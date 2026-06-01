@@ -1,0 +1,141 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "blendState": 2,
+            "burstCount": 0,
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 0,
+            "emissivePower": 1.5,
+            "emitCount": [
+                1,
+                2
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "emitRate": 2.5999999046325684,
+            "emitterLifeTime": 0.6000000238418579,
+            "endColor": [
+                [
+                    1.0,
+                    0.5581395030021667,
+                    0.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    0.9209302067756653,
+                    0.0,
+                    1.0
+                ]
+            ],
+            "endSize": [
+                [
+                    0.5,
+                    0.5
+                ],
+                [
+                    0.5,
+                    0.5
+                ]
+            ],
+            "height": 1.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "isBurst": false,
+            "lifeTime": [
+                1.0,
+                1.0
+            ],
+            "loop": true,
+            "maxParticles": 1000,
+            "name": "Emitter0",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 1.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "shapeType": 0,
+            "speed": [
+                1.0,
+                1.0
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    0.5860465168952942,
+                    0.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    0.5,
+                    0.5
+                ],
+                [
+                    0.5,
+                    0.5
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\T_Fire_SubUV.PNG",
+            "textureSplitCount": [
+                6,
+                6
+            ],
+            "useGravity": false,
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
+        }
+    ],
+    "name": "DarkStageEffectFrame"
+}

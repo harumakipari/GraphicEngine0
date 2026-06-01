@@ -1,0 +1,141 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    -3.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    -3.200000047683716,
+                    0.0
+                ]
+            ],
+            "blendState": 2,
+            "burstCount": 0,
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 3,
+            "emissivePower": 1.0,
+            "emitCount": [
+                17,
+                29
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "emitRate": 2.5,
+            "emitterLifeTime": 0.6000000238418579,
+            "endColor": [
+                [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.772549033164978
+                ],
+                [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.8941176533699036
+                ]
+            ],
+            "endSize": [
+                [
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0
+                ]
+            ],
+            "height": 1.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "isBurst": true,
+            "lifeTime": [
+                0.20000000298023224,
+                0.4000000059604645
+            ],
+            "loop": false,
+            "maxParticles": 1000,
+            "name": "Spark",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 0.10000000149011612,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    426.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    311.0,
+                    0.0
+                ]
+            ],
+            "shapeType": 2,
+            "speed": [
+                7.400000095367432,
+                15.699999809265137
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    0.9767441749572754,
+                    0.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    0.10000000149011612,
+                    0.15000000596046448
+                ],
+                [
+                    0.10000000149011612,
+                    0.15000000596046448
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\Particles\\Particle02.png",
+            "textureSplitCount": [
+                1,
+                1
+            ],
+            "useGravity": false,
+            "velocity": [
+                [
+                    0.0,
+                    -0.10000000149011612,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
+        }
+    ],
+    "name": "DarkStageSparkEffect"
+}

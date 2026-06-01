@@ -1,0 +1,140 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "blendState": 2,
+            "burstCount": 0,
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 1,
+            "emitCount": [
+                1,
+                1
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "emitRate": 0.4000000059604645,
+            "emitterLifeTime": 1.0,
+            "endColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    0.772549033164978
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    0.658823549747467
+                ]
+            ],
+            "endSize": [
+                [
+                    0.5,
+                    0.5
+                ],
+                [
+                    0.5,
+                    0.5
+                ]
+            ],
+            "height": 1.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "isBurst": false,
+            "lifeTime": [
+                1.0,
+                1.0
+            ],
+            "loop": true,
+            "maxParticles": 1000,
+            "name": "Emitter0",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 1.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "shapeType": 0,
+            "speed": [
+                0.20000000298023224,
+                0.4000000059604645
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    0.5,
+                    0.5
+                ],
+                [
+                    0.5,
+                    0.5
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\T_Smoke_SubUV.PNG",
+            "textureSplitCount": [
+                8,
+                8
+            ],
+            "useGravity": false,
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
+        }
+    ],
+    "name": "DarkStageAfterFrameEffect"
+}

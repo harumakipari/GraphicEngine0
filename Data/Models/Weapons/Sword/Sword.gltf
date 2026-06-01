@@ -1,0 +1,174 @@
+{
+	"asset":
+	{
+		"version": "2.0",
+		"generator": "Unreal Engine 5.3.2"
+	},
+	"scene": 0,
+	"accessors": [
+		{
+			"bufferView": 0,
+			"count": 6822,
+			"type": "SCALAR",
+			"componentType": 5123
+		},
+		{
+			"bufferView": 1,
+			"count": 1914,
+			"type": "VEC3",
+			"componentType": 5126,
+			"min": [ -0.195821792, -0.000140774253, -0.0234830659 ],
+			"max": [ 0.195821792, 1.29398036, 0.0234831069 ]
+		},
+		{
+			"bufferView": 2,
+			"count": 1914,
+			"type": "VEC3",
+			"componentType": 5126
+		},
+		{
+			"bufferView": 3,
+			"count": 1914,
+			"type": "VEC4",
+			"componentType": 5126
+		},
+		{
+			"bufferView": 4,
+			"count": 1914,
+			"type": "VEC2",
+			"componentType": 5126
+		},
+		{
+			"bufferView": 5,
+			"count": 1914,
+			"type": "VEC2",
+			"componentType": 5126
+		}
+	],
+	"buffers": [
+		{
+			"uri": "Sword.bin",
+			"byteLength": 120828
+		}
+	],
+	"bufferViews": [
+		{
+			"buffer": 0,
+			"byteLength": 13644,
+			"target": 34963
+		},
+		{
+			"buffer": 0,
+			"byteLength": 22968,
+			"byteOffset": 13644,
+			"target": 34962
+		},
+		{
+			"buffer": 0,
+			"byteLength": 22968,
+			"byteOffset": 36612,
+			"target": 34962
+		},
+		{
+			"buffer": 0,
+			"byteLength": 30624,
+			"byteOffset": 59580,
+			"target": 34962
+		},
+		{
+			"buffer": 0,
+			"byteLength": 15312,
+			"byteOffset": 90204,
+			"target": 34962
+		},
+		{
+			"buffer": 0,
+			"byteLength": 15312,
+			"byteOffset": 105516,
+			"target": 34962
+		}
+	],
+	"images": [
+		{
+			"uri": "M_Sword_01_MetallicRoughness.png"
+		},
+		{
+			"uri": "T_Sword_01_D.png"
+		},
+		{
+			"uri": "T_Sword_01_N.png"
+		}
+	],
+	"materials": [
+		{
+			"name": "M_Sword_01",
+			"pbrMetallicRoughness":
+			{
+				"baseColorTexture":
+				{
+					"index": 0
+				},
+				"metallicRoughnessTexture":
+				{
+					"index": 1
+				}
+			},
+			"normalTexture":
+			{
+				"index": 2
+			}
+		}
+	],
+	"meshes": [
+		{
+			"name": "SM_Sword_01",
+			"primitives": [
+				{
+					"attributes":
+					{
+						"POSITION": 1,
+						"NORMAL": 2,
+						"TANGENT": 3,
+						"TEXCOORD_0": 4,
+						"TEXCOORD_1": 5
+					},
+					"indices": 0,
+					"material": 0
+				}
+			]
+		}
+	],
+	"nodes": [
+		{
+			"mesh": 0
+		}
+	],
+	"samplers": [
+		{
+			"minFilter": 9987,
+			"magFilter": 9729
+		}
+	],
+	"scenes": [
+		{
+			"nodes": [ 0 ]
+		}
+	],
+	"textures": [
+		{
+			"name": "T_Sword_01_D",
+			"sampler": 0,
+			"source": 1
+		},
+		{
+			"name": "M_Sword_01_MetallicRoughness",
+			"sampler": 0,
+			"source": 0
+		},
+		{
+			"name": "T_Sword_01_N",
+			"sampler": 0,
+			"source": 2
+		}
+	]
+}

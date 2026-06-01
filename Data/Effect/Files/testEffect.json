@@ -1,0 +1,135 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    0.20000000298023224,
+                    0.0
+                ],
+                [
+                    0.0,
+                    1.0,
+                    0.0
+                ]
+            ],
+            "blendState": 2,
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 0,
+            "emitCount": [
+                10,
+                10
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "endColor": [
+                [
+                    0.019607843831181526,
+                    0.3019607961177826,
+                    1.0,
+                    0.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    0.0
+                ]
+            ],
+            "endSize": [
+                [
+                    0.5,
+                    0.5
+                ],
+                [
+                    2.0,
+                    2.0
+                ]
+            ],
+            "height": 1.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "lifeTime": [
+                1.0,
+                1.0
+            ],
+            "maxParticles": 1000,
+            "name": "Emitter0",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 1.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "shapeType": 2,
+            "speed": [
+                1.0,
+                1.0
+            ],
+            "startColor": [
+                [
+                    0.9674418568611145,
+                    0.0,
+                    0.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    0.30000001192092896,
+                    0.30000001192092896
+                ],
+                [
+                    1.0,
+                    1.0
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\Textures\\particle.png",
+            "textureSplitCount": [
+                1,
+                1
+            ],
+            "useGravity": true,
+            "velocity": [
+                [
+                    0.0,
+                    4.199999809265137,
+                    0.0
+                ],
+                [
+                    0.0,
+                    8.300000190734863,
+                    0.0
+                ]
+            ]
+        }
+    ],
+    "name": "Effect 0"
+}

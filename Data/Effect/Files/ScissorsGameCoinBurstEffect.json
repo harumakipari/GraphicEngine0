@@ -1,0 +1,141 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "blendState": 2,
+            "burstCount": 0,
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 0,
+            "emissivePower": 1.0,
+            "emitCount": [
+                7,
+                7
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "emitRate": 8.199999809265137,
+            "emitterLifeTime": 0.5,
+            "endColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    0.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    0.05098039284348488
+                ]
+            ],
+            "endSize": [
+                [
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0
+                ]
+            ],
+            "height": 1.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "isBurst": true,
+            "lifeTime": [
+                1.0,
+                1.0
+            ],
+            "loop": false,
+            "maxParticles": 1000,
+            "name": "Emitter0",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 0.800000011920929,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "shapeType": 2,
+            "speed": [
+                1.0,
+                1.0
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\Textures\\Star-1.png",
+            "textureSplitCount": [
+                1,
+                1
+            ],
+            "useGravity": false,
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
+        }
+    ],
+    "name": "ScissorsGameCoinBurstEffect"
+}

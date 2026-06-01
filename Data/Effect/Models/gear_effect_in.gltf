@@ -1,0 +1,200 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 21,
+      "max": [
+        2.6148791313171387,
+        0.006918945349752903,
+        2.6148793697357178
+      ],
+      "min": [
+        -2.6148805618286133,
+        0.006918639875948429,
+        -2.614880323410034
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 21,
+      "max": [
+        1.1670735489133222e-07,
+        1.0,
+        1.1725895632253014e-07
+      ],
+      "min": [
+        -1.1670743305103315e-07,
+        1.0,
+        -1.1699017221644681e-07
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 21,
+      "max": [
+        0.994934618473053,
+        1.1611625438945339e-07,
+        0.10052540153265,
+        1.0
+      ],
+      "min": [
+        0.9949344992637634,
+        -1.161161691243251e-07,
+        0.10052470862865448,
+        1.0
+      ],
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 21,
+      "max": [
+        0.9887306690216064,
+        0.9850299954414368
+      ],
+      "min": [
+        0.013658672571182251,
+        0.009958028793334961
+      ],
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5125,
+      "count": 60,
+      "max": [
+        20
+      ],
+      "min": [
+        0
+      ],
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 252,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 252,
+      "byteOffset": 252,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 336,
+      "byteOffset": 504,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 168,
+      "byteOffset": 840,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 240,
+      "byteOffset": 1008,
+      "target": 34963
+    }
+  ],
+  "buffers": [
+    {
+      "byteLength": 1248,
+      "uri": "gear_effect_in.bin"
+    }
+  ],
+  "images": [
+    {
+      "uri": "gear_effect_in_tex.png"
+    }
+  ],
+  "materials": [
+    {
+      "alphaMode": "BLEND",
+      "emissiveFactor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "name": "m_gear_effect_in",
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicFactor": 0.0
+      }
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "NORMAL": 1,
+            "POSITION": 0,
+            "TANGENT": 2,
+            "TEXCOORD_0": 3
+          },
+          "indices": 4,
+          "material": 0,
+          "mode": 4
+        }
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "name": "gear_effect_in",
+      "rotation": [
+        0.0,
+        -0.1647873818874359,
+        0.0,
+        0.9863291382789612
+      ],
+      "scale": [
+        0.9386498928070068,
+        1.0,
+        0.9386498928070068
+      ],
+      "translation": [
+        -2.2830811019503017e-07,
+        0.007991504855453968,
+        5.4725891374118874e-08
+      ]
+    }
+  ],
+  "samplers": [
+    {
+      "wrapS": 10497,
+      "wrapT": 10497
+    }
+  ],
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "sampler": 0,
+      "source": 0
+    }
+  ]
+}
