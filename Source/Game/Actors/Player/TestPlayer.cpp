@@ -26,7 +26,16 @@ void TestPlayer::Initialize(const Transform& transform)
 	GetBodyAnimationController()->ResetRootMotion("Idle");
 #else
 	skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+	//skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon1/player.gltf", false, true);
 	skeletalMeshComponent->SetModel("./Data/Models/Characters/Player/player.gltf", false, true);
+
+	for (auto& material : skeletalMeshComponent->model->materials)
+	{
+		if (material.name == "MI_Aurora_Sword_FrozenHearth")
+		{// 髪の毛だったら
+			material.overridePipelineName = "characterFurAndHairSkeletalMesh";
+		}
+	}
 
 	// ルートノードを設定する
 	int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
@@ -66,6 +75,33 @@ void TestPlayer::Initialize(const Transform& transform)
 	capsuleComponent->SetCollisionOffsetY(height * 0.5f);
 	capsuleComponent->SetIsVisibleDebugBox(false);
 	capsuleComponent->Initialize();
+
+	int weaponSocketNode = skeletalMeshComponent->FindIndexByName("VB root_weapon");
+	//int weaponSocketNode = skeletalMeshComponent->FindIndexByName("ik_hand_gun");
+
+
+	// 剣に当たり判定のコンポーネントを追加
+	auto swordCollisionComp = AddComponent<CapsuleComponent>("SwordCollision", parentName);
+	DirectX::XMFLOAT3 weaponSize = { 0.1f,1.2f,1.0f };
+	swordCollisionComp->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
+	swordCollisionComp->SetRadiusAndHeight(weaponSize.x, weaponSize.y);
+	swordCollisionComp->SetMass(mass);
+	swordCollisionComp->SetCapsuleAxis(ShapeComponent::CapsuleAxis::z);
+	swordCollisionComp->SetLayer(CollisionLayer::PlayerWeapon);
+	swordCollisionComp->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Trigger);
+	swordCollisionComp->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Trigger);
+	swordCollisionComp->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Trigger);
+	swordCollisionComp->SetCollisionOffsetY(height * 0.5f);
+	swordCollisionComp->SetIsVisibleDebugBox(false);
+	swordCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, 0.8f });
+	swordCollisionComp->Initialize();
+
+
+
+	auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", "SwordCollision");
+	swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
+	swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
+
 }
 
 void TestPlayer::Update(float elapsedTime)
@@ -172,13 +208,13 @@ void TestPlayer::Update(float elapsedTime)
 			GetBodyAnimationController()->ResetRootMotion("Jog_Fwd");
 		}
 	}
-	else
-	{
-		if (currentAnimationName != "Idle")
-		{
-			GetBodyAnimationController()->ResetRootMotion("Idle");
-		}
-	}
+	//else
+	//{
+	//	if (currentAnimationName != "Idle")
+	//	{
+	//		GetBodyAnimationController()->ResetRootMotion("Idle");
+	//	}
+	//}
 #endif // 0
 
 }

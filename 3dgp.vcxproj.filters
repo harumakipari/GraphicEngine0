@@ -354,9 +354,6 @@
     <ClCompile Include="Source\Game\State\StateMachine.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Actors\Player\PlayerStateDerived.cpp">
-      <Filter>Sources</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossEnemy.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
@@ -529,6 +526,9 @@
       <Filter>Sources\Game\Scenes</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Actors\Player\TestPlayer.cpp">
+      <Filter>Sources\Game\Actors\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Player\PlayerStateDerived.cpp">
       <Filter>Sources\Game\Actors\Player</Filter>
     </ClCompile>
   </ItemGroup>
@@ -789,7 +789,6 @@
     <ClInclude Include="Source\Components\Easing\CoreEasingComponent.h" />
     <ClInclude Include="Source\Game\State\StateMachine.h" />
     <ClInclude Include="Source\Game\State\StateBase.h" />
-    <ClInclude Include="Source\Game\Actors\Player\PlayerStateDerived.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossEnemy.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossState.h" />
     <ClInclude Include="Source\Graphics\Renderer\PrimitiveRenderer.h" />
@@ -880,6 +879,9 @@
       <Filter>Sources\Game\Scenes</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\Player\TestPlayer.h">
+      <Filter>Sources\Game\Actors\Player</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Player\PlayerStateDerived.h">
       <Filter>Sources\Game\Actors\Player</Filter>
     </ClInclude>
   </ItemGroup>

@@ -54,7 +54,7 @@ public:
     {
         if (auto controller = GetAnimationController(animationBodyControllerName))
         {
-            controller->SetAnimationClip(name, loop, blend, blendTime);
+            controller->ResetRootMotion(name, loop, blend, blendTime);
         }
     }
 
@@ -62,7 +62,7 @@ public:
     {
         if (auto controller = GetAnimationController(controllerName))
         {
-            controller->SetAnimationClip(name, loop, blend, blendTime);
+            controller->ResetRootMotion(name, loop, blend, blendTime);
         }
     }
 

@@ -50,6 +50,8 @@ void AnimationController::OnUpdate(const float deltaTime)
             blendFactor,
             finalNodes);
 
+
+
         if (blendFactor >= 1.0f)
         {
             // 遷移終了
@@ -58,14 +60,14 @@ void AnimationController::OnUpdate(const float deltaTime)
             this->animationClip = this->animationNextClip;
 
 
-            InterleavedGltfModel::Node& node =animationNodes[Next][rootNodeIndex];
+            InterleavedGltfModel::Node& node = animationNodes[Next][rootNodeIndex];
 
-          /*  previousPosition =
-            {
-                node.globalTransform._41,
-                node.globalTransform._42,
-                node.globalTransform._43
-            };*/
+            /*  previousPosition =
+              {
+                  node.globalTransform._41,
+                  node.globalTransform._42,
+                  node.globalTransform._43
+              };*/
 
         }
         break;
@@ -94,9 +96,6 @@ void AnimationController::OnUpdate(const float deltaTime)
                 isAnimationFinished = true;
             }
         }
-
-
-
 
         break;
     default:
@@ -151,7 +150,9 @@ void AnimationController::OnUpdate(const float deltaTime)
     }
     target_->SetModelNodes(finalNodes);
 
-
+    target_->UpdateChildTransforms(
+        UpdateTransformFlags::None,
+        TeleportType::None);
 #else
     if (target_->model->animations.at(animationClip).duration < animationTime)
     {
@@ -212,12 +213,13 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
     //previousPosition = { node.globalTransform._41, node.globalTransform._42, node.globalTransform._43 }; // グローバル空間
     resetRootMotionDelta = true;
     zeroTranslation = node.translation;
+    isAnimationLoop = loop;
+
     if (isBlend)
     {
         isBlendingAnimation = true;
-
+        transitionTime = blendTime;
         animationNodes[Origin] = finalNodes;
-
         transitionState = AnimationController::AnimationTransitionState::NotStarted;
     }
     else
@@ -248,6 +250,14 @@ void AnimationController::DrawImGui()
     if (!ImGui::CollapsingHeader("Animation Debug"))
         return;
 
+    auto& node = finalNodes[181];
+
+    ImGui::Text("Weapon Socket Pos: %.2f %.2f %.2f",
+        node.globalTransform._41,
+        node.globalTransform._42,
+        node.globalTransform._43);
+
+
     ImGui::Text("Current: %s", currentAnimationName.c_str());
     ImGui::Text("Playing: %s", isAnimationFinished ? "No" : "Yes");
 
@@ -265,7 +275,7 @@ void AnimationController::DrawImGui()
     {
         if (ImGui::Button(name.c_str()))
         {
-            SetAnimationClip(name, isAnimationLoop, isBlendingAnimation, transitionTime);
+            ResetRootMotion(name, isAnimationLoop, isBlendingAnimation, transitionTime);
         }
     }
 #endif

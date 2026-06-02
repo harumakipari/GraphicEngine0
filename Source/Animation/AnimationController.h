@@ -49,35 +49,6 @@ public:
     }
 
 
-    // 使用例
-    // modelComponent->SetAnimationClip(
-    void SetAnimationClip(const std::string& animationName, const bool loop = false, const bool isBlend = false, const float blendTime = 0.3f)
-    {
-        this->isAnimationFinished = false;
-        //this->animationTime = 0.0f;
-        this->animationNextClip = animationNameToIndex_[animationName];
-        this->isAnimationLoop = loop;
-        this->currentAnimationName = animationName;
-        this->transitionTime = blendTime;
-#if 1
-        if (isBlend)
-        {
-            isBlendingAnimation = true;
-            transitionState = AnimationController::AnimationTransitionState::NotStarted;
-        }
-        else
-
-#endif // 1
-        { // ブレンドしないなら現在のアニメーションを次のアニメーションに変更する
-            this->animationClip = animationNameToIndex_[animationName];
-            //isBlendingAnimation = false;
-            transitionState = AnimationController::AnimationTransitionState::Completed;
-        }
-
-        //ResetRootMotion(static_cast<int>(animationNextClip));
-
-    }
-
     void OnUpdate(const float deltaTime);
 
     // アニメーションの再生倍率を変更する関数
@@ -118,7 +89,6 @@ public:
 private:
     // ルートモーションをリセットする
     void ResetRootMotion(int animationClip);
-
 
     SkeletalMeshComponent* target_ = nullptr;
     Actor* owner = nullptr;
