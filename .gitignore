@@ -38,6 +38,8 @@
 *.exe
 *.out
 *.app
+*.cod
+*.cso
 
 # Build directories
 build/
@@ -74,3 +76,5 @@ Data/Sound/
 Data/Models/DarkStageAssets/
 Data/Models/Characters/
 Data/Models/Flag/
+.vs/
+3dgp/
