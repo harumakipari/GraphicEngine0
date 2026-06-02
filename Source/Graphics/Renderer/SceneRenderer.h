@@ -20,13 +20,7 @@ struct InstanceBatch
 
 struct RenderQueues
 {
-    std::vector<MeshComponent*> deferredOpaque;
-    std::vector<MeshComponent*> deferredMask;
-    std::vector<MeshComponent*> deferredBlend;
-
-    std::vector<MeshComponent*> forwardOpaque;
-    std::vector<MeshComponent*> forwardMask;
-    std::vector<MeshComponent*> forwardBlend;
+    std::vector<MeshComponent*> meshes;
 
     std::vector<MeshComponent*> shadowCasters;
 

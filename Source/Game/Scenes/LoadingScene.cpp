@@ -453,10 +453,10 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
     sceneRender.currentRenderPath = RenderPath::Deferred;
-    sceneRender.RenderOpaque(immediateContext, queues.deferredOpaque);
+    sceneRender.RenderOpaque(immediateContext, queues.meshes);
     ExecuteHooks(RenderPass::Opaque, immediateContext);
 
-    sceneRender.RenderMask(immediateContext, queues.deferredMask);
+    sceneRender.RenderMask(immediateContext, queues.meshes);
     ExecuteHooks(RenderPass::Mask, immediateContext);
 
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
@@ -511,17 +511,20 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
 
     frameBuffer->Activate(immediateContext, gBufferRenderTarget->depthStencilView);
 
+#if 1
     RenderState::BindBlendState(immediateContext, BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA);
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_FRONT);
     sceneRender.currentRenderPath = RenderPath::Forward;
-    sceneRender.RenderBlend(immediateContext, queues.deferredBlend); // Ç±Ç±Ç≈åxçêèoÇÈ
+    sceneRender.RenderBlend(immediateContext, queues.meshes); // Ç±Ç±Ç≈åxçêèoÇÈ
     ExecuteHooks(RenderPass::ForwardBlend, immediateContext);
 
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
     sceneRender.currentRenderPath = RenderPath::Forward;
-    sceneRender.RenderBlend(immediateContext, queues.deferredBlend); // Ç±Ç±Ç≈åxçêèoÇÈ
+    sceneRender.RenderBlend(immediateContext, queues.meshes); // Ç±Ç±Ç≈åxçêèoÇÈ
     ExecuteHooks(RenderPass::ForwardBlend, immediateContext);
+
+#endif // 1
 
 #if 0
     // PARTICLES

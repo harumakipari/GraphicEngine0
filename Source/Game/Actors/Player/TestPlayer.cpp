@@ -98,9 +98,9 @@ void TestPlayer::Initialize(const Transform& transform)
 
 
 
-	auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", "SwordCollision");
-	swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
-	swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
+	//auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", "SwordCollision");
+	//swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
+	//swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
 
 }
 

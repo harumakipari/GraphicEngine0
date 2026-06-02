@@ -951,25 +951,7 @@ RenderQueues SceneRenderer::BuildRenderQueues()
             // ===== ’Êí•`‰æ =====
             if (visible)
             {
-                bool isForward =
-                    mesh->renderPass ==
-                    MeshComponent::MeshRenderPass::Forward;
-
-                auto& opaque =
-                    isForward ? queues.forwardOpaque
-                    : queues.deferredOpaque;
-
-                auto& mask =
-                    isForward ? queues.forwardMask
-                    : queues.deferredMask;
-
-                auto& blend =
-                    isForward ? queues.forwardBlend
-                    : queues.deferredBlend;
-
-                opaque.push_back(mesh);
-                mask.push_back(mesh);
-                blend.push_back(mesh);
+                queues.meshes.push_back(mesh);
             }
 
             // ===== ‰eƒpƒX =====
