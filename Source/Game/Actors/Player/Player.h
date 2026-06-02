@@ -24,9 +24,6 @@ public:
 
     void Update(float elapsedTime)override;
 
-    // 遅延更新処理
-    void LateUpdate(float elapsedTime)override;
-
     void DrawImGuiDetails()override;
 
     void Finalize()override {}
@@ -37,13 +34,7 @@ private:
     // 剣の攻撃判定
     void CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end);
 
-    void Move(float elapsedTime)override;
-
-    void Turn(float elapsedTime);
 public:
-    //スティック入力値から移動ベクトルを取得
-    DirectX::XMFLOAT3 GetMoveVec();
-
     //当たった時の処理
     void TakeDamage(int damage);
 
