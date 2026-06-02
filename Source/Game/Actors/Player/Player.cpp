@@ -85,7 +85,7 @@ void Player::Initialize(const Transform& transform)
         stateMachine_ = std::make_shared<StateMachine>();
         stateMachine_->RegisterState(std::make_unique<PlayerIdleState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerRunningState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerAttackingState>(this));
+        stateMachine_->RegisterState(std::make_unique<PlayerAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDodgeState>(this));
 
         // ステートマシンを character に追加
@@ -173,7 +173,7 @@ void Player::Initialize(const Transform& transform)
 
         // 移動用コンポーネントを追加
         characterMovementComponent = this->AddComponent<CharacterMovementComponent>("movementComponent", parentName);
-        //characterMovementComponent->SetUseGravity(false);
+        characterMovementComponent->SetUseGravity(false);
 
         // 回転用コンポーネントを追加
         rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
@@ -210,8 +210,6 @@ void Player::Initialize(const Transform& transform)
     weaponController->AddAnimation("Bow", 0);
     AddAnimationController("Weapon", weaponController);
     PlayAnimation("Weapon", "Bow");
-
-
 #endif // 0
     //bowMeshComponent->AttachToComponent(skeletalMeshComponent, 23); // "weapon"
 
@@ -222,6 +220,50 @@ void Player::Initialize(const Transform& transform)
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
 
+
+    comboAttacks =
+    {
+       {
+        "Primary_Attack_Fast_A",
+        0.10f,
+        0.25f,
+        0.20f,
+        0.5f,
+        1,
+        1.5f
+        },
+
+        {
+            "Primary_Attack_Fast_B",
+            0.08f,
+            0.30f,
+            0.25f,
+            0.50f,
+            2,
+            1.0f
+        },
+
+        {
+            "Primary_Attack_Fast_C",
+            0.15f,
+            0.40f,
+            0.1f,
+            0.5f,
+            3,
+            0.0f
+        },
+
+        {
+            "Primary_Attack_Fast_D",
+            0.15f,
+            0.50f,
+            -1.0f,
+            -1.0f,
+            -1,
+            0.0f
+        }
+
+    };
 }
 
 
@@ -284,35 +326,35 @@ void Player::Update(float elapsedTime)
     if (swordPointComp)
     {
 
-    auto currentTip = swordPointComp->GetComponentLocation();
+        auto currentTip = swordPointComp->GetComponentLocation();
 
-    if (hasPrevSwordTip)
-    {
-        CheckSwordLineHit(prevSwordTip, currentTip);
-    }
+        if (hasPrevSwordTip)
+        {
+            CheckSwordLineHit(prevSwordTip, currentTip);
+        }
 
-    prevSwordTip = currentTip;
-    hasPrevSwordTip = true;
+        prevSwordTip = currentTip;
+        hasPrevSwordTip = true;
 
-    DebugRender::DrawSphere(swordPointComp->GetComponentLocation(), 0.1f, { 1,1,0,1 }, 0.0f, true);
+        DebugRender::DrawSphere(swordPointComp->GetComponentLocation(), 0.1f, { 1,1,0,1 }, 0.0f, true);
 
-    // 剣先取得
-    XMFLOAT3 tip = swordPointComp->GetComponentLocation();
+        // 剣先取得
+        XMFLOAT3 tip = swordPointComp->GetComponentLocation();
 
-    // トレイル追加（毎フレーム）
-    trailPoints.push_back({ tip, 0.3f }); // ←長さ調整
+        // トレイル追加（毎フレーム）
+        trailPoints.push_back({ tip, 0.3f }); // ←長さ調整
 
-    // 更新
-    for (auto& p : trailPoints)
-    {
-        p.life -= elapsedTime;
-    }
+        // 更新
+        for (auto& p : trailPoints)
+        {
+            p.life -= elapsedTime;
+        }
 
-    // 削除
-    trailPoints.erase(
-        std::remove_if(trailPoints.begin(), trailPoints.end(),
-            [](const TrailPoint& p) { return p.life <= 0; }),
-        trailPoints.end());
+        // 削除
+        trailPoints.erase(
+            std::remove_if(trailPoints.begin(), trailPoints.end(),
+                [](const TrailPoint& p) { return p.life <= 0; }),
+            trailPoints.end());
     }
 
 #if 1

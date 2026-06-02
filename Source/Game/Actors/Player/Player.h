@@ -15,6 +15,22 @@ class IInteractable;
 class Player :public Character
 {
 public:
+    struct AttackData
+    {
+        std::string animationName;
+
+        float hitStart;
+        float hitEnd;
+
+        float comboWindowStart;
+        float comboWindowEnd;
+
+        int nextComboIndex = -1;
+
+        float moveSpeed = 0.0f;
+    };
+
+public:
     explicit Player(const std::string& modelName) :Character(modelName)
     {
         mass = 50.0f;
@@ -49,86 +65,10 @@ public:
 
     bool invincible = false; // 無敵状態かどうか
 
-    //上方向への力
-    float jumpPower = 5.0f;
-
-    //武器のノード番号
-    //size_t nodeAttackIndex = 153; //"VB root Weapon"
-    size_t nodeAttackIndex = 0; //"VB root Weapon"
-
 private:
-    GamePad pad;
-    //頭の天辺のノード番号
-    size_t nodeTopIndex = 126;   //"hair_top_mid_01"
-    //頭の下のノード番号
-    size_t nodeBottomIndex = 146;    //"ik_foot_root"
-
-    // プレイヤーの現在のスピード
-    float currentSpeed = 5.0f;
-    // プレイヤーはアイテムを持っていないときのスピード
-    float noItemSpeed = 10.0f;
-    // プレイヤーの Max スピード
-    float maxSpeed = 5.0f;
-    // プレイヤーの Min スピード
-    float minSpeed = 2.0f;
-    // プレイヤーの現在の回転スピード
-    float currentTurnSpeed = 720.0f;
-    // プレイヤーの Max 回転スピード
-    float maxTurnSpeed = 720.0f;
-    // プレイヤーの Min 回転スピード
-    float minTurnSpeed = 90.0f;
     // プレイヤーのマックスHP
     int maxHp = 100;
 
-    bool isIdleEnd = false;
-public:
-    // EraseInArea で使用
-    // 次のフレームで適応する無敵時間のフラグを立てる
-    bool applyInvincibilityNextFrame = false;
-    // 初回だけダメージを換算したいから
-    bool hasDamageThisFrame = false;
-    // ダメージ記録
-    bool hitLeftThisFrame = false;
-    bool hitRightThisFrame = false;
-    int currentFrameDamage = 0;
-
-    DirectX::XMFLOAT3 angle = { 0.0f,0.0f,0.0f };
-    DirectX::XMFLOAT3 prePosition = { 0.0f,0.0f,0.0f };
-
-    int leftItemMax = 15;
-    int rightItemMax = 15;
-
-    // 初回のサイズ
-    DirectX::XMFLOAT3 leftFirstPos = { -0.5f,-0.5f,0.2f };
-    DirectX::XMFLOAT3 rightFirstPos = { 0.5f,-0.5f,0.2f };
-
-private:
-    // プレイヤー被弾時の点滅
-    float hitBlinkElapsed = 0.0f;
-    float hitBlinkInterval = 0.1f;
-    float hitBlinkTotalTime = 1.5f;
-    bool isHitBlinking = false;
-    bool isRed = false;
-
-    void BlinkInit()
-    {
-        isHitBlinking = true;
-        hitBlinkElapsed = 0.0f;
-    }
-
-    void SetBlinkColor(bool isRed)
-    {
-        if (isRed)
-        {
-            color = { 1.0f,0.2f,0.2f };
-        }
-        else
-        {
-            color = { 1.0f,1.0f,1.0f };
-        }
-    }
-
-    DirectX::XMFLOAT3 color = { 1.0f,1.0f,1.0f };
 
     // インタラクト対象検索
     IInteractable* FindInteractable() ;
@@ -154,8 +94,13 @@ public:
     };
     std::vector<TrailPoint> trailPoints;
 
+    std::vector<AttackData> comboAttacks; // コンボ攻撃のデータ
+    int currentComboIndex = 0; // 現在のコンボ攻撃のインデックス
+    bool comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
+
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     bool isAttackActive = false;
     float hitStopTimer = 0.0f;// ヒットストップのタイマー
+
 };

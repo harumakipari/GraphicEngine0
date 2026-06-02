@@ -465,6 +465,7 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStagePointLightActor.h" />
     <ClInclude Include="Source\Game\DarkGame\Interactable.h" />
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h" />
+    <ClInclude Include="Source\Game\Scenes\ModelScene.h" />
     <ClInclude Include="Source\Game\Scenes\SampleScene.h" />
     <ClInclude Include="Source\Game\Scenes\GameScene.h" />
     <ClInclude Include="Source\Game\SofyBody\SoftBody.h" />

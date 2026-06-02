@@ -114,7 +114,12 @@ void SampleScene::SetUpActors()
     auto pauseActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor", buildTr2);
 
     Transform playerTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto player = this->GetActorManager()->CreateAndRegisterActorWithTransform<TestPlayer>("player", playerTr);
+    auto player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
+
+#if 1
+    Transform testPlayerTr(DirectX::XMFLOAT3{ 3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    auto testPlayer = this->GetActorManager()->CreateAndRegisterActorWithTransform<TestPlayer>("testPlayer", testPlayerTr);
+#endif // 1
 
     std::shared_ptr<StageAsset> stageCandelabraAsset = std::make_shared<StageAsset>();
     stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(Graphics::GetDevice(), "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::StaticMesh, false, true);

@@ -21,6 +21,8 @@ public:
 
 protected:
     Player* player = nullptr;
+
+    
 };
 
 // 待機ステートオブジェクト
@@ -60,13 +62,13 @@ public:
 };
 
 // 攻撃ステートオブジェクト
- class PlayerAttackingState : public PlayerStateBase
+ class PlayerAttackState : public PlayerStateBase
  {
  public:
      // コンストラクタ
-     PlayerAttackingState(Player* player) :PlayerStateBase(player) {}
+     PlayerAttackState(Player* player) :PlayerStateBase(player) {}
      // デストラクタ
-     ~PlayerAttackingState() = default;
+     ~PlayerAttackState() = default;
      // ステートに入った時のメソッド
      void Enter() override;
      // ステートで実行するメソッド

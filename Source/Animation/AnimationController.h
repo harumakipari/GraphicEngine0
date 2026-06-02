@@ -86,6 +86,8 @@ public:
 
     const std::string& GetCurrentAnimationName()const { return currentAnimationName; }
 
+    float GetCurrentAnimationLength() const { return target_->model->animations[animationClip].duration; }
+
 private:
     // ルートモーションをリセットする
     void ResetRootMotion(int animationClip);
