@@ -17,7 +17,7 @@ void SSAOEffect::Initialize(ID3D11Device* device, uint32_t width, uint32_t heigh
     ssaoBuffer = std::make_unique<FrameBuffer>(device, width / 2, height / 2, false, DXGI_FORMAT_R32_FLOAT);
     ssaoCBuffer = std::make_unique<ConstantBuffer<SSAOConstantBuffer>>(device);
 
-    HRESULT hr = CreatePsFromCSO(device, "./Shader/SsaoPS.cso", ssaoPS.ReleaseAndGetAddressOf());
+    HRESULT hr = CreatePsFromCSO(device, "./Data/Shaders/SsaoPS.cso", ssaoPS.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     // SSAOカーネルポイント用の構造化バッファを作成する

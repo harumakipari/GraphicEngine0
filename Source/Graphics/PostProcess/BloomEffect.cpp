@@ -22,15 +22,15 @@ void BloomEffect::Initialize(ID3D11Device* device, uint32_t width, uint32_t heig
         gaussianBlur[downsampled_index][0] = std::make_unique<FrameBuffer>(device, width >> downsampled_index, height >> downsampled_index, false);
         gaussianBlur[downsampled_index][1] = std::make_unique<FrameBuffer>(device, width >> downsampled_index, height >> downsampled_index, false);
     }
-    hr = CreatePsFromCSO(device, "./Shader/GlowExtractionPS.cso", glowExtractionPs.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/GlowExtractionPS.cso", glowExtractionPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "./Shader/GaussianBlurDownSamplingPS.cso", gaussianBlurDownsamplingPs.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/GaussianBlurDownSamplingPS.cso", gaussianBlurDownsamplingPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "./Shader/GaussianBlurHorizontalPS.cso", gaussianBlurHorizontalPs.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/GaussianBlurHorizontalPS.cso", gaussianBlurHorizontalPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "./Shader/GaussianBlurVerticalPS.cso", gaussianBlurVerticalPs.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/GaussianBlurVerticalPS.cso", gaussianBlurVerticalPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "./Shader/GaussianBlurUpsamplingPS.cso", gaussianBlurUpsamplingPs.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/GaussianBlurUpsamplingPS.cso", gaussianBlurUpsamplingPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     D3D11_RASTERIZER_DESC rasterizerDesc{};

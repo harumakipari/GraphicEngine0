@@ -21,7 +21,7 @@ PrimitiveShapeRenderer::PrimitiveShapeRenderer(ID3D11Device* device)
 	// 頂点シェーダー
 	HRESULT hr = CreateVsFromCSO(
 		device,
-		"./Shader/WiredShapeRendererVS.cso",
+		"./Data/Shaders/WiredShapeRendererVS.cso",
 		wiredVertexShader.GetAddressOf(),
 		wiredInputLayout.GetAddressOf(),
 		wiredInputElementDesc,
@@ -31,7 +31,7 @@ PrimitiveShapeRenderer::PrimitiveShapeRenderer(ID3D11Device* device)
 
 	hr = CreateVsFromCSO(
 		device,
-		"./Shader/SolidShapeRendererVS.cso",
+		"./Data/Shaders/SolidShapeRendererVS.cso",
 		solidVertexShader.GetAddressOf(),
 		solidInputLayout.GetAddressOf(),
 		solidInputElementDesc,
@@ -41,13 +41,13 @@ PrimitiveShapeRenderer::PrimitiveShapeRenderer(ID3D11Device* device)
 	// ピクセルシェーダー
 	hr = CreatePsFromCSO(
 		device,
-		"./Shader/WiredShapeRendererPS.cso",
+		"./Data/Shaders/WiredShapeRendererPS.cso",
 		wiredPixelShader.GetAddressOf());
 	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
 	hr = CreatePsFromCSO(
 		device,
-		"./Shader/SolidShapeRendererPS.cso",
+		"./Data/Shaders/SolidShapeRendererPS.cso",
 		solidPixelShader.GetAddressOf());
 	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 

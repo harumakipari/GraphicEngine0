@@ -1520,9 +1520,9 @@ void InterleavedGltfModel::CreateAndUploadResources(ID3D11Device* device)
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
-        hr = CreateVsFromCSO(device, "./Shader/GltfModelStaticBatchingVS.cso", vertexShader.ReleaseAndGetAddressOf(), inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
+        hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelStaticBatchingVS.cso", vertexShader.ReleaseAndGetAddressOf(), inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        hr = CreateVsFromCSO(device, "./Shader/GltfModelStaticBatchingCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
+        hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelStaticBatchingCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     }
@@ -1539,10 +1539,10 @@ void InterleavedGltfModel::CreateAndUploadResources(ID3D11Device* device)
             { "WEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "WEIGHTS", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
-        hr = CreateVsFromCSO(device, "./Shader/GltfModelVS.cso", vertexShader.ReleaseAndGetAddressOf(), inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
+        hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelVS.cso", vertexShader.ReleaseAndGetAddressOf(), inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        //hr = CreateVsFromCSO(device, "./Shader/GltfModelCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
-        hr = CreateVsFromCSO(device, "./Shader/ElasticBuildingCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
+        //hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
+        hr = CreateVsFromCSO(device, "./Data/Shaders/ElasticBuildingCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     }
@@ -1565,16 +1565,16 @@ void InterleavedGltfModel::CreateAndUploadResources(ID3D11Device* device)
 
 
         };
-        hr = CreateVsFromCSO(device, "./Shader/GltfModelInstancedBatchingVS.cso", vertexShader.ReleaseAndGetAddressOf(), inputLayout.ReleaseAndGetAddressOf(), instancedStaticMeshInputElementDesc, _countof(instancedStaticMeshInputElementDesc));
+        hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelInstancedBatchingVS.cso", vertexShader.ReleaseAndGetAddressOf(), inputLayout.ReleaseAndGetAddressOf(), instancedStaticMeshInputElementDesc, _countof(instancedStaticMeshInputElementDesc));
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        hr = CreateVsFromCSO(device, "./Shader/GltfModelInstancedBatchingCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
+        hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelInstancedBatchingCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 
-    hr = CreatePsFromCSO(device, "./Shader/GltfModelPS.cso", pixelShader.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPS.cso", pixelShader.ReleaseAndGetAddressOf());
     //hr = CreatePsFromCSO(device, "./Shader/GltfModelDeferredPS.cso", pixelShader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreateGsFromCSO(device, "./Shader/GltfModelCsmGS.cso", geometryShaderCSM.ReleaseAndGetAddressOf());
+    hr = CreateGsFromCSO(device, "./Data/Shaders/GltfModelCsmGS.cso", geometryShaderCSM.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
 

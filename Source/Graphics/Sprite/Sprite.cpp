@@ -54,11 +54,11 @@ Sprite::Sprite(ID3D11Device* device, const wchar_t* filename)
     };
 
     //頂点シェーダーオブジェクトを生成
-    hr = CreateVsFromCSO(device, "./Shader/sprite_vs.cso", vertex_shader.ReleaseAndGetAddressOf(), input_layout.ReleaseAndGetAddressOf(), input_element_desc, _countof(input_element_desc));
+    hr = CreateVsFromCSO(device, "./Data/Shaders/sprite_vs.cso", vertex_shader.ReleaseAndGetAddressOf(), input_layout.ReleaseAndGetAddressOf(), input_element_desc, _countof(input_element_desc));
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     //ピクセルシェーダーオブジェクトを生成
-    hr = CreatePsFromCSO(device, "./Shader/sprite_ps.cso", pixel_shader.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/sprite_ps.cso", pixel_shader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     //テクスチャのロード

@@ -176,11 +176,11 @@ public:
         desc.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         desc.rasterState = RASTERIZE_STATE::SOLID_CULL_BACK;
         desc.depthState = DEPTH_STATE::ZT_ON_ZW_ON;
-        hr = CreateVsFromCSO(device, "./Shader/GltfModelStaticBatchingVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
+        hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelStaticBatchingVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
 
         // StaticMesh forward Opaque 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
@@ -189,7 +189,7 @@ public:
 
         // StaticMesh deferred Opaque 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
@@ -198,7 +198,7 @@ public:
 
         // StaticMesh deferred Stage Blend 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
@@ -207,7 +207,7 @@ public:
 
         // StaticMesh forward Mask 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
@@ -216,7 +216,7 @@ public:
 
         // StaticMesh deferred Mask 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
@@ -225,7 +225,7 @@ public:
 
         // StaticMesh forward Blend 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
@@ -234,7 +234,7 @@ public:
 
         // StaticMesh deferred Blend 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
@@ -252,9 +252,9 @@ public:
         // StaticMesh Cascade ShadowMap 用
         {
             desc.pixelShader = nullptr;
-            hr = CreateVsFromCSO(device, "./Shader/GltfModelStaticBatchingCsmVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), NULL, NULL, 0);
+            hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelStaticBatchingCsmVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), NULL, NULL, 0);
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            hr = CreateGsFromCSO(device, "./Shader/GltfModelCsmGS.cso", desc.geometryShader.ReleaseAndGetAddressOf());
+            hr = CreateGsFromCSO(device, "./Data/Shaders/GltfModelCsmGS.cso", desc.geometryShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             desc.blendState = BLEND_STATE::NONE;
             AddPipeLineState("CascadeShadowMapStaticMesh", desc);
@@ -277,7 +277,7 @@ public:
             { "WEIGHTS", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
         desc.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        hr = CreateVsFromCSO(device, "./Shader/GltfModelVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
+        hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
         desc.rasterState = RASTERIZE_STATE::SOLID_CULL_NONE;
         desc.depthState = DEPTH_STATE::ZT_ON_ZW_ON;
@@ -300,23 +300,32 @@ public:
             { "WEIGHTS", 1, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
         desc.primitiveTopology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        hr = CreateVsFromCSO(device, "./Shader/GltfModelVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
+        hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
         desc.rasterState = RASTERIZE_STATE::SOLID_CULL_NONE;
         desc.depthState = DEPTH_STATE::ZT_ON_ZW_ON;
 
         // SkeletalMesh forward Opaque 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
             AddPipeLineState("forwardOpaqueSkeletalMesh", desc);
         }
 
+        // SkeletalMesh forward Opaque 用
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/DarkStagePlayerWeaponPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
+            AddPipeLineState("DarkStagePlayerWeaponPS", desc);
+        }
+
         // SkeletalMesh deferred Opaque 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
@@ -325,7 +334,7 @@ public:
 
         // StaticMesh deferred stage 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelFightStagePS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelFightStagePS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             AddPipeLineState("deferredFightStage", desc);
@@ -333,7 +342,7 @@ public:
 
         // SkeletalMesh forward Mask 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
@@ -342,7 +351,7 @@ public:
 
         // SkeletalMesh deferred Mask 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
@@ -351,7 +360,7 @@ public:
 
         // SkeletalMesh forward Blend 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
@@ -361,7 +370,7 @@ public:
 
         // SkeletalMesh deferred Blend 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
@@ -370,7 +379,7 @@ public:
 
         // ポイントライト 用　
         {
-            hr = CreatePsFromCSO(device, "./Shader/PointLightModelPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/PointLightModelPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
             AddPipeLineState("pointLightSkeletalMesh", desc);
@@ -378,7 +387,7 @@ public:
 
         // deferred キャラクターの髪の毛とかファー 用
         {
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelHairOrFurDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelHairOrFurDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             //desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
             AddPipeLineState("characterFurAndHairSkeletalMesh", desc);
@@ -386,9 +395,9 @@ public:
 
         // elasticBuilding forward Blend 用
         {
-            hr = CreateVsFromCSO(device, "./Shader/ElasticBuildsVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
+            hr = CreateVsFromCSO(device, "./Data/Shaders/ElasticBuildsVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
             AddPipeLineState("elasticBuildingForward", desc);
@@ -396,9 +405,9 @@ public:
 
         // elasticBuilding deferred Blend 用
         {
-            hr = CreateVsFromCSO(device, "./Shader/ElasticBuildsVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
+            hr = CreateVsFromCSO(device, "./Data/Shaders/ElasticBuildsVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), desc.inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            hr = CreatePsFromCSO(device, "./Shader/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
             desc.rasterState = RASTERIZE_STATE::SOLID_CULL_NONE;
@@ -408,9 +417,9 @@ public:
         // SkeletalMesh Cascade ShadowMap 用
         {
             desc.pixelShader = nullptr;
-            hr = CreateVsFromCSO(device, "./Shader/GltfModelCsmVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), NULL, NULL, 0);
+            hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelCsmVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), NULL, NULL, 0);
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            hr = CreateGsFromCSO(device, "./Shader/GltfModelCsmGS.cso", desc.geometryShader.ReleaseAndGetAddressOf());
+            hr = CreateGsFromCSO(device, "./Data/Shaders/GltfModelCsmGS.cso", desc.geometryShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             AddPipeLineState("CascadeShadowMapSkeletalMesh", desc);
         }
@@ -418,9 +427,9 @@ public:
         // ElasticBuilding Cascade ShadowMap 用
         {
             desc.pixelShader = nullptr;
-            hr = CreateVsFromCSO(device, "./Shader/ElasticBuildingCsmVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), NULL, NULL, 0);
+            hr = CreateVsFromCSO(device, "./Data/Shaders/ElasticBuildingCsmVS.cso", desc.vertexShader.ReleaseAndGetAddressOf(), NULL, NULL, 0);
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            hr = CreateGsFromCSO(device, "./Shader/GltfModelCsmGS.cso", desc.geometryShader.ReleaseAndGetAddressOf());
+            hr = CreateGsFromCSO(device, "./Data/Shaders/GltfModelCsmGS.cso", desc.geometryShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             AddPipeLineState("CascadeShadowMapElasticBuilding", desc);
         }

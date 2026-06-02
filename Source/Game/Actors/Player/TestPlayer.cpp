@@ -33,7 +33,7 @@ void TestPlayer::Initialize(const Transform& transform)
 	{
 		if (material.name == "MI_Aurora_Sword_FrozenHearth")
 		{// ”¯‚Ì–Ñ‚¾‚Á‚½‚ç
-			material.overridePipelineName = "characterFurAndHairSkeletalMesh";
+			material.overridePipelineName = "DarkStagePlayerWeaponPS";
 		}
 	}
 

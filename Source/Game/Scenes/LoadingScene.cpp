@@ -75,10 +75,10 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
 
         // GBUFFER
         gBufferRenderTarget = std::make_unique<decltype(gBufferRenderTarget)::element_type>(device, static_cast<uint32_t>(width), height);
-        hr = CreatePsFromCSO(device, "./Shader/DeferredLightingPS.cso", deferredPs.ReleaseAndGetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/DeferredLightingPS.cso", deferredPs.ReleaseAndGetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-        hr = CreatePsFromCSO(device, "./Shader/FinalPassPS.cso", finalPs.ReleaseAndGetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/FinalPassPS.cso", finalPs.ReleaseAndGetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
         // カスケードシャドウマップ

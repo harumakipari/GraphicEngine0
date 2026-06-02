@@ -21,12 +21,12 @@ void DepthOfFieldEffect::Initialize(ID3D11Device* device, uint32_t width, uint32
         gaussianBlur[downsampled_index][1] = std::make_unique<FrameBuffer>(device, width >> downsampled_index, height >> downsampled_index, false);
     }
 
-    HRESULT hr = CreatePsFromCSO(device, "./Shader/DepthOfFieldPS.cso", bokehPS.ReleaseAndGetAddressOf());
+    HRESULT hr = CreatePsFromCSO(device, "./Data/Shaders/DepthOfFieldPS.cso", bokehPS.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-    hr = CreatePsFromCSO(device, "./Shader/GaussianBlurHorizontalPS.cso", gaussianBlurHorizontalPs.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/GaussianBlurHorizontalPS.cso", gaussianBlurHorizontalPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "./Shader/GaussianBlurVerticalPS.cso", gaussianBlurVerticalPs.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/GaussianBlurVerticalPS.cso", gaussianBlurVerticalPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     D3D11_RASTERIZER_DESC rasterizerDesc{};

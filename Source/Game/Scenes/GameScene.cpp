@@ -93,7 +93,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     skyShaderConstantsBuffer = std::make_unique<ConstantBuffer<SkyShaderConstants>>(device);
     //HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Shader/DarkStageSkyPS.cso", darkStageSkyPS.GetAddressOf());
     //HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Shader/ShaderToySky2.cso", darkStageSkyPS.GetAddressOf());
-    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Shader/ShaderToySkyPS.cso", darkStageSkyPS.GetAddressOf());
+    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/ShaderToySkyPS.cso", darkStageSkyPS.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     RegisterRenderHook(RenderPass::Sky, [&](ID3D11DeviceContext* immediateContext)

@@ -53,11 +53,11 @@ SpriteBatch::SpriteBatch(ID3D11Device* device, const wchar_t* filename, size_t m
     };
 
     //頂点シェーダーオブジェクトを生成
-    hr = CreateVsFromCSO(device, "./Shader/sprite_vs.cso", &vertexShader, &inputLayout, input_element_desc, _countof(input_element_desc));
+    hr = CreateVsFromCSO(device, "./Data/Shaders/sprite_vs.cso", &vertexShader, &inputLayout, input_element_desc, _countof(input_element_desc));
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     //ピクセルシェーダーオブジェクトを生成
-    hr = CreatePsFromCSO(device, "./Shader/sprite_ps.cso", &pixelShader);
+    hr = CreatePsFromCSO(device, "./Data/Shaders/sprite_ps.cso", &pixelShader);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     //テクスチャのロード

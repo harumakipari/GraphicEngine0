@@ -13,7 +13,7 @@ PrimitiveRenderer::PrimitiveRenderer(ID3D11Device* device)
     // 頂点シェーダー
     HRESULT hr = CreateVsFromCSO(
         device,
-        "./Shader/PrimitiveRendererVS.cso",
+        "./Data/Shaders/PrimitiveRendererVS.cso",
         vertexShader.GetAddressOf(),
         inputLayout.GetAddressOf(),
         inputElementDesc,
@@ -24,7 +24,7 @@ PrimitiveRenderer::PrimitiveRenderer(ID3D11Device* device)
     // ピクセルシェーダー
     hr=CreatePsFromCSO(
         device,
-        "./Shader/PrimitiveRendererPS.cso",
+        "./Data/Shaders/PrimitiveRendererPS.cso",
         pixelShader.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 

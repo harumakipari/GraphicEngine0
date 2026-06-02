@@ -135,9 +135,9 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
-      <ObjectFileOutput>Shader/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>Data/Shaders/%(Filename).cso</ObjectFileOutput>
       <AssemblerOutput>AssemblyCode</AssemblerOutput>
-      <AssemblerOutputFile>Shader/%(Filename).cod</AssemblerOutputFile>
+      <AssemblerOutputFile>Data/Shaders/%(Filename).cod</AssemblerOutputFile>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -195,9 +195,9 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
-      <ObjectFileOutput>Shader/%(Filename).cso</ObjectFileOutput>
+      <ObjectFileOutput>Data/Shaders/%(Filename).cso</ObjectFileOutput>
       <AssemblerOutput>AssemblyCode</AssemblerOutput>
-      <AssemblerOutputFile>Shader/%(Filename).cod</AssemblerOutputFile>
+      <AssemblerOutputFile>Data/Shaders/%(Filename).cod</AssemblerOutputFile>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemGroup>

@@ -15,10 +15,10 @@ GeometricPrimitive::GeometricPrimitive()
         {"NORMAL",0,DXGI_FORMAT_R32G32B32_FLOAT,0, D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0},
     };
 
-    hr=CreateVsFromCSO(device, "./Shader/geometricPrimitiveVS.cso", vertexShader.GetAddressOf(),
+    hr=CreateVsFromCSO(device, "./Data/Shaders/geometricPrimitiveVS.cso", vertexShader.GetAddressOf(),
         inputLayout.GetAddressOf(), inputElementDesc, ARRAYSIZE(inputElementDesc));
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr=CreatePsFromCSO(device, "./Shader/geometricPrimitivePS.cso", pixelShader.GetAddressOf());
+    hr=CreatePsFromCSO(device, "./Data/Shaders/geometricPrimitivePS.cso", pixelShader.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     D3D11_BUFFER_DESC bufferDesc{};

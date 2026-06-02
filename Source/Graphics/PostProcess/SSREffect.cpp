@@ -14,7 +14,7 @@ void SSREffect::Initialize(ID3D11Device* device, uint32_t width, uint32_t height
     ssrBuffer = std::make_unique<FrameBuffer>(device, width / 2, height / 2, false);
     ssrCBuffer = std::make_unique<ConstantBuffer<SSRConstantBuffer>>(device);
 
-    HRESULT hr = CreatePsFromCSO(device, "./Shader/SSRPS.cso", ssrPS.ReleaseAndGetAddressOf());
+    HRESULT hr = CreatePsFromCSO(device, "./Data/Shaders/SSRPS.cso", ssrPS.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 

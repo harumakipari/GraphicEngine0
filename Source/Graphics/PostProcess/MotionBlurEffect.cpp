@@ -16,11 +16,11 @@ void MotionBlurEffect::Initialize(ID3D11Device* device, uint32_t width, uint32_t
     fullScreenQuad = std::make_unique<FullScreenQuad>(device);
     frameBuffer = std::make_unique<FrameBuffer>(device, width / 2, height / 2, false, DXGI_FORMAT_R16_FLOAT);
     //	モーションブラーシェーダー
-    HRESULT hr = CreatePsFromCSO(device, "./Shader/MotionBlurPS.cso", motion_blur_pixel_shader.ReleaseAndGetAddressOf());
+    HRESULT hr = CreatePsFromCSO(device, "./Data/Shaders/MotionBlurPS.cso", motion_blur_pixel_shader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "./Shader/VelocityTileMaxPS.cso", reconstract_velocity_buffer_ps[0].GetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/VelocityTileMaxPS.cso", reconstract_velocity_buffer_ps[0].GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "./Shader/VelocityNeighborMaxPS.cso", reconstract_velocity_buffer_ps[1].GetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/VelocityNeighborMaxPS.cso", reconstract_velocity_buffer_ps[1].GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     //	ブラー用速度バッファを生成

@@ -24,9 +24,9 @@ void ShapeRenderer::Initialize(ID3D11Device* device)
     {
         {"POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,D3D11_APPEND_ALIGNED_ELEMENT,D3D11_INPUT_PER_VERTEX_DATA,0},
     };
-    hr = CreateVsFromCSO(device, "./Shader/LineSegmentVS.cso", vertexShader.GetAddressOf(), inputLayout.GetAddressOf(), inputElementDesc, ARRAYSIZE(inputElementDesc));
+    hr = CreateVsFromCSO(device, "./Data/Shaders/LineSegmentVS.cso", vertexShader.GetAddressOf(), inputLayout.GetAddressOf(), inputElementDesc, ARRAYSIZE(inputElementDesc));
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "./Shader/LineSegmentPS.cso", pixelShader.GetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/LineSegmentPS.cso", pixelShader.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     sphere = std::make_unique<InterleavedGltfModel>(device, "./Data/Models/Primitives/sphere.glb", ModelTypes::ModelMode::SkeletalMesh);
@@ -47,32 +47,32 @@ void ShapeRenderer::Initialize(ID3D11Device* device)
     //デバック用のPSに変更する
     for (InterleavedGltfModel::Material& material : sphereMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Shader/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : capsuleMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Shader/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : topHalfSphereMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Shader/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : bottomHalfSphereMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Shader/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : cylinderMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Shader/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : cubeMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Shader/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 

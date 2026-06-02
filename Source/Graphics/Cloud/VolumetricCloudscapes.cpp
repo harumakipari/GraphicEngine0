@@ -55,7 +55,7 @@ void VolumetricCloudscapes::CreateNoiseTexture(ID3D11Device* device)
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
         Microsoft::WRL::ComPtr<ID3D11ComputeShader> lowFreqPerlinWorleyCS;
-        hr=CreateCsFromCSO(device, "./Shader/LowFreqPerlinWorleyCS.cso", lowFreqPerlinWorleyCS.GetAddressOf());
+        hr=CreateCsFromCSO(device, "./Data/Shaders/LowFreqPerlinWorleyCS.cso", lowFreqPerlinWorleyCS.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
         immediateContext->CSSetUnorderedAccessViews(0, 1, lowFreqPerlinWorleyUnorderedAccessView.GetAddressOf(), NULL);
         immediateContext->CSSetShader(lowFreqPerlinWorleyCS.Get(), NULL, 0);
@@ -110,7 +110,7 @@ void VolumetricCloudscapes::CreateNoiseTexture(ID3D11Device* device)
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
         Microsoft::WRL::ComPtr<ID3D11ComputeShader> highFreqWorleyCS;
-        hr=CreateCsFromCSO(device, "./Shader/LowFreqPerlinWorleyCS.cso", highFreqWorleyCS.GetAddressOf());
+        hr=CreateCsFromCSO(device, "./Data/Shaders/LowFreqPerlinWorleyCS.cso", highFreqWorleyCS.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
         immediateContext->CSSetUnorderedAccessViews(0, 1, highFreqWorleyUnorderdAccessView.GetAddressOf(), NULL);
         immediateContext->CSSetShader(highFreqWorleyCS.Get(), NULL, 0);
@@ -176,7 +176,7 @@ VolumetricCloudscapes::VolumetricCloudscapes(ID3D11Device* device, const wchar_t
     hr=LoadTextureFromFile(device, L"./Assets/Environment/VolumetricCloudscapes/gradient_cumulonimbus.png", gradientCumulonimbusShaderResouceView.GetAddressOf(), NULL);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 #endif
-    hr=CreatePsFromCSO(device, "./Shader/VolumetricCloudscapesPS.cso", volumetricCloudscapesPS.GetAddressOf());
+    hr=CreatePsFromCSO(device, "./Data/Shaders/VolumetricCloudscapesPS.cso", volumetricCloudscapesPS.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     fullscreenQuad = std::make_unique<decltype(fullscreenQuad)::element_type>(device);

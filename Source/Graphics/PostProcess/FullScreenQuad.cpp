@@ -8,10 +8,10 @@
 FullScreenQuad::FullScreenQuad(ID3D11Device* device)
 {
     HRESULT hr{ S_OK };
-    hr = CreateVsFromCSO(device, "./Shader/FullScreenQuadVS.cso", embeddedVertexShader.ReleaseAndGetAddressOf(),
+    hr = CreateVsFromCSO(device, "./Data/Shaders/FullScreenQuadVS.cso", embeddedVertexShader.ReleaseAndGetAddressOf(),
         nullptr, nullptr, 0);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "./Shader/FullScreenQuadPS.cso", embeddedPixelShader.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/FullScreenQuadPS.cso", embeddedPixelShader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 

@@ -49,7 +49,7 @@ public:
         pipeLineStateSet->InitStaticMesh(Graphics::GetDevice());
         pipeLineStateSet->InitSkeletalMesh(Graphics::GetDevice());
         
-        HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Shader/InstancePointLightModelPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+        HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/InstancePointLightModelPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 
