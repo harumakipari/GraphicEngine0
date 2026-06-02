@@ -34,12 +34,12 @@
 *.a
 *.lib
 
+
 # Executables
 *.exe
 *.out
 *.app
-*.cod
-*.cso
+
 
 # Build directories
 build/
@@ -78,3 +78,8 @@ Data/Models/Characters/
 Data/Models/Flag/
 .vs/
 3dgp/
+git status
+*.cod
+*.cso
+Data/Log/
+x64/

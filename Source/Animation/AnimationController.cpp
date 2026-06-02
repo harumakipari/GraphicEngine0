@@ -20,7 +20,7 @@ void AnimationController::OnUpdate(const float deltaTime)
     switch (transitionState)
     {
     case AnimationTransitionState::NotStarted:
-        target_->model->Animate(animationClip, animationTime, animationNodes[Origin]);
+        //target_->model->Animate(animationClip, animationTime, animationNodes[Origin]);
         target_->model->Animate(this->animationNextClip, 0.0f, animationNodes[Next]);
         blendElapsedTime = 0.0f;
         animationTime = 0.0f;
@@ -215,6 +215,9 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
     if (isBlend)
     {
         isBlendingAnimation = true;
+
+        animationNodes[Origin] = finalNodes;
+
         transitionState = AnimationController::AnimationTransitionState::NotStarted;
     }
     else
