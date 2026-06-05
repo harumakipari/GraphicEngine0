@@ -1,11 +1,11 @@
 #include "pch.h"
-#include "CoreAudioSourceComponent.h"
+#include "AudioSourceComponent.h"
 #include "Graphics/Core/Graphics.h"
 
 #include <x3daudio.h>
 #include <imgui.h>
 
-void CoreAudioSourceComponent::SetSource(const std::wstring& filePath)
+void AudioSourceComponent::SetSource(const std::wstring& filePath)
 {
     // 再生中なら停止
     Stop();
@@ -14,18 +14,18 @@ void CoreAudioSourceComponent::SetSource(const std::wstring& filePath)
         sourceVoice->DestroyVoice();
     }
     // ファイルパスに "BGM" が含まれていれば BGM、含まれていなければ SE として扱う
-    this->type = std::wstring(filePath).find(L"BGM") != std::wstring::npos ? CoreSoundType::BGM : CoreSoundType::SE;
+    this->soundType = std::wstring(filePath).find(L"BGM") != std::wstring::npos ? CoreSoundType::BGM : CoreSoundType::SE;
     // ファイルパスを保存
-    this->filePath = filePath;
+    this->sourceFilePath = filePath;
     // ループ設定
-    this->loop = (this->type == CoreSoundType::BGM) ? true : false;
+    this->isLooping = (this->soundType == CoreSoundType::BGM) ? true : false;
     // オーディオバッファを取得
     m_SptrBuffer = CoreAudio::CoreAudioBuffer::GetResource(filePath);
     // ソースボイスを作成
-    CoreAudio::CreateAudioSource(m_SptrBuffer, &sourceVoice, type);
+    CoreAudio::CreateAudioSource(m_SptrBuffer, &sourceVoice, soundType);
 }
 
-CoreAudioSourceComponent::~CoreAudioSourceComponent()
+AudioSourceComponent::~AudioSourceComponent()
 {
     Stop();
     if (sourceVoice)
@@ -34,7 +34,7 @@ CoreAudioSourceComponent::~CoreAudioSourceComponent()
     }
 }
 
-void CoreAudioSourceComponent::Tick(float deltaTime)
+void AudioSourceComponent::Tick(float deltaTime)
 {
     //バッファやソースボイスが設定されていなければ何もしない
     if (!m_SptrBuffer || !sourceVoice)
@@ -74,7 +74,7 @@ void CoreAudioSourceComponent::Tick(float deltaTime)
 #endif // X3DAUDIO
 }
 
-void CoreAudioSourceComponent::Play()
+void AudioSourceComponent::Play()
 {
     //バッファやソースボイスが設定されていなければ何もしない
     if (!m_SptrBuffer || !sourceVoice)
@@ -99,7 +99,7 @@ void CoreAudioSourceComponent::Play()
 
     // バッファをソースボイスにセット
     XAUDIO2_BUFFER* pBuffer = &m_SptrBuffer->buffer;
-    pBuffer->LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
+    pBuffer->LoopCount = isLooping ? XAUDIO2_LOOP_INFINITE : 0;
     hr = sourceVoice->SubmitSourceBuffer(pBuffer);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
@@ -108,7 +108,7 @@ void CoreAudioSourceComponent::Play()
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
-void CoreAudioSourceComponent::Stop(bool playTails)
+void AudioSourceComponent::Stop(bool playTails)
 {
     //バッファやソースボイスが設定されていなければ何もしない
     if (!m_SptrBuffer || !sourceVoice)
@@ -138,7 +138,7 @@ void CoreAudioSourceComponent::Stop(bool playTails)
 
 }
 
-void CoreAudioSourceComponent::Pause()
+void AudioSourceComponent::Pause()
 {
     //バッファやソースボイスが設定されていなければ何もしない
     if (!m_SptrBuffer || !sourceVoice)
@@ -149,7 +149,7 @@ void CoreAudioSourceComponent::Pause()
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
-void CoreAudioSourceComponent::Resume()
+void AudioSourceComponent::Resume()
 {
     //バッファやソースボイスが設定されていなければ何もしない
     if (!m_SptrBuffer || !sourceVoice)
@@ -160,7 +160,7 @@ void CoreAudioSourceComponent::Resume()
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
-void CoreAudioSourceComponent::SetVolume(float volume)
+void AudioSourceComponent::SetVolume(float volume)
 {
     //バッファやソースボイスが設定されていなければ何もしない
     if (!m_SptrBuffer || !sourceVoice)
@@ -171,52 +171,35 @@ void CoreAudioSourceComponent::SetVolume(float volume)
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
-void CoreAudioSourceComponent::GetVolume(float& volume)
+float AudioSourceComponent::GetVolume() const
 {
     //バッファやソースボイスが設定されていなければ何もしない
     if (!m_SptrBuffer || !sourceVoice)
     {
-        volume = 0.0f;
-        return;
+        return  0.0f;
+
     }
+    float volume = 0.0f;
     sourceVoice->GetVolume(&volume);
+    return volume;
 }
 
 
-bool CoreAudioSourceComponent::IsPlaying()
+bool AudioSourceComponent::IsPlaying() const
 {
     XAUDIO2_VOICE_STATE voiceState{};
     sourceVoice->GetState(&voiceState);
     return voiceState.BuffersQueued > 0;
 }
 
-void CoreAudioSourceComponent::SetPan(float pan)
+void AudioSourceComponent::SetPan(float pan)
 {
-    m_Pan = std::clamp(pan, -1.0f, 1.0f);
+    this->pan = std::clamp(pan, -1.0f, 1.0f);
 
-#if 0
-    // TODO:変化無し
-    float angle = (m_Pan + 1.0f) * (XM_PI / 4.0f); // -1.0 ～ 1.0 を 0 ～ π/2 に変換
-    //float left = cosf(angle);
-    //float right = sinf(angle);
-
-    // 入力がステレオなら左と右を平均化してパンを適用
-    float leftInputGain = cosf(angle);
-    float rightInputGain = sinf(angle);
-
-    // 左入力を左/右に割り振る
-    // 右入力を左/右に割り振る
-    float matrix[4] = {
-        leftInputGain, rightInputGain,  // 左入力
-        leftInputGain, rightInputGain   // 右入力
-    };
-    sourceVoice->SetOutputMatrix(nullptr, 2, 2, matrix);
-
-#else
     // TODO:何故か完全に左に寄ってしまう
     float outputMatrix[8] = {};
-    float left = 1.0f - (m_Pan * 0.5f + 0.5f);
-    float right = m_Pan * 0.5f + 0.5f;
+    float left = 1.0f - (this->pan * 0.5f + 0.5f);
+    float right = this->pan * 0.5f + 0.5f;
 
     DWORD channelMask;
     CoreAudio::masterVoice->GetChannelMask(&channelMask);
@@ -310,16 +293,15 @@ void CoreAudioSourceComponent::SetPan(float pan)
     CoreAudio::masterVoice->GetVoiceDetails(&masterVoiceDetails);
 
     XAUDIO2_VOICE_DETAILS subVoiceDetails;
-    CoreAudio::submixVoices[type]->GetVoiceDetails(&subVoiceDetails);
+    CoreAudio::submixVoices[soundType]->GetVoiceDetails(&subVoiceDetails);
 
 
     HRESULT hr = sourceVoice->SetOutputMatrix(NULL, voiceDetails.InputChannels, subVoiceDetails.InputChannels, outputMatrix);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-#endif // 0
 
 }
 
-void CoreAudioSourceComponent::SetLoopOption(float begin, float length)
+void AudioSourceComponent::SetLoopRange(float begin, float length)
 {
     //バッファやソースボイスが設定されていなければ何もしない
     if (!m_SptrBuffer || !sourceVoice)
@@ -350,7 +332,7 @@ void CoreAudioSourceComponent::SetLoopOption(float begin, float length)
     pBuffer->LoopLength = loopLength;
 }
 
-float CoreAudioSourceComponent::GetPlaybackTime() const
+float AudioSourceComponent::GetPlaybackTime() const
 {
     //バッファやソースボイスが設定されていなければ 0 を返す
     if (!m_SptrBuffer || !sourceVoice)
@@ -365,7 +347,7 @@ float CoreAudioSourceComponent::GetPlaybackTime() const
     return playbackTime;
 }
 
-float CoreAudioSourceComponent::GetPlaybackDeltaTime()
+float AudioSourceComponent::GetPlaybackDeltaTime()
 {
     //バッファやソースボイスが設定されていなければ 0 を返す
     if (!m_SptrBuffer || !sourceVoice)
@@ -384,7 +366,7 @@ float CoreAudioSourceComponent::GetPlaybackDeltaTime()
 }
 
 
-uint32_t CoreAudioSourceComponent::GetBufferQueueCount()
+uint32_t AudioSourceComponent::GetBufferQueueCount()
 {
     //バッファやソースボイスが設定されていなければ 0 を返す
     if (!m_SptrBuffer || !sourceVoice)
@@ -396,7 +378,7 @@ uint32_t CoreAudioSourceComponent::GetBufferQueueCount()
     return voiceState.BuffersQueued;
 }
 
-float CoreAudioSourceComponent::GetTotalDuration() const
+float AudioSourceComponent::GetTotalDuration() const
 {
     // バッファが設定されていなければ 0 を返す
     if (!m_SptrBuffer)
@@ -406,29 +388,29 @@ float CoreAudioSourceComponent::GetTotalDuration() const
     return m_SptrBuffer->GetDuration();
 }
 
-void CoreAudioSourceComponent::SetPitch(float pitch)
+void AudioSourceComponent::SetPitch(const float pitch)
 {
     if (!sourceVoice)
     {
         return;
     }
 
-    m_Pitch = std::clamp(pitch, 0.1f, XAUDIO2_MAX_FREQ_RATIO);
+    this->pitch = std::clamp(pitch, 0.1f, XAUDIO2_MAX_FREQ_RATIO);
 
-    HRESULT hr = sourceVoice->SetFrequencyRatio(m_Pitch);
+    HRESULT hr = sourceVoice->SetFrequencyRatio(this->pitch);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
 
 
-void CoreAudioSourceComponent::DrawImGuiInspector()
+void AudioSourceComponent::DrawImGuiInspector()
 {
 #ifdef USE_IMGUI
     ImGui::PushID(this);
 
     ImGui::SameLine();
     // 現在のファイルパスを表示
-    std::wstring path = filePath.empty() ? L"No file" : filePath;
+    std::wstring path = sourceFilePath.empty() ? L"No file" : sourceFilePath;
     std::string pathUtf8 = WStringToUTF8(path);
     ImGui::Text("%s", pathUtf8.c_str());
     // ソースボイスが設定されていなければ何もしない
@@ -440,9 +422,9 @@ void CoreAudioSourceComponent::DrawImGuiInspector()
             ImGui::Checkbox("3D Audio", &use3DAudio);
 
             // パン設定
-            if (ImGui::SliderFloat("Pan", &m_Pan, -1.0f, 1.0f))
+            if (ImGui::SliderFloat("Pan", &pan, -1.0f, 1.0f))
             {
-                SetPan(m_Pan);
+                SetPan(pan);
             }
         }
 
@@ -462,7 +444,7 @@ void CoreAudioSourceComponent::DrawImGuiInspector()
 #endif // 0
 
         // ループ有無
-        ImGui::Checkbox("Loop", &loop);
+        ImGui::Checkbox("Loop", &isLooping);
 
 
         // 再生・停止ボタン
@@ -480,9 +462,9 @@ void CoreAudioSourceComponent::DrawImGuiInspector()
             sourceVoice->SetVolume(volume);
         }
     }
-    if (ImGui::SliderFloat("Pitch", &m_Pitch, 0.5f, 2.0f))
+    if (ImGui::SliderFloat("Pitch", &pitch, 0.5f, 2.0f))
     {
-        SetPitch(m_Pitch);
+        SetPitch(pitch);
     }
 
     ImGui::Separator();

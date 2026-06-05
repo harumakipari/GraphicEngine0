@@ -5,7 +5,7 @@
 #include "Engine/Debug/Assert.h"
 #include "Graphics/Core/Graphics.h"
 #include "Engine/Utility/JsonFileHandler.h"
-#include "Widgets/Utils/Dialog.h"
+#include "Engine/Utility/Dialog.h"
 #include "Engine/Utility/JsonUtils.h"
 #include "Graphics/Resource/Texture.h"
 #include "Math/MathHelper.h"

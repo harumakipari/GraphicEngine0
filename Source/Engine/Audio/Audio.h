@@ -1,71 +1,238 @@
 #pragma once
-
+#include <map>
 #include <xaudio2.h>
-#include <wrl.h>
-
 #include <mmreg.h>
-#include <memory>
+
+#include <wrl.h>
+#include <cstdint>
 
 #include "Engine/Utility/Win32Utils.h"
 
-class AudioDevice
+/**
+ * @file
+ * @brief オーディオ（BGM/SE）の再生・管理を行うユーティリティ。
+ * @details XAudio2 を用いた初期化、マスター/サブミックスの音量制御、ワンショット再生、
+ *          オーディオソースの寿命管理などを提供します。
+ */
+
+ /**
+  * @brief サウンド種別。
+  */
+enum CoreSoundType :uint8_t
+{
+	BGM,       //!< 楽曲（BGM）
+	SE,        //!< 効果音（SE）
+	EnumCount  //!< 列挙数
+};
+class CoreStandaloneAudioSource;
+
+/**
+ * @brief オーディオ再生の中核クラス（静的ユーティリティ）。
+ */
+class CoreAudio
 {
 public:
-	static IXAudio2* xaudio2;
-	static IXAudio2MasteringVoice* masterVoice;
-
-	static bool Initialize()
+	/**
+	 * @brief 読み込み済みの音声データを保持するバッファ。
+	 * @details WaveFormat と XAudio2 のバッファをまとめて管理します。
+	 */
+	class CoreAudioBuffer
 	{
-		HRESULT hr = S_OK;
+	public:
+		CoreAudioBuffer() = default;
+		~CoreAudioBuffer() {
+			delete[] buffer.pAudioData;
+		}
 
-		hr = XAudio2Create(&xaudio2, 0, XAUDIO2_DEFAULT_PROCESSOR);
-		_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+		WAVEFORMATEXTENSIBLE wfx = { 0 }; //!< フォーマット情報
+		XAUDIO2_BUFFER buffer = { 0 };    //!< XAudio2 再生用バッファ
 
-		hr = xaudio2->CreateMasteringVoice(&masterVoice);
-		_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+		/**
+		 * @brief オーディオの総再生時間を取得します。
+		 * @return 再生時間（秒）。
+		 */
+		float GetDuration() const;
+	public:
+		/**
+		 * @brief オーディオリソースを取得（共有）。
+		 * @param filePath 読み込む音声ファイルパス。
+		 * @return 読み込み済み/新規読み込みされた `AudioBuffer` の共有ポインタ。
+		 */
+		static std::shared_ptr<CoreAudioBuffer> GetResource(const std::wstring& filePath);
+	private:
+		friend class Audio;
+		/**
+		 * @brief 参照済みリソースの弱参照キャッシュ。
+		 * @note キーが `const wchar_t*` のため、同一パスでもポインタ値が異なると別キーとなります。
+		 */
+		static inline std::map<std::wstring, std::weak_ptr<CoreAudioBuffer>> resources;
+	};
 
-		return hr == S_OK;
-	}
-	static void Uninitialize()
+	/** @brief 初期化処理（XAudio2 のセットアップ）。*/
+	static void Initialize();
+
+	/** @brief マスターボリューム設定。*/
+	static void SetMasterVolume(float volume) { masterVoice->SetVolume(volume); }
+
+	/** @brief マスターボリューム取得。*/
+	static void GetMasterVolume(float& volume) { masterVoice->GetVolume(&volume); }
+
+	/** @brief BGM 全体のボリューム設定。*/
+	static void SetBgmVolume(float volume) { submixVoices[BGM]->SetVolume(volume); }
+
+	/** @brief BGM 全体のボリューム取得。*/
+	static void GetBgmVolume(float& volume) { submixVoices[BGM]->GetVolume(&volume); }
+
+	/** @brief SE 全体のボリューム設定。*/
+	static void SetSeVolume(float volume) { submixVoices[SE]->SetVolume(volume); }
+
+	/** @brief SE 全体のボリューム取得。*/
+	static void GetSeVolume(float& volume) { submixVoices[SE]->GetVolume(&volume); }
+
+	/** @brief デストラクタ。リソースを解放します。*/
+	virtual ~CoreAudio();
+
+    // システム全体のミュート設定（緊急で追加）
+	static void SetMutedBySystem(bool enabled)
 	{
-		masterVoice->DestroyVoice();
-		xaudio2->Release();
+		isMutedBySystem = enabled;
+		if (isMutedBySystem)
+		{
+			Logger::Log(U8("音声を無効化した"));
+		}
+		else
+		{
+			Logger::Log(U8("音声を有効化した"));
+		}
 	}
-};
 
-class AudioSourceVoice;
-class AudioBuffer
-{
-	WAVEFORMATEXTENSIBLE wfx_ = { 0 };
-	XAUDIO2_BUFFER buffer_ = { 0 };
+	static bool GetMutedBySystem()
+	{
+		return isMutedBySystem;
+	}
+
+    // システム全体のミュート設定（緊急で追加）
+	static void SetSystemPaused(bool enabled)
+	{
+		isSystemPaused = enabled;
+		if (isSystemPaused)
+		{
+			Logger::Log(U8("ポーズのため音声を無効化した"));
+		}
+		else
+		{
+			Logger::Log(U8("ポーズのため音声を有効化した"));
+		}
+	}
+
+	static bool GetSystemPaused()
+	{
+		return isSystemPaused;
+	}
+
 public:
-	AudioBuffer(const wchar_t* filename);
-	virtual ~AudioBuffer();
-	AudioBuffer(const AudioBuffer& rhs) = delete;
-	AudioBuffer& operator=(const AudioBuffer& rhs) = delete;
-	AudioBuffer(AudioBuffer&&) noexcept = delete;
-	AudioBuffer& operator=(AudioBuffer&&) noexcept = delete;
 
-	friend class AudioSourceVoice;
+	/**
+	 * @brief 単発の効果音（または BGM）を再生します。
+	 * @param filePath 音声ファイルパス。
+	 * @param volume 再生音量（0-1 目安）。
+	 */
+	static void PlayOneShot(const wchar_t* filePath, float volume = 1.0f);
+
+	/**
+	 * @brief フレーム更新。
+	 * @param deltaTime 経過時間（秒）。
+	 * @details 再生完了した一時ソースの破棄などを行います。
+	 */
+	static void Update(float deltaTime);
+	/**
+	 * @brief すべての一時ソースを破棄します。
+	 */
+	static void ClearAll() {
+		audioSources.clear();
+		erases.clear();
+	}
+
+
+private:
+	/** @brief アクティブな一時ソース群。*/
+	static inline std::vector<std::shared_ptr<CoreStandaloneAudioSource>> audioSources;
+	/** @brief 破棄予定の一時ソース群。*/
+	static inline std::vector<std::shared_ptr<CoreStandaloneAudioSource>> erases;
+
+	static inline bool isMutedBySystem = false;	// 緊急で追加
+	static inline bool isSystemPaused = false;	// 緊急で追加
+
+private:
+	friend class AudioSourceComponent;
+	friend class CoreStandaloneAudioSource;
+	/**
+	 * @brief XAudio2 のソースボイスを作成します。
+	 * @param buffer 再生元のオーディオバッファ。
+	 * @param sourceVoice 生成結果の出力先。
+	 * @param type サウンド種別（BGM/SE）。
+	 */
+	static void CreateAudioSource(std::shared_ptr<CoreAudioBuffer> buffer, IXAudio2SourceVoice** sourceVoice, CoreSoundType type);
+
+private:
+	//#ifdef X3DAUDIO
+	//	/** @brief X3DAudio のハンドル。*/
+	//	static inline BYTE x3dAudioHandle;
+	//#endif // X3DAUDIO
+private:
+	friend class AudioListener;
+	friend class C3DAudio;
+	/** @brief XAudio2 インスタンス。*/
+	static inline Microsoft::WRL::ComPtr<IXAudio2> xaudio2;
+	/** @brief マスターボイス。*/
+	static inline IXAudio2MasteringVoice* masterVoice = nullptr;
+	/** @brief サブミックスボイス（BGM/SE）。*/
+	static inline IXAudio2SubmixVoice* submixVoices[CoreSoundType::EnumCount];
 };
 
-class AudioSourceVoice
+/**
+ * @brief 単体で動作する簡易オーディオソース。
+ * @details ファイルを指定して再生・停止・音量操作を行います。
+ */
+class CoreStandaloneAudioSource
 {
-	IXAudio2SourceVoice* sourceVoice_;
-	std::shared_ptr<AudioBuffer> audioBuffer_;
-
 public:
-	AudioSourceVoice(std::shared_ptr<AudioBuffer>& audio_buffer);
-	virtual ~AudioSourceVoice();
-	AudioSourceVoice(const AudioSourceVoice& rhs) = delete;
-	AudioSourceVoice& operator=(const AudioSourceVoice& rhs) = delete;
-	AudioSourceVoice(AudioSourceVoice&&) noexcept = delete;
-	AudioSourceVoice& operator=(AudioSourceVoice&&) noexcept = delete;
+	/**
+	 * @brief コンストラクタ。
+	 * @param filePath 音声ファイルパス。
+	 */
+	CoreStandaloneAudioSource(const wchar_t* filePath);
+	/** @brief デストラクタ。*/
+	~CoreStandaloneAudioSource();
 
-	void Play(int loop_count = 0/*255 : XAUDIO2_LOOP_INFINITE*/);
-	void Stop(bool play_tails = true);
-	void Volume(float volume);
-	void Pan(float pan_value/*pan_value of -1.0 indicates all left speaker, 1.0 is all right speaker, 0.0 is split between left and right*/);
-	bool Queuing();
+	/** @brief 再生を開始します。*/
+	void Play(bool loop = false);
+	/** @brief 再生を停止します。*/
+	void Stop(bool playTails = true);
+	/** @brief 音量を設定します。*/
+	void SetVolume(float volume);
+	/** @brief 現在の音量を取得します。*/
+	float GetVolume();
+
+	/** @brief 再生中かを返します。*/
+	bool IsPlaying();
+
+	/** @brief デバッグ GUI 描画。*/
+	void DrawGUI();
+
+private:
+	/** @brief サウンド種別。*/
+	CoreSoundType type;
+
+	/** @brief 再生対象のオーディオバッファ。*/
+	std::shared_ptr<CoreAudio::CoreAudioBuffer> sptrBuffer;
+	/** @brief XAudio2 のソースボイス。*/
+	IXAudio2SourceVoice* sourceVoice;
+
+	/** @brief マスター音量。*/
+	static inline float masterVolume = 1.0f;
+	/** @brief BGM 音量。*/
+	static inline float bgmVolume = 1.0f;
+	/** @brief SE 音量。*/
+	static inline float seVolume = 1.0f;
 };
-

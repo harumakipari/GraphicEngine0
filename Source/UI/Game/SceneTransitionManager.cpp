@@ -2,7 +2,7 @@
 #include "SceneTransitionManager.h"
 
 #include "TransitionEffect.h"
-#include "Engine/Audio/CoreAudio.h"
+#include "Engine/Audio/Audio.h"
 #include "Engine/Scene/Scene.h"
 
 

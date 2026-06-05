@@ -254,7 +254,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\Animation\AnimationController.cpp" />
-    <ClCompile Include="Source\Components\Audio\CoreAudioSourceComponent.cpp" />
+    <ClCompile Include="Source\Components\Audio\AudioSourceComponent.cpp" />
     <ClCompile Include="Source\Components\Base\Component.cpp" />
     <ClCompile Include="Source\Components\Base\SceneComponent.cpp" />
     <ClCompile Include="Source\Components\Camera\CameraComponent.cpp" />
@@ -274,7 +274,6 @@
     <ClCompile Include="Source\Core\Vector.cpp" />
     <ClCompile Include="Source\Core\World.cpp" />
     <ClCompile Include="Source\Engine\Audio\Audio.cpp" />
-    <ClCompile Include="Source\Engine\Audio\CoreAudio.cpp" />
     <ClCompile Include="Source\Engine\Camera\CameraManager.cpp" />
     <ClCompile Include="Source\Engine\Debug\DebugRender.cpp" />
     <ClCompile Include="Source\Engine\Debug\EditorGizmo.cpp" />
@@ -290,10 +289,9 @@
     <ClCompile Include="Source\Engine\Resources\ResourceManager.cpp" />
     <ClCompile Include="Source\Engine\Scene\Scene.cpp" />
     <ClCompile Include="Source\Engine\Scene\SceneBase.cpp" />
+    <ClCompile Include="Source\Engine\Utility\Dialog.cpp" />
     <ClCompile Include="Source\Engine\Utility\Time.cpp" />
     <ClCompile Include="Source\Game\Actors\Camera\Camera.cpp" />
-    <ClCompile Include="Source\Game\Actors\Dessert\Cherry.cpp" />
-    <ClCompile Include="Source\Game\Actors\Dessert\TargetPudding.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossEnemy.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\TestPlayer.cpp" />
@@ -360,7 +358,6 @@
     <ClCompile Include="Source\UI\Game\TransitionEffect.cpp" />
     <ClCompile Include="Source\UI\UIManager.cpp" />
     <ClCompile Include="Source\UI\Widgets\Widget.cpp" />
-    <ClCompile Include="Source\Widgets\Utils\Dialog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\imconfig.h" />
@@ -377,7 +374,7 @@
     <ClInclude Include="External\imgui\profiler.h" />
     <ClInclude Include="External\imgui\timer.h" />
     <ClInclude Include="Source\Animation\AnimationController.h" />
-    <ClInclude Include="Source\Components\Audio\CoreAudioSourceComponent.h" />
+    <ClInclude Include="Source\Components\Audio\AudioSourceComponent.h" />
     <ClInclude Include="Source\Components\Base\Component.h" />
     <ClInclude Include="Source\Components\Base\SceneComponent.h" />
     <ClInclude Include="Source\Components\Camera\CameraComponent.h" />
@@ -399,7 +396,6 @@
     <ClInclude Include="Source\Core\Vector.h" />
     <ClInclude Include="Source\Core\World.h" />
     <ClInclude Include="Source\Engine\Audio\Audio.h" />
-    <ClInclude Include="Source\Engine\Audio\CoreAudio.h" />
     <ClInclude Include="Source\Engine\Camera\CameraConstants.h" />
     <ClInclude Include="Source\Engine\Camera\CameraManager.h" />
     <ClInclude Include="Source\Engine\Camera\MovieManager.h" />
@@ -428,16 +424,15 @@
     <ClInclude Include="Source\Engine\Scene\SceneSetting.h" />
     <ClInclude Include="Source\Engine\Scene\SceneState.h" />
     <ClInclude Include="Source\Engine\Serialization\DirectXSerializers.h" />
+    <ClInclude Include="Source\Engine\Utility\Dialog.h" />
     <ClInclude Include="Source\Engine\Utility\JsonFileHandler.h" />
     <ClInclude Include="Source\Engine\Utility\JsonUtils.h" />
+    <ClInclude Include="Source\Engine\Utility\stdUtiles.h" />
     <ClInclude Include="Source\Engine\Utility\Time.h" />
     <ClInclude Include="Source\Engine\Utility\Win32Utils.h" />
     <ClInclude Include="Source\Game\Actors\Base\Character.h" />
     <ClInclude Include="Source\Game\Actors\Camera\Camera.h" />
     <ClInclude Include="Source\Game\Actors\Camera\LoadingCamera.h" />
-    <ClInclude Include="Source\Game\Actors\Dessert\Cherry.h" />
-    <ClInclude Include="Source\Game\Actors\Dessert\Pudding.h" />
-    <ClInclude Include="Source\Game\Actors\Dessert\TargetPudding.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossEnemy.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossState.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Enemy.h" />
@@ -533,8 +528,6 @@
     <ClInclude Include="Source\UI\UIManager.h" />
     <ClInclude Include="Source\UI\Widgets\Widget.h" />
     <ClInclude Include="Source\Utility\GameUtility.h" />
-    <ClInclude Include="Source\Widgets\Utils\Dialog.h" />
-    <ClInclude Include="Source\Widgets\Utils\stdUtiles.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">

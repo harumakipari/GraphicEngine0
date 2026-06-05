@@ -13,7 +13,7 @@
 #include "Components/Render/PointLightComponent.h"
 
 #include "PlayerStateDerived.h"
-#include "Components/Audio/CoreAudioSourceComponent.h"
+#include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Engine/Utility/Time.h"

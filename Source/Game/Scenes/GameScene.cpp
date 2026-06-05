@@ -5,12 +5,11 @@
 #define IMGUI_ENABLE_DOCKING
 #endif
 
-#include "Components/Audio/CoreAudioSourceComponent.h"
+#include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Input/InputSystem.h"
 #include "Core/ActorManager.h"
 #include "Engine/Utility/Time.h"
 
-#include "Game/Actors/Dessert/Pudding.h"
 #include "Game/Actors/Enemy/Boss/BossEnemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Stage/Cloth.h"
@@ -22,7 +21,6 @@
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
-
 
 #include "Physics/CollisionSystem.h"
 #include "UI/UIManager.h"
@@ -125,7 +123,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 void GameScene::Start()
 {
     auto audioActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("Audio");
-    auto audioComp = audioActor->AddComponent<CoreAudioSourceComponent>("audioSource");
+    auto audioComp = audioActor->AddComponent<AudioSourceComponent>("audioSource");
     audioComp->SetSource(L"./Data/Sound/BGM/game.wav");
     audioComp->SetLoop(true);
     audioComp->Play();

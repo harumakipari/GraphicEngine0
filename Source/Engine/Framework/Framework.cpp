@@ -13,7 +13,7 @@
 
 #include "Engine/Input/InputSystem.h"
 #include "Graphics/Renderer/ShapeRenderer.h"
-#include "Engine/Audio/CoreAudio.h"
+#include "Engine/Audio/Audio.h"
 #include "Engine/Debug/DebugRender.h"
 #include "Engine/Debug/Logger.h"
 #include "Engine/Effects/EffectEditor.h"

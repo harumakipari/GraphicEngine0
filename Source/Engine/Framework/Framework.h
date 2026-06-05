@@ -67,7 +67,6 @@ public:
 #endif
     CONST HWND hwnd;
 
-
     Framework(HWND hwnd, BOOL fullscreen);
     ~Framework();
 
@@ -97,7 +96,7 @@ public:
             nullptr,
             ImGui::GetIO().Fonts->GetGlyphRangesJapanese()
         );
-         ImGui::GetIO().FontGlobalScale = 1.5f;
+        ImGui::GetIO().FontGlobalScale = 1.5f;
         ImGui_ImplWin32_Init(hwnd);
         ImGui_ImplDX11_Init(Graphics::GetDevice(), Graphics::GetDeviceContext());
 #if 1

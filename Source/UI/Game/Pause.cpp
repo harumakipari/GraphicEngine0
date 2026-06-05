@@ -2,7 +2,7 @@
 #include "Pause.h"
 
 #include "SceneTransitionManager.h"
-#include "Engine/Audio/CoreAudio.h"
+#include "Engine/Audio/Audio.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Utility/Time.h"
 

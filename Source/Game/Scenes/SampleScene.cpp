@@ -7,7 +7,7 @@
 #endif
 
 #include "Game/Actors/Player/TestPlayer.h"
-#include "Components/Audio/CoreAudioSourceComponent.h"
+#include "Components/Audio/AudioSourceComponent.h"
 #include "Graphics/Core/Graphics.h"
 #include "Graphics/Core/RenderState.h"
 #include "Engine/Input/InputSystem.h"
@@ -15,7 +15,6 @@
 #include "Engine/Utility/Time.h"
 
 #include "Game/Actors/Camera/LoadingCamera.h"
-#include "Game/Actors/Dessert/Pudding.h"
 #include "Game/Actors/Enemy/Boss/BossEnemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Stage/ElasticBuilding.h"

@@ -1,16 +1,10 @@
 #include "pch.h"
 #include "Audio.h"
 
-#include <x3daudio.h>
-
-#include <windows.h>
-#include <winerror.h>
-
-IXAudio2* AudioDevice::xaudio2 = NULL;
-IXAudio2MasteringVoice* AudioDevice::masterVoice = NULL;
+#include <imgui.h>
 
 
-HRESULT FindChunk(HANDLE hfile, DWORD fourcc, DWORD& chunk_size, DWORD& chunk_data_position)
+HRESULT FindChunk_(HANDLE hfile, DWORD fourcc, DWORD& chunkSize, DWORD& chunkDataPosition)
 {
 	HRESULT hr = S_OK;
 
@@ -28,28 +22,27 @@ HRESULT FindChunk(HANDLE hfile, DWORD fourcc, DWORD& chunk_size, DWORD& chunk_da
 
 	while (hr == S_OK)
 	{
-		DWORD number_of_bytes_read;
-		if (0 == ReadFile(hfile, &chunkType, sizeof(DWORD), &number_of_bytes_read, NULL))
+		DWORD numberOfBytesRead;
+		if (0 == ReadFile(hfile, &chunkType, sizeof(DWORD), &numberOfBytesRead, NULL))
 		{
 			hr = HRESULT_FROM_WIN32(GetLastError());
 		}
 
-		if (0 == ReadFile(hfile, &chunkDataSize, sizeof(DWORD), &number_of_bytes_read, NULL))
+		if (0 == ReadFile(hfile, &chunkDataSize, sizeof(DWORD), &numberOfBytesRead, NULL))
 		{
 			hr = HRESULT_FROM_WIN32(GetLastError());
 		}
 
 		switch (chunkType)
 		{
-		case 'FFIR'/*RIFF*/:
+		case 'FFIR'://RIFF
 			riffDataSize = chunkDataSize;
 			chunkDataSize = 4;
-			if (0 == ReadFile(hfile, &fileType, sizeof(DWORD), &number_of_bytes_read, NULL))
+			if (0 == ReadFile(hfile, &fileType, sizeof(DWORD), &numberOfBytesRead, NULL))
 			{
 				hr = HRESULT_FROM_WIN32(GetLastError());
 			}
 			break;
-
 		default:
 			if (INVALID_SET_FILE_POINTER == SetFilePointer(hfile, chunkDataSize, NULL, FILE_CURRENT))
 			{
@@ -61,8 +54,8 @@ HRESULT FindChunk(HANDLE hfile, DWORD fourcc, DWORD& chunk_size, DWORD& chunk_da
 
 		if (chunkType == fourcc)
 		{
-			chunk_size = chunkDataSize;
-			chunk_data_position = offset;
+			chunkSize = chunkDataSize;
+			chunkDataPosition = offset;
 			return S_OK;
 		}
 
@@ -75,188 +68,258 @@ HRESULT FindChunk(HANDLE hfile, DWORD fourcc, DWORD& chunk_size, DWORD& chunk_da
 	}
 
 	return S_OK;
-
 }
 
-HRESULT ReadChunkData(HANDLE hFile, LPVOID buffer, DWORD buffer_size, DWORD buffer_offset)
+HRESULT ReadChunkData_(HANDLE hfile, LPVOID buffer, DWORD bufferSize, DWORD bufferOffset)
 {
 	HRESULT hr = S_OK;
-	if (INVALID_SET_FILE_POINTER == SetFilePointer(hFile, buffer_offset, NULL, FILE_BEGIN))
+	if (INVALID_SET_FILE_POINTER == SetFilePointer(hfile, bufferOffset, NULL, FILE_BEGIN))
 	{
 		return HRESULT_FROM_WIN32(GetLastError());
 	}
 	DWORD numberOfBytesRead;
-	if (0 == ReadFile(hFile, buffer, buffer_size, &numberOfBytesRead, NULL))
+	if (0 == ReadFile(hfile, buffer, bufferSize, &numberOfBytesRead, NULL))
 	{
 		hr = HRESULT_FROM_WIN32(GetLastError());
 	}
 	return hr;
 }
 
-AudioBuffer::AudioBuffer(const wchar_t* filename)
+void CoreAudio::CreateAudioSource(std::shared_ptr<CoreAudioBuffer> buffer,
+	IXAudio2SourceVoice** sourceVoice, CoreSoundType type)
 {
-	HRESULT hr;
+	// BGM,SEの送り先設定
+	XAUDIO2_SEND_DESCRIPTOR send[CoreSoundType::EnumCount] = { { 0, submixVoices[BGM] }, { 0, submixVoices[SE] } };
+	XAUDIO2_VOICE_SENDS sends[CoreSoundType::EnumCount] = { {1, &send[BGM]}, {1, &send[SE]} };
 
-	// Open the file
-	HANDLE hfile = CreateFileW(filename, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-	if (INVALID_HANDLE_VALUE == hfile)
-	{
-		hr = HRESULT_FROM_WIN32(GetLastError());
-		_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-	}
-
-	if (INVALID_SET_FILE_POINTER == SetFilePointer(hfile, 0, NULL, FILE_BEGIN))
-	{
-		hr = HRESULT_FROM_WIN32(GetLastError());
-		_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-	}
-
-	DWORD chunkSize;
-	DWORD chunkPosition;
-	//check the file type, should be 'WAVE' or 'XWMA'
-	FindChunk(hfile, 'FFIR'/*RIFF*/, chunkSize, chunkPosition);
-	DWORD filetype;
-	ReadChunkData(hfile, &filetype, sizeof(DWORD), chunkPosition);
-	_ASSERT_EXPR(filetype == 'EVAW'/*WAVE*/, L"Only support 'WAVE'");
-
-	FindChunk(hfile, ' tmf'/*FMT*/, chunkSize, chunkPosition);
-	ReadChunkData(hfile, &wfx_, chunkSize, chunkPosition);
-
-	//fill out the audio data buffer with the contents of the fourccDATA chunk
-	FindChunk(hfile, 'atad'/*DATA*/, chunkSize, chunkPosition);
-	BYTE* data = new BYTE[chunkSize];
-	ReadChunkData(hfile, data, chunkSize, chunkPosition);
-
-	buffer_.AudioBytes = chunkSize;  //size of the audio buffer in bytes
-	buffer_.pAudioData = data;  //buffer containing audio data
-	buffer_.Flags = XAUDIO2_END_OF_STREAM; // tell the source voice not to expect any data after this buffer
-}
-
-AudioBuffer::~AudioBuffer()
-{
-	delete[] buffer_.pAudioData;
-}
-
-AudioSourceVoice::AudioSourceVoice(std::shared_ptr<AudioBuffer>& audio_buffer) : audioBuffer_(audio_buffer)
-{
-	HRESULT hr;
-
-	hr = AudioDevice::xaudio2->CreateSourceVoice(&sourceVoice_, (WAVEFORMATEX*)&audio_buffer->wfx_);
+	HRESULT hr = xaudio2->CreateSourceVoice(sourceVoice, (WAVEFORMATEX*)&buffer->wfx, 0, XAUDIO2_DEFAULT_FREQ_RATIO, nullptr, &sends[type], nullptr);
 	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
-AudioSourceVoice::~AudioSourceVoice()
-{
-	sourceVoice_->DestroyVoice();
-}
-void AudioSourceVoice::Play(int loop_count)
+void CoreAudio::Initialize()
 {
 	HRESULT hr;
 
-	XAUDIO2_VOICE_STATE voice_state = {};
-	sourceVoice_->GetState(&voice_state);
+	//XAudio2の初期化
+	hr = XAudio2Create(xaudio2.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
+	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-	if (voice_state.BuffersQueued)
+	hr = xaudio2->CreateMasteringVoice(&masterVoice);
+	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+	// BGMとSE用のサブミキサー・ボイスを作成（ステレオ: 2チャンネル）
+	hr = xaudio2->CreateSubmixVoice(&submixVoices[BGM], 2, 44100);
+	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+	hr = xaudio2->CreateSubmixVoice(&submixVoices[SE], 2, 44100);
+	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+	// X3DAudio の初期化
+	//C3DAudio::Initialize();
+}
+
+CoreAudio::~CoreAudio()
+{
+	masterVoice->DestroyVoice();
+	submixVoices[0]->DestroyVoice();
+	submixVoices[1]->DestroyVoice();
+	xaudio2->Release();
+}
+
+float CoreAudio::CoreAudioBuffer::GetDuration() const
+{
+	// 再生時間 = バッファサイズ(バイト) / 1秒あたりのバイト数
+	const uint32_t byteRate = wfx.Format.nAvgBytesPerSec;
+	// byteRate が 0 の場合、無限ループなどで再生時間が定義できない場合があるためガード
+	if (byteRate == 0) return 0.0;
+	// 秒数を返す
+	return static_cast<float>(buffer.AudioBytes) / static_cast<float>(byteRate);
+}
+
+std::shared_ptr<CoreAudio::CoreAudioBuffer> CoreAudio::CoreAudioBuffer::GetResource(const std::wstring& filePath)
+{
+	//すでに存在していたらリソースを返す
+	if (resources.contains(filePath) && !resources.at(filePath).expired())
 	{
-		//stop(false, 0);
+		return resources.at(filePath).lock();
+	}
+
+	//存在していなければ新規でオーディオバッファを作成
+	{
+		HRESULT hr;
+		std::shared_ptr<CoreAudioBuffer> audioBuffer = std::make_shared<CoreAudioBuffer>();
+
+		//ファイルオープン
+		HANDLE hfile = CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+		if (INVALID_HANDLE_VALUE == hfile)
+		{
+			hr = HRESULT_FROM_WIN32(GetLastError());
+			_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+		}
+
+		if (INVALID_SET_FILE_POINTER == SetFilePointer(hfile, 0, NULL, FILE_BEGIN))
+		{
+			hr = HRESULT_FROM_WIN32(GetLastError());
+			_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+		}
+
+		DWORD chunkSize;
+		DWORD chunkPosition;
+		//check the file type, should be 'WAVE' or 'XWMA'
+		FindChunk_(hfile, 'FFIR'/*RIFF*/, chunkSize, chunkPosition);
+		DWORD fileType = 0;
+		ReadChunkData_(hfile, &fileType, sizeof(DWORD), chunkPosition);
+		_ASSERT_EXPR(fileType == 'EVAW'/*WAVE*/, L"Only support 'WAVE'");
+
+		FindChunk_(hfile, ' tmf'/*FMT*/, chunkSize, chunkPosition);
+		ReadChunkData_(hfile, &audioBuffer->wfx, chunkSize, chunkPosition);
+
+		//fill out the audio data buffer with the contents of the fourccDATA chunk
+		FindChunk_(hfile, 'atad'/*DATA*/, chunkSize, chunkPosition);
+		BYTE* data = new BYTE[chunkSize];
+		ReadChunkData_(hfile, data, chunkSize, chunkPosition);
+
+		audioBuffer->buffer.AudioBytes = chunkSize;  //size of the audio buffer in bytes
+		audioBuffer->buffer.pAudioData = data; //buffer containing audio data
+		audioBuffer->buffer.Flags = XAUDIO2_END_OF_STREAM; // tell the source voice not to expect any data after this buffer
+
+		resources[filePath] = audioBuffer;
+		return audioBuffer;
+	}
+}
+
+void CoreAudio::PlayOneShot(const wchar_t* filePath, float volume)
+{
+	if (isMutedBySystem)	// ミュートだったら
+		return;
+	std::shared_ptr<CoreStandaloneAudioSource> source = std::make_shared<CoreStandaloneAudioSource>(filePath);
+	source->SetVolume(volume);
+	source->Play();
+	audioSources.emplace_back(source);
+}
+
+void CoreAudio::Update(float deltaTime)
+{
+	//削除処理
+	for (auto& source : audioSources)
+	{
+		if (!source->IsPlaying())
+		{
+			erases.emplace_back(source);
+		}
+	}
+	audioSources.erase(std::remove_if(audioSources.begin(), audioSources.end(),
+		[&](const auto& audioSource) {
+			return std::find(erases.begin(), erases.end(), audioSource) != erases.end();
+		}),
+		audioSources.end());
+	erases.clear();
+}
+
+CoreStandaloneAudioSource::CoreStandaloneAudioSource(const wchar_t* filePath)
+{
+	this->type = std::wstring(filePath).find(L"BGM") != std::wstring::npos ? CoreSoundType::BGM : CoreSoundType::SE;
+	sptrBuffer = CoreAudio::CoreAudioBuffer::GetResource(filePath);
+	CoreAudio::CreateAudioSource(sptrBuffer, &sourceVoice, type);
+}
+CoreStandaloneAudioSource::~CoreStandaloneAudioSource()
+{
+	Stop();
+	sourceVoice->DestroyVoice();
+}
+
+void CoreStandaloneAudioSource::Play(bool loop)
+{
+	_ASSERT_EXPR(sourceVoice, L"ソースが設定されていません。");
+
+	HRESULT hr;
+
+	XAUDIO2_VOICE_STATE voiceState = {};
+	sourceVoice->GetState(&voiceState);
+
+	if (voiceState.BuffersQueued)
+	{
+		//Stop(false, 0);
 		return;
 	}
 
-	audioBuffer_->buffer_.LoopCount = loop_count;
-	hr = sourceVoice_->SubmitSourceBuffer(&audioBuffer_->buffer_);
+	XAUDIO2_BUFFER* pBuffer = &sptrBuffer->buffer;
+
+	pBuffer->LoopCount = loop ? XAUDIO2_LOOP_INFINITE : 0;
+	hr = sourceVoice->SubmitSourceBuffer(pBuffer);
 	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-	hr = sourceVoice_->Start(0);
+	hr = sourceVoice->Start(0);
 	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
-void AudioSourceVoice::Stop(bool play_tails/*Continue emitting effect output after the voice is stopped. */)
+
+void CoreStandaloneAudioSource::Stop(bool playTails)
 {
-	XAUDIO2_VOICE_STATE voice_state = {};
-	sourceVoice_->GetState(&voice_state);
-	if (!voice_state.BuffersQueued)
+	XAUDIO2_VOICE_STATE voiceState{};
+	sourceVoice->GetState(&voiceState);
+
+	if (!voiceState.BuffersQueued)
 	{
 		return;
 	}
 
 	HRESULT hr;
-	hr = sourceVoice_->Stop(play_tails ? XAUDIO2_PLAY_TAILS : 0);
+	hr = sourceVoice->Stop(playTails ? XAUDIO2_PLAY_TAILS : 0);
 	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-	hr = sourceVoice_->FlushSourceBuffers();
-	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-}
-
-void AudioSourceVoice::Volume(float volume)
-{
-	HRESULT hr = sourceVoice_->SetVolume(volume);
+	hr = sourceVoice->FlushSourceBuffers();
 	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
-bool AudioSourceVoice::Queuing()
+void CoreStandaloneAudioSource::SetVolume(float volume)
 {
-	XAUDIO2_VOICE_STATE voice_state = {};
-	sourceVoice_->GetState(&voice_state);
-	return voice_state.BuffersQueued;
+	HRESULT hr = sourceVoice->SetVolume(volume);
+	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
-//#define SPEAKER_MONO (0x0)
-//#define SPEAKER_FRONT_LEFT (0x1)
-//#define SPEAKER_FRONT_RIGHT (0x2)
-//#define SPEAKER_STEREO SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT
-//#define SPEAKER_FRONT_CENTER (0x4)
-//#define SPEAKER_LOW_FREQUENCY (0x8)
-//#define SPEAKER_BACK_LEFT (0x10)
-//#define SPEAKER_BACK_RIGHT (0x20)
-//#define SPEAKER_5POINT1 SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT | SPEAKER_FRONT_CENTER | SPEAKER_LOW_FREQUENCY | SPEAKER_BACK_LEFT | SPEAKER_BACK_RIGHT
-
-void AudioSourceVoice::Pan(float pan_value/*pan_value of -1.0 indicates all left speaker, 1.0 is all right speaker, 0.0 is split between left and right*/)
+float CoreStandaloneAudioSource::GetVolume()
 {
-	// https://learn.microsoft.com/en-us/windows/win32/xaudio2/how-to--pan-a-sound
-	float outputMatrix[8] = {};
+	float volume;
+	sourceVoice->GetVolume(&volume);
+	return volume;
+}
 
-	float left = 0.5f - pan_value / 2;
-	float right = 0.5f + pan_value / 2;
+bool CoreStandaloneAudioSource::IsPlaying()
+{
+	XAUDIO2_VOICE_STATE voiceState{};
+	sourceVoice->GetState(&voiceState);
+	return voiceState.BuffersQueued > 0;
+}
 
-	DWORD channel_mask;
-	AudioDevice::masterVoice->GetChannelMask(&channel_mask);
-	switch (channel_mask)
-	{
-	case SPEAKER_MONO:
-		outputMatrix[0] = 1.0;
-		break;
-	case SPEAKER_STEREO:
-	case SPEAKER_2POINT1:
-	case SPEAKER_SURROUND:
-		outputMatrix[0] = left;
-		outputMatrix[1] = right;
-		break;
-	case SPEAKER_QUAD:
-		outputMatrix[0] = outputMatrix[2] = left;
-		outputMatrix[1] = outputMatrix[3] = right;
-		break;
-	case SPEAKER_4POINT1:
-		outputMatrix[0] = outputMatrix[3] = left;
-		outputMatrix[1] = outputMatrix[4] = right;
-		break;
-	case SPEAKER_5POINT1:
-	case SPEAKER_7POINT1:
-	case SPEAKER_5POINT1_SURROUND:
-		outputMatrix[0] = outputMatrix[4] = left;
-		outputMatrix[1] = outputMatrix[5] = right;
-		break;
-	case SPEAKER_7POINT1_SURROUND:
-		outputMatrix[0] = outputMatrix[4] = outputMatrix[6] = left;
-		outputMatrix[1] = outputMatrix[5] = outputMatrix[7] = right;
-		break;
+void CoreStandaloneAudioSource::DrawGUI()
+{
+#ifdef USE_IMGUI
+	if (ImGui::Button("Play")) {
+		Play();
+	}
+	if (ImGui::Button("Stop")) {
+		Stop();
 	}
 
-	XAUDIO2_VOICE_DETAILS voiceDetails;
-	sourceVoice_->GetVoiceDetails(&voiceDetails);
+	static float volume;
+	if (sourceVoice)
+	{
+		sourceVoice->GetVolume(&volume);
+		if (ImGui::SliderFloat("Volume", &volume, 0, 1)) {
+			sourceVoice->SetVolume(volume);
+		}
+	}
 
-	XAUDIO2_VOICE_DETAILS masterVoiceDetails;
-	AudioDevice::masterVoice->GetVoiceDetails(&masterVoiceDetails);
+	ImGui::Separator();
 
-	HRESULT hr = sourceVoice_->SetOutputMatrix(NULL, voiceDetails.InputChannels, 2/*master_voice_details.InputChannels*/, outputMatrix);
-	_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+	if (ImGui::SliderFloat("MasterVolume", &masterVolume, 0, 1)) {
+		CoreAudio::SetMasterVolume(masterVolume);
+	}
+	if (ImGui::SliderFloat("BgmVolume", &bgmVolume, 0, 1)) {
+		CoreAudio::SetBgmVolume(bgmVolume);
+	}
+	if (ImGui::SliderFloat("SeVolume", &seVolume, 0, 1)) {
+		CoreAudio::SetSeVolume(seVolume);
+	}
+#endif // USE_IMGUI
 }
