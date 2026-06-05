@@ -20,9 +20,9 @@ void AudioSourceComponent::SetSource(const std::wstring& filePath)
     // ループ設定
     this->isLooping = (this->soundType == CoreSoundType::BGM) ? true : false;
     // オーディオバッファを取得
-    m_SptrBuffer = CoreAudio::CoreAudioBuffer::GetResource(filePath);
+    audioBuffer = CoreAudio::CoreAudioBuffer::GetResource(filePath);
     // ソースボイスを作成
-    CoreAudio::CreateAudioSource(m_SptrBuffer, &sourceVoice, soundType);
+    CoreAudio::CreateAudioSource(audioBuffer, &sourceVoice, soundType);
 }
 
 AudioSourceComponent::~AudioSourceComponent()
@@ -37,7 +37,7 @@ AudioSourceComponent::~AudioSourceComponent()
 void AudioSourceComponent::Tick(float deltaTime)
 {
     //バッファやソースボイスが設定されていなければ何もしない
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return;
     }
@@ -77,7 +77,7 @@ void AudioSourceComponent::Tick(float deltaTime)
 void AudioSourceComponent::Play()
 {
     //バッファやソースボイスが設定されていなければ何もしない
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return;
     }
@@ -98,7 +98,7 @@ void AudioSourceComponent::Play()
     Stop(false);
 
     // バッファをソースボイスにセット
-    XAUDIO2_BUFFER* pBuffer = &m_SptrBuffer->buffer;
+    XAUDIO2_BUFFER* pBuffer = &audioBuffer->buffer;
     pBuffer->LoopCount = isLooping ? XAUDIO2_LOOP_INFINITE : 0;
     hr = sourceVoice->SubmitSourceBuffer(pBuffer);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
@@ -111,7 +111,7 @@ void AudioSourceComponent::Play()
 void AudioSourceComponent::Stop(bool playTails)
 {
     //バッファやソースボイスが設定されていなければ何もしない
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return;
     }
@@ -141,7 +141,7 @@ void AudioSourceComponent::Stop(bool playTails)
 void AudioSourceComponent::Pause()
 {
     //バッファやソースボイスが設定されていなければ何もしない
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return;
     }
@@ -152,7 +152,7 @@ void AudioSourceComponent::Pause()
 void AudioSourceComponent::Resume()
 {
     //バッファやソースボイスが設定されていなければ何もしない
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return;
     }
@@ -163,7 +163,7 @@ void AudioSourceComponent::Resume()
 void AudioSourceComponent::SetVolume(float volume)
 {
     //バッファやソースボイスが設定されていなければ何もしない
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return;
     }
@@ -174,7 +174,7 @@ void AudioSourceComponent::SetVolume(float volume)
 float AudioSourceComponent::GetVolume() const
 {
     //バッファやソースボイスが設定されていなければ何もしない
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return  0.0f;
 
@@ -304,12 +304,12 @@ void AudioSourceComponent::SetPan(float pan)
 void AudioSourceComponent::SetLoopRange(float begin, float length)
 {
     //バッファやソースボイスが設定されていなければ何もしない
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return;
     }
-    XAUDIO2_BUFFER* pBuffer = &m_SptrBuffer->buffer;
-    const WAVEFORMATEX& format = m_SptrBuffer->wfx.Format;
+    XAUDIO2_BUFFER* pBuffer = &audioBuffer->buffer;
+    const WAVEFORMATEX& format = audioBuffer->wfx.Format;
 
     const UINT32 sampleRate = format.nSamplesPerSec;
     const UINT32 blockAlign = format.nBlockAlign;
@@ -335,13 +335,13 @@ void AudioSourceComponent::SetLoopRange(float begin, float length)
 float AudioSourceComponent::GetPlaybackTime() const
 {
     //バッファやソースボイスが設定されていなければ 0 を返す
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return 0.0f;
     }
     XAUDIO2_VOICE_STATE voiceState{};
     sourceVoice->GetState(&voiceState);
-    const WAVEFORMATEX& format = m_SptrBuffer->wfx.Format;
+    const WAVEFORMATEX& format = audioBuffer->wfx.Format;
     const UINT32 sampleRate = format.nSamplesPerSec;
     const float playbackTime = static_cast<float>(voiceState.SamplesPlayed) / static_cast<float>(sampleRate);
     return playbackTime;
@@ -350,7 +350,7 @@ float AudioSourceComponent::GetPlaybackTime() const
 float AudioSourceComponent::GetPlaybackDeltaTime()
 {
     //バッファやソースボイスが設定されていなければ 0 を返す
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return 0.0f;
     }
@@ -360,8 +360,8 @@ float AudioSourceComponent::GetPlaybackDeltaTime()
     uint64_t samples = state.SamplesPlayed;
 
     // 前回のサンプル数からの差分を計算して秒数に変換
-    float deltaTime = (samples - m_LastSamplesPlayed) / static_cast<float>(m_SptrBuffer->wfx.Format.nSamplesPerSec);
-    m_LastSamplesPlayed = static_cast<float>(samples);
+    float deltaTime = (samples - lastSamplesPlayed) / static_cast<float>(audioBuffer->wfx.Format.nSamplesPerSec);
+    lastSamplesPlayed = static_cast<float>(samples);
     return deltaTime;
 }
 
@@ -369,7 +369,7 @@ float AudioSourceComponent::GetPlaybackDeltaTime()
 uint32_t AudioSourceComponent::GetBufferQueueCount()
 {
     //バッファやソースボイスが設定されていなければ 0 を返す
-    if (!m_SptrBuffer || !sourceVoice)
+    if (!audioBuffer || !sourceVoice)
     {
         return 0;
     }
@@ -381,11 +381,11 @@ uint32_t AudioSourceComponent::GetBufferQueueCount()
 float AudioSourceComponent::GetTotalDuration() const
 {
     // バッファが設定されていなければ 0 を返す
-    if (!m_SptrBuffer)
+    if (!audioBuffer)
     {
         return 0.0f;
     }
-    return m_SptrBuffer->GetDuration();
+    return audioBuffer->GetDuration();
 }
 
 void AudioSourceComponent::SetPitch(const float pitch)

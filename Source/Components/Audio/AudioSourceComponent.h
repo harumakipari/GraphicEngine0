@@ -80,34 +80,51 @@ public:
     void DrawImGuiInspector() override;
 
 private:
+
     /// 音声ファイルパス
     std::wstring sourceFilePath;
+
     /// サウンド種別
-    CoreSoundType soundType;
-    /** @brief ループ設定。*/
+    CoreSoundType soundType = CoreSoundType::SE;
+
+    /// ループ再生するか
     bool isLooping = false;
-    /** @brief 3D 音源として扱うか。*/
+
+    /// 3D音声として扱うか
     bool use3DAudio = false;
-    /// パン（-1.0 左、0 中央、1.0 右）
+
+    /// BGMの場合はポーズなどで音を一時停止しないためのフラグ
+    bool isBgm = false;
+
+    /// システムポーズによる停止中か
+    bool wasSystemPaused = false;
+
+private:
+    /// パン (-1.0 ~ 1.0)
     float pan = 0.0f;
-    /** @brief ピッチ（-1.0 左、0 中央、1.0 右）*/
+
+    /// ピッチ
     float pitch = 1.0f;
-    /** @brief 再生対象のオーディオバッファ。*/
-    std::shared_ptr<CoreAudio::CoreAudioBuffer> m_SptrBuffer;
-    friend class C3DAudio;
-    /** @brief XAudio2 のソースボイス。*/
+
+private:
+
+    /// 前回再生サンプル位置
+    float lastSamplesPlayed = 0.0f;
+
+private:
+
+    /// オーディオバッファ
+    std::shared_ptr<CoreAudio::CoreAudioBuffer> audioBuffer;
+
+    /// XAudio2 ソースボイス
     IXAudio2SourceVoice* sourceVoice = nullptr;
 
+private:
 
-    /** @brief マスター音量。*/
     static inline float masterVolume = 1.0f;
-    /** @brief BGM 音量。*/
     static inline float bgmVolume = 1.0f;
-    /** @brief SE 音量。*/
     static inline float seVolume = 1.0f;
 
 private:
-    float m_LastSamplesPlayed = 0.0f;
-    bool wasSystemPaused = false;   // システムによる一時停止状態を記録するフラグ
-    bool isBgm = false; // BGMの場合はポーズなどで音を一時停止しないためのフラグ
+    friend class C3DAudio;
 };
