@@ -97,6 +97,7 @@ public:
             nullptr,
             ImGui::GetIO().Fonts->GetGlyphRangesJapanese()
         );
+         ImGui::GetIO().FontGlobalScale = 1.5f;
         ImGui_ImplWin32_Init(hwnd);
         ImGui_ImplDX11_Init(Graphics::GetDevice(), Graphics::GetDeviceContext());
 #if 1

@@ -75,6 +75,9 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Primary_Attack_Fast_C", 8);
         controller->AddAnimation("Primary_Attack_Fast_D", 9);
 
+        controller->AddNotify(0, 0.3f, AnimationNotify::Type::HitStart);
+        controller->AddNotify(0, 0.5f, AnimationNotify::Type::HitEnd);
+
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
     }
@@ -179,7 +182,7 @@ void Player::Initialize(const Transform& transform)
         rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
     }
 
-    int weaponSocketNode = skeletalMeshComponent->FindIndexByName("VB root_weapon");
+    int weaponSocketNode = skeletalMeshComponent->FindIndexByName("weapon");
 
     // 剣に当たり判定のコンポーネントを追加
     swordCollisionComp = AddComponent<CapsuleComponent>("SwordCollision", parentName);
@@ -196,7 +199,7 @@ void Player::Initialize(const Transform& transform)
     swordCollisionComp->SetIsVisibleDebugBox(false);
     swordCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, 0.8f });
     swordCollisionComp->Initialize();
-
+    
 #if 0
     auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
@@ -219,6 +222,7 @@ void Player::Initialize(const Transform& transform)
     // 火花エフェクト用のコンポーネントを追加
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
+
 
 
     comboAttacks =
@@ -379,8 +383,6 @@ void Player::Update(float elapsedTime)
     characterMovementComponent->SetMoveDirection(moveDir);
     rotationComponent->SetDirection(moveDir);
 
-
-
 #endif // 0
 
 }
@@ -388,11 +390,40 @@ void Player::Update(float elapsedTime)
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    DrawAttackEditorImGui();
     Character::DrawImGuiDetails();
 #endif
 
 }
 
+// アタックエディタ
+void Player::DrawAttackEditorImGui()
+{
+    ImGui::SeparatorText("Combo Editor");
+
+    for (int i = 0; i < comboAttacks.size(); i++)
+    {
+        auto& attack = comboAttacks[i];
+
+        ImGui::PushID(i);
+
+        if (ImGui::TreeNode(
+            attack.animationName.c_str()))
+        {
+            ImGui::SliderFloat("HitStart", &attack.hitStart, 0.0f, 2.0f);
+
+            ImGui::SliderFloat("HitEnd", &attack.hitEnd, 0.0f, 2.0f);
+
+            ImGui::SliderFloat("ComboStart", &attack.comboWindowStart, 0.0f, 2.0f);
+
+            ImGui::SliderFloat("ComboEnd", &attack.comboWindowEnd, 0.0f, 2.0f);
+
+            ImGui::TreePop();
+        }
+
+        ImGui::PopID();
+    }
+}
 // 火花エフェクトの生成
 void Player::SpawnSpark(DirectX::XMFLOAT3 pos)
 {

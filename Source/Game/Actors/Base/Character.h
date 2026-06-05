@@ -102,7 +102,6 @@ public:
         return  it->second;
     }
 
-
     // アニメーションコントローラーを取得する
     std::shared_ptr<AnimationController> GetBodyAnimationController() const
     {
@@ -152,6 +151,10 @@ public:
         for (auto& controller : animationControllers | std::views::values)
         {
             controller->DrawImGui();
+        }
+        if (stateMachine_)
+        {
+            stateMachine_->DrawImGui();
         }
 #endif
     }

@@ -26,11 +26,15 @@ public:
     // ステート登録
     void RegisterState(std::unique_ptr<State> state);
 
+    // ImGui描画
+    void DrawImGui();
+
     // ステート名取得
     const char* GetStateName() const { return currentState == nullptr ? "" : currentState->GetName(); }
 
     // 現在のステートを取得
     State* GetCurrentState() const { return currentState; }
+
 private:
     // 現在のステート
     State* currentState = nullptr;

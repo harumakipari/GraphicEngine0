@@ -50,6 +50,9 @@ private:
     // 剣の攻撃判定
     void CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end);
 
+    // アタックエディタ
+    void DrawAttackEditorImGui();
+
 public:
     //当たった時の処理
     void TakeDamage(int damage);

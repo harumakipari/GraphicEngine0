@@ -414,9 +414,6 @@
     <ClCompile Include="Source\Game\Actors\Dessert\Cherry.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\Actor.cpp">
-      <Filter>Sources</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Debug\SceneEditor.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
@@ -530,6 +527,9 @@
     </ClCompile>
     <ClCompile Include="Source\Game\Actors\Player\PlayerStateDerived.cpp">
       <Filter>Sources\Game\Actors\Player</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Core\Actor.cpp">
+      <Filter>Sources\Core</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -884,6 +884,7 @@
     <ClInclude Include="Source\Game\Actors\Player\PlayerStateDerived.h">
       <Filter>Sources\Game\Actors\Player</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Scenes\ModelScene.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\ComputeParticleBeginFrameCS.hlsl">

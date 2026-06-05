@@ -8,6 +8,20 @@
 #include "Components/Render/MeshComponent.h"
 #include "Graphics/Resource/InterleavedGltfModel.h"
 
+
+struct AnimationNotify
+{
+    float time;
+
+    enum class Type:uint8_t
+    {
+        HitStart,
+        HitEnd,
+        ComboEnable,
+    };
+    Type type;
+};
+
 // アニメーションのコントローラー  
 class AnimationController
 {
@@ -82,11 +96,32 @@ public:
 
     void DrawImGui();
 
+    void DrawTimeline();
+
     size_t GetAnimationClip()const { return animationClip; }
 
     const std::string& GetCurrentAnimationName()const { return currentAnimationName; }
 
     float GetCurrentAnimationLength() const { return target_->model->animations[animationClip].duration; }
+
+    // NotifyTrack にイベントを追加する関数
+    void AddNotify(size_t clip,float time,AnimationNotify::Type type)
+    {
+        notifyTracks[clip].push_back(
+            {
+                time,
+                type
+            });
+
+        std::sort(
+            notifyTracks[clip].begin(),
+            notifyTracks[clip].end(),
+            [](const auto& a, const auto& b)
+            {
+                return a.time < b.time;
+            });
+    }
+
 
 private:
     // ルートモーションをリセットする
@@ -168,5 +203,7 @@ private:
 
     bool resetRootMotionDelta = false;   // ルートモーションのリセットが必要かどうか
 
+    // アニメーションクリップごとのイベント
+    std::unordered_map<size_t,std::vector<AnimationNotify>> notifyTracks; 
 };
 

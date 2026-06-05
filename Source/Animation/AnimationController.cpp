@@ -15,7 +15,27 @@ void AnimationController::OnUpdate(const float deltaTime)
         return;
     }
 
-#if 1
+    // NotifyTrack のイベント処理
+    float prevTime = animationTime;
+    auto& notifies = notifyTracks[animationClip];
+
+    for (auto& notify : notifies)
+    {
+        if (prevTime < notify.time &&
+            animationTime >= notify.time)
+        {
+            switch (notify.type)
+            {
+            case AnimationNotify::Type::HitStart:
+                break;
+            case AnimationNotify::Type::HitEnd:
+                break;
+            case AnimationNotify::Type::ComboEnable:
+                break;
+            }
+        }
+    }
+
     // アニメーション遷移の準備
     switch (transitionState)
     {
@@ -153,44 +173,7 @@ void AnimationController::OnUpdate(const float deltaTime)
     target_->UpdateChildTransforms(
         UpdateTransformFlags::None,
         TeleportType::None);
-#else
-    if (target_->model->animations.at(animationClip).duration < animationTime)
-    {
-        ResetRootMotion(animationClip);
-    }
 
-    target_->model->Animate(animationClip, animationTime, finalNodes);
-    if (enableRootMotion)
-    {
-        InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
-
-        if (!ignoreRootMotion)
-        {
-            DirectX::XMFLOAT4X4 worldTransform = owner->GetWorldTransform();
-
-            DirectX::XMFLOAT3 position = { node.globalTransform._41, node.globalTransform._42, node.globalTransform._43 }; // グローバル空間
-            DirectX::XMFLOAT3 displacement = { position.x - previousPosition.x, position.y - previousPosition.y,  position.z - previousPosition.z }; // グローバル空間
-            DirectX::XMStoreFloat3(&displacement, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&displacement), DirectX::XMLoadFloat4x4(&worldTransform))); // ワールド空間
-
-            DirectX::XMFLOAT3 translation = owner->GetPosition();
-
-            translation.x += displacement.x;
-            //translation.y += displacement.y;
-            translation.z += displacement.z;
-
-            owner->SetPosition(translation);
-
-            previousPosition = position;
-        }
-        // ルートノードの変位量を初期姿勢の値に設定。
-        node.translation = zeroTranslation;
-
-        // 子ノードのグローバル変換を再帰的に更新する。
-        target_->model->CumulateTransforms(finalNodes);
-    }
-
-    target_->SetModelNodes(finalNodes);
-#endif // 0
 
 }
 
@@ -250,12 +233,15 @@ void AnimationController::DrawImGui()
     if (!ImGui::CollapsingHeader("Animation Debug"))
         return;
 
+    DrawTimeline();
+
     auto& node = finalNodes[181];
 
     ImGui::Text("Weapon Socket Pos: %.2f %.2f %.2f",
         node.globalTransform._41,
         node.globalTransform._42,
         node.globalTransform._43);
+
 
 
     ImGui::Text("Current: %s", currentAnimationName.c_str());
@@ -278,5 +264,37 @@ void AnimationController::DrawImGui()
             ResetRootMotion(name, isAnimationLoop, isBlendingAnimation, transitionTime);
         }
     }
+#endif
+}
+
+
+void AnimationController::DrawTimeline()
+{
+#ifdef USE_IMGUI
+    ImGui::Text("Time : %.2f / %.2f", animationTime, GetCurrentAnimationLength());
+    float length = GetCurrentAnimationLength();
+
+    ImGui::SliderFloat("Time", &animationTime, 0.0f, length);
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    float width = 400.0f;
+    float height = 30.0f;
+    drawList->AddRectFilled(pos, ImVec2(pos.x + width, pos.y + height), IM_COL32(60, 60, 60, 255));
+    float normalized = animationTime / GetCurrentAnimationLength();
+    float x = pos.x + width * normalized;
+    drawList->AddLine(ImVec2(x, pos.y), ImVec2(x, pos.y + height), IM_COL32(255, 255, 255, 255), 2.0f);
+
+    auto& notifies = notifyTracks[animationClip];
+
+    for (auto& notify : notifies)
+    {
+        float normalized = notify.time / length;
+
+        float notifyX = pos.x + width * normalized;
+
+        drawList->AddLine(ImVec2(notifyX, pos.y), ImVec2(notifyX, pos.y + height), IM_COL32(255, 0, 0, 255), 2.0f);
+    }
+
 #endif
 }

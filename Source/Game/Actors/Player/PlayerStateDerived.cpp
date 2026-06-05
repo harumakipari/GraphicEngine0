@@ -119,7 +119,7 @@ void PlayerAttackState::Execute(float deltaTime)
     // 今のアニメーションの再生時間を取得する
     float animTime = owner->GetBodyAnimationController()->GetCurrentAnimationTime();
     // アニメーションの終了間際でコンボ入力があれば次の攻撃に移る
-    if (animTime >= animationLength - 0.1f)
+    if (animTime >= attack.comboWindowEnd)
     {
         if (player->comboQueued &&
             attack.nextComboIndex != -1)

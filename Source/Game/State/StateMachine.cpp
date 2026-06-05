@@ -50,3 +50,9 @@ void StateMachine::RegisterState(std::unique_ptr<State> state)
 }
 
 
+// ImGui•`‰æ
+void StateMachine::DrawImGui()
+{
+    ImGui::SeparatorText("StateMachine");
+    ImGui::Text("Current State: %s", currentState ? GetStateName() : "None");
+}

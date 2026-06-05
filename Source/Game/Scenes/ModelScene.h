@@ -19,7 +19,6 @@
 
 #include "UI/Widgets/Widget.h"
 
-
 class ModelScene : public SceneBase
 {
 public:
