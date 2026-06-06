@@ -15,50 +15,44 @@
  *          オーディオソースの寿命管理などを提供します。
  */
 
- /**
-  * @brief サウンド種別。
-  */
-enum CoreSoundType :uint8_t
+ /// サウンド種別
+enum CoreSoundType  :uint8_t
 {
-	BGM,       //!< 楽曲（BGM）
-	SE,        //!< 効果音（SE）
-	EnumCount  //!< 列挙数
+	BGM,       
+	SE,        
+	EnumCount  
 };
 class CoreStandaloneAudioSource;
 
-/**
- * @brief オーディオ再生の中核クラス（静的ユーティリティ）。
- */
+/// オーディオ再生管理クラス
 class CoreAudio
 {
 public:
-	/**
-	 * @brief 読み込み済みの音声データを保持するバッファ。
-	 * @details WaveFormat と XAudio2 のバッファをまとめて管理します。
-	 */
+	/// 読み込み済み音声データ
 	class CoreAudioBuffer
 	{
 	public:
 		CoreAudioBuffer() = default;
-		~CoreAudioBuffer() {
+
+		~CoreAudioBuffer()
+	    {
 			delete[] buffer.pAudioData;
 		}
 
-		WAVEFORMATEXTENSIBLE wfx = { 0 }; //!< フォーマット情報
-		XAUDIO2_BUFFER buffer = { 0 };    //!< XAudio2 再生用バッファ
-
-		/**
-		 * @brief オーディオの総再生時間を取得します。
-		 * @return 再生時間（秒）。
-		 */
-		float GetDuration() const;
 	public:
-		/**
-		 * @brief オーディオリソースを取得（共有）。
-		 * @param filePath 読み込む音声ファイルパス。
-		 * @return 読み込み済み/新規読み込みされた `AudioBuffer` の共有ポインタ。
-		 */
+		/// 音声の総再生時間取得
+		float GetDuration() const;
+	
+		/// 音声リソース取得
 		static std::shared_ptr<CoreAudioBuffer> GetResource(const std::wstring& filePath);
+
+	public:
+		/// フォーマット情報
+		WAVEFORMATEXTENSIBLE wfx = { 0 };
+
+		/// XAudio2 再生用バッファ
+		XAUDIO2_BUFFER buffer = { 0 };    
+
 	private:
 		friend class Audio;
 		/**
