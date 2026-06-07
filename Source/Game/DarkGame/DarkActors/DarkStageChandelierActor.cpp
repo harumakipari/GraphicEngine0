@@ -58,7 +58,7 @@ void DarkStageChandelierActor::Initialize(const Transform& transform)
         sphereMeshComponent->SetRelativeLocationDirect(pos);
         sphereMeshComponent->SetRelativeRotationDirect(point.worldRotation);
         sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-        sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
+        sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 30.0f;
     }
 #else
     for (auto point : chandelierMeshComponent->model->spawnPoints)

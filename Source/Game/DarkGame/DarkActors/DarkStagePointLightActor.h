@@ -12,5 +12,5 @@ public:
     std::shared_ptr<PointLightComponent> GetPointLightComponent() const { return pointLightComponent; }
 private:
     std::shared_ptr<PointLightComponent> pointLightComponent;
-    std::shared_ptr<InstanceMeshComponent> sphereMeshComponent;
+    std::shared_ptr<MeshComponent> sphereMeshComponent;
 };
