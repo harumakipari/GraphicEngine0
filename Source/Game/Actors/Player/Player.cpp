@@ -32,6 +32,7 @@ void Player::Initialize(const Transform& transform)
         PROFILE_SCOPE("Create PlayerModel");
 
         skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+        //skeletalMeshComponent->SetModel("./Data/Models/Characters/Aurora_FrozenHealth/animation.gltf", false, true);
         skeletalMeshComponent->SetModel("./Data/Models/Characters/Player/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
@@ -62,6 +63,7 @@ void Player::Initialize(const Transform& transform)
         // ルートノードを設定する
         int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
 
+#if 1
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get(), rootNodeIndex);
         controller->AddAnimation("Idle", 0);
@@ -74,6 +76,46 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Primary_Attack_Fast_B", 7);
         controller->AddAnimation("Primary_Attack_Fast_C", 8);
         controller->AddAnimation("Primary_Attack_Fast_D", 9);
+#else
+        // アニメーションコントローラーを作成
+        auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get(), rootNodeIndex);
+        controller->AddAnimation("Ability_E", 0);
+        controller->AddAnimation("Ability_R", 1);
+        controller->AddAnimation("Idle", 2);
+        controller->AddAnimation("anim_idleLever", 3);
+        controller->AddAnimation("anim_openDoor_L", 4);
+        controller->AddAnimation("anim_openDoor_R", 5);
+        controller->AddAnimation("anim_PullLever", 6);
+        controller->AddAnimation("anim_ReachLever", 7);
+        controller->AddAnimation("Death", 8);
+        controller->AddAnimation("Emote_Ice_Sculpture", 9);
+        controller->AddAnimation("FrontEndPose", 10);
+        controller->AddAnimation("HitReact_Back", 11);
+        controller->AddAnimation("HitReact_Front", 12);
+        controller->AddAnimation("HitReact_Left", 13);
+        controller->AddAnimation("HitReact_Right", 14);
+        controller->AddAnimation("Idle_Noise_A", 15);
+        controller->AddAnimation("Idle_Noise_B", 16);
+        controller->AddAnimation("Jog_Fwd", 17);
+        controller->AddAnimation("Jog_Fwd_Start", 18);
+        controller->AddAnimation("Jog_Fwd_Stop", 19);
+        controller->AddAnimation("Level_Start", 20);
+        controller->AddAnimation("Primary_Attack_Fast_A", 21);
+        controller->AddAnimation("Primary_Attack_Fast_B", 22);
+        controller->AddAnimation("Primary_Attack_Fast_C", 23);
+        controller->AddAnimation("Primary_Attack_Fast_D", 24);
+        controller->AddAnimation("Primary_Fire_Fast_0", 25);
+        controller->AddAnimation("Recall", 26);
+        controller->AddAnimation("Roll_back_0", 27);
+        controller->AddAnimation("Roll_back_left_45", 28);
+        controller->AddAnimation("Roll_back_right_45", 29);
+        controller->AddAnimation("Roll_front_0", 30);
+        controller->AddAnimation("Roll_front_left_45", 31);
+        controller->AddAnimation("Roll_front_right_45", 32);
+        controller->AddAnimation("Roll_left_0", 33);
+        controller->AddAnimation("Roll_right_0", 34);
+
+#endif // 0
 
         controller->AddNotify(0, 0.3f, AnimationNotify::Type::HitStart);
         controller->AddNotify(0, 0.5f, AnimationNotify::Type::HitEnd);
@@ -200,10 +242,10 @@ void Player::Initialize(const Transform& transform)
     swordCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, 0.8f });
     swordCollisionComp->Initialize();
     
-#if 0
     auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
-    swordMeshComponent->AttachToComponent(skeletalMeshComponent, 181); // "VB root_weapon"
+    swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
+#if 0
 
     auto bowMeshComponent = this->AddComponent<SkeletalMeshComponent>("Bow", parentName);
     bowMeshComponent->SetModel("./Data/Models/Weapons/PlayerBow/AnimationBow.gltf", false, true);

@@ -26,7 +26,6 @@
 #include "UI/UIManager.h"
 #include "UI/Game/Pause.h"
 
-
 bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
     PROFILE_FUNCTION();
@@ -35,8 +34,8 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         {
             PROFILE_SCOPE("Load StageModel");
             //stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage_0327_1/DarkStage.gltf",
-            //stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0414/DarkStage.gltf",
-            stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0601/DarkStage.gltf",
+            stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0414/DarkStage.gltf",
+                //stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0601/DarkStage.gltf",
                 ModelTypes::ModelMode::StaticMesh, false, true);
             stageAsset->spawnPoints = stageAsset->model->spawnPoints;
         });
@@ -85,7 +84,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     }
 
 
-    clothSimulate = std::make_unique<ClothSimulate>(device, "./Data/Models/Flag/Oden_Cloth_Noren_1.gltf");
+    //clothSimulate = std::make_unique<ClothSimulate>(device, "./Data/Models/Flag/Oden_Cloth_Noren_1.gltf");
 
 
     skyShaderConstantsBuffer = std::make_unique<ConstantBuffer<SkyShaderConstants>>(device);
@@ -110,7 +109,10 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
             {
                 if (const auto cloth = GetActorManager()->GetActorByName("cloth"))
                 {
-                    clothSimulate->Render(immediateContext, cloth->GetWorldTransform());
+                    if (clothSimulate)
+                    {
+                        clothSimulate->Render(immediateContext, cloth->GetWorldTransform());
+                    }
                 }
             }
         });
@@ -167,9 +169,10 @@ void GameScene::Update(float deltaTime)
     Physics::Instance().Update(Time::UnscaledDeltaTime());
     CollisionSystem::DetectAndResolveCollisions();
     CollisionSystem::ApplyPushAll();
-
-    clothSimulate->Update(deltaTime);
-
+    if (clothSimulate)
+    {
+        clothSimulate->Update(deltaTime);
+    }
 
 #if 0
     if (player && mainCameraComponent)
@@ -210,7 +213,8 @@ void GameScene::SetUpActors()
     mainCameraComponent = mainCameraActor->GetComponent<TPSCameraComponent>();
     {
         PROFILE_SCOPE("Create Player");
-        Transform playerTr(DirectX::XMFLOAT3{ 0.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
+        Transform playerTr(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
+        //Transform playerTr(DirectX::XMFLOAT3{ 0.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
         player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
         mainCameraActor->SetTarget(player->GetRootComponent());
     }
@@ -258,14 +262,16 @@ void GameScene::SetUpActors()
     }
 
 #endif // 0
+
+#if 1
+
     Transform enemyTr(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto enemy = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("enemy", enemyTr);
 
     Transform KnightActorTR(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto KnightsActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<KnightActor>("KnightActor", KnightActorTR);
 
-#if 1
-    Transform GruxEnemyTr(DirectX::XMFLOAT3{ -18.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 2.0f,2.0f,2.0f });
+    Transform GruxEnemyTr(DirectX::XMFLOAT3{ -18.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto GruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
 
 #endif // 0
@@ -331,34 +337,34 @@ void GameScene::DrawGui()
 {
 #ifdef USE_IMGUI
     SceneBase::DrawGui();
-    ImGui::Begin("SkyShader");
+    //ImGui::Begin("SkyShader");
 
-    ImGui::ColorEdit3("topColor", &skyShaderConstantsBuffer->data.topColor.x);
-    ImGui::ColorEdit3("bottomColor", &skyShaderConstantsBuffer->data.bottomColor.x);
-    ImGui::ColorEdit3("sunColor", &skyShaderConstantsBuffer->data.sunColor.x);
-    ImGui::ColorEdit3("cloudColor", &skyShaderConstantsBuffer->data.cloudColor.x);
-    ImGui::DragFloat("cloudThreshold", &skyShaderConstantsBuffer->data.cloudThreshold, 0.01f);
-    ImGui::DragFloat("sunSize", &skyShaderConstantsBuffer->data.sunSize, 0.1f);
-    ImGui::DragFloat("cloudIntensity", &skyShaderConstantsBuffer->data.cloudIntensity, 0.1f);
-    ImGui::DragFloat("scrollSpeed", &skyShaderConstantsBuffer->data.scrollSpeed, 0.01f);
+    //ImGui::ColorEdit3("topColor", &skyShaderConstantsBuffer->data.topColor.x);
+    //ImGui::ColorEdit3("bottomColor", &skyShaderConstantsBuffer->data.bottomColor.x);
+    //ImGui::ColorEdit3("sunColor", &skyShaderConstantsBuffer->data.sunColor.x);
+    //ImGui::ColorEdit3("cloudColor", &skyShaderConstantsBuffer->data.cloudColor.x);
+    //ImGui::DragFloat("cloudThreshold", &skyShaderConstantsBuffer->data.cloudThreshold, 0.01f);
+    //ImGui::DragFloat("sunSize", &skyShaderConstantsBuffer->data.sunSize, 0.1f);
+    //ImGui::DragFloat("cloudIntensity", &skyShaderConstantsBuffer->data.cloudIntensity, 0.1f);
+    //ImGui::DragFloat("scrollSpeed", &skyShaderConstantsBuffer->data.scrollSpeed, 0.01f);
 
-    ImGui::DragFloat("starScale", &skyShaderConstantsBuffer->data.starScale, 0.01f);
-    ImGui::DragFloat2("starOffset", &skyShaderConstantsBuffer->data.starOffset.x, 0.1f);
-    ImGui::DragFloat("starIntensity", &skyShaderConstantsBuffer->data.starIntensity, 0.1f);
+    //ImGui::DragFloat("starScale", &skyShaderConstantsBuffer->data.starScale, 0.01f);
+    //ImGui::DragFloat2("starOffset", &skyShaderConstantsBuffer->data.starOffset.x, 0.1f);
+    //ImGui::DragFloat("starIntensity", &skyShaderConstantsBuffer->data.starIntensity, 0.1f);
 
-    ImGui::ColorEdit3("moonColor", &skyShaderConstantsBuffer->data.moonColor.x);
-    ImGui::DragFloat("moonRadius", &skyShaderConstantsBuffer->data.moonRadius, 0.01f);
+    //ImGui::ColorEdit3("moonColor", &skyShaderConstantsBuffer->data.moonColor.x);
+    //ImGui::DragFloat("moonRadius", &skyShaderConstantsBuffer->data.moonRadius, 0.01f);
 
-    ImGui::DragFloat2("moonPos", &skyShaderConstantsBuffer->data.moonPos.x, 0.1f);
-    ImGui::DragFloat2("moonOffset", &skyShaderConstantsBuffer->data.moonOffset.x, 0.01f);
+    //ImGui::DragFloat2("moonPos", &skyShaderConstantsBuffer->data.moonPos.x, 0.1f);
+    //ImGui::DragFloat2("moonOffset", &skyShaderConstantsBuffer->data.moonOffset.x, 0.01f);
 
-    ImGui::ColorEdit3("startAuroraColor", &skyShaderConstantsBuffer->data.startAuroraColor.x);
-    ImGui::DragFloat("value", &skyShaderConstantsBuffer->data.value, 0.01f);
+    //ImGui::ColorEdit3("startAuroraColor", &skyShaderConstantsBuffer->data.startAuroraColor.x);
+    //ImGui::DragFloat("value", &skyShaderConstantsBuffer->data.value, 0.01f);
 
-    ImGui::ColorEdit3("endAuroraColor", &skyShaderConstantsBuffer->data.endAuroraColor.x);
-    ImGui::DragFloat("value1", &skyShaderConstantsBuffer->data.value1, 0.01f);
+    //ImGui::ColorEdit3("endAuroraColor", &skyShaderConstantsBuffer->data.endAuroraColor.x);
+    //ImGui::DragFloat("value1", &skyShaderConstantsBuffer->data.value1, 0.01f);
 
-    ImGui::End();
+    //ImGui::End();
 #endif
 
 }

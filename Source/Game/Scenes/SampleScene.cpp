@@ -41,26 +41,6 @@ bool SampleScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, co
     //アクターをセット
     SetUpActors();
 
-#if 0
-    morphModel = std::make_unique<MorphModel>(device, "./Data/Models/Morph/morphSphere.gltf");
-
-    RegisterRenderHook(RenderPass::Opaque, [&](ID3D11DeviceContext* immediateContext)
-        {
-            if (const auto cloth = GetActorManager()->GetActorByName("cloth"))
-            {
-                morphModel->Render(immediateContext, cloth->GetWorldTransform(), {}, MorphModel::RenderPass::All);
-            }
-        });
-#endif // 0
-
-    RegisterRenderHook(RenderPass::Opaque, [&](ID3D11DeviceContext* immediateContext)
-        {
-            if (const auto cloth = GetActorManager()->GetActorByName("pauseActor"))
-            {
-                //shapeMatchingModel->Render(immediateContext, cloth->GetWorldTransform(), {}, ShapeMatchingModel::RenderPass::Opaque);
-            }
-        });
-
     return true;
 }
 

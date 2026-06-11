@@ -22,7 +22,8 @@ void DarkStage::Initialize(const Transform& transform)
     {
         PROFILE_SCOPE("Create StageCollision");
         auto stageCollisionModel = this->AddComponent<StaticMeshComponent>("collisionModel", parentName);
-        stageCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_Collision.glb", true, true);
+        stageCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_Collision1.glb", true, true);
+        //stageCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_Collision.glb", true, true);
         stageCollisionModel->SetIsCastShadow(false);
         stageCollisionModel->SetIsVisible(false);
         auto nodes = stageCollisionModel->model->GetNodes();
@@ -66,14 +67,6 @@ void DarkStage::Initialize(const Transform& transform)
     }
 #endif // 0
 
-#if 0
-    // 当たり判定
-    // メッシュ
-    std::shared_ptr<TriangleMeshCollisionComponent> triangleMeshComponent = this->AddComponent<class TriangleMeshCollisionComponent>("triangleMeshComponent", parentName);
-    triangleMeshComponent->SetLayer(CollisionLayer::WorldStatic);
-    triangleMeshComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
-    triangleMeshComponent->CreateConvexMeshFromModel(staticMeshComponent.get());
-#else
 
     {
         PROFILE_SCOPE("Create FloorCollision");
@@ -93,19 +86,12 @@ void DarkStage::Initialize(const Transform& transform)
 
 
 
-#endif // 0 // 当たり判定
 
 }
 
 void DarkStage::Update(float elapsedTime)
 {
-    //if (steamComponent)
-    //{
-    //    if (!steamComponent->IsPlaying())
-    //    {
-    //        steamComponent->Play();
-    //    }
-    //}
+
 
 }
 
@@ -289,6 +275,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
 
 #endif // 0
             }
+#if 0
             else if (point.name.rfind("Spawn_Melted_Wax", 0) == 0)
             {// 名前が "Spawn_Melted_Wax" で始まる場合、溶けた蝋を配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
@@ -309,7 +296,9 @@ point.worldScale
                 door->SetRelativeRotationDirect(point.worldRotation);
                 door->SetRelativeScaleDirect(point.worldScale);
 #endif // 0
-            }
+                }
+#endif // 0
+
             else if (point.name.rfind("Spawn_Standing_Brazier", 0) == 0)
             {// 名前が "Spawn_Standing_Brazier" で始まる場合、スタンド式火鉢を配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);

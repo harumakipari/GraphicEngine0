@@ -83,3 +83,5 @@ git status
 *.cso
 Data/Log/
 x64/
+Data/Models/DarkStage_0327_1/
+Data/Models/DarkStage0414/

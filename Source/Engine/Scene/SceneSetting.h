@@ -14,7 +14,7 @@ struct SceneLightConstants
     float iblIntensity = 0.4f;
     int directionalLightEnable = 1;// ïΩçsåıåπÇÃ on / off
     int pointLightEnable = 1;
-    int pointLightCount = 40;
+    int pointLightCount = 80;
 
     DirectX::XMFLOAT3 rimColor = { 0.1f,0.1f,0.1f };
     float rimIntensity = 1.466f;

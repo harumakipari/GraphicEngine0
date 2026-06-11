@@ -1,22 +1,25 @@
 #pragma once
 
 #include <vector>
-#include <set>
 #include <map>
-#include <DirectXMath.h>
 #include <memory>
 
-#include "Graphics/Renderer/ShapeRenderer.h"
-struct HitResult
-{
-    DirectX::XMFLOAT3	position;
-    DirectX::XMFLOAT3	normal;
-    float				distance;
-};
+#include <DirectXMath.h>
 
+#include "Graphics/Renderer/ShapeRenderer.h"
 
 class Actor;
 class ShapeComponent;
+
+/// ヒット結果
+struct HitResult
+{
+    DirectX::XMFLOAT3	position = {};
+    DirectX::XMFLOAT3	normal = {};
+    float distance = 0.0f;
+};
+
+/// Actor除法付きヒット結果
 struct HitResultWithActor
 {
     Actor* actor = nullptr;     // 衝突した相手
@@ -26,8 +29,7 @@ struct HitResultWithActor
     DirectX::XMFLOAT3 normal = { 0,1,0 };    // 法線
 };
 
-
-// マテリアルのタイプを作成する
+/// マテリアルタイプ
 enum class PhysicsMaterialType : uint8_t
 {
     Default,
@@ -36,17 +38,16 @@ enum class PhysicsMaterialType : uint8_t
     NoFriction,
 };
 
-// フィジクス
-class Physics
-    : public physx::PxQueryFilterCallback		// NOTE:③フィルタリングインターフェースの継承
-    , public physx::PxSimulationEventCallback	// NOTE:⑦衝突イベントインターフェース継承
+/// PhysXの管理クラス
+class Physics : public physx::PxQueryFilterCallback, public physx::PxSimulationEventCallback	
 {
 private:
+
     Physics() = default;
     ~Physics() = default;
 
 public:
-    // インスタンス取得
+    /// シングルトン
     static Physics& Instance()
     {
         static Physics instance;
@@ -62,7 +63,7 @@ public:
     // 更新処理
     void Update(float elapsedTime);
 
-    // 描画処理
+    // デバック描画処理
     void Render(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, const DirectX::XMFLOAT3& lightDirection);
 
     // フィジクス取得
@@ -88,17 +89,15 @@ public:
     // デフォルトのマテリアル取得
     physx::PxMaterial* GetDefaultMaterial() const
     {
-        physx::PxMaterial* defaultMaterial_ = pxPhysics->createMaterial(0.5f, 0.5f, 0.6f); /* static friction, dynamic friction, restitution*/
-        return defaultMaterial_;
+        return materials_.at(PhysicsMaterialType::Default);
     }
 
-
     // レイキャスト
-    bool RayCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF/*なにと当たりたいか、ここの数字に入れたら、この数値と同じレイヤーに当たる*/);
+    bool RayCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
 
     // スフィアキャスト
-    bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF/*なにと当たりたいか、ここの数字に入れたら、この数値と同じレイヤーに当たる*/);
-    bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResultWithActor& result, uint32_t wantToHitLayer = 0xFFFFFF/*なにと当たりたいか、ここの数字に入れたら、この数値と同じレイヤーに当たる*/);
+    bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
+    bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResultWithActor& result, uint32_t wantToHitLayer = 0xFFFFFF);
 
 
 protected:
