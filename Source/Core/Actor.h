@@ -484,6 +484,7 @@ private:
     // physx ‚Ì simulate “r’†‚É pxShape ‚ª•t‚¢‚½ shapeComponent ‚ğíœ‚·‚é‚Ì‚ğ–h‚®‚½‚ß
     std::vector<std::string> pendingDestroyComponentNames_;
 
+
 protected:
     std::vector<std::string> tags_;
 };

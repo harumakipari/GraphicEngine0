@@ -57,6 +57,13 @@ void PlayerRunningState::Execute(float deltaTime)
         return;
     }
 
+    if (InputSystem::GetInputState("Dodge", InputStateMask::Trigger))
+    {
+        player->GetStateMachine()->ChangeState("Dodge");
+        return;
+    }
+
+
     // 入力がなければ待機ステートに変更
     auto inputComp = player->inputComponent;
     DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
@@ -167,9 +174,13 @@ void PlayerAttackState::Exit()
 
 void PlayerDodgeState::Enter()
 {
-    owner->PlayBodyAnimation("HitReact_Front");
+    owner->PlayBodyAnimation("Roll_front_0");
     dodgeTimer = 0.0f;
     player->invincible = true; // ←無敵ON
+
+    // 攻撃中は移動速度を0にする
+    player->characterMovementComponent->SetSpeed(0.0f);
+
 
 }
 
@@ -177,7 +188,7 @@ void PlayerDodgeState::Execute(float deltaTime)
 {
     dodgeTimer += deltaTime;
 
-    // 無敵時間（ここがキモ）
+    // 無敵時間
     if (dodgeTimer > 0.3f)
     {
         player->invincible = false;
@@ -200,5 +211,6 @@ void PlayerDodgeState::Execute(float deltaTime)
 
 void PlayerDodgeState::Exit()
 {
+    player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
 
 }

@@ -15,6 +15,7 @@ enum class SRV_SLOT :uint8_t
     NORMAL,     // world normal    w: Object Type
     EMISSIVE,      // w:Flags
     POSITION,    // world position
+    VELOCITY,    // 速度バッファ用
 };
 
 class GBuffer
@@ -170,7 +171,7 @@ public:
         }
     }
 private:
-    static constexpr UINT GBufferCount = 6;
+    static constexpr UINT GBufferCount = 7;
     UINT viewportCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
     D3D11_VIEWPORT catchedViewports[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
     ID3D11RenderTargetView* catchedRenderTargetViews[maxBufferCount];
@@ -179,10 +180,11 @@ private:
     {
         DXGI_FORMAT_R16G16B16A16_FLOAT, // Scene Color
         DXGI_FORMAT_R8G8B8A8_UNORM,  //  albedo Opacity + Mask??とか？
-        DXGI_FORMAT_R16G16B16A16_FLOAT, // マテリアルの情報？
+        DXGI_FORMAT_R16G16B16A16_FLOAT, // マテリアルの情報
         DXGI_FORMAT_R16G16B16A16_FLOAT, // Normal
-        DXGI_FORMAT_R16G16B16A16_FLOAT, // emmisive
+        DXGI_FORMAT_R16G16B16A16_FLOAT, // emissive
         DXGI_FORMAT_R16G16B16A16_FLOAT, // Position
+        DXGI_FORMAT_R16G16B16A16_FLOAT, // Velocity
     };
 };
 

@@ -5,6 +5,16 @@
 #include "Core/ActorManager.h"
 #include "Engine/Utility/Win32Utils.h"
 
+// ‘OƒtƒŒ[ƒ€‚Ì Transform ‚ð•Û‘¶‚·‚é
+void SceneComponent::CapturePreviousTransform()
+{
+    previousComponentToWorld_ = componentToWorld_;
+
+    for (auto& child : attachChildren_)
+    {
+        child->CapturePreviousTransform();
+    }
+}
 
 void SceneComponent::UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags, TeleportType teleport)
 {

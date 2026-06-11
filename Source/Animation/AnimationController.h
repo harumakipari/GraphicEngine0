@@ -197,7 +197,7 @@ private:
 
     bool enableRootMotion = true;  // ルートモーションがある場合
 
-    bool ignoreRootMotion = true; // ルートモーションを無視する
+    bool ignoreRootMotion = false; // ルートモーションを無視する
 
     float blendElapsedTime = 0.0f;  // ブレンド時に経過した時間
 

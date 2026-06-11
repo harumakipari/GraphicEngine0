@@ -50,6 +50,8 @@ protected:
     // final Transform_　親子関係を全て考慮した最終的なTransform
     Transform componentToWorld_;     // キャッシュ
 
+    Transform previousComponentToWorld_; // 前フレームの Transform キャッシュ。　velocity計算などに使用する
+
 protected:
     // 現在接続している親。　valid　なら　relativeLocation_ などはこのオブジェクトに対する相対値になる
     std::weak_ptr<SceneComponent> attachParent_; // 弱参照
@@ -197,6 +199,9 @@ public:
 
 
 public:
+    // 前フレームの Transform を保存する
+    void CapturePreviousTransform();
+
     // 相対的な座標を取得
     DirectX::XMFLOAT3 GetRelativeLocation() const
     {

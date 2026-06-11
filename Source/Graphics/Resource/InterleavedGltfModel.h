@@ -684,6 +684,7 @@ public:
     {
         DirectX::XMFLOAT4X4 world;
 
+
         int material{ -1 };
         int hasTangent{ 0 };
         int skin{ -1 };

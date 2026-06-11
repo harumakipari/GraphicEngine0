@@ -138,6 +138,16 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
 
 void SceneBase::Update(float deltaTime)
 {
+    // アクターの前フレームの姿勢を保存
+    for (auto& actor : GetActorManager()->GetAllActors())
+    {
+        if (auto root = actor->GetRootComponent())
+        {
+            root->CapturePreviousTransform();
+        }
+    }
+
+
     lightManager->Update(deltaTime);
 
     sceneCBuffer->data.elapsedTime += deltaTime;

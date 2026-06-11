@@ -237,6 +237,7 @@ void InputSystem::Initialize()
     inputKeys["Attack"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_SHOULDER));     // 右
 
     inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_RETURN)); // Enterキー
+    inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_SHIFT)); // Shiftキー
     inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));     // Bボタン
 
     //inputKeys["Z"].emplace_back(std::make_unique<Keyboard>('Z'));
@@ -252,28 +253,6 @@ void InputSystem::Initialize()
 
     inputKeys["GamePadA"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));     // 左
     inputKeys["GamePadA"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));     // 左
-
-    // 今回のゲームで使用する入力キーをここでまとめて登録しておく
-    inputKeys["ScissorsAttack"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::RightTrigger));
-    inputKeys["ScissorsAttack"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_SHOULDER));     // 右
-    inputKeys["ScissorsAttack"].emplace_back(std::make_unique<Mouse>(VK_RBUTTON)); // マウス右ボタン
-
-    inputKeys["ScissorsAction"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
-    inputKeys["ScissorsAction"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));
-    inputKeys["ScissorsAction"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_X));
-    inputKeys["ScissorsAction"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_Y));
-    inputKeys["ScissorsAction"].emplace_back(std::make_unique<Mouse>(VK_LBUTTON)); // マウス左ボタン
-
-    inputKeys["TutorialOk"].emplace_back(std::make_unique<Mouse>(VK_LBUTTON));  // 左ボタン
-    inputKeys["TutorialOk"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));     // A
-    inputKeys["TutorialOk"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));     // A
-
-    inputKeys["DashCancel"].emplace_back(std::make_unique<Mouse>(VK_RBUTTON));  // 右クリック
-    inputKeys["DashCancel"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::RightTrigger));
-    inputKeys["DashCancel"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_SHOULDER));     // 右
-    inputKeys["DashCancel"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::LeftTrigger));
-    inputKeys["DashCancel"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_LEFT_SHOULDER));     // 左
-
 
     // コントローラーとキーボード対応させる
     inputKeys["UIUp"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_DPAD_UP));
