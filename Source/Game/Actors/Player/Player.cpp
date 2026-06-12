@@ -76,6 +76,9 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Primary_Attack_Fast_B", 7);
         controller->AddAnimation("Primary_Attack_Fast_C", 8);
         controller->AddAnimation("Primary_Attack_Fast_D", 9);
+        controller->AddAnimation("Anim_DKF_Attack_01", 10);
+        controller->AddAnimation("Anim_DKF_Attack_02", 11);
+        controller->AddAnimation("Anim_DKF_Attack_03", 12);
 #else
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get(), rootNodeIndex);
@@ -270,7 +273,7 @@ void Player::Initialize(const Transform& transform)
     comboAttacks =
     {
        {
-        "Primary_Attack_Fast_A",
+        "Anim_DKF_Attack_01",
         0.10f,
         0.25f,
         0.20f,
@@ -280,7 +283,7 @@ void Player::Initialize(const Transform& transform)
         },
 
         {
-            "Primary_Attack_Fast_B",
+            "Anim_DKF_Attack_02",
             0.08f,
             0.30f,
             0.25f,
@@ -290,24 +293,15 @@ void Player::Initialize(const Transform& transform)
         },
 
         {
-            "Primary_Attack_Fast_C",
+            "Anim_DKF_Attack_03",
             0.15f,
             0.40f,
-            0.1f,
-            0.5f,
-            3,
-            0.0f
-        },
-
-        {
-            "Primary_Attack_Fast_D",
-            0.15f,
-            0.50f,
             -1.0f,
             -1.0f,
             -1,
             0.0f
-        }
+        },
+
 
     };
 }

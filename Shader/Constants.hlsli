@@ -40,7 +40,7 @@ cbuffer SHADER_CONSTANT_BUFFER : register(b9)
     int enableBlur;
     int enableDof;
     int colorizeCascadedLayer;
-    float toneMappingValue ;
+    float toneMappingValue;
 
     float3 colorMapRGB;
     float pad3 = 0.0f;
@@ -105,6 +105,7 @@ cbuffer VIEW_CONSTANTS_BUFFER : register(b4)
     row_major float4x4 inverseViewProjection;
     row_major float4x4 invView;
     float4 cameraClipDistance;
+    row_major float4x4 previousViewProjection;
 }
 
 #endif

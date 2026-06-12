@@ -67,6 +67,8 @@ ViewConstants CameraComponent::GetViewConstants()
     vc.view = GetView();
     vc.projection = GetProjection();
 
+    vc.previousViewProjection = vc.viewProjection;  // ˆêƒtƒŒ[ƒ€‘O‚ÌviewProjection‚ğ•Û‘¶
+
     using namespace DirectX;
 
     XMMATRIX V = XMLoadFloat4x4(&vc.view);

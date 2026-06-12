@@ -26,6 +26,8 @@ VS_OUT main(VS_IN vin)
     vout.position = mul(vin.position, mul(world, viewProjection));
     vout.wPosition = mul(vin.position, world);
 
+    vout.currentClipPosition = vout.position;
+    vout.previousClipPosition = mul(vin.position, mul(previousWorld, previousViewProjection));
     
     vin.normal.w = 0;
     vout.wNormal.xyz = normalize(mul(vin.normal, world).xyz);
@@ -38,5 +40,5 @@ VS_OUT main(VS_IN vin)
     vout.texcoord = vin.texcoord;
 
 
-	return vout;
+    return vout;
 }

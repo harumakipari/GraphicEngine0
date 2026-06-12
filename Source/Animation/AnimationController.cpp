@@ -8,6 +8,7 @@
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
+    float prevTime = animationTime;
     animationTime += deltaTime * animationRate;
 
     if (target_->model->animations.size() == 0)
@@ -16,24 +17,16 @@ void AnimationController::OnUpdate(const float deltaTime)
     }
 
     // NotifyTrack のイベント処理
-    float prevTime = animationTime;
-    auto& notifies = notifyTracks[animationClip];
-
-    for (auto& notify : notifies)
+    auto& states = notifyStates[animationClip];
+    for (auto& state : states)
     {
-        if (prevTime < notify.time &&
-            animationTime >= notify.time)
-        {
-            switch (notify.type)
-            {
-            case AnimationNotify::Type::HitStart:
-                break;
-            case AnimationNotify::Type::HitEnd:
-                break;
-            case AnimationNotify::Type::ComboEnable:
-                break;
-            }
-        }
+        bool wasInside =
+            prevTime >= state.startTime &&
+            prevTime < state.endTime;
+
+        bool isInside =
+            animationTime >= state.startTime &&
+            animationTime < state.endTime;
     }
 
     // アニメーション遷移の準備

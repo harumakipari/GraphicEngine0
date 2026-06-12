@@ -107,8 +107,8 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
     pout.gBuffer3Normal = float4(N.xyz, objectType); // world space
 
-    //pout.gbuffer1.xy = EncodeOctahedralNormal(N);
-    //pout.velocity
+    //float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
+    //pout.velocity = float4(velocity, 1, 1);
 
     pout.albedo = baseColorFactor;
 
@@ -127,7 +127,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         float maskCenter = 1.0 - smoothstep(0.1, 0.2, dist);
 
         float mask = maskColor * maskCenter;
-        emissiveFactor = mask * float3(cpuColor.rgb) * emissionPower; 
+        emissiveFactor = mask * float3(cpuColor.rgb) * emissionPower;
         pout.emissive = float4(emissiveFactor, 0); // wの値 : スカイマップ１それ以外０    2: emissiveFlagとして使用
     }
 

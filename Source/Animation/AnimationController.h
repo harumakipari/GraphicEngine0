@@ -9,19 +9,21 @@
 #include "Graphics/Resource/InterleavedGltfModel.h"
 
 
-struct AnimationNotify
+struct AnimationNotifyState
 {
-    float time;
+    float startTime;
+    float endTime;
 
-    enum class Type:uint8_t
+    enum class Type:uint32_t
     {
-        HitStart,
-        HitEnd,
-        ComboEnable,
+        HitBox,
+        ComboWindow,
+        Invincible,
+        SuperArmor
     };
+
     Type type;
 };
-
 // アニメーションのコントローラー  
 class AnimationController
 {
@@ -61,7 +63,6 @@ public:
     {
         return !(this->isAnimationFinished);
     }
-
 
     void OnUpdate(const float deltaTime);
 
@@ -105,20 +106,17 @@ public:
     float GetCurrentAnimationLength() const { return target_->model->animations[animationClip].duration; }
 
     // NotifyTrack にイベントを追加する関数
-    void AddNotify(size_t clip,float time,AnimationNotify::Type type)
+    void AddNotifyState(
+        size_t clip,
+        float start,
+        float end,
+        AnimationNotifyState::Type type)
     {
-        notifyTracks[clip].push_back(
+        notifyStates[clip].push_back(
             {
-                time,
+                start,
+                end,
                 type
-            });
-
-        std::sort(
-            notifyTracks[clip].begin(),
-            notifyTracks[clip].end(),
-            [](const auto& a, const auto& b)
-            {
-                return a.time < b.time;
             });
     }
 
@@ -204,6 +202,6 @@ private:
     bool resetRootMotionDelta = false;   // ルートモーションのリセットが必要かどうか
 
     // アニメーションクリップごとのイベント
-    std::unordered_map<size_t,std::vector<AnimationNotify>> notifyTracks; 
+    std::unordered_map<size_t,std::vector<AnimationNotifyState>> notifyStates;
 };
 
