@@ -107,7 +107,7 @@ void TestPlayer::Initialize(const Transform& transform)
 void TestPlayer::Update(float elapsedTime)
 {
     Character::Update(elapsedTime);
-	clip_index = GetBodyAnimationController()->GetAnimationClip();
+	clip_index = static_cast<int>(GetBodyAnimationController()->GetAnimationClip());
 	std::string currentAnimationName = GetBodyAnimationController()->GetCurrentAnimationName();
 #if 0
 	bool pressing_shift = (GetKeyState(VK_SHIFT) & 0x8000);

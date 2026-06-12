@@ -24,6 +24,7 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 
+
 void Player::Initialize(const Transform& transform)
 {
     std::string parentName = "skeletalComponent";
@@ -84,6 +85,33 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyState("Anim_DKF_Attack_01", 0.36f, 0.7f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Anim_DKF_Attack_01", 0.36f, 0.958f, AnimationNotifyState::Type::ComboWindow);
         controller->AddNotifyState("Anim_DKF_Attack_01", 0.7f, 0.958f, AnimationNotifyState::Type::TransitionWindow);
+
+        controller->AddNotifyEvent("Anim_DKF_Attack_02", 0.315f, AnimationNotifyEvent::Type::PlaySE,"start");
+        controller->AddNotifyState("Anim_DKF_Attack_02", 0.08f, 0.28f, AnimationNotifyState::Type::HitBox);
+        controller->AddNotifyState("Anim_DKF_Attack_02", 0.08f, 0.875f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Anim_DKF_Attack_02", 0.421f, 0.875f, AnimationNotifyState::Type::TransitionWindow);
+
+        controller->AddNotifyEvent("Anim_DKF_Attack_03", 0.315f, AnimationNotifyEvent::Type::PlaySE,"start");
+        controller->AddNotifyState("Anim_DKF_Attack_03", 0.137f, 0.243f, AnimationNotifyState::Type::HitBox);
+        controller->AddNotifyState("Anim_DKF_Attack_03", 0.08f, 1.0f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Anim_DKF_Attack_03", 0.52f, 1.0f, AnimationNotifyState::Type::TransitionWindow);
+
+        comboAttacks =
+        {
+            {
+                "Anim_DKF_Attack_01",
+                1
+            },
+            {
+                "Anim_DKF_Attack_02",
+                2
+            },
+            {
+                "Anim_DKF_Attack_03",
+                -1
+            }
+        };
+
 #else
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get(), rootNodeIndex);
@@ -451,7 +479,6 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
         std::string audioPath = "./Data/Sound/SSE" + event.parameter + ".wav";
         CoreAudio::PlayOneShot(audioPath, 1.0f);
 #endif // 0
-
         break;
     case AnimationNotifyEvent::Type::SpawnEffect:
         break;

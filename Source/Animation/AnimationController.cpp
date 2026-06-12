@@ -8,7 +8,7 @@
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
-    float prevTime = animationTime;
+    prevAnimationTime = animationTime;
     animationTime += deltaTime * animationRate;
 
     if (target_->model->animations.size() == 0)
@@ -17,12 +17,12 @@ void AnimationController::OnUpdate(const float deltaTime)
     }
 
     // NotifyTrack のイベント処理
-    auto& notifyStates = notifyTracks[animationClip];
+    auto& notifyStates = notifyTracks[notifyAnimationClip];
     for (auto& state : notifyStates.states)
     {
         bool wasInside =
-            prevTime >= state.startTime &&
-            prevTime < state.endTime;
+            prevAnimationTime >= state.startTime &&
+            prevAnimationTime < state.endTime;
 
         bool isInside =
             animationTime >= state.startTime &&
@@ -41,7 +41,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 
     for (auto& event : notifyStates.events)
     {
-        if (prevTime < event.time &&
+        if (prevAnimationTime < event.time &&
             animationTime >= event.time)
         {
             OnNotifyEvent(event);
@@ -55,7 +55,7 @@ void AnimationController::OnUpdate(const float deltaTime)
         //target_->model->Animate(animationClip, animationTime, animationNodes[Origin]);
         target_->model->Animate(this->animationNextClip, 0.0f, animationNodes[Next]);
         blendElapsedTime = 0.0f;
-        animationTime = 0.0f;
+        //animationTime = 0.0f;
         blendFactor = 0.0f;
 
         transitionState = AnimationTransitionState::Inprogress;
@@ -191,6 +191,11 @@ void AnimationController::OnUpdate(const float deltaTime)
 
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
 {
+    notifyAnimationClip = animationNameToIndex_[animationName];
+
+    animationTime = 0.0f;
+    prevAnimationTime = 0.0f;
+
     this->animationNextClip = animationNameToIndex_[animationName];
     this->isAnimationFinished = false;
     currentAnimationName = animationName;
@@ -217,9 +222,11 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
 // ルートモーションをリセットする
 void AnimationController::ResetRootMotion(int animationClip)
 {
+
     this->isAnimationFinished = false;
     transitionState = AnimationController::AnimationTransitionState::Completed;
     this->animationClip = animationClip;
+    prevAnimationTime = 0.0f;
     animationTime = 0;
     target_->model->Animate(animationClip, 0, finalNodes);
     InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);

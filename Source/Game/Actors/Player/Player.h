@@ -15,19 +15,11 @@ class IInteractable;
 class Player :public Character
 {
 public:
-    struct AttackData
+    struct ComboAttack
     {
         std::string animationName;
 
-        float hitStart;
-        float hitEnd;
-
-        float comboWindowStart;
-        float comboWindowEnd;
-
         int nextComboIndex = -1;
-
-        float moveSpeed = 0.0f;
     };
 
 public:
@@ -56,6 +48,7 @@ public:
         transitionWindow = false;  // ステート遷移してもいいかどうか
         comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
         comboWindow = false;   // コンボ受付をするかどうか
+        Logger::Log(U8("コンボ受付をしなくする、ステート遷移しない、コンボキューをいれない"));
     }
 private:
     // 火花エフェクトの生成
@@ -78,6 +71,10 @@ public:
     bool hasSpawnedThisAttack = false; // 今攻撃でエフェクトを生成したかどうか
 
     bool invincible = false; // 無敵状態かどうか
+
+    std::vector<ComboAttack> comboAttacks;
+
+    int currentComboIndex = 0;
 
 private:
     // プレイヤーのマックスHP

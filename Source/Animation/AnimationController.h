@@ -149,6 +149,9 @@ private:
     //アニメーションの再生倍率
     float animationRate = 1.0f;     //デフォルト 1,0f
 
+    // 前フレームのアニメーション時間
+    float prevAnimationTime = 0.0f;
+
     //アニメーション時間
     float animationTime = 0.0f;
 
@@ -157,6 +160,10 @@ private:
 
     // 次再生したいアニメーションのインデックス
     size_t animationNextClip = 0;
+
+    // ステートの管理に使用するアニメーションのインデックス　別にわけないと
+    size_t notifyAnimationClip = 0;
+
 
     // アニメーションをループするか
     bool isAnimationLoop = true;
