@@ -31,6 +31,12 @@ public:
     {
         animationNameToIndex_[animationName] = animationClip;
         animationImGUiOrder.push_back(animationName);
+
+        auto& asset =
+            animationNotifyAssets[animationClip];
+
+        asset.animationName = animationName;
+        asset.animationClip = animationClip;
     }
 
     // アニメーション再生しているかどうか
@@ -88,7 +94,7 @@ public:
         const AnimationNotifyState::Type type)
     {
         const size_t clip = animationNameToIndex_[animationName];
-        notifyTracks[clip].states.push_back({ start,end,type });
+        animationNotifyAssets[clip].notifyTrack.states.push_back({ start,end,type });
     }
 
     void AddNotifyEvent(
@@ -97,15 +103,21 @@ public:
         const AnimationNotifyEvent::Type type, const std::string& parameter = "")
     {
         const size_t clip = animationNameToIndex_[animationName];
-        notifyTracks[clip].events.push_back({ time,type,parameter });
+        animationNotifyAssets[clip].notifyTrack.events.push_back({ time,type,parameter });
 
         std::sort(
-            notifyTracks[clip].events.begin(),
-            notifyTracks[clip].events.end(),
+            animationNotifyAssets[clip].notifyTrack.events.begin(),
+            animationNotifyAssets[clip].notifyTrack.events.end(),
             [](const auto& a, const auto& b)
             {
                 return a.time < b.time;
             });
+    }
+
+    void AddCombo(const std::string& animationName, const std::string& nextComboName)
+    {
+        const size_t clip = animationNameToIndex_[animationName];
+        animationNotifyAssets[clip].nextCombo = nextComboName;
     }
 
     void OnNotifyBegin(const AnimationNotifyState& state);
@@ -113,6 +125,21 @@ public:
     void OnNotifyEnd(const AnimationNotifyState& state);
 
     void OnNotifyEvent(const AnimationNotifyEvent& event);
+
+    const AnimationNotifyAsset* GetAnimationAsset(const std::string& animationName) const
+    {
+        auto it = animationNameToIndex_.find(animationName);
+
+        if (it == animationNameToIndex_.end())
+            return nullptr;
+
+        auto assetIt = animationNotifyAssets.find(it->second);
+
+        if (assetIt == animationNotifyAssets.end())
+            return nullptr;
+
+        return &assetIt->second;
+    }
 
 private:
     // ルートモーションをリセットする
@@ -202,8 +229,7 @@ private:
     bool resetRootMotionDelta = false;   // ルートモーションのリセットが必要かどうか
 
     // アニメーションクリップごとのイベント
-    std::unordered_map<size_t,
-        AnimationNotifyTrack> notifyTracks;
+    std::unordered_map<size_t, AnimationNotifyAsset> animationNotifyAssets;
 
 };
 

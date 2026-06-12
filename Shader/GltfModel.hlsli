@@ -14,6 +14,7 @@ struct BATCH_VS_IN
     float4 normal : NORMAL;
     float4 tangent : TANGENT;
     float2 texcoord : TEXCOORD;
+
 };
 
 struct MORPH_VS_IN
@@ -48,8 +49,8 @@ struct VS_OUT
     float4 wTangent : TANGENT;
     float2 texcoord : TEXCOORD;
 
-    float4 currentClipPosition : CLIP_POSITION0;
-    float4 previousClipPosition : CLIP_POSITION1;
+    float4 currentClipPosition : CURRENT_POSITION;
+    float4 previousClipPosition : PREVIOUS_POSITION;
 };
 
 struct INSTANCE_VS_OUT
@@ -61,6 +62,9 @@ struct INSTANCE_VS_OUT
     float2 texcoord : TEXCOORD;
     float4 instanceColor : INSTANCE_COLOR;
     float4 instanceEmissive : INSTANCE_EMISSIVE;
+
+    float4 currentClipPosition : CURRENT_POSITION;
+    float4 previousClipPosition : PREVIOUS_POSITION;
 };
 
 cbuffer PRIMITIVE_CONSTANT_BUFFER : register(b0)
@@ -160,10 +164,3 @@ struct PS_OUT
 
 #include "GBuffer.hlsli"
 
-//struct GBUFFER_PS_OUT
-//{
-//    float4 gbuffer1Normal : SV_TARGET1; // Normal (Octahedral) + Roughness + Metallic
-//    float4 gbuffer2Color : SV_TARGET2; // BaseColor (RGB) +　occlusion
-//    float4 position : SV_TARGET3; // world position 
-//    float4 emissive : SV_TARGET4; // w:何かを書き込んでいたら０にするそれ以外は１　スカイマップなどの時に使用 
-//};

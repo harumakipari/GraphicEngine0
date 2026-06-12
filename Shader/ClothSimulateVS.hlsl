@@ -39,12 +39,17 @@ VS_OUT main(VS_ClOTH_IN vin)
 {
     float sigma = vin.tangent.w;
     VS_OUT vout;
+
     vin.position.w = 1;
     vout.position = mul(vin.position, mul(world, viewProjection));
     
     //vout.position /= vout.position.w; // to ndc
     vout.wPosition = mul(vin.position, world);
-    
+
+    vout.currentClipPosition = vout.position;
+    vout.previousClipPosition = mul(vin.position, mul(previousWorld, previousViewProjection));
+
+
     // ‚±‚±‚Å world ‚Ì‰ñ“]‚Ì‘O‚É
     float3 normal = vin.normal.xyz;
     float3 tangent = vin.tangent.xyz;

@@ -87,9 +87,7 @@ void PlayerAttackState::Enter()
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
 
-    auto& attack = player->comboAttacks[player->currentComboIndex];
-    player->PlayBodyAnimation(attack.animationName, false, true, 0.1f);
-
+    player->PlayBodyAnimation(player->currentAttackAnimation, false, true, 0.1f);
     //player->PlayBodyAnimation("Primary_Attack_Fast_D", false, true, 0.1f);
 
     // 攻撃タイマーをリセット
@@ -98,11 +96,10 @@ void PlayerAttackState::Enter()
 
     player->ResetAnimationStateFlag();  // アニメーションのステート系のフラグをリセットする
 
-    Logger::Log("Attack Enter :"+attack.animationName);
+    Logger::Log("Attack Enter :" + player->currentAttackAnimation);
 
-    Logger::Log("AnimationTime="+std::to_string( player->GetBodyAnimationController()->GetCurrentAnimationTime()));
-    Logger::Log("AnimationTime="+std::to_string( player->GetBodyAnimationController()->GetCurrentAnimationTime()));
-
+    Logger::Log("AnimationTime=" + std::to_string(player->GetBodyAnimationController()->GetCurrentAnimationTime()));
+    Logger::Log("AnimationTime=" + std::to_string(player->GetBodyAnimationController()->GetCurrentAnimationTime()));
 
 }
 
@@ -131,14 +128,25 @@ void PlayerAttackState::Execute(float deltaTime)
     {
         if (player->comboQueued)
         {
-            auto& attack =player->comboAttacks[player->currentComboIndex];
+            auto controller =
+                player->GetBodyAnimationController();
 
-            if (attack.nextComboIndex != -1)
+            const auto* asset =
+                controller->GetAnimationAsset(
+                    player->currentAttackAnimation);
+
+            if (asset)
             {
-                player->currentComboIndex =
-                    attack.nextComboIndex;
-                player->comboQueued = false;
-                player->GetStateMachine()->ChangeState("Attack");
+                if (!asset->nextCombo.empty())
+                {
+                    player->currentAttackAnimation =
+                        asset->nextCombo;
+
+                    player->comboQueued = false;
+
+                    player->GetStateMachine()
+                        ->ChangeState("Attack");
+                }
             }
         }
     }
@@ -146,7 +154,7 @@ void PlayerAttackState::Execute(float deltaTime)
 
     if (!owner->GetBodyAnimationController()->IsPlayAnimation())
     {
-        player->currentComboIndex = 0;
+        player->currentAttackAnimation = "Anim_DKF_Attack_01";
         player->comboQueued = false;
 
         auto dir = player->inputComponent->GetMoveInput();

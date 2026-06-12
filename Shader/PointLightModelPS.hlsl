@@ -63,5 +63,8 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     // 元々wは１だったがスカイマップなどの時に使用するため、２は点光源であることを示すフラグ
     pout.emissive = float4(emissive, 2);
     pout.material = float4(0.0, 0.0, 0.0, 0.0);
+    float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
+    pout.velocity = float4(velocity, 1, 1);
+
     return pout;
 }

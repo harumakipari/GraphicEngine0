@@ -60,7 +60,11 @@ GBUFFER_PS_OUT main(INSTANCE_VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 // 外側暗く
     emissive *= lerp(0.4, 1.0, core);
 
-#endif 
+#endif
+    float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
+    pout.velocity = float4(velocity, 1, 1);
+
+
     // 元々wは１だったがスカイマップなどの時に使用するため、２は点光源であることを示すフラグ
     pout.emissive = float4(emissive, 2);
     pout.material = float4(0.0, 0.0, 0.0, 0.0);

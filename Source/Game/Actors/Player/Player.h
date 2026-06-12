@@ -72,10 +72,7 @@ public:
 
     bool invincible = false; // 無敵状態かどうか
 
-    std::vector<ComboAttack> comboAttacks;
-
-    int currentComboIndex = 0;
-
+    std::string currentAttackAnimation = "Anim_DKF_Attack_01";
 private:
     // プレイヤーのマックスHP
     int maxHp = 100;

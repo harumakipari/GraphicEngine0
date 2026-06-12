@@ -23,7 +23,9 @@ INSTANCE_VS_OUT main(INSTANCE_VS_IN vsIn)
     vsOut.instanceEmissive = vsIn.instanceEmissive;
     
     vsOut.texcoord = vsIn.texcoord;
-    
+
+    vsOut.currentClipPosition = vsOut.position;
+    vsOut.previousClipPosition = mul(vsOut.position, mul(previousWorld, previousViewProjection));
     
     return vsOut;
 }

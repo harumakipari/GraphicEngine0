@@ -17,8 +17,11 @@ void AnimationController::OnUpdate(const float deltaTime)
     }
 
     // NotifyTrack ‚ÌƒCƒxƒ“ƒgˆ—
-    auto& notifyStates = notifyTracks[notifyAnimationClip];
-    for (auto& state : notifyStates.states)
+    auto& asset =
+        animationNotifyAssets[notifyAnimationClip];
+
+    auto& notifyTrack =asset.notifyTrack;
+    for (auto& state : notifyTrack.states)
     {
         bool wasInside =
             prevAnimationTime >= state.startTime &&
@@ -39,7 +42,7 @@ void AnimationController::OnUpdate(const float deltaTime)
         }
     }
 
-    for (auto& event : notifyStates.events)
+    for (auto& event : notifyTrack.events)
     {
         if (prevAnimationTime < event.time &&
             animationTime >= event.time)

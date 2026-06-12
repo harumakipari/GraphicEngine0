@@ -96,21 +96,11 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyState("Anim_DKF_Attack_03", 0.08f, 1.0f, AnimationNotifyState::Type::ComboWindow);
         controller->AddNotifyState("Anim_DKF_Attack_03", 0.52f, 1.0f, AnimationNotifyState::Type::TransitionWindow);
 
-        comboAttacks =
-        {
-            {
-                "Anim_DKF_Attack_01",
-                1
-            },
-            {
-                "Anim_DKF_Attack_02",
-                2
-            },
-            {
-                "Anim_DKF_Attack_03",
-                -1
-            }
-        };
+        controller->AddCombo("Anim_DKF_Attack_01", "Anim_DKF_Attack_02");
+        controller->AddCombo("Anim_DKF_Attack_02", "Anim_DKF_Attack_03");
+
+
+
 
 #else
         // アニメーションコントローラーを作成

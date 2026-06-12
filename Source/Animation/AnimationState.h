@@ -37,3 +37,12 @@ struct AnimationNotifyTrack
     std::vector<AnimationNotifyEvent> events;
     std::vector<AnimationNotifyState> states;
 };
+
+struct AnimationNotifyAsset
+{
+    std::string animationName = "";
+    size_t animationClip = 0;
+    std::string nextCombo = "";
+
+    AnimationNotifyTrack notifyTrack;
+};
