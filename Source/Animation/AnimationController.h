@@ -37,6 +37,8 @@ public:
 
         asset.animationName = animationName;
         asset.animationClip = animationClip;
+
+        animationAssetOrder.push_back(animationClip);
     }
 
     // アニメーション再生しているかどうか
@@ -228,8 +230,11 @@ private:
 
     bool resetRootMotionDelta = false;   // ルートモーションのリセットが必要かどうか
 
+    size_t selectedTimelineClip = 0;    // タイムラインの対象アニメーション
+
     // アニメーションクリップごとのイベント
     std::unordered_map<size_t, AnimationNotifyAsset> animationNotifyAssets;
 
+    std::vector<size_t> animationAssetOrder;    // アニメーションの表示を追加順にするための変数
 };
 
