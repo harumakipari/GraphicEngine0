@@ -46,7 +46,8 @@ void BossEnemy::Initialize(const Transform& transform)
 
 #endif // 0
     // アニメーションコントローラーを作成
-    auto animationController_ = std::make_shared<AnimationController>(skeletalMeshComponent.get());
+    int rootIndex = skeletalMeshComponent->FindIndexByName("root");
+    auto animationController_ = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     animationController_->AddAnimation("Idle", 0);
     animationController_->AddAnimation("HitReact_Back", 1);
     animationController_->AddAnimation("HitReact_Front", 2);

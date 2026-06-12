@@ -65,7 +65,7 @@ void Player::Initialize(const Transform& transform)
 
 #if 1
         // アニメーションコントローラーを作成
-        auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get(), rootNodeIndex);
+        auto controller = std::make_shared<AnimationController>(this,skeletalMeshComponent.get(), rootNodeIndex);
         controller->AddAnimation("Idle", 0);
         controller->AddAnimation("Jog_Fwd", 1);
         controller->AddAnimation("Roll_front_0", 2);
@@ -79,6 +79,11 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Anim_DKF_Attack_01", 10);
         controller->AddAnimation("Anim_DKF_Attack_02", 11);
         controller->AddAnimation("Anim_DKF_Attack_03", 12);
+
+        controller->AddNotifyEvent("Anim_DKF_Attack_01", 0.615f, AnimationNotifyEvent::Type::PlaySE,"start");
+        controller->AddNotifyState("Anim_DKF_Attack_01", 0.36f, 0.7f, AnimationNotifyState::Type::HitBox);
+        controller->AddNotifyState("Anim_DKF_Attack_01", 0.36f, 0.958f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Anim_DKF_Attack_01", 0.7f, 0.958f, AnimationNotifyState::Type::TransitionWindow);
 #else
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get(), rootNodeIndex);
@@ -120,8 +125,6 @@ void Player::Initialize(const Transform& transform)
 
 #endif // 0
 
-        controller->AddNotify(0, 0.3f, AnimationNotify::Type::HitStart);
-        controller->AddNotify(0, 0.5f, AnimationNotify::Type::HitEnd);
 
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
@@ -248,8 +251,8 @@ void Player::Initialize(const Transform& transform)
     auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
-#if 0
 
+#if 0
     auto bowMeshComponent = this->AddComponent<SkeletalMeshComponent>("Bow", parentName);
     bowMeshComponent->SetModel("./Data/Models/Weapons/PlayerBow/AnimationBow.gltf", false, true);
 
@@ -269,41 +272,8 @@ void Player::Initialize(const Transform& transform)
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
 
 
+    
 
-    comboAttacks =
-    {
-       {
-        "Anim_DKF_Attack_01",
-        0.10f,
-        0.25f,
-        0.20f,
-        0.5f,
-        1,
-        1.5f
-        },
-
-        {
-            "Anim_DKF_Attack_02",
-            0.08f,
-            0.30f,
-            0.25f,
-            0.50f,
-            2,
-            1.0f
-        },
-
-        {
-            "Anim_DKF_Attack_03",
-            0.15f,
-            0.40f,
-            -1.0f,
-            -1.0f,
-            -1,
-            0.0f
-        },
-
-
-    };
 }
 
 
@@ -426,40 +396,69 @@ void Player::Update(float elapsedTime)
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
-    DrawAttackEditorImGui();
     Character::DrawImGuiDetails();
 #endif
 
 }
 
-// アタックエディタ
-void Player::DrawAttackEditorImGui()
+void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {
-    ImGui::SeparatorText("Combo Editor");
-
-    for (int i = 0; i < comboAttacks.size(); i++)
+    switch (state.type)
     {
-        auto& attack = comboAttacks[i];
-
-        ImGui::PushID(i);
-
-        if (ImGui::TreeNode(
-            attack.animationName.c_str()))
-        {
-            ImGui::SliderFloat("HitStart", &attack.hitStart, 0.0f, 2.0f);
-
-            ImGui::SliderFloat("HitEnd", &attack.hitEnd, 0.0f, 2.0f);
-
-            ImGui::SliderFloat("ComboStart", &attack.comboWindowStart, 0.0f, 2.0f);
-
-            ImGui::SliderFloat("ComboEnd", &attack.comboWindowEnd, 0.0f, 2.0f);
-
-            ImGui::TreePop();
-        }
-
-        ImGui::PopID();
+    case AnimationNotifyState::Type::HitBox:
+        Logger::Log(U8("当たり判定を開始しました"));
+        break;
+    case AnimationNotifyState::Type::ComboWindow:
+        comboWindow = true;
+        Logger::Log(U8("コンボ受付を開始しました"));
+        break;
+    case AnimationNotifyState::Type::Invincible:
+        break;
+    case AnimationNotifyState::Type::TransitionWindow:
+        transitionWindow = true;
+        Logger::Log(U8("遷移許可区間を開始しました"));
+        break;
     }
 }
+
+void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
+{
+    switch (state.type)
+    {
+    case AnimationNotifyState::Type::HitBox:
+        Logger::Log(U8("当たり判定を終了しました"));
+        break;
+    case AnimationNotifyState::Type::ComboWindow:
+        comboWindow = false;
+        Logger::Log(U8("コンボ受付を終了しました"));
+        break;
+    case AnimationNotifyState::Type::Invincible:
+        break;
+    case AnimationNotifyState::Type::TransitionWindow:
+        transitionWindow = false;
+        Logger::Log(U8("遷移許可区間を終了しました"));
+        break;
+    }
+}
+
+void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
+{
+    switch (event.type)
+    {
+    case AnimationNotifyEvent::Type::PlaySE:
+        Logger::Log(U8("SEがなる！"));
+#if 0
+        std::string audioPath = "./Data/Sound/SSE" + event.parameter + ".wav";
+        CoreAudio::PlayOneShot(audioPath, 1.0f);
+#endif // 0
+
+        break;
+    case AnimationNotifyEvent::Type::SpawnEffect:
+        break;
+    }
+}
+
+
 // 火花エフェクトの生成
 void Player::SpawnSpark(DirectX::XMFLOAT3 pos)
 {

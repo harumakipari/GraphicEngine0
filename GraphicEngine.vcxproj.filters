@@ -852,6 +852,9 @@
     <ClInclude Include="External\imgui\timer.h">
       <Filter>External\imgui</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Animation\AnimationState.h">
+      <Filter>Source\Animation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">

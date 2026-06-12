@@ -374,6 +374,7 @@
     <ClInclude Include="External\imgui\profiler.h" />
     <ClInclude Include="External\imgui\timer.h" />
     <ClInclude Include="Source\Animation\AnimationController.h" />
+    <ClInclude Include="Source\Animation\AnimationState.h" />
     <ClInclude Include="Source\Components\Audio\AudioSourceComponent.h" />
     <ClInclude Include="Source\Components\Base\Component.h" />
     <ClInclude Include="Source\Components\Base\SceneComponent.h" />

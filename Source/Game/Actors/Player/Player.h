@@ -43,15 +43,26 @@ public:
     void DrawImGuiDetails()override;
 
     void Finalize()override {}
+
+    void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
+
+    void OnAnimationNotifyEnd(const AnimationNotifyState& state)override;
+
+    void OnAnimationNotifyEvent(const AnimationNotifyEvent& event)override;
+
+    // アニメーションステート関連のフラグをリセットする
+    void ResetAnimationStateFlag()
+    {
+        transitionWindow = false;  // ステート遷移してもいいかどうか
+        comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
+        comboWindow = false;   // コンボ受付をするかどうか
+    }
 private:
     // 火花エフェクトの生成
     void SpawnSpark(DirectX::XMFLOAT3 hitPosition);
 
     // 剣の攻撃判定
     void CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end);
-
-    // アタックエディタ
-    void DrawAttackEditorImGui();
 
 public:
     //当たった時の処理
@@ -74,7 +85,7 @@ private:
 
 
     // インタラクト対象検索
-    IInteractable* FindInteractable() ;
+    IInteractable* FindInteractable();
 
 public:
     // 描画用コンポーネントを追加
@@ -97,10 +108,9 @@ public:
     };
     std::vector<TrailPoint> trailPoints;
 
-    std::vector<AttackData> comboAttacks; // コンボ攻撃のデータ
-    int currentComboIndex = 0; // 現在のコンボ攻撃のインデックス
     bool comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
-
+    bool comboWindow = false;   // コンボ受付をするかどうか
+    bool transitionWindow = false;  // ステート遷移してもいいかどうか
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     bool isAttackActive = false;

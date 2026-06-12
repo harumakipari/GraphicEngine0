@@ -17,6 +17,8 @@ public:
     // ステージから出ていくときのメソッド
     virtual void Exit() = 0;
 
+    void Reset();
+
     virtual const char* GetName() const = 0;
 
 protected:

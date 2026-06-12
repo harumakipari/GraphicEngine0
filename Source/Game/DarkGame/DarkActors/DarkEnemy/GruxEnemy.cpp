@@ -29,7 +29,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     }
 
     // アニメーションコントローラーを作成
-    auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get());
+    int rootIndex = skeletalMeshComponent->FindIndexByName("root");
+    auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     controller->AddAnimation("Idle", 0);
     controller->AddAnimation("PrimaryAttack_RA", 1);
     controller->AddAnimation("PrimaryAttack_LA", 2);
@@ -199,7 +200,8 @@ void KnightActor::Initialize(const Transform& transform)
     skeletalMeshComponent->SetModel("./Data/Models/Characters/Greystone/Idle.gltf", false, true);
 
     // アニメーションコントローラーを作成
-    auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get());
+    int rootIndex = skeletalMeshComponent->FindIndexByName("root");
+    auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     controller->AddAnimation("Idle", 0);
 
     // アニメーションコントローラーを character に追加
@@ -272,7 +274,8 @@ void SavarogEnemy::Initialize(const Transform& transform)
 
 
     // アニメーションコントローラーを作成
-    auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get());
+    int rootIndex = skeletalMeshComponent->FindIndexByName("root");
+    auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     controller->AddAnimation("Idle", 0);
     controller->AddAnimation("Emote_Pull", 1);
     controller->AddAnimation("Swing1_Medium", 2);
@@ -381,7 +384,8 @@ void GracialEnemy::Initialize(const Transform& transform)
 
 
     // アニメーションコントローラーを作成
-    auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get());
+    int rootIndex = skeletalMeshComponent->FindIndexByName("root");
+    auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     controller->AddAnimation("Idle", 0);
     controller->AddAnimation("Ability_E", 1);
     controller->AddAnimation("Ability_R", 2);

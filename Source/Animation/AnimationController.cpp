@@ -4,7 +4,7 @@
 #include <imgui.h>
 #include <ranges>
 
-#include "Core/Actor.h"
+#include "Game/Actors/Base/Character.h"
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
@@ -17,8 +17,8 @@ void AnimationController::OnUpdate(const float deltaTime)
     }
 
     // NotifyTrack のイベント処理
-    auto& states = notifyStates[animationClip];
-    for (auto& state : states)
+    auto& notifyStates = notifyTracks[animationClip];
+    for (auto& state : notifyStates.states)
     {
         bool wasInside =
             prevTime >= state.startTime &&
@@ -27,6 +27,25 @@ void AnimationController::OnUpdate(const float deltaTime)
         bool isInside =
             animationTime >= state.startTime &&
             animationTime < state.endTime;
+
+        if (!wasInside && isInside)
+        {
+            OnNotifyBegin(state);
+        }
+
+        if (wasInside && !isInside)
+        {
+            OnNotifyEnd(state);
+        }
+    }
+
+    for (auto& event : notifyStates.events)
+    {
+        if (prevTime < event.time &&
+            animationTime >= event.time)
+        {
+            OnNotifyEvent(event);
+        }
     }
 
     // アニメーション遷移の準備
@@ -172,16 +191,6 @@ void AnimationController::OnUpdate(const float deltaTime)
 
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
 {
-#if 0
-    this->isAnimationFinished = false;
-    transitionState = AnimationController::AnimationTransitionState::Completed;
-    this->animationClip = animationNameToIndex_[animationName];
-    currentAnimationName = animationName;
-    animationTime = 0; // blend している時に
-    InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
-    previousPosition = { node.globalTransform._41, node.globalTransform._42, node.globalTransform._43 }; // グローバル空間
-    zeroTranslation = node.translation;
-#else
     this->animationNextClip = animationNameToIndex_[animationName];
     this->isAnimationFinished = false;
     currentAnimationName = animationName;
@@ -203,7 +212,6 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
         this->animationClip = animationNameToIndex_[animationName];
         transitionState = AnimationController::AnimationTransitionState::Completed;
     }
-#endif // 0
 }
 
 // ルートモーションをリセットする
@@ -278,16 +286,49 @@ void AnimationController::DrawTimeline()
     float x = pos.x + width * normalized;
     drawList->AddLine(ImVec2(x, pos.y), ImVec2(x, pos.y + height), IM_COL32(255, 255, 255, 255), 2.0f);
 
-    auto& notifies = notifyTracks[animationClip];
 
-    for (auto& notify : notifies)
-    {
-        float normalized = notify.time / length;
-
-        float notifyX = pos.x + width * normalized;
-
-        drawList->AddLine(ImVec2(notifyX, pos.y), ImVec2(notifyX, pos.y + height), IM_COL32(255, 0, 0, 255), 2.0f);
-    }
 
 #endif
+}
+
+
+void AnimationController::OnNotifyBegin(const AnimationNotifyState& state)
+{
+    if (!owner)
+    {
+        Logger::Warning(U8("アニメーションコントローラーでownerがnullptrです！"));
+        return;
+    }
+    if (owner)
+    {
+        owner->OnAnimationNotifyBegin(state);
+    }
+}
+
+void AnimationController::OnNotifyEnd(const AnimationNotifyState& state)
+{
+    if (!owner)
+    {
+        Logger::Warning(U8("アニメーションコントローラーでownerがnullptrです！"));
+        return;
+    }
+
+    if (owner)
+    {
+        owner->OnAnimationNotifyEnd(state);
+    }
+}
+
+void AnimationController::OnNotifyEvent(const AnimationNotifyEvent& event)
+{
+    if (!owner)
+    {
+        Logger::Warning(U8("アニメーションコントローラーでownerがnullptrです！"));
+        return;
+    }
+
+    if (owner)
+    {
+        owner->OnAnimationNotifyEvent(event);
+    }
 }

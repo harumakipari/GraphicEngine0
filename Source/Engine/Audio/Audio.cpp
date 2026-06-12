@@ -198,6 +198,12 @@ void CoreAudio::PlayOneShot(const wchar_t* filePath, float volume)
 	audioSources.emplace_back(source);
 }
 
+void CoreAudio::PlayOneShot(const std::string& filePath, float volume)
+{
+	std::filesystem::path path(filePath);
+	PlayOneShot(path.c_str(), volume);
+}
+
 void CoreAudio::Update(float deltaTime)
 {
 	//íœˆ—

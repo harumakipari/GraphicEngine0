@@ -10,11 +10,12 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     Character::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
     //skeletalMeshComponent->SetModel("./Data/Models/Characters/Skeleton/Skeleton.gltf");
-    skeletalMeshComponent->SetModel("./Data/Models/Characters/Skeleton/SK_Skeleton_01.gltf",false,true);
+    skeletalMeshComponent->SetModel("./Data/Models/Characters/Skeleton/SK_Skeleton_01.gltf", false, true);
     skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Enemy;   // オブジェクトの種類を Enemy に設定
 
     // アニメーションコントローラーを作成
-    auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get());
+    int rootIndex = skeletalMeshComponent->FindIndexByName("root");
+    auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     controller->AddAnimation("Walk", 0);
     controller->AddAnimation("Attack", 1);
     controller->AddAnimation("Idle", 2);

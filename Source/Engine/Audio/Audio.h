@@ -133,6 +133,8 @@ public:
 	 */
 	static void PlayOneShot(const wchar_t* filePath, float volume = 1.0f);
 
+	static void PlayOneShot(const std::string& filePath,float volume=1.0f);
+
 	/**
 	 * @brief フレーム更新。
 	 * @param deltaTime 経過時間（秒）。

@@ -21,7 +21,6 @@ public:
         animationBodyControllerName = "Body";
     }
 
-
     virtual void Update(float deltaTime)override
     {
         for (auto& controller : animationControllers | std::views::values)
@@ -35,13 +34,11 @@ public:
         }
     };
 
-
     // ステートマシンをセットする
     void SetStateMachine(const std::shared_ptr<StateMachine>& stateMachine)
     {
         stateMachine_ = stateMachine;
     }
-
 
     // ステートマシンを取得する
     std::shared_ptr<StateMachine> GetStateMachine()
@@ -114,7 +111,6 @@ public:
         return  it->second;
     }
 
-
     int GetHp() const { return hp; }
 
     //進行方向の単位ベクトルを取得する
@@ -159,6 +155,11 @@ public:
 #endif
     }
 
+    virtual void OnAnimationNotifyBegin(const AnimationNotifyState& state) {}
+
+    virtual void OnAnimationNotifyEnd(const AnimationNotifyState& state) {}
+
+    virtual void OnAnimationNotifyEvent(const AnimationNotifyEvent& event) {}
 
 public:
     //高さ
@@ -178,6 +179,8 @@ public:
 
     //重力
     float gravity = -9.8f;
+
+
 protected:
     size_t animationIndex = 0;
 

@@ -41,7 +41,7 @@ void TestPlayer::Initialize(const Transform& transform)
 	int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
 
 	// アニメーションコントローラーを作成
-	auto controller = std::make_shared<AnimationController>(skeletalMeshComponent.get(), rootNodeIndex);
+	auto controller = std::make_shared<AnimationController>(this,skeletalMeshComponent.get(), rootNodeIndex);
 	controller->AddAnimation("Idle", 0);
 	controller->AddAnimation("Jog_Fwd", 1);
 	controller->AddAnimation("Roll_front_0", 2);

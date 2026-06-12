@@ -7,40 +7,15 @@
 // プロジェクトの他のヘッダ
 #include "Components/Render/MeshComponent.h"
 #include "Graphics/Resource/InterleavedGltfModel.h"
+#include "AnimationState.h"
 
+class Character;
 
-struct AnimationNotifyState
-{
-    float startTime;
-    float endTime;
-
-    enum class Type:uint32_t
-    {
-        HitBox,
-        ComboWindow,
-        Invincible,
-        SuperArmor
-    };
-
-    Type type;
-};
 // アニメーションのコントローラー  
 class AnimationController
 {
 public:
-    struct AnimationState
-    {
-        size_t clip = 0;
-
-        float time = 0.0f;
-
-        bool loop = true;
-
-        std::vector<InterleavedGltfModel::Node>* nodes = nullptr;
-    };
-
-public:
-    AnimationController(SkeletalMeshComponent* target, int rootNodeIndex = 0) :target_(target), rootNodeIndex(rootNodeIndex)
+    AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex) :owner(character), target_(target)
     {
         // アニメーションブレンドに使用するノード
         animationNodes[AnimNode::Origin] = target_->model->GetNodes();
@@ -49,7 +24,7 @@ public:
         // 描画に使用するノード
         finalNodes = target_->model->GetNodes();
 
-        owner = target->GetOwner();
+        this->rootNodeIndex = rootNodeIndex < 0 ? 0 : rootNodeIndex;
     }
 
     void AddAnimation(const std::string& animationName, const size_t animationClip)
@@ -107,26 +82,44 @@ public:
 
     // NotifyTrack にイベントを追加する関数
     void AddNotifyState(
-        size_t clip,
-        float start,
-        float end,
-        AnimationNotifyState::Type type)
+        const std::string& animationName,
+        const float start,
+        const float end,
+        const AnimationNotifyState::Type type)
     {
-        notifyStates[clip].push_back(
+        const size_t clip = animationNameToIndex_[animationName];
+        notifyTracks[clip].states.push_back({ start,end,type });
+    }
+
+    void AddNotifyEvent(
+        const std::string& animationName,
+        const float time,
+        const AnimationNotifyEvent::Type type, const std::string& parameter = "")
+    {
+        const size_t clip = animationNameToIndex_[animationName];
+        notifyTracks[clip].events.push_back({ time,type,parameter });
+
+        std::sort(
+            notifyTracks[clip].events.begin(),
+            notifyTracks[clip].events.end(),
+            [](const auto& a, const auto& b)
             {
-                start,
-                end,
-                type
+                return a.time < b.time;
             });
     }
 
+    void OnNotifyBegin(const AnimationNotifyState& state);
+
+    void OnNotifyEnd(const AnimationNotifyState& state);
+
+    void OnNotifyEvent(const AnimationNotifyEvent& event);
 
 private:
     // ルートモーションをリセットする
     void ResetRootMotion(int animationClip);
 
     SkeletalMeshComponent* target_ = nullptr;
-    Actor* owner = nullptr;
+    Character* owner = nullptr;
 
     std::unordered_map<std::string, size_t> animationNameToIndex_;
 
@@ -202,6 +195,8 @@ private:
     bool resetRootMotionDelta = false;   // ルートモーションのリセットが必要かどうか
 
     // アニメーションクリップごとのイベント
-    std::unordered_map<size_t,std::vector<AnimationNotifyState>> notifyStates;
+    std::unordered_map<size_t,
+        AnimationNotifyTrack> notifyTracks;
+
 };
 

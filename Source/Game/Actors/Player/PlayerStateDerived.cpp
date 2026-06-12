@@ -87,10 +87,7 @@ void PlayerAttackState::Enter()
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
 
-    // 攻撃アニメーションを再生
-    auto& attack = player->comboAttacks[player->currentComboIndex];
-
-    player->PlayBodyAnimation(attack.animationName, false, true, 0.1f);
+    player->PlayBodyAnimation("Anim_DKF_Attack_01", false, true, 0.1f);
 
     //player->PlayBodyAnimation("Primary_Attack_Fast_D", false, true, 0.1f);
 
@@ -103,49 +100,33 @@ void PlayerAttackState::Execute(float deltaTime)
 {
     attackTimer += deltaTime;
 
-    // 0.3秒後に当たる
-    if (!hitDone && attackTimer > 0.3f)
+#if 0
+    if (player->hitBoxEnabled)
     {
         player->DoAttackHit();
-        hitDone = true;
     }
 
-    auto& attack = player->comboAttacks[player->currentComboIndex];
+#endif // 0
 
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
-        if (attackTimer >= attack.comboWindowStart &&
-            attackTimer <= attack.comboWindowEnd)
+        if (player->comboWindow)
         {
             player->comboQueued = true;
         }
     }
 
-    // 今のアニメーションの時間を取得する
-    float animationLength = owner->GetBodyAnimationController()->GetCurrentAnimationLength();
-    // 今のアニメーションの再生時間を取得する
-    float animTime = owner->GetBodyAnimationController()->GetCurrentAnimationTime();
-    // アニメーションの終了間際でコンボ入力があれば次の攻撃に移る
-    if (animTime >= attack.comboWindowEnd)
+    if (player->transitionWindow)
     {
-        if (player->comboQueued &&
-            attack.nextComboIndex != -1)
+        if (player->comboQueued)
         {
-            player->comboQueued = false;
-
-            player->currentComboIndex =
-                attack.nextComboIndex;
-
-            player->GetStateMachine()
-                ->ChangeState("Attack");
-
-            return;
+            player->GetStateMachine()->ChangeState("Attack");
         }
     }
 
+
     if (!owner->GetBodyAnimationController()->IsPlayAnimation())
     {
-        player->currentComboIndex = 0;
         player->comboQueued = false;
 
         auto dir = player->inputComponent->GetMoveInput();
@@ -170,6 +151,7 @@ void PlayerAttackState::Execute(float deltaTime)
 void PlayerAttackState::Exit()
 {
     player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
+    player->ResetAnimationStateFlag();  // アニメーションのステート系のフラグをリセットする
 }
 
 void PlayerDodgeState::Enter()
