@@ -35,9 +35,8 @@ void SceneRenderer::RenderOpaque(ID3D11DeviceContext* immediateContext, const st
 
     for (auto* meshComponent : sorted)
     {
-        auto worldMat =
-            meshComponent->GetComponentWorldTransform()
-            .ToWorldTransform();
+        auto worldMat = meshComponent->GetComponentWorldTransform().ToWorldTransform();
+        auto previousWorldMat = meshComponent->GetPreviousComponentWorldTransform().ToWorldTransform();
 
         meshComponent->UpdateConstantBuffer(immediateContext);
         meshComponent->UpdatePlusAlphaConstants(immediateContext);
@@ -64,7 +63,7 @@ void SceneRenderer::RenderOpaque(ID3D11DeviceContext* immediateContext, const st
         {
             Draw(immediateContext,
                 meshComponent,
-                worldMat,
+                worldMat, previousWorldMat,
                 animatedNodes,
                 InterleavedGltfModel::RenderPass::Opaque);
         }
@@ -72,7 +71,7 @@ void SceneRenderer::RenderOpaque(ID3D11DeviceContext* immediateContext, const st
         {
             DrawWithStaticBatching(immediateContext,
                 meshComponent,
-                worldMat,
+                worldMat, previousWorldMat,
                 animatedNodes,
                 InterleavedGltfModel::RenderPass::Opaque);
         }
@@ -91,9 +90,9 @@ void SceneRenderer::RenderMask(ID3D11DeviceContext* immediateContext, const std:
 
     for (auto* meshComponent : sorted)
     {
-        const auto& worldMat =
-            meshComponent->GetComponentWorldTransform()
-            .ToWorldTransform();
+        const auto& worldMat = meshComponent->GetComponentWorldTransform().ToWorldTransform();
+        auto previousWorldMat = meshComponent->GetPreviousComponentWorldTransform().ToWorldTransform();
+
 
         meshComponent->UpdateConstantBuffer(immediateContext);
         meshComponent->UpdatePlusAlphaConstants(immediateContext);
@@ -103,7 +102,7 @@ void SceneRenderer::RenderMask(ID3D11DeviceContext* immediateContext, const std:
         {
             Draw(immediateContext,
                 meshComponent,
-                worldMat,
+                worldMat, previousWorldMat,
                 meshComponent->GetNodes(),
                 InterleavedGltfModel::RenderPass::Mask);
         }
@@ -111,7 +110,7 @@ void SceneRenderer::RenderMask(ID3D11DeviceContext* immediateContext, const std:
         {
             DrawWithStaticBatching(immediateContext,
                 meshComponent,
-                worldMat,
+                worldMat, previousWorldMat,
                 meshComponent->GetNodes(),
                 InterleavedGltfModel::RenderPass::Mask);
         }
@@ -130,9 +129,8 @@ void SceneRenderer::RenderBlend(ID3D11DeviceContext* immediateContext, const std
 
     for (auto* meshComponent : sorted)
     {
-        const auto& worldMat =
-            meshComponent->GetComponentWorldTransform()
-            .ToWorldTransform();
+        const auto& worldMat = meshComponent->GetComponentWorldTransform().ToWorldTransform();
+        auto previousWorldMat = meshComponent->GetPreviousComponentWorldTransform().ToWorldTransform();
 
         meshComponent->UpdateConstantBuffer(immediateContext);
         meshComponent->UpdatePlusAlphaConstants(immediateContext);
@@ -142,7 +140,7 @@ void SceneRenderer::RenderBlend(ID3D11DeviceContext* immediateContext, const std
         {
             Draw(immediateContext,
                 meshComponent,
-                worldMat,
+                worldMat, previousWorldMat,
                 meshComponent->GetNodes(),
                 InterleavedGltfModel::RenderPass::Blend);
         }
@@ -150,7 +148,7 @@ void SceneRenderer::RenderBlend(ID3D11DeviceContext* immediateContext, const std
         {
             DrawWithStaticBatching(immediateContext,
                 meshComponent,
-                worldMat,
+                worldMat, previousWorldMat,
                 meshComponent->GetNodes(),
                 InterleavedGltfModel::RenderPass::Blend);
         }
@@ -222,7 +220,7 @@ void SceneRenderer::CastShadowRender(ID3D11DeviceContext* immediateContext, cons
 }
 
 
-void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass) const
+void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& previousWorld, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass) const
 {
     // 各 MeshComponent の model を取り出す
     const InterleavedGltfModel* model = meshComponent->model.get();
@@ -267,55 +265,14 @@ void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshCompon
                     primitiveCBuffer->data.hasTangent = primitive.has("TANGENT");
                     primitiveCBuffer->data.skin = node.skin;
 
-
-                    //座標系の変換を行う
-                    const DirectX::XMFLOAT4X4 coordinateSystemTransforms[]
-                    {
-                        {//RHS Y-UP
-                            -1,0,0,0,
-                             0,1,0,0,
-                             0,0,1,0,
-                             0,0,0,1,
-                        },
-                        {//LHS Y-UP
-                            1,0,0,0,
-                            0,1,0,0,
-                            0,0,1,0,
-                            0,0,0,1,
-                        },
-                        {//RHS Z-UP
-                            -1,0, 0,0,
-                             0,0,-1,0,
-                             0,1, 0,0,
-                             0,0, 0,1,
-                        },
-                        {//LHS Z-UP
-                            1,0,0,0,
-                            0,0,1,0,
-                            0,1,0,0,
-                            0,0,0,1,
-                        },
-                    };
-
-                    float scaleFactor;
-
-                    if (model->isModelInMeters)
-                    {
-                        scaleFactor = 1.0f;//メートル単位の時
-                    }
-                    else
-                    {
-                        scaleFactor = 0.01f;//㎝単位の時
-                    }
-                    DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&coordinateSystemTransforms[static_cast<int>(model->GetCoordinateSystem())]) * DirectX::XMMatrixScaling(scaleFactor,scaleFactor,scaleFactor) };
-
-                    XMMATRIX W =
-                        XMLoadFloat4x4(&node.globalTransform) *
-                        C *
-                        XMLoadFloat4x4(&world);
+                    XMMATRIX W = XMLoadFloat4x4(&node.globalTransform) * XMLoadFloat4x4(&world);
+                    XMMATRIX PrevW = XMLoadFloat4x4(&node.globalTransform) * XMLoadFloat4x4(&previousWorld);
 
                     DirectX::XMStoreFloat4x4(&primitiveCBuffer->data.world, W);
+                    DirectX::XMStoreFloat4x4(&primitiveCBuffer->data.previousWorld, PrevW);
                     DirectX::XMStoreFloat4x4(&primitiveCBuffer->data.inverseTransposeWorld, XMMatrixTranspose(XMMatrixInverse(nullptr, W)));
+
+
 
                     const InterleavedGltfModel::Material& material = model->materials.at(primitive.material);
                     // マテリアルの種類をシェーダーに伝える
@@ -429,7 +386,7 @@ void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshCompon
 
 }
 
-void SceneRenderer::DrawWithStaticBatching(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass) const
+void SceneRenderer::DrawWithStaticBatching(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& previousWorld, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass) const
 {
 #if 1
     _ASSERT_EXPR(meshComponent->model->mode == ModelTypes::ModelMode::StaticMesh, L"This function only works with static_batching data.");
@@ -491,11 +448,11 @@ void SceneRenderer::DrawWithStaticBatching(ID3D11DeviceContext* immediateContext
 
         DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&coordinateSystemTransforms[static_cast<int>(model->GetCoordinateSystem())]) * DirectX::XMMatrixScaling(scaleFactor,scaleFactor,scaleFactor) };
 
-        XMMATRIX W =
-            C *
-            XMLoadFloat4x4(&world);
+        XMMATRIX W = C * XMLoadFloat4x4(&world);
+        XMMATRIX PrevW = XMLoadFloat4x4(&previousWorld);
 
         DirectX::XMStoreFloat4x4(&primitiveCBuffer->data.world, W);
+        DirectX::XMStoreFloat4x4(&primitiveCBuffer->data.previousWorld, PrevW);
         DirectX::XMStoreFloat4x4(&primitiveCBuffer->data.inverseTransposeWorld, XMMatrixTranspose(XMMatrixInverse(nullptr, W)));
 
         const InterleavedGltfModel::Material& material = model->materials.at(batchMesh.material);

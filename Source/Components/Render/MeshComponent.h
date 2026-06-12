@@ -90,6 +90,7 @@ public:
         if (ImGui::TreeNode((name_ + "  model").c_str()))
         {
             ImGui::Checkbox("isVisible", &isVisible_);
+            ImGui::Checkbox("isMotionBlur", &isMotionBlur);
             ImGui::SliderFloat(U8("色相調整"), &plusAlphaCBuffer->data.hueShift, -1.0f, +1.0);
             ImGui::SliderFloat(U8("彩度調整"), &plusAlphaCBuffer->data.saturation, -1.0f, +1.0);
             ImGui::SliderFloat(U8("明度調整"), &plusAlphaCBuffer->data.brightness, -1.0f, +1.0);
@@ -164,6 +165,8 @@ protected:
     // モデルのノード情報
     std::vector<InterleavedGltfModel::Node> modelNodes = {};
 
+    // モーションブラーを有効にするかどうか
+    bool isMotionBlur = true;    
 
 };
 

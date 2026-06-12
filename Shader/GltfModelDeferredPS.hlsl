@@ -108,7 +108,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     pout.gBuffer3Normal = float4(N.xyz, objectType); // world space
 
     //pout.gbuffer1.xy = EncodeOctahedralNormal(N);
-
+    //pout.velocity
 
     pout.albedo = baseColorFactor;
 

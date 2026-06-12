@@ -267,6 +267,16 @@ public:
     {
         return componentToWorld_;
     }
+    //  このコンポーネントの1フレーム前のワールド空間上でのTransformを取得
+    _NODISCARD const Transform& GetPreviousComponentWorldTransform() const
+    {
+        return previousComponentToWorld_;
+    }
+    //  このコンポーネントの1フレーム前のワールド空間上でのTransformを取得(書き換え用)
+    _NODISCARD Transform& GetPreviousComponentWorldTransform()
+    {
+        return previousComponentToWorld_;
+    }
     // ワールド空間でのこのコンポーネントの位置を取得
     DirectX::XMFLOAT3 GetComponentLocation() const
     {

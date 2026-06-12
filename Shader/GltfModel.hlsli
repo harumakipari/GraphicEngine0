@@ -47,6 +47,9 @@ struct VS_OUT
     float4 wNormal : NORMAL;
     float4 wTangent : TANGENT;
     float2 texcoord : TEXCOORD;
+
+    float4 currentClipPosition : CLIP_POSITION0;
+    float4 previousClipPosition : CLIP_POSITION1;
 };
 
 struct INSTANCE_VS_OUT
@@ -63,7 +66,8 @@ struct INSTANCE_VS_OUT
 cbuffer PRIMITIVE_CONSTANT_BUFFER : register(b0)
 {
     row_major float4x4 world;
-    
+    row_major float4x4 previousWorld;
+
     int material;
     bool hasTangent;
     int skin;

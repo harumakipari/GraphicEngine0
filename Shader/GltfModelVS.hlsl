@@ -21,26 +21,22 @@ VS_OUT main(VS_IN vin)
     }
     
     VS_OUT vout;
-    
+
     vin.position.w = 1;
     vout.position = mul(vin.position, mul(world, viewProjection));
-    
-    //vout.position /= vout.position.w; // to ndc
-    
-    
     vout.wPosition = mul(vin.position, world);
+
     
     vin.normal.w = 0;
     vout.wNormal.xyz = normalize(mul(vin.normal, world).xyz);
-    //vout.wNormal.xyz = normalize(mul(vin.normal,inverseTransposeWorld).xyz);
     vout.wNormal.w = 0;
     
     vin.tangent.w = 0;
     vout.wTangent.xyz = normalize(mul(vin.tangent, world).xyz);
-    //vout.wTangent.xyz = normalize(mul(vin.tangent, inverseTransposeWorld).xyz);
     vout.wTangent.w = sigma;
     
     vout.texcoord = vin.texcoord;
-    
+
+
 	return vout;
 }

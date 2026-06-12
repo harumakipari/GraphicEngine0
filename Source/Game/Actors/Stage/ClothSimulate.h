@@ -588,6 +588,7 @@ public:
     struct PrimitiveConstants
     {
         DirectX::XMFLOAT4X4 world;
+        DirectX::XMFLOAT4X4 previousWorld;
 
         int material{ -1 };
         int hasTangent{ 0 };

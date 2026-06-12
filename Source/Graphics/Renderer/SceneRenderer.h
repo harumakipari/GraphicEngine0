@@ -79,9 +79,9 @@ public:
     // ÉÅÉbÉVÉÖÇé˚èWÇµÇƒêUÇËï™ÇØÇÈ
     RenderQueues BuildRenderQueues();
 private:
-    void Draw(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass) const;
+    void Draw(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& previousWorld, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass) const;
 
-    void DrawWithStaticBatching(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass) const;
+    void DrawWithStaticBatching(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& previousWorld, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass) const;
 
     void DrawCloth(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass);
 private:
@@ -102,6 +102,7 @@ private:
     struct PrimitiveConstants
     {
         DirectX::XMFLOAT4X4 world;
+        DirectX::XMFLOAT4X4 previousWorld;
 
         int material{ -1 };
         int hasTangent{ 0 };
