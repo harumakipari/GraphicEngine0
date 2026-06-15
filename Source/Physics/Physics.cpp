@@ -49,8 +49,8 @@ void Physics::Initialize()
         pxSceneDesc.cpuDispatcher = pxDispatcher;
         pxSceneDesc.filterShader = SimulationFilterShader;	// NOTE:⑧衝突検出フィルタリング
         pxSceneDesc.simulationEventCallback = this;
-        	pxSceneDesc.flags |= physx::PxSceneFlag::eENABLE_PCM;
-        	pxSceneDesc.flags |= physx::PxSceneFlag::eENABLE_STABILIZATION;
+        pxSceneDesc.flags |= physx::PxSceneFlag::eENABLE_PCM;
+        pxSceneDesc.flags |= physx::PxSceneFlag::eENABLE_STABILIZATION;
 
         pxScene = pxPhysics->createScene(pxSceneDesc);
         _ASSERT_EXPR(pxScene != nullptr, "Failed pxPhysics->createScene");
@@ -569,6 +569,15 @@ void Physics::Render(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4&
             for (physx::PxU32 pxShapeIndex = 0; pxShapeIndex < pxNumShapes; ++pxShapeIndex)
             {
                 physx::PxShape* pxShape = pxShapes[pxShapeIndex];
+                ShapeComponent* shape = static_cast<ShapeComponent*>(pxShape->userData);
+
+                if (shape)
+                {
+                    if (!shape->IsVisibleDebugShape())
+                    {
+                        continue;
+                    }
+                }
                 drawShape(pxShape, physx::PxShapeExt::getGlobalPose(*pxShape, *pxActor), contactOffset, sleeping);
             }
         };
@@ -666,7 +675,7 @@ void Physics::Render(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4&
 
 
 // レイキャスト
-bool Physics::RayCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, HitResult& result,uint32_t wantToHitLayer/*なにと当たりたいか、ここの数字に入れたら、この数値と同じレイヤーに当たる*/)
+bool Physics::RayCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, HitResult& result, uint32_t wantToHitLayer/*なにと当たりたいか、ここの数字に入れたら、この数値と同じレイヤーに当たる*/)
 {
     //--------------------------
     // NOTE:②フィルタリング設定

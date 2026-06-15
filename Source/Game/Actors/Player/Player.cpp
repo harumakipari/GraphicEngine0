@@ -63,7 +63,6 @@ void Player::Initialize(const Transform& transform)
 
         // ルートノードを設定する
         int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
-
 #if 1
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
@@ -137,9 +136,6 @@ void Player::Initialize(const Transform& transform)
         controller->AddCombo("Primary_Attack_Fast_C", "Primary_Attack_Fast_D1_1");
 
 #endif // 0
-
-
-
 
 #else
         // アニメーションコントローラーを作成
@@ -222,6 +218,7 @@ void Player::Initialize(const Transform& transform)
         capsuleComponent->SetCollisionOffsetY(height * 0.5f);
         capsuleComponent->SetIsVisibleDebugBox(false);
         capsuleComponent->Initialize();
+
     }
 
 #if 1
@@ -298,12 +295,48 @@ void Player::Initialize(const Transform& transform)
     swordCollisionComp->SetCapsuleAxis(ShapeComponent::CapsuleAxis::z);
     swordCollisionComp->SetLayer(CollisionLayer::PlayerWeapon);
     swordCollisionComp->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Trigger);
+    swordCollisionComp->SetResponseToLayer(CollisionLayer::Boss, CollisionComponent::CollisionResponse::Trigger);
     swordCollisionComp->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Trigger);
     swordCollisionComp->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Trigger);
     swordCollisionComp->SetCollisionOffsetY(height * 0.5f);
     swordCollisionComp->SetIsVisibleDebugBox(false);
     swordCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, 0.8f });
     swordCollisionComp->Initialize();
+    swordCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
+        {
+            if (!other)
+            {
+                Logger::Warning("other is nullptr");
+                return;
+            }
+
+            uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Enemy) | CollisionHelper::ToBit(CollisionLayer::Boss);
+
+            // Enemyレイヤーか確認
+            if (!(other->GetCollisionLayer() & mask))
+                return;
+
+            // 相手のActor取得
+            Actor* actor = other->GetOwner();
+
+            if (!actor)
+            {
+                Logger::Warning("actor is nullptr");
+                return;
+            }
+
+            if (!hitBox)
+                return;
+
+            // Enemyへキャスト
+            GruxEnemy* enemy = dynamic_cast<GruxEnemy*>(actor);
+
+            if (!enemy)
+                return;
+
+            enemy->TakeDamage(10);
+
+        });
 
     auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
@@ -327,10 +360,6 @@ void Player::Initialize(const Transform& transform)
     // 火花エフェクト用のコンポーネントを追加
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
-
-
-
-
 }
 
 
@@ -352,6 +381,8 @@ void Player::Update(float elapsedTime)
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(elapsedTime);
 
+    // 剣のデバックの当たり判定を描画するかどうか
+    swordCollisionComp->SetIsVisibleDebugShape(hitBox);
 
     // アニメーション時間から攻撃有効フラグ更新
     auto anim = GetBodyAnimationController();
@@ -464,6 +495,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     {
     case AnimationNotifyState::Type::HitBox:
         Logger::Log(U8("当たり判定を開始しました"));
+        hitBox = true;
         break;
     case AnimationNotifyState::Type::ComboWindow:
         comboWindow = true;
@@ -484,6 +516,7 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     {
     case AnimationNotifyState::Type::HitBox:
         Logger::Log(U8("当たり判定を終了しました"));
+        hitBox = false;
         break;
     case AnimationNotifyState::Type::ComboWindow:
         comboWindow = false;
@@ -515,6 +548,17 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
         break;
     }
 }
+
+// アニメーションステート関連のフラグをリセットする
+void Player::ResetAnimationStateFlag()
+{
+    transitionWindow = false;  // ステート遷移してもいいかどうか
+    comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
+    comboWindow = false;   // コンボ受付をするかどうか
+    hitBox = false;     // 当たり判定
+    Logger::Log(U8("コンボ受付をしなくする、ステート遷移しない、コンボキューをいれない、武器当たり判定を消す"));
+}
+
 
 
 // 火花エフェクトの生成

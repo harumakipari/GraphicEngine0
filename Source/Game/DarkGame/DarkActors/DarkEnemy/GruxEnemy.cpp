@@ -60,6 +60,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     {
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
         DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
+        size = MathHelper::Multiply(size, GetScale().x);
         height = size.y;
         radius = size.x * 0.5f;
         mass = 300.0f;
@@ -127,6 +128,13 @@ void GruxEnemy::Initialize(const Transform& transform)
 void GruxEnemy::Update(float deltaTime)
 {
     Character::Update(deltaTime);
+
+#if 0
+    if (hp <= 0)
+    {
+        PlayBodyAnimation("Death_A_0", false);
+    }
+#endif // 0
 
     return;
     stateTimer += deltaTime;
@@ -247,15 +255,16 @@ float GruxEnemy::GetDistanceToPlayer()
 
 void KnightActor::Initialize(const Transform& transform)
 {
-    std::string parentName = "SkeletonWarriorMeshComponent";
+    std::string parentName = "KnightActor";
     Character::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
-    skeletalMeshComponent->SetModel("./Data/Models/Characters/Greystone/Idle.gltf", false, true);
+    skeletalMeshComponent->SetModel("./Data/Models/Characters/Greystone/Greystone.gltf", false, true);
 
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
     auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     controller->AddAnimation("Idle", 0);
+    controller->AddAnimation("Attack_A", 1);
 
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);

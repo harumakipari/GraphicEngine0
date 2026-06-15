@@ -43,13 +43,8 @@ public:
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event)override;
 
     // アニメーションステート関連のフラグをリセットする
-    void ResetAnimationStateFlag()
-    {
-        transitionWindow = false;  // ステート遷移してもいいかどうか
-        comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
-        comboWindow = false;   // コンボ受付をするかどうか
-        Logger::Log(U8("コンボ受付をしなくする、ステート遷移しない、コンボキューをいれない"));
-    }
+    void ResetAnimationStateFlag();
+
 private:
     // 火花エフェクトの生成
     void SpawnSpark(DirectX::XMFLOAT3 hitPosition);
@@ -105,6 +100,7 @@ public:
 
     bool comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
     bool comboWindow = false;   // コンボ受付をするかどうか
+    bool hitBox = false;   // 武器の当たり判定をつける
     bool transitionWindow = false;  // ステート遷移してもいいかどうか
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
