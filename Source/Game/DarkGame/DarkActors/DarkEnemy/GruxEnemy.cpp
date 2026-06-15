@@ -27,7 +27,6 @@ void GruxEnemy::Initialize(const Transform& transform)
         }
     }
 
-
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
     auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
@@ -51,6 +50,43 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Jump_Land_1", 17);
     controller->AddAnimation("Death_A_0", 18);
     controller->AddAnimation("Death_B_0", 19);
+
+    controller->AddNotifyEvent("PrimaryAttack_LA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
+    controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
+
+#if 0
+    controller->AddNotifyEvent("PrimaryAttack_RA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
+    controller->AddNotifyState("PrimaryAttack_RA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
+#endif // 0
+
+
+
+#if 0
+    controller->AddNotifyState("PrimaryAttack_LA", 0.12f, 0.583f, AnimationNotifyState::Type::ComboWindow);
+    controller->AddNotifyState("PrimaryAttack_LA", 0.23f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
+
+    controller->AddNotifyEvent("Primary_Attack_Fast_B", 0.315f, AnimationNotifyEvent::Type::PlaySE, "star");
+    controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.265f, AnimationNotifyState::Type::HitBox);
+    controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.583f, AnimationNotifyState::Type::ComboWindow);
+    controller->AddNotifyState("Primary_Attack_Fast_B", 0.265f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
+
+    controller->AddNotifyEvent("Primary_Attack_Fast_C", 0.315f, AnimationNotifyEvent::Type::PlaySE, "turning");
+    controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.22f, AnimationNotifyState::Type::HitBox);
+    controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.583f, AnimationNotifyState::Type::ComboWindow);
+    controller->AddNotifyState("Primary_Attack_Fast_C", 0.3f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
+
+    controller->AddNotifyEvent("Primary_Attack_Fast_D1_1", 0.315f, AnimationNotifyEvent::Type::PlaySE, "turning");
+    controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.414f, 0.548f, AnimationNotifyState::Type::HitBox);
+    controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.08f, 1.0f, AnimationNotifyState::Type::ComboWindow);
+    controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.52f, 1.0f, AnimationNotifyState::Type::TransitionWindow);
+
+    controller->AddCombo("Primary_Attack_Fast_A", "Primary_Attack_Fast_B");
+    controller->AddCombo("Primary_Attack_Fast_B", "Primary_Attack_Fast_C");
+    controller->AddCombo("Primary_Attack_Fast_C", "Primary_Attack_Fast_D1_1");
+
+#endif // 0
+
+
 
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
@@ -94,7 +130,7 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     // 武器に当たり判定のコンポーネントを追加
     int socketLeftNode = skeletalMeshComponent->FindIndexByName("weapon_l");
-    auto leftWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponLeftNode", parentName);
+    leftWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponLeftNode", parentName);
     DirectX::XMFLOAT3 size = { 0.2f,1.5f,1.0f };
     leftWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketLeftNode); // "weapon_l"
     leftWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
@@ -110,7 +146,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     leftWeaponCollisionComp->Initialize();
 
     int socketRightNode = skeletalMeshComponent->FindIndexByName("weapon_r");
-    auto rightWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponRightNode", parentName);
+    rightWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponRightNode", parentName);
     rightWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketRightNode); // "weapon_r"
     rightWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
     rightWeaponCollisionComp->SetMass(mass);
@@ -123,11 +159,54 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightWeaponCollisionComp->SetIsVisibleDebugBox(false);
     rightWeaponCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, -0.9f });
     rightWeaponCollisionComp->Initialize();
+    rightWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
+        {
+            if (!other)
+            {
+                Logger::Warning("other is nullptr");
+                return;
+            }
+
+            uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
+
+            // Playerレイヤーか確認
+            if (!(other->GetCollisionLayer() & mask))
+                return;
+
+            // 相手のActor取得
+            Actor* actor = other->GetOwner();
+
+            if (!actor)
+            {
+                Logger::Warning("actor is nullptr");
+                return;
+            }
+
+            if (!rightHitBox && !leftHitBox)
+                return;
+
+            if (hitActors.contains(actor))
+            {// 一度当たったことがあった場合
+                return;
+            }
+
+            // Playerへキャスト
+            Player* player = dynamic_cast<Player*>(actor);
+
+            if (!player)
+                return;
+
+            player->TakeDamage(10);
+            hitActors.insert(actor);
+        });
 }
 
 void GruxEnemy::Update(float deltaTime)
 {
     Character::Update(deltaTime);
+
+    rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
+    leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
 
 #if 0
     if (hp <= 0)
@@ -198,6 +277,58 @@ void GruxEnemy::TakeDamage(int damage)
     hp -= damage;
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
 }
+
+void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
+{
+    switch (state.type)
+    {
+    case AnimationNotifyState::Type::HitBox:
+        Logger::Log(U8("当たり判定を開始しました"));
+        if (state.parameter == rightWeapon)
+        {
+            rightHitBox = true;
+        }
+        else if (state.parameter == leftWeapon)
+        {
+            leftHitBox = true;
+        }
+        break;
+    case AnimationNotifyState::Type::ComboWindow:
+        Logger::Log(U8("コンボ受付を開始しました"));
+        break;
+    case AnimationNotifyState::Type::Invincible:
+        break;
+    case AnimationNotifyState::Type::TransitionWindow:
+        Logger::Log(U8("遷移許可区間を開始しました"));
+        break;
+    }
+}
+
+void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
+{
+    switch (state.type)
+    {
+    case AnimationNotifyState::Type::HitBox:
+        Logger::Log(U8("当たり判定を終了しました"));
+        rightHitBox = false;   // 右の剣の当たり判定
+        leftHitBox = false;    // 左の剣の当たり判定
+        break;
+    case AnimationNotifyState::Type::ComboWindow:
+        Logger::Log(U8("コンボ受付を終了しました"));
+        break;
+    case AnimationNotifyState::Type::Invincible:
+        break;
+    case AnimationNotifyState::Type::TransitionWindow:
+        Logger::Log(U8("遷移許可区間を終了しました"));
+        break;
+    }
+}
+
+void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
+{
+
+}
+
 
 // 攻撃が当たるタイミングで呼ばれる関数
 void GruxEnemy::DoAttackHit()

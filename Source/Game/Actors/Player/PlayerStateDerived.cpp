@@ -94,6 +94,9 @@ void PlayerAttackState::Enter()
     attackTimer = 0.0f;
     hitDone = false;
 
+    // 攻撃を開始する処理
+    player->StartAttack();
+
     player->ResetAnimationStateFlag();  // アニメーションのステート系のフラグをリセットする
 
     Logger::Log("Attack Enter :" + player->currentAttackAnimation);

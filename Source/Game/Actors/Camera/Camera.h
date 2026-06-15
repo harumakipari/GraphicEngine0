@@ -8,7 +8,6 @@
 #include "Components/CollisionShape/ShapeComponent.h"
 #include "Physics/Physics.h"
 
-
 #include "Engine/Camera/CameraConstants.h"
 #include "Engine/Camera/TPSCameraController.h"
 #include "Game/Actors/Stage/ElasticBuilding.h"

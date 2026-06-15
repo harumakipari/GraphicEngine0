@@ -54,8 +54,30 @@ public:
         pos.y += shakeOffset.y;
         pos.z += shakeOffset.z;
 
+        XMFLOAT3 targetCameraPos;
+        XMStoreFloat3(&targetCameraPos, resolvedEye);
 
-        camera->GetOwner()->SetPosition(pos);
+        if (!initialized)
+        {
+            smoothedPosition = targetCameraPos;
+            initialized = true;
+        }
+        else
+        {
+            float t = std::clamp(dt * followSpeed, 0.0f, 1.0f);
+
+            smoothedPosition.x =
+                std::lerp(smoothedPosition.x, targetCameraPos.x, t);
+
+            smoothedPosition.y =
+                std::lerp(smoothedPosition.y, targetCameraPos.y, t);
+
+            smoothedPosition.z =
+                std::lerp(smoothedPosition.z, targetCameraPos.z, t);
+        }
+
+        camera->GetOwner()->SetPosition(smoothedPosition);
+        //camera->GetOwner()->SetPosition(pos);
         XMFLOAT3 pivot3;
         XMStoreFloat3(&pivot3, pivot);
 
@@ -64,5 +86,9 @@ public:
     }
 
     DirectX::XMFLOAT3 shakeOffset = {};
+private:
+    DirectX::XMFLOAT3 smoothedPosition{};
+    bool initialized = false;
+    float followSpeed = 15.0f;
 };
 

@@ -59,6 +59,9 @@ public:
     // 攻撃ヒット時の処理
     void DoAttackHit();
 
+    // 攻撃開始時の処理
+    void StartAttack();
+
 public:
     //当たった相手を記録するためのセット 火花エフェクトの生成やダメージの適用を一度だけ行うために使用
     std::unordered_set<Actor*> hitTargets;
@@ -73,10 +76,11 @@ private:
     // プレイヤーのマックスHP
     int maxHp = 100;
 
-
     // インタラクト対象検索
     IInteractable* FindInteractable();
 
+    // ヒット中に当たった敵を記録する
+    std::unordered_set<Actor*> hitActors;
 public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;

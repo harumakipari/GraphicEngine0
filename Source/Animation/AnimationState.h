@@ -15,6 +15,8 @@ struct AnimationNotifyState
     };
 
     Type type;
+
+    std::string parameter;
 };
 
 struct AnimationNotifyEvent

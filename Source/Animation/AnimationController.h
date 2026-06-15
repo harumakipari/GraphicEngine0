@@ -93,10 +93,10 @@ public:
         const std::string& animationName,
         const float start,
         const float end,
-        const AnimationNotifyState::Type type)
+        const AnimationNotifyState::Type type, const std::string& parameter = "")
     {
         const size_t clip = animationNameToIndex_[animationName];
-        animationNotifyAssets[clip].notifyTrack.states.push_back({ start,end,type });
+        animationNotifyAssets[clip].notifyTrack.states.push_back({ start,end,type,parameter });
     }
 
     void AddNotifyEvent(

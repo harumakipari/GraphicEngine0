@@ -38,8 +38,6 @@ public:
     {
     }
 
-
-
     //コピーコンストラクタとコピー代入演算子を禁止にする
     Enemy(const Enemy&) = delete;
     Enemy& operator=(const Enemy&) = delete;

@@ -328,6 +328,11 @@ void Player::Initialize(const Transform& transform)
             if (!hitBox)
                 return;
 
+            if (hitActors.contains(actor))
+            {// 一度当たったことがあった場合
+                return;
+            }
+
             // Enemyへキャスト
             GruxEnemy* enemy = dynamic_cast<GruxEnemy*>(actor);
 
@@ -335,6 +340,7 @@ void Player::Initialize(const Transform& transform)
                 return;
 
             enemy->TakeDamage(10);
+            hitActors.insert(actor);
 
         });
 
@@ -698,6 +704,11 @@ void Player::DoAttackHit()
     }
 }
 
+// 攻撃開始時の処理
+void Player::StartAttack()
+{
+    hitActors.clear();
+}
 
 // インタラクト対象検索
 IInteractable* Player::FindInteractable()
