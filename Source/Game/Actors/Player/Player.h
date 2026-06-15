@@ -72,7 +72,8 @@ public:
 
     bool invincible = false; // 無敵状態かどうか
 
-    std::string currentAttackAnimation = "Anim_DKF_Attack_01";
+    std::string currentAttackAnimation = "Primary_Attack_Fast_A";
+    std::string startAttackAnimation = "Primary_Attack_Fast_A";    // コンボ開始のアニメーション
 private:
     // プレイヤーのマックスHP
     int maxHp = 100;

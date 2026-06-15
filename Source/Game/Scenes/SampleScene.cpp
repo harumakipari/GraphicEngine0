@@ -25,6 +25,7 @@
 #include "Game/DarkGame/DarkActors/DarkStage.h"
 #include "Game/DarkGame/DarkActors/DarkStageCandelabraActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
+#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
 
@@ -61,7 +62,7 @@ void SampleScene::Update(float deltaTime)
     CollisionSystem::ApplyPushAll();
 
     //#ifdef _DEBUG
-    if (InputSystem::GetInputState("Space", InputStateMask::Trigger))
+    if (InputSystem::GetInputState("F1", InputStateMask::Trigger))
     {
         const char* types[] = { "0", "1" };
         Scene::_transition("LoadingScene", { std::make_pair("preload", "SampleScene"), std::make_pair("type", types[rand() % 2]) });
@@ -95,7 +96,11 @@ void SampleScene::SetUpActors()
     Transform playerTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
 
-#if 1
+    Transform bossTr(DirectX::XMFLOAT3{ 3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    auto boss = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("boss", bossTr);
+
+
+#if 0
     Transform testPlayerTr(DirectX::XMFLOAT3{ 3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto testPlayer = this->GetActorManager()->CreateAndRegisterActorWithTransform<TestPlayer>("testPlayer", testPlayerTr);
 #endif // 1

@@ -12,6 +12,17 @@ void AnimationController::OnUpdate(const float deltaTime)
     prevAnimationTime = animationTime;
     animationTime += deltaTime * animationRate;
 
+#if 0
+    if (animationTime >= target_->model->animations.at(animationClip).duration)
+    {
+        animationTime =
+            std::fmod(
+                animationTime,
+                target_->model->animations.at(animationClip).duration);
+    }
+
+#endif // 0
+
     if (target_->model->animations.size() == 0)
     {// アニメーションがないモデルの場合
         return;
@@ -226,7 +237,6 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
 // ルートモーションをリセットする
 void AnimationController::ResetRootMotion(int animationClip)
 {
-
     this->isAnimationFinished = false;
     transitionState = AnimationController::AnimationTransitionState::Completed;
     this->animationClip = animationClip;
@@ -246,16 +256,6 @@ void AnimationController::DrawImGui()
 
     if (!ImGui::CollapsingHeader("Animation Debug"))
         return;
-
-
-    auto& node = finalNodes[181];
-
-    ImGui::Text("Weapon Socket Pos: %.2f %.2f %.2f",
-        node.globalTransform._41,
-        node.globalTransform._42,
-        node.globalTransform._43);
-
-
 
     ImGui::Text("Current: %s", currentAnimationName.c_str());
     ImGui::Text("Playing: %s", isAnimationFinished ? "No" : "Yes");
@@ -298,7 +298,7 @@ void AnimationController::DrawTimeline()
         if (ImGui::Selectable(asset.animationName.c_str(), selected))
         {
             selectedTimelineClip = clip;
-            ResetRootMotion(asset.animationName,false,false,0.0f);
+            ResetRootMotion(asset.animationName, false, false, 0.0f);
         }
     }
 
@@ -314,7 +314,7 @@ void AnimationController::DrawTimeline()
 
     auto& asset = it->second;
 
-    float duration =target_->model->animations[asset.animationClip].duration;
+    float duration = target_->model->animations[asset.animationClip].duration;
 
     ImGui::Text("Timeline");
     ImGui::Separator();
@@ -333,13 +333,14 @@ void AnimationController::DrawTimeline()
 
     if (ImGui::Button("Play"))
     {
-        ResetRootMotion(asset.animationName,false,false,0.0f);
+        ResetRootMotion(asset.animationName, false, false, 0.0f);
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("Stop"))
     {
+        Stop();
         animationTime = 0.0f;
     }
 
@@ -349,8 +350,7 @@ void AnimationController::DrawTimeline()
     ImDrawList* drawList =
         ImGui::GetWindowDrawList();
 
-    ImVec2 timelinePos =
-        ImGui::GetCursorScreenPos();
+    ImVec2 timelinePos = ImGui::GetCursorScreenPos();
 
     ImGui::InvisibleButton(
         "TimelineSeek",
@@ -370,8 +370,9 @@ void AnimationController::DrawTimeline()
                 0.0f,
                 1.0f);
 
-        animationTime =
-            normalized * duration;
+        animationTime = normalized * duration;
+
+        //target_->model->Animate(this->notifyAnimationClip, animationTime, finalNodes);
     }
 
     drawList->AddRectFilled(
@@ -399,16 +400,41 @@ void AnimationController::DrawTimeline()
         sprintf_s(buffer, "%.2f", t);
 
         drawList->AddText(
-            ImVec2(x - 10, timelinePos.y - 18),
+            ImVec2(
+                x - 10,
+                timelinePos.y + 12),
             IM_COL32(255, 255, 255, 255),
             buffer);
     }
     ImGui::Dummy(ImVec2(0, 40));
     float trackHeight = 24.0f;
     float labelWidth = 150.0f;
-    for (auto& state : asset.notifyTrack.states)
+    float handleSize = 40.0f;
+    float visualHandleSize = 6.0f;
+    for (int stateIndex = 0;
+        stateIndex < asset.notifyTrack.states.size();
+        stateIndex++)
     {
-        ImGui::Text("%s",
+        ImU32 color =
+            (selectedStateIndex == stateIndex)
+            ?
+            IM_COL32(
+                0,
+                255,
+                100,
+                255)
+            :
+            IM_COL32(
+                0,
+                180,
+                0,
+                255);
+
+        auto& state =
+            asset.notifyTrack.states[stateIndex];
+
+        ImGui::Text(
+            "%s",
             magic_enum::enum_name(state.type).data());
 
         ImGui::SameLine(labelWidth);
@@ -425,32 +451,334 @@ void AnimationController::DrawTimeline()
 
         float x0 =
             rowPos.x +
-            (state.startTime / duration) * width;
+            (state.startTime / duration)
+            * width;
 
         float x1 =
             rowPos.x +
-            (state.endTime / duration) * width;
+            (state.endTime / duration)
+            * width;
+
+        float barWidth =
+            x1 - x0;
+
+        //---------------------------------
+        // Move
+        //---------------------------------
+
+        {
+            char id[64];
+            sprintf_s(id,"Move_%d",stateIndex);
+
+            ImGui::SetCursorScreenPos(ImVec2(x0, rowPos.y));
+
+            ImGui::InvisibleButton(id,ImVec2(barWidth,trackHeight));
+
+            if (ImGui::IsItemClicked())
+            {
+                selectedStateIndex = stateIndex;
+                selectedEventIndex = -1;
+            }
+
+
+            if (ImGui::IsItemActive())
+            {
+                float deltaTime =
+                    (ImGui::GetIO().MouseDelta.x
+                        / width)
+                    * duration;
+
+                state.startTime += deltaTime;
+                state.endTime += deltaTime;
+
+                float length =
+                    state.endTime
+                    - state.startTime;
+
+                state.startTime =
+                    std::clamp(
+                        state.startTime,
+                        0.0f,
+                        duration - length);
+
+                state.endTime =
+                    state.startTime
+                    + length;
+            }
+        }
+
+        //---------------------------------
+        // Left Handle
+        //---------------------------------
+
+        {
+            char id[64];
+            sprintf_s(id,
+                "Left_%d",
+                stateIndex);
+
+            ImGui::SetCursorScreenPos(
+                ImVec2(
+                    x0 - handleSize ,
+                    rowPos.y));
+
+            ImGui::InvisibleButton(
+                id,
+                ImVec2(
+                    handleSize * 2.0f,
+                    trackHeight));
+
+            if (ImGui::IsItemActive())
+            {
+                float deltaTime =
+                    (ImGui::GetIO().MouseDelta.x
+                        / width)
+                    * duration;
+
+                state.startTime += deltaTime;
+
+                state.startTime =
+                    std::clamp(
+                        state.startTime,
+                        0.0f,
+                        state.endTime - 0.01f);
+            }
+        }
+
+        //---------------------------------
+        // Right Handle
+        //---------------------------------
+
+        {
+            char id[64];
+            sprintf_s(id,
+                "Right_%d",
+                stateIndex);
+
+            ImGui::SetCursorScreenPos(
+                ImVec2(
+                    x1 - handleSize ,
+                    rowPos.y));
+
+            ImGui::InvisibleButton(
+                id,
+                ImVec2(
+                    handleSize*2.0f,
+                    trackHeight));
+
+            if (ImGui::IsItemActive())
+            {
+                float deltaTime =
+                    (ImGui::GetIO().MouseDelta.x
+                        / width)
+                    * duration;
+
+                state.endTime += deltaTime;
+
+                state.endTime =
+                    std::clamp(
+                        state.endTime,
+                        state.startTime + 0.01f,
+                        duration);
+            }
+        }
+
+        //---------------------------------
+        // Draw State
+        //---------------------------------
 
         drawList->AddRectFilled(
             ImVec2(x0, rowPos.y),
             ImVec2(x1, rowPos.y + trackHeight),
-            IM_COL32(0, 255, 0, 255));
+            color);
+
+        char stateText[64];
+
+        sprintf_s(
+            stateText,
+            "%.2f - %.2f",
+            state.startTime,
+            state.endTime);
+
+        ImVec2 textSize =
+            ImGui::CalcTextSize(stateText);
+
+        drawList->AddText(
+            ImVec2(
+                (x0 + x1) * 0.5f - textSize.x * 0.5f,
+                rowPos.y + 4),
+            IM_COL32(255, 255, 255, 255),
+            stateText);
+
+        drawList->AddRectFilled(
+            ImVec2(
+                x0 - 3,
+                rowPos.y),
+            ImVec2(
+                x0 + 3,
+                rowPos.y + trackHeight),
+            IM_COL32(
+                255,
+                255,
+                255,
+                255));
+
+        drawList->AddRectFilled(
+            ImVec2(
+                x1 - 3,
+                rowPos.y),
+            ImVec2(
+                x1 + 3,
+                rowPos.y + trackHeight),
+            IM_COL32(
+                255,
+                255,
+                255,
+                255));
 
         ImGui::Dummy(
-            ImVec2(width, trackHeight));
+            ImVec2(
+                width,
+                trackHeight));
     }
-    for (auto& event : asset.notifyTrack.events)
+
+    ImGui::Text("Events");
+
+    ImGui::SameLine(labelWidth);
+
+    ImVec2 eventRow =ImGui::GetCursorScreenPos();
+
+    drawList->AddRectFilled(
+        eventRow,
+        ImVec2(
+            eventRow.x + width,
+            eventRow.y + trackHeight),
+        IM_COL32(40, 40, 40, 255));
+    for (int eventIndex = 0;
+        eventIndex < asset.notifyTrack.events.size();
+        eventIndex++)
     {
+        auto& event =
+            asset.notifyTrack.events[eventIndex];
+
         float x =
-            timelinePos.x +
-            (event.time / duration) * width;
+            eventRow.x +
+            (event.time / duration)
+            * width;
+
+        char id[64];
+        sprintf_s(id,
+            "Event_%d",
+            eventIndex);
+
+        ImGui::SetCursorScreenPos(
+            ImVec2(
+                x - 6,
+                eventRow.y));
+
+        ImGui::InvisibleButton(id,ImVec2(12,trackHeight));
+
+        if (ImGui::IsItemClicked())
+        {
+            selectedEventIndex = eventIndex;
+            selectedStateIndex = -1;
+        }
+
+        if (ImGui::IsItemActive())
+        {
+            float deltaTime =
+                (ImGui::GetIO().MouseDelta.x
+                    / width)
+                * duration;
+
+            event.time += deltaTime;
+
+            event.time =
+                std::clamp(
+                    event.time,
+                    0.0f,
+                    duration);
+        }
 
         drawList->AddLine(
-            ImVec2(x, timelinePos.y),
-            ImVec2(x, timelinePos.y + 20),
+            ImVec2(x, eventRow.y),
+            ImVec2(x, eventRow.y + trackHeight),
             IM_COL32(255, 255, 0, 255),
-            2.0f);
+            3.0f);
+
+        char eventText[32];
+
+        sprintf_s(
+            eventText,
+            "%.2f",
+            event.time);
+
+        drawList->AddText(
+            ImVec2(
+                x + 5,
+                eventRow.y),
+            IM_COL32(
+                255,
+                255,
+                0,
+                255),
+            eventText);
+    } 
+
+    ImGui::Dummy(ImVec2(width, trackHeight));
+    ImGui::SetCursorScreenPos(eventRow);
+
+    ImGui::InvisibleButton(
+        "EventTrackArea",
+        ImVec2(width, trackHeight));
+
+    if (ImGui::IsItemHovered() &&
+        ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+    {
+        float mouseX =
+            ImGui::GetIO().MousePos.x;
+
+        popupCreateTime =
+            ((mouseX - eventRow.x) / width)
+            * duration;
+
+        popupCreateTime =
+            std::clamp(
+                popupCreateTime,
+                0.0f,
+                duration);
+
+        ImGui::OpenPopup("EventPopup");
     }
+    if (ImGui::BeginPopup("EventPopup"))
+    {
+        if (ImGui::MenuItem("Add Event"))
+        {
+            AnimationNotifyEvent event;
+
+            event.time = popupCreateTime;
+
+            event.type =
+                AnimationNotifyEvent::Type::PlaySE;
+
+            asset.notifyTrack.events.push_back(
+                event);
+        }
+        if (ImGui::MenuItem("Add HitBox"))
+        {
+            AnimationNotifyState state;
+
+            state.startTime = animationTime;
+            state.endTime = animationTime + 0.2f;
+
+            state.type =
+                AnimationNotifyState::Type::HitBox;
+
+            asset.notifyTrack.states.push_back(state);
+        }
+        ImGui::EndPopup();
+    }
+
 
     if (asset.animationClip == animationClip)
     {
@@ -464,23 +792,47 @@ void AnimationController::DrawTimeline()
             ImVec2(currentX, timelinePos.y + height),
             IM_COL32(255, 0, 0, 255),
             3.0f);
+
+        char currentText[32];
+
+        sprintf_s(
+            currentText,
+            "%.3f",
+            animationTime);
+
+        drawList->AddText(
+            ImVec2(
+                currentX - 15,
+                timelinePos.y - 18),
+            IM_COL32(
+                255,
+                0,
+                0,
+                255),
+            currentText);
     }
 
-#if 0
-    ImGui::Text("Time : %.2f / %.2f", animationTime, GetCurrentAnimationLength());
-    float length = GetCurrentAnimationLength();
+    if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+    {
+        if (selectedStateIndex >= 0)
+        {
+            asset.notifyTrack.states.erase(
+                asset.notifyTrack.states.begin()
+                + selectedStateIndex);
 
-    ImGui::SliderFloat("Time", &animationTime, 0.0f, length);
+            selectedStateIndex = -1;
+        }
 
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    ImVec2 pos = ImGui::GetCursorScreenPos();
-    float width = 400.0f;
-    float height = 30.0f;
-    drawList->AddRectFilled(pos, ImVec2(pos.x + width, pos.y + height), IM_COL32(60, 60, 60, 255));
-    float normalized = animationTime / GetCurrentAnimationLength();
-    float x = pos.x + width * normalized;
-    drawList->AddLine(ImVec2(x, pos.y), ImVec2(x, pos.y + height), IM_COL32(255, 255, 255, 255), 2.0f);
-#endif
+        if (selectedEventIndex >= 0)
+        {
+            asset.notifyTrack.events.erase(
+                asset.notifyTrack.events.begin()
+                + selectedEventIndex);
+
+            selectedEventIndex = -1;
+        }
+    }
+
     ImGui::End();
 
 #endif

@@ -154,7 +154,7 @@ void PlayerAttackState::Execute(float deltaTime)
 
     if (!owner->GetBodyAnimationController()->IsPlayAnimation())
     {
-        player->currentAttackAnimation = "Anim_DKF_Attack_01";
+        player->currentAttackAnimation = player->startAttackAnimation;
         player->comboQueued = false;
 
         auto dir = player->inputComponent->GetMoveInput();

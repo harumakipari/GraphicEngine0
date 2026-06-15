@@ -236,5 +236,9 @@ private:
     std::unordered_map<size_t, AnimationNotifyAsset> animationNotifyAssets;
 
     std::vector<size_t> animationAssetOrder;    // アニメーションの表示を追加順にするための変数
+
+    int selectedStateIndex = -1;
+    int selectedEventIndex = -1;
+    float popupCreateTime = 0.0f;
 };
 

@@ -66,7 +66,7 @@ void Player::Initialize(const Transform& transform)
 
 #if 1
         // アニメーションコントローラーを作成
-        auto controller = std::make_shared<AnimationController>(this,skeletalMeshComponent.get(), rootNodeIndex);
+        auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
         controller->AddAnimation("Idle", 0);
         controller->AddAnimation("Jog_Fwd", 1);
         controller->AddAnimation("Roll_front_0", 2);
@@ -80,24 +80,63 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Anim_DKF_Attack_01", 10);
         controller->AddAnimation("Anim_DKF_Attack_02", 11);
         controller->AddAnimation("Anim_DKF_Attack_03", 12);
+        controller->AddAnimation("Ability_E_0", 13);
+        controller->AddAnimation("Ability_Q_0", 14);
+        controller->AddAnimation("Ability_R1_0", 15);
+        controller->AddAnimation("Primary_Attack_Fast_D1_1", 16);
+        controller->AddAnimation("Ability_RMB_Bwd_0", 17);
+        controller->AddAnimation("Ability_RMB_BwdLeft_0", 18);
+        controller->AddAnimation("Ability_RMB_BwdRight_0", 19);
+        controller->AddAnimation("Ability_RMB_FwdRight_0", 20);
+        controller->AddAnimation("Ability_RMB_Left_0", 21);
+        controller->AddAnimation("Ability_RMB_Right_0", 22);
 
-        controller->AddNotifyEvent("Anim_DKF_Attack_01", 0.615f, AnimationNotifyEvent::Type::PlaySE,"start");
+
+#if 0
+        controller->AddNotifyEvent("Anim_DKF_Attack_01", 0.615f, AnimationNotifyEvent::Type::PlaySE, "start");
         controller->AddNotifyState("Anim_DKF_Attack_01", 0.36f, 0.7f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Anim_DKF_Attack_01", 0.36f, 0.958f, AnimationNotifyState::Type::ComboWindow);
         controller->AddNotifyState("Anim_DKF_Attack_01", 0.7f, 0.958f, AnimationNotifyState::Type::TransitionWindow);
 
-        controller->AddNotifyEvent("Anim_DKF_Attack_02", 0.315f, AnimationNotifyEvent::Type::PlaySE,"start");
+        controller->AddNotifyEvent("Anim_DKF_Attack_02", 0.315f, AnimationNotifyEvent::Type::PlaySE, "star");
         controller->AddNotifyState("Anim_DKF_Attack_02", 0.08f, 0.28f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Anim_DKF_Attack_02", 0.08f, 0.875f, AnimationNotifyState::Type::ComboWindow);
         controller->AddNotifyState("Anim_DKF_Attack_02", 0.421f, 0.875f, AnimationNotifyState::Type::TransitionWindow);
 
-        controller->AddNotifyEvent("Anim_DKF_Attack_03", 0.315f, AnimationNotifyEvent::Type::PlaySE,"start");
+        controller->AddNotifyEvent("Anim_DKF_Attack_03", 0.315f, AnimationNotifyEvent::Type::PlaySE, "turning");
         controller->AddNotifyState("Anim_DKF_Attack_03", 0.137f, 0.243f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Anim_DKF_Attack_03", 0.08f, 1.0f, AnimationNotifyState::Type::ComboWindow);
         controller->AddNotifyState("Anim_DKF_Attack_03", 0.52f, 1.0f, AnimationNotifyState::Type::TransitionWindow);
 
         controller->AddCombo("Anim_DKF_Attack_01", "Anim_DKF_Attack_02");
         controller->AddCombo("Anim_DKF_Attack_02", "Anim_DKF_Attack_03");
+
+#else
+        controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
+        controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);
+        controller->AddNotifyState("Primary_Attack_Fast_A", 0.12f, 0.583f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_A", 0.23f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
+
+        controller->AddNotifyEvent("Primary_Attack_Fast_B", 0.315f, AnimationNotifyEvent::Type::PlaySE, "star");
+        controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.265f, AnimationNotifyState::Type::HitBox);
+        controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.583f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_B", 0.265f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
+
+        controller->AddNotifyEvent("Primary_Attack_Fast_C", 0.315f, AnimationNotifyEvent::Type::PlaySE, "turning");
+        controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.22f, AnimationNotifyState::Type::HitBox);
+        controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.583f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_C", 0.3f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
+
+        controller->AddNotifyEvent("Primary_Attack_Fast_D1_1", 0.315f, AnimationNotifyEvent::Type::PlaySE, "turning");
+        controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.414f, 0.548f, AnimationNotifyState::Type::HitBox);
+        controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.08f, 1.0f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.52f, 1.0f, AnimationNotifyState::Type::TransitionWindow);
+
+        controller->AddCombo("Primary_Attack_Fast_A", "Primary_Attack_Fast_B");
+        controller->AddCombo("Primary_Attack_Fast_B", "Primary_Attack_Fast_C");
+        controller->AddCombo("Primary_Attack_Fast_C", "Primary_Attack_Fast_D1_1");
+
+#endif // 0
 
 
 
@@ -265,7 +304,7 @@ void Player::Initialize(const Transform& transform)
     swordCollisionComp->SetIsVisibleDebugBox(false);
     swordCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, 0.8f });
     swordCollisionComp->Initialize();
-    
+
     auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
@@ -290,7 +329,7 @@ void Player::Initialize(const Transform& transform)
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
 
 
-    
+
 
 }
 
@@ -464,12 +503,14 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     switch (event.type)
     {
     case AnimationNotifyEvent::Type::PlaySE:
+    {
         Logger::Log(U8("SEがなる！"));
-#if 0
-        std::string audioPath = "./Data/Sound/SSE" + event.parameter + ".wav";
+#if 1
+        std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
         CoreAudio::PlayOneShot(audioPath, 1.0f);
 #endif // 0
-        break;
+    }
+    break;
     case AnimationNotifyEvent::Type::SpawnEffect:
         break;
     }

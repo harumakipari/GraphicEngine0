@@ -14,9 +14,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     std::string parentName = "SkeletonWarriorMeshComponent";
     Character::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
-    skeletalMeshComponent->SetModel("./Data/Models/Characters/GruxQilin/animations.gltf", false, true);
+    skeletalMeshComponent->SetModel("./Data/Models/Characters/GruxQilin/boss.gltf", false, true);
     //skeletalMeshComponent->SetModel("./Data/Models/Characters/Grux/animations.gltf", false, true);
-    //skeletalMeshComponent->SetModel("./Data/Models/Characters/StoneGolem/StoneGolem.gltf", false, true);
     skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Enemy;   // オブジェクトの種類を Enemy に設定
     skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.6f;   // 目玉の自己発光の強さを設定
     skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.9f,0.08f,0.08f,1.0f };   // 目玉の色を赤にしてみる
@@ -28,18 +27,30 @@ void GruxEnemy::Initialize(const Transform& transform)
         }
     }
 
+
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
     auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     controller->AddAnimation("Idle", 0);
-    controller->AddAnimation("PrimaryAttack_RA", 1);
+    controller->AddAnimation("Jog_Fwd_0", 1);
     controller->AddAnimation("PrimaryAttack_LA", 2);
-    controller->AddAnimation("PrimaryAttack_LB", 3);
-    controller->AddAnimation("PrimaryAttack_RB", 4);
-    controller->AddAnimation("Respawn", 5);
-    controller->AddAnimation("LaunchPad", 6);
-    controller->AddAnimation("LevelStart", 7);
-    controller->AddAnimation("Death", 8);
+    controller->AddAnimation("PrimaryAttack_RA", 3);
+    controller->AddAnimation("PrimaryAttack_JumpAttack", 4);
+    controller->AddAnimation("PrimaryAttack_SweepAway", 5);
+    controller->AddAnimation("PrimaryAttack_Recall", 6);
+    controller->AddAnimation("PrimaryAttack_Fire", 7);
+    controller->AddAnimation("PrimaryAttack_Dash", 8);
+    controller->AddAnimation("PrimaryAttack_DashAttack", 9);
+    controller->AddAnimation("Stun_Idle", 10);
+    controller->AddAnimation("TravelMode_Fwd_0", 11);
+    controller->AddAnimation("TravelMode_Idle_0", 12);
+    controller->AddAnimation("Ultimate_Roar_0", 13);
+    controller->AddAnimation("Jump_Land_0", 14);
+    controller->AddAnimation("Jump_Loop_0", 15);
+    controller->AddAnimation("Jump_Start_0", 16);
+    controller->AddAnimation("Jump_Land_1", 17);
+    controller->AddAnimation("Death_A_0", 18);
+    controller->AddAnimation("Death_B_0", 19);
 
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
@@ -51,7 +62,7 @@ void GruxEnemy::Initialize(const Transform& transform)
         DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
         height = size.y;
         radius = size.x * 0.5f;
-        mass = 60.0f;
+        mass = 300.0f;
         capsuleComponent->SetRadiusAndHeight(radius, height);
         capsuleComponent->SetMass(mass);
         capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
@@ -68,7 +79,49 @@ void GruxEnemy::Initialize(const Transform& transform)
     // 回転用コンポーネントを追加
     rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
 
+    // ポイントライトコンポーネントを追加
+    auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
+    pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
+    // ライトの名前からライトマネージャーの共有ライトを取得して設定
+    pointLightComponent->SetSharedLightName("PlayerPointLight");
 
+    // ポイントライトコンポーネントを追加
+    auto backPointLightComponent = this->AddComponent<PointLightComponent>("backPointLight", parentName);
+    backPointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f,-1.0f });
+    // ライトの名前からライトマネージャーの共有ライトを取得して設定
+    backPointLightComponent->SetSharedLightName("PlayerBackPointLight");
+
+    // 武器に当たり判定のコンポーネントを追加
+    int socketLeftNode = skeletalMeshComponent->FindIndexByName("weapon_l");
+    auto leftWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponLeftNode", parentName);
+    DirectX::XMFLOAT3 size = { 0.2f,1.5f,1.0f };
+    leftWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketLeftNode); // "weapon_l"
+    leftWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
+    leftWeaponCollisionComp->SetMass(mass);
+    leftWeaponCollisionComp->SetCapsuleAxis(ShapeComponent::CapsuleAxis::z);
+    leftWeaponCollisionComp->SetLayer(CollisionLayer::EnemyWeapon);
+    leftWeaponCollisionComp->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
+    leftWeaponCollisionComp->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Trigger);
+    leftWeaponCollisionComp->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Trigger);
+    leftWeaponCollisionComp->SetCollisionOffsetY(height * 0.5f);
+    leftWeaponCollisionComp->SetIsVisibleDebugBox(false);
+    leftWeaponCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, 0.8f });
+    leftWeaponCollisionComp->Initialize();
+
+    int socketRightNode = skeletalMeshComponent->FindIndexByName("weapon_r");
+    auto rightWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponRightNode", parentName);
+    rightWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketRightNode); // "weapon_r"
+    rightWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
+    rightWeaponCollisionComp->SetMass(mass);
+    rightWeaponCollisionComp->SetCapsuleAxis(ShapeComponent::CapsuleAxis::z);
+    rightWeaponCollisionComp->SetLayer(CollisionLayer::EnemyWeapon);
+    rightWeaponCollisionComp->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
+    rightWeaponCollisionComp->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Trigger);
+    rightWeaponCollisionComp->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Trigger);
+    rightWeaponCollisionComp->SetCollisionOffsetY(height * 0.5f);
+    rightWeaponCollisionComp->SetIsVisibleDebugBox(false);
+    rightWeaponCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, -0.9f });
+    rightWeaponCollisionComp->Initialize();
 }
 
 void GruxEnemy::Update(float deltaTime)
