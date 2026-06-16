@@ -19,7 +19,7 @@ public:
 
     // 描画処理（入力：前フレームのレンダーターゲット）
     void Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* gBufferColor, ID3D11ShaderResourceView* gBufferNormal,
-        ID3D11ShaderResourceView* gBufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* shadowMap)override;
+        ID3D11ShaderResourceView* gBufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* gBufferVelocity, ID3D11ShaderResourceView* shadowMap)override;
 
     // 出力（次のエフェクトや最終合成に渡す用）
     ID3D11ShaderResourceView* GetOutputSRV()const override

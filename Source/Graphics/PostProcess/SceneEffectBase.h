@@ -13,7 +13,7 @@ public:
 
     virtual void Initialize(ID3D11Device* device, uint32_t width, uint32_t height) = 0;
     virtual void Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* gBufferColor, ID3D11ShaderResourceView* gBufferNormal,
-        ID3D11ShaderResourceView* gBufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* shadowMap) = 0;
+        ID3D11ShaderResourceView* gBufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* gBufferVelocity, ID3D11ShaderResourceView* shadowMap) = 0;
 
     virtual ID3D11ShaderResourceView* GetOutputSRV() const = 0;
 

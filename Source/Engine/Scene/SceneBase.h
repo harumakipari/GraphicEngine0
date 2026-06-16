@@ -18,6 +18,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include "Graphics/Core/TemporalAA.h"
 #include "Graphics/PostProcess/DepthOfFieldEffect.h"
 #include "Graphics/Shadow/ShadowMap.h"
 #include "UI/UIManager.h"
@@ -163,8 +164,6 @@ protected:
 
     std::unordered_map<RenderPass, std::vector<RenderHook>> renderHooks;
 
-
-
-
+    //TemporalAA temporalAa;
 
 };

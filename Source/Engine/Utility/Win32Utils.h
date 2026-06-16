@@ -1,7 +1,7 @@
 #pragma once
 
 #include <windows.h>
-
+#include <string>
 #include "imgui.h"
 
 inline LPWSTR hr_trace(HRESULT hr)

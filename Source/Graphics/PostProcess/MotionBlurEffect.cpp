@@ -61,17 +61,16 @@ void MotionBlurEffect::Initialize(ID3D11Device* device, uint32_t width, uint32_t
     }
 }
 
-void MotionBlurEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* gBufferColor, ID3D11ShaderResourceView* gbufferNormal, ID3D11ShaderResourceView* gbufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* shadowMap)
+void MotionBlurEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* gBufferColor, ID3D11ShaderResourceView* gBufferNormal, ID3D11ShaderResourceView* gbufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* gBufferVelocity, ID3D11ShaderResourceView* shadowMap)
 {
-    //frameBuffer->Clear(immediateContext, 0, 0, 0, 1);
-    //frameBuffer->Activate(immediateContext);
+    frameBuffer->Clear(immediateContext, 0, 0, 0, 1);
+    frameBuffer->Activate(immediateContext);
 
     ID3D11ShaderResourceView* shaderResourceViews[]
     {
-        gbufferDepth,       //gbufferVelocity
+        gBufferVelocity,       //gBufferVelocity
         tile_max_shader_resource_view.Get(),
     };
-
 
     if (motionBlurCBuffer->data.motion_blur_iteration <= 0)
         return;
@@ -93,7 +92,6 @@ void MotionBlurEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11Shader
     //	速度バッファ内の速度をタイル化する
     {
         // シェーダーリソースにGBufferを設定
-
 
         //	出力先をタイルバッファに変更
         {
@@ -131,7 +129,7 @@ void MotionBlurEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11Shader
     //	退避した物を再設定
     immediateContext->RSSetViewports(reserve_num_viewports, reserve_viewports);
 
-    //frameBuffer->Deactivate(immediateContext);
+    frameBuffer->Deactivate(immediateContext);
 }
 
 // 速度バッファを再構築する

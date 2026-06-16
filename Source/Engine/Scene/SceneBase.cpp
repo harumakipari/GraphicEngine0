@@ -79,6 +79,7 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     hr = CreatePsFromCSO(device, "./Data/Shaders/FinalPS.cso", finalPs.ReleaseAndGetAddressOf());
+    //hr = CreatePsFromCSO(device, "./Data/Shaders/FullScreenCopyPS.cso", finalPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     //カスケードシャドウマップ
@@ -132,6 +133,8 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
         imageSize.y
     );
     Logger::Log(U8("UI Render viewport ") + std::to_string(imageMin.x) + std::to_string(imageMin.y) + std::to_string(imageSize.x) + std::to_string(imageSize.y));
+
+    //temporalAa.Initialize(device, static_cast<UINT>(screenWidth), static_cast<UINT>(screenHeight));
 
     return true;
 }
@@ -408,7 +411,7 @@ void SceneBase::ForwardRender(ID3D11DeviceContext* immediateContext)
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
 
         sceneEffectManager->ApplyAll(immediateContext, multipleRenderTargets->renderTargetShaderResourceViews[static_cast<int>(M_SRV_SLOT::COLOR)], multipleRenderTargets->renderTargetShaderResourceViews[static_cast<int>(M_SRV_SLOT::NORMAL)],
-            multipleRenderTargets->depthStencilShaderResourceView, multipleRenderTargets->renderTargetShaderResourceViews[static_cast<int>(M_SRV_SLOT::POSITION)], nullptr/*ディファードの時に使用するmaterial の値*/, cascadedShadowMaps->depthMap().Get());
+            multipleRenderTargets->depthStencilShaderResourceView, multipleRenderTargets->renderTargetShaderResourceViews[static_cast<int>(M_SRV_SLOT::POSITION)], nullptr/*ディファードの時に使用するmaterial の値*/, nullptr/*ディファードの時に生成する速度バッファ*/, cascadedShadowMaps->depthMap().Get());
         //postEffectManager->ApplyAll(immediateContext, multipleRenderTargets->renderTargetShaderResourceViews[0]);
 
 
@@ -452,8 +455,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
 #endif
 
     sceneRender.RenderInstanced(immediateContext, queues.instanceBatches);
-
-
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
     gBufferRenderTarget->Deactivate(immediateContext);
 
@@ -638,12 +639,11 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
 
     frameBuffer->Deactivate(immediateContext);
     //multipleRenderTargets->Deactivate(immediateContext);
-
-
+    //temporalAa.Apply(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)]);
 #if 1
-//postEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get());
+    //postEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get());
     sceneEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
-        gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], cascadedShadowMaps->depthMap().Get());
+        gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)], cascadedShadowMaps->depthMap().Get());
     //sceneEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
     //    gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], cascaded_shadow_map->depth_map().Get());
 
@@ -687,10 +687,12 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
     finalBuffer->Deactivate(immediateContext);
 
     depthOfFieldEffect->Apply(immediateContext, finalBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
-        gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], cascadedShadowMaps->depthMap().Get());
+        gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)], cascadedShadowMaps->depthMap().Get());
+
 
     ID3D11ShaderResourceView* shader_resource_views[]
     {
+        //temporalAa.history[temporalAa.previous].srv.Get(),
         finalBuffer->shaderResourceViews[0].Get(),//colorMap   こっちポストエフェクト済み
         depthOfFieldEffect->GetOutputSRV(),
         gBufferRenderTarget->depthStencilShaderResourceView,      //depthMap
@@ -1049,3 +1051,4 @@ void SceneBase::DrawGizmo()
 #endif
 
 }
+
