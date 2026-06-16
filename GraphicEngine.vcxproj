@@ -478,6 +478,7 @@
     <ClInclude Include="Source\Graphics\Core\RenderState.h" />
     <ClInclude Include="Source\Graphics\Core\SceneRenderContext.h" />
     <ClInclude Include="Source\Graphics\Core\Shader.h" />
+    <ClInclude Include="Source\Graphics\Core\TemporalAA.h" />
     <ClInclude Include="Source\Graphics\Environment\SkyMap.h" />
     <ClInclude Include="Source\Graphics\PostProcess\BloomEffect.h" />
     <ClInclude Include="Source\Graphics\PostProcess\DepthOfFieldEffect.h" />
@@ -660,6 +661,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shader\FinalPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shader\FullScreenCopyPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>

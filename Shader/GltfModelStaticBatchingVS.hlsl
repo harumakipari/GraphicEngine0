@@ -8,6 +8,9 @@ VS_OUT main(float4 position : POSITION, float4 normal : NORMAL, float4 tangent :
     vout.position = mul(position, mul(world, viewProjection));
     vout.wPosition = mul(position, world);
 
+    vout.currentClipPosition = vout.position;
+    vout.previousClipPosition = mul(position, mul(previousWorld, previousViewProjection));
+
     normal.w = 0;
     vout.wNormal = normalize(mul(normal, world));
     //vout.wNormal.xyz = normalize(mul(gbuffer1Normal, inverseTransposeWorld).xyz);

@@ -25,7 +25,7 @@ void EnemyIdleState::Exit()
 // 移動ステートオブジェクト
 void EnemyWalkState::Enter()
 {
-    owner->PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
+    owner->PlayBodyAnimation("Jog_Fwd_0", true, true, 0.2f);
 }
 
 void EnemyWalkState::Execute(float deltaTime)
@@ -40,7 +40,7 @@ void EnemyWalkState::Exit()
 // 攻撃ステートオブジェクト
 void EnemyAttackState::Enter()
 {
-    owner->PlayBodyAnimation("Swing1_Medium", false, true, 0.1f);
+    owner->PlayBodyAnimation("PrimaryAttack_LA", false, true, 0.1f);
 }
 
 void EnemyAttackState::Execute(float deltaTime)
@@ -67,4 +67,20 @@ void EnemyCastState::Execute(float deltaTime)
 void EnemyCastState::Exit()
 {
 }
+
+// 攻撃の予兆ステートオブジェクト
+void EnemyDeathState::Enter()
+{
+    owner->PlayBodyAnimation("Death_A_0", false, true, 0.1f);
+}
+
+void EnemyDeathState::Execute(float deltaTime)
+{
+
+}
+
+void EnemyDeathState::Exit()
+{
+}
+
 

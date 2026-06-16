@@ -39,7 +39,7 @@ public:
     // ステートから出ていくときのメソッド
     void Exit() override;
     // ステート名を取得
-    const char* GetName() const override { return "Idle"; }
+    const char* GetName() const override { return "EnemyIdleState"; }
 };
 
 class EnemyWalkState : public EnemyStateBase
@@ -56,7 +56,7 @@ public:
     // ステートから出ていくときのメソッド
     void Exit() override;
     // ステート名を取得
-    const char* GetName() const override { return "Walk"; }
+    const char* GetName() const override { return "EnemyWalkState"; }
 };
 
 // 攻撃ステートオブジェクト
@@ -74,7 +74,25 @@ public:
     // ステートから出ていくときのメソッド
     void Exit() override;
     // ステート名を取得
-    const char* GetName() const override { return "Attack"; }
+    const char* GetName() const override { return "EnemyAttackState"; }
+};
+
+// 死亡ステートオブジェクト
+class EnemyDeathState : public EnemyStateBase
+{
+public:
+    // コンストラクタ
+    EnemyDeathState(Enemy* enemy) :EnemyStateBase(enemy) {}
+    // デストラクタ
+    ~EnemyDeathState() = default;
+    // ステートに入った時のメソッド
+    void Enter() override;
+    // ステートで実行するメソッド
+    void Execute(float deltaTime) override;
+    // ステートから出ていくときのメソッド
+    void Exit() override;
+    // ステート名を取得
+    const char* GetName() const override { return "EnemyDeathState"; }
 };
 
 // 攻撃前の予兆ステートオブジェクト

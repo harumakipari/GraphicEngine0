@@ -67,7 +67,6 @@ ViewConstants CameraComponent::GetViewConstants()
     vc.view = GetView();
     vc.projection = GetProjection();
 
-    vc.previousViewProjection = vc.viewProjection;  // 一フレーム前のviewProjectionを保存
 
     using namespace DirectX;
 
@@ -78,6 +77,16 @@ ViewConstants CameraComponent::GetViewConstants()
     XMStoreFloat4x4(&vc.invView, XMMatrixInverse(nullptr, V));
     XMStoreFloat4x4(&vc.invProjection, XMMatrixInverse(nullptr, P));
     XMStoreFloat4x4(&vc.invViewProjection, XMMatrixInverse(nullptr, V * P));
+
+    // 前フレームのviewProjectionを入れる
+    vc.previousViewProjection = previousViewProjection;
+    previousViewProjection = vc.viewProjection;
+
+    if (firstFrame)
+    {
+        previousViewProjection = vc.viewProjection;
+        firstFrame = false;
+    }
 
     vc.cameraPosition =
     {

@@ -2,19 +2,12 @@
 #include "Components/Controller/ControllerComponent.h"
 #include "Core/Actor.h"
 #include "Game/Actors/Base/Character.h"
+#include "Game/Actors/Enemy/Enemy.h"
 
-
-class GruxEnemy :public Character
+class GruxEnemy :public Enemy
 {
 public:
-    enum class BossState :uint8_t
-    {
-        Idle,
-        Attack,
-        Cooldown
-    };
-
-    explicit GruxEnemy(const std::string& actorName) :Character(actorName) {}
+    explicit GruxEnemy(const std::string& actorName) :Enemy(actorName) {}
 
     void Initialize(const Transform& transform)override;
 
@@ -28,7 +21,6 @@ public:
     void OnAnimationNotifyEnd(const AnimationNotifyState& state)override;
 
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event)override;
-
 
 private:
     // 攻撃が当たるタイミングで呼ばれる関数
@@ -53,14 +45,10 @@ private:
     bool rightHitBox = false;   // 右の剣の当たり判定
     bool leftHitBox = false;    // 左の剣の当たり判定
 
-    BossState state = BossState::Idle;
-    float stateTimer = 0.0f;
-    bool attackPlayed = false;
-    float attackHitTime = 0.5f; // 何秒後に当たるか
-    bool damageDone = false;
-
     // ヒット中に当たった敵を記録する
     std::unordered_set<Actor*> hitActors;
+
+    bool isDeathPerform = false;
 };
 
 

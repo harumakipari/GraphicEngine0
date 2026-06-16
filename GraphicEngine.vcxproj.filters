@@ -855,6 +855,9 @@
     <ClInclude Include="Source\Animation\AnimationState.h">
       <Filter>Source\Animation</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Graphics\Core\TemporalAA.h">
+      <Filter>Source\Graphics\Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">
@@ -1055,9 +1058,6 @@
     <FxCompile Include="Shader\PrimitiveRendererVS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\ScissorsPlayerPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\SsaoPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
@@ -1122,6 +1122,9 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\WiredShapeRendererVS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\FullScreenCopyPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
   </ItemGroup>

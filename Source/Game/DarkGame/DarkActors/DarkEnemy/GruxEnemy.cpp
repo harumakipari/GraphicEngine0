@@ -4,6 +4,7 @@
 
 #include "Components/Render/PointLightComponent.h"
 #include "Engine/Scene/SceneBase.h"
+#include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
 
 void GruxEnemy::Initialize(const Transform& transform)
@@ -86,7 +87,20 @@ void GruxEnemy::Initialize(const Transform& transform)
 
 #endif // 0
 
+    // ステートマシンを作成
+    {
+        stateMachine_ = std::make_shared<StateMachine>();
+        stateMachine_->RegisterState(std::make_unique<EnemyIdleState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyWalkState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyAttackState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyDeathState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyCastState>(this));
 
+        // ステートマシンを character に追加
+        //this->SetStateMachine(stateMachine);
+        // 初期ステートを設定
+        stateMachine_->ChangeState("EnemyIdleState");
+    }
 
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
@@ -131,7 +145,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     // 武器に当たり判定のコンポーネントを追加
     int socketLeftNode = skeletalMeshComponent->FindIndexByName("weapon_l");
     leftWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponLeftNode", parentName);
-    DirectX::XMFLOAT3 size = { 0.2f,1.5f,1.0f };
+    DirectX::XMFLOAT3 size = { 0.4f,3.0f,.0f };
     leftWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketLeftNode); // "weapon_l"
     leftWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
     leftWeaponCollisionComp->SetMass(mass);
@@ -144,6 +158,46 @@ void GruxEnemy::Initialize(const Transform& transform)
     leftWeaponCollisionComp->SetIsVisibleDebugBox(false);
     leftWeaponCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, 0.8f });
     leftWeaponCollisionComp->Initialize();
+    leftWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
+        {
+            if (!other)
+            {
+                Logger::Warning("other is nullptr");
+                return;
+            }
+
+            uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
+
+            // Playerレイヤーか確認
+            if (!(other->GetCollisionLayer() & mask))
+                return;
+
+            // 相手のActor取得
+            Actor* actor = other->GetOwner();
+
+            if (!actor)
+            {
+                Logger::Warning("actor is nullptr");
+                return;
+            }
+
+            if (!rightHitBox && !leftHitBox)
+                return;
+
+            if (hitActors.contains(actor))
+            {// 一度当たったことがあった場合
+                return;
+            }
+
+            // Playerへキャスト
+            Player* player = dynamic_cast<Player*>(actor);
+
+            if (!player)
+                return;
+
+            player->TakeDamage(10);
+            hitActors.insert(actor);
+        });
 
     int socketRightNode = skeletalMeshComponent->FindIndexByName("weapon_r");
     rightWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponRightNode", parentName);
@@ -208,67 +262,15 @@ void GruxEnemy::Update(float deltaTime)
     rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
     leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
 
-#if 0
-    if (hp <= 0)
+#if 1
+    if (hp <= 0&& !isDeathPerform)
     {
-        PlayBodyAnimation("Death_A_0", false);
+        isDeathPerform = true;
+        stateMachine_->ChangeState("EnemyDeathState");
     }
 #endif // 0
 
-    return;
-    stateTimer += deltaTime;
 
-    auto player = GetOwnerScene()->GetActorManager()->GetActorByName("player");
-    DirectX::XMFLOAT3 playerPos = player->GetPosition();
-    switch (state)
-    {
-    case BossState::Idle:
-    {
-        // プレイヤーとの距離を見る
-        if (GetDistanceToPlayer() < 5.0f)
-        {
-            state = BossState::Attack;
-            stateTimer = 0.0f;
-            attackPlayed = false;
-        }
-        break;
-    }
-
-    case BossState::Attack:
-    {
-        if (!attackPlayed)
-        {
-            PlayBodyAnimation("PrimaryAttack_RA", false, true, 0.1f);
-            attackPlayed = true;
-            damageDone = false;
-            stateTimer = 0.0f;
-        }
-
-        // ここで遅れて当たる
-        if (!damageDone && stateTimer > attackHitTime)
-        {
-            DoAttackHit(); // ←さっきの距離判定関数
-            damageDone = true;
-        }
-
-        if (stateTimer > 1.2f)
-        {
-            state = BossState::Cooldown;
-            stateTimer = 0.0f;
-        }
-        break;
-    }
-
-    case BossState::Cooldown:
-    {
-        if (stateTimer > 1.5f)
-        {
-            state = BossState::Idle;
-            stateTimer = 0.0f;
-        }
-        break;
-    }
-    }
 }
 
 //当たった時の処理

@@ -16,9 +16,37 @@ public:
 
         XMFLOAT3 targetPos = t->GetComponentLocation();
 
-        XMVECTOR pivot =
-            XMLoadFloat3(&targetPos) +
-            XMVectorSet(0, 1.5f, 0, 0);
+        XMVECTOR pivot =XMLoadFloat3(&targetPos) +XMVectorSet(0, 1.5f, 0, 0);
+
+        XMFLOAT3 targetPivot;
+        XMStoreFloat3(&targetPivot, pivot);
+
+        if (!initialized)
+        {
+            smoothedPivot = targetPivot;
+        }
+        else
+        {
+            float pivotT =
+                std::clamp(dt * pivotFollowSpeed, 0.0f, 1.0f);
+
+            smoothedPivot.x =
+                std::lerp(smoothedPivot.x,
+                    targetPivot.x,
+                    pivotT);
+
+            smoothedPivot.y =
+                std::lerp(smoothedPivot.y,
+                    targetPivot.y,
+                    pivotT);
+
+            smoothedPivot.z =
+                std::lerp(smoothedPivot.z,
+                    targetPivot.z,
+                    pivotT);
+        }
+
+        pivot = XMLoadFloat3(&smoothedPivot);
 
         static DirectX::XMFLOAT3 lastPos{};
 
@@ -81,14 +109,19 @@ public:
         XMFLOAT3 pivot3;
         XMStoreFloat3(&pivot3, pivot);
 
-        camera->lookTarget = pivot3;
+        //camera->lookTarget = pivot3;
+        camera->lookTarget = smoothedPivot;
         camera->useLookTarget = true;
     }
 
     DirectX::XMFLOAT3 shakeOffset = {};
 private:
     DirectX::XMFLOAT3 smoothedPosition{};
+    DirectX::XMFLOAT3 smoothedPivot{};
+
     bool initialized = false;
-    float followSpeed = 15.0f;
+
+    float followSpeed = 10.0f;
+    float pivotFollowSpeed = 5.0f;
 };
 

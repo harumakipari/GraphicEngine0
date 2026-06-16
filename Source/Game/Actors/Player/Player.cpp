@@ -114,17 +114,17 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.12f, 0.583f, AnimationNotifyState::Type::ComboWindow);
-        controller->AddNotifyState("Primary_Attack_Fast_A", 0.23f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_A", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
         controller->AddNotifyEvent("Primary_Attack_Fast_B", 0.315f, AnimationNotifyEvent::Type::PlaySE, "star");
         controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.265f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.583f, AnimationNotifyState::Type::ComboWindow);
-        controller->AddNotifyState("Primary_Attack_Fast_B", 0.265f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_B", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
         controller->AddNotifyEvent("Primary_Attack_Fast_C", 0.315f, AnimationNotifyEvent::Type::PlaySE, "turning");
         controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.22f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.583f, AnimationNotifyState::Type::ComboWindow);
-        controller->AddNotifyState("Primary_Attack_Fast_C", 0.3f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_C", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
         controller->AddNotifyEvent("Primary_Attack_Fast_D1_1", 0.315f, AnimationNotifyEvent::Type::PlaySE, "turning");
         controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.414f, 0.548f, AnimationNotifyState::Type::HitBox);
