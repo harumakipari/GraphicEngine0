@@ -42,15 +42,58 @@ public:
         history[1].Create(device, width, height, DXGI_FORMAT_R16G16B16A16_FLOAT);
         fullscreenQuad = std::make_unique<FullScreenQuad>(device);
 
-        HRESULT hr = CreatePsFromCSO(device, "./Data/Shaders/FullScreenCopyPS.cso", copyPs.ReleaseAndGetAddressOf());
+        HRESULT hr = CreatePsFromCSO(device, "./Data/Shaders/TemporalAntiAliasingPS.cso", copyPs.ReleaseAndGetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 
-    void Apply(
-        ID3D11DeviceContext* immediateContext,
-        ID3D11ShaderResourceView* sceneColor,
-        ID3D11ShaderResourceView* velocity)
+    void Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* sceneColor, ID3D11ShaderResourceView* velocity)
     {
+        if (firstFrame)
+        {
+            ID3D11ShaderResourceView* srvs[]
+            {
+                sceneColor,
+                velocity,
+                sceneColor
+            };
+
+            fullscreenQuad->Blit(
+                immediateContext,
+                srvs,
+                0,
+                _countof(srvs),
+                copyPs.Get());
+
+            firstFrame = false;
+
+            std::swap(current, previous);
+
+            return;
+        }
+
+        UINT viewportCount{ D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE };
+        D3D11_VIEWPORT cachedViewPorts[D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE];
+        viewportCount = D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
+        immediateContext->RSGetViewports(&viewportCount, cachedViewPorts);
+
+        // ビューポートの設定
+        D3D11_VIEWPORT scene_viewport{};
+        scene_viewport.TopLeftX = 0;
+        scene_viewport.TopLeftY = 0;
+
+#if _DEBUG
+        scene_viewport.Width = 1920;// Graphics::GetScreenWidth();
+        scene_viewport.Height = 1080;    // Graphics::GetScreenHeight();
+#else
+        scene_viewport.Width = Graphics::GetScreenWidth();
+        scene_viewport.Height = Graphics::GetScreenHeight();
+#endif
+
+        scene_viewport.MinDepth = 0.0f;
+        scene_viewport.MaxDepth = 1.0f;
+        immediateContext->RSSetViewports(1, &scene_viewport);
+
+
         ID3D11RenderTargetView* oldRTV = nullptr;
         ID3D11DepthStencilView* oldDSV = nullptr;
 
@@ -82,15 +125,18 @@ public:
 
         ID3D11ShaderResourceView* srvs[]
         {
-            sceneColor
+            sceneColor,
+            velocity,
+            history[previous].srv.Get(),
         };
 
 #if 1
+        RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
         fullscreenQuad->Blit(
             immediateContext,
             srvs,
             0,
-            1,
+            _countof(srvs),
             copyPs.Get());
 #else
         Microsoft::WRL::ComPtr<ID3D11Resource> srcResource;
@@ -99,15 +145,19 @@ public:
 
         immediateContext->CopyResource(
             history[current].texture.Get(),
-            srcResource.Get()); 
+            srcResource.Get());
 #endif // 0
         std::swap(current, previous);
+
+        //immediateContext->RSSetViewports(viewportCount, cachedViewPorts);
+
 
         immediateContext->PSSetShaderResources(
             0,
             16,
             nullSRVs);
 
+        immediateContext->RSSetViewports(viewportCount, cachedViewPorts);
 
         immediateContext->OMSetRenderTargets(
             1,
@@ -133,5 +183,7 @@ public:
     int previous = 1;
     std::unique_ptr<FullScreenQuad> fullscreenQuad;
 
+private:
     Microsoft::WRL::ComPtr<ID3D11PixelShader> copyPs;
+    bool firstFrame = true;
 };

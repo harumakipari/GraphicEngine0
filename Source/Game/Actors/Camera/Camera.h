@@ -103,12 +103,7 @@ public:
     {
         //mainCameraComponent->Shake(power, time);
     }
-    void DrawImGuiDetails()override
-    {
-#ifdef USE_IMGUI
-
-#endif
-    }
+    void DrawImGuiDetails()override;
 
     DirectX::XMFLOAT3 CameraForwardXZ() const
     {
@@ -132,10 +127,18 @@ public:
         };
     }
 
+    void SetLockTarget(const std::shared_ptr<SceneComponent>& target)
+    {
+        tpsController.SetLockTarget(target);
+    }
+
+    void ClearLockTarget()
+    {
+        tpsController.ClearLockTarget();
+    }
 
 private:
     TPSCameraController tpsController;
-
     bool didShake = false;
 };
 

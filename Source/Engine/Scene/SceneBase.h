@@ -164,6 +164,6 @@ protected:
 
     std::unordered_map<RenderPass, std::vector<RenderHook>> renderHooks;
 
-    //TemporalAA temporalAa;
+    TemporalAA temporalAa;
 
 };

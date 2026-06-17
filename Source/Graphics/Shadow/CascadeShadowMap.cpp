@@ -23,7 +23,7 @@ std::array<DirectX::XMFLOAT4, 8> ExtractFrustumCorners(const DirectX::XMFLOAT4X4
         {
             for (size_t z = 0; z < 2; ++z)
             {
-                DirectX::XMFLOAT4 pt = { 2.0f * x - 1.0f, 2.0f * y - 1.0f, 2.0f * z - 1.0f, 1.0f };
+                DirectX::XMFLOAT4 pt = { 2.0f * x - 1.0f, 2.0f * y - 1.0f, /*2.0f * z - 1.0f*/static_cast <float>(z), 1.0f };
                 XMStoreFloat4(&pt, XMVector3TransformCoord(XMLoadFloat4(&pt), VP_));
                 frustum_corners.at(index++) = pt;
             }
@@ -149,8 +149,7 @@ CascadedShadowMaps::CascadedShadowMaps(ID3D11Device* device, UINT width, UINT he
     }
 }
 
-void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& cameraView, const DirectX::XMFLOAT4X4& cameraProjection, const DirectX::XMFLOAT4& lightDirection,
-    const float criticalDepthValue/* この値が 0 の場合、カメラの遠方パネル距離が使用される。*/, const UINT cbSlot)
+void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& cameraView, const DirectX::XMFLOAT4X4& cameraProjection, const DirectX::XMFLOAT4& lightDirection,const float criticalDepthValue/* この値が 0 の場合、カメラの遠方パネル距離が使用される。*/, const UINT cbSlot)
 {
     auto& shadow = Scene::GetCurrentScene()->GetSceneSettings().cascadedShadowMapConstants;
 
@@ -183,6 +182,10 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
         float nearPlane = shadow.fitToCascade ? cascadedPlaneDistances.at(cascadeIndex) : zn;
         float farPlane = cascadedPlaneDistances.at(cascadeIndex + 1);
 
+#if 0
+        Logger::Log("nearPlane :" + std::to_string(nearPlane));
+        Logger::Log("farPlane :" + std::to_string(farPlane));
+#endif
         // カスケード用射影行列再構築
         DirectX::XMFLOAT4X4 cascadedProjection = cameraProjection;
         cascadedProjection._33 = farPlane / (farPlane - nearPlane);
@@ -202,6 +205,14 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
         center.x /= corners.size();
         center.y /= corners.size();
         center.z /= corners.size();
+
+        for (auto& c : corners)
+        {
+            Logger::Log(
+                std::to_string(c.x) + "," +
+                std::to_string(c.y) + "," +
+                std::to_string(c.z));
+        }
 #if 0
         // ライトビュー行列作成
         DirectX::XMMATRIX V;
@@ -213,7 +224,9 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
 #else
 
         using namespace DirectX;
-        DirectX::XMVECTOR LightDir = DirectX::XMVector3Normalize(XMLoadFloat4(&lightDirection));
+        DirectX::XMFLOAT4 lightDir = lightDirection;
+        lightDir.w = 0.0f;
+        DirectX::XMVECTOR LightDir = DirectX::XMVector3Normalize(XMLoadFloat4(&lightDir));
         DirectX::XMMATRIX V = XMMatrixLookAtLH(
             XMVectorSet(center.x, center.y, center.z, 1.0f) - XMVectorScale(LightDir, 100),
             XMVectorSet(center.x, center.y, center.z, 1.0f),
@@ -237,6 +250,13 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
         for (DirectX::XMFLOAT4 corner : corners)
         {
             DirectX::XMStoreFloat4(&corner, DirectX::XMVector3TransformCoord(DirectX::XMLoadFloat4(&corner), V));
+#if 0
+            Logger::Log(
+                "lightspace = " +
+                std::to_string(corner.x) + "," +
+                std::to_string(corner.y) + "," +
+                std::to_string(corner.z));
+#endif
             minX = std::min<float>(minX, corner.x);
             maxX = std::max<float>(maxX, corner.x);
             minY = std::min<float>(minY, corner.y);
@@ -244,6 +264,7 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
             minZ = std::min<float>(minZ, corner.z);
             maxZ = std::max<float>(maxZ, corner.z);
         }
+
 
 
 #if 0
@@ -277,6 +298,7 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
 #if 1
         // Z拡張（シャドウ欠け防止）
         shadow.zDepthScale = std::max<float>(1.0f, shadow.zDepthScale);
+
         if (minZ < 0)
         {
             minZ *= shadow.zDepthScale;
@@ -293,6 +315,13 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
         {
             maxZ *= shadow.zDepthScale;
         }
+
+#if 0
+        Logger::Log("min x :" + std::to_string(minX) + "min y :" + std::to_string(minY) + "min z :" + std::to_string(minZ));
+        Logger::Log("max x :" + std::to_string(maxX) + "max y :" + std::to_string(maxY) + "max z :" + std::to_string(maxZ));
+
+#endif // 0
+
 #endif
 
         // ライト射影行列

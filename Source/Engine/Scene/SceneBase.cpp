@@ -22,7 +22,6 @@
 #include "Graphics/PostProcess/SSREffect.h"
 #include "UI/FontManager.h"
 
-
 bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
     sceneCBuffer = std::make_unique<ConstantBuffer<FrameConstants>>(device);
@@ -134,7 +133,7 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     );
     Logger::Log(U8("UI Render viewport ") + std::to_string(imageMin.x) + std::to_string(imageMin.y) + std::to_string(imageSize.x) + std::to_string(imageSize.y));
 
-    //temporalAa.Initialize(device, static_cast<UINT>(screenWidth), static_cast<UINT>(screenHeight));
+    temporalAa.Initialize(device, static_cast<UINT>(screenWidth), static_cast<UINT>(screenHeight));
 
     return true;
 }
@@ -149,7 +148,6 @@ void SceneBase::Update(float deltaTime)
             root->CapturePreviousTransform();
         }
     }
-
 
     lightManager->Update(deltaTime);
 
@@ -556,8 +554,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
 
     //immediateContext->OMSetRenderTargets(1, gBufferRenderTarget->renderTargetViews[1], gBufferRenderTarget->depthStencilView);
     //immediateContext->OMSetRenderTargets(1, gBufferRenderTarget->renderTargetViews[4], gBufferRenderTarget->depthStencilView);
-
-
     frameBuffer->Activate(immediateContext, gBufferRenderTarget->depthStencilView);
 
 #if 0
@@ -620,7 +616,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
 
 #endif // 0
 
-
     // デバック描画
 #if _DEBUG
     if (useDrawDebug)
@@ -639,7 +634,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
 
     frameBuffer->Deactivate(immediateContext);
     //multipleRenderTargets->Deactivate(immediateContext);
-    //temporalAa.Apply(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)]);
+    temporalAa.Apply(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)]);
 #if 1
     //postEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get());
     sceneEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],

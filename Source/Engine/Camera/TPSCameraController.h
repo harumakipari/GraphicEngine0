@@ -6,6 +6,8 @@ class TPSCameraController
 public:
     TPSCameraComponent* camera = nullptr;
     std::weak_ptr<SceneComponent> target;
+    std::weak_ptr<SceneComponent> lockTarget;
+    bool isLockOn = false;
     bool useRaycast = true; // 障害物の回避にレイキャストを使うかどうか
     void Update(float dt)
     {
@@ -16,7 +18,7 @@ public:
 
         XMFLOAT3 targetPos = t->GetComponentLocation();
 
-        XMVECTOR pivot =XMLoadFloat3(&targetPos) +XMVectorSet(0, 1.5f, 0, 0);
+        XMVECTOR pivot = XMLoadFloat3(&targetPos) + XMVectorSet(0, 1.5f, 0, 0);
 
         XMFLOAT3 targetPivot;
         XMStoreFloat3(&targetPivot, pivot);
@@ -67,10 +69,8 @@ public:
         XMVECTOR resolvedEye = idealEye;
         if (useRaycast)
         {
-            resolvedEye =
-                camera->ResolveCameraCollision(pivot, idealEye);
+            resolvedEye = camera->ResolveCameraCollision(pivot, idealEye);
         }
-
 
         XMVECTOR currentEye = resolvedEye;
         //XMVECTOR currentEye = idealEye;
@@ -105,14 +105,54 @@ public:
         }
 
         camera->GetOwner()->SetPosition(smoothedPosition);
-        //camera->GetOwner()->SetPosition(pos);
-        XMFLOAT3 pivot3;
-        XMStoreFloat3(&pivot3, pivot);
+        XMFLOAT3 lookTargetPos = smoothedPivot;
 
-        //camera->lookTarget = pivot3;
-        camera->lookTarget = smoothedPivot;
+        if (isLockOn)
+        {
+            auto enemy = lockTarget.lock();
+
+            if (enemy)
+            {
+                XMFLOAT3 enemyPos = enemy->GetComponentLocation();
+
+                XMFLOAT3 dir=
+                {
+                    enemyPos.x - targetPos.x,
+                    0.0f,
+                    enemyPos.z - targetPos.z
+                };
+
+                yaw = atan2f(dir.x, dir.z);
+
+                camera->SetYaw(yaw);
+
+                lookTargetPos.x = (smoothedPivot.x + enemyPos.x) * 0.5f;
+                lookTargetPos.y = (smoothedPivot.y + enemyPos.y) * 0.5f;
+                lookTargetPos.z = (smoothedPivot.z + enemyPos.z) * 0.5f;
+            }
+            else
+            {
+                isLockOn = false;
+            }
+        }
+
+        camera->lookTarget = lookTargetPos;
         camera->useLookTarget = true;
+
     }
+
+    void SetLockTarget(const std::shared_ptr<SceneComponent>& target)
+    {
+        lockTarget = target;
+        isLockOn = true;
+    }
+
+    void ClearLockTarget()
+    {
+        lockTarget.reset();
+        isLockOn = false;
+    }
+
 
     DirectX::XMFLOAT3 shakeOffset = {};
 private:

@@ -3,6 +3,7 @@
 
 #include "Components/Controller/ControllerComponent.h"
 #include "Engine/Scene/SceneBase.h"
+#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 
 void Camera::Initialize(const Transform& transform)
@@ -44,10 +45,23 @@ void MainCamera::Update(float deltaTime)
 
     // ControllerXV
     tpsController.Update(deltaTime);
-
 }
 
+void MainCamera::DrawImGuiDetails()
+{
+#ifdef USE_IMGUI
+    if (ImGui::Button("SetLockTarget"))
+    {
+        auto enemy = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>();
+        SetLockTarget(enemy->GetRootComponent());
+    }
+    if (ImGui::Button("ClearLockTarget"))
+    {
+        ClearLockTarget();
+    }
 
+#endif
+}
 
 void TitleCamera::Update(float deltaTime)
 {
