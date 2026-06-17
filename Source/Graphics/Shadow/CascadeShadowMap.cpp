@@ -206,13 +206,6 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
         center.y /= corners.size();
         center.z /= corners.size();
 
-        for (auto& c : corners)
-        {
-            Logger::Log(
-                std::to_string(c.x) + "," +
-                std::to_string(c.y) + "," +
-                std::to_string(c.z));
-        }
 #if 0
         // ライトビュー行列作成
         DirectX::XMMATRIX V;

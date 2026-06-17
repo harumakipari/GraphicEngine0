@@ -27,6 +27,12 @@ void PlayerIdleState::Execute(float deltaTime)
         return;
     }
 
+    if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
+    {
+        player->GetStateMachine()->ChangeState("Jump");
+        return;
+    }
+
     // 入力があれば走るステートに変更
     auto inputComp = player->inputComponent;
     DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
@@ -63,6 +69,11 @@ void PlayerRunningState::Execute(float deltaTime)
         return;
     }
 
+    if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
+    {
+        player->GetStateMachine()->ChangeState("Jump");
+        return;
+    }
 
     // 入力がなければ待機ステートに変更
     auto inputComp = player->inputComponent;
@@ -154,7 +165,6 @@ void PlayerAttackState::Execute(float deltaTime)
         }
     }
 
-
     if (!owner->GetBodyAnimationController()->IsPlayAnimation())
     {
         player->currentAttackAnimation = player->startAttackAnimation;
@@ -193,8 +203,6 @@ void PlayerDodgeState::Enter()
 
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
-
-
 }
 
 void PlayerDodgeState::Execute(float deltaTime)
@@ -225,5 +233,110 @@ void PlayerDodgeState::Execute(float deltaTime)
 void PlayerDodgeState::Exit()
 {
     player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
-
 }
+
+void PlayerJumpState::Enter()
+{
+    //ジャンプの初速度
+    player->characterMovementComponent->Jump(jumpPower);
+    //上昇時間　　v = v0 + gt を変形して ジャンプの上昇時 v は 0 になるから t = v0 / g ;
+    float t_up = jumpPower / std::fabs(gravity);
+    //Jump_Startのアニメーション時間
+    float t_anim = player->GetBodyAnimationController()->GetAnimationLength("Jump_Start_0");
+    //アニメーションの再生速度をt_upに合わせる
+    float animationRate = t_anim / t_up;
+    player->GetBodyAnimationController()->SetAnimationRate(animationRate);
+    // アニメーションを再生
+    player->PlayBodyAnimation("Jump_Start_0", false);
+    // ステート
+    jumpState = JumpState::JumpStart;
+}
+
+void PlayerJumpState::Execute(float deltaTime)
+{
+    switch (jumpState)
+    {
+    case JumpState::JumpStart:
+        //上昇が完了した時
+        if (!player->GetBodyAnimationController()->IsPlayAnimation())
+        {//アニメーションの再生が終わったら 
+            jumpState = JumpState::JumpMid;
+            // アニメーションを再生
+            player->PlayBodyAnimation("Jump_Land_0", false);
+            // アニメーションの再生倍率をリセットする
+            player->GetBodyAnimationController()->ResetAnimationRate();
+        }
+        break;
+    case JumpState::JumpMid:
+    {
+        if (!player->GetBodyAnimationController()->IsPlayAnimation() && player->characterMovementComponent->GetVelocity().y < 0.0f)
+        {//上昇が完了した時
+            jumpState = JumpState::JumpLand;
+            // アニメーションを再生
+            player->PlayBodyAnimation("Jump_Recovery_0", false);
+
+            isAnimatedRecovering = false;
+
+            float t_middle_anim = player->GetBodyAnimationController()->GetAnimationLength("Jump_Land_0");
+            //自由落下の公式より
+            //v0 = √ (2gh)  から　 h = v0 * v0 / 2g 
+            float h = player->GetPosition().y - 0.0f/*地面の高さ*/ + (3.0f)/*調整値*/;
+            // t = √ (2h / g) から　上の式代入して　
+            float t_fall = std::sqrtf(2 * h / std::abs(gravity))  - t_middle_anim/*"Jump_Middle"*/;
+            //"Jump_Finish"のアニメーションの再生時間取得
+            float t_anim = player->GetBodyAnimationController()->GetAnimationLength("Jump_Recovery_0");
+            //アニメーションの再生速度を"t_fall"に合わせる
+            float animationRate = t_anim / t_fall;
+            player->GetBodyAnimationController()->SetAnimationRate(animationRate);
+        }
+    }
+        break;
+    case JumpState::JumpLand:
+        if (!player->GetBodyAnimationController()->IsPlayAnimation()&& player->characterMovementComponent->IsGround())
+        {//アニメーションの再生が終わったら
+            player->GetStateMachine()->ChangeState("Idle");
+        }
+        break;
+    }
+    if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+    {
+        player->GetStateMachine()->ChangeState("JumpAttack");
+    }
+}
+
+void PlayerJumpState::Exit()
+{
+    // アニメーションの再生倍率をリセットする
+    player->GetBodyAnimationController()->ResetAnimationRate();
+}
+
+void PlayerJumpAttackState::Enter()
+{
+    player->GetBodyAnimationController()->ResetAnimationRate();
+    // アニメーションを再生
+    player->PlayBodyAnimation("Jump_Pad_0", false,true, 0.3f);
+    // ステート
+    jumpState = JumpState::JumpAttack;
+}
+
+void PlayerJumpAttackState::Execute(float deltaTime)
+{
+    switch (jumpState)
+    {
+    case JumpState::JumpAttack:
+        if (!player->GetBodyAnimationController()->IsPlayAnimation())
+        {//アニメーションの再生が終わったら 
+            jumpState = JumpState::JumpLand;
+        }
+        break;
+    case JumpState::JumpLand:
+        player->GetStateMachine()->ChangeState("Idle");
+        break;
+    }
+}
+
+void PlayerJumpAttackState::Exit()
+{
+    
+}
+

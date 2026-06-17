@@ -230,7 +230,6 @@ void InputSystem::Initialize()
     inputKeys["ok"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
     inputKeys["ok"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));
 
-
     inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_THUMB));    // 右スティック押し込み
 
     inputKeys["Attack"].emplace_back(std::make_unique<Keyboard>('Z'));
@@ -239,6 +238,10 @@ void InputSystem::Initialize()
     inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_RETURN)); // Enterキー
     inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_SHIFT)); // Shiftキー
     inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));     // Bボタン
+
+    inputKeys["Jump"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_X));     // Bボタン
+    inputKeys["Jump"].emplace_back(std::make_unique<Keyboard>('X'));     // 右
+
 
     //inputKeys["Z"].emplace_back(std::make_unique<Keyboard>('Z'));
     //inputKeys["RB"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_SHOULDER));     // 右

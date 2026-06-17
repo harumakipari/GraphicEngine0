@@ -126,6 +126,11 @@ public:
                 if (!hit || depth <= 0.0001f) // ”÷¬‚ÈÕ“Ë‚Í–³Ž‹
                     continue;
 
+#if 0
+                std::string hitName = "Hit : " + aComponent->GetName() + bComponent->GetName();
+                Logger::Log(hitName);
+#endif // 0
+
                 std::pair<CollisionComponent*, CollisionComponent*> hitPairA = { aComponent, bComponent };
                 std::pair<CollisionComponent*, CollisionComponent*> hitPairB = { bComponent, aComponent };
 

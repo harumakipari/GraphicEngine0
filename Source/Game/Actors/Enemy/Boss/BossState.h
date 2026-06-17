@@ -1,12 +1,12 @@
 #pragma once
 #include "Game/State/StateBase.h"
 
-class Enemy;
+class GruxEnemy;
 
 class EnemyStateBase : public State
 {
 public:
-    EnemyStateBase(Enemy* player);
+    EnemyStateBase(GruxEnemy* player);
     virtual ~EnemyStateBase() = default;
     // ステートに入った時のメソッド
     virtual void Enter() = 0;
@@ -20,7 +20,7 @@ public:
     virtual const char* GetName() const = 0;
 
 protected:
-    Enemy* enemy = nullptr;
+    GruxEnemy* enemy = nullptr;
 
 };
 
@@ -29,7 +29,7 @@ class EnemyIdleState :public EnemyStateBase
 {
 public:
     // コンストラクタ
-    EnemyIdleState(Enemy* enemy) :EnemyStateBase(enemy) {}
+    EnemyIdleState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
     // デストラクタ
     virtual ~EnemyIdleState() = default;
     // ステートに入った時のメソッド
@@ -46,7 +46,7 @@ class EnemyWalkState : public EnemyStateBase
 {
 public:
     // コンストラクタ
-    EnemyWalkState(Enemy* enemy) :EnemyStateBase(enemy) {}
+    EnemyWalkState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
     // デストラクタ
     ~EnemyWalkState() = default;
     // ステートに入った時のメソッド
@@ -64,7 +64,7 @@ class EnemyAttackState : public EnemyStateBase
 {
 public:
     // コンストラクタ
-    EnemyAttackState(Enemy* enemy) :EnemyStateBase(enemy) {}
+    EnemyAttackState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
     // デストラクタ
     ~EnemyAttackState() = default;
     // ステートに入った時のメソッド
@@ -82,7 +82,7 @@ class EnemyDeathState : public EnemyStateBase
 {
 public:
     // コンストラクタ
-    EnemyDeathState(Enemy* enemy) :EnemyStateBase(enemy) {}
+    EnemyDeathState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
     // デストラクタ
     ~EnemyDeathState() = default;
     // ステートに入った時のメソッド
@@ -98,9 +98,9 @@ public:
 // 攻撃前の予兆ステートオブジェクト
 class EnemyCastState :public EnemyStateBase
 {
-    public:
+public:
     // コンストラクタ
-    EnemyCastState(Enemy* enemy) :EnemyStateBase(enemy) {}
+    EnemyCastState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
     // デストラクタ
     ~EnemyCastState() = default;
     // ステートに入った時のメソッド
@@ -116,9 +116,9 @@ class EnemyCastState :public EnemyStateBase
 // クールダウンステートオブジェクト
 class EnemyCoolDownState :public EnemyStateBase
 {
-    public:
+public:
     // コンストラクタ
-    EnemyCoolDownState(Enemy* enemy) :EnemyStateBase(enemy) {}
+    EnemyCoolDownState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
     // デストラクタ
     ~EnemyCoolDownState() = default;
     // ステートに入った時のメソッド

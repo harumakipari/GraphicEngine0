@@ -17,6 +17,7 @@ public:
     void Initialize(const Transform& transform)override
     {
         std::shared_ptr<StaticMeshComponent> staticMeshComponent = this->AddComponent<class StaticMeshComponent>("staticMeshComponent");
+        //staticMeshComponent->SetModel("./Data/Models/shrine/scene.gltf", true);
         staticMeshComponent->SetModel("./Data/Models/Stage/ExampleStage.gltf", true);
         SetEulerRotation(DirectX::XMFLOAT3(0.0f, 180.0f, 0.0f));
         staticMeshComponent->SetRelativeScaleDirect(DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f));

@@ -1,8 +1,9 @@
 #include "pch.h"
 #include "BossState.h"
 #include "Game/Actors/Enemy/Enemy.h"
+#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
-EnemyStateBase::EnemyStateBase(Enemy* actor) :State(actor), enemy(actor)
+EnemyStateBase::EnemyStateBase(GruxEnemy* actor) :State(actor), enemy(actor)
 {
 }
 
@@ -40,7 +41,8 @@ void EnemyWalkState::Exit()
 // 攻撃ステートオブジェクト
 void EnemyAttackState::Enter()
 {
-    owner->PlayBodyAnimation("PrimaryAttack_LA", false, true, 0.1f);
+    enemy->StartAttack();
+    enemy->PlayBodyAnimation("PrimaryAttack_LA", false, true, 0.1f);
 }
 
 void EnemyAttackState::Execute(float deltaTime)

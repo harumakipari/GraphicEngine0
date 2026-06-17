@@ -52,6 +52,9 @@ public:
     // アニメーションの再生倍率を変更する関数
     void SetAnimationRate(const float animationRate) { this->animationRate = animationRate; }
 
+    // アニメーションの再生倍率をリセットする関数
+    void ResetAnimationRate() { this->animationRate = 1.0f; }
+
     // アニメーションを止める処理
     void Stop()
     {
@@ -87,6 +90,12 @@ public:
     const std::string& GetCurrentAnimationName()const { return currentAnimationName; }
 
     float GetCurrentAnimationLength() const { return target_->model->animations[animationClip].duration; }
+
+    float GetAnimationLength(const std::string& animationName)
+    {
+        const size_t clip = animationNameToIndex_[animationName];
+        return target_->model->animations[clip].duration;
+    }
 
     // NotifyTrack にイベントを追加する関数
     void AddNotifyState(

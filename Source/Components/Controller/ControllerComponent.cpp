@@ -14,7 +14,7 @@ void CharacterMovementComponent::Tick(float dt)
 {
     if (useGravity)
     {
-        gravity_ = -4.9f;
+        gravity_ = -9.8f;
     }
     else
     {

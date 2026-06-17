@@ -13,6 +13,8 @@ public:
 
     void Update(float deltaTime)override;
 
+    void DrawImGuiDetails() override;
+
     //当たった時の処理
     void TakeDamage(int damage);
 
@@ -21,6 +23,9 @@ public:
     void OnAnimationNotifyEnd(const AnimationNotifyState& state)override;
 
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event)override;
+
+    // 攻撃開始時に始める処理
+    void StartAttack();
 
 private:
     // 攻撃が当たるタイミングで呼ばれる関数
