@@ -18,7 +18,8 @@ public:
         DirectX::XMFLOAT4 position{ 0.0f,0.0f,0.0f,0.0f };
         DirectX::XMFLOAT4 color{ 1.0f,0.0f,0.0f,0.0f };
         float range = 0.0f;
-        float pads[3] = {};
+        int attenuationType = 0;   // 
+        float pads[2] = {};
     };
 
     struct LightConstants
@@ -83,5 +84,4 @@ private:
     std::vector<PointLight> scenePointLights;
 
     std::unique_ptr<ConstantBuffer<LightConstants>> lightCBuffer;
-
 };

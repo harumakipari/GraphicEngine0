@@ -27,13 +27,13 @@ struct SceneLightConstants
 
     float rimPower = 3.0f;
     float kc = 1.0f;
-    float kl = 0.7f;
-    float kq = 1.8f;
+    float kl = 0.22f;
+    float kq = 0.2f;
 
-    float diffuseIntensity = 1.0f;
-    float specularIntensity = 0.3f;
-    float pointLightDiffuseIntensity = 0.78f;
-    float pointLightSpecularIntensity = 0.15f;
+    float diffuseIntensity = 0.8f;
+    float specularIntensity = 0.5f;
+    float pointLightDiffuseIntensity = 1.0f;
+    float pointLightSpecularIntensity = 1.0f;
 };
 
 struct SceneLightSaveData

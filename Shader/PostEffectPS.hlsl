@@ -201,8 +201,6 @@ float4 main(VS_OUT pin) : SV_TARGET
         return baseColor;
     }
 
-
-
     float4 positionNdc;
     // uv -> ndc 
     positionNdc.x = pin.texcoord.x * +2 - 1;
@@ -225,33 +223,28 @@ float4 main(VS_OUT pin) : SV_TARGET
         color.rgb = ApplyShadow(color.rgb, positionWorldSpace, (positionViewSpace.z), shadowMapDimensions, positionNdc.xyz, sceneNormal, lightDirection.xyz);
     }
 
-
     if (enableFog)
     {
         float linearDepth = positionViewSpace.z;
 
         // Volumetric Fog
         color.rgb = CalculatedFogColor(pin.texcoord, depthNdc, color.rgb);
-#if 0
-        // 距離fog
-        color = CalcFog(color, fogColor, float2(fogNear, fogFar), length(positionWorldSpace.xyz - cameraPositon.xyz));
 
+        float fogTopHeight = 0.5f;
+        float heightFactor = saturate((fogTopHeight - positionWorldSpace.y) / fogTopHeight);
+        float3 noisePos = positionWorldSpace.xyz * 0.05f;
+        noisePos.x += elapsedTime * 0.03;
+        noisePos.z += elapsedTime * 0.01;
 
+        float noise = noise3D.Sample(samplerStates[LINEAR], frac(noisePos).r);
+        heightFactor *= lerp(0.5, 1.5, noise);
         float dist = length(positionWorldSpace.xyz - cameraPositon.xyz);
-        // 距離
-        float distFog = saturate((dist - fogNear) / (fogFar - fogNear));
-        // 高さ
-        float height = positionWorldSpace.y;
-        float heightFog = exp(-height * distanceFogHeightFalloff);
-        // ノイズ
-        const float3 noiseVelocity = normalize(float3(1, 0, 0));
-        float3 noiseSamplePosition = frac(positionWorldSpace * noiseScale + noiseVelocity * elapsedTime * timeScale);
-        float noise = 0.5 * noise3D.Sample(samplerStates[LINEAR], noiseSamplePosition) + 0.5;
-        heightFog *= lerp(0.8, 1.2, noise);
+        float distanceFactor = saturate((dist - 5) / 40);
+        float fogFactor = heightFactor * distanceFactor;
+        float density = 3.7f;
 
-        float fogFactor = 1 - exp(-distFog * heightFog);
-        color.rgb = lerp(color.rgb, fogColor.rgb, fogFactor);
-#endif
+        float transmittance = exp(-fogFactor * density);
+        color.rgb = color.rgb * transmittance + fogColor.rgb * (1 - transmittance);
     }
 
     // ブルーム処理
