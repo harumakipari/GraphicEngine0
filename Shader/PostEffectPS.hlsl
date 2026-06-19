@@ -230,6 +230,7 @@ float4 main(VS_OUT pin) : SV_TARGET
         // Volumetric Fog
         color.rgb = CalculatedFogColor(pin.texcoord, depthNdc, color.rgb);
 
+#if 0
         float fogTopHeight = 0.5f;
         float heightFactor = saturate((fogTopHeight - positionWorldSpace.y) / fogTopHeight);
         float3 noisePos = positionWorldSpace.xyz * 0.05f;
@@ -245,6 +246,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
         float transmittance = exp(-fogFactor * density);
         color.rgb = color.rgb * transmittance + fogColor.rgb * (1 - transmittance);
+#endif
     }
 
     // ÉuÉãÅ[ÉÄèàóù

@@ -8,7 +8,6 @@ float4 main(VS_OUT pin) : SV_TARGET
 {
     float2 vel = Velocity.Sample(samplerStates[LINEAR], pin.texcoord).xy;
     float2 historyUv = pin.texcoord - vel;
-
     float3 current = CurrentColor.Sample(samplerStates[LINEAR], pin.texcoord);
     //float3 history = HistoryColor.Sample(samplerStates[LINEAR], pin.texcoord);
 

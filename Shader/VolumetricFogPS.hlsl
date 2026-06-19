@@ -56,6 +56,8 @@ void ApplyHeightFog(float3 position /*world space*/, inout float density)
     // 地面付近 → 濃い
     // 高空→ 薄い
     density *= exp(-(position.y - groundLevel) * fogHeightFalloff);
+    //float height = saturate((fogTopHeight - position.y) / fogTopHeight);
+    //density *= height;
 }
 
 // 太陽方向に伸びる霧（前方散乱）
