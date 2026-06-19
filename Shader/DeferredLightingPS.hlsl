@@ -13,6 +13,7 @@ Texture2D colorMap : register(t2);
 Texture2D positionMap : register(t3);
 Texture2D emissiveMap : register(t4);
 
+
 float4 main(VS_OUT pin) : SV_TARGET
 {
     float4 sampled = normalMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
@@ -83,7 +84,11 @@ float4 main(VS_OUT pin) : SV_TARGET
             {
                 lightCount++;
             }
-            float attenuateLength = saturate(1.0 - len / pointLights[i].range);
+
+            float kc = attenuationPresets[pointLights[i].attenuationType].kc;
+            float kl = attenuationPresets[pointLights[i].attenuationType].kl;
+            float kq = attenuationPresets[pointLights[i].attenuationType].kq;
+
             float attenuation = saturate(1.0 / (kc + kl * len + kq * (len * len)));
 
             LP /= len;
@@ -101,8 +106,8 @@ float4 main(VS_OUT pin) : SV_TARGET
                 const float HoV = max(0.0, dot(H, V));
 
                 float attenuationRate = lightDirection.w;
-                pointDiffuse += pLi * pNoL * BrdfLambertian(f0, f90, cDiff, HoV) *attenuation/** lerp(1.0, attenuation, attenuationRate)*/;
-                pointSpecular += pLi * pNoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, pNoL, pNoV, NoH)*attenuation/* * lerp(1.0, attenuation, attenuationRate)*/;
+                pointDiffuse += pLi * pNoL * BrdfLambertian(f0, f90, cDiff, HoV) * attenuation /** lerp(1.0, attenuation, attenuationRate)*/;
+                pointSpecular += pLi * pNoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, pNoL, pNoV, NoH) * attenuation /* * lerp(1.0, attenuation, attenuationRate)*/;
             }
         }
         float maxPointSpecular = 3.0f;

@@ -34,7 +34,8 @@ inline void to_json(nlohmann::json& j, const SharedLightParam& s)
 {
     j = {
         {"color", s.color},
-        {"range", s.range}
+        {"range", s.range},
+        {"attenuationType",s.attenuationType}
     };
 }
 
@@ -42,6 +43,8 @@ inline void from_json(const nlohmann::json& j, SharedLightParam& s)
 {
     j.at("color").get_to(s.color);
     j.at("range").get_to(s.range);
+    if (j.contains("attenuationType")) j.at("attenuationType").get_to(s.attenuationType);
+
 }
 
 // SceneLightConstants

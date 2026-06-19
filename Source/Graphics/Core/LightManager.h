@@ -18,7 +18,7 @@ public:
         DirectX::XMFLOAT4 position{ 0.0f,0.0f,0.0f,0.0f };
         DirectX::XMFLOAT4 color{ 1.0f,0.0f,0.0f,0.0f };
         float range = 0.0f;
-        int attenuationType = 0;   // 
+        int attenuationType = 2;   // 
         float pads[2] = {};
     };
 

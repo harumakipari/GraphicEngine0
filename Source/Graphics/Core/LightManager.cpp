@@ -32,6 +32,7 @@ static AttenuationPreset presets[] =
     {600,  1.0f, 0.007f, 0.0002f},
     {3250, 1.0f, 0.0014f,0.000007f},
 };
+
 std::unordered_map<std::string, const char*> lightDisplayNames =
 {
     {"MainChandelier", U8("メインシャンデリア")},
@@ -357,25 +358,8 @@ void LightManager::DrawGui()
     ImGui::SliderInt(U8("ポイントライト数"), &light.pointLightCount, 0, PointLightMaxCount);
 
     ImGui::Checkbox(U8("ライト範囲表示"), &showLightRange);
-    static int currentPreset = 0; // 7
-    if (ImGui::Combo(U8("ポイントライト距離"), &currentPreset,
-        "7\0"
-        "13\0"
-        "20\0"
-        "32\0"
-        "50\0"
-        "65\0"
-        "100\0"
-        "160\0"
-        "200\0"
-        "325\0"
-        "600\0"
-        "3250\0"))
-    {
-        light.kc = presets[currentPreset].kc;
-        light.kl = presets[currentPreset].kl;
-        light.kq = presets[currentPreset].kq;
-    }
+
+
 
     ImGui::SliderFloat("Kc", &light.kc, 0.0f, 2.0f);
     ImGui::SliderFloat("Kl", &light.kl, 0.0f, 1.0f);
@@ -399,7 +383,20 @@ void LightManager::DrawGui()
             {
                 ImGui::ColorEdit3(U8("色"), &light.color.x);
                 ImGui::SliderFloat(U8("強度"), &light.color.w, 0.0f, 50.0f);
-                ImGui::SliderFloat(U8("範囲"), &light.range, 0.0f, 20.0f);
+                //ImGui::SliderFloat(U8("範囲"), &light.range, 0.0f, 20.0f);
+                ImGui::Combo(U8("ポイントライト距離"), &light.attenuationType,
+                    "7\0"
+                    "13\0"
+                    "20\0"
+                    "32\0"
+                    "50\0"
+                    "65\0"
+                    "100\0"
+                    "160\0"
+                    "200\0"
+                    "325\0"
+                    "600\0"
+                    "3250\0");
                 ImGui::TreePop();
             }
         }

@@ -315,42 +315,4 @@ float4 main(VS_OUT pin) : SV_TARGET
     }
 
     return finalColor;
-    //// DOFの処理
-    //if (enableDof)
-    //{
-    //    // 深度からview space Z
-    //    float viewSpaceZ = positionViewSpace.z;
-
-    //    // ブレンド係数
-    //    float alpha = abs(viewSpaceZ - focusDistance) / dofRange;
-    //    alpha = saturate(alpha);
-
-    //    // 色取得
-    //    float3 originColor = color.rgb;
-    //    float3 bokehColor = bokehTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).rgb;
-
-    //    // DOF合成
-    //    color.rgb = lerp(originColor, bokehColor, alpha);
-    //}
-
-
-
-    //// 分割表示
-    //if (pin.texcoord.x < splitU)
-    //{
-    //    // 左側はポストなし
-    //    finalColor = sceneColor;
-    //}
-
-    if (enableToneMapping == 1)
-    {
-        // トーンマップは共通にする
-        finalColor.rgb = JodieReinhardToneMap(finalColor.rgb);
-
-	    // 色相、彩度、明度、コントラストを調整する。
-        finalColor.rgb = HueSaturation(finalColor.rgb, hueShift, saturation);
-        finalColor.rgb = BrightnessContrast(finalColor.rgb, brightness, contrast);
-    }
-
-    return finalColor;
 }

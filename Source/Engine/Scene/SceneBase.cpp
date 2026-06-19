@@ -77,8 +77,8 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     hr = CreatePsFromCSO(device, "./Data/Shaders/PostEffectPS.cso", postEffectPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-    hr = CreatePsFromCSO(device, "./Data/Shaders/FinalPS.cso", finalPs.ReleaseAndGetAddressOf());
-    //hr = CreatePsFromCSO(device, "./Data/Shaders/FullScreenCopyPS.cso", finalPs.ReleaseAndGetAddressOf());
+    //hr = CreatePsFromCSO(device, "./Data/Shaders/FinalPS.cso", finalPs.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/FullScreenCopyPS.cso", finalPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     //カスケードシャドウマップ
@@ -687,8 +687,8 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
 
     ID3D11ShaderResourceView* shader_resource_views[]
     {
-        //temporalAa.history[temporalAa.previous].srv.Get(),
-        finalBuffer->shaderResourceViews[0].Get(),//colorMap   こっちポストエフェクト済み
+        temporalAa.history[temporalAa.previous].srv.Get(),
+        //finalBuffer->shaderResourceViews[0].Get(),//colorMap   こっちポストエフェクト済み
         depthOfFieldEffect->GetOutputSRV(),
         gBufferRenderTarget->depthStencilShaderResourceView,      //depthMap
     };

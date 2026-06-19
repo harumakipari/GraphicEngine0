@@ -117,11 +117,10 @@ public:
 
         float clearColor[4] =
         {
-            1,0,0,1
+            0,0,1,1
         };
-        immediateContext->ClearRenderTargetView(
-            history[current].rtv.Get(),
-            clearColor);
+        RenderState::BindBlendState(immediateContext, BLEND_STATE::ALPHA);
+        immediateContext->ClearRenderTargetView(history[current].rtv.Get(), clearColor);
 
         ID3D11ShaderResourceView* srvs[]
         {

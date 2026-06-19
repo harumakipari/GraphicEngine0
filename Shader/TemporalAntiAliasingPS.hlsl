@@ -11,6 +11,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     float3 current = CurrentColor.Sample(samplerStates[LINEAR], pin.texcoord);
     //float3 history = HistoryColor.Sample(samplerStates[LINEAR], pin.texcoord);
+
     float3 history = HistoryColor.Sample(samplerStates[LINEAR], historyUv).rgb;
     return float4(lerp(current, history, 0.5), 1);
 }

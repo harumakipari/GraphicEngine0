@@ -73,6 +73,7 @@ LightManager::PointLight PointLightComponent::ToRenderLight() const
         const auto& param = sharedLights.at(sharedLightName);
         l.color = param.color;
         l.range = param.range;
+        l.attenuationType = param.attenuationType;
     }
 
     return l;

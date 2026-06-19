@@ -4,6 +4,7 @@ struct SharedLightParam
 {
     DirectX::XMFLOAT4 color;
     float range;
+    int attenuationType = 2;
 };
 
 
@@ -47,7 +48,7 @@ struct SceneShaderConstants
     float shadowColor = 0.75f;
     float shadowDepthBias = -0.00207f;
     float slopeBias = 0.005f;
-   
+
     float splitU = 0.0f;
 
     float	hueShift = -0.028f;	// 色相調整 -1 から 1 （-1 は負方向の 180 度、0 は変更なし、1 は正方向の 180 度）

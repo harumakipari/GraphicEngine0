@@ -12,6 +12,7 @@ Texture2D colorMap : register(t2);
 Texture2D positionMap : register(t3);
 Texture2D emissiveMap : register(t4);
 
+
 float4 main(VS_OUT pin) : SV_TARGET
 {
     float3 normal = normalMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).xyz; // world space 
@@ -77,6 +78,10 @@ float4 main(VS_OUT pin) : SV_TARGET
             		600			1		0.007	0.0002
             		3250		1		0.0014	0.000007	
             */
+
+            float kc = attenuationPresets[pointLights[i].attenuationType].kc;
+            float kl = attenuationPresets[pointLights[i].attenuationType].kl;
+            float kq = attenuationPresets[pointLights[i].attenuationType].kq;
 
             float attenuation = saturate(1.0 / (kc + kl * len + kq * (len * len)));
 #else

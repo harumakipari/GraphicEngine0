@@ -106,8 +106,8 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
     pout.gBuffer3Normal = float4(N.xyz, objectType); // world space
 
-    //float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
-    //pout.velocity = float4(velocity, 1, 1);
+    float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
+    pout.velocity = float4(velocity, 0, 1);
 
     pout.albedo = baseColorFactor;
 
