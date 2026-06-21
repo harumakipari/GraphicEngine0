@@ -38,6 +38,7 @@ std::unordered_map<std::string, const char*> lightDisplayNames =
     {"MainChandelier", U8("メインシャンデリア")},
     {"CandleChandelier", U8("キャンドルシャンデリア")},
     {"BossRoomPointLight", U8("ボスの部屋のライト")},
+    {"MainRoomPointLight", U8("メインの部屋のライト")},
     {"TopCandelabra", U8("燭台 上")},
     {"SideCandelabra", U8("燭台 左右")},
     {"BrazierCenterBig", U8("かご 火鉢 大")},
@@ -49,8 +50,12 @@ std::unordered_map<std::string, const char*> lightDisplayNames =
     {"PlayerPointLight", U8("プレイヤーライト")},
     {"PlayerBackPointLight", U8("プレイヤーの後ろライト")},
     {"EnemyPointLight", U8("敵のライト")},
+    {"EnemyBackPointLight", U8("敵の後ろライト")},
     {"FireBowl", U8("お椀の火")},
     {"TorchSconce", U8("たいまつの火")},
+    {"CandleStand", U8("蝋燭スタンド")},
+    {"TorchLight", U8("ボスの部屋のたいまつ")},
+    {"WallLight", U8("ボスの部屋の壁のライト")},
 };
 
 void LightManager::Initialize(ID3D11Device* device)
@@ -148,19 +153,45 @@ void LightManager::Initialize(ID3D11Device* device)
         };
     }
 
-    // ボスの部屋の共有ライト
+    // 部屋の共有ライト
     {
+        // ボス
         sharedLights["BossRoomPointLight"] =
+            SharedLightParam{ DirectX::XMFLOAT4(0.959999979f, 0.523895442f, 0.240151942f, 8.0f),
+        8.0f
+        };
+        // メイン
+        sharedLights["MainRoomPointLight"] =
+            SharedLightParam{ DirectX::XMFLOAT4(0.959999979f, 0.523895442f, 0.240151942f, 8.0f),
+        8.0f
+        };
+        // ボスの部屋のたいまつ
+        sharedLights["TorchLight"] =
+            SharedLightParam{ DirectX::XMFLOAT4(0.959999979f, 0.523895442f, 0.240151942f, 8.0f),
+        8.0f
+        };
+        // ボスの部屋の壁のライト
+        sharedLights["WallLight"] =
             SharedLightParam{ DirectX::XMFLOAT4(0.959999979f, 0.523895442f, 0.240151942f, 8.0f),
         8.0f
         };
     }
 
-
+    // 蝋燭スタンドの共有ライト
+    {
+        sharedLights["CandleStand"] =
+            SharedLightParam{ DirectX::XMFLOAT4(1.0f, 0.73791045f, 0.434153646f, 1.2f),
+        8.0f
+        };
+    }
 
     // 敵のポイントライト
     {
         sharedLights["EnemyPointLight"] =
+            SharedLightParam{ DirectX::XMFLOAT4(0.977f, 0.688f, 0.5f, 20.0f),
+        3.1f
+        };
+        sharedLights["EnemyBackPointLight"] =
             SharedLightParam{ DirectX::XMFLOAT4(0.977f, 0.688f, 0.5f, 20.0f),
         3.1f
         };

@@ -34,8 +34,6 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     loadStageThread = std::thread([&]()
         {
             PROFILE_SCOPE("Load StageModel");
-            //stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage_0327_1/DarkStage.gltf",
-            //stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0414/DarkStage.gltf",
                 stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/DarkStage.gltf",
                 ModelTypes::ModelMode::StaticMesh, false, true);
             stageAsset->spawnPoints = stageAsset->model->spawnPoints;
@@ -57,17 +55,13 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
             stageStandingBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/StandingBrazier/StandingBrazier.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
             stageStandingBrazierAsset->spawnPoints = stageStandingBrazierAsset->model->spawnPoints;
+
+            stageCandleStandAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/CandleStand/CandleStand.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            stageCandleStandAsset->spawnPoints = stageCandleStandAsset->model->spawnPoints;
+
         });
 
     // ライトの方向と色を設定
-    lightDirection = { -0.15f, -0.483f, 0.786f, 0.9f };   // 横の窓からの光
-    lightDirection = { 0.03f, -0.15f, 0.23f, 0.9f };   // 横の窓からの光
-    //lightDirection = { 0.382f, -0.882f, 0.112f, 0.0f };   // 上の窓からの光
-    //lightDirection = { 0.545f, -0.86f, -0.526f, 0.0f };   // 上の窓からの光
-
-    //lightDirection = { 0.9f, -0.64f, -0.058f, 0.9f };   // 上の窓からの光
-
-    //lightDirection = { 1.0f, -1.0f, -0.008f, 0.9f };   // 上の窓からの光
     lightDirection = { 0.722f, -0.38f, -0.0211f, 0.9f };   // 上の窓からの光
     lightColor = { 1.0f, 0.8f, 1.0f, 2.6f };
     {
@@ -289,7 +283,7 @@ void GameScene::SetUpActors()
         PROFILE_SCOPE("Create Stage");
         Transform stageTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
         auto stage = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStage>("stage", stageTr); // 元のモデルの scale を 0.4f
-        stage->SetModel(stageAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset);
+        stage->SetModel(stageAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset,stageCandleStandAsset);
     }
 
     Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });

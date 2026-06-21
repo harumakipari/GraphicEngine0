@@ -83,6 +83,7 @@ private:
     std::shared_ptr<StageAsset> stageGroundBrazierAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> stageMeltedWaxAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> stageStandingBrazierAsset = std::make_shared<StageAsset>();
+    std::shared_ptr<StageAsset> stageCandleStandAsset = std::make_shared<StageAsset>();
 
     std::thread loadStageThread;
     std::thread loadStageAssetsThread;

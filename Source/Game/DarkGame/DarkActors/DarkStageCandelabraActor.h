@@ -43,15 +43,38 @@ private:
 // 蝋燭台
 class DarkStageCandleStandActor :public Actor
 {
+    struct FlameSettings
+    {
+        float baseEmission = 30.0f;
+
+        float flickerSpeed1 = 7.3f;
+        float flickerSpeed2 = 13.7f;
+        float flickerAmp1 = 0.05f;
+        float flickerAmp2 = 0.02f;
+
+        float baseScale = 0.006f;
+        float scaleAmp = 0.0002f;
+        float heightMultiplier = 3.1f;
+
+        float posAmpX = 0.001f;
+        float posAmpY = 0.00f;
+        float posAmpZ = 0.001f;
+
+        float colorBaseG = 0.3f;
+        float colorAmpG = 0.15f;
+    };
+    FlameSettings flameSettings = {};
 public:
     DarkStageCandleStandActor(const std::string& actorName) :Actor(actorName) {}
     virtual ~DarkStageCandleStandActor() = default;
     void Initialize(const Transform& transform)override {}
     void SetModel(const std::shared_ptr<StageAsset>& stageAsset);
-    void DrawImGuiDetails() override;
+    void Update(float deltaTime) override;
+    void DrawImGuiDetails() override{}
 
 private:
     // スタンド式火鉢のモデル
-    std::shared_ptr<SkeletalMeshComponent> standingBrazierMeshComponent;
-
+    std::shared_ptr<SkeletalMeshComponent> meshComponent;
+    std::vector<MeshComponent*> flameComponents; // 炎のモデル
+    std::vector<DirectX::XMFLOAT3> flameBasePositions;// 炎の初期位置
 };
