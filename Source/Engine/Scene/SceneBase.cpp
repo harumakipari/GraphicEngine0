@@ -538,33 +538,10 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
     }
 
 
-#if 0
-    //postEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get());
-    sceneEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
-        gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], cascadedShadowMaps->depthMap().Get());
-    //sceneEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
-    //    gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], cascaded_shadow_map->depth_map().Get());
 
-    ID3D11ShaderResourceView* nullSRVs[16] = {};
-    immediateContext->PSSetShaderResources(0, 16, nullSRVs);
-#endif
 
     // フォーワードの透明描画
-    //multipleRenderTargets->Activate(immediateContext, gBufferRenderTarget->depthStencilView);
-
-    //immediateContext->OMSetRenderTargets(1, gBufferRenderTarget->renderTargetViews[1], gBufferRenderTarget->depthStencilView);
-    //immediateContext->OMSetRenderTargets(1, gBufferRenderTarget->renderTargetViews[4], gBufferRenderTarget->depthStencilView);
     frameBuffer->Activate(immediateContext, gBufferRenderTarget->depthStencilView);
-
-#if 0
-    RenderState::BindBlendState(immediateContext, BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA);
-    RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
-    RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-    sceneRender.currentRenderPath = RenderPath::Forward;
-    sceneRender.RenderBlend(immediateContext); // ここで警告出る
-#else
-
-#if 1
     RenderState::BindBlendState(immediateContext, BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA);
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_FRONT);
@@ -577,24 +554,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
     sceneRender.RenderBlend(immediateContext, queues.meshes); // ここで警告出る
     ExecuteHooks(RenderPass::ForwardBlend, immediateContext);
 
-#endif // 1
-
-
-#if 0
-    // フォワードの描画
-    {
-        RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
-        RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-        sceneRender.RenderOpaque(immediateContext, queues.forwardOpaque);
-        sceneRender.RenderMask(immediateContext, queues.forwardMask);
-        RenderState::BindBlendState(immediateContext, BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA);
-        RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
-        sceneRender.RenderBlend(immediateContext, queues.forwardBlend);
-    }
-
-#endif // 0
-
-#endif // 0
 
 #if 1
     // PARTICLES
@@ -633,14 +592,12 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
 
     frameBuffer->Deactivate(immediateContext);
-    //multipleRenderTargets->Deactivate(immediateContext);
     temporalAa.Apply(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)]);
 #if 1
-    //postEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get());
-    sceneEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
+    sceneEffectManager->ApplyAll(immediateContext, temporalAa.history[temporalAa.previous].srv.Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
         gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)], cascadedShadowMaps->depthMap().Get());
     //sceneEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
-    //    gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], cascaded_shadow_map->depth_map().Get());
+    //    gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)], cascadedShadowMaps->depthMap().Get());
 
     ID3D11ShaderResourceView* nullSRVs[16] = {};
     immediateContext->PSSetShaderResources(0, 16, nullSRVs);
@@ -660,6 +617,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
 
         ID3D11ShaderResourceView* shader_resource_views[]
         {
+             //temporalAa.history[temporalAa.previous].srv.Get(),//colorMap   こっちライティング済み
               frameBuffer->shaderResourceViews[0].Get(),//colorMap   こっちライティング済み
               gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)],   // positionMap
               gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],   // normalMap

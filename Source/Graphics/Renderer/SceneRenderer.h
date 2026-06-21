@@ -96,6 +96,7 @@ private:
     struct PrimitiveJointConstants
     {
         DirectX::XMFLOAT4X4 matrices[PRIMITIVE_MAX_JOINTS];
+        //DirectX::XMFLOAT4X4 previousMatrices[PRIMITIVE_MAX_JOINTS];
     };
     std::unique_ptr<ConstantBuffer<PrimitiveJointConstants>> primitiveJointCBuffer;
 

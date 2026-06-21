@@ -7,7 +7,7 @@ class DarkStageCandelabraActor :public Actor
 {
     struct FlameSettings
     {
-        float baseEmission = 30.0f;
+        float baseEmission = 200.0f;
 
         float flickerSpeed1 = 7.3f;
         float flickerSpeed2 = 13.7f;
@@ -45,7 +45,7 @@ class DarkStageCandleStandActor :public Actor
 {
     struct FlameSettings
     {
-        float baseEmission = 30.0f;
+        float baseEmission = 200.0f;
 
         float flickerSpeed1 = 7.3f;
         float flickerSpeed2 = 13.7f;

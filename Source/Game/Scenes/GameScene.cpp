@@ -223,46 +223,22 @@ void GameScene::SetUpActors()
     auto cloth = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("cloth", clothTr);
 
 
-    //Transform paintingTr(DirectX::XMFLOAT3{ -29.9f,2.8f,2.5f }, DirectX::XMFLOAT3{ 0.0f,90.0f,0.0f }, DirectX::XMFLOAT3{ 0.38f,0.38f,0.38f });
-    //auto paintingActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("painting", paintingTr);
-
-#if 0
-    Transform torchSconceTr(DirectX::XMFLOAT3{ -5.75f,1.9f,13.2f }, DirectX::XMFLOAT3{ 0.0f,-180.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto torchSconceActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageTorchSconceActor>("TorchSconce", torchSconceTr);
-#endif // 0
-
-
 #if 0
     auto pauseActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor");
     pauseActor->SetRetrySceneName("SampleScene");
 #endif // 0
 
-#if 0
-    {
-        PROFILE_SCOPE("Create Enemy");
-        Transform bossTr(DirectX::XMFLOAT3{ -10.7f,-0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 2.0f,2.0f,2.0f });
-        auto boss = this->GetActorManager()->CreateAndRegisterActorWithTransform<BossEnemy>("boss", bossTr);
-    }
-#endif // 0
 
-#if 1
+#if 0
     Transform enemyTr(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto enemy = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("enemy", enemyTr);
 
     Transform KnightActorTR(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto KnightsActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<KnightActor>("KnightActor", KnightActorTR);
+#endif // 0
 
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
     auto GruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
-#endif // 0
-
-
-
-    //Transform savarogEnemyTr(DirectX::XMFLOAT3{ -10.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    //auto savarogEnemy = this->GetActorManager()->CreateAndRegisterActorWithTransform<SavarogEnemy>("SavarogEnemy", savarogEnemyTr);
-
-    //Transform gracialEnemyTr(DirectX::XMFLOAT3{ -10.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    //auto gracialEnemy = this->GetActorManager()->CreateAndRegisterActorWithTransform<GracialEnemy>("gracialEnemy", gracialEnemyTr);
 
 #if 0
     Transform dustParticleTr(DirectX::XMFLOAT3{ -27.0f,0.0f,11.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });

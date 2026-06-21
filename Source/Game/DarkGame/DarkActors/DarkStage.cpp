@@ -96,7 +96,7 @@ void DarkStage::Update(float elapsedTime)
 }
 
 
-void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset,std::shared_ptr<StageAsset> stageCandleStandAsset)
+void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset)
 {
     auto scene = GetOwnerScene();
 
@@ -148,16 +148,26 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 };
                 auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("chandelier", chandelierTr);
             }
+            else if (point.name.rfind("Spawn_BossRoomChandelier", 0) == 0)
+            {// bossの部屋のシャンデリアを生成する
+                Transform chandelierTr{ {17.221f,13.996f,11.082f},point.worldRotation,{2.5f,2.5f,2.5f} };
+                auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("chandelier", chandelierTr);
+            }
+            else if (point.name.rfind("Spawn_MainChandelier", 0) == 0)
+            {// メインの部屋のシャンデリアを生成する
+                Transform chandelierTr{ {-13.28f,13.266f,11.182f},point.worldRotation,{2.5f,2.5f,2.5f} };
+                auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("chandelier", chandelierTr);
+            }
             else if (point.name.rfind("Spawn_TorchSconce", 0) == 0)
             {
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                Transform candelabraTr{pos,point.worldRotation,point.worldScale};
+                Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto candelabra = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageTorchSconceActor>("TorchSconce", candelabraTr);
             }
             else if (point.name.rfind("Spawn_CandleStand", 0) == 0)
             {
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                Transform candleStandTr{pos,point.worldRotation,{1.0f,1.0f,1.0f}};
+                Transform candleStandTr{ pos,point.worldRotation,{1.0f,1.0f,1.0f} };
                 auto candleStand = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageCandleStandActor>("candleStand", candleStandTr);
                 candleStand->SetModel(stageCandleStandAsset);
             }
@@ -171,14 +181,14 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
             else if (point.name.rfind("Spawn_Brazier", 0) == 0)
             {// 名前が "Spawn_Brazier" で始まる場合、火鉢を配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                Transform brazierTr{pos,point.worldRotation,point.worldScale};
+                Transform brazierTr{ pos,point.worldRotation,point.worldScale };
                 auto brazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBrazierActor>("brazier", brazierTr);
                 brazier->SetModel(stageBrazierAsset);
             }
             else if (point.name.rfind("Spawn_GroundBrazier", 0) == 0)
             {// 名前が "Spawn_GroundBrazier" で始まる場合、地面の火鉢を配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                Transform candelabraTr{pos,point.worldRotation,point.worldScale};
+                Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto groundBrazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageGroundBrazierActor>("GroundBrazier", candelabraTr);
                 groundBrazier->SetModel(stageGroundBrazierAsset);
             }
@@ -192,14 +202,14 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
             else if (point.name.rfind("Spawn_Standing_Brazier", 0) == 0)
             {// 名前が "Spawn_Standing_Brazier" で始まる場合、スタンド式火鉢を配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                Transform candelabraTr{pos,{0,0,0,1},point.worldScale};
+                Transform candelabraTr{ pos,{0,0,0,1},point.worldScale };
                 auto standingBrazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageStandingBrazierActor>("StandingBrazier", candelabraTr);
                 standingBrazier->SetModel(stageStandingBrazierAsset);
             }
             else if (point.name.rfind("Spawn_Barrel", 0) == 0)
             {
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                Transform barrelTr{pos,point.worldRotation,point.worldScale};
+                Transform barrelTr{ pos,point.worldRotation,point.worldScale };
                 auto barrel = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBarrelActor>("barrel", barrelTr);
             }
             else if (point.name.rfind("Spawn_TorchLight", 0) == 0)
@@ -239,6 +249,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 pointLightComponent->SetRelativeLocationDirect(pos);
                 pointLightComponent->SetSharedLightName("MainRoomPointLight");
             }
+
         }
     }
 }
