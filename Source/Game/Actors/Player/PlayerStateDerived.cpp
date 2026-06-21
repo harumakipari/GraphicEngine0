@@ -197,7 +197,8 @@ void PlayerAttackState::Exit()
 
 void PlayerDodgeState::Enter()
 {
-    owner->PlayBodyAnimation("Roll_front_0");
+    owner->PlayBodyAnimation("Ability_RMB_Bwd_0");
+    //owner->PlayBodyAnimation("Roll_front_0");
     dodgeTimer = 0.0f;
     player->invincible = true; // ©–³“GON
 

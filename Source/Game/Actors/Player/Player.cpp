@@ -54,7 +54,6 @@ void Player::Initialize(const Transform& transform)
             {// 髪の毛だったら
                 material.overridePipelineName = "DarkStagePlayerWeaponPS";
             }
-
         }
 #endif // 0
     }
@@ -117,6 +116,9 @@ void Player::Initialize(const Transform& transform)
         controller->AddCombo("Primary_Attack_Fast_A", "Primary_Attack_Fast_B");
         controller->AddCombo("Primary_Attack_Fast_B", "Primary_Attack_Fast_C");
         controller->AddCombo("Primary_Attack_Fast_C", "Primary_Attack_Fast_D1_1");
+
+        // ジャスト回避
+        controller->AddNotifyState("Ability_RMB_Bwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
 
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
@@ -186,7 +188,7 @@ void Player::Initialize(const Transform& transform)
 
         // 移動用コンポーネントを追加
         characterMovementComponent = this->AddComponent<CharacterMovementComponent>("movementComponent", parentName);
-        characterMovementComponent->SetUseGravity(true);
+        characterMovementComponent->SetUseGravity(false);
 
         // 回転用コンポーネントを追加
         rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
@@ -420,6 +422,10 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         transitionWindow = true;
         Logger::Log(U8("遷移許可区間を開始しました"));
         break;
+    case AnimationNotifyState::Type::JustDodgeWindow:
+        Logger::Log(U8("ジャスト回避許可区間を開始しました"));
+        justDodgeWindow = true;
+        break;
     }
 }
 
@@ -440,6 +446,10 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::TransitionWindow:
         transitionWindow = false;
         Logger::Log(U8("遷移許可区間を終了しました"));
+        break;
+    case AnimationNotifyState::Type::JustDodgeWindow:
+        Logger::Log(U8("ジャスト回避許可区間を終了しました"));
+        justDodgeWindow = false;
         break;
     }
 }

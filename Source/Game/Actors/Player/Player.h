@@ -106,6 +106,7 @@ public:
     bool comboWindow = false;   // コンボ受付をするかどうか
     bool hitBox = false;   // 武器の当たり判定をつける
     bool transitionWindow = false;  // ステート遷移してもいいかどうか
+    bool justDodgeWindow = false;  // ジャスト回避受付時間
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     bool isAttackActive = false;

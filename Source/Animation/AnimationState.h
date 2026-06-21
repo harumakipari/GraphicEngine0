@@ -12,6 +12,7 @@ struct AnimationNotifyState
         ComboWindow,    // コンボ受付
         Invincible,     // 無敵時間
         TransitionWindow,   // アニメーション遷移
+        JustDodgeWindow, // ジャスト回避
     };
 
     Type type;
