@@ -11,7 +11,7 @@ class Scene;
 
 class LightManager
 {
-    const static inline int PointLightMaxCount = 100;
+    const static inline int PointLightMaxCount = 120;
 public:
     struct PointLight
     {

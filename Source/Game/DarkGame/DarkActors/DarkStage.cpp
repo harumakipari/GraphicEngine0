@@ -126,16 +126,16 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
     {
         const auto& light = lightsData[i];
         //continue; // とりあえずポイントライトは無効化
-#if 0
+#if 1
         std::string compName = "pointLightComponent_" + std::to_string(i);
-        auto pointLightComponent =
-            this->AddComponent<PointLightComponent>(compName, parentName);
+        auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
 
-        DirectX::XMFLOAT3 pos = convertRHtoLh(light.worldPosition);
+        DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(light.worldPosition);
         pointLightComponent->SetRelativeLocationDirect(pos);
-        pointLightComponent->SetColor(light.color);
-        pointLightComponent->SetRange(light.range);
-        pointLightComponent->SetIntensity(light.intensity);
+        pointLightComponent->SetSharedLightName("BossRoomPointLight");
+        //pointLightComponent->SetColor(light.color);
+        //pointLightComponent->SetRange(light.range);
+        //pointLightComponent->SetIntensity(light.intensity);
 #else
 
 #endif // 0
@@ -150,7 +150,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
 
         for (auto point : stageAsset->spawnPoints)
         {
-            if (point.name == "Spawn_Particle_Steam")
+            if (point.name.rfind("Spawn_Particle_Steam", 0) == 0)
             {
                 // 湯気のエフェクト
                 auto steamComponent = this->AddComponent<ParticleComponent>("steamComponent", parentName);
@@ -216,9 +216,9 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
 #if 1
                 Transform candelabraTr{
-    pos,
-    point.worldRotation,
-    point.worldScale
+                    pos,
+                    point.worldRotation,
+                    point.worldScale
                 };
 
                 auto candelabra = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageCandelabraActor>("candelabra", candelabraTr);
@@ -237,7 +237,6 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
             {// 名前が "Spawn_Brazier" で始まる場合、火鉢を配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
 
-#if 1
                 Transform brazierTr{
     pos,
     point.worldRotation,
@@ -246,18 +245,10 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
 
                 auto brazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBrazierActor>("brazier", brazierTr);
                 brazier->SetModel(stageBrazierAsset);
-#else
-                std::shared_ptr<StaticMeshComponent> door = AddComponent<StaticMeshComponent>("Brazier", parentName);
-                door->model = stageBrazierAsset->model;
-                door->SetRelativeLocationDirect(pos);
-                door->SetRelativeRotationDirect(point.worldRotation);
-                door->SetRelativeScaleDirect(point.worldScale);
-#endif // 0
             }
             else if (point.name.rfind("Spawn_GroundBrazier", 0) == 0)
             {// 名前が "Spawn_GroundBrazier" で始まる場合、地面の火鉢を配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-#if 1
                 Transform candelabraTr{
                     pos,
                     point.worldRotation,
@@ -266,37 +257,20 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
 
                 auto groundBrazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageGroundBrazierActor>("GroundBrazier", candelabraTr);
                 groundBrazier->SetModel(stageGroundBrazierAsset);
-#else
-                std::shared_ptr<StaticMeshComponent> door = AddComponent<StaticMeshComponent>("GroundBrazier", parentName);
-                door->model = stageGroundBrazierAsset->model;
-                door->SetRelativeLocationDirect(pos);
-                door->SetRelativeRotationDirect(point.worldRotation);
-                door->SetRelativeScaleDirect(point.worldScale);
-
-#endif // 0
             }
-#if 0
+#if 1
             else if (point.name.rfind("Spawn_Melted_Wax", 0) == 0)
             {// 名前が "Spawn_Melted_Wax" で始まる場合、溶けた蝋を配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-#if 1
                 Transform candelabraTr{
     pos,
-    {0,0,0,1},
-    /*      point.worldRotation,*/
-point.worldScale
+    /*  {0,0,0,1},*/            point.worldRotation,
+  point.worldScale
                 };
 
                 auto meltedWax = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageMeltedWaxActor>("MeltedWax", candelabraTr);
                 meltedWax->SetModel(stageMeltedWaxAsset);
-#else
-                std::shared_ptr<StaticMeshComponent> door = AddComponent<StaticMeshComponent>("MeltedWax", parentName);
-                door->model = stageMeltedWaxAsset->model;
-                door->SetRelativeLocationDirect(pos);
-                door->SetRelativeRotationDirect(point.worldRotation);
-                door->SetRelativeScaleDirect(point.worldScale);
-#endif // 0
-                }
+            }
 #endif // 0
 
             else if (point.name.rfind("Spawn_Standing_Brazier", 0) == 0)

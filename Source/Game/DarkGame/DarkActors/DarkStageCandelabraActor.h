@@ -39,3 +39,19 @@ private:
     std::vector<MeshComponent*> flameComponents; // 炎のモデル
     std::vector<DirectX::XMFLOAT3> flameBasePositions;// 炎の初期位置
 };
+
+// 蝋燭台
+class DarkStageCandleStandActor :public Actor
+{
+public:
+    DarkStageCandleStandActor(const std::string& actorName) :Actor(actorName) {}
+    virtual ~DarkStageCandleStandActor() = default;
+    void Initialize(const Transform& transform)override {}
+    void SetModel(const std::shared_ptr<StageAsset>& stageAsset);
+    void DrawImGuiDetails() override;
+
+private:
+    // スタンド式火鉢のモデル
+    std::shared_ptr<SkeletalMeshComponent> standingBrazierMeshComponent;
+
+};

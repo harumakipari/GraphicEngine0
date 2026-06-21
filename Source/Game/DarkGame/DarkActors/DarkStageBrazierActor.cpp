@@ -34,7 +34,6 @@ void DarkStageBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAss
 
     }
 
-#if 1
     for (auto point : brazierMeshComponent->model->spawnPoints)
     {
         // エミッションを発生させるためにモデルを追加
@@ -49,25 +48,6 @@ void DarkStageBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAss
         sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
         sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
     }
-#else
-
-    for (auto point : brazierMeshComponent->model->spawnPoints)
-    {
-        // エミッションを発生させるためにモデルを追加
-        auto sphereMeshComponent = this->AddComponent<SkeletalMeshComponent>("sphereMeshComponent", parentName);
-        sphereMeshComponent->SetModel("./Data/Models/Primitives/Sphere.glb");
-        sphereMeshComponent->overrideDeferredPipelineName = "pointLightSkeletalMesh";
-        sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-        sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.01f,0.01f });
-        DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-        pos.y += 0.1f;
-        sphereMeshComponent->SetRelativeLocationDirect(pos);
-        sphereMeshComponent->SetRelativeRotationDirect(point.worldRotation);
-        sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-        sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-    }
-
-#endif // 0
 
 }
 
@@ -101,23 +81,6 @@ void DarkStageMeltedWaxActor::SetModel(const std::shared_ptr<StageAsset>& stageA
 
     }
 
-#if 0
-    for (auto point : metedWaxMeshComponent->model->spawnPoints)
-    {
-        // エミッションを発生させるためにモデルを追加
-        auto sphereMeshComponent = this->AddComponent<SkeletalMeshComponent>("sphereMeshComponent", parentName);
-        sphereMeshComponent->SetModel("./Data/Models/Primitives/Sphere.glb");
-        sphereMeshComponent->overrideDeferredPipelineName = "pointLightSkeletalMesh";
-        sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-        sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.01f,0.01f });
-        DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-        pos.y += 0.1f;
-        sphereMeshComponent->SetRelativeLocationDirect(pos);
-        sphereMeshComponent->SetRelativeRotationDirect(point.worldRotation);
-        sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-        sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-    }
-#else
     for (auto point : metedWaxMeshComponent->model->spawnPoints)
     {
         // エミッションを発生させるためにモデルを追加
@@ -132,7 +95,6 @@ void DarkStageMeltedWaxActor::SetModel(const std::shared_ptr<StageAsset>& stageA
         sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
         sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
     }
-#endif // 0
 
 }
 

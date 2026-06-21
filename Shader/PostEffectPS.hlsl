@@ -20,7 +20,6 @@ Texture2DArray cascadedShadowMaps : register(t10);
 
 Texture3D noise3D : register(t20); // ノイズテクスチャ
 
-
 // texcoord -> ndc 空間に変換
 float4 CalculatedPositionNDC(VS_OUT pin)
 {

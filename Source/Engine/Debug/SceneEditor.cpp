@@ -83,3 +83,12 @@ void SceneEditor::LoadPresetList()
         }
     }
 }
+
+void SceneEditor::LoadSceneState(const std::string& path, SceneState& state)
+{
+    std::ifstream ifs(path);
+    nlohmann::json j;
+    ifs >> j;
+
+    state = j.get<SceneState>();
+}

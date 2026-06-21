@@ -412,6 +412,7 @@ private:
                 pitch = DirectX::XMConvertToRadians(pitchDeg);
             }
             ImGui::SliderFloat("nearZ", &nearZ, 0.01f, 100.0f);
+            ImGui::DragFloat("farZ", &farZ, 0.1f);
 
             ImGui::TreePop();
         }
@@ -570,6 +571,7 @@ private:
                 pitch = DirectX::XMConvertToRadians(pitchDeg);
             }
             ImGui::SliderFloat("nearZ", &nearZ, 0.01f, 100.0f);
+            ImGui::DragFloat("farZ", &farZ, 0.1f);
 
             for (int i = 0; i < MAX_BOOKMARKS; i++)
             {

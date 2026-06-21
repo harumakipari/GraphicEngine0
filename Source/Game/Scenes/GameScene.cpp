@@ -8,6 +8,7 @@
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Input/InputSystem.h"
 #include "Core/ActorManager.h"
+#include "Engine/Debug/SceneEditor.h"
 #include "Engine/Utility/Time.h"
 
 #include "Game/Actors/Enemy/Boss/BossEnemy.h"
@@ -34,8 +35,8 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         {
             PROFILE_SCOPE("Load StageModel");
             //stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage_0327_1/DarkStage.gltf",
-            stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0414/DarkStage.gltf",
-                //stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0601/DarkStage.gltf",
+            //stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0414/DarkStage.gltf",
+                stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/DarkStage.gltf",
                 ModelTypes::ModelMode::StaticMesh, false, true);
             stageAsset->spawnPoints = stageAsset->model->spawnPoints;
         });
@@ -84,6 +85,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     }
 
 
+
     //clothSimulate = std::make_unique<ClothSimulate>(device, "./Data/Models/Flag/Oden_Cloth_Noren_1.gltf");
 
 
@@ -124,36 +126,22 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
 void GameScene::Start()
 {
-    auto audioActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("Audio");
-    auto audioComp = audioActor->AddComponent<AudioSourceComponent>("audioSource");
-    audioComp->SetSource(L"./Data/Sound/BGM/game.wav");
-    audioComp->SetLoop(true);
-    audioComp->Play();
+    //auto audioActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("Audio");
+    //auto audioComp = audioActor->AddComponent<AudioSourceComponent>("audioSource");
+    //audioComp->SetSource(L"./Data/Sound/BGM/game.wav");
+    //audioComp->SetLoop(true);
+    //audioComp->Play();
     //audioComp->SetVolume(0.2f);
 #if 0
+    cameraManager->ToggleCinematicCamera(this);
 
-    std::shared_ptr<UIImageComponent> image = std::make_shared<UIImageComponent>("./Data/Textures/UI/icon_chara.png", "image");
-    image->SetWorldPosition({ 50, 50 });
-    image->SetSize({ 200, 200 });
-
-    uiManager->Add(image);
-
-
-    std::shared_ptr<UIButtonComponent> button = std::make_shared<UIButtonComponent>("./Data/Textures/UI/icon_chara.png", "button");
-    button->SetWorldPosition({ 300, 50 });
-    button->SetSize({ 200, 80 });
-
-    uiManager->Add(button);
-
-    std::shared_ptr<UIGaugeComponent> gauge = std::make_shared<UIGaugeComponent>("./Data/Textures/UI/boss_hp_frame.png", "./Data/Textures/UI/boss_hp.png", "gauge");
-    gauge->SetWorldPosition({ 50, 300 });
-    gauge->SetSize({ 300, 40 });
-
-    uiManager->Add(gauge);
+    SceneEditor::LoadPresetList(); // 更新
+    std::string file = "WindowWall1.json";
+    static SceneState savedState;
+    SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+    savedState.Apply(Scene::GetCurrentScene());
 
 #endif // 0
-
-
 
 
     // シーンが切り替わった時に
@@ -230,6 +218,7 @@ void GameScene::SetUpActors()
     Transform cinemaCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto cinemaCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<CinemaCamera>("cinemaCam", cinemaCameraTr);
     cameraManager->SetCinematicCamera(cinemaCameraActor);
+    
 
     Transform movieCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto movieCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MovieCamera>("movieCam", movieCameraTr);
@@ -269,7 +258,7 @@ void GameScene::SetUpActors()
     Transform KnightActorTR(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto KnightsActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<KnightActor>("KnightActor", KnightActorTR);
 
-    Transform GruxEnemyTr(DirectX::XMFLOAT3{ -18.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
+    Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
     auto GruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
 #endif // 0
 
@@ -303,17 +292,24 @@ void GameScene::SetUpActors()
         stage->SetModel(stageAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset);
     }
 
+    Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    auto doorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorLargeActor>("doorActor", doorTr);
+
+
     for (auto point : stageAsset->spawnPoints)
     {
+#if 0
         if (point.name.rfind("Spawn_Door_Right", 0) == 0)
         {// 名前が "Spawn_Door_Right" で始まる場合、燭台を配置
             DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
             pos.x = -0.4f;
-            Transform doorTr{ pos,point.worldRotation,point.worldScale };
-            //Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+            //Transform doorTr{ pos,point.worldRotation,point.worldScale };
+            Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
             auto doorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorLargeActor>("doorActor", doorTr);
         }
-        else if (point.name.rfind("Spawn_SmallDoor", 0) == 0)
+
+#endif // 0
+        if (point.name.rfind("Spawn_SmallDoor", 0) == 0)
         {
             DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
             Transform smallDoorTr{ pos,point.worldRotation,point.worldScale };
@@ -334,34 +330,6 @@ void GameScene::DrawGui()
 {
 #ifdef USE_IMGUI
     SceneBase::DrawGui();
-    //ImGui::Begin("SkyShader");
-
-    //ImGui::ColorEdit3("topColor", &skyShaderConstantsBuffer->data.topColor.x);
-    //ImGui::ColorEdit3("bottomColor", &skyShaderConstantsBuffer->data.bottomColor.x);
-    //ImGui::ColorEdit3("sunColor", &skyShaderConstantsBuffer->data.sunColor.x);
-    //ImGui::ColorEdit3("cloudColor", &skyShaderConstantsBuffer->data.cloudColor.x);
-    //ImGui::DragFloat("cloudThreshold", &skyShaderConstantsBuffer->data.cloudThreshold, 0.01f);
-    //ImGui::DragFloat("sunSize", &skyShaderConstantsBuffer->data.sunSize, 0.1f);
-    //ImGui::DragFloat("cloudIntensity", &skyShaderConstantsBuffer->data.cloudIntensity, 0.1f);
-    //ImGui::DragFloat("scrollSpeed", &skyShaderConstantsBuffer->data.scrollSpeed, 0.01f);
-
-    //ImGui::DragFloat("starScale", &skyShaderConstantsBuffer->data.starScale, 0.01f);
-    //ImGui::DragFloat2("starOffset", &skyShaderConstantsBuffer->data.starOffset.x, 0.1f);
-    //ImGui::DragFloat("starIntensity", &skyShaderConstantsBuffer->data.starIntensity, 0.1f);
-
-    //ImGui::ColorEdit3("moonColor", &skyShaderConstantsBuffer->data.moonColor.x);
-    //ImGui::DragFloat("moonRadius", &skyShaderConstantsBuffer->data.moonRadius, 0.01f);
-
-    //ImGui::DragFloat2("moonPos", &skyShaderConstantsBuffer->data.moonPos.x, 0.1f);
-    //ImGui::DragFloat2("moonOffset", &skyShaderConstantsBuffer->data.moonOffset.x, 0.01f);
-
-    //ImGui::ColorEdit3("startAuroraColor", &skyShaderConstantsBuffer->data.startAuroraColor.x);
-    //ImGui::DragFloat("value", &skyShaderConstantsBuffer->data.value, 0.01f);
-
-    //ImGui::ColorEdit3("endAuroraColor", &skyShaderConstantsBuffer->data.endAuroraColor.x);
-    //ImGui::DragFloat("value1", &skyShaderConstantsBuffer->data.value1, 0.01f);
-
-    //ImGui::End();
 #endif
 
 }

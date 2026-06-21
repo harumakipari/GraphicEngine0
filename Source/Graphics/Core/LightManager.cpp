@@ -37,6 +37,7 @@ std::unordered_map<std::string, const char*> lightDisplayNames =
 {
     {"MainChandelier", U8("メインシャンデリア")},
     {"CandleChandelier", U8("キャンドルシャンデリア")},
+    {"BossRoomPointLight", U8("ボスの部屋のライト")},
     {"TopCandelabra", U8("燭台 上")},
     {"SideCandelabra", U8("燭台 左右")},
     {"BrazierCenterBig", U8("かご 火鉢 大")},
@@ -118,7 +119,7 @@ void LightManager::Initialize(ID3D11Device* device)
     // 溶けた蝋の共有ライト
     {
         sharedLights["MeltedWaxLight"] =
-            SharedLightParam{ DirectX::XMFLOAT4(1.0f, 0.630757093f, 0.219526187f, 1.28f),
+            SharedLightParam{ DirectX::XMFLOAT4(1.0f, 0.630757093f, 0.219526187f, 7.28f),
         7.5f
         };
     }
@@ -138,7 +139,7 @@ void LightManager::Initialize(ID3D11Device* device)
     // プレイヤーのポイントライト
     {
         sharedLights["PlayerPointLight"] =
-            SharedLightParam{ DirectX::XMFLOAT4(0.977f, 0.688f, 0.5f, 20.0f),
+            SharedLightParam{ DirectX::XMFLOAT4(0.977f, 0.688f, 0.5f, 5.0f),
         3.1f
         };
         sharedLights["PlayerBackPointLight"] =
@@ -146,6 +147,16 @@ void LightManager::Initialize(ID3D11Device* device)
         3.1f
         };
     }
+
+    // ボスの部屋の共有ライト
+    {
+        sharedLights["BossRoomPointLight"] =
+            SharedLightParam{ DirectX::XMFLOAT4(0.959999979f, 0.523895442f, 0.240151942f, 8.0f),
+        8.0f
+        };
+    }
+
+
 
     // 敵のポイントライト
     {
@@ -220,8 +231,6 @@ void LightManager::Update(float deltaTime)
 {
     auto& lightData = Scene::GetCurrentScene()->GetSceneSettings().sceneLightSaveData;
     auto& light = lightData.sceneConstants;
-
-
 
     auto& sharedLights = lightData.sharedLights;
 
