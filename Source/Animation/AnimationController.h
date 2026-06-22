@@ -55,6 +55,7 @@ public:
     // アニメーションの再生倍率をリセットする関数
     void ResetAnimationRate() { this->animationRate = 1.0f; }
 
+
     // アニメーションを止める処理
     void Stop()
     {
@@ -98,19 +99,14 @@ public:
     }
 
     // NotifyTrack にイベントを追加する関数
-    void AddNotifyState(
-        const std::string& animationName,
-        const float start,
-        const float end,
-        const AnimationNotifyState::Type type, const std::string& parameter = "")
+    void AddNotifyState(const std::string& animationName, const float start, const float end,
+        const AnimationNotifyState::Type type, const std::string& parameter = "", float animationSpeed = 1.0f)
     {
         const size_t clip = animationNameToIndex_[animationName];
-        animationNotifyAssets[clip].notifyTrack.states.push_back({ start,end,type,parameter });
+        animationNotifyAssets[clip].notifyTrack.states.push_back({ start,end,type,parameter,animationSpeed });
     }
 
-    void AddNotifyEvent(
-        const std::string& animationName,
-        const float time,
+    void AddNotifyEvent(const std::string& animationName,const float time,
         const AnimationNotifyEvent::Type type, const std::string& parameter = "")
     {
         const size_t clip = animationNameToIndex_[animationName];
@@ -226,6 +222,8 @@ private:
 
     // ImGuiで表示するための
     std::vector<std::string> animationImGUiOrder;
+
+
 
     int rootNodeIndex = 0;
     DirectX::XMFLOAT3 previousPosition = {}; // world 空間

@@ -55,7 +55,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddNotifyEvent("PrimaryAttack_LA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
     controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
 
-    controller->AddNotifyEvent("PrimaryAttack_LA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
+    controller->AddNotifyState("PrimaryAttack_LA", 0.08f, 0.12f, AnimationNotifyState::Type::AnimationSpeed, "", 0.1f);
+
 
     // ステートマシンを作成
     {
@@ -130,13 +131,13 @@ void GruxEnemy::Initialize(const Transform& transform)
     leftWeaponCollisionComp->Initialize();
     leftWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
         {
-            Logger::Log("leftWeaponCollisionComp zero");
+            //Logger::Log("leftWeaponCollisionComp zero");
             if (!other)
             {
                 Logger::Warning("other is nullptr");
                 return;
             }
-            Logger::Log("leftWeaponCollisionComp First");
+            //Logger::Log("leftWeaponCollisionComp First");
             uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
 
             // Playerレイヤーか確認
@@ -161,7 +162,7 @@ void GruxEnemy::Initialize(const Transform& transform)
             }
 
 #endif // 0
-            Logger::Log("leftWeaponCollisionComp Second");
+            //Logger::Log("leftWeaponCollisionComp Second");
 
             // Playerへキャスト
             Player* player = dynamic_cast<Player*>(actor);
@@ -192,14 +193,14 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightWeaponCollisionComp->Initialize();
     rightWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
         {
-            Logger::Log("rightWeaponCollisionComp zero");
+            //Logger::Log("rightWeaponCollisionComp zero");
 
             if (!other)
             {
                 Logger::Warning("other is nullptr");
                 return;
             }
-            Logger::Log("rightWeaponCollisionComp First");
+            //Logger::Log("rightWeaponCollisionComp First");
 
 
             uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
@@ -225,7 +226,7 @@ void GruxEnemy::Initialize(const Transform& transform)
                 return;
             }
 #endif // 0
-            Logger::Log("rightWeaponCollisionComp Second");
+            //Logger::Log("rightWeaponCollisionComp Second");
 
             // Playerへキャスト
             Player* player = dynamic_cast<Player*>(actor);
@@ -321,6 +322,12 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::TransitionWindow:
         Logger::Log(U8("遷移許可区間を開始しました"));
         break;
+    case AnimationNotifyState::Type::JustDodgeWindow:
+        break;
+    case AnimationNotifyState::Type::AnimationSpeed:
+        Logger::Log(U8("アニメーションの再生速度変更：") + std::to_string(state.animationSpeed));
+        GetBodyAnimationController()->SetAnimationRate(state.animationSpeed);
+        break;
     }
 }
 
@@ -340,6 +347,12 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::TransitionWindow:
         Logger::Log(U8("遷移許可区間を終了しました"));
+        break;
+    case AnimationNotifyState::Type::JustDodgeWindow:
+        break;
+    case AnimationNotifyState::Type::AnimationSpeed:
+        Logger::Log(U8("アニメーションの再生速度をリセットする"));
+        GetBodyAnimationController()->ResetAnimationRate();
         break;
     }
 }

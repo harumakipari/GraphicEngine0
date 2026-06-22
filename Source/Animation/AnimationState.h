@@ -13,11 +13,14 @@ struct AnimationNotifyState
         Invincible,     // 無敵時間
         TransitionWindow,   // アニメーション遷移
         JustDodgeWindow, // ジャスト回避
+        AnimationSpeed, // アニメーションスピード
     };
 
     Type type;
 
     std::string parameter;
+
+    float animationSpeed = 1.0f;
 };
 
 struct AnimationNotifyEvent
@@ -28,7 +31,6 @@ struct AnimationNotifyEvent
     {
         PlaySE,
         SpawnEffect,
-        AnimationSpeed,
     };
 
     Type type;

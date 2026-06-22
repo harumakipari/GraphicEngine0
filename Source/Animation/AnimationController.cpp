@@ -12,16 +12,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     prevAnimationTime = animationTime;
     animationTime += deltaTime * animationRate;
 
-#if 0
-    if (animationTime >= target_->model->animations.at(animationClip).duration)
-    {
-        animationTime =
-            std::fmod(
-                animationTime,
-                target_->model->animations.at(animationClip).duration);
-    }
-
-#endif // 0
 
     if (target_->model->animations.size() == 0)
     {// アニメーションがないモデルの場合
@@ -29,8 +19,7 @@ void AnimationController::OnUpdate(const float deltaTime)
     }
 
     // NotifyTrack のイベント処理
-    auto& asset =
-        animationNotifyAssets[notifyAnimationClip];
+    auto& asset = animationNotifyAssets[notifyAnimationClip];
 
     auto& notifyTrack = asset.notifyTrack;
     for (auto& state : notifyTrack.states)
@@ -56,8 +45,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 
     for (auto& event : notifyTrack.events)
     {
-        if (prevAnimationTime < event.time &&
-            animationTime >= event.time)
+        if (prevAnimationTime < event.time && animationTime >= event.time)
         {
             OnNotifyEvent(event);
         }
@@ -91,13 +79,7 @@ void AnimationController::OnUpdate(const float deltaTime)
         target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
 
         // blend
-        target_->model->BlendAnimations(
-            animationNodes[Origin],
-            animationNodes[Next],
-            blendFactor,
-            finalNodes);
-
-
+        target_->model->BlendAnimations(animationNodes[Origin], animationNodes[Next], blendFactor, finalNodes);
 
         if (blendFactor >= 1.0f)
         {
@@ -105,17 +87,6 @@ void AnimationController::OnUpdate(const float deltaTime)
             transitionState = AnimationTransitionState::Completed;
             // 現在のアニメーションクリップを次のアニメーションクリップに変更する
             this->animationClip = this->animationNextClip;
-
-
-            InterleavedGltfModel::Node& node = animationNodes[Next][rootNodeIndex];
-
-            /*  previousPosition =
-              {
-                  node.globalTransform._41,
-                  node.globalTransform._42,
-                  node.globalTransform._43
-              };*/
-
         }
         break;
     case AnimationTransitionState::Completed:
@@ -197,11 +168,7 @@ void AnimationController::OnUpdate(const float deltaTime)
     }
     target_->SetModelNodes(finalNodes);
 
-    target_->UpdateChildTransforms(
-        UpdateTransformFlags::None,
-        TeleportType::None);
-
-
+    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
 }
 
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
@@ -468,11 +435,11 @@ void AnimationController::DrawTimeline()
 
         {
             char id[64];
-            sprintf_s(id,"Move_%d",stateIndex);
+            sprintf_s(id, "Move_%d", stateIndex);
 
             ImGui::SetCursorScreenPos(ImVec2(x0, rowPos.y));
 
-            ImGui::InvisibleButton(id,ImVec2(barWidth,trackHeight));
+            ImGui::InvisibleButton(id, ImVec2(barWidth, trackHeight));
 
             if (ImGui::IsItemClicked())
             {
@@ -519,7 +486,7 @@ void AnimationController::DrawTimeline()
 
             ImGui::SetCursorScreenPos(
                 ImVec2(
-                    x0 - handleSize ,
+                    x0 - handleSize,
                     rowPos.y));
 
             ImGui::InvisibleButton(
@@ -557,13 +524,13 @@ void AnimationController::DrawTimeline()
 
             ImGui::SetCursorScreenPos(
                 ImVec2(
-                    x1 - handleSize ,
+                    x1 - handleSize,
                     rowPos.y));
 
             ImGui::InvisibleButton(
                 id,
                 ImVec2(
-                    handleSize*2.0f,
+                    handleSize * 2.0f,
                     trackHeight));
 
             if (ImGui::IsItemActive())
@@ -646,7 +613,7 @@ void AnimationController::DrawTimeline()
 
     ImGui::SameLine(labelWidth);
 
-    ImVec2 eventRow =ImGui::GetCursorScreenPos();
+    ImVec2 eventRow = ImGui::GetCursorScreenPos();
 
     drawList->AddRectFilled(
         eventRow,
@@ -676,7 +643,7 @@ void AnimationController::DrawTimeline()
                 x - 6,
                 eventRow.y));
 
-        ImGui::InvisibleButton(id,ImVec2(12,trackHeight));
+        ImGui::InvisibleButton(id, ImVec2(12, trackHeight));
 
         if (ImGui::IsItemClicked())
         {
@@ -723,7 +690,7 @@ void AnimationController::DrawTimeline()
                 0,
                 255),
             eventText);
-    } 
+    }
 
     ImGui::Dummy(ImVec2(width, trackHeight));
     ImGui::SetCursorScreenPos(eventRow);
