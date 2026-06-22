@@ -641,12 +641,14 @@ void Player::StartAttack()
 }
 
 // ジャスト回避成功時の処理
-void Player::StartJustDodgeSuccess()
+void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 {
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
     // スローモーションにする
     Time::SetSlow(0.2f, 1.0f);
+    // rush時のtargetを保存する
+    rushTarget = enemy;
 
     // 画面の色を変える
 

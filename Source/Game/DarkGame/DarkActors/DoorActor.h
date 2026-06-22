@@ -15,7 +15,6 @@ public:
 
     void DrawImGuiDetails() override;
 private:
-
     std::shared_ptr<SceneComponent> root;
 
     std::shared_ptr<SceneComponent> leftHinge;
@@ -24,10 +23,12 @@ private:
     std::shared_ptr<SkeletalMeshComponent> leftDoorMesh;
     std::shared_ptr<SkeletalMeshComponent> rightDoorMesh;
 
-    float openAngle = 0.0f;
-    float openSpeed = 60.0f;
+    float currentAngle = 0.0f;
+    float openSpeed = 60.0f;    // “x/•b
+    float openedAngle = 90.0f;  // ŠJ‚¢‚½Šp“x
+    float closedAngle = 0.0f;   // •Â‚¶‚½Šp“x
 
-    enum class DoorState
+    enum class DoorState :uint8_t
     {
         Closed,
         Opening,

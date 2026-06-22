@@ -14,6 +14,7 @@ struct AnimationNotifyState
         TransitionWindow,   // アニメーション遷移
         JustDodgeWindow, // ジャスト回避
         AnimationSpeed, // アニメーションスピード
+        DangerWindow, // 攻撃の危険時間
     };
 
     Type type;

@@ -66,8 +66,6 @@ void DarkStage::Initialize(const Transform& transform)
         }
     }
 #endif // 0
-
-
     {
         PROFILE_SCOPE("Create FloorCollision");
 
@@ -82,11 +80,6 @@ void DarkStage::Initialize(const Transform& transform)
         boxComponent->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Block);
         boxComponent->Initialize();
     }
-
-
-
-
-
 }
 
 void DarkStage::Update(float deltaTime)

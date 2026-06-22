@@ -58,14 +58,13 @@ void DoorLargeActor::Update(float deltaTime)
 
     switch (doorState)
     {
-
     case DoorState::Opening:
 
-        openAngle += delta;
+        currentAngle += delta;
 
-        if (openAngle >= 90)
+        if (currentAngle >= 90)
         {
-            delta -= (openAngle - 90);
+            delta -= (currentAngle - 90);
             doorState = DoorState::Open;
         }
 
@@ -77,11 +76,11 @@ void DoorLargeActor::Update(float deltaTime)
 
     case DoorState::Closing:
 
-        openAngle -= delta;
+        currentAngle -= delta;
 
-        if (openAngle <= 0)
+        if (currentAngle <= 0)
         {
-            delta -= (0 - openAngle);
+            delta -= (0 - currentAngle);
             doorState = DoorState::Closed;
         }
 

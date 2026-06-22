@@ -11,6 +11,7 @@
 #include "Components/Effect/ParticleComponent.h"
 
 class IInteractable;
+class Enemy;
 
 class Player :public Character
 {
@@ -63,7 +64,7 @@ public:
     void StartAttack();
 
     // ジャスト回避成功時の処理
-    void StartJustDodgeSuccess();
+    void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
 
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
@@ -98,6 +99,8 @@ public:
 
     float dodgeSpeed = 3.0f; // 回避する時のスピード
     float dodgeDuration = 0.5f; // 回避するときの時間
+
+    std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 
 public:
     // 描画用コンポーネントを追加

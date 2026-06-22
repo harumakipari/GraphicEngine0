@@ -49,6 +49,7 @@ private:
 
     bool rightHitBox = false;   // 右の剣の当たり判定
     bool leftHitBox = false;    // 左の剣の当たり判定
+    bool isDangerWindow = false; 
 
     // ヒット中に当たった敵を記録する
     std::unordered_set<Actor*> hitActors;

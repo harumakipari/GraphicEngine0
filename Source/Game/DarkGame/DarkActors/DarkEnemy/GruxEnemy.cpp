@@ -55,6 +55,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddNotifyEvent("PrimaryAttack_LA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
     controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
 
+    controller->AddNotifyState("PrimaryAttack_LA", 0.03f, 0.3f, AnimationNotifyState::Type::DangerWindow);
     controller->AddNotifyState("PrimaryAttack_LA", 0.01f, 0.08f, AnimationNotifyState::Type::AnimationSpeed, "", 0.2f);
     controller->AddNotifyState("PrimaryAttack_LA", 0.08f, 0.12f, AnimationNotifyState::Type::AnimationSpeed, "", 0.1f);
 
@@ -153,6 +154,22 @@ void GruxEnemy::Initialize(const Transform& transform)
                 Logger::Warning("actor is nullptr");
                 return;
             }
+            // Playerへキャスト
+            Player* player = dynamic_cast<Player*>(actor);
+            if (!player)
+                return;
+
+            if (isDangerWindow)
+            {
+                if (player->GetJustDodgeWindow())
+                {
+                    if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
+                    {
+                        player->StartJustDodgeSuccess(enemy);
+                        Logger::Log(U8("ジャスト回避成功！"));
+                    }
+                }
+            }
 #if 1
             if (!rightHitBox && !leftHitBox)
                 return;
@@ -165,18 +182,7 @@ void GruxEnemy::Initialize(const Transform& transform)
 #endif // 0
             //Logger::Log("leftWeaponCollisionComp Second");
 
-            // Playerへキャスト
-            Player* player = dynamic_cast<Player*>(actor);
-
-            if (!player)
-                return;
-
             player->TakeDamage(10);
-            if (player->GetJustDodgeWindow())
-            {
-                player->StartJustDodgeSuccess();
-                Logger::Log(U8("ジャスト回避成功！"));
-            }
             hitActors.insert(actor);
         });
 
@@ -218,6 +224,21 @@ void GruxEnemy::Initialize(const Transform& transform)
                 Logger::Warning("actor is nullptr");
                 return;
             }
+
+
+            // Playerへキャスト
+            Player* player = dynamic_cast<Player*>(actor);
+            if (!player)
+                return;
+
+            if (player->GetJustDodgeWindow())
+            {
+                if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
+                {
+                    player->StartJustDodgeSuccess(enemy);
+                    Logger::Log(U8("ジャスト回避成功！"));
+                }
+            }
 #if 1
             if (!rightHitBox && !leftHitBox)
                 return;
@@ -229,15 +250,6 @@ void GruxEnemy::Initialize(const Transform& transform)
 #endif // 0
             //Logger::Log("rightWeaponCollisionComp Second");
 
-            // Playerへキャスト
-            Player* player = dynamic_cast<Player*>(actor);
-            if (!player)
-                return;
-            if (player->GetJustDodgeWindow())
-            {
-                player->StartJustDodgeSuccess();
-                Logger::Log(U8("ジャスト回避成功！"));
-            }
             player->TakeDamage(10);
             hitActors.insert(actor);
         });
@@ -329,6 +341,10 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         Logger::Log(U8("アニメーションの再生速度変更：") + std::to_string(state.animationSpeed));
         GetBodyAnimationController()->SetAnimationRate(state.animationSpeed);
         break;
+    case AnimationNotifyState::Type::DangerWindow:
+        Logger::Log(U8("攻撃の危険時間が開始しました。"));
+        isDangerWindow = true;
+        break;
     }
 }
 
@@ -354,6 +370,10 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::AnimationSpeed:
         Logger::Log(U8("アニメーションの再生速度をリセットする"));
         GetBodyAnimationController()->ResetAnimationRate();
+        break;
+    case AnimationNotifyState::Type::DangerWindow:
+        Logger::Log(U8("攻撃の危険時間が終了しました。"));
+        isDangerWindow = false;
         break;
     }
 }
