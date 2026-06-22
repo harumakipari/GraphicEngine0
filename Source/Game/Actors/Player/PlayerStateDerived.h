@@ -107,6 +107,26 @@ private:
 
 };
 
+// ラッシュステート
+class PlayerRushState : public PlayerStateBase
+{
+public:
+    // コンストラクタ
+    PlayerRushState(Player* player) :PlayerStateBase(player) {}
+    // デストラクタ
+    ~PlayerRushState() = default;
+    // ステートに入った時のメソッド
+    void Enter() override;
+    // ステートで実行するメソッド
+    void Execute(float deltaTime) override;
+    // ステートから出ていくときのメソッド
+    void Exit() override;
+    // ステート名を取得
+    const char* GetName() const override { return "Rush"; }
+private:
+    float elapsedTime = 0.0f;
+};
+
 // ジャンプステートオブジェクト
 class PlayerJumpState : public PlayerStateBase
 {

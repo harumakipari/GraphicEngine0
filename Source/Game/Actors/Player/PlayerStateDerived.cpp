@@ -197,10 +197,10 @@ void PlayerAttackState::Exit()
 
 void PlayerDodgeState::Enter()
 {
+    player->ResetAnimationStateFlag();
     owner->PlayBodyAnimation("Ability_RMB_Bwd_0");
     //owner->PlayBodyAnimation("Roll_front_0");
     dodgeTimer = 0.0f;
-    player->invincible = true; // ←無敵ON
 
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
@@ -208,13 +208,13 @@ void PlayerDodgeState::Enter()
 
 void PlayerDodgeState::Execute(float deltaTime)
 {
-    dodgeTimer += deltaTime;
-
-    // 無敵時間
-    if (dodgeTimer > 0.3f)
+    if (player->justDodgeSuccess)
     {
-        player->invincible = false;
+        Logger::Log(U8("ラッシュへ"));
+        player->GetStateMachine()->ChangeState("Rush");
     }
+
+    dodgeTimer += deltaTime;
 
     // 終了
     if (dodgeTimer > 0.6f)
@@ -233,8 +233,43 @@ void PlayerDodgeState::Execute(float deltaTime)
 
 void PlayerDodgeState::Exit()
 {
+    player->ResetAnimationStateFlag();
     player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
 }
+
+
+// ラッシュ
+void PlayerRushState::Enter()
+{
+    // 攻撃中は移動速度を0にする
+    player->characterMovementComponent->SetSpeed(0.0f);
+    elapsedTime = 0.0f;
+}
+
+void PlayerRushState::Execute(float deltaTime)
+{
+    elapsedTime += deltaTime;
+    // 終了
+    if (elapsedTime > 0.1f)
+    {
+        auto dir = player->inputComponent->GetMoveInput();
+        if (MathHelper::Length(dir) > 0.01f)
+        {
+            player->GetStateMachine()->ChangeState("Running");
+        }
+        else
+        {
+            player->GetStateMachine()->ChangeState("Idle");
+        }
+    }
+
+}
+
+void PlayerRushState::Exit()
+{
+    player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
+}
+
 
 void PlayerJumpState::Enter()
 {

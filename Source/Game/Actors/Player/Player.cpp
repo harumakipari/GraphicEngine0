@@ -119,6 +119,7 @@ void Player::Initialize(const Transform& transform)
 
         // ジャスト回避
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
+        controller->AddNotifyState("Ability_RMB_Bwd_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
 
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
@@ -132,6 +133,7 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerRunningState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDodgeState>(this));
+        stateMachine_->RegisterState(std::make_unique<PlayerRushState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpAttackState>(this));
 
@@ -417,6 +419,8 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         Logger::Log(U8("コンボ受付を開始しました"));
         break;
     case AnimationNotifyState::Type::Invincible:
+        invincibleWindow = true;
+        Logger::Log(U8("無敵状態を開始しました"));
         break;
     case AnimationNotifyState::Type::TransitionWindow:
         transitionWindow = true;
@@ -442,6 +446,8 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         Logger::Log(U8("コンボ受付を終了しました"));
         break;
     case AnimationNotifyState::Type::Invincible:
+        invincibleWindow = false;
+        Logger::Log(U8("無敵状態を終了しました"));
         break;
     case AnimationNotifyState::Type::TransitionWindow:
         transitionWindow = false;
@@ -479,10 +485,11 @@ void Player::ResetAnimationStateFlag()
     comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
     comboWindow = false;   // コンボ受付をするかどうか
     hitBox = false;     // 当たり判定
-    Logger::Log(U8("コンボ受付をしなくする、ステート遷移しない、コンボキューをいれない、武器当たり判定を消す"));
+    justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
+    invincibleWindow = false;   // 無敵状態かどうか
+    justDodgeSuccess = false; // ジャスト回避が成功したかどうか
+    Logger::Log(U8("アニメーションステート関連のフラグをリセットする"));
 }
-
-
 
 // 火花エフェクトの生成
 void Player::SpawnSpark(DirectX::XMFLOAT3 pos)
@@ -563,10 +570,10 @@ void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XM
 //当たった時の処理
 void Player::TakeDamage(int damage)
 {
-#if 0
-    if (invincible)
+#if 1
+    if (invincibleWindow)
     {// 無敵状態ならダメージを受けない
-        Logger::Log(U8("攻撃を回避した"));
+        Logger::Log(U8("無敵状態ならダメージを受けない"));
         return;
     }
 #endif // 0

@@ -53,7 +53,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Death_B_0", 19);
 
     controller->AddNotifyEvent("PrimaryAttack_LA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
-    controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox);
+    controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
 
     // ステートマシンを作成
     {
@@ -135,6 +135,70 @@ void GruxEnemy::Initialize(const Transform& transform)
                 return;
             }
             Logger::Log("leftWeaponCollisionComp First");
+            uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
+
+            // Playerレイヤーか確認
+            if (!(other->GetCollisionLayer() & mask))
+                return;
+
+            // 相手のActor取得
+            Actor* actor = other->GetOwner();
+
+            if (!actor)
+            {
+                Logger::Warning("actor is nullptr");
+                return;
+            }
+#if 1
+            if (!rightHitBox && !leftHitBox)
+                return;
+
+            if (hitActors.contains(actor))
+            {// 一度当たったことがあった場合
+                return;
+            }
+
+#endif // 0
+            Logger::Log("leftWeaponCollisionComp Second");
+
+            // Playerへキャスト
+            Player* player = dynamic_cast<Player*>(actor);
+
+            if (!player)
+                return;
+
+            player->TakeDamage(10);
+            if (player->justDodgeWindow)
+            {
+                player->justDodgeSuccess = true;
+                Logger::Log(U8("ジャスト回避成功！"));
+            }
+            hitActors.insert(actor);
+        });
+
+    int socketRightNode = skeletalMeshComponent->FindIndexByName("weapon_r");
+    rightWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponRightNode", parentName);
+    rightWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketRightNode); // "weapon_r"
+    rightWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
+    rightWeaponCollisionComp->SetMass(mass);
+    rightWeaponCollisionComp->SetCapsuleAxis(ShapeComponent::CapsuleAxis::z);
+    rightWeaponCollisionComp->SetLayer(CollisionLayer::EnemyWeapon);
+    rightWeaponCollisionComp->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
+    rightWeaponCollisionComp->SetCollisionOffsetY(height * 0.5f);
+    rightWeaponCollisionComp->SetIsVisibleDebugBox(false);
+    rightWeaponCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, -0.9f });
+    rightWeaponCollisionComp->Initialize();
+    rightWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
+        {
+            Logger::Log("rightWeaponCollisionComp zero");
+
+            if (!other)
+            {
+                Logger::Warning("other is nullptr");
+                return;
+            }
+            Logger::Log("rightWeaponCollisionComp First");
+
 
             uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
 
@@ -150,8 +214,7 @@ void GruxEnemy::Initialize(const Transform& transform)
                 Logger::Warning("actor is nullptr");
                 return;
             }
-#if 0
-
+#if 1
             if (!rightHitBox && !leftHitBox)
                 return;
 
@@ -159,100 +222,41 @@ void GruxEnemy::Initialize(const Transform& transform)
             {// 一度当たったことがあった場合
                 return;
             }
-
 #endif // 0
-
-            Logger::Log("leftWeaponCollisionComp Second");
+            Logger::Log("rightWeaponCollisionComp Second");
 
             // Playerへキャスト
             Player* player = dynamic_cast<Player*>(actor);
-
             if (!player)
                 return;
-
+            if (player->justDodgeWindow)
+            {
+                player->justDodgeSuccess = true;
+                Logger::Log(U8("ジャスト回避成功！"));
+            }
             player->TakeDamage(10);
             hitActors.insert(actor);
         });
 
-//    int socketRightNode = skeletalMeshComponent->FindIndexByName("weapon_r");
-//    rightWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponRightNode", parentName);
-//    rightWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketRightNode); // "weapon_r"
-//    rightWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
-//    rightWeaponCollisionComp->SetMass(mass);
-//    rightWeaponCollisionComp->SetCapsuleAxis(ShapeComponent::CapsuleAxis::z);
-//    rightWeaponCollisionComp->SetLayer(CollisionLayer::EnemyWeapon);
-//    rightWeaponCollisionComp->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
-//    rightWeaponCollisionComp->SetCollisionOffsetY(height * 0.5f);
-//    rightWeaponCollisionComp->SetIsVisibleDebugBox(false);
-//    rightWeaponCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, -0.9f });
-//    rightWeaponCollisionComp->Initialize();
-//    rightWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
-//        {
-//            Logger::Log("rightWeaponCollisionComp zero");
-//            return;
-//
-//            if (!other)
-//            {
-//                Logger::Warning("other is nullptr");
-//                return;
-//            }
-//            Logger::Log("rightWeaponCollisionComp First");
-//
-//
-//            uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
-//
-//            // Playerレイヤーか確認
-//            if (!(other->GetCollisionLayer() & mask))
-//                return;
-//
-//            // 相手のActor取得
-//            Actor* actor = other->GetOwner();
-//
-//            if (!actor)
-//            {
-//                Logger::Warning("actor is nullptr");
-//                return;
-//            }
-//#if 0
-//            if (!rightHitBox && !leftHitBox)
-//                return;
-//
-//            if (hitActors.contains(actor))
-//            {// 一度当たったことがあった場合
-//                return;
-//            }
-//#endif // 0
-//            Logger::Log("rightWeaponCollisionComp Second");
-//
-//            // Playerへキャスト
-//            Player* player = dynamic_cast<Player*>(actor);
-//
-//            if (!player)
-//                return;
-//
-//            player->TakeDamage(10);
-//            hitActors.insert(actor);
-//        });
-//
-//#if 0
-//    AddHitCallback([&](std::pair<CollisionComponent*, CollisionComponent*> hitPair)
-//        {
-//            CollisionComponent* own = hitPair.first;
-//            CollisionComponent* other = hitPair.second;
-//
-//            uint32_t myLayer = own->GetCollisionLayer();
-//            uint32_t otherLayer = other->GetCollisionLayer();
-//               
-//            if (myLayer & CollisionHelper::ToBit(CollisionLayer::EnemyWeapon) ||
-//                otherLayer & CollisionHelper::ToBit(CollisionLayer::Player))
-//            {
-//                auto player = dynamic_cast<Player*>(other->GetOwner());
-//                player->TakeDamage(10);
-//            }
-//
-//        }
-//    );
-//#endif // 0
+#if 0
+    AddHitCallback([&](std::pair<CollisionComponent*, CollisionComponent*> hitPair)
+        {
+            CollisionComponent* own = hitPair.first;
+            CollisionComponent* other = hitPair.second;
+
+            uint32_t myLayer = own->GetCollisionLayer();
+            uint32_t otherLayer = other->GetCollisionLayer();
+
+            if (myLayer & CollisionHelper::ToBit(CollisionLayer::EnemyWeapon) ||
+                otherLayer & CollisionHelper::ToBit(CollisionLayer::Player))
+            {
+                auto player = dynamic_cast<Player*>(other->GetOwner());
+                player->TakeDamage(10);
+            }
+
+        }
+    );
+#endif // 0
 
 
 }
@@ -261,11 +265,11 @@ void GruxEnemy::Update(float deltaTime)
 {
     Character::Update(deltaTime);
 
-    //rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
-    //leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
+    rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
+    leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
 
 #if 1
-    if (hp <= 0&& !isDeathPerform)
+    if (hp <= 0 && !isDeathPerform)
     {
         isDeathPerform = true;
         stateMachine_->ChangeState("EnemyDeathState");
@@ -296,13 +300,14 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
-        Logger::Log(U8("当たり判定を開始しました"));
-        //if (state.parameter == rightWeapon)
+        if (state.parameter == rightWeapon)
         {
+            Logger::Log(U8("右の当たり判定を開始しました"));
             rightHitBox = true;
         }
-        //else if (state.parameter == leftWeapon)
+        else if (state.parameter == leftWeapon)
         {
+            Logger::Log(U8("左の当たり判定を開始しました"));
             leftHitBox = true;
         }
         break;
@@ -340,13 +345,14 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
 
+
 }
 
 // 攻撃開始時に始める処理
 void GruxEnemy::StartAttack()
 {
-    //ResizeCapsule(const float newRadius, const float newHeight);
-
+    DirectX::XMFLOAT3 size = { 1.0f,4.0f,1.0f };
+    leftWeaponCollisionComp->ResizeCapsule(size.x, size.y);
     hitActors.clear();
 }
 

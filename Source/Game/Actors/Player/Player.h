@@ -68,7 +68,6 @@ public:
     bool hasPrevSwordTip = false; // 前フレームの剣先の位置が有効かどうか
     bool hasSpawnedThisAttack = false; // 今攻撃でエフェクトを生成したかどうか
 
-    bool invincible = false; // 無敵状態かどうか
 
     std::string currentAttackAnimation = "Primary_Attack_Fast_A";
     std::string startAttackAnimation = "Primary_Attack_Fast_A";    // コンボ開始のアニメーション
@@ -107,9 +106,11 @@ public:
     bool hitBox = false;   // 武器の当たり判定をつける
     bool transitionWindow = false;  // ステート遷移してもいいかどうか
     bool justDodgeWindow = false;  // ジャスト回避受付時間
+    bool justDodgeSuccess = false; // ジャスト回避成功フラグ
+    bool invincibleWindow = false; // 無敵状態かどうか
+
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     bool isAttackActive = false;
     float hitStopTimer = 0.0f;// ヒットストップのタイマー
-
 };
