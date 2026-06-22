@@ -81,7 +81,7 @@ struct SceneState
         }
     }
 
-    void Apply(Scene* scene)
+    void Apply(Scene* scene) const
     {
         auto& s = scene->GetSceneSettings();
 
@@ -130,6 +130,43 @@ struct SceneState
 
                 cinemaComp->UpdateRotationFromYawPitch();
                 cinemaComp->bookmarks = cameraBookmarks;
+            }
+        }
+    }
+
+    // シーンのプリセットを設定する/カメラは設定しない
+    void ApplyScenePreset(Scene* scene) const
+    {
+        auto& s = scene->GetSceneSettings();
+
+        // sceneConstantsは普通に上書き
+        s.sceneLightSaveData.sceneConstants = lightSaveData.sceneConstants;
+
+        auto backupShared = s.sceneLightSaveData.sharedLights;
+
+        s.sceneLightSaveData = lightSaveData;
+
+        // 空なら元を維持
+        if (lightSaveData.sharedLights.empty())
+        {
+            s.sceneLightSaveData.sharedLights = backupShared;
+        }
+        s.sceneShaderConstants = shader;
+        s.fogConstants = fog;
+        s.ssrConstantBuffer = ssr;
+        s.ssaoConstantBuffer = ssao;
+        s.bloomConstantBuffer = bloom;
+        s.cascadedShadowMapConstants = cascadeShadow;
+
+        // --- Actor Transform ---
+        for (auto& ats : actorStates)
+        {
+            auto actor = scene->GetActorManager()->GetActorByName(ats.name);
+            if (actor)
+            {
+                actor->SetPosition(ats.position);
+                actor->SetQuaternionRotation(ats.rotation);
+                actor->SetScale(ats.scale);
             }
         }
     }

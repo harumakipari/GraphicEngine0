@@ -64,7 +64,7 @@ class CharacterMovementComponent : public SceneComponent
 public:
     CharacterMovementComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :SceneComponent(name, owner) {}
 
-    void Tick(float dt) override;
+    void Tick(float deltaTime) override;
 
     void SetMoveDirection(const DirectX::XMFLOAT3& dir)
     {
@@ -105,12 +105,27 @@ public:
         externalVelocity_.z += impulse.z;
     }
 
+    // 一定時間だけ強制移動する速度を設定するための関数  ルートモーションではないアニメーションなどに使用する
+    void AddForcedMove(const DirectX::XMFLOAT3& direction,float speed,float duration)
+    {
+        forcedVelocity_ =
+        {
+            direction.x * speed,
+            direction.y * speed,
+            direction.z * speed
+        };
+
+        forcedMoveTime_ = duration;
+    }
+
     void Jump(const float power)
     {
         velocity_.y += power;   
     }
 
-    bool IsGround() { return isGrounded_; }
+    bool IsGround() const { return isGrounded_; }
+
+    
 
 private:
     // 状態
@@ -126,11 +141,13 @@ private:
 
     float initialSpeed = 5.0f; // 初速
 
-    
-
     DirectX::XMFLOAT3 inputDir_{ 0,0,0 };
     DirectX::XMFLOAT3 externalVelocity_ = { 0.0f,0.0f,0.0f }; // 外部から加算される速度（吹き飛ばしなど）
     float damping_ = 3.5f; // 外部速度の減衰率（1秒あたりどれだけ外部速度が減るか）
+
+    // 一定時間だけ強制移動する時に使用する
+    DirectX::XMFLOAT3 forcedVelocity_{ 0,0,0 };
+    float forcedMoveTime_ = 0.0f;
 };
 
 

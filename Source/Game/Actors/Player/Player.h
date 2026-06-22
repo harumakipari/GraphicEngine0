@@ -96,6 +96,9 @@ public:
     bool justDodgeSuccess = false; // ジャスト回避成功フラグ
     bool invincibleWindow = false; // 無敵状態かどうか
 
+    float dodgeSpeed = 3.0f; // 回避する時のスピード
+    float dodgeDuration = 0.5f; // 回避するときの時間
+
 public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;

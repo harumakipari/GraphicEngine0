@@ -198,12 +198,17 @@ void PlayerAttackState::Exit()
 void PlayerDodgeState::Enter()
 {
     player->ResetAnimationStateFlag();
-    owner->PlayBodyAnimation("Ability_RMB_Bwd_0",false);
-    //owner->PlayBodyAnimation("Roll_front_0");
+    owner->PlayBodyAnimation("Ability_RMB_Bwd_0", false);
     dodgeTimer = 0.0f;
 
     // UŒ‚’†‚ÍˆÚ“®‘¬“x‚ð0‚É‚·‚é
     player->characterMovementComponent->SetSpeed(0.0f);
+
+
+    DirectX::XMFLOAT3 forward = player->GetForward();
+    //float duration = player->GetBodyAnimationController()->GetAnimationLength("Ability_RMB_Bwd_0");
+    // ˆê’èŽžŠÔ‚¾‚¯‹­§ˆÚ“®‚·‚é‘¬“x‚ðÝ’è‚·‚é
+    player->characterMovementComponent->AddForcedMove({ -forward.x,0.0f,-forward.z }, player->dodgeSpeed, player->dodgeDuration);
 }
 
 void PlayerDodgeState::Execute(float deltaTime)

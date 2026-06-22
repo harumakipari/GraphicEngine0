@@ -36,7 +36,7 @@ cbuffer LIGHT_CONSTANT_BUFFER : register(b11)
     float3 playerHairRimColor;
     float playerHairRimIntensity;
 
-    PointLights pointLights[120];
+    PointLights pointLights[160];
 };
 
 

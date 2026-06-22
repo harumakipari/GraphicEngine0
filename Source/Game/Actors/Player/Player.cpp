@@ -402,7 +402,10 @@ void Player::Update(float elapsedTime)
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
+    ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     Character::DrawImGuiDetails();
+
 #endif
 
 }

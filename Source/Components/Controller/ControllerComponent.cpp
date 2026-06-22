@@ -10,7 +10,7 @@
 #include "Engine/Utility/Win32Utils.h"
 #include "Physics/CollisionSystem.h"
 
-void CharacterMovementComponent::Tick(float dt)
+void CharacterMovementComponent::Tick(float deltaTime)
 {
     if (useGravity)
     {
@@ -41,14 +41,29 @@ void CharacterMovementComponent::Tick(float dt)
     velocity_.z += externalVelocity_.z;
 
     // 減衰
-    externalVelocity_.x -= externalVelocity_.x * damping_ * dt;
-    externalVelocity_.y -= externalVelocity_.y * damping_ * dt;
-    externalVelocity_.z -= externalVelocity_.z * damping_ * dt;
+    externalVelocity_.x -= externalVelocity_.x * damping_ * deltaTime;
+    externalVelocity_.y -= externalVelocity_.y * damping_ * deltaTime;
+    externalVelocity_.z -= externalVelocity_.z * damping_ * deltaTime;
+
+    // 一定時間だけ強制移動する速度の処理
+    if (forcedMoveTime_ > 0.0f)
+    {
+        velocity_.x += forcedVelocity_.x;
+        velocity_.y += forcedVelocity_.y;
+        velocity_.z += forcedVelocity_.z;
+
+        forcedMoveTime_ -= deltaTime;
+
+        if (forcedMoveTime_ <= 0.0f)
+        {
+            forcedVelocity_ = { 0,0,0 };
+        }
+    }
 
     // 重力加速度を適用
     if (!isGrounded_)
     {
-        velocity_.y += gravity_ * dt;
+        velocity_.y += gravity_ * deltaTime;
     }
 
     if (owner_.expired())
@@ -62,9 +77,9 @@ void CharacterMovementComponent::Tick(float dt)
     DirectX::XMFLOAT3 pos = owner->GetPosition();
     DirectX::XMFLOAT3 nextPos = pos;
 
-    nextPos.x += velocity_.x * dt;
-    nextPos.y += velocity_.y * dt;
-    nextPos.z += velocity_.z * dt;
+    nextPos.x += velocity_.x * deltaTime;
+    nextPos.y += velocity_.y * deltaTime;
+    nextPos.z += velocity_.z * deltaTime;
 
     // 床との衝突判定
     isGrounded_ = false;
@@ -95,24 +110,24 @@ void CharacterMovementComponent::Tick(float dt)
     }
 
     // 壁とのレイキャスト
-    DirectX::XMFLOAT3 horizMove =
+    DirectX::XMFLOAT3 horizontalMove =
     {
         nextPos.x - pos.x,
         0,
         nextPos.z - pos.z
     };
 
-    float dist = sqrt(horizMove.x * horizMove.x + horizMove.z * horizMove.z);
+    float dist = sqrt(horizontalMove.x * horizontalMove.x + horizontalMove.z * horizontalMove.z);
 
     if (dist > 0.001f)
     {
-        horizMove.x /= dist;
-        horizMove.z /= dist;
+        horizontalMove.x /= dist;
+        horizontalMove.z /= dist;
 
         HitResult wallHit;
         if (Physics::Instance().RayCast(
             { pos.x, pos.y + 1.0f, pos.z },
-            horizMove,
+            horizontalMove,
             dist + radius_,
             wallHit,
             CollisionHelper::ToBit(CollisionLayer::WorldStatic)))
