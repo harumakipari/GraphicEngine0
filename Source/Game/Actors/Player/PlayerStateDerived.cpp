@@ -198,7 +198,7 @@ void PlayerAttackState::Exit()
 void PlayerDodgeState::Enter()
 {
     player->ResetAnimationStateFlag();
-    owner->PlayBodyAnimation("Ability_RMB_Bwd_0");
+    owner->PlayBodyAnimation("Ability_RMB_Bwd_0",false);
     //owner->PlayBodyAnimation("Roll_front_0");
     dodgeTimer = 0.0f;
 
@@ -243,31 +243,50 @@ void PlayerRushState::Enter()
 {
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
+
     elapsedTime = 0.0f;
+
+    rushStarted = false;
+    queuedAttackCount = 0;
 }
 
 void PlayerRushState::Execute(float deltaTime)
 {
-    elapsedTime += deltaTime;
-    // 終了
-    if (elapsedTime > 0.1f)
+    if (!player->GetBodyAnimationController()->IsPlayAnimation())
     {
-        auto dir = player->inputComponent->GetMoveInput();
-        if (MathHelper::Length(dir) > 0.01f)
+        queuedAttackCount--;
+        if (queuedAttackCount > 0)
         {
-            player->GetStateMachine()->ChangeState("Running");
+            player->PlayBodyAnimation("Attack_Air", false, true, 0.05f);
         }
         else
-        {
+        {// こっちは回避のステートが終わったら待機へ行く
             player->GetStateMachine()->ChangeState("Idle");
         }
     }
 
+    if (!rushStarted)
+    {
+        if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+        {
+            rushStarted = true;
+            queuedAttackCount = 1;
+            player->SetBodyAnimationRate(5.0f);
+            player->PlayBodyAnimation("Attack_Air", false, true, 0.05f);
+        }
+        return;
+    }
+
+    if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+    {
+        queuedAttackCount++;
+    }
 }
 
 void PlayerRushState::Exit()
 {
     player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
+    player->GetBodyAnimationController()->ResetAnimationRate();
 }
 
 
@@ -318,7 +337,7 @@ void PlayerJumpState::Execute(float deltaTime)
             //v0 = √ (2gh)  から　 h = v0 * v0 / 2g 
             float h = player->GetPosition().y - 0.0f/*地面の高さ*/ + (3.0f)/*調整値*/;
             // t = √ (2h / g) から　上の式代入して　
-            float t_fall = std::sqrtf(2 * h / std::abs(gravity))  - t_middle_anim/*"Jump_Middle"*/;
+            float t_fall = std::sqrtf(2 * h / std::abs(gravity)) - t_middle_anim/*"Jump_Middle"*/;
             //"Jump_Finish"のアニメーションの再生時間取得
             float t_anim = player->GetBodyAnimationController()->GetAnimationLength("Jump_Recovery_0");
             //アニメーションの再生速度を"t_fall"に合わせる
@@ -326,9 +345,9 @@ void PlayerJumpState::Execute(float deltaTime)
             player->GetBodyAnimationController()->SetAnimationRate(animationRate);
         }
     }
-        break;
+    break;
     case JumpState::JumpLand:
-        if (!player->GetBodyAnimationController()->IsPlayAnimation()&& player->characterMovementComponent->IsGround())
+        if (!player->GetBodyAnimationController()->IsPlayAnimation() && player->characterMovementComponent->IsGround())
         {//アニメーションの再生が終わったら
             player->GetStateMachine()->ChangeState("Idle");
         }
@@ -350,7 +369,7 @@ void PlayerJumpAttackState::Enter()
 {
     player->GetBodyAnimationController()->ResetAnimationRate();
     // アニメーションを再生
-    player->PlayBodyAnimation("Jump_Pad_0", false,true, 0.3f);
+    player->PlayBodyAnimation("Jump_Pad_0", false, true, 0.3f);
     // ステート
     jumpState = JumpState::JumpAttack;
 }
@@ -373,6 +392,6 @@ void PlayerJumpAttackState::Execute(float deltaTime)
 
 void PlayerJumpAttackState::Exit()
 {
-    
+
 }
 

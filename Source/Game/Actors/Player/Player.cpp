@@ -92,6 +92,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Jump_Pad_0", 25);
         controller->AddAnimation("Jump_Recovery_0", 26);
         controller->AddAnimation("Jump_Start_0", 27);
+        controller->AddAnimation("Attack_Air", 28);
 
         controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);

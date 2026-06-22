@@ -76,6 +76,14 @@ public:
         }
     }
 
+    void SetBodyAnimationRate(const float animationRate) const
+    {
+        if (auto controller = GetAnimationController(animationBodyControllerName))
+        {
+            controller->SetAnimationRate(animationRate);
+        }
+    }
+
     void AddBodyAnimationController(const std::shared_ptr<AnimationController>& controller)
     {
         animationControllers[animationBodyControllerName] = controller;

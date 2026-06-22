@@ -28,6 +28,7 @@ struct AnimationNotifyEvent
     {
         PlaySE,
         SpawnEffect,
+        AnimationSpeed,
     };
 
     Type type;

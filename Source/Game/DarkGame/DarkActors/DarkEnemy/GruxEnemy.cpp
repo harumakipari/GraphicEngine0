@@ -55,6 +55,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddNotifyEvent("PrimaryAttack_LA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
     controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
 
+    controller->AddNotifyEvent("PrimaryAttack_LA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
+
     // ステートマシンを作成
     {
         stateMachine_ = std::make_shared<StateMachine>();

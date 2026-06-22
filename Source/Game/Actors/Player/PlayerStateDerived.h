@@ -123,6 +123,8 @@ public:
     const char* GetName() const override { return "Rush"; }
 private:
     float elapsedTime = 0.0f;
+    bool rushStarted = false;
+    int queuedAttackCount = 0;
 };
 
 // ジャンプステートオブジェクト
