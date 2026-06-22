@@ -636,6 +636,19 @@ void Player::StartAttack()
     hitActors.clear();
 }
 
+// ジャスト回避成功時の処理
+void Player::StartJustDodgeSuccess()
+{
+    // ジャスト回避成功フラグをオンにする
+    justDodgeSuccess = true;
+    // スローモーションにする
+    Time::SetSlow(0.2f, 1.0f);
+
+    // 画面の色を変える
+
+    // UIを表示する
+}
+
 // インタラクト対象検索
 IInteractable* Player::FindInteractable()
 {

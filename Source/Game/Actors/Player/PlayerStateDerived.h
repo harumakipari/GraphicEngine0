@@ -8,6 +8,7 @@ class PlayerStateBase : public State
 public:
     PlayerStateBase(Player* player);
     virtual ~PlayerStateBase() = default;
+
     // ステートに入った時のメソッド
     virtual void Enter() = 0;
 
@@ -17,14 +18,11 @@ public:
     // ステージから出ていくときのメソッド
     virtual void Exit() = 0;
 
-    void Reset();
-
     virtual const char* GetName() const = 0;
 
 protected:
     Player* player = nullptr;
-
-
+public:
 };
 
 // 待機ステートオブジェクト

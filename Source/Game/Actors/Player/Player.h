@@ -62,7 +62,23 @@ public:
     // 攻撃開始時の処理
     void StartAttack();
 
+    // ジャスト回避成功時の処理
+    void StartJustDodgeSuccess();
+
+    // ジャスト回避を受け付けるかどうか
+    bool GetJustDodgeWindow()const { return  justDodgeWindow; }
+
+private:
+    // プレイヤーのマックスHP
+    int maxHp = 100;
+
+    // インタラクト対象検索
+    IInteractable* FindInteractable();
+
 public:
+    // ヒット中に当たった敵を記録する
+    std::unordered_set<Actor*> hitActors;
+
     //当たった相手を記録するためのセット 火花エフェクトの生成やダメージの適用を一度だけ行うために使用
     std::unordered_set<Actor*> hitTargets;
     bool hasPrevSwordTip = false; // 前フレームの剣先の位置が有効かどうか
@@ -71,15 +87,15 @@ public:
 
     std::string currentAttackAnimation = "Primary_Attack_Fast_A";
     std::string startAttackAnimation = "Primary_Attack_Fast_A";    // コンボ開始のアニメーション
-private:
-    // プレイヤーのマックスHP
-    int maxHp = 100;
 
-    // インタラクト対象検索
-    IInteractable* FindInteractable();
+    bool comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
+    bool comboWindow = false;   // コンボ受付をするかどうか
+    bool hitBox = false;   // 武器の当たり判定をつける
+    bool transitionWindow = false;  // ステート遷移してもいいかどうか
+    bool justDodgeWindow = false;  // ジャスト回避受付時間
+    bool justDodgeSuccess = false; // ジャスト回避成功フラグ
+    bool invincibleWindow = false; // 無敵状態かどうか
 
-    // ヒット中に当たった敵を記録する
-    std::unordered_set<Actor*> hitActors;
 public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
@@ -101,16 +117,11 @@ public:
     };
     std::vector<TrailPoint> trailPoints;
 
-    bool comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
-    bool comboWindow = false;   // コンボ受付をするかどうか
-    bool hitBox = false;   // 武器の当たり判定をつける
-    bool transitionWindow = false;  // ステート遷移してもいいかどうか
-    bool justDodgeWindow = false;  // ジャスト回避受付時間
-    bool justDodgeSuccess = false; // ジャスト回避成功フラグ
-    bool invincibleWindow = false; // 無敵状態かどうか
 
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     bool isAttackActive = false;
     float hitStopTimer = 0.0f;// ヒットストップのタイマー
+
+    friend class PlayerStateBase;
 };

@@ -168,9 +168,9 @@ void GruxEnemy::Initialize(const Transform& transform)
                 return;
 
             player->TakeDamage(10);
-            if (player->justDodgeWindow)
+            if (player->GetJustDodgeWindow())
             {
-                player->justDodgeSuccess = true;
+                player->StartJustDodgeSuccess();
                 Logger::Log(U8("ジャスト回避成功！"));
             }
             hitActors.insert(actor);
@@ -229,9 +229,9 @@ void GruxEnemy::Initialize(const Transform& transform)
             Player* player = dynamic_cast<Player*>(actor);
             if (!player)
                 return;
-            if (player->justDodgeWindow)
+            if (player->GetJustDodgeWindow())
             {
-                player->justDodgeSuccess = true;
+                player->StartJustDodgeSuccess();
                 Logger::Log(U8("ジャスト回避成功！"));
             }
             player->TakeDamage(10);
