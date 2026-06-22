@@ -135,12 +135,12 @@ void GameScene::Start()
     SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
     savedState.Apply(Scene::GetCurrentScene());
 #else
-    // シーンプリセットを設定する
-    SceneEditor::LoadPresetList(); // 更新
-    std::string file = "newPreset.json";
-    static SceneState savedState;
-    SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
-    savedState.ApplyScenePreset(Scene::GetCurrentScene());
+    //// シーンプリセットを設定する
+    //SceneEditor::LoadPresetList(); // 更新
+    //std::string file = "newPreset.json";
+    //static SceneState savedState;
+    //SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+    //savedState.ApplyScenePreset(Scene::GetCurrentScene());
 #endif // 0
 
     // シーンが切り替わった時に

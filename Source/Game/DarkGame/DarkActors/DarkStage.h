@@ -16,12 +16,20 @@ public:
 
     void Update(float elapsedTime)override;
 
-    void SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset);
+    void DrawImGuiDetails() override;
 
+    // ボスの部屋に入った時の処理
+    void StartBossRoomLightSequence();
+
+    void SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset);
+    
 private:
     std::string parentName = "RootComponent";
 
-
+    // ボス部屋のライト
+    std::vector<PointLightComponent*> bossRoomLightsLeft;
+    bool bossRoomSequencePlaying = false;
+    float bossRoomSequenceTime = 0.0f;
 };
 
 

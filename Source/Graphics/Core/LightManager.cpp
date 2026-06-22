@@ -175,6 +175,7 @@ void LightManager::Initialize(ID3D11Device* device)
             SharedLightParam{ DirectX::XMFLOAT4(0.959999979f, 0.523895442f, 0.240151942f, 8.0f),
         8.0f
         };
+
     }
 
     // 蝋燭スタンドの共有ライト
@@ -212,6 +213,14 @@ void LightManager::Initialize(ID3D11Device* device)
         20.0f
         };
     }
+
+    // ゼロライト
+    sharedLights["ZeroLight"] =
+        SharedLightParam{ DirectX::XMFLOAT4(0.959999979f, 0.523895442f, 0.240151942f, 0.0f),
+    8.0f
+    };
+
+
     lightData.sharedLights = sharedLights;
 
 }

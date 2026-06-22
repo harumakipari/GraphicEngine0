@@ -55,6 +55,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddNotifyEvent("PrimaryAttack_LA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
     controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
 
+    controller->AddNotifyState("PrimaryAttack_LA", 0.01f, 0.08f, AnimationNotifyState::Type::AnimationSpeed, "", 0.2f);
     controller->AddNotifyState("PrimaryAttack_LA", 0.08f, 0.12f, AnimationNotifyState::Type::AnimationSpeed, "", 0.1f);
 
 

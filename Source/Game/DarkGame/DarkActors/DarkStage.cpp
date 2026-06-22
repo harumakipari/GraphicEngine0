@@ -89,12 +89,43 @@ void DarkStage::Initialize(const Transform& transform)
 
 }
 
-void DarkStage::Update(float elapsedTime)
+void DarkStage::Update(float deltaTime)
 {
+    if (!bossRoomSequencePlaying)
+        return;
+#if 0
+    bossRoomSequenceTime += deltaTime;
 
+    const float interval = 0.3f;
+
+
+#endif // 0
+    for (size_t i = 0; i < bossRoomLightsLeft.size(); i++)
+    {
+        //if (bossRoomSequenceTime > i * interval)
+        {
+            bossRoomLightsLeft[i]->SetSharedLightName("WallLight");
+        }
+    }
 
 }
 
+void DarkStage::DrawImGuiDetails()
+{
+#ifdef USE_IMGUI
+    if (ImGui::Button(U8("ボスの部屋に入る")))
+    {
+        StartBossRoomLightSequence();
+    }
+#endif 
+}
+
+// ボスの部屋に入った時の処理
+void DarkStage::StartBossRoomLightSequence()
+{
+    bossRoomSequencePlaying = true;
+    bossRoomSequenceTime = 0.0f;
+}
 
 void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset)
 {
@@ -229,7 +260,9 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 std::string compName = "BossRoomLight" + std::to_string(i);
                 auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
                 pointLightComponent->SetRelativeLocationDirect(pos);
-                pointLightComponent->SetSharedLightName("BossRoomPointLight");
+                //pointLightComponent->SetSharedLightName("BossRoomPointLight");
+                pointLightComponent->SetSharedLightName("ZeroLight");
+                bossRoomLightsLeft.push_back(pointLightComponent.get());
             }
             else if (point.name.rfind("Spawn_WallLight", 0) == 0)
             {// ボスの部屋の壁のPointLightを生成する
@@ -238,7 +271,9 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 std::string compName = "WallLight" + std::to_string(i);
                 auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
                 pointLightComponent->SetRelativeLocationDirect(pos);
-                pointLightComponent->SetSharedLightName("WallLight");
+                //pointLightComponent->SetSharedLightName("WallLight");
+                pointLightComponent->SetSharedLightName("ZeroLight");
+                bossRoomLightsLeft.push_back(pointLightComponent.get());
             }
             else if (point.name.rfind("Spawn_MainRoomLight", 0) == 0)
             {// メインの部屋のPointLightを生成する
