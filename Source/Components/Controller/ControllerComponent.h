@@ -106,7 +106,7 @@ public:
     }
 
     // 一定時間だけ強制移動する速度を設定するための関数  ルートモーションではないアニメーションなどに使用する
-    void AddForcedMove(const DirectX::XMFLOAT3& direction,float speed,float duration)
+    void AddForcedMove(const DirectX::XMFLOAT3& direction, float speed, float duration)
     {
         forcedVelocity_ =
         {
@@ -120,12 +120,25 @@ public:
 
     void Jump(const float power)
     {
-        velocity_.y += power;   
+        velocity_.y += power;
     }
 
     bool IsGround() const { return isGrounded_; }
 
-    
+    // targetまで進む時に使用する
+    void  MoveToActor(
+        const std::shared_ptr<Actor>& target,
+        float moveTime, float stopDistance = 1.5f/*targetのどれくらい手前で止まるか*/)
+    {
+        this->target = target;
+        moveToTargetTime_ = moveTime;
+        moveToTargetTimer_ = moveTime;
+        stopDistance_ = stopDistance;
+        moveToTarget_ = true;
+    }
+
+    // targetまで進んだかどうか
+    bool IsMoveToActorFinished() const { return !moveToTarget_; }
 
 private:
     // 状態
@@ -145,9 +158,16 @@ private:
     DirectX::XMFLOAT3 externalVelocity_ = { 0.0f,0.0f,0.0f }; // 外部から加算される速度（吹き飛ばしなど）
     float damping_ = 3.5f; // 外部速度の減衰率（1秒あたりどれだけ外部速度が減るか）
 
-    // 一定時間だけ強制移動する時に使用する
+    // 一定時間だけ強制移動する時に使用する　RootMotionではないアニメーションに使用
     DirectX::XMFLOAT3 forcedVelocity_{ 0,0,0 };
     float forcedMoveTime_ = 0.0f;
+
+    // targetまで進む時に使用する
+    bool moveToTarget_ = false;
+    std::weak_ptr<Actor> target;
+    float moveToTargetTime_ = 0.0f;
+    float moveToTargetTimer_ = 0.0f;
+    float stopDistance_ = 1.5f;
 };
 
 

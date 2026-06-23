@@ -453,6 +453,14 @@ public:
         return std::find(tags_.begin(), tags_.end(), tag) != tags_.end();
     }
 
+    // タイムスケールを取得する
+    float GetTimeScale() const { return timeScale; }
+
+    // タイムスケールをリセットする
+    void ResetTimeScale() { timeScale = 1.0f; }
+
+    // タイムスケールを設定する
+    void SetTimeScale(const float timeScale) { this->timeScale = timeScale; }
 protected:
     Scene* ownerScene_ = nullptr;   // 自分が属しているScene
 
@@ -484,7 +492,8 @@ private:
     // physx の simulate 途中に pxShape が付いた shapeComponent を削除するのを防ぐため
     std::vector<std::string> pendingDestroyComponentNames_;
 
-
+    // アクターごとのタイムスケール
+    float timeScale = 1.0f;
 protected:
     std::vector<std::string> tags_;
 };

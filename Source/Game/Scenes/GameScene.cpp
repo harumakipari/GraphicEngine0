@@ -120,12 +120,12 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
 void GameScene::Start()
 {
-    //auto audioActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("Audio");
-    //auto audioComp = audioActor->AddComponent<AudioSourceComponent>("audioSource");
-    //audioComp->SetSource(L"./Data/Sound/BGM/game.wav");
-    //audioComp->SetLoop(true);
-    //audioComp->Play();
-    //audioComp->SetVolume(0.2f);
+    auto audioActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("Audio");
+    auto audioComp = audioActor->AddComponent<AudioSourceComponent>("audioSource");
+    audioComp->SetSource(L"./Data/Sound/BGM/game_bgm.wav");
+    audioComp->SetLoop(true);
+    audioComp->Play();
+    audioComp->SetVolume(1.2f);
 #if 0
     cameraManager->ToggleCinematicCamera(this);
 

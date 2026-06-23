@@ -60,6 +60,49 @@ void CharacterMovementComponent::Tick(float deltaTime)
         }
     }
 
+    if (moveToTarget_)
+    {
+        auto targetShared = target.lock();
+
+        if (!targetShared)
+        {
+            moveToTarget_ = false;
+        }
+        else
+        {
+            DirectX::XMFLOAT3 pos = owner_.lock()->GetPosition();
+            DirectX::XMFLOAT3 targetPos = targetShared->GetPosition();
+
+            DirectX::XMFLOAT3 dir =
+            {
+                targetPos.x - pos.x,
+                0.0f,
+                targetPos.z - pos.z
+            };
+
+            float dist =
+                sqrtf(dir.x * dir.x +
+                    dir.z * dir.z);
+
+            if (dist <= stopDistance_)
+            {
+                moveToTarget_ = false;
+            }
+            else
+            {
+                dir.x /= dist;
+                dir.z /= dist;
+
+                float speed = (dist - stopDistance_) / std::max<float>(moveToTargetTimer_, 0.01f);
+
+                velocity_.x = dir.x * speed;
+                velocity_.z = dir.z * speed;
+            }
+
+            moveToTargetTimer_ -= deltaTime;
+        }
+    }
+
     // 重力加速度を適用
     if (!isGrounded_)
     {

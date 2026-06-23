@@ -327,7 +327,7 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
             leftHitBox = true;
         }
         break;
-    case AnimationNotifyState::Type::ComboWindow:
+    case AnimationNotifyState::Type::InputWindow:
         Logger::Log(U8("コンボ受付を開始しました"));
         break;
     case AnimationNotifyState::Type::Invincible:
@@ -357,7 +357,7 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         rightHitBox = false;   // 右の剣の当たり判定
         leftHitBox = false;    // 左の剣の当たり判定
         break;
-    case AnimationNotifyState::Type::ComboWindow:
+    case AnimationNotifyState::Type::InputWindow:
         Logger::Log(U8("コンボ受付を終了しました"));
         break;
     case AnimationNotifyState::Type::Invincible:

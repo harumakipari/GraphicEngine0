@@ -102,7 +102,6 @@ void SampleScene::SetUpActors()
     Transform greystoneTr(DirectX::XMFLOAT3{ -3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto greystone = this->GetActorManager()->CreateAndRegisterActorWithTransform<KnightActor>("greystone", greystoneTr);
 
-
 #if 0
     Transform testPlayerTr(DirectX::XMFLOAT3{ 3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto testPlayer = this->GetActorManager()->CreateAndRegisterActorWithTransform<TestPlayer>("testPlayer", testPlayerTr);

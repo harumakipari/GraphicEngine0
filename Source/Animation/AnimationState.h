@@ -9,7 +9,7 @@ struct AnimationNotifyState
     enum class Type :uint8_t
     {
         HitBox,         // 当たり判定有効
-        ComboWindow,    // コンボ受付
+        InputWindow,    // 入力受付
         Invincible,     // 無敵時間
         TransitionWindow,   // アニメーション遷移
         JustDodgeWindow, // ジャスト回避

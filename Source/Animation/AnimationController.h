@@ -148,6 +148,9 @@ public:
         return &assetIt->second;
     }
 
+    // ルートモーションを無視するかどうか
+    void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
+
 private:
     // ルートモーションをリセットする
     void ResetRootMotion(int animationClip);
@@ -197,7 +200,6 @@ private:
 
     // ステートの管理に使用するアニメーションのインデックス　別にわけないと
     size_t notifyAnimationClip = 0;
-
 
     // アニメーションをループするか
     bool isAnimationLoop = true;

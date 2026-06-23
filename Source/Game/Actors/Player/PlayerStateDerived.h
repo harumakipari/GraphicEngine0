@@ -108,6 +108,13 @@ private:
 // ラッシュステート
 class PlayerRushState : public PlayerStateBase
 {
+    enum class RushPhase :uint8_t
+    {
+        WaitInput,      // Y待ち
+        DashToTarget,   // 敵へ接近
+        Attack,         // ラッシュ攻撃
+        Finished,
+    };
 public:
     // コンストラクタ
     PlayerRushState(Player* player) :PlayerStateBase(player) {}
@@ -125,6 +132,8 @@ private:
     float elapsedTime = 0.0f;
     bool rushStarted = false;
     int queuedAttackCount = 0;
+    DirectX::XMFLOAT3 targetPos = { 0.0f,0.0f,0.0f };
+    RushPhase phase = RushPhase::WaitInput;
 };
 
 // ジャンプステートオブジェクト

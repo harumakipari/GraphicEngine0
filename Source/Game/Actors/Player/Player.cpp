@@ -93,25 +93,58 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Jump_Recovery_0", 26);
         controller->AddAnimation("Jump_Start_0", 27);
         controller->AddAnimation("Attack_Air", 28);
+        controller->AddAnimation("Combo_Attack_01_01", 29);
+        controller->AddAnimation("Combo_Attack_01_02", 30);
+        controller->AddAnimation("Combo_Attack_01_03", 31);
+        controller->AddAnimation("Combo_Attack_01_04", 32);
+        controller->AddAnimation("Combo_Attack_02_01", 33);
+        controller->AddAnimation("Combo_Attack_02_02", 34);
+        controller->AddAnimation("Combo_Attack_02_03", 35);
+        controller->AddAnimation("Combo_Attack_02_04", 36);
+        controller->AddAnimation("Combo_Attack_03_01", 37);
+        controller->AddAnimation("Combo_Attack_03_02", 38);
+        controller->AddAnimation("Combo_Attack_03_03", 39);
+        controller->AddAnimation("Combo_Attack_03_04", 40);
+        controller->AddAnimation("Combo_Attack_04_01", 41);
+        controller->AddAnimation("Combo_Attack_04_02", 42);
+        controller->AddAnimation("Combo_Attack_04_03", 43);
+        controller->AddAnimation("Combo_Attack_04_04", 44);
+        controller->AddAnimation("Combo_Attack_05_01", 45);
+        controller->AddAnimation("Combo_Attack_05_02", 46);
+        controller->AddAnimation("Combo_Attack_05_03", 47);
+        controller->AddAnimation("Combo_Attack_05_04", 48);
+        controller->AddAnimation("Dodge_Combat_F", 49);
+        controller->AddAnimation("Hit_Combat_B", 50);
+        controller->AddAnimation("Hit_Combat_Death", 51);
+        controller->AddAnimation("Hit_Combat_F", 52);
+        controller->AddAnimation("Hit_Combat_L", 53);
+        controller->AddAnimation("Hit_Combat_Large_B", 54);
+        controller->AddAnimation("Hit_Combat_Large_Death", 55);
+        controller->AddAnimation("Hit_Combat_Large_F", 56);
+        controller->AddAnimation("Hit_Combat_Large_L", 57);
+        controller->AddAnimation("Hit_Combat_Large_R", 58);
+        controller->AddAnimation("Hit_Combat_R", 59);
+        controller->AddAnimation("Run_Combat_Loop_F", 60);
+        controller->AddAnimation("Run_Fast_Combat_Loop_F", 61);
 
-        controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
+        controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.583f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);
-        controller->AddNotifyState("Primary_Attack_Fast_A", 0.12f, 0.583f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_A", 0.12f, 0.583f, AnimationNotifyState::Type::InputWindow);
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
-        controller->AddNotifyEvent("Primary_Attack_Fast_B", 0.315f, AnimationNotifyEvent::Type::PlaySE, "star");
+        controller->AddNotifyEvent("Primary_Attack_Fast_B", 0.315f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.265f, AnimationNotifyState::Type::HitBox);
-        controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.583f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.583f, AnimationNotifyState::Type::InputWindow);
         controller->AddNotifyState("Primary_Attack_Fast_B", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
-        controller->AddNotifyEvent("Primary_Attack_Fast_C", 0.315f, AnimationNotifyEvent::Type::PlaySE, "turning");
+        controller->AddNotifyEvent("Primary_Attack_Fast_C", 0.315f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.22f, AnimationNotifyState::Type::HitBox);
-        controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.583f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.583f, AnimationNotifyState::Type::InputWindow);
         controller->AddNotifyState("Primary_Attack_Fast_C", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
-        controller->AddNotifyEvent("Primary_Attack_Fast_D1_1", 0.315f, AnimationNotifyEvent::Type::PlaySE, "turning");
+        controller->AddNotifyEvent("Primary_Attack_Fast_D1_1", 0.315f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.414f, 0.548f, AnimationNotifyState::Type::HitBox);
-        controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.08f, 1.0f, AnimationNotifyState::Type::ComboWindow);
+        controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.08f, 1.0f, AnimationNotifyState::Type::InputWindow);
         controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.52f, 1.0f, AnimationNotifyState::Type::TransitionWindow);
 
         controller->AddCombo("Primary_Attack_Fast_A", "Primary_Attack_Fast_B");
@@ -121,6 +154,7 @@ void Player::Initialize(const Transform& transform)
         // ジャスト回避
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
+        controller->AddNotifyState("Ability_RMB_Bwd_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
 
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
@@ -418,7 +452,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         Logger::Log(U8("当たり判定を開始しました"));
         hitBox = true;
         break;
-    case AnimationNotifyState::Type::ComboWindow:
+    case AnimationNotifyState::Type::InputWindow:
         comboWindow = true;
         Logger::Log(U8("コンボ受付を開始しました"));
         break;
@@ -445,7 +479,7 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         Logger::Log(U8("当たり判定を終了しました"));
         hitBox = false;
         break;
-    case AnimationNotifyState::Type::ComboWindow:
+    case AnimationNotifyState::Type::InputWindow:
         comboWindow = false;
         Logger::Log(U8("コンボ受付を終了しました"));
         break;
@@ -646,7 +680,10 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
     // スローモーションにする
-    Time::SetSlow(0.2f, 1.0f);
+    //Time::SetSlow(0.2f, 1.0f);
+    enemy->SetTimeScale(0.2f);
+    this->SetTimeScale(0.2f);
+
     // rush時のtargetを保存する
     rushTarget = enemy;
 

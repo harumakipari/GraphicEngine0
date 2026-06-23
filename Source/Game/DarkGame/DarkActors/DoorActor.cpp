@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "DoorActor.h"
 
+#include "Engine/Audio/Audio.h"
+
 void DoorLargeActor::Initialize(const Transform& transform)
 {
     root = AddComponent<SceneComponent>("DoorRoot");
@@ -48,50 +50,40 @@ void DoorLargeActor::Initialize(const Transform& transform)
 
     // ヒンジ位置調整
     leftHinge->SetRelativeLocationDirect({ 0.0f,0,-2.0f });
-    leftHinge->SetRelativeEulerRotationDirect({ 0.0f,180.0f,0.0f });
+    leftHinge->SetRelativeEulerRotationDirect({ 0.0f,closedAngleLeft,0.0f });
     rightHinge->SetRelativeLocationDirect({ 0.0f,0,2.0f });
+    rightHinge->SetRelativeEulerRotationDirect({ 0.0f,closedAngleRight,0.0f });
 }
 
 void DoorLargeActor::Update(float deltaTime)
 {
-    float delta = openSpeed * deltaTime;
-
     switch (doorState)
     {
     case DoorState::Opening:
-
-        currentAngle += delta;
-
-        if (currentAngle >= 90)
-        {
-            delta -= (currentAngle - 90);
+        openAlpha += deltaTime / openTime;
+        openAlpha = std::clamp(openAlpha, 0.0f, 1.0f);
+        if (openAlpha >= 1.0f)
             doorState = DoorState::Open;
-        }
-
-        leftHinge->AddLocalRotation({ 0,-delta,0 });
-        rightHinge->AddLocalRotation({ 0, delta,0 });
-
         break;
-
-
     case DoorState::Closing:
-
-        currentAngle -= delta;
-
-        if (currentAngle <= 0)
-        {
-            delta -= (0 - currentAngle);
+        openAlpha -= deltaTime / closeTime;
+        openAlpha = std::clamp(openAlpha, 0.0f, 1.0f);
+        if (openAlpha <= 0.0f)
             doorState = DoorState::Closed;
-        }
-
-        leftHinge->AddLocalRotation({ 0, delta,0 });
-        rightHinge->AddLocalRotation({ 0,-delta,0 });
-
         break;
-
-    default:
+    case DoorState::Closed:
+        openAlpha = 0.0f;
+        break;
+    case DoorState::Open:
+        openAlpha = 1.0f;
         break;
     }
+
+    float leftAngle = std::lerp(closedAngleLeft, openedAngleLeft, openAlpha);
+    float rightAngle = std::lerp(closedAngleRight, openedAngleRight, openAlpha);
+
+    leftHinge->SetRelativeEulerRotationDirect({ 0,leftAngle,0 });
+    rightHinge->SetRelativeEulerRotationDirect({ 0,rightAngle,0 });
 }
 
 void DoorLargeActor::Interact()
@@ -99,16 +91,20 @@ void DoorLargeActor::Interact()
     if (doorState == DoorState::Closed || doorState == DoorState::Closing)
     {
         doorState = DoorState::Opening;
+        CoreAudio::PlayOneShot("./Data/Sound/SE/big_door_open.wav");
     }
     else if (doorState == DoorState::Open || doorState == DoorState::Opening)
     {
         doorState = DoorState::Closing;
+        CoreAudio::PlayOneShot("./Data/Sound/SE/big_door_close.wav");
     }
 }
 
 void DoorLargeActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    ImGui::DragFloat(U8("ドアを開ける速度"), &openTime, 0.1f);
+    ImGui::DragFloat(U8("ドアを閉める速度"), &closeTime, 0.1f);
     if (ImGui::Button(U8("ドア空ける")))
     {
         if (doorState == DoorState::Closed || doorState == DoorState::Closing)

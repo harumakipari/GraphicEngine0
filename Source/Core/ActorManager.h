@@ -78,7 +78,7 @@ public:
 
     // アクターを名前付きで作成・登録する（同名アクターが存在する場合は"_1","_2"とつけてユニークな名前にする） 二つ目の引数は初期化をautoでするかどうかを決定する
     template <class T, class... Args>
-    std::shared_ptr<T> CreateAndRegisterActorWithTransform(const std::string& actorName, const Transform& transform = { DirectX::XMFLOAT3 {0,0,0},DirectX::XMFLOAT4{1,1,1,0},DirectX::XMFLOAT3{1,1,1} },Args&&... args)
+    std::shared_ptr<T> CreateAndRegisterActorWithTransform(const std::string& actorName, const Transform& transform = { DirectX::XMFLOAT3 {0,0,0},DirectX::XMFLOAT4{1,1,1,0},DirectX::XMFLOAT3{1,1,1} }, Args&&... args)
     {
         // 同名の時にユニークな名前をつける
         // 同名があれば "_1", "_2", ... をつけてユニークな名前にする
@@ -201,15 +201,6 @@ public:
     {
         for (const std::shared_ptr<Actor>& actor : allActors_)
         {
-            //for (std::shared_ptr<SceneComponent>& component : actor->ownedSceneComponents_)
-            //{
-            //    component->OnUnregister();
-            //}
-            //for (std::shared_ptr<Component>& component : actor->ownedLogicComponents_)
-            //{
-            //    component->OnUnregister();
-            //}
-            //actor->Finalize();
             actor->DestroyActor();
         }
         allActors_.clear();
@@ -237,52 +228,35 @@ public:
             auto& actor = *it;
             if (!actor /*|| !actor->isActive*/) continue;
 
-            //char buf[256];
-            //sprintf_s(buf, "Update Loop: actor=%s, isValid=%d, isActive=%d\n", actor->GetName().c_str(), actor->isValid, actor->isActive);
-            //OutputDebugStringA(buf);
+            const float timeScale = actor->GetTimeScale();
 
-            //if (!actor->isValid)
+            float actorDeltaTime = deltaTime * timeScale;
+
             if (actor->IsPendingKill())
             {
-                //char buf[256];
-                //sprintf_s(buf, "actor=%s, isValid=%d, isActive=%d\n → Destroy() を呼ぶ！\n", actor->GetName().c_str(), actor->isValid, actor->isActive);
-                //OutputDebugStringA(buf);
-
-                //OutputDebugStringA(" → Destroy() を呼ぶ！\n");
                 actor->DestroyActor();
                 continue;
             }
 
             for (auto& component : actor->GetComponents())
             {
-                component->Tick(deltaTime);
+                component->Tick(actorDeltaTime);
             }
 
-            //for (auto& component : actor->ownedLogicComponents_)
-            //{
-            //    component->Tick(deltaTime);
-            //}
 
             if (actor->GetRootComponent())
             {
                 actor->GetRootComponent()->UpdateComponentToWorld();
             }
-            actor->Update(deltaTime);
 
-            //if (!actor->isValid)
-            //{
-            //    actor->Destroy();
-            //    continue;
-            //}
+            actor->Update(actorDeltaTime);
 
             actor->PostDestroyComponents();
         }
 
         // isValid == false のアクターだけを削除
-        allActors_.erase(
-            std::remove_if(allActors_.begin(), allActors_.end(),
-                [](const std::shared_ptr<Actor>& a) { return !a || !a->IsAlive(); }),
-            allActors_.end());
+        std::erase_if(allActors_,
+                      [](const std::shared_ptr<Actor>& a) { return !a || !a->IsAlive(); });
     }
 
     void DrawImGuiAllActors() const
@@ -314,47 +288,6 @@ public:
     }
 };
 
-class Renderer
-{
-private:
-    std::unique_ptr<ConstantBuffer<ViewConstants>> viewBuffer;
-
-public:
-    Renderer()
-    {
-        ID3D11Device* device = Graphics::GetDevice();
-        itemModel = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/Items/PickUpEnergyCore/pick_up_item.gltf", ModelTypes::ModelMode::InstancedStaticMesh);
-
-        viewBuffer = std::make_unique<ConstantBuffer<ViewConstants>>(device);
-    }
-
-    virtual ~Renderer() = default;
-
-    // View関連の定数バッファを更新する
-    void UpdateViewConstants(ID3D11DeviceContext* immediateContext, const ViewConstants& data) const
-    {
-        viewBuffer->data = data;
-        viewBuffer->Activate(immediateContext, 4);
-    }
-
-    void RenderParticle(ID3D11DeviceContext* immediateContext);
-
-    void RenderOpaque(ID3D11DeviceContext* immediateContext);
-
-    void RenderMask(ID3D11DeviceContext* immediateContext);
-
-    void RenderBlend(ID3D11DeviceContext* immediateContext);
-
-    void RenderInstanced(ID3D11DeviceContext* immediateContext);
-
-    std::vector<DirectX::XMFLOAT4X4> instanceDatas;
-
-private:
-    std::shared_ptr<InterleavedGltfModel> itemModel;
-    PipeLineStateDesc pipeLineState_ = {};
-public:
-    void CastShadowRender(ID3D11DeviceContext* immediateContext);
-};
 
 
 

@@ -1,8 +1,6 @@
 #pragma once
 #include "Game/DarkGame/DarkActors/InteractableActor.h"
 
-
-
 class DoorLargeActor : public InteractableActor
 {
 public:
@@ -23,10 +21,13 @@ private:
     std::shared_ptr<SkeletalMeshComponent> leftDoorMesh;
     std::shared_ptr<SkeletalMeshComponent> rightDoorMesh;
 
-    float currentAngle = 0.0f;
-    float openSpeed = 60.0f;    // “x/•b
-    float openedAngle = 90.0f;  // ŠJ‚¢‚½Šp“x
-    float closedAngle = 0.0f;   // •Â‚¶‚½Šp“x
+    float openAlpha = 0.0f;  // 0=•Â 1=ŠJ
+    float openTime = 1.5f; // 1•b‚ÅƒhƒA‚ªŠJ‚­
+    float closeTime = 1.8f; // 1•b‚ÅƒhƒA‚ª•Â‚¶‚é
+    float openedAngleLeft = -90.0f;  // ŠJ‚¢‚½Šp“x
+    float openedAngleRight = -90.0f;  // ŠJ‚¢‚½Šp“x
+    float closedAngleLeft = -180.0f;   // •Â‚¶‚½Šp“x
+    float closedAngleRight = 0.0f;   // •Â‚¶‚½Šp“x
 
     enum class DoorState :uint8_t
     {

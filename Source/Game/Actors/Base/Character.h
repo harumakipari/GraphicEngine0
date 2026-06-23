@@ -47,11 +47,12 @@ public:
     }
 
     // Žg—p
-    void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true, float blendTime = 0.3f) const
+    void PlayBodyAnimation(const std::string& name, const bool loop = true, bool blend = true, float blendTime = 0.3f, const bool ignoreRootMotion = false) const
     {
-        if (auto controller = GetAnimationController(animationBodyControllerName))
+        if (const auto controller = GetAnimationController(animationBodyControllerName))
         {
             controller->ResetRootMotion(name, loop, blend, blendTime);
+            controller->SetIgnoreRootMotion(ignoreRootMotion);
         }
     }
 
