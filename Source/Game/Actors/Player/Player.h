@@ -44,6 +44,8 @@ public:
 
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event)override;
 
+    void OnAnimationChanged() override;
+
     // アニメーションステート関連のフラグをリセットする
     void ResetAnimationStateFlag();
 

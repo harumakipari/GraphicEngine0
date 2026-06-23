@@ -170,6 +170,9 @@ public:
 
     virtual void OnAnimationNotifyEvent(const AnimationNotifyEvent& event) {}
 
+    // アニメーションが変わった時にステートなどを変更する関数
+    virtual void OnAnimationChanged(){}
+
 public:
     //高さ
     float height = 0.0f;    //m単位

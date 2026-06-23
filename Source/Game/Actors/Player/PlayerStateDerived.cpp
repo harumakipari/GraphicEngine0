@@ -130,14 +130,6 @@ void PlayerAttackState::Execute(float deltaTime)
 {
     attackTimer += deltaTime;
 
-#if 0
-    if (player->hitBoxEnabled)
-    {
-        player->DoAttackHit();
-    }
-
-#endif // 0
-
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
         if (player->comboWindow)
@@ -239,13 +231,19 @@ void PlayerDodgeState::Execute(float deltaTime)
         }
         else
         {
-            player->GetStateMachine()->ChangeState("Idle");
             if (auto target = player->rushTarget.lock())
             {// タイムスケールをリセットする
                 target->ResetTimeScale();
             }
+            player->GetStateMachine()->ChangeState("Idle");
         }
     }
+#if 0
+    if (!player->GetBodyAnimationController()->IsPlayAnimation())
+    {
+        player->GetStateMachine()->ChangeState("Idle");
+    }
+#endif // 0
 }
 
 void PlayerDodgeState::Exit()
@@ -258,7 +256,6 @@ void PlayerDodgeState::Exit()
 // ラッシュ
 void PlayerRushState::Enter()
 {
-    // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
 
     phase = RushPhase::DashToTarget;
@@ -269,13 +266,20 @@ void PlayerRushState::Enter()
             0.05f, 2.0f);
     }
 
+    rushComboAdvanced = false;
+
     elapsedTime = 0.0f;
-    rushStarted = false;
-    queuedAttackCount = 5;
+    queuedAttackCount = 1;
 }
 
 void PlayerRushState::Execute(float deltaTime)
 {
+    if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+    {
+        queuedAttackCount++;
+        queuedAttackCount = std::min<int>(queuedAttackCount, 8);
+    }
+
     switch (phase)
     {
     case RushPhase::DashToTarget:
@@ -288,9 +292,35 @@ void PlayerRushState::Execute(float deltaTime)
         }
         break;
     case RushPhase::Attack:
+        player->invincibleWindow = true;
+        if (!player->transitionWindow)
+        {
+            rushComboAdvanced = false;
+        }
+        if (player->transitionWindow && !rushComboAdvanced)
+        {
+            rushComboAdvanced = true;
+            auto controller = player->GetBodyAnimationController();
+
+            const auto* asset = controller->GetAnimationAsset(player->currentAttackAnimation);
+
+            if (asset && !asset->nextCombo.empty() && queuedAttackCount > 0)
+            {
+                queuedAttackCount--;
+
+                player->currentAttackAnimation = asset->nextCombo;
+                //player->ResetAnimationStateFlag();
+                player->PlayBodyAnimation(player->currentAttackAnimation, false);
+            }
+
+            if (asset == nullptr || asset->nextCombo.empty())
+            {
+                phase = RushPhase::Finished;
+            }
+        }
         if (!player->GetBodyAnimationController()->IsPlayAnimation())
         {
-            player->GetStateMachine()->ChangeState("Idle");
+            phase = RushPhase::Finished;
         }
         break;
     case RushPhase::Finished:

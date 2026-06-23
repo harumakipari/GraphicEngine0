@@ -3,6 +3,7 @@
 #include "GruxEnemy.h"
 
 #include "Components/Render/PointLightComponent.h"
+#include "Engine/Audio/Audio.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
@@ -52,7 +53,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Death_A_0", 18);
     controller->AddAnimation("Death_B_0", 19);
 
-    controller->AddNotifyEvent("PrimaryAttack_LA", 0.583f, AnimationNotifyEvent::Type::PlaySE, "start");
+    controller->AddNotifyEvent("PrimaryAttack_LA", 0.187f, AnimationNotifyEvent::Type::PlaySE, "enemy_attack");
     controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
 
     controller->AddNotifyState("PrimaryAttack_LA", 0.03f, 0.3f, AnimationNotifyState::Type::DangerWindow);
@@ -380,8 +381,17 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
-
-
+    switch (event.type)
+    {
+    case AnimationNotifyEvent::Type::PlaySE:
+    {
+        std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
+        CoreAudio::PlayOneShot(audioPath, 1.0f);
+    }
+    break;
+    case AnimationNotifyEvent::Type::SpawnEffect:
+        break;
+    }
 }
 
 // çUåÇäJénéûÇ…énÇﬂÇÈèàóù

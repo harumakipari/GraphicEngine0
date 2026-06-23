@@ -182,10 +182,11 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
     this->isAnimationFinished = false;
     currentAnimationName = animationName;
     InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
-    //previousPosition = { node.globalTransform._41, node.globalTransform._42, node.globalTransform._43 }; // グローバル空間
     resetRootMotionDelta = true;
     zeroTranslation = node.translation;
     isAnimationLoop = loop;
+    // アニメーションが変わった時にステートなどを変更する
+    owner->OnAnimationChanged();
 
     if (isBlend)
     {

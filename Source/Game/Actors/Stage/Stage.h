@@ -21,6 +21,18 @@ public:
         staticMeshComponent->SetRelativeScaleDirect(DirectX::XMFLOAT3(1.0f, 1.0f, 1.0f));
         staticMeshComponent->SetRelativeLocationDirect(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f));
 
+        // 床の当たり判定用のボックスコリジョンコンポーネント
+        std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<class BoxComponent>("boxComponent", "staticMeshComponent");
+        boxComponent->SetHalfBoxExtent(DirectX::XMFLOAT3(80.0f, 0.2f, 80.0f));
+        boxComponent->SetRelativeLocationDirect({ 0.0f,-0.2f,0.0f });
+        //boxComponent->SetCollisionOffsetY(-4.5f);
+        boxComponent->SetStatic(true);
+        boxComponent->SetLayer(CollisionLayer::Floor);
+        boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
+        boxComponent->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Block);
+        boxComponent->Initialize();
+
+
         std::shared_ptr<TriangleMeshCollisionComponent> triangleMeshComponent = this->AddComponent<class TriangleMeshCollisionComponent>("triangleMeshComponent", "staticMeshComponent");
         triangleMeshComponent->CreateConvexMeshFromModel(staticMeshComponent.get());
     }

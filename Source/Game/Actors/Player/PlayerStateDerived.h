@@ -128,9 +128,8 @@ public:
     const char* GetName() const override { return "Rush"; }
 private:
     float elapsedTime = 0.0f;
-    bool rushStarted = false;
+    bool rushComboAdvanced = false;
     int queuedAttackCount = 0;
-    DirectX::XMFLOAT3 targetPos = { 0.0f,0.0f,0.0f };
     RushPhase phase = RushPhase::DashToTarget;
 };
 

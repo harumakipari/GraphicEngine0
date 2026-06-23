@@ -127,22 +127,22 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Run_Combat_Loop_F", 60);
         controller->AddAnimation("Run_Fast_Combat_Loop_F", 61);
 
-        controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.583f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
+        controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.17f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.12f, 0.583f, AnimationNotifyState::Type::InputWindow);
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
-        controller->AddNotifyEvent("Primary_Attack_Fast_B", 0.315f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
+        controller->AddNotifyEvent("Primary_Attack_Fast_B", 0.138f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.265f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.583f, AnimationNotifyState::Type::InputWindow);
         controller->AddNotifyState("Primary_Attack_Fast_B", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
-        controller->AddNotifyEvent("Primary_Attack_Fast_C", 0.315f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
+        controller->AddNotifyEvent("Primary_Attack_Fast_C", 0.15f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.22f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.583f, AnimationNotifyState::Type::InputWindow);
         controller->AddNotifyState("Primary_Attack_Fast_C", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
-        controller->AddNotifyEvent("Primary_Attack_Fast_D1_1", 0.315f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
+        controller->AddNotifyEvent("Primary_Attack_Fast_D1_1", 0.4f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.414f, 0.548f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.08f, 1.0f, AnimationNotifyState::Type::InputWindow);
         controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.52f, 1.0f, AnimationNotifyState::Type::TransitionWindow);
@@ -510,16 +510,25 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     {
     case AnimationNotifyEvent::Type::PlaySE:
     {
-        Logger::Log(U8("SEがなる！"));
-#if 1
         std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
         CoreAudio::PlayOneShot(audioPath, 1.0f);
-#endif // 0
     }
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:
         break;
     }
+}
+
+void Player::OnAnimationChanged()
+{
+    transitionWindow = false;  // ステート遷移してもいいかどうか
+    comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
+    comboWindow = false;   // コンボ受付をするかどうか
+    hitBox = false;     // 当たり判定
+    justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
+    invincibleWindow = false;   // 無敵状態かどうか
+    justDodgeSuccess = false; // ジャスト回避が成功したかどうか
+    Logger::Log(U8("playerのAnimationが切り替わった"));
 }
 
 // アニメーションステート関連のフラグをリセットする

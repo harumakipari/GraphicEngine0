@@ -86,7 +86,7 @@ private:
 
     float openAlpha = 0.0f;  // 0=閉 1=開
     float openTime = 1.5f; // 1秒でドアが開く
-    float closeTime = 1.8f; // 1秒でドアが閉じる
+    float closeTime = 1.2f; // 1秒でドアが閉じる
     float openedAngle = 90.0f;  // 開いた角度
     float closedAngle = 180.0f;   // 閉じた角度
 
