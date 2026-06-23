@@ -55,6 +55,8 @@ private:
     std::unordered_set<Actor*> hitActors;
 
     bool isDeathPerform = false;
+
+    float pitchBaseValue = 0.45f;
 };
 
 

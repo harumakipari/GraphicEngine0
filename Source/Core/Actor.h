@@ -398,6 +398,7 @@ public:
                 }
             }
 
+            ImGui::DragFloat("TimeScale", &timeScale, 0.05f);
 
             DrawImGuiDetails();
 

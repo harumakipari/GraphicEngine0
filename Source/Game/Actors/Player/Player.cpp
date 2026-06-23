@@ -155,6 +155,10 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
+        controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
+        controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
+
+
 
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
@@ -316,6 +320,7 @@ void Player::Initialize(const Transform& transform)
     // 走り用のSEのコンポーネントを追加
     runAudioComp = AddComponent<AudioSourceComponent>("runAudioComponent", parentName);
     runAudioComp->SetSource(L"./Data/Sound/SE/run_heel.wav");
+    //runAudioComp->SetSource(L"./Data/Sound/SE/run.wav");
     runAudioComp->SetVolume(0.5f);
     runAudioComp->SetLoop(true);
 }

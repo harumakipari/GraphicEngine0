@@ -298,6 +298,7 @@ void GruxEnemy::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
     Character::DrawImGuiDetails();
+    ImGui::DragFloat("pitchBaseValue", &pitchBaseValue, 0.05f);
     if (ImGui::Button("Attack"))
     {
         stateMachine_->ChangeState("EnemyAttackState");
@@ -386,7 +387,9 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     case AnimationNotifyEvent::Type::PlaySE:
     {
         std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
-        CoreAudio::PlayOneShot(audioPath, 1.0f);
+        auto audio = CoreAudio::PlayOneShot(audioPath, 1.0f);
+        float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
+        audio->SetPitch(pitch);
     }
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:

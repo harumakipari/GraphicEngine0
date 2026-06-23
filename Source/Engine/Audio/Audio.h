@@ -131,9 +131,9 @@ public:
 	 * @param filePath 音声ファイルパス。
 	 * @param volume 再生音量（0-1 目安）。
 	 */
-	static void PlayOneShot(const wchar_t* filePath, float volume = 1.0f);
+	static std::shared_ptr<CoreStandaloneAudioSource> PlayOneShot(const wchar_t* filePath, float volume = 1.0f);
 
-	static void PlayOneShot(const std::string& filePath,float volume=1.0f);
+	static std::shared_ptr<CoreStandaloneAudioSource> PlayOneShot(const std::string& filePath,float volume=1.0f);
 
 	/**
 	 * @brief フレーム更新。
@@ -209,6 +209,10 @@ public:
 	void SetVolume(float volume);
 	/** @brief 現在の音量を取得します。*/
 	float GetVolume();
+	// ピッチを設定する
+	void SetPitch(float pitch);
+	// ピッチを取得する
+	float GetPitch()const;
 
 	/** @brief 再生中かを返します。*/
 	bool IsPlaying();
@@ -231,4 +235,6 @@ private:
 	static inline float bgmVolume = 1.0f;
 	/** @brief SE 音量。*/
 	static inline float seVolume = 1.0f;
+
+	static inline float pitch = 1.0f;
 };

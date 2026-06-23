@@ -188,20 +188,21 @@ std::shared_ptr<CoreAudio::CoreAudioBuffer> CoreAudio::CoreAudioBuffer::GetResou
 	}
 }
 
-void CoreAudio::PlayOneShot(const wchar_t* filePath, float volume)
+std::shared_ptr<CoreStandaloneAudioSource> CoreAudio::PlayOneShot(const wchar_t* filePath, float volume)
 {
-	if (isMutedBySystem)	// ミュートだったら
-		return;
 	std::shared_ptr<CoreStandaloneAudioSource> source = std::make_shared<CoreStandaloneAudioSource>(filePath);
 	source->SetVolume(volume);
+	if (isMutedBySystem)	// ミュートだったら
+		return source;
 	source->Play();
 	audioSources.emplace_back(source);
+	return source;
 }
 
-void CoreAudio::PlayOneShot(const std::string& filePath, float volume)
+std::shared_ptr<CoreStandaloneAudioSource> CoreAudio::PlayOneShot(const std::string& filePath, float volume)
 {
 	std::filesystem::path path(filePath);
-	PlayOneShot(path.c_str(), volume);
+	return PlayOneShot(path.c_str(), volume);
 }
 
 void CoreAudio::Update(float deltaTime)
@@ -288,6 +289,22 @@ float CoreStandaloneAudioSource::GetVolume()
 	float volume;
 	sourceVoice->GetVolume(&volume);
 	return volume;
+}
+
+// ピッチを設定する
+void CoreStandaloneAudioSource::SetPitch(float pitch)
+{
+	this->pitch = pitch;
+
+	if (sourceVoice)
+	{
+		sourceVoice->SetFrequencyRatio(pitch);
+	}
+}
+// ピッチを取得する
+float CoreStandaloneAudioSource::GetPitch() const
+{
+	return pitch;
 }
 
 bool CoreStandaloneAudioSource::IsPlaying()
