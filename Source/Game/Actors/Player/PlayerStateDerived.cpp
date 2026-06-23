@@ -204,39 +204,58 @@ void PlayerDodgeState::Enter()
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
 
+    // 入力方向を見る
+
     DirectX::XMFLOAT3 forward = player->GetForward();
     //float duration = player->GetBodyAnimationController()->GetAnimationLength("Ability_RMB_Bwd_0");
     // 一定時間だけ強制移動する速度を設定する
     player->characterMovementComponent->AddForcedMove({ -forward.x,0.0f,-forward.z }, player->dodgeSpeed, player->dodgeDuration);
 
     rushRequested = false;
+    judgeSuccess = false;
 }
 
 void PlayerDodgeState::Execute(float deltaTime)
 {
     if (player->justDodgeSuccess)
     {
+        judgeSuccess = true;
+    }
+    if (judgeSuccess)
+    {
+        player->rushInputTimer -= deltaTime;
+
         if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
         {
             rushRequested = true;
         }
-    }
 
-    if (player->transitionWindow)
-    {
-        if (rushRequested)
+        //if (player->rushInputTimer <= 0.0f)
+        if (player->transitionWindow)
         {
-            Logger::Log(U8("ラッシュへ"));
-            player->GetStateMachine()->ChangeState("Rush");
-        }
-        else
-        {
-            if (auto target = player->rushTarget.lock())
-            {// タイムスケールをリセットする
-                target->ResetTimeScale();
+            if (rushRequested)
+            {
+                Logger::Log(U8("ラッシュへ"));
+                player->GetStateMachine()->ChangeState("Rush");
             }
-            player->GetStateMachine()->ChangeState("Idle");
+            else
+            {
+                if (auto target = player->rushTarget.lock())
+                {// タイムスケールをリセットする
+                    target->ResetTimeScale();
+                }
+                player->GetStateMachine()->ChangeState("Idle");
+            }
         }
+
+    }
+    else if (player->transitionWindow)
+    {
+        if (auto target = player->rushTarget.lock())
+        {// タイムスケールをリセットする
+            target->ResetTimeScale();
+        }
+        player->GetStateMachine()->ChangeState("Idle");
     }
 #if 0
     if (!player->GetBodyAnimationController()->IsPlayAnimation())
@@ -270,6 +289,8 @@ void PlayerRushState::Enter()
 
     elapsedTime = 0.0f;
     queuedAttackCount = 1;
+    player->invincible = true;  // ラッシュ攻撃中は無敵状態にする
+
 }
 
 void PlayerRushState::Execute(float deltaTime)
@@ -292,7 +313,6 @@ void PlayerRushState::Execute(float deltaTime)
         }
         break;
     case RushPhase::Attack:
-        player->invincibleWindow = true;
         if (!player->transitionWindow)
         {
             rushComboAdvanced = false;
@@ -341,6 +361,7 @@ void PlayerRushState::Exit()
         target->ResetTimeScale();
     }
     player->ResetTimeScale();
+    player->invincible = false;  // ラッシュ攻撃中は無敵状態解除
 }
 
 

@@ -102,6 +102,7 @@ public:
 
 private:
     bool rushRequested = false;
+    bool judgeSuccess = false;
 };
 
 // ラッシュステート

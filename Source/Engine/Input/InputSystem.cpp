@@ -168,7 +168,6 @@ void InputSystem::Initialize()
     directionKeys[static_cast<size_t>(Side::Right)][static_cast<size_t>(Direction::Down)] = std::make_unique<Keyboard>(VK_DOWN);
     directionKeys[static_cast<size_t>(Side::Right)][static_cast<size_t>(Direction::Right)] = std::make_unique<Keyboard>(VK_RIGHT);
 
-
     inputKeys.clear();
 
     inputKeys["MouseRight"].emplace_back(std::make_unique<Mouse>(VK_RBUTTON));
@@ -230,14 +229,17 @@ void InputSystem::Initialize()
     inputKeys["ok"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
     inputKeys["ok"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));
 
-    inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_THUMB));    // 右スティック押し込み
+    inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_LEFT_SHOULDER));    // 左
+    //inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_THUMB));    // 右スティック押し込み
 
     inputKeys["Attack"].emplace_back(std::make_unique<Keyboard>('Z'));
-    inputKeys["Attack"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_SHOULDER));     // 右
+    inputKeys["Attack"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_Y));     // Yボタン
 
+    inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_SHOULDER));     // RB
+    inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::RightTrigger));   // RT
     inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_RETURN)); // Enterキー
     inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_SHIFT)); // Shiftキー
-    inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));     // Bボタン
+    //inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));     // Bボタン
 
     inputKeys["Jump"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_X));     // Bボタン
     inputKeys["Jump"].emplace_back(std::make_unique<Keyboard>('X'));     // 右

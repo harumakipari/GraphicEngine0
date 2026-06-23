@@ -58,7 +58,7 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     controller->AddNotifyState("PrimaryAttack_LA", 0.03f, 0.3f, AnimationNotifyState::Type::DangerWindow);
     controller->AddNotifyState("PrimaryAttack_LA", 0.01f, 0.08f, AnimationNotifyState::Type::AnimationSpeed, "", 0.2f);
-    controller->AddNotifyState("PrimaryAttack_LA", 0.08f, 0.12f, AnimationNotifyState::Type::AnimationSpeed, "", 0.1f);
+    controller->AddNotifyState("PrimaryAttack_LA", 0.08f, 0.13f, AnimationNotifyState::Type::AnimationSpeed, "", 0.05f);
 
 
     // ステートマシンを作成
@@ -134,6 +134,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     leftWeaponCollisionComp->Initialize();
     leftWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
         {
+            OnWeaponHit(self, other);
+            return;
             //Logger::Log("leftWeaponCollisionComp zero");
             if (!other)
             {
@@ -201,8 +203,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightWeaponCollisionComp->Initialize();
     rightWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
         {
-            //Logger::Log("rightWeaponCollisionComp zero");
-
+            OnWeaponHit(self, other);
+            return;
             if (!other)
             {
                 Logger::Warning("other is nullptr");
@@ -457,6 +459,53 @@ float GruxEnemy::GetDistanceToPlayer()
     float dz = p.z - b.z;
 
     return sqrtf(dx * dx + dz * dz);
+}
+
+// 武器ヒット時の処理
+void GruxEnemy::OnWeaponHit(CollisionComponent* self, CollisionComponent* other)
+{
+    if (!other)
+    {
+        Logger::Warning("other is nullptr");
+        return;
+    }
+
+    uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
+
+    if (!(other->GetCollisionLayer() & mask))
+        return;
+
+    Actor* actor = other->GetOwner();
+
+    if (!actor)
+    {
+        Logger::Warning("actor is nullptr");
+        return;
+    }
+
+    Player* player = dynamic_cast<Player*>(actor);
+
+    if (!player)
+        return;
+
+    if (isDangerWindow && player->GetJustDodgeWindow())
+    {
+        if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
+        {
+            player->StartJustDodgeSuccess(enemy);
+            Logger::Log(U8("ジャスト回避成功！"));
+        }
+    }
+
+    if (!rightHitBox && !leftHitBox)
+        return;
+
+    if (hitActors.contains(actor))
+        return;
+
+    player->TakeDamage(10);
+
+    hitActors.insert(actor);
 }
 
 void KnightActor::Initialize(const Transform& transform)

@@ -33,6 +33,9 @@ private:
 
     // プレイヤーとの距離を取得する関数
     float GetDistanceToPlayer();
+
+    // 武器ヒット時の処理
+    void OnWeaponHit(CollisionComponent* self, CollisionComponent* other);
 private:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;

@@ -98,7 +98,10 @@ public:
     bool transitionWindow = false;  // ステート遷移してもいいかどうか
     bool justDodgeWindow = false;  // ジャスト回避受付時間
     bool justDodgeSuccess = false; // ジャスト回避成功フラグ
-    bool invincibleWindow = false; // 無敵状態かどうか
+    float rushInputTimer = 0.0f; // ジャスト回避時にラッシュを受け付ける時間(この時間の間スローになる)
+
+    bool invincibleWindow = false; // アニメーションによる無敵状態かどうか
+    bool invincible = false; // 無敵状態かどうか
 
     float dodgeSpeed = 3.0f; // 回避する時のスピード
     float dodgeDuration = 0.5f; // 回避するときの時間

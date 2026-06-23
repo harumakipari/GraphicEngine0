@@ -631,6 +631,11 @@ void Player::TakeDamage(int damage)
 #if 1
     if (invincibleWindow)
     {// 無敵状態ならダメージを受けない
+        Logger::Log(U8("animationによる無敵状態ならダメージを受けない"));
+        return;
+    }
+    if (invincible)
+    {// 無敵状態ならダメージを受けない
         Logger::Log(U8("無敵状態ならダメージを受けない"));
         return;
     }
@@ -703,6 +708,8 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     //Time::SetSlow(0.2f, 1.0f);
     enemy->SetTimeScale(0.2f);
     this->SetTimeScale(0.2f);
+
+    rushInputTimer = 0.5f;
 
     // rush時のtargetを保存する
     rushTarget = enemy;
