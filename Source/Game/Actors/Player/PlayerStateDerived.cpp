@@ -200,39 +200,42 @@ void PlayerDodgeState::Enter()
 {
     player->ResetAnimationStateFlag();
     owner->PlayBodyAnimation("Ability_RMB_Bwd_0", false);
-    dodgeTimer = 0.0f;
 
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
-
 
     DirectX::XMFLOAT3 forward = player->GetForward();
     //float duration = player->GetBodyAnimationController()->GetAnimationLength("Ability_RMB_Bwd_0");
     // 一定時間だけ強制移動する速度を設定する
     player->characterMovementComponent->AddForcedMove({ -forward.x,0.0f,-forward.z }, player->dodgeSpeed, player->dodgeDuration);
+
+    rushRequested = false;
 }
 
 void PlayerDodgeState::Execute(float deltaTime)
 {
     if (player->justDodgeSuccess)
     {
-        Logger::Log(U8("ラッシュへ"));
-        player->GetStateMachine()->ChangeState("Rush");
+        if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+        {
+            rushRequested = true;
+        }
     }
 
-    dodgeTimer += deltaTime;
-
-    // 終了
-    if (dodgeTimer > 0.6f)
+    if (player->transitionWindow)
     {
-        auto dir = player->inputComponent->GetMoveInput();
-        if (MathHelper::Length(dir) > 0.01f)
+        if (rushRequested)
         {
-            player->GetStateMachine()->ChangeState("Running");
+            Logger::Log(U8("ラッシュへ"));
+            player->GetStateMachine()->ChangeState("Rush");
         }
         else
         {
             player->GetStateMachine()->ChangeState("Idle");
+            if (auto target = player->rushTarget.lock())
+            {// タイムスケールをリセットする
+                target->ResetTimeScale();
+            }
         }
     }
 }
@@ -240,9 +243,9 @@ void PlayerDodgeState::Execute(float deltaTime)
 void PlayerDodgeState::Exit()
 {
     player->ResetAnimationStateFlag();
+    player->ResetTimeScale();
     player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
 }
-
 
 // ラッシュ
 void PlayerRushState::Enter()
@@ -250,59 +253,37 @@ void PlayerRushState::Enter()
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
 
-    phase = RushPhase::WaitInput;
-
-    elapsedTime = 0.0f;
-
-    rushStarted = false;
-    queuedAttackCount = 0;
+    phase = RushPhase::DashToTarget;
 
     if (auto target = player->rushTarget.lock())
-    {
-        targetPos = target->GetPosition();
+    {// 移動する
+        player->characterMovementComponent->MoveToActor(target,
+            0.05f, 2.0f);
     }
-    else
-    {
-        targetPos = player->GetPosition();
-    }
+
+    elapsedTime = 0.0f;
+    rushStarted = false;
+    queuedAttackCount = 5;
 }
 
 void PlayerRushState::Execute(float deltaTime)
 {
-    // ここでAttackボタンが押されたら、回避アニメーションが終わった後、enemyまで
-    // ダッシュしてラッシュ攻撃。ボタンが押された回数に応じて、最大5回コンボ攻撃をする。
-    if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
-    {
-        queuedAttackCount++;
-        queuedAttackCount = std::min<int>(queuedAttackCount, 5);
-    }
-
-
     switch (phase)
     {
-    case RushPhase::WaitInput:
-        if (player->transitionWindow)
-        {
-            if (queuedAttackCount > 0)
-            {
-                phase = RushPhase::DashToTarget;
-                player->characterMovementComponent->MoveToActor(player->rushTarget.lock(), 0.05f, 2.0f);
-            }
-            else
-            {
-                phase = RushPhase::Finished;
-            }
-            player->SetTimeScale(1.0f);
-        }
-        break;
     case RushPhase::DashToTarget:
         if (player->characterMovementComponent->IsMoveToActorFinished())
         {// targetまで付いたら、
-            player->PlayBodyAnimation("Primary_Attack_Fast_A", false);
-            phase = RushPhase::Finished;
+            Logger::Log(U8("Rush中のtargetまで移動完了"));
+            player->currentAttackAnimation = "Primary_Attack_Fast_A";
+            player->PlayBodyAnimation(player->currentAttackAnimation, false);
+            phase = RushPhase::Attack;
         }
         break;
     case RushPhase::Attack:
+        if (!player->GetBodyAnimationController()->IsPlayAnimation())
+        {
+            player->GetStateMachine()->ChangeState("Idle");
+        }
         break;
     case RushPhase::Finished:
         if (!player->GetBodyAnimationController()->IsPlayAnimation())
@@ -311,35 +292,6 @@ void PlayerRushState::Execute(float deltaTime)
         }
         break;
     }
-
-#if 0
-    if (!player->GetBodyAnimationController()->IsPlayAnimation())
-    {
-        queuedAttackCount--;
-        if (queuedAttackCount > 0)
-        {
-            player->PlayBodyAnimation("Attack_Air", false, true, 0.05f);
-        }
-        else
-        {// こっちは回避のステートが終わったら待機へ行く
-            player->GetStateMachine()->ChangeState("Idle");
-        }
-    }
-
-    if (!rushStarted)
-    {
-        if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
-        {
-            rushStarted = true;
-            queuedAttackCount = 1;
-            player->SetBodyAnimationRate(5.0f);
-            player->PlayBodyAnimation("Attack_Air", false, true, 0.05f);
-        }
-        return;
-    }
-
-
-#endif // 0
 }
 
 void PlayerRushState::Exit()

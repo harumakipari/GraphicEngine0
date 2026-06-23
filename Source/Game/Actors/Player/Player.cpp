@@ -225,7 +225,7 @@ void Player::Initialize(const Transform& transform)
 
         // 移動用コンポーネントを追加
         characterMovementComponent = this->AddComponent<CharacterMovementComponent>("movementComponent", parentName);
-        characterMovementComponent->SetUseGravity(false);
+        characterMovementComponent->SetUseGravity(true);
 
         // 回転用コンポーネントを追加
         rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);

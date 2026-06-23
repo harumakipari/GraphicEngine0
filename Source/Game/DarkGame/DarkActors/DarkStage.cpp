@@ -22,7 +22,7 @@ void DarkStage::Initialize(const Transform& transform)
     {
         PROFILE_SCOPE("Create StageCollision");
         auto stageCollisionModel = this->AddComponent<StaticMeshComponent>("collisionModel", parentName);
-        stageCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_Collision1.glb", true, true);
+        stageCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_CollisionModel_0622.glb", true, false);
         //stageCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_Collision.glb", true, true);
         stageCollisionModel->SetIsCastShadow(false);
         stageCollisionModel->SetIsVisible(false);
@@ -229,6 +229,13 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 Transform candelabraTr{ pos,{0,0,0,1},point.worldScale };
                 auto standingBrazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageStandingBrazierActor>("StandingBrazier", candelabraTr);
                 standingBrazier->SetModel(stageStandingBrazierAsset);
+            }
+            else if (point.name.rfind("Spawn_JailDoor", 0) == 0)
+            {
+                DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
+                Transform doorJailTr{ pos,point.worldRotation,point.worldScale };
+                auto doorJailActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DoorJailActor>("DoorJailActor", doorJailTr);
+
             }
             else if (point.name.rfind("Spawn_Barrel", 0) == 0)
             {

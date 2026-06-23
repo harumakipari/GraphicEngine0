@@ -101,8 +101,7 @@ public:
     const char* GetName() const override { return "Dodge"; }
 
 private:
-    float dodgeTimer = 0.0f;
-
+    bool rushRequested = false;
 };
 
 // ラッシュステート
@@ -110,7 +109,6 @@ class PlayerRushState : public PlayerStateBase
 {
     enum class RushPhase :uint8_t
     {
-        WaitInput,      // Y待ち
         DashToTarget,   // 敵へ接近
         Attack,         // ラッシュ攻撃
         Finished,
@@ -133,7 +131,7 @@ private:
     bool rushStarted = false;
     int queuedAttackCount = 0;
     DirectX::XMFLOAT3 targetPos = { 0.0f,0.0f,0.0f };
-    RushPhase phase = RushPhase::WaitInput;
+    RushPhase phase = RushPhase::DashToTarget;
 };
 
 // ジャンプステートオブジェクト

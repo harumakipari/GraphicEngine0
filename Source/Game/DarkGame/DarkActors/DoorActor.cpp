@@ -150,30 +150,31 @@ void DoorSmallActor::Initialize(const Transform& transform)
 
 void DoorSmallActor::Update(float deltaTime)
 {
-    float delta = openSpeed * deltaTime;
     switch (doorState)
     {
     case DoorState::Opening:
-        openAngle += delta;
-        if (openAngle >= 90)
-        {
-            delta -= (openAngle - 90);
+        openAlpha += deltaTime / openTime;
+        openAlpha = std::clamp(openAlpha, 0.0f, 1.0f);
+        if (openAlpha >= 1.0f)
             doorState = DoorState::Open;
-        }
-        hinge->AddLocalRotation({ 0,-delta,0 });
         break;
     case DoorState::Closing:
-        openAngle -= delta;
-        if (openAngle <= 0)
-        {
-            delta -= (0 - openAngle);
+        openAlpha -= deltaTime / closeTime;
+        openAlpha = std::clamp(openAlpha, 0.0f, 1.0f);
+        if (openAlpha <= 0.0f)
             doorState = DoorState::Closed;
-        }
-        hinge->AddLocalRotation({ 0, delta,0 });
         break;
-    default:
+    case DoorState::Closed:
+        openAlpha = 0.0f;
+        break;
+    case DoorState::Open:
+        openAlpha = 1.0f;
         break;
     }
+
+    float angle = std::lerp(closedAngle, openedAngle, openAlpha);
+
+    hinge->SetRelativeEulerRotationDirect({ 0,angle,0 });
 }
 
 void DoorSmallActor::Interact()
@@ -187,3 +188,70 @@ void DoorSmallActor::Interact()
         doorState = DoorState::Closing;
     }
 }
+
+
+void DoorJailActor::Initialize(const Transform& transform)
+{
+    root = AddComponent<SceneComponent>("DoorRoot");
+    hinge = AddComponent<SceneComponent>("Hinge", "DoorRoot");
+    doorMesh = AddComponent<SkeletalMeshComponent>("Door", "Hinge");
+    // ドアのメッシュコンポーネントを追加
+    doorMesh->SetModel("./Data/Models/DarkStageAssets/Door_Jail/Door_Jail.gltf", false, true);
+
+    // ドアのサイズを取得
+    DirectX::XMFLOAT3 size = doorMesh->GetModelSize();
+    // ドアの当たり判定用のコリジョンコンポーネントを追加
+    std::shared_ptr<BoxComponent> boxComponent = AddComponent<BoxComponent>("DoorCollision", "Hinge");
+    boxComponent->SetBoxExtent(size);
+    boxComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-1.1f });
+    boxComponent->SetCollisionOffsetY(size.y * 0.5f);
+    boxComponent->SetCollisionOffsetX(-size.x * 0.5f);
+    boxComponent->SetCollisionOffsetZ(-size.z * 0.5f);
+    boxComponent->SetStatic(true);
+    boxComponent->SetLayer(CollisionLayer::WorldProps);
+    boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
+    boxComponent->Initialize();
+}
+
+
+void DoorJailActor::Update(float deltaTime)
+{
+    switch (doorState)
+    {
+    case DoorState::Opening:
+        openAlpha += deltaTime / openTime;
+        openAlpha = std::clamp(openAlpha, 0.0f, 1.0f);
+        if (openAlpha >= 1.0f)
+            doorState = DoorState::Open;
+        break;
+    case DoorState::Closing:
+        openAlpha -= deltaTime / closeTime;
+        openAlpha = std::clamp(openAlpha, 0.0f, 1.0f);
+        if (openAlpha <= 0.0f)
+            doorState = DoorState::Closed;
+        break;
+    case DoorState::Closed:
+        openAlpha = 0.0f;
+        break;
+    case DoorState::Open:
+        openAlpha = 1.0f;
+        break;
+    }
+
+    float angle = std::lerp(closedAngle, openedAngle, openAlpha);
+
+    hinge->SetRelativeEulerRotationDirect({ 0,angle,0 });
+}
+
+void DoorJailActor::Interact()
+{
+    if (doorState == DoorState::Closed || doorState == DoorState::Closing)
+    {
+        doorState = DoorState::Opening;
+    }
+    else if (doorState == DoorState::Open || doorState == DoorState::Opening)
+    {
+        doorState = DoorState::Closing;
+    }
+}
+
