@@ -233,6 +233,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
             else if (point.name.rfind("Spawn_JailDoor", 0) == 0)
             {
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
+                pos.z = 12.0f;
                 Transform doorJailTr{ pos,point.worldRotation,point.worldScale };
                 auto doorJailActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DoorJailActor>("DoorJailActor", doorJailTr);
 

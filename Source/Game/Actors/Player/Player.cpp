@@ -312,6 +312,12 @@ void Player::Initialize(const Transform& transform)
     // 火花エフェクト用のコンポーネントを追加
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
+
+    // 走り用のSEのコンポーネントを追加
+    runAudioComp = AddComponent<AudioSourceComponent>("runAudioComponent", parentName);
+    runAudioComp->SetSource(L"./Data/Sound/SE/run_heel.wav");
+    runAudioComp->SetVolume(0.5f);
+    runAudioComp->SetLoop(true);
 }
 
 

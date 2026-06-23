@@ -247,11 +247,21 @@ void DoorJailActor::Interact()
 {
     if (doorState == DoorState::Closed || doorState == DoorState::Closing)
     {
+        CoreAudio::PlayOneShot("./Data/Sound/SE/jail_door_open.wav");
         doorState = DoorState::Opening;
     }
     else if (doorState == DoorState::Open || doorState == DoorState::Opening)
     {
+        CoreAudio::PlayOneShot("./Data/Sound/SE/jail_door_close.wav");
         doorState = DoorState::Closing;
     }
 }
+void DoorJailActor::DrawImGuiDetails()
+{
+#ifdef USE_IMGUI
+    ImGui::DragFloat(U8("ドアを開ける速度"), &openTime, 0.1f);
+    ImGui::DragFloat(U8("ドアを閉める速度"), &closeTime, 0.1f);
+#endif
+}
+
 

@@ -75,8 +75,10 @@ class DoorJailActor :public InteractableActor
 public:
     explicit DoorJailActor(const std::string& actorName) :InteractableActor(actorName) {}
     void Initialize(const Transform& transform) override;
-    void Update(float dt) override;
+    void Update(float deltaTime) override;
     void Interact() override;
+    void DrawImGuiDetails() override;
+
 private:
     std::shared_ptr<SceneComponent> root;
     std::shared_ptr<SceneComponent> hinge;

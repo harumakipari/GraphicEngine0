@@ -3,6 +3,7 @@
 #include "Game/Actors/Base/Character.h"
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Game/Actors/Player/Player.h"
+#include "Components/Audio/AudioSourceComponent.h"
 
 PlayerStateBase::PlayerStateBase(Player* actor) :State(actor), player(actor)
 {
@@ -53,6 +54,10 @@ void PlayerIdleState::Exit()
 void PlayerRunningState::Enter()
 {
     owner->PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
+
+    // 走りSE再生
+    if (player->runAudioComp)
+        player->runAudioComp->Play();
 }
 
 void PlayerRunningState::Execute(float deltaTime)
@@ -87,6 +92,9 @@ void PlayerRunningState::Execute(float deltaTime)
 
 void PlayerRunningState::Exit()
 {
+    // 走りSEをストップ
+    if (player->runAudioComp)
+        player->runAudioComp->Stop();
 }
 
 void PlayerAttackState::Enter()

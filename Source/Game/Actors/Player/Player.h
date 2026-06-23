@@ -10,6 +10,7 @@
 #include "Core/ActorManager.h"
 #include "Components/Effect/ParticleComponent.h"
 
+class AudioSourceComponent;
 class IInteractable;
 class Enemy;
 
@@ -111,6 +112,7 @@ public:
     std::shared_ptr<CharacterMovementComponent> characterMovementComponent;
     std::shared_ptr<CapsuleComponent> swordCollisionComp;
     std::shared_ptr<SceneComponent> swordPointComp;
+    std::shared_ptr<AudioSourceComponent> runAudioComp;    // ‘–‚è‚ÌSE
 
     float elapsedTime_ = 0.0f;
 
