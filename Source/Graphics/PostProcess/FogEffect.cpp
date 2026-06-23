@@ -53,6 +53,7 @@ void FogEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourc
     fogCBuffer->data.fogNear = fog.fogNear;
     fogCBuffer->data.fogFar = fog.fogFar;
     fogCBuffer->data.distanceFogHeightFalloff = fog.distanceFogHeightFalloff;
+    fogCBuffer->data.fogShadowDepthBias = fog.fogShadowDepthBias;
 
     fogCBuffer->Activate(immediateContext, 8);
 
@@ -99,5 +100,7 @@ void FogEffect::DrawDebugUI()
     ImGui::SliderFloat("distanceFogHeightFalloff", &fog.distanceFogHeightFalloff, 0.1f, +50.0f);
     CheckboxInt("Enable Dither", &fog.enableDither);
     CheckboxInt("window fog", &fog.isWindowFog);
+    ImGui::DragFloat("Depth Bias", &fog.fogShadowDepthBias, 0.00001f, -0.01f, 0.01f, "%.8f");
+
 #endif
 }

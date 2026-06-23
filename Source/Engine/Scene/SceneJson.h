@@ -271,6 +271,10 @@ inline void to_json(nlohmann::json& j, const FogConstants& s)
         {"enableDither", s.enableDither},
         {"globalFogIntensity", s.globalFogIntensity},
         {"isWindowFog", s.isWindowFog},
+        {"fogNear", s.fogNear},
+        {"fogFar", s.fogFar},
+        {"distanceFogHeightFalloff", s.distanceFogHeightFalloff},
+        {"fogShadowDepthBias", s.fogShadowDepthBias},
     };
 }
 
@@ -287,7 +291,10 @@ inline void from_json(const nlohmann::json& j, FogConstants& s)
     j.at("enableDither").get_to(s.enableDither);
     j.at("globalFogIntensity").get_to(s.globalFogIntensity);
     if (j.contains("isWindowFog")) j.at("isWindowFog").get_to(s.isWindowFog);
-
+    if (j.contains("fogNear")) j.at("fogNear").get_to(s.fogNear);
+    if (j.contains("fogFar")) j.at("fogFar").get_to(s.fogFar);
+    if (j.contains("distanceFogHeightFalloff")) j.at("distanceFogHeightFalloff").get_to(s.distanceFogHeightFalloff);
+    if (j.contains("fogShadowDepthBias")) j.at("fogShadowDepthBias").get_to(s.fogShadowDepthBias);
 }
 
 // SSR

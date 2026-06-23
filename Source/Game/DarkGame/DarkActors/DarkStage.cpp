@@ -288,6 +288,10 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
 
         }
     }
+
+
+    StartBossRoomLightSequence();
+
 }
 
 

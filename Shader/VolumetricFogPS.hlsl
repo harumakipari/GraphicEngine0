@@ -47,7 +47,7 @@ float SunlightRadiance(float3 worldPositon)
     
     // シャドウマップの深度と現在ピクセルの深度を比較
     // 1.0 -> 光が当たっている　0.0 -> 影の中
-    return cascadedShadowMaps.SampleCmpLevelZero(comparisionSamplerState, float3(positionLightSpace.xy, cascadeIndex), positionLightSpace.z - shadowDepthBias).x + globalFogIntensity;
+    return cascadedShadowMaps.SampleCmpLevelZero(comparisionSamplerState, float3(positionLightSpace.xy, cascadeIndex), positionLightSpace.z - fogShadowDepthBias).x + globalFogIntensity;
 }
 
 // 高さによる霧の濃度変化

@@ -110,6 +110,7 @@ struct FogConstants
     float fogFar = 400.0f;
 
     float distanceFogHeightFalloff = 0.0f; // 距離フォグの高さ減衰。0で減衰なし。値が大きいほど距離フォグの影響が高い位置が低くなる。
+    float fogShadowDepthBias = 0.0f; // フォグ用のshadowバイアス
 };
 
 struct SSRConstantBuffer

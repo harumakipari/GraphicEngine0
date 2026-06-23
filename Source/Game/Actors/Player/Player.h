@@ -24,6 +24,13 @@ public:
         int nextComboIndex = -1;
     };
 
+    enum class PlayerCommand :uint8_t
+    {
+        None,
+        Attack,
+        Dodge,
+    };
+
 public:
     explicit Player(const std::string& modelName) :Character(modelName)
     {
@@ -71,6 +78,9 @@ public:
 
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
+
+    // 入力処理をまとめる
+
 
 private:
     // プレイヤーのマックスHP
@@ -135,6 +145,9 @@ private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     bool isAttackActive = false;
     float hitStopTimer = 0.0f;// ヒットストップのタイマー
+
+    PlayerCommand pendingCommand = PlayerCommand::None; // 入力コマンド
+    DirectX::XMFLOAT3 dodgeDirection = { 0.0f,0.0f,0.0f };// 避ける方向
 
     friend class PlayerStateBase;
 };
