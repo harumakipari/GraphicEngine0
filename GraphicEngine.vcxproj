@@ -291,6 +291,7 @@
     <ClCompile Include="Source\Engine\Scene\SceneBase.cpp" />
     <ClCompile Include="Source\Engine\Utility\Dialog.cpp" />
     <ClCompile Include="Source\Engine\Utility\Time.cpp" />
+    <ClCompile Include="Source\Game\Actors\Base\Character.cpp" />
     <ClCompile Include="Source\Game\Actors\Camera\Camera.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossEnemy.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp" />

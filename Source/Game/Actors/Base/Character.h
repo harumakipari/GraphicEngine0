@@ -23,6 +23,8 @@ public:
 
     virtual void Update(float deltaTime)override
     {
+        UpdateDirectionVectors();
+
         for (auto& controller : animationControllers | std::views::values)
         {
             controller->OnUpdate(deltaTime);
@@ -125,18 +127,42 @@ public:
     //進行方向の単位ベクトルを取得する
     const DirectX::XMFLOAT3& GetForward()
     {
+#if 0
         // Z軸方向の単位方向ベクトル　デフォルト
         DirectX::XMVECTOR DefaultForward = DirectX::XMVectorSet(0, 0, 1, 0);
         //playerの回転値によって作られる回転行列
         DirectX::XMMATRIX RotationMatrix = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&GetQuaternionRotation()));
-        //DirectX::XMMATRIX RotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(GetQuaternionRotation().x, GetQuaternionRotation().y, GetQuaternionRotation().z);
         // デフォルトのベクトルに回転行列を適応する
         DirectX::XMVECTOR TransformedForward = DirectX::XMVector3TransformNormal(DefaultForward, RotationMatrix);
         //正規化
         TransformedForward = DirectX::XMVector3Normalize(TransformedForward);
-
         DirectX::XMStoreFloat3(&front, TransformedForward);
+#endif // 0
         return front;
+    }
+
+    // 右方向の単位ベクトルを取得する
+    const DirectX::XMFLOAT3& GetRight()
+    {
+#if 0
+        // X軸方向の単位ベクトル
+        DirectX::XMVECTOR DefaultRight = DirectX::XMVectorSet(1, 0, 0, 0);
+
+        // 回転行列を作成
+        DirectX::XMMATRIX RotationMatrix =
+            DirectX::XMMatrixRotationQuaternion(
+                DirectX::XMLoadFloat4(&GetQuaternionRotation()));
+
+        // 回転を適用
+        DirectX::XMVECTOR TransformedRight =
+            DirectX::XMVector3TransformNormal(DefaultRight, RotationMatrix);
+
+        // 正規化
+        TransformedRight = DirectX::XMVector3Normalize(TransformedRight);
+
+        DirectX::XMStoreFloat3(&right, TransformedRight);
+#endif
+        return right;
     }
 
     float GetYawFromForward(const DirectX::XMFLOAT3& forward)
@@ -173,6 +199,10 @@ public:
     // アニメーションが変わった時にステートなどを変更する関数
     virtual void OnAnimationChanged(){}
 
+private:
+    // 方向を更新
+    void UpdateDirectionVectors();
+
 public:
     //高さ
     float height = 0.0f;    //m単位
@@ -199,8 +229,11 @@ protected:
     int hp = 0;
 
     //前方向ベクトル
-    DirectX::XMFLOAT3 front{ 0.0f,0.0f,1.0f/*,0.0f*/ };
-
+    DirectX::XMFLOAT3 front{ 0.0f,0.0f,1.0f };
+    //横方向ベクトル
+    DirectX::XMFLOAT3 right{ 1.0f,0.0f,0.0f};
+    //上方向ベクトル
+    DirectX::XMFLOAT3 up{ 0.0f,1.0f,0.0f};
     //最大回転値
     float maxTurningSpeed = 360.0f;
 

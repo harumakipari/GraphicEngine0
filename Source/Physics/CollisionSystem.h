@@ -110,8 +110,6 @@ public:
                     continue; // PhysX “¯Žm‚Í‰Ÿ‚µo‚³‚È‚¢
                 }
 
-
-
                 // PxGeometry Žæ“¾
                 auto aInfo = aShape->GetPhysicsShapeInfo();
                 auto bInfo = bShape->GetPhysicsShapeInfo();
@@ -122,6 +120,22 @@ public:
                     dir, depth,
                     aInfo.geometry.any(), aInfo.transform,
                     bInfo.geometry.any(), bInfo.transform);
+
+#if 0
+                if (aComponent->GetName() == "SwordCollision" && bComponent->GetName() == "enemyCapsuleComponent")
+                {
+                    auto swordPos = aShape->GetComponentLocation();
+                    auto enemyPos = bShape->GetComponentLocation();
+
+                    Logger::Log(std::format(
+                        "Sword({},{},{}) Enemy({},{},{}) hit={}",
+                        swordPos.x, swordPos.y, swordPos.z,
+                        enemyPos.x, enemyPos.y, enemyPos.z,
+                        hit
+                    ));
+                }
+
+#endif // 0
 
                 if (!hit || depth <= 0.0001f) // ”÷¬‚ÈÕ“Ë‚Í–³Ž‹
                     continue;

@@ -82,7 +82,7 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     // “–‚½‚è”»’è
     {
-        std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
+        std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("enemyCapsuleComponent", parentName);
         DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
         size = MathHelper::Multiply(size, GetScale().x);
         height = size.y;

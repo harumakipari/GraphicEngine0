@@ -79,8 +79,7 @@ public:
     const char* GetName() const override { return "Attack"; }
 
 private:
-    float attackTimer = 0.0f;
-    bool hitDone = false;
+    bool dodgeQueued = false;
 };
 
 // 回避ステートオブジェクト

@@ -138,7 +138,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyState("Primary_Attack_Fast_B", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
         controller->AddNotifyEvent("Primary_Attack_Fast_C", 0.15f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
-        controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.22f, AnimationNotifyState::Type::HitBox);
+        controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.27f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.583f, AnimationNotifyState::Type::InputWindow);
         controller->AddNotifyState("Primary_Attack_Fast_C", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
 
@@ -157,7 +157,27 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
         controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
         controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
+#if 0
+        controller->AddNotifyState("Ability_RMB_Fwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
+        controller->AddNotifyState("Ability_RMB_Fwd_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
+        controller->AddNotifyState("Ability_RMB_Fwd_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
+        controller->AddNotifyEvent("Ability_RMB_Fwd_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
+        controller->AddNotifyEvent("Ability_RMB_Fwd_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
 
+        controller->AddNotifyState("Ability_RMB_Left_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
+        controller->AddNotifyState("Ability_RMB_Left_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
+        controller->AddNotifyState("Ability_RMB_Left_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
+        controller->AddNotifyEvent("Ability_RMB_Left_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
+        controller->AddNotifyEvent("Ability_RMB_Left_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
+
+        controller->AddNotifyState("Ability_RMB_Right_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
+        controller->AddNotifyState("Ability_RMB_Right_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
+        controller->AddNotifyState("Ability_RMB_Right_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
+        controller->AddNotifyEvent("Ability_RMB_Right_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
+        controller->AddNotifyEvent("Ability_RMB_Right_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
+
+
+#endif // 0
 
 
         // アニメーションコントローラーを character に追加
@@ -239,7 +259,7 @@ void Player::Initialize(const Transform& transform)
 
     // 剣に当たり判定のコンポーネントを追加
     swordCollisionComp = AddComponent<CapsuleComponent>("SwordCollision", parentName);
-    DirectX::XMFLOAT3 size = { 0.1f,1.2f,1.0f };
+    DirectX::XMFLOAT3 size = { 0.6f,1.5f,1.0f };
     swordCollisionComp->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
     swordCollisionComp->SetRadiusAndHeight(size.x, size.y);
     swordCollisionComp->SetMass(mass);
@@ -255,6 +275,7 @@ void Player::Initialize(const Transform& transform)
     swordCollisionComp->Initialize();
     swordCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
         {
+            
             if (!other)
             {
                 Logger::Warning("other is nullptr");
@@ -267,6 +288,8 @@ void Player::Initialize(const Transform& transform)
             if (!(other->GetCollisionLayer() & mask))
                 return;
 
+            //Logger::Log(U8("swordCollisionComponent を通っている"));
+
             // 相手のActor取得
             Actor* actor = other->GetOwner();
 
@@ -277,10 +300,14 @@ void Player::Initialize(const Transform& transform)
             }
 
             if (!hitBox)
+            {
+                Logger::Log(U8("hitBoxがtrueではない！"));
                 return;
+            }
 
             if (hitActors.contains(actor))
             {// 一度当たったことがあった場合
+                Logger::Log(U8("敵に当たったことがある"));
                 return;
             }
 
@@ -326,7 +353,7 @@ void Player::Initialize(const Transform& transform)
 }
 
 
-void Player::Update(float elapsedTime)
+void Player::Update(float deltaTime)
 {
     using namespace DirectX;
 
@@ -342,27 +369,15 @@ void Player::Update(float elapsedTime)
     }
 
     // 入力処理
-    HandleInput();
+    HandleInput(deltaTime);
 
     // これは絶対入れる　アニメーションの更新をしているから
-    Character::Update(elapsedTime);
+    Character::Update(deltaTime);
 
     // 剣のデバックの当たり判定を描画するかどうか
     swordCollisionComp->SetIsVisibleDebugShape(hitBox);
 
-    // アニメーション時間から攻撃有効フラグ更新
-    auto anim = GetBodyAnimationController();
-    float time = anim->GetCurrentAnimationTime(); // ← 秒
-    if (stateMachine_->GetStateName() == "Attack" && time >= 0.1f && time <= 0.4f)
-    {
-        isAttackActive = true;
-    }
-    else
-    {
-        isAttackActive = false;
-    }
-
-
+    FindInteractable();
     //skeletalMeshComponent->UpdateCloth(elapsedTime);
 
     //skeletalMeshComponent->UpdateGlobalTransforms();
@@ -411,7 +426,7 @@ void Player::Update(float elapsedTime)
         // 更新
         for (auto& p : trailPoints)
         {
-            p.life -= elapsedTime;
+            p.life -= deltaTime;
         }
 
         // 削除
@@ -467,8 +482,8 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         hitBox = true;
         break;
     case AnimationNotifyState::Type::InputWindow:
-        comboWindow = true;
-        Logger::Log(U8("コンボ受付を開始しました"));
+        inputWindow = true;
+        Logger::Log(U8("入力受付を開始しました"));
         break;
     case AnimationNotifyState::Type::Invincible:
         invincibleWindow = true;
@@ -494,8 +509,8 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         hitBox = false;
         break;
     case AnimationNotifyState::Type::InputWindow:
-        comboWindow = false;
-        Logger::Log(U8("コンボ受付を終了しました"));
+        inputWindow = false;
+        Logger::Log(U8("入力受付を終了しました"));
         break;
     case AnimationNotifyState::Type::Invincible:
         invincibleWindow = false;
@@ -531,12 +546,13 @@ void Player::OnAnimationChanged()
 {
     transitionWindow = false;  // ステート遷移してもいいかどうか
     comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
-    comboWindow = false;   // コンボ受付をするかどうか
+    inputWindow = false;   // コンボ受付をするかどうか
     hitBox = false;     // 当たり判定
     justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
     invincibleWindow = false;   // 無敵状態かどうか
     justDodgeSuccess = false; // ジャスト回避が成功したかどうか
-    Logger::Log(U8("playerのAnimationが切り替わった"));
+    hitActors.clear();
+    //Logger::Log(U8("playerのAnimationが切り替わった"));
 }
 
 // アニメーションステート関連のフラグをリセットする
@@ -544,7 +560,7 @@ void Player::ResetAnimationStateFlag()
 {
     transitionWindow = false;  // ステート遷移してもいいかどうか
     comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
-    comboWindow = false;   // コンボ受付をするかどうか
+    inputWindow = false;   // コンボ受付をするかどうか
     hitBox = false;     // 当たり判定
     justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
     invincibleWindow = false;   // 無敵状態かどうか
@@ -629,26 +645,32 @@ void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XM
 }
 
 // 入力処理をまとめる
-void Player::HandleInput()
+void Player::HandleInput(float deltaTime)
 {
-    pendingCommand = PlayerCommand::None;
+    bufferCommand.remainTime -= deltaTime;
+    if (bufferCommand.remainTime <= 0.0f)
+    {
+        bufferCommand.command = InputCommand::None;
+    }
     if (InputSystem::GetInputState("Dodge", InputStateMask::Trigger))
     {
-        pendingCommand = PlayerCommand::Dodge;
+        bufferCommand.command = InputCommand::Dodge;
         dodgeDirection = inputComponent->GetMoveInput();
-
+        bufferCommand.remainTime = 0.3f;
         return;
     }
 
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
-        pendingCommand = PlayerCommand::Attack;
+        bufferCommand.command = InputCommand::Attack;
+        bufferCommand.remainTime = 0.3f;
         return;
     }
 
     if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
     {
-        pendingCommand = PlayerCommand::Jump;
+        bufferCommand.command = InputCommand::Jump;
+        bufferCommand.remainTime = 0.3f;
         return;
     }
 
@@ -658,21 +680,28 @@ void Player::HandleInput()
 // 入力コマンドによってステートを変える
 bool Player::TryHandleGlobalTransition()
 {
-    switch (pendingCommand)
+    switch (bufferCommand.command)
     {
-    case PlayerCommand::None:
+    case InputCommand::None:
         return false;
-    case PlayerCommand::Attack:
+    case InputCommand::Attack:
         stateMachine_->ChangeState("Attack");
         return true;
-    case PlayerCommand::Dodge:
+    case InputCommand::Dodge:
         stateMachine_->ChangeState("Dodge");
         return true;
-    case PlayerCommand::Jump:
+    case InputCommand::Jump:
         stateMachine_->ChangeState("Jump");
         return true;
     }
     return false;
+}
+
+// 入力を消費する処理
+void Player::ConsumeBufferCommand()
+{
+    bufferCommand.command = InputCommand::None;
+    bufferCommand.remainTime = 0.0f;
 }
 
 //当たった時の処理
@@ -772,7 +801,6 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 // インタラクト対象検索
 IInteractable* Player::FindInteractable()
 {
-    float bestDist = 2.0f;
     IInteractable* best = nullptr;
 
     DirectX::XMFLOAT3 forward = GetForward(); // プレイヤー前方向
@@ -781,9 +809,14 @@ IInteractable* Player::FindInteractable()
     {
         auto interactable = dynamic_cast<IInteractable*>(actor.get());
         if (!interactable) continue;
+        float bestDist = 2.0f;
+
+        DirectX::XMFLOAT3 playerPos = GetPosition();
+        DirectX::XMFLOAT3 interactablePos = actor->GetPosition();
+
 
         DirectX::XMFLOAT3 dir = MathHelper::Normalize(
-            MathHelper::Subtract(actor->GetPosition(), GetPosition())
+            MathHelper::Subtract(interactablePos, playerPos)
         );
 
         float dot = MathHelper::Dot(forward, dir);
@@ -791,13 +824,20 @@ IInteractable* Player::FindInteractable()
         // 前方60度以内
         if (dot < 0.5f) continue;
 
-        float dist = MathHelper::Distance(GetPosition(), actor->GetPosition());
+        DebugRender::DrawSphere(interactablePos,bestDist, { 0,1,1,1 }, 0);
+
+
+        float dist = MathHelper::Distance(playerPos, interactablePos);
 
         if (dist < bestDist)
         {
+            DebugRender::DrawSphere(interactablePos, bestDist, { 1,1,1,1 }, 0);
+
             bestDist = dist;
             best = interactable;
         }
+
+
     }
 
     return best;

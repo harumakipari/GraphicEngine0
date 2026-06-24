@@ -24,12 +24,19 @@ public:
         int nextComboIndex = -1;
     };
 
-    enum class PlayerCommand :uint8_t
+    enum class InputCommand :uint8_t
     {
         None,
         Attack,
         Dodge,
         Jump,
+        Interact,
+    };
+
+    struct BufferInput
+    {
+        InputCommand command = InputCommand::None;
+        float remainTime = 0.0f;
     };
 
 public:
@@ -40,7 +47,7 @@ public:
     }
     void Initialize(const Transform& transform)override;
 
-    void Update(float elapsedTime)override;
+    void Update(float deltaTime)override;
 
     void DrawImGuiDetails()override;
 
@@ -65,10 +72,13 @@ private:
     void CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end);
 
     // 入力処理をまとめる
-    void HandleInput();
+    void HandleInput(float deltaTimes);
 public:
     // 入力コマンドによってステートが変わるかどうか
     bool TryHandleGlobalTransition();
+
+    // 入力を消費する処理
+    void ConsumeBufferCommand();
 
     //当たった時の処理
     void TakeDamage(int damage);
@@ -108,7 +118,7 @@ public:
     std::string startAttackAnimation = "Primary_Attack_Fast_A";    // コンボ開始のアニメーション
 
     bool comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
-    bool comboWindow = false;   // コンボ受付をするかどうか
+    bool inputWindow = false;   // コンボ受付をするかどうか
     bool hitBox = false;   // 武器の当たり判定をつける
     bool transitionWindow = false;  // ステート遷移してもいいかどうか
     bool justDodgeWindow = false;  // ジャスト回避受付時間
@@ -123,6 +133,9 @@ public:
 
     std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 
+    // 入力受付のコマンド
+    BufferInput bufferCommand = { InputCommand::None,0.0f }; // 入力コマンド
+    DirectX::XMFLOAT3 dodgeDirection = { 0.0f,0.0f,0.0f };// 避ける方向
 public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
@@ -151,8 +164,6 @@ private:
     bool isAttackActive = false;
     float hitStopTimer = 0.0f;// ヒットストップのタイマー
 
-    PlayerCommand pendingCommand = PlayerCommand::None; // 入力コマンド
-    DirectX::XMFLOAT3 dodgeDirection = { 0.0f,0.0f,0.0f };// 避ける方向
 
     friend class PlayerStateBase;
 };

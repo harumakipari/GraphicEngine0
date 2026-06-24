@@ -346,6 +346,9 @@
     <ClCompile Include="External\imgui\timer.cpp">
       <Filter>External\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Base\Character.cpp">
+      <Filter>Source\Game\Actors\Base</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">

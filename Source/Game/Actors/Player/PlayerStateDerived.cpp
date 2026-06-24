@@ -82,10 +82,6 @@ void PlayerAttackState::Enter()
     player->PlayBodyAnimation(player->currentAttackAnimation, false, true, 0.1f);
     //player->PlayBodyAnimation("Primary_Attack_Fast_D", false, true, 0.1f);
 
-    // 攻撃タイマーをリセット
-    attackTimer = 0.0f;
-    hitDone = false;
-
     // 攻撃を開始する処理
     player->StartAttack();
 
@@ -96,23 +92,35 @@ void PlayerAttackState::Enter()
     Logger::Log("AnimationTime=" + std::to_string(player->GetBodyAnimationController()->GetCurrentAnimationTime()));
     Logger::Log("AnimationTime=" + std::to_string(player->GetBodyAnimationController()->GetCurrentAnimationTime()));
 
+    dodgeQueued = false;
 }
 
 void PlayerAttackState::Execute(float deltaTime)
 {
-    attackTimer += deltaTime;
-
-    if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+    if (player->inputWindow)
     {
-        if (player->comboWindow)
+        switch (player->bufferCommand.command)
         {
+        case Player::InputCommand::Attack:
             player->comboQueued = true;
-            Logger::Log(U8("comboQueued が true になりました"));
+            player->ConsumeBufferCommand();
+            break;
+        case Player::InputCommand::Dodge:
+            dodgeQueued = true;
+            player->ConsumeBufferCommand();
+            break;
         }
     }
 
     if (player->transitionWindow)
     {
+        if (dodgeQueued)
+        {
+            player->GetStateMachine()
+                ->ChangeState("Dodge");
+            return;
+        }
+
         if (player->comboQueued)
         {
             auto controller =
@@ -136,6 +144,7 @@ void PlayerAttackState::Execute(float deltaTime)
                 }
             }
         }
+
     }
 
     if (!owner->GetBodyAnimationController()->IsPlayAnimation())
@@ -154,11 +163,6 @@ void PlayerAttackState::Execute(float deltaTime)
         }
     }
 
-    if (InputSystem::GetInputState("Dodge", InputStateMask::Trigger))
-    {
-        player->GetStateMachine()->ChangeState("Dodge");
-        return;
-    }
 
 }
 
@@ -171,17 +175,91 @@ void PlayerAttackState::Exit()
 void PlayerDodgeState::Enter()
 {
     player->ResetAnimationStateFlag();
-    owner->PlayBodyAnimation("Ability_RMB_Bwd_0", false);
 
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetSpeed(0.0f);
 
     // 入力方向を見る
-
+    DirectX::XMFLOAT3 inputDir = player->dodgeDirection;
     DirectX::XMFLOAT3 forward = player->GetForward();
-    //float duration = player->GetBodyAnimationController()->GetAnimationLength("Ability_RMB_Bwd_0");
+    DirectX::XMFLOAT3 right = player->GetRight();
+
+    // 入力無しなら後ろ回避
+    if (MathHelper::Length(inputDir) < 0.1f)
+    {
+        inputDir = {
+            -player->GetForward().x,
+            0.0f,
+            -player->GetForward().z
+        };
+    }
+
+
+#if 0
+    inputDir = MathHelper::Normalize(inputDir);
+
+    float forwardDot =
+        inputDir.x * forward.x +
+        inputDir.z * forward.z;
+
+    float rightDot =
+        inputDir.x * right.x +
+        inputDir.z * right.z;
+
+    DirectX::XMFLOAT3 dodgeMoveDir;
+    std::string animName;
+
+    if (std::abs(forwardDot) > std::abs(rightDot))
+    {
+        // 前後
+        if (forwardDot > 0.0f)
+        {
+            animName = "Ability_RWB_Fwd_0";
+            dodgeMoveDir = forward;
+        }
+        else
+        {
+            animName = "Ability_RMB_Bwd_0";
+            dodgeMoveDir = {
+                -forward.x,
+                0.0f,
+                -forward.z
+            };
+        }
+    }
+    else
+    {
+        // 左右
+        if (rightDot > 0.0f)
+        {
+            animName = "Ability_RMB_Right_0";
+            dodgeMoveDir = right;
+        }
+        else
+        {
+            animName = "Ability_RMB_Left_0";
+            dodgeMoveDir = {
+                -right.x,
+                0.0f,
+                -right.z
+            };
+        }
+    }
+
+    owner->PlayBodyAnimation(animName, false);
+
+    player->characterMovementComponent->AddForcedMove(
+        dodgeMoveDir,
+        player->dodgeSpeed,
+        player->dodgeDuration);
+
+#else
+    owner->PlayBodyAnimation("Ability_RMB_Bwd_0", false);
+
     // 一定時間だけ強制移動する速度を設定する
     player->characterMovementComponent->AddForcedMove({ -forward.x,0.0f,-forward.z }, player->dodgeSpeed, player->dodgeDuration);
+
+#endif // 0
 
     rushRequested = false;
     judgeSuccess = false;
@@ -197,11 +275,11 @@ void PlayerDodgeState::Execute(float deltaTime)
     {
         player->rushInputTimer -= deltaTime;
 
-        if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+        if (player->bufferCommand.command == Player::InputCommand::Attack)
         {
             rushRequested = true;
+            player->ConsumeBufferCommand();
         }
-
         //if (player->rushInputTimer <= 0.0f)
         if (player->transitionWindow)
         {
@@ -254,7 +332,7 @@ void PlayerRushState::Enter()
     if (auto target = player->rushTarget.lock())
     {// 移動する
         player->characterMovementComponent->MoveToActor(target,
-            0.05f, 2.0f);
+            0.05f, 1.7f);
     }
 
     rushComboAdvanced = false;
