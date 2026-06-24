@@ -311,6 +311,7 @@ void GruxEnemy::DrawImGuiDetails()
 //当たった時の処理
 void GruxEnemy::TakeDamage(int damage)
 {
+    CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_hit.wav",0.5f);
     hp -= damage;
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
 }

@@ -341,6 +341,9 @@ void Player::Update(float elapsedTime)
         }
     }
 
+    // 入力処理
+    HandleInput();
+
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(elapsedTime);
 
@@ -623,6 +626,53 @@ void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XM
     }
 
     DebugRender::DrawLine(start, end, { 1,0,0,1 });
+}
+
+// 入力処理をまとめる
+void Player::HandleInput()
+{
+    pendingCommand = PlayerCommand::None;
+    if (InputSystem::GetInputState("Dodge", InputStateMask::Trigger))
+    {
+        pendingCommand = PlayerCommand::Dodge;
+        dodgeDirection = inputComponent->GetMoveInput();
+
+        return;
+    }
+
+    if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+    {
+        pendingCommand = PlayerCommand::Attack;
+        return;
+    }
+
+    if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
+    {
+        pendingCommand = PlayerCommand::Jump;
+        return;
+    }
+
+
+}
+
+// 入力コマンドによってステートを変える
+bool Player::TryHandleGlobalTransition()
+{
+    switch (pendingCommand)
+    {
+    case PlayerCommand::None:
+        return false;
+    case PlayerCommand::Attack:
+        stateMachine_->ChangeState("Attack");
+        return true;
+    case PlayerCommand::Dodge:
+        stateMachine_->ChangeState("Dodge");
+        return true;
+    case PlayerCommand::Jump:
+        stateMachine_->ChangeState("Jump");
+        return true;
+    }
+    return false;
 }
 
 //当たった時の処理

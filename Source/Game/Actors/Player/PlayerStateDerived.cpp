@@ -16,22 +16,8 @@ void PlayerIdleState::Enter()
 
 void PlayerIdleState::Execute(float deltaTime)
 {
-    // 攻撃入力チェック
-    if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+    if (player->TryHandleGlobalTransition())
     {
-        player->GetStateMachine()->ChangeState("Attack");
-        return;
-    }
-
-    if (InputSystem::GetInputState("Dodge", InputStateMask::Trigger))
-    {
-        player->GetStateMachine()->ChangeState("Dodge");
-        return;
-    }
-
-    if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
-    {
-        player->GetStateMachine()->ChangeState("Jump");
         return;
     }
 
@@ -62,22 +48,8 @@ void PlayerRunningState::Enter()
 
 void PlayerRunningState::Execute(float deltaTime)
 {
-    // 攻撃入力チェック
-    if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+    if (player->TryHandleGlobalTransition())
     {
-        player->GetStateMachine()->ChangeState("Attack");
-        return;
-    }
-
-    if (InputSystem::GetInputState("Dodge", InputStateMask::Trigger))
-    {
-        player->GetStateMachine()->ChangeState("Dodge");
-        return;
-    }
-
-    if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
-    {
-        player->GetStateMachine()->ChangeState("Jump");
         return;
     }
 

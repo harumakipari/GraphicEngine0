@@ -29,6 +29,7 @@ public:
         None,
         Attack,
         Dodge,
+        Jump,
     };
 
 public:
@@ -63,7 +64,12 @@ private:
     // 剣の攻撃判定
     void CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end);
 
+    // 入力処理をまとめる
+    void HandleInput();
 public:
+    // 入力コマンドによってステートが変わるかどうか
+    bool TryHandleGlobalTransition();
+
     //当たった時の処理
     void TakeDamage(int damage);
 
@@ -79,8 +85,7 @@ public:
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
 
-    // 入力処理をまとめる
-
+    
 
 private:
     // プレイヤーのマックスHP

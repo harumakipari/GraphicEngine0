@@ -261,8 +261,8 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 std::string compName = "BossRoomLight" + std::to_string(i);
                 auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
                 pointLightComponent->SetRelativeLocationDirect(pos);
-                //pointLightComponent->SetSharedLightName("BossRoomPointLight");
-                pointLightComponent->SetSharedLightName("ZeroLight");
+                pointLightComponent->SetSharedLightName("BossRoomPointLight");
+                //pointLightComponent->SetSharedLightName("ZeroLight");
                 bossRoomLightsLeft.push_back(pointLightComponent.get());
             }
             else if (point.name.rfind("Spawn_WallLight", 0) == 0)
@@ -272,8 +272,8 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 std::string compName = "WallLight" + std::to_string(i);
                 auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
                 pointLightComponent->SetRelativeLocationDirect(pos);
-                //pointLightComponent->SetSharedLightName("WallLight");
-                pointLightComponent->SetSharedLightName("ZeroLight");
+                pointLightComponent->SetSharedLightName("WallLight");
+                //pointLightComponent->SetSharedLightName("ZeroLight");
                 bossRoomLightsLeft.push_back(pointLightComponent.get());
             }
             else if (point.name.rfind("Spawn_MainRoomLight", 0) == 0)
