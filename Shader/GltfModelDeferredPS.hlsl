@@ -3,13 +3,14 @@
 #include "Common.hlsli"
 #include "ModelType.hlsli"
 
-
 #define BASE_COLOR_TEXTURE 0 
 #define METALLIC_ROUGHNESS_TEXTURE 1 
 #define NORMAL_TEXTURE 2 
 #define EMISSIVE_TEXTURE 3
 #define OCCLUSION_TEXTURE 4 
 Texture2D<float4> materialTextures[5] : register(t1);
+
+Texture2D shadowMap : register(t15);
 
 GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 {
@@ -48,8 +49,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         { // playerの時はエミッシブを強めに出す
             emissiveFactor *= emissionPower;
         }
-
-
     }
     
     float roughnessFactor = m.pbrMetallicRoughness.roughnessFactor;
@@ -108,6 +107,21 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
     float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
     pout.velocity = float4(velocity, 0, 1);
+
+    if (objectType == OBJECT_STAGE)
+    { // 影の値を入れる
+        const float shadow_depth_bias = 0.001;
+        float4 light_view_position = mul(pin.wPosition, lightViewProjection); // World to Clip space
+        light_view_position = light_view_position / light_view_position.w; // Clip to NDC
+        float2 light_view_texcoord = 0;
+	    // NDC to Texture coordinate
+        light_view_texcoord.x = light_view_position.x * +0.5 + 0.5;
+        light_view_texcoord.y = light_view_position.y * -0.5 + 0.5;
+        float depth = saturate(light_view_position.z - shadow_depth_bias);
+        float shadow_factor = 1.0f;
+        shadow_factor = shadowMap.SampleCmpLevelZero(comparisionSamplerState, light_view_texcoord, depth).x;
+        pout.velocity.w = shadow_factor;
+    }
 
     pout.albedo = baseColorFactor;
 

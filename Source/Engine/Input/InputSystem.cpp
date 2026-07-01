@@ -184,6 +184,7 @@ void InputSystem::Initialize()
 
     inputKeys["Ctrl"].emplace_back(std::make_unique<Keyboard>(VK_CONTROL));
 
+    inputKeys["0"].emplace_back(std::make_unique<Keyboard>('0'));
     inputKeys["1"].emplace_back(std::make_unique<Keyboard>('1'));
     inputKeys["2"].emplace_back(std::make_unique<Keyboard>('2'));
 

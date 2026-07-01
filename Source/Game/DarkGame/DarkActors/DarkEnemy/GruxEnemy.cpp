@@ -28,6 +28,8 @@ void GruxEnemy::Initialize(const Transform& transform)
             material.materialType = MaterialType::Eye;
         }
     }
+    skeletalMeshComponent->SetIsShadowMap(true);
+    skeletalMeshComponent->SetIsCastShadow(false);
 
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
@@ -80,6 +82,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     this->AddBodyAnimationController(controller);
     PlayBodyAnimation("Idle");
 
+#if 1
     // 当たり判定
     {
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("enemyCapsuleComponent", parentName);
@@ -101,6 +104,8 @@ void GruxEnemy::Initialize(const Transform& transform)
         capsuleComponent->Initialize();
     }
 
+#endif // 0
+
     // 回転用コンポーネントを追加
     rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
 
@@ -116,9 +121,11 @@ void GruxEnemy::Initialize(const Transform& transform)
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     backPointLightComponent->SetSharedLightName("EnemyBackPointLight");
 
+#if 0
     // 武器に当たり判定のコンポーネントを追加
     int socketLeftNode = skeletalMeshComponent->FindIndexByName("weapon_l");
     leftWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponLeftNode", parentName);
+    //DirectX::XMFLOAT3 size = { 0.4f,4.0f,1.0f };
     DirectX::XMFLOAT3 size = { 1.0f,4.0f,1.0f };
     leftWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketLeftNode); // "weapon_l"
     leftWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
@@ -135,58 +142,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     leftWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
         {
             OnWeaponHit(self, other);
-            return;
-            //Logger::Log("leftWeaponCollisionComp zero");
-            if (!other)
-            {
-                Logger::Warning("other is nullptr");
-                return;
-            }
-            //Logger::Log("leftWeaponCollisionComp First");
-            uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
-
-            // Playerレイヤーか確認
-            if (!(other->GetCollisionLayer() & mask))
-                return;
-
-            // 相手のActor取得
-            Actor* actor = other->GetOwner();
-
-            if (!actor)
-            {
-                Logger::Warning("actor is nullptr");
-                return;
-            }
-            // Playerへキャスト
-            Player* player = dynamic_cast<Player*>(actor);
-            if (!player)
-                return;
-
-            if (isDangerWindow)
-            {
-                if (player->GetJustDodgeWindow())
-                {
-                    if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
-                    {
-                        player->StartJustDodgeSuccess(enemy);
-                        Logger::Log(U8("ジャスト回避成功！"));
-                    }
-                }
-            }
-#if 1
-            if (!rightHitBox && !leftHitBox)
-                return;
-
-            if (hitActors.contains(actor))
-            {// 一度当たったことがあった場合
-                return;
-            }
-
-#endif // 0
-            //Logger::Log("leftWeaponCollisionComp Second");
-
-            player->TakeDamage(10);
-            hitActors.insert(actor);
         });
 
     int socketRightNode = skeletalMeshComponent->FindIndexByName("weapon_r");
@@ -204,59 +159,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
         {
             OnWeaponHit(self, other);
-            return;
-            if (!other)
-            {
-                Logger::Warning("other is nullptr");
-                return;
-            }
-            //Logger::Log("rightWeaponCollisionComp First");
-
-
-            uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
-
-            // Playerレイヤーか確認
-            if (!(other->GetCollisionLayer() & mask))
-                return;
-
-            // 相手のActor取得
-            Actor* actor = other->GetOwner();
-
-            if (!actor)
-            {
-                Logger::Warning("actor is nullptr");
-                return;
-            }
-
-
-            // Playerへキャスト
-            Player* player = dynamic_cast<Player*>(actor);
-            if (!player)
-                return;
-
-            if (player->GetJustDodgeWindow())
-            {
-                if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
-                {
-                    player->StartJustDodgeSuccess(enemy);
-                    Logger::Log(U8("ジャスト回避成功！"));
-                }
-            }
-#if 1
-            if (!rightHitBox && !leftHitBox)
-                return;
-
-            if (hitActors.contains(actor))
-            {// 一度当たったことがあった場合
-                return;
-            }
-#endif // 0
-            //Logger::Log("rightWeaponCollisionComp Second");
-
-            player->TakeDamage(10);
-            hitActors.insert(actor);
         });
 
+
+#endif // 0
 #if 0
     AddHitCallback([&](std::pair<CollisionComponent*, CollisionComponent*> hitPair)
         {
@@ -272,7 +178,6 @@ void GruxEnemy::Initialize(const Transform& transform)
                 auto player = dynamic_cast<Player*>(other->GetOwner());
                 player->TakeDamage(10);
             }
-
         }
     );
 #endif // 0
@@ -284,8 +189,15 @@ void GruxEnemy::Update(float deltaTime)
 {
     Character::Update(deltaTime);
 
-    rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
-    leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
+    if (rightWeaponCollisionComp)
+        rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
+    if (leftWeaponCollisionComp)
+        leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
+
+    if (InputSystem::GetInputState("0"))
+    {
+        stateMachine_->ChangeState("EnemyAttackState");
+    }
 
 #if 1
     if (hp <= 0 && !isDeathPerform)
@@ -311,7 +223,7 @@ void GruxEnemy::DrawImGuiDetails()
 //当たった時の処理
 void GruxEnemy::TakeDamage(int damage)
 {
-    CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_hit.wav",0.5f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_hit.wav", 0.5f);
     hp -= damage;
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
 }
@@ -403,8 +315,10 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 // 攻撃開始時に始める処理
 void GruxEnemy::StartAttack()
 {
+#if 0
     DirectX::XMFLOAT3 size = { 1.0f,4.0f,1.0f };
     leftWeaponCollisionComp->ResizeCapsule(size.x, size.y);
+#endif // 0
     hitActors.clear();
 }
 

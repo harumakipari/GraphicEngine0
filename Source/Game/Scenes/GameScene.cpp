@@ -151,6 +151,12 @@ void GameScene::Start()
 void GameScene::Update(float deltaTime)
 {
     using namespace DirectX;
+
+    // ライトのビューの焦点をプレイヤー位置に設定する
+    if (player)
+    {
+        SetLightViewFocus(player->GetPosition());
+    }
     SceneBase::Update(deltaTime);
 
     Physics::Instance().Update(Time::UnscaledDeltaTime());

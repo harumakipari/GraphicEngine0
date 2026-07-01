@@ -24,6 +24,8 @@ struct RenderQueues
 
     std::vector<MeshComponent*> shadowCasters;
 
+    std::vector<MeshComponent*> shadowMapCasters;// キャラクターなどのシャドウマップ
+
     std::vector<InstanceBatch> instanceBatches;
 };
 
@@ -72,9 +74,8 @@ public:
 
     void CastShadowRender(ID3D11DeviceContext* immediateContext, const std::vector<MeshComponent*>& items);
 
-    void CastShadow(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass);
 
-    void CastShadowWithStaticBatching(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes) const;
+    void CastShadowMapRender(ID3D11DeviceContext* immediateContext, const std::vector<MeshComponent*>& items);
 
     // メッシュを収集して振り分ける
     RenderQueues BuildRenderQueues();
@@ -83,7 +84,14 @@ private:
 
     void DrawWithStaticBatching(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const DirectX::XMFLOAT4X4& previousWorld, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass) const;
 
-    void DrawCloth(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass);
+    void CastShadow(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass);
+
+    void CastShadowWithStaticBatching(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes) const;
+
+    void CastShadowMap(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass);
+
+    void CastShadowMapWithStaticBatching(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes) const;
+
 private:
     // カメラの定数バッファ
     std::unique_ptr<ConstantBuffer<ViewConstants>> viewBuffer;

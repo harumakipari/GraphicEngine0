@@ -314,6 +314,7 @@
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\SampleScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp" />
+    <ClCompile Include="Source\Game\Scenes\TestScene.cpp" />
     <ClCompile Include="Source\Game\SofyBody\SoftBody.cpp" />
     <ClCompile Include="Source\Game\State\StateMachine.cpp" />
     <ClCompile Include="Source\Graphics\Cloud\VolumetricCloudscapes.cpp" />
@@ -465,6 +466,7 @@
     <ClInclude Include="Source\Game\Scenes\ModelScene.h" />
     <ClInclude Include="Source\Game\Scenes\SampleScene.h" />
     <ClInclude Include="Source\Game\Scenes\GameScene.h" />
+    <ClInclude Include="Source\Game\Scenes\TestScene.h" />
     <ClInclude Include="Source\Game\SofyBody\SoftBody.h" />
     <ClInclude Include="Source\Game\State\StateMachine.h" />
     <ClInclude Include="Source\Game\State\StateBase.h" />

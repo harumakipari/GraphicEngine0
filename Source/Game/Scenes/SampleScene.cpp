@@ -93,14 +93,13 @@ void SampleScene::SetUpActors()
     Transform buildTr2(DirectX::XMFLOAT3{ -3.0f,0.45f,3.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 0.8f,0.8f,0.8f });
     auto pauseActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor", buildTr2);
 
-
     Transform bossTr(DirectX::XMFLOAT3{ 3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
     auto boss = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("boss", bossTr);
 
     Transform greystoneTr(DirectX::XMFLOAT3{ -3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto greystone = this->GetActorManager()->CreateAndRegisterActorWithTransform<KnightActor>("greystone", greystoneTr);
 
-#if 0
+#if 1
     Transform testPlayerTr(DirectX::XMFLOAT3{ 3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto testPlayer = this->GetActorManager()->CreateAndRegisterActorWithTransform<TestPlayer>("testPlayer", testPlayerTr);
 #endif // 1

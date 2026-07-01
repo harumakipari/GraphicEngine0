@@ -338,7 +338,8 @@ void PlayerRushState::Enter()
     rushComboAdvanced = false;
 
     elapsedTime = 0.0f;
-    queuedAttackCount = 1;
+    //queuedAttackCount = 1;
+    queuedAttackCount = 5;
     player->invincible = true;  // ƒ‰ƒbƒVƒ…UŒ‚’†‚Í–³“Gó‘Ô‚É‚·‚é
 
 }

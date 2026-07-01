@@ -37,6 +37,9 @@ void Player::Initialize(const Transform& transform)
         skeletalMeshComponent->SetModel("./Data/Models/Characters/Player/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
+
+        skeletalMeshComponent->SetIsCastShadow(false);
+        skeletalMeshComponent->SetIsShadowMap(true);
 #if 1
         for (auto& material : skeletalMeshComponent->model->materials)
         {
@@ -202,6 +205,7 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->ChangeState("Idle");
     }
 
+#if 1
     {
         PROFILE_SCOPE("Create PlayerCollision");
 
@@ -224,6 +228,8 @@ void Player::Initialize(const Transform& transform)
         capsuleComponent->SetIsVisibleDebugBox(false);
         capsuleComponent->Initialize();
     }
+#endif // 1
+
 
 #if 1
     // ポイントライトコンポーネントを追加
@@ -257,9 +263,11 @@ void Player::Initialize(const Transform& transform)
 
     int weaponSocketNode = skeletalMeshComponent->FindIndexByName("weapon");
 
+#if 1
     // 剣に当たり判定のコンポーネントを追加
     swordCollisionComp = AddComponent<CapsuleComponent>("SwordCollision", parentName);
-    DirectX::XMFLOAT3 size = { 0.6f,1.5f,1.0f };
+    //DirectX::XMFLOAT3 size = { 0.6f,1.5f,1.0f };
+    DirectX::XMFLOAT3 size = { 0.3f,1.5f,1.0f };
     swordCollisionComp->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
     swordCollisionComp->SetRadiusAndHeight(size.x, size.y);
     swordCollisionComp->SetMass(mass);
@@ -275,7 +283,6 @@ void Player::Initialize(const Transform& transform)
     swordCollisionComp->Initialize();
     swordCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
         {
-            
             if (!other)
             {
                 Logger::Warning("other is nullptr");
@@ -301,7 +308,7 @@ void Player::Initialize(const Transform& transform)
 
             if (!hitBox)
             {
-                Logger::Log(U8("hitBoxがtrueではない！"));
+                //Logger::Log(U8("hitBoxがtrueではない！"));
                 return;
             }
 
@@ -322,6 +329,11 @@ void Player::Initialize(const Transform& transform)
 
         });
 
+    swordPointComp = AddComponent<CapsuleComponent>("SwordPointComponent", "SwordCollision");
+    swordPointComp->SetRelativeLocationDirect({ 0.0f,0.0f,0.6f });
+
+#endif // 0
+
     auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
@@ -337,8 +349,6 @@ void Player::Initialize(const Transform& transform)
     PlayAnimation("Weapon", "Bow");
 #endif // 0
 
-    swordPointComp = AddComponent<CapsuleComponent>("SwordPointComponent", "SwordCollision");
-    swordPointComp->SetRelativeLocationDirect({ 0.0f,0.0f,0.6f });
 
     // 火花エフェクト用のコンポーネントを追加
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
@@ -355,6 +365,11 @@ void Player::Initialize(const Transform& transform)
 
 void Player::Update(float deltaTime)
 {
+    if (InputSystem::GetInputState("1"))
+    {
+        stateMachine_->ChangeState("Rush");
+    }
+
     using namespace DirectX;
 
     // ヒットストップ処理
@@ -375,7 +390,8 @@ void Player::Update(float deltaTime)
     Character::Update(deltaTime);
 
     // 剣のデバックの当たり判定を描画するかどうか
-    swordCollisionComp->SetIsVisibleDebugShape(hitBox);
+    if (swordCollisionComp)
+        swordCollisionComp->SetIsVisibleDebugShape(hitBox);
 
     FindInteractable();
     //skeletalMeshComponent->UpdateCloth(elapsedTime);
@@ -824,7 +840,7 @@ IInteractable* Player::FindInteractable()
         // 前方60度以内
         if (dot < 0.5f) continue;
 
-        DebugRender::DrawSphere(interactablePos,bestDist, { 0,1,1,1 }, 0);
+        DebugRender::DrawSphere(interactablePos, bestDist, { 0,1,1,1 }, 0);
 
 
         float dist = MathHelper::Distance(playerPos, interactablePos);

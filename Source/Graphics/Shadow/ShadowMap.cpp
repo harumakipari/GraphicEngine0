@@ -56,6 +56,10 @@ void shadow_map::activate(ID3D11DeviceContext* immediate_context)
 	immediate_context->RSGetViewports(&viewport_count, cached_viewports);
 	immediate_context->OMGetRenderTargets(1, cached_render_target_view.ReleaseAndGetAddressOf(), cached_depth_stencil_view.ReleaseAndGetAddressOf());
 
+	// ShadowMap‚ÌSRV‚ðŠO‚·
+	ID3D11ShaderResourceView* nullSRV = nullptr;
+	immediate_context->PSSetShaderResources(15, 1, &nullSRV);
+
 	immediate_context->RSSetViewports(1, &viewport);
 	ID3D11RenderTargetView* null_render_target_view{ NULL };
 	immediate_context->OMSetRenderTargets(1, &null_render_target_view, depth_stencil_view.Get());

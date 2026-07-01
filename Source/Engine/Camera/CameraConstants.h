@@ -14,6 +14,7 @@ struct ViewConstants
     DirectX::XMFLOAT4X4 invView;
     DirectX::XMFLOAT4  cameraClipDistance;
     DirectX::XMFLOAT4X4 previousViewProjection;
+    DirectX::XMFLOAT4X4 lightViewProjection;
 };
 
 

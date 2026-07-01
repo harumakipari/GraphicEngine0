@@ -125,6 +125,10 @@ public:
 
     void SetIsCastShadow(bool isCastShadow) { this->isCastShadow_ = isCastShadow; }
 
+    void SetIsShadowMap(bool isShadowMap) { this->isShadowMap = isShadowMap; }
+
+    bool IsShadowMap() const { return isShadowMap; }
+
     virtual bool IsCastShadow() const { return isCastShadow_; }
 
     virtual void OnRegister() override {}
@@ -160,6 +164,9 @@ protected:
     bool isVisible_ = true;
     // 影をつけるかどうか
     bool isCastShadow_ = true;
+    // シャドウマップで影をつけるかどうか
+    bool isShadowMap = false;
+
     // 描画優先度
     int priority = 0;
     // モデルのノード情報

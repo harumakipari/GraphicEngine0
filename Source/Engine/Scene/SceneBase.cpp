@@ -135,6 +135,8 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
 
     temporalAa.Initialize(device, static_cast<UINT>(screenWidth), static_cast<UINT>(screenHeight));
 
+    shadowMap = std::make_unique<shadow_map>(device, shadowmap_width, shadowmap_height);
+
     return true;
 }
 
@@ -312,7 +314,6 @@ void SceneBase::Render(ID3D11DeviceContext* immediateContext, float deltaTime)
 #endif
 }
 
-
 void SceneBase::ForwardRender(ID3D11DeviceContext* immediateContext)
 {
     multipleRenderTargets->Clear(immediateContext);
@@ -429,7 +430,7 @@ void SceneBase::ForwardRender(ID3D11DeviceContext* immediateContext)
     }
 }
 
-void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const ViewConstants& viewConstants)
+void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext,  ViewConstants& viewConstants)
 {
     //auto camera = cameraManager->GetRenderCamera(this);
 
@@ -438,6 +439,17 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
     gBufferRenderTarget->Acticate(immediateContext);
 
     auto queues = sceneRender.BuildRenderQueues();
+
+    immediateContext->PSSetShaderResources(15, 1, shadowMap->shader_resource_view.GetAddressOf());
+    const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
+    XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
+    XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&lightManager->GetLightDirection())) * light_view_distance };
+    XMVECTOR U{ XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f) };
+    XMMATRIX V{ XMMatrixLookAtLH(E, F, U) };
+    XMMATRIX P{ XMMatrixOrthographicLH(light_view_size * aspect_ratio, light_view_size, light_view_near_z, light_view_far_z) };
+
+    DirectX::XMStoreFloat4x4(&viewConstants.lightViewProjection, V * P);
+    sceneRender.UpdateViewConstants(immediateContext, viewConstants);
 
 #if 1
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
@@ -487,6 +499,41 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
     sceneRender.currentRenderPath = RenderPath::Shadow;
     sceneRender.CastShadowRender(immediateContext, queues.shadowCasters);
     cascadedShadowMaps->Deactivate(immediateContext);
+
+#if 1
+    // シャドウマップ
+    {
+        using namespace DirectX;
+
+        const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
+
+        
+
+        XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
+        XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&lightManager->GetLightDirection())) * light_view_distance };
+        XMVECTOR U{ XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f) };
+        XMMATRIX V{ XMMatrixLookAtLH(E, F, U) };
+        XMMATRIX P{ XMMatrixOrthographicLH(light_view_size * aspect_ratio, light_view_size, light_view_near_z, light_view_far_z) };
+
+        ViewConstants data{};
+
+        DirectX::XMStoreFloat4x4(&data.viewProjection, V * P);
+        data.lightViewProjection = data.viewProjection;
+        viewConstants.lightViewProjection = data.lightViewProjection;
+        sceneRender.UpdateViewConstants(immediateContext, data);
+        shadowMap->clear(immediateContext, 1.0f);
+        shadowMap->activate(immediateContext);
+
+        sceneRender.currentRenderPath = RenderPath::Deferred; // ShadowMapだから普通の描画を使用する
+        sceneRender.CastShadowMapRender(immediateContext, queues.shadowMapCasters);
+
+        shadowMap->deactivate(immediateContext);
+    }
+    // カメラの定数バッファを更新し直す（影で違う値が入っているから）
+    sceneRender.UpdateViewConstants(immediateContext, viewConstants);
+
+#endif // 1
+
 #else
     cascaded_shadow_map->clear(immediateContext);
     RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
@@ -617,19 +664,21 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, const View
 
         ID3D11ShaderResourceView* shader_resource_views[]
         {
-             //temporalAa.history[temporalAa.previous].srv.Get(),//colorMap   こっちライティング済み
-              frameBuffer->shaderResourceViews[0].Get(),//colorMap   こっちライティング済み
-              gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)],   // positionMap
-              gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],   // normalMap
-              gBufferRenderTarget->depthStencilShaderResourceView,      //depthMap
-              sceneEffectManager->GetOutput("BloomEffect"),
-              sceneEffectManager->GetOutput("FogEffect"),
-              sceneEffectManager->GetOutput("SSAOEffect"),
-              sceneEffectManager->GetOutput("SSREffect"),
-              sceneEffectManager->GetOutput("DepthOfFieldEffect"), // 被写界深度のために、ぼやけたクスチャ
-              //gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::EMISSIVE)],   // emissiveMap
-              gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::COLOR)],   // positionMap
-              cascadedShadowMaps->depthMap().Get(),   //cascadedShadowMaps
+            //temporalAa.history[temporalAa.previous].srv.Get(),//colorMap   こっちライティング済み
+             frameBuffer->shaderResourceViews[0].Get(),//colorMap   こっちライティング済み
+             gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)],   // positionMap
+             gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],   // normalMap
+             gBufferRenderTarget->depthStencilShaderResourceView,      //depthMap
+             sceneEffectManager->GetOutput("BloomEffect"),
+             sceneEffectManager->GetOutput("FogEffect"),
+             sceneEffectManager->GetOutput("SSAOEffect"),
+             sceneEffectManager->GetOutput("SSREffect"),
+             sceneEffectManager->GetOutput("DepthOfFieldEffect"), // 被写界深度のために、ぼやけたクスチャ
+             gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::EMISSIVE)],   // emissiveMap
+             gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)],   // velocityMap
+             cascadedShadowMaps->depthMap().Get(),   //cascadedShadowMaps
+             //gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::COLOR)],   // colorMap
+             //shadowMap->shader_resource_view.Get(),  // ShadowMap
         };
         //immediateContext->PSSetShaderResources(8, 1, cascadedShadowMaps->depthMap().GetAddressOf());
 
@@ -912,6 +961,13 @@ void SceneBase::DrawPostEffectTab()
         }
     }
 
+    ImGui::Begin("shadowMap");
+    ImGui::SliderFloat("light_view_distance", &light_view_distance, 1.0f, +100.0f);
+    ImGui::SliderFloat("light_view_size", &light_view_size, 1.0f, +100.0f);
+    ImGui::SliderFloat("light_view_near_z", &light_view_near_z, 1.0f, light_view_far_z - 1.0f);
+    ImGui::SliderFloat("light_view_far_z", &light_view_far_z, light_view_near_z + 1.0f, +100.0f);
+    ImGui::Image(reinterpret_cast<void*>(shadowMap->shader_resource_view.Get()), ImVec2(shadowmap_width / 5.0f, shadowmap_height / 5.0f));
+    ImGui::End();
 }
 
 

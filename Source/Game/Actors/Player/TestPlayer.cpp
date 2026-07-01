@@ -26,8 +26,8 @@ void TestPlayer::Initialize(const Transform& transform)
 	GetBodyAnimationController()->ResetRootMotion("Idle");
 #else
 	skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-	//skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon1/player.gltf", false, true);
-	skeletalMeshComponent->SetModel("./Data/Models/Characters/Player/player.gltf", false, true);
+	skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/testPlayer.gltf", false, true);
+	//skeletalMeshComponent->SetModel("./Data/Models/Characters/Player/player.gltf", false, true);
 
 	for (auto& material : skeletalMeshComponent->model->materials)
 	{
@@ -52,6 +52,8 @@ void TestPlayer::Initialize(const Transform& transform)
 	controller->AddAnimation("Primary_Attack_Fast_B", 7);
 	controller->AddAnimation("Primary_Attack_Fast_C", 8);
 	controller->AddAnimation("Primary_Attack_Fast_D", 9);
+	controller->AddAnimation("Idle_to_Idle_Combat_Seq_0", 10);
+	controller->AddAnimation("Idle_Combat_to_Idle_Seq_0", 11);
 
 	// アニメーションコントローラーを character に追加
 	this->AddBodyAnimationController(controller);
@@ -76,7 +78,8 @@ void TestPlayer::Initialize(const Transform& transform)
 	capsuleComponent->SetIsVisibleDebugBox(false);
 	capsuleComponent->Initialize();
 
-	int weaponSocketNode = skeletalMeshComponent->FindIndexByName("VB root_weapon");
+	int weaponSocketNode = skeletalMeshComponent->FindIndexByName("Sword");
+	//int weaponSocketNode = skeletalMeshComponent->FindIndexByName("weapon");
 	//int weaponSocketNode = skeletalMeshComponent->FindIndexByName("ik_hand_gun");
 
 
@@ -98,9 +101,9 @@ void TestPlayer::Initialize(const Transform& transform)
 
 
 
-	//auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", "SwordCollision");
-	//swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
-	//swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
+	auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", "SwordCollision");
+	swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
+	swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
 
 }
 

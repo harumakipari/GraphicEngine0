@@ -16,7 +16,8 @@ Texture2D ssaoTexture : register(t6);
 Texture2D ssrTexture : register(t7);
 Texture2D bokehTexture : register(t8);
 Texture2D sceneColorTexture : register(t9);
-Texture2DArray cascadedShadowMaps : register(t10);
+Texture2D velocityTexture : register(t10);  // w にshadowFactorが入っている
+Texture2DArray cascadedShadowMaps : register(t11);
 
 Texture3D noise3D : register(t20); // ノイズテクスチャ
 
@@ -32,6 +33,30 @@ float4 CalculatedPositionNDC(VS_OUT pin)
     return positionNdc;
 }
 
+float3 ApplyShadowMaps(inout float3 color, in float4 positionWorldSpace)
+{
+#if 1
+    float shadowFactor = 0.0;
+#if 1
+    const float shadow_depth_bias = 0.001;
+#else
+	// Here we have a maximum bias of 0.01 and a minimum of 0.001 based on the surface's normal and light direction. 
+    const float shadow_depth_bias = max(0.01 * (1.0 - dot(N, L)), 0.001);
+#endif
+
+    float4 light_view_position = mul(positionWorldSpace, lightViewProjection); // World to Clip space
+    light_view_position = light_view_position / light_view_position.w; // Clip to NDC
+    float2 light_view_texcoord = 0;
+	// NDC to Texture coordinate
+    light_view_texcoord.x = light_view_position.x * +0.5 + 0.5;
+    light_view_texcoord.y = light_view_position.y * -0.5 + 0.5;
+    float depth = saturate(light_view_position.z - shadow_depth_bias);
+
+    float3 shadow_factor = 1.0f;
+    //shadow_factor = shadowMap.SampleCmpLevelZero(comparisionSamplerState, light_view_texcoord, depth).xxx;
+#endif
+    return shadow_factor;
+}
 
 
 float3 ApplyShadow(inout float3 color, in float4 positionWorldSpace, in float depthViewSpace, in float2 shadowMapDimensions, in float3 randSeed, in float3 normal, in float3 lightDir)
@@ -200,6 +225,7 @@ float4 main(VS_OUT pin) : SV_TARGET
         return baseColor;
     }
 
+
     float4 positionNdc;
     // uv -> ndc 
     positionNdc.x = pin.texcoord.x * +2 - 1;
@@ -220,7 +246,12 @@ float4 main(VS_OUT pin) : SV_TARGET
     if (enableCascadedShadowMaps)
     {
         color.rgb = ApplyShadow(color.rgb, positionWorldSpace, (positionViewSpace.z), shadowMapDimensions, positionNdc.xyz, sceneNormal, lightDirection.xyz);
+        float shadowFactor = velocityTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).w;
+        color.rgb *= shadowFactor;
+        //return float4(shadowFactor.xxx, 1);
     }
+
+    //color.rgb = ApplyShadowMaps(color.rgb, positionWorldSpace);
 
     if (enableFog)
     {

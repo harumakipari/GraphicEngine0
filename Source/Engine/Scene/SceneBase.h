@@ -48,7 +48,7 @@ public:
     virtual void Update(float deltaTime) override;
 
     // 定数バッファの更新処理をシーンごとにカスタマイズできるようにするための仮想関数
-    virtual void UpdateConstants(ID3D11DeviceContext* immediateContext, float deltaTime){}
+    virtual void UpdateConstants(ID3D11DeviceContext* immediateContext, float deltaTime) {}
 
     virtual void Render(ID3D11DeviceContext* immediateContext, float deltaTime) override;
 
@@ -69,6 +69,8 @@ public:
 
     // ライトマネージャーへのアクセス関数
     //LightManager* GetLightManager() const { return lightManager.get(); }
+    // 影描画用のライトビューの焦点を設定する関数
+    void SetLightViewFocus(const DirectX::XMFLOAT3& focus) { light_view_focus = { focus.x,focus.y,focus.z,1.0f }; }
 
 protected:
     // UI描画
@@ -78,7 +80,7 @@ private:
 
     void ForwardRender(ID3D11DeviceContext* immediateContext);
 
-    void DeferredRender(ID3D11DeviceContext* immediateContext, const ViewConstants& viewConstants);
+    void DeferredRender(ID3D11DeviceContext* immediateContext, ViewConstants& viewConstants);
 
     void DrawOutliner();
 
@@ -149,6 +151,9 @@ protected:
     bool useDrawDebug = true;
 
 
+
+
+
     SIZE framebufferDimensions = {};
 
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> noise3d;
@@ -165,5 +170,14 @@ protected:
     std::unordered_map<RenderPass, std::vector<RenderHook>> renderHooks;
 
     TemporalAA temporalAa;
+
+    std::shared_ptr<shadow_map> shadowMap;
+    const uint32_t shadowmap_width = 2048;
+    const uint32_t shadowmap_height = 2048;
+    DirectX::XMFLOAT4 light_view_focus{ 0, 0, 0, 1 };
+    float light_view_distance{ 10.0f };
+    float light_view_size{ 12.0f };
+    float light_view_near_z{ 2.0f };
+    float light_view_far_z{ 18.0f };
 
 };

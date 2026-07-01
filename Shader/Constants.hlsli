@@ -107,6 +107,7 @@ cbuffer VIEW_CONSTANTS_BUFFER : register(b4)
     row_major float4x4 invView;
     float4 cameraClipDistance;
     row_major float4x4 previousViewProjection;
+    row_major float4x4 lightViewProjection;
 }
 
 #endif

@@ -129,6 +129,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
         PROFILE_SCOPE("Create StageModel");
         staticMeshComponent = this->AddComponent<class StaticMeshComponent>("model", parentName);
         staticMeshComponent->model = stageAsset->model;
+        staticMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Stage;
     }
 
 
@@ -238,12 +239,15 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 auto doorJailActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DoorJailActor>("DoorJailActor", doorJailTr);
 
             }
+#if 0
             else if (point.name.rfind("Spawn_Barrel", 0) == 0)
             {
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
                 Transform barrelTr{ pos,point.worldRotation,point.worldScale };
                 auto barrel = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBarrelActor>("barrel", barrelTr);
-            }
+                }
+
+#endif // 0
             else if (point.name.rfind("Spawn_TorchLight", 0) == 0)
             {// ƒ{ƒX‚Ì•”‰®‚ÌTorchLight‚ğ¶¬‚·‚é
                 static int i = 0;
