@@ -111,6 +111,13 @@ struct FogConstants
 
     float distanceFogHeightFalloff = 0.0f; // 距離フォグの高さ減衰。0で減衰なし。値が大きいほど距離フォグの影響が高い位置が低くなる。
     float fogShadowDepthBias = 0.0f; // フォグ用のshadowバイアス
+    float groundFogFallOff = 0.1f; // 地面フォグの減衰。0で減衰なし。値が大きいほど地面フォグの影響が高い位置が低くなる。
+    float groundFogHeight = 0.5f; // 地面フォグの高さ。0で地面に沿ってフォグがかかる。値が大きいほど地面から離れた位置でフォグがかかる。
+
+    float groundFogDensity = 0.5f; // 地面フォグの密度。0でフォグなし。値が大きいほど地面フォグの影響が強くなる。
+    float groundFogAmbient = 0.6f; // 床フォグが環境光からどれくらい明るさを受けるか
+    float groundNoiseScale= 0.0204f;
+    float groundNoiseTimeScale = 0.1877f;
 };
 
 struct SSRConstantBuffer

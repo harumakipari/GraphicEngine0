@@ -54,6 +54,12 @@ void FogEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourc
     fogCBuffer->data.fogFar = fog.fogFar;
     fogCBuffer->data.distanceFogHeightFalloff = fog.distanceFogHeightFalloff;
     fogCBuffer->data.fogShadowDepthBias = fog.fogShadowDepthBias;
+    fogCBuffer->data.groundFogFallOff = fog.groundFogFallOff;
+    fogCBuffer->data.groundFogHeight = fog.groundFogHeight;
+    fogCBuffer->data.groundFogDensity = fog.groundFogDensity;
+    fogCBuffer->data.groundFogAmbient = fog.groundFogAmbient;
+    fogCBuffer->data.groundNoiseScale = fog.groundNoiseScale;
+    fogCBuffer->data.groundNoiseTimeScale = fog.groundNoiseTimeScale;
 
     fogCBuffer->Activate(immediateContext, 8);
 
@@ -87,14 +93,20 @@ void FogEffect::DrawDebugUI()
     auto& fog = Scene::GetCurrentScene()->GetSceneSettings().fogConstants;
     ImGui::ColorEdit4("Fog Color", &fog.fogColor.x);
     ImGui::SliderFloat("Intensity", &fog.fogColor.w, 0.0f, 10.0f);
+    ImGui::SliderFloat("groundFogDensity", &fog.groundFogDensity, 0.0f, 10.0f);
     ImGui::SliderFloat("Density", &fog.fogDensity, 0.0f, 10.0f, "%.6f");
     ImGui::SliderFloat("Height Falloff", &fog.fogHeightFalloff, 0.001f, 1.0f, "%.4f");
+    ImGui::SliderFloat("Ground Falloff", &fog.groundFogFallOff, 0.001f, 1.0f, "%.4f");
     ImGui::SliderFloat("Cutoff Distance", &fog.fogCutoffDistance, 0.0f, 1000.0f);
     ImGui::SliderFloat("Ground Level", &fog.groundLevel, -100.0f, 100.0f);
+    ImGui::DragFloat("Ground Fog Height", &fog.groundFogHeight, 0.001f, -10.0f, 10.0f);
     ImGui::SliderFloat("Mie Scattering", &fog.mieScatteringFactor, 0.0f, 1.0f, "%.4f");
     ImGui::SliderFloat("Time Scale", &fog.timeScale, 0.0f, 1.0f, "%.4f");
     ImGui::SliderFloat("Noise Scale", &fog.noiseScale, 0.0f, 0.5f, "%.4f");
+    ImGui::SliderFloat("Ground Time Scale", &fog.groundNoiseTimeScale, 0.0f, 1.0f, "%.4f");
+    ImGui::SliderFloat("Ground Noise Scale", &fog.groundNoiseScale, 0.0f, 0.5f, "%.4f");
     ImGui::DragFloat("globalFogIntensity", &fog.globalFogIntensity, 0.001f, 0.0f, 0.5f, "%.4f");
+    ImGui::DragFloat("groundFogAmbient", &fog.groundFogAmbient, 0.01f, 0.0f, 1.0f, "%.4f");
     ImGui::SliderFloat("fogNear", &fog.fogNear, 0.1f, +100.0f);
     ImGui::SliderFloat("fogFar", &fog.fogFar, 0.1f, +500.0f);
     ImGui::SliderFloat("distanceFogHeightFalloff", &fog.distanceFogHeightFalloff, 0.1f, +50.0f);

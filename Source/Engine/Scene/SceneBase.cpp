@@ -441,6 +441,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext,  ViewConst
     auto queues = sceneRender.BuildRenderQueues();
 
     immediateContext->PSSetShaderResources(15, 1, shadowMap->shader_resource_view.GetAddressOf());
+#if 1
     const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
     XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
     XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&lightManager->GetLightDirection())) * light_view_distance };
@@ -450,6 +451,42 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext,  ViewConst
 
     DirectX::XMStoreFloat4x4(&viewConstants.lightViewProjection, V * P);
     sceneRender.UpdateViewConstants(immediateContext, viewConstants);
+
+#else
+
+    // シャドウマップ
+    {
+        using namespace DirectX;
+
+        const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
+
+
+
+        XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
+        XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&lightManager->GetLightDirection())) * light_view_distance };
+        XMVECTOR U{ XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f) };
+        XMMATRIX V{ XMMatrixLookAtLH(E, F, U) };
+        XMMATRIX P{ XMMatrixOrthographicLH(light_view_size * aspect_ratio, light_view_size, light_view_near_z, light_view_far_z) };
+
+        ViewConstants data{};
+
+        DirectX::XMStoreFloat4x4(&data.viewProjection, V * P);
+        data.lightViewProjection = data.viewProjection;
+        viewConstants.lightViewProjection = data.lightViewProjection;
+        sceneRender.UpdateViewConstants(immediateContext, data);
+        shadowMap->clear(immediateContext, 1.0f);
+        shadowMap->activate(immediateContext);
+
+        sceneRender.currentRenderPath = RenderPath::Deferred; // ShadowMapだから普通の描画を使用する
+        sceneRender.CastShadowMapRender(immediateContext, queues.shadowMapCasters);
+
+        shadowMap->deactivate(immediateContext);
+    }
+    // カメラの定数バッファを更新し直す（影で違う値が入っているから）
+    sceneRender.UpdateViewConstants(immediateContext, viewConstants);
+
+
+#endif // 0
 
 #if 1
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
@@ -504,10 +541,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext,  ViewConst
     // シャドウマップ
     {
         using namespace DirectX;
-
         const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
-
-        
 
         XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
         XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&lightManager->GetLightDirection())) * light_view_distance };
@@ -516,17 +550,14 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext,  ViewConst
         XMMATRIX P{ XMMatrixOrthographicLH(light_view_size * aspect_ratio, light_view_size, light_view_near_z, light_view_far_z) };
 
         ViewConstants data{};
-
         DirectX::XMStoreFloat4x4(&data.viewProjection, V * P);
         data.lightViewProjection = data.viewProjection;
         viewConstants.lightViewProjection = data.lightViewProjection;
         sceneRender.UpdateViewConstants(immediateContext, data);
         shadowMap->clear(immediateContext, 1.0f);
         shadowMap->activate(immediateContext);
-
         sceneRender.currentRenderPath = RenderPath::Deferred; // ShadowMapだから普通の描画を使用する
         sceneRender.CastShadowMapRender(immediateContext, queues.shadowMapCasters);
-
         shadowMap->deactivate(immediateContext);
     }
     // カメラの定数バッファを更新し直す（影で違う値が入っているから）

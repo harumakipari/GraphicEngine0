@@ -72,7 +72,15 @@ cbuffer FOG_CONSTANTS_BUFFER : register(b8)
 
     float distanceFogHeightFalloff; // 距離フォグの高さ減衰。0で減衰なし。値が大きいほど距離フォグの影響が高い位置が低くなる。
     float fogShadowDepthBias;
+    float groundFogFalloff;
+    float groundFogHeight;
+
+    float groundFogDensity;
+    float groundFogAmbient; // 床フォグが環境光からどれくらい明るさを受けるか
+    float groundNoiseScale;
+    float groundNoiseTimeScale;
 }
+
 cbuffer VOLUMETRIC_CLOUDSCAPES_CONSTANT_BUFFER : register(b5)
 {
     float2 windDirection;

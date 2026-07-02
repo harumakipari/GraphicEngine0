@@ -275,6 +275,12 @@ inline void to_json(nlohmann::json& j, const FogConstants& s)
         {"fogFar", s.fogFar},
         {"distanceFogHeightFalloff", s.distanceFogHeightFalloff},
         {"fogShadowDepthBias", s.fogShadowDepthBias},
+        {"groundFogFallOff", s.groundFogFallOff},
+        {"groundFogHeight", s.groundFogHeight},
+        {"groundFogDensity", s.groundFogDensity},
+        {"groundFogAmbient", s.groundFogAmbient},
+        {"groundNoiseScale", s.groundNoiseScale},
+        {"groundNoiseTimeScale", s.groundNoiseTimeScale},
     };
 }
 
@@ -295,6 +301,12 @@ inline void from_json(const nlohmann::json& j, FogConstants& s)
     if (j.contains("fogFar")) j.at("fogFar").get_to(s.fogFar);
     if (j.contains("distanceFogHeightFalloff")) j.at("distanceFogHeightFalloff").get_to(s.distanceFogHeightFalloff);
     if (j.contains("fogShadowDepthBias")) j.at("fogShadowDepthBias").get_to(s.fogShadowDepthBias);
+    if (j.contains("groundFogFallOff")) j.at("groundFogFallOff").get_to(s.groundFogFallOff);
+    if (j.contains("groundFogHeight")) j.at("groundFogHeight").get_to(s.groundFogHeight);
+    if (j.contains("groundFogDensity")) j.at("groundFogDensity").get_to(s.groundFogDensity);
+    if (j.contains("groundFogAmbient")) j.at("groundFogAmbient").get_to(s.groundFogAmbient);
+    if (j.contains("groundNoiseScale")) j.at("groundNoiseScale").get_to(s.groundNoiseScale);
+    if (j.contains("groundNoiseTimeScale")) j.at("groundNoiseTimeScale").get_to(s.groundNoiseTimeScale);
 }
 
 // SSR

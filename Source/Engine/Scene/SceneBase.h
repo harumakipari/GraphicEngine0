@@ -176,8 +176,8 @@ protected:
     const uint32_t shadowmap_height = 2048;
     DirectX::XMFLOAT4 light_view_focus{ 0, 0, 0, 1 };
     float light_view_distance{ 10.0f };
-    float light_view_size{ 12.0f };
-    float light_view_near_z{ 2.0f };
-    float light_view_far_z{ 18.0f };
+    float light_view_size{ 20.0f };
+    float light_view_near_z{ 1.0f };
+    float light_view_far_z{ 100.0f };
 
 };

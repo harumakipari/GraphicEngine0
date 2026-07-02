@@ -50,6 +50,20 @@ float SunlightRadiance(float3 worldPositon)
     return cascadedShadowMaps.SampleCmpLevelZero(comparisionSamplerState, float3(positionLightSpace.xy, cascadeIndex), positionLightSpace.z - fogShadowDepthBias).x + globalFogIntensity;
 }
 
+float GroundFogDensity(float3 worldPos)
+{
+    float height = worldPos.y - groundLevel;
+
+    float fog =
+        exp(-max(height, 0) * groundFogFalloff);
+
+    fog *= 1.0 - smoothstep(
+        0,
+        groundFogHeight,
+        height);
+
+    return fog;
+}
 // 高さによる霧の濃度変化
 void ApplyHeightFog(float3 position /*world space*/, inout float density)
 {
@@ -94,7 +108,7 @@ float DitheredRayMarch(float2 screenPos, float3 rayStart, float3 rayDir, float r
     [loop] // レイマーチループ
     for (int i = 0; i < stepCount; ++i)
     {
-        // 太陽光のチェック
+        // 太陽光のチェック 日向->1.0 影->0.0
         float radiance = SunlightRadiance(currentPosition);
         // 霧密度
         float density = fogDensity;
@@ -107,15 +121,25 @@ float DitheredRayMarch(float2 screenPos, float3 rayStart, float3 rayDir, float r
 #endif
         // 高さフォグ
         ApplyHeightFog(currentPosition, density);
-        
+
+        // 地面付近のフォグ
+        float groundDensity = groundFogDensity * GroundFogDensity(currentPosition);
+        // ノイズ（地面付近の霧）
+        float3 groundNoisePos =frac(currentPosition * groundNoiseScale +noiseVelocity * elapsedTime * groundNoiseTimeScale);
+        float groundNoise =0.5 * noise3D.Sample(samplerStates[LINEAR],groundNoisePos) + 0.5;
+        groundDensity *= groundNoise;
+
         const float scatteringCoef = 0.815f;
         const float extinctionCoef = 0.0031f;
         float scattering = scatteringCoef * stepSize * density; // 散乱
         extinction += extinctionCoef * stepSize * density; // 減衰
 
-        // 手前の霧ほど強く、奥は減衰 積分
+        // 手前の霧ほど強く、奥は減衰 積分 
         accumulatedRadiance += radiance * scattering * exp(-extinction);
-        
+
+        // 地面付近のフォグ　
+        accumulatedRadiance += groundDensity * groundFogAmbient * stepSize * exp(-extinction);
+
         currentPosition += step;
     }
     
