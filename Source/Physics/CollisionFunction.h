@@ -43,6 +43,25 @@ namespace CollisionFunction
             collisionLayer);
     }
 
+    inline bool CapsuleCast(
+        const DirectX::XMFLOAT3& point1,
+        const DirectX::XMFLOAT3& point2,
+        float radius,
+        const DirectX::XMFLOAT3& direction,
+        float distance,
+        bool trigger,
+        HitResult& result,
+        uint32_t wantToHitLayer
+    )
+    {
+        return Physics::Instance().CapsuleCast(
+            point1,
+            point2,
+            radius,
+            direction, distance,
+            trigger, result, wantToHitLayer);
+    }
+
     inline bool RaycastFromMouse(const DirectX::XMFLOAT2& mouseCursor, HitResultWithActor& result, uint32_t collisionLayer = 0xFFFFFF)
     {
         float screenWidth, screenHeight, viewportX, viewportY;
@@ -64,7 +83,7 @@ namespace CollisionFunction
         }
         auto camera = scene->GetCameraManager()->GetRenderCamera(scene);
         ViewConstants data;
-        
+
 
         if (camera)
         {
@@ -125,7 +144,7 @@ namespace CollisionFunction
 
         ViewConstants data;
         if (camera)
-            data= camera->GetViewConstants();
+            data = camera->GetViewConstants();
         //Šes—ñ‚ğæ“¾
         DirectX::XMMATRIX View = DirectX::XMLoadFloat4x4(&data.view);
         DirectX::XMMATRIX Projection = DirectX::XMLoadFloat4x4(&data.projection);

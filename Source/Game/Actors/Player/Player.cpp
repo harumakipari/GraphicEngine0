@@ -332,12 +332,25 @@ void Player::Initialize(const Transform& transform)
     swordPointComp = AddComponent<CapsuleComponent>("SwordPointComponent", "SwordCollision");
     swordPointComp->SetRelativeLocationDirect({ 0.0f,0.0f,0.6f });
 
-#endif // 0
+    {
+        // 剣の根本のコンポーネントを追加   
+        swordRootComponent = AddComponent<SceneComponent>("swordRootComponent", parentName);
+        swordRootComponent->SetRelativeLocationDirect({ 0.0f,0.0f,0.3f });
+        swordRootComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
 
+        // 剣の真ん中のコンポーネントを追加
+        swordMiddleComponent = AddComponent<SceneComponent>("swordMiddleComponent", "swordRootComponent");
+        swordMiddleComponent->SetRelativeLocationDirect({ 0.0f,0.0f,0.4f });
+
+        // 剣の先端のコンポーネントを追加
+        swordTipComponent = AddComponent<SceneComponent>("swordTipComponent", "swordRootComponent");
+        swordTipComponent->SetRelativeLocationDirect({ 0.0f,0.0f,0.8f });
+    }
+
+#endif // 0
     auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
-
 #if 0
     auto bowMeshComponent = this->AddComponent<SkeletalMeshComponent>("Bow", parentName);
     bowMeshComponent->SetModel("./Data/Models/Weapons/PlayerBow/AnimationBow.gltf", false, true);
@@ -348,8 +361,6 @@ void Player::Initialize(const Transform& transform)
     AddAnimationController("Weapon", weaponController);
     PlayAnimation("Weapon", "Bow");
 #endif // 0
-
-
     // 火花エフェクト用のコンポーネントを追加
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
@@ -394,6 +405,29 @@ void Player::Update(float deltaTime)
         swordCollisionComp->SetIsVisibleDebugShape(hitBox);
 
     FindInteractable();
+
+    HitResultWithActor hit;
+
+    bool isHit = false;
+
+    DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
+    DirectX::XMFLOAT3 swordMidPos = swordMiddleComponent->GetComponentLocation();
+    DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
+    
+    isHit |= CollisionFunction::SphereRayCast(prevSwordRootPos, swordRootPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+    isHit |= CollisionFunction::SphereRayCast(prevSwordMidPos, swordMidPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+    isHit |= CollisionFunction::SphereRayCast(prevSwordTipPos, swordTipPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+
+    prevSwordRootPos = swordRootPos;
+    prevSwordMidPos = swordMidPos;
+    prevSwordTipPos = swordTipPos;
+
+    if (isHit)
+    {
+        Logger::Log(U8("剣に敵が当たった"));
+    }
+
+
     //skeletalMeshComponent->UpdateCloth(elapsedTime);
 
     //skeletalMeshComponent->UpdateGlobalTransforms();

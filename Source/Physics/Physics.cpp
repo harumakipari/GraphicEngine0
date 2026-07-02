@@ -912,6 +912,132 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
     return hit;
 }
 
+// カプセルキャスト
+bool Physics::CapsuleCast(
+    const DirectX::XMFLOAT3& point1,
+    const DirectX::XMFLOAT3& point2,
+    float radius,
+    const DirectX::XMFLOAT3& direction,
+    float distance,
+    bool trigger,
+    HitResult& result,
+    uint32_t wantToHitLayer
+    )
+{
+    physx::PxQueryFilterData px_query_filter_data(
+        //	physx::PxQueryFlag::eDYNAMIC |
+        physx::PxQueryFlag::eSTATIC |
+        physx::PxQueryFlag::ePREFILTER |
+        physx::PxQueryFlag::ePOSTFILTER
+    );
+    px_query_filter_data.data.word0 = wantToHitLayer;
+    px_query_filter_data.data.word1 = trigger;
+
+    DirectX::XMVECTOR Point1 = DirectX::XMLoadFloat3(&point1);
+    DirectX::XMVECTOR Point2 = DirectX::XMLoadFloat3(&point2);
+    DirectX::XMVECTOR Vec = DirectX::XMVectorSubtract(Point2, Point1);
+    DirectX::XMVECTOR Length = DirectX::XMVector3Length(Vec);
+    float height = DirectX::XMVectorGetX(Length);
+
+    DirectX::XMVECTOR TargetDirection = DirectX::XMVectorDivide(Vec, Length);
+    DirectX::XMVECTOR Center = DirectX::XMVectorAdd(Point1, DirectX::XMVectorScale(TargetDirection, height * 0.5f));
+    DirectX::XMFLOAT3 center;
+    DirectX::XMStoreFloat3(&center, Center);
+
+    DirectX::XMVECTOR AxisX = DirectX::XMVectorSet(1, 0, 0, 0);
+    DirectX::XMVECTOR Rotation = DirectX::XMQuaternionIdentity();
+    DirectX::XMVECTOR Cross = DirectX::XMVector3Cross(AxisX, TargetDirection);
+    if (DirectX::XMVector3NotEqual(Cross, DirectX::XMVectorZero()))
+    {
+        DirectX::XMVECTOR Dot = DirectX::XMVector3Dot(AxisX, TargetDirection);
+        float angle = acosf(DirectX::XMVectorGetX(Dot));
+
+        DirectX::XMVECTOR Normal = DirectX::XMVector3Normalize(Cross);
+        Rotation = DirectX::XMQuaternionRotationAxis(Normal, angle);
+    }
+    DirectX::XMFLOAT4 rotation;
+    DirectX::XMStoreFloat4(&rotation, Rotation);
+
+    physx::PxCapsuleGeometry px_geometry(radius, height * 0.5f);
+    physx::PxSweepBufferN<1> px_sweep_buffer;
+    physx::PxTransform px_transform(
+        physx::PxVec3(center.x, center.y, center.z),
+        physx::PxQuat(rotation.x, rotation.y, rotation.z, rotation.w));
+
+    bool hit = pxScene->sweep(px_geometry,
+        px_transform,
+        physx::PxVec3(direction.x, direction.y, direction.z),
+        distance,
+        px_sweep_buffer,
+        physx::PxHitFlag::eDEFAULT | physx::PxHitFlag::eMTD,
+        px_query_filter_data,
+        this);
+    if (hit && px_sweep_buffer.hasBlock)
+    {
+        const physx::PxVec3& p = px_sweep_buffer.block.position;
+        const physx::PxVec3& n = px_sweep_buffer.block.normal;
+
+        result.position = DirectX::XMFLOAT3(p.x, p.y, p.z);
+        result.normal = DirectX::XMFLOAT3(n.x, n.y, n.z);
+        result.distance = px_sweep_buffer.block.distance;
+
+        distance = result.distance;
+    }
+#if 1
+    // デバッグ描画
+    Line line;
+    line.color = hit ? DirectX::XMFLOAT4(1, 0, 0, 1) : DirectX::XMFLOAT4(0, 0, 1, 1);
+
+    line.start = point1;
+    line.end = point2;
+    lines.emplace_back(line);
+
+    line.start = point1;
+    line.end.x = line.start.x + direction.x * distance;
+    line.end.y = line.start.y + direction.y * distance;
+    line.end.z = line.start.z + direction.z * distance;
+    lines.emplace_back(line);
+
+    line.start = point2;
+    line.end.x = line.start.x + direction.x * distance;
+    line.end.y = line.start.y + direction.y * distance;
+    line.end.z = line.start.z + direction.z * distance;
+    lines.emplace_back(line);
+
+    line.start = center;
+    line.end.x = line.start.x + direction.x * distance;
+    line.end.y = line.start.y + direction.y * distance;
+    line.end.z = line.start.z + direction.z * distance;
+    lines.emplace_back(line);
+
+    DirectX::XMMATRIX Transform = DirectX::XMMatrixIdentity();
+    DirectX::XMVECTOR AxisY = DirectX::XMVectorSet(0, 1, 0, 0);
+    Cross = DirectX::XMVector3Cross(AxisY, TargetDirection);
+    if (DirectX::XMVector3NotEqual(Cross, DirectX::XMVectorZero()))
+    {
+        DirectX::XMVECTOR Dot = DirectX::XMVector3Dot(AxisY, TargetDirection);
+        float angle = acosf(DirectX::XMVectorGetX(Dot));
+        DirectX::XMVECTOR Normal = DirectX::XMVector3Normalize(Cross);
+        Transform = DirectX::XMMatrixRotationAxis(Normal, angle);
+    }
+
+    Capsule capsule;
+    capsule.radius = radius;
+    capsule.height = height;
+    capsule.color = line.color;
+
+    Transform.r[3] = DirectX::XMVectorSet(line.start.x, line.start.y, line.start.z, 1.0f);
+    DirectX::XMStoreFloat4x4(&capsule.transform, Transform);
+    capsules.emplace_back(capsule);
+
+    Transform.r[3] = DirectX::XMVectorSet(line.end.x, line.end.y, line.end.z, 1.0f);
+    DirectX::XMStoreFloat4x4(&capsule.transform, Transform);
+    capsules.emplace_back(capsule);
+#endif
+
+    return hit;
+}
+
 physx::PxQueryHitType::Enum Physics::preFilter(const physx::PxFilterData& filterData, const physx::PxShape* shape, const physx::PxRigidActor* actor, physx::PxHitFlags& queryFlags)
 {
     //OutputDebugStringA("=== preFilter CALLED ===\n");

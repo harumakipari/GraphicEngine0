@@ -95,7 +95,7 @@ public:
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
 
-    
+
 
 private:
     // プレイヤーのマックスHP
@@ -144,11 +144,15 @@ public:
     std::shared_ptr<RotationComponent> rotationComponent;
     std::shared_ptr<CharacterMovementComponent> characterMovementComponent;
     std::shared_ptr<CapsuleComponent> swordCollisionComp;
+
     std::shared_ptr<SceneComponent> swordPointComp;
     std::shared_ptr<AudioSourceComponent> runAudioComp;    // 走りのSE
 
-    float elapsedTime_ = 0.0f;
+    std::shared_ptr<SceneComponent> swordRootComponent; // 剣の根元のコンポーネント
+    std::shared_ptr<SceneComponent> swordMiddleComponent; // 剣の中間のコンポーネント
+    std::shared_ptr<SceneComponent> swordTipComponent;  // 剣の先端のコンポーネント
 
+    float elapsedTime_ = 0.0f;
     bool isGrounded_ = false;
 
     struct TrailPoint
@@ -163,6 +167,11 @@ private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     bool isAttackActive = false;
     float hitStopTimer = 0.0f;// ヒットストップのタイマー
+
+    DirectX::XMFLOAT3 prevSwordRootPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 prevSwordMidPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 prevSwordTipPos = { 0.0f,0.0f,0.0f };
+
 
 
     friend class PlayerStateBase;

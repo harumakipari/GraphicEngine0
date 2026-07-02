@@ -99,6 +99,8 @@ public:
     bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
     bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResultWithActor& result, uint32_t wantToHitLayer = 0xFFFFFF);
 
+    // カプセルキャスト
+    bool CapsuleCast(const DirectX::XMFLOAT3& point1, const DirectX::XMFLOAT3& point2, float radius, const DirectX::XMFLOAT3& direction, float distance, bool trigger, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
 
 protected:
     //--------------------------
