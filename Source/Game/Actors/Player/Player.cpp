@@ -21,6 +21,7 @@
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Game/Actors/Stage/Stage.h"
 #include "Game/DarkGame/Interactable.h"
+#include "Game/DarkGame/DarkActors/InteractableActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 
@@ -34,7 +35,8 @@ void Player::Initialize(const Transform& transform)
 
         skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
         //skeletalMeshComponent->SetModel("./Data/Models/Characters/Aurora_FrozenHealth/animation.gltf", false, true);
-        skeletalMeshComponent->SetModel("./Data/Models/Characters/Player/player.gltf", false, true);
+        //skeletalMeshComponent->SetModel("./Data/Models/Characters/Player/player.gltf", false, true);
+        skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
 
@@ -129,6 +131,10 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Hit_Combat_R", 59);
         controller->AddAnimation("Run_Combat_Loop_F", 60);
         controller->AddAnimation("Run_Fast_Combat_Loop_F", 61);
+        controller->AddAnimation("Idle_Combat_to_Idle_Seq_0", 62);
+        controller->AddAnimation("Idle_Idle_to_Combat_Seq_0", 63);
+        controller->AddAnimation("anim_OpenDoor_L_0", 64);
+        controller->AddAnimation("anim_OpenDoor_R_0", 65);
 
         controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.17f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);
@@ -178,11 +184,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyState("Ability_RMB_Right_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
         controller->AddNotifyEvent("Ability_RMB_Right_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
         controller->AddNotifyEvent("Ability_RMB_Right_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
-
-
 #endif // 0
-
-
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
     }
@@ -351,6 +353,15 @@ void Player::Initialize(const Transform& transform)
     auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
+
+    int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");
+    auto swordSheathMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
+    swordSheathMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
+    swordSheathMeshComponent->AttachToComponent(skeletalMeshComponent, swordSheathSocketNode); // "VB root_weapon"
+    swordSheathMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
+    swordSheathMeshComponent->SetRelativeEulerRotationDirect({ 83.0f,-180.0f,-105.0f });
+
+
 #if 0
     auto bowMeshComponent = this->AddComponent<SkeletalMeshComponent>("Bow", parentName);
     bowMeshComponent->SetModel("./Data/Models/Weapons/PlayerBow/AnimationBow.gltf", false, true);
@@ -413,7 +424,7 @@ void Player::Update(float deltaTime)
     DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
     DirectX::XMFLOAT3 swordMidPos = swordMiddleComponent->GetComponentLocation();
     DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
-    
+
     isHit |= CollisionFunction::SphereRayCast(prevSwordRootPos, swordRootPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
     isHit |= CollisionFunction::SphereRayCast(prevSwordMidPos, swordMidPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
     isHit |= CollisionFunction::SphereRayCast(prevSwordTipPos, swordTipPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
@@ -855,15 +866,13 @@ IInteractable* Player::FindInteractable()
 
     DirectX::XMFLOAT3 forward = GetForward(); // プレイヤー前方向
 
-    for (auto& actor : GetOwnerScene()->GetActorManager()->GetAllActors())
+    for (auto actor : GetOwnerScene()->GetActorManager()->GetActorsOfType<InteractableActor>())
     {
         auto interactable = dynamic_cast<IInteractable*>(actor.get());
         if (!interactable) continue;
-        float bestDist = 2.0f;
-
+        float bestDist = actor->GetInteractRange();
         DirectX::XMFLOAT3 playerPos = GetPosition();
-        DirectX::XMFLOAT3 interactablePos = actor->GetPosition();
-
+        DirectX::XMFLOAT3 interactablePos = MathHelper::Add(actor->GetPosition(), actor->GetInteractOffset());
 
         DirectX::XMFLOAT3 dir = MathHelper::Normalize(
             MathHelper::Subtract(interactablePos, playerPos)
@@ -882,7 +891,6 @@ IInteractable* Player::FindInteractable()
         if (dist < bestDist)
         {
             DebugRender::DrawSphere(interactablePos, bestDist, { 1,1,1,1 }, 0);
-
             bestDist = dist;
             best = interactable;
         }

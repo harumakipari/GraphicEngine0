@@ -42,7 +42,6 @@ enum class PhysicsMaterialType : uint8_t
 class Physics : public physx::PxQueryFilterCallback, public physx::PxSimulationEventCallback	
 {
 private:
-
     Physics() = default;
     ~Physics() = default;
 
@@ -76,20 +75,20 @@ public:
     physx::PxControllerManager* GetControllerManager() const { return pxControllerManager; }
 
     // マテリアル取得
-    physx::PxMaterial* GetMaterial(PhysicsMaterialType type)
+    physx::PxMaterial* GetMaterial(const PhysicsMaterialType type)
     {
-        auto it = materials_.find(type);
-        if (it != materials_.end())
+        auto it = materials.find(type);
+        if (it != materials.end())
         {
             return it->second;
         }
-        return materials_[PhysicsMaterialType::Default];
+        return materials[PhysicsMaterialType::Default];
     }
 
     // デフォルトのマテリアル取得
     physx::PxMaterial* GetDefaultMaterial() const
     {
-        return materials_.at(PhysicsMaterialType::Default);
+        return materials.at(PhysicsMaterialType::Default);
     }
 
     // レイキャスト
@@ -130,7 +129,28 @@ private:
         const void* constantBlock, physx::PxU32 constantBlockSize);
 
 private:
+    struct ContactData
+    {
+        physx::PxVec3					normal;
+        physx::PxF32					depth;
+    };
 
+    struct DebugLine
+    {
+        DirectX::XMFLOAT3	start;
+        DirectX::XMFLOAT3	end;
+        DirectX::XMFLOAT4	color;
+    };
+
+    struct DebugCapsule
+    {
+        DirectX::XMFLOAT4X4	transform;
+        float				radius;
+        float				height;
+        DirectX::XMFLOAT4	color;
+    };
+
+private:
     physx::PxDefaultAllocator			pxAllocator;
     physx::PxDefaultErrorCallback		pxErrorCallback;
     physx::PxFoundation* pxFoundation = nullptr;
@@ -138,38 +158,12 @@ private:
     physx::PxDefaultCpuDispatcher* pxDispatcher = nullptr;
     physx::PxScene* pxScene = nullptr;
     physx::PxControllerManager* pxControllerManager = nullptr;
-
-    //physx::PxMaterial* pxMaterial = nullptr;
-
-    // 複数のマテリアルを所持する
-    std::map<PhysicsMaterialType, physx::PxMaterial*> materials_;
-
     physx::PxPvd* pxPvd = nullptr;
 
-    struct ContactData
-    {
-        physx::PxVec3					normal;
-        physx::PxF32					depth;
-    };
+    // 複数のマテリアルを所持する
+    std::map<PhysicsMaterialType, physx::PxMaterial*> materials;
 
-    struct Line
-    {
-        DirectX::XMFLOAT3	start;
-        DirectX::XMFLOAT3	end;
-        DirectX::XMFLOAT4	color;
-    };
-
-    struct Capsule
-    {
-        DirectX::XMFLOAT4X4	transform;
-        float				radius;
-        float				height;
-        DirectX::XMFLOAT4	color;
-    };
-    std::vector<Line>		lines;
-    std::vector<Capsule>	capsules;
-
-
-    std::vector<physx::PxRigidDynamic*> gravityEnableList_;
+    std::vector<DebugLine>		lines;
+    std::vector<DebugCapsule>	capsules;
 
 };

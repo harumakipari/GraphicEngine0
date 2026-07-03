@@ -108,7 +108,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
     pout.velocity = float4(velocity, 0, 1);
 
-    if (objectType == OBJECT_STAGE)
+    if (objectType == OBJECT_STAGE || objectType == OBJECT_DOOR)
     { // ‰e‚Ì’l‚ð“ü‚ê‚é
         const float shadow_depth_bias = 0.001;
         float4 light_view_position = mul(pin.wPosition, lightViewProjection); // World to Clip space

@@ -103,6 +103,7 @@ void DoorLargeActor::Interact()
 void DoorLargeActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    InteractableActor::DrawImGuiDetails();
     ImGui::DragFloat(U8("ドアを開ける速度"), &openTime, 0.1f);
     ImGui::DragFloat(U8("ドアを閉める速度"), &closeTime, 0.1f);
     if (ImGui::Button(U8("ドア空ける")))
@@ -189,6 +190,15 @@ void DoorSmallActor::Interact()
     }
 }
 
+void DoorSmallActor::DrawImGuiDetails()
+{
+#ifdef USE_IMGUI
+    InteractableActor::DrawImGuiDetails();
+    ImGui::DragFloat(U8("ドアを開ける速度"), &openTime, 0.1f);
+    ImGui::DragFloat(U8("ドアを閉める速度"), &closeTime, 0.1f);
+#endif
+}
+
 
 void DoorJailActor::Initialize(const Transform& transform)
 {
@@ -259,6 +269,7 @@ void DoorJailActor::Interact()
 void DoorJailActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    InteractableActor::DrawImGuiDetails();
     ImGui::DragFloat(U8("ドアを開ける速度"), &openTime, 0.1f);
     ImGui::DragFloat(U8("ドアを閉める速度"), &closeTime, 0.1f);
 #endif

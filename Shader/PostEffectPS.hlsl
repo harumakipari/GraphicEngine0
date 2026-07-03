@@ -16,7 +16,7 @@ Texture2D ssaoTexture : register(t6);
 Texture2D ssrTexture : register(t7);
 Texture2D bokehTexture : register(t8);
 Texture2D sceneColorTexture : register(t9);
-Texture2D velocityTexture : register(t10);  // w にshadowFactorが入っている
+Texture2D velocityTexture : register(t10); // w にshadowFactorが入っている
 Texture2DArray cascadedShadowMaps : register(t11);
 
 Texture3D noise3D : register(t20); // ノイズテクスチャ
@@ -247,7 +247,8 @@ float4 main(VS_OUT pin) : SV_TARGET
     {
         color.rgb = ApplyShadow(color.rgb, positionWorldSpace, (positionViewSpace.z), shadowMapDimensions, positionNdc.xyz, sceneNormal, lightDirection.xyz);
         float shadowFactor = velocityTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).w;
-        color.rgb *= shadowFactor;
+        float shadowStrength = 0.7;
+        color *= lerp(1.0, shadowFactor, shadowStrength);
         //return float4(shadowFactor.xxx, 1);
     }
 

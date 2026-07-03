@@ -152,6 +152,9 @@ public:
     std::shared_ptr<SceneComponent> swordMiddleComponent; // 剣の中間のコンポーネント
     std::shared_ptr<SceneComponent> swordTipComponent;  // 剣の先端のコンポーネント
 
+    std::shared_ptr<SceneComponent> swordSheathComponent; // 剣をしまうときのコンポーネント
+
+
     float elapsedTime_ = 0.0f;
     bool isGrounded_ = false;
 
@@ -171,8 +174,6 @@ private:
     DirectX::XMFLOAT3 prevSwordRootPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevSwordMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevSwordTipPos = { 0.0f,0.0f,0.0f };
-
-
 
     friend class PlayerStateBase;
 };

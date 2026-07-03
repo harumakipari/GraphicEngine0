@@ -77,21 +77,21 @@ void Physics::Initialize()
     // マテリアル生成
     {
 
-        materials_[PhysicsMaterialType::Default]
+        materials[PhysicsMaterialType::Default]
             = pxPhysics->createMaterial(0.5f, 0.5f, 0.6f);
-        _ASSERT_EXPR(materials_[PhysicsMaterialType::Default] != nullptr, "Failed pxPhysics->createMaterial");
+        _ASSERT_EXPR(materials[PhysicsMaterialType::Default] != nullptr, "Failed pxPhysics->createMaterial");
 
-        materials_[PhysicsMaterialType::Wall]
+        materials[PhysicsMaterialType::Wall]
             = pxPhysics->createMaterial(0.0f, 0.0f, 1.0f); // 壁：滑る＆跳ねる
-        _ASSERT_EXPR(materials_[PhysicsMaterialType::Wall] != nullptr, "Failed pxPhysics->createMaterial");
+        _ASSERT_EXPR(materials[PhysicsMaterialType::Wall] != nullptr, "Failed pxPhysics->createMaterial");
 
-        materials_[PhysicsMaterialType::Food]
+        materials[PhysicsMaterialType::Food]
             = pxPhysics->createMaterial(0.1f, 0.1f, 0.4f); // 食材：少し摩擦
-        _ASSERT_EXPR(materials_[PhysicsMaterialType::Food] != nullptr, "Failed pxPhysics->createMaterial");
+        _ASSERT_EXPR(materials[PhysicsMaterialType::Food] != nullptr, "Failed pxPhysics->createMaterial");
 
-        materials_[PhysicsMaterialType::NoFriction]
+        materials[PhysicsMaterialType::NoFriction]
             = pxPhysics->createMaterial(0.0f, 0.0f, 0.0f);
-        _ASSERT_EXPR(materials_[PhysicsMaterialType::NoFriction] != nullptr, "Failed pxPhysics->createMaterial");
+        _ASSERT_EXPR(materials[PhysicsMaterialType::NoFriction] != nullptr, "Failed pxPhysics->createMaterial");
 
         //pxMaterial = pxPhysics->createMaterial(0.5f, 0.5f, 0.6f);
         //_ASSERT_EXPR(pxMaterial != nullptr, "Failed pxPhysics->createMaterial");
@@ -122,190 +122,8 @@ void Physics::Finalize()
 // 更新処理
 void Physics::Update(float elapsedTime)
 {
-
     pxScene->simulate(elapsedTime);//simulate今から開始するよっていう合図
     pxScene->fetchResults(true);//	計算が終わるまで待つ
-
-
-    //--------------------------
-    // NOTE:⑬キネマティックオブジェクト同士の衝突処理
-    //--------------------------
-#if 0
-    {
-        // シーンの中からダイナミックオブジェクトを収集
-        physx::PxActorTypeFlags pxActorTypeFlags = physx::PxActorTypeFlag::eRIGID_DYNAMIC;
-        physx::PxU32 pxNumActors = pxScene->getNbActors(pxActorTypeFlags);
-
-        if (pxNumActors > 0)
-        {
-            std::vector<physx::PxRigidActor*> pxActors(pxNumActors);
-            pxScene->getActors(pxActorTypeFlags, reinterpret_cast<physx::PxActor**>(pxActors.data()), pxNumActors);
-
-            // 収集したアクターを総当たりで衝突処理
-            physx::PxShape* pxShapesA[128] = { nullptr };
-            physx::PxShape* pxShapesB[128] = { nullptr };
-            for (physx::PxU32 pxActorIndexA = 0; pxActorIndexA < pxNumActors; ++pxActorIndexA)
-            {
-                // キネマティックオブジェクト以外は対象外
-                physx::PxRigidActor* pxActorA = pxActors.at(pxActorIndexA);
-                physx::PxRigidDynamic* pxRigidBodyA = pxActorA->is<physx::PxRigidDynamic>();
-
-
-                //physx::PxTransform pxPose = pxActorA->getGlobalPose();
-                //OutputDebugStringA(("PhysX Actor Pos: " + std::to_string(pxPose.p.x) + ", " + std::to_string(pxPose.p.y) + ", " + std::to_string(pxPose.p.z) + "\n").c_str());
-
-
-                if (!pxRigidBodyA->getRigidBodyFlags().isSet(physx::PxRigidBodyFlag::eKINEMATIC))
-                {//キネマティックじゃなかったらcontinue
-                    continue;
-                }
-
-                // アクターにくっついている形状を収集
-                const physx::PxU32 pxNumShapesA = pxActorA->getShapes(pxShapesA, _countof(pxShapesA));
-                for (physx::PxU32 pxShapeIndexA = 0; pxShapeIndexA < pxNumShapesA; ++pxShapeIndexA)
-                {
-                    // トリガー設定の形状は対象外
-                    physx::PxShape* pxShapeA = pxShapesA[pxShapeIndexA];
-                    if (pxShapeA->getFlags().isSet(physx::PxShapeFlag::eTRIGGER_SHAPE))
-                    {//トリガーオブジェクトは押し出し処理いらないからcontinue
-                        continue;
-                    }
-                    // 三角形メッシュなどの複雑なジオメトリは対象外
-                    const physx::PxGeometry& pxGeometryA = pxShapeA->getGeometry();
-                    if (pxGeometryA.getType() == physx::PxGeometryType::eTRIANGLEMESH)
-                    {//sphereとcapseleとboxしか想定してないからtrinagleMeshは対象外めっちゃ処理重いconvexはできる
-                        continue;
-                    }
-
-                    // アクターと形状の情報から姿勢を計算
-                    //カプセルなどが世界のどこにいるか
-                    physx::PxTransform pxShapeTransformA = physx::PxShapeExt::getGlobalPose(*pxShapeA, *pxActorA);
-
-                    // 対象となるアクターと衝突判定をする
-                    for (physx::PxU32 pxActorIndexB = pxActorIndexA + 1; pxActorIndexB < pxNumActors; ++pxActorIndexB)
-                    {//forが２重になるから,+しておく
-                        // キネマティックオブジェクト以外は対象外
-                        physx::PxRigidActor* pxActorB = pxActors.at(pxActorIndexB);
-                        physx::PxRigidDynamic* pxRigidBodyB = pxActorB->is<physx::PxRigidDynamic>();
-                        if (!pxRigidBodyB->getRigidBodyFlags().isSet(physx::PxRigidBodyFlag::eKINEMATIC))
-                        {
-                            continue;
-                        }
-                        // 両方のアクターの質量がゼロの場合は衝突処理をしない
-                        physx::PxF32 pxMassA = pxRigidBodyA->getMass();
-                        physx::PxF32 pxMassB = pxRigidBodyB->getMass();
-                        if (pxMassA == 0.0f && pxMassB == 0.0f)
-                        {//質量0はcontinueこの先の0除算を防ぐため
-                            continue;
-                        }
-
-                        // 対象となるアクターにくっついている形状を収集
-                        const physx::PxU32 pxNumShapesB = pxActorB->getShapes(pxShapesB, _countof(pxShapesB));
-                        for (physx::PxU32 pxShapeIndexB = 0; pxShapeIndexB < pxNumShapesB; ++pxShapeIndexB)
-                        {
-                            // トリガー設定の形状は対象外
-                            physx::PxShape* pxShapeB = pxShapesB[pxShapeIndexB];
-                            if (pxShapeB->getFlags().isSet(physx::PxShapeFlag::eTRIGGER_SHAPE))
-                            {
-                                continue;
-                            }
-                            // 三角形メッシュなどの複雑なジオメトリは対象外
-                            const physx::PxGeometry& pxGeometryB = pxShapeB->getGeometry();
-                            if (pxGeometryB.getType() == physx::PxGeometryType::eTRIANGLEMESH)
-                            {
-                                continue;
-                            }
-
-                            // アクターと形状の情報から姿勢を計算
-                            physx::PxTransform pxShapeTransformB = physx::PxShapeExt::getGlobalPose(*pxShapeB, *pxActorB);
-
-                            // 衝突押し出し処理
-                            {
-                                // ２つの形状が重なっている場合、押し出し方向とめり込み量をの計算をする
-                                physx::PxVec3 pxDirection;
-                                physx::PxF32 pxDepth;
-                                bool intersect = physx::PxGeometryQuery::computePenetration(pxDirection, pxDepth, pxGeometryA, pxShapeTransformA, pxGeometryB, pxShapeTransformB);
-                                if (intersect)											//どっち方向にどれくらいめり込んでいるか
-                                {
-                                    // ２つのアクターの質量から押し出し具合を計算する		2つのmassから押し出しの割合を求める
-                                    physx::PxF32 pxRateA, pxRateB;
-                                    if (pxMassA == 0.0f)
-                                    {
-                                        pxRateA = 0.0f;
-                                        pxRateB = 1.0f;
-                                    }
-                                    else if (pxMassB == 0.0f)
-                                    {
-                                        pxRateA = 1.0f;
-                                        pxRateB = 0.0f;
-                                    }
-                                    else
-                                    {
-                                        pxRateA = pxMassB / (pxMassA + pxMassB);
-                                        pxRateB = 1.0f - pxRateA;
-                                    }
-                                    // 各アクターに対して押し出し量を計算
-                                    physx::PxF32 pxDepthA = pxDepth * pxRateA;
-                                    physx::PxF32 pxDepthB = pxDepth * pxRateB;
-
-                                    // 押し出し処理
-                                    physx::PxTransform pxTransformA = pxRigidBodyA->getGlobalPose();
-                                    physx::PxTransform pxTransformB = pxRigidBodyB->getGlobalPose();
-
-                                    pxTransformA.p += pxDirection * pxDepthA;
-                                    pxTransformB.p -= pxDirection * pxDepthB;
-
-                                    pxRigidBodyA->setKinematicTarget(pxTransformA);
-                                    pxRigidBodyA->setGlobalPose(pxTransformA);//すぐにその場所に変わる　瞬間移動　本来はsimulateの時に内部的に行われるけど、
-                                    //今回はsimulateの直後に行っているから他に影響がない
-
-                                    pxRigidBodyB->setKinematicTarget(pxTransformB);
-                                    pxRigidBodyB->setGlobalPose(pxTransformB);
-
-                                    auto actorA = static_cast<Actor*>(pxRigidBodyA->userData);
-                                    auto actorB = static_cast<Actor*>(pxRigidBodyB->userData);
-                                    if (actorA)
-                                    {
-                                        Transform tA = PhysicsHelper::FromPxTransform(pxTransformA);
-                                        actorA->rootComponent_->SetPhysicalTransform(tA); // 押し出された Transform を保存
-                                        //actorA->SetPosition(tA.GetLocation());
-                                        //actorA->SetQuaternionRotation(tA.GetRotation());
-                                    }
-                                    if (actorB)
-                                    {
-                                        Transform tB = PhysicsHelper::FromPxTransform(pxTransformB);
-                                        actorB->rootComponent_->SetPhysicalTransform(tB);
-                                        //actorB->SetPosition(tB.GetLocation());
-                                        //actorB->SetQuaternionRotation(tB.GetRotation());
-                                    }
-                                    //// 衝突通知
-                                    //auto objA = static_cast<CollisionEvent*>(pxActorA->userData);
-                                    //if (objA != nullptr)
-                                    //{
-                                    //    CollisionHit hit;
-                                    //    hit.pxActor = pxActorB;
-                                    //    hit.pxNormal = pxDirection;
-                                    //    hit.pxDepth = pxDepth;
-                                    //    objA->OnCollisionHit(hit);
-                                    //}
-                                    //auto objB = static_cast<CollisionEvent*>(pxActorB->userData);
-                                    //if (objB != nullptr)
-                                    //{
-                                    //    CollisionHit hit;
-                                    //    hit.pxActor = pxActorA;
-                                    //    hit.pxNormal = -pxDirection;
-                                    //    hit.pxDepth = pxDepth;
-                                    //    objB->OnCollisionHit(hit);
-                                    //}
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-#endif
 }
 
 // 描画
@@ -650,14 +468,14 @@ void Physics::Render(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4&
 
     // レイキャスト＆スフィアキャスト
     {
-        for (const Line& line : lines)
+        for (const DebugLine& line : lines)
         {
             primitiveRenderer->AddVertex(line.start, line.color);
             primitiveRenderer->AddVertex(line.end, line.color);
         }
         lines.clear();
 
-        for (const Capsule& capsule : capsules)
+        for (const DebugCapsule& capsule : capsules)
         {
             shapeRenderer->DrawCapsule(capsule.transform, capsule.radius, capsule.height, capsule.color);
         }
@@ -718,7 +536,7 @@ bool Physics::RayCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& 
         distance = result.distance;
     }
 
-    Line& line = lines.emplace_back();
+    DebugLine& line = lines.emplace_back();
     line.start = origin;
     line.end.x = origin.x + direction.x * distance;
     line.end.y = origin.y + direction.y * distance;
@@ -774,14 +592,14 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
     }
     distance += radius;
 
-    Line& line = lines.emplace_back();
+    DebugLine& line = lines.emplace_back();
     line.start = origin;
     line.end.x = origin.x + direction.x * distance;
     line.end.y = origin.y + direction.y * distance;
     line.end.z = origin.z + direction.z * distance;
     line.color = hit ? DirectX::XMFLOAT4(1, 0, 0, 1) : DirectX::XMFLOAT4(0, 0, 1, 1);
 
-    Capsule& capsule = capsules.emplace_back();
+    DebugCapsule& capsule = capsules.emplace_back();
     capsule.radius = radius;
     capsule.height = (std::max)(distance - radius * 2, 0.0f);
     capsule.color = line.color;
@@ -867,14 +685,14 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
     }
     distance += radius;
 
-    Line& line = lines.emplace_back();
+    DebugLine& line = lines.emplace_back();
     line.start = origin;
     line.end.x = origin.x + direction.x * distance;
     line.end.y = origin.y + direction.y * distance;
     line.end.z = origin.z + direction.z * distance;
     line.color = hit ? DirectX::XMFLOAT4(1, 0, 0, 1) : DirectX::XMFLOAT4(0, 0, 1, 1);
 
-    Capsule& capsule = capsules.emplace_back();
+    DebugCapsule& capsule = capsules.emplace_back();
     capsule.radius = radius;
     capsule.height = (std::max)(distance - radius * 2, 0.0f);
     capsule.color = line.color;
@@ -985,7 +803,7 @@ bool Physics::CapsuleCast(
     }
 #if 1
     // デバッグ描画
-    Line line;
+    DebugLine line;
     line.color = hit ? DirectX::XMFLOAT4(1, 0, 0, 1) : DirectX::XMFLOAT4(0, 0, 1, 1);
 
     line.start = point1;
@@ -1021,7 +839,7 @@ bool Physics::CapsuleCast(
         Transform = DirectX::XMMatrixRotationAxis(Normal, angle);
     }
 
-    Capsule capsule;
+    DebugCapsule capsule;
     capsule.radius = radius;
     capsule.height = height;
     capsule.color = line.color;

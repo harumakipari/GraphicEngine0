@@ -49,6 +49,7 @@ public:
     void Initialize(const Transform& transform) override;
     void Update(float dt) override;
     void Interact() override;
+    void DrawImGuiDetails() override;
 private:
     std::shared_ptr<SceneComponent> root;
     std::shared_ptr<SceneComponent> hinge;
