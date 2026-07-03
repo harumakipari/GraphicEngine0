@@ -145,7 +145,7 @@ float DitheredRayMarch(float2 screenPos, float3 rayStart, float3 rayDir, float r
     
     const float cosAngle = dot(normalize(lightDirection.xyz), -rayDir);
     // MieéUóêï‚ê≥
-    accumulatedRadiance *= MieScattering(cosAngle, mieScatteringCoef);
+    //accumulatedRadiance *= MieScattering(cosAngle, mieScatteringCoef);
     return accumulatedRadiance;
 }
 
