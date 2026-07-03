@@ -200,6 +200,7 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerRushState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpAttackState>(this));
+        stateMachine_->RegisterState(std::make_unique<PlayerInteractState>(this));
 
         // ステートマシンを character に追加
         //this->SetStateMachine(stateMachine);
@@ -350,12 +351,12 @@ void Player::Initialize(const Transform& transform)
     }
 
 #endif // 0
-    auto swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
+    swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
 
     int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");
-    auto swordSheathMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
+    swordSheathMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordSheathMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordSheathMeshComponent->AttachToComponent(skeletalMeshComponent, swordSheathSocketNode); // "VB root_weapon"
     swordSheathMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
@@ -438,6 +439,17 @@ void Player::Update(float deltaTime)
         Logger::Log(U8("剣に敵が当たった"));
     }
 
+    switch (swordState)
+    {
+    case SwordState::Equipped:
+        swordSheathMeshComponent->SetIsVisible(false);
+        swordMeshComponent->SetIsVisible(true);
+        break;
+    case SwordState::Sheathed:
+        swordSheathMeshComponent->SetIsVisible(true);
+        swordMeshComponent->SetIsVisible(false);
+        break;
+    }
 
     //skeletalMeshComponent->UpdateCloth(elapsedTime);
 
@@ -529,9 +541,7 @@ void Player::DrawImGuiDetails()
     ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     Character::DrawImGuiDetails();
-
 #endif
-
 }
 
 void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
@@ -720,7 +730,6 @@ void Player::HandleInput(float deltaTime)
         bufferCommand.remainTime = 0.3f;
         return;
     }
-
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
         bufferCommand.command = InputCommand::Attack;
@@ -734,8 +743,11 @@ void Player::HandleInput(float deltaTime)
         bufferCommand.remainTime = 0.3f;
         return;
     }
-
-
+    if (InputSystem::GetInputState("Interact", InputStateMask::Trigger))
+    {
+        bufferCommand.command = InputCommand::Interact;
+        bufferCommand.remainTime = 0.3f;
+    }
 }
 
 // 入力コマンドによってステートを変える
@@ -754,6 +766,9 @@ bool Player::TryHandleGlobalTransition()
     case InputCommand::Jump:
         stateMachine_->ChangeState("Jump");
         return true;
+    case InputCommand::Interact:
+        stateMachine_->ChangeState("Interact");
+        break;
     }
     return false;
 }

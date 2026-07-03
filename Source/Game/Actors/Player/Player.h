@@ -39,6 +39,12 @@ public:
         float remainTime = 0.0f;
     };
 
+    enum class SwordState :uint8_t
+    {
+        Equipped,   // 剣を装備している状態
+        Sheathed    // 剣を鞘に収めている状態
+    };
+
 public:
     explicit Player(const std::string& modelName) :Character(modelName)
     {
@@ -94,8 +100,6 @@ public:
 
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
-
-
 
 private:
     // プレイヤーのマックスHP
@@ -165,6 +169,7 @@ public:
     };
     std::vector<TrailPoint> trailPoints;
 
+    SwordState swordState = SwordState::Equipped; // 剣の状態
 
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
@@ -174,6 +179,12 @@ private:
     DirectX::XMFLOAT3 prevSwordRootPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevSwordMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevSwordTipPos = { 0.0f,0.0f,0.0f };
+
+    // 剣の描画用メッシュコンポーネント
+    std::shared_ptr<SkeletalMeshComponent> swordMeshComponent;
+    // 剣をしまうときの描画用メッシュコンポーネント
+    std::shared_ptr<SkeletalMeshComponent> swordSheathMeshComponent;
+
 
     friend class PlayerStateBase;
 };

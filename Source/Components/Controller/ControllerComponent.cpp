@@ -138,7 +138,7 @@ void CharacterMovementComponent::Tick(float deltaTime)
         { 0,-1,0 },
         rayLength,
         hit,
-        CollisionHelper::ToBit(CollisionLayer::Floor)))
+        CollisionHelper::ToBit(CollisionLayer::WorldStatic)))
     {
         float groundY = hit.position.y;
 

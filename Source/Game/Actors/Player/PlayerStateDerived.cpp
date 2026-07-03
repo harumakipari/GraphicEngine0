@@ -322,6 +322,8 @@ void PlayerDodgeState::Exit()
     player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
 }
 
+
+
 // ラッシュ
 void PlayerRushState::Enter()
 {
@@ -416,6 +418,32 @@ void PlayerRushState::Exit()
 }
 
 
+void PlayerInteractState::Enter()
+{
+    switch (player->swordState)
+    {
+    case Player::SwordState::Equipped:
+
+        break;
+    case Player::SwordState::Sheathed:
+        break;
+    }
+
+    owner->PlayBodyAnimation("anim_OpenDoor_L_0", false);
+}
+
+void PlayerInteractState::Execute(float deltaTime)
+{
+    if (!owner->GetBodyAnimationController()->IsPlayAnimation())
+    {
+        player->GetStateMachine()->ChangeState("Idle");
+    }
+}
+
+void PlayerInteractState::Exit()
+{
+
+}
 void PlayerJumpState::Enter()
 {
     //ジャンプの初速度

@@ -238,9 +238,13 @@ void InputSystem::Initialize()
 
     inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_SHOULDER));     // RB
     inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::RightTrigger));   // RT
-    inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_RETURN)); // Enterキー
     inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_SHIFT)); // Shiftキー
+
+    //inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_RETURN)); // Enterキー
     //inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));     // Bボタン
+
+    inputKeys["Interact"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
+    inputKeys["Interact"].emplace_back(std::make_unique<Keyboard>(VK_RETURN));
 
     inputKeys["Jump"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_X));     // Bボタン
     inputKeys["Jump"].emplace_back(std::make_unique<Keyboard>('X'));     // 右

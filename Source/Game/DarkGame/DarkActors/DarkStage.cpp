@@ -68,7 +68,14 @@ void DarkStage::Initialize(const Transform& transform)
 #endif // 0
     {
         PROFILE_SCOPE("Create FloorCollision");
+        std::shared_ptr<StaticMeshComponent> floorCollisionModel = this->AddComponent<StaticMeshComponent>("floorCollisionModel", parentName);
+        floorCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_CollisionFloor.glb", true,true);
+        floorCollisionModel->SetIsVisible(false);
 
+        std::shared_ptr<TriangleMeshCollisionComponent> triangleMeshComponent = this->AddComponent<class TriangleMeshCollisionComponent>("triangleMeshComponent", "floorCollisionModel");
+        triangleMeshComponent->CreateConvexMeshFromModel(floorCollisionModel.get());
+        
+#if 0
         // 床の当たり判定用のボックスコリジョンコンポーネント
         std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<class BoxComponent>("boxComponent", parentName);
         boxComponent->SetHalfBoxExtent(DirectX::XMFLOAT3(80.0f, 0.2f, 80.0f));
@@ -79,6 +86,8 @@ void DarkStage::Initialize(const Transform& transform)
         boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
         boxComponent->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Block);
         boxComponent->Initialize();
+
+#endif // 0
     }
 }
 

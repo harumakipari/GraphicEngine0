@@ -133,6 +133,24 @@ private:
     RushPhase phase = RushPhase::DashToTarget;
 };
 
+// インタラクトステートオブジェクト
+class PlayerInteractState : public PlayerStateBase
+{
+public:
+    // コンストラクタ
+    PlayerInteractState(Player* player) :PlayerStateBase(player) {}
+    // デストラクタ
+    ~PlayerInteractState() = default;
+    // ステートに入った時のメソッド
+    void Enter() override;
+    // ステートで実行するメソッド
+    void Execute(float deltaTime) override;
+    // ステートから出ていくときのメソッド
+    void Exit() override;
+    // ステート名を取得
+    const char* GetName() const override { return "Interact"; }
+};
+
 // ジャンプステートオブジェクト
 class PlayerJumpState : public PlayerStateBase
 {

@@ -666,17 +666,36 @@ void TriangleMeshRigidBodyComponent::Initialize(physx::PxPhysics* physics)
 
         if (use32BitIndex)
         {
+
+            for (size_t i = 0; i < mesh.cachedIndices.size(); i += 3)
+            {
+                indices32.push_back(mesh.cachedIndices[i + 0] + vertexOffset);
+                indices32.push_back(mesh.cachedIndices[i + 2] + vertexOffset);
+                indices32.push_back(mesh.cachedIndices[i + 1] + vertexOffset);
+            }
+#if 0
             for (const auto& index : mesh.cachedIndices)
             {
                 indices32.push_back(index + vertexOffset);
             }
+#endif // 0
+
         }
         else
         {
+            for (size_t i = 0; i < mesh.cachedIndices.size(); i += 3)
+            {
+                indices16.push_back(static_cast<PxU16>(mesh.cachedIndices[i + 0] + vertexOffset));
+                indices16.push_back(static_cast<PxU16>(mesh.cachedIndices[i + 2] + vertexOffset));
+                indices16.push_back(static_cast<PxU16>(mesh.cachedIndices[i + 1] + vertexOffset));
+            }
+#if 0
             for (const auto& index : mesh.cachedIndices)
             {
                 indices16.push_back(static_cast<PxU16>(index + vertexOffset));
             }
+
+#endif // 0
         }
 
         // 頂点数オフセット込みで加算
