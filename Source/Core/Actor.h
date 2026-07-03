@@ -10,7 +10,7 @@
 #include "Components/Base/SceneComponent.h"
 #include "Components/CollisionShape/ShapeComponent.h"
 #include "Components/Transform/Transform.h"
-#include "Engine/Debug/Assert.h"
+#include "Engine/Utility/Win32Utils.h"
 #include "Math/MathHelper.h"
 
 class Scene;

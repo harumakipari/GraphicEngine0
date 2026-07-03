@@ -283,6 +283,7 @@
     <ClCompile Include="Source\Engine\Effects\CoreComputeParticleSystem.cpp" />
     <ClCompile Include="Source\Engine\Effects\EffectEditor.cpp" />
     <ClCompile Include="Source\Engine\Effects\EffectManager.cpp" />
+    <ClCompile Include="Source\Engine\Effects\HuskParticles.cpp" />
     <ClCompile Include="Source\Engine\Framework\Framework.cpp" />
     <ClCompile Include="Source\Engine\Input\GamePad.cpp" />
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp" />
@@ -403,7 +404,6 @@
     <ClInclude Include="Source\Engine\Camera\CameraManager.h" />
     <ClInclude Include="Source\Engine\Camera\MovieManager.h" />
     <ClInclude Include="Source\Engine\Camera\TPSCameraController.h" />
-    <ClInclude Include="Source\Engine\Debug\Assert.h" />
     <ClInclude Include="Source\Engine\Debug\DebugRender.h" />
     <ClInclude Include="Source\Engine\Debug\EditorGizmo.h" />
     <ClInclude Include="Source\Engine\Debug\Logger.h" />
@@ -415,6 +415,7 @@
     <ClInclude Include="Source\Engine\Effects\CoreComputeParticleSystem.h" />
     <ClInclude Include="Source\Engine\Effects\EffectEditor.h" />
     <ClInclude Include="Source\Engine\Effects\EffectManager.h" />
+    <ClInclude Include="Source\Engine\Effects\HuskParticles.h" />
     <ClInclude Include="Source\Engine\Framework\Framework.h" />
     <ClInclude Include="Source\Engine\Input\GamePad.h" />
     <ClInclude Include="Source\Engine\Input\InputSystem.h" />

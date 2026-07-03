@@ -7,7 +7,6 @@
 #include "tiny_gltf.h"
 
 #include "Engine/Utility/Win32Utils.h"
-#include "Engine/Debug/Assert.h"
 #include "Engine/Serialization/DirectXSerializers.h"
 #include "Graphics/Core/Shader.h"
 #include "Graphics/Resource/Texture.h"

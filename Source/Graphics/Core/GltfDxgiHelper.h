@@ -4,7 +4,7 @@
 //#define TINYGLTF_NO_STB_IMAGE
 //#define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
-#include "Engine/Debug/Assert.h"
+#include "Engine/Utility/Win32Utils.h"
 
 // DXGI_FORMAT の要素サイズ（1要素分）を返す
 inline UINT GetFormatByteSize(DXGI_FORMAT format)

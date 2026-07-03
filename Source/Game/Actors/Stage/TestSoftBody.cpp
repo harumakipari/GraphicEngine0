@@ -6,7 +6,7 @@
 #include <fstream>
 
 #include "tiny_gltf.h"
-#include "Engine/Debug/Assert.h"
+#include "Engine/Utility/Win32Utils.h"
 
 #include "Graphics/Core/Shader.h"
 #include "Engine/Utility/Win32Utils.h"

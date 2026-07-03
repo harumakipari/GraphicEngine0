@@ -4,7 +4,7 @@
 
 #include <WICTextureLoader.h>
 //#include "Logger.h"
-#include "Engine/Debug/Assert.h"
+#include "Engine/Utility/Win32Utils.h"
 #include "Graphics/Core/Graphics.h"
 #include "Graphics/Core/RenderState.h"
 

@@ -14,7 +14,6 @@
 #endif
 
 #include "Engine/Utility/Win32Utils.h"
-#include "Engine/Debug/Assert.h"
 #include "Engine/Debug/DebugRender.h"
 #include "Engine/Serialization/DirectXSerializers.h"
 #include "Graphics/Core/Shader.h"

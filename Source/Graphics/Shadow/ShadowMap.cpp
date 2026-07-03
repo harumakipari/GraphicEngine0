@@ -3,7 +3,8 @@
 
 #include <array>
 
-#include "Engine/Debug/Assert.h"
+#include "Engine/Utility/Win32Utils.h"
+
 
 shadow_map::shadow_map(ID3D11Device* device, uint32_t width, uint32_t height)
 {

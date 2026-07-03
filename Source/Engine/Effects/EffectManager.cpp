@@ -2,7 +2,7 @@
 #include "EffectManager.h"
 
 #include "Components/Base/SceneComponent.h"
-#include "Engine/Debug/Assert.h"
+#include "Engine/Utility/Win32Utils.h"
 #include "Graphics/Core/Graphics.h"
 #include "Engine/Utility/JsonFileHandler.h"
 #include "Engine/Utility/Dialog.h"
