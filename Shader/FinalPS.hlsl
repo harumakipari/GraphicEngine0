@@ -8,6 +8,8 @@
 Texture2D sceneColorTexture : register(t0);
 Texture2D bokehTexture : register(t1);
 Texture2D depthTexture : register(t2);
+Texture2D normalTexture : register(t3);
+Texture2D materialTexture : register(t4);
 
 
 float4 main(VS_OUT pin) : SV_TARGET
@@ -77,6 +79,18 @@ float4 main(VS_OUT pin) : SV_TARGET
         finalColor.rgb = ToneCurve(finalColor.rgb, toneMappingValue);
     }
 
+    float4 sampled = normalTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
+    int objectType = sampled.w;
+
+    sampled = materialTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
+    int materialType = sampled.w;
+
+
+
+    if ((objectType == OBJECT_ENEMY && materialType != MATERIAL_EYE)  || objectType == OBJECT_STAGE)
+    {
+        finalColor.rgb = float3(0, 0, 0);
+    }
 
     return finalColor;
 }

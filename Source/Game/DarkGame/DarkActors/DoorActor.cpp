@@ -2,6 +2,8 @@
 #include "DoorActor.h"
 
 #include "Engine/Audio/Audio.h"
+#include "Engine/Camera/MovieCameraManagerActor.h"
+#include "Engine/Scene/Scene.h"
 
 void DoorLargeActor::Initialize(const Transform& transform)
 {
@@ -90,13 +92,27 @@ void DoorLargeActor::Interact()
 {
     if (doorState == DoorState::Closed || doorState == DoorState::Closing)
     {
-        doorState = DoorState::Opening;
-        CoreAudio::PlayOneShot("./Data/Sound/SE/big_door_open.wav");
+        if (auto movieManager = GetOwnerScene()->GetActorManager()->GetActorOfType<MovieCameraManagerActor>())
+        {
+            movieManager->PlayDoorMovie();
+        }
     }
     else if (doorState == DoorState::Open || doorState == DoorState::Opening)
     {
         doorState = DoorState::Closing;
         CoreAudio::PlayOneShot("./Data/Sound/SE/big_door_close.wav");
+        
+
+    }
+}
+
+// ƒhƒA‚ðŠJ‚­
+void DoorLargeActor::Open()
+{
+    if (doorState == DoorState::Closed || doorState == DoorState::Closing)
+    {
+        doorState = DoorState::Opening;
+        CoreAudio::PlayOneShot("./Data/Sound/SE/big_door_open.wav");
     }
 }
 

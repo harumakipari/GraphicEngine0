@@ -135,6 +135,10 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Idle_Idle_to_Combat_Seq_0", 63);
         controller->AddAnimation("anim_OpenDoor_L_0", 64);
         controller->AddAnimation("anim_OpenDoor_R_0", 65);
+        controller->AddAnimation("Aurora_Combat", 66);
+        controller->AddAnimation("Emote_Ice_Sculpture1_0", 67);
+        controller->AddAnimation("Level_Start1_0", 68);
+        controller->AddAnimation("Recall_0", 69);
 
         controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.17f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);

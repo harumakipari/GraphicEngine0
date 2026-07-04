@@ -8,6 +8,7 @@
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Input/InputSystem.h"
 #include "Core/ActorManager.h"
+#include "Engine/Camera/MovieCameraManagerActor.h"
 #include "Engine/Debug/SceneEditor.h"
 #include "Engine/Utility/Time.h"
 
@@ -214,8 +215,6 @@ void GameScene::SetUpActors()
     SetActiveCamera(mainCameraActor);
     Logger::Log(U8("sampleシーンのカメラ設定される。"));
 
-
-
     Transform debugCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto debugCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DebugCamera>("debugCam", debugCameraTr);
     cameraManager->SetDebugCamera(debugCameraActor);
@@ -229,6 +228,9 @@ void GameScene::SetUpActors()
     auto movieCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MovieCamera>("movieCam", movieCameraTr);
     cameraManager->SetMovieCamera(movieCameraActor);
 
+    // MovieCameraManagerActor を作成し、MovieCameraComponent を設定
+    auto movieCameraManagerActor = GetActorManager()->CreateAndRegisterActorWithTransform<MovieCameraManagerActor>("movieCameraManager", movieCameraTr);
+    movieCameraManagerActor->SetMovieCameraComponent(movieCameraActor->GetMovieCameraComponent());
 
     Transform clothTr(DirectX::XMFLOAT3{ 0.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto cloth = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("cloth", clothTr);
@@ -248,7 +250,7 @@ void GameScene::SetUpActors()
     auto KnightsActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<KnightActor>("KnightActor", KnightActorTR);
 #endif // 0
 
-    Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
+    Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
     auto GruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
 
 #if 0

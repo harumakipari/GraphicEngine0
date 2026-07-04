@@ -516,8 +516,10 @@ void MovieCameraComponent::UpdatePath(float dt)
             target->SetUseMovie(false);
         }
 
-        // ムービー終了後は手動操作OK
-        manualControl = true;
+        // ムービー終了後は手動操作を禁止する
+        // ここをtrueにすると、ムービー終了後に手動操作が可能になる
+        // 画角が変わるのを防ぐために、falseにしておく
+        manualControl = false;
 
         auto& last = reversePlay
             ? keys.front()

@@ -15,7 +15,7 @@ enum class SRV_SLOT :uint8_t
     NORMAL,     // world normal    w: Object Type
     EMISSIVE,      // w:Flags
     POSITION,    // world position
-    VELOCITY,    // 速度バッファ用
+    VELOCITY,    // 速度バッファ用     w:shadowMapFactor
 };
 
 class GBuffer

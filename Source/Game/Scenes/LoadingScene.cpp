@@ -194,9 +194,9 @@ void LoadingScene::Start()
         {
             backImage->SetTexture(bossSprite);
         }
-        else if (name=="FIRST")
+        else if (name == "FIRST")
         {
-            
+
         }
 
     }
@@ -417,7 +417,8 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
         shaderCBuffer->data.toneMappingValue = shader.toneMappingValue;
 
         shaderCBuffer->data.colorMapRGB = shader.colorMapRGB;
-        shaderCBuffer->data.pad3 = shader.pad3;
+        shaderCBuffer->data.shadowMapFactor = shader.shadowMapFactor;
+        shaderCBuffer->data.shadowMapColor = shader.shadowMapColor;
 
         sceneCBuffer->Activate(immediateContext, 1);
         shaderCBuffer->Activate(immediateContext, 9);

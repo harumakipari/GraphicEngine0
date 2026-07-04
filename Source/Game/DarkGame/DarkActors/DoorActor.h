@@ -12,7 +12,11 @@ public:
 
     void Interact() override;
 
+    // ƒhƒA‚ğŠJ‚­
+    void Open();
+
     void DrawImGuiDetails() override;
+
 private:
     std::shared_ptr<SceneComponent> root;
 

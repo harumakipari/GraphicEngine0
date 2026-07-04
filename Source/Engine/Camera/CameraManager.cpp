@@ -117,6 +117,7 @@ void CameraManager::ToggleMovieCamera(const Scene* scene)
                     movieComp->SetIsUseMovie(useMovieCamera);
                     movieComp->SetFov(fov);
                     movieComp->SetYawAndPitch(yaw, pitch);
+                    
 
                 }
             }

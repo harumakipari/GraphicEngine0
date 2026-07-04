@@ -798,7 +798,14 @@ public:
         }
     }
 
-    void SetIsUseMovie(const bool useMovie) { this->useMovieCamera = useMovie; }
+    void SetIsUseMovie(const bool useMovie)
+    {
+        manualControl = true;
+        this->useMovieCamera = useMovie;
+    }
+
+    // ムービー再生中かどうかを取得する
+    bool IsMovieFinish() const { return finished; }
 
     // 最初のフレームを適応する
     void ApplyFirstFrame();

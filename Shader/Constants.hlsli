@@ -43,8 +43,9 @@ cbuffer SHADER_CONSTANT_BUFFER : register(b9)
     float toneMappingValue;
 
     float3 colorMapRGB;
-    float pad3 = 0.0f;
-
+    float shadowMapFactor;
+    
+    float3 shadowMapColor;
 }
 cbuffer CSM_CONSTANTS : register(b3)
 {

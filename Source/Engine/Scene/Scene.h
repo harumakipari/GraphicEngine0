@@ -61,7 +61,7 @@ public:
     UIManager* GetUIManager() { return uiManager.get(); }
 
     CameraManager* GetCameraManager() const { return cameraManager.get(); }
-    const CameraManager* GetCameraManager() { return cameraManager.get(); }
+    const CameraManager* GetConstCameraManager() { return cameraManager.get(); }
 
     void ClearActorManager() const
     {

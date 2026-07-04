@@ -247,9 +247,10 @@ float4 main(VS_OUT pin) : SV_TARGET
     {
         color.rgb = ApplyShadow(color.rgb, positionWorldSpace, (positionViewSpace.z), shadowMapDimensions, positionNdc.xyz, sceneNormal, lightDirection.xyz);
         float shadowFactor = velocityTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).w;
-        float shadowStrength = 0.5;
-        color *= lerp(1.0, shadowFactor, shadowStrength);
-        //return float4(shadowFactor.xxx, 1);
+        float shadow = lerp(1.0, shadowFactor, shadowMapFactor);
+        // âeêFÇ÷ï‚ä‘
+        color.rgb = lerp(shadowMapColor, color.rgb, shadow);
+        //color *= lerp(1.0, shadowFactor, shadowMapFactor);
     }
 
     //color.rgb = ApplyShadowMaps(color.rgb, positionWorldSpace);

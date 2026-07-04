@@ -64,6 +64,7 @@ float GroundFogDensity(float3 worldPos)
 
     return fog;
 }
+
 // ‚‚³‚É‚æ‚é–¶‚Ì”Z“x•Ï‰»
 void ApplyHeightFog(float3 position /*world space*/, inout float density)
 {

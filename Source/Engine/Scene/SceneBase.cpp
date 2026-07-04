@@ -270,7 +270,8 @@ void SceneBase::UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, floa
     shaderCBuffer->data.toneMappingValue = shader.toneMappingValue;
 
     shaderCBuffer->data.colorMapRGB = shader.colorMapRGB;
-    shaderCBuffer->data.pad3 = shader.pad3;
+    shaderCBuffer->data.shadowMapFactor = shader.shadowMapFactor;
+    shaderCBuffer->data.shadowMapColor = shader.shadowMapColor;
 
     sceneCBuffer->Activate(immediateContext, 1);
     shaderCBuffer->Activate(immediateContext, 9);
@@ -429,7 +430,7 @@ void SceneBase::ForwardRender(ID3D11DeviceContext* immediateContext)
     }
 }
 
-void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext,  ViewConstants& viewConstants)
+void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConstants& viewConstants)
 {
     //auto camera = cameraManager->GetRenderCamera(this);
 
@@ -443,7 +444,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext,  ViewConst
 #if 1
     const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
     XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
-    XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&lightManager->GetLightDirection())) * light_view_distance };
+    XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&shadowLightDirection)) * light_view_distance };
     XMVECTOR U{ XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f) };
     XMMATRIX V{ XMMatrixLookAtLH(E, F, U) };
     XMMATRIX P{ XMMatrixOrthographicLH(light_view_size * aspect_ratio, light_view_size, light_view_near_z, light_view_far_z) };
@@ -543,7 +544,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext,  ViewConst
         const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
 
         XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
-        XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&lightManager->GetLightDirection())) * light_view_distance };
+        XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&shadowLightDirection)) * light_view_distance };
         XMVECTOR U{ XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f) };
         XMMATRIX V{ XMMatrixLookAtLH(E, F, U) };
         XMMATRIX P{ XMMatrixOrthographicLH(light_view_size * aspect_ratio, light_view_size, light_view_near_z, light_view_far_z) };
@@ -727,7 +728,9 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext,  ViewConst
         //temporalAa.history[temporalAa.previous].srv.Get(),
         finalBuffer->shaderResourceViews[0].Get(),//colorMap   こっちポストエフェクト済み
         depthOfFieldEffect->GetOutputSRV(),
-        gBufferRenderTarget->depthStencilShaderResourceView,      //depthMap
+        gBufferRenderTarget->depthStencilShaderResourceView,//depthMap
+        gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],   // normalMap w: objectType
+        gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)],   // msrMap  w: material Type
     };
     fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), finalPs.Get());
 }
@@ -970,6 +973,9 @@ void SceneBase::DrawPostEffectTab()
     ImGui::SliderFloat(U8("青強調"), &shader.colorMapRGB.z, 0.5f, 1.5f);
     ImGui::DragFloat(U8("焦点距離"), &shader.focusDistance, 0.001f, 1000.0f);
     ImGui::SliderFloat(U8("被写界深度範囲"), &shader.dofRange, 1.0f, 500.0f);
+    ImGui::DragFloat3(U8("影のライト方向"), &shadowLightDirection.x, 0.01f, -1.0f, 1.0f, "%.8f");
+    ImGui::DragFloat(U8("シャドウマップの強さ"), &shader.shadowMapFactor, 0.01f, 0.0f, 1.0f, "%.4f");
+    ImGui::ColorEdit3(U8("シャドウマップの色"), &shader.shadowMapColor.x);
 
     sceneEffectManager->DrawGui();
     //postEffectManager->DrawGui();

@@ -415,7 +415,7 @@ public:
     //==================================================
     void SetOwnerScene(Scene* scene) { ownerScene_ = scene; }
     Scene* GetOwnerScene() const { return ownerScene_; }
-
+    const Scene* GetOwnerConstScene() const { return ownerScene_; }
 
 
     // 

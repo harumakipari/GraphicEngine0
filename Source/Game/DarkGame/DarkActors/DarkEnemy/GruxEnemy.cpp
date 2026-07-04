@@ -23,7 +23,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.9f,0.08f,0.08f,1.0f };   // –Ú‹Ê‚ÌF‚ğÔ‚É‚µ‚Ä‚İ‚é
     for (auto& material : skeletalMeshComponent->model->materials)
     {
-        if (material.name == "MI_Grux_Eye")
+        if (material.name == "M_Grux_Qilin_Eye")
         {// –Ú‚¾‚Á‚½‚çA
             material.materialType = MaterialType::Eye;
         }

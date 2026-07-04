@@ -158,7 +158,9 @@ inline void to_json(nlohmann::json& j, const SceneShaderConstants& s)
         {"toneMappingValue", s.toneMappingValue},
 
         {"colorMapRGB", s.colorMapRGB},
-        {"pad3", s.pad3},
+        {"shadowMapFactor", s.shadowMapFactor},
+
+        {"shadowMapColor", s.shadowMapColor},
     };
 }
 
@@ -197,7 +199,8 @@ inline void from_json(const nlohmann::json& j, SceneShaderConstants& s)
     if (j.contains("toneMappingValue")) j.at("toneMappingValue").get_to(s.toneMappingValue);
 
     if (j.contains("colorMapRGB")) j.at("colorMapRGB").get_to(s.colorMapRGB);
-    if (j.contains("pad3")) j.at("pad3").get_to(s.pad3);
+    if (j.contains("shadowMapFactor")) j.at("shadowMapFactor").get_to(s.shadowMapFactor);
+    if (j.contains("shadowMapColor")) j.at("shadowMapColor").get_to(s.shadowMapColor);
 #else
     j.at("shadowColor").get_to(s.shadowColor);
     j.at("shadowDepthBias").get_to(s.shadowDepthBias);

@@ -275,6 +275,7 @@
     <ClCompile Include="Source\Core\World.cpp" />
     <ClCompile Include="Source\Engine\Audio\Audio.cpp" />
     <ClCompile Include="Source\Engine\Camera\CameraManager.cpp" />
+    <ClCompile Include="Source\Engine\Camera\MovieCameraManagerActor.cpp" />
     <ClCompile Include="Source\Engine\Debug\DebugRender.cpp" />
     <ClCompile Include="Source\Engine\Debug\EditorGizmo.cpp" />
     <ClCompile Include="Source\Engine\Debug\Logger.cpp" />
@@ -402,7 +403,7 @@
     <ClInclude Include="Source\Engine\Audio\Audio.h" />
     <ClInclude Include="Source\Engine\Camera\CameraConstants.h" />
     <ClInclude Include="Source\Engine\Camera\CameraManager.h" />
-    <ClInclude Include="Source\Engine\Camera\MovieManager.h" />
+    <ClInclude Include="Source\Engine\Camera\MovieCameraManagerActor.h" />
     <ClInclude Include="Source\Engine\Camera\TPSCameraController.h" />
     <ClInclude Include="Source\Engine\Debug\DebugRender.h" />
     <ClInclude Include="Source\Engine\Debug\EditorGizmo.h" />
@@ -657,12 +658,6 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-    </FxCompile>
-    <FxCompile Include="Shader\FinalPassPS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shader\FinalPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>

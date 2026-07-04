@@ -77,7 +77,8 @@ struct SceneShaderConstants
     float toneMappingValue = 0.0f;
 
     DirectX::XMFLOAT3 colorMapRGB = { 1.0f,1.0f,1.0f };
-    float pad3 = 0.0f;
+    float shadowMapFactor = 0.3f;
+    DirectX::XMFLOAT3 shadowMapColor = { 0.147f,0.111f,0.0085f };
 
 };
 

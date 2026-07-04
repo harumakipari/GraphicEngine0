@@ -355,6 +355,9 @@
     <ClCompile Include="Source\Engine\Effects\HuskParticles.cpp">
       <Filter>Source\Engine\Effects</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\MovieCameraManagerActor.cpp">
+      <Filter>Source\Engine\Camera</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -378,7 +381,7 @@
     <ClInclude Include="Source\Core\Vector.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Camera\MovieManager.h">
+    <ClInclude Include="Source\Engine\Camera\MovieCameraManagerActor.h">
       <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera\TPSCameraController.h">
@@ -936,9 +939,6 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\ElasticBuildsVS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\FinalPassPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\FinalPS.hlsl">

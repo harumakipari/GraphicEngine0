@@ -48,6 +48,7 @@ public:
     }
 
 };
+
 class CinemaCamera :public Camera
 {
 public:
@@ -59,7 +60,6 @@ public:
     {
         mainCameraComponent = this->AddComponent<CinematicCameraComponent>("cinemaCamera");
     }
-
 };
 
 class MovieCamera :public Camera
@@ -74,6 +74,10 @@ public:
         mainCameraComponent = this->AddComponent<MovieCameraComponent>("movieCamera");
     }
 
+    std::shared_ptr<MovieCameraComponent> GetMovieCameraComponent() const
+    {
+        return std::dynamic_pointer_cast<MovieCameraComponent>(mainCameraComponent);
+    }
 };
 
 
