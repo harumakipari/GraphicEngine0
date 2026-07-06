@@ -94,3 +94,7 @@ void GruxEnemyEyeActor::DrawImGuiDetails()
 #endif
 }
 
+void GruxEnemyEyeActor::StartEyeFlash()
+{
+    
+}

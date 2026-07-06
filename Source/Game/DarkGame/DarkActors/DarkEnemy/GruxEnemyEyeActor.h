@@ -20,6 +20,8 @@ public:
     void Update(float elapsedTime)override;
 
     void DrawImGuiDetails() override;
+
+    void StartEyeFlash();
 private:
     // 左目の描画用コンポーネントを追加　暗闇で光る目の表現用
     std::shared_ptr<SkeletalMeshComponent> leftEyeMeshComponent;
