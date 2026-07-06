@@ -127,7 +127,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
     pout.position = pin.wPosition; // world space 
 
-    pout.emissive = float4(emissiveFactor, 0); // wの値 : スカイマップ１それ以外０    2: emissiveFlagとして使用
+    pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // wの値 : スカイマップ１それ以外０    2: emissiveFlagとして使用
 
     if (materialType == MATERIAL_EYE)
     {
@@ -141,7 +141,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
         float mask = maskColor * maskCenter;
         emissiveFactor = mask * float3(cpuColor.rgb) * emissionPower;
-        pout.emissive = float4(emissiveFactor, 0); // wの値 : スカイマップ１それ以外０    2: emissiveFlagとして使用
+        pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // wの値 : スカイマップ１それ以外０    2: emissiveFlagとして使用
     }
 
     pout.material = float4(metallicFactor, roughnessFactor, occlusionFactor, materialType /*マテリアルタイプ*/);

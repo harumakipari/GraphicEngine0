@@ -393,11 +393,19 @@ public:
             AddPipeLineState("EnemyEyeModelPS", desc);
         }
 
+        // 敵の目 用　
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/EnemyEyeFlarePS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+            desc.blendState = BLEND_STATE::ADD;
+            AddPipeLineState("EnemyEyeFlarePS", desc);
+        }
+
         // deferred キャラクターの髪の毛とかファー 用
         {
             hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelHairOrFurDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            //desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
             AddPipeLineState("characterFurAndHairSkeletalMesh", desc);
         }
 

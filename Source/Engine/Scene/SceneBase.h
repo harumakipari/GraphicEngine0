@@ -18,6 +18,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include "Engine/Effects/HuskParticles.h"
 #include "Graphics/Core/TemporalAA.h"
 #include "Graphics/PostProcess/DepthOfFieldEffect.h"
 #include "Graphics/Shadow/ShadowMap.h"
@@ -151,9 +152,7 @@ protected:
     bool useDeferredRendering = true;
     bool useDrawDebug = true;
 
-
-
-
+    std::unique_ptr<husk_particles> huskParticles;
 
     SIZE framebufferDimensions = {};
 

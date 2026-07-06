@@ -13,7 +13,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     int maxHp = 100;
     hp = maxHp;
 
-    std::string parentName = "SkeletonWarriorMeshComponent";
+    std::string parentName = "GruxEnemy";
     Character::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
     skeletalMeshComponent->SetModel("./Data/Models/Characters/GruxQilin/boss.gltf", false, true);
@@ -186,51 +186,18 @@ void GruxEnemy::Initialize(const Transform& transform)
     int rightEyeSocketNode = skeletalMeshComponent->FindIndexByName("R_eye");
 
 
-    // 左目の描画用コンポーネントを追加　暗闇で光る目の表現用
-    leftEyeMeshComponent = this->AddComponent<SkeletalMeshComponent>("leftEye", parentName);
-    leftEyeMeshComponent->SetModel("./Data/Models/Primitives/Sphere.glb");
-    leftEyeMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
-    leftEyeMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-    leftEyeMeshComponent->SetRelativeScaleDirect({ 0.03f,0.02f,0.02f });
-    leftEyeMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
-    leftEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-    leftEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-    leftEyeMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
-    leftEyeMeshComponent->AttachToComponent(skeletalMeshComponent, leftEyeSocketNode);
+    // 左目の位置用コンポーネントを追加　暗闇で光る目の表現用
+    leftEyeSceneComponent = this->AddComponent<SceneComponent>("leftEye", parentName);
+    leftEyeSceneComponent->AttachToComponent(skeletalMeshComponent, leftEyeSocketNode);
+    leftEyeSceneComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
 
-    // 左目の描画用コンポーネントを追加　横に光るフレアの表現用
-    leftEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("leftEyeFlare", "leftEye");
-    leftEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
-    leftEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
-    leftEyeFlareMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-    leftEyeFlareMeshComponent->SetRelativeScaleDirect({ 0.1f,0.1f,0.1f });
-    leftEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-    leftEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-    leftEyeFlareMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
-
-    // 右目の描画用コンポーネントを追加　暗闇で光る目の表現用
-    rightEyeMeshComponent = this->AddComponent<SkeletalMeshComponent>("rightEye", parentName);
-    rightEyeMeshComponent->SetModel("./Data/Models/Primitives/Sphere.glb");
-    rightEyeMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
-    rightEyeMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-    rightEyeMeshComponent->SetRelativeScaleDirect({ 0.03f,0.02f,0.02f });
-    rightEyeMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
-    rightEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-    rightEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-    rightEyeMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
-    rightEyeMeshComponent->AttachToComponent(skeletalMeshComponent, rightEyeSocketNode);
-
-    // 右目の描画用コンポーネントを追加　横に光るフレアの表現用
-    rightEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("rightEyeFlare", "rightEye");
-    rightEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
-    rightEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
-    rightEyeFlareMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-    rightEyeFlareMeshComponent->SetRelativeScaleDirect({ 0.1f,0.1f,0.1f });
-    rightEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-    rightEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-    rightEyeFlareMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
+    // 右目の位置用コンポーネントを追加　暗闇で光る目の表現用
+    rightEyeSceneComponent = this->AddComponent<SceneComponent>("rightEye", parentName);
+    rightEyeSceneComponent->AttachToComponent(skeletalMeshComponent, rightEyeSocketNode);
+    rightEyeSceneComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
 
 
+    
 }
 
 void GruxEnemy::Update(float deltaTime)
@@ -242,10 +209,12 @@ void GruxEnemy::Update(float deltaTime)
     if (leftWeaponCollisionComp)
         leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
 
+#if 0
     if (InputSystem::GetInputState("0"))
     {
         stateMachine_->ChangeState("EnemyAttackState");
     }
+#endif // 0
 
 #if 1
     if (hp <= 0 && !isDeathPerform)
@@ -255,28 +224,12 @@ void GruxEnemy::Update(float deltaTime)
     }
 #endif // 0
 
-    // 目の色を設定する
-    leftEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = eyeColor;
-    leftEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = eyeColor;
-    rightEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = eyeColor;
-    rightEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = eyeColor;
-    // 目の光量
-    leftEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = emissionFactor;
-    leftEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = emissionFactor;
-    rightEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = emissionFactor;
-    rightEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = emissionFactor;
-
-    leftEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
-    rightEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
 }
 
 void GruxEnemy::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
     Character::DrawImGuiDetails();
-    ImGui::ColorEdit3(U8("目の色"), &eyeColor.x);
-    ImGui::DragFloat(U8("目の光の量"), &emissionFactor);
-    ImGui::DragFloat3(U8("目のフレアのスケール"), &eyeFlareScale.x, 0.05f, 0.0f, 1.0f);
     ImGui::DragFloat("pitchBaseValue", &pitchBaseValue, 0.05f);
     if (ImGui::Button("Attack"))
     {

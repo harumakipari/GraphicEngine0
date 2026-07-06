@@ -22,6 +22,7 @@
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
+#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemyEyeActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
 
 #include "Physics/CollisionSystem.h"
@@ -235,6 +236,9 @@ void GameScene::SetUpActors()
     Transform clothTr(DirectX::XMFLOAT3{ 0.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto cloth = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("cloth", clothTr);
 
+
+    Transform bossEyeTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    auto enemyEyeActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemyEyeActor>("GruxEnemyEyeActor", bossEyeTr);
 
 #if 0
     auto pauseActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor");

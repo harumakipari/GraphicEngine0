@@ -422,7 +422,7 @@ public:
 
     void MakeRootComponent()
     {
-        rootComponent_ = AddComponent<SceneComponent>("RootComponent");
+        rootComponent_ = AddComponent<SceneComponent>(rootComponentName);
     }
 
 
@@ -462,6 +462,9 @@ public:
 
     // タイムスケールを設定する
     void SetTimeScale(const float timeScale) { this->timeScale = timeScale; }
+
+    // ルートコンポーネントの名前を取得する
+    const std::string& GetRootComponentName()const { return rootComponentName; }
 protected:
     Scene* ownerScene_ = nullptr;   // 自分が属しているScene
 
@@ -470,6 +473,8 @@ private:
     // Internal Data
     //==================================================
     std::string actorName;
+
+    std::string rootComponentName = "RootComponent";
 
     bool isActive = true;
 

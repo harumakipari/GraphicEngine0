@@ -41,7 +41,7 @@ void main(VS_OUT pin)
     float3 ambient = color.rgb * 0.2;
     
     PARTICLE p;
-    p.color = float4(max(0, ambient + diffuse + specular), alpha) * pin.color;
+    p.color = float4(max(0, ambient + diffuse + specular), alpha) /** pin.color*/;
     p.position = pin.wPosition.xyz;
     p.normal = N.xyz;
     p.velocity = 0;

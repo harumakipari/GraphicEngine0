@@ -45,17 +45,6 @@ private:
     std::shared_ptr<CapsuleComponent> leftWeaponCollisionComp;
     // 右の武器の当たり判定のコンポーネント
     std::shared_ptr<CapsuleComponent> rightWeaponCollisionComp;
-
-    // 左目の描画用コンポーネントを追加　暗闇で光る目の表現用
-    std::shared_ptr<SkeletalMeshComponent> leftEyeMeshComponent;
-    // 左目の描画用コンポーネントを追加　横に光るフレアの表現用
-    std::shared_ptr<SkeletalMeshComponent> leftEyeFlareMeshComponent;
-    // 右目の描画用コンポーネントを追加　暗闇で光る目の表現用
-    std::shared_ptr<SkeletalMeshComponent> rightEyeMeshComponent;
-    // 右目の描画用コンポーネントを追加　横に光るフレアの表現用
-    std::shared_ptr<SkeletalMeshComponent> rightEyeFlareMeshComponent;
-
-
     std::string leftWeapon = "leftWeapon";
     std::string rightWeapon = "rightWeapon";
     std::string bothWeapon = "bothWeapon";
@@ -71,9 +60,13 @@ private:
 
     float pitchBaseValue = 0.45f;
 
-    float emissionFactor = 5.0f;
-    DirectX::XMFLOAT4 eyeColor = { 0.011f,0.034f,0.0f,1.0f };
-    DirectX::XMFLOAT3 eyeFlareScale = { 0.2f,0.45f,0.01f };
+
+    // 左目の位置用コンポーネントを追加　暗闇で光る目の表現用
+    std::shared_ptr<SceneComponent> leftEyeSceneComponent;
+    // 右目の位置用コンポーネントを追加　暗闇で光る目の表現用
+    std::shared_ptr<SceneComponent> rightEyeSceneComponent;
+
+    friend class GruxEnemyEyeActor;
 };
 
 

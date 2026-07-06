@@ -299,6 +299,7 @@
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\TestPlayer.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBarrelActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.cpp" />
@@ -449,6 +450,7 @@
     <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h" />
     <ClInclude Include="Source\Game\Actors\Stage\Props\ClothActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.h" />
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageAsset.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageBarrelActor.h" />
