@@ -10,7 +10,7 @@ EnemyStateBase::EnemyStateBase(GruxEnemy* actor) :State(actor), enemy(actor)
 // 待機ステートオブジェクト
 void EnemyIdleState::Enter()
 {
-    owner->PlayBodyAnimation("Idle");
+    owner->PlayBodyAnimation("TravelMode_Idle_0");
 }
 
 // ステートで実行するメソッド

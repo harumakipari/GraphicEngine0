@@ -281,12 +281,12 @@ float4 main(VS_OUT pin) : SV_TARGET
 #endif
     }
 
-    // ブルーム処理
-    if (enableBloom)
-    {
-        float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);
-        color.rgb += bloom.rgb;
-    }
+    //// ブルーム処理
+    //if (enableBloom)
+    //{
+    //    float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);
+    //    color.rgb += bloom.rgb;
+    //}
 
     // SSRの処理
     if (enableSSR)
@@ -339,7 +339,6 @@ float4 main(VS_OUT pin) : SV_TARGET
     }
 
     float4 finalColor = color;
-
 
     // 分割表示
     if (pin.texcoord.x < splitU)

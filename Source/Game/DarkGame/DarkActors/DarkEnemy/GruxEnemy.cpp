@@ -80,7 +80,7 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
-    PlayBodyAnimation("Idle");
+    PlayBodyAnimation("TravelMode_Idle_0");
 
 #if 1
     // 当たり判定
@@ -199,7 +199,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     leftEyeMeshComponent->AttachToComponent(skeletalMeshComponent, leftEyeSocketNode);
 
     // 左目の描画用コンポーネントを追加　横に光るフレアの表現用
-    leftEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("leftEyeFlare", parentName);
+    leftEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("leftEyeFlare", "leftEye");
     leftEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
     leftEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
     leftEyeFlareMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
@@ -207,7 +207,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     leftEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
     leftEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
     leftEyeFlareMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
-    leftEyeFlareMeshComponent->AttachToComponent(skeletalMeshComponent, leftEyeSocketNode);
 
     // 右目の描画用コンポーネントを追加　暗闇で光る目の表現用
     rightEyeMeshComponent = this->AddComponent<SkeletalMeshComponent>("rightEye", parentName);
@@ -222,7 +221,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightEyeMeshComponent->AttachToComponent(skeletalMeshComponent, rightEyeSocketNode);
 
     // 右目の描画用コンポーネントを追加　横に光るフレアの表現用
-    rightEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("rightEyeFlare", parentName);
+    rightEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("rightEyeFlare", "rightEye");
     rightEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
     rightEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
     rightEyeFlareMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
@@ -230,7 +229,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
     rightEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
     rightEyeFlareMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
-    rightEyeFlareMeshComponent->AttachToComponent(skeletalMeshComponent, rightEyeSocketNode);
 
 
 }

@@ -32,18 +32,16 @@ float4 main(VS_OUT pin) : SV_TARGET
     
     sampled = emissiveMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
     float3 emissive = sampled.xyz;
-    float skymap = sampled.w;
-    float emissiveFlag = skymap;
+    int gBufferFlag = sampled.w;
 
 
-    if (skymap == 1)
+    if (gBufferFlag == GBUFFER_FLAG_SKY)
     { // 何も書き込まれていなかったら スカイマップのために
         discard;
     }
 
-    if (emissiveFlag == 2)
+    if (gBufferFlag == GBUFFER_FLAG_EMISSIVE)
     {
-        //return float4(emissive * rimPower, 1);// これsphereEmissiveに使用
         return float4(emissive * 6.0, 1); // これsphereEmissiveに使用
     }
 

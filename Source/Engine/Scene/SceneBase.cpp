@@ -734,6 +734,8 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         gBufferRenderTarget->depthStencilShaderResourceView,//depthMap
         gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],   // normalMap w: objectType
         gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)],   // msrMap  w: material Type
+        gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::EMISSIVE)],   // emissive w: shaderFlag
+        sceneEffectManager->GetOutput("BloomEffect"),
     };
     fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), finalPs.Get());
 }

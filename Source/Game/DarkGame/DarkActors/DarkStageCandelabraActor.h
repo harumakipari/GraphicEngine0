@@ -84,4 +84,5 @@ private:
     std::vector<DirectX::XMFLOAT3> flameBasePositions;// 炎の初期位置
     // シャンデリアの炎の球体のモデル
     std::vector <std::shared_ptr<InstanceMeshComponent>> sphereMeshComponents;
+    DirectX::XMFLOAT3 initFireScale = { 0.01f,0.02f,0.01f };// 炎の初期スケール
 };

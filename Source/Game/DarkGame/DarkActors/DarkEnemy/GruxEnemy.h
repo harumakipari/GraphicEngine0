@@ -72,7 +72,7 @@ private:
     float pitchBaseValue = 0.45f;
 
     float emissionFactor = 5.0f;
-    DirectX::XMFLOAT4 eyeColor = { 1.0f,1.0f,1.0f,1.0f };
+    DirectX::XMFLOAT4 eyeColor = { 0.011f,0.034f,0.0f,1.0f };
     DirectX::XMFLOAT3 eyeFlareScale = { 0.2f,0.45f,0.01f };
 };
 

@@ -177,7 +177,7 @@ void DarkStageCandleStandActor::SetModel(const std::shared_ptr<StageAsset>& stag
         auto sphereMeshComponent = this->AddComponent<InstanceMeshComponent>("sphereMeshComponent", parentName);
         sphereMeshComponent->SetModel("./Data/Models/Primitives/frame.glb");
         sphereMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
-        sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.02f,0.01f });
+        sphereMeshComponent->SetRelativeScaleDirect(initFireScale);
         DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
         pos.y += 0.18f;
         sphereMeshComponent->SetRelativeLocationDirect(pos);
@@ -250,6 +250,6 @@ void DarkStageCandleStandActor::ResetFireLightScale()
 {
     for (auto sphereMeshComponent : sphereMeshComponents)
     {
-        sphereMeshComponent->SetRelativeScaleDirect(fireScale);
+        sphereMeshComponent->SetRelativeScaleDirect(initFireScale);
     }
 }

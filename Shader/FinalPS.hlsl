@@ -10,6 +10,8 @@ Texture2D bokehTexture : register(t1);
 Texture2D depthTexture : register(t2);
 Texture2D normalTexture : register(t3);
 Texture2D materialTexture : register(t4);
+Texture2D emissiveTexture : register(t5);
+Texture2D bloomTexture : register(t6);
 
 
 float4 main(VS_OUT pin) : SV_TARGET
@@ -85,9 +87,26 @@ float4 main(VS_OUT pin) : SV_TARGET
     sampled = materialTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
     int materialType = sampled.w;
 
+    sampled = emissiveTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
+    float3 emissive = sampled.xyz;
+    int gBufferFlag = sampled.w;
+
+
     if ((objectType == OBJECT_ENEMY && materialType != MATERIAL_EYE) || objectType == OBJECT_STAGE || objectType == OBJECT_FURNITURE)
     {
         finalColor.rgb = lerp(finalColor.rgb, bossRoomColor, bossRoomLerpFactor);
+    }
+
+    if (gBufferFlag == GBUFFER_FLAG_EMISSIVE)
+    {
+        finalColor.rgb += emissive;
+    }
+
+    // ÉuÉãÅ[ÉÄèàóù
+    if (enableBloom)
+    {
+        float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);
+        finalColor.rgb += bloom.rgb;
     }
 
     return finalColor;

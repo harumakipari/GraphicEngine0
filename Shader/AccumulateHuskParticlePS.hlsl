@@ -1,11 +1,8 @@
 #include "Constants.hlsli"
 #include "GltfModel.hlsli"
 #include "Lights.hlsli"
+#include "Sampler.hlsli"
 
-#define POINT 0
-#define LINEAR 1
-#define ANISOTROPIC 2
-SamplerState samplerStates[3] : register(s0);
 Texture2D textureMaps[4] : register(t0);
 
 struct PARTICLE
@@ -28,7 +25,6 @@ void main(VS_OUT pin)
     color.rgb = pow(color.rgb, GAMMA);
     
     float3 N = normalize(pin.wNormal.xyz);
-    
     float3 T = normalize(pin.wTangent.xyz);
     float sigma = pin.wTangent.w;
     T = normalize(T - dot(N, T));
@@ -44,12 +40,12 @@ void main(VS_OUT pin)
     float3 specular = pow(max(0, dot(N, normalize(V + L))), 128);
     float3 ambient = color.rgb * 0.2;
     
-    //PARTICLE p;
-    //p.gbuffer3Color = float4(max(0, ambient + diffuse + specular), alpha) * pin.gbuffer3Color;
-    //p.position = pin.wPosition.xyz;
-    //p.gbuffer1Normal = N.xyz;
-    //p.velocity = 0;
-    //p.age = 0;
-    //p.state = 0;
-    //particleBuffer.Append(p);
+    PARTICLE p;
+    p.color = float4(max(0, ambient + diffuse + specular), alpha) * pin.color;
+    p.position = pin.wPosition.xyz;
+    p.normal = N.xyz;
+    p.velocity = 0;
+    p.age = 0;
+    p.state = 0;
+    particleBuffer.Append(p);
 }
