@@ -107,19 +107,7 @@ cbuffer VOLUMETRIC_CLOUDSCAPES_CONSTANT_BUFFER : register(b5)
     uint rayMarchingSteps;
     bool autoRayMarchingSteps;
 }
+#include "ViewConstants.hlsli"
 
-cbuffer VIEW_CONSTANTS_BUFFER : register(b4)
-{
-    row_major float4x4 viewProjection;
-    float4 cameraPositon;
-    row_major float4x4 view;
-    row_major float4x4 projection;
-    row_major float4x4 inverseProjection;
-    row_major float4x4 inverseViewProjection;
-    row_major float4x4 invView;
-    float4 cameraClipDistance;
-    row_major float4x4 previousViewProjection;
-    row_major float4x4 lightViewProjection;
-}
 
 #endif

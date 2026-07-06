@@ -1,11 +1,11 @@
 #include "FullScreenQuad.hlsli"
 #include "Constants.hlsli"
-#include "imageBasedLighting.hlsli"
 #include "BidirectionalReflectanceDistributionFunction.hlsli"
 #include "Lights.hlsli"
 #include "Sampler.hlsli"
 #include "ShaderFunctions.hlsli"
 #include "ModelType.hlsli"
+#include "ViewConstants.hlsli"
 
 Texture2D normalMap : register(t0);
 Texture2D materialMap : register(t1);

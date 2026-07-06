@@ -1,6 +1,7 @@
 #include "Sampler.hlsli"
 #include "FullScreenQuad.hlsli"
 #include "Constants.hlsli"
+#include "ViewConstants.hlsli"
 
 Texture2D color_map : register(t0);
 Texture2D bokeh_map : register(t1);

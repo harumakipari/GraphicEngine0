@@ -1,6 +1,7 @@
 #include "ComputeParticle.hlsli"
-#include "Constants.hlsli"
 #include "Sampler.hlsli"
+#include "ViewConstants.hlsli"
+
 
 //Šg‘ås—ñ¶¬
 float4x4 MatrixScaling(float3 scale)

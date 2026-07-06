@@ -1,6 +1,7 @@
 #include "Sampler.hlsli"
 #include "Constants.hlsli"
 #include "Common.hlsli"
+#include "ViewConstants.hlsli"
 
 Texture2D depthTexture : register(t0);
 Texture2D<float4> sceneNormalTexture : register(t1);

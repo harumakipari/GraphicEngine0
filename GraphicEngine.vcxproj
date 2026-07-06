@@ -1069,6 +1069,7 @@
     <None Include="Shader\SolidShapeRenderer.hlsli" />
     <None Include="Shader\sprite.hlsli" />
     <None Include="Shader\Trail.hlsli" />
+    <None Include="Shader\ViewConstants.hlsli" />
     <None Include="Shader\WiredShapeRenderer.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

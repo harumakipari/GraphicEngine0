@@ -1,6 +1,8 @@
 #include "Constants.hlsli"
 #include "geometricPrimitive.hlsli"
 #include "Lights.hlsli"
+#include "ViewConstants.hlsli"
+
 VS_OUT main(float4 positon : POSITION, float4 normal : NORMAL)
 {
     VS_OUT vout;

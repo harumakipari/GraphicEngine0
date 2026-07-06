@@ -15,6 +15,7 @@
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/Camera.h"
+#include "Game/Actors/Player/Player.h"
 #include "Graphics/PostProcess/BloomEffect.h"
 #include "Graphics/PostProcess/DepthOfFieldEffect.h"
 #include "Graphics/PostProcess/FogEffect.h"
@@ -136,6 +137,9 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
 
     shadowMap = std::make_unique<shadow_map>(device, shadowmap_width, shadowmap_height);
 
+    huskParticles = std::make_unique<husk_particles>(device);
+    particleMeshModel = std::make_unique<InterleavedGltfModel>(device, "./Data/Models/Weapons/PlayerSword/Sword.gltf", ModelTypes::ModelMode::SkeletalMesh, false, true);
+
     return true;
 }
 
@@ -174,6 +178,15 @@ void SceneBase::Update(float deltaTime)
         cameraManager->ToggleMovieCamera(this);
     }
 #endif // !_DEBUG
+
+    if (InputSystem::GetInputState("P", InputStateMask::Trigger))
+    {
+        integrateParticles = !integrateParticles;
+    }
+    if (integrateParticles)
+    {
+        huskParticles->integrate(Graphics::GetDeviceContext(), deltaTime);
+    }
 }
 
 
@@ -618,9 +631,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         //multipleRenderTargets->Deactivate(immediateContext);
     }
 
-
-
-
     // フォーワードの透明描画
     frameBuffer->Activate(immediateContext, gBufferRenderTarget->depthStencilView);
     RenderState::BindBlendState(immediateContext, BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA);
@@ -647,6 +657,33 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
 
         //定数バッファ更新
+
+        // HuskParticle
+        if (!integrateParticles)
+        {
+            RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF, 0);
+            RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
+            RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
+
+            if (auto player = GetActorManager()->GetActorOfType<Player>())
+            {
+                auto world = player->swordRootComponent->GetComponentWorldTransform().ToWorldTransform();
+                //player->GetWorldTransform();
+                DirectX::XMStoreFloat4x4(&world, DirectX::XMLoadFloat4x4(&world) * DirectX::XMMatrixTranslation(+1, 0, 0));
+                huskParticles->accumulate_husk_particles(immediateContext, [&](ID3D11PixelShader* accumulate_husk_particles_ps)
+                    {
+                        PipeLineStateDesc pipeline;
+                        pipeline.pixelShader = accumulate_husk_particles_ps;
+                        particleMeshModel->Render(immediateContext, world, {}, InterleavedGltfModel::RenderPass::All, pipeline);
+                    });
+            }
+        }
+
+        RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON, 0);
+        RenderState::BindBlendState(immediateContext, BLEND_STATE::ALPHA);
+        RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
+
+        huskParticles->render(immediateContext);
 
         // パーティクル描画
         EffectManager::Render(immediateContext);
@@ -914,6 +951,16 @@ void SceneBase::DrawSceneSettingsTab()
         ImGui::Checkbox("useDrawDebug", &useDrawDebug);
         lightManager->DrawGui();
     }
+
+    ImGui::Begin(U8("huskParticle"));
+    ImGui::Text("press K key to integrate particles");
+    if (huskParticles)
+    {
+        ImGui::Checkbox("integrateParticles", &integrateParticles);
+        ImGui::Text("accumulated husk particle count %d", huskParticles->particle_data.particle_count);
+        ImGui::SliderFloat("particle_data.size", &huskParticles->particle_data.particle_size, +0.0f, +0.05f, "%.4f");
+    }
+    ImGui::End();
 }
 
 

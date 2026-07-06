@@ -73,7 +73,6 @@ public:
     // プレイヤーの入力を受け付けるかどうかを設定する
     void SetInputEnabled(const bool enabled) { InputSystem::SetInputEnabled(enabled); }
 
-
 private:
     // 火花エフェクトの生成
     void SpawnSpark(DirectX::XMFLOAT3 hitPosition);

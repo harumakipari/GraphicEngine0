@@ -4,6 +4,7 @@
 #include "FilterFunctions.hlsli"
 #include "Lights.hlsli"
 #include "ModelType.hlsli"
+#include "ViewConstants.hlsli"
 
 Texture2D sceneColorTexture : register(t0);
 Texture2D bokehTexture : register(t1);

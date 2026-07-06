@@ -33,7 +33,7 @@ void main(point VS_OUT input[1] : SV_POSITION, inout TriangleStream<GS_OUT> outp
         GS_OUT element;
         float3 corner_pos = billboard[vertex_index] * particle_size;
 
-        element.position = mul(float4(p.position + mul(corner_pos, R), 1), view_projection);
+        element.position = mul(float4(p.position + mul(corner_pos, R), 1), viewProjection);
         element.color = p.color;
         element.texcoord = texcoords[vertex_index];
         output.Append(element);

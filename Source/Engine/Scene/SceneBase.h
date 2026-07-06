@@ -145,14 +145,18 @@ protected:
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> starTexture;   // 星のテクスチャ
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> skyNoiseTexture;   // 空のノイズテクスチャ
 
-    DirectX::XMFLOAT4 lightDirection={ -0.75f, -0.581f, -0.4f, 0.0f };
-    DirectX::XMFLOAT4 lightColor={ 1.0f, 1.0f, 1.0f, 20.1f };
+    DirectX::XMFLOAT4 lightDirection = { -0.75f, -0.581f, -0.4f, 0.0f };
+    DirectX::XMFLOAT4 lightColor = { 1.0f, 1.0f, 1.0f, 20.1f };
     DirectX::XMFLOAT4 shadowLightDirection = { -0.75f, -0.581f, -0.4f, 0.0f };
 
     bool useDeferredRendering = true;
     bool useDrawDebug = true;
 
+    // HuskParticle用
+    bool integrateParticles = false;
     std::unique_ptr<husk_particles> huskParticles;
+    std::unique_ptr<InterleavedGltfModel> particleMeshModel;
+
 
     SIZE framebufferDimensions = {};
 

@@ -55,24 +55,18 @@ husk_particles::husk_particles(ID3D11Device* device, size_t max_particle_count) 
     hr = device->CreateUnorderedAccessView(particle_buffer.Get(), &unordered_access_view_desc, particle_append_buffer_uav.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-    buffer_desc.ByteWidth = sizeof(particle_constants);
-    buffer_desc.Usage = D3D11_USAGE_DEFAULT;
-    buffer_desc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    buffer_desc.CPUAccessFlags = 0;
-    buffer_desc.MiscFlags = 0;
-    buffer_desc.StructureByteStride = 0;
-    hr = device->CreateBuffer(&buffer_desc, nullptr, constant_buffer.GetAddressOf());
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-    hr = CreateVsFromCSO(device, "husk_particles_vs.cso", vertex_shader.ReleaseAndGetAddressOf(), nullptr, nullptr, 0);
+    particleCBuffer = std::make_unique<ConstantBuffer<particle_constants>>(device);
+
+    hr = CreateVsFromCSO(device, "./Data/Shaders/HuskParticlesVS.cso", vertex_shader.ReleaseAndGetAddressOf(), nullptr, nullptr, 0);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "husk_particles_ps.cso", pixel_shader.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/HuskParticlesPS.cso", pixel_shader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreateGsFromCSO(device, "husk_particles_gs.cso", geometry_shader.ReleaseAndGetAddressOf());
+    hr = CreateGsFromCSO(device, "./Data/Shaders/HuskParticlesGS.cso", geometry_shader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreateCsFromCSO(device, "husk_particles_cs.cso", compute_shader.ReleaseAndGetAddressOf());
+    hr = CreateCsFromCSO(device, "./Data/Shaders/HuskParticlesCS.cso", compute_shader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(device, "accumulate_husk_particles_ps.cso", accumulate_husk_particles_ps.ReleaseAndGetAddressOf());
+    hr = CreatePsFromCSO(device, "./Data/Shaders/AccumulateHuskParticlePS.cso", accumulate_husk_particles_ps.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
@@ -91,8 +85,9 @@ void husk_particles::integrate(ID3D11DeviceContext* immediate_context, float del
     immediate_context->CSSetUnorderedAccessViews(0, 1, particle_buffer_uav.GetAddressOf(), nullptr);
 
     particle_data.delta_time = delta_time;
-    immediate_context->UpdateSubresource(constant_buffer.Get(), 0, 0, &particle_data, 0, 0);
-    immediate_context->CSSetConstantBuffers(9, 1, constant_buffer.GetAddressOf());
+
+    particleCBuffer->data = particle_data;
+    particleCBuffer->Activate(immediate_context, 12);
 
     immediate_context->CSSetShader(compute_shader.Get(), NULL, 0);
 
@@ -116,10 +111,8 @@ void husk_particles::render(ID3D11DeviceContext* immediate_context)
     immediate_context->GSSetShader(geometry_shader.Get(), NULL, 0);
     immediate_context->GSSetShaderResources(9, 1, particle_buffer_srv.GetAddressOf());
 
-    immediate_context->UpdateSubresource(constant_buffer.Get(), 0, 0, &particle_data, 0, 0);
-    immediate_context->VSSetConstantBuffers(9, 1, constant_buffer.GetAddressOf());
-    immediate_context->PSSetConstantBuffers(9, 1, constant_buffer.GetAddressOf());
-    immediate_context->GSSetConstantBuffers(9, 1, constant_buffer.GetAddressOf());
+    particleCBuffer->data = particle_data;
+    particleCBuffer->Activate(immediate_context, 12);
 
     immediate_context->IASetInputLayout(NULL);
     immediate_context->IASetVertexBuffers(0, 0, NULL, NULL, NULL);

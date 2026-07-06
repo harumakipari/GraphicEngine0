@@ -1,5 +1,7 @@
 #include "Constants.hlsli"
+#include "ViewConstants.hlsli"
 #include "GltfModel.hlsli"
+
 struct VS_ClOTH_IN
 {
     float4 position : POSITION;

@@ -5,6 +5,7 @@
 #include "Lights.hlsli"
 #include "ModelType.hlsli"
 #include "ShaderFunctions.hlsli"
+#include "ViewConstants.hlsli"
 
 Texture2D colorTexture : register(t0);
 Texture2D positionTexture : register(t1);

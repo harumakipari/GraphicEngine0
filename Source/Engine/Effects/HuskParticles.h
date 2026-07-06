@@ -5,6 +5,8 @@
 #include <directxmath.h>
 
 #include <vector>
+
+#include "Graphics/Core/ConstantBuffer.h"
 #include "Graphics/Resource/InterleavedGltfModel.h"
 
 struct husk_particles
@@ -28,6 +30,7 @@ struct husk_particles
 		float delta_time{};
 	};
 	particle_constants particle_data;
+	std::unique_ptr<ConstantBuffer<particle_constants>> particleCBuffer;
 
 	Microsoft::WRL::ComPtr<ID3D11Buffer> particle_buffer;
 	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particle_buffer_uav;
@@ -41,7 +44,6 @@ struct husk_particles
 	Microsoft::WRL::ComPtr<ID3D11GeometryShader> geometry_shader;
 	Microsoft::WRL::ComPtr<ID3D11InputLayout> input_layout;
 	Microsoft::WRL::ComPtr<ID3D11ComputeShader> compute_shader;
-	Microsoft::WRL::ComPtr<ID3D11Buffer> constant_buffer;
 
 	husk_particles(ID3D11Device* pDevice, size_t max_particle_count = 1000000);
 	husk_particles(const husk_particles&) = delete;

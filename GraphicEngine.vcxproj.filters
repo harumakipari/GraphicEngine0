@@ -358,6 +358,9 @@
     <ClCompile Include="Source\Engine\Camera\MovieCameraManagerActor.cpp">
       <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.cpp">
+      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -873,6 +876,9 @@
     <ClInclude Include="Source\Engine\Effects\HuskParticles.h">
       <Filter>Source\Engine\Effects</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.h">
+      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">
@@ -1142,6 +1148,24 @@
     <FxCompile Include="Shader\TemporalAntiAliasingPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Shader\HuskParticlesCS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\HuskParticlesGS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\HuskParticlesPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\HuskParticlesVS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\EnemyEyeFlarePS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\EnemyEyeModelPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader\BidirectionalReflectanceDistributionFunction.hlsli">
@@ -1232,6 +1256,12 @@
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\WiredShapeRenderer.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="Shader\HuskParticles.hlsli">
+      <Filter>Shader</Filter>
+    </None>
+    <None Include="Shader\ViewConstants.hlsli">
       <Filter>Shader</Filter>
     </None>
   </ItemGroup>

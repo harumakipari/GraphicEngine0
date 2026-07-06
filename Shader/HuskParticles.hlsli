@@ -1,5 +1,5 @@
 
-cbuffer PARTICLE_CONSTANTS : register(b9)
+cbuffer PARTICLE_CONSTANTS : register(b12)
 {
     uint particle_count;
     float particle_size;
@@ -8,12 +8,8 @@ cbuffer PARTICLE_CONSTANTS : register(b9)
     float4 position_on_near_plane;
     float4 eye_position;
 };
-cbuffer SCENE_CONSTANT_BUFFER : register(b1)
-{
-    row_major float4x4 view_projection;
-    float4 light_direction;
-    float4 camera_position;
-};
+
+#include "ViewConstants.hlsli"
 
 struct VS_OUT
 {
