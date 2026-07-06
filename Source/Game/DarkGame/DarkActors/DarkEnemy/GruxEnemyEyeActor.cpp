@@ -76,6 +76,9 @@ void GruxEnemyEyeActor::Update(float elapsedTime)
     // 目の角度を設定する
     leftEyeFlareMeshComponent->SetWorldEulerRotationDirect(eyeFlareDegreeAngle);
     rightEyeFlareMeshComponent->SetWorldEulerRotationDirect(eyeFlareDegreeAngle);
+
+    // 目のフレアのスケールを設定する
+    // eyeFlareScale.x :0.0f -> 9.0fまで大きくする
     leftEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
     rightEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
 
