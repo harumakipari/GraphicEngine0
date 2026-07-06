@@ -165,7 +165,7 @@ void SceneRenderer::RenderInstanced(ID3D11DeviceContext* immediateContext, const
             InterleavedGltfModel::InstanceData data{};
             data.world = instance->GetComponentWorldTransform().ToWorldTransform();
             data.color = instance->plusAlphaCBuffer->data.cpuColor;
-            data.emissiveColor = { instance->plusAlphaCBuffer->data.emissionPower,0.0f,0.0f,0.0f };
+            data.emissiveColor = { instance->plusAlphaCBuffer->data.emissionPower,static_cast<float>(instance->plusAlphaCBuffer->data.objectType),0.0f,0.0f };
             instanceData.push_back(data);
         }
 

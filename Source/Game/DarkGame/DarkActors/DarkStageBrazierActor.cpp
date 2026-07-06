@@ -60,8 +60,8 @@ void DarkStageMeltedWaxActor::SetModel(const std::shared_ptr<StageAsset>& stageA
     metedWaxMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
     metedWaxMeshComponent->SetModel("./Data/Models/DarkStageAssets/MeltedWax/MeltedWax.gltf");
     metedWaxMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+    metedWaxMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
 
-    auto scene = dynamic_cast<SceneBase*>(Scene::GetCurrentScene());
 
     auto lightsData = metedWaxMeshComponent->model->GetPointLights();
     // ポイントライトコンポーネントを追加
@@ -77,8 +77,6 @@ void DarkStageMeltedWaxActor::SetModel(const std::shared_ptr<StageAsset>& stageA
         pointLightComponent->SetRelativeLocationDirect(pos);
         // ライトの名前からライトマネージャーの共有ライトを取得して設定
         pointLightComponent->SetSharedLightName(light.name);
-
-
     }
 
     for (auto point : metedWaxMeshComponent->model->spawnPoints)

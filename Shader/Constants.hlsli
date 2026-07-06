@@ -46,6 +46,9 @@ cbuffer SHADER_CONSTANT_BUFFER : register(b9)
     float shadowMapFactor;
     
     float3 shadowMapColor;
+    float bossRoomLerpFactor;
+
+    float3 bossRoomColor;
 }
 cbuffer CSM_CONSTANTS : register(b3)
 {

@@ -161,13 +161,15 @@ inline void to_json(nlohmann::json& j, const SceneShaderConstants& s)
         {"shadowMapFactor", s.shadowMapFactor},
 
         {"shadowMapColor", s.shadowMapColor},
+        {"bossRoomLerpFactor", s.bossRoomLerpFactor},
+
+        {"bossRoomColor", s.bossRoomColor},
     };
 }
 
 // SceneShaderConstants
 inline void from_json(const nlohmann::json& j, SceneShaderConstants& s)
 {
-#if 1
     if (j.contains("shadowColor")) j.at("shadowColor").get_to(s.shadowColor);
     if (j.contains("shadowDepthBias")) j.at("shadowDepthBias").get_to(s.shadowDepthBias);
     if (j.contains("slopeBias")) j.at("slopeBias").get_to(s.slopeBias);
@@ -200,43 +202,12 @@ inline void from_json(const nlohmann::json& j, SceneShaderConstants& s)
 
     if (j.contains("colorMapRGB")) j.at("colorMapRGB").get_to(s.colorMapRGB);
     if (j.contains("shadowMapFactor")) j.at("shadowMapFactor").get_to(s.shadowMapFactor);
+
     if (j.contains("shadowMapColor")) j.at("shadowMapColor").get_to(s.shadowMapColor);
-#else
-    j.at("shadowColor").get_to(s.shadowColor);
-    j.at("shadowDepthBias").get_to(s.shadowDepthBias);
-    j.at("slopeBias").get_to(s.slopeBias);
-    j.at("splitU").get_to(s.splitU);
+    if (j.contains("bossRoomLerpFactor")) j.at("bossRoomLerpFactor").get_to(s.bossRoomLerpFactor);
 
-    j.at("hueShift").get_to(s.hueShift);
-    j.at("saturation").get_to(s.saturation);
-    j.at("brightness").get_to(s.brightness);
-    j.at("contrast").get_to(s.contrast);
+    if (j.contains("bossRoomColor")) j.at("bossRoomColor").get_to(s.bossRoomColor);
 
-    j.at("focusDistance").get_to(s.focusDistance);
-    j.at("dofNearRange").get_to(s.dofNearRange);
-    j.at("dofRange").get_to(s.dofRange);
-    j.at("dofBlurStrength").get_to(s.dofBlurStrength);
-
-    j.at("objectIblIntensity").get_to(s.objectIblIntensity);
-    j.at("renderStep").get_to(s.renderStep);
-    j.at("enableToneMapping").get_to(s.enableToneMapping);
-    j.at("enableSsao").get_to(s.enableSsao);
-
-    j.at("enableCascadedShadowMaps").get_to(s.enableCascadedShadowMaps);
-    j.at("enableSsr").get_to(s.enableSsr);
-    j.at("enableFog").get_to(s.enableFog);
-    j.at("enableBloom").get_to(s.enableBloom);
-
-    j.at("enableBlur").get_to(s.enableBlur);
-    j.at("enableDof").get_to(s.enableDof);
-    j.at("colorizeCascadedLayer").get_to(s.colorizeCascadedLayer);
-    j.at("value0").get_to(s.value0);
-
-    j.at("pad0").get_to(s.pad0);
-    j.at("pad1").get_to(s.pad1);
-    j.at("pad2").get_to(s.pad2);
-    j.at("pad3").get_to(s.pad3);
-#endif // 0
 
 }
 

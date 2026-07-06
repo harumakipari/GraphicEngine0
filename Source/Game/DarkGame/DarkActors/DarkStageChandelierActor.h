@@ -9,16 +9,26 @@ public:
     virtual ~DarkStageChandelierActor() = default;
     void Initialize(const Transform& transform)override;
     void Update(float deltaTime) override;
+
+    // 炎の光のスケールを変更する関数
+    void SetFireLightScale(DirectX::XMFLOAT3 fireScale);
+
+    // 炎の光のスケールを戻す関数
+    void ResetFireLightScale();
 private:
     // シャンデリアのモデル
     std::shared_ptr<SkeletalMeshComponent> chandelierMeshComponent;
+    // シャンデリアの炎の球体のモデル
+    std::vector <std::shared_ptr<InstanceMeshComponent>> sphereMeshComponents;
+
+    DirectX::XMFLOAT3 fireScale = { 0.01f,0.02f,0.01f };
 
     float swingTime = 0.0f;
     float swingSpeed = 1.5f;     // 揺れる速さ
     float swingAngle = 10.0f;    // 最大角度（度）
 };
 
-class DarkStageFireBowlActor:public Actor
+class DarkStageFireBowlActor :public Actor
 {
 public:
     DarkStageFireBowlActor(const std::string& actorName) :Actor(actorName) {}
@@ -29,7 +39,7 @@ private:
     std::shared_ptr<SkeletalMeshComponent> meshComponent;
 };
 
-class DarkStageTorchSconceActor:public Actor
+class DarkStageTorchSconceActor :public Actor
 {
 public:
     DarkStageTorchSconceActor(const std::string& actorName) :Actor(actorName) {}

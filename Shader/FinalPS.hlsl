@@ -85,11 +85,9 @@ float4 main(VS_OUT pin) : SV_TARGET
     sampled = materialTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
     int materialType = sampled.w;
 
-
-
-    if ((objectType == OBJECT_ENEMY && materialType != MATERIAL_EYE)  || objectType == OBJECT_STAGE)
+    if ((objectType == OBJECT_ENEMY && materialType != MATERIAL_EYE) || objectType == OBJECT_STAGE || objectType == OBJECT_FURNITURE)
     {
-        finalColor.rgb = float3(0, 0, 0);
+        finalColor.rgb = lerp(finalColor.rgb, bossRoomColor, bossRoomLerpFactor);
     }
 
     return finalColor;

@@ -4,6 +4,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Camera/CameraManager.h"
 #include "Game/Actors/Player/Player.h"
+#include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 
 void MovieCameraManagerActor::Update(float deltaTime)
@@ -27,6 +28,16 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {// 動画が終了したらplayerをアップする動画再生
             PlayMovie(playerMovieFileName);
             doorMovieState = DoorMovieState::UpPlayerMovie;
+            if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
+            {
+                player->PlayBodyAnimation("Recall_0", false);
+            }
+            // 部屋のシャンデリアの炎の光を消す
+            auto chandelierActors = GetOwnerScene()->GetActorManager()->GetActorsOfType<DarkStageChandelierActor>();
+            for (auto chandelier:chandelierActors)
+            {
+                chandelier->SetFireLightScale({ 0.0f,0.0f,0.0f });
+            }
         }
         break;
     case DoorMovieState::UpPlayerMovie:
@@ -41,7 +52,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             doorMovieState = DoorMovieState::DoorOpening;
         }
     }
-        break;
+    break;
     case DoorMovieState::DoorOpening:
         break;
     case DoorMovieState::EnemyMovie:

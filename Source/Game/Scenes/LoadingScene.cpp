@@ -420,6 +420,9 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
         shaderCBuffer->data.shadowMapFactor = shader.shadowMapFactor;
         shaderCBuffer->data.shadowMapColor = shader.shadowMapColor;
 
+        shaderCBuffer->data.bossRoomLerpFactor = shader.bossRoomLerpFactor;
+        shaderCBuffer->data.bossRoomColor = shader.bossRoomColor;
+
         sceneCBuffer->Activate(immediateContext, 1);
         shaderCBuffer->Activate(immediateContext, 9);
     }

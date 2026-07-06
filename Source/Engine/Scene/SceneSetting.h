@@ -78,7 +78,12 @@ struct SceneShaderConstants
 
     DirectX::XMFLOAT3 colorMapRGB = { 1.0f,1.0f,1.0f };
     float shadowMapFactor = 0.3f;
+
     DirectX::XMFLOAT3 shadowMapColor = { 0.147f,0.111f,0.0085f };
+    float bossRoomLerpFactor = 1.0f;
+
+    DirectX::XMFLOAT3 bossRoomColor = { 0.0f,0.0f,0.0f };
+
 
 };
 
@@ -117,7 +122,7 @@ struct FogConstants
 
     float groundFogDensity = 0.5f; // 地面フォグの密度。0でフォグなし。値が大きいほど地面フォグの影響が強くなる。
     float groundFogAmbient = 0.6f; // 床フォグが環境光からどれくらい明るさを受けるか
-    float groundNoiseScale= 0.0204f;
+    float groundNoiseScale = 0.0204f;
     float groundNoiseTimeScale = 0.1877f;
 };
 

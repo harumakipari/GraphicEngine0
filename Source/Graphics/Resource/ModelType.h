@@ -29,4 +29,6 @@ enum class ObjectType :int
     Stage,
     NotSSR, // SSRとかをつけたくないステージのオブジェクト
     Door, // メタリックを下げて、ラフネスを上げるため
+    Furniture,
+    EnemyEye, // 敵の目の表現用 暗い中で光る用
 };

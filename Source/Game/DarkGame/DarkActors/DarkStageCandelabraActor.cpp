@@ -153,8 +153,7 @@ void DarkStageCandleStandActor::SetModel(const std::shared_ptr<StageAsset>& stag
     meshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
     meshComponent->model = stageAsset->model;
     meshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-
-    auto scene = dynamic_cast<SceneBase*>(Scene::GetCurrentScene());
+    meshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
 
     auto lightsData = meshComponent->model->GetPointLights();
     // ポイントライトコンポーネントを追加
@@ -185,7 +184,8 @@ void DarkStageCandleStandActor::SetModel(const std::shared_ptr<StageAsset>& stag
         sphereMeshComponent->SetRelativeRotationDirect(point.worldRotation);
         sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
         sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-
+        sphereMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
+        sphereMeshComponents.push_back(sphereMeshComponent);
         flameComponents.push_back(sphereMeshComponent.get());
         flameBasePositions.push_back(pos);
     }
@@ -232,5 +232,24 @@ void DarkStageCandleStandActor::Update(float deltaTime)
             0.0f,
             1.0f
         };
+    }
+}
+
+
+// 炎の光のスケールを変更する関数
+void DarkStageCandleStandActor::SetFireLightScale(DirectX::XMFLOAT3 fireScale) const
+{
+    for (auto sphereMeshComponent : sphereMeshComponents)
+    {
+        sphereMeshComponent->SetRelativeScaleDirect(fireScale);
+    }
+}
+
+// 炎の光のスケールを戻す関数
+void DarkStageCandleStandActor::ResetFireLightScale()
+{
+    for (auto sphereMeshComponent : sphereMeshComponents)
+    {
+        sphereMeshComponent->SetRelativeScaleDirect(fireScale);
     }
 }

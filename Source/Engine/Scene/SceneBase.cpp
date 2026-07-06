@@ -273,6 +273,9 @@ void SceneBase::UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, floa
     shaderCBuffer->data.shadowMapFactor = shader.shadowMapFactor;
     shaderCBuffer->data.shadowMapColor = shader.shadowMapColor;
 
+    shaderCBuffer->data.bossRoomLerpFactor = shader.bossRoomLerpFactor;
+    shaderCBuffer->data.bossRoomColor = shader.bossRoomColor;
+
     sceneCBuffer->Activate(immediateContext, 1);
     shaderCBuffer->Activate(immediateContext, 9);
 
@@ -976,6 +979,9 @@ void SceneBase::DrawPostEffectTab()
     ImGui::DragFloat3(U8("影のライト方向"), &shadowLightDirection.x, 0.01f, -1.0f, 1.0f, "%.8f");
     ImGui::DragFloat(U8("シャドウマップの強さ"), &shader.shadowMapFactor, 0.01f, 0.0f, 1.0f, "%.4f");
     ImGui::ColorEdit3(U8("シャドウマップの色"), &shader.shadowMapColor.x);
+
+    ImGui::DragFloat(U8("ボスの部屋のlerp"), &shader.bossRoomLerpFactor, 0.01f, 0.0f, 1.0f, "%.4f");
+    ImGui::ColorEdit3(U8("ボスの部屋の色"), &shader.bossRoomColor.x);
 
     sceneEffectManager->DrawGui();
     //postEffectManager->DrawGui();

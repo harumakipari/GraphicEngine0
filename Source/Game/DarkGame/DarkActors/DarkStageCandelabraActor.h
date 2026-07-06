@@ -72,9 +72,16 @@ public:
     void Update(float deltaTime) override;
     void DrawImGuiDetails() override{}
 
+    // 炎の光のスケールを変更する関数
+    void SetFireLightScale(DirectX::XMFLOAT3 fireScale) const;
+
+    // 炎の光のスケールを戻す関数
+    void ResetFireLightScale();
 private:
     // スタンド式火鉢のモデル
     std::shared_ptr<SkeletalMeshComponent> meshComponent;
     std::vector<MeshComponent*> flameComponents; // 炎のモデル
     std::vector<DirectX::XMFLOAT3> flameBasePositions;// 炎の初期位置
+    // シャンデリアの炎の球体のモデル
+    std::vector <std::shared_ptr<InstanceMeshComponent>> sphereMeshComponents;
 };

@@ -46,13 +46,23 @@ private:
     // 右の武器の当たり判定のコンポーネント
     std::shared_ptr<CapsuleComponent> rightWeaponCollisionComp;
 
+    // 左目の描画用コンポーネントを追加　暗闇で光る目の表現用
+    std::shared_ptr<SkeletalMeshComponent> leftEyeMeshComponent;
+    // 左目の描画用コンポーネントを追加　横に光るフレアの表現用
+    std::shared_ptr<SkeletalMeshComponent> leftEyeFlareMeshComponent;
+    // 右目の描画用コンポーネントを追加　暗闇で光る目の表現用
+    std::shared_ptr<SkeletalMeshComponent> rightEyeMeshComponent;
+    // 右目の描画用コンポーネントを追加　横に光るフレアの表現用
+    std::shared_ptr<SkeletalMeshComponent> rightEyeFlareMeshComponent;
+
+
     std::string leftWeapon = "leftWeapon";
     std::string rightWeapon = "rightWeapon";
     std::string bothWeapon = "bothWeapon";
 
     bool rightHitBox = false;   // 右の剣の当たり判定
     bool leftHitBox = false;    // 左の剣の当たり判定
-    bool isDangerWindow = false; 
+    bool isDangerWindow = false;
 
     // ヒット中に当たった敵を記録する
     std::unordered_set<Actor*> hitActors;
@@ -60,15 +70,19 @@ private:
     bool isDeathPerform = false;
 
     float pitchBaseValue = 0.45f;
+
+    float emissionFactor = 5.0f;
+    DirectX::XMFLOAT4 eyeColor = { 1.0f,1.0f,1.0f,1.0f };
+    DirectX::XMFLOAT3 eyeFlareScale = { 0.2f,0.45f,0.01f };
 };
 
 
-class KnightActor: public Character
+class KnightActor : public Character
 {
 public:
-    explicit KnightActor(const std::string & actorName) :Character(actorName) {}
+    explicit KnightActor(const std::string& actorName) :Character(actorName) {}
 
-    void Initialize(const Transform & transform)override;
+    void Initialize(const Transform& transform)override;
 
     void Update(float elapsedTime)override;
 

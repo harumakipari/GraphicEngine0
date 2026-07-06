@@ -8,7 +8,8 @@ GBUFFER_PS_OUT main(INSTANCE_VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     emissive *= emissivePower;
     pout.position = pin.wPosition; // world ‹óŠÔ
     float3 N = normalize(pin.wNormal.xyz);
-    pout.gBuffer3Normal = float4(N.xyz, 0); // world ‹óŠÔ
+    int instanceObjectType = pin.instanceEmissive.y;
+    pout.gBuffer3Normal = float4(N.xyz, instanceObjectType); // world ‹óŠÔ
     pout.albedo = float4(1, 1, 1, 1); // ‰¼B“_ŒõŒ¹‚Íemissive‚ÅF‚ğ‚Â‚¯‚é‚©‚ç‚±‚±‚Å‚Í”’‚É‚µ‚Ä‚¨‚­
 #if 1
     float n =
