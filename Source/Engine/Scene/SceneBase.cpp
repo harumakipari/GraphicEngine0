@@ -667,9 +667,8 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 
             if (auto player = GetActorManager()->GetActorOfType<Player>())
             {
-                auto world = player->swordRootComponent->GetComponentWorldTransform().ToWorldTransform();
-                //player->GetWorldTransform();
-                DirectX::XMStoreFloat4x4(&world, DirectX::XMLoadFloat4x4(&world) * DirectX::XMMatrixTranslation(+1, 0, 0));
+                auto world = player->swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+                DirectX::XMStoreFloat4x4(&world, DirectX::XMLoadFloat4x4(&world) * DirectX::XMMatrixTranslation(0, 0, 0));
                 huskParticles->accumulate_husk_particles(immediateContext, [&](ID3D11PixelShader* accumulate_husk_particles_ps)
                     {
                         PipeLineStateDesc pipeline;
@@ -1028,7 +1027,6 @@ void SceneBase::DrawPostEffectTab()
     ImGui::DragFloat3(U8("影のライト方向"), &shadowLightDirection.x, 0.01f, -1.0f, 1.0f, "%.8f");
     ImGui::DragFloat(U8("シャドウマップの強さ"), &shader.shadowMapFactor, 0.01f, 0.0f, 1.0f, "%.4f");
     ImGui::ColorEdit3(U8("シャドウマップの色"), &shader.shadowMapColor.x);
-
     ImGui::DragFloat(U8("ボスの部屋のlerp"), &shader.bossRoomLerpFactor, 0.01f, 0.0f, 1.0f, "%.4f");
     ImGui::ColorEdit3(U8("ボスの部屋の色"), &shader.bossRoomColor.x);
 

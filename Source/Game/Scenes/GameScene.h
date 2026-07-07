@@ -43,6 +43,8 @@ public:
     //シーンの自動登録
     static inline Scene::Autoenrollment<GameScene> _autoenrollment;
 
+    // ボスの部屋の色ラープ値を設定する
+    void SetBossRoomLerpFactor(float lerpFactor);
 private:
     struct SkyShaderConstants
     {

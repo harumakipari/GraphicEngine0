@@ -95,7 +95,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     if ((objectType == OBJECT_ENEMY && materialType != MATERIAL_EYE) || objectType == OBJECT_STAGE || objectType == OBJECT_FURNITURE)
     {
-        finalColor.rgb = lerp(finalColor.rgb, bossRoomColor, bossRoomLerpFactor);
+        finalColor.rgb = lerp(bossRoomColor, finalColor.rgb, bossRoomLerpFactor);
     }
 
     if (gBufferFlag == GBUFFER_FLAG_EMISSIVE)

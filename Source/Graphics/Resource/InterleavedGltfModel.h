@@ -213,6 +213,7 @@ public:
     };
     std::vector<SpawnPoint> spawnPoints;
 
+    void SetCoordinateSystem(CoordinateSystem coordinateSystem) { modelCoordinateSystem = coordinateSystem; }
 
     CoordinateSystem GetCoordinateSystem()const { return modelCoordinateSystem; }
 private:
@@ -382,7 +383,7 @@ public:
     std::vector<BatchMesh> batchMeshes;
     ModelTypes::ModelMode mode = ModelTypes::ModelMode::SkeletalMesh;
 
-    
+
     std::vector<Microsoft::WRL::ComPtr<ID3D11Buffer>> buffers;
 
     void Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& world, const std::vector<Node>& animated_nodes, RenderPass pass, const PipeLineStateDesc& pipeline = {});

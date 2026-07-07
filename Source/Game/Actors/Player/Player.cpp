@@ -357,10 +357,13 @@ void Player::Initialize(const Transform& transform)
     }
 
 #endif // 0
+
+    // 剣のメッシュコンポーネントを追加
     swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
 
+    // 剣を背中に背負ったとき用の剣のメッシュコンポーネント
     int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");
     swordSheathMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordSheathMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
@@ -368,6 +371,14 @@ void Player::Initialize(const Transform& transform)
     swordSheathMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
     swordSheathMeshComponent->SetRelativeEulerRotationDirect({ 83.0f,-180.0f,-105.0f });
 
+    // 剣の残像用の剣のメッシュコンポーネント
+    for (auto& ghost : ghosts)
+    {
+        ghost.swordMeshComp = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
+        ghost.swordMeshComp->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
+        ghost.swordMeshComp->SetIsVisible(false);
+        //ghost.swordMeshComp->AttachToComponent(skeletalMeshComponent,weaponSocketNode);
+    }
 
 #if 0
     auto bowMeshComponent = this->AddComponent<SkeletalMeshComponent>("Bow", parentName);
@@ -387,8 +398,9 @@ void Player::Initialize(const Transform& transform)
     runAudioComp = AddComponent<AudioSourceComponent>("runAudioComponent", parentName);
     runAudioComp->SetSource(L"./Data/Sound/SE/run_heel.wav");
     //runAudioComp->SetSource(L"./Data/Sound/SE/run.wav");
-    runAudioComp->SetVolume(0.5f);
+    runAudioComp->SetVolume(0.3f);
     runAudioComp->SetLoop(true);
+
 }
 
 
@@ -398,6 +410,57 @@ void Player::Update(float deltaTime)
     {
         stateMachine_->ChangeState("Rush");
     }
+
+#if 0
+    DirectX::XMFLOAT4X4 world = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+    DirectX::XMFLOAT4X4 rhs =
+    {//RHS Y-UP
+       -1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1,
+    };
+    DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&rhs) };
+    XMMATRIX W = C * XMLoadFloat4x4(&world);
+    DirectX::XMStoreFloat4x4(&world, W);
+#endif // 0
+
+    swordGhostElapsedTime += deltaTime;
+    if (swordGhostElapsedTime >= 0.05f)
+    {
+        swordGhostElapsedTime = 0.0f;
+        ghosts[swordGhostIndex].world = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+        ghosts[swordGhostIndex].alpha = 0.6f;
+        ghosts[swordGhostIndex].isVisible = true;
+        //ghosts[swordGhostIndex].swordMeshComp->SetWorldMatrixDirect(world);
+        ghosts[swordGhostIndex].swordMeshComp->SetWorldMatrixDirect(ghosts[swordGhostIndex].world);
+
+        swordGhostIndex++;
+        if (swordGhostIndex >= ghosts.size())
+        {
+            swordGhostIndex = 0;
+        }
+    }
+
+    // 剣の残像用の剣のメッシュコンポーネント
+    for (auto& ghost : ghosts)
+    {
+        ghost.alpha -= deltaTime * 4.0f;
+
+        if (ghost.alpha <= 0)
+        {
+            ghost.alpha = 0;
+            ghost.isVisible = false;
+        }
+
+        ghost.swordMeshComp->SetIsVisible(ghost.isVisible);
+
+        if (!ghost.isVisible)
+            continue;
+
+        ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor.w = ghost.alpha;
+    }
+
 
     using namespace DirectX;
 

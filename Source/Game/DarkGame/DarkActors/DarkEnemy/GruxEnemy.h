@@ -39,7 +39,10 @@ private:
 private:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
+    // 回転コンポーネントを追加
     std::shared_ptr<RotationComponent> rotationComponent;
+    // キャラクタームーブコンポーネントを追加
+    std::shared_ptr<CharacterMovementComponent> characterMovementComponent;
 
     // 左の武器の当たり判定のコンポーネント
     std::shared_ptr<CapsuleComponent> leftWeaponCollisionComp;

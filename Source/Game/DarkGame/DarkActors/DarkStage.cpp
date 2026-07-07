@@ -69,13 +69,13 @@ void DarkStage::Initialize(const Transform& transform)
     {
         PROFILE_SCOPE("Create FloorCollision");
         std::shared_ptr<StaticMeshComponent> floorCollisionModel = this->AddComponent<StaticMeshComponent>("floorCollisionModel", parentName);
-        floorCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_CollisionFloor.glb", true,true);
+        floorCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_CollisionFloor.glb", true, true);
         floorCollisionModel->SetIsVisible(false);
 
         std::shared_ptr<TriangleMeshCollisionComponent> triangleMeshComponent = this->AddComponent<class TriangleMeshCollisionComponent>("triangleMeshComponent", "floorCollisionModel");
         triangleMeshComponent->CreateConvexMeshFromModel(floorCollisionModel.get());
-        
-#if 1
+
+#if 0
         // 床の当たり判定用のボックスコリジョンコンポーネント
         std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<class BoxComponent>("boxComponent", parentName);
         boxComponent->SetHalfBoxExtent(DirectX::XMFLOAT3(80.0f, 0.2f, 80.0f));
@@ -141,7 +141,6 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
         staticMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Stage;
     }
 
-
     {
         PROFILE_SCOPE("Create StageActor");
 
@@ -184,8 +183,8 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
             }
             else if (point.name.rfind("Spawn_BossRoomChandelier", 0) == 0)
             {// bossの部屋のシャンデリアを生成する
-                Transform chandelierTr{ {17.221f,13.996f,11.082f},point.worldRotation,{2.5f,2.5f,2.5f} };
-                auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("chandelier", chandelierTr);
+                Transform chandelierTr{ {17.221f,13.996f,11.082f},point.worldRotation,{3.71f,3.51f,5.1f} };
+                auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("bossRoomChandelier", chandelierTr);
             }
             else if (point.name.rfind("Spawn_MainChandelier", 0) == 0)
             {// メインの部屋のシャンデリアを生成する
@@ -254,7 +253,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
                 Transform barrelTr{ pos,point.worldRotation,point.worldScale };
                 auto barrel = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBarrelActor>("barrel", barrelTr);
-                }
+            }
 
 #endif // 0
             else if (point.name.rfind("Spawn_TorchLight", 0) == 0)

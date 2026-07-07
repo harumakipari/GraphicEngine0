@@ -15,6 +15,10 @@ public:
     // ドアを開く
     void Open();
 
+    // ドアが開いたかどうか
+    bool IsOpenDoor() const { return (doorState == DoorState::Open); }
+
+
     void DrawImGuiDetails() override;
 
 private:
@@ -95,7 +99,7 @@ private:
     float openedAngle = 90.0f;  // 開いた角度
     float closedAngle = 180.0f;   // 閉じた角度
 
-    enum class DoorState:uint8_t
+    enum class DoorState :uint8_t
     {
         Closed,
         Opening,

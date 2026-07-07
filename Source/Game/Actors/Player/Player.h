@@ -174,6 +174,9 @@ public:
 
     SwordState swordState = SwordState::Equipped; // 剣の状態
 
+    // 剣の描画用メッシュコンポーネント
+    std::shared_ptr<SkeletalMeshComponent> swordMeshComponent;
+
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     bool isAttackActive = false;
@@ -183,10 +186,22 @@ private:
     DirectX::XMFLOAT3 prevSwordMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevSwordTipPos = { 0.0f,0.0f,0.0f };
 
-    // 剣の描画用メッシュコンポーネント
-    std::shared_ptr<SkeletalMeshComponent> swordMeshComponent;
     // 剣をしまうときの描画用メッシュコンポーネント
     std::shared_ptr<SkeletalMeshComponent> swordSheathMeshComponent;
+
+    // 剣の残像用
+    struct SwordGhost
+    {
+        std::shared_ptr<SkeletalMeshComponent> swordMeshComp;
+        DirectX::XMFLOAT4X4 world = { };
+        float alpha;
+        bool isVisible = false;
+    };
+    std::array<SwordGhost, 6> ghosts;
+
+    float swordGhostElapsedTime = 0.0f;
+    int swordGhostIndex = 0;
+
 
 
     friend class PlayerStateBase;

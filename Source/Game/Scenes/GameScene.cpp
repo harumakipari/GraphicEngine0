@@ -306,6 +306,13 @@ void GameScene::SetUpActors()
 
 }
 
+// ボスの部屋の色ラープ値を設定する
+void GameScene::SetBossRoomLerpFactor(float lerpFactor)
+{
+    auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
+    shader.bossRoomLerpFactor = lerpFactor;
+}
+
 bool GameScene::Uninitialize(ID3D11Device* device)
 {
     SceneBase::Uninitialize(device);

@@ -282,7 +282,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 #endif
     }
 
-    //// ブルーム処理
+    // ブルーム処理
     //if (enableBloom)
     //{
     //    float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);

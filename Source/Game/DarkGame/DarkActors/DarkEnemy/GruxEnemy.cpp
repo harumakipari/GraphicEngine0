@@ -108,7 +108,10 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     // 回転用コンポーネントを追加
     rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
-
+    rotationComponent->SetDirection({ -1.0f,0.0f,0.0f });
+    // キャラクタームーブコンポーネントを追加
+    characterMovementComponent = this->AddComponent<CharacterMovementComponent>("movementComponent", parentName);
+    characterMovementComponent->SetUseGravity(true);
     // ポイントライトコンポーネントを追加
     auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
     pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
@@ -189,12 +192,12 @@ void GruxEnemy::Initialize(const Transform& transform)
     // 左目の位置用コンポーネントを追加　暗闇で光る目の表現用
     leftEyeSceneComponent = this->AddComponent<SceneComponent>("leftEye", parentName);
     leftEyeSceneComponent->AttachToComponent(skeletalMeshComponent, leftEyeSocketNode);
-    leftEyeSceneComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
+    leftEyeSceneComponent->SetRelativeLocationDirect({ 0.0f,0.03f,-0.1f });
 
     // 右目の位置用コンポーネントを追加　暗闇で光る目の表現用
     rightEyeSceneComponent = this->AddComponent<SceneComponent>("rightEye", parentName);
     rightEyeSceneComponent->AttachToComponent(skeletalMeshComponent, rightEyeSocketNode);
-    rightEyeSceneComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
+    rightEyeSceneComponent->SetRelativeLocationDirect({ 0.0f,0.03f,-0.1f });
 
 
     
