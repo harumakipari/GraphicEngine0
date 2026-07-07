@@ -374,9 +374,12 @@ void Player::Initialize(const Transform& transform)
     // 剣の残像用の剣のメッシュコンポーネント
     for (auto& ghost : ghosts)
     {
+        // マテリアル　ブレンド
         ghost.swordMeshComp = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
-        ghost.swordMeshComp->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
+        ghost.swordMeshComp->SetModel("./Data/Models/Weapons/PlayerSwordGhost/Sword.gltf", false, true);
         ghost.swordMeshComp->SetIsVisible(false);
+        ghost.swordMeshComp->overrideForwardPipelineName = "PlayerSwordGhostPS";
+        ghost.swordMeshComp->overrideDeferredPipelineName = "PlayerSwordGhostPS";
         //ghost.swordMeshComp->AttachToComponent(skeletalMeshComponent,weaponSocketNode);
     }
 

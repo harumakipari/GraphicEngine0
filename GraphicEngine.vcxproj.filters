@@ -1166,6 +1166,9 @@
     <FxCompile Include="Shader\EnemyEyeModelPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Shader\PlayerSwordGhostPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader\BidirectionalReflectanceDistributionFunction.hlsli">

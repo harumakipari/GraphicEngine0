@@ -367,6 +367,23 @@ public:
             AddPipeLineState("forwardBlendSkeletalMesh", desc);
         }
 
+        // SkeletalMesh forward Blend —p
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
+            AddPipeLineState("forwardBlendSkeletalMesh", desc);
+        }
+
+        // SkeletalMesh PlayerSwordGhostPS forward Blend —p
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/PlayerSwordGhostPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
+            AddPipeLineState("PlayerSwordGhostPS", desc);
+        }
 
         // SkeletalMesh deferred Blend —p
         {
@@ -397,7 +414,7 @@ public:
         {
             hr = CreatePsFromCSO(device, "./Data/Shaders/EnemyEyeFlarePS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            desc.blendState = BLEND_STATE::ADD;
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
             AddPipeLineState("EnemyEyeFlarePS", desc);
         }
 

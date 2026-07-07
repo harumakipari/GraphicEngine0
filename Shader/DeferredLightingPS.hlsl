@@ -103,9 +103,8 @@ float4 main(VS_OUT pin) : SV_TARGET
                 const float NoH = max(0.0, dot(N, H));
                 const float HoV = max(0.0, dot(H, V));
 
-                float attenuationRate = lightDirection.w;
-                pointDiffuse += pLi * pNoL * BrdfLambertian(f0, f90, cDiff, HoV) * attenuation /** lerp(1.0, attenuation, attenuationRate)*/;
-                pointSpecular += pLi * pNoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, pNoL, pNoV, NoH) * attenuation /* * lerp(1.0, attenuation, attenuationRate)*/;
+                pointDiffuse += pLi * pNoL * BrdfLambertian(f0, f90, cDiff, HoV) * attenuation ;
+                pointSpecular += pLi * pNoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, pNoL, pNoV, NoH) * attenuation ;
             }
         }
         float maxPointSpecular = 3.0f;
