@@ -92,11 +92,11 @@ public:
     //当たった時の処理
     void TakeDamage(int damage);
 
-    // 攻撃ヒット時の処理
-    void DoAttackHit();
-
     // 攻撃開始時の処理
     void StartAttack();
+
+    // 攻撃終了時の処理
+    void EndAttack();
 
     // ジャスト回避成功時の処理
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
@@ -177,9 +177,18 @@ public:
     // 剣の描画用メッシュコンポーネント
     std::shared_ptr<SkeletalMeshComponent> swordMeshComponent;
 
+    // 剣の残像用
+    struct SwordGhost
+    {
+        std::shared_ptr<SkeletalMeshComponent> swordMeshComp;
+        DirectX::XMFLOAT4X4 world = { };
+        float alpha;
+        bool isVisible = false;
+    };
+    std::array<SwordGhost, 8> ghosts;
+
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
-    bool isAttackActive = false;
     float hitStopTimer = 0.0f;// ヒットストップのタイマー
 
     DirectX::XMFLOAT3 prevSwordRootPos = { 0.0f,0.0f,0.0f };
@@ -189,20 +198,14 @@ private:
     // 剣をしまうときの描画用メッシュコンポーネント
     std::shared_ptr<SkeletalMeshComponent> swordSheathMeshComponent;
 
-    // 剣の残像用
-    struct SwordGhost
-    {
-        std::shared_ptr<SkeletalMeshComponent> swordMeshComp;
-        DirectX::XMFLOAT4X4 world = { };
-        float alpha;
-        bool isVisible = false;
-    };
-    std::array<SwordGhost, 6> ghosts;
 
     float swordGhostElapsedTime = 0.0f;
     int swordGhostIndex = 0;
+    
+    float ghostInterval = 0.015f; // 残像を出す間隔
 
 
+    bool isAttackActive = false;    // プレイヤーが攻撃状態に入る
 
     friend class PlayerStateBase;
 };

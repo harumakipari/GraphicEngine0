@@ -162,12 +162,12 @@ void PlayerAttackState::Execute(float deltaTime)
             player->GetStateMachine()->ChangeState("Idle");
         }
     }
-
-
 }
 
 void PlayerAttackState::Exit()
 {
+    // 攻撃を終了する処理
+    player->EndAttack();
     player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
     player->ResetAnimationStateFlag();  // アニメーションのステート系のフラグをリセットする
 }

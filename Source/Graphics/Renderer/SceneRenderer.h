@@ -130,5 +130,7 @@ private:
 
     std::vector<InterleavedGltfModel::InstanceData> instanceData;
     PipeLineStateDesc pipeLineState;
+
+
 };
 

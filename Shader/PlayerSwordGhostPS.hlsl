@@ -15,7 +15,8 @@ Texture2D<float4> materialTextures[5] : register(t1);
 
 float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
 {
-    return float4(1, 1, 1, cpuColor.w);
+    return float4(cpuColor.xyz, cpuColor.w);
+    return float4(1,1,1,1);
 
     const float GAMMA = 2.2;
     const MaterialConstants m = materials[material];

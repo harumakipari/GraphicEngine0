@@ -156,6 +156,7 @@ protected:
     bool integrateParticles = false;
     std::unique_ptr<husk_particles> huskParticles;
     std::unique_ptr<InterleavedGltfModel> particleMeshModel;
+    std::unique_ptr<InterleavedGltfModel> swordGhostMeshModel;
 
 
     SIZE framebufferDimensions = {};
@@ -184,4 +185,5 @@ protected:
     float light_view_near_z{ 1.0f };
     float light_view_far_z{ 100.0f };
 
+    Microsoft::WRL::ComPtr<ID3D11PixelShader> ghostPs;
 };

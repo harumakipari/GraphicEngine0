@@ -380,7 +380,6 @@ void Player::Initialize(const Transform& transform)
         ghost.swordMeshComp->SetIsVisible(false);
         ghost.swordMeshComp->overrideForwardPipelineName = "PlayerSwordGhostPS";
         ghost.swordMeshComp->overrideDeferredPipelineName = "PlayerSwordGhostPS";
-        //ghost.swordMeshComp->AttachToComponent(skeletalMeshComponent,weaponSocketNode);
     }
 
 #if 0
@@ -409,46 +408,36 @@ void Player::Initialize(const Transform& transform)
 
 void Player::Update(float deltaTime)
 {
+    using namespace DirectX;
+
     if (InputSystem::GetInputState("1"))
     {
         stateMachine_->ChangeState("Rush");
     }
 
-#if 0
-    DirectX::XMFLOAT4X4 world = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
-    DirectX::XMFLOAT4X4 rhs =
-    {//RHS Y-UP
-       -1, 0, 0, 0,
-        0, 1, 0, 0,
-        0, 0, 1, 0,
-        0, 0, 0, 1,
-    };
-    DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&rhs) };
-    XMMATRIX W = C * XMLoadFloat4x4(&world);
-    DirectX::XMStoreFloat4x4(&world, W);
-#endif // 0
-
-    swordGhostElapsedTime += deltaTime;
-    if (swordGhostElapsedTime >= 0.05f)
+    if (isAttackActive)
     {
-        swordGhostElapsedTime = 0.0f;
-        ghosts[swordGhostIndex].world = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
-        ghosts[swordGhostIndex].alpha = 0.6f;
-        ghosts[swordGhostIndex].isVisible = true;
-        //ghosts[swordGhostIndex].swordMeshComp->SetWorldMatrixDirect(world);
-        ghosts[swordGhostIndex].swordMeshComp->SetWorldMatrixDirect(ghosts[swordGhostIndex].world);
-
-        swordGhostIndex++;
-        if (swordGhostIndex >= ghosts.size())
+        swordGhostElapsedTime += deltaTime;
+        if (swordGhostElapsedTime >= ghostInterval)
         {
-            swordGhostIndex = 0;
+            swordGhostElapsedTime = 0.0f;
+            ghosts[swordGhostIndex].world = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+            ghosts[swordGhostIndex].alpha = 1.0f;
+            ghosts[swordGhostIndex].isVisible = true;
+            //ghosts[swordGhostIndex].swordMeshComp->SetWorldMatrixDirect(ghosts[swordGhostIndex].world);
+            //ghosts[swordGhostIndex].swordMeshComp->UpdateTransformImmediate();
+            swordGhostIndex++;
+            if (swordGhostIndex >= ghosts.size())
+            {
+                swordGhostIndex = 0;
+            }
         }
     }
 
     // 剣の残像用の剣のメッシュコンポーネント
     for (auto& ghost : ghosts)
     {
-        ghost.alpha -= deltaTime * 4.0f;
+        ghost.alpha -= deltaTime * 2.0f;
 
         if (ghost.alpha <= 0)
         {
@@ -456,16 +445,16 @@ void Player::Update(float deltaTime)
             ghost.isVisible = false;
         }
 
-        ghost.swordMeshComp->SetIsVisible(ghost.isVisible);
+        //ghost.swordMeshComp->SetIsVisible(ghost.isVisible);
 
         if (!ghost.isVisible)
             continue;
 
-        ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor.w = ghost.alpha;
+        //ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor.w = ghost.alpha;
+        ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { 1,1,0, ghost.alpha };
     }
 
 
-    using namespace DirectX;
 
     // ヒットストップ処理
     if (hitStopTimer > 0.0f)
@@ -875,55 +864,17 @@ void Player::TakeDamage(int damage)
     }
 }
 
-// 攻撃ヒット時の処理
-void Player::DoAttackHit()
-{
-    auto enemies = GetOwnerScene()->GetActorManager()->GetActorsOfType<Character>();
-
-    for (auto& actor : enemies)
-    {
-        auto enemy = std::dynamic_pointer_cast<GruxEnemy>(actor);
-        if (!enemy) continue;
-
-        auto p = GetPosition();
-        auto e = enemy->GetPosition();
-
-        // 敵へのベクトル
-        float dx = e.x - p.x;
-        float dz = e.z - p.z;
-
-        float distSq = dx * dx + dz * dz;
-        float attackRange = 2.5f;
-
-        if (distSq > attackRange * attackRange)
-            return;
-
-        // 正規化
-        float len = sqrtf(dx * dx + dz * dz);
-        dx /= len;
-        dz /= len;
-
-        // プレイヤーの前方向（Z+方向）
-        DirectX::XMFLOAT3 forward = GetForward();
-
-        float dot = dx * forward.x + dz * forward.z;
-
-        float angleCos = cosf(DirectX::XMConvertToRadians(60.0f)); // 60度
-
-        if (dot > angleCos)
-        {
-            enemy->TakeDamage(10);
-            //　ヒットストップ発動
-            Time::timeScale = 0.1f;
-            hitStopTimer = 0.35f;
-        }
-    }
-}
-
 // 攻撃開始時の処理
 void Player::StartAttack()
 {
+    isAttackActive = true;
     hitActors.clear();
+}
+
+// 攻撃終了時の処理
+void Player::EndAttack()
+{
+    isAttackActive = false;
 }
 
 // ジャスト回避成功時の処理

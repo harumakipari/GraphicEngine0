@@ -79,8 +79,11 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     hr = CreatePsFromCSO(device, "./Data/Shaders/FinalPS.cso", finalPs.ReleaseAndGetAddressOf());
-    //hr = CreatePsFromCSO(device, "./Data/Shaders/FullScreenCopyPS.cso", finalPs.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+    hr = CreatePsFromCSO(device, "./Data/Shaders/PlayerSwordGhostPS.cso", ghostPs.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
 
     //カスケードシャドウマップ
     //cascadedShadowMaps = std::make_unique<decltype(cascadedShadowMaps)::element_type>(device, 1024, 1024, 4);
@@ -139,6 +142,7 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
 
     huskParticles = std::make_unique<husk_particles>(device);
     particleMeshModel = std::make_unique<InterleavedGltfModel>(device, "./Data/Models/Weapons/PlayerSword/Sword.gltf", ModelTypes::ModelMode::SkeletalMesh, false, true);
+    swordGhostMeshModel = std::make_unique<InterleavedGltfModel>(device, "./Data/Models/Weapons/PlayerSwordGhost/Sword.gltf", ModelTypes::ModelMode::SkeletalMesh, false, true);
 
     return true;
 }
@@ -645,9 +649,26 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     sceneRender.RenderBlend(immediateContext, queues.meshes); // ここで警告出る
     ExecuteHooks(RenderPass::ForwardBlend, immediateContext);
 
+#if 1
+    // playerの剣の残像
+    if (auto player = GetActorManager()->GetActorOfType<Player>())
+    {
+        for (auto& ghost : player->ghosts)
+        {
+            if (ghost.isVisible)
+            {
+                PipeLineStateDesc pipeline;
+                pipeline.pixelShader = ghostPs;
+                ghost.swordMeshComp->UpdatePlusAlphaConstants(immediateContext);
+                swordGhostMeshModel->Render(immediateContext, ghost.world, {}, InterleavedGltfModel::RenderPass::Blend, pipeline);
+            }
+        }
+    }
+
+#endif // 1
 
 #if 1
-    // PARTICLES
+    // パーティクル
     {
         ProfileScopedSection_2(0, "Particles", ImGuiControl::Profiler::Green);
 
@@ -683,6 +704,9 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
 
         huskParticles->render(immediateContext);
+
+
+
 
         // パーティクル描画
         EffectManager::Render(immediateContext);
