@@ -36,7 +36,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     loadStageThread = std::thread([&]()
         {
             PROFILE_SCOPE("Load StageModel");
-                stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/DarkStage.gltf",
+            stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/DarkStage.gltf",
                 ModelTypes::ModelMode::StaticMesh, false, true);
             stageAsset->spawnPoints = stageAsset->model->spawnPoints;
         });
@@ -115,6 +115,9 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
             }
         });
 
+    // ボスの部屋のラープのための初期化処理
+    bossLerpEasing = std::make_unique<EasingRunner>();
+
 
 
     return true;
@@ -154,7 +157,19 @@ void GameScene::Update(float deltaTime)
 {
     using namespace DirectX;
 
-    // ライトのビューの焦点をプレイヤー位置に設定する
+    // ボスの部屋のラープのため
+    if (bossLerpEasing)
+    {
+        bossLerpEasing->Tick(deltaTime);
+        if (startBossRoomLerp)
+        {
+            auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
+            float lerpFactor = std::lerp(startBossRoomLerpFactor, endBossRoomLerpFactor, bossLerpEasingFactor);
+            shader.bossRoomLerpFactor = lerpFactor;
+        }
+    }
+
+    // ライトのビューの焦点をプレイヤー位置に設定する (シャドウマップ用)
     if (player)
     {
         SetLightViewFocus(player->GetPosition());
@@ -223,7 +238,7 @@ void GameScene::SetUpActors()
     Transform cinemaCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto cinemaCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<CinemaCamera>("cinemaCam", cinemaCameraTr);
     cameraManager->SetCinematicCamera(cinemaCameraActor);
-    
+
 
     Transform movieCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto movieCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MovieCamera>("movieCam", movieCameraTr);
@@ -276,7 +291,7 @@ void GameScene::SetUpActors()
         PROFILE_SCOPE("Create Stage");
         Transform stageTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
         auto stage = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStage>("stage", stageTr); // 元のモデルの scale を 0.4f
-        stage->SetModel(stageAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset,stageCandleStandAsset);
+        stage->SetModel(stageAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset, stageCandleStandAsset);
     }
 
     Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
@@ -306,12 +321,8 @@ void GameScene::SetUpActors()
 
 }
 
-// ボスの部屋の色ラープ値を設定する
-void GameScene::SetBossRoomLerpFactor(float lerpFactor)
-{
-    auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
-    shader.bossRoomLerpFactor = lerpFactor;
-}
+
+
 
 bool GameScene::Uninitialize(ID3D11Device* device)
 {
@@ -324,6 +335,63 @@ void GameScene::DrawGui()
 {
 #ifdef USE_IMGUI
     SceneBase::DrawGui();
+    if (ImGui::Button(U8("ボスの部屋を明るくする")))
+    {
+        StartBossRoomLerp(0.0f, 1.0f, 3.0f);
+    }
+    if (ImGui::Button(U8("ボスの部屋を暗くする")))
+    {
+        StartBossRoomLerp(1.0f, 0.0f, 3.0f);
+    }
+
 #endif
 
+}
+
+
+// ボスの部屋の色ラープ値を設定する
+void GameScene::SetBossRoomLerpFactor(float lerpFactor)
+{
+    auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
+    shader.bossRoomLerpFactor = lerpFactor;
+}
+
+// ボスの部屋の色のラープを開始する関数
+void GameScene::StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished)
+{
+    startBossRoomLerpFactor = startFactor;
+    endBossRoomLerpFactor = endFactor;
+    this->onFinished = finished;
+    startBossRoomLerp = true;
+    // ボスの部屋の色のラープを開始する
+    {
+        TestEasingHandler handler;
+
+        handler.AddEasing(
+            TestEaseType::InSine,
+            0.0f,
+            1.0f,
+            duration
+        );
+
+        handler.SetCompletedFunction([this]()
+            {
+                startBossRoomLerp = false;
+                if (onFinished)
+                {
+                    onFinished();
+                }
+                onFinished = nullptr;
+                SetBossRoomLerpFactor(endBossRoomLerpFactor);
+            });
+        PropertyAccessor<float> accessor;
+
+        accessor.getter = [this]() { return bossLerpEasingFactor; };
+        accessor.setter = [this](float t)
+            {
+                bossLerpEasingFactor = t;
+            };
+
+        bossLerpEasing->StartHandler(handler, accessor);
+    }
 }

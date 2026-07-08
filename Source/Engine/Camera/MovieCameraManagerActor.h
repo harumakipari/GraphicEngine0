@@ -11,6 +11,11 @@ private:
         DoorPreMovie,
         UpPlayerMovie,
         DoorOpening,
+        EnemyEyeFlash,
+        PreBossRoomLerp, // ボスの部屋が明るくなる
+        BossRoomLerp,   // ボスの部屋が明るくなる
+        UpPlayerCombat, // プレイヤーが剣を構える
+        UpPlayerCombatMovie,
         EnemyMovie,
         Finished
     };

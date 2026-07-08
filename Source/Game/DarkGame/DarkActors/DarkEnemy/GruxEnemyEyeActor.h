@@ -25,6 +25,7 @@ public:
 
     void StartEyeFlash(const std::function<void()>& onFinished = nullptr);
 
+
 private:
     // 目のフレアのスケールが大きくなる処理を開始
     void StartEyeFlareScale();

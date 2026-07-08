@@ -75,7 +75,6 @@ public:
 
     void UpdatePlusAlphaConstants(ID3D11DeviceContext* immediateContext) const
     {
-        plusAlphaCBuffer->data.dissolve = dissolve;
         plusAlphaCBuffer->Activate(immediateContext, 5);
     }
 
@@ -95,7 +94,7 @@ public:
             ImGui::SliderFloat(U8("彩度調整"), &plusAlphaCBuffer->data.saturation, -1.0f, +1.0);
             ImGui::SliderFloat(U8("明度調整"), &plusAlphaCBuffer->data.brightness, -1.0f, +1.0);
             ImGui::SliderFloat(U8("コントラスト調整"), &plusAlphaCBuffer->data.contrast, -1.0f, +1.0);
-            ImGui::SliderFloat("dissolve", &dissolve, 0.0f, 1.0f);
+            ImGui::SliderFloat("dissolve", &plusAlphaCBuffer->data.dissolve, 0.0f, 1.0f);
             ImGui::ColorEdit4("cpuColor", &plusAlphaCBuffer->data.cpuColor.x);
             ImGui::SliderFloat("emissionPower", &plusAlphaCBuffer->data.emissionPower, 0.0f, 50.0f);
             ImGui::SliderFloat4("morphWeight", &plusAlphaCBuffer->data.morphWeights.x, 0.0f, 1.0f);
@@ -137,6 +136,22 @@ public:
     void SetPriority(int priority) { this->priority = priority; }
     int GetPriority() const { return priority; }
 
+    // エフェクト用の構造体 
+    struct EffectParameters
+    {
+        DirectX::XMFLOAT4 edgeColor;
+        DirectX::XMFLOAT4 innerColor;
+
+        float edgeWidth;
+        float edgePower;
+        float fresnelPower;
+        float trailBlend;
+
+        float noiseScale;
+        float noiseSpeed;
+    };
+
+
     // モデルごとに更新したいPlusAlpha 用定数バッファ
     struct PlusAlphaConstants
     {
@@ -153,11 +168,11 @@ public:
         float emissionPower;    // 自己発光の強さ
         float flashValue = 0.0f; //　白くフラッシュする値
         ObjectType objectType = ObjectType::Default; // オブジェクトの種類
+
+        EffectParameters effectParameters={};
     };
     std::unique_ptr<ConstantBuffer<PlusAlphaConstants>> plusAlphaCBuffer;
 
-    float   dissolve = 0.0f;   // ディゾルブ用
-    float morphWeight = 0.0f;   // モーフモデルに使用する weight  0.0f ~ 1.0f 
 
 protected:
     //描画するかどうか
@@ -173,7 +188,7 @@ protected:
     std::vector<InterleavedGltfModel::Node> modelNodes = {};
 
     // モーションブラーを有効にするかどうか
-    bool isMotionBlur = true;    
+    bool isMotionBlur = true;
 
 };
 
@@ -280,23 +295,23 @@ public:
 class InstanceMeshComponent : public MeshComponent
 {
 public:
-    InstanceMeshComponent(const std::string & name, const std::shared_ptr<Actor>&owner) :MeshComponent(name, owner)
+    InstanceMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :MeshComponent(name, owner)
     {
     }
 
-    void SetModel(const std::string & filename, bool isSaveVerticesData = false, bool convertToLHS = false)override
+    void SetModel(const std::string& filename, bool isSaveVerticesData = false, bool convertToLHS = false)override
     {
         ID3D11Device* device = Graphics::GetDevice();
         model = AssetManager::Get().LoadModel(device, filename, ModelTypes::ModelMode::InstancedStaticMesh, isSaveVerticesData, convertToLHS);
         modelNodes = model->GetNodes();
     }
 
-    void Render(ID3D11DeviceContext * immediateContext, const DirectX::XMFLOAT4X4 world, InterleavedGltfModel::RenderPass pass) const override
+    void Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world, InterleavedGltfModel::RenderPass pass) const override
     {
         model->Render(immediateContext, world, modelNodes, pass, pipeLineState_);
     }
 
-    void CastShadow(ID3D11DeviceContext * immediateContext, const DirectX::XMFLOAT4X4 world) const override
+    void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const override
     {
         model->CastShadow(immediateContext, world, modelNodes);
     }

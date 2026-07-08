@@ -11,17 +11,8 @@ Transform SkeletalMeshComponent::GetSocketTransform(int socketNode) const
 
         using namespace DirectX;
 
-        XMMATRIX C = XMMatrixSet
-        (
-            -1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1
-        );
-
         XMMATRIX socket_transform =
             XMLoadFloat4x4(&node.globalTransform) *
-            //C *
             new_transform.ToMatrix();
 
         XMVECTOR scale;

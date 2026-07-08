@@ -4,6 +4,14 @@
 class DoorLargeActor : public InteractableActor
 {
 public:
+    enum class DoorState :uint8_t
+    {
+        Closed,
+        Opening,
+        Open,
+        Closing
+    };
+public:
     explicit DoorLargeActor(const std::string& actorName) :InteractableActor(actorName) {}
 
     void Initialize(const Transform& transform) override;
@@ -18,6 +26,8 @@ public:
     // ドアが開いたかどうか
     bool IsOpenDoor() const { return (doorState == DoorState::Open); }
 
+    // ステートを設定する
+    void SetState(const DoorState doorState) { this->doorState = doorState; }
 
     void DrawImGuiDetails() override;
 
@@ -38,13 +48,6 @@ private:
     float closedAngleLeft = -180.0f;   // 閉じた角度
     float closedAngleRight = 0.0f;   // 閉じた角度
 
-    enum class DoorState :uint8_t
-    {
-        Closed,
-        Opening,
-        Open,
-        Closing
-    };
 
     DoorState doorState = DoorState::Closed;
 };

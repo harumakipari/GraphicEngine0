@@ -80,6 +80,20 @@ cbuffer PRIMITIVE_CONSTANT_BUFFER : register(b0)
     row_major float4x4 inverseTransposeWorld;
 }
 
+struct ModelEffectParameter
+{
+    float4 edgeColor;
+    float4 innerColor;
+
+    float edgeWidth;
+    float edgePower;
+    float fresnelPower;
+    float trailBlend;
+
+    float noiseScale;
+    float noiseSpeed;
+
+};
 
 cbuffer PLUS_ALPHA_CONSTANT_BUFFER : register(b5)
 {
@@ -92,10 +106,12 @@ cbuffer PLUS_ALPHA_CONSTANT_BUFFER : register(b5)
 
     float4 morphWeights;
 
-    float modelContrast;//コントラスト調整
+    float modelContrast; //コントラスト調整
     float emissionPower; // 自己発光の強さ
     float flashValue; //　白くフラッシュする値
     int objectType; // オブジェクトの種類 0:通常 1:プレイヤーとか
+
+    ModelEffectParameter modelEffectParameter;
 }
 
 

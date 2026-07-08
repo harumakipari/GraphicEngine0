@@ -45,36 +45,39 @@ public:
 
     // ボスの部屋の色ラープ値を設定する
     void SetBossRoomLerpFactor(float lerpFactor);
+
+    // ボスの部屋の色のラープを開始する関数
+    void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
 private:
     struct SkyShaderConstants
     {
-        DirectX::XMFLOAT3 topColor= { 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT3 topColor = { 0.0f, 0.0f, 0.0f };
         float scrollSpeed = 0.03f;
 
-        DirectX::XMFLOAT3 bottomColor= { 0.025f,0.016f,0.73f };
-        float cloudIntensity= 0.6f;
+        DirectX::XMFLOAT3 bottomColor = { 0.025f,0.016f,0.73f };
+        float cloudIntensity = 0.6f;
 
         DirectX::XMFLOAT3 sunColor = { 1.0f, 0.95f, 0.75f };
         float sunSize = 0.98f;
 
         DirectX::XMFLOAT3 cloudColor = { 1.0f, 1.0f, 1.0f };
-        float cloudThreshold= 0.5f;
+        float cloudThreshold = 0.5f;
 
-        float starScale= 1.3f;
-        DirectX::XMFLOAT2 starOffset= { 0.0f,0.0f };
-        float starIntensity= 4.4f;
+        float starScale = 1.3f;
+        DirectX::XMFLOAT2 starOffset = { 0.0f,0.0f };
+        float starIntensity = 4.4f;
 
-        DirectX::XMFLOAT3 moonColor= { 0.98f,1.0f,0.0f };
-        float moonRadius= 0.09f;
+        DirectX::XMFLOAT3 moonColor = { 0.98f,1.0f,0.0f };
+        float moonRadius = 0.09f;
 
-        DirectX::XMFLOAT2 moonPos= { 0.1f,0.1f };
-        DirectX::XMFLOAT2 moonOffset= { 1.00/*5*/,1.0f };
+        DirectX::XMFLOAT2 moonPos = { 0.1f,0.1f };
+        DirectX::XMFLOAT2 moonOffset = { 1.00/*5*/,1.0f };
 
-        DirectX::XMFLOAT3 startAuroraColor= { 0.0f,0.0f,0.0f };
-        float value=15.5f;
+        DirectX::XMFLOAT3 startAuroraColor = { 0.0f,0.0f,0.0f };
+        float value = 15.5f;
 
-        DirectX::XMFLOAT3 endAuroraColor= { 0.0f,0.0f,0.0f };
-        float value1= 1.2f;
+        DirectX::XMFLOAT3 endAuroraColor = { 0.0f,0.0f,0.0f };
+        float value1 = 1.2f;
     };
     std::unique_ptr<ConstantBuffer<SkyShaderConstants>> skyShaderConstantsBuffer;
     Microsoft::WRL::ComPtr<ID3D11PixelShader> darkStageSkyPS;
@@ -100,5 +103,11 @@ private:
 
     std::unique_ptr<ClothSimulate> clothSimulate;
 
-
+    // ボスの部屋のラープのための変数
+    std::unique_ptr<EasingRunner> bossLerpEasing;
+    float bossLerpEasingFactor = 0.0f;
+    bool startBossRoomLerp = false;
+    std::function<void()> onFinished;
+    float startBossRoomLerpFactor = 0.0f;
+    float endBossRoomLerpFactor = 1.0f;
 };

@@ -202,9 +202,13 @@ private:
     float swordGhostElapsedTime = 0.0f;
     int swordGhostIndex = 0;
     float ghostInterval = 0.015f; // 残像を出す間隔
-    DirectX::XMFLOAT3 swordGhostColor = { 0.5f,0.8f,1.6f };
+    DirectX::XMFLOAT3 swordGhostColor = { 0.5f,0.8f,1.6f }; // 残像の剣のベースカラー
     float swordGhostEmissive = 2.0f;    // 残像のemissiveColor
     bool isAttackActive = false;    // プレイヤーが攻撃状態に入る
+    DirectX::XMFLOAT3 ghostEdgeColor = { 0.3f,0.8f,1.2f };  // 残像の剣のベースカラー
+    DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 残像の剣のベースカラー
+
+
 
     friend class PlayerStateBase;
 };

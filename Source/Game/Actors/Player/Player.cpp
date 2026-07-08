@@ -141,6 +141,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Emote_Ice_Sculpture1_0", 69);
         controller->AddAnimation("Level_Start1_0", 70);
         controller->AddAnimation("Recall_0", 71);
+        controller->AddAnimation("Level_Start_Cut", 72);
 
         controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.17f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);
@@ -415,7 +416,7 @@ void Player::Update(float deltaTime)
         stateMachine_->ChangeState("Rush");
     }
 
-    if (hitBox)
+    if (isAttackActive)
     {
         swordGhostElapsedTime += deltaTime;
         if (swordGhostElapsedTime >= ghostInterval)

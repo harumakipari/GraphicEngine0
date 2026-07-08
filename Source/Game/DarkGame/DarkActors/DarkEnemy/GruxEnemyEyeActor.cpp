@@ -104,14 +104,19 @@ void GruxEnemyEyeActor::DrawImGuiDetails()
     ImGui::DragFloat(U8("目の光の量"), &emissionEyeFactor);
     ImGui::DragFloat(U8("フレアのスケールが大きくなる時間"), &eyeFlareAddScaleTime, 0.1f, 0.0f, 2.0f);
     ImGui::DragFloat(U8("フレアのスケールを小さくするまでの維持時間"), &eyeFlareWaitScaleTime, 0.1f, 0.0f, 2.0f);
-    ImGui::DragFloat(U8("フレアのスケールが小さくきくなる時間"), &eyeFlareSubtractScaleTime, 0.1f, 0.0f, 2.0f);
+    ImGui::DragFloat(U8("フレアのスケールが小さくなる時間"), &eyeFlareSubtractScaleTime, 0.1f, 0.0f, 2.0f);
 
     ImGui::DragFloat3(U8("目のフレアのスケール"), &eyeFlareScale.x, 0.05f, 0.0f);
     ImGui::DragFloat3(U8("目のフレアの角度"), &eyeFlareDegreeAngle.x);
     if (ImGui::Button(U8("目のフレアのスケール変更開始")))
     {
+        StartEyeFlareScale();
+    }
+    if (ImGui::Button(U8("目の光る処理開始")))
+    {
         StartEyeFlash();
     }
+
 #endif
 }
 
@@ -181,6 +186,7 @@ void GruxEnemyEyeActor::StartEyeFlareScale()
                     this->onFinished();
                 }
                 eyeFlareScaleEasingFactor = 0.0f;
+
             });
         PropertyAccessor<float> accessor;
 

@@ -15,6 +15,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
 {
     std::string playerMovieFileName = "player_up.json";
     std::string doorOpenMovieFileName = "door_open.json";
+    std::string playerCombatMovieFileName = "door_player_prepare.json";
+    std::string bossRoarMovieFileName = "boss_roar.json";
 
     auto movieCamera = this->movieCameraWeakPtr.lock();
     if (!movieCamera)
@@ -116,23 +118,47 @@ void MovieCameraManagerActor::Update(float deltaTime)
             {
                 gruxEnemyEye->StartEyeFlash([&]()
                     {
-                        doorMovieState = DoorMovieState::EnemyMovie;
+                        doorMovieState = DoorMovieState::PreBossRoomLerp;
                     });
+                doorMovieState = DoorMovieState::EnemyEyeFlash;
             }
+
+            if (player)
+            {
+                player->SetEulerRotation({ 0.0f,108.3f,0.0f });
+            }
+
         }
         break;
-    case DoorMovieState::EnemyMovie:
+    case DoorMovieState::EnemyEyeFlash:
+        break;
+    case DoorMovieState::PreBossRoomLerp:
+
         // Bloomの値を落ち着ける
-        if (scene)
-        {
-            auto& shader = scene->GetSceneSettings();
-            shader.bloomConstantBuffer.bloomExtractionThreshold = 9.0f;
-            shader.bloomConstantBuffer.bloomIntensity = 0.415f;
-        }
+        //if (scene)
+        //{
+        //    auto& shader = scene->GetSceneSettings();
+        //    shader.bloomConstantBuffer.bloomExtractionThreshold = 9.0f;
+        //    shader.bloomConstantBuffer.bloomIntensity = 0.415f;
+        //}
+        // 部屋を徐々に明るくする
         if (gameScene)
         {
-            gameScene->SetBossRoomLerpFactor(1.0f);
+            gameScene->StartBossRoomLerp(0.0f, 1.0f, 5.0f, [&]()
+                {
+                    doorMovieState = DoorMovieState::UpPlayerCombat;
+                });
         }
+
+
+        doorMovieState = DoorMovieState::BossRoomLerp;
+        break;
+    case DoorMovieState::BossRoomLerp:
+        // ボスの目玉をなくす
+
+
+        break;
+    case DoorMovieState::UpPlayerCombat:
         // 部屋のシャンデリアの炎の光を戻す
         for (auto chandelier : chandelierActors)
         {
@@ -143,10 +169,56 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {
             candleStand->ResetFireLightScale();
         }
+
+        // ドアを閉めた状態にする
+        if (doorActor)
+        {
+            doorActor->SetState(DoorLargeActor::DoorState::Closed);
+        }
+
+        // プレイヤーの位置をドア前にする
+        if (player)
+        {
+            player->SetPosition({ -4.827f,-0.098f,11.724f });
+
+            // プレイヤーのアニメーションを再生
+            player->PlayBodyAnimation("Level_Start_Cut", false);
+        }
+        // 敵の位置を部屋の奥にする
+        if (gruxEnemy)
+        {
+            gruxEnemy->SetPosition({ 12.795f,-0.12f,10.774f });
+            gruxEnemy->SetEulerRotation({ 0.0f,-90.0f,0.0f });
+        }
+        // プレイヤーアップカメラワーク
+        PlayMovie(playerCombatMovieFileName);
+        doorMovieState = DoorMovieState::UpPlayerCombatMovie;
+        break;
+    case DoorMovieState::UpPlayerCombatMovie:
+        if (movieCamera->IsMovieFinish())
+        {// カメラワークが終わったら、
+            doorMovieState = DoorMovieState::EnemyMovie;
+        }
+        break;
+    case DoorMovieState::EnemyMovie:
+        // ボスアップカメラワーク
+        PlayMovie(bossRoarMovieFileName);
+        // 敵が吠える
+        if (gruxEnemy)
+        {
+            gruxEnemy->PlayBodyAnimation("Ultimate_Roar_0", false);
+            gruxEnemy->GetBodyAnimationController()->ResetAnimationRate();
+        }
+
         doorMovieState = DoorMovieState::Finished;
 
         break;
     case DoorMovieState::Finished:
+        if (player)
+        {
+            player->SetInputEnabled(true); // 入力を有効化する
+        }
+
         break;
     }
 
@@ -172,9 +244,10 @@ void MovieCameraManagerActor::PlayDoorMovie()
     // プレイヤーの操作を無効化して位置を固定する
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
     {
-        //player->SetInputEnabled(false);
+        player->SetInputEnabled(false);
         DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
         player->SetPosition(fixedPosition); // プレイヤーの位置を固定する座標に設定
+        player->SetEulerRotation({ 0.0f,83.3f,0.0f });
     }
 
 
