@@ -154,7 +154,6 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
                 steamComponent->SetRelativeLocationDirect(pos);
                 steamComponent->Play();
-
             }
             else if (point.name.rfind("Spawn_FireEffect", 0) == 0)
             {
@@ -171,25 +170,27 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 // ライトの名前からライトマネージャーの共有ライトを取得して設定
                 pointLightComponent->SetSharedLightName("FireBowl");
             }
+            else if (point.name.rfind("Spawn_BossRoomChandelier", 0) == 0)
+            {// bossの部屋のシャンデリアを生成する
+                Transform chandelierTr{ {17.221f,13.996f,11.082f},point.worldRotation,{3.71f,3.51f,5.1f} };
+                auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("bossRoomChandelier", chandelierTr);
+            }
             else if (point.name.rfind("Spawn_Chandelier", 0) == 0)
             {// 名前が "Spawn_Chandelier" で始まる場合、シャンデリアを配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-
+                static int count = 0;
+                Logger::Log("chandelier spawn count :" + std::to_string(count));
+                count++;
                 Transform chandelierTr{ pos,
                     point.worldRotation,
                     point.worldScale
                 };
                 auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("chandelier", chandelierTr);
             }
-            else if (point.name.rfind("Spawn_BossRoomChandelier", 0) == 0)
-            {// bossの部屋のシャンデリアを生成する
-                Transform chandelierTr{ {17.221f,13.996f,11.082f},point.worldRotation,{3.71f,3.51f,5.1f} };
-                auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("bossRoomChandelier", chandelierTr);
-            }
             else if (point.name.rfind("Spawn_MainChandelier", 0) == 0)
             {// メインの部屋のシャンデリアを生成する
                 Transform chandelierTr{ {-13.28f,13.266f,11.182f},point.worldRotation,{2.5f,2.5f,2.5f} };
-                auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("chandelier", chandelierTr);
+                auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("MainChandelier", chandelierTr);
             }
             else if (point.name.rfind("Spawn_TorchSconce", 0) == 0)
             {

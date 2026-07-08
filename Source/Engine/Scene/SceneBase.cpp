@@ -659,6 +659,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
             {
                 PipeLineStateDesc pipeline;
                 pipeline.pixelShader = ghostPs;
+                pipeline.blendState = BLEND_STATE::ADD;
                 ghost.swordMeshComp->UpdatePlusAlphaConstants(immediateContext);
                 swordGhostMeshModel->Render(immediateContext, ghost.world, {}, InterleavedGltfModel::RenderPass::Blend, pipeline);
             }
@@ -693,6 +694,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                 huskParticles->accumulate_husk_particles(immediateContext, [&](ID3D11PixelShader* accumulate_husk_particles_ps)
                     {
                         PipeLineStateDesc pipeline;
+                        pipeline.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
                         pipeline.pixelShader = accumulate_husk_particles_ps;
                         particleMeshModel->Render(immediateContext, world, {}, InterleavedGltfModel::RenderPass::All, pipeline);
                     });

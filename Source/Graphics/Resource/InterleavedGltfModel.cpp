@@ -1746,6 +1746,8 @@ void InterleavedGltfModel::Render(ID3D11DeviceContext* immediateContext, const D
                     continue;
                 }
 
+                RenderState::BindBlendState(immediateContext, pipeline.blendState);
+
                 const int textureIndices[] =
                 {
                     material.data.pbrMetallicRoughness.basecolorTexture.index,

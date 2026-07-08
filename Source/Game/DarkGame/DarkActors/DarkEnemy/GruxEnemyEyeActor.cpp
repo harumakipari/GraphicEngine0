@@ -88,14 +88,13 @@ void GruxEnemyEyeActor::Update(float elapsedTime)
     rightEyeFlareMeshComponent->SetWorldEulerRotationDirect(eyeFlareDegreeAngle);
 
     // 目のフレアのスケールを設定する
-    // eyeFlareScale.x :0.0f -> 9.0fまで大きくする
-    //float maxScale = 9.0f * 0.03f;
+    // eyeFlareScale.x :0.0f -> 1.2fまで大きくする
+    float maxScale = 1.2f;
     //eyeFlareScale.y *= 0.02f;
     //eyeFlareScale.z *= 0.02f;
-    //eyeFlareScale.x = std::lerp(0.0f, maxScale, eyeFlareScaleEasingFactor);
+    eyeFlareScale.x = std::lerp(0.0f, maxScale, eyeFlareScaleEasingFactor);
     leftEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
     rightEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
-
 }
 
 void GruxEnemyEyeActor::DrawImGuiDetails()

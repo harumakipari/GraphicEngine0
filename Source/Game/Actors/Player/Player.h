@@ -198,13 +198,12 @@ private:
     // 剣をしまうときの描画用メッシュコンポーネント
     std::shared_ptr<SkeletalMeshComponent> swordSheathMeshComponent;
 
-
+    // 剣の残像の調整値
     float swordGhostElapsedTime = 0.0f;
     int swordGhostIndex = 0;
-    
     float ghostInterval = 0.015f; // 残像を出す間隔
-
-
+    DirectX::XMFLOAT3 swordGhostColor = { 0.5f,0.8f,1.6f };
+    float swordGhostEmissive = 2.0f;    // 残像のemissiveColor
     bool isAttackActive = false;    // プレイヤーが攻撃状態に入る
 
     friend class PlayerStateBase;

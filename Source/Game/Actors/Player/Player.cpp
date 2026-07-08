@@ -415,7 +415,7 @@ void Player::Update(float deltaTime)
         stateMachine_->ChangeState("Rush");
     }
 
-    if (isAttackActive)
+    if (hitBox)
     {
         swordGhostElapsedTime += deltaTime;
         if (swordGhostElapsedTime >= ghostInterval)
@@ -450,11 +450,9 @@ void Player::Update(float deltaTime)
         if (!ghost.isVisible)
             continue;
 
-        //ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor.w = ghost.alpha;
-        ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { 1,1,0, ghost.alpha };
+        ghost.swordMeshComp->plusAlphaCBuffer->data.emissionPower = swordGhostEmissive;
+        ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { swordGhostColor.x,swordGhostColor.y,swordGhostColor.z, ghost.alpha };
     }
-
-
 
     // ヒットストップ処理
     if (hitStopTimer > 0.0f)
@@ -601,6 +599,9 @@ void Player::DrawImGuiDetails()
 #ifdef USE_IMGUI
     ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
+    ImGui::ColorEdit3(U8("剣の残像の色"), &swordGhostColor.x);
+    ImGui::DragFloat(U8("残像のemissiveColor"), &swordGhostEmissive, 0.1f);
+    ImGui::DragFloat(U8("残像を出す間隔"), &ghostInterval, 0.001f,0.0f,1.0f,"%.5f");
     Character::DrawImGuiDetails();
 #endif
 }

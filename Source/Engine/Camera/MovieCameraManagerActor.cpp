@@ -54,6 +54,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             doorMovieState = DoorMovieState::UpPlayerMovie;
             if (player)
             {
+                player->SetInputEnabled(false); // “ü—Í‚ð–³Œø‰»‚·‚é
                 player->PlayBodyAnimation("Recall_0", false);
             }
             // •”‰®‚ÌƒVƒƒƒ“ƒfƒŠƒA‚Ì‰Š‚ÌŒõ‚ðÁ‚·

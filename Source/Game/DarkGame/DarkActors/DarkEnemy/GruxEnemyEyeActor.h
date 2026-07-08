@@ -49,7 +49,7 @@ private:
     float emissionEyeFlareFactor = 10.0f;
 
     DirectX::XMFLOAT4 eyeColor = { 0.011f,0.034f,0.0f,1.0f };
-    DirectX::XMFLOAT3 eyeFlareScale = { 9.6f,1.0f,3.95f };
+    DirectX::XMFLOAT3 eyeFlareScale = { 0.0f,1.0f,0.05f };
     DirectX::XMFLOAT3 eyeFlareDegreeAngle = { 8.0f,90.0f,0.0f };
 
     std::function<void()> onFinished;  // 目玉のフレアの演出が終わった時に呼び出す関数

@@ -414,32 +414,6 @@ public:
         //SetWorldScaleDirect(scl);
     }
 
-    // ワールド空間でのこのコンポーネントの Transform を直接保持する　（剣の残像などに使用）
-    void SetWorldMatrixDirectRaw(const DirectX::XMFLOAT4X4& worldMatrix)
-    {
-        using namespace DirectX;
-
-        XMMATRIX m = XMLoadFloat4x4(&worldMatrix);
-
-        XMVECTOR scale;
-        XMVECTOR rotation;
-        XMVECTOR translation;
-
-        XMMatrixDecompose(&scale, &rotation, &translation, m);
-
-        XMFLOAT3 pos;
-        XMFLOAT3 scl;
-        XMFLOAT4 rot;
-
-        XMStoreFloat3(&pos, translation);
-        XMStoreFloat3(&scl, scale);
-        XMStoreFloat4(&rot, rotation);
-
-        componentToWorld_.SetTranslation(pos);
-        componentToWorld_.SetRotation(rot);
-        componentToWorld_.SetScale(scl);
-    }
-
 
     // 親からの相対的なこのコンポーネントの Transform を直接設定
     void SetRelativeMatrixDirect(const DirectX::XMFLOAT4X4& matrix)
