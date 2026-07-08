@@ -18,12 +18,17 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     float3 N = normalize(pin.wNormal.xyz);
     float3 V = normalize(cameraPositon.xyz - pin.wPosition.xyz);
 
-    float fresnel = pow(1.0 - saturate(dot(N, V)), 2.0);
+    float fresnel = pow(1.0 - saturate(dot(N, V)), modelEffectParameter.edgeWidth);
 
+    float3 innerColor = modelEffectParameter.innerColor;
+    float3 edgeColor = modelEffectParameter.edgeColor;
+
+    
     float3 finalColor = cpuColor.rgb * emissionPower;
 
-    //finalColor += float3(1, 1, 1) * fresnel;
-    finalColor= float3(1, 1, 1) * fresnel;
+    //finalColor = lerp(innerColor, edgeColor, fresnel);;
+    
+    finalColor = float3(edgeColor) * fresnel * emissionPower;
 
     return float4(finalColor, cpuColor.a);
 

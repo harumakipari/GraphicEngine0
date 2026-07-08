@@ -155,6 +155,13 @@ void GruxEnemyEyeActor::StartEyeFlash(const std::function<void()>& onFinished)
     }
 }
 
+// 目のモデルを小さくする処理
+void GruxEnemyEyeActor::ToSmallEyeModel()
+{
+    leftEyeMeshComponent->SetIsVisible(false);
+    rightEyeMeshComponent->SetIsVisible(false);
+}
+
 // 目のフレアのスケールが大きくなる処理を開始
 void GruxEnemyEyeActor::StartEyeFlareScale()
 {

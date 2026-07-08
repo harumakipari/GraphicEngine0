@@ -205,10 +205,9 @@ private:
     DirectX::XMFLOAT3 swordGhostColor = { 0.5f,0.8f,1.6f }; // 残像の剣のベースカラー
     float swordGhostEmissive = 2.0f;    // 残像のemissiveColor
     bool isAttackActive = false;    // プレイヤーが攻撃状態に入る
-    DirectX::XMFLOAT3 ghostEdgeColor = { 0.3f,0.8f,1.2f };  // 残像の剣のベースカラー
+    DirectX::XMFLOAT3 ghostEdgeColor = { 0.0f,0.2f,1.2f };  // 残像の剣のベースカラー
     DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 残像の剣のベースカラー
-
-
+    float ghostEdgeWidth = 2.0f; // 残像の輪郭
 
     friend class PlayerStateBase;
 };

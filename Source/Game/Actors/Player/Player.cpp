@@ -451,8 +451,14 @@ void Player::Update(float deltaTime)
         if (!ghost.isVisible)
             continue;
 
-        ghost.swordMeshComp->plusAlphaCBuffer->data.emissionPower = swordGhostEmissive;
-        ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { swordGhostColor.x,swordGhostColor.y,swordGhostColor.z, ghost.alpha };
+        if (ghost.swordMeshComp)
+        {
+            ghost.swordMeshComp->plusAlphaCBuffer->data.emissionPower = swordGhostEmissive;
+            ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { swordGhostColor.x,swordGhostColor.y,swordGhostColor.z, ghost.alpha };
+            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeColor = { ghostEdgeColor.x,ghostEdgeColor.y,ghostEdgeColor.z,1.0f };
+            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.innerColor = { ghostInnerColor.x,ghostInnerColor.y,ghostInnerColor.z,1.0f };
+            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeWidth = ghostEdgeWidth;
+        }
     }
 
     // ヒットストップ処理
@@ -537,7 +543,6 @@ void Player::Update(float deltaTime)
 
     if (swordPointComp)
     {
-
         auto currentTip = swordPointComp->GetComponentLocation();
 
         if (hasPrevSwordTip)
@@ -602,7 +607,10 @@ void Player::DrawImGuiDetails()
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     ImGui::ColorEdit3(U8("剣の残像の色"), &swordGhostColor.x);
     ImGui::DragFloat(U8("残像のemissiveColor"), &swordGhostEmissive, 0.1f);
-    ImGui::DragFloat(U8("残像を出す間隔"), &ghostInterval, 0.001f,0.0f,1.0f,"%.5f");
+    ImGui::DragFloat(U8("残像を出す間隔"), &ghostInterval, 0.001f, 0.0f, 1.0f, "%.5f");
+    ImGui::DragFloat(U8("剣の残像の輪郭"), &ghostEdgeWidth);
+    ImGui::ColorEdit3(U8("剣の残像のエッジの色"), &ghostEdgeColor.x);
+    ImGui::ColorEdit3(U8("剣の残像の内部の色"), &ghostInnerColor.x);
     Character::DrawImGuiDetails();
 #endif
 }

@@ -69,7 +69,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
             {
                 candleStand->SetFireLightScale({ 0.0f,0.0f,0.0f });
             }
-
         }
         break;
     case DoorMovieState::UpPlayerMovie:
@@ -127,13 +126,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
             {
                 player->SetEulerRotation({ 0.0f,108.3f,0.0f });
             }
-
         }
         break;
     case DoorMovieState::EnemyEyeFlash:
         break;
     case DoorMovieState::PreBossRoomLerp:
-
         // Bloomの値を落ち着ける
         //if (scene)
         //{
@@ -149,14 +146,14 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     doorMovieState = DoorMovieState::UpPlayerCombat;
                 });
         }
-
-
         doorMovieState = DoorMovieState::BossRoomLerp;
         break;
     case DoorMovieState::BossRoomLerp:
         // ボスの目玉をなくす
-
-
+        if (gruxEnemyEye)
+        {
+            gruxEnemyEye->ToSmallEyeModel();
+        }
         break;
     case DoorMovieState::UpPlayerCombat:
         // 部屋のシャンデリアの炎の光を戻す
@@ -180,7 +177,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
         if (player)
         {
             player->SetPosition({ -4.827f,-0.098f,11.724f });
-
             // プレイヤーのアニメーションを再生
             player->PlayBodyAnimation("Level_Start_Cut", false);
         }
@@ -209,9 +205,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             gruxEnemy->PlayBodyAnimation("Ultimate_Roar_0", false);
             gruxEnemy->GetBodyAnimationController()->ResetAnimationRate();
         }
-
         doorMovieState = DoorMovieState::Finished;
-
         break;
     case DoorMovieState::Finished:
         if (player)

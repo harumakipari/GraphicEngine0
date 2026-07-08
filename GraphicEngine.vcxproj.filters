@@ -361,6 +361,9 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.cpp">
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Graphics\Renderer\TrailRenderer.cpp">
+      <Filter>Source\Graphics\Renderer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -878,6 +881,9 @@
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.h">
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Graphics\Renderer\TrailRenderer.h">
+      <Filter>Source\Graphics\Renderer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

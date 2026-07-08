@@ -18,7 +18,7 @@ void DarkStage::Initialize(const Transform& transform)
     //castStaticMeshComponent->SetModel("./Data/Models/DarkStageShadow/DarkStageShadow.gltf");
     //castStaticMeshComponent->SetIsVisible(false);
 
-#if 0
+#if 1
     {
         PROFILE_SCOPE("Create StageCollision");
         auto stageCollisionModel = this->AddComponent<StaticMeshComponent>("collisionModel", parentName);
@@ -99,7 +99,6 @@ void DarkStage::Update(float deltaTime)
     bossRoomSequenceTime += deltaTime;
 
     const float interval = 0.3f;
-
 
 #endif // 0
     for (size_t i = 0; i < bossRoomLightsLeft.size(); i++)

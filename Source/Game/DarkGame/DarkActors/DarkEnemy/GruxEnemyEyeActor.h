@@ -25,6 +25,8 @@ public:
 
     void StartEyeFlash(const std::function<void()>& onFinished = nullptr);
 
+    // 目のモデルを小さくする処理
+    void ToSmallEyeModel();
 
 private:
     // 目のフレアのスケールが大きくなる処理を開始

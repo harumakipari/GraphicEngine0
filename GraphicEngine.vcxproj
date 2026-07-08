@@ -339,6 +339,7 @@
     <ClCompile Include="Source\Graphics\Renderer\SceneRenderer.cpp" />
     <ClCompile Include="Source\Graphics\Renderer\ShapeRenderer.cpp" />
     <ClCompile Include="Source\Graphics\Renderer\SpriteRenderer.cpp" />
+    <ClCompile Include="Source\Graphics\Renderer\TrailRenderer.cpp" />
     <ClCompile Include="Source\Graphics\Resource\AssetManager.cpp" />
     <ClCompile Include="Source\Graphics\Resource\GeometricPrimitive.cpp" />
     <ClCompile Include="Source\Graphics\Resource\InterleavedGltfModel.cpp" />
@@ -506,6 +507,7 @@
     <ClInclude Include="Source\Graphics\Renderer\SceneRenderer.h" />
     <ClInclude Include="Source\Graphics\Renderer\ShapeRenderer.h" />
     <ClInclude Include="Source\Graphics\Renderer\SpriteRenderer.h" />
+    <ClInclude Include="Source\Graphics\Renderer\TrailRenderer.h" />
     <ClInclude Include="Source\Graphics\Resource\GeometricPrimitive.h" />
     <ClInclude Include="Source\Graphics\Resource\InterleavedGltfModel.h" />
     <ClInclude Include="Source\Graphics\Resource\AssetManager.h" />
