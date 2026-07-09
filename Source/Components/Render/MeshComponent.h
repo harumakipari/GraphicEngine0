@@ -68,6 +68,9 @@ public:
 
     virtual void SetIsVisible(bool isVisible) { this->isVisible_ = isVisible; }
 
+    // 影用のモデルにする
+    virtual void SetIsOnlyShadow(bool isOnlyShadow) { this->isOnlyShadow = isOnlyShadow; }
+
     virtual bool IsVisible() const { return isVisible_; }
 
     // 他のメッシュコンポーネントに必要な外部からの定数バッファ更新するためのフック関数
@@ -130,6 +133,9 @@ public:
 
     virtual bool IsCastShadow() const { return isCastShadow_; }
 
+    // 影用のモデルかどうか
+    virtual bool IsOnlyShadow() const { return isOnlyShadow; }
+
     virtual void OnRegister() override {}
 
     // 数値が大きいほうが後に描画される
@@ -169,7 +175,7 @@ public:
         float flashValue = 0.0f; //　白くフラッシュする値
         ObjectType objectType = ObjectType::Default; // オブジェクトの種類
 
-        EffectParameters effectParameters={};
+        EffectParameters effectParameters = {};
     };
     std::unique_ptr<ConstantBuffer<PlusAlphaConstants>> plusAlphaCBuffer;
 
@@ -181,6 +187,8 @@ protected:
     bool isCastShadow_ = true;
     // シャドウマップで影をつけるかどうか
     bool isShadowMap = false;
+    // 影用のモデルかどうか
+    bool isOnlyShadow = false;
 
     // 描画優先度
     int priority = 0;

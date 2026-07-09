@@ -85,24 +85,10 @@ public:
     {
         using namespace DirectX;
 
-#if 0
-        XMVECTOR qYaw = XMQuaternionRotationAxis(
-            XMVectorSet(0, 1, 0, 0),
-            yaw);
-
-        XMVECTOR qPitch = XMQuaternionRotationAxis(
-            XMVectorSet(1, 0, 0, 0),
-            pitch);
-
-        XMVECTOR q = XMQuaternionNormalize(
-            XMQuaternionMultiply(qPitch, qYaw));
-#else
         XMVECTOR qYaw = XMQuaternionRotationAxis(XMVectorSet(0, 1, 0, 0), yaw);
         XMVECTOR right = XMVector3Rotate(XMVectorSet(1, 0, 0, 0), qYaw);
         XMVECTOR qPitch = XMQuaternionRotationAxis(right, pitch);
         XMVECTOR q = XMQuaternionNormalize(XMQuaternionMultiply(qPitch, qYaw));
-#endif // 0
-
         XMFLOAT4 rot;
         XMStoreFloat4(&rot, q);
 
@@ -124,11 +110,6 @@ public:
             DirectX::XMConvertToRadians(minPitchDegree),
             DirectX::XMConvertToRadians(maxPitchDegree)
         );
-        //pitch = std::clamp(
-        //    pitch,
-        //    DirectX::XMConvertToRadians(-60.0f),
-        //    DirectX::XMConvertToRadians(50.0f)
-        //);
 
         UpdateRotationFromYawPitch();
     }

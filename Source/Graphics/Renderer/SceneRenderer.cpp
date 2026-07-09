@@ -1105,6 +1105,8 @@ RenderQueues SceneRenderer::BuildRenderQueues()
             const bool visible = mesh->IsVisible();
             const bool castShadow = mesh->IsCastShadow() && visible;
             const bool shadowMap = mesh->IsShadowMap() && visible;
+            
+
             // ===== 通常描画 =====
             if (visible)
             {
@@ -1116,12 +1118,18 @@ RenderQueues SceneRenderer::BuildRenderQueues()
             {
                 queues.shadowCasters.push_back(mesh);
             }
-
+            // 影モデル専用
+            if (mesh->IsOnlyShadow())
+            {
+                queues.shadowCasters.push_back(mesh);
+            }
+            
             // ===== シャドウマップパス ======
             if (shadowMap)
             {
                 queues.shadowMapCasters.push_back(mesh);
             }
+
         }
     }
 

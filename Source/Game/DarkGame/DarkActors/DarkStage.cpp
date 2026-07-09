@@ -14,10 +14,11 @@
 void DarkStage::Initialize(const Transform& transform)
 {
     // //影用のスタティックメッシュコンポーネントを追加
-    //std::shared_ptr<StaticMeshComponent> castStaticMeshComponent = this->AddComponent<class StaticMeshComponent>("castShadowModel", parentName);
-    //castStaticMeshComponent->SetModel("./Data/Models/DarkStageShadow/DarkStageShadow.gltf");
-    //castStaticMeshComponent->SetIsVisible(false);
-
+    std::shared_ptr<StaticMeshComponent> castStaticMeshComponent = this->AddComponent<class StaticMeshComponent>("castShadowModel", parentName);
+    castStaticMeshComponent->SetModel("./Data/Models/DarkStageShadowModel/DarkStageShadowModel.glb");
+    castStaticMeshComponent->SetIsOnlyShadow(true);
+    castStaticMeshComponent->SetIsVisible(false);
+    
 #if 1
     {
         PROFILE_SCOPE("Create StageCollision");
@@ -138,6 +139,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
         staticMeshComponent = this->AddComponent<class StaticMeshComponent>("model", parentName);
         staticMeshComponent->model = stageAsset->model;
         staticMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Stage;
+        staticMeshComponent->SetIsCastShadow(false);
     }
 
     {
