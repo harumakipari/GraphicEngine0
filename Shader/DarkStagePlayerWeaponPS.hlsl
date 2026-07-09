@@ -207,9 +207,4 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
 	
     return float4(Lo, baseColorFactor.a);
 
-    float4 color = float4(diffuse + specular + emissiveFactor, baseColorFactor.a) * baseColorFactor;
-    return color;
-
-    
-    //return float4(Lo , baseColorFactor.a);
 }

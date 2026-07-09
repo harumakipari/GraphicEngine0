@@ -121,7 +121,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     });
                 doorMovieState = DoorMovieState::EnemyEyeFlash;
             }
-
             if (player)
             {
                 player->SetEulerRotation({ 0.0f,108.3f,0.0f });
@@ -132,12 +131,12 @@ void MovieCameraManagerActor::Update(float deltaTime)
         break;
     case DoorMovieState::PreBossRoomLerp:
         // Bloomの値を落ち着ける
-        //if (scene)
-        //{
-        //    auto& shader = scene->GetSceneSettings();
-        //    shader.bloomConstantBuffer.bloomExtractionThreshold = 9.0f;
-        //    shader.bloomConstantBuffer.bloomIntensity = 0.415f;
-        //}
+        if (scene)
+        {
+            auto& shader = scene->GetSceneSettings();
+            shader.bloomConstantBuffer.bloomExtractionThreshold = 9.0f;
+            shader.bloomConstantBuffer.bloomIntensity = 0.415f;
+        }
         // 部屋を徐々に明るくする
         if (gameScene)
         {
@@ -166,13 +165,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {
             candleStand->ResetFireLightScale();
         }
-
         // ドアを閉めた状態にする
         if (doorActor)
         {
             doorActor->SetState(DoorLargeActor::DoorState::Closed);
         }
-
         // プレイヤーの位置をドア前にする
         if (player)
         {
@@ -212,7 +209,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {
             player->SetInputEnabled(true); // 入力を有効化する
         }
-
         break;
     }
 

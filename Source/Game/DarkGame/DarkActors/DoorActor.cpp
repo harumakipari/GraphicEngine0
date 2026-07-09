@@ -55,6 +55,9 @@ void DoorLargeActor::Initialize(const Transform& transform)
     leftHinge->SetRelativeEulerRotationDirect({ 0.0f,closedAngleLeft,0.0f });
     rightHinge->SetRelativeLocationDirect({ 0.0f,0,2.0f });
     rightHinge->SetRelativeEulerRotationDirect({ 0.0f,closedAngleRight,0.0f });
+
+    // インタラクト角度を設定する
+    interactDegree = 0.0f;
 }
 
 void DoorLargeActor::Update(float deltaTime)
@@ -101,8 +104,6 @@ void DoorLargeActor::Interact()
     {
         doorState = DoorState::Closing;
         CoreAudio::PlayOneShot("./Data/Sound/SE/big_door_close.wav");
-        
-
     }
 }
 

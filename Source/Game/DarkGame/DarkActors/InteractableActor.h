@@ -33,15 +33,29 @@ public:
         interactOffset = newOffset;
     }
 
+    // インタラクト可能な角度(度)を設定する
+    void SetInteractDegree(const float degree)
+    {
+        interactDegree = degree;
+    }
+
+    // インタラクト可能な角度(ラジアン)を取得する
+    float GetInteractRadian() const
+    {
+        return DirectX::XMConvertToRadians(interactDegree);
+    }
+
     void DrawImGuiDetails() override
     {
 #ifdef USE_IMGUI
         ImGui::DragFloat(U8("インタラクトが反応する範囲"), &interactRange, 0.1f, 0.0f, 5.0f);
+        ImGui::DragFloat(U8("インタラクトが反応する角度"), &interactDegree, 1.0f, 0.0f, 180.0f);
         ImGui::DragFloat3(U8("インタラクト範囲のオフセット"), &interactOffset.x, 0.1f);
 #endif
     }
 
 protected:
     float interactRange = 2.0f;
+    float interactDegree = 90.0f;
     DirectX::XMFLOAT3 interactOffset = { 0.0f, 0.0f, 0.0f }; // インタラクト可能な範囲のオフセット
 };

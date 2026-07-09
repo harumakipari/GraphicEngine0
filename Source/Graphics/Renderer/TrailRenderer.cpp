@@ -38,7 +38,6 @@ static DirectX::XMVECTOR CatmullRom(DirectX::XMVECTOR p0,DirectX::XMVECTOR p1,Di
 void Trail::Initialize()
 {
     HRESULT hr{ S_OK };
-
     D3D11_BUFFER_DESC bufferDesc{};
     bufferDesc.ByteWidth = static_cast<UINT>(sizeof(TrailVertex) * maxPoints);
     bufferDesc.Usage = D3D11_USAGE_DYNAMIC;

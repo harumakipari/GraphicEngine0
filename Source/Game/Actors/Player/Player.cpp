@@ -56,7 +56,7 @@ void Player::Initialize(const Transform& transform)
                 material.materialType = MaterialType::Fur;
             }
             else if (material.name == "MI_Aurora_Sword_FrozenHearth")
-            {// 髪の毛だったら
+            {// 剣の時
                 material.overridePipelineName = "DarkStagePlayerWeaponPS";
             }
         }
@@ -363,6 +363,7 @@ void Player::Initialize(const Transform& transform)
     swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
+    swordMeshComponent->overrideDeferredPipelineName = "DarkStagePlayerWeaponPS";
 
     // 剣を背中に背負ったとき用の剣のメッシュコンポーネント
     int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");
@@ -945,8 +946,11 @@ IInteractable* Player::FindInteractable()
 
         float dot = MathHelper::Dot(forward, dir);
 
+        // playerが反応する角度
+        float interactableRadian = actor->GetInteractRadian();
+
         // 前方60度以内
-        if (dot < 0.5f) continue;
+        if (dot < interactableRadian) continue;
 
         DebugRender::DrawSphere(interactablePos, bestDist, { 0,1,1,1 }, 0);
 

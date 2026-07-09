@@ -193,63 +193,69 @@ void DarkStageCandleStandActor::SetModel(const std::shared_ptr<StageAsset>& stag
 
 void DarkStageCandleStandActor::Update(float deltaTime)
 {
-    static float time = 0.0f;
-    time += deltaTime;
+    elapsedTime += deltaTime;
 
-    for (int i = 0; i < flameComponents.size(); ++i)
+    if (isSetScale)
     {
-        auto* flame = flameComponents[i];
+        for (auto sphereMeshComponent : sphereMeshComponents)
+        {
+            sphereMeshComponent->SetRelativeScaleDirect(fireScale);
+        }
+    }
+    else
+    {
 
-        float id = (float)i;
+        for (int i = 0; i < flameComponents.size(); ++i)
+        {
+            auto* flame = flameComponents[i];
 
-        //  揺らぎ（擬似ノイズ）
-        float flicker =
-            1.0f +
-            flameSettings.flickerAmp1 * sin(time * flameSettings.flickerSpeed1 + id) +
-            flameSettings.flickerAmp2 * sin(time * flameSettings.flickerSpeed2 + id * 2.1f);
-        // 明るさ
-        flame->plusAlphaCBuffer->data.emissionPower = flameSettings.baseEmission * flicker;
+            float id = (float)i;
 
-        //  サイズ（縦に伸ばす）
-        float scale = flameSettings.baseScale + flameSettings.scaleAmp * flicker;
-        flame->SetRelativeScaleDirect({ scale, scale * flameSettings.heightMultiplier, scale });
+            //  揺らぎ（擬似ノイズ）
+            float flicker =
+                1.0f +
+                flameSettings.flickerAmp1 * sin(elapsedTime * flameSettings.flickerSpeed1 + id) +
+                flameSettings.flickerAmp2 * sin(elapsedTime * flameSettings.flickerSpeed2 + id * 2.1f);
+            // 明るさ
+            flame->plusAlphaCBuffer->data.emissionPower = flameSettings.baseEmission * flicker;
 
-        //  位置揺らし
-        auto basePos = flameBasePositions[i];
-        auto pos = basePos;
-        pos.x += flameSettings.posAmpX * sin(time * 1.0f + id);
-        pos.z += flameSettings.posAmpZ * cos(time * 1.0f + id);
-        pos.y += flameSettings.posAmpY * sin(time * 1.0f + id);
-        flame->SetRelativeLocationDirect(pos);
+            //  サイズ（縦に伸ばす）
+            float scale = flameSettings.baseScale + flameSettings.scaleAmp * flicker;
+            flame->SetRelativeScaleDirect({ scale, scale * flameSettings.heightMultiplier, scale });
 
-        float f = powf(flicker, 2.0f);
+            //  位置揺らし
+            auto basePos = flameBasePositions[i];
+            auto pos = basePos;
+            pos.x += flameSettings.posAmpX * sin(elapsedTime * 1.0f + id);
+            pos.z += flameSettings.posAmpZ * cos(elapsedTime * 1.0f + id);
+            pos.y += flameSettings.posAmpY * sin(elapsedTime * 1.0f + id);
+            pos.y += flameSettings.posAmpY * sin(elapsedTime * 1.0f + id);
+            flame->SetRelativeLocationDirect(pos);
 
-        float g = flameSettings.colorBaseG + flameSettings.colorAmpG * f;
+            float f = powf(flicker, 2.0f);
 
-        flame->plusAlphaCBuffer->data.cpuColor = {
-            1.0f,
-            g,
-            0.0f,
-            1.0f
-        };
+            float g = flameSettings.colorBaseG + flameSettings.colorAmpG * f;
+
+            flame->plusAlphaCBuffer->data.cpuColor = {
+                1.0f,
+                g,
+                0.0f,
+                1.0f
+            };
+        }
     }
 }
 
 
 // 炎の光のスケールを変更する関数
-void DarkStageCandleStandActor::SetFireLightScale(DirectX::XMFLOAT3 fireScale) const
+void DarkStageCandleStandActor::SetFireLightScale(DirectX::XMFLOAT3 fireScale)
 {
-    for (auto sphereMeshComponent : sphereMeshComponents)
-    {
-        sphereMeshComponent->SetRelativeScaleDirect(fireScale);
-    }
+    isSetScale = true;
+    this->fireScale = fireScale;
 }
 
 // 炎の光のスケールを戻す関数
 void DarkStageCandleStandActor::ResetFireLightScale()
 {
-    for (auto sphereMeshComponent : sphereMeshComponents)
-    {
-        sphereMeshComponent->SetRelativeScaleDirect(initFireScale);
-    }
+    isSetScale = false;
 }

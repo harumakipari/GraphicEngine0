@@ -70,10 +70,10 @@ public:
     void Initialize(const Transform& transform)override {}
     void SetModel(const std::shared_ptr<StageAsset>& stageAsset);
     void Update(float deltaTime) override;
-    void DrawImGuiDetails() override{}
+    void DrawImGuiDetails() override {}
 
     // 炎の光のスケールを変更する関数
-    void SetFireLightScale(DirectX::XMFLOAT3 fireScale) const;
+    void SetFireLightScale(DirectX::XMFLOAT3 fireScale);
 
     // 炎の光のスケールを戻す関数
     void ResetFireLightScale();
@@ -85,4 +85,8 @@ private:
     // シャンデリアの炎の球体のモデル
     std::vector <std::shared_ptr<InstanceMeshComponent>> sphereMeshComponents;
     DirectX::XMFLOAT3 initFireScale = { 0.01f,0.02f,0.01f };// 炎の初期スケール
+
+    float elapsedTime = 0.0f;
+    bool isSetScale = false;    // スケールを外から設定する
+    DirectX::XMFLOAT3 fireScale = { 0.0f,0.0f,0.0f };
 };
