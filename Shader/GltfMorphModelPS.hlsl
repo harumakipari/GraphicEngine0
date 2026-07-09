@@ -75,7 +75,7 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     const float3 cDiff = lerp(basecolorFactor.rgb, 0.0, metallicFactor);
     
     const float3 P = pin.wPosition.xyz;
-    const float3 V = normalize(cameraPositon.xyz - pin.wPosition.xyz);
+    const float3 V = normalize(cameraPosition.xyz - pin.wPosition.xyz);
     
     float3 N = normalize(pin.wNormal.xyz);
     float3 T = hasTangent ? normalize(pin.wTangent.xyz) : float3(1, 0, 0);

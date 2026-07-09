@@ -314,14 +314,6 @@ public:
             AddPipeLineState("forwardOpaqueSkeletalMesh", desc);
         }
 
-        // SkeletalMesh forward Opaque 用
-        {
-            hr = CreatePsFromCSO(device, "./Data/Shaders/DarkStagePlayerWeaponPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
-            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
-            AddPipeLineState("DarkStagePlayerWeaponPS", desc);
-        }
 
         // SkeletalMesh deferred Opaque 用
         {
@@ -330,6 +322,14 @@ public:
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
             AddPipeLineState("deferredOpaqueSkeletalMesh", desc);
+        }
+
+        // SkeletalMesh deferred Player Swprd 用
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPlayerWeaponDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+            AddPipeLineState("DarkStagePlayerWeaponPS", desc);
         }
 
         // StaticMesh deferred stage 用

@@ -1,4 +1,5 @@
 #pragma once
+#include "Components/Easing/CoreEasingComponent.h"
 #include "Core/Actor.h"
 #include "Components/Render/PointLightComponent.h"
 
@@ -20,6 +21,9 @@ private:
     std::shared_ptr<SkeletalMeshComponent> chandelierMeshComponent;
     // シャンデリアの炎の球体のモデル
     std::vector <std::shared_ptr<InstanceMeshComponent>> sphereMeshComponents;
+
+    std::unique_ptr<EasingRunner> easingRunner;
+    float easingFactor = 0.0f;
 
     DirectX::XMFLOAT3 fireScale = { 0.01f,0.02f,0.01f };
 

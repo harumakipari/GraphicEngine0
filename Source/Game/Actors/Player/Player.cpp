@@ -364,6 +364,7 @@ void Player::Initialize(const Transform& transform)
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
     swordMeshComponent->overrideDeferredPipelineName = "DarkStagePlayerWeaponPS";
+    swordMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.0f,0.16f,0.8f ,0.0f };
 
     // 剣を背中に背負ったとき用の剣のメッシュコンポーネント
     int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");

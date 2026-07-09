@@ -169,7 +169,7 @@ float main(VS_OUT pin) : SV_TARGET
         position = positionMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord); // world ãÛä‘
     }
     // ÉåÉCÇê∂ê¨
-    float3 rayStart = cameraPositon.xyz;
+    float3 rayStart = cameraPosition.xyz;
     float3 rayDir = position.xyz - rayStart;
     float rayLength = length(rayDir);
     rayDir /= rayLength;

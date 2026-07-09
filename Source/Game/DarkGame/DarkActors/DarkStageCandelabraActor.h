@@ -1,5 +1,6 @@
 #pragma once
 #include "DarkStageAsset.h"
+#include "Components/Easing/CoreEasingComponent.h"
 #include "Core/Actor.h"
 #include "Components/Render/PointLightComponent.h"
 
@@ -85,6 +86,8 @@ private:
     // シャンデリアの炎の球体のモデル
     std::vector <std::shared_ptr<InstanceMeshComponent>> sphereMeshComponents;
     DirectX::XMFLOAT3 initFireScale = { 0.01f,0.02f,0.01f };// 炎の初期スケール
+
+    std::unique_ptr<EasingRunner> easingRunner;
 
     float elapsedTime = 0.0f;
     bool isSetScale = false;    // スケールを外から設定する

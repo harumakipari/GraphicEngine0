@@ -272,7 +272,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
         float noise = noise3D.Sample(samplerStates[LINEAR], frac(noisePos).r);
         heightFactor *= lerp(0.5, 1.5, noise);
-        float dist = length(positionWorldSpace.xyz - cameraPositon.xyz);
+        float dist = length(positionWorldSpace.xyz - cameraPosition.xyz);
         float distanceFactor = saturate((dist - 5) / 40);
         float fogFactor = heightFactor * distanceFactor;
         float density = 3.7f;

@@ -85,7 +85,7 @@ float3 Atmosphere(float3 eyeDir)
     const float3 sunDirection = normalize(-directionalLightDirection[0].xyz);
 #else
     const float distanceToSun = 1000.0;
-    const float3 sunDirection = normalize(normalize(-lightDirection.xyz) * distanceToSun - cameraPositon.xyz);
+    const float3 sunDirection = normalize(normalize(-lightDirection.xyz) * distanceToSun - cameraPosition.xyz);
 #endif	
     const float3 lightColor = float3(1.0, 1.0, 1.0);
     const float3 groundColor = float3(1.0, 1.0, 1.0);
@@ -488,7 +488,7 @@ float4 main(VS_OUT pin) : SV_TARGET
     float4 pos = mul(ndc, inverseViewProjection);
     pos /= pos.w;
 
-    float3 rayDir = normalize(pos.xyz - cameraPositon.xyz);
+    float3 rayDir = normalize(pos.xyz - cameraPosition.xyz);
 	
 #if 0
 	const float4x4 ditherPatterns =
@@ -506,7 +506,7 @@ float4 main(VS_OUT pin) : SV_TARGET
     if (rayDir.y > 0.0)
     {
 		// define the center of the earth as the origin of coordinates
-        float3 eyePos = float3(0.0, earthRadius, 0.0) + cameraPositon.xyz;
+        float3 eyePos = float3(0.0, earthRadius, 0.0) + cameraPosition.xyz;
         float3 rayOrigin = eyePos + rayDir * IntersectSphere(eyePos, rayDir, cloudAltitudesMinMax.x);
         float3 rayEndpoint = eyePos + rayDir * IntersectSphere(eyePos, rayDir, cloudAltitudesMinMax.y);
         float shellDist = length(rayEndpoint - rayOrigin);

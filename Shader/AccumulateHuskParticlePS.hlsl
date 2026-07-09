@@ -80,7 +80,7 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     const float alphaRoughness = roughnessFactor * roughnessFactor;
     const float3 cDiff = lerp(baseColorFactor.rgb, 0.0, metallicFactor);
     
-    const float3 V = normalize(cameraPositon.xyz - pin.wPosition.xyz);
+    const float3 V = normalize(cameraPosition.xyz - pin.wPosition.xyz);
     
     float3 N = normalize(pin.wNormal.xyz);
     float3 T = hasTangent ? normalize(pin.wTangent.xyz) : float3(1, 0, 0.0001);
@@ -232,7 +232,7 @@ void main(VS_OUT pin)
     
     float3 L = normalize(-lightDirection.xyz);
     float3 diffuse = color.rgb * max(0, dot(N, L));
-    float3 V = normalize(cameraPositon.xyz - pin.wPosition.xyz);
+    float3 V = normalize(cameraPosition.xyz - pin.wPosition.xyz);
     float3 specular = pow(max(0, dot(N, normalize(V + L))), 128);
     float3 ambient = color.rgb * 0.2;
     

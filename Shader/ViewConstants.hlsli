@@ -4,7 +4,7 @@
 cbuffer VIEW_CONSTANTS_BUFFER : register(b4)
 {
     row_major float4x4 viewProjection;
-    float4 cameraPositon;
+    float4 cameraPosition;
     row_major float4x4 view;
     row_major float4x4 projection;
     row_major float4x4 inverseProjection;

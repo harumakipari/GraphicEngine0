@@ -1,4 +1,5 @@
 #include "GltfModel.hlsli"
+#include "ModelType.hlsli"
 
 GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 {
@@ -61,7 +62,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
 #endif 
     // 元々wは１だったがスカイマップなどの時に使用するため、２は点光源であることを示すフラグ
-    pout.emissive = float4(emissive, 2);
+    pout.emissive = float4(emissive, GBUFFER_FLAG_EMISSIVE);
     pout.material = float4(0.0, 0.0, 0.0, materialType);
     float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
     pout.velocity = float4(velocity, 1, 1);

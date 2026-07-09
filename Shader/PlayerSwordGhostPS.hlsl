@@ -16,7 +16,7 @@ Texture2D<float4> materialTextures[5] : register(t1);
 float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
 {
     float3 N = normalize(pin.wNormal.xyz);
-    float3 V = normalize(cameraPositon.xyz - pin.wPosition.xyz);
+    float3 V = normalize(cameraPosition.xyz - pin.wPosition.xyz);
 
     float fresnel = pow(1.0 - saturate(dot(N, V)), modelEffectParameter.edgeWidth);
 
