@@ -9,6 +9,7 @@
 
 #include "Core/ActorManager.h"
 #include "Components/Effect/ParticleComponent.h"
+#include "Graphics/Renderer/TrailRenderer.h"
 
 class AudioSourceComponent;
 class IInteractable;
@@ -72,6 +73,9 @@ public:
 
     // プレイヤーの入力を受け付けるかどうかを設定する
     void SetInputEnabled(const bool enabled) { InputSystem::SetInputEnabled(enabled); }
+
+    // 軌跡を描画する処理
+    void RenderTrail(ID3D11DeviceContext* immediateContext);
 
 private:
     // 火花エフェクトの生成
@@ -208,6 +212,9 @@ private:
     DirectX::XMFLOAT3 ghostEdgeColor = { 0.0f,0.2f,1.2f };  // 残像の剣のベースカラー
     DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 残像の剣のベースカラー
     float ghostEdgeWidth = 2.0f; // 残像の輪郭
+
+    // 剣の軌跡
+    Trail trail;
 
     friend class PlayerStateBase;
 };

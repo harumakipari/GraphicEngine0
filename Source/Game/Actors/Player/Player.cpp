@@ -404,6 +404,9 @@ void Player::Initialize(const Transform& transform)
     runAudioComp->SetVolume(0.3f);
     runAudioComp->SetLoop(true);
 
+    // ãOê’èâä˙âª
+    trail.Initialize();
+
 }
 
 
@@ -416,8 +419,36 @@ void Player::Update(float deltaTime)
         stateMachine_->ChangeState("Rush");
     }
 
+    HitResultWithActor hit;
+
+    bool isHit = false;
+
+    DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
+    DirectX::XMFLOAT3 swordMidPos = swordMiddleComponent->GetComponentLocation();
+    DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
+
+    isHit |= CollisionFunction::SphereRayCast(prevSwordRootPos, swordRootPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+    isHit |= CollisionFunction::SphereRayCast(prevSwordMidPos, swordMidPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+    isHit |= CollisionFunction::SphereRayCast(prevSwordTipPos, swordTipPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+
+    prevSwordRootPos = swordRootPos;
+    prevSwordMidPos = swordMidPos;
+    prevSwordTipPos = swordTipPos;
+
+
+    if (isHit)
+    {
+        Logger::Log(U8("åïÇ…ìGÇ™ìñÇΩÇ¡ÇΩ"));
+    }
+
+    // ãOê’ÇÃçXêVèàóù
+    trail.UpdateTrail(deltaTime);
+
     if (isAttackActive)
     {
+        // ãOê’Çí«â¡
+        trail.trailPoints.push_back({ swordTipPos,swordRootPos, 0.8f });
+
         swordGhostElapsedTime += deltaTime;
         if (swordGhostElapsedTime >= ghostInterval)
         {
@@ -484,26 +515,6 @@ void Player::Update(float deltaTime)
 
     FindInteractable();
 
-    HitResultWithActor hit;
-
-    bool isHit = false;
-
-    DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
-    DirectX::XMFLOAT3 swordMidPos = swordMiddleComponent->GetComponentLocation();
-    DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
-
-    isHit |= CollisionFunction::SphereRayCast(prevSwordRootPos, swordRootPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
-    isHit |= CollisionFunction::SphereRayCast(prevSwordMidPos, swordMidPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
-    isHit |= CollisionFunction::SphereRayCast(prevSwordTipPos, swordTipPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
-
-    prevSwordRootPos = swordRootPos;
-    prevSwordMidPos = swordMidPos;
-    prevSwordTipPos = swordTipPos;
-
-    if (isHit)
-    {
-        Logger::Log(U8("åïÇ…ìGÇ™ìñÇΩÇ¡ÇΩ"));
-    }
 
     switch (swordState)
     {
@@ -598,6 +609,12 @@ void Player::Update(float deltaTime)
 
 #endif // 0
 
+}
+
+// ãOê’Çï`âÊÇ∑ÇÈèàóù
+void Player::RenderTrail(ID3D11DeviceContext* immediateContext)
+{
+    trail.Render(immediateContext);
 }
 
 void Player::DrawImGuiDetails()

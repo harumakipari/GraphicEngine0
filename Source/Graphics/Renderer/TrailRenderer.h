@@ -14,7 +14,8 @@ public:
     // 軌跡構造　CPUで更新するもの
     struct TrailPoint
     {
-        DirectX::XMFLOAT3 position;
+        DirectX::XMFLOAT3 tip;
+        DirectX::XMFLOAT3 root;
         float life; // 残り時間
     };
     std::vector<TrailPoint> trailPoints;

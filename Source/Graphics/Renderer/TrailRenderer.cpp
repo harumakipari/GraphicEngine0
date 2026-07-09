@@ -1,6 +1,40 @@
 #include "pch.h"
 #include "TrailRenderer.h"
 
+// Catmull- Rom 補完関数
+static DirectX::XMVECTOR CatmullRom(DirectX::XMVECTOR p0,DirectX::XMVECTOR p1,DirectX::XMVECTOR p2,DirectX::XMVECTOR p3,float t)
+{
+    float t2 = t * t;
+    float t3 = t2 * t;
+
+    return DirectX::XMVectorScale(
+    DirectX::XMVectorAdd(
+            DirectX::XMVectorAdd(
+                DirectX::XMVectorScale(p1, 2.0f),
+                DirectX::XMVectorScale(DirectX::XMVectorSubtract(p2, p0), t)),
+            DirectX::XMVectorAdd(
+                DirectX::XMVectorScale(
+                    DirectX::XMVectorAdd(
+                        DirectX::XMVectorAdd(
+                            DirectX::XMVectorScale(p0, 2.0f),
+                            DirectX::XMVectorScale(p2, 4.0f)),
+                        DirectX::XMVectorAdd(
+                            DirectX::XMVectorScale(p1, -5.0f),
+                            DirectX::XMVectorScale(p3, -1.0f))),
+                    t2),
+                DirectX::XMVectorScale(
+                    DirectX::XMVectorAdd(
+                        DirectX::XMVectorAdd(
+                            DirectX::XMVectorScale(p1, 3.0f),
+                            DirectX::XMVectorScale(p3, 1.0f)),
+                        DirectX::XMVectorAdd(
+                            DirectX::XMVectorScale(p0, -1.0f),
+                            DirectX::XMVectorScale(p2, -3.0f))),
+                    t3))),
+        0.5f);
+}
+
+
 void Trail::Initialize()
 {
     HRESULT hr{ S_OK };
@@ -22,9 +56,9 @@ void Trail::Initialize()
         {"TEXCOORD",1,DXGI_FORMAT_R32G32_FLOAT,0,16,D3D11_INPUT_PER_VERTEX_DATA,0}, // uv
     };
 
-    hr = CreateVsFromCSO(Graphics::GetDevice(), "./Shader/TrailVS.cso", vertexShader.GetAddressOf(), inputLayout.GetAddressOf(), inputElementDesc, ARRAYSIZE(inputElementDesc));
+    hr = CreateVsFromCSO(Graphics::GetDevice(), "./Data/Shaders/TrailVS.cso", vertexShader.GetAddressOf(), inputLayout.GetAddressOf(), inputElementDesc, ARRAYSIZE(inputElementDesc));
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreatePsFromCSO(Graphics::GetDevice(), "./Shader/TrailPS.cso", pixelShader.GetAddressOf());
+    hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/TrailPS.cso", pixelShader.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
 
@@ -41,37 +75,89 @@ void Trail::UpdateTrail(float deltaTime)
 
     vertices.clear();
 
-    for (size_t i = 1; i < trailPoints.size(); i++)
+    if (trailPoints.size() < 2)
+        return;
+
+    const float maxLife = 0.5f;
+
+#if 0
+    for (size_t i = 0; i < trailPoints.size(); i++)
     {
-        auto& previent = trailPoints[i - 1];
-        auto& current = trailPoints[i];
+        auto& point = trailPoints[i];
 
-        // 進行方向
-        DirectX::XMVECTOR p0 = XMLoadFloat3(&previent.position);
-        DirectX::XMVECTOR p1 = XMLoadFloat3(&current.position);
-        DirectX::XMVECTOR dir = DirectX::XMVector3Normalize(DirectX::XMVectorSubtract(p1, p0));
-
-        // 横方向（XZ平面）
-        DirectX::XMVECTOR side = DirectX::XMVector3Cross(dir, DirectX::XMVectorSet(0, 1, 0, 0));
-        side = DirectX::XMVector3Normalize(side);
-
-        float width = 0.3f; // 太さ
-        float alpha = current.life / 0.5f;
-        alpha = alpha * alpha;
-
-        DirectX::XMFLOAT3 left, right;
-
-        DirectX::XMVECTOR leftVec = DirectX::XMVectorAdd(p1, DirectX::XMVectorScale(side, width));
-        DirectX::XMVECTOR rightVec = DirectX::XMVectorSubtract(p1, DirectX::XMVectorScale(side, width));
-
-        XMStoreFloat3(&left, leftVec);
-        XMStoreFloat3(&right, rightVec);
-
+        float alpha = point.life / maxLife;
+        alpha *= alpha;
 
         float u = static_cast<float>(i) / (trailPoints.size() - 1);
-        vertices.push_back({ left, alpha, {u, 0.0f} });
-        vertices.push_back({ right, alpha, {u, 1.0f} });
+
+        // 剣先
+        vertices.push_back({ point.tip,alpha,{u, 0.0f} });
+        // 剣の根元
+        vertices.push_back({ point.root,alpha,{u, 1.0f} });
     }
+#else
+    if (trailPoints.size() < 4)
+        return;
+
+    const int samplesPerSegment = 6;
+
+    for (size_t i = 0; i + 3 < trailPoints.size(); ++i)
+    {
+        auto& p0 = trailPoints[i + 0];
+        auto& p1 = trailPoints[i + 1];
+        auto& p2 = trailPoints[i + 2];
+        auto& p3 = trailPoints[i + 3];
+
+        DirectX::XMVECTOR tip0 = XMLoadFloat3(&p0.tip);
+        DirectX::XMVECTOR tip1 = XMLoadFloat3(&p1.tip);
+        DirectX::XMVECTOR tip2 = XMLoadFloat3(&p2.tip);
+        DirectX::XMVECTOR tip3 = XMLoadFloat3(&p3.tip);
+
+        DirectX::XMVECTOR root0 = XMLoadFloat3(&p0.root);
+        DirectX::XMVECTOR root1 = XMLoadFloat3(&p1.root);
+        DirectX::XMVECTOR root2 = XMLoadFloat3(&p2.root);
+        DirectX::XMVECTOR root3 = XMLoadFloat3(&p3.root);
+
+        for (int s = 0; s < samplesPerSegment; ++s)
+        {
+            float t = static_cast<float>(s) / (samplesPerSegment - 1);
+
+            DirectX::XMVECTOR tip = CatmullRom(tip0, tip1, tip2, tip3, t);
+            DirectX::XMVECTOR root = CatmullRom(root0, root1, root2, root3, t);
+
+            DirectX::XMFLOAT3 tipPos;
+            DirectX::XMFLOAT3 rootPos;
+
+            XMStoreFloat3(&tipPos, tip);
+            XMStoreFloat3(&rootPos, root);
+
+            // αは p1 → p2 の間を補間
+            float alpha = std::lerp(
+                p1.life / maxLife,
+                p2.life / maxLife,
+                t);
+
+            alpha = alpha * alpha;
+
+            float u =
+                (static_cast<float>(i) + t) /
+                static_cast<float>(trailPoints.size() - 1);
+
+            vertices.push_back({
+                tipPos,
+                alpha,
+                {u, 0.0f}
+                });
+
+            vertices.push_back({
+                rootPos,
+                alpha,
+                {u, 1.0f}
+                });
+        }
+    }
+#endif // 0
+
 }
 
 void Trail::Render(ID3D11DeviceContext* immediateContext)

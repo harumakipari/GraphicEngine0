@@ -118,6 +118,12 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     // ボスの部屋のラープのための初期化処理
     bossLerpEasing = std::make_unique<EasingRunner>();
 
+    // ここで軌跡を描画する
+    RegisterRenderHook(RenderPass::ForwardBlend, [&](ID3D11DeviceContext* immediateContext)
+        {
+            RenderState::BindBlendState(immediateContext, BLEND_STATE::ADD);
+            player->RenderTrail(immediateContext);
+        });
 
 
     return true;
