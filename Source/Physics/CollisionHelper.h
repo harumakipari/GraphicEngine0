@@ -1,5 +1,4 @@
-#ifndef COLLISION_HELPER_H
-#define COLLISION_HELPER_H
+#pragma once
 
 #include <cmath>
 #include <list>
@@ -12,7 +11,8 @@ enum class CollisionLayer :uint32_t
     Enemy ,
     Boss,
     Convex ,
-    WorldProps , // stage の object
+    WorldProps , // stage の object(カメラのレイキャストに関係するもの）
+    WorldPropsNoRaycast, // stage の object(カメラのレイキャストに関係しないもの）
     Camera ,   // カメラ
     Interactable,  // プレイヤーが近づいてインタラクトできるもの
     PlayerWeapon,// プレイヤーの武器
@@ -62,7 +62,3 @@ namespace CollisionHelper
         return (mask & ToBit(layer)) != 0;
     }
 }
-
-
-
-#endif //COLLISION_HELPER_H

@@ -326,13 +326,13 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
     Constants data;
     data.cascadedMatrices[0] = cascadedMatrices.at(0);
     data.cascadedMatrices[1] = cascadedMatrices.at(1);
-    data.cascadedMatrices[2] = cascadedMatrices.at(2);
-    data.cascadedMatrices[3] = cascadedMatrices.at(3);
+    //data.cascadedMatrices[2] = cascadedMatrices.at(2);
+    //data.cascadedMatrices[3] = cascadedMatrices.at(3);
 
     data.cascadedPlaneDistances[0] = cascadedPlaneDistances.at(1);
     data.cascadedPlaneDistances[1] = cascadedPlaneDistances.at(2);
-    data.cascadedPlaneDistances[2] = cascadedPlaneDistances.at(3);
-    data.cascadedPlaneDistances[3] = cascadedPlaneDistances.at(4);
+    //data.cascadedPlaneDistances[2] = cascadedPlaneDistances.at(3);
+    //data.cascadedPlaneDistances[3] = cascadedPlaneDistances.at(4);
 
     immediateContext->UpdateSubresource(csmConstantBuffer.Get(), 0, 0, &data, 0, 0);
     immediateContext->VSSetConstantBuffers(cbSlot, 1, csmConstantBuffer.GetAddressOf());

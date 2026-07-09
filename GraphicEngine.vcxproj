@@ -472,6 +472,7 @@
     <ClInclude Include="Source\Game\Scenes\SampleScene.h" />
     <ClInclude Include="Source\Game\Scenes\GameScene.h" />
     <ClInclude Include="Source\Game\Scenes\TestScene.h" />
+    <ClInclude Include="Source\Game\Scenes\TitleScene.h" />
     <ClInclude Include="Source\Game\SofyBody\SoftBody.h" />
     <ClInclude Include="Source\Game\State\StateMachine.h" />
     <ClInclude Include="Source\Game\State\StateBase.h" />

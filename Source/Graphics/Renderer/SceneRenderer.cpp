@@ -727,11 +727,11 @@ void SceneRenderer::CastShadow(ID3D11DeviceContext* immediateContext, const Mesh
                 if (primitive.indexBufferView.buffer > -1)
                 {
                     immediateContext->IASetIndexBuffer(model->buffers.at(primitive.indexBufferView.buffer).Get(), primitive.indexBufferView.format, 0);
-                    immediateContext->DrawIndexedInstanced(primitive.indexBufferView.sizeInBytes / SizeofComponent(primitive.indexBufferView.format), 4, 0, 0, 0);
+                    immediateContext->DrawIndexedInstanced(primitive.indexBufferView.sizeInBytes / SizeofComponent(primitive.indexBufferView.format), 2, 0, 0, 0);
                 }
                 else
                 {
-                    immediateContext->DrawIndexedInstanced(primitive.vertexBufferView.sizeInBytes / primitive.vertexBufferView.strideInBytes, 4, 0, 0, 0);
+                    immediateContext->DrawIndexedInstanced(primitive.vertexBufferView.sizeInBytes / primitive.vertexBufferView.strideInBytes, 2, 0, 0, 0);
                 }
             }
         }
@@ -866,11 +866,11 @@ void SceneRenderer::CastShadowWithStaticBatching(ID3D11DeviceContext* immediateC
         if (batchMesh.indexBufferView.buffer > -1)
         {
             immediateContext->IASetIndexBuffer(model->buffers.at(batchMesh.indexBufferView.buffer).Get(), batchMesh.indexBufferView.format, 0);
-            immediateContext->DrawIndexedInstanced(batchMesh.indexBufferView.sizeInBytes / SizeofComponent(batchMesh.indexBufferView.format), 4, 0, 0, 0);
+            immediateContext->DrawIndexedInstanced(batchMesh.indexBufferView.sizeInBytes / SizeofComponent(batchMesh.indexBufferView.format), 2, 0, 0, 0);
         }
         else
         {
-            immediateContext->DrawIndexedInstanced(batchMesh.vertexBufferView.sizeInBytes / batchMesh.vertexBufferView.strideInBytes, 4, 0, 0, 0);
+            immediateContext->DrawIndexedInstanced(batchMesh.vertexBufferView.sizeInBytes / batchMesh.vertexBufferView.strideInBytes, 2, 0, 0, 0);
         }
     }
     immediateContext->VSSetShader(nullptr, nullptr, 0);

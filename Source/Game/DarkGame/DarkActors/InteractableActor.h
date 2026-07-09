@@ -56,6 +56,6 @@ public:
 
 protected:
     float interactRange = 2.0f;
-    float interactDegree = 90.0f;
+    float interactDegree = 0.0f;
     DirectX::XMFLOAT3 interactOffset = { 0.0f, 0.0f, 0.0f }; // インタラクト可能な範囲のオフセット
 };

@@ -87,7 +87,7 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
 
     //カスケードシャドウマップ
     //cascadedShadowMaps = std::make_unique<decltype(cascadedShadowMaps)::element_type>(device, 1024, 1024, 4);
-    cascadedShadowMaps = std::make_unique<decltype(cascadedShadowMaps)::element_type>(device, 512, 512, 4);
+    cascadedShadowMaps = std::make_unique<CascadedShadowMaps>(device, 512, 512, 2);
 
     D3D11_TEXTURE2D_DESC texture2dDesc;
     //テクスチャをロード

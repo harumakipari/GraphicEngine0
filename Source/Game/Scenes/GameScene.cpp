@@ -136,7 +136,7 @@ void GameScene::Start()
     audioComp->SetSource(L"./Data/Sound/BGM/game_bgm.wav");
     audioComp->SetLoop(true);
     audioComp->Play();
-    audioComp->SetVolume(1.2f);
+    audioComp->SetVolume(0.8f);
 #if 0
     cameraManager->ToggleCinematicCamera(this);
 
@@ -234,6 +234,8 @@ void GameScene::SetUpActors()
         player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
         mainCameraActor->SetTarget(player->GetRootComponent());
     }
+    mainCameraComponent->SetPitch(-20.0f);
+    mainCameraComponent->distance = 5.35f;
     SetActiveCamera(mainCameraActor);
     Logger::Log(U8("sampleシーンのカメラ設定される。"));
 

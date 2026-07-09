@@ -30,14 +30,13 @@ void DarkStageChandelierActor::Initialize(const Transform& transform)
         DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(light.worldPosition);
         pointLightComponent->SetRelativeLocationDirect(pos);
     }
-#if 1
     for (auto point : chandelierMeshComponent->model->spawnPoints)
     {
         // エミッションを発生させるためにモデルを追加
         auto sphereMeshComponent = this->AddComponent<InstanceMeshComponent>("sphereMeshComponent", parentName);
         sphereMeshComponent->SetModel("./Data/Models/Primitives/frame.glb");
         sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-        sphereMeshComponent->SetRelativeScaleDirect(fireScale);
+        sphereMeshComponent->SetRelativeScaleDirect(initFireScale);
         DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
         pos.y = -1.5f; // ろうそくの位置に合わせて微調整
         sphereMeshComponent->SetRelativeLocationDirect(pos);
@@ -47,50 +46,60 @@ void DarkStageChandelierActor::Initialize(const Transform& transform)
         sphereMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
         sphereMeshComponents.push_back(sphereMeshComponent);
     }
-#else
-    for (auto point : chandelierMeshComponent->model->spawnPoints)
-    {
-        // エミッションを発生させるためにモデルを追加
-        auto sphereMeshComponent = this->AddComponent<SkeletalMeshComponent>("sphereMeshComponent", parentName);
-        sphereMeshComponent->SetModel("./Data/Models/Primitives/Sphere.glb");
-        sphereMeshComponent->overrideDeferredPipelineName = "pointLightSkeletalMesh";
-        sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-        sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.02f,0.01f });
-        DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-        pos.y = -1.5f; // ろうそくの位置に合わせて微調整
-        sphereMeshComponent->SetRelativeLocationDirect(pos);
-        sphereMeshComponent->SetRelativeRotationDirect(point.worldRotation);
-        sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-        sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-    }
-#endif // 0
-
+    easingRunner = std::make_unique<EasingRunner>();
+    easingFactor = 1.0f;// 炎が付いた状態でスタートするため
 }
 
 void DarkStageChandelierActor::Update(float deltaTime)
 {
     swingTime += deltaTime;
-
+    easingRunner->Tick(deltaTime);
     float angle = sinf(swingTime * swingSpeed) * swingAngle;
     DirectX::XMFLOAT3 rot = { angle, 0.0f, 0.0f }; // X軸回転で揺らす
     chandelierMeshComponent->SetRelativeEulerRotationDirect(rot);
-}
 
-// 炎の光のスケールを変更する関数
-void DarkStageChandelierActor::SetFireLightScale(DirectX::XMFLOAT3 fireScale)
-{
-    for (auto sphereMeshComponent:sphereMeshComponents)
-    {
-        sphereMeshComponent->SetRelativeScaleDirect(fireScale);
-    }
-}
-
-// 炎の光のスケールを戻す関数
-void DarkStageChandelierActor::ResetFireLightScale()
-{
+    DirectX::XMFLOAT3 fireScale = MathHelper::Lerp({ 0.0f,0.0f,0.0f }, initFireScale, easingFactor);
     for (auto sphereMeshComponent : sphereMeshComponents)
     {
         sphereMeshComponent->SetRelativeScaleDirect(fireScale);
+    }
+
+
+}
+
+// 炎の光のスケールを0にする関数
+void DarkStageChandelierActor::SetFireScaleToZero()
+{
+    easingFactor = 0.0f;
+}
+
+// 炎の光のスケールを戻す関数
+void DarkStageChandelierActor::ResetFireLightScale(float duration)
+{
+    // 炎の光のスケールを大きくする処理を開始する
+    {
+        TestEasingHandler handler;
+
+        handler.AddEasing(
+            TestEaseType::InSine,
+            0.0f,
+            1.0f,
+            duration
+        );
+
+        handler.SetCompletedFunction([this]()
+            {
+                easingFactor = 1.0f;
+            });
+        PropertyAccessor<float> accessor;
+
+        accessor.getter = [this]() { return easingFactor; };
+        accessor.setter = [this](float t)
+            {
+                easingFactor = t;
+            };
+
+        easingRunner->StartHandler(handler, accessor);
     }
 }
 

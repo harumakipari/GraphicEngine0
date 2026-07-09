@@ -121,9 +121,14 @@ public:
 
         pitch = std::clamp(
             pitch,
-            DirectX::XMConvertToRadians(-60.0f),
-            DirectX::XMConvertToRadians(50.0f)
+            DirectX::XMConvertToRadians(minPitchDegree),
+            DirectX::XMConvertToRadians(maxPitchDegree)
         );
+        //pitch = std::clamp(
+        //    pitch,
+        //    DirectX::XMConvertToRadians(-60.0f),
+        //    DirectX::XMConvertToRadians(50.0f)
+        //);
 
         UpdateRotationFromYawPitch();
     }
@@ -165,6 +170,9 @@ protected:
     DirectX::XMFLOAT4X4 view{};
     DirectX::XMFLOAT4X4 projection{};
     DirectX::XMFLOAT4X4 previousViewProjection{};
+
+    float minPitchDegree = -26.5f; // pitchÇÃç≈è¨äpìx
+    float maxPitchDegree = 22.5f;  // pitchÇÃç≈ëÂäpìx
 
     bool firstFrame = true;
 };

@@ -62,7 +62,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             // 部屋のシャンデリアの炎の光を消す
             for (auto chandelier : chandelierActors)
             {
-                chandelier->SetFireLightScale({ 0.0f,0.0f,0.0f });
+                chandelier->SetFireScaleToZero();
             }
             // 部屋の蝋燭スタンドの炎の光を消す
             for (auto candleStand : candleStandActors)
@@ -130,6 +130,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::EnemyEyeFlash:
         break;
     case DoorMovieState::PreBossRoomLerp:
+    {
+        constexpr float duration = 5.0f;
         // Bloomの値を落ち着ける
         if (scene)
         {
@@ -140,13 +142,19 @@ void MovieCameraManagerActor::Update(float deltaTime)
         // 部屋を徐々に明るくする
         if (gameScene)
         {
-            gameScene->StartBossRoomLerp(0.0f, 1.0f, 5.0f, [&]()
+            gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&]()
                 {
                     doorMovieState = DoorMovieState::UpPlayerCombat;
                 });
         }
+        // 部屋のシャンデリアの炎の光を徐々に戻す
+        for (auto chandelier : chandelierActors)
+        {
+            chandelier->ResetFireLightScale(duration);
+        }
         doorMovieState = DoorMovieState::BossRoomLerp;
-        break;
+    }
+    break;
     case DoorMovieState::BossRoomLerp:
         // ボスの目玉をなくす
         if (gruxEnemyEye)
@@ -155,11 +163,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
         }
         break;
     case DoorMovieState::UpPlayerCombat:
-        // 部屋のシャンデリアの炎の光を戻す
-        for (auto chandelier : chandelierActors)
-        {
-            chandelier->ResetFireLightScale();
-        }
         // 部屋の蝋燭スタンドの炎の光を戻す
         for (auto candleStand : candleStandActors)
         {
@@ -205,11 +208,20 @@ void MovieCameraManagerActor::Update(float deltaTime)
         doorMovieState = DoorMovieState::Finished;
         break;
     case DoorMovieState::Finished:
-        if (player)
+        if (movieCamera->IsMovieFinish())
         {
-            player->SetInputEnabled(true); // 入力を有効化する
+            if (player)
+            {
+                player->SetInputEnabled(true); // 入力を有効化する
+            }
+            // カメラを三人称に戻す
+            if (scene->GetCameraManager()->IsUseMovie())
+            {// ムービーカメラが使用中の場合のみ切り替え
+                scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
+            }
         }
         break;
+
     }
 
 }

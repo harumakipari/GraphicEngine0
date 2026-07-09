@@ -1,5 +1,4 @@
-#ifndef SHAPE_COMPONENT_H
-#define SHAPE_COMPONENT_H
+#pragma once
 
 // C++ ïWèÄÉâÉCÉuÉâÉä
 #include <memory>
@@ -305,11 +304,11 @@ public:
     virtual void DrawImGuiInspector() override
     {
 #ifdef USE_IMGUI
-
         ShapeComponent::DrawImGuiInspector();
         if (ImGui::TreeNode((name_ + "  box").c_str()))
         {
             ImGui::DragFloat3("boxExtent", &boxExtent_.x, 0.1f);
+            ResizeBox(boxExtent_.x, boxExtent_.y, boxExtent_.z);
             ImGui::TreePop();
         }
 #endif
@@ -501,7 +500,7 @@ public:
             capsuleAxisQ = { physx::PxPiDivTwo, physx::PxVec3(1.0f, 0.0f, 0.0f) };
             break;
         case ShapeComponent::CapsuleAxis::y:
-            capsuleAxisQ = {physx::PxPiDivTwo, physx::PxVec3(0.0f, 0.0f, 1.0f)};
+            capsuleAxisQ = { physx::PxPiDivTwo, physx::PxVec3(0.0f, 0.0f, 1.0f) };
             break;
         case ShapeComponent::CapsuleAxis::z:
             capsuleAxisQ = { physx::PxPiDivTwo, physx::PxVec3(0.0f, 1.0f, 0.0f) };
@@ -631,4 +630,3 @@ private:
     std::shared_ptr<TriangleMeshRigidBodyComponent> rigidBody_;
     MeshComponent* meshComponent_ = nullptr;
 };
-#endif  //SHAPE_COMPONENT_H

@@ -885,6 +885,9 @@
     <ClInclude Include="Source\Graphics\Renderer\TrailRenderer.h">
       <Filter>Source\Graphics\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Scenes\TitleScene.h">
+      <Filter>Source\Game\Scenes</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">
@@ -933,9 +936,6 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\ComputeParticleUpdateCS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\DarkStagePlayerWeaponPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\DarkStageSkyPS.hlsl">
@@ -1175,6 +1175,7 @@
     <FxCompile Include="Shader\PlayerSwordGhostPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Shader\GltfModelPlayerWeaponDeferredPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader\BidirectionalReflectanceDistributionFunction.hlsli">

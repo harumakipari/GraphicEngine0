@@ -131,7 +131,8 @@ DirectX::XMVECTOR TPSCameraComponent::ResolveCameraCollision(
     HitResultWithActor hit;
     uint32_t mask =
         CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
-        CollisionHelper::ToBit(CollisionLayer::Floor);
+        CollisionHelper::ToBit(CollisionLayer::Floor) |
+        CollisionHelper::ToBit(CollisionLayer::WorldProps);
     if (CollisionFunction::SphereRayCast(
         f,
         e,
@@ -151,8 +152,6 @@ DirectX::XMVECTOR TPSCameraComponent::ResolveCameraCollision(
 
 void DebugCameraComponent::HandleKeyboardInput(float deltaTime)
 {
-
-
     using namespace DirectX;
     XMFLOAT4 rotation = GetComponentRotation();
     XMVECTOR q = XMLoadFloat4(&rotation);

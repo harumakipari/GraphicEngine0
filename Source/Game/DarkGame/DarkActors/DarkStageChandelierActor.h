@@ -11,11 +11,11 @@ public:
     void Initialize(const Transform& transform)override;
     void Update(float deltaTime) override;
 
-    // 炎の光のスケールを変更する関数
-    void SetFireLightScale(DirectX::XMFLOAT3 fireScale);
+    // 炎の光のスケールを0にする関数
+    void SetFireScaleToZero();
 
     // 炎の光のスケールを戻す関数
-    void ResetFireLightScale();
+    void ResetFireLightScale(float duration);
 private:
     // シャンデリアのモデル
     std::shared_ptr<SkeletalMeshComponent> chandelierMeshComponent;
@@ -25,7 +25,7 @@ private:
     std::unique_ptr<EasingRunner> easingRunner;
     float easingFactor = 0.0f;
 
-    DirectX::XMFLOAT3 fireScale = { 0.01f,0.02f,0.01f };
+    DirectX::XMFLOAT3 initFireScale = { 0.01f,0.02f,0.01f };
 
     float swingTime = 0.0f;
     float swingSpeed = 1.5f;     // 揺れる速さ
