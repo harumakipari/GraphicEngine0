@@ -4,14 +4,24 @@
 class TPSCameraController
 {
 public:
+    enum class CameraMode :uint8_t
+    {
+        TPS,
+        BossBattle,
+    };
+
+public:
     TPSCameraComponent* camera = nullptr;
-    std::weak_ptr<SceneComponent> target;
+    std::weak_ptr<SceneComponent> eyeComponent; // カメラ位置
+    std::weak_ptr<SceneComponent> targetComponent;  // 注視点
     std::weak_ptr<SceneComponent> lockTarget;
+    CameraMode cameraMode = CameraMode::TPS;
+
     bool isLockOn = false;
     bool useRaycast = true; // 障害物の回避にレイキャストを使うかどうか
     void Update(float dt)
     {
-        auto t = target.lock();
+        auto t = targetComponent.lock();
         if (!t) return;
 
         using namespace DirectX;
@@ -64,16 +74,24 @@ public:
                 cosf(yaw) * cosf(pitch),
                 0);
 
-
         XMVECTOR idealEye = pivot - forward * camera->distance;
         XMVECTOR resolvedEye = idealEye;
+
+        if (cameraMode == CameraMode::BossBattle)
+        {
+            if (auto eyeComp = eyeComponent.lock())
+            {
+                DirectX::XMFLOAT3 eyePosition = eyeComp->GetComponentLocation();
+                idealEye = DirectX::XMLoadFloat3(&eyePosition);
+            }
+        }
+
         if (useRaycast)
         {
             resolvedEye = camera->ResolveCameraCollision(pivot, idealEye);
         }
 
         XMVECTOR currentEye = resolvedEye;
-        //XMVECTOR currentEye = idealEye;
 
         XMFLOAT3 pos;
         XMStoreFloat3(&pos, currentEye);
@@ -115,7 +133,7 @@ public:
             {
                 XMFLOAT3 enemyPos = enemy->GetComponentLocation();
 
-                XMFLOAT3 dir=
+                XMFLOAT3 dir =
                 {
                     enemyPos.x - targetPos.x,
                     0.0f,
@@ -152,7 +170,6 @@ public:
         lockTarget.reset();
         isLockOn = false;
     }
-
 
     DirectX::XMFLOAT3 shakeOffset = {};
 private:

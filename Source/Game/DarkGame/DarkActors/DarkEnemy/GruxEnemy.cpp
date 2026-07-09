@@ -199,8 +199,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightEyeSceneComponent->AttachToComponent(skeletalMeshComponent, rightEyeSocketNode);
     rightEyeSceneComponent->SetRelativeLocationDirect({ 0.0f,0.03f,-0.1f });
 
-
-    
+    // カメラの注視点の位置のコンポーネントを追加
+    cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
 }
 
 void GruxEnemy::Update(float deltaTime)

@@ -225,14 +225,15 @@ void GameScene::UpdateConstants(ID3D11DeviceContext* immediateContext, float del
 void GameScene::SetUpActors()
 {
     Transform mainCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto mainCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MainCamera>("mainCameraActor", mainCameraTr);
+    mainCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MainCamera>("mainCameraActor", mainCameraTr);
     mainCameraComponent = mainCameraActor->GetComponent<TPSCameraComponent>();
     {
         PROFILE_SCOPE("Create Player");
         Transform playerTr(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
         //Transform playerTr(DirectX::XMFLOAT3{ 0.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
         player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
-        mainCameraActor->SetTarget(player->GetRootComponent());
+        mainCameraActor->SetLookTarget(player->GetRootComponent());
+        mainCameraActor->SetEye(player->GetRootComponent());
     }
     mainCameraComponent->SetPitch(-20.0f);
     mainCameraComponent->distance = 5.35f;
@@ -278,7 +279,7 @@ void GameScene::SetUpActors()
 #endif // 0
 
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
-    auto GruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
+    gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
 
 #if 0
     Transform dustParticleTr(DirectX::XMFLOAT3{ -27.0f,0.0f,11.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
@@ -351,6 +352,16 @@ void GameScene::DrawGui()
     {
         StartBossRoomLerp(1.0f, 0.0f, 3.0f);
     }
+    if (ImGui::Button(U8("Bossカメラ")))
+    {
+        ChangeCameraMode(TPSCameraController::CameraMode::BossBattle);
+    }
+    if (ImGui::Button(U8("TPSカメラ")))
+    {
+        ChangeCameraMode(TPSCameraController::CameraMode::TPS);
+    }
+
+
 
 #endif
 
@@ -401,5 +412,29 @@ void GameScene::StartBossRoomLerp(float startFactor, float endFactor, float dura
             };
 
         bossLerpEasing->StartHandler(handler, accessor);
+    }
+}
+
+// カメラのモードを変更する
+void GameScene::ChangeCameraMode(TPSCameraController::CameraMode cameraMode)
+{
+    switch (cameraMode)
+    {
+    case TPSCameraController::CameraMode::TPS:
+        if (mainCameraActor)
+        {
+            mainCameraActor->SetLookTarget(player->GetCameraTargetComponent());
+            mainCameraActor->SetCameraMode(TPSCameraController::CameraMode::TPS);
+        }
+        break;
+    case TPSCameraController::CameraMode::BossBattle:
+        // ボス戦
+        if (mainCameraActor)
+        {
+            mainCameraActor->SetEye(player->GetCameraEyeComponent());
+            mainCameraActor->SetLookTarget(gruxEnemyActor->GetCameraTargetComponent());
+            mainCameraActor->SetCameraMode(TPSCameraController::CameraMode::BossBattle);
+        }
+        break;
     }
 }

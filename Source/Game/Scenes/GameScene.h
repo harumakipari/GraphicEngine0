@@ -22,6 +22,8 @@
 
 #include "PBD/PBDSystem.h"
 
+class GruxEnemy;
+
 class GameScene : public SceneBase
 {
 public:
@@ -48,6 +50,9 @@ public:
 
     // ボスの部屋の色のラープを開始する関数
     void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
+
+    // カメラのモードを変更する
+    void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
 private:
     struct SkyShaderConstants
     {
@@ -101,7 +106,12 @@ private:
     std::shared_ptr<Player> player;
     TPSCameraComponent* mainCameraComponent = nullptr;
 
+    std::shared_ptr<GruxEnemy> gruxEnemyActor;
+
     std::unique_ptr<ClothSimulate> clothSimulate;
+
+    // カメラ
+    std::shared_ptr<MainCamera> mainCameraActor;
 
     // ボスの部屋のラープのための変数
     std::unique_ptr<EasingRunner> bossLerpEasing;

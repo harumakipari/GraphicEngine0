@@ -27,6 +27,9 @@ public:
     // 攻撃開始時に始める処理
     void StartAttack();
 
+    // カメラの注視点の位置
+    const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
+
 private:
     // 攻撃が当たるタイミングで呼ばれる関数
     void DoAttackHit();
@@ -68,6 +71,9 @@ private:
     std::shared_ptr<SceneComponent> leftEyeSceneComponent;
     // 右目の位置用コンポーネントを追加　暗闇で光る目の表現用
     std::shared_ptr<SceneComponent> rightEyeSceneComponent;
+
+    // カメラの注視点の位置
+    std::shared_ptr<SceneComponent> cameraTargetComponent;
 
     friend class GruxEnemyEyeActor;
 };

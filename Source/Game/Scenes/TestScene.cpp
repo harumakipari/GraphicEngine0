@@ -103,7 +103,7 @@ void TestScene::SetUpActors()
         PROFILE_SCOPE("Create Player");
         Transform playerTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
         auto player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
-        mainCameraActor->SetTarget(player->GetRootComponent());
+        mainCameraActor->SetLookTarget(player->GetRootComponent());
         player->characterMovementComponent->SetUseGravity(false);
     }
     SetActiveCamera(mainCameraActor);

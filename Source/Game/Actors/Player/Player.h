@@ -108,6 +108,11 @@ public:
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
 
+    // カメラの目の位置を取得する
+    const std::shared_ptr<SceneComponent>& GetCameraEyeComponent() { return cameraEyeComponent; }
+    // カメラの注視点の位置
+    const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
+
 private:
     // プレイヤーのマックスHP
     int maxHp = 100;
@@ -193,7 +198,7 @@ public:
 
 private:
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
-    float hitStopTimer = 0.0f;// ヒットストップのタイマー
+    float hitStopTimer = 0.0f; // ヒットストップのタイマー
 
     DirectX::XMFLOAT3 prevSwordRootPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevSwordMidPos = { 0.0f,0.0f,0.0f };
@@ -215,6 +220,15 @@ private:
 
     // 剣の軌跡
     Trail trail;
+
+    // カメラの目の位置
+    std::shared_ptr<SceneComponent> cameraEyeComponent;
+    // カメラの注視点の位置
+    std::shared_ptr<SceneComponent> cameraTargetComponent;
+    // ボス戦時のオフセット
+    float bossBattleCameraDistance = -4.0f;
+    DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,2.0f,0.0f };
+
 
     friend class PlayerStateBase;
 };

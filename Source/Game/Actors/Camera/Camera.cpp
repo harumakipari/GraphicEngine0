@@ -17,7 +17,7 @@ void MainCamera::Update(float deltaTime)
     // ƒvƒŒƒCƒ„[ˆÚ“®•ûŒü
     XMFLOAT3 moveDir = {};
 
-    if (auto target = tpsController.target.lock())
+    if (auto target = tpsController.targetComponent.lock())
     {
         auto actor = target->GetOwner();
 

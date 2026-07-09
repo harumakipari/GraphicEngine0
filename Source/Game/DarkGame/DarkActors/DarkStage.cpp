@@ -13,12 +13,12 @@
 
 void DarkStage::Initialize(const Transform& transform)
 {
-    // //影用のスタティックメッシュコンポーネントを追加
+    //影用のスタティックメッシュコンポーネントを追加
     std::shared_ptr<StaticMeshComponent> castStaticMeshComponent = this->AddComponent<class StaticMeshComponent>("castShadowModel", parentName);
-    castStaticMeshComponent->SetModel("./Data/Models/DarkStageShadowModel/DarkStageShadowModel.glb");
+    castStaticMeshComponent->SetModel("./Data/Models/DarkStageShadowModel/DarkStageShadowModel.glb", false, true);
     castStaticMeshComponent->SetIsOnlyShadow(true);
     castStaticMeshComponent->SetIsVisible(false);
-    
+
 #if 1
     {
         PROFILE_SCOPE("Create StageCollision");

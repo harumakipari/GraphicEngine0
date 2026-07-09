@@ -95,9 +95,19 @@ public:
             static_cast<TPSCameraComponent*>(mainCameraComponent.get());
     };
 
-    void SetTarget(const std::shared_ptr<SceneComponent>& target)
+    void SetLookTarget(const std::shared_ptr<SceneComponent>& target)
     {
-        tpsController.target = target;
+        tpsController.targetComponent = target;
+    }
+
+    void SetEye(const std::shared_ptr<SceneComponent>& eye)
+    {
+        tpsController.eyeComponent = eye;
+    }
+
+    void SetCameraMode(TPSCameraController::CameraMode cameraMode)
+    {
+        tpsController.cameraMode = cameraMode;
     }
 
     //更新処理
@@ -135,6 +145,7 @@ public:
     {
         tpsController.SetLockTarget(target);
     }
+
 
     void ClearLockTarget()
     {
@@ -179,7 +190,7 @@ public:
 
     void SetTarget(const std::shared_ptr<SceneComponent>& target)
     {
-        tpsController.target = target;
+        tpsController.targetComponent = target;
     }
 
     //更新処理

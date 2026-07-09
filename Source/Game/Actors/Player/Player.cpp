@@ -385,16 +385,6 @@ void Player::Initialize(const Transform& transform)
         ghost.swordMeshComp->overrideDeferredPipelineName = "PlayerSwordGhostPS";
     }
 
-#if 0
-    auto bowMeshComponent = this->AddComponent<SkeletalMeshComponent>("Bow", parentName);
-    bowMeshComponent->SetModel("./Data/Models/Weapons/PlayerBow/AnimationBow.gltf", false, true);
-
-    // 武器アニメーションコントローラーを作成
-    auto weaponController = std::make_shared<AnimationController>(bowMeshComponent.get());
-    weaponController->AddAnimation("Bow", 0);
-    AddAnimationController("Weapon", weaponController);
-    PlayAnimation("Weapon", "Bow");
-#endif // 0
     // 火花エフェクト用のコンポーネントを追加
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
@@ -406,9 +396,14 @@ void Player::Initialize(const Transform& transform)
     runAudioComp->SetVolume(0.3f);
     runAudioComp->SetLoop(true);
 
+    // カメラの目の位置のコンポーネントを追加
+    cameraEyeComponent = AddComponent<SceneComponent>("cameraEyeComponent", parentName);
+
+    // カメラの注視点の位置のコンポーネントを追加
+    cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
+
     // 軌跡初期化
     trail.Initialize();
-
 }
 
 
@@ -420,6 +415,24 @@ void Player::Update(float deltaTime)
     {
         stateMachine_->ChangeState("Rush");
     }
+
+    // ボス戦時のカメラのeyeの位置を更新する
+    if (auto gruxEnemy = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
+    {
+        DirectX::XMFLOAT3 bossPos = gruxEnemy->GetPosition();
+        DirectX::XMFLOAT3 playerPos = GetPosition();
+        DirectX::XMFLOAT3 toEnemyDir = MathHelper::Subtract(bossPos, playerPos);
+        toEnemyDir = MathHelper::Normalize(toEnemyDir);
+        DirectX::XMFLOAT3 eyePos = MathHelper::Add(
+            MathHelper::Add(
+                playerPos,
+                MathHelper::Multiply(toEnemyDir, bossBattleCameraDistance)
+            ),
+            bossBattleCameraOffset
+        );
+        cameraEyeComponent->SetWorldLocationDirect(eyePos);
+    }
+
 
     HitResultWithActor hit;
 
@@ -630,6 +643,8 @@ void Player::DrawImGuiDetails()
     ImGui::DragFloat(U8("剣の残像の輪郭"), &ghostEdgeWidth);
     ImGui::ColorEdit3(U8("剣の残像のエッジの色"), &ghostEdgeColor.x);
     ImGui::ColorEdit3(U8("剣の残像の内部の色"), &ghostInnerColor.x);
+    ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
+    ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
     Character::DrawImGuiDetails();
 #endif
 }
