@@ -24,6 +24,11 @@ void DarkStagePointLightActor::Initialize(const Transform& transform)
     sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.02f,0.01f });
     sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
     sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 10.0f;
+    PipeLineStateDesc pipeLineState;
+    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/InstancePointLightModelPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    sphereMeshComponent->SetPipeLineState(pipeLineState);
+
 #endif // 0
 
 }

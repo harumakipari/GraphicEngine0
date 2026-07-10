@@ -81,6 +81,12 @@ void DarkStageGroundBrazierActor::Initialize(const Transform& transform)
         sphereMeshComponent->SetModel("./Data/Models/Primitives/frame.glb");
         sphereMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
         sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.02f,0.01f });
+
+        PipeLineStateDesc pipeLineState;
+        HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/InstancePointLightModelPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+        sphereMeshComponent->SetPipeLineState(pipeLineState);
+
         DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
         pos.y += 0.1f;
         sphereMeshComponent->SetRelativeLocationDirect(pos);

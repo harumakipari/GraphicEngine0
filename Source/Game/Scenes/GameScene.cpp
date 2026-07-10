@@ -43,7 +43,8 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     loadStageAssetsThread = std::thread([&]()
         {
             PROFILE_SCOPE("Load StageAssetModel");
-            stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            //stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
             stageCandelabraAsset->spawnPoints = stageCandelabraAsset->model->spawnPoints;
 
             stageBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Brazier/Brazier.gltf", ModelTypes::ModelMode::StaticMesh, false, true);

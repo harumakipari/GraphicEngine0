@@ -37,6 +37,11 @@ void DarkStageChandelierActor::Initialize(const Transform& transform)
         sphereMeshComponent->SetModel("./Data/Models/Primitives/frame.glb");
         sphereMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
         sphereMeshComponent->SetRelativeScaleDirect(initFireScale);
+        PipeLineStateDesc pipeLineState;
+        HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/InstancePointLightModelPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+        sphereMeshComponent->SetPipeLineState(pipeLineState);
+
         DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
         pos.y = -1.5f; // ‚ë‚¤‚»‚­‚ÌˆÊ’u‚É‡‚í‚¹‚Ä”÷’²®
         sphereMeshComponent->SetRelativeLocationDirect(pos);

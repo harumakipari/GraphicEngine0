@@ -157,9 +157,9 @@ void SceneRenderer::RenderBlend(ID3D11DeviceContext* immediateContext, const std
 
 void SceneRenderer::RenderInstanced(ID3D11DeviceContext* immediateContext, const std::vector<InstanceBatch>& batches)
 {
-    instanceData.clear();
     for (const auto& batch : batches)
     {
+        instanceData.clear();
         for (auto* instance : batch.instances)
         {
             InterleavedGltfModel::InstanceData data{};
@@ -174,11 +174,11 @@ void SceneRenderer::RenderInstanced(ID3D11DeviceContext* immediateContext, const
         hr = immediateContext->Map(batch.model->instanceBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD,
             0, &mapped_subresource);
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
+        _ASSERT(instanceData.size() <= 1000);
         memcpy_s(mapped_subresource.pData, sizeof(InterleavedGltfModel::InstanceData) * 1000, instanceData.data(), sizeof(InterleavedGltfModel::InstanceData) * instanceData.size());
         batch.model->instanceCount_ = static_cast<int>(instanceData.size());
         immediateContext->Unmap(batch.model->instanceBuffer.Get(), 0);
-        batch.model->InstancedStaticBatchRender(immediateContext, InterleavedGltfModel::RenderPass::All, pipeLineState);
+        batch.model->InstancedStaticBatchRender(immediateContext, InterleavedGltfModel::RenderPass::All, batch.pipeline);
     }
 }
 
@@ -1084,6 +1084,7 @@ RenderQueues SceneRenderer::BuildRenderQueues()
                         if (batch.model == model.get())
                         {
                             batch.instances.push_back(instanceMesh);
+                            batch.pipeline = instanceMesh->GetPipeLineState();
                             found = true;
                             break;
                         }

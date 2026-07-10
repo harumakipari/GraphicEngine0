@@ -36,7 +36,7 @@ public:
     void DrawImGuiDetails() override;
 private:
     // C‘ä‚Ìƒ‚ƒfƒ‹
-    std::shared_ptr<SkeletalMeshComponent> candelabraMeshComponent;
+    std::shared_ptr<MeshComponent> candelabraMeshComponent;
     std::vector<MeshComponent*> flameComponents; // ‰Š‚Ìƒ‚ƒfƒ‹
     std::vector<DirectX::XMFLOAT3> flameBasePositions;// ‰Š‚Ì‰ŠúˆÊ’u
 };

@@ -90,8 +90,7 @@ DirectX::XMFLOAT3 CameraComponent::GetRight() const
     DirectX::XMFLOAT3 up = { 0,1,0 };
 
     return MathHelper::Normalize(
-        MathHelper::Cross(GetForward(), up));
-        //MathHelper::Cross(up, GetForward()));
+        MathHelper::Cross(up, GetForward()));
 }
 
 ViewConstants CameraComponent::GetViewConstants()

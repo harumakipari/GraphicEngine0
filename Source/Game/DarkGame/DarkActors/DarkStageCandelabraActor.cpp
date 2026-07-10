@@ -13,9 +13,17 @@ void DarkStageCandelabraActor::SetModel(const std::shared_ptr<StageAsset>& stage
     std::string parentName = "candelabraMesh";
 
     // 燭台のモデルを追加
-    candelabraMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+    //candelabraMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+    //candelabraMeshComponent->model = stageAsset->model;
+    //candelabraMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+
+    candelabraMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
     candelabraMeshComponent->model = stageAsset->model;
     candelabraMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+    PipeLineStateDesc pipeLineState;
+    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/GltfModelInstancedBatchingPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    candelabraMeshComponent->SetPipeLineState(pipeLineState);
 
 
 #if 0
@@ -49,7 +57,6 @@ void DarkStageCandelabraActor::SetModel(const std::shared_ptr<StageAsset>& stage
         pointLightComponent->SetRelativeLocationDirect(pos);
         // ライトの名前からライトマネージャーの共有ライトを取得して設定
         pointLightComponent->SetSharedLightName(light.name);
-
     }
 
     for (auto point : stageAsset->spawnPoints)
@@ -59,6 +66,11 @@ void DarkStageCandelabraActor::SetModel(const std::shared_ptr<StageAsset>& stage
         sphereMeshComponent->SetModel("./Data/Models/Primitives/frame.glb");
         sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
         sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.02f,0.01f });
+        PipeLineStateDesc pipeLineState;
+        HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/InstancePointLightModelPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+        sphereMeshComponent->SetPipeLineState(pipeLineState);
+
         DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
         pos.y += 0.1f;
         sphereMeshComponent->SetRelativeLocationDirect(pos);
@@ -178,6 +190,11 @@ void DarkStageCandleStandActor::SetModel(const std::shared_ptr<StageAsset>& stag
         sphereMeshComponent->SetModel("./Data/Models/Primitives/frame.glb");
         sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
         sphereMeshComponent->SetRelativeScaleDirect(initFireScale);
+        PipeLineStateDesc pipeLineState;
+        HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/InstancePointLightModelPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+        sphereMeshComponent->SetPipeLineState(pipeLineState);
+
         DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
         pos.y += 0.18f;
         sphereMeshComponent->SetRelativeLocationDirect(pos);
