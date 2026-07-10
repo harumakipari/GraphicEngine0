@@ -21,8 +21,11 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
 
     // 左目の描画用コンポーネントを追加　横に光るフレアの表現用
     leftEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("leftEyeFlare", "leftEye");
-    leftEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
-    leftEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeFlarePS";
+    //leftEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
+    leftEyeFlareMeshComponent->SetModel("./Data/Models/ParticleMesh/StarPlane.gltf");
+    //leftEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeFlarePS";
+    leftEyeFlareMeshComponent->overrideDeferredPipelineName = "StarEyeOpaquePS";
+    leftEyeFlareMeshComponent->overrideForwardPipelineName = "StarEyeOpaquePS";
     leftEyeFlareMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
     leftEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
     leftEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
@@ -41,8 +44,10 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
 
     // 右目の描画用コンポーネントを追加　横に光るフレアの表現用
     rightEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("rightEyeFlare", "rightEye");
-    rightEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
-    rightEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeFlarePS";
+    //rightEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
+    rightEyeFlareMeshComponent->SetModel("./Data/Models/ParticleMesh/StarPlane.gltf");
+    rightEyeFlareMeshComponent->overrideDeferredPipelineName = "StarEyeOpaquePS";
+    rightEyeFlareMeshComponent->overrideForwardPipelineName = "StarEyeOpaquePS";
     rightEyeFlareMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
     rightEyeFlareMeshComponent->SetRelativeScaleDirect({ 0.1f,0.1f,0.1f });
     rightEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
@@ -92,7 +97,7 @@ void GruxEnemyEyeActor::Update(float elapsedTime)
     float maxScale = 1.2f;
     //eyeFlareScale.y *= 0.02f;
     //eyeFlareScale.z *= 0.02f;
-    eyeFlareScale.x = std::lerp(0.0f, maxScale, eyeFlareScaleEasingFactor);
+    //eyeFlareScale.x = std::lerp(0.0f, maxScale, eyeFlareScaleEasingFactor);
     leftEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
     rightEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
 }

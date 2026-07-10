@@ -364,6 +364,9 @@
     <ClCompile Include="Source\Graphics\Renderer\TrailRenderer.cpp">
       <Filter>Source\Graphics\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Scenes\TitleScene.cpp">
+      <Filter>Source\Game\Scenes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -1179,6 +1182,12 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\GltfModelInstancedBatchingPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\GltfModelPlayerWeaponForwardPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\StarEyeOpaquePS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
   </ItemGroup>

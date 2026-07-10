@@ -101,6 +101,7 @@ public:
             ImGui::ColorEdit4("cpuColor", &plusAlphaCBuffer->data.cpuColor.x);
             ImGui::SliderFloat("emissionPower", &plusAlphaCBuffer->data.emissionPower, 0.0f, 50.0f);
             ImGui::SliderFloat4("morphWeight", &plusAlphaCBuffer->data.morphWeights.x, 0.0f, 1.0f);
+            ImGui::SliderFloat("value", &plusAlphaCBuffer->data.flashValue, 0.0f, 20.0f);
             const char* objectTypes[] =
             {
                 "Default",

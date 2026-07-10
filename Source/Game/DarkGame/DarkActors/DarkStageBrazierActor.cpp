@@ -10,12 +10,18 @@ void DarkStageBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAss
     std::string parentName = "candelabraMesh";
 
     // 火鉢のモデルを追加
-    brazierMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    brazierMeshComponent->SetModel("./Data/Models/DarkStageAssets/Brazier/Brazier.gltf");
+    //brazierMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+    //brazierMeshComponent->SetModel("./Data/Models/DarkStageAssets/Brazier/Brazier.gltf");
+    //brazierMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+
+    brazierMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
+    brazierMeshComponent->model = stageAsset->model;
     brazierMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-
-    auto scene = dynamic_cast<SceneBase*>(Scene::GetCurrentScene());
-
+    brazierMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
+    PipeLineStateDesc pipeLineState;
+    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/GltfModelInstancedBatchingPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    brazierMeshComponent->SetPipeLineState(pipeLineState);
 
     auto lightsData = brazierMeshComponent->model->GetPointLights();
     // ポイントライトコンポーネントを追加
@@ -63,11 +69,19 @@ void DarkStageMeltedWaxActor::SetModel(const std::shared_ptr<StageAsset>& stageA
     std::string parentName = "metedWaxMesh";
 
     // 溶けた蝋のモデルを追加
-    metedWaxMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    metedWaxMeshComponent->SetModel("./Data/Models/DarkStageAssets/MeltedWax/MeltedWax.gltf");
+    //metedWaxMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+    //metedWaxMeshComponent->SetModel("./Data/Models/DarkStageAssets/MeltedWax/MeltedWax.gltf");
+    //metedWaxMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+    //metedWaxMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
+
+    metedWaxMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
+    metedWaxMeshComponent->model = stageAsset->model;
     metedWaxMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
     metedWaxMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
-
+    PipeLineStateDesc pipeLineState;
+    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/GltfModelInstancedBatchingPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    metedWaxMeshComponent->SetPipeLineState(pipeLineState);
 
     auto lightsData = metedWaxMeshComponent->model->GetPointLights();
     // ポイントライトコンポーネントを追加
@@ -85,25 +99,6 @@ void DarkStageMeltedWaxActor::SetModel(const std::shared_ptr<StageAsset>& stageA
         pointLightComponent->SetSharedLightName(light.name);
     }
 
-    for (auto point : metedWaxMeshComponent->model->spawnPoints)
-    {
-        // エミッションを発生させるためにモデルを追加
-        auto sphereMeshComponent = this->AddComponent<InstanceMeshComponent>("sphereMeshComponent", parentName);
-        sphereMeshComponent->SetModel("./Data/Models/Primitives/frame.glb");
-        sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-        sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.02f,0.01f });
-        PipeLineStateDesc pipeLineState;
-        HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/InstancePointLightModelPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        sphereMeshComponent->SetPipeLineState(pipeLineState);
-
-        DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-        pos.y += 0.1f;
-        sphereMeshComponent->SetRelativeLocationDirect(pos);
-        sphereMeshComponent->SetRelativeRotationDirect(point.worldRotation);
-        sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-        sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-    }
 
 }
 
@@ -113,11 +108,18 @@ void DarkStageStandingBrazierActor::SetModel(const std::shared_ptr<StageAsset>& 
     std::string parentName = "standingBrazierMesh";
 
     // スタンド式火鉢のモデルを追加
-    standingBrazierMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    standingBrazierMeshComponent->SetModel("./Data/Models/DarkStageAssets/StandingBrazier/StandingBrazier.gltf");
-    standingBrazierMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+    //standingBrazierMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+    //standingBrazierMeshComponent->SetModel("./Data/Models/DarkStageAssets/StandingBrazier/StandingBrazier.gltf");
+    //standingBrazierMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
 
-    auto scene = dynamic_cast<SceneBase*>(Scene::GetCurrentScene());
+    standingBrazierMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
+    standingBrazierMeshComponent->model = stageAsset->model;
+    standingBrazierMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+    standingBrazierMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
+    PipeLineStateDesc pipeLineState;
+    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/GltfModelInstancedBatchingPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    standingBrazierMeshComponent->SetPipeLineState(pipeLineState);
 
 
     auto lightsData = standingBrazierMeshComponent->model->GetPointLights();
@@ -137,23 +139,6 @@ void DarkStageStandingBrazierActor::SetModel(const std::shared_ptr<StageAsset>& 
 
     }
 
-#if 0
-    for (auto point : standingBrazierMeshComponent->model->spawnPoints)
-    {
-        // エミッションを発生させるためにモデルを追加
-        auto sphereMeshComponent = this->AddComponent<SkeletalMeshComponent>("sphereMeshComponent", parentName);
-        sphereMeshComponent->SetModel("./Data/Models/Primitives/Sphere.glb");
-        sphereMeshComponent->overrideDeferredPipelineName = "pointLightSkeletalMesh";
-        sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-        sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.01f,0.01f });
-        DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-        pos.y += 0.1f;
-        sphereMeshComponent->SetRelativeLocationDirect(pos);
-        sphereMeshComponent->SetRelativeRotationDirect(point.worldRotation);
-        sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-        sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-    }
-#else
     for (auto point : standingBrazierMeshComponent->model->spawnPoints)
     {
         // エミッションを発生させるためにモデルを追加
@@ -173,6 +158,5 @@ void DarkStageStandingBrazierActor::SetModel(const std::shared_ptr<StageAsset>& 
         sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
         sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
     }
-#endif // 0
 
 }

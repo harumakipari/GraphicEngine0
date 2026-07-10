@@ -26,7 +26,6 @@ void DarkStageCandelabraActor::SetModel(const std::shared_ptr<StageAsset>& stage
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     candelabraMeshComponent->SetPipeLineState(pipeLineState);
 
-
 #if 0
     // サイズを取得
     DirectX::XMFLOAT3 size = stageAsset->model->GetModelSize();
@@ -163,10 +162,20 @@ void DarkStageCandleStandActor::SetModel(const std::shared_ptr<StageAsset>& stag
 {
     std::string parentName = "candleStand";
 
-    meshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+    //meshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+    //meshComponent->model = stageAsset->model;
+    //meshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+    //meshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
+
+    meshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
     meshComponent->model = stageAsset->model;
     meshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
     meshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
+    PipeLineStateDesc pipeLineState;
+    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/GltfModelInstancedBatchingPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    meshComponent->SetPipeLineState(pipeLineState);
+
 
     auto lightsData = meshComponent->model->GetPointLights();
     // ポイントライトコンポーネントを追加

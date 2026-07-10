@@ -9,10 +9,9 @@ public:
     virtual ~DarkStageBrazierActor() = default;
     void Initialize(const Transform& transform)override {}
     void SetModel(const std::shared_ptr<StageAsset>& stageAsset);
-
 private:
     // 火鉢のモデル
-    std::shared_ptr<SkeletalMeshComponent> brazierMeshComponent;
+    std::shared_ptr<MeshComponent> brazierMeshComponent;
 };
 
 // 溶けた蝋のモデル
@@ -23,10 +22,9 @@ public:
     virtual ~DarkStageMeltedWaxActor() = default;
     void Initialize(const Transform& transform)override {}
     void SetModel(const std::shared_ptr<StageAsset>& stageAsset);
-
 private:
     // 溶けた蝋のモデル
-    std::shared_ptr<SkeletalMeshComponent> metedWaxMeshComponent;
+    std::shared_ptr<MeshComponent> metedWaxMeshComponent;
 };
 
 // スタンド式火鉢のモデル
@@ -37,9 +35,8 @@ public:
     virtual ~DarkStageStandingBrazierActor() = default;
     void Initialize(const Transform& transform)override {}
     void SetModel(const std::shared_ptr<StageAsset>& stageAsset);
-
 private:
     // スタンド式火鉢のモデル
-    std::shared_ptr<SkeletalMeshComponent> standingBrazierMeshComponent;
+    std::shared_ptr<MeshComponent> standingBrazierMeshComponent;
 };
 

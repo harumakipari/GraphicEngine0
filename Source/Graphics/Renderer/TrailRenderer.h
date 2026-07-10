@@ -16,7 +16,7 @@ public:
     {
         DirectX::XMFLOAT3 tip;
         DirectX::XMFLOAT3 root;
-        float life; // 残り時間
+        float life = 0.5f; // 残り時間
     };
     std::vector<TrailPoint> trailPoints;
 
@@ -37,6 +37,8 @@ private:
     std::vector<TrailVertex> vertices;
     size_t maxPoints = 1500; /**< 内部で扱える最大頂点数 */
 
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> noise2d;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> noise3d;
 
     // バッファ/シェーダ/入力レイアウト
     Microsoft::WRL::ComPtr<ID3D11Buffer> vertexBuffer;

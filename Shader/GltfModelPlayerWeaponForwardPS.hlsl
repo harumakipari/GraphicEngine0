@@ -151,7 +151,6 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         }
     }
 #endif
-    
 
 #if 1   // âÊëúÉxÅ[ÉXÇÃè∆ñæ
     float3 iblDiffuse = IblRadianceLambertian(N, V, roughnessFactor, cDiff, f0) * iblIntensity;
@@ -165,8 +164,8 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
 
     float3 emissive = emissiveFactor;
 #if 1
-    float rimPower = lightDirection.w;
-    float3 rim = CalcRimLight(N, V, rimColor.rgb, rimPower) * rimIntensity;
+    float rimPower = flashValue;
+    float3 rim = CalcRimLight(N, V, cpuColor.rgb, rimPower) * emissionPower;
 #endif
     float3 Lo = totalDiffuse + totalSpecular + emissive + rim;
 	

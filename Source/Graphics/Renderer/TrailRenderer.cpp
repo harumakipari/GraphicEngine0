@@ -1,6 +1,11 @@
 #include "pch.h"
 #include "TrailRenderer.h"
 
+#include <DDSTextureLoader.h>
+
+#include "Graphics/Core/RenderState.h"
+#include "Graphics/Resource/Texture.h"
+
 // Catmull- Rom 補完関数
 static DirectX::XMVECTOR CatmullRom(DirectX::XMVECTOR p0,DirectX::XMVECTOR p1,DirectX::XMVECTOR p2,DirectX::XMVECTOR p3,float t)
 {
@@ -60,7 +65,13 @@ void Trail::Initialize()
     hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/TrailPS.cso", pixelShader.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
+    D3D11_TEXTURE2D_DESC texture2dDesc;
+    hr = LoadTextureFromFile(Graphics::GetDevice(), L"./Data/ShaderTextures/noise1.png", noise2d.ReleaseAndGetAddressOf(), &texture2dDesc);
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
+    Microsoft::WRL::ComPtr<ID3D11Resource> resource;
+    hr = DirectX::CreateDDSTextureFromFile(Graphics::GetDevice(), L"./Data/ShaderTextures/_noise_3d.dds", resource.ReleaseAndGetAddressOf(), noise3d.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
 
@@ -165,6 +176,13 @@ void Trail::Render(ID3D11DeviceContext* immediateContext)
     D3D11_MAPPED_SUBRESOURCE mappedSubresource{};
     hr = immediateContext->Map(vertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+    // シェーダーリソースを送る
+    immediateContext->PSSetShaderResources(30, 1, noise2d.GetAddressOf());
+    immediateContext->PSSetShaderResources(31, 1, noise3d.GetAddressOf());
+
+    RenderState::BindBlendState(immediateContext, BLEND_STATE::ADD);
+    RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
 
     std::memcpy(mappedSubresource.pData, vertices.data(), sizeof(TrailVertex) * vertices.size());
     immediateContext->Unmap(vertexBuffer.Get(), 0);

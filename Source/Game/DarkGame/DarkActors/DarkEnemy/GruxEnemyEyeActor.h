@@ -9,9 +9,7 @@ public:
     GruxEnemyEyeActor() = default;
     ~GruxEnemyEyeActor() override {}
 
-    GruxEnemyEyeActor(const std::string& modelName) :Actor(modelName)
-    {
-    }
+    GruxEnemyEyeActor(const std::string& modelName) :Actor(modelName) {}
 
     //コピーコンストラクタとコピー代入演算子を禁止にする
     GruxEnemyEyeActor(const GruxEnemyEyeActor&) = delete;
@@ -52,8 +50,10 @@ private:
     float emissionEyeFlareFactor = 10.0f;
 
     DirectX::XMFLOAT4 eyeColor = { 0.011f,0.034f,0.0f,1.0f };
-    DirectX::XMFLOAT3 eyeFlareScale = { 0.0f,1.0f,0.05f };
-    DirectX::XMFLOAT3 eyeFlareDegreeAngle = { 8.0f,90.0f,0.0f };
+    //DirectX::XMFLOAT3 eyeFlareScale = { 0.0f,1.0f,0.05f };
+    //DirectX::XMFLOAT3 eyeFlareDegreeAngle = { 8.0f,90.0f,0.0f };
+    DirectX::XMFLOAT3 eyeFlareScale = { 0.05f,1.05f,0.1f };
+    DirectX::XMFLOAT3 eyeFlareDegreeAngle = { 0.0f,0.0f,-90.0f };
 
     std::function<void()> onFinished;  // 目玉のフレアの演出が終わった時に呼び出す関数
     float eyeFlareScaleEasingFactor = 0.0f;
@@ -69,5 +69,5 @@ private:
 
 
     // 調整値
-    
+
 };

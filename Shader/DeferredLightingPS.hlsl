@@ -45,14 +45,12 @@ float4 main(VS_OUT pin) : SV_TARGET
         return float4(emissive * 6.0, 1); // ‚±‚êsphereEmissive‚ÉŽg—p
     }
 
-
     // –Ú‚¾‚¯’Ç‰Á
     if (materialType == MATERIAL_EYE)
     {
         float mask = step(0.8, baseColor.r);
         emissive += mask * float3(10, 0, 0);
     }
-
 
     const float3 f0 = lerp(0.04, baseColor.rgb, metallicFactor);
     const float3 f90 = 1.0;

@@ -120,11 +120,18 @@
   "images": [
     {
       "uri": "..\\ParticleMesh\\starClear.png"
+    },
+    {
+      "uri": "starOpacity.png"
     }
   ],
   "materials": [
     {
+      "alphaMode": "BLEND",
       "name": "Material.001",
+      "normalTexture": {
+        "index": 1
+      },
       "pbrMetallicRoughness": {
         "baseColorFactor": [
           1.0,
@@ -196,6 +203,10 @@
     {
       "sampler": 0,
       "source": 0
+    },
+    {
+      "sampler": 0,
+      "source": 1
     }
   ]
 }

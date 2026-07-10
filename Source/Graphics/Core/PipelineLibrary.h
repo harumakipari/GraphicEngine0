@@ -367,13 +367,22 @@ public:
             AddPipeLineState("forwardBlendSkeletalMesh", desc);
         }
 
-        // SkeletalMesh forward Blend 用
+        // SkeletalMesh GltfModelPlayerWeaponForwardPS forward Blend 用
         {
-            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelForwardTransparencyPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPlayerWeaponForwardPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
-            AddPipeLineState("forwardBlendSkeletalMesh", desc);
+            AddPipeLineState("GltfModelPlayerWeaponForwardPS", desc);
+        }
+
+        // SkeletalMesh StarEyeOpaquePS forward Blend 用
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/StarEyeOpaquePS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
+            AddPipeLineState("StarEyeOpaquePS", desc);
         }
 
         // SkeletalMesh PlayerSwordGhostPS forward Blend 用
@@ -417,6 +426,7 @@ public:
             desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
             AddPipeLineState("EnemyEyeFlarePS", desc);
         }
+
 
         // deferred キャラクターの髪の毛とかファー 用
         {

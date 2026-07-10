@@ -12,5 +12,5 @@ public:
 
 private:
     // ’n–Ê‚Ì‰Î”«‚Ìƒ‚ƒfƒ‹
-    std::shared_ptr<SkeletalMeshComponent> brazierMeshComponent;
+    std::shared_ptr<MeshComponent> brazierMeshComponent;
 };

@@ -209,15 +209,20 @@ private:
     float swordGhostElapsedTime = 0.0f;
     int swordGhostIndex = 0;
     float ghostInterval = 0.015f; // 残像を出す間隔
+    float ghostFadeTime = 0.6f; // 残像が残る時間
     DirectX::XMFLOAT3 swordGhostColor = { 0.5f,0.8f,1.6f }; // 残像の剣のベースカラー
     float swordGhostEmissive = 2.0f;    // 残像のemissiveColor
     bool isAttackActive = false;    // プレイヤーが攻撃状態に入る
     DirectX::XMFLOAT3 ghostEdgeColor = { 0.0f,0.042f,0.253f };  // 残像の剣のベースカラー
     DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 残像の剣のベースカラー
     float ghostEdgeWidth = 1.0f; // 残像の輪郭
+    DirectX::XMFLOAT4X4 prevSwordWorld; // 前回の姿勢
+    bool isPrevSwordWorldValid = false;
 
     // 剣の軌跡
     Trail trail;
+    float trailRemainTime = 0.8f; // 残像が残る時間
+
 
     // カメラの目の位置
     std::shared_ptr<SceneComponent> cameraEyeComponent;

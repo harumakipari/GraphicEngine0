@@ -7,19 +7,32 @@
 
 void DarkStageGroundBrazierActor::Initialize(const Transform& transform)
 {
+
+}
+
+
+void DarkStageGroundBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAsset)
+{
     std::string parentName = "candelabraMesh";
 
     // 火鉢のモデルを追加
-    brazierMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    brazierMeshComponent->SetModel("./Data/Models/DarkStageAssets/GroundBrazier/groundBrazier.gltf", false, true);
-    brazierMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+    //brazierMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+    //brazierMeshComponent->SetModel("./Data/Models/DarkStageAssets/GroundBrazier/groundBrazier.gltf", false, true);
+    //brazierMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
 
+    brazierMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
+    brazierMeshComponent->model = stageAsset->model;
+    brazierMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
+    brazierMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
+    PipeLineStateDesc pipeLineState;
+    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/GltfModelInstancedBatchingPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    brazierMeshComponent->SetPipeLineState(pipeLineState);
 
     // 炎のエフェクト
     auto frameEffect = this->AddComponent<ParticleComponent>("FireFrameEffect", parentName);
     frameEffect->Load("./Data/Effect/Files/DarkStageFrameEffect.json");
-    int socketNode = brazierMeshComponent->model->FindNodeIndexByName("P_Fire");
-    frameEffect->AttachToComponent(brazierMeshComponent, socketNode); // "P_Fire"
+    frameEffect->SetRelativeLocationDirect({ 0.0f,0.8f,0.0f });
     frameEffect->Play();
 
 #if 0
@@ -40,7 +53,6 @@ void DarkStageGroundBrazierActor::Initialize(const Transform& transform)
 #endif // 0
 
 
-    auto scene = dynamic_cast<SceneBase*>(Scene::GetCurrentScene());
 
 
     auto lightsData = brazierMeshComponent->model->GetPointLights();
@@ -62,20 +74,6 @@ void DarkStageGroundBrazierActor::Initialize(const Transform& transform)
 
     for (auto point : brazierMeshComponent->model->spawnPoints)
     {
-#if 0
-        // エミッションを発生させるためにモデルを追加
-        auto sphereMeshComponent = this->AddComponent<SkeletalMeshComponent>("sphereMeshComponent", parentName);
-        sphereMeshComponent->SetModel("./Data/Models/Primitives/Sphere.glb");
-        sphereMeshComponent->overrideDeferredPipelineName = "pointLightSkeletalMesh";
-        sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-        sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.01f,0.01f });
-        DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-        pos.y += 0.1f;
-        sphereMeshComponent->SetRelativeLocationDirect(pos);
-        sphereMeshComponent->SetRelativeRotationDirect(point.worldRotation);
-        sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-        sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-#else
         // エミッションを発生させるためにモデルを追加
         auto sphereMeshComponent = this->AddComponent<InstanceMeshComponent>("sphereMeshComponent", parentName);
         sphereMeshComponent->SetModel("./Data/Models/Primitives/frame.glb");
@@ -93,14 +91,6 @@ void DarkStageGroundBrazierActor::Initialize(const Transform& transform)
         sphereMeshComponent->SetRelativeRotationDirect(point.worldRotation);
         sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
         sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
-#endif // 0
 
     }
-}
-
-
-void DarkStageGroundBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAsset)
-{
-
-
 }

@@ -365,8 +365,11 @@ void Player::Initialize(const Transform& transform)
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSwordGhost/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
     //swordMeshComponent->overrideDeferredPipelineName = "DarkStagePlayerWeaponPS";
-    swordMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.0f,0.16f,0.8f ,0.0f };
-
+    swordMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.0f,0.8f,1.0f ,0.0f };
+    swordMeshComponent->plusAlphaCBuffer->data.flashValue = 9.5f;
+    swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 8.5f;
+    swordMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerWeaponForwardPS";
+    swordMeshComponent->overrideForwardPipelineName = "GltfModelPlayerWeaponForwardPS";
 
     // 剣を背中に背負ったとき用の剣のメッシュコンポーネント
     int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");
@@ -456,7 +459,6 @@ void Player::Update(float deltaTime)
     prevSwordMidPos = swordMidPos;
     prevSwordTipPos = swordTipPos;
 
-
     if (isHit)
     {
         Logger::Log(U8("剣に敵が当たった"));
@@ -467,30 +469,59 @@ void Player::Update(float deltaTime)
 
     if (isAttackActive)
     {
+        XMFLOAT4X4 currentWorld = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+
+        if (!isPrevSwordWorldValid)
+        {
+            prevSwordWorld = currentWorld;
+            isPrevSwordWorldValid = true;
+        }
+
         // 軌跡を追加
-        trail.trailPoints.push_back({ swordTipPos,swordRootPos, 0.8f });
+        trail.trailPoints.push_back({ swordTipPos,swordRootPos, trailRemainTime });
+
+        XMFLOAT3 prevPos =
+        {
+            prevSwordWorld._41,
+            prevSwordWorld._42,
+            prevSwordWorld._43
+        };
+
+        XMFLOAT3 currentPos =
+        {
+            currentWorld._41,
+            currentWorld._42,
+            currentWorld._43
+        };
 
         swordGhostElapsedTime += deltaTime;
-        if (swordGhostElapsedTime >= ghostInterval)
+        while (swordGhostElapsedTime >= ghostInterval)
         {
-            swordGhostElapsedTime = 0.0f;
-            ghosts[swordGhostIndex].world = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+            swordGhostElapsedTime -= ghostInterval;
+
+            float t = 1.0f - swordGhostElapsedTime / deltaTime;
+
+            XMFLOAT3 pos = MathHelper::Lerp(prevPos, currentPos, t);
+
+            XMFLOAT4X4 world = currentWorld;
+            world._41 = pos.x;
+            world._42 = pos.y;
+            world._43 = pos.z;
+
+            ghosts[swordGhostIndex].world = world;
             ghosts[swordGhostIndex].alpha = 1.0f;
             ghosts[swordGhostIndex].isVisible = true;
-            //ghosts[swordGhostIndex].swordMeshComp->SetWorldMatrixDirect(ghosts[swordGhostIndex].world);
-            //ghosts[swordGhostIndex].swordMeshComp->UpdateTransformImmediate();
-            swordGhostIndex++;
-            if (swordGhostIndex >= ghosts.size())
-            {
-                swordGhostIndex = 0;
-            }
+
+            swordGhostIndex = (swordGhostIndex + 1) % ghosts.size();
         }
+        // 前回の姿勢を保存する
+        prevSwordWorld = currentWorld;
     }
 
     // 剣の残像用の剣のメッシュコンポーネント
     for (auto& ghost : ghosts)
     {
-        ghost.alpha -= deltaTime * 2.0f;
+        ghost.alpha -= deltaTime / ghostFadeTime;
 
         if (ghost.alpha <= 0)
         {
@@ -502,7 +533,6 @@ void Player::Update(float deltaTime)
 
         if (!ghost.isVisible)
             continue;
-
         if (ghost.swordMeshComp)
         {
             ghost.swordMeshComp->plusAlphaCBuffer->data.emissionPower = swordGhostEmissive;
@@ -535,7 +565,6 @@ void Player::Update(float deltaTime)
         swordCollisionComp->SetIsVisibleDebugShape(hitBox);
 
     FindInteractable();
-
 
     switch (swordState)
     {
@@ -661,6 +690,8 @@ void Player::DrawImGuiDetails()
 #ifdef USE_IMGUI
     ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
+    ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);
+    ImGui::DragFloat(U8("剣の残像が残る時間"), &ghostFadeTime, 0.1f);
     ImGui::ColorEdit3(U8("剣の残像の色"), &swordGhostColor.x);
     ImGui::DragFloat(U8("残像のemissiveColor"), &swordGhostEmissive, 0.1f);
     ImGui::DragFloat(U8("残像を出す間隔"), &ghostInterval, 0.001f, 0.0f, 1.0f, "%.5f");

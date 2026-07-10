@@ -2,11 +2,10 @@
 #include "imageBasedLighting.hlsli"
 #include "BidirectionalReflectanceDistributionFunction.hlsli"
 #include "Lights.hlsli"
-#include "ShaderFunctions.hlsli"
 
 #define BASE_COLOR_TEXTURE 0 
 #define METALLIC_ROUGHNESS_TEXTURE 1 
-#define NORMAL_TEXTURE 2 
+#define OPAQUE_TEXTURE 2 
 #define EMISSIVE_TEXTURE 3
 #define OCCLUSION_TEXTURE 4 
 Texture2D<float4> materialTextures[5] : register(t1);
@@ -24,6 +23,18 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         float4 sampled = materialTextures[BASE_COLOR_TEXTURE].Sample(samplerStates[ANISOTROPIC], pin.texcoord);
         sampled.rgb = pow(saturate(sampled.rgb), GAMMA);
         baseColorFactor *= sampled;
+    }
+
+    if (m.alphaMode == 2 /*BLEND*/)
+    {
+        float opacity = materialTextures[OPAQUE_TEXTURE].Sample(samplerStates[ANISOTROPIC], pin.texcoord).r;
+        baseColorFactor.a = opacity;
+    }
+
+    float alpha_cutoff = 0.5;
+    if (baseColorFactor.a < alpha_cutoff)
+    {
+        discard;
     }
 
     float3 emissiveFactor = m.emissiveFactor;
@@ -53,7 +64,7 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         occlusionFactor *= sampled.r;
     }
     const float occlusionStrength = m.occlusionTexture.strength;
-    
+
     const float3 f0 = lerp(0.04, baseColorFactor.rgb, metallicFactor);
     const float3 f90 = 1.0;
     const float alphaRoughness = roughnessFactor * roughnessFactor;
@@ -76,16 +87,6 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     }
     
     const int normalTexture = m.normalTexture.index;
-    if (normalTexture > -1)
-    {
-        float4 sampled = materialTextures[NORMAL_TEXTURE].Sample(samplerStates[LINEAR], pin.texcoord);
-        float3 normalFactor = sampled.xyz;
-        normalFactor = (normalFactor * 2.0) - 1.0;
-        normalFactor = normalize(normalFactor * float3(m.normalTexture.scale, m.normalTexture.scale, 1.0));
-        N = normalize((normalFactor.x * T) + (normalFactor.y * B) + (normalFactor.z * N));
-    }
-
-  
 #if 1
     // ì_åıåπÇÃèàóù
     float3 pointDiffuse = 0;
@@ -94,20 +95,19 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     {
         for (int i = 0; i < pointLightCount; i++)
         {
-            float3 LP = pointLights[i].position.xyz - pin.wPosition.xyz;
+            float3 LP = pin.wPosition.xyz - pointLights[i].position.xyz;
             float len = length(LP);
-
-            float kc = attenuationPresets[pointLights[i].attenuationType].kc;
-            float kl = attenuationPresets[pointLights[i].attenuationType].kl;
-            float kq = attenuationPresets[pointLights[i].attenuationType].kq;
-
-            float attenuation = saturate(1.0 / (kc + kl * len + kq * (len * len)));
-
+            if (len >= pointLights[i].range)
+            {
+                continue;
+            }
+            float attenuateLength = saturate(1.0 - len / pointLights[i].range);
+            float attenuation = attenuateLength * attenuateLength;
             LP /= len;
             const float pNoV = max(0.0, dot(N, V));
             const float pNoL = max(0.0, dot(N, LP));
-
-            if (pNoV > 0.0 || pNoL > 0.0) // ì_åıåπÇ…ÇÕï˚å¸Ç™Ç»Ç¢ÇΩÇﬂ
+            // float pNoL = max(0, 0.5 * dot(N, LP) + 0.5);
+            if (pNoV > 0.0 || pNoL > 0.0)
             {
                 const float3 R = reflect(-LP, N);
                 const float3 H = normalize(V + LP);
@@ -117,14 +117,12 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
                 const float NoH = max(0.0, dot(N, H));
                 const float HoV = max(0.0, dot(H, V));
 
-                pointDiffuse += pLi * pNoL * BrdfLambertian(f0, f90, cDiff, HoV) * attenuation;
-                pointSpecular += pLi * pNoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, pNoL, pNoV, NoH) * attenuation;
+                pointDiffuse += pLi * pNoL * BrdfLambertian(f0, f90, cDiff, HoV);
+                pointSpecular += pLi * pNoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, pNoL, pNoV, NoH);
             }
         }
-        float maxPointSpecular = 3.0f;
-        pointSpecular = max(0, min(maxPointSpecular, pointSpecular));
-
     }
+
     // ïΩçsåıåπÇÃèàóù
     float3 diffuse = 0;
     float3 specular = 0;
@@ -133,7 +131,7 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     float3 L = normalize(-lightDirection.xyz);
     float3 Li = float3(colorLight.x, colorLight.y, colorLight.z) * colorLight.w; //  åıÇÃãPÇ´
 
-    float NoL = saturate(dot(N, L) * 0.5 + 0.5);
+    const float NoL = max(0, 0.5 * dot(N, L) + 0.5);
     const float NoV = max(0, dot(N, V));
 
     if (directionalLightEnable != 0)
@@ -164,12 +162,8 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     totalSpecular = lerp(totalSpecular, totalSpecular * occlusionFactor, occlusionStrength);
 
     float3 emissive = emissiveFactor;
-#if 1
-    float rimPower = lightDirection.w;
-    float3 rim = CalcRimLight(N, V, rimColor.rgb, rimPower) * rimIntensity;
-#endif
-    float3 Lo = totalDiffuse + totalSpecular + emissive + rim;
-	
-    return float4(Lo, baseColorFactor.a);
+
+    return float4(baseColorFactor);
+
 
 }

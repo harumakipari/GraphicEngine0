@@ -80,7 +80,7 @@ public:
     void ResetFireLightScale();
 private:
     // スタンド式火鉢のモデル
-    std::shared_ptr<SkeletalMeshComponent> meshComponent;
+    std::shared_ptr<MeshComponent> meshComponent;
     std::vector<MeshComponent*> flameComponents; // 炎のモデル
     std::vector<DirectX::XMFLOAT3> flameBasePositions;// 炎の初期位置
     // シャンデリアの炎の球体のモデル
