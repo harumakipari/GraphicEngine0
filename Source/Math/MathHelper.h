@@ -359,6 +359,26 @@ namespace MathHelper
         return XMVectorGetX(XMVector3Dot(va, vb));
     }
 
+    // äOêœ
+    inline DirectX::XMFLOAT3 Cross(
+        const DirectX::XMFLOAT3& a,
+        const DirectX::XMFLOAT3& b
+    )
+    {
+        using namespace DirectX;
+
+        XMVECTOR va = XMLoadFloat3(&a);
+        XMVECTOR vb = XMLoadFloat3(&b);
+
+        XMVECTOR Cross=XMVector3Cross(va, vb);
+        XMFLOAT3 cross;
+        XMStoreFloat3(&cross, Cross);
+        return cross;
+
+    }
+
+
+
     // à¯Ç´éZ a-b
     inline DirectX::XMFLOAT3 Subtract(
         const DirectX::XMFLOAT3& a,

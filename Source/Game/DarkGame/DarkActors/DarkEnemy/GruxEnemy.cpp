@@ -207,6 +207,37 @@ void GruxEnemy::Update(float deltaTime)
 {
     Character::Update(deltaTime);
 
+    // ボス戦時のカメラの注視点の位置を更新する
+    if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
+    {
+        DirectX::XMFLOAT3 bossPos = GetPosition();
+        DirectX::XMFLOAT3 playerPos = player->GetPosition();
+        DirectX::XMFLOAT3 toPlayerDir = MathHelper::Subtract(playerPos, bossPos);
+        DirectX::XMFLOAT3 worldUp = { 0.0f,1.0f,0.0f };
+        toPlayerDir = MathHelper::Normalize(toPlayerDir);
+        DirectX::XMFLOAT3 rightDir = MathHelper::Cross(worldUp, toPlayerDir);
+        rightDir = MathHelper::Normalize(rightDir);
+        DirectX::XMFLOAT3 targetPos = bossPos;
+
+        targetPos = MathHelper::Add(
+            targetPos,
+            MathHelper::Multiply(toPlayerDir, bossBattleCameraDistance));
+
+        targetPos = MathHelper::Add(
+            targetPos,
+            MathHelper::Multiply(rightDir, bossBattleCameraRightDistance));
+
+        targetPos = MathHelper::Add(
+            targetPos,
+            bossBattleCameraOffset);
+
+        cameraTargetComponent->SetWorldLocationDirect(targetPos);
+        DebugRender::DrawSphere(targetPos, 0.5f, { 1.0f,1.0f,0.0f,1.0f }, true);
+    }
+
+
+
+
     if (rightWeaponCollisionComp)
         rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
     if (leftWeaponCollisionComp)
@@ -238,6 +269,9 @@ void GruxEnemy::DrawImGuiDetails()
     {
         stateMachine_->ChangeState("EnemyAttackState");
     }
+    ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
+    ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
+    ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
 #endif
 }
 

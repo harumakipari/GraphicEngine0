@@ -229,7 +229,7 @@ void DoorJailActor::Initialize(const Transform& transform)
     DirectX::XMFLOAT3 size = doorMesh->GetModelSize();
     // ドアの当たり判定用のコリジョンコンポーネントを追加
     std::shared_ptr<BoxComponent> boxComponent = AddComponent<BoxComponent>("DoorCollision", "Hinge");
-    boxComponent->SetBoxExtent({ 0.005f,1.945f,1.655f });
+    boxComponent->SetBoxExtent({ 0.005f,0.945f,1.655f });
     boxComponent->SetRelativeLocationDirect({ 0.0f,0.0f,0.0f });
     boxComponent->SetCollisionOffsetY(size.y * 0.5f);
     boxComponent->SetCollisionOffsetX(-size.x * 0.5f);

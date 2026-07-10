@@ -911,7 +911,6 @@ void SceneRenderer::CastShadowMap(ID3D11DeviceContext* immediateContext, const M
                 const InterleavedGltfModel::Mesh& mesh = model->meshes.at(node.mesh);
                 for (const InterleavedGltfModel::Mesh::Primitive& primitive : mesh.primitives)
                 {
-                    // INTERLEAVED_GLTF_MODEL
                     UINT stride = sizeof(InterleavedGltfModel::Mesh::Vertex);
                     UINT offset = 0;
 

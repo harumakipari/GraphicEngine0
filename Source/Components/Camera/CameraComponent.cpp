@@ -59,6 +59,40 @@ const DirectX::XMFLOAT4X4& CameraComponent::GetView()
     return view;
 }
 
+DirectX::XMFLOAT3 CameraComponent::GetForward()const
+{
+    using namespace DirectX;
+
+    XMFLOAT3 pos = GetComponentLocation();
+
+    if (useLookTarget)
+    {
+        return MathHelper::Normalize(
+            MathHelper::Subtract(lookTarget, pos));
+    }
+
+    XMFLOAT4 rot = GetComponentRotation();
+
+    XMVECTOR q = XMLoadFloat4(&rot);
+
+    XMVECTOR forward = XMVector3Rotate(
+        XMVectorSet(0, 0, 1, 0),
+        q);
+
+    XMFLOAT3 result;
+    XMStoreFloat3(&result, forward);
+
+    return MathHelper::Normalize(result);
+}
+
+DirectX::XMFLOAT3 CameraComponent::GetRight() const
+{
+    DirectX::XMFLOAT3 up = { 0,1,0 };
+
+    return MathHelper::Normalize(
+        MathHelper::Cross(GetForward(), up));
+        //MathHelper::Cross(up, GetForward()));
+}
 
 ViewConstants CameraComponent::GetViewConstants()
 {

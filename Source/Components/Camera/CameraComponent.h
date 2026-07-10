@@ -74,6 +74,9 @@ public:
         return projection;
     }
 
+    DirectX::XMFLOAT3 GetForward() const;
+
+    DirectX::XMFLOAT3 GetRight() const;
 
     bool useLookTarget = false;
     DirectX::XMFLOAT3 lookTarget{};

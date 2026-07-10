@@ -72,8 +72,12 @@ private:
     // 右目の位置用コンポーネントを追加　暗闇で光る目の表現用
     std::shared_ptr<SceneComponent> rightEyeSceneComponent;
 
-    // カメラの注視点の位置
+    // カメラの注視点の位置 
     std::shared_ptr<SceneComponent> cameraTargetComponent;
+    // ボス戦時のオフセット
+    float bossBattleCameraDistance = 0.0f;
+    float bossBattleCameraRightDistance = 2.5f;
+    DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,0.0f,0.0f };
 
     friend class GruxEnemyEyeActor;
 };

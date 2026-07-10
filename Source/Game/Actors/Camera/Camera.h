@@ -121,6 +121,7 @@ public:
 
     DirectX::XMFLOAT3 CameraForwardXZ() const
     {
+#if 0
         float yaw = mainCameraComponent->GetYaw();
 
         return {
@@ -128,17 +129,27 @@ public:
             0.0f,
             cosf(yaw)
         };
+#else
+        auto forward = mainCameraComponent->GetForward();
+        forward.y = 0.0f;
+        return MathHelper::Normalize(forward);
+#endif // 0
     }
 
     DirectX::XMFLOAT3 CameraRightXZ() const
     {
+#if 0
         float yaw = mainCameraComponent->GetYaw();
-
         return {
             cosf(yaw),
             0.0f,
             -sinf(yaw)
         };
+#else
+        auto right = mainCameraComponent->GetRight();
+        right.y = 0.0f;
+        return MathHelper::Normalize(right);
+#endif
     }
 
     void SetLockTarget(const std::shared_ptr<SceneComponent>& target)
