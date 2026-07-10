@@ -324,7 +324,7 @@ public:
             AddPipeLineState("deferredOpaqueSkeletalMesh", desc);
         }
 
-        // SkeletalMesh deferred Player Swprd —p
+        // SkeletalMesh deferred Player Sword —p
         {
             hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPlayerWeaponDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));

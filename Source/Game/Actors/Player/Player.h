@@ -21,7 +21,6 @@ public:
     struct ComboAttack
     {
         std::string animationName;
-
         int nextComboIndex = -1;
     };
 
@@ -128,7 +127,6 @@ public:
     std::unordered_set<Actor*> hitTargets;
     bool hasPrevSwordTip = false; // 前フレームの剣先の位置が有効かどうか
     bool hasSpawnedThisAttack = false; // 今攻撃でエフェクトを生成したかどうか
-
 
     std::string currentAttackAnimation = "Primary_Attack_Fast_A";
     std::string startAttackAnimation = "Primary_Attack_Fast_A";    // コンボ開始のアニメーション

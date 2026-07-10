@@ -15,6 +15,8 @@ void DarkStageChandelierActor::Initialize(const Transform& transform)
     chandelierMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
 
 
+
+
     auto lightsData = chandelierMeshComponent->model->GetPointLights();
     // ポイントライトコンポーネントを追加
     for (int i = 0; i < static_cast<int>(lightsData.size()); ++i)

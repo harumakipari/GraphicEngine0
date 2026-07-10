@@ -163,6 +163,8 @@ public:
         tpsController.ClearLockTarget();
     }
 
+    // ƒJƒƒ‰‚Ìƒ‚[ƒh‚ğæ“¾‚·‚é
+    TPSCameraController::CameraMode GetCameraMode() const { return tpsController.cameraMode; }
 private:
     TPSCameraController tpsController;
     bool didShake = false;

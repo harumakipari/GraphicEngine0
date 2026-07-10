@@ -26,6 +26,7 @@ void GruxEnemy::Initialize(const Transform& transform)
         if (material.name == "M_Grux_Qilin_Eye")
         {// –Ú‚¾‚Á‚½‚çA
             material.materialType = MaterialType::Eye;
+            //material.overridePipelineName = "";
         }
     }
     skeletalMeshComponent->SetIsShadowMap(true);

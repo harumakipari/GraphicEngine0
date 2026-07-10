@@ -362,10 +362,11 @@ void Player::Initialize(const Transform& transform)
 
     // 剣のメッシュコンポーネントを追加
     swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
-    swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
+    swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSwordGhost/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
-    swordMeshComponent->overrideDeferredPipelineName = "DarkStagePlayerWeaponPS";
+    //swordMeshComponent->overrideDeferredPipelineName = "DarkStagePlayerWeaponPS";
     swordMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.0f,0.16f,0.8f ,0.0f };
+
 
     // 剣を背中に背負ったとき用の剣のメッシュコンポーネント
     int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");
@@ -417,12 +418,15 @@ void Player::Update(float deltaTime)
         stateMachine_->ChangeState("Rush");
     }
 
+    DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 toEnemyDir = { 0.0f,0.0f,0.0f };
     // ボス戦時のカメラのeyeの位置を更新する
     if (auto gruxEnemy = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
     {
-        DirectX::XMFLOAT3 bossPos = gruxEnemy->GetPosition();
-        DirectX::XMFLOAT3 playerPos = GetPosition();
-        DirectX::XMFLOAT3 toEnemyDir = MathHelper::Subtract(bossPos, playerPos);
+        bossPos = gruxEnemy->GetPosition();
+        playerPos = GetPosition();
+        toEnemyDir = MathHelper::Subtract(bossPos, playerPos);
         toEnemyDir = MathHelper::Normalize(toEnemyDir);
         DirectX::XMFLOAT3 eyePos = MathHelper::Add(
             MathHelper::Add(
@@ -609,16 +613,34 @@ void Player::Update(float deltaTime)
 
     if (auto camera = dynamic_cast<MainCamera*>(GetOwnerScene()->GetActiveCamera()))
     {
-        auto camForward = camera->CameraForwardXZ();
-        auto camRight = camera->CameraRightXZ();
-
         // 左スティック入力
         float stickX = intent.leftMove.x;
         float stickZ = intent.leftMove.z;
+        switch (camera->GetCameraMode())
+        {
+        case TPSCameraController::CameraMode::TPS:
+        {
+            auto camForward = camera->CameraForwardXZ();
+            auto camRight = camera->CameraRightXZ();
 
-        // カメラ基準の移動方向
-        moveDir.x = camForward.x * stickZ + camRight.x * stickX;
-        moveDir.z = camForward.z * stickZ + camRight.z * stickX;
+            // カメラ基準の移動方向
+            moveDir.x = camForward.x * stickZ + camRight.x * stickX;
+            moveDir.z = camForward.z * stickZ + camRight.z * stickX;
+        }
+        break;
+        case TPSCameraController::CameraMode::BossBattle:
+        {
+            DirectX::XMFLOAT3 forward = toEnemyDir;
+            forward.y = 0.0f;
+            DirectX::XMFLOAT3 worldUp = { 0.0f,1.0f,0.0f };
+            right = MathHelper::Normalize(MathHelper::Cross(worldUp, forward));
+            // ボス基準の移動方向
+            moveDir.x = forward.x * stickZ + right.x * stickX;
+            moveDir.z = forward.z * stickZ + right.z * stickX;
+        }
+        break;
+        }
+
     }
 
     characterMovementComponent->SetMoveDirection(moveDir);

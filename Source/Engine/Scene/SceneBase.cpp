@@ -681,6 +681,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         //定数バッファ更新
 
         // HuskParticle
+#if 0
         if (!integrateParticles)
         {
             RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF, 0);
@@ -706,10 +707,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
 
         huskParticles->render(immediateContext);
-
-
-
-
+#endif // 0
         // パーティクル描画
         EffectManager::Render(immediateContext);
 

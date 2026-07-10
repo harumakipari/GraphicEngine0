@@ -20,6 +20,7 @@ void DarkStageCandelabraActor::SetModel(const std::shared_ptr<StageAsset>& stage
     candelabraMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
     candelabraMeshComponent->model = stageAsset->model;
     candelabraMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
+    candelabraMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
     PipeLineStateDesc pipeLineState;
     HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/GltfModelInstancedBatchingPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
