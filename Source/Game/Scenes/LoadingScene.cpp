@@ -121,6 +121,15 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
         Logger::Log(U8("UI Render viewport ") + std::to_string(imageMin.x) + std::to_string(imageMin.y) + std::to_string(imageSize.x) + std::to_string(imageSize.y));
     }
 
+
+    HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/LoadingPS.cso", loadingPs.GetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+    RegisterRenderHook(RenderPass::Sky, [&](ID3D11DeviceContext* immediateContext)
+        {
+        });
+
+
 #endif // 0
 
     preload_scene = props.at("preload");
@@ -129,173 +138,12 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
 
     loadingTime = 4.0f;   // ロードにかかる時間
 
-    auto& param = SceneTransitionManager::Instance().GetParams();
-    if (param.contains("fade"))
-    {// ゲームオーバーだったら
-        std::string name = param.at("fade");
-        if (name == "0")
-        {
-            loadingSprite = std::make_shared<Sprite>(device, L"./Data/Textures/ScissorsUI/black.png");
-            //gameOverSprite =std::make_shared<Sprite>(device, L"./Data/Textures/ScissorsUI/gameOver.png");
-            loadingTime = 0.0f;
-        }
-    }
     return true;
 }
 
 void LoadingScene::Start()
 {
     SetUpActors();
-
-    RegisterRenderHook(RenderPass::UI, [&](ID3D11DeviceContext* immediateContext)
-        {
-            //if (const auto e = GetActorManager()->GetActorByName("LoadingEnemy"))
-            //{
-            //loadingSkewer->poleModel->RenderOpaque(immediateContext, loadingSkewer->GetWorldTransform());
-
-
-            //enemy->skeltalMeshComponent->RenderOpaque(immediateContext, e->GetWorldTransform());
-            //RenderState::BindBlendState(immediateContext, BLEND_STATE::ALPHA);
-            //RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF);
-            //backImage->Draw(immediateContext);
-            chipsFrameImage->Draw(immediateContext);
-            chipsImage->Draw(immediateContext);
-
-            RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
-            RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
-            //loadingPlayerActor->skeletalMeshComponent->RenderOpaque(immediateContext, loadingPlayerActor->GetWorldTransform());
-            if (loadingSprite)
-            {
-                loadingSprite->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                //gameOverSprite->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-            }
-
-            //}
-        });
-
-    float width = 1920.0f;
-    float height = 1080.0f;
-
-    auto bossSprite = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/scene_change_boss.png");
-    //auto difficultSprite = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/scene_change_difficult.png");
-    //auto firstSprite = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/scene_change_first.png");
-
-    backWhiteImage = std::make_shared<UIImageComponent>("./Data/Textures/ScissorsUI/back.png", "back");
-    backWhiteImage->SetSize({ 1920, 1080 });
-
-
-    backImage = std::make_shared<UIImageComponent>("./Data/Textures/ScissorsUI/scene_change.png", "backGround");
-    backImage->SetSize({ 1920, 1080 });
-    auto& param = SceneTransitionManager::Instance().GetParams();
-    if (param.contains("stage"))
-    {
-        std::string name = param.at("stage");
-        if (name == "BOSS")
-        {
-            backImage->SetTexture(bossSprite);
-        }
-        else if (name == "FIRST")
-        {
-
-        }
-
-    }
-
-    std::shared_ptr<Sprite> chipSprite = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/Tips/scissors_hint.png");
-
-    DirectX::XMFLOAT2 tipsSize = { 750.0f,168.0f };
-
-    chipsImage = std::make_shared<UIImageComponent>("./Data/Textures/ScissorsUI/Tips/player_lore.png", "chipsImage");
-    chipsImage->SetSize(tipsSize);
-    chipsImage->SetWorldPosition(tipsPos);
-    chipsImage->SetTexture(chipSprite);
-
-    chipsFrameImage = std::make_shared<UIImageComponent>("./Data/Textures/ScissorsUI/Tips/tips_frame.png", "tips_frame");
-    chipsFrameImage->SetSize({ 1000.0f,200.0f });
-    chipsFrameImage->SetWorldPosition(tipsPos);
-
-
-#if 0
-    GetUIManager()->Add(sprite);
-#else
-    RegisterRenderHook(RenderPass::Sky, [&](ID3D11DeviceContext* immediateContext)
-        {
-            backWhiteImage->Draw(immediateContext);
-            backImage->Draw(immediateContext);
-        });
-
-
-#endif // 0
-
-    // シーンのライト設定などを設定する
-    SceneSettings& settings = this->GetSceneSettings();
-    auto& lightData = Scene::GetCurrentScene()->GetSceneSettings().sceneLightSaveData;
-
-    settings.cascadedShadowMapConstants =
-    {
-        17.021f,
-        0.136f,
-        21.643f,
-        true,
-    };
-    settings.sceneShaderConstants =
-    {
-        0.75f,
-        0.00011f,
-        0.005f,
-        0.0f,
-        0.0f,
-        0.04f,
-        0.018f,
-        0.16f,
-        4.6f,
-        0.0f,
-        80.0f,
-        1.0f,
-        23.0f,
-        0,
-        1,
-        0,
-        1,
-        1,
-        1,
-        1,
-        1,
-        0,
-        0,
-        0.0f,
-        { 1.0f,1.0f,1.0f },
-        0.0f,
-    };
-    lightData.sceneConstants =
-    {
-         { -0.99f, 0.15f, -0.95f, 0.85f/* w:attenuation Rate */},
-         { 1.0f, 1.0f, 1.0f, 1.98f/*w colorPower*/ },
-         0.278f,
-         1,
-         1,
-         40,
-
-         { 1.0f,1.0f,1.0f },
-         1.466f,
-
-         { 0.977f,0.71f,0.168f },
-         0.0f,
-
-         { 0.422f,0.333f,0.0f },
-         0.0f,
-
-         3.0f,
-         1.0f,
-         0.7f,
-         1.8f,
-
-         1.0f,
-         0.3f,
-         0.78f,
-         0.15f,
-    };
-    this->SetSceneSettings(settings);
 }
 
 void LoadingScene::SetUpActors()
@@ -323,11 +171,6 @@ void LoadingScene::Update(float deltaTime)
 {
     SceneBase::Update(deltaTime);
 
-    DirectX::XMFLOAT2 tipsWordPos = { tipsPos.x + tipsWordOffset.x,tipsPos.y + tipsWordOffset.y };
-    chipsImage->SetWorldPosition(tipsWordPos);
-
-    chipsFrameImage->SetWorldPosition(tipsPos);
-
 
     loadingTime -= deltaTime;
 
@@ -351,22 +194,7 @@ bool LoadingScene::Uninitialize(ID3D11Device* device)
 
 void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime)
 {
-#if 0
-    //定数バッファをGPUに送信
-    {
-        //shaderToyCBuffer->Activate(immediateContext, 7);
-    }
-    SceneBase::Render(immediateContext, deltaTime);
-    backImage->Draw(immediateContext);
-    chipsFrameImage->Draw(immediateContext);
-    chipsImage->Draw(immediateContext);
-    if (loadingSprite)
-    {
-        loadingSprite->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-        //gameOverSprite->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-    }
-
-#else
+#if 1
     RenderState::BindSamplerStates(immediateContext);
     RenderState::BindBlendState(immediateContext, BLEND_STATE::ALPHA);
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
@@ -473,17 +301,6 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
     cameraView = data.view;
     cameraProjection = data.projection;
 
-    // 影を作る処理
-    auto& shadow = Scene::GetCurrentScene()->GetSceneSettings().cascadedShadowMapConstants;
-
-    cascadedShadowMaps->Clear(immediateContext);
-    cascadedShadowMaps->Activate(immediateContext, cameraView, cameraProjection, lightManager->GetLightDirection(), shadow.criticalDepthValue, 3/*cbSlot*/);
-    RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
-    RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
-    RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-    sceneRender.currentRenderPath = RenderPath::Shadow;
-    sceneRender.CastShadowRender(immediateContext, queues.shadowCasters);
-    cascadedShadowMaps->Deactivate(immediateContext);
     // ライティングのパス
     {
         frameBuffer->Clear(immediateContext);
@@ -529,26 +346,6 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
     sceneRender.RenderBlend(immediateContext, queues.meshes); // ここで警告出る
     ExecuteHooks(RenderPass::ForwardBlend, immediateContext);
 
-#endif // 1
-
-#if 0
-    // PARTICLES
-    {
-
-        //深度ステンシルステート設定
-        RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF, 1);
-        //ラスタライザ設定
-        RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-
-        //定数バッファ更新
-
-        // パーティクル描画
-        EffectManager::Render(immediateContext);
-
-        ExecuteHooks(RenderPass::Particle, immediateContext);
-    }
-
-#endif // 0
 
     // デバック描画
 #if _DEBUG
@@ -584,12 +381,18 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
 
         ID3D11ShaderResourceView* shader_resource_views[]
         {
-              frameBuffer->shaderResourceViews[0].Get(),//colorMap   こっちライティング済み
-              gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)],   // positionMap
-              gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],   // normalMap
-              gBufferRenderTarget->depthStencilShaderResourceView,      //depthMap
-              sceneEffectManager->GetOutput("BloomEffect"),
-              cascadedShadowMaps->depthMap().Get(),   //cascadedShadowMaps
+             frameBuffer->shaderResourceViews[0].Get(),//colorMap   こっちライティング済み
+             gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)],   // positionMap
+             gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],   // normalMap
+             gBufferRenderTarget->depthStencilShaderResourceView,      //depthMap
+             sceneEffectManager->GetOutput("BloomEffect"),
+             sceneEffectManager->GetOutput("FogEffect"),
+             sceneEffectManager->GetOutput("SSAOEffect"),
+             sceneEffectManager->GetOutput("SSREffect"),
+             sceneEffectManager->GetOutput("DepthOfFieldEffect"), // 被写界深度のために、ぼやけたクスチャ
+             gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::EMISSIVE)],   // emissiveMap
+             gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)],   // velocityMap
+             cascadedShadowMaps->depthMap().Get(),   //cascadedShadowMaps
         };
         // メインフレームバッファとブルームエフェクトを組み合わせて描画
         fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), finalPs.Get());
@@ -600,6 +403,11 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
 
     ExecuteHooks(RenderPass::UI, immediateContext);
 
+    ID3D11ShaderResourceView* shaderResourceViews[]
+    {
+        nullptr
+    };
+    fullscreenQuad->Blit(immediateContext, shaderResourceViews, 0, 1, loadingPs.Get());
 
 
 
@@ -608,6 +416,30 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
 #endif
 
 #endif
+
+#else
+#ifdef USE_IMGUI
+    imGuiGizmoBuffer->Clear(immediateContext);
+    imGuiGizmoBuffer->Activate(immediateContext);
+#endif
+
+    RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
+    RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF);
+    RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
+
+
+    UpdateConstantBuffer(immediateContext,deltaTime);
+    ID3D11ShaderResourceView* shaderResourceViews[]
+    {
+        nullptr
+    };
+    fullscreenQuad->Blit(immediateContext, shaderResourceViews, 0, 1, loadingPs.Get());
+
+#ifdef USE_IMGUI
+    imGuiGizmoBuffer->Deactivate(immediateContext);
+#endif
+
+#endif // 0
 }
 
 
@@ -615,8 +447,6 @@ void LoadingScene::DrawGui()
 {
 #ifdef USE_IMGUI
     ImGui::Begin(U8("調整"));
-    ImGui::DragFloat2("tipsPos", &tipsPos.x);
-    ImGui::DragFloat2("tipsWordOffset", &tipsWordOffset.x);
     ImGui::End();
     SceneBase::DrawGui();
 #endif

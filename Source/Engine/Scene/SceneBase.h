@@ -76,9 +76,9 @@ public:
 protected:
     // UI•`‰æ
     void Draw(ID3D11DeviceContext* immediateContext);
-private:
-    void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, float deltaTime);
 
+    void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, float deltaTime);
+private:
     void ForwardRender(ID3D11DeviceContext* immediateContext);
 
     void DeferredRender(ID3D11DeviceContext* immediateContext, ViewConstants& viewConstants);

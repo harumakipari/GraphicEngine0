@@ -1,9 +1,4 @@
-struct VS_OUT
-{
-    float4 position : SV_POSITION;
-    float2 texcoord : TEXCOORD;
-};
-
+#include "FullScreenQuad.hlsli"
 #include "Constants.hlsli"
 
 
@@ -66,6 +61,7 @@ void mainImage(out float4 fragColor, in float2 fragCoord)
     from.xz *= rot1;
     from.xy *= rot2;
 #else
+
     float2 uv = fragCoord.xy / iResolution.xy - 0.5;
     uv.y *= iResolution.y / iResolution.x;
     float3 dir = float3(uv * zoom, 1.0);
