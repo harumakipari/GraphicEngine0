@@ -294,6 +294,7 @@
     <ClCompile Include="Source\Engine\Utility\Dialog.cpp" />
     <ClCompile Include="Source\Engine\Utility\Time.cpp" />
     <ClCompile Include="Source\Game\Actors\Base\Character.cpp" />
+    <ClCompile Include="Source\Game\Actors\BgmActor.cpp" />
     <ClCompile Include="Source\Game\Actors\Camera\Camera.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossEnemy.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp" />
@@ -439,6 +440,7 @@
     <ClInclude Include="Source\Engine\Utility\Time.h" />
     <ClInclude Include="Source\Engine\Utility\Win32Utils.h" />
     <ClInclude Include="Source\Game\Actors\Base\Character.h" />
+    <ClInclude Include="Source\Game\Actors\BgmActor.h" />
     <ClInclude Include="Source\Game\Actors\Camera\Camera.h" />
     <ClInclude Include="Source\Game\Actors\Camera\LoadingCamera.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossEnemy.h" />

@@ -133,10 +133,10 @@ void CharacterMovementComponent::Tick(float deltaTime)
     float rayLength = groundOffset_ + std::max<float>(fallDistance, 0.0f) + 0.1f;
 
     HitResult hit;
-    if (Physics::Instance().SphereCast(
+    if (Physics::Instance().RayCast(
         { pos.x, rayStartY, pos.z },
         { 0,-1,0 },
-        rayLength, 0.3f,
+        rayLength,
         hit,
         CollisionHelper::ToBit(CollisionLayer::WorldStatic)))
     {
@@ -168,12 +168,15 @@ void CharacterMovementComponent::Tick(float deltaTime)
         horizontalMove.z /= dist;
 
         HitResult wallHit;
+        uint32_t mask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) | CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast)
+        | CollisionHelper::ToBit(CollisionLayer::WorldProps);
+
         if (Physics::Instance().RayCast(
             { pos.x, pos.y + 1.0f, pos.z },
             horizontalMove,
             dist + radius_,
             wallHit,
-            CollisionHelper::ToBit(CollisionLayer::WorldStatic)))
+            mask))
         {
             nextPos.x = pos.x;
             nextPos.z = pos.z;

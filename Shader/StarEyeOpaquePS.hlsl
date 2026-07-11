@@ -37,6 +37,12 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         discard;
     }
 
+    baseColorFactor.rgb = cpuColor.rgb;
+    baseColorFactor.rgb *= emissionPower;
+
+    return float4(baseColorFactor);
+
+
     float3 emissiveFactor = m.emissiveFactor;
     const int emissiveTexture = m.emissiveTexture.index;
     if (emissiveTexture > -1)
@@ -162,6 +168,8 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     totalSpecular = lerp(totalSpecular, totalSpecular * occlusionFactor, occlusionStrength);
 
     float3 emissive = emissiveFactor;
+
+
 
     return float4(baseColorFactor);
 

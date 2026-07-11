@@ -367,6 +367,9 @@
     <ClCompile Include="Source\Game\Scenes\TitleScene.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\BgmActor.cpp">
+      <Filter>Source\Game\Actors</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -890,6 +893,9 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Scenes\TitleScene.h">
       <Filter>Source\Game\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\BgmActor.h">
+      <Filter>Source\Game\Actors</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

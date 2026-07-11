@@ -32,6 +32,7 @@ struct AnimationNotifyEvent
     {
         PlaySE,
         SpawnEffect,
+        SwordEmissive,   // 剣のエミッシブを追加
     };
 
     Type type;

@@ -9,11 +9,11 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
     std::string parentName = GetRootComponentName();
     // 左目の描画用コンポーネントを追加　暗闇で光る目の表現用
     leftEyeMeshComponent = this->AddComponent<SkeletalMeshComponent>("leftEye", parentName);
-    leftEyeMeshComponent->SetModel("./Data/Models/Characters/EnemyEye/EnemyEyeModel.glb");
+    //leftEyeMeshComponent->SetModel("./Data/Models/Characters/EnemyEye/EnemyEyeModel.glb");
+    leftEyeMeshComponent->SetModel("./Data/Models/Primitives/sphere.glb");
     leftEyeMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
     leftEyeMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-    leftEyeMeshComponent->SetRelativeScaleDirect({ 1.0f,1.00f,1.00f });
-    //leftEyeMeshComponent->SetRelativeScaleDirect({ 0.03f,0.02f,0.02f });
+    leftEyeMeshComponent->SetRelativeScaleDirect(eyeInitScale);
     leftEyeMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
     leftEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
     leftEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
@@ -21,11 +21,14 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
 
     // 左目の描画用コンポーネントを追加　横に光るフレアの表現用
     leftEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("leftEyeFlare", "leftEye");
-    //leftEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
+#if 0
     leftEyeFlareMeshComponent->SetModel("./Data/Models/ParticleMesh/StarPlane.gltf");
-    //leftEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeFlarePS";
     leftEyeFlareMeshComponent->overrideDeferredPipelineName = "StarEyeOpaquePS";
     leftEyeFlareMeshComponent->overrideForwardPipelineName = "StarEyeOpaquePS";
+#else
+    leftEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
+    leftEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
+#endif // 0
     leftEyeFlareMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
     leftEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
     leftEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
@@ -33,10 +36,10 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
 
     // 右目の描画用コンポーネントを追加　暗闇で光る目の表現用
     rightEyeMeshComponent = this->AddComponent<SkeletalMeshComponent>("rightEye", parentName);
-    rightEyeMeshComponent->SetModel("./Data/Models/Characters/EnemyEye/EnemyEyeModel.glb");
+    rightEyeMeshComponent->SetModel("./Data/Models/Primitives/sphere.glb");
     rightEyeMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
     rightEyeMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-    rightEyeMeshComponent->SetRelativeScaleDirect({ 1.0f,1.0f,1.0f });
+    rightEyeMeshComponent->SetRelativeScaleDirect(eyeInitScale);
     rightEyeMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
     rightEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
     rightEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
@@ -44,10 +47,15 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
 
     // 右目の描画用コンポーネントを追加　横に光るフレアの表現用
     rightEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("rightEyeFlare", "rightEye");
-    //rightEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
+#if 0
     rightEyeFlareMeshComponent->SetModel("./Data/Models/ParticleMesh/StarPlane.gltf");
     rightEyeFlareMeshComponent->overrideDeferredPipelineName = "StarEyeOpaquePS";
     rightEyeFlareMeshComponent->overrideForwardPipelineName = "StarEyeOpaquePS";
+#else
+    rightEyeFlareMeshComponent->SetModel("./Data/Models/Primitives/plane.glb");
+    rightEyeFlareMeshComponent->overrideDeferredPipelineName = "EnemyEyeModelPS";
+
+#endif // 0
     rightEyeFlareMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
     rightEyeFlareMeshComponent->SetRelativeScaleDirect({ 0.1f,0.1f,0.1f });
     rightEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
@@ -56,12 +64,14 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
 
     eyeFlareEasingComponent = std::make_unique<EasingRunner>();
     eyeEmissiveEasingComponent = std::make_unique<EasingRunner>();
+    eyeEasingComponent = std::make_unique<EasingRunner>();
 }
 
 void GruxEnemyEyeActor::Update(float elapsedTime)
 {
     eyeFlareEasingComponent->Tick(elapsedTime);
     eyeEmissiveEasingComponent->Tick(elapsedTime);
+    eyeEasingComponent->Tick(elapsedTime);
 
     if (auto enemy = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
     {
@@ -69,8 +79,11 @@ void GruxEnemyEyeActor::Update(float elapsedTime)
         DirectX::XMFLOAT3 rightEyePosition = enemy->rightEyeSceneComponent->GetComponentLocation();
 
         leftEyeMeshComponent->SetWorldLocationDirect(leftEyePosition);
-        leftEyeFlareMeshComponent->SetWorldLocationDirect(leftEyePosition);
         rightEyeMeshComponent->SetWorldLocationDirect(rightEyePosition);
+
+        leftEyePosition = MathHelper::Add(leftEyePosition, eyeFlareOffset);
+        rightEyePosition = MathHelper::Add(rightEyePosition, eyeFlareOffset);
+        leftEyeFlareMeshComponent->SetWorldLocationDirect(leftEyePosition);
         rightEyeFlareMeshComponent->SetWorldLocationDirect(rightEyePosition);
     }
 
@@ -81,25 +94,32 @@ void GruxEnemyEyeActor::Update(float elapsedTime)
     rightEyeFlareMeshComponent->plusAlphaCBuffer->data.cpuColor = eyeColor;
 
     // 目の光量
-    emissionEyeFactor = std::lerp(140.0f, 208.0f, eyeEmissiveEasingFactor);
+    //emissionEyeFactor = std::lerp(140.0f, 208.0f, eyeEmissiveEasingFactor);
 
     leftEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = emissionEyeFactor;
     rightEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = emissionEyeFactor;
-
     leftEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = emissionEyeFlareFactor;
     rightEyeFlareMeshComponent->plusAlphaCBuffer->data.emissionPower = emissionEyeFlareFactor;
+
     // 目の角度を設定する
-    leftEyeFlareMeshComponent->SetWorldEulerRotationDirect(eyeFlareDegreeAngle);
-    rightEyeFlareMeshComponent->SetWorldEulerRotationDirect(eyeFlareDegreeAngle);
+    leftEyeMeshComponent->SetWorldEulerRotationDirect(eyeDegreeAngle);
+    rightEyeMeshComponent->SetWorldEulerRotationDirect(eyeDegreeAngle);
+
+    // 目のスケールを設定する
+    eyeScale = MathHelper::Lerp({ 0.0f,0.0f,0.0f }, eyeInitScale, eyeScaleEasingFactor);
+    leftEyeMeshComponent->SetRelativeScaleDirect(eyeScale);
+    rightEyeMeshComponent->SetRelativeScaleDirect(eyeScale);
+
+
 
     // 目のフレアのスケールを設定する
     // eyeFlareScale.x :0.0f -> 1.2fまで大きくする
     float maxScale = 1.2f;
     //eyeFlareScale.y *= 0.02f;
     //eyeFlareScale.z *= 0.02f;
-    //eyeFlareScale.x = std::lerp(0.0f, maxScale, eyeFlareScaleEasingFactor);
-    leftEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
-    rightEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
+    //eyeFlareScale.z = std::lerp(0.0f, maxScale, eyeFlareScaleEasingFactor);
+    //leftEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
+    //rightEyeFlareMeshComponent->SetRelativeScaleDirect(eyeFlareScale);
 }
 
 void GruxEnemyEyeActor::DrawImGuiDetails()
@@ -113,6 +133,7 @@ void GruxEnemyEyeActor::DrawImGuiDetails()
 
     ImGui::DragFloat3(U8("目のフレアのスケール"), &eyeFlareScale.x, 0.05f, 0.0f);
     ImGui::DragFloat3(U8("目のフレアの角度"), &eyeFlareDegreeAngle.x);
+    ImGui::DragFloat3(U8("目のフレアのoffset"), &eyeFlareOffset.x);
     if (ImGui::Button(U8("目のフレアのスケール変更開始")))
     {
         StartEyeFlareScale();
@@ -146,7 +167,7 @@ void GruxEnemyEyeActor::StartEyeFlash(const std::function<void()>& onFinished)
         handler.SetCompletedFunction([this]()
             {
                 StartEyeFlareScale();
-                eyeEmissiveEasingFactor = 0.0f;
+                eyeEmissiveEasingFactor = 1.0f;
             });
         PropertyAccessor<float> accessor;
 
@@ -161,10 +182,39 @@ void GruxEnemyEyeActor::StartEyeFlash(const std::function<void()>& onFinished)
 }
 
 // 目のモデルを小さくする処理
-void GruxEnemyEyeActor::ToSmallEyeModel()
+void GruxEnemyEyeActor::ToSmallEyeModel(float duration)
 {
-    leftEyeMeshComponent->SetIsVisible(false);
-    rightEyeMeshComponent->SetIsVisible(false);
+    duration -= 0.5f;
+    // 目玉が光る処理
+    {
+        TestEasingHandler handler;
+
+        handler.AddEasing(
+            TestEaseType::InSine,
+            1.0f,
+            0.0f,
+            duration
+        );
+
+        handler.SetCompletedFunction([this]()
+            {
+                eyeScaleEasingFactor = 0.0f;
+                leftEyeMeshComponent->SetIsVisible(false);
+                rightEyeMeshComponent->SetIsVisible(false);
+                leftEyeFlareMeshComponent->SetIsVisible(false);
+                rightEyeFlareMeshComponent->SetIsVisible(false);
+            });
+        PropertyAccessor<float> accessor;
+
+        accessor.getter = [this]() { return eyeScaleEasingFactor; };
+        accessor.setter = [this](float t)
+            {
+                eyeScaleEasingFactor = t;
+            };
+
+        eyeEasingComponent->StartHandler(handler, accessor);
+    }
+
 }
 
 // 目のフレアのスケールが大きくなる処理を開始

@@ -164,6 +164,7 @@ inline void to_json(nlohmann::json& j, const SceneShaderConstants& s)
         {"bossRoomLerpFactor", s.bossRoomLerpFactor},
 
         {"bossRoomColor", s.bossRoomColor},
+        {"enableEyeBloom", s.enableEyeBloom},
     };
 }
 
@@ -207,6 +208,7 @@ inline void from_json(const nlohmann::json& j, SceneShaderConstants& s)
     if (j.contains("bossRoomLerpFactor")) j.at("bossRoomLerpFactor").get_to(s.bossRoomLerpFactor);
 
     if (j.contains("bossRoomColor")) j.at("bossRoomColor").get_to(s.bossRoomColor);
+    if (j.contains("enableEyeBloom")) j.at("enableEyeBloom").get_to(s.enableEyeBloom);
 
 
 }

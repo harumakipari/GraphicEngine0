@@ -113,7 +113,7 @@ void main(point GS_IN gin[1], inout TriangleStream<PS_IN> output)
     float curveValue = curveTextures.SampleLevel(samplerStates[LINEAR_CLAMP], float2(t, curveIndex), 0);
 
     //¶‘¶‚µ‚Ä‚¢‚È‚¢ê‡‚ÍƒXƒP[ƒ‹‚ğ‚O‚É‚µ‚Ä‚¨‚­
-#if 0
+#if 1
     float2 size = !isAlive ? float2(0, 0) : lerp(particleDataBuffer[particleIndex].scale.zw, particleDataBuffer[particleIndex].scale.xy, lifeTimeRate);
 #else
 

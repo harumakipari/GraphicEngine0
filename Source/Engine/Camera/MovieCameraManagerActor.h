@@ -17,6 +17,7 @@ private:
         UpPlayerCombat, // プレイヤーが剣を構える
         UpPlayerCombatMovie,
         EnemyMovie,
+        EnemyName,
         Finished
     };
 public:

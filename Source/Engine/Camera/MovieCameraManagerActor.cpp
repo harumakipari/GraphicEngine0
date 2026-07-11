@@ -17,6 +17,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
     std::string doorOpenMovieFileName = "door_open.json";
     std::string playerCombatMovieFileName = "door_player_prepare.json";
     std::string bossRoarMovieFileName = "boss_roar.json";
+    std::string bossNameMovieFileName = "grux.json";
 
     auto movieCamera = this->movieCameraWeakPtr.lock();
     if (!movieCamera)
@@ -87,10 +88,13 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 shader.bloomConstantBuffer.bloomIntensity = 0.058f;
             }
 
-            // ボスの部屋を暗くする
+
             if (gameScene)
             {
+                // ボスの部屋を暗くする
                 gameScene->SetBossRoomLerpFactor(0.0f);
+                // 目のBloomのみをオンにする
+                gameScene->SetEyeBloom(true);
             }
             // ドアが開くカメラワーク
             PlayMovie(doorOpenMovieFileName);
@@ -105,6 +109,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0");
                 gruxEnemy->SetBodyAnimationRate(0.0f);
             }
+
+
             doorMovieState = DoorMovieState::DoorOpening;
         }
     }
@@ -112,14 +118,16 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::DoorOpening:
         if (doorActor->IsOpenDoor())
         {// ドアが開いたら、
+            CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_groan.wav", 0.2f);
             // 敵の目玉が光る
             if (gruxEnemyEye)
             {
                 gruxEnemyEye->StartEyeFlash([&]()
                     {
-                        doorMovieState = DoorMovieState::PreBossRoomLerp;
+                        //doorMovieState = DoorMovieState::PreBossRoomLerp;
                     });
                 doorMovieState = DoorMovieState::EnemyEyeFlash;
+                doorMovieState = DoorMovieState::PreBossRoomLerp;
             }
             if (player)
             {
@@ -131,13 +139,19 @@ void MovieCameraManagerActor::Update(float deltaTime)
         break;
     case DoorMovieState::PreBossRoomLerp:
     {
-        constexpr float duration = 5.0f;
+        constexpr float duration = 3.0f;
         // Bloomの値を落ち着ける
         if (scene)
         {
             auto& shader = scene->GetSceneSettings();
             shader.bloomConstantBuffer.bloomExtractionThreshold = 9.0f;
             shader.bloomConstantBuffer.bloomIntensity = 0.415f;
+        }
+        // ボスの目玉をなくす
+        if (gruxEnemyEye)
+        {
+            gruxEnemyEye->ToSmallEyeModel(duration);
+            gruxEnemy->GetBodyAnimationController()->ResetAnimationRate();
         }
         // 部屋を徐々に明るくする
         if (gameScene)
@@ -156,13 +170,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
     }
     break;
     case DoorMovieState::BossRoomLerp:
-        // ボスの目玉をなくす
-        if (gruxEnemyEye)
-        {
-            gruxEnemyEye->ToSmallEyeModel();
-        }
+        // 目のBloomのみをオフにして、Bloomをオンにする
+        gameScene->SetEyeBloom(false);
         break;
     case DoorMovieState::UpPlayerCombat:
+
         // 部屋の蝋燭スタンドの炎の光を戻す
         for (auto candleStand : candleStandActors)
         {
@@ -186,6 +198,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             gruxEnemy->SetPosition({ 12.795f,-0.12f,10.774f });
             gruxEnemy->SetEulerRotation({ 0.0f,-90.0f,0.0f });
         }
+
         // プレイヤーアップカメラワーク
         PlayMovie(playerCombatMovieFileName);
         doorMovieState = DoorMovieState::UpPlayerCombatMovie;
@@ -203,9 +216,28 @@ void MovieCameraManagerActor::Update(float deltaTime)
         if (gruxEnemy)
         {
             gruxEnemy->PlayBodyAnimation("Ultimate_Roar_0", false);
-            gruxEnemy->GetBodyAnimationController()->ResetAnimationRate();
         }
-        doorMovieState = DoorMovieState::Finished;
+        doorMovieState = DoorMovieState::EnemyName;
+        break;
+    case DoorMovieState::EnemyName:
+        if (movieCamera->IsMovieFinish())
+        {
+            // BGMを再生する
+            auto bgmActors = GetOwnerScene()->GetActorManager()->GetActorsOfType <BgmActor>();
+            for (auto bgmActor : bgmActors)
+            {
+                if (bgmActor->GetName() == "BossBgmActor")
+                {
+                    bgmActor->Play();
+                }
+            }
+            PlayMovie(bossNameMovieFileName);
+            if (gruxEnemy)
+            {
+                gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0");
+            }
+            doorMovieState = DoorMovieState::Finished;
+        }
         break;
     case DoorMovieState::Finished:
         if (movieCamera->IsMovieFinish())
@@ -214,16 +246,14 @@ void MovieCameraManagerActor::Update(float deltaTime)
             {
                 player->SetInputEnabled(true); // 入力を有効化する
             }
-            // カメラを三人称に戻す
+            //カメラを三人称に戻す
             if (scene->GetCameraManager()->IsUseMovie())
             {// ムービーカメラが使用中の場合のみ切り替え
                 scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
             }
         }
         break;
-
     }
-
 }
 
 void MovieCameraManagerActor::PlayMovie(const std::string& file)
@@ -243,6 +273,16 @@ void MovieCameraManagerActor::PlayMovie(const std::string& file)
 // ドアを開くムービーを再生する
 void MovieCameraManagerActor::PlayDoorMovie()
 {
+    // BGMを止める
+    auto bgmActors = GetOwnerScene()->GetActorManager()->GetActorsOfType <BgmActor>();
+    for (auto bgmActor : bgmActors)
+    {
+        if (bgmActor->GetName() == "GameBgmActor")
+        {
+            bgmActor->Stop();
+        }
+    }
+
     // プレイヤーの操作を無効化して位置を固定する
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
     {

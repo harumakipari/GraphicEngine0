@@ -63,6 +63,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddNotifyState("PrimaryAttack_LA", 0.01f, 0.08f, AnimationNotifyState::Type::AnimationSpeed, "", 0.2f);
     controller->AddNotifyState("PrimaryAttack_LA", 0.08f, 0.13f, AnimationNotifyState::Type::AnimationSpeed, "", 0.05f);
 
+    controller->AddNotifyEvent("Ultimate_Roar_0", 0.187f, AnimationNotifyEvent::Type::PlaySE, "enemy_roar");
+    controller->AddNotifyState("Ultimate_Roar_0", 0.265f, 0.98f, AnimationNotifyState::Type::AnimationSpeed, "", 0.4f);
+
 
     // ステートマシンを作成
     {
@@ -358,7 +361,7 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     case AnimationNotifyEvent::Type::PlaySE:
     {
         std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
-        auto audio = CoreAudio::PlayOneShot(audioPath, 1.0f);
+        auto audio = CoreAudio::PlayOneShot(audioPath, 0.8f);
         float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
         audio->SetPitch(pitch);
     }

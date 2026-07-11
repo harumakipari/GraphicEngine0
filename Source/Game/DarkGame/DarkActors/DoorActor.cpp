@@ -23,15 +23,18 @@ void DoorLargeActor::Initialize(const Transform& transform)
 
     // ドアのサイズを取得
     DirectX::XMFLOAT3 leftSize = leftDoorMesh->GetModelSize();
+    DirectX::XMFLOAT3 size = leftSize;
+    //size.x = 1.6f;
     // ドアの当たり判定用のコリジョンコンポーネントを追加
     std::shared_ptr<BoxComponent> leftBoxComponent = AddComponent<BoxComponent>("DoorLeftCollision", "LeftHinge");
-    leftBoxComponent->SetBoxExtent(leftSize);
-    leftBoxComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-1.1f });
+    leftBoxComponent->SetBoxExtent(size);
+    leftBoxComponent->SetRelativeLocationDirect({ 0.0f,0.0f,0.0f });
+    //leftBoxComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-1.1f });
     leftBoxComponent->SetCollisionOffsetY(leftSize.y * 0.5f);
     leftBoxComponent->SetCollisionOffsetX(-leftSize.x * 0.5f);
     leftBoxComponent->SetCollisionOffsetZ(-leftSize.z * 0.5f);
     leftBoxComponent->SetStatic(true);
-    leftBoxComponent->SetLayer(CollisionLayer::WorldProps);
+    leftBoxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
     leftBoxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
     leftBoxComponent->Initialize();
 
@@ -39,14 +42,14 @@ void DoorLargeActor::Initialize(const Transform& transform)
     DirectX::XMFLOAT3 rightSize = rightDoorMesh->GetModelSize();
     // ドアの当たり判定用のコリジョンコンポーネントを追加
     std::shared_ptr<BoxComponent> rightBoxComponent = AddComponent<BoxComponent>("DoorRightCollision", "RightHinge");
-    rightBoxComponent->SetBoxExtent(rightSize);
-    rightBoxComponent->SetBoxExtent(rightSize);
-    rightBoxComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-1.1f });
+    rightBoxComponent->SetBoxExtent(size);
+    rightBoxComponent->SetRelativeLocationDirect({ 0.2f,0.0f,0.0f });
+    //rightBoxComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-1.1f });
     rightBoxComponent->SetCollisionOffsetY(rightSize.y * 0.5f);
     rightBoxComponent->SetCollisionOffsetX(-rightSize.x * 0.5f);
     rightBoxComponent->SetCollisionOffsetZ(-rightSize.z * 0.5f);
     rightBoxComponent->SetStatic(true);
-    rightBoxComponent->SetLayer(CollisionLayer::WorldProps);
+    rightBoxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
     rightBoxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
     rightBoxComponent->Initialize();
 

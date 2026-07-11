@@ -11,6 +11,7 @@ static const int OBJECT_STAGE = 3;
 static const int OBJECT_NOT_SSR = 4;
 static const int OBJECT_DOOR = 5;
 static const int OBJECT_FURNITURE = 6;
+static const int OBJECT_ENEMY_EYE = 7;
 
 static const int GBUFFER_FLAG_NORMAL = 0;
 static const int GBUFFER_FLAG_SKY = 1;

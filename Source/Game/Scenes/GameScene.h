@@ -8,6 +8,7 @@
 
 #include "Core/ActorManager.h"
 #include "Engine/Scene/SceneBase.h"
+#include "Game/Actors/BgmActor.h"
 
 
 #include "Graphics/Renderer/SceneRenderer.h"
@@ -50,6 +51,9 @@ public:
 
     // ボスの部屋の色のラープを開始する関数
     void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
+
+    // ボスの目のみBloomをつける
+    void SetEyeBloom(bool enable);
 
     // カメラのモードを変更する
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
@@ -104,13 +108,13 @@ private:
     std::shared_ptr<InterleavedGltfModel> model;
 
     std::shared_ptr<Player> player;
-    TPSCameraComponent* mainCameraComponent = nullptr;
 
     std::shared_ptr<GruxEnemy> gruxEnemyActor;
 
     std::unique_ptr<ClothSimulate> clothSimulate;
 
     // カメラ
+    TPSCameraComponent* mainCameraComponent = nullptr;
     std::shared_ptr<MainCamera> mainCameraActor;
 
     // ボスの部屋のラープのための変数
@@ -120,4 +124,9 @@ private:
     std::function<void()> onFinished;
     float startBossRoomLerpFactor = 0.0f;
     float endBossRoomLerpFactor = 1.0f;
+
+    // ゲームBGMアクター
+    std::shared_ptr<BgmActor> gameBgmActor;
+    // ボスBGMアクター
+    std::shared_ptr<BgmActor> bossBgmActor;
 };

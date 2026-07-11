@@ -132,12 +132,22 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
 void GameScene::Start()
 {
-    auto audioActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("Audio");
-    auto audioComp = audioActor->AddComponent<AudioSourceComponent>("audioSource");
-    audioComp->SetSource(L"./Data/Sound/BGM/game_bgm.wav");
-    audioComp->SetLoop(true);
-    audioComp->Play();
-    audioComp->SetVolume(0.8f);
+    // ゲームBGM
+    gameBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("GameBgmActor");
+    gameBgmActor->SetSource(L"./Data/Sound/BGM/game_bgm.wav");
+    gameBgmActor->SetLoop(true);
+    gameBgmActor->SetBgm(true);
+    gameBgmActor->Play();
+    gameBgmActor->SetVolume(0.8f);
+
+    // ボスBGM
+    bossBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("BossBgmActor");
+    bossBgmActor->SetSource(L"./Data/Sound/BGM/boss_bgm.wav");
+    bossBgmActor->SetLoop(true);
+    bossBgmActor->SetBgm(true);
+    //bossBgmActor->Play();
+    bossBgmActor->SetVolume(0.1f);
+
 #if 0
     cameraManager->ToggleCinematicCamera(this);
 
@@ -307,7 +317,6 @@ void GameScene::SetUpActors()
     Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto doorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorLargeActor>("doorActor", doorTr);
 
-
     for (auto point : stageAsset->spawnPoints)
     {
 #if 0
@@ -374,6 +383,23 @@ void GameScene::SetBossRoomLerpFactor(float lerpFactor)
 {
     auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
     shader.bossRoomLerpFactor = lerpFactor;
+}
+
+// ボスの目のみBloomをオンにする
+void GameScene::SetEyeBloom(bool enable)
+{
+    auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
+    if (enable)
+    {// オンにする
+        shader.enableEyeBloom = true;
+        shader.enableBloom = false;
+    }
+    else
+    {// オフにする
+        shader.enableEyeBloom = false;
+        shader.enableBloom = true;
+    }
+
 }
 
 // ボスの部屋の色のラープを開始する関数

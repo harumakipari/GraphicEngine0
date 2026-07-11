@@ -11,6 +11,7 @@
 #include "Graphics/Core/RenderState.h"
 #include "Engine/Input/InputSystem.h"
 #include "Core/ActorManager.h"
+#include "Engine/Debug/SceneEditor.h"
 #include "Engine/Utility/Time.h"
 
 #include "Game/Actors/Camera/LoadingCamera.h"
@@ -24,6 +25,7 @@
 #include "Game/DarkGame/DarkActors/DarkStage.h"
 #include "Game/DarkGame/DarkActors/DarkStageCandelabraActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
+#include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
@@ -34,25 +36,105 @@
 
 bool TitleScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
-    SceneBase::Initialize(device, width, height, props);
+    loadStageThread = std::thread([&]()
+        {
+            PROFILE_SCOPE("Load StageModel");
+            stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/DarkStage.gltf",
+                ModelTypes::ModelMode::StaticMesh, false, true);
+            stageAsset->spawnPoints = stageAsset->model->spawnPoints;
+        });
+    loadStageAssetsThread = std::thread([&]()
+        {
+            PROFILE_SCOPE("Load StageAssetModel");
+            //stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageCandelabraAsset->spawnPoints = stageCandelabraAsset->model->spawnPoints;
 
-    Physics::Instance().Initialize();
+            stageBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Brazier/Brazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageBrazierAsset->spawnPoints = stageBrazierAsset->model->spawnPoints;
 
-    //アクターをセット
-    SetUpActors();
+            stageGroundBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/GroundBrazier/groundBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageGroundBrazierAsset->spawnPoints = stageGroundBrazierAsset->model->spawnPoints;
+
+            stageMeltedWaxAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/MeltedWax/MeltedWax.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageMeltedWaxAsset->spawnPoints = stageMeltedWaxAsset->model->spawnPoints;
+
+            stageStandingBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/StandingBrazier/StandingBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageStandingBrazierAsset->spawnPoints = stageStandingBrazierAsset->model->spawnPoints;
+
+            stageCandleStandAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/CandleStand/CandleStand.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageCandleStandAsset->spawnPoints = stageCandleStandAsset->model->spawnPoints;
+
+        });
+
+    // ライトの方向と色を設定
+    lightDirection = { 0.722f, -0.38f, -0.0211f, 0.9f };   // 上の窓からの光
+    lightColor = { 1.0f, 0.8f, 1.0f, 2.6f };
+    {
+        //PROFILE_SCOPE("SceneBase Init");
+        SceneBase::Initialize(device, width, height, props);
+    }
+    {
+        //PROFILE_SCOPE("Physics Init");
+        Physics::Instance().Initialize();
+    }
+    {
+        PROFILE_SCOPE("SetUpActors Init");
+        //アクターをセット
+        SetUpActors();
+    }
+
+    // ここで軌跡を描画する
+    RegisterRenderHook(RenderPass::ForwardBlend, [&](ID3D11DeviceContext* immediateContext)
+        {
+            RenderState::BindBlendState(immediateContext, BLEND_STATE::ADD);
+            player->RenderTrail(immediateContext);
+        });
 
     return true;
 }
 
 void TitleScene::Start()
 {
+    // ゲームBGM
+    gameBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("GameBgmActor");
+    gameBgmActor->SetSource(L"./Data/Sound/BGM/game_bgm.wav");
+    gameBgmActor->SetLoop(true);
+    gameBgmActor->SetBgm(true);
+    gameBgmActor->Play();
+    gameBgmActor->SetVolume(0.8f);
 
+#if 1
+    cameraManager->ToggleCinematicCamera(this);
 
+    SceneEditor::LoadPresetList(); // 更新
+    std::string file = "Title.json";
+    static SceneState savedState;
+    SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+    savedState.Apply(Scene::GetCurrentScene());
+#else
+    // シーンプリセットを設定する
+    SceneEditor::LoadPresetList(); // 更新
+    std::string file = "newPreset.json";
+    static SceneState savedState;
+    SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+    savedState.ApplyScenePreset(Scene::GetCurrentScene());
+#endif // 0
+
+    // シーンが切り替わった時に
+    SceneTransitionManager::Instance().NotifySceneChanged();
 }
 
 void TitleScene::Update(float deltaTime)
 {
     using namespace DirectX;
+
+    // ライトのビューの焦点をプレイヤー位置に設定する (シャドウマップ用)
+    if (player)
+    {
+        SetLightViewFocus(player->GetPosition());
+    }
+
     SceneBase::Update(deltaTime);
 
     Physics::Instance().Update(Time::UnscaledDeltaTime());
@@ -60,42 +142,63 @@ void TitleScene::Update(float deltaTime)
     CollisionSystem::ApplyPushAll();
 
     //#ifdef _DEBUG
-    if (InputSystem::GetInputState("F1", InputStateMask::Trigger))
+    if (InputSystem::GetInputState("Space", InputStateMask::Trigger))
     {
         const char* types[] = { "0", "1" };
-        Scene::_transition("LoadingScene", { std::make_pair("preload", "SampleScene"), std::make_pair("type", types[rand() % 2]) });
+        Scene::_transition("LoadingScene", { std::make_pair("preload", "GameScene"), std::make_pair("type", types[rand() % 2]) });
     }
     //#endif // !_DEBUG
 }
 
 void TitleScene::SetUpActors()
 {
-    auto mainCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MainCamera>("mainCameraActor");
-    auto mainCameraComponent = mainCameraActor->GetComponent<TPSCameraComponent>();
-
-    Transform playerTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
-
-    mainCameraActor->SetLookTarget(player->GetRootComponent());
+    Transform mainCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    mainCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MainCamera>("mainCameraActor", mainCameraTr);
+    mainCameraComponent = mainCameraActor->GetComponent<TPSCameraComponent>();
+    {
+        PROFILE_SCOPE("Create Player");
+        Transform playerTr(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,126.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
+        //Transform playerTr(DirectX::XMFLOAT3{ 0.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
+        player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
+        mainCameraActor->SetLookTarget(player->GetRootComponent());
+        mainCameraActor->SetEye(player->GetRootComponent());
+    }
+    mainCameraComponent->SetPitch(-20.0f);
+    mainCameraComponent->distance = 5.35f;
     SetActiveCamera(mainCameraActor);
     Logger::Log(U8("sampleシーンのカメラ設定される。"));
 
-    Transform stageTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto stage = this->GetActorManager()->CreateAndRegisterActorWithTransform<Stage>("stage", stageTr);
-
-    auto debugCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DebugCamera>("debugCam");
-    debugCameraActor->SetPosition({ 0.0f,10.0f,-20.0f });
-
-    Transform buildTr2(DirectX::XMFLOAT3{ -3.0f,0.45f,3.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 0.8f,0.8f,0.8f });
-    auto pauseActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor", buildTr2);
-
-    Transform bossTr(DirectX::XMFLOAT3{ 3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
-    auto boss = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("boss", bossTr);
-
-    Transform greystoneTr(DirectX::XMFLOAT3{ -3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto greystone = this->GetActorManager()->CreateAndRegisterActorWithTransform<KnightActor>("greystone", greystoneTr);
-
+    Transform debugCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    auto debugCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DebugCamera>("debugCam", debugCameraTr);
     cameraManager->SetDebugCamera(debugCameraActor);
+
+    Transform cinemaCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    auto cinemaCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<CinemaCamera>("cinemaCam", cinemaCameraTr);
+    cameraManager->SetCinematicCamera(cinemaCameraActor);
+
+
+    Transform movieCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    auto movieCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MovieCamera>("movieCam", movieCameraTr);
+    cameraManager->SetMovieCamera(movieCameraActor);
+
+    loadStageThread.join();
+    loadStageAssetsThread.join();
+    {
+        PROFILE_SCOPE("Create Stage");
+        Transform stageTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        auto stage = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStage>("stage", stageTr); // 元のモデルの scale を 0.4f
+        stage->SetModel(stageAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset, stageCandleStandAsset);
+    }
+
+    for (auto point : stageAsset->spawnPoints)
+    {
+        if (point.name.rfind("Spawn_SmallDoor", 0) == 0)
+        {
+            DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
+            Transform smallDoorTr{ pos,point.worldRotation,point.worldScale };
+            auto smallDoorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorSmallActor>("smallDoorActor", smallDoorTr);
+        }
+    }
 }
 
 bool TitleScene::Uninitialize(ID3D11Device* device)

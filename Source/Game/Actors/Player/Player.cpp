@@ -167,6 +167,14 @@ void Player::Initialize(const Transform& transform)
         controller->AddCombo("Primary_Attack_Fast_B", "Primary_Attack_Fast_C");
         controller->AddCombo("Primary_Attack_Fast_C", "Primary_Attack_Fast_D1_1");
 
+        // 剣を地面に突き刺す時のSE
+        controller->AddNotifyEvent("Recall_0", 1.4f, AnimationNotifyEvent::Type::PlaySE, "player_recall");
+
+        // 剣を構えたときのSE
+        controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_attack2");
+        controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::SwordEmissive);
+
+
         // ジャスト回避
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
@@ -367,7 +375,6 @@ void Player::Initialize(const Transform& transform)
     //swordMeshComponent->overrideDeferredPipelineName = "DarkStagePlayerWeaponPS";
     swordMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.0f,0.8f,1.0f ,0.0f };
     swordMeshComponent->plusAlphaCBuffer->data.flashValue = 9.5f;
-    swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 8.5f;
     swordMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerWeaponForwardPS";
     swordMeshComponent->overrideForwardPipelineName = "GltfModelPlayerWeaponForwardPS";
 
@@ -398,7 +405,7 @@ void Player::Initialize(const Transform& transform)
     runAudioComp = AddComponent<AudioSourceComponent>("runAudioComponent", parentName);
     runAudioComp->SetSource(L"./Data/Sound/SE/run_heel.wav");
     //runAudioComp->SetSource(L"./Data/Sound/SE/run.wav");
-    runAudioComp->SetVolume(0.3f);
+    runAudioComp->SetVolume(0.05f);
     runAudioComp->SetLoop(true);
 
     // カメラの目の位置のコンポーネントを追加
@@ -769,6 +776,12 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     }
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:
+        break;
+    case AnimationNotifyEvent::Type::SwordEmissive:
+        if (swordMeshComponent)
+        {// 剣にエミッシブを追加
+            swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 10.5f;
+        }
         break;
     }
 }

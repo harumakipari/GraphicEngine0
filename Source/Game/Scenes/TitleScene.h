@@ -8,6 +8,7 @@
 
 #include "Core/ActorManager.h"
 #include "Engine/Scene/SceneBase.h"
+#include "Game/Actors/BgmActor.h"
 
 
 #include "Graphics/Renderer/SceneRenderer.h"
@@ -40,5 +41,22 @@ public:
     static inline Scene::Autoenrollment<TitleScene> _autoenrollment;
 
 private:
-    std::shared_ptr<Stage>  title;
+    std::thread loadStageThread;
+    std::thread loadStageAssetsThread;
+
+    std::shared_ptr<StageAsset> stageAsset = std::make_shared<StageAsset>();
+    std::shared_ptr<StageAsset> stageCandelabraAsset = std::make_shared<StageAsset>();
+    std::shared_ptr<StageAsset> stageBrazierAsset = std::make_shared<StageAsset>();
+    std::shared_ptr<StageAsset> stageGroundBrazierAsset = std::make_shared<StageAsset>();
+    std::shared_ptr<StageAsset> stageMeltedWaxAsset = std::make_shared<StageAsset>();
+    std::shared_ptr<StageAsset> stageStandingBrazierAsset = std::make_shared<StageAsset>();
+    std::shared_ptr<StageAsset> stageCandleStandAsset = std::make_shared<StageAsset>();
+
+    // ゲームBGMアクター
+    std::shared_ptr<BgmActor> gameBgmActor;
+
+    std::shared_ptr<Player> player;
+    // カメラ
+    TPSCameraComponent* mainCameraComponent = nullptr;
+    std::shared_ptr<MainCamera> mainCameraActor;
 };

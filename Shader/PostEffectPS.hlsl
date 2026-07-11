@@ -283,11 +283,11 @@ float4 main(VS_OUT pin) : SV_TARGET
     }
 
     // ƒuƒ‹[ƒ€ˆ—
-    //if (enableBloom)
-    //{
-    //    float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);
-    //    color.rgb += bloom.rgb;
-    //}
+    if (enableBloom)
+    {
+        float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);
+        color.rgb += bloom.rgb;
+    }
 
     // SSR‚Ìˆ—
     if (enableSSR)

@@ -98,13 +98,13 @@ float4 main(VS_OUT pin) : SV_TARGET
         finalColor.rgb = lerp(bossRoomColor, finalColor.rgb, bossRoomLerpFactor);
     }
 
-    if (gBufferFlag == GBUFFER_FLAG_EMISSIVE)
+    if (gBufferFlag == GBUFFER_FLAG_EMISSIVE /*&& materialType == MATERIAL_EYE*/)
     {
         finalColor.rgb += emissive;
     }
 
     // ÉuÉãÅ[ÉÄèàóù
-    if (enableBloom)
+    if (enableEyeBloom == 1)
     {
         float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);
         finalColor.rgb += bloom.rgb;

@@ -78,7 +78,7 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
         hr = CreatePsFromCSO(device, "./Data/Shaders/DeferredLightingPS.cso", deferredPs.ReleaseAndGetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-        hr = CreatePsFromCSO(device, "./Data/Shaders/FinalPassPS.cso", finalPs.ReleaseAndGetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/FinalPS.cso", finalPs.ReleaseAndGetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
         // カスケードシャドウマップ
@@ -422,6 +422,7 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
 
         shaderCBuffer->data.bossRoomLerpFactor = shader.bossRoomLerpFactor;
         shaderCBuffer->data.bossRoomColor = shader.bossRoomColor;
+        shaderCBuffer->data.enableEyeBloom = shader.enableEyeBloom;
 
         sceneCBuffer->Activate(immediateContext, 1);
         shaderCBuffer->Activate(immediateContext, 9);

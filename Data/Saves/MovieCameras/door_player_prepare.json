@@ -1,7 +1,7 @@
 {
     "keys": [
         {
-            "duration": 2.5,
+            "duration": 1.5,
             "ease": "EaseInOut",
             "fov": 0.3108653128147125,
             "name": "player_prePare",
