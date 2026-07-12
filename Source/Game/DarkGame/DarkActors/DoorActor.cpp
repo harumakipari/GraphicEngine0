@@ -120,6 +120,15 @@ void DoorLargeActor::Open()
     }
 }
 
+// ƒhƒA‚ð•Â‚ß‚é
+void DoorLargeActor::Closed()
+{
+    leftHinge->SetRelativeEulerRotationDirect({ 0,closedAngleLeft,0 });
+    rightHinge->SetRelativeEulerRotationDirect({ 0,closedAngleRight,0 });
+
+    doorState = DoorState::Closed;
+}
+
 void DoorLargeActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI

@@ -75,9 +75,6 @@ void GruxEnemyEyeActor::Update(float elapsedTime)
 
     if (auto enemy = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
     {
-        DirectX::XMFLOAT3 leftEyePosition = enemy->leftEyeSceneComponent->GetComponentLocation();
-        DirectX::XMFLOAT3 rightEyePosition = enemy->rightEyeSceneComponent->GetComponentLocation();
-
         leftEyeMeshComponent->SetWorldLocationDirect(leftEyePosition);
         rightEyeMeshComponent->SetWorldLocationDirect(rightEyePosition);
 
@@ -134,6 +131,8 @@ void GruxEnemyEyeActor::DrawImGuiDetails()
     ImGui::DragFloat3(U8("目のフレアのスケール"), &eyeFlareScale.x, 0.05f, 0.0f);
     ImGui::DragFloat3(U8("目のフレアの角度"), &eyeFlareDegreeAngle.x);
     ImGui::DragFloat3(U8("目のフレアのoffset"), &eyeFlareOffset.x);
+    ImGui::DragFloat3(U8("右目の位置"), &rightEyePosition.x);
+    ImGui::DragFloat3(U8("左目の位置"), &leftEyePosition.x);
     if (ImGui::Button(U8("目のフレアのスケール変更開始")))
     {
         StartEyeFlareScale();
@@ -182,8 +181,9 @@ void GruxEnemyEyeActor::StartEyeFlash(const std::function<void()>& onFinished)
 }
 
 // 目のモデルを小さくする処理
-void GruxEnemyEyeActor::ToSmallEyeModel(float duration)
+void GruxEnemyEyeActor::ToSmallEyeModel(float duration, std::function<void()> finished)
 {
+    onFinished = finished;
     duration -= 0.5f;
     // 目玉が光る処理
     {
@@ -203,6 +203,12 @@ void GruxEnemyEyeActor::ToSmallEyeModel(float duration)
                 rightEyeMeshComponent->SetIsVisible(false);
                 leftEyeFlareMeshComponent->SetIsVisible(false);
                 rightEyeFlareMeshComponent->SetIsVisible(false);
+
+                if (onFinished)
+                {
+                    onFinished();
+                }
+                onFinished = nullptr;
             });
         PropertyAccessor<float> accessor;
 
@@ -247,6 +253,7 @@ void GruxEnemyEyeActor::StartEyeFlareScale()
                 {
                     this->onFinished();
                 }
+                this->onFinished = nullptr;
                 eyeFlareScaleEasingFactor = 0.0f;
 
             });

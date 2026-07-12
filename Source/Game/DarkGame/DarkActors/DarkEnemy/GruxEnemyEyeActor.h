@@ -24,7 +24,7 @@ public:
     void StartEyeFlash(const std::function<void()>& onFinished = nullptr);
 
     // 目のモデルを小さくする処理
-    void ToSmallEyeModel(float duration);
+    void ToSmallEyeModel(float duration, std::function<void()> finished = nullptr);
 
 private:
     // 目のフレアのスケールが大きくなる処理を開始
@@ -61,6 +61,8 @@ private:
     DirectX::XMFLOAT3 eyeInitScale = { 0.01f,0.01f,0.01f };
     DirectX::XMFLOAT3 eyeScale = { 0.03f,0.02f,0.02f };
 
+    DirectX::XMFLOAT3 leftEyePosition = { -1.072f,1.621f,10.881f };
+    DirectX::XMFLOAT3 rightEyePosition = { -1.072f,1.621f,11.2f };
 
 
     std::function<void()> onFinished;  // 目玉のフレアの演出が終わった時に呼び出す関数

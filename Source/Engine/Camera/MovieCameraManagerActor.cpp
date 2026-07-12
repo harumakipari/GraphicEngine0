@@ -80,13 +80,13 @@ void MovieCameraManagerActor::Update(float deltaTime)
             {// プレイヤーのアニメーションを待機に変更
                 player->PlayBodyAnimation("Idle", true);
             }
-            // Bloomの値を落ち着ける
-            if (scene)
-            {
-                auto& shader = scene->GetSceneSettings();
-                shader.bloomConstantBuffer.bloomExtractionThreshold = 7.83f;
-                shader.bloomConstantBuffer.bloomIntensity = 0.058f;
-            }
+            //// Bloomの値を落ち着ける
+            //if (scene)
+            //{
+            //    auto& shader = scene->GetSceneSettings();
+            //    shader.bloomConstantBuffer.bloomExtractionThreshold = 7.83f;
+            //    shader.bloomConstantBuffer.bloomIntensity = 0.058f;
+            //}
 
 
             if (gameScene)
@@ -109,8 +109,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0");
                 gruxEnemy->SetBodyAnimationRate(0.0f);
             }
-
-
             doorMovieState = DoorMovieState::DoorOpening;
         }
     }
@@ -141,17 +139,21 @@ void MovieCameraManagerActor::Update(float deltaTime)
     {
         constexpr float duration = 3.0f;
         // Bloomの値を落ち着ける
-        if (scene)
-        {
-            auto& shader = scene->GetSceneSettings();
-            shader.bloomConstantBuffer.bloomExtractionThreshold = 9.0f;
-            shader.bloomConstantBuffer.bloomIntensity = 0.415f;
-        }
+        //if (scene)
+        //{
+        //    auto& shader = scene->GetSceneSettings();
+        //    shader.bloomConstantBuffer.bloomExtractionThreshold = 9.0f;
+        //    shader.bloomConstantBuffer.bloomIntensity = 0.415f;
+        //}
         // ボスの目玉をなくす
         if (gruxEnemyEye)
         {
-            gruxEnemyEye->ToSmallEyeModel(duration);
-            gruxEnemy->GetBodyAnimationController()->ResetAnimationRate();
+            gruxEnemyEye->ToSmallEyeModel(duration, [&, gameScene, gruxEnemy]()
+                {
+                    // 目のBloomのみをオフにして、Bloomをオンにする
+                    gameScene->SetEyeBloom(false);
+                    gruxEnemy->GetBodyAnimationController()->ResetAnimationRate();
+                });
         }
         // 部屋を徐々に明るくする
         if (gameScene)
@@ -170,38 +172,41 @@ void MovieCameraManagerActor::Update(float deltaTime)
     }
     break;
     case DoorMovieState::BossRoomLerp:
-        // 目のBloomのみをオフにして、Bloomをオンにする
-        gameScene->SetEyeBloom(false);
         break;
     case DoorMovieState::UpPlayerCombat:
+        movieCamera->SetOnMovieStart([&, doorActor, player, gruxEnemy]()
+            {
+                // ドアを閉めた状態にする
+                if (doorActor)
+                {
+                    doorActor->Closed();
+                }
+                // プレイヤーの位置をドア前にする
+                if (player)
+                {
+                    player->SetPosition({ -4.827f,-0.098f,11.724f });
+                    // プレイヤーのアニメーションを再生
+                    player->PlayBodyAnimation("Level_Start_Cut", false);
+                }
+                // 敵の位置を部屋の奥にする
+                if (gruxEnemy)
+                {
+                    gruxEnemy->SetPosition({ 12.795f,-0.12f,10.774f });
+                    gruxEnemy->SetEulerRotation({ 0.0f,-90.0f,0.0f });
+                }
+                doorMovieState = DoorMovieState::UpPlayerCombatMovie;
+            });
 
+        // プレイヤーアップカメラワーク
+        PlayMovie(playerCombatMovieFileName);
         // 部屋の蝋燭スタンドの炎の光を戻す
         for (auto candleStand : candleStandActors)
         {
             candleStand->ResetFireLightScale();
         }
-        // ドアを閉めた状態にする
-        if (doorActor)
-        {
-            doorActor->SetState(DoorLargeActor::DoorState::Closed);
-        }
-        // プレイヤーの位置をドア前にする
-        if (player)
-        {
-            player->SetPosition({ -4.827f,-0.098f,11.724f });
-            // プレイヤーのアニメーションを再生
-            player->PlayBodyAnimation("Level_Start_Cut", false);
-        }
-        // 敵の位置を部屋の奥にする
-        if (gruxEnemy)
-        {
-            gruxEnemy->SetPosition({ 12.795f,-0.12f,10.774f });
-            gruxEnemy->SetEulerRotation({ 0.0f,-90.0f,0.0f });
-        }
-
-        // プレイヤーアップカメラワーク
-        PlayMovie(playerCombatMovieFileName);
-        doorMovieState = DoorMovieState::UpPlayerCombatMovie;
+        doorMovieState = DoorMovieState::PreUpPlayerCombatMovie;
+        break;
+    case DoorMovieState::PreUpPlayerCombatMovie:
         break;
     case DoorMovieState::UpPlayerCombatMovie:
         if (movieCamera->IsMovieFinish())
@@ -236,6 +241,12 @@ void MovieCameraManagerActor::Update(float deltaTime)
             {
                 gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0");
             }
+            if (player)
+            {
+                player->SetPosition({ -1.3f,-0.1f,11.24f });
+                player->SetEulerRotation({ 0.0f,90.0f,0.0f });
+            }
+
             doorMovieState = DoorMovieState::Finished;
         }
         break;
@@ -249,6 +260,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
             //カメラを三人称に戻す
             if (scene->GetCameraManager()->IsUseMovie())
             {// ムービーカメラが使用中の場合のみ切り替え
+                if (auto mainCamera = actorManager->GetActorOfType<MainCamera>())
+                {
+                    mainCamera->SetCameraMode(TPSCameraController::CameraMode::BossBattle);
+                    mainCamera->StartBlend(dynamic_cast<Camera*>(movieCamera->GetOwner()), 2.0f);
+                }
                 scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
             }
         }

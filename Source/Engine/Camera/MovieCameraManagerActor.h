@@ -15,6 +15,7 @@ private:
         PreBossRoomLerp, // ボスの部屋が明るくなる
         BossRoomLerp,   // ボスの部屋が明るくなる
         UpPlayerCombat, // プレイヤーが剣を構える
+        PreUpPlayerCombatMovie,
         UpPlayerCombatMovie,
         EnemyMovie,
         EnemyName,

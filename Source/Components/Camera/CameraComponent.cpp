@@ -510,6 +510,12 @@ void MovieCameraComponent::Start(bool reverse)
     {
         target->SetUseMovie(true);
     }
+
+    //const auto& first = reversePlay ? keys.back() : keys.front();
+    //GetOwner()->SetPosition(first.position);
+    //GetOwner()->SetQuaternionRotation(first.rotation);
+    //SetFov(first.fov);
+
     finished = false;
 
     // Ä¶’†‚Íè“®‹Ö~
@@ -564,6 +570,12 @@ void MovieCameraComponent::UpdatePath(float dt)
         fovY = last.fov;
 
         return;
+    }
+
+    if (onMovieStart)
+    {
+        onMovieStart();
+        onMovieStart = nullptr;
     }
 
     auto& a = reversePlay ? keys[currentIndex + 1] : keys[currentIndex];

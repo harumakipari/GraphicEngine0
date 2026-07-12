@@ -276,6 +276,7 @@
     <ClCompile Include="Source\Engine\Audio\Audio.cpp" />
     <ClCompile Include="Source\Engine\Camera\CameraManager.cpp" />
     <ClCompile Include="Source\Engine\Camera\MovieCameraManagerActor.cpp" />
+    <ClCompile Include="Source\Engine\Camera\TPSCameraController.cpp" />
     <ClCompile Include="Source\Engine\Debug\DebugRender.cpp" />
     <ClCompile Include="Source\Engine\Debug\EditorGizmo.cpp" />
     <ClCompile Include="Source\Engine\Debug\Logger.cpp" />

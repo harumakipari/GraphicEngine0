@@ -29,6 +29,9 @@ public:
     // ステートを設定する
     void SetState(const DoorState doorState) { this->doorState = doorState; }
 
+    // ドアを閉める
+    void Closed();
+
     void DrawImGuiDetails() override;
 
 private:

@@ -370,6 +370,9 @@
     <ClCompile Include="Source\Game\Actors\BgmActor.cpp">
       <Filter>Source\Game\Actors</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Camera\TPSCameraController.cpp">
+      <Filter>Source\Engine\Camera</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -1196,6 +1199,7 @@
     <FxCompile Include="Shader\StarEyeOpaquePS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Shader\LoadingPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader\BidirectionalReflectanceDistributionFunction.hlsli">

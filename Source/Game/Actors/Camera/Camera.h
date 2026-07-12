@@ -110,6 +110,11 @@ public:
         tpsController.cameraMode = cameraMode;
     }
 
+    void StartBlend(const Camera* currentCamera, float duration)
+    {
+        tpsController.StartBlend(currentCamera, duration);
+    }
+
     //XVˆ—
     void Update(float deltaTime)override;
 

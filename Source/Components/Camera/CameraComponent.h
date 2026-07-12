@@ -909,6 +909,12 @@ public:
     // =========================
     void Start(bool reverse = false);
 
+    void SetOnMovieStart(const std::function<void()>& func)
+    {
+        onMovieStart = func;
+    }
+
+
 private:
     void HandleKeyboardInput(float deltaTime);
     void HandleMouseInput(float deltaTime)
@@ -1017,6 +1023,7 @@ private:
     std::vector<std::string> movieFiles;
 
     std::weak_ptr<TitleCamera> targetCamera;
+    std::function<void()> onMovieStart;
 };
 
 #endif //CAMERA_COMPONENT_H
