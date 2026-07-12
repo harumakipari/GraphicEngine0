@@ -106,11 +106,11 @@ public:
         animationNotifyAssets[clip].notifyTrack.states.push_back({ start,end,type,parameter,animationSpeed });
     }
 
-    void AddNotifyEvent(const std::string& animationName,const float time,
-        const AnimationNotifyEvent::Type type, const std::string& parameter = "")
+    void AddNotifyEvent(const std::string& animationName, const float time,
+        const AnimationNotifyEvent::Type type, const std::string& parameter = "", float value = 1.0f)
     {
         const size_t clip = animationNameToIndex_[animationName];
-        animationNotifyAssets[clip].notifyTrack.events.push_back({ time,type,parameter });
+        animationNotifyAssets[clip].notifyTrack.events.push_back({ time,type,parameter,value });
 
         std::sort(
             animationNotifyAssets[clip].notifyTrack.events.begin(),

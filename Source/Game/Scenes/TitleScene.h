@@ -11,15 +11,11 @@
 #include "Game/Actors/BgmActor.h"
 
 
-#include "Graphics/Renderer/SceneRenderer.h"
 
 #include "Game/Actors/Camera/LoadingCamera.h"
-#include "Game/Actors/Player/Player.h"
-#include "Game/Actors/Stage/ClothSimulate.h"
-#include "Game/Actors/Stage/Stage.h"
+#include "Game/Actors/Player/TitlePlayer.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
 
-#include "UI/Widgets/Widget.h"
 
 
 class TitleScene : public SceneBase
@@ -55,7 +51,7 @@ private:
     // ゲームBGMアクター
     std::shared_ptr<BgmActor> gameBgmActor;
 
-    std::shared_ptr<Player> player;
+    std::shared_ptr<TitlePlayer> player;
     // カメラ
     TPSCameraComponent* mainCameraComponent = nullptr;
     std::shared_ptr<MainCamera> mainCameraActor;

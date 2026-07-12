@@ -373,6 +373,12 @@
     <ClCompile Include="Source\Engine\Camera\TPSCameraController.cpp">
       <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.cpp">
+      <Filter>Source\Game\DarkGame\DarkActors</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp">
+      <Filter>Source\Game\Actors\Player</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -900,6 +906,12 @@
     <ClInclude Include="Source\Game\Actors\BgmActor.h">
       <Filter>Source\Game\Actors</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.h">
+      <Filter>Source\Game\DarkGame\DarkActors</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Player\TitlePlayer.h">
+      <Filter>Source\Game\Actors\Player</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">
@@ -1199,7 +1211,9 @@
     <FxCompile Include="Shader\StarEyeOpaquePS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\LoadingPS.hlsl" />
+    <FxCompile Include="Shader\LoadingPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader\BidirectionalReflectanceDistributionFunction.hlsli">

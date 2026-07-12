@@ -264,6 +264,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 {
                     mainCamera->SetEye(player->GetCameraEyeComponent());
                     mainCamera->SetLookTarget(gruxEnemy->GetCameraTargetComponent());
+                    //mainCamera->SetCameraMode(TPSCameraController::CameraMode::TPS);
                     mainCamera->StartBlend(dynamic_cast<Camera*>(movieCamera->GetOwner()), 2.0f, [&, mainCamera]()
                         {
                             mainCamera->SetCameraMode(TPSCameraController::CameraMode::BossBattle);

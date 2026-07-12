@@ -300,6 +300,7 @@
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossEnemy.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\TestPlayer.cpp" />
+    <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.cpp" />
@@ -309,6 +310,7 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageChandelierActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageGroundBrazierActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStagePointLightActor.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DoorActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStage.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\Player.cpp" />
@@ -450,6 +452,9 @@
     <ClInclude Include="Source\Game\Actors\Player\Player.h" />
     <ClInclude Include="Source\Game\Actors\Player\PlayerStateDerived.h" />
     <ClInclude Include="Source\Game\Actors\Player\TestPlayer.h" />
+    <ClInclude Include="Source\Game\Actors\Player\TitlePlayer.h">
+      <DeploymentContent>false</DeploymentContent>
+    </ClInclude>
     <ClInclude Include="Source\Game\Actors\Stage\Cloth.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h" />
@@ -463,6 +468,7 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageCandelabraActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageChandelierActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageGroundBrazierActor.h" />
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DoorActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStage.h" />
     <ClInclude Include="Source\Game\Actors\Stage\TestSoftBody.h" />
@@ -761,9 +767,9 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shader\LoadingPS.hlsl">
+      <FileType>Document</FileType>
+      <DeploymentContent>false</DeploymentContent>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shader\MotionBlurPS.hlsl">

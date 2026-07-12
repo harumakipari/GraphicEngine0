@@ -17,6 +17,7 @@
 #include "Game/Actors/Camera/LoadingCamera.h"
 #include "Game/Actors/Enemy/Boss/BossEnemy.h"
 #include "Game/Actors/Player/Player.h"
+#include "Game/Actors/Player/TitlePlayer.h"
 #include "Game/Actors/Stage/ElasticBuilding.h"
 #include "Game/Actors/Stage/Cloth.h"
 
@@ -25,6 +26,7 @@
 #include "Game/DarkGame/DarkActors/DarkStage.h"
 #include "Game/DarkGame/DarkActors/DarkStageCandelabraActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
+#include "Game/DarkGame/DarkActors/DarkTitleStage.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
@@ -39,7 +41,7 @@ bool TitleScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, con
     loadStageThread = std::thread([&]()
         {
             PROFILE_SCOPE("Load StageModel");
-            stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/DarkStage.gltf",
+            stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/TitleStage0712/DarkStage.gltf",
                 ModelTypes::ModelMode::StaticMesh, false, true);
             stageAsset->spawnPoints = stageAsset->model->spawnPoints;
         });
@@ -104,14 +106,12 @@ void TitleScene::Start()
     gameBgmActor->Play();
     gameBgmActor->SetVolume(0.8f);
 
-
     cameraManager->ToggleCinematicCamera(this);
     SceneEditor::LoadPresetList(); // 更新
     std::string file = "Title.json";
     static SceneState savedState;
     SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
     savedState.Apply(Scene::GetCurrentScene());
-
 
     // タイトルの画像を作成
     std::shared_ptr<UIImageComponent> title = std::make_shared<UIImageComponent>("./Data/Textures/UI/title.png", "title");
@@ -121,6 +121,9 @@ void TitleScene::Start()
     uiManager->Add(title);
 
     // Press A　の画像を作成
+    //std::shared_ptr<Sprite> pressEnter = std::make_shared<Sprite>(Graphics::GetDevice(),"./Data/Textures/UI/");
+
+
     std::shared_ptr<UIImageComponent> pressButton = std::make_shared<UIImageComponent>("./Data/Textures/UI/press_a.png", "press_a");
     pressButton->SetWorldPosition({ 1160, 900 });
     pressButton->SetSize({ 600, 100 });
@@ -148,7 +151,7 @@ void TitleScene::Update(float deltaTime)
     CollisionSystem::ApplyPushAll();
 
     //#ifdef _DEBUG
-    if (InputSystem::GetInputState("Space", InputStateMask::Trigger))
+    if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
     {
         const char* types[] = { "0", "1" };
         SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene")}, TransitionStyle::Fade);
@@ -164,8 +167,7 @@ void TitleScene::SetUpActors()
     {
         PROFILE_SCOPE("Create Player");
         Transform playerTr(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,126.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
-        //Transform playerTr(DirectX::XMFLOAT3{ 0.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
-        player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
+        player = this->GetActorManager()->CreateAndRegisterActorWithTransform<TitlePlayer>("player", playerTr);
         mainCameraActor->SetLookTarget(player->GetRootComponent());
         mainCameraActor->SetEye(player->GetRootComponent());
     }
@@ -192,7 +194,7 @@ void TitleScene::SetUpActors()
     {
         PROFILE_SCOPE("Create Stage");
         Transform stageTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-        auto stage = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStage>("stage", stageTr); // 元のモデルの scale を 0.4f
+        auto stage = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkTitleStage>("stage", stageTr); 
         stage->SetModel(stageAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset, stageCandleStandAsset);
     }
 

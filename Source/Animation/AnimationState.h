@@ -38,6 +38,8 @@ struct AnimationNotifyEvent
     Type type;
 
     std::string parameter;
+
+    float value = 0.0f; // ‰¹‚Ìvolume‚È‚Ç
 };
 
 struct AnimationNotifyTrack

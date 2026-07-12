@@ -169,9 +169,11 @@ void Player::Initialize(const Transform& transform)
 
         // åïÇínñ Ç…ìÀÇ´éhÇ∑éûÇÃSE
         controller->AddNotifyEvent("Recall_0", 1.4f, AnimationNotifyEvent::Type::PlaySE, "player_recall");
+        controller->AddNotifyEvent("Recall_0", 1.4f, AnimationNotifyEvent::Type::PlaySE, "player_recall_voice", 1.2f);
 
         // åïÇç\Ç¶ÇΩÇ∆Ç´ÇÃSE
         controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_attack2");
+        controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_level_voice");
         controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::SwordEmissive);
 
 
@@ -474,8 +476,12 @@ void Player::Update(float deltaTime)
     // ãOê’ÇÃçXêVèàóù
     trail.UpdateTrail(deltaTime);
 
+
     if (isAttackActive)
     {
+        // ãOê’Çí«â¡
+        trail.trailPoints.push_back({ swordTipPos,swordRootPos, trailRemainTime });
+
         XMFLOAT4X4 currentWorld = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
 
         if (!isPrevSwordWorldValid)
@@ -483,9 +489,6 @@ void Player::Update(float deltaTime)
             prevSwordWorld = currentWorld;
             isPrevSwordWorldValid = true;
         }
-
-        // ãOê’Çí«â¡
-        trail.trailPoints.push_back({ swordTipPos,swordRootPos, trailRemainTime });
 
         XMFLOAT3 prevPos =
         {
@@ -772,7 +775,7 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     case AnimationNotifyEvent::Type::PlaySE:
     {
         std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
-        CoreAudio::PlayOneShot(audioPath, 1.0f);
+        CoreAudio::PlayOneShot(audioPath, event.value);
     }
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:
