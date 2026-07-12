@@ -50,34 +50,6 @@ void SceneTransitionManager::RequestTransition(const std::string& nextScene, con
     if (style == TransitionStyle::Scale)
     {
         scaleTransitionEffect->OnSceneChanged();
-        if (param.contains("stage"))
-        {
-            const auto& stage = param.at("stage");
-            if (stage == "BOSS")
-            {
-                scaleTransitionEffect->SetTransitionTexture("BOSS");
-            }
-            //else if (stage=="FIRST")
-            //{
-            //    scaleTransitionEffect->SetTransitionTexture("FIRST");
-            //}
-            //else if (stage=="BOBBIN_FIRST")
-            //{
-            //    scaleTransitionEffect->SetTransitionTexture("BOBBIN_FIRST");
-            //}
-            //else if (stage=="REFLECT_WALL")
-            //{
-            //    scaleTransitionEffect->SetTransitionTexture("REFLECT_WALL");
-            //}
-            //else if (stage=="DIFFICULT")
-            //{
-            //    scaleTransitionEffect->SetTransitionTexture("DIFFICULT");
-            //}
-            else
-            {
-                scaleTransitionEffect->SetTransitionTexture("FIRST");
-            }
-        }
         scaleTransitionEffect->Start(TransitionDirection::Close);
     }
     else
@@ -107,7 +79,7 @@ void SceneTransitionManager::Update(float deltaTime)
     switch (state_)
     {
     case State::Closing:
-        if (scaleTransitionEffect->IsFinished())
+        if (fadeTransitionEffect->IsFinished())
         {
             state_ = State::ChangingScene;
             Scene::_transition(nextScene_, param);

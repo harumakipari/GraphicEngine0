@@ -19,8 +19,6 @@ public:
 
     bool IsFinished() const { return isFinishTransitionPerform; }
 
-    void SetTransitionTexture(const std::string& path);
-
     void OnSceneChanged() const;
 
 private:
@@ -30,7 +28,6 @@ private:
     float spriteScale = 1.0f;
     bool isFinishTransitionPerform = false;
 
-    std::unordered_map<std::string, std::shared_ptr<Sprite>> transitionTextures;
 };
 
 

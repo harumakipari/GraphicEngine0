@@ -15,35 +15,6 @@ void ScaleTransitionEffect::Initialize()
 
     float startScale = 220.0f;
 
-    transitionTextures["TUTORIAL"] =
-        std::make_shared<Sprite>(
-            Graphics::GetDevice(),
-            L"./Data/Textures/ScissorsUI/scene_change.png");
-
-    transitionTextures["FIRST"] =
-        std::make_shared<Sprite>(
-            Graphics::GetDevice(),
-            L"./Data/Textures/ScissorsUI/scene_change.png");
-
-    transitionTextures["BOBBIN_FIRST"] =
-        std::make_shared<Sprite>(
-            Graphics::GetDevice(),
-            L"./Data/Textures/ScissorsUI/scene_change.png");
-
-    transitionTextures["REFLECT_WALL"] =
-        std::make_shared<Sprite>(
-            Graphics::GetDevice(),
-            L"./Data/Textures/ScissorsUI/scene_change.png");
-
-    transitionTextures["DIFFICULT"] =
-        std::make_shared<Sprite>(
-            Graphics::GetDevice(),
-            L"./Data/Textures/ScissorsUI/scene_change.png");
-
-    transitionTextures["BOSS"] =
-        std::make_shared<Sprite>(
-            Graphics::GetDevice(),
-            L"./Data/Textures/ScissorsUI/scene_change_boss.png");
 
 #if 0
     TestEasingHandler floatHandler;
@@ -64,7 +35,7 @@ void ScaleTransitionEffect::Initialize()
 #endif // 0
     const auto scene = Scene::GetCurrentScene();
 
-    sprite = std::make_shared<UISceneChangeComponent>("./Data/Textures/ScissorsUI/scene_change.png", "sceneChange");
+    sprite = std::make_shared<UISceneChangeComponent>("./Data/Textures/back.png", "sceneChange");
     sprite->SetWorldPosition({ width * 0.5f, height * 0.5f });
     sprite->SetPivot({ 0.5f,0.5f });
     sprite->SetScale({ startScale,startScale });
@@ -116,15 +87,6 @@ void ScaleTransitionEffect::Update(float deltaTime)
     sprite->SetScale({ spriteScale,spriteScale });
 }
 
-void ScaleTransitionEffect::SetTransitionTexture(const std::string& stage)
-{
-    auto it = transitionTextures.find(stage);
-
-    if (it != transitionTextures.end())
-    {
-        sprite->SetTexture(it->second);
-    }
-}
 
 void FadeTransitionEffect::Initialize()
 {
@@ -134,7 +96,7 @@ void FadeTransitionEffect::Initialize()
     float height = 1080.0f;
 
     sprite = std::make_shared<UISceneChangeComponent>(
-        "./Data/Textures/ScissorsUI/black.png",
+        "./Data/Textures/back.png",
         "fade");
 
     sprite->SetWorldPosition({ width * 0.5f, height * 0.5f });

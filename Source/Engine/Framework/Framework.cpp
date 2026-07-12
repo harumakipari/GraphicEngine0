@@ -45,7 +45,7 @@ bool Framework::Initialize()
 {
     ////デバイス・デバイスコンテクスト・スワップチェーンの作成
     ID3D11Device* device = Graphics::GetDevice();
-    if (!device) 
+    if (!device)
     {
         assert("ModelComponent Error: device is null\n");
     }
@@ -55,10 +55,10 @@ bool Framework::Initialize()
 
     SceneTransitionManager::Instance().Initialize();
 
-    //Scene::_boot(device, "TitleScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
+    Scene::_boot(device, "TitleScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
     //Scene::_boot(device, "ResultScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
     //Scene::_boot(device, "TestScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
-    Scene::_boot(device, "GameScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
+    //Scene::_boot(device, "GameScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
     //Scene::_boot(device, "SampleScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
 
     //パーティクルシステム
@@ -80,10 +80,7 @@ bool Framework::Initialize()
     ProfileInitialize(&isPaused, Framework::SetPause/*, ImGuiControl::Profiler::DefaultMaxThreads*/);
     ProfileThreadName(0, "Main Thread");
 
-    //back = std::make_shared<Sprite>(device, L"./Data/Textures/UI/backGround.png");
-    back = std::make_shared<Sprite>(device, L"./Data/Textures/ScissorsUI/scene_change.png");
-    black = std::make_shared<Sprite>(device, L"./Data/Textures/ScissorsUI/black.png");
-    backBoss = std::make_shared<Sprite>(device, L"./Data/Textures/ScissorsUI/scene_change_boss.png");
+    back = std::make_shared<Sprite>(device, L"./Data/Textures/back.png");
 
     return true;
 }
@@ -181,31 +178,7 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
     }
     else
     {
-        auto& param = SceneTransitionManager::Instance().GetParams();
-        if (param.contains("fade"))
-        {
-            std::string name = param.at("fade");
-            if (name == "0")
-            {
-                black->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                Logger::Log(U8("blackを通った"));
-            }
-        }
-        else
-        {
-            if (param.contains("stage"))
-            {
-                std::string stageName = param.at("stage");
-                if (stageName == "BOSS")
-                {
-                    backBoss->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                }
-                else
-                {
-                    back->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-                }
-            }
-        }
+        back->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         Logger::Log(U8("backを通った"));
 
     }

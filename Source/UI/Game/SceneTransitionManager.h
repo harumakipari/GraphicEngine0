@@ -22,7 +22,7 @@ public:
 
     void RequestTransition(
         const std::string& nextScene,
-        const SceneTransitionParam& param = {}, TransitionStyle style = TransitionStyle::Scale
+        const SceneTransitionParam& param = {}, TransitionStyle style = TransitionStyle::Fade
     );
 
     void Update(float deltaTime);
@@ -56,7 +56,7 @@ private:
     std::string nextScene_;
     SceneTransitionParam param;
 
-    TransitionStyle currentStyle = TransitionStyle::Scale;
+    TransitionStyle currentStyle = TransitionStyle::Fade;
 
     std::shared_ptr<FadeTransitionEffect> fadeTransitionEffect;
     std::shared_ptr<ScaleTransitionEffect> scaleTransitionEffect;

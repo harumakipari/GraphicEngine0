@@ -104,22 +104,28 @@ void TitleScene::Start()
     gameBgmActor->Play();
     gameBgmActor->SetVolume(0.8f);
 
-#if 1
-    cameraManager->ToggleCinematicCamera(this);
 
+    cameraManager->ToggleCinematicCamera(this);
     SceneEditor::LoadPresetList(); // 更新
     std::string file = "Title.json";
     static SceneState savedState;
     SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
     savedState.Apply(Scene::GetCurrentScene());
-#else
-    // シーンプリセットを設定する
-    SceneEditor::LoadPresetList(); // 更新
-    std::string file = "newPreset.json";
-    static SceneState savedState;
-    SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
-    savedState.ApplyScenePreset(Scene::GetCurrentScene());
-#endif // 0
+
+
+    // タイトルの画像を作成
+    std::shared_ptr<UIImageComponent> title = std::make_shared<UIImageComponent>("./Data/Textures/UI/title.png", "title");
+    title->SetWorldPosition({ 680, 270 });
+    title->SetScale({ 1.2f,1.2f });
+    title->SetSize({ 1000, 200 });
+    uiManager->Add(title);
+
+    // Press A　の画像を作成
+    std::shared_ptr<UIImageComponent> pressButton = std::make_shared<UIImageComponent>("./Data/Textures/UI/press_a.png", "press_a");
+    pressButton->SetWorldPosition({ 1160, 900 });
+    pressButton->SetSize({ 600, 100 });
+    pressButton->SetScale({ 1.2f,1.2f });
+    uiManager->Add(pressButton);
 
     // シーンが切り替わった時に
     SceneTransitionManager::Instance().NotifySceneChanged();
@@ -145,7 +151,7 @@ void TitleScene::Update(float deltaTime)
     if (InputSystem::GetInputState("Space", InputStateMask::Trigger))
     {
         const char* types[] = { "0", "1" };
-        Scene::_transition("LoadingScene", { std::make_pair("preload", "GameScene"), std::make_pair("type", types[rand() % 2]) });
+        SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene")}, TransitionStyle::Fade);
     }
     //#endif // !_DEBUG
 }
