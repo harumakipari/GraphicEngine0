@@ -60,6 +60,12 @@ public:
     {
         mainCameraComponent = this->AddComponent<CinematicCameraComponent>("cinemaCamera");
     }
+    // ƒJƒƒ‰‚ğˆÚ“®‚Å‚«‚é‚æ‚¤‚É‚·‚é‚©‚Ç‚¤‚©
+    void SetUseDebugMode(const bool useDebug) const
+    {
+        std::dynamic_pointer_cast<CinematicCameraComponent>(mainCameraComponent)->SetIsUseCinematic(useDebug);
+    }
+
 };
 
 class MovieCamera :public Camera

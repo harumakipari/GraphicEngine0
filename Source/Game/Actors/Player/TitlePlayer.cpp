@@ -83,15 +83,22 @@ void TitlePlayer::Initialize(const Transform& transform)
 
     // ポイントライトコンポーネントを追加
     auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
-    pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
+    pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.8f, 0.5f });
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     pointLightComponent->SetSharedLightName("PlayerPointLight");
 
     // ポイントライトコンポーネントを追加
     auto backPointLightComponent = this->AddComponent<PointLightComponent>("PlayerBackPointLight", parentName);
-    backPointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f,-1.0f });
+    backPointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f,-2.7f });
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     backPointLightComponent->SetSharedLightName("PlayerBackPointLight");
+
+    // ポイントライトコンポーネントを追加
+    auto playerPlusPointLight = this->AddComponent<PointLightComponent>("PlayerPlusPointLight", parentName);
+    playerPlusPointLight->SetRelativeLocationDirect({ 0.0f, 1.6f, 0.5f });
+    // ライトの名前からライトマネージャーの共有ライトを取得して設定
+    playerPlusPointLight->SetSharedLightName("PlayerPointLight");
+
 
     {
         PROFILE_SCOPE("Create PlayerComponent");

@@ -1,11 +1,16 @@
 #pragma once
 #include "Core/Actor.h"
 #include "Game/DarkGame/Interactable.h"
+#include "UI/Widgets/Widget.h"
 
 class InteractableActor :public Actor, public IInteractable
 {
 public:
     InteractableActor(const std::string& actorName) :Actor(actorName) {}
+
+    void Initialize(const Transform& transform) override;
+
+    void Update(float deltaTime) override;
 
     virtual void Interact() override {}
 
@@ -58,4 +63,9 @@ protected:
     float interactRange = 2.0f;
     float interactDegree = 0.0f;
     DirectX::XMFLOAT3 interactOffset = { 0.0f, 0.0f, 0.0f }; // インタラクト可能な範囲のオフセット
+
+    std::shared_ptr<UIImageComponent> interactUiComponent;  // インタラクト可能な時に表示するUI
+    std::shared_ptr<Sprite> controlButton;
+    std::shared_ptr<Sprite> keyboardButton;
+
 };

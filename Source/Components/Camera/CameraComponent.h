@@ -384,6 +384,7 @@ private:
         SceneComponent::DrawImGuiInspector();
         if (ImGui::TreeNode((name_ + "  camera").c_str()))
         {
+            ImGui::Checkbox("useDebug", &useDebug);
             ImGui::DragFloat("moveSpeed", &moveSpeed, 0.1f);
             ImGui::DragFloat("rotateSpeed", &rotateSpeed, 0.1f);
 
@@ -543,6 +544,7 @@ private:
         SceneComponent::DrawImGuiInspector();
         if (ImGui::TreeNode((name_ + "  camera").c_str()))
         {
+            ImGui::Checkbox("useCinematic", &useCinematic);
             ImGui::DragFloat("moveSpeed", &moveSpeed, 0.1f);
             ImGui::DragFloat("rotateSpeed", &rotateSpeed, 0.1f);
 

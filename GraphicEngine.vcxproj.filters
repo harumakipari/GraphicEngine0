@@ -379,6 +379,9 @@
     <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp">
       <Filter>Source\Game\Actors\Player</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\InteractableActor.cpp">
+      <Filter>Source\Game\DarkGame\DarkActors</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">

@@ -318,6 +318,7 @@
     <ClCompile Include="Source\Game\Actors\Stage\ClothSimulate.cpp" />
     <ClCompile Include="Source\Game\Actors\Stage\TestSoftBody.cpp" />
     <ClCompile Include="Source\Game\Actors\WaterSphere\MorphModel.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\InteractableActor.cpp" />
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\SampleScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp" />

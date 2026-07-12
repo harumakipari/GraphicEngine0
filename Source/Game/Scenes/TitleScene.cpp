@@ -112,6 +112,8 @@ void TitleScene::Start()
     static SceneState savedState;
     SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
     savedState.Apply(Scene::GetCurrentScene());
+    // カメラを固定する
+    cinemaCameraActor->SetUseDebugMode(false);
 
     // タイトルの画像を作成
     std::shared_ptr<UIImageComponent> title = std::make_shared<UIImageComponent>("./Data/Textures/UI/title.png", "title");
@@ -122,6 +124,22 @@ void TitleScene::Start()
 
     // Press A　の画像を作成
     //std::shared_ptr<Sprite> pressEnter = std::make_shared<Sprite>(Graphics::GetDevice(),"./Data/Textures/UI/");
+    // コントローラー対応用
+    //controlButtonOnImage = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/Tutorial/A.png");
+    //controlButtonOffImage = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/Tutorial/A_off.png");
+    //// キーボード対応用
+    //keyBoardButtonOnImage = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/Tutorial/mouseClick.png");
+    //keyBoardButtonOffImage = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/Tutorial/mouseClick_off.png");
+    //if (InputSystem::IsGamepadConnected())
+    //{//　コントローラー対応
+    //    tutorialMouseClickImage->SetTexture(controlButtonOnImage);
+    //    tutorialMouseClickOffImage->SetTexture(controlButtonOffImage);
+    //}
+    //else
+    //{
+    //    tutorialMouseClickImage->SetTexture(keyBoardButtonOnImage);
+    //    tutorialMouseClickOffImage->SetTexture(keyBoardButtonOffImage);
+    //}
 
 
     std::shared_ptr<UIImageComponent> pressButton = std::make_shared<UIImageComponent>("./Data/Textures/UI/press_a.png", "press_a");
@@ -181,9 +199,8 @@ void TitleScene::SetUpActors()
     cameraManager->SetDebugCamera(debugCameraActor);
 
     Transform cinemaCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto cinemaCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<CinemaCamera>("cinemaCam", cinemaCameraTr);
+    cinemaCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<CinemaCamera>("cinemaCam", cinemaCameraTr);
     cameraManager->SetCinematicCamera(cinemaCameraActor);
-
 
     Transform movieCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto movieCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MovieCamera>("movieCam", movieCameraTr);

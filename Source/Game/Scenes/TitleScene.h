@@ -55,6 +55,10 @@ private:
     // カメラ
     TPSCameraComponent* mainCameraComponent = nullptr;
     std::shared_ptr<MainCamera> mainCameraActor;
+    // タイトル固定用カメラ
+    std::shared_ptr<CinemaCamera> cinemaCameraActor;
 
-    
+
+    // pressButtonのUIコンポーネント
+    std::shared_ptr<UIImageComponent> pressButton;
 };

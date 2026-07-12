@@ -7,6 +7,9 @@
 
 void DoorLargeActor::Initialize(const Transform& transform)
 {
+    // インタラクトの初期化
+    InteractableActor::Initialize(transform);
+
     root = AddComponent<SceneComponent>("DoorRoot");
 
     leftHinge = AddComponent<SceneComponent>("LeftHinge", "DoorRoot");
@@ -65,6 +68,9 @@ void DoorLargeActor::Initialize(const Transform& transform)
 
 void DoorLargeActor::Update(float deltaTime)
 {
+    // インタラクトの更新
+    InteractableActor::Update(deltaTime);
+
     switch (doorState)
     {
     case DoorState::Opening:
@@ -156,6 +162,9 @@ void DoorLargeActor::DrawImGuiDetails()
 
 void DoorSmallActor::Initialize(const Transform& transform)
 {
+    // インタラクトの初期化
+    InteractableActor::Initialize(transform);
+
     root = AddComponent<SceneComponent>("DoorRoot");
     hinge = AddComponent<SceneComponent>("Hinge", "DoorRoot");
     doorMesh = AddComponent<SkeletalMeshComponent>("Door", "Hinge");
@@ -180,6 +189,9 @@ void DoorSmallActor::Initialize(const Transform& transform)
 
 void DoorSmallActor::Update(float deltaTime)
 {
+    // インタラクトの更新
+    InteractableActor::Update(deltaTime);
+
     switch (doorState)
     {
     case DoorState::Opening:
@@ -231,6 +243,9 @@ void DoorSmallActor::DrawImGuiDetails()
 
 void DoorJailActor::Initialize(const Transform& transform)
 {
+    // インタラクトの初期化
+    InteractableActor::Initialize(transform);
+
     root = AddComponent<SceneComponent>("DoorRoot");
     hinge = AddComponent<SceneComponent>("Hinge", "DoorRoot");
     doorMesh = AddComponent<SkeletalMeshComponent>("Door", "Hinge");
@@ -258,6 +273,9 @@ void DoorJailActor::Initialize(const Transform& transform)
 
 void DoorJailActor::Update(float deltaTime)
 {
+    // インタラクトの更新
+    InteractableActor::Update(deltaTime);
+
     if (InputSystem::GetInputState("2", InputStateMask::Trigger))
     {
         CoreAudio::PlayOneShot("./Data/Sound/SE/jail_door_open.wav");
