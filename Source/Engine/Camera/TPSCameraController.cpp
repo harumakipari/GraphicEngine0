@@ -2,11 +2,28 @@
 #include "TPSCameraController.h"
 #include "Game/Actors/Camera/Camera.h"
 
-void TPSCameraController::StartBlend(const Camera* currentCamera, float duration)
+void TPSCameraController::StartBlend(const Camera* currentCamera, float duration, std::function<void()> finished)
 {
+    onFinished = finished;
+    startBlend = true;
+    blendTime = 0.0f;
+    blendDuration = duration;
+
+    blendTargetEndPos = targetComponent.lock()->GetComponentLocation();
+    blendTargetStartPos = targetComponent.lock()->GetComponentLocation();
+    blendEyeStartPos = currentCamera->GetPosition();
+    blendEyeEndPos = eyeComponent.lock()->GetComponentLocation();
+
+
+
+    return;
+
+    camera->lookTarget = targetComponent.lock()->GetComponentLocation();
+    camera->GetOwner()->SetPosition(eyeComponent.lock()->GetComponentLocation());
+
     if (currentCamera)
     {
-        blendStartPos = currentCamera->GetPosition();
+        blendEyeStartPos = currentCamera->GetPosition();
         blendStartPitch = currentCamera->GetCameraComponent()->GetPitch();
         blendStartYaw = currentCamera->GetCameraComponent()->GetYaw();
     }
@@ -15,9 +32,38 @@ void TPSCameraController::StartBlend(const Camera* currentCamera, float duration
     blendTargetYaw = camera->GetYaw();
     blendTargetPitch = camera->GetPitch();
 
+    using namespace DirectX;
+
+    XMFLOAT4 rot = currentCamera->GetQuaternionRotation();
+
+    XMVECTOR q = XMLoadFloat4(&rot);
+
+    XMVECTOR forward =
+        XMVector3Rotate(
+            XMVectorSet(0, 0, 1, 0),
+            q);
+
+    XMVECTOR eye =
+        XMLoadFloat3(&blendEyeStartPos);
+
+    XMVECTOR target = eye + forward * 5.0f; // 適当な距離
+
+    auto targetComp = targetComponent.lock();
+
+    blendTargetEndPos = targetComp->GetComponentLocation();
+
+    blendTargetEndPos.y += 1.5f;
+
+
+    XMStoreFloat3(&blendTargetStartPos, target);
+
+
     blendTime = 0.0f;
     blendDuration = duration;
     startBlend = true;
+
+    blendTargetEndPos = smoothedPivot;
+    blendEyeEndPos = CalculateTargetCameraPosition(0.0f);
 }
 
 void TPSCameraController::Update(float deltaTime)
@@ -26,7 +72,13 @@ void TPSCameraController::Update(float deltaTime)
 
     if (startBlend)
     {
-        UpdateBlend(targetCameraPos, deltaTime);
+        //camera->lookTarget = targetComponent.lock()->GetComponentLocation();
+        //camera->GetOwner()->SetPosition(eyeComponent.lock()->GetComponentLocation());
+
+
+        UpdateBlend(eyeComponent.lock()->GetComponentLocation(), deltaTime);
+        camera->GetOwner()->SetPosition(smoothedPosition);
+        return;
     }
     else
     {
@@ -65,8 +117,11 @@ void TPSCameraController::Update(float deltaTime)
         }
     }
 
-    camera->lookTarget = lookTargetPos;
-    camera->useLookTarget = true;
+    {
+        camera->lookTarget = lookTargetPos;
+        camera->useLookTarget = true;
+    }
+
 }
 
 // カメラのターゲット位置を計算する
@@ -190,21 +245,29 @@ void TPSCameraController::UpdateBlend(const DirectX::XMFLOAT3& targetCameraPos, 
 
     float t = std::min<float>(blendTime / blendDuration, 1.0f);
 
-    smoothedPosition = MathHelper::Lerp(blendStartPos, targetCameraPos, t);
+    smoothedPosition = MathHelper::Lerp(blendEyeStartPos, targetCameraPos, t);
 
     float yaw = camera->GetYaw();
     float pitch = camera->GetPitch();
 
-    yaw = std::lerp(blendStartYaw, blendTargetYaw, t);
-    pitch = std::lerp(blendStartPitch, blendTargetPitch, t);
+    //yaw = std::lerp(blendStartYaw, blendTargetYaw, t);
+    //pitch = std::lerp(blendStartPitch, blendTargetPitch, t);
 
-    camera->SetPitch(pitch);
-    camera->SetYaw(yaw);
+    //camera->SetPitch(pitch);
+    //camera->SetYaw(yaw);
 
+    camera->lookTarget = MathHelper::Lerp(blendTargetStartPos, blendTargetEndPos, t);
+    camera->useLookTarget = true;
     if (t >= 1)
     {
         startBlend = false;
         initialized = true;
+        if (onFinished)
+        {
+            onFinished();
+            onFinished = nullptr;
+        }
+
     }
 }
 

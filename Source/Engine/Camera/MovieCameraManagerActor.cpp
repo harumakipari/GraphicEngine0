@@ -262,10 +262,14 @@ void MovieCameraManagerActor::Update(float deltaTime)
             {// ムービーカメラが使用中の場合のみ切り替え
                 if (auto mainCamera = actorManager->GetActorOfType<MainCamera>())
                 {
-                    mainCamera->SetCameraMode(TPSCameraController::CameraMode::BossBattle);
-                    mainCamera->StartBlend(dynamic_cast<Camera*>(movieCamera->GetOwner()), 2.0f);
+                    mainCamera->SetEye(player->GetCameraEyeComponent());
+                    mainCamera->SetLookTarget(gruxEnemy->GetCameraTargetComponent());
+                    mainCamera->StartBlend(dynamic_cast<Camera*>(movieCamera->GetOwner()), 2.0f, [&, mainCamera]()
+                        {
+                            mainCamera->SetCameraMode(TPSCameraController::CameraMode::BossBattle);
+                        });
+                    scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
                 }
-                scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
             }
         }
         break;

@@ -78,10 +78,10 @@ void GruxEnemyEyeActor::Update(float elapsedTime)
         leftEyeMeshComponent->SetWorldLocationDirect(leftEyePosition);
         rightEyeMeshComponent->SetWorldLocationDirect(rightEyePosition);
 
-        leftEyePosition = MathHelper::Add(leftEyePosition, eyeFlareOffset);
-        rightEyePosition = MathHelper::Add(rightEyePosition, eyeFlareOffset);
-        leftEyeFlareMeshComponent->SetWorldLocationDirect(leftEyePosition);
-        rightEyeFlareMeshComponent->SetWorldLocationDirect(rightEyePosition);
+        //leftEyePosition = MathHelper::Add(leftEyePosition, eyeFlareOffset);
+        //rightEyePosition = MathHelper::Add(rightEyePosition, eyeFlareOffset);
+        //leftEyeFlareMeshComponent->SetWorldLocationDirect(leftEyePosition);
+        //rightEyeFlareMeshComponent->SetWorldLocationDirect(rightEyePosition);
     }
 
     // –Ú‚ÌF‚ğİ’è‚·‚é
@@ -184,13 +184,13 @@ void GruxEnemyEyeActor::StartEyeFlash(const std::function<void()>& onFinished)
 void GruxEnemyEyeActor::ToSmallEyeModel(float duration, std::function<void()> finished)
 {
     onFinished = finished;
-    duration -= 0.5f;
+    duration *= 0.5f;
     // –Ú‹Ê‚ªŒõ‚éˆ—
     {
         TestEasingHandler handler;
 
         handler.AddEasing(
-            TestEaseType::InSine,
+            TestEaseType::OutBounce,
             1.0f,
             0.0f,
             duration

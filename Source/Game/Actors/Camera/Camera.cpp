@@ -14,6 +14,7 @@ void Camera::Initialize(const Transform& transform)
 
 void MainCamera::Update(float deltaTime)
 {
+#if 0
     // プレイヤー移動方向
     XMFLOAT3 moveDir = {};
 
@@ -26,6 +27,8 @@ void MainCamera::Update(float deltaTime)
             moveDir = movement->GetVelocity();
         }
     }
+
+#endif // 0
 
     // 右スティック
     XMFLOAT2 rightStick = InputSystem::GetRightStick();

@@ -110,9 +110,9 @@ public:
         tpsController.cameraMode = cameraMode;
     }
 
-    void StartBlend(const Camera* currentCamera, float duration)
+    void StartBlend(const Camera* currentCamera, float duration, std::function<void()> finished)
     {
-        tpsController.StartBlend(currentCamera, duration);
+        tpsController.StartBlend(currentCamera, duration, finished);
     }
 
     //更新処理
@@ -170,8 +170,9 @@ public:
 
     // カメラのモードを取得する
     TPSCameraController::CameraMode GetCameraMode() const { return tpsController.cameraMode; }
-private:
     TPSCameraController tpsController;
+
+private:
     bool didShake = false;
 };
 

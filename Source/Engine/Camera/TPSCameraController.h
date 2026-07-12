@@ -22,7 +22,7 @@ public:
     bool isLockOn = false;
     bool useRaycast = true; // 障害物の回避にレイキャストを使うかどうか
 
-    void StartBlend(const Camera* currentCamera,float duration);
+    void StartBlend(const Camera* currentCamera,float duration,std::function<void()> finished);
 
     void Update(float deltaTime);
 
@@ -32,6 +32,18 @@ public:
         isLockOn = true;
     }
 
+
+    void ClearLockTarget()
+    {
+        lockTarget.reset();
+        isLockOn = false;
+    }
+
+    DirectX::XMFLOAT3 shakeOffset = {};
+
+    bool startBlend = false;
+
+private:
     // カメラのターゲット位置を計算する
     DirectX::XMFLOAT3 CalculateTargetCameraPosition(float deltaTime);
 
@@ -44,13 +56,6 @@ public:
     // ロックオン処理
     void UpdateLookTarget();
 
-    void ClearLockTarget()
-    {
-        lockTarget.reset();
-        isLockOn = false;
-    }
-
-    DirectX::XMFLOAT3 shakeOffset = {};
 private:
     DirectX::XMFLOAT3 smoothedPosition{};
     DirectX::XMFLOAT3 smoothedPivot{};
@@ -62,15 +67,18 @@ private:
 
 
     // ブレンド
-    bool startBlend = false;
-
     float blendTime = 0.0f;
     float blendDuration = 0.5f;
 
-    DirectX::XMFLOAT3 blendStartPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 blendEyeStartPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 blendTargetStartPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 blendEyeEndPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 blendTargetEndPos = { 0.0f,0.0f,0.0f };
     float blendStartYaw = 0.0f;
     float blendStartPitch = 0.0f;
     float blendTargetYaw = 0.0f;
     float blendTargetPitch = 0.0f;
+
+    std::function<void()> onFinished;
 };
 

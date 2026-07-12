@@ -321,7 +321,7 @@ public:
     }
 
     // カーソルの表示非表示を変更
-    static void SetCursolVisible(bool visible)
+    static void SetCursorVisible(bool visible)
     {
         cursolVisible = visible;
         int count = 0;

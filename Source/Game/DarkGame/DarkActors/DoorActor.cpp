@@ -258,6 +258,12 @@ void DoorJailActor::Initialize(const Transform& transform)
 
 void DoorJailActor::Update(float deltaTime)
 {
+    if (InputSystem::GetInputState("2", InputStateMask::Trigger))
+    {
+        CoreAudio::PlayOneShot("./Data/Sound/SE/jail_door_open.wav");
+        doorState = DoorState::Opening;
+    }
+
     switch (doorState)
     {
     case DoorState::Opening:

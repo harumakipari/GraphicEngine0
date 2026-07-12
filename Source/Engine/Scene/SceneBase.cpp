@@ -168,11 +168,13 @@ void SceneBase::Update(float deltaTime)
 
     //uiManager->Update(deltaTime);
 
-#ifdef _DEBUG
     if (InputSystem::GetInputState("F8", InputStateMask::Trigger))
     {// デバッグカメラとゲームカメラの切り替え
         cameraManager->ToggleCamera(this);
     }
+#ifdef _DEBUG
+    InputSystem::SetCursorVisible(true);
+
     if (InputSystem::GetInputState("F7", InputStateMask::Trigger))
     {// シネマカメラとゲームカメラの切り替え
         cameraManager->ToggleCinematicCamera(this);
@@ -181,6 +183,10 @@ void SceneBase::Update(float deltaTime)
     {// ムービーカメラとゲームカメラの切り替え
         cameraManager->ToggleMovieCamera(this);
     }
+#else
+    InputSystem::SetCursorVisible(false);
+
+
 #endif // !_DEBUG
 
     if (InputSystem::GetInputState("P", InputStateMask::Trigger))
@@ -248,7 +254,6 @@ void SceneBase::UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, floa
     immediateContext->PSSetShaderResources(20, 1, noise3d.GetAddressOf());
     immediateContext->PSSetShaderResources(21, 1, skyNoiseTexture.GetAddressOf());
     immediateContext->PSSetShaderResources(22, 1, starTexture.GetAddressOf());
-
 
     D3D11_VIEWPORT viewport;
     UINT num_viewports{ 1 };
