@@ -1,0 +1,36 @@
+{
+    "animationClip": 0,
+    "animationName": "Idle",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.0,
+                "value": 0.2133333534002304
+            },
+            {
+                "time": 1.5760416984558105,
+                "value": 2.0
+            },
+            {
+                "time": 2.496875047683716,
+                "value": 0.7999999523162842
+            },
+            {
+                "time": 3.559375047683716,
+                "value": 1.999999761581421
+            }
+        ]
+    },
+    "states": [
+        {
+            "animationSpeed": 1.0,
+            "endTime": 3.2192702293395996,
+            "parameter": "",
+            "startTime": 2.1427085399627686,
+            "type": "JustDodgeWindow"
+        }
+    ]
+}

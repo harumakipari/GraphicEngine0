@@ -4,6 +4,8 @@
 #include <imgui.h>
 #include <magic_enum.hpp>
 #include <ranges>
+#include <json.hpp>
+#include <fstream>
 
 #include "Game/Actors/Base/Character.h"
 
@@ -284,6 +286,7 @@ void AnimationController::DrawTimeline()
         if (ImGui::Selectable(asset.animationName.c_str(), selected))
         {
             selectedTimelineClip = clip;
+            LoadNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
             ResetRootMotion(asset.animationName, false, false, 0.0f);
         }
     }
@@ -299,6 +302,16 @@ void AnimationController::DrawTimeline()
     }
 
     auto& asset = it->second;
+
+    if (ImGui::Button("Save"))
+    {
+        SaveNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Load"))
+    {
+        LoadNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
+    }
 
     float duration = target_->model->animations[asset.animationClip].duration;
 
@@ -901,30 +914,30 @@ void AnimationController::DrawTimeline()
     }
     if (ImGui::BeginPopup("EventPopup"))
     {
-        if (ImGui::MenuItem("Add Event"))
+        if (ImGui::BeginMenu("Add Event"))
         {
-            AnimationNotifyEvent event;
-
-            event.time = popupCreateTime;
-
-            event.type =
-                AnimationNotifyEvent::Type::PlaySE;
-
-            asset.notifyTrack.events.push_back(
-                event);
+            for (auto type : magic_enum::enum_values<AnimationNotifyEvent::Type>())
+            {
+                if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
+                {
+                    AddEvent(asset.notifyTrack, type, popupCreateTime);
+                }
+            }
+            ImGui::EndMenu();
         }
-        if (ImGui::MenuItem("Add HitBox"))
+        if (ImGui::BeginMenu("Add State"))
         {
-            AnimationNotifyState state;
+            for (auto type : magic_enum::enum_values<AnimationNotifyState::Type>())
+            {
+                if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
+                {
+                    AddState(asset.notifyTrack, type, popupCreateTime);
+                }
+            }
 
-            state.startTime = animationTime;
-            state.endTime = animationTime + 0.2f;
-
-            state.type =
-                AnimationNotifyState::Type::HitBox;
-
-            asset.notifyTrack.states.push_back(state);
+            ImGui::EndMenu();
         }
+
         ImGui::EndPopup();
     }
 
@@ -968,7 +981,7 @@ void AnimationController::DrawTimeline()
     float speed = asset.speedCurve.Evaluate(animationTime);
     char text[64];
     sprintf_s(text, "%.2f", speed);
-    drawList->AddText(ImVec2(currentX + 5, curvePos.y),IM_COL32(255, 255, 0, 255),text);
+    drawList->AddText(ImVec2(currentX + 5, curvePos.y), IM_COL32(255, 255, 0, 255), text);
 
     if (ImGui::IsKeyPressed(ImGuiKey_Delete))
     {
@@ -1036,4 +1049,234 @@ void AnimationController::OnNotifyEvent(const AnimationNotifyEvent& event)
     {
         owner->OnAnimationNotifyEvent(event);
     }
+}
+
+// NotifyAssetを保存する
+void AnimationController::SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset)
+{
+    using json = nlohmann::json;
+
+    json root;
+    // アニメーション情報だけ保存
+    root["animationName"] = asset.animationName;
+    root["animationClip"] = asset.animationClip;
+    root["nextCombo"] = asset.nextCombo;
+
+    root["loop"] = asset.loop;
+    root["playRate"] = asset.playRate;
+
+    // SpeedCurveを保存
+    for (const auto& key : asset.speedCurve.keys)
+    {
+        json curve;
+
+        curve["time"] = key.time;
+        curve["value"] = key.value;
+
+        root["speedCurve"]["keys"].push_back(curve);
+    }
+
+    // NotifyState保存
+    for (const auto& state : asset.notifyTrack.states)
+    {
+        json j;
+
+        j["startTime"] = state.startTime;
+        j["endTime"] = state.endTime;
+
+        j["type"] =
+            std::string(
+                magic_enum::enum_name(state.type));
+
+        j["parameter"] = state.parameter;
+        j["animationSpeed"] = state.animationSpeed;
+
+        root["states"].push_back(j);
+    }
+
+    // Event 保存
+    for (const auto& event : asset.notifyTrack.events)
+    {
+        json j;
+
+        j["time"] = event.time;
+
+        j["type"] =
+            std::string(
+                magic_enum::enum_name(event.type));
+
+        j["parameter"] = event.parameter;
+        j["value"] = event.value;
+
+        root["events"].push_back(j);
+    }
+
+    std::ofstream ofs(filename);
+
+    if (!ofs.is_open())
+        return;
+
+    ofs << root.dump(4);
+}
+
+// NotifyAssetをロードする
+void AnimationController::LoadNotifyAsset(const std::string& filename, AnimationNotifyAsset& asset)
+{
+    using json = nlohmann::json;
+    // jsonファイルを開く
+    std::ifstream ifs(filename);
+
+    if (!ifs.is_open())
+        return;
+
+    json root;
+    ifs >> root;
+
+    // アニメーション情報を読み込む
+    asset.animationName = root.value("animationName", "");
+    asset.animationClip = root.value("animationClip", 0);
+    asset.nextCombo = root.value("nextCombo", "");
+
+    asset.loop = root.value("loop", false);
+    asset.playRate = root.value("playRate", 1.0f);
+
+    // SpeedCurveをロードする
+    asset.speedCurve.keys.clear();
+    if (root.contains("speedCurve"))
+    {
+        for (auto& j : root["speedCurve"]["keys"])
+        {
+            CurveKey key;
+
+            key.time = j.value("time", 0.0f);
+            key.value = j.value("value", 1.0f);
+
+            asset.speedCurve.keys.push_back(key);
+        }
+    }
+
+    // Stateをロードする
+    asset.notifyTrack.states.clear();
+    if (root.contains("states"))
+    {
+        for (auto& j : root["states"])
+        {
+            AnimationNotifyState state;
+
+            state.startTime =
+                j.value("startTime", 0.0f);
+
+            state.endTime =
+                j.value("endTime", 0.0f);
+
+            auto typeName =
+                j.value("type", "HitBox");
+
+            auto type =
+                magic_enum::enum_cast<AnimationNotifyState::Type>(typeName);
+
+            if (type.has_value())
+                state.type = type.value();
+
+            state.parameter =
+                j.value("parameter", "");
+
+            state.animationSpeed =
+                j.value("animationSpeed", 1.0f);
+
+            asset.notifyTrack.states.push_back(state);
+        }
+    }
+
+    // Eventをロードする
+    asset.notifyTrack.events.clear();
+    if (root.contains("events"))
+    {
+        for (auto& j : root["events"])
+        {
+            AnimationNotifyEvent event;
+
+            event.time =
+                j.value("time", 0.0f);
+
+            auto typeName =
+                j.value("type", "PlaySE");
+
+            auto type =
+                magic_enum::enum_cast<AnimationNotifyEvent::Type>(typeName);
+
+            if (type.has_value())
+                event.type = type.value();
+
+            event.parameter =
+                j.value("parameter", "");
+
+            event.value =
+                j.value("value", 0.0f);
+
+            asset.notifyTrack.events.push_back(event);
+        }
+    }
+
+    // 最後にソートする
+    std::sort(
+        asset.notifyTrack.events.begin(),
+        asset.notifyTrack.events.end(),
+        [](const AnimationNotifyEvent& a, const AnimationNotifyEvent& b)
+        {
+            return a.time < b.time;
+        });
+
+    std::sort(
+        asset.notifyTrack.states.begin(),
+        asset.notifyTrack.states.end(),
+        [](const AnimationNotifyState& a, const AnimationNotifyState& b)
+        {
+            return a.startTime < b.startTime;
+        });
+
+    std::sort(
+        asset.speedCurve.keys.begin(),
+        asset.speedCurve.keys.end(),
+        [](const CurveKey& a, const CurveKey& b)
+        {
+            return a.time < b.time;
+        });
+}
+
+// イベントを追加する
+void AnimationController::AddEvent(AnimationNotifyTrack& track, AnimationNotifyEvent::Type type, float time)
+{
+    AnimationNotifyEvent event;
+    event.time = popupCreateTime;
+    event.type = type;
+    track.events.push_back(event);
+    std::sort(
+        track.events.begin(),
+        track.events.end(),
+        [](const AnimationNotifyEvent& a, const AnimationNotifyEvent& b)
+        {
+            return a.time < b.time;
+        });
+
+}
+
+// ステートを追加する
+void AnimationController::AddState(AnimationNotifyTrack& track, AnimationNotifyState::Type type, float startTime)
+{
+    AnimationNotifyState state;
+
+    state.startTime = popupCreateTime;
+    state.endTime = popupCreateTime + 0.2f;
+    state.type = type;
+
+    track.states.push_back(state);
+
+    std::sort(
+        track.states.begin(),
+        track.states.end(),
+        [](const AnimationNotifyState& a, const AnimationNotifyState& b)
+        {
+            return a.startTime < b.startTime;
+        });
 }

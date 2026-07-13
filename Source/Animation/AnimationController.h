@@ -158,6 +158,18 @@ public:
     void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
 
 private:
+    // NotifyAssetを保存する
+    void SaveNotifyAsset(const std::string& filename,const AnimationNotifyAsset& asset);
+
+    // NotifyAssetをロードする
+    void LoadNotifyAsset(const std::string& filename,AnimationNotifyAsset& asset);
+
+    // イベントを追加する
+    void AddEvent(AnimationNotifyTrack& track, AnimationNotifyEvent::Type type,float time);
+
+    // ステートを追加する
+    void AddState(AnimationNotifyTrack& track,AnimationNotifyState::Type type,float startTime);
+
     // ルートモーションをリセットする
     void ResetRootMotion(int animationClip);
 
