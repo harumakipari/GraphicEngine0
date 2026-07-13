@@ -716,8 +716,7 @@ void AnimationController::DrawTimeline()
     ImGui::Text("Speed Curve");
     float curveHeight = 150.0f;
 
-    ImVec2 curvePos =
-        ImGui::GetCursorScreenPos();
+    ImVec2 curvePos = ImGui::GetCursorScreenPos();
 
     drawList->AddRectFilled(
         curvePos,
@@ -811,8 +810,35 @@ void AnimationController::DrawTimeline()
         float value = 1.0f - (mousePos.y - curvePos.y) / curveHeight;
         value *= maxSpeed;
         value = std::clamp(value, 0.0f, maxSpeed);
+
+        curveCreateTime = time;
+        curveCreateValue = value;
+        ImGui::OpenPopup("CurvePopup");
+
         ImGui::Text("Time = %.2f", time);
         ImGui::Text("Value = %.2f", value);
+    }
+
+    if (ImGui::BeginPopup("CurvePopup"))
+    {
+        if (ImGui::MenuItem("Add Key"))
+        {
+            CurveKey key;
+
+            key.time = curveCreateTime;
+            key.value = curveCreateValue;
+
+            asset.speedCurve.keys.push_back(key);
+
+            std::sort(
+                asset.speedCurve.keys.begin(),
+                asset.speedCurve.keys.end(),
+                [](const CurveKey& a, const CurveKey& b)
+                {
+                    return a.time < b.time;
+                });
+        }
+        ImGui::EndPopup();
     }
 
     ImGui::SetCursorScreenPos(eventRow);

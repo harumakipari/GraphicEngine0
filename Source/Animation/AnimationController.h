@@ -257,5 +257,7 @@ private:
     float popupCreateTime = 0.0f;
 
     int selectedCurveKey = -1;
+    float curveCreateTime = 0.0f;
+    float curveCreateValue = 1.0f;
 };
 
