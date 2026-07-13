@@ -718,16 +718,26 @@ void AnimationController::DrawTimeline()
 
     ImVec2 curvePos = ImGui::GetCursorScreenPos();
 
-    drawList->AddRectFilled(
-        curvePos,
-        ImVec2(
-            curvePos.x + width,
-            curvePos.y + curveHeight),
+    // îwåi
+    drawList->AddRectFilled(curvePos, ImVec2(curvePos.x + width, curvePos.y + curveHeight),
         IM_COL32(35, 35, 35, 255));
 
-    //ImGui::InvisibleButton(
-    //    "CurveArea",
-    //    ImVec2(width, curveHeight));
+    // ècê¸
+    for (int i = 0; i <= 10; i++)
+    {
+        float x = curvePos.x + width * i / 10.0f;
+
+        drawList->AddLine(ImVec2(x, curvePos.y), ImVec2(x, curvePos.y + curveHeight), IM_COL32(70, 70, 70, 255));
+    }
+
+    // â°ê¸
+    for (int i = 0; i <= 4; i++)
+    {
+        float y = curvePos.y + curveHeight * i / 4.0f;
+
+        drawList->AddLine(ImVec2(curvePos.x, y), ImVec2(curvePos.x + width, y), IM_COL32(70, 70, 70, 255));
+    }
+
     float maxSpeed = 2.0f;
 
     for (int i = 0; i < asset.speedCurve.keys.size(); ++i)
@@ -735,8 +745,6 @@ void AnimationController::DrawTimeline()
         auto& key = asset.speedCurve.keys[i];
         float x = curvePos.x + (key.time / duration) * width;
         float y = curvePos.y + (1.0f - key.value / maxSpeed) * curveHeight;
-        //float x = curvePos.x + key.time * width;
-        //float y = curvePos.y + (1.0f - key.value / maxSpeed) * curveHeight;
 
 
         // ìñÇΩÇËîªíËÇí«â¡
@@ -754,7 +762,6 @@ void AnimationController::DrawTimeline()
 
         if (ImGui::IsItemActive())
         {
-            //float delta = ImGui::GetIO().MouseDelta.x / width;
             float delta = (ImGui::GetIO().MouseDelta.x / width) * duration;
             key.time += delta;
             float deltaValue = -ImGui::GetIO().MouseDelta.y / curveHeight * maxSpeed;
@@ -764,28 +771,45 @@ void AnimationController::DrawTimeline()
             key.value = std::clamp(key.value, 0.0f, maxSpeed);
         }
 
+        if (ImGui::IsItemDeactivated())
+        {
+            std::sort(
+                asset.speedCurve.keys.begin(),
+                asset.speedCurve.keys.end(),
+                [](const CurveKey& a, const CurveKey& b)
+                {
+                    return a.time < b.time;
+                });
+
+            selectedCurveKey = -1;
+
+            for (int j = 0; j < asset.speedCurve.keys.size(); j++)
+            {
+                if (asset.speedCurve.keys[j].time == key.time &&
+                    asset.speedCurve.keys[j].value == key.value)
+                {
+                    selectedCurveKey = j;
+                    break;
+                }
+            }
+        }
+
+
         ImU32 color = selectedCurveKey == i ? IM_COL32(255, 255, 0, 255) : IM_COL32(255, 100, 0, 255);
         drawList->AddCircleFilled(ImVec2(x, y), 5, color);
 
     }
     ImGui::Text("Selected = %d", selectedCurveKey);
 
-    //std::sort(asset.speedCurve.keys.begin(), asset.speedCurve.keys.end(), [](const CurveKey& a, const CurveKey& b)
-    //    {
-    //        return a.time < b.time;
-    //    });
-
     ImGui::SetCursorScreenPos(curvePos);
     for (size_t i = 0; i + 1 < asset.speedCurve.keys.size(); i++)
     {
         auto& a = asset.speedCurve.keys[i];
-        //float ax = curvePos.x + a.time * width;
         float ax = curvePos.x + (a.time / duration) * width;
         float ay = curvePos.y + (1.0f - a.value / maxSpeed) * curveHeight;
 
         auto& b = asset.speedCurve.keys[i + 1];
         float bx = curvePos.x + (b.time / duration) * width;
-        //float bx = curvePos.x + b.time * width;
         float by = curvePos.y + (1.0f - b.value / maxSpeed) * curveHeight;
 
         drawList->AddLine(ImVec2(ax, ay), ImVec2(bx, by), IM_COL32(0, 255, 255, 255), 2.0f);
@@ -837,6 +861,16 @@ void AnimationController::DrawTimeline()
                 {
                     return a.time < b.time;
                 });
+
+            for (int i = 0; i < asset.speedCurve.keys.size(); i++)
+            {// í«â¡ÇµÇΩÉLÅ[Çé©ìÆÇ≈ëIëÇ∑ÇÈ
+                if (asset.speedCurve.keys[i].time == curveCreateTime &&
+                    asset.speedCurve.keys[i].value == curveCreateValue)
+                {
+                    selectedCurveKey = i;
+                    break;
+                }
+            }
         }
         ImGui::EndPopup();
     }
@@ -926,6 +960,15 @@ void AnimationController::DrawTimeline()
                 255),
             currentText);
     }
+
+    // åªç›éûä‘ï\é¶
+    float currentX = curvePos.x + (animationTime / duration) * width;
+    drawList->AddLine(ImVec2(currentX, curvePos.y), ImVec2(currentX, curvePos.y + curveHeight), IM_COL32(255, 0, 0, 255), 2.0f);
+    // ë¨ìxï\é¶
+    float speed = asset.speedCurve.Evaluate(animationTime);
+    char text[64];
+    sprintf_s(text, "%.2f", speed);
+    drawList->AddText(ImVec2(currentX + 5, curvePos.y),IM_COL32(255, 255, 0, 255),text);
 
     if (ImGui::IsKeyPressed(ImGuiKey_Delete))
     {
