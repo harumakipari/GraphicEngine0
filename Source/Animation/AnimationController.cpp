@@ -10,8 +10,25 @@
 void AnimationController::OnUpdate(const float deltaTime)
 {
     prevAnimationTime = animationTime;
+#if 0
     animationTime += deltaTime * animationRate;
+#else
+    const auto& asset = animationNotifyAssets[animationClip];
 
+    // 正規化時間
+    float duration = target_->model->animations[animationClip].duration;
+
+    float normalizedTime = duration > 0.0f ? animationTime / duration : 0.0f;
+
+    // カーブ評価
+    float curveRate = asset.speedCurve.Evaluate(normalizedTime);
+
+    // 実際の再生速度
+    float playRate = animationRate * asset.playRate * curveRate;
+
+    // 時間更新
+    animationTime += deltaTime * playRate;
+#endif
 
     if (target_->model->animations.size() == 0)
     {// アニメーションがないモデルの場合
@@ -19,9 +36,9 @@ void AnimationController::OnUpdate(const float deltaTime)
     }
 
     // NotifyTrack のイベント処理
-    auto& asset = animationNotifyAssets[notifyAnimationClip];
+    const auto& notifyAsset = animationNotifyAssets[notifyAnimationClip];
 
-    auto& notifyTrack = asset.notifyTrack;
+    auto& notifyTrack = notifyAsset.notifyTrack;
     for (auto& state : notifyTrack.states)
     {
         bool wasInside =
@@ -64,7 +81,8 @@ void AnimationController::OnUpdate(const float deltaTime)
         transitionState = AnimationTransitionState::Inprogress;
         break;
     case AnimationTransitionState::Inprogress:
-        blendElapsedTime += deltaTime * animationRate;
+        blendElapsedTime += deltaTime * playRate;
+        //blendElapsedTime += deltaTime * animationRate;
         if (transitionTime > 0.0f)
         {
             blendFactor = blendElapsedTime / transitionTime;     //ゼロ除算を防ぐため
@@ -694,6 +712,44 @@ void AnimationController::DrawTimeline()
     }
 
     ImGui::Dummy(ImVec2(width, trackHeight));
+
+    ImGui::Text("Speed Curve");
+    float curveHeight = 150.0f;
+
+    ImVec2 curvePos =
+        ImGui::GetCursorScreenPos();
+
+    drawList->AddRectFilled(
+        curvePos,
+        ImVec2(
+            curvePos.x + width,
+            curvePos.y + curveHeight),
+        IM_COL32(35, 35, 35, 255));
+
+    ImGui::InvisibleButton(
+        "CurveArea",
+        ImVec2(width, curveHeight));
+    float maxSpeed = 2.0f;
+
+    for (const auto& key : asset.speedCurve.keys)
+    {
+        float x = curvePos.x + key.time * width;
+        float y = curvePos.y + (1.0f - key.value / maxSpeed) * curveHeight;
+        drawList->AddCircleFilled(ImVec2(x, y), 5, IM_COL32(255, 100, 0, 255));
+    }
+    for (size_t i = 0; i + 1 < asset.speedCurve.keys.size(); i++)
+    {
+        auto& a = asset.speedCurve.keys[i];
+        float ax = curvePos.x + a.time * width;
+        float ay = curvePos.y + (1.0f - a.value / maxSpeed) * curveHeight;
+
+        auto& b = asset.speedCurve.keys[i + 1];
+        float bx = curvePos.x + b.time * width;
+        float by = curvePos.y + (1.0f - b.value / maxSpeed) * curveHeight;
+
+        drawList->AddLine(ImVec2(ax, ay),ImVec2(bx, by),IM_COL32(0, 255, 255, 255),2.0f);
+    }
+
     ImGui::SetCursorScreenPos(eventRow);
 
     ImGui::InvisibleButton(

@@ -1,5 +1,17 @@
 #pragma once
 
+struct CurveKey
+{
+    float time;
+    float value;
+};
+
+struct AnimationCurve
+{
+    std::vector<CurveKey> keys;
+    float Evaluate(const float t)const;
+};
+
 // アニメーションに入れる
 struct AnimationNotifyState
 {
@@ -53,6 +65,11 @@ struct AnimationNotifyAsset
     std::string animationName = "";
     size_t animationClip = 0;
     std::string nextCombo = "";
+
+    bool loop = false;              // ループするか
+    float playRate = 1.0f;          // 基本再生速度
+
+    AnimationCurve speedCurve;      // 再生速度カーブ
 
     AnimationNotifyTrack notifyTrack;
 };

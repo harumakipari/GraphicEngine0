@@ -127,6 +127,12 @@ public:
         animationNotifyAssets[clip].nextCombo = nextComboName;
     }
 
+    void AddAnimationCurve(const std::string& animationName, const AnimationCurve& curve)
+    {
+        const size_t clip = animationNameToIndex_[animationName];
+        animationNotifyAssets[clip].speedCurve = curve;
+    }
+
     void OnNotifyBegin(const AnimationNotifyState& state);
 
     void OnNotifyEnd(const AnimationNotifyState& state);

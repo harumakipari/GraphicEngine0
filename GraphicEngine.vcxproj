@@ -254,6 +254,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Source\Animation\AnimationController.cpp" />
+    <ClCompile Include="Source\Animation\AnimationState.cpp" />
     <ClCompile Include="Source\Components\Audio\AudioSourceComponent.cpp" />
     <ClCompile Include="Source\Components\Base\Component.cpp" />
     <ClCompile Include="Source\Components\Base\SceneComponent.cpp" />

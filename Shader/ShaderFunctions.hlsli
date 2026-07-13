@@ -31,3 +31,18 @@ float4 CalcFog(in float4 color, float4 fogColor, float2 fogRange, float eyeLengt
     float fogAlpha = saturate((eyeLength - fogRange.x) / (fogRange.y - fogRange.x));
     return lerp(color, fogColor, fogAlpha);
 }
+
+
+// アンチエイリアス対策関数
+float SpecularAntiAliasing(float roughness, float3 normal, float minClamp = 0.18f)
+{
+    float alpha = roughness * roughness;
+    //	法線分散算出
+    float3 dx = ddx(normal);
+    float3 dy = ddy(normal);
+    float variance = max(dot(dx, dx), dot(dy, dy));
+    variance = min(variance, minClamp); //  Frostbite 
+    alpha += variance;
+    return sqrt(saturate(alpha));
+}
+ 
