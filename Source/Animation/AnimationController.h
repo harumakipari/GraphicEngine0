@@ -255,5 +255,7 @@ private:
     int selectedStateIndex = -1;
     int selectedEventIndex = -1;
     float popupCreateTime = 0.0f;
+
+    int selectedCurveKey = -1;
 };
 

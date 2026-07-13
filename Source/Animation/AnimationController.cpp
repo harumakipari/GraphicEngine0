@@ -16,12 +16,12 @@ void AnimationController::OnUpdate(const float deltaTime)
     const auto& asset = animationNotifyAssets[animationClip];
 
     // 正規化時間
-    float duration = target_->model->animations[animationClip].duration;
-
-    float normalizedTime = duration > 0.0f ? animationTime / duration : 0.0f;
+    //float duration = target_->model->animations[animationClip].duration;
+    //float normalizedTime = duration > 0.0f ? animationTime / duration : 0.0f;
 
     // カーブ評価
-    float curveRate = asset.speedCurve.Evaluate(normalizedTime);
+    //float curveRate = asset.speedCurve.Evaluate(normalizedTime);
+    float curveRate = asset.speedCurve.Evaluate(animationTime);
 
     // 実際の再生速度
     float playRate = animationRate * asset.playRate * curveRate;
@@ -726,28 +726,93 @@ void AnimationController::DrawTimeline()
             curvePos.y + curveHeight),
         IM_COL32(35, 35, 35, 255));
 
-    ImGui::InvisibleButton(
-        "CurveArea",
-        ImVec2(width, curveHeight));
+    //ImGui::InvisibleButton(
+    //    "CurveArea",
+    //    ImVec2(width, curveHeight));
     float maxSpeed = 2.0f;
 
-    for (const auto& key : asset.speedCurve.keys)
+    for (int i = 0; i < asset.speedCurve.keys.size(); ++i)
     {
-        float x = curvePos.x + key.time * width;
+        auto& key = asset.speedCurve.keys[i];
+        float x = curvePos.x + (key.time / duration) * width;
         float y = curvePos.y + (1.0f - key.value / maxSpeed) * curveHeight;
-        drawList->AddCircleFilled(ImVec2(x, y), 5, IM_COL32(255, 100, 0, 255));
+        //float x = curvePos.x + key.time * width;
+        //float y = curvePos.y + (1.0f - key.value / maxSpeed) * curveHeight;
+
+
+        // 当たり判定を追加
+        char id[32];
+        sprintf_s(id, "CurveKey_%d", i);
+        ImGui::SetCursorScreenPos(ImVec2(x - 6, y - 6));
+        ImGui::InvisibleButton(id, ImVec2(20, 20));
+
+        if (ImGui::IsItemClicked())
+        {
+            selectedCurveKey = i;
+            selectedStateIndex = -1;
+            selectedEventIndex = -1;
+        }
+
+        if (ImGui::IsItemActive())
+        {
+            //float delta = ImGui::GetIO().MouseDelta.x / width;
+            float delta = (ImGui::GetIO().MouseDelta.x / width) * duration;
+            key.time += delta;
+            float deltaValue = -ImGui::GetIO().MouseDelta.y / curveHeight * maxSpeed;
+            key.value += deltaValue;
+
+            key.time = std::clamp(key.time, 0.0f, duration);
+            key.value = std::clamp(key.value, 0.0f, maxSpeed);
+        }
+
+        ImU32 color = selectedCurveKey == i ? IM_COL32(255, 255, 0, 255) : IM_COL32(255, 100, 0, 255);
+        drawList->AddCircleFilled(ImVec2(x, y), 5, color);
+
     }
+    ImGui::Text("Selected = %d", selectedCurveKey);
+
+    //std::sort(asset.speedCurve.keys.begin(), asset.speedCurve.keys.end(), [](const CurveKey& a, const CurveKey& b)
+    //    {
+    //        return a.time < b.time;
+    //    });
+
+    ImGui::SetCursorScreenPos(curvePos);
     for (size_t i = 0; i + 1 < asset.speedCurve.keys.size(); i++)
     {
         auto& a = asset.speedCurve.keys[i];
-        float ax = curvePos.x + a.time * width;
+        //float ax = curvePos.x + a.time * width;
+        float ax = curvePos.x + (a.time / duration) * width;
         float ay = curvePos.y + (1.0f - a.value / maxSpeed) * curveHeight;
 
         auto& b = asset.speedCurve.keys[i + 1];
-        float bx = curvePos.x + b.time * width;
+        float bx = curvePos.x + (b.time / duration) * width;
+        //float bx = curvePos.x + b.time * width;
         float by = curvePos.y + (1.0f - b.value / maxSpeed) * curveHeight;
 
-        drawList->AddLine(ImVec2(ax, ay),ImVec2(bx, by),IM_COL32(0, 255, 255, 255),2.0f);
+        drawList->AddLine(ImVec2(ax, ay), ImVec2(bx, by), IM_COL32(0, 255, 255, 255), 2.0f);
+    }
+
+    if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+    {
+        if (selectedCurveKey >= 0)
+        {
+            asset.speedCurve.keys.erase(asset.speedCurve.keys.begin() + selectedCurveKey);
+            selectedCurveKey = -1;
+        }
+    }
+
+    ImVec2 mousePos = ImGui::GetIO().MousePos;
+    bool inside = mousePos.x >= curvePos.x && mousePos.x <= curvePos.x + width && mousePos.y >= curvePos.y && mousePos.y <= curvePos.y + curveHeight;
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Right) && inside)
+    {// カーブエディタ内なら
+        float time = (mousePos.x - curvePos.x) / width;
+        time = std::clamp(time, 0.0f, 1.0f);
+        time *= duration;
+        float value = 1.0f - (mousePos.y - curvePos.y) / curveHeight;
+        value *= maxSpeed;
+        value = std::clamp(value, 0.0f, maxSpeed);
+        ImGui::Text("Time = %.2f", time);
+        ImGui::Text("Value = %.2f", value);
     }
 
     ImGui::SetCursorScreenPos(eventRow);
