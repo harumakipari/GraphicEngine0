@@ -12,7 +12,7 @@ public:
 
     void Update(float deltaTime) override;
 
-    virtual void Interact() override {}
+    virtual void Interact() override;
 
     // インタラクト可能な範囲を取得する
     float GetInteractRange() const
@@ -56,6 +56,7 @@ public:
         ImGui::DragFloat(U8("インタラクトが反応する範囲"), &interactRange, 0.1f, 0.0f, 5.0f);
         ImGui::DragFloat(U8("インタラクトが反応する角度"), &interactDegree, 1.0f, 0.0f, 180.0f);
         ImGui::DragFloat3(U8("インタラクト範囲のオフセット"), &interactOffset.x, 0.1f);
+        ImGui::DragFloat2(U8("インタラクトのUIの座標"), &interactUiWorldPos.x, 1.0f);
 #endif
     }
 
@@ -63,6 +64,8 @@ protected:
     float interactRange = 2.0f;
     float interactDegree = 0.0f;
     DirectX::XMFLOAT3 interactOffset = { 0.0f, 0.0f, 0.0f }; // インタラクト可能な範囲のオフセット
+
+    DirectX::XMFLOAT2 interactUiWorldPos = { 0.0f,0.0f };
 
     std::shared_ptr<UIImageComponent> interactUiComponent;  // インタラクト可能な時に表示するUI
     std::shared_ptr<Sprite> controlButton;

@@ -10,11 +10,19 @@ public:
 
     virtual void Interact() = 0;
 
-    // オプション
-    virtual bool CanInteract() const { return true; }
+    // インタラクトできるか
+    bool CanInteract() const { return canInteract; }
+
+    // インタラクトできるかを設定する
+    void SetCanInteract(const bool interact) { canInteract = interact; }
 
     virtual std::string GetInteractText() const
     {
         return "Interact";
     }
+protected:
+    // インタラクトできるか
+    bool canInteract = false;
+    // インタラクトされたかどうか
+    bool interacted = false;
 };

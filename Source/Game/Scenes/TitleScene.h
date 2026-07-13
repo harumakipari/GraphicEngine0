@@ -60,5 +60,7 @@ private:
 
 
     // pressButtonのUIコンポーネント
-    std::shared_ptr<UIImageComponent> pressButton;
+    std::shared_ptr<UIImageComponent> pressButtonUiComponent;
+    std::shared_ptr<Sprite> controlButton;
+    std::shared_ptr<Sprite> keyboardButton;
 };

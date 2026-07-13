@@ -64,6 +64,9 @@ void DoorLargeActor::Initialize(const Transform& transform)
 
     // インタラクト角度を設定する
     interactDegree = 0.0f;
+
+    // インタラクトUIの座標を設定する
+    interactUiWorldPos = { 1200.0f,500.0f };
 }
 
 void DoorLargeActor::Update(float deltaTime)
@@ -102,6 +105,8 @@ void DoorLargeActor::Update(float deltaTime)
 
 void DoorLargeActor::Interact()
 {
+    InteractableActor::Interact();
+
     if (doorState == DoorState::Closed || doorState == DoorState::Closing)
     {
         if (auto movieManager = GetOwnerScene()->GetActorManager()->GetActorOfType<MovieCameraManagerActor>())
@@ -184,6 +189,9 @@ void DoorSmallActor::Initialize(const Transform& transform)
     boxComponent->SetLayer(CollisionLayer::WorldProps);
     boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
     boxComponent->Initialize();
+
+    // インタラクトUIの座標を設定する
+    interactUiWorldPos = { 1160.0f,500.0f };
 }
 
 
@@ -221,6 +229,8 @@ void DoorSmallActor::Update(float deltaTime)
 
 void DoorSmallActor::Interact()
 {
+    InteractableActor::Interact();
+
     if (doorState == DoorState::Closed || doorState == DoorState::Closing)
     {
         doorState = DoorState::Opening;
@@ -268,6 +278,9 @@ void DoorJailActor::Initialize(const Transform& transform)
 
     // インタラクトの角度を設定する
     interactDegree = 0.0f;
+
+    // インタラクトUIの座標を設定する
+    interactUiWorldPos = { 1120.0f,490.0f };
 }
 
 
@@ -311,6 +324,8 @@ void DoorJailActor::Update(float deltaTime)
 
 void DoorJailActor::Interact()
 {
+    InteractableActor::Interact();
+
     if (doorState == DoorState::Closed || doorState == DoorState::Closing)
     {
         CoreAudio::PlayOneShot("./Data/Sound/SE/jail_door_open.wav");

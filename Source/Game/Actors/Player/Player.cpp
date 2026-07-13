@@ -1016,14 +1016,16 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 IInteractable* Player::FindInteractable()
 {
     IInteractable* best = nullptr;
+    float bestDist = FLT_MAX;
 
     DirectX::XMFLOAT3 forward = GetForward(); // プレイヤー前方向
+
 
     for (auto actor : GetOwnerScene()->GetActorManager()->GetActorsOfType<InteractableActor>())
     {
         auto interactable = dynamic_cast<IInteractable*>(actor.get());
         if (!interactable) continue;
-        float bestDist = actor->GetInteractRange();
+        bestDist = actor->GetInteractRange();
         DirectX::XMFLOAT3 playerPos = GetPosition();
         DirectX::XMFLOAT3 interactablePos = MathHelper::Add(actor->GetPosition(), actor->GetInteractOffset());
 
@@ -1036,9 +1038,11 @@ IInteractable* Player::FindInteractable()
         // playerが反応する角度
         float interactableRadian = actor->GetInteractRadian();
 
-        // 前方60度以内
-        if (dot < interactableRadian) continue;
-
+        if (dot < interactableRadian)
+        {
+            interactable->SetCanInteract(false);
+            continue;
+        }
         DebugRender::DrawSphere(interactablePos, bestDist, { 0,1,1,1 }, 0);
 
 
@@ -1049,11 +1053,9 @@ IInteractable* Player::FindInteractable()
             DebugRender::DrawSphere(interactablePos, bestDist, { 1,1,1,1 }, 0);
             bestDist = dist;
             best = interactable;
+            interactable->SetCanInteract(true);
         }
-
-
     }
-
     return best;
 }
 

@@ -238,9 +238,6 @@
     <ClCompile Include="Source\Core\World.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Actors\Player\TestPlayer.cpp">
-      <Filter>Source\Game\Actors\Player</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Actors\Player\Player.cpp">
       <Filter>Source\Game\Actors\Player</Filter>
     </ClCompile>
@@ -733,9 +730,6 @@
       <Filter>Source\Game\Actors\Player</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\Player\PlayerStateDerived.h">
-      <Filter>Source\Game\Actors\Player</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Player\TestPlayer.h">
       <Filter>Source\Game\Actors\Player</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\Base\Character.h">

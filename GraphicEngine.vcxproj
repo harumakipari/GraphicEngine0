@@ -299,7 +299,6 @@
     <ClCompile Include="Source\Game\Actors\Camera\Camera.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossEnemy.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp" />
-    <ClCompile Include="Source\Game\Actors\Player\TestPlayer.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.cpp" />
@@ -452,7 +451,6 @@
     <ClInclude Include="Source\Game\Actors\Enemy\Enemy.h" />
     <ClInclude Include="Source\Game\Actors\Player\Player.h" />
     <ClInclude Include="Source\Game\Actors\Player\PlayerStateDerived.h" />
-    <ClInclude Include="Source\Game\Actors\Player\TestPlayer.h" />
     <ClInclude Include="Source\Game\Actors\Player\TitlePlayer.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>

@@ -6,7 +6,6 @@
 #include "imgui.h"
 #endif
 
-#include "Game/Actors/Player/TestPlayer.h"
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Graphics/Core/Graphics.h"
 #include "Graphics/Core/RenderState.h"
@@ -98,11 +97,6 @@ void SampleScene::SetUpActors()
 
     Transform greystoneTr(DirectX::XMFLOAT3{ -3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto greystone = this->GetActorManager()->CreateAndRegisterActorWithTransform<KnightActor>("greystone", greystoneTr);
-
-#if 1
-    Transform testPlayerTr(DirectX::XMFLOAT3{ 3.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto testPlayer = this->GetActorManager()->CreateAndRegisterActorWithTransform<TestPlayer>("testPlayer", testPlayerTr);
-#endif // 1
 
 #if 0
     std::shared_ptr<StageAsset> stageCandelabraAsset = std::make_shared<StageAsset>();

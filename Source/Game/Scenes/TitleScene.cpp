@@ -123,30 +123,16 @@ void TitleScene::Start()
     uiManager->Add(title);
 
     // Press A　の画像を作成
-    //std::shared_ptr<Sprite> pressEnter = std::make_shared<Sprite>(Graphics::GetDevice(),"./Data/Textures/UI/");
     // コントローラー対応用
-    //controlButtonOnImage = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/Tutorial/A.png");
-    //controlButtonOffImage = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/Tutorial/A_off.png");
-    //// キーボード対応用
-    //keyBoardButtonOnImage = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/Tutorial/mouseClick.png");
-    //keyBoardButtonOffImage = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/ScissorsUI/Tutorial/mouseClick_off.png");
-    //if (InputSystem::IsGamepadConnected())
-    //{//　コントローラー対応
-    //    tutorialMouseClickImage->SetTexture(controlButtonOnImage);
-    //    tutorialMouseClickOffImage->SetTexture(controlButtonOffImage);
-    //}
-    //else
-    //{
-    //    tutorialMouseClickImage->SetTexture(keyBoardButtonOnImage);
-    //    tutorialMouseClickOffImage->SetTexture(keyBoardButtonOffImage);
-    //}
+    controlButton = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/UI/press_a.png");
+    // キーボード対応用
+    keyboardButton = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/UI/press_enter.png");
 
-
-    std::shared_ptr<UIImageComponent> pressButton = std::make_shared<UIImageComponent>("./Data/Textures/UI/press_a.png", "press_a");
-    pressButton->SetWorldPosition({ 1160, 900 });
-    pressButton->SetSize({ 600, 100 });
-    pressButton->SetScale({ 1.2f,1.2f });
-    uiManager->Add(pressButton);
+    pressButtonUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/press_a.png", "press_a");
+    pressButtonUiComponent->SetWorldPosition({ 1160, 900 });
+    pressButtonUiComponent->SetSize({ 500, 100 });
+    pressButtonUiComponent->SetScale({ 1.2f,1.2f });
+    uiManager->Add(pressButtonUiComponent);
 
     // シーンが切り替わった時に
     SceneTransitionManager::Instance().NotifySceneChanged();
@@ -162,6 +148,15 @@ void TitleScene::Update(float deltaTime)
         SetLightViewFocus(player->GetPosition());
     }
 
+    if (InputSystem::IsGamepadConnected())
+    {//　コントローラー対応
+        pressButtonUiComponent->SetTexture(controlButton);
+    }
+    else
+    {
+        pressButtonUiComponent->SetTexture(keyboardButton);
+    }
+
     SceneBase::Update(deltaTime);
 
     Physics::Instance().Update(Time::UnscaledDeltaTime());
@@ -172,7 +167,7 @@ void TitleScene::Update(float deltaTime)
     if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
     {
         const char* types[] = { "0", "1" };
-        SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene")}, TransitionStyle::Fade);
+        SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene") }, TransitionStyle::Fade);
     }
     //#endif // !_DEBUG
 }
@@ -211,7 +206,7 @@ void TitleScene::SetUpActors()
     {
         PROFILE_SCOPE("Create Stage");
         Transform stageTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-        auto stage = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkTitleStage>("stage", stageTr); 
+        auto stage = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkTitleStage>("stage", stageTr);
         stage->SetModel(stageAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset, stageCandleStandAsset);
     }
 
