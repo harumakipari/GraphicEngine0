@@ -2,7 +2,7 @@
     "animationClip": 0,
     "animationName": "Idle",
     "loop": false,
-    "nextCombo": "",
+    "nextCombo": "Roll_front_0",
     "playRate": 1.0,
     "speedCurve": {
         "keys": [

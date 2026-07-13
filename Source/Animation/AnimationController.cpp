@@ -343,6 +343,34 @@ void AnimationController::DrawTimeline()
         animationTime = 0.0f;
     }
 
+    ImGui::Separator();
+    ImGui::Text("Animation Settings");
+
+    ImGui::Checkbox("Loop", &asset.loop);
+    ImGui::SameLine();
+    ImGui::DragFloat("Play Rate",&asset.playRate,0.01f,0.1f,3.0f);
+    ImGui::SameLine();
+    // éüÇÃÉRÉìÉ{Çê›íËÇ∑ÇÈ
+    if (ImGui::BeginCombo("Next Combo",asset.nextCombo.c_str()))
+    {
+        for (auto clip : animationAssetOrder)
+        {
+            auto& comboAsset =animationNotifyAssets[clip];
+
+            bool selected =comboAsset.animationName ==asset.nextCombo;
+
+            if (ImGui::Selectable(comboAsset.animationName.c_str(),selected))
+            {
+                asset.nextCombo =comboAsset.animationName;
+            }
+
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+
+        ImGui::EndCombo();
+    }
+
     float width = 800.0f;
     float height = 30.0f;
 
