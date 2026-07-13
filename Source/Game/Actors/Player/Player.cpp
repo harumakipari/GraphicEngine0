@@ -60,6 +60,7 @@ void Player::Initialize(const Transform& transform)
         int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
+
         controller->AddAnimation("Idle", 0);
         controller->AddAnimation("Jog_Fwd", 1);
         controller->AddAnimation("Roll_front_0", 2);
@@ -173,9 +174,12 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
         controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
         controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
+        std::string name = GetName();
+        controller->SetOwnerName(name);
 
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
+        // アニメーションコントローラーのオーナーの名前を設定する
     }
 
     {
@@ -445,11 +449,11 @@ void Player::Update(float deltaTime)
     {
         if (hitActors.contains(hit.actor))
         {
-         
+
         }
         else
         {
-            if (auto enemy=dynamic_cast<GruxEnemy*>(hit.actor))
+            if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
             {
                 Logger::Log(U8("剣に敵が当たった"));
                 enemy->TakeDamage(10);
@@ -759,8 +763,11 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     {
     case AnimationNotifyEvent::Type::PlaySE:
     {
-        std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
-        CoreAudio::PlayOneShot(audioPath, event.value);
+        if (event.parameter != "")
+        {
+            std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
+            CoreAudio::PlayOneShot(audioPath, event.value);
+        }
     }
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:

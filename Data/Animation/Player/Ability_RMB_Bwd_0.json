@@ -1,0 +1,44 @@
+{
+    "animationClip": 17,
+    "animationName": "Ability_RMB_Bwd_0",
+    "events": [
+        {
+            "parameter": "dodge_start",
+            "time": 0.1599999964237213,
+            "type": "PlaySE",
+            "value": 1.0
+        },
+        {
+            "parameter": "dodge_land",
+            "time": 0.47999998927116394,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "states": [
+        {
+            "animationSpeed": 1.0,
+            "endTime": 0.5299999713897705,
+            "parameter": "",
+            "startTime": 0.1599999964237213,
+            "type": "JustDodgeWindow"
+        },
+        {
+            "animationSpeed": 1.0,
+            "endTime": 0.6000000238418579,
+            "parameter": "",
+            "startTime": 0.05000000074505806,
+            "type": "Invincible"
+        },
+        {
+            "animationSpeed": 1.0,
+            "endTime": 0.6000000238418579,
+            "parameter": "",
+            "startTime": 0.47999998927116394,
+            "type": "TransitionWindow"
+        }
+    ]
+}

@@ -60,4 +60,6 @@ private:
 
 
     Microsoft::WRL::ComPtr<ID3D11PixelShader> loadingPs;
+
+    std::shared_ptr<UIImageComponent> imageUiComponent;
 };

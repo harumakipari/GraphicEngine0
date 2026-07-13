@@ -1,0 +1,23 @@
+{
+    "animationClip": 4,
+    "animationName": "PrimaryAttack_JumpAttack",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.009687500074505806,
+                "value": 0.13333331048488617
+            },
+            {
+                "time": 0.08072913438081741,
+                "value": 0.11999998986721039
+            },
+            {
+                "time": 0.08557285368442535,
+                "value": 0.9999999403953552
+            }
+        ]
+    }
+}

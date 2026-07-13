@@ -241,7 +241,7 @@ void GameScene::SetUpActors()
     {
         PROFILE_SCOPE("Create Player");
         Transform playerTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
-        player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("player", playerTr);
+        player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("Player", playerTr);
         mainCameraActor->SetLookTarget(player->GetRootComponent());
         mainCameraActor->SetEye(player->GetRootComponent());
     }

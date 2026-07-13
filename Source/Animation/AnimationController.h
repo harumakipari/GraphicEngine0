@@ -157,18 +157,24 @@ public:
     // ルートモーションを無視するかどうか
     void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
 
+    // オーナーの名前を設定する
+    void SetOwnerName(const std::string& name) { ownerName = name; }
+
+    // 全てのNotifyAssetsをロードする
+    void LoadAllNotifyAssets(const std::string& ownerName);
+
 private:
     // NotifyAssetを保存する
-    void SaveNotifyAsset(const std::string& filename,const AnimationNotifyAsset& asset);
+    void SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset);
 
     // NotifyAssetをロードする
-    void LoadNotifyAsset(const std::string& filename,AnimationNotifyAsset& asset);
+    void LoadNotifyAsset(const std::string& filename, AnimationNotifyAsset& asset);
 
     // イベントを追加する
-    void AddEvent(AnimationNotifyTrack& track, AnimationNotifyEvent::Type type,float time);
+    void AddEvent(AnimationNotifyTrack& track, AnimationNotifyEvent::Type type, float time);
 
     // ステートを追加する
-    void AddState(AnimationNotifyTrack& track,AnimationNotifyState::Type type,float startTime);
+    void AddState(AnimationNotifyTrack& track, AnimationNotifyState::Type type, float startTime);
 
     // ルートモーションをリセットする
     void ResetRootMotion(int animationClip);
@@ -177,13 +183,13 @@ private:
     void DrawAnimationSettings(AnimationNotifyAsset& asset, float duration);
 
     // タイムラインステート設定のImGui描画
-    void DrawStateTimeline(AnimationNotifyAsset& asset,float duration,float width,float height,float labelWidth,float trackHeight,float handleSize, ImDrawList* drawList, ImVec2 timelinePos);
+    void DrawStateTimeline(AnimationNotifyAsset& asset, float duration, float width, float height, float labelWidth, float trackHeight, float handleSize, ImDrawList* drawList, ImVec2 timelinePos);
 
     // タイムラインイベント設定のImGui描画
     void DrawEventTimeline(AnimationNotifyAsset& asset, float duration, float width, float labelWidth, float trackHeight, ImDrawList* drawList);
 
     // カーブエディタのImGui描画
-    void DrawCurveEditor(AnimationNotifyAsset& asset, float duration, float width, float height,ImDrawList* drawList, ImVec2 timelinePos);
+    void DrawCurveEditor(AnimationNotifyAsset& asset, float duration, float width, float height, ImDrawList* drawList, ImVec2 timelinePos);
 
     // Notifyの詳細設定のImGui描画
     void DrawNotifyInspector(AnimationNotifyAsset& asset);
@@ -287,6 +293,7 @@ private:
     float curveCreateTime = 0.0f;
     float curveCreateValue = 1.0f;
 
+    std::string ownerName = "";    // コントローラーを所有しているオーナーの名前
 
 };
 

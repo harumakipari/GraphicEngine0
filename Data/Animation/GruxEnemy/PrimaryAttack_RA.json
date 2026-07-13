@@ -1,0 +1,35 @@
+{
+    "animationClip": 3,
+    "animationName": "PrimaryAttack_RA",
+    "events": [
+        {
+            "parameter": "enemy_attack",
+            "time": 0.1544167399406433,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.0014166668988764286,
+                "value": 0.15999992191791534
+            },
+            {
+                "time": 0.0651666447520256,
+                "value": 0.1333332508802414
+            },
+            {
+                "time": 0.10766661167144775,
+                "value": 0.3866666555404663
+            },
+            {
+                "time": 0.15016666054725647,
+                "value": 0.9733332395553589
+            }
+        ]
+    }
+}

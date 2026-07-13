@@ -57,15 +57,25 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Death_A_0", 18);
     controller->AddAnimation("Death_B_0", 19);
 
+    // 全てのNotifyAssetsをロードする
+    controller->LoadAllNotifyAssets(GetName());
+
+#if 0
     controller->AddNotifyEvent("PrimaryAttack_LA", 0.187f, AnimationNotifyEvent::Type::PlaySE, "enemy_attack");
     controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
 
     controller->AddNotifyState("PrimaryAttack_LA", 0.03f, 0.3f, AnimationNotifyState::Type::DangerWindow);
-    controller->AddNotifyState("PrimaryAttack_LA", 0.01f, 0.08f, AnimationNotifyState::Type::AnimationSpeed, "", 0.2f);
-    controller->AddNotifyState("PrimaryAttack_LA", 0.08f, 0.13f, AnimationNotifyState::Type::AnimationSpeed, "", 0.05f);
+    //controller->AddNotifyState("PrimaryAttack_LA",
+    //    0.01f, 0.08f, AnimationNotifyState::Type::AnimationSpeed, 
+    //    "", 0.2f);
+    //controller->AddNotifyState("PrimaryAttack_LA",
+    //    0.08f, 0.13f, AnimationNotifyState::Type::AnimationSpeed,
+    //    "", 0.05f);
 
     controller->AddNotifyEvent("Ultimate_Roar_0", 0.187f, AnimationNotifyEvent::Type::PlaySE, "enemy_roar");
-    controller->AddNotifyState("Ultimate_Roar_0", 0.265f, 0.98f, AnimationNotifyState::Type::AnimationSpeed, "", 0.4f);
+    //controller->AddNotifyState("Ultimate_Roar_0", 
+    //    0.265f, 0.98f, AnimationNotifyState::Type::AnimationSpeed,
+    //    "", 0.4f);
 
     AnimationCurve curve;
     curve.keys =
@@ -76,6 +86,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     };
     controller->AddAnimationCurve("PrimaryAttack_RA", curve);
 
+
+#endif // 0
     // ステートマシンを作成
     {
         stateMachine_ = std::make_shared<StateMachine>();
@@ -93,6 +105,8 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
+    // アニメーションコントローラーのオーナーの名前を設定する
+    controller->SetOwnerName(GetName());
     PlayBodyAnimation("TravelMode_Idle_0");
 
 #if 1
@@ -428,10 +442,6 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
         break;
-    case AnimationNotifyState::Type::AnimationSpeed:
-        Logger::Log(U8("アニメーションの再生速度変更：") + std::to_string(state.animationSpeed));
-        GetBodyAnimationController()->SetAnimationRate(state.animationSpeed);
-        break;
     case AnimationNotifyState::Type::DangerWindow:
         Logger::Log(U8("攻撃の危険時間が開始しました。"));
         isDangerWindow = true;
@@ -458,10 +468,6 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
         break;
-    case AnimationNotifyState::Type::AnimationSpeed:
-        Logger::Log(U8("アニメーションの再生速度をリセットする"));
-        GetBodyAnimationController()->ResetAnimationRate();
-        break;
     case AnimationNotifyState::Type::DangerWindow:
         Logger::Log(U8("攻撃の危険時間が終了しました。"));
         isDangerWindow = false;
@@ -475,10 +481,13 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     {
     case AnimationNotifyEvent::Type::PlaySE:
     {
-        std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
-        auto audio = CoreAudio::PlayOneShot(audioPath, 0.8f);
-        float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
-        audio->SetPitch(pitch);
+        if (event.parameter != "")
+        {
+            std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
+            auto audio = CoreAudio::PlayOneShot(audioPath, event.value);
+            float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
+            audio->SetPitch(pitch);
+        }
     }
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:

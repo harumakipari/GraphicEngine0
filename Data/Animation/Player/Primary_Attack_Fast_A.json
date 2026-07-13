@@ -1,0 +1,38 @@
+{
+    "animationClip": 6,
+    "animationName": "Primary_Attack_Fast_A",
+    "events": [
+        {
+            "parameter": "player_attack",
+            "time": 0.17000000178813934,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "Primary_Attack_Fast_B",
+    "playRate": 1.0,
+    "states": [
+        {
+            "animationSpeed": 1.0,
+            "endTime": 0.23000000417232513,
+            "parameter": "",
+            "startTime": 0.17000000178813934,
+            "type": "HitBox"
+        },
+        {
+            "animationSpeed": 1.0,
+            "endTime": 0.5830000042915344,
+            "parameter": "",
+            "startTime": 0.11999999731779099,
+            "type": "InputWindow"
+        },
+        {
+            "animationSpeed": 1.0,
+            "endTime": 0.5830000042915344,
+            "parameter": "",
+            "startTime": 0.4000000059604645,
+            "type": "TransitionWindow"
+        }
+    ]
+}

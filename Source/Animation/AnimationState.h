@@ -25,7 +25,6 @@ struct AnimationNotifyState
         Invincible,     // 無敵時間
         TransitionWindow,   // アニメーション遷移
         JustDodgeWindow, // ジャスト回避
-        AnimationSpeed, // アニメーションスピード
         DangerWindow, // 攻撃の危険時間
     };
 

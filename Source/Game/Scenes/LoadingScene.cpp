@@ -135,6 +135,7 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
     preload_scene = props.at("preload");
     _async_preload_scene(device, width, height, preload_scene);
 
+    
 
     loadingTime = 4.0f;   // ロードにかかる時間
 
@@ -144,6 +145,13 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
 void LoadingScene::Start()
 {
     SetUpActors();
+
+    // ロード画面に出すタイトルテクスチャ
+    imageUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/title.png", "title");
+    imageUiComponent->SetWorldPosition({ 680, 270 });
+    imageUiComponent->SetScale({ 1.2f,1.2f });
+    imageUiComponent->SetSize({ 1000, 200 });
+    uiManager->Add(imageUiComponent);
 }
 
 void LoadingScene::SetUpActors()

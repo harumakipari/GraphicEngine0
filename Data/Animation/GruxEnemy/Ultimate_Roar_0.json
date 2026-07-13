@@ -1,0 +1,27 @@
+{
+    "animationClip": 13,
+    "animationName": "Ultimate_Roar_0",
+    "events": [
+        {
+            "parameter": "enemy_roar",
+            "time": 0.18700000643730164,
+            "type": "PlaySE",
+            "value": 0.4000000059604645
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.185499906539917,
+                "value": 0.28000038862228394
+            },
+            {
+                "time": 0.23274999856948853,
+                "value": 0.6000002026557922
+            }
+        ]
+    }
+}

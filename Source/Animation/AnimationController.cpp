@@ -270,16 +270,6 @@ void AnimationController::DrawImGui()
 
 void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, float duration)
 {
-    if (ImGui::Button("Save"))
-    {
-        SaveNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Load"))
-    {
-        LoadNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
-    }
-
     ImGui::Text("Timeline");
     ImGui::Separator();
 
@@ -293,6 +283,17 @@ void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, flo
         &animationTime,
         0.0f,
         duration);
+    std::string filename = "./Data/Animation/" + ownerName + "/" + asset.animationName + ".json";
+
+    if (ImGui::Button("Save"))
+    {
+        SaveNotifyAsset(filename, asset);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Load"))
+    {
+        LoadNotifyAsset(filename, asset);
+    }
 
 
     if (ImGui::Button("Play"))
@@ -310,8 +311,8 @@ void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, flo
 
     ImGui::Separator();
     ImGui::Text("Animation Settings");
-
-    ImGui::Checkbox("Loop", &asset.loop);
+    ImGui::Checkbox("Loop", &isAnimationLoop);
+    //ImGui::Checkbox("Loop", &asset.loop);
     ImGui::SameLine();
     ImGui::DragFloat("Play Rate", &asset.playRate, 0.01f, 0.1f, 3.0f);
     // 次のコンボを設定する
@@ -711,7 +712,7 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
     ImVec2 curvePos = ImGui::GetCursorScreenPos();
     curvePos.y += 50.0f;
     // 背景
-    drawList->AddRectFilled(curvePos, ImVec2(curvePos.x + width, curvePos.y + curveHeight),IM_COL32(35, 35, 35, 255));
+    drawList->AddRectFilled(curvePos, ImVec2(curvePos.x + width, curvePos.y + curveHeight), IM_COL32(35, 35, 35, 255));
 
     // 縦線
     for (int i = 0; i <= 10; i++)
@@ -764,6 +765,9 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
 
         if (ImGui::IsItemDeactivated())
         {
+            float selectedTime = key.time;
+            float selectedValue = key.value;
+
             std::sort(
                 asset.speedCurve.keys.begin(),
                 asset.speedCurve.keys.end(),
@@ -772,12 +776,10 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
                     return a.time < b.time;
                 });
 
-            selectedCurveKey = -1;
-
             for (int j = 0; j < asset.speedCurve.keys.size(); j++)
             {
-                if (asset.speedCurve.keys[j].time == key.time &&
-                    asset.speedCurve.keys[j].value == key.value)
+                if (asset.speedCurve.keys[j].time == selectedTime &&
+                    asset.speedCurve.keys[j].value == selectedValue)
                 {
                     selectedCurveKey = j;
                     break;
@@ -790,7 +792,19 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
         drawList->AddCircleFilled(ImVec2(x, y), 5, color);
 
     }
+
     ImGui::Text("Selected = %d", selectedCurveKey);
+    if (selectedCurveKey >= 0 && selectedCurveKey < asset.speedCurve.keys.size())
+    {
+        auto& selectedKey = asset.speedCurve.keys[selectedCurveKey];
+        ImGui::Text("Selected Key");
+        ImGui::Text("Time  = %.3f", selectedKey.time);
+        ImGui::Text("Speed = %.3f", selectedKey.value);
+    }
+    else
+    {
+        ImGui::Text("No Key Selected");
+    }
 
     ImGui::SetCursorScreenPos(curvePos);
     for (size_t i = 0; i + 1 < asset.speedCurve.keys.size(); i++)
@@ -830,9 +844,10 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
         curveCreateValue = value;
         ImGui::OpenPopup("CurvePopup");
 
-        ImGui::Text("Time = %.2f", time);
-        ImGui::Text("Value = %.2f", value);
     }
+
+
+
 
     if (ImGui::BeginPopup("CurvePopup"))
     {
@@ -966,8 +981,6 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             break;
         case AnimationNotifyState::Type::JustDodgeWindow:
             break;
-        case AnimationNotifyState::Type::AnimationSpeed:
-            break;
         case AnimationNotifyState::Type::DangerWindow:
             break;
         }
@@ -998,8 +1011,6 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             ImGui::DragFloat("Power", &event.value, 0.1f, 0, 20);
             break;
         }
-
-
     }
 }
 
@@ -1020,8 +1031,16 @@ void AnimationController::DrawTimeline()
         if (ImGui::Selectable(asset.animationName.c_str(), selected))
         {
             selectedTimelineClip = clip;
-            LoadNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
+            std::string filename = "./Data/Animation/" + ownerName + "/" + asset.animationName + ".json";
+            LoadNotifyAsset(filename, asset);
             ResetRootMotion(asset.animationName, false, false, 0.0f);
+            // 値を初期化する
+            selectedStateIndex = -1;
+            selectedEventIndex = -1;
+            popupCreateTime = 0.0f;
+            selectedCurveKey = -1;
+            curveCreateTime = 0.0f;
+            curveCreateValue = 1.0f;
         }
     }
 
@@ -1104,6 +1123,24 @@ void AnimationController::OnNotifyEvent(const AnimationNotifyEvent& event)
     {
         owner->OnAnimationNotifyEvent(event);
     }
+}
+
+// 全てのNotifyAssetsをロードする
+void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
+{
+    std::string directory = "./Data/Animation/" + ownerName;
+    for (auto& file : std::filesystem::directory_iterator(directory))
+    {
+        if (file.path().extension() != ".json")
+            continue;
+
+        AnimationNotifyAsset asset;
+
+        LoadNotifyAsset(file.path().string(), asset);
+
+        animationNotifyAssets[asset.animationClip] = asset;
+    }
+
 }
 
 // NotifyAssetを保存する
