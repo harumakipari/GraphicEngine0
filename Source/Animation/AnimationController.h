@@ -173,6 +173,21 @@ private:
     // ルートモーションをリセットする
     void ResetRootMotion(int animationClip);
 
+    // アニメーション設定のImGui描画
+    void DrawAnimationSettings(AnimationNotifyAsset& asset, float duration);
+
+    // タイムラインステート設定のImGui描画
+    void DrawStateTimeline(AnimationNotifyAsset& asset,float duration,float width,float height,float labelWidth,float trackHeight,float handleSize, ImDrawList* drawList, ImVec2 timelinePos);
+
+    // タイムラインイベント設定のImGui描画
+    void DrawEventTimeline(AnimationNotifyAsset& asset, float duration, float width, float labelWidth, float trackHeight, ImDrawList* drawList);
+
+    // カーブエディタのImGui描画
+    void DrawCurveEditor(AnimationNotifyAsset& asset, float duration, float width, float height,ImDrawList* drawList, ImVec2 timelinePos);
+
+    // Notifyの詳細設定のImGui描画
+    void DrawNotifyInspector(AnimationNotifyAsset& asset);
+
     SkeletalMeshComponent* target_ = nullptr;
     Character* owner = nullptr;
 
@@ -271,5 +286,7 @@ private:
     int selectedCurveKey = -1;
     float curveCreateTime = 0.0f;
     float curveCreateValue = 1.0f;
+
+
 };
 

@@ -268,41 +268,8 @@ void AnimationController::DrawImGui()
 #endif
 }
 
-
-void AnimationController::DrawTimeline()
+void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, float duration)
 {
-#ifdef USE_IMGUI
-    ImGui::Begin("Animation Sequence");
-
-    ImGui::Columns(2);
-    ImGui::SetColumnWidth(0, 200.0f);
-
-    for (auto clip : animationAssetOrder)
-    {
-        auto& asset = animationNotifyAssets[clip];
-
-        bool selected = selectedTimelineClip == clip;
-
-        if (ImGui::Selectable(asset.animationName.c_str(), selected))
-        {
-            selectedTimelineClip = clip;
-            LoadNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
-            ResetRootMotion(asset.animationName, false, false, 0.0f);
-        }
-    }
-
-    ImGui::NextColumn();
-
-    auto it = animationNotifyAssets.find(selectedTimelineClip);
-
-    if (it == animationNotifyAssets.end())
-    {
-        ImGui::End();
-        return;
-    }
-
-    auto& asset = it->second;
-
     if (ImGui::Button("Save"))
     {
         SaveNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
@@ -312,8 +279,6 @@ void AnimationController::DrawTimeline()
     {
         LoadNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
     }
-
-    float duration = target_->model->animations[asset.animationClip].duration;
 
     ImGui::Text("Timeline");
     ImGui::Separator();
@@ -348,20 +313,19 @@ void AnimationController::DrawTimeline()
 
     ImGui::Checkbox("Loop", &asset.loop);
     ImGui::SameLine();
-    ImGui::DragFloat("Play Rate",&asset.playRate,0.01f,0.1f,3.0f);
-    ImGui::SameLine();
+    ImGui::DragFloat("Play Rate", &asset.playRate, 0.01f, 0.1f, 3.0f);
     // 次のコンボを設定する
-    if (ImGui::BeginCombo("Next Combo",asset.nextCombo.c_str()))
+    if (ImGui::BeginCombo("Next Combo", asset.nextCombo.c_str()))
     {
         for (auto clip : animationAssetOrder)
         {
-            auto& comboAsset =animationNotifyAssets[clip];
+            auto& comboAsset = animationNotifyAssets[clip];
 
-            bool selected =comboAsset.animationName ==asset.nextCombo;
+            bool selected = comboAsset.animationName == asset.nextCombo;
 
-            if (ImGui::Selectable(comboAsset.animationName.c_str(),selected))
+            if (ImGui::Selectable(comboAsset.animationName.c_str(), selected))
             {
-                asset.nextCombo =comboAsset.animationName;
+                asset.nextCombo = comboAsset.animationName;
             }
 
             if (selected)
@@ -370,36 +334,19 @@ void AnimationController::DrawTimeline()
 
         ImGui::EndCombo();
     }
+}
 
-    float width = 800.0f;
-    float height = 30.0f;
-
-    ImDrawList* drawList =
-        ImGui::GetWindowDrawList();
-
-    ImVec2 timelinePos = ImGui::GetCursorScreenPos();
-
-    ImGui::InvisibleButton(
-        "TimelineSeek",
-        ImVec2(width, height));
+// タイムラインステート設定のImGui描画
+void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, float duration, float width, float height, float labelWidth, float trackHeight, float handleSize, ImDrawList* drawList, ImVec2 timelinePos)
+{
+    ImGui::InvisibleButton("TimelineSeek", ImVec2(width, height));
 
     if (ImGui::IsItemActive())
     {
-        float mouseX =
-            ImGui::GetIO().MousePos.x;
-
-        float normalized =
-            (mouseX - timelinePos.x) / width;
-
-        normalized =
-            std::clamp(
-                normalized,
-                0.0f,
-                1.0f);
-
+        float mouseX = ImGui::GetIO().MousePos.x;
+        float normalized = (mouseX - timelinePos.x) / width;
+        normalized = std::clamp(normalized, 0.0f, 1.0f);
         animationTime = normalized * duration;
-
-        //target_->model->Animate(this->notifyAnimationClip, animationTime, finalNodes);
     }
 
     drawList->AddRectFilled(
@@ -434,10 +381,6 @@ void AnimationController::DrawTimeline()
             buffer);
     }
     ImGui::Dummy(ImVec2(0, 40));
-    float trackHeight = 24.0f;
-    float labelWidth = 150.0f;
-    float handleSize = 40.0f;
-    float visualHandleSize = 6.0f;
     for (int stateIndex = 0;
         stateIndex < asset.notifyTrack.states.size();
         stateIndex++)
@@ -668,41 +611,27 @@ void AnimationController::DrawTimeline()
                 width,
                 trackHeight));
     }
+}
 
+// タイムラインイベント設定のImGui描画
+void AnimationController::DrawEventTimeline(AnimationNotifyAsset& asset, float duration, float width, float labelWidth, float trackHeight, ImDrawList* drawList)
+{
     ImGui::Text("Events");
-
     ImGui::SameLine(labelWidth);
 
     ImVec2 eventRow = ImGui::GetCursorScreenPos();
-
-    drawList->AddRectFilled(
-        eventRow,
-        ImVec2(
-            eventRow.x + width,
-            eventRow.y + trackHeight),
-        IM_COL32(40, 40, 40, 255));
-    for (int eventIndex = 0;
-        eventIndex < asset.notifyTrack.events.size();
-        eventIndex++)
+    float eventAreaHeight = std::max<float>(trackHeight, trackHeight * (float)asset.notifyTrack.events.size());
+    drawList->AddRectFilled(eventRow, ImVec2(eventRow.x + width, eventRow.y + eventAreaHeight), IM_COL32(40, 40, 40, 255));
+    for (int eventIndex = 0; eventIndex < asset.notifyTrack.events.size(); eventIndex++)
     {
-        auto& event =
-            asset.notifyTrack.events[eventIndex];
+        auto& event = asset.notifyTrack.events[eventIndex];
 
-        float x =
-            eventRow.x +
-            (event.time / duration)
-            * width;
-
+        float x = eventRow.x + (event.time / duration) * width;
+        float y = eventRow.y + eventIndex * trackHeight;
         char id[64];
-        sprintf_s(id,
-            "Event_%d",
-            eventIndex);
+        sprintf_s(id, "Event_%d", eventIndex);
 
-        ImGui::SetCursorScreenPos(
-            ImVec2(
-                x - 6,
-                eventRow.y));
-
+        ImGui::SetCursorScreenPos(ImVec2(x - 6, y));
         ImGui::InvisibleButton(id, ImVec2(12, trackHeight));
 
         if (ImGui::IsItemClicked())
@@ -713,55 +642,76 @@ void AnimationController::DrawTimeline()
 
         if (ImGui::IsItemActive())
         {
-            float deltaTime =
-                (ImGui::GetIO().MouseDelta.x
-                    / width)
-                * duration;
+            float deltaTime = (ImGui::GetIO().MouseDelta.x / width) * duration;
 
             event.time += deltaTime;
 
-            event.time =
-                std::clamp(
-                    event.time,
-                    0.0f,
-                    duration);
+            event.time = std::clamp(event.time, 0.0f, duration);
         }
 
-        drawList->AddLine(
-            ImVec2(x, eventRow.y),
-            ImVec2(x, eventRow.y + trackHeight),
-            IM_COL32(255, 255, 0, 255),
-            3.0f);
+        drawList->AddLine(ImVec2(x, y), ImVec2(x, y + trackHeight), IM_COL32(255, 255, 0, 255), 3.0f);
 
         char eventText[32];
 
-        sprintf_s(
-            eventText,
-            "%.2f",
-            event.time);
+        sprintf_s(eventText, "%.2f", event.time);
 
-        drawList->AddText(
-            ImVec2(
-                x + 5,
-                eventRow.y),
-            IM_COL32(
-                255,
-                255,
-                0,
-                255),
-            eventText);
+        drawList->AddText(ImVec2(x + 5, y), IM_COL32(255, 255, 0, 255), eventText);
+    }
+    ImGui::Dummy(ImVec2(width, trackHeight * asset.notifyTrack.events.size()));
+
+
+    ImVec2 popupPos = eventRow;
+    ImGui::SetCursorScreenPos(popupPos);
+    ImGui::Dummy(ImVec2(width, eventAreaHeight));
+
+    ImGui::InvisibleButton("EventTrackArea", ImVec2(width, eventAreaHeight));
+
+    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+    {
+        float mouseX = ImGui::GetIO().MousePos.x;
+        popupCreateTime = ((mouseX - eventRow.x) / width) * duration;
+        popupCreateTime = std::clamp(popupCreateTime, 0.0f, duration);
+        ImGui::OpenPopup("EventPopup");
+    }
+    if (ImGui::BeginPopup("EventPopup"))
+    {
+        if (ImGui::BeginMenu("Add Event"))
+        {
+            for (auto type : magic_enum::enum_values<AnimationNotifyEvent::Type>())
+            {
+                if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
+                {
+                    AddEvent(asset.notifyTrack, type, popupCreateTime);
+                }
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Add State"))
+        {
+            for (auto type : magic_enum::enum_values<AnimationNotifyState::Type>())
+            {
+                if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
+                {
+                    AddState(asset.notifyTrack, type, popupCreateTime);
+                }
+            }
+
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndPopup();
     }
 
-    ImGui::Dummy(ImVec2(width, trackHeight));
+}
 
-    ImGui::Text("Speed Curve");
+// カーブエディタのImGui描画
+void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float duration, float width, float height, ImDrawList* drawList, ImVec2 timelinePos)
+{
     float curveHeight = 150.0f;
-
     ImVec2 curvePos = ImGui::GetCursorScreenPos();
-
+    curvePos.y += 50.0f;
     // 背景
-    drawList->AddRectFilled(curvePos, ImVec2(curvePos.x + width, curvePos.y + curveHeight),
-        IM_COL32(35, 35, 35, 255));
+    drawList->AddRectFilled(curvePos, ImVec2(curvePos.x + width, curvePos.y + curveHeight),IM_COL32(35, 35, 35, 255));
 
     // 縦線
     for (int i = 0; i <= 10; i++)
@@ -916,58 +866,6 @@ void AnimationController::DrawTimeline()
         ImGui::EndPopup();
     }
 
-    ImGui::SetCursorScreenPos(eventRow);
-
-    ImGui::InvisibleButton(
-        "EventTrackArea",
-        ImVec2(width, trackHeight));
-
-    if (ImGui::IsItemHovered() &&
-        ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-    {
-        float mouseX =
-            ImGui::GetIO().MousePos.x;
-
-        popupCreateTime =
-            ((mouseX - eventRow.x) / width)
-            * duration;
-
-        popupCreateTime =
-            std::clamp(
-                popupCreateTime,
-                0.0f,
-                duration);
-
-        ImGui::OpenPopup("EventPopup");
-    }
-    if (ImGui::BeginPopup("EventPopup"))
-    {
-        if (ImGui::BeginMenu("Add Event"))
-        {
-            for (auto type : magic_enum::enum_values<AnimationNotifyEvent::Type>())
-            {
-                if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
-                {
-                    AddEvent(asset.notifyTrack, type, popupCreateTime);
-                }
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Add State"))
-        {
-            for (auto type : magic_enum::enum_values<AnimationNotifyState::Type>())
-            {
-                if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
-                {
-                    AddState(asset.notifyTrack, type, popupCreateTime);
-                }
-            }
-
-            ImGui::EndMenu();
-        }
-
-        ImGui::EndPopup();
-    }
 
 
     if (asset.animationClip == animationClip)
@@ -978,8 +876,8 @@ void AnimationController::DrawTimeline()
             * width;
 
         drawList->AddLine(
-            ImVec2(currentX, timelinePos.y),
-            ImVec2(currentX, timelinePos.y + height),
+            ImVec2(currentX, curvePos.y),
+            ImVec2(currentX, curvePos.y + height),
             IM_COL32(255, 0, 0, 255),
             3.0f);
 
@@ -993,7 +891,7 @@ void AnimationController::DrawTimeline()
         drawList->AddText(
             ImVec2(
                 currentX - 15,
-                timelinePos.y - 18),
+                curvePos.y - 18),
             IM_COL32(
                 255,
                 0,
@@ -1031,7 +929,136 @@ void AnimationController::DrawTimeline()
             selectedEventIndex = -1;
         }
     }
+}
 
+// Notifyの詳細設定のImGui描画
+void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
+{
+    ImGui::Separator();
+    ImGui::Text("Notify Inspector");
+    // ステートが選択されている時
+    if (selectedStateIndex != -1)
+    {
+        auto& state = asset.notifyTrack.states[selectedStateIndex];
+
+        ImGui::Text("Type");
+        ImGui::Text("%s", magic_enum::enum_name(state.type).data());
+        ImGui::DragFloat("Start", &state.startTime, 0.01f, 0.0f, 10.0f);
+        ImGui::DragFloat("End", &state.endTime, 0.01f, 0.0f, 10.0f);
+
+        switch (state.type)
+        {
+        case AnimationNotifyState::Type::HitBox:
+        {
+            char buffer[128];
+            strcpy_s(buffer, state.parameter.c_str());
+            if (ImGui::InputText("Weapon", buffer, sizeof(buffer)))
+            {
+                state.parameter = buffer;
+            }
+            break;
+        }
+        case AnimationNotifyState::Type::InputWindow:
+            break;
+        case AnimationNotifyState::Type::Invincible:
+            break;
+        case AnimationNotifyState::Type::TransitionWindow:
+            break;
+        case AnimationNotifyState::Type::JustDodgeWindow:
+            break;
+        case AnimationNotifyState::Type::AnimationSpeed:
+            break;
+        case AnimationNotifyState::Type::DangerWindow:
+            break;
+        }
+    }
+    // イベントが選択されている時
+    if (selectedEventIndex != -1)
+    {
+        auto& event = asset.notifyTrack.events[selectedEventIndex];
+        ImGui::Text("Type");
+        ImGui::Text("%s", magic_enum::enum_name(event.type).data());
+        ImGui::DragFloat("Time", &event.time, 0.01f, 0, 10);
+        switch (event.type)
+        {
+        case AnimationNotifyEvent::Type::PlaySE:
+        {
+            char buffer[128];
+            strcpy_s(buffer, event.parameter.c_str());
+            if (ImGui::InputText("Sound", buffer, sizeof(buffer)))
+            {
+                event.parameter = buffer;
+            }
+            ImGui::DragFloat("Volume", &event.value, 0.01f, 0, 1);
+            break;
+        }
+        case AnimationNotifyEvent::Type::SpawnEffect:
+            break;
+        case AnimationNotifyEvent::Type::SwordEmissive:
+            ImGui::DragFloat("Power", &event.value, 0.1f, 0, 20);
+            break;
+        }
+
+
+    }
+}
+
+void AnimationController::DrawTimeline()
+{
+#ifdef USE_IMGUI
+    ImGui::Begin("Animation Sequence");
+
+    ImGui::Columns(2);
+    ImGui::SetColumnWidth(0, 200.0f);
+
+    for (auto clip : animationAssetOrder)
+    {
+        auto& asset = animationNotifyAssets[clip];
+
+        bool selected = selectedTimelineClip == clip;
+
+        if (ImGui::Selectable(asset.animationName.c_str(), selected))
+        {
+            selectedTimelineClip = clip;
+            LoadNotifyAsset("./Data/Animation/" + asset.animationName + ".json", asset);
+            ResetRootMotion(asset.animationName, false, false, 0.0f);
+        }
+    }
+
+    ImGui::NextColumn();
+
+    auto it = animationNotifyAssets.find(selectedTimelineClip);
+
+    if (it == animationNotifyAssets.end())
+    {
+        ImGui::End();
+        return;
+    }
+
+    auto& asset = it->second;
+    float duration = target_->model->animations[asset.animationClip].duration;
+
+    // ImGui
+    float trackHeight = 24.0f;
+    float labelWidth = 150.0f;
+    float handleSize = 40.0f;
+    float width = 800.0f;
+    float height = 30.0f;
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec2 timelinePos = ImGui::GetCursorScreenPos();
+
+    DrawAnimationSettings(asset, duration);
+    DrawStateTimeline(asset, duration, width, height, labelWidth, trackHeight, handleSize, drawList, timelinePos);
+    DrawEventTimeline(asset, duration, width, labelWidth, trackHeight, drawList);
+    DrawNotifyInspector(asset);
+
+    ImGui::End();
+
+    ImGui::Begin("CurveEditor");
+    ImDrawList* curveDrawList = ImGui::GetWindowDrawList();
+    ImVec2 curvePos = ImGui::GetCursorScreenPos();
+    DrawCurveEditor(asset, duration, width, height, curveDrawList, curvePos);
     ImGui::End();
 
 #endif
