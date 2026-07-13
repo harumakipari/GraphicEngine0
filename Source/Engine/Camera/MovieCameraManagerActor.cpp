@@ -247,10 +247,10 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 player->SetEulerRotation({ 0.0f,90.0f,0.0f });
             }
 
-            doorMovieState = DoorMovieState::Finished;
+            doorMovieState = DoorMovieState::PreFinished;
         }
         break;
-    case DoorMovieState::Finished:
+    case DoorMovieState::PreFinished:
         if (movieCamera->IsMovieFinish())
         {
             if (player)
@@ -272,7 +272,9 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
                 }
             }
+            doorMovieState = DoorMovieState::Finished;
         }
+    case DoorMovieState::Finished:
         break;
     }
 }

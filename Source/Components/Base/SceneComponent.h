@@ -591,7 +591,6 @@ private:
     }
 
     friend class Actor;
-
 public:
     virtual void UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None, TeleportType teleport = TeleportType::None) override final;
 
@@ -610,13 +609,13 @@ public:
         attachParent_ = parent;
         parent->attachChildren_.push_back(shared_from_this());
         // もう一度確認
+
     }
 
     // このコンポーネントを、指定された親コンポーネントにアタッチ（接続）する
-// parent はアタッチ先の親コンポーネント　
-// socketNode 接続先のソケットノード番号( -1 ならデフォルト)
+    // parent はアタッチ先の親コンポーネント　
+    // socketNode 接続先のソケットノード番号( -1 ならデフォルト)
     void AttachToComponent(const std::shared_ptr<SceneComponent>& parent, int socketNode);
-
 
     void AddWorldOffset(const DirectX::XMFLOAT3& offset);
 
@@ -624,8 +623,6 @@ public:
 
     // ワールド空間でのこのコンポーネントの回転をオフセット分だけ加算する
     void AddLocalRotation(const DirectX::XMFLOAT3& offset);
-
-
 };
 
 

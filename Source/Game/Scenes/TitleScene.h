@@ -58,7 +58,6 @@ private:
     // タイトル固定用カメラ
     std::shared_ptr<CinemaCamera> cinemaCameraActor;
 
-
     // pressButtonのUIコンポーネント
     std::shared_ptr<UIImageComponent> pressButtonUiComponent;
     std::shared_ptr<Sprite> controlButton;

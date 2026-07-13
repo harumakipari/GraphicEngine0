@@ -34,15 +34,11 @@ void Player::Initialize(const Transform& transform)
         PROFILE_SCOPE("Create PlayerModel");
 
         skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-        //skeletalMeshComponent->SetModel("./Data/Models/Characters/Aurora_FrozenHealth/animation.gltf", false, true);
-        //skeletalMeshComponent->SetModel("./Data/Models/Characters/Player/player.gltf", false, true);
         skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
-
         skeletalMeshComponent->SetIsCastShadow(false);
         skeletalMeshComponent->SetIsShadowMap(true);
-#if 1
         for (auto& material : skeletalMeshComponent->model->materials)
         {
             if (material.name == "M_Aurora_Hair_Blonde_FrozenHearth")
@@ -55,12 +51,7 @@ void Player::Initialize(const Transform& transform)
                 material.overridePipelineName = "characterFurAndHairSkeletalMesh";
                 material.materialType = MaterialType::Fur;
             }
-            else if (material.name == "MI_Aurora_Sword_FrozenHearth")
-            {// 剣の時
-                material.overridePipelineName = "DarkStagePlayerWeaponPS";
-            }
         }
-#endif // 0
     }
     {
         PROFILE_SCOPE("Create PlayerAnimationController");
@@ -176,32 +167,13 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_level_voice");
         controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::SwordEmissive);
 
-
         // ジャスト回避
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
         controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
         controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
-#if 0
-        controller->AddNotifyState("Ability_RMB_Fwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
-        controller->AddNotifyState("Ability_RMB_Fwd_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
-        controller->AddNotifyState("Ability_RMB_Fwd_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
-        controller->AddNotifyEvent("Ability_RMB_Fwd_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
-        controller->AddNotifyEvent("Ability_RMB_Fwd_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
 
-        controller->AddNotifyState("Ability_RMB_Left_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
-        controller->AddNotifyState("Ability_RMB_Left_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
-        controller->AddNotifyState("Ability_RMB_Left_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
-        controller->AddNotifyEvent("Ability_RMB_Left_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
-        controller->AddNotifyEvent("Ability_RMB_Left_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
-
-        controller->AddNotifyState("Ability_RMB_Right_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
-        controller->AddNotifyState("Ability_RMB_Right_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
-        controller->AddNotifyState("Ability_RMB_Right_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
-        controller->AddNotifyEvent("Ability_RMB_Right_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
-        controller->AddNotifyEvent("Ability_RMB_Right_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
-#endif // 0
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
     }
@@ -284,7 +256,7 @@ void Player::Initialize(const Transform& transform)
 
     int weaponSocketNode = skeletalMeshComponent->FindIndexByName("weapon");
 
-#if 1
+#if 0
     // 剣に当たり判定のコンポーネントを追加
     swordCollisionComp = AddComponent<CapsuleComponent>("SwordCollision", parentName);
     //DirectX::XMFLOAT3 size = { 0.6f,1.5f,1.0f };
@@ -350,8 +322,7 @@ void Player::Initialize(const Transform& transform)
 
         });
 
-    swordPointComp = AddComponent<CapsuleComponent>("SwordPointComponent", "SwordCollision");
-    swordPointComp->SetRelativeLocationDirect({ 0.0f,0.0f,0.6f });
+#endif // 0
 
     {
         // 剣の根本のコンポーネントを追加   
@@ -368,17 +339,19 @@ void Player::Initialize(const Transform& transform)
         swordTipComponent->SetRelativeLocationDirect({ 0.0f,0.0f,0.8f });
     }
 
-#endif // 0
+
 
     // 剣のメッシュコンポーネントを追加
     swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSwordGhost/Sword.gltf", false, true);
     swordMeshComponent->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
-    //swordMeshComponent->overrideDeferredPipelineName = "DarkStagePlayerWeaponPS";
     swordMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.0f,0.8f,1.0f ,0.0f };
     swordMeshComponent->plusAlphaCBuffer->data.flashValue = 9.5f;
     swordMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerWeaponForwardPS";
     swordMeshComponent->overrideForwardPipelineName = "GltfModelPlayerWeaponForwardPS";
+
+    swordPointComp = AddComponent<CapsuleComponent>("SwordPointComponent", "Sword");
+    swordPointComp->SetRelativeLocationDirect({ 0.0f,0.0f,0.6f });
 
     // 剣を背中に背負ったとき用の剣のメッシュコンポーネント
     int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");
@@ -406,7 +379,6 @@ void Player::Initialize(const Transform& transform)
     // 走り用のSEのコンポーネントを追加
     runAudioComp = AddComponent<AudioSourceComponent>("runAudioComponent", parentName);
     runAudioComp->SetSource(L"./Data/Sound/SE/run_heel.wav");
-    //runAudioComp->SetSource(L"./Data/Sound/SE/run.wav");
     runAudioComp->SetVolume(0.05f);
     runAudioComp->SetLoop(true);
 
@@ -433,6 +405,7 @@ void Player::Update(float deltaTime)
     DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 toEnemyDir = { 0.0f,0.0f,0.0f };
+
     // ボス戦時のカメラのeyeの位置を更新する
     if (auto gruxEnemy = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
     {
@@ -468,9 +441,21 @@ void Player::Update(float deltaTime)
     prevSwordMidPos = swordMidPos;
     prevSwordTipPos = swordTipPos;
 
-    if (isHit)
+    if (isHit && isAttackActive)
     {
-        Logger::Log(U8("剣に敵が当たった"));
+        if (hitActors.contains(hit.actor))
+        {
+         
+        }
+        else
+        {
+            if (auto enemy=dynamic_cast<GruxEnemy*>(hit.actor))
+            {
+                Logger::Log(U8("剣に敵が当たった"));
+                enemy->TakeDamage(10);
+                hitActors.emplace(enemy);
+            }
+        }
     }
 
     // 軌跡の更新処理

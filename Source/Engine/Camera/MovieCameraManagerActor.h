@@ -19,6 +19,7 @@ private:
         UpPlayerCombatMovie,
         EnemyMovie,
         EnemyName,
+        PreFinished,
         Finished
     };
 public:

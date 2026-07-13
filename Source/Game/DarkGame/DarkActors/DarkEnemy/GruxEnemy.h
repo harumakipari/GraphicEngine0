@@ -31,9 +31,6 @@ public:
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 
 private:
-    // 攻撃が当たるタイミングで呼ばれる関数
-    void DoAttackHit();
-
     // プレイヤーとの距離を取得する関数
     float GetDistanceToPlayer();
 
@@ -55,6 +52,14 @@ private:
     std::string rightWeapon = "rightWeapon";
     std::string bothWeapon = "bothWeapon";
 
+    std::shared_ptr<SceneComponent> weaponLeftRootComponent; // 左の武器の根元のコンポーネント
+    std::shared_ptr<SceneComponent> weaponLeftMiddleComponent; // 左の武器の中間のコンポーネント
+    std::shared_ptr<SceneComponent> weaponLeftTipComponent;  // 左の武器の先端のコンポーネント
+
+    std::shared_ptr<SceneComponent> weaponRightRootComponent; // 右の武器の根元のコンポーネント
+    std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // 右の武器の中間のコンポーネント
+    std::shared_ptr<SceneComponent> weaponRightTipComponent;  // 右の武器の先端のコンポーネント
+
     bool rightHitBox = false;   // 右の剣の当たり判定
     bool leftHitBox = false;    // 左の剣の当たり判定
     bool isDangerWindow = false;
@@ -63,9 +68,7 @@ private:
     std::unordered_set<Actor*> hitActors;
 
     bool isDeathPerform = false;
-
     float pitchBaseValue = 0.45f;
-
 
     // 左目の位置用コンポーネントを追加　暗闇で光る目の表現用
     std::shared_ptr<SceneComponent> leftEyeSceneComponent;
@@ -78,6 +81,18 @@ private:
     float bossBattleCameraDistance = 0.0f;
     float bossBattleCameraRightDistance = 2.5f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,0.0f,0.0f };
+
+    // 前フレームの左の武器
+    DirectX::XMFLOAT3 prevWeaponLeftRootPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 prevWeaponLeftMidPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 prevWeaponLeftTipPos = { 0.0f,0.0f,0.0f };
+
+    // 前フレームの右の武器
+    DirectX::XMFLOAT3 prevWeaponRightRootPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 prevWeaponRightMidPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 prevWeaponRightTipPos = { 0.0f,0.0f,0.0f };
+
+    float hitWeaponRadius = 0.4f;
 
     friend class GruxEnemyEyeActor;
 };

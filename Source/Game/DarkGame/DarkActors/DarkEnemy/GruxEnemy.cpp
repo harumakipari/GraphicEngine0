@@ -7,6 +7,7 @@
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
+#include "Physics/CollisionFunction.h"
 
 void GruxEnemy::Initialize(const Transform& transform)
 {
@@ -65,7 +66,6 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     controller->AddNotifyEvent("Ultimate_Roar_0", 0.187f, AnimationNotifyEvent::Type::PlaySE, "enemy_roar");
     controller->AddNotifyState("Ultimate_Roar_0", 0.265f, 0.98f, AnimationNotifyState::Type::AnimationSpeed, "", 0.4f);
-
 
     // ステートマシンを作成
     {
@@ -127,6 +127,32 @@ void GruxEnemy::Initialize(const Transform& transform)
     backPointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f,-1.0f });
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     backPointLightComponent->SetSharedLightName("EnemyBackPointLight");
+
+    // 武器に当たり判定のコンポーネントを追加
+    int socketLeftNode = skeletalMeshComponent->FindIndexByName("weapon_l");
+    // 左の武器の根本のコンポーネントを追加   
+    weaponLeftRootComponent = AddComponent<SceneComponent>("weaponLeftRootComponent", parentName);
+    weaponLeftRootComponent->SetRelativeLocationDirect({ 0.0f,0.0f,0.6f });
+    weaponLeftRootComponent->AttachToComponent(skeletalMeshComponent, socketLeftNode); // "weapon_l"
+    // 左の武器の真ん中のコンポーネントを追加
+    weaponLeftMiddleComponent = AddComponent<SceneComponent>("weaponLeftMiddleComponent", "weaponLeftRootComponent");
+    weaponLeftMiddleComponent->SetRelativeLocationDirect({ 0.0f,0.0f,0.6f });
+    // 左の武器の先端のコンポーネントを追加
+    weaponLeftTipComponent = AddComponent<SceneComponent>("weaponLeftTipComponent", "weaponLeftRootComponent");
+    weaponLeftTipComponent->SetRelativeLocationDirect({ 0.0f,0.0f,1.1f });
+
+
+    int socketRightNode = skeletalMeshComponent->FindIndexByName("weapon_r");
+    // 右の武器の根本のコンポーネントを追加   
+    weaponRightRootComponent = AddComponent<SceneComponent>("weaponRightRootComponent", parentName);
+    weaponRightRootComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.2f });
+    weaponRightRootComponent->AttachToComponent(skeletalMeshComponent, socketRightNode); // "weapon_r"
+    // 右の武器の真ん中のコンポーネントを追加
+    weaponRightMiddleComponent = AddComponent<SceneComponent>("weaponRightMiddleComponent", "weaponRightRootComponent");
+    weaponRightMiddleComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.8f });
+    // 右の武器の先端のコンポーネントを追加
+    weaponRightTipComponent = AddComponent<SceneComponent>("weaponRightTipComponent", "weaponRightRootComponent");
+    weaponRightTipComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-1.6f });
 
 #if 0
     // 武器に当たり判定のコンポーネントを追加
@@ -239,8 +265,88 @@ void GruxEnemy::Update(float deltaTime)
         DebugRender::DrawSphere(targetPos, 0.5f, { 1.0f,1.0f,0.0f,1.0f }, true);
     }
 
+    // 当たり判定
+    HitResultWithActor hit;
 
+    // 左の武器の当たり判定
+    {
+        bool isLeftHit = false;
 
+        DirectX::XMFLOAT3 weaponLeftRootPos = weaponLeftRootComponent->GetComponentLocation();
+        DirectX::XMFLOAT3 weaponLeftMidPos = weaponLeftMiddleComponent->GetComponentLocation();
+        DirectX::XMFLOAT3 weaponLeftTipPos = weaponLeftTipComponent->GetComponentLocation();
+
+        isLeftHit |= CollisionFunction::SphereRayCast(prevWeaponLeftRootPos, weaponLeftRootPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        isLeftHit |= CollisionFunction::SphereRayCast(prevWeaponLeftMidPos, weaponLeftMidPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        isLeftHit |= CollisionFunction::SphereRayCast(prevWeaponLeftTipPos, weaponLeftTipPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+
+        prevWeaponLeftRootPos = weaponLeftRootPos;
+        prevWeaponLeftMidPos = weaponLeftMidPos;
+        prevWeaponLeftTipPos = weaponLeftTipPos;
+
+        if (isLeftHit)
+        {
+            if (auto player = dynamic_cast<Player*>(hit.actor))
+            {
+                /*                if (isDangerWindow && player->GetJustDodgeWindow())
+                                {
+                                    if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
+                                    {
+                                        player->StartJustDodgeSuccess(enemy);
+                                        Logger::Log(U8("ジャスト回避成功！"));
+                                    }
+                                }
+                                else*/ if (leftHitBox)
+                                {
+                                    if (!hitActors.contains(hit.actor))
+                                    {
+                                        Logger::Log(U8("剣にプレイヤーが当たった"));
+                                        player->TakeDamage(1);
+                                        hitActors.emplace(player);
+                                    }
+                                }
+            }
+        }
+    }
+    // 右の武器の当たり判定
+    {
+        bool isRightHit = false;
+
+        DirectX::XMFLOAT3 weaponRightRootPos = weaponRightRootComponent->GetComponentLocation();
+        DirectX::XMFLOAT3 weaponRightMidPos = weaponRightMiddleComponent->GetComponentLocation();
+        DirectX::XMFLOAT3 weaponRightTipPos = weaponRightTipComponent->GetComponentLocation();
+
+        isRightHit |= CollisionFunction::SphereRayCast(prevWeaponRightRootPos, weaponRightRootPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        isRightHit |= CollisionFunction::SphereRayCast(prevWeaponRightMidPos, weaponRightMidPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        isRightHit |= CollisionFunction::SphereRayCast(prevWeaponRightTipPos, weaponRightTipPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+
+        prevWeaponRightRootPos = weaponRightRootPos;
+        prevWeaponRightMidPos = weaponRightMidPos;
+        prevWeaponRightTipPos = weaponRightTipPos;
+        if (isRightHit)
+        {
+            if (auto player = dynamic_cast<Player*>(hit.actor))
+            {
+                /*                if (isDangerWindow && player->GetJustDodgeWindow())
+                                {
+                                    if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
+                                    {
+                                        player->StartJustDodgeSuccess(enemy);
+                                        Logger::Log(U8("ジャスト回避成功！"));
+                                    }
+                                }
+                                else*/ if (rightHitBox)
+                                {
+                                    if (!hitActors.contains(hit.actor))
+                                    {
+                                        Logger::Log(U8("剣にプレイヤーが当たった"));
+                                        player->TakeDamage(1);
+                                        hitActors.emplace(player);
+                                    }
+                                }
+            }
+        }
+    }
 
     if (rightWeaponCollisionComp)
         rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
@@ -261,7 +367,6 @@ void GruxEnemy::Update(float deltaTime)
         stateMachine_->ChangeState("EnemyDeathState");
     }
 #endif // 0
-
 }
 
 void GruxEnemy::DrawImGuiDetails()
@@ -273,6 +378,7 @@ void GruxEnemy::DrawImGuiDetails()
     {
         stateMachine_->ChangeState("EnemyAttackState");
     }
+    ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
@@ -381,44 +487,6 @@ void GruxEnemy::StartAttack()
     hitActors.clear();
 }
 
-// 攻撃が当たるタイミングで呼ばれる関数
-void GruxEnemy::DoAttackHit()
-{
-    auto playerActor = GetOwnerScene()->GetActorManager()->GetActorByName("player");
-    auto player = std::dynamic_pointer_cast<Player>(playerActor);
-    if (!player)
-    {// プレイヤーがいない場合は攻撃しない
-        return;
-    }
-    DirectX::XMFLOAT3 bossPos = GetPosition();
-    DirectX::XMFLOAT3 playerPos = player->GetPosition();
-
-    // ▼プレイヤーへの方向ベクトル
-    float dx = playerPos.x - bossPos.x;
-    float dz = playerPos.z - bossPos.z;
-
-    float distSq = dx * dx + dz * dz;
-    float attackRange = 3.0f;
-
-    if (distSq > attackRange * attackRange) return;
-
-    // 正規化
-    float len = sqrtf(dx * dx + dz * dz);
-    dx /= len;
-    dz /= len;
-
-    // ボスの前方向（Z+方向）
-    DirectX::XMFLOAT3 forward = GetForward();
-
-    float dot = dx * forward.x + dz * forward.z;
-
-    float angleCos = cosf(DirectX::XMConvertToRadians(60.0f)); // 60度
-
-    if (dot > angleCos)
-    {
-        player->TakeDamage(10);
-    }
-}
 
 // プレイヤーとの距離を取得する関数
 float GruxEnemy::GetDistanceToPlayer()
