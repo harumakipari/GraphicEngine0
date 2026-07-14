@@ -34,7 +34,7 @@
     },
     "states": [
         {
-            "endTime": 0.15333329141139984,
+            "endTime": 0.19054186344146729,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -51,7 +51,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.0767083466053009,
+            "startTime": 0.03791666403412819,
             "type": "DangerWindow",
             "value": 1.0
         },
@@ -73,7 +73,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "leftWeapon",
-            "startTime": 0.1599999964237213,
+            "startTime": 0.1718750298023224,
             "type": "HitBox",
             "value": 1.0
         }

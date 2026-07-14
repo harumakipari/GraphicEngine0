@@ -271,7 +271,7 @@ void PlayerRushState::Enter()
     if (auto target = player->rushTarget.lock())
     {// ˆÚ“®‚·‚é
         player->characterMovementComponent->MoveToActor(target,
-            0.05f, 1.7f);
+            0.05f, 2.5f);
     }
 
     rushComboAdvanced = false;

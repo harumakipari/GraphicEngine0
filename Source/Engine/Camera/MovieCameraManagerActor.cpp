@@ -318,7 +318,7 @@ void MovieCameraManagerActor::PlayDoorMovie()
         player->SetInputEnabled(false);
         DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
         player->SetPosition(fixedPosition); // プレイヤーの位置を固定する座標に設定
-        player->SetEulerRotation({ 0.0f,83.3f,0.0f });
+        player->rotationComponent->SetDirection({1.0f,0.0f,0.0f});
     }
 
 

@@ -201,6 +201,15 @@ void GameScene::Update(float deltaTime)
         clothSimulate->Update(deltaTime);
     }
 
+    if (InputSystem::GetInputState("LockOn", InputStateMask::Press))
+    {// ‰Ÿ‚µ‚Ä‚¢‚éŠÔƒƒbƒNƒIƒ“‚·‚é
+        ChangeCameraMode(TPSCameraController::CameraMode::BossBattle);
+    }
+    else
+    {
+        ChangeCameraMode(TPSCameraController::CameraMode::TPS);
+    }
+
 #if 0
     if (player && mainCameraComponent)
     {

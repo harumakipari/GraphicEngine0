@@ -231,6 +231,7 @@ void InputSystem::Initialize()
     inputKeys["ok"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));
 
     inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_LEFT_SHOULDER));    // 左
+    inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::LeftTrigger));    // 左
     //inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_THUMB));    // 右スティック押し込み
 
     inputKeys["Attack"].emplace_back(std::make_unique<Keyboard>('Z'));
@@ -261,8 +262,8 @@ void InputSystem::Initialize()
     inputKeys["BookLeft"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_LEFT_SHOULDER));     // 左
     inputKeys["BookLeft"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::LeftTrigger));
 
-    inputKeys["GamePadA"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));     
-    inputKeys["GamePadA"].emplace_back(std::make_unique<Keyboard>(VK_RETURN));    
+    inputKeys["GamePadA"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
+    inputKeys["GamePadA"].emplace_back(std::make_unique<Keyboard>(VK_RETURN));
 
     // コントローラーとキーボード対応させる
     inputKeys["UIUp"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_DPAD_UP));
