@@ -382,6 +382,12 @@
     <ClCompile Include="Source\Animation\AnimationState.cpp">
       <Filter>Source\Animation</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\LanternActor.cpp">
+      <Filter>Source\Game\DarkGame\DarkActors</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.cpp">
+      <Filter>Source\Game\DarkGame\DarkActors</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -914,6 +920,12 @@
     </ClInclude>
     <ClInclude Include="Source\Utility\SceneJsonUtils.h">
       <Filter>Source\Engine\Utility</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\LanternActor.h">
+      <Filter>Source\Game\DarkGame\DarkActors</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.h">
+      <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

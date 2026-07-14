@@ -27,7 +27,6 @@ void DarkTitleStage::Initialize(const Transform& transform)
 
         std::shared_ptr<TriangleMeshCollisionComponent> triangleMeshComponent = this->AddComponent<class TriangleMeshCollisionComponent>("triangleMeshComponent", "floorCollisionModel");
         triangleMeshComponent->CreateConvexMeshFromModel(floorCollisionModel.get());
-
 #if 1
         // 床の当たり判定用のボックスコリジョンコンポーネント
         std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<class BoxComponent>("boxComponent", parentName);
@@ -39,29 +38,12 @@ void DarkTitleStage::Initialize(const Transform& transform)
         boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
         boxComponent->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Block);
         boxComponent->Initialize();
-
 #endif // 0
     }
 }
 
 void DarkTitleStage::Update(float deltaTime)
 {
-    if (!bossRoomSequencePlaying)
-        return;
-#if 0
-    bossRoomSequenceTime += deltaTime;
-
-    const float interval = 0.3f;
-
-#endif // 0
-    for (size_t i = 0; i < bossRoomLightsLeft.size(); i++)
-    {
-        //if (bossRoomSequenceTime > i * interval)
-        {
-            bossRoomLightsLeft[i]->SetSharedLightName("WallLight");
-        }
-    }
-
 }
 
 void DarkTitleStage::DrawImGuiDetails()
@@ -206,28 +188,6 @@ void DarkTitleStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::share
                 auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
                 pointLightComponent->SetRelativeLocationDirect(pos);
                 pointLightComponent->SetSharedLightName("TorchLight");
-            }
-            else if (point.name.rfind("Spawn_BossRoomLight", 0) == 0)
-            {// ボスの部屋のPointLightを生成する
-                static int i = 0;
-                DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                std::string compName = "BossRoomLight" + std::to_string(i);
-                auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
-                pointLightComponent->SetRelativeLocationDirect(pos);
-                pointLightComponent->SetSharedLightName("BossRoomPointLight");
-                //pointLightComponent->SetSharedLightName("ZeroLight");
-                bossRoomLightsLeft.push_back(pointLightComponent.get());
-            }
-            else if (point.name.rfind("Spawn_WallLight", 0) == 0)
-            {// ボスの部屋の壁のPointLightを生成する
-                static int i = 0;
-                DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                std::string compName = "WallLight" + std::to_string(i);
-                auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
-                pointLightComponent->SetRelativeLocationDirect(pos);
-                pointLightComponent->SetSharedLightName("WallLight");
-                //pointLightComponent->SetSharedLightName("ZeroLight");
-                bossRoomLightsLeft.push_back(pointLightComponent.get());
             }
             else if (point.name.rfind("Spawn_MainRoomLight", 0) == 0)
             {// メインの部屋のPointLightを生成する

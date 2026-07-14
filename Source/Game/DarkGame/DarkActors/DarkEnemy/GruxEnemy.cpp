@@ -7,6 +7,7 @@
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
+#include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
 #include "Physics/CollisionFunction.h"
 
 void GruxEnemy::Initialize(const Transform& transform)
@@ -291,7 +292,7 @@ void GruxEnemy::Update(float deltaTime)
 
     // 被弾時のフラッシュ
     {
-        skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = std::max<float>(0.0f, skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - deltaTime * 8.0f);
+        skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = std::max<float>(0.0f, skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - deltaTime / flashDuration);
     }
 
 
@@ -505,6 +506,7 @@ void GruxEnemy::DrawImGuiDetails()
     {
         StartGruxNamePerform(2.0f);
     }
+    ImGui::DragFloat(U8("被弾時のフラッシュ"), &flashDuration, 0.05f, 0.1f, 2.0f);
     ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
@@ -513,12 +515,23 @@ void GruxEnemy::DrawImGuiDetails()
 }
 
 //当たった時の処理
-void GruxEnemy::TakeDamage(int damage)
+void GruxEnemy::TakeDamage(const int damage)
 {
     skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
     CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_hit.wav", 0.5f);
     hp -= damage;
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
+}
+
+// ヒットエフェクトを生成する
+void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal) const
+{
+    if (auto actorManager = GetOwnerScene()->GetActorManager())
+    {
+        Transform tr{ hitPos,{0.0f,0.0f,0.0f},{1.0f,1.0f,1.0f} };
+        auto iceEffect = actorManager->CreateAndRegisterActorWithTransform<IceFragmentEffectActor>("iceFragment", tr);
+        iceEffect->SetDirection(hitNormal);
+    }
 }
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)

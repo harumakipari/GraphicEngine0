@@ -19,6 +19,9 @@ public:
     //当たった時の処理
     void TakeDamage(int damage);
 
+    // ヒットエフェクトを生成する
+    void SpawnHitEffect(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal) const;
+
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
 
     void OnAnimationNotifyEnd(const AnimationNotifyState& state)override;
@@ -106,6 +109,8 @@ private:
     DirectX::XMFLOAT2 justDodgeAreaSize = { 0.0f,0.0f };
     // ジャスト回避の矩形のオフセット
     DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };
+
+    float flashDuration = 0.8f;   // 何秒でフラッシュしなくなるか
 
     friend class GruxEnemyEyeActor;
 };

@@ -282,7 +282,6 @@ private:
 
     // アニメーションクリップごとのイベント
     std::unordered_map<size_t, AnimationNotifyAsset> animationNotifyAssets;
-
     std::vector<size_t> animationAssetOrder;    // アニメーションの表示を追加順にするための変数
 
     int selectedStateIndex = -1;
@@ -295,5 +294,6 @@ private:
 
     std::string ownerName = "";    // コントローラーを所有しているオーナーの名前
 
+    friend class Player;
 };
 

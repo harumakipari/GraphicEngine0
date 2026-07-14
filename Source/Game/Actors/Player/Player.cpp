@@ -455,6 +455,7 @@ void Player::Update(float deltaTime)
                 {
                     Logger::Log(U8("剣に敵が当たった"));
                     enemy->TakeDamage(10);
+                    enemy->SpawnHitEffect(hit.hitPoint, hit.normal);
                     hitActors.emplace(enemy);
                 }
             }
@@ -723,6 +724,27 @@ void Player::DrawImGuiDetails()
     ImGui::ColorEdit3(U8("剣の残像の内部の色"), &ghostInnerColor.x);
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
+    // コンボの始まりを設定する
+    if (ImGui::BeginCombo(U8("コンボの始まり"), startAttackAnimation.c_str()))
+    {
+        for (auto clip : GetBodyAnimationController()->animationAssetOrder)
+        {
+            auto& comboAsset = GetBodyAnimationController()->animationNotifyAssets[clip];
+
+            bool selected = comboAsset.animationName == startAttackAnimation;
+
+            if (ImGui::Selectable(comboAsset.animationName.c_str(), selected))
+            {
+                startAttackAnimation = comboAsset.animationName;
+            }
+
+            if (selected)
+                ImGui::SetItemDefaultFocus();
+        }
+        ImGui::EndCombo();
+    }
+
+
     Character::DrawImGuiDetails();
 #endif
 }

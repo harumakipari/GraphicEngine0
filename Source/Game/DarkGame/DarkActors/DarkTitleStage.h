@@ -19,9 +19,4 @@ public:
 
 private:
     std::string parentName = "RootComponent";
-
-    // ボス部屋のライト
-    std::vector<PointLightComponent*> bossRoomLightsLeft;
-    bool bossRoomSequencePlaying = false;
-    float bossRoomSequenceTime = 0.0f;
 };

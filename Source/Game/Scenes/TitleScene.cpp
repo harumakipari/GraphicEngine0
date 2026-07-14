@@ -28,6 +28,7 @@
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
 #include "Game/DarkGame/DarkActors/DarkTitleStage.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
+#include "Game/DarkGame/DarkActors/LanternActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
@@ -219,6 +220,11 @@ void TitleScene::SetUpActors()
             auto smallDoorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorSmallActor>("smallDoorActor", smallDoorTr);
         }
     }
+
+    // ƒ‰ƒ“ƒ^ƒ“‚ð¶¬‚·‚é
+    Transform lanternTr(DirectX::XMFLOAT3{ -25.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    auto lanternActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<LanternActor>("LanternActor", lanternTr);
+
 }
 
 bool TitleScene::Uninitialize(ID3D11Device* device)

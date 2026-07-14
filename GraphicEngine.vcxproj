@@ -318,7 +318,9 @@
     <ClCompile Include="Source\Game\Actors\Stage\ClothSimulate.cpp" />
     <ClCompile Include="Source\Game\Actors\Stage\TestSoftBody.cpp" />
     <ClCompile Include="Source\Game\Actors\WaterSphere\MorphModel.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\InteractableActor.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\LanternActor.cpp" />
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\SampleScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp" />
@@ -474,8 +476,10 @@
     <ClInclude Include="Source\Game\Actors\Stage\TestSoftBody.h" />
     <ClInclude Include="Source\Game\Actors\Stage\Stage.h" />
     <ClInclude Include="Source\Game\Actors\WaterSphere\MorphModel.h" />
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\InteractableActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStagePointLightActor.h" />
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\LanternActor.h" />
     <ClInclude Include="Source\Game\DarkGame\Interactable.h" />
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h" />
     <ClInclude Include="Source\Game\Scenes\ModelScene.h" />
