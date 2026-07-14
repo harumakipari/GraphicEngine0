@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "DebugRender.h"
 
+#include "Graphics/Core/Graphics.h"
+#include "Graphics/Renderer/PrimitiveShapeRenderer.h"
 #include "Graphics/Renderer/ShapeRenderer.h"
 
 void DebugRender::DrawSphere(
@@ -172,13 +174,26 @@ void DebugRender::Render(ID3D11DeviceContext* immediateContext)
                 cmd.color);
             break;
         case DebugDrawType::Box:
-            ShapeRenderer::DrawBoxCenter(
-                immediateContext,
-                cmd.position,
-                DirectX::XMFLOAT3{ 0.0f, 0.0f, 0.0f },
-                cmd.size,
-                cmd.color);
-            break;
+        {
+            PrimitiveShapeRenderer* shapeRenderer = Graphics::GetShapeRenderer();
+            DirectX::XMFLOAT4X4 shapeTransform;
+            DirectX::XMStoreFloat4x4(
+                &shapeTransform,
+                DirectX::XMMatrixTranslation(
+                    cmd.position.x,
+                    cmd.position.y,
+                    cmd.position.z
+                )
+            );
+            shapeRenderer->DrawBox(shapeTransform, cmd.size, cmd.color);
+        }
+        //ShapeRenderer::DrawBoxCenter(
+        //    immediateContext,
+        //    cmd.position,
+        //    DirectX::XMFLOAT3{ 0.0f, 0.0f, 0.0f },
+        //    cmd.size,
+        //    cmd.color);
+        break;
         case DebugDrawType::Line:
             ShapeRenderer::DrawLineSegment(
                 immediateContext,
@@ -218,7 +233,7 @@ void DebugRender::WiredRender(ID3D11DeviceContext* immediateContext)
                 immediateContext,
                 cmd.position,
                 cmd.size.x,
-                cmd.color,32);
+                cmd.color, 32);
             break;
         case DebugDrawType::Box:
             ShapeRenderer::DrawBoxCenter(

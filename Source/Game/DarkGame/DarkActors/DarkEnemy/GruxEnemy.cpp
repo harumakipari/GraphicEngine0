@@ -28,8 +28,24 @@ void GruxEnemy::Initialize(const Transform& transform)
         if (material.name == "M_Grux_Qilin_Eye")
         {// 目だったら、
             material.materialType = MaterialType::Eye;
-            //material.overridePipelineName = "";
         }
+        else if (material.name == "M_Grux_Qilin_Gear")
+        {// 腕輪
+            material.materialType = MaterialType::Metallic;
+        }
+        else if (material.name == "M_Grux_Qilin_Hore")
+        {// つの
+
+        }
+        else if (material.name == "M_Grux_Qilin_Gauntlets")
+        {// 腰
+
+        }
+        else if (material.name == "M_Grux_Qilin_Weapon")
+        {// 武器
+
+        }
+
     }
     skeletalMeshComponent->SetIsShadowMap(true);
     skeletalMeshComponent->SetIsCastShadow(false);
@@ -53,8 +69,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     }
     int leftLowerArmLeftIndex = skeletalMeshComponent->FindIndexByName("lowerarm_l");
     // 右肩にカプセルの当たり判定を追加
-
-
 #endif // 0
 
     // アニメーションコントローラーを作成
@@ -281,11 +295,14 @@ void GruxEnemy::Update(float deltaTime)
         skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = std::max<float>(0.0f, skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - deltaTime * 8.0f);
     }
 
+    DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
+
     // ボス戦時のカメラの注視点の位置を更新する
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
     {
-        DirectX::XMFLOAT3 bossPos = GetPosition();
-        DirectX::XMFLOAT3 playerPos = player->GetPosition();
+        bossPos = GetPosition();
+        playerPos = player->GetPosition();
         DirectX::XMFLOAT3 toPlayerDir = MathHelper::Subtract(playerPos, bossPos);
         DirectX::XMFLOAT3 worldUp = { 0.0f,1.0f,0.0f };
         toPlayerDir = MathHelper::Normalize(toPlayerDir);
@@ -397,15 +414,44 @@ void GruxEnemy::Update(float deltaTime)
         leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
 
     // 攻撃の危険な時に、
-    if (isDangerWindow)
+    //if (isDangerWindow)
     {
-        // ボスの前方向にプレイヤーがいて
+        if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
+        {
+            DirectX::XMFLOAT3 forwardVec = GetForward();
+            DirectX::XMFLOAT3 rightVec = GetRight();
+            DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(playerPos, bossPos);
+            float forward = MathHelper::Dot(toPlayer, forwardVec);
+            float right = MathHelper::Dot(toPlayer, rightVec);
+            // ボス基準の矩形中心
+            DirectX::XMFLOAT3 boxCenter = bossPos;
 
-        // プレイヤーがジャスト回避したら、
+            boxCenter = MathHelper::Add(boxCenter, MathHelper::Multiply(GetForward(), justDodgeAreaOffset.z));
+            boxCenter = MathHelper::Add(boxCenter, MathHelper::Multiply(GetRight(), justDodgeAreaOffset.x));
+            boxCenter = MathHelper::Add(boxCenter, { 0.0f, justDodgeAreaOffset.y, 0.0f });
 
-        // ジャスト回避成功
+            DirectX::XMFLOAT4 debugColor = { 1,1,1,1 };
+            float minForward = justDodgeAreaOffset.z - justDodgeAreaSize.y * 0.5f;
+            float maxForward = justDodgeAreaOffset.z + justDodgeAreaSize.y * 0.5f;
 
+            float minRight = justDodgeAreaOffset.x - justDodgeAreaSize.x * 0.5f;
+            float maxRight = justDodgeAreaOffset.x + justDodgeAreaSize.x * 0.5f;
+            bool inside = forward >= minForward && forward <= maxForward && right >= minRight && right <= maxRight;
+
+            if (inside)
+            {
+                debugColor = { 1,0,0,1 };
+            }
+            DebugRender::DrawBox(boxCenter, { justDodgeAreaSize.x,2.0f,justDodgeAreaSize.y }, debugColor);
+            // プレイヤーがジャスト回避したら、
+            if (player->GetJustDodgeWindow())
+            {
+                // ジャスト回避成功
+                player->StartJustDodgeSuccess(std::dynamic_pointer_cast<Enemy>(this->shared_from_this()));
+            }
+        }
     }
+    //DebugRender::DrawBox(bossPos, { 3,3,3 }, { 1,1,1,1 });
 
 #if 0
     if (InputSystem::GetInputState("0"))
@@ -480,6 +526,8 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::DangerWindow:
         Logger::Log(U8("攻撃の危険時間が開始しました。"));
+        justDodgeAreaSize = state.justDodgeAreaSize;
+        justDodgeAreaOffset = state.justDodgeAreaOffset;
         isDangerWindow = true;
         break;
     }

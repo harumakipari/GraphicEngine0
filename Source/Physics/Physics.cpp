@@ -133,6 +133,7 @@ void Physics::Render(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4&
     ID3D11DeviceContext* immediateContext = Graphics::GetDeviceContext();
     PrimitiveRenderer* primitiveRenderer = Graphics::GetPrimitiveRenderer();
     PrimitiveShapeRenderer* shapeRenderer = Graphics::GetShapeRenderer();
+   
 
     physx::PxShape* pxShapes[128];
     auto drawShape = [&](physx::PxShape* pxShape, const physx::PxTransform& pxShapeTransform, float contactOffset, bool sleeping)

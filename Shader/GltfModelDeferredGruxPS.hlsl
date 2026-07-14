@@ -60,12 +60,10 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         metallicFactor *= sampled.b;
     }
 
-    if (objectType == OBJECT_DOOR)
-    { // ドアの時だけラフネスを上げて、メタリックを下げる
-        if (metallicFactor < 0.1) // 木
-        {
-            roughnessFactor = max(roughnessFactor, 0.6);
-        }
+
+    if (materialType == MATERIAL_METALLIC)
+    {
+        
     }
     
     float occlusionFactor = 1.0;

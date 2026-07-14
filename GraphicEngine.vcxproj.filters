@@ -912,6 +912,9 @@
     <ClInclude Include="Source\Game\Actors\Player\TitlePlayer.h">
       <Filter>Source\Game\Actors\Player</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Utility\SceneJsonUtils.h">
+      <Filter>Source\Engine\Utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">

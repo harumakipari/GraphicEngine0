@@ -4,30 +4,8 @@
 
 #include "SceneSetting.h"
 #include "SceneState.h"
+#include "Utility/SceneJsonUtils.h"
 
-using json = nlohmann::json;
-
-namespace DirectX
-{
-    inline void to_json(nlohmann::json& j, const XMFLOAT4& v)
-    {
-        j = { v.x, v.y, v.z, v.w };
-    }
-
-    inline void from_json(const nlohmann::json& j, XMFLOAT4& v)
-    {
-        v = XMFLOAT4(j[0], j[1], j[2], j[3]);
-    }
-    inline void to_json(nlohmann::json& j, const XMFLOAT3& v)
-    {
-        j = { v.x, v.y, v.z };
-    }
-
-    inline void from_json(const nlohmann::json& j, XMFLOAT3& v)
-    {
-        v = XMFLOAT3(j[0], j[1], j[2]);
-    }
-}
 
 // SharedLightParam
 inline void to_json(nlohmann::json& j, const SharedLightParam& s)

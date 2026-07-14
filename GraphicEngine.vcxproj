@@ -550,6 +550,7 @@
     <ClInclude Include="Source\UI\UIManager.h" />
     <ClInclude Include="Source\UI\Widgets\Widget.h" />
     <ClInclude Include="Source\Utility\GameUtility.h" />
+    <ClInclude Include="Source\Utility\SceneJsonUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">

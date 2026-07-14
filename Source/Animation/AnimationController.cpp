@@ -7,6 +7,7 @@
 #include <json.hpp>
 #include <fstream>
 
+#include "Utility/SceneJsonUtils.h"
 #include "Game/Actors/Base/Character.h"
 
 void AnimationController::OnUpdate(const float deltaTime)
@@ -696,10 +697,8 @@ void AnimationController::DrawEventTimeline(AnimationNotifyAsset& asset, float d
                     AddState(asset.notifyTrack, type, popupCreateTime);
                 }
             }
-
             ImGui::EndMenu();
         }
-
         ImGui::EndPopup();
     }
 
@@ -982,6 +981,8 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
         case AnimationNotifyState::Type::JustDodgeWindow:
             break;
         case AnimationNotifyState::Type::DangerWindow:
+            ImGui::DragFloat2(U8("ジャスト回避の矩形の範囲"), &state.justDodgeAreaSize.x, 0.1f, 0, 6);
+            ImGui::DragFloat3(U8("ジャスト回避の矩形のオフセット"), &state.justDodgeAreaOffset.x, 0.1f, 0, 20);
             break;
         case AnimationNotifyState::Type::ShowTrail:
             break;
@@ -1178,18 +1179,15 @@ void AnimationController::SaveNotifyAsset(const std::string& filename, const Ani
     for (const auto& state : asset.notifyTrack.states)
     {
         json j;
-
         j["startTime"] = state.startTime;
         j["endTime"] = state.endTime;
-
-        j["type"] =
-            std::string(
-                magic_enum::enum_name(state.type));
-
+        j["type"] = std::string(magic_enum::enum_name(state.type));
         j["parameter"] = state.parameter;
         j["value"] = state.value;
-        j["moveDirection"] = { state.moveDirection.x,state.moveDirection.y,state.moveDirection.z };
         j["moveDistance"] = state.moveDistance;
+        j["moveDirection"] = state.moveDirection;
+        j["justDodgeAreaSize"] = state.justDodgeAreaSize;
+        j["justDodgeAreaOffset"] = state.justDodgeAreaOffset;
         root["states"].push_back(j);
     }
 
@@ -1262,37 +1260,31 @@ void AnimationController::LoadNotifyAsset(const std::string& filename, Animation
         {
             AnimationNotifyState state;
 
-            state.startTime =
-                j.value("startTime", 0.0f);
+            state.startTime = j.value("startTime", 0.0f);
 
-            state.endTime =
-                j.value("endTime", 0.0f);
+            state.endTime = j.value("endTime", 0.0f);
 
-            auto typeName =
-                j.value("type", "HitBox");
-
-            auto type =
-                magic_enum::enum_cast<AnimationNotifyState::Type>(typeName);
+            auto typeName = j.value("type", "HitBox");
+            auto type = magic_enum::enum_cast<AnimationNotifyState::Type>(typeName);
 
             if (type.has_value())
                 state.type = type.value();
 
-            state.parameter =
-                j.value("parameter", "");
-
+            state.parameter = j.value("parameter", "");
             state.value = j.value("value", 1.0f);
-
             if (j.contains("moveDirection"))
             {
-                auto dir = j["moveDirection"];
-
-                state.moveDirection.x = dir[0].get<float>();
-                state.moveDirection.y = dir[1].get<float>();
-                state.moveDirection.z = dir[2].get<float>();
+                j["moveDirection"].get_to(state.moveDirection);
             }
-
             state.moveDistance = j.value("moveDistance", 0.0f);
-
+            if (j.contains("justDodgeAreaSize"))
+            {
+                j["justDodgeAreaSize"].get_to(state.justDodgeAreaSize);
+            }
+            if (j.contains("justDodgeAreaOffset"))
+            {
+                j["justDodgeAreaOffset"].get_to(state.justDodgeAreaOffset);
+            }
             asset.notifyTrack.states.push_back(state);
         }
     }

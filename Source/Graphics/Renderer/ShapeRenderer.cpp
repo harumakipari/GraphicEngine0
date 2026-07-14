@@ -456,8 +456,8 @@ void ShapeRenderer::DrawBoxCenter(ID3D11DeviceContext* immediateContext, const D
         DirectX::XMFLOAT4X4 world;
         DirectX::XMStoreFloat4x4(&world, C * S * R * T);
         //TODO:03 debugShape‚ÍRenderPass‚ðOpaque‚É‚µ‚Ä‚¢‚é
-        //cubeCenter->Render(immediateContext, world, {}, InterleavedGltfModel::RenderPass::All);
-        cubeCenter->Render(immediateContext, world, {}, InterleavedGltfModel::RenderPass::Blend);
+        cubeCenter->Render(immediateContext, world, {}, InterleavedGltfModel::RenderPass::All);
+        //cubeCenter->Render(immediateContext, world, {}, InterleavedGltfModel::RenderPass::Blend);
     }
 }
 

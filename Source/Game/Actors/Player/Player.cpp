@@ -463,12 +463,9 @@ void Player::Update(float deltaTime)
     }
 
     // 剣のエミッシブを表示する
-    if (showSwordEmissive)
-    {
-        if (swordMeshComponent)
-        {// 剣にエミッシブを追加
-            swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 10.5f;
-        }
+    if (swordMeshComponent)
+    {// 剣にエミッシブを追加
+        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
     }
 
     // 軌跡の更新処理
@@ -760,7 +757,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         showTrail = true;
         break;
     case AnimationNotifyState::Type::ShowEmissive:
-        showSwordEmissive = true;
+        swordEmissivePower = state.value;
         break;
     case AnimationNotifyState::Type::MotionWarp:
     {
@@ -816,7 +813,7 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         showTrail = false;
         break;
     case AnimationNotifyState::Type::ShowEmissive:
-        showSwordEmissive = false;
+        swordEmissivePower = 0.0f;
         break;
     case AnimationNotifyState::Type::MotionWarp:
     {
@@ -856,7 +853,7 @@ void Player::OnAnimationChanged()
     invincibleWindow = false;   // 無敵状態かどうか
     justDodgeSuccess = false; // ジャスト回避が成功したかどうか
     showTrail = false;
-    showSwordEmissive = false;
+    swordEmissivePower = 0.0f;
     hitActors.clear();
     //Logger::Log(U8("playerのAnimationが切り替わった"));
 }
@@ -872,7 +869,7 @@ void Player::ResetAnimationStateFlag()
     //invincibleWindow = false;   // 無敵状態かどうか
     //justDodgeSuccess = false; // ジャスト回避が成功したかどうか
     //showTrail = false;
-    //showSwordEmissive = false;
+    //swordEmissivePower = 0.0f;
     //Logger::Log(U8("アニメーションステート関連のフラグをリセットする"));
 }
 

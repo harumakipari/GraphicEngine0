@@ -33,11 +33,9 @@ public:
 
     // ボスの名前の演出を開始する
     void StartGruxNamePerform(float duration, float start = 0.0f, float end = 1.0f);
-
 private:
     // プレイヤーとの距離を取得する関数
     float GetDistanceToPlayer();
-
     // 武器ヒット時の処理
     void OnWeaponHit(CollisionComponent* self, CollisionComponent* other);
 private:
@@ -103,6 +101,10 @@ private:
     std::unique_ptr<EasingRunner> easingRunner;
     float easingFactorAlpha = 0.0f;
 
+    // ジャスト回避の矩形の範囲
+    DirectX::XMFLOAT2 justDodgeAreaSize = { 0.0f,0.0f };
+    // ジャスト回避の矩形のオフセット
+    DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };
 
     friend class GruxEnemyEyeActor;
 };
