@@ -379,6 +379,9 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\InteractableActor.cpp">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Animation\AnimationState.cpp">
+      <Filter>Source\Animation</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -1209,6 +1212,9 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\LoadingPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\GltfModelDeferredGruxPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
   </ItemGroup>

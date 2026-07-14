@@ -240,6 +240,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             if (gruxEnemy)
             {
                 gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0");
+                gruxEnemy->StartGruxNamePerform(1.5f);
             }
             if (player)
             {
@@ -272,6 +273,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
                 }
             }
+            if (gruxEnemy)
+            {// ‚±‚±‚Åƒ{ƒX‚Ì–¼‘O‚ÌUI‚ðÁ‚·
+                gruxEnemy->StartGruxNamePerform(1.0f, 1.0f, 0.0f);
+            }
+
             doorMovieState = DoorMovieState::Finished;
         }
     case DoorMovieState::Finished:

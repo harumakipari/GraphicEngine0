@@ -983,6 +983,15 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             break;
         case AnimationNotifyState::Type::DangerWindow:
             break;
+        case AnimationNotifyState::Type::ShowTrail:
+            break;
+        case AnimationNotifyState::Type::ShowEmissive:
+            ImGui::DragFloat("Power", &state.value, 0.1f, 0, 20);
+            break;
+        case AnimationNotifyState::Type::MotionWarp:
+            ImGui::DragFloat3("moveDirection", &state.moveDirection.x, 0.1f, -1.0f, 1.0f);
+            ImGui::DragFloat("distance", &state.moveDistance, 0.1f, 0, 20);
+            break;
         }
     }
     // イベントが選択されている時
@@ -1006,9 +1015,6 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             break;
         }
         case AnimationNotifyEvent::Type::SpawnEffect:
-            break;
-        case AnimationNotifyEvent::Type::SwordEmissive:
-            ImGui::DragFloat("Power", &event.value, 0.1f, 0, 20);
             break;
         }
     }
@@ -1181,7 +1187,7 @@ void AnimationController::SaveNotifyAsset(const std::string& filename, const Ani
                 magic_enum::enum_name(state.type));
 
         j["parameter"] = state.parameter;
-        j["animationSpeed"] = state.animationSpeed;
+        j["animationSpeed"] = state.value;
 
         root["states"].push_back(j);
     }
@@ -1273,7 +1279,7 @@ void AnimationController::LoadNotifyAsset(const std::string& filename, Animation
             state.parameter =
                 j.value("parameter", "");
 
-            state.animationSpeed =
+            state.value =
                 j.value("animationSpeed", 1.0f);
 
             asset.notifyTrack.states.push_back(state);

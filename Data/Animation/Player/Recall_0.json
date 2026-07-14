@@ -1,0 +1,30 @@
+{
+    "animationClip": 71,
+    "animationName": "Recall_0",
+    "events": [
+        {
+            "parameter": "player_recall",
+            "time": 1.399999976158142,
+            "type": "PlaySE",
+            "value": 1.0
+        },
+        {
+            "parameter": "player_recall_voice",
+            "time": 1.399999976158142,
+            "type": "PlaySE",
+            "value": 1.2000000476837158
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "states": [
+        {
+            "animationSpeed": 1.0,
+            "endTime": 1.3999998569488525,
+            "parameter": "",
+            "startTime": 0.24000048637390137,
+            "type": "ShowTrail"
+        }
+    ]
+}

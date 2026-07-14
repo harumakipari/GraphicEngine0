@@ -3,6 +3,7 @@
 #include "Core/Actor.h"
 #include "Game/Actors/Base/Character.h"
 #include "Game/Actors/Enemy/Enemy.h"
+#include "UI/Widgets/Widget.h"
 
 class GruxEnemy :public Enemy
 {
@@ -29,6 +30,9 @@ public:
 
     // カメラの注視点の位置
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
+
+    // ボスの名前の演出を開始する
+    void StartGruxNamePerform(float duration, float start = 0.0f, float end = 1.0f);
 
 private:
     // プレイヤーとの距離を取得する関数
@@ -93,6 +97,12 @@ private:
     DirectX::XMFLOAT3 prevWeaponRightTipPos = { 0.0f,0.0f,0.0f };
 
     float hitWeaponRadius = 0.4f;
+
+    // 登場シーンのボス名前のUI
+    std::shared_ptr<UIImageComponent> gruxNameImageComponent;
+    std::unique_ptr<EasingRunner> easingRunner;
+    float easingFactorAlpha = 0.0f;
+
 
     friend class GruxEnemyEyeActor;
 };

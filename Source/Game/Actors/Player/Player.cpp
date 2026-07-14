@@ -166,7 +166,6 @@ void Player::Initialize(const Transform& transform)
         // 剣を構えたときのSE
         controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_attack2");
         controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_level_voice");
-        controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::SwordEmissive);
 
         // ジャスト回避
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
@@ -429,44 +428,51 @@ void Player::Update(float deltaTime)
     }
 
 
-    HitResultWithActor hit;
-
-    bool isHit = false;
-
+    // 剣の真ん中、根本、先の座標を取得する
     DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
     DirectX::XMFLOAT3 swordMidPos = swordMiddleComponent->GetComponentLocation();
     DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
 
-    isHit |= CollisionFunction::SphereRayCast(prevSwordRootPos, swordRootPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
-    isHit |= CollisionFunction::SphereRayCast(prevSwordMidPos, swordMidPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
-    isHit |= CollisionFunction::SphereRayCast(prevSwordTipPos, swordTipPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
 
-    prevSwordRootPos = swordRootPos;
-    prevSwordMidPos = swordMidPos;
-    prevSwordTipPos = swordTipPos;
-
-    if (isHit && isAttackActive)
+    // 当たり判定が有効な時にスフィアキャストをする
+    if (hitBox)
     {
-        if (hitActors.contains(hit.actor))
-        {
+        HitResultWithActor hit;
+        bool isHit = false;
 
-        }
-        else
+        isHit |= CollisionFunction::SphereRayCast(prevSwordRootPos, swordRootPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+        isHit |= CollisionFunction::SphereRayCast(prevSwordMidPos, swordMidPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+        isHit |= CollisionFunction::SphereRayCast(prevSwordTipPos, swordTipPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+
+        if (isHit)
         {
-            if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
+            if (!hitActors.contains(hit.actor))
             {
-                Logger::Log(U8("剣に敵が当たった"));
-                enemy->TakeDamage(10);
-                hitActors.emplace(enemy);
+                if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
+                {
+                    Logger::Log(U8("剣に敵が当たった"));
+                    enemy->TakeDamage(10);
+                    hitActors.emplace(enemy);
+                }
             }
+        }
+
+    }
+
+    // 剣のエミッシブを表示する
+    if (showSwordEmissive)
+    {
+        if (swordMeshComponent)
+        {// 剣にエミッシブを追加
+            swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 10.5f;
         }
     }
 
     // 軌跡の更新処理
     trail.UpdateTrail(deltaTime);
 
-
-    if (isAttackActive)
+    // 軌跡と残像を表示する
+    if (showTrail)
     {
         // 軌跡を追加
         trail.trailPoints.push_back({ swordTipPos,swordRootPos, trailRemainTime });
@@ -636,7 +642,6 @@ void Player::Update(float deltaTime)
 
 #if 1
     auto intent = inputComponent->GetIntent();
-    //characterMovementComponent->SetMoveDirection({ 1,0,0 });
     DirectX::XMFLOAT3 moveDir = { 0,0,0 };
 
     if (auto camera = dynamic_cast<MainCamera*>(GetOwnerScene()->GetActiveCamera()))
@@ -673,6 +678,25 @@ void Player::Update(float deltaTime)
 
     characterMovementComponent->SetMoveDirection(moveDir);
     rotationComponent->SetDirection(moveDir);
+
+    // アニメーションに後から設定した移動値が入っている場合
+    if (motionWarp)
+    {
+        DirectX::XMVECTOR move = DirectX::XMLoadFloat3(&motionWarpDirection);
+        move *= motionWarpSpeed * deltaTime;
+        DirectX::XMFLOAT3 velocity;
+        DirectX::XMStoreFloat3(&velocity, move);
+        playerPos = GetPosition();
+        playerPos.x += velocity.x;
+        playerPos.y += velocity.y;
+        playerPos.z += velocity.z;
+        SetPosition(playerPos);
+    }
+
+    // 剣の真ん中、根本、先の座標を保存する
+    prevSwordRootPos = swordRootPos;
+    prevSwordMidPos = swordMidPos;
+    prevSwordTipPos = swordTipPos;
 
 #endif // 0
 
@@ -727,6 +751,35 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         Logger::Log(U8("ジャスト回避許可区間を開始しました"));
         justDodgeWindow = true;
         break;
+    case AnimationNotifyState::Type::DangerWindow:
+        break;
+    case AnimationNotifyState::Type::ShowTrail:
+        showTrail = true;
+        break;
+    case AnimationNotifyState::Type::ShowEmissive:
+        showSwordEmissive = true;
+        break;
+    case AnimationNotifyState::Type::MotionWarp:
+    {
+        motionWarp = true;
+        // アニメーション側で指定したローカル方向
+        DirectX::XMFLOAT3 localDirection = state.moveDirection;
+        // プレイヤーの向いている方向を考慮してワールド方向へ変換
+        float radianAngle = DirectX::XMConvertToRadians(GetEulerRotation().y);
+        DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationY(radianAngle);
+        DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&localDirection);
+        dir = DirectX::XMVector3TransformNormal(dir, rotation);
+        dir = DirectX::XMVector3Normalize(dir);
+        DirectX::XMStoreFloat3(&motionWarpDirection, dir);
+        // 区間の時間を取る
+        float duration = state.endTime - state.startTime;
+        if (duration > 0.0f)
+        {
+            motionWarpSpeed = state.moveDistance / duration;
+        }
+        Logger::Log(U8("MotionWarp開始"));
+    }
+    break;
     }
 }
 
@@ -735,7 +788,7 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
-        Logger::Log(U8("当たり判定を終了しました"));
+        //Logger::Log(U8("当たり判定を終了しました"));
         hitBox = false;
         break;
     case AnimationNotifyState::Type::InputWindow:
@@ -754,6 +807,21 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         Logger::Log(U8("ジャスト回避許可区間を終了しました"));
         justDodgeWindow = false;
         break;
+    case AnimationNotifyState::Type::DangerWindow:
+        break;
+    case AnimationNotifyState::Type::ShowTrail:
+        showTrail = false;
+        break;
+    case AnimationNotifyState::Type::ShowEmissive:
+        showSwordEmissive = false;
+        break;
+    case AnimationNotifyState::Type::MotionWarp:
+    {
+        motionWarp = false;
+        motionWarpSpeed = 0.0f;
+        Logger::Log(U8("MotionWarp終了"));
+    }
+    break;
     }
 }
 
@@ -772,12 +840,6 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:
         break;
-    case AnimationNotifyEvent::Type::SwordEmissive:
-        if (swordMeshComponent)
-        {// 剣にエミッシブを追加
-            swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 10.5f;
-        }
-        break;
     }
 }
 
@@ -790,6 +852,8 @@ void Player::OnAnimationChanged()
     justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
     invincibleWindow = false;   // 無敵状態かどうか
     justDodgeSuccess = false; // ジャスト回避が成功したかどうか
+    showTrail = false;
+    showSwordEmissive = false;
     hitActors.clear();
     //Logger::Log(U8("playerのAnimationが切り替わった"));
 }
@@ -797,14 +861,16 @@ void Player::OnAnimationChanged()
 // アニメーションステート関連のフラグをリセットする
 void Player::ResetAnimationStateFlag()
 {
-    transitionWindow = false;  // ステート遷移してもいいかどうか
-    comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
-    inputWindow = false;   // コンボ受付をするかどうか
-    hitBox = false;     // 当たり判定
-    justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
-    invincibleWindow = false;   // 無敵状態かどうか
-    justDodgeSuccess = false; // ジャスト回避が成功したかどうか
-    Logger::Log(U8("アニメーションステート関連のフラグをリセットする"));
+    //transitionWindow = false;  // ステート遷移してもいいかどうか
+    //comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
+    //inputWindow = false;   // コンボ受付をするかどうか
+    //hitBox = false;     // 当たり判定
+    //justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
+    //invincibleWindow = false;   // 無敵状態かどうか
+    //justDodgeSuccess = false; // ジャスト回避が成功したかどうか
+    //showTrail = false;
+    //showSwordEmissive = false;
+    //Logger::Log(U8("アニメーションステート関連のフラグをリセットする"));
 }
 
 // 火花エフェクトの生成

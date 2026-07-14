@@ -1,0 +1,30 @@
+{
+    "animationClip": 72,
+    "animationName": "Level_Start_Cut",
+    "events": [
+        {
+            "parameter": "player_attack2",
+            "time": 0.47999998927116394,
+            "type": "PlaySE",
+            "value": 1.0
+        },
+        {
+            "parameter": "player_level_voice",
+            "time": 0.47999998927116394,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "states": [
+        {
+            "animationSpeed": 1.0,
+            "endTime": 0.7678646445274353,
+            "parameter": "",
+            "startTime": 0.46723970770835876,
+            "type": "ShowTrail"
+        }
+    ]
+}

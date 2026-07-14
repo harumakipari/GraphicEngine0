@@ -26,13 +26,20 @@ struct AnimationNotifyState
         TransitionWindow,   // アニメーション遷移
         JustDodgeWindow, // ジャスト回避
         DangerWindow, // 攻撃の危険時間
+        ShowTrail, // 軌跡を出現させる時間
+        ShowEmissive,  // 剣が光る時間
+        MotionWarp, // 移動値を入れる
     };
 
     Type type;
 
     std::string parameter;
 
-    float animationSpeed = 1.0f;
+    float value = 1.0f; // 剣の光るエミッシブの強さなど
+
+    // 移動値
+    DirectX::XMFLOAT3 moveDirection{ 0.0f,0.0f,0.0f };
+    float moveDistance = 0.0f;
 };
 
 struct AnimationNotifyEvent
@@ -43,7 +50,6 @@ struct AnimationNotifyEvent
     {
         PlaySE,
         SpawnEffect,
-        SwordEmissive,   // 剣のエミッシブを追加
     };
 
     Type type;

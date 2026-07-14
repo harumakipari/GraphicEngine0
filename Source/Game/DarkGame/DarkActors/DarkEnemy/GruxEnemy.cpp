@@ -18,10 +18,11 @@ void GruxEnemy::Initialize(const Transform& transform)
     Character::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
     skeletalMeshComponent->SetModel("./Data/Models/Characters/GruxQilin/boss.gltf", false, true);
-    //skeletalMeshComponent->SetModel("./Data/Models/Characters/Grux/animations.gltf", false, true);
     skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Enemy;   // オブジェクトの種類を Enemy に設定
     skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.6f;   // 目玉の自己発光の強さを設定
     skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.9f,0.08f,0.08f,1.0f };   // 目玉の色を赤にしてみる
+    skeletalMeshComponent->overrideDeferredPipelineName = "GltfModelDeferredGruxPS";
+
     for (auto& material : skeletalMeshComponent->model->materials)
     {
         if (material.name == "M_Grux_Qilin_Eye")
@@ -32,6 +33,33 @@ void GruxEnemy::Initialize(const Transform& transform)
     }
     skeletalMeshComponent->SetIsShadowMap(true);
     skeletalMeshComponent->SetIsCastShadow(false);
+
+    {
+        // 左肩にカプセルの当たり判定を追加
+
+        int leftUpperArmLeftIndex = skeletalMeshComponent->FindIndexByName("upperarm_l");
+        std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
+        DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
+        height = size.y;
+        radius = size.x * 0.5f;
+        capsuleComponent->SetRadiusAndHeight(radius, height);
+        capsuleComponent->SetMass(mass);
+        capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
+        capsuleComponent->SetLayer(CollisionLayer::Player);
+        capsuleComponent->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Block);
+        capsuleComponent->SetResponseToLayer(CollisionLayer::EnemyWeapon, CollisionComponent::CollisionResponse::Trigger);
+        capsuleComponent->SetResponseToLayer(CollisionLayer::Floor, CollisionComponent::CollisionResponse::Block);
+        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Block);
+        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldPropsNoRaycast, CollisionComponent::CollisionResponse::Block);
+        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Block);
+        capsuleComponent->SetResponseToLayer(CollisionLayer::Convex, CollisionComponent::CollisionResponse::Block);
+        capsuleComponent->SetCollisionOffsetY(height * 0.5f);
+        capsuleComponent->SetIsVisibleDebugBox(false);
+        capsuleComponent->Initialize();
+    }
+    int leftLowerArmLeftIndex = skeletalMeshComponent->FindIndexByName("lowerarm_l");
+    // 右肩にカプセルの当たり判定を追加
+
 
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
@@ -60,34 +88,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     // 全てのNotifyAssetsをロードする
     controller->LoadAllNotifyAssets(GetName());
 
-#if 0
-    controller->AddNotifyEvent("PrimaryAttack_LA", 0.187f, AnimationNotifyEvent::Type::PlaySE, "enemy_attack");
-    controller->AddNotifyState("PrimaryAttack_LA", 0.16f, 0.3f, AnimationNotifyState::Type::HitBox, leftWeapon);
-
-    controller->AddNotifyState("PrimaryAttack_LA", 0.03f, 0.3f, AnimationNotifyState::Type::DangerWindow);
-    //controller->AddNotifyState("PrimaryAttack_LA",
-    //    0.01f, 0.08f, AnimationNotifyState::Type::AnimationSpeed, 
-    //    "", 0.2f);
-    //controller->AddNotifyState("PrimaryAttack_LA",
-    //    0.08f, 0.13f, AnimationNotifyState::Type::AnimationSpeed,
-    //    "", 0.05f);
-
-    controller->AddNotifyEvent("Ultimate_Roar_0", 0.187f, AnimationNotifyEvent::Type::PlaySE, "enemy_roar");
-    //controller->AddNotifyState("Ultimate_Roar_0", 
-    //    0.265f, 0.98f, AnimationNotifyState::Type::AnimationSpeed,
-    //    "", 0.4f);
-
-    AnimationCurve curve;
-    curve.keys =
-    {
-    {0.01f ,0.2f},
-    {0.08f ,0.05f},
-    {0.13f ,1.0f},
-    };
-    controller->AddAnimationCurve("PrimaryAttack_RA", curve);
-
-
-#endif // 0
     // ステートマシンを作成
     {
         stateMachine_ = std::make_shared<StateMachine>();
@@ -163,7 +163,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     // 左の武器の先端のコンポーネントを追加
     weaponLeftTipComponent = AddComponent<SceneComponent>("weaponLeftTipComponent", "weaponLeftRootComponent");
     weaponLeftTipComponent->SetRelativeLocationDirect({ 0.0f,0.0f,1.1f });
-
 
     int socketRightNode = skeletalMeshComponent->FindIndexByName("weapon_r");
     // 右の武器の根本のコンポーネントを追加   
@@ -254,11 +253,38 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     // カメラの注視点の位置のコンポーネントを追加
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
+
+    // 登場シーンのボス名前のUIを追加
+    auto uiManager = GetOwnerScene()->GetUIManager();
+    gruxNameImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Grux_name.png", "Grux_name");
+    gruxNameImageComponent->SetWorldPosition({ 995, 900 });
+    gruxNameImageComponent->SetScale({ 1.2f,1.2f });
+    gruxNameImageComponent->SetSize({ 600, 200 });
+    gruxNameImageComponent->SetPivot({ 0.5f,0.5f });
+    gruxNameImageComponent->SetColor(DirectX::XMFLOAT4{ 1.0f,1.0f,1.0f,0.0f });
+    gruxNameImageComponent->SetVisible(true);
+    uiManager->Add(gruxNameImageComponent);
+
+    easingRunner = std::make_unique<EasingRunner>();
+
+
 }
 
 void GruxEnemy::Update(float deltaTime)
 {
     Character::Update(deltaTime);
+
+    // ImageComponentのalpha更新
+    {
+        easingRunner->Tick(deltaTime);
+        float bossNameImageAlpha = std::lerp(0.0f, 1.0f, easingFactorAlpha);
+        gruxNameImageComponent->SetColor(DirectX::XMFLOAT4{ 1.0f,1.0f,1.0f,bossNameImageAlpha });
+    }
+
+    // 被弾時のフラッシュ
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = std::max<float>(0.0f, skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - deltaTime * 8.0f);
+    }
 
     // ボス戦時のカメラの注視点の位置を更新する
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
@@ -401,6 +427,10 @@ void GruxEnemy::DrawImGuiDetails()
     {
         stateMachine_->ChangeState("EnemyAttackState");
     }
+    if (ImGui::Button(U8("ボスの名前の演出")))
+    {
+        StartGruxNamePerform(2.0f);
+    }
     ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
@@ -411,6 +441,7 @@ void GruxEnemy::DrawImGuiDetails()
 //当たった時の処理
 void GruxEnemy::TakeDamage(int damage)
 {
+    skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
     CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_hit.wav", 0.5f);
     hp -= damage;
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
@@ -505,6 +536,36 @@ void GruxEnemy::StartAttack()
     hitActors.clear();
 }
 
+// ボスの名前の演出を開始する
+void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
+{
+    // 名前テクスチャのalphaが徐々に濃くなる処理
+    {
+        TestEasingHandler handler;
+
+        handler.AddEasing(
+            TestEaseType::InSine,
+            start,
+            end,
+            duration
+        );
+
+
+        handler.SetCompletedFunction([this]()
+            {
+                easingFactorAlpha = 1.0f;
+            });
+        PropertyAccessor<float> accessor;
+
+        accessor.getter = [this]() { return easingFactorAlpha; };
+        accessor.setter = [this](float t)
+            {
+                easingFactorAlpha = t;
+            };
+
+        easingRunner->StartHandler(handler, accessor);
+    }
+}
 
 // プレイヤーとの距離を取得する関数
 float GruxEnemy::GetDistanceToPlayer()

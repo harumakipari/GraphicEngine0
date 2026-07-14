@@ -18,7 +18,49 @@
     "loop": false,
     "nextCombo": "",
     "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.031416699290275574,
+                "value": 0.24000029265880585
+            },
+            {
+                "time": 0.06524992734193802,
+                "value": 0.4133336544036865
+            },
+            {
+                "time": 0.15224991738796234,
+                "value": 0.973333477973938
+            },
+            {
+                "time": 0.5703333020210266,
+                "value": 1.0133333206176758
+            },
+            {
+                "time": 0.6500832438468933,
+                "value": 0.5600004196166992
+            },
+            {
+                "time": 0.7491666078567505,
+                "value": 0.9866665601730347
+            }
+        ]
+    },
     "states": [
+        {
+            "animationSpeed": 1.0,
+            "endTime": 0.6000000238418579,
+            "parameter": "",
+            "startTime": 0.05000000074505806,
+            "type": "Invincible"
+        },
+        {
+            "animationSpeed": 1.0,
+            "endTime": 0.46700000762939453,
+            "parameter": "",
+            "startTime": 0.1289999932050705,
+            "type": "MotionWarp"
+        },
         {
             "animationSpeed": 1.0,
             "endTime": 0.5299999713897705,
@@ -28,10 +70,10 @@
         },
         {
             "animationSpeed": 1.0,
-            "endTime": 0.6000000238418579,
+            "endTime": 0.4706665873527527,
             "parameter": "",
-            "startTime": 0.05000000074505806,
-            "type": "Invincible"
+            "startTime": 0.1643332690000534,
+            "type": "MotionWarp"
         },
         {
             "animationSpeed": 1.0,

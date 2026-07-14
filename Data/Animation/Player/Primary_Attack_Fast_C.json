@@ -29,6 +29,13 @@
         },
         {
             "animationSpeed": 1.0,
+            "endTime": 0.408541738986969,
+            "parameter": "",
+            "startTime": 0.1254165917634964,
+            "type": "ShowTrail"
+        },
+        {
+            "animationSpeed": 1.0,
             "endTime": 0.5830000042915344,
             "parameter": "",
             "startTime": 0.4000000059604645,

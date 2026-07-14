@@ -430,6 +430,7 @@ public:
         {
             ImGui::DragFloat("radius", &radius_, 0.1f);
             ImGui::DragFloat("height", &height, 0.1f);
+            ResizeCapsule(radius_,height);
             ImGui::TreePop();
         }
 #endif

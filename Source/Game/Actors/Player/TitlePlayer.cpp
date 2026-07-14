@@ -74,7 +74,6 @@ void TitlePlayer::Initialize(const Transform& transform)
         // 剣を構えたときのSE
         controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_attack2");
         controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_level_voice");
-        controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::SwordEmissive);
 
 
         // アニメーションコントローラーを character に追加
@@ -289,12 +288,6 @@ void TitlePlayer::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     }
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:
-        break;
-    case AnimationNotifyEvent::Type::SwordEmissive:
-        if (swordMeshComponent)
-        {// 剣にエミッシブを追加
-            swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 10.5f;
-        }
         break;
     }
 }

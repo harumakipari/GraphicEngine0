@@ -176,6 +176,7 @@ public:
         float flashValue = 0.0f; //　白くフラッシュする値
         ObjectType objectType = ObjectType::Default; // オブジェクトの種類
 
+
         EffectParameters effectParameters = {};
     };
     std::unique_ptr<ConstantBuffer<PlusAlphaConstants>> plusAlphaCBuffer;

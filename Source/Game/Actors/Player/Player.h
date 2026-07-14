@@ -138,6 +138,14 @@ public:
     bool justDodgeWindow = false;  // ジャスト回避受付時間
     bool justDodgeSuccess = false; // ジャスト回避成功フラグ
     float rushInputTimer = 0.0f; // ジャスト回避時にラッシュを受け付ける時間(この時間の間スローになる)
+    bool showTrail = false;     // 軌跡を出現させるかどうか
+    bool showSwordEmissive = false; // 剣のエミッシブを出現させるかどうか
+
+    // アニメーション時にどれくらい移動するか
+    bool motionWarp = false;
+    DirectX::XMFLOAT3 motionWarpDirection{};
+    float motionWarpSpeed = 0.0f;
+
 
     bool invincibleWindow = false; // アニメーションによる無敵状態かどうか
     bool invincible = false; // 無敵状態かどうか

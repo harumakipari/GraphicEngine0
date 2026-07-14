@@ -324,6 +324,16 @@ public:
             AddPipeLineState("deferredOpaqueSkeletalMesh", desc);
         }
 
+        // SkeletalMesh deferred GruxEnemy —p
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredGruxPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_NONE;
+            AddPipeLineState("GltfModelDeferredGruxPS", desc);
+        }
+
+
         // SkeletalMesh deferred Player Sword —p
         {
             hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPlayerWeaponDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
