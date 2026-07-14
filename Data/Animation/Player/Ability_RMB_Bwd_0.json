@@ -33,54 +33,84 @@
                 "value": 0.973333477973938
             },
             {
-                "time": 0.5703333020210266,
-                "value": 1.0133333206176758
+                "time": 0.46158313751220703,
+                "value": 1.0266666412353516
             },
             {
-                "time": 0.6500832438468933,
-                "value": 0.5600004196166992
+                "time": 0.589666485786438,
+                "value": 1.426666259765625
             },
             {
-                "time": 0.7491666078567505,
-                "value": 0.9866665601730347
+                "time": 0.7539999485015869,
+                "value": 1.4666661024093628
             }
         ]
     },
     "states": [
         {
-            "animationSpeed": 1.0,
             "endTime": 0.6000000238418579,
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.05000000074505806,
-            "type": "Invincible"
+            "type": "Invincible",
+            "value": 1.0
         },
         {
-            "animationSpeed": 1.0,
             "endTime": 0.46700000762939453,
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.1289999932050705,
-            "type": "MotionWarp"
+            "type": "MotionWarp",
+            "value": 1.0
         },
         {
-            "animationSpeed": 1.0,
             "endTime": 0.5299999713897705,
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.1599999964237213,
-            "type": "JustDodgeWindow"
+            "type": "JustDodgeWindow",
+            "value": 1.0
         },
         {
-            "animationSpeed": 1.0,
             "endTime": 0.4706665873527527,
+            "moveDirection": [
+                0.0,
+                0.0,
+                -1.0
+            ],
+            "moveDistance": 1.7999999523162842,
             "parameter": "",
             "startTime": 0.1643332690000534,
-            "type": "MotionWarp"
+            "type": "MotionWarp",
+            "value": 1.0
         },
         {
-            "animationSpeed": 1.0,
-            "endTime": 0.6000000238418579,
+            "endTime": 0.8392502665519714,
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.47999998927116394,
-            "type": "TransitionWindow"
+            "startTime": 0.7192502021789551,
+            "type": "TransitionWindow",
+            "value": 1.0
         }
     ]
 }

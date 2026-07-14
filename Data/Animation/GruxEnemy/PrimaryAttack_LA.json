@@ -34,14 +34,14 @@
     },
     "states": [
         {
-            "animationSpeed": 1.0,
+            "value": 1.0,
             "endTime": 0.30000001192092896,
             "parameter": "leftWeapon",
             "startTime": 0.1599999964237213,
             "type": "HitBox"
         },
         {
-            "animationSpeed": 1.0,
+            "value": 1.0,
             "endTime": 0.16599999368190765,
             "parameter": "",
             "startTime": 0.029999999329447746,

@@ -1187,8 +1187,9 @@ void AnimationController::SaveNotifyAsset(const std::string& filename, const Ani
                 magic_enum::enum_name(state.type));
 
         j["parameter"] = state.parameter;
-        j["animationSpeed"] = state.value;
-
+        j["value"] = state.value;
+        j["moveDirection"] = { state.moveDirection.x,state.moveDirection.y,state.moveDirection.z };
+        j["moveDistance"] = state.moveDistance;
         root["states"].push_back(j);
     }
 
@@ -1279,8 +1280,18 @@ void AnimationController::LoadNotifyAsset(const std::string& filename, Animation
             state.parameter =
                 j.value("parameter", "");
 
-            state.value =
-                j.value("animationSpeed", 1.0f);
+            state.value = j.value("value", 1.0f);
+
+            if (j.contains("moveDirection"))
+            {
+                auto dir = j["moveDirection"];
+
+                state.moveDirection.x = dir[0].get<float>();
+                state.moveDirection.y = dir[1].get<float>();
+                state.moveDirection.z = dir[2].get<float>();
+            }
+
+            state.moveDistance = j.value("moveDistance", 0.0f);
 
             asset.notifyTrack.states.push_back(state);
         }

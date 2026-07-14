@@ -14,28 +14,28 @@
     "playRate": 1.0,
     "states": [
         {
-            "animationSpeed": 1.0,
+            "value": 1.0,
             "endTime": 0.5084376335144043,
             "parameter": "",
             "startTime": 0.12468746304512024,
             "type": "ShowTrail"
         },
         {
-            "animationSpeed": 1.0,
+            "value": 1.0,
             "endTime": 0.26499998569488525,
             "parameter": "",
             "startTime": 0.1379999965429306,
             "type": "HitBox"
         },
         {
-            "animationSpeed": 1.0,
+            "value": 1.0,
             "endTime": 0.5830000042915344,
             "parameter": "",
             "startTime": 0.1379999965429306,
             "type": "InputWindow"
         },
         {
-            "animationSpeed": 1.0,
+            "value": 1.0,
             "endTime": 0.5830000042915344,
             "parameter": "",
             "startTime": 0.4000000059604645,

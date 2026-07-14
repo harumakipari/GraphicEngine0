@@ -135,6 +135,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Recall_0", 71);
         controller->AddAnimation("Level_Start_Cut", 72);
 
+#if 0
         controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.17f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);
         controller->AddNotifyState("Primary_Attack_Fast_A", 0.12f, 0.583f, AnimationNotifyState::Type::InputWindow);
@@ -173,12 +174,15 @@ void Player::Initialize(const Transform& transform)
         controller->AddNotifyState("Ability_RMB_Bwd_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
         controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
         controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
-        std::string name = GetName();
-        controller->SetOwnerName(name);
 
+#endif // 0
+        std::string name = GetName();
+        // アニメーションコントローラーのオーナーの名前を設定する
+        controller->SetOwnerName(name);
+        // 全てのNotifyAssetsをロードする
+        controller->LoadAllNotifyAssets(name);
         // アニメーションコントローラーを character に追加
         this->AddBodyAnimationController(controller);
-        // アニメーションコントローラーのオーナーの名前を設定する
     }
 
     {

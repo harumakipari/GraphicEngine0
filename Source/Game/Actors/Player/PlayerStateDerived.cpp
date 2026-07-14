@@ -193,73 +193,11 @@ void PlayerDodgeState::Enter()
             -player->GetForward().z
         };
     }
-
-
-#if 0
-    inputDir = MathHelper::Normalize(inputDir);
-
-    float forwardDot =
-        inputDir.x * forward.x +
-        inputDir.z * forward.z;
-
-    float rightDot =
-        inputDir.x * right.x +
-        inputDir.z * right.z;
-
-    DirectX::XMFLOAT3 dodgeMoveDir;
-    std::string animName;
-
-    if (std::abs(forwardDot) > std::abs(rightDot))
-    {
-        // ‘OŒã
-        if (forwardDot > 0.0f)
-        {
-            animName = "Ability_RWB_Fwd_0";
-            dodgeMoveDir = forward;
-        }
-        else
-        {
-            animName = "Ability_RMB_Bwd_0";
-            dodgeMoveDir = {
-                -forward.x,
-                0.0f,
-                -forward.z
-            };
-        }
-    }
-    else
-    {
-        // ¶‰E
-        if (rightDot > 0.0f)
-        {
-            animName = "Ability_RMB_Right_0";
-            dodgeMoveDir = right;
-        }
-        else
-        {
-            animName = "Ability_RMB_Left_0";
-            dodgeMoveDir = {
-                -right.x,
-                0.0f,
-                -right.z
-            };
-        }
-    }
-
-    owner->PlayBodyAnimation(animName, false);
-
-    player->characterMovementComponent->AddForcedMove(
-        dodgeMoveDir,
-        player->dodgeSpeed,
-        player->dodgeDuration);
-
-#else
     owner->PlayBodyAnimation("Ability_RMB_Bwd_0", false);
 
     // ˆê’èŽžŠÔ‚¾‚¯‹­§ˆÚ“®‚·‚é‘¬“x‚ðÝ’è‚·‚é
     player->characterMovementComponent->AddForcedMove({ -forward.x,0.0f,-forward.z }, player->dodgeSpeed, player->dodgeDuration);
 
-#endif // 0
 
     rushRequested = false;
     judgeSuccess = false;

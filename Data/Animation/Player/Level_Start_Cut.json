@@ -20,7 +20,7 @@
     "playRate": 1.0,
     "states": [
         {
-            "animationSpeed": 1.0,
+            "value": 1.0,
             "endTime": 0.7678646445274353,
             "parameter": "",
             "startTime": 0.46723970770835876,
