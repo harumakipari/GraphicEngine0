@@ -235,7 +235,6 @@ void PlayerDodgeState::Execute(float deltaTime)
                 player->GetStateMachine()->ChangeState("Idle");
             }
         }
-
     }
     else if (player->transitionWindow)
     {

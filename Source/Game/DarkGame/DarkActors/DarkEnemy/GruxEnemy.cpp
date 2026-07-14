@@ -34,32 +34,28 @@ void GruxEnemy::Initialize(const Transform& transform)
     skeletalMeshComponent->SetIsShadowMap(true);
     skeletalMeshComponent->SetIsCastShadow(false);
 
+#if 0
     {
         // 左肩にカプセルの当たり判定を追加
-
         int leftUpperArmLeftIndex = skeletalMeshComponent->FindIndexByName("upperarm_l");
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
-        DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
-        height = size.y;
-        radius = size.x * 0.5f;
+        height = 0.3f;
+        radius = 0.75f;
         capsuleComponent->SetRadiusAndHeight(radius, height);
         capsuleComponent->SetMass(mass);
         capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
-        capsuleComponent->SetLayer(CollisionLayer::Player);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::EnemyWeapon, CollisionComponent::CollisionResponse::Trigger);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Floor, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldPropsNoRaycast, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Convex, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetCollisionOffsetY(height * 0.5f);
-        capsuleComponent->SetIsVisibleDebugBox(false);
+        capsuleComponent->SetLayer(CollisionLayer::EnemyBody);
+        capsuleComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
+        capsuleComponent->SetRelativeEulerRotationDirect({ 0.0f,0.0f,90.0f });
+        capsuleComponent->SetRelativeLocationDirect({ -0.9f,0.0f,-0.1f });
         capsuleComponent->Initialize();
+        capsuleComponent->AttachToComponent(skeletalMeshComponent, leftUpperArmLeftIndex);
     }
     int leftLowerArmLeftIndex = skeletalMeshComponent->FindIndexByName("lowerarm_l");
     // 右肩にカプセルの当たり判定を追加
 
+
+#endif // 0
 
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
@@ -110,13 +106,16 @@ void GruxEnemy::Initialize(const Transform& transform)
     PlayBodyAnimation("TravelMode_Idle_0");
 
 #if 1
-    // 当たり判定
+    //　身体の当たり判定
     {
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("enemyCapsuleComponent", parentName);
-        DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
-        size = MathHelper::Multiply(size, GetScale().x);
-        height = size.y;
-        radius = size.x * 0.5f;
+        //DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
+        //size = MathHelper::Multiply(size, GetScale().x);
+        //height = size.y;
+        //radius = size.x * 0.3f;
+        height = 2.7f;
+        radius = 1.5f;
+
         mass = 300.0f;
         capsuleComponent->SetRadiusAndHeight(radius, height);
         capsuleComponent->SetMass(mass);
@@ -240,7 +239,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     int leftEyeSocketNode = skeletalMeshComponent->FindIndexByName("L_eye");
     int rightEyeSocketNode = skeletalMeshComponent->FindIndexByName("R_eye");
 
-
     // 左目の位置用コンポーネントを追加　暗闇で光る目の表現用
     leftEyeSceneComponent = this->AddComponent<SceneComponent>("leftEye", parentName);
     leftEyeSceneComponent->AttachToComponent(skeletalMeshComponent, leftEyeSocketNode);
@@ -264,10 +262,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     gruxNameImageComponent->SetColor(DirectX::XMFLOAT4{ 1.0f,1.0f,1.0f,0.0f });
     gruxNameImageComponent->SetVisible(true);
     uiManager->Add(gruxNameImageComponent);
-
     easingRunner = std::make_unique<EasingRunner>();
-
-
 }
 
 void GruxEnemy::Update(float deltaTime)
@@ -318,6 +313,7 @@ void GruxEnemy::Update(float deltaTime)
     HitResultWithActor hit;
 
     // 左の武器の当たり判定
+    if (leftHitBox)
     {
         bool isLeftHit = false;
 
@@ -345,19 +341,19 @@ void GruxEnemy::Update(float deltaTime)
                                         Logger::Log(U8("ジャスト回避成功！"));
                                     }
                                 }
-                                else*/ if (leftHitBox)
-                                {
-                                    if (!hitActors.contains(hit.actor))
-                                    {
-                                        Logger::Log(U8("剣にプレイヤーが当たった"));
-                                        player->TakeDamage(1);
-                                        hitActors.emplace(player);
-                                    }
-                                }
+                                else*/
+
+                if (!hitActors.contains(hit.actor))
+                {
+                    Logger::Log(U8("剣にプレイヤーが当たった"));
+                    player->TakeDamage(1);
+                    hitActors.emplace(player);
+                }
             }
         }
     }
     // 右の武器の当たり判定
+    if (rightHitBox)
     {
         bool isRightHit = false;
 
@@ -384,15 +380,13 @@ void GruxEnemy::Update(float deltaTime)
                                         Logger::Log(U8("ジャスト回避成功！"));
                                     }
                                 }
-                                else*/ if (rightHitBox)
-                                {
-                                    if (!hitActors.contains(hit.actor))
-                                    {
-                                        Logger::Log(U8("剣にプレイヤーが当たった"));
-                                        player->TakeDamage(1);
-                                        hitActors.emplace(player);
-                                    }
-                                }
+                                else*/
+                if (!hitActors.contains(hit.actor))
+                {
+                    Logger::Log(U8("剣にプレイヤーが当たった"));
+                    player->TakeDamage(1);
+                    hitActors.emplace(player);
+                }
             }
         }
     }
@@ -401,6 +395,17 @@ void GruxEnemy::Update(float deltaTime)
         rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
     if (leftWeaponCollisionComp)
         leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
+
+    // 攻撃の危険な時に、
+    if (isDangerWindow)
+    {
+        // ボスの前方向にプレイヤーがいて
+
+        // プレイヤーがジャスト回避したら、
+
+        // ジャスト回避成功
+
+    }
 
 #if 0
     if (InputSystem::GetInputState("0"))

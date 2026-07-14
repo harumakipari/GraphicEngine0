@@ -399,7 +399,6 @@ void Player::Initialize(const Transform& transform)
     trail.Initialize();
 }
 
-
 void Player::Update(float deltaTime)
 {
     using namespace DirectX;
