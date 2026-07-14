@@ -176,8 +176,9 @@ public:
         float flashValue = 0.0f; //　白くフラッシュする値
         ObjectType objectType = ObjectType::Default; // オブジェクトの種類
 
-
         EffectParameters effectParameters = {};
+
+        float chargePower = 0.0f;   // 敵の角などを光らせるのに使用する処理
     };
     std::unique_ptr<ConstantBuffer<PlusAlphaConstants>> plusAlphaCBuffer;
 

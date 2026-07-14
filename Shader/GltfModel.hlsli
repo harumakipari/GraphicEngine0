@@ -112,6 +112,9 @@ cbuffer PLUS_ALPHA_CONSTANT_BUFFER : register(b5)
     int objectType; // オブジェクトの種類 0:通常 1:プレイヤーとか
 
     ModelEffectParameter modelEffectParameter;
+
+    float chargePower; // 敵の角などを光らせる値
+
 }
 
 

@@ -14,32 +14,114 @@
     "playRate": 1.0,
     "states": [
         {
-            "value": 1.0,
-            "endTime": 0.27000001072883606,
-            "parameter": "",
-            "startTime": 0.13199999928474426,
-            "type": "HitBox"
-        },
-        {
-            "value": 1.0,
-            "endTime": 0.5830000042915344,
-            "parameter": "",
-            "startTime": 0.13199999928474426,
-            "type": "InputWindow"
-        },
-        {
-            "value": 1.0,
             "endTime": 0.408541738986969,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.1254165917634964,
-            "type": "ShowTrail"
+            "type": "ShowTrail",
+            "value": 1.0
         },
         {
-            "value": 1.0,
+            "endTime": 0.27000001072883606,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.13199999928474426,
+            "type": "HitBox",
+            "value": 1.0
+        },
+        {
             "endTime": 0.5830000042915344,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.13199999928474426,
+            "type": "InputWindow",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.40927112102508545,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.1319791078567505,
+            "type": "ShowEmissive",
+            "value": 10.100000381469727
+        },
+        {
+            "endTime": 0.5830000042915344,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.4000000059604645,
-            "type": "TransitionWindow"
+            "type": "TransitionWindow",
+            "value": 1.0
         }
     ]
 }

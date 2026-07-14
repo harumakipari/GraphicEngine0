@@ -14,32 +14,114 @@
     "playRate": 1.0,
     "states": [
         {
-            "value": 1.0,
             "endTime": 0.5084376335144043,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.12468746304512024,
-            "type": "ShowTrail"
+            "type": "ShowTrail",
+            "value": 1.0
         },
         {
-            "value": 1.0,
             "endTime": 0.26499998569488525,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.1379999965429306,
-            "type": "HitBox"
+            "type": "HitBox",
+            "value": 1.0
         },
         {
-            "value": 1.0,
             "endTime": 0.5830000042915344,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.1379999965429306,
-            "type": "InputWindow"
+            "type": "InputWindow",
+            "value": 1.0
         },
         {
-            "value": 1.0,
+            "endTime": 0.510624885559082,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.12468741089105606,
+            "type": "ShowEmissive",
+            "value": 10.300000190734863
+        },
+        {
             "endTime": 0.5830000042915344,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.4000000059604645,
-            "type": "TransitionWindow"
+            "type": "TransitionWindow",
+            "value": 1.0
         }
     ]
 }

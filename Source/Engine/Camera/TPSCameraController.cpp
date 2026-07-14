@@ -196,8 +196,8 @@ DirectX::XMFLOAT3 TPSCameraController::CalculateTargetCameraPosition(float delta
     // Eye‚ª—‘zˆÊ’u‚©‚ç‚Ç‚ê‚¾‚¯‰Ÿ‚³‚ê‚½‚©‚É‰ž‚¶‚ÄLookTarget‚ðplayerŠñ‚è‚Ö•âŠÔ‚·‚é
     float idealDistance = XMVectorGetX(XMVector3Length(idealEye - pivot));
     float resolvedDistance = XMVectorGetX(XMVector3Length(resolvedEye - pivot));
-    Logger::Log("idealDistance:" + std::to_string(idealDistance));
-    Logger::Log("resolvedDistance:" + std::to_string(resolvedDistance));
+    //Logger::Log("idealDistance:" + std::to_string(idealDistance));
+    //Logger::Log("resolvedDistance:" + std::to_string(resolvedDistance));
 
     // 1.0 -> •Ç‚É“–‚½‚Á‚Ä‚¢‚È‚¢@0.0 -> player ‚Æ•Ç‚ª‹ß‚¢
     float pushDistance = XMVectorGetX(XMVector3Length(idealEye - resolvedEye));

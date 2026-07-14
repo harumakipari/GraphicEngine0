@@ -45,7 +45,6 @@ void GruxEnemy::Initialize(const Transform& transform)
         {// •Ší
             material.materialType = MaterialType::Metallic;
         }
-
     }
     skeletalMeshComponent->SetIsShadowMap(true);
     skeletalMeshComponent->SetIsCastShadow(false);
@@ -295,6 +294,7 @@ void GruxEnemy::Update(float deltaTime)
         skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = std::max<float>(0.0f, skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - deltaTime * 8.0f);
     }
 
+
     DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
 
@@ -427,8 +427,17 @@ void GruxEnemy::Update(float deltaTime)
     if (leftWeaponCollisionComp)
         leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
 
+    if (isDangerWindow)
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 2.0f;
+    }
+    else
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 0.0f;
+    }
+
     // UŒ‚‚ÌŠëŒ¯‚ÈŽž‚ÉA
-    //if (isDangerWindow)
+    if (isDangerWindow)
     {
         if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
         {

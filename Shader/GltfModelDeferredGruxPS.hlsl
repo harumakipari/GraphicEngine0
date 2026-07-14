@@ -62,7 +62,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
     if (materialType == MATERIAL_METALLIC)
     {
-        
+        emissiveFactor += float3(1.0, 0.8, 0.2) *chargePower ;
     }
     
     float occlusionFactor = 1.0;
