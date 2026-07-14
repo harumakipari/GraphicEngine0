@@ -80,5 +80,9 @@ private:
     float blendTargetPitch = 0.0f;
 
     std::function<void()> onFinished;
+
+public:
+    // 壁とプレイヤーとのブレンド
+    float blendLookTarget = 0.0f;
 };
 

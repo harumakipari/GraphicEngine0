@@ -151,9 +151,7 @@ ViewConstants CameraComponent::GetViewConstants()
 
 
 DirectX::XMVECTOR TPSCameraComponent::ResolveCameraCollision(
-    DirectX::FXMVECTOR focus,
-    DirectX::FXMVECTOR idealEye
-)
+    DirectX::FXMVECTOR focus,DirectX::FXMVECTOR idealEye)
 {
     using namespace DirectX;
 

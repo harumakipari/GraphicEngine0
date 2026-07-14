@@ -237,8 +237,8 @@ private:
     // カメラの注視点の位置
     std::shared_ptr<SceneComponent> cameraTargetComponent;
     // ボス戦時のオフセット
-    float bossBattleCameraDistance = -4.0f;
-    DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,2.0f,0.0f };
+    float bossBattleCameraDistance = -3.0f;
+    DirectX::XMFLOAT3 bossBattleCameraOffset = { -0.5f,2.0f,0.0f };
 
 
     friend class PlayerStateBase;

@@ -140,8 +140,6 @@ DirectX::XMFLOAT3 TPSCameraController::CalculateTargetCameraPosition(float delta
     XMFLOAT3 targetPivot;
     XMStoreFloat3(&targetPivot, pivot);
 
-
-
     if (!initialized)
     {
         smoothedPivot = targetPivot;
@@ -176,18 +174,13 @@ DirectX::XMFLOAT3 TPSCameraController::CalculateTargetCameraPosition(float delta
     float yaw = camera->GetYaw();
     float pitch = camera->GetPitch();
 
-    XMVECTOR forward =
-        XMVectorSet(
-            sinf(yaw) * cosf(pitch),
-            sinf(pitch),
-            cosf(yaw) * cosf(pitch),
-            0);
-
+    // TPSモードの時の理想のカメラの位置
+    XMVECTOR forward = XMVectorSet(sinf(yaw) * cosf(pitch), sinf(pitch), cosf(yaw) * cosf(pitch), 0);
     XMVECTOR idealEye = pivot - forward * camera->distance;
     XMVECTOR resolvedEye = idealEye;
 
     if (cameraMode == CameraMode::BossBattle)
-    {
+    {// ボスにターゲットを合わせる時の理想のカメラの位置
         if (auto eyeComp = eyeComponent.lock())
         {
             DirectX::XMFLOAT3 eyePosition = eyeComp->GetComponentLocation();
@@ -200,10 +193,25 @@ DirectX::XMFLOAT3 TPSCameraController::CalculateTargetCameraPosition(float delta
         resolvedEye = camera->ResolveCameraCollision(pivot, idealEye);
     }
 
+    // Eyeが理想位置からどれだけ押されたかに応じてLookTargetをplayer寄りへ補間する
+    float idealDistance = XMVectorGetX(XMVector3Length(idealEye - pivot));
+    float resolvedDistance = XMVectorGetX(XMVector3Length(resolvedEye - pivot));
+    Logger::Log("idealDistance:" + std::to_string(idealDistance));
+    Logger::Log("resolvedDistance:" + std::to_string(resolvedDistance));
+
+    // 1.0 -> 壁に当たっていない　0.0 -> player と壁が近い
+    float pushDistance = XMVectorGetX(XMVector3Length(idealEye - resolvedEye));
+    blendLookTarget = std::clamp(pushDistance / 3.0f, 0.0f, 1.0f);
+
+    //float playerToWallRatio = resolvedDistance / idealDistance;
+    //blendLookTarget = 1.0f - playerToWallRatio;
+    //blendLookTarget = std::clamp(blendLookTarget, 0.0f, 1.0f);
+    //blendLookTarget *= blendLookTarget;
+
     XMVECTOR currentEye = resolvedEye;
 
     XMFLOAT3 pos;
-    XMStoreFloat3(&pos, currentEye);
+    DirectX::XMStoreFloat3(&pos, currentEye);
 
     pos.x += shakeOffset.x;
     pos.y += shakeOffset.y;

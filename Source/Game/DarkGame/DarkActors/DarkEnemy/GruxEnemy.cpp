@@ -35,15 +35,15 @@ void GruxEnemy::Initialize(const Transform& transform)
         }
         else if (material.name == "M_Grux_Qilin_Hore")
         {// つの
-
+            material.materialType = MaterialType::Metallic;
         }
         else if (material.name == "M_Grux_Qilin_Gauntlets")
         {// 腰
-
+            material.materialType = MaterialType::Metallic;
         }
         else if (material.name == "M_Grux_Qilin_Weapon")
         {// 武器
-
+            material.materialType = MaterialType::Metallic;
         }
 
     }
@@ -309,6 +309,20 @@ void GruxEnemy::Update(float deltaTime)
         DirectX::XMFLOAT3 rightDir = MathHelper::Cross(worldUp, toPlayerDir);
         rightDir = MathHelper::Normalize(rightDir);
         DirectX::XMFLOAT3 targetPos = bossPos;
+        // ターゲットの位置をプレイヤーとボスの中点にする
+        DirectX::XMFLOAT3 middlePos =
+        {
+            (bossPos.x + playerPos.x) * 0.5f,
+            (bossPos.y + playerPos.y) * 0.5f,
+            (bossPos.z + playerPos.z) * 0.5f
+        };
+
+        if (auto mainCamera = GetOwnerScene()->GetActorManager()->GetActorOfType<MainCamera>())
+        {
+            float blendLookTarget = mainCamera->tpsController.blendLookTarget;
+            targetPos = MathHelper::Lerp(middlePos, playerPos, blendLookTarget);
+
+        }
 
         targetPos = MathHelper::Add(
             targetPos,

@@ -60,7 +60,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         metallicFactor *= sampled.b;
     }
 
-
     if (materialType == MATERIAL_METALLIC)
     {
         

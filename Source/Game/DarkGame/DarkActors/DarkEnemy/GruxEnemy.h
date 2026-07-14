@@ -81,7 +81,8 @@ private:
     std::shared_ptr<SceneComponent> cameraTargetComponent;
     // ボス戦時のオフセット
     float bossBattleCameraDistance = 0.0f;
-    float bossBattleCameraRightDistance = 2.5f;
+    //float bossBattleCameraRightDistance = 2.5f;
+    float bossBattleCameraRightDistance = 0.0f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,0.0f,0.0f };
 
     // 前フレームの左の武器
