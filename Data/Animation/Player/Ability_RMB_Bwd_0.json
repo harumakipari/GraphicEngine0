@@ -6,13 +6,13 @@
             "parameter": "dodge_start",
             "time": 0.1599999964237213,
             "type": "PlaySE",
-            "value": 1.0
+            "value": 0.3100000023841858
         },
         {
             "parameter": "dodge_land",
             "time": 0.47999998927116394,
             "type": "PlaySE",
-            "value": 1.0
+            "value": 0.30000001192092896
         }
     ],
     "loop": false,
@@ -21,34 +21,43 @@
     "speedCurve": {
         "keys": [
             {
-                "time": 0.031416699290275574,
-                "value": 0.24000029265880585
+                "time": 0.02900003269314766,
+                "value": 0.36000022292137146
             },
             {
-                "time": 0.06524992734193802,
-                "value": 0.4133336544036865
+                "time": 0.0942499116063118,
+                "value": 0.34666696190834045
             },
             {
-                "time": 0.15224991738796234,
-                "value": 0.973333477973938
+                "time": 0.1643332540988922,
+                "value": 0.8533334732055664
             },
             {
-                "time": 0.46158313751220703,
-                "value": 1.0266666412353516
+                "time": 0.43016642332077026,
+                "value": 1.0133333206176758
             },
             {
-                "time": 0.589666485786438,
-                "value": 1.426666259765625
+                "time": 0.5727497935295105,
+                "value": 2.0
             },
             {
-                "time": 0.7539999485015869,
-                "value": 1.4666661024093628
+                "time": 0.7878333330154419,
+                "value": 2.0
             }
         ]
     },
     "states": [
         {
             "endTime": 0.6000000238418579,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
             "moveDirection": [
                 0.0,
                 0.0,
@@ -61,20 +70,38 @@
             "value": 1.0
         },
         {
-            "endTime": 0.46700000762939453,
-            "moveDirection": [
+            "endTime": 0.5419167876243591,
+            "justDodgeAreaOffset": [
                 0.0,
                 0.0,
                 0.0
             ],
-            "moveDistance": 0.0,
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "moveDistance": 0.800000011920929,
             "parameter": "",
-            "startTime": 0.1289999932050705,
+            "startTime": 0.16766665875911713,
             "type": "MotionWarp",
             "value": 1.0
         },
         {
             "endTime": 0.5299999713897705,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
             "moveDirection": [
                 0.0,
                 0.0,
@@ -88,12 +115,21 @@
         },
         {
             "endTime": 0.4706665873527527,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
             "moveDirection": [
                 0.0,
                 0.0,
                 -1.0
             ],
-            "moveDistance": 1.7999999523162842,
+            "moveDistance": 2.0999999046325684,
             "parameter": "",
             "startTime": 0.1643332690000534,
             "type": "MotionWarp",
@@ -101,6 +137,15 @@
         },
         {
             "endTime": 0.8392502665519714,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
             "moveDirection": [
                 0.0,
                 0.0,

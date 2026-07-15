@@ -82,3 +82,10 @@ struct AnimationNotifyAsset
 
     AnimationNotifyTrack notifyTrack;
 };
+
+struct AnimationMotionWarp
+{
+    const AnimationNotifyState* state;
+    DirectX::XMFLOAT3 direction;
+    float speed;
+};

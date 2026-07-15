@@ -142,9 +142,7 @@ public:
     float swordEmissivePower = 0.0f;    // 剣のエミッシブの力
 
     // アニメーション時にどれくらい移動するか
-    bool motionWarp = false;
-    DirectX::XMFLOAT3 motionWarpDirection{};
-    float motionWarpSpeed = 0.0f;
+    std::vector<AnimationMotionWarp> animationMotionWarps;
 
 
     bool invincibleWindow = false; // アニメーションによる無敵状態かどうか

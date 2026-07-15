@@ -388,6 +388,9 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.cpp">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\Camera\DarkGameCamera.cpp">
+      <Filter>Source\Game\Actors\Camera</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\profiler.h">
@@ -927,6 +930,9 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.h">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Actors\Camera\DarkGameCamera.h">
+      <Filter>Source\Game\Actors\Camera</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">
@@ -1232,9 +1238,7 @@
     <FxCompile Include="Shader\GltfModelDeferredGruxPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\InstanceModelIcePS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
+    <FxCompile Include="Shader\InstanceModelIceEffectPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shader\BidirectionalReflectanceDistributionFunction.hlsli">

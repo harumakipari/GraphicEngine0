@@ -135,47 +135,6 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Recall_0", 71);
         controller->AddAnimation("Level_Start_Cut", 72);
 
-#if 0
-        controller->AddNotifyEvent("Primary_Attack_Fast_A", 0.17f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
-        controller->AddNotifyState("Primary_Attack_Fast_A", 0.17f, 0.23f, AnimationNotifyState::Type::HitBox);
-        controller->AddNotifyState("Primary_Attack_Fast_A", 0.12f, 0.583f, AnimationNotifyState::Type::InputWindow);
-        controller->AddNotifyState("Primary_Attack_Fast_A", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
-
-        controller->AddNotifyEvent("Primary_Attack_Fast_B", 0.138f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
-        controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.265f, AnimationNotifyState::Type::HitBox);
-        controller->AddNotifyState("Primary_Attack_Fast_B", 0.138f, 0.583f, AnimationNotifyState::Type::InputWindow);
-        controller->AddNotifyState("Primary_Attack_Fast_B", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
-
-        controller->AddNotifyEvent("Primary_Attack_Fast_C", 0.15f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
-        controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.27f, AnimationNotifyState::Type::HitBox);
-        controller->AddNotifyState("Primary_Attack_Fast_C", 0.132f, 0.583f, AnimationNotifyState::Type::InputWindow);
-        controller->AddNotifyState("Primary_Attack_Fast_C", 0.4f, 0.583f, AnimationNotifyState::Type::TransitionWindow);
-
-        controller->AddNotifyEvent("Primary_Attack_Fast_D1_1", 0.4f, AnimationNotifyEvent::Type::PlaySE, "player_attack");
-        controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.414f, 0.548f, AnimationNotifyState::Type::HitBox);
-        controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.08f, 1.0f, AnimationNotifyState::Type::InputWindow);
-        controller->AddNotifyState("Primary_Attack_Fast_D1_1", 0.52f, 1.0f, AnimationNotifyState::Type::TransitionWindow);
-
-        controller->AddCombo("Primary_Attack_Fast_A", "Primary_Attack_Fast_B");
-        controller->AddCombo("Primary_Attack_Fast_B", "Primary_Attack_Fast_C");
-        controller->AddCombo("Primary_Attack_Fast_C", "Primary_Attack_Fast_D1_1");
-
-        // 剣を地面に突き刺す時のSE
-        controller->AddNotifyEvent("Recall_0", 1.4f, AnimationNotifyEvent::Type::PlaySE, "player_recall");
-        controller->AddNotifyEvent("Recall_0", 1.4f, AnimationNotifyEvent::Type::PlaySE, "player_recall_voice", 1.2f);
-
-        // 剣を構えたときのSE
-        controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_attack2");
-        controller->AddNotifyEvent("Level_Start_Cut", 0.48f, AnimationNotifyEvent::Type::PlaySE, "player_level_voice");
-
-        // ジャスト回避
-        controller->AddNotifyState("Ability_RMB_Bwd_0", 0.16f, 0.53f, AnimationNotifyState::Type::JustDodgeWindow);
-        controller->AddNotifyState("Ability_RMB_Bwd_0", 0.05f, 0.6f, AnimationNotifyState::Type::Invincible);
-        controller->AddNotifyState("Ability_RMB_Bwd_0", 0.48f, 0.6f, AnimationNotifyState::Type::TransitionWindow);
-        controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.16f, AnimationNotifyEvent::Type::PlaySE, "dodge_start");
-        controller->AddNotifyEvent("Ability_RMB_Bwd_0", 0.48f, AnimationNotifyEvent::Type::PlaySE, "dodge_land");
-
-#endif // 0
         std::string name = GetName();
         // アニメーションコントローラーのオーナーの名前を設定する
         controller->SetOwnerName(name);
@@ -680,19 +639,22 @@ void Player::Update(float deltaTime)
     characterMovementComponent->SetMoveDirection(moveDir);
     rotationComponent->SetDirection(moveDir);
 
-    // アニメーションに後から設定した移動値が入っている場合
-    if (motionWarp)
+    playerPos = GetPosition();
+
+    for (auto& warp : animationMotionWarps)
     {
-        DirectX::XMVECTOR move = DirectX::XMLoadFloat3(&motionWarpDirection);
-        move *= motionWarpSpeed * deltaTime;
+        DirectX::XMVECTOR move = DirectX::XMLoadFloat3(&warp.direction);
+        move *= warp.speed * deltaTime;
+
         DirectX::XMFLOAT3 velocity;
         DirectX::XMStoreFloat3(&velocity, move);
-        playerPos = GetPosition();
+
         playerPos.x += velocity.x;
         playerPos.y += velocity.y;
         playerPos.z += velocity.z;
-        SetPosition(playerPos);
     }
+
+    SetPosition(playerPos);
 
     // 剣の真ん中、根本、先の座標を保存する
     prevSwordRootPos = swordRootPos;
@@ -783,7 +745,6 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::MotionWarp:
     {
-        motionWarp = true;
         // アニメーション側で指定したローカル方向
         DirectX::XMFLOAT3 localDirection = state.moveDirection;
         // プレイヤーの向いている方向を考慮してワールド方向へ変換
@@ -792,13 +753,20 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&localDirection);
         dir = DirectX::XMVector3TransformNormal(dir, rotation);
         dir = DirectX::XMVector3Normalize(dir);
-        DirectX::XMStoreFloat3(&motionWarpDirection, dir);
+        DirectX::XMFLOAT3 direction;
+        DirectX::XMStoreFloat3(&direction, dir);
         // 区間の時間を取る
         float duration = state.endTime - state.startTime;
+        float speed = 0.0f;
         if (duration > 0.0f)
         {
-            motionWarpSpeed = state.moveDistance / duration;
+            speed = state.moveDistance / duration;
         }
+        AnimationMotionWarp warp{};
+        warp.direction = direction;
+        warp.speed = speed;
+        warp.state = &state;
+        animationMotionWarps.push_back(warp);
         Logger::Log(U8("MotionWarp開始"));
     }
     break;
@@ -839,8 +807,15 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::MotionWarp:
     {
-        motionWarp = false;
-        motionWarpSpeed = 0.0f;
+        animationMotionWarps.erase(
+            std::remove_if(
+                animationMotionWarps.begin(),
+                animationMotionWarps.end(),
+                [&](const AnimationMotionWarp& warp)
+                {
+                    return warp.state == &state;
+                }),
+            animationMotionWarps.end());
         Logger::Log(U8("MotionWarp終了"));
     }
     break;
