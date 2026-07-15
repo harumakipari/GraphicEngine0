@@ -13,25 +13,24 @@
 void AnimationController::OnUpdate(const float deltaTime)
 {
     prevAnimationTime = animationTime;
-#if 0
-    animationTime += deltaTime * animationRate;
-#else
+
     const auto& asset = animationNotifyAssets[animationClip];
+    float curveRate = 1.0f;
+    switch (transitionState)
+    {
+    case AnimationTransitionState::Inprogress:
+        curveRate = 1.0f;
+        break;
+    case AnimationTransitionState::NotStarted:
+    case AnimationTransitionState::Completed:
+        curveRate = asset.speedCurve.Evaluate(animationTime);
+        break;
+    }
 
-    // 正規化時間
-    //float duration = target_->model->animations[animationClip].duration;
-    //float normalizedTime = duration > 0.0f ? animationTime / duration : 0.0f;
-
-    // カーブ評価
-    //float curveRate = asset.speedCurve.Evaluate(normalizedTime);
-    float curveRate = asset.speedCurve.Evaluate(animationTime);
-
-    // 実際の再生速度
     float playRate = animationRate * asset.playRate * curveRate;
-
-    // 時間更新
     animationTime += deltaTime * playRate;
-#endif
+
+
 
     if (target_->model->animations.size() == 0)
     {// アニメーションがないモデルの場合
@@ -52,12 +51,13 @@ void AnimationController::OnUpdate(const float deltaTime)
             animationTime >= state.startTime &&
             animationTime < state.endTime;
 
-        if (!wasInside && isInside)
+        if (prevAnimationTime < state.startTime &&
+            animationTime >= state.startTime)
         {
             OnNotifyBegin(state);
         }
-
-        if (wasInside && !isInside)
+        if (prevAnimationTime < state.endTime &&
+            animationTime >= state.endTime)
         {
             OnNotifyEnd(state);
         }

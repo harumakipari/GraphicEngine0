@@ -234,7 +234,17 @@ void PlayerDodgeState::Execute(float deltaTime)
                 {// タイムスケールをリセットする
                     target->ResetTimeScale();
                 }
-                player->GetStateMachine()->ChangeState("Idle");
+               
+                DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
+
+                if (MathHelper::Length(move) > 0.1f)
+                {
+                    player->GetStateMachine()->ChangeState("Running");
+                }
+                else
+                {
+                    player->GetStateMachine()->ChangeState("Idle");
+                }
             }
         }
     }
@@ -244,7 +254,16 @@ void PlayerDodgeState::Execute(float deltaTime)
         {// タイムスケールをリセットする
             target->ResetTimeScale();
         }
-        player->GetStateMachine()->ChangeState("Idle");
+        DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
+
+        if (MathHelper::Length(move) > 0.1f)
+        {
+            player->GetStateMachine()->ChangeState("Running");
+        }
+        else
+        {
+            player->GetStateMachine()->ChangeState("Idle");
+        }
     }
 #if 0
     if (!player->GetBodyAnimationController()->IsPlayAnimation())

@@ -30,11 +30,15 @@
             },
             {
                 "time": 0.1643332540988922,
-                "value": 0.8533334732055664
+                "value": 0.4133338928222656
             },
             {
-                "time": 0.43016642332077026,
-                "value": 1.0133333206176758
+                "time": 0.35283342003822327,
+                "value": 0.4400002956390381
+            },
+            {
+                "time": 0.42774975299835205,
+                "value": 0.7733335494995117
             },
             {
                 "time": 0.5727497935295105,
@@ -67,28 +71,6 @@
             "parameter": "",
             "startTime": 0.05000000074505806,
             "type": "Invincible",
-            "value": 1.0
-        },
-        {
-            "endTime": 0.5419167876243591,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                1.0,
-                0.0
-            ],
-            "moveDistance": 0.800000011920929,
-            "parameter": "",
-            "startTime": 0.16766665875911713,
-            "type": "MotionWarp",
             "value": 1.0
         },
         {
@@ -136,7 +118,29 @@
             "value": 1.0
         },
         {
-            "endTime": 0.8392502665519714,
+            "endTime": 0.5419167876243591,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "moveDistance": 0.800000011920929,
+            "parameter": "",
+            "startTime": 0.16766665875911713,
+            "type": "MotionWarp",
+            "value": 1.0
+        },
+        {
+            "endTime": 1.933333158493042,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -153,7 +157,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.7192502021789551,
+            "startTime": 1.5281695127487183,
             "type": "TransitionWindow",
             "value": 1.0
         }
