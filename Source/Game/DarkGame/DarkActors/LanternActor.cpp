@@ -4,11 +4,12 @@
 void LanternActor::Initialize(const Transform& transform)
 {
     meshComponent = AddComponent<SkeletalMeshComponent>(parentName);
-    meshComponent->SetModel("./Data/Models/DarkStageAssets/Lantern/scene.gltf");
+    meshComponent->SetModel("./Data/Models/DarkStageAssets/Lantern/Lantern.gltf");
+    //meshComponent->SetModel("./Data/Models/DarkStageAssets/Lantern/scene.gltf");
 
     // ポイントライトコンポーネントを追加
     auto pointLightComponent = this->AddComponent<PointLightComponent>("LanternLight", parentName);
-    pointLightComponent->SetRelativeLocationDirect({ 0.0f, 0.0f, -0.2f });
+    pointLightComponent->SetRelativeLocationDirect({ 0.0f, -0.8f, -0.0f });
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     pointLightComponent->SetSharedLightName("LanternLight");
 
@@ -25,7 +26,7 @@ void LanternActor::Initialize(const Transform& transform)
     titleRoomLightComponent1->SetSharedLightName("TitleRoomLight");
 }
 
-void LanternActor::Update(float elapsedTime)
+void LanternActor::Update(float deltaTime)
 {
     if (titleRoomLightComponent0)
     {
@@ -35,9 +36,17 @@ void LanternActor::Update(float elapsedTime)
     {
         DebugRender::DrawSphere(titleRoomLightComponent1->GetComponentLocation(), 0.1f, { 1,0,1,1 }, 0);
     }
+
+    swingTime += deltaTime;
+    float angle = sinf(swingTime * swingSpeed) * swingAngle;
+    DirectX::XMFLOAT3 rot = { 0.0f, 0.0f ,angle }; // Z軸回転で揺らす
+    meshComponent->SetRelativeEulerRotationDirect(rot);
 }
 
 void LanternActor::DrawImGuiDetails()
 {
-    
+#ifdef USE_IMGUI
+    ImGui::DragFloat(U8("揺らすスピード"), &swingSpeed, 0.1f, 0.0f, 2.0f);
+    ImGui::DragFloat(U8("揺らす角度"), &swingAngle, 0.1f, 0.0f, 360.0f);
+#endif
 }

@@ -1,0 +1,23 @@
+{
+    "animationClip": 27,
+    "animationName": "Jump_Start_0",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.0,
+                "value": 0.10666687786579132
+            },
+            {
+                "time": 0.01012499164789915,
+                "value": 0.09333333373069763
+            },
+            {
+                "time": 0.038249995559453964,
+                "value": 0.9599997997283936
+            }
+        ]
+    }
+}

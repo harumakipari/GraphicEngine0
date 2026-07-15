@@ -70,8 +70,6 @@ void DarkStageChandelierActor::Update(float deltaTime)
     {
         sphereMeshComponent->SetRelativeScaleDirect(fireScale);
     }
-
-
 }
 
 // ‰Š‚ÌŒõ‚ÌƒXƒP[ƒ‹‚ğ0‚É‚·‚éŠÖ”

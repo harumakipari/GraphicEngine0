@@ -14,6 +14,28 @@
     "playRate": 1.0,
     "states": [
         {
+            "endTime": 0.1963541954755783,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "moveDistance": 0.5,
+            "parameter": "",
+            "startTime": 0.08166655898094177,
+            "type": "MotionWarp",
+            "value": 1.0
+        },
+        {
             "endTime": 0.408541738986969,
             "justDodgeAreaOffset": [
                 0.0,
@@ -34,6 +56,28 @@
             "startTime": 0.1254165917634964,
             "type": "ShowTrail",
             "value": 1.0
+        },
+        {
+            "endTime": 0.40927112102508545,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.1319791078567505,
+            "type": "ShowEmissive",
+            "value": 10.100000381469727
         },
         {
             "endTime": 0.27000001072883606,
@@ -78,28 +122,6 @@
             "startTime": 0.13199999928474426,
             "type": "InputWindow",
             "value": 1.0
-        },
-        {
-            "endTime": 0.40927112102508545,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "",
-            "startTime": 0.1319791078567505,
-            "type": "ShowEmissive",
-            "value": 10.100000381469727
         },
         {
             "endTime": 0.5830000042915344,

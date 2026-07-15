@@ -93,6 +93,8 @@ void PlayerAttackState::Enter()
     Logger::Log("AnimationTime=" + std::to_string(player->GetBodyAnimationController()->GetCurrentAnimationTime()));
 
     dodgeQueued = false;
+    player->comboQueued = false;
+    player->bufferCommand.command = Player::InputCommand::None;
 }
 
 void PlayerAttackState::Execute(float deltaTime)

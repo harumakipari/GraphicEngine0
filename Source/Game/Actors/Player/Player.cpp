@@ -989,14 +989,13 @@ void Player::HandleInput(float deltaTime)
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
         bufferCommand.command = InputCommand::Attack;
-        bufferCommand.remainTime = 0.3f;
+        bufferCommand.remainTime = 0.5f;
         return;
     }
-
     if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
     {
         bufferCommand.command = InputCommand::Jump;
-        bufferCommand.remainTime = 0.3f;
+        bufferCommand.remainTime = 0.5f;
         return;
     }
     if (InputSystem::GetInputState("Interact", InputStateMask::Trigger))

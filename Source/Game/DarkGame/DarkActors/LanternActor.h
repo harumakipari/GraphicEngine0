@@ -9,7 +9,7 @@ public:
 
     void Initialize(const Transform& transform)override;
 
-    void Update(float elapsedTime)override;
+    void Update(float deltaTime)override;
 
     void DrawImGuiDetails() override;
 
@@ -20,4 +20,7 @@ private:
     std::shared_ptr<PointLightComponent> titleRoomLightComponent0;
     std::shared_ptr<PointLightComponent> titleRoomLightComponent1;
 
+    float swingTime = 0.0f;
+    float swingSpeed = 0.9f;     // 揺れる速さ
+    float swingAngle = 5.0f;    // 最大角度（度）
 };

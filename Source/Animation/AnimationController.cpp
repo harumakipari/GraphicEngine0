@@ -452,7 +452,6 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, float d
                 selectedEventIndex = -1;
             }
 
-
             if (ImGui::IsItemActive())
             {
                 float deltaTime =
@@ -1140,14 +1139,14 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
     {
         if (file.path().extension() != ".json")
             continue;
-
         AnimationNotifyAsset asset;
-
         LoadNotifyAsset(file.path().string(), asset);
-
+        if (owner)
+        {
+            owner->OnAnimationChanged();
+        }
         animationNotifyAssets[asset.animationClip] = asset;
     }
-
 }
 
 // NotifyAsset‚ð•Û‘¶‚·‚é

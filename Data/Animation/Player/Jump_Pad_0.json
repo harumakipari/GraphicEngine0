@@ -1,0 +1,23 @@
+{
+    "animationClip": 25,
+    "animationName": "Jump_Pad_0",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.0024999999441206455,
+                "value": 0.29333359003067017
+            },
+            {
+                "time": 0.29499998688697815,
+                "value": 1.9066656827926636
+            },
+            {
+                "time": 0.37250012159347534,
+                "value": 1.0266668796539307
+            }
+        ]
+    }
+}
