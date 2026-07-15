@@ -16,4 +16,8 @@ public:
 private:
     std::string parentName = "RootComponent";
     std::shared_ptr<SkeletalMeshComponent> meshComponent;
+
+    std::shared_ptr<PointLightComponent> titleRoomLightComponent0;
+    std::shared_ptr<PointLightComponent> titleRoomLightComponent1;
+
 };

@@ -117,10 +117,11 @@ void TitleScene::Start()
     cinemaCameraActor->SetUseDebugMode(false);
 
     // タイトルの画像を作成
-    std::shared_ptr<UIImageComponent> title = std::make_shared<UIImageComponent>("./Data/Textures/UI/title.png", "title");
-    title->SetWorldPosition({ 680, 270 });
-    title->SetScale({ 1.2f,1.2f });
-    title->SetSize({ 1000, 200 });
+    std::shared_ptr<UIImageComponent> title = std::make_shared<UIImageComponent>("./Data/Textures/UI/title_logo1.png", "title");
+    title->SetWorldPosition({ 790, 120 });
+    //title->SetWorldPosition({ 835, 180 });
+    title->SetScale({ 0.8f,0.8f });
+    title->SetSize({ 1300, 700 });
     uiManager->Add(title);
 
     // Press A　の画像を作成
@@ -187,6 +188,7 @@ void TitleScene::SetUpActors()
     }
     mainCameraComponent->SetPitch(-20.0f);
     mainCameraComponent->distance = 5.35f;
+    mainCameraActor->tpsController.useRaycast = false;
     SetActiveCamera(mainCameraActor);
     Logger::Log(U8("sampleシーンのカメラ設定される。"));
 

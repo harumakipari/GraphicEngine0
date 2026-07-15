@@ -56,6 +56,8 @@ std::unordered_map<std::string, const char*> lightDisplayNames =
     {"CandleStand", U8("蝋燭スタンド")},
     {"TorchLight", U8("ボスの部屋のたいまつ")},
     {"WallLight", U8("ボスの部屋の壁のライト")},
+    {"LanternLight", U8("ランタンのライト")},
+    {"TitleRoomLight", U8("タイトル部屋のライト")},
 };
 
 void LightManager::Initialize(ID3D11Device* device)
@@ -150,6 +152,22 @@ void LightManager::InitializeDefaultLights(std::unordered_map<std::string, Share
     // 溶けた蝋の共有ライト
     {
         sharedLights["MeltedWaxLight"] =
+            SharedLightParam{ DirectX::XMFLOAT4(1.0f, 0.630757093f, 0.219526187f, 7.28f),
+        7.5f
+        };
+    }
+
+    // ランタンの共有ライト
+    {
+        sharedLights["LanternLight"] =
+            SharedLightParam{ DirectX::XMFLOAT4(1.0f, 0.630757093f, 0.219526187f, 7.28f),
+        7.5f
+        };
+    }
+
+    // タイトルの部屋の共有ライト
+    {
+        sharedLights["TitleRoomLight"] =
             SharedLightParam{ DirectX::XMFLOAT4(1.0f, 0.630757093f, 0.219526187f, 7.28f),
         7.5f
         };
