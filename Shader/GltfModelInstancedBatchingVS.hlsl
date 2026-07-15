@@ -20,7 +20,7 @@ INSTANCE_VS_OUT main(INSTANCE_VS_IN vsIn)
     vsOut.wTangent.w = sigma;
 
     vsOut.instanceColor = vsIn.instanceColor;
-    vsOut.instanceEmissive = vsIn.instanceEmissive;
+    vsOut.instancePlusParameter = vsIn.instancePlusParameter;
     
     vsOut.texcoord = vsIn.texcoord;
 

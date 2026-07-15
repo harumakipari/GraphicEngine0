@@ -15,7 +15,7 @@ GBUFFER_PS_OUT main(INSTANCE_VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     GBUFFER_PS_OUT pout;
 
     // インスタンス時は定数バッファを個別に送れていないので、
-    int instanceObjectType = pin.instanceEmissive.y;
+    int instanceObjectType = pin.instancePlusParameter.y;
 
     const float GAMMA = 2.2;
 
@@ -96,6 +96,7 @@ GBUFFER_PS_OUT main(INSTANCE_VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         N = normalize((normalFactor.x * T) + (normalFactor.y * B) + (normalFactor.z * N));
     }
 
+    instanceObjectType = OBJECT_FURNITURE;  // ここで家具にする
     pout.gBuffer3Normal = float4(N.xyz, instanceObjectType); // world space
 
     float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);

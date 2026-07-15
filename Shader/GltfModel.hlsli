@@ -38,7 +38,7 @@ struct INSTANCE_VS_IN
     row_major float4x4 instance_matrix : INSTANCE_MATRIX;
 
     float4 instanceColor : INSTANCE_COLOR;
-    float4 instanceEmissive : INSTANCE_EMISSIVE;
+    float4 instancePlusParameter : INSTANCE_PLUSPARAMETER;
 };
 
 struct VS_OUT
@@ -61,7 +61,7 @@ struct INSTANCE_VS_OUT
     float4 wTangent : TANGENT;
     float2 texcoord : TEXCOORD;
     float4 instanceColor : INSTANCE_COLOR;
-    float4 instanceEmissive : INSTANCE_EMISSIVE;
+    float4 instancePlusParameter : INSTANCE_PLUSPARAMETER;
 
     float4 currentClipPosition : CURRENT_POSITION;
     float4 previousClipPosition : PREVIOUS_POSITION;
