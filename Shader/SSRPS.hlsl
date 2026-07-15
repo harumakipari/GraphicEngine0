@@ -1,7 +1,6 @@
 #include "Sampler.hlsli"
 #include "FullScreenQuad.hlsli"
 #include "Constants.hlsli"
-#include "ModelType.hlsli"
 
 Texture2D positionTexture : register(t0); // ワールド空間
 Texture2D normalTexture : register(t1); // ワールド空間 w成分はSSRを使うかどうか 0:使わない 1:使う

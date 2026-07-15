@@ -9,9 +9,14 @@ void IceFragmentEmitterActor::Initialize(const Transform& transform)
     for (int i = 0; i < 15; i++)
     {
         Fragment fragment;
-        fragment.meshComponent = AddComponent<SkeletalMeshComponent>("Fragment_" + std::to_string(i), parentName);
+        fragment.meshComponent = AddComponent<InstanceMeshComponent>("Fragment_" + std::to_string(i), parentName);
         fragment.meshComponent->SetModel("./Data/Models/ParticleMesh/Fragment/SM_Aurora_Fragment.gltf");
         fragment.meshComponent->SetIsVisible(false);
+        fragment.meshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0,0,1 };
+        PipeLineStateDesc pipeLineState;
+        HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/InstanceModelIceEffectPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
+        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+        fragment.meshComponent->SetPipeLineState(pipeLineState);
         fragments.push_back(fragment);
     }
 }

@@ -8,7 +8,7 @@ class IceFragmentEmitterActor :public Actor
 private:
     struct Fragment
     {
-        std::shared_ptr<SkeletalMeshComponent> meshComponent;
+        std::shared_ptr<InstanceMeshComponent> meshComponent;
 
         DirectX::XMFLOAT3 position;
         DirectX::XMFLOAT3 velocity;

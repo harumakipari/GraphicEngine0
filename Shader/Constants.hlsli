@@ -110,6 +110,7 @@ cbuffer VOLUMETRIC_CLOUDSCAPES_CONSTANT_BUFFER : register(b5)
     bool autoRayMarchingSteps;
 }
 #include "ViewConstants.hlsli"
+#include "ModelType.hlsli"
 
 
 #endif

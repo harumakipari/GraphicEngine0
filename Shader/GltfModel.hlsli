@@ -117,9 +117,9 @@ cbuffer PLUS_ALPHA_CONSTANT_BUFFER : register(b5)
 
 }
 
-
 #include "Constants.hlsli"
 #include "ViewConstants.hlsli"
+#include "ModelType.hlsli"
 
 struct TextureInfo
 {

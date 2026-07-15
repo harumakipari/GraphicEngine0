@@ -1,7 +1,6 @@
 #include "GltfModel.hlsli"
 #include "Sampler.hlsli"
 #include "FilterFunctions.hlsli"
-#include "ModelType.hlsli"
 
 
 #define BASE_COLOR_TEXTURE 0 

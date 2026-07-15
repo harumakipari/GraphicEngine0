@@ -1,5 +1,4 @@
 #include "GltfModel.hlsli"
-#include "ModelType.hlsli"
 
 GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 {

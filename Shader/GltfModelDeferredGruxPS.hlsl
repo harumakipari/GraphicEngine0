@@ -1,7 +1,6 @@
 #include "GltfModel.hlsli"
 #include "Sampler.hlsli"
 #include "Common.hlsli"
-#include "ModelType.hlsli"
 
 #define BASE_COLOR_TEXTURE 0 
 #define METALLIC_ROUGHNESS_TEXTURE 1 

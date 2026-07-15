@@ -140,7 +140,7 @@
             "value": 1.0
         },
         {
-            "endTime": 0.5830000042915344,
+            "endTime": 0.5811458230018616,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -157,7 +157,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.4000000059604645,
+            "startTime": 0.47908371686935425,
             "type": "TransitionWindow",
             "value": 1.0
         }

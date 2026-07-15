@@ -3,7 +3,6 @@
 #include "Sampler.hlsli"
 #include "FilterFunctions.hlsli"
 #include "Lights.hlsli"
-#include "ModelType.hlsli"
 #include "ShaderFunctions.hlsli"
 #include "ViewConstants.hlsli"
 
