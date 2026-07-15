@@ -441,6 +441,68 @@ namespace MathHelper
         return DirectX::XMLoadFloat3(&v);
     }
 
+    inline DirectX::XMFLOAT3 DirectionToEuler(
+        const DirectX::XMFLOAT3& dir)
+    {
+        DirectX::XMFLOAT3 d = Normalize(dir);
+
+        float yaw = atan2f(d.x, d.z);
+
+        float pitch =
+            -atan2f(
+                d.y,
+                sqrtf(d.x * d.x + d.z * d.z));
+
+        return
+        {
+            DirectX::XMConvertToDegrees(pitch),
+            DirectX::XMConvertToDegrees(yaw),
+            0.0f
+        };
+    }
+
+    inline DirectX::XMFLOAT4 LookRotation(
+        const DirectX::XMFLOAT3& forward,
+        const DirectX::XMFLOAT3& worldUp)
+    {
+        using namespace DirectX;
+
+        XMVECTOR f = XMVector3Normalize(XMLoadFloat3(&forward));
+
+        // forward Ç™ worldUp Ç∆ïΩçsÇæÇ∆äOêœÇ™0Ç…Ç»ÇÈÇÃÇ≈âÒî
+        XMVECTOR up = XMLoadFloat3(&worldUp);
+
+        float dot = XMVectorGetX(XMVector3Dot(f, up));
+
+        if (fabs(dot) > 0.999f)
+        {
+            XMFLOAT3 tmp = { 1.0f,0.0f,0.0f };
+            up = XMLoadFloat3(&tmp);
+        }
+
+        XMVECTOR r = XMVector3Normalize(
+            XMVector3Cross(up, f));
+
+        XMVECTOR u =
+            XMVector3Cross(f, r);
+
+        XMMATRIX rot;
+
+        // çsóÒÇçÏÇÈ
+        rot.r[0] = r;
+        rot.r[1] = u;
+        rot.r[2] = f;
+        rot.r[3] = XMVectorSet(0, 0, 0, 1);
+
+        XMVECTOR q =
+            XMQuaternionRotationMatrix(rot);
+
+        XMFLOAT4 result;
+        XMStoreFloat4(&result, q);
+
+        return result;
+    }
+
     inline DirectX::XMFLOAT3 StoreFloat3(DirectX::XMVECTOR v)
     {
         DirectX::XMFLOAT3 out;

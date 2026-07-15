@@ -3,10 +3,25 @@
 #include "Core/Actor.h"
 #include "Components/Render/PointLightComponent.h"
 
-class IceFragmentEffectActor :public Actor
+class IceFragmentEmitterActor :public Actor
 {
+private:
+    struct Fragment
+    {
+        std::shared_ptr<SkeletalMeshComponent> meshComponent;
+
+        DirectX::XMFLOAT3 position;
+        DirectX::XMFLOAT3 velocity;
+
+        DirectX::XMFLOAT3 rotation;
+        DirectX::XMFLOAT3 rotationSpeed;
+
+        float scale;
+        float life;
+    };
+
 public:
-    explicit IceFragmentEffectActor(const std::string& actorName) :Actor(actorName) {}
+    explicit IceFragmentEmitterActor(const std::string& actorName) :Actor(actorName) {}
 
     void Initialize(const Transform& transform)override;
 
@@ -15,12 +30,21 @@ public:
     void DrawImGuiDetails() override;
 
     // îÚÇ‘ï˚å¸ÇåàíËÇ∑ÇÈ
-    void SetDirection(DirectX::XMFLOAT3 hitNormal);
+    void SetDirection(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal);
 
 private:
     std::string parentName = "RootComponent";
 
-    std::shared_ptr<SkeletalMeshComponent> meshComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
 
+    std::vector<Fragment> fragments;
+
+
+    // í≤êÆíl
+    float spreadAngle = 20.0f;      // çLÇ™ÇËäpìx
+    float speedMin = 5.0f;
+    float speedMax = 12.0f;
+    float gravity = 18.0f;
+    float lifeTime = 0.7f;
+    int fragmentCount = 15;
 };

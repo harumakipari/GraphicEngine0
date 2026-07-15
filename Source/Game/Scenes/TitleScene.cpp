@@ -131,9 +131,9 @@ void TitleScene::Start()
     keyboardButton = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/UI/press_enter.png");
 
     pressButtonUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/press_a.png", "press_a");
-    pressButtonUiComponent->SetWorldPosition({ 1160, 900 });
+    pressButtonUiComponent->SetWorldPosition({ 1450, 960 });
     pressButtonUiComponent->SetSize({ 500, 100 });
-    pressButtonUiComponent->SetScale({ 1.2f,1.2f });
+    pressButtonUiComponent->SetScale({ 0.8f,0.8f });
     uiManager->Add(pressButtonUiComponent);
 
     // ƒV[ƒ“‚ªØ‚è‘Ö‚í‚Á‚½‚É

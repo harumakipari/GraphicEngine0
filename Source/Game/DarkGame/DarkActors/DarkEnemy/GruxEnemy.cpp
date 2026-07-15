@@ -529,8 +529,8 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
     if (auto actorManager = GetOwnerScene()->GetActorManager())
     {
         Transform tr{ hitPos,{0.0f,0.0f,0.0f},{1.0f,1.0f,1.0f} };
-        auto iceEffect = actorManager->CreateAndRegisterActorWithTransform<IceFragmentEffectActor>("iceFragment", tr);
-        iceEffect->SetDirection(hitNormal);
+        auto iceEffect = actorManager->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("iceFragment", tr);
+        iceEffect->SetDirection(hitPos,hitNormal);
     }
 }
 

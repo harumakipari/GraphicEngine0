@@ -147,7 +147,7 @@ void LoadingScene::Start()
     SetUpActors();
 
     // ロード画面に出すタイトルテクスチャ
-    imageUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/title.png", "title");
+    imageUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/title_logo.png", "title");
     imageUiComponent->SetWorldPosition({ 680, 270 });
     imageUiComponent->SetScale({ 1.2f,1.2f });
     imageUiComponent->SetSize({ 1000, 200 });
