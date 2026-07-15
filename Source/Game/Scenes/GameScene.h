@@ -9,6 +9,7 @@
 #include "Core/ActorManager.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/BgmActor.h"
+#include "Game/Actors/Camera/DarkGameCamera.h"
 
 
 #include "Graphics/Renderer/SceneRenderer.h"
@@ -116,6 +117,8 @@ private:
     // カメラ
     TPSCameraComponent* mainCameraComponent = nullptr;
     std::shared_ptr<MainCamera> mainCameraActor;
+
+    std::shared_ptr<DarkCameraActor> darkCameraActor;
 
     // ボスの部屋のラープのための変数
     std::unique_ptr<EasingRunner> bossLerpEasing;

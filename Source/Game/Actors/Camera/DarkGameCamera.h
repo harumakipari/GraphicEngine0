@@ -15,6 +15,7 @@ public:
     {
         DirectX::XMFLOAT3 eye;
         DirectX::XMFLOAT3 target;
+        DirectX::XMFLOAT3 forward;
         float yaw;
         float pitch;
     };
@@ -54,12 +55,41 @@ public:
 
     void DrawImGuiDetails() override;
 
+    DirectX::XMFLOAT3 CameraForwardXZ() const
+    {
+        auto forward = mainCameraComponent->GetForward();
+        forward.y = 0.0f;
+        return MathHelper::Normalize(forward);
+    }
+
+    DirectX::XMFLOAT3 CameraRightXZ() const
+    {
+        auto right = mainCameraComponent->GetRight();
+        right.y = 0.0f;
+        return MathHelper::Normalize(right);
+    }
+
+    // カメラモードを取得する
+    CameraMode GetCameraMode()const { return currentMode; }
+
+    // カメラモードをセットする
+    void SetCameraMode(CameraMode mode) { requestMode = mode; }
+
+    // ブレンドを開始する
+    void StartBlend(CameraMode current, CameraMode request);
+
 private:
+    // ブレンド状態を更新する
+    void UpdateBlend(float deltaTime);
+
+    // フォーカスカメラと同期する
+    void SyncFocusCamera();
+
     // 目標の方向を更新する関数
-    void UpdateDesireRotation();
+    void UpdateDesireRotation(float deltaTime);
 
     // 実際の方向を更新する関数
-    void UpdateRotation();
+    void UpdateRotation(float deltaTime);
 
     // Eyeを計算する関数
     void CalculatePose();
@@ -76,7 +106,9 @@ private:
 
     std::shared_ptr<InputComponent> inputComponent;
 
-    CameraMode cameraMode = CameraMode::TPS;
+    CameraMode currentMode = CameraMode::TPS;// 実際の計算用
+    CameraMode requestMode = CameraMode::TPS; // 外部から変更される目標
+
 
     CameraPose currentPose;
 
@@ -86,11 +118,22 @@ private:
     float currentPitch = 0.0f;
     float desiredPitch = 0.0f;
 
+    // ブレンド用のPoseを作成する
+    CameraPose blendStartPose;
+    CameraPose blendTargetPose;
+
+    float blendTime = 0.0f;
+    float blendDuration = 0.25f;
+
+    bool isBlending = false;
 
     // 調整値
     float rotateSpeed = 2.0f;
-    float minPitchDegree = -26.5f; // pitchの最小角度
-    float maxPitchDegree = 22.5f;  // pitchの最大角度
+    float minPitchDegree = -50.0f; // pitchの最小角度
+    float maxPitchDegree = 40.0f;  // pitchの最大角度
+    float cameraDistance = 5.0f;
+    float cameraHeight = 2.0f;
+    float focusDistance = 0.0f;
 
     // フォーカス時の
     // float focus

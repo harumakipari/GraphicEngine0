@@ -11,6 +11,7 @@
 #include "Engine/Camera/MovieCameraManagerActor.h"
 #include "Engine/Debug/SceneEditor.h"
 #include "Engine/Utility/Time.h"
+#include "Game/Actors/Camera/DarkGameCamera.h"
 
 #include "Game/Actors/Enemy/Boss/BossEnemy.h"
 #include "Game/Actors/Player/Player.h"
@@ -260,6 +261,7 @@ void GameScene::SetUpActors()
     SetActiveCamera(mainCameraActor);
     Logger::Log(U8("sampleシーンのカメラ設定される。"));
 
+
     Transform debugCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto debugCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DebugCamera>("debugCam", debugCameraTr);
     cameraManager->SetDebugCamera(debugCameraActor);
@@ -304,6 +306,20 @@ void GameScene::SetUpActors()
 
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
     gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
+
+
+    Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    darkCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkCameraActor>("darkCameraActor", darkCameraTr);
+    SetActiveCamera(darkCameraActor);
+    float fovY = DirectX::XMConvertToRadians(35.0f);
+    float aspect = 1280.f / 720.f;
+    float nearZ = 0.1f;
+    float farZ = 1000.f;
+    darkCameraActor->SetPerspective(fovY, aspect, nearZ, farZ);
+    darkCameraActor->InitSetYawAndPitch(DirectX::XMConvertToRadians(-20.0f), DirectX::XMConvertToRadians(0.0f));
+    darkCameraActor->SetPlayerHead(player->GetCameraTargetComponent());
+    darkCameraActor->SetEnemyHead(gruxEnemyActor->GetCameraTargetComponent());
+
 
 #if 0
     Transform dustParticleTr(DirectX::XMFLOAT3{ -27.0f,0.0f,11.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
