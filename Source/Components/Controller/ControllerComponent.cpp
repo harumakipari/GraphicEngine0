@@ -32,8 +32,8 @@ void CharacterMovementComponent::Tick(float deltaTime)
         wishDir.z /= len;
     }
 
-    velocity_.x = wishDir.x * speed_;
-    velocity_.z = wishDir.z * speed_;
+    velocity_.x = wishDir.x * speed_ * inputMagnitude;
+    velocity_.z = wishDir.z * speed_ * inputMagnitude;
 
     // ŠO—Í‚ð‰ÁŽZ
     velocity_.x += externalVelocity_.x;
@@ -169,7 +169,7 @@ void CharacterMovementComponent::Tick(float deltaTime)
 
         HitResult wallHit;
         uint32_t mask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) | CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast)
-        | CollisionHelper::ToBit(CollisionLayer::WorldProps);
+            | CollisionHelper::ToBit(CollisionLayer::WorldProps);
 
         if (Physics::Instance().RayCast(
             { pos.x, pos.y + 1.0f, pos.z },

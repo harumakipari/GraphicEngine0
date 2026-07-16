@@ -78,6 +78,9 @@ public:
 
     void SetUseGravity(const bool useGravity) { this->useGravity = useGravity; }
 
+    // スティックの入力の強さを設定する
+    void SetInputMagnitude(const float power) { this->inputMagnitude = power; }
+
     // 速度を取得する
     DirectX::XMFLOAT3 GetVelocity() const
     {
@@ -168,6 +171,9 @@ private:
     float moveToTargetTime_ = 0.0f;
     float moveToTargetTimer_ = 0.0f;
     float stopDistance_ = 1.5f;
+
+    // スティックの強さ　
+    float inputMagnitude = 0.0f;
 };
 
 
@@ -182,6 +188,15 @@ public:
     void Tick(float deltaTime)override;
 
     void SetRotateTime(float t) { this->rotateTime_ = t; }
+
+    void DrawImGuiInspector() override
+    {
+#ifdef USE_IMGUI
+        SceneComponent::DrawImGuiInspector();
+        ImGui::DragFloat(U8("回転時間"), &rotateTime_, 0.05f, 0.0f, 10.0f);
+
+#endif
+    }
 private:
     // t: 補間率（0.0?1.0）
     DirectX::XMFLOAT4 SlerpQuaternion(const DirectX::XMFLOAT4& current, const DirectX::XMFLOAT4& target, float t)
@@ -212,7 +227,6 @@ private:
     DirectX::XMFLOAT4 startRotation_ = { 0.0f,0.0f,0.0f,1.0f };
     float lerpTime_ = 0.0f;
     float rotateTime_ = 0.3f;    // 3秒で rotation する
-    float rotateSpeed_ = 10.0f; // ( degree / second )
 };
 
 

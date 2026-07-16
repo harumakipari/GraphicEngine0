@@ -227,6 +227,7 @@ void Player::Initialize(const Transform& transform)
 
         // 回転用コンポーネントを追加
         rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
+        rotationComponent->SetRotateTime(0.1f);
     }
 
     int weaponSocketNode = skeletalMeshComponent->FindIndexByName("weapon");
@@ -611,16 +612,39 @@ void Player::Update(float deltaTime)
 #if 1
     auto intent = inputComponent->GetIntent();
     DirectX::XMFLOAT3 moveDir = { 0,0,0 };
-
-
     bool focus = InputSystem::GetInputState("LockOn", InputStateMask::Press);
 
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
     {
         // カメラモードに応じたプレイヤー移動処理
         // 左スティック入力
-        float stickX = intent.leftMove.x;
-        float stickZ = intent.leftMove.z;
+        float rawStickX = intent.leftMove.x;
+        float rawStickZ = intent.leftMove.z;
+        // Rotation用
+        float stickX = rawStickX;
+        float stickZ = rawStickZ;
+        // Movement用
+        float moveStickX = rawStickX;
+        float moveStickZ = rawStickZ;
+        float length = sqrtf(moveStickX * moveStickX + moveStickZ * moveStickZ);
+        const float deadZone = 0.15f;
+        if (length < deadZone)
+        {
+            moveStickX = 0.0f;
+            moveStickZ = 0.0f;
+        }
+        else
+        {
+            float newLength = (length - deadZone) / (1.0f - deadZone);
+            // 好みでコメントアウトを切り替え
+             //newLength *= newLength;      // より繊細な入力
+            // newLength = sqrtf(newLength); // 少し倒しただけで速い
+            moveStickX = moveStickX / length * newLength;
+            moveStickZ = moveStickZ / length * newLength;
+
+            characterMovementComponent->SetInputMagnitude(newLength);
+        }
+
         switch (camera->GetCameraMode())
         {
         case DarkCameraActor::CameraMode::TPS:
@@ -629,9 +653,14 @@ void Player::Update(float deltaTime)
             auto camRight = camera->CameraRightXZ();
 
             // カメラ基準の移動方向
-            moveDir.x = camForward.x * stickZ + camRight.x * stickX;
-            moveDir.z = camForward.z * stickZ + camRight.z * stickX;
-            rotationComponent->SetDirection(moveDir);
+            moveDir.x = camForward.x * moveStickZ + camRight.x * moveStickX;
+            moveDir.z = camForward.z * moveStickZ + camRight.z * moveStickX;
+
+            // 回転はすぐに向きを変えてほしいため
+            DirectX::XMFLOAT3 lookDir = {0,0,0};
+            lookDir.x = camForward.x * rawStickZ + camRight.x * rawStickX;
+            lookDir.z = camForward.z * rawStickZ + camRight.z * rawStickX;
+            rotationComponent->SetDirection(lookDir);
         }
         break;
         case DarkCameraActor::CameraMode::Focus:
@@ -639,9 +668,9 @@ void Player::Update(float deltaTime)
             DirectX::XMFLOAT3 forward = focusDirection;
             DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
             DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
-            moveDir.x = forward.x * stickZ + right.x * stickX;
-            moveDir.z = forward.z * stickZ + right.z * stickX;
-            GetBodyAnimationController()->SetBlendInput(stickX, stickZ);
+            moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
+            moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
+            GetBodyAnimationController()->SetBlendInput(moveStickX, moveStickZ);
             break;
         case DarkCameraActor::CameraMode::LockOn:
             break;
