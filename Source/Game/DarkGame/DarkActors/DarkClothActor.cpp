@@ -14,6 +14,8 @@ void DarkClothActor::Initialize(const Transform& transform)
 
     // 布の位置コンポーネントを追加する
     clothPoint = AddComponent<SceneComponent>("clothPoint", parentName);
+    clothPoint->SetRelativeLocationDirect({ 0.0f,-1.8f,0.0f });
+    clothPoint->SetRelativeEulerRotationDirect({ 90.0f,0.0f,0.0f });
 }
 
 void DarkClothActor::Update(float deltaTime)
@@ -29,7 +31,7 @@ void DarkClothActor::DrawImGuiDetails()
 #ifdef USE_IMGUI
     if (clothSimulate)
     {
-        //clothSimulate->
+        clothSimulate->DrawImGui();
     }
 #endif
 }

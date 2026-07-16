@@ -11,7 +11,6 @@ PlayerStateBase::PlayerStateBase(Player* actor) :State(actor), player(actor)
 
 void PlayerIdleState::Enter()
 {
-    owner->GetBodyAnimationController()->SetUseBlendSpace(false);
     Logger::Log("Idle Enter");
     owner->PlayBodyAnimation("Idle",true,true,0.2f);
 }
@@ -22,11 +21,9 @@ void PlayerIdleState::Execute(float deltaTime)
     {
         return;
     }
-
     // 入力があれば走るステートに変更
     auto inputComp = player->inputComponent;
     DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
-
     if (std::abs(dir.x - 0.0f) <= FLT_EPSILON && std::abs(dir.y - 0.0f) <= FLT_EPSILON && std::abs(dir.z - 0.0f) <= FLT_EPSILON)
     {
         return;
@@ -71,6 +68,9 @@ void PlayerRunningState::Exit()
     // 走りSEをストップ
     if (player->runAudioComp)
         player->runAudioComp->Stop();
+    // ブレンドスペースを使うのをやめる
+    owner->GetBodyAnimationController()->SetUseBlendSpace(false);
+
 }
 
 void PlayerAttackState::Enter()

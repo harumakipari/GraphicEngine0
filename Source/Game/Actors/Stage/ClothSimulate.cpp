@@ -488,8 +488,13 @@ void ClothSimulate::FetchTextures(ID3D11Device* device, const tinygltf::Model& g
 
 void ClothSimulate::Update(float deltaTine)
 {
-    int currentPinMode = 0;
 
+    DebugRender::DrawSphere(cbuffer->data.windEmitPosition, 0.5f, { 1.0f,1.0f,0.0f,1.0f });
+
+}
+
+void ClothSimulate::DrawImGui()
+{
 #ifdef USE_IMGUI
     std::string windowName =
         "Cloth##" + std::to_string(reinterpret_cast<uintptr_t>(this));
@@ -516,18 +521,11 @@ void ClothSimulate::Update(float deltaTine)
         SetupPinVertices(3);
         RecreateClothBuffers(Graphics::GetDevice());
     }
-
-#if 0
     ImGui::DragFloat("windVariation", &windPhaseOffset, 0.5f);
     ImGui::DragFloat("windBase", &windBase, 0.5f);
-
     ImGui::DragFloat3("windEmitPosition", &windEmitPosition.x, 0.5f);
-
-#endif // 0
-
     ImGui::End();
 #endif
-  //  DebugDrawManager::DrawSphere(cbuffer->data.windEmitPosition, 0.5f, { 1.0f,1.0f,0.0f,1.0f });
 
 }
 

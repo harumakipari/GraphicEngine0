@@ -202,6 +202,11 @@ public:
             // ルートモーションを切る
             enableRootMotion = false;
             locomotionTime = 0.0f;
+            // ブレンドスペースに入る時に補間処理をするため
+            blendSpaceTransition = true;
+            blendSpaceElapsed = 0.0f;
+            animationNodes[Origin] = finalNodes;
+
             Logger::Log("Enable BlendSpace");
         }
         else
@@ -214,7 +219,7 @@ public:
 
 private:
     // ブレンドスペースを更新する
-    void UpdateBlendSpace();
+    void UpdateBlendSpace(float deltaTime);
 
     // 入力方向から２つのアニメーションクリップとブレンドの重さを決定する関数
     BlendPair CalculateBlendPair(const DirectX::XMFLOAT2& input);
@@ -267,7 +272,12 @@ private:
     // 描画に使用するノード
     std::vector<InterleavedGltfModel::Node> finalNodes;
 
+    // BlendSpaceの完成結果
+    std::vector<InterleavedGltfModel::Node> blendSpaceNodes;
 
+    std::vector<InterleavedGltfModel::Node> blendSpaceClipA;
+    std::vector<InterleavedGltfModel::Node> blendSpaceClipB;
+             
     enum class AnimationTransitionState :uint8_t
     {
         NotStarted,
@@ -356,7 +366,11 @@ private:
     DirectX::XMFLOAT2 blendInput = {};
     bool useBlendSpace = false;
     float locomotionTime = 0.0f;
-
+    float locomotionPlayRate = 1.0f;
+    // ブレンドスペースに入る時の補完処理
+    bool blendSpaceTransition = false;
+    float blendSpaceTransitionTime = 0.2f;
+    float blendSpaceElapsed = 0.0f;
 
     friend class Player;
 };

@@ -18,6 +18,11 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
     animationNodes[AnimNode::Origin] = target_->model->GetNodes();
     animationNodes[AnimNode::Next] = target_->model->GetNodes();
 
+    // BlendSpaceの完成結果に使用するノード
+    blendSpaceNodes = target_->model->GetNodes();
+    blendSpaceClipA = target_->model->GetNodes();
+    blendSpaceClipB = target_->model->GetNodes();
+
     // 描画に使用するノード
     finalNodes = target_->model->GetNodes();
 
@@ -44,7 +49,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 
     float playRate = animationRate * asset.playRate * curveRate;
     animationTime += deltaTime * playRate;
-    locomotionTime += deltaTime * playRate; // ブレンドスペースのためのタイム
+    locomotionTime += deltaTime; // ブレンドスペースのためのタイム   
 
     if (target_->model->animations.size() == 0)
     {// アニメーションがないモデルの場合
@@ -127,7 +132,7 @@ void AnimationController::OnUpdate(const float deltaTime)
     case AnimationTransitionState::Completed:
         if (useBlendSpace)
         {
-            UpdateBlendSpace();
+            UpdateBlendSpace(deltaTime);
         }
         else
         {
@@ -1172,7 +1177,7 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
 }
 
 // ブレンドスペースを更新する
-void AnimationController::UpdateBlendSpace()
+void AnimationController::UpdateBlendSpace(float deltaTime)
 {
     Logger::Log("BlendSpace Update");
     BlendPair pair = CalculateBlendPair(blendInput);
@@ -1187,9 +1192,35 @@ void AnimationController::UpdateBlendSpace()
     float timeA = normalizedTime * durationA;
     float timeB = normalizedTime * durationB;
 
-    target_->model->Animate(clipA, timeA, animationNodes[Origin]);
-    target_->model->Animate(clipB, timeB, animationNodes[Next]);
-    target_->model->BlendAnimations(animationNodes[Origin], animationNodes[Next], weight, finalNodes);
+    target_->model->Animate(clipA, timeA, blendSpaceClipA);
+    target_->model->Animate(clipB, timeB, blendSpaceClipB);
+    target_->model->BlendAnimations(blendSpaceClipA, blendSpaceClipB, weight, blendSpaceNodes);
+
+    // BlendSpaceへの遷移
+    if (blendSpaceTransition)
+    {
+        blendSpaceElapsed += deltaTime;
+
+        float t = std::clamp(
+            blendSpaceElapsed / blendSpaceTransitionTime,
+            0.0f,
+            1.0f);
+
+        target_->model->BlendAnimations(
+            animationNodes[Origin],
+            blendSpaceNodes,
+            t,
+            finalNodes);
+
+        if (t >= 1.0f)
+        {
+            blendSpaceTransition = false;
+        }
+    }
+    else
+    {
+        finalNodes = blendSpaceNodes;
+    }
 
     // ループ
     if (locomotionTime >= durationA)

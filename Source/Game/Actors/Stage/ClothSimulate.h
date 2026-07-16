@@ -129,6 +129,7 @@ public:
     float windBase = 6.0f;
     DirectX::XMFLOAT3 windEmitPosition = {};
 
+    void DrawImGui();
 
 private:
     std::vector<Node> nodes;
