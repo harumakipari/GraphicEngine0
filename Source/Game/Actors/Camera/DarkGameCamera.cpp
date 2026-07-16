@@ -13,22 +13,34 @@ void DarkCameraActor::Initialize(const Transform& transform)
 
 void DarkCameraActor::Update(float deltaTime)
 {
-    if (currentMode != requestMode)
+    // プレイヤーの位置を取得
+    auto playerHeadShared = playerHead.lock();
+    if (!playerHeadShared)
     {
-        StartBlend(currentMode, requestMode);
+        return;
     }
+    DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
+
 
     if (!isBlending)
     {
-        UpdateDesireRotation(deltaTime);
-        UpdateRotation(deltaTime);
-        CalculatePose();
+        if (requestMode != currentMode)
+        {
+            StartBlend(currentMode, requestMode);
+        }
+        else
+        {
+            UpdateDesireRotation(deltaTime);
+            UpdateRotation(deltaTime);
+            currentPose = CalculatePose(currentMode, playerPos, currentYaw, currentPitch);
+        }
+    }
+    else
+    {
+        UpdateBlend(deltaTime);
     }
 
-    UpdateBlend(deltaTime);
-
     SetPosition(currentPose.eye);
-
     mainCameraComponent->lookTarget = currentPose.target;
     mainCameraComponent->useLookTarget = true;
 }
@@ -36,24 +48,44 @@ void DarkCameraActor::Update(float deltaTime)
 // ブレンドを開始する
 void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
 {
-    // 現在のカメラ状態を保存
-    CalculatePose();
-    blendStartPose = currentPose;
-
-    // 一時的に新しいモードへ
-    CameraMode oldMode = currentMode;
-    currentMode = to;
-    if (currentMode == CameraMode::Focus)
-    {
-        SyncFocusCamera();
-    }
-
-    CalculatePose();
-
-    blendTargetPose = currentPose;
-
     blendTime = 0.0f;
     isBlending = true;
+
+    // プレイヤーの位置を取得
+    auto playerHeadShared = playerHead.lock();
+    if (!playerHeadShared)
+    {
+        return;
+    }
+    DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
+
+    // 現在のカメラ状態を保存
+    blendStartPose = CalculatePose(from, playerPos, currentYaw, currentPitch);
+    CameraPose oldPose = currentPose;
+    float targetYaw = currentYaw;
+    float targetPitch = currentPitch;
+    switch (to)
+    {
+    case CameraMode::TPS:
+        targetYaw = desiredYaw;
+        targetPitch = desiredPitch;
+        break;
+
+    case CameraMode::Focus:
+    {
+        FocusInfo info = CreateFocusInfo();
+
+        targetYaw = info.yaw;
+        targetPitch = info.pitch;
+        break;
+    }
+
+    case CameraMode::LockOn:
+
+        break;
+    }
+    blendTargetPose = CalculatePose(to, playerPos, targetYaw, targetPitch);
+    currentPose = oldPose;
 }
 
 // ブレンド状態を更新する
@@ -92,6 +124,39 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
     }
 }
 
+// フォーカスカメラの情報を作成する
+DarkCameraActor::FocusInfo DarkCameraActor::CreateFocusInfo()
+{
+    FocusInfo info = {};
+    auto playerHeadShared = playerHead.lock();
+
+    if (!playerHeadShared)
+    {
+        Logger::Warning("playerHeadShared is nullptr");
+        return{};
+    }
+
+    auto playerActor = playerHeadShared->GetOwner();
+
+    if (!playerActor)
+    {
+        Logger::Warning("playerActor is nullptr");
+        return{};
+    }
+
+    info.direction = playerActor->GetForward();
+
+    if (auto player = dynamic_cast<Player*>(playerActor))
+    {
+        player->SetFocusDirection(info.direction);
+    }
+
+    info.yaw = atan2f(info.direction.x, info.direction.z);
+    info.pitch = 0.0f;
+    return info;
+}
+
+#if 0
 // フォーカスカメラと同期する
 void DarkCameraActor::SyncFocusCamera()
 {
@@ -117,6 +182,8 @@ void DarkCameraActor::SyncFocusCamera()
     //desiredYaw = atan2f(forward.x, forward.z);
     //desiredPitch = 0.0f;
 }
+#endif // 0
+
 
 // 目標の方向を更新する関数
 void DarkCameraActor::UpdateDesireRotation(float deltaTime)
@@ -164,9 +231,9 @@ void DarkCameraActor::UpdateDesireRotation(float deltaTime)
         break;
     }
 
-    desiredPitch = std::clamp(desiredPitch,
-        DirectX::XMConvertToRadians(minPitchDegree),
-        DirectX::XMConvertToRadians(maxPitchDegree));
+    // 
+    desiredPitch = std::clamp(desiredPitch, DirectX::XMConvertToRadians(minPitchDegree), DirectX::XMConvertToRadians(maxPitchDegree));
+    desiredYaw = MathHelper::ClampAngle(desiredYaw);
 }
 
 // 実際の方向を更新する関数
@@ -174,11 +241,52 @@ void DarkCameraActor::UpdateRotation(float deltaTime)
 {
     currentYaw = desiredYaw;
     currentPitch = desiredPitch;
-    currentPitch = MathHelper::ClampAngle(currentPitch);
     mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
 }
 
-void DarkCameraActor::CalculatePose()
+DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const
+{
+    CameraPose pose{};
+    switch (cameraMode)
+    {
+    case CameraMode::TPS:
+    {
+        pose.target = playerPos;
+        break;
+    }
+    case CameraMode::Focus:
+    {
+        DirectX::XMFLOAT3 forward = { sinf(yaw),0.0f,cosf(yaw) };
+        pose.target = MathHelper::Add(playerPos, MathHelper::Multiply(forward, focusDistance));        break;
+    }
+    case CameraMode::LockOn:
+    {
+        // 後で作る
+        break;
+    }
+    }
+
+    // Eye の処理は共通
+    using namespace DirectX;
+
+    XMVECTOR forward = XMVectorSet(
+        sinf(yaw) * cosf(pitch),
+        sinf(pitch),
+        cosf(yaw) * cosf(pitch),
+        0.0f);
+    XMVECTOR target = XMLoadFloat3(&pose.target);
+    XMVECTOR eye = target - forward * cameraDistance;
+    eye += XMVectorSet(0, cameraHeight, 0, 0);
+
+    XMStoreFloat3(&pose.eye, eye);
+    //  yaw と pitch を保存
+    pose.yaw = yaw;
+    pose.pitch = pitch;
+    return pose;
+}
+
+#if 0
+void DarkCameraActor::CalculatePose(CameraMode cameraMode)
 {
     auto playerHeadShared = playerHead.lock();
     if (!playerHeadShared)
@@ -186,7 +294,7 @@ void DarkCameraActor::CalculatePose()
         return;
     }
     DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
-    switch (currentMode)
+    switch (cameraMode)
     {
     case CameraMode::TPS:
     {
@@ -226,6 +334,8 @@ void DarkCameraActor::CalculatePose()
     currentPose.yaw = currentYaw;
     currentPose.pitch = currentPitch;
 }
+#endif // 0
+
 
 
 void DarkCameraActor::DrawImGuiDetails()

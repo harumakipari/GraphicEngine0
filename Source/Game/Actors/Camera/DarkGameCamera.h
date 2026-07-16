@@ -15,10 +15,17 @@ public:
     {
         DirectX::XMFLOAT3 eye;
         DirectX::XMFLOAT3 target;
-        DirectX::XMFLOAT3 forward;
         float yaw;
         float pitch;
     };
+    // Z注目の情報
+    struct FocusInfo
+    {
+        DirectX::XMFLOAT3 direction;
+        float yaw;
+        float pitch;
+    };
+
 public:
     //引数付きコンストラクタ
     explicit DarkCameraActor(const std::string& actorName) :Camera(actorName)
@@ -82,8 +89,9 @@ private:
     // ブレンド状態を更新する
     void UpdateBlend(float deltaTime);
 
-    // フォーカスカメラと同期する
-    void SyncFocusCamera();
+    // フォーカスカメラの情報を作成する
+    FocusInfo CreateFocusInfo();
+    //void SyncFocusCamera();
 
     // 目標の方向を更新する関数
     void UpdateDesireRotation(float deltaTime);
@@ -92,7 +100,8 @@ private:
     void UpdateRotation(float deltaTime);
 
     // Eyeを計算する関数
-    void CalculatePose();
+    //void CalculatePose(CameraMode cameraMode);
+    CameraPose CalculatePose(CameraMode mode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const;
 
     // 当たり判定を考慮する関数
     void ResolveCollision();
