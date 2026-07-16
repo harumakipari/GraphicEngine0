@@ -10,6 +10,21 @@
 #include "Utility/SceneJsonUtils.h"
 #include "Game/Actors/Base/Character.h"
 
+AnimationController::AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex)
+{
+    owner = character;
+    target_ = target;
+    // アニメーションブレンドに使用するノード
+    animationNodes[AnimNode::Origin] = target_->model->GetNodes();
+    animationNodes[AnimNode::Next] = target_->model->GetNodes();
+
+    // 描画に使用するノード
+    finalNodes = target_->model->GetNodes();
+
+    this->rootNodeIndex = rootNodeIndex < 0 ? 0 : rootNodeIndex;
+}
+
+
 void AnimationController::OnUpdate(const float deltaTime)
 {
     prevAnimationTime = animationTime;
@@ -1159,18 +1174,17 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
 // ブレンドスペースを更新する
 void AnimationController::UpdateBlendSpace()
 {
-    auto& samples = locomotionBlendSpace.GetSamples();
-    if (samples.size() != 2)
-        return;
-    size_t clipA = samples[0].clip;
-    size_t clipB = samples[1].clip;
-    float weight = blendInput.x;
+    BlendPair pair = CalculateBlendPair(blendInput);
 
-    float durationA =target_->model->animations[clipA].duration;
-    float durationB =target_->model->animations[clipB].duration;
-    float normalizedTime =locomotionTime /durationA;
-    float timeA =normalizedTime * durationA;
-    float timeB =normalizedTime * durationB;
+    size_t clipA = pair.clipA;
+    size_t clipB = pair.clipB;
+    float weight = pair.weight;
+
+    float durationA = target_->model->animations[clipA].duration;
+    float durationB = target_->model->animations[clipB].duration;
+    float normalizedTime = locomotionTime / durationA;
+    float timeA = normalizedTime * durationA;
+    float timeB = normalizedTime * durationB;
 
     target_->model->Animate(clipA, timeA, animationNodes[Origin]);
     target_->model->Animate(clipB, timeB, animationNodes[Next]);
@@ -1181,6 +1195,94 @@ void AnimationController::UpdateBlendSpace()
     {
         locomotionTime = 0.0f;
     }
+}
+
+// 入力方向から２つのアニメーションクリップとブレンドの重さを決定する関数
+AnimationController::BlendPair AnimationController::CalculateBlendPair(const DirectX::XMFLOAT2& input)
+{
+    BlendPair result;
+    auto& samples = locomotionBlendSpace.GetSamples();
+    if (samples.size() < 4)
+        return result;
+    // 入力なし
+    if (input.x == 0.0f && input.y == 0.0f)
+    {
+        result.clipA = animationNameToIndex_["Idle"];
+        result.clipB = result.clipA;
+        result.weight = 0.0f;
+        return result;
+    }
+    // 前方向
+    if (input.y > 0.0f)
+    {
+        // 前右
+        if (input.x > 0.0f)
+        {
+            result.clipA = animationNameToIndex_["Jog_Fwd"];
+            result.clipB = animationNameToIndex_["Jog_Right"];
+            float total = input.x + input.y;
+            result.weight = input.x / total;
+        }
+        // 前左
+        else if (input.x < 0.0f)
+        {
+            result.clipA = animationNameToIndex_["Jog_Fwd"];
+            result.clipB = animationNameToIndex_["Jog_Left"];
+            float total = fabs(input.x) + input.y;
+            result.weight = fabs(input.x) / total;
+        }
+        // 前だけ
+        else
+        {
+            result.clipA = animationNameToIndex_["Jog_Fwd"];
+            result.clipB = result.clipA;
+            result.weight = 0.0f;
+        }
+    }
+    // 後方向
+    else if (input.y < 0.0f)
+    {
+        // 後右
+        if (input.x > 0.0f)
+        {
+            result.clipA = animationNameToIndex_["Jog_Bwd"];
+            result.clipB = animationNameToIndex_["Jog_Right"];
+            float total = input.x + fabs(input.y);
+            result.weight = input.x / total;
+        }
+        // 後左
+        else if (input.x < 0.0f)
+        {
+            result.clipA = animationNameToIndex_["Jog_Bwd"];
+            result.clipB = animationNameToIndex_["Jog_Left"];
+            float total = fabs(input.x) + fabs(input.y);
+            result.weight = fabs(input.x) / total;
+        }
+        // 後ろだけ
+        else
+        {
+            result.clipA = animationNameToIndex_["Jog_Bwd"];
+            result.clipB = result.clipA;
+            result.weight = 0.0f;
+        }
+    }
+    // 横移動だけ
+    else
+    {
+        if (input.x > 0)
+        {
+            result.clipA = animationNameToIndex_["Jog_Right"];
+            result.clipB = result.clipA;
+            result.weight = 0.0f;
+        }
+        else
+        {
+            result.clipA = animationNameToIndex_["Jog_Left"];
+            result.clipB = result.clipA;
+            result.weight = 0.0f;
+        }
+    }
+    return result;
 }
 
 // NotifyAssetを保存する

@@ -18,6 +18,7 @@
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Stage/ClothSimulate.h"
 #include "Game/Actors/Stage/Stage.h"
+#include "Game/DarkGame/DarkActors/DarkClothActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
 
 #include "UI/Widgets/Widget.h"
@@ -132,4 +133,7 @@ private:
     std::shared_ptr<BgmActor> gameBgmActor;
     // ボスBGMアクター
     std::shared_ptr<BgmActor> bossBgmActor;
+
+    // 布アクター
+    std::shared_ptr<DarkClothActor> darkClothActor;
 };

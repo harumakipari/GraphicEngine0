@@ -139,9 +139,9 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Jog_Right", 75);
 
         // ブレンドスペースに追加
-        //controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
+        controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
         controller->AddBlendAnimation("Jog_Bwd", 0.0f, -1.0f);
-        //controller->AddBlendAnimation("Jog_Left", -1.0f, 0.0f);
+        controller->AddBlendAnimation("Jog_Left", -1.0f, 0.0f);
         controller->AddBlendAnimation("Jog_Right", 1.0f, 0.0f);
 
         std::string name = GetName();

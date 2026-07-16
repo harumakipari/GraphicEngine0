@@ -25,18 +25,19 @@ public:
         DirectX::XMFLOAT2 position;
     };
 
-public:
-    AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex) :owner(character), target_(target)
+    struct BlendPair
     {
-        // アニメーションブレンドに使用するノード
-        animationNodes[AnimNode::Origin] = target_->model->GetNodes();
-        animationNodes[AnimNode::Next] = target_->model->GetNodes();
+        size_t clipA = 0;
+        size_t clipB = 0;
 
-        // 描画に使用するノード
-        finalNodes = target_->model->GetNodes();
+        // clipA → clipB の割合
+        // 0.0 : clipA 100%
+        // 1.0 : clipB 100%
+        float weight = 0.0f;
+    };
 
-        this->rootNodeIndex = rootNodeIndex < 0 ? 0 : rootNodeIndex;
-    }
+public:
+    AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex);
 
     void AddAnimation(const std::string& animationName, const size_t animationClip)
     {
@@ -182,7 +183,7 @@ public:
         locomotionBlendSpace.AddAnimation(clip, { x,y });
     }
 
-    void SetBlendInput(const float x,const float y)
+    void SetBlendInput(const float x, const float y)
     {
         blendInput.x = x;
         blendInput.y = y;
@@ -195,10 +196,13 @@ public:
         enableRootMotion = !useBlendSpace;
         locomotionTime = 0.0f;
     }
-    
+
 private:
     // ブレンドスペースを更新する
     void UpdateBlendSpace();
+
+    // 入力方向から２つのアニメーションクリップとブレンドの重さを決定する関数
+    BlendPair CalculateBlendPair(const DirectX::XMFLOAT2& input);
 
     // NotifyAssetを保存する
     void SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset);
@@ -337,6 +341,7 @@ private:
     DirectX::XMFLOAT2 blendInput = {};
     bool useBlendSpace = false;
     float locomotionTime = 0.0f;
+
 
     friend class Player;
 };

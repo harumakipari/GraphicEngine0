@@ -255,6 +255,7 @@
     </ClCompile>
     <ClCompile Include="Source\Animation\AnimationController.cpp" />
     <ClCompile Include="Source\Animation\AnimationState.cpp" />
+    <ClCompile Include="Source\Animation\BlendSpaceAnimation.cpp" />
     <ClCompile Include="Source\Components\Audio\AudioSourceComponent.cpp" />
     <ClCompile Include="Source\Components\Base\Component.cpp" />
     <ClCompile Include="Source\Components\Base\SceneComponent.cpp" />
@@ -302,6 +303,7 @@
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossEnemy.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkClothActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.cpp" />
@@ -464,6 +466,7 @@
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h" />
     <ClInclude Include="Source\Game\Actors\Stage\Props\ClothActor.h" />
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkClothActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.h" />
