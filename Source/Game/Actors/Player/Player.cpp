@@ -3,7 +3,7 @@
 
 #ifdef USE_IMGUI
 #define IMGUI_ENABLE_DOCKING
-#include "../External/imgui/imgui.h"
+#include <imgui.h>
 #endif
 
 #include "Graphics/Core/Graphics.h"
@@ -20,7 +20,6 @@
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Enemy/Enemy.h"
-#include "Game/Actors/Stage/Stage.h"
 #include "Game/DarkGame/Interactable.h"
 #include "Game/DarkGame/DarkActors/InteractableActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
@@ -135,6 +134,15 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Level_Start1_0", 70);
         controller->AddAnimation("Recall_0", 71);
         controller->AddAnimation("Level_Start_Cut", 72);
+        controller->AddAnimation("Jog_Bwd", 73);
+        controller->AddAnimation("Jog_Left", 74);
+        controller->AddAnimation("Jog_Right", 75);
+
+        // ブレンドスペースに追加
+        //controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
+        controller->AddBlendAnimation("Jog_Bwd", 0.0f, -1.0f);
+        //controller->AddBlendAnimation("Jog_Left", -1.0f, 0.0f);
+        controller->AddBlendAnimation("Jog_Right", 1.0f, 0.0f);
 
         std::string name = GetName();
         // アニメーションコントローラーのオーナーの名前を設定する
@@ -606,41 +614,41 @@ void Player::Update(float deltaTime)
     DirectX::XMFLOAT3 moveDir = { 0,0,0 };
 
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
-    //if (auto camera = dynamic_cast<MainCamera*>(GetOwnerScene()->GetActiveCamera()))
+        //if (auto camera = dynamic_cast<MainCamera*>(GetOwnerScene()->GetActiveCamera()))
     {
         // 左スティック入力
         float stickX = intent.leftMove.x;
         float stickZ = intent.leftMove.z;
         //switch (camera->GetCameraMode())
         {
-        //case TPSCameraController::CameraMode::TPS:
-        //break;
-        //case TPSCameraController::CameraMode::BossBattle:
-        //{
-        //    DirectX::XMFLOAT3 forward = toEnemyDir;
-        //    forward.y = 0.0f;
-        //    DirectX::XMFLOAT3 worldUp = { 0.0f,1.0f,0.0f };
-        //    right = MathHelper::Normalize(MathHelper::Cross(worldUp, forward));
-        //    // ボス基準の移動方向
-        //    moveDir.x = forward.x * stickZ + right.x * stickX;
-        //    moveDir.z = forward.z * stickZ + right.z * stickX;
-        //}
-        //break;
+            //case TPSCameraController::CameraMode::TPS:
+            //break;
+            //case TPSCameraController::CameraMode::BossBattle:
+            //{
+            //    DirectX::XMFLOAT3 forward = toEnemyDir;
+            //    forward.y = 0.0f;
+            //    DirectX::XMFLOAT3 worldUp = { 0.0f,1.0f,0.0f };
+            //    right = MathHelper::Normalize(MathHelper::Cross(worldUp, forward));
+            //    // ボス基準の移動方向
+            //    moveDir.x = forward.x * stickZ + right.x * stickX;
+            //    moveDir.z = forward.z * stickZ + right.z * stickX;
+            //}
+            //break;
         }
 
         switch (camera->GetCameraMode())
         {
         case DarkCameraActor::CameraMode::TPS:
-            {
-                auto camForward = camera->CameraForwardXZ();
-                auto camRight = camera->CameraRightXZ();
+        {
+            auto camForward = camera->CameraForwardXZ();
+            auto camRight = camera->CameraRightXZ();
 
-                // カメラ基準の移動方向
-                moveDir.x = camForward.x * stickZ + camRight.x * stickX;
-                moveDir.z = camForward.z * stickZ + camRight.z * stickX;
+            // カメラ基準の移動方向
+            moveDir.x = camForward.x * stickZ + camRight.x * stickX;
+            moveDir.z = camForward.z * stickZ + camRight.z * stickX;
             rotationComponent->SetDirection(moveDir);
-            }
-            break;
+        }
+        break;
         case DarkCameraActor::CameraMode::Focus:
             // 最初に決定したfocus 方向
             DirectX::XMFLOAT3 forward = focusDirection;

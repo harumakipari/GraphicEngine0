@@ -29,8 +29,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 
     float playRate = animationRate * asset.playRate * curveRate;
     animationTime += deltaTime * playRate;
-
-
+    locomotionTime += deltaTime * playRate; // ブレンドスペースのためのタイム
 
     if (target_->model->animations.size() == 0)
     {// アニメーションがないモデルの場合
@@ -111,31 +110,36 @@ void AnimationController::OnUpdate(const float deltaTime)
         }
         break;
     case AnimationTransitionState::Completed:
-        target_->model->Animate(this->animationClip, animationTime, finalNodes);
-
-        // 終わったら通常時に戻す
-        if (target_->model->animations.at(animationClip).duration < animationTime)
+        if (useBlendSpace)
         {
-            if (isAnimationLoop)
-            {//アニメーションをループするとき
-                if (requestStopLoop)
-                {
-                    isAnimationLoop = false;    // ループしないモードにする
-                    animationTime = 0.0f;
-                    requestStopLoop = false;
+            UpdateBlendSpace();
+        }
+        else
+        {
+            target_->model->Animate(this->animationClip, animationTime, finalNodes);
+            // 終わったら通常時に戻す
+            if (target_->model->animations.at(animationClip).duration < animationTime)
+            {
+                if (isAnimationLoop)
+                {//アニメーションをループするとき
+                    if (requestStopLoop)
+                    {
+                        isAnimationLoop = false;    // ループしないモードにする
+                        animationTime = 0.0f;
+                        requestStopLoop = false;
+                    }
+                    else
+                    {
+                        animationTime = 0;
+                        ResetRootMotion(static_cast<int>(animationClip));
+                    }
                 }
                 else
                 {
-                    animationTime = 0;
-                    ResetRootMotion(static_cast<int>(animationClip));
+                    isAnimationFinished = true;
                 }
             }
-            else
-            {
-                isAnimationFinished = true;
-            }
         }
-
         break;
     default:
         break;
@@ -245,6 +249,9 @@ void AnimationController::DrawImGui()
 
     if (!ImGui::CollapsingHeader("Animation Debug"))
         return;
+
+    ImGui::DragFloat2("blendInput", &blendInput.x, 0.1f, -1.0f, 1.0f);
+    ImGui::Checkbox("useBlendSpace", &useBlendSpace);
 
     ImGui::Text("Current: %s", currentAnimationName.c_str());
     ImGui::Text("Playing: %s", isAnimationFinished ? "No" : "Yes");
@@ -1146,6 +1153,33 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
             owner->OnAnimationChanged();
         }
         animationNotifyAssets[asset.animationClip] = asset;
+    }
+}
+
+// ブレンドスペースを更新する
+void AnimationController::UpdateBlendSpace()
+{
+    auto& samples = locomotionBlendSpace.GetSamples();
+    if (samples.size() != 2)
+        return;
+    size_t clipA = samples[0].clip;
+    size_t clipB = samples[1].clip;
+    float weight = blendInput.x;
+
+    float durationA =target_->model->animations[clipA].duration;
+    float durationB =target_->model->animations[clipB].duration;
+    float normalizedTime =locomotionTime /durationA;
+    float timeA =normalizedTime * durationA;
+    float timeB =normalizedTime * durationB;
+
+    target_->model->Animate(clipA, timeA, animationNodes[Origin]);
+    target_->model->Animate(clipB, timeB, animationNodes[Next]);
+    target_->model->BlendAnimations(animationNodes[Origin], animationNodes[Next], weight, finalNodes);
+
+    // ループ
+    if (locomotionTime >= durationA)
+    {
+        locomotionTime = 0.0f;
     }
 }
 

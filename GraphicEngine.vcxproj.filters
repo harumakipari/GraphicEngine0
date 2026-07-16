@@ -933,6 +933,9 @@
     <ClInclude Include="Source\Game\Actors\Camera\DarkGameCamera.h">
       <Filter>Source\Game\Actors\Camera</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Animation\BlendSpaceAnimation.h">
+      <Filter>Source\Animation</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">

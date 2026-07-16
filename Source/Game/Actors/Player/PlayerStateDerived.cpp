@@ -39,7 +39,7 @@ void PlayerIdleState::Exit()
 
 void PlayerRunningState::Enter()
 {
-    owner->PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
+    //owner->PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
 
     // ‘–‚èSEÄ¶
     if (player->runAudioComp)
@@ -58,7 +58,7 @@ void PlayerRunningState::Execute(float deltaTime)
     DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
     if (std::abs(dir.x - 0.0f) <= FLT_EPSILON && std::abs(dir.y - 0.0f) <= FLT_EPSILON && std::abs(dir.z - 0.0f) <= FLT_EPSILON)
     {
-        player->GetStateMachine()->ChangeState("Idle");
+        //player->GetStateMachine()->ChangeState("Idle");
     }
 }
 

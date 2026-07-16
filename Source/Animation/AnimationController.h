@@ -8,12 +8,23 @@
 #include "Components/Render/MeshComponent.h"
 #include "Graphics/Resource/InterleavedGltfModel.h"
 #include "AnimationState.h"
+#include "BlendSpaceAnimation.h"
 
 class Character;
 
 // アニメーションのコントローラー  
 class AnimationController
 {
+public:
+    struct BlendSpaceAnimation
+    {
+        size_t clip;
+        // Blendする位置
+        // x = 横方向
+        // y = 前後方向
+        DirectX::XMFLOAT2 position;
+    };
+
 public:
     AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex) :owner(character), target_(target)
     {
@@ -163,7 +174,32 @@ public:
     // 全てのNotifyAssetsをロードする
     void LoadAllNotifyAssets(const std::string& ownerName);
 
+    // ブレンドスペースでブレンドするアニメーションを追加する
+    // x +右-左　y +前-後
+    void AddBlendAnimation(const std::string& name, float x, float y)
+    {
+        const size_t clip = animationNameToIndex_[name];
+        locomotionBlendSpace.AddAnimation(clip, { x,y });
+    }
+
+    void SetBlendInput(const float x,const float y)
+    {
+        blendInput.x = x;
+        blendInput.y = y;
+    }
+
+    void SetUseBlendSpace(const bool useBlendSpace)
+    {
+        this->useBlendSpace = useBlendSpace;
+        // ルートモーションを切る
+        enableRootMotion = !useBlendSpace;
+        locomotionTime = 0.0f;
+    }
+    
 private:
+    // ブレンドスペースを更新する
+    void UpdateBlendSpace();
+
     // NotifyAssetを保存する
     void SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset);
 
@@ -193,6 +229,7 @@ private:
 
     // Notifyの詳細設定のImGui描画
     void DrawNotifyInspector(AnimationNotifyAsset& asset);
+
 
     SkeletalMeshComponent* target_ = nullptr;
     Character* owner = nullptr;
@@ -293,6 +330,13 @@ private:
     float curveCreateValue = 1.0f;
 
     std::string ownerName = "";    // コントローラーを所有しているオーナーの名前
+
+    // ブレンドスペース
+    BlendSpace locomotionBlendSpace;
+    // ブレンドスペースで使用する入力値
+    DirectX::XMFLOAT2 blendInput = {};
+    bool useBlendSpace = false;
+    float locomotionTime = 0.0f;
 
     friend class Player;
 };
