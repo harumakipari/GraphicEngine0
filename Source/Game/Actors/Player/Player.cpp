@@ -612,29 +612,15 @@ void Player::Update(float deltaTime)
     auto intent = inputComponent->GetIntent();
     DirectX::XMFLOAT3 moveDir = { 0,0,0 };
 
+
+    bool focus = InputSystem::GetInputState("LockOn", InputStateMask::Press);
+
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
-        //if (auto camera = dynamic_cast<MainCamera*>(GetOwnerScene()->GetActiveCamera()))
     {
+        // カメラモードに応じたプレイヤー移動処理
         // 左スティック入力
         float stickX = intent.leftMove.x;
         float stickZ = intent.leftMove.z;
-        //switch (camera->GetCameraMode())
-        {
-            //case TPSCameraController::CameraMode::TPS:
-            //break;
-            //case TPSCameraController::CameraMode::BossBattle:
-            //{
-            //    DirectX::XMFLOAT3 forward = toEnemyDir;
-            //    forward.y = 0.0f;
-            //    DirectX::XMFLOAT3 worldUp = { 0.0f,1.0f,0.0f };
-            //    right = MathHelper::Normalize(MathHelper::Cross(worldUp, forward));
-            //    // ボス基準の移動方向
-            //    moveDir.x = forward.x * stickZ + right.x * stickX;
-            //    moveDir.z = forward.z * stickZ + right.z * stickX;
-            //}
-            //break;
-        }
-
         switch (camera->GetCameraMode())
         {
         case DarkCameraActor::CameraMode::TPS:
@@ -662,6 +648,14 @@ void Player::Update(float deltaTime)
         }
         characterMovementComponent->SetMoveDirection(moveDir);
 
+        if (focus)
+        {
+            camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
+        }
+        else
+        {
+            camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+        }
     }
 
 

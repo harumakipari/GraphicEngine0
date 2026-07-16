@@ -233,12 +233,12 @@ void DarkCameraActor::DrawImGuiDetails()
 #ifdef USE_IMGUI
     if (ImGui::Button(U8("TPS")))
     {
-        SetCameraMode(CameraMode::TPS);
+        SetRequestMode(CameraMode::TPS);
 
     }
     if (ImGui::Button(U8("Focus")))
     {
-        SetCameraMode(CameraMode::Focus);
+        SetRequestMode(CameraMode::Focus);
 
     }
     ImGui::DragFloat(U8("右スティックの回転のスピード"), &rotateSpeed, 0.1f, 0.0f, 10.0f);

@@ -73,7 +73,7 @@ public:
     CameraMode GetCameraMode()const { return currentMode; }
 
     // カメラモードをセットする
-    void SetCameraMode(CameraMode mode) { requestMode = mode; }
+    void SetRequestMode(const CameraMode mode) { requestMode = mode; }
 
     // ブレンドを開始する
     void StartBlend(CameraMode current, CameraMode request);
@@ -106,8 +106,8 @@ private:
 
     std::shared_ptr<InputComponent> inputComponent;
 
-    CameraMode currentMode = CameraMode::TPS;// 実際の計算用
-    CameraMode requestMode = CameraMode::TPS; // 外部から変更される目標
+    CameraMode currentMode = CameraMode::TPS;   // 現在有効なモード
+    CameraMode requestMode = CameraMode::TPS;   // 入力が要求しているモード
 
 
     CameraPose currentPose;
@@ -132,7 +132,7 @@ private:
     float minPitchDegree = -50.0f; // pitchの最小角度
     float maxPitchDegree = 40.0f;  // pitchの最大角度
     float cameraDistance = 5.0f;
-    float cameraHeight = 2.0f;
+    float cameraHeight = 0.0f;
     float focusDistance = 0.0f;
 
     // フォーカス時の
