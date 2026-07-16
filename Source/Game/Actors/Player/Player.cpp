@@ -137,12 +137,20 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Jog_Bwd", 73);
         controller->AddAnimation("Jog_Left", 74);
         controller->AddAnimation("Jog_Right", 75);
+        controller->AddAnimation("Walk_Bwd", 76);
+        controller->AddAnimation("Walk_Fwd", 77);
+        controller->AddAnimation("Walk_Left", 78);
+        controller->AddAnimation("Walk_Right", 79);
 
         // ブレンドスペースに追加
         controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
         controller->AddBlendAnimation("Jog_Bwd", 0.0f, -1.0f);
         controller->AddBlendAnimation("Jog_Left", -1.0f, 0.0f);
         controller->AddBlendAnimation("Jog_Right", 1.0f, 0.0f);
+        controller->AddBlendAnimation("Walk_Fwd", 0.0f, 0.5f);
+        controller->AddBlendAnimation("Walk_Bwd", 0.0f, -0.5f);
+        controller->AddBlendAnimation("Walk_Left", -0.5f, 0.0f);
+        controller->AddBlendAnimation("Walk_Right", 0.5f, 0.0f);
 
         std::string name = GetName();
         // アニメーションコントローラーのオーナーの名前を設定する
@@ -638,7 +646,7 @@ void Player::Update(float deltaTime)
             float newLength = (length - deadZone) / (1.0f - deadZone);
             // 好みでコメントアウトを切り替え
              //newLength = std::pow(newLength,1.5f);// より繊細な入力
-            newLength *= newLength;
+            //newLength *= newLength;
             // newLength = sqrtf(newLength); // 少し倒しただけで速い
             moveStickX = moveStickX / length * newLength;
             moveStickZ = moveStickZ / length * newLength;
@@ -664,19 +672,21 @@ void Player::Update(float deltaTime)
             rotationComponent->SetDirection(lookDir);
 
             float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-            GetBodyAnimationController()->SetTPSBlend(normalizeSpeed);
+            GetBodyAnimationController()->SetBlendInput(0.0f,1.0f,normalizeSpeed);
         }
         break;
         case DarkCameraActor::CameraMode::Focus:
-            // 最初に決定したfocus 方向
-            DirectX::XMFLOAT3 forward = focusDirection;
-            DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
-            DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
-            moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
-            moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
-            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-            GetBodyAnimationController()->SetBlendInput(moveStickX, moveStickZ, normalizeSpeed);
-            break;
+            {
+                // 最初に決定したfocus 方向
+                DirectX::XMFLOAT3 forward = focusDirection;
+                DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
+                DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
+                moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
+                moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
+                float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+                GetBodyAnimationController()->SetBlendInput(rawStickX, rawStickZ, normalizeSpeed);
+                break;
+            }
         case DarkCameraActor::CameraMode::LockOn:
             break;
         }
@@ -929,8 +939,9 @@ void Player::UpdateLocomotionAnimation()
         if (useBlendSpace)
         {
             // 入力値を渡す
+            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
             auto move = inputComponent->GetMoveInput();
-            controller->SetBlendInput(move.x, move.z);
+            controller->SetBlendInput(move.x, move.z, normalizeSpeed);
         }
         else
         {

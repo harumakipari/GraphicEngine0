@@ -22,9 +22,9 @@
 
 
 #include "ModelType.h"
+#include "Animation/BlendSpaceAnimation.h"
 #include "Physics/Collider.h"
 #include "Graphics/Core/PipelineState.h"
-
 
 class MeshComponent;
 
@@ -740,6 +740,8 @@ public:
 
     //アニメーションをブレンドする関数
     void BlendAnimations(const std::vector<Node>& fromNodes, const std::vector<Node>& toNodes, float factor, std::vector<Node>& outNodes);
+    // 複数のアニメーションをブレンドする関数
+    void BlendAnimations(const std::array<std::vector<Node>, 4>& poses, const BlendResult& blend, std::vector<Node>& outNodes);
 
     void Animate(size_t animationIndex, float time, std::vector<Node>& animatedNodes);
 

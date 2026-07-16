@@ -16,6 +16,29 @@ class Character;
 class AnimationController
 {
 public:
+    enum class MoveDirection :uint8_t
+    {
+        Idle,
+        Forward,
+        Backward,
+        Left,
+        Right,
+    };
+
+    enum class MoveSpeed :uint8_t
+    {
+        Idle,
+        Walk,
+        Run
+    };
+
+    struct SpeedWeight
+    {
+        float idle = 0.0f;
+        float walk = 0.0f;
+        float run = 0.0f;
+    };
+
     struct BlendSpaceAnimation
     {
         size_t clip;
@@ -27,8 +50,8 @@ public:
 
     struct BlendPair
     {
-        size_t clipA = 0;
-        size_t clipB = 0;
+        MoveDirection directionA = MoveDirection::Idle;
+        MoveDirection directionB = MoveDirection::Idle;
 
         // clipA → clipB の割合
         // 0.0 : clipA 100%
@@ -183,17 +206,12 @@ public:
         locomotionBlendSpace.AddAnimation(clip, { x,y });
     }
 
-    void SetLockOnBlend(const float x, const float y,const float speed)
+    void SetBlendInput(const float x, const float y, const float speed)
     {
-        blendInput.x = x;
-        blendInput.y = y;
+        blendInput = { x, y };
         blendSpeed = speed;
     }
 
-    void SetTPSBlend(const float speed)
-    {
-        blendSpeed = speed;
-    }
 
     void SetUseBlendSpace(const bool useBlendSpace)
     {
@@ -229,6 +247,15 @@ private:
 
     // 入力方向から２つのアニメーションクリップとブレンドの重さを決定する関数
     BlendPair CalculateBlendPair(const DirectX::XMFLOAT2& input);
+
+    // スピードから待機歩き走りの重みを計算する
+    SpeedWeight CalculateSpeedWeight(float speed) const;
+
+    // 方向とスピードからアニメーションと重みを計算する
+    BlendResult CalculateBlendSpace(DirectX::XMFLOAT2 direction, float speed);
+
+    // 方向とスピードからアニメーションを取得する
+    size_t GetBlendSpaceAnimationClip(MoveDirection direction,MoveSpeed speed);
 
     // NotifyAssetを保存する
     void SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset);
@@ -283,6 +310,8 @@ private:
 
     std::vector<InterleavedGltfModel::Node> blendSpaceClipA;
     std::vector<InterleavedGltfModel::Node> blendSpaceClipB;
+
+    std::array<std::vector<InterleavedGltfModel::Node>, 4> blendSpacePoses;
 
     enum class AnimationTransitionState :uint8_t
     {
@@ -369,8 +398,8 @@ private:
     // ブレンドスペース
     BlendSpace locomotionBlendSpace;
     // ブレンドスペースで使用する入力値
-    DirectX::XMFLOAT2 blendInput = {};
-    float blendSpeed = 0.0f;
+    DirectX::XMFLOAT2 blendInput;
+    float blendSpeed;
 
     bool useBlendSpace = false;
     float locomotionTime = 0.0f;

@@ -4,6 +4,18 @@
 #include <DirectXMath.h>
 
 
+struct BlendSample
+{
+    size_t clip = 0;
+    float weight = 0.0f;
+};
+
+struct BlendResult
+{
+    BlendSample samples[4];
+    int count = 0;
+};
+
 class BlendSpace
 {
 public:

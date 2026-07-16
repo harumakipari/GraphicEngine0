@@ -23,6 +23,7 @@
 #include "Engine/Serialization/DirectXSerializers.h"
 #include "Graphics/Core/Shader.h"
 #include "Texture.h"
+#include "Animation/AnimationController.h"
 #include "Graphics/Core/RenderState.h"
 #include "Graphics/Core/GltfDxgiHelper.h"
 #include "Graphics/Core/PipelineState.h"
@@ -1237,6 +1238,105 @@ void InterleavedGltfModel::BlendAnimations(const std::vector<Node>& fromNodes, c
     CumulateTransforms(outNodes);
 }
 
+void InterleavedGltfModel::BlendAnimations(
+    const std::array<std::vector<Node>, 4>& poses,
+    const BlendResult& blend,
+    std::vector<Node>& outNodes)
+{
+    size_t nodeCount = poses[0].size();
+    for (size_t nodeIndex = 0;
+        nodeIndex < nodeCount;
+        nodeIndex++)
+    {
+        using namespace DirectX;
+
+        XMVECTOR scale = XMVectorZero();
+        float totalWeight = 0.0f;
+        for (int i = 0; i < blend.count; i++)
+        {
+            float weight = blend.samples[i].weight;
+
+            totalWeight += weight;
+
+            XMVECTOR s =
+                XMLoadFloat3(
+                    &poses[i][nodeIndex].scale);
+
+            scale = XMVectorAdd(
+                scale,
+                XMVectorScale(s, weight));
+        }
+        scale = XMVectorScale(
+            scale,
+            1.0f / totalWeight);
+        XMStoreFloat3(
+            &outNodes[nodeIndex].scale,
+            scale);
+
+        // Translation
+        XMVECTOR translation = XMVectorZero();
+
+        for (int i = 0; i < blend.count; i++)
+        {
+            float weight = blend.samples[i].weight;
+
+            XMVECTOR t =
+                XMLoadFloat3(
+                    &poses[i][nodeIndex].translation);
+
+            translation = XMVectorAdd(
+                translation,
+                XMVectorScale(t, weight));
+        }
+
+        translation = XMVectorScale(
+            translation,
+            1.0f / totalWeight);
+
+        XMStoreFloat3(
+            &outNodes[nodeIndex].translation,
+            translation);
+
+        // Rotation
+        XMVECTOR rotation = XMQuaternionIdentity();
+
+        float accumulatedWeight = 0.0f;
+
+        for (int i = 0; i < blend.count; i++)
+        {
+            float weight = blend.samples[i].weight;
+
+            XMVECTOR q =
+                XMLoadFloat4(
+                    &poses[i][nodeIndex].rotation);
+
+            if (accumulatedWeight == 0.0f)
+            {
+                rotation = q;
+                accumulatedWeight = weight;
+                continue;
+            }
+
+            float t = weight / (accumulatedWeight + weight);
+
+            rotation =
+                XMQuaternionSlerp(
+                    rotation,
+                    q,
+                    t);
+
+            accumulatedWeight += weight;
+        }
+
+        rotation = XMQuaternionNormalize(rotation);
+
+        XMStoreFloat4(
+            &outNodes[nodeIndex].rotation,
+            rotation);
+    }
+
+    CumulateTransforms(outNodes);
+}
 
 void InterleavedGltfModel::Animate(size_t animationIndex, float time, std::vector<Node>& animatedNodes)
 {

@@ -22,7 +22,10 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
     blendSpaceNodes = target_->model->GetNodes();
     blendSpaceClipA = target_->model->GetNodes();
     blendSpaceClipB = target_->model->GetNodes();
-
+    for (auto& pose : blendSpacePoses)
+    {
+        pose = target_->model->GetNodes();
+    }
     // 描画に使用するノード
     finalNodes = target_->model->GetNodes();
 
@@ -1180,6 +1183,7 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
 void AnimationController::UpdateBlendSpace(float deltaTime)
 {
     Logger::Log("BlendSpace Update");
+#if 0
     BlendPair pair = CalculateBlendPair(blendInput);
 
     size_t clipA = pair.clipA;
@@ -1195,6 +1199,34 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     target_->model->Animate(clipA, timeA, blendSpaceClipA);
     target_->model->Animate(clipB, timeB, blendSpaceClipB);
     target_->model->BlendAnimations(blendSpaceClipA, blendSpaceClipB, weight, blendSpaceNodes);
+
+#else
+    BlendResult blend = CalculateBlendSpace(blendInput, blendSpeed);
+    for (int i = 0; i < blend.count; i++)
+    {
+        size_t clip = blend.samples[i].clip;
+
+        float duration =
+            target_->model->animations[clip].duration;
+
+        float normalized =
+            locomotionTime / duration;
+
+        float time =
+            normalized * duration;
+
+        target_->model->Animate(
+            clip,
+            time,
+            blendSpacePoses[i]);
+    }
+
+    target_->model->BlendAnimations(blendSpacePoses,blend,blendSpaceNodes);
+
+
+#endif // 0
+
+
 
     // BlendSpaceへの遷移
     if (blendSpaceTransition)
@@ -1223,9 +1255,13 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     }
 
     // ループ
-    if (locomotionTime >= durationA)
+    float runDuration =
+        target_->model->animations[
+            animationNameToIndex_["Jog_Fwd"]].duration;
+
+    if (locomotionTime >= runDuration)
     {
-        locomotionTime = 0.0f;
+        locomotionTime -= runDuration;
     }
 }
 
@@ -1239,8 +1275,8 @@ AnimationController::BlendPair AnimationController::CalculateBlendPair(const Dir
     // 入力なし
     if (std::abs(input.x) <= FLT_EPSILON && std::abs(input.y) <= FLT_EPSILON)
     {
-        result.clipA = animationNameToIndex_["Idle"];
-        result.clipB = result.clipA;
+        result.directionA = MoveDirection::Idle;
+        result.directionB = result.directionA;
         result.weight = 0.0f;
         return result;
     }
@@ -1250,24 +1286,24 @@ AnimationController::BlendPair AnimationController::CalculateBlendPair(const Dir
         // 前右
         if (input.x > 0.0f)
         {
-            result.clipA = animationNameToIndex_["Jog_Fwd"];
-            result.clipB = animationNameToIndex_["Jog_Right"];
+            result.directionA = MoveDirection::Forward;
+            result.directionB = MoveDirection::Right;
             float total = input.x + input.y;
             result.weight = input.x / total;
         }
         // 前左
         else if (input.x < 0.0f)
         {
-            result.clipA = animationNameToIndex_["Jog_Fwd"];
-            result.clipB = animationNameToIndex_["Jog_Left"];
+            result.directionA = MoveDirection::Forward;
+            result.directionB = MoveDirection::Left;
             float total = fabs(input.x) + input.y;
             result.weight = fabs(input.x) / total;
         }
         // 前だけ
         else
         {
-            result.clipA = animationNameToIndex_["Jog_Fwd"];
-            result.clipB = result.clipA;
+            result.directionA = MoveDirection::Forward;
+            result.directionB = result.directionA;
             result.weight = 0.0f;
         }
     }
@@ -1277,24 +1313,24 @@ AnimationController::BlendPair AnimationController::CalculateBlendPair(const Dir
         // 後右
         if (input.x > 0.0f)
         {
-            result.clipA = animationNameToIndex_["Jog_Bwd"];
-            result.clipB = animationNameToIndex_["Jog_Right"];
+            result.directionA = MoveDirection::Backward;
+            result.directionB = MoveDirection::Right;
             float total = input.x + fabs(input.y);
             result.weight = input.x / total;
         }
         // 後左
         else if (input.x < 0.0f)
         {
-            result.clipA = animationNameToIndex_["Jog_Bwd"];
-            result.clipB = animationNameToIndex_["Jog_Left"];
+            result.directionA = MoveDirection::Backward;
+            result.directionB = MoveDirection::Left;
             float total = fabs(input.x) + fabs(input.y);
             result.weight = fabs(input.x) / total;
         }
         // 後ろだけ
         else
         {
-            result.clipA = animationNameToIndex_["Jog_Bwd"];
-            result.clipB = result.clipA;
+            result.directionA = MoveDirection::Backward;;
+            result.directionB = result.directionA;
             result.weight = 0.0f;
         }
     }
@@ -1303,19 +1339,161 @@ AnimationController::BlendPair AnimationController::CalculateBlendPair(const Dir
     {
         if (input.x > 0)
         {
-            result.clipA = animationNameToIndex_["Jog_Right"];
-            result.clipB = result.clipA;
+            result.directionA = MoveDirection::Right;
+            result.directionB = result.directionA;
             result.weight = 0.0f;
         }
         else
         {
-            result.clipA = animationNameToIndex_["Jog_Left"];
-            result.clipB = result.clipA;
+            result.directionA = MoveDirection::Left;
+            result.directionB = result.directionA;
             result.weight = 0.0f;
         }
     }
     return result;
 }
+
+AnimationController::SpeedWeight AnimationController::CalculateSpeedWeight(float speed) const
+{
+    SpeedWeight result;
+
+    speed = std::clamp(speed, 0.0f, 1.0f);
+
+    float walkPoint = 2.0f / 5.0f;  // ここを後で walkSpeed / runSpeed に変更する
+
+    if (speed <= walkPoint)
+    {
+        // Idle ⇔ Walk
+        result.walk = speed / walkPoint;
+        result.idle = 1.0f - result.walk;
+        result.run = 0.0f;
+    }
+    else
+    {
+        // Walk ⇔ Run
+        result.run = (speed - walkPoint) / (1.0f - walkPoint);
+        result.walk = 1.0f - result.run;
+        result.idle = 0.0f;
+    }
+
+    return result;
+}
+
+BlendResult AnimationController::CalculateBlendSpace(DirectX::XMFLOAT2 direction, float speed)
+{
+    BlendResult result = {};
+    // 方向とその重み 例：Forward 70% / Right   30 %
+    BlendPair pair = CalculateBlendPair(direction);
+    // 速さとその重み 例：Walk 20 / Run 80 %
+    SpeedWeight speedWeight = CalculateSpeedWeight(speed);
+
+    if (speedWeight.walk > 0.0f)
+    {
+        result.samples[result.count].clip =
+            GetBlendSpaceAnimationClip(pair.directionA,
+                MoveSpeed::Walk);
+
+        result.samples[result.count].weight =
+            (1.0f - pair.weight)
+            * speedWeight.walk;
+
+        result.count++;
+
+        result.samples[result.count].clip =
+            GetBlendSpaceAnimationClip(pair.directionB,
+                MoveSpeed::Walk);
+
+        result.samples[result.count].weight =
+            pair.weight
+            * speedWeight.walk;
+
+        result.count++;
+    }
+    if (speedWeight.run > 0)
+    {
+        result.samples[result.count].clip =
+            GetBlendSpaceAnimationClip(pair.directionA,
+                MoveSpeed::Run);
+
+        result.samples[result.count].weight =
+            (1.0f - pair.weight)
+            * speedWeight.run;
+
+        result.count++;
+
+        result.samples[result.count].clip =
+            GetBlendSpaceAnimationClip(pair.directionB,
+                MoveSpeed::Run);
+
+        result.samples[result.count].weight =
+            pair.weight
+            * speedWeight.run;
+
+        result.count++;
+    }
+    if (speedWeight.idle > 0)
+    {
+        result.samples[result.count].clip =
+            animationNameToIndex_["Idle"];
+
+        result.samples[result.count].weight =
+            speedWeight.idle;
+
+        result.count++;
+    }
+    return result;
+}
+
+// 方向とスピードからアニメーションを取得する
+size_t AnimationController::GetBlendSpaceAnimationClip(MoveDirection direction, MoveSpeed speed)
+{
+    switch (speed)
+    {
+    case MoveSpeed::Walk:
+
+        switch (direction)
+        {
+        case MoveDirection::Forward:
+            return animationNameToIndex_["Walk_Fwd"];
+
+        case MoveDirection::Backward:
+            return animationNameToIndex_["Walk_Bwd"];
+
+        case MoveDirection::Left:
+            return animationNameToIndex_["Walk_Left"];
+
+        case MoveDirection::Right:
+            return animationNameToIndex_["Walk_Right"];
+
+        default:
+            return animationNameToIndex_["Idle"];
+        }
+
+    case MoveSpeed::Run:
+
+        switch (direction)
+        {
+        case MoveDirection::Forward:
+            return animationNameToIndex_["Jog_Fwd"];
+
+        case MoveDirection::Backward:
+            return animationNameToIndex_["Jog_Bwd"];
+
+        case MoveDirection::Left:
+            return animationNameToIndex_["Jog_Left"];
+
+        case MoveDirection::Right:
+            return animationNameToIndex_["Jog_Right"];
+
+        default:
+            return animationNameToIndex_["Idle"];
+        }
+
+    default:
+        return animationNameToIndex_["Idle"];
+    }
+}
+
 
 // NotifyAssetを保存する
 void AnimationController::SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset)
