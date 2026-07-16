@@ -11,7 +11,9 @@ PlayerStateBase::PlayerStateBase(Player* actor) :State(actor), player(actor)
 
 void PlayerIdleState::Enter()
 {
-    owner->PlayBodyAnimation("Idle");
+    owner->GetBodyAnimationController()->SetUseBlendSpace(false);
+    Logger::Log("Idle Enter");
+    owner->PlayBodyAnimation("Idle",true,true,0.2f);
 }
 
 void PlayerIdleState::Execute(float deltaTime)
@@ -53,12 +55,14 @@ void PlayerRunningState::Execute(float deltaTime)
         return;
     }
 
+
     // 入力がなければ待機ステートに変更
     auto inputComp = player->inputComponent;
+
     DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
     if (std::abs(dir.x - 0.0f) <= FLT_EPSILON && std::abs(dir.y - 0.0f) <= FLT_EPSILON && std::abs(dir.z - 0.0f) <= FLT_EPSILON)
     {
-        //player->GetStateMachine()->ChangeState("Idle");
+        player->GetStateMachine()->ChangeState("Idle");
     }
 }
 
@@ -234,7 +238,7 @@ void PlayerDodgeState::Execute(float deltaTime)
                 {// タイムスケールをリセットする
                     target->ResetTimeScale();
                 }
-               
+
                 DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
 
                 if (MathHelper::Length(move) > 0.1f)

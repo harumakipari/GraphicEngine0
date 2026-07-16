@@ -252,25 +252,5 @@ void InputComponent::Tick(float)
 
         intent_.rightMove.x = rx;
         intent_.rightMove.y = ry;
-
-#if 0
-        if (InputSystem::GetInputState("W"))
-        {
-            intent_.move.z += 1.0f;
-        }
-        if (InputSystem::GetInputState("S"))
-        {
-            intent_.move.z -= 1.0f;
-        }
-        if (InputSystem::GetInputState("D"))
-        {
-            intent_.move.x += 1.0f;
-        }
-        if (InputSystem::GetInputState("A"))
-        {
-            intent_.move.x -= 1.0f;
-        }
-
-#endif // 0
     }
 }

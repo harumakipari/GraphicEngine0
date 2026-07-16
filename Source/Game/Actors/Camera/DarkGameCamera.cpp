@@ -64,41 +64,24 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
 
     blendTime += deltaTime;
 
-    float t =
-        std::clamp(
-            blendTime / blendDuration,
-            0.0f,
-            1.0f);
+    float t = std::clamp(blendTime / blendDuration, 0.0f, 1.0f);
 
     // 補間
-    currentPose.eye =
-        MathHelper::Lerp(
-            blendStartPose.eye,
-            blendTargetPose.eye,
-            t);
+    currentPose.target = MathHelper::Lerp(blendStartPose.target, blendTargetPose.target, t);
+    currentYaw = MathHelper::LerpAngle(blendStartPose.yaw, blendTargetPose.yaw, t);
+    currentPitch = std::lerp(blendStartPose.pitch, blendTargetPose.pitch, t);
 
-    currentPose.target =
-        MathHelper::Lerp(
-            blendStartPose.target,
-            blendTargetPose.target,
-            t);
+    using namespace DirectX;
 
-
-
-    currentYaw =
-        std::lerp(
-            blendStartPose.yaw,
-            blendTargetPose.yaw,
-            t);
-
-
-    currentPitch =
-        std::lerp(
-            blendStartPose.pitch,
-            blendTargetPose.pitch,
-            t);
-
-
+    XMVECTOR forward = XMVectorSet(
+        sinf(currentYaw) * cosf(currentPitch),
+        sinf(currentPitch),
+        cosf(currentYaw) * cosf(currentPitch),
+        0.0f);
+    XMVECTOR target = XMLoadFloat3(&currentPose.target);
+    XMVECTOR eye = target - forward * cameraDistance;
+    eye += XMVectorSet(0, cameraHeight, 0, 0);
+    XMStoreFloat3(&currentPose.eye, eye);
 
     if (t >= 1.0f)
     {
@@ -116,7 +99,6 @@ void DarkCameraActor::SyncFocusCamera()
 
     if (!playerHeadShared)
         return;
-
 
     auto playerActor = playerHeadShared->GetOwner();
 
@@ -151,8 +133,17 @@ void DarkCameraActor::UpdateDesireRotation(float deltaTime)
         desiredPitch += rightStick.y * rotateSpeed * deltaTime;
         break;
     case CameraMode::Focus:
-        desiredYaw += rightStick.x * rotateSpeed * deltaTime;
-        desiredPitch += rightStick.y * rotateSpeed * deltaTime;
+        if (std::abs(inputComponent->GetIntent().leftMove.x) >= FLT_EPSILON &&
+            std::abs(inputComponent->GetIntent().leftMove.z) >= FLT_EPSILON)
+        {
+
+        }
+        else
+        {// player の左スティックが入力されていなかったら、
+            // 右スティックを動かす
+            desiredYaw += rightStick.x * rotateSpeed * deltaTime;
+            desiredPitch += rightStick.y * rotateSpeed * deltaTime;
+        }
         break;
     case CameraMode::LockOn:
         // 敵とプレイヤーが向いている方向
@@ -183,8 +174,7 @@ void DarkCameraActor::UpdateRotation(float deltaTime)
 {
     currentYaw = desiredYaw;
     currentPitch = desiredPitch;
-
-
+    currentPitch = MathHelper::ClampAngle(currentPitch);
     mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
 }
 
@@ -195,10 +185,7 @@ void DarkCameraActor::CalculatePose()
     {
         return;
     }
-
     DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
-
-
     switch (currentMode)
     {
     case CameraMode::TPS:
@@ -206,21 +193,11 @@ void DarkCameraActor::CalculatePose()
         currentPose.target = playerPos;
         break;
     }
-
-
     case CameraMode::Focus:
     {
-
-        currentPose.target =
-            MathHelper::Add(
-                playerPos,
-                MathHelper::Multiply(CameraForwardXZ(), focusDistance)
-            );
-
+        currentPose.target = MathHelper::Add(playerPos, MathHelper::Multiply(CameraForwardXZ(), focusDistance));
         break;
     }
-
-
     case CameraMode::LockOn:
     {
         // 後で作る

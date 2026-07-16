@@ -553,7 +553,6 @@ void Player::Update(float deltaTime)
     }
 
     //skeletalMeshComponent->UpdateCloth(elapsedTime);
-
     //skeletalMeshComponent->UpdateGlobalTransforms();
 
     if (InputSystem::GetInputState("RB", InputStateMask::Trigger))
@@ -652,28 +651,11 @@ void Player::Update(float deltaTime)
         case DarkCameraActor::CameraMode::Focus:
             // 最初に決定したfocus 方向
             DirectX::XMFLOAT3 forward = focusDirection;
-
-            DirectX::XMFLOAT3 up =
-            {
-                0.0f,
-                1.0f,
-                0.0f
-            };
-
-            DirectX::XMFLOAT3 right =
-                MathHelper::Normalize(
-                    MathHelper::Cross(up, forward)
-                );
-
-
-            moveDir.x =
-                forward.x * stickZ +
-                right.x * stickX;
-
-            moveDir.z =
-                forward.z * stickZ +
-                right.z * stickX;
-
+            DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
+            DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
+            moveDir.x = forward.x * stickZ + right.x * stickX;
+            moveDir.z = forward.z * stickZ + right.z * stickX;
+            GetBodyAnimationController()->SetBlendInput(stickX, stickZ);
             break;
         case DarkCameraActor::CameraMode::LockOn:
             break;
@@ -897,6 +879,40 @@ void Player::OnAnimationChanged()
     swordEmissivePower = 0.0f;
     hitActors.clear();
     //Logger::Log(U8("playerのAnimationが切り替わった"));
+}
+
+// ブレンドスペースのアニメーションを使用するかの更新関数
+void Player::UpdateLocomotionAnimation()
+{
+    auto controller = GetBodyAnimationController();
+    bool lockOn = false;
+    if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
+    {
+        lockOn = camera->GetCameraMode() == DarkCameraActor::CameraMode::Focus;
+    }
+    bool locomotion = GetStateMachine()->GetStateName() == "Running";
+    //std::string locomotionText = locomotion ? "locomotion: true" : "locomotion:false";
+    //std::string lockOnText = lockOn ? "lockOn: true" : "lockOn:false";
+    //Logger::Log(lockOnText + locomotionText);
+    bool useBlendSpace = lockOn && locomotion;
+    controller->SetUseBlendSpace(useBlendSpace);
+    if (locomotion)
+    {
+        if (useBlendSpace)
+        {
+            // 入力値を渡す
+            auto move = inputComponent->GetMoveInput();
+            controller->SetBlendInput(move.x, move.z);
+        }
+        else
+        {
+            // 通常TPS走り
+            if (controller->GetCurrentAnimationName() != "Jog_Fwd")
+            {
+                PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
+            }
+        }
+    }
 }
 
 // アニメーションステート関連のフラグをリセットする

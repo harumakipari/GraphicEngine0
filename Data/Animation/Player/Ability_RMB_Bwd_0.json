@@ -133,7 +133,7 @@
                 1.0,
                 0.0
             ],
-            "moveDistance": 0.800000011920929,
+            "moveDistance": 1.2000000476837158,
             "parameter": "",
             "startTime": 0.16766665875911713,
             "type": "MotionWarp",

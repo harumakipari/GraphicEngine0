@@ -67,6 +67,9 @@ public:
 
     void OnAnimationChanged() override;
 
+    // ブレンドスペースのアニメーションを使用するかの更新関数
+    void UpdateLocomotionAnimation() override;
+
     // アニメーションステート関連のフラグをリセットする
     void ResetAnimationStateFlag();
 

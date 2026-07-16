@@ -1174,6 +1174,7 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
 // ブレンドスペースを更新する
 void AnimationController::UpdateBlendSpace()
 {
+    Logger::Log("BlendSpace Update");
     BlendPair pair = CalculateBlendPair(blendInput);
 
     size_t clipA = pair.clipA;
@@ -1205,7 +1206,7 @@ AnimationController::BlendPair AnimationController::CalculateBlendPair(const Dir
     if (samples.size() < 4)
         return result;
     // 入力なし
-    if (input.x == 0.0f && input.y == 0.0f)
+    if (std::abs(input.x) <= FLT_EPSILON && std::abs(input.y) <= FLT_EPSILON)
     {
         result.clipA = animationNameToIndex_["Idle"];
         result.clipB = result.clipA;

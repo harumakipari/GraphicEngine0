@@ -23,17 +23,22 @@ public:
 
     virtual void Update(float deltaTime)override
     {
+        // front,up,rightを更新する
         UpdateDirectionVectors();
+
+        if (stateMachine_)
+        {
+            stateMachine_->Update(deltaTime);
+        }
+
+        // ブレンドスペースのアニメーションを使用するかを更新する
+        UpdateLocomotionAnimation();
 
         for (auto& controller : animationControllers | std::views::values)
         {
             controller->OnUpdate(deltaTime);
         }
 
-        if (stateMachine_)
-        {
-            stateMachine_->Update(deltaTime);
-        }
     };
 
     // ステートマシンをセットする
@@ -69,6 +74,9 @@ public:
     virtual void LateUpdate(float elapsedTime) {};
 
     virtual void Move(float elapsedTime) {}
+
+    // ブレンドスペースのアニメーションを使用するかの更新関数
+    virtual void UpdateLocomotionAnimation() {}
 
     // アニメーションの再生倍率を変更する関数
     void SetAnimationRate(const std::string& name, const float  animationRate) const
@@ -127,41 +135,12 @@ public:
     //進行方向の単位ベクトルを取得する
     const DirectX::XMFLOAT3& GetForward()
     {
-#if 0
-        // Z軸方向の単位方向ベクトル　デフォルト
-        DirectX::XMVECTOR DefaultForward = DirectX::XMVectorSet(0, 0, 1, 0);
-        //playerの回転値によって作られる回転行列
-        DirectX::XMMATRIX RotationMatrix = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&GetQuaternionRotation()));
-        // デフォルトのベクトルに回転行列を適応する
-        DirectX::XMVECTOR TransformedForward = DirectX::XMVector3TransformNormal(DefaultForward, RotationMatrix);
-        //正規化
-        TransformedForward = DirectX::XMVector3Normalize(TransformedForward);
-        DirectX::XMStoreFloat3(&front, TransformedForward);
-#endif // 0
         return front;
     }
 
     // 右方向の単位ベクトルを取得する
     const DirectX::XMFLOAT3& GetRight()
     {
-#if 0
-        // X軸方向の単位ベクトル
-        DirectX::XMVECTOR DefaultRight = DirectX::XMVectorSet(1, 0, 0, 0);
-
-        // 回転行列を作成
-        DirectX::XMMATRIX RotationMatrix =
-            DirectX::XMMatrixRotationQuaternion(
-                DirectX::XMLoadFloat4(&GetQuaternionRotation()));
-
-        // 回転を適用
-        DirectX::XMVECTOR TransformedRight =
-            DirectX::XMVector3TransformNormal(DefaultRight, RotationMatrix);
-
-        // 正規化
-        TransformedRight = DirectX::XMVector3Normalize(TransformedRight);
-
-        DirectX::XMStoreFloat3(&right, TransformedRight);
-#endif
         return right;
     }
 
@@ -197,7 +176,7 @@ public:
     virtual void OnAnimationNotifyEvent(const AnimationNotifyEvent& event) {}
 
     // アニメーションが変わった時にステートなどを変更する関数
-    virtual void OnAnimationChanged(){}
+    virtual void OnAnimationChanged() {}
 
 private:
     // 方向を更新
@@ -231,9 +210,9 @@ protected:
     //前方向ベクトル
     DirectX::XMFLOAT3 front{ 0.0f,0.0f,1.0f };
     //横方向ベクトル
-    DirectX::XMFLOAT3 right{ 1.0f,0.0f,0.0f};
+    DirectX::XMFLOAT3 right{ 1.0f,0.0f,0.0f };
     //上方向ベクトル
-    DirectX::XMFLOAT3 up{ 0.0f,1.0f,0.0f};
+    DirectX::XMFLOAT3 up{ 0.0f,1.0f,0.0f };
     //最大回転値
     float maxTurningSpeed = 360.0f;
 

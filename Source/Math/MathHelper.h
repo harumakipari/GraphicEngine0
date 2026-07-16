@@ -46,6 +46,7 @@ namespace MathHelper
         return angle;
     }
 
+
     inline float ClampEulerAngle(float eulerAngle)
     {
         float angle = DirectX::XMConvertToRadians(eulerAngle);
@@ -281,6 +282,13 @@ namespace MathHelper
         );
     }
 
+    // äpìxï‚ä‘
+    inline float LerpAngle(float from, float to, float t)
+    {
+        float diff = ClampAngle(to - from);
+        return ClampAngle(from + diff * t);
+    }
+
     // ãóó£åvéZÅiVector3Åj
     inline float Distance(
         const DirectX::XMFLOAT3& a,
@@ -370,7 +378,7 @@ namespace MathHelper
         XMVECTOR va = XMLoadFloat3(&a);
         XMVECTOR vb = XMLoadFloat3(&b);
 
-        XMVECTOR Cross=XMVector3Cross(va, vb);
+        XMVECTOR Cross = XMVector3Cross(va, vb);
         XMFLOAT3 cross;
         XMStoreFloat3(&cross, Cross);
         return cross;

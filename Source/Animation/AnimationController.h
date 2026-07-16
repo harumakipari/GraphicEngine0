@@ -191,10 +191,25 @@ public:
 
     void SetUseBlendSpace(const bool useBlendSpace)
     {
+        // 変更がないなら何もしない
+        if (this->useBlendSpace == useBlendSpace)
+            return;
+
         this->useBlendSpace = useBlendSpace;
-        // ルートモーションを切る
-        enableRootMotion = !useBlendSpace;
-        locomotionTime = 0.0f;
+        
+        if (useBlendSpace)
+        {// ブレンドスペース開始
+            // ルートモーションを切る
+            enableRootMotion = false;
+            locomotionTime = 0.0f;
+            Logger::Log("Enable BlendSpace");
+        }
+        else
+        {
+            enableRootMotion = true;
+            ResetRootMotion("Jog_Fwd",true,true,0.2f);
+            Logger::Log("Disable BlendSpace");
+        }
     }
 
 private:
