@@ -32,8 +32,9 @@ void CharacterMovementComponent::Tick(float deltaTime)
         wishDir.z /= len;
     }
 
-    velocity_.x = wishDir.x * speed_ * inputMagnitude;
-    velocity_.z = wishDir.z * speed_ * inputMagnitude;
+    float targetSpeed = std::lerp(walkSpeed, runSpeed, inputMagnitude);
+    velocity_.x = wishDir.x * speed_ * targetSpeed;
+    velocity_.z = wishDir.z * speed_ * targetSpeed;
 
     // ŠO—Í‚ð‰ÁŽZ
     velocity_.x += externalVelocity_.x;

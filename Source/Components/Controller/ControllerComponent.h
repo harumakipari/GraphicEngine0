@@ -94,6 +94,17 @@ public:
         this->speed_ = s;
     }
 
+    // 入力によって変わる現在の速さを取得
+    float GetCurrentInputSpeed() const { return targetSpeed; }
+
+    // 入力によって変わる現在の速さを取得
+    float GetCurrentInputNormalizeSpeed()const
+    {
+        // 0除算を防ぐため
+        float speed = targetSpeed / std::max<float>(0.00001f, runSpeed);
+        return speed;
+    }
+
     // 速さを設定する
     void SetSpeed(const float speed) { this->speed_ = speed; }
 
@@ -143,19 +154,29 @@ public:
     // targetまで進んだかどうか
     bool IsMoveToActorFinished() const { return !moveToTarget_; }
 
+    void DrawImGuiInspector() override
+    {
+#ifdef USE_IMGUI
+        SceneComponent::DrawImGuiInspector();
+        ImGui::DragFloat(U8("歩く速度"), &walkSpeed, 0.05f, 0.0f, 5.0f);
+        ImGui::DragFloat(U8("走り速度"), &runSpeed, 0.05f, 0.0f, 10.0f);
+
+#endif
+    }
+
 private:
     // 状態
     DirectX::XMFLOAT3 velocity_{ 0,0,0 };
     bool isGrounded_ = false;
 
     // 設定値
-    float speed_ = 5.0f;
+    float speed_ = 1.0f;    // 強制的に速さを変更する場合に使用
     float gravity_ = -4.9f;
     float groundOffset_ = 1.0f;
     float radius_ = 0.4f;
     bool useGravity = true;
 
-    float initialSpeed = 5.0f; // 初速
+    float initialSpeed = 1.0f; // 初速
 
     DirectX::XMFLOAT3 inputDir_{ 0,0,0 };
     DirectX::XMFLOAT3 externalVelocity_ = { 0.0f,0.0f,0.0f }; // 外部から加算される速度（吹き飛ばしなど）
@@ -174,6 +195,11 @@ private:
 
     // スティックの強さ　
     float inputMagnitude = 0.0f;
+
+    float walkSpeed = 2.0f;
+    float runSpeed = 5.0f;
+    // 入力によって変わるスピード結果
+    float targetSpeed = 0.0f;
 };
 
 

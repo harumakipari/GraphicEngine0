@@ -183,10 +183,16 @@ public:
         locomotionBlendSpace.AddAnimation(clip, { x,y });
     }
 
-    void SetBlendInput(const float x, const float y)
+    void SetLockOnBlend(const float x, const float y,const float speed)
     {
         blendInput.x = x;
         blendInput.y = y;
+        blendSpeed = speed;
+    }
+
+    void SetTPSBlend(const float speed)
+    {
+        blendSpeed = speed;
     }
 
     void SetUseBlendSpace(const bool useBlendSpace)
@@ -196,7 +202,7 @@ public:
             return;
 
         this->useBlendSpace = useBlendSpace;
-        
+
         if (useBlendSpace)
         {// ブレンドスペース開始
             // ルートモーションを切る
@@ -212,7 +218,7 @@ public:
         else
         {
             enableRootMotion = true;
-            ResetRootMotion("Jog_Fwd",true,true,0.2f);
+            ResetRootMotion("Jog_Fwd", true, true, 0.2f);
             Logger::Log("Disable BlendSpace");
         }
     }
@@ -277,7 +283,7 @@ private:
 
     std::vector<InterleavedGltfModel::Node> blendSpaceClipA;
     std::vector<InterleavedGltfModel::Node> blendSpaceClipB;
-             
+
     enum class AnimationTransitionState :uint8_t
     {
         NotStarted,
@@ -364,6 +370,8 @@ private:
     BlendSpace locomotionBlendSpace;
     // ブレンドスペースで使用する入力値
     DirectX::XMFLOAT2 blendInput = {};
+    float blendSpeed = 0.0f;
+
     bool useBlendSpace = false;
     float locomotionTime = 0.0f;
     float locomotionPlayRate = 1.0f;
@@ -371,6 +379,8 @@ private:
     bool blendSpaceTransition = false;
     float blendSpaceTransitionTime = 0.2f;
     float blendSpaceElapsed = 0.0f;
+
+
 
     friend class Player;
 };

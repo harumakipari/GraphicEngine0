@@ -627,7 +627,7 @@ void Player::Update(float deltaTime)
         float moveStickX = rawStickX;
         float moveStickZ = rawStickZ;
         float length = sqrtf(moveStickX * moveStickX + moveStickZ * moveStickZ);
-        const float deadZone = 0.15f;
+        const float deadZone = 0.18f;
         if (length < deadZone)
         {
             moveStickX = 0.0f;
@@ -637,7 +637,8 @@ void Player::Update(float deltaTime)
         {
             float newLength = (length - deadZone) / (1.0f - deadZone);
             // D‚Ý‚ÅƒRƒƒ“ƒgƒAƒEƒg‚ðØ‚è‘Ö‚¦
-             //newLength *= newLength;      // ‚æ‚è‘@×‚È“ü—Í
+             //newLength = std::pow(newLength,1.5f);// ‚æ‚è‘@×‚È“ü—Í
+            newLength *= newLength;
             // newLength = sqrtf(newLength); // ­‚µ“|‚µ‚½‚¾‚¯‚Å‘¬‚¢
             moveStickX = moveStickX / length * newLength;
             moveStickZ = moveStickZ / length * newLength;
@@ -657,10 +658,13 @@ void Player::Update(float deltaTime)
             moveDir.z = camForward.z * moveStickZ + camRight.z * moveStickX;
 
             // ‰ñ“]‚Í‚·‚®‚ÉŒü‚«‚ð•Ï‚¦‚Ä‚Ù‚µ‚¢‚½‚ß
-            DirectX::XMFLOAT3 lookDir = {0,0,0};
+            DirectX::XMFLOAT3 lookDir = { 0,0,0 };
             lookDir.x = camForward.x * rawStickZ + camRight.x * rawStickX;
             lookDir.z = camForward.z * rawStickZ + camRight.z * rawStickX;
             rotationComponent->SetDirection(lookDir);
+
+            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+            GetBodyAnimationController()->SetTPSBlend(normalizeSpeed);
         }
         break;
         case DarkCameraActor::CameraMode::Focus:
@@ -670,7 +674,8 @@ void Player::Update(float deltaTime)
             DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
             moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
             moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
-            GetBodyAnimationController()->SetBlendInput(moveStickX, moveStickZ);
+            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+            GetBodyAnimationController()->SetBlendInput(moveStickX, moveStickZ, normalizeSpeed);
             break;
         case DarkCameraActor::CameraMode::LockOn:
             break;
