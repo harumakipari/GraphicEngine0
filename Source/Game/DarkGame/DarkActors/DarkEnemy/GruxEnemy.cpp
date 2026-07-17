@@ -50,26 +50,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     skeletalMeshComponent->SetIsShadowMap(true);
     skeletalMeshComponent->SetIsCastShadow(false);
 
-#if 0
-    {
-        // 左肩にカプセルの当たり判定を追加
-        int leftUpperArmLeftIndex = skeletalMeshComponent->FindIndexByName("upperarm_l");
-        std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
-        height = 0.3f;
-        radius = 0.75f;
-        capsuleComponent->SetRadiusAndHeight(radius, height);
-        capsuleComponent->SetMass(mass);
-        capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
-        capsuleComponent->SetLayer(CollisionLayer::EnemyBody);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetRelativeEulerRotationDirect({ 0.0f,0.0f,90.0f });
-        capsuleComponent->SetRelativeLocationDirect({ -0.9f,0.0f,-0.1f });
-        capsuleComponent->Initialize();
-        capsuleComponent->AttachToComponent(skeletalMeshComponent, leftUpperArmLeftIndex);
-    }
-    int leftLowerArmLeftIndex = skeletalMeshComponent->FindIndexByName("lowerarm_l");
-    // 右肩にカプセルの当たり判定を追加
-#endif // 0
 
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
@@ -265,7 +245,7 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     // カメラの注視点の位置のコンポーネントを追加
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
-
+    cameraTargetComponent->SetRelativeLocationDirect({ 0.0f,1.5f,-0.0f });
     // 登場シーンのボス名前のUIを追加
     auto uiManager = GetOwnerScene()->GetUIManager();
     gruxNameImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Grux_name.png", "Grux_name");
@@ -277,6 +257,11 @@ void GruxEnemy::Initialize(const Transform& transform)
     gruxNameImageComponent->SetVisible(true);
     uiManager->Add(gruxNameImageComponent);
     easingRunner = std::make_unique<EasingRunner>();
+
+    // ロックオンのモデル
+    lockOnTargetMeshComponent = AddComponent<SkeletalMeshComponent>("lockOn", parentName);
+    lockOnTargetMeshComponent->SetModel("./Data/Models/LockOnTarget/LockOnTargetModel.gltf");
+
 }
 
 void GruxEnemy::Update(float deltaTime)
@@ -295,10 +280,10 @@ void GruxEnemy::Update(float deltaTime)
         skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = std::max<float>(0.0f, skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - deltaTime / flashDuration);
     }
 
-
     DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
 
+#if 1
     // ボス戦時のカメラの注視点の位置を更新する
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
     {
@@ -337,9 +322,12 @@ void GruxEnemy::Update(float deltaTime)
             targetPos,
             bossBattleCameraOffset);
 
-        cameraTargetComponent->SetWorldLocationDirect(targetPos);
-        DebugRender::DrawSphere(targetPos, 0.5f, { 1.0f,1.0f,0.0f,1.0f }, true);
+        //cameraTargetComponent->SetWorldLocationDirect(targetPos);
+        //DebugRender::DrawSphere(targetPos, 0.5f, { 1.0f,1.0f,0.0f,1.0f }, true);
     }
+
+
+#endif // 0
 
     // 当たり判定
     HitResultWithActor hit;
@@ -530,7 +518,7 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
     {
         Transform tr{ hitPos,{0.0f,0.0f,0.0f},{1.0f,1.0f,1.0f} };
         auto iceEffect = actorManager->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("iceFragment", tr);
-        iceEffect->SetDirection(hitPos,hitNormal);
+        iceEffect->SetDirection(hitPos, hitNormal);
     }
 }
 

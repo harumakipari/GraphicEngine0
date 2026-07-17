@@ -80,7 +80,10 @@ public:
     void RenderTrail(ID3D11DeviceContext* immediateContext);
 
     // Focus開始時のForwardを設定する
-    void SetFocusDirection(const DirectX::XMFLOAT3& focusDir) { this->focusDirection = focusDir; }
+    void SetFocusDirection(const DirectX::XMFLOAT3& focusDir)
+    {
+        this->focusDirection = focusDir;
+    }
 
 private:
     // 火花エフェクトの生成
@@ -245,6 +248,6 @@ private:
     DirectX::XMFLOAT3 bossBattleCameraOffset = { -0.5f,2.0f,0.0f };
 
     DirectX::XMFLOAT3 focusDirection = {};//　カメラのFocus開始時のForwawrd
-
+    bool isBossBattle = false;  // ボス戦状態かどうか
     friend class PlayerStateBase;
 };

@@ -42,8 +42,8 @@ void AnimationController::OnUpdate(const float deltaTime)
     switch (transitionState)
     {
     case AnimationTransitionState::Inprogress:
-        curveRate = 1.0f;
-        break;
+        //curveRate = 1.0f;
+        //break;
     case AnimationTransitionState::NotStarted:
     case AnimationTransitionState::Completed:
         curveRate = asset.speedCurve.Evaluate(animationTime);
@@ -1185,6 +1185,8 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     Logger::Log("BlendSpace Update");
 #if 0
     BlendPair pair = CalculateBlendPair(blendInput);
+
+
 
     size_t clipA = pair.clipA;
     size_t clipB = pair.clipB;

@@ -305,6 +305,8 @@ namespace MathHelper
         return distance;
     }
 
+
+
     // ‹——£ŒvZiVector3j
     inline float DistanceSq(
         const DirectX::XMFLOAT3& a,

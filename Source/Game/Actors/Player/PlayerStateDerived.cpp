@@ -269,9 +269,9 @@ void PlayerDodgeState::Execute(float deltaTime)
             player->GetStateMachine()->ChangeState("Idle");
         }
     }
-#if 0
+#if 1
     if (!player->GetBodyAnimationController()->IsPlayAnimation())
-    {
+    {// •ÛŒ¯
         player->GetStateMachine()->ChangeState("Idle");
     }
 #endif // 0

@@ -2,6 +2,7 @@
 #include "DarkGameCamera.h"
 
 #include "Game/Actors/Player/Player.h"
+#include "Physics/CollisionFunction.h"
 
 void DarkCameraActor::Initialize(const Transform& transform)
 {
@@ -9,6 +10,23 @@ void DarkCameraActor::Initialize(const Transform& transform)
     mainCameraComponent = AddComponent<CameraComponent>(parentName);
 
     inputComponent = AddComponent<InputComponent>("inputComponent", parentName);
+
+    // カメラを敵方向から何度横へ振るか
+    lockOnYawOffsetDegree = -26.0f;
+    // targetをどこに置くか
+    // 0 = Player
+    // 1 = Enemy
+    lockOnTargetWeight = 0.1f;
+    // 基本距離
+    lockOnCameraDistance = 5.0f;
+    // 敵との距離による増加量
+    lockOnDistanceScale = 0.75f;
+    // 最大距離
+    lockOnMaxDistance = 8.0f;
+    // Pitch
+    lockOnPitchDegree = -10.0f;
+
+
 }
 
 void DarkCameraActor::Update(float deltaTime)
@@ -39,6 +57,10 @@ void DarkCameraActor::Update(float deltaTime)
     {
         UpdateBlend(deltaTime);
     }
+
+    // 当たり判定でカメラの位置を修正する
+    currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
+
 
     SetPosition(currentPose.eye);
     mainCameraComponent->lookTarget = currentPose.target;
@@ -73,7 +95,7 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
 
     case CameraMode::Focus:
     {
-        FocusInfo info = CreateFocusInfo();
+        CameraDirectionInfo info = CreateFocusInfo();
 
         targetYaw = info.yaw;
         targetPitch = info.pitch;
@@ -81,10 +103,15 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     }
 
     case CameraMode::LockOn:
-
+        CameraDirectionInfo info = CreateLockOnInfo();
+        targetYaw = info.yaw;
+        targetPitch = info.pitch;
         break;
     }
     blendTargetPose = CalculatePose(to, playerPos, targetYaw, targetPitch);
+    // 当たり判定でカメラの位置を修正する
+    //blendTargetPose.eye = ResolveCameraCollision(blendTargetPose.target, blendTargetPose.eye);
+
     currentPose = oldPose;
 }
 
@@ -103,6 +130,13 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
     currentYaw = MathHelper::LerpAngle(blendStartPose.yaw, blendTargetPose.yaw, t);
     currentPitch = std::lerp(blendStartPose.pitch, blendTargetPose.pitch, t);
 
+    float distance = cameraDistance;
+
+    if (requestMode == CameraMode::LockOn)
+    {
+        distance = CalculateLockOnDistance();
+    }
+
     using namespace DirectX;
 
     XMVECTOR forward = XMVectorSet(
@@ -111,7 +145,7 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
         cosf(currentYaw) * cosf(currentPitch),
         0.0f);
     XMVECTOR target = XMLoadFloat3(&currentPose.target);
-    XMVECTOR eye = target - forward * cameraDistance;
+    XMVECTOR eye = target - forward * distance;
     eye += XMVectorSet(0, cameraHeight, 0, 0);
     XMStoreFloat3(&currentPose.eye, eye);
 
@@ -125,9 +159,9 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
 }
 
 // フォーカスカメラの情報を作成する
-DarkCameraActor::FocusInfo DarkCameraActor::CreateFocusInfo()
+DarkCameraActor::CameraDirectionInfo DarkCameraActor::CreateFocusInfo()
 {
-    FocusInfo info = {};
+    CameraDirectionInfo info = {};
     auto playerHeadShared = playerHead.lock();
 
     if (!playerHeadShared)
@@ -156,34 +190,42 @@ DarkCameraActor::FocusInfo DarkCameraActor::CreateFocusInfo()
     return info;
 }
 
-#if 0
-// フォーカスカメラと同期する
-void DarkCameraActor::SyncFocusCamera()
+// ロックオンカメラの情報を作成する
+DarkCameraActor::CameraDirectionInfo DarkCameraActor::CreateLockOnInfo()
 {
+    CameraDirectionInfo info{};
+
     auto playerHeadShared = playerHead.lock();
+    auto enemyHeadShared = enemyHead.lock();
 
-    if (!playerHeadShared)
-        return;
-
-    auto playerActor = playerHeadShared->GetOwner();
-
-    if (!playerActor)
-        return;
-
-    XMFLOAT3 forward = playerActor->GetForward();
-
-    if (auto player = dynamic_cast<Player*>(playerActor))
+    if (!playerHeadShared || !enemyHeadShared)
     {
-        player->SetFocusDirection(forward);
+        Logger::Warning("LockOn target missing");
+        return {};
+    }
+    auto player = playerHeadShared->GetOwner();
+    auto enemy = enemyHeadShared->GetOwner();
+
+    if (!player || !enemy)
+    {
+        return {};
     }
 
-    currentYaw = atan2f(forward.x, forward.z);
-    currentPitch = 0.0f;
-    //desiredYaw = atan2f(forward.x, forward.z);
-    //desiredPitch = 0.0f;
-}
-#endif // 0
+    DirectX::XMFLOAT3 playerPos = player->GetPosition();
 
+    DirectX::XMFLOAT3 enemyPos = enemy->GetPosition();
+
+    info.direction = MathHelper::Normalize(MathHelper::Subtract(enemyPos, playerPos));
+    info.yaw = atan2f(info.direction.x, info.direction.z);
+    // 調整値
+    info.yaw += XMConvertToRadians(lockOnYawOffsetDegree);
+
+    //float horizontalLength = sqrtf(info.direction.x * info.direction.x + info.direction.z * info.direction.z);
+    //info.pitch = atan2f(info.direction.y, horizontalLength);
+    info.pitch = XMConvertToRadians(lockOnPitchDegree);
+
+    return info;
+}
 
 // 目標の方向を更新する関数
 void DarkCameraActor::UpdateDesireRotation(float deltaTime)
@@ -191,7 +233,6 @@ void DarkCameraActor::UpdateDesireRotation(float deltaTime)
     auto intent = inputComponent->GetIntent();
     // 右スティックの入力値
     DirectX::XMFLOAT2 rightStick = intent.rightMove;
-    Logger::Log("rightStick" + std::to_string(rightStick.x) + ":" + std::to_string(rightStick.y));
     switch (currentMode)
     {
     case CameraMode::TPS:
@@ -225,6 +266,17 @@ void DarkCameraActor::UpdateDesireRotation(float deltaTime)
 
                     DirectX::XMFLOAT3 toEnemy = MathHelper::Subtract(enemyPos, playerPos);
                     desiredYaw = atan2f(toEnemy.x, toEnemy.z);
+                    desiredPitch = XMConvertToRadians(lockOnPitchDegree);
+                    // 調整値
+                    desiredYaw += XMConvertToRadians(lockOnYawOffsetDegree);
+
+
+
+                    // 右スティックを動かす
+                    desiredYaw += rightStick.x * rotateSpeed * deltaTime;
+                    desiredPitch += rightStick.y * rotateSpeed * deltaTime;
+
+
                 }
             }
         }
@@ -247,6 +299,9 @@ void DarkCameraActor::UpdateRotation(float deltaTime)
 DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const
 {
     CameraPose pose{};
+
+    float distance = cameraDistance;
+
     switch (cameraMode)
     {
     case CameraMode::TPS:
@@ -261,7 +316,15 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
     }
     case CameraMode::LockOn:
     {
-        // 後で作る
+        auto enemy = enemyHead.lock();
+        if (enemy)
+        {
+            XMFLOAT3 enemyPos = enemy->GetComponentLocation();
+
+            // プレイヤーと敵の中間を見る
+            pose.target = MathHelper::Lerp(playerPos, enemyPos, lockOnTargetWeight);
+        }
+        distance = CalculateLockOnDistance();
         break;
     }
     }
@@ -275,7 +338,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
         cosf(yaw) * cosf(pitch),
         0.0f);
     XMVECTOR target = XMLoadFloat3(&pose.target);
-    XMVECTOR eye = target - forward * cameraDistance;
+    XMVECTOR eye = target - forward * distance;
     eye += XMVectorSet(0, cameraHeight, 0, 0);
 
     XMStoreFloat3(&pose.eye, eye);
@@ -285,57 +348,60 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
     return pose;
 }
 
-#if 0
-void DarkCameraActor::CalculatePose(CameraMode cameraMode)
+// ロックオンのカメラ距離を計算する関数
+float DarkCameraActor::CalculateLockOnDistance() const
 {
     auto playerHeadShared = playerHead.lock();
-    if (!playerHeadShared)
+    auto enemyHeadShared = enemyHead.lock();
+
+    if (!playerHeadShared || !enemyHeadShared)
     {
-        return;
-    }
-    DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
-    switch (cameraMode)
-    {
-    case CameraMode::TPS:
-    {
-        currentPose.target = playerPos;
-        break;
-    }
-    case CameraMode::Focus:
-    {
-        currentPose.target = MathHelper::Add(playerPos, MathHelper::Multiply(CameraForwardXZ(), focusDistance));
-        break;
-    }
-    case CameraMode::LockOn:
-    {
-        // 後で作る
-        break;
-    }
+        return lockOnCameraDistance;
     }
 
+    auto player = playerHeadShared->GetOwner();
+    auto enemy = enemyHeadShared->GetOwner();
 
-    // Eye の処理は共通
+    if (!player || !enemy)
+    {
+        return lockOnCameraDistance;
+    }
 
-    using namespace DirectX;
+    DirectX::XMFLOAT3 playerPos = player->GetPosition();
+    DirectX::XMFLOAT3 enemyPos = enemy->GetPosition();
 
-    XMVECTOR forward = XMVectorSet(
-        sinf(currentYaw) * cosf(currentPitch),
-        sinf(currentPitch),
-        cosf(currentYaw) * cosf(currentPitch),
-        0.0f);
-    XMVECTOR target = XMLoadFloat3(&currentPose.target);
+    float enemyDistance = MathHelper::Distance(playerPos, enemyPos);
 
-    XMVECTOR eye = target - forward * cameraDistance;
+    float distance =
+        lockOnCameraDistance +
+        enemyDistance * lockOnDistanceScale;
 
-    eye += XMVectorSet(0, cameraHeight, 0, 0);
+    distance = std::min<float>(distance, lockOnMaxDistance);
 
-    XMStoreFloat3(&currentPose.eye, eye);
-    // 現在の yaw と pitch を保存
-    currentPose.yaw = currentYaw;
-    currentPose.pitch = currentPitch;
+    return distance;
 }
-#endif // 0
 
+// 当たり判定を考慮する関数
+DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 target, DirectX::XMFLOAT3 eye)
+{
+    using namespace DirectX;
+    DirectX::XMFLOAT3 idealEye = eye;
+    HitResultWithActor hit;
+    uint32_t mask =
+        CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
+        CollisionHelper::ToBit(CollisionLayer::Floor) |
+        CollisionHelper::ToBit(CollisionLayer::WorldProps);
+    if (CollisionFunction::SphereRayCast(target, eye, hit, sphereCastRadius, mask))
+    {
+        float collisionOffset = sphereCastRadius + 0.05f;
+        // 少し手前に出す
+        idealEye = MathHelper::Add(hit.hitPoint,
+            MathHelper::Multiply(hit.normal, collisionOffset));
+        return idealEye;
+    }
+
+    return idealEye;
+}
 
 
 void DarkCameraActor::DrawImGuiDetails()
@@ -351,11 +417,26 @@ void DarkCameraActor::DrawImGuiDetails()
         SetRequestMode(CameraMode::Focus);
 
     }
+    if (ImGui::Button(U8("LockOn")))
+    {
+        SetRequestMode(CameraMode::LockOn);
+
+    }
     ImGui::DragFloat(U8("右スティックの回転のスピード"), &rotateSpeed, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat(U8("カメラの距離"), &cameraDistance, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat(U8("カメラの高さ"), &cameraHeight, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat(U8("フォーカス距離"), &focusDistance, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat(U8("最小ピッチ度数"), &minPitchDegree, 0.1f, -90.0f, 90.0f);
     ImGui::DragFloat(U8("最大ピッチ度数"), &maxPitchDegree, 0.1f, -90.0f, 90.0f);
+
+    ImGui::DragFloat(U8("sphereCastRadius"), &sphereCastRadius, 0.01f, 0.01f, 1.0f);
+    ImGui::DragFloat(U8("blendDuration"), &blendDuration, 0.01f, 0.01f, 1.0f);
+    ImGui::DragFloat(U8("lockOnTargetWeight"), &lockOnTargetWeight, 0.1f, 0.01f, 1.0f);
+    ImGui::DragFloat(U8("ロックオンカメラの基本距離"), &lockOnCameraDistance, 0.1f, 0.01f, 10.0f);
+    ImGui::DragFloat(U8("敵との距離による増加量"), &lockOnDistanceScale, 0.05f, 0.01f, 0.999f);
+    ImGui::DragFloat(U8("最大距離"), &lockOnMaxDistance, 0.1f, 0.0f, 10.0f);
+    ImGui::DragFloat(U8("ロックオンピッチ度数"), &lockOnPitchDegree, 0.1f, -90.0f, 90.0f);
+    ImGui::DragFloat(U8("ロックオンyaw度数"), &lockOnYawOffsetDegree, 0.1f, -90.0f, 90.0f);
+
 #endif
 }

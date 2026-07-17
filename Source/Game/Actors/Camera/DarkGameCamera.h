@@ -19,7 +19,7 @@ public:
         float pitch;
     };
     // Z注目の情報
-    struct FocusInfo
+    struct CameraDirectionInfo
     {
         DirectX::XMFLOAT3 direction;
         float yaw;
@@ -60,6 +60,12 @@ public:
         this->playerHead = playerHead;
     }
 
+    const std::shared_ptr<SceneComponent>& GetEnemyHead()const
+    {
+        return this->enemyHead.lock();
+    }
+
+
     void DrawImGuiDetails() override;
 
     DirectX::XMFLOAT3 CameraForwardXZ() const
@@ -79,6 +85,9 @@ public:
     // カメラモードを取得する
     CameraMode GetCameraMode()const { return currentMode; }
 
+    // カメラモードで
+    CameraMode GetMovementMode()const { return requestMode; }
+
     // カメラモードをセットする
     void SetRequestMode(const CameraMode mode) { requestMode = mode; }
 
@@ -90,8 +99,10 @@ private:
     void UpdateBlend(float deltaTime);
 
     // フォーカスカメラの情報を作成する
-    FocusInfo CreateFocusInfo();
-    //void SyncFocusCamera();
+    CameraDirectionInfo CreateFocusInfo();
+
+    // ロックオンカメラの情報を作成する
+    CameraDirectionInfo CreateLockOnInfo();
 
     // 目標の方向を更新する関数
     void UpdateDesireRotation(float deltaTime);
@@ -100,11 +111,13 @@ private:
     void UpdateRotation(float deltaTime);
 
     // Eyeを計算する関数
-    //void CalculatePose(CameraMode cameraMode);
     CameraPose CalculatePose(CameraMode mode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const;
 
+    // ロックオンのカメラ距離を計算する関数
+    float CalculateLockOnDistance() const;
+
     // 当たり判定を考慮する関数
-    void ResolveCollision();
+    DirectX::XMFLOAT3 ResolveCameraCollision(DirectX::XMFLOAT3 target, DirectX::XMFLOAT3 eye);
 
     // 適応する
 
@@ -132,7 +145,7 @@ private:
     CameraPose blendTargetPose;
 
     float blendTime = 0.0f;
-    float blendDuration = 0.25f;
+    float blendDuration = 0.30f;
 
     bool isBlending = false;
 
@@ -143,6 +156,24 @@ private:
     float cameraDistance = 5.0f;
     float cameraHeight = 0.0f;
     float focusDistance = 0.0f;
+
+    // ロックオンカメラの調整値
+    // カメラを敵方向から何度横へ振るか
+    float lockOnYawOffsetDegree = -26.0f;
+    // targetをどこに置くか
+    // 0 = Player
+    // 1 = Enemy
+    float lockOnTargetWeight = 0.1f;
+    // 基本距離
+    float lockOnCameraDistance = 5.0f;
+    // 敵との距離による増加量
+    float lockOnDistanceScale = 0.25f;
+    // 最大距離
+    float lockOnMaxDistance = 8.0f;
+    // Pitch
+    float lockOnPitchDegree = -10.0f;
+    // 当たり判定のスフィアキャストの球の大きさ
+    float sphereCastRadius = 0.01f;
 
     // フォーカス時の
     // float focus

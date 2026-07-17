@@ -624,6 +624,32 @@ void Player::Update(float deltaTime)
 
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
     {
+#if 1
+        if (isBossBattle)
+        {
+            if (focus)
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
+            }
+            else
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+            }
+        }
+        else
+        {
+            if (focus)
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
+            }
+            else
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+            }
+        }
+#endif // 0
+
+
         // カメラモードに応じたプレイヤー移動処理
         // 左スティック入力
         float rawStickX = intent.leftMove.x;
@@ -654,7 +680,7 @@ void Player::Update(float deltaTime)
             characterMovementComponent->SetInputMagnitude(newLength);
         }
 
-        switch (camera->GetCameraMode())
+        switch (camera->GetMovementMode())
         {
         case DarkCameraActor::CameraMode::TPS:
         {
@@ -669,37 +695,52 @@ void Player::Update(float deltaTime)
             DirectX::XMFLOAT3 lookDir = { 0,0,0 };
             lookDir.x = camForward.x * rawStickZ + camRight.x * rawStickX;
             lookDir.z = camForward.z * rawStickZ + camRight.z * rawStickX;
-            rotationComponent->SetDirection(lookDir);
+            if (GetStateMachine()->GetStateName() != "Dodge"|| GetStateMachine()->GetStateName() != "Attack")
+            {// 回避ではないかつ攻撃でないときは
+                rotationComponent->SetDirection(lookDir);
+            }
 
             float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-            GetBodyAnimationController()->SetBlendInput(0.0f,1.0f,normalizeSpeed);
+            GetBodyAnimationController()->SetBlendInput(0.0f, 1.0f, normalizeSpeed);
         }
         break;
         case DarkCameraActor::CameraMode::Focus:
+        {
+            // 最初に決定したfocus 方向
+            DirectX::XMFLOAT3 forward = focusDirection;
+            forward = MathHelper::Normalize(forward);
+            DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
+            DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
+            moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
+            moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
+            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+            GetBodyAnimationController()->SetBlendInput(rawStickX, rawStickZ, normalizeSpeed);
+            break;
+        }
+        case DarkCameraActor::CameraMode::LockOn:
+        {
+            // 最初に決定したfocus 方向
+            if (auto target = camera->GetEnemyHead())
             {
-                // 最初に決定したfocus 方向
-                DirectX::XMFLOAT3 forward = focusDirection;
+                XMFLOAT3 playerPos = GetPosition();
+                XMFLOAT3 enemyPos = target->GetComponentLocation();
+                XMFLOAT3 forward = MathHelper::Subtract(enemyPos, playerPos);
+                forward.y = 0.0f;
+                forward = MathHelper::Normalize(forward);
                 DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
                 DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
                 moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
                 moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
                 float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
                 GetBodyAnimationController()->SetBlendInput(rawStickX, rawStickZ, normalizeSpeed);
-                break;
+                rotationComponent->SetDirection(forward);
             }
-        case DarkCameraActor::CameraMode::LockOn:
             break;
+        }
         }
         characterMovementComponent->SetMoveDirection(moveDir);
 
-        if (focus)
-        {
-            camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
-        }
-        else
-        {
-            camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-        }
+
     }
 
 
@@ -738,6 +779,7 @@ void Player::RenderTrail(ID3D11DeviceContext* immediateContext)
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    ImGui::Checkbox(U8("ボス戦カメラ"), &isBossBattle);
     ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);
@@ -923,25 +965,24 @@ void Player::OnAnimationChanged()
 void Player::UpdateLocomotionAnimation()
 {
     auto controller = GetBodyAnimationController();
-    bool lockOn = false;
+    bool cameraRelativeMovement = false;
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
     {
-        lockOn = camera->GetCameraMode() == DarkCameraActor::CameraMode::Focus;
+        auto mode = camera->GetMovementMode();
+
+        cameraRelativeMovement = mode == DarkCameraActor::CameraMode::Focus || mode == DarkCameraActor::CameraMode::LockOn;
     }
     bool locomotion = GetStateMachine()->GetStateName() == "Running";
-    //std::string locomotionText = locomotion ? "locomotion: true" : "locomotion:false";
-    //std::string lockOnText = lockOn ? "lockOn: true" : "lockOn:false";
-    //Logger::Log(lockOnText + locomotionText);
-    bool useBlendSpace = lockOn && locomotion;
+    bool useBlendSpace = cameraRelativeMovement && locomotion;
     controller->SetUseBlendSpace(useBlendSpace);
     if (locomotion)
     {
         if (useBlendSpace)
         {
             // 入力値を渡す
-            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-            auto move = inputComponent->GetMoveInput();
-            controller->SetBlendInput(move.x, move.z, normalizeSpeed);
+            //float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+            //auto move = inputComponent->GetMoveInput();
+            //controller->SetBlendInput(move.x, move.z, normalizeSpeed);
         }
         else
         {
