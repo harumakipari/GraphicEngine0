@@ -8,8 +8,6 @@ namespace ModelTypes
         StaticMesh,
         InstancedStaticMesh
     };
-
-
 }
 
 enum class MaterialType :int
@@ -32,4 +30,5 @@ enum class ObjectType :int
     Door, // メタリックを下げて、ラフネスを上げるため
     Furniture,
     EnemyEye, // 敵の目の表現用 暗い中で光る用
+    NoLighting, // ライティング無し用
 };

@@ -255,6 +255,10 @@ public:
     std::array<SwordGhost, 8> ghosts;
 
 private:
+    std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // ヒット時の剣のエフェクト
+
+
+
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     float hitStopTimer = 0.0f; // ヒットストップのタイマー
 

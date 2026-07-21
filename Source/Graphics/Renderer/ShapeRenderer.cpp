@@ -47,32 +47,32 @@ void ShapeRenderer::Initialize(ID3D11Device* device)
     //デバック用のPSに変更する
     for (InterleavedGltfModel::Material& material : sphereMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelCpuColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : capsuleMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelCpuColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : topHalfSphereMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelCpuColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : bottomHalfSphereMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelCpuColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : cylinderMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelCpuColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
     for (InterleavedGltfModel::Material& material : cubeMaterials)
     {//色だけを返すPS
-        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelBaseColorPS.cso", material.replacedPixelShader.GetAddressOf());
+        hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelCpuColorPS.cso", material.replacedPixelShader.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 

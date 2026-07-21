@@ -1106,7 +1106,7 @@
     <FxCompile Include="Shader\GlowExtractionPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\GltfModelBaseColorPS.hlsl">
+    <FxCompile Include="Shader\GltfModelCpuColorPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\GltfModelCsmGS.hlsl">

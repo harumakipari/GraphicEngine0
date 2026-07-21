@@ -155,6 +155,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Walk_Right", 79);
         controller->AddAnimation("Jog_Fwd1", 80);
         controller->AddAnimation("Walk_Fwd1", 81);
+        controller->AddAnimation("Sprint_Fwd", 82);
 
         // ブレンドスペースに追加
         controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
@@ -376,6 +377,10 @@ void Player::Initialize(const Transform& transform)
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
 
+    // ヒット時の剣のエフェクトコンポーネントを追加
+    hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
+    hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
+
     // 走り用のSEのコンポーネントを追加
     runAudioComp = AddComponent<AudioSourceComponent>("runAudioComponent", parentName);
     runAudioComp->SetSource(L"./Data/Sound/SE/run_heel.wav");
@@ -390,6 +395,8 @@ void Player::Initialize(const Transform& transform)
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f,1.0f,0.0f });
     // 軌跡初期化
     trail.Initialize();
+
+
 }
 
 void Player::Update(float deltaTime)
@@ -491,6 +498,16 @@ void Player::Update(float deltaTime)
                     enemy->TakeDamage(1);
                     enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
                     hitActors.emplace(enemy);
+
+                    if (hitSwordEffectComponent)
+                    {
+                        hitSwordEffectComponent->SetWorldLocationDirect(hit.hitPoint);
+                        hitSwordEffectComponent->UpdateComponentToWorld(); // これ入れないと最初に呼ばれる時に位置がずれる
+                        XMFLOAT3 position = hitSwordEffectComponent->GetComponentLocation();
+                        XMFLOAT3 rotation = hitSwordEffectComponent->GetComponentEulerRotation();
+                        EffectManager::EmitParticle(hitSwordEffectComponent->GetEffectHandle(), position, rotation);
+                    }
+
                 }
             }
         }

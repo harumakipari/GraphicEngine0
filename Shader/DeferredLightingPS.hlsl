@@ -13,7 +13,6 @@ Texture2D colorMap : register(t2);
 Texture2D positionMap : register(t3);
 Texture2D emissiveMap : register(t4);
 
-
 float4 main(VS_OUT pin) : SV_TARGET
 {
     float4 sampled = normalMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
@@ -34,6 +33,10 @@ float4 main(VS_OUT pin) : SV_TARGET
     float3 emissive = sampled.xyz;
     int gBufferFlag = sampled.w;
 
+    if (objectType == OBJECT_NO_LIGHTING)
+    { // ライティングがいらないものは
+        return baseColor;
+    }
 
     if (gBufferFlag == GBUFFER_FLAG_SKY)
     { // 何も書き込まれていなかったら スカイマップのために
@@ -188,10 +191,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     float3 lo = totalDiffuse + totalSpecular + (emissive) + rim /*+ ambient*/;
 
-    if (objectType == OBJECT_PLAYER)
-    {
-        //return float4(lo, 0.1f);
-    }
+
 
 
     return float4(lo, 1.0f);

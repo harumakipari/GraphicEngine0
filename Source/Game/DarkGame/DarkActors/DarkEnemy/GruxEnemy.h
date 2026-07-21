@@ -110,8 +110,8 @@ private:
 
     // ロックオンのイメージモデル
     std::shared_ptr<SkeletalMeshComponent> lockOnTargetMeshComponent;
-    float lockOnOffset = 0.1f;  // プレイヤー側に押し出すオフセット
-    float lockOnOffsetY = 3.7f;
+    float lockOnOffset = 0.0f;  // プレイヤー側に押し出すオフセット
+    float lockOnOffsetY = 4.0f;
 
     // ジャスト回避の矩形の範囲
     DirectX::XMFLOAT2 justDodgeAreaSize = { 0.0f,0.0f };

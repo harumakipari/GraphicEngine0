@@ -266,7 +266,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     // ロックオンのモデル
     lockOnTargetMeshComponent = AddComponent<SkeletalMeshComponent>("lockOn", parentName);
     lockOnTargetMeshComponent->SetModel("./Data/Models/LockOnTarget/LockOnTargetModel1.gltf");
+    lockOnTargetMeshComponent->SetRelativeScaleDirect({ 0.68f,0.68f, 0.68f });
     lockOnTargetMeshComponent->SetIsCastShadow(false);
+    lockOnTargetMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
 }
 
 void GruxEnemy::Update(float deltaTime)
