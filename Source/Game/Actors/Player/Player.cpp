@@ -153,16 +153,20 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Walk_Fwd", 77);
         controller->AddAnimation("Walk_Left", 78);
         controller->AddAnimation("Walk_Right", 79);
+        controller->AddAnimation("Jog_Fwd1", 80);
+        controller->AddAnimation("Walk_Fwd1", 81);
 
         // ブレンドスペースに追加
         controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
         controller->AddBlendAnimation("Jog_Bwd", 0.0f, -1.0f);
         controller->AddBlendAnimation("Jog_Left", -1.0f, 0.0f);
         controller->AddBlendAnimation("Jog_Right", 1.0f, 0.0f);
+#if 0
         controller->AddBlendAnimation("Walk_Fwd", 0.0f, 0.5f);
         controller->AddBlendAnimation("Walk_Bwd", 0.0f, -0.5f);
         controller->AddBlendAnimation("Walk_Left", -0.5f, 0.0f);
         controller->AddBlendAnimation("Walk_Right", 0.5f, 0.0f);
+#endif // 0
 
         std::string name = GetName();
         // アニメーションコントローラーのオーナーの名前を設定する
@@ -393,9 +397,26 @@ void Player::Update(float deltaTime)
     using namespace DirectX;
 
     // プレイヤーの透明化
-    if (skeletalMeshBlendComponent)
+    if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
     {
-        skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = 0.3f;
+        float ratio = camera->GetCameraCollisionRatio();
+        if (ratio < 0.30f)
+        {
+            skeletalMeshComponent->SetIsVisible(false);
+            skeletalMeshBlendComponent->SetIsVisible(true);
+
+            float t = std::clamp(ratio / 0.3f, 0.0f, 1.0f);
+            t = t * t * (3.0f - 2.0f * t);
+
+            float alpha =  t;
+
+            skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
+        }
+        else
+        {
+            skeletalMeshComponent->SetIsVisible(true);
+            skeletalMeshBlendComponent->SetIsVisible(false);
+        }
     }
 
 
@@ -462,7 +483,8 @@ void Player::Update(float deltaTime)
     // 剣のエミッシブを表示する
     if (swordMeshComponent)
     {// 剣にエミッシブを追加
-        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
+        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 8.0f;
+        //swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
     }
 
     // 軌跡の更新処理
@@ -604,6 +626,7 @@ void Player::Update(float deltaTime)
         }
     }
 
+#if 0
     if (swordPointComp)
     {
         auto currentTip = swordPointComp->GetComponentLocation();
@@ -636,6 +659,7 @@ void Player::Update(float deltaTime)
                 [](const TrailPoint& p) { return p.life <= 0; }),
             trailPoints.end());
     }
+#endif // 0
 
     UpdateMovement();
 
@@ -660,7 +684,6 @@ void Player::Update(float deltaTime)
     prevSwordRootPos = swordRootPos;
     prevSwordMidPos = swordMidPos;
     prevSwordTipPos = swordTipPos;
-
 
 }
 
@@ -708,6 +731,13 @@ void Player::DrawImGuiDetails()
 
 
     Character::DrawImGuiDetails();
+
+    float speed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+    auto move = characterMovementComponent->GetInputMagnitude();
+
+    ImGui::Text("characterMovementComponentSpeed: %.4f", speed);
+    ImGui::Text("CurrentInputSpeed: %.4f", move);
+
 #endif
 }
 
@@ -858,6 +888,27 @@ void Player::OnAnimationChanged()
 // ブレンドスペースのアニメーションを使用するかの更新関数
 void Player::UpdateLocomotionAnimation()
 {
+    if (GetStateMachine()->GetStateName() != "Running")
+    {
+        locomotionMode = LocomotionMode::Idle;
+        return;
+    }
+
+    auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera());
+
+    switch (camera->GetMovementMode())
+    {
+    case DarkCameraActor::CameraMode::TPS:
+        UpdateTPSLocomotion();
+        break;
+
+    case DarkCameraActor::CameraMode::Focus:
+    case DarkCameraActor::CameraMode::LockOn:
+        UpdateLockOnLocomotion();
+        break;
+    }
+
+    return;
     auto controller = GetBodyAnimationController();
     bool cameraRelativeMovement = false;
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
@@ -887,6 +938,49 @@ void Player::UpdateLocomotionAnimation()
             }
         }
     }
+}
+
+// TPSモードの移動時の更新処理
+void Player::UpdateTPSLocomotion()
+{
+    float speed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+
+    if (speed <= 0.40f)
+    {
+        SetLocomotionMode(LocomotionMode::Idle);
+    }
+    else if (speed < 0.6f)
+    {
+        SetLocomotionMode(LocomotionMode::TPSWalk);
+    }
+    else
+    {
+        SetLocomotionMode(LocomotionMode::TPSRun);
+    }
+
+    auto move = inputComponent->GetMoveInput();
+    GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
+}
+
+void Player::UpdateLockOnLocomotion()
+{
+    float speed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+
+    if (speed <= 0.40f)
+    {
+        SetLocomotionMode(LocomotionMode::Idle);
+    }
+    else if (speed < 0.6f)
+    {
+        SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
+    }
+    else
+    {
+        SetLocomotionMode(LocomotionMode::LockOnBlendRun);
+    }
+
+    auto move = inputComponent->GetMoveInput();
+    GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
 }
 
 // アニメーションステート関連のフラグをリセットする
@@ -1014,6 +1108,7 @@ void Player::HandleInput(float deltaTime)
     }
 }
 
+
 // 入力コマンドによってステートを変える
 bool Player::TryHandleGlobalTransition()
 {
@@ -1071,7 +1166,6 @@ void Player::UpdateMovement()
         }
 #endif // 0
 
-
         // カメラモードに応じたプレイヤー移動処理
         // 左スティック入力
         float rawStickX = intent.leftMove.x;
@@ -1088,6 +1182,7 @@ void Player::UpdateMovement()
         {
             moveStickX = 0.0f;
             moveStickZ = 0.0f;
+            characterMovementComponent->SetInputMagnitude(0.0f);
         }
         else
         {
@@ -1121,7 +1216,6 @@ void Player::UpdateMovement()
             {// 回避ではないかつ攻撃でないときは
                 rotationComponent->SetDirection(lookDir);
             }
-
             float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
             GetBodyAnimationController()->SetBlendInput(0.0f, 1.0f, normalizeSpeed);
         }
@@ -1163,6 +1257,46 @@ void Player::UpdateMovement()
         characterMovementComponent->SetMoveDirection(moveDir);
     }
 }
+
+// モード変更用関数
+void Player::SetLocomotionMode(LocomotionMode mode)
+{
+    if (locomotionMode == mode)
+    {
+        return;
+    }
+
+    locomotionMode = mode;
+
+    auto controller = GetBodyAnimationController();
+
+    switch (mode)
+    {
+    case LocomotionMode::TPSWalk:
+        controller->SetUseBlendSpace(false);
+        PlayBodyAnimation("Walk_Fwd", true, true, 0.2f);
+        break;
+
+    case LocomotionMode::TPSRun:
+        controller->SetUseBlendSpace(false);
+        PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
+        break;
+
+    case LocomotionMode::LockOnBlendWalk:
+        controller->SetUseBlendSpace(true);
+        break;
+
+    case LocomotionMode::LockOnBlendRun:
+        controller->SetUseBlendSpace(true);
+        break;
+
+    case LocomotionMode::Dash:
+        controller->SetUseBlendSpace(false);
+        PlayBodyAnimation("Sprint", true, true, 0.1f);
+        break;
+    }
+}
+
 
 // 回避の方向を決定する処理
 void Player::DecideLockOnDodgeDirection()

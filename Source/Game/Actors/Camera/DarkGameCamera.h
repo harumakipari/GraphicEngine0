@@ -65,6 +65,10 @@ public:
         return this->enemyHead.lock();
     }
 
+    float GetCameraCollisionRatio()const
+    {
+        return cameraCollisionRatio;
+    }
 
     void DrawImGuiDetails() override;
 

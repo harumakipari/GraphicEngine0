@@ -80,6 +80,7 @@ public:
 
     // スティックの入力の強さを設定する
     void SetInputMagnitude(const float power) { this->inputMagnitude = power; }
+    float GetInputMagnitude() const { return this->inputMagnitude; }
 
     // 速度を取得する
     DirectX::XMFLOAT3 GetVelocity() const

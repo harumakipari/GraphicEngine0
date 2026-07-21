@@ -212,7 +212,6 @@ public:
         blendSpeed = speed;
     }
 
-
     void SetUseBlendSpace(const bool useBlendSpace)
     {
         // •ÏX‚ª‚È‚¢‚È‚ç‰½‚à‚µ‚È‚¢

@@ -52,7 +52,6 @@ void PlayerRunningState::Execute(float deltaTime)
         return;
     }
 
-
     // 入力がなければ待機ステートに変更
     auto inputComp = player->inputComponent;
 
@@ -70,8 +69,9 @@ void PlayerRunningState::Exit()
         player->runAudioComp->Stop();
     // ブレンドスペースを使うのをやめる
     owner->GetBodyAnimationController()->SetUseBlendSpace(false);
-
 }
+
+
 
 void PlayerAttackState::Enter()
 {

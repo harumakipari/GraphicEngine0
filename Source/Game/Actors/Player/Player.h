@@ -53,6 +53,16 @@ public:
         Left,
         Right,
     };
+
+    enum class LocomotionMode :uint8_t
+    {
+        Idle,
+        TPSWalk,
+        TPSRun,
+        LockOnBlendWalk,
+        LockOnBlendRun,
+        Dash,
+    };
 public:
     explicit Player(const std::string& modelName) :Character(modelName)
     {
@@ -77,6 +87,12 @@ public:
 
     // ブレンドスペースのアニメーションを使用するかの更新関数
     void UpdateLocomotionAnimation() override;
+
+    // TPSモードの移動時の更新処理
+    void UpdateTPSLocomotion();
+
+    // ロックオンモードの移動時の更新処理
+    void UpdateLockOnLocomotion();
 
     // アニメーションステート関連のフラグをリセットする
     void ResetAnimationStateFlag();
@@ -105,6 +121,10 @@ private:
 
     // 入力処理をまとめる
     void HandleInput(float deltaTimes);
+
+    // モード変更用関数
+    void SetLocomotionMode(LocomotionMode mode);
+
 public:
     // 入力コマンドによってステートが変わるかどうか
     bool TryHandleGlobalTransition();
@@ -274,6 +294,8 @@ private:
 
     // 回避方向
     DodgeDirection dodgeDirection = DodgeDirection::Backward;
+
+    LocomotionMode locomotionMode = LocomotionMode::Idle;
 
     friend class PlayerStateBase;
 };

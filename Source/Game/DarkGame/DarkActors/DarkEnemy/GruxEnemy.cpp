@@ -5,6 +5,7 @@
 #include "Components/Render/PointLightComponent.h"
 #include "Engine/Audio/Audio.h"
 #include "Engine/Scene/SceneBase.h"
+#include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
@@ -260,7 +261,7 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     // ロックオンのモデル
     lockOnTargetMeshComponent = AddComponent<SkeletalMeshComponent>("lockOn", parentName);
-    lockOnTargetMeshComponent->SetModel("./Data/Models/LockOnTarget/LockOnTargetModel.gltf");
+    lockOnTargetMeshComponent->SetModel("./Data/Models/LockOnTarget/LockOnTargetModel1.gltf");
     lockOnTargetMeshComponent->SetIsCastShadow(false);
 }
 
@@ -332,6 +333,18 @@ void GruxEnemy::Update(float deltaTime)
     DirectX::XMFLOAT4 rotation = MathHelper::LookRotation(toPlayerDir, { 0,1,0 });
     lockOnTargetMeshComponent->SetRelativeRotationDirect(rotation);
 
+    if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
+    {
+        // カメラがロックオンモードの時のみ表示する
+        if (camera->GetMovementMode() == DarkCameraActor::CameraMode::LockOn)
+        {
+            lockOnTargetMeshComponent->SetIsVisible(true);
+        }
+        else
+        {
+            lockOnTargetMeshComponent->SetIsVisible(false);
+        }
+    }
 
 #endif // 0
 

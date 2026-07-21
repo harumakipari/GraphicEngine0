@@ -1369,6 +1369,7 @@ AnimationController::SpeedWeight AnimationController::CalculateSpeedWeight(float
 
     float walkPoint = 2.0f / 5.0f;  // Ç±Ç±Çå„Ç≈ walkSpeed / runSpeed Ç…ïœçXÇ∑ÇÈ
 
+#if 0
     if (speed <= walkPoint)
     {
         // Idle ÅÃ Walk
@@ -1383,6 +1384,23 @@ AnimationController::SpeedWeight AnimationController::CalculateSpeedWeight(float
         result.walk = 1.0f - result.run;
         result.idle = 0.0f;
     }
+#else
+    const float runStart = 0.1f;
+
+    if (speed <= runStart)
+    {
+        result.idle = 1.0f - speed / runStart;
+        result.run = speed / runStart;
+        result.walk = 0.0f;
+    }
+    else
+    {
+        result.idle = 0.0f;
+        result.walk = 0.0f;
+        result.run = 1.0f;
+    }
+#endif // 0
+
 
     return result;
 }
