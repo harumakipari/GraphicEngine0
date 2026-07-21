@@ -185,24 +185,26 @@ void PlayerDodgeState::Enter()
     // UŒ‚’†‚ÍˆÚ“®‘¬“x‚ð0‚É‚·‚é
     player->characterMovementComponent->SetSpeed(0.0f);
 
-    // “ü—Í•ûŒü‚ðŒ©‚é
-    DirectX::XMFLOAT3 inputDir = player->dodgeDirection;
-    DirectX::XMFLOAT3 forward = player->GetForward();
-    DirectX::XMFLOAT3 right = player->GetRight();
-
-    // “ü—Í–³‚µ‚È‚çŒã‚ë‰ñ”ð
-    if (MathHelper::Length(inputDir) < 0.1f)
+    switch (player->GetDodgeDirection())
     {
-        inputDir = {
-            -player->GetForward().x,
-            0.0f,
-            -player->GetForward().z
-        };
+    case Player::DodgeDirection::Forward:
+        owner->PlayBodyAnimation("Ability_RWB_Fwd_0", false);
+        break;
+    case Player::DodgeDirection::Backward:
+        owner->PlayBodyAnimation("Ability_RMB_Bwd_0", false);
+        break;
+    case Player::DodgeDirection::Left:
+        owner->PlayBodyAnimation("Ability_RMB_Left_0", false);
+        break;
+    case Player::DodgeDirection::Right:
+        owner->PlayBodyAnimation("Ability_RMB_Right_0", false);
+        break;
     }
-    owner->PlayBodyAnimation("Ability_RMB_Bwd_0", false);
 
-    // ˆê’èŽžŠÔ‚¾‚¯‹­§ˆÚ“®‚·‚é‘¬“x‚ðÝ’è‚·‚é
-    player->characterMovementComponent->AddForcedMove({ -forward.x,0.0f,-forward.z }, player->dodgeSpeed, player->dodgeDuration);
+    //owner->PlayBodyAnimation("Ability_RMB_Bwd_0", false);
+
+    //// ˆê’èŽžŠÔ‚¾‚¯‹­§ˆÚ“®‚·‚é‘¬“x‚ðÝ’è‚·‚é
+    //player->characterMovementComponent->AddForcedMove({ -forward.x,0.0f,-forward.z }, player->dodgeSpeed, player->dodgeDuration);
 
 
     rushRequested = false;

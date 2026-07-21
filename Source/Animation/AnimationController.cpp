@@ -217,6 +217,12 @@ void AnimationController::OnUpdate(const float deltaTime)
     target_->SetModelNodes(finalNodes);
 
     target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+
+    for (auto* target : extraTargets_)
+    {
+        target->SetModelNodes(finalNodes);
+        target->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+    }
 }
 
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
@@ -1223,7 +1229,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             blendSpacePoses[i]);
     }
 
-    target_->model->BlendAnimations(blendSpacePoses,blend,blendSpaceNodes);
+    target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
 
 
 #endif // 0

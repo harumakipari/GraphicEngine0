@@ -39,6 +39,7 @@ void Player::Initialize(const Transform& transform)
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
         skeletalMeshComponent->SetIsCastShadow(false);
         skeletalMeshComponent->SetIsShadowMap(true);
+        //skeletalMeshComponent->SetIsVisible(false);
         for (auto& material : skeletalMeshComponent->model->materials)
         {
             if (material.name == "M_Aurora_Hair_Blonde_FrozenHearth")
@@ -53,6 +54,14 @@ void Player::Initialize(const Transform& transform)
             }
         }
     }
+
+    // 透明にできるplayerを追加
+    skeletalMeshBlendComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+    skeletalMeshBlendComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/playerBlend.gltf", false, true);
+    skeletalMeshBlendComponent->overrideForwardPipelineName = "GltfModelPlayerBlendPS";
+    skeletalMeshBlendComponent->overrideDeferredPipelineName = "GltfModelPlayerBlendPS";
+    //skeletalMeshBlendComponent->SetIsVisible(false);
+
     {
         PROFILE_SCOPE("Create PlayerAnimationController");
 
@@ -60,6 +69,9 @@ void Player::Initialize(const Transform& transform)
         int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
+
+        // 透明なモデルのアニメーションの動きを追加
+        controller->AddTarget(skeletalMeshBlendComponent.get());
 
         controller->AddAnimation("Idle", 0);
         controller->AddAnimation("Jog_Fwd", 1);
@@ -380,6 +392,13 @@ void Player::Update(float deltaTime)
 {
     using namespace DirectX;
 
+    // プレイヤーの透明化
+    if (skeletalMeshBlendComponent)
+    {
+        skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = 0.3f;
+    }
+
+
     if (InputSystem::GetInputState("1"))
     {
         stateMachine_->ChangeState("Rush");
@@ -537,11 +556,12 @@ void Player::Update(float deltaTime)
         }
     }
 
-    // 入力処理
-    HandleInput(deltaTime);
 
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(deltaTime);
+
+    // 入力処理
+    HandleInput(deltaTime);
 
     // 剣のデバックの当たり判定を描画するかどうか
     if (swordCollisionComp)
@@ -617,132 +637,7 @@ void Player::Update(float deltaTime)
             trailPoints.end());
     }
 
-#if 1
-    auto intent = inputComponent->GetIntent();
-    DirectX::XMFLOAT3 moveDir = { 0,0,0 };
-    bool focus = InputSystem::GetInputState("LockOn", InputStateMask::Press);
-
-    if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
-    {
-#if 1
-        if (isBossBattle)
-        {
-            if (focus)
-            {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
-            }
-            else
-            {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-            }
-        }
-        else
-        {
-            if (focus)
-            {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
-            }
-            else
-            {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-            }
-        }
-#endif // 0
-
-
-        // カメラモードに応じたプレイヤー移動処理
-        // 左スティック入力
-        float rawStickX = intent.leftMove.x;
-        float rawStickZ = intent.leftMove.z;
-        // Rotation用
-        float stickX = rawStickX;
-        float stickZ = rawStickZ;
-        // Movement用
-        float moveStickX = rawStickX;
-        float moveStickZ = rawStickZ;
-        float length = sqrtf(moveStickX * moveStickX + moveStickZ * moveStickZ);
-        const float deadZone = 0.18f;
-        if (length < deadZone)
-        {
-            moveStickX = 0.0f;
-            moveStickZ = 0.0f;
-        }
-        else
-        {
-            float newLength = (length - deadZone) / (1.0f - deadZone);
-            // 好みでコメントアウトを切り替え
-             //newLength = std::pow(newLength,1.5f);// より繊細な入力
-            //newLength *= newLength;
-            // newLength = sqrtf(newLength); // 少し倒しただけで速い
-            moveStickX = moveStickX / length * newLength;
-            moveStickZ = moveStickZ / length * newLength;
-
-            characterMovementComponent->SetInputMagnitude(newLength);
-        }
-
-        switch (camera->GetMovementMode())
-        {
-        case DarkCameraActor::CameraMode::TPS:
-        {
-            auto camForward = camera->CameraForwardXZ();
-            auto camRight = camera->CameraRightXZ();
-
-            // カメラ基準の移動方向
-            moveDir.x = camForward.x * moveStickZ + camRight.x * moveStickX;
-            moveDir.z = camForward.z * moveStickZ + camRight.z * moveStickX;
-
-            // 回転はすぐに向きを変えてほしいため
-            DirectX::XMFLOAT3 lookDir = { 0,0,0 };
-            lookDir.x = camForward.x * rawStickZ + camRight.x * rawStickX;
-            lookDir.z = camForward.z * rawStickZ + camRight.z * rawStickX;
-            if (GetStateMachine()->GetStateName() != "Dodge"|| GetStateMachine()->GetStateName() != "Attack")
-            {// 回避ではないかつ攻撃でないときは
-                rotationComponent->SetDirection(lookDir);
-            }
-
-            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-            GetBodyAnimationController()->SetBlendInput(0.0f, 1.0f, normalizeSpeed);
-        }
-        break;
-        case DarkCameraActor::CameraMode::Focus:
-        {
-            // 最初に決定したfocus 方向
-            DirectX::XMFLOAT3 forward = focusDirection;
-            forward = MathHelper::Normalize(forward);
-            DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
-            DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
-            moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
-            moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
-            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-            GetBodyAnimationController()->SetBlendInput(rawStickX, rawStickZ, normalizeSpeed);
-            break;
-        }
-        case DarkCameraActor::CameraMode::LockOn:
-        {
-            // 最初に決定したfocus 方向
-            if (auto target = camera->GetEnemyHead())
-            {
-                XMFLOAT3 playerPos = GetPosition();
-                XMFLOAT3 enemyPos = target->GetComponentLocation();
-                XMFLOAT3 forward = MathHelper::Subtract(enemyPos, playerPos);
-                forward.y = 0.0f;
-                forward = MathHelper::Normalize(forward);
-                DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
-                DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
-                moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
-                moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
-                float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-                GetBodyAnimationController()->SetBlendInput(rawStickX, rawStickZ, normalizeSpeed);
-                rotationComponent->SetDirection(forward);
-            }
-            break;
-        }
-        }
-        characterMovementComponent->SetMoveDirection(moveDir);
-
-
-    }
-
+    UpdateMovement();
 
     playerPos = GetPosition();
 
@@ -766,7 +661,6 @@ void Player::Update(float deltaTime)
     prevSwordMidPos = swordMidPos;
     prevSwordTipPos = swordTipPos;
 
-#endif // 0
 
 }
 
@@ -1094,10 +988,10 @@ void Player::HandleInput(float deltaTime)
     {
         bufferCommand.command = InputCommand::None;
     }
-    if (InputSystem::GetInputState("Dodge", InputStateMask::Trigger))
+    if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
     {
         bufferCommand.command = InputCommand::Dodge;
-        dodgeDirection = inputComponent->GetMoveInput();
+        DecideLockOnDodgeDirection();
         bufferCommand.remainTime = 0.3f;
         return;
     }
@@ -1107,10 +1001,10 @@ void Player::HandleInput(float deltaTime)
         bufferCommand.remainTime = 0.5f;
         return;
     }
-    if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
+    //if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
     {
-        bufferCommand.command = InputCommand::Jump;
-        bufferCommand.remainTime = 0.5f;
+        //bufferCommand.command = InputCommand::Jump;
+        //bufferCommand.remainTime = 0.5f;
         return;
     }
     if (InputSystem::GetInputState("Interact", InputStateMask::Trigger))
@@ -1141,6 +1035,174 @@ bool Player::TryHandleGlobalTransition()
         break;
     }
     return false;
+}
+
+// 動作更新処理
+void Player::UpdateMovement()
+{
+    auto intent = inputComponent->GetIntent();
+    DirectX::XMFLOAT3 moveDir = { 0,0,0 };
+    bool focus = InputSystem::GetInputState("LockOn", InputStateMask::Press);
+
+    if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
+    {
+#if 1
+        if (isBossBattle)
+        {
+            if (focus)
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
+            }
+            else
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+            }
+        }
+        else
+        {
+            if (focus)
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
+            }
+            else
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+            }
+        }
+#endif // 0
+
+
+        // カメラモードに応じたプレイヤー移動処理
+        // 左スティック入力
+        float rawStickX = intent.leftMove.x;
+        float rawStickZ = intent.leftMove.z;
+        // Rotation用
+        float stickX = rawStickX;
+        float stickZ = rawStickZ;
+        // Movement用
+        float moveStickX = rawStickX;
+        float moveStickZ = rawStickZ;
+        float length = sqrtf(moveStickX * moveStickX + moveStickZ * moveStickZ);
+        const float deadZone = 0.18f;
+        if (length < deadZone)
+        {
+            moveStickX = 0.0f;
+            moveStickZ = 0.0f;
+        }
+        else
+        {
+            float newLength = (length - deadZone) / (1.0f - deadZone);
+            // 好みでコメントアウトを切り替え
+             //newLength = std::pow(newLength,1.5f);// より繊細な入力
+            //newLength *= newLength;
+            // newLength = sqrtf(newLength); // 少し倒しただけで速い
+            moveStickX = moveStickX / length * newLength;
+            moveStickZ = moveStickZ / length * newLength;
+
+            characterMovementComponent->SetInputMagnitude(newLength);
+        }
+
+        switch (camera->GetMovementMode())
+        {
+        case DarkCameraActor::CameraMode::TPS:
+        {
+            auto camForward = camera->CameraForwardXZ();
+            auto camRight = camera->CameraRightXZ();
+
+            // カメラ基準の移動方向
+            moveDir.x = camForward.x * moveStickZ + camRight.x * moveStickX;
+            moveDir.z = camForward.z * moveStickZ + camRight.z * moveStickX;
+
+            // 回転はすぐに向きを変えてほしいため
+            DirectX::XMFLOAT3 lookDir = { 0,0,0 };
+            lookDir.x = camForward.x * rawStickZ + camRight.x * rawStickX;
+            lookDir.z = camForward.z * rawStickZ + camRight.z * rawStickX;
+            if (GetStateMachine()->GetStateName() != "Dodge" || GetStateMachine()->GetStateName() != "Attack")
+            {// 回避ではないかつ攻撃でないときは
+                rotationComponent->SetDirection(lookDir);
+            }
+
+            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+            GetBodyAnimationController()->SetBlendInput(0.0f, 1.0f, normalizeSpeed);
+        }
+        break;
+        case DarkCameraActor::CameraMode::Focus:
+        {
+            // 最初に決定したfocus 方向
+            DirectX::XMFLOAT3 forward = focusDirection;
+            forward = MathHelper::Normalize(forward);
+            DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
+            DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
+            moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
+            moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
+            float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+            GetBodyAnimationController()->SetBlendInput(rawStickX, rawStickZ, normalizeSpeed);
+            break;
+        }
+        case DarkCameraActor::CameraMode::LockOn:
+        {
+            // 最初に決定したfocus 方向
+            if (auto target = camera->GetEnemyHead())
+            {
+                XMFLOAT3 playerPos = GetPosition();
+                XMFLOAT3 enemyPos = target->GetComponentLocation();
+                XMFLOAT3 forward = MathHelper::Subtract(enemyPos, playerPos);
+                forward.y = 0.0f;
+                forward = MathHelper::Normalize(forward);
+                DirectX::XMFLOAT3 up = { 0.0f,1.0f,0.0f };
+                DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
+                moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
+                moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
+                float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+                GetBodyAnimationController()->SetBlendInput(rawStickX, rawStickZ, normalizeSpeed);
+                rotationComponent->SetDirection(forward);
+            }
+            break;
+        }
+        }
+        characterMovementComponent->SetMoveDirection(moveDir);
+    }
+}
+
+// 回避の方向を決定する処理
+void Player::DecideLockOnDodgeDirection()
+{
+    auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera());
+    if (!camera)
+        return;
+
+    // TPSでは使用しない
+    if (camera->GetMovementMode() == DarkCameraActor::CameraMode::TPS)
+        return;
+
+    auto intent = inputComponent->GetIntent();
+
+
+    float x = intent.leftMove.x;
+    float z = intent.leftMove.z;
+
+    Logger::Log(std::format(
+        "x={} z={}",
+        x,
+        z));
+
+
+    // 入力なしなら後ろ回避
+    if (fabs(x) < 0.1f && fabs(z) < 0.1f)
+    {
+        dodgeDirection = DodgeDirection::Backward;
+        return;
+    }
+
+    // 横入力の方が強い
+    if (fabs(x) > fabs(z))
+    {
+        dodgeDirection = (x > 0.0f) ? DodgeDirection::Right : DodgeDirection::Left;
+    }
+    else
+    {
+        dodgeDirection = (z > 0.0f) ? DodgeDirection::Forward : DodgeDirection::Backward;
+    }
 }
 
 // 入力を消費する処理

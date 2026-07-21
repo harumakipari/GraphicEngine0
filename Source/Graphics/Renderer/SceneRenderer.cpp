@@ -362,6 +362,7 @@ void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshCompon
                         if (material.data.alphaMode == 2/*BLEND*/)
                         {
                             RenderState::BindBlendState(immediateContext, BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA);
+                            RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
                             passed = true;
                         }
                         break;

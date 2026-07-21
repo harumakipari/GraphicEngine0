@@ -377,6 +377,15 @@ public:
             AddPipeLineState("forwardBlendSkeletalMesh", desc);
         }
 
+        // SkeletalMesh forward Blend —p
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPlayerBlendPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+            desc.depthState= DEPTH_STATE::ZT_ON_ZW_ON;
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
+            AddPipeLineState("GltfModelPlayerBlendPS", desc);
+        }
+
         // SkeletalMesh GltfModelPlayerWeaponForwardPS forward Blend —p
         {
             hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPlayerWeaponForwardPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());

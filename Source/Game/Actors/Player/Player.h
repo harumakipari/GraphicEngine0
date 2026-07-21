@@ -45,6 +45,14 @@ public:
         Sheathed    // 剣を鞘に収めている状態
     };
 
+    // 回避方向
+    enum class DodgeDirection :uint8_t
+    {
+        Forward,
+        Backward,
+        Left,
+        Right,
+    };
 public:
     explicit Player(const std::string& modelName) :Character(modelName)
     {
@@ -85,6 +93,9 @@ public:
         this->focusDirection = focusDir;
     }
 
+    // 回避方向を取得する
+    DodgeDirection GetDodgeDirection()const { return dodgeDirection; }
+
 private:
     // 火花エフェクトの生成
     void SpawnSpark(DirectX::XMFLOAT3 hitPosition);
@@ -120,6 +131,14 @@ public:
     const std::shared_ptr<SceneComponent>& GetCameraEyeComponent() { return cameraEyeComponent; }
     // カメラの注視点の位置
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
+
+private:
+    // 動作更新処理
+    void UpdateMovement();
+
+    // 回避の方向を決定する処理
+    void DecideLockOnDodgeDirection();
+
 
 private:
     // プレイヤーのマックスHP
@@ -164,10 +183,12 @@ public:
 
     // 入力受付のコマンド
     BufferInput bufferCommand = { InputCommand::None,0.0f }; // 入力コマンド
-    DirectX::XMFLOAT3 dodgeDirection = { 0.0f,0.0f,0.0f };// 避ける方向
 public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
+    // 描画用コンポーネント（透明）を追加
+    std::shared_ptr<SkeletalMeshComponent> skeletalMeshBlendComponent;
+
     std::shared_ptr<ParticleComponent> sparkComponent; // 火花エフェクト用コンポーネント
     std::shared_ptr<InputComponent> inputComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
@@ -247,7 +268,12 @@ private:
     float bossBattleCameraDistance = -3.0f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { -0.5f,2.0f,0.0f };
 
+    // カメラの
     DirectX::XMFLOAT3 focusDirection = {};//　カメラのFocus開始時のForwawrd
-    bool isBossBattle = false;  // ボス戦状態かどうか
+    bool isBossBattle = true;  // ボス戦状態かどうか
+
+    // 回避方向
+    DodgeDirection dodgeDirection = DodgeDirection::Backward;
+
     friend class PlayerStateBase;
 };

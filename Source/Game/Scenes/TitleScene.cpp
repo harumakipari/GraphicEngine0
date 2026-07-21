@@ -105,7 +105,16 @@ void TitleScene::Start()
     gameBgmActor->SetLoop(true);
     gameBgmActor->SetBgm(true);
     gameBgmActor->Play();
-    gameBgmActor->SetVolume(0.8f);
+    gameBgmActor->SetVolume(0.25f);
+
+    std::string parentName = gameBgmActor->GetRootComponentName();
+    auto seComponent=gameBgmActor->AddComponent<AudioSourceComponent>("bonfireSeComponent", parentName);
+    seComponent->SetSource(L"./Data/Sound/SE/bonfire_se.wav");
+    seComponent->SetLoop(true);
+    seComponent->SetBgm(true);
+    seComponent->SetVolume(1.5f);
+    seComponent->Play();
+
 
     cameraManager->ToggleCinematicCamera(this);
     SceneEditor::LoadPresetList(); // XV

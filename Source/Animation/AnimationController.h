@@ -241,6 +241,11 @@ public:
         }
     }
 
+    void AddTarget(SkeletalMeshComponent* target)
+    {
+        extraTargets_.push_back(target);
+    }
+
 private:
     // ブレンドスペースを更新する
     void UpdateBlendSpace(float deltaTime);
@@ -288,6 +293,7 @@ private:
     void DrawNotifyInspector(AnimationNotifyAsset& asset);
 
 
+    std::vector<SkeletalMeshComponent*> extraTargets_;
     SkeletalMeshComponent* target_ = nullptr;
     Character* owner = nullptr;
 

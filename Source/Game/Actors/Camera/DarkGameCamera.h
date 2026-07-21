@@ -89,11 +89,23 @@ public:
     CameraMode GetMovementMode()const { return requestMode; }
 
     // カメラモードをセットする
-    void SetRequestMode(const CameraMode mode) { requestMode = mode; }
+    void SetRequestMode(const CameraMode mode)
+    {
+        if (isBlending)
+        {
+            return;
+        }
+        requestMode = mode;
+    }
 
     // ブレンドを開始する
     void StartBlend(CameraMode current, CameraMode request);
 
+    //壁近いときの関数
+    void AddWallNearFunc(const std::function<void()>& wallNearFunc)
+    {
+        this->wallNearFunc = wallNearFunc;
+    }
 private:
     // ブレンド状態を更新する
     void UpdateBlend(float deltaTime);
@@ -175,6 +187,17 @@ private:
     // 当たり判定のスフィアキャストの球の大きさ
     float sphereCastRadius = 0.01f;
 
+    float lockOnTargetNearWall = 0.005f;
+    float lockOnTargetNormal = 0.11f;
+    float wallDistance = 7.1f;
+    float cameraHitDistance = 0.0f; // カメラと壁の距離
+    bool cameraHitWall = false;   // カメラが壁に当たったかどうか
+    float cameraFov = 35.0f;
+    float wallBlend = 0.0f;
+    float smoothHitDistance = 0.0f;
+    float cameraCollisionRatio = 0.0f;
+
+    std::function<void()> wallNearFunc;
     // フォーカス時の
     // float focus
 };

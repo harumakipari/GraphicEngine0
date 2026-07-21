@@ -109,5 +109,10 @@ float4 main(VS_OUT pin) : SV_TARGET
         finalColor.rgb += bloom.rgb;
     }
 
+    if (objectType==OBJECT_PLAYER)
+    {
+        //finalColor.a = 0.1f;
+    }
+
     return finalColor;
 }

@@ -165,28 +165,6 @@ float4 main(VS_OUT pin) : SV_TARGET
     totalSpecular = totalSpecular * occlusionFactor * specularIntensity;
 
 
-    if (objectType == OBJECT_PLAYER && materialType == MATERIAL_HAIR)
-    {
-//        float3 T = N; // 髪の流れ方向
-//        float3 B = cross(N, T);
-//        float3 H = normalize(L + V);
-
-//// タンジェント方向に依存
-//        float ToH = dot(T, H);
-//        float anisotropic = pow(1.0 - abs(ToH), 16.0);
-
-//// リムっぽくする
-//        float fresnel = pow(1.0 - saturate(dot(V, H)), 5.0);
-
-//// 強めに出す
-//        float3 hairSpec = anisotropic * fresnel * float3(1.0, 0.9, 0.7) * 5.0;
-//        float3 hairLighting =
-//    totalDiffuse * 0.5 + // 髪は拡散弱め
-//    hairSpec +
-//    emissive;
-
-//        return float4(hairLighting, 1);
-    }
 
 #if 1
     float3 rim = 0;
@@ -203,34 +181,18 @@ float4 main(VS_OUT pin) : SV_TARGET
             rim = CalcRimLight(N, V, playerHairRimColor, rimPower) * playerHairRimIntensity;
         }
     }
+
+
 #endif
     float3 ambient = baseColor.rgb * 0.05;
 
     float3 lo = totalDiffuse + totalSpecular + (emissive) + rim /*+ ambient*/;
 
-
-#if 0
-    int debugLightComplexity = 0;
-    if (debugLightComplexity != 0)
+    if (objectType == OBJECT_PLAYER)
     {
-        float3 color;
-
-        if (lightCount == 0)
-            color = float3(0, 0, 1);
-        else if (lightCount == 1)
-            color = float3(0, 1, 0);
-        else if (lightCount == 2)
-            color = float3(1, 1, 0);
-        else if (lightCount == 3)
-            color = float3(1, 0.5, 0);
-        else if (lightCount == 4)
-            color = float3(1, 0, 0);
-        else
-            color = float3(1, 0, 1);
-
-        return float4(color, 1);
+        //return float4(lo, 0.1f);
     }
-#endif
+
 
     return float4(lo, 1.0f);
 }

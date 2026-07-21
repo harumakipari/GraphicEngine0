@@ -261,7 +261,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     // ロックオンのモデル
     lockOnTargetMeshComponent = AddComponent<SkeletalMeshComponent>("lockOn", parentName);
     lockOnTargetMeshComponent->SetModel("./Data/Models/LockOnTarget/LockOnTargetModel.gltf");
-
+    lockOnTargetMeshComponent->SetIsCastShadow(false);
 }
 
 void GruxEnemy::Update(float deltaTime)
@@ -282,14 +282,14 @@ void GruxEnemy::Update(float deltaTime)
 
     DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
-
+    DirectX::XMFLOAT3 toPlayerDir = { 0.0f,0.0f,0.0f };
 #if 1
     // ボス戦時のカメラの注視点の位置を更新する
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
     {
         bossPos = GetPosition();
         playerPos = player->GetPosition();
-        DirectX::XMFLOAT3 toPlayerDir = MathHelper::Subtract(playerPos, bossPos);
+        toPlayerDir = MathHelper::Subtract(playerPos, bossPos);
         DirectX::XMFLOAT3 worldUp = { 0.0f,1.0f,0.0f };
         toPlayerDir = MathHelper::Normalize(toPlayerDir);
         DirectX::XMFLOAT3 rightDir = MathHelper::Cross(worldUp, toPlayerDir);
@@ -325,6 +325,12 @@ void GruxEnemy::Update(float deltaTime)
         //cameraTargetComponent->SetWorldLocationDirect(targetPos);
         //DebugRender::DrawSphere(targetPos, 0.5f, { 1.0f,1.0f,0.0f,1.0f }, true);
     }
+
+    DirectX::XMFLOAT3 lockOnPos = MathHelper::Add(bossPos, MathHelper::Multiply(toPlayerDir, lockOnOffset));
+    lockOnPos.y = lockOnOffsetY;
+    lockOnTargetMeshComponent->SetWorldLocationDirect({ lockOnPos });
+    DirectX::XMFLOAT4 rotation = MathHelper::LookRotation(toPlayerDir, { 0,1,0 });
+    lockOnTargetMeshComponent->SetRelativeRotationDirect(rotation);
 
 
 #endif // 0
@@ -494,6 +500,8 @@ void GruxEnemy::DrawImGuiDetails()
     {
         StartGruxNamePerform(2.0f);
     }
+    ImGui::DragFloat(U8("lockOnOffsetY"), &lockOnOffsetY, 0.05f, 0.1f, 10.0f);
+    ImGui::DragFloat(U8("ロックオンプレイヤー側に押し出すオフセット"), &lockOnOffset, 0.05f, 0.1f, 10.0f);
     ImGui::DragFloat(U8("被弾時のフラッシュ"), &flashDuration, 0.05f, 0.1f, 2.0f);
     ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);

@@ -58,9 +58,37 @@ void DarkCameraActor::Update(float deltaTime)
         UpdateBlend(deltaTime);
     }
 
+    if (cameraCollisionRatio < 0.3f)
+    {
+        if (wallNearFunc)
+        {
+            wallNearFunc();
+        }
+    }
+
+#if 0
+    if (currentMode == CameraMode::LockOn)
+    {
+        mainCameraComponent->SetFov(DirectX::XMConvertToRadians(CalculateLockOnFov()));
+    }
+    else
+    {
+        mainCameraComponent->SetFov(DirectX::XMConvertToRadians(cameraFov));
+    }
+#endif // 0
+
+
     // 当たり判定でカメラの位置を修正する
+    //XMFLOAT3 start =
+        //playerHeadShared->GetComponentLocation();
+
+    //currentPose.eye = ResolveCameraCollision(start, currentPose.eye);
+
     currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
 
+    float targetBlend = cameraHitWall ? 1.0f : 0.0f;
+
+    wallBlend = std::lerp(wallBlend, targetBlend, deltaTime * 8.0f);
 
     SetPosition(currentPose.eye);
     mainCameraComponent->lookTarget = currentPose.target;
@@ -321,8 +349,14 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
         {
             XMFLOAT3 enemyPos = enemy->GetComponentLocation();
 
+            // 壁との距離でplayerと敵の中間の割合を変更する
+            float nearWeight = std::lerp(lockOnTargetNormal, lockOnTargetNearWall, wallBlend);
+            float targetWeight = nearWeight;
+            {
+                targetWeight = std::lerp(lockOnTargetNearWall, lockOnTargetNormal, cameraHitDistance / wallDistance);
+            }
             // プレイヤーと敵の中間を見る
-            pose.target = MathHelper::Lerp(playerPos, enemyPos, lockOnTargetWeight);
+            pose.target = MathHelper::Lerp(playerPos, enemyPos, targetWeight);
         }
         distance = CalculateLockOnDistance();
         break;
@@ -381,6 +415,7 @@ float DarkCameraActor::CalculateLockOnDistance() const
     return distance;
 }
 
+
 // 当たり判定を考慮する関数
 DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 target, DirectX::XMFLOAT3 eye)
 {
@@ -391,14 +426,23 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
         CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
         CollisionHelper::ToBit(CollisionLayer::Floor) |
         CollisionHelper::ToBit(CollisionLayer::WorldProps);
-    if (CollisionFunction::SphereRayCast(target, eye, hit, sphereCastRadius, mask))
+
+    cameraHitWall = CollisionFunction::SphereRayCast(target, eye, hit, sphereCastRadius, mask);
+    if (cameraHitWall)
     {
         float collisionOffset = sphereCastRadius + 0.05f;
         // 少し手前に出す
         idealEye = MathHelper::Add(hit.hitPoint,
             MathHelper::Multiply(hit.normal, collisionOffset));
-        return idealEye;
+
+        cameraHitDistance = hit.distance;
+
     }
+
+    float idealDistance = MathHelper::Distance(target, eye);
+    float collisionDistance = MathHelper::Distance(target, idealEye);
+
+    cameraCollisionRatio = collisionDistance / idealDistance;
 
     return idealEye;
 }
@@ -437,6 +481,17 @@ void DarkCameraActor::DrawImGuiDetails()
     ImGui::DragFloat(U8("最大距離"), &lockOnMaxDistance, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat(U8("ロックオンピッチ度数"), &lockOnPitchDegree, 0.1f, -90.0f, 90.0f);
     ImGui::DragFloat(U8("ロックオンyaw度数"), &lockOnYawOffsetDegree, 0.1f, -90.0f, 90.0f);
+
+    ImGui::DragFloat(U8("lockOnTargetNearWall"), &lockOnTargetNearWall, 0.1f, 0.01f, 10.0f);
+    ImGui::DragFloat(U8("lockOnTargetNormal"), &lockOnTargetNormal, 0.1f, 0.01f, 10.0f);
+    ImGui::DragFloat(U8("wallDistance"), &wallDistance, 0.1f, 0.01f, 10.0f);
+    ImGui::Text("cameraHitDistance: %.4f", cameraHitDistance);
+    ImGui::Text("cameraCollisionRatio: %.4f", cameraCollisionRatio);
+    ImGui::Text("cameraHitWall: %s", cameraHitWall ? "true" : "false");
+
+    ImGui::Text("Current : %d", (int)currentMode);
+    ImGui::Text("Request : %d", (int)requestMode);
+    ImGui::Text("Blend : %d", isBlending);
 
 #endif
 }

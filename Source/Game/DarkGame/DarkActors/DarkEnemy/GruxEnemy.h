@@ -105,8 +105,10 @@ private:
     std::unique_ptr<EasingRunner> easingRunner;
     float easingFactorAlpha = 0.0f;
 
-    // ロックオンのUIイメージテクスチャ
+    // ロックオンのイメージモデル
     std::shared_ptr<SkeletalMeshComponent> lockOnTargetMeshComponent;
+    float lockOnOffset = 1.4f;  // プレイヤー側に押し出すオフセット
+    float lockOnOffsetY = 1.5f;
 
     // ジャスト回避の矩形の範囲
     DirectX::XMFLOAT2 justDodgeAreaSize = { 0.0f,0.0f };
