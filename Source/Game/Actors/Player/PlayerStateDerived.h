@@ -61,6 +61,24 @@ public:
     const char* GetName() const override { return "Running"; }
 };
 
+// ダッシュステートオブジェクト
+class PlayerDashState : public PlayerStateBase
+{
+public:
+    // コンストラクタ
+    PlayerDashState(Player* player) :PlayerStateBase(player) {}
+    // デストラクタ
+    ~PlayerDashState() = default;
+    // ステートに入った時のメソッド
+    void Enter() override;
+    // ステートで実行するメソッド
+    void Execute(float deltaTime) override;
+    // ステートから出ていくときのメソッド
+    void Exit() override;
+    // ステート名を取得
+    const char* GetName() const override { return "Dash"; }
+};
+
 // 攻撃ステートオブジェクト
 class PlayerAttackState : public PlayerStateBase
 {

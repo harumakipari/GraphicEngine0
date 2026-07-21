@@ -4,6 +4,8 @@
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Components/Audio/AudioSourceComponent.h"
+#include "Engine/Scene/Scene.h"
+#include "Game/Actors/Camera/DarkGameCamera.h"
 
 PlayerStateBase::PlayerStateBase(Player* actor) :State(actor), player(actor)
 {
@@ -41,8 +43,8 @@ void PlayerRunningState::Enter()
     //owner->PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
 
     // 走りSE再生
-    if (player->runAudioComp)
-        player->runAudioComp->Play();
+    //if (player->runAudioComp)
+    //    player->runAudioComp->Play();
 }
 
 void PlayerRunningState::Execute(float deltaTime)
@@ -65,11 +67,54 @@ void PlayerRunningState::Execute(float deltaTime)
 void PlayerRunningState::Exit()
 {
     // 走りSEをストップ
-    if (player->runAudioComp)
-        player->runAudioComp->Stop();
+    //if (player->runAudioComp)
+    //    player->runAudioComp->Stop();
     // ブレンドスペースを使うのをやめる
     owner->GetBodyAnimationController()->SetUseBlendSpace(false);
 }
+
+
+void PlayerDashState::Enter()
+{
+    // カメラをTPSに変更する
+    auto camera =dynamic_cast<DarkCameraActor*>(player->GetOwnerScene()->GetActiveCamera());
+    camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+
+    owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f);
+
+    // スピードを変更する
+
+
+}
+
+void PlayerDashState::Execute(float deltaTime)
+{
+    if (player->TryHandleGlobalTransition())
+    {
+        return;
+    }
+
+    // 入力がなければ待機ステートに変更
+    auto inputComp = player->inputComponent;
+
+    DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
+    if (std::abs(dir.x - 0.0f) <= FLT_EPSILON && std::abs(dir.y - 0.0f) <= FLT_EPSILON && std::abs(dir.z - 0.0f) <= FLT_EPSILON)
+    {
+        player->GetStateMachine()->ChangeState("Idle");
+    }
+
+    // Bボタンが離されたてかつ
+
+
+}
+
+void PlayerDashState::Exit()
+{
+    // ブレンドスペースを使うのをやめる
+    owner->GetBodyAnimationController()->SetUseBlendSpace(false);
+}
+
+
 
 
 

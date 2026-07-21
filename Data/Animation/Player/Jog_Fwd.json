@@ -1,0 +1,15 @@
+{
+    "animationClip": 1,
+    "animationName": "Jog_Fwd",
+    "events": [
+        {
+            "parameter": "run_one_foot",
+            "time": 0.16171877086162567,
+            "type": "PlaySE",
+            "value": 0.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

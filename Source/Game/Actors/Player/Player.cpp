@@ -190,6 +190,7 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerJumpState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerInteractState>(this));
+        stateMachine_->RegisterState(std::make_unique<PlayerDashState>(this));
 
         // ステートマシンを character に追加
         //this->SetStateMachine(stateMachine);
@@ -979,18 +980,44 @@ void Player::UpdateLocomotionAnimation()
 void Player::UpdateTPSLocomotion()
 {
     float speed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+    bool dash = InputSystem::GetInputState("GamePadB", InputStateMask::Press);
 
-    if (speed <= 0.40f)
+    // ダッシュ条件
+    if (dash && speed >= 0.6f)
     {
-        SetLocomotionMode(LocomotionMode::Idle);
+        SetLocomotionMode(LocomotionMode::Dash);
+        return;
     }
-    else if (speed < 0.6f)
+
+    switch (locomotionMode)
     {
-        SetLocomotionMode(LocomotionMode::TPSWalk);
-    }
-    else
-    {
-        SetLocomotionMode(LocomotionMode::TPSRun);
+    case LocomotionMode::Idle:
+        if (speed > 0.4f)
+            SetLocomotionMode(LocomotionMode::TPSWalk);
+        break;
+
+    case LocomotionMode::TPSWalk:
+        if (speed <= 0.4f)
+            SetLocomotionMode(LocomotionMode::Idle);
+        else if (speed >= 0.6f)
+            SetLocomotionMode(LocomotionMode::TPSRun);
+        break;
+
+    case LocomotionMode::TPSRun:
+        if (speed < 0.55f)
+            SetLocomotionMode(LocomotionMode::TPSWalk);
+        break;
+    case LocomotionMode::Dash:
+        if (!dash)
+        {
+            if (speed >= 0.6f)
+                SetLocomotionMode(LocomotionMode::TPSRun);
+            else if (speed > 0.4f)
+                SetLocomotionMode(LocomotionMode::TPSWalk);
+            else
+                SetLocomotionMode(LocomotionMode::Idle);
+        }
+        break;
     }
 
     auto move = inputComponent->GetMoveInput();
@@ -1328,7 +1355,11 @@ void Player::SetLocomotionMode(LocomotionMode mode)
 
     case LocomotionMode::Dash:
         controller->SetUseBlendSpace(false);
-        PlayBodyAnimation("Sprint", true, true, 0.1f);
+        GetStateMachine()->ChangeState("Dash");
+        break;
+    case LocomotionMode::Idle:
+        controller->SetUseBlendSpace(false);
+        GetStateMachine()->ChangeState("Idle");
         break;
     }
 }

@@ -262,6 +262,8 @@ void InputSystem::Initialize()
     inputKeys["BookLeft"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_LEFT_SHOULDER));     // ç∂
     inputKeys["BookLeft"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::LeftTrigger));
 
+    inputKeys["GamePadB"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));
+
     inputKeys["GamePadA"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
     inputKeys["GamePadA"].emplace_back(std::make_unique<Keyboard>(VK_RETURN));
 
