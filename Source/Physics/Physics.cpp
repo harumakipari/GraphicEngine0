@@ -652,7 +652,6 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
     pxQueryFilterData.data.word0 = wantToHitLayer;	// NOTE:⑤レイヤーマスク
     physx::PxSphereGeometry pxGeometry(radius);
     physx::PxSweepBuffer pxSweepBuffer;
-    //physx::PxSweepBufferN<1> pxSweepBuffer;
     physx::PxTransform pxTransform(
         physx::PxVec3(origin.x, origin.y, origin.z),
         physx::PxQuat(0, 0, 0, 1));
@@ -662,10 +661,10 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
         physx::PxVec3(direction.x, direction.y, direction.z),
         distance,
         pxSweepBuffer,
-        //physx::PxHitFlag::eDEFAULT,
         hitFlags,
         pxQueryFilterData,
         this);
+
     if (hit && pxSweepBuffer.hasBlock)
     {
         const physx::PxVec3& p = pxSweepBuffer.block.position;

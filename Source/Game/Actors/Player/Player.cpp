@@ -408,7 +408,7 @@ void Player::Update(float deltaTime)
             float t = std::clamp(ratio / 0.3f, 0.0f, 1.0f);
             t = t * t * (3.0f - 2.0f * t);
 
-            float alpha =  t;
+            float alpha = t;
 
             skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
         }
@@ -459,11 +459,28 @@ void Player::Update(float deltaTime)
     {
         HitResultWithActor hit;
         bool isHit = false;
+        HitResultWithActor tmp;
 
-        isHit |= CollisionFunction::SphereRayCast(prevSwordRootPos, swordRootPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
-        isHit |= CollisionFunction::SphereRayCast(prevSwordMidPos, swordMidPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
-        isHit |= CollisionFunction::SphereRayCast(prevSwordTipPos, swordTipPos, hit, 0.2f, CollisionHelper::ToBit(CollisionLayer::Enemy));
+        if (CollisionFunction::SphereRayCast(prevSwordRootPos, swordRootPos, tmp,
+            weaponSphereRadius, CollisionHelper::ToBit(CollisionLayer::Enemy)))
+        {
+            hit = tmp;
+            isHit = true;
+        }
 
+        if (CollisionFunction::SphereRayCast(prevSwordMidPos, swordMidPos, tmp,
+            weaponSphereRadius, CollisionHelper::ToBit(CollisionLayer::Enemy)))
+        {
+            hit = tmp;
+            isHit = true;
+        }
+
+        if (CollisionFunction::SphereRayCast(prevSwordTipPos, swordTipPos, tmp,
+            weaponSphereRadius, CollisionHelper::ToBit(CollisionLayer::Enemy)))
+        {
+            hit = tmp;
+            isHit = true;
+        }
         if (isHit)
         {
             if (!hitActors.contains(hit.actor))
@@ -471,13 +488,12 @@ void Player::Update(float deltaTime)
                 if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
                 {
                     Logger::Log(U8("剣に敵が当たった"));
-                    enemy->TakeDamage(10);
-                    enemy->SpawnHitEffect(hit.hitPoint, hit.normal);
+                    enemy->TakeDamage(1);
+                    enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
                     hitActors.emplace(enemy);
                 }
             }
         }
-
     }
 
     // 剣のエミッシブを表示する
@@ -697,6 +713,8 @@ void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
     ImGui::Checkbox(U8("ボス戦カメラ"), &isBossBattle);
+    ImGui::DragFloat(U8("剣の球の当たり判定の半径"), &weaponSphereRadius, 0.05f);
+    ImGui::DragFloat(U8("ラッシュ時のタイムスケール"), &rushTimeScale, 0.05f);
     ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);
@@ -1212,7 +1230,8 @@ void Player::UpdateMovement()
             DirectX::XMFLOAT3 lookDir = { 0,0,0 };
             lookDir.x = camForward.x * rawStickZ + camRight.x * rawStickX;
             lookDir.z = camForward.z * rawStickZ + camRight.z * rawStickX;
-            if (GetStateMachine()->GetStateName() != "Dodge" || GetStateMachine()->GetStateName() != "Attack")
+            const std::string& state = GetStateMachine()->GetStateName();
+            if (state != "Dodge" && state != "Attack")
             {// 回避ではないかつ攻撃でないときは
                 rotationComponent->SetDirection(lookDir);
             }
@@ -1388,9 +1407,8 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
     // スローモーションにする
-    //Time::SetSlow(0.2f, 1.0f);
-    enemy->SetTimeScale(0.2f);
-    this->SetTimeScale(0.2f);
+    enemy->SetTimeScale(rushTimeScale);
+    this->SetTimeScale(rushTimeScale);
 
     rushInputTimer = 0.5f;
 

@@ -199,7 +199,9 @@ private:
     float cameraFov = 35.0f;
     float wallBlend = 0.0f;
     float smoothHitDistance = 0.0f;
-    float cameraCollisionRatio = 0.0f;
+    float cameraCollisionRatio = 1.0f;
+
+    int unstableFrameCount = 0; // 
 
     std::function<void()> wallNearFunc;
     // フォーカス時の

@@ -30,7 +30,7 @@ public:
     void DrawImGuiDetails() override;
 
     // ”ò‚Ô•ûŒü‚ğŒˆ’è‚·‚é
-    void SetDirection(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal);
+    void SetDirection(DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 enemyCenter, DirectX::XMFLOAT3 playerPos);
 
 private:
     std::string parentName = "RootComponent";
@@ -44,7 +44,8 @@ private:
     float spreadAngle = 20.0f;      // L‚ª‚èŠp“x
     float speedMin = 5.0f;
     float speedMax = 12.0f;
-    float gravity = 18.0f;
+    float gravity = 3.0f;
     float lifeTime = 0.7f;
     int fragmentCount = 15;
+    float spawnOffset = 0.8f;  // ¶¬ˆÊ’u‚ğ“G‚Ì’†S‘¤‚Ö­‚µ‰Ÿ‚µ–ß‚·”’l
 };

@@ -138,13 +138,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::PreBossRoomLerp:
     {
         constexpr float duration = 3.0f;
-        // Bloomの値を落ち着ける
-        //if (scene)
-        //{
-        //    auto& shader = scene->GetSceneSettings();
-        //    shader.bloomConstantBuffer.bloomExtractionThreshold = 9.0f;
-        //    shader.bloomConstantBuffer.bloomIntensity = 0.415f;
-        //}
         // ボスの目玉をなくす
         if (gruxEnemyEye)
         {
@@ -257,6 +250,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
             if (player)
             {
                 player->SetInputEnabled(true); // 入力を有効化する
+                // カメラをボス戦時の状態に変更する
+                player->SetIsBossBattle(true);
             }
             //カメラを三人称に戻す
             if (scene->GetCameraManager()->IsUseMovie())

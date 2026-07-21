@@ -31,6 +31,8 @@ void DarkCameraActor::Initialize(const Transform& transform)
 
 void DarkCameraActor::Update(float deltaTime)
 {
+    Logger::Log(U8("cameraCollisionRatio") + std::to_string(cameraCollisionRatio));
+
     // プレイヤーの位置を取得
     auto playerHeadShared = playerHead.lock();
     if (!playerHeadShared)
@@ -79,11 +81,6 @@ void DarkCameraActor::Update(float deltaTime)
 
 
     // 当たり判定でカメラの位置を修正する
-    //XMFLOAT3 start =
-        //playerHeadShared->GetComponentLocation();
-
-    //currentPose.eye = ResolveCameraCollision(start, currentPose.eye);
-
     currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
 
     float targetBlend = cameraHitWall ? 1.0f : 0.0f;
@@ -442,7 +439,25 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
     float idealDistance = MathHelper::Distance(target, eye);
     float collisionDistance = MathHelper::Distance(target, idealEye);
 
-    cameraCollisionRatio = collisionDistance / idealDistance;
+    //cameraCollisionRatio = collisionDistance / idealDistance;
+
+    float newRatio = collisionDistance / idealDistance;
+
+    if (std::abs(newRatio - cameraCollisionRatio) > 0.5f)
+    {
+        unstableFrameCount++;
+
+        if (unstableFrameCount >= 2)
+        {
+            cameraCollisionRatio = newRatio;
+            unstableFrameCount = 0;
+        }
+    }
+    else
+    {
+        unstableFrameCount = 0;
+        cameraCollisionRatio = newRatio;
+    }
 
     return idealEye;
 }

@@ -149,8 +149,12 @@ public:
 
     // カメラの目の位置を取得する
     const std::shared_ptr<SceneComponent>& GetCameraEyeComponent() { return cameraEyeComponent; }
+
     // カメラの注視点の位置
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
+
+    // ボス戦時かどうかを設定する
+    void SetIsBossBattle(const bool isBossBattle) { this->isBossBattle = isBossBattle; }
 
 private:
     // 動作更新処理
@@ -275,6 +279,9 @@ private:
     DirectX::XMFLOAT4X4 prevSwordWorld; // 前回の姿勢
     bool isPrevSwordWorldValid = false;
 
+    float weaponSphereRadius = 0.25f;    // 剣の球の当たり判定の半径
+    float rushTimeScale = 0.4f;         // ラッシュ時のタイムスケール
+
     // 剣の軌跡
     Trail trail;
     float trailRemainTime = 0.8f; // 残像が残る時間
@@ -290,7 +297,7 @@ private:
 
     // カメラの
     DirectX::XMFLOAT3 focusDirection = {};//　カメラのFocus開始時のForwawrd
-    bool isBossBattle = true;  // ボス戦状態かどうか
+    bool isBossBattle = false;  // ボス戦状態かどうか
 
     // 回避方向
     DodgeDirection dodgeDirection = DodgeDirection::Backward;

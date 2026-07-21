@@ -3,8 +3,6 @@
 
 void IceFragmentEmitterActor::Initialize(const Transform& transform)
 {
-    rotationComponent = AddComponent<RotationComponent>(parentName);
-
     // 結晶を生成する関数
     for (int i = 0; i < 15; i++)
     {
@@ -32,12 +30,10 @@ void IceFragmentEmitterActor::Update(float deltaTime)
         pos.z += fragment.velocity.z * deltaTime;
         fragment.meshComponent->SetWorldLocationDirect(pos);
 
-        // 回転
-        //auto rot = fragment.meshComponent->GetComponentEulerRotation();
-        //rot.x += fragment.rotationSpeed.x * deltaTime;
-        //rot.y += fragment.rotationSpeed.y * deltaTime;
-        //rot.z += fragment.rotationSpeed.z * deltaTime;
-        //fragment.meshComponent->SetWorldEulerRotationDirect(rot);
+        // 減衰
+        fragment.velocity.x *= 0.98f;
+        fragment.velocity.y *= 0.98f;
+        fragment.velocity.z *= 0.98f;
 
         // 重力
         fragment.velocity.y -= gravity * deltaTime;
@@ -49,6 +45,11 @@ void IceFragmentEmitterActor::Update(float deltaTime)
         {
             fragment.meshComponent->SetIsVisible(false);
         }
+
+        // スケール
+        float t =  fragment.life / lifeTime;
+        float iceScale = std::lerp(1.0f, 0.0f, t);
+        fragment.meshComponent->SetRelativeScaleDirect({ iceScale,iceScale,iceScale });
     }
 }
 
@@ -60,23 +61,31 @@ void IceFragmentEmitterActor::DrawImGuiDetails()
     ImGui::DragFloat("Speed Max", &speedMax, 0.1f);
     ImGui::DragFloat("Gravity", &gravity, 0.5f);
     ImGui::DragFloat("Life", &lifeTime, 0.01f, 0.1f, 5.0f);
+    ImGui::DragFloat("spawnOffset", &spawnOffset, 0.01f, 0.1f, 5.0f);
 
     if (ImGui::Button(U8("エフェクト生成")))
     {
-        SetDirection(GetPosition(), { 0,0,1 });
+        SetDirection({ 0,0,1 }, { 0,2,0 }, {0,2,1});
     }
 #endif
 }
 
 // 飛ぶ方向を決定する
-void IceFragmentEmitterActor::SetDirection(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal)
+void IceFragmentEmitterActor::SetDirection(DirectX::XMFLOAT3 hitNormal,DirectX::XMFLOAT3 enemyCenter, DirectX::XMFLOAT3 playerPos)
 {
+    // 敵→プレイヤー方向
+    DirectX::XMFLOAT3 forward = MathHelper::Normalize(MathHelper::Subtract(playerPos, enemyCenter));
+    // エフェクト生成位置
+    DirectX::XMFLOAT3 spawnPos = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
+
     for (auto& fragment : fragments)
     {
         fragment.life = 0.5f;
         fragment.meshComponent->SetIsVisible(true);
-        fragment.meshComponent->SetWorldLocationDirect(hitPos);
-        DirectX::XMFLOAT3 forward = MathHelper::Normalize(hitNormal);
+
+        fragment.meshComponent->SetWorldLocationDirect(spawnPos);
+
+        //forward = MathHelper::Normalize(hitNormal);
         DirectX::XMFLOAT3 worldUp = { 0,1,0 };
         DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(worldUp, forward));
         DirectX::XMFLOAT3 up = MathHelper::Cross(forward, right);
@@ -89,12 +98,7 @@ void IceFragmentEmitterActor::SetDirection(DirectX::XMFLOAT3 hitPos, DirectX::XM
         dir = MathHelper::Normalize(dir);
         float speed = MathHelper::RandomRange(speedMin, speedMax);
         fragment.velocity = MathHelper::Multiply(dir, speed);
-        DirectX::XMFLOAT4 rotation=MathHelper::LookRotation(dir, { 0,1,0 });
+        DirectX::XMFLOAT4 rotation = MathHelper::LookRotation(dir, { 0,1,0 });
         fragment.meshComponent->SetRelativeRotationDirect(rotation);
     }
-
-    //if (rotationComponent)
-    //{
-    //    rotationComponent->SetDirection(hitNormal);
-    //}
 }

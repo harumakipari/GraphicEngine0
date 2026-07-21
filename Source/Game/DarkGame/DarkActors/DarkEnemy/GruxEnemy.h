@@ -20,7 +20,7 @@ public:
     void TakeDamage(int damage);
 
     // ヒットエフェクトを生成する
-    void SpawnHitEffect(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal) const;
+    void SpawnHitEffect(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
 
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
 
@@ -98,7 +98,10 @@ private:
     DirectX::XMFLOAT3 prevWeaponRightMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponRightTipPos = { 0.0f,0.0f,0.0f };
 
-    float hitWeaponRadius = 0.4f;
+    float hitWeaponRadius = 0.8f;   // 武器の半径
+    float enemyScale = 1.7f;    // 敵のスケール
+    float hitEnemyEffectOffsetY = 2.2f;  // ヒットエフェクトのオフセットY
+    float hitPlayerEffectOffsetY = 2.4f;  // ヒットエフェクトのオフセットY
 
     // 登場シーンのボス名前のUI
     std::shared_ptr<UIImageComponent> gruxNameImageComponent;

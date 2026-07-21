@@ -42,13 +42,14 @@ public:
     const char* GetName() const override { return "EnemyIdleState"; }
 };
 
-class EnemyWalkState : public EnemyStateBase
+// 次の攻撃を考えるステートオブジェクト
+class EnemyThinkState :public EnemyStateBase
 {
 public:
     // コンストラクタ
-    EnemyWalkState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
+    EnemyThinkState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
     // デストラクタ
-    ~EnemyWalkState() = default;
+    virtual ~EnemyThinkState() = default;
     // ステートに入った時のメソッド
     void Enter() override;
     // ステートで実行するメソッド
@@ -56,26 +57,9 @@ public:
     // ステートから出ていくときのメソッド
     void Exit() override;
     // ステート名を取得
-    const char* GetName() const override { return "EnemyWalkState"; }
+    const char* GetName() const override { return "EnemyThinkState"; }
 };
 
-// 攻撃ステートオブジェクト
-class EnemyAttackState : public EnemyStateBase
-{
-public:
-    // コンストラクタ
-    EnemyAttackState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
-    // デストラクタ
-    ~EnemyAttackState() = default;
-    // ステートに入った時のメソッド
-    void Enter() override;
-    // ステートで実行するメソッド
-    void Execute(float deltaTime) override;
-    // ステートから出ていくときのメソッド
-    void Exit() override;
-    // ステート名を取得
-    const char* GetName() const override { return "EnemyAttackState"; }
-};
 
 // 死亡ステートオブジェクト
 class EnemyDeathState : public EnemyStateBase
@@ -95,38 +79,4 @@ public:
     const char* GetName() const override { return "EnemyDeathState"; }
 };
 
-// 攻撃前の予兆ステートオブジェクト
-class EnemyCastState :public EnemyStateBase
-{
-public:
-    // コンストラクタ
-    EnemyCastState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
-    // デストラクタ
-    ~EnemyCastState() = default;
-    // ステートに入った時のメソッド
-    void Enter() override;
-    // ステートで実行するメソッド
-    void Execute(float deltaTime) override;
-    // ステートから出ていくときのメソッド
-    void Exit() override;
-    // ステート名を取得
-    const char* GetName() const override { return "Cast"; }
-};
 
-// クールダウンステートオブジェクト
-class EnemyCoolDownState :public EnemyStateBase
-{
-public:
-    // コンストラクタ
-    EnemyCoolDownState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
-    // デストラクタ
-    ~EnemyCoolDownState() = default;
-    // ステートに入った時のメソッド
-    void Enter() override;
-    // ステートで実行するメソッド
-    void Execute(float deltaTime) override;
-    // ステートから出ていくときのメソッド
-    void Exit() override;
-    // ステート名を取得
-    const char* GetName() const override { return "CoolDown"; }
-};

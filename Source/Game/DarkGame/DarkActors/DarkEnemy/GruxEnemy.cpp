@@ -75,6 +75,11 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Jump_Land_1", 17);
     controller->AddAnimation("Death_A_0", 18);
     controller->AddAnimation("Death_B_0", 19);
+    controller->AddAnimation("Attack_A_Fast_0", 20);
+    controller->AddAnimation("Attack_B_Fast_0", 21);
+    controller->AddAnimation("Attack_C_Fast_0", 22);
+    controller->AddAnimation("Dodge_B_180_Seq_0", 23);
+    controller->AddAnimation("TravelMode_Start_0", 24);
 
     // 全てのNotifyAssetsをロードする
     controller->LoadAllNotifyAssets(GetName());
@@ -83,13 +88,11 @@ void GruxEnemy::Initialize(const Transform& transform)
     {
         stateMachine_ = std::make_shared<StateMachine>();
         stateMachine_->RegisterState(std::make_unique<EnemyIdleState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyWalkState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyDeathState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyCastState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyThinkState>(this));
 
         // ステートマシンを character に追加
-        //this->SetStateMachine(stateMachine);
+        this->SetStateMachine(stateMachine_);
         // 初期ステートを設定
         stateMachine_->ChangeState("EnemyIdleState");
     }
@@ -108,12 +111,13 @@ void GruxEnemy::Initialize(const Transform& transform)
         //size = MathHelper::Multiply(size, GetScale().x);
         //height = size.y;
         //radius = size.x * 0.3f;
-        height = 2.7f;
-        radius = 1.5f;
+        height = 2.7f * 1.3f;
+        radius = 1.5f * 1.3f;
 
         mass = 300.0f;
         capsuleComponent->SetRadiusAndHeight(radius, height);
         capsuleComponent->SetMass(mass);
+        capsuleComponent->SetStatic(true);
         capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
         capsuleComponent->SetLayer(CollisionLayer::Enemy);
         capsuleComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
@@ -269,6 +273,8 @@ void GruxEnemy::Update(float deltaTime)
 {
     Character::Update(deltaTime);
 
+    SetScale({ enemyScale,enemyScale,enemyScale });
+
     // ImageComponentのalpha更新
     {
         easingRunner->Tick(deltaTime);
@@ -372,16 +378,6 @@ void GruxEnemy::Update(float deltaTime)
         {
             if (auto player = dynamic_cast<Player*>(hit.actor))
             {
-                /*                if (isDangerWindow && player->GetJustDodgeWindow())
-                                {
-                                    if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
-                                    {
-                                        player->StartJustDodgeSuccess(enemy);
-                                        Logger::Log(U8("ジャスト回避成功！"));
-                                    }
-                                }
-                                else*/
-
                 if (!hitActors.contains(hit.actor))
                 {
                     Logger::Log(U8("剣にプレイヤーが当たった"));
@@ -444,8 +440,9 @@ void GruxEnemy::Update(float deltaTime)
         skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 0.0f;
     }
 
+
     // 攻撃の危険な時に、
-    if (isDangerWindow)
+    //if (isDangerWindow)
     {
         if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
         {
@@ -473,15 +470,20 @@ void GruxEnemy::Update(float deltaTime)
             {
                 debugColor = { 1,0,0,1 };
             }
+
             DebugRender::DrawBox(boxCenter, { justDodgeAreaSize.x,2.0f,justDodgeAreaSize.y }, debugColor);
-            // プレイヤーがジャスト回避したら、
-            if (player->GetJustDodgeWindow())
+
+            if (isDangerWindow)
             {
-                // ジャスト回避成功
-                player->StartJustDodgeSuccess(std::dynamic_pointer_cast<Enemy>(this->shared_from_this()));
+                if (player->GetJustDodgeWindow())
+                {// プレイヤーがジャスト回避したら、
+                    // ジャスト回避成功
+                    player->StartJustDodgeSuccess(std::dynamic_pointer_cast<Enemy>(this->shared_from_this()));
+                }
             }
         }
     }
+
     //DebugRender::DrawBox(bossPos, { 3,3,3 }, { 1,1,1,1 });
 
 #if 0
@@ -516,9 +518,12 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat(U8("lockOnOffsetY"), &lockOnOffsetY, 0.05f, 0.1f, 10.0f);
     ImGui::DragFloat(U8("ロックオンプレイヤー側に押し出すオフセット"), &lockOnOffset, 0.05f, 0.1f, 10.0f);
     ImGui::DragFloat(U8("被弾時のフラッシュ"), &flashDuration, 0.05f, 0.1f, 2.0f);
-    ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
+    ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
+    ImGui::DragFloat(U8("enemyScale"), &enemyScale, 0.1f);
+    ImGui::DragFloat(U8("hitEnemyEffectOffsetY"), &hitEnemyEffectOffsetY, 0.1f);
+    ImGui::DragFloat(U8("hitPlayerEffectOffsetY"), &hitPlayerEffectOffsetY, 0.1f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
 #endif
 }
@@ -533,14 +538,20 @@ void GruxEnemy::TakeDamage(const int damage)
 }
 
 // ヒットエフェクトを生成する
-void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal) const
+// ヒットエフェクトを生成する
+void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const
 {
+    DirectX::XMFLOAT3 enemyCenter = GetPosition();
+    enemyCenter.y += hitEnemyEffectOffsetY;
+    playerPos.y += hitPlayerEffectOffsetY;
+
     if (auto actorManager = GetOwnerScene()->GetActorManager())
     {
-        Transform tr{ hitPos,{0.0f,0.0f,0.0f},{1.0f,1.0f,1.0f} };
+        Transform tr{ enemyCenter,{0.0f,0.0f,0.0f},{1.0f,1.0f,1.0f} };
         auto iceEffect = actorManager->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("iceFragment", tr);
-        iceEffect->SetDirection(hitPos, hitNormal);
+        iceEffect->SetDirection(hitNormal, enemyCenter, playerPos);
     }
+
 }
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)

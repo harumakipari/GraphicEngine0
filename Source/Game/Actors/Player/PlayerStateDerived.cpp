@@ -84,7 +84,6 @@ void PlayerAttackState::Enter()
     player->characterMovementComponent->SetSpeed(0.0f);
 
     player->PlayBodyAnimation(player->currentAttackAnimation, false, true, 0.1f);
-    //player->PlayBodyAnimation("Primary_Attack_Fast_D", false, true, 0.1f);
 
     // UŒ‚‚ðŠJŽn‚·‚éˆ—
     player->StartAttack();
@@ -201,12 +200,6 @@ void PlayerDodgeState::Enter()
         break;
     }
 
-    //owner->PlayBodyAnimation("Ability_RMB_Bwd_0", false);
-
-    //// ˆê’èŽžŠÔ‚¾‚¯‹­§ˆÚ“®‚·‚é‘¬“x‚ðÝ’è‚·‚é
-    //player->characterMovementComponent->AddForcedMove({ -forward.x,0.0f,-forward.z }, player->dodgeSpeed, player->dodgeDuration);
-
-
     rushRequested = false;
     judgeSuccess = false;
 }
@@ -226,7 +219,6 @@ void PlayerDodgeState::Execute(float deltaTime)
             rushRequested = true;
             player->ConsumeBufferCommand();
         }
-        //if (player->rushInputTimer <= 0.0f)
         if (player->transitionWindow)
         {
             if (rushRequested)

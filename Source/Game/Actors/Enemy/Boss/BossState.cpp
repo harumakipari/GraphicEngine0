@@ -23,52 +23,22 @@ void EnemyIdleState::Exit()
 {
 }
 
-// 移動ステートオブジェクト
-void EnemyWalkState::Enter()
-{
-    owner->PlayBodyAnimation("Jog_Fwd_0", true, true, 0.2f);
-}
 
-void EnemyWalkState::Execute(float deltaTime)
-{
-
-}
-
-void EnemyWalkState::Exit()
+// 次の攻撃を考えるステートオブジェクト
+void EnemyThinkState::Enter()
 {
 }
 
-// 攻撃ステートオブジェクト
-void EnemyAttackState::Enter()
-{
-    enemy->StartAttack();
-    enemy->PlayBodyAnimation("PrimaryAttack_LA", false, true, 0.1f);
-}
-
-void EnemyAttackState::Execute(float deltaTime)
+// ステートで実行するメソッド
+void EnemyThinkState::Execute(float deltaTime)
 {
 
 }
 
-void EnemyAttackState::Exit()
-{
-
-}
-
-// 攻撃の予兆ステートオブジェクト
-void EnemyCastState::Enter()
-{
-    
-}
-
-void EnemyCastState::Execute(float deltaTime)
-{
-
-}
-
-void EnemyCastState::Exit()
+void EnemyThinkState::Exit()
 {
 }
+
 
 // 攻撃の予兆ステートオブジェクト
 void EnemyDeathState::Enter()
