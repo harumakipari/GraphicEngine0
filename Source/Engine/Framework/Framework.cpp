@@ -36,9 +36,6 @@ Framework::Framework(HWND hwnd, BOOL fullscreen) : hwnd(hwnd), fullscreenMode(fu
     Logger::Initialize();
 #endif
 
-#ifdef USE_IMGUI
-    enableImGui = true;
-#endif
 }
 
 bool Framework::Initialize()
@@ -127,10 +124,6 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
     }
 
 #ifdef _DEBUG
-    //if (InputSystem::GetInputState("F1", InputStateMask::Trigger))
-    //{// ImGui‚Ì—LŒø‰»ƒgƒOƒ‹
-    //    enableImGui = !enableImGui;
-    //}
 
     if (InputSystem::GetInputState("F1", InputStateMask::Trigger))
     {
@@ -190,7 +183,6 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
         Logger::Log(U8("back‚ð’Ê‚Á‚½"));
 
     }
-    if (enableImGui)
     {
 #ifdef USE_IMGUI
         {

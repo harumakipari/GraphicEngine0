@@ -11,6 +11,7 @@
 #include "Engine/Debug/SceneEditor.h"
 #include "Engine/Effects/EffectEditor.h"
 #include "Engine/Effects/EffectManager.h"
+#include "Engine/Framework/Framework.h"
 
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Utility/Time.h"
@@ -841,10 +842,13 @@ void SceneBase::DrawGui()
 {
 #ifdef USE_IMGUI
     SetupImGuiStyle();
-
-    //DrawMenuBar();
-
     DrawDockSpace();
+    DrawViewport();
+
+    if (!Framework::showEditor)
+    {
+        return;
+    }
     DrawGizmo();//
 
     DrawOutliner();
@@ -1099,6 +1103,46 @@ void SceneBase::DrawPostEffectTab()
 
 void SceneBase::DrawGizmo()
 {
+    DirectX::XMMATRIX CameraView;
+    DirectX::XMMATRIX CameraProjection;
+
+    //if (auto camera = CameraManager::GetRenderCamera(this))
+    if (auto camera = cameraManager->GetRenderCamera(this))
+    {
+        ViewConstants data = camera->GetViewConstants();
+        CameraView = XMLoadFloat4x4(&data.view);
+        CameraProjection = XMLoadFloat4x4(&data.projection);
+    }
+
+    if (InputSystem::GetInputState("W"))
+        EditorGizmo::SetOperation(ImGuizmo::TRANSLATE);
+    if (InputSystem::GetInputState("E"))
+        EditorGizmo::SetOperation(ImGuizmo::ROTATE);
+    if (InputSystem::GetInputState("R"))
+        EditorGizmo::SetOperation(ImGuizmo::SCALE);
+
+    if (selectedActor_)
+    {
+        auto root = selectedActor_->GetRootComponent();
+        if (root)
+        {
+            EditorGizmo::Draw(
+                root,
+                CameraView,
+                CameraProjection,
+                viewportImageMin,
+                viewportImageSize
+            );
+        }
+    }
+
+
+
+}
+
+
+void SceneBase::DrawViewport()
+{
     ImGuiViewport* vp = ImGui::GetMainViewport();
 
     ImGui::SetNextWindowPos(vp->WorkPos);
@@ -1143,42 +1187,8 @@ void SceneBase::DrawGizmo()
         ImVec2(VIEW_W, VIEW_H)
     );
 
-    // š Image ‚Ì Rect ‚ðŽæ“¾
-    ImVec2 imageMin = ImGui::GetItemRectMin();
-    ImVec2 imageSize = ImGui::GetItemRectSize();
-
-    DirectX::XMMATRIX CameraView;
-    DirectX::XMMATRIX CameraProjection;
-
-    //if (auto camera = CameraManager::GetRenderCamera(this))
-    if (auto camera = cameraManager->GetRenderCamera(this))
-    {
-        ViewConstants data = camera->GetViewConstants();
-        CameraView = XMLoadFloat4x4(&data.view);
-        CameraProjection = XMLoadFloat4x4(&data.projection);
-    }
-
-    if (InputSystem::GetInputState("W"))
-        EditorGizmo::SetOperation(ImGuizmo::TRANSLATE);
-    if (InputSystem::GetInputState("E"))
-        EditorGizmo::SetOperation(ImGuizmo::ROTATE);
-    if (InputSystem::GetInputState("R"))
-        EditorGizmo::SetOperation(ImGuizmo::SCALE);
-
-    if (selectedActor_)
-    {
-        auto root = selectedActor_->GetRootComponent();
-        if (root)
-        {
-            EditorGizmo::Draw(
-                root,
-                CameraView,
-                CameraProjection,
-                imageMin,
-                imageSize
-            );
-        }
-    }
+    viewportImageMin = ImGui::GetItemRectMin();
+    viewportImageSize = ImGui::GetItemRectSize();
 
     ImGui::End();
 
@@ -1187,34 +1197,18 @@ void SceneBase::DrawGizmo()
 #ifdef USE_IMGUI
 
     InputSystem::SetViewportRect(
-        imageMin.x,
-        imageMin.y,
-        imageSize.x,
-        imageSize.y
+        viewportImageMin.x,
+        viewportImageMin.y,
+        viewportImageSize.x,
+        viewportImageSize.y
     );
     Graphics::SetViewport(
-        imageMin.x,
-        imageMin.y,
-        imageSize.x,
-        imageSize.y
+        viewportImageMin.x,
+        viewportImageMin.y,
+        viewportImageSize.x,
+        viewportImageSize.y
     );
 #else
 #endif
 
 }
-
-
-void SceneBase::DrawMenuBar()
-{
-#ifdef USE_IMGUI
-    if (ImGui::BeginMainMenuBar())
-    {
-        if (ImGui::BeginMenu("Window"))
-        {
-            ImGui::EndMenu();
-        }
-        ImGui::EndMainMenuBar();
-    }
-#endif
-}
-

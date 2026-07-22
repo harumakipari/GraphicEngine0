@@ -56,9 +56,6 @@ CONST LPCWSTR APPLICATION_NAME{ L"X3DGP" };
 class Framework
 {
 public:
-    //タイムスケール（ヒットストップやポーズでいじる）
-    static inline const float defaultTimeScale = 1.0f;
-    static inline float timeScale = 1.0f;
 
 #ifdef USE_IMGUI
 
@@ -217,6 +214,8 @@ public:
         isPaused = pause;
     }
 
+    static inline bool showEditor = false;    // エディタの有効化フラグ
+
 private:
     bool Initialize();
     bool Update(float elapsed_time/*Elapsed seconds from last frame*/);
@@ -251,8 +250,6 @@ private:
     BOOL vsync{ FALSE };
     BOOL tearingSupported{ FALSE };
 
-    bool enableImGui = false;   // ImGuiの有効化フラグ
-    bool showEditor = false;    // エディタの有効化フラグ
 
     RECT windowedRect;
     DWORD windowedStyle;

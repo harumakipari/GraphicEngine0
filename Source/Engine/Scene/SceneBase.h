@@ -99,7 +99,7 @@ private:
 
     void DrawGizmo();
 
-    void DrawMenuBar();
+    void DrawViewport();
 
 protected:
 
@@ -186,6 +186,9 @@ protected:
     float light_view_size{ 20.0f };
     float light_view_near_z{ 1.0f };
     float light_view_far_z{ 100.0f };
+
+    ImVec2 viewportImageMin;
+    ImVec2 viewportImageSize;
 
     Microsoft::WRL::ComPtr<ID3D11PixelShader> ghostPs;
 
