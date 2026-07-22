@@ -333,8 +333,9 @@ void PlayerRushState::Enter()
 
     if (auto target = player->rushTarget.lock())
     {// 移動する
-        player->characterMovementComponent->MoveToActor(target,
-            0.05f, 2.5f);
+        player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, 2.5f);
+        // ルートモーションを無視する
+        player->PlayBodyAnimation("CombatRush_Fwd", false, true, 0.2f, true);
     }
 
     rushComboAdvanced = false;

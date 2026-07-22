@@ -156,6 +156,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Jog_Fwd1", 80);
         controller->AddAnimation("Walk_Fwd1", 81);
         controller->AddAnimation("Sprint_Fwd", 82);
+        controller->AddAnimation("CombatRush_Fwd", 83);
 
         // ブレンドスペースに追加
         controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
@@ -402,27 +403,35 @@ void Player::Update(float deltaTime)
 {
     using namespace DirectX;
 
-    // プレイヤーの透明化
-    if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
+    // プレイヤーの透明化処理
+    if (moviePerform)
+    {// 演出中は壁の近くでも透明化しない
+        skeletalMeshComponent->SetIsVisible(true);
+        skeletalMeshBlendComponent->SetIsVisible(false);
+    }
+    else
     {
-        float transparencyStartRation = 0.3f;
-        float ratio = camera->GetCameraCollisionRatio();
-        if (ratio < transparencyStartRation)
+        if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
         {
-            skeletalMeshComponent->SetIsVisible(false);
-            skeletalMeshBlendComponent->SetIsVisible(true);
+            float transparencyStartRation = 0.3f;
+            float ratio = camera->GetCameraCollisionRatio();
+            if (ratio < transparencyStartRation)
+            {
+                skeletalMeshComponent->SetIsVisible(false);
+                skeletalMeshBlendComponent->SetIsVisible(true);
 
-            float t = std::clamp(ratio / transparencyStartRation, 0.0f, 1.0f);
-            t = t * t * (3.0f - 2.0f * t);
+                float t = std::clamp(ratio / transparencyStartRation, 0.0f, 1.0f);
+                t = t * t * (3.0f - 2.0f * t);
 
-            float alpha = std::lerp(transparencyMinAlpha, transparencyMaxAlpha, t);
+                float alpha = std::lerp(transparencyMinAlpha, transparencyMaxAlpha, t);
 
-            skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
-        }
-        else
-        {
-            skeletalMeshComponent->SetIsVisible(true);
-            skeletalMeshBlendComponent->SetIsVisible(false);
+                skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
+            }
+            else
+            {
+                skeletalMeshComponent->SetIsVisible(true);
+                skeletalMeshBlendComponent->SetIsVisible(false);
+            }
         }
     }
 
@@ -767,6 +776,7 @@ void Player::DrawImGuiDetails()
     ImGui::DragFloat("slowMotionTimeScale", &slowMotionTimeScale, 0.05f);
     ImGui::DragFloat("transparencyMinAlpha", &transparencyMinAlpha, 0.05f);
     ImGui::DragFloat("transparencyMaxAlpha", &transparencyMaxAlpha, 0.05f);
+    ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
 
 
     // コンボの始まりを設定する
@@ -1003,6 +1013,52 @@ void Player::UpdateLocomotionAnimation()
 // TPSモードの移動時の更新処理
 void Player::UpdateTPSLocomotion()
 {
+#if 1
+    float speed = characterMovementComponent->GetInputMagnitude();
+    bool dash = InputSystem::GetInputState("GamePadB", InputStateMask::Press);
+
+    // ダッシュ条件
+    if (dash && speed >= 0.0f)
+    {
+        SetLocomotionMode(LocomotionMode::Dash);
+        return;
+    }
+
+    switch (locomotionMode)
+    {
+    case LocomotionMode::Idle:
+        if (speed > 0.0f)
+            SetLocomotionMode(LocomotionMode::TPSWalk);
+        break;
+
+    case LocomotionMode::TPSWalk:
+        if (speed <= 0.0f)
+            SetLocomotionMode(LocomotionMode::Idle);
+        else if (speed >= 0.6f)
+            SetLocomotionMode(LocomotionMode::TPSRun);
+        break;
+
+    case LocomotionMode::TPSRun:
+        if (speed < 0.55f)
+            SetLocomotionMode(LocomotionMode::TPSWalk);
+        break;
+    case LocomotionMode::Dash:
+        if (!dash)
+        {
+            if (speed >= 0.6f)
+                SetLocomotionMode(LocomotionMode::TPSRun);
+            else if (speed > 0.0f)
+                SetLocomotionMode(LocomotionMode::TPSWalk);
+            else
+                SetLocomotionMode(LocomotionMode::Idle);
+        }
+        break;
+    }
+
+    auto move = inputComponent->GetMoveInput();
+    GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
+
+#else
     float speed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
     bool dash = InputSystem::GetInputState("GamePadB", InputStateMask::Press);
 
@@ -1046,6 +1102,8 @@ void Player::UpdateTPSLocomotion()
 
     auto move = inputComponent->GetMoveInput();
     GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
+
+#endif // 0
 }
 
 void Player::UpdateLockOnLocomotion()
@@ -1402,15 +1460,8 @@ void Player::DecideLockOnDodgeDirection()
 
     auto intent = inputComponent->GetIntent();
 
-
     float x = intent.leftMove.x;
     float z = intent.leftMove.z;
-
-    Logger::Log(std::format(
-        "x={} z={}",
-        x,
-        z));
-
 
     // 入力なしなら後ろ回避
     if (fabs(x) < 0.1f && fabs(z) < 0.1f)

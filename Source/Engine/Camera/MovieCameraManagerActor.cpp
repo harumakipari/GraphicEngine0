@@ -252,6 +252,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 player->SetInputEnabled(true); // 入力を有効化する
                 // カメラをボス戦時の状態に変更する
                 player->SetIsBossBattle(true);
+                // 演出が終わったことを通知する
+                player->SetIsMoviePerform(false);
             }
             //カメラを三人称に戻す
             if (scene->GetCameraManager()->IsUseMovie())
@@ -292,6 +294,8 @@ void MovieCameraManagerActor::PlayMovie(const std::string& file)
     auto movieCamera = this->movieCameraWeakPtr.lock();
     movieCamera->LoadFromJson("./Data/Saves/MovieCameras/" + file);
     movieCamera->Start();
+
+
 }
 
 // ドアを開くムービーを再生する
@@ -307,15 +311,17 @@ void MovieCameraManagerActor::PlayDoorMovie()
         }
     }
 
-    // プレイヤーの操作を無効化して位置を固定する
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
     {
+        // 演出が始まったことをことを通知する
+        player->SetIsMoviePerform(true);
+        // プレイヤーの操作を無効化する
         player->SetInputEnabled(false);
+        // プレイヤーの位置を固定する
         DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
         player->SetPosition(fixedPosition); // プレイヤーの位置を固定する座標に設定
         player->rotationComponent->SetDirection({1.0f,0.0f,0.0f});
     }
-
 
     if (auto cameraManager = GetOwnerScene()->GetCameraManager())
     {

@@ -156,6 +156,9 @@ public:
     // ボス戦時かどうかを設定する
     void SetIsBossBattle(const bool isBossBattle) { this->isBossBattle = isBossBattle; }
 
+    // 演出中かどうかを設定する
+    void SetIsMoviePerform(const bool moviePerform) { this->moviePerform = moviePerform; }
+
 private:
     // 動作更新処理
     void UpdateMovement();
@@ -202,6 +205,8 @@ public:
 
     float dodgeSpeed = 3.0f; // 回避する時のスピード
     float dodgeDuration = 0.5f; // 回避するときの時間
+
+    float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
 
     std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 
@@ -317,12 +322,16 @@ private:
     // スロー
     float slowMotionTimer = 0.0f;
     bool slowMotionActive = false;
-    float slowMotionInterval = 0.5f;   // スローモーションの期間
+    float slowMotionInterval = 0.15f;   // スローモーションの時間
     float slowMotionTimeScale = 0.2f;  // どれくらいスローモーションにタイム倍率
+
 
     // プレイヤーの壁に近づいた時の透明度
     float transparencyMinAlpha = 0.0f;  // 最小透明度
     float transparencyMaxAlpha = 0.1f;  // 最大透明度
+
+    // 演出中かどうか
+    bool moviePerform = false;
 
     friend class PlayerStateBase;
 };
