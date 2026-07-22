@@ -842,6 +842,8 @@ void SceneBase::DrawGui()
 #ifdef USE_IMGUI
     SetupImGuiStyle();
 
+    //DrawMenuBar();
+
     DrawDockSpace();
     DrawGizmo();//
 
@@ -868,7 +870,8 @@ void SceneBase::DrawDockSpace()
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoBringToFrontOnFocus |
-        ImGuiWindowFlags_NoNavFocus;
+        ImGuiWindowFlags_NoNavFocus |
+        ImGuiWindowFlags_NoBackground;
 
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->WorkPos);
@@ -1096,21 +1099,34 @@ void SceneBase::DrawPostEffectTab()
 
 void SceneBase::DrawGizmo()
 {
-    ImGui::Begin("Viewport",
-        nullptr,
-        /* ImGuiWindowFlags_NoMove |*/
-        ImGuiWindowFlags_NoScrollbar |
-        ImGuiWindowFlags_NoScrollWithMouse
-    );
+    ImGuiViewport* vp = ImGui::GetMainViewport();
+
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
+
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoTitleBar
+        | ImGuiWindowFlags_NoResize
+        | ImGuiWindowFlags_NoMove
+        | ImGuiWindowFlags_NoCollapse
+        | ImGuiWindowFlags_NoDocking
+        | ImGuiWindowFlags_NoScrollbar
+        | ImGuiWindowFlags_NoScrollWithMouse
+        | ImGuiWindowFlags_NoBackground
+        | ImGuiWindowFlags_NoBringToFrontOnFocus;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+    ImGui::Begin("Viewport", nullptr, flags);
 
     // =========================
     // ‡@ 3D•`‰æŒ‹‰Ê‚ð•\Ž¦
     // =========================
-    constexpr float VIEW_W = 1280.0f;
-    constexpr float VIEW_H = 720.0f;
+    float VIEW_W = Graphics::GetScreenWidth();
+    float VIEW_H = Graphics::GetScreenHeight();
 
     ImVec2 avail = ImGui::GetContentRegionAvail();
-
+    ImGui::SetCursorPos(ImVec2(0, 0));
     // ’†‰›Šñ‚¹
     ImVec2 offset(
         (avail.x - VIEW_W) * 0.5f,
@@ -1165,6 +1181,9 @@ void SceneBase::DrawGizmo()
     }
 
     ImGui::End();
+
+    ImGui::PopStyleVar();
+
 #ifdef USE_IMGUI
 
     InputSystem::SetViewportRect(
@@ -1182,5 +1201,20 @@ void SceneBase::DrawGizmo()
 #else
 #endif
 
+}
+
+
+void SceneBase::DrawMenuBar()
+{
+#ifdef USE_IMGUI
+    if (ImGui::BeginMainMenuBar())
+    {
+        if (ImGui::BeginMenu("Window"))
+        {
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+#endif
 }
 

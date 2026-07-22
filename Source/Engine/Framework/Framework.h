@@ -48,8 +48,8 @@ extern ImWchar glyphRangesJapanese[];
 CONST LONG SCREEN_WIDTH{ 1920 };
 CONST LONG SCREEN_HEIGHT{ 1080 };
 #else
-CONST LONG SCREEN_WIDTH{ 1280 };
-CONST LONG SCREEN_HEIGHT{ 720 };
+CONST LONG SCREEN_WIDTH{ 1920 };
+CONST LONG SCREEN_HEIGHT{ 1080 };
 #endif
 CONST LPCWSTR APPLICATION_NAME{ L"X3DGP" };
 
@@ -252,6 +252,7 @@ private:
     BOOL tearingSupported{ FALSE };
 
     bool enableImGui = false;   // ImGuiの有効化フラグ
+    bool showEditor = false;    // エディタの有効化フラグ
 
     RECT windowedRect;
     DWORD windowedStyle;

@@ -99,6 +99,8 @@ private:
 
     void DrawGizmo();
 
+    void DrawMenuBar();
+
 protected:
 
     //==============================
@@ -186,4 +188,5 @@ protected:
     float light_view_far_z{ 100.0f };
 
     Microsoft::WRL::ComPtr<ID3D11PixelShader> ghostPs;
+
 };

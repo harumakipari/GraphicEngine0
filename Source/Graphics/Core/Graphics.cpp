@@ -520,8 +520,8 @@ void Graphics::StylizeWindow(BOOL fullscreen)
     }
     else
     {
-        //SetWindowLongPtrA(hwnd, GWL_STYLE, windowedStyle);
         SetWindowLongPtrA(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW ^ WS_MAXIMIZEBOX ^ WS_THICKFRAME | WS_VISIBLE);
+#if 0// 画面の大きさがWindowモードになる
         SetWindowPos(
             hWnd,
             HWND_NOTOPMOST,
@@ -530,6 +530,16 @@ void Graphics::StylizeWindow(BOOL fullscreen)
             windowedRect.right - windowedRect.left,
             windowedRect.bottom - windowedRect.top,
             SWP_FRAMECHANGED | SWP_NOACTIVATE);
+#else
+        SetWindowPos(
+            hWnd,
+            nullptr,
+            0, 0, 0, 0,
+            SWP_FRAMECHANGED |
+            SWP_NOMOVE |
+            SWP_NOSIZE |
+            SWP_NOZORDER);
+#endif // 0// 画面の大きさがWindowモードになる
 
         ShowWindow(hWnd, SW_NORMAL);
     }

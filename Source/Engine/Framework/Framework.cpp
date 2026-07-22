@@ -127,10 +127,18 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
     }
 
 #ifdef _DEBUG
+    //if (InputSystem::GetInputState("F1", InputStateMask::Trigger))
+    //{// ImGuiの有効化トグル
+    //    enableImGui = !enableImGui;
+    //}
+
     if (InputSystem::GetInputState("F1", InputStateMask::Trigger))
-    {// ImGuiの有効化トグル
-        enableImGui = !enableImGui;
+    {
+        showEditor = !showEditor;
+
+        Graphics::StylizeWindow(!showEditor);
     }
+
 #endif
     //パーティクルシステム更新
     {
