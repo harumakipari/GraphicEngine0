@@ -14,7 +14,7 @@ PlayerStateBase::PlayerStateBase(Player* actor) :State(actor), player(actor)
 void PlayerIdleState::Enter()
 {
     Logger::Log("Idle Enter");
-    owner->PlayBodyAnimation("Idle",true,true,0.2f);
+    owner->PlayBodyAnimation("Idle", true, true, 0.2f);
 }
 
 void PlayerIdleState::Execute(float deltaTime)
@@ -77,13 +77,13 @@ void PlayerRunningState::Exit()
 void PlayerDashState::Enter()
 {
     // カメラをTPSに変更する
-    auto camera =dynamic_cast<DarkCameraActor*>(player->GetOwnerScene()->GetActiveCamera());
+    auto camera = dynamic_cast<DarkCameraActor*>(player->GetOwnerScene()->GetActiveCamera());
     camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
 
     owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f);
 
     // スピードを変更する
-
+    player->characterMovementComponent->SetFixedSpeed(player->dashSpeed);
 
 }
 
@@ -104,19 +104,20 @@ void PlayerDashState::Execute(float deltaTime)
     }
 
     // Bボタンが離されたてかつ
-
-
+    if (!InputSystem::GetInputState("GamePadB", InputStateMask::Press))
+    {
+        player->GetStateMachine()->ChangeState("Running");
+        return;
+    }
 }
 
 void PlayerDashState::Exit()
 {
     // ブレンドスペースを使うのをやめる
     owner->GetBodyAnimationController()->SetUseBlendSpace(false);
+    // 速度を元に戻す
+    player->characterMovementComponent->ResetFixedSpeed();
 }
-
-
-
-
 
 void PlayerAttackState::Enter()
 {
@@ -126,7 +127,7 @@ void PlayerAttackState::Enter()
     player->hasPrevSwordTip = false;
 
     // 攻撃中は移動速度を0にする
-    player->characterMovementComponent->SetSpeed(0.0f);
+    player->characterMovementComponent->SetFixedSpeed(0.0f);
 
     player->PlayBodyAnimation(player->currentAttackAnimation, false, true, 0.1f);
 
@@ -218,7 +219,7 @@ void PlayerAttackState::Exit()
 {
     // 攻撃を終了する処理
     player->EndAttack();
-    player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
+    player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
     player->ResetAnimationStateFlag();  // アニメーションのステート系のフラグをリセットする
 }
 
@@ -227,7 +228,7 @@ void PlayerDodgeState::Enter()
     player->ResetAnimationStateFlag();
 
     // 攻撃中は移動速度を0にする
-    player->characterMovementComponent->SetSpeed(0.0f);
+    player->characterMovementComponent->SetFixedSpeed(0.0f);
 
     switch (player->GetDodgeDirection())
     {
@@ -320,15 +321,13 @@ void PlayerDodgeState::Exit()
 {
     player->ResetAnimationStateFlag();
     player->ResetTimeScale();
-    player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
+    player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
 }
-
-
 
 // ラッシュ
 void PlayerRushState::Enter()
 {
-    player->characterMovementComponent->SetSpeed(0.0f);
+    player->characterMovementComponent->SetFixedSpeed(0.0f);
 
     phase = RushPhase::DashToTarget;
 
@@ -344,7 +343,6 @@ void PlayerRushState::Enter()
     //queuedAttackCount = 1;
     queuedAttackCount = 5;
     player->invincible = true;  // ラッシュ攻撃中は無敵状態にする
-
 }
 
 void PlayerRushState::Execute(float deltaTime)
@@ -408,7 +406,7 @@ void PlayerRushState::Execute(float deltaTime)
 
 void PlayerRushState::Exit()
 {
-    player->characterMovementComponent->ResetSpeed(); // 攻撃が終わったら移動速度をリセットする
+    player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
     player->GetBodyAnimationController()->ResetAnimationRate();
     if (auto target = player->rushTarget.lock())
     {

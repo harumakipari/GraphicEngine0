@@ -341,8 +341,6 @@ void Player::Initialize(const Transform& transform)
         swordTipComponent->SetRelativeLocationDirect({ 0.0f,0.0f,0.8f });
     }
 
-
-
     // 剣のメッシュコンポーネントを追加
     swordMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordMeshComponent->SetModel("./Data/Models/Weapons/PlayerSwordGhost/Sword.gltf", false, true);
@@ -407,16 +405,17 @@ void Player::Update(float deltaTime)
     // プレイヤーの透明化
     if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
     {
+        float transparencyStartRation = 0.3f;
         float ratio = camera->GetCameraCollisionRatio();
-        if (ratio < 0.30f)
+        if (ratio < transparencyStartRation)
         {
             skeletalMeshComponent->SetIsVisible(false);
             skeletalMeshBlendComponent->SetIsVisible(true);
 
-            float t = std::clamp(ratio / 0.3f, 0.0f, 1.0f);
+            float t = std::clamp(ratio / transparencyStartRation, 0.0f, 1.0f);
             t = t * t * (3.0f - 2.0f * t);
 
-            float alpha = t;
+            float alpha = std::lerp(transparencyMinAlpha, transparencyMaxAlpha, t);
 
             skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
         }
@@ -427,6 +426,23 @@ void Player::Update(float deltaTime)
         }
     }
 
+
+    // スローモーション
+    if (slowMotionActive)
+    {
+        slowMotionTimer -= deltaTime;
+
+        if (slowMotionTimer <= 0.0f)
+        {
+            slowMotionActive = false;
+            ResetTimeScale();
+        }
+    }
+
+    if (characterMovementComponent)
+    {
+        characterMovementComponent->SetMoveSpeedSetting(walkSpeed, runSpeed);
+    }
 
     if (InputSystem::GetInputState("1"))
     {
@@ -732,7 +748,6 @@ void Player::DrawImGuiDetails()
 #ifdef USE_IMGUI
     ImGui::Checkbox(U8("ボス戦カメラ"), &isBossBattle);
     ImGui::DragFloat(U8("剣の球の当たり判定の半径"), &weaponSphereRadius, 0.05f);
-    ImGui::DragFloat(U8("ラッシュ時のタイムスケール"), &rushTimeScale, 0.05f);
     ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);
@@ -745,6 +760,15 @@ void Player::DrawImGuiDetails()
     ImGui::ColorEdit3(U8("剣の残像の内部の色"), &ghostInnerColor.x);
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
+    ImGui::DragFloat("walkSpeed", &walkSpeed, 0.05f);
+    ImGui::DragFloat("runSpeed", &runSpeed, 0.05f);
+    ImGui::DragFloat("dashSpeed", &dashSpeed, 0.05f);
+    ImGui::DragFloat("slowMotionInterval", &slowMotionInterval, 0.05f);
+    ImGui::DragFloat("slowMotionTimeScale", &slowMotionTimeScale, 0.05f);
+    ImGui::DragFloat("transparencyMinAlpha", &transparencyMinAlpha, 0.05f);
+    ImGui::DragFloat("transparencyMaxAlpha", &transparencyMaxAlpha, 0.05f);
+
+
     // コンボの始まりを設定する
     if (ImGui::BeginCombo(U8("コンボの始まり"), startAttackAnimation.c_str()))
     {
@@ -1455,10 +1479,13 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
     // スローモーションにする
-    enemy->SetTimeScale(rushTimeScale);
-    this->SetTimeScale(rushTimeScale);
+    enemy->SetTimeScale(slowMotionTimeScale);
+    this->SetTimeScale(slowMotionTimeScale);
 
-    rushInputTimer = 0.5f;
+    slowMotionActive = true;
+    slowMotionTimer = slowMotionInterval;
+
+    //rushInputTimer = 0.5f;
 
     // rush時のtargetを保存する
     rushTarget = enemy;

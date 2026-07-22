@@ -107,10 +107,18 @@ public:
     }
 
     // 速さを設定する
-    void SetSpeed(const float speed) { this->speed_ = speed; }
+    void SetFixedSpeed(const float speed)
+    {
+        this->speed_ = speed;
+        useFixedSpeed = true;
+    }
 
     // 速さをリセットする
-    void ResetSpeed() { this->speed_ = initialSpeed; }
+    void ResetFixedSpeed()
+    {
+        useFixedSpeed = false;
+        this->speed_ = initialSpeed;
+    }
 
     // 吹き飛ばしなどで外部から速度を加算するための関数
     void AddImpulse(const DirectX::XMFLOAT3& impulse)
@@ -141,9 +149,7 @@ public:
     bool IsGround() const { return isGrounded_; }
 
     // targetまで進む時に使用する
-    void  MoveToActor(
-        const std::shared_ptr<Actor>& target,
-        float moveTime, float stopDistance = 1.5f/*targetのどれくらい手前で止まるか*/)
+    void  MoveToActor(const std::shared_ptr<Actor>& target,float moveTime, float stopDistance = 1.5f/*targetのどれくらい手前で止まるか*/)
     {
         this->target = target;
         moveToTargetTime_ = moveTime;
@@ -154,6 +160,13 @@ public:
 
     // targetまで進んだかどうか
     bool IsMoveToActorFinished() const { return !moveToTarget_; }
+
+    // 動きの速度を設定する
+    void SetMoveSpeedSetting(const float walkSpeed,const float runSpeed)
+    {
+        this->walkSpeed = walkSpeed;
+        this->runSpeed = runSpeed;
+    }
 
     void DrawImGuiInspector() override
     {
@@ -201,6 +214,8 @@ private:
     float runSpeed = 5.0f;
     // 入力によって変わるスピード結果
     float targetSpeed = 0.0f;
+    // 固定のスピードを使用するかどうか
+    bool useFixedSpeed = false;
 };
 
 

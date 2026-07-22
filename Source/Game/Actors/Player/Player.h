@@ -254,6 +254,13 @@ public:
     };
     std::array<SwordGhost, 8> ghosts;
 
+    // ダッシュのスピード
+    float dashSpeed = 8.0f;
+    // 歩きのスピード
+    float walkSpeed = 2.0f;
+    // 走りのスピード
+    float runSpeed = 6.0f;
+
 private:
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // ヒット時の剣のエフェクト
 
@@ -284,7 +291,6 @@ private:
     bool isPrevSwordWorldValid = false;
 
     float weaponSphereRadius = 0.25f;    // 剣の球の当たり判定の半径
-    float rushTimeScale = 0.4f;         // ラッシュ時のタイムスケール
 
     // 剣の軌跡
     Trail trail;
@@ -305,8 +311,18 @@ private:
 
     // 回避方向
     DodgeDirection dodgeDirection = DodgeDirection::Backward;
-
+    // 歩き走りダッシュのステート管理
     LocomotionMode locomotionMode = LocomotionMode::Idle;
+
+    // スロー
+    float slowMotionTimer = 0.0f;
+    bool slowMotionActive = false;
+    float slowMotionInterval = 0.5f;   // スローモーションの期間
+    float slowMotionTimeScale = 0.2f;  // どれくらいスローモーションにタイム倍率
+
+    // プレイヤーの壁に近づいた時の透明度
+    float transparencyMinAlpha = 0.0f;  // 最小透明度
+    float transparencyMaxAlpha = 0.1f;  // 最大透明度
 
     friend class PlayerStateBase;
 };
