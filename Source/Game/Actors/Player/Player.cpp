@@ -48,10 +48,17 @@ void Player::Initialize(const Transform& transform)
                 material.materialType = MaterialType::Hair;
             }
             else if (material.name == "M_Aurora_Fur_FrozenHearth")
-            {// ”¯‚Ì–Ñ‚¾‚Á‚½‚ç
+            {// Fur•”•ª‚¾‚Á‚½‚ç
                 material.overridePipelineName = "characterFurAndHairSkeletalMesh";
                 material.materialType = MaterialType::Fur;
             }
+            else if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth"||
+                material.name == "M_Aurora_Dress_FrozenHearth"||
+                material.name == "M_Aurora_Body_Fur_FrozenHearth")
+            {// ••”•ª‚¾‚Á‚½‚çA
+                material.materialType = MaterialType::Cloth;
+            }
+
         }
     }
 

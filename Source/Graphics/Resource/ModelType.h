@@ -18,7 +18,7 @@ enum class MaterialType :int
     Skin,
     Eye,
     Metallic,   // メタリックにする場所(現在は敵の黄色の部分）
-    Cloth,  // 服マテリアル
+    Cloth,      // 服マテリアル
 };
 
 enum class ObjectType :int

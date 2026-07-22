@@ -7,6 +7,7 @@ static const int MATERIAL_FUR = 2;
 static const int MATERIAL_SKIN = 3;
 static const int MATERIAL_EYE = 4;
 static const int MATERIAL_METALLIC = 5;
+static const int MATERIAL_CLOTH = 6;
 
 static const int OBJECT_DEFAULT = 0;
 static const int OBJECT_PLAYER = 1;

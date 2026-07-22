@@ -1,6 +1,7 @@
 #include "GltfModel.hlsli"
 #include "Sampler.hlsli"
 #include "Common.hlsli"
+#include "ShaderFunctions.hlsli"
 
 #define BASE_COLOR_TEXTURE 0 
 #define METALLIC_ROUGHNESS_TEXTURE 1 
@@ -8,6 +9,8 @@
 #define EMISSIVE_TEXTURE 3
 #define OCCLUSION_TEXTURE 4 
 Texture2D<float4> materialTextures[5] : register(t1);
+
+Texture2D shadowMap : register(t15);
 
 GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 {
@@ -59,9 +62,13 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         metallicFactor *= sampled.b;
     }
 
-    if (materialType == MATERIAL_METALLIC)
-    {
-        emissiveFactor += float3(1.0, 0.8, 0.2) *chargePower ;
+
+    if (objectType == OBJECT_DOOR)
+    { // ドアの時だけラフネスを上げて、メタリックを下げる
+        if (metallicFactor < 0.1) // 木
+        {
+            roughnessFactor = max(roughnessFactor, 0.6);
+        }
     }
     
     float occlusionFactor = 1.0;
@@ -78,7 +85,11 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     float sigma = hasTangent ? pin.wTangent.w : 1.0;
     T = normalize(T - N * dot(N, T));
     float3 B = normalize(cross(N, T) * sigma);
-    
+
+    // TODO:アンチエイリアス対策にラフネスを下げる処理を追加
+    //roughnessFactor = SpecularAntiAliasing(roughnessFactor, N, 0.05f);
+
+
     //背面については、接線方向の基底ベクトルは符号が反転する。
     if (isFrontFace == false)
     {
@@ -102,14 +113,22 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
     pout.velocity = float4(velocity, 0, 1);
 
-    // ヒットフラッシュ時
-    float3 finalAlbedo = baseColorFactor.rgb;
-    // ヒットフラッシュ
-    float flash = pow(flashValue, 2.0);
-    // 色調整・時間調整
-    finalAlbedo = lerp(finalAlbedo, float3(1.0,0, 0), flash);
+    if (objectType == OBJECT_STAGE || objectType == OBJECT_DOOR || objectType == OBJECT_FURNITURE)
+    { // 影の値を入れる
+        const float shadow_depth_bias = 0.001;
+        float4 light_view_position = mul(pin.wPosition, lightViewProjection); // World to Clip space
+        light_view_position = light_view_position / light_view_position.w; // Clip to NDC
+        float2 light_view_texcoord = 0;
+	    // NDC to Texture coordinate
+        light_view_texcoord.x = light_view_position.x * +0.5 + 0.5;
+        light_view_texcoord.y = light_view_position.y * -0.5 + 0.5;
+        float depth = saturate(light_view_position.z - shadow_depth_bias);
+        float shadow_factor = 1.0f;
+        shadow_factor = shadowMap.SampleCmpLevelZero(comparisionSamplerState, light_view_texcoord, depth).x;
+        pout.velocity.w = shadow_factor;
+    }
 
-    pout.albedo = float4(finalAlbedo, baseColorFactor.a);
+    pout.albedo = baseColorFactor;
 
     pout.position = pin.wPosition; // world space 
 
