@@ -76,9 +76,6 @@ void PlayerRunningState::Exit()
 
 void PlayerDashState::Enter()
 {
-    // ƒJƒƒ‰‚ğTPS‚É•ÏX‚·‚é
-    auto camera = dynamic_cast<DarkCameraActor*>(player->GetOwnerScene()->GetActiveCamera());
-    camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
 
     owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f);
 

@@ -69,6 +69,7 @@ public:
         mass = 50.0f;
         hp = maxHp;
     }
+
     void Initialize(const Transform& transform)override;
 
     void Update(float deltaTime)override;

@@ -431,7 +431,6 @@ void Player::Update(float deltaTime)
                 t = t * t * (3.0f - 2.0f * t);
 
                 float alpha = std::lerp(transparencyMinAlpha, transparencyMaxAlpha, t);
-
                 skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
             }
             else
@@ -442,16 +441,16 @@ void Player::Update(float deltaTime)
         }
     }
 
-
     // スローモーション
     if (slowMotionActive)
     {
-        slowMotionTimer -= deltaTime;
+        slowMotionTimer -= Time::UnscaledDeltaTime();
 
         if (slowMotionTimer <= 0.0f)
         {
             slowMotionActive = false;
             ResetTimeScale();
+            Logger::Log(U8("スローモーション終了"));
         }
     }
 
@@ -487,12 +486,10 @@ void Player::Update(float deltaTime)
         DebugRender::DrawSphere(eyePos, 0.5f, { 1.0f,1.0f,0.0f,1.0f }, true);
     }
 
-
     // 剣の真ん中、根本、先の座標を取得する
     DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
     DirectX::XMFLOAT3 swordMidPos = swordMiddleComponent->GetComponentLocation();
     DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
-
 
     // 当たり判定が有効な時にスフィアキャストをする
     if (hitBox)
@@ -978,42 +975,10 @@ void Player::UpdateLocomotionAnimation()
     case DarkCameraActor::CameraMode::TPS:
         UpdateTPSLocomotion();
         break;
-
     case DarkCameraActor::CameraMode::Focus:
     case DarkCameraActor::CameraMode::LockOn:
         UpdateLockOnLocomotion();
         break;
-    }
-
-    return;
-    auto controller = GetBodyAnimationController();
-    bool cameraRelativeMovement = false;
-    if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
-    {
-        auto mode = camera->GetMovementMode();
-
-        cameraRelativeMovement = mode == DarkCameraActor::CameraMode::Focus || mode == DarkCameraActor::CameraMode::LockOn;
-    }
-    bool locomotion = GetStateMachine()->GetStateName() == "Running";
-    bool useBlendSpace = cameraRelativeMovement && locomotion;
-    controller->SetUseBlendSpace(useBlendSpace);
-    if (locomotion)
-    {
-        if (useBlendSpace)
-        {
-            // 入力値を渡す
-            //float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-            //auto move = inputComponent->GetMoveInput();
-            //controller->SetBlendInput(move.x, move.z, normalizeSpeed);
-        }
-        else
-        {
-            // 通常TPS走り
-            if (controller->GetCurrentAnimationName() != "Jog_Fwd")
-            {
-                PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
-            }
-        }
     }
 }
 
@@ -1115,23 +1080,50 @@ void Player::UpdateTPSLocomotion()
 
 void Player::UpdateLockOnLocomotion()
 {
-    float speed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
+    float speed = characterMovementComponent->GetInputMagnitude();
+    bool dash = InputSystem::GetInputState("GamePadB", InputStateMask::Press);
 
-    if (speed <= 0.40f)
+    // ダッシュ条件
+    if (dash && speed >= 0.0f)
     {
-        SetLocomotionMode(LocomotionMode::Idle);
+        SetLocomotionMode(LocomotionMode::Dash);
+        return;
     }
-    else if (speed < 0.6f)
+
+    switch (locomotionMode)
     {
-        SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
-    }
-    else
-    {
-        SetLocomotionMode(LocomotionMode::LockOnBlendRun);
+    case LocomotionMode::Idle:
+        if (speed > 0.0f)
+            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
+        break;
+
+    case LocomotionMode::LockOnBlendWalk:
+        if (speed <= 0.0f)
+            SetLocomotionMode(LocomotionMode::Idle);
+        else if (speed >= 0.6f)
+            SetLocomotionMode(LocomotionMode::LockOnBlendRun);
+        break;
+
+    case LocomotionMode::LockOnBlendRun:
+        if (speed < 0.55f)
+            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
+        break;
+    case LocomotionMode::Dash:
+        if (!dash)
+        {
+            if (speed >= 0.6f)
+                SetLocomotionMode(LocomotionMode::LockOnBlendRun);
+            else if (speed > 0.0f)
+                SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
+            else
+                SetLocomotionMode(LocomotionMode::Idle);
+        }
+        break;
     }
 
     auto move = inputComponent->GetMoveInput();
     GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
+
 }
 
 // アニメーションステート関連のフラグをリセットする
@@ -1286,6 +1278,8 @@ bool Player::TryHandleGlobalTransition()
 // 動作更新処理
 void Player::UpdateMovement()
 {
+    bool isDash = GetStateMachine()->GetStateName() == "Dash";
+
     auto intent = inputComponent->GetIntent();
     DirectX::XMFLOAT3 moveDir = { 0,0,0 };
     bool focus = InputSystem::GetInputState("LockOn", InputStateMask::Press);
@@ -1293,26 +1287,33 @@ void Player::UpdateMovement()
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
     {
 #if 1
-        if (isBossBattle)
+        if (isDash)
         {
-            if (focus)
-            {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
-            }
-            else
-            {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-            }
+            camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
         }
         else
         {
-            if (focus)
+            if (isBossBattle)
             {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
+                if (focus)
+                {
+                    camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
+                }
+                else
+                {
+                    camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+                }
             }
             else
             {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+                if (focus)
+                {
+                    camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
+                }
+                else
+                {
+                    camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+                }
             }
         }
 #endif // 0

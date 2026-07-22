@@ -31,7 +31,7 @@ void DarkCameraActor::Initialize(const Transform& transform)
 
 void DarkCameraActor::Update(float deltaTime)
 {
-    Logger::Log(U8("cameraCollisionRatio") + std::to_string(cameraCollisionRatio));
+    //Logger::Log(U8("cameraCollisionRatio") + std::to_string(cameraCollisionRatio));
 
     // プレイヤーの位置を取得
     auto playerHeadShared = playerHead.lock();
@@ -203,13 +203,13 @@ DarkCameraActor::CameraDirectionInfo DarkCameraActor::CreateFocusInfo()
         return{};
     }
 
-    info.direction = playerActor->GetForward();
-
+    info.direction = MathHelper::Normalize(playerActor->GetForward());
     if (auto player = dynamic_cast<Player*>(playerActor))
     {
         player->SetFocusDirection(info.direction);
     }
 
+    //info.yaw = 0.0f;
     info.yaw = atan2f(info.direction.x, info.direction.z);
     info.pitch = 0.0f;
     return info;
