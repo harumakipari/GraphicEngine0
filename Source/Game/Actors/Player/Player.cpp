@@ -172,6 +172,8 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Walk_Fwd1", 81);
         controller->AddAnimation("Sprint_Fwd", 82);
         controller->AddAnimation("CombatRush_Fwd", 83);
+        controller->AddAnimation("Walk_Fwd2", 84);
+        controller->AddAnimation("Jog_Fwd2", 85);
 
         // ブレンドスペースに追加
         controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);

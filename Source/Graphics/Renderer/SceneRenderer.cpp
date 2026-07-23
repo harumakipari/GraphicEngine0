@@ -119,6 +119,7 @@ void SceneRenderer::RenderMask(ID3D11DeviceContext* immediateContext, const std:
 
 void SceneRenderer::RenderBlend(ID3D11DeviceContext* immediateContext, const std::vector<MeshComponent*>& items) const
 {
+
     std::vector<MeshComponent*> sorted = items;
 
     std::sort(sorted.begin(), sorted.end(),
