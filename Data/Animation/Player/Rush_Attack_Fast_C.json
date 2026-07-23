@@ -1,58 +1,20 @@
 {
-    "animationClip": 13,
-    "animationName": "Ability_RWB_Fwd_0",
+    "animationClip": 64,
+    "animationName": "Rush_Attack_Fast_C",
     "events": [
         {
-            "parameter": "dodge_start",
-            "time": 0.1599999964237213,
+            "parameter": "player_attack",
+            "time": 0.15000000596046448,
             "type": "PlaySE",
-            "value": 0.3100000023841858
-        },
-        {
-            "parameter": "dodge_land",
-            "time": 0.47999998927116394,
-            "type": "PlaySE",
-            "value": 0.30000001192092896
+            "value": 1.0
         }
     ],
     "loop": false,
-    "nextCombo": "",
-    "playRate": 1.0,
-    "speedCurve": {
-        "keys": [
-            {
-                "time": 0.02900003269314766,
-                "value": 0.36000022292137146
-            },
-            {
-                "time": 0.0942499116063118,
-                "value": 0.34666696190834045
-            },
-            {
-                "time": 0.1643332540988922,
-                "value": 0.4133338928222656
-            },
-            {
-                "time": 0.35283342003822327,
-                "value": 0.4400002956390381
-            },
-            {
-                "time": 0.42774975299835205,
-                "value": 0.7733335494995117
-            },
-            {
-                "time": 0.5727497935295105,
-                "value": 2.0
-            },
-            {
-                "time": 0.7878333330154419,
-                "value": 2.0
-            }
-        ]
-    },
+    "nextCombo": "Primary_Attack_Fast_D1_1",
+    "playRate": 1.5,
     "states": [
         {
-            "endTime": 0.6000000238418579,
+            "endTime": 0.408541738986969,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -69,12 +31,12 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.05000000074505806,
-            "type": "Invincible",
+            "startTime": 0.1254165917634964,
+            "type": "ShowTrail",
             "value": 1.0
         },
         {
-            "endTime": 0.5299999713897705,
+            "endTime": 0.40927112102508545,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -91,56 +53,12 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.1599999964237213,
-            "type": "JustDodgeWindow",
-            "value": 1.0
+            "startTime": 0.1319791078567505,
+            "type": "ShowEmissive",
+            "value": 10.100000381469727
         },
         {
-            "endTime": 0.4706665873527527,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                1.0
-            ],
-            "moveDistance": 2.0999999046325684,
-            "parameter": "",
-            "startTime": 0.1643332690000534,
-            "type": "MotionWarp",
-            "value": 1.0
-        },
-        {
-            "endTime": 0.5419167876243591,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                1.0,
-                0.0
-            ],
-            "moveDistance": 1.2000000476837158,
-            "parameter": "",
-            "startTime": 0.16766665875911713,
-            "type": "MotionWarp",
-            "value": 1.0
-        },
-        {
-            "endTime": 1.933333158493042,
+            "endTime": 0.27000001072883606,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -157,7 +75,51 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 1.5281695127487183,
+            "startTime": 0.13199999928474426,
+            "type": "HitBox",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.5830000042915344,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.13199999928474426,
+            "type": "InputWindow",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.5830000042915344,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.4000000059604645,
             "type": "TransitionWindow",
             "value": 1.0
         }

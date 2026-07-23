@@ -150,6 +150,8 @@ private:
     int queuedAttackCount = 0;
     int comboIndex = 0; 
 
+    std::string currentAttackAnimation = "Rush_Attack_Fast_A";
+
     std::vector<std::string> rushCombo; // ラッシュコンボのアニメーションを持つ
     RushPhase phase = RushPhase::DashToTarget;
 };

@@ -338,13 +338,14 @@ void PlayerRushState::Enter()
     // ラッシュコンボのアニメーション名
     rushCombo =
     {
-        "Primary_Attack_Fast_A",
-        "Primary_Attack_Fast_B",
-        "Primary_Attack_Fast_C",
-        "Primary_Attack_Fast_A",
-        "Primary_Attack_Fast_B",
-        "Primary_Attack_Fast_C",
-        "Primary_Attack_Fast_D",
+        "Rush_Attack_Fast_A",
+        "Rush_Attack_Fast_B",
+        "Rush_Attack_Fast_C",
+        "Rush_Attack_Fast_D",
+        "Rush_Attack_Fast_A",
+        "Rush_Attack_Fast_B",
+        "Rush_Attack_Fast_C",
+        "Rush_Attack_Fast_End",
     };
 
     comboIndex = 0;
@@ -364,8 +365,9 @@ void PlayerRushState::Enter()
 
     elapsedTime = 0.0f;
     queuedAttackCount = 1;
-    queuedAttackCount = 5;
     player->invincible = true;  // ラッシュ攻撃中は無敵状態にする
+
+    currentAttackAnimation = "Rush_Attack_Fast_A";
 }
 
 void PlayerRushState::Execute(float deltaTime)
@@ -373,7 +375,7 @@ void PlayerRushState::Execute(float deltaTime)
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
         queuedAttackCount++;
-        queuedAttackCount = std::min<int>(queuedAttackCount, 7);
+        queuedAttackCount = std::min<int>(queuedAttackCount, rushCombo.size());
     }
 
     switch (phase)
@@ -382,8 +384,7 @@ void PlayerRushState::Execute(float deltaTime)
         if (player->characterMovementComponent->IsMoveToActorFinished())
         {// targetまで付いたら、
             Logger::Log(U8("Rush中のtargetまで移動完了"));
-            player->currentAttackAnimation = "Primary_Attack_Fast_A";
-            player->PlayBodyAnimation(player->currentAttackAnimation, false);
+            player->PlayBodyAnimation(currentAttackAnimation, false);
             phase = RushPhase::Attack;
         }
         break;
@@ -395,15 +396,19 @@ void PlayerRushState::Execute(float deltaTime)
         if (player->transitionWindow && !rushComboAdvanced)
         {
             rushComboAdvanced = true;
-            auto controller = player->GetBodyAnimationController();
-
-            const auto* asset = controller->GetAnimationAsset(player->currentAttackAnimation);
-
             if (queuedAttackCount > 0)
             {
                 queuedAttackCount--;
                 comboIndex++;
-                player->PlayBodyAnimation(rushCombo[comboIndex], false);
+                if (comboIndex < rushCombo.size())
+                {
+                    currentAttackAnimation = rushCombo[comboIndex];
+                    player->PlayBodyAnimation(currentAttackAnimation, false);
+                }
+                else
+                {
+                    phase = RushPhase::Finished;
+                }
             }
             else
             {

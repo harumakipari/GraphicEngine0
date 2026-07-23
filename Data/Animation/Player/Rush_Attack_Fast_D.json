@@ -1,6 +1,6 @@
 {
-    "animationClip": 9,
-    "animationName": "Primary_Attack_Fast_D1_1",
+    "animationClip": 68,
+    "animationName": "Rush_Attack_Fast_D",
     "events": [
         {
             "parameter": "player_attack",
@@ -11,7 +11,7 @@
     ],
     "loop": false,
     "nextCombo": "",
-    "playRate": 1.0,
+    "playRate": 1.5,
     "speedCurve": {
         "keys": [
             {
@@ -47,56 +47,12 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.02572919800877571,
-            "type": "ShowTrail",
-            "value": 1.0
-        },
-        {
-            "endTime": 0.7916666865348816,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "",
             "startTime": 0.07999999821186066,
             "type": "InputWindow",
             "value": 1.0
         },
         {
-            "endTime": 0.4315623641014099,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                1.0
-            ],
-            "moveDistance": 1.600000023841858,
-            "parameter": "",
-            "startTime": 0.10192708671092987,
-            "type": "MotionWarp",
-            "value": 1.0
-        },
-        {
-            "endTime": 0.5479999780654907,
+            "endTime": 0.3379998803138733,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -113,8 +69,30 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.414000004529953,
+            "startTime": 0.10774999111890793,
             "type": "HitBox",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.752291738986969,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.13291676342487335,
+            "type": "ShowTrail",
             "value": 1.0
         },
         {
