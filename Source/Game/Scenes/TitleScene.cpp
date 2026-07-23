@@ -144,7 +144,6 @@ void TitleScene::Start()
     pressButtonUiComponent->SetSize({ 650, 200 });
     pressButtonUiComponent->SetScale({ 0.8f,0.8f });
     uiManager->Add(pressButtonUiComponent);
-
     // ƒV[ƒ“‚ªØ‚è‘Ö‚í‚Á‚½‚É
     SceneTransitionManager::Instance().NotifySceneChanged();
 }

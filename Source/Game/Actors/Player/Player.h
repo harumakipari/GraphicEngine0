@@ -229,7 +229,6 @@ public:
     std::shared_ptr<CapsuleComponent> swordCollisionComp;
 
     std::shared_ptr<SceneComponent> swordPointComp;
-    std::shared_ptr<AudioSourceComponent> runAudioComp;    // 走りのSE
 
     std::shared_ptr<SceneComponent> swordRootComponent; // 剣の根元のコンポーネント
     std::shared_ptr<SceneComponent> swordMiddleComponent; // 剣の中間のコンポーネント

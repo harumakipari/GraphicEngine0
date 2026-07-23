@@ -4,9 +4,39 @@
     "events": [
         {
             "parameter": "run_one_foot",
-            "time": 0.16171877086162567,
+            "time": 0.1788812130689621,
             "type": "PlaySE",
-            "value": 0.0
+            "value": 0.10000000149011612
+        },
+        {
+            "parameter": "run_two_foot",
+            "time": 0.5084384083747864,
+            "type": "PlaySE",
+            "value": 0.10000000149011612
+        },
+        {
+            "parameter": "run_three_foot",
+            "time": 0.8226156234741211,
+            "type": "PlaySE",
+            "value": 0.10000000149011612
+        },
+        {
+            "parameter": "run_four_foot",
+            "time": 1.1520295143127441,
+            "type": "PlaySE",
+            "value": 0.10999999940395355
+        },
+        {
+            "parameter": "run_five_foot",
+            "time": 1.4630999565124512,
+            "type": "PlaySE",
+            "value": 0.11999999731779099
+        },
+        {
+            "parameter": "run_six_foot",
+            "time": 1.7913326025009155,
+            "type": "PlaySE",
+            "value": 0.09000000357627869
         }
     ],
     "loop": false,

@@ -327,11 +327,6 @@ void Player::Initialize(const Transform& transform)
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
     hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
 
-    // 走り用のSEのコンポーネントを追加
-    runAudioComp = AddComponent<AudioSourceComponent>("runAudioComponent", parentName);
-    runAudioComp->SetSource(L"./Data/Sound/SE/run_heel.wav");
-    runAudioComp->SetVolume(0.05f);
-    runAudioComp->SetLoop(true);
 
     // カメラの目の位置のコンポーネントを追加
     cameraEyeComponent = AddComponent<SceneComponent>("cameraEyeComponent", parentName);

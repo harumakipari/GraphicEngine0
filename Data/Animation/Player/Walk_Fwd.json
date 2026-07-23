@@ -1,0 +1,21 @@
+{
+    "animationClip": 47,
+    "animationName": "Walk_Fwd",
+    "events": [
+        {
+            "parameter": "run_one_foot",
+            "time": 0.030511051416397095,
+            "type": "PlaySE",
+            "value": 0.07000000029802322
+        },
+        {
+            "parameter": "run_two_foot",
+            "time": 0.5369950532913208,
+            "type": "PlaySE",
+            "value": 0.07999999821186066
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}
