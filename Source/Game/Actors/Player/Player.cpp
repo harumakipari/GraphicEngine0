@@ -61,7 +61,7 @@ void Player::Initialize(const Transform& transform)
             else if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
                 material.name == "M_Aurora_Dress_FrozenHearth" ||
                 material.name == "M_Aurora_Body_Metals_FrozenHearth" ||
-                material.name == "M_Aurora_Fur_FrozenHearth" )
+                material.name == "M_Aurora_Fur_FrozenHearth")
             {// 服部分だったら、
                 material.materialType = MaterialType::Cloth;
             }
@@ -290,74 +290,6 @@ void Player::Initialize(const Transform& transform)
 
     int weaponSocketNode = skeletalMeshComponent->FindIndexByName("weapon");
 
-#if 0
-    // 剣に当たり判定のコンポーネントを追加
-    swordCollisionComp = AddComponent<CapsuleComponent>("SwordCollision", parentName);
-    //DirectX::XMFLOAT3 size = { 0.6f,1.5f,1.0f };
-    DirectX::XMFLOAT3 size = { 0.3f,1.5f,1.0f };
-    swordCollisionComp->AttachToComponent(skeletalMeshComponent, weaponSocketNode); // "VB root_weapon"
-    swordCollisionComp->SetRadiusAndHeight(size.x, size.y);
-    swordCollisionComp->SetMass(mass);
-    swordCollisionComp->SetCapsuleAxis(ShapeComponent::CapsuleAxis::z);
-    swordCollisionComp->SetLayer(CollisionLayer::PlayerWeapon);
-    swordCollisionComp->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Trigger);
-    swordCollisionComp->SetResponseToLayer(CollisionLayer::Boss, CollisionComponent::CollisionResponse::Trigger);
-    swordCollisionComp->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Trigger);
-    swordCollisionComp->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Trigger);
-    swordCollisionComp->SetCollisionOffsetY(height * 0.5f);
-    swordCollisionComp->SetIsVisibleDebugBox(false);
-    swordCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, 0.8f });
-    swordCollisionComp->Initialize();
-    swordCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
-        {
-            if (!other)
-            {
-                Logger::Warning("other is nullptr");
-                return;
-            }
-
-            uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Enemy) | CollisionHelper::ToBit(CollisionLayer::Boss);
-
-            // Enemyレイヤーか確認
-            if (!(other->GetCollisionLayer() & mask))
-                return;
-
-            //Logger::Log(U8("swordCollisionComponent を通っている"));
-
-            // 相手のActor取得
-            Actor* actor = other->GetOwner();
-
-            if (!actor)
-            {
-                Logger::Warning("actor is nullptr");
-                return;
-            }
-
-            if (!hitBox)
-            {
-                //Logger::Log(U8("hitBoxがtrueではない！"));
-                return;
-            }
-
-            if (hitActors.contains(actor))
-            {// 一度当たったことがあった場合
-                Logger::Log(U8("敵に当たったことがある"));
-                return;
-            }
-
-            // Enemyへキャスト
-            GruxEnemy* enemy = dynamic_cast<GruxEnemy*>(actor);
-
-            if (!enemy)
-                return;
-
-            enemy->TakeDamage(10);
-            hitActors.insert(actor);
-
-        });
-
-#endif // 0
-
     {
         // 剣の根本のコンポーネントを追加   
         swordRootComponent = AddComponent<SceneComponent>("swordRootComponent", parentName);
@@ -427,7 +359,15 @@ void Player::Initialize(const Transform& transform)
     // 軌跡初期化
     trail.Initialize();
 
-
+    // ラッシュ時のUIを作成
+    auto uiManager = GetOwnerScene()->GetUIManager();
+    rushButtonImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Y.png", "Y");
+    rushButtonImageComponent->SetWorldPosition({ 995, 900 });
+    rushButtonImageComponent->SetScale({ 1.2f,1.2f });
+    rushButtonImageComponent->SetSize({ 200, 200 });
+    rushButtonImageComponent->SetPivot({ 0.5f,0.5f });
+    rushButtonImageComponent->SetVisible(false);
+    uiManager->Add(rushButtonImageComponent);
 }
 
 void Player::Update(float deltaTime)
@@ -1452,12 +1392,12 @@ void Player::SetLocomotionMode(LocomotionMode mode)
     {
     case LocomotionMode::TPSWalk:
         controller->SetUseBlendSpace(false);
-        PlayBodyAnimation("Walk_Fwd", true, true, 0.2f);
+        PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, true);
         break;
 
     case LocomotionMode::TPSRun:
         controller->SetUseBlendSpace(false);
-        PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
+        PlayBodyAnimation("Jog_Fwd", true, true, 0.2f, true);
         break;
 
     case LocomotionMode::LockOnBlendWalk:
@@ -1569,14 +1509,28 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     slowMotionActive = true;
     slowMotionTimer = slowMotionInterval;
 
-    //rushInputTimer = 0.5f;
-
     // rush時のtargetを保存する
     rushTarget = enemy;
 
     // 画面の色を変える
 
     // UIを表示する
+    //rushButtonImageComponent->SetVisible(true);
+    // SEの再生
+
+}
+
+// ラッシュ受付期間終了
+void Player::EndRushAttackInput()
+{
+    // UIを非表示にする
+    //rushButtonImageComponent->SetVisible(false);
+
+    // SEの再生を終了する
+
+    // playerのスロー再生を終了する
+
+
 }
 
 // インタラクト対象検索

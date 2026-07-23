@@ -10,6 +10,7 @@
 #include "Core/ActorManager.h"
 #include "Components/Effect/ParticleComponent.h"
 #include "Graphics/Renderer/TrailRenderer.h"
+#include "UI/Widgets/Widget.h"
 
 class AudioSourceComponent;
 class IInteractable;
@@ -142,8 +143,11 @@ public:
     // 攻撃終了時の処理
     void EndAttack();
 
-    // ジャスト回避成功時の処理
+    // ジャスト回避成功時の処理　ラッシュ受付期間開始
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
+
+    // ラッシュ受付期間終了
+    void EndRushAttackInput();
 
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
@@ -193,7 +197,6 @@ public:
     bool transitionWindow = false;  // ステート遷移してもいいかどうか
     bool justDodgeWindow = false;  // ジャスト回避受付時間
     bool justDodgeSuccess = false; // ジャスト回避成功フラグ
-    float rushInputTimer = 0.0f; // ジャスト回避時にラッシュを受け付ける時間(この時間の間スローになる)
     bool showTrail = false;     // 軌跡を出現させるかどうか
     float swordEmissivePower = 0.0f;    // 剣のエミッシブの力
 
@@ -267,6 +270,9 @@ public:
     // 走りのスピード
     float runSpeed = 6.0f;
 
+    // ラッシュ時のUI
+    std::shared_ptr<UIImageComponent> rushButtonImageComponent;
+
 private:
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // ヒット時の剣のエフェクト
 
@@ -334,6 +340,7 @@ private:
 
     // 演出中かどうか
     bool moviePerform = false;
+
 
     friend class PlayerStateBase;
 };

@@ -60,14 +60,6 @@ void DarkCameraActor::Update(float deltaTime)
         UpdateBlend(deltaTime);
     }
 
-    if (cameraCollisionRatio < 0.3f)
-    {
-        if (wallNearFunc)
-        {
-            wallNearFunc();
-        }
-    }
-
 #if 0
     if (currentMode == CameraMode::LockOn)
     {
@@ -138,6 +130,21 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     //blendTargetPose.eye = ResolveCameraCollision(blendTargetPose.target, blendTargetPose.eye);
 
     currentPose = oldPose;
+}
+
+// カメラをplayerのforward方向に向ける
+void DarkCameraActor::RotateToPlayerForward()
+{
+    CameraDirectionInfo info = CreateFocusInfo();
+
+    desiredYaw = info.yaw;
+    desiredPitch = info.pitch;
+
+    blendStartPose = currentPose;
+    blendTime = 0.0f;
+    isBlending = true;
+
+    requestMode = CameraMode::TPS;
 }
 
 // ブレンド状態を更新する

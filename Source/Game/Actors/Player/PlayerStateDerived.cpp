@@ -76,8 +76,7 @@ void PlayerRunningState::Exit()
 
 void PlayerDashState::Enter()
 {
-
-    owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f);
+    owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f, true);
 
     // スピードを変更する
     player->characterMovementComponent->SetFixedSpeed(player->dashSpeed);
@@ -249,14 +248,21 @@ void PlayerDodgeState::Enter()
 
 void PlayerDodgeState::Execute(float deltaTime)
 {
-    if (player->justDodgeSuccess)
+    if (player->inputWindow)
+    {// 
+        player->rushButtonImageComponent->SetVisible(true);
+    }
+    else
     {
+        player->rushButtonImageComponent->SetVisible(false);
+    }
+
+    if (player->justDodgeSuccess)
+    {// ジャスト回避成功したら、
         judgeSuccess = true;
     }
     if (judgeSuccess)
     {
-        player->rushInputTimer -= deltaTime;
-
         if (player->bufferCommand.command == Player::InputCommand::Attack)
         {
             rushRequested = true;
@@ -264,6 +270,7 @@ void PlayerDodgeState::Execute(float deltaTime)
         }
         if (player->transitionWindow)
         {
+
             if (rushRequested)
             {
                 Logger::Log(U8("ラッシュへ"));
@@ -275,9 +282,7 @@ void PlayerDodgeState::Execute(float deltaTime)
                 {// タイムスケールをリセットする
                     target->ResetTimeScale();
                 }
-
                 DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
-
                 if (MathHelper::Length(move) > 0.1f)
                 {
                     player->GetStateMachine()->ChangeState("Running");
@@ -288,9 +293,11 @@ void PlayerDodgeState::Execute(float deltaTime)
                 }
             }
         }
+
     }
     else if (player->transitionWindow)
     {
+
         if (auto target = player->rushTarget.lock())
         {// タイムスケールをリセットする
             target->ResetTimeScale();
@@ -305,6 +312,10 @@ void PlayerDodgeState::Execute(float deltaTime)
         {
             player->GetStateMachine()->ChangeState("Idle");
         }
+    }
+    else
+    {
+        player->rushButtonImageComponent->SetVisible(false);
     }
 #if 1
     if (!player->GetBodyAnimationController()->IsPlayAnimation())
@@ -324,6 +335,20 @@ void PlayerDodgeState::Exit()
 // ラッシュ
 void PlayerRushState::Enter()
 {
+    // ラッシュコンボのアニメーション名
+    rushCombo =
+    {
+        "Primary_Attack_Fast_A",
+        "Primary_Attack_Fast_B",
+        "Primary_Attack_Fast_C",
+        "Primary_Attack_Fast_A",
+        "Primary_Attack_Fast_B",
+        "Primary_Attack_Fast_C",
+        "Primary_Attack_Fast_D",
+    };
+
+    comboIndex = 0;
+
     player->characterMovementComponent->SetFixedSpeed(0.0f);
 
     phase = RushPhase::DashToTarget;
@@ -338,7 +363,7 @@ void PlayerRushState::Enter()
     rushComboAdvanced = false;
 
     elapsedTime = 0.0f;
-    //queuedAttackCount = 1;
+    queuedAttackCount = 1;
     queuedAttackCount = 5;
     player->invincible = true;  // ラッシュ攻撃中は無敵状態にする
 }
@@ -348,7 +373,7 @@ void PlayerRushState::Execute(float deltaTime)
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
         queuedAttackCount++;
-        queuedAttackCount = std::min<int>(queuedAttackCount, 8);
+        queuedAttackCount = std::min<int>(queuedAttackCount, 7);
     }
 
     switch (phase)
@@ -374,16 +399,13 @@ void PlayerRushState::Execute(float deltaTime)
 
             const auto* asset = controller->GetAnimationAsset(player->currentAttackAnimation);
 
-            if (asset && !asset->nextCombo.empty() && queuedAttackCount > 0)
+            if (queuedAttackCount > 0)
             {
                 queuedAttackCount--;
-
-                player->currentAttackAnimation = asset->nextCombo;
-                //player->ResetAnimationStateFlag();
-                player->PlayBodyAnimation(player->currentAttackAnimation, false);
+                comboIndex++;
+                player->PlayBodyAnimation(rushCombo[comboIndex], false);
             }
-
-            if (asset == nullptr || asset->nextCombo.empty())
+            else
             {
                 phase = RushPhase::Finished;
             }

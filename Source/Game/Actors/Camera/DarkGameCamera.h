@@ -105,11 +105,9 @@ public:
     // ブレンドを開始する
     void StartBlend(CameraMode current, CameraMode request);
 
-    //壁近いときの関数
-    void AddWallNearFunc(const std::function<void()>& wallNearFunc)
-    {
-        this->wallNearFunc = wallNearFunc;
-    }
+    // カメラをplayerのforward方向に向ける
+    void RotateToPlayerForward();
+
 private:
     // ブレンド状態を更新する
     void UpdateBlend(float deltaTime);
@@ -203,7 +201,6 @@ private:
 
     int unstableFrameCount = 0; // 
 
-    std::function<void()> wallNearFunc;
     // フォーカス時の
     // float focus
 };

@@ -148,6 +148,9 @@ private:
     float elapsedTime = 0.0f;
     bool rushComboAdvanced = false;
     int queuedAttackCount = 0;
+    int comboIndex = 0; 
+
+    std::vector<std::string> rushCombo; // ラッシュコンボのアニメーションを持つ
     RushPhase phase = RushPhase::DashToTarget;
 };
 
