@@ -1,6 +1,7 @@
 #include "GltfModel.hlsli"
 #include "Sampler.hlsli"
 #include "Common.hlsli"
+#include "FilterFunctions.hlsli"
 #include "ShaderFunctions.hlsli"
 
 #define BASE_COLOR_TEXTURE 0 
@@ -63,13 +64,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     }
 
 
-    if (objectType == OBJECT_DOOR)
-    { // ドアの時だけラフネスを上げて、メタリックを下げる
-        if (metallicFactor < 0.1) // 木
-        {
-            roughnessFactor = max(roughnessFactor, 0.6);
-        }
-    }
     
     float occlusionFactor = 1.0;
     const int occlusionTexture = m.occlusionTexture.index;
@@ -113,19 +107,10 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
     pout.velocity = float4(velocity, 0, 1);
 
-    if (objectType == OBJECT_STAGE || objectType == OBJECT_DOOR || objectType == OBJECT_FURNITURE)
-    { // 影の値を入れる
-        const float shadow_depth_bias = 0.001;
-        float4 light_view_position = mul(pin.wPosition, lightViewProjection); // World to Clip space
-        light_view_position = light_view_position / light_view_position.w; // Clip to NDC
-        float2 light_view_texcoord = 0;
-	    // NDC to Texture coordinate
-        light_view_texcoord.x = light_view_position.x * +0.5 + 0.5;
-        light_view_texcoord.y = light_view_position.y * -0.5 + 0.5;
-        float depth = saturate(light_view_position.z - shadow_depth_bias);
-        float shadow_factor = 1.0f;
-        shadow_factor = shadowMap.SampleCmpLevelZero(comparisionSamplerState, light_view_texcoord, depth).x;
-        pout.velocity.w = shadow_factor;
+    if (materialType == MATERIAL_CLOTH || materialType == MATERIAL_FUR)
+    { // 服の時は
+        baseColorFactor.rgb = HueSaturation(baseColorFactor.rgb, modelHueShift, modelSaturation);
+        baseColorFactor.rgb = BrightnessContrast(baseColorFactor.rgb, modelBrightness, modelContrast);
     }
 
     pout.albedo = baseColorFactor;

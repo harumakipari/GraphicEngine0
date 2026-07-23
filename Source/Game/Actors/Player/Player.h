@@ -323,8 +323,9 @@ private:
     // スロー
     float slowMotionTimer = 0.0f;
     bool slowMotionActive = false;
-    float slowMotionInterval = 0.15f;   // スローモーションの時間
-    float slowMotionTimeScale = 0.2f;  // どれくらいスローモーションにタイム倍率
+    float slowMotionInterval = 0.3f;   // スローモーションの時間
+    float slowMotionPlayerTimeScale = 0.2f;  // どれくらいスローモーションにタイム倍率
+    float slowMotionEnemyTimeScale = 0.2f;  // どれくらいスローモーションにタイム倍率
 
 
     // プレイヤーの壁に近づいた時の透明度

@@ -316,7 +316,6 @@ void GruxEnemy::Update(float deltaTime)
         {
             float blendLookTarget = mainCamera->tpsController.blendLookTarget;
             targetPos = MathHelper::Lerp(middlePos, playerPos, blendLookTarget);
-
         }
 
         targetPos = MathHelper::Add(

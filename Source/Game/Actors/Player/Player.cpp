@@ -37,6 +37,12 @@ void Player::Initialize(const Transform& transform)
         skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
+        // 服の色のための色相変更
+        skeletalMeshComponent->plusAlphaCBuffer->data.hueShift = -1.0f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.saturation = 0.442f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.brightness = 0.352f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.contrast = 0.8f;
+        skeletalMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerDeferredPS";
         skeletalMeshComponent->SetIsCastShadow(false);
         skeletalMeshComponent->SetIsShadowMap(true);
         //skeletalMeshComponent->SetIsVisible(false);
@@ -52,9 +58,11 @@ void Player::Initialize(const Transform& transform)
                 material.overridePipelineName = "characterFurAndHairSkeletalMesh";
                 material.materialType = MaterialType::Fur;
             }
-            else if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth"||
-                material.name == "M_Aurora_Dress_FrozenHearth"||
-                material.name == "M_Aurora_Body_Fur_FrozenHearth")
+            else if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
+                material.name == "M_Aurora_Dress_FrozenHearth" ||
+                material.name == "M_Aurora_Body_Metals_FrozenHearth" ||
+                //material.name == "M_Aurora_Metal_Armor_FrozenHearth" ||
+                material.name == "M_Aurora_Fur_FrozenHearth" )
             {// 服部分だったら、
                 material.materialType = MaterialType::Cloth;
             }
@@ -777,7 +785,8 @@ void Player::DrawImGuiDetails()
     ImGui::DragFloat("runSpeed", &runSpeed, 0.05f);
     ImGui::DragFloat("dashSpeed", &dashSpeed, 0.05f);
     ImGui::DragFloat("slowMotionInterval", &slowMotionInterval, 0.05f);
-    ImGui::DragFloat("slowMotionTimeScale", &slowMotionTimeScale, 0.05f);
+    ImGui::DragFloat("slowMotionPlayerTimeScale", &slowMotionPlayerTimeScale, 0.05f);
+    ImGui::DragFloat("slowMotionEnemyTimeScale", &slowMotionEnemyTimeScale, 0.05f);
     ImGui::DragFloat("transparencyMinAlpha", &transparencyMinAlpha, 0.05f);
     ImGui::DragFloat("transparencyMaxAlpha", &transparencyMaxAlpha, 0.05f);
     ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
@@ -1538,8 +1547,8 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
     // スローモーションにする
-    enemy->SetTimeScale(slowMotionTimeScale);
-    this->SetTimeScale(slowMotionTimeScale);
+    enemy->SetTimeScale(slowMotionEnemyTimeScale);
+    this->SetTimeScale(slowMotionPlayerTimeScale);
 
     slowMotionActive = true;
     slowMotionTimer = slowMotionInterval;

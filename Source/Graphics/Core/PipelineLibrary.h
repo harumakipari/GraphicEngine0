@@ -342,12 +342,12 @@ public:
             AddPipeLineState("DarkStagePlayerWeaponPS", desc);
         }
 
-        // StaticMesh deferred stage —p
+        // SkeletalMesh deferred Player —p
         {
-            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelFightStagePS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelPlayerDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
             _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-            AddPipeLineState("deferredFightStage", desc);
+            AddPipeLineState("GltfModelPlayerDeferredPS", desc);
         }
 
         // SkeletalMesh forward Mask —p

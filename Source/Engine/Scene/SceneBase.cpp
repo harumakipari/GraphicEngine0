@@ -844,13 +844,11 @@ void SceneBase::DrawGui()
     SetupImGuiStyle();
     DrawDockSpace();
     DrawViewport();
-
     if (!Framework::showEditor)
     {
         return;
     }
     DrawGizmo();//
-
     DrawOutliner();
     Logger::DrawImGui();
     Time::DrawImGui();

@@ -36,7 +36,12 @@ void TitlePlayer::Initialize(const Transform& transform)
         skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/titlePlayer.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
-
+        // 服の色のための色相変更
+        skeletalMeshComponent->plusAlphaCBuffer->data.hueShift = -1.0f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.saturation = 0.442f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.brightness = 0.352f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.contrast = 0.8f;
+        skeletalMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerDeferredPS";
         skeletalMeshComponent->SetIsCastShadow(false);
         skeletalMeshComponent->SetIsShadowMap(true);
         for (auto& material : skeletalMeshComponent->model->materials)
@@ -51,6 +56,15 @@ void TitlePlayer::Initialize(const Transform& transform)
                 material.overridePipelineName = "characterFurAndHairSkeletalMesh";
                 material.materialType = MaterialType::Fur;
             }
+            else if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
+                material.name == "M_Aurora_Dress_FrozenHearth" ||
+                material.name == "M_Aurora_Body_Metals_FrozenHearth" ||
+                //material.name == "M_Aurora_Metal_Armor_FrozenHearth" ||
+                material.name == "M_Aurora_Fur_FrozenHearth" )
+            {// 服部分だったら、
+                material.materialType = MaterialType::Cloth;
+            }
+
         }
     }
     {
