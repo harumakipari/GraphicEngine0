@@ -419,56 +419,19 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, float d
             buffer);
     }
     ImGui::Dummy(ImVec2(0, 40));
-    for (int stateIndex = 0;
-        stateIndex < asset.notifyTrack.states.size();
-        stateIndex++)
+    for (int stateIndex = 0; stateIndex < asset.notifyTrack.states.size(); stateIndex++)
     {
-        ImU32 color =
-            (selectedStateIndex == stateIndex)
-            ?
-            IM_COL32(
-                0,
-                255,
-                100,
-                255)
-            :
-            IM_COL32(
-                0,
-                180,
-                0,
-                255);
-
-        auto& state =
-            asset.notifyTrack.states[stateIndex];
-
-        ImGui::Text(
-            "%s",
-            magic_enum::enum_name(state.type).data());
-
+        ImU32 color = (selectedStateIndex == stateIndex) ? IM_COL32(0, 255, 100, 255) : IM_COL32(0, 180, 0, 255);
+        auto& state = asset.notifyTrack.states[stateIndex];
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2);
+        ImGui::Text("%s", magic_enum::enum_name(state.type).data());
         ImGui::SameLine(labelWidth);
+        ImVec2 rowPos = ImGui::GetCursorScreenPos();
+        drawList->AddRectFilled(rowPos, ImVec2(rowPos.x + width, rowPos.y + trackHeight), IM_COL32(40, 40, 40, 255));
 
-        ImVec2 rowPos =
-            ImGui::GetCursorScreenPos();
-
-        drawList->AddRectFilled(
-            rowPos,
-            ImVec2(
-                rowPos.x + width,
-                rowPos.y + trackHeight),
-            IM_COL32(40, 40, 40, 255));
-
-        float x0 =
-            rowPos.x +
-            (state.startTime / duration)
-            * width;
-
-        float x1 =
-            rowPos.x +
-            (state.endTime / duration)
-            * width;
-
-        float barWidth =
-            x1 - x0;
+        float x0 = rowPos.x + (state.startTime / duration) * width;
+        float x1 = rowPos.x + (state.endTime / duration) * width;
+        float barWidth = x1 - x0;
 
         //---------------------------------
         // Move
@@ -643,10 +606,7 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, float d
                 255,
                 255));
 
-        ImGui::Dummy(
-            ImVec2(
-                width,
-                trackHeight));
+        ImGui::Dummy(ImVec2(0, trackHeight));
     }
 }
 
@@ -1061,8 +1021,12 @@ void AnimationController::DrawTimeline()
 #ifdef USE_IMGUI
     ImGui::Begin("Animation Sequence");
 
-    ImGui::Columns(2);
+    ImGui::Columns(3);
     ImGui::SetColumnWidth(0, 200.0f);
+    ImGui::SetColumnWidth(1, 1000.0f);
+
+    float animationListHeight = ImGui::GetContentRegionAvail().y;
+    ImGui::BeginChild(U8("アニメーションリスト"), ImVec2(0, animationListHeight), true);
 
     for (auto clip : animationAssetOrder)
     {
@@ -1085,6 +1049,7 @@ void AnimationController::DrawTimeline()
             curveCreateValue = 1.0f;
         }
     }
+    ImGui::EndChild();
 
     ImGui::NextColumn();
 
@@ -1101,9 +1066,9 @@ void AnimationController::DrawTimeline()
 
     // ImGui
     float trackHeight = 24.0f;
-    float labelWidth = 150.0f;
+    float labelWidth = 100.0f;
     float handleSize = 40.0f;
-    float width = 800.0f;
+    float width = ImGui::GetContentRegionAvail().x - labelWidth - 10.0f;
     float height = 30.0f;
 
     ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -1112,8 +1077,11 @@ void AnimationController::DrawTimeline()
     DrawAnimationSettings(asset, duration);
     DrawStateTimeline(asset, duration, width, height, labelWidth, trackHeight, handleSize, drawList, timelinePos);
     DrawEventTimeline(asset, duration, width, labelWidth, trackHeight, drawList);
-    DrawNotifyInspector(asset);
 
+    ImGui::NextColumn();
+    ImGui::BeginChild("NotifyInspector", ImVec2(0, 0), true);
+    DrawNotifyInspector(asset);
+    ImGui::EndChild();
     ImGui::End();
 
     ImGui::Begin("CurveEditor");

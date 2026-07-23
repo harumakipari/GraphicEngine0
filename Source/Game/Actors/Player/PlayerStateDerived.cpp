@@ -271,7 +271,6 @@ void PlayerDodgeState::Execute(float deltaTime)
         }
         if (player->transitionWindow)
         {
-
             if (rushRequested)
             {
                 Logger::Log(U8("ƒ‰ƒbƒVƒ…‚Ö"));
