@@ -140,8 +140,8 @@ void TitleScene::Start()
     keyboardButton = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/UI/press_enter.png");
 
     pressButtonUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/press_a.png", "press_a");
-    pressButtonUiComponent->SetWorldPosition({ 1450, 960 });
-    pressButtonUiComponent->SetSize({ 500, 100 });
+    pressButtonUiComponent->SetWorldPosition({ 1400, 930 });
+    pressButtonUiComponent->SetSize({ 650, 200 });
     pressButtonUiComponent->SetScale({ 0.8f,0.8f });
     uiManager->Add(pressButtonUiComponent);
 

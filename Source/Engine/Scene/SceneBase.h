@@ -55,7 +55,7 @@ public:
 
     virtual bool Uninitialize(ID3D11Device* device) override;
     virtual bool OnSizeChanged(ID3D11Device* device, UINT64 width, UINT height) override;
-    virtual void DrawGui() override;
+    void DrawGui() override;
 
     void RegisterRenderHook(const RenderPass pass, const RenderHook& hook)
     {
@@ -78,6 +78,9 @@ protected:
     void Draw(ID3D11DeviceContext* immediateContext);
 
     void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, float deltaTime);
+
+    // ’Ç‰Á‚ÌImGui
+    virtual void DrawGuiPlusAlpha() {}
 private:
     void ForwardRender(ID3D11DeviceContext* immediateContext);
 

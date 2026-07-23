@@ -248,14 +248,6 @@ void PlayerDodgeState::Enter()
 
 void PlayerDodgeState::Execute(float deltaTime)
 {
-    if (player->inputWindow)
-    {// 
-        player->rushButtonImageComponent->SetVisible(true);
-    }
-    else
-    {
-        player->rushButtonImageComponent->SetVisible(false);
-    }
 
     if (player->justDodgeSuccess)
     {// ジャスト回避成功したら、
@@ -263,6 +255,15 @@ void PlayerDodgeState::Execute(float deltaTime)
     }
     if (judgeSuccess)
     {
+        if (player->inputWindow)
+        {// 
+            player->rushButtonImageComponent->SetVisible(true);
+        }
+        else
+        {
+            player->rushButtonImageComponent->SetVisible(false);
+        }
+
         if (player->bufferCommand.command == Player::InputCommand::Attack)
         {
             rushRequested = true;
@@ -312,10 +313,6 @@ void PlayerDodgeState::Execute(float deltaTime)
         {
             player->GetStateMachine()->ChangeState("Idle");
         }
-    }
-    else
-    {
-        player->rushButtonImageComponent->SetVisible(false);
     }
 #if 1
     if (!player->GetBodyAnimationController()->IsPlayAnimation())
@@ -375,7 +372,7 @@ void PlayerRushState::Execute(float deltaTime)
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
         queuedAttackCount++;
-        queuedAttackCount = std::min<int>(queuedAttackCount, rushCombo.size());
+        queuedAttackCount = std::min<int>(queuedAttackCount, static_cast<int>(rushCombo.size()));
     }
 
     switch (phase)

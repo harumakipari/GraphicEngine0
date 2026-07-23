@@ -451,12 +451,11 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
 }
 
 
-void LoadingScene::DrawGui()
+void LoadingScene::DrawGuiPlusAlpha()
 {
 #ifdef USE_IMGUI
     ImGui::Begin(U8("Т▓Ро"));
     ImGui::End();
-    SceneBase::DrawGui();
 #endif
 
 }

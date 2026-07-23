@@ -381,10 +381,10 @@ bool GameScene::Uninitialize(ID3D11Device* device)
     return true;
 }
 
-void GameScene::DrawGui()
+void GameScene::DrawGuiPlusAlpha()
 {
 #ifdef USE_IMGUI
-    SceneBase::DrawGui();
+    ImGui::Begin("GameScene");
     if (ImGui::Button(U8("ƒ{ƒX‚Ì•”‰®‚ð–¾‚é‚­‚·‚é")))
     {
         StartBossRoomLerp(0.0f, 1.0f, 3.0f);
@@ -401,9 +401,7 @@ void GameScene::DrawGui()
     {
         ChangeCameraMode(TPSCameraController::CameraMode::TPS);
     }
-
-
-
+    ImGui::End();
 #endif
 
 }

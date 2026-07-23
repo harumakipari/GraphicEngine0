@@ -272,7 +272,8 @@ public:
 
     // ラッシュ時のUI
     std::shared_ptr<UIImageComponent> rushButtonImageComponent;
-
+    // ラッシュの時のコンボカウント（回避中にもラッシュをカウントするための変数）
+    int rushQueuedAttackCount = 0;
 private:
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // ヒット時の剣のエフェクト
 

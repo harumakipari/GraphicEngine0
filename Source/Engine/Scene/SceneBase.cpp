@@ -846,6 +846,7 @@ void SceneBase::DrawGui()
     DrawViewport();
     if (!Framework::showEditor)
     {
+        useDrawDebug = false;
         return;
     }
     DrawGizmo();//
@@ -857,9 +858,10 @@ void SceneBase::DrawGui()
     ProfileDrawUI();
     uiManager->DrawImGUi();
     EffectEditor::DrawGUI();
-    //DrawShortcutInfo();
+    DrawShortcutInfo();
     skyMap->DrawImGui();
     cascadedShadowMaps->DrawImGui();
+    DrawGuiPlusAlpha();
 #endif
 }
 
@@ -897,6 +899,20 @@ void SceneBase::DrawDockSpace()
 
 void SceneBase::DrawShortcutInfo()
 {
+    ImGui::Begin("ImGUI");
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+#if 1
+    ImGui::Text("Video memory usage %d MB", Graphics::VideoMemoryUsage());
+#endif
+    ImGui::Text("ALT+ENTER to change window mode");
+    ImGui::Text("F1 ImGui on/off");
+    ImGui::Text("F6 MovieCamera");
+    ImGui::Text("F7 CinemaCamera");
+    ImGui::Text("F8 DebugCamera");
+
+    ImGui::End();
+
+    return;
     ImVec2 padding(10.0f, 10.0f);
     ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImVec2 window_pos = ImVec2(viewport->WorkPos.x + padding.x,

@@ -155,8 +155,8 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Jog_Fwd1", 50);
         controller->AddAnimation("Walk_Fwd1", 51);
         controller->AddAnimation("Sprint_Fwd", 52);
-        controller->AddAnimation("Walk_Fwd2", 53);
-        controller->AddAnimation("Jog_Fwd2", 54);
+        controller->AddAnimation("Walk_Fwd2", 53);  // ‚±‚ê‚¾‚ß
+        controller->AddAnimation("Jog_Fwd2", 54);// ‚±‚ê‚¾‚ß
         controller->AddAnimation("Jog_Bwd2", 55);
         controller->AddAnimation("Jog_BwdLeft", 56);
         controller->AddAnimation("Jog_BwdRight", 57);
@@ -345,7 +345,7 @@ void Player::Initialize(const Transform& transform)
     // ƒ‰ƒbƒVƒ…Žž‚ÌUI‚ðì¬
     auto uiManager = GetOwnerScene()->GetUIManager();
     rushButtonImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Y.png", "Y");
-    rushButtonImageComponent->SetWorldPosition({ 995, 900 });
+    rushButtonImageComponent->SetWorldPosition({ 50, 50 });
     rushButtonImageComponent->SetScale({ 1.2f,1.2f });
     rushButtonImageComponent->SetSize({ 200, 200 });
     rushButtonImageComponent->SetPivot({ 0.5f,0.5f });

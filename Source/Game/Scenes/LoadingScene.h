@@ -41,7 +41,7 @@ public:
 
     bool Uninitialize(ID3D11Device* device) override;
 
-    void DrawGui() override;
+    void DrawGuiPlusAlpha() override;
 
     //ƒV[ƒ“‚Ì©“®“o˜^
     static inline Scene::Autoenrollment<LoadingScene> _autoenrollment;

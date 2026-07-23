@@ -52,10 +52,10 @@ bool Framework::Initialize()
 
     SceneTransitionManager::Instance().Initialize();
 
-    //Scene::_boot(device, "TitleScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
+    Scene::_boot(device, "TitleScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
     //Scene::_boot(device, "ResultScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
     //Scene::_boot(device, "TestScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
-    Scene::_boot(device, "GameScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
+    //Scene::_boot(device, "GameScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
     //Scene::_boot(device, "SampleScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
 
     //パーティクルシステム
@@ -181,7 +181,6 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
     {
         back->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         Logger::Log(U8("backを通った"));
-
     }
     {
 #ifdef USE_IMGUI
@@ -192,30 +191,9 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
             ImGui::PopFont();
 
         }
-        ImGui::Begin("ImGUI");
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-#if 1
-        ImGui::Text("Video memory usage %d MB", Graphics::VideoMemoryUsage());
-#endif
-        ImGui::Text("ALT+ENTER to change window mode");
-        ImGui::Text("F1 ImGui on/off");
-        ImGui::Text("F6 MovieCamera");
-        ImGui::Text("F7 CinemaCamera");
-        ImGui::Text("F8 DebugCamera");
-
-        ImGui::End();
 #endif
 
 
-#if 0
-#ifdef USE_IMGUI
-        ImGui::Render();
-        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-#endif
-
-        //UINT sync_interval{ 0 };
-        //swap_chain->Present(sync_interval, 0);
-#endif
     }
 }
 
