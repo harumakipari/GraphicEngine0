@@ -1,6 +1,7 @@
 #include "GltfModel.hlsli"
 #include "imageBasedLighting.hlsli"
 #include "BidirectionalReflectanceDistributionFunction.hlsli"
+#include "FilterFunctions.hlsli"
 #include "Lights.hlsli"
 #include "ShaderFunctions.hlsli"
 
@@ -90,41 +91,7 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     // ì_åıåπÇÃèàóù
     float3 pointDiffuse = 0;
     float3 pointSpecular = 0;
-    if (pointLightEnable != 0)
-    {
-        for (int i = 0; i < pointLightCount; i++)
-        {
-            float3 LP = pointLights[i].position.xyz - pin.wPosition.xyz;
-            float len = length(LP);
 
-            float kc = attenuationPresets[pointLights[i].attenuationType].kc;
-            float kl = attenuationPresets[pointLights[i].attenuationType].kl;
-            float kq = attenuationPresets[pointLights[i].attenuationType].kq;
-
-            float attenuation = saturate(1.0 / (kc + kl * len + kq * (len * len)));
-
-            LP /= len;
-            const float pNoV = max(0.0, dot(N, V));
-            const float pNoL = max(0.0, dot(N, LP));
-
-            if (pNoV > 0.0 || pNoL > 0.0) // ì_åıåπÇ…ÇÕï˚å¸Ç™Ç»Ç¢ÇΩÇﬂ
-            {
-                const float3 R = reflect(-LP, N);
-                const float3 H = normalize(V + LP);
-
-                float3 pLi = float3(pointLights[i].color.xyz) * pointLights[i].color.w; // åıÇÃãPÇ´
-
-                const float NoH = max(0.0, dot(N, H));
-                const float HoV = max(0.0, dot(H, V));
-
-                pointDiffuse += pLi * pNoL * BrdfLambertian(f0, f90, cDiff, HoV) * attenuation;
-                pointSpecular += pLi * pNoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, pNoL, pNoV, NoH) * attenuation;
-            }
-        }
-        float maxPointSpecular = 3.0f;
-        pointSpecular = max(0, min(maxPointSpecular, pointSpecular));
-
-    }
     // ïΩçsåıåπÇÃèàóù
     float3 diffuse = 0;
     float3 specular = 0;
@@ -169,6 +136,12 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     float3 rim = CalcRimLight(N, V, rimColor.rgb, rimPower) * rimIntensity;
 #endif
     float3 Lo = totalDiffuse + totalSpecular + emissive + rim;
+
+    if (materialType == MATERIAL_CLOTH || materialType == MATERIAL_FUR)
+    { // ïûÇÃéûÇÕ
+        baseColorFactor.rgb = HueSaturation(baseColorFactor.rgb, modelHueShift, modelSaturation);
+        baseColorFactor.rgb = BrightnessContrast(baseColorFactor.rgb, modelBrightness, modelContrast);
+    }
 
     baseColorFactor.a = cpuColor.a;
 

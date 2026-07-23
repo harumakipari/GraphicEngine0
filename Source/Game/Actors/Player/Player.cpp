@@ -61,7 +61,6 @@ void Player::Initialize(const Transform& transform)
             else if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
                 material.name == "M_Aurora_Dress_FrozenHearth" ||
                 material.name == "M_Aurora_Body_Metals_FrozenHearth" ||
-                //material.name == "M_Aurora_Metal_Armor_FrozenHearth" ||
                 material.name == "M_Aurora_Fur_FrozenHearth" )
             {// ••”•ª‚¾‚Á‚½‚çA
                 material.materialType = MaterialType::Cloth;
@@ -75,7 +74,22 @@ void Player::Initialize(const Transform& transform)
     skeletalMeshBlendComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/playerBlend.gltf", false, true);
     skeletalMeshBlendComponent->overrideForwardPipelineName = "GltfModelPlayerBlendPS";
     skeletalMeshBlendComponent->overrideDeferredPipelineName = "GltfModelPlayerBlendPS";
-    //skeletalMeshBlendComponent->SetIsVisible(false);
+    skeletalMeshBlendComponent->plusAlphaCBuffer->data.hueShift = -1.0f;
+    skeletalMeshBlendComponent->plusAlphaCBuffer->data.saturation = 0.442f;
+    skeletalMeshBlendComponent->plusAlphaCBuffer->data.brightness = 0.352f;
+    skeletalMeshBlendComponent->plusAlphaCBuffer->data.contrast = 0.8f;
+    for (auto& material : skeletalMeshBlendComponent->model->materials)
+    {
+        if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
+            material.name == "M_Aurora_Dress_FrozenHearth" ||
+            material.name == "M_Aurora_Body_Metals_FrozenHearth" ||
+            material.name == "M_Aurora_Fur_FrozenHearth")
+        {// ••”•ª‚¾‚Á‚½‚çA
+            material.materialType = MaterialType::Cloth;
+        }
+
+    }
+
 
     {
         PROFILE_SCOPE("Create PlayerAnimationController");

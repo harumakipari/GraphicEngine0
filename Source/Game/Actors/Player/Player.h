@@ -329,8 +329,8 @@ private:
 
 
     // プレイヤーの壁に近づいた時の透明度
-    float transparencyMinAlpha = 0.0f;  // 最小透明度
-    float transparencyMaxAlpha = 0.1f;  // 最大透明度
+    float transparencyMinAlpha = 0.1f;  // 最小透明度
+    float transparencyMaxAlpha = 0.2f;  // 最大透明度
 
     // 演出中かどうか
     bool moviePerform = false;
