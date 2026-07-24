@@ -147,6 +147,14 @@ void DarkCameraActor::RotateToPlayerForward()
     requestMode = CameraMode::TPS;
 }
 
+// 外部のカメラアクターとのブレンド用の関数
+void DarkCameraActor::StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration)
+{
+    externalBlendDuration = duration;
+    externalStartPose = start;
+    externalTargetPose = target;
+}
+
 // ブレンド状態を更新する
 void DarkCameraActor::UpdateBlend(float deltaTime)
 {

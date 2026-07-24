@@ -240,7 +240,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 player->SetPosition({ -1.3f,-0.1f,11.24f });
                 player->SetEulerRotation({ 0.0f,90.0f,0.0f });
             }
-
             doorMovieState = DoorMovieState::PreFinished;
         }
         break;
@@ -274,7 +273,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
             {// ‚±‚±‚Åƒ{ƒX‚Ì–¼‘O‚ÌUI‚ðÁ‚·
                 gruxEnemy->StartGruxNamePerform(1.0f, 1.0f, 0.0f);
             }
-
             doorMovieState = DoorMovieState::Finished;
         }
     case DoorMovieState::Finished:

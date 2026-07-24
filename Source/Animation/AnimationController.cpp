@@ -54,6 +54,11 @@ void AnimationController::OnUpdate(const float deltaTime)
     animationTime += deltaTime * playRate;
     locomotionTime += deltaTime; // ブレンドスペースのためのタイム   
 
+    // 六歩進むlocomotionPhase 一旦Jog_Fwdを参照する
+    float referenceDuration = target_->model->animations[animationNameToIndex_["Jog_Fwd"]].duration;
+    locomotionPhase += deltaTime * (6.0f / referenceDuration);
+
+
     if (target_->model->animations.size() == 0)
     {// アニメーションがないモデルの場合
         return;
@@ -1182,21 +1187,31 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         float duration =
             target_->model->animations[clip].duration;
 
+#if 0
         float normalized =
             locomotionTime / duration;
 
         float time =
             normalized * duration;
-
+#else
+        float normalized = locomotionPhase / 6.0f;
+        if (clip == animationNameToIndex_["Jog_Fwd"])
+        {
+            normalized = 1.0f - normalized;
+        }
+        float time = normalized * duration;
+#endif
         target_->model->Animate(
             clip,
             time,
             blendSpacePoses[i]);
     }
 
+
+    Logger::Log("blendCount:" + std::to_string(blend.count));
     target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
 
-    
+
     //currentMoveDirection = CalculateMoveDirection(blendInput, currentMoveDirection);
     //size_t clip = GetBlendSpaceAnimationClip(currentMoveDirection, MoveSpeed::Run);
     //float duration = target_->model->animations[clip].duration;
@@ -1235,6 +1250,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
     // ループ
     //float runDuration = target_->model->animations[clip].duration;
+#if 0
     float runDuration =
         target_->model->animations[
             animationNameToIndex_["Jog_Fwd"]].duration;
@@ -1243,6 +1259,17 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     {
         locomotionTime -= runDuration;
     }
+#else
+
+    while (locomotionPhase >= 6.0f)
+    {
+        locomotionPhase -= 6.0f;
+    }
+
+
+#endif // 0
+
+
 }
 
 // 入力方向から２つのアニメーションクリップとブレンドの重さを決定する関数
@@ -1439,6 +1466,8 @@ BlendResult AnimationController::CalculateBlendSpace(DirectX::XMFLOAT2 direction
 
         result.count++;
     }
+
+
     return result;
 }
 

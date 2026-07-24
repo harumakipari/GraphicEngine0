@@ -34,7 +34,8 @@ void Player::Initialize(const Transform& transform)
         PROFILE_SCOPE("Create PlayerModel");
 
         skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-        skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
+        skeletalMeshComponent->SetModel("./Data/Models/Mannequin.glb", false, true);
+        //skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
         // 服の色のための色相変更
@@ -98,7 +99,7 @@ void Player::Initialize(const Transform& transform)
         int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
-
+#if 0
         // 透明なモデルのアニメーションの動きを追加
         controller->AddTarget(skeletalMeshBlendComponent.get());
 
@@ -171,16 +172,29 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Walk_Fwd3", 66);
         controller->AddAnimation("Jump", 67);
         controller->AddAnimation("Rush_Attack_Fast_D", 68);
+#else
+        controller->AddAnimation("Idle0", 0);
+        controller->AddAnimation("Idle1", 1);
+        controller->AddAnimation("Idle2", 2);
+        controller->AddAnimation("Idle3", 3);
+        controller->AddAnimation("Idle4", 4);
+        controller->AddAnimation("Idle", 5);
+        controller->AddAnimation("Jog_Bwd", 7);
+        controller->AddAnimation("Jog_Fwd", 8);
+        controller->AddAnimation("Jog_Left", 9);
+        controller->AddAnimation("Jog_Right", 10);
+#endif // 0
+
 
         // ブレンドスペースに追加
         controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
         controller->AddBlendAnimation("Jog_Bwd", 0.0f, -1.0f);
         controller->AddBlendAnimation("Jog_Left", -1.0f, 0.0f);
         controller->AddBlendAnimation("Jog_Right", 1.0f, 0.0f);
-        controller->AddBlendAnimation("Jog_BwdLeft", -1.0f, -1.0f);
-        controller->AddBlendAnimation("Jog_FwdLeft", -1.0f, 1.0f);
-        controller->AddBlendAnimation("Jog_FwdRight", 1.0f, 1.0f);
-        controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
+        //controller->AddBlendAnimation("Jog_BwdLeft", -1.0f, -1.0f);
+        //controller->AddBlendAnimation("Jog_FwdLeft", -1.0f, 1.0f);
+        //controller->AddBlendAnimation("Jog_FwdRight", 1.0f, 1.0f);
+        //controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
 #if 0
         controller->AddBlendAnimation("Walk_Fwd", 0.0f, 0.5f);
         controller->AddBlendAnimation("Walk_Bwd", 0.0f, -0.5f);

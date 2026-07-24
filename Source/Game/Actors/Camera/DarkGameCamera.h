@@ -108,7 +108,12 @@ public:
     // カメラをplayerのforward方向に向ける
     void RotateToPlayerForward();
 
+    // 外部のカメラアクターとのブレンド用の関数
+    void StartExternalBlend(const CameraPose& start,const CameraPose& target,float duration);
+
 private:
+    // 外部のカメラアクターとのブレンド状態を更新する
+
     // ブレンド状態を更新する
     void UpdateBlend(float deltaTime);
 
@@ -203,5 +208,14 @@ private:
 
     // フォーカス時の
     // float focus
+
+    // 外部のカメラとのBlend用の変数
+    CameraPose externalStartPose;
+    CameraPose externalTargetPose;
+
+    float externalBlendTime = 0.0f;
+    float externalBlendDuration = 0.0f;
+
+    bool isExternalBlending = false;
 };
 

@@ -1,6 +1,7 @@
 #include "GltfModel.hlsli"
 #include "Sampler.hlsli"
 #include "Common.hlsli"
+#include "FilterFunctions.hlsli"
 
 #define BASE_COLOR_TEXTURE 0 
 #define METALLIC_ROUGHNESS_TEXTURE 1 
@@ -97,8 +98,11 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         pout.gBuffer3Normal = float4(T.xyz, objectType); // world space
     }
 
-    //pout.gbuffer1.xy = EncodeOctahedralNormal(N);
-
+    if ( materialType == MATERIAL_FUR)
+    { // •ž‚ÌŽž‚Í
+        baseColorFactor.rgb = HueSaturation(baseColorFactor.rgb, modelHueShift, modelSaturation);
+        baseColorFactor.rgb = BrightnessContrast(baseColorFactor.rgb, modelBrightness, modelContrast);
+    }
 
     pout.albedo = baseColorFactor;
 
