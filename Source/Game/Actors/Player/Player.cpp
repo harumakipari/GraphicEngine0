@@ -34,8 +34,8 @@ void Player::Initialize(const Transform& transform)
         PROFILE_SCOPE("Create PlayerModel");
 
         skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-        skeletalMeshComponent->SetModel("./Data/Models/Mannequin.glb", false, true);
-        //skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
+        //skeletalMeshComponent->SetModel("./Data/Models/Mannequin.glb", false, true);
+        skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
         // 服の色のための色相変更
@@ -66,7 +66,6 @@ void Player::Initialize(const Transform& transform)
             {// 服部分だったら、
                 material.materialType = MaterialType::Cloth;
             }
-
         }
     }
 
@@ -99,7 +98,7 @@ void Player::Initialize(const Transform& transform)
         int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
-#if 0
+#if 1
         // 透明なモデルのアニメーションの動きを追加
         controller->AddTarget(skeletalMeshBlendComponent.get());
 

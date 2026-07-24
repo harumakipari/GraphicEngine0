@@ -916,6 +916,8 @@ public:
         onMovieStart = func;
     }
 
+    // Œ»İ‚ÌƒJƒƒ‰p¨‚©‚ç‰¼‘ztarget‚ğŒvZ‚·‚é
+    DirectX::XMFLOAT3 GetVirtualTarget(float distance = 5.0f) ;
 
 private:
     void HandleKeyboardInput(float deltaTime);

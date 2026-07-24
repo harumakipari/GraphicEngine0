@@ -26,7 +26,7 @@ void DarkCameraActor::Initialize(const Transform& transform)
     // Pitch
     lockOnPitchDegree = -10.0f;
 
-
+    isExternalBlending = false;
 }
 
 void DarkCameraActor::Update(float deltaTime)
@@ -42,7 +42,15 @@ void DarkCameraActor::Update(float deltaTime)
     DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
 
 
-    if (!isBlending)
+    if (isExternalBlending)
+    {
+        UpdateExternalBlend(deltaTime);
+    }
+    else if (isBlending)
+    {
+        UpdateBlend(deltaTime);
+    }
+    else
     {
         if (requestMode != currentMode)
         {
@@ -54,10 +62,6 @@ void DarkCameraActor::Update(float deltaTime)
             UpdateRotation(deltaTime);
             currentPose = CalculatePose(currentMode, playerPos, currentYaw, currentPitch);
         }
-    }
-    else
-    {
-        UpdateBlend(deltaTime);
     }
 
 #if 0
@@ -153,6 +157,72 @@ void DarkCameraActor::StartExternalBlend(const CameraPose& start, const CameraPo
     externalBlendDuration = duration;
     externalStartPose = start;
     externalTargetPose = target;
+    isExternalBlending = true;
+    externalBlendTime = 0.0f;
+    desiredPitch = externalTargetPose.pitch;
+    desiredYaw = externalTargetPose.yaw;
+}
+
+// ムービーカメラコンポーネントからカメラポーズを作成する
+DarkCameraActor::CameraPose DarkCameraActor::CreatePoseFromMovie(const std::shared_ptr<MovieCameraComponent>& movieCamera)
+{
+    using namespace DirectX;
+    CameraPose pose{};
+    pose.eye = movieCamera->GetOwner()->GetPosition();
+    pose.target = movieCamera->GetVirtualTarget(5.0f);
+    auto dir = MathHelper::Normalize(MathHelper::Subtract(pose.target, pose.eye));
+    pose.yaw = atan2f(dir.x, dir.z);
+    pose.pitch = asinf(dir.y);
+    return pose;
+}
+
+// Focus状態のポーズを作成する
+DarkCameraActor::CameraPose DarkCameraActor::CreateFocusPose()
+{
+    CameraPose pose{};
+    auto playerHeadShared = playerHead.lock();
+    if (!playerHeadShared)
+    {
+        return pose;
+    }
+
+    auto playerActor = playerHeadShared->GetOwner();
+    if (!playerActor)
+    {
+        return pose;
+    }
+
+    // プレイヤー位置
+    XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
+    // プレイヤーの向き
+    XMFLOAT3 forward = MathHelper::Normalize(playerActor->GetForward());
+
+    // Focus時のYaw/Pitch
+    pose.yaw = atan2f(forward.x, forward.z);
+    pose.pitch = 0.0f;
+
+    // TPSカメラ位置を計算
+    pose = CalculatePose(CameraMode::TPS, playerPos, pose.yaw, pose.pitch);
+
+    return pose;
+}
+
+// 外部のカメラアクターとのブレンド状態を更新する
+void DarkCameraActor::UpdateExternalBlend(float deltaTime)
+{
+    externalBlendTime += deltaTime;
+
+    float t = std::clamp(externalBlendTime / externalBlendDuration, 0.0f, 1.0f);
+    currentPose.eye = MathHelper::Lerp(externalStartPose.eye, externalTargetPose.eye, t);
+    currentPose.target = MathHelper::Lerp(externalStartPose.target, externalTargetPose.target, t);
+    currentYaw = MathHelper::LerpAngle(externalStartPose.yaw, externalTargetPose.yaw, t);
+    currentPitch = std::lerp(externalStartPose.pitch, externalTargetPose.pitch, t);
+
+    if (t >= 1.0f)
+    {
+        isExternalBlending = false;
+        currentMode = CameraMode::TPS;
+    }
 }
 
 // ブレンド状態を更新する

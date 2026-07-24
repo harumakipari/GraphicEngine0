@@ -109,10 +109,16 @@ public:
     void RotateToPlayerForward();
 
     // 外部のカメラアクターとのブレンド用の関数
-    void StartExternalBlend(const CameraPose& start,const CameraPose& target,float duration);
+    void StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration);
 
+    // ムービーカメラコンポーネントからカメラポーズを作成する
+    CameraPose CreatePoseFromMovie(const std::shared_ptr<MovieCameraComponent>& movieCamera);
+
+    // Focus状態のポーズを作成する
+    CameraPose CreateFocusPose();
 private:
     // 外部のカメラアクターとのブレンド状態を更新する
+    void UpdateExternalBlend(float deltaTime);
 
     // ブレンド状態を更新する
     void UpdateBlend(float deltaTime);

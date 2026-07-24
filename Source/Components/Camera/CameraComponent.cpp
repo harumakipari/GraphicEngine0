@@ -151,7 +151,7 @@ ViewConstants CameraComponent::GetViewConstants()
 
 
 DirectX::XMVECTOR TPSCameraComponent::ResolveCameraCollision(
-    DirectX::FXMVECTOR focus,DirectX::FXMVECTOR idealEye)
+    DirectX::FXMVECTOR focus, DirectX::FXMVECTOR idealEye)
 {
     using namespace DirectX;
 
@@ -520,6 +520,53 @@ void MovieCameraComponent::Start(bool reverse)
     manualControl = false;
 }
 
+// 現在のカメラ姿勢から仮想targetを計算する
+DirectX::XMFLOAT3 MovieCameraComponent::GetVirtualTarget(float distance)
+{
+    using namespace DirectX;
+    // カメラ位置
+    XMFLOAT3 position = GetOwner()->GetPosition();
+    // カメラ回転
+    XMFLOAT4 rotation = GetOwner()->GetQuaternionRotation();
+
+
+    XMVECTOR q =
+        XMLoadFloat4(&rotation);
+
+
+    q = XMQuaternionNormalize(q);
+
+
+    // カメラの前方向
+    XMVECTOR forward =
+        XMVector3Rotate(
+            XMVectorSet(0, 0, 1, 0),
+            q);
+
+
+    forward =
+        XMVector3Normalize(forward);
+
+
+    XMFLOAT3 forward3;
+    XMStoreFloat3(&forward3, forward);
+
+
+
+    XMFLOAT3 target;
+
+    target.x =
+        position.x + forward3.x * distance;
+
+    target.y =
+        position.y + forward3.y * distance;
+
+    target.z =
+        position.z + forward3.z * distance;
+
+
+    return target;
+}
 
 void MovieCameraComponent::RefreshMovieFiles()
 {

@@ -80,15 +80,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
             {// プレイヤーのアニメーションを待機に変更
                 player->PlayBodyAnimation("Idle", true);
             }
-            //// Bloomの値を落ち着ける
-            //if (scene)
-            //{
-            //    auto& shader = scene->GetSceneSettings();
-            //    shader.bloomConstantBuffer.bloomExtractionThreshold = 7.83f;
-            //    shader.bloomConstantBuffer.bloomIntensity = 0.058f;
-            //}
-
-
             if (gameScene)
             {
                 // ボスの部屋を暗くする
@@ -257,6 +248,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             //カメラを三人称に戻す
             if (scene->GetCameraManager()->IsUseMovie())
             {// ムービーカメラが使用中の場合のみ切り替え
+#if 0
                 if (auto mainCamera = actorManager->GetActorOfType<MainCamera>())
                 {
                     mainCamera->SetEye(player->GetCameraEyeComponent());
@@ -268,6 +260,16 @@ void MovieCameraManagerActor::Update(float deltaTime)
                         });
                     scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
                 }
+#else
+                if (auto darkCameraActor = actorManager->GetActorOfType<DarkCameraActor>())
+                {
+                    DarkCameraActor::CameraPose start = darkCameraActor->CreatePoseFromMovie(movieCamera);
+                    DarkCameraActor::CameraPose target = darkCameraActor->CreateFocusPose();
+                    darkCameraActor->StartExternalBlend(start, target, 2.0f);
+                    scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
+                }
+#endif // 0
+
             }
             if (gruxEnemy)
             {// ここでボスの名前のUIを消す
@@ -318,7 +320,7 @@ void MovieCameraManagerActor::PlayDoorMovie()
         // プレイヤーの位置を固定する
         DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
         player->SetPosition(fixedPosition); // プレイヤーの位置を固定する座標に設定
-        player->rotationComponent->SetDirection({1.0f,0.0f,0.0f});
+        player->rotationComponent->SetDirection({ 1.0f,0.0f,0.0f });
     }
 
     if (auto cameraManager = GetOwnerScene()->GetCameraManager())
