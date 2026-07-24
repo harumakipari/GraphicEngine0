@@ -177,6 +177,10 @@ void Player::Initialize(const Transform& transform)
         controller->AddBlendAnimation("Jog_Bwd", 0.0f, -1.0f);
         controller->AddBlendAnimation("Jog_Left", -1.0f, 0.0f);
         controller->AddBlendAnimation("Jog_Right", 1.0f, 0.0f);
+        controller->AddBlendAnimation("Jog_BwdLeft", -1.0f, -1.0f);
+        controller->AddBlendAnimation("Jog_FwdLeft", -1.0f, 1.0f);
+        controller->AddBlendAnimation("Jog_FwdRight", 1.0f, 1.0f);
+        controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
 #if 0
         controller->AddBlendAnimation("Walk_Fwd", 0.0f, 0.5f);
         controller->AddBlendAnimation("Walk_Bwd", 0.0f, -0.5f);
@@ -1067,6 +1071,28 @@ void Player::UpdateLockOnLocomotion()
     auto move = inputComponent->GetMoveInput();
     GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
 
+
+    //auto controller = GetBodyAnimationController();
+    //auto move = inputComponent->GetMoveInput();
+    //AnimationController::MoveDirection dir =
+    //    controller->CalculateMoveDirection({ move.x, move.z }, currentMoveDir);
+
+    //if (dir != currentMoveDir)
+    //{
+    //    currentMoveDir = dir;
+
+    //    AnimationController::MoveSpeed speedType =
+    //        locomotionMode == LocomotionMode::LockOnBlendRun ?
+    //        AnimationController::MoveSpeed::Run :
+    //        AnimationController::MoveSpeed::Walk;
+
+    //    std::string animationName =
+    //        controller->GetBlendSpaceAnimationName(currentMoveDir, AnimationController::MoveSpeed::Run);
+    //    Logger::Log("LockOnBlendRuns animation Name: " + animationName);
+
+    //    PlayBodyAnimation(animationName, true, true, 0.2f, true);
+    //}
+
 }
 
 // アニメーションステート関連のフラグをリセットする
@@ -1379,11 +1405,27 @@ void Player::SetLocomotionMode(LocomotionMode mode)
         break;
 
     case LocomotionMode::LockOnBlendWalk:
+    {
+        //auto move = inputComponent->GetMoveInput();
         controller->SetUseBlendSpace(true);
-        break;
+        //currentMoveDir = controller->CalculateMoveDirection({ move.x,move.z }, currentMoveDir);
+        //std::string animationName = controller->GetBlendSpaceAnimationName(currentMoveDir, AnimationController::MoveSpeed::Run);
+        //Logger::Log("LockOnBlendWalk animation Name: " + animationName);
+        //PlayBodyAnimation(animationName, true, true, 0.2f, true);
+
+    }
+
+    break;
 
     case LocomotionMode::LockOnBlendRun:
+    {
+        //auto move = inputComponent->GetMoveInput();
         controller->SetUseBlendSpace(true);
+        //currentMoveDir = controller->CalculateMoveDirection({ move.x,move.z }, currentMoveDir);
+        //std::string animationName = controller->GetBlendSpaceAnimationName(currentMoveDir, AnimationController::MoveSpeed::Run);
+        //Logger::Log("LockOnBlendRuns animation Name: " + animationName);
+        //PlayBodyAnimation(animationName, true, true, 0.2f, true);
+    }
         break;
 
     case LocomotionMode::Dash:

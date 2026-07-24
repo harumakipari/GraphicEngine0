@@ -20,9 +20,13 @@ public:
     {
         Idle,
         Forward,
-        Backward,
-        Left,
+        ForwardRight,
         Right,
+        BackRight,
+        Backward,
+        BackLeft,
+        Left,
+        ForwardLeft,
     };
 
     enum class MoveSpeed :uint8_t
@@ -245,6 +249,16 @@ public:
         extraTargets_.push_back(target);
     }
 
+    // 方向とスピードからアニメーションを取得する 
+    size_t GetBlendSpaceAnimationClip(MoveDirection direction, MoveSpeed speed);
+
+    // 方向とスピードからアニメーションの名前を取得する 
+    const std::string GetBlendSpaceAnimationName(MoveDirection direction, MoveSpeed speed);
+
+    // blendInputから方向を決める関数
+    MoveDirection CalculateMoveDirection(const DirectX::XMFLOAT2& input, MoveDirection currentMoveDirection);
+
+
 private:
     // ブレンドスペースを更新する
     void UpdateBlendSpace(float deltaTime);
@@ -257,9 +271,6 @@ private:
 
     // 方向とスピードからアニメーションと重みを計算する
     BlendResult CalculateBlendSpace(DirectX::XMFLOAT2 direction, float speed);
-
-    // 方向とスピードからアニメーションを取得する
-    size_t GetBlendSpaceAnimationClip(MoveDirection direction,MoveSpeed speed);
 
     // NotifyAssetを保存する
     void SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset);
@@ -404,17 +415,24 @@ private:
     BlendSpace locomotionBlendSpace;
     // ブレンドスペースで使用する入力値
     DirectX::XMFLOAT2 blendInput;
+    size_t locomotionClip;
+    size_t locomotionNextClip;
+
+    bool locomotionChanging;
+
+    float locomotionBlendElapsed;
     float blendSpeed;
 
     bool useBlendSpace = false;
     float locomotionTime = 0.0f;
+    float locomotionPhase = 0.0f;
     float locomotionPlayRate = 1.0f;
     // ブレンドスペースに入る時の補完処理
     bool blendSpaceTransition = false;
     float blendSpaceTransitionTime = 0.2f;
     float blendSpaceElapsed = 0.0f;
 
-
+    MoveDirection currentMoveDirection = MoveDirection::Idle;
 
     friend class Player;
 };

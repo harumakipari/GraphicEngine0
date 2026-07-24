@@ -97,17 +97,14 @@ void AnimationController::OnUpdate(const float deltaTime)
     switch (transitionState)
     {
     case AnimationTransitionState::NotStarted:
-        //target_->model->Animate(animationClip, animationTime, animationNodes[Origin]);
         target_->model->Animate(this->animationNextClip, 0.0f, animationNodes[Next]);
         blendElapsedTime = 0.0f;
-        //animationTime = 0.0f;
         blendFactor = 0.0f;
 
         transitionState = AnimationTransitionState::Inprogress;
         break;
     case AnimationTransitionState::Inprogress:
         blendElapsedTime += deltaTime * playRate;
-        //blendElapsedTime += deltaTime * animationRate;
         if (transitionTime > 0.0f)
         {
             blendFactor = blendElapsedTime / transitionTime;     //ゼロ除算を防ぐため
@@ -116,9 +113,7 @@ void AnimationController::OnUpdate(const float deltaTime)
         {
             blendFactor = 1.0f;
         }
-        blendFactor =
-            std::clamp(blendFactor, 0.0f, 1.0f);
-
+        blendFactor = std::clamp(blendFactor, 0.0f, 1.0f);
         target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
 
         // blend
@@ -133,11 +128,13 @@ void AnimationController::OnUpdate(const float deltaTime)
         }
         break;
     case AnimationTransitionState::Completed:
+#if 1
         if (useBlendSpace)
         {
             UpdateBlendSpace(deltaTime);
         }
         else
+#endif // 0
         {
             target_->model->Animate(this->animationClip, animationTime, finalNodes);
             // 終わったら通常時に戻す
@@ -1199,10 +1196,16 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
     target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
 
+    
+    //currentMoveDirection = CalculateMoveDirection(blendInput, currentMoveDirection);
+    //size_t clip = GetBlendSpaceAnimationClip(currentMoveDirection, MoveSpeed::Run);
+    //float duration = target_->model->animations[clip].duration;
+    //float normalized = locomotionTime / duration;
+    //float time = normalized * duration;
+    //target_->model->Animate(clip, time, blendSpaceNodes);
+
 
 #endif // 0
-
-
 
     // BlendSpaceへの遷移
     if (blendSpaceTransition)
@@ -1231,6 +1234,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     }
 
     // ループ
+    //float runDuration = target_->model->animations[clip].duration;
     float runDuration =
         target_->model->animations[
             animationNameToIndex_["Jog_Fwd"]].duration;
@@ -1449,16 +1453,20 @@ size_t AnimationController::GetBlendSpaceAnimationClip(MoveDirection direction, 
         {
         case MoveDirection::Forward:
             return animationNameToIndex_["Walk_Fwd"];
-
         case MoveDirection::Backward:
             return animationNameToIndex_["Walk_Bwd"];
-
         case MoveDirection::Left:
             return animationNameToIndex_["Walk_Left"];
-
         case MoveDirection::Right:
             return animationNameToIndex_["Walk_Right"];
-
+        case MoveDirection::BackLeft:
+            return animationNameToIndex_["Walk_BwdLeft"];
+        case MoveDirection::BackRight:
+            return animationNameToIndex_["Walk_BwdRight"];
+        case MoveDirection::ForwardLeft:
+            return animationNameToIndex_["Walk_FwdLeft"];
+        case MoveDirection::ForwardRight:
+            return animationNameToIndex_["Walk_FwdRight"];
         default:
             return animationNameToIndex_["Idle"];
         }
@@ -1479,6 +1487,15 @@ size_t AnimationController::GetBlendSpaceAnimationClip(MoveDirection direction, 
         case MoveDirection::Right:
             return animationNameToIndex_["Jog_Right"];
 
+        case MoveDirection::BackLeft:
+            return animationNameToIndex_["Jog_BwdLeft"];
+        case MoveDirection::BackRight:
+            return animationNameToIndex_["Jog_BwdRight"];
+        case MoveDirection::ForwardLeft:
+            return animationNameToIndex_["Jog_FwdLeft"];
+        case MoveDirection::ForwardRight:
+            return animationNameToIndex_["Jog_FwdRight"];
+
         default:
             return animationNameToIndex_["Idle"];
         }
@@ -1486,6 +1503,188 @@ size_t AnimationController::GetBlendSpaceAnimationClip(MoveDirection direction, 
     default:
         return animationNameToIndex_["Idle"];
     }
+}
+
+// 方向とスピードからアニメーションを取得する
+const std::string AnimationController::GetBlendSpaceAnimationName(MoveDirection direction, MoveSpeed speed)
+{
+    switch (speed)
+    {
+    case MoveSpeed::Walk:
+
+        switch (direction)
+        {
+        case MoveDirection::Forward:
+            return "Walk_Fwd";
+        case MoveDirection::Backward:
+            return "Walk_Bwd";
+        case MoveDirection::Left:
+            return "Walk_Left";
+        case MoveDirection::Right:
+            return "Walk_Right";
+        case MoveDirection::BackLeft:
+            return "Walk_BwdLeft";
+        case MoveDirection::BackRight:
+            return "Walk_BwdRight";
+        case MoveDirection::ForwardLeft:
+            return "Walk_FwdLeft";
+        case MoveDirection::ForwardRight:
+            return "Walk_FwdRight";
+        default:
+            return "Idle";
+        }
+
+    case MoveSpeed::Run:
+        switch (direction)
+        {
+        case MoveDirection::Forward:
+            return "Jog_Fwd";
+        case MoveDirection::Backward:
+            return "Jog_Bwd";
+        case MoveDirection::Left:
+            return "Jog_Left";
+        case MoveDirection::Right:
+            return "Jog_Right";
+
+        case MoveDirection::BackLeft:
+            return "Jog_BwdLeft";
+        case MoveDirection::BackRight:
+            return "Jog_BwdRight";
+        case MoveDirection::ForwardLeft:
+            return "Jog_FwdLeft";
+        case MoveDirection::ForwardRight:
+            return "Jog_FwdRight";
+
+        default:
+            return "Idle";
+        }
+    default:
+        return "Idle";
+    }
+    return "Idle";
+}
+
+
+// blendInputから方向を決める関数
+AnimationController::MoveDirection AnimationController::CalculateMoveDirection(const DirectX::XMFLOAT2& input, MoveDirection currentDirection)
+{
+#if 0
+    constexpr float DEAD_ZONE = 0.01f;
+    constexpr float HYSTERESIS = 10.0f;   // 10°くらいがおすすめ
+
+    if (std::fabs(input.x) < DEAD_ZONE &&
+        std::fabs(input.y) < DEAD_ZONE)
+    {
+        return MoveDirection::Idle;
+    }
+
+    float angle =
+        DirectX::XMConvertToDegrees(
+            std::atan2(input.x, input.y));
+
+    if (angle < 0.0f)
+        angle += 360.0f;
+
+    // 現在方向の中心角
+    float center = 0.0f;
+
+    switch (currentDirection)
+    {
+    case MoveDirection::Forward:      center = 0.0f; break;
+    case MoveDirection::ForwardRight: center = 45.0f; break;
+    case MoveDirection::Right:        center = 90.0f; break;
+    case MoveDirection::BackRight:    center = 135.0f; break;
+    case MoveDirection::Backward:     center = 180.0f; break;
+    case MoveDirection::BackLeft:     center = 225.0f; break;
+    case MoveDirection::Left:         center = 270.0f; break;
+    case MoveDirection::ForwardLeft:  center = 315.0f; break;
+    default: break;
+    }
+
+    // 現在方向との角度差
+    float diff = angle - center;
+
+    while (diff > 180.0f)
+        diff -= 360.0f;
+
+    while (diff < -180.0f)
+        diff += 360.0f;
+
+    // 現在方向を維持する
+    if (std::abs(diff) <= 22.5f + HYSTERESIS)
+    {
+        return currentDirection;
+    }
+
+    // 通常判定
+    if (angle >= 337.5f || angle < 22.5f)
+        return MoveDirection::Forward;
+
+    if (angle < 67.5f)
+        return MoveDirection::ForwardRight;
+
+    if (angle < 112.5f)
+        return MoveDirection::Right;
+
+    if (angle < 157.5f)
+        return MoveDirection::BackRight;
+
+    if (angle < 202.5f)
+        return MoveDirection::Backward;
+
+    if (angle < 247.5f)
+        return MoveDirection::BackLeft;
+
+    if (angle < 292.5f)
+        return MoveDirection::Left;
+
+    return MoveDirection::ForwardLeft;
+#else
+
+
+    constexpr float DEAD_ZONE = 0.01f;
+
+    // 入力なし
+    if (std::fabs(input.x) < DEAD_ZONE &&
+        std::fabs(input.y) < DEAD_ZONE)
+    {
+        return MoveDirection::Idle;
+    }
+
+    // 前を0°として時計回り
+    float angle = DirectX::XMConvertToDegrees(
+        std::atan2(input.x, input.y));
+
+    // -180～180 → 0～360
+    if (angle < 0.0f)
+    {
+        angle += 360.0f;
+    }
+
+    if (angle >= 337.5f || angle < 22.5f)
+        return MoveDirection::Forward;
+
+    if (angle < 67.5f)
+        return MoveDirection::ForwardRight;
+
+    if (angle < 112.5f)
+        return MoveDirection::Right;
+
+    if (angle < 157.5f)
+        return MoveDirection::BackRight;
+
+    if (angle < 202.5f)
+        return MoveDirection::Backward;
+
+    if (angle < 247.5f)
+        return MoveDirection::BackLeft;
+
+    if (angle < 292.5f)
+        return MoveDirection::Left;
+
+    return MoveDirection::ForwardLeft;
+#endif // 0
+
 }
 
 

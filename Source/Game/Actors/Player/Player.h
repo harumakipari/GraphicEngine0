@@ -341,6 +341,8 @@ private:
     // ââèoíÜÇ©Ç«Ç§Ç©
     bool moviePerform = false;
 
+    AnimationController::MoveDirection currentMoveDir = AnimationController::MoveDirection::Idle;
+
 
     friend class PlayerStateBase;
 };
