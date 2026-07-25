@@ -16,17 +16,22 @@ class Character;
 class AnimationController
 {
 public:
+    enum class LocomotionGroup :uint8_t
+    {
+        Forward,
+        Backward,
+    };
+
+
     enum class MoveDirection :uint8_t
     {
         Idle,
         Forward,
         ForwardRight,
-        Right,
+        ForwardLeft,
         BackRight,
         Backward,
         BackLeft,
-        Left,
-        ForwardLeft,
     };
 
     enum class MoveSpeed :uint8_t
@@ -61,6 +66,8 @@ public:
         // 0.0 : clipA 100%
         // 1.0 : clipB 100%
         float weight = 0.0f;
+
+        bool isForwardGroup = true;
     };
 
 public:
@@ -227,7 +234,9 @@ public:
         if (useBlendSpace)
         {// ブレンドスペース開始
             // ルートモーションを切る
-            enableRootMotion = false;
+            enableRootMotion = true;
+            ignoreRootMotion = true;
+
             locomotionTime = 0.0f;
             // ブレンドスペースに入る時に補間処理をするため
             blendSpaceTransition = true;
@@ -239,6 +248,7 @@ public:
         else
         {
             enableRootMotion = true;
+
             ResetRootMotion("Jog_Fwd", true, true, 0.2f);
             Logger::Log("Disable BlendSpace");
         }
@@ -260,6 +270,9 @@ public:
 
 
 private:
+    // それぞれのアニメーション再生時間を取る
+    float GetLocomotionDuration();
+
     // ブレンドスペースを更新する
     void UpdateBlendSpace(float deltaTime);
 
@@ -389,7 +402,7 @@ private:
 
     bool enableRootMotion = true;  // ルートモーションがある場合
 
-    bool ignoreRootMotion = false; // ルートモーションを無視する
+    bool ignoreRootMotion = true; // ルートモーションを無視する
 
     float blendElapsedTime = 0.0f;  // ブレンド時に経過した時間
 
@@ -433,6 +446,7 @@ private:
     float blendSpaceElapsed = 0.0f;
 
     MoveDirection currentMoveDirection = MoveDirection::Idle;
+    LocomotionGroup locomotionGroup = LocomotionGroup::Forward;
 
     friend class Player;
 };

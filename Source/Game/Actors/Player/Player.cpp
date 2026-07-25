@@ -87,7 +87,6 @@ void Player::Initialize(const Transform& transform)
         {// 服部分だったら、
             material.materialType = MaterialType::Cloth;
         }
-
     }
 
 
@@ -103,7 +102,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddTarget(skeletalMeshBlendComponent.get());
 
         controller->AddAnimation("Idle", 0);
-        controller->AddAnimation("Jog_Fwd", 1);
+        controller->AddAnimation("Jog_Fwd0", 1);
         controller->AddAnimation("Roll_front_0", 2);
         controller->AddAnimation("Roll_back_0", 3);
         controller->AddAnimation("Roll_left_0", 4);
@@ -145,23 +144,23 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Level_Start1_0", 40);
         controller->AddAnimation("Recall_0", 41);
         controller->AddAnimation("Level_Start_Cut", 42);
-        controller->AddAnimation("Jog_Bwd", 43);
-        controller->AddAnimation("Jog_Left", 44);
-        controller->AddAnimation("Jog_Right", 45);
+        controller->AddAnimation("Jog_Bwd0", 43);
+        controller->AddAnimation("Jog_Left0", 44);
+        controller->AddAnimation("Jog_Right0", 45);
         controller->AddAnimation("Walk_Bwd", 46);
         controller->AddAnimation("Walk_Fwd", 47);
         controller->AddAnimation("Walk_Left", 48);
         controller->AddAnimation("Walk_Right", 49);
         controller->AddAnimation("Jog_Fwd1", 50);
         controller->AddAnimation("Walk_Fwd1", 51);
-        controller->AddAnimation("Sprint_Fwd", 52);
+        controller->AddAnimation("Sprint_Fwd5", 52);
         controller->AddAnimation("Walk_Fwd2", 53);  // これだめ
         controller->AddAnimation("Jog_Fwd2", 54);// これだめ
         controller->AddAnimation("Jog_Bwd2", 55);
-        controller->AddAnimation("Jog_BwdLeft", 56);
-        controller->AddAnimation("Jog_BwdRight", 57);
-        controller->AddAnimation("Jog_FwdLeft", 58);
-        controller->AddAnimation("Jog_FwdRight", 59);
+        controller->AddAnimation("Jog_BwdLeft5", 56);
+        controller->AddAnimation("Jog_BwdRight5", 57);
+        controller->AddAnimation("Jog_FwdLeft5", 58);
+        controller->AddAnimation("Jog_FwdRight5", 59);
         controller->AddAnimation("Jog_Left2", 60);
         controller->AddAnimation("Jog_Right2", 61);
         controller->AddAnimation("Rush_Attack_Fast_A", 62);
@@ -171,6 +170,25 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Walk_Fwd3", 66);
         controller->AddAnimation("Jump", 67);
         controller->AddAnimation("Rush_Attack_Fast_D", 68);
+        controller->AddAnimation("Jog_Bwd5", 69);
+        controller->AddAnimation("Jog_Fwd5", 70);
+        controller->AddAnimation("Jog_Left5", 71);
+        controller->AddAnimation("Jog_Right5", 72);
+
+        controller->AddAnimation("Jog_Bwd", 73);
+        controller->AddAnimation("Jog_BwdLeft", 74);
+        controller->AddAnimation("Jog_BwdRight", 75);
+        controller->AddAnimation("Jog_Fwd", 76);
+        controller->AddAnimation("Jog_FwdLeft", 77);
+        controller->AddAnimation("Jog_FwdRight", 78);
+        controller->AddAnimation("Sprint_Fwd", 79);
+        controller->AddAnimation("Walk_Bwd", 80);
+        controller->AddAnimation("Walk_BwdLeft", 81);
+        controller->AddAnimation("Walk_BwdRight", 82);
+        controller->AddAnimation("Walk_Fwd", 83);
+        controller->AddAnimation("Walk_FwdLeft", 84);
+        controller->AddAnimation("Walk_FwdRight", 85);
+
 #else
         controller->AddAnimation("Idle0", 0);
         controller->AddAnimation("Idle1", 1);
@@ -188,12 +206,10 @@ void Player::Initialize(const Transform& transform)
         // ブレンドスペースに追加
         controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
         controller->AddBlendAnimation("Jog_Bwd", 0.0f, -1.0f);
-        controller->AddBlendAnimation("Jog_Left", -1.0f, 0.0f);
-        controller->AddBlendAnimation("Jog_Right", 1.0f, 0.0f);
-        //controller->AddBlendAnimation("Jog_BwdLeft", -1.0f, -1.0f);
-        //controller->AddBlendAnimation("Jog_FwdLeft", -1.0f, 1.0f);
-        //controller->AddBlendAnimation("Jog_FwdRight", 1.0f, 1.0f);
-        //controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
+        controller->AddBlendAnimation("Jog_BwdLeft", -1.0f, -1.0f);
+        controller->AddBlendAnimation("Jog_FwdLeft", -1.0f, 1.0f);
+        controller->AddBlendAnimation("Jog_FwdRight", 1.0f, 1.0f);
+        controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
 #if 0
         controller->AddBlendAnimation("Walk_Fwd", 0.0f, 0.5f);
         controller->AddBlendAnimation("Walk_Bwd", 0.0f, -0.5f);
@@ -224,8 +240,6 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerInteractState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDashState>(this));
 
-        // ステートマシンを character に追加
-        //this->SetStateMachine(stateMachine);
         // 初期ステートを設定
         stateMachine_->ChangeState("Idle");
     }
@@ -340,10 +354,6 @@ void Player::Initialize(const Transform& transform)
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
 
-    // ヒット時の剣のエフェクトコンポーネントを追加
-    hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
-    hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
-
 
     // カメラの目の位置のコンポーネントを追加
     cameraEyeComponent = AddComponent<SceneComponent>("cameraEyeComponent", parentName);
@@ -353,7 +363,6 @@ void Player::Initialize(const Transform& transform)
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f,1.0f,0.0f });
     // 軌跡初期化
     trail.Initialize();
-
     // ラッシュ時のUIを作成
     auto uiManager = GetOwnerScene()->GetUIManager();
     rushButtonImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Y.png", "Y");
@@ -404,7 +413,6 @@ void Player::Update(float deltaTime)
     if (slowMotionActive)
     {
         slowMotionTimer -= Time::UnscaledDeltaTime();
-
         if (slowMotionTimer <= 0.0f)
         {
             slowMotionActive = false;
@@ -417,12 +425,10 @@ void Player::Update(float deltaTime)
     {
         characterMovementComponent->SetMoveSpeedSetting(walkSpeed, runSpeed);
     }
-
     if (InputSystem::GetInputState("1"))
     {
         stateMachine_->ChangeState("Rush");
     }
-
     DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 toEnemyDir = { 0.0f,0.0f,0.0f };
@@ -487,15 +493,6 @@ void Player::Update(float deltaTime)
                     enemy->TakeDamage(1);
                     enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
                     hitActors.emplace(enemy);
-
-                    if (hitSwordEffectComponent)
-                    {
-                        hitSwordEffectComponent->SetWorldLocationDirect(hit.hitPoint);
-                        hitSwordEffectComponent->UpdateComponentToWorld(); // これ入れないと最初に呼ばれる時に位置がずれる
-                        XMFLOAT3 position = hitSwordEffectComponent->GetComponentLocation();
-                        XMFLOAT3 rotation = hitSwordEffectComponent->GetComponentEulerRotation();
-                        EffectManager::EmitParticle(hitSwordEffectComponent->GetEffectHandle(), position, rotation);
-                    }
 
                 }
             }
@@ -1272,6 +1269,10 @@ void Player::UpdateMovement()
         if (isDash)
         {
             camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+            if (InputSystem::GetInputState("LockOn", InputStateMask::Trigger))
+            {
+                camera->RotateToPlayerForward();
+            }
         }
         else
         {

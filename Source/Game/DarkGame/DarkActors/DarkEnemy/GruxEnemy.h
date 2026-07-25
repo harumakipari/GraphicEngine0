@@ -1,5 +1,6 @@
 #pragma once
 #include "Components/Controller/ControllerComponent.h"
+#include "Components/Effect/ParticleComponent.h"
 #include "Core/Actor.h"
 #include "Game/Actors/Base/Character.h"
 #include "Game/Actors/Enemy/Enemy.h"
@@ -64,6 +65,8 @@ private:
     std::shared_ptr<SceneComponent> weaponRightRootComponent; // 右の武器の根元のコンポーネント
     std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // 右の武器の中間のコンポーネント
     std::shared_ptr<SceneComponent> weaponRightTipComponent;  // 右の武器の先端のコンポーネント
+
+    std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // ヒット時の剣のエフェクト
 
     bool rightHitBox = false;   // 右の剣の当たり判定
     bool leftHitBox = false;    // 左の剣の当たり判定

@@ -75,7 +75,6 @@ void DarkCameraActor::Update(float deltaTime)
     }
 #endif // 0
 
-
     // 当たり判定でカメラの位置を修正する
     currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
 
@@ -144,11 +143,9 @@ void DarkCameraActor::RotateToPlayerForward()
     desiredYaw = info.yaw;
     desiredPitch = info.pitch;
 
-    blendStartPose = currentPose;
-    blendTime = 0.0f;
-    isBlending = true;
-
-    requestMode = CameraMode::TPS;
+    //blendStartPose = currentPose;
+    //blendTime = 0.0f;
+    //isBlending = true;
 }
 
 // 外部のカメラアクターとのブレンド用の関数
@@ -403,6 +400,9 @@ void DarkCameraActor::UpdateRotation(float deltaTime)
 {
     currentYaw = desiredYaw;
     currentPitch = desiredPitch;
+    //float rotateRate = 20.0f;
+    //currentYaw = MathHelper::LerpAngle(currentYaw,desiredYaw,rotateRate * deltaTime);
+    //currentPitch = std::lerp(currentPitch,desiredPitch,rotateRate * deltaTime);
     mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
 }
 

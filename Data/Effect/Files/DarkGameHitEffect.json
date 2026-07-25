@@ -23,8 +23,8 @@
             "directionMode": 0,
             "emissivePower": 1.0,
             "emitCount": [
-                4,
-                4
+                10,
+                10
             ],
             "emitInterval": [
                 0.0,
@@ -67,7 +67,7 @@
                 0.20000000298023224
             ],
             "loop": false,
-            "maxParticles": 41,
+            "maxParticles": 1,
             "name": "Emitter0",
             "positionOffset": [
                 0.0,

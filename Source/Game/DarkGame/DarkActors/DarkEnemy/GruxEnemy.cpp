@@ -269,6 +269,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     lockOnTargetMeshComponent->SetRelativeScaleDirect({ 0.68f,0.68f, 0.68f });
     lockOnTargetMeshComponent->SetIsCastShadow(false);
     lockOnTargetMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+
+    hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
+    hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
 }
 
 void GruxEnemy::Update(float deltaTime)
@@ -551,6 +554,22 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
         Transform tr{ enemyCenter,{0.0f,0.0f,0.0f},{1.0f,1.0f,1.0f} };
         auto iceEffect = actorManager->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("iceFragment", tr);
         iceEffect->SetDirection(hitNormal, enemyCenter, playerPos);
+
+        // 敵→プレイヤー方向
+        DirectX::XMFLOAT3 forward = MathHelper::Normalize(MathHelper::Subtract(playerPos, enemyCenter));
+        // エフェクト生成位置
+        float spawnOffset = 0.8f;
+        DirectX::XMFLOAT3 spawnPos = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
+
+
+        if (hitSwordEffectComponent)
+        {
+            hitSwordEffectComponent->SetWorldLocationDirect(spawnPos);
+            hitSwordEffectComponent->UpdateComponentToWorld(); // これ入れないと最初に呼ばれる時に位置がずれる
+            XMFLOAT3 position = hitSwordEffectComponent->GetComponentLocation();
+            XMFLOAT3 rotation = hitSwordEffectComponent->GetComponentEulerRotation();
+            EffectManager::EmitParticle(hitSwordEffectComponent->GetEffectHandle(), position, rotation);
+        }
     }
 
 }
