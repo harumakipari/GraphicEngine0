@@ -34,7 +34,6 @@ void Player::Initialize(const Transform& transform)
         PROFILE_SCOPE("Create PlayerModel");
 
         skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-        //skeletalMeshComponent->SetModel("./Data/Models/Mannequin.glb", false, true);
         skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
@@ -147,10 +146,10 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Jog_Bwd0", 43);
         controller->AddAnimation("Jog_Left0", 44);
         controller->AddAnimation("Jog_Right0", 45);
-        controller->AddAnimation("Walk_Bwd", 46);
-        controller->AddAnimation("Walk_Fwd", 47);
-        controller->AddAnimation("Walk_Left", 48);
-        controller->AddAnimation("Walk_Right", 49);
+        controller->AddAnimation("Walk_Bwd1", 46);
+        controller->AddAnimation("Walk_Fwd1", 47);
+        controller->AddAnimation("Walk_Left1", 48);
+        controller->AddAnimation("Walk_Right1", 49);
         controller->AddAnimation("Jog_Fwd1", 50);
         controller->AddAnimation("Walk_Fwd1", 51);
         controller->AddAnimation("Sprint_Fwd5", 52);
@@ -1158,8 +1157,6 @@ void Player::EndEvent()
     this->moviePerform = false;
 }
 
-
-
 // 火花エフェクトの生成
 void Player::SpawnSpark(DirectX::XMFLOAT3 pos)
 {
@@ -1613,24 +1610,27 @@ IInteractable* Player::FindInteractable()
     IInteractable* best = nullptr;
     float bestDist = FLT_MAX;
 
-    DirectX::XMFLOAT3 forward = GetForward(); // プレイヤー前方向
-
+    DirectX::XMFLOAT3 forward = GetForward();
+    DirectX::XMFLOAT3 playerPos = GetPosition();
 
     for (auto actor : GetOwnerScene()->GetActorManager()->GetActorsOfType<InteractableActor>())
     {
         auto interactable = dynamic_cast<IInteractable*>(actor.get());
-        if (!interactable) continue;
-        bestDist = actor->GetInteractRange();
-        DirectX::XMFLOAT3 playerPos = GetPosition();
-        DirectX::XMFLOAT3 interactablePos = MathHelper::Add(actor->GetPosition(), actor->GetInteractOffset());
+        if (!interactable)
+            continue;
 
-        DirectX::XMFLOAT3 dir = MathHelper::Normalize(
-            MathHelper::Subtract(interactablePos, playerPos)
-        );
+        DirectX::XMFLOAT3 interactablePos =
+            MathHelper::Add(actor->GetPosition(), actor->GetInteractOffset());
+
+
+        DirectX::XMFLOAT3 dir =
+            MathHelper::Normalize(
+                MathHelper::Subtract(interactablePos, playerPos)
+            );
+
 
         float dot = MathHelper::Dot(forward, dir);
 
-        // playerが反応する角度
         float interactableRadian = actor->GetInteractRadian();
 
         if (dot < interactableRadian)
@@ -1638,19 +1638,40 @@ IInteractable* Player::FindInteractable()
             interactable->SetCanInteract(false);
             continue;
         }
-        DebugRender::DrawSphere(interactablePos, bestDist, { 0,1,1,1 }, 0);
 
 
         float dist = MathHelper::Distance(playerPos, interactablePos);
 
+
+        // 範囲外なら無視
+        if (dist > actor->GetInteractRange())
+        {
+            interactable->SetCanInteract(false);
+            continue;
+        }
+
+
+        // 一番近いものを選択
         if (dist < bestDist)
         {
-            DebugRender::DrawSphere(interactablePos, bestDist, { 1,1,1,1 }, 0);
             bestDist = dist;
             best = interactable;
-            interactable->SetCanInteract(true);
         }
     }
+
+
+    // 最終的に選ばれたものだけtrue
+    for (auto actor : GetOwnerScene()->GetActorManager()->GetActorsOfType<InteractableActor>())
+    {
+        auto interactable = dynamic_cast<IInteractable*>(actor.get());
+
+        if (interactable)
+        {
+            interactable->SetCanInteract(interactable == best);
+        }
+    }
+
     return best;
+
 }
 

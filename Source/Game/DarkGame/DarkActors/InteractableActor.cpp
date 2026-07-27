@@ -13,6 +13,7 @@ void InteractableActor::Initialize(const Transform& transform)
     interactUiComponent->SetSize({ 140.0f, 140.0f });
     interactUiComponent->SetPivot({ 0.5f, 0.5f }); // 矢印の根元をプレイヤーの位置に合わせる
     interactUiComponent->SetVisible(false);
+    interactUiComponent->SetScale({ 0.6f,0.6f });
     uiManager->Add(interactUiComponent);
 
     controlButton = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/UI/button_a.png");
@@ -25,10 +26,12 @@ void InteractableActor::Update(float deltaTime)
     if (InputSystem::IsGamepadConnected())
     {//　コントローラー対応
         interactUiComponent->SetTexture(controlButton);
+        interactUiComponent->SetScale({ 0.6f,0.6f });
     }
     else
     {
         interactUiComponent->SetTexture(keyboardButton);
+        interactUiComponent->SetScale({ 1.2f,1.2f });
     }
     interactUiComponent->SetVisible(canInteract && !interacted);
     interactUiComponent->SetWorldPosition(interactUiWorldPos);

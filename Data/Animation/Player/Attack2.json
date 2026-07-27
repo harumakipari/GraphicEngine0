@@ -1,0 +1,53 @@
+{
+    "animationClip": 87,
+    "animationName": "Attack2",
+    "loop": false,
+    "nextCombo": "Attack3",
+    "playRate": 1.0,
+    "states": [
+        {
+            "endTime": 0.570423424243927,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.029033176600933075,
+            "type": "InputWindow",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.8619851469993591,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.6619851589202881,
+            "type": "TransitionWindow",
+            "value": 1.0
+        }
+    ]
+}

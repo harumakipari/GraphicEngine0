@@ -348,7 +348,8 @@ void GruxEnemy::Update(float deltaTime)
         // カメラがロックオンモードの時のみ表示する
         if (camera->GetMovementMode() == DarkCameraActor::CameraMode::LockOn)
         {
-            lockOnTargetMeshComponent->SetIsVisible(true);
+            //lockOnTargetMeshComponent->SetIsVisible(true);
+            lockOnTargetMeshComponent->SetIsVisible(false);
         }
         else
         {

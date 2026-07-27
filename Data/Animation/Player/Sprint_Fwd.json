@@ -1,66 +1,18 @@
 {
-    "animationClip": 52,
+    "animationClip": 79,
     "animationName": "Sprint_Fwd",
     "events": [
         {
             "parameter": "run_one_foot",
-            "time": 0.19908468425273895,
+            "time": 0.1069793701171875,
             "type": "PlaySE",
-            "value": 0.14000000059604645
+            "value": 0.23999999463558197
         },
         {
             "parameter": "run_two_foot",
-            "time": 0.3958807587623596,
+            "time": 0.39809292554855347,
             "type": "PlaySE",
-            "value": 0.10999999940395355
-        },
-        {
-            "parameter": "run_three_foot",
-            "time": 0.5972537994384766,
-            "type": "PlaySE",
-            "value": 0.11999999731779099
-        },
-        {
-            "parameter": "run_four_foot",
-            "time": 0.8009154796600342,
-            "type": "PlaySE",
-            "value": 0.10999999940395355
-        },
-        {
-            "parameter": "run_five_foot",
-            "time": 1.0045762062072754,
-            "type": "PlaySE",
-            "value": 0.10000000149011612
-        },
-        {
-            "parameter": "run_six_foot",
-            "time": 1.1990845203399658,
-            "type": "PlaySE",
-            "value": 0.09000000357627869
-        },
-        {
-            "parameter": "run_one_foot",
-            "time": 1.4004573822021484,
-            "type": "PlaySE",
-            "value": 0.10000000149011612
-        },
-        {
-            "parameter": "run_two_foot",
-            "time": 1.6018306016921997,
-            "type": "PlaySE",
-            "value": 0.10000000149011612
-        },
-        {
-            "parameter": "run_five_foot",
-            "time": 1.798627257347107,
-            "type": "PlaySE",
-            "value": 0.10000000149011612
-        },
-        {
-            "parameter": "run_six_foot",
-            "time": 1.990847110748291,
-            "type": "PlaySE",
-            "value": 0.10000000149011612
+            "value": 0.25999999046325684
         }
     ],
     "loop": false,

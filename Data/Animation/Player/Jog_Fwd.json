@@ -1,42 +1,18 @@
 {
-    "animationClip": 1,
+    "animationClip": 76,
     "animationName": "Jog_Fwd",
     "events": [
         {
             "parameter": "run_one_foot",
-            "time": 0.1788812130689621,
+            "time": 0.16929806768894196,
             "type": "PlaySE",
-            "value": 0.10000000149011612
+            "value": 0.14000000059604645
         },
         {
             "parameter": "run_two_foot",
-            "time": 0.5084384083747864,
+            "time": 0.5412281155586243,
             "type": "PlaySE",
-            "value": 0.10000000149011612
-        },
-        {
-            "parameter": "run_three_foot",
-            "time": 0.8226156234741211,
-            "type": "PlaySE",
-            "value": 0.10000000149011612
-        },
-        {
-            "parameter": "run_four_foot",
-            "time": 1.1520295143127441,
-            "type": "PlaySE",
-            "value": 0.10999999940395355
-        },
-        {
-            "parameter": "run_five_foot",
-            "time": 1.4630999565124512,
-            "type": "PlaySE",
-            "value": 0.11999999731779099
-        },
-        {
-            "parameter": "run_six_foot",
-            "time": 1.7913326025009155,
-            "type": "PlaySE",
-            "value": 0.09000000357627869
+            "value": 0.12999999523162842
         }
     ],
     "loop": false,
