@@ -372,6 +372,16 @@ void Player::Initialize(const Transform& transform)
     rushButtonImageComponent->SetPivot({ 0.5f,0.5f });
     rushButtonImageComponent->SetVisible(false);
     uiManager->Add(rushButtonImageComponent);
+    SetEulerRotation({ 0.0f,90.0f,0.0f });
+
+    // 操作説明UIを入れる
+    operateUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/operate_ui.png", "operate_ui");
+    operateUiComponent->SetWorldPosition({ 1000, 1000 });
+    operateUiComponent->SetSize({ 2400, 300 });
+    operateUiComponent->SetScale({ 0.3f,0.3f });
+    operateUiComponent->SetPivot({ 0.5f,0.5f });
+    uiManager->Add(operateUiComponent);
+
 }
 
 void Player::Update(float deltaTime)
@@ -1119,6 +1129,36 @@ void Player::ResetAnimationStateFlag()
     //swordEmissivePower = 0.0f;
     //Logger::Log(U8("アニメーションステート関連のフラグをリセットする"));
 }
+
+// イベントシーン開始時に呼ぶ処理
+void Player::StartEvent()
+{
+    // 操作UIを非表示する
+    if (operateUiComponent)
+    {
+        operateUiComponent->SetVisible(false);
+    }
+    // 入力を受け付けない
+    InputSystem::SetInputEnabled(false);
+    //　イベント中はplayerの透過処理をなくす
+    this->moviePerform = true;
+}
+
+// イベントシーン終了時に呼ぶ処理
+void Player::EndEvent()
+{
+    // 操作UIを表示する
+    if (operateUiComponent)
+    {
+        operateUiComponent->SetVisible(true);
+    }
+    // 入力を受け付ける
+    InputSystem::SetInputEnabled(true);
+    //　イベントが終わったのでplayerの透過処理を戻す
+    this->moviePerform = false;
+}
+
+
 
 // 火花エフェクトの生成
 void Player::SpawnSpark(DirectX::XMFLOAT3 pos)

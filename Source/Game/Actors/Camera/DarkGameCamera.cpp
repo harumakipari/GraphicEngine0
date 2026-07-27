@@ -149,7 +149,7 @@ void DarkCameraActor::RotateToPlayerForward()
 }
 
 // 外部のカメラアクターとのブレンド用の関数
-void DarkCameraActor::StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration)
+void DarkCameraActor::StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration, std::function<void()> finishExternalBlend)
 {
     externalBlendDuration = duration;
     externalStartPose = start;
@@ -158,6 +158,7 @@ void DarkCameraActor::StartExternalBlend(const CameraPose& start, const CameraPo
     externalBlendTime = 0.0f;
     desiredPitch = externalTargetPose.pitch;
     desiredYaw = externalTargetPose.yaw;
+    this->finishedExternalBlend = finishExternalBlend;
 }
 
 // ムービーカメラコンポーネントからカメラポーズを作成する
@@ -217,6 +218,11 @@ void DarkCameraActor::UpdateExternalBlend(float deltaTime)
 
     if (t >= 1.0f)
     {
+        if (finishedExternalBlend)
+        {
+            finishedExternalBlend();
+            finishedExternalBlend = nullptr;
+        }
         isExternalBlending = false;
         currentMode = CameraMode::TPS;
     }

@@ -180,6 +180,7 @@ protected:
     std::unordered_map<RenderPass, std::vector<RenderHook>> renderHooks;
 
     TemporalAA temporalAa;
+    bool useTAA = true;
 
     std::shared_ptr<shadow_map> shadowMap;
     const uint32_t shadowmap_width = 2048;

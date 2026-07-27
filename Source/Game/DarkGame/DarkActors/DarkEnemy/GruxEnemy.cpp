@@ -255,7 +255,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     auto uiManager = GetOwnerScene()->GetUIManager();
     gruxNameImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Grux_name.png", "Grux_name");
     gruxNameImageComponent->SetWorldPosition({ 995, 900 });
-    gruxNameImageComponent->SetScale({ 1.2f,1.2f });
+    gruxNameImageComponent->SetScale({ 0.8f,0.8f });
     gruxNameImageComponent->SetSize({ 600, 200 });
     gruxNameImageComponent->SetPivot({ 0.5f,0.5f });
     gruxNameImageComponent->SetColor(DirectX::XMFLOAT4{ 1.0f,1.0f,1.0f,0.0f });

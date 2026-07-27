@@ -99,8 +99,11 @@ public:
     // アニメーションステート関連のフラグをリセットする
     void ResetAnimationStateFlag();
 
-    // プレイヤーの入力を受け付けるかどうかを設定する
-    void SetInputEnabled(const bool enabled) { InputSystem::SetInputEnabled(enabled); }
+    // イベントシーン開始時に呼ぶ処理
+    void StartEvent();
+
+    // イベントシーン終了時に呼ぶ処理
+    void EndEvent();
 
     // 軌跡を描画する処理
     void RenderTrail(ID3D11DeviceContext* immediateContext);
@@ -160,9 +163,6 @@ public:
 
     // ボス戦時かどうかを設定する
     void SetIsBossBattle(const bool isBossBattle) { this->isBossBattle = isBossBattle; }
-
-    // 演出中かどうかを設定する
-    void SetIsMoviePerform(const bool moviePerform) { this->moviePerform = moviePerform; }
 
 private:
     // 動作更新処理
@@ -338,6 +338,9 @@ private:
     bool moviePerform = false;
 
     AnimationController::MoveDirection currentMoveDir = AnimationController::MoveDirection::Idle;
+
+    // 操作UI
+    std::shared_ptr<UIImageComponent> operateUiComponent;
 
     friend class PlayerStateBase;
 };

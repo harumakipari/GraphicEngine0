@@ -57,7 +57,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
             doorMovieState = DoorMovieState::UpPlayerMovie;
             if (player)
             {
-                player->SetInputEnabled(false); // 入力を無効化する
+                // イベントシーンが開始したことを通知する
+                player->StartEvent();
                 player->PlayBodyAnimation("Recall_0", false);
             }
             // 部屋のシャンデリアの炎の光を消す
@@ -239,11 +240,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {
             if (player)
             {
-                player->SetInputEnabled(true); // 入力を有効化する
                 // カメラをボス戦時の状態に変更する
                 player->SetIsBossBattle(true);
-                // 演出が終わったことを通知する
-                player->SetIsMoviePerform(false);
             }
             //カメラを三人称に戻す
             if (scene->GetCameraManager()->IsUseMovie())
@@ -265,7 +263,15 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 {
                     DarkCameraActor::CameraPose start = darkCameraActor->CreatePoseFromMovie(movieCamera);
                     DarkCameraActor::CameraPose target = darkCameraActor->CreateFocusPose();
-                    darkCameraActor->StartExternalBlend(start, target, 2.0f);
+                    darkCameraActor->StartExternalBlend(start, target, 2.0f, [player]()
+                        {
+                            if (player)
+                            {
+                                // 演出がが終わったことを通知する
+                                player->EndEvent();
+                            }
+                        }
+                    );
                     scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
                 }
 #endif // 0
@@ -314,9 +320,9 @@ void MovieCameraManagerActor::PlayDoorMovie()
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
     {
         // 演出が始まったことをことを通知する
-        player->SetIsMoviePerform(true);
-        // プレイヤーの操作を無効化する
-        player->SetInputEnabled(false);
+        player->StartEvent();
+
+
         // プレイヤーの位置を固定する
         DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
         player->SetPosition(fixedPosition); // プレイヤーの位置を固定する座標に設定

@@ -174,7 +174,15 @@ void SceneBase::Update(float deltaTime)
         cameraManager->ToggleCamera(this);
     }
 #ifdef _DEBUG
-    InputSystem::SetCursorVisible(true);
+    if (!Framework::showEditor)
+    {
+        InputSystem::SetCursorVisible(false);
+    }
+    else
+    {
+        InputSystem::SetCursorVisible(true);
+    }
+
 
     if (InputSystem::GetInputState("F7", InputStateMask::Trigger))
     {// シネマカメラとゲームカメラの切り替え
@@ -729,7 +737,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     {
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::WIREFRAME_CULL_NONE);
-        Physics::Instance().Render(cameraView, cameraProjection, { lightDirection.x,lightDirection.y,lightDirection.z });
+        //Physics::Instance().Render(cameraView, cameraProjection, { lightDirection.x,lightDirection.y,lightDirection.z });
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
         DebugRender::Render(immediateContext);
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::WIREFRAME_CULL_NONE);
@@ -742,10 +750,16 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     frameBuffer->Deactivate(immediateContext);
     temporalAa.Apply(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)]);
 #if 1
-    sceneEffectManager->ApplyAll(immediateContext, temporalAa.history[temporalAa.previous].srv.Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
-        gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)], cascadedShadowMaps->depthMap().Get());
-    //sceneEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
-    //    gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)], cascadedShadowMaps->depthMap().Get());
+    if (useTAA)
+    {
+        sceneEffectManager->ApplyAll(immediateContext, temporalAa.history[temporalAa.previous].srv.Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
+            gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)], cascadedShadowMaps->depthMap().Get());
+    }
+    else
+    {
+        sceneEffectManager->ApplyAll(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
+            gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)], cascadedShadowMaps->depthMap().Get());
+    }
 
     ID3D11ShaderResourceView* nullSRVs[16] = {};
     immediateContext->PSSetShaderResources(0, 16, nullSRVs);
@@ -846,7 +860,7 @@ void SceneBase::DrawGui()
     DrawViewport();
     if (!Framework::showEditor)
     {
-        useDrawDebug = false;
+        //useDrawDebug = false;
         return;
     }
     DrawGizmo();//
@@ -1055,6 +1069,7 @@ void SceneBase::DrawPostEffectTab()
 
 
     ImGui::SliderFloat("objectIblIntensity", &shader.objectIblIntensity, 0.0f, +30.0f);
+    ImGui::Checkbox("Enable TAA", &useTAA);
     CheckboxInt("Enable ToneMapping", &shader.enableToneMapping);
     CheckboxInt("Enable SSAO", &shader.enableSsao);
     CheckboxInt("Enable SSR", &shader.enableSsr);

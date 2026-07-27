@@ -172,6 +172,12 @@ void GameScene::Start()
     savedState.ApplyScenePreset(Scene::GetCurrentScene());
 #endif // 0
 
+
+    // カメラをplayerの前方向を向くように変更
+    darkCameraActor->RotateToPlayerForward();
+
+    player->SetEulerRotation({ 0.0f,90.0f,0.0f });
+
     // シーンが切り替わった時に
     SceneTransitionManager::Instance().NotifySceneChanged();
 
@@ -290,7 +296,7 @@ void GameScene::SetUpActors()
     auto enemyEyeActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemyEyeActor>("GruxEnemyEyeActor", bossEyeTr);
 
     Transform iceTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto iceActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("IceFragmentEmitterActor",iceTr);
+    auto iceActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("IceFragmentEmitterActor", iceTr);
 
 
 #if 0
@@ -370,9 +376,6 @@ void GameScene::SetUpActors()
     }
 
 }
-
-
-
 
 bool GameScene::Uninitialize(ID3D11Device* device)
 {

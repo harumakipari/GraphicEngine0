@@ -109,7 +109,7 @@ public:
     void RotateToPlayerForward();
 
     // 外部のカメラアクターとのブレンド用の関数
-    void StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration);
+    void StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration,std::function<void()> finishExternalBlend);
 
     // ムービーカメラコンポーネントからカメラポーズを作成する
     CameraPose CreatePoseFromMovie(const std::shared_ptr<MovieCameraComponent>& movieCamera);
@@ -223,5 +223,6 @@ private:
     float externalBlendDuration = 0.0f;
 
     bool isExternalBlending = false;
+    std::function<void()> finishedExternalBlend;
 };
 
