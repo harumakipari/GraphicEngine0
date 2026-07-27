@@ -209,7 +209,18 @@ void Player::Initialize(const Transform& transform)
         controller->AddBlendAnimation("Jog_FwdLeft", -1.0f, 1.0f);
         controller->AddBlendAnimation("Jog_FwdRight", 1.0f, 1.0f);
         controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
-#if 0
+
+        controller->AddForwardBlendAnimation("Jog_Fwd",  0.0f, 1.0f );
+        controller->AddForwardBlendAnimation("Jog_FwdLeft", -1.0f, 0.0f);
+        controller->AddForwardBlendAnimation("Jog_FwdRight", 1.0f, 0.0f);
+
+        controller->AddBackwardBlendAnimation("Jog_Bwd", 0.0f, -1.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdLeft", 1.0f, 0.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdRight", -1.0f, 0.0f);
+
+#if 1
+
+
         controller->AddBlendAnimation("Walk_Fwd", 0.0f, 0.5f);
         controller->AddBlendAnimation("Walk_Bwd", 0.0f, -0.5f);
         controller->AddBlendAnimation("Walk_Left", -0.5f, 0.0f);

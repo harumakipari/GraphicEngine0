@@ -41,6 +41,12 @@ public:
         Run
     };
 
+    enum class BlendGroup:uint8_t
+    {
+        Forward,
+        Backward
+    };
+
     struct SpeedWeight
     {
         float idle = 0.0f;
@@ -217,6 +223,24 @@ public:
         locomotionBlendSpace.AddAnimation(clip, { x,y });
     }
 
+    // ブレンドスペースでブレンドするアニメーションを追加する
+    // x +右-左　y +前-後
+    void AddForwardBlendAnimation(const std::string& name, float x, float y)
+    {
+        const size_t clip = animationNameToIndex_[name];
+        forwardBlendSpace.AddAnimation(clip, { x,y });
+    }
+
+    // ブレンドスペースでブレンドするアニメーションを追加する
+    // x +右-左　y +前-後
+    void AddBackwardBlendAnimation(const std::string& name, float x, float y)
+    {
+        const size_t clip = animationNameToIndex_[name];
+        backwardBlendSpace.AddAnimation(clip, { x,y });
+    }
+
+
+
     void SetBlendInput(const float x, const float y, const float speed)
     {
         blendInput = { x, y };
@@ -315,7 +339,12 @@ private:
     // Notifyの詳細設定のImGui描画
     void DrawNotifyInspector(AnimationNotifyAsset& asset);
 
+public:
+    // ブレンドスペース
+    BlendSpace forwardBlendSpace;
+    BlendSpace backwardBlendSpace;
 
+private:
     std::vector<SkeletalMeshComponent*> extraTargets_;
     SkeletalMeshComponent* target_ = nullptr;
     Character* owner = nullptr;
@@ -426,6 +455,9 @@ private:
 
     // ブレンドスペース
     BlendSpace locomotionBlendSpace;
+
+    BlendGroup currentGroup = BlendGroup::Forward;;
+
     // ブレンドスペースで使用する入力値
     DirectX::XMFLOAT2 blendInput;
     size_t locomotionClip;

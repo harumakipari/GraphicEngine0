@@ -1174,24 +1174,68 @@ float AnimationController::GetLocomotionDuration()
 void AnimationController::UpdateBlendSpace(float deltaTime)
 {
     Logger::Log("BlendSpace Update");
-#if 0
-    BlendPair pair = CalculateBlendPair(blendInput);
+#if 1
+    std::vector<BlendSpace::BlendResult> weights;
 
+    //if (blendInput.y >= 0)
+    //{
+    //    weights = forwardBlendSpace.CalculateWeights(blendInput);
+    //}
+    //else
+    //{
+    //    weights = backwardBlendSpace.CalculateWeights(blendInput);
+    //}
 
+    constexpr float ChangeThreshold = 0.2f;
 
-    size_t clipA = pair.clipA;
-    size_t clipB = pair.clipB;
-    float weight = pair.weight;
+    if (currentGroup == BlendGroup::Forward)
+    {
+        if (blendInput.y < -ChangeThreshold)
+        {
+            currentGroup = BlendGroup::Backward;
+            locomotionTime = 0.0f;
+        }
+    }
+    else
+    {
+        if (blendInput.y > ChangeThreshold)
+        {
+            currentGroup = BlendGroup::Forward;
+            locomotionTime = 0.0f;
+        }
+    }
+    if (currentGroup == BlendGroup::Forward)
+    {
+        weights = forwardBlendSpace.CalculateWeights(blendInput);
+    }
+    else
+    {
+        weights = backwardBlendSpace.CalculateWeights(blendInput);
+    }
 
-    float durationA = target_->model->animations[clipA].duration;
-    float durationB = target_->model->animations[clipB].duration;
-    float normalizedTime = locomotionTime / durationA;
-    float timeA = normalizedTime * durationA;
-    float timeB = normalizedTime * durationB;
+    for (size_t i = 0; i < weights.size(); i++)
+    {
+        size_t clip = weights[i].clip;
 
-    target_->model->Animate(clipA, timeA, blendSpaceClipA);
-    target_->model->Animate(clipB, timeB, blendSpaceClipB);
-    target_->model->BlendAnimations(blendSpaceClipA, blendSpaceClipB, weight, blendSpaceNodes);
+        float duration = target_->model->animations[clip].duration;
+        float normalized = locomotionTime / duration;
+        float time = normalized * duration;
+
+        target_->model->Animate(clip, time, blendSpacePoses[i]);
+    }
+
+    BlendResult blend;
+    blend.count = 0;
+
+    for (auto& w : weights)
+    {
+        blend.samples[blend.count].clip = w.clip;
+        blend.samples[blend.count].weight = w.weight;
+        blend.count++;
+    }
+
+    target_->model->BlendAnimations(blendSpacePoses,blend,blendSpaceNodes);
+
 
 #else
     BlendResult blend = CalculateBlendSpace(blendInput, blendSpeed);
@@ -1225,8 +1269,8 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
     Logger::Log("blendCount:" + std::to_string(blend.count));
     target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
-
 #endif // 0
+
 
     // BlendSpace‚Ö‚Ì‘JˆÚ
     if (blendSpaceTransition)
@@ -1283,7 +1327,7 @@ AnimationController::BlendPair AnimationController::CalculateBlendPair(const Dir
     /*auto& samples = locomotionBlendSpace.GetSamples();
     if (samples.size() < 4)
         return result;*/
-    // “ü—Í‚È‚µ
+        // “ü—Í‚È‚µ
     if (std::abs(input.x) <= FLT_EPSILON && std::abs(input.y) <= FLT_EPSILON)
     {
         result.directionA = MoveDirection::Idle;
