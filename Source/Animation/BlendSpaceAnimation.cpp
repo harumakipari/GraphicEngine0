@@ -4,24 +4,57 @@
 // ƒCƒ“ƒvƒbƒg‚©‚ç2DƒuƒŒƒ“ƒh‹óŠÔ‚Å‚Ìd‚İ‚ğŒvZ‚·‚é
 std::vector<BlendSpace::BlendResult> BlendSpace::CalculateWeights(const DirectX::XMFLOAT2 input) const
 {
-#if 0
+#if 1
     std::vector<BlendResult> result;
-    float totalWeight = 0.0f;
-    for (auto& sample : samples)
+
+    if (samples.empty())
+        return result;
+
+    float inputAngle = DirectX::XMConvertToDegrees(atan2f(input.x, fabsf(input.y)));
+    float minDistanceA = FLT_MAX;
+    float minDistanceB = FLT_MAX;
+
+    const Sample* sampleA = nullptr;
+    const Sample* sampleB = nullptr;
+
+    for (const auto& sample : samples)
     {
-        float dx = input.x - sample.position.x;
-        float dy = input.y - sample.position.y;
-        float distance = sqrtf(dx * dx + dy * dy);
-        // 0œZ–h~
-        float weight = 1.0f / (distance + 0.001f);
-        result.push_back({ sample.clip,weight });
-        totalWeight += weight;
+        float distance =
+            fabsf(inputAngle - sample.angle);
+
+        if (distance < minDistanceA)
+        {
+            minDistanceB = minDistanceA;
+            sampleB = sampleA;
+
+            minDistanceA = distance;
+            sampleA = &sample;
+        }
+        else if (distance < minDistanceB)
+        {
+            minDistanceB = distance;
+            sampleB = &sample;
+        }
     }
-    // ³‹K‰»
-    for (auto& r : result)
+
+    if (sampleA && sampleB == nullptr)
     {
-        r.weight /= totalWeight;
+        result.push_back({ sampleA->clip,1.0f });
+        return result;
     }
+
+    float total = minDistanceA + minDistanceB;
+
+    result.push_back({
+        sampleA->clip,
+        minDistanceB / total
+        });
+
+    result.push_back({
+        sampleB->clip,
+        minDistanceA / total
+        });
+
     return result;
 #else
     std::vector<BlendResult> result;

@@ -22,7 +22,7 @@ public:
     struct Sample
     {
         size_t clip;
-        DirectX::XMFLOAT2 position;
+        float angle = 0.0f;;
     };
 
     struct BlendResult
@@ -31,10 +31,9 @@ public:
         float weight;
     };
 public:
-
-    void AddAnimation(const size_t clip, const DirectX::XMFLOAT2 position)
+    void AddAnimation(const size_t clip, float angle)
     {
-        samples.push_back({ clip, position });
+        samples.push_back({ clip, angle });
     }
 
     const std::vector<Sample>& GetSamples() const

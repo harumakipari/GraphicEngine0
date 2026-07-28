@@ -217,29 +217,19 @@ public:
 
     // ブレンドスペースでブレンドするアニメーションを追加する
     // x +右-左　y +前-後
-    void AddBlendAnimation(const std::string& name, float x, float y)
+    void AddForwardBlendAnimation(const std::string& name, float angle)
     {
         const size_t clip = animationNameToIndex_[name];
-        locomotionBlendSpace.AddAnimation(clip, { x,y });
+        forwardBlendSpace.AddAnimation(clip, angle);
     }
 
     // ブレンドスペースでブレンドするアニメーションを追加する
     // x +右-左　y +前-後
-    void AddForwardBlendAnimation(const std::string& name, float x, float y)
+    void AddBackwardBlendAnimation(const std::string& name, float angle)
     {
         const size_t clip = animationNameToIndex_[name];
-        forwardBlendSpace.AddAnimation(clip, { x,y });
+        backwardBlendSpace.AddAnimation(clip, angle);
     }
-
-    // ブレンドスペースでブレンドするアニメーションを追加する
-    // x +右-左　y +前-後
-    void AddBackwardBlendAnimation(const std::string& name, float x, float y)
-    {
-        const size_t clip = animationNameToIndex_[name];
-        backwardBlendSpace.AddAnimation(clip, { x,y });
-    }
-
-
 
     void SetBlendInput(const float x, const float y, const float speed)
     {
