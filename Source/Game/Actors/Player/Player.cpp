@@ -968,7 +968,6 @@ void Player::UpdateLocomotionAnimation()
 // TPSモードの移動時の更新処理
 void Player::UpdateTPSLocomotion()
 {
-#if 1
     float speed = characterMovementComponent->GetInputMagnitude();
     bool dash = InputSystem::GetInputState("GamePadB", InputStateMask::Press);
 
@@ -1008,49 +1007,20 @@ void Player::UpdateTPSLocomotion()
                 SetLocomotionMode(LocomotionMode::Idle);
         }
         break;
-    }
-
-    auto move = inputComponent->GetMoveInput();
-    GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
-
-#else
-    float speed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-    bool dash = InputSystem::GetInputState("GamePadB", InputStateMask::Press);
-
-    // ダッシュ条件
-    if (dash && speed >= 0.6f)
-    {
-        SetLocomotionMode(LocomotionMode::Dash);
-        return;
-    }
-
-    switch (locomotionMode)
-    {
-    case LocomotionMode::Idle:
-        if (speed > 0.4f)
-            SetLocomotionMode(LocomotionMode::TPSWalk);
-        break;
-
-    case LocomotionMode::TPSWalk:
-        if (speed <= 0.4f)
-            SetLocomotionMode(LocomotionMode::Idle);
-        else if (speed >= 0.6f)
-            SetLocomotionMode(LocomotionMode::TPSRun);
-        break;
-
-    case LocomotionMode::TPSRun:
-        if (speed < 0.55f)
-            SetLocomotionMode(LocomotionMode::TPSWalk);
-        break;
-    case LocomotionMode::Dash:
-        if (!dash)
+    // Focus / LockOn から TPS に戻った時
+    case LocomotionMode::LockOnBlendWalk:
+    case LocomotionMode::LockOnBlendRun:
+        if (speed >= 0.6f)
         {
-            if (speed >= 0.6f)
-                SetLocomotionMode(LocomotionMode::TPSRun);
-            else if (speed > 0.4f)
-                SetLocomotionMode(LocomotionMode::TPSWalk);
-            else
-                SetLocomotionMode(LocomotionMode::Idle);
+            SetLocomotionMode(LocomotionMode::TPSRun);
+        }
+        else if (speed > 0.0f)
+        {
+            SetLocomotionMode(LocomotionMode::TPSWalk);
+        }
+        else
+        {
+            SetLocomotionMode(LocomotionMode::Idle);
         }
         break;
     }
@@ -1058,7 +1028,6 @@ void Player::UpdateTPSLocomotion()
     auto move = inputComponent->GetMoveInput();
     GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
 
-#endif // 0
 }
 
 void Player::UpdateLockOnLocomotion()
@@ -1102,32 +1071,25 @@ void Player::UpdateLockOnLocomotion()
                 SetLocomotionMode(LocomotionMode::Idle);
         }
         break;
+    case LocomotionMode::TPSWalk:
+    case LocomotionMode::TPSRun:
+        if (speed >= 0.6f)
+        {
+            SetLocomotionMode(LocomotionMode::LockOnBlendRun);
+        }
+        else if (speed > 0.0f)
+        {
+            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
+        }
+        else
+        {
+            SetLocomotionMode(LocomotionMode::Idle);
+        }
+        break;
     }
 
     auto move = inputComponent->GetMoveInput();
     GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
-
-
-    //auto controller = GetBodyAnimationController();
-    //auto move = inputComponent->GetMoveInput();
-    //AnimationController::MoveDirection dir =
-    //    controller->CalculateMoveDirection({ move.x, move.z }, currentMoveDir);
-
-    //if (dir != currentMoveDir)
-    //{
-    //    currentMoveDir = dir;
-
-    //    AnimationController::MoveSpeed speedType =
-    //        locomotionMode == LocomotionMode::LockOnBlendRun ?
-    //        AnimationController::MoveSpeed::Run :
-    //        AnimationController::MoveSpeed::Walk;
-
-    //    std::string animationName =
-    //        controller->GetBlendSpaceAnimationName(currentMoveDir, AnimationController::MoveSpeed::Run);
-    //    Logger::Log("LockOnBlendRuns animation Name: " + animationName);
-
-    //    PlayBodyAnimation(animationName, true, true, 0.2f, true);
-    //}
 
 }
 

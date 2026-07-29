@@ -45,9 +45,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     const auto& asset = animationNotifyAssets[rateClip];
     float curveRate = 1.0f;
 
-
-
-
     switch (transitionState)
     {
     case AnimationTransitionState::Inprogress:
