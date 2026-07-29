@@ -76,10 +76,14 @@ void PlayerRunningState::Exit()
 
 void PlayerDashState::Enter()
 {
+#if 1
+    owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f, false);
+    player->characterMovementComponent->SetFixedSpeed(0.0f);
+#else 
     owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f, true);
-
     // スピードを変更する
     player->characterMovementComponent->SetFixedSpeed(player->dashSpeed);
+#endif
 
 }
 

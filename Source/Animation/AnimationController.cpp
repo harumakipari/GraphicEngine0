@@ -1183,30 +1183,57 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
     BlendGroup previousGroup = currentGroup;
 
+    // 最後の切り替えからの経過時間を進める
+    groupHoldElapsed += deltaTime;
+
     const float oldDuration = GetLocomotionDuration(previousGroup);
     float phase = 0.0f;
 
     if (oldDuration > FLT_EPSILON)
     {
         phase = locomotionTime / oldDuration;
-        phase = phase - floorf(phase);
+        phase -= floorf(phase);
     }
-
+    // 現在Forwardグループの場合
     if (currentGroup == BlendGroup::Forward)
     {
+        // 後ろ方向へ十分入力されたら、Backward変更を予約する
         if (blendInput.y < -ChangeThreshold)
         {
-            currentGroup = BlendGroup::Backward;
-            //locomotionTime = 0.0f;
+            pendingGroup = BlendGroup::Backward;
+            hasPendingGroupChange = true;
+        }
+        // 前方向へ明確に戻った場合は、予約を取り消す
+        else if (blendInput.y > ChangeThreshold)
+        {
+            hasPendingGroupChange = false;
         }
     }
+    // 現在Backwardグループの場合
     else
     {
+        // 前方向へ十分入力されたら、Forward変更を予約する
         if (blendInput.y > ChangeThreshold)
         {
-            currentGroup = BlendGroup::Forward;
-            //locomotionTime = 0.0f;
+            pendingGroup = BlendGroup::Forward;
+            hasPendingGroupChange = true;
         }
+        // 後ろ方向へ明確に戻った場合は、予約を取り消す
+        else if (blendInput.y < -ChangeThreshold)
+        {
+            hasPendingGroupChange = false;
+        }
+    }
+
+    // 真横付近では、現在グループと予約状態を維持する
+    // 最低保持時間が経過していれば、予約したグループへ変更する
+    if (hasPendingGroupChange &&
+        pendingGroup != currentGroup &&
+        groupHoldElapsed >= minimumGroupHoldTime)
+    {
+        currentGroup = pendingGroup;
+        hasPendingGroupChange = false;
+        groupHoldElapsed = 0.0f;
     }
 
     bool groupChanged = previousGroup != currentGroup;
@@ -1216,7 +1243,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         groupTransitionStartNodes = finalNodes;
         groupTransitionElapsed = 0.0f;
         groupTransition = true;
-
         blendSpaceTransition = false;
 
         const float newDuration = GetLocomotionDuration(currentGroup);

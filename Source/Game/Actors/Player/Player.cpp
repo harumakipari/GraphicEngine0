@@ -96,7 +96,6 @@ void Player::Initialize(const Transform& transform)
         int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
-#if 1
         // 透明なモデルのアニメーションの動きを追加
         controller->AddTarget(skeletalMeshBlendComponent.get());
 
@@ -174,42 +173,45 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Jog_Left5", 71);
         controller->AddAnimation("Jog_Right5", 72);
 
-        controller->AddAnimation("Jog_Bwd", 73);
-        controller->AddAnimation("Jog_BwdLeft", 74);
-        controller->AddAnimation("Jog_BwdRight", 75);
-        controller->AddAnimation("Jog_Fwd", 76);
-        controller->AddAnimation("Jog_FwdLeft", 77);
-        controller->AddAnimation("Jog_FwdRight", 78);
-        controller->AddAnimation("Sprint_Fwd", 79);
-        controller->AddAnimation("Walk_Bwd", 80);
-        controller->AddAnimation("Walk_BwdLeft", 81);
-        controller->AddAnimation("Walk_BwdRight", 82);
-        controller->AddAnimation("Walk_Fwd", 83);
-        controller->AddAnimation("Walk_FwdLeft", 84);
-        controller->AddAnimation("Walk_FwdRight", 85);
+        controller->AddAnimation("1_Jog_Bwd", 73);
+        controller->AddAnimation("1_Jog_BwdLeft", 74);
+        controller->AddAnimation("1_Jog_BwdRight", 75);
+        controller->AddAnimation("1_Jog_Fwd", 76);
+        controller->AddAnimation("1_Jog_FwdLeft", 77);
+        controller->AddAnimation("1_Jog_FwdRight", 78);
+        controller->AddAnimation("1_Sprint_Fwd", 79);
+        controller->AddAnimation("1_Walk_Bwd", 80);
+        controller->AddAnimation("1_Walk_BwdLeft", 81);
+        controller->AddAnimation("1_Walk_BwdRight", 82);
+        controller->AddAnimation("1_Walk_Fwd", 83);
+        controller->AddAnimation("1_Walk_FwdLeft", 84);
+        controller->AddAnimation("1_Walk_FwdRight", 85);
 
         controller->AddAnimation("Attack1", 86);
         controller->AddAnimation("Attack2", 87);
         controller->AddAnimation("Attack3", 88);
 
-        controller->AddAnimation("Jog_BwdLeft45", 89);
-        controller->AddAnimation("Jog_BwdRight45", 90);
-        controller->AddAnimation("Jog_FwdLeft45", 91);
-        controller->AddAnimation("Jog_FwdRight45", 92);
+        controller->AddAnimation("1_Jog_BwdLeft45", 89);
+        controller->AddAnimation("1_Jog_BwdRight45", 90);
+        controller->AddAnimation("1_Jog_FwdLeft45", 91);
+        controller->AddAnimation("1_Jog_FwdRight45", 92);
+
+        controller->AddAnimation("Jog_Bwd", 93);
+        controller->AddAnimation("Jog_BwdLeft45", 94);
+        controller->AddAnimation("Jog_BwdLeft90", 95);
+        controller->AddAnimation("Jog_BwdRight45", 96);
+        controller->AddAnimation("Jog_BwdRight90", 97);
+        controller->AddAnimation("Jog_Fwd", 98);
+        controller->AddAnimation("Jog_FwdLeft45", 99);
+        controller->AddAnimation("Jog_FwdLeft90", 100);
+        controller->AddAnimation("Jog_FwdRight45", 101);
+        controller->AddAnimation("Jog_FwdRight90", 102);
+        controller->AddAnimation("Sprint_Fwd", 103);
+        controller->AddAnimation("Walk_Fwd", 104);
 
 
-#else
-        controller->AddAnimation("Idle0", 0);
-        controller->AddAnimation("Idle1", 1);
-        controller->AddAnimation("Idle2", 2);
-        controller->AddAnimation("Idle3", 3);
-        controller->AddAnimation("Idle4", 4);
-        controller->AddAnimation("Idle", 5);
-        controller->AddAnimation("Jog_Bwd", 7);
-        controller->AddAnimation("Jog_Fwd", 8);
-        controller->AddAnimation("Jog_Left", 9);
-        controller->AddAnimation("Jog_Right", 10);
-#endif // 0
+
+
 
 
         // ブレンドスペースに追加
@@ -221,14 +223,14 @@ void Player::Initialize(const Transform& transform)
         //controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
 
         controller->AddForwardBlendAnimation("Jog_Fwd", 0.0f);
-        controller->AddForwardBlendAnimation("Jog_FwdLeft", -90.0f);
-        controller->AddForwardBlendAnimation("Jog_FwdRight", 90.0f);
+        controller->AddForwardBlendAnimation("Jog_FwdLeft90", -90.0f);
+        controller->AddForwardBlendAnimation("Jog_FwdRight90", 90.0f);
         controller->AddForwardBlendAnimation("Jog_FwdRight45", 45.0f);
         controller->AddForwardBlendAnimation("Jog_FwdLeft45", -45.0f);
 
         controller->AddBackwardBlendAnimation("Jog_Bwd", 0.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdLeft", 90.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdRight", -90.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdLeft90", 90.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdRight90", -90.0f);
         controller->AddBackwardBlendAnimation("Jog_BwdRight45", -45.0f);
         controller->AddBackwardBlendAnimation("Jog_BwdLeft45", 45.0f);
 
@@ -1055,7 +1057,6 @@ void Player::UpdateLockOnLocomotion()
         else if (speed >= 0.6f)
             SetLocomotionMode(LocomotionMode::LockOnBlendRun);
         break;
-
     case LocomotionMode::LockOnBlendRun:
         if (speed < 0.55f)
             SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
@@ -1426,17 +1427,20 @@ void Player::SetLocomotionMode(LocomotionMode mode)
     {
     case LocomotionMode::TPSWalk:
         controller->SetUseBlendSpace(false);
-        PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, true);
+        characterMovementComponent->SetFixedSpeed(0.0f);
+        PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, false);
         break;
 
     case LocomotionMode::TPSRun:
         controller->SetUseBlendSpace(false);
-        PlayBodyAnimation("Jog_Fwd", true, true, 0.2f, true);
+        characterMovementComponent->SetFixedSpeed(0.0f);
+        PlayBodyAnimation("Jog_Fwd", true, true, 0.2f, false);
         break;
 
     case LocomotionMode::LockOnBlendWalk:
     {
         //auto move = inputComponent->GetMoveInput();
+
         controller->SetUseBlendSpace(true);
         //currentMoveDir = controller->CalculateMoveDirection({ move.x,move.z }, currentMoveDir);
         //std::string animationName = controller->GetBlendSpaceAnimationName(currentMoveDir, AnimationController::MoveSpeed::Run);

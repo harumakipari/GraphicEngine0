@@ -422,7 +422,7 @@ private:
 
     bool enableRootMotion = true;  // ルートモーションがある場合
 
-    bool ignoreRootMotion = true; // ルートモーションを無視する
+    bool ignoreRootMotion = false; // ルートモーションを無視する
 
     float blendElapsedTime = 0.0f;  // ブレンド時に経過した時間
 
@@ -447,7 +447,15 @@ private:
     // ブレンドスペース
     BlendSpace locomotionBlendSpace;
 
-    BlendGroup currentGroup = BlendGroup::Forward;;
+    BlendGroup currentGroup = BlendGroup::Forward;
+    // グループ変更待機
+    BlendGroup pendingGroup = BlendGroup::Forward;
+    bool hasPendingGroupChange = false;
+    // グループ切り替え後、再び切り替え可能になるまでの時間
+    float minimumGroupHoldTime = 0.8f;
+    // 最後にグループを切り替えてからの経過時間
+    float groupHoldElapsed = minimumGroupHoldTime;
+
 
     // ブレンドスペースで使用する入力値
     DirectX::XMFLOAT2 blendInput;
