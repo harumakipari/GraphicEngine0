@@ -221,6 +221,7 @@ public:
     {
         const size_t clip = animationNameToIndex_[name];
         forwardBlendSpace.AddAnimation(clip, angle);
+
     }
 
     // ブレンドスペースでブレンドするアニメーションを追加する
@@ -285,7 +286,7 @@ public:
 
 private:
     // それぞれのアニメーション再生時間を取る
-    float GetLocomotionDuration();
+    float GetLocomotionDuration(BlendGroup group);
 
     // ブレンドスペースを更新する
     void UpdateBlendSpace(float deltaTime);

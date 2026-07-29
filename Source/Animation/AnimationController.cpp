@@ -1156,12 +1156,11 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
 }
 
 // それぞれのアニメーション再生時間を取る
-float AnimationController::GetLocomotionDuration()
+float AnimationController::GetLocomotionDuration(const BlendGroup group)
 {
-    if (blendInput.y >= 0.0f)
+    if (group == BlendGroup::Forward)
     {
-        return target_->model->animations[
-            animationNameToIndex_["Jog_Fwd"]].duration;
+        return target_->model->animations[animationNameToIndex_["Jog_Fwd"]].duration;
     }
     else
     {
@@ -1173,26 +1172,27 @@ float AnimationController::GetLocomotionDuration()
 // ブレンドスペースを更新する
 void AnimationController::UpdateBlendSpace(float deltaTime)
 {
-#if 1
     std::vector<BlendSpace::BlendResult> weights;
 
-    //if (blendInput.y >= 0)
-    //{
-    //    weights = forwardBlendSpace.CalculateWeights(blendInput);
-    //}
-    //else
-    //{
-    //    weights = backwardBlendSpace.CalculateWeights(blendInput);
-    //}
-
     constexpr float ChangeThreshold = 0.2f;
+
+    BlendGroup previousGroup = currentGroup;
+
+    const float oldDuration = GetLocomotionDuration(previousGroup);
+    float phase = 0.0f;
+
+    if (oldDuration > FLT_EPSILON)
+    {
+        phase = locomotionTime / oldDuration;
+        phase = phase - floorf(phase);
+    }
 
     if (currentGroup == BlendGroup::Forward)
     {
         if (blendInput.y < -ChangeThreshold)
         {
             currentGroup = BlendGroup::Backward;
-            locomotionTime = 0.0f;
+            //locomotionTime = 0.0f;
         }
     }
     else
@@ -1200,9 +1200,26 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         if (blendInput.y > ChangeThreshold)
         {
             currentGroup = BlendGroup::Forward;
-            locomotionTime = 0.0f;
+            //locomotionTime = 0.0f;
         }
     }
+
+    bool groupChanged = previousGroup != currentGroup;
+    if (groupChanged)
+    {
+        const float newDuration = GetLocomotionDuration(currentGroup);
+
+        if (newDuration > FLT_EPSILON)
+        {
+            locomotionTime = phase * newDuration;
+        }
+    }
+
+    Logger::Log(std::format(
+        "InputY: %f, Group: %s",
+        blendInput.y,
+        currentGroup == BlendGroup::Forward ? "Forward" : "Backward"));
+
     if (currentGroup == BlendGroup::Forward)
     {
         weights = forwardBlendSpace.CalculateWeights(blendInput);
@@ -1216,9 +1233,21 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     {
         size_t clip = weights[i].clip;
 
-        float duration = target_->model->animations[clip].duration;
-        float normalized = locomotionTime / duration;
-        float time = normalized * duration;
+        //float duration = target_->model->animations[clip].duration;
+        //float normalized = locomotionTime / duration;
+        //float time = normalized * duration;
+
+        float groupDuration = GetLocomotionDuration(currentGroup);
+        if (groupDuration <= FLT_EPSILON)
+        {
+            continue;
+        }
+        float groupPhase = locomotionTime / groupDuration;
+        groupPhase = groupPhase - floorf(groupPhase);
+
+        float clipDuration = target_->model->animations[clip].duration;
+        float time = groupPhase * clipDuration;
+
 
         target_->model->Animate(clip, time, blendSpacePoses[i]);
     }
@@ -1233,43 +1262,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         blend.count++;
     }
 
-    target_->model->BlendAnimations(blendSpacePoses,blend,blendSpaceNodes);
-
-
-#else
-    BlendResult blend = CalculateBlendSpace(blendInput, blendSpeed);
-    for (int i = 0; i < blend.count; i++)
-    {
-        size_t clip = blend.samples[i].clip;
-
-        float duration =
-            target_->model->animations[clip].duration;
-
-#if 1
-        float normalized =
-            locomotionTime / duration;
-
-        float time =
-            normalized * duration;
-#else
-        float normalized = locomotionPhase / 6.0f;
-        if (clip == animationNameToIndex_["Jog_Fwd"])
-        {
-            normalized = 1.0f - normalized;
-        }
-        float time = normalized * duration;
-#endif
-        target_->model->Animate(
-            clip,
-            time,
-            blendSpacePoses[i]);
-    }
-
-
-    Logger::Log("blendCount:" + std::to_string(blend.count));
     target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
-#endif // 0
-
 
     // BlendSpaceへの遷移
     if (blendSpaceTransition)
@@ -1297,26 +1290,12 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         finalNodes = blendSpaceNodes;
     }
 
-    // ループ
-    //float runDuration = target_->model->animations[clip].duration;
-#if 1
-    float duration = GetLocomotionDuration();
+    float duration = GetLocomotionDuration(currentGroup);
 
     if (locomotionTime >= duration)
     {
         locomotionTime -= duration;
     }
-#else
-
-    while (locomotionPhase >= 6.0f)
-    {
-        locomotionPhase -= 6.0f;
-    }
-
-
-#endif // 0
-
-
 }
 
 // 入力方向から２つのアニメーションクリップとブレンドの重さを決定する関数

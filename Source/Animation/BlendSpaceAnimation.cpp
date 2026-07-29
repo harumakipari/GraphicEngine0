@@ -4,140 +4,98 @@
 // インプットから2Dブレンド空間での重みを計算する
 std::vector<BlendSpace::BlendResult> BlendSpace::CalculateWeights(const DirectX::XMFLOAT2 input)
 {
-#if 1
     std::vector<BlendResult> result;
 
     if (samples.empty())
         return result;
 
     float inputAngle = DirectX::XMConvertToDegrees(atan2f(input.x, fabsf(input.y)));
-    float minDistanceA = FLT_MAX;
-    float minDistanceB = FLT_MAX;
-
-    const Sample* sampleA = nullptr;
-    const Sample* sampleB = nullptr;
 
 
-    for (const auto& sample : samples)
+    // サンプルが1つしかない場合
+    if (samples.size() == 1)
     {
-        float distance = fabsf(inputAngle - sample.angle);
-
-        if (distance < minDistanceA)
-        {
-            minDistanceB = minDistanceA;
-            sampleB = sampleA;
-
-            minDistanceA = distance;
-            sampleA = &sample;
-        }
-        else if (distance < minDistanceB)
-        {
-            minDistanceB = distance;
-            sampleB = &sample;
-        }
-    }
-
-    if (sampleA && sampleB == nullptr)
-    {
-        result.push_back({ sampleA->clip,1.0f });
-        return result;
-    }
-
-    float total = minDistanceA + minDistanceB;
-
-    result.push_back({
-        sampleA->clip,
-        minDistanceB / total
-        });
-
-    result.push_back({
-        sampleB->clip,
-        minDistanceA / total
-        });
-
-    return result;
-#else
-    std::vector<BlendResult> result;
-
-    if (samples.empty())
-        return result;
-
-
-    // 近い順に2つ探す
-    float minDistanceA = FLT_MAX;
-    float minDistanceB = FLT_MAX;
-
-    const Sample* sampleA = nullptr;
-    const Sample* sampleB = nullptr;
-
-
-    for (const auto& sample : samples)
-    {
-        float dx = input.x - sample.position.x;
-        float dy = input.y - sample.position.y;
-
-        float distance =
-            sqrtf(dx * dx + dy * dy);
-
-
-        if (distance < minDistanceA)
-        {
-            // 今まで1位だったものを2位へ
-            minDistanceB = minDistanceA;
-            sampleB = sampleA;
-
-            // 新しい1位
-            minDistanceA = distance;
-            sampleA = &sample;
-        }
-        else if (distance < minDistanceB)
-        {
-            minDistanceB = distance;
-            sampleB = &sample;
-        }
-    }
-
-
-    // 一番近いものしかない場合
-    if (sampleA && sampleB == nullptr)
-    {
-        result.push_back(
-            {
-                sampleA->clip,
-                1.0f
+        result.push_back({
+            samples.front().clip,
+            1.0f
             });
 
         return result;
     }
 
+    // 最小角度より外側なら最小角度へ固定
+    if (inputAngle <= samples.front().angle)
+    {
+        result.push_back({
+            samples.front().clip,
+            1.0f
+            });
 
-    // 距離による線形補間
-    float totalDistance =
-        minDistanceA + minDistanceB;
+        return result;
+    }
 
+    // 最大角度より外側なら最大角度へ固定
+    if (inputAngle >= samples.back().angle)
+    {
+        result.push_back({
+            samples.back().clip,
+            1.0f
+            });
 
-    float weightA =
-        minDistanceB / totalDistance;
+        return result;
+    }
 
-    float weightB =
-        minDistanceA / totalDistance;
+    // 入力角度を挟む隣接2サンプルを探す
+    for (size_t i = 0; i + 1 < samples.size(); ++i)
+    {
+        const Sample& sampleA = samples[i];
+        const Sample& sampleB = samples[i + 1];
 
-
-    result.push_back(
+        if (sampleA.angle <= inputAngle &&
+            inputAngle <= sampleB.angle)
         {
-            sampleA->clip,
-            weightA
+            const float angleRange = sampleB.angle - sampleA.angle;
+
+            // 同じ角度のサンプルが登録されていた場合のゼロ除算対策
+            if (fabsf(angleRange) <= FLT_EPSILON)
+            {
+                result.push_back({
+                    sampleA.clip,
+                    1.0f
+                    });
+
+                return result;
+            }
+
+            // AからBに向かって0～1
+            const float t =
+                std::clamp(
+                    (inputAngle - sampleA.angle) / angleRange,
+                    0.0f,
+                    1.0f
+                );
+
+            result.push_back({
+                sampleA.clip,
+                1.0f - t
+                });
+
+            result.push_back({
+                sampleB.clip,
+                t
+                });
+
+            return result;
+        }
+    }
+
+    // 本来ここには来ないが、安全のため最大角度へ固定
+    result.push_back({
+        samples.back().clip,
+        1.0f
         });
-
-
-    result.push_back(
-        {
-            sampleB->clip,
-            weightB
-        });
-
 
     return result;
-#endif // 0
+
 
 }

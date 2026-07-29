@@ -34,6 +34,15 @@ public:
     void AddAnimation(const size_t clip, float angle)
     {
         samples.push_back({ clip, angle });
+
+        std::sort(
+            samples.begin(),
+            samples.end(),
+            [](const Sample& a, const Sample& b)
+            {
+                return a.angle < b.angle;
+            }
+        );
     }
 
     const std::vector<Sample>& GetSamples() const
