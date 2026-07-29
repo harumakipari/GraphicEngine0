@@ -468,6 +468,15 @@ private:
     float blendSpaceTransitionTime = 0.2f;
     float blendSpaceElapsed = 0.0f;
 
+    bool groupTransition = false;
+
+    float groupTransitionElapsed = 0.0f;
+    float groupTransitionDuration = 0.15f;
+
+    std::vector<InterleavedGltfModel::Node> groupTransitionStartNodes;
+    std::vector<InterleavedGltfModel::Node> groupTransitionNodes;
+
+
     MoveDirection currentMoveDirection = MoveDirection::Idle;
     LocomotionGroup locomotionGroup = LocomotionGroup::Forward;
 

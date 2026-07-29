@@ -22,6 +22,9 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
     blendSpaceNodes = target_->model->GetNodes();
     blendSpaceClipA = target_->model->GetNodes();
     blendSpaceClipB = target_->model->GetNodes();
+    groupTransitionStartNodes= target_->model->GetNodes();
+    groupTransitionNodes = target_->model->GetNodes();
+
     for (auto& pose : blendSpacePoses)
     {
         pose = target_->model->GetNodes();
@@ -1207,6 +1210,10 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     bool groupChanged = previousGroup != currentGroup;
     if (groupChanged)
     {
+        // 切り替え前フレームの前グループ姿勢
+        groupTransitionStartNodes = blendSpaceNodes;
+        groupTransitionElapsed = 0.0f;
+        groupTransition = true;
         const float newDuration = GetLocomotionDuration(currentGroup);
 
         if (newDuration > FLT_EPSILON)
@@ -1262,6 +1269,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         blend.count++;
     }
 
+
     target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
 
     // BlendSpaceへの遷移
@@ -1285,10 +1293,34 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             blendSpaceTransition = false;
         }
     }
+    else if (groupTransition)
+    {
+        groupTransitionElapsed += deltaTime;
+
+        const float t = std::clamp(
+            groupTransitionElapsed /
+            groupTransitionDuration,
+            0.0f,
+            1.0f);
+
+        target_->model->BlendAnimations(
+            groupTransitionStartNodes,
+            blendSpaceNodes,
+            t,
+            groupTransitionNodes);
+
+        finalNodes = groupTransitionNodes;
+
+        if (t >= 1.0f)
+        {
+            groupTransition = false;
+        }
+    }
     else
     {
         finalNodes = blendSpaceNodes;
     }
+
 
     float duration = GetLocomotionDuration(currentGroup);
 
