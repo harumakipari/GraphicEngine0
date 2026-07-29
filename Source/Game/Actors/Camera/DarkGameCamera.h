@@ -224,5 +224,8 @@ private:
 
     bool isExternalBlending = false;
     std::function<void()> finishedExternalBlend;
+
+    float startDistance = 5.0f;
+    float targetDistance = 5.0f;
 };
 

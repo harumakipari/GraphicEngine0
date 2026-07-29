@@ -1173,7 +1173,6 @@ float AnimationController::GetLocomotionDuration()
 // ブレンドスペースを更新する
 void AnimationController::UpdateBlendSpace(float deltaTime)
 {
-    Logger::Log("BlendSpace Update");
 #if 1
     std::vector<BlendSpace::BlendResult> weights;
 

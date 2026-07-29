@@ -188,6 +188,16 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Walk_FwdLeft", 84);
         controller->AddAnimation("Walk_FwdRight", 85);
 
+        controller->AddAnimation("Attack1", 86);
+        controller->AddAnimation("Attack2", 87);
+        controller->AddAnimation("Attack3", 88);
+
+        controller->AddAnimation("Jog_BwdLeft45", 89);
+        controller->AddAnimation("Jog_BwdRight45", 90);
+        controller->AddAnimation("Jog_FwdLeft45", 91);
+        controller->AddAnimation("Jog_FwdRight45", 92);
+
+
 #else
         controller->AddAnimation("Idle0", 0);
         controller->AddAnimation("Idle1", 1);
@@ -210,13 +220,18 @@ void Player::Initialize(const Transform& transform)
         //controller->AddBlendAnimation("Jog_FwdRight", 1.0f, 1.0f);
         //controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
 
-        controller->AddForwardBlendAnimation("Jog_Fwd",  0.0f );
+        controller->AddForwardBlendAnimation("Jog_Fwd", 0.0f);
         controller->AddForwardBlendAnimation("Jog_FwdLeft", -90.0f);
         controller->AddForwardBlendAnimation("Jog_FwdRight", 90.0f);
+        controller->AddForwardBlendAnimation("Jog_FwdRight45", 45.0f);
+        controller->AddForwardBlendAnimation("Jog_FwdLeft45", -45.0f);
 
         controller->AddBackwardBlendAnimation("Jog_Bwd", 0.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdLeft",-90.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdRight", 90.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdLeft", 90.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdRight", -90.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdRight45", -45.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdLeft45", 45.0f);
+
 
         std::string name = GetName();
         // アニメーションコントローラーのオーナーの名前を設定する
@@ -1479,7 +1494,7 @@ void Player::SetLocomotionMode(LocomotionMode mode)
         //Logger::Log("LockOnBlendRuns animation Name: " + animationName);
         //PlayBodyAnimation(animationName, true, true, 0.2f, true);
     }
-        break;
+    break;
 
     case LocomotionMode::Dash:
         controller->SetUseBlendSpace(false);

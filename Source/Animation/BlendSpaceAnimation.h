@@ -42,8 +42,11 @@ public:
     }
 
     // インプットから2Dブレンド空間での重みを計算する
-    std::vector<BlendResult> CalculateWeights(DirectX::XMFLOAT2 input) const;
+    std::vector<BlendResult> CalculateWeights(DirectX::XMFLOAT2 input) ;
 
 private:
     std::vector<Sample> samples;
+
+    float prevAngle = 0.0f;
+    bool hasPrevAngle = false;
 };

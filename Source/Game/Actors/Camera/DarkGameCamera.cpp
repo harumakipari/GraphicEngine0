@@ -85,6 +85,23 @@ void DarkCameraActor::Update(float deltaTime)
     SetPosition(currentPose.eye);
     mainCameraComponent->lookTarget = currentPose.target;
     mainCameraComponent->useLookTarget = true;
+
+    Logger::Log("currentMode = " + std::to_string((int)currentMode));
+    Logger::Log("requestMode = " + std::to_string((int)requestMode));
+    Logger::Log("desiredYaw = " + std::to_string(desiredYaw));
+    Logger::Log("currentYaw = " + std::to_string(currentYaw));
+    Logger::Log(
+        "Target : " +
+        std::to_string(currentPose.target.x) + "," +
+        std::to_string(currentPose.target.y) + "," +
+        std::to_string(currentPose.target.z));
+
+    Logger::Log(
+        "Eye : " +
+        std::to_string(currentPose.eye.x) + "," +
+        std::to_string(currentPose.eye.y) + "," +
+        std::to_string(currentPose.eye.z));
+
 }
 
 // ブレンドを開始する
@@ -106,6 +123,8 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     CameraPose oldPose = currentPose;
     float targetYaw = currentYaw;
     float targetPitch = currentPitch;
+    startDistance = cameraDistance; // 現在の距離
+    //blendStartPose = oldPose;
     switch (to)
     {
     case CameraMode::TPS:
@@ -126,6 +145,7 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
         CameraDirectionInfo info = CreateLockOnInfo();
         targetYaw = info.yaw;
         targetPitch = info.pitch;
+        targetDistance = CalculateLockOnDistance();
         break;
     }
     blendTargetPose = CalculatePose(to, playerPos, targetYaw, targetPitch);
@@ -243,12 +263,8 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
     currentYaw = MathHelper::LerpAngle(blendStartPose.yaw, blendTargetPose.yaw, t);
     currentPitch = std::lerp(blendStartPose.pitch, blendTargetPose.pitch, t);
 
+    //float distance = std::lerp(startDistance, targetDistance, t);
     float distance = cameraDistance;
-
-    if (requestMode == CameraMode::LockOn)
-    {
-        distance = CalculateLockOnDistance();
-    }
 
     using namespace DirectX;
 
@@ -268,6 +284,11 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
         currentMode = requestMode;
         desiredYaw = currentYaw;
         desiredPitch = currentPitch;
+
+        Logger::Log("Blend Finished");
+        Logger::Log("Blend Eye = ");
+        Logger::Log("Blend Target = ");
+
     }
 }
 
@@ -404,11 +425,11 @@ void DarkCameraActor::UpdateDesireRotation(float deltaTime)
 // 実際の方向を更新する関数
 void DarkCameraActor::UpdateRotation(float deltaTime)
 {
-    currentYaw = desiredYaw;
-    currentPitch = desiredPitch;
-    //float rotateRate = 20.0f;
-    //currentYaw = MathHelper::LerpAngle(currentYaw,desiredYaw,rotateRate * deltaTime);
-    //currentPitch = std::lerp(currentPitch,desiredPitch,rotateRate * deltaTime);
+    //currentYaw = desiredYaw;
+    //currentPitch = desiredPitch;
+    float rotateRate = 20.0f;
+    currentYaw = MathHelper::LerpAngle(currentYaw, desiredYaw, rotateRate * deltaTime);
+    currentPitch = std::lerp(currentPitch, desiredPitch, rotateRate * deltaTime);
     mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
 }
 
@@ -446,7 +467,8 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
             // プレイヤーと敵の中間を見る
             pose.target = MathHelper::Lerp(playerPos, enemyPos, targetWeight);
         }
-        distance = CalculateLockOnDistance();
+        //distance = CalculateLockOnDistance();
+        distance = cameraDistance;
         break;
     }
     }

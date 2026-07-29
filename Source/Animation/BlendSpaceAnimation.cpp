@@ -2,7 +2,7 @@
 #include "BlendSpaceAnimation.h"
 
 // インプットから2Dブレンド空間での重みを計算する
-std::vector<BlendSpace::BlendResult> BlendSpace::CalculateWeights(const DirectX::XMFLOAT2 input) const
+std::vector<BlendSpace::BlendResult> BlendSpace::CalculateWeights(const DirectX::XMFLOAT2 input)
 {
 #if 1
     std::vector<BlendResult> result;
@@ -17,10 +17,10 @@ std::vector<BlendSpace::BlendResult> BlendSpace::CalculateWeights(const DirectX:
     const Sample* sampleA = nullptr;
     const Sample* sampleB = nullptr;
 
+
     for (const auto& sample : samples)
     {
-        float distance =
-            fabsf(inputAngle - sample.angle);
+        float distance = fabsf(inputAngle - sample.angle);
 
         if (distance < minDistanceA)
         {

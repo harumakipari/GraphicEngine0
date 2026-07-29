@@ -300,8 +300,6 @@ void MovieCameraManagerActor::PlayMovie(const std::string& file)
     auto movieCamera = this->movieCameraWeakPtr.lock();
     movieCamera->LoadFromJson("./Data/Saves/MovieCameras/" + file);
     movieCamera->Start();
-
-
 }
 
 // ドアを開くムービーを再生する
