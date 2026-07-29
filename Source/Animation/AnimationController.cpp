@@ -22,7 +22,7 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
     blendSpaceNodes = target_->model->GetNodes();
     blendSpaceClipA = target_->model->GetNodes();
     blendSpaceClipB = target_->model->GetNodes();
-    groupTransitionStartNodes= target_->model->GetNodes();
+    groupTransitionStartNodes = target_->model->GetNodes();
     groupTransitionNodes = target_->model->GetNodes();
 
     for (auto& pose : blendSpacePoses)
@@ -40,8 +40,14 @@ void AnimationController::OnUpdate(const float deltaTime)
 {
     prevAnimationTime = animationTime;
 
-    const auto& asset = animationNotifyAssets[animationClip];
+    const size_t rateClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
+
+    const auto& asset = animationNotifyAssets[rateClip];
     float curveRate = 1.0f;
+
+
+
+
     switch (transitionState)
     {
     case AnimationTransitionState::Inprogress:
@@ -60,7 +66,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     // 六歩進むlocomotionPhase 一旦Jog_Fwdを参照する
     float referenceDuration = target_->model->animations[animationNameToIndex_["Jog_Fwd"]].duration;
     locomotionPhase += deltaTime * (6.0f / referenceDuration);
-
 
     if (target_->model->animations.size() == 0)
     {// アニメーションがないモデルの場合
@@ -1211,9 +1216,12 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     if (groupChanged)
     {
         // 切り替え前フレームの前グループ姿勢
-        groupTransitionStartNodes = blendSpaceNodes;
+        groupTransitionStartNodes = finalNodes;
         groupTransitionElapsed = 0.0f;
         groupTransition = true;
+
+        blendSpaceTransition = false;
+
         const float newDuration = GetLocomotionDuration(currentGroup);
 
         if (newDuration > FLT_EPSILON)
