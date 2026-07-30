@@ -1439,13 +1439,8 @@ void Player::SetLocomotionMode(LocomotionMode mode)
 
     case LocomotionMode::LockOnBlendWalk:
     {
-        //auto move = inputComponent->GetMoveInput();
 
         controller->SetUseBlendSpace(true);
-        //currentMoveDir = controller->CalculateMoveDirection({ move.x,move.z }, currentMoveDir);
-        //std::string animationName = controller->GetBlendSpaceAnimationName(currentMoveDir, AnimationController::MoveSpeed::Run);
-        //Logger::Log("LockOnBlendWalk animation Name: " + animationName);
-        //PlayBodyAnimation(animationName, true, true, 0.2f, true);
 
     }
 
@@ -1453,12 +1448,7 @@ void Player::SetLocomotionMode(LocomotionMode mode)
 
     case LocomotionMode::LockOnBlendRun:
     {
-        //auto move = inputComponent->GetMoveInput();
         controller->SetUseBlendSpace(true);
-        //currentMoveDir = controller->CalculateMoveDirection({ move.x,move.z }, currentMoveDir);
-        //std::string animationName = controller->GetBlendSpaceAnimationName(currentMoveDir, AnimationController::MoveSpeed::Run);
-        //Logger::Log("LockOnBlendRuns animation Name: " + animationName);
-        //PlayBodyAnimation(animationName, true, true, 0.2f, true);
     }
     break;
 

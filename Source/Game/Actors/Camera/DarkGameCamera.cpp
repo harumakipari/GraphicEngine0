@@ -31,7 +31,6 @@ void DarkCameraActor::Initialize(const Transform& transform)
 
 void DarkCameraActor::Update(float deltaTime)
 {
-    //Logger::Log(U8("cameraCollisionRatio") + std::to_string(cameraCollisionRatio));
 
     // プレイヤーの位置を取得
     auto playerHeadShared = playerHead.lock();
@@ -85,23 +84,6 @@ void DarkCameraActor::Update(float deltaTime)
     SetPosition(currentPose.eye);
     mainCameraComponent->lookTarget = currentPose.target;
     mainCameraComponent->useLookTarget = true;
-
-    Logger::Log("currentMode = " + std::to_string((int)currentMode));
-    Logger::Log("requestMode = " + std::to_string((int)requestMode));
-    Logger::Log("desiredYaw = " + std::to_string(desiredYaw));
-    Logger::Log("currentYaw = " + std::to_string(currentYaw));
-    Logger::Log(
-        "Target : " +
-        std::to_string(currentPose.target.x) + "," +
-        std::to_string(currentPose.target.y) + "," +
-        std::to_string(currentPose.target.z));
-
-    Logger::Log(
-        "Eye : " +
-        std::to_string(currentPose.eye.x) + "," +
-        std::to_string(currentPose.eye.y) + "," +
-        std::to_string(currentPose.eye.z));
-
 }
 
 // ブレンドを開始する
@@ -284,11 +266,6 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
         currentMode = requestMode;
         desiredYaw = currentYaw;
         desiredPitch = currentPitch;
-
-        Logger::Log("Blend Finished");
-        Logger::Log("Blend Eye = ");
-        Logger::Log("Blend Target = ");
-
     }
 }
 

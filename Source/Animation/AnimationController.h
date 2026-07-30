@@ -41,7 +41,7 @@ public:
         Run
     };
 
-    enum class BlendGroup:uint8_t
+    enum class BlendGroup :uint8_t
     {
         Forward,
         Backward
@@ -277,6 +277,9 @@ public:
     // 方向とスピードからアニメーションを取得する 
     size_t GetBlendSpaceAnimationClip(MoveDirection direction, MoveSpeed speed);
 
+    // BlendSpaceから抽出したRoot Motionを取得して消費する
+    bool ConsumeBlendSpaceRootMotion(DirectX::XMFLOAT3& outDelta);
+
     // 方向とスピードからアニメーションの名前を取得する 
     const std::string GetBlendSpaceAnimationName(MoveDirection direction, MoveSpeed speed);
 
@@ -285,6 +288,8 @@ public:
 
 
 private:
+
+
     // それぞれのアニメーション再生時間を取る
     float GetLocomotionDuration(BlendGroup group);
 
@@ -480,6 +485,21 @@ private:
 
     float groupTransitionElapsed = 0.0f;
     float groupTransitionDuration = 0.15f;
+
+    // ブレンドスペースのルートモーション処理
+    float previousLocomotionPhase = 0.0f;
+    bool resetLocomotionRootMotion = true;
+
+    DirectX::XMFLOAT3 blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+
+    bool blendSpaceRootMotionValid = false;
+    // 前回時刻の RootMotion 取得用 Pose
+    std::vector<InterleavedGltfModel::Node> previousBlendSpaceRootMotionNodes;
+    // ルートモーションの最初を記録する　Pose
+    std::vector<InterleavedGltfModel::Node> blendSpaceRootMotionStartNodes;
+    // ルートモーションの最後を記録する　Pose
+    std::vector<InterleavedGltfModel::Node> blendSpaceRootMotionEndNodes;
+
 
     std::vector<InterleavedGltfModel::Node> groupTransitionStartNodes;
     std::vector<InterleavedGltfModel::Node> groupTransitionNodes;

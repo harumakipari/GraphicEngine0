@@ -24,6 +24,13 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
     blendSpaceClipB = target_->model->GetNodes();
     groupTransitionStartNodes = target_->model->GetNodes();
     groupTransitionNodes = target_->model->GetNodes();
+    // 前回時刻の RootMotion 取得用 Pose
+    previousBlendSpaceRootMotionNodes = target_->model->GetNodes();
+    // ルートモーションの最初を記録する　Pose
+    blendSpaceRootMotionStartNodes = target_->model->GetNodes();
+    // ルートモーションの最後を記録する　Pose
+    blendSpaceRootMotionEndNodes = target_->model->GetNodes();
+
 
     for (auto& pose : blendSpacePoses)
     {
@@ -1244,6 +1251,11 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         groupTransitionElapsed = 0.0f;
         groupTransition = true;
         blendSpaceTransition = false;
+        //
+        resetLocomotionRootMotion = true;
+        blendSpaceRootMotionValid = false;
+        blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
+
 
         const float newDuration = GetLocomotionDuration(currentGroup);
 
@@ -1252,11 +1264,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             locomotionTime = phase * newDuration;
         }
     }
-
-    Logger::Log(std::format(
-        "InputY: %f, Group: %s",
-        blendInput.y,
-        currentGroup == BlendGroup::Forward ? "Forward" : "Backward"));
 
     if (currentGroup == BlendGroup::Forward)
     {
@@ -1267,28 +1274,195 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         weights = backwardBlendSpace.CalculateWeights(blendInput);
     }
 
+    float groupDuration = GetLocomotionDuration(currentGroup);
+    // 前回phaseと今回phaseを確定する
+    float currentLocomotionPhase = 0.0f;
+    if (groupDuration > FLT_EPSILON)
+    {
+        currentLocomotionPhase = locomotionTime / groupDuration;
+        currentLocomotionPhase -= floorf(currentLocomotionPhase);
+    }
+    bool canExtractRootMotion = true;
+
+    if (resetLocomotionRootMotion)
+    {
+        previousLocomotionPhase = currentLocomotionPhase;
+        resetLocomotionRootMotion = false;
+        blendSpaceRootMotionValid = false;
+        blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
+
+        canExtractRootMotion = false;
+    }
+
+    if (currentGroup != BlendGroup::Forward || groupTransition || blendSpaceTransition)
+    {
+        canExtractRootMotion = false;
+    }
+
+    blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+    blendSpaceRootMotionValid = false;
+
+    // ルートモーションの重み用の変数
+    float rootMotionTotalWeight = 0.0f;
+
+
     for (size_t i = 0; i < weights.size(); i++)
     {
         size_t clip = weights[i].clip;
 
-        //float duration = target_->model->animations[clip].duration;
-        //float normalized = locomotionTime / duration;
-        //float time = normalized * duration;
+        // clip ごとの delta をローカル変数へ入れる
+        DirectX::XMFLOAT3 clipRootMotionDelta =
+        {
+            0.0f, 0.0f, 0.0f
+        };
+        bool clipRootMotionValid = false;
 
-        float groupDuration = GetLocomotionDuration(currentGroup);
         if (groupDuration <= FLT_EPSILON)
         {
             continue;
         }
-        float groupPhase = locomotionTime / groupDuration;
-        groupPhase = groupPhase - floorf(groupPhase);
 
         float clipDuration = target_->model->animations[clip].duration;
-        float time = groupPhase * clipDuration;
+
+        float previousTime = previousLocomotionPhase * clipDuration;
+        float currentTime = currentLocomotionPhase * clipDuration;
 
 
-        target_->model->Animate(clip, time, blendSpacePoses[i]);
+        target_->model->Animate(clip, currentTime, blendSpacePoses[i]);
+
+
+        if (!canExtractRootMotion)
+        {
+            continue;
+        }
+
+        // 前回時刻のRootMotion 取得用Pose
+        target_->model->Animate(clip, previousTime, previousBlendSpaceRootMotionNodes);
+
+        // 前回と今回のroot位置を取得する
+        const auto& previousRootNode = previousBlendSpaceRootMotionNodes[rootNodeIndex];
+        const auto& currentRootNode = blendSpacePoses[i][rootNodeIndex];
+        // 位置を取り出す
+        DirectX::XMFLOAT3 previousRootPosition =
+        {
+            previousRootNode.globalTransform._41,
+            previousRootNode.globalTransform._42,
+            previousRootNode.globalTransform._43
+        };
+
+        DirectX::XMFLOAT3 currentRootPosition =
+        {
+            currentRootNode.globalTransform._41,
+            currentRootNode.globalTransform._42,
+            currentRootNode.globalTransform._43
+        };
+
+        // ループしていないフレームのみ
+        if (previousLocomotionPhase <= currentLocomotionPhase)
+        {
+            clipRootMotionDelta =
+            {
+                currentRootPosition.x - previousRootPosition.x,
+                currentRootPosition.y - previousRootPosition.y,
+                currentRootPosition.z - previousRootPosition.z
+            };
+            clipRootMotionValid = true;
+        }
+        // 1.0 → 0.0をまたいだループフレーム
+        else
+        {
+            // clip先頭のPoseを評価
+            target_->model->Animate(clip, 0.0f, blendSpaceRootMotionStartNodes);
+
+            // clip末尾のPoseを評価
+            target_->model->Animate(clip, clipDuration, blendSpaceRootMotionEndNodes);
+
+            const auto& startRootNode = blendSpaceRootMotionStartNodes[rootNodeIndex];
+            const auto& endRootNode = blendSpaceRootMotionEndNodes[rootNodeIndex];
+
+            DirectX::XMFLOAT3 startRootPosition =
+            {
+                startRootNode.globalTransform._41,
+                startRootNode.globalTransform._42,
+                startRootNode.globalTransform._43
+            };
+
+            DirectX::XMFLOAT3 endRootPosition =
+            {
+                endRootNode.globalTransform._41,
+                endRootNode.globalTransform._42,
+                endRootNode.globalTransform._43
+            };
+
+            // previous位置からclip末尾まで
+            DirectX::XMFLOAT3 deltaToEnd =
+            {
+                endRootPosition.x - previousRootPosition.x,
+                endRootPosition.y - previousRootPosition.y,
+                endRootPosition.z - previousRootPosition.z
+            };
+
+            // clip先頭からcurrent位置まで
+            DirectX::XMFLOAT3 deltaFromStart =
+            {
+                currentRootPosition.x - startRootPosition.x,
+                currentRootPosition.y - startRootPosition.y,
+                currentRootPosition.z - startRootPosition.z
+            };
+
+            clipRootMotionDelta =
+            {
+                deltaToEnd.x + deltaFromStart.x,
+                deltaToEnd.y + deltaFromStart.y,
+                deltaToEnd.z + deltaFromStart.z
+            };
+
+            clipRootMotionValid = true;
+
+            //Logger::Log(std::format(
+            //    "StartZ = {} EndZ = {}",
+            //    startRootPosition.z,
+            //    endRootPosition.z));
+            //Logger::Log(std::format(
+            //    "ToEnd {}  FromStart {}",
+            //    deltaToEnd.z,
+            //    deltaFromStart.z));
+        }
+
+        // 各クリップごとの重み付きのRootMotionを加算
+        if (clipRootMotionValid)
+        {
+            const float weight = weights[i].weight;
+            blendSpaceRootMotionDelta.x += clipRootMotionDelta.x * weight;
+            blendSpaceRootMotionDelta.y += clipRootMotionDelta.y * weight;
+            blendSpaceRootMotionDelta.z += clipRootMotionDelta.z * weight;
+            rootMotionTotalWeight += weight;
+
+            Logger::Log(std::format(
+                "RootMotion Clip:{} Weight:{:.3f} "
+                "Delta:({:.5f}, {:.5f}, {:.5f})",
+                clip,
+                weight,
+                clipRootMotionDelta.x,
+                clipRootMotionDelta.y,
+                clipRootMotionDelta.z));
+
+        }
+
     }
+
+    if (rootMotionTotalWeight > FLT_EPSILON)
+    {
+        const float inverseWeight = 1.0f / rootMotionTotalWeight;
+
+        blendSpaceRootMotionDelta.x *= inverseWeight;
+        blendSpaceRootMotionDelta.y *= inverseWeight;
+        blendSpaceRootMotionDelta.z *= inverseWeight;
+
+        blendSpaceRootMotionValid = true;
+    }
+
+
 
     BlendResult blend;
     blend.count = 0;
@@ -1308,8 +1482,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     {
         blendSpaceElapsed += deltaTime;
 
-        float t = std::clamp(
-            blendSpaceElapsed / blendSpaceTransitionTime,
+        float t = std::clamp(blendSpaceElapsed / blendSpaceTransitionTime,
             0.0f,
             1.0f);
 
@@ -1353,12 +1526,31 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     }
 
 
+    if (blendSpaceRootMotionValid)
+    {
+        const bool looped = previousLocomotionPhase > currentLocomotionPhase;
+        Logger::Log(std::format(
+            "Root Motion Loop:{} Phase Prev:{:.4f} Current:{:.4f} "
+            "Delta:({:.5f}, {:.5f}, {:.5f})",
+            looped ? "true" : "false",
+            previousLocomotionPhase,
+            currentLocomotionPhase,
+            blendSpaceRootMotionDelta.x,
+            blendSpaceRootMotionDelta.y,
+            blendSpaceRootMotionDelta.z));
+    }
+
+
+    // 今回Phaseを次フレームの前回phaseにする
+    previousLocomotionPhase = currentLocomotionPhase;
     float duration = GetLocomotionDuration(currentGroup);
 
     if (locomotionTime >= duration)
     {
         locomotionTime -= duration;
     }
+
+
 }
 
 // 入力方向から２つのアニメーションクリップとブレンドの重さを決定する関数
@@ -1610,6 +1802,23 @@ size_t AnimationController::GetBlendSpaceAnimationClip(MoveDirection direction, 
     default:
         return animationNameToIndex_["Idle"];
     }
+}
+
+// BlendSpaceから抽出したRoot Motionを取得して消費する
+bool AnimationController::ConsumeBlendSpaceRootMotion(DirectX::XMFLOAT3& outDelta)
+{
+    if (!blendSpaceRootMotionValid)
+    {
+        outDelta = { 0.0f,0.0f,0.0f };
+        return false;
+    }
+    outDelta = blendSpaceRootMotionDelta;
+
+    // 同じDeltaを複数回適用しないように消費後は無効化
+    blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
+    blendSpaceRootMotionValid = false;
+
+    return true;
 }
 
 // 方向とスピードからアニメーションを取得する
