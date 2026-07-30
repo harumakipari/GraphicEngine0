@@ -67,9 +67,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     animationTime += deltaTime * playRate;
     locomotionTime += deltaTime; // ブレンドスペースのためのタイム   
 
-    // 六歩進むlocomotionPhase 一旦Jog_Fwdを参照する
-    float referenceDuration = target_->model->animations[animationNameToIndex_["Jog_Fwd"]].duration;
-    locomotionPhase += deltaTime * (6.0f / referenceDuration);
 
     if (target_->model->animations.size() == 0)
     {// アニメーションがないモデルの場合
@@ -188,39 +185,61 @@ void AnimationController::OnUpdate(const float deltaTime)
 
         if (!ignoreRootMotion)
         {
+            DirectX::XMFLOAT3 rootMotionDelta = {};
+            bool hasRootMotionDelta = false;
             DirectX::XMFLOAT4X4 worldTransform = owner->GetWorldTransform();
-            // グローバル空間
-            DirectX::XMFLOAT3 position =
-            {
-                node.globalTransform._41,
-                node.globalTransform._42,
-                node.globalTransform._43
-            };
 
-            if (resetRootMotionDelta)
+            if (useBlendSpace)
             {
+                hasRootMotionDelta = ConsumeBlendSpaceRootMotion(rootMotionDelta);
+            }
+            else
+            {
+                // グローバル空間
+                DirectX::XMFLOAT3 position =
+                {
+                    node.globalTransform._41,
+                    node.globalTransform._42,
+                    node.globalTransform._43
+                };
+
+                if (resetRootMotionDelta)
+                {
+                    previousPosition = position;
+                    resetRootMotionDelta = false;
+                }
+
+                // グローバル空間
+                rootMotionDelta =
+                {
+                    position.x - previousPosition.x,
+                    position.y - previousPosition.y,
+                    position.z - previousPosition.z
+                };
+
+                hasRootMotionDelta = true;
                 previousPosition = position;
-                resetRootMotionDelta = false;
             }
 
-            // グローバル空間
-            DirectX::XMFLOAT3 displacement =
+
+            if (hasRootMotionDelta)
             {
-                position.x - previousPosition.x,
-                position.y - previousPosition.y,
-                position.z - previousPosition.z
-            };
-            DirectX::XMStoreFloat3(&displacement, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&displacement), DirectX::XMLoadFloat4x4(&worldTransform))); // ワールド空間
+                DirectX::XMStoreFloat3(&rootMotionDelta, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&rootMotionDelta), DirectX::XMLoadFloat4x4(&worldTransform))); // ワールド空間
 
-            DirectX::XMFLOAT3 translation = owner->GetPosition();
+                DirectX::XMFLOAT3 translation = owner->GetPosition();
 
-            translation.x += displacement.x;
-            //translation.y += displacement.y;
-            translation.z += displacement.z;
+                translation.x += rootMotionDelta.x;
+                //translation.y += rootMotionDelta.y;
+                translation.z += rootMotionDelta.z;
 
-            owner->SetPosition(translation);
+                owner->SetPosition(translation);
 
-            previousPosition = position;
+                Logger::Log(std::format(
+                    "Apply RootMotion Delta: ({:.5f}, {:.5f}, {:.5f})",
+                    rootMotionDelta.x,
+                    rootMotionDelta.y,
+                    rootMotionDelta.z));
+            }
         }
         // ルートノードの変位量を初期姿勢の値に設定。
         node.translation = zeroTranslation;

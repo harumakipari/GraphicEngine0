@@ -665,7 +665,7 @@ void Player::Update(float deltaTime)
     {
         Logger::Log("RT‚ª‰Ÿ‚³‚ê‚½");
     }
-    if (InputSystem::GetInputState("ok", InputStateMask::Trigger))
+    if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
     {
         if (IInteractable* interactable = FindInteractable())
         {

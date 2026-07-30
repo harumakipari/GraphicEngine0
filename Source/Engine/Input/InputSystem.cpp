@@ -225,10 +225,6 @@ void InputSystem::Initialize()
     inputKeys["Enter"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
     inputKeys["1"].emplace_back(std::make_unique<Keyboard>('1'));
 
-    //inputKeys["ok"].emplace_back(std::make_unique<Mouse>(VK_LBUTTON)); // マウス左ボタン
-    inputKeys["ok"].emplace_back(std::make_unique<Keyboard>(VK_RETURN));    // Enterキー
-    inputKeys["ok"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
-    inputKeys["ok"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));
 
     inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_LEFT_SHOULDER));    // 左
     inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::LeftTrigger));    // 左

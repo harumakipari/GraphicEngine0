@@ -250,7 +250,8 @@ public:
         {// ブレンドスペース開始
             // ルートモーションを切る
             enableRootMotion = true;
-            ignoreRootMotion = true;
+            //ignoreRootMotion = true;
+            ignoreRootMotion = false;
 
             locomotionTime = 0.0f;
             // ブレンドスペースに入る時に補間処理をするため
@@ -474,7 +475,6 @@ private:
 
     bool useBlendSpace = false;
     float locomotionTime = 0.0f;
-    float locomotionPhase = 0.0f;
     float locomotionPlayRate = 1.0f;
     // ブレンドスペースに入る時の補完処理
     bool blendSpaceTransition = false;
