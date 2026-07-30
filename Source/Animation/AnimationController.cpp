@@ -1369,11 +1369,32 @@ void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
             continue;
         AnimationNotifyAsset asset;
         LoadNotifyAsset(file.path().string(), asset);
+
+        // JsonのanimationClipはモデル更新などで古くなるため、
+        // 実行時のclip番号は現在の名前->clip登録から解決する
+        const auto animationIt = animationNameToIndex_.find(asset.animationName);
+        if (animationIt == animationNameToIndex_.end())
+        {
+            Logger::Warning("animation asset is not registered");
+            continue;
+        }
+
+        const size_t registeredClip = animationIt->second;
+
+        if (asset.animationClip != registeredClip)
+        {
+            Logger::Warning("Remap animation asset");
+        }
+
+        asset.animationClip = registeredClip;
+
+
         if (owner)
         {
             owner->OnAnimationChanged();
         }
-        animationNotifyAssets[asset.animationClip] = asset;
+        //animationNotifyAssets[asset.animationClip] = asset;
+        animationNotifyAssets[registeredClip] = asset;
     }
 }
 
@@ -1648,14 +1669,14 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             blendSpaceRootMotionDelta.z += clipRootMotionDelta.z * weight;
             rootMotionTotalWeight += weight;
 
-            Logger::Log(std::format(
-                "RootMotion Clip:{} Weight:{:.3f} "
-                "Delta:({:.5f}, {:.5f}, {:.5f})",
-                clip,
-                weight,
-                clipRootMotionDelta.x,
-                clipRootMotionDelta.y,
-                clipRootMotionDelta.z));
+            //Logger::Log(std::format(
+            //    "RootMotion Clip:{} Weight:{:.3f} "
+            //    "Delta:({:.5f}, {:.5f}, {:.5f})",
+            //    clip,
+            //    weight,
+            //    clipRootMotionDelta.x,
+            //    clipRootMotionDelta.y,
+            //    clipRootMotionDelta.z));
 
         }
 
@@ -1739,15 +1760,15 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     if (blendSpaceRootMotionValid)
     {
         const bool looped = previousLocomotionPhase > currentLocomotionPhase;
-        Logger::Log(std::format(
-            "Root Motion Loop:{} Phase Prev:{:.4f} Current:{:.4f} "
-            "Delta:({:.5f}, {:.5f}, {:.5f})",
-            looped ? "true" : "false",
-            previousLocomotionPhase,
-            currentLocomotionPhase,
-            blendSpaceRootMotionDelta.x,
-            blendSpaceRootMotionDelta.y,
-            blendSpaceRootMotionDelta.z));
+        //Logger::Log(std::format(
+        //    "Root Motion Loop:{} Phase Prev:{:.4f} Current:{:.4f} "
+        //    "Delta:({:.5f}, {:.5f}, {:.5f})",
+        //    looped ? "true" : "false",
+        //    previousLocomotionPhase,
+        //    currentLocomotionPhase,
+        //    blendSpaceRootMotionDelta.x,
+        //    blendSpaceRootMotionDelta.y,
+        //    blendSpaceRootMotionDelta.z));
     }
 
 

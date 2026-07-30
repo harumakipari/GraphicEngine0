@@ -278,13 +278,13 @@ public:
 
             resetRootMotionDelta = true;
 
-            Logger::Log(std::format(
-                "DisableBS Pending:{} Phase:{:.4f} "
-                "Suppress:{} Observed:{}",
-                pendingLocomotionPhaseTransfer,
-                pendingLocomotionPhase,
-                suppressNormalRootMotionUntilTransitionCompleted,
-                suppressNormalRootMotionObservedTransition));
+            //Logger::Log(std::format(
+            //    "DisableBS Pending:{} Phase:{:.4f} "
+            //    "Suppress:{} Observed:{}",
+            //    pendingLocomotionPhaseTransfer,
+            //    pendingLocomotionPhase,
+            //    suppressNormalRootMotionUntilTransitionCompleted,
+            //    suppressNormalRootMotionObservedTransition));
         }
         else if (!wasUsingBlendSpace && use)
         {
