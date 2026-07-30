@@ -238,26 +238,55 @@ public:
         blendSpeed = speed;
     }
 
-    void SetUseBlendSpace(const bool useBlendSpace)
+    void SetUseBlendSpace(const bool use)
     {
         // 変更がないなら何もしない
-        if (this->useBlendSpace == useBlendSpace)
+        if (this->useBlendSpace == use)
             return;
 
-        const bool wasUsingBlendSpace = useBlendSpace;
+        const bool wasUsingBlendSpace = use;
+        this->useBlendSpace = use;
 
         if (wasUsingBlendSpace && !useBlendSpace)
         {
             Logger::Log("Disable BlendSpace");
 
+            // 位相転送はRootMotion抑制とは別に管理する
+            const float duration = GetLocomotionDuration(currentGroup);
+
+            pendingLocomotionPhase = 0.0f;
+
+            if (duration > FLT_EPSILON)
+            {
+                pendingLocomotionPhase =
+                    locomotionTime / duration;
+
+                pendingLocomotionPhase -=
+                    std::floor(pendingLocomotionPhase);
+            }
+
+            pendingLocomotionPhaseTransfer = true;
+
+            // 通常アニメーション遷移中のRoot Motionを止める
             suppressNormalRootMotionUntilTransitionCompleted = true;
+
+            // まだ新しい通常遷移は観測していない
+            suppressNormalRootMotionObservedTransition = false;
 
             blendSpaceRootMotionDelta = {};
             blendSpaceRootMotionValid = false;
 
             resetRootMotionDelta = true;
+
+            Logger::Log(std::format(
+                "DisableBS Pending:{} Phase:{:.4f} "
+                "Suppress:{} Observed:{}",
+                pendingLocomotionPhaseTransfer,
+                pendingLocomotionPhase,
+                suppressNormalRootMotionUntilTransitionCompleted,
+                suppressNormalRootMotionObservedTransition));
         }
-        else if (!wasUsingBlendSpace && useBlendSpace)
+        else if (!wasUsingBlendSpace && use)
         {
             Logger::Log("Enable BlendSpace");
 
@@ -276,9 +305,8 @@ public:
 
 
 
-        this->useBlendSpace = useBlendSpace;
 
-        if (useBlendSpace)
+        if (use)
         {// ブレンドスペース開始
             // ルートモーションを切る
             enableRootMotion = true;
@@ -534,6 +562,14 @@ private:
     // BlendSpace終了後、通常アニメーション遷移中の
     // ブレンド済みrootからRoot Motionを抽出しないためのフラグ
     bool suppressNormalRootMotionUntilTransitionCompleted = false;
+    // SetUseBlendSpace(false)以前からCompletedだった状態と、
+    // 新しく開始した通常遷移の完了を区別する
+    bool suppressNormalRootMotionObservedTransition = false;
+
+    // BlendSpace解除時の位相を次のLocomotion clipへ一度だけ渡す
+    bool pendingLocomotionPhaseTransfer = false;
+    float pendingLocomotionPhase = 0.0f;
+
 
     std::vector<InterleavedGltfModel::Node> groupTransitionStartNodes;
     std::vector<InterleavedGltfModel::Node> groupTransitionNodes;

@@ -257,19 +257,19 @@ void GameScene::UpdateConstants(ID3D11DeviceContext* immediateContext, float del
 
 void GameScene::SetUpActors()
 {
-    Transform mainCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    mainCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MainCamera>("mainCameraActor", mainCameraTr);
-    mainCameraComponent = mainCameraActor->GetComponent<TPSCameraComponent>();
+    //Transform mainCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    //mainCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<MainCamera>("mainCameraActor", mainCameraTr);
+    //mainCameraComponent = mainCameraActor->GetComponent<TPSCameraComponent>();
     {
         PROFILE_SCOPE("Create Player");
         Transform playerTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
         player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("Player", playerTr);
-        mainCameraActor->SetLookTarget(player->GetRootComponent());
-        mainCameraActor->SetEye(player->GetRootComponent());
+        //mainCameraActor->SetLookTarget(player->GetRootComponent());
+        //mainCameraActor->SetEye(player->GetRootComponent());
     }
-    mainCameraComponent->SetPitch(-20.0f);
-    mainCameraComponent->distance = 5.35f;
-    SetActiveCamera(mainCameraActor);
+    //mainCameraComponent->SetPitch(-20.0f);
+    //mainCameraComponent->distance = 5.35f;
+    //SetActiveCamera(mainCameraActor);
     Logger::Log(U8("sampleシーンのカメラ設定される。"));
 
     Transform debugCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
@@ -313,8 +313,8 @@ void GameScene::SetUpActors()
     auto KnightsActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<KnightActor>("KnightActor", KnightActorTR);
 #endif // 0
 
-    Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
-    gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
+    //Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
+    //gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
 
     Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     darkCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkCameraActor>("darkCameraActor", darkCameraTr);
@@ -326,7 +326,7 @@ void GameScene::SetUpActors()
     darkCameraActor->SetPerspective(fovY, aspect, nearZ, farZ);
     darkCameraActor->InitSetYawAndPitch(DirectX::XMConvertToRadians(-20.0f), DirectX::XMConvertToRadians(0.0f));
     darkCameraActor->SetPlayerHead(player->GetCameraTargetComponent());
-    darkCameraActor->SetEnemyHead(gruxEnemyActor->GetCameraTargetComponent());
+    //darkCameraActor->SetEnemyHead(gruxEnemyActor->GetCameraTargetComponent());
 
 
 #if 0

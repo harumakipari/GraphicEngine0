@@ -129,6 +129,14 @@ void AnimationController::OnUpdate(const float deltaTime)
         }
     }
 
+    // BlendSpace解除後、新しい通常遷移が実際に開始されたことを記録
+    if (suppressNormalRootMotionUntilTransitionCompleted &&
+        transitionState !=
+        AnimationTransitionState::Completed)
+    {
+        suppressNormalRootMotionObservedTransition = true;
+    }
+
     // アニメーション遷移の準備
     switch (transitionState)
     {
@@ -201,6 +209,9 @@ void AnimationController::OnUpdate(const float deltaTime)
         break;
     }
 
+
+    bool releaseNormalRootMotionSuppression = false;
+
     if (enableRootMotion)
     {
         InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
@@ -241,11 +252,12 @@ void AnimationController::OnUpdate(const float deltaTime)
                     previousPosition = position;
                     hasRootMotionDelta = false;
 
-                    // 遷移完了フレームでも位置を同期するだけにして、
-                    // 次のフレームから通常Root Motionを再開する。
-                    if (transitionState == AnimationTransitionState::Completed)
+                    // 新しい遷移を一度以上観測してからCompletedになった場合だけ解除予約
+                    if (suppressNormalRootMotionObservedTransition &&
+                        transitionState ==
+                        AnimationTransitionState::Completed)
                     {
-                        suppressNormalRootMotionUntilTransitionCompleted = false;
+                        releaseNormalRootMotionSuppression = true;
                     }
                 }
                 else
@@ -310,6 +322,17 @@ void AnimationController::OnUpdate(const float deltaTime)
     {
         target->SetModelNodes(finalNodes);
         target->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+    }
+
+    // 遷移完了フレームはRoot Motionを適用せず、
+    // previousPositionの同期だけで終了する。
+    // 次のOnUpdateから通常Root Motionを再開する。
+    if (releaseNormalRootMotionSuppression)
+    {
+        Logger::Log("Release Normal RootMotion Suppression");
+
+        suppressNormalRootMotionUntilTransitionCompleted = false;
+        suppressNormalRootMotionObservedTransition = false;
     }
 
     const DirectX::XMFLOAT3 actorPositionAtEnd =
@@ -377,6 +400,10 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
     if (transitionState != AnimationTransitionState::Completed &&
         animationNextClip == requestedClip)
     {
+        Logger::Log(std::format(
+            "Skip Duplicate Transition Name:{} Clip:{}",
+            animationName,
+            requestedClip));
         return;
     }
 
@@ -384,29 +411,49 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
 
     float requestedAnimationTime = 0.0f;
 
-    // BlendSpaceの歩行位相を通常Locomotion clip へ引き継ぐ。
-    // 攻撃、回避、Idleなどは従来通り時刻０から開始する。
+
+    const bool isLocomotionAnimation =
+        animationName == "Walk_Fwd" ||
+        animationName == "Jog_Fwd";
+
     const bool preserveLocomotionPhase =
-        suppressNormalRootMotionUntilTransitionCompleted &&
-        (animationName == "Walk_Fwd" || animationName == "Jog_Fwd");
+        pendingLocomotionPhaseTransfer &&
+        isLocomotionAnimation;
 
-    if (preserveLocomotionPhase)
+    const float requestedDuration =
+        target_->model->animations
+        .at(requestedClip).duration;
+
+    if (preserveLocomotionPhase &&
+        requestedDuration > FLT_EPSILON)
     {
-        const float blendSpaceDuration = GetLocomotionDuration(currentGroup);
-        const float requestedDuration = target_->model->animations.at(requestedClip).duration;
-        if (blendSpaceDuration > FLT_EPSILON && requestedDuration > FLT_EPSILON)
-        {
-            float phase = locomotionTime / blendSpaceDuration;
-            phase -= std::floor(phase);
-
-            requestedAnimationTime = phase * requestedDuration;
-        }
+        requestedAnimationTime =
+            pendingLocomotionPhase *
+            requestedDuration;
     }
+
+    Logger::Log(std::format(
+        "ResetRM Name:{} Requested:{} "
+        "Pending:{} Phase:{:.4f} "
+        "Preserve:{} RequestedTime:{:.4f} "
+        "Suppress:{} Transition:{}",
+        animationName,
+        requestedClip,
+        pendingLocomotionPhaseTransfer,
+        pendingLocomotionPhase,
+        preserveLocomotionPhase,
+        requestedAnimationTime,
+        suppressNormalRootMotionUntilTransitionCompleted,
+        static_cast<int>(transitionState)));
+
+    // 次のアニメーション要求だけが対象
+    // Walk/Jog以外が来た場合も古い位相を残さない
+    pendingLocomotionPhaseTransfer = false;
 
     animationTime = requestedAnimationTime;
     prevAnimationTime = requestedAnimationTime;
-    this->animationNextClip = requestedClip;
 
+    animationNextClip = requestedClip;
 
 #endif // 0
     this->isAnimationFinished = false;
