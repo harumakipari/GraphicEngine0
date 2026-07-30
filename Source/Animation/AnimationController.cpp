@@ -45,6 +45,8 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
+    const DirectX::XMFLOAT3 actorPositionAtBegin = owner->GetPosition();
+
     prevAnimationTime = animationTime;
 
     const size_t rateClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
@@ -205,20 +207,53 @@ void AnimationController::OnUpdate(const float deltaTime)
 
                 if (resetRootMotionDelta)
                 {
+                    // Root Motion基準位置を現在Poseへ同期する
                     previousPosition = position;
                     resetRootMotionDelta = false;
+
+                    // 同期フレームでは移動しない
+                    hasRootMotionDelta = false;
+                }
+                else if (suppressNormalRootMotionUntilTransitionCompleted)
+                {
+                    // BlendSpace終了後の通常アニメーション遷移中は、
+                    // ブレンド済みrootの絶対位置差をActorへ適用しない。
+                    previousPosition = position;
+                    hasRootMotionDelta = false;
+
+                    // 遷移完了フレームでも位置を同期するだけにして、
+                    // 次のフレームから通常Root Motionを再開する。
+                    if (transitionState == AnimationTransitionState::Completed)
+                    {
+                        suppressNormalRootMotionUntilTransitionCompleted = false;
+                    }
+                }
+                else
+                {
+                    // グローバル空間
+                    rootMotionDelta =
+                    {
+                        position.x - previousPosition.x,
+                        position.y - previousPosition.y,
+                        position.z - previousPosition.z
+                    };
+
+                    hasRootMotionDelta = true;
+                    previousPosition = position;
                 }
 
-                // グローバル空間
-                rootMotionDelta =
-                {
-                    position.x - previousPosition.x,
-                    position.y - previousPosition.y,
-                    position.z - previousPosition.z
-                };
+                Logger::Log(std::format(
+                    "NormalRM Suppress:{} Transition:{} "
+                    "BlendFactor:{:.3f} HasDelta:{} "
+                    "RootPos:({:.4f}, {:.4f}, {:.4f})",
+                    suppressNormalRootMotionUntilTransitionCompleted,
+                    static_cast<int>(transitionState),
+                    blendFactor,
+                    hasRootMotionDelta,
+                    node.globalTransform._41,
+                    node.globalTransform._42,
+                    node.globalTransform._43));
 
-                hasRootMotionDelta = true;
-                previousPosition = position;
             }
 
 
@@ -256,6 +291,25 @@ void AnimationController::OnUpdate(const float deltaTime)
         target->SetModelNodes(finalNodes);
         target->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
     }
+
+    const DirectX::XMFLOAT3 actorPositionAtEnd =
+        owner->GetPosition();
+
+    Logger::Log(std::format(
+        "AnimationController:{:p} "
+        "Actor Begin:({:.4f}, {:.4f}, {:.4f}) "
+        "End:({:.4f}, {:.4f}, {:.4f}) "
+        "Delta:({:.4f}, {:.4f}, {:.4f})",
+        static_cast<void*>(this),
+        actorPositionAtBegin.x,
+        actorPositionAtBegin.y,
+        actorPositionAtBegin.z,
+        actorPositionAtEnd.x,
+        actorPositionAtEnd.y,
+        actorPositionAtEnd.z,
+        actorPositionAtEnd.x - actorPositionAtBegin.x,
+        actorPositionAtEnd.y - actorPositionAtBegin.y,
+        actorPositionAtEnd.z - actorPositionAtBegin.z));
 }
 
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
@@ -1313,7 +1367,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         canExtractRootMotion = false;
     }
 
-    if (currentGroup != BlendGroup::Forward || groupTransition || blendSpaceTransition)
+    if (groupTransition || blendSpaceTransition)
     {
         canExtractRootMotion = false;
     }

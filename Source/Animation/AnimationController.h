@@ -244,6 +244,38 @@ public:
         if (this->useBlendSpace == useBlendSpace)
             return;
 
+        const bool wasUsingBlendSpace = useBlendSpace;
+
+        if (wasUsingBlendSpace && !useBlendSpace)
+        {
+            Logger::Log("Disable BlendSpace");
+
+            suppressNormalRootMotionUntilTransitionCompleted = true;
+
+            blendSpaceRootMotionDelta = {};
+            blendSpaceRootMotionValid = false;
+
+            resetRootMotionDelta = true;
+        }
+        else if (!wasUsingBlendSpace && useBlendSpace)
+        {
+            Logger::Log("Enable BlendSpace");
+
+            locomotionTime = 0.0f;
+            previousLocomotionPhase = 0.0f;
+            resetLocomotionRootMotion = true;
+
+            blendSpaceRootMotionDelta = {};
+            blendSpaceRootMotionValid = false;
+
+            blendSpaceElapsed = 0.0f;
+            blendSpaceTransition = true;
+
+            animationNodes[Origin] = finalNodes;
+        }
+
+
+
         this->useBlendSpace = useBlendSpace;
 
         if (useBlendSpace)
@@ -265,7 +297,7 @@ public:
         {
             enableRootMotion = true;
 
-            ResetRootMotion("Jog_Fwd", true, true, 0.2f);
+            //ResetRootMotion("Jog_Fwd", true, true, 0.2f);
             Logger::Log("Disable BlendSpace");
         }
     }
@@ -499,7 +531,9 @@ private:
     std::vector<InterleavedGltfModel::Node> blendSpaceRootMotionStartNodes;
     // ルートモーションの最後を記録する　Pose
     std::vector<InterleavedGltfModel::Node> blendSpaceRootMotionEndNodes;
-
+    // BlendSpace終了後、通常アニメーション遷移中の
+    // ブレンド済みrootからRoot Motionを抽出しないためのフラグ
+    bool suppressNormalRootMotionUntilTransitionCompleted = false;
 
     std::vector<InterleavedGltfModel::Node> groupTransitionStartNodes;
     std::vector<InterleavedGltfModel::Node> groupTransitionNodes;
