@@ -129,6 +129,11 @@ void Logger::Warning(const char* message)
     Warning(LogCategory::Gameplay, message);
 }
 
+void Logger::Warning(const std::string& message)
+{
+    Warning(LogCategory::Gameplay, message.c_str());
+}
+
 void Logger::Warning(const char8_t* message)
 {
     Warning(reinterpret_cast<const char*>(message));
@@ -138,6 +143,7 @@ void Logger::Warning(LogCategory category, const char8_t* message)
 {
     Warning(category, reinterpret_cast<const char*>(message));
 }
+
 
 void Logger::Error(LogCategory category, const char* message, std::source_location location)
 {

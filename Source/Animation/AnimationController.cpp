@@ -45,6 +45,26 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
+
+    Logger::Log(std::format(
+        "AnimCtrl:{:p} Owner:{:p} OwnerName:{} OwnerType:{} "
+        "Target:{:p} TargetName:{} "
+        "Clip:{} Next:{} Time:{:.4f} LocomotionTime:{:.4f} "
+        "UseBS:{} Transition:{} BlendFactor:{:.3f}",
+        static_cast<void*>(this),
+        static_cast<void*>(owner),
+        owner ? owner->GetName() : "<null>",
+        owner ? typeid(*owner).name() : "<null>",
+        static_cast<void*>(target_),
+        target_ ? target_->GetName() : "<null>",
+        animationClip,
+        animationNextClip,
+        animationTime,
+        locomotionTime,
+        useBlendSpace,
+        static_cast<int>(transitionState),
+        blendFactor));
+
     const DirectX::XMFLOAT3 actorPositionAtBegin = owner->GetPosition();
 
     prevAnimationTime = animationTime;
@@ -113,7 +133,7 @@ void AnimationController::OnUpdate(const float deltaTime)
     switch (transitionState)
     {
     case AnimationTransitionState::NotStarted:
-        target_->model->Animate(this->animationNextClip, 0.0f, animationNodes[Next]);
+        target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
         blendElapsedTime = 0.0f;
         blendFactor = 0.0f;
 
@@ -314,12 +334,81 @@ void AnimationController::OnUpdate(const float deltaTime)
 
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
 {
+#if 0
     notifyAnimationClip = animationNameToIndex_[animationName];
 
     animationTime = 0.0f;
     prevAnimationTime = 0.0f;
 
     this->animationNextClip = animationNameToIndex_[animationName];
+#else
+    Logger::Log(std::format(
+        "AnimCtrl:{:p} Owner:{:p} OwnerName:{} OwnerType:{} "
+        "Target:{:p} TargetName:{} "
+        "Clip:{} Next:{} Time:{:.4f} LocomotionTime:{:.4f} "
+        "UseBS:{} Transition:{} BlendFactor:{:.3f}",
+        static_cast<void*>(this),
+        static_cast<void*>(owner),
+        owner ? owner->GetName() : "<null>",
+        owner ? typeid(*owner).name() : "<null>",
+        static_cast<void*>(target_),
+        target_ ? target_->GetName() : "<null>",
+        animationClip,
+        animationNextClip,
+        animationTime,
+        locomotionTime,
+        useBlendSpace,
+        static_cast<int>(transitionState),
+        blendFactor));
+
+
+    const auto animationIt = animationNameToIndex_.find(animationName);
+    if (animationIt == animationNameToIndex_.end())
+    {
+        Logger::Warning(std::format(
+            "Animation not found: {}", animationName));
+        return;
+    }
+
+    const size_t requestedClip = animationIt->second;
+
+    // 同じ遷移先を遷移中に再要求しても、
+    // blendElapsedTime / blendFactor を先頭へ戻さない
+    if (transitionState != AnimationTransitionState::Completed &&
+        animationNextClip == requestedClip)
+    {
+        return;
+    }
+
+    notifyAnimationClip = requestedClip;
+
+    float requestedAnimationTime = 0.0f;
+
+    // BlendSpaceの歩行位相を通常Locomotion clip へ引き継ぐ。
+    // 攻撃、回避、Idleなどは従来通り時刻０から開始する。
+    const bool preserveLocomotionPhase =
+        suppressNormalRootMotionUntilTransitionCompleted &&
+        (animationName == "Walk_Fwd" || animationName == "Jog_Fwd");
+
+    if (preserveLocomotionPhase)
+    {
+        const float blendSpaceDuration = GetLocomotionDuration(currentGroup);
+        const float requestedDuration = target_->model->animations.at(requestedClip).duration;
+        if (blendSpaceDuration > FLT_EPSILON && requestedDuration > FLT_EPSILON)
+        {
+            float phase = locomotionTime / blendSpaceDuration;
+            phase -= std::floor(phase);
+
+            requestedAnimationTime = phase * requestedDuration;
+        }
+    }
+
+    animationTime = requestedAnimationTime;
+    prevAnimationTime = requestedAnimationTime;
+    this->animationNextClip = requestedClip;
+
+
+#endif // 0
     this->isAnimationFinished = false;
     currentAnimationName = animationName;
     InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
@@ -338,7 +427,8 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
     }
     else
     { // ブレンドしないなら現在のアニメーションを次のアニメーションに変更する
-        this->animationClip = animationNameToIndex_[animationName];
+        this->animationClip = requestedClip;
+        //this->animationClip = animationNameToIndex_[animationName];
         transitionState = AnimationController::AnimationTransitionState::Completed;
     }
 }
