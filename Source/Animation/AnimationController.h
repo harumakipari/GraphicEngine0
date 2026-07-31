@@ -571,6 +571,14 @@ private:
     float pendingLocomotionPhase = 0.0f;
 
 
+    // ブレンドスペースではない
+    // ルートモーションの最初を記録する　Pose
+    std::vector<InterleavedGltfModel::Node> normalRootMotionStartNodes;
+    // ルートモーションの最後を記録する　Pose
+    std::vector<InterleavedGltfModel::Node> normalRootMotionEndNodes;
+
+
+
     std::vector<InterleavedGltfModel::Node> groupTransitionStartNodes;
     std::vector<InterleavedGltfModel::Node> groupTransitionNodes;
 

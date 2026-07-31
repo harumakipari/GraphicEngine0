@@ -30,6 +30,10 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
     blendSpaceRootMotionStartNodes = target_->model->GetNodes();
     // ルートモーションの最後を記録する　Pose
     blendSpaceRootMotionEndNodes = target_->model->GetNodes();
+    // ルートモーションの最初を記録する　Pose
+    normalRootMotionStartNodes = target_->model->GetNodes();
+    // ルートモーションの最後を記録する　Pose
+    normalRootMotionEndNodes = target_->model->GetNodes();
 
 
     for (auto& pose : blendSpacePoses)
@@ -45,29 +49,14 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
-
-    Logger::Log(std::format(
-        "AnimCtrl:{:p} Owner:{:p} OwnerName:{} OwnerType:{} "
-        "Target:{:p} TargetName:{} "
-        "Clip:{} Next:{} Time:{:.4f} LocomotionTime:{:.4f} "
-        "UseBS:{} Transition:{} BlendFactor:{:.3f}",
-        static_cast<void*>(this),
-        static_cast<void*>(owner),
-        owner ? owner->GetName() : "<null>",
-        owner ? typeid(*owner).name() : "<null>",
-        static_cast<void*>(target_),
-        target_ ? target_->GetName() : "<null>",
-        animationClip,
-        animationNextClip,
-        animationTime,
-        locomotionTime,
-        useBlendSpace,
-        static_cast<int>(transitionState),
-        blendFactor));
-
     const DirectX::XMFLOAT3 actorPositionAtBegin = owner->GetPosition();
 
     prevAnimationTime = animationTime;
+
+    bool normalAnimationLoopedThisFrame = false;
+    float unwrappedAnimationTime = animationTime;
+    float normalAnimationDuration = 0.0f;
+
 
     const size_t rateClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
 
@@ -77,8 +66,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     switch (transitionState)
     {
     case AnimationTransitionState::Inprogress:
-        //curveRate = 1.0f;
-        //break;
     case AnimationTransitionState::NotStarted:
     case AnimationTransitionState::Completed:
         curveRate = asset.speedCurve.Evaluate(animationTime);
@@ -87,6 +74,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 
     float playRate = animationRate * asset.playRate * curveRate;
     animationTime += deltaTime * playRate;
+    unwrappedAnimationTime = animationTime;
     locomotionTime += deltaTime; // ブレンドスペースのためのタイム   
 
 
@@ -94,6 +82,38 @@ void AnimationController::OnUpdate(const float deltaTime)
     {// アニメーションがないモデルの場合
         return;
     }
+
+    // 通常アニメーションのループ判定
+    if (transitionState == AnimationTransitionState::Completed && !useBlendSpace)
+    {
+        normalAnimationDuration = target_->model->animations.at(animationClip).duration;
+
+        if (normalAnimationDuration > 0.0f && animationTime >= normalAnimationDuration)
+        {
+            if (requestStopLoop)
+            {
+                animationTime = normalAnimationDuration;
+                isAnimationLoop = false;
+                requestStopLoop = false;
+                isAnimationFinished = true;
+            }
+            else if (isAnimationLoop)
+            {
+                normalAnimationLoopedThisFrame = true;
+
+                animationTime =
+                    std::fmod(
+                        animationTime,
+                        normalAnimationDuration);
+            }
+            else
+            {
+                animationTime = normalAnimationDuration;
+                isAnimationFinished = true;
+            }
+        }
+    }
+
 
     // NotifyTrack のイベント処理
     const auto& notifyAsset = animationNotifyAssets[notifyAnimationClip];
@@ -172,18 +192,32 @@ void AnimationController::OnUpdate(const float deltaTime)
         }
         break;
     case AnimationTransitionState::Completed:
-#if 1
         if (useBlendSpace)
         {
             UpdateBlendSpace(deltaTime);
         }
         else
-#endif // 0
         {
             target_->model->Animate(this->animationClip, animationTime, finalNodes);
+
+            const float duration = target_->model->animations.at(animationClip).duration;
+            if (requestStopLoop && normalAnimationLoopedThisFrame)
+            {
+                isAnimationLoop = false;
+                requestStopLoop = false;
+                isAnimationFinished = true;
+            }
+            else if (!isAnimationLoop && animationTime >= duration)
+            {
+                animationTime = duration;
+                isAnimationFinished = true;
+            }
+
+#if 0// ループ処理
             // 終わったら通常時に戻す
             if (target_->model->animations.at(animationClip).duration < animationTime)
             {
+
                 if (isAnimationLoop)
                 {//アニメーションをループするとき
                     if (requestStopLoop)
@@ -203,6 +237,8 @@ void AnimationController::OnUpdate(const float deltaTime)
                     isAnimationFinished = true;
                 }
             }
+#endif // 0// ループ処理
+
         }
         break;
     default:
@@ -262,6 +298,56 @@ void AnimationController::OnUpdate(const float deltaTime)
                 }
                 else
                 {
+#if 1
+                    if (normalAnimationLoopedThisFrame)
+                    {
+                        target_->model->Animate(animationClip,0.0f,normalRootMotionStartNodes);
+
+                        target_->model->Animate(animationClip,normalAnimationDuration,normalRootMotionEndNodes);
+
+                        const auto& startNode =normalRootMotionStartNodes.at(rootNodeIndex);
+
+                        const auto& endNode =normalRootMotionEndNodes.at(rootNodeIndex);
+
+                        const DirectX::XMFLOAT3 rootPositionAtStart =
+                        {
+                            startNode.globalTransform._41,
+                            startNode.globalTransform._42,
+                            startNode.globalTransform._43
+                        };
+
+                        const DirectX::XMFLOAT3 rootPositionAtEnd =
+                        {
+                            endNode.globalTransform._41,
+                            endNode.globalTransform._42,
+                            endNode.globalTransform._43
+                        };
+
+                        rootMotionDelta =
+                        {
+                            (rootPositionAtEnd.x - previousPosition.x)
+                                + (position.x - rootPositionAtStart.x),
+
+                            (rootPositionAtEnd.y - previousPosition.y)
+                                + (position.y - rootPositionAtStart.y),
+
+                            (rootPositionAtEnd.z - previousPosition.z)
+                                + (position.z - rootPositionAtStart.z)
+                        };
+                    }
+                    else
+                    {
+                        rootMotionDelta =
+                        {
+                            position.x - previousPosition.x,
+                            position.y - previousPosition.y,
+                            position.z - previousPosition.z
+                        };
+                    }
+
+                    hasRootMotionDelta = true;
+                    previousPosition = position;
+#else
                     // グローバル空間
                     rootMotionDelta =
                     {
@@ -272,6 +358,8 @@ void AnimationController::OnUpdate(const float deltaTime)
 
                     hasRootMotionDelta = true;
                     previousPosition = position;
+#endif // 0
+
                 }
 
                 Logger::Log(std::format(

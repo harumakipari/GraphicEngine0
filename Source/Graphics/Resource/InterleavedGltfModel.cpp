@@ -1346,7 +1346,10 @@ void InterleavedGltfModel::Animate(size_t animationIndex, float time, std::vecto
     std::function<size_t(const std::vector<float>&, float, float&)> indexof = [](const std::vector<float>& timelines, float time, float& interpolationFactor)->size_t
         {
             const size_t keyframeCount = timelines.size();
-            if (time > timelines.at(keyframeCount - 1))
+
+
+
+            if (time >= timelines.at(keyframeCount - 1))
             {
                 interpolationFactor = 1.0f;
                 if (keyframeCount < 2)
