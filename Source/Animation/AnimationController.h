@@ -244,52 +244,53 @@ public:
         if (this->useBlendSpace == use)
             return;
 
-        const bool wasUsingBlendSpace = use;
+        // 変更前の状態を保存
+        const bool wasUsingBlendSpace = this->useBlendSpace;
         this->useBlendSpace = use;
 
+        // ルートモーションを使う
+        enableRootMotion = true;
+        ignoreRootMotion = false;
+
+        // BlendSpace -> 通常アニメーション
         if (wasUsingBlendSpace && !useBlendSpace)
         {
             Logger::Log("Disable BlendSpace");
 
             // 位相転送はRootMotion抑制とは別に管理する
-            const float duration = GetLocomotionDuration(currentGroup);
+            const float blendDuration = GetLocomotionDuration(currentGroup);
 
             pendingLocomotionPhase = 0.0f;
 
-            if (duration > FLT_EPSILON)
+            if (blendDuration > FLT_EPSILON)
             {
-                pendingLocomotionPhase =
-                    locomotionTime / duration;
-
-                pendingLocomotionPhase -=
-                    std::floor(pendingLocomotionPhase);
+                pendingLocomotionPhase =locomotionTime / blendDuration;
+                // 0~1へ収める
+                pendingLocomotionPhase -=std::floor(pendingLocomotionPhase);
             }
 
+            // 次に通常アニメーションが開始される時、
+            // この位相をanimationTime へ反映する
             pendingLocomotionPhaseTransfer = true;
 
-            // 通常アニメーション遷移中のRoot Motionを止める
+            // BlendSpaceから通常アニメーションへの遷移中は、
+            // ブレンド済みRoot位置の差分をActorへ適用しない
             suppressNormalRootMotionUntilTransitionCompleted = true;
-
-            // まだ新しい通常遷移は観測していない
             suppressNormalRootMotionObservedTransition = false;
 
             blendSpaceRootMotionDelta = {};
             blendSpaceRootMotionValid = false;
-
+            // 通常Root Motionの基準位置を再同期する
             resetRootMotionDelta = true;
 
-            //Logger::Log(std::format(
-            //    "DisableBS Pending:{} Phase:{:.4f} "
-            //    "Suppress:{} Observed:{}",
-            //    pendingLocomotionPhaseTransfer,
-            //    pendingLocomotionPhase,
-            //    suppressNormalRootMotionUntilTransitionCompleted,
-            //    suppressNormalRootMotionObservedTransition));
+            return;
         }
-        else if (!wasUsingBlendSpace && use)
+        // 通常アニメーション → BlendSpace
+        if (!wasUsingBlendSpace && use)
         {
             Logger::Log("Enable BlendSpace");
 
+#if 0
             locomotionTime = 0.0f;
             previousLocomotionPhase = 0.0f;
             resetLocomotionRootMotion = true;
@@ -301,19 +302,63 @@ public:
             blendSpaceTransition = true;
 
             animationNodes[Origin] = finalNodes;
+#else
+            float normalizedPhase = 0.0f;
+
+            if (animationClip <
+                target_->model->animations.size())
+            {
+                const float normalDuration =
+                    target_->model
+                    ->animations
+                    .at(animationClip)
+                    .duration;
+
+                if (normalDuration > FLT_EPSILON)
+                {
+                    normalizedPhase =
+                        animationTime / normalDuration;
+
+                    normalizedPhase -=
+                        std::floor(normalizedPhase);
+                }
+            }
+
+            const float blendDuration =
+                GetLocomotionDuration(currentGroup);
+
+            if (blendDuration > FLT_EPSILON)
+            {
+                locomotionTime =
+                    normalizedPhase * blendDuration;
+            }
+            else
+            {
+                locomotionTime = 0.0f;
+            }
+
+            // Root Motionの前回位相も同じ位置へ同期する
+            previousLocomotionPhase =
+                normalizedPhase;
+
+            // BlendSpaceのRoot Motion差分は新しく計算し直す
+            resetLocomotionRootMotion = true;
+            blendSpaceRootMotionDelta = {};
+            blendSpaceRootMotionValid = false;
+
+            // 通常PoseからBlendSpace Poseへの見た目の補間
+            blendSpaceElapsed = 0.0f;
+            blendSpaceTransition = true;
+            animationNodes[Origin] = finalNodes;
+
+            return;
+
+#endif // 0
         }
-
-
 
 
         if (use)
         {// ブレンドスペース開始
-            // ルートモーションを切る
-            enableRootMotion = true;
-            //ignoreRootMotion = true;
-            ignoreRootMotion = false;
-
-            locomotionTime = 0.0f;
             // ブレンドスペースに入る時に補間処理をするため
             blendSpaceTransition = true;
             blendSpaceElapsed = 0.0f;

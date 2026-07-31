@@ -54,7 +54,6 @@ Logger::~Logger() {
 }
 
 void Logger::Initialize() {
-
     auto& instance = Instance();
 
     //現在時刻を取得

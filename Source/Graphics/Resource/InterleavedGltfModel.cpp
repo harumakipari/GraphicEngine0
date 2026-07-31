@@ -1347,8 +1347,6 @@ void InterleavedGltfModel::Animate(size_t animationIndex, float time, std::vecto
         {
             const size_t keyframeCount = timelines.size();
 
-
-
             if (time >= timelines.at(keyframeCount - 1))
             {
                 interpolationFactor = 1.0f;

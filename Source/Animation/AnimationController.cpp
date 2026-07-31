@@ -212,33 +212,6 @@ void AnimationController::OnUpdate(const float deltaTime)
                 animationTime = duration;
                 isAnimationFinished = true;
             }
-
-#if 0// ループ処理
-            // 終わったら通常時に戻す
-            if (target_->model->animations.at(animationClip).duration < animationTime)
-            {
-
-                if (isAnimationLoop)
-                {//アニメーションをループするとき
-                    if (requestStopLoop)
-                    {
-                        isAnimationLoop = false;    // ループしないモードにする
-                        animationTime = 0.0f;
-                        requestStopLoop = false;
-                    }
-                    else
-                    {
-                        animationTime = 0;
-                        ResetRootMotion(static_cast<int>(animationClip));
-                    }
-                }
-                else
-                {
-                    isAnimationFinished = true;
-                }
-            }
-#endif // 0// ループ処理
-
         }
         break;
     default:
@@ -298,7 +271,6 @@ void AnimationController::OnUpdate(const float deltaTime)
                 }
                 else
                 {
-#if 1
                     if (normalAnimationLoopedThisFrame)
                     {
                         target_->model->Animate(animationClip,0.0f,normalRootMotionStartNodes);
@@ -347,32 +319,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 
                     hasRootMotionDelta = true;
                     previousPosition = position;
-#else
-                    // グローバル空間
-                    rootMotionDelta =
-                    {
-                        position.x - previousPosition.x,
-                        position.y - previousPosition.y,
-                        position.z - previousPosition.z
-                    };
-
-                    hasRootMotionDelta = true;
-                    previousPosition = position;
-#endif // 0
-
                 }
-
-                Logger::Log(std::format(
-                    "NormalRM Suppress:{} Transition:{} "
-                    "BlendFactor:{:.3f} HasDelta:{} "
-                    "RootPos:({:.4f}, {:.4f}, {:.4f})",
-                    suppressNormalRootMotionUntilTransitionCompleted,
-                    static_cast<int>(transitionState),
-                    blendFactor,
-                    hasRootMotionDelta,
-                    node.globalTransform._41,
-                    node.globalTransform._42,
-                    node.globalTransform._43));
 
             }
 
@@ -388,12 +335,6 @@ void AnimationController::OnUpdate(const float deltaTime)
                 translation.z += rootMotionDelta.z;
 
                 owner->SetPosition(translation);
-
-                Logger::Log(std::format(
-                    "Apply RootMotion Delta: ({:.5f}, {:.5f}, {:.5f})",
-                    rootMotionDelta.x,
-                    rootMotionDelta.y,
-                    rootMotionDelta.z));
             }
         }
         // ルートノードの変位量を初期姿勢の値に設定。
@@ -417,8 +358,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     // 次のOnUpdateから通常Root Motionを再開する。
     if (releaseNormalRootMotionSuppression)
     {
-        Logger::Log("Release Normal RootMotion Suppression");
-
         suppressNormalRootMotionUntilTransitionCompleted = false;
         suppressNormalRootMotionObservedTransition = false;
     }
@@ -426,21 +365,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     const DirectX::XMFLOAT3 actorPositionAtEnd =
         owner->GetPosition();
 
-    Logger::Log(std::format(
-        "AnimationController:{:p} "
-        "Actor Begin:({:.4f}, {:.4f}, {:.4f}) "
-        "End:({:.4f}, {:.4f}, {:.4f}) "
-        "Delta:({:.4f}, {:.4f}, {:.4f})",
-        static_cast<void*>(this),
-        actorPositionAtBegin.x,
-        actorPositionAtBegin.y,
-        actorPositionAtBegin.z,
-        actorPositionAtEnd.x,
-        actorPositionAtEnd.y,
-        actorPositionAtEnd.z,
-        actorPositionAtEnd.x - actorPositionAtBegin.x,
-        actorPositionAtEnd.y - actorPositionAtBegin.y,
-        actorPositionAtEnd.z - actorPositionAtBegin.z));
 }
 
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
@@ -453,25 +377,6 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
 
     this->animationNextClip = animationNameToIndex_[animationName];
 #else
-    Logger::Log(std::format(
-        "AnimCtrl:{:p} Owner:{:p} OwnerName:{} OwnerType:{} "
-        "Target:{:p} TargetName:{} "
-        "Clip:{} Next:{} Time:{:.4f} LocomotionTime:{:.4f} "
-        "UseBS:{} Transition:{} BlendFactor:{:.3f}",
-        static_cast<void*>(this),
-        static_cast<void*>(owner),
-        owner ? owner->GetName() : "<null>",
-        owner ? typeid(*owner).name() : "<null>",
-        static_cast<void*>(target_),
-        target_ ? target_->GetName() : "<null>",
-        animationClip,
-        animationNextClip,
-        animationTime,
-        locomotionTime,
-        useBlendSpace,
-        static_cast<int>(transitionState),
-        blendFactor));
-
 
     const auto animationIt = animationNameToIndex_.find(animationName);
     if (animationIt == animationNameToIndex_.end())
@@ -488,10 +393,6 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
     if (transitionState != AnimationTransitionState::Completed &&
         animationNextClip == requestedClip)
     {
-        Logger::Log(std::format(
-            "Skip Duplicate Transition Name:{} Clip:{}",
-            animationName,
-            requestedClip));
         return;
     }
 
@@ -519,20 +420,6 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
             pendingLocomotionPhase *
             requestedDuration;
     }
-
-    Logger::Log(std::format(
-        "ResetRM Name:{} Requested:{} "
-        "Pending:{} Phase:{:.4f} "
-        "Preserve:{} RequestedTime:{:.4f} "
-        "Suppress:{} Transition:{}",
-        animationName,
-        requestedClip,
-        pendingLocomotionPhaseTransfer,
-        pendingLocomotionPhase,
-        preserveLocomotionPhase,
-        requestedAnimationTime,
-        suppressNormalRootMotionUntilTransitionCompleted,
-        static_cast<int>(transitionState)));
 
     // 次のアニメーション要求だけが対象
     // Walk/Jog以外が来た場合も古い位相を残さない
