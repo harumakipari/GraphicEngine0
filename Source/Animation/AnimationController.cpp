@@ -1499,7 +1499,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         canExtractRootMotion = false;
     }
 
-    if (groupTransition || blendSpaceTransition)
+    if (groupTransition /*|| blendSpaceTransition*/)
     {
         canExtractRootMotion = false;
     }

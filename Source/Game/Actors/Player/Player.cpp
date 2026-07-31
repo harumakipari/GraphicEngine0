@@ -953,17 +953,18 @@ void Player::UpdateLocomotionAnimation()
         return;
     }
 
-    auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera());
-
-    switch (camera->GetMovementMode())
+    if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
     {
-    case DarkCameraActor::CameraMode::TPS:
-        UpdateTPSLocomotion();
-        break;
-    case DarkCameraActor::CameraMode::Focus:
-    case DarkCameraActor::CameraMode::LockOn:
-        UpdateLockOnLocomotion();
-        break;
+        switch (camera->GetMovementMode())
+        {
+        case DarkCameraActor::CameraMode::TPS:
+            UpdateTPSLocomotion();
+            break;
+        case DarkCameraActor::CameraMode::Focus:
+        case DarkCameraActor::CameraMode::LockOn:
+            UpdateLockOnLocomotion();
+            break;
+        }
     }
 }
 
@@ -1009,7 +1010,7 @@ void Player::UpdateTPSLocomotion()
                 SetLocomotionMode(LocomotionMode::Idle);
         }
         break;
-    // Focus / LockOn ‚©‚ç TPS ‚É–ß‚Á‚½Žž
+        // Focus / LockOn ‚©‚ç TPS ‚É–ß‚Á‚½Žž
     case LocomotionMode::LockOnBlendWalk:
     case LocomotionMode::LockOnBlendRun:
         if (speed >= 0.6f)

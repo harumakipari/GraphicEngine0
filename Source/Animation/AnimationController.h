@@ -264,9 +264,9 @@ public:
 
             if (blendDuration > FLT_EPSILON)
             {
-                pendingLocomotionPhase =locomotionTime / blendDuration;
+                pendingLocomotionPhase = locomotionTime / blendDuration;
                 // 0~1へ収める
-                pendingLocomotionPhase -=std::floor(pendingLocomotionPhase);
+                pendingLocomotionPhase -= std::floor(pendingLocomotionPhase);
             }
 
             // 次に通常アニメーションが開始される時、
@@ -289,20 +289,7 @@ public:
         if (!wasUsingBlendSpace && use)
         {
             Logger::Log("Enable BlendSpace");
-
 #if 0
-            locomotionTime = 0.0f;
-            previousLocomotionPhase = 0.0f;
-            resetLocomotionRootMotion = true;
-
-            blendSpaceRootMotionDelta = {};
-            blendSpaceRootMotionValid = false;
-
-            blendSpaceElapsed = 0.0f;
-            blendSpaceTransition = true;
-
-            animationNodes[Origin] = finalNodes;
-#else
             float normalizedPhase = 0.0f;
 
             if (animationClip <
@@ -342,7 +329,8 @@ public:
                 normalizedPhase;
 
             // BlendSpaceのRoot Motion差分は新しく計算し直す
-            resetLocomotionRootMotion = true;
+            //resetLocomotionRootMotion = true;
+            resetLocomotionRootMotion = false;
             blendSpaceRootMotionDelta = {};
             blendSpaceRootMotionValid = false;
 
@@ -351,9 +339,52 @@ public:
             blendSpaceTransition = true;
             animationNodes[Origin] = finalNodes;
 
+#else
+            // 通常アニメーションの位相を取得
+            float normalizedPhase = 0.0f;
+
+            const float normalDuration =
+                target_->model->animations.at(animationClip).duration;
+
+            if (normalDuration > 0.0f)
+            {
+                normalizedPhase =
+                    animationTime / normalDuration;
+
+                normalizedPhase -=
+                    std::floor(normalizedPhase);
+            }
+
+            const float blendSpaceDuration =GetLocomotionDuration(currentGroup);
+
+            if (blendSpaceDuration > FLT_EPSILON)
+            {
+                locomotionTime =
+                    normalizedPhase * blendSpaceDuration;
+
+                previousLocomotionPhase =
+                    normalizedPhase;
+
+                resetLocomotionRootMotion = false;
+            }
+            else
+            {
+                locomotionTime = 0.0f;
+                previousLocomotionPhase = 0.0f;
+                resetLocomotionRootMotion = true;
+            }
+
+            blendSpaceRootMotionDelta = {};
+            blendSpaceRootMotionValid = false;
+            blendSpaceElapsed = 0.0f;
+            blendSpaceTransition = true;
+
+            animationNodes[Origin] = finalNodes;
+
+#endif // 1
+
             return;
 
-#endif // 0
         }
 
 

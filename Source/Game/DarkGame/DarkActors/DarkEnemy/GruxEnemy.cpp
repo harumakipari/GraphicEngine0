@@ -271,7 +271,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     lockOnTargetMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
 
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
-    hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
+    hitSwordEffectComponent->Load("./Data/Effect/Files/DarkStageBloodEffect.json");
+    //hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
 }
 
 void GruxEnemy::Update(float deltaTime)
@@ -536,7 +537,7 @@ void GruxEnemy::DrawImGuiDetails()
 //当たった時の処理
 void GruxEnemy::TakeDamage(const int damage)
 {
-    skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
+    //skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
     CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_hit.wav", 0.5f);
     hp -= damage;
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
