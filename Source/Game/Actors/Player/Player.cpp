@@ -673,40 +673,6 @@ void Player::Update(float deltaTime)
         }
     }
 
-#if 0
-    if (swordPointComp)
-    {
-        auto currentTip = swordPointComp->GetComponentLocation();
-
-        if (hasPrevSwordTip)
-        {
-            CheckSwordLineHit(prevSwordTip, currentTip);
-        }
-
-        prevSwordTip = currentTip;
-        hasPrevSwordTip = true;
-
-        DebugRender::DrawSphere(swordPointComp->GetComponentLocation(), 0.1f, { 1,1,0,1 }, 0.0f, true);
-
-        // 剣先取得
-        XMFLOAT3 tip = swordPointComp->GetComponentLocation();
-
-        // トレイル追加（毎フレーム）
-        trailPoints.push_back({ tip, 0.3f }); // ←長さ調整
-
-        // 更新
-        for (auto& p : trailPoints)
-        {
-            p.life -= deltaTime;
-        }
-
-        // 削除
-        trailPoints.erase(
-            std::remove_if(trailPoints.begin(), trailPoints.end(),
-                [](const TrailPoint& p) { return p.life <= 0; }),
-            trailPoints.end());
-    }
-#endif // 0
 
     UpdateMovement();
 

@@ -49,13 +49,111 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
-    const DirectX::XMFLOAT3 actorPositionAtBegin = owner->GetPosition();
-
-    prevAnimationTime = animationTime;
+    // 最初にモデルとアニメーションを確認する
+    if (!target_ || !target_->model || target_->model->animations.empty())
+    {
+        return;
+    }
 
     bool normalAnimationLoopedThisFrame = false;
     float unwrappedAnimationTime = animationTime;
     float normalAnimationDuration = 0.0f;
+
+    // 通常アニメーション遷移でのみ使用する
+    float normalPlayRate = 1.0f;
+
+#if 1
+    if (useBlendSpace)
+    {
+        // Focus中は通常アニメーション時間を進めない
+        // 通常クリップのSpeed Curveも評価しない
+        locomotionTime += deltaTime;
+    }
+    else
+    {
+        // 通常NotifyやRoot Motionで使用する前回時刻
+        prevAnimationTime = animationTime;
+
+        const size_t rateClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
+
+        // 配列範囲を確認
+        if (rateClip >=
+            target_->model->animations.size())
+        {
+            return;
+        }
+
+        if (rateClip >=
+            animationNotifyAssets.size())
+        {
+            return;
+        }
+
+        const auto& asset =
+            animationNotifyAssets.at(rateClip);
+
+        const float curveRate =
+            asset.speedCurve.Evaluate(
+                animationTime);
+
+        normalPlayRate =
+            animationRate *
+            asset.playRate *
+            curveRate;
+
+        animationTime +=
+            deltaTime * normalPlayRate;
+
+        unwrappedAnimationTime =
+            animationTime;
+
+        // 通常アニメーションのループ判定
+        if (transitionState ==
+            AnimationTransitionState::Completed)
+        {
+            normalAnimationDuration =
+                target_->model
+                ->animations
+                .at(animationClip)
+                .duration;
+
+            if (normalAnimationDuration >
+                FLT_EPSILON &&
+                animationTime >=
+                normalAnimationDuration)
+            {
+                if (requestStopLoop)
+                {
+                    animationTime =
+                        normalAnimationDuration;
+
+                    isAnimationLoop = false;
+                    requestStopLoop = false;
+                    isAnimationFinished = true;
+                }
+                else if (isAnimationLoop)
+                {
+                    normalAnimationLoopedThisFrame =
+                        true;
+
+                    animationTime =
+                        std::fmod(
+                            animationTime,
+                            normalAnimationDuration);
+                }
+                else
+                {
+                    animationTime =
+                        normalAnimationDuration;
+
+                    isAnimationFinished = true;
+                }
+            }
+        }
+    }
+
+#else
+    prevAnimationTime = animationTime;
 
 
     const size_t rateClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
@@ -78,10 +176,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     locomotionTime += deltaTime; // ブレンドスペースのためのタイム   
 
 
-    if (target_->model->animations.size() == 0)
-    {// アニメーションがないモデルの場合
-        return;
-    }
 
     // 通常アニメーションのループ判定
     if (transitionState == AnimationTransitionState::Completed && !useBlendSpace)
@@ -113,6 +207,8 @@ void AnimationController::OnUpdate(const float deltaTime)
             }
         }
     }
+#endif // 0
+
 
 
     // NotifyTrack のイベント処理
@@ -150,53 +246,54 @@ void AnimationController::OnUpdate(const float deltaTime)
     }
 
     // BlendSpace解除後、新しい通常遷移が実際に開始されたことを記録
-    if (suppressNormalRootMotionUntilTransitionCompleted &&
-        transitionState !=
-        AnimationTransitionState::Completed)
+    if (!useBlendSpace && suppressNormalRootMotionUntilTransitionCompleted && transitionState != AnimationTransitionState::Completed)
     {
         suppressNormalRootMotionObservedTransition = true;
     }
 
-    // アニメーション遷移の準備
-    switch (transitionState)
+    if (useBlendSpace)
     {
-    case AnimationTransitionState::NotStarted:
-        target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
-        blendElapsedTime = 0.0f;
-        blendFactor = 0.0f;
+        UpdateBlendSpace(deltaTime);
 
-        transitionState = AnimationTransitionState::Inprogress;
-        break;
-    case AnimationTransitionState::Inprogress:
-        blendElapsedTime += deltaTime * playRate;
-        if (transitionTime > 0.0f)
-        {
-            blendFactor = blendElapsedTime / transitionTime;     //ゼロ除算を防ぐため
-        }
-        else
-        {
-            blendFactor = 1.0f;
-        }
-        blendFactor = std::clamp(blendFactor, 0.0f, 1.0f);
-        target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
+    }
+    else
+    {
 
-        // blend
-        target_->model->BlendAnimations(animationNodes[Origin], animationNodes[Next], blendFactor, finalNodes);
+        // アニメーション遷移の準備
+        switch (transitionState)
+        {
+        case AnimationTransitionState::NotStarted:
+            target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
+            blendElapsedTime = 0.0f;
+            blendFactor = 0.0f;
 
-        if (blendFactor >= 1.0f)
-        {
-            // 遷移終了
-            transitionState = AnimationTransitionState::Completed;
-            // 現在のアニメーションクリップを次のアニメーションクリップに変更する
-            this->animationClip = this->animationNextClip;
-        }
-        break;
-    case AnimationTransitionState::Completed:
-        if (useBlendSpace)
-        {
-            UpdateBlendSpace(deltaTime);
-        }
-        else
+            transitionState = AnimationTransitionState::Inprogress;
+            break;
+        case AnimationTransitionState::Inprogress:
+            blendElapsedTime += deltaTime * normalPlayRate;
+            if (transitionTime > 0.0f)
+            {
+                blendFactor = blendElapsedTime / transitionTime;     //ゼロ除算を防ぐため
+            }
+            else
+            {
+                blendFactor = 1.0f;
+            }
+            blendFactor = std::clamp(blendFactor, 0.0f, 1.0f);
+            target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
+
+            // blend
+            target_->model->BlendAnimations(animationNodes[Origin], animationNodes[Next], blendFactor, finalNodes);
+
+            if (blendFactor >= 1.0f)
+            {
+                // 遷移終了
+                transitionState = AnimationTransitionState::Completed;
+                // 現在のアニメーションクリップを次のアニメーションクリップに変更する
+                this->animationClip = this->animationNextClip;
+            }
+            break;
+        case AnimationTransitionState::Completed:
         {
             target_->model->Animate(this->animationClip, animationTime, finalNodes);
 
@@ -214,8 +311,9 @@ void AnimationController::OnUpdate(const float deltaTime)
             }
         }
         break;
-    default:
-        break;
+        default:
+            break;
+        }
     }
 
 
@@ -1561,6 +1659,16 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             currentRootNode.globalTransform._42,
             currentRootNode.globalTransform._43
         };
+
+
+        Logger::Log(std::format(
+            "BlendRM PrevPhase:{} CurrentPhase:{} Delta:{} LocomotionTime:{} Duration:{}",
+            previousLocomotionPhase,
+            currentLocomotionPhase,
+            currentLocomotionPhase -
+            previousLocomotionPhase,
+            locomotionTime,
+            GetLocomotionDuration(currentGroup)));
 
         // ループしていないフレームのみ
         if (previousLocomotionPhase <= currentLocomotionPhase)
