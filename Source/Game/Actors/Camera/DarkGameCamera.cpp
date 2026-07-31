@@ -240,8 +240,19 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
 
     float t = std::clamp(blendTime / blendDuration, 0.0f, 1.0f);
 
+    // TPSからFocusの時に現在のplayerの位置から終点を再計算をする
+    CameraPose targetPose = blendTargetPose;
+    if (currentMode == CameraMode::TPS && requestMode == CameraMode::Focus)
+    {
+        if (auto head = playerHead.lock())
+        {
+            const DirectX::XMFLOAT3 currentPlayerPos = head->GetComponentLocation();
+            targetPose = CalculatePose(CameraMode::Focus, currentPlayerPos, blendTargetPose.yaw, blendTargetPose.pitch);
+        }
+    }
+
     // 補間
-    currentPose.target = MathHelper::Lerp(blendStartPose.target, blendTargetPose.target, t);
+    currentPose.target = MathHelper::Lerp(blendStartPose.target, targetPose.target, t);
     currentYaw = MathHelper::LerpAngle(blendStartPose.yaw, blendTargetPose.yaw, t);
     currentPitch = std::lerp(blendStartPose.pitch, blendTargetPose.pitch, t);
 

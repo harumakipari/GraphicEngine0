@@ -465,22 +465,22 @@ void AnimationController::OnUpdate(const float deltaTime)
         owner->GetPosition();
 
 
-    Logger::Log(std::format(
-        "[ActorMove] UseBS:{} BlendTransition:{} "
-        "Begin:({},{},{}) "
-        "End:({},{},{}) "
-        "Delta:({},{},{})",
-        useBlendSpace,
-        blendSpaceTransition,
-        actorPositionAtBegin.x,
-        actorPositionAtBegin.y,
-        actorPositionAtBegin.z,
-        actorPositionAtEnd.x,
-        actorPositionAtEnd.y,
-        actorPositionAtEnd.z,
-        actorPositionAtEnd.x - actorPositionAtBegin.x,
-        actorPositionAtEnd.y - actorPositionAtBegin.y,
-        actorPositionAtEnd.z - actorPositionAtBegin.z));
+    //Logger::Log(std::format(
+    //    "[ActorMove] UseBS:{} BlendTransition:{} "
+    //    "Begin:({},{},{}) "
+    //    "End:({},{},{}) "
+    //    "Delta:({},{},{})",
+    //    useBlendSpace,
+    //    blendSpaceTransition,
+    //    actorPositionAtBegin.x,
+    //    actorPositionAtBegin.y,
+    //    actorPositionAtBegin.z,
+    //    actorPositionAtEnd.x,
+    //    actorPositionAtEnd.y,
+    //    actorPositionAtEnd.z,
+    //    actorPositionAtEnd.x - actorPositionAtBegin.x,
+    //    actorPositionAtEnd.y - actorPositionAtBegin.y,
+    //    actorPositionAtEnd.z - actorPositionAtBegin.z));
 
 }
 
@@ -1755,22 +1755,22 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
                     clipRootMotionDelta.z *
                     clipRootMotionDelta.z);
 
-            Logger::Log(std::format(
-                "[BlendRMClip] "
-                "Clip:{} Weight:{} "
-                "PrevPhase:{} CurrentPhase:{} "
-                "Delta:({},{},{}) "
-                "Length:{} "
-                "BlendTransition:{}",
-                clip,
-                weights[i].weight,
-                previousLocomotionPhase,
-                currentLocomotionPhase,
-                clipRootMotionDelta.x,
-                clipRootMotionDelta.y,
-                clipRootMotionDelta.z,
-                deltaLength,
-                blendSpaceTransition));
+            //Logger::Log(std::format(
+            //    "[BlendRMClip] "
+            //    "Clip:{} Weight:{} "
+            //    "PrevPhase:{} CurrentPhase:{} "
+            //    "Delta:({},{},{}) "
+            //    "Length:{} "
+            //    "BlendTransition:{}",
+            //    clip,
+            //    weights[i].weight,
+            //    previousLocomotionPhase,
+            //    currentLocomotionPhase,
+            //    clipRootMotionDelta.x,
+            //    clipRootMotionDelta.y,
+            //    clipRootMotionDelta.z,
+            //    deltaLength,
+            //    blendSpaceTransition));
         }
 
         // 各クリップごとの重み付きのRootMotionを加算
