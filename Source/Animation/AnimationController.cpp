@@ -49,6 +49,8 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
+    const DirectX::XMFLOAT3 actorPositionAtBegin =owner->GetPosition();
+
     // 最初にモデルとアニメーションを確認する
     if (!target_ || !target_->model || target_->model->animations.empty())
     {
@@ -461,6 +463,24 @@ void AnimationController::OnUpdate(const float deltaTime)
 
     const DirectX::XMFLOAT3 actorPositionAtEnd =
         owner->GetPosition();
+
+
+    Logger::Log(std::format(
+        "[ActorMove] UseBS:{} BlendTransition:{} "
+        "Begin:({},{},{}) "
+        "End:({},{},{}) "
+        "Delta:({},{},{})",
+        useBlendSpace,
+        blendSpaceTransition,
+        actorPositionAtBegin.x,
+        actorPositionAtBegin.y,
+        actorPositionAtBegin.z,
+        actorPositionAtEnd.x,
+        actorPositionAtEnd.y,
+        actorPositionAtEnd.z,
+        actorPositionAtEnd.x - actorPositionAtBegin.x,
+        actorPositionAtEnd.y - actorPositionAtBegin.y,
+        actorPositionAtEnd.z - actorPositionAtBegin.z));
 
 }
 
@@ -1660,16 +1680,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             currentRootNode.globalTransform._43
         };
 
-
-        Logger::Log(std::format(
-            "BlendRM PrevPhase:{} CurrentPhase:{} Delta:{} LocomotionTime:{} Duration:{}",
-            previousLocomotionPhase,
-            currentLocomotionPhase,
-            currentLocomotionPhase -
-            previousLocomotionPhase,
-            locomotionTime,
-            GetLocomotionDuration(currentGroup)));
-
         // ループしていないフレームのみ
         if (previousLocomotionPhase <= currentLocomotionPhase)
         {
@@ -1732,14 +1742,35 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
             clipRootMotionValid = true;
 
-            //Logger::Log(std::format(
-            //    "StartZ = {} EndZ = {}",
-            //    startRootPosition.z,
-            //    endRootPosition.z));
-            //Logger::Log(std::format(
-            //    "ToEnd {}  FromStart {}",
-            //    deltaToEnd.z,
-            //    deltaFromStart.z));
+        }
+
+        if (clipRootMotionValid)
+        {
+            const float deltaLength =
+                std::sqrt(
+                    clipRootMotionDelta.x *
+                    clipRootMotionDelta.x +
+                    clipRootMotionDelta.y *
+                    clipRootMotionDelta.y +
+                    clipRootMotionDelta.z *
+                    clipRootMotionDelta.z);
+
+            Logger::Log(std::format(
+                "[BlendRMClip] "
+                "Clip:{} Weight:{} "
+                "PrevPhase:{} CurrentPhase:{} "
+                "Delta:({},{},{}) "
+                "Length:{} "
+                "BlendTransition:{}",
+                clip,
+                weights[i].weight,
+                previousLocomotionPhase,
+                currentLocomotionPhase,
+                clipRootMotionDelta.x,
+                clipRootMotionDelta.y,
+                clipRootMotionDelta.z,
+                deltaLength,
+                blendSpaceTransition));
         }
 
         // 各クリップごとの重み付きのRootMotionを加算
@@ -1750,16 +1781,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             blendSpaceRootMotionDelta.y += clipRootMotionDelta.y * weight;
             blendSpaceRootMotionDelta.z += clipRootMotionDelta.z * weight;
             rootMotionTotalWeight += weight;
-
-            //Logger::Log(std::format(
-            //    "RootMotion Clip:{} Weight:{:.3f} "
-            //    "Delta:({:.5f}, {:.5f}, {:.5f})",
-            //    clip,
-            //    weight,
-            //    clipRootMotionDelta.x,
-            //    clipRootMotionDelta.y,
-            //    clipRootMotionDelta.z));
-
         }
 
     }
