@@ -18,6 +18,7 @@ void DarkStage::Initialize(const Transform& transform)
     castStaticMeshComponent->SetModel("./Data/Models/DarkStageShadowModel/DarkStageShadowModel.glb", false, true);
     castStaticMeshComponent->SetIsOnlyShadow(true);
     castStaticMeshComponent->SetIsVisible(false);
+    
 
 #if 1
     {
@@ -133,6 +134,7 @@ void DarkStage::StartBossRoomLightSequence()
 void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset)
 {
     auto scene = GetOwnerScene();
+
 
     std::shared_ptr<StaticMeshComponent> staticMeshComponent;
     {

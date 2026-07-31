@@ -263,8 +263,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 
                     // V‚µ‚¢‘JˆÚ‚ðˆê“xˆÈãŠÏ‘ª‚µ‚Ä‚©‚çCompleted‚É‚È‚Á‚½ê‡‚¾‚¯‰ðœ—\–ñ
                     if (suppressNormalRootMotionObservedTransition &&
-                        transitionState ==
-                        AnimationTransitionState::Completed)
+                        transitionState == AnimationTransitionState::Completed)
                     {
                         releaseNormalRootMotionSuppression = true;
                     }
@@ -273,13 +272,13 @@ void AnimationController::OnUpdate(const float deltaTime)
                 {
                     if (normalAnimationLoopedThisFrame)
                     {
-                        target_->model->Animate(animationClip,0.0f,normalRootMotionStartNodes);
+                        target_->model->Animate(animationClip, 0.0f, normalRootMotionStartNodes);
 
-                        target_->model->Animate(animationClip,normalAnimationDuration,normalRootMotionEndNodes);
+                        target_->model->Animate(animationClip, normalAnimationDuration, normalRootMotionEndNodes);
 
-                        const auto& startNode =normalRootMotionStartNodes.at(rootNodeIndex);
+                        const auto& startNode = normalRootMotionStartNodes.at(rootNodeIndex);
 
-                        const auto& endNode =normalRootMotionEndNodes.at(rootNodeIndex);
+                        const auto& endNode = normalRootMotionEndNodes.at(rootNodeIndex);
 
                         const DirectX::XMFLOAT3 rootPositionAtStart =
                         {

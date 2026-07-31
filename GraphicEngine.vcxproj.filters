@@ -1181,15 +1181,6 @@
     <FxCompile Include="Shader\SsaoPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\ShaderToyPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\ShaderToySky2.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\ShaderToySkyPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\ShaderToyVS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
