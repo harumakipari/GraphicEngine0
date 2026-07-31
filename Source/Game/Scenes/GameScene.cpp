@@ -209,30 +209,14 @@ void GameScene::Update(float deltaTime)
         ChangeCameraMode(TPSCameraController::CameraMode::TPS);
     }
 
-#if 0
-    if (player && mainCameraComponent)
-    {
-        float followSpeed = 6.0f;
-        const auto& forward = player->GetForward();
-        float playerYaw = std::atan2f(forward.x, forward.z);
-        //mainCameraComponent->yaw = (playerYaw);
 
-        float delta = playerYaw - mainCameraComponent->yaw;
-        delta = std::atan2f(std::sinf(delta), std::cosf(delta)); // -3.14 ~ 3.14
-        mainCameraComponent->yaw += delta * followSpeed * deltaTime;
-
-    }
-#endif // 0
-
-    //#ifdef _DEBUG
+#ifdef _DEBUG
     if (InputSystem::GetInputState("Space", InputStateMask::Trigger))
     {
         const char* types[] = { "0", "1" };
         SceneTransitionManager::Instance().RequestTransition("GameScene");
-
-        //Scene::_transition("LoadingScene", { std::make_pair("preload", "PuddingGameScene"), std::make_pair("type", types[rand() % 2]) });
     }
-    //#endif // !_DEBUG
+#endif // !_DEBUG
 }
 
 // 定数バッファの更新処理をシーンごとにカスタマイズできるようにするための仮想関数

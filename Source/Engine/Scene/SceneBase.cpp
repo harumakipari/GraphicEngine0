@@ -88,7 +88,8 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
 
     //カスケードシャドウマップ
     //cascadedShadowMaps = std::make_unique<decltype(cascadedShadowMaps)::element_type>(device, 1024, 1024, 4);
-    cascadedShadowMaps = std::make_unique<CascadedShadowMaps>(device, 256, 256, 4);
+    cascadedShadowMaps = std::make_unique<decltype(cascadedShadowMaps)::element_type>(device, 128, 128, 4);
+    //cascadedShadowMaps = std::make_unique<CascadedShadowMaps>(device, 256, 256, 4);
 
     D3D11_TEXTURE2D_DESC texture2dDesc;
     //テクスチャをロード
@@ -104,12 +105,6 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     // フォグなどの使用するノイズテクスチャ
     Microsoft::WRL::ComPtr<ID3D11Resource> resource;
     hr = DirectX::CreateDDSTextureFromFile(device, L"./Data/ShaderTextures/_noise_3d.dds", resource.ReleaseAndGetAddressOf(), noise3d.ReleaseAndGetAddressOf());
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-    // 空に使用するテクスチャ
-    hr = LoadTextureFromFile(device, L"./Data/ShaderTextures/starTex.png", starTexture.ReleaseAndGetAddressOf(), &texture2dDesc);
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = LoadTextureFromFile(device, L"./Data/ShaderTextures/skyNoiseTex.png", skyNoiseTexture.ReleaseAndGetAddressOf(), &texture2dDesc);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     // UIマネージャーを初期化
@@ -261,8 +256,6 @@ void SceneBase::UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, floa
 
     // テクスチャをセット
     immediateContext->PSSetShaderResources(20, 1, noise3d.GetAddressOf());
-    immediateContext->PSSetShaderResources(21, 1, skyNoiseTexture.GetAddressOf());
-    immediateContext->PSSetShaderResources(22, 1, starTexture.GetAddressOf());
 
     D3D11_VIEWPORT viewport;
     UINT num_viewports{ 1 };
