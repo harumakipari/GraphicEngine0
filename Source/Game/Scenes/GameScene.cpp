@@ -139,7 +139,7 @@ void GameScene::Start()
     bossBgmActor->SetLoop(true);
     bossBgmActor->SetBgm(true);
     //bossBgmActor->Play();
-    bossBgmActor->SetVolume(0.1f);
+    bossBgmActor->SetVolume(0.015f);
 
 #if 0
     cameraManager->ToggleCinematicCamera(this);
@@ -190,15 +190,15 @@ void GameScene::Update(float deltaTime)
     {
         SetLightViewFocus(player->GetPosition());
     }
-    // シネマカメラだったら
-    if (cameraManager->IsUseCinematic())
+    // シネマカメラだったらまたはムービーカメラだったらプレイヤーを透明化しない
+    if (cameraManager->IsUseCinematic() || cameraManager->IsUseMovie())
     {
-        player->SetIsPlayerTransparency(true);
+        player->SetIsPlayerTransparency(false);
         player->operateUiComponent->SetVisible(false);
     }
     else
     {
-        player->SetIsPlayerTransparency(false);
+        player->SetIsPlayerTransparency(true);
         player->operateUiComponent->SetVisible(true);
     }
 
@@ -257,7 +257,7 @@ void GameScene::Update(float deltaTime)
         enableSceneGui = !enableSceneGui;
     }
 
-    if (enableLightGui|| enableSceneGui)
+    if (enableLightGui || enableSceneGui)
     {
         InputSystem::SetCursorVisible(true);
     }
@@ -271,6 +271,20 @@ void GameScene::Update(float deltaTime)
         static SceneState savedState;
         SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
         savedState.ApplyScenePreset(Scene::GetCurrentScene());
+
+        // BGMも元に戻す
+        auto bgmActors = GetActorManager()->GetActorsOfType <BgmActor>();
+        for (auto bgmActor : bgmActors)
+        {
+            if (bgmActor->GetName() == "BossBgmActor")
+            {
+                bgmActor->Stop();
+            }
+            if (bgmActor->GetName() == "GameBgmActor")
+            {
+                bgmActor->Play();
+            }
+        }
     }
 
 

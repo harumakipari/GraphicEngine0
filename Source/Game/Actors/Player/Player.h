@@ -117,7 +117,7 @@ public:
     // 回避方向を取得する
     DodgeDirection GetDodgeDirection()const { return dodgeDirection; }
 
-    void SetIsPlayerTransparency(const bool isTransparency) { moviePerform = isTransparency; }
+    void SetIsPlayerTransparency(const bool isTransparency) { moviePerform = !isTransparency; }
 
 private:
     // 火花エフェクトの生成
