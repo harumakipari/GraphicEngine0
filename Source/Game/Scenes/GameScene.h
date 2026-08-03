@@ -86,6 +86,7 @@ private:
     // ƒJƒƒ‰
     TPSCameraComponent* mainCameraComponent = nullptr;
     std::shared_ptr<MainCamera> mainCameraActor;
+    std::shared_ptr<CinemaCamera> cinemaCameraActor;
 
     std::shared_ptr<DarkCameraActor> darkCameraActor;
 

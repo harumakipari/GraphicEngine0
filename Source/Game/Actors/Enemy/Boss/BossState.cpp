@@ -10,13 +10,19 @@ EnemyStateBase::EnemyStateBase(GruxEnemy* actor) :State(actor), enemy(actor)
 // 待機ステートオブジェクト
 void EnemyIdleState::Enter()
 {
+    timer = 0.0f;
     owner->PlayBodyAnimation("TravelMode_Idle_0");
 }
 
 // ステートで実行するメソッド
 void EnemyIdleState::Execute(float deltaTime)
 {
+    timer += deltaTime;
 
+    if (timer >= waitTime)
+    {
+        owner->GetStateMachine()->ChangeState("EnemyAttackState");
+    }
 }
 
 void EnemyIdleState::Exit()
@@ -27,6 +33,7 @@ void EnemyIdleState::Exit()
 // 次の攻撃を考えるステートオブジェクト
 void EnemyThinkState::Enter()
 {
+
 }
 
 // ステートで実行するメソッド
@@ -56,3 +63,20 @@ void EnemyDeathState::Exit()
 }
 
 
+// 攻撃の予兆ステートオブジェクト
+void EnemyAttackState::Enter()
+{
+    owner->PlayBodyAnimation("PrimaryAttack_LA", false, true, 0.1f);
+}
+
+void EnemyAttackState::Execute(float deltaTime)
+{
+    if (!enemy->GetBodyAnimationController()->IsPlayAnimation())
+    {
+        owner->GetStateMachine()->ChangeState("EnemyIdleState");
+    }
+}
+
+void EnemyAttackState::Exit()
+{
+}

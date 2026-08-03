@@ -14,7 +14,6 @@
 #include "Engine/Utility/Time.h"
 
 #include "Game/Actors/Camera/LoadingCamera.h"
-#include "Game/Actors/Enemy/Boss/BossEnemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Stage/ElasticBuilding.h"
 #include "Game/Actors/Stage/Cloth.h"

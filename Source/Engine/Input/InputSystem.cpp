@@ -174,6 +174,9 @@ void InputSystem::Initialize()
     inputKeys["MouseLeft"].emplace_back(std::make_unique<Mouse>(VK_LBUTTON));
 
     inputKeys["F1"].emplace_back(std::make_unique<Keyboard>(VK_F1));
+    inputKeys["F2"].emplace_back(std::make_unique<Keyboard>(VK_F2));
+    inputKeys["F3"].emplace_back(std::make_unique<Keyboard>(VK_F3));
+    inputKeys["F4"].emplace_back(std::make_unique<Keyboard>(VK_F4));
     inputKeys["F5"].emplace_back(std::make_unique<Keyboard>(VK_F5));
     inputKeys["F6"].emplace_back(std::make_unique<Keyboard>(VK_F6));
     inputKeys["F7"].emplace_back(std::make_unique<Keyboard>(VK_F7));

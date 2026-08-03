@@ -60,7 +60,7 @@ void TitlePlayer::Initialize(const Transform& transform)
                 material.name == "M_Aurora_Dress_FrozenHearth" ||
                 material.name == "M_Aurora_Body_Metals_FrozenHearth" ||
                 //material.name == "M_Aurora_Metal_Armor_FrozenHearth" ||
-                material.name == "M_Aurora_Fur_FrozenHearth" )
+                material.name == "M_Aurora_Fur_FrozenHearth")
             {// 服部分だったら、
                 material.materialType = MaterialType::Cloth;
             }
@@ -163,6 +163,8 @@ void TitlePlayer::Initialize(const Transform& transform)
 
     // 軌跡初期化
     trail.Initialize();
+
+    SetPosition({ -25.302f,0.004f,12.205f });
 }
 
 void TitlePlayer::Update(float deltaTime)
@@ -186,50 +188,50 @@ void TitlePlayer::Update(float deltaTime)
 
     //if (isAttackActive)
     //{
-        XMFLOAT4X4 currentWorld = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+    XMFLOAT4X4 currentWorld = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
 
-        if (!isPrevSwordWorldValid)
-        {
-            prevSwordWorld = currentWorld;
-            isPrevSwordWorldValid = true;
-        }
-
-        XMFLOAT3 prevPos =
-        {
-            prevSwordWorld._41,
-            prevSwordWorld._42,
-            prevSwordWorld._43
-        };
-
-        XMFLOAT3 currentPos =
-        {
-            currentWorld._41,
-            currentWorld._42,
-            currentWorld._43
-        };
-
-        swordGhostElapsedTime += deltaTime;
-        while (swordGhostElapsedTime >= ghostInterval)
-        {
-            swordGhostElapsedTime -= ghostInterval;
-
-            float t = 1.0f - swordGhostElapsedTime / deltaTime;
-
-            XMFLOAT3 pos = MathHelper::Lerp(prevPos, currentPos, t);
-
-            XMFLOAT4X4 world = currentWorld;
-            world._41 = pos.x;
-            world._42 = pos.y;
-            world._43 = pos.z;
-
-            ghosts[swordGhostIndex].world = world;
-            ghosts[swordGhostIndex].alpha = 1.0f;
-            ghosts[swordGhostIndex].isVisible = true;
-
-            swordGhostIndex = (swordGhostIndex + 1) % ghosts.size();
-        }
-        // 前回の姿勢を保存する
+    if (!isPrevSwordWorldValid)
+    {
         prevSwordWorld = currentWorld;
+        isPrevSwordWorldValid = true;
+    }
+
+    XMFLOAT3 prevPos =
+    {
+        prevSwordWorld._41,
+        prevSwordWorld._42,
+        prevSwordWorld._43
+    };
+
+    XMFLOAT3 currentPos =
+    {
+        currentWorld._41,
+        currentWorld._42,
+        currentWorld._43
+    };
+
+    swordGhostElapsedTime += deltaTime;
+    while (swordGhostElapsedTime >= ghostInterval)
+    {
+        swordGhostElapsedTime -= ghostInterval;
+
+        float t = 1.0f - swordGhostElapsedTime / deltaTime;
+
+        XMFLOAT3 pos = MathHelper::Lerp(prevPos, currentPos, t);
+
+        XMFLOAT4X4 world = currentWorld;
+        world._41 = pos.x;
+        world._42 = pos.y;
+        world._43 = pos.z;
+
+        ghosts[swordGhostIndex].world = world;
+        ghosts[swordGhostIndex].alpha = 1.0f;
+        ghosts[swordGhostIndex].isVisible = true;
+
+        swordGhostIndex = (swordGhostIndex + 1) % ghosts.size();
+    }
+    // 前回の姿勢を保存する
+    prevSwordWorld = currentWorld;
     //}
 
     // 剣の残像用の剣のメッシュコンポーネント
@@ -259,6 +261,8 @@ void TitlePlayer::Update(float deltaTime)
 
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(deltaTime);
+
+    SetPosition({ -25.302f,0.004f,12.205f });
 
 }
 

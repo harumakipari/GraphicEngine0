@@ -90,11 +90,12 @@ void GruxEnemy::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<EnemyIdleState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyDeathState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyThinkState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyAttackState>(this));
 
         // ステートマシンを character に追加
         this->SetStateMachine(stateMachine_);
         // 初期ステートを設定
-        stateMachine_->ChangeState("EnemyIdleState");
+        //stateMachine_->ChangeState("EnemyIdleState");
     }
 
     // アニメーションコントローラーを character に追加
@@ -268,11 +269,23 @@ void GruxEnemy::Initialize(const Transform& transform)
     lockOnTargetMeshComponent->SetModel("./Data/Models/LockOnTarget/LockOnTargetModel1.gltf");
     lockOnTargetMeshComponent->SetRelativeScaleDirect({ 0.68f,0.68f, 0.68f });
     lockOnTargetMeshComponent->SetIsCastShadow(false);
+    lockOnTargetMeshComponent->SetIsVisible(false);
     lockOnTargetMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+
+    lockOnTargetImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/lock_on.png", "lockOn");
+    lockOnTargetImageComponent->SetVisible(true);
+    lockOnTargetImageComponent->SetPivot({ 0.5f,0.5f });
+    lockOnTargetImageComponent->SetSize({ 150.0f,150.0f });
+    uiManager->Add(lockOnTargetImageComponent);
+
 
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
     hitSwordEffectComponent->Load("./Data/Effect/Files/DarkStageBloodEffect.json");
     //hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
+
+ 
+
+
 }
 
 void GruxEnemy::Update(float deltaTime)
@@ -344,17 +357,19 @@ void GruxEnemy::Update(float deltaTime)
     DirectX::XMFLOAT4 rotation = MathHelper::LookRotation(toPlayerDir, { 0,1,0 });
     lockOnTargetMeshComponent->SetRelativeRotationDirect(rotation);
 
+    DirectX::XMFLOAT2 lockOnUiPos = WorldToUI(lockOnPos);
+    lockOnTargetImageComponent->SetWorldPosition(lockOnUiPos);
+
     if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
     {
         // カメラがロックオンモードの時のみ表示する
         if (camera->GetMovementMode() == DarkCameraActor::CameraMode::LockOn)
         {
-            //lockOnTargetMeshComponent->SetIsVisible(true);
-            lockOnTargetMeshComponent->SetIsVisible(false);
+            lockOnTargetImageComponent->SetVisible(true);
         }
         else
         {
-            lockOnTargetMeshComponent->SetIsVisible(false);
+            lockOnTargetImageComponent->SetVisible(false);
         }
     }
 
@@ -437,6 +452,7 @@ void GruxEnemy::Update(float deltaTime)
     if (leftWeaponCollisionComp)
         leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
 
+#if 0 // ジャスト回避のタイミングをわかりやすくするため
     if (isDangerWindow)
     {
         skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 2.0f;
@@ -446,9 +462,11 @@ void GruxEnemy::Update(float deltaTime)
         skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 0.0f;
     }
 
+#endif // 0
+
 
     // 攻撃の危険な時に、
-    //if (isDangerWindow)
+    if (isDangerWindow)
     {
         if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
         {
@@ -553,9 +571,9 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
 
     if (auto actorManager = GetOwnerScene()->GetActorManager())
     {
-        Transform tr{ enemyCenter,{0.0f,0.0f,0.0f},{1.0f,1.0f,1.0f} };
-        auto iceEffect = actorManager->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("iceFragment", tr);
-        iceEffect->SetDirection(hitNormal, enemyCenter, playerPos);
+        //Transform tr{ enemyCenter,{0.0f,0.0f,0.0f},{1.0f,1.0f,1.0f} };
+        //auto iceEffect = actorManager->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("iceFragment", tr);
+        //iceEffect->SetDirection(hitNormal, enemyCenter, playerPos);
 
         // 敵→プレイヤー方向
         DirectX::XMFLOAT3 forward = MathHelper::Normalize(MathHelper::Subtract(playerPos, enemyCenter));

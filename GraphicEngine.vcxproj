@@ -300,7 +300,6 @@
     <ClCompile Include="Source\Game\Actors\BgmActor.cpp" />
     <ClCompile Include="Source\Game\Actors\Camera\Camera.cpp" />
     <ClCompile Include="Source\Game\Actors\Camera\DarkGameCamera.cpp" />
-    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossEnemy.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkClothActor.cpp" />
@@ -454,7 +453,6 @@
     <ClInclude Include="Source\Game\Actors\Camera\Camera.h" />
     <ClInclude Include="Source\Game\Actors\Camera\DarkGameCamera.h" />
     <ClInclude Include="Source\Game\Actors\Camera\LoadingCamera.h" />
-    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossEnemy.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossState.h" />
     <ClInclude Include="Source\Game\Actors\Enemy\Enemy.h" />
     <ClInclude Include="Source\Game\Actors\Player\Player.h" />

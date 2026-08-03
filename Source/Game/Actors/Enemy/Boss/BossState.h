@@ -40,6 +40,10 @@ public:
     void Exit() override;
     // ステート名を取得
     const char* GetName() const override { return "EnemyIdleState"; }
+
+private:
+    float timer = 0.0f;
+    constexpr static float waitTime = 3.0f;
 };
 
 // 次の攻撃を考えるステートオブジェクト
@@ -78,5 +82,24 @@ public:
     // ステート名を取得
     const char* GetName() const override { return "EnemyDeathState"; }
 };
+
+// 攻撃ステートオブジェクト
+class EnemyAttackState : public EnemyStateBase
+{
+public:
+    // コンストラクタ
+    EnemyAttackState(GruxEnemy* enemy) :EnemyStateBase(enemy) {}
+    // デストラクタ
+    ~EnemyAttackState() = default;
+    // ステートに入った時のメソッド
+    void Enter() override;
+    // ステートで実行するメソッド
+    void Execute(float deltaTime) override;
+    // ステートから出ていくときのメソッド
+    void Exit() override;
+    // ステート名を取得
+    const char* GetName() const override { return "EnemyAttackState"; }
+};
+
 
 

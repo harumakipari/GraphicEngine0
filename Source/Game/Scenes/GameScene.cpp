@@ -13,7 +13,6 @@
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 
-#include "Game/Actors/Enemy/Boss/BossEnemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Stage/Cloth.h"
 
@@ -139,7 +138,7 @@ void GameScene::Start()
     bossBgmActor->SetLoop(true);
     bossBgmActor->SetBgm(true);
     //bossBgmActor->Play();
-    bossBgmActor->SetVolume(0.015f);
+    bossBgmActor->SetVolume(0.02f);
 
 #if 0
     cameraManager->ToggleCinematicCamera(this);
@@ -157,7 +156,6 @@ void GameScene::Start()
     SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
     savedState.ApplyScenePreset(Scene::GetCurrentScene());
 #endif // 0
-
 
     // カメラをplayerの前方向を向くように変更
     darkCameraActor->RotateToPlayerForward();
@@ -249,8 +247,11 @@ void GameScene::Update(float deltaTime)
     }
     if (InputSystem::GetInputState("5", InputStateMask::Trigger))
     {
-        lightManager->showLightRange = !lightManager->showLightRange;
-        showDebugLight = !showDebugLight;
+        auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
+        shader.enableDof = !shader.enableDof;
+
+        //lightManager->showLightRange = !lightManager->showLightRange;
+        //showDebugLight = !showDebugLight;
     }
     if (InputSystem::GetInputState("6", InputStateMask::Trigger))
     {
@@ -260,6 +261,52 @@ void GameScene::Update(float deltaTime)
     if (enableLightGui || enableSceneGui)
     {
         InputSystem::SetCursorVisible(true);
+    }
+
+    if (InputSystem::GetInputState("7", InputStateMask::Trigger))
+    {
+
+        // シーンプリセットを設定する
+        SceneEditor::LoadPresetList(); // 更新
+        std::string file = "Unadjusted.json";
+        static SceneState savedState;
+        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+        savedState.ApplyScenePreset(Scene::GetCurrentScene());
+
+    }
+
+
+    if (InputSystem::GetInputState("8", InputStateMask::Trigger))
+    {
+        // シーンプリセットを設定する
+        SceneEditor::LoadPresetList(); // 更新
+        std::string file = "bossRoom.json";
+        static SceneState savedState;
+        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+        savedState.ApplyScenePreset(Scene::GetCurrentScene());
+
+        // BGMも元に戻す
+        auto bgmActors = GetActorManager()->GetActorsOfType <BgmActor>();
+        for (auto bgmActor : bgmActors)
+        {
+            if (bgmActor->GetName() == "BossBgmActor")
+            {
+                bgmActor->Stop();
+            }
+            if (bgmActor->GetName() == "GameBgmActor")
+            {
+                bgmActor->Play();
+            }
+        }
+
+        if (auto cameraManager = GetCameraManager())
+        {
+            if (cameraManager->IsUseCinematic())
+            {// すでにシネマカメラが使用だったら、
+                cameraManager->ToggleCinematicCamera(this);
+            }
+        }
+
     }
 
 
@@ -285,7 +332,73 @@ void GameScene::Update(float deltaTime)
                 bgmActor->Play();
             }
         }
+
+        if (auto cameraManager = GetCameraManager())
+        {
+            if (cameraManager->IsUseCinematic())
+            {// すでにシネマカメラが使用だったら、
+                cameraManager->ToggleCinematicCamera(this);
+            }
+        }
+
     }
+
+    if (InputSystem::GetInputState("F2", InputStateMask::Trigger))
+    {
+        if (!cameraManager->IsUseCinematic())
+        {// すでにシネマカメラが使用中でない場合のみ切り替え
+            cameraManager->ToggleCinematicCamera(this);
+        }
+
+        // シーンプリセットを設定する
+        SceneEditor::LoadPresetList(); // 更新
+        std::string file = "0.json";
+        static SceneState savedState;
+        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+        savedState.Apply(Scene::GetCurrentScene());
+
+        // カメラを固定する
+        cinemaCameraActor->SetUseDebugMode(false);
+        cinemaCameraActor->SetEulerRotation({ 6.96f,-148.175f,11.522f });
+
+    }
+    // シーン変更
+    if (InputSystem::GetInputState("F3", InputStateMask::Trigger))
+    {
+        if (!cameraManager->IsUseCinematic())
+        {// すでにシネマカメラが使用中でない場合のみ切り替え
+            cameraManager->ToggleCinematicCamera(this);
+        }
+
+        // シーンプリセットを設定する
+        SceneEditor::LoadPresetList(); // 更新
+        std::string file = "HallwayPlayerUpScene.json";
+        static SceneState savedState;
+        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+        savedState.Apply(Scene::GetCurrentScene());
+        // カメラを固定する
+        cinemaCameraActor->SetUseDebugMode(false);
+
+
+    }
+    if (InputSystem::GetInputState("F4", InputStateMask::Trigger))
+    {
+        if (!cameraManager->IsUseCinematic())
+        {// すでにシネマカメラが使用中でない場合のみ切り替え
+            cameraManager->ToggleCinematicCamera(this);
+        }
+
+        // シーンプリセットを設定する
+        SceneEditor::LoadPresetList(); // 更新
+        std::string file = "title2.json";
+        static SceneState savedState;
+        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+        savedState.Apply(Scene::GetCurrentScene());
+        // カメラを固定する
+        cinemaCameraActor->SetUseDebugMode(false);
+    }
+
+
 
 
 
@@ -310,7 +423,7 @@ void GameScene::SetUpActors()
     cameraManager->SetDebugCamera(debugCameraActor);
 
     Transform cinemaCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto cinemaCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<CinemaCamera>("cinemaCam", cinemaCameraTr);
+    cinemaCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<CinemaCamera>("cinemaCam", cinemaCameraTr);
     cameraManager->SetCinematicCamera(cinemaCameraActor);
 
     Transform movieCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });

@@ -18,7 +18,7 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
     leftEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
     leftEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
     leftEyeMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
-
+    leftEyeMeshComponent->SetIsVisible(false);
     // 左目の描画用コンポーネントを追加　横に光るフレアの表現用
     leftEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("leftEyeFlare", "leftEye");
 #if 0
@@ -44,7 +44,7 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
     rightEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
     rightEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
     rightEyeMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
-
+    rightEyeMeshComponent->SetIsVisible(false);
     // 右目の描画用コンポーネントを追加　横に光るフレアの表現用
     rightEyeFlareMeshComponent = this->AddComponent<SkeletalMeshComponent>("rightEyeFlare", "rightEye");
 #if 0

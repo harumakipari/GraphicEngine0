@@ -261,7 +261,7 @@ void PlayerDodgeState::Execute(float deltaTime)
     {
         if (player->inputWindow)
         {// 
-            player->rushButtonImageComponent->SetVisible(true);
+            //player->rushButtonImageComponent->SetVisible(true);
         }
         else
         {

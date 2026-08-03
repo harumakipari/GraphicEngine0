@@ -263,13 +263,18 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 {
                     DarkCameraActor::CameraPose start = darkCameraActor->CreatePoseFromMovie(movieCamera);
                     DarkCameraActor::CameraPose target = darkCameraActor->CreateFocusPose();
-                    darkCameraActor->StartExternalBlend(start, target, 2.0f, [player]()
+                    darkCameraActor->StartExternalBlend(start, target, 2.0f, [player,gruxEnemy]()
                         {
                             if (player)
                             {
                                 // 演出がが終わったことを通知する
                                 player->EndEvent();
                             }
+                            if (gruxEnemy)
+                            {// ここでボスの名前のUIを消す
+                                gruxEnemy->GetStateMachine()->ChangeState("EnemyIdleState");
+                            }
+
                         }
                     );
                     scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
@@ -284,6 +289,9 @@ void MovieCameraManagerActor::Update(float deltaTime)
             doorMovieState = DoorMovieState::Finished;
         }
     case DoorMovieState::Finished:
+
+
+
         break;
     }
 }
