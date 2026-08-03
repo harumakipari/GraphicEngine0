@@ -72,9 +72,13 @@ public:
 
     void DrawGui();
 
+    void LightGui();
+
     const DirectX::XMFLOAT4& GetLightDirection() const { return constants.lightDirection; }
-private:
+
     bool showLightRange = false; // ポイントライトの範囲をデバッグ表示するか
+
+private:
     LightConstants constants = {};
     // GPUに送る最終のポイントライト情報
     std::vector<PointLight> renderPointLights;

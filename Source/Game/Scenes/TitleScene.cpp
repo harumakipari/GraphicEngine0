@@ -179,6 +179,7 @@ void TitleScene::Update(float deltaTime)
         const char* types[] = { "0", "1" };
         SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene") }, TransitionStyle::Fade);
     }
+
     //#endif // !_DEBUG
 }
 
@@ -190,7 +191,7 @@ void TitleScene::SetUpActors()
     {
         PROFILE_SCOPE("Create Player");
         Transform playerTr(DirectX::XMFLOAT3{ -15.0f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,126.0f,10.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
-        player = this->GetActorManager()->CreateAndRegisterActorWithTransform<TitlePlayer>("player", playerTr);
+        player = this->GetActorManager()->CreateAndRegisterActorWithTransform<TitlePlayer>("Player", playerTr);
         mainCameraActor->SetLookTarget(player->GetRootComponent());
         mainCameraActor->SetEye(player->GetRootComponent());
     }

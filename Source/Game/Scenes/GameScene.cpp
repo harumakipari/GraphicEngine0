@@ -84,7 +84,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     }
 
     // クロスシミュレーション
-    //clothSimulate = std::make_unique<ClothSimulate>(device, "./Data/Models/Cloth/ClothModel.gltf");
+    clothSimulate = std::make_unique<ClothSimulate>(device, "./Data/Models/Cloth/ClothModel.gltf");
 
 
     // ここで布を描画する
@@ -190,6 +190,21 @@ void GameScene::Update(float deltaTime)
     {
         SetLightViewFocus(player->GetPosition());
     }
+    // シネマカメラだったら
+    if (cameraManager->IsUseCinematic())
+    {
+        player->SetIsPlayerTransparency(true);
+        player->operateUiComponent->SetVisible(false);
+    }
+    else
+    {
+        player->SetIsPlayerTransparency(false);
+        player->operateUiComponent->SetVisible(true);
+    }
+
+
+
+
     SceneBase::Update(deltaTime);
 
     Physics::Instance().Update(Time::UnscaledDeltaTime());
@@ -211,11 +226,55 @@ void GameScene::Update(float deltaTime)
 
 
 #ifdef _DEBUG
-    if (InputSystem::GetInputState("Space", InputStateMask::Trigger))
+    if (InputSystem::GetInputState("0", InputStateMask::Trigger))
     {
-        const char* types[] = { "0", "1" };
-        SceneTransitionManager::Instance().RequestTransition("GameScene");
+        SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
     }
+
+    if (InputSystem::GetInputState("2", InputStateMask::Trigger))
+    {
+        auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
+        shader.enableFog = !shader.enableFog;
+    }
+    if (InputSystem::GetInputState("3", InputStateMask::Trigger))
+    {
+        auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
+        shader.enableBloom = !shader.enableBloom;
+    }
+    if (InputSystem::GetInputState("4", InputStateMask::Trigger))
+    {
+        enableLightGui = !enableLightGui;
+        InputSystem::SetCursorVisible(enableLightGui);
+
+    }
+    if (InputSystem::GetInputState("5", InputStateMask::Trigger))
+    {
+        lightManager->showLightRange = !lightManager->showLightRange;
+        showDebugLight = !showDebugLight;
+    }
+    if (InputSystem::GetInputState("6", InputStateMask::Trigger))
+    {
+        enableSceneGui = !enableSceneGui;
+    }
+
+    if (enableLightGui|| enableSceneGui)
+    {
+        InputSystem::SetCursorVisible(true);
+    }
+
+
+    if (InputSystem::GetInputState("9", InputStateMask::Trigger))
+    {
+        // シーンプリセットを設定する
+        SceneEditor::LoadPresetList(); // 更新
+        std::string file = "newPreset.json";
+        static SceneState savedState;
+        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+        savedState.ApplyScenePreset(Scene::GetCurrentScene());
+    }
+
+
+
 #endif // !_DEBUG
 }
 
@@ -248,8 +307,8 @@ void GameScene::SetUpActors()
     auto movieCameraManagerActor = GetActorManager()->CreateAndRegisterActorWithTransform<MovieCameraManagerActor>("movieCameraManager", movieCameraTr);
     movieCameraManagerActor->SetMovieCameraComponent(movieCameraActor->GetMovieCameraComponent());
 
-    //Transform clothTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    //darkClothActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
+    Transform clothTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    darkClothActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
 
 
     Transform bossEyeTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });

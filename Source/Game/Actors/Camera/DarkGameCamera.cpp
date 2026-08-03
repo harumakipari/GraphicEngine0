@@ -8,7 +8,6 @@ void DarkCameraActor::Initialize(const Transform& transform)
 {
     std::string parentName = "DarkCameraActor";
     mainCameraComponent = AddComponent<CameraComponent>(parentName);
-
     inputComponent = AddComponent<InputComponent>("inputComponent", parentName);
 
     // ƒJƒƒ‰‚ğ“G•ûŒü‚©‚ç‰½“x‰¡‚ÖU‚é‚©

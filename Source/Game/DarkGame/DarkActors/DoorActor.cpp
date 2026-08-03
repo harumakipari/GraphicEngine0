@@ -289,11 +289,11 @@ void DoorJailActor::Update(float deltaTime)
     // インタラクトの更新
     InteractableActor::Update(deltaTime);
 
-    if (InputSystem::GetInputState("2", InputStateMask::Trigger))
-    {
-        CoreAudio::PlayOneShot("./Data/Sound/SE/jail_door_open.wav");
-        doorState = DoorState::Opening;
-    }
+    //if (InputSystem::GetInputState("2", InputStateMask::Trigger))
+    //{
+    //    CoreAudio::PlayOneShot("./Data/Sound/SE/jail_door_open.wav");
+    //    doorState = DoorState::Opening;
+    //}
 
     switch (doorState)
     {

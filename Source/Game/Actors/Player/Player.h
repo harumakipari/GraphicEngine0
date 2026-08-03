@@ -117,6 +117,8 @@ public:
     // 回避方向を取得する
     DodgeDirection GetDodgeDirection()const { return dodgeDirection; }
 
+    void SetIsPlayerTransparency(const bool isTransparency) { moviePerform = isTransparency; }
+
 private:
     // 火花エフェクトの生成
     void SpawnSpark(DirectX::XMFLOAT3 hitPosition);
@@ -202,6 +204,8 @@ public:
 
     // アニメーション時にどれくらい移動するか
     std::vector<AnimationMotionWarp> animationMotionWarps;
+    // 操作UI
+    std::shared_ptr<UIImageComponent> operateUiComponent;
 
 
     bool invincibleWindow = false; // アニメーションによる無敵状態かどうか
@@ -337,10 +341,9 @@ private:
     // 演出中かどうか
     bool moviePerform = false;
 
+
     AnimationController::MoveDirection currentMoveDir = AnimationController::MoveDirection::Idle;
 
-    // 操作UI
-    std::shared_ptr<UIImageComponent> operateUiComponent;
 
     friend class PlayerStateBase;
 };

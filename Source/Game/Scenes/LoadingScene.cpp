@@ -66,7 +66,7 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
         HRESULT hr = { S_OK };
 
         //スカイマップ
-        skyMap = std::make_unique<decltype(skyMap)::element_type>(device, L"./Data/Environment/Sky/sky/skybox.dds");
+        skyMap = std::make_unique<decltype(skyMap)::element_type>(device, L"./Data/Environment/Sky/stage/skybox.dds");
         fullscreenQuad = std::make_unique<FullScreenQuad>(device);
 
         frameBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
@@ -86,13 +86,13 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
 
         D3D11_TEXTURE2D_DESC texture2dDesc;
         // テクスチャをロード
-        hr = LoadTextureFromFile(device, L"./Data/Environment/Sky/sky/lut_charlie.dds", environmentTextures[0].ReleaseAndGetAddressOf(), &texture2dDesc);
+        hr = LoadTextureFromFile(device, L"./Data/Environment/Sky/stage/lut_charlie.dds", environmentTextures[0].ReleaseAndGetAddressOf(), &texture2dDesc);
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        hr = LoadTextureFromFile(device, L"./Data/Environment/Sky/sky/diffuse_iem.dds", environmentTextures[1].ReleaseAndGetAddressOf(), &texture2dDesc);
+        hr = LoadTextureFromFile(device, L"./Data/Environment/Sky/stage/diffuse_iem.dds", environmentTextures[1].ReleaseAndGetAddressOf(), &texture2dDesc);
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        hr = LoadTextureFromFile(device, L"./Data/Environment/Sky/sky/specular_pmrem.dds", environmentTextures[2].ReleaseAndGetAddressOf(), &texture2dDesc);
+        hr = LoadTextureFromFile(device, L"./Data/Environment/Sky/stage/specular_pmrem.dds", environmentTextures[2].ReleaseAndGetAddressOf(), &texture2dDesc);
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        hr = LoadTextureFromFile(device, L"./Data/Environment/Sky/sky/lut_sheen_e.dds", environmentTextures[3].ReleaseAndGetAddressOf(), &texture2dDesc);
+        hr = LoadTextureFromFile(device, L"./Data/Environment/Sky/stage/lut_sheen_e.dds", environmentTextures[3].ReleaseAndGetAddressOf(), &texture2dDesc);
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
         // UIマネージャーを初期化

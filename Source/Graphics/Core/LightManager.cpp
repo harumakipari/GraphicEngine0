@@ -33,6 +33,35 @@ static AttenuationPreset presets[] =
     {3250, 1.0f, 0.0014f,0.000007f},
 };
 
+
+const std::vector<std::string> lightDisplayOrder =
+{
+    "TopCandelabra",
+    "SideCandelabra",
+    "MainChandelier",
+    "CandleChandelier",
+    "BrazierCenterBig",
+    "BrazierCenterSmall",
+    "GroundBrazierLight",
+    "BottomStandingBrazier",
+    "TopStandingBrazier",
+    "MeltedWaxLight",
+    "FireBowl",
+    "TorchSconce",
+    "CandleStand",
+    "TorchLight",
+    "WallLight",
+    "LanternLight",
+    "BossRoomPointLight",
+    "MainRoomPointLight",
+    "PlayerPointLight",
+    "PlayerBackPointLight",
+    "EnemyPointLight",
+    "EnemyBackPointLight",
+    "TitleRoomLight",
+};
+
+
 std::unordered_map<std::string, const char*> lightDisplayNames =
 {
     {"MainChandelier", U8("メインシャンデリア")},
@@ -333,11 +362,10 @@ void LightManager::Update(float deltaTime)
             auto& light = constants.pointsLight[i];
 
             float range = sqrt(1.0f / constants.kq);
-            DebugRender::DrawLightIcon(
-                { light.position.x, light.position.y, light.position.z },
-                light.color
-            );
-            //DebugRender::DrawSphere({ light.position.x,light.position.y, light.position.z }, 0.1f, { 1,1,1,1 });
+            //DebugRender::DrawLightIcon(
+            //    { light.position.x, light.position.y, light.position.z },
+            //    light.color
+            //);
             DebugRender::DrawSphere(
                 { light.position.x,light.position.y, light.position.z },
                 range,
@@ -383,7 +411,6 @@ void LightManager::DrawGui()
 #ifdef USE_IMGUI
     auto& lightData = Scene::GetCurrentScene()->GetSceneSettings().sceneLightSaveData;
 
-
     auto& light = lightData.sceneConstants;
     CheckboxInt(U8("平行光源 有効"), &light.directionalLightEnable);
     ImGui::DragFloat3(U8("ライト方向"), &light.lightDirection.x, 0.01f, -1.0f, 1.0f, "%.8f");
@@ -404,10 +431,7 @@ void LightManager::DrawGui()
     ImGui::SliderFloat(U8("ライト強度"), &light.lightColor.w, 0.0f, 20.0f);
     CheckboxInt(U8("ポイントライト 有効"), &light.pointLightEnable);
     ImGui::SliderInt(U8("ポイントライト数"), &light.pointLightCount, 0, PointLightMaxCount);
-
     ImGui::Checkbox(U8("ライト範囲表示"), &showLightRange);
-
-
 
     ImGui::SliderFloat("Kc", &light.kc, 0.0f, 2.0f);
     ImGui::SliderFloat("Kl", &light.kl, 0.0f, 1.0f);
@@ -420,18 +444,19 @@ void LightManager::DrawGui()
     {
         auto& lightData = Scene::GetCurrentScene()->GetSceneSettings().sceneLightSaveData;
         auto& sharedLights = lightData.sharedLights;
+#if 0
         for (auto& [name, light] : sharedLights)
         {
             const char* displayName = name.c_str();
 
             if (lightDisplayNames.contains(name))
+            {
                 displayName = lightDisplayNames[name];
-
+            }
             if (ImGui::TreeNodeEx(displayName, ImGuiTreeNodeFlags_DefaultOpen))
             {
                 ImGui::ColorEdit3(U8("色"), &light.color.x);
                 ImGui::SliderFloat(U8("強度"), &light.color.w, 0.0f, 50.0f);
-                //ImGui::SliderFloat(U8("範囲"), &light.range, 0.0f, 20.0f);
                 ImGui::Combo(U8("ポイントライト距離"), &light.attenuationType,
                     "7\0"
                     "13\0"
@@ -449,21 +474,148 @@ void LightManager::DrawGui()
             }
         }
         ImGui::TreePop();
-    }
-
-#if 0
-    for (int i = 0; i < pointLightCount; i++)
-    {
-        std::string header = "PointLight[" + std::to_string(i) + "]";
-        if (ImGui::CollapsingHeader(header.c_str()))
+#else
+        // 指定した順番で表示
+        for (const std::string& name : lightDisplayOrder)
         {
-            ImGui::DragFloat3(("Position##" + std::to_string(i)).c_str(), &debugPointLights[i].position.x, 0.1f);
-            ImGui::ColorEdit3(("Color##" + std::to_string(i)).c_str(), &debugPointLights[i].color.x);
-            ImGui::SliderFloat(("Range##" + std::to_string(i)).c_str(), &debugPointLights[i].range, 0.0f, 10.0f);
-            ImGui::SliderFloat(("Intensity##" + std::to_string(i)).c_str(), &debugPointLights[i].color.w, 0.0f, 10.0f);
+            auto lightIt = sharedLights.find(name);
+
+            // シーン内に存在しないライトは飛ばす
+            if (lightIt == sharedLights.end())
+                continue;
+
+            auto& light = lightIt->second;
+
+            const char* displayName = name.c_str();
+
+            auto displayNameIt = lightDisplayNames.find(name);
+            if (displayNameIt != lightDisplayNames.end())
+            {
+                displayName = displayNameIt->second;
+            }
+
+            // 内部名をIDとして使う
+            ImGui::PushID(name.c_str());
+
+            if (ImGui::TreeNodeEx(
+                displayName,
+                ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::ColorEdit3(
+                    U8("色"),
+                    &light.color.x);
+
+                ImGui::SliderFloat(
+                    U8("強度"),
+                    &light.color.w,
+                    0.0f,
+                    50.0f);
+
+                ImGui::Combo(
+                    U8("ポイントライト距離"),
+                    &light.attenuationType,
+                    "7\0"
+                    "13\0"
+                    "20\0"
+                    "32\0"
+                    "50\0"
+                    "65\0"
+                    "100\0"
+                    "160\0"
+                    "200\0"
+                    "325\0"
+                    "600\0"
+                    "3250\0");
+
+                ImGui::TreePop();
+            }
+
+            ImGui::PopID();
         }
+
+        ImGui::TreePop();
+#endif // 0
+
     }
 
-#endif // 0
+
 #endif
+}
+
+void LightManager::LightGui()
+{
+    auto& lightData = Scene::GetCurrentScene()->GetSceneSettings().sceneLightSaveData;
+
+    auto& light = lightData.sceneConstants;
+    ImGui::SliderFloat(U8("Specular 強度"), &light.specularIntensity, 0.0f, 2.0f);
+
+    if (debugPointLights.size() != static_cast<size_t>(light.pointLightCount))
+        debugPointLights.resize(light.pointLightCount); // 個数を合わせる
+
+    if (ImGui::TreeNodeEx(U8("共有ライト"), ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        auto& lightData = Scene::GetCurrentScene()->GetSceneSettings().sceneLightSaveData;
+        auto& sharedLights = lightData.sharedLights;
+
+        // 指定した順番で表示
+        for (const std::string& name : lightDisplayOrder)
+        {
+            auto lightIt = sharedLights.find(name);
+
+            // シーン内に存在しないライトは飛ばす
+            if (lightIt == sharedLights.end())
+                continue;
+
+            auto& light = lightIt->second;
+
+            const char* displayName = name.c_str();
+
+            auto displayNameIt = lightDisplayNames.find(name);
+            if (displayNameIt != lightDisplayNames.end())
+            {
+                displayName = displayNameIt->second;
+            }
+
+            // 内部名をIDとして使う
+            ImGui::PushID(name.c_str());
+
+            if (ImGui::TreeNodeEx(
+                displayName,
+                ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::ColorEdit3(
+                    U8("色"),
+                    &light.color.x);
+
+                ImGui::SliderFloat(
+                    U8("強度"),
+                    &light.color.w,
+                    0.0f,
+                    50.0f);
+
+                ImGui::Combo(
+                    U8("ポイントライト距離"),
+                    &light.attenuationType,
+                    "7\0"
+                    "13\0"
+                    "20\0"
+                    "32\0"
+                    "50\0"
+                    "65\0"
+                    "100\0"
+                    "160\0"
+                    "200\0"
+                    "325\0"
+                    "600\0"
+                    "3250\0");
+
+                ImGui::TreePop();
+            }
+
+            ImGui::PopID();
+        }
+
+        ImGui::TreePop();
+
+    }
 }

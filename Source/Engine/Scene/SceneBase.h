@@ -193,4 +193,8 @@ protected:
 
     Microsoft::WRL::ComPtr<ID3D11PixelShader> ghostPs;
 
+    bool enableLightGui = false;
+    bool enableSceneGui = false;
+    bool showDebugLight = false;
+
 };

@@ -737,6 +737,13 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         DebugRender::WiredRender(immediateContext);
         ExecuteHooks(RenderPass::Debug, immediateContext);
     }
+
+    if (showDebugLight)
+    {
+        RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::WIREFRAME_CULL_NONE);
+        DebugRender::Render(immediateContext);
+    }
+
 #endif
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
 
@@ -851,11 +858,29 @@ void SceneBase::DrawGui()
     SetupImGuiStyle();
     DrawDockSpace();
     DrawViewport();
+
+    if (enableLightGui)
+    {
+        if (lightManager)
+        {
+            lightManager->LightGui();
+        }
+    }
+
+    if (enableSceneGui)
+    {
+        SceneEditor::Draw();
+    }
+
+
+
     if (!Framework::showEditor)
     {
-        //useDrawDebug = false;
+        useDrawDebug = false;
         return;
     }
+
+
     DrawGizmo();//
     DrawOutliner();
     Logger::DrawImGui();
