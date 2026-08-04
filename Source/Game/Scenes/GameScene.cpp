@@ -307,6 +307,11 @@ void GameScene::Update(float deltaTime)
             }
         }
 
+        if (gruxEnemyActor)
+        {
+            gruxEnemyActor->GetStateMachine()->ChangeState("EnemyThinkState");
+        }
+
     }
 
 
@@ -339,6 +344,11 @@ void GameScene::Update(float deltaTime)
             {// すでにシネマカメラが使用だったら、
                 cameraManager->ToggleCinematicCamera(this);
             }
+        }
+
+        if (gruxEnemyActor)
+        {
+            gruxEnemyActor->GetStateMachine()->ChangeState("EnemyThinkState");
         }
 
     }
@@ -398,7 +408,42 @@ void GameScene::Update(float deltaTime)
         cinemaCameraActor->SetUseDebugMode(false);
     }
 
+    if (InputSystem::GetInputState("F9", InputStateMask::Trigger))
+    {
+        // シーンプリセットを設定する
+        SceneEditor::LoadPresetList(); // 更新
+        std::string file = "bossinroom.json";
+        static SceneState savedState;
+        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
+        savedState.ApplyScenePreset(Scene::GetCurrentScene());
 
+        // BGMも元に戻す
+        auto bgmActors = GetActorManager()->GetActorsOfType <BgmActor>();
+        for (auto bgmActor : bgmActors)
+        {
+            if (bgmActor->GetName() == "BossBgmActor")
+            {
+                bgmActor->Play();
+            }
+            if (bgmActor->GetName() == "GameBgmActor")
+            {
+                bgmActor->Stop();
+            }
+        }
+
+        if (auto cameraManager = GetCameraManager())
+        {
+            if (cameraManager->IsUseCinematic())
+            {// すでにシネマカメラが使用だったら、
+                cameraManager->ToggleCinematicCamera(this);
+            }
+        }
+
+        if (gruxEnemyActor)
+        {
+            gruxEnemyActor->GetStateMachine()->ChangeState("EnemyIdleState");
+        }
+    }
 
 
 

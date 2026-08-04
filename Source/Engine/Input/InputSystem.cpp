@@ -181,6 +181,7 @@ void InputSystem::Initialize()
     inputKeys["F6"].emplace_back(std::make_unique<Keyboard>(VK_F6));
     inputKeys["F7"].emplace_back(std::make_unique<Keyboard>(VK_F7));
     inputKeys["F8"].emplace_back(std::make_unique<Keyboard>(VK_F8));
+    inputKeys["F9"].emplace_back(std::make_unique<Keyboard>(VK_F9));
     inputKeys["Alt"].emplace_back(std::make_unique<Keyboard>(VK_MENU));
     inputKeys["Enter"].emplace_back(std::make_unique<Keyboard>(VK_RETURN));
     inputKeys["Shift"].emplace_back(std::make_unique<Keyboard>(VK_SHIFT));

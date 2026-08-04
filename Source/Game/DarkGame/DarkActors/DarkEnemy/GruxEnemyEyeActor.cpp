@@ -16,7 +16,7 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
     leftEyeMeshComponent->SetRelativeScaleDirect(eyeInitScale);
     leftEyeMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
     leftEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-    leftEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
+    leftEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
     leftEyeMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
     leftEyeMeshComponent->SetIsVisible(false);
     // 左目の描画用コンポーネントを追加　横に光るフレアの表現用
@@ -42,7 +42,7 @@ void GruxEnemyEyeActor::Initialize(const Transform& transform)
     rightEyeMeshComponent->SetRelativeScaleDirect(eyeInitScale);
     rightEyeMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
     rightEyeMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1,0.2f,0,1 };
-    rightEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.0f;
+    rightEyeMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
     rightEyeMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::EnemyEye;
     rightEyeMeshComponent->SetIsVisible(false);
     // 右目の描画用コンポーネントを追加　横に光るフレアの表現用
@@ -72,6 +72,9 @@ void GruxEnemyEyeActor::Update(float elapsedTime)
     eyeFlareEasingComponent->Tick(elapsedTime);
     eyeEmissiveEasingComponent->Tick(elapsedTime);
     eyeEasingComponent->Tick(elapsedTime);
+
+    leftEyeMeshComponent->SetIsVisible(false);
+    rightEyeMeshComponent->SetIsVisible(false);
 
     if (auto enemy = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
     {
@@ -107,8 +110,8 @@ void GruxEnemyEyeActor::Update(float elapsedTime)
     leftEyeMeshComponent->SetRelativeScaleDirect(eyeScale);
     rightEyeMeshComponent->SetRelativeScaleDirect(eyeScale);
 
-
-
+    leftEyeMeshComponent->SetIsVisible(false);
+    rightEyeMeshComponent->SetIsVisible(false);
     // 目のフレアのスケールを設定する
     // eyeFlareScale.x :0.0f -> 1.2fまで大きくする
     float maxScale = 1.2f;
