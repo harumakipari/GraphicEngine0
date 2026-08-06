@@ -1243,6 +1243,30 @@ void InterleavedGltfModel::BlendAnimations(
     const BlendResult& blend,
     std::vector<Node>& outNodes)
 {
+    // Reject empty or invalid blends before total-weight normalization.
+    if (blend.count <= 0 ||
+        blend.count > static_cast<int>(poses.size()))
+    {
+        return;
+    }
+
+    float validatedTotalWeight = 0.0f;
+    for (int i = 0; i < blend.count; ++i)
+    {
+        const float weight = blend.samples[i].weight;
+        if (!std::isfinite(weight) || weight < 0.0f)
+        {
+            return;
+        }
+        validatedTotalWeight += weight;
+    }
+
+    if (!std::isfinite(validatedTotalWeight) ||
+        validatedTotalWeight <= FLT_EPSILON)
+    {
+        return;
+    }
+
     size_t nodeCount = poses[0].size();
     for (size_t nodeIndex = 0;
         nodeIndex < nodeCount;

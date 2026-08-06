@@ -209,6 +209,18 @@ public:
     // ルートモーションを無視するかどうか
     void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
 
+    void SetEnableRootMotion(const bool enableRootMotion)
+    {
+        this->enableRootMotion = enableRootMotion;
+
+        if (!enableRootMotion)
+        {
+            blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+            blendSpaceRootMotionValid = false;
+            resetLocomotionRootMotion = true;
+        }
+    }
+
     // オーナーの名前を設定する
     void SetOwnerName(const std::string& name) { ownerName = name; }
 
@@ -232,10 +244,43 @@ public:
         backwardBlendSpace.AddAnimation(clip, angle);
     }
 
+    // 単一の360度Locomotion BlendSpaceへアニメーションを追加する
+    void AddLocomotionBlendAnimation(
+        const std::string& name,
+        float angle,
+        float phaseOffset = 0.0f)
+    {
+        const size_t clip = animationNameToIndex_[name];
+        const float normalizedOffset =
+            name == "Jog_Fwd" ? 0.0f : BlendSpace::WrapPhase(phaseOffset);
+        locomotionBlendSpace.AddAnimation(clip, angle, normalizedOffset);
+
+        if (name == "Jog_Right") locomotionRightPhaseOffset = normalizedOffset;
+        if (name == "Jog_Bwd") locomotionBackwardPhaseOffset = normalizedOffset;
+        if (name == "Jog_Left") locomotionLeftPhaseOffset = normalizedOffset;
+    }
+
+    void SetLocomotionPhaseOffset(const std::string& name, float phaseOffset)
+    {
+        const auto it = animationNameToIndex_.find(name);
+        if (it == animationNameToIndex_.end())
+            return;
+
+        const float normalizedOffset =
+            name == "Jog_Fwd" ? 0.0f : BlendSpace::WrapPhase(phaseOffset);
+        locomotionBlendSpace.SetPhaseOffset(it->second, normalizedOffset);
+    }
+
     void SetBlendInput(const float x, const float y, const float speed)
     {
         blendInput = { x, y };
         blendSpeed = speed;
+    }
+
+    void SetBlendDebugRawInput(const float x, const float z)
+    {
+        locomotionDebugRawStickX = x;
+        locomotionDebugRawStickZ = z;
     }
 
     void SetUseBlendSpace(const bool use)
@@ -611,6 +656,40 @@ private:
     float pendingLocomotionPhase = 0.0f;
 
 
+    struct LocomotionBlendDebugSample
+    {
+        std::string clipName;
+        float weight = 0.0f;
+        float duration = 0.0f;
+        float phaseOffset = 0.0f;
+        float samplePhase = 0.0f;
+        float sampleTime = 0.0f;
+    };
+
+    float locomotionCommonPhase = 0.0f;
+    std::array<LocomotionBlendDebugSample, 2> locomotionDebugSamples;
+    size_t locomotionDebugSampleCount = 0;
+    float locomotionBackwardPhaseOffset = 0.0f;
+    float locomotionRightPhaseOffset = 0.5f;
+    float locomotionLeftPhaseOffset = 0.5f;
+    int locomotionDebugForcedPair = 0;
+    int locomotionDebugForcedSingle = 0;
+    int locomotionDebugBodyBlendMode = 0;
+    bool locomotionDebugExcludePelvisTranslation = false;
+    bool locomotionDebugExcludePelvisRotation = false;
+    bool locomotionDebugExcludeRootTranslation = false;
+    bool locomotionDebugExcludeRootRotation = false;
+    bool locomotionDebugManualBwdWeight = false;
+    float locomotionDebugBwdWeight = 0.5f;
+    float locomotionDebugRawStickX = 0.0f;
+    float locomotionDebugRawStickZ = 0.0f;
+    float locomotionDebugEvaluationAngle = 0.0f;
+    bool locomotionDebugHasReference = false;
+    float locomotionDebugReferenceAngle = 0.0f;
+    bool locomotionDebugFreezeCommonPhase = false;
+    float locomotionDebugFrozenCommonPhase = 0.0f;
+    std::array<LocomotionBlendDebugSample, 2> locomotionDebugReferenceSamples;
+    size_t locomotionDebugReferenceSampleCount = 0;
     // ブレンドスペースではない
     // ルートモーションの最初を記録する　Pose
     std::vector<InterleavedGltfModel::Node> normalRootMotionStartNodes;

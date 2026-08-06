@@ -112,6 +112,9 @@ void Player::Initialize(const Transform& transform)
         int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
+        // Player movement is input-driven; never apply animation Root Motion.
+        controller->SetEnableRootMotion(false);
+        controller->SetIgnoreRootMotion(true);
         // 透明なモデルのアニメーションの動きを追加
         controller->AddTarget(skeletalMeshBlendComponent.get());
 
@@ -246,10 +249,10 @@ void Player::Initialize(const Transform& transform)
         controller->AddBackwardBlendAnimation("Jog_BwdRight45", 45.0f);
         controller->AddBackwardBlendAnimation("Jog_BwdLeft45", -45.0f);
 #else
-        controller->AddBackwardBlendAnimation("Jog_Bwd", -180.0f);
-        controller->AddBackwardBlendAnimation("Jog_Fwd", 0.0f);
-        controller->AddBackwardBlendAnimation("Jog_Right", 90.0f);
-        controller->AddBackwardBlendAnimation("Jog_Left", -90.0f);
+        controller->AddLocomotionBlendAnimation("Jog_Fwd", 0.0f, 0.0f);
+        controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.5f);
+        controller->AddLocomotionBlendAnimation("Jog_Bwd", 180.0f, 0.0f);
+        controller->AddLocomotionBlendAnimation("Jog_Left", -90.0f, 0.5f);
 #endif // 0
 
         std::string name = GetName();
@@ -1313,6 +1316,8 @@ void Player::UpdateMovement()
         // 左スティック入力
         float rawStickX = intent.leftMove.x;
         float rawStickZ = intent.leftMove.z;
+        GetBodyAnimationController()->SetBlendDebugRawInput(
+            rawStickX, rawStickZ);
         // Rotation用
         float stickX = rawStickX;
         float stickZ = rawStickZ;

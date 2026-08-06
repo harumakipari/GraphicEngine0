@@ -22,18 +22,20 @@ public:
     struct Sample
     {
         size_t clip;
-        float angle = 0.0f;;
+        float angle = 0.0f;
+        float phaseOffset = 0.0f;
     };
 
     struct BlendResult
     {
         size_t clip;
         float weight;
+        float phaseOffset;
     };
 public:
-    void AddAnimation(const size_t clip, float angle)
+    void AddAnimation(const size_t clip, float angle, float phaseOffset = 0.0f)
     {
-        samples.push_back({ clip, angle });
+        samples.push_back({ clip, angle, WrapPhase(phaseOffset) });
 
         std::sort(
             samples.begin(),
@@ -48,6 +50,25 @@ public:
     const std::vector<Sample>& GetSamples() const
     {
         return samples;
+    }
+
+    void SetPhaseOffset(size_t clip, float phaseOffset)
+    {
+        for (Sample& sample : samples)
+        {
+            if (sample.clip == clip)
+            {
+                sample.phaseOffset = WrapPhase(phaseOffset);
+            }
+        }
+    }
+
+    static float WrapPhase(float phase)
+    {
+        if (!std::isfinite(phase))
+            return 0.0f;
+
+        return phase - std::floor(phase);
     }
 
     // インプットから2Dブレンド空間での重みを計算する

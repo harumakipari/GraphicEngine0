@@ -44,6 +44,10 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
     finalNodes = target_->model->GetNodes();
 
     this->rootNodeIndex = rootNodeIndex < 0 ? 0 : rootNodeIndex;
+
+
+
+
 }
 
 
@@ -505,6 +509,10 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
 
     const size_t requestedClip = animationIt->second;
 
+    // Apply the per-animation Root Motion setting.
+    // enableRootMotion=false always takes precedence over this flag.
+    this->ignoreRootMotion = ignoreRootMotion;
+
     // 同じ遷移先を遷移中に再要求しても、
     // blendElapsedTime / blendFactor を先頭へ戻さない
     if (transitionState != AnimationTransitionState::Completed &&
@@ -608,6 +616,130 @@ void AnimationController::DrawImGui()
 
     ImGui::Checkbox("enableRootMotion", &enableRootMotion);
     ImGui::Checkbox("ignoreRootMotion", &ignoreRootMotion);
+
+    ImGui::Separator();
+    ImGui::Text("Locomotion Runtime Debug");
+    ImGui::Text("Controller: %s @ %p", ownerName.c_str(),
+        static_cast<void*>(this));
+    ImGui::Text("rawStick: (%.4f, %.4f)",
+        locomotionDebugRawStickX, locomotionDebugRawStickZ);
+    ImGui::Text("blendInput: (%.4f, %.4f)", blendInput.x, blendInput.y);
+    ImGui::Text("evaluationAngle: %.3f deg", locomotionDebugEvaluationAngle);
+    ImGui::Text("commonPhase: %.4f", locomotionCommonPhase);
+    ImGui::Checkbox("Freeze commonPhase",
+        &locomotionDebugFreezeCommonPhase);
+    if (locomotionDebugFreezeCommonPhase)
+    {
+        ImGui::SliderFloat("Frozen commonPhase",
+            &locomotionDebugFrozenCommonPhase, 0.0f, 1.0f);
+    }
+    ImGui::Text("Force pair: %s (%d)  Force single: %s (%d)",
+        locomotionDebugForcedPair != 0 ? "ON" : "OFF",
+        locomotionDebugForcedPair,
+        locomotionDebugForcedSingle != 0 ? "ON" : "OFF",
+        locomotionDebugForcedSingle);
+
+    bool phaseOffsetChanged = false;
+    phaseOffsetChanged |= ImGui::SliderFloat(
+        "Backward phaseOffset", &locomotionBackwardPhaseOffset, 0.0f, 1.0f);
+    phaseOffsetChanged |= ImGui::SliderFloat(
+        "Right phaseOffset", &locomotionRightPhaseOffset, 0.0f, 1.0f);
+    phaseOffsetChanged |= ImGui::SliderFloat(
+        "Left phaseOffset", &locomotionLeftPhaseOffset, 0.0f, 1.0f);
+    if (phaseOffsetChanged)
+    {
+        SetLocomotionPhaseOffset("Jog_Bwd", locomotionBackwardPhaseOffset);
+        SetLocomotionPhaseOffset("Jog_Right", locomotionRightPhaseOffset);
+        SetLocomotionPhaseOffset("Jog_Left", locomotionLeftPhaseOffset);
+    }
+
+    const char* forcedPairs =
+        "Off\0Forward + Right\0Right + Backward\0"
+        "Backward + Left\0Left + Forward\0";
+    if (ImGui::Combo(
+        "Force 50/50 Pair", &locomotionDebugForcedPair, forcedPairs) &&
+        locomotionDebugForcedPair != 0)
+    {
+        locomotionDebugForcedSingle = 0;
+    }
+
+    const char* forcedSingles =
+        "Off\0Jog_Fwd\0Jog_Right\0Jog_Bwd\0Jog_Left\0";
+    if (ImGui::Combo(
+        "Force Clip Weight 1", &locomotionDebugForcedSingle, forcedSingles) &&
+        locomotionDebugForcedSingle != 0)
+    {
+        locomotionDebugForcedPair = 0;
+    }
+
+    const char* bodyBlendModes =
+        "Full Body\0Lower Body Only\0Upper Body Only\0";
+    ImGui::Combo(
+        "Bone Blend Isolation", &locomotionDebugBodyBlendMode, bodyBlendModes);
+    ImGui::Checkbox("Do not blend Pelvis Translation",
+        &locomotionDebugExcludePelvisTranslation);
+    ImGui::Checkbox("Do not blend Pelvis Rotation",
+        &locomotionDebugExcludePelvisRotation);
+    ImGui::Checkbox("Do not blend Root Translation",
+        &locomotionDebugExcludeRootTranslation);
+    ImGui::Checkbox("Do not blend Root Rotation",
+        &locomotionDebugExcludeRootRotation);
+    ImGui::Checkbox("Manual Jog_Bwd Weight",
+        &locomotionDebugManualBwdWeight);
+    if (locomotionDebugManualBwdWeight)
+    {
+        ImGui::SliderFloat("Jog_Bwd Weight",
+            &locomotionDebugBwdWeight, 0.0f, 1.0f);
+    }
+
+    if (ImGui::Button("Capture Current Blend Reference"))
+    {
+        locomotionDebugReferenceAngle = locomotionDebugEvaluationAngle;
+        locomotionDebugReferenceSampleCount = locomotionDebugSampleCount;
+        locomotionDebugReferenceSamples = locomotionDebugSamples;
+        locomotionDebugHasReference = true;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Clear Blend Reference"))
+    {
+        locomotionDebugHasReference = false;
+    }
+    for (size_t i = 0; i < locomotionDebugSampleCount; ++i)
+    {
+        const LocomotionBlendDebugSample& sample = locomotionDebugSamples[i];
+        ImGui::Text("[%zu] %s", i, sample.clipName.c_str());
+        ImGui::Text("  Weight %.3f  duration %.3f",
+            sample.weight, sample.duration);
+        ImGui::Text(
+            "  phaseOffset %.4f  samplePhase %.4f  sampleTime %.4f",
+            sample.phaseOffset, sample.samplePhase, sample.sampleTime);
+    }
+
+    if (locomotionDebugHasReference)
+    {
+        constexpr float CompareEpsilon = 0.0001f;
+        bool valuesMatch =
+            std::fabs(locomotionDebugEvaluationAngle -
+                locomotionDebugReferenceAngle) <= CompareEpsilon &&
+            locomotionDebugSampleCount == locomotionDebugReferenceSampleCount;
+
+        for (size_t i = 0;
+            valuesMatch && i < locomotionDebugSampleCount;
+            ++i)
+        {
+            const auto& current = locomotionDebugSamples[i];
+            const auto& reference = locomotionDebugReferenceSamples[i];
+            valuesMatch = current.clipName == reference.clipName &&
+                std::fabs(current.weight - reference.weight) <= CompareEpsilon &&
+                std::fabs(current.phaseOffset - reference.phaseOffset) <= CompareEpsilon &&
+                std::fabs(current.samplePhase - reference.samplePhase) <= CompareEpsilon;
+        }
+
+        ImGui::Text("Reference comparison: %s",
+            valuesMatch ? "MATCH" : "MISMATCH");
+        ImGui::Text("Reference angle %.3f / Current %.3f",
+            locomotionDebugReferenceAngle, locomotionDebugEvaluationAngle);
+    }
 
     ImGui::Separator();
 
@@ -1507,105 +1639,96 @@ float AnimationController::GetLocomotionDuration(const BlendGroup group)
 // ブレンドスペースを更新する
 void AnimationController::UpdateBlendSpace(float deltaTime)
 {
-    std::vector<BlendSpace::BlendResult> weights;
-
-    constexpr float ChangeThreshold = 0.2f;
-
-    BlendGroup previousGroup = currentGroup;
-
-    // 最後の切り替えからの経過時間を進める
-    groupHoldElapsed += deltaTime;
-
-    const float oldDuration = GetLocomotionDuration(previousGroup);
-    float phase = 0.0f;
-
-    if (oldDuration > FLT_EPSILON)
+    // デバッグ固定方向はPose評価だけに使用し、Playerの移動入力は変更しない。
+    DirectX::XMFLOAT2 evaluationInput = blendInput;
+    if (locomotionDebugForcedSingle != 0)
     {
-        phase = locomotionTime / oldDuration;
-        phase -= floorf(phase);
-    }
-    // 現在Forwardグループの場合
-    if (currentGroup == BlendGroup::Forward)
-    {
-        // 後ろ方向へ十分入力されたら、Backward変更を予約する
-        if (blendInput.y < -ChangeThreshold)
+        switch (locomotionDebugForcedSingle)
         {
-            pendingGroup = BlendGroup::Backward;
-            hasPendingGroupChange = true;
-        }
-        // 前方向へ明確に戻った場合は、予約を取り消す
-        else if (blendInput.y > ChangeThreshold)
-        {
-            hasPendingGroupChange = false;
+        case 1: evaluationInput = { 0.0f, 1.0f }; break;
+        case 2: evaluationInput = { 1.0f, 0.0f }; break;
+        case 3: evaluationInput = { 0.0f, -1.0f }; break;
+        case 4: evaluationInput = { -1.0f, 0.0f }; break;
+        default: break;
         }
     }
-    // 現在Backwardグループの場合
     else
     {
-        // 前方向へ十分入力されたら、Forward変更を予約する
-        if (blendInput.y > ChangeThreshold)
+        switch (locomotionDebugForcedPair)
         {
-            pendingGroup = BlendGroup::Forward;
-            hasPendingGroupChange = true;
-        }
-        // 後ろ方向へ明確に戻った場合は、予約を取り消す
-        else if (blendInput.y < -ChangeThreshold)
-        {
-            hasPendingGroupChange = false;
+        case 1: evaluationInput = { 1.0f, 1.0f }; break;
+        case 2: evaluationInput = { 1.0f, -1.0f }; break;
+        case 3: evaluationInput = { -1.0f, -1.0f }; break;
+        case 4: evaluationInput = { -1.0f, 1.0f }; break;
+        default: break;
         }
     }
 
-    // 真横付近では、現在グループと予約状態を維持する
-    // 最低保持時間が経過していれば、予約したグループへ変更する
-    if (hasPendingGroupChange &&
-        pendingGroup != currentGroup &&
-        groupHoldElapsed >= minimumGroupHoldTime)
-    {
-        currentGroup = pendingGroup;
-        hasPendingGroupChange = false;
-        groupHoldElapsed = 0.0f;
-    }
+    locomotionDebugEvaluationAngle = DirectX::XMConvertToDegrees(
+        atan2f(evaluationInput.x, evaluationInput.y));
 
-    bool groupChanged = previousGroup != currentGroup;
-    if (groupChanged)
+    // 旧Forward/Backwardグループは保持するが、Locomotion更新では使用しない。
+    std::vector<BlendSpace::BlendResult> weights =
+        locomotionBlendSpace.CalculateWeights(evaluationInput);
+
+    if (locomotionDebugManualBwdWeight && weights.size() == 2)
     {
-        // 切り替え前フレームの前グループ姿勢
-        groupTransitionStartNodes = finalNodes;
-        groupTransitionElapsed = 0.0f;
-        groupTransition = true;
-        blendSpaceTransition = false;
-        //
-        resetLocomotionRootMotion = true;
+        const auto bwdIt = animationNameToIndex_.find("Jog_Bwd");
+        if (bwdIt != animationNameToIndex_.end())
+        {
+            for (size_t i = 0; i < weights.size(); ++i)
+            {
+                if (weights[i].clip == bwdIt->second)
+                {
+                    const float bwdWeight = std::clamp(
+                        locomotionDebugBwdWeight, 0.0f, 1.0f);
+                    weights[i].weight = bwdWeight;
+                    weights[1 - i].weight = 1.0f - bwdWeight;
+                    break;
+                }
+            }
+        }
+    }
+    // Keep the current pose when the selected BlendSpace has no samples.
+    if (weights.empty())
+    {
+        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
         blendSpaceRootMotionValid = false;
-        blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
-
-
-        const float newDuration = GetLocomotionDuration(currentGroup);
-
-        if (newDuration > FLT_EPSILON)
-        {
-            locomotionTime = phase * newDuration;
-        }
+        resetLocomotionRootMotion = true;
+        return;
     }
 
-    if (currentGroup == BlendGroup::Forward)
+    if (weights.size() > blendSpacePoses.size())
     {
-        weights = forwardBlendSpace.CalculateWeights(blendInput);
-    }
-    else
-    {
-        weights = backwardBlendSpace.CalculateWeights(blendInput);
+        Logger::Error("BlendSpace weights exceeded pose capacity.");
+        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+        blendSpaceRootMotionValid = false;
+        resetLocomotionRootMotion = true;
+        return;
     }
 
-    float groupDuration = GetLocomotionDuration(currentGroup);
+    // Jog_Fwdを共通Locomotion cycleの基準durationとして使用する。
+    const float cycleDuration = GetLocomotionDuration(BlendGroup::Forward);
     // 前回phaseと今回phaseを確定する
     float currentLocomotionPhase = 0.0f;
-    if (groupDuration > FLT_EPSILON)
+    if (std::isfinite(locomotionTime) &&
+        std::isfinite(cycleDuration) &&
+        cycleDuration > FLT_EPSILON)
     {
-        currentLocomotionPhase = locomotionTime / groupDuration;
-        currentLocomotionPhase -= floorf(currentLocomotionPhase);
+        currentLocomotionPhase = locomotionTime / cycleDuration;
+        currentLocomotionPhase = BlendSpace::WrapPhase(currentLocomotionPhase);
     }
-    bool canExtractRootMotion = true;
+
+    if (locomotionDebugFreezeCommonPhase)
+    {
+        currentLocomotionPhase =
+            BlendSpace::WrapPhase(locomotionDebugFrozenCommonPhase);
+    }
+
+    locomotionCommonPhase = currentLocomotionPhase;
+    locomotionDebugSampleCount = 0;
+
+    bool canExtractRootMotion = enableRootMotion && !ignoreRootMotion;
 
     if (resetLocomotionRootMotion)
     {
@@ -1640,18 +1763,47 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         };
         bool clipRootMotionValid = false;
 
-        if (groupDuration <= FLT_EPSILON)
+        if (cycleDuration <= FLT_EPSILON ||
+            clip >= target_->model->animations.size())
         {
-            continue;
+            return;
         }
 
-        float clipDuration = target_->model->animations[clip].duration;
+        const float clipDuration = target_->model->animations[clip].duration;
+        if (!std::isfinite(clipDuration) || clipDuration <= FLT_EPSILON)
+        {
+            return;
+        }
 
-        float previousTime = previousLocomotionPhase * clipDuration;
-        float currentTime = currentLocomotionPhase * clipDuration;
+        const float phaseOffset = BlendSpace::WrapPhase(weights[i].phaseOffset);
+        const float previousSamplePhase =
+            BlendSpace::WrapPhase(previousLocomotionPhase + phaseOffset);
+        const float samplePhase =
+            BlendSpace::WrapPhase(currentLocomotionPhase + phaseOffset);
+        const float previousTime = previousSamplePhase * clipDuration;
+        const float sampleTime = samplePhase * clipDuration;
 
+        if (locomotionDebugSampleCount < locomotionDebugSamples.size())
+        {
+            LocomotionBlendDebugSample& debugSample =
+                locomotionDebugSamples[locomotionDebugSampleCount++];
+            debugSample.clipName = "<unknown>";
+            for (const auto& [name, registeredClip] : animationNameToIndex_)
+            {
+                if (registeredClip == clip)
+                {
+                    debugSample.clipName = name;
+                    break;
+                }
+            }
+            debugSample.weight = weights[i].weight;
+            debugSample.duration = clipDuration;
+            debugSample.phaseOffset = phaseOffset;
+            debugSample.samplePhase = samplePhase;
+            debugSample.sampleTime = sampleTime;
+        }
 
-        target_->model->Animate(clip, currentTime, blendSpacePoses[i]);
+        target_->model->Animate(clip, sampleTime, blendSpacePoses[i]);
 
 
         if (!canExtractRootMotion)
@@ -1681,7 +1833,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         };
 
         // ループしていないフレームのみ
-        if (previousLocomotionPhase <= currentLocomotionPhase)
+        if (previousSamplePhase <= samplePhase)
         {
             clipRootMotionDelta =
             {
@@ -1811,6 +1963,59 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
     target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
 
+    // Bone/transform isolation is debug-only and uses the first selected clip as reference.
+    if (blend.count > 0)
+    {
+        const std::vector<InterleavedGltfModel::Node>& referencePose =
+            blendSpacePoses[0];
+
+        auto isLowerBodyNode = [](std::string name)
+        {
+            std::transform(name.begin(), name.end(), name.begin(),
+                [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            return name == "pelvis" ||
+                name.find("thigh") != std::string::npos ||
+                name.find("calf") != std::string::npos ||
+                name.find("foot") != std::string::npos ||
+                name.find("toe") != std::string::npos ||
+                name.find("ball") != std::string::npos ||
+                name.find("hip_cloth") != std::string::npos;
+        };
+
+        for (size_t nodeIndex = 0;
+            nodeIndex < blendSpaceNodes.size() &&
+            nodeIndex < referencePose.size();
+            ++nodeIndex)
+        {
+            auto& outputNode = blendSpaceNodes[nodeIndex];
+            const auto& referenceNode = referencePose[nodeIndex];
+            const bool lowerBody = isLowerBodyNode(outputNode.name);
+
+            if ((locomotionDebugBodyBlendMode == 1 && !lowerBody) ||
+                (locomotionDebugBodyBlendMode == 2 && lowerBody))
+            {
+                outputNode.scale = referenceNode.scale;
+                outputNode.rotation = referenceNode.rotation;
+                outputNode.translation = referenceNode.translation;
+            }
+
+            const bool pelvis = outputNode.name == "pelvis";
+            const bool root = static_cast<int>(nodeIndex) == rootNodeIndex ||
+                outputNode.name == "root";
+
+            if (pelvis && locomotionDebugExcludePelvisTranslation)
+                outputNode.translation = referenceNode.translation;
+            if (pelvis && locomotionDebugExcludePelvisRotation)
+                outputNode.rotation = referenceNode.rotation;
+            if (root && locomotionDebugExcludeRootTranslation)
+                outputNode.translation = referenceNode.translation;
+            if (root && locomotionDebugExcludeRootRotation)
+                outputNode.rotation = referenceNode.rotation;
+        }
+
+        target_->model->CumulateTransforms(blendSpaceNodes);
+    }
+
     // BlendSpaceへの遷移
     if (blendSpaceTransition)
     {
@@ -1877,11 +2082,13 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
     // 今回Phaseを次フレームの前回phaseにする
     previousLocomotionPhase = currentLocomotionPhase;
-    float duration = GetLocomotionDuration(currentGroup);
-
-    if (locomotionTime >= duration)
+    if (std::isfinite(cycleDuration) && cycleDuration > FLT_EPSILON)
     {
-        locomotionTime -= duration;
+        locomotionTime = currentLocomotionPhase * cycleDuration;
+    }
+    else
+    {
+        locomotionTime = 0.0f;
     }
 
 
