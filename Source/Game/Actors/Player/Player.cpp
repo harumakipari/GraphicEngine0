@@ -27,17 +27,29 @@
 
 namespace
 {
-const char* ToString(Player::InputCommand command)
+const char* ToString(Player::ActionType action)
 {
-    switch (command)
+    switch (action)
     {
-    case Player::InputCommand::None:     return "None";
-    case Player::InputCommand::Attack:   return "Attack";
-    case Player::InputCommand::Dodge:    return "Dodge";
-    case Player::InputCommand::Jump:     return "Jump";
-    case Player::InputCommand::Interact: return "Interact";
+    case Player::ActionType::None:     return "None";
+    case Player::ActionType::Attack:   return "Attack";
+    case Player::ActionType::Dodge:    return "Dodge";
+    case Player::ActionType::Dash:     return "Dash";
+    case Player::ActionType::Jump:     return "Jump";
+    case Player::ActionType::Interact: return "Interact";
     }
     return "Unknown";
+}
+
+int GetActionPriority(Player::ActionType action)
+{
+    switch (action)
+    {
+    case Player::ActionType::Dodge:  return 3;
+    case Player::ActionType::Attack: return 2;
+    case Player::ActionType::Dash:   return 1;
+    default:                         return 0;
+    }
 }
 }
 
@@ -648,7 +660,7 @@ void Player::Update(float deltaTime)
 
 
     // 入力処理
-    HandleInput(deltaTime);
+    CaptureActionRequest(deltaTime);
 
     // 現在フレームの入力から移動方向を確定し、その直後に一度だけ位置を更新する。
     UpdateMovement();
@@ -787,6 +799,10 @@ void Player::DrawImGuiDetails()
         characterMovementComponent->GetActualHorizontalSpeed());
     ImGui::Text("finalMoveSpeed: %.4f",
         characterMovementComponent->GetFinalMoveSpeed());
+    ImGui::SeparatorText("Action Request");
+    ImGui::Text("ActionRequest: %s", ToString(bufferCommand.type));
+    ImGui::Text("remainTime: %.3f", bufferCommand.remainTime);
+    ImGui::Text("currentState: %s", stateMachine_->GetStateName());
 
 #endif
 }
@@ -959,21 +975,25 @@ void Player::UpdateLocomotionAnimation()
     }
 }
 
+void Player::RestartLocomotionAnimation()
+{
+    locomotionMode = LocomotionMode::None;
+    UpdateLocomotionAnimation();
+}
+
 // TPSモードの移動時の更新処理
 void Player::UpdateTPSLocomotion()
 {
     float speed = characterMovementComponent->GetInputMagnitude();
-    bool dash = InputSystem::GetInputState("GamePadB", InputStateMask::Press);
-
-    // ダッシュ条件
-    if (dash && speed >= 0.0f)
-    {
-        SetLocomotionMode(LocomotionMode::Dash);
-        return;
-    }
 
     switch (locomotionMode)
     {
+    case LocomotionMode::None:
+        if (speed >= 0.6f)
+            SetLocomotionMode(LocomotionMode::TPSRun);
+        else
+            SetLocomotionMode(LocomotionMode::TPSWalk);
+        break;
     case LocomotionMode::Idle:
         if (speed > 0.0f)
             SetLocomotionMode(LocomotionMode::TPSWalk);
@@ -991,15 +1011,12 @@ void Player::UpdateTPSLocomotion()
             SetLocomotionMode(LocomotionMode::TPSWalk);
         break;
     case LocomotionMode::Dash:
-        if (!dash)
-        {
-            if (speed >= 0.6f)
-                SetLocomotionMode(LocomotionMode::TPSRun);
-            else if (speed > 0.0f)
-                SetLocomotionMode(LocomotionMode::TPSWalk);
-            else
-                SetLocomotionMode(LocomotionMode::Idle);
-        }
+        if (speed >= 0.6f)
+            SetLocomotionMode(LocomotionMode::TPSRun);
+        else if (speed > 0.0f)
+            SetLocomotionMode(LocomotionMode::TPSWalk);
+        else
+            SetLocomotionMode(LocomotionMode::Idle);
         break;
         // Focus / LockOn から TPS に戻った時
     case LocomotionMode::LockOnBlendWalk:
@@ -1024,17 +1041,15 @@ void Player::UpdateTPSLocomotion()
 void Player::UpdateLockOnLocomotion()
 {
     float speed = characterMovementComponent->GetInputMagnitude();
-    bool dash = InputSystem::GetInputState("GamePadB", InputStateMask::Press);
-
-    // ダッシュ条件
-    if (dash && speed >= 0.0f)
-    {
-        SetLocomotionMode(LocomotionMode::Dash);
-        return;
-    }
 
     switch (locomotionMode)
     {
+    case LocomotionMode::None:
+        if (speed >= 0.6f)
+            SetLocomotionMode(LocomotionMode::LockOnBlendRun);
+        else
+            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
+        break;
     case LocomotionMode::Idle:
         if (speed > 0.0f)
             SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
@@ -1051,15 +1066,12 @@ void Player::UpdateLockOnLocomotion()
             SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
         break;
     case LocomotionMode::Dash:
-        if (!dash)
-        {
-            if (speed >= 0.6f)
-                SetLocomotionMode(LocomotionMode::LockOnBlendRun);
-            else if (speed > 0.0f)
-                SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
-            else
-                SetLocomotionMode(LocomotionMode::Idle);
-        }
+        if (speed >= 0.6f)
+            SetLocomotionMode(LocomotionMode::LockOnBlendRun);
+        else if (speed > 0.0f)
+            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
+        else
+            SetLocomotionMode(LocomotionMode::Idle);
         break;
     case LocomotionMode::TPSWalk:
     case LocomotionMode::TPSRun:
@@ -1200,68 +1212,138 @@ void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XM
 }
 
 // 入力処理をまとめる
-void Player::HandleInput(float deltaTime)
+void Player::CaptureActionRequest(float deltaTime)
 {
-    bufferCommand.remainTime -= deltaTime;
-    if (bufferCommand.command != InputCommand::None && bufferCommand.remainTime <= 0.0f)
+    if (bufferCommand.type != ActionType::None)
     {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[InputBuffer][Expired] command=" + std::string(ToString(bufferCommand.command)) +
-            " remainTime=" + std::to_string(bufferCommand.remainTime) +
-            " state=" + stateMachine_->GetStateName());
-        bufferCommand.command = InputCommand::None;
+        bufferCommand.remainTime -= deltaTime;
+        if (bufferCommand.remainTime <= 0.0f)
+        {
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[ActionRequest][Expired] action=" + std::string(ToString(bufferCommand.type)) +
+                " remainTime=" + std::to_string(bufferCommand.remainTime) +
+                " state=" + stateMachine_->GetStateName());
+            bufferCommand = {};
+        }
     }
+
     if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
     {
-        bufferCommand.command = InputCommand::Dodge;
-        DecideLockOnDodgeDirection();
-        bufferCommand.remainTime = 0.3f;
         Logger::Log(Logger::LogCategory::Gameplay,
-            "[InputBuffer][Stored] command=Dodge remainTime=" + std::to_string(bufferCommand.remainTime) +
-            " state=" + stateMachine_->GetStateName());
-        return;
+            std::string("[ActionRequest][Detected] action=Dodge state=") + stateMachine_->GetStateName());
+        DecideLockOnDodgeDirection();
+        StoreActionRequest(ActionType::Dodge, 0.3f);
     }
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
-        bufferCommand.command = InputCommand::Attack;
-        bufferCommand.remainTime = 0.5f;
         Logger::Log(Logger::LogCategory::Gameplay,
-            "[InputBuffer][Stored] command=Attack remainTime=" + std::to_string(bufferCommand.remainTime) +
-            " state=" + stateMachine_->GetStateName());
-        return;
+            std::string("[ActionRequest][Detected] action=Attack state=") + stateMachine_->GetStateName());
+        StoreActionRequest(ActionType::Attack, 0.5f);
+    }
+    if (InputSystem::GetInputState("GamePadB", InputStateMask::Trigger))
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            std::string("[ActionRequest][Detected] action=Dash state=") + stateMachine_->GetStateName());
+        StoreActionRequest(ActionType::Dash, 0.3f);
     }
     if (InputSystem::GetInputState("Interact", InputStateMask::Trigger))
     {
-        bufferCommand.command = InputCommand::Interact;
-        bufferCommand.remainTime = 0.3f;
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[InputBuffer][Stored] command=Interact remainTime=" + std::to_string(bufferCommand.remainTime) +
-            " state=" + stateMachine_->GetStateName());
+        StoreActionRequest(ActionType::Interact, 0.3f);
     }
 }
 
-
-// 入力コマンドによってステートを変える
-bool Player::TryHandleGlobalTransition()
+bool Player::StoreActionRequest(ActionType type, float remainTime)
 {
-    switch (bufferCommand.command)
+    const int newPriority = GetActionPriority(type);
+    const int currentPriority = GetActionPriority(bufferCommand.type);
+    if (bufferCommand.type != ActionType::None && newPriority < currentPriority)
     {
-    case InputCommand::None:
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[ActionRequest][Rejected] action=" + std::string(ToString(type)) +
+            " reason=lower_priority current=" + std::string(ToString(bufferCommand.type)) +
+            " state=" + stateMachine_->GetStateName());
         return false;
-    case InputCommand::Attack:
-        stateMachine_->ChangeState("Attack");
-        return true;
-    case InputCommand::Dodge:
-        stateMachine_->ChangeState("Dodge");
-        return true;
-    case InputCommand::Jump:
-        stateMachine_->ChangeState("Jump");
-        return true;
-    case InputCommand::Interact:
-        stateMachine_->ChangeState("Interact");
+    }
+
+    const ActionType previous = bufferCommand.type;
+    bufferCommand.type = type;
+    bufferCommand.remainTime = remainTime;
+    if (type == ActionType::Dodge)
+    {
+        bufferCommand.dodgeDirection = dodgeDirection;
+    }
+
+    const char* reason = previous == ActionType::None ? "empty" :
+        (previous == type ? "refreshed" : "higher_priority");
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[ActionRequest][Stored] action=" + std::string(ToString(type)) +
+        " remainTime=" + std::to_string(remainTime) +
+        " reason=" + reason +
+        " previous=" + std::string(ToString(previous)) +
+        " state=" + stateMachine_->GetStateName());
+    return true;
+}
+
+// 保存済み要求を現在のステートから実行する
+bool Player::TryExecuteActionRequest()
+{
+    const ActionType requestedType = bufferCommand.type;
+    std::string targetState;
+    switch (requestedType)
+    {
+    case ActionType::None:
+        return false;
+    case ActionType::Attack:
+        targetState = "Attack";
+        break;
+    case ActionType::Dodge:
+        dodgeDirection = bufferCommand.dodgeDirection;
+        targetState = "Dodge";
+        break;
+    case ActionType::Dash:
+        if (characterMovementComponent->GetInputMagnitude() <= 0.01f)
+        {
+            Logger::Log(Logger::LogCategory::Gameplay,
+                std::string("[ActionRequest][Deferred] action=Dash reason=no_move_input state=") +
+                stateMachine_->GetStateName());
+            return false;
+        }
+        if (!InputSystem::GetInputState("GamePadB", InputStateMask::Press))
+        {
+            Logger::Log(Logger::LogCategory::Gameplay,
+                std::string("[ActionRequest][Deferred] action=Dash reason=button_released state=") +
+                stateMachine_->GetStateName());
+            return false;
+        }
+        SetLocomotionMode(LocomotionMode::Dash);
+        targetState = "Dash";
+        break;
+    case ActionType::Jump:
+        targetState = "Jump";
+        break;
+    case ActionType::Interact:
+        targetState = "Interact";
         break;
     }
-    return false;
+
+    if (requestedType != ActionType::Dash)
+    {
+        stateMachine_->ChangeState(targetState);
+    }
+
+    if (stateMachine_->GetStateName() != targetState)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[ActionRequest][ExecutionFailed] action=" + std::string(ToString(requestedType)) +
+            " target=" + targetState + " state=" + stateMachine_->GetStateName());
+        return false;
+    }
+
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[ActionRequest][Executed] action=" + std::string(ToString(requestedType)) +
+        " state=" + targetState);
+    ConsumeActionRequest(requestedType);
+    return true;
 }
 
 // 動作更新処理
@@ -1553,14 +1635,25 @@ void Player::DecideLockOnDodgeDirection()
 }
 
 // 入力を消費する処理
-void Player::ConsumeBufferCommand()
+void Player::ConsumeActionRequest(ActionType expectedType)
 {
+    if (bufferCommand.type != expectedType)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[ActionRequest][ConsumeRejected] expected=" + std::string(ToString(expectedType)) +
+            " current=" + std::string(ToString(bufferCommand.type)) +
+            " state=" + stateMachine_->GetStateName());
+        return;
+    }
+    if (expectedType == ActionType::Dodge)
+    {
+        dodgeDirection = bufferCommand.dodgeDirection;
+    }
     Logger::Log(Logger::LogCategory::Gameplay,
-        "[InputBuffer][Consumed] command=" + std::string(ToString(bufferCommand.command)) +
+        "[ActionRequest][Consumed] action=" + std::string(ToString(bufferCommand.type)) +
         " remainTime=" + std::to_string(bufferCommand.remainTime) +
         " state=" + stateMachine_->GetStateName());
-    bufferCommand.command = InputCommand::None;
-    bufferCommand.remainTime = 0.0f;
+    bufferCommand = {};
 }
 
 //当たった時の処理

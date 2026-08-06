@@ -19,7 +19,7 @@ void PlayerIdleState::Enter()
 
 void PlayerIdleState::Execute(float deltaTime)
 {
-    if (player->TryHandleGlobalTransition())
+    if (player->TryExecuteActionRequest())
     {
         return;
     }
@@ -40,7 +40,18 @@ void PlayerIdleState::Exit()
 
 void PlayerRunningState::Enter()
 {
-    //owner->PlayBodyAnimation("Jog_Fwd", true, true, 0.2f);
+    player->RestartLocomotionAnimation();
+
+    auto controller = player->GetBodyAnimationController();
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[LocomotionRecovery][RunningEnter] currentState=" +
+        std::string(player->GetStateMachine()->GetStateName()) +
+        " locomotionMode=" + std::to_string(static_cast<int>(player->GetLocomotionMode())) +
+        " useBlendSpace=" + (controller->IsUsingBlendSpace() ? "true" : "false") +
+        " currentAnimation=" + controller->GetCurrentAnimationName() +
+        " animationTime=" + std::to_string(controller->GetCurrentAnimationTime()) +
+        " inputMagnitude=" + std::to_string(player->characterMovementComponent->GetInputMagnitude()) +
+        " actualHorizontalSpeed=" + std::to_string(player->characterMovementComponent->GetActualHorizontalSpeed()));
 
     // 走りSE再生
     //if (player->runAudioComp)
@@ -49,7 +60,7 @@ void PlayerRunningState::Enter()
 
 void PlayerRunningState::Execute(float deltaTime)
 {
-    if (player->TryHandleGlobalTransition())
+    if (player->TryExecuteActionRequest())
     {
         return;
     }
@@ -90,24 +101,24 @@ void PlayerDashState::Enter()
 
 void PlayerDashState::Execute(float deltaTime)
 {
-    if (player->TryHandleGlobalTransition())
+    if (player->TryExecuteActionRequest())
     {
         return;
     }
 
-    // 入力がなければ待機ステートに変更
     auto inputComp = player->inputComponent;
-
     DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
-    if (std::abs(dir.x - 0.0f) <= FLT_EPSILON && std::abs(dir.y - 0.0f) <= FLT_EPSILON && std::abs(dir.z - 0.0f) <= FLT_EPSILON)
-    {
-        player->GetStateMachine()->ChangeState("Idle");
-    }
 
-    // Bボタンが離されたてかつ
     if (!InputSystem::GetInputState("GamePadB", InputStateMask::Press))
     {
-        player->GetStateMachine()->ChangeState("Running");
+        if (MathHelper::Length(dir) > 0.01f)
+        {
+            player->GetStateMachine()->ChangeState("Running");
+        }
+        else
+        {
+            player->GetStateMachine()->ChangeState("Idle");
+        }
         return;
     }
 }
@@ -144,27 +155,21 @@ void PlayerAttackState::Enter()
 
     dodgeQueued = false;
     player->comboQueued = false;
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[InputBuffer][ClearedByStateTransition] command=" +
-        std::string(player->bufferCommand.command == Player::InputCommand::Attack ? "Attack" : "Other") +
-        " remainTime=" + std::to_string(player->bufferCommand.remainTime) +
-        " state=" + player->GetStateMachine()->GetStateName());
-    player->bufferCommand.command = Player::InputCommand::None;
 }
 
 void PlayerAttackState::Execute(float deltaTime)
 {
     if (player->inputWindow)
     {
-        switch (player->bufferCommand.command)
+        switch (player->bufferCommand.type)
         {
-        case Player::InputCommand::Attack:
+        case Player::ActionType::Attack:
             player->comboQueued = true;
-            player->ConsumeBufferCommand();
+            player->ConsumeActionRequest(Player::ActionType::Attack);
             break;
-        case Player::InputCommand::Dodge:
+        case Player::ActionType::Dodge:
             dodgeQueued = true;
-            player->ConsumeBufferCommand();
+            player->ConsumeActionRequest(Player::ActionType::Dodge);
             break;
         }
     }
@@ -206,18 +211,23 @@ void PlayerAttackState::Execute(float deltaTime)
 
     if (!owner->GetBodyAnimationController()->IsPlayAnimation())
     {
+        auto controller = player->GetBodyAnimationController();
+        const float inputMagnitude = MathHelper::Length(player->inputComponent->GetMoveInput());
+        const char* targetState = inputMagnitude > 0.01f ? "Running" : "Idle";
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[LocomotionRecovery][AttackFinished] attackEndDetected=true previousState=Attack targetState=" +
+            std::string(targetState) +
+            " locomotionMode=" + std::to_string(static_cast<int>(player->GetLocomotionMode())) +
+            " useBlendSpace=" + (controller->IsUsingBlendSpace() ? "true" : "false") +
+            " currentAnimation=" + controller->GetCurrentAnimationName() +
+            " animationTime=" + std::to_string(controller->GetCurrentAnimationTime()) +
+            " inputMagnitude=" + std::to_string(inputMagnitude) +
+            " actualHorizontalSpeed=" + std::to_string(player->characterMovementComponent->GetActualHorizontalSpeed()));
+
         player->currentAttackAnimation = player->startAttackAnimation;
         player->comboQueued = false;
 
-        auto dir = player->inputComponent->GetMoveInput();
-        if (MathHelper::Length(dir) > 0.01f)
-        {
-            player->GetStateMachine()->ChangeState("Running");
-        }
-        else
-        {
-            player->GetStateMachine()->ChangeState("Idle");
-        }
+        player->GetStateMachine()->ChangeState(targetState);
     }
 }
 
@@ -274,10 +284,10 @@ void PlayerDodgeState::Execute(float deltaTime)
             player->rushButtonImageComponent->SetVisible(false);
         }
 
-        if (player->bufferCommand.command == Player::InputCommand::Attack)
+        if (player->bufferCommand.type == Player::ActionType::Attack)
         {
             rushRequested = true;
-            player->ConsumeBufferCommand();
+            player->ConsumeActionRequest(Player::ActionType::Attack);
         }
         if (player->transitionWindow)
         {

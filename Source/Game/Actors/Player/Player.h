@@ -25,19 +25,29 @@ public:
         int nextComboIndex = -1;
     };
 
-    enum class InputCommand :uint8_t
+    enum class DodgeDirection :uint8_t
+    {
+        Forward,
+        Backward,
+        Left,
+        Right,
+    };
+
+    enum class ActionType :uint8_t
     {
         None,
         Attack,
         Dodge,
+        Dash,
         Jump,
         Interact,
     };
 
-    struct BufferInput
+    struct ActionRequest
     {
-        InputCommand command = InputCommand::None;
+        ActionType type = ActionType::None;
         float remainTime = 0.0f;
+        DodgeDirection dodgeDirection = DodgeDirection::Forward;
     };
 
     enum class SwordState :uint8_t
@@ -47,14 +57,6 @@ public:
     };
 
     // 回避方向
-    enum class DodgeDirection :uint8_t
-    {
-        Forward,
-        Backward,
-        Left,
-        Right,
-    };
-
     enum class LocomotionMode :uint8_t
     {
         None,
@@ -92,6 +94,10 @@ public:
 
     // ブレンドスペースのアニメーションを使用するかの更新関数
     void UpdateLocomotionAnimation() override;
+
+    void RestartLocomotionAnimation();
+
+    LocomotionMode GetLocomotionMode() const { return locomotionMode; }
 
     // TPSモードの移動時の更新処理
     void UpdateTPSLocomotion();
@@ -134,15 +140,17 @@ private:
     void CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end);
 
     // 入力処理をまとめる
-    void HandleInput(float deltaTimes);
+    void CaptureActionRequest(float deltaTime);
+
+    bool StoreActionRequest(ActionType type, float remainTime);
 
 
 public:
     // 入力コマンドによってステートが変わるかどうか
-    bool TryHandleGlobalTransition();
+    bool TryExecuteActionRequest();
 
     // 入力を消費する処理
-    void ConsumeBufferCommand();
+    void ConsumeActionRequest(ActionType expectedType);
 
     //当たった時の処理
     void TakeDamage(int damage);
@@ -224,7 +232,7 @@ public:
     std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 
     // 入力受付のコマンド
-    BufferInput bufferCommand = { InputCommand::None,0.0f }; // 入力コマンド
+    ActionRequest bufferCommand{}; // 入力コマンド
 public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;

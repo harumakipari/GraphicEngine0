@@ -285,6 +285,9 @@ public:
 
     void SetUseBlendSpace(const bool use)
     {
+        Logger::Log(std::string("[LocomotionRecovery][SetUseBlendSpace] requested=") +
+            (use ? "true" : "false") +
+            " current=" + (useBlendSpace ? "true" : "false"));
         // •ÏX‚ª‚È‚¢‚È‚ç‰½‚à‚µ‚È‚¢
         if (this->useBlendSpace == use)
             return;
@@ -414,6 +417,8 @@ public:
             return;
         }
     }
+
+    bool IsUsingBlendSpace() const { return useBlendSpace; }
 
     void AddTarget(SkeletalMeshComponent* target)
     {
