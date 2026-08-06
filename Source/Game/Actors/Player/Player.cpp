@@ -250,7 +250,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddBackwardBlendAnimation("Jog_BwdLeft45", -45.0f);
 #else
         controller->AddLocomotionBlendAnimation("Jog_Fwd", 0.0f, 0.0f);
-        controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.5f);
+        controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.464f);
         controller->AddLocomotionBlendAnimation("Jog_Bwd", 180.0f, 0.0f);
         controller->AddLocomotionBlendAnimation("Jog_Left", -90.0f, 0.5f);
 #endif // 0
@@ -334,6 +334,7 @@ void Player::Initialize(const Transform& transform)
         // 移動用コンポーネントを追加
         characterMovementComponent = this->AddComponent<CharacterMovementComponent>("movementComponent", parentName);
         characterMovementComponent->SetUseGravity(true);
+        characterMovementComponent->SetDeferredMovementTick(true);
 
         // 回転用コンポーネントを追加
         rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
@@ -649,6 +650,19 @@ void Player::Update(float deltaTime)
     // 入力処理
     HandleInput(deltaTime);
 
+    // 現在フレームの入力から移動方向を確定し、その直後に一度だけ位置を更新する。
+    UpdateMovement();
+
+    DirectX::XMFLOAT3 motionWarpVelocity = { 0.0f, 0.0f, 0.0f };
+    for (const auto& warp : animationMotionWarps)
+    {
+        motionWarpVelocity.x += warp.direction.x * warp.speed;
+        motionWarpVelocity.y += warp.direction.y * warp.speed;
+        motionWarpVelocity.z += warp.direction.z * warp.speed;
+    }
+    characterMovementComponent->SetFrameAdditionalVelocity(motionWarpVelocity);
+    characterMovementComponent->TickDeferredMovement(deltaTime);
+
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(deltaTime);
 
@@ -693,25 +707,6 @@ void Player::Update(float deltaTime)
         }
     }
 
-
-    UpdateMovement();
-
-    playerPos = GetPosition();
-
-    for (auto& warp : animationMotionWarps)
-    {
-        DirectX::XMVECTOR move = DirectX::XMLoadFloat3(&warp.direction);
-        move *= warp.speed * deltaTime;
-
-        DirectX::XMFLOAT3 velocity;
-        DirectX::XMStoreFloat3(&velocity, move);
-
-        playerPos.x += velocity.x;
-        playerPos.y += velocity.y;
-        playerPos.z += velocity.z;
-    }
-
-    SetPosition(playerPos);
 
     // 剣の真ん中、根本、先の座標を保存する
     prevSwordRootPos = swordRootPos;
@@ -1014,9 +1009,6 @@ void Player::UpdateTPSLocomotion()
         break;
     }
 
-    auto move = inputComponent->GetMoveInput();
-    GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
-
 }
 
 void Player::UpdateLockOnLocomotion()
@@ -1075,9 +1067,6 @@ void Player::UpdateLockOnLocomotion()
         }
         break;
     }
-
-    auto move = inputComponent->GetMoveInput();
-    GetBodyAnimationController()->SetBlendInput(move.x, move.z, speed);
 
 }
 
@@ -1324,9 +1313,11 @@ void Player::UpdateMovement()
         // Movement用
         float moveStickX = rawStickX;
         float moveStickZ = rawStickZ;
-        float length = sqrtf(moveStickX * moveStickX + moveStickZ * moveStickZ);
+        const float rawLength = sqrtf(
+            moveStickX * moveStickX + moveStickZ * moveStickZ);
         const float deadZone = 0.18f;
-        if (length < deadZone)
+        float processedMagnitude = 0.0f;
+        if (rawLength < deadZone)
         {
             moveStickX = 0.0f;
             moveStickZ = 0.0f;
@@ -1334,13 +1325,17 @@ void Player::UpdateMovement()
         }
         else
         {
-            float newLength = (length - deadZone) / (1.0f - deadZone);
+            // 円形入力として長さを1.0に制限し、斜め入力で速度が増えないようにする。
+            const float clampedLength = std::clamp(rawLength, 0.0f, 1.0f);
+            float newLength =
+                (clampedLength - deadZone) / (1.0f - deadZone);
+            processedMagnitude = newLength;
             // 好みでコメントアウトを切り替え
              //newLength = std::pow(newLength,1.5f);// より繊細な入力
             //newLength *= newLength;
             // newLength = sqrtf(newLength); // 少し倒しただけで速い
-            moveStickX = moveStickX / length * newLength;
-            moveStickZ = moveStickZ / length * newLength;
+            moveStickX = moveStickX / rawLength * newLength;
+            moveStickZ = moveStickZ / rawLength * newLength;
 
             characterMovementComponent->SetInputMagnitude(newLength);
         }
@@ -1357,16 +1352,14 @@ void Player::UpdateMovement()
             moveDir.z = camForward.z * moveStickZ + camRight.z * moveStickX;
 
             // 回転はすぐに向きを変えてほしいため
-            DirectX::XMFLOAT3 lookDir = { 0,0,0 };
-            lookDir.x = camForward.x * rawStickZ + camRight.x * rawStickX;
-            lookDir.z = camForward.z * rawStickZ + camRight.z * rawStickX;
             const std::string& state = GetStateMachine()->GetStateName();
             if (state != "Dodge" && state != "Attack")
             {// 回避ではないかつ攻撃でないときは
-                rotationComponent->SetDirection(lookDir);
+                rotationComponent->SetDirection(moveDir);
             }
             float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-            GetBodyAnimationController()->SetBlendInput(0.0f, 1.0f, normalizeSpeed);
+            GetBodyAnimationController()->SetBlendInput(
+                0.0f, processedMagnitude > 0.0f ? 1.0f : 0.0f, normalizeSpeed);
         }
         break;
         case DarkCameraActor::CameraMode::Focus:
@@ -1379,7 +1372,9 @@ void Player::UpdateMovement()
             moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
             moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
             float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-            GetBodyAnimationController()->SetBlendInput(rawStickX, rawStickZ, normalizeSpeed);
+            GetBodyAnimationController()->SetBlendInput(
+                moveStickX, moveStickZ, normalizeSpeed);
+            rotationComponent->SetDirection(forward);
             break;
         }
         case DarkCameraActor::CameraMode::LockOn:
@@ -1397,7 +1392,8 @@ void Player::UpdateMovement()
                 moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
                 moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
                 float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-                GetBodyAnimationController()->SetBlendInput(rawStickX, rawStickZ, normalizeSpeed);
+                GetBodyAnimationController()->SetBlendInput(
+                    moveStickX, moveStickZ, normalizeSpeed);
                 rotationComponent->SetDirection(forward);
             }
             break;
@@ -1447,13 +1443,13 @@ void Player::SetLocomotionMode(LocomotionMode mode)
     {
     case LocomotionMode::TPSWalk:
         controller->SetUseBlendSpace(false);
-        characterMovementComponent->SetFixedSpeed(0.0f);
+        characterMovementComponent->ResetFixedSpeed();
         PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, true);
         break;
 
     case LocomotionMode::TPSRun:
         controller->SetUseBlendSpace(false);
-        //characterMovementComponent->SetFixedSpeed(0.0f);
+        characterMovementComponent->ResetFixedSpeed();
         PlayBodyAnimation("Jog_Fwd", true, true, 0.2f, true);
         break;
 
@@ -1461,14 +1457,14 @@ void Player::SetLocomotionMode(LocomotionMode mode)
     {
 
         controller->SetUseBlendSpace(true);
-        //characterMovementComponent->SetFixedSpeed(0.0f);
+        characterMovementComponent->ResetFixedSpeed();
     }
 
     break;
 
     case LocomotionMode::LockOnBlendRun:
     {
-        //characterMovementComponent->SetFixedSpeed(0.0f);
+        characterMovementComponent->ResetFixedSpeed();
         controller->SetUseBlendSpace(true);
     }
     break;

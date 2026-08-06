@@ -670,7 +670,7 @@ private:
     std::array<LocomotionBlendDebugSample, 2> locomotionDebugSamples;
     size_t locomotionDebugSampleCount = 0;
     float locomotionBackwardPhaseOffset = 0.0f;
-    float locomotionRightPhaseOffset = 0.5f;
+    float locomotionRightPhaseOffset = 0.464f;
     float locomotionLeftPhaseOffset = 0.5f;
     int locomotionDebugForcedPair = 0;
     int locomotionDebugForcedSingle = 0;

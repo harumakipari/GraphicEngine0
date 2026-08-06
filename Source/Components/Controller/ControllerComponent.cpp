@@ -12,6 +12,22 @@
 
 void CharacterMovementComponent::Tick(float deltaTime)
 {
+    if (deferredMovementTick_)
+        return;
+
+    TickMovement(deltaTime);
+}
+
+void CharacterMovementComponent::TickDeferredMovement(float deltaTime)
+{
+    if (!deferredMovementTick_)
+        return;
+
+    TickMovement(deltaTime);
+}
+
+void CharacterMovementComponent::TickMovement(float deltaTime)
+{
     if (useGravity)
     {
         gravity_ = -9.8f;
@@ -132,6 +148,10 @@ void CharacterMovementComponent::Tick(float deltaTime)
     nextPos.x += velocity_.x * deltaTime;
     nextPos.y += velocity_.y * deltaTime;
     nextPos.z += velocity_.z * deltaTime;
+    nextPos.x += frameAdditionalVelocity_.x * deltaTime;
+    nextPos.y += frameAdditionalVelocity_.y * deltaTime;
+    nextPos.z += frameAdditionalVelocity_.z * deltaTime;
+    frameAdditionalVelocity_ = { 0.0f, 0.0f, 0.0f };
 
     // è∞Ç∆ÇÃè’ìÀîªíË
     isGrounded_ = false;

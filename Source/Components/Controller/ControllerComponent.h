@@ -66,9 +66,19 @@ public:
 
     void Tick(float deltaTime) override;
 
+    // Actor::Updateで入力方向を確定してから、同じフレームに一度だけ移動する場合に使用する。
+    void SetDeferredMovementTick(const bool deferred) { deferredMovementTick_ = deferred; }
+    void TickDeferredMovement(float deltaTime);
+
     void SetMoveDirection(const DirectX::XMFLOAT3& dir)
     {
         inputDir_ = dir;
+    }
+
+    // このフレームだけ通常移動へ加算する速度（Animation Motion Warpなど）。
+    void SetFrameAdditionalVelocity(const DirectX::XMFLOAT3& velocity)
+    {
+        frameAdditionalVelocity_ = velocity;
     }
 
     void ApplyIntent(const MoveIntent& intent)
@@ -179,6 +189,8 @@ public:
     }
 
 private:
+    void TickMovement(float deltaTime);
+
     // 状態
     DirectX::XMFLOAT3 velocity_{ 0,0,0 };
     bool isGrounded_ = false;
@@ -193,6 +205,7 @@ private:
     float initialSpeed = 1.0f; // 初速
 
     DirectX::XMFLOAT3 inputDir_{ 0,0,0 };
+    DirectX::XMFLOAT3 frameAdditionalVelocity_{ 0,0,0 };
     DirectX::XMFLOAT3 externalVelocity_ = { 0.0f,0.0f,0.0f }; // 外部から加算される速度（吹き飛ばしなど）
     float damping_ = 3.5f; // 外部速度の減衰率（1秒あたりどれだけ外部速度が減るか）
 
@@ -216,6 +229,7 @@ private:
     float targetSpeed = 0.0f;
     // 固定のスピードを使用するかどうか
     bool useFixedSpeed = false;
+    bool deferredMovementTick_ = false;
 };
 
 
