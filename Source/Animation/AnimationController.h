@@ -672,6 +672,7 @@ private:
     float locomotionBackwardPhaseOffset = 0.0f;
     float locomotionRightPhaseOffset = 0.464f;
     float locomotionLeftPhaseOffset = 0.5f;
+    float locomotionBackwardSideMaxWeight = 0.15f;
     int locomotionDebugForcedPair = 0;
     int locomotionDebugForcedSingle = 0;
     int locomotionDebugBodyBlendMode = 0;

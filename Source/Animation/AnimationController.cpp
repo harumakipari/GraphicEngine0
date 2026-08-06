@@ -655,6 +655,11 @@ void AnimationController::DrawImGui()
         SetLocomotionPhaseOffset("Jog_Right", locomotionRightPhaseOffset);
         SetLocomotionPhaseOffset("Jog_Left", locomotionLeftPhaseOffset);
     }
+    ImGui::SliderFloat(
+        "Backward Side Max Weight",
+        &locomotionBackwardSideMaxWeight,
+        0.0f,
+        0.5f);
 
     const char* forcedPairs =
         "Off\0Forward + Right\0Right + Backward\0"
@@ -1673,6 +1678,56 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     // 旧Forward/Backwardグループは保持するが、Locomotion更新では使用しない。
     std::vector<BlendSpace::BlendResult> weights =
         locomotionBlendSpace.CalculateWeights(evaluationInput);
+
+    // 90度ではSide 100%、180度ではBackward 100%を維持する。
+    // 90度直後の短い遷移帯で連続的にSide上限へ収束させる。
+    const float absoluteEvaluationAngle =
+        std::fabs(locomotionDebugEvaluationAngle);
+    if (absoluteEvaluationAngle >= 90.0f &&
+        absoluteEvaluationAngle <= 180.0f &&
+        weights.size() == 2)
+    {
+        const auto backwardIt = animationNameToIndex_.find("Jog_Bwd");
+        if (backwardIt != animationNameToIndex_.end())
+        {
+            size_t backwardWeightIndex = weights.size();
+            for (size_t i = 0; i < weights.size(); ++i)
+            {
+                if (weights[i].clip == backwardIt->second)
+                {
+                    backwardWeightIndex = i;
+                    break;
+                }
+            }
+
+            if (backwardWeightIndex < weights.size())
+            {
+                const size_t sideWeightIndex = 1 - backwardWeightIndex;
+                const float sideMaxWeight = std::clamp(
+                    locomotionBackwardSideMaxWeight, 0.0f, 0.5f);
+                const float originalSideWeight =
+                    weights[sideWeightIndex].weight;
+                const float cappedSideWeight =
+                    originalSideWeight < sideMaxWeight
+                    ? originalSideWeight
+                    : sideMaxWeight;
+
+                constexpr float TransitionAngle = 22.5f;
+                float transition = std::clamp(
+                    (absoluteEvaluationAngle - 90.0f) / TransitionAngle,
+                    0.0f,
+                    1.0f);
+                transition = transition * transition * (3.0f - 2.0f * transition);
+
+                const float adjustedSideWeight = std::lerp(
+                    originalSideWeight,
+                    cappedSideWeight,
+                    transition);
+                weights[sideWeightIndex].weight = adjustedSideWeight;
+                weights[backwardWeightIndex].weight = 1.0f - adjustedSideWeight;
+            }
+        }
+    }
 
     if (locomotionDebugManualBwdWeight && weights.size() == 2)
     {
