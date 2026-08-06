@@ -248,9 +248,13 @@ public:
         const bool wasUsingBlendSpace = this->useBlendSpace;
         this->useBlendSpace = use;
 
+        // ルートモーションを使わない
+        enableRootMotion = false;
+        ignoreRootMotion = true;
+
         // ルートモーションを使う
-        enableRootMotion = true;
-        ignoreRootMotion = false;
+        //enableRootMotion = true;
+        //ignoreRootMotion = false;
 
         // BlendSpace -> 通常アニメーション
         if (wasUsingBlendSpace && !useBlendSpace)

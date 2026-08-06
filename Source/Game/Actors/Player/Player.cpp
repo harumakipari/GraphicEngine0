@@ -25,6 +25,22 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 
+namespace
+{
+const char* ToString(Player::InputCommand command)
+{
+    switch (command)
+    {
+    case Player::InputCommand::None:     return "None";
+    case Player::InputCommand::Attack:   return "Attack";
+    case Player::InputCommand::Dodge:    return "Dodge";
+    case Player::InputCommand::Jump:     return "Jump";
+    case Player::InputCommand::Interact: return "Interact";
+    }
+    return "Unknown";
+}
+}
+
 
 void Player::Initialize(const Transform& transform)
 {
@@ -100,7 +116,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddTarget(skeletalMeshBlendComponent.get());
 
         controller->AddAnimation("Idle", 0);
-        controller->AddAnimation("Jog_Fwd0", 1);
+        controller->AddAnimation("Jog_Fwd", 1);
         controller->AddAnimation("Roll_front_0", 2);
         controller->AddAnimation("Roll_back_0", 3);
         controller->AddAnimation("Roll_left_0", 4);
@@ -142,9 +158,9 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Level_Start1_0", 40);
         controller->AddAnimation("Recall_0", 41);
         controller->AddAnimation("Level_Start_Cut", 42);
-        controller->AddAnimation("Jog_Bwd0", 43);
-        controller->AddAnimation("Jog_Left0", 44);
-        controller->AddAnimation("Jog_Right0", 45);
+        controller->AddAnimation("Jog_Bwd", 43);
+        controller->AddAnimation("Jog_Left", 44);
+        controller->AddAnimation("Jog_Right", 45);
         controller->AddAnimation("Walk_Bwd1", 46);
         controller->AddAnimation("Walk_Fwd1", 47);
         controller->AddAnimation("Walk_Left1", 48);
@@ -196,23 +212,18 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("1_Jog_FwdLeft45", 91);
         controller->AddAnimation("1_Jog_FwdRight45", 92);
 
-        controller->AddAnimation("Jog_Bwd", 93);
-        controller->AddAnimation("Jog_BwdLeft45", 94);
-        controller->AddAnimation("Jog_BwdLeft90", 95);
-        controller->AddAnimation("Jog_BwdRight45", 96);
-        controller->AddAnimation("Jog_BwdRight90", 97);
-        controller->AddAnimation("Jog_Fwd", 98);
-        controller->AddAnimation("Jog_FwdLeft45", 99);
-        controller->AddAnimation("Jog_FwdLeft90", 100);
-        controller->AddAnimation("Jog_FwdRight45", 101);
-        controller->AddAnimation("Jog_FwdRight90", 102);
+        controller->AddAnimation("0_Jog_Bwd", 93);
+        controller->AddAnimation("0_Jog_BwdLeft45", 94);
+        controller->AddAnimation("0_Jog_BwdLeft90", 95);
+        controller->AddAnimation("0_Jog_BwdRight45", 96);
+        controller->AddAnimation("0_Jog_BwdRight90", 97);
+        controller->AddAnimation("0_Jog_Fwd", 98);
+        controller->AddAnimation("0_Jog_FwdLeft45", 99);
+        controller->AddAnimation("0_Jog_FwdLeft90", 100);
+        controller->AddAnimation("0_Jog_FwdRight45", 101);
+        controller->AddAnimation("0_Jog_FwdRight90", 102);
         controller->AddAnimation("Sprint_Fwd", 103);
         controller->AddAnimation("Walk_Fwd", 104);
-
-
-
-
-
 
         // ブレンドスペースに追加
         //controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
@@ -222,6 +233,7 @@ void Player::Initialize(const Transform& transform)
         //controller->AddBlendAnimation("Jog_FwdRight", 1.0f, 1.0f);
         //controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
 
+#if 0
         controller->AddForwardBlendAnimation("Jog_Fwd", 0.0f);
         controller->AddForwardBlendAnimation("Jog_FwdLeft90", -90.0f);
         controller->AddForwardBlendAnimation("Jog_FwdRight90", 90.0f);
@@ -229,11 +241,16 @@ void Player::Initialize(const Transform& transform)
         controller->AddForwardBlendAnimation("Jog_FwdLeft45", -45.0f);
 
         controller->AddBackwardBlendAnimation("Jog_Bwd", 0.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdLeft90", 90.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdRight90", -90.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdRight45", -45.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdLeft45", 45.0f);
-
+        controller->AddBackwardBlendAnimation("Jog_BwdLeft90", -90.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdRight90", 90.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdRight45", 45.0f);
+        controller->AddBackwardBlendAnimation("Jog_BwdLeft45", -45.0f);
+#else
+        controller->AddBackwardBlendAnimation("Jog_Bwd", -180.0f);
+        controller->AddBackwardBlendAnimation("Jog_Fwd", 0.0f);
+        controller->AddBackwardBlendAnimation("Jog_Right", 90.0f);
+        controller->AddBackwardBlendAnimation("Jog_Left", -90.0f);
+#endif // 0
 
         std::string name = GetName();
         // アニメーションコントローラーのオーナーの名前を設定する
@@ -626,11 +643,11 @@ void Player::Update(float deltaTime)
     }
 
 
-    // これは絶対入れる　アニメーションの更新をしているから
-    Character::Update(deltaTime);
-
     // 入力処理
     HandleInput(deltaTime);
+
+    // これは絶対入れる　アニメーションの更新をしているから
+    Character::Update(deltaTime);
 
     // 剣のデバックの当たり判定を描画するかどうか
     if (swordCollisionComp)
@@ -915,7 +932,7 @@ void Player::UpdateLocomotionAnimation()
 {
     if (GetStateMachine()->GetStateName() != "Running")
     {
-        locomotionMode = LocomotionMode::Idle;
+        //locomotionMode = LocomotionMode::Idle;
         return;
     }
 
@@ -1184,8 +1201,12 @@ void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XM
 void Player::HandleInput(float deltaTime)
 {
     bufferCommand.remainTime -= deltaTime;
-    if (bufferCommand.remainTime <= 0.0f)
+    if (bufferCommand.command != InputCommand::None && bufferCommand.remainTime <= 0.0f)
     {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[InputBuffer][Expired] command=" + std::string(ToString(bufferCommand.command)) +
+            " remainTime=" + std::to_string(bufferCommand.remainTime) +
+            " state=" + stateMachine_->GetStateName());
         bufferCommand.command = InputCommand::None;
     }
     if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
@@ -1193,24 +1214,27 @@ void Player::HandleInput(float deltaTime)
         bufferCommand.command = InputCommand::Dodge;
         DecideLockOnDodgeDirection();
         bufferCommand.remainTime = 0.3f;
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[InputBuffer][Stored] command=Dodge remainTime=" + std::to_string(bufferCommand.remainTime) +
+            " state=" + stateMachine_->GetStateName());
         return;
     }
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
         bufferCommand.command = InputCommand::Attack;
         bufferCommand.remainTime = 0.5f;
-        return;
-    }
-    //if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
-    {
-        //bufferCommand.command = InputCommand::Jump;
-        //bufferCommand.remainTime = 0.5f;
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[InputBuffer][Stored] command=Attack remainTime=" + std::to_string(bufferCommand.remainTime) +
+            " state=" + stateMachine_->GetStateName());
         return;
     }
     if (InputSystem::GetInputState("Interact", InputStateMask::Trigger))
     {
         bufferCommand.command = InputCommand::Interact;
         bufferCommand.remainTime = 0.3f;
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[InputBuffer][Stored] command=Interact remainTime=" + std::to_string(bufferCommand.remainTime) +
+            " state=" + stateMachine_->GetStateName());
     }
 }
 
@@ -1390,31 +1414,56 @@ void Player::SetLocomotionMode(LocomotionMode mode)
 
     auto controller = GetBodyAnimationController();
 
+#if 0
+    switch (locomotionMode)
+    {
+    case LocomotionMode::None:
+        controller->SetUseBlendSpace(false);
+        break;
+
+    case LocomotionMode::TPSWalk:
+        controller->SetUseBlendSpace(false);
+        PlayBodyAnimation("Walk_Fwd", true);
+        break;
+
+    case LocomotionMode::TPSRun:
+        controller->SetUseBlendSpace(false);
+        PlayBodyAnimation("Jog_Fwd", true);
+        break;
+
+    case LocomotionMode::LockOnBlendWalk:
+    case LocomotionMode::LockOnBlendRun:
+        controller->SetUseBlendSpace(true);
+        break;
+    }
+
+#else
     switch (mode)
     {
     case LocomotionMode::TPSWalk:
         controller->SetUseBlendSpace(false);
         characterMovementComponent->SetFixedSpeed(0.0f);
-        PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, false);
+        PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, true);
         break;
 
     case LocomotionMode::TPSRun:
         controller->SetUseBlendSpace(false);
-        characterMovementComponent->SetFixedSpeed(0.0f);
-        PlayBodyAnimation("Jog_Fwd", true, true, 0.2f, false);
+        //characterMovementComponent->SetFixedSpeed(0.0f);
+        PlayBodyAnimation("Jog_Fwd", true, true, 0.2f, true);
         break;
 
     case LocomotionMode::LockOnBlendWalk:
     {
 
         controller->SetUseBlendSpace(true);
-
+        //characterMovementComponent->SetFixedSpeed(0.0f);
     }
 
     break;
 
     case LocomotionMode::LockOnBlendRun:
     {
+        //characterMovementComponent->SetFixedSpeed(0.0f);
         controller->SetUseBlendSpace(true);
     }
     break;
@@ -1428,6 +1477,8 @@ void Player::SetLocomotionMode(LocomotionMode mode)
         GetStateMachine()->ChangeState("Idle");
         break;
     }
+#endif // 0
+
 }
 
 
@@ -1468,6 +1519,10 @@ void Player::DecideLockOnDodgeDirection()
 // 入力を消費する処理
 void Player::ConsumeBufferCommand()
 {
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[InputBuffer][Consumed] command=" + std::string(ToString(bufferCommand.command)) +
+        " remainTime=" + std::to_string(bufferCommand.remainTime) +
+        " state=" + stateMachine_->GetStateName());
     bufferCommand.command = InputCommand::None;
     bufferCommand.remainTime = 0.0f;
 }

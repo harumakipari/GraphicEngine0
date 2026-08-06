@@ -71,12 +71,13 @@ void PlayerRunningState::Exit()
     //    player->runAudioComp->Stop();
     // ブレンドスペースを使うのをやめる
     owner->GetBodyAnimationController()->SetUseBlendSpace(false);
+
 }
 
 
 void PlayerDashState::Enter()
 {
-#if 1
+#if 0
     owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f, false);
     player->characterMovementComponent->SetFixedSpeed(0.0f);
 #else 
@@ -143,6 +144,11 @@ void PlayerAttackState::Enter()
 
     dodgeQueued = false;
     player->comboQueued = false;
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[InputBuffer][ClearedByStateTransition] command=" +
+        std::string(player->bufferCommand.command == Player::InputCommand::Attack ? "Attack" : "Other") +
+        " remainTime=" + std::to_string(player->bufferCommand.remainTime) +
+        " state=" + player->GetStateMachine()->GetStateName());
     player->bufferCommand.command = Player::InputCommand::None;
 }
 

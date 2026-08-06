@@ -57,11 +57,14 @@ public:
 
     enum class LocomotionMode :uint8_t
     {
-        Idle,
+        None,
         TPSWalk,
         TPSRun,
         LockOnBlendWalk,
         LockOnBlendRun,
+
+        // 一時的に残すが使用禁止
+        Idle,
         Dash,
     };
 public:
@@ -119,6 +122,10 @@ public:
 
     void SetIsPlayerTransparency(const bool isTransparency) { moviePerform = !isTransparency; }
 
+    // モード変更用関数
+    void SetLocomotionMode(LocomotionMode mode);
+
+
 private:
     // 火花エフェクトの生成
     void SpawnSpark(DirectX::XMFLOAT3 hitPosition);
@@ -129,8 +136,6 @@ private:
     // 入力処理をまとめる
     void HandleInput(float deltaTimes);
 
-    // モード変更用関数
-    void SetLocomotionMode(LocomotionMode mode);
 
 public:
     // 入力コマンドによってステートが変わるかどうか
