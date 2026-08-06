@@ -738,8 +738,14 @@ void Player::DrawImGuiDetails()
     ImGui::ColorEdit3(U8("剣の残像の内部の色"), &ghostInnerColor.x);
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
-    ImGui::DragFloat("walkSpeed", &walkSpeed, 0.05f);
-    ImGui::DragFloat("runSpeed", &runSpeed, 0.05f);
+    ImGui::SliderFloat("Walk Speed", &walkSpeed, 0.25f, 10.0f);
+    ImGui::SliderFloat("Run Speed", &runSpeed, 0.25f, 15.0f);
+    ImGui::SliderFloat(
+        "Forward Speed Scale", &forwardSpeedScale, 0.25f, 1.5f);
+    ImGui::SliderFloat(
+        "Side Speed Scale", &sideSpeedScale, 0.25f, 1.5f);
+    ImGui::SliderFloat(
+        "Backward Speed Scale", &backwardSpeedScale, 0.25f, 1.5f);
     ImGui::DragFloat("dashSpeed", &dashSpeed, 0.05f);
     ImGui::DragFloat("slowMotionInterval", &slowMotionInterval, 0.05f);
     ImGui::DragFloat("slowMotionPlayerTimeScale", &slowMotionPlayerTimeScale, 0.05f);
@@ -777,6 +783,10 @@ void Player::DrawImGuiDetails()
 
     ImGui::Text("characterMovementComponentSpeed: %.4f", speed);
     ImGui::Text("CurrentInputSpeed: %.4f", move);
+    ImGui::Text("actualHorizontalSpeed: %.4f",
+        characterMovementComponent->GetActualHorizontalSpeed());
+    ImGui::Text("finalMoveSpeed: %.4f",
+        characterMovementComponent->GetFinalMoveSpeed());
 
 #endif
 }
@@ -1340,6 +1350,26 @@ void Player::UpdateMovement()
             characterMovementComponent->SetInputMagnitude(newLength);
         }
 
+        const auto calculateDirectionalSpeedScale = [&](const float x, const float z)
+        {
+            const float forwardWeight = z > 0.0f ? z : 0.0f;
+            const float backwardWeight = z < 0.0f ? -z : 0.0f;
+            const float sideWeight = std::fabs(x);
+            const float totalWeight =
+                forwardWeight + sideWeight + backwardWeight;
+
+            if (totalWeight <= FLT_EPSILON)
+                return 1.0f;
+
+            return
+                (forwardWeight * forwardSpeedScale +
+                    sideWeight * sideSpeedScale +
+                    backwardWeight * backwardSpeedScale) /
+                totalWeight;
+        };
+
+        float directionSpeedScale = 1.0f;
+
         switch (camera->GetMovementMode())
         {
         case DarkCameraActor::CameraMode::TPS:
@@ -1371,6 +1401,8 @@ void Player::UpdateMovement()
             DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
             moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
             moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
+            directionSpeedScale = calculateDirectionalSpeedScale(
+                moveStickX, moveStickZ);
             float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
             GetBodyAnimationController()->SetBlendInput(
                 moveStickX, moveStickZ, normalizeSpeed);
@@ -1391,6 +1423,8 @@ void Player::UpdateMovement()
                 DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
                 moveDir.x = forward.x * moveStickZ + right.x * moveStickX;
                 moveDir.z = forward.z * moveStickZ + right.z * moveStickX;
+                directionSpeedScale = calculateDirectionalSpeedScale(
+                    moveStickX, moveStickZ);
                 float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
                 GetBodyAnimationController()->SetBlendInput(
                     moveStickX, moveStickZ, normalizeSpeed);
@@ -1399,6 +1433,7 @@ void Player::UpdateMovement()
             break;
         }
         }
+        characterMovementComponent->SetMoveSpeedScale(directionSpeedScale);
         characterMovementComponent->SetMoveDirection(moveDir);
     }
 }

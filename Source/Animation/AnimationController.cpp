@@ -73,7 +73,7 @@ void AnimationController::OnUpdate(const float deltaTime)
     {
         // Focus中は通常アニメーション時間を進めない
         // 通常クリップのSpeed Curveも評価しない
-        locomotionTime += deltaTime;
+        locomotionTime += deltaTime * locomotionPlayRate;
     }
     else
     {
@@ -179,7 +179,7 @@ void AnimationController::OnUpdate(const float deltaTime)
     float playRate = animationRate * asset.playRate * curveRate;
     animationTime += deltaTime * playRate;
     unwrappedAnimationTime = animationTime;
-    locomotionTime += deltaTime; // ブレンドスペースのためのタイム   
+    locomotionTime += deltaTime * locomotionPlayRate; // ブレンドスペースのためのタイム
 
 
 
@@ -625,6 +625,9 @@ void AnimationController::DrawImGui()
         locomotionDebugRawStickX, locomotionDebugRawStickZ);
     ImGui::Text("blendInput: (%.4f, %.4f)", blendInput.x, blendInput.y);
     ImGui::Text("evaluationAngle: %.3f deg", locomotionDebugEvaluationAngle);
+    ImGui::SliderFloat(
+        "Locomotion Play Rate", &locomotionPlayRate, 0.5f, 2.0f);
+    ImGui::Text("locomotionTime: %.4f", locomotionTime);
     ImGui::Text("commonPhase: %.4f", locomotionCommonPhase);
     ImGui::Checkbox("Freeze commonPhase",
         &locomotionDebugFreezeCommonPhase);

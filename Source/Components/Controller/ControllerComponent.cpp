@@ -57,8 +57,11 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
         targetSpeed = std::lerp(walkSpeed, runSpeed, inputMagnitude);
     }
 
-    velocity_.x = wishDir.x  * targetSpeed;
-    velocity_.z = wishDir.z  * targetSpeed;
+    finalMoveSpeed_ = len > 0.001f
+        ? targetSpeed * moveSpeedScale_
+        : 0.0f;
+    velocity_.x = wishDir.x * finalMoveSpeed_;
+    velocity_.z = wishDir.z * finalMoveSpeed_;
 
     // 外力を加算
     velocity_.x += externalVelocity_.x;
@@ -210,6 +213,19 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
             nextPos.x = pos.x;
             nextPos.z = pos.z;
         }
+    }
+
+    if (deltaTime > FLT_EPSILON)
+    {
+        const float actualDeltaX = nextPos.x - pos.x;
+        const float actualDeltaZ = nextPos.z - pos.z;
+        actualHorizontalSpeed_ =
+            sqrtf(actualDeltaX * actualDeltaX + actualDeltaZ * actualDeltaZ) /
+            deltaTime;
+    }
+    else
+    {
+        actualHorizontalSpeed_ = 0.0f;
     }
 
     // 位置を更新

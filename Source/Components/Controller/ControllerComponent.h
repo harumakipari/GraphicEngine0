@@ -92,6 +92,14 @@ public:
     void SetInputMagnitude(const float power) { this->inputMagnitude = power; }
     float GetInputMagnitude() const { return this->inputMagnitude; }
 
+    void SetMoveSpeedScale(const float scale)
+    {
+        moveSpeedScale_ = std::clamp(scale, 0.25f, 1.5f);
+    }
+
+    float GetActualHorizontalSpeed() const { return actualHorizontalSpeed_; }
+    float GetFinalMoveSpeed() const { return finalMoveSpeed_; }
+
     // 速度を取得する
     DirectX::XMFLOAT3 GetVelocity() const
     {
@@ -227,6 +235,9 @@ private:
     float runSpeed = 5.0f;
     // 入力によって変わるスピード結果
     float targetSpeed = 0.0f;
+    float moveSpeedScale_ = 1.0f;
+    float finalMoveSpeed_ = 0.0f;
+    float actualHorizontalSpeed_ = 0.0f;
     // 固定のスピードを使用するかどうか
     bool useFixedSpeed = false;
     bool deferredMovementTick_ = false;

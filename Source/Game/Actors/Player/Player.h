@@ -272,11 +272,14 @@ public:
     std::array<SwordGhost, 8> ghosts;
 
     // ダッシュのスピード
-    float dashSpeed = 8.0f;
+    float dashSpeed = 6.2f;
     // 歩きのスピード
-    float walkSpeed = 2.0f;
+    float walkSpeed = 1.0f;
     // 走りのスピード
-    float runSpeed = 6.0f;
+    float runSpeed = 5.15f;
+    float forwardSpeedScale = 1.0f;
+    float sideSpeedScale = 0.95f;
+    float backwardSpeedScale = 1.0f;
 
     // ラッシュ時のUI
     std::shared_ptr<UIImageComponent> rushButtonImageComponent;
