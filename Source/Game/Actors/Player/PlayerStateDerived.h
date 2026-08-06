@@ -122,6 +122,26 @@ private:
     bool judgeSuccess = false;
 };
 
+class PlayerDamageState : public PlayerStateBase
+{
+public:
+    PlayerDamageState(Player* player) : PlayerStateBase(player) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "Damage"; }
+};
+
+class PlayerDeathState : public PlayerStateBase
+{
+public:
+    PlayerDeathState(Player* player) : PlayerStateBase(player) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "Death"; }
+};
+
 // ラッシュステート
 class PlayerRushState : public PlayerStateBase
 {

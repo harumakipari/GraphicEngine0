@@ -348,6 +348,59 @@ void PlayerDodgeState::Exit()
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
 }
 
+void PlayerDamageState::Enter()
+{
+    player->ResetAnimationStateFlag();
+    player->characterMovementComponent->SetFixedSpeed(0.0f);
+    player->PlayBodyAnimation("Hit_Combat_F", false, true, 0.1f, true);
+
+    const DirectX::XMFLOAT3& direction = player->GetDamageKnockbackDirection();
+    const float power = player->GetDamageKnockbackPower();
+    player->characterMovementComponent->AddImpulse(
+        { direction.x * power, 0.0f, direction.z * power });
+
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[PlayerDamage][Enter] animation=Hit_Combat_F knockback=" +
+        std::to_string(direction.x) + ",0," + std::to_string(direction.z));
+}
+
+void PlayerDamageState::Execute(float deltaTime)
+{
+    if (player->GetBodyAnimationController()->IsPlayAnimation())
+        return;
+
+    const DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
+    const char* targetState = MathHelper::Length(move) > 0.01f ? "Running" : "Idle";
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[PlayerDamage][Finished] targetState=" + std::string(targetState));
+    player->GetStateMachine()->ChangeState(targetState);
+}
+
+void PlayerDamageState::Exit()
+{
+    player->characterMovementComponent->ResetFixedSpeed();
+    player->ResetAnimationStateFlag();
+}
+
+void PlayerDeathState::Enter()
+{
+    player->ClearActionRequest("death_enter");
+    player->ResetAnimationStateFlag();
+    player->characterMovementComponent->SetFixedSpeed(0.0f);
+    player->characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    player->characterMovementComponent->SetInputMagnitude(0.0f);
+    player->PlayBodyAnimation("Hit_Combat_Death", false, true, 0.1f, true);
+    Logger::Log(Logger::LogCategory::Gameplay, "[PlayerDeath][Enter] hp=0");
+}
+
+void PlayerDeathState::Execute(float deltaTime)
+{
+}
+
+void PlayerDeathState::Exit()
+{
+}
+
 // ラッシュ
 void PlayerRushState::Enter()
 {

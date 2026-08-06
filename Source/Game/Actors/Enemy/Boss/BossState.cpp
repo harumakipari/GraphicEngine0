@@ -66,6 +66,7 @@ void EnemyDeathState::Exit()
 // 攻撃の予兆ステートオブジェクト
 void EnemyAttackState::Enter()
 {
+    enemy->StartAttack();
     owner->PlayBodyAnimation("PrimaryAttack_LA", false, true, 0.1f);
 }
 
@@ -79,4 +80,5 @@ void EnemyAttackState::Execute(float deltaTime)
 
 void EnemyAttackState::Exit()
 {
+    enemy->DisableAttackHitBoxes();
 }

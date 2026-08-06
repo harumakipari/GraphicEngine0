@@ -29,8 +29,12 @@ public:
 
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event)override;
 
+    void OnAnimationChanged() override;
+
     // 攻撃開始時に始める処理
     void StartAttack();
+
+    void DisableAttackHitBoxes();
 
     // カメラの注視点の位置
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
@@ -74,6 +78,7 @@ private:
 
     // ヒット中に当たった敵を記録する
     std::unordered_set<Actor*> hitActors;
+    int currentAttackHitCount = 0;
 
     bool isDeathPerform = false;
     float pitchBaseValue = 0.45f;

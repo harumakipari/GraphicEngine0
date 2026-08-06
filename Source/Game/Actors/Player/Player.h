@@ -152,8 +152,16 @@ public:
     // 入力を消費する処理
     void ConsumeActionRequest(ActionType expectedType);
 
-    //当たった時の処理
-    void TakeDamage(int damage);
+    // 無敵判定を含め、成立した被弾だけを適用する
+    bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition);
+
+    void ClearActionRequest(const char* reason);
+
+    const DirectX::XMFLOAT3& GetDamageKnockbackDirection() const
+    {
+        return damageKnockbackDirection;
+    }
+    float GetDamageKnockbackPower() const { return damageKnockbackPower; }
 
     // 攻撃開始時の処理
     void StartAttack();
@@ -190,6 +198,9 @@ private:
 private:
     // プレイヤーのマックスHP
     int maxHp = 100;
+
+    DirectX::XMFLOAT3 damageKnockbackDirection{ 0.0f, 0.0f, 1.0f };
+    float damageKnockbackPower = 2.5f;
 
     // インタラクト対象検索
     IInteractable* FindInteractable();

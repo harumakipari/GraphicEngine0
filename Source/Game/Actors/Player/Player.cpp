@@ -284,6 +284,8 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerRunningState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDodgeState>(this));
+        stateMachine_->RegisterState(std::make_unique<PlayerDamageState>(this));
+        stateMachine_->RegisterState(std::make_unique<PlayerDeathState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerRushState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpAttackState>(this));
@@ -803,6 +805,10 @@ void Player::DrawImGuiDetails()
     ImGui::Text("ActionRequest: %s", ToString(bufferCommand.type));
     ImGui::Text("remainTime: %.3f", bufferCommand.remainTime);
     ImGui::Text("currentState: %s", stateMachine_->GetStateName());
+    ImGui::SeparatorText("Damage");
+    ImGui::Text("Player HP: %d / %d", hp, maxHp);
+    ImGui::Text("invincibleWindow: %s", invincibleWindow ? "true" : "false");
+    ImGui::Text("invincible: %s", invincible ? "true" : "false");
 
 #endif
 }
@@ -1214,6 +1220,14 @@ void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XM
 // 入力処理をまとめる
 void Player::CaptureActionRequest(float deltaTime)
 {
+    const std::string currentState = stateMachine_->GetStateName();
+    if (currentState == "Damage" || currentState == "Death")
+    {
+        if (bufferCommand.type != ActionType::None)
+            ClearActionRequest("damage_or_death_state");
+        return;
+    }
+
     if (bufferCommand.type != ActionType::None)
     {
         bufferCommand.remainTime -= deltaTime;
@@ -1349,9 +1363,13 @@ bool Player::TryExecuteActionRequest()
 // 動作更新処理
 void Player::UpdateMovement()
 {
-    bool isDash = GetStateMachine()->GetStateName() == "Dash";
+    const std::string currentState = GetStateMachine()->GetStateName();
+    bool isDash = currentState == "Dash";
+    const bool suppressMovementInput = currentState == "Damage" || currentState == "Death";
 
     auto intent = inputComponent->GetIntent();
+    if (suppressMovementInput)
+        intent.leftMove = { 0.0f, 0.0f, 0.0f };
     DirectX::XMFLOAT3 moveDir = { 0,0,0 };
     bool focus = InputSystem::GetInputState("LockOn", InputStateMask::Press);
 
@@ -1465,7 +1483,8 @@ void Player::UpdateMovement()
 
             // 回転はすぐに向きを変えてほしいため
             const std::string& state = GetStateMachine()->GetStateName();
-            if (state != "Dodge" && state != "Attack")
+            if (state != "Dodge" && state != "Attack" &&
+                state != "Damage" && state != "Death")
             {// 回避ではないかつ攻撃でないときは
                 rotationComponent->SetDirection(moveDir);
             }
@@ -1657,26 +1676,67 @@ void Player::ConsumeActionRequest(ActionType expectedType)
 }
 
 //当たった時の処理
-void Player::TakeDamage(int damage)
+bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition)
 {
-#if 1
     if (invincibleWindow)
-    {// 無敵状態ならダメージを受けない
-        Logger::Log(U8("animationによる無敵状態ならダメージを受けない"));
-        return;
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[PlayerDamage][Rejected] reason=invincibleWindow hp=" + std::to_string(hp));
+        return false;
     }
     if (invincible)
-    {// 無敵状態ならダメージを受けない
-        Logger::Log(U8("無敵状態ならダメージを受けない"));
-        return;
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[PlayerDamage][Rejected] reason=invincible hp=" + std::to_string(hp));
+        return false;
     }
-#endif // 0
-    hp -= damage;
+
+    const std::string currentState = stateMachine_->GetStateName();
+    if (currentState == "Damage" || currentState == "Death")
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[PlayerDamage][Rejected] reason=damage_state state=" + currentState);
+        return false;
+    }
+
+    DirectX::XMFLOAT3 direction = MathHelper::Subtract(GetPosition(), attackerPosition);
+    direction.y = 0.0f;
+    if (MathHelper::Length(direction) > 0.0001f)
+    {
+        direction = MathHelper::Normalize(direction);
+    }
+    else
+    {
+        direction = GetForward();
+        direction.y = 0.0f;
+    }
+    damageKnockbackDirection = direction;
+
+    const int appliedDamage = (std::max)(0, damage);
+    hp = (std::max)(0, hp - appliedDamage);
+    ClearActionRequest("damage_applied");
     Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
     if (sparkComponent)
     {
         sparkComponent->Play();
     }
+
+    const char* targetState = hp > 0 ? "Damage" : "Death";
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[PlayerDamage][Applied] targetState=" + std::string(targetState) +
+        " knockback=" + std::to_string(direction.x) + "," +
+        std::to_string(direction.y) + "," + std::to_string(direction.z));
+    stateMachine_->ChangeState(targetState);
+    return true;
+}
+
+void Player::ClearActionRequest(const char* reason)
+{
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[ActionRequest][Cleared] action=" + std::string(ToString(bufferCommand.type)) +
+        " reason=" + (reason ? reason : "unknown") +
+        " state=" + stateMachine_->GetStateName());
+    bufferCommand = {};
 }
 
 // 攻撃開始時の処理

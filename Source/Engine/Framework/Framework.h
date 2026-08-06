@@ -232,7 +232,7 @@ private:
             float fps = static_cast<float>(frames);
             std::wostringstream outs;
             outs.precision(6);
-            outs << APPLICATION_NAME /*<< L" : FPS : " << fps << L" / " << L"Frame Time : " << 1000.0f / fps << L" (ms)"*/;
+            outs << APPLICATION_NAME << L" : FPS : " << fps << L" / " << L"Frame Time : " << 1000.0f / fps << L" (ms)";
             SetWindowTextW(hwnd, outs.str().c_str());
 
             frames = 0;

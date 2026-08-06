@@ -230,7 +230,8 @@ void GruxEnemy::Initialize(const Transform& transform)
                 otherLayer & CollisionHelper::ToBit(CollisionLayer::Player))
             {
                 auto player = dynamic_cast<Player*>(other->GetOwner());
-                player->TakeDamage(10);
+                if (player)
+                    player->TryTakeDamage(10, GetPosition());
             }
         }
     );
@@ -402,8 +403,11 @@ void GruxEnemy::Update(float deltaTime)
                 if (!hitActors.contains(hit.actor))
                 {
                     Logger::Log(U8("剣にプレイヤーが当たった"));
-                    player->TakeDamage(1);
-                    hitActors.emplace(player);
+                    if (player->TryTakeDamage(1, GetPosition()))
+                    {
+                        hitActors.emplace(player);
+                        ++currentAttackHitCount;
+                    }
                 }
             }
         }
@@ -440,8 +444,11 @@ void GruxEnemy::Update(float deltaTime)
                 if (!hitActors.contains(hit.actor))
                 {
                     Logger::Log(U8("剣にプレイヤーが当たった"));
-                    player->TakeDamage(1);
-                    hitActors.emplace(player);
+                    if (player->TryTakeDamage(1, GetPosition()))
+                    {
+                        hitActors.emplace(player);
+                        ++currentAttackHitCount;
+                    }
                 }
             }
         }
@@ -549,6 +556,11 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat(U8("hitEnemyEffectOffsetY"), &hitEnemyEffectOffsetY, 0.1f);
     ImGui::DragFloat(U8("hitPlayerEffectOffsetY"), &hitPlayerEffectOffsetY, 0.1f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
+    ImGui::SeparatorText("PrimaryAttack_LA Hit Debug");
+    ImGui::Text("hitActors: %zu", hitActors.size());
+    ImGui::Text("attackHitCount: %d", currentAttackHitCount);
+    ImGui::Text("leftHitBox: %s", leftHitBox ? "true" : "false");
+    ImGui::Text("rightHitBox: %s", rightHitBox ? "true" : "false");
 #endif
 }
 
@@ -602,13 +614,22 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         if (state.parameter == rightWeapon)
         {
             Logger::Log(U8("右の当たり判定を開始しました"));
+            prevWeaponRightRootPos = weaponRightRootComponent->GetComponentLocation();
+            prevWeaponRightMidPos = weaponRightMiddleComponent->GetComponentLocation();
+            prevWeaponRightTipPos = weaponRightTipComponent->GetComponentLocation();
             rightHitBox = true;
         }
         else if (state.parameter == leftWeapon)
         {
             Logger::Log(U8("左の当たり判定を開始しました"));
+            prevWeaponLeftRootPos = weaponLeftRootComponent->GetComponentLocation();
+            prevWeaponLeftMidPos = weaponLeftMiddleComponent->GetComponentLocation();
+            prevWeaponLeftTipPos = weaponLeftTipComponent->GetComponentLocation();
             leftHitBox = true;
         }
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[BossAttack][HitBoxBegin] left=" + std::string(leftHitBox ? "true" : "false") +
+            " right=" + (rightHitBox ? "true" : "false"));
         break;
     case AnimationNotifyState::Type::InputWindow:
         Logger::Log(U8("コンボ受付を開始しました"));
@@ -635,8 +656,14 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     {
     case AnimationNotifyState::Type::HitBox:
         Logger::Log(U8("当たり判定を終了しました"));
-        rightHitBox = false;   // 右の剣の当たり判定
-        leftHitBox = false;    // 左の剣の当たり判定
+        if (state.parameter == rightWeapon || state.parameter == bothWeapon)
+            rightHitBox = false;
+        if (state.parameter == leftWeapon || state.parameter == bothWeapon)
+            leftHitBox = false;
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[BossAttack][HitBoxEnd] left=" + std::string(leftHitBox ? "true" : "false") +
+            " right=" + (rightHitBox ? "true" : "false") +
+            " hitCount=" + std::to_string(currentAttackHitCount));
         break;
     case AnimationNotifyState::Type::InputWindow:
         Logger::Log(U8("コンボ受付を終了しました"));
@@ -675,6 +702,15 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     }
 }
 
+void GruxEnemy::OnAnimationChanged()
+{
+    auto controller = GetBodyAnimationController();
+    if (!controller || controller->GetCurrentAnimationName() != "PrimaryAttack_LA")
+    {
+        DisableAttackHitBoxes();
+    }
+}
+
 // 攻撃開始時に始める処理
 void GruxEnemy::StartAttack()
 {
@@ -682,7 +718,19 @@ void GruxEnemy::StartAttack()
     DirectX::XMFLOAT3 size = { 1.0f,4.0f,1.0f };
     leftWeaponCollisionComp->ResizeCapsule(size.x, size.y);
 #endif // 0
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[BossAttack][Start] previousHitActors=" + std::to_string(hitActors.size()));
     hitActors.clear();
+    currentAttackHitCount = 0;
+    DisableAttackHitBoxes();
+}
+
+void GruxEnemy::DisableAttackHitBoxes()
+{
+    leftHitBox = false;
+    rightHitBox = false;
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[BossAttack][HitBoxesDisabled] hitCount=" + std::to_string(currentAttackHitCount));
 }
 
 // ボスの名前の演出を開始する
@@ -773,9 +821,11 @@ void GruxEnemy::OnWeaponHit(CollisionComponent* self, CollisionComponent* other)
     if (hitActors.contains(actor))
         return;
 
-    player->TakeDamage(10);
-
-    hitActors.insert(actor);
+    if (player->TryTakeDamage(10, GetPosition()))
+    {
+        hitActors.insert(actor);
+        ++currentAttackHitCount;
+    }
 }
 
 void KnightActor::Initialize(const Transform& transform)
