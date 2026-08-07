@@ -197,7 +197,7 @@ private:
 
 private:
     // プレイヤーのマックスHP
-    int maxHp = 10;
+    int maxHp = 100;
 
     DirectX::XMFLOAT3 damageKnockbackDirection{ 0.0f, 0.0f, 1.0f };
     float damageKnockbackPower = 2.5f;

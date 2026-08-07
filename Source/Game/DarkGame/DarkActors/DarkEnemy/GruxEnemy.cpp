@@ -400,13 +400,25 @@ void GruxEnemy::Update(float deltaTime)
         {
             if (auto player = dynamic_cast<Player*>(hit.actor))
             {
-                if (!hitActors.contains(hit.actor))
+                Logger::Log(Logger::LogCategory::Gameplay,
+                    "[BossAttack][SphereRayCastHit] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
+                    " side=left");
+                if (HasJustDodgedAttack(hit.actor))
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[BossAttack][DamageRejected] reason=justDodged attackSequenceId=" +
+                        std::to_string(currentAttackSequenceId));
+                }
+                else if (!hitActors.contains(hit.actor))
                 {
                     Logger::Log(U8("剣にプレイヤーが当たった"));
                     if (player->TryTakeDamage(1, GetPosition()))
                     {
                         hitActors.emplace(player);
                         ++currentAttackHitCount;
+                        Logger::Log(Logger::LogCategory::Gameplay,
+                            "[BossAttack][DamageApplied] attackSequenceId=" +
+                            std::to_string(currentAttackSequenceId) + " source=sphereRayLeft");
                     }
                 }
             }
@@ -441,13 +453,25 @@ void GruxEnemy::Update(float deltaTime)
                                     }
                                 }
                                 else*/
-                if (!hitActors.contains(hit.actor))
+                Logger::Log(Logger::LogCategory::Gameplay,
+                    "[BossAttack][SphereRayCastHit] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
+                    " side=right");
+                if (HasJustDodgedAttack(hit.actor))
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[BossAttack][DamageRejected] reason=justDodged attackSequenceId=" +
+                        std::to_string(currentAttackSequenceId));
+                }
+                else if (!hitActors.contains(hit.actor))
                 {
                     Logger::Log(U8("剣にプレイヤーが当たった"));
                     if (player->TryTakeDamage(1, GetPosition()))
                     {
                         hitActors.emplace(player);
                         ++currentAttackHitCount;
+                        Logger::Log(Logger::LogCategory::Gameplay,
+                            "[BossAttack][DamageApplied] attackSequenceId=" +
+                            std::to_string(currentAttackSequenceId) + " source=sphereRayRight");
                     }
                 }
             }
@@ -497,6 +521,11 @@ void GruxEnemy::Update(float deltaTime)
             float maxRight = justDodgeAreaOffset.x + justDodgeAreaSize.x * 0.5f;
             bool inside = forward >= minForward && forward <= maxForward && right >= minRight && right <= maxRight;
 
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[BossAttack][DangerCheck] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
+                " inside=" + (inside ? "true" : "false") +
+                " justDodgeWindow=" + (player->GetJustDodgeWindow() ? "true" : "false"));
+
             if (inside)
             {
                 debugColor = { 1,0,0,1 };
@@ -504,12 +533,22 @@ void GruxEnemy::Update(float deltaTime)
 
             DebugRender::DrawBox(boxCenter, { justDodgeAreaSize.x,2.0f,justDodgeAreaSize.y }, debugColor);
 
-            if (isDangerWindow)
+            if (inside && player->GetJustDodgeWindow())
             {
-                if (player->GetJustDodgeWindow())
-                {// プレイヤーがジャスト回避したら、
-                    // ジャスト回避成功
-                    player->StartJustDodgeSuccess(std::dynamic_pointer_cast<Enemy>(this->shared_from_this()));
+                if (HasJustDodgedAttack(player.get()))
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[BossAttack][JustDodgeRejected] reason=duplicate attackSequenceId=" +
+                        std::to_string(currentAttackSequenceId));
+                }
+                else
+                {
+                    justDodgedActors.insert(player.get());
+                    player->StartJustDodgeSuccess(
+                        std::dynamic_pointer_cast<Enemy>(this->shared_from_this()));
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[BossAttack][JustDodgeSuccess] attackSequenceId=" +
+                        std::to_string(currentAttackSequenceId));
                 }
             }
         }
@@ -628,7 +667,8 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
             leftHitBox = true;
         }
         Logger::Log(Logger::LogCategory::Gameplay,
-            "[BossAttack][HitBoxBegin] left=" + std::string(leftHitBox ? "true" : "false") +
+            "[BossAttack][HitBoxBegin] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
+            " left=" + std::string(leftHitBox ? "true" : "false") +
             " right=" + (rightHitBox ? "true" : "false"));
         break;
     case AnimationNotifyState::Type::InputWindow:
@@ -642,7 +682,9 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::JustDodgeWindow:
         break;
     case AnimationNotifyState::Type::DangerWindow:
-        Logger::Log(U8("攻撃の危険時間が開始しました。"));
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[BossAttack][DangerWindowBegin] attackSequenceId=" +
+            std::to_string(currentAttackSequenceId));
         justDodgeAreaSize = state.justDodgeAreaSize;
         justDodgeAreaOffset = state.justDodgeAreaOffset;
         isDangerWindow = true;
@@ -661,9 +703,11 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         if (state.parameter == leftWeapon || state.parameter == bothWeapon)
             leftHitBox = false;
         Logger::Log(Logger::LogCategory::Gameplay,
-            "[BossAttack][HitBoxEnd] left=" + std::string(leftHitBox ? "true" : "false") +
+            "[BossAttack][HitBoxEnd] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
+            " left=" + std::string(leftHitBox ? "true" : "false") +
             " right=" + (rightHitBox ? "true" : "false") +
             " hitCount=" + std::to_string(currentAttackHitCount));
+        ResetJustDodgeRecords("hitbox_end");
         break;
     case AnimationNotifyState::Type::InputWindow:
         Logger::Log(U8("コンボ受付を終了しました"));
@@ -676,7 +720,9 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::JustDodgeWindow:
         break;
     case AnimationNotifyState::Type::DangerWindow:
-        Logger::Log(U8("攻撃の危険時間が終了しました。"));
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[BossAttack][DangerWindowEnd] attackSequenceId=" +
+            std::to_string(currentAttackSequenceId));
         isDangerWindow = false;
         break;
     }
@@ -718,8 +764,11 @@ void GruxEnemy::StartAttack()
     DirectX::XMFLOAT3 size = { 1.0f,4.0f,1.0f };
     leftWeaponCollisionComp->ResizeCapsule(size.x, size.y);
 #endif // 0
+    ++currentAttackSequenceId;
+    ResetJustDodgeRecords("start_attack");
     Logger::Log(Logger::LogCategory::Gameplay,
-        "[BossAttack][Start] previousHitActors=" + std::to_string(hitActors.size()));
+        "[BossAttack][Start] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
+        " previousHitActors=" + std::to_string(hitActors.size()));
     hitActors.clear();
     currentAttackHitCount = 0;
     DisableAttackHitBoxes();
@@ -729,10 +778,27 @@ void GruxEnemy::DisableAttackHitBoxes()
 {
     leftHitBox = false;
     rightHitBox = false;
+    isDangerWindow = false;
+    ResetJustDodgeRecords("hitboxes_disabled");
     Logger::Log(Logger::LogCategory::Gameplay,
-        "[BossAttack][HitBoxesDisabled] hitCount=" + std::to_string(currentAttackHitCount));
+        "[BossAttack][HitBoxesDisabled] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
+        " hitCount=" + std::to_string(currentAttackHitCount));
 }
 
+void GruxEnemy::ResetJustDodgeRecords(const char* reason)
+{
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[BossAttack][JustDodgeReset] attackSequenceId=" +
+        std::to_string(currentAttackSequenceId) +
+        " count=" + std::to_string(justDodgedActors.size()) +
+        " reason=" + (reason ? reason : "unknown"));
+    justDodgedActors.clear();
+}
+
+bool GruxEnemy::HasJustDodgedAttack(const Actor* actor) const
+{
+    return actor && justDodgedActors.contains(actor);
+}
 // ボスの名前の演出を開始する
 void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
 {
@@ -788,35 +854,29 @@ void GruxEnemy::OnWeaponHit(CollisionComponent* self, CollisionComponent* other)
         return;
     }
 
-    uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
-
+    const uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
     if (!(other->GetCollisionLayer() & mask))
         return;
 
     Actor* actor = other->GetOwner();
-
-    if (!actor)
-    {
-        Logger::Warning("actor is nullptr");
-        return;
-    }
-
-    Player* player = dynamic_cast<Player*>(actor);
-
+    Player* player = actor ? dynamic_cast<Player*>(actor) : nullptr;
     if (!player)
         return;
 
-    if (isDangerWindow && player->GetJustDodgeWindow())
-    {
-        if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
-        {
-            player->StartJustDodgeSuccess(enemy);
-            Logger::Log(U8("ジャスト回避成功！"));
-        }
-    }
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[BossAttack][WeaponCollisionHit] attackSequenceId=" +
+        std::to_string(currentAttackSequenceId));
 
     if (!rightHitBox && !leftHitBox)
         return;
+
+    if (HasJustDodgedAttack(actor))
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[BossAttack][DamageRejected] reason=justDodged attackSequenceId=" +
+            std::to_string(currentAttackSequenceId));
+        return;
+    }
 
     if (hitActors.contains(actor))
         return;
@@ -825,6 +885,9 @@ void GruxEnemy::OnWeaponHit(CollisionComponent* self, CollisionComponent* other)
     {
         hitActors.insert(actor);
         ++currentAttackHitCount;
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[BossAttack][DamageApplied] attackSequenceId=" +
+            std::to_string(currentAttackSequenceId) + " source=weaponCollision");
     }
 }
 

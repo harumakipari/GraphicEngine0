@@ -1,0 +1,31 @@
+{
+    "animationClip": 22,
+    "animationName": "Hit_Combat_F",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "states": [
+        {
+            "endTime": 0.18474464118480682,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                -1.0
+            ],
+            "moveDistance": 0.699999988079071,
+            "parameter": "",
+            "startTime": 0.12299767136573792,
+            "type": "MotionWarp",
+            "value": 1.0
+        }
+    ]
+}

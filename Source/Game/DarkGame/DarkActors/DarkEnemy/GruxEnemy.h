@@ -46,6 +46,8 @@ private:
     float GetDistanceToPlayer();
     // 武器ヒット時の処理
     void OnWeaponHit(CollisionComponent* self, CollisionComponent* other);
+    void ResetJustDodgeRecords(const char* reason);
+    bool HasJustDodgedAttack(const Actor* actor) const;
 private:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
@@ -78,6 +80,9 @@ private:
 
     // ヒット中に当たった敵を記録する
     std::unordered_set<Actor*> hitActors;
+    // Players that successfully just-dodged the current attack sequence.
+    std::unordered_set<const Actor*> justDodgedActors;
+    uint64_t currentAttackSequenceId = 0;
     int currentAttackHitCount = 0;
 
     bool isDeathPerform = false;

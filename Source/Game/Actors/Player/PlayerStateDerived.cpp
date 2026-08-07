@@ -354,14 +354,14 @@ void PlayerDamageState::Enter()
     player->characterMovementComponent->SetFixedSpeed(0.0f);
     player->PlayBodyAnimation("Hit_Combat_F", false, true, 0.1f, true);
 
-    const DirectX::XMFLOAT3& direction = player->GetDamageKnockbackDirection();
-    const float power = player->GetDamageKnockbackPower();
-    player->characterMovementComponent->AddImpulse(
-        { direction.x * power, 0.0f, direction.z * power });
+    //const DirectX::XMFLOAT3& direction = player->GetDamageKnockbackDirection();
+    //const float power = player->GetDamageKnockbackPower();
+    //player->characterMovementComponent->AddImpulse(
+    //    { direction.x * power, 0.0f, direction.z * power });
 
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[PlayerDamage][Enter] animation=Hit_Combat_F knockback=" +
-        std::to_string(direction.x) + ",0," + std::to_string(direction.z));
+    //Logger::Log(Logger::LogCategory::Gameplay,
+    //    "[PlayerDamage][Enter] animation=Hit_Combat_F knockback=" +
+    //    std::to_string(direction.x) + ",0," + std::to_string(direction.z));
 }
 
 void PlayerDamageState::Execute(float deltaTime)
