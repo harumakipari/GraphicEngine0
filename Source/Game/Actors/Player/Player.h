@@ -197,7 +197,7 @@ private:
 
 private:
     // プレイヤーのマックスHP
-    int maxHp = 100;
+    int maxHp = 10;
 
     DirectX::XMFLOAT3 damageKnockbackDirection{ 0.0f, 0.0f, 1.0f };
     float damageKnockbackPower = 2.5f;
@@ -329,7 +329,7 @@ private:
     DirectX::XMFLOAT4X4 prevSwordWorld; // 前回の姿勢
     bool isPrevSwordWorldValid = false;
 
-    float weaponSphereRadius = 0.25f;    // 剣の球の当たり判定の半径
+    float weaponSphereRadius = 0.75f;    // 剣の球の当たり判定の半径
 
     // 剣の軌跡
     Trail trail;

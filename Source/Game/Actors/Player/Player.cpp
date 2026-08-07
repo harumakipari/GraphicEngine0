@@ -667,6 +667,13 @@ void Player::Update(float deltaTime)
     // 現在フレームの入力から移動方向を確定し、その直後に一度だけ位置を更新する。
     UpdateMovement();
 
+    // NotifyEnd is not guaranteed when an animation is interrupted or finishes
+    // before the notify range ends. Do not carry that animation's warp forward.
+    if (!GetBodyAnimationController()->IsPlayAnimation())
+    {
+        animationMotionWarps.clear();
+    }
+
     DirectX::XMFLOAT3 motionWarpVelocity = { 0.0f, 0.0f, 0.0f };
     for (const auto& warp : animationMotionWarps)
     {
@@ -944,6 +951,8 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 
 void Player::OnAnimationChanged()
 {
+    // Reset active warps even when the previous animation's NotifyEnd was skipped.
+    animationMotionWarps.clear();
     transitionWindow = false;  // ステート遷移してもいいかどうか
     comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
     inputWindow = false;   // コンボ受付をするかどうか
@@ -1716,10 +1725,10 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     hp = (std::max)(0, hp - appliedDamage);
     ClearActionRequest("damage_applied");
     Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
-    if (sparkComponent)
-    {
-        sparkComponent->Play();
-    }
+    //if (sparkComponent)
+    //{
+    //    sparkComponent->Play();
+    //}
 
     const char* targetState = hp > 0 ? "Damage" : "Death";
     Logger::Log(Logger::LogCategory::Gameplay,
