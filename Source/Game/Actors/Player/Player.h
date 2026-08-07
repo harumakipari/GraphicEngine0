@@ -48,6 +48,8 @@ public:
         ActionType type = ActionType::None;
         float remainTime = 0.0f;
         DodgeDirection dodgeDirection = DodgeDirection::Forward;
+        DirectX::XMFLOAT3 dodgeWorldDirection{};
+        bool useDodgeWorldDirection = false;
     };
 
     enum class SwordState :uint8_t
@@ -125,6 +127,8 @@ public:
 
     // 回避方向を取得する
     DodgeDirection GetDodgeDirection()const { return dodgeDirection; }
+    const DirectX::XMFLOAT3& GetDodgeWorldDirection() const { return dodgeWorldDirection; }
+    bool UsesDodgeWorldDirection() const { return useDodgeWorldDirection; }
 
     void SetIsPlayerTransparency(const bool isTransparency) { moviePerform = !isTransparency; }
 
@@ -361,6 +365,8 @@ private:
 
     // 回避方向
     DodgeDirection dodgeDirection = DodgeDirection::Backward;
+    DirectX::XMFLOAT3 dodgeWorldDirection{};
+    bool useDodgeWorldDirection = false;
     // 歩き走りダッシュのステート管理
     LocomotionMode locomotionMode = LocomotionMode::Idle;
 

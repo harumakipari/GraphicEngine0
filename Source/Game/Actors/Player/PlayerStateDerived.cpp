@@ -276,6 +276,11 @@ void PlayerDodgeState::Enter()
     // UŒ‚’†‚ÍˆÚ“®‘¬“x‚ð0‚É‚·‚é
     player->characterMovementComponent->SetFixedSpeed(0.0f);
 
+    if (player->UsesDodgeWorldDirection())
+    {
+        player->rotationComponent->SetDirection(player->GetDodgeWorldDirection());
+    }
+
     switch (player->GetDodgeDirection())
     {
     case Player::DodgeDirection::Forward:

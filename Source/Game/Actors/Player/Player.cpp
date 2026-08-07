@@ -1383,6 +1383,8 @@ bool Player::StoreActionRequest(ActionType type, float remainTime)
     if (type == ActionType::Dodge)
     {
         bufferCommand.dodgeDirection = dodgeDirection;
+        bufferCommand.dodgeWorldDirection = dodgeWorldDirection;
+        bufferCommand.useDodgeWorldDirection = useDodgeWorldDirection;
     }
 
     const char* reason = previous == ActionType::None ? "empty" :
@@ -1410,6 +1412,8 @@ bool Player::TryExecuteActionRequest()
         break;
     case ActionType::Dodge:
         dodgeDirection = bufferCommand.dodgeDirection;
+        dodgeWorldDirection = bufferCommand.dodgeWorldDirection;
+        useDodgeWorldDirection = bufferCommand.useDodgeWorldDirection;
         targetState = "Dodge";
         break;
     case ActionType::Dash:
@@ -1808,14 +1812,39 @@ void Player::DecideLockOnDodgeDirection()
     if (!camera)
         return;
 
-    // TPS‚Å‚ÍŽg—p‚µ‚È‚¢
-    if (camera->GetMovementMode() == DarkCameraActor::CameraMode::TPS)
-        return;
-
     auto intent = inputComponent->GetIntent();
 
     float x = intent.leftMove.x;
     float z = intent.leftMove.z;
+
+    dodgeWorldDirection = {};
+    useDodgeWorldDirection = false;
+
+    if (camera->GetMovementMode() == DarkCameraActor::CameraMode::TPS)
+    {
+        const float inputLength = sqrtf(x * x + z * z);
+        if (inputLength <= 0.1f)
+        {
+            // Explicitly preserve the previous no-input behavior.
+            dodgeDirection = DodgeDirection::Backward;
+            return;
+        }
+
+        x /= inputLength;
+        z /= inputLength;
+        const DirectX::XMFLOAT3 cameraForward = camera->CameraForwardXZ();
+        const DirectX::XMFLOAT3 cameraRight = camera->CameraRightXZ();
+        dodgeWorldDirection =
+        {
+            cameraForward.x * z + cameraRight.x * x,
+            0.0f,
+            cameraForward.z * z + cameraRight.z * x
+        };
+        dodgeWorldDirection = MathHelper::Normalize(dodgeWorldDirection);
+        dodgeDirection = DodgeDirection::Forward;
+        useDodgeWorldDirection = true;
+        return;
+    }
 
     // “ü—Í‚È‚µ‚È‚çŒã‚ë‰ñ”ð
     if (fabs(x) < 0.1f && fabs(z) < 0.1f)
@@ -1849,6 +1878,8 @@ void Player::ConsumeActionRequest(ActionType expectedType)
     if (expectedType == ActionType::Dodge)
     {
         dodgeDirection = bufferCommand.dodgeDirection;
+        dodgeWorldDirection = bufferCommand.dodgeWorldDirection;
+        useDodgeWorldDirection = bufferCommand.useDodgeWorldDirection;
     }
     Logger::Log(Logger::LogCategory::Gameplay,
         "[ActionRequest][Consumed] action=" + std::string(ToString(bufferCommand.type)) +
