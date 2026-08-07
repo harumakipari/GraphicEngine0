@@ -49,6 +49,20 @@ void DebugRender::DrawBox(
     }
 }
 
+void DebugRender::DrawBox(const DirectX::XMFLOAT4X4& transform,
+    const DirectX::XMFLOAT3& size, const DirectX::XMFLOAT4& color,
+    float life, bool wired)
+{
+    DebugDrawCommand command{};
+    command.type = DebugDrawType::Box;
+    command.transform = transform;
+    command.hasTransform = true;
+    command.size = size;
+    command.color = color;
+    command.lifetime = life;
+    (wired ? wiredCommands_ : commands_).push_back(command);
+}
+
 void DebugRender::DrawCapsule(
     const DirectX::XMFLOAT3& startPos,
     const DirectX::XMFLOAT3& endPos,
@@ -176,7 +190,8 @@ void DebugRender::Render(ID3D11DeviceContext* immediateContext)
         case DebugDrawType::Box:
         {
             PrimitiveShapeRenderer* shapeRenderer = Graphics::GetShapeRenderer();
-            DirectX::XMFLOAT4X4 shapeTransform;
+            DirectX::XMFLOAT4X4 shapeTransform = cmd.transform;
+            if (!cmd.hasTransform)
             DirectX::XMStoreFloat4x4(
                 &shapeTransform,
                 DirectX::XMMatrixTranslation(
@@ -185,7 +200,14 @@ void DebugRender::Render(ID3D11DeviceContext* immediateContext)
                     cmd.position.z
                 )
             );
-            shapeRenderer->DrawBox(shapeTransform, cmd.size, cmd.color);
+            // PrimitiveShapeRenderer's centered box mesh spans -1..+1, so its
+            // scale parameter is a half extent. DebugRender's size is full size.
+            const DirectX::XMFLOAT3 primitiveHalfExtent = {
+                cmd.size.x * (cmd.hasTransform ? 0.5f : 1.0f),
+                cmd.size.y * (cmd.hasTransform ? 0.5f : 1.0f),
+                cmd.size.z * (cmd.hasTransform ? 0.5f : 1.0f)
+            };
+            shapeRenderer->DrawBox(shapeTransform, primitiveHalfExtent, cmd.color);
         }
         //ShapeRenderer::DrawBoxCenter(
         //    immediateContext,
@@ -236,6 +258,14 @@ void DebugRender::WiredRender(ID3D11DeviceContext* immediateContext)
                 cmd.color, 32);
             break;
         case DebugDrawType::Box:
+            if (cmd.hasTransform)
+            {
+                const DirectX::XMFLOAT3 primitiveHalfExtent = {
+                    cmd.size.x * 0.5f, cmd.size.y * 0.5f, cmd.size.z * 0.5f
+                };
+                Graphics::GetShapeRenderer()->DrawBox(cmd.transform, primitiveHalfExtent, cmd.color);
+                break;
+            }
             ShapeRenderer::DrawBoxCenter(
                 immediateContext,
                 cmd.position,

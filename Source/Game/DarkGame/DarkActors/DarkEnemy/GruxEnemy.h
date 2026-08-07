@@ -5,6 +5,7 @@
 #include "Game/Actors/Base/Character.h"
 #include "Game/Actors/Enemy/Enemy.h"
 #include "UI/Widgets/Widget.h"
+#include "Animation/DangerArea.h"
 
 class GruxEnemy :public Enemy
 {
@@ -48,6 +49,7 @@ private:
     void OnWeaponHit(CollisionComponent* self, CollisionComponent* other);
     void ResetJustDodgeRecords(const char* reason);
     bool HasJustDodgedAttack(const Actor* actor) const;
+    void ResetDangerArea();
 private:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
@@ -130,9 +132,10 @@ private:
 
 
     // ジャスト回避の矩形の範囲
-    DirectX::XMFLOAT2 justDodgeAreaSize = { 0.0f,0.0f };
+    DirectX::XMFLOAT3 justDodgeAreaSize = { 0.0f,2.0f,0.0f };
     // ジャスト回避の矩形のオフセット
     DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };
+    DangerArea dangerArea{};
 
     float flashDuration = 0.8f;   // 何秒でフラッシュしなくなるか
 

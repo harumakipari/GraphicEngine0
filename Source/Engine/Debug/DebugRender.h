@@ -16,6 +16,8 @@ struct DebugDrawCommand
     DirectX::XMFLOAT3 endPosition;
     DirectX::XMFLOAT3 size;
     DirectX::XMFLOAT4 color;
+    DirectX::XMFLOAT4X4 transform{};
+    bool hasTransform = false;
     float lifetime = 0.0f;
 };
 
@@ -32,6 +34,10 @@ public:
         const DirectX::XMFLOAT3& pos,
         const DirectX::XMFLOAT3& size,
         const DirectX::XMFLOAT4& color,
+        float life = 0.0f, bool wired = false);
+
+    static void DrawBox(const DirectX::XMFLOAT4X4& transform,
+        const DirectX::XMFLOAT3& size, const DirectX::XMFLOAT4& color,
         float life = 0.0f, bool wired = false);
 
     static void DrawCapsule(

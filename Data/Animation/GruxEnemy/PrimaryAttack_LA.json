@@ -38,11 +38,12 @@
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
-                1.0
+                3.299999952316284
             ],
             "justDodgeAreaSize": [
-                2.799999952316284,
-                2.799999952316284
+                5.099999904632568,
+                2.0,
+                7.0
             ],
             "moveDirection": [
                 0.0,
@@ -64,6 +65,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [

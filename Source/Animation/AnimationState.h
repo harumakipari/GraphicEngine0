@@ -41,7 +41,8 @@ struct AnimationNotifyState
     DirectX::XMFLOAT3 moveDirection{ 0.0f,0.0f,0.0f };
     float moveDistance = 0.0f;
     // ジャスト回避の矩形の範囲
-    DirectX::XMFLOAT2 justDodgeAreaSize = { 0.0f,0.0f };
+    // Full size: X=Right/Width, Y=Up/Height, Z=Forward/Depth.
+    DirectX::XMFLOAT3 justDodgeAreaSize = { 0.0f,2.0f,0.0f };
     // ジャスト回避の矩形のオフセット
     DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };
 };

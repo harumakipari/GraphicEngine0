@@ -9,6 +9,8 @@
 
 #include "Utility/SceneJsonUtils.h"
 #include "Game/Actors/Base/Character.h"
+#include "Animation/DangerArea.h"
+#include "Engine/Debug/DebugRender.h"
 
 AnimationController::AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex)
 {
@@ -1432,8 +1434,16 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
         case AnimationNotifyState::Type::JustDodgeWindow:
             break;
         case AnimationNotifyState::Type::DangerWindow:
-            ImGui::DragFloat2(U8("ジャスト回避の矩形の範囲"), &state.justDodgeAreaSize.x, 0.1f, 0, 6);
+            ImGui::DragFloat3("Danger Area Size (Width / Height / Depth)", &state.justDodgeAreaSize.x, 0.1f, 0, 20);
             ImGui::DragFloat3(U8("ジャスト回避の矩形のオフセット"), &state.justDodgeAreaOffset.x, 0.1f, 0, 20);
+            if (owner)
+            {
+                const DangerArea previewArea = BuildDangerArea(owner->GetPosition(),
+                    owner->GetRight(), owner->GetUp(), owner->GetForward(),
+                    state.justDodgeAreaOffset, state.justDodgeAreaSize);
+                DebugRender::DrawBox(previewArea.WorldTransform(), previewArea.size,
+                    { 1,1,1,1 }, 0.0f, true);
+            }
             break;
         case AnimationNotifyState::Type::ShowTrail:
             break;
@@ -2602,7 +2612,11 @@ void AnimationController::LoadNotifyAsset(const std::string& filename, Animation
             state.moveDistance = j.value("moveDistance", 0.0f);
             if (j.contains("justDodgeAreaSize"))
             {
-                j["justDodgeAreaSize"].get_to(state.justDodgeAreaSize);
+                const auto& size = j["justDodgeAreaSize"];
+                if (size.is_array() && size.size() >= 3)
+                    state.justDodgeAreaSize = { size[0].get<float>(), size[1].get<float>(), size[2].get<float>() };
+                else if (size.is_array() && size.size() == 2)
+                    state.justDodgeAreaSize = { size[0].get<float>(), 2.0f, size[1].get<float>() };
             }
             if (j.contains("justDodgeAreaOffset"))
             {

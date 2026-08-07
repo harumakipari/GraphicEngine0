@@ -501,37 +501,60 @@ void GruxEnemy::Update(float deltaTime)
     {
         if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
         {
-            DirectX::XMFLOAT3 forwardVec = GetForward();
-            DirectX::XMFLOAT3 rightVec = GetRight();
-            DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(playerPos, bossPos);
-            float forward = MathHelper::Dot(toPlayer, forwardVec);
-            float right = MathHelper::Dot(toPlayer, rightVec);
-            // ボス基準の矩形中心
-            DirectX::XMFLOAT3 boxCenter = bossPos;
-
-            boxCenter = MathHelper::Add(boxCenter, MathHelper::Multiply(GetForward(), justDodgeAreaOffset.z));
-            boxCenter = MathHelper::Add(boxCenter, MathHelper::Multiply(GetRight(), justDodgeAreaOffset.x));
-            boxCenter = MathHelper::Add(boxCenter, { 0.0f, justDodgeAreaOffset.y, 0.0f });
-
-            DirectX::XMFLOAT4 debugColor = { 1,1,1,1 };
-            float minForward = justDodgeAreaOffset.z - justDodgeAreaSize.y * 0.5f;
-            float maxForward = justDodgeAreaOffset.z + justDodgeAreaSize.y * 0.5f;
-
-            float minRight = justDodgeAreaOffset.x - justDodgeAreaSize.x * 0.5f;
-            float maxRight = justDodgeAreaOffset.x + justDodgeAreaSize.x * 0.5f;
-            bool inside = forward >= minForward && forward <= maxForward && right >= minRight && right <= maxRight;
-
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[BossAttack][DangerCheck] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
-                " inside=" + (inside ? "true" : "false") +
-                " justDodgeWindow=" + (player->GetJustDodgeWindow() ? "true" : "false"));
-
-            if (inside)
+            const DirectX::XMFLOAT3 playerTestPosition = player->GetPosition();
+            DirectX::XMFLOAT3 playerCapsuleCenter = playerTestPosition;
+            float playerCapsuleRadius = 0.0f;
+            float playerCapsuleHeight = 0.0f;
+            if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                player->FindComponentByName("capsuleComponent")))
             {
-                debugColor = { 1,0,0,1 };
+                playerCapsuleCenter = capsule->GetComponentLocation();
+                playerCapsuleRadius = capsule->GetRadius();
+                playerCapsuleHeight = capsule->GetHeight();
+            }
+            const DangerArea::PointResult pointResult = dangerArea.ContainsPoint(playerTestPosition);
+            const DangerArea::CapsuleResult capsuleResult = dangerArea.IntersectsPlayerCapsule(
+                playerCapsuleCenter, playerCapsuleRadius, playerCapsuleHeight);
+            const bool inside = capsuleResult.overlap;
+            const bool justDodgeWindow = player->GetJustDodgeWindow();
+            DirectX::XMFLOAT4 debugColor = inside ? DirectX::XMFLOAT4{ 1,0,0,1 } : DirectX::XMFLOAT4{ 1,1,1,1 };
+            if (inside && justDodgeWindow)
+                debugColor = { 0,1,0,1 };
+
+            DebugRender::DrawSphere(dangerArea.origin, 0.1f, { 1,1,0,1 }, 0.0f, true);
+            DebugRender::DrawSphere(playerTestPosition, 0.12f, { 1,1,0,1 }, 0.0f, true);
+            DebugRender::DrawSphere(playerCapsuleCenter, 0.09f, { 0,1,1,1 }, 0.0f, true);
+
+            // CPU-computed logical OBB markers. Do not use WorldTransform here.
+            for (int rightSign : { -1, 1 })
+            {
+                for (int upSign : { -1, 1 })
+                {
+                    for (int forwardSign : { -1, 1 })
+                    {
+                        DirectX::XMFLOAT3 corner = dangerArea.center;
+                        corner = MathHelper::Add(corner, MathHelper::Multiply(
+                            dangerArea.right, dangerArea.halfExtent.x * static_cast<float>(rightSign)));
+                        corner = MathHelper::Add(corner, MathHelper::Multiply(
+                            dangerArea.up, dangerArea.halfExtent.y * static_cast<float>(upSign)));
+                        corner = MathHelper::Add(corner, MathHelper::Multiply(
+                            dangerArea.forward, dangerArea.halfExtent.z * static_cast<float>(forwardSign)));
+                        DebugRender::DrawSphere(corner, 0.06f, { 1,1,0,1 }, 0.0f, true);
+                    }
+                }
             }
 
-            DebugRender::DrawBox(boxCenter, { justDodgeAreaSize.x,2.0f,justDodgeAreaSize.y }, debugColor);
+            DebugRender::DrawSphere(dangerArea.center, 0.08f, { 1,0,0,1 }, 0.0f, true);
+            DebugRender::DrawSphere(MathHelper::Add(dangerArea.center,
+                MathHelper::Multiply(dangerArea.right, dangerArea.halfExtent.x)),
+                0.08f, { 0,1,0,1 }, 0.0f, true);
+            DebugRender::DrawSphere(MathHelper::Add(dangerArea.center,
+                MathHelper::Multiply(dangerArea.up, dangerArea.halfExtent.y)),
+                0.08f, { 0,0,1,1 }, 0.0f, true);
+            DebugRender::DrawSphere(MathHelper::Add(dangerArea.center,
+                MathHelper::Multiply(dangerArea.forward, dangerArea.halfExtent.z)),
+                0.08f, { 1,0,1,1 }, 0.0f, true);
+            DebugRender::DrawBox(dangerArea.WorldTransform(), dangerArea.size, debugColor, 0.0f, true);
 
             if (inside && player->GetJustDodgeWindow())
             {
@@ -687,6 +710,8 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
             std::to_string(currentAttackSequenceId));
         justDodgeAreaSize = state.justDodgeAreaSize;
         justDodgeAreaOffset = state.justDodgeAreaOffset;
+        dangerArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(),
+            justDodgeAreaOffset, justDodgeAreaSize);
         isDangerWindow = true;
         break;
     }
@@ -724,6 +749,7 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
             "[BossAttack][DangerWindowEnd] attackSequenceId=" +
             std::to_string(currentAttackSequenceId));
         isDangerWindow = false;
+        ResetDangerArea();
         break;
     }
 }
@@ -779,6 +805,7 @@ void GruxEnemy::DisableAttackHitBoxes()
     leftHitBox = false;
     rightHitBox = false;
     isDangerWindow = false;
+    ResetDangerArea();
     ResetJustDodgeRecords("hitboxes_disabled");
     Logger::Log(Logger::LogCategory::Gameplay,
         "[BossAttack][HitBoxesDisabled] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
@@ -798,6 +825,11 @@ void GruxEnemy::ResetJustDodgeRecords(const char* reason)
 bool GruxEnemy::HasJustDodgedAttack(const Actor* actor) const
 {
     return actor && justDodgedActors.contains(actor);
+}
+
+void GruxEnemy::ResetDangerArea()
+{
+    dangerArea = {};
 }
 // ボスの名前の演出を開始する
 void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)

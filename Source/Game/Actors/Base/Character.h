@@ -144,6 +144,8 @@ public:
         return right;
     }
 
+    const DirectX::XMFLOAT3& GetUp() { return up; }
+
     float GetYawFromForward(const DirectX::XMFLOAT3& forward)
     {
         // Z+ が前の座標系想定（LH）
