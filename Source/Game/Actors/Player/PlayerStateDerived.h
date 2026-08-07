@@ -98,6 +98,8 @@ public:
 
 private:
     bool dodgeQueued = false;
+    // True only while the synchronous Attack -> Attack combo transition runs.
+    bool continuingComboTransition = false;
 };
 
 // 回避ステートオブジェクト

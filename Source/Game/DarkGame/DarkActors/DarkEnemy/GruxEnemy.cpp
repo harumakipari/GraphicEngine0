@@ -831,6 +831,7 @@ void GruxEnemy::ResetDangerArea()
 {
     dangerArea = {};
 }
+
 // ボスの名前の演出を開始する
 void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
 {

@@ -133,6 +133,13 @@ void PlayerDashState::Exit()
 
 void PlayerAttackState::Enter()
 {
+    const bool isComboContinuation = continuingComboTransition;
+    if (!isComboContinuation)
+    {
+        player->currentAttackAnimation = player->startAttackAnimation;
+        player->comboQueued = false;
+    }
+
     // 火花エフェクトの生成フラグと当たった相手のセットをリセット
     player->hitTargets.clear();
     player->hasSpawnedThisAttack = false;
@@ -155,6 +162,12 @@ void PlayerAttackState::Enter()
 
     dodgeQueued = false;
     player->comboQueued = false;
+    continuingComboTransition = false;
+
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[NormalAttack][Enter] continuation=" +
+        std::string(isComboContinuation ? "true" : "false") +
+        " animation=" + player->currentAttackAnimation);
 }
 
 void PlayerAttackState::Execute(float deltaTime)
@@ -201,8 +214,10 @@ void PlayerAttackState::Execute(float deltaTime)
 
                     player->comboQueued = false;
 
+                    continuingComboTransition = true;
                     player->GetStateMachine()
                         ->ChangeState("Attack");
+                    return;
                 }
             }
         }
@@ -233,6 +248,15 @@ void PlayerAttackState::Execute(float deltaTime)
 
 void PlayerAttackState::Exit()
 {
+    if (!continuingComboTransition)
+    {
+        player->currentAttackAnimation = player->startAttackAnimation;
+        player->comboQueued = false;
+        dodgeQueued = false;
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[NormalAttack][Exit] combo state discarded");
+    }
+
     // 攻撃を終了する処理
     player->EndAttack();
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
