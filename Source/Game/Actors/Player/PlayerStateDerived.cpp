@@ -343,6 +343,8 @@ void PlayerDodgeState::Execute(float deltaTime)
 
 void PlayerDodgeState::Exit()
 {
+    rushRequested = false;
+    judgeSuccess = false;
     player->ResetAnimationStateFlag();
     player->ResetTimeScale();
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
@@ -433,7 +435,8 @@ void PlayerRushState::Enter()
     rushComboAdvanced = false;
 
     elapsedTime = 0.0f;
-    queuedAttackCount = 1;
+    // The Attack request that started Rush was already consumed in Dodge.
+    queuedAttackCount = 0;
     player->invincible = true;  // ラッシュ攻撃中は無敵状態にする
 
     currentAttackAnimation = "Rush_Attack_Fast_A";
@@ -441,10 +444,17 @@ void PlayerRushState::Enter()
 
 void PlayerRushState::Execute(float deltaTime)
 {
-    if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
+    // CaptureActionRequest is the single source of Rush Attack input.
+    if (player->bufferCommand.type == Player::ActionType::Attack)
     {
         queuedAttackCount++;
-        queuedAttackCount = std::min<int>(queuedAttackCount, static_cast<int>(rushCombo.size()));
+        queuedAttackCount = std::min<int>(
+            queuedAttackCount,
+            static_cast<int>(rushCombo.size()) - comboIndex - 1);
+        player->ConsumeActionRequest(Player::ActionType::Attack);
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Rush][AttackQueued] comboIndex=" + std::to_string(comboIndex) +
+            " queuedAttackCount=" + std::to_string(queuedAttackCount));
     }
 
     switch (phase)
@@ -500,6 +510,14 @@ void PlayerRushState::Execute(float deltaTime)
 
 void PlayerRushState::Exit()
 {
+    comboIndex = 0;
+    queuedAttackCount = 0;
+    rushComboAdvanced = false;
+    phase = RushPhase::DashToTarget;
+    currentAttackAnimation = "Rush_Attack_Fast_A";
+    elapsedTime = 0.0f;
+    Logger::Log(Logger::LogCategory::Gameplay, "[Rush][Exit] combo state reset");
+
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
     player->GetBodyAnimationController()->ResetAnimationRate();
     if (auto target = player->rushTarget.lock())
