@@ -468,6 +468,16 @@ void PlayerRushState::Enter()
 
 void PlayerRushState::Execute(float deltaTime)
 {
+    if (auto target = player->rushTarget.lock())
+    {
+        DirectX::XMFLOAT3 targetDirection = MathHelper::Subtract(
+            target->GetPosition(), player->GetPosition());
+        targetDirection.y = 0.0f;
+        player->rotationComponent->SetDirection(targetDirection);
+    }
+
+
+
     // CaptureActionRequest is the single source of Rush Attack input.
     if (player->bufferCommand.type == Player::ActionType::Attack)
     {
