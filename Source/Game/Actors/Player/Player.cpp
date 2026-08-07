@@ -27,6 +27,19 @@
 
 namespace
 {
+std::string MotionWarpPositionString(const DirectX::XMFLOAT3& value)
+{
+    return "(" + std::to_string(value.x) + "," +
+        std::to_string(value.y) + "," + std::to_string(value.z) + ")";
+}
+
+float NormalizeAngleDegrees(float angle)
+{
+    while (angle > 180.0f) angle -= 360.0f;
+    while (angle < -180.0f) angle += 360.0f;
+    return angle;
+}
+
 const char* ToString(Player::ActionType action)
 {
     switch (action)
@@ -774,6 +787,12 @@ void Player::DrawImGuiDetails()
     ImGui::DragFloat("transparencyMinAlpha", &transparencyMinAlpha, 0.05f);
     ImGui::DragFloat("transparencyMaxAlpha", &transparencyMaxAlpha, 0.05f);
     ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
+    ImGui::DragFloat("MotionWarp attack surface distance",
+        &motionWarpDesiredAttackSurfaceDistance, 0.01f, 0.3f, 1.0f);
+    ImGui::DragFloat("Attack rotation max correction (deg)",
+        &attackRotationMaxCorrectionDegrees, 1.0f, 45.0f, 60.0f);
+    ImGui::DragFloat("Attack rotation speed (deg/sec)",
+        &attackRotationSpeedDegrees, 5.0f, 30.0f, 720.0f);
 
 
     // コンボの始まりを設定する
@@ -827,6 +846,8 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::HitBox:
         Logger::Log(U8("当たり判定を開始しました"));
         hitBox = true;
+        if (stateMachine_->GetStateName() == "Attack")
+            StopAttackTargetRotation();
         break;
     case AnimationNotifyState::Type::InputWindow:
         inputWindow = true;
@@ -866,17 +887,62 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         DirectX::XMStoreFloat3(&direction, dir);
         // 区間の時間を取る
         float duration = state.endTime - state.startTime;
+        float actualWarpDistance = state.moveDistance;
+        float currentCenterDistance = 0.0f;
+        float playerRadius = 0.0f;
+        float enemyRadius = 0.0f;
+        float remainingApproachDistance = 0.0f;
+        bool targetClampApplied = false;
+
+        // Rotation and MotionWarp share the target fixed at Attack Enter.
+        if (stateMachine_->GetStateName() == "Attack")
+        {
+            if (const auto target = attackTarget.lock())
+            {
+                DirectX::XMFLOAT3 targetDelta = MathHelper::Subtract(
+                    target->GetPosition(), GetPosition());
+                targetDelta.y = 0.0f;
+                currentCenterDistance = MathHelper::Length(targetDelta);
+                if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                    FindComponentByName("capsuleComponent")))
+                    playerRadius = capsule->GetRadius();
+                if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                    target->FindComponentByName("capsuleComponent")))
+                    enemyRadius = capsule->GetRadius();
+
+                const float centerStopDistance = playerRadius + enemyRadius +
+                    motionWarpDesiredAttackSurfaceDistance;
+                remainingApproachDistance = (std::max)(
+                    currentCenterDistance - centerStopDistance, 0.0f);
+                actualWarpDistance = (std::min)(
+                    state.moveDistance, remainingApproachDistance);
+                targetClampApplied = true;
+            }
+        }
+
         float speed = 0.0f;
         if (duration > 0.0f)
         {
-            speed = state.moveDistance / duration;
+            speed = actualWarpDistance / duration;
         }
         AnimationMotionWarp warp{};
         warp.direction = direction;
         warp.speed = speed;
         warp.state = &state;
+        warp.notifyMoveDistance = state.moveDistance;
+        warp.actualWarpDistance = actualWarpDistance;
+        warp.startPosition = GetPosition();
         animationMotionWarps.push_back(warp);
-        Logger::Log(U8("MotionWarp開始"));
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[MotionWarp][Begin] notifyMoveDistance=" + std::to_string(state.moveDistance) +
+            " currentCenterDistance=" + std::to_string(currentCenterDistance) +
+            " playerRadius=" + std::to_string(playerRadius) +
+            " enemyRadius=" + std::to_string(enemyRadius) +
+            " desiredAttackSurfaceDistance=" + std::to_string(motionWarpDesiredAttackSurfaceDistance) +
+            " remainingApproachDistance=" + std::to_string(remainingApproachDistance) +
+            " actualWarpDistance=" + std::to_string(actualWarpDistance) +
+            " targetClampApplied=" + std::string(targetClampApplied ? "true" : "false") +
+            " positionBefore=" + MotionWarpPositionString(warp.startPosition));
     }
     break;
     }
@@ -916,6 +982,30 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::MotionWarp:
     {
+        const auto activeWarp = std::find_if(
+            animationMotionWarps.begin(), animationMotionWarps.end(),
+            [&](const AnimationMotionWarp& warp)
+            {
+                return warp.state == &state;
+            });
+        if (activeWarp != animationMotionWarps.end())
+        {
+            float endCenterDistance = 0.0f;
+            if (const auto target = attackTarget.lock())
+            {
+                DirectX::XMFLOAT3 delta = MathHelper::Subtract(target->GetPosition(), GetPosition());
+                delta.y = 0.0f;
+                endCenterDistance = MathHelper::Length(delta);
+            }
+
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[MotionWarp][End] notifyMoveDistance=" +
+                std::to_string(activeWarp->notifyMoveDistance) +
+                " actualWarpDistance=" + std::to_string(activeWarp->actualWarpDistance) +
+                " endCenterDistance=" + std::to_string(endCenterDistance) +
+                " positionBefore=" + MotionWarpPositionString(activeWarp->startPosition) +
+                " positionAfter=" + MotionWarpPositionString(GetPosition()));
+        }
         animationMotionWarps.erase(
             std::remove_if(
                 animationMotionWarps.begin(),
@@ -925,7 +1015,6 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
                     return warp.state == &state;
                 }),
             animationMotionWarps.end());
-        Logger::Log(U8("MotionWarp終了"));
     }
     break;
     }
@@ -1369,6 +1458,88 @@ bool Player::TryExecuteActionRequest()
     return true;
 }
 
+void Player::AcquireAttackTarget()
+{
+    attackTarget.reset();
+    const auto enemies = GetOwnerScene()->GetActorManager()->GetActorsOfType<Enemy>();
+
+    // Prefer the camera's LockOn/Focus target when it is an Enemy in this scene.
+    if (const auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
+    {
+        if (const auto targetHead = camera->GetEnemyHead())
+        {
+            Actor* targetOwner = targetHead->GetOwner();
+            for (const auto& enemy : enemies)
+            {
+                if (enemy && enemy.get() == targetOwner)
+                {
+                    attackTarget = enemy;
+                    break;
+                }
+            }
+        }
+    }
+
+    // TPS/no lock-on fallback: nearest valid Enemy.
+    if (attackTarget.expired())
+    {
+        float nearestDistance = FLT_MAX;
+        for (const auto& enemy : enemies)
+        {
+            if (!enemy)
+                continue;
+            DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), GetPosition());
+            delta.y = 0.0f;
+            const float distance = MathHelper::Length(delta);
+            if (distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                attackTarget = enemy;
+            }
+        }
+    }
+
+    attackRotationStartYaw = GetEulerRotation().y;
+    attackRotationTracking = !attackTarget.expired();
+}
+
+void Player::UpdateAttackTargetRotation(float deltaTime)
+{
+    if (!attackRotationTracking || hitBox)
+        return;
+
+    const auto target = attackTarget.lock();
+    if (!target)
+    {
+        attackRotationTracking = false;
+        return;
+    }
+
+    DirectX::XMFLOAT3 direction = MathHelper::Subtract(target->GetPosition(), GetPosition());
+    direction.y = 0.0f;
+    if (MathHelper::Length(direction) <= FLT_EPSILON)
+        return;
+
+    const float targetYaw = DirectX::XMConvertToDegrees(std::atan2f(direction.x, direction.z));
+    const float correctionFromStart = std::clamp(
+        NormalizeAngleDegrees(targetYaw - attackRotationStartYaw),
+        -attackRotationMaxCorrectionDegrees,
+        attackRotationMaxCorrectionDegrees);
+    const float limitedTargetYaw = attackRotationStartYaw + correctionFromStart;
+
+    DirectX::XMFLOAT3 rotation = GetEulerRotation();
+    const float remainingYaw = NormalizeAngleDegrees(limitedTargetYaw - rotation.y);
+    const float maxStep = attackRotationSpeedDegrees * deltaTime;
+    rotation.y += std::clamp(remainingYaw, -maxStep, maxStep);
+    SetEulerRotation(rotation);
+}
+
+void Player::ClearAttackTarget()
+{
+    attackRotationTracking = false;
+    attackTarget.reset();
+}
+
 // 動作更新処理
 void Player::UpdateMovement()
 {
@@ -1516,7 +1687,8 @@ void Player::UpdateMovement()
             float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
             GetBodyAnimationController()->SetBlendInput(
                 moveStickX, moveStickZ, normalizeSpeed);
-            rotationComponent->SetDirection(forward);
+            if (currentState != "Attack")
+                rotationComponent->SetDirection(forward);
             break;
         }
         case DarkCameraActor::CameraMode::LockOn:
@@ -1538,7 +1710,8 @@ void Player::UpdateMovement()
                 float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
                 GetBodyAnimationController()->SetBlendInput(
                     moveStickX, moveStickZ, normalizeSpeed);
-                rotationComponent->SetDirection(forward);
+                if (currentState != "Attack")
+                    rotationComponent->SetDirection(forward);
             }
             break;
         }

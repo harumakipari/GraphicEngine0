@@ -184,6 +184,11 @@ public:
     // カメラの注視点の位置
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 
+    void AcquireAttackTarget();
+    void UpdateAttackTargetRotation(float deltaTime);
+    void StopAttackTargetRotation() { attackRotationTracking = false; }
+    void ClearAttackTarget();
+
     // ボス戦時かどうかを設定する
     void SetIsBossBattle(const bool isBossBattle) { this->isBossBattle = isBossBattle; }
 
@@ -239,6 +244,12 @@ public:
     float dodgeDuration = 0.5f; // 回避するときの時間
 
     float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
+    float motionWarpDesiredAttackSurfaceDistance = 0.5f;
+    float attackRotationMaxCorrectionDegrees = 55.0f;
+    float attackRotationSpeedDegrees = 240.0f;
+    std::weak_ptr<Enemy> attackTarget;
+    float attackRotationStartYaw = 0.0f;
+    bool attackRotationTracking = false;
 
     std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 

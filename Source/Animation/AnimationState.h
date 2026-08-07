@@ -89,4 +89,7 @@ struct AnimationMotionWarp
     const AnimationNotifyState* state;
     DirectX::XMFLOAT3 direction;
     float speed;
+    float notifyMoveDistance = 0.0f;
+    float actualWarpDistance = 0.0f;
+    DirectX::XMFLOAT3 startPosition{};
 };

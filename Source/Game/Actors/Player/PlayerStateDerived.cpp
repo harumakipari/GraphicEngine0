@@ -140,6 +140,8 @@ void PlayerAttackState::Enter()
         player->comboQueued = false;
     }
 
+    player->AcquireAttackTarget();
+
     // 火花エフェクトの生成フラグと当たった相手のセットをリセット
     player->hitTargets.clear();
     player->hasSpawnedThisAttack = false;
@@ -172,6 +174,8 @@ void PlayerAttackState::Enter()
 
 void PlayerAttackState::Execute(float deltaTime)
 {
+    player->UpdateAttackTargetRotation(deltaTime);
+
     if (player->inputWindow)
     {
         switch (player->bufferCommand.type)
@@ -261,6 +265,8 @@ void PlayerAttackState::Exit()
     player->EndAttack();
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
     player->ResetAnimationStateFlag();  // アニメーションのステート系のフラグをリセットする
+    if (!continuingComboTransition)
+        player->ClearAttackTarget();
 }
 
 void PlayerDodgeState::Enter()
@@ -453,7 +459,7 @@ void PlayerRushState::Enter()
     {// 移動する
         player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, 2.5f);
         // ルートモーションを無視する
-        player->PlayBodyAnimation("CombatRush_Fwd", false, true, 0.2f, true);
+        player->PlayBodyAnimation("0_Jog_Fwd", false, true, 0.2f, true);
     }
 
     rushComboAdvanced = false;
