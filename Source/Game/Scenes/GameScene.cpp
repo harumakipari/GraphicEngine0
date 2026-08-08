@@ -443,6 +443,7 @@ void GameScene::Update(float deltaTime)
         {
             gruxEnemyActor->GetStateMachine()->ChangeState("EnemyIdleState");
         }
+        player->SetIsBossBattle(true);
     }
 
 

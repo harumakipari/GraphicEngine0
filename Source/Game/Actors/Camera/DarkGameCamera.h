@@ -107,6 +107,10 @@ public:
         {
             return;
         }
+        if (mode == CameraMode::LockOn && requestMode != CameraMode::LockOn)
+        {
+            ResetLockOnAdaptiveState();
+        }
         requestMode = mode;
     }
 
@@ -145,6 +149,12 @@ private:
 
     // Eyeを計算する関数
     CameraPose CalculatePose(CameraMode mode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const;
+
+    // LockOn構図の適応値を更新する
+    void UpdateLockOnComposition(float deltaTime);
+
+    // LockOn開始時に前回の適応値を持ち越さない
+    void ResetLockOnAdaptiveState();
 
     // ロックオンのカメラ距離を計算する関数
     float CalculateLockOnDistance() const;
@@ -191,19 +201,52 @@ private:
     float focusDistance = 0.0f;
 
     // モード別の構図調整値（初期値は従来値相当）
-    CameraCompositionSettings tpsSettings;
-    CameraCompositionSettings focusSettings;
-    CameraCompositionSettings lockOnSettings;
-    float lockOnPlayerLookHeight = 0.0f;
-    float lockOnEnemyLookHeight = 0.0f;
+    CameraCompositionSettings tpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
+    //CameraCompositionSettings tpsSettings = { 7.15f, 0.5f, 1.05f, 35.0f, 0.0f };
+    CameraCompositionSettings focusSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
+    CameraCompositionSettings lockOnSettings = { 11.4f, 0.4f, -0.3f, 35.0f, 0.0f };
+    float lockOnPlayerLookHeight = -.15f;
+    float lockOnEnemyLookHeight = -1.4f;
+
+    // LockOn適応構図。広い場所では基準値を変更しない。
+    float lockOnCollisionStartRatio = 0.9f;
+    float lockOnCollisionFullRatio = 0.45f;
+    float lockOnWallTargetWeight = 0.35f;
+    float lockOnWallHorizontalScale = 0.2f;
+    float lockOnWallDistanceScale = 0.85f;
+    float lockOnDistanceStart = 4.0f;
+    float lockOnDistanceFull = 9.0f;
+    float lockOnMaxDistanceAdd = 2.0f;
+    float lockOnZoomOutSpeed = 5.0f;
+    float lockOnZoomInSpeed = 2.0f;
+    float lockOnDistanceDeadZone = 0.15f;
+    float lockOnCompositionLerpSpeed = 6.0f;
+
+    float lockOnCollisionStrength = 0.0f;
+    float lockOnDistanceStrength = 0.0f;
+    float lockOnDistanceForZoom = 0.0f;
+    float desiredLockOnCameraDistance = 6.55f;
+    float currentLockOnCameraDistance = 6.55f;
+    float currentLockOnZoomSpeed = 0.0f;
+    float adaptiveLockOnTargetWeight = 0.72f;
+    float adaptiveLockOnHorizontalOffset = 0.0f;
+    float adaptiveLockOnCameraDistance = 6.55f;
+
+    // ランタイム調査値
+    DirectX::XMFLOAT3 desiredEyePosition{};
+    DirectX::XMFLOAT3 collisionPreEyePosition{};
+    DirectX::XMFLOAT3 collisionPostEyePosition{};
+    float desiredCameraDistance = 0.0f;
+    float actualCameraDistance = 0.0f;
+    float lockOnEnemyDistance = 0.0f;
 
     // ロックオンカメラの調整値
     // カメラを敵方向から何度横へ振るか
-    float lockOnYawOffsetDegree = -26.0f;
+    float lockOnYawOffsetDegree = -0.0f;
     // targetをどこに置くか
     // 0 = Player
     // 1 = Enemy
-    float lockOnTargetWeight = 0.1f;
+    float lockOnTargetWeight = 0.72f;
     // 基本距離
     float lockOnCameraDistance = 5.0f;
     // 敵との距離による増加量

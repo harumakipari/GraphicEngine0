@@ -4,6 +4,15 @@
 #include "Game/Actors/Player/Player.h"
 #include "Physics/CollisionFunction.h"
 
+namespace
+{
+    float SmoothStep01(float value)
+    {
+        value = std::clamp(value, 0.0f, 1.0f);
+        return value * value * (3.0f - 2.0f * value);
+    }
+}
+
 void DarkCameraActor::Initialize(const Transform& transform)
 {
     std::string parentName = "DarkCameraActor";
@@ -11,11 +20,11 @@ void DarkCameraActor::Initialize(const Transform& transform)
     inputComponent = AddComponent<InputComponent>("inputComponent", parentName);
 
     // カメラを敵方向から何度横へ振るか
-    lockOnYawOffsetDegree = -26.0f;
+    lockOnYawOffsetDegree = -0.0f;
     // targetをどこに置くか
     // 0 = Player
     // 1 = Enemy
-    lockOnTargetWeight = 0.1f;
+    lockOnTargetWeight = 0.72f;
     // 基本距離
     lockOnCameraDistance = 5.0f;
     // 敵との距離による増加量
@@ -26,6 +35,7 @@ void DarkCameraActor::Initialize(const Transform& transform)
     lockOnPitchDegree = -10.0f;
 
     isExternalBlending = false;
+    ResetLockOnAdaptiveState();
 }
 
 void DarkCameraActor::Update(float deltaTime)
@@ -38,6 +48,11 @@ void DarkCameraActor::Update(float deltaTime)
         return;
     }
     DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
+
+    if (!isExternalBlending && !isBlending && currentMode == CameraMode::LockOn)
+    {
+        UpdateLockOnComposition(deltaTime);
+    }
 
 
     if (isExternalBlending)
@@ -89,8 +104,18 @@ void DarkCameraActor::Update(float deltaTime)
     }
 #endif // 0
 
+    // 当たり判定前後を保存し、実距離を診断できるようにする。
+    desiredEyePosition = currentPose.eye;
+    collisionPreEyePosition = currentPose.eye;
+    desiredCameraDistance = MathHelper::Distance(currentPose.target, collisionPreEyePosition);
+
     // 当たり判定でカメラの位置を修正する
     currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
+    collisionPostEyePosition = currentPose.eye;
+    actualCameraDistance = MathHelper::Distance(currentPose.target, collisionPostEyePosition);
+    cameraCollisionRatio = desiredCameraDistance > FLT_EPSILON
+        ? actualCameraDistance / desiredCameraDistance
+        : 1.0f;
 
     float targetBlend = cameraHitWall ? 1.0f : 0.0f;
 
@@ -446,6 +471,99 @@ void DarkCameraActor::UpdateRotation(float deltaTime)
     mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
 }
 
+void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
+{
+    auto playerHeadShared = playerHead.lock();
+    auto enemyHeadShared = enemyHead.lock();
+    if (!playerHeadShared || !enemyHeadShared)
+    {
+        return;
+    }
+
+    lockOnEnemyDistance = MathHelper::Distance(
+        playerHeadShared->GetComponentLocation(),
+        enemyHeadShared->GetComponentLocation());
+
+    if (lockOnDistanceForZoom <= FLT_EPSILON)
+    {
+        lockOnDistanceForZoom = lockOnEnemyDistance;
+    }
+    else if (lockOnEnemyDistance > lockOnDistanceForZoom + lockOnDistanceDeadZone)
+    {
+        lockOnDistanceForZoom = lockOnEnemyDistance - lockOnDistanceDeadZone;
+    }
+    else if (lockOnEnemyDistance < lockOnDistanceForZoom - lockOnDistanceDeadZone)
+    {
+        lockOnDistanceForZoom = lockOnEnemyDistance + lockOnDistanceDeadZone;
+    }
+
+    const float collisionRange = std::max<float>(
+        lockOnCollisionStartRatio - lockOnCollisionFullRatio,
+        FLT_EPSILON);
+    const float collisionInput =
+        (lockOnCollisionStartRatio - cameraCollisionRatio) / collisionRange;
+    const float targetCollisionStrength = SmoothStep01(collisionInput);
+
+    const float enemyRange = std::max<float>(
+        lockOnDistanceFull - lockOnDistanceStart,
+        FLT_EPSILON);
+    const float enemyDistanceInput =
+        (lockOnDistanceForZoom - lockOnDistanceStart) / enemyRange;
+    const float targetDistanceStrength = SmoothStep01(enemyDistanceInput);
+
+    const float lerpRate = std::clamp(
+        deltaTime * lockOnCompositionLerpSpeed,
+        0.0f,
+        1.0f);
+    lockOnCollisionStrength = std::lerp(
+        lockOnCollisionStrength,
+        targetCollisionStrength,
+        lerpRate);
+    lockOnDistanceStrength = targetDistanceStrength;
+
+    adaptiveLockOnTargetWeight = std::lerp(
+        lockOnTargetWeight,
+        lockOnWallTargetWeight,
+        lockOnCollisionStrength);
+    adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset * std::lerp(
+        1.0f,
+        lockOnWallHorizontalScale,
+        lockOnCollisionStrength);
+
+    desiredLockOnCameraDistance =
+        lockOnSettings.distance + lockOnMaxDistanceAdd * lockOnDistanceStrength;
+    currentLockOnZoomSpeed = desiredLockOnCameraDistance > currentLockOnCameraDistance
+        ? lockOnZoomOutSpeed
+        : lockOnZoomInSpeed;
+    const float zoomLerpRate = std::clamp(
+        deltaTime * currentLockOnZoomSpeed,
+        0.0f,
+        1.0f);
+    currentLockOnCameraDistance = std::lerp(
+        currentLockOnCameraDistance,
+        desiredLockOnCameraDistance,
+        zoomLerpRate);
+
+    adaptiveLockOnCameraDistance = currentLockOnCameraDistance * std::lerp(
+        1.0f,
+        lockOnWallDistanceScale,
+        lockOnCollisionStrength);
+}
+
+void DarkCameraActor::ResetLockOnAdaptiveState()
+{
+    lockOnCollisionStrength = 0.0f;
+    lockOnDistanceStrength = 0.0f;
+    lockOnDistanceForZoom = 0.0f;
+    lockOnEnemyDistance = 0.0f;
+    desiredLockOnCameraDistance = lockOnSettings.distance;
+    currentLockOnCameraDistance = lockOnSettings.distance;
+    adaptiveLockOnCameraDistance = lockOnSettings.distance;
+    currentLockOnZoomSpeed = 0.0f;
+    adaptiveLockOnTargetWeight = lockOnTargetWeight;
+    adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset;
+}
+
 DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const
 {
     CameraPose pose{};
@@ -454,6 +572,12 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
     if (cameraMode == CameraMode::Focus) settings = &focusSettings;
     if (cameraMode == CameraMode::LockOn) settings = &lockOnSettings;
     float distance = settings->distance;
+    float horizontalOffset = settings->horizontalOffset;
+    if (cameraMode == CameraMode::LockOn)
+    {
+        distance = adaptiveLockOnCameraDistance;
+        horizontalOffset = adaptiveLockOnHorizontalOffset;
+    }
 
     switch (cameraMode)
     {
@@ -483,7 +607,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
             pose.target = MathHelper::Lerp(
                 playerLookPosition,
                 enemyLookPosition,
-                lockOnTargetWeight);
+                adaptiveLockOnTargetWeight);
         }
         break;
     }
@@ -500,7 +624,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
     XMVECTOR target = XMLoadFloat3(&pose.target);
     XMVECTOR eye = target - forward * distance;
     XMVECTOR right = XMVectorSet(cosf(yaw), 0.0f, -sinf(yaw), 0.0f);
-    eye += right * settings->horizontalOffset;
+    eye += right * horizontalOffset;
     eye += XMVectorSet(0, settings->height, 0, 0);
 
     XMStoreFloat3(&pose.eye, eye);
@@ -567,29 +691,6 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
 
     }
 
-    float idealDistance = MathHelper::Distance(target, eye);
-    float collisionDistance = MathHelper::Distance(target, idealEye);
-
-    //cameraCollisionRatio = collisionDistance / idealDistance;
-
-    float newRatio = collisionDistance / idealDistance;
-
-    if (std::abs(newRatio - cameraCollisionRatio) > 0.5f)
-    {
-        unstableFrameCount++;
-
-        if (unstableFrameCount >= 2)
-        {
-            cameraCollisionRatio = newRatio;
-            unstableFrameCount = 0;
-        }
-    }
-    else
-    {
-        unstableFrameCount = 0;
-        cameraCollisionRatio = newRatio;
-    }
-
     return idealEye;
 }
 
@@ -646,6 +747,43 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::DragFloat("Enemy Look Height", &lockOnEnemyLookHeight, 0.05f, -10.0f, 10.0f);
         ImGui::SliderFloat("Player/Enemy Target Weight", &lockOnTargetWeight, 0.0f, 1.0f);
         ImGui::DragFloat("Horizontal Offset##LockOn", &lockOnSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("LockOn Adaptive Composition"))
+    {
+        ImGui::DragFloat("Collision Start Ratio", &lockOnCollisionStartRatio, 0.01f, 0.0f, 1.0f);
+        ImGui::DragFloat("Collision Full Ratio", &lockOnCollisionFullRatio, 0.01f, 0.0f, 1.0f);
+        ImGui::SliderFloat("Wall Target Weight", &lockOnWallTargetWeight, 0.0f, 1.0f);
+        ImGui::SliderFloat("Wall Horizontal Scale", &lockOnWallHorizontalScale, 0.0f, 1.0f);
+        ImGui::SliderFloat("Wall Distance Scale", &lockOnWallDistanceScale, 0.1f, 1.0f);
+        ImGui::DragFloat("Distance Start", &lockOnDistanceStart, 0.05f, 0.0f, 30.0f);
+        ImGui::DragFloat("Distance Full", &lockOnDistanceFull, 0.05f, 0.0f, 30.0f);
+        ImGui::DragFloat("Max Distance Add", &lockOnMaxDistanceAdd, 0.05f, 0.0f, 10.0f);
+        ImGui::DragFloat("Zoom Out Speed", &lockOnZoomOutSpeed, 0.1f, 0.01f, 30.0f);
+        ImGui::DragFloat("Zoom In Speed", &lockOnZoomInSpeed, 0.1f, 0.01f, 30.0f);
+        ImGui::DragFloat("Distance Dead Zone", &lockOnDistanceDeadZone, 0.01f, 0.0f, 5.0f);
+        ImGui::DragFloat("Composition Lerp Speed", &lockOnCompositionLerpSpeed, 0.1f, 0.1f, 30.0f);
+        ImGui::Separator();
+        ImGui::Text("Desired Eye: %.3f, %.3f, %.3f",
+            desiredEyePosition.x, desiredEyePosition.y, desiredEyePosition.z);
+        ImGui::Text("Collision Pre Eye: %.3f, %.3f, %.3f",
+            collisionPreEyePosition.x, collisionPreEyePosition.y, collisionPreEyePosition.z);
+        ImGui::Text("Collision Post Eye: %.3f, %.3f, %.3f",
+            collisionPostEyePosition.x, collisionPostEyePosition.y, collisionPostEyePosition.z);
+        ImGui::Text("Desired Camera Distance: %.3f", desiredCameraDistance);
+        ImGui::Text("Actual Camera Distance: %.3f", actualCameraDistance);
+        ImGui::Text("Collision Ratio: %.3f", cameraCollisionRatio);
+        ImGui::Text("Player-Boss Distance: %.3f", lockOnEnemyDistance);
+        ImGui::Text("Base Distance: %.3f", lockOnSettings.distance);
+        ImGui::Text("Desired Distance: %.3f", desiredLockOnCameraDistance);
+        ImGui::Text("Current Adaptive Distance: %.3f", adaptiveLockOnCameraDistance);
+        ImGui::Text("Distance Strength: %.3f", lockOnDistanceStrength);
+        ImGui::Text("Zoom Speed: %.3f", currentLockOnZoomSpeed);
+        ImGui::Text("Target Weight: %.3f", lockOnTargetWeight);
+        ImGui::Text("Adaptive Target Weight: %.3f", adaptiveLockOnTargetWeight);
+        ImGui::Text("Adaptive Horizontal Offset: %.3f", adaptiveLockOnHorizontalOffset);
+        ImGui::Text("Yaw Offset: %.3f deg", lockOnYawOffsetDegree);
+        ImGui::Text("Pitch: %.3f deg", lockOnPitchDegree);
         ImGui::TreePop();
     }
     ImGui::DragFloat(U8("ロックオンカメラの基本距離"), &lockOnCameraDistance, 0.1f, 0.01f, 10.0f);
