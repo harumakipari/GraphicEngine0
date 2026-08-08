@@ -62,6 +62,22 @@ void DarkCameraActor::Update(float deltaTime)
         }
     }
 
+    if (!isExternalBlending)
+    {
+        const CameraCompositionSettings* fromSettings = &tpsSettings;
+        const CameraCompositionSettings* toSettings = &tpsSettings;
+        if (currentMode == CameraMode::Focus) fromSettings = &focusSettings;
+        if (currentMode == CameraMode::LockOn) fromSettings = &lockOnSettings;
+        if (requestMode == CameraMode::Focus) toSettings = &focusSettings;
+        if (requestMode == CameraMode::LockOn) toSettings = &lockOnSettings;
+
+        const float fovDegree = isBlending
+            ? std::lerp(fromSettings->fovDegree, toSettings->fovDegree,
+                std::clamp(blendTime / blendDuration, 0.0f, 1.0f))
+            : fromSettings->fovDegree;
+        mainCameraComponent->SetFov(DirectX::XMConvertToRadians(fovDegree));
+    }
+
 #if 0
     if (currentMode == CameraMode::LockOn)
     {
@@ -255,8 +271,16 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
     currentYaw = MathHelper::LerpAngle(blendStartPose.yaw, blendTargetPose.yaw, t);
     currentPitch = std::lerp(blendStartPose.pitch, blendTargetPose.pitch, t);
 
-    //float distance = std::lerp(startDistance, targetDistance, t);
-    float distance = cameraDistance;
+    const CameraCompositionSettings* fromSettings = &tpsSettings;
+    const CameraCompositionSettings* toSettings = &tpsSettings;
+    if (currentMode == CameraMode::Focus) fromSettings = &focusSettings;
+    if (currentMode == CameraMode::LockOn) fromSettings = &lockOnSettings;
+    if (requestMode == CameraMode::Focus) toSettings = &focusSettings;
+    if (requestMode == CameraMode::LockOn) toSettings = &lockOnSettings;
+
+    const float distance = std::lerp(fromSettings->distance, toSettings->distance, t);
+    const float height = std::lerp(fromSettings->height, toSettings->height, t);
+    const float horizontalOffset = std::lerp(fromSettings->horizontalOffset, toSettings->horizontalOffset, t);
 
     using namespace DirectX;
 
@@ -267,7 +291,9 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
         0.0f);
     XMVECTOR target = XMLoadFloat3(&currentPose.target);
     XMVECTOR eye = target - forward * distance;
-    eye += XMVectorSet(0, cameraHeight, 0, 0);
+    XMVECTOR right = XMVectorSet(cosf(currentYaw), 0.0f, -sinf(currentYaw), 0.0f);
+    eye += right * horizontalOffset;
+    eye += XMVectorSet(0, height, 0, 0);
     XMStoreFloat3(&currentPose.eye, eye);
 
     if (t >= 1.0f)
@@ -424,38 +450,41 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
 {
     CameraPose pose{};
 
-    float distance = cameraDistance;
+    const CameraCompositionSettings* settings = &tpsSettings;
+    if (cameraMode == CameraMode::Focus) settings = &focusSettings;
+    if (cameraMode == CameraMode::LockOn) settings = &lockOnSettings;
+    float distance = settings->distance;
 
     switch (cameraMode)
     {
     case CameraMode::TPS:
     {
         pose.target = playerPos;
+        pose.target.y += settings->lookTargetHeight;
         break;
     }
     case CameraMode::Focus:
     {
         DirectX::XMFLOAT3 forward = { sinf(yaw),0.0f,cosf(yaw) };
-        pose.target = MathHelper::Add(playerPos, MathHelper::Multiply(forward, focusDistance));        break;
+        pose.target = MathHelper::Add(playerPos, MathHelper::Multiply(forward, focusDistance));
+        pose.target.y += settings->lookTargetHeight;
+        break;
     }
     case CameraMode::LockOn:
     {
         auto enemy = enemyHead.lock();
         if (enemy)
         {
-            XMFLOAT3 enemyPos = enemy->GetComponentLocation();
+            XMFLOAT3 playerLookPosition = playerPos;
+            XMFLOAT3 enemyLookPosition = enemy->GetComponentLocation();
+            playerLookPosition.y += lockOnPlayerLookHeight;
+            enemyLookPosition.y += lockOnEnemyLookHeight;
 
-            // 壁との距離でplayerと敵の中間の割合を変更する
-            float nearWeight = std::lerp(lockOnTargetNormal, lockOnTargetNearWall, wallBlend);
-            float targetWeight = nearWeight;
-            {
-                targetWeight = std::lerp(lockOnTargetNearWall, lockOnTargetNormal, cameraHitDistance / wallDistance);
-            }
-            // プレイヤーと敵の中間を見る
-            pose.target = MathHelper::Lerp(playerPos, enemyPos, targetWeight);
+            pose.target = MathHelper::Lerp(
+                playerLookPosition,
+                enemyLookPosition,
+                lockOnTargetWeight);
         }
-        //distance = CalculateLockOnDistance();
-        distance = cameraDistance;
         break;
     }
     }
@@ -470,7 +499,9 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
         0.0f);
     XMVECTOR target = XMLoadFloat3(&pose.target);
     XMVECTOR eye = target - forward * distance;
-    eye += XMVectorSet(0, cameraHeight, 0, 0);
+    XMVECTOR right = XMVectorSet(cosf(yaw), 0.0f, -sinf(yaw), 0.0f);
+    eye += right * settings->horizontalOffset;
+    eye += XMVectorSet(0, settings->height, 0, 0);
 
     XMStoreFloat3(&pose.eye, eye);
     //  yaw と pitch を保存
@@ -582,15 +613,41 @@ void DarkCameraActor::DrawImGuiDetails()
 
     }
     ImGui::DragFloat(U8("右スティックの回転のスピード"), &rotateSpeed, 0.1f, 0.0f, 10.0f);
-    ImGui::DragFloat(U8("カメラの距離"), &cameraDistance, 0.1f, 0.0f, 10.0f);
-    ImGui::DragFloat(U8("カメラの高さ"), &cameraHeight, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat(U8("フォーカス距離"), &focusDistance, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat(U8("最小ピッチ度数"), &minPitchDegree, 0.1f, -90.0f, 90.0f);
     ImGui::DragFloat(U8("最大ピッチ度数"), &maxPitchDegree, 0.1f, -90.0f, 90.0f);
 
     ImGui::DragFloat(U8("sphereCastRadius"), &sphereCastRadius, 0.01f, 0.01f, 1.0f);
     ImGui::DragFloat(U8("blendDuration"), &blendDuration, 0.01f, 0.01f, 1.0f);
-    ImGui::DragFloat(U8("lockOnTargetWeight"), &lockOnTargetWeight, 0.1f, 0.01f, 1.0f);
+    if (ImGui::TreeNode("TPS Composition"))
+    {
+        ImGui::DragFloat("Distance##TPS", &tpsSettings.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("Height##TPS", &tpsSettings.height, 0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("LookTarget Height##TPS", &tpsSettings.lookTargetHeight, 0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("FOV##TPS", &tpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("Shoulder Offset##TPS", &tpsSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Focus Composition"))
+    {
+        ImGui::DragFloat("Distance##Focus", &focusSettings.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("Height##Focus", &focusSettings.height, 0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("LookTarget Height##Focus", &focusSettings.lookTargetHeight, 0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("FOV##Focus", &focusSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("Horizontal Offset##Focus", &focusSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("LockOn Composition"))
+    {
+        ImGui::DragFloat("Distance##LockOn", &lockOnSettings.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("Height##LockOn", &lockOnSettings.height, 0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("FOV##LockOn", &lockOnSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("Player Look Height", &lockOnPlayerLookHeight, 0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("Enemy Look Height", &lockOnEnemyLookHeight, 0.05f, -10.0f, 10.0f);
+        ImGui::SliderFloat("Player/Enemy Target Weight", &lockOnTargetWeight, 0.0f, 1.0f);
+        ImGui::DragFloat("Horizontal Offset##LockOn", &lockOnSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
+        ImGui::TreePop();
+    }
     ImGui::DragFloat(U8("ロックオンカメラの基本距離"), &lockOnCameraDistance, 0.1f, 0.01f, 10.0f);
     ImGui::DragFloat(U8("敵との距離による増加量"), &lockOnDistanceScale, 0.05f, 0.01f, 0.999f);
     ImGui::DragFloat(U8("最大距離"), &lockOnMaxDistance, 0.1f, 0.0f, 10.0f);

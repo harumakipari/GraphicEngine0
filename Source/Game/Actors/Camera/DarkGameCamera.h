@@ -25,6 +25,14 @@ public:
         float yaw;
         float pitch;
     };
+    struct CameraCompositionSettings
+    {
+        float distance = 5.0f;
+        float height = 0.0f;
+        float lookTargetHeight = 0.0f;
+        float fovDegree = 35.0f;
+        float horizontalOffset = 0.0f;
+    };
 
 public:
     //引数付きコンストラクタ
@@ -181,6 +189,13 @@ private:
     float cameraDistance = 5.0f;
     float cameraHeight = 0.0f;
     float focusDistance = 0.0f;
+
+    // モード別の構図調整値（初期値は従来値相当）
+    CameraCompositionSettings tpsSettings;
+    CameraCompositionSettings focusSettings;
+    CameraCompositionSettings lockOnSettings;
+    float lockOnPlayerLookHeight = 0.0f;
+    float lockOnEnemyLookHeight = 0.0f;
 
     // ロックオンカメラの調整値
     // カメラを敵方向から何度横へ振るか
