@@ -2086,6 +2086,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
 
     const int appliedDamage = (std::max)(0, damage);
     hp = (std::max)(0, hp - appliedDamage);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav");
     ClearActionRequest("damage_applied");
     Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
     //if (sparkComponent)
@@ -2234,8 +2235,37 @@ void Player::UpdateRushPromptUI()
 // ジャスト回避成功時の処理
 void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 {
+    int debugFrame = -1;
+#ifdef USE_IMGUI
+    if (ImGui::GetCurrentContext())
+        debugFrame = ImGui::GetFrameCount();
+#endif
+    const auto gruxEnemy = std::dynamic_pointer_cast<GruxEnemy>(enemy);
+    const uint64_t attackSequenceId = gruxEnemy
+        ? gruxEnemy->GetCurrentAttackSequenceId()
+        : 0;
+    const auto controller = GetBodyAnimationController();
+    const std::string animationName = controller
+        ? controller->GetCurrentAnimationName()
+        : "";
+    const float animationTime = controller
+        ? controller->GetCurrentAnimationTime()
+        : -1.0f;
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[JustDodgeSuccess] frame={} this={} enemy={} attackSequenceId={} justDodgeSuccess={} state={} animation={} animationTime={}",
+        debugFrame,
+        static_cast<const void*>(this),
+        static_cast<const void*>(enemy.get()),
+        attackSequenceId,
+        justDodgeSuccess,
+        stateMachine_ ? stateMachine_->GetStateName() : "",
+        animationName,
+        animationTime));
+
     // SEの再生
-    CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge1.wav", 1.0f);
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[JustDodgeSE] frame={} sound=just_dodge2.wav", debugFrame));
+    CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge2.wav", 1.0f);
 
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;

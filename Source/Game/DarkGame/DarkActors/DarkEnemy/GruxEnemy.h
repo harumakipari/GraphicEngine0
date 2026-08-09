@@ -37,6 +37,8 @@ public:
 
     void DisableAttackHitBoxes();
 
+    uint64_t GetCurrentAttackSequenceId() const { return currentAttackSequenceId; }
+
     // ƒJƒƒ‰‚Ì’‹“_‚ÌˆÊ’u
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 

@@ -756,7 +756,6 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
             " left=" + std::string(leftHitBox ? "true" : "false") +
             " right=" + (rightHitBox ? "true" : "false") +
             " hitCount=" + std::to_string(currentAttackHitCount));
-        ResetJustDodgeRecords("hitbox_end");
         break;
     case AnimationNotifyState::Type::InputWindow:
         Logger::Log(U8("コンボ受付を終了しました"));
@@ -830,7 +829,6 @@ void GruxEnemy::DisableAttackHitBoxes()
     rightHitBox = false;
     isDangerWindow = false;
     ResetDangerArea();
-    ResetJustDodgeRecords("hitboxes_disabled");
     Logger::Log(Logger::LogCategory::Gameplay,
         "[BossAttack][HitBoxesDisabled] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
         " hitCount=" + std::to_string(currentAttackHitCount));
