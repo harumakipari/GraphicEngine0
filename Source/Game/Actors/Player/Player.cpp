@@ -2234,6 +2234,9 @@ void Player::UpdateRushPromptUI()
 // ジャスト回避成功時の処理
 void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 {
+    // SEの再生
+    CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge1.wav", 1.0f);
+
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
     // スローモーションにする
@@ -2261,8 +2264,6 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 
     // UIを表示する
     //rushButtonImageComponent->SetVisible(true);
-    // SEの再生
-
 }
 
 void Player::BeginPlayerSlowReturn()
