@@ -658,7 +658,7 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
         // エフェクト生成位置
         float spawnOffset = 0.8f;
         DirectX::XMFLOAT3 spawnPos = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
-
+        spawnPos = hitPos;
 
         if (hitSwordEffectComponent)
         {

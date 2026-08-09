@@ -177,6 +177,7 @@ public:
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
 
     bool CanAcceptInitialRushInput() const;
+    bool CanShowInitialRushGuide() const;
     bool CanShowRushComboGuide() const;
     bool CanShowRushPrompt() const;
     void SetRushInputAcceptance(bool accepting);

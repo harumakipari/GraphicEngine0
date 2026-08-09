@@ -322,8 +322,8 @@ void PlayerDodgeState::Execute(float deltaTime)
             player->bufferCommand.type == Player::ActionType::Attack)
         {
             rushRequested = true;
-            player->SetRushInputAcceptance(false);
             player->SetRushInputDebugState(judgeSuccess, rushRequested);
+            player->SetRushInputAcceptance(false);
             player->BeginPlayerSlowReturn();
             player->HoldBossSlowForRush();
             player->ConsumeActionRequest(Player::ActionType::Attack);

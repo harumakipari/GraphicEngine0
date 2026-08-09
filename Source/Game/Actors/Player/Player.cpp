@@ -849,6 +849,7 @@ void Player::DrawImGuiDetails()
         ImGui::DragFloat("Fade In Duration", &rushPromptFadeInDuration, 0.01f, 0.0f, 1.0f);
         ImGui::Separator();
         ImGui::Text("CanAcceptInitialRushInput: %s", CanAcceptInitialRushInput() ? "true" : "false");
+        ImGui::Text("CanShowInitialRushGuide: %s", CanShowInitialRushGuide() ? "true" : "false");
         ImGui::Text("CanShowRushComboGuide: %s", CanShowRushComboGuide() ? "true" : "false");
         ImGui::Text("CanShowRushPrompt: %s", CanShowRushPrompt() ? "true" : "false");
         ImGui::Text("judgeSuccess: %s", rushJudgeSuccessDebug ? "true" : "false");
@@ -2054,9 +2055,21 @@ bool Player::CanShowRushComboGuide() const
         !rushTarget.expired();
 }
 
+bool Player::CanShowInitialRushGuide() const
+{
+    if (CanAcceptInitialRushInput())
+        return true;
+
+    return stateMachine_ &&
+        std::string(stateMachine_->GetStateName()) == "Dodge" &&
+        justDodgeSuccess &&
+        rushRequestedDebug &&
+        !rushTarget.expired();
+}
+
 bool Player::CanShowRushPrompt() const
 {
-    return CanAcceptInitialRushInput() || CanShowRushComboGuide();
+    return CanShowInitialRushGuide() || CanShowRushComboGuide();
 }
 
 void Player::SetRushInputAcceptance(bool accepting)
@@ -2073,6 +2086,11 @@ void Player::SetRushInputAcceptance(bool accepting)
     }
     else
     {
+        // 初回Rush入力済みなら、Dodge TransitionWindow待ちの間も
+        // 受付時の表示とAlphaをそのまま維持する。
+        if (CanShowInitialRushGuide())
+            return;
+
         rushPromptAlpha = 0.0f;
         if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(false);
         if (rushPromptTextComponent) rushPromptTextComponent->SetVisible(false);
@@ -2092,7 +2110,7 @@ void Player::UpdateRushPromptUI()
         return;
     }
 
-    const bool initialRush = CanAcceptInitialRushInput();
+    const bool initialRush = CanShowInitialRushGuide();
     const bool comboGuide = CanShowRushComboGuide();
     const bool visible = initialRush || comboGuide;
     if (!visible)
