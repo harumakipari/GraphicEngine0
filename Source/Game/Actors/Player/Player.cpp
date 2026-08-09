@@ -27,43 +27,43 @@
 
 namespace
 {
-std::string MotionWarpPositionString(const DirectX::XMFLOAT3& value)
-{
-    return "(" + std::to_string(value.x) + "," +
-        std::to_string(value.y) + "," + std::to_string(value.z) + ")";
-}
-
-float NormalizeAngleDegrees(float angle)
-{
-    while (angle > 180.0f) angle -= 360.0f;
-    while (angle < -180.0f) angle += 360.0f;
-    return angle;
-}
-
-const char* ToString(Player::ActionType action)
-{
-    switch (action)
+    std::string MotionWarpPositionString(const DirectX::XMFLOAT3& value)
     {
-    case Player::ActionType::None:     return "None";
-    case Player::ActionType::Attack:   return "Attack";
-    case Player::ActionType::Dodge:    return "Dodge";
-    case Player::ActionType::Dash:     return "Dash";
-    case Player::ActionType::Jump:     return "Jump";
-    case Player::ActionType::Interact: return "Interact";
+        return "(" + std::to_string(value.x) + "," +
+            std::to_string(value.y) + "," + std::to_string(value.z) + ")";
     }
-    return "Unknown";
-}
 
-int GetActionPriority(Player::ActionType action)
-{
-    switch (action)
+    float NormalizeAngleDegrees(float angle)
     {
-    case Player::ActionType::Dodge:  return 3;
-    case Player::ActionType::Attack: return 2;
-    case Player::ActionType::Dash:   return 1;
-    default:                         return 0;
+        while (angle > 180.0f) angle -= 360.0f;
+        while (angle < -180.0f) angle += 360.0f;
+        return angle;
     }
-}
+
+    const char* ToString(Player::ActionType action)
+    {
+        switch (action)
+        {
+        case Player::ActionType::None:     return "None";
+        case Player::ActionType::Attack:   return "Attack";
+        case Player::ActionType::Dodge:    return "Dodge";
+        case Player::ActionType::Dash:     return "Dash";
+        case Player::ActionType::Jump:     return "Jump";
+        case Player::ActionType::Interact: return "Interact";
+        }
+        return "Unknown";
+    }
+
+    int GetActionPriority(Player::ActionType action)
+    {
+        switch (action)
+        {
+        case Player::ActionType::Dodge:  return 3;
+        case Player::ActionType::Attack: return 2;
+        case Player::ActionType::Dash:   return 1;
+        default:                         return 0;
+        }
+    }
 }
 
 
@@ -441,9 +441,7 @@ void Player::Initialize(const Transform& transform)
 
     rushPromptTextComponent = std::make_shared<UITextComponent>("RushPromptText");
     rushPromptTextComponent->SetText(L"RUSH");
-    rushPromptTextComponent->SetWorldPosition({
-        rushPromptPosition.x + rushPromptTextOffset.x,
-        rushPromptPosition.y + rushPromptTextOffset.y });
+    rushPromptTextComponent->SetWorldPosition({ rushPromptPosition.x + rushPromptTextOffset.x,rushPromptPosition.y + rushPromptTextOffset.y });
     rushPromptTextComponent->SetPivot({ 0.0f, 0.5f });
     rushPromptTextComponent->SetScale({ 0.8f, 0.8f });
     rushPromptTextComponent->SetVisible(false);
@@ -1708,22 +1706,22 @@ void Player::UpdateMovement()
         }
 
         const auto calculateDirectionalSpeedScale = [&](const float x, const float z)
-        {
-            const float forwardWeight = z > 0.0f ? z : 0.0f;
-            const float backwardWeight = z < 0.0f ? -z : 0.0f;
-            const float sideWeight = std::fabs(x);
-            const float totalWeight =
-                forwardWeight + sideWeight + backwardWeight;
+            {
+                const float forwardWeight = z > 0.0f ? z : 0.0f;
+                const float backwardWeight = z < 0.0f ? -z : 0.0f;
+                const float sideWeight = std::fabs(x);
+                const float totalWeight =
+                    forwardWeight + sideWeight + backwardWeight;
 
-            if (totalWeight <= FLT_EPSILON)
-                return 1.0f;
+                if (totalWeight <= FLT_EPSILON)
+                    return 1.0f;
 
-            return
-                (forwardWeight * forwardSpeedScale +
-                    sideWeight * sideSpeedScale +
-                    backwardWeight * backwardSpeedScale) /
-                totalWeight;
-        };
+                return
+                    (forwardWeight * forwardSpeedScale +
+                        sideWeight * sideSpeedScale +
+                        backwardWeight * backwardSpeedScale) /
+                    totalWeight;
+            };
 
         float directionSpeedScale = 1.0f;
 
