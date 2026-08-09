@@ -580,39 +580,123 @@ void Player::Update(float deltaTime)
     // 当たり判定が有効な時にスフィアキャストをする
     if (hitBox)
     {
-        HitResultWithActor hit;
-        bool isHit = false;
-        HitResultWithActor tmp;
-
-        if (CollisionFunction::SphereRayCast(prevSwordRootPos, swordRootPos, tmp,
-            weaponSphereRadius, CollisionHelper::ToBit(CollisionLayer::Enemy)))
+        struct SwordSweepResult
         {
-            hit = tmp;
-            isHit = true;
+            const char* source;
+            bool hit;
+            float sweepLength;
+            DirectX::XMFLOAT3 start;
+            DirectX::XMFLOAT3 end;
+            HitResultWithActor result;
+        };
+
+        const auto sweepLength = [](const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end)
+        {
+            return MathHelper::Length(MathHelper::Subtract(end, start));
+        };
+
+        SwordSweepResult sweeps[] =
+        {
+            { "Root", false, sweepLength(prevSwordRootPos, swordRootPos), prevSwordRootPos, swordRootPos, {} },
+            { "Mid",  false, sweepLength(prevSwordMidPos, swordMidPos),   prevSwordMidPos,  swordMidPos,  {} },
+            { "Tip",  false, sweepLength(prevSwordTipPos, swordTipPos),   prevSwordTipPos,  swordTipPos,  {} },
+        };
+
+        const uint32_t enemyLayer = CollisionHelper::ToBit(CollisionLayer::Enemy);
+        sweeps[0].hit = CollisionFunction::SphereRayCast(
+            prevSwordRootPos, swordRootPos, sweeps[0].result, weaponSphereRadius, enemyLayer, true);
+        sweeps[1].hit = CollisionFunction::SphereRayCast(
+            prevSwordMidPos, swordMidPos, sweeps[1].result, weaponSphereRadius, enemyLayer, true);
+        sweeps[2].hit = CollisionFunction::SphereRayCast(
+            prevSwordTipPos, swordTipPos, sweeps[2].result, weaponSphereRadius, enemyLayer, true);
+
+        constexpr float minSweepLength = 0.0001f;
+        const SwordSweepResult* selectedNormalHit = nullptr;
+        const SwordSweepResult* selectedOverlapHit = nullptr;
+        const SwordSweepResult* selectedDamageHit = nullptr;
+        float selectedNormalToi = FLT_MAX;
+        float selectedOverlapDepth = FLT_MAX;
+        float selectedDamageToi = FLT_MAX;
+        const bool anySweepHit = sweeps[0].hit || sweeps[1].hit || sweeps[2].hit;
+
+        for (const SwordSweepResult& sweep : sweeps)
+        {
+            const bool validSweepLength = sweep.sweepLength > minSweepLength;
+            const float toi = sweep.hit && validSweepLength
+                ? sweep.result.distance / sweep.sweepLength
+                : -1.0f;
+            const std::string actorName = sweep.result.actor
+                ? sweep.result.actor->GetName()
+                : "null";
+            if (swordHitDebug && anySweepHit)
+            {
+                Logger::Log(Logger::LogCategory::Physics, std::format(
+                    "[SwordHit] source={} success={} actor={} hasPosition={} hasNormal={} initialOverlap={} distance={} penetrationDepth={} sweepLength={} toi={} hitPoint={} normal={} prevPos={} currentPos={}",
+                    sweep.source,
+                    sweep.hit,
+                    actorName,
+                    sweep.result.hasPosition,
+                    sweep.result.hasNormal,
+                    sweep.result.initialOverlap,
+                    sweep.result.distance,
+                    sweep.result.penetrationDepth,
+                    sweep.sweepLength,
+                    toi,
+                    MotionWarpPositionString(sweep.result.hitPoint),
+                    MotionWarpPositionString(sweep.result.normal),
+                    MotionWarpPositionString(sweep.start),
+                    MotionWarpPositionString(sweep.end)));
+            }
+
+            if (!sweep.hit || !validSweepLength)
+                continue;
+
+            const float damageOrder = sweep.result.initialOverlap ? 0.0f : toi;
+            if (damageOrder < selectedDamageToi)
+            {
+                selectedDamageToi = damageOrder;
+                selectedDamageHit = &sweep;
+            }
+            if (!sweep.result.initialOverlap && sweep.result.hasPosition &&
+                sweep.result.hasNormal && toi < selectedNormalToi)
+            {
+                selectedNormalToi = toi;
+                selectedNormalHit = &sweep;
+            }
+            else if (sweep.result.initialOverlap && sweep.result.hasPosition &&
+                sweep.result.hasNormal && sweep.result.penetrationDepth < selectedOverlapDepth)
+            {
+                selectedOverlapDepth = sweep.result.penetrationDepth;
+                selectedOverlapHit = &sweep;
+            }
         }
 
-        if (CollisionFunction::SphereRayCast(prevSwordMidPos, swordMidPos, tmp,
-            weaponSphereRadius, CollisionHelper::ToBit(CollisionLayer::Enemy)))
+        // 有効Positionがあれば、そのHitのActorをDamage対象にも優先する。
+        const SwordSweepResult* selectedEffectHit = selectedNormalHit
+            ? selectedNormalHit
+            : selectedOverlapHit;
+        const SwordSweepResult* selectedHit = selectedEffectHit
+            ? selectedEffectHit
+            : selectedDamageHit;
+        if (selectedHit)
         {
-            hit = tmp;
-            isHit = true;
-        }
-
-        if (CollisionFunction::SphereRayCast(prevSwordTipPos, swordTipPos, tmp,
-            weaponSphereRadius, CollisionHelper::ToBit(CollisionLayer::Enemy)))
-        {
-            hit = tmp;
-            isHit = true;
-        }
-        if (isHit)
-        {
+            const HitResultWithActor& hit = selectedHit->result;
             if (!hitActors.contains(hit.actor))
             {
                 if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
                 {
                     Logger::Log(U8("剣に敵が当たった"));
                     enemy->TakeDamage(1);
-                    enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
+                    if (selectedEffectHit && hit.hasPosition && hit.hasNormal)
+                    {
+                        enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
+                    }
+                    else
+                    {
+                        if (swordHitDebug)
+                            Logger::Log(Logger::LogCategory::Physics,
+                                "[SwordHit] effect skipped: no valid hit position/normal");
+                    }
                     hitActors.emplace(enemy);
 
                 }
@@ -808,6 +892,7 @@ void Player::DrawImGuiDetails()
 #ifdef USE_IMGUI
     ImGui::Checkbox(U8("ボス戦カメラ"), &isBossBattle);
     ImGui::DragFloat(U8("剣の球の当たり判定の半径"), &weaponSphereRadius, 0.05f);
+    ImGui::Checkbox("Sword Hit Debug", &swordHitDebug);
     ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);

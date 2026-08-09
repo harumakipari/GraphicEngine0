@@ -640,8 +640,11 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
 }
 
 // スフィアキャスト
-bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResultWithActor& result, uint32_t wantToHitLayer/*なにと当たりたいか、ここの数字に入れたら、この数値と同じレイヤーに当たる*/)
+bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResultWithActor& result, uint32_t wantToHitLayer/*なにと当たりたいか、ここの数字に入れたら、この数値と同じレイヤーに当たる*/, bool useMTD)
 {
+    // 呼び出し元が同じ変数を再利用しても、前回の結果を残さない。
+    result = HitResultWithActor{};
+
     physx::PxQueryFilterData pxQueryFilterData{};
     pxQueryFilterData.flags =
         physx::PxQueryFlag::eDYNAMIC |
@@ -656,6 +659,8 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
         physx::PxVec3(origin.x, origin.y, origin.z),
         physx::PxQuat(0, 0, 0, 1));
     physx::PxHitFlags hitFlags = physx::PxHitFlag::ePOSITION | physx::PxHitFlag::eNORMAL;
+    if (useMTD)
+        hitFlags |= physx::PxHitFlag::eMTD;
     bool hit = pxScene->sweep(pxGeometry,
         physx::PxTransform(origin.x, origin.y, origin.z),
         physx::PxVec3(direction.x, direction.y, direction.z),
@@ -667,18 +672,28 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
 
     if (hit && pxSweepBuffer.hasBlock)
     {
-        const physx::PxVec3& p = pxSweepBuffer.block.position;
+        const physx::PxSweepHit& block = pxSweepBuffer.block;
+        result.hasPosition = block.flags.isSet(physx::PxHitFlag::ePOSITION);
+        result.hasNormal = block.flags.isSet(physx::PxHitFlag::eNORMAL);
+        result.initialOverlap = block.hadInitialOverlap();
+        result.penetrationDepth = result.initialOverlap
+            ? (std::max)(0.0f, -block.distance)
+            : 0.0f;
+
+        const physx::PxVec3& p = block.position;
         //OutputDebugStringA(("Hit Position: " + std::to_string(p.x) + "," + std::to_string(p.y) + "," + std::to_string(p.z) + "\n").c_str());
-        const physx::PxVec3& n = pxSweepBuffer.block.normal;
+        const physx::PxVec3& n = block.normal;
 
-        result.hitPoint = DirectX::XMFLOAT3(p.x, p.y, p.z);
-        result.normal = DirectX::XMFLOAT3(n.x, n.y, n.z);
-        result.distance = pxSweepBuffer.block.distance;
-        if (pxSweepBuffer.block.actor && pxSweepBuffer.block.actor->userData)
-            result.actor = static_cast<Actor*>(pxSweepBuffer.block.actor->userData);
+        if (result.hasPosition)
+            result.hitPoint = DirectX::XMFLOAT3(p.x, p.y, p.z);
+        if (result.hasNormal)
+            result.normal = DirectX::XMFLOAT3(n.x, n.y, n.z);
+        result.distance = block.distance;
+        if (block.actor && block.actor->userData)
+            result.actor = static_cast<Actor*>(block.actor->userData);
 
-        if (pxSweepBuffer.block.shape && pxSweepBuffer.block.shape->userData)
-            result.component = static_cast<ShapeComponent*>(pxSweepBuffer.block.shape->userData);
+        if (block.shape && block.shape->userData)
+            result.component = static_cast<ShapeComponent*>(block.shape->userData);
 
 
         distance = result.distance;

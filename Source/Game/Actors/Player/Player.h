@@ -276,6 +276,7 @@ public:
     bool rushInputAccepting = false;
     bool rushJudgeSuccessDebug = false;
     bool rushRequestedDebug = false;
+    bool swordHitDebug = false;
     float rushPromptAlpha = 0.0f;
     float rushPromptFadeInDuration = 0.10f;
     DirectX::XMFLOAT2 rushPromptPosition = { 640.0f, 450.0f };

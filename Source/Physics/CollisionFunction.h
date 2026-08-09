@@ -15,7 +15,8 @@ namespace CollisionFunction
         const DirectX::XMFLOAT3& rayEnd,
         HitResultWithActor& result,
         float radius = 0.3f,
-        uint32_t collisionLayer = 0xFFFFFF)
+        uint32_t collisionLayer = 0xFFFFFF,
+        bool useMTD = false)
     {
         using namespace DirectX;
 
@@ -40,7 +41,8 @@ namespace CollisionFunction
             distance,
             radius,
             result,
-            collisionLayer);
+            collisionLayer,
+            useMTD);
     }
 
     inline bool CapsuleCast(

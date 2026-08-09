@@ -485,9 +485,19 @@ void GruxEnemy::Update(float deltaTime)
         DirectX::XMFLOAT3 weaponLeftMidPos = weaponLeftMiddleComponent->GetComponentLocation();
         DirectX::XMFLOAT3 weaponLeftTipPos = weaponLeftTipComponent->GetComponentLocation();
 
-        isLeftHit |= CollisionFunction::SphereRayCast(prevWeaponLeftRootPos, weaponLeftRootPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        isLeftHit |= CollisionFunction::SphereRayCast(prevWeaponLeftMidPos, weaponLeftMidPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        isLeftHit |= CollisionFunction::SphereRayCast(prevWeaponLeftTipPos, weaponLeftTipPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        HitResultWithActor leftRootHit;
+        HitResultWithActor leftMidHit;
+        HitResultWithActor leftTipHit;
+        const bool leftRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftRootPos, weaponLeftRootPos, leftRootHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool leftMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftMidPos, weaponLeftMidPos, leftMidHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool leftTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftTipPos, weaponLeftTipPos, leftTipHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        isLeftHit = leftRootSucceeded || leftMidSucceeded || leftTipSucceeded;
+        if (leftRootSucceeded)
+            hit = leftRootHit;
+        else if (leftMidSucceeded)
+            hit = leftMidHit;
+        else if (leftTipSucceeded)
+            hit = leftTipHit;
 
         prevWeaponLeftRootPos = weaponLeftRootPos;
         prevWeaponLeftMidPos = weaponLeftMidPos;
@@ -530,9 +540,19 @@ void GruxEnemy::Update(float deltaTime)
         DirectX::XMFLOAT3 weaponRightMidPos = weaponRightMiddleComponent->GetComponentLocation();
         DirectX::XMFLOAT3 weaponRightTipPos = weaponRightTipComponent->GetComponentLocation();
 
-        isRightHit |= CollisionFunction::SphereRayCast(prevWeaponRightRootPos, weaponRightRootPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        isRightHit |= CollisionFunction::SphereRayCast(prevWeaponRightMidPos, weaponRightMidPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        isRightHit |= CollisionFunction::SphereRayCast(prevWeaponRightTipPos, weaponRightTipPos, hit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        HitResultWithActor rightRootHit;
+        HitResultWithActor rightMidHit;
+        HitResultWithActor rightTipHit;
+        const bool rightRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightRootPos, weaponRightRootPos, rightRootHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool rightMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightMidPos, weaponRightMidPos, rightMidHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool rightTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightTipPos, weaponRightTipPos, rightTipHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        isRightHit = rightRootSucceeded || rightMidSucceeded || rightTipSucceeded;
+        if (rightRootSucceeded)
+            hit = rightRootHit;
+        else if (rightMidSucceeded)
+            hit = rightMidHit;
+        else if (rightTipSucceeded)
+            hit = rightTipHit;
 
         prevWeaponRightRootPos = weaponRightRootPos;
         prevWeaponRightMidPos = weaponRightMidPos;

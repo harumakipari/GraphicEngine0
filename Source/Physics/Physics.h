@@ -27,6 +27,10 @@ struct HitResultWithActor
     float distance = 0.0f;      // 距離
     DirectX::XMFLOAT3 hitPoint = { 0,0,0 };    // ヒット距離
     DirectX::XMFLOAT3 normal = { 0,1,0 };    // 法線
+    bool hasPosition = false;
+    bool hasNormal = false;
+    bool initialOverlap = false;
+    float penetrationDepth = 0.0f;
 };
 
 /// マテリアルタイプ
@@ -96,7 +100,7 @@ public:
 
     // スフィアキャスト
     bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
-    bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResultWithActor& result, uint32_t wantToHitLayer = 0xFFFFFF);
+    bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResultWithActor& result, uint32_t wantToHitLayer = 0xFFFFFF, bool useMTD = false);
 
     // カプセルキャスト
     bool CapsuleCast(const DirectX::XMFLOAT3& point1, const DirectX::XMFLOAT3& point2, float radius, const DirectX::XMFLOAT3& direction, float distance, bool trigger, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
