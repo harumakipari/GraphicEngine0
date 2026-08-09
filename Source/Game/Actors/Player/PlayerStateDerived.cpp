@@ -272,6 +272,8 @@ void PlayerAttackState::Exit()
 void PlayerDodgeState::Enter()
 {
     player->ResetAnimationStateFlag();
+    player->SetRushInputAcceptance(false);
+    player->SetRushInputDebugState(false, false);
 
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetFixedSpeed(0.0f);
@@ -304,24 +306,24 @@ void PlayerDodgeState::Enter()
 void PlayerDodgeState::Execute(float deltaTime)
 {
 
-    if (player->justDodgeSuccess)
+    if (player->justDodgeSuccess && !judgeSuccess)
     {// ジャスト回避成功したら、
         judgeSuccess = true;
+        player->SetRushInputAcceptance(!player->rushTarget.expired());
     }
+    if (player->rushTarget.expired())
+    {
+        player->SetRushInputAcceptance(false);
+    }
+    player->SetRushInputDebugState(judgeSuccess, rushRequested);
     if (judgeSuccess)
     {
-        if (player->inputWindow)
-        {// 
-            //player->rushButtonImageComponent->SetVisible(true);
-        }
-        else
-        {
-            player->rushButtonImageComponent->SetVisible(false);
-        }
-
-        if (player->bufferCommand.type == Player::ActionType::Attack)
+        if (player->CanAcceptRushInput() &&
+            player->bufferCommand.type == Player::ActionType::Attack)
         {
             rushRequested = true;
+            player->SetRushInputAcceptance(false);
+            player->SetRushInputDebugState(judgeSuccess, rushRequested);
             player->BeginPlayerSlowReturn();
             player->HoldBossSlowForRush();
             player->ConsumeActionRequest(Player::ActionType::Attack);
@@ -335,6 +337,7 @@ void PlayerDodgeState::Execute(float deltaTime)
             }
             else
             {
+                player->SetRushInputAcceptance(false);
                 DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
                 if (MathHelper::Length(move) > 0.1f)
                 {
@@ -350,6 +353,7 @@ void PlayerDodgeState::Execute(float deltaTime)
     }
     else if (player->transitionWindow)
     {
+        player->SetRushInputAcceptance(false);
 
         DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
 
@@ -365,6 +369,7 @@ void PlayerDodgeState::Execute(float deltaTime)
 #if 1
     if (!player->GetBodyAnimationController()->IsPlayAnimation())
     {// 保険
+        player->SetRushInputAcceptance(false);
         player->GetStateMachine()->ChangeState("Idle");
     }
 #endif // 0
@@ -373,6 +378,8 @@ void PlayerDodgeState::Execute(float deltaTime)
 void PlayerDodgeState::Exit()
 {
     const bool enteringRush = rushRequested;
+    player->SetRushInputAcceptance(false);
+    player->SetRushInputDebugState(false, false);
     rushRequested = false;
     judgeSuccess = false;
     player->ResetAnimationStateFlag();

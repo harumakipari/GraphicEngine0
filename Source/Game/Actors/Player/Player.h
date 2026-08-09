@@ -176,6 +176,10 @@ public:
     // ジャスト回避成功時の処理　ラッシュ受付期間開始
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
 
+    bool CanAcceptRushInput() const;
+    void SetRushInputAcceptance(bool accepting);
+    void SetRushInputDebugState(bool judgeSuccess, bool rushRequested);
+
     // Player/Bossの解除タイミングを独立して管理する。
     void BeginPlayerSlowReturn();
     void BeginBossSlowReturn(bool afterRush = false);
@@ -206,6 +210,8 @@ public:
 private:
     // 動作更新処理
     void UpdateMovement();
+
+    void UpdateRushPromptUI();
 
     // 回避の方向を決定する処理
     void DecideLockOnDodgeDirection();
@@ -263,6 +269,15 @@ public:
     bool attackRotationTracking = false;
 
     std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
+
+    bool rushInputAccepting = false;
+    bool rushJudgeSuccessDebug = false;
+    bool rushRequestedDebug = false;
+    float rushPromptAlpha = 0.0f;
+    float rushPromptFadeInDuration = 0.10f;
+    DirectX::XMFLOAT2 rushPromptPosition = { 640.0f, 450.0f };
+    DirectX::XMFLOAT2 rushPromptTextOffset = { 52.0f, 0.0f };
+    float rushPromptIconSize = 64.0f;
 
     // 入力受付のコマンド
     ActionRequest bufferCommand{}; // 入力コマンド
@@ -324,6 +339,7 @@ public:
 
     // ラッシュ時のUI
     std::shared_ptr<UIImageComponent> rushButtonImageComponent;
+    std::shared_ptr<UITextComponent> rushPromptTextComponent;
     // ラッシュの時のコンボカウント（回避中にもラッシュをカウントするための変数）
     int rushQueuedAttackCount = 0;
 private:

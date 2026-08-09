@@ -432,12 +432,22 @@ void Player::Initialize(const Transform& transform)
     // ラッシュ時のUIを作成
     auto uiManager = GetOwnerScene()->GetUIManager();
     rushButtonImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Y.png", "Y");
-    rushButtonImageComponent->SetWorldPosition({ 50, 50 });
-    rushButtonImageComponent->SetScale({ 1.2f,1.2f });
-    rushButtonImageComponent->SetSize({ 200, 200 });
+    rushButtonImageComponent->SetWorldPosition(rushPromptPosition);
+    rushButtonImageComponent->SetScale({ 1.0f,1.0f });
+    rushButtonImageComponent->SetSize({ rushPromptIconSize, rushPromptIconSize });
     rushButtonImageComponent->SetPivot({ 0.5f,0.5f });
     rushButtonImageComponent->SetVisible(false);
     uiManager->Add(rushButtonImageComponent);
+
+    rushPromptTextComponent = std::make_shared<UITextComponent>("RushPromptText");
+    rushPromptTextComponent->SetText(L"RUSH");
+    rushPromptTextComponent->SetWorldPosition({
+        rushPromptPosition.x + rushPromptTextOffset.x,
+        rushPromptPosition.y + rushPromptTextOffset.y });
+    rushPromptTextComponent->SetPivot({ 0.0f, 0.5f });
+    rushPromptTextComponent->SetScale({ 0.8f, 0.8f });
+    rushPromptTextComponent->SetVisible(false);
+    uiManager->Add(rushPromptTextComponent);
     SetEulerRotation({ 0.0f,90.0f,0.0f });
 
     // 操作説明UIを入れる
@@ -737,6 +747,9 @@ void Player::Update(float deltaTime)
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(deltaTime);
 
+    // Dodge State更新後の受付状態を、そのフレームのUIへ反映する。
+    UpdateRushPromptUI();
+
     // 剣のデバックの当たり判定を描画するかどうか
     if (swordCollisionComp)
         swordCollisionComp->SetIsVisibleDebugShape(hitBox);
@@ -827,6 +840,21 @@ void Player::DrawImGuiDetails()
         ImGui::SliderFloat("Rush Boss Return Duration", &rushBossReturnDuration, 0.00f, 0.50f, "%.2f sec");
         ImGui::Text("Player Phase: %d / Scale: %.3f", static_cast<int>(playerSlowPhase), GetTimeScale());
         ImGui::Text("Boss Phase: %d", static_cast<int>(bossSlowPhase));
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Rush Input Prompt"))
+    {
+        ImGui::DragFloat("Position X", &rushPromptPosition.x, 1.0f);
+        ImGui::DragFloat("Position Y", &rushPromptPosition.y, 1.0f);
+        ImGui::DragFloat("Icon Size", &rushPromptIconSize, 1.0f, 1.0f, 512.0f);
+        ImGui::DragFloat2("Text Offset", &rushPromptTextOffset.x, 1.0f);
+        ImGui::DragFloat("Fade In Duration", &rushPromptFadeInDuration, 0.01f, 0.0f, 1.0f);
+        ImGui::Separator();
+        ImGui::Text("CanAcceptRushInput: %s", CanAcceptRushInput() ? "true" : "false");
+        ImGui::Text("judgeSuccess: %s", rushJudgeSuccessDebug ? "true" : "false");
+        ImGui::Text("rushRequested: %s", rushRequestedDebug ? "true" : "false");
+        ImGui::Text("rushTargetValid: %s", rushTarget.expired() ? "false" : "true");
+        ImGui::Text("UI Alpha: %.3f", rushPromptAlpha);
         ImGui::TreePop();
     }
     ImGui::DragFloat("transparencyMinAlpha", &transparencyMinAlpha, 0.05f);
@@ -2008,6 +2036,81 @@ void Player::StartAttack()
 void Player::EndAttack()
 {
     isAttackActive = false;
+}
+
+bool Player::CanAcceptRushInput() const
+{
+    return rushInputAccepting &&
+        justDodgeSuccess &&
+        stateMachine_ &&
+        std::string(stateMachine_->GetStateName()) == "Dodge" &&
+        !rushTarget.expired();
+}
+
+void Player::SetRushInputAcceptance(bool accepting)
+{
+    if (rushInputAccepting == accepting)
+    {
+        return;
+    }
+
+    rushInputAccepting = accepting;
+    if (accepting)
+    {
+        rushPromptAlpha = 0.0f;
+    }
+    else
+    {
+        rushPromptAlpha = 0.0f;
+        if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(false);
+        if (rushPromptTextComponent) rushPromptTextComponent->SetVisible(false);
+    }
+}
+
+void Player::SetRushInputDebugState(bool judgeSuccess, bool rushRequested)
+{
+    rushJudgeSuccessDebug = judgeSuccess;
+    rushRequestedDebug = rushRequested;
+}
+
+void Player::UpdateRushPromptUI()
+{
+    if (!rushButtonImageComponent || !rushPromptTextComponent)
+    {
+        return;
+    }
+
+    const bool visible = CanAcceptRushInput();
+    if (!visible)
+    {
+        rushPromptAlpha = 0.0f;
+        rushButtonImageComponent->SetVisible(false);
+        rushPromptTextComponent->SetVisible(false);
+        return;
+    }
+
+    if (rushPromptFadeInDuration <= FLT_EPSILON)
+    {
+        rushPromptAlpha = 1.0f;
+    }
+    else
+    {
+        rushPromptAlpha = std::clamp(
+            rushPromptAlpha + Time::UnscaledDeltaTime() / rushPromptFadeInDuration,
+            0.0f, 1.0f);
+    }
+
+    rushButtonImageComponent->SetWorldPosition(rushPromptPosition);
+    rushButtonImageComponent->SetSize({ rushPromptIconSize, rushPromptIconSize });
+    rushButtonImageComponent->SetColor(
+        DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, rushPromptAlpha });
+    rushButtonImageComponent->SetVisible(true);
+
+    rushPromptTextComponent->SetWorldPosition({
+        rushPromptPosition.x + rushPromptTextOffset.x,
+        rushPromptPosition.y + rushPromptTextOffset.y });
+    rushPromptTextComponent->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, rushPromptAlpha });
+    rushPromptTextComponent->SetVisible(true);
 }
 
 // ジャスト回避成功時の処理

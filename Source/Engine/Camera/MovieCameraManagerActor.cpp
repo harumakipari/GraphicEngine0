@@ -155,7 +155,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
         }
         doorMovieState = DoorMovieState::BossRoomLerp;
     }
-    break;
+        break;
     case DoorMovieState::BossRoomLerp:
         break;
     case DoorMovieState::UpPlayerCombat:
