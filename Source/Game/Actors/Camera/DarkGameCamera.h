@@ -107,6 +107,12 @@ public:
         {
             return;
         }
+        const CameraMode previousRequestMode = requestMode;
+        if ((previousRequestMode == CameraMode::TPS && mode == CameraMode::LockOn) ||
+            (previousRequestMode == CameraMode::LockOn && mode == CameraMode::TPS))
+        {
+            BeginLockOnTransitionDiagnostics(previousRequestMode, mode);
+        }
         if (mode == CameraMode::LockOn && requestMode != CameraMode::LockOn)
         {
             ResetLockOnAdaptiveState();
@@ -161,6 +167,10 @@ private:
 
     // LockOn開始時に前回の適応値を持ち越さない
     void ResetLockOnAdaptiveState();
+
+    // TPS <-> LockOn切替時の壁際構図を追跡する
+    void BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to);
+    void UpdateLockOnTransitionDiagnostics();
 
     // ロックオンのカメラ距離を計算する関数
     float CalculateLockOnDistance() const;
@@ -222,9 +232,10 @@ private:
     // LockOn適応構図。広い場所では基準値を変更しない。
     float lockOnCollisionStartRatio = 0.9f;
     float lockOnCollisionFullRatio = 0.45f;
-    float lockOnWallTargetWeight = 0.35f;
-    float lockOnWallHorizontalScale = 0.2f;
+    float lockOnWallTargetWeight = 0.72f;
+    float lockOnWallHorizontalScale = 1.0f;
     float lockOnWallDistanceScale = 0.85f;
+    float lockOnCollisionRatioHysteresis = 0.02f;
     float lockOnDistanceStart = 4.0f;
     float lockOnDistanceFull = 9.0f;
     float lockOnMaxDistanceAdd = 2.0f;
@@ -234,6 +245,7 @@ private:
     float lockOnCompositionLerpSpeed = 6.0f;
 
     float lockOnCollisionStrength = 0.0f;
+    float lockOnCollisionRatioForAdaptive = 1.0f;
     float lockOnDistanceStrength = 0.0f;
     float lockOnDistanceForZoom = 0.0f;
     float desiredLockOnCameraDistance = 6.55f;
@@ -250,6 +262,21 @@ private:
     float desiredCameraDistance = 0.0f;
     float actualCameraDistance = 0.0f;
     float lockOnEnemyDistance = 0.0f;
+
+    // TPS <-> LockOn診断（切替後30フレームを記録）
+    bool lockOnTransitionDiagnosticsActive = false;
+    int lockOnTransitionDiagnosticsFrame = 0;
+    CameraMode lockOnTransitionTo = CameraMode::TPS;
+    DirectX::XMFLOAT3 transitionStartDesiredEye{};
+    DirectX::XMFLOAT3 transitionStartCollisionPostEye{};
+    float transitionStartCollisionRatio = 1.0f;
+    float transitionStartAdaptiveDistance = 0.0f;
+    float transitionStartAdaptiveTargetWeight = 0.0f;
+    float transitionMaxDesiredEyeDelta = 0.0f;
+    float transitionMaxCollisionPostEyeDelta = 0.0f;
+    float transitionMaxCollisionRatioDelta = 0.0f;
+    float transitionMaxAdaptiveDistanceDelta = 0.0f;
+    float transitionMaxAdaptiveTargetWeightDelta = 0.0f;
 
     // ロックオンカメラの調整値
     // カメラを敵方向から何度横へ振るか
@@ -297,4 +324,3 @@ private:
     float startDistance = 5.0f;
     float targetDistance = 5.0f;
 };
-

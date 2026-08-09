@@ -114,6 +114,8 @@ void DarkCameraActor::Update(float deltaTime)
         ? actualCameraDistance / desiredCameraDistance
         : 1.0f;
 
+    UpdateLockOnTransitionDiagnostics();
+
     float targetBlend = cameraHitWall ? 1.0f : 0.0f;
 
     wallBlend = std::lerp(wallBlend, targetBlend, deltaTime * 8.0f);
@@ -501,11 +503,21 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
         lockOnDistanceForZoom = lockOnEnemyDistance + lockOnDistanceDeadZone;
     }
 
+    // Collision RatioÇ™ê⁄êGã´äEÇ≈î˜êUìÆÇµÇƒÇ‡AdaptiveílÇâùïúÇ≥ÇπÇ»Ç¢ÅB
+    if (cameraCollisionRatio < lockOnCollisionRatioForAdaptive - lockOnCollisionRatioHysteresis)
+    {
+        lockOnCollisionRatioForAdaptive = cameraCollisionRatio + lockOnCollisionRatioHysteresis;
+    }
+    else if (cameraCollisionRatio > lockOnCollisionRatioForAdaptive + lockOnCollisionRatioHysteresis)
+    {
+        lockOnCollisionRatioForAdaptive = cameraCollisionRatio - lockOnCollisionRatioHysteresis;
+    }
+
     const float collisionRange = std::max<float>(
         lockOnCollisionStartRatio - lockOnCollisionFullRatio,
         FLT_EPSILON);
     const float collisionInput =
-        (lockOnCollisionStartRatio - cameraCollisionRatio) / collisionRange;
+        (lockOnCollisionStartRatio - lockOnCollisionRatioForAdaptive) / collisionRange;
     const float targetCollisionStrength = SmoothStep01(collisionInput);
 
     const float enemyRange = std::max<float>(
@@ -525,14 +537,11 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
         lerpRate);
     lockOnDistanceStrength = targetDistanceStrength;
 
-    adaptiveLockOnTargetWeight = std::lerp(
-        lockOnTargetWeight,
-        lockOnWallTargetWeight,
-        lockOnCollisionStrength);
-    adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset * std::lerp(
-        1.0f,
-        lockOnWallHorizontalScale,
-        lockOnCollisionStrength);
+    // ï«ç€ÇÃèâä˙î‰ärÇÕDistance AdaptiveÇÃÇ›ÅBWeight/OffsetÇÕBaseílÇà€éùÇ∑ÇÈÅB
+    lockOnWallTargetWeight = lockOnTargetWeight;
+    lockOnWallHorizontalScale = 1.0f;
+    adaptiveLockOnTargetWeight = lockOnTargetWeight;
+    adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset;
 
     desiredLockOnCameraDistance =
         lockOnSettings.distance + lockOnMaxDistanceAdd * lockOnDistanceStrength;
@@ -557,6 +566,7 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
 void DarkCameraActor::ResetLockOnAdaptiveState()
 {
     lockOnCollisionStrength = 0.0f;
+    lockOnCollisionRatioForAdaptive = 1.0f;
     lockOnDistanceStrength = 0.0f;
     lockOnDistanceForZoom = 0.0f;
     lockOnEnemyDistance = 0.0f;
@@ -566,6 +576,79 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
     currentLockOnZoomSpeed = 0.0f;
     adaptiveLockOnTargetWeight = lockOnTargetWeight;
     adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset;
+}
+
+void DarkCameraActor::BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to)
+{
+    (void)from;
+    lockOnTransitionDiagnosticsActive = true;
+    lockOnTransitionDiagnosticsFrame = 0;
+    lockOnTransitionTo = to;
+    transitionStartDesiredEye = desiredEyePosition;
+    transitionStartCollisionPostEye = collisionPostEyePosition;
+    transitionStartCollisionRatio = cameraCollisionRatio;
+    transitionStartAdaptiveDistance = adaptiveLockOnCameraDistance;
+    transitionStartAdaptiveTargetWeight = adaptiveLockOnTargetWeight;
+    transitionMaxDesiredEyeDelta = 0.0f;
+    transitionMaxCollisionPostEyeDelta = 0.0f;
+    transitionMaxCollisionRatioDelta = 0.0f;
+    transitionMaxAdaptiveDistanceDelta = 0.0f;
+    transitionMaxAdaptiveTargetWeightDelta = 0.0f;
+}
+
+void DarkCameraActor::UpdateLockOnTransitionDiagnostics()
+{
+    if (!lockOnTransitionDiagnosticsActive)
+    {
+        return;
+    }
+
+    const float deltas[] =
+    {
+        MathHelper::Distance(desiredEyePosition, transitionStartDesiredEye),
+        MathHelper::Distance(collisionPostEyePosition, transitionStartCollisionPostEye),
+        std::abs(cameraCollisionRatio - transitionStartCollisionRatio),
+        std::abs(adaptiveLockOnCameraDistance - transitionStartAdaptiveDistance),
+        std::abs(adaptiveLockOnTargetWeight - transitionStartAdaptiveTargetWeight)
+    };
+    transitionMaxDesiredEyeDelta = std::max<float>(transitionMaxDesiredEyeDelta, deltas[0]);
+    transitionMaxCollisionPostEyeDelta = std::max<float>(transitionMaxCollisionPostEyeDelta, deltas[1]);
+    transitionMaxCollisionRatioDelta = std::max<float>(transitionMaxCollisionRatioDelta, deltas[2]);
+    transitionMaxAdaptiveDistanceDelta = std::max<float>(transitionMaxAdaptiveDistanceDelta, deltas[3]);
+    transitionMaxAdaptiveTargetWeightDelta = std::max<float>(transitionMaxAdaptiveTargetWeightDelta, deltas[4]);
+
+    const char* direction = lockOnTransitionTo == CameraMode::LockOn ? "TPS->LockOn" : "LockOn->TPS";
+    Logger::Log(std::string("[LockOnTransition][") + direction + "][frame=" +
+        std::to_string(lockOnTransitionDiagnosticsFrame) + "] DesiredEye=(" +
+        std::to_string(desiredEyePosition.x) + "," + std::to_string(desiredEyePosition.y) + "," +
+        std::to_string(desiredEyePosition.z) + ") CollisionPostEye=(" +
+        std::to_string(collisionPostEyePosition.x) + "," + std::to_string(collisionPostEyePosition.y) + "," +
+        std::to_string(collisionPostEyePosition.z) + ") CollisionRatio=" + std::to_string(cameraCollisionRatio) +
+        " AdaptiveDistance=" + std::to_string(adaptiveLockOnCameraDistance) +
+        " AdaptiveTargetWeight=" + std::to_string(adaptiveLockOnTargetWeight));
+
+    ++lockOnTransitionDiagnosticsFrame;
+    if (lockOnTransitionDiagnosticsFrame < 30)
+    {
+        return;
+    }
+
+    const float maxDeltas[] = { transitionMaxDesiredEyeDelta, transitionMaxCollisionPostEyeDelta,
+        transitionMaxCollisionRatioDelta, transitionMaxAdaptiveDistanceDelta,
+        transitionMaxAdaptiveTargetWeightDelta };
+    const char* names[] = { "Desired Eye", "Collision Post Eye", "Collision Ratio",
+        "Adaptive Distance", "Adaptive Target Weight" };
+    int largestIndex = 0;
+    for (int i = 1; i < 5; ++i)
+    {
+        if (maxDeltas[i] > maxDeltas[largestIndex]) largestIndex = i;
+    }
+    Logger::Log(std::string("[LockOnTransition][") + direction + "][summary] maxDelta: DesiredEye=" +
+        std::to_string(maxDeltas[0]) + " CollisionPostEye=" + std::to_string(maxDeltas[1]) +
+        " CollisionRatio=" + std::to_string(maxDeltas[2]) + " AdaptiveDistance=" +
+        std::to_string(maxDeltas[3]) + " AdaptiveTargetWeight=" + std::to_string(maxDeltas[4]) +
+        " Largest=" + names[largestIndex]);
+    lockOnTransitionDiagnosticsActive = false;
 }
 
 DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const
@@ -754,9 +837,10 @@ void DarkCameraActor::DrawImGuiDetails()
     {
         ImGui::DragFloat("Collision Start Ratio", &lockOnCollisionStartRatio, 0.01f, 0.0f, 1.0f);
         ImGui::DragFloat("Collision Full Ratio", &lockOnCollisionFullRatio, 0.01f, 0.0f, 1.0f);
-        ImGui::SliderFloat("Wall Target Weight", &lockOnWallTargetWeight, 0.0f, 1.0f);
-        ImGui::SliderFloat("Wall Horizontal Scale", &lockOnWallHorizontalScale, 0.0f, 1.0f);
+        ImGui::Text("Wall Target Weight: %.3f (Base)", lockOnWallTargetWeight);
+        ImGui::Text("Wall Horizontal Scale: %.3f (fixed)", lockOnWallHorizontalScale);
         ImGui::SliderFloat("Wall Distance Scale", &lockOnWallDistanceScale, 0.1f, 1.0f);
+        ImGui::DragFloat("Collision Ratio Hysteresis", &lockOnCollisionRatioHysteresis, 0.005f, 0.0f, 0.2f);
         ImGui::DragFloat("Distance Start", &lockOnDistanceStart, 0.05f, 0.0f, 30.0f);
         ImGui::DragFloat("Distance Full", &lockOnDistanceFull, 0.05f, 0.0f, 30.0f);
         ImGui::DragFloat("Max Distance Add", &lockOnMaxDistanceAdd, 0.05f, 0.0f, 10.0f);
@@ -774,6 +858,7 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::Text("Desired Camera Distance: %.3f", desiredCameraDistance);
         ImGui::Text("Actual Camera Distance: %.3f", actualCameraDistance);
         ImGui::Text("Collision Ratio: %.3f", cameraCollisionRatio);
+        ImGui::Text("Adaptive Collision Ratio: %.3f", lockOnCollisionRatioForAdaptive);
         ImGui::Text("Player-Boss Distance: %.3f", lockOnEnemyDistance);
         ImGui::Text("Base Distance: %.3f", lockOnSettings.distance);
         ImGui::Text("Desired Distance: %.3f", desiredLockOnCameraDistance);
