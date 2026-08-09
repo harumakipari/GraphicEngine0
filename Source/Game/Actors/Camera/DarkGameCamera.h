@@ -103,13 +103,19 @@ public:
     // カメラモードをセットする
     void SetRequestMode(const CameraMode mode)
     {
-        if (isBlending)
+        if (mode == requestMode)
         {
             return;
         }
         if (mode == CameraMode::LockOn && requestMode != CameraMode::LockOn)
         {
             ResetLockOnAdaptiveState();
+        }
+        if (isBlending)
+        {
+            requestMode = mode;
+            StartBlend(currentMode, requestMode);
+            return;
         }
         requestMode = mode;
     }
@@ -189,6 +195,11 @@ private:
 
     float blendTime = 0.0f;
     float blendDuration = 0.30f;
+    float blendStartFovDegree = 35.0f;
+    float blendTargetFovDegree = 35.0f;
+    float blendStartEyeYaw = 0.0f;
+    float blendStartEyePitch = 0.0f;
+    float blendStartEyeDistance = 0.0f;
 
     bool isBlending = false;
 
@@ -204,7 +215,7 @@ private:
     CameraCompositionSettings tpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
     //CameraCompositionSettings tpsSettings = { 7.15f, 0.5f, 1.05f, 35.0f, 0.0f };
     CameraCompositionSettings focusSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
-    CameraCompositionSettings lockOnSettings = { 11.4f, 0.4f, -0.3f, 35.0f, 0.0f };
+    CameraCompositionSettings lockOnSettings = { 9.7f, 0.4f, -0.3f, 35.0f, 0.0f };
     float lockOnPlayerLookHeight = -.15f;
     float lockOnEnemyLookHeight = -1.4f;
 
@@ -217,8 +228,8 @@ private:
     float lockOnDistanceStart = 4.0f;
     float lockOnDistanceFull = 9.0f;
     float lockOnMaxDistanceAdd = 2.0f;
-    float lockOnZoomOutSpeed = 5.0f;
-    float lockOnZoomInSpeed = 2.0f;
+    float lockOnZoomOutSpeed = 0.01f;
+    float lockOnZoomInSpeed = 0.01f;
     float lockOnDistanceDeadZone = 0.15f;
     float lockOnCompositionLerpSpeed = 6.0f;
 

@@ -80,14 +80,11 @@ void DarkCameraActor::Update(float deltaTime)
     if (!isExternalBlending)
     {
         const CameraCompositionSettings* fromSettings = &tpsSettings;
-        const CameraCompositionSettings* toSettings = &tpsSettings;
         if (currentMode == CameraMode::Focus) fromSettings = &focusSettings;
         if (currentMode == CameraMode::LockOn) fromSettings = &lockOnSettings;
-        if (requestMode == CameraMode::Focus) toSettings = &focusSettings;
-        if (requestMode == CameraMode::LockOn) toSettings = &lockOnSettings;
 
         const float fovDegree = isBlending
-            ? std::lerp(fromSettings->fovDegree, toSettings->fovDegree,
+            ? std::lerp(blendStartFovDegree, blendTargetFovDegree,
                 std::clamp(blendTime / blendDuration, 0.0f, 1.0f))
             : fromSettings->fovDegree;
         mainCameraComponent->SetFov(DirectX::XMConvertToRadians(fovDegree));
@@ -129,6 +126,7 @@ void DarkCameraActor::Update(float deltaTime)
 // ブレンドを開始する
 void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
 {
+    (void)from;
     blendTime = 0.0f;
     isBlending = true;
 
@@ -140,18 +138,23 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     }
     DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
 
-    // 現在のカメラ状態を保存
-    blendStartPose = CalculatePose(from, playerPos, currentYaw, currentPitch);
-    CameraPose oldPose = currentPose;
+    // Collision補正を含め、直前まで実際に表示していたPoseから開始する。
+    blendStartPose = currentPose;
+    blendStartPose.yaw = currentYaw;
+    blendStartPose.pitch = currentPitch;
+    const DirectX::XMFLOAT3 startEyeDirection = MathHelper::Normalize(
+        MathHelper::Subtract(blendStartPose.eye, blendStartPose.target));
+    blendStartEyeYaw = atan2f(startEyeDirection.x, startEyeDirection.z);
+    blendStartEyePitch = asinf(std::clamp(startEyeDirection.y, -1.0f, 1.0f));
+    blendStartEyeDistance = MathHelper::Distance(blendStartPose.eye, blendStartPose.target);
     float targetYaw = currentYaw;
     float targetPitch = currentPitch;
-    startDistance = cameraDistance; // 現在の距離
-    //blendStartPose = oldPose;
     switch (to)
     {
     case CameraMode::TPS:
-        targetYaw = desiredYaw;
-        targetPitch = desiredPitch;
+        // Blend途中でTPSへ戻しても、古いTPS角度へ巻き戻さない。
+        targetYaw = currentYaw;
+        targetPitch = currentPitch;
         break;
 
     case CameraMode::Focus:
@@ -171,10 +174,10 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
         break;
     }
     blendTargetPose = CalculatePose(to, playerPos, targetYaw, targetPitch);
-    // 当たり判定でカメラの位置を修正する
-    //blendTargetPose.eye = ResolveCameraCollision(blendTargetPose.target, blendTargetPose.eye);
-
-    currentPose = oldPose;
+    blendStartFovDegree = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
+    blendTargetFovDegree = tpsSettings.fovDegree;
+    if (to == CameraMode::Focus) blendTargetFovDegree = focusSettings.fovDegree;
+    if (to == CameraMode::LockOn) blendTargetFovDegree = lockOnSettings.fovDegree;
 }
 
 // カメラをplayerのforward方向に向ける
@@ -280,53 +283,54 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
 
     float t = std::clamp(blendTime / blendDuration, 0.0f, 1.0f);
 
-    // TPSからFocusの時に現在のplayerの位置から終点を再計算をする
+    // 移動中のPlayer/Enemyを反映し、Blend完了次フレームとの差を残さない。
     CameraPose targetPose = blendTargetPose;
-    if (currentMode == CameraMode::TPS && requestMode == CameraMode::Focus)
+    if (auto head = playerHead.lock())
     {
-        if (auto head = playerHead.lock())
-        {
-            const DirectX::XMFLOAT3 currentPlayerPos = head->GetComponentLocation();
-            targetPose = CalculatePose(CameraMode::Focus, currentPlayerPos, blendTargetPose.yaw, blendTargetPose.pitch);
-        }
+        const DirectX::XMFLOAT3 currentPlayerPos = head->GetComponentLocation();
+        targetPose = CalculatePose(
+            requestMode,
+            currentPlayerPos,
+            blendTargetPose.yaw,
+            blendTargetPose.pitch);
     }
 
-    // 補間
+    // Target、視線方向、Distanceを表示中Poseから同じBlend率で補間する。
     currentPose.target = MathHelper::Lerp(blendStartPose.target, targetPose.target, t);
+    const DirectX::XMFLOAT3 targetEyeDirection = MathHelper::Normalize(
+        MathHelper::Subtract(targetPose.eye, targetPose.target));
+    const float targetEyeYaw = atan2f(targetEyeDirection.x, targetEyeDirection.z);
+    const float targetEyePitch = asinf(std::clamp(targetEyeDirection.y, -1.0f, 1.0f));
+    const float eyeYaw = MathHelper::LerpAngle(blendStartEyeYaw, targetEyeYaw, t);
+    const float eyePitch = std::lerp(blendStartEyePitch, targetEyePitch, t);
+    const float eyeDistance = std::lerp(
+        blendStartEyeDistance,
+        MathHelper::Distance(targetPose.eye, targetPose.target),
+        t);
+    const DirectX::XMFLOAT3 eyeDirection =
+    {
+        sinf(eyeYaw) * cosf(eyePitch),
+        sinf(eyePitch),
+        cosf(eyeYaw) * cosf(eyePitch)
+    };
+    currentPose.eye = MathHelper::Add(
+        currentPose.target,
+        MathHelper::Multiply(eyeDirection, eyeDistance));
     currentYaw = MathHelper::LerpAngle(blendStartPose.yaw, blendTargetPose.yaw, t);
     currentPitch = std::lerp(blendStartPose.pitch, blendTargetPose.pitch, t);
-
-    const CameraCompositionSettings* fromSettings = &tpsSettings;
-    const CameraCompositionSettings* toSettings = &tpsSettings;
-    if (currentMode == CameraMode::Focus) fromSettings = &focusSettings;
-    if (currentMode == CameraMode::LockOn) fromSettings = &lockOnSettings;
-    if (requestMode == CameraMode::Focus) toSettings = &focusSettings;
-    if (requestMode == CameraMode::LockOn) toSettings = &lockOnSettings;
-
-    const float distance = std::lerp(fromSettings->distance, toSettings->distance, t);
-    const float height = std::lerp(fromSettings->height, toSettings->height, t);
-    const float horizontalOffset = std::lerp(fromSettings->horizontalOffset, toSettings->horizontalOffset, t);
-
-    using namespace DirectX;
-
-    XMVECTOR forward = XMVectorSet(
-        sinf(currentYaw) * cosf(currentPitch),
-        sinf(currentPitch),
-        cosf(currentYaw) * cosf(currentPitch),
-        0.0f);
-    XMVECTOR target = XMLoadFloat3(&currentPose.target);
-    XMVECTOR eye = target - forward * distance;
-    XMVECTOR right = XMVectorSet(cosf(currentYaw), 0.0f, -sinf(currentYaw), 0.0f);
-    eye += right * horizontalOffset;
-    eye += XMVectorSet(0, height, 0, 0);
-    XMStoreFloat3(&currentPose.eye, eye);
+    currentPose.yaw = currentYaw;
+    currentPose.pitch = currentPitch;
 
     if (t >= 1.0f)
     {
+        currentPose = targetPose;
+        currentYaw = blendTargetPose.yaw;
+        currentPitch = blendTargetPose.pitch;
         isBlending = false;
         currentMode = requestMode;
         desiredYaw = currentYaw;
         desiredPitch = currentPitch;
+        mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
     }
 }
 
@@ -701,17 +705,14 @@ void DarkCameraActor::DrawImGuiDetails()
     if (ImGui::Button(U8("TPS")))
     {
         SetRequestMode(CameraMode::TPS);
-
     }
     if (ImGui::Button(U8("Focus")))
     {
         SetRequestMode(CameraMode::Focus);
-
     }
     if (ImGui::Button(U8("LockOn")))
     {
         SetRequestMode(CameraMode::LockOn);
-
     }
     ImGui::DragFloat(U8("右スティックの回転のスピード"), &rotateSpeed, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat(U8("フォーカス距離"), &focusDistance, 0.1f, 0.0f, 10.0f);
