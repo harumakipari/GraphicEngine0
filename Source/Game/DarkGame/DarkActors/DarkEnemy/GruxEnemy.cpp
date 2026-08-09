@@ -376,6 +376,103 @@ void GruxEnemy::Update(float deltaTime)
 
 #endif // 0
 
+#if 0 // ジャスト回避のタイミングをわかりやすくするため
+    if (isDangerWindow)
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 2.0f;
+    }
+    else
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 0.0f;
+    }
+
+#endif // 0
+
+
+    // 攻撃の危険な時に、
+    if (isDangerWindow)
+    {
+        if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
+        {
+            const DirectX::XMFLOAT3 playerTestPosition = player->GetPosition();
+            DirectX::XMFLOAT3 playerCapsuleCenter = playerTestPosition;
+            float playerCapsuleRadius = 0.0f;
+            float playerCapsuleHeight = 0.0f;
+            if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                player->FindComponentByName("capsuleComponent")))
+            {
+                playerCapsuleCenter = capsule->GetComponentLocation();
+                playerCapsuleRadius = capsule->GetRadius();
+                playerCapsuleHeight = capsule->GetHeight();
+            }
+            const DangerArea::PointResult pointResult = dangerArea.ContainsPoint(playerTestPosition);
+            const DangerArea::CapsuleResult capsuleResult = dangerArea.IntersectsPlayerCapsule(
+                playerCapsuleCenter, playerCapsuleRadius, playerCapsuleHeight);
+            const bool inside = capsuleResult.overlap;
+            const bool justDodgeWindow = player->GetJustDodgeWindow();
+            DirectX::XMFLOAT4 debugColor = inside ? DirectX::XMFLOAT4{ 1,0,0,1 } : DirectX::XMFLOAT4{ 1,1,1,1 };
+            if (inside && justDodgeWindow)
+                debugColor = { 0,1,0,1 };
+
+            DebugRender::DrawSphere(dangerArea.origin, 0.1f, { 1,1,0,1 }, 0.0f, true);
+            DebugRender::DrawSphere(playerTestPosition, 0.12f, { 1,1,0,1 }, 0.0f, true);
+            DebugRender::DrawSphere(playerCapsuleCenter, 0.09f, { 0,1,1,1 }, 0.0f, true);
+
+            // CPU-computed logical OBB markers. Do not use WorldTransform here.
+            for (int rightSign : { -1, 1 })
+            {
+                for (int upSign : { -1, 1 })
+                {
+                    for (int forwardSign : { -1, 1 })
+                    {
+                        DirectX::XMFLOAT3 corner = dangerArea.center;
+                        corner = MathHelper::Add(corner, MathHelper::Multiply(
+                            dangerArea.right, dangerArea.halfExtent.x * static_cast<float>(rightSign)));
+                        corner = MathHelper::Add(corner, MathHelper::Multiply(
+                            dangerArea.up, dangerArea.halfExtent.y * static_cast<float>(upSign)));
+                        corner = MathHelper::Add(corner, MathHelper::Multiply(
+                            dangerArea.forward, dangerArea.halfExtent.z * static_cast<float>(forwardSign)));
+                        DebugRender::DrawSphere(corner, 0.06f, { 1,1,0,1 }, 0.0f, true);
+                    }
+                }
+            }
+
+            DebugRender::DrawSphere(dangerArea.center, 0.08f, { 1,0,0,1 }, 0.0f, true);
+            DebugRender::DrawSphere(MathHelper::Add(dangerArea.center,
+                MathHelper::Multiply(dangerArea.right, dangerArea.halfExtent.x)),
+                0.08f, { 0,1,0,1 }, 0.0f, true);
+            DebugRender::DrawSphere(MathHelper::Add(dangerArea.center,
+                MathHelper::Multiply(dangerArea.up, dangerArea.halfExtent.y)),
+                0.08f, { 0,0,1,1 }, 0.0f, true);
+            DebugRender::DrawSphere(MathHelper::Add(dangerArea.center,
+                MathHelper::Multiply(dangerArea.forward, dangerArea.halfExtent.z)),
+                0.08f, { 1,0,1,1 }, 0.0f, true);
+            DebugRender::DrawBox(dangerArea.WorldTransform(), dangerArea.size, debugColor, 0.0f, true);
+
+            if (inside && player->GetJustDodgeWindow())
+            {
+                if (HasJustDodgedAttack(player.get()))
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[BossAttack][JustDodgeRejected] reason=duplicate attackSequenceId=" +
+                        std::to_string(currentAttackSequenceId));
+                }
+                else
+                {
+                    justDodgedActors.insert(player.get());
+                    player->StartJustDodgeSuccess(
+                        std::dynamic_pointer_cast<Enemy>(this->shared_from_this()));
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[BossAttack][JustDodgeSuccess] attackSequenceId=" +
+                        std::to_string(currentAttackSequenceId));
+                }
+            }
+        }
+    }
+
+
+
+
     // 当たり判定
     HitResultWithActor hit;
 
@@ -483,99 +580,6 @@ void GruxEnemy::Update(float deltaTime)
     if (leftWeaponCollisionComp)
         leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
 
-#if 0 // ジャスト回避のタイミングをわかりやすくするため
-    if (isDangerWindow)
-    {
-        skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 2.0f;
-    }
-    else
-    {
-        skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 0.0f;
-    }
-
-#endif // 0
-
-
-    // 攻撃の危険な時に、
-    if (isDangerWindow)
-    {
-        if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
-        {
-            const DirectX::XMFLOAT3 playerTestPosition = player->GetPosition();
-            DirectX::XMFLOAT3 playerCapsuleCenter = playerTestPosition;
-            float playerCapsuleRadius = 0.0f;
-            float playerCapsuleHeight = 0.0f;
-            if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(
-                player->FindComponentByName("capsuleComponent")))
-            {
-                playerCapsuleCenter = capsule->GetComponentLocation();
-                playerCapsuleRadius = capsule->GetRadius();
-                playerCapsuleHeight = capsule->GetHeight();
-            }
-            const DangerArea::PointResult pointResult = dangerArea.ContainsPoint(playerTestPosition);
-            const DangerArea::CapsuleResult capsuleResult = dangerArea.IntersectsPlayerCapsule(
-                playerCapsuleCenter, playerCapsuleRadius, playerCapsuleHeight);
-            const bool inside = capsuleResult.overlap;
-            const bool justDodgeWindow = player->GetJustDodgeWindow();
-            DirectX::XMFLOAT4 debugColor = inside ? DirectX::XMFLOAT4{ 1,0,0,1 } : DirectX::XMFLOAT4{ 1,1,1,1 };
-            if (inside && justDodgeWindow)
-                debugColor = { 0,1,0,1 };
-
-            DebugRender::DrawSphere(dangerArea.origin, 0.1f, { 1,1,0,1 }, 0.0f, true);
-            DebugRender::DrawSphere(playerTestPosition, 0.12f, { 1,1,0,1 }, 0.0f, true);
-            DebugRender::DrawSphere(playerCapsuleCenter, 0.09f, { 0,1,1,1 }, 0.0f, true);
-
-            // CPU-computed logical OBB markers. Do not use WorldTransform here.
-            for (int rightSign : { -1, 1 })
-            {
-                for (int upSign : { -1, 1 })
-                {
-                    for (int forwardSign : { -1, 1 })
-                    {
-                        DirectX::XMFLOAT3 corner = dangerArea.center;
-                        corner = MathHelper::Add(corner, MathHelper::Multiply(
-                            dangerArea.right, dangerArea.halfExtent.x * static_cast<float>(rightSign)));
-                        corner = MathHelper::Add(corner, MathHelper::Multiply(
-                            dangerArea.up, dangerArea.halfExtent.y * static_cast<float>(upSign)));
-                        corner = MathHelper::Add(corner, MathHelper::Multiply(
-                            dangerArea.forward, dangerArea.halfExtent.z * static_cast<float>(forwardSign)));
-                        DebugRender::DrawSphere(corner, 0.06f, { 1,1,0,1 }, 0.0f, true);
-                    }
-                }
-            }
-
-            DebugRender::DrawSphere(dangerArea.center, 0.08f, { 1,0,0,1 }, 0.0f, true);
-            DebugRender::DrawSphere(MathHelper::Add(dangerArea.center,
-                MathHelper::Multiply(dangerArea.right, dangerArea.halfExtent.x)),
-                0.08f, { 0,1,0,1 }, 0.0f, true);
-            DebugRender::DrawSphere(MathHelper::Add(dangerArea.center,
-                MathHelper::Multiply(dangerArea.up, dangerArea.halfExtent.y)),
-                0.08f, { 0,0,1,1 }, 0.0f, true);
-            DebugRender::DrawSphere(MathHelper::Add(dangerArea.center,
-                MathHelper::Multiply(dangerArea.forward, dangerArea.halfExtent.z)),
-                0.08f, { 1,0,1,1 }, 0.0f, true);
-            DebugRender::DrawBox(dangerArea.WorldTransform(), dangerArea.size, debugColor, 0.0f, true);
-
-            if (inside && player->GetJustDodgeWindow())
-            {
-                if (HasJustDodgedAttack(player.get()))
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[BossAttack][JustDodgeRejected] reason=duplicate attackSequenceId=" +
-                        std::to_string(currentAttackSequenceId));
-                }
-                else
-                {
-                    justDodgedActors.insert(player.get());
-                    player->StartJustDodgeSuccess(
-                        std::dynamic_pointer_cast<Enemy>(this->shared_from_this()));
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[BossAttack][JustDodgeSuccess] attackSequenceId=" +
-                        std::to_string(currentAttackSequenceId));
-                }
-            }
-        }
-    }
 
     //DebugRender::DrawBox(bossPos, { 3,3,3 }, { 1,1,1,1 });
 
