@@ -1,5 +1,6 @@
 #pragma once
 #include "Game/State/StateBase.h"
+#include "BossAITypes.h"
 
 class GruxEnemy;
 
@@ -41,9 +42,6 @@ public:
     // ステート名を取得
     const char* GetName() const override { return "EnemyIdleState"; }
 
-private:
-    float timer = 0.0f;
-    constexpr static float waitTime = 3.0f;
 };
 
 // 次の攻撃を考えるステートオブジェクト
@@ -62,6 +60,10 @@ public:
     void Exit() override;
     // ステート名を取得
     const char* GetName() const override { return "EnemyThinkState"; }
+
+private:
+    bool attackSelected = false;
+    float timer = 0.0f;
 };
 
 
@@ -99,6 +101,22 @@ public:
     void Exit() override;
     // ステート名を取得
     const char* GetName() const override { return "EnemyAttackState"; }
+
+private:
+    int comboStage = 0;
+};
+
+class EnemyRecoveryState : public EnemyStateBase
+{
+public:
+    EnemyRecoveryState(GruxEnemy* enemy) : EnemyStateBase(enemy) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "EnemyRecoveryState"; }
+
+private:
+    float timer = 0.0f;
 };
 
 

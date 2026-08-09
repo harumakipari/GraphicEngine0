@@ -91,6 +91,7 @@ void GruxEnemy::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<EnemyDeathState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyThinkState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyAttackState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyRecoveryState>(this));
 
         // ステートマシンを character に追加
         this->SetStateMachine(stateMachine_);
@@ -623,6 +624,28 @@ void GruxEnemy::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
     Character::DrawImGuiDetails();
+    ImGui::SeparatorText("Boss AI");
+    int aiModeIndex = static_cast<int>(bossAIMode);
+    const char* aiModes[] = { "CombatAI", "DebugFixedAttack" };
+    if (ImGui::Combo("AI Mode", &aiModeIndex, aiModes, static_cast<int>(std::size(aiModes))))
+        bossAIMode = static_cast<BossAIMode>(aiModeIndex);
+
+    int attackIndex = static_cast<int>(debugFixedAttackType);
+    const char* attackTypes[] =
+    {
+        "PrimaryAttack_LA",
+        "PrimaryAttack_RA",
+        "FastCombo (A > B > C)",
+        "PrimaryAttack_JumpAttack",
+        "PrimaryAttack_Dash",
+        "PrimaryAttack_DashAttack",
+        "LongRangeAttack (Not Implemented)",
+    };
+    if (ImGui::Combo("Debug Fixed Attack", &attackIndex, attackTypes, static_cast<int>(std::size(attackTypes))))
+        debugFixedAttackType = static_cast<BossAttackType>(attackIndex);
+    ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::DragFloat("Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::Text("Selected Attack: %s", attackTypes[static_cast<int>(selectedAttackType)]);
     ImGui::DragFloat("pitchBaseValue", &pitchBaseValue, 0.05f);
     if (ImGui::Button("Attack"))
     {
@@ -807,6 +830,62 @@ void GruxEnemy::OnAnimationChanged()
 }
 
 // 攻撃開始時に始める処理
+void GruxEnemy::SelectAttackForCurrentMode()
+{
+    if (bossAIMode == BossAIMode::DebugFixedAttack)
+    {
+        selectedAttackType = debugFixedAttackType;
+        return;
+    }
+
+    // CombatAI candidate filtering and weighted selection will be added here.
+    selectedAttackType = BossAttackType::PrimaryAttackLA;
+}
+
+int GruxEnemy::GetAttackStageCount(BossAttackType type) const
+{
+    if (type == BossAttackType::FastCombo)
+        return 3;
+    if (type == BossAttackType::LongRangeAttack)
+        return 0;
+    return 1;
+}
+
+bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
+{
+    const char* animationName = nullptr;
+    switch (type)
+    {
+    case BossAttackType::PrimaryAttackLA: animationName = "PrimaryAttack_LA"; break;
+    case BossAttackType::PrimaryAttackRA: animationName = "PrimaryAttack_RA"; break;
+    case BossAttackType::FastCombo:
+    {
+        static constexpr const char* comboAnimations[] =
+        {
+            "Attack_A_Fast_0",
+            "Attack_B_Fast_0",
+            "Attack_C_Fast_0",
+        };
+        if (stage < 0 || stage >= static_cast<int>(std::size(comboAnimations)))
+            return false;
+        animationName = comboAnimations[stage];
+        break;
+    }
+    case BossAttackType::JumpAttack: animationName = "PrimaryAttack_JumpAttack"; break;
+    case BossAttackType::Dash: animationName = "PrimaryAttack_Dash"; break;
+    case BossAttackType::DashAttack: animationName = "PrimaryAttack_DashAttack"; break;
+    case BossAttackType::LongRangeAttack: return false;
+    }
+
+    PlayBodyAnimation(animationName, false, true, 0.1f);
+    return true;
+}
+
+void GruxEnemy::BeginAdditionalAttackStage()
+{
+    // A FastCombo is one attack sequence, but each stage may damage the player once.
+    hitActors.clear();
+}
 void GruxEnemy::StartAttack()
 {
 #if 0

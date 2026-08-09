@@ -591,9 +591,9 @@ void Player::Update(float deltaTime)
         };
 
         const auto sweepLength = [](const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end)
-        {
-            return MathHelper::Length(MathHelper::Subtract(end, start));
-        };
+            {
+                return MathHelper::Length(MathHelper::Subtract(end, start));
+            };
 
         SwordSweepResult sweeps[] =
         {
@@ -2298,8 +2298,7 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 
 void Player::BeginPlayerSlowReturn()
 {
-    if (playerSlowPhase == JustDodgeSlowPhase::Inactive ||
-        playerSlowPhase == JustDodgeSlowPhase::Return)
+    if (playerSlowPhase == JustDodgeSlowPhase::Inactive || playerSlowPhase == JustDodgeSlowPhase::Return)
     {
         return;
     }

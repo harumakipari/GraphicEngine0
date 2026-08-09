@@ -6,6 +6,7 @@
 #include "Game/Actors/Enemy/Enemy.h"
 #include "UI/Widgets/Widget.h"
 #include "Animation/DangerArea.h"
+#include "Game/Actors/Enemy/Boss/BossAITypes.h"
 
 class GruxEnemy :public Enemy
 {
@@ -38,6 +39,15 @@ public:
     void DisableAttackHitBoxes();
 
     uint64_t GetCurrentAttackSequenceId() const { return currentAttackSequenceId; }
+
+    BossAIMode GetBossAIMode() const { return bossAIMode; }
+    BossAttackType GetSelectedAttackType() const { return selectedAttackType; }
+    void SelectAttackForCurrentMode();
+    int GetAttackStageCount(BossAttackType type) const;
+    bool PlayAttackStage(BossAttackType type, int stage);
+    void BeginAdditionalAttackStage();
+    float GetAttackInterval() const { return attackInterval; }
+    float GetRecoveryDuration() const { return recoveryDuration; }
 
     // ÉJÉÅÉâÇÃíçéãì_ÇÃà íu
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
@@ -88,6 +98,12 @@ private:
     std::unordered_set<const Actor*> justDodgedActors;
     uint64_t currentAttackSequenceId = 0;
     int currentAttackHitCount = 0;
+
+    BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;
+    BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
+    BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
+    float attackInterval = 3.0f;
+    float recoveryDuration = 0.5f;
 
     bool isDeathPerform = false;
     float pitchBaseValue = 0.45f;

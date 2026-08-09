@@ -10,21 +10,14 @@ EnemyStateBase::EnemyStateBase(GruxEnemy* actor) :State(actor), enemy(actor)
 // 待機ステートオブジェクト
 void EnemyIdleState::Enter()
 {
-    timer = 0.0f;
     owner->PlayBodyAnimation("TravelMode_Idle_0");
 }
 
 // ステートで実行するメソッド
 void EnemyIdleState::Execute(float deltaTime)
 {
-    timer += deltaTime;
-
-    if (timer >= waitTime)
-    {
-        owner->GetStateMachine()->ChangeState("EnemyAttackState");
-    }
+    owner->GetStateMachine()->ChangeState("EnemyThinkState");
 }
-
 void EnemyIdleState::Exit()
 {
 }
@@ -33,15 +26,23 @@ void EnemyIdleState::Exit()
 // 次の攻撃を考えるステートオブジェクト
 void EnemyThinkState::Enter()
 {
-
+    attackSelected = false;
+    timer = 0.0f;
 }
 
-// ステートで実行するメソッド
 void EnemyThinkState::Execute(float deltaTime)
 {
+    if (attackSelected)
+        return;
 
+    timer += deltaTime;
+    if (timer < enemy->GetAttackInterval())
+        return;
+
+    attackSelected = true;
+    enemy->SelectAttackForCurrentMode();
+    owner->GetStateMachine()->ChangeState("EnemyAttackState");
 }
-
 void EnemyThinkState::Exit()
 {
 }
@@ -66,19 +67,45 @@ void EnemyDeathState::Exit()
 // 攻撃の予兆ステートオブジェクト
 void EnemyAttackState::Enter()
 {
+    comboStage = 0;
     enemy->StartAttack();
-    owner->PlayBodyAnimation("PrimaryAttack_LA", false, true, 0.1f);
+    if (!enemy->PlayAttackStage(enemy->GetSelectedAttackType(), comboStage))
+        owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
 }
 
 void EnemyAttackState::Execute(float deltaTime)
 {
-    if (!enemy->GetBodyAnimationController()->IsPlayAnimation())
-    {
-        owner->GetStateMachine()->ChangeState("EnemyIdleState");
-    }
-}
+    if (enemy->GetBodyAnimationController()->IsPlayAnimation())
+        return;
 
+    const int stageCount = enemy->GetAttackStageCount(enemy->GetSelectedAttackType());
+    if (comboStage + 1 < stageCount)
+    {
+        ++comboStage;
+        enemy->BeginAdditionalAttackStage();
+        enemy->PlayAttackStage(enemy->GetSelectedAttackType(), comboStage);
+        return;
+    }
+    owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+}
 void EnemyAttackState::Exit()
 {
     enemy->DisableAttackHitBoxes();
+}
+
+void EnemyRecoveryState::Enter()
+{
+    timer = 0.0f;
+    owner->PlayBodyAnimation("TravelMode_Idle_0");
+}
+
+void EnemyRecoveryState::Execute(float deltaTime)
+{
+    timer += deltaTime;
+    if (timer >= enemy->GetRecoveryDuration())
+        owner->GetStateMachine()->ChangeState("EnemyThinkState");
+}
+
+void EnemyRecoveryState::Exit()
+{
 }
