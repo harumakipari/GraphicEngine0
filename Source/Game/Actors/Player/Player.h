@@ -176,7 +176,9 @@ public:
     // ジャスト回避成功時の処理　ラッシュ受付期間開始
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
 
-    bool CanAcceptRushInput() const;
+    bool CanAcceptInitialRushInput() const;
+    bool CanShowRushComboGuide() const;
+    bool CanShowRushPrompt() const;
     void SetRushInputAcceptance(bool accepting);
     void SetRushInputDebugState(bool judgeSuccess, bool rushRequested);
 

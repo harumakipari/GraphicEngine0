@@ -848,7 +848,9 @@ void Player::DrawImGuiDetails()
         ImGui::DragFloat2("Text Offset", &rushPromptTextOffset.x, 1.0f);
         ImGui::DragFloat("Fade In Duration", &rushPromptFadeInDuration, 0.01f, 0.0f, 1.0f);
         ImGui::Separator();
-        ImGui::Text("CanAcceptRushInput: %s", CanAcceptRushInput() ? "true" : "false");
+        ImGui::Text("CanAcceptInitialRushInput: %s", CanAcceptInitialRushInput() ? "true" : "false");
+        ImGui::Text("CanShowRushComboGuide: %s", CanShowRushComboGuide() ? "true" : "false");
+        ImGui::Text("CanShowRushPrompt: %s", CanShowRushPrompt() ? "true" : "false");
         ImGui::Text("judgeSuccess: %s", rushJudgeSuccessDebug ? "true" : "false");
         ImGui::Text("rushRequested: %s", rushRequestedDebug ? "true" : "false");
         ImGui::Text("rushTargetValid: %s", rushTarget.expired() ? "false" : "true");
@@ -2036,13 +2038,25 @@ void Player::EndAttack()
     isAttackActive = false;
 }
 
-bool Player::CanAcceptRushInput() const
+bool Player::CanAcceptInitialRushInput() const
 {
     return rushInputAccepting &&
         justDodgeSuccess &&
         stateMachine_ &&
         std::string(stateMachine_->GetStateName()) == "Dodge" &&
         !rushTarget.expired();
+}
+
+bool Player::CanShowRushComboGuide() const
+{
+    return stateMachine_ &&
+        std::string(stateMachine_->GetStateName()) == "Rush" &&
+        !rushTarget.expired();
+}
+
+bool Player::CanShowRushPrompt() const
+{
+    return CanAcceptInitialRushInput() || CanShowRushComboGuide();
 }
 
 void Player::SetRushInputAcceptance(bool accepting)
@@ -2078,7 +2092,9 @@ void Player::UpdateRushPromptUI()
         return;
     }
 
-    const bool visible = CanAcceptRushInput();
+    const bool initialRush = CanAcceptInitialRushInput();
+    const bool comboGuide = CanShowRushComboGuide();
+    const bool visible = initialRush || comboGuide;
     if (!visible)
     {
         rushPromptAlpha = 0.0f;
@@ -2107,6 +2123,7 @@ void Player::UpdateRushPromptUI()
     rushPromptTextComponent->SetWorldPosition({
         rushPromptPosition.x + rushPromptTextOffset.x,
         rushPromptPosition.y + rushPromptTextOffset.y });
+    rushPromptTextComponent->SetText(initialRush ? L"RUSH" : L"ATTACK");
     rushPromptTextComponent->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, rushPromptAlpha });
     rushPromptTextComponent->SetVisible(true);
 }

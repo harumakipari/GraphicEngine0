@@ -318,7 +318,7 @@ void PlayerDodgeState::Execute(float deltaTime)
     player->SetRushInputDebugState(judgeSuccess, rushRequested);
     if (judgeSuccess)
     {
-        if (player->CanAcceptRushInput() &&
+        if (player->CanAcceptInitialRushInput() &&
             player->bufferCommand.type == Player::ActionType::Attack)
         {
             rushRequested = true;
