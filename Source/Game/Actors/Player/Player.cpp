@@ -485,15 +485,52 @@ void Player::Update(float deltaTime)
         }
     }
 
-    // スローモーション
-    if (slowMotionActive)
+    // Player/BossのSlowは独立させ、どちらも実時間で更新する。
+    if (playerSlowPhase == JustDodgeSlowPhase::Hold)
     {
-        slowMotionTimer -= Time::UnscaledDeltaTime();
-        if (slowMotionTimer <= 0.0f)
+        playerSlowHoldTimer -= Time::UnscaledDeltaTime();
+        if (playerSlowHoldTimer <= 0.0f)
         {
-            slowMotionActive = false;
-            ResetTimeScale();
-            Logger::Log(U8("スローモーション終了"));
+            BeginPlayerSlowReturn();
+        }
+    }
+    else if (playerSlowPhase == JustDodgeSlowPhase::Return)
+    {
+        playerSlowReturnElapsed += Time::UnscaledDeltaTime();
+        const float t = justDodgeSlowReturnDuration > FLT_EPSILON
+            ? std::clamp(playerSlowReturnElapsed / justDodgeSlowReturnDuration, 0.0f, 1.0f)
+            : 1.0f;
+        const float smoothT = t * t * (3.0f - 2.0f * t);
+        SetTimeScale(std::lerp(playerSlowReturnStartScale, 1.0f, smoothT));
+        if (t >= 1.0f)
+        {
+            ForceResetPlayerSlow();
+        }
+    }
+
+    if (bossSlowPhase == JustDodgeSlowPhase::Hold)
+    {
+        bossSlowHoldTimer -= Time::UnscaledDeltaTime();
+        if (bossSlowHoldTimer <= 0.0f)
+        {
+            BeginBossSlowReturn();
+        }
+    }
+    else if (bossSlowPhase == JustDodgeSlowPhase::Return)
+    {
+        if (auto target = rushTarget.lock())
+        {
+            bossSlowReturnElapsed += Time::UnscaledDeltaTime();
+            const float duration = activeBossSlowReturnDuration;
+            const float t = duration > FLT_EPSILON
+                ? std::clamp(bossSlowReturnElapsed / duration, 0.0f, 1.0f) : 1.0f;
+            const float smoothT = t * t * (3.0f - 2.0f * t);
+            target->SetTimeScale(std::lerp(bossSlowReturnStartScale, 1.0f, smoothT));
+            if (t >= 1.0f) ForceResetBossSlow();
+        }
+        else
+        {
+            bossSlowPhase = JustDodgeSlowPhase::Inactive;
         }
     }
 
@@ -781,9 +818,17 @@ void Player::DrawImGuiDetails()
     ImGui::SliderFloat(
         "Backward Speed Scale", &backwardSpeedScale, 0.25f, 1.5f);
     ImGui::DragFloat("dashSpeed", &dashSpeed, 0.05f);
-    ImGui::DragFloat("slowMotionInterval", &slowMotionInterval, 0.05f);
-    ImGui::DragFloat("slowMotionPlayerTimeScale", &slowMotionPlayerTimeScale, 0.05f);
-    ImGui::DragFloat("slowMotionEnemyTimeScale", &slowMotionEnemyTimeScale, 0.05f);
+    if (ImGui::TreeNode("Just Dodge Slow Motion"))
+    {
+        ImGui::SliderFloat("Time Scale", &justDodgeTimeScale, 0.10f, 1.00f);
+        ImGui::SliderFloat("Hold Duration", &justDodgeSlowHoldDuration, 0.00f, 1.00f, "%.2f sec");
+        ImGui::SliderFloat("Return Duration", &justDodgeSlowReturnDuration, 0.00f, 0.50f, "%.2f sec");
+        ImGui::SliderFloat("Rush Boss Slow Scale", &rushBossSlowScale, 0.10f, 1.00f);
+        ImGui::SliderFloat("Rush Boss Return Duration", &rushBossReturnDuration, 0.00f, 0.50f, "%.2f sec");
+        ImGui::Text("Player Phase: %d / Scale: %.3f", static_cast<int>(playerSlowPhase), GetTimeScale());
+        ImGui::Text("Boss Phase: %d", static_cast<int>(bossSlowPhase));
+        ImGui::TreePop();
+    }
     ImGui::DragFloat("transparencyMinAlpha", &transparencyMinAlpha, 0.05f);
     ImGui::DragFloat("transparencyMaxAlpha", &transparencyMaxAlpha, 0.05f);
     ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
@@ -1971,14 +2016,25 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
     // スローモーションにする
-    enemy->SetTimeScale(slowMotionEnemyTimeScale);
-    this->SetTimeScale(slowMotionPlayerTimeScale);
-
-    slowMotionActive = true;
-    slowMotionTimer = slowMotionInterval;
-
     // rush時のtargetを保存する
     rushTarget = enemy;
+
+    const float scale = std::clamp(justDodgeTimeScale, 0.10f, 1.0f);
+    enemy->SetTimeScale(scale);
+    SetTimeScale(scale);
+    playerSlowPhase = JustDodgeSlowPhase::Hold;
+    bossSlowPhase = JustDodgeSlowPhase::Hold;
+    playerSlowHoldTimer = std::max<float>(0.0f, justDodgeSlowHoldDuration);
+    bossSlowHoldTimer = playerSlowHoldTimer;
+    playerSlowReturnElapsed = 0.0f;
+    bossSlowReturnElapsed = 0.0f;
+    playerSlowReturnStartScale = scale;
+    bossSlowReturnStartScale = scale;
+    if (playerSlowHoldTimer <= FLT_EPSILON)
+    {
+        BeginPlayerSlowReturn();
+        BeginBossSlowReturn();
+    }
 
     // 画面の色を変える
 
@@ -1986,6 +2042,72 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     //rushButtonImageComponent->SetVisible(true);
     // SEの再生
 
+}
+
+void Player::BeginPlayerSlowReturn()
+{
+    if (playerSlowPhase == JustDodgeSlowPhase::Inactive ||
+        playerSlowPhase == JustDodgeSlowPhase::Return)
+    {
+        return;
+    }
+
+    playerSlowPhase = JustDodgeSlowPhase::Return;
+    playerSlowReturnElapsed = 0.0f;
+    playerSlowReturnStartScale = GetTimeScale();
+    if (justDodgeSlowReturnDuration <= FLT_EPSILON)
+    {
+        ForceResetPlayerSlow();
+    }
+}
+
+void Player::BeginBossSlowReturn(bool afterRush)
+{
+    if (bossSlowPhase == JustDodgeSlowPhase::Inactive ||
+        bossSlowPhase == JustDodgeSlowPhase::Return)
+    {
+        return;
+    }
+    if (auto target = rushTarget.lock())
+    {
+        bossSlowPhase = JustDodgeSlowPhase::Return;
+        bossSlowReturnElapsed = 0.0f;
+        bossSlowReturnStartScale = target->GetTimeScale();
+        activeBossSlowReturnDuration = std::max<float>(0.0f,
+            afterRush ? rushBossReturnDuration : justDodgeSlowReturnDuration);
+        if (activeBossSlowReturnDuration <= FLT_EPSILON) ForceResetBossSlow();
+    }
+    else bossSlowPhase = JustDodgeSlowPhase::Inactive;
+}
+
+void Player::HoldBossSlowForRush()
+{
+    if (auto target = rushTarget.lock())
+    {
+        const float scale = std::clamp(rushBossSlowScale, 0.10f, 1.0f);
+        target->SetTimeScale(scale);
+        bossSlowPhase = JustDodgeSlowPhase::RushHold;
+    }
+    else bossSlowPhase = JustDodgeSlowPhase::Inactive;
+}
+
+void Player::ForceResetPlayerSlow()
+{
+    ResetTimeScale();
+    playerSlowPhase = JustDodgeSlowPhase::Inactive;
+    playerSlowHoldTimer = 0.0f;
+    playerSlowReturnElapsed = 0.0f;
+    playerSlowReturnStartScale = 1.0f;
+}
+
+void Player::ForceResetBossSlow()
+{
+    if (auto target = rushTarget.lock()) target->ResetTimeScale();
+    bossSlowPhase = JustDodgeSlowPhase::Inactive;
+    bossSlowHoldTimer = 0.0f;
+    bossSlowReturnElapsed = 0.0f;
+    bossSlowReturnStartScale = 1.0f;
+    activeBossSlowReturnDuration = justDodgeSlowReturnDuration;
 }
 
 // ラッシュ受付期間終了
@@ -2071,4 +2193,3 @@ IInteractable* Player::FindInteractable()
     return best;
 
 }
-

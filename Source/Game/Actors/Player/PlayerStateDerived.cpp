@@ -322,6 +322,8 @@ void PlayerDodgeState::Execute(float deltaTime)
         if (player->bufferCommand.type == Player::ActionType::Attack)
         {
             rushRequested = true;
+            player->BeginPlayerSlowReturn();
+            player->HoldBossSlowForRush();
             player->ConsumeActionRequest(Player::ActionType::Attack);
         }
         if (player->transitionWindow)
@@ -333,10 +335,6 @@ void PlayerDodgeState::Execute(float deltaTime)
             }
             else
             {
-                if (auto target = player->rushTarget.lock())
-                {// タイムスケールをリセットする
-                    target->ResetTimeScale();
-                }
                 DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
                 if (MathHelper::Length(move) > 0.1f)
                 {
@@ -353,10 +351,6 @@ void PlayerDodgeState::Execute(float deltaTime)
     else if (player->transitionWindow)
     {
 
-        if (auto target = player->rushTarget.lock())
-        {// タイムスケールをリセットする
-            target->ResetTimeScale();
-        }
         DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
 
         if (MathHelper::Length(move) > 0.1f)
@@ -378,10 +372,15 @@ void PlayerDodgeState::Execute(float deltaTime)
 
 void PlayerDodgeState::Exit()
 {
+    const bool enteringRush = rushRequested;
     rushRequested = false;
     judgeSuccess = false;
     player->ResetAnimationStateFlag();
-    player->ResetTimeScale();
+    player->BeginPlayerSlowReturn();
+    if (!enteringRush)
+    {
+        player->BeginBossSlowReturn();
+    }
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
 }
 
@@ -441,6 +440,8 @@ void PlayerDeathState::Exit()
 // ラッシュ
 void PlayerRushState::Enter()
 {
+    player->ForceResetPlayerSlow();
+    player->HoldBossSlowForRush();
     // ラッシュコンボのアニメーション名
     rushCombo =
     {
@@ -479,6 +480,23 @@ void PlayerRushState::Enter()
 
 void PlayerRushState::Execute(float deltaTime)
 {
+    if (player->rushTarget.expired())
+    {
+        player->ForceResetBossSlow();
+        player->GetStateMachine()->ChangeState("Idle");
+        return;
+    }
+    if (auto target = player->rushTarget.lock())
+    {
+        const auto targetStateMachine = target->GetStateMachine();
+        if (!target->IsAlive() || target->IsPendingKill() ||
+            (targetStateMachine && std::string(targetStateMachine->GetStateName()) == "EnemyDeathState"))
+        {
+            player->BeginBossSlowReturn(true);
+            player->GetStateMachine()->ChangeState("Idle");
+            return;
+        }
+    }
     if (auto target = player->rushTarget.lock())
     {
         DirectX::XMFLOAT3 targetDirection = MathHelper::Subtract(
@@ -565,11 +583,8 @@ void PlayerRushState::Exit()
 
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
     player->GetBodyAnimationController()->ResetAnimationRate();
-    if (auto target = player->rushTarget.lock())
-    {
-        target->ResetTimeScale();
-    }
-    player->ResetTimeScale();
+    player->ForceResetPlayerSlow();
+    player->BeginBossSlowReturn(true);
     player->invincible = false;  // ラッシュ攻撃中は無敵状態解除
 }
 
@@ -704,4 +719,3 @@ void PlayerJumpAttackState::Exit()
 {
 
 }
-

@@ -84,7 +84,7 @@ public:
 
     void DrawImGuiDetails()override;
 
-    void Finalize()override {}
+    void Finalize()override { ForceResetPlayerSlow(); ForceResetBossSlow(); }
 
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
 
@@ -175,6 +175,13 @@ public:
 
     // ジャスト回避成功時の処理　ラッシュ受付期間開始
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
+
+    // Player/Bossの解除タイミングを独立して管理する。
+    void BeginPlayerSlowReturn();
+    void BeginBossSlowReturn(bool afterRush = false);
+    void HoldBossSlowForRush();
+    void ForceResetPlayerSlow();
+    void ForceResetBossSlow();
 
     // ラッシュ受付期間終了
     void EndRushAttackInput();
@@ -371,11 +378,28 @@ private:
     LocomotionMode locomotionMode = LocomotionMode::Idle;
 
     // スロー
-    float slowMotionTimer = 0.0f;
-    bool slowMotionActive = false;
-    float slowMotionInterval = 0.3f;   // スローモーションの時間
-    float slowMotionPlayerTimeScale = 0.2f;  // どれくらいスローモーションにタイム倍率
-    float slowMotionEnemyTimeScale = 0.2f;  // どれくらいスローモーションにタイム倍率
+    enum class JustDodgeSlowPhase : uint8_t
+    {
+        Inactive,
+        Hold,
+        Return,
+        RushHold,
+    };
+
+    JustDodgeSlowPhase playerSlowPhase = JustDodgeSlowPhase::Inactive;
+    JustDodgeSlowPhase bossSlowPhase = JustDodgeSlowPhase::Inactive;
+    float playerSlowHoldTimer = 0.0f;
+    float bossSlowHoldTimer = 0.0f;
+    float playerSlowReturnElapsed = 0.0f;
+    float bossSlowReturnElapsed = 0.0f;
+    float playerSlowReturnStartScale = 1.0f;
+    float bossSlowReturnStartScale = 1.0f;
+    float activeBossSlowReturnDuration = 0.10f;
+    float justDodgeTimeScale = 0.25f;
+    float justDodgeSlowHoldDuration = 0.30f;
+    float justDodgeSlowReturnDuration = 0.10f;
+    float rushBossSlowScale = 0.1f;
+    float rushBossReturnDuration = 0.10f;
 
 
     // プレイヤーの壁に近づいた時の透明度
