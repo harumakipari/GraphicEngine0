@@ -52,6 +52,9 @@ public:
     void BeginAdditionalAttackStage();
     float GetAttackInterval() const { return attackInterval; }
     float GetRecoveryDuration() const { return recoveryDuration; }
+    float GetComboInterval() const { return comboInterval; }
+    int GetCurrentAttackHitCount() const { return currentAttackHitCount; }
+    bool WasCurrentAttackSequenceJustDodged() const { return !justDodgedActors.empty(); }
 
     // ƒJƒƒ‰‚Ì’‹“_‚ÌˆÊ’u
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
@@ -109,6 +112,7 @@ private:
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
     float attackInterval = 3.0f;
     float recoveryDuration = 0.5f;
+    float comboInterval = 0.2f;
 
     bool isDeathPerform = false;
     float pitchBaseValue = 0.45f;

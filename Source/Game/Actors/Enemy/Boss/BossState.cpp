@@ -68,22 +68,56 @@ void EnemyDeathState::Exit()
 void EnemyAttackState::Enter()
 {
     comboStage = 0;
+    stageStartHitCount = 0;
+    comboIntervalTimer = 0.0f;
+    waitingForNextStage = false;
     enemy->StartAttack();
+    stageStartHitCount = enemy->GetCurrentAttackHitCount();
     if (!enemy->PlayAttackStage(enemy->GetSelectedAttackType(), comboStage))
         owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
 }
 
 void EnemyAttackState::Execute(float deltaTime)
 {
+    const BossAttackType attackType = enemy->GetSelectedAttackType();
+
+    if (waitingForNextStage)
+    {
+        comboIntervalTimer += deltaTime;
+        if (comboIntervalTimer < enemy->GetComboInterval())
+            return;
+
+        waitingForNextStage = false;
+        comboIntervalTimer = 0.0f;
+        ++comboStage;
+        enemy->BeginAdditionalAttackStage();
+        stageStartHitCount = enemy->GetCurrentAttackHitCount();
+        if (!enemy->PlayAttackStage(attackType, comboStage))
+            owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+        return;
+    }
+
     if (enemy->GetBodyAnimationController()->IsPlayAnimation())
         return;
 
-    const int stageCount = enemy->GetAttackStageCount(enemy->GetSelectedAttackType());
+    if (attackType == BossAttackType::FastCombo)
+    {
+        const bool playerHitThisStage =
+            enemy->GetCurrentAttackHitCount() > stageStartHitCount;
+        const bool justDodgedThisSequence =
+            enemy->WasCurrentAttackSequenceJustDodged();
+        if (playerHitThisStage || justDodgedThisSequence)
+        {
+            owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+            return;
+        }
+    }
+
+    const int stageCount = enemy->GetAttackStageCount(attackType);
     if (comboStage + 1 < stageCount)
     {
-        ++comboStage;
-        enemy->BeginAdditionalAttackStage();
-        enemy->PlayAttackStage(enemy->GetSelectedAttackType(), comboStage);
+        waitingForNextStage = true;
+        comboIntervalTimer = 0.0f;
         return;
     }
     owner->GetStateMachine()->ChangeState("EnemyRecoveryState");

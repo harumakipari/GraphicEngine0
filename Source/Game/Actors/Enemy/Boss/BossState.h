@@ -104,6 +104,9 @@ public:
 
 private:
     int comboStage = 0;
+    int stageStartHitCount = 0;
+    float comboIntervalTimer = 0.0f;
+    bool waitingForNextStage = false;
 };
 
 class EnemyRecoveryState : public EnemyStateBase

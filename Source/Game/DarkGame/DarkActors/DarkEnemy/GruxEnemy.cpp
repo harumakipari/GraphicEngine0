@@ -728,6 +728,7 @@ void GruxEnemy::DrawImGuiDetails()
         debugFixedAttackType = static_cast<BossAttackType>(attackIndex);
     ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::DragFloat("FastCombo Interval", &comboInterval, 0.01f, 0.0f, 2.0f, "%.2f sec");
     ImGui::Text("Selected Attack: %s", attackTypes[static_cast<int>(selectedAttackType)]);
     ImGui::DragFloat("pitchBaseValue", &pitchBaseValue, 0.05f);
     if (ImGui::Button("Attack"))
