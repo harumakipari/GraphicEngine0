@@ -258,6 +258,17 @@ void RotationComponent::SetDirection(const DirectX::XMFLOAT3& dir)
     DirectX::XMStoreFloat4(&targetRotation_, DirectX::XMQuaternionRotationRollPitchYaw(startAngle_.x, targetYaw, startAngle_.z));
 }
 
+void RotationComponent::SetDirectionImmediate(const DirectX::XMFLOAT3& dir)
+{
+    // Keep the current rotation for a zero-length XZ direction.
+    if (fabs(dir.x) < 0.001f && fabs(dir.z) < 0.001f)
+        return;
+
+    SetDirection(dir);
+    if (auto owner = owner_.lock())
+        owner->SetQuaternionRotation(targetRotation_);
+    lerpTime_ = rotateTime_;
+}
 void RotationComponent::Tick(float deltaTime)
 {
     if (lerpTime_ >= rotateTime_)

@@ -251,6 +251,7 @@ public:
     RotationComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :SceneComponent(name, owner) {}
 
     void SetDirection(const DirectX::XMFLOAT3& dir);
+    void SetDirectionImmediate(const DirectX::XMFLOAT3& dir);
 
     void Tick(float deltaTime)override;
 

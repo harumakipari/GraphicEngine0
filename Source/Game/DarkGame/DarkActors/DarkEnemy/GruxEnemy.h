@@ -116,8 +116,8 @@ private:
     float recoveryDuration = 0.5f;
     float comboInterval = 0.2f;
 
-    float maxJumpDistance = 8.0f;
-    float desiredAttackDistance = 2.0f;
+    float maxJumpDistance = 12.5f;
+    float desiredAttackDistance = 0.1f;
     float currentJumpPlayerDistance = 0.0f;
     float calculatedJumpDistance = 0.0f;
     bool jumpMotionWarpOverrideActive = false;

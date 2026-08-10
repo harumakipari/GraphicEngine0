@@ -1085,6 +1085,8 @@ void GruxEnemy::PrepareJumpAttackMotionWarpOverride()
     {
         const float inverseDistance = 1.0f / currentJumpPlayerDistance;
         jumpMotionWarpDirection = { dx * inverseDistance, 0.0f, dz * inverseDistance };
+        if (rotationComponent)
+            rotationComponent->SetDirectionImmediate(jumpMotionWarpDirection);
     }
     else
     {
