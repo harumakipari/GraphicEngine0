@@ -84,6 +84,8 @@ bool Framework::Initialize()
 
 bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
 {
+    ZoneScopedN("Update");
+
     //デバイスコンテクストを取得
     ID3D11DeviceContext* immediateContext = Graphics::GetDeviceContext();
     //オーディオ更新
@@ -107,6 +109,7 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
     bool skipRendering;
     // SCENE_TRANSITION
     {
+        ZoneScopedN("Scene Update");
         ProfileScopedSection_2(0, "SceneUpdate", ImGuiControl::Profiler::Blue);
         skipRendering = Scene::_update(immediateContext, deltaTime);
     }
@@ -135,6 +138,7 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
 #endif
     //パーティクルシステム更新
     {
+        ZoneScopedN("Effects Update");
         ProfileScopedSection_2(0, "ComputeParticleSystem::Update", ImGuiControl::Profiler::Blue);
         particleSystem->Update(Graphics::GetDeviceContext(), deltaTime);
 
@@ -148,6 +152,8 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
 
 void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bool skipRendering)
 {
+    ZoneScopedN("Render CPU");
+
     HRESULT hr{ S_OK };
 
     //デバイスコンテクストを取得
@@ -172,6 +178,7 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
     if (!skipRendering)
     {
         {
+            ZoneScopedN("Scene Render");
             ProfileScopedSection_2(0, "Render", ImGuiControl::Profiler::Red);
             Scene::_render(immediateContext, elapsed_time);//
         }

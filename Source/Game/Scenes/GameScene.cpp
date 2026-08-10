@@ -211,8 +211,11 @@ void GameScene::Update(float deltaTime)
     SceneBase::Update(deltaTime);
 
     Physics::Instance().Update(Time::UnscaledDeltaTime());
-    CollisionSystem::DetectAndResolveCollisions();
-    CollisionSystem::ApplyPushAll();
+    {
+        ZoneScopedN("Collision Resolution");
+        CollisionSystem::DetectAndResolveCollisions();
+        CollisionSystem::ApplyPushAll();
+    }
     if (clothSimulate)
     {
         clothSimulate->Update(deltaTime);

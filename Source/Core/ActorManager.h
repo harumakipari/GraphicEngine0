@@ -2,6 +2,7 @@
 #include <map>
 #include <memory>
 #include <cassert>
+#include <tracy/Tracy.hpp>
 #include "Actor.h"
 
 #include "Graphics/Renderer/ShapeRenderer.h"
@@ -220,6 +221,8 @@ public:
     // 全アクターのUpdate処理を呼び出す（RootComponentとOwnedComponent）
     void Update(float deltaTime)
     {
+        ZoneScopedN("Actor Update");
+
         // allActors_ のコピーを作る（弱参照ならshared_ptrもコピーされる）
         auto updateActors = allActors_;
 

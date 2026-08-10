@@ -3,6 +3,7 @@
 #include "Engine/Utility/Win32Utils.h"
 #include "Physics.h"
 #include "Graphics/Core/Graphics.h"
+#include <tracy/Tracy.hpp>
 
 #include "Core/Actor.h"
 
@@ -122,6 +123,8 @@ void Physics::Finalize()
 // 更新処理
 void Physics::Update(float elapsedTime)
 {
+    ZoneScopedN("Physics / PhysX");
+
     pxScene->simulate(elapsedTime);//simulate今から開始するよっていう合図
     pxScene->fetchResults(true);//	計算が終わるまで待つ
 }

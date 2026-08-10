@@ -6,6 +6,7 @@
 #include <ranges>
 #include <json.hpp>
 #include <fstream>
+#include <tracy/Tracy.hpp>
 
 #include "Utility/SceneJsonUtils.h"
 #include "Game/Actors/Base/Character.h"
@@ -55,6 +56,8 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
+    ZoneScopedN("Animation Update");
+
     const DirectX::XMFLOAT3 actorPositionAtBegin =owner->GetPosition();
 
     // 最初にモデルとアニメーションを確認する

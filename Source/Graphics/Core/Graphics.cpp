@@ -2,6 +2,7 @@
 #include "Graphics.h"
 
 #include <string>
+#include <tracy/Tracy.hpp>
 
 
 #include "Engine/Utility/Win32Utils.h"
@@ -113,6 +114,7 @@ void Graphics::SetRenderTargets()
 // 画面表示
 void Graphics::Present(UINT syncInterval)
 {
+    ZoneScopedN("Present");
     swapChain->Present(syncInterval, DXGI_PRESENT_ALLOW_TEARING);// フレームをスクリーンに表示
 }
 

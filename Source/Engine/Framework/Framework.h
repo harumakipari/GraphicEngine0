@@ -116,7 +116,9 @@ public:
             }
             else
             {
-                tictoc.Tick();
+                {
+                    ZoneScopedN("Frame");
+                    tictoc.Tick();
                 calculate_frame_stats();
 
                 // SCENE_TRANSITION
@@ -132,14 +134,18 @@ public:
                 //Render(tictoc.DeltaTime());
 
 #ifdef USE_IMGUI
-                ImGui::Render();
-                ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+                {
+                    ZoneScopedN("ImGui Render CPU");
+                    ImGui::Render();
+                    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+                }
 #endif
                 //UINT sync_interval{ vsync ? 1U : 0U };
                 //UINT flags = (tearing_supported && !fullscreenMode && !vsync) ? DXGI_PRESENT_ALLOW_TEARING : 0;
                 //Graphics::GetSwapChain()->Present(sync_interval, flags);
                 UINT sync_interval{ 0 };
                 Graphics::Present(sync_interval);
+                }
                 FrameMark;
             }
         }
