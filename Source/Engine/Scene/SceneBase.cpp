@@ -168,7 +168,7 @@ void SceneBase::Update(float deltaTime)
     {// デバッグカメラとゲームカメラの切り替え
         cameraManager->ToggleCamera(this);
     }
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (!Framework::showEditor)
     {
         InputSystem::SetCursorVisible(false);
@@ -191,7 +191,7 @@ void SceneBase::Update(float deltaTime)
     InputSystem::SetCursorVisible(false);
 
 
-#endif // !_DEBUG
+#endif // !USE_IMGUI
 
     if (InputSystem::GetInputState("P", InputStateMask::Trigger))
     {

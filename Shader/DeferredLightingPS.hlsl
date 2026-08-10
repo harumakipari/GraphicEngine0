@@ -79,10 +79,6 @@ float4 main(VS_OUT pin) : SV_TARGET
         {
             float3 LP = pointLights[i].position.xyz - position.xyz;
             float len = length(LP);
-            if (len <= pointLights[i].range)
-            {
-                lightCount++;
-            }
 
             float kc = attenuationPresets[pointLights[i].attenuationType].kc;
             float kl = attenuationPresets[pointLights[i].attenuationType].kl;
@@ -90,9 +86,31 @@ float4 main(VS_OUT pin) : SV_TARGET
 
             float attenuation = saturate(1.0 / (kc + kl * len + kq * (len * len)));
 
+            // ライト自体の強さ
+            float3 pLi =pointLights[i].color.xyz * pointLights[i].color.w;
+
+            // このライトが出せる最大寄与量を簡易評価
+            float maxLightIntensity =max(pLi.r, max(pLi.g, pLi.b));
+
+            float contribution =maxLightIntensity * attenuation;
+
+            // ほぼ見えないライトは、
+            // normalize / GGX / Fresnelなどを行わない
+            if (contribution < 0.001f)
+            {
+                continue;
+            }
+
             LP /= len;
             const float pNoV = max(0.0, dot(N, V));
             const float pNoL = max(0.0, dot(N, LP));
+
+             // 直接光なのでライトの反対側ならBRDF不要
+            if (pNoL <= 0.0f)
+            {
+                continue;
+            }
+
 
             if (pNoV > 0.0 || pNoL > 0.0) // 点光源には方向がないため
             {

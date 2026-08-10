@@ -126,7 +126,7 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
         Graphics::StylizeWindow(!Graphics::fullscreenMode);
     }
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
 
     if (InputSystem::GetInputState("F1", InputStateMask::Trigger))
     {

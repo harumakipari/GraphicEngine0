@@ -123,7 +123,6 @@ public:
                         TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "GPU Frame");
                 calculate_frame_stats();
 
-                // SCENE_TRANSITION
 #ifdef USE_IMGUI
                 ImGui_ImplDX11_NewFrame();
                 ImGui_ImplWin32_NewFrame();

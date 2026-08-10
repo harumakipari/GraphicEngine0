@@ -231,7 +231,7 @@ void GameScene::Update(float deltaTime)
     }
 
 
-#ifdef _DEBUG
+#ifdef USE_IMGUI
     if (InputSystem::GetInputState("0", InputStateMask::Trigger))
     {
         SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
@@ -456,7 +456,7 @@ void GameScene::Update(float deltaTime)
 
 
 
-#endif // !_DEBUG
+#endif // !USE_IMGUI
 
 
 }
