@@ -50,6 +50,7 @@ public:
     int GetAttackStageCount(BossAttackType type) const;
     bool PlayAttackStage(BossAttackType type, int stage);
     void BeginAdditionalAttackStage();
+    void ClearJumpAttackMotionWarpOverride();
     float GetAttackInterval() const { return attackInterval; }
     float GetRecoveryDuration() const { return recoveryDuration; }
     float GetComboInterval() const { return comboInterval; }
@@ -69,6 +70,7 @@ private:
     void ResetJustDodgeRecords(const char* reason);
     bool HasJustDodgedAttack(const Actor* actor) const;
     void ResetDangerArea();
+    void PrepareJumpAttackMotionWarpOverride();
     void RefreshActiveHitBoxesFromNotifyStates();
 private:
     // 描画用コンポーネントを追加
@@ -113,6 +115,14 @@ private:
     float attackInterval = 3.0f;
     float recoveryDuration = 0.5f;
     float comboInterval = 0.2f;
+
+    float maxJumpDistance = 8.0f;
+    float desiredAttackDistance = 2.0f;
+    float currentJumpPlayerDistance = 0.0f;
+    float calculatedJumpDistance = 0.0f;
+    bool jumpMotionWarpOverrideActive = false;
+    DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};
+    DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };
 
     bool isDeathPerform = false;
     float pitchBaseValue = 0.45f;

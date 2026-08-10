@@ -124,6 +124,7 @@ void EnemyAttackState::Execute(float deltaTime)
 }
 void EnemyAttackState::Exit()
 {
+    enemy->ClearJumpAttackMotionWarpOverride();
     enemy->DisableAttackHitBoxes();
 }
 

@@ -729,6 +729,13 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("FastCombo Interval", &comboInterval, 0.01f, 0.0f, 2.0f, "%.2f sec");
+    ImGui::SeparatorText("JumpAttack Debug");
+    ImGui::DragFloat("Max Jump Distance", &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
+    ImGui::DragFloat("Desired Attack Distance", &desiredAttackDistance, 0.05f, 0.0f, 10.0f, "%.2f");
+    currentJumpPlayerDistance = GetDistanceToPlayer();
+    ImGui::Text("Current Player Distance: %.3f", currentJumpPlayerDistance);
+    ImGui::Text("Calculated Jump Distance: %.3f", calculatedJumpDistance);
+    ImGui::Text("Jump Override: %s", jumpMotionWarpOverrideActive ? "Active" : "Inactive");
     ImGui::Text("Selected Attack: %s", attackTypes[static_cast<int>(selectedAttackType)]);
     ImGui::DragFloat("pitchBaseValue", &pitchBaseValue, 0.05f);
     if (ImGui::Button("Attack"))
@@ -868,6 +875,11 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         // ‹æŠÔ‚ÌŽžŠÔ‚ðŽæ‚é
         float duration = state.endTime - state.startTime;
         float actualWarpDistance = state.moveDistance;
+        if (jumpMotionWarpOverrideActive)
+        {
+            direction = jumpMotionWarpDirection;
+            actualWarpDistance = calculatedJumpDistance;
+        }
 
         float speed = 0.0f;
         if (duration > 0.0f)
@@ -1027,7 +1039,10 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
         animationName = comboAnimations[stage];
         break;
     }
-    case BossAttackType::JumpAttack: animationName = "PrimaryAttack_JumpAttack"; break;
+    case BossAttackType::JumpAttack:
+        PrepareJumpAttackMotionWarpOverride();
+        animationName = "PrimaryAttack_JumpAttack";
+        break;
     case BossAttackType::Dash: animationName = "PrimaryAttack_Dash"; break;
     case BossAttackType::DashAttack: animationName = "PrimaryAttack_DashAttack"; break;
     case BossAttackType::LongRangeAttack: return false;
@@ -1042,8 +1057,51 @@ void GruxEnemy::BeginAdditionalAttackStage()
     // A FastCombo is one attack sequence, but each stage may damage the player once.
     hitActors.clear();
 }
+
+void GruxEnemy::PrepareJumpAttackMotionWarpOverride()
+{
+    ClearJumpAttackMotionWarpOverride();
+
+    const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+    if (!player)
+    {
+        currentJumpPlayerDistance = 0.0f;
+        calculatedJumpDistance = 0.0f;
+        jumpMotionWarpDirection = { 0.0f, 0.0f, 0.0f };
+        jumpMotionWarpOverrideActive = true;
+        return;
+    }
+
+    const DirectX::XMFLOAT3 bossPosition = GetPosition();
+    jumpAttackStartPlayerPosition = player->GetPosition();
+    const float dx = jumpAttackStartPlayerPosition.x - bossPosition.x;
+    const float dz = jumpAttackStartPlayerPosition.z - bossPosition.z;
+    currentJumpPlayerDistance = std::sqrt(dx * dx + dz * dz);
+
+    const float desiredMoveDistance = currentJumpPlayerDistance - desiredAttackDistance;
+    calculatedJumpDistance = std::clamp(desiredMoveDistance, 0.0f, maxJumpDistance);
+
+    if (currentJumpPlayerDistance > FLT_EPSILON)
+    {
+        const float inverseDistance = 1.0f / currentJumpPlayerDistance;
+        jumpMotionWarpDirection = { dx * inverseDistance, 0.0f, dz * inverseDistance };
+    }
+    else
+    {
+        jumpMotionWarpDirection = { 0.0f, 0.0f, 0.0f };
+    }
+    jumpMotionWarpOverrideActive = true;
+}
+
+void GruxEnemy::ClearJumpAttackMotionWarpOverride()
+{
+    jumpMotionWarpOverrideActive = false;
+    jumpMotionWarpDirection = { 0.0f, 0.0f, 1.0f };
+    animationMotionWarps.clear();
+}
 void GruxEnemy::StartAttack()
 {
+    ClearJumpAttackMotionWarpOverride();
 #if 0
     DirectX::XMFLOAT3 size = { 1.0f,4.0f,1.0f };
     leftWeaponCollisionComp->ResizeCapsule(size.x, size.y);
