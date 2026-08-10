@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 enum class BossAIMode : uint8_t
 {
@@ -17,4 +18,13 @@ enum class BossAttackType : uint8_t
     Dash,
     DashAttack,
     LongRangeAttack,
+};
+
+struct BossAttackData
+{
+    BossAttackType type = BossAttackType::PrimaryAttackLA;
+    std::string animationName;
+    float minDistance = 0.0f;
+    float maxDistance = 0.0f;
+    float weight = 1.0f;
 };

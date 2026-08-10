@@ -39,8 +39,13 @@ void EnemyThinkState::Execute(float deltaTime)
     if (timer < enemy->GetAttackInterval())
         return;
 
+    if (!enemy->SelectAttackForCurrentMode())
+    {
+        timer = (std::max)(0.0f, enemy->GetAttackInterval() - 0.25f);
+        return;
+    }
+
     attackSelected = true;
-    enemy->SelectAttackForCurrentMode();
     owner->GetStateMachine()->ChangeState("EnemyAttackState");
 }
 void EnemyThinkState::Exit()

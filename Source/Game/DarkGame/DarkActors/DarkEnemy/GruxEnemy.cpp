@@ -10,6 +10,7 @@
 #include "Game/Actors/Player/Player.h"
 #include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
 #include "Physics/CollisionFunction.h"
+#include <random>
 
 void GruxEnemy::Initialize(const Transform& transform)
 {
@@ -736,6 +737,30 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Calculated Jump Distance: %.3f", calculatedJumpDistance);
     ImGui::Text("Jump Override: %s", jumpMotionWarpOverrideActive ? "Active" : "Inactive");
     ImGui::Text("Selected Attack: %s", attackTypes[static_cast<int>(selectedAttackType)]);
+    ImGui::Text("Current AI Mode: %s", aiModes[static_cast<int>(bossAIMode)]);
+    ImGui::Text("Last Attack: %s",
+        hasLastAttack ? attackTypes[static_cast<int>(lastAttackType)] : "None");
+    ImGui::DragFloat("Repeat Weight Scale", &repeatWeightScale, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::Text("Last Think Distance: %.3f", lastCombatSelectionDistance);
+    if (ImGui::TreeNode("Combat Attack Candidates"))
+    {
+        for (size_t i = 0; i < combatAttackData.size(); ++i)
+        {
+            auto& attack = combatAttackData[i];
+            ImGui::PushID(static_cast<int>(i));
+            ImGui::SeparatorText(attack.animationName.c_str());
+            ImGui::DragFloat("Min Distance", &attack.minDistance, 0.1f, 0.0f, 100.0f, "%.2f");
+            ImGui::DragFloat("Max Distance", &attack.maxDistance, 0.1f, 0.0f, 100.0f, "%.2f");
+            ImGui::DragFloat("Base Weight", &attack.weight, 0.05f, 0.0f, 100.0f, "%.2f");
+            attack.minDistance = (std::max)(0.0f, attack.minDistance);
+            attack.maxDistance = (std::max)(attack.minDistance, attack.maxDistance);
+            attack.weight = (std::max)(0.0f, attack.weight);
+            ImGui::Text("Effective Weight: %.3f", combatEffectiveWeights[i]);
+            ImGui::Text("Last Think: %s", combatCandidateFlags[i] ? "Candidate" : "OutOfRange");
+            ImGui::PopID();
+        }
+        ImGui::TreePop();
+    }
     ImGui::DragFloat("pitchBaseValue", &pitchBaseValue, 0.05f);
     if (ImGui::Button("Attack"))
     {
@@ -999,18 +1024,76 @@ void GruxEnemy::OnAnimationChanged()
 }
 
 // 攻撃開始時に始める処理
-void GruxEnemy::SelectAttackForCurrentMode()
+bool GruxEnemy::SelectAttackForCurrentMode()
 {
     if (bossAIMode == BossAIMode::DebugFixedAttack)
     {
         selectedAttackType = debugFixedAttackType;
-        return;
+        return true;
     }
 
-    // CombatAI candidate filtering and weighted selection will be added here.
-    selectedAttackType = BossAttackType::PrimaryAttackLA;
-}
+    currentCombatPlayerDistance = GetDistanceToPlayer();
+    lastCombatSelectionDistance = currentCombatPlayerDistance;
+    combatEffectiveWeights.fill(0.0f);
+    combatCandidateFlags.fill(false);
 
+    float totalWeight = 0.0f;
+    for (size_t i = 0; i < combatAttackData.size(); ++i)
+    {
+        const auto& attack = combatAttackData[i];
+        const bool inRange =
+            attack.minDistance <= currentCombatPlayerDistance &&
+            currentCombatPlayerDistance <= attack.maxDistance;
+        combatCandidateFlags[i] = inRange;
+        if (!inRange || attack.weight <= 0.0f)
+            continue;
+
+        float effectiveWeight = attack.weight;
+        if (hasLastAttack && attack.type == lastAttackType)
+            effectiveWeight *= repeatWeightScale;
+        combatEffectiveWeights[i] = effectiveWeight;
+        totalWeight += effectiveWeight;
+    }
+
+    if (totalWeight <= 0.0f)
+        return false;
+
+    static std::mt19937 randomEngine{ std::random_device{}() };
+    std::uniform_real_distribution<float> distribution(0.0f, totalWeight);
+    const float selectionValue = distribution(randomEngine);
+    float accumulatedWeight = 0.0f;
+    size_t selectedIndex = combatAttackData.size();
+    for (size_t i = 0; i < combatAttackData.size(); ++i)
+    {
+        if (combatEffectiveWeights[i] <= 0.0f)
+            continue;
+        accumulatedWeight += combatEffectiveWeights[i];
+        if (selectionValue <= accumulatedWeight)
+        {
+            selectedIndex = i;
+            break;
+        }
+    }
+
+    if (selectedIndex >= combatAttackData.size())
+    {
+        for (size_t i = combatAttackData.size(); i-- > 0;)
+        {
+            if (combatEffectiveWeights[i] > 0.0f)
+            {
+                selectedIndex = i;
+                break;
+            }
+        }
+    }
+    if (selectedIndex >= combatAttackData.size())
+        return false;
+
+    selectedAttackType = combatAttackData[selectedIndex].type;
+    lastAttackType = selectedAttackType;
+    hasLastAttack = true;
+    return true;
+}
 int GruxEnemy::GetAttackStageCount(BossAttackType type) const
 {
     if (type == BossAttackType::FastCombo)
@@ -1224,7 +1307,7 @@ void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
 // プレイヤーとの距離を取得する関数
 float GruxEnemy::GetDistanceToPlayer()
 {
-    auto player = GetOwnerScene()->GetActorManager()->GetActorByName("player");
+    auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     if (!player) return 9999.0f;
 
     auto p = player->GetPosition();

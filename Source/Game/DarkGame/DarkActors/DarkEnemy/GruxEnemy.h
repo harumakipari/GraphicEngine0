@@ -7,6 +7,7 @@
 #include "UI/Widgets/Widget.h"
 #include "Animation/DangerArea.h"
 #include "Game/Actors/Enemy/Boss/BossAITypes.h"
+#include <array>
 
 class GruxEnemy :public Enemy
 {
@@ -46,7 +47,7 @@ public:
 
     BossAIMode GetBossAIMode() const { return bossAIMode; }
     BossAttackType GetSelectedAttackType() const { return selectedAttackType; }
-    void SelectAttackForCurrentMode();
+    bool SelectAttackForCurrentMode();
     int GetAttackStageCount(BossAttackType type) const;
     bool PlayAttackStage(BossAttackType type, int stage);
     bool PlayAttackAnimationByName(const std::string& animationName);
@@ -113,6 +114,19 @@ private:
     BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;
     BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
+    BossAttackType lastAttackType = BossAttackType::PrimaryAttackLA;
+    bool hasLastAttack = false;
+    std::array<BossAttackData, 4> combatAttackData = {{
+        { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f },
+        { BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f },
+        { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f },
+        { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 14.0f, 1.0f },
+    }};
+    std::array<float, 4> combatEffectiveWeights{};
+    std::array<bool, 4> combatCandidateFlags{};
+    float currentCombatPlayerDistance = 0.0f;
+    float lastCombatSelectionDistance = 0.0f;
+    float repeatWeightScale = 0.25f;
     float attackInterval = 3.0f;
     float recoveryDuration = 0.5f;
     bool transitionWindow = false;
