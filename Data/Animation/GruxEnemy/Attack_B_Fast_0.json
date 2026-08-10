@@ -34,7 +34,32 @@
     },
     "states": [
         {
+            "endTime": 0.17637357115745544,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.699999988079071,
+                0.0,
+                2.5999999046325684
+            ],
+            "justDodgeAreaSize": [
+                6.699999809265137,
+                2.0,
+                7.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.030769258737564087,
+            "type": "DangerWindow",
+            "value": 1.0
+        },
+        {
             "endTime": 0.1582416146993637,
+            "hitBoxRadius": 1.309999942779541,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -54,29 +79,6 @@
             "parameter": "rightWeapon",
             "startTime": 0.09285715222358704,
             "type": "HitBox",
-            "value": 1.0
-        },
-        {
-            "endTime": 0.170879065990448,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                1.7000000476837158
-            ],
-            "justDodgeAreaSize": [
-                6.199999809265137,
-                2.0,
-                4.099999904632568
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "",
-            "startTime": 0.039011016488075256,
-            "type": "DangerWindow",
             "value": 1.0
         }
     ]

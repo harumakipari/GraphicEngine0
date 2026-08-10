@@ -588,6 +588,7 @@ void AnimationController::BeginEditorPreview(const bool playing, const bool rese
     editorPreviewPlaying = playing;
     if (resetTime)
         editorPreviewTime = 0.0f;
+    previousEditorPreviewTime = editorPreviewTime;
     ApplyEditorPreviewPose();
 }
 
@@ -600,6 +601,7 @@ void AnimationController::SetEditorPreviewTime(const float time)
     editorPreviewPlaying = false;
     const float duration = target_->model->animations[selectedTimelineClip].duration;
     editorPreviewTime = std::clamp(time, 0.0f, duration);
+    previousEditorPreviewTime = editorPreviewTime;
     ApplyEditorPreviewPose();
 }
 
@@ -616,23 +618,59 @@ void AnimationController::UpdateEditorPreview(const float deltaTime)
             ? assetIt->second.speedCurve.Evaluate(editorPreviewTime) : 1.0f;
         const float playRate = assetIt != animationNotifyAssets.end()
             ? assetIt->second.playRate : 1.0f;
-        editorPreviewTime += deltaTime * animationRate * playRate * curveRate;
+
+        previousEditorPreviewTime = editorPreviewTime;
+        const float advancedTime = editorPreviewTime + deltaTime * animationRate * playRate * curveRate;
+        bool wrapped = false;
+        editorPreviewTime = advancedTime;
 
         if (editorPreviewTime >= duration)
         {
             if (isAnimationLoop)
+            {
                 editorPreviewTime = std::fmod(editorPreviewTime, duration);
+                wrapped = true;
+            }
             else
             {
                 editorPreviewTime = duration;
                 editorPreviewPlaying = false;
             }
         }
+
+        if (wrapped || editorPreviewTime > previousEditorPreviewTime)
+        {
+            ProcessEditorPreviewEvents(
+                previousEditorPreviewTime, editorPreviewTime, duration, wrapped);
+        }
     }
 
     ApplyEditorPreviewPose();
 }
+void AnimationController::ProcessEditorPreviewEvents(
+    const float previousTime, const float currentTime,
+    const float duration, const bool wrapped)
+{
+    if (!editorPreviewActive || !owner)
+        return;
 
+    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+    if (assetIt == animationNotifyAssets.end())
+        return;
+
+    for (const auto& event : assetIt->second.notifyTrack.events)
+    {
+        if (event.type != AnimationNotifyEvent::Type::PlaySE)
+            continue;
+
+        const bool crossed = wrapped
+            ? ((previousTime < event.time && event.time <= duration) ||
+                (0.0f < event.time && event.time <= currentTime))
+            : (previousTime < event.time && currentTime >= event.time);
+        if (crossed)
+            owner->OnAnimationEditorPreviewEvent(event);
+    }
+}
 void AnimationController::ApplyEditorPreviewPose()
 {
     if (!target_ || !target_->model || selectedTimelineClip >= target_->model->animations.size())
@@ -1632,6 +1670,8 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             {
                 state.parameter = buffer;
             }
+            if (ImGui::DragFloat("HitBox Radius", &state.hitBoxRadius, 0.01f, 0.01f, 5.0f))
+                state.hitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
             break;
         }
         case AnimationNotifyState::Type::InputWindow:
@@ -2758,6 +2798,7 @@ void AnimationController::SaveNotifyAsset(const std::string& filename, const Ani
         j["endTime"] = state.endTime;
         j["type"] = std::string(magic_enum::enum_name(state.type));
         j["parameter"] = state.parameter;
+        j["hitBoxRadius"] = state.hitBoxRadius;
         j["value"] = state.value;
         j["moveDistance"] = state.moveDistance;
         j["moveDirection"] = state.moveDirection;
@@ -2846,6 +2887,7 @@ void AnimationController::LoadNotifyAsset(const std::string& filename, Animation
                 state.type = type.value();
 
             state.parameter = j.value("parameter", "");
+            state.hitBoxRadius = ([&] { const float radius = j.value("hitBoxRadius", 0.8f); return radius < 0.01f ? 0.01f : radius; }());
             state.value = j.value("value", 1.0f);
             if (j.contains("moveDirection"))
             {

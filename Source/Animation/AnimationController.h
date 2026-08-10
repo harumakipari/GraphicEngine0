@@ -492,6 +492,7 @@ private:
     void UpdateEditorPreview(float deltaTime);
     void ApplyEditorPreviewPose();
     void DrawEditorPreviewStates();
+    void ProcessEditorPreviewEvents(float previousTime, float currentTime, float duration, bool wrapped);
     void BeginEditorPreview(bool playing, bool resetTime);
     void SetEditorPreviewTime(float time);
     void CaptureEditorRuntimeSnapshot();
@@ -639,6 +640,7 @@ private:
     bool editorPreviewActive = false;
     bool editorPreviewPlaying = false;
     float editorPreviewTime = 0.0f;
+    float previousEditorPreviewTime = 0.0f;
     bool editorPreviewShowDangerWindow = true;
     bool editorPreviewShowHitBox = true;
     EditorRuntimeSnapshot editorRuntimeSnapshot;

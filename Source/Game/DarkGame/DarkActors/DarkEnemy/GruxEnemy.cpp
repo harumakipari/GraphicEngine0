@@ -513,9 +513,9 @@ void GruxEnemy::Update(float deltaTime)
         HitResultWithActor leftRootHit;
         HitResultWithActor leftMidHit;
         HitResultWithActor leftTipHit;
-        const bool leftRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftRootPos, weaponLeftRootPos, leftRootHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        const bool leftMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftMidPos, weaponLeftMidPos, leftMidHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        const bool leftTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftTipPos, weaponLeftTipPos, leftTipHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool leftRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftRootPos, weaponLeftRootPos, leftRootHit, activeLeftHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool leftMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftMidPos, weaponLeftMidPos, leftMidHit, activeLeftHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool leftTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftTipPos, weaponLeftTipPos, leftTipHit, activeLeftHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
         isLeftHit = leftRootSucceeded || leftMidSucceeded || leftTipSucceeded;
         if (leftRootSucceeded)
             hit = leftRootHit;
@@ -568,9 +568,9 @@ void GruxEnemy::Update(float deltaTime)
         HitResultWithActor rightRootHit;
         HitResultWithActor rightMidHit;
         HitResultWithActor rightTipHit;
-        const bool rightRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightRootPos, weaponRightRootPos, rightRootHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        const bool rightMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightMidPos, weaponRightMidPos, rightMidHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        const bool rightTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightTipPos, weaponRightTipPos, rightTipHit, hitWeaponRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool rightRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightRootPos, weaponRightRootPos, rightRootHit, activeRightHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool rightMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightMidPos, weaponRightMidPos, rightMidHit, activeRightHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool rightTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightTipPos, weaponRightTipPos, rightTipHit, activeRightHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
         isRightHit = rightRootSucceeded || rightMidSucceeded || rightTipSucceeded;
         if (rightRootSucceeded)
             hit = rightRootHit;
@@ -644,6 +644,19 @@ void GruxEnemy::Update(float deltaTime)
 #endif // 0
 }
 
+void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
+{
+    if (event.type != AnimationNotifyEvent::Type::PlaySE || event.parameter.empty())
+        return;
+
+    const std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
+    auto audio = CoreAudio::PlayOneShot(audioPath, event.value);
+    if (audio)
+    {
+        const float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
+        audio->SetPitch(pitch);
+    }
+}
 void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
 {
     constexpr DirectX::XMFLOAT4 dangerPreviewColor{ 0.15f, 0.85f, 1.0f, 1.0f };
@@ -667,7 +680,8 @@ void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& stat
         const std::shared_ptr<SceneComponent>& root,
         const std::shared_ptr<SceneComponent>& middle,
         const std::shared_ptr<SceneComponent>& tip,
-        const DirectX::XMFLOAT4& color)
+        const DirectX::XMFLOAT4& color,
+        const float radius)
     {
         if (!root || !middle || !tip)
             return;
@@ -675,19 +689,19 @@ void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& stat
         const DirectX::XMFLOAT3 rootPos = root->GetComponentLocation();
         const DirectX::XMFLOAT3 middlePos = middle->GetComponentLocation();
         const DirectX::XMFLOAT3 tipPos = tip->GetComponentLocation();
-        DebugRender::DrawSphere(rootPos, hitWeaponRadius, color, 0.0f, true);
-        DebugRender::DrawSphere(middlePos, hitWeaponRadius, color, 0.0f, true);
-        DebugRender::DrawSphere(tipPos, hitWeaponRadius, color, 0.0f, true);
+        DebugRender::DrawSphere(rootPos, radius, color, 0.0f, true);
+        DebugRender::DrawSphere(middlePos, radius, color, 0.0f, true);
+        DebugRender::DrawSphere(tipPos, radius, color, 0.0f, true);
         DebugRender::DrawLine(rootPos, middlePos, color, 0.0f, true);
         DebugRender::DrawLine(middlePos, tipPos, color, 0.0f, true);
     };
 
     if (state.parameter == leftWeapon || state.parameter == bothWeapon)
         drawWeapon(weaponLeftRootComponent, weaponLeftMiddleComponent,
-            weaponLeftTipComponent, leftHitBoxPreviewColor);
+            weaponLeftTipComponent, leftHitBoxPreviewColor, state.hitBoxRadius);
     if (state.parameter == rightWeapon || state.parameter == bothWeapon)
         drawWeapon(weaponRightRootComponent, weaponRightMiddleComponent,
-            weaponRightTipComponent, rightHitBoxPreviewColor);
+            weaponRightTipComponent, rightHitBoxPreviewColor, state.hitBoxRadius);
 }
 void GruxEnemy::DrawImGuiDetails()
 {
@@ -789,22 +803,26 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
-        if (state.parameter == rightWeapon)
+        activeHitBoxNotifyStates.push_back(&state);
+        if (state.parameter == rightWeapon || state.parameter == bothWeapon)
         {
             Logger::Log(U8("右の当たり判定を開始しました"));
             prevWeaponRightRootPos = weaponRightRootComponent->GetComponentLocation();
             prevWeaponRightMidPos = weaponRightMiddleComponent->GetComponentLocation();
             prevWeaponRightTipPos = weaponRightTipComponent->GetComponentLocation();
+            activeRightHitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
             rightHitBox = true;
         }
-        else if (state.parameter == leftWeapon)
+        if (state.parameter == leftWeapon || state.parameter == bothWeapon)
         {
             Logger::Log(U8("左の当たり判定を開始しました"));
             prevWeaponLeftRootPos = weaponLeftRootComponent->GetComponentLocation();
             prevWeaponLeftMidPos = weaponLeftMiddleComponent->GetComponentLocation();
             prevWeaponLeftTipPos = weaponLeftTipComponent->GetComponentLocation();
+            activeLeftHitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
             leftHitBox = true;
         }
+        RefreshActiveHitBoxesFromNotifyStates();
         Logger::Log(Logger::LogCategory::Gameplay,
             "[BossAttack][HitBoxBegin] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
             " left=" + std::string(leftHitBox ? "true" : "false") +
@@ -873,11 +891,21 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
+        activeHitBoxNotifyStates.erase(
+            std::remove(activeHitBoxNotifyStates.begin(), activeHitBoxNotifyStates.end(), &state),
+            activeHitBoxNotifyStates.end());
         Logger::Log(U8("当たり判定を終了しました"));
         if (state.parameter == rightWeapon || state.parameter == bothWeapon)
+        {
             rightHitBox = false;
+            activeRightHitBoxRadius = hitWeaponRadius;
+        }
         if (state.parameter == leftWeapon || state.parameter == bothWeapon)
+        {
             leftHitBox = false;
+            activeLeftHitBoxRadius = hitWeaponRadius;
+        }
+        RefreshActiveHitBoxesFromNotifyStates();
         Logger::Log(Logger::LogCategory::Gameplay,
             "[BossAttack][HitBoxEnd] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
             " left=" + std::string(leftHitBox ? "true" : "false") +
@@ -1033,6 +1061,9 @@ void GruxEnemy::DisableAttackHitBoxes()
 {
     leftHitBox = false;
     rightHitBox = false;
+    activeLeftHitBoxRadius = hitWeaponRadius;
+    activeRightHitBoxRadius = hitWeaponRadius;
+    activeHitBoxNotifyStates.clear();
     isDangerWindow = false;
     ResetDangerArea();
     Logger::Log(Logger::LogCategory::Gameplay,
@@ -1055,6 +1086,30 @@ bool GruxEnemy::HasJustDodgedAttack(const Actor* actor) const
     return actor && justDodgedActors.contains(actor);
 }
 
+void GruxEnemy::RefreshActiveHitBoxesFromNotifyStates()
+{
+    leftHitBox = false;
+    rightHitBox = false;
+    activeLeftHitBoxRadius = hitWeaponRadius;
+    activeRightHitBoxRadius = hitWeaponRadius;
+
+    for (const AnimationNotifyState* activeState : activeHitBoxNotifyStates)
+    {
+        if (!activeState)
+            continue;
+        const float radius = (activeState->hitBoxRadius < 0.01f ? 0.01f : activeState->hitBoxRadius);
+        if (activeState->parameter == leftWeapon || activeState->parameter == bothWeapon)
+        {
+            leftHitBox = true;
+            activeLeftHitBoxRadius = radius;
+        }
+        if (activeState->parameter == rightWeapon || activeState->parameter == bothWeapon)
+        {
+            rightHitBox = true;
+            activeRightHitBoxRadius = radius;
+        }
+    }
+}
 void GruxEnemy::ResetDangerArea()
 {
     dangerArea = {};

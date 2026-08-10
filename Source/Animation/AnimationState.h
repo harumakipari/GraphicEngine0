@@ -35,6 +35,9 @@ struct AnimationNotifyState
 
     std::string parameter;
 
+    // Sphere radius used by HitBox states. 0.8 preserves legacy Boss assets.
+    float hitBoxRadius = 0.8f;
+
     float value = 1.0f; // 剣の光るエミッシブの強さなど
 
     // 移動値

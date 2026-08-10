@@ -316,7 +316,7 @@ void Player::Initialize(const Transform& transform)
         // 敵からの攻撃を受ける当たり判定用のコンポーネントを追加
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
         DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
-        height = size.y;
+        height = size.y+0.5f;
         radius = size.x * 0.5f;
         capsuleComponent->SetRadiusAndHeight(radius, height);
         capsuleComponent->SetMass(mass);

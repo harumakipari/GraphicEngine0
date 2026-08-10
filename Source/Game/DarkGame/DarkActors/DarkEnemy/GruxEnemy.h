@@ -31,6 +31,8 @@ public:
 
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event)override;
 
+    void OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event) override;
+
     void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
 
     void OnAnimationChanged() override;
@@ -64,6 +66,7 @@ private:
     void ResetJustDodgeRecords(const char* reason);
     bool HasJustDodgedAttack(const Actor* actor) const;
     void ResetDangerArea();
+    void RefreshActiveHitBoxesFromNotifyStates();
 private:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
@@ -133,7 +136,10 @@ private:
     DirectX::XMFLOAT3 prevWeaponRightMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponRightTipPos = { 0.0f,0.0f,0.0f };
 
-    float hitWeaponRadius = 0.8f;   // 武器の半径
+    float hitWeaponRadius = 0.8f;
+    float activeLeftHitBoxRadius = 0.8f;
+    float activeRightHitBoxRadius = 0.8f;
+    std::vector<const AnimationNotifyState*> activeHitBoxNotifyStates;   // 武器の半径
     float enemyScale = 1.7f;    // 敵のスケール
     float hitEnemyEffectOffsetY = 2.2f;  // ヒットエフェクトのオフセットY
     float hitPlayerEffectOffsetY = 2.4f;  // ヒットエフェクトのオフセットY
