@@ -2264,7 +2264,7 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     // SEの再生
     Logger::Log(Logger::LogCategory::Gameplay, std::format(
         "[JustDodgeSE] frame={} sound=just_dodge2.wav", debugFrame));
-    CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge2.wav", 1.0f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge3.wav", 1.5f);
 
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
