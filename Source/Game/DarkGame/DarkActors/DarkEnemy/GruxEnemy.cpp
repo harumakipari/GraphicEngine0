@@ -299,6 +299,25 @@ void GruxEnemy::Update(float deltaTime)
     if (IsAnimationEditorPreviewActive())
         return;
 
+
+    // NotifyEnd is not guaranteed when an animation is interrupted or finishes
+// before the notify range ends. Do not carry that animation's warp forward.
+    if (!GetBodyAnimationController()->IsPlayAnimation())
+    {
+        animationMotionWarps.clear();
+    }
+
+    DirectX::XMFLOAT3 motionWarpVelocity = { 0.0f, 0.0f, 0.0f };
+    for (const auto& warp : animationMotionWarps)
+    {
+        motionWarpVelocity.x += warp.direction.x * warp.speed;
+        motionWarpVelocity.y += warp.direction.y * warp.speed;
+        motionWarpVelocity.z += warp.direction.z * warp.speed;
+    }
+    characterMovementComponent->SetFrameAdditionalVelocity(motionWarpVelocity);
+    characterMovementComponent->TickDeferredMovement(deltaTime);
+
+
     SetScale({ enemyScale,enemyScale,enemyScale });
 
     // ImageComponentのalpha更新
@@ -766,6 +785,41 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
             justDodgeAreaOffset, justDodgeAreaSize);
         isDangerWindow = true;
         break;
+    case AnimationNotifyState::Type::ShowTrail:
+        break;
+    case AnimationNotifyState::Type::ShowEmissive:
+        break;
+    case AnimationNotifyState::Type::MotionWarp:
+    {
+        // アニメーション側で指定したローカル方向
+        DirectX::XMFLOAT3 localDirection = state.moveDirection;
+        // プレイヤーの向いている方向を考慮してワールド方向へ変換
+        float radianAngle = DirectX::XMConvertToRadians(GetEulerRotation().y);
+        DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationY(radianAngle);
+        DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&localDirection);
+        dir = DirectX::XMVector3TransformNormal(dir, rotation);
+        dir = DirectX::XMVector3Normalize(dir);
+        DirectX::XMFLOAT3 direction;
+        DirectX::XMStoreFloat3(&direction, dir);
+        // 区間の時間を取る
+        float duration = state.endTime - state.startTime;
+        float actualWarpDistance = state.moveDistance;
+
+        float speed = 0.0f;
+        if (duration > 0.0f)
+        {
+            speed = actualWarpDistance / duration;
+        }
+        AnimationMotionWarp warp{};
+        warp.direction = direction;
+        warp.speed = speed;
+        warp.state = &state;
+        warp.notifyMoveDistance = state.moveDistance;
+        warp.actualWarpDistance = actualWarpDistance;
+        warp.startPosition = GetPosition();
+        animationMotionWarps.push_back(warp);
+    }
+        break;
     }
 }
 
@@ -801,6 +855,29 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
             std::to_string(currentAttackSequenceId));
         isDangerWindow = false;
         ResetDangerArea();
+        break;
+    case AnimationNotifyState::Type::ShowTrail:
+        break;
+    case AnimationNotifyState::Type::ShowEmissive:
+        break;
+    case AnimationNotifyState::Type::MotionWarp:
+    {
+        const auto activeWarp = std::find_if(
+            animationMotionWarps.begin(), animationMotionWarps.end(),
+            [&](const AnimationMotionWarp& warp)
+            {
+                return warp.state == &state;
+            });
+        animationMotionWarps.erase(
+            std::remove_if(
+                animationMotionWarps.begin(),
+                animationMotionWarps.end(),
+                [&](const AnimationMotionWarp& warp)
+                {
+                    return warp.state == &state;
+                }),
+            animationMotionWarps.end());
+    }
         break;
     }
 }

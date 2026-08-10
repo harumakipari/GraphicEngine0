@@ -157,6 +157,9 @@ private:
 
     float flashDuration = 0.8f;   // 何秒でフラッシュしなくなるか
 
+    // アニメーション時にどれくらい移動するか
+    std::vector<AnimationMotionWarp> animationMotionWarps;
+
     friend class GruxEnemyEyeActor;
 };
 
