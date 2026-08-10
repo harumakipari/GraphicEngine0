@@ -68,7 +68,7 @@ public:
         this->playerHead = playerHead;
     }
 
-    const std::shared_ptr<SceneComponent>& GetEnemyHead()const
+    std::shared_ptr<SceneComponent> GetEnemyHead()const
     {
         return this->enemyHead.lock();
     }
