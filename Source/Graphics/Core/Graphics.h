@@ -4,6 +4,7 @@
 #include <wrl.h>
 #include <memory>
 #include <dxgi1_6.h>
+#include <tracy/TracyD3D11.hpp>
 
 #include "Graphics/Renderer/PrimitiveRenderer.h"
 #include "Graphics/Renderer/PrimitiveShapeRenderer.h"
@@ -42,6 +43,10 @@ public:
 
     // 画面表示
     static void Present(UINT syncInterval);
+
+    static TracyD3D11Ctx GetTracyD3D11Context() { return tracyD3D11Context; }
+    static void CollectTracyD3D11();
+    static void DestroyTracyD3D11Context();
 
     // ウインドウハンドル取得
     static HWND GetWindowHandle() { return hWnd; }
@@ -106,6 +111,7 @@ private:
     static inline SIZE framebufferDimensions;// フレームバッファのサイズ（画面解像度）
     static inline Microsoft::WRL::ComPtr<ID3D11Device>			device;// Direct3Dのデバイス（GPU）
     static inline Microsoft::WRL::ComPtr<ID3D11DeviceContext>		immediateContext;// デバイスコンテキスト（描画の管理）
+    static inline TracyD3D11Ctx tracyD3D11Context = nullptr;
     static inline Microsoft::WRL::ComPtr<IDXGISwapChain1>			swapChain;// スワップチェーン（画面表示のバッファ管理）
     static inline Microsoft::WRL::ComPtr<ID3D11RenderTargetView>	renderTargetView;// レンダーターゲットビュー（描画先）
     static inline Microsoft::WRL::ComPtr<ID3D11DepthStencilView>	depthStencilView;// 深度ステンシルビュー（3D描画の深度管理）

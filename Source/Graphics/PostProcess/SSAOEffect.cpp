@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Graphics/Core/Graphics.h"
 #include "SSAOEffect.h"
 
 #include <DirectXMath.h>
@@ -45,6 +46,7 @@ void SSAOEffect::Initialize(ID3D11Device* device, uint32_t width, uint32_t heigh
 
 void SSAOEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* gbufferColor, ID3D11ShaderResourceView* gbufferNormal, ID3D11ShaderResourceView* gbufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* gBufferVelocity, ID3D11ShaderResourceView* shadowMap)
 {
+    TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "SSAO");
     auto& ssao = Scene::GetCurrentScene()->GetSceneSettings().ssaoConstantBuffer;
 
     ssaoCBuffer->data.radius = ssao.radius;

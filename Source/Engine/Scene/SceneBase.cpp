@@ -463,10 +463,12 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     //auto camera = cameraManager->GetRenderCamera(this);
 
     // ディファードレンダリング
+    auto queues = sceneRender.BuildRenderQueues();
+
+    {
+        TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "GBuffer / Geometry");
     gBufferRenderTarget->Clear(immediateContext);
     gBufferRenderTarget->Acticate(immediateContext);
-
-    auto queues = sceneRender.BuildRenderQueues();
 
     immediateContext->PSSetShaderResources(15, 1, shadowMap->shader_resource_view.GetAddressOf());
 #if 1
@@ -532,6 +534,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     sceneRender.RenderInstanced(immediateContext, queues.instanceBatches);
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
     gBufferRenderTarget->Deactivate(immediateContext);
+    }
 
     DirectX::XMFLOAT4X4 cameraView;
     DirectX::XMFLOAT4X4 cameraProjection;
@@ -554,6 +557,8 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 
     // 影を作る処理
 #if 1
+    {
+    TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Shadow");
     auto& shadow = Scene::GetCurrentScene()->GetSceneSettings().cascadedShadowMapConstants;
 
     cascadedShadowMaps->Clear(immediateContext);
@@ -591,6 +596,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     // カメラの定数バッファを更新し直す（影で違う値が入っているから）
     sceneRender.UpdateViewConstants(immediateContext, viewConstants);
 
+    }
 #endif // 1
 
 #else
@@ -607,6 +613,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 #endif // 0
     // ライティングのパス
     {
+        TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Deferred Lighting");
         //multipleRenderTargets->Clear(immediateContext);
         //multipleRenderTargets->Activate(immediateContext);
 
@@ -644,6 +651,8 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     }
 
     // フォーワードの透明描画
+    {
+    TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Transparent / Particles");
     frameBuffer->Activate(immediateContext, gBufferRenderTarget->depthStencilView);
     RenderState::BindBlendState(immediateContext, BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA);
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
@@ -748,6 +757,9 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
 
     frameBuffer->Deactivate(immediateContext);
+    }
+    {
+    TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Post Process / Composite");
     temporalAa.Apply(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)]);
 #if 1
     if (useTAA)
@@ -819,10 +831,12 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         sceneEffectManager->GetOutput("BloomEffect"),
     };
     fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), finalPs.Get());
+    }
 }
 
 void SceneBase::Draw(ID3D11DeviceContext* immediateContext)
 {
+    TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Game UI");
     // UI描画
     {
         RenderState::BindBlendState(immediateContext, BLEND_STATE::ALPHA);

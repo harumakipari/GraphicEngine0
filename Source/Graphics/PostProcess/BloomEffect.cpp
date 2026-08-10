@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Graphics/Core/Graphics.h"
 #include "BloomEffect.h"
 #ifdef USE_IMGUI
 #define IMGUI_ENABLE_DOCKING
@@ -75,6 +76,7 @@ void BloomEffect::Initialize(ID3D11Device* device, uint32_t width, uint32_t heig
 void BloomEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* gBufferColor, ID3D11ShaderResourceView* gBufferNormal,
     ID3D11ShaderResourceView* gBufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* gBufferVelocity, ID3D11ShaderResourceView* shadowMap)
 {
+    TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Bloom");
     // Store current states
     ID3D11ShaderResourceView* nullShaderResourceView{};
     ID3D11ShaderResourceView* cachedShaderResourceViews[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT]{};

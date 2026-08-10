@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "Graphics/Core/Graphics.h"
 #include "FogEffect.h"
 
 #include <DDSTextureLoader.h>
@@ -37,6 +38,7 @@ void FogEffect::Initialize(ID3D11Device* device, uint32_t width, uint32_t height
 
 void FogEffect::Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* gBufferColor, ID3D11ShaderResourceView* gbufferNormal, ID3D11ShaderResourceView* gbufferDepth, ID3D11ShaderResourceView* gBufferPosition, ID3D11ShaderResourceView* gBufferPbrValue, ID3D11ShaderResourceView* gBufferVelocity, ID3D11ShaderResourceView* shadowMap)
 {
+    TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Fog");
     auto& fog = Scene::GetCurrentScene()->GetSceneSettings().fogConstants;
 
     fogCBuffer->data.enableDither = static_cast<int>(fog.enableDither);

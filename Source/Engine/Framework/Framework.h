@@ -119,6 +119,8 @@ public:
                 {
                     ZoneScopedN("Frame");
                     tictoc.Tick();
+                    {
+                        TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "GPU Frame");
                 calculate_frame_stats();
 
                 // SCENE_TRANSITION
@@ -136,6 +138,7 @@ public:
 #ifdef USE_IMGUI
                 {
                     ZoneScopedN("ImGui Render CPU");
+                    TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "ImGui UI");
                     ImGui::Render();
                     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
                 }
@@ -143,8 +146,10 @@ public:
                 //UINT sync_interval{ vsync ? 1U : 0U };
                 //UINT flags = (tearing_supported && !fullscreenMode && !vsync) ? DXGI_PRESENT_ALLOW_TEARING : 0;
                 //Graphics::GetSwapChain()->Present(sync_interval, flags);
+                    }
                 UINT sync_interval{ 0 };
                 Graphics::Present(sync_interval);
+                Graphics::CollectTracyD3D11();
                 }
                 FrameMark;
             }

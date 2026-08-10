@@ -219,6 +219,7 @@ bool Framework::Uninitialize()
     //gameManager->UninitAll();
     // SCENE_TRANSITION
     Scene::_uninitialize(device);
+    Graphics::DestroyTracyD3D11Context();
     return true;
 }
 

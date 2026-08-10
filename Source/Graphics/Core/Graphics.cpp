@@ -85,6 +85,9 @@ void Graphics::Initialize(HWND hwnd, BOOL fullscreen)
     hr = D3D11CreateDevice(adapter.Get(), D3D_DRIVER_TYPE_UNKNOWN, 0, createDeviceFlags, &featureLevels, 1, D3D11_SDK_VERSION, &device, NULL, &immediateContext);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
+    tracyD3D11Context = TracyD3D11Context(device.Get(), immediateContext.Get());
+    TracyD3D11ContextName(tracyD3D11Context, "DirectX 11", 10);
+
     CreateSwapChain(hwnd, dxgi_factory6.Get());
 
     // レンダラ生成
@@ -116,6 +119,23 @@ void Graphics::Present(UINT syncInterval)
 {
     ZoneScopedN("Present");
     swapChain->Present(syncInterval, DXGI_PRESENT_ALLOW_TEARING);// フレームをスクリーンに表示
+}
+void Graphics::CollectTracyD3D11()
+{
+    ZoneScopedN("Tracy GPU Collect");
+    if (tracyD3D11Context)
+    {
+        TracyD3D11Collect(tracyD3D11Context);
+    }
+}
+
+void Graphics::DestroyTracyD3D11Context()
+{
+    if (tracyD3D11Context)
+    {
+        TracyD3D11Destroy(tracyD3D11Context);
+        tracyD3D11Context = nullptr;
+    }
 }
 
 
