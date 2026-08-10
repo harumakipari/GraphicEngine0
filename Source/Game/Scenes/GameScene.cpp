@@ -5,6 +5,9 @@
 #define IMGUI_ENABLE_DOCKING
 #endif
 
+#include <tracy/Tracy.hpp>
+
+
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Input/InputSystem.h"
 #include "Core/ActorManager.h"
@@ -170,6 +173,8 @@ void GameScene::Start()
 void GameScene::Update(float deltaTime)
 {
     using namespace DirectX;
+
+    ZoneScopedN("Game Update");
 
     // ボスの部屋のラープのため
     if (bossLerpEasing)
@@ -449,6 +454,8 @@ void GameScene::Update(float deltaTime)
 
 
 #endif // !_DEBUG
+
+
 }
 
 // 定数バッファの更新処理をシーンごとにカスタマイズできるようにするための仮想関数

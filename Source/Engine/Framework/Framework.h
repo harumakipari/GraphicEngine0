@@ -33,8 +33,9 @@ extern ImWchar glyphRangesJapanese[];
 #endif
 
 
-//スマートポインタを使う
+
 #include <memory>
+#include <tracy/Tracy.hpp>
 
 #include "Graphics/Core/Graphics.h"
 #include "Graphics/Core/RenderState.h"
@@ -139,6 +140,7 @@ public:
                 //Graphics::GetSwapChain()->Present(sync_interval, flags);
                 UINT sync_interval{ 0 };
                 Graphics::Present(sync_interval);
+                FrameMark;
             }
         }
 
