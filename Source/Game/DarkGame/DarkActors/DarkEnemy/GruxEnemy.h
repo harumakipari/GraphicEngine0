@@ -31,6 +31,8 @@ public:
 
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event)override;
 
+    void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
+
     void OnAnimationChanged() override;
 
     // UŒ‚ŠJn‚Én‚ß‚éˆ—

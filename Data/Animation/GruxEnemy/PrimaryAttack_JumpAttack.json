@@ -61,6 +61,29 @@
             "value": 1.0
         },
         {
+            "endTime": 0.9984207153320313,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                4.300000190734863,
+                2.0,
+                3.5
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.6955128908157349,
+            "type": "DangerWindow",
+            "value": 1.0
+        },
+        {
             "endTime": 0.9274508357048035,
             "justDodgeAreaOffset": [
                 0.0,

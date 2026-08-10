@@ -75,8 +75,31 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.2302197962999344,
+            "startTime": 0.2302197813987732,
             "type": "TransitionWindow",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.45494508743286133,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                2.5
+            ],
+            "justDodgeAreaSize": [
+                4.900000095367432,
+                2.0,
+                5.699999809265137
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.2549450695514679,
+            "type": "DangerWindow",
             "value": 1.0
         }
     ]

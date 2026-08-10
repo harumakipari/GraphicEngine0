@@ -652,6 +652,30 @@ void AnimationController::ApplyEditorPreviewPose()
         extraTarget->SetModelNodes(finalNodes);
         extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
     }
+    DrawEditorPreviewStates();
+}
+
+void AnimationController::DrawEditorPreviewStates()
+{
+    if (!editorPreviewActive || !owner)
+        return;
+
+    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+    if (assetIt == animationNotifyAssets.end())
+        return;
+
+    for (const auto& state : assetIt->second.notifyTrack.states)
+    {
+        // Current-time sampling keeps Play, Pause and bidirectional Scrub identical.
+        if (editorPreviewTime < state.startTime || editorPreviewTime >= state.endTime)
+            continue;
+
+        const bool shouldDraw =
+            (state.type == AnimationNotifyState::Type::DangerWindow && editorPreviewShowDangerWindow) ||
+            (state.type == AnimationNotifyState::Type::HitBox && editorPreviewShowHitBox);
+        if (shouldDraw)
+            owner->DrawAnimationEditorPreviewState(state);
+    }
 }
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
 {
@@ -979,6 +1003,12 @@ void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, flo
         EndEditorPreview();
     }
     ImGui::Text("Preview: %s", !editorPreviewActive ? "Runtime" : (editorPreviewPlaying ? "Playing" : "Paused"));
+
+    if (ImGui::CollapsingHeader("Preview Debug", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::Checkbox("DangerWindow", &editorPreviewShowDangerWindow);
+        ImGui::Checkbox("HitBox", &editorPreviewShowHitBox);
+    }
 
     ImGui::Separator();
     ImGui::Text("Animation Settings");

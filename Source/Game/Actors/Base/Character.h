@@ -189,6 +189,9 @@ public:
 
     virtual void OnAnimationNotifyEvent(const AnimationNotifyEvent& event) {}
 
+    // Editor-only visualization hook; it must not mutate gameplay state.
+    virtual void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) {}
+
     // アニメーションが変わった時にステートなどを変更する関数
     virtual void OnAnimationChanged() {}
 

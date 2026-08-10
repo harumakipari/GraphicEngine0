@@ -644,6 +644,51 @@ void GruxEnemy::Update(float deltaTime)
 #endif // 0
 }
 
+void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
+{
+    constexpr DirectX::XMFLOAT4 dangerPreviewColor{ 0.15f, 0.85f, 1.0f, 1.0f };
+    constexpr DirectX::XMFLOAT4 leftHitBoxPreviewColor{ 0.25f, 1.0f, 0.45f, 1.0f };
+    constexpr DirectX::XMFLOAT4 rightHitBoxPreviewColor{ 1.0f, 0.35f, 0.85f, 1.0f };
+
+    if (state.type == AnimationNotifyState::Type::DangerWindow)
+    {
+        const DangerArea previewArea = BuildDangerArea(
+            GetPosition(), GetRight(), GetUp(), GetForward(),
+            state.justDodgeAreaOffset, state.justDodgeAreaSize);
+        DebugRender::DrawBox(previewArea.WorldTransform(), previewArea.size,
+            dangerPreviewColor, 0.0f, true);
+        return;
+    }
+
+    if (state.type != AnimationNotifyState::Type::HitBox)
+        return;
+
+    const auto drawWeapon = [this](
+        const std::shared_ptr<SceneComponent>& root,
+        const std::shared_ptr<SceneComponent>& middle,
+        const std::shared_ptr<SceneComponent>& tip,
+        const DirectX::XMFLOAT4& color)
+    {
+        if (!root || !middle || !tip)
+            return;
+
+        const DirectX::XMFLOAT3 rootPos = root->GetComponentLocation();
+        const DirectX::XMFLOAT3 middlePos = middle->GetComponentLocation();
+        const DirectX::XMFLOAT3 tipPos = tip->GetComponentLocation();
+        DebugRender::DrawSphere(rootPos, hitWeaponRadius, color, 0.0f, true);
+        DebugRender::DrawSphere(middlePos, hitWeaponRadius, color, 0.0f, true);
+        DebugRender::DrawSphere(tipPos, hitWeaponRadius, color, 0.0f, true);
+        DebugRender::DrawLine(rootPos, middlePos, color, 0.0f, true);
+        DebugRender::DrawLine(middlePos, tipPos, color, 0.0f, true);
+    };
+
+    if (state.parameter == leftWeapon || state.parameter == bothWeapon)
+        drawWeapon(weaponLeftRootComponent, weaponLeftMiddleComponent,
+            weaponLeftTipComponent, leftHitBoxPreviewColor);
+    if (state.parameter == rightWeapon || state.parameter == bothWeapon)
+        drawWeapon(weaponRightRootComponent, weaponRightMiddleComponent,
+            weaponRightTipComponent, rightHitBoxPreviewColor);
+}
 void GruxEnemy::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI

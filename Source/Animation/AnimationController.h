@@ -491,6 +491,7 @@ private:
     // Runtime playback is left untouched while the editor owns the preview pose.
     void UpdateEditorPreview(float deltaTime);
     void ApplyEditorPreviewPose();
+    void DrawEditorPreviewStates();
     void BeginEditorPreview(bool playing, bool resetTime);
     void SetEditorPreviewTime(float time);
     void CaptureEditorRuntimeSnapshot();
@@ -638,6 +639,8 @@ private:
     bool editorPreviewActive = false;
     bool editorPreviewPlaying = false;
     float editorPreviewTime = 0.0f;
+    bool editorPreviewShowDangerWindow = true;
+    bool editorPreviewShowHitBox = true;
     EditorRuntimeSnapshot editorRuntimeSnapshot;
 
     std::string ownerName = "";    // コントローラーを所有しているオーナーの名前
