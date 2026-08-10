@@ -49,11 +49,12 @@ public:
     void SelectAttackForCurrentMode();
     int GetAttackStageCount(BossAttackType type) const;
     bool PlayAttackStage(BossAttackType type, int stage);
+    bool PlayAttackAnimationByName(const std::string& animationName);
     void BeginAdditionalAttackStage();
     void ClearJumpAttackMotionWarpOverride();
     float GetAttackInterval() const { return attackInterval; }
     float GetRecoveryDuration() const { return recoveryDuration; }
-    float GetComboInterval() const { return comboInterval; }
+    bool IsTransitionWindowActive() const { return transitionWindow; }
     int GetCurrentAttackHitCount() const { return currentAttackHitCount; }
     bool WasCurrentAttackSequenceJustDodged() const { return !justDodgedActors.empty(); }
 
@@ -114,7 +115,7 @@ private:
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
     float attackInterval = 3.0f;
     float recoveryDuration = 0.5f;
-    float comboInterval = 0.2f;
+    bool transitionWindow = false;
 
     float maxJumpDistance = 12.5f;
     float desiredAttackDistance = 0.1f;

@@ -728,7 +728,6 @@ void GruxEnemy::DrawImGuiDetails()
         debugFixedAttackType = static_cast<BossAttackType>(attackIndex);
     ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-    ImGui::DragFloat("FastCombo Interval", &comboInterval, 0.01f, 0.0f, 2.0f, "%.2f sec");
     ImGui::SeparatorText("JumpAttack Debug");
     ImGui::DragFloat("Max Jump Distance", &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
     ImGui::DragFloat("Desired Attack Distance", &desiredAttackDistance, 0.05f, 0.0f, 10.0f, "%.2f");
@@ -842,6 +841,7 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::Invincible:
         break;
     case AnimationNotifyState::Type::TransitionWindow:
+        transitionWindow = true;
         Logger::Log(U8("‘JˆÚ‹–‰Â‹æŠÔ‚ðŠJŽn‚µ‚Ü‚µ‚½"));
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
@@ -931,6 +931,7 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::Invincible:
         break;
     case AnimationNotifyState::Type::TransitionWindow:
+        transitionWindow = false;
         Logger::Log(U8("‘JˆÚ‹–‰Â‹æŠÔ‚ðI—¹‚µ‚Ü‚µ‚½"));
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
@@ -1048,6 +1049,18 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
     case BossAttackType::LongRangeAttack: return false;
     }
 
+    transitionWindow = false;
+    PlayBodyAnimation(animationName, false, true, 0.1f);
+    return true;
+}
+
+bool GruxEnemy::PlayAttackAnimationByName(const std::string& animationName)
+{
+    const auto controller = GetBodyAnimationController();
+    if (!controller || !controller->GetAnimationAsset(animationName))
+        return false;
+
+    transitionWindow = false;
     PlayBodyAnimation(animationName, false, true, 0.1f);
     return true;
 }
@@ -1125,6 +1138,7 @@ void GruxEnemy::DisableAttackHitBoxes()
     activeLeftHitBoxRadius = hitWeaponRadius;
     activeRightHitBoxRadius = hitWeaponRadius;
     activeHitBoxNotifyStates.clear();
+    transitionWindow = false;
     isDangerWindow = false;
     ResetDangerArea();
     Logger::Log(Logger::LogCategory::Gameplay,

@@ -10,7 +10,7 @@
         }
     ],
     "loop": false,
-    "nextCombo": "",
+    "nextCombo": "PrimaryAttack_RA",
     "playRate": 1.0,
     "speedCurve": {
         "keys": [
@@ -35,6 +35,7 @@
     "states": [
         {
             "endTime": 0.4144550859928131,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -58,6 +59,7 @@
         },
         {
             "endTime": 0.30000001192092896,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -77,6 +79,30 @@
             "parameter": "leftWeapon",
             "startTime": 0.1718750298023224,
             "type": "HitBox",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.6257020831108093,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.3474058210849762,
+            "type": "TransitionWindow",
             "value": 1.0
         }
     ]

@@ -35,6 +35,7 @@
     "states": [
         {
             "endTime": 0.33226534724235535,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -58,6 +59,7 @@
         },
         {
             "endTime": 0.27520984411239624,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,

@@ -69,8 +69,6 @@ void EnemyAttackState::Enter()
 {
     comboStage = 0;
     stageStartHitCount = 0;
-    comboIntervalTimer = 0.0f;
-    waitingForNextStage = false;
     enemy->StartAttack();
     stageStartHitCount = enemy->GetCurrentAttackHitCount();
     if (!enemy->PlayAttackStage(enemy->GetSelectedAttackType(), comboStage))
@@ -81,26 +79,8 @@ void EnemyAttackState::Execute(float deltaTime)
 {
     const BossAttackType attackType = enemy->GetSelectedAttackType();
 
-    if (waitingForNextStage)
-    {
-        comboIntervalTimer += deltaTime;
-        if (comboIntervalTimer < enemy->GetComboInterval())
-            return;
-
-        waitingForNextStage = false;
-        comboIntervalTimer = 0.0f;
-        ++comboStage;
-        enemy->BeginAdditionalAttackStage();
-        stageStartHitCount = enemy->GetCurrentAttackHitCount();
-        if (!enemy->PlayAttackStage(attackType, comboStage))
-            owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
-        return;
-    }
-
-    if (enemy->GetBodyAnimationController()->IsPlayAnimation())
-        return;
-
-    if (attackType == BossAttackType::FastCombo)
+    if (attackType == BossAttackType::FastCombo &&
+        enemy->IsTransitionWindowActive())
     {
         const bool playerHitThisStage =
             enemy->GetCurrentAttackHitCount() > stageStartHitCount;
@@ -111,15 +91,26 @@ void EnemyAttackState::Execute(float deltaTime)
             owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
             return;
         }
+
+        const auto controller = enemy->GetBodyAnimationController();
+        const auto* asset = controller
+            ? controller->GetAnimationAsset(controller->GetCurrentAnimationName())
+            : nullptr;
+        if (asset && !asset->nextCombo.empty())
+        {
+            const std::string nextAnimation = asset->nextCombo;
+            enemy->BeginAdditionalAttackStage();
+            stageStartHitCount = enemy->GetCurrentAttackHitCount();
+            ++comboStage;
+            if (!enemy->PlayAttackAnimationByName(nextAnimation))
+                owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+            return;
+        }
     }
 
-    const int stageCount = enemy->GetAttackStageCount(attackType);
-    if (comboStage + 1 < stageCount)
-    {
-        waitingForNextStage = true;
-        comboIntervalTimer = 0.0f;
+    if (enemy->GetBodyAnimationController()->IsPlayAnimation())
         return;
-    }
+
     owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
 }
 void EnemyAttackState::Exit()

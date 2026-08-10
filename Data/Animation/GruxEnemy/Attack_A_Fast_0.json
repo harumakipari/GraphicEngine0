@@ -10,7 +10,7 @@
         }
     ],
     "loop": false,
-    "nextCombo": "Attack_B_Fast_0",
+    "nextCombo": "PrimaryAttack_LA",
     "playRate": 1.0,
     "speedCurve": {
         "keys": [
@@ -33,6 +33,30 @@
         ]
     },
     "states": [
+        {
+            "endTime": 0.45494508743286133,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.30000001192092896,
+                0.0,
+                2.5
+            ],
+            "justDodgeAreaSize": [
+                6.800000190734863,
+                2.0,
+                5.699999809265137
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.03021979331970215,
+            "type": "DangerWindow",
+            "value": 1.0
+        },
         {
             "endTime": 0.230219304561615,
             "hitBoxRadius": 1.2200000286102295,
@@ -79,30 +103,6 @@
             "parameter": "",
             "startTime": 0.2302197813987732,
             "type": "TransitionWindow",
-            "value": 1.0
-        },
-        {
-            "endTime": 0.45494508743286133,
-            "hitBoxRadius": 0.800000011920929,
-            "justDodgeAreaOffset": [
-                0.30000001192092896,
-                0.0,
-                2.5
-            ],
-            "justDodgeAreaSize": [
-                6.800000190734863,
-                2.0,
-                5.699999809265137
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "",
-            "startTime": 0.03021979331970215,
-            "type": "DangerWindow",
             "value": 1.0
         }
     ]
