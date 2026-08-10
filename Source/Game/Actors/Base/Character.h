@@ -21,18 +21,30 @@ public:
         animationBodyControllerName = "Body";
     }
 
+    bool IsAnimationEditorPreviewActive() const
+    {
+        for (const auto& controller : animationControllers | std::views::values)
+        {
+            if (controller && controller->IsEditorPreviewActive())
+                return true;
+        }
+        return false;
+    }
+
     virtual void Update(float deltaTime)override
     {
         // front,up,rightを更新する
         UpdateDirectionVectors();
 
-        if (stateMachine_)
+        const bool editorPreviewActive = IsAnimationEditorPreviewActive();
+        if (stateMachine_ && !editorPreviewActive)
         {
             stateMachine_->Update(deltaTime);
         }
 
-        // ブレンドスペースのアニメーションを使用するかを更新する
-        UpdateLocomotionAnimation();
+        // Preview対象ActorだけLocomotionによるAnimation要求も停止する。
+        if (!editorPreviewActive)
+            UpdateLocomotionAnimation();
 
         for (auto& controller : animationControllers | std::views::values)
         {

@@ -40,6 +40,7 @@ public:
     {
     }
     virtual ~DarkCameraActor() = default;
+
     virtual void Initialize(const Transform& transform)override;
 
     void Update(float deltaTime) override;

@@ -294,6 +294,11 @@ void GruxEnemy::Update(float deltaTime)
 {
     Character::Update(deltaTime);
 
+    // Animation Editor Preview中はこのBossだけGameplay/AI/攻撃判定を停止する。
+    // Character::Update内のPreview Pose更新は上で継続している。
+    if (IsAnimationEditorPreviewActive())
+        return;
+
     SetScale({ enemyScale,enemyScale,enemyScale });
 
     // ImageComponentのalpha更新

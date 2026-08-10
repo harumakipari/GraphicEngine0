@@ -1,0 +1,83 @@
+{
+    "animationClip": 20,
+    "animationName": "Attack_A_Fast_0",
+    "events": [
+        {
+            "parameter": "enemy_attack",
+            "time": 0.1478022038936615,
+            "type": "PlaySE",
+            "value": 0.8700000047683716
+        }
+    ],
+    "loop": false,
+    "nextCombo": "Attack_B_Fast_0",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.003020134288817644,
+                "value": 0.18666678667068481
+            },
+            {
+                "time": 0.105201356112957,
+                "value": 0.2000003159046173
+            },
+            {
+                "time": 0.14496652781963348,
+                "value": 1.0
+            },
+            {
+                "time": 0.19580543041229248,
+                "value": 0.9733332395553589
+            }
+        ]
+    },
+    "states": [
+        {
+            "endTime": 0.230219304561615,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.13406594097614288,
+            "type": "HitBox",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.6000000238418579,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.2302197962999344,
+            "type": "TransitionWindow",
+            "value": 1.0
+        }
+    ]
+}

@@ -66,6 +66,13 @@ void AnimationController::OnUpdate(const float deltaTime)
         return;
     }
 
+    // Editor preview has its own clock and never enters runtime Notify or Root Motion.
+    if (editorPreviewActive)
+    {
+        UpdateEditorPreview(deltaTime);
+        return;
+    }
+
     bool normalAnimationLoopedThisFrame = false;
     float unwrappedAnimationTime = animationTime;
     float normalAnimationDuration = 0.0f;
@@ -493,6 +500,159 @@ void AnimationController::OnUpdate(const float deltaTime)
 
 }
 
+void AnimationController::CaptureEditorRuntimeSnapshot()
+{
+    editorRuntimeSnapshot.valid = true;
+    editorRuntimeSnapshot.animationTime = animationTime;
+    editorRuntimeSnapshot.prevAnimationTime = prevAnimationTime;
+    editorRuntimeSnapshot.animationClip = animationClip;
+    editorRuntimeSnapshot.animationNextClip = animationNextClip;
+    editorRuntimeSnapshot.notifyAnimationClip = notifyAnimationClip;
+    editorRuntimeSnapshot.transitionState = transitionState;
+    editorRuntimeSnapshot.blendFactor = blendFactor;
+    editorRuntimeSnapshot.blendElapsedTime = blendElapsedTime;
+    editorRuntimeSnapshot.transitionTime = transitionTime;
+    editorRuntimeSnapshot.isBlendingAnimation = isBlendingAnimation;
+    editorRuntimeSnapshot.isAnimationFinished = isAnimationFinished;
+    editorRuntimeSnapshot.isAnimationLoop = isAnimationLoop;
+    editorRuntimeSnapshot.requestStopLoop = requestStopLoop;
+    editorRuntimeSnapshot.currentAnimationName = currentAnimationName;
+    editorRuntimeSnapshot.animationOriginNodes = animationNodes[Origin];
+    editorRuntimeSnapshot.animationNextNodes = animationNodes[Next];
+    editorRuntimeSnapshot.finalNodes = finalNodes;
+    editorRuntimeSnapshot.previousPosition = previousPosition;
+    editorRuntimeSnapshot.zeroTranslation = zeroTranslation;
+    editorRuntimeSnapshot.resetRootMotionDelta = resetRootMotionDelta;
+    editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted = suppressNormalRootMotionUntilTransitionCompleted;
+    editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition = suppressNormalRootMotionObservedTransition;
+}
+
+void AnimationController::EndEditorPreview()
+{
+    editorPreviewPlaying = false;
+    editorPreviewActive = false;
+
+    if (!editorRuntimeSnapshot.valid)
+        return;
+
+    animationTime = editorRuntimeSnapshot.animationTime;
+    prevAnimationTime = editorRuntimeSnapshot.prevAnimationTime;
+    animationClip = editorRuntimeSnapshot.animationClip;
+    animationNextClip = editorRuntimeSnapshot.animationNextClip;
+    notifyAnimationClip = editorRuntimeSnapshot.notifyAnimationClip;
+    transitionState = editorRuntimeSnapshot.transitionState;
+    blendFactor = editorRuntimeSnapshot.blendFactor;
+    blendElapsedTime = editorRuntimeSnapshot.blendElapsedTime;
+    transitionTime = editorRuntimeSnapshot.transitionTime;
+    isBlendingAnimation = editorRuntimeSnapshot.isBlendingAnimation;
+    isAnimationFinished = editorRuntimeSnapshot.isAnimationFinished;
+    isAnimationLoop = editorRuntimeSnapshot.isAnimationLoop;
+    requestStopLoop = editorRuntimeSnapshot.requestStopLoop;
+    currentAnimationName = editorRuntimeSnapshot.currentAnimationName;
+    animationNodes[Origin] = editorRuntimeSnapshot.animationOriginNodes;
+    animationNodes[Next] = editorRuntimeSnapshot.animationNextNodes;
+    finalNodes = editorRuntimeSnapshot.finalNodes;
+    zeroTranslation = editorRuntimeSnapshot.zeroTranslation;
+    suppressNormalRootMotionUntilTransitionCompleted = editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted;
+    suppressNormalRootMotionObservedTransition = editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition;
+
+    // Restore the runtime pose immediately on the button frame.
+    target_->SetModelNodes(finalNodes);
+    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+    for (auto* extraTarget : extraTargets_)
+    {
+        extraTarget->SetModelNodes(finalNodes);
+        extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+    }
+
+    // The actor did not consume root motion during preview. Rebase once so the
+    // first runtime frame cannot interpret the preview gap as movement.
+    if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(finalNodes.size()))
+    {
+        const auto& root = finalNodes[rootNodeIndex];
+        previousPosition = { root.globalTransform._41, root.globalTransform._42, root.globalTransform._43 };
+    }
+    else
+    {
+        previousPosition = editorRuntimeSnapshot.previousPosition;
+    }
+    resetRootMotionDelta = true;
+    editorRuntimeSnapshot.valid = false;
+}
+void AnimationController::BeginEditorPreview(const bool playing, const bool resetTime)
+{
+    if (!editorPreviewActive)
+        CaptureEditorRuntimeSnapshot();
+
+    editorPreviewActive = true;
+    editorPreviewPlaying = playing;
+    if (resetTime)
+        editorPreviewTime = 0.0f;
+    ApplyEditorPreviewPose();
+}
+
+void AnimationController::SetEditorPreviewTime(const float time)
+{
+    if (!target_ || !target_->model || selectedTimelineClip >= target_->model->animations.size())
+        return;
+
+    editorPreviewActive = true;
+    editorPreviewPlaying = false;
+    const float duration = target_->model->animations[selectedTimelineClip].duration;
+    editorPreviewTime = std::clamp(time, 0.0f, duration);
+    ApplyEditorPreviewPose();
+}
+
+void AnimationController::UpdateEditorPreview(const float deltaTime)
+{
+    if (selectedTimelineClip >= target_->model->animations.size())
+        return;
+
+    const float duration = target_->model->animations[selectedTimelineClip].duration;
+    if (editorPreviewPlaying && duration > FLT_EPSILON)
+    {
+        const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+        const float curveRate = assetIt != animationNotifyAssets.end()
+            ? assetIt->second.speedCurve.Evaluate(editorPreviewTime) : 1.0f;
+        const float playRate = assetIt != animationNotifyAssets.end()
+            ? assetIt->second.playRate : 1.0f;
+        editorPreviewTime += deltaTime * animationRate * playRate * curveRate;
+
+        if (editorPreviewTime >= duration)
+        {
+            if (isAnimationLoop)
+                editorPreviewTime = std::fmod(editorPreviewTime, duration);
+            else
+            {
+                editorPreviewTime = duration;
+                editorPreviewPlaying = false;
+            }
+        }
+    }
+
+    ApplyEditorPreviewPose();
+}
+
+void AnimationController::ApplyEditorPreviewPose()
+{
+    if (!target_ || !target_->model || selectedTimelineClip >= target_->model->animations.size())
+        return;
+
+    target_->model->Animate(selectedTimelineClip, editorPreviewTime, finalNodes);
+    if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(finalNodes.size()))
+    {
+        finalNodes[rootNodeIndex].translation = zeroTranslation;
+        target_->model->CumulateTransforms(finalNodes);
+    }
+
+    target_->SetModelNodes(finalNodes);
+    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+    for (auto* extraTarget : extraTargets_)
+    {
+        extraTarget->SetModelNodes(finalNodes);
+        extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+    }
+}
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
 {
 #if 0
@@ -771,16 +931,21 @@ void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, flo
     ImGui::Text("Timeline");
     ImGui::Separator();
 
+    const float currentPreviewTime = editorPreviewActive ? editorPreviewTime : animationTime;
     ImGui::Text(
         "Time : %.3f / %.3f",
-        animationTime,
+        currentPreviewTime,
         duration);
 
-    ImGui::SliderFloat(
+    float scrubTime = currentPreviewTime;
+    if (ImGui::SliderFloat(
         "##AnimationTime",
-        &animationTime,
+        &scrubTime,
         0.0f,
-        duration);
+        duration))
+    {
+        SetEditorPreviewTime(scrubTime);
+    }
     std::string filename = "./Data/Animation/" + ownerName + "/" + asset.animationName + ".json";
 
     if (ImGui::Button("Save"))
@@ -796,16 +961,24 @@ void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, flo
 
     if (ImGui::Button("Play"))
     {
-        ResetRootMotion(asset.animationName, false, false, 0.0f);
+        BeginEditorPreview(true, false);
     }
-
     ImGui::SameLine();
-
+    if (ImGui::Button("Pause"))
+    {
+        BeginEditorPreview(false, false);
+    }
+    ImGui::SameLine();
     if (ImGui::Button("Stop"))
     {
-        Stop();
-        animationTime = 0.0f;
+        BeginEditorPreview(false, true);
     }
+    ImGui::SameLine();
+    if (ImGui::Button("Return to Runtime"))
+    {
+        EndEditorPreview();
+    }
+    ImGui::Text("Preview: %s", !editorPreviewActive ? "Runtime" : (editorPreviewPlaying ? "Playing" : "Paused"));
 
     ImGui::Separator();
     ImGui::Text("Animation Settings");
@@ -845,7 +1018,7 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, float d
         float mouseX = ImGui::GetIO().MousePos.x;
         float normalized = (mouseX - timelinePos.x) / width;
         normalized = std::clamp(normalized, 0.0f, 1.0f);
-        animationTime = normalized * duration;
+        SetEditorPreviewTime(normalized * duration);
     }
 
     drawList->AddRectFilled(
@@ -910,6 +1083,7 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, float d
             {
                 selectedStateIndex = stateIndex;
                 selectedEventIndex = -1;
+                selectedCurveKey = -1;
             }
 
             if (ImGui::IsItemActive())
@@ -1096,6 +1270,7 @@ void AnimationController::DrawEventTimeline(AnimationNotifyAsset& asset, float d
         {
             selectedEventIndex = eventIndex;
             selectedStateIndex = -1;
+            selectedCurveKey = -1;
         }
 
         if (ImGui::IsItemActive())
@@ -1342,7 +1517,7 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
     {
         float currentX =
             timelinePos.x +
-            (animationTime / duration)
+            ((editorPreviewActive ? editorPreviewTime : animationTime) / duration)
             * width;
 
         drawList->AddLine(
@@ -1356,7 +1531,7 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
         sprintf_s(
             currentText,
             "%.3f",
-            animationTime);
+            editorPreviewActive ? editorPreviewTime : animationTime);
 
         drawList->AddText(
             ImVec2(
@@ -1370,11 +1545,12 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
             currentText);
     }
 
+    const float displayedTime = editorPreviewActive ? editorPreviewTime : animationTime;
     // 現在時間表示
-    float currentX = curvePos.x + (animationTime / duration) * width;
+    float currentX = curvePos.x + ((editorPreviewActive ? editorPreviewTime : animationTime) / duration) * width;
     drawList->AddLine(ImVec2(currentX, curvePos.y), ImVec2(currentX, curvePos.y + curveHeight), IM_COL32(255, 0, 0, 255), 2.0f);
     // 速度表示
-    float speed = asset.speedCurve.Evaluate(animationTime);
+    float speed = asset.speedCurve.Evaluate(displayedTime);
     char text[64];
     sprintf_s(text, "%.2f", speed);
     drawList->AddText(ImVec2(currentX + 5, curvePos.y), IM_COL32(255, 255, 0, 255), text);
@@ -1483,6 +1659,33 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             break;
         }
     }
+
+    if (selectedCurveKey >= 0 && selectedCurveKey < static_cast<int>(asset.speedCurve.keys.size()))
+    {
+        ImGui::Separator();
+        ImGui::Text("Speed Curve Key");
+        CurveKey editedKey = asset.speedCurve.keys[selectedCurveKey];
+        const float duration = target_->model->animations[asset.animationClip].duration;
+        bool changed = ImGui::DragFloat("Time##CurveKey", &editedKey.time, 0.001f, 0.0f, duration, "%.3f");
+        changed |= ImGui::DragFloat("Value##CurveKey", &editedKey.value, 0.01f, 0.0f, 2.0f, "%.3f");
+        if (changed)
+        {
+            editedKey.time = std::clamp(editedKey.time, 0.0f, duration);
+            editedKey.value = std::clamp(editedKey.value, 0.0f, 2.0f);
+            asset.speedCurve.keys[selectedCurveKey] = editedKey;
+            std::sort(asset.speedCurve.keys.begin(), asset.speedCurve.keys.end(),
+                [](const CurveKey& a, const CurveKey& b) { return a.time < b.time; });
+            for (int i = 0; i < static_cast<int>(asset.speedCurve.keys.size()); ++i)
+            {
+                if (asset.speedCurve.keys[i].time == editedKey.time &&
+                    asset.speedCurve.keys[i].value == editedKey.value)
+                {
+                    selectedCurveKey = i;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void AnimationController::DrawTimeline()
@@ -1490,26 +1693,29 @@ void AnimationController::DrawTimeline()
 #ifdef USE_IMGUI
     ImGui::Begin("Animation Sequence");
 
-    ImGui::Columns(3);
-    ImGui::SetColumnWidth(0, 200.0f);
-    ImGui::SetColumnWidth(1, 1000.0f);
+    const float availableWidth = ImGui::GetContentRegionAvail().x;
+    const float listWidth = std::clamp(availableWidth * 0.18f, 180.0f, 280.0f);
+    const float inspectorWidth = std::clamp(availableWidth * 0.24f, 220.0f, 360.0f);
+    const float editorWidth = (std::max)(320.0f, availableWidth - listWidth - inspectorWidth);
 
-    float animationListHeight = ImGui::GetContentRegionAvail().y;
+    ImGui::Columns(3);
+    ImGui::SetColumnWidth(0, listWidth);
+    ImGui::SetColumnWidth(1, editorWidth);
+
+    const float animationListHeight = ImGui::GetContentRegionAvail().y;
     ImGui::BeginChild(U8("アニメーションリスト"), ImVec2(0, animationListHeight), true);
 
     for (auto clip : animationAssetOrder)
     {
-        auto& asset = animationNotifyAssets[clip];
-
-        bool selected = selectedTimelineClip == clip;
-
-        if (ImGui::Selectable(asset.animationName.c_str(), selected))
+        auto& listedAsset = animationNotifyAssets[clip];
+        const bool selected = selectedTimelineClip == clip;
+        if (ImGui::Selectable(listedAsset.animationName.c_str(), selected))
         {
             selectedTimelineClip = clip;
-            std::string filename = "./Data/Animation/" + ownerName + "/" + asset.animationName + ".json";
-            LoadNotifyAsset(filename, asset);
-            ResetRootMotion(asset.animationName, false, false, 0.0f);
-            // 値を初期化する
+            const std::string filename = "./Data/Animation/" + ownerName + "/" + listedAsset.animationName + ".json";
+            LoadNotifyAsset(filename, listedAsset);
+            editorPreviewTime = 0.0f;
+            BeginEditorPreview(false, true);
             selectedStateIndex = -1;
             selectedEventIndex = -1;
             popupCreateTime = 0.0f;
@@ -1521,44 +1727,47 @@ void AnimationController::DrawTimeline()
     ImGui::EndChild();
 
     ImGui::NextColumn();
-
     auto it = animationNotifyAssets.find(selectedTimelineClip);
-
     if (it == animationNotifyAssets.end())
     {
+        ImGui::Columns(1);
         ImGui::End();
         return;
     }
 
     auto& asset = it->second;
-    float duration = target_->model->animations[asset.animationClip].duration;
-
-    // ImGui
-    float trackHeight = 24.0f;
-    float labelWidth = 100.0f;
-    float handleSize = 40.0f;
-    float width = ImGui::GetContentRegionAvail().x - labelWidth - 10.0f;
-    float height = 30.0f;
-
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    ImVec2 timelinePos = ImGui::GetCursorScreenPos();
+    const float duration = target_->model->animations[asset.animationClip].duration;
+    const float trackHeight = 24.0f;
+    const float labelWidth = 100.0f;
+    const float handleSize = 40.0f;
+    const float height = 30.0f;
 
     DrawAnimationSettings(asset, duration);
+
+    float width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - labelWidth - 10.0f);
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec2 timelinePos = ImGui::GetCursorScreenPos();
     DrawStateTimeline(asset, duration, width, height, labelWidth, trackHeight, handleSize, drawList, timelinePos);
     DrawEventTimeline(asset, duration, width, labelWidth, trackHeight, drawList);
+
+    const std::string curveHeader = "Animation Curve [" + std::to_string(asset.speedCurve.keys.size()) + " Keys]";
+    ImGui::SetNextItemOpen(false, ImGuiCond_Once);
+    if (ImGui::CollapsingHeader(curveHeader.c_str()))
+    {
+        width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - 10.0f);
+        ImDrawList* curveDrawList = ImGui::GetWindowDrawList();
+        const ImVec2 curvePos = ImGui::GetCursorScreenPos();
+        DrawCurveEditor(asset, duration, width, height, curveDrawList, curvePos);
+        ImGui::Dummy(ImVec2(width, 210.0f));
+    }
 
     ImGui::NextColumn();
     ImGui::BeginChild("NotifyInspector", ImVec2(0, 0), true);
     DrawNotifyInspector(asset);
     ImGui::EndChild();
-    ImGui::End();
 
-    ImGui::Begin("CurveEditor");
-    ImDrawList* curveDrawList = ImGui::GetWindowDrawList();
-    ImVec2 curvePos = ImGui::GetCursorScreenPos();
-    DrawCurveEditor(asset, duration, width, height, curveDrawList, curvePos);
+    ImGui::Columns(1);
     ImGui::End();
-
 #endif
 }
 

@@ -138,6 +138,8 @@ public:
 
     void DrawTimeline();
 
+    bool IsEditorPreviewActive() const { return editorPreviewActive; }
+
     size_t GetAnimationClip()const { return animationClip; }
 
     const std::string& GetCurrentAnimationName()const { return currentAnimationName; }
@@ -486,6 +488,14 @@ private:
     // Notifyの詳細設定のImGui描画
     void DrawNotifyInspector(AnimationNotifyAsset& asset);
 
+    // Runtime playback is left untouched while the editor owns the preview pose.
+    void UpdateEditorPreview(float deltaTime);
+    void ApplyEditorPreviewPose();
+    void BeginEditorPreview(bool playing, bool resetTime);
+    void SetEditorPreviewTime(float time);
+    void CaptureEditorRuntimeSnapshot();
+    void EndEditorPreview();
+
 public:
     // ブレンドスペース
     BlendSpace forwardBlendSpace;
@@ -523,6 +533,33 @@ private:
         NotStarted,
         Inprogress,
         Completed,
+    };
+
+    struct EditorRuntimeSnapshot
+    {
+        bool valid = false;
+        float animationTime = 0.0f;
+        float prevAnimationTime = 0.0f;
+        size_t animationClip = 0;
+        size_t animationNextClip = 0;
+        size_t notifyAnimationClip = 0;
+        AnimationTransitionState transitionState = AnimationTransitionState::NotStarted;
+        float blendFactor = 0.0f;
+        float blendElapsedTime = 0.0f;
+        float transitionTime = 0.0f;
+        bool isBlendingAnimation = false;
+        bool isAnimationFinished = false;
+        bool isAnimationLoop = false;
+        bool requestStopLoop = false;
+        std::string currentAnimationName;
+        std::vector<InterleavedGltfModel::Node> animationOriginNodes;
+        std::vector<InterleavedGltfModel::Node> animationNextNodes;
+        std::vector<InterleavedGltfModel::Node> finalNodes;
+        DirectX::XMFLOAT3 previousPosition{};
+        DirectX::XMFLOAT3 zeroTranslation{};
+        bool resetRootMotionDelta = false;
+        bool suppressNormalRootMotionUntilTransitionCompleted = false;
+        bool suppressNormalRootMotionObservedTransition = false;
     };
 
     //遷移ステート
@@ -597,6 +634,11 @@ private:
     int selectedCurveKey = -1;
     float curveCreateTime = 0.0f;
     float curveCreateValue = 1.0f;
+
+    bool editorPreviewActive = false;
+    bool editorPreviewPlaying = false;
+    float editorPreviewTime = 0.0f;
+    EditorRuntimeSnapshot editorRuntimeSnapshot;
 
     std::string ownerName = "";    // コントローラーを所有しているオーナーの名前
 

@@ -1,0 +1,31 @@
+{
+    "animationClip": 22,
+    "animationName": "Attack_C_Fast_0",
+    "events": [
+        {
+            "parameter": "enemy_attack",
+            "time": 0.16428573429584503,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.0030201347544789314,
+                "value": 0.3466668426990509
+            },
+            {
+                "time": 0.1364094316959381,
+                "value": 0.2933334410190582
+            },
+            {
+                "time": 0.1872483193874359,
+                "value": 0.8400000333786011
+            }
+        ]
+    }
+}
