@@ -89,7 +89,7 @@ float4 main(VS_OUT pin) : SV_TARGET
             // ライト自体の強さ
             float3 pLi =pointLights[i].color.xyz * pointLights[i].color.w;
 
-            // このライトが出せる最大寄与量を簡易評価
+            // このライトが出せる最大寄与量を計算
             float maxLightIntensity =max(pLi.r, max(pLi.g, pLi.b));
 
             float contribution =maxLightIntensity * attenuation;

@@ -3,6 +3,7 @@
 #include <unordered_map>
 
 #include "SceneEffectBase.h"
+#include "Graphics/Core/Graphics.h"
 
 class SceneEffectManager
 {
@@ -24,7 +25,15 @@ public:
         {
             if (!effect->IsEnabled())
                 continue;
-            effect->Apply(immediateContext, current, gBufferNormal, gBufferDepth, gBufferPosition, gBufferPbrValue, gBufferVelocity,shadowMap);
+            if (effect->GetName() == "DepthOfFieldEffect")
+            {
+                TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Depth of Field (Scene Effect)");
+                effect->Apply(immediateContext, current, gBufferNormal, gBufferDepth, gBufferPosition, gBufferPbrValue, gBufferVelocity, shadowMap);
+            }
+            else
+            {
+                effect->Apply(immediateContext, current, gBufferNormal, gBufferDepth, gBufferPosition, gBufferPbrValue, gBufferVelocity, shadowMap);
+            }
 
         }
 

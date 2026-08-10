@@ -31,5 +31,53 @@
                 "value": 0.9733332395553589
             }
         ]
-    }
+    },
+    "states": [
+        {
+            "endTime": 0.22982457280158997,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                3.0
+            ],
+            "justDodgeAreaSize": [
+                5.0,
+                2.0,
+                7.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.08428682386875153,
+            "type": "DangerWindow",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.27520984411239624,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "rightWeapon",
+            "startTime": 0.1607932597398758,
+            "type": "HitBox",
+            "value": 1.0
+        }
+    ]
 }

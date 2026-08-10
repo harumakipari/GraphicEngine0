@@ -734,7 +734,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 #endif // 0
 
     // デバック描画
-#if _DEBUG
+#if USE_IMGUI
     if (useDrawDebug)
     {
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
@@ -760,7 +760,10 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     }
     {
     TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Post Process / Composite");
-    temporalAa.Apply(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)]);
+    {
+        TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Temporal AA");
+        temporalAa.Apply(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)]);
+    }
 #if 1
     if (useTAA)
     {
@@ -777,8 +780,10 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     immediateContext->PSSetShaderResources(0, 16, nullSRVs);
 #endif
 
-    finalBuffer->Clear(immediateContext);
-    finalBuffer->Activate(immediateContext);
+    {
+        TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Intermediate Composite");
+        finalBuffer->Clear(immediateContext);
+        finalBuffer->Activate(immediateContext);
 
     // FINAL_PASS
     {
@@ -813,10 +818,14 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), postEffectPs.Get());
 
     }
-    finalBuffer->Deactivate(immediateContext);
+        finalBuffer->Deactivate(immediateContext);
+    }
 
-    depthOfFieldEffect->Apply(immediateContext, finalBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
+    {
+        TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Depth of Field (Final)");
+        depthOfFieldEffect->Apply(immediateContext, finalBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
         gBufferRenderTarget->depthStencilShaderResourceView, gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)], cascadedShadowMaps->depthMap().Get());
+    }
 
 
     ID3D11ShaderResourceView* shader_resource_views[]
@@ -830,7 +839,10 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::EMISSIVE)],   // emissive w: shaderFlag
         sceneEffectManager->GetOutput("BloomEffect"),
     };
-    fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), finalPs.Get());
+    {
+        TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Final Composite");
+        fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), finalPs.Get());
+    }
     }
 }
 
@@ -890,7 +902,7 @@ void SceneBase::DrawGui()
 
     if (!Framework::showEditor)
     {
-        useDrawDebug = false;
+        //useDrawDebug = false;
         return;
     }
 

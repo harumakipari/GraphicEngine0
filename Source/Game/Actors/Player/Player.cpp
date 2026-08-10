@@ -1629,22 +1629,18 @@ void Player::AcquireAttackTarget()
     // Prefer the camera's LockOn/Focus target when it is an Enemy in this scene.
     if (const auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
     {
-        if (auto enemyHead = camera->GetEnemyHead())
+        if (const auto targetHead = camera->GetEnemyHead())
         {
-            if (const auto targetHead = enemyHead)
+            Actor* targetOwner = targetHead->GetOwner();
+            for (const auto& enemy : enemies)
             {
-                Actor* targetOwner = targetHead->GetOwner();
-                for (const auto& enemy : enemies)
+                if (enemy && enemy.get() == targetOwner)
                 {
-                    if (enemy && enemy.get() == targetOwner)
-                    {
-                        attackTarget = enemy;
-                        break;
-                    }
+                    attackTarget = enemy;
+                    break;
                 }
             }
         }
-
     }
     // TPS/no lock-on fallback: nearest valid Enemy.
     if (attackTarget.expired())
