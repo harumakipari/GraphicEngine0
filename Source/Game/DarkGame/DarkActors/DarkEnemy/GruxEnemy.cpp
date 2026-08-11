@@ -792,7 +792,7 @@ void GruxEnemy::DrawImGuiDetails()
 void GruxEnemy::TakeDamage(const int damage)
 {
     //skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
-    CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_hit.wav", 0.5f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.3f);
     hp -= damage;
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
 }

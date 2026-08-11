@@ -2085,7 +2085,8 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
 
     const int appliedDamage = (std::max)(0, damage);
     hp = (std::max)(0, hp - appliedDamage);
-    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav");
+    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav",0.3f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav",0.5f);
     ClearActionRequest("damage_applied");
     Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
     //if (sparkComponent)
@@ -2263,7 +2264,7 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 
     // SEの再生
     Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[JustDodgeSE] frame={} sound=just_dodge2.wav", debugFrame));
+        "[JustDodgeSE] frame={} sound=just_dodge3.wav", debugFrame));
     CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge3.wav", 1.5f);
 
     // ジャスト回避成功フラグをオンにする
