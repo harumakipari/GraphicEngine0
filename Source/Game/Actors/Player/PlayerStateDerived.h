@@ -166,6 +166,8 @@ public:
     void Exit() override;
     // ステート名を取得
     const char* GetName() const override { return "Rush"; }
+    // 0-based Rush step. comboIndex remains the single source of truth.
+    int GetComboIndex() const { return comboIndex; }
 private:
     float elapsedTime = 0.0f;
     bool rushComboAdvanced = false;

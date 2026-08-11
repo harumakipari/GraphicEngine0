@@ -416,7 +416,7 @@ private:
     float bossSlowReturnStartScale = 1.0f;
     float activeBossSlowReturnDuration = 0.10f;
     float justDodgeTimeScale = 0.25f;
-    float justDodgeSlowHoldDuration = 0.30f;
+    float justDodgeSlowHoldDuration = 0.40f;
     float justDodgeSlowReturnDuration = 0.10f;
     float rushBossSlowScale = 0.2f;
     float rushBossReturnDuration = 0.10f;

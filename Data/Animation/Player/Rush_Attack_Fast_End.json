@@ -3,7 +3,7 @@
     "animationName": "Rush_Attack_Fast_End",
     "events": [
         {
-            "parameter": "player_attack",
+            "parameter": "RushSword",
             "time": 0.4000000059604645,
             "type": "PlaySE",
             "value": 1.0

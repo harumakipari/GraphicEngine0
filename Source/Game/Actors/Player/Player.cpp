@@ -27,6 +27,18 @@
 
 namespace
 {
+    constexpr std::array<const char*, 8> RushSwordSEs =
+    {
+        "player_attack",
+        "player_attack",
+        "player_attack",
+        "player_attack",
+        "player_attack",
+        "player_attack",
+        "player_attack",
+        "player_attack",
+    };
+
     std::string MotionWarpPositionString(const DirectX::XMFLOAT3& value)
     {
         return "(" + std::to_string(value.x) + "," +
@@ -1187,7 +1199,39 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     {
         if (event.parameter != "")
         {
-            std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
+            std::string soundName = event.parameter;
+            if (event.parameter == "RushSword")
+            {
+                if (std::string(stateMachine_->GetStateName()) != "Rush")
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[Rush][SwordSE] ignored: RushSword event fired outside Rush state");
+                    break;
+                }
+
+                const auto* rushState =
+                    dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
+                if (!rushState)
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[Rush][SwordSE] ignored: current state is not PlayerRushState");
+                    break;
+                }
+
+                const int comboIndex = rushState->GetComboIndex();
+                if (comboIndex < 0 ||
+                    comboIndex >= static_cast<int>(RushSwordSEs.size()))
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[Rush][SwordSE] ignored: comboIndex out of range: " +
+                        std::to_string(comboIndex));
+                    break;
+                }
+
+                soundName = RushSwordSEs[comboIndex];
+            }
+
+            std::string audioPath = "./Data/Sound/SE/" + soundName + ".wav";
             CoreAudio::PlayOneShot(audioPath, event.value);
         }
     }

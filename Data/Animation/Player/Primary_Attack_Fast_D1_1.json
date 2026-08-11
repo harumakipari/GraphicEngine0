@@ -4,9 +4,9 @@
     "events": [
         {
             "parameter": "player_attack",
-            "time": 0.4000000059604645,
+            "time": 0.3992750346660614,
             "type": "PlaySE",
-            "value": 0.5
+            "value": 0.30000001192092896
         }
     ],
     "loop": false,
