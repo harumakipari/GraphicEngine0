@@ -269,6 +269,44 @@ void RotationComponent::SetDirectionImmediate(const DirectX::XMFLOAT3& dir)
         owner->SetQuaternionRotation(targetRotation_);
     lerpTime_ = rotateTime_;
 }
+bool RotationComponent::RotateTowardsDirection(
+    const DirectX::XMFLOAT3& direction,
+    const float maxDegreesPerSecond,
+    const float deltaTime)
+{
+    if (auto owner = owner_.lock())
+    {
+        const float directionLengthSq =
+            direction.x * direction.x + direction.z * direction.z;
+        if (directionLengthSq <= FLT_EPSILON)
+            return true;
+
+        const float targetYaw = std::atan2f(direction.x, direction.z);
+        DirectX::XMVECTOR currentForward = DirectX::XMVector3Rotate(
+            DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
+            DirectX::XMLoadFloat4(&owner->GetQuaternionRotation()));
+        DirectX::XMFLOAT3 forward{};
+        DirectX::XMStoreFloat3(&forward, currentForward);
+        const float currentYaw = std::atan2f(forward.x, forward.z);
+        const float yawDelta = std::atan2f(
+            std::sinf(targetYaw - currentYaw),
+            std::cosf(targetYaw - currentYaw));
+        const float maxStep = DirectX::XMConvertToRadians(
+            (std::max)(0.0f, maxDegreesPerSecond)) * (std::max)(0.0f, deltaTime);
+        const float appliedDelta = std::clamp(yawDelta, -maxStep, maxStep);
+        const float newYaw = currentYaw + appliedDelta;
+
+        DirectX::XMFLOAT4 rotation{};
+        DirectX::XMStoreFloat4(&rotation,
+            DirectX::XMQuaternionRotationRollPitchYaw(0.0f, newYaw, 0.0f));
+        owner->SetQuaternionRotation(rotation);
+        // Do not let a pending SetDirection interpolation overwrite this rotation.
+        lerpTime_ = rotateTime_;
+        return std::abs(yawDelta) <= maxStep;
+    }
+    return false;
+}
+
 void RotationComponent::Tick(float deltaTime)
 {
     if (lerpTime_ >= rotateTime_)

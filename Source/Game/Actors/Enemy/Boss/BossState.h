@@ -67,6 +67,28 @@ private:
 };
 
 
+class EnemyApproachState : public EnemyStateBase
+{
+public:
+    EnemyApproachState(GruxEnemy* enemy) : EnemyStateBase(enemy) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "EnemyApproachState"; }
+};
+
+class EnemyTurnState : public EnemyStateBase
+{
+public:
+    EnemyTurnState(GruxEnemy* enemy) : EnemyStateBase(enemy) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "EnemyTurnState"; }
+private:
+    float timer = 0.0f;
+};
+
 // 死亡ステートオブジェクト
 class EnemyDeathState : public EnemyStateBase
 {

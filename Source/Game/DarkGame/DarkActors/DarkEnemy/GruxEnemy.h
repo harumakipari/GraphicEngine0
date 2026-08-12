@@ -59,6 +59,21 @@ public:
     int GetCurrentAttackHitCount() const { return currentAttackHitCount; }
     bool WasCurrentAttackSequenceJustDodged() const { return !justDodgedActors.empty(); }
 
+    BossTargetContext BuildTargetContext() const;
+    float GetMaximumCombatAttackDistance() const;
+    bool IsOutsideAllAttackRanges(float distance) const;
+    bool IsFacingPlayerForAttack(const BossTargetContext& context) const;
+    void BeginApproach();
+    void UpdateApproachMovement(const DirectX::XMFLOAT3& direction, float deltaTime);
+    void StopAIMovement();
+    bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
+        float degreesPerSecond, float deltaTime);
+    float GetTurnCompleteAngle() const { return turnCompleteAngle; }
+    float GetTurnTimeout() const { return turnTimeout; }
+    float GetApproachTurnSpeed() const { return approachTurnSpeed; }
+    float GetTurnSpeed() const { return turnSpeed; }
+    void SetLastAIDecision(const std::string& reason) { lastAIDecisionReason = reason; }
+
     // ÉJÉÅÉâÇÃíçéãì_ÇÃà íu
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 
@@ -127,8 +142,15 @@ private:
     float currentCombatPlayerDistance = 0.0f;
     float lastCombatSelectionDistance = 0.0f;
     float repeatWeightScale = 0.25f;
-    float attackInterval = 3.0f;
+    float attackInterval = 0.1f;
     float recoveryDuration = 0.5f;
+    float attackFacingAngle = 35.0f;
+    float approachSpeed = 5.0f;
+    float approachTurnSpeed = 180.0f;
+    float turnSpeed = 180.0f;
+    float turnCompleteAngle = 15.0f;
+    float turnTimeout = 1.5f;
+    std::string lastAIDecisionReason = "None";
     bool transitionWindow = false;
 
     float maxJumpDistance = 12.5f;

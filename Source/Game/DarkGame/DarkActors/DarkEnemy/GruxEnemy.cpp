@@ -91,6 +91,8 @@ void GruxEnemy::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<EnemyIdleState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyDeathState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyThinkState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyApproachState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyTurnState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyRecoveryState>(this));
 
@@ -729,6 +731,25 @@ void GruxEnemy::DrawImGuiDetails()
         debugFixedAttackType = static_cast<BossAttackType>(attackIndex);
     ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    const BossTargetContext targetContext = BuildTargetContext();
+    const char* relativeRegions[] = { "Front", "Side", "Back" };
+    ImGui::SeparatorText("CombatAI v2 Positioning");
+    ImGui::Text("Current Distance: %.3f", targetContext.xzDistance);
+    ImGui::Text("Absolute Angle: %.3f", targetContext.absoluteAngleDegrees);
+    ImGui::Text("Signed Angle: %.3f", targetContext.signedAngleDegrees);
+    ImGui::Text("Forward Dot: %.3f", targetContext.forwardDot);
+    ImGui::Text("Relative Region: %s",
+        targetContext.valid
+        ? relativeRegions[static_cast<int>(targetContext.region)]
+        : "Invalid");
+    ImGui::DragFloat("Attack Facing Angle", &attackFacingAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+    ImGui::DragFloat("Approach Speed", &approachSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
+    ImGui::DragFloat("Approach Turn Speed", &approachTurnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
+    ImGui::DragFloat("Turn Speed", &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
+    ImGui::DragFloat("Turn Complete Angle", &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+    ImGui::DragFloat("Turn Timeout", &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::Text("Current AI State: %s", stateMachine_ ? stateMachine_->GetStateName() : "None");
+    ImGui::Text("Last Decision Reason: %s", lastAIDecisionReason.c_str());
     ImGui::SeparatorText("JumpAttack Debug");
     ImGui::DragFloat("Max Jump Distance", &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
     ImGui::DragFloat("Desired Attack Distance", &desiredAttackDistance, 0.05f, 0.0f, 10.0f, "%.2f");
@@ -1302,6 +1323,132 @@ void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
 
         easingRunner->StartHandler(handler, accessor);
     }
+}
+
+BossTargetContext GruxEnemy::BuildTargetContext() const
+{
+    BossTargetContext context{};
+    const auto scene = GetOwnerScene();
+    const auto player = scene
+        ? scene->GetActorManager()->GetActorOfType<Player>()
+        : nullptr;
+    if (!player || player->IsPendingKill())
+        return context;
+
+    const DirectX::XMFLOAT3 bossPosition = GetPosition();
+    const DirectX::XMFLOAT3 playerPosition = player->GetPosition();
+    const float dx = playerPosition.x - bossPosition.x;
+    const float dz = playerPosition.z - bossPosition.z;
+    context.xzDistance = std::sqrt(dx * dx + dz * dz);
+
+    DirectX::XMVECTOR forwardVector = DirectX::XMVector3Rotate(
+        DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
+        DirectX::XMLoadFloat4(&GetQuaternionRotation()));
+    DirectX::XMFLOAT3 forward{};
+    DirectX::XMStoreFloat3(&forward, forwardVector);
+    forward.y = 0.0f;
+    const float forwardLength = std::sqrt(
+        forward.x * forward.x + forward.z * forward.z);
+    if (forwardLength > FLT_EPSILON)
+    {
+        forward.x /= forwardLength;
+        forward.z /= forwardLength;
+    }
+    else
+    {
+        forward = { 0.0f, 0.0f, 1.0f };
+    }
+
+    if (context.xzDistance > FLT_EPSILON)
+    {
+        const float inverseDistance = 1.0f / context.xzDistance;
+        context.directionToPlayer =
+            { dx * inverseDistance, 0.0f, dz * inverseDistance };
+    }
+    else
+    {
+        context.directionToPlayer = forward;
+    }
+
+    context.forwardDot = std::clamp(
+        MathHelper::Dot(forward, context.directionToPlayer), -1.0f, 1.0f);
+    const float side =
+        forward.x * context.directionToPlayer.z -
+        forward.z * context.directionToPlayer.x;
+    context.signedAngleDegrees = DirectX::XMConvertToDegrees(
+        std::atan2f(side, context.forwardDot));
+    context.absoluteAngleDegrees = DirectX::XMConvertToDegrees(
+        std::acos(context.forwardDot));
+
+    if (context.absoluteAngleDegrees <= 45.0f)
+        context.region = PlayerRelativeRegion::Front;
+    else if (context.absoluteAngleDegrees < 135.0f)
+        context.region = PlayerRelativeRegion::Side;
+    else
+        context.region = PlayerRelativeRegion::Back;
+
+    context.valid = true;
+    return context;
+}
+
+float GruxEnemy::GetMaximumCombatAttackDistance() const
+{
+    float maximumDistance = 0.0f;
+    for (const auto& attack : combatAttackData)
+    {
+        if (attack.weight > 0.0f)
+            maximumDistance = (std::max)(maximumDistance, attack.maxDistance);
+    }
+    return maximumDistance;
+}
+
+bool GruxEnemy::IsOutsideAllAttackRanges(const float distance) const
+{
+    const float maximumDistance = GetMaximumCombatAttackDistance();
+    return maximumDistance > 0.0f && distance > maximumDistance;
+}
+
+bool GruxEnemy::IsFacingPlayerForAttack(
+    const BossTargetContext& context) const
+{
+    return context.valid &&
+        context.absoluteAngleDegrees <= attackFacingAngle;
+}
+
+void GruxEnemy::BeginApproach()
+{
+    PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
+    if (characterMovementComponent)
+    {
+        characterMovementComponent->SetFixedSpeed(approachSpeed);
+        characterMovementComponent->SetInputMagnitude(1.0f);
+    }
+}
+
+void GruxEnemy::UpdateApproachMovement(
+    const DirectX::XMFLOAT3& direction, const float deltaTime)
+{
+    if (characterMovementComponent)
+        characterMovementComponent->SetMoveDirection(direction);
+    RotateTowardsPlayer(direction, approachTurnSpeed, deltaTime);
+}
+
+void GruxEnemy::StopAIMovement()
+{
+    if (!characterMovementComponent)
+        return;
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->ResetFixedSpeed();
+}
+
+bool GruxEnemy::RotateTowardsPlayer(
+    const DirectX::XMFLOAT3& direction,
+    const float degreesPerSecond,
+    const float deltaTime)
+{
+    return rotationComponent && rotationComponent->RotateTowardsDirection(
+        direction, degreesPerSecond, deltaTime);
 }
 
 // ÉvÉåÉCÉÑÅ[Ç∆ÇÃãóó£ÇéÊìæÇ∑ÇÈä÷êî
