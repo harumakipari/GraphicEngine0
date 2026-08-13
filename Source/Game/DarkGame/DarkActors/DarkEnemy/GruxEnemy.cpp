@@ -1044,6 +1044,17 @@ void GruxEnemy::OnAnimationChanged()
     }
 }
 
+std::optional<BossAttackType> GruxEnemy::GetAttackTypeForAction(BossActionType actionType) const
+{
+    for (const BossActionData& data : combatActionData)
+    {
+        if (data.type == actionType)
+            return data.attackType;
+    }
+
+    return std::nullopt;
+}
+
 // UŒ‚ŠJn‚Én‚ß‚éˆ—
 bool GruxEnemy::SelectAttackForCurrentMode()
 {

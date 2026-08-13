@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <string>
 #include <DirectXMath.h>
+#include <optional>
 
 enum class PlayerRelativeRegion : uint8_t
 {
@@ -28,6 +29,15 @@ enum class BossAIMode : uint8_t
     DebugFixedAttack,
 };
 
+enum class BossActionType :uint8_t
+{
+    AttackLA,
+    AttackRA,
+    FastCombo,
+    JumpAttack,
+    Approach,
+};
+
 enum class BossAttackType : uint8_t
 {
     PrimaryAttackLA,
@@ -39,6 +49,14 @@ enum class BossAttackType : uint8_t
     LongRangeAttack,
 };
 
+
+struct BossActionData
+{
+    BossActionType type = BossActionType::AttackLA;
+    std::optional<BossAttackType> attackType = BossAttackType::PrimaryAttackLA;
+};
+
+
 struct BossAttackData
 {
     BossAttackType type = BossAttackType::PrimaryAttackLA;
@@ -47,3 +65,4 @@ struct BossAttackData
     float maxDistance = 0.0f;
     float weight = 1.0f;
 };
+

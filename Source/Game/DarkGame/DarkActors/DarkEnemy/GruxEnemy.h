@@ -47,6 +47,9 @@ public:
 
     BossAIMode GetBossAIMode() const { return bossAIMode; }
     BossAttackType GetSelectedAttackType() const { return selectedAttackType; }
+
+    std::optional<BossAttackType> GetAttackTypeForAction(BossActionType actionType) const;
+
     bool SelectAttackForCurrentMode();
     int GetAttackStageCount(BossAttackType type) const;
     bool PlayAttackStage(BossAttackType type, int stage);
@@ -74,11 +77,14 @@ public:
     float GetTurnSpeed() const { return turnSpeed; }
     void SetLastAIDecision(const std::string& reason) { lastAIDecisionReason = reason; }
 
+
     // カメラの注視点の位置
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 
     // ボスの名前の演出を開始する
     void StartGruxNamePerform(float duration, float start = 0.0f, float end = 1.0f);
+
+
 private:
     // プレイヤーとの距離を取得する関数
     float GetDistanceToPlayer();
@@ -126,17 +132,34 @@ private:
     uint64_t currentAttackSequenceId = 0;
     int currentAttackHitCount = 0;
 
+
     BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;
     BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
+
+    BossActionType selectedActionType = BossActionType::AttackLA;
+    BossActionType lastActionType = BossActionType::AttackLA;
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
+
     BossAttackType lastAttackType = BossAttackType::PrimaryAttackLA;
     bool hasLastAttack = false;
-    std::array<BossAttackData, 4> combatAttackData = {{
+
+    std::array<BossActionData, 5> combatActionData =
+    { {
+        { BossActionType::AttackLA, BossAttackType::PrimaryAttackLA },
+        { BossActionType::AttackRA, BossAttackType::PrimaryAttackRA },
+        { BossActionType::FastCombo, BossAttackType::FastCombo },
+        { BossActionType::JumpAttack,BossAttackType::JumpAttack },
+        { BossActionType::Approach, std::nullopt},
+    } };
+
+    std::array<BossAttackData, 4> combatAttackData =
+    {{
         { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f },
         { BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f },
         { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f },
         { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 14.0f, 1.0f },
     }};
+
     std::array<float, 4> combatEffectiveWeights{};
     std::array<bool, 4> combatCandidateFlags{};
     float currentCombatPlayerDistance = 0.0f;
