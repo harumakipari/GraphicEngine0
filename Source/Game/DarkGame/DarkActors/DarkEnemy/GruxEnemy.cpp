@@ -756,14 +756,34 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Relative Region: %s", targetContext.valid ? relativeRegions[static_cast<int>(targetContext.region)] : "Invalid");
     ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
     ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
+    const char* intentTypes[] = { "CloseCombat", "JumpAttack" };
     const char* activeIntentName = "None";
     if (activeIntent)
-    {
-        const char* intentTypes[] = { "CloseCombat", "JumpAttack" };
         activeIntentName = intentTypes[static_cast<int>(*activeIntent)];
-    }
     ImGui::Text("Active Intent: %s", activeIntentName);
     ImGui::Text("Positioning Attempted: %s", intentPositioningAttempted ? "Yes" : "No");
+    if (ImGui::TreeNode("Intent Selection"))
+    {
+        const float totalIntentWeight = GetTotalIntentWeight();
+        for (size_t i = 0; i < combatIntentData.size(); ++i)
+        {
+            BossIntentData& data = combatIntentData[i];
+            const float probability = totalIntentWeight > 0.0f
+                ? (std::max)(0.0f, data.weight) / totalIntentWeight * 100.0f
+                : 0.0f;
+            ImGui::PushID(static_cast<int>(i));
+            ImGui::Text("%s", intentTypes[i]);
+            ImGui::DragFloat("Weight", &data.weight, 1.0f, 0.0f, 1000.0f, "%.1f");
+            ImGui::Text("Selection Probability: %.2f%%", probability);
+            ImGui::PopID();
+        }
+        if (ImGui::Button("Select Intent Once"))
+            SelectIntentByWeight();
+        ImGui::SameLine();
+        if (ImGui::Button("Clear Active Intent"))
+            ClearActiveIntent();
+        ImGui::TreePop();
+    }
     if (ImGui::TreeNode("Combat Action Candidates"))
     {
         ImGui::Text("Total Effective Weight: %.2f", GetTotalActionWeight());
@@ -1209,6 +1229,42 @@ bool GruxEnemy::TryStartIntent(BossIntentType intentType)
     activeIntent = intentType;
     intentPositioningAttempted = false;
     return true;
+}
+
+float GruxEnemy::GetTotalIntentWeight() const
+{
+    float totalWeight = 0.0f;
+    for (const BossIntentData& data : combatIntentData)
+        totalWeight += (std::max)(0.0f, data.weight);
+    return totalWeight;
+}
+
+bool GruxEnemy::SelectIntentByWeight()
+{
+    if (activeIntent)
+        return false;
+
+    const float totalWeight = GetTotalIntentWeight();
+    if (totalWeight <= 0.0f)
+        return false;
+
+    static std::mt19937 randomEngine{ std::random_device{}() };
+    std::uniform_real_distribution<float> distribution(0.0f, totalWeight);
+    const float selectionValue = distribution(randomEngine);
+
+    float accumulatedWeight = 0.0f;
+    for (const BossIntentData& data : combatIntentData)
+    {
+        const float effectiveWeight = (std::max)(0.0f, data.weight);
+        if (effectiveWeight <= 0.0f)
+            continue;
+
+        accumulatedWeight += effectiveWeight;
+        if (selectionValue <= accumulatedWeight)
+            return TryStartIntent(data.type);
+    }
+
+    return false;
 }
 
 void GruxEnemy::ClearActiveIntent()

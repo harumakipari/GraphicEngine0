@@ -49,6 +49,12 @@ enum class BossIntentType : uint8_t
     JumpAttack,
 };
 
+struct BossIntentData
+{
+    BossIntentType type = BossIntentType::CloseCombat;
+    float weight = 1.0f;
+};
+
 enum class BossActionType :uint8_t
 {
     AttackLA,

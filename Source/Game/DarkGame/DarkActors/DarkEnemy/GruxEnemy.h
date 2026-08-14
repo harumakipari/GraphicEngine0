@@ -55,6 +55,7 @@ public:
     BossAttackType GetSelectedAttackType() const { return selectedAttackType; }
 
     bool TryStartIntent(BossIntentType intentType);
+    bool SelectIntentByWeight();
     void ClearActiveIntent();
     void MarkIntentPositioningAttempted();
     const std::optional<BossIntentType>& GetActiveIntent() const { return activeIntent; }
@@ -124,6 +125,7 @@ private:
     // ActionŒó•â‚ÆBase Weight‚©‚çEffective Weight‚ğXV‚·‚é
     void UpdateActionEffectiveWeights();
     void UpdateActionCooldowns(float deltaTime);
+    float GetTotalIntentWeight() const;
 
     // Action‚ÌEffective Weight‡Œv‚ğ‹‚ß‚éŠÖ”
     float GetTotalActionWeight() const;
@@ -178,6 +180,13 @@ private:
 
     std::optional<BossIntentType> activeIntent = std::nullopt;
     bool intentPositioningAttempted = false;
+
+    static constexpr int intentCount = 2;
+    std::array<BossIntentData, intentCount> combatIntentData =
+    { {
+        { BossIntentType::CloseCombat, 70.0f },
+        { BossIntentType::JumpAttack, 30.0f },
+    } };
 
     BossActionType selectedActionType = BossActionType::AttackLA;
     BossActionType lastActionType = BossActionType::AttackLA;
