@@ -67,6 +67,7 @@ public:
         const DirectX::XMFLOAT3& facingDirection, float deltaTime);
     void UpdatePositioningDebug(float traveledDistance, float elapsedTime, float stuckTimer);
     void FinishPositioningDebug(const std::string& reason);
+    void StartSelectedActionCooldown();
 
     bool SelectAttackForCurrentMode();
     int GetAttackStageCount(BossAttackType type) const;
@@ -116,6 +117,7 @@ private:
 
     // Action候補とBase WeightからEffective Weightを更新する
     void UpdateActionEffectiveWeights();
+    void UpdateActionCooldowns(float deltaTime);
 
     // ActionのEffective Weight合計を求める関数
     float GetTotalActionWeight() const;
@@ -181,12 +183,12 @@ private:
     std::array<BossActionData, actionCount> combatActionData =
     {
         {
-        { BossActionType::AttackLA, BossAttackType::PrimaryAttackLA ,BossDistanceRegion::Near,BossDistanceRegion::Near,30.0f},
-        { BossActionType::AttackRA, BossAttackType::PrimaryAttackRA,BossDistanceRegion::Near,BossDistanceRegion::Near,30.0f},
-        { BossActionType::FastCombo, BossAttackType::FastCombo ,BossDistanceRegion::Near,BossDistanceRegion::Near,40.0f},
-        { BossActionType::JumpAttack,BossAttackType::JumpAttack ,BossDistanceRegion::Middle,BossDistanceRegion::Middle,30.0f},
-        { BossActionType::Approach, std::nullopt,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f},
-        { BossActionType::Retreat, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Middle,40.0f},
+        { BossActionType::AttackLA, BossAttackType::PrimaryAttackLA ,BossDistanceRegion::Near,BossDistanceRegion::Near,30.0f,1.0f},
+        { BossActionType::AttackRA, BossAttackType::PrimaryAttackRA,BossDistanceRegion::Near,BossDistanceRegion::Near,30.0f,1.0f},
+        { BossActionType::FastCombo, BossAttackType::FastCombo ,BossDistanceRegion::Near,BossDistanceRegion::Near,40.0f,2.0f},
+        { BossActionType::JumpAttack,BossAttackType::JumpAttack ,BossDistanceRegion::Middle,BossDistanceRegion::Middle,30.0f,3.0f},
+        { BossActionType::Approach, std::nullopt,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,0.5f},
+        { BossActionType::Retreat, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Middle,40.0f,2.5f},
     }
     };
 
@@ -194,6 +196,7 @@ private:
     std::array<bool, actionCount> combatActionCandidateFlags{};
     // 各行動の有効な重み。距離条件とRepeat条件を考慮した有効な重み
     std::array<float, actionCount> combatActionEffectiveWeights{};
+    std::array<float, actionCount> combatActionCooldownRemaining{};
 
     // 攻撃ごとのデータを定義する配列。アニメーション名、距離条件、重みなどを設定する。
     std::array<BossAttackData, 4> combatAttackData =

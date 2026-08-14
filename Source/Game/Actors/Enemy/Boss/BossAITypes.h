@@ -75,6 +75,7 @@ struct BossActionData
     BossDistanceRegion maxDistanceRegion = BossDistanceRegion::Far;
 
     float weight = 1.0f;
+    float cooldownDuration = 0.0f;
 };
 
 struct BossPositioningData

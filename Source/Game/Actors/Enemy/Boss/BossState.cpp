@@ -52,13 +52,13 @@ void EnemyThinkState::Execute(float deltaTime)
         }
     }
 
-    timer += deltaTime;
-    if (timer < enemy->GetAttackInterval())
-        return;
-
     // デバック固定用の分岐
     if (enemy->GetBossAIMode() == BossAIMode::DebugFixedAttack)
     {
+        timer += deltaTime;
+        if (timer < enemy->GetAttackInterval())
+            return;
+
         if (!enemy->SelectAttackForCurrentMode())
         {
             enemy->SetLastAIDecision("Wait: DebugFixedAttack selection failed");
@@ -202,6 +202,7 @@ void EnemyPositioningState::Exit()
         enemy->SetLastAIDecision("Positioning End: Interrupted");
         enemy->FinishPositioningDebug("Interrupted");
     }
+    enemy->StartSelectedActionCooldown();
     enemy->StopAIMovement();
     positioningData = std::nullopt;
 }
@@ -320,6 +321,7 @@ void EnemyAttackState::Execute(float deltaTime)
 }
 void EnemyAttackState::Exit()
 {
+    enemy->StartSelectedActionCooldown();
     enemy->ClearJumpAttackMotionWarpOverride();
     enemy->DisableAttackHitBoxes();
 }

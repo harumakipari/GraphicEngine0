@@ -295,6 +295,9 @@ void GruxEnemy::Initialize(const Transform& transform)
 
 void GruxEnemy::Update(float deltaTime)
 {
+    if (!IsAnimationEditorPreviewActive())
+        UpdateActionCooldowns(deltaTime);
+
     Character::Update(deltaTime);
 
     // Animation Editor Preview中はこのBossだけGameplay/AI/攻撃判定を停止する。
@@ -759,9 +762,16 @@ void GruxEnemy::DrawImGuiDetails()
 
         for (size_t i = 0; i < combatActionData.size(); ++i)
         {
-            ImGui::Text("%s: %s / Effective Weight: %.2f", actionTypes[i],
-                combatActionCandidateFlags[i]
-                ? "Candidate" : "Not Candidate", combatActionEffectiveWeights[i]);
+            ImGui::PushID(static_cast<int>(i));
+            BossActionData& actionData = combatActionData[i];
+            ImGui::Text("%s", actionTypes[i]);
+            ImGui::DragFloat("Cooldown Duration", &actionData.cooldownDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
+            ImGui::Text("Cooldown Remaining: %.2f sec", combatActionCooldownRemaining[i]);
+            ImGui::Text("Cooldown State: %s", combatActionCooldownRemaining[i] <= 0.0f ? "Ready" : "Cooldown");
+            ImGui::Text("Candidate: %s", combatActionCandidateFlags[i] ? "Yes" : "No");
+            ImGui::Text("Effective Weight: %.2f", combatActionEffectiveWeights[i]);
+            ImGui::Separator();
+            ImGui::PopID();
         }
         ImGui::TreePop();
     }
@@ -1139,7 +1149,14 @@ const BossPositioningData* GruxEnemy::GetPositioningDataForAction(BossActionType
 
 void GruxEnemy::BeginPositioning(const BossPositioningData& data)
 {
-    PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
+    const auto controller = GetBodyAnimationController();
+    const bool isPositioningLocomotionPlaying =
+        controller &&
+        controller->IsPlayAnimation() &&
+        controller->GetCurrentAnimationName() == "TravelMode_Fwd_0";
+
+    if (!isPositioningLocomotionPlaying)
+        PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
 
     positioningDebugActive = true;
     activePositioningDebugData = data;
@@ -1174,6 +1191,22 @@ void GruxEnemy::FinishPositioningDebug(const std::string& reason)
 {
     positioningDebugActive = false;
     positioningEndReason = reason;
+}
+
+void GruxEnemy::StartSelectedActionCooldown()
+{
+    if (bossAIMode != BossAIMode::CombatAI)
+        return;
+
+    for (size_t i = 0; i < combatActionData.size(); ++i)
+    {
+        if (combatActionData[i].type != selectedActionType)
+            continue;
+
+        combatActionCooldownRemaining[i] =
+            (std::max)(0.0f, combatActionData[i].cooldownDuration);
+        return;
+    }
 }
 
 // 攻撃開始時に始める処理
@@ -1592,7 +1625,11 @@ void GruxEnemy::UpdateActionCandidateFlags(BossDistanceRegion currentRegion)
     //  IsActionCandidateForCurrentDistance()の結果を対応するflagへ保存する
     for (size_t i = 0; i < combatActionData.size(); ++i)
     {
-        combatActionCandidateFlags[i] = IsActionCandidateForCurrentDistance(combatActionData[i], currentRegion);
+        const BossActionData& actionData = combatActionData[i];
+        const bool distanceReady = IsActionCandidateForCurrentDistance(actionData, currentRegion);
+        const bool cooldownReady = combatActionCooldownRemaining[i] <= 0.0f;
+        const bool weightReady = actionData.weight > 0.0f;
+        combatActionCandidateFlags[i] = distanceReady && cooldownReady && weightReady;
     }
 
 }
@@ -1609,6 +1646,13 @@ bool GruxEnemy::IsActionCandidateForCurrentDistance(const BossActionData& action
 }
 
 //  Action候補とBase WeightからEffective Weightを更新する
+void GruxEnemy::UpdateActionCooldowns(float deltaTime)
+{
+    const float safeDeltaTime = (std::max)(0.0f, deltaTime);
+    for (float& remaining : combatActionCooldownRemaining)
+        remaining = (std::max)(0.0f, remaining - safeDeltaTime);
+}
+
 void GruxEnemy::UpdateActionEffectiveWeights()
 {
     // 前回の計算結果をリセット
