@@ -43,6 +43,12 @@ enum class BossAIMode : uint8_t
     DebugFixedAttack,
 };
 
+enum class BossIntentType : uint8_t
+{
+    CloseCombat,
+    JumpAttack,
+};
+
 enum class BossActionType :uint8_t
 {
     AttackLA,

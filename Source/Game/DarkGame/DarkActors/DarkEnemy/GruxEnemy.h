@@ -54,6 +54,12 @@ public:
     BossAIMode GetBossAIMode() const { return bossAIMode; }
     BossAttackType GetSelectedAttackType() const { return selectedAttackType; }
 
+    bool TryStartIntent(BossIntentType intentType);
+    void ClearActiveIntent();
+    void MarkIntentPositioningAttempted();
+    const std::optional<BossIntentType>& GetActiveIntent() const { return activeIntent; }
+    bool WasIntentPositioningAttempted() const { return intentPositioningAttempted; }
+
     const std::optional<BossPositioningData>& GetSelectedPositioningData() const
     {
         return selectedPositioningData;
@@ -169,6 +175,9 @@ private:
 
     BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;
     BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
+
+    std::optional<BossIntentType> activeIntent = std::nullopt;
+    bool intentPositioningAttempted = false;
 
     BossActionType selectedActionType = BossActionType::AttackLA;
     BossActionType lastActionType = BossActionType::AttackLA;

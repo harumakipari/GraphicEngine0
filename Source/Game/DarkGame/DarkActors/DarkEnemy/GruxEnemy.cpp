@@ -756,6 +756,14 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Relative Region: %s", targetContext.valid ? relativeRegions[static_cast<int>(targetContext.region)] : "Invalid");
     ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
     ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
+    const char* activeIntentName = "None";
+    if (activeIntent)
+    {
+        const char* intentTypes[] = { "CloseCombat", "JumpAttack" };
+        activeIntentName = intentTypes[static_cast<int>(*activeIntent)];
+    }
+    ImGui::Text("Active Intent: %s", activeIntentName);
+    ImGui::Text("Positioning Attempted: %s", intentPositioningAttempted ? "Yes" : "No");
     if (ImGui::TreeNode("Combat Action Candidates"))
     {
         ImGui::Text("Total Effective Weight: %.2f", GetTotalActionWeight());
@@ -1191,6 +1199,28 @@ void GruxEnemy::FinishPositioningDebug(const std::string& reason)
 {
     positioningDebugActive = false;
     positioningEndReason = reason;
+}
+
+bool GruxEnemy::TryStartIntent(BossIntentType intentType)
+{
+    if (activeIntent)
+        return false;
+
+    activeIntent = intentType;
+    intentPositioningAttempted = false;
+    return true;
+}
+
+void GruxEnemy::ClearActiveIntent()
+{
+    activeIntent = std::nullopt;
+    intentPositioningAttempted = false;
+}
+
+void GruxEnemy::MarkIntentPositioningAttempted()
+{
+    if (activeIntent)
+        intentPositioningAttempted = true;
 }
 
 void GruxEnemy::StartSelectedActionCooldown()
