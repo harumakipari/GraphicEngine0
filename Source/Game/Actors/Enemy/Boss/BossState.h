@@ -67,14 +67,22 @@ private:
 };
 
 
-class EnemyApproachState : public EnemyStateBase
+class EnemyPositioningState : public EnemyStateBase
 {
 public:
-    EnemyApproachState(GruxEnemy* enemy) : EnemyStateBase(enemy) {}
+    EnemyPositioningState(GruxEnemy* enemy) : EnemyStateBase(enemy) {}
     void Enter() override;
     void Execute(float deltaTime) override;
     void Exit() override;
-    const char* GetName() const override { return "EnemyApproachState"; }
+    const char* GetName() const override { return "EnemyPositioningState"; }
+
+private:
+    std::optional<BossPositioningData> positioningData = std::nullopt;
+    DirectX::XMFLOAT3 previousPosition{};
+    float traveledDistance = 0.0f;
+    float elapsedTime = 0.0f;
+    float stuckTimer = 0.0f;
+    bool endReasonSet = false;
 };
 
 class EnemyTurnState : public EnemyStateBase
@@ -141,6 +149,5 @@ public:
 private:
     float timer = 0.0f;
 };
-
 
 

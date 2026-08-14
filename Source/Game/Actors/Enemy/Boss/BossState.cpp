@@ -44,13 +44,6 @@ void EnemyThinkState::Execute(float deltaTime)
             return;
         }
 
-        if (enemy->IsOutsideAllAttackRanges(context.xzDistance))
-        {
-            enemy->SetLastAIDecision("Approach: outside all attack ranges");
-            owner->GetStateMachine()->ChangeState("EnemyApproachState");
-            return;
-        }
-
         if (!enemy->IsFacingPlayerForAttack(context))
         {
             enemy->SetLastAIDecision("Turn: Player outside attack facing angle");
@@ -59,23 +52,48 @@ void EnemyThinkState::Execute(float deltaTime)
         }
     }
 
-#if 1
     timer += deltaTime;
     if (timer < enemy->GetAttackInterval())
         return;
 
-#endif // 1
+    // デバック固定用の分岐
+    if (enemy->GetBossAIMode() == BossAIMode::DebugFixedAttack)
+    {
+        if (!enemy->SelectAttackForCurrentMode())
+        {
+            enemy->SetLastAIDecision("Wait: DebugFixedAttack selection failed");
+            return;
+        }
+        enemy->SetLastAIDecision("Attack: DebugFixedAttack");
+        attackSelected = true;
+        owner->GetStateMachine()->ChangeState("EnemyAttackState");
+        return;
+    }
 
-    if (!enemy->SelectAttackForCurrentMode())
+
+    if (!enemy->SelectCombatAction())
     {
         enemy->SetLastAIDecision("Wait: no weighted attack candidate");
         timer = (std::max)(0.0f, enemy->GetAttackInterval() - 0.25f);
         return;
     }
 
-    enemy->SetLastAIDecision(
-        enemy->GetBossAIMode() == BossAIMode::DebugFixedAttack
-        ? "Attack: DebugFixedAttack" : "Attack: weighted selection");
+    if (enemy->GetSelectedPositioningData())
+    {
+        enemy->SetLastAIDecision("Action: Positioning selected by weighted selection");
+        attackSelected = true;
+        owner->GetStateMachine()->ChangeState("EnemyPositioningState");
+        return;
+    }
+
+    if (!enemy->PrepareAttackForSelectedAction())
+    {
+        enemy->SetLastAIDecision("Wait: selected Action has no executable mapping");
+        timer = (std::max)(0.0f, enemy->GetAttackInterval() - 0.25f);
+        return;
+    }
+
+    enemy->SetLastAIDecision("Action: Attack selected by weighted selection");
     attackSelected = true;
     owner->GetStateMachine()->ChangeState("EnemyAttackState");
 }
@@ -84,41 +102,108 @@ void EnemyThinkState::Exit()
 }
 
 
-void EnemyApproachState::Enter()
+void EnemyPositioningState::Enter()
 {
-    enemy->BeginApproach();
+    positioningData = enemy->GetSelectedPositioningData();
+    traveledDistance = 0.0f;
+    elapsedTime = 0.0f;
+    stuckTimer = 0.0f;
+    previousPosition = enemy->GetPosition();
+    endReasonSet = false;
+
+    if (!positioningData)
+    {
+        enemy->SetLastAIDecision("Positioning End: Interrupted (missing data)");
+        enemy->FinishPositioningDebug("Interrupted");
+        endReasonSet = true;
+        owner->GetStateMachine()->ChangeState("EnemyThinkState");
+        return;
+    }
+
+    enemy->BeginPositioning(*positioningData);
 }
 
-void EnemyApproachState::Execute(float deltaTime)
+void EnemyPositioningState::Execute(float deltaTime)
 {
+    auto finish = [this](const char* reason)
+    {
+        enemy->SetLastAIDecision(std::string("Positioning End: ") + reason);
+        enemy->FinishPositioningDebug(reason);
+        endReasonSet = true;
+        owner->GetStateMachine()->ChangeState("EnemyThinkState");
+    };
+
     if (enemy->GetBossAIMode() != BossAIMode::CombatAI)
     {
-        enemy->SetLastAIDecision("Approach ended: AI mode changed");
-        owner->GetStateMachine()->ChangeState("EnemyThinkState");
+        finish("AIModeChanged");
+        return;
+    }
+
+    if (!positioningData)
+    {
+        finish("Interrupted");
+        return;
+    }
+
+    const DirectX::XMFLOAT3 currentPosition = enemy->GetPosition();
+    const float deltaX = currentPosition.x - previousPosition.x;
+    const float deltaZ = currentPosition.z - previousPosition.z;
+    const float frameMovement = std::sqrt(deltaX * deltaX + deltaZ * deltaZ);
+    traveledDistance += frameMovement;
+    previousPosition = currentPosition;
+    elapsedTime += deltaTime;
+
+    const float actualMovementSpeed = deltaTime > 0.0f ? frameMovement / deltaTime : 0.0f;
+    if (actualMovementSpeed < positioningData->stuckMovementThreshold)
+        stuckTimer += deltaTime;
+    else
+        stuckTimer = 0.0f;
+
+    enemy->UpdatePositioningDebug(traveledDistance, elapsedTime, stuckTimer);
+
+    if (traveledDistance >= positioningData->moveDistance)
+    {
+        finish("DistanceReached");
+        return;
+    }
+
+    if (elapsedTime >= positioningData->timeout)
+    {
+        finish("Timeout");
+        return;
+    }
+
+    if (stuckTimer >= positioningData->stuckTimeThreshold)
+    {
+        finish("Stuck");
         return;
     }
 
     const BossTargetContext context = enemy->BuildTargetContext();
     if (!context.valid)
     {
-        enemy->SetLastAIDecision("Approach ended: no valid Player target");
-        owner->GetStateMachine()->ChangeState("EnemyThinkState");
+        finish("InvalidPlayer");
         return;
     }
 
-    if (!enemy->IsOutsideAllAttackRanges(context.xzDistance))
+    DirectX::XMFLOAT3 moveDirection = context.directionToPlayer;
+    if (positioningData->direction == BossPositioningDirection::AwayFromPlayer)
     {
-        enemy->SetLastAIDecision("Approach complete: entered attack range");
-        owner->GetStateMachine()->ChangeState("EnemyThinkState");
-        return;
+        moveDirection.x *= -1.0f;
+        moveDirection.z *= -1.0f;
     }
-
-    enemy->UpdateApproachMovement(context.directionToPlayer, deltaTime);
+    enemy->UpdatePositioningMovement(moveDirection, moveDirection, deltaTime);
 }
 
-void EnemyApproachState::Exit()
+void EnemyPositioningState::Exit()
 {
+    if (!endReasonSet)
+    {
+        enemy->SetLastAIDecision("Positioning End: Interrupted");
+        enemy->FinishPositioningDebug("Interrupted");
+    }
     enemy->StopAIMovement();
+    positioningData = std::nullopt;
 }
 
 void EnemyTurnState::Enter()

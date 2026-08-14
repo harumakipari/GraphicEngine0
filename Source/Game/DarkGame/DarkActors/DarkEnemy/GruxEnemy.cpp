@@ -91,10 +91,10 @@ void GruxEnemy::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<EnemyIdleState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyDeathState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyThinkState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyApproachState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyTurnState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyRecoveryState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyPositioningState>(this));
 
         // ステートマシンを character に追加
         this->SetStateMachine(stateMachine_);
@@ -288,7 +288,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     hitSwordEffectComponent->Load("./Data/Effect/Files/DarkStageBloodEffect.json");
     //hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
 
- 
+
 
 
 }
@@ -685,19 +685,19 @@ void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& stat
         const std::shared_ptr<SceneComponent>& tip,
         const DirectX::XMFLOAT4& color,
         const float radius)
-    {
-        if (!root || !middle || !tip)
-            return;
+        {
+            if (!root || !middle || !tip)
+                return;
 
-        const DirectX::XMFLOAT3 rootPos = root->GetComponentLocation();
-        const DirectX::XMFLOAT3 middlePos = middle->GetComponentLocation();
-        const DirectX::XMFLOAT3 tipPos = tip->GetComponentLocation();
-        DebugRender::DrawSphere(rootPos, radius, color, 0.0f, true);
-        DebugRender::DrawSphere(middlePos, radius, color, 0.0f, true);
-        DebugRender::DrawSphere(tipPos, radius, color, 0.0f, true);
-        DebugRender::DrawLine(rootPos, middlePos, color, 0.0f, true);
-        DebugRender::DrawLine(middlePos, tipPos, color, 0.0f, true);
-    };
+            const DirectX::XMFLOAT3 rootPos = root->GetComponentLocation();
+            const DirectX::XMFLOAT3 middlePos = middle->GetComponentLocation();
+            const DirectX::XMFLOAT3 tipPos = tip->GetComponentLocation();
+            DebugRender::DrawSphere(rootPos, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(middlePos, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(tipPos, radius, color, 0.0f, true);
+            DebugRender::DrawLine(rootPos, middlePos, color, 0.0f, true);
+            DebugRender::DrawLine(middlePos, tipPos, color, 0.0f, true);
+        };
 
     if (state.parameter == leftWeapon || state.parameter == bothWeapon)
         drawWeapon(weaponLeftRootComponent, weaponLeftMiddleComponent,
@@ -733,18 +733,80 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
     const BossTargetContext targetContext = BuildTargetContext();
     const char* relativeRegions[] = { "Front", "Side", "Back" };
+    const char* distanceRegions[] = { "Near", "Middle", "Far" };
+    const char* actionTypes[] =
+    {
+        "AttackLA",
+        "AttackRA",
+        "FastCombo",
+        "JumpAttack",
+        "Approach",
+        "Retreat",
+    };
+
     ImGui::SeparatorText("CombatAI v2 Positioning");
     ImGui::Text("Current Distance: %.3f", targetContext.xzDistance);
     ImGui::Text("Absolute Angle: %.3f", targetContext.absoluteAngleDegrees);
     ImGui::Text("Signed Angle: %.3f", targetContext.signedAngleDegrees);
     ImGui::Text("Forward Dot: %.3f", targetContext.forwardDot);
-    ImGui::Text("Relative Region: %s",
-        targetContext.valid
-        ? relativeRegions[static_cast<int>(targetContext.region)]
-        : "Invalid");
+
+    ImGui::Text("Relative Region: %s", targetContext.valid ? relativeRegions[static_cast<int>(targetContext.region)] : "Invalid");
+    ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
+    ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
+    if (ImGui::TreeNode("Combat Action Candidates"))
+    {
+        ImGui::Text("Total Effective Weight: %.2f", GetTotalActionWeight());
+
+        for (size_t i = 0; i < combatActionData.size(); ++i)
+        {
+            ImGui::Text("%s: %s / Effective Weight: %.2f", actionTypes[i],
+                combatActionCandidateFlags[i]
+                ? "Candidate" : "Not Candidate", combatActionEffectiveWeights[i]);
+        }
+        ImGui::TreePop();
+    }
+
+
+
+    if (ImGui::TreeNode("Positioning Tuning"))
+    {
+        for (BossPositioningData& data : combatPositioningData)
+        {
+            const char* actionName = actionTypes[static_cast<int>(data.actionType)];
+            if (ImGui::TreeNode(actionName))
+            {
+                for (BossActionData& actionData : combatActionData)
+                {
+                    if (actionData.type == data.actionType)
+                    {
+                        ImGui::DragFloat("Weight", &actionData.weight, 0.5f, 0.0f, 100.0f, "%.2f");
+                        break;
+                    }
+                }
+                ImGui::DragFloat("Move Distance", &data.moveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
+                ImGui::DragFloat("Move Speed", &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
+                ImGui::DragFloat("Timeout", &data.timeout, 0.05f, 0.01f, 20.0f, "%.2f sec");
+                ImGui::DragFloat("Stuck Time Threshold", &data.stuckTimeThreshold, 0.05f, 0.0f, 10.0f, "%.2f sec");
+                ImGui::DragFloat("Stuck Movement Threshold", &data.stuckMovementThreshold, 0.01f, 0.0f, 10.0f, "%.2f m/sec");
+                ImGui::TreePop();
+            }
+        }
+        ImGui::TreePop();
+    }
+
+    ImGui::SeparatorText("Positioning Runtime");
+    ImGui::Text("Active: %s", positioningDebugActive ? "Yes" : "No");
+    ImGui::Text("Positioning Action: %s", actionTypes[static_cast<int>(activePositioningDebugData.actionType)]);
+    ImGui::Text("Direction Type: %s", activePositioningDebugData.direction == BossPositioningDirection::TowardPlayer ? "TowardPlayer" : "AwayFromPlayer");
+    ImGui::Text("Target Move Distance: %.2f", activePositioningDebugData.moveDistance);
+    ImGui::Text("Traveled Distance: %.2f", positioningDebugTraveledDistance);
+    ImGui::Text("Move Speed: %.2f", activePositioningDebugData.moveSpeed);
+    ImGui::Text("Elapsed Time: %.2f", positioningDebugElapsedTime);
+    ImGui::Text("Timeout: %.2f", activePositioningDebugData.timeout);
+    ImGui::Text("Stuck Timer: %.2f", positioningDebugStuckTimer);
+    ImGui::Text("Positioning End Reason: %s", positioningEndReason.c_str());
+
     ImGui::DragFloat("Attack Facing Angle", &attackFacingAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
-    ImGui::DragFloat("Approach Speed", &approachSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
-    ImGui::DragFloat("Approach Turn Speed", &approachTurnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
     ImGui::DragFloat("Turn Speed", &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
     ImGui::DragFloat("Turn Complete Angle", &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     ImGui::DragFloat("Turn Timeout", &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
@@ -941,7 +1003,7 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         warp.startPosition = GetPosition();
         animationMotionWarps.push_back(warp);
     }
-        break;
+    break;
     }
 }
 
@@ -1011,7 +1073,7 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
                 }),
             animationMotionWarps.end());
     }
-        break;
+    break;
     }
 }
 
@@ -1055,6 +1117,65 @@ std::optional<BossAttackType> GruxEnemy::GetAttackTypeForAction(BossActionType a
     return std::nullopt;
 }
 
+bool GruxEnemy::PrepareAttackForSelectedAction()
+{
+    const std::optional<BossAttackType> attackType = GetAttackTypeForAction(selectedActionType);
+    if (!attackType)
+        return false;
+
+    selectedAttackType = *attackType;
+    return true;
+}
+
+const BossPositioningData* GruxEnemy::GetPositioningDataForAction(BossActionType actionType) const
+{
+    for (const BossPositioningData& data : combatPositioningData)
+    {
+        if (data.actionType == actionType)
+            return &data;
+    }
+    return nullptr;
+}
+
+void GruxEnemy::BeginPositioning(const BossPositioningData& data)
+{
+    PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
+
+    positioningDebugActive = true;
+    activePositioningDebugData = data;
+    positioningDebugTraveledDistance = 0.0f;
+    positioningDebugElapsedTime = 0.0f;
+    positioningDebugStuckTimer = 0.0f;
+    positioningEndReason = "Running";
+
+    if (characterMovementComponent)
+    {
+        characterMovementComponent->SetFixedSpeed(data.moveSpeed);
+        characterMovementComponent->SetInputMagnitude(1.0f);
+    }
+}
+
+void GruxEnemy::UpdatePositioningMovement(const DirectX::XMFLOAT3& moveDirection,
+    const DirectX::XMFLOAT3& facingDirection, float deltaTime)
+{
+    if (characterMovementComponent)
+        characterMovementComponent->SetMoveDirection(moveDirection);
+    RotateTowardsPlayer(facingDirection, GetTurnSpeed(), deltaTime);
+}
+
+void GruxEnemy::UpdatePositioningDebug(float traveledDistance, float elapsedTime, float stuckTimer)
+{
+    positioningDebugTraveledDistance = traveledDistance;
+    positioningDebugElapsedTime = elapsedTime;
+    positioningDebugStuckTimer = stuckTimer;
+}
+
+void GruxEnemy::FinishPositioningDebug(const std::string& reason)
+{
+    positioningDebugActive = false;
+    positioningEndReason = reason;
+}
+
 // 攻撃開始時に始める処理
 bool GruxEnemy::SelectAttackForCurrentMode()
 {
@@ -1063,8 +1184,15 @@ bool GruxEnemy::SelectAttackForCurrentMode()
         selectedAttackType = debugFixedAttackType;
         return true;
     }
-
+    // プレイヤーまでの距離を取得する
     currentCombatPlayerDistance = GetDistanceToPlayer();
+
+    // プレイヤーまでの距離から、候補のアクションフラグを更新する
+    UpdateActionCandidateFlags(GetDistanceRegion(currentCombatPlayerDistance));
+
+    // 候補のアクションフラグから、候補の攻撃の確率の重みを更新する
+    UpdateActionEffectiveWeights();
+
     lastCombatSelectionDistance = currentCombatPlayerDistance;
     combatEffectiveWeights.fill(0.0f);
     combatCandidateFlags.fill(false);
@@ -1340,18 +1468,22 @@ BossTargetContext GruxEnemy::BuildTargetContext() const
 {
     BossTargetContext context{};
     const auto scene = GetOwnerScene();
-    const auto player = scene
-        ? scene->GetActorManager()->GetActorOfType<Player>()
-        : nullptr;
+    const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
+    // プレイヤーが存在しない場合や削除予定の場合は無効なコンテキストを返す
     if (!player || player->IsPendingKill())
         return context;
 
+    // プレイヤーとの距離を計算する
     const DirectX::XMFLOAT3 bossPosition = GetPosition();
     const DirectX::XMFLOAT3 playerPosition = player->GetPosition();
     const float dx = playerPosition.x - bossPosition.x;
     const float dz = playerPosition.z - bossPosition.z;
     context.xzDistance = std::sqrt(dx * dx + dz * dz);
 
+    // プレイヤーとの距離に応じた距離領域を取得する
+    context.distanceRegion = GetDistanceRegion(context.xzDistance);
+
+    // ボスの前方向ベクトルを計算する
     DirectX::XMVECTOR forwardVector = DirectX::XMVector3Rotate(
         DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
         DirectX::XMLoadFloat4(&GetQuaternionRotation()));
@@ -1370,26 +1502,25 @@ BossTargetContext GruxEnemy::BuildTargetContext() const
         forward = { 0.0f, 0.0f, 1.0f };
     }
 
+    // プレイヤーへの方向ベクトルを計算する
     if (context.xzDistance > FLT_EPSILON)
     {
         const float inverseDistance = 1.0f / context.xzDistance;
         context.directionToPlayer =
-            { dx * inverseDistance, 0.0f, dz * inverseDistance };
+        { dx * inverseDistance, 0.0f, dz * inverseDistance };
     }
     else
     {
         context.directionToPlayer = forward;
     }
 
-    context.forwardDot = std::clamp(
-        MathHelper::Dot(forward, context.directionToPlayer), -1.0f, 1.0f);
-    const float side =
-        forward.x * context.directionToPlayer.z -
-        forward.z * context.directionToPlayer.x;
-    context.signedAngleDegrees = DirectX::XMConvertToDegrees(
-        std::atan2f(side, context.forwardDot));
-    context.absoluteAngleDegrees = DirectX::XMConvertToDegrees(
-        std::acos(context.forwardDot));
+    // ボスの前方向とプレイヤーへの方向の内積を計算する
+    context.forwardDot = std::clamp(MathHelper::Dot(forward, context.directionToPlayer), -1.0f, 1.0f);
+    const float side = forward.x * context.directionToPlayer.z - forward.z * context.directionToPlayer.x;
+    // 内積と外積から角度を計算する
+    context.signedAngleDegrees = DirectX::XMConvertToDegrees(std::atan2f(side, context.forwardDot));
+    // 内積から絶対角度を計算する
+    context.absoluteAngleDegrees = DirectX::XMConvertToDegrees(std::acos(context.forwardDot));
 
     if (context.absoluteAngleDegrees <= 45.0f)
         context.region = PlayerRelativeRegion::Front;
@@ -1402,46 +1533,11 @@ BossTargetContext GruxEnemy::BuildTargetContext() const
     return context;
 }
 
-float GruxEnemy::GetMaximumCombatAttackDistance() const
-{
-    float maximumDistance = 0.0f;
-    for (const auto& attack : combatAttackData)
-    {
-        if (attack.weight > 0.0f)
-            maximumDistance = (std::max)(maximumDistance, attack.maxDistance);
-    }
-    return maximumDistance;
-}
-
-bool GruxEnemy::IsOutsideAllAttackRanges(const float distance) const
-{
-    const float maximumDistance = GetMaximumCombatAttackDistance();
-    return maximumDistance > 0.0f && distance > maximumDistance;
-}
-
 bool GruxEnemy::IsFacingPlayerForAttack(
     const BossTargetContext& context) const
 {
     return context.valid &&
         context.absoluteAngleDegrees <= attackFacingAngle;
-}
-
-void GruxEnemy::BeginApproach()
-{
-    PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
-    if (characterMovementComponent)
-    {
-        characterMovementComponent->SetFixedSpeed(approachSpeed);
-        characterMovementComponent->SetInputMagnitude(1.0f);
-    }
-}
-
-void GruxEnemy::UpdateApproachMovement(
-    const DirectX::XMFLOAT3& direction, const float deltaTime)
-{
-    if (characterMovementComponent)
-        characterMovementComponent->SetMoveDirection(direction);
-    RotateTowardsPlayer(direction, approachTurnSpeed, deltaTime);
 }
 
 void GruxEnemy::StopAIMovement()
@@ -1477,50 +1573,138 @@ float GruxEnemy::GetDistanceToPlayer()
     return sqrtf(dx * dx + dz * dz);
 }
 
-// 武器ヒット時の処理
-void GruxEnemy::OnWeaponHit(CollisionComponent* self, CollisionComponent* other)
+// プレイヤーとの距離に応じた距離領域を取得する関数
+BossDistanceRegion GruxEnemy::GetDistanceRegion(float distance) const
 {
-    if (!other)
+    if (distance <= nearDistanceThreshold)
+        return BossDistanceRegion::Near;
+    if (distance <= middleDistanceThreshold)
+        return BossDistanceRegion::Middle;
+    return BossDistanceRegion::Far;
+}
+
+// 現在の距離領域に基づいて、候補となる行動を選択する関数
+void GruxEnemy::UpdateActionCandidateFlags(BossDistanceRegion currentRegion)
+{
+    // すべての候補フラグをリセット
+    combatActionCandidateFlags.fill(false);
+
+    //  IsActionCandidateForCurrentDistance()の結果を対応するflagへ保存する
+    for (size_t i = 0; i < combatActionData.size(); ++i)
     {
-        Logger::Warning("other is nullptr");
-        return;
+        combatActionCandidateFlags[i] = IsActionCandidateForCurrentDistance(combatActionData[i], currentRegion);
     }
 
-    const uint32_t mask = CollisionHelper::ToBit(CollisionLayer::Player);
-    if (!(other->GetCollisionLayer() & mask))
-        return;
+}
 
-    Actor* actor = other->GetOwner();
-    Player* player = actor ? dynamic_cast<Player*>(actor) : nullptr;
-    if (!player)
-        return;
-
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[BossAttack][WeaponCollisionHit] attackSequenceId=" +
-        std::to_string(currentAttackSequenceId));
-
-    if (!rightHitBox && !leftHitBox)
-        return;
-
-    if (HasJustDodgedAttack(actor))
+// アクションが現在の距離(Region)で候補になるかを判定する関数
+bool GruxEnemy::IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const
+{
+    if (actionData.minDistanceRegion <= currentRegion &&
+        currentRegion <= actionData.maxDistanceRegion)
     {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[BossAttack][DamageRejected] reason=justDodged attackSequenceId=" +
-            std::to_string(currentAttackSequenceId));
-        return;
+        return true;
+    }
+    return false;
+}
+
+//  Action候補とBase WeightからEffective Weightを更新する
+void GruxEnemy::UpdateActionEffectiveWeights()
+{
+    // 前回の計算結果をリセット
+    combatActionEffectiveWeights.fill(0.0f);
+
+    for (size_t i = 0; i < combatActionData.size(); ++i)
+    {
+        // 候補フラグが立っていない場合はスキップ
+        if (!combatActionCandidateFlags[i])
+            continue;
+
+        // 基本の重みを取得
+        const float baseWeight = combatActionData[i].weight;
+        if (baseWeight <= 0.0f)
+            continue;
+
+        combatActionEffectiveWeights[i] = baseWeight;
+    }
+}
+
+// ActionのEffective Weight合計を求める関数
+float GruxEnemy::GetTotalActionWeight() const
+{
+    float totalWeight = 0.0f;
+    for (const float effectiveWeight : combatActionEffectiveWeights)
+    {
+        totalWeight += effectiveWeight;
     }
 
-    if (hitActors.contains(actor))
-        return;
+    return totalWeight;
+}
 
-    if (player->TryTakeDamage(10, GetPosition()))
+// Weightに基づいて行動を選択する関数。候補がない場合はstd::nulloptを返す
+std::optional<BossActionType> GruxEnemy::SelectActionByWeight() const
+{
+    float totalWeight = GetTotalActionWeight();
+    if (totalWeight <= 0.0f)
+        return std::nullopt;
+
+    static std::mt19937 randomEngine{ std::random_device{}() };
+
+    std::uniform_real_distribution<float> distribution(
+        0.0f,
+        totalWeight);
+
+    const float selectionValue = distribution(randomEngine);
+
+    float accumulatedWeight = 0.0f;
+
+    for (size_t i = 0; i < combatActionData.size(); ++i)
     {
-        hitActors.insert(actor);
-        ++currentAttackHitCount;
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[BossAttack][DamageApplied] attackSequenceId=" +
-            std::to_string(currentAttackSequenceId) + " source=weaponCollision");
+        const float effectiveWeight = combatActionEffectiveWeights[i];
+
+        if (effectiveWeight <= 0.0f)
+            continue;
+
+        accumulatedWeight += effectiveWeight;
+
+        if (selectionValue <= accumulatedWeight)
+            return combatActionData[i].type;
     }
+
+    return std::nullopt;
+}
+
+// 抽選結果をmemberへ保存する関数
+bool GruxEnemy::SelectCombatAction()
+{
+    // 現在の状況を取得する
+    currentCombatPlayerDistance = GetDistanceToPlayer();
+    lastCombatSelectionDistance = currentCombatPlayerDistance;
+    const BossDistanceRegion currentRegion =GetDistanceRegion(currentCombatPlayerDistance);
+
+    // 現在の距離領域に基づいて、候補となる行動を更新する
+    UpdateActionCandidateFlags(currentRegion);
+    // 候補となる行動の重みを更新する
+    UpdateActionEffectiveWeights();
+
+    // 重みに基づいて行動を選択する
+    const std::optional<BossActionType> action = SelectActionByWeight();
+
+    if (!action)
+        return false;
+
+    // 現在の選択結果を保存する
+    lastActionType = selectedActionType;
+    // 新しい選択結果を保存する
+    selectedActionType = *action;
+
+    const BossPositioningData* positioningData = GetPositioningDataForAction(selectedActionType);
+    if (positioningData)
+        selectedPositioningData = *positioningData;
+    else
+        selectedPositioningData = std::nullopt;
+
+    return true;
 }
 
 void KnightActor::Initialize(const Transform& transform)
