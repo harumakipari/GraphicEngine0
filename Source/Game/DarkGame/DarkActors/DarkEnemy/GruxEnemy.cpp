@@ -841,7 +841,7 @@ void GruxEnemy::DrawImGuiDetails()
                         break;
                     }
                 }
-                ImGui::DragFloat("Move Distance", &data.moveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
+                ImGui::DragFloat("Max Move Distance", &data.maxMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
                 ImGui::DragFloat("Move Speed", &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
                 ImGui::DragFloat("Timeout", &data.timeout, 0.05f, 0.01f, 20.0f, "%.2f sec");
                 ImGui::DragFloat("Stuck Time Threshold", &data.stuckTimeThreshold, 0.05f, 0.0f, 10.0f, "%.2f sec");
@@ -856,8 +856,11 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Active: %s", positioningDebugActive ? "Yes" : "No");
     ImGui::Text("Positioning Action: %s", actionTypes[static_cast<int>(activePositioningDebugData.actionType)]);
     ImGui::Text("Direction Type: %s", activePositioningDebugData.direction == BossPositioningDirection::TowardPlayer ? "TowardPlayer" : "AwayFromPlayer");
-    ImGui::Text("Target Move Distance: %.2f", activePositioningDebugData.moveDistance);
+    ImGui::Text("Completion Type: %s", activePositioningDebugData.completionType == BossPositioningCompletionType::TargetDistance ? "TargetDistance" : "TravelDistance");
+    ImGui::Text("Current Player Distance: %.2f", targetContext.xzDistance);
+    ImGui::Text("Target Distance: %.2f", activePositioningDebugData.targetDistance);
     ImGui::Text("Traveled Distance: %.2f", positioningDebugTraveledDistance);
+    ImGui::Text("Max Move Distance: %.2f", activePositioningDebugData.maxMoveDistance);
     ImGui::Text("Move Speed: %.2f", activePositioningDebugData.moveSpeed);
     ImGui::Text("Elapsed Time: %.2f", positioningDebugElapsedTime);
     ImGui::Text("Timeout: %.2f", activePositioningDebugData.timeout);
@@ -1968,7 +1971,16 @@ bool GruxEnemy::SelectCombatAction()
 
     const BossPositioningData* positioningData = GetPositioningDataForAction(selectedActionType);
     if (positioningData)
+    {
         selectedPositioningData = *positioningData;
+        if (selectedActionType == BossActionType::Approach &&
+            activeIntent && *activeIntent == BossIntentType::CloseCombat)
+        {
+            selectedPositioningData->completionType = BossPositioningCompletionType::TargetDistance;
+            selectedPositioningData->targetDistance =
+                (std::max)(0.0f, nearDistanceThreshold - closeCombatApproachArrivalMargin);
+        }
+    }
     else
         selectedPositioningData = std::nullopt;
 

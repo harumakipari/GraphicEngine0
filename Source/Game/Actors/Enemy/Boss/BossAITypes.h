@@ -25,6 +25,12 @@ enum class BossPositioningDirection : uint8_t
     AwayFromPlayer,
 };
 
+enum class BossPositioningCompletionType : uint8_t
+{
+    TravelDistance,
+    TargetDistance,
+};
+
 struct BossTargetContext
 {
     bool valid = false;
@@ -104,11 +110,13 @@ struct BossPositioningData
 {
     BossActionType actionType = BossActionType::Approach;
     BossPositioningDirection direction = BossPositioningDirection::TowardPlayer;
-    float moveDistance = 3.0f;
+    float maxMoveDistance = 3.0f;
     float moveSpeed = 5.0f;
     float timeout = 3.0f;
     float stuckTimeThreshold = 0.5f;
     float stuckMovementThreshold = 0.1f;
+    BossPositioningCompletionType completionType = BossPositioningCompletionType::TravelDistance;
+    float targetDistance = 0.0f;
 };
 
 

@@ -244,8 +244,8 @@ private:
 
     std::array<BossPositioningData, 2> combatPositioningData =
     { {
-        { BossActionType::Approach, BossPositioningDirection::TowardPlayer, 7.0f, 10.0f, 3.0f, 0.5f, 0.1f },
-        { BossActionType::Retreat, BossPositioningDirection::AwayFromPlayer, 7.0f, 10.0f, 3.0f, 0.5f, 0.1f },
+        { BossActionType::Approach, BossPositioningDirection::TowardPlayer, 20.0f, 10.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TargetDistance, 0.0f },
+        { BossActionType::Retreat, BossPositioningDirection::AwayFromPlayer, 7.0f, 10.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TravelDistance, 0.0f },
     } };
 
     //  StateMachineのタイミングと方向制御
@@ -254,6 +254,7 @@ private:
     float attackFacingAngle = 35.0f;    // この角度以内なら攻撃可能とみなす
 
     float nearDistanceThreshold = 6.0f; // この距離以下は近距離とみなす
+    float closeCombatApproachArrivalMargin = 0.5f;
     float middleDistanceThreshold = 12.0f; // この距離以下は中距離とみなす
 
     float turnSpeed = 720.0f;  // EnemyTurnStateでその場回転するときの速度

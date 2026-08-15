@@ -173,9 +173,31 @@ void EnemyPositioningState::Execute(float deltaTime)
 
     enemy->UpdatePositioningDebug(traveledDistance, elapsedTime, stuckTimer);
 
-    if (traveledDistance >= positioningData->moveDistance)
+    const BossTargetContext context = enemy->BuildTargetContext();
+    if (!context.valid)
     {
-        finish("DistanceReached");
+        finish("InvalidPlayer");
+        return;
+    }
+
+    if (positioningData->completionType == BossPositioningCompletionType::TargetDistance)
+    {
+        const bool targetDistanceReached =
+            positioningData->direction == BossPositioningDirection::TowardPlayer
+            ? context.xzDistance <= positioningData->targetDistance
+            : context.xzDistance >= positioningData->targetDistance;
+        if (targetDistanceReached)
+        {
+            finish("TargetDistanceReached");
+            return;
+        }
+    }
+
+    if (traveledDistance >= positioningData->maxMoveDistance)
+    {
+        finish(positioningData->completionType == BossPositioningCompletionType::TargetDistance
+            ? "MaxTravelDistance"
+            : "DistanceReached");
         return;
     }
 
@@ -188,13 +210,6 @@ void EnemyPositioningState::Execute(float deltaTime)
     if (stuckTimer >= positioningData->stuckTimeThreshold)
     {
         finish("Stuck");
-        return;
-    }
-
-    const BossTargetContext context = enemy->BuildTargetContext();
-    if (!context.valid)
-    {
-        finish("InvalidPlayer");
         return;
     }
 
