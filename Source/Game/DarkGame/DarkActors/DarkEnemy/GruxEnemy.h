@@ -58,6 +58,11 @@ public:
     bool SelectIntentByWeight();
     void ClearActiveIntent();
     void MarkIntentPositioningAttempted();
+    void BeginIntentReevaluation();
+    void MarkIntentAttackSelected();
+    void OnSelectedActionStartedSuccessfully();
+    void OnSelectedActionStartFailed();
+    void FailActiveIntent(const char* reason);
     const std::optional<BossIntentType>& GetActiveIntent() const { return activeIntent; }
     bool WasIntentPositioningAttempted() const { return intentPositioningAttempted; }
 
@@ -117,7 +122,8 @@ private:
     BossDistanceRegion GetDistanceRegion(float distance) const;
 
     // 現在の距離領域に基づいて、候補となる行動を選択する関数
-    void UpdateActionCandidateFlags(BossDistanceRegion currentRegion);
+    void UpdateActionCandidateFlags(const BossTargetContext& context);
+    bool IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const;
 
     // アクションが現在の距離(Region)で候補になるかを判定する関数
     bool IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const;
@@ -180,6 +186,9 @@ private:
 
     std::optional<BossIntentType> activeIntent = std::nullopt;
     bool intentPositioningAttempted = false;
+    std::string intentLifecycleState = "None";
+    std::string intentLifecycleTrace = "None";
+    std::string intentLifecycleReason = "None";
 
     static constexpr int intentCount = 2;
     std::array<BossIntentData, intentCount> combatIntentData =
@@ -212,6 +221,7 @@ private:
 
     // 各行動が距離条件を満たしているかのフラグ　
     std::array<bool, actionCount> combatActionCandidateFlags{};
+    std::array<BossActionCandidateReason, actionCount> combatActionCandidateReasons{};
     // 各行動の有効な重み。距離条件とRepeat条件を考慮した有効な重み
     std::array<float, actionCount> combatActionEffectiveWeights{};
     std::array<float, actionCount> combatActionCooldownRemaining{};

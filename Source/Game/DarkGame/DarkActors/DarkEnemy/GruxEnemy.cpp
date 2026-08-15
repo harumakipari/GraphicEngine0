@@ -717,7 +717,11 @@ void GruxEnemy::DrawImGuiDetails()
     int aiModeIndex = static_cast<int>(bossAIMode);
     const char* aiModes[] = { "CombatAI", "DebugFixedAttack" };
     if (ImGui::Combo("AI Mode", &aiModeIndex, aiModes, static_cast<int>(std::size(aiModes))))
+    {
         bossAIMode = static_cast<BossAIMode>(aiModeIndex);
+        if (bossAIMode == BossAIMode::DebugFixedAttack)
+            ClearActiveIntent();
+    }
 
     int attackIndex = static_cast<int>(debugFixedAttackType);
     const char* attackTypes[] =
@@ -757,11 +761,23 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
     ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
     const char* intentTypes[] = { "CloseCombat", "JumpAttack" };
+    const char* candidateReasonNames[] =
+    {
+        "NoActiveIntent",
+        "Candidate",
+        "NotForCurrentIntent",
+        "WrongDistance",
+        "Cooldown",
+        "ZeroWeight",
+    };
     const char* activeIntentName = "None";
     if (activeIntent)
         activeIntentName = intentTypes[static_cast<int>(*activeIntent)];
     ImGui::Text("Active Intent: %s", activeIntentName);
     ImGui::Text("Positioning Attempted: %s", intentPositioningAttempted ? "Yes" : "No");
+    ImGui::Text("CloseCombat Lifecycle: %s", intentLifecycleState.c_str());
+    ImGui::Text("Lifecycle Reason: %s", intentLifecycleReason.c_str());
+    ImGui::TextWrapped("Lifecycle Trace: %s", intentLifecycleTrace.c_str());
     if (ImGui::TreeNode("Intent Selection"))
     {
         const float totalIntentWeight = GetTotalIntentWeight();
@@ -782,6 +798,8 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::SameLine();
         if (ImGui::Button("Clear Active Intent"))
             ClearActiveIntent();
+        if (ImGui::Button("Mark Positioning Attempted"))
+            MarkIntentPositioningAttempted();
         ImGui::TreePop();
     }
     if (ImGui::TreeNode("Combat Action Candidates"))
@@ -796,6 +814,8 @@ void GruxEnemy::DrawImGuiDetails()
             ImGui::DragFloat("Cooldown Duration", &actionData.cooldownDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
             ImGui::Text("Cooldown Remaining: %.2f sec", combatActionCooldownRemaining[i]);
             ImGui::Text("Cooldown State: %s", combatActionCooldownRemaining[i] <= 0.0f ? "Ready" : "Cooldown");
+            ImGui::Text("Required By Intent: %s", IsActionForCurrentIntent(actionData.type, targetContext) ? "Yes" : "No");
+            ImGui::Text("Candidate Reason: %s", candidateReasonNames[static_cast<int>(combatActionCandidateReasons[i])]);
             ImGui::Text("Candidate: %s", combatActionCandidateFlags[i] ? "Yes" : "No");
             ImGui::Text("Effective Weight: %.2f", combatActionEffectiveWeights[i]);
             ImGui::Separator();
@@ -1228,6 +1248,9 @@ bool GruxEnemy::TryStartIntent(BossIntentType intentType)
 
     activeIntent = intentType;
     intentPositioningAttempted = false;
+    intentLifecycleState = "Intent Started";
+    intentLifecycleTrace = "Intent Started";
+    intentLifecycleReason = "None";
     return true;
 }
 
@@ -1271,12 +1294,78 @@ void GruxEnemy::ClearActiveIntent()
 {
     activeIntent = std::nullopt;
     intentPositioningAttempted = false;
+    intentLifecycleState = "None";
+    intentLifecycleTrace = "None";
+    intentLifecycleReason = "Cleared";
 }
 
 void GruxEnemy::MarkIntentPositioningAttempted()
 {
-    if (activeIntent)
-        intentPositioningAttempted = true;
+    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat ||
+        selectedActionType != BossActionType::Approach)
+        return;
+
+    intentPositioningAttempted = true;
+    intentLifecycleState = "Positioning";
+    intentLifecycleTrace += " -> Positioning";
+}
+
+void GruxEnemy::BeginIntentReevaluation()
+{
+    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat ||
+        !intentPositioningAttempted)
+        return;
+
+    intentLifecycleState = "Reevaluate";
+    intentLifecycleTrace += " -> Reevaluate";
+}
+
+void GruxEnemy::MarkIntentAttackSelected()
+{
+    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat)
+        return;
+
+    if (selectedActionType != BossActionType::AttackLA &&
+        selectedActionType != BossActionType::AttackRA &&
+        selectedActionType != BossActionType::FastCombo)
+        return;
+
+    intentLifecycleState = "Attack Selected";
+    intentLifecycleTrace += " -> Attack Selected";
+}
+
+void GruxEnemy::OnSelectedActionStartedSuccessfully()
+{
+    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat)
+        return;
+
+    if (selectedActionType != BossActionType::AttackLA &&
+        selectedActionType != BossActionType::AttackRA &&
+        selectedActionType != BossActionType::FastCombo)
+        return;
+
+    activeIntent = std::nullopt;
+    intentPositioningAttempted = false;
+    intentLifecycleState = "Intent Completed";
+    intentLifecycleTrace += " -> Intent Completed";
+    intentLifecycleReason = "AttackStarted";
+}
+
+void GruxEnemy::OnSelectedActionStartFailed()
+{
+    FailActiveIntent("AttackStartFailed");
+}
+
+void GruxEnemy::FailActiveIntent(const char* reason)
+{
+    if (!activeIntent)
+        return;
+
+    activeIntent = std::nullopt;
+    intentPositioningAttempted = false;
+    intentLifecycleState = "Intent Failed";
+    intentLifecycleTrace += " -> Intent Failed";
+    intentLifecycleReason = reason ? reason : "Unknown";
 }
 
 void GruxEnemy::StartSelectedActionCooldown()
@@ -1307,7 +1396,8 @@ bool GruxEnemy::SelectAttackForCurrentMode()
     currentCombatPlayerDistance = GetDistanceToPlayer();
 
     // プレイヤーまでの距離から、候補のアクションフラグを更新する
-    UpdateActionCandidateFlags(GetDistanceRegion(currentCombatPlayerDistance));
+    const BossTargetContext context = BuildTargetContext();
+    UpdateActionCandidateFlags(context);
 
     // 候補のアクションフラグから、候補の攻撃の確率の重みを更新する
     UpdateActionEffectiveWeights();
@@ -1703,21 +1793,69 @@ BossDistanceRegion GruxEnemy::GetDistanceRegion(float distance) const
 }
 
 // 現在の距離領域に基づいて、候補となる行動を選択する関数
-void GruxEnemy::UpdateActionCandidateFlags(BossDistanceRegion currentRegion)
+bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const
 {
-    // すべての候補フラグをリセット
+    if (!activeIntent || !context.valid)
+        return false;
+
+    if (*activeIntent != BossIntentType::CloseCombat)
+        return false;
+
+    if (context.distanceRegion == BossDistanceRegion::Near)
+    {
+        return actionType == BossActionType::AttackLA ||
+            actionType == BossActionType::AttackRA ||
+            actionType == BossActionType::FastCombo;
+    }
+
+    if (intentPositioningAttempted)
+        return false;
+
+    return actionType == BossActionType::Approach;
+}
+
+void GruxEnemy::UpdateActionCandidateFlags(const BossTargetContext& context)
+{
     combatActionCandidateFlags.fill(false);
 
-    //  IsActionCandidateForCurrentDistance()の結果を対応するflagへ保存する
     for (size_t i = 0; i < combatActionData.size(); ++i)
     {
         const BossActionData& actionData = combatActionData[i];
-        const bool distanceReady = IsActionCandidateForCurrentDistance(actionData, currentRegion);
-        const bool cooldownReady = combatActionCooldownRemaining[i] <= 0.0f;
-        const bool weightReady = actionData.weight > 0.0f;
-        combatActionCandidateFlags[i] = distanceReady && cooldownReady && weightReady;
-    }
 
+        if (!activeIntent)
+        {
+            combatActionCandidateReasons[i] = BossActionCandidateReason::NoActiveIntent;
+            continue;
+        }
+
+        if (!IsActionForCurrentIntent(actionData.type, context))
+        {
+            combatActionCandidateReasons[i] = BossActionCandidateReason::NotForCurrentIntent;
+            continue;
+        }
+
+        if (!IsActionCandidateForCurrentDistance(actionData, context.distanceRegion))
+        {
+            combatActionCandidateReasons[i] = BossActionCandidateReason::WrongDistance;
+            continue;
+        }
+
+        if (combatActionCooldownRemaining[i] > 0.0f)
+        {
+            combatActionCandidateReasons[i] = BossActionCandidateReason::Cooldown;
+            continue;
+        }
+
+        if (actionData.weight <= 0.0f)
+        {
+            combatActionCandidateReasons[i] = BossActionCandidateReason::ZeroWeight;
+            continue;
+        }
+
+        // Future action-specific conditions are evaluated here.
+        combatActionCandidateFlags[i] = true;
+        combatActionCandidateReasons[i] = BossActionCandidateReason::Candidate;
+    }
 }
 
 // アクションが現在の距離(Region)で候補になるかを判定する関数
@@ -1808,12 +1946,12 @@ std::optional<BossActionType> GruxEnemy::SelectActionByWeight() const
 bool GruxEnemy::SelectCombatAction()
 {
     // 現在の状況を取得する
-    currentCombatPlayerDistance = GetDistanceToPlayer();
+    const BossTargetContext context = BuildTargetContext();
+    currentCombatPlayerDistance = context.xzDistance;
     lastCombatSelectionDistance = currentCombatPlayerDistance;
-    const BossDistanceRegion currentRegion =GetDistanceRegion(currentCombatPlayerDistance);
 
     // 現在の距離領域に基づいて、候補となる行動を更新する
-    UpdateActionCandidateFlags(currentRegion);
+    UpdateActionCandidateFlags(context);
     // 候補となる行動の重みを更新する
     UpdateActionEffectiveWeights();
 

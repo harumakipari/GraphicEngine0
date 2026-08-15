@@ -28,6 +28,7 @@ void EnemyThinkState::Enter()
 {
     attackSelected = false;
     timer = 0.0f;
+    enemy->BeginIntentReevaluation();
 }
 
 void EnemyThinkState::Execute(float deltaTime)
@@ -41,6 +42,7 @@ void EnemyThinkState::Execute(float deltaTime)
         if (!context.valid)
         {
             enemy->SetLastAIDecision("No valid Player target");
+            enemy->FailActiveIntent("InvalidTarget");
             return;
         }
 
@@ -50,11 +52,17 @@ void EnemyThinkState::Execute(float deltaTime)
             owner->GetStateMachine()->ChangeState("EnemyTurnState");
             return;
         }
+
+        if (!enemy->GetActiveIntent())
+            enemy->TryStartIntent(BossIntentType::CloseCombat);
     }
 
     // デバック固定用の分岐
     if (enemy->GetBossAIMode() == BossAIMode::DebugFixedAttack)
     {
+        if (enemy->GetActiveIntent())
+            enemy->ClearActiveIntent();
+
         timer += deltaTime;
         if (timer < enemy->GetAttackInterval())
             return;
@@ -74,6 +82,7 @@ void EnemyThinkState::Execute(float deltaTime)
     if (!enemy->SelectCombatAction())
     {
         enemy->SetLastAIDecision("Wait: no weighted attack candidate");
+        enemy->FailActiveIntent("NoActionCandidate");
         timer = (std::max)(0.0f, enemy->GetAttackInterval() - 0.25f);
         return;
     }
@@ -81,6 +90,7 @@ void EnemyThinkState::Execute(float deltaTime)
     if (enemy->GetSelectedPositioningData())
     {
         enemy->SetLastAIDecision("Action: Positioning selected by weighted selection");
+        enemy->MarkIntentPositioningAttempted();
         attackSelected = true;
         owner->GetStateMachine()->ChangeState("EnemyPositioningState");
         return;
@@ -89,11 +99,13 @@ void EnemyThinkState::Execute(float deltaTime)
     if (!enemy->PrepareAttackForSelectedAction())
     {
         enemy->SetLastAIDecision("Wait: selected Action has no executable mapping");
+        enemy->FailActiveIntent("ActionMappingFailed");
         timer = (std::max)(0.0f, enemy->GetAttackInterval() - 0.25f);
         return;
     }
 
     enemy->SetLastAIDecision("Action: Attack selected by weighted selection");
+    enemy->MarkIntentAttackSelected();
     attackSelected = true;
     owner->GetStateMachine()->ChangeState("EnemyAttackState");
 }
@@ -278,7 +290,13 @@ void EnemyAttackState::Enter()
     enemy->StartAttack();
     stageStartHitCount = enemy->GetCurrentAttackHitCount();
     if (!enemy->PlayAttackStage(enemy->GetSelectedAttackType(), comboStage))
+    {
+        enemy->OnSelectedActionStartFailed();
         owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+        return;
+    }
+
+    enemy->OnSelectedActionStartedSuccessfully();
 }
 
 void EnemyAttackState::Execute(float deltaTime)

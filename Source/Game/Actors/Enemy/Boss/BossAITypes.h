@@ -77,6 +77,16 @@ enum class BossAttackType : uint8_t
 };
 
 
+enum class BossActionCandidateReason : uint8_t
+{
+    NoActiveIntent,
+    Candidate,
+    NotForCurrentIntent,
+    WrongDistance,
+    Cooldown,
+    ZeroWeight,
+};
+
 struct BossActionData
 {
     BossActionType type = BossActionType::AttackLA;
