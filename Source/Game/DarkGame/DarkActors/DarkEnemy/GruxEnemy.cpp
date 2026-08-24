@@ -63,8 +63,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("PrimaryAttack_SweepAway", 5);
     controller->AddAnimation("PrimaryAttack_Recall", 6);
     controller->AddAnimation("PrimaryAttack_Fire", 7);
-    controller->AddAnimation("PrimaryAttack_Dash", 8);
-    controller->AddAnimation("PrimaryAttack_DashAttack", 9);
+    controller->AddAnimation("Stampede_0", 8);
+    controller->AddAnimation("Stampede_Knockup_0", 9);
     controller->AddAnimation("Stun_Idle", 10);
     controller->AddAnimation("TravelMode_Fwd_0", 11);
     controller->AddAnimation("TravelMode_Idle_0", 12);
@@ -753,8 +753,8 @@ void GruxEnemy::DrawImGuiDetails()
         "PrimaryAttack_RA",
         "FastCombo (A > B > C)",
         "PrimaryAttack_JumpAttack",
-        "PrimaryAttack_Dash",
-        "PrimaryAttack_DashAttack",
+        "Stampede_0",
+        "Stampede_0 > Stampede_Knockup_0",
         "LongRangeAttack (Not Implemented)",
     };
     if (ImGui::Combo("Debug Fixed Attack", &attackIndex, attackTypes, static_cast<int>(std::size(attackTypes))))
@@ -770,6 +770,7 @@ void GruxEnemy::DrawImGuiDetails()
         "AttackRA",
         "FastCombo",
         "JumpAttack",
+        "DashAttack",
         "Approach",
         "Retreat",
     };
@@ -1354,7 +1355,8 @@ void GruxEnemy::MarkIntentAttackSelected()
 
     if (selectedActionType != BossActionType::AttackLA &&
         selectedActionType != BossActionType::AttackRA &&
-        selectedActionType != BossActionType::FastCombo)
+        selectedActionType != BossActionType::FastCombo &&
+        selectedActionType != BossActionType::DashAttack)
         return;
 
     intentLifecycleState = "Attack Selected";
@@ -1368,7 +1370,8 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
 
     if (selectedActionType != BossActionType::AttackLA &&
         selectedActionType != BossActionType::AttackRA &&
-        selectedActionType != BossActionType::FastCombo)
+        selectedActionType != BossActionType::FastCombo &&
+        selectedActionType != BossActionType::DashAttack)
         return;
 
     activeIntent = std::nullopt;
@@ -1494,6 +1497,8 @@ int GruxEnemy::GetAttackStageCount(BossAttackType type) const
 {
     if (type == BossAttackType::FastCombo)
         return 3;
+    if (type == BossAttackType::DashAttack)
+        return 2;
     if (type == BossAttackType::LongRangeAttack)
         return 0;
     return 1;
@@ -1523,13 +1528,27 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
         PrepareJumpAttackMotionWarpOverride();
         animationName = "PrimaryAttack_JumpAttack";
         break;
-    case BossAttackType::Dash: animationName = "PrimaryAttack_Dash"; break;
-    case BossAttackType::DashAttack: animationName = "PrimaryAttack_DashAttack"; break;
+    case BossAttackType::Dash: animationName = "Stampede_0"; break;
+    case BossAttackType::DashAttack:
+    {
+        static constexpr const char* dashAnimations[] =
+        {
+            "Stampede_0",
+            "Stampede_Knockup_0",
+        };
+        if (stage < 0 || stage >= static_cast<int>(std::size(dashAnimations)))
+            return false;
+        if (stage == 0 && !BeginDashAttackMovement())
+            return false;
+        animationName = dashAnimations[stage];
+        break;
+    }
     case BossAttackType::LongRangeAttack: return false;
     }
 
     transitionWindow = false;
-    PlayBodyAnimation(animationName, false, true, 0.1f);
+    const bool ignoreRootMotion = type == BossAttackType::DashAttack;
+    PlayBodyAnimation(animationName, false, true, 0.1f, ignoreRootMotion);
     return true;
 }
 
@@ -1604,9 +1623,91 @@ void GruxEnemy::ClearJumpAttackMotionWarpOverride()
     jumpMotionWarpDirection = { 0.0f, 0.0f, 1.0f };
     animationMotionWarps.clear();
 }
+
+bool GruxEnemy::BeginDashAttackMovement()
+{
+    StopDashAttackMovement();
+
+    const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+    if (!player)
+        return false;
+
+    const DirectX::XMFLOAT3 bossPosition = GetPosition();
+    const DirectX::XMFLOAT3 playerPosition = player->GetPosition();
+    const float dx = playerPosition.x - bossPosition.x;
+    const float dz = playerPosition.z - bossPosition.z;
+    currentDashAttackPlayerDistance = std::sqrt(dx * dx + dz * dz);
+    if (currentDashAttackPlayerDistance <= FLT_EPSILON)
+        return false;
+
+    const float inverseDistance = 1.0f / currentDashAttackPlayerDistance;
+    dashAttackDirection = { dx * inverseDistance, 0.0f, dz * inverseDistance };
+    calculatedDashAttackDistance = std::clamp(
+        currentDashAttackPlayerDistance - desiredDashAttackDistance,
+        minDashAttackDistance, maxDashAttackDistance);
+    dashAttackStartPosition = bossPosition;
+    dashTargetPosition =
+    {
+        bossPosition.x + dashAttackDirection.x * calculatedDashAttackDistance,
+        bossPosition.y,
+        bossPosition.z + dashAttackDirection.z * calculatedDashAttackDistance
+    };
+    dashAttackElapsedTime = 0.0f;
+    dashAttackMovementActive = true;
+
+    if (rotationComponent)
+        rotationComponent->SetDirectionImmediate(dashAttackDirection);
+    if (characterMovementComponent)
+    {
+        characterMovementComponent->SetFixedSpeed(dashAttackSpeed);
+        characterMovementComponent->SetInputMagnitude(1.0f);
+        characterMovementComponent->SetMoveDirection(dashAttackDirection);
+    }
+    return true;
+}
+
+bool GruxEnemy::UpdateDashAttackMovement(float deltaTime)
+{
+    if (!dashAttackMovementActive)
+        return true;
+
+    dashAttackElapsedTime += deltaTime;
+    const DirectX::XMFLOAT3 currentPosition = GetPosition();
+    const float dx = dashTargetPosition.x - currentPosition.x;
+    const float dz = dashTargetPosition.z - currentPosition.z;
+    const float remainingDistance = std::sqrt(dx * dx + dz * dz);
+    const float traveledAlongDash =
+        (currentPosition.x - dashAttackStartPosition.x) * dashAttackDirection.x +
+        (currentPosition.z - dashAttackStartPosition.z) * dashAttackDirection.z;
+    const bool maxDistanceReached =
+        traveledAlongDash >= calculatedDashAttackDistance - dashArrivalDistance;
+
+    if (remainingDistance <= dashArrivalDistance || maxDistanceReached ||
+        dashAttackElapsedTime >= dashAttackTimeout)
+    {
+        StopDashAttackMovement();
+        return true;
+    }
+
+    const float inverseDistance = 1.0f / remainingDistance;
+    const DirectX::XMFLOAT3 directionToTarget = { dx * inverseDistance, 0.0f, dz * inverseDistance };
+    if (characterMovementComponent)
+        characterMovementComponent->SetMoveDirection(directionToTarget);
+    if (rotationComponent)
+        rotationComponent->SetDirectionImmediate(directionToTarget);
+    return false;
+}
+
+void GruxEnemy::StopDashAttackMovement()
+{
+    dashAttackMovementActive = false;
+    dashAttackElapsedTime = 0.0f;
+    StopAIMovement();
+}
 void GruxEnemy::StartAttack()
 {
     ClearJumpAttackMotionWarpOverride();
+    StopDashAttackMovement();
 #if 0
     DirectX::XMFLOAT3 size = { 1.0f,4.0f,1.0f };
     leftWeaponCollisionComp->ResizeCapsule(size.x, size.y);
@@ -1845,6 +1946,9 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
             actionType == BossActionType::AttackRA ||
             actionType == BossActionType::FastCombo;
     }
+
+    if (actionType == BossActionType::DashAttack)
+        return true;
 
     if (intentPositioningAttempted)
         return false;

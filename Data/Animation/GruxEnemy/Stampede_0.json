@@ -1,0 +1,20 @@
+{
+    "animationClip": 8,
+    "animationName": "Stampede_0",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.0,
+                "value": 1.0
+            },
+            {
+                "time": 0.699999988079071,
+                "value": 1.0
+            }
+        ]
+    },
+    "states": []
+}

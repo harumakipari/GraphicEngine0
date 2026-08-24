@@ -1,0 +1,45 @@
+{
+    "animationClip": 9,
+    "animationName": "Stampede_Knockup_0",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.0,
+                "value": 1.0
+            },
+            {
+                "time": 1.5333333015441895,
+                "value": 1.0
+            }
+        ]
+    },
+    "states": [
+        {
+            "endTime": 0.5473132729530334,
+            "hitBoxRadius": 1.2000000476837158,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "bothWeapon",
+            "startTime": 0.24951140582561493,
+            "type": "HitBox",
+            "value": 1.0
+        }
+    ]
+}

@@ -67,6 +67,7 @@ enum class BossActionType :uint8_t
     AttackRA,
     FastCombo,
     JumpAttack,
+    DashAttack,
     Approach,
     Retreat,
 };

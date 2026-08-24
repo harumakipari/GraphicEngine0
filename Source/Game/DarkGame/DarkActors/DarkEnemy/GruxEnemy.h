@@ -87,6 +87,9 @@ public:
     bool PlayAttackAnimationByName(const std::string& animationName);
     void BeginAdditionalAttackStage();
     void ClearJumpAttackMotionWarpOverride();
+    bool BeginDashAttackMovement();
+    bool UpdateDashAttackMovement(float deltaTime);
+    void StopDashAttackMovement();
     float GetAttackInterval() const { return attackInterval; }
     float GetRecoveryDurationForCurrentAttack() const;
     bool IsTransitionWindowActive() const { return transitionWindow; }
@@ -143,6 +146,7 @@ private:
     bool HasJustDodgedAttack(const Actor* actor) const;
     void ResetDangerArea();
     void PrepareJumpAttackMotionWarpOverride();
+
     void RefreshActiveHitBoxesFromNotifyStates();
 
 private:
@@ -209,7 +213,7 @@ private:
     bool hasLastAttack = false;
 
     // 行動のデータを定義する配列。攻撃の種類、距離条件などを設定する。
-    static constexpr int actionCount = 6;
+    static constexpr int actionCount = 7;
     std::array<BossActionData, actionCount> combatActionData =
     {
         {
@@ -217,6 +221,7 @@ private:
         { BossActionType::AttackRA, BossAttackType::PrimaryAttackRA,BossDistanceRegion::Near,BossDistanceRegion::Near,30.0f,1.0f},
         { BossActionType::FastCombo, BossAttackType::FastCombo ,BossDistanceRegion::Near,BossDistanceRegion::Near,40.0f,2.0f},
         { BossActionType::JumpAttack,BossAttackType::JumpAttack ,BossDistanceRegion::Middle,BossDistanceRegion::Middle,30.0f,3.0f},
+        { BossActionType::DashAttack,BossAttackType::DashAttack,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,4.0f},
         { BossActionType::Approach, std::nullopt,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,0.5f},
         { BossActionType::Retreat, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Middle,40.0f,2.5f},
     }
@@ -230,17 +235,18 @@ private:
     std::array<float, actionCount> combatActionCooldownRemaining{};
 
     // 攻撃ごとのデータを定義する配列。アニメーション名、距離条件、重みなどを設定する。
-    std::array<BossAttackData, 4> combatAttackData =
+    std::array<BossAttackData, 5> combatAttackData =
     { {
         { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f },
         { BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f, 1.30f },
         { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f },
         { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f },
+        { BossAttackType::DashAttack, "Stampede_0 > Stampede_Knockup_0", 6.0f, 100.0f, 1.0f, 1.20f },
     } };
 
     // 既存のAttack選択用
-    std::array<float, 4> combatEffectiveWeights{};  // 距離条件とRepeat条件を考慮した有効な重み
-    std::array<bool, 4> combatCandidateFlags{}; // 各攻撃が距離条件を満たしているかのフラグ　主にImGuiで使用。
+    std::array<float, 5> combatEffectiveWeights{};  // 距離条件とRepeat条件を考慮した有効な重み
+    std::array<bool, 5> combatCandidateFlags{}; // 各攻撃が距離条件を満たしているかのフラグ　主にImGuiで使用。
     float currentCombatPlayerDistance = 0.0f;   // Attack選択時点のプレイヤーとの距離。距離条件の判定に直接使用。
     float lastCombatSelectionDistance = 0.0f;   //  最後にAttack抽選を行ったときの距離。現在はImGui表示用として保持。
     float repeatWeightScale = 0.25f;    //  直前と同じAttackのWeightへ掛ける倍率。現在は0.25なので、同じ攻撃のWeightを25%まで下げる。
@@ -282,6 +288,21 @@ private:
     bool jumpMotionWarpOverrideActive = false;  // 通常のAnimation Notifyに設定された移動距離ではなく、JumpAttack用に計算した距離と方向を使用するかどうか
     DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  //  JumpAttack開始時のプレイヤー位置
     DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  //  ボスからJumpAttack開始時のプレイヤー位置へ向かう正規化済み方向
+
+    // DashAttack
+    float dashAttackSpeed = 17.0f;
+    float minDashAttackDistance = 4.0f;
+    float maxDashAttackDistance = 16.0f;
+    float desiredDashAttackDistance = 2.0f;
+    float dashArrivalDistance = 0.35f;
+    float dashAttackTimeout = 0.70f;
+    float currentDashAttackPlayerDistance = 0.0f;
+    float calculatedDashAttackDistance = 0.0f;
+    float dashAttackElapsedTime = 0.0f;
+    bool dashAttackMovementActive = false;
+    DirectX::XMFLOAT3 dashAttackDirection{ 0.0f, 0.0f, 1.0f };
+    DirectX::XMFLOAT3 dashAttackStartPosition{};
+    DirectX::XMFLOAT3 dashTargetPosition{};
 
     bool isDeathPerform = false;
     float pitchBaseValue = 0.45f;

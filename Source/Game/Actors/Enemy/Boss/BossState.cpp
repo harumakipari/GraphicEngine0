@@ -318,6 +318,22 @@ void EnemyAttackState::Execute(float deltaTime)
 {
     const BossAttackType attackType = enemy->GetSelectedAttackType();
 
+    if (attackType == BossAttackType::DashAttack && comboStage == 0)
+    {
+        const bool dashFinished = enemy->UpdateDashAttackMovement(deltaTime);
+        const bool animationFinished = !enemy->GetBodyAnimationController()->IsPlayAnimation();
+        if (!dashFinished && !animationFinished)
+            return;
+
+        enemy->StopDashAttackMovement();
+        enemy->BeginAdditionalAttackStage();
+        stageStartHitCount = enemy->GetCurrentAttackHitCount();
+        ++comboStage;
+        if (!enemy->PlayAttackStage(attackType, comboStage))
+            owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+        return;
+    }
+
     if (attackType == BossAttackType::FastCombo &&
         enemy->IsTransitionWindowActive())
     {
@@ -356,6 +372,7 @@ void EnemyAttackState::Exit()
 {
     enemy->StartSelectedActionCooldown();
     enemy->ClearJumpAttackMotionWarpOverride();
+    enemy->StopDashAttackMovement();
     enemy->DisableAttackHitBoxes();
 }
 
