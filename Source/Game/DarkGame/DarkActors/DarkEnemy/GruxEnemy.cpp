@@ -282,11 +282,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     lockOnTargetImageComponent->SetSize({ 150.0f,150.0f });
     uiManager->Add(lockOnTargetImageComponent);
 
-
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
     hitSwordEffectComponent->Load("./Data/Effect/Files/DarkStageBloodEffect.json");
     //hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
-
 
     // Hpƒo[Œã‚ë
     auto gaugeFrameBackComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/bar_back.png", "bar_back_ui");

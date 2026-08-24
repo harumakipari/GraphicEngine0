@@ -10,7 +10,7 @@
         }
     ],
     "loop": false,
-    "nextCombo": "PrimaryAttack_LA",
+    "nextCombo": "Attack_B_Fast_0",
     "playRate": 1.0,
     "speedCurve": {
         "keys": [
@@ -79,6 +79,30 @@
             "parameter": "rightWeapon",
             "startTime": 0.13406594097614288,
             "type": "HitBox",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.21703284978866577,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "moveDistance": 1.0,
+            "parameter": "",
+            "startTime": 0.13516485691070557,
+            "type": "MotionWarp",
             "value": 1.0
         },
         {

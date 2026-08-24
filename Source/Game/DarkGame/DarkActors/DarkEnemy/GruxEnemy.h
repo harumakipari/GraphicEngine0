@@ -144,6 +144,7 @@ private:
     void ResetDangerArea();
     void PrepareJumpAttackMotionWarpOverride();
     void RefreshActiveHitBoxesFromNotifyStates();
+
 private:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;

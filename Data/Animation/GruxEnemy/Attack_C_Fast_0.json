@@ -4,7 +4,7 @@
     "events": [
         {
             "parameter": "enemy_attack",
-            "time": 0.16428573429584503,
+            "time": 0.1544167399406433,
             "type": "PlaySE",
             "value": 1.0
         }
@@ -15,32 +15,36 @@
     "speedCurve": {
         "keys": [
             {
-                "time": 0.0030201347544789314,
-                "value": 0.3466668426990509
+                "time": 0.0014166668988764286,
+                "value": 0.15999992191791534
             },
             {
-                "time": 0.1364094316959381,
-                "value": 0.2933334410190582
+                "time": 0.0651666447520256,
+                "value": 0.1333332508802414
             },
             {
-                "time": 0.1872483193874359,
-                "value": 0.8400000333786011
+                "time": 0.10766661167144775,
+                "value": 0.3866666555404663
+            },
+            {
+                "time": 0.15016666054725647,
+                "value": 0.9733332395553589
             }
         ]
     },
     "states": [
         {
-            "endTime": 0.22857128083705902,
+            "endTime": 0.33226534724235535,
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
-                0.800000011920929,
                 0.0,
-                2.299999952316284
+                0.0,
+                3.0
             ],
             "justDodgeAreaSize": [
-                7.699999809265137,
+                5.0,
                 2.0,
-                6.0
+                7.0
             ],
             "moveDirection": [
                 0.0,
@@ -49,13 +53,13 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.08681319653987885,
+            "startTime": 0.08428682386875153,
             "type": "DangerWindow",
             "value": 1.0
         },
         {
-            "endTime": 0.20659318566322327,
-            "hitBoxRadius": 1.2000000476837158,
+            "endTime": 0.27520984411239624,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -73,8 +77,32 @@
             ],
             "moveDistance": 0.0,
             "parameter": "rightWeapon",
-            "startTime": 0.13901101052761078,
+            "startTime": 0.1607932597398758,
             "type": "HitBox",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.2757630944252014,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "moveDistance": 1.100000023841858,
+            "parameter": "",
+            "startTime": 0.1598290652036667,
+            "type": "MotionWarp",
             "value": 1.0
         }
     ]
