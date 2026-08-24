@@ -368,7 +368,7 @@ void EnemyRecoveryState::Enter()
 void EnemyRecoveryState::Execute(float deltaTime)
 {
     timer += deltaTime;
-    if (timer >= enemy->GetRecoveryDuration())
+    if (timer >= enemy->GetRecoveryDurationForCurrentAttack())
         owner->GetStateMachine()->ChangeState("EnemyThinkState");
 }
 

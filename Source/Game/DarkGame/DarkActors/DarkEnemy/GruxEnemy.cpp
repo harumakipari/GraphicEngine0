@@ -289,7 +289,12 @@ void GruxEnemy::Initialize(const Transform& transform)
     //hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
 
 
-
+    // HpÉoÅ[
+    hpFrameUiComponent = std::make_shared<UIGaugeComponent>("./Data/Textures/UI/HpBar/frame.png","./Data/Textures/UI/HpBar/bar.png", "HpBar");
+    hpFrameUiComponent->SetVisible(true);
+    hpFrameUiComponent->SetPivot({ 0.5f,0.5f });
+    hpFrameUiComponent->SetSize({ 221.0f,28.0f });
+    uiManager->Add(hpFrameUiComponent);
 
 }
 
@@ -737,7 +742,7 @@ void GruxEnemy::DrawImGuiDetails()
     if (ImGui::Combo("Debug Fixed Attack", &attackIndex, attackTypes, static_cast<int>(std::size(attackTypes))))
         debugFixedAttackType = static_cast<BossAttackType>(attackIndex);
     ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
-    ImGui::DragFloat("Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::DragFloat("Fallback Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
     const BossTargetContext targetContext = BuildTargetContext();
     const char* relativeRegions[] = { "Front", "Side", "Back" };
     const char* distanceRegions[] = { "Near", "Middle", "Far" };
@@ -895,10 +900,11 @@ void GruxEnemy::DrawImGuiDetails()
             ImGui::SeparatorText(attack.animationName.c_str());
             ImGui::DragFloat("Min Distance", &attack.minDistance, 0.1f, 0.0f, 100.0f, "%.2f");
             ImGui::DragFloat("Max Distance", &attack.maxDistance, 0.1f, 0.0f, 100.0f, "%.2f");
-            ImGui::DragFloat("Base Weight", &attack.weight, 0.05f, 0.0f, 100.0f, "%.2f");
             attack.minDistance = (std::max)(0.0f, attack.minDistance);
             attack.maxDistance = (std::max)(attack.minDistance, attack.maxDistance);
             attack.weight = (std::max)(0.0f, attack.weight);
+            ImGui::DragFloat("Recovery Duration", &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
+            attack.recoveryDuration = (std::max)(0.0f, attack.recoveryDuration);
             ImGui::Text("Effective Weight: %.3f", combatEffectiveWeights[i]);
             ImGui::Text("Last Think: %s", combatCandidateFlags[i] ? "Candidate" : "OutOfRange");
             ImGui::PopID();
@@ -1518,6 +1524,17 @@ bool GruxEnemy::PlayAttackAnimationByName(const std::string& animationName)
     transitionWindow = false;
     PlayBodyAnimation(animationName, false, true, 0.1f);
     return true;
+}
+
+float GruxEnemy::GetRecoveryDurationForCurrentAttack() const
+{
+    for (const BossAttackData& attackData : combatAttackData)
+    {
+        if (attackData.type == selectedAttackType)
+            return (std::max)(0.0f, attackData.recoveryDuration);
+    }
+
+    return (std::max)(0.0f, recoveryDuration);
 }
 
 void GruxEnemy::BeginAdditionalAttackStage()

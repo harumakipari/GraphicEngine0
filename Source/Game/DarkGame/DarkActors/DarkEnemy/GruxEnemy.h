@@ -88,7 +88,7 @@ public:
     void BeginAdditionalAttackStage();
     void ClearJumpAttackMotionWarpOverride();
     float GetAttackInterval() const { return attackInterval; }
-    float GetRecoveryDuration() const { return recoveryDuration; }
+    float GetRecoveryDurationForCurrentAttack() const;
     bool IsTransitionWindowActive() const { return transitionWindow; }
     int GetCurrentAttackHitCount() const { return currentAttackHitCount; }
     bool WasCurrentAttackSequenceJustDodged() const { return !justDodgedActors.empty(); }
@@ -170,6 +170,10 @@ private:
 
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // ヒット時の剣のエフェクト
 
+    // HPバー
+    std::shared_ptr<UIImageComponent> hpFrameUiComponent;
+    std::shared_ptr<UIImageComponent> hpGaugeUiComponent;
+
     bool rightHitBox = false;   // 右の剣の当たり判定
     bool leftHitBox = false;    // 左の剣の当たり判定
     bool isDangerWindow = false;
@@ -229,10 +233,10 @@ private:
     // 攻撃ごとのデータを定義する配列。アニメーション名、距離条件、重みなどを設定する。
     std::array<BossAttackData, 4> combatAttackData =
     { {
-        { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f },
-        { BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f },
-        { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f },
-        { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f },
+        { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f },
+        { BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f, 1.30f },
+        { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f },
+        { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f },
     } };
 
     // 既存のAttack選択用
