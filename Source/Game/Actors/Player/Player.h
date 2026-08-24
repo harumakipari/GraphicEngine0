@@ -377,6 +377,7 @@ private:
     Trail trail;
     float trailRemainTime = 0.8f; // 残像が残る時間
 
+    std::shared_ptr<UIGaugeComponent> hpFrameUiComponent;   // HPバー
 
     // カメラの目の位置
     std::shared_ptr<SceneComponent> cameraEyeComponent;

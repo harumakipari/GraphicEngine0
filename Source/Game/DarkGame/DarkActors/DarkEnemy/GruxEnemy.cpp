@@ -14,7 +14,6 @@
 
 void GruxEnemy::Initialize(const Transform& transform)
 {
-    int maxHp = 100;
     hp = maxHp;
 
     std::string parentName = "GruxEnemy";
@@ -289,17 +288,38 @@ void GruxEnemy::Initialize(const Transform& transform)
     //hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
 
 
+    // Hpバー後ろ
+    auto gaugeFrameBackComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/bar_back.png", "bar_back_ui");
+    DirectX::XMFLOAT2 gaugeSize = { 221.0f,28.0f };
+    DirectX::XMFLOAT2 gaugeScale = { 3.0f,3.0f };
+    gaugeFrameBackComponent->SetScale(gaugeScale);
+    gaugeFrameBackComponent->SetSize(gaugeSize);
+    gaugeFrameBackComponent->SetPivot({ 0.0f,0.5f });
+    gaugeFrameBackComponent->zOrder = 10;
+    gaugeFrameBackComponent->SetWorldPosition({ 650.0f,115.0f });
+    gaugeFrameBackComponent->SetColor(CoreColor::White);
+    uiManager->Add(gaugeFrameBackComponent);
     // Hpバー
-    hpFrameUiComponent = std::make_shared<UIGaugeComponent>("./Data/Textures/UI/HpBar/frame.png","./Data/Textures/UI/HpBar/bar.png", "HpBar");
+    hpFrameUiComponent = std::make_shared<UIGaugeComponent>("./Data/Textures/UI/HpBar/frame.png","./Data/Textures/UI/HpBar/bar.png", "EnemyHpBar");
     hpFrameUiComponent->SetVisible(true);
-    hpFrameUiComponent->SetPivot({ 0.5f,0.5f });
-    hpFrameUiComponent->SetSize({ 221.0f,28.0f });
+    hpFrameUiComponent->SetPivot({ 0.0f,0.5f });
+    hpFrameUiComponent->SetSize(gaugeSize);
+    hpFrameUiComponent->SetScale(gaugeScale);
+    hpFrameUiComponent->SetWorldPosition({ 650.0f,115.0f });
+    hpFrameUiComponent->zOrder = 15;
+    hpFrameUiComponent->SetGaugeFillSize(gaugeSize);
+    hpFrameUiComponent->SetColor(CoreColor::White);
     uiManager->Add(hpFrameUiComponent);
-
 }
 
 void GruxEnemy::Update(float deltaTime)
 {
+    // HPバーの更新
+    if (hpFrameUiComponent)
+    {
+        hpFrameUiComponent->SetValue(static_cast<float>(hp), static_cast<float>(maxHp));
+    }
+
     if (!IsAnimationEditorPreviewActive())
         UpdateActionCooldowns(deltaTime);
 

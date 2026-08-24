@@ -170,9 +170,7 @@ private:
 
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // ヒット時の剣のエフェクト
 
-    // HPバー
-    std::shared_ptr<UIImageComponent> hpFrameUiComponent;
-    std::shared_ptr<UIImageComponent> hpGaugeUiComponent;
+    std::shared_ptr<UIGaugeComponent> hpFrameUiComponent;   // HPバー
 
     bool rightHitBox = false;   // 右の剣の当たり判定
     bool leftHitBox = false;    // 左の剣の当たり判定
@@ -248,8 +246,8 @@ private:
 
     std::array<BossPositioningData, 2> combatPositioningData =
     { {
-        { BossActionType::Approach, BossPositioningDirection::TowardPlayer, 20.0f, 10.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TargetDistance, 0.0f },
-        { BossActionType::Retreat, BossPositioningDirection::AwayFromPlayer, 7.0f, 10.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TravelDistance, 0.0f },
+        { BossActionType::Approach, BossPositioningDirection::TowardPlayer, 20.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TargetDistance, 0.0f },
+        { BossActionType::Retreat, BossPositioningDirection::AwayFromPlayer, 7.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TravelDistance, 0.0f },
     } };
 
     //  StateMachineのタイミングと方向制御

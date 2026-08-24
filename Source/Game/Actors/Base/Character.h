@@ -226,6 +226,8 @@ protected:
     size_t animationIndex = 0;
 
     int hp = 0;
+    int maxHp = 100;
+
 
     //前方向ベクトル
     DirectX::XMFLOAT3 front{ 0.0f,0.0f,1.0f };
