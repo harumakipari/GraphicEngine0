@@ -80,6 +80,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Attack_C_Fast_0", 22);
     controller->AddAnimation("Dodge_B_180_Seq_0", 23);
     controller->AddAnimation("TravelMode_Start_0", 24);
+    controller->AddAnimation("Pre_Stampede_0", 25);
 
     // ‘S‚Ä‚ÌNotifyAssets‚ðƒ[ƒh‚·‚é
     controller->LoadAllNotifyAssets(GetName());
@@ -1498,7 +1499,7 @@ int GruxEnemy::GetAttackStageCount(BossAttackType type) const
     if (type == BossAttackType::FastCombo)
         return 3;
     if (type == BossAttackType::DashAttack)
-        return 2;
+        return 3;
     if (type == BossAttackType::LongRangeAttack)
         return 0;
     return 1;
@@ -1533,12 +1534,15 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
     {
         static constexpr const char* dashAnimations[] =
         {
+            "Pre_Stampede_0",
             "Stampede_0",
             "Stampede_Knockup_0",
         };
         if (stage < 0 || stage >= static_cast<int>(std::size(dashAnimations)))
             return false;
-        if (stage == 0 && !BeginDashAttackMovement())
+        if (stage == 0)
+            StopDashAttackMovement();
+        if (stage == 1 && !BeginDashAttackMovement())
             return false;
         animationName = dashAnimations[stage];
         break;
@@ -1548,7 +1552,8 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
 
     transitionWindow = false;
     const bool ignoreRootMotion = type == BossAttackType::DashAttack;
-    PlayBodyAnimation(animationName, false, true, 0.1f, ignoreRootMotion);
+    const bool loopAnimation = type == BossAttackType::DashAttack && stage == 1;
+    PlayBodyAnimation(animationName, loopAnimation, true, 0.1f, ignoreRootMotion);
     return true;
 }
 

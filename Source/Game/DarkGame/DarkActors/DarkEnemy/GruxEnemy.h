@@ -91,6 +91,7 @@ public:
     bool UpdateDashAttackMovement(float deltaTime);
     void StopDashAttackMovement();
     float GetAttackInterval() const { return attackInterval; }
+    float GetDashWindupDuration() const { return dashWindupDuration; }
     float GetRecoveryDurationForCurrentAttack() const;
     bool IsTransitionWindowActive() const { return transitionWindow; }
     int GetCurrentAttackHitCount() const { return currentAttackHitCount; }
@@ -290,12 +291,13 @@ private:
     DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  //  ボスからJumpAttack開始時のプレイヤー位置へ向かう正規化済み方向
 
     // DashAttack
-    float dashAttackSpeed = 17.0f;
+    float dashWindupDuration = 1.40f;   // 予備動作の時間
+    float dashAttackSpeed = 12.0f;
     float minDashAttackDistance = 4.0f;
     float maxDashAttackDistance = 16.0f;
     float desiredDashAttackDistance = 2.0f;
     float dashArrivalDistance = 0.35f;
-    float dashAttackTimeout = 0.70f;
+    float dashAttackTimeout = 1.10f;
     float currentDashAttackPlayerDistance = 0.0f;
     float calculatedDashAttackDistance = 0.0f;
     float dashAttackElapsedTime = 0.0f;

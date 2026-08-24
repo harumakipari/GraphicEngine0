@@ -135,6 +135,7 @@ public:
 private:
     int comboStage = 0;
     int stageStartHitCount = 0;
+    float dashWindupTimer = 0.0f;
 };
 
 class EnemyRecoveryState : public EnemyStateBase

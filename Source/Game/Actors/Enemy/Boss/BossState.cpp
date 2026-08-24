@@ -302,6 +302,7 @@ void EnemyAttackState::Enter()
 {
     comboStage = 0;
     stageStartHitCount = 0;
+    dashWindupTimer = 0.0f;
     enemy->StartAttack();
     stageStartHitCount = enemy->GetCurrentAttackHitCount();
     if (!enemy->PlayAttackStage(enemy->GetSelectedAttackType(), comboStage))
@@ -319,6 +320,27 @@ void EnemyAttackState::Execute(float deltaTime)
     const BossAttackType attackType = enemy->GetSelectedAttackType();
 
     if (attackType == BossAttackType::DashAttack && comboStage == 0)
+    {
+        dashWindupTimer += deltaTime;
+        const BossTargetContext context = enemy->BuildTargetContext();
+        if (context.valid)
+        {
+            enemy->RotateTowardsPlayer(
+                context.directionToPlayer, enemy->GetTurnSpeed(), deltaTime);
+        }
+
+        if (dashWindupTimer < enemy->GetDashWindupDuration())
+            return;
+
+        enemy->BeginAdditionalAttackStage();
+        stageStartHitCount = enemy->GetCurrentAttackHitCount();
+        ++comboStage;
+        if (!enemy->PlayAttackStage(attackType, comboStage))
+            owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+        return;
+    }
+
+    if (attackType == BossAttackType::DashAttack && comboStage == 1)
     {
         const bool dashFinished = enemy->UpdateDashAttackMovement(deltaTime);
         const bool animationFinished = !enemy->GetBodyAnimationController()->IsPlayAnimation();
