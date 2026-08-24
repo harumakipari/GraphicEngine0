@@ -129,4 +129,5 @@ struct BossAttackData
     float maxDistance = 0.0f;
     float weight = 1.0f;
     float recoveryDuration = 0.5f;
+    int damagePerHit = 1;
 };

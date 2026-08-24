@@ -579,7 +579,7 @@ void GruxEnemy::Update(float deltaTime)
                 else if (!hitActors.contains(hit.actor))
                 {
                     Logger::Log(U8("剣にプレイヤーが当たった"));
-                    if (player->TryTakeDamage(1, GetPosition()))
+                    if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
                     {
                         hitActors.emplace(player);
                         ++currentAttackHitCount;
@@ -642,7 +642,7 @@ void GruxEnemy::Update(float deltaTime)
                 else if (!hitActors.contains(hit.actor))
                 {
                     Logger::Log(U8("剣にプレイヤーが当たった"));
-                    if (player->TryTakeDamage(1, GetPosition()))
+                    if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
                     {
                         hitActors.emplace(player);
                         ++currentAttackHitCount;
@@ -1126,14 +1126,95 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::TextDisabled("Target Context: Invalid");
     }
 
+    if (ImGui::CollapsingHeader("Runtime Tuning", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        constexpr float minimumDistanceGap = 0.1f;
+        ImGui::SeparatorText("Distance");
+        if (ImGui::DragFloat("Near Distance", &nearDistanceThreshold, 0.1f, 0.0f, 100.0f, "%.2f"))
+        {
+            nearDistanceThreshold = (std::max)(0.0f, nearDistanceThreshold);
+            if (nearDistanceThreshold >= middleDistanceThreshold)
+                middleDistanceThreshold = nearDistanceThreshold + minimumDistanceGap;
+        }
+        if (ImGui::DragFloat("Middle Distance", &middleDistanceThreshold, 0.1f, 0.1f, 200.0f, "%.2f"))
+        {
+            middleDistanceThreshold = (std::max)(
+                nearDistanceThreshold + minimumDistanceGap,
+                middleDistanceThreshold);
+        }
+
+        const float evaluationTotalWeight = GetTotalActionWeight();
+        ImGui::SeparatorText("Action Tuning");
+        for (size_t i = 0; i < combatActionData.size(); ++i)
+        {
+            BossActionData& actionData = combatActionData[i];
+            ImGui::PushID(static_cast<int>(i));
+            if (ImGui::TreeNode(actionTypes[i]))
+            {
+                ImGui::DragFloat("Weight", &actionData.weight, 0.5f, 0.0f, 1000.0f, "%.1f");
+                actionData.weight = (std::max)(0.0f, actionData.weight);
+                ImGui::DragFloat("Base Cooldown", &actionData.cooldownDuration, 0.05f, 0.0f, 60.0f, "%.2f sec");
+                actionData.cooldownDuration = (std::max)(0.0f, actionData.cooldownDuration);
+                ImGui::Text("Cooldown Remaining: %s",
+                    combatActionCooldownRemaining[i] <= 0.0f ? "READY" : "Active");
+
+                if (actionData.attackType)
+                {
+                    for (BossAttackData& attackData : combatAttackData)
+                    {
+                        if (attackData.type != *actionData.attackType)
+                            continue;
+                        ImGui::DragFloat("Recovery", &attackData.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
+                        attackData.recoveryDuration = (std::max)(0.0f, attackData.recoveryDuration);
+                        ImGui::DragInt("Damage / Hit", &attackData.damagePerHit, 1.0f, 0, 1000);
+                        attackData.damagePerHit = (std::max)(0, attackData.damagePerHit);
+                        break;
+                    }
+                }
+
+                const bool candidate =
+                    combatActionCandidateReasons[i] == BossActionCandidateReason::Candidate;
+                const float probability = candidate && evaluationTotalWeight > 0.0f
+                    ? combatActionEffectiveWeights[i] / evaluationTotalWeight
+                    : 0.0f;
+                char probabilityLabel[32]{};
+                sprintf_s(probabilityLabel, "%.1f%%", probability * 100.0f);
+                ImGui::Text("Status: %s", candidateReasonNames[static_cast<int>(combatActionCandidateReasons[i])]);
+                ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), probabilityLabel);
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        }
+
+        if (ImGui::Button("Reset AI Tuning"))
+        {
+            for (size_t i = 0; i < combatActionData.size(); ++i)
+            {
+                combatActionData[i].weight = initialCombatActionData[i].weight;
+                combatActionData[i].cooldownDuration = initialCombatActionData[i].cooldownDuration;
+            }
+            for (size_t i = 0; i < combatAttackData.size(); ++i)
+            {
+                combatAttackData[i].recoveryDuration = initialCombatAttackData[i].recoveryDuration;
+                combatAttackData[i].damagePerHit = initialCombatAttackData[i].damagePerHit;
+            }
+            nearDistanceThreshold = initialNearDistanceThreshold;
+            middleDistanceThreshold = initialMiddleDistanceThreshold;
+        }
+        ImGui::TextDisabled("Runtime only. Reset does not change active Cooldown Remaining.");
+        ImGui::TextDisabled("Recovery edits affect an active Recovery on its next update.");
+    }
+
     ImGui::SeparatorText("Action Evaluation (Last AI Evaluation)");
-    if (ImGui::BeginTable("BossAIActionTable", 5,
+    const float actionEvaluationTotalWeight = GetTotalActionWeight();
+    if (ImGui::BeginTable("BossAIActionTable", 6,
         ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
     {
         ImGui::TableSetupColumn("Action");
         ImGui::TableSetupColumn("Base");
         ImGui::TableSetupColumn("Effective");
         ImGui::TableSetupColumn("Cooldown");
+        ImGui::TableSetupColumn("Probability");
         ImGui::TableSetupColumn("Status");
         ImGui::TableHeadersRow();
 
@@ -1159,10 +1240,52 @@ void GruxEnemy::DrawImGuiDetails()
             else
                 ImGui::TextDisabled("%.2fs", combatActionCooldownRemaining[i]);
             ImGui::TableSetColumnIndex(4);
+            const float probability = candidate && actionEvaluationTotalWeight > 0.0f
+                ? combatActionEffectiveWeights[i] / actionEvaluationTotalWeight
+                : 0.0f;
+            ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), "" );
+            ImGui::SameLine();
+            ImGui::Text("%.1f%%", probability * 100.0f);
+            ImGui::TableSetColumnIndex(5);
             ImGui::TextColored(rowColor, "%s", candidateReasonNames[static_cast<int>(reason)]);
         }
         ImGui::EndTable();
     }
+
+    ImGui::SeparatorText("Weighted Random Result (Last Selection)");
+    //if (hasLastActionRandomDebug)
+    {
+        ImGui::Text("Total Candidate Weight: %.2f", lastActionRandomTotalWeight);
+        ImGui::Text("Last Random Roll: %.2f / %.2f",
+            lastActionRandomRoll,
+            lastActionRandomTotalWeight);
+
+        float rangeStart = 0.0f;
+        for (size_t i = 0; i < lastActionRandomWeights.size(); ++i)
+        {
+            const float weight = lastActionRandomWeights[i];
+            if (weight <= 0.0f)
+                continue;
+
+            const float rangeEnd = rangeStart + weight;
+            const float probability = lastActionRandomTotalWeight > 0.0f
+                ? weight / lastActionRandomTotalWeight
+                : 0.0f;
+            ImGui::Text("%s  %.2f - %.2f  (%.1f%%)",
+                actionTypes[i],
+                rangeStart,
+                rangeEnd,
+                probability * 100.0f);
+            rangeStart = rangeEnd;
+        }
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.25f, 1.0f),
+            "Selected: %s",
+            hasSelectedActionDebug ? actionTypes[static_cast<int>(selectedActionType)] : "None");
+    }
+    //else
+    //{
+    //    ImGui::TextDisabled("No weighted-random selection recorded yet.");
+    //}
 
     ImGui::End();
 
@@ -1789,6 +1912,17 @@ float GruxEnemy::GetRecoveryDurationForCurrentAttack() const
     }
 
     return (std::max)(0.0f, recoveryDuration);
+}
+
+int GruxEnemy::GetDamageForCurrentAttack() const
+{
+    for (const BossAttackData& attackData : combatAttackData)
+    {
+        if (attackData.type == selectedAttackType)
+            return (std::max)(0, attackData.damagePerHit);
+    }
+
+    return 1;
 }
 
 void GruxEnemy::BeginAdditionalAttackStage()

@@ -93,6 +93,7 @@ public:
     float GetAttackInterval() const { return attackInterval; }
     float GetDashWindupDuration() const { return dashWindupDuration; }
     float GetRecoveryDurationForCurrentAttack() const;
+    int GetDamageForCurrentAttack() const;
     bool IsTransitionWindowActive() const { return transitionWindow; }
     int GetCurrentAttackHitCount() const { return currentAttackHitCount; }
     bool WasCurrentAttackSequenceJustDodged() const { return !justDodgedActors.empty(); }
@@ -251,11 +252,11 @@ private:
     // 攻撃ごとのデータを定義する配列。アニメーション名、距離条件、重みなどを設定する。
     std::array<BossAttackData, 5> combatAttackData =
     { {
-        { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f },
-        { BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f, 1.30f },
-        { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f },
-        { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f },
-        { BossAttackType::DashAttack, "Stampede_0 > Stampede_Knockup_0", 6.0f, 100.0f, 1.0f, 1.20f },
+        { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f, 1 },
+        { BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f, 1.30f, 1 },
+        { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f, 1 },
+        { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f, 1 },
+        { BossAttackType::DashAttack, "Stampede_0 > Stampede_Knockup_0", 6.0f, 100.0f, 1.0f, 1.20f, 1 },
     } };
 
     // 既存のAttack選択用
@@ -279,6 +280,11 @@ private:
     float nearDistanceThreshold = 6.0f; // この距離以下は近距離とみなす
     float closeCombatApproachArrivalMargin = 0.5f;
     float middleDistanceThreshold = 12.0f; // この距離以下は中距離とみなす
+
+    const std::array<BossActionData, actionCount> initialCombatActionData = combatActionData;
+    const std::array<BossAttackData, 5> initialCombatAttackData = combatAttackData;
+    const float initialNearDistanceThreshold = nearDistanceThreshold;
+    const float initialMiddleDistanceThreshold = middleDistanceThreshold;
 
     float turnSpeed = 720.0f;  // EnemyTurnStateでその場回転するときの速度
     float turnCompleteAngle = 15.0f;    // この角度以内なら回転完了とみなす
