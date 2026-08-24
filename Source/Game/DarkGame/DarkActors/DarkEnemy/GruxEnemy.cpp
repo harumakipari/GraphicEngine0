@@ -347,6 +347,11 @@ void GruxEnemy::Update(float deltaTime)
     characterMovementComponent->SetFrameAdditionalVelocity(motionWarpVelocity);
     characterMovementComponent->TickDeferredMovement(deltaTime);
 
+#ifdef USE_IMGUI
+    aiDebugTargetContext = BuildTargetContext();
+    if (showBossAIDebug)
+        DrawBossAIDebugWorld(aiDebugTargetContext);
+#endif
 
     SetScale({ enemyScale,enemyScale,enemyScale });
 
@@ -733,6 +738,83 @@ void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& stat
         drawWeapon(weaponRightRootComponent, weaponRightMiddleComponent,
             weaponRightTipComponent, rightHitBoxPreviewColor, state.hitBoxRadius);
 }
+void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
+{
+#ifdef USE_IMGUI
+    constexpr int segmentCount = 64;
+    constexpr float twoPi = DirectX::XM_2PI;
+    const DirectX::XMFLOAT3 bossPosition = GetPosition();
+    const float debugHeight = bossPosition.y + 1.0f;
+
+    const auto drawRing = [&](float radius, const DirectX::XMFLOAT4& color)
+    {
+        for (int i = 0; i < segmentCount; ++i)
+        {
+            const float angle0 = twoPi * static_cast<float>(i) / static_cast<float>(segmentCount);
+            const float angle1 = twoPi * static_cast<float>(i + 1) / static_cast<float>(segmentCount);
+            const DirectX::XMFLOAT3 start =
+            {
+                bossPosition.x + std::cos(angle0) * radius,
+                debugHeight,
+                bossPosition.z + std::sin(angle0) * radius
+            };
+            const DirectX::XMFLOAT3 end =
+            {
+                bossPosition.x + std::cos(angle1) * radius,
+                debugHeight,
+                bossPosition.z + std::sin(angle1) * radius
+            };
+            DebugRender::DrawLine(start, end, color, 0.0f, true);
+        }
+    };
+
+    drawRing(nearDistanceThreshold, { 0.2f, 1.0f, 0.2f, 1.0f });
+    drawRing(middleDistanceThreshold, { 1.0f, 0.7f, 0.1f, 1.0f });
+
+    if (context.valid)
+    {
+        const DirectX::XMFLOAT3 playerXZPosition =
+        {
+            bossPosition.x + context.directionToPlayer.x * context.xzDistance,
+            debugHeight,
+            bossPosition.z + context.directionToPlayer.z * context.xzDistance
+        };
+        DirectX::XMFLOAT4 playerLineColor{ 0.2f, 0.8f, 1.0f, 1.0f };
+        if (context.distanceRegion == BossDistanceRegion::Near)
+            playerLineColor = { 0.2f, 1.0f, 0.2f, 1.0f };
+        else if (context.distanceRegion == BossDistanceRegion::Far)
+            playerLineColor = { 0.8f, 0.3f, 1.0f, 1.0f };
+        DebugRender::DrawLine(
+            { bossPosition.x, debugHeight, bossPosition.z },
+            playerXZPosition, playerLineColor, 0.0f, true);
+    }
+
+    if (dashAttackMovementActive)
+    {
+        const DirectX::XMFLOAT3 dashStart =
+        {
+            dashAttackStartPosition.x,
+            dashAttackStartPosition.y + 0.15f,
+            dashAttackStartPosition.z
+        };
+        const DirectX::XMFLOAT3 dashTarget =
+        {
+            dashTargetPosition.x,
+            dashTargetPosition.y + 0.15f,
+            dashTargetPosition.z
+        };
+        DebugRender::DrawLine(dashStart, dashTarget, { 1.0f, 0.15f, 0.15f, 1.0f }, 0.0f, true);
+        DebugRender::DrawSphere(dashTarget, 0.25f, { 1.0f, 0.15f, 0.15f, 1.0f }, 0.0f, true);
+    }
+#else
+    (void)context;
+#endif
+}
+
+//　ボスAIのImGui描画
+
+
+
 void GruxEnemy::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
@@ -762,7 +844,7 @@ void GruxEnemy::DrawImGuiDetails()
         debugFixedAttackType = static_cast<BossAttackType>(attackIndex);
     ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("Fallback Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-    const BossTargetContext targetContext = BuildTargetContext();
+    const BossTargetContext& targetContext = aiDebugTargetContext;
     const char* relativeRegions[] = { "Front", "Side", "Back" };
     const char* distanceRegions[] = { "Near", "Middle", "Far" };
     const char* actionTypes[] =
@@ -798,6 +880,56 @@ void GruxEnemy::DrawImGuiDetails()
     const char* activeIntentName = "None";
     if (activeIntent)
         activeIntentName = intentTypes[static_cast<int>(*activeIntent)];
+
+
+
+    ImGui::SeparatorText("Selected Action");
+    if (hasSelectedActionDebug)
+        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.25f, 1.0f), "-> %s", actionTypes[static_cast<int>(selectedActionType)]);
+    else
+        ImGui::TextDisabled("-> None");
+
+    ImGui::SeparatorText("Last Decision");
+    ImGui::TextWrapped("%s", lastAIDecisionReason.c_str());
+
+    ImGui::SeparatorText("Last Weighted Random");
+    if (hasLastActionRandomRoll)
+    {
+        ImGui::Text("Roll: %.3f / Total: %.3f", lastActionRandomRoll, lastActionRandomTotalWeight);
+        for (size_t i = 0; i < combatActionData.size(); ++i)
+        {
+            if (lastActionRandomWeights[i] <= 0.0f)
+                continue;
+            ImGui::Text("%s  %.3f - %.3f  (Weight %.3f)",
+                actionTypes[i], lastActionRandomRangeBegin[i],
+                lastActionRandomRangeEnd[i], lastActionRandomWeights[i]);
+        }
+    }
+    else
+    {
+        ImGui::TextDisabled("No weighted Action roll recorded");
+    }
+
+    if (dashAttackMovementActive)
+    {
+        const DirectX::XMFLOAT3 currentPosition = GetPosition();
+        const float traveledX = currentPosition.x - dashAttackStartPosition.x;
+        const float traveledZ = currentPosition.z - dashAttackStartPosition.z;
+        const float targetX = dashTargetPosition.x - currentPosition.x;
+        const float targetZ = dashTargetPosition.z - currentPosition.z;
+        ImGui::SeparatorText("DashAttack Runtime");
+        ImGui::Text("Start: (%.2f, %.2f, %.2f)", dashAttackStartPosition.x, dashAttackStartPosition.y, dashAttackStartPosition.z);
+        ImGui::Text("Target: (%.2f, %.2f, %.2f)", dashTargetPosition.x, dashTargetPosition.y, dashTargetPosition.z);
+        ImGui::Text("Direction: (%.3f, %.3f, %.3f)", dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
+        ImGui::Text("Planned Distance: %.2f", calculatedDashAttackDistance);
+        ImGui::Text("Traveled Distance: %.2f", std::sqrt(traveledX * traveledX + traveledZ * traveledZ));
+        ImGui::Text("Remaining Distance: %.2f", std::sqrt(targetX * targetX + targetZ * targetZ));
+        ImGui::Text("Speed: %.2f", dashAttackSpeed);
+        ImGui::Text("Elapsed / Timeout: %.2f / %.2f", dashAttackElapsedTime, dashAttackTimeout);
+    }
+
+
+
     ImGui::Text("Active Intent: %s", activeIntentName);
     ImGui::Text("Positioning Attempted: %s", intentPositioningAttempted ? "Yes" : "No");
     ImGui::Text("CloseCombat Lifecycle: %s", intentLifecycleState.c_str());
@@ -955,6 +1087,86 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("attackHitCount: %d", currentAttackHitCount);
     ImGui::Text("leftHitBox: %s", leftHitBox ? "true" : "false");
     ImGui::Text("rightHitBox: %s", rightHitBox ? "true" : "false");
+
+
+    ImGui::Begin("Boss AI Debug");
+    ImGui::Checkbox("Show AI World Debug", &showBossAIDebug);
+
+    const char* fullStateName = stateMachine_ ? stateMachine_->GetStateName() : "";
+    const char* stateDisplayName = "None";
+    if (std::strcmp(fullStateName, "EnemyIdleState") == 0) stateDisplayName = "Idle";
+    else if (std::strcmp(fullStateName, "EnemyThinkState") == 0) stateDisplayName = "Think";
+    else if (std::strcmp(fullStateName, "EnemyTurnState") == 0) stateDisplayName = "Turn";
+    else if (std::strcmp(fullStateName, "EnemyPositioningState") == 0) stateDisplayName = "Positioning";
+    else if (std::strcmp(fullStateName, "EnemyAttackState") == 0) stateDisplayName = "Attack";
+    else if (std::strcmp(fullStateName, "EnemyRecoveryState") == 0) stateDisplayName = "Recovery";
+    else if (std::strcmp(fullStateName, "EnemyDeathState") == 0) stateDisplayName = "Death";
+
+    ImGui::Text("State: %s (%s)", stateDisplayName, fullStateName[0] ? fullStateName : "None");
+    ImGui::Text("Intent: %s", activeIntentName);
+    ImGui::Separator();
+
+    if (targetContext.valid)
+    {
+        const int distanceRegionIndex = static_cast<int>(targetContext.distanceRegion);
+        ImGui::Text("Distance: %.2f", targetContext.xzDistance);
+        ImGui::Text("Angle to Player: %.2f deg", targetContext.absoluteAngleDegrees);
+        ImGui::Text("Relative Region: %s", relativeRegions[static_cast<int>(targetContext.region)]);
+        ImGui::Text("Distance Region:");
+        for (int i = 0; i < static_cast<int>(std::size(distanceRegions)); ++i)
+        {
+            if (i == distanceRegionIndex)
+                ImGui::TextColored(ImVec4(0.35f, 1.0f, 0.35f, 1.0f), "-> %s", distanceRegions[i]);
+            else
+                ImGui::TextDisabled("   %s", distanceRegions[i]);
+        }
+    }
+    else
+    {
+        ImGui::TextDisabled("Target Context: Invalid");
+    }
+
+    ImGui::SeparatorText("Action Evaluation (Last AI Evaluation)");
+    if (ImGui::BeginTable("BossAIActionTable", 5,
+        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
+    {
+        ImGui::TableSetupColumn("Action");
+        ImGui::TableSetupColumn("Base");
+        ImGui::TableSetupColumn("Effective");
+        ImGui::TableSetupColumn("Cooldown");
+        ImGui::TableSetupColumn("Status");
+        ImGui::TableHeadersRow();
+
+        for (size_t i = 0; i < combatActionData.size(); ++i)
+        {
+            const BossActionCandidateReason reason = combatActionCandidateReasons[i];
+            const bool candidate = reason == BossActionCandidateReason::Candidate;
+            const bool selected = hasSelectedActionDebug && combatActionData[i].type == selectedActionType;
+            const ImVec4 rowColor = selected
+                ? ImVec4(1.0f, 0.85f, 0.25f, 1.0f)
+                : (candidate ? ImVec4(0.35f, 1.0f, 0.35f, 1.0f) : ImVec4(0.55f, 0.55f, 0.55f, 1.0f));
+
+            ImGui::TableNextRow();
+            ImGui::TableSetColumnIndex(0);
+            ImGui::TextColored(rowColor, "%s%s", selected ? "-> " : "", actionTypes[i]);
+            ImGui::TableSetColumnIndex(1);
+            ImGui::Text("%.1f", combatActionData[i].weight);
+            ImGui::TableSetColumnIndex(2);
+            ImGui::Text("%.1f", combatActionEffectiveWeights[i]);
+            ImGui::TableSetColumnIndex(3);
+            if (combatActionCooldownRemaining[i] <= 0.0f)
+                ImGui::TextColored(ImVec4(0.35f, 1.0f, 0.35f, 1.0f), "READY");
+            else
+                ImGui::TextDisabled("%.2fs", combatActionCooldownRemaining[i]);
+            ImGui::TableSetColumnIndex(4);
+            ImGui::TextColored(rowColor, "%s", candidateReasonNames[static_cast<int>(reason)]);
+        }
+        ImGui::EndTable();
+    }
+
+    ImGui::End();
+
+
 #endif
 }
 
@@ -2057,11 +2269,18 @@ float GruxEnemy::GetTotalActionWeight() const
 }
 
 // Weightに基づいて行動を選択する関数。候補がない場合はstd::nulloptを返す
-std::optional<BossActionType> GruxEnemy::SelectActionByWeight() const
+std::optional<BossActionType> GruxEnemy::SelectActionByWeight()
 {
-    float totalWeight = GetTotalActionWeight();
+    const float totalWeight = GetTotalActionWeight();
+    lastActionRandomTotalWeight = totalWeight;
+    lastActionRandomRangeBegin.fill(0.0f);
+    lastActionRandomRangeEnd.fill(0.0f);
+    lastActionRandomWeights = combatActionEffectiveWeights;
     if (totalWeight <= 0.0f)
+    {
+        hasLastActionRandomRoll = false;
         return std::nullopt;
+    }
 
     static std::mt19937 randomEngine{ std::random_device{}() };
 
@@ -2070,6 +2289,8 @@ std::optional<BossActionType> GruxEnemy::SelectActionByWeight() const
         totalWeight);
 
     const float selectionValue = distribution(randomEngine);
+    lastActionRandomRoll = selectionValue;
+    hasLastActionRandomRoll = true;
 
     float accumulatedWeight = 0.0f;
 
@@ -2080,7 +2301,9 @@ std::optional<BossActionType> GruxEnemy::SelectActionByWeight() const
         if (effectiveWeight <= 0.0f)
             continue;
 
+        lastActionRandomRangeBegin[i] = accumulatedWeight;
         accumulatedWeight += effectiveWeight;
+        lastActionRandomRangeEnd[i] = accumulatedWeight;
 
         if (selectionValue <= accumulatedWeight)
             return combatActionData[i].type;
@@ -2112,6 +2335,7 @@ bool GruxEnemy::SelectCombatAction()
     lastActionType = selectedActionType;
     // 新しい選択結果を保存する
     selectedActionType = *action;
+    hasSelectedActionDebug = true;
 
     const BossPositioningData* positioningData = GetPositioningDataForAction(selectedActionType);
     if (positioningData)

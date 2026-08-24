@@ -141,14 +141,17 @@ private:
     float GetTotalActionWeight() const;
 
     // Weightに基づいて行動を選択する関数。候補がない場合はstd::nulloptを返す
-    std::optional<BossActionType> SelectActionByWeight() const;
+    std::optional<BossActionType> SelectActionByWeight();
 
     void ResetJustDodgeRecords(const char* reason);
     bool HasJustDodgedAttack(const Actor* actor) const;
     void ResetDangerArea();
     void PrepareJumpAttackMotionWarpOverride();
 
+
     void RefreshActiveHitBoxesFromNotifyStates();
+    // ボスの距離範囲のデバック描画
+    void DrawBossAIDebugWorld(const BossTargetContext& context) const;
 
 private:
     // 描画用コンポーネントを追加
@@ -234,6 +237,16 @@ private:
     // 各行動の有効な重み。距離条件とRepeat条件を考慮した有効な重み
     std::array<float, actionCount> combatActionEffectiveWeights{};
     std::array<float, actionCount> combatActionCooldownRemaining{};
+
+    bool showBossAIDebug = false;
+    BossTargetContext aiDebugTargetContext{};
+    bool hasSelectedActionDebug = false;
+    bool hasLastActionRandomRoll = false;
+    float lastActionRandomRoll = 0.0f;
+    float lastActionRandomTotalWeight = 0.0f;
+    std::array<float, actionCount> lastActionRandomRangeBegin{};
+    std::array<float, actionCount> lastActionRandomRangeEnd{};
+    std::array<float, actionCount> lastActionRandomWeights{};
 
     // 攻撃ごとのデータを定義する配列。アニメーション名、距離条件、重みなどを設定する。
     std::array<BossAttackData, 5> combatAttackData =
