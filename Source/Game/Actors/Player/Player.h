@@ -75,6 +75,7 @@ public:
     explicit Player(const std::string& modelName) :Character(modelName)
     {
         mass = 50.0f;
+        maxHp = 50;
         hp = maxHp;
     }
 
@@ -221,8 +222,6 @@ private:
 
 
 private:
-    // プレイヤーのマックスHP
-    int maxHp = 100;
 
     DirectX::XMFLOAT3 damageKnockbackDirection{ 0.0f, 0.0f, 1.0f };
     float damageKnockbackPower = 2.5f;
@@ -285,6 +284,9 @@ public:
 
     // 入力受付のコマンド
     ActionRequest bufferCommand{}; // 入力コマンド
+
+    float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
+
 public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;

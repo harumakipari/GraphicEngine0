@@ -210,7 +210,9 @@ void GameScene::Update(float deltaTime)
 
     SceneBase::Update(deltaTime);
 
-    Physics::Instance().Update(Time::UnscaledDeltaTime());
+    // GameplayŽžŠÔ‚Ö“¯Šú‚µAHitStop’†‚ÍPhysX‚¾‚¯‚ªi‚Þ‚¸‚ê‚ð–h‚®B
+    if (deltaTime > FLT_EPSILON)
+        Physics::Instance().Update(deltaTime);
     {
         ZoneScopedN("Collision Resolution");
         CollisionSystem::DetectAndResolveCollisions();

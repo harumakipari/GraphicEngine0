@@ -14,6 +14,7 @@
 
 void GruxEnemy::Initialize(const Transform& transform)
 {
+    maxHp = 75;
     hp = maxHp;
 
     std::string parentName = "GruxEnemy";

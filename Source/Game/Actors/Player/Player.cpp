@@ -740,6 +740,7 @@ void Player::Update(float deltaTime)
                                 "[SwordHit] effect skipped: no valid hit position/normal");
                     }
                     hitActors.emplace(enemy);
+                    Time::SetSlow(0.0f, normalAttackHitStopDuration);
 
                 }
             }
@@ -949,6 +950,7 @@ void Player::DrawImGuiDetails()
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
     ImGui::SliderFloat("Walk Speed", &walkSpeed, 0.25f, 10.0f);
     ImGui::SliderFloat("Run Speed", &runSpeed, 0.25f, 15.0f);
+    ImGui::DragFloat(U8("ヒットストップの時間"), &normalAttackHitStopDuration, 0.01f);
     ImGui::SliderFloat(
         "Forward Speed Scale", &forwardSpeedScale, 0.25f, 1.5f);
     ImGui::SliderFloat(
