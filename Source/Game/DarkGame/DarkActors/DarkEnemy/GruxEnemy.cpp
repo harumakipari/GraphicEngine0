@@ -873,7 +873,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Relative Region: %s", targetContext.valid ? relativeRegions[static_cast<int>(targetContext.region)] : "Invalid");
     ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
     ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
-    const char* intentTypes[] = { "CloseCombat", "DashAttackPlan" };
+    const char* intentTypes[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan" };
     const char* intentStepNames[] =
     {
         "Selecting",
@@ -898,9 +898,18 @@ void GruxEnemy::DrawImGuiDetails()
     const char* activeIntentGoal = "None";
     if (activeIntent)
     {
-        activeIntentGoal = *activeIntent == BossIntentType::CloseCombat
-            ? "CloseCombat Attack"
-            : "DashAttack";
+        switch (*activeIntent)
+        {
+        case BossIntentType::CloseCombat:
+            activeIntentGoal = "CloseCombat Attack";
+            break;
+        case BossIntentType::DashAttackPlan:
+            activeIntentGoal = "DashAttack";
+            break;
+        case BossIntentType::JumpAttackPlan:
+            activeIntentGoal = "JumpAttack";
+            break;
+        }
     }
     const BossIntentData* activeIntentData = GetActiveIntentData();
     const char* activeRangeStatusName = "None";
@@ -922,6 +931,12 @@ void GruxEnemy::DrawImGuiDetails()
             activeIntentNextAction = rangeStatus == BossIntentRangeStatus::TooClose
                 ? "Retreat"
                 : (rangeStatus == BossIntentRangeStatus::TooFar ? "Approach" : "DashAttack");
+        }
+        else if (*activeIntent == BossIntentType::JumpAttackPlan)
+        {
+            activeIntentNextAction = rangeStatus == BossIntentRangeStatus::TooClose
+                ? "Retreat"
+                : (rangeStatus == BossIntentRangeStatus::TooFar ? "Approach" : "JumpAttack");
         }
     }
 
@@ -1008,6 +1023,8 @@ void GruxEnemy::DrawImGuiDetails()
             data.farWeight = (std::max)(0.0f, data.farWeight);
             ImGui::Text("Effective Weight: %.2f", combatIntentEffectiveWeights[i]);
             ImGui::Text("Selection Probability: %.2f%%", probability);
+            ImGui::Text("Candidate Status: %s",
+                combatIntentEffectiveWeights[i] > 0.0f ? "Candidate" : "ZeroWeight");
             ImGui::PopID();
         }
         ImGui::Text("Total Intent Weight: %.2f", totalIntentWeight);
@@ -1263,10 +1280,16 @@ void GruxEnemy::DrawImGuiDetails()
                         intentData.preferredMinDistance + minimumPreferredRangeWidth,
                         intentData.preferredMaxDistance);
                 }
+                ImGui::DragFloat("Positioning Arrival Inset", &intentData.positioningArrivalInset,
+                    0.05f, 0.0f, 10.0f, "%.2f m");
+                intentData.positioningArrivalInset =
+                    (std::max)(0.0f, intentData.positioningArrivalInset);
                 const float probability = intentEvaluationTotalWeight > 0.0f
                     ? combatIntentEffectiveWeights[i] / intentEvaluationTotalWeight
                     : 0.0f;
                 ImGui::Text("Effective Weight: %.1f", combatIntentEffectiveWeights[i]);
+                ImGui::Text("Candidate Status: %s",
+                    combatIntentEffectiveWeights[i] > 0.0f ? "Candidate" : "ZeroWeight");
                 ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), "");
                 ImGui::SameLine();
                 ImGui::Text("%.1f%%", probability * 100.0f);
@@ -1274,10 +1297,6 @@ void GruxEnemy::DrawImGuiDetails()
             }
             ImGui::PopID();
         }
-        ImGui::DragFloat("Positioning Arrival Inset", &intentPositioningArrivalInset,
-            0.05f, 0.0f, 10.0f, "%.2f m");
-        intentPositioningArrivalInset = (std::max)(0.0f, intentPositioningArrivalInset);
-
         ImGui::SeparatorText("Action Tuning");
         for (size_t i = 0; i < combatActionData.size(); ++i)
         {
@@ -1860,6 +1879,9 @@ void GruxEnemy::MarkIntentPositioningAttempted()
             selectedActionType == BossActionType::Approach) ||
         (*activeIntent == BossIntentType::DashAttackPlan &&
             (selectedActionType == BossActionType::Approach ||
+                selectedActionType == BossActionType::Retreat)) ||
+        (*activeIntent == BossIntentType::JumpAttackPlan &&
+            (selectedActionType == BossActionType::Approach ||
                 selectedActionType == BossActionType::Retreat));
     if (!validPositioning)
         return;
@@ -1893,7 +1915,10 @@ void GruxEnemy::MarkIntentAttackSelected()
     const bool isDashAttackPlanAttack =
         *activeIntent == BossIntentType::DashAttackPlan &&
         selectedActionType == BossActionType::DashAttack;
-    if (!isCloseCombatAttack && !isDashAttackPlanAttack)
+    const bool isJumpAttackPlanAttack =
+        *activeIntent == BossIntentType::JumpAttackPlan &&
+        selectedActionType == BossActionType::JumpAttack;
+    if (!isCloseCombatAttack && !isDashAttackPlanAttack && !isJumpAttackPlanAttack)
         return;
 
     activeIntentStep = BossIntentStep::AttackPending;
@@ -1914,7 +1939,10 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
     const bool dashAttackGoalReached =
         *activeIntent == BossIntentType::DashAttackPlan &&
         selectedActionType == BossActionType::DashAttack;
-    if (!closeCombatGoalReached && !dashAttackGoalReached)
+    const bool jumpAttackGoalReached =
+        *activeIntent == BossIntentType::JumpAttackPlan &&
+        selectedActionType == BossActionType::JumpAttack;
+    if (!closeCombatGoalReached && !dashAttackGoalReached && !jumpAttackGoalReached)
         return;
 
     activeIntent = std::nullopt;
@@ -2544,6 +2572,13 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
         if (rangeStatus == BossIntentRangeStatus::TooFar)
             return actionType == BossActionType::Approach;
         return actionType == BossActionType::DashAttack;
+
+    case BossIntentType::JumpAttackPlan:
+        if (rangeStatus == BossIntentRangeStatus::TooClose)
+            return actionType == BossActionType::Retreat;
+        if (rangeStatus == BossIntentRangeStatus::TooFar)
+            return actionType == BossActionType::Approach;
+        return actionType == BossActionType::JumpAttack;
     }
 
     return false;
@@ -2743,7 +2778,7 @@ bool GruxEnemy::SelectCombatAction()
             const float rangeWidth = (std::max)(0.0f,
                 intentData->preferredMaxDistance - intentData->preferredMinDistance);
             const float safeInset = (std::min)(
-                (std::max)(0.0f, intentPositioningArrivalInset),
+                (std::max)(0.0f, intentData->positioningArrivalInset),
                 rangeWidth * 0.25f);
             selectedPositioningData->completionType = BossPositioningCompletionType::TargetDistance;
             if (selectedActionType == BossActionType::Approach)

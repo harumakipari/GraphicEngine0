@@ -210,11 +210,12 @@ private:
     std::string intentLifecycleTrace = "None";
     std::string intentLifecycleReason = "None";
 
-    static constexpr int intentCount = 2;
+    static constexpr int intentCount = 3;
     std::array<BossIntentData, intentCount> combatIntentData =
     { {
-        { BossIntentType::CloseCombat, 70.0f, 40.0f, 30.0f, 4.0f, 5.5f },
-        { BossIntentType::DashAttackPlan, 30.0f, 60.0f, 70.0f, 8.0f, 10.0f },
+        { BossIntentType::CloseCombat, 60.0f, 30.0f, 25.0f, 4.0f, 5.5f, 0.25f },
+        { BossIntentType::DashAttackPlan, 25.0f, 35.0f, 45.0f, 8.0f, 10.0f, 0.25f },
+        { BossIntentType::JumpAttackPlan, 15.0f, 35.0f, 30.0f, 7.0f, 9.0f, 0.25f },
     } };
     std::array<float, intentCount> combatIntentEffectiveWeights{};
     bool hasLastIntentRandomRoll = false;
@@ -294,7 +295,6 @@ private:
     float attackFacingAngle = 35.0f;    // ‚±‚ÌŠp“xˆÈ“à‚È‚çUŒ‚‰Â”\‚Æ‚İ‚È‚·
 
     float nearDistanceThreshold = 6.0f; // ‚±‚Ì‹——£ˆÈ‰º‚Í‹ß‹——£‚Æ‚İ‚È‚·
-    float intentPositioningArrivalInset = 0.25f;
     float middleDistanceThreshold = 12.0f; // ‚±‚Ì‹——£ˆÈ‰º‚Í’†‹——£‚Æ‚İ‚È‚·
 
     const std::array<BossActionData, actionCount> initialCombatActionData = combatActionData;

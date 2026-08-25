@@ -53,6 +53,7 @@ enum class BossIntentType : uint8_t
 {
     CloseCombat,
     DashAttackPlan,
+    JumpAttackPlan,
 };
 
 enum class BossIntentStep : uint8_t
@@ -79,6 +80,7 @@ struct BossIntentData
     float farWeight = 1.0f;
     float preferredMinDistance = 0.0f;
     float preferredMaxDistance = 1.0f;
+    float positioningArrivalInset = 0.25f;
 };
 
 enum class BossActionType :uint8_t
