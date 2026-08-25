@@ -450,7 +450,7 @@ void PlayerRushState::Enter()
     player->ForceResetPlayerSlow();
     player->HoldBossSlowForRush();
     // ラッシュコンボのアニメーション名
-    rushCombo =
+    const std::array<const char*, 7> availableRushCombo =
     {
         "Rush_Attack_Fast_A",
         "Rush_Attack_Fast_B",
@@ -458,9 +458,16 @@ void PlayerRushState::Enter()
         "Rush_Attack_Fast_D",
         "Rush_Attack_Fast_A",
         "Rush_Attack_Fast_B",
-        "Rush_Attack_Fast_C",
         "Rush_Attack_Fast_End",
     };
+    const int rushAttackCount = std::clamp(
+        player->GetMaxRushAttackCount(), 1,
+        static_cast<int>(availableRushCombo.size()));
+    rushCombo.assign(
+        availableRushCombo.begin(),
+        availableRushCombo.begin() + rushAttackCount);
+    // A tuned shorter Rush still finishes with the existing finisher animation.
+    rushCombo.back() = "Rush_Attack_Fast_End";
 
     comboIndex = 0;
 
@@ -480,6 +487,7 @@ void PlayerRushState::Enter()
     elapsedTime = 0.0f;
     // The Attack request that started Rush was already consumed in Dodge.
     queuedAttackCount = 0;
+    ResetRushInputGrace();
     player->invincible = true;  // ラッシュ攻撃中は無敵状態にする
 
     currentAttackAnimation = "Rush_Attack_Fast_A";
@@ -538,33 +546,49 @@ void PlayerRushState::Execute(float deltaTime)
         }
         break;
     case RushPhase::Attack:
-        if (!player->transitionWindow)
+        if (player->inputWindow)
         {
-            rushComboAdvanced = false;
+            rushInputWindowObserved = true;
         }
+        else if (rushInputWindowObserved && !rushInputGraceActive &&
+            !rushComboAdvanced && !IsFinalRushAttack())
+        {
+            rushInputGraceActive = true;
+            rushInputGraceTimer = (std::max)(0.0f, player->GetRushInputGracePeriod());
+        }
+
         if (player->transitionWindow && !rushComboAdvanced)
         {
-            rushComboAdvanced = true;
+            if (IsFinalRushAttack())
+            {
+                rushComboAdvanced = true;
+                phase = RushPhase::Finished;
+            }
+            else if (queuedAttackCount > 0)
+            {
+                AdvanceRushCombo();
+            }
+        }
+
+        if (rushInputGraceActive && !rushComboAdvanced)
+        {
             if (queuedAttackCount > 0)
             {
-                queuedAttackCount--;
-                comboIndex++;
-                if (comboIndex < rushCombo.size())
-                {
-                    currentAttackAnimation = rushCombo[comboIndex];
-                    player->PlayBodyAnimation(currentAttackAnimation, false);
-                }
-                else
-                {
-                    phase = RushPhase::Finished;
-                }
+                AdvanceRushCombo();
             }
             else
             {
-                phase = RushPhase::Finished;
+                rushInputGraceTimer -= deltaTime;
+                if (rushInputGraceTimer <= 0.0f)
+                {
+                    rushInputGraceActive = false;
+                    phase = RushPhase::Finished;
+                }
             }
         }
-        if (!player->GetBodyAnimationController()->IsPlayAnimation())
+
+        if (!player->GetBodyAnimationController()->IsPlayAnimation() &&
+            !rushInputGraceActive)
         {
             phase = RushPhase::Finished;
         }
@@ -583,6 +607,7 @@ void PlayerRushState::Exit()
     comboIndex = 0;
     queuedAttackCount = 0;
     rushComboAdvanced = false;
+    ResetRushInputGrace();
     phase = RushPhase::DashToTarget;
     currentAttackAnimation = "Rush_Attack_Fast_A";
     elapsedTime = 0.0f;
@@ -593,6 +618,41 @@ void PlayerRushState::Exit()
     player->ForceResetPlayerSlow();
     player->BeginBossSlowReturn(true);
     player->invincible = false;  // ラッシュ攻撃中は無敵状態解除
+}
+
+bool PlayerRushState::AdvanceRushCombo()
+{
+    if (queuedAttackCount <= 0 || IsFinalRushAttack())
+        return false;
+
+    queuedAttackCount--;
+    comboIndex++;
+    if (comboIndex >= static_cast<int>(rushCombo.size()))
+    {
+        phase = RushPhase::Finished;
+        return false;
+    }
+
+    currentAttackAnimation = rushCombo[comboIndex];
+    rushComboAdvanced = true;
+    ResetRushInputGrace();
+    player->PlayBodyAnimation(currentAttackAnimation, false);
+    // PlayBodyAnimation switches to a fresh animation and resets its Notify flags.
+    rushComboAdvanced = false;
+    return true;
+}
+
+bool PlayerRushState::IsFinalRushAttack() const
+{
+    return !rushCombo.empty() &&
+        comboIndex + 1 >= static_cast<int>(rushCombo.size());
+}
+
+void PlayerRushState::ResetRushInputGrace()
+{
+    rushInputWindowObserved = false;
+    rushInputGraceActive = false;
+    rushInputGraceTimer = 0.0f;
 }
 
 

@@ -169,10 +169,17 @@ public:
     // 0-based Rush step. comboIndex remains the single source of truth.
     int GetComboIndex() const { return comboIndex; }
 private:
+    bool AdvanceRushCombo();
+    bool IsFinalRushAttack() const;
+    void ResetRushInputGrace();
+
     float elapsedTime = 0.0f;
     bool rushComboAdvanced = false;
     int queuedAttackCount = 0;
     int comboIndex = 0; 
+    bool rushInputWindowObserved = false;
+    bool rushInputGraceActive = false;
+    float rushInputGraceTimer = 0.0f;
 
     std::string currentAttackAnimation = "Rush_Attack_Fast_A";
 

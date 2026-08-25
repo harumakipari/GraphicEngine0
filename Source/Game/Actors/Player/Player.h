@@ -194,6 +194,9 @@ public:
     // ラッシュ受付期間終了
     void EndRushAttackInput();
 
+    int GetMaxRushAttackCount() const { return std::clamp(maxRushAttackCount, 1, 7); }
+    float GetRushInputGracePeriod() const { return rushInputGracePeriod; }
+
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
 
@@ -216,6 +219,9 @@ private:
     void UpdateMovement();
 
     void UpdateRushPromptUI();
+
+    float GetRushDamageMultiplier() const;
+    int GetCurrentAttackDamage() const;
 
     // 回避の方向を決定する処理
     void DecideLockOnDodgeDirection();
@@ -284,6 +290,13 @@ public:
 
     // 入力受付のコマンド
     ActionRequest bufferCommand{}; // 入力コマンド
+
+    // Rush combat tuning values. Kept together for future runtime tuning.
+    int normalAttackDamage = 1;
+    float rushDamageMultiplier = 2.0f;
+    float finalRushDamageMultiplier = 3.0f;
+    float rushInputGracePeriod = 0.5f;
+    int maxRushAttackCount = 7;
 
     float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
 

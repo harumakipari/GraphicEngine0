@@ -728,7 +728,7 @@ void Player::Update(float deltaTime)
                 if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
                 {
                     Logger::Log(U8("Œ•‚É“G‚ª“–‚½‚Á‚½"));
-                    enemy->TakeDamage(1);
+                    enemy->TakeDamage(GetCurrentAttackDamage());
                     if (selectedEffectHit && hit.hasPosition && hit.hasNormal)
                     {
                         enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
@@ -2199,6 +2199,33 @@ void Player::StartAttack()
 void Player::EndAttack()
 {
     isAttackActive = false;
+}
+
+float Player::GetRushDamageMultiplier() const
+{
+    if (!stateMachine_ || std::string(stateMachine_->GetStateName()) != "Rush")
+        return 1.0f;
+
+    const auto* rushState =
+        dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
+    if (!rushState)
+        return 1.0f;
+
+    const int attackNumber = rushState->GetComboIndex() + 1;
+    const int rushAttackCount = GetMaxRushAttackCount();
+    return attackNumber == rushAttackCount
+        ? (std::max)(0.0f, finalRushDamageMultiplier)
+        : (std::max)(0.0f, rushDamageMultiplier);
+}
+
+int Player::GetCurrentAttackDamage() const
+{
+    const int baseDamage = (std::max)(0, normalAttackDamage);
+    if (!stateMachine_ || std::string(stateMachine_->GetStateName()) != "Rush")
+        return baseDamage;
+
+    return static_cast<int>(std::lround(
+        static_cast<float>(baseDamage) * GetRushDamageMultiplier()));
 }
 
 bool Player::CanAcceptInitialRushInput() const
