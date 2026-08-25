@@ -53,8 +53,11 @@ void EnemyThinkState::Execute(float deltaTime)
             return;
         }
 
-        if (!enemy->GetActiveIntent())
-            enemy->TryStartIntent(BossIntentType::CloseCombat);
+        if (!enemy->GetActiveIntent() && !enemy->SelectIntentByWeight())
+        {
+            enemy->SetLastAIDecision("Wait: no weighted Intent candidate");
+            return;
+        }
     }
 
     // デバック固定用の分岐
@@ -81,6 +84,12 @@ void EnemyThinkState::Execute(float deltaTime)
 
     if (!enemy->SelectCombatAction())
     {
+        const BossTargetContext context = enemy->BuildTargetContext();
+        if (enemy->ShouldWaitForActiveIntentCooldown(context))
+        {
+            enemy->SetLastAIDecision("Wait: active Intent Action cooldown");
+            return;
+        }
         enemy->SetLastAIDecision("Wait: no weighted attack candidate");
         enemy->FailActiveIntent("NoActionCandidate");
         timer = (std::max)(0.0f, enemy->GetAttackInterval() - 0.25f);
@@ -141,6 +150,11 @@ void EnemyPositioningState::Execute(float deltaTime)
     {
         enemy->SetLastAIDecision(std::string("Positioning End: ") + reason);
         enemy->FinishPositioningDebug(reason);
+        const bool completed =
+            std::strcmp(reason, "TargetDistanceReached") == 0 ||
+            std::strcmp(reason, "DistanceReached") == 0;
+        if (!completed)
+            enemy->FailActiveIntent(reason);
         endReasonSet = true;
         owner->GetStateMachine()->ChangeState("EnemyThinkState");
     };

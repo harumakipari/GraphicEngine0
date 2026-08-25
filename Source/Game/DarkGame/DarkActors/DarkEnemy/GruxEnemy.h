@@ -99,6 +99,7 @@ public:
     bool WasCurrentAttackSequenceJustDodged() const { return !justDodgedActors.empty(); }
 
     BossTargetContext BuildTargetContext() const;
+    bool ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const;
     bool IsFacingPlayerForAttack(const BossTargetContext& context) const;
     void StopAIMovement();
     bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
@@ -129,6 +130,9 @@ private:
     // 現在の距離領域に基づいて、候補となる行動を選択する関数
     void UpdateActionCandidateFlags(const BossTargetContext& context);
     bool IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const;
+    const BossIntentData* GetActiveIntentData() const;
+    BossIntentRangeStatus GetIntentRangeStatus(
+        const BossIntentData& intentData, float distance) const;
 
     // アクションが現在の距離(Region)で候補になるかを判定する関数
     bool IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const;
@@ -136,6 +140,8 @@ private:
     // Action候補とBase WeightからEffective Weightを更新する
     void UpdateActionEffectiveWeights();
     void UpdateActionCooldowns(float deltaTime);
+    void UpdateIntentEffectiveWeights(const BossTargetContext& context);
+    float GetIntentWeightForDistance(const BossIntentData& data, BossDistanceRegion region) const;
     float GetTotalIntentWeight() const;
 
     // ActionのEffective Weight合計を求める関数
@@ -193,10 +199,12 @@ private:
     uint64_t currentAttackSequenceId = 0;
     int currentAttackHitCount = 0;
 
-    BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;
+    BossAIMode bossAIMode = BossAIMode::CombatAI;
+    //BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;
     BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
 
     std::optional<BossIntentType> activeIntent = std::nullopt;
+    BossIntentStep activeIntentStep = BossIntentStep::Selecting;
     bool intentPositioningAttempted = false;
     std::string intentLifecycleState = "None";
     std::string intentLifecycleTrace = "None";
@@ -205,9 +213,17 @@ private:
     static constexpr int intentCount = 2;
     std::array<BossIntentData, intentCount> combatIntentData =
     { {
-        { BossIntentType::CloseCombat, 70.0f },
-        { BossIntentType::JumpAttack, 30.0f },
+        { BossIntentType::CloseCombat, 70.0f, 40.0f, 30.0f, 4.0f, 5.5f },
+        { BossIntentType::DashAttackPlan, 30.0f, 60.0f, 70.0f, 8.0f, 10.0f },
     } };
+    std::array<float, intentCount> combatIntentEffectiveWeights{};
+    bool hasLastIntentRandomRoll = false;
+    float lastIntentRandomRoll = 0.0f;
+    float lastIntentRandomTotalWeight = 0.0f;
+    std::array<float, intentCount> lastIntentRandomRangeBegin{};
+    std::array<float, intentCount> lastIntentRandomRangeEnd{};
+    std::array<float, intentCount> lastIntentRandomWeights{};
+    std::optional<BossIntentType> lastSelectedIntent = std::nullopt;
 
     BossActionType selectedActionType = BossActionType::AttackLA;
     BossActionType lastActionType = BossActionType::AttackLA;
@@ -227,8 +243,8 @@ private:
         { BossActionType::FastCombo, BossAttackType::FastCombo ,BossDistanceRegion::Near,BossDistanceRegion::Near,40.0f,2.0f},
         { BossActionType::JumpAttack,BossAttackType::JumpAttack ,BossDistanceRegion::Middle,BossDistanceRegion::Middle,30.0f,3.0f},
         { BossActionType::DashAttack,BossAttackType::DashAttack,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,4.0f},
-        { BossActionType::Approach, std::nullopt,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,0.5f},
-        { BossActionType::Retreat, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Middle,40.0f,2.5f},
+        { BossActionType::Approach, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,40.0f,0.5f},
+        { BossActionType::Retreat, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,40.0f,2.5f},
     }
     };
 
@@ -278,10 +294,11 @@ private:
     float attackFacingAngle = 35.0f;    // この角度以内なら攻撃可能とみなす
 
     float nearDistanceThreshold = 6.0f; // この距離以下は近距離とみなす
-    float closeCombatApproachArrivalMargin = 0.5f;
+    float intentPositioningArrivalInset = 0.25f;
     float middleDistanceThreshold = 12.0f; // この距離以下は中距離とみなす
 
     const std::array<BossActionData, actionCount> initialCombatActionData = combatActionData;
+    const std::array<BossIntentData, intentCount> initialCombatIntentData = combatIntentData;
     const std::array<BossAttackData, 5> initialCombatAttackData = combatAttackData;
     const float initialNearDistanceThreshold = nearDistanceThreshold;
     const float initialMiddleDistanceThreshold = middleDistanceThreshold;

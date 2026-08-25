@@ -771,6 +771,12 @@ void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
     drawRing(nearDistanceThreshold, { 0.2f, 1.0f, 0.2f, 1.0f });
     drawRing(middleDistanceThreshold, { 1.0f, 0.7f, 0.1f, 1.0f });
 
+    if (const BossIntentData* intentData = GetActiveIntentData())
+    {
+        drawRing(intentData->preferredMinDistance, { 0.15f, 0.85f, 1.0f, 1.0f });
+        drawRing(intentData->preferredMaxDistance, { 1.0f, 0.25f, 0.85f, 1.0f });
+    }
+
     if (context.valid)
     {
         const DirectX::XMFLOAT3 playerXZPosition =
@@ -867,7 +873,16 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Relative Region: %s", targetContext.valid ? relativeRegions[static_cast<int>(targetContext.region)] : "Invalid");
     ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
     ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
-    const char* intentTypes[] = { "CloseCombat", "JumpAttack" };
+    const char* intentTypes[] = { "CloseCombat", "DashAttackPlan" };
+    const char* intentStepNames[] =
+    {
+        "Selecting",
+        "Positioning",
+        "AttackPending",
+        "Completed",
+        "Failed",
+    };
+    UpdateIntentEffectiveWeights(targetContext);
     const char* candidateReasonNames[] =
     {
         "NoActiveIntent",
@@ -880,6 +895,35 @@ void GruxEnemy::DrawImGuiDetails()
     const char* activeIntentName = "None";
     if (activeIntent)
         activeIntentName = intentTypes[static_cast<int>(*activeIntent)];
+    const char* activeIntentGoal = "None";
+    if (activeIntent)
+    {
+        activeIntentGoal = *activeIntent == BossIntentType::CloseCombat
+            ? "CloseCombat Attack"
+            : "DashAttack";
+    }
+    const BossIntentData* activeIntentData = GetActiveIntentData();
+    const char* activeRangeStatusName = "None";
+    const char* activeIntentNextAction = "None";
+    if (activeIntentData && targetContext.valid)
+    {
+        const BossIntentRangeStatus rangeStatus =
+            GetIntentRangeStatus(*activeIntentData, targetContext.xzDistance);
+        const char* rangeStatusNames[] = { "Too Close", "In Range", "Too Far" };
+        activeRangeStatusName = rangeStatusNames[static_cast<int>(rangeStatus)];
+        if (*activeIntent == BossIntentType::CloseCombat)
+        {
+            activeIntentNextAction = rangeStatus == BossIntentRangeStatus::TooFar
+                ? "Approach"
+                : "CloseCombat Attack";
+        }
+        else if (*activeIntent == BossIntentType::DashAttackPlan)
+        {
+            activeIntentNextAction = rangeStatus == BossIntentRangeStatus::TooClose
+                ? "Retreat"
+                : (rangeStatus == BossIntentRangeStatus::TooFar ? "Approach" : "DashAttack");
+        }
+    }
 
 
 
@@ -931,8 +975,18 @@ void GruxEnemy::DrawImGuiDetails()
 
 
     ImGui::Text("Active Intent: %s", activeIntentName);
+    ImGui::Text("Intent Goal: %s", activeIntentGoal);
+    ImGui::Text("Intent Step: %s", intentStepNames[static_cast<int>(activeIntentStep)]);
+    if (activeIntentData)
+    {
+        ImGui::Text("Preferred Range: %.2f - %.2f m",
+            activeIntentData->preferredMinDistance,
+            activeIntentData->preferredMaxDistance);
+    }
+    ImGui::Text("Range Status: %s", activeRangeStatusName);
+    ImGui::Text("Next Action: %s", activeIntentNextAction);
     ImGui::Text("Positioning Attempted: %s", intentPositioningAttempted ? "Yes" : "No");
-    ImGui::Text("CloseCombat Lifecycle: %s", intentLifecycleState.c_str());
+    ImGui::Text("Intent Lifecycle: %s", intentLifecycleState.c_str());
     ImGui::Text("Lifecycle Reason: %s", intentLifecycleReason.c_str());
     ImGui::TextWrapped("Lifecycle Trace: %s", intentLifecycleTrace.c_str());
     if (ImGui::TreeNode("Intent Selection"))
@@ -942,13 +996,35 @@ void GruxEnemy::DrawImGuiDetails()
         {
             BossIntentData& data = combatIntentData[i];
             const float probability = totalIntentWeight > 0.0f
-                ? (std::max)(0.0f, data.weight) / totalIntentWeight * 100.0f
+                ? combatIntentEffectiveWeights[i] / totalIntentWeight * 100.0f
                 : 0.0f;
             ImGui::PushID(static_cast<int>(i));
             ImGui::Text("%s", intentTypes[i]);
-            ImGui::DragFloat("Weight", &data.weight, 1.0f, 0.0f, 1000.0f, "%.1f");
+            ImGui::DragFloat("Near Weight", &data.nearWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+            ImGui::DragFloat("Middle Weight", &data.middleWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+            ImGui::DragFloat("Far Weight", &data.farWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+            data.nearWeight = (std::max)(0.0f, data.nearWeight);
+            data.middleWeight = (std::max)(0.0f, data.middleWeight);
+            data.farWeight = (std::max)(0.0f, data.farWeight);
+            ImGui::Text("Effective Weight: %.2f", combatIntentEffectiveWeights[i]);
             ImGui::Text("Selection Probability: %.2f%%", probability);
             ImGui::PopID();
+        }
+        ImGui::Text("Total Intent Weight: %.2f", totalIntentWeight);
+        if (hasLastIntentRandomRoll)
+        {
+            ImGui::Text("Last Intent Roll: %.2f / %.2f",
+                lastIntentRandomRoll, lastIntentRandomTotalWeight);
+            for (size_t i = 0; i < combatIntentData.size(); ++i)
+            {
+                if (lastIntentRandomWeights[i] <= 0.0f)
+                    continue;
+                ImGui::Text("%s  %.2f - %.2f",
+                    intentTypes[i], lastIntentRandomRangeBegin[i],
+                    lastIntentRandomRangeEnd[i]);
+            }
+            ImGui::Text("Selected Intent: %s",
+                lastSelectedIntent ? intentTypes[static_cast<int>(*lastSelectedIntent)] : "None");
         }
         if (ImGui::Button("Select Intent Once"))
             SelectIntentByWeight();
@@ -1104,6 +1180,16 @@ void GruxEnemy::DrawImGuiDetails()
 
     ImGui::Text("State: %s (%s)", stateDisplayName, fullStateName[0] ? fullStateName : "None");
     ImGui::Text("Intent: %s", activeIntentName);
+    ImGui::Text("Intent Goal: %s", activeIntentGoal);
+    ImGui::Text("Intent Step: %s", intentStepNames[static_cast<int>(activeIntentStep)]);
+    if (activeIntentData)
+    {
+        ImGui::Text("Preferred Range: %.2f - %.2f m",
+            activeIntentData->preferredMinDistance,
+            activeIntentData->preferredMaxDistance);
+    }
+    ImGui::Text("Range Status: %s", activeRangeStatusName);
+    ImGui::Text("Next Action: %s", activeIntentNextAction);
     ImGui::Separator();
 
     if (targetContext.valid)
@@ -1144,6 +1230,54 @@ void GruxEnemy::DrawImGuiDetails()
         }
 
         const float evaluationTotalWeight = GetTotalActionWeight();
+        const float intentEvaluationTotalWeight = GetTotalIntentWeight();
+        ImGui::SeparatorText("Intent Tuning");
+        for (size_t i = 0; i < combatIntentData.size(); ++i)
+        {
+            BossIntentData& intentData = combatIntentData[i];
+            ImGui::PushID(static_cast<int>(i));
+            if (ImGui::TreeNode(intentTypes[i]))
+            {
+                ImGui::DragFloat("Near Weight", &intentData.nearWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+                ImGui::DragFloat("Middle Weight", &intentData.middleWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+                ImGui::DragFloat("Far Weight", &intentData.farWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+                intentData.nearWeight = (std::max)(0.0f, intentData.nearWeight);
+                intentData.middleWeight = (std::max)(0.0f, intentData.middleWeight);
+                intentData.farWeight = (std::max)(0.0f, intentData.farWeight);
+                constexpr float minimumPreferredRangeWidth = 0.1f;
+                if (ImGui::DragFloat("Preferred Min", &intentData.preferredMinDistance,
+                    0.1f, 0.0f, 100.0f, "%.2f m"))
+                {
+                    intentData.preferredMinDistance =
+                        (std::max)(0.0f, intentData.preferredMinDistance);
+                    if (intentData.preferredMinDistance >= intentData.preferredMaxDistance)
+                    {
+                        intentData.preferredMaxDistance =
+                            intentData.preferredMinDistance + minimumPreferredRangeWidth;
+                    }
+                }
+                if (ImGui::DragFloat("Preferred Max", &intentData.preferredMaxDistance,
+                    0.1f, 0.1f, 100.0f, "%.2f m"))
+                {
+                    intentData.preferredMaxDistance = (std::max)(
+                        intentData.preferredMinDistance + minimumPreferredRangeWidth,
+                        intentData.preferredMaxDistance);
+                }
+                const float probability = intentEvaluationTotalWeight > 0.0f
+                    ? combatIntentEffectiveWeights[i] / intentEvaluationTotalWeight
+                    : 0.0f;
+                ImGui::Text("Effective Weight: %.1f", combatIntentEffectiveWeights[i]);
+                ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), "");
+                ImGui::SameLine();
+                ImGui::Text("%.1f%%", probability * 100.0f);
+                ImGui::TreePop();
+            }
+            ImGui::PopID();
+        }
+        ImGui::DragFloat("Positioning Arrival Inset", &intentPositioningArrivalInset,
+            0.05f, 0.0f, 10.0f, "%.2f m");
+        intentPositioningArrivalInset = (std::max)(0.0f, intentPositioningArrivalInset);
+
         ImGui::SeparatorText("Action Tuning");
         for (size_t i = 0; i < combatActionData.size(); ++i)
         {
@@ -1188,6 +1322,7 @@ void GruxEnemy::DrawImGuiDetails()
 
         if (ImGui::Button("Reset AI Tuning"))
         {
+            combatIntentData = initialCombatIntentData;
             for (size_t i = 0; i < combatActionData.size(); ++i)
             {
                 combatActionData[i].weight = initialCombatActionData[i].weight;
@@ -1611,6 +1746,7 @@ bool GruxEnemy::TryStartIntent(BossIntentType intentType)
         return false;
 
     activeIntent = intentType;
+    activeIntentStep = BossIntentStep::Selecting;
     intentPositioningAttempted = false;
     intentLifecycleState = "Intent Started";
     intentLifecycleTrace = "Intent Started";
@@ -1621,9 +1757,37 @@ bool GruxEnemy::TryStartIntent(BossIntentType intentType)
 float GruxEnemy::GetTotalIntentWeight() const
 {
     float totalWeight = 0.0f;
-    for (const BossIntentData& data : combatIntentData)
-        totalWeight += (std::max)(0.0f, data.weight);
+    for (float weight : combatIntentEffectiveWeights)
+        totalWeight += weight;
     return totalWeight;
+}
+
+float GruxEnemy::GetIntentWeightForDistance(
+    const BossIntentData& data, BossDistanceRegion region) const
+{
+    switch (region)
+    {
+    case BossDistanceRegion::Near:
+        return (std::max)(0.0f, data.nearWeight);
+    case BossDistanceRegion::Middle:
+        return (std::max)(0.0f, data.middleWeight);
+    case BossDistanceRegion::Far:
+        return (std::max)(0.0f, data.farWeight);
+    }
+    return 0.0f;
+}
+
+void GruxEnemy::UpdateIntentEffectiveWeights(const BossTargetContext& context)
+{
+    combatIntentEffectiveWeights.fill(0.0f);
+    if (!context.valid)
+        return;
+
+    for (size_t i = 0; i < combatIntentData.size(); ++i)
+    {
+        combatIntentEffectiveWeights[i] =
+            GetIntentWeightForDistance(combatIntentData[i], context.distanceRegion);
+    }
 }
 
 bool GruxEnemy::SelectIntentByWeight()
@@ -1631,24 +1795,46 @@ bool GruxEnemy::SelectIntentByWeight()
     if (activeIntent)
         return false;
 
+    const BossTargetContext context = BuildTargetContext();
+    UpdateIntentEffectiveWeights(context);
     const float totalWeight = GetTotalIntentWeight();
+    lastIntentRandomTotalWeight = totalWeight;
+    lastIntentRandomRangeBegin.fill(0.0f);
+    lastIntentRandomRangeEnd.fill(0.0f);
+    lastIntentRandomWeights = combatIntentEffectiveWeights;
     if (totalWeight <= 0.0f)
+    {
+        hasLastIntentRandomRoll = false;
         return false;
+    }
 
     static std::mt19937 randomEngine{ std::random_device{}() };
     std::uniform_real_distribution<float> distribution(0.0f, totalWeight);
     const float selectionValue = distribution(randomEngine);
+    lastIntentRandomRoll = selectionValue;
+    hasLastIntentRandomRoll = true;
 
     float accumulatedWeight = 0.0f;
-    for (const BossIntentData& data : combatIntentData)
+    for (size_t i = 0; i < combatIntentData.size(); ++i)
     {
-        const float effectiveWeight = (std::max)(0.0f, data.weight);
+        const float effectiveWeight = combatIntentEffectiveWeights[i];
         if (effectiveWeight <= 0.0f)
             continue;
 
+        lastIntentRandomRangeBegin[i] = accumulatedWeight;
         accumulatedWeight += effectiveWeight;
-        if (selectionValue <= accumulatedWeight)
-            return TryStartIntent(data.type);
+        lastIntentRandomRangeEnd[i] = accumulatedWeight;
+    }
+
+    for (size_t i = 0; i < combatIntentData.size(); ++i)
+    {
+        if (combatIntentEffectiveWeights[i] <= 0.0f)
+            continue;
+        if (selectionValue <= lastIntentRandomRangeEnd[i])
+        {
+            lastSelectedIntent = combatIntentData[i].type;
+            return TryStartIntent(combatIntentData[i].type);
+        }
     }
 
     return false;
@@ -1657,6 +1843,7 @@ bool GruxEnemy::SelectIntentByWeight()
 void GruxEnemy::ClearActiveIntent()
 {
     activeIntent = std::nullopt;
+    activeIntentStep = BossIntentStep::Selecting;
     intentPositioningAttempted = false;
     intentLifecycleState = "None";
     intentLifecycleTrace = "None";
@@ -1665,52 +1852,73 @@ void GruxEnemy::ClearActiveIntent()
 
 void GruxEnemy::MarkIntentPositioningAttempted()
 {
-    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat ||
-        selectedActionType != BossActionType::Approach)
+    if (!activeIntent)
+        return;
+
+    const bool validPositioning =
+        (*activeIntent == BossIntentType::CloseCombat &&
+            selectedActionType == BossActionType::Approach) ||
+        (*activeIntent == BossIntentType::DashAttackPlan &&
+            (selectedActionType == BossActionType::Approach ||
+                selectedActionType == BossActionType::Retreat));
+    if (!validPositioning)
         return;
 
     intentPositioningAttempted = true;
+    activeIntentStep = BossIntentStep::Positioning;
     intentLifecycleState = "Positioning";
     intentLifecycleTrace += " -> Positioning";
 }
 
 void GruxEnemy::BeginIntentReevaluation()
 {
-    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat ||
-        !intentPositioningAttempted)
+    if (!activeIntent || !intentPositioningAttempted)
         return;
 
+    activeIntentStep = BossIntentStep::AttackPending;
     intentLifecycleState = "Reevaluate";
     intentLifecycleTrace += " -> Reevaluate";
 }
 
 void GruxEnemy::MarkIntentAttackSelected()
 {
-    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat)
+    if (!activeIntent)
         return;
 
-    if (selectedActionType != BossActionType::AttackLA &&
-        selectedActionType != BossActionType::AttackRA &&
-        selectedActionType != BossActionType::FastCombo &&
-        selectedActionType != BossActionType::DashAttack)
+    const bool isCloseCombatAttack =
+        *activeIntent == BossIntentType::CloseCombat &&
+        (selectedActionType == BossActionType::AttackLA ||
+            selectedActionType == BossActionType::AttackRA ||
+            selectedActionType == BossActionType::FastCombo);
+    const bool isDashAttackPlanAttack =
+        *activeIntent == BossIntentType::DashAttackPlan &&
+        selectedActionType == BossActionType::DashAttack;
+    if (!isCloseCombatAttack && !isDashAttackPlanAttack)
         return;
 
+    activeIntentStep = BossIntentStep::AttackPending;
     intentLifecycleState = "Attack Selected";
     intentLifecycleTrace += " -> Attack Selected";
 }
 
 void GruxEnemy::OnSelectedActionStartedSuccessfully()
 {
-    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat)
+    if (!activeIntent)
         return;
 
-    if (selectedActionType != BossActionType::AttackLA &&
-        selectedActionType != BossActionType::AttackRA &&
-        selectedActionType != BossActionType::FastCombo &&
-        selectedActionType != BossActionType::DashAttack)
+    const bool closeCombatGoalReached =
+        *activeIntent == BossIntentType::CloseCombat &&
+        (selectedActionType == BossActionType::AttackLA ||
+            selectedActionType == BossActionType::AttackRA ||
+            selectedActionType == BossActionType::FastCombo);
+    const bool dashAttackGoalReached =
+        *activeIntent == BossIntentType::DashAttackPlan &&
+        selectedActionType == BossActionType::DashAttack;
+    if (!closeCombatGoalReached && !dashAttackGoalReached)
         return;
 
     activeIntent = std::nullopt;
+    activeIntentStep = BossIntentStep::Completed;
     intentPositioningAttempted = false;
     intentLifecycleState = "Intent Completed";
     intentLifecycleTrace += " -> Intent Completed";
@@ -1728,6 +1936,7 @@ void GruxEnemy::FailActiveIntent(const char* reason)
         return;
 
     activeIntent = std::nullopt;
+    activeIntentStep = BossIntentStep::Failed;
     intentPositioningAttempted = false;
     intentLifecycleState = "Intent Failed";
     intentLifecycleTrace += " -> Intent Failed";
@@ -2282,29 +2491,82 @@ BossDistanceRegion GruxEnemy::GetDistanceRegion(float distance) const
     return BossDistanceRegion::Far;
 }
 
+const BossIntentData* GruxEnemy::GetActiveIntentData() const
+{
+    if (!activeIntent)
+        return nullptr;
+
+    for (const BossIntentData& data : combatIntentData)
+    {
+        if (data.type == *activeIntent)
+            return &data;
+    }
+    return nullptr;
+}
+
+BossIntentRangeStatus GruxEnemy::GetIntentRangeStatus(
+    const BossIntentData& intentData, float distance) const
+{
+    if (distance < intentData.preferredMinDistance)
+        return BossIntentRangeStatus::TooClose;
+    if (distance > intentData.preferredMaxDistance)
+        return BossIntentRangeStatus::TooFar;
+    return BossIntentRangeStatus::InRange;
+}
+
 // 現在の距離領域に基づいて、候補となる行動を選択する関数
 bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const
 {
     if (!activeIntent || !context.valid)
         return false;
 
-    if (*activeIntent != BossIntentType::CloseCombat)
+    const BossIntentData* intentData = GetActiveIntentData();
+    if (!intentData)
         return false;
+    const BossIntentRangeStatus rangeStatus =
+        GetIntentRangeStatus(*intentData, context.xzDistance);
 
-    if (context.distanceRegion == BossDistanceRegion::Near)
+    switch (*activeIntent)
     {
-        return actionType == BossActionType::AttackLA ||
-            actionType == BossActionType::AttackRA ||
-            actionType == BossActionType::FastCombo;
+    case BossIntentType::CloseCombat:
+        // CloseCombatは密着時に不要な後退をせず、そのまま近距離攻撃を許可する。
+        if (rangeStatus != BossIntentRangeStatus::TooFar)
+        {
+            return actionType == BossActionType::AttackLA ||
+                actionType == BossActionType::AttackRA ||
+                actionType == BossActionType::FastCombo;
+        }
+        return actionType == BossActionType::Approach;
+
+    case BossIntentType::DashAttackPlan:
+        if (rangeStatus == BossIntentRangeStatus::TooClose)
+            return actionType == BossActionType::Retreat;
+        if (rangeStatus == BossIntentRangeStatus::TooFar)
+            return actionType == BossActionType::Approach;
+        return actionType == BossActionType::DashAttack;
     }
 
-    if (actionType == BossActionType::DashAttack)
-        return true;
+    return false;
+}
 
-    if (intentPositioningAttempted)
+bool GruxEnemy::ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const
+{
+    if (!activeIntent || !context.valid)
         return false;
 
-    return actionType == BossActionType::Approach;
+    for (size_t i = 0; i < combatActionData.size(); ++i)
+    {
+        const BossActionData& actionData = combatActionData[i];
+        if (!IsActionForCurrentIntent(actionData.type, context))
+            continue;
+        if (!IsActionCandidateForCurrentDistance(actionData, context.distanceRegion))
+            continue;
+        if (actionData.weight <= 0.0f)
+            continue;
+        if (combatActionCooldownRemaining[i] > 0.0f)
+            return true;
+    }
+    return false;
 }
 
 void GruxEnemy::UpdateActionCandidateFlags(const BossTargetContext& context)
@@ -2475,12 +2737,25 @@ bool GruxEnemy::SelectCombatAction()
     if (positioningData)
     {
         selectedPositioningData = *positioningData;
-        if (selectedActionType == BossActionType::Approach &&
-            activeIntent && *activeIntent == BossIntentType::CloseCombat)
+        const BossIntentData* intentData = GetActiveIntentData();
+        if (intentData)
         {
+            const float rangeWidth = (std::max)(0.0f,
+                intentData->preferredMaxDistance - intentData->preferredMinDistance);
+            const float safeInset = (std::min)(
+                (std::max)(0.0f, intentPositioningArrivalInset),
+                rangeWidth * 0.25f);
             selectedPositioningData->completionType = BossPositioningCompletionType::TargetDistance;
-            selectedPositioningData->targetDistance =
-                (std::max)(0.0f, nearDistanceThreshold - closeCombatApproachArrivalMargin);
+            if (selectedActionType == BossActionType::Approach)
+            {
+                selectedPositioningData->targetDistance =
+                    intentData->preferredMaxDistance - safeInset;
+            }
+            else if (selectedActionType == BossActionType::Retreat)
+            {
+                selectedPositioningData->targetDistance =
+                    intentData->preferredMinDistance + safeInset;
+            }
         }
     }
     else
