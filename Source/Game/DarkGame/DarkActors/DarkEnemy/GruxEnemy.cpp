@@ -52,7 +52,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     skeletalMeshComponent->SetIsShadowMap(true);
     skeletalMeshComponent->SetIsCastShadow(false);
 
-
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
     auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
@@ -179,68 +178,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     // 右の武器の先端のコンポーネントを追加
     weaponRightTipComponent = AddComponent<SceneComponent>("weaponRightTipComponent", "weaponRightRootComponent");
     weaponRightTipComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-1.6f });
-
-#if 0
-    // 武器に当たり判定のコンポーネントを追加
-    int socketLeftNode = skeletalMeshComponent->FindIndexByName("weapon_l");
-    leftWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponLeftNode", parentName);
-    //DirectX::XMFLOAT3 size = { 0.4f,4.0f,1.0f };
-    DirectX::XMFLOAT3 size = { 1.0f,4.0f,1.0f };
-    leftWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketLeftNode); // "weapon_l"
-    leftWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
-    leftWeaponCollisionComp->SetMass(mass);
-    leftWeaponCollisionComp->SetCapsuleAxis(ShapeComponent::CapsuleAxis::z);
-    leftWeaponCollisionComp->SetLayer(CollisionLayer::EnemyWeapon);
-    leftWeaponCollisionComp->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
-    leftWeaponCollisionComp->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Trigger);
-    leftWeaponCollisionComp->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Trigger);
-    leftWeaponCollisionComp->SetCollisionOffsetY(height * 0.5f);
-    leftWeaponCollisionComp->SetIsVisibleDebugBox(true);
-    leftWeaponCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, 0.8f });
-    leftWeaponCollisionComp->Initialize();
-    leftWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
-        {
-            OnWeaponHit(self, other);
-        });
-
-    int socketRightNode = skeletalMeshComponent->FindIndexByName("weapon_r");
-    rightWeaponCollisionComp = AddComponent<CapsuleComponent>("weaponRightNode", parentName);
-    rightWeaponCollisionComp->AttachToComponent(skeletalMeshComponent, socketRightNode); // "weapon_r"
-    rightWeaponCollisionComp->SetRadiusAndHeight(size.x, size.y);
-    rightWeaponCollisionComp->SetMass(mass);
-    rightWeaponCollisionComp->SetCapsuleAxis(ShapeComponent::CapsuleAxis::z);
-    rightWeaponCollisionComp->SetLayer(CollisionLayer::EnemyWeapon);
-    rightWeaponCollisionComp->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
-    rightWeaponCollisionComp->SetCollisionOffsetY(height * 0.5f);
-    rightWeaponCollisionComp->SetIsVisibleDebugBox(false);
-    rightWeaponCollisionComp->SetRelativeLocationDirect({ -0.f, -0.f, -0.9f });
-    rightWeaponCollisionComp->Initialize();
-    rightWeaponCollisionComp->SetOnHitCallback([this](CollisionComponent* self, CollisionComponent* other)
-        {
-            OnWeaponHit(self, other);
-        });
-
-
-#endif // 0
-#if 0
-    AddHitCallback([&](std::pair<CollisionComponent*, CollisionComponent*> hitPair)
-        {
-            CollisionComponent* own = hitPair.first;
-            CollisionComponent* other = hitPair.second;
-
-            uint32_t myLayer = own->GetCollisionLayer();
-            uint32_t otherLayer = other->GetCollisionLayer();
-
-            if (myLayer & CollisionHelper::ToBit(CollisionLayer::EnemyWeapon) ||
-                otherLayer & CollisionHelper::ToBit(CollisionLayer::Player))
-            {
-                auto player = dynamic_cast<Player*>(other->GetOwner());
-                if (player)
-                    player->TryTakeDamage(10, GetPosition());
-            }
-        }
-    );
-#endif // 0
 
     int leftEyeSocketNode = skeletalMeshComponent->FindIndexByName("L_eye");
     int rightEyeSocketNode = skeletalMeshComponent->FindIndexByName("R_eye");
@@ -1298,6 +1235,28 @@ void GruxEnemy::DrawImGuiDetails()
             }
             ImGui::PopID();
         }
+        ImGui::SeparatorText("Jump Attack Telegraph");
+        const auto animationController = GetBodyAnimationController();
+        const float telegraphClipDuration = animationController
+            ? animationController->GetAnimationLength("Pre_Stampede_0")
+            : 7.5f;
+        constexpr float minimumTelegraphRange = 0.01f;
+        if (ImGui::DragFloat("Jump Telegraph Start", &jumpAttackTelegraphStartTime,
+            0.01f, 0.0f, telegraphClipDuration - minimumTelegraphRange, "%.2f sec"))
+        {
+            jumpAttackTelegraphStartTime = std::clamp(
+                jumpAttackTelegraphStartTime, 0.0f,
+                jumpAttackTelegraphEndTime - minimumTelegraphRange);
+        }
+        if (ImGui::DragFloat("Jump Telegraph End", &jumpAttackTelegraphEndTime,
+            0.01f, minimumTelegraphRange, telegraphClipDuration, "%.2f sec"))
+        {
+            jumpAttackTelegraphEndTime = std::clamp(
+                jumpAttackTelegraphEndTime,
+                jumpAttackTelegraphStartTime + minimumTelegraphRange,
+                telegraphClipDuration);
+        }
+
         ImGui::SeparatorText("Action Tuning");
         for (size_t i = 0; i < combatActionData.size(); ++i)
         {
@@ -2073,6 +2032,8 @@ int GruxEnemy::GetAttackStageCount(BossAttackType type) const
         return 3;
     if (type == BossAttackType::DashAttack)
         return 3;
+    if (type == BossAttackType::JumpAttack)
+        return 2;
     if (type == BossAttackType::LongRangeAttack)
         return 0;
     return 1;
@@ -2099,8 +2060,19 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
         break;
     }
     case BossAttackType::JumpAttack:
-        PrepareJumpAttackMotionWarpOverride();
-        animationName = "PrimaryAttack_JumpAttack";
+        if (stage == 0)
+        {
+            animationName = "Pre_Stampede_0";
+        }
+        else if (stage == 1)
+        {
+            PrepareJumpAttackMotionWarpOverride();
+            animationName = "PrimaryAttack_JumpAttack";
+        }
+        else
+        {
+            return false;
+        }
         break;
     case BossAttackType::Dash: animationName = "Stampede_0"; break;
     case BossAttackType::DashAttack:
@@ -2124,9 +2096,21 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
     }
 
     transitionWindow = false;
-    const bool ignoreRootMotion = type == BossAttackType::DashAttack;
+    const bool isJumpTelegraph = type == BossAttackType::JumpAttack && stage == 0;
+    const bool ignoreRootMotion = type == BossAttackType::DashAttack || isJumpTelegraph;
     const bool loopAnimation = type == BossAttackType::DashAttack && stage == 1;
     PlayBodyAnimation(animationName, loopAnimation, true, 0.1f, ignoreRootMotion);
+
+    if (isJumpTelegraph)
+    {
+        const auto controller = GetBodyAnimationController();
+        if (!controller ||
+            !controller->SetPlaybackRange(
+                jumpAttackTelegraphStartTime, jumpAttackTelegraphEndTime))
+        {
+            return false;
+        }
+    }
     return true;
 }
 

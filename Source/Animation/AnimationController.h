@@ -153,6 +153,10 @@ public:
     }
 
     // NotifyTrack にイベントを追加する関数
+    // Restrict the current one-shot animation to a runtime time range.
+    // ResetRootMotion clears this range whenever another animation is played.
+    bool SetPlaybackRange(float startTime, float endTime);
+
     void AddNotifyState(const std::string& animationName, const float start, const float end,
         const AnimationNotifyState::Type type, const std::string& parameter = "", float animationSpeed = 1.0f)
     {
@@ -541,6 +545,7 @@ private:
     {
         bool valid = false;
         float animationTime = 0.0f;
+        float playbackEndTime = -1.0f;
         float prevAnimationTime = 0.0f;
         size_t animationClip = 0;
         size_t animationNextClip = 0;
@@ -575,6 +580,9 @@ private:
 
     //アニメーション時間
     float animationTime = 0.0f;
+
+    // Negative means that the animation uses its full clip duration.
+    float playbackEndTime = -1.0f;
 
     // 今再生しているアニメーションのインデックス
     size_t animationClip = 0;

@@ -317,7 +317,10 @@ void EnemyAttackState::Enter()
     comboStage = 0;
     stageStartHitCount = 0;
     dashWindupTimer = 0.0f;
-    enemy->StartAttack();
+    const bool isJumpAttack = enemy->GetSelectedAttackType() == BossAttackType::JumpAttack;
+    enemy->StopAIMovement();
+    if (!isJumpAttack)
+        enemy->StartAttack();
     stageStartHitCount = enemy->GetCurrentAttackHitCount();
     if (!enemy->PlayAttackStage(enemy->GetSelectedAttackType(), comboStage))
     {
@@ -326,12 +329,40 @@ void EnemyAttackState::Enter()
         return;
     }
 
-    enemy->OnSelectedActionStartedSuccessfully();
+    if (!isJumpAttack)
+        enemy->OnSelectedActionStartedSuccessfully();
 }
 
 void EnemyAttackState::Execute(float deltaTime)
 {
     const BossAttackType attackType = enemy->GetSelectedAttackType();
+
+    if (attackType == BossAttackType::JumpAttack && comboStage == 0)
+    {
+        enemy->StopAIMovement();
+        const BossTargetContext context = enemy->BuildTargetContext();
+        if (context.valid)
+        {
+            enemy->RotateTowardsPlayer(
+                context.directionToPlayer, enemy->GetTurnSpeed(), deltaTime);
+        }
+
+        if (enemy->GetBodyAnimationController()->IsPlayAnimation())
+            return;
+
+        enemy->StartAttack();
+        stageStartHitCount = enemy->GetCurrentAttackHitCount();
+        ++comboStage;
+        if (!enemy->PlayAttackStage(attackType, comboStage))
+        {
+            enemy->OnSelectedActionStartFailed();
+            owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+            return;
+        }
+
+        enemy->OnSelectedActionStartedSuccessfully();
+        return;
+    }
 
     if (attackType == BossAttackType::DashAttack && comboStage == 0)
     {

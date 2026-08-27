@@ -1,0 +1,15 @@
+{
+    "animationClip": 25,
+    "animationName": "Pre_Stampede_0",
+    "events": [
+        {
+            "parameter": "boss_head_shake",
+            "time": 0.8516482710838318,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

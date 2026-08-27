@@ -135,6 +135,9 @@ void AnimationController::OnUpdate(const float deltaTime)
                 .at(animationClip)
                 .duration;
 
+            if (playbackEndTime >= 0.0f)
+                normalAnimationDuration = (std::min)(normalAnimationDuration, playbackEndTime);
+
             if (normalAnimationDuration >
                 FLT_EPSILON &&
                 animationTime >=
@@ -316,15 +319,18 @@ void AnimationController::OnUpdate(const float deltaTime)
             target_->model->Animate(this->animationClip, animationTime, finalNodes);
 
             const float duration = target_->model->animations.at(animationClip).duration;
+            const float effectiveDuration = playbackEndTime >= 0.0f
+                ? (std::min)(duration, playbackEndTime)
+                : duration;
             if (requestStopLoop && normalAnimationLoopedThisFrame)
             {
                 isAnimationLoop = false;
                 requestStopLoop = false;
                 isAnimationFinished = true;
             }
-            else if (!isAnimationLoop && animationTime >= duration)
+            else if (!isAnimationLoop && animationTime >= effectiveDuration)
             {
-                animationTime = duration;
+                animationTime = effectiveDuration;
                 isAnimationFinished = true;
             }
         }
@@ -504,6 +510,7 @@ void AnimationController::CaptureEditorRuntimeSnapshot()
 {
     editorRuntimeSnapshot.valid = true;
     editorRuntimeSnapshot.animationTime = animationTime;
+    editorRuntimeSnapshot.playbackEndTime = playbackEndTime;
     editorRuntimeSnapshot.prevAnimationTime = prevAnimationTime;
     editorRuntimeSnapshot.animationClip = animationClip;
     editorRuntimeSnapshot.animationNextClip = animationNextClip;
@@ -536,6 +543,7 @@ void AnimationController::EndEditorPreview()
         return;
 
     animationTime = editorRuntimeSnapshot.animationTime;
+    playbackEndTime = editorRuntimeSnapshot.playbackEndTime;
     prevAnimationTime = editorRuntimeSnapshot.prevAnimationTime;
     animationClip = editorRuntimeSnapshot.animationClip;
     animationNextClip = editorRuntimeSnapshot.animationNextClip;
@@ -779,6 +787,7 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
 
     animationTime = requestedAnimationTime;
     prevAnimationTime = requestedAnimationTime;
+    playbackEndTime = -1.0f;
 
     animationNextClip = requestedClip;
 
@@ -808,6 +817,30 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
 }
 
 // ルートモーションをリセットする
+bool AnimationController::SetPlaybackRange(float startTime, float endTime)
+{
+    if (!target_ || !target_->model || isAnimationLoop)
+        return false;
+
+    const size_t clip = transitionState == AnimationTransitionState::Completed
+        ? animationClip
+        : animationNextClip;
+    if (clip >= target_->model->animations.size())
+        return false;
+
+    const float duration = target_->model->animations.at(clip).duration;
+    const float clampedStart = std::clamp(startTime, 0.0f, duration);
+    const float clampedEnd = std::clamp(endTime, 0.0f, duration);
+    if (clampedEnd <= clampedStart)
+        return false;
+
+    animationTime = clampedStart;
+    prevAnimationTime = clampedStart;
+    playbackEndTime = clampedEnd;
+    resetRootMotionDelta = true;
+    return true;
+}
+
 void AnimationController::ResetRootMotion(int animationClip)
 {
     this->isAnimationFinished = false;
@@ -815,6 +848,7 @@ void AnimationController::ResetRootMotion(int animationClip)
     this->animationClip = animationClip;
     prevAnimationTime = 0.0f;
     animationTime = 0;
+    playbackEndTime = -1.0f;
     target_->model->Animate(animationClip, 0, finalNodes);
     InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
     previousPosition = { node.globalTransform._41, node.globalTransform._42, node.globalTransform._43 }; // グローバル空間
