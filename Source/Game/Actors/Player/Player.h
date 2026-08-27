@@ -76,7 +76,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        maxHp = 10000;
+        //maxHp = 10000;
         hp = maxHp;
     }
 

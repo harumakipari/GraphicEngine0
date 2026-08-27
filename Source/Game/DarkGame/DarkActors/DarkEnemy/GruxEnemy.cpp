@@ -1127,14 +1127,14 @@ void GruxEnemy::DrawImGuiDetails()
     float attackValidMax = 0.0f;
     const bool hasAttackValidRange =
         GetIntentAttackValidRange(attackValidMin, attackValidMax);
+    const float effectiveAttackValidMin =
+        activeIntentStep == BossIntentStep::AttackPending ? 0.0f : attackValidMin;
     const bool attackValid = hasAttackValidRange && targetContext.valid &&
-        targetContext.xzDistance >= attackValidMin &&
+        targetContext.xzDistance >= effectiveAttackValidMin &&
         targetContext.xzDistance <= attackValidMax;
     if (activeIntentStep == BossIntentStep::AttackPending && hasAttackValidRange)
     {
-        if (targetContext.xzDistance < attackValidMin)
-            activeIntentNextAction = "Reposition: Too Close For Attack";
-        else if (targetContext.xzDistance > attackValidMax)
+        if (targetContext.xzDistance > attackValidMax)
             activeIntentNextAction = "Reposition: Too Far For Attack";
         else
             activeIntentNextAction = activeIntentGoal;
@@ -1205,8 +1205,11 @@ void GruxEnemy::DrawImGuiDetails()
         intentPositioningAttemptCount, maxIntentPositioningAttempts);
     if (hasAttackValidRange)
     {
-        ImGui::Text("Attack Valid Range: %.2f - %.2f m",
-            attackValidMin, attackValidMax);
+        ImGui::Text("%s: %.2f - %.2f m",
+            activeIntentStep == BossIntentStep::AttackPending
+                ? "AttackPending Effective Valid Range"
+                : "Attack Valid Range",
+            effectiveAttackValidMin, attackValidMax);
         ImGui::Text("Current Player Distance: %.2f m", targetContext.xzDistance);
         ImGui::Text("Attack Valid: %s", attackValid ? "YES" : "NO");
     }
@@ -3273,7 +3276,7 @@ bool GruxEnemy::IsAttackPendingGoalAction(
     float validMin = 0.0f;
     float validMax = 0.0f;
     if (!GetIntentAttackValidRange(validMin, validMax) ||
-        context.xzDistance < validMin || context.xzDistance > validMax)
+        context.xzDistance > validMax)
         return false;
 
     return (*activeIntent == BossIntentType::DashAttackPlan &&
@@ -3297,8 +3300,6 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
         float validMax = 0.0f;
         if (GetIntentAttackValidRange(validMin, validMax))
         {
-            if (context.xzDistance < validMin)
-                return actionType == BossActionType::Retreat;
             if (context.xzDistance > validMax)
                 return actionType == BossActionType::Approach;
             return IsAttackPendingGoalAction(actionType, context);
@@ -3366,7 +3367,7 @@ bool GruxEnemy::ShouldFailIntentForPositioningRetryLimit(
     float validMin = 0.0f;
     float validMax = 0.0f;
     return GetIntentAttackValidRange(validMin, validMax) &&
-        (context.xzDistance < validMin || context.xzDistance > validMax);
+        context.xzDistance > validMax;
 }
 
 void GruxEnemy::UpdateActionCandidateFlags(const BossTargetContext& context)
@@ -3522,14 +3523,13 @@ bool GruxEnemy::SelectCombatAction()
     {
         float validMin = 0.0f;
         float validMax = 0.0f;
-        if (GetIntentAttackValidRange(validMin, validMax))
+        if (GetIntentAttackValidRange(validMin, validMax) &&
+            context.xzDistance > validMax)
         {
-            if (context.xzDistance < validMin)
-                intentRepositionReason = "Too Close For Attack";
-            else if (context.xzDistance > validMax)
-                intentRepositionReason = "Too Far For Attack";
+            intentRepositionReason = "Too Far For Attack";
         }
     }
+
 
     // 現在の距離領域に基づいて、候補となる行動を更新する
     UpdateActionCandidateFlags(context);
