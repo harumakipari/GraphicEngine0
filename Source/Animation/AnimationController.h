@@ -233,6 +233,18 @@ public:
     // ‘S‚Ä‚ÌNotifyAssets‚ğƒ[ƒh‚·‚é
     void LoadAllNotifyAssets(const std::string& ownerName);
 
+    enum class RuntimeDangerObbSaveResult
+    {
+        Saved,
+        FileNotFound,
+        DangerWindowNotFound,
+        JsonParseFailed,
+        JsonWriteFailed,
+    };
+    RuntimeDangerObbSaveResult SaveDangerObbForRuntimeTuning(
+        size_t clip, size_t stateIndex, const AnimationNotifyState& state,
+        std::string& outFilePath);
+
     const std::vector<size_t>& GetAnimationAssetOrderForRuntimeTuning() const
     {
         return animationAssetOrder;

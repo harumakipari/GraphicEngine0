@@ -2799,6 +2799,128 @@ const std::string AnimationController::GetBlendSpaceAnimationName(MoveDirection 
 
 
 
+AnimationController::RuntimeDangerObbSaveResult AnimationController::SaveDangerObbForRuntimeTuning(
+    size_t clip, size_t stateIndex, const AnimationNotifyState& state,
+    std::string& outFilePath)
+{
+    namespace fs = std::filesystem;
+    using json = nlohmann::json;
+
+    const AnimationNotifyAsset* asset = GetNotifyAssetForRuntimeTuning(clip);
+    if (!asset)
+    {
+        outFilePath.clear();
+        return RuntimeDangerObbSaveResult::DangerWindowNotFound;
+    }
+
+    outFilePath = "./Data/Animation/" + ownerName + "/" + asset->animationName + ".json";
+    if (!fs::exists(outFilePath))
+        return RuntimeDangerObbSaveResult::FileNotFound;
+
+    std::ifstream ifs(outFilePath, std::ios::binary);
+    if (!ifs.is_open())
+        return RuntimeDangerObbSaveResult::FileNotFound;
+    const std::string original((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+    ifs.close();
+
+    const bool hasUtf8Bom = original.size() >= 3 &&
+        static_cast<unsigned char>(original[0]) == 0xEF &&
+        static_cast<unsigned char>(original[1]) == 0xBB &&
+        static_cast<unsigned char>(original[2]) == 0xBF;
+    const bool usesCrLf = original.find("\r\n") != std::string::npos;
+    const bool hasFinalNewline = !original.empty() && original.back() == '\n';
+
+    json root;
+    try
+    {
+        root = json::parse(original.begin() + (hasUtf8Bom ? 3 : 0), original.end());
+    }
+    catch (const json::parse_error&)
+    {
+        return RuntimeDangerObbSaveResult::JsonParseFailed;
+    }
+
+    if (!root.contains("states") || !root["states"].is_array())
+        return RuntimeDangerObbSaveResult::DangerWindowNotFound;
+
+    auto matchesSelectedDanger = [&state](const json& jsonState)
+    {
+        if (!jsonState.is_object() || jsonState.value("type", std::string{}) != "DangerWindow")
+            return false;
+        constexpr float timeTolerance = 0.0001f;
+        const float start = jsonState.value("startTime", -FLT_MAX);
+        const float end = jsonState.value("endTime", -FLT_MAX);
+        return std::abs(start - state.startTime) <= timeTolerance &&
+            std::abs(end - state.endTime) <= timeTolerance;
+    };
+
+    size_t jsonStateIndex = static_cast<size_t>(-1);
+    if (stateIndex < root["states"].size() && matchesSelectedDanger(root["states"][stateIndex]))
+    {
+        jsonStateIndex = stateIndex;
+    }
+    else
+    {
+        size_t matchCount = 0;
+        for (size_t index = 0; index < root["states"].size(); ++index)
+        {
+            if (!matchesSelectedDanger(root["states"][index]))
+                continue;
+            jsonStateIndex = index;
+            ++matchCount;
+        }
+        if (matchCount != 1)
+            return RuntimeDangerObbSaveResult::DangerWindowNotFound;
+    }
+
+    json& targetState = root["states"][jsonStateIndex];
+    targetState["justDodgeAreaOffset"] = json::array({
+        state.justDodgeAreaOffset.x, state.justDodgeAreaOffset.y, state.justDodgeAreaOffset.z });
+    targetState["justDodgeAreaSize"] = json::array({
+        state.justDodgeAreaSize.x, state.justDodgeAreaSize.y, state.justDodgeAreaSize.z });
+
+    std::string output = root.dump(4);
+    if (usesCrLf)
+    {
+        std::string crlfOutput;
+        crlfOutput.reserve(output.size() + output.size() / 20);
+        for (const char character : output)
+        {
+            if (character == '\n')
+                crlfOutput.push_back('\r');
+            crlfOutput.push_back(character);
+        }
+        output = std::move(crlfOutput);
+    }
+    if (hasFinalNewline)
+        output += usesCrLf ? "\r\n" : "\n";
+    if (hasUtf8Bom)
+        output.insert(0, "\xEF\xBB\xBF", 3);
+
+    const fs::path temporaryPath = fs::path(outFilePath).concat(".dangerobb.tmp");
+    {
+        std::ofstream ofs(temporaryPath, std::ios::binary | std::ios::trunc);
+        if (!ofs.is_open())
+            return RuntimeDangerObbSaveResult::JsonWriteFailed;
+        ofs.write(output.data(), static_cast<std::streamsize>(output.size()));
+        ofs.flush();
+        if (!ofs.good())
+        {
+            ofs.close();
+            std::error_code cleanupError;
+            fs::remove(temporaryPath, cleanupError);
+            return RuntimeDangerObbSaveResult::JsonWriteFailed;
+        }
+    }
+
+    std::error_code writeError;
+    fs::copy_file(temporaryPath, outFilePath, fs::copy_options::overwrite_existing, writeError);
+    std::error_code cleanupError;
+    fs::remove(temporaryPath, cleanupError);
+    return writeError
+        ? RuntimeDangerObbSaveResult::JsonWriteFailed
+        : RuntimeDangerObbSaveResult::Saved;
+}
 // NotifyAsset‚ð•Û‘¶‚·‚é
 void AnimationController::SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset)
 {

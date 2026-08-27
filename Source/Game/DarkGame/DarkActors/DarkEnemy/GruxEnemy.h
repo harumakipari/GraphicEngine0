@@ -410,6 +410,10 @@ private:
         DirectX::XMFLOAT3 fullSize{};
     };
     std::unordered_map<uint64_t, DangerObbInitialValue> initialDangerObbSettings;
+    std::unordered_map<uint64_t, DangerObbInitialValue> savedDangerObbSettings;
+    std::string dangerObbSaveStatus = "Not saved this session";
+    std::string dangerObbSavePath;
+    bool dangerObbLastSaveSucceeded = false;
     size_t dangerObbSelectedClip = static_cast<size_t>(-1);
     size_t dangerObbSelectedStateIndex = 0;
     const AnimationNotifyState* activeDangerNotifyState = nullptr;

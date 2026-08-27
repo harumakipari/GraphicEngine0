@@ -889,6 +889,53 @@ void GruxEnemy::DrawImGuiDetails()
 
             const uint64_t key = (static_cast<uint64_t>(dangerObbSelectedClip) << 32) |
                 static_cast<uint64_t>(dangerObbSelectedStateIndex);
+            const auto savedIt = savedDangerObbSettings.find(key);
+            const bool modified = savedIt == savedDangerObbSettings.end() ||
+                savedIt->second.centerOffset.x != selectedState->justDodgeAreaOffset.x ||
+                savedIt->second.centerOffset.y != selectedState->justDodgeAreaOffset.y ||
+                savedIt->second.centerOffset.z != selectedState->justDodgeAreaOffset.z ||
+                savedIt->second.fullSize.x != selectedState->justDodgeAreaSize.x ||
+                savedIt->second.fullSize.y != selectedState->justDodgeAreaSize.y ||
+                savedIt->second.fullSize.z != selectedState->justDodgeAreaSize.z;
+            ImGui::TextColored(modified
+                ? ImVec4(1.0f, 0.75f, 0.2f, 1.0f)
+                : ImVec4(0.35f, 1.0f, 0.45f, 1.0f),
+                "Status: %s", modified ? "Modified / Unsaved" : "Saved");
+
+            if (ImGui::Button("Save Selected Danger OBB") && controller)
+            {
+                const auto result = controller->SaveDangerObbForRuntimeTuning(
+                    dangerObbSelectedClip, dangerObbSelectedStateIndex,
+                    *selectedState, dangerObbSavePath);
+                dangerObbLastSaveSucceeded = result ==
+                    AnimationController::RuntimeDangerObbSaveResult::Saved;
+                switch (result)
+                {
+                case AnimationController::RuntimeDangerObbSaveResult::Saved:
+                    dangerObbSaveStatus = "Saved";
+                    savedDangerObbSettings[key] = {
+                        selectedState->justDodgeAreaOffset, selectedState->justDodgeAreaSize };
+                    break;
+                case AnimationController::RuntimeDangerObbSaveResult::FileNotFound:
+                    dangerObbSaveStatus = "Save Failed: File not found";
+                    break;
+                case AnimationController::RuntimeDangerObbSaveResult::DangerWindowNotFound:
+                    dangerObbSaveStatus = "Save Failed: DangerWindow not found or does not match";
+                    break;
+                case AnimationController::RuntimeDangerObbSaveResult::JsonParseFailed:
+                    dangerObbSaveStatus = "Save Failed: JSON parse failed";
+                    break;
+                case AnimationController::RuntimeDangerObbSaveResult::JsonWriteFailed:
+                    dangerObbSaveStatus = "Save Failed: JSON write failed";
+                    break;
+                }
+            }
+            ImGui::TextColored(dangerObbLastSaveSucceeded
+                ? ImVec4(0.35f, 1.0f, 0.45f, 1.0f)
+                : ImVec4(1.0f, 0.45f, 0.3f, 1.0f),
+                "Save Status: %s", dangerObbSaveStatus.c_str());
+            if (!dangerObbSavePath.empty())
+                ImGui::TextWrapped("File: %s", dangerObbSavePath.c_str());
             if (ImGui::Button("Reset Selected Danger OBB"))
             {
                 if (const auto initialIt = initialDangerObbSettings.find(key);
@@ -925,7 +972,7 @@ void GruxEnemy::DrawImGuiDetails()
                 }
                 RefreshActiveDangerAreaFromNotify();
             }
-            ImGui::TextDisabled("Runtime only. Persist by copying Offset/Full Size to Data/Animation/GruxEnemy/%s.json.",
+            ImGui::TextDisabled("Reset changes Runtime only. JSON changes only when Save Selected is pressed: %s.json",
                 selectedName.c_str());
         }
         else
@@ -2540,6 +2587,7 @@ void GruxEnemy::RefreshActiveHitBoxesFromNotifyStates()
 void GruxEnemy::CaptureInitialDangerObbSettings()
 {
     initialDangerObbSettings.clear();
+    savedDangerObbSettings.clear();
     const auto controller = GetBodyAnimationController();
     if (!controller)
         return;
@@ -2557,6 +2605,7 @@ void GruxEnemy::CaptureInitialDangerObbSettings()
             const uint64_t key = (static_cast<uint64_t>(clip) << 32) |
                 static_cast<uint64_t>(stateIndex);
             initialDangerObbSettings[key] = { state.justDodgeAreaOffset, state.justDodgeAreaSize };
+            savedDangerObbSettings[key] = initialDangerObbSettings[key];
             if (dangerObbSelectedClip == static_cast<size_t>(-1))
             {
                 dangerObbSelectedClip = clip;
