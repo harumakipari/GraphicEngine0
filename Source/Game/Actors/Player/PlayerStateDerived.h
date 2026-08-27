@@ -177,9 +177,7 @@ private:
     bool rushComboAdvanced = false;
     int queuedAttackCount = 0;
     int comboIndex = 0; 
-    bool rushInputWindowObserved = false;
-    bool rushInputGraceActive = false;
-    float rushInputGraceTimer = 0.0f;
+    bool rushTransitionWindowObserved = false;
 
     std::string currentAttackAnimation = "Rush_Attack_Fast_A";
 

@@ -196,7 +196,6 @@ public:
     void EndRushAttackInput();
 
     int GetMaxRushAttackCount() const { return std::clamp(maxRushAttackCount, 1, 7); }
-    float GetRushInputGracePeriod() const { return rushInputGracePeriod; }
 
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
@@ -297,7 +296,6 @@ public:
     int normalAttackDamage = 1;
     float rushDamageMultiplier = 2.0f;
     float finalRushDamageMultiplier = 3.0f;
-    float rushInputGracePeriod = 0.5f;
     int maxRushAttackCount = 7;
 
     float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数

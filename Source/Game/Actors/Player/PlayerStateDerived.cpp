@@ -495,6 +495,7 @@ void PlayerRushState::Enter()
 
 void PlayerRushState::Execute(float deltaTime)
 {
+    (void)deltaTime;
     if (player->rushTarget.expired())
     {
         player->ForceResetBossSlow();
@@ -522,18 +523,6 @@ void PlayerRushState::Execute(float deltaTime)
 
 
 
-    // CaptureActionRequest is the single source of Rush Attack input.
-    if (player->bufferCommand.type == Player::ActionType::Attack)
-    {
-        queuedAttackCount++;
-        queuedAttackCount = std::min<int>(
-            queuedAttackCount,
-            static_cast<int>(rushCombo.size()) - comboIndex - 1);
-        player->ConsumeActionRequest(Player::ActionType::Attack);
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[Rush][AttackQueued] comboIndex=" + std::to_string(comboIndex) +
-            " queuedAttackCount=" + std::to_string(queuedAttackCount));
-    }
 
     switch (phase)
     {
@@ -546,15 +535,35 @@ void PlayerRushState::Execute(float deltaTime)
         }
         break;
     case RushPhase::Attack:
-        if (player->inputWindow)
+    {
+        const bool animationPlaying =
+            player->GetBodyAnimationController()->IsPlayAnimation();
+        if (player->transitionWindow)
         {
-            rushInputWindowObserved = true;
+            rushTransitionWindowObserved = true;
         }
-        else if (rushInputWindowObserved && !rushInputGraceActive &&
-            !rushComboAdvanced && !IsFinalRushAttack())
+
+        const bool lateInputGraceActive =
+            rushTransitionWindowObserved && animationPlaying &&
+            queuedAttackCount == 0 && !IsFinalRushAttack();
+        const bool acceptsRushInput =
+            !IsFinalRushAttack() &&
+            (player->inputWindow || lateInputGraceActive);
+        if (player->bufferCommand.type == Player::ActionType::Attack)
         {
-            rushInputGraceActive = true;
-            rushInputGraceTimer = (std::max)(0.0f, player->GetRushInputGracePeriod());
+            if (acceptsRushInput && queuedAttackCount == 0)
+            {
+                queuedAttackCount = 1;
+                player->ConsumeActionRequest(Player::ActionType::Attack);
+                Logger::Log(Logger::LogCategory::Gameplay,
+                    "[Rush][AttackQueued] comboIndex=" + std::to_string(comboIndex) +
+                    " lateInput=" + std::string(lateInputGraceActive ? "true" : "false"));
+            }
+            else if (IsFinalRushAttack())
+            {
+                // The final Rush cannot reserve an eighth attack.
+                player->ConsumeActionRequest(Player::ActionType::Attack);
+            }
         }
 
         if (player->transitionWindow && !rushComboAdvanced)
@@ -567,32 +576,24 @@ void PlayerRushState::Execute(float deltaTime)
             else if (queuedAttackCount > 0)
             {
                 AdvanceRushCombo();
+                break;
             }
         }
 
-        if (rushInputGraceActive && !rushComboAdvanced)
+        if (!animationPlaying && phase == RushPhase::Attack)
         {
-            if (queuedAttackCount > 0)
+            if (queuedAttackCount > 0 && rushTransitionWindowObserved &&
+                !IsFinalRushAttack())
             {
                 AdvanceRushCombo();
             }
             else
             {
-                rushInputGraceTimer -= deltaTime;
-                if (rushInputGraceTimer <= 0.0f)
-                {
-                    rushInputGraceActive = false;
-                    phase = RushPhase::Finished;
-                }
+                phase = RushPhase::Finished;
             }
         }
-
-        if (!player->GetBodyAnimationController()->IsPlayAnimation() &&
-            !rushInputGraceActive)
-        {
-            phase = RushPhase::Finished;
-        }
         break;
+    }
     case RushPhase::Finished:
         if (!player->GetBodyAnimationController()->IsPlayAnimation())
         {
@@ -608,6 +609,10 @@ void PlayerRushState::Exit()
     queuedAttackCount = 0;
     rushComboAdvanced = false;
     ResetRushInputGrace();
+    if (player->bufferCommand.type == Player::ActionType::Attack)
+    {
+        player->ConsumeActionRequest(Player::ActionType::Attack);
+    }
     phase = RushPhase::DashToTarget;
     currentAttackAnimation = "Rush_Attack_Fast_A";
     elapsedTime = 0.0f;
@@ -650,9 +655,7 @@ bool PlayerRushState::IsFinalRushAttack() const
 
 void PlayerRushState::ResetRushInputGrace()
 {
-    rushInputWindowObserved = false;
-    rushInputGraceActive = false;
-    rushInputGraceTimer = 0.0f;
+    rushTransitionWindowObserved = false;
 }
 
 
