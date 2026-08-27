@@ -290,6 +290,8 @@ void GruxEnemy::Update(float deltaTime)
     aiDebugTargetContext = BuildTargetContext();
     if (showBossAIDebug)
         DrawBossAIDebugWorld(aiDebugTargetContext);
+    if (positioningWorldDebug)
+        DrawPositioningDebugWorld();
 #endif
 
     SetScale({ enemyScale,enemyScale,enemyScale });
@@ -776,6 +778,55 @@ void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
 #endif
 }
 
+void GruxEnemy::DrawPositioningDebugWorld() const
+{
+#ifdef USE_IMGUI
+    const PositioningDebugSnapshot& snapshot = positioningDebugActive
+        ? currentPositioningDebug
+        : lastPositioningDebug;
+    const float debugY = snapshot.valid ? snapshot.startBossPosition.y + 0.12f : GetPosition().y + 0.12f;
+    const auto drawBounds = [debugY](float minX, float maxX, float minZ, float maxZ,
+        const DirectX::XMFLOAT4& color)
+    {
+        const DirectX::XMFLOAT3 a{ minX, debugY, minZ };
+        const DirectX::XMFLOAT3 b{ maxX, debugY, minZ };
+        const DirectX::XMFLOAT3 c{ maxX, debugY, maxZ };
+        const DirectX::XMFLOAT3 d{ minX, debugY, maxZ };
+        DebugRender::DrawLine(a, b, color, 0.0f, true);
+        DebugRender::DrawLine(b, c, color, 0.0f, true);
+        DebugRender::DrawLine(c, d, color, 0.0f, true);
+        DebugRender::DrawLine(d, a, color, 0.0f, true);
+    };
+
+    drawBounds(bossRoomMinX, bossRoomMaxX, bossRoomMinZ, bossRoomMaxZ,
+        { 0.45f, 0.45f, 0.5f, 1.0f });
+    constexpr float maximumMargin =
+        (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
+            (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
+    const float margin = std::clamp(bossRoomSafetyMargin, 0.0f, maximumMargin);
+    drawBounds(bossRoomMinX + margin, bossRoomMaxX - margin,
+        bossRoomMinZ + margin, bossRoomMaxZ - margin,
+        { 0.2f, 1.0f, 0.45f, 1.0f });
+
+    if (!snapshot.valid)
+        return;
+    DirectX::XMFLOAT3 start = snapshot.startBossPosition;
+    DirectX::XMFLOAT3 desired = snapshot.desiredTargetPosition;
+    DirectX::XMFLOAT3 target = snapshot.clampedTargetPosition;
+    DirectX::XMFLOAT3 current = positioningDebugActive ? GetPosition() : snapshot.currentPosition;
+    start.y = desired.y = target.y = current.y = debugY + 0.08f;
+    DebugRender::DrawSphere(start, 0.22f, { 0.2f, 0.8f, 1.0f, 1.0f }, 0.0f, true);
+    DebugRender::DrawSphere(desired, 0.22f, { 1.0f, 0.2f, 0.9f, 1.0f }, 0.0f, true);
+    DebugRender::DrawSphere(target, 0.28f, { 1.0f, 0.25f, 0.2f, 1.0f }, 0.0f, true);
+    DebugRender::DrawSphere(current, 0.18f, { 0.25f, 1.0f, 0.35f, 1.0f }, 0.0f, true);
+    DebugRender::DrawLine(start, desired, { 1.0f, 0.2f, 0.9f, 1.0f }, 0.0f, true);
+    DebugRender::DrawLine(desired, target, { 1.0f, 0.45f, 0.15f, 1.0f }, 0.0f, true);
+    DebugRender::DrawLine(start, target, { 0.2f, 0.8f, 1.0f, 1.0f }, 0.0f, true);
+    DebugRender::DrawLine(current, target, { 1.0f, 0.75f, 0.15f, 1.0f }, 0.0f, true);
+#else
+    (void)this;
+#endif
+}
 //　ボスAIのImGui描画
 
 
@@ -1072,6 +1123,24 @@ void GruxEnemy::DrawImGuiDetails()
 
 
 
+    float attackValidMin = 0.0f;
+    float attackValidMax = 0.0f;
+    const bool hasAttackValidRange =
+        GetIntentAttackValidRange(attackValidMin, attackValidMax);
+    const bool attackValid = hasAttackValidRange && targetContext.valid &&
+        targetContext.xzDistance >= attackValidMin &&
+        targetContext.xzDistance <= attackValidMax;
+    if (activeIntentStep == BossIntentStep::AttackPending && hasAttackValidRange)
+    {
+        if (targetContext.xzDistance < attackValidMin)
+            activeIntentNextAction = "Reposition: Too Close For Attack";
+        else if (targetContext.xzDistance > attackValidMax)
+            activeIntentNextAction = "Reposition: Too Far For Attack";
+        else
+            activeIntentNextAction = activeIntentGoal;
+    }
+
+
     ImGui::SeparatorText("Selected Action");
     if (hasSelectedActionDebug)
         ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.25f, 1.0f), "-> %s", actionTypes[static_cast<int>(selectedActionType)]);
@@ -1131,6 +1200,21 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Range Status: %s", activeRangeStatusName);
     ImGui::Text("Next Action: %s", activeIntentNextAction);
     ImGui::Text("Positioning Attempted: %s", intentPositioningAttempted ? "Yes" : "No");
+    ImGui::Text("Positioning Completed: %s", intentPositioningCompleted ? "YES" : "NO");
+    ImGui::Text("Positioning Attempts: %d / %d",
+        intentPositioningAttemptCount, maxIntentPositioningAttempts);
+    if (hasAttackValidRange)
+    {
+        ImGui::Text("Attack Valid Range: %.2f - %.2f m",
+            attackValidMin, attackValidMax);
+        ImGui::Text("Current Player Distance: %.2f m", targetContext.xzDistance);
+        ImGui::Text("Attack Valid: %s", attackValid ? "YES" : "NO");
+    }
+    else
+    {
+        ImGui::TextDisabled("Attack Valid Range: Not used for this Intent");
+    }
+    ImGui::Text("Reposition Reason: %s", intentRepositionReason.c_str());
     ImGui::Text("Intent Lifecycle: %s", intentLifecycleState.c_str());
     ImGui::Text("Lifecycle Reason: %s", intentLifecycleReason.c_str());
     ImGui::TextWrapped("Lifecycle Trace: %s", intentLifecycleTrace.c_str());
@@ -1232,20 +1316,124 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::TreePop();
     }
 
-    ImGui::SeparatorText("Positioning Runtime");
-    ImGui::Text("Active: %s", positioningDebugActive ? "Yes" : "No");
-    ImGui::Text("Positioning Action: %s", actionTypes[static_cast<int>(activePositioningDebugData.actionType)]);
-    ImGui::Text("Direction Type: %s", activePositioningDebugData.direction == BossPositioningDirection::TowardPlayer ? "TowardPlayer" : "AwayFromPlayer");
-    ImGui::Text("Completion Type: %s", activePositioningDebugData.completionType == BossPositioningCompletionType::TargetDistance ? "TargetDistance" : "TravelDistance");
-    ImGui::Text("Current Player Distance: %.2f", targetContext.xzDistance);
-    ImGui::Text("Target Distance: %.2f", activePositioningDebugData.targetDistance);
-    ImGui::Text("Traveled Distance: %.2f", positioningDebugTraveledDistance);
-    ImGui::Text("Max Move Distance: %.2f", activePositioningDebugData.maxMoveDistance);
-    ImGui::Text("Move Speed: %.2f", activePositioningDebugData.moveSpeed);
-    ImGui::Text("Elapsed Time: %.2f", positioningDebugElapsedTime);
-    ImGui::Text("Timeout: %.2f", activePositioningDebugData.timeout);
-    ImGui::Text("Stuck Timer: %.2f", positioningDebugStuckTimer);
-    ImGui::Text("Positioning End Reason: %s", positioningEndReason.c_str());
+const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan" };
+    const auto drawPosition = [](const char* label, const DirectX::XMFLOAT3& position)
+    {
+        ImGui::Text("%s: (%.2f, %.2f, %.2f)", label, position.x, position.y, position.z);
+    };
+    const auto drawPositioningSnapshot = [&](const PositioningDebugSnapshot& snapshot, bool active)
+    {
+        if (!snapshot.valid)
+        {
+            ImGui::TextDisabled("No positioning record");
+            return;
+        }
+        const char* intentName = snapshot.intent
+            ? positioningIntentNames[static_cast<int>(*snapshot.intent)]
+            : "None";
+        ImGui::Text("Intent: %s", intentName);
+        ImGui::Text("Action: %s", actionTypes[static_cast<int>(snapshot.data.actionType)]);
+        ImGui::Text("Preferred Range: %.2f - %.2f m", snapshot.preferredMin, snapshot.preferredMax);
+        ImGui::Text("Start Player Distance: %.3f m", snapshot.startPlayerDistance);
+        ImGui::Text("Current/End Player Distance: %.3f m", snapshot.currentPlayerDistance);
+        ImGui::Text("Target Distance: %.3f m", snapshot.data.targetDistance);
+        drawPosition("Start Boss Position", snapshot.startBossPosition);
+        drawPosition("Start Player Position", snapshot.startPlayerPosition);
+        drawPosition("Desired Target Before Clamp", snapshot.desiredTargetPosition);
+        drawPosition("Positioning Target After Clamp", snapshot.clampedTargetPosition);
+        ImGui::Text("Was Clamped: %s", snapshot.targetWasClamped ? "YES" : "NO");
+        ImGui::Text("Clamp Distance: %.3f m", snapshot.targetClampDistance);
+        ImGui::Text("Available Move Distance: %.3f m", snapshot.availableMoveDistance);
+        ImGui::TextColored(snapshot.availableMoveDistance < minimumPositioningMoveDistance
+            ? ImVec4(1.0f, 0.45f, 0.2f, 1.0f) : ImVec4(0.5f, 1.0f, 0.5f, 1.0f),
+            "Below Minimum Diagnostic Distance: %s (%.2f m)",
+            snapshot.availableMoveDistance < minimumPositioningMoveDistance ? "YES" : "NO",
+            minimumPositioningMoveDistance);
+        drawPosition(active ? "Current Position" : "End Position", snapshot.currentPosition);
+        ImGui::Text("Planned Move: %.3f m", snapshot.plannedMoveDistance);
+        ImGui::Text("Actual Move (Start -> Current): %.3f m", snapshot.actualMoveDistance);
+        ImGui::Text("Traveled Path: %.3f m", snapshot.traveledPathDistance);
+        ImGui::Text("Target Remaining: %.3f m", snapshot.remainingDistance);
+        ImGui::Text("Requested Move Direction: (%.3f, %.3f, %.3f)",
+            snapshot.requestedMoveDirection.x, snapshot.requestedMoveDirection.y,
+            snapshot.requestedMoveDirection.z);
+        ImGui::Text("Requested Speed: %.3f m/s", snapshot.data.moveSpeed);
+        ImGui::Text("Input Magnitude: %.3f", snapshot.inputMagnitude);
+        ImGui::Text("Actual Move This Frame: %.4f m", snapshot.frameMovement);
+        ImGui::Text("Actual Speed (Position Delta): %.3f m/s", snapshot.actualSpeed);
+        if (characterMovementComponent)
+            ImGui::Text("Movement Component Actual Speed: %.3f m/s",
+                characterMovementComponent->GetActualHorizontalSpeed());
+        ImGui::Text("Positioning Time: %.3f / %.3f sec", snapshot.elapsedTime, snapshot.data.timeout);
+        ImGui::Text("Stuck: %.3f / %.3f sec (speed < %.3f m/s)",
+            snapshot.stuckTimer, snapshot.data.stuckTimeThreshold,
+            snapshot.data.stuckMovementThreshold);
+        ImGui::Text("Safe Bounds at Start: X %.2f - %.2f, Z %.2f - %.2f (Margin %.2f)",
+            snapshot.safeMinX, snapshot.safeMaxX, snapshot.safeMinZ, snapshot.safeMaxZ,
+            snapshot.safetyMargin);
+        ImGui::Text("Target In BossRoom Safe Bounds: YES (clamped before use)");
+        ImGui::TextDisabled("Wall Hit/Normal: Unavailable; movement RayCast result is not exposed");
+        ImGui::Text("Rotation: RotateTowardsPlayer(requested move direction), %.1f deg/s", turnSpeed);
+        const auto controller = GetBodyAnimationController();
+        if (active)
+        {
+            ImGui::SeparatorText("Positioning Animation");
+            ImGui::Text("Actual Speed: %.3f m/s", positioningAnimationActualSpeed);
+            ImGui::Text("Animation State: %s", positioningAnimationMoving ? "Moving" : "Idle");
+            ImGui::Text("Move Start Threshold: %.3f m/s", positioningMoveStartSpeedThreshold);
+            ImGui::Text("Move Stop Threshold: %.3f m/s", positioningMoveStopSpeedThreshold);
+            ImGui::Text("Move Stop Timer: %.3f / %.3f sec",
+                positioningMoveStopTimer, positioningMoveStopDelay);
+            ImGui::Text("Current Animation: %s",
+                controller ? controller->GetCurrentAnimationName().c_str() : "None");
+        }
+        ImGui::Text("End Reason: %s", snapshot.endReason.c_str());
+    };
+
+    ImGui::SeparatorText("Boss Room Positioning");
+    ImGui::Text("BossRoom Bounds X: %.2f - %.2f", bossRoomMinX, bossRoomMaxX);
+    ImGui::Text("BossRoom Bounds Z: %.2f - %.2f", bossRoomMinZ, bossRoomMaxZ);
+    constexpr float maximumBossRoomMargin =
+        (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
+            (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
+    if (ImGui::DragFloat("Safety Margin", &bossRoomSafetyMargin, 0.05f,
+        0.0f, maximumBossRoomMargin, "%.2f m"))
+        bossRoomSafetyMargin = std::clamp(bossRoomSafetyMargin, 0.0f, maximumBossRoomMargin);
+    ImGui::DragFloat("Positioning Arrival Distance", &positioningArrivalDistance,
+        0.01f, 0.01f, 2.0f, "%.2f m");
+    positioningArrivalDistance = std::clamp(positioningArrivalDistance, 0.01f, 2.0f);
+    ImGui::DragFloat("Minimum Move Distance (Diagnostic Only)",
+        &minimumPositioningMoveDistance, 0.05f, 0.0f, 5.0f, "%.2f m");
+    minimumPositioningMoveDistance = (std::max)(0.0f, minimumPositioningMoveDistance);
+    ImGui::SeparatorText("Positioning Animation Tuning");
+    ImGui::DragFloat("Move Start Speed Threshold",
+        &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
+    positioningMoveStartSpeedThreshold =
+        std::clamp(positioningMoveStartSpeedThreshold, 0.01f, 10.0f);
+    ImGui::DragFloat("Move Stop Speed Threshold",
+        &positioningMoveStopSpeedThreshold, 0.01f, 0.0f,
+        positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
+    positioningMoveStopSpeedThreshold = std::clamp(
+        positioningMoveStopSpeedThreshold, 0.0f,
+        positioningMoveStartSpeedThreshold - 0.01f);
+    ImGui::DragFloat("Move Stop Delay", &positioningMoveStopDelay,
+        0.01f, 0.0f, 2.0f, "%.2f sec");
+    positioningMoveStopDelay = (std::max)(0.0f, positioningMoveStopDelay);
+    ImGui::Text("Safe X: %.2f - %.2f",
+        bossRoomMinX + bossRoomSafetyMargin, bossRoomMaxX - bossRoomSafetyMargin);
+    ImGui::Text("Safe Z: %.2f - %.2f",
+        bossRoomMinZ + bossRoomSafetyMargin, bossRoomMaxZ - bossRoomSafetyMargin);
+    ImGui::TextDisabled("Margin changes apply to the next Positioning target; active target stays fixed.");
+    ImGui::SeparatorText("Boss Positioning Debug");
+    ImGui::Checkbox("Positioning World Debug", &positioningWorldDebug);
+    ImGui::SeparatorText("Current Positioning");
+    ImGui::Text("Active: %s", positioningDebugActive ? "YES" : "NO");
+    if (positioningDebugActive)
+        drawPositioningSnapshot(currentPositioningDebug, true);
+    else
+        ImGui::TextDisabled("No active positioning; see Last Positioning below.");
+    ImGui::SeparatorText("Last Positioning");
+    drawPositioningSnapshot(lastPositioningDebug, false);
 
     ImGui::DragFloat("Attack Facing Angle", &attackFacingAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     ImGui::DragFloat("Turn Speed", &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
@@ -1909,14 +2097,14 @@ const BossPositioningData* GruxEnemy::GetPositioningDataForAction(BossActionType
 
 void GruxEnemy::BeginPositioning(const BossPositioningData& data)
 {
+    positioningAnimationMoving = false;
+    positioningMoveStopTimer = 0.0f;
+    positioningAnimationActualSpeed = 0.0f;
     const auto controller = GetBodyAnimationController();
-    const bool isPositioningLocomotionPlaying =
-        controller &&
-        controller->IsPlayAnimation() &&
-        controller->GetCurrentAnimationName() == "TravelMode_Fwd_0";
-
-    if (!isPositioningLocomotionPlaying)
-        PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
+    const bool isIdlePlaying = controller && controller->IsPlayAnimation() &&
+        controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
+    if (!isIdlePlaying)
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
 
     positioningDebugActive = true;
     activePositioningDebugData = data;
@@ -1925,11 +2113,140 @@ void GruxEnemy::BeginPositioning(const BossPositioningData& data)
     positioningDebugStuckTimer = 0.0f;
     positioningEndReason = "Running";
 
+    currentPositioningDebug = {};
+    currentPositioningDebug.valid = true;
+    currentPositioningDebug.data = data;
+    currentPositioningDebug.intent = activeIntent;
+    currentPositioningDebug.startBossPosition = GetPosition();
+    currentPositioningDebug.currentPosition = GetPosition();
+    currentPositioningDebug.endReason = "Running";
+    if (const BossIntentData* intentData = GetActiveIntentData())
+    {
+        currentPositioningDebug.preferredMin = intentData->preferredMinDistance;
+        currentPositioningDebug.preferredMax = intentData->preferredMaxDistance;
+    }
+
+fixedPositioningTargetValid = false;
+    if (const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
+    {
+        currentPositioningDebug.startPlayerPosition = player->GetPosition();
+        const float toPlayerX = currentPositioningDebug.startPlayerPosition.x - currentPositioningDebug.startBossPosition.x;
+        const float toPlayerZ = currentPositioningDebug.startPlayerPosition.z - currentPositioningDebug.startBossPosition.z;
+        const float distance = std::sqrt(toPlayerX * toPlayerX + toPlayerZ * toPlayerZ);
+        currentPositioningDebug.startPlayerDistance = distance;
+        currentPositioningDebug.currentPlayerDistance = distance;
+
+        float directionX = distance > 0.0001f ? toPlayerX / distance : GetForward().x;
+        float directionZ = distance > 0.0001f ? toPlayerZ / distance : GetForward().z;
+        float moveDistance = 0.0f;
+        if (data.actionType == BossActionType::Retreat ||
+            data.direction == BossPositioningDirection::AwayFromPlayer)
+        {
+            directionX *= -1.0f;
+            directionZ *= -1.0f;
+            moveDistance = (std::max)(0.0f, data.targetDistance - distance);
+        }
+        else
+        {
+            moveDistance = (std::max)(0.0f, distance - data.targetDistance);
+        }
+
+        currentPositioningDebug.desiredTargetPosition = {
+            currentPositioningDebug.startBossPosition.x + directionX * moveDistance,
+            currentPositioningDebug.startBossPosition.y,
+            currentPositioningDebug.startBossPosition.z + directionZ * moveDistance };
+
+        constexpr float maximumMargin =
+            (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
+                (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
+        const float margin = std::clamp(bossRoomSafetyMargin, 0.0f, maximumMargin);
+        currentPositioningDebug.safetyMargin = margin;
+        currentPositioningDebug.safeMinX = bossRoomMinX + margin;
+        currentPositioningDebug.safeMaxX = bossRoomMaxX - margin;
+        currentPositioningDebug.safeMinZ = bossRoomMinZ + margin;
+        currentPositioningDebug.safeMaxZ = bossRoomMaxZ - margin;
+        currentPositioningDebug.clampedTargetPosition = currentPositioningDebug.desiredTargetPosition;
+        currentPositioningDebug.clampedTargetPosition.x = std::clamp(
+            currentPositioningDebug.clampedTargetPosition.x,
+            currentPositioningDebug.safeMinX, currentPositioningDebug.safeMaxX);
+        currentPositioningDebug.clampedTargetPosition.z = std::clamp(
+            currentPositioningDebug.clampedTargetPosition.z,
+            currentPositioningDebug.safeMinZ, currentPositioningDebug.safeMaxZ);
+        currentPositioningDebug.clampedTargetPosition.y = currentPositioningDebug.startBossPosition.y;
+
+        const float plannedX = currentPositioningDebug.desiredTargetPosition.x - currentPositioningDebug.startBossPosition.x;
+        const float plannedZ = currentPositioningDebug.desiredTargetPosition.z - currentPositioningDebug.startBossPosition.z;
+        currentPositioningDebug.plannedMoveDistance = std::sqrt(plannedX * plannedX + plannedZ * plannedZ);
+        const float clampX = currentPositioningDebug.clampedTargetPosition.x - currentPositioningDebug.desiredTargetPosition.x;
+        const float clampZ = currentPositioningDebug.clampedTargetPosition.z - currentPositioningDebug.desiredTargetPosition.z;
+        currentPositioningDebug.targetClampDistance = std::sqrt(clampX * clampX + clampZ * clampZ);
+        currentPositioningDebug.targetWasClamped = currentPositioningDebug.targetClampDistance > 0.0001f;
+        const float availableX = currentPositioningDebug.clampedTargetPosition.x - currentPositioningDebug.startBossPosition.x;
+        const float availableZ = currentPositioningDebug.clampedTargetPosition.z - currentPositioningDebug.startBossPosition.z;
+        currentPositioningDebug.availableMoveDistance = std::sqrt(availableX * availableX + availableZ * availableZ);
+        currentPositioningDebug.remainingDistance = currentPositioningDebug.availableMoveDistance;
+
+        fixedPositioningTarget = currentPositioningDebug.clampedTargetPosition;
+        fixedPositioningTargetValid = true;
+    }
+
     if (characterMovementComponent)
     {
         characterMovementComponent->SetFixedSpeed(data.moveSpeed);
         characterMovementComponent->SetInputMagnitude(1.0f);
+        currentPositioningDebug.inputMagnitude = characterMovementComponent->GetInputMagnitude();
     }
+}
+
+void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
+{
+    positioningAnimationActualSpeed = (std::max)(0.0f, actualSpeed);
+    const float safeDeltaTime = (std::max)(0.0f, deltaTime);
+
+    if (!positioningAnimationMoving)
+    {
+        positioningMoveStopTimer = 0.0f;
+        if (positioningAnimationActualSpeed <= positioningMoveStartSpeedThreshold)
+            return;
+
+        positioningAnimationMoving = true;
+        const auto controller = GetBodyAnimationController();
+        const bool movePlaying = controller && controller->IsPlayAnimation() &&
+            controller->GetCurrentAnimationName() == "TravelMode_Fwd_0";
+        if (!movePlaying)
+            PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
+        return;
+    }
+
+    if (positioningAnimationActualSpeed >= positioningMoveStopSpeedThreshold)
+    {
+        positioningMoveStopTimer = 0.0f;
+        return;
+    }
+
+    positioningMoveStopTimer += safeDeltaTime;
+    if (positioningMoveStopTimer < positioningMoveStopDelay)
+        return;
+
+    positioningAnimationMoving = false;
+    positioningMoveStopTimer = 0.0f;
+    const auto controller = GetBodyAnimationController();
+    const bool idlePlaying = controller && controller->IsPlayAnimation() &&
+        controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
+    if (!idlePlaying)
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+}
+
+void GruxEnemy::EndPositioningAnimation()
+{
+    positioningAnimationActualSpeed = 0.0f;
+    positioningMoveStopTimer = 0.0f;
+    positioningAnimationMoving = false;
+    const auto controller = GetBodyAnimationController();
+    const bool idlePlaying = controller && controller->IsPlayAnimation() &&
+        controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
+    if (!idlePlaying)
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
 }
 
 void GruxEnemy::UpdatePositioningMovement(const DirectX::XMFLOAT3& moveDirection,
@@ -1940,17 +2257,55 @@ void GruxEnemy::UpdatePositioningMovement(const DirectX::XMFLOAT3& moveDirection
     RotateTowardsPlayer(facingDirection, GetTurnSpeed(), deltaTime);
 }
 
-void GruxEnemy::UpdatePositioningDebug(float traveledDistance, float elapsedTime, float stuckTimer)
+void GruxEnemy::UpdatePositioningDebug(float traveledDistance, float elapsedTime, float stuckTimer,
+    float frameMovement, float actualSpeed, const DirectX::XMFLOAT3& requestedDirection)
 {
     positioningDebugTraveledDistance = traveledDistance;
     positioningDebugElapsedTime = elapsedTime;
     positioningDebugStuckTimer = stuckTimer;
+
+    if (!currentPositioningDebug.valid)
+        return;
+    currentPositioningDebug.currentPosition = GetPosition();
+    currentPositioningDebug.traveledPathDistance = traveledDistance;
+    currentPositioningDebug.elapsedTime = elapsedTime;
+    currentPositioningDebug.stuckTimer = stuckTimer;
+    currentPositioningDebug.frameMovement = frameMovement;
+    currentPositioningDebug.actualSpeed = actualSpeed;
+    currentPositioningDebug.requestedMoveDirection = requestedDirection;
+    if (characterMovementComponent)
+        currentPositioningDebug.inputMagnitude = characterMovementComponent->GetInputMagnitude();
+
+    const float actualX = currentPositioningDebug.currentPosition.x - currentPositioningDebug.startBossPosition.x;
+    const float actualZ = currentPositioningDebug.currentPosition.z - currentPositioningDebug.startBossPosition.z;
+    currentPositioningDebug.actualMoveDistance = std::sqrt(actualX * actualX + actualZ * actualZ);
+    const float remainingX = currentPositioningDebug.clampedTargetPosition.x - currentPositioningDebug.currentPosition.x;
+    const float remainingZ = currentPositioningDebug.clampedTargetPosition.z - currentPositioningDebug.currentPosition.z;
+    currentPositioningDebug.remainingDistance = std::sqrt(remainingX * remainingX + remainingZ * remainingZ);
+    const BossTargetContext context = BuildTargetContext();
+    if (context.valid)
+        currentPositioningDebug.currentPlayerDistance = context.xzDistance;
 }
 
 void GruxEnemy::FinishPositioningDebug(const std::string& reason)
 {
     positioningDebugActive = false;
     positioningEndReason = reason;
+    if (!currentPositioningDebug.valid)
+        return;
+
+    currentPositioningDebug.currentPosition = GetPosition();
+    currentPositioningDebug.endReason = reason;
+    const float actualX = currentPositioningDebug.currentPosition.x - currentPositioningDebug.startBossPosition.x;
+    const float actualZ = currentPositioningDebug.currentPosition.z - currentPositioningDebug.startBossPosition.z;
+    currentPositioningDebug.actualMoveDistance = std::sqrt(actualX * actualX + actualZ * actualZ);
+    const float remainingX = currentPositioningDebug.clampedTargetPosition.x - currentPositioningDebug.currentPosition.x;
+    const float remainingZ = currentPositioningDebug.clampedTargetPosition.z - currentPositioningDebug.currentPosition.z;
+    currentPositioningDebug.remainingDistance = std::sqrt(remainingX * remainingX + remainingZ * remainingZ);
+    const BossTargetContext context = BuildTargetContext();
+    if (context.valid)
+        currentPositioningDebug.currentPlayerDistance = context.xzDistance;
+    lastPositioningDebug = currentPositioningDebug;
 }
 
 bool GruxEnemy::TryStartIntent(BossIntentType intentType)
@@ -1961,6 +2316,9 @@ bool GruxEnemy::TryStartIntent(BossIntentType intentType)
     activeIntent = intentType;
     activeIntentStep = BossIntentStep::Selecting;
     intentPositioningAttempted = false;
+    intentPositioningCompleted = false;
+    intentPositioningAttemptCount = 0;
+    intentRepositionReason = "None";
     intentLifecycleState = "Intent Started";
     intentLifecycleTrace = "Intent Started";
     intentLifecycleReason = "None";
@@ -2058,6 +2416,9 @@ void GruxEnemy::ClearActiveIntent()
     activeIntent = std::nullopt;
     activeIntentStep = BossIntentStep::Selecting;
     intentPositioningAttempted = false;
+    intentPositioningCompleted = false;
+    intentPositioningAttemptCount = 0;
+    intentRepositionReason = "None";
     intentLifecycleState = "None";
     intentLifecycleTrace = "None";
     intentLifecycleReason = "Cleared";
@@ -2081,14 +2442,29 @@ void GruxEnemy::MarkIntentPositioningAttempted()
         return;
 
     intentPositioningAttempted = true;
+    intentPositioningCompleted = false;
+    ++intentPositioningAttemptCount;
     activeIntentStep = BossIntentStep::Positioning;
     intentLifecycleState = "Positioning";
     intentLifecycleTrace += " -> Positioning";
 }
 
+void GruxEnemy::MarkIntentPositioningCompleted()
+{
+    if (!activeIntent || activeIntentStep != BossIntentStep::Positioning)
+        return;
+
+    intentPositioningCompleted = true;
+    activeIntentStep = BossIntentStep::AttackPending;
+    intentRepositionReason = "None";
+    intentLifecycleState = "Attack Pending";
+    intentLifecycleTrace += " -> WorldTargetReached -> AttackPending";
+}
+
 void GruxEnemy::BeginIntentReevaluation()
 {
-    if (!activeIntent || !intentPositioningAttempted)
+    if (!activeIntent || !intentPositioningAttempted ||
+        activeIntentStep != BossIntentStep::Positioning)
         return;
 
     activeIntentStep = BossIntentStep::AttackPending;
@@ -2142,6 +2518,8 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
     activeIntent = std::nullopt;
     activeIntentStep = BossIntentStep::Completed;
     intentPositioningAttempted = false;
+    intentPositioningCompleted = true;
+    intentRepositionReason = "None";
     intentLifecycleState = "Intent Completed";
     intentLifecycleTrace += " -> Intent Completed";
     intentLifecycleReason = "AttackStarted";
@@ -2160,6 +2538,8 @@ void GruxEnemy::FailActiveIntent(const char* reason)
     activeIntent = std::nullopt;
     activeIntentStep = BossIntentStep::Failed;
     intentPositioningAttempted = false;
+    intentPositioningCompleted = false;
+    intentRepositionReason = "None";
     intentLifecycleState = "Intent Failed";
     intentLifecycleTrace += " -> Intent Failed";
     intentLifecycleReason = reason ? reason : "Unknown";
@@ -2859,6 +3239,49 @@ BossIntentRangeStatus GruxEnemy::GetIntentRangeStatus(
 }
 
 // 現在の距離領域に基づいて、候補となる行動を選択する関数
+bool GruxEnemy::GetIntentAttackValidRange(float& outMinDistance, float& outMaxDistance) const
+{
+    if (!activeIntent)
+        return false;
+
+    if (*activeIntent == BossIntentType::DashAttackPlan)
+    {
+        outMinDistance = dashAttackValidMinDistance;
+        outMaxDistance = dashAttackValidMaxDistance;
+        return true;
+    }
+    if (*activeIntent == BossIntentType::JumpAttackPlan)
+    {
+        for (const BossAttackData& attackData : combatAttackData)
+        {
+            if (attackData.type != BossAttackType::JumpAttack)
+                continue;
+            outMinDistance = attackData.minDistance;
+            outMaxDistance = attackData.maxDistance;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool GruxEnemy::IsAttackPendingGoalAction(
+    BossActionType actionType, const BossTargetContext& context) const
+{
+    if (!activeIntent || activeIntentStep != BossIntentStep::AttackPending || !context.valid)
+        return false;
+
+    float validMin = 0.0f;
+    float validMax = 0.0f;
+    if (!GetIntentAttackValidRange(validMin, validMax) ||
+        context.xzDistance < validMin || context.xzDistance > validMax)
+        return false;
+
+    return (*activeIntent == BossIntentType::DashAttackPlan &&
+        actionType == BossActionType::DashAttack) ||
+        (*activeIntent == BossIntentType::JumpAttackPlan &&
+            actionType == BossActionType::JumpAttack);
+}
+
 bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const
 {
     if (!activeIntent || !context.valid)
@@ -2867,13 +3290,26 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
     const BossIntentData* intentData = GetActiveIntentData();
     if (!intentData)
         return false;
+
+    if (activeIntentStep == BossIntentStep::AttackPending)
+    {
+        float validMin = 0.0f;
+        float validMax = 0.0f;
+        if (GetIntentAttackValidRange(validMin, validMax))
+        {
+            if (context.xzDistance < validMin)
+                return actionType == BossActionType::Retreat;
+            if (context.xzDistance > validMax)
+                return actionType == BossActionType::Approach;
+            return IsAttackPendingGoalAction(actionType, context);
+        }
+    }
+
     const BossIntentRangeStatus rangeStatus =
         GetIntentRangeStatus(*intentData, context.xzDistance);
-
     switch (*activeIntent)
     {
     case BossIntentType::CloseCombat:
-        // CloseCombatは密着時に不要な後退をせず、そのまま近距離攻撃を許可する。
         if (rangeStatus != BossIntentRangeStatus::TooFar)
         {
             return actionType == BossActionType::AttackLA ||
@@ -2896,7 +3332,6 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
             return actionType == BossActionType::Approach;
         return actionType == BossActionType::JumpAttack;
     }
-
     return false;
 }
 
@@ -2910,7 +3345,8 @@ bool GruxEnemy::ShouldWaitForActiveIntentCooldown(const BossTargetContext& conte
         const BossActionData& actionData = combatActionData[i];
         if (!IsActionForCurrentIntent(actionData.type, context))
             continue;
-        if (!IsActionCandidateForCurrentDistance(actionData, context.distanceRegion))
+        if (!IsAttackPendingGoalAction(actionData.type, context) &&
+            !IsActionCandidateForCurrentDistance(actionData, context.distanceRegion))
             continue;
         if (actionData.weight <= 0.0f)
             continue;
@@ -2918,6 +3354,19 @@ bool GruxEnemy::ShouldWaitForActiveIntentCooldown(const BossTargetContext& conte
             return true;
     }
     return false;
+}
+
+bool GruxEnemy::ShouldFailIntentForPositioningRetryLimit(
+    const BossTargetContext& context) const
+{
+    if (!activeIntent || activeIntentStep != BossIntentStep::AttackPending || !context.valid ||
+        intentPositioningAttemptCount < maxIntentPositioningAttempts)
+        return false;
+
+    float validMin = 0.0f;
+    float validMax = 0.0f;
+    return GetIntentAttackValidRange(validMin, validMax) &&
+        (context.xzDistance < validMin || context.xzDistance > validMax);
 }
 
 void GruxEnemy::UpdateActionCandidateFlags(const BossTargetContext& context)
@@ -2940,7 +3389,8 @@ void GruxEnemy::UpdateActionCandidateFlags(const BossTargetContext& context)
             continue;
         }
 
-        if (!IsActionCandidateForCurrentDistance(actionData, context.distanceRegion))
+        if (!IsAttackPendingGoalAction(actionData.type, context) &&
+            !IsActionCandidateForCurrentDistance(actionData, context.distanceRegion))
         {
             combatActionCandidateReasons[i] = BossActionCandidateReason::WrongDistance;
             continue;
@@ -3066,6 +3516,20 @@ bool GruxEnemy::SelectCombatAction()
     const BossTargetContext context = BuildTargetContext();
     currentCombatPlayerDistance = context.xzDistance;
     lastCombatSelectionDistance = currentCombatPlayerDistance;
+
+    intentRepositionReason = "None";
+    if (activeIntent && activeIntentStep == BossIntentStep::AttackPending)
+    {
+        float validMin = 0.0f;
+        float validMax = 0.0f;
+        if (GetIntentAttackValidRange(validMin, validMax))
+        {
+            if (context.xzDistance < validMin)
+                intentRepositionReason = "Too Close For Attack";
+            else if (context.xzDistance > validMax)
+                intentRepositionReason = "Too Far For Attack";
+        }
+    }
 
     // 現在の距離領域に基づいて、候補となる行動を更新する
     UpdateActionCandidateFlags(context);

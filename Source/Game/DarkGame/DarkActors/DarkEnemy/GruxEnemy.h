@@ -58,6 +58,7 @@ public:
     bool SelectIntentByWeight();
     void ClearActiveIntent();
     void MarkIntentPositioningAttempted();
+    void MarkIntentPositioningCompleted();
     void BeginIntentReevaluation();
     void MarkIntentAttackSelected();
     void OnSelectedActionStartedSuccessfully();
@@ -75,9 +76,20 @@ public:
     bool PrepareAttackForSelectedAction();
     const BossPositioningData* GetPositioningDataForAction(BossActionType actionType) const;
     void BeginPositioning(const BossPositioningData& data);
+    bool GetFixedPositioningTarget(DirectX::XMFLOAT3& outTarget) const
+    {
+        if (!fixedPositioningTargetValid)
+            return false;
+        outTarget = fixedPositioningTarget;
+        return true;
+    }
+    float GetPositioningArrivalDistance() const { return positioningArrivalDistance; }
+    void UpdatePositioningAnimation(float actualSpeed, float deltaTime);
+    void EndPositioningAnimation();
     void UpdatePositioningMovement(const DirectX::XMFLOAT3& moveDirection,
         const DirectX::XMFLOAT3& facingDirection, float deltaTime);
-    void UpdatePositioningDebug(float traveledDistance, float elapsedTime, float stuckTimer);
+    void UpdatePositioningDebug(float traveledDistance, float elapsedTime, float stuckTimer,
+        float frameMovement, float actualSpeed, const DirectX::XMFLOAT3& requestedDirection);
     void FinishPositioningDebug(const std::string& reason);
     void StartSelectedActionCooldown();
 
@@ -103,6 +115,7 @@ public:
     std::string GetCurrentAttackNameForDebug() const;
     BossTargetContext BuildTargetContext() const;
     bool ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const;
+    bool ShouldFailIntentForPositioningRetryLimit(const BossTargetContext& context) const;
     bool IsFacingPlayerForAttack(const BossTargetContext& context) const;
     void StopAIMovement();
     bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
@@ -136,6 +149,8 @@ private:
     const BossIntentData* GetActiveIntentData() const;
     BossIntentRangeStatus GetIntentRangeStatus(
         const BossIntentData& intentData, float distance) const;
+    bool GetIntentAttackValidRange(float& outMinDistance, float& outMaxDistance) const;
+    bool IsAttackPendingGoalAction(BossActionType actionType, const BossTargetContext& context) const;
 
     // アクションが現在の距離(Region)で候補になるかを判定する関数
     bool IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const;
@@ -168,6 +183,7 @@ private:
     void RefreshActiveHitBoxesFromNotifyStates();
     // ボスの距離範囲のデバック描画
     void DrawBossAIDebugWorld(const BossTargetContext& context) const;
+    void DrawPositioningDebugWorld() const;
 
 private:
     // 描画用コンポーネントを追加
@@ -215,6 +231,12 @@ private:
     std::optional<BossIntentType> activeIntent = std::nullopt;
     BossIntentStep activeIntentStep = BossIntentStep::Selecting;
     bool intentPositioningAttempted = false;
+    bool intentPositioningCompleted = false;
+    int intentPositioningAttemptCount = 0;
+    static constexpr int maxIntentPositioningAttempts = 2;
+    float dashAttackValidMinDistance = 6.0f;
+    float dashAttackValidMaxDistance = 14.0f;
+    std::string intentRepositionReason = "None";
     std::string intentLifecycleState = "None";
     std::string intentLifecycleTrace = "None";
     std::string intentLifecycleReason = "None";
@@ -316,7 +338,60 @@ private:
     float turnCompleteAngle = 15.0f;    // この角度以内なら回転完了とみなす
     float turnTimeout = 1.5f;   //   Turnがいつまでも完了しない場合の制限時間。現在は1.5秒でThinkへ戻る。
     std::string lastAIDecisionReason = "None";  // 最後にAIが行った判断理由を文字列で保存。ImGuiに表示。AIの動作確認用。
+    struct PositioningDebugSnapshot
+    {
+        bool valid = false;
+        BossPositioningData data{};
+        std::optional<BossIntentType> intent = std::nullopt;
+        float preferredMin = 0.0f;
+        float preferredMax = 0.0f;
+        DirectX::XMFLOAT3 startBossPosition{};
+        DirectX::XMFLOAT3 startPlayerPosition{};
+        DirectX::XMFLOAT3 desiredTargetPosition{};
+        DirectX::XMFLOAT3 clampedTargetPosition{};
+        bool targetWasClamped = false;
+        float targetClampDistance = 0.0f;
+        float availableMoveDistance = 0.0f;
+        float safetyMargin = 0.0f;
+        float safeMinX = 0.0f;
+        float safeMaxX = 0.0f;
+        float safeMinZ = 0.0f;
+        float safeMaxZ = 0.0f;
+        DirectX::XMFLOAT3 currentPosition{};
+        DirectX::XMFLOAT3 requestedMoveDirection{};
+        float startPlayerDistance = 0.0f;
+        float currentPlayerDistance = 0.0f;
+        float plannedMoveDistance = 0.0f;
+        float actualMoveDistance = 0.0f;
+        float traveledPathDistance = 0.0f;
+        float remainingDistance = 0.0f;
+        float frameMovement = 0.0f;
+        float actualSpeed = 0.0f;
+        float elapsedTime = 0.0f;
+        float stuckTimer = 0.0f;
+        float inputMagnitude = 0.0f;
+        std::string endReason = "None";
+    };
+    static constexpr float bossRoomMinX = -2.5f;
+    static constexpr float bossRoomMaxX = 19.5f;
+    static constexpr float bossRoomMinZ = 0.0f;
+    static constexpr float bossRoomMaxZ = 21.5f;
+    float bossRoomSafetyMargin = 0.5f;
+    float positioningArrivalDistance = 0.3f;
+    float minimumPositioningMoveDistance = 0.75f;
+    float positioningMoveStartSpeedThreshold = 0.30f;
+    float positioningMoveStopSpeedThreshold = 0.10f;
+    float positioningMoveStopDelay = 0.15f;
+    float positioningMoveStopTimer = 0.0f;
+    float positioningAnimationActualSpeed = 0.0f;
+    bool positioningAnimationMoving = false;
+    DirectX::XMFLOAT3 fixedPositioningTarget{};
+    bool fixedPositioningTargetValid = false;
+
     bool positioningDebugActive = false;
+    bool positioningWorldDebug = false;
+    PositioningDebugSnapshot currentPositioningDebug{};
+    PositioningDebugSnapshot lastPositioningDebug{};
     BossPositioningData activePositioningDebugData{};
     float positioningDebugTraveledDistance = 0.0f;
     float positioningDebugElapsedTime = 0.0f;

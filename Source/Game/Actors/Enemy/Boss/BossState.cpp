@@ -82,6 +82,15 @@ void EnemyThinkState::Execute(float deltaTime)
     }
 
 
+    const BossTargetContext actionContext = enemy->BuildTargetContext();
+    if (enemy->ShouldFailIntentForPositioningRetryLimit(actionContext))
+    {
+        enemy->SetLastAIDecision("Intent Failed: Positioning retry limit");
+        enemy->FailActiveIntent("PositioningRetryLimit");
+        timer = (std::max)(0.0f, enemy->GetAttackInterval() - 0.25f);
+        return;
+    }
+
     if (!enemy->SelectCombatAction())
     {
         const BossTargetContext context = enemy->BuildTargetContext();
@@ -151,6 +160,7 @@ void EnemyPositioningState::Execute(float deltaTime)
         enemy->SetLastAIDecision(std::string("Positioning End: ") + reason);
         enemy->FinishPositioningDebug(reason);
         const bool completed =
+            std::strcmp(reason, "WorldTargetReached") == 0 ||
             std::strcmp(reason, "TargetDistanceReached") == 0 ||
             std::strcmp(reason, "DistanceReached") == 0;
         if (!completed)
@@ -164,7 +174,6 @@ void EnemyPositioningState::Execute(float deltaTime)
         finish("AIModeChanged");
         return;
     }
-
     if (!positioningData)
     {
         finish("Interrupted");
@@ -185,16 +194,45 @@ void EnemyPositioningState::Execute(float deltaTime)
     else
         stuckTimer = 0.0f;
 
-    enemy->UpdatePositioningDebug(traveledDistance, elapsedTime, stuckTimer);
-
     const BossTargetContext context = enemy->BuildTargetContext();
+    DirectX::XMFLOAT3 fixedTarget{};
+    const bool hasFixedTarget = enemy->GetFixedPositioningTarget(fixedTarget);
+    DirectX::XMFLOAT3 requestedMoveDirection = context.directionToPlayer;
+    float targetRemainingDistance = FLT_MAX;
+    if (hasFixedTarget)
+    {
+        const float targetX = fixedTarget.x - currentPosition.x;
+        const float targetZ = fixedTarget.z - currentPosition.z;
+        targetRemainingDistance = std::sqrt(targetX * targetX + targetZ * targetZ);
+        if (targetRemainingDistance > 0.0001f)
+            requestedMoveDirection = { targetX / targetRemainingDistance, 0.0f, targetZ / targetRemainingDistance };
+        else
+            requestedMoveDirection = { 0.0f, 0.0f, 0.0f };
+    }
+    else if (positioningData->direction == BossPositioningDirection::AwayFromPlayer)
+    {
+        requestedMoveDirection.x *= -1.0f;
+        requestedMoveDirection.z *= -1.0f;
+    }
+    enemy->UpdatePositioningDebug(traveledDistance, elapsedTime, stuckTimer,
+        frameMovement, actualMovementSpeed, requestedMoveDirection);
+    enemy->UpdatePositioningAnimation(actualMovementSpeed, deltaTime);
+
     if (!context.valid)
     {
         finish("InvalidPlayer");
         return;
     }
-
-    if (positioningData->completionType == BossPositioningCompletionType::TargetDistance)
+    if (hasFixedTarget)
+    {
+        if (targetRemainingDistance <= enemy->GetPositioningArrivalDistance())
+        {
+            enemy->MarkIntentPositioningCompleted();
+            finish("WorldTargetReached");
+            return;
+        }
+    }
+    else if (positioningData->completionType == BossPositioningCompletionType::TargetDistance)
     {
         const bool targetDistanceReached =
             positioningData->direction == BossPositioningDirection::TowardPlayer
@@ -206,34 +244,24 @@ void EnemyPositioningState::Execute(float deltaTime)
             return;
         }
     }
-
     if (traveledDistance >= positioningData->maxMoveDistance)
     {
         finish(positioningData->completionType == BossPositioningCompletionType::TargetDistance
-            ? "MaxTravelDistance"
-            : "DistanceReached");
+            ? "MaxTravelDistance" : "DistanceReached");
         return;
     }
-
     if (elapsedTime >= positioningData->timeout)
     {
         finish("Timeout");
         return;
     }
-
     if (stuckTimer >= positioningData->stuckTimeThreshold)
     {
         finish("Stuck");
         return;
     }
 
-    DirectX::XMFLOAT3 moveDirection = context.directionToPlayer;
-    if (positioningData->direction == BossPositioningDirection::AwayFromPlayer)
-    {
-        moveDirection.x *= -1.0f;
-        moveDirection.z *= -1.0f;
-    }
-    enemy->UpdatePositioningMovement(moveDirection, moveDirection, deltaTime);
+    enemy->UpdatePositioningMovement(requestedMoveDirection, requestedMoveDirection, deltaTime);
 }
 
 void EnemyPositioningState::Exit()
@@ -245,6 +273,7 @@ void EnemyPositioningState::Exit()
     }
     enemy->StartSelectedActionCooldown();
     enemy->StopAIMovement();
+    enemy->EndPositioningAnimation();
     positioningData = std::nullopt;
 }
 
