@@ -322,7 +322,7 @@ private:
     // JumpAttackのMotionWarp用
     float maxJumpDistance = 12.5f;//  JumpAttackで実際に移動してよい最大距離。プレイヤーが遠くても12.5より長くは移動しない。
     float desiredAttackDistance = 0.1f; //  JumpAttack後にプレイヤーとの間へ残したい距離
-    float jumpAttackTelegraphStartTime = 1.4f;
+    float jumpAttackTelegraphStartTime = 1.4f;  // 予備動作の開始アニメーション時間
     float jumpAttackTelegraphEndTime = 2.6f;
     float currentJumpPlayerDistance = 0.0f; //  JumpAttack開始時点のプレイヤーまでの距離
     float calculatedJumpDistance = 0.0f;    //  最終的にMotionWarpで移動する距離

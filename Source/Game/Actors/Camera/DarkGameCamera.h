@@ -173,6 +173,10 @@ private:
     void BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to);
     void UpdateLockOnTransitionDiagnostics();
 
+    bool IsBossBattle() const;
+    float GetFovDegreeForMode(CameraMode mode) const;
+    void ResetCameraTuning();
+
     // ロックオンのカメラ距離を計算する関数
     float CalculateLockOnDistance() const;
 
@@ -224,11 +228,11 @@ private:
 
     // モード別の構図調整値（初期値は従来値相当）
     CameraCompositionSettings tpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
-    //CameraCompositionSettings tpsSettings = { 7.15f, 0.5f, 1.05f, 35.0f, 0.0f };
     CameraCompositionSettings focusSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
-    CameraCompositionSettings lockOnSettings = { 9.7f, 0.4f, -0.3f, 35.0f, 0.0f };
+    CameraCompositionSettings lockOnSettings = { 10.0f, 0.4f, -0.3f, 45.0f, 0.0f };
+    float bossTpsFovDegree = 44.0f;
     float lockOnPlayerLookHeight = -.15f;
-    float lockOnEnemyLookHeight = -1.4f;
+    float lockOnEnemyLookHeight = -0.75f;
 
     // LockOn適応構図。広い場所では基準値を変更しない。
     float lockOnCollisionStartRatio = 0.9f;
@@ -240,8 +244,8 @@ private:
     float lockOnDistanceStart = 4.0f;
     float lockOnDistanceFull = 9.0f;
     float lockOnMaxDistanceAdd = 2.0f;
-    float lockOnZoomOutSpeed = 0.01f;
-    float lockOnZoomInSpeed = 0.01f;
+    float lockOnZoomOutSpeed = 1.2f;
+    float lockOnZoomInSpeed = 1.2f;
     float lockOnDistanceDeadZone = 0.15f;
     float lockOnCompositionLerpSpeed = 6.0f;
 
@@ -285,7 +289,7 @@ private:
     // targetをどこに置くか
     // 0 = Player
     // 1 = Enemy
-    float lockOnTargetWeight = 0.72f;
+    float lockOnTargetWeight = 0.3f;
     // 基本距離
     float lockOnCameraDistance = 5.0f;
     // 敵との距離による増加量
@@ -306,6 +310,16 @@ private:
     float wallBlend = 0.0f;
     float smoothHitDistance = 0.0f;
     float cameraCollisionRatio = 1.0f;
+    std::string cameraCollisionHitName = "None";
+    bool showCameraCollisionDebug = false;
+
+    CameraCompositionSettings initialTpsSettings{};
+    CameraCompositionSettings initialLockOnSettings{};
+    float initialBossTpsFovDegree = 44.0f;
+    float initialLockOnEnemyLookHeight = 0.0f;
+    float initialLockOnTargetWeight = 0.0f;
+    float initialLockOnZoomInSpeed = 0.0f;
+    float initialLockOnZoomOutSpeed = 0.0f;
 
     int unstableFrameCount = 0; // 
 

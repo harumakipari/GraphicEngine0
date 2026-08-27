@@ -76,6 +76,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
+        maxHp = 10000;
         hp = maxHp;
     }
 
@@ -213,6 +214,7 @@ public:
 
     // ボス戦時かどうかを設定する
     void SetIsBossBattle(const bool isBossBattle) { this->isBossBattle = isBossBattle; }
+    bool IsBossBattle() const { return isBossBattle; }
 
 private:
     // 動作更新処理

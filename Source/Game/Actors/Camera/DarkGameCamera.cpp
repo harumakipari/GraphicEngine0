@@ -2,6 +2,7 @@
 #include "DarkGameCamera.h"
 
 #include "Game/Actors/Player/Player.h"
+#include "Engine/Debug/DebugRender.h"
 #include "Physics/CollisionFunction.h"
 
 namespace
@@ -36,6 +37,14 @@ void DarkCameraActor::Initialize(const Transform& transform)
 
     isExternalBlending = false;
     ResetLockOnAdaptiveState();
+
+    initialTpsSettings = tpsSettings;
+    initialLockOnSettings = lockOnSettings;
+    initialBossTpsFovDegree = bossTpsFovDegree;
+    initialLockOnEnemyLookHeight = lockOnEnemyLookHeight;
+    initialLockOnTargetWeight = lockOnTargetWeight;
+    initialLockOnZoomInSpeed = lockOnZoomInSpeed;
+    initialLockOnZoomOutSpeed = lockOnZoomOutSpeed;
 }
 
 void DarkCameraActor::Update(float deltaTime)
@@ -79,14 +88,10 @@ void DarkCameraActor::Update(float deltaTime)
 
     if (!isExternalBlending)
     {
-        const CameraCompositionSettings* fromSettings = &tpsSettings;
-        if (currentMode == CameraMode::Focus) fromSettings = &focusSettings;
-        if (currentMode == CameraMode::LockOn) fromSettings = &lockOnSettings;
-
         const float fovDegree = isBlending
             ? std::lerp(blendStartFovDegree, blendTargetFovDegree,
                 std::clamp(blendTime / blendDuration, 0.0f, 1.0f))
-            : fromSettings->fovDegree;
+            : GetFovDegreeForMode(currentMode);
         mainCameraComponent->SetFov(DirectX::XMConvertToRadians(fovDegree));
     }
 
@@ -113,6 +118,16 @@ void DarkCameraActor::Update(float deltaTime)
     cameraCollisionRatio = desiredCameraDistance > FLT_EPSILON
         ? actualCameraDistance / desiredCameraDistance
         : 1.0f;
+
+    if (showCameraCollisionDebug)
+    {
+        DebugRender::DrawLine(currentPose.target, collisionPreEyePosition,
+            { 0.2f, 0.8f, 1.0f, 1.0f }, 0.0f, true);
+        DebugRender::DrawSphere(collisionPostEyePosition, 0.12f,
+            cameraHitWall ? DirectX::XMFLOAT4{ 1.0f, 0.2f, 0.2f, 1.0f }
+                          : DirectX::XMFLOAT4{ 0.2f, 1.0f, 0.3f, 1.0f },
+            0.0f, true);
+    }
 
     UpdateLockOnTransitionDiagnostics();
 
@@ -177,9 +192,35 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     }
     blendTargetPose = CalculatePose(to, playerPos, targetYaw, targetPitch);
     blendStartFovDegree = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
-    blendTargetFovDegree = tpsSettings.fovDegree;
-    if (to == CameraMode::Focus) blendTargetFovDegree = focusSettings.fovDegree;
-    if (to == CameraMode::LockOn) blendTargetFovDegree = lockOnSettings.fovDegree;
+    blendTargetFovDegree = GetFovDegreeForMode(to);
+}
+
+bool DarkCameraActor::IsBossBattle() const
+{
+    const auto head = playerHead.lock();
+    const auto player = head ? dynamic_cast<Player*>(head->GetOwner()) : nullptr;
+    return player && player->IsBossBattle();
+}
+
+float DarkCameraActor::GetFovDegreeForMode(CameraMode mode) const
+{
+    if (mode == CameraMode::LockOn) return lockOnSettings.fovDegree;
+    if (mode == CameraMode::Focus) return focusSettings.fovDegree;
+    return IsBossBattle() ? bossTpsFovDegree : tpsSettings.fovDegree;
+}
+
+void DarkCameraActor::ResetCameraTuning()
+{
+    tpsSettings.fovDegree = initialTpsSettings.fovDegree;
+    tpsSettings.distance = initialTpsSettings.distance;
+    bossTpsFovDegree = initialBossTpsFovDegree;
+    lockOnSettings.fovDegree = initialLockOnSettings.fovDegree;
+    lockOnSettings.distance = initialLockOnSettings.distance;
+    lockOnEnemyLookHeight = initialLockOnEnemyLookHeight;
+    lockOnTargetWeight = initialLockOnTargetWeight;
+    lockOnZoomInSpeed = initialLockOnZoomInSpeed;
+    lockOnZoomOutSpeed = initialLockOnZoomOutSpeed;
+    ResetLockOnAdaptiveState();
 }
 
 // ƒJƒƒ‰‚ðplayer‚Ìforward•ûŒü‚ÉŒü‚¯‚é
@@ -767,6 +808,7 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
         CollisionHelper::ToBit(CollisionLayer::WorldProps);
 
     cameraHitWall = CollisionFunction::SphereRayCast(target, eye, hit, sphereCastRadius, mask);
+    cameraCollisionHitName = "None";
     if (cameraHitWall)
     {
         float collisionOffset = sphereCastRadius + 0.05f;
@@ -775,6 +817,14 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
             MathHelper::Multiply(hit.normal, collisionOffset));
 
         cameraHitDistance = hit.distance;
+        if (hit.actor)
+        {
+            cameraCollisionHitName = hit.actor->GetName();
+        }
+        else if (hit.component)
+        {
+            cameraCollisionHitName = hit.component->GetName();
+        }
 
     }
 
@@ -785,6 +835,54 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
 void DarkCameraActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    if (ImGui::CollapsingHeader("Runtime Camera Tuning", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::DragFloat("TPS FOV", &tpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("TPS Distance", &tpsSettings.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("Boss TPS FOV", &bossTpsFovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::Separator();
+        ImGui::DragFloat("LockOn FOV", &lockOnSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("LockOn Base Distance", &lockOnSettings.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("LockOn Enemy Look Height", &lockOnEnemyLookHeight, 0.05f, -10.0f, 10.0f);
+        ImGui::SliderFloat("LockOn LookAt Bias (0=Player, 1=Boss)", &lockOnTargetWeight, 0.0f, 1.0f);
+        lockOnTargetWeight = std::clamp(lockOnTargetWeight, 0.0f, 1.0f);
+        ImGui::DragFloat("LockOn Zoom In Speed", &lockOnZoomInSpeed, 0.01f, 0.0f, 30.0f);
+        ImGui::DragFloat("LockOn Zoom Out Speed", &lockOnZoomOutSpeed, 0.01f, 0.0f, 30.0f);
+        if (ImGui::Button("Reset Camera Tuning")) ResetCameraTuning();
+    }
+
+    if (ImGui::CollapsingHeader("FOV Switching Debug", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        const char* modeNames[] = { "TPS", "Focus", "LockOn" };
+        const float currentFov = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
+        const float desiredFov = isBlending ? blendTargetFovDegree : GetFovDegreeForMode(currentMode);
+        ImGui::Text("Boss Battle: %s", IsBossBattle() ? "true" : "false");
+        ImGui::Text("Current Mode: %s", modeNames[static_cast<int>(currentMode)]);
+        ImGui::Text("Requested Mode: %s", modeNames[static_cast<int>(requestMode)]);
+        ImGui::Text("Current FOV: %.2f deg", currentFov);
+        ImGui::Text("Desired FOV: %.2f deg", desiredFov);
+        ImGui::Text("TPS / Boss TPS / LockOn: %.2f / %.2f / %.2f deg",
+            tpsSettings.fovDegree, bossTpsFovDegree, lockOnSettings.fovDegree);
+        if (isBlending)
+            ImGui::Text("FOV Blend: %.2f -> %.2f deg", blendStartFovDegree, blendTargetFovDegree);
+    }
+
+    if (ImGui::CollapsingHeader("Camera Collision Debug", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::Checkbox("World Collision Debug", &showCameraCollisionDebug);
+        ImGui::Text("Ideal / Desired Distance: %.3f", desiredCameraDistance);
+        ImGui::Text("Actual Distance: %.3f", actualCameraDistance);
+        const ImVec4 ratioColor = cameraCollisionRatio < 0.3f
+            ? ImVec4(1.0f, 0.15f, 0.15f, 1.0f)
+            : cameraCollisionRatio < 0.7f
+                ? ImVec4(1.0f, 0.75f, 0.15f, 1.0f)
+                : ImVec4(0.75f, 1.0f, 0.75f, 1.0f);
+        ImGui::TextColored(ratioColor, "Collision Ratio: %.3f", cameraCollisionRatio);
+        ImGui::Text("SphereCast Hit: %s", cameraHitWall ? "true" : "false");
+        ImGui::Text("Hit Object: %s", cameraCollisionHitName.c_str());
+        ImGui::Text("Player transparency threshold: ratio < 0.300");
+    }
+
     if (ImGui::Button(U8("TPS")))
     {
         SetRequestMode(CameraMode::TPS);
