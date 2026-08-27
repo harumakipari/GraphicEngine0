@@ -271,6 +271,7 @@ void PlayerAttackState::Exit()
 
 void PlayerDodgeState::Enter()
 {
+    player->BeginDodgeDebug();
     player->ResetAnimationStateFlag();
     player->SetRushInputAcceptance(false);
     player->SetRushInputDebugState(false, false);
@@ -305,6 +306,7 @@ void PlayerDodgeState::Enter()
 
 void PlayerDodgeState::Execute(float deltaTime)
 {
+    player->UpdateDodgeDebug(deltaTime);
 
     if (player->justDodgeSuccess && !judgeSuccess)
     {// ジャスト回避成功したら、

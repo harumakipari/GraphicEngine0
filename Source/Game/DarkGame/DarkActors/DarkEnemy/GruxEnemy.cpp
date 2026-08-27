@@ -84,6 +84,7 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     // 全てのNotifyAssetsをロードする
     controller->LoadAllNotifyAssets(GetName());
+    CaptureInitialDangerObbSettings();
 
     // ステートマシンを作成
     {
@@ -468,6 +469,7 @@ void GruxEnemy::Update(float deltaTime)
         }
     }
 
+    DrawDangerObbWorldDebug();
 
 
 
@@ -597,6 +599,25 @@ void GruxEnemy::Update(float deltaTime)
         rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
     if (leftWeaponCollisionComp)
         leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
+    if (const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+        player && player->IsJustDodgeDebugEnabled())
+    {
+        const auto drawWeaponHitSpheres = [](const std::shared_ptr<SceneComponent>& root,
+            const std::shared_ptr<SceneComponent>& middle,
+            const std::shared_ptr<SceneComponent>& tip, float radius,
+            const DirectX::XMFLOAT4& color)
+        {
+            if (root) DebugRender::DrawSphere(root->GetComponentLocation(), radius, color, 0.0f, true);
+            if (middle) DebugRender::DrawSphere(middle->GetComponentLocation(), radius, color, 0.0f, true);
+            if (tip) DebugRender::DrawSphere(tip->GetComponentLocation(), radius, color, 0.0f, true);
+        };
+        if (leftHitBox)
+            drawWeaponHitSpheres(weaponLeftRootComponent, weaponLeftMiddleComponent,
+                weaponLeftTipComponent, activeLeftHitBoxRadius, { 0.2f, 1.0f, 0.35f, 1.0f });
+        if (rightHitBox)
+            drawWeaponHitSpheres(weaponRightRootComponent, weaponRightMiddleComponent,
+                weaponRightTipComponent, activeRightHitBoxRadius, { 1.0f, 0.25f, 0.8f, 1.0f });
+    }
 
 
     //DebugRender::DrawBox(bossPos, { 3,3,3 }, { 1,1,1,1 });
@@ -788,6 +809,130 @@ void GruxEnemy::DrawImGuiDetails()
         debugFixedAttackType = static_cast<BossAttackType>(attackIndex);
     ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("Fallback Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    if (ImGui::CollapsingHeader("Danger OBB Tuning"))
+    {
+        auto controller = GetBodyAnimationController();
+        AnimationNotifyState* selectedState = GetSelectedDangerNotifyState();
+        std::string selectedName = "None";
+        if (controller)
+        {
+            if (const auto* asset = controller->GetNotifyAssetForRuntimeTuning(dangerObbSelectedClip))
+                selectedName = asset->animationName;
+
+            if (ImGui::BeginCombo("Attack Animation", selectedName.c_str()))
+            {
+                for (const size_t clip : controller->GetAnimationAssetOrderForRuntimeTuning())
+                {
+                    auto* asset = controller->GetNotifyAssetForRuntimeTuning(clip);
+                    if (!asset)
+                        continue;
+                    auto& states = asset->notifyTrack.states;
+                    const size_t dangerCount = std::count_if(states.begin(), states.end(),
+                        [](const AnimationNotifyState& state)
+                        { return state.type == AnimationNotifyState::Type::DangerWindow; });
+                    for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
+                    {
+                        if (states[stateIndex].type != AnimationNotifyState::Type::DangerWindow)
+                            continue;
+                        const bool selected = clip == dangerObbSelectedClip &&
+                            stateIndex == dangerObbSelectedStateIndex;
+                        std::string label = asset->animationName;
+                        if (dangerCount > 1)
+                            label += " [Danger " + std::to_string(stateIndex) + "]";
+                        if (ImGui::Selectable(label.c_str(), selected))
+                        {
+                            dangerObbSelectedClip = clip;
+                            dangerObbSelectedStateIndex = stateIndex;
+                        }
+                        if (selected)
+                            ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+        }
+
+        selectedState = GetSelectedDangerNotifyState();
+        if (selectedState)
+        {
+            bool changed = false;
+            ImGui::TextDisabled("Center Offset (Local: X=Right, Y=Up, Z=Forward)");
+            changed |= ImGui::DragFloat3("Center Offset##DangerOBB", &selectedState->justDodgeAreaOffset.x,
+                0.05f, -20.0f, 20.0f, "%.2f");
+            ImGui::TextDisabled("Full Size (not Half Extent)");
+            changed |= ImGui::DragFloat3("Full Size##DangerOBB", &selectedState->justDodgeAreaSize.x,
+                0.05f, 0.0f, 40.0f, "%.2f");
+            selectedState->justDodgeAreaSize.x = (std::max)(0.0f, selectedState->justDodgeAreaSize.x);
+            selectedState->justDodgeAreaSize.y = (std::max)(0.0f, selectedState->justDodgeAreaSize.y);
+            selectedState->justDodgeAreaSize.z = (std::max)(0.0f, selectedState->justDodgeAreaSize.z);
+            if (changed && selectedState == activeDangerNotifyState)
+                RefreshActiveDangerAreaFromNotify();
+
+            ImGui::Text("Danger Window: %.3f - %.3f sec", selectedState->startTime, selectedState->endTime);
+            const bool selectedDangerActive = isDangerWindow && selectedState == activeDangerNotifyState;
+            const DangerArea selectedArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(),
+                selectedState->justDodgeAreaOffset, selectedState->justDodgeAreaSize);
+            const bool playerInside = GetPlayerDangerOverlapForDebug(selectedArea);
+            const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+            const bool justActive = player && player->GetJustDodgeWindow();
+            const float activeTime = selectedDangerActive && controller
+                ? (std::max)(0.0f, controller->GetCurrentAnimationTime() - selectedState->startTime)
+                : 0.0f;
+            ImGui::Text("Danger Active: %s", selectedDangerActive ? "YES" : "NO");
+            ImGui::Text("Window Active Time: %.3f sec", activeTime);
+            ImGui::TextColored(playerInside ? ImVec4(1.0f, 0.25f, 0.2f, 1.0f) : ImVec4(0.7f, 0.85f, 1.0f, 1.0f),
+                "Player Inside: %s", playerInside ? "YES / PLAYER INSIDE" : "NO / OUTSIDE");
+            ImGui::Text("Just Window: %s", justActive ? "ACTIVE" : "INACTIVE");
+            ImGui::Text("Just Possible Now: %s",
+                selectedDangerActive && playerInside && justActive ? "YES" : "NO");
+            ImGui::Checkbox("Danger OBB World Debug", &dangerObbWorldDebug);
+
+            const uint64_t key = (static_cast<uint64_t>(dangerObbSelectedClip) << 32) |
+                static_cast<uint64_t>(dangerObbSelectedStateIndex);
+            if (ImGui::Button("Reset Selected Danger OBB"))
+            {
+                if (const auto initialIt = initialDangerObbSettings.find(key);
+                    initialIt != initialDangerObbSettings.end())
+                {
+                    selectedState->justDodgeAreaOffset = initialIt->second.centerOffset;
+                    selectedState->justDodgeAreaSize = initialIt->second.fullSize;
+                    if (selectedState == activeDangerNotifyState)
+                        RefreshActiveDangerAreaFromNotify();
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Reset All Danger OBB") && controller)
+            {
+                for (const size_t clip : controller->GetAnimationAssetOrderForRuntimeTuning())
+                {
+                    auto* asset = controller->GetNotifyAssetForRuntimeTuning(clip);
+                    if (!asset)
+                        continue;
+                    auto& states = asset->notifyTrack.states;
+                    for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
+                    {
+                        if (states[stateIndex].type != AnimationNotifyState::Type::DangerWindow)
+                            continue;
+                        const uint64_t stateKey = (static_cast<uint64_t>(clip) << 32) |
+                            static_cast<uint64_t>(stateIndex);
+                        if (const auto initialIt = initialDangerObbSettings.find(stateKey);
+                            initialIt != initialDangerObbSettings.end())
+                        {
+                            states[stateIndex].justDodgeAreaOffset = initialIt->second.centerOffset;
+                            states[stateIndex].justDodgeAreaSize = initialIt->second.fullSize;
+                        }
+                    }
+                }
+                RefreshActiveDangerAreaFromNotify();
+            }
+            ImGui::TextDisabled("Runtime only. Persist by copying Offset/Full Size to Data/Animation/GruxEnemy/%s.json.",
+                selectedName.c_str());
+        }
+        else
+        {
+            ImGui::TextDisabled("No DangerWindow notify data loaded.");
+        }
+    }
     const BossTargetContext& targetContext = aiDebugTargetContext;
     const char* relativeRegions[] = { "Front", "Side", "Back" };
     const char* distanceRegions[] = { "Near", "Middle", "Far" };
@@ -1117,7 +1262,13 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("hitActors: %zu", hitActors.size());
     ImGui::Text("attackHitCount: %d", currentAttackHitCount);
     ImGui::Text("leftHitBox: %s", leftHitBox ? "true" : "false");
-    ImGui::Text("rightHitBox: %s", rightHitBox ? "true" : "false");
+    ImGui::Text("rightHitBox: %s", rightHitBox ? "true" : "false");    ImGui::Text("Active HitBox Radius L/R: %.3f / %.3f",
+        activeLeftHitBoxRadius, activeRightHitBoxRadius);
+    const float activeHitBoxElapsed = GetActiveHitBoxElapsedForDebug();
+    if (activeHitBoxElapsed >= 0.0f)
+        ImGui::Text("Active HitBox Elapsed: %.3f sec", activeHitBoxElapsed);
+    else
+        ImGui::Text("Active HitBox Elapsed: N/A");
 
 
     ImGui::Begin("Boss AI Debug");
@@ -1408,6 +1559,43 @@ void GruxEnemy::DrawImGuiDetails()
 }
 
 //当たった時の処理
+float GruxEnemy::GetActiveHitBoxElapsedForDebug() const
+{
+    if (activeHitBoxNotifyStates.empty())
+        return -1.0f;
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return -1.0f;
+    float startTime = FLT_MAX;
+    for (const auto* state : activeHitBoxNotifyStates)
+    {
+        if (state)
+            startTime = (std::min)(startTime, state->startTime);
+    }
+    return startTime < FLT_MAX
+        ? (std::max)(0.0f, controller->GetCurrentAnimationTime() - startTime)
+        : -1.0f;
+}
+
+std::string GruxEnemy::GetCurrentAttackNameForDebug() const
+{
+    const auto controller = GetBodyAnimationController();
+    const std::string animationName = controller
+        ? controller->GetCurrentAnimationName()
+        : "UnknownAnimation";
+    const char* attackName = "UnknownAttack";
+    switch (selectedAttackType)
+    {
+    case BossAttackType::PrimaryAttackLA: attackName = "PrimaryAttackLA"; break;
+    case BossAttackType::PrimaryAttackRA: attackName = "PrimaryAttackRA"; break;
+    case BossAttackType::FastCombo: attackName = "FastCombo"; break;
+    case BossAttackType::JumpAttack: attackName = "JumpAttack"; break;
+    case BossAttackType::Dash: attackName = "Dash"; break;
+    case BossAttackType::DashAttack: attackName = "DashAttack"; break;
+    case BossAttackType::LongRangeAttack: attackName = "LongRangeAttack"; break;
+    }
+    return std::string(attackName) + " / " + animationName;}
+
 void GruxEnemy::TakeDamage(const int damage)
 {
     //skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
@@ -1494,11 +1682,9 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         Logger::Log(Logger::LogCategory::Gameplay,
             "[BossAttack][DangerWindowBegin] attackSequenceId=" +
             std::to_string(currentAttackSequenceId));
-        justDodgeAreaSize = state.justDodgeAreaSize;
-        justDodgeAreaOffset = state.justDodgeAreaOffset;
-        dangerArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(),
-            justDodgeAreaOffset, justDodgeAreaSize);
+        activeDangerNotifyState = &state;
         isDangerWindow = true;
+        RefreshActiveDangerAreaFromNotify();
         break;
     case AnimationNotifyState::Type::ShowTrail:
         break;
@@ -1585,6 +1771,7 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
             "[BossAttack][DangerWindowEnd] attackSequenceId=" +
             std::to_string(currentAttackSequenceId));
         isDangerWindow = false;
+        activeDangerNotifyState = nullptr;
         ResetDangerArea();
         break;
     case AnimationNotifyState::Type::ShowTrail:
@@ -2304,6 +2491,7 @@ void GruxEnemy::DisableAttackHitBoxes()
     activeHitBoxNotifyStates.clear();
     transitionWindow = false;
     isDangerWindow = false;
+    activeDangerNotifyState = nullptr;
     ResetDangerArea();
     Logger::Log(Logger::LogCategory::Gameplay,
         "[BossAttack][HitBoxesDisabled] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
@@ -2349,6 +2537,100 @@ void GruxEnemy::RefreshActiveHitBoxesFromNotifyStates()
         }
     }
 }
+void GruxEnemy::CaptureInitialDangerObbSettings()
+{
+    initialDangerObbSettings.clear();
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return;
+    for (const size_t clip : controller->GetAnimationAssetOrderForRuntimeTuning())
+    {
+        const auto* asset = controller->GetNotifyAssetForRuntimeTuning(clip);
+        if (!asset)
+            continue;
+        const auto& states = asset->notifyTrack.states;
+        for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
+        {
+            const auto& state = states[stateIndex];
+            if (state.type != AnimationNotifyState::Type::DangerWindow)
+                continue;
+            const uint64_t key = (static_cast<uint64_t>(clip) << 32) |
+                static_cast<uint64_t>(stateIndex);
+            initialDangerObbSettings[key] = { state.justDodgeAreaOffset, state.justDodgeAreaSize };
+            if (dangerObbSelectedClip == static_cast<size_t>(-1))
+            {
+                dangerObbSelectedClip = clip;
+                dangerObbSelectedStateIndex = stateIndex;
+            }
+        }
+    }
+}
+
+AnimationNotifyState* GruxEnemy::GetSelectedDangerNotifyState()
+{
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return nullptr;
+    auto* asset = controller->GetNotifyAssetForRuntimeTuning(dangerObbSelectedClip);
+    if (!asset || dangerObbSelectedStateIndex >= asset->notifyTrack.states.size())
+        return nullptr;
+    AnimationNotifyState& state = asset->notifyTrack.states[dangerObbSelectedStateIndex];
+    return state.type == AnimationNotifyState::Type::DangerWindow ? &state : nullptr;
+}
+
+const AnimationNotifyState* GruxEnemy::GetSelectedDangerNotifyState() const
+{
+    return const_cast<GruxEnemy*>(this)->GetSelectedDangerNotifyState();
+}
+
+bool GruxEnemy::GetPlayerDangerOverlapForDebug(const DangerArea& area) const
+{
+    const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+    if (!player)
+        return false;
+    DirectX::XMFLOAT3 center = player->GetPosition();
+    float radius = 0.0f;
+    float height = 0.0f;
+    if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(
+        player->FindComponentByName("capsuleComponent")))
+    {
+        center = capsule->GetComponentLocation();
+        radius = capsule->GetRadius();
+        height = capsule->GetHeight();
+    }
+    return area.IntersectsPlayerCapsule(center, radius, height).overlap;
+}
+
+void GruxEnemy::RefreshActiveDangerAreaFromNotify()
+{
+    if (!isDangerWindow || !activeDangerNotifyState)
+        return;
+    justDodgeAreaOffset = activeDangerNotifyState->justDodgeAreaOffset;
+    justDodgeAreaSize = activeDangerNotifyState->justDodgeAreaSize;
+    justDodgeAreaSize.x = (std::max)(0.0f, justDodgeAreaSize.x);
+    justDodgeAreaSize.y = (std::max)(0.0f, justDodgeAreaSize.y);
+    justDodgeAreaSize.z = (std::max)(0.0f, justDodgeAreaSize.z);
+    dangerArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(),
+        justDodgeAreaOffset, justDodgeAreaSize);
+}
+
+void GruxEnemy::DrawDangerObbWorldDebug()
+{
+    if (!dangerObbWorldDebug)
+        return;
+    const AnimationNotifyState* state = GetSelectedDangerNotifyState();
+    if (!state)
+        return;
+    const DangerArea selectedArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(),
+        state->justDodgeAreaOffset, state->justDodgeAreaSize);
+    const bool inside = GetPlayerDangerOverlapForDebug(selectedArea);
+    const DirectX::XMFLOAT4 color = inside
+        ? DirectX::XMFLOAT4{ 1.0f, 0.1f, 0.1f, 1.0f }
+        : DirectX::XMFLOAT4{ 1.0f, 0.8f, 0.15f, 1.0f };
+    DebugRender::DrawBox(selectedArea.WorldTransform(), selectedArea.size, color, 0.0f, true);
+    DebugRender::DrawSphere(selectedArea.center, 0.1f, color, 0.0f, true);
+}
+
 void GruxEnemy::ResetDangerArea()
 {
     dangerArea = {};

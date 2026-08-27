@@ -933,6 +933,99 @@ void Player::RenderTrail(ID3D11DeviceContext* immediateContext)
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    if (ImGui::CollapsingHeader("Just Dodge Debug", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::Checkbox("Enable World HitBox Debug", &justDodgeDebugEnabled);
+        const bool isDodging = stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge";
+        const auto controller = GetBodyAnimationController();
+        const float animationTime = controller ? controller->GetCurrentAnimationTime() : 0.0f;
+        const float dodgeDurationDebug = controller ? controller->GetAnimationLength("Ability_RWB_Fwd_0") : 0.0f;
+        const AnimationNotifyAsset* dodgeAsset = controller
+            ? controller->GetAnimationAsset(isDodging ? controller->GetCurrentAnimationName() : "Ability_RWB_Fwd_0")
+            : nullptr;
+        float invincibleStart = 0.0f, invincibleEnd = 0.0f;
+        float justStart = 0.0f, justEnd = 0.0f;
+        float dodgeStateEnd = dodgeDurationDebug;
+        if (dodgeAsset)
+        {
+            for (const auto& state : dodgeAsset->notifyTrack.states)
+            {
+                if (state.type == AnimationNotifyState::Type::Invincible)
+                {
+                    invincibleStart = state.startTime;
+                    invincibleEnd = state.endTime;
+                }
+                else if (state.type == AnimationNotifyState::Type::JustDodgeWindow)
+                {
+                    justStart = state.startTime;
+                    justEnd = state.endTime;
+                }                else if (state.type == AnimationNotifyState::Type::TransitionWindow)
+                {
+                    dodgeStateEnd = state.startTime;
+                }
+            }
+        }
+
+        ImGui::Text("Dodge Active: %s", isDodging ? "true" : "false");
+        ImGui::Text("Dodge Elapsed: %.3f sec", dodgeDebugElapsed);
+        ImGui::Text("Animation Time / Duration: %.3f / %.3f sec", animationTime, dodgeDurationDebug);
+        ImGui::Text("Dodge State End (Transition Start): %.3f sec", dodgeStateEnd);
+        ImGui::TextColored(invincibleWindow ? ImVec4(0.25f, 0.75f, 1.0f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
+            "Invincible Active: %s", invincibleWindow ? "true" : "false");
+        ImGui::TextColored(justDodgeWindow ? ImVec4(1.0f, 0.55f, 0.1f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
+            "Just Dodge Active: %s", justDodgeWindow ? "true" : "false");
+        ImGui::Text("Invincible: %.3f - %.3f sec", invincibleStart, invincibleEnd);
+        ImGui::Text("Just Dodge: %.3f - %.3f sec", justStart, justEnd);
+
+        const float timelineWidth = (std::max)(120.0f, ImGui::GetContentRegionAvail().x);
+        constexpr float timelineHeight = 34.0f;
+        const ImVec2 timelinePos = ImGui::GetCursorScreenPos();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(timelinePos, ImVec2(timelinePos.x + timelineWidth, timelinePos.y + timelineHeight), IM_COL32(70, 70, 70, 255));
+        if (dodgeDurationDebug > FLT_EPSILON)
+        {
+            const auto timelineX = [&](float time)
+            {
+                return timelinePos.x + timelineWidth * std::clamp(time / dodgeDurationDebug, 0.0f, 1.0f);
+            };
+            drawList->AddRectFilled(ImVec2(timelineX(invincibleStart), timelinePos.y + 5.0f),
+                ImVec2(timelineX(invincibleEnd), timelinePos.y + 19.0f), IM_COL32(45, 150, 235, 255));
+            drawList->AddRectFilled(ImVec2(timelineX(justStart), timelinePos.y + 19.0f),
+                ImVec2(timelineX(justEnd), timelinePos.y + 33.0f), IM_COL32(255, 135, 25, 255));
+            if (isDodging)
+            {
+                const float currentX = timelineX(animationTime);
+                drawList->AddLine(ImVec2(currentX, timelinePos.y), ImVec2(currentX, timelinePos.y + timelineHeight), IM_COL32(255, 255, 255, 255), 2.0f);
+            }
+        }
+        ImGui::InvisibleButton("##DodgeTimeline", ImVec2(timelineWidth, timelineHeight));
+        ImGui::TextDisabled("Blue: Invincible  Orange: Just  White: Current");
+
+        const float justRate = dodgeDebugAttempts > 0
+            ? 100.0f * static_cast<float>(dodgeDebugJustCount) / static_cast<float>(dodgeDebugAttempts)
+            : 0.0f;
+        ImGui::Text("Attempts: %d  Just: %d  Normal: %d  Damage: %d",
+            dodgeDebugAttempts, dodgeDebugJustCount, dodgeDebugNormalCount, dodgeDebugDamageCount);
+        ImGui::Text("Just / Attempt: %.1f%%", justRate);
+        if (ImGui::Button("Reset Debug Stats"))
+        {
+            dodgeDebugAttempts = dodgeDebugJustCount = dodgeDebugNormalCount = dodgeDebugDamageCount = 0;
+            lastJustDodgeValid = false;
+        }
+        ImGui::SeparatorText("Last Just Dodge");
+        if (lastJustDodgeValid)
+        {
+            ImGui::Text("Attack: %s", lastJustDodgeAttack.c_str());
+            ImGui::Text("Dodge / Animation Time: %.3f / %.3f sec", lastJustDodgeTime, lastJustAnimationTime);
+            ImGui::Text("Just Window: %.3f - %.3f sec (Hit %.1f%%)",
+                lastJustWindowStart, lastJustWindowEnd, lastJustWindowRatio * 100.0f);
+            if (lastJustBossHitBoxElapsed >= 0.0f)
+                ImGui::Text("Boss HitBox Active Elapsed: %.3f sec", lastJustBossHitBoxElapsed);
+            else
+                ImGui::Text("Boss HitBox Active Elapsed: N/A (not active)");
+        }
+        else ImGui::TextDisabled("No Just Dodge recorded");
+    }
     ImGui::Checkbox(U8("ƒ{ƒXíƒJƒƒ‰"), &isBossBattle);
     ImGui::DragFloat(U8("Œ•‚Ì‹…‚Ì“–‚½‚è”»’è‚Ì”¼Œa"), &weaponSphereRadius, 0.05f);
     ImGui::Checkbox("Sword Hit Debug", &swordHitDebug);
@@ -2122,11 +2215,35 @@ void Player::ConsumeActionRequest(ActionType expectedType)
     bufferCommand = {};
 }
 
+void Player::BeginDodgeDebug()
+{
+    dodgeDebugElapsed = 0.0f;
+    normalDodgeRecordedThisDodge = false;
+    justDodgeRecordedThisDodge = false;
+    ++dodgeDebugAttempts;
+}
+
+void Player::UpdateDodgeDebug(float deltaTime)
+{
+    dodgeDebugElapsed += (std::max)(0.0f, deltaTime);
+}
+
+void Player::RecordNormalDodgeDebug()
+{
+    if (!normalDodgeRecordedThisDodge)
+    {
+        normalDodgeRecordedThisDodge = true;
+        ++dodgeDebugNormalCount;
+    }
+}
+
 //“–‚½‚Á‚½Žž‚Ìˆ—
 bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition)
 {
     if (invincibleWindow)
     {
+        if (stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge")
+            RecordNormalDodgeDebug();
         Logger::Log(Logger::LogCategory::Gameplay,
             "[PlayerDamage][Rejected] reason=invincibleWindow hp=" + std::to_string(hp));
         return false;
@@ -2161,6 +2278,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
 
     const int appliedDamage = (std::max)(0, damage);
     hp = (std::max)(0, hp - appliedDamage);
+    ++dodgeDebugDamageCount;
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav",0.3f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav",0.5f);
     ClearActionRequest("damage_applied");
@@ -2353,6 +2471,45 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
         : "";
     const float animationTime = controller
         ? controller->GetCurrentAnimationTime()
+        : -1.0f;
+    float justWindowStart = 0.0f;
+    float justWindowEnd = 0.0f;
+    if (controller)
+    {
+        const auto assetIt = controller->animationNotifyAssets.find(
+            controller->GetAnimationClip());
+        if (assetIt != controller->animationNotifyAssets.end())
+        {
+            for (const auto& state : assetIt->second.notifyTrack.states)
+            {
+                if (state.type == AnimationNotifyState::Type::JustDodgeWindow)
+                {
+                    justWindowStart = state.startTime;
+                    justWindowEnd = state.endTime;
+                    break;
+                }
+            }
+        }
+    }
+    if (!justDodgeRecordedThisDodge)
+    {
+        justDodgeRecordedThisDodge = true;
+        ++dodgeDebugJustCount;
+    }
+    lastJustDodgeValid = true;
+    lastJustDodgeTime = dodgeDebugElapsed;
+    lastJustAnimationTime = animationTime;
+    lastJustWindowStart = justWindowStart;
+    lastJustWindowEnd = justWindowEnd;
+    lastJustWindowRatio = justWindowEnd > justWindowStart
+        ? std::clamp((animationTime - justWindowStart) /
+            (justWindowEnd - justWindowStart), 0.0f, 1.0f)
+        : 0.0f;
+    lastJustDodgeAttack = gruxEnemy
+        ? gruxEnemy->GetCurrentAttackNameForDebug()
+        : "Unknown";
+    lastJustBossHitBoxElapsed = gruxEnemy
+        ? gruxEnemy->GetActiveHitBoxElapsedForDebug()
         : -1.0f;
     Logger::Log(Logger::LogCategory::Gameplay, std::format(
         "[JustDodgeSuccess] frame={} this={} enemy={} attackSequenceId={} justDodgeSuccess={} state={} animation={} animationTime={}",

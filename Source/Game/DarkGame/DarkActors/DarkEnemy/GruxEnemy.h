@@ -99,7 +99,8 @@ public:
     bool IsTransitionWindowActive() const { return transitionWindow; }
     int GetCurrentAttackHitCount() const { return currentAttackHitCount; }
     bool WasCurrentAttackSequenceJustDodged() const { return !justDodgedActors.empty(); }
-
+    float GetActiveHitBoxElapsedForDebug() const;
+    std::string GetCurrentAttackNameForDebug() const;
     BossTargetContext BuildTargetContext() const;
     bool ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const;
     bool IsFacingPlayerForAttack(const BossTargetContext& context) const;
@@ -155,6 +156,12 @@ private:
     void ResetJustDodgeRecords(const char* reason);
     bool HasJustDodgedAttack(const Actor* actor) const;
     void ResetDangerArea();
+    void CaptureInitialDangerObbSettings();
+    AnimationNotifyState* GetSelectedDangerNotifyState();
+    const AnimationNotifyState* GetSelectedDangerNotifyState() const;
+    bool GetPlayerDangerOverlapForDebug(const DangerArea& area) const;
+    void RefreshActiveDangerAreaFromNotify();
+    void DrawDangerObbWorldDebug();
     void PrepareJumpAttackMotionWarpOverride();
 
 
@@ -397,6 +404,16 @@ private:
     // ジャスト回避の矩形のオフセット
     DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };
     DangerArea dangerArea{};
+    struct DangerObbInitialValue
+    {
+        DirectX::XMFLOAT3 centerOffset{};
+        DirectX::XMFLOAT3 fullSize{};
+    };
+    std::unordered_map<uint64_t, DangerObbInitialValue> initialDangerObbSettings;
+    size_t dangerObbSelectedClip = static_cast<size_t>(-1);
+    size_t dangerObbSelectedStateIndex = 0;
+    const AnimationNotifyState* activeDangerNotifyState = nullptr;
+    bool dangerObbWorldDebug = false;
 
     float flashDuration = 0.8f;   // 何秒でフラッシュしなくなるか
 

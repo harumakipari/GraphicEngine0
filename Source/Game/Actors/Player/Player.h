@@ -199,7 +199,10 @@ public:
 
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
-
+    void BeginDodgeDebug();
+    void UpdateDodgeDebug(float deltaTime);
+    void RecordNormalDodgeDebug();
+    bool IsJustDodgeDebugEnabled() const { return justDodgeDebugEnabled; }
     // カメラの目の位置を取得する
     const std::shared_ptr<SceneComponent>& GetCameraEyeComponent() { return cameraEyeComponent; }
 
@@ -269,6 +272,22 @@ public:
     float dodgeSpeed = 3.0f; // 回避する時のスピード
     float dodgeDuration = 0.5f; // 回避するときの時間
 
+    bool justDodgeDebugEnabled = false;
+    float dodgeDebugElapsed = 0.0f;
+    bool normalDodgeRecordedThisDodge = false;
+    bool justDodgeRecordedThisDodge = false;
+    int dodgeDebugAttempts = 0;
+    int dodgeDebugJustCount = 0;
+    int dodgeDebugNormalCount = 0;
+    int dodgeDebugDamageCount = 0;
+    bool lastJustDodgeValid = false;
+    std::string lastJustDodgeAttack = "None";
+    float lastJustDodgeTime = 0.0f;
+    float lastJustAnimationTime = 0.0f;
+    float lastJustWindowStart = 0.0f;
+    float lastJustWindowEnd = 0.0f;
+    float lastJustWindowRatio = 0.0f;
+    float lastJustBossHitBoxElapsed = -1.0f;
     float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
     float motionWarpDesiredAttackSurfaceDistance = 0.5f;
     float attackRotationMaxCorrectionDegrees = 55.0f;

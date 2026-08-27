@@ -233,6 +233,21 @@ public:
     // 全てのNotifyAssetsをロードする
     void LoadAllNotifyAssets(const std::string& ownerName);
 
+    const std::vector<size_t>& GetAnimationAssetOrderForRuntimeTuning() const
+    {
+        return animationAssetOrder;
+    }
+    AnimationNotifyAsset* GetNotifyAssetForRuntimeTuning(size_t clip)
+    {
+        const auto it = animationNotifyAssets.find(clip);
+        return it != animationNotifyAssets.end() ? &it->second : nullptr;
+    }
+    const AnimationNotifyAsset* GetNotifyAssetForRuntimeTuning(size_t clip) const
+    {
+        const auto it = animationNotifyAssets.find(clip);
+        return it != animationNotifyAssets.end() ? &it->second : nullptr;
+    }
+
     // ブレンドスペースでブレンドするアニメーションを追加する
     // x +右-左　y +前-後
     void AddForwardBlendAnimation(const std::string& name, float angle)
