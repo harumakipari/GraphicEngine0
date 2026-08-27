@@ -234,6 +234,13 @@ void GameScene::Update(float deltaTime)
 
 
 #ifdef USE_IMGUI
+
+
+    if (enableLightGui || enableSceneGui)
+    {
+        InputSystem::SetCursorVisible(true);
+    }
+#if 0
     if (InputSystem::GetInputState("0", InputStateMask::Trigger))
     {
         SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
@@ -266,11 +273,6 @@ void GameScene::Update(float deltaTime)
     if (InputSystem::GetInputState("6", InputStateMask::Trigger))
     {
         enableSceneGui = !enableSceneGui;
-    }
-
-    if (enableLightGui || enableSceneGui)
-    {
-        InputSystem::SetCursorVisible(true);
     }
 
     if (InputSystem::GetInputState("7", InputStateMask::Trigger))
@@ -417,6 +419,8 @@ void GameScene::Update(float deltaTime)
         // ƒJƒƒ‰‚ðŒÅ’è‚·‚é
         cinemaCameraActor->SetUseDebugMode(false);
     }
+#endif // 0
+
 
     if (InputSystem::GetInputState("F9", InputStateMask::Trigger))
     {

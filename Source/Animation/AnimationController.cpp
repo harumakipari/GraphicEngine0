@@ -1717,8 +1717,8 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
         case AnimationNotifyState::Type::JustDodgeWindow:
             break;
         case AnimationNotifyState::Type::DangerWindow:
-            ImGui::DragFloat3("Danger Area Size (Width / Height / Depth)", &state.justDodgeAreaSize.x, 0.1f, 0, 20);
-            ImGui::DragFloat3(U8("ジャスト回避の矩形のオフセット"), &state.justDodgeAreaOffset.x, 0.1f, 0, 20);
+            ImGui::DragFloat3(U8("ジャスト回避の矩形のサイズ (Width / Height / Depth)"), &state.justDodgeAreaSize.x, 0.1f, 0, 20);
+            ImGui::DragFloat3(U8("ジャスト回避の矩形のオフセット"), &state.justDodgeAreaOffset.x, 0.1f, -10, 20);
             if (owner)
             {
                 const DangerArea previewArea = BuildDangerArea(owner->GetPosition(),

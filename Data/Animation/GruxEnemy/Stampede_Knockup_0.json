@@ -18,6 +18,30 @@
     },
     "states": [
         {
+            "endTime": 0.2982904613018036,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                1.100000023841858
+            ],
+            "justDodgeAreaSize": [
+                4.800000190734863,
+                2.0,
+                5.699999809265137
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.008424907922744751,
+            "type": "DangerWindow",
+            "value": 1.0
+        },
+        {
             "endTime": 0.5473132729530334,
             "hitBoxRadius": 1.2000000476837158,
             "justDodgeAreaOffset": [
