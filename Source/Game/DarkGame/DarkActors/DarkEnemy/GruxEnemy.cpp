@@ -1610,7 +1610,9 @@ void GruxEnemy::DrawImGuiDetails()
         ? attackTypes[static_cast<int>(lastResumedAttackType)]
         : "None");
     ImGui::Text("Attack Ready Active: %s", attackReadyActive ? "YES" : "NO");
-    ImGui::Text("Attack Ready Duration: %.3f sec", attackReadyDuration);
+    ImGui::Text("Attack Ready Reason: %s",
+        attackReadyReason == AttackReadyReason::AfterTurn ? "AfterTurn" : "Front");
+    ImGui::Text("Attack Ready Duration: %.3f sec", GetAttackReadyDuration());
     ImGui::Text("Attack Ready Timer: %.3f sec", attackReadyDebugTimer);
     ImGui::Text("Ready Attack Type: %s",
         attackTypes[static_cast<int>(attackReadyDebugType)]);
@@ -1748,9 +1750,12 @@ void GruxEnemy::DrawImGuiDetails()
             suppressCombatRepositionForNextIntentSelection ? "YES" : "NO");
 
         ImGui::SeparatorText("Attack Ready");
-        ImGui::DragFloat("Attack Ready Duration", &attackReadyDuration,
+        ImGui::DragFloat("Front Attack Ready Duration", &frontAttackReadyDuration,
             0.01f, 0.0f, 3.0f, "%.2f sec");
-        attackReadyDuration = std::clamp(attackReadyDuration, 0.0f, 3.0f);
+        ImGui::DragFloat("Side Attack Ready Duration", &sideAttackReadyDuration,
+            0.01f, 0.0f, 3.0f, "%.2f sec");
+        frontAttackReadyDuration = std::clamp(frontAttackReadyDuration, 0.0f, 3.0f);
+        sideAttackReadyDuration = std::clamp(sideAttackReadyDuration, 0.0f, 3.0f);
 
 
         const float evaluationTotalWeight = GetTotalActionWeight();
@@ -1889,7 +1894,8 @@ void GruxEnemy::DrawImGuiDetails()
             combatRepositionBackWeight = initialCombatRepositionBackWeight;
             dashAttackPlanBackWeight = initialDashAttackPlanBackWeight;
             jumpAttackPlanBackWeight = initialJumpAttackPlanBackWeight;
-            attackReadyDuration = initialAttackReadyDuration;
+            frontAttackReadyDuration = initialFrontAttackReadyDuration;
+            sideAttackReadyDuration = initialSideAttackReadyDuration;
         }
         ImGui::TextDisabled("Runtime only. Reset does not change active Cooldown Remaining.");
         ImGui::TextDisabled("Recovery edits affect an active Recovery on its next update.");
@@ -3657,9 +3663,15 @@ bool GruxEnemy::ResumeSelectedAttackAfterTurn()
     lastResumedAttackType = selectedAttackType;
     lastResumedAttackValid = true;
     ClearPendingAttackFacing();
-    stateMachine_->ChangeState(IsCloseCombatAttackType(selectedAttackType)
-        ? "EnemyAttackReadyState"
-        : "EnemyAttackState");
+    if (IsCloseCombatAttackType(selectedAttackType))
+    {
+        attackReadyReason = AttackReadyReason::AfterTurn;
+        stateMachine_->ChangeState("EnemyAttackReadyState");
+    }
+    else
+    {
+        stateMachine_->ChangeState("EnemyAttackState");
+    }
     return true;
 }
 

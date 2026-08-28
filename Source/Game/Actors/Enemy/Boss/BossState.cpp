@@ -130,7 +130,15 @@ void EnemyThinkState::Execute(float deltaTime)
     enemy->SetLastAIDecision("Action: Attack selected by weighted selection");
     enemy->MarkIntentAttackSelected();
     attackSelected = true;
-    owner->GetStateMachine()->ChangeState("EnemyAttackState");
+    if (enemy->IsCloseCombatAttackType(enemy->GetSelectedAttackType()))
+    {
+        enemy->SetAttackReadyReason(AttackReadyReason::Front);
+        owner->GetStateMachine()->ChangeState("EnemyAttackReadyState");
+    }
+    else
+    {
+        owner->GetStateMachine()->ChangeState("EnemyAttackState");
+    }
 }
 void EnemyThinkState::Exit()
 {

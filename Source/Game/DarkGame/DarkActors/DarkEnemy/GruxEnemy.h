@@ -130,7 +130,14 @@ public:
     float GetPendingAttackFacingAngle() const;
     bool ResumeSelectedAttackAfterTurn();
     bool IsCloseCombatAttackType(BossAttackType attackType) const;
-    float GetAttackReadyDuration() const { return attackReadyDuration; }
+    void SetAttackReadyReason(AttackReadyReason reason) { attackReadyReason = reason; }
+    AttackReadyReason GetAttackReadyReason() const { return attackReadyReason; }
+    float GetAttackReadyDuration() const
+    {
+        return attackReadyReason == AttackReadyReason::AfterTurn
+            ? sideAttackReadyDuration
+            : frontAttackReadyDuration;
+    }
     void BeginAttackReadyDebug();
     void UpdateAttackReadyDebug(float elapsedTime);
     void EndAttackReadyDebug();
@@ -378,6 +385,7 @@ private:
     float attackReadyDebugTimer = 0.0f;
     BossAttackType attackReadyDebugType = BossAttackType::PrimaryAttackLA;
     bool attackReadySEFired = false;
+    AttackReadyReason attackReadyReason = AttackReadyReason::Front;
 
 
     bool hasSelectedActionDebug = false;
@@ -432,13 +440,15 @@ private:
     const float initialRelativeBackMinAngle = relativeBackMinAngle;
     static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // 横に練り歩く距離
 
-    static constexpr float initialAttackReadyDuration = 1.5f;  // 攻撃の準備時間
+    static constexpr float initialFrontAttackReadyDuration = 1.0f;
+    static constexpr float initialSideAttackReadyDuration = 1.5f;
 
     float turnSpeed = 480.0f;  // EnemyTurnStateでその場回転するときの速度
     float turnCompleteAngle = 15.0f;    // この角度以内なら回転完了とみなす
     float turnTimeout = 1.5f;   //   Turnがいつまでも完了しない場合の制限時間。現在は1.5秒でThinkへ戻る。
     std::string lastAIDecisionReason = "None";  // 最後にAIが行った判断理由を文字列で保存。ImGuiに表示。AIの動作確認用。
-    float attackReadyDuration = initialAttackReadyDuration;
+    float frontAttackReadyDuration = initialFrontAttackReadyDuration;
+    float sideAttackReadyDuration = initialSideAttackReadyDuration;
     std::string attackReadySEName = "enemy_attack_ready";
     float attackReadySEVolume = 1.0f;
     struct PositioningDebugSnapshot
