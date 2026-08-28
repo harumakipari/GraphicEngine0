@@ -12,6 +12,87 @@
 #include "Physics/CollisionFunction.h"
 #include <random>
 
+#ifdef USE_IMGUI
+namespace
+{
+    void DrawIntentWeightBar(const char* label, float& weight,
+        float totalWeight, const bool editable = true)
+    {
+        ImGui::PushID(label);
+        ImGui::TextUnformatted(label);
+
+        const float barWidth = (std::max)(180.0f,
+            (std::min)(420.0f, ImGui::GetContentRegionAvail().x - 105.0f));
+        constexpr float barHeight = 22.0f;
+        const float previousWeight = weight;
+        ImGui::InvisibleButton("##IntentWeightBar",
+            ImVec2(barWidth, barHeight));
+        if (editable && ImGui::IsItemActive())
+        {
+            constexpr float weightPerPixel = 1.0f;
+            weight = std::clamp(weight +
+                ImGui::GetIO().MouseDelta.x * weightPerPixel,
+                0.0f, 1000.0f);
+        }
+
+        totalWeight += weight - previousWeight;
+        const float probability = totalWeight > 0.0f
+            ? std::clamp(weight / totalWeight, 0.0f, 1.0f)
+            : 0.0f;
+        const ImVec2 barMin = ImGui::GetItemRectMin();
+        const ImVec2 barMax = ImGui::GetItemRectMax();
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+        drawList->AddRectFilled(barMin, barMax,
+            ImGui::GetColorU32(ImGuiCol_FrameBg), 4.0f);
+        if (probability > 0.0f)
+        {
+            const ImVec2 fillMax{
+                barMin.x + (barMax.x - barMin.x) * probability,
+                barMax.y };
+            drawList->AddRectFilled(barMin, fillMax,
+                ImGui::GetColorU32(editable
+                    ? ImGuiCol_PlotHistogram
+                    : ImGuiCol_TextDisabled), 4.0f);
+        }
+        drawList->AddRect(barMin, barMax,
+            ImGui::GetColorU32(ImGuiCol_Border), 4.0f);
+
+        char probabilityText[32]{};
+        sprintf_s(probabilityText, "%.1f%%", probability * 100.0f);
+        const ImVec2 textSize = ImGui::CalcTextSize(probabilityText);
+        drawList->AddText(
+            ImVec2(barMin.x + (barWidth - textSize.x) * 0.5f,
+                barMin.y + (barHeight - textSize.y) * 0.5f),
+            ImGui::GetColorU32(ImGuiCol_Text), probabilityText);
+
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("Base Weight: %.1f", weight);
+            ImGui::Text("Base Probability: %.1f%%", probability * 100.0f);
+            if (editable)
+                ImGui::TextDisabled("Drag left/right to change weight");
+            else
+                ImGui::TextDisabled("Disabled for Back region");
+            ImGui::EndTooltip();
+        }
+
+        if (editable)
+        {
+            ImGui::SetNextItemWidth(140.0f);
+            ImGui::DragFloat("Weight", &weight, 0.5f, 0.0f, 1000.0f, "%.1f");
+            weight = std::clamp(weight, 0.0f, 1000.0f);
+        }
+        else
+        {
+            ImGui::TextDisabled("Disabled / 0%%");
+        }
+        ImGui::Spacing();
+        ImGui::PopID();
+    }
+}
+#endif
+
 void GruxEnemy::Initialize(const Transform& transform)
 {
     maxHp = 75;
@@ -1741,27 +1822,89 @@ void GruxEnemy::DrawImGuiDetails()
             10.0f, relativeBackMinAngle - minimumRelativeSideAngleWidth);
         relativeBackMinAngle = std::clamp(relativeBackMinAngle,
             relativeFrontMaxAngle + minimumRelativeSideAngleWidth, 170.0f);
+
+        ImGui::SeparatorText("Combat Behavior");
+        const auto getIntentData = [&](const BossIntentType type) -> BossIntentData&
+        {
+            for (BossIntentData& data : combatIntentData)
+            {
+                if (data.type == type)
+                    return data;
+            }
+            return combatIntentData.front();
+        };
+        BossIntentData& closeCombatIntent =
+            getIntentData(BossIntentType::CloseCombat);
+        BossIntentData& repositionIntent =
+            getIntentData(BossIntentType::CombatReposition);
+        BossIntentData& dashIntent =
+            getIntentData(BossIntentType::DashAttackPlan);
+        BossIntentData& jumpIntent =
+            getIntentData(BossIntentType::JumpAttackPlan);
+
+        const auto drawDistanceRegionWeights = [&](const char* regionName,
+            float BossIntentData::* weightMember)
+        {
+            if (!ImGui::TreeNodeEx(regionName, ImGuiTreeNodeFlags_DefaultOpen))
+                return;
+            ImGui::PushID(regionName);
+            const auto totalBaseWeight = [&]()
+            {
+                return closeCombatIntent.*weightMember +
+                    repositionIntent.*weightMember +
+                    dashIntent.*weightMember +
+                    jumpIntent.*weightMember;
+            };
+            DrawIntentWeightBar("Close Combat",
+                closeCombatIntent.*weightMember, totalBaseWeight());
+            DrawIntentWeightBar("Combat Reposition",
+                repositionIntent.*weightMember, totalBaseWeight());
+            DrawIntentWeightBar("Dash Attack",
+                dashIntent.*weightMember, totalBaseWeight());
+            DrawIntentWeightBar("Jump Attack",
+                jumpIntent.*weightMember, totalBaseWeight());
+            ImGui::PopID();
+            ImGui::TreePop();
+        };
+
+        drawDistanceRegionWeights("Near", &BossIntentData::nearWeight);
+        drawDistanceRegionWeights("Middle", &BossIntentData::middleWeight);
+        drawDistanceRegionWeights("Far", &BossIntentData::farWeight);
+
+        if (ImGui::TreeNodeEx("Back", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            const auto totalBackWeight = [&]()
+            {
+                return combatRepositionBackWeight +
+                    dashAttackPlanBackWeight + jumpAttackPlanBackWeight;
+            };
+            float disabledCloseCombatWeight = 0.0f;
+            DrawIntentWeightBar("Close Combat", disabledCloseCombatWeight,
+                totalBackWeight(), false);
+            DrawIntentWeightBar("Combat Reposition",
+                combatRepositionBackWeight, totalBackWeight());
+            DrawIntentWeightBar("Dash Attack",
+                dashAttackPlanBackWeight, totalBackWeight());
+            DrawIntentWeightBar("Jump Attack",
+                jumpAttackPlanBackWeight, totalBackWeight());
+            ImGui::TreePop();
+        }
+
+        ImGui::SeparatorText("Post Attack Modifier");
+        ImGui::DragFloat("Post Attack CombatReposition Weight",
+            &postAttackCombatRepositionWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+        postAttackCombatRepositionWeight = std::clamp(
+            postAttackCombatRepositionWeight, 0.0f, 1000.0f);
+        ImGui::Text("Boost Pending: %s",
+            postAttackCombatRepositionBoostPending ? "YES" : "NO");
+        ImGui::Text("Reposition Suppression: %s",
+            suppressCombatRepositionForNextIntentSelection ? "YES" : "NO");
+
         ImGui::SeparatorText("Combat Reposition");
         ImGui::DragFloat("Move Distance", &combatRepositionMoveDistance,
             0.1f, 1.0f, 15.0f, "%.2f m");
         combatRepositionMoveDistance = std::clamp(
             combatRepositionMoveDistance, 1.0f, 15.0f);
-        ImGui::SeparatorText("Back Region Intent Weights");
-        ImGui::DragFloat("Combat Reposition Back Weight",
-            &combatRepositionBackWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-        ImGui::DragFloat("Dash Attack Plan Back Weight",
-            &dashAttackPlanBackWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-        ImGui::DragFloat("Jump Attack Plan Back Weight",
-            &jumpAttackPlanBackWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-        combatRepositionBackWeight = (std::max)(0.0f, combatRepositionBackWeight);
-        dashAttackPlanBackWeight = (std::max)(0.0f, dashAttackPlanBackWeight);
-        jumpAttackPlanBackWeight = (std::max)(0.0f, jumpAttackPlanBackWeight);
-        ImGui::Text("Skip Reposition On Next Intent Selection: %s",
-            suppressCombatRepositionForNextIntentSelection ? "YES" : "NO");
-        ImGui::DragFloat("Post Attack CombatReposition Weight",
-            &postAttackCombatRepositionWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-        postAttackCombatRepositionWeight = std::clamp(
-            postAttackCombatRepositionWeight, 0.0f, 1000.0f);
 
         ImGui::SeparatorText("Attack Ready");
         ImGui::DragFloat("Front Attack Ready Duration", &frontAttackReadyDuration,
@@ -1777,20 +1920,13 @@ void GruxEnemy::DrawImGuiDetails()
 
 
         const float evaluationTotalWeight = GetTotalActionWeight();
-        const float intentEvaluationTotalWeight = GetTotalIntentWeight();
-        ImGui::SeparatorText("Intent Tuning");
+        ImGui::SeparatorText("Positioning Plans");
         for (size_t i = 0; i < combatIntentData.size(); ++i)
         {
             BossIntentData& intentData = combatIntentData[i];
             ImGui::PushID(static_cast<int>(i));
             if (ImGui::TreeNode(intentTypes[i]))
             {
-                ImGui::DragFloat("Near Weight", &intentData.nearWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-                ImGui::DragFloat("Middle Weight", &intentData.middleWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-                ImGui::DragFloat("Far Weight", &intentData.farWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-                intentData.nearWeight = (std::max)(0.0f, intentData.nearWeight);
-                intentData.middleWeight = (std::max)(0.0f, intentData.middleWeight);
-                intentData.farWeight = (std::max)(0.0f, intentData.farWeight);
                 constexpr float minimumPreferredRangeWidth = 0.1f;
                 if (ImGui::DragFloat("Preferred Min", &intentData.preferredMinDistance,
                     0.1f, 0.0f, 100.0f, "%.2f m"))
@@ -1814,15 +1950,6 @@ void GruxEnemy::DrawImGuiDetails()
                     0.05f, 0.0f, 10.0f, "%.2f m");
                 intentData.positioningArrivalInset =
                     (std::max)(0.0f, intentData.positioningArrivalInset);
-                const float probability = intentEvaluationTotalWeight > 0.0f
-                    ? combatIntentEffectiveWeights[i] / intentEvaluationTotalWeight
-                    : 0.0f;
-                ImGui::Text("Effective Weight: %.1f", combatIntentEffectiveWeights[i]);
-                ImGui::Text("Candidate Status: %s",
-                    combatIntentEffectiveWeights[i] > 0.0f ? "Candidate" : "ZeroWeight");
-                ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), "");
-                ImGui::SameLine();
-                ImGui::Text("%.1f%%", probability * 100.0f);
                 ImGui::TreePop();
             }
             ImGui::PopID();

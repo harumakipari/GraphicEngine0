@@ -321,7 +321,7 @@ public:
     int maxRushAttackCount = 7;
 
     float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
-    float rushHitStopDuration = 0.05f;
+    float rushHitStopDuration = 0.1f;
 
 public:
     // 描画用コンポーネントを追加
