@@ -62,6 +62,7 @@ public:
     void BeginIntentReevaluation();
     void MarkIntentAttackSelected();
     void OnSelectedActionStartedSuccessfully();
+    void OnSelectedAttackCompletedSuccessfully();
     void OnSelectedActionStartFailed();
     void FailActiveIntent(const char* reason);
     bool InvalidateCloseCombatIntentForBack(const BossTargetContext& context);
@@ -128,6 +129,10 @@ public:
         return pendingAttackFacingDirection;
     }
     float GetPendingAttackFacingAngle() const;
+    float GetPendingAttackFacingCompleteAngle() const
+    {
+        return pendingAttackFacingCompleteAngle;
+    }
     bool ResumeSelectedAttackAfterTurn();
     bool IsCloseCombatAttackType(BossAttackType attackType) const;
     void SetAttackReadyReason(AttackReadyReason reason) { attackReadyReason = reason; }
@@ -315,6 +320,7 @@ private:
     bool pendingAttackActionValid = false;
     bool pendingAttackFacingValid = false;
     DirectX::XMFLOAT3 pendingAttackFacingDirection{ 0.0f, 0.0f, 1.0f };
+    float pendingAttackFacingCompleteAngle = 15.0f;
 
     BossAttackType lastAttackType = BossAttackType::PrimaryAttackLA;
     bool hasLastAttack = false;
@@ -442,6 +448,7 @@ private:
 
     static constexpr float initialFrontAttackReadyDuration = 1.0f;
     static constexpr float initialSideAttackReadyDuration = 1.5f;
+    static constexpr float initialCloseCombatReadyFacingAngle = 7.5f;
 
     float turnSpeed = 480.0f;  // EnemyTurnStateでその場回転するときの速度
     float turnCompleteAngle = 15.0f;    // この角度以内なら回転完了とみなす
@@ -449,6 +456,8 @@ private:
     std::string lastAIDecisionReason = "None";  // 最後にAIが行った判断理由を文字列で保存。ImGuiに表示。AIの動作確認用。
     float frontAttackReadyDuration = initialFrontAttackReadyDuration;
     float sideAttackReadyDuration = initialSideAttackReadyDuration;
+    float closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
+    float currentFacingAngleBeforeReady = 0.0f;
     std::string attackReadySEName = "enemy_attack_ready";
     float attackReadySEVolume = 1.0f;
     struct PositioningDebugSnapshot
@@ -508,6 +517,11 @@ private:
     const float initialDashAttackPlanBackWeight = dashAttackPlanBackWeight;
     const float initialJumpAttackPlanBackWeight = jumpAttackPlanBackWeight;
     bool suppressCombatRepositionForNextIntentSelection = false;
+    float postAttackCombatRepositionWeight = 45.0f;
+    const float initialPostAttackCombatRepositionWeight =
+        postAttackCombatRepositionWeight;
+    bool postAttackCombatRepositionBoostPending = false;
+    bool postAttackCombatRepositionBoostApplied = false;
     BossRepositionReason repositionReason = BossRepositionReason::Normal;
     BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;
     RepositionTargetEvaluation leftRepositionTarget{};

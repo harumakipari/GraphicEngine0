@@ -327,7 +327,8 @@ void EnemyTurnState::Execute(float deltaTime)
         return;
     }
 
-    if (enemy->GetPendingAttackFacingAngle() <= enemy->GetTurnCompleteAngle())
+    if (enemy->GetPendingAttackFacingAngle() <=
+        enemy->GetPendingAttackFacingCompleteAngle())
     {
         enemy->SetLastAIDecision("Turn complete: resume selected Attack");
         if (!enemy->ResumeSelectedAttackAfterTurn())
@@ -517,6 +518,7 @@ void EnemyAttackState::Execute(float deltaTime)
             enemy->WasCurrentAttackSequenceJustDodged();
         if (playerHitThisStage || justDodgedThisSequence)
         {
+            enemy->OnSelectedAttackCompletedSuccessfully();
             owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
             return;
         }
@@ -540,6 +542,7 @@ void EnemyAttackState::Execute(float deltaTime)
     if (enemy->GetBodyAnimationController()->IsPlayAnimation())
         return;
 
+    enemy->OnSelectedAttackCompletedSuccessfully();
     owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
 }
 void EnemyAttackState::Exit()

@@ -1278,6 +1278,12 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::TextDisabled("Attack Valid Range: Not used for this Intent");
     }
     ImGui::Text("Reposition Reason: %s", intentRepositionReason.c_str());
+    ImGui::Text("Post Attack Reposition Boost Pending: %s",
+        postAttackCombatRepositionBoostPending ? "YES" : "NO");
+    ImGui::Text("Post Attack Reposition Weight: %.1f",
+        postAttackCombatRepositionWeight);
+    ImGui::Text("Post Attack Boost Applied: %s",
+        postAttackCombatRepositionBoostApplied ? "YES" : "NO");
     ImGui::Text("Intent Lifecycle: %s", intentLifecycleState.c_str());
     ImGui::Text("Lifecycle Reason: %s", intentLifecycleReason.c_str());
     ImGui::TextWrapped("Lifecycle Trace: %s", intentLifecycleTrace.c_str());
@@ -1313,9 +1319,9 @@ void GruxEnemy::DrawImGuiDetails()
             {
                 if (lastIntentRandomWeights[i] <= 0.0f)
                     continue;
-                ImGui::Text("%s  %.2f - %.2f",
+                ImGui::Text("%s  %.2f - %.2f  (Weight %.2f)",
                     intentTypes[i], lastIntentRandomRangeBegin[i],
-                    lastIntentRandomRangeEnd[i]);
+                    lastIntentRandomRangeEnd[i], lastIntentRandomWeights[i]);
             }
             ImGui::Text("Selected Intent: %s",
                 lastSelectedIntent ? intentTypes[static_cast<int>(*lastSelectedIntent)] : "None");
@@ -1598,6 +1604,10 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Facing Evaluation: %s", attackFacingEvaluationValid ? "Valid" : "None");
     ImGui::Text("Facing Tolerance: %.1f deg", attackFacingEvaluationTolerance);
     ImGui::Text("Angle To Player At Selection: %.3f deg", attackFacingEvaluationAngle);
+    ImGui::Text("CloseCombat Ready Facing Angle: %.1f deg",
+        closeCombatReadyFacingAngle);
+    ImGui::Text("Current Facing Angle Before Ready: %.3f deg",
+        currentFacingAngleBeforeReady);
     ImGui::Text("Facing Required: %s", attackFacingEvaluationRequired ? "YES" : "NO");
     ImGui::Text("Pending Facing Valid: %s", pendingAttackFacingValid ? "YES" : "NO");
     const float pendingFacingYaw = pendingAttackFacingValid
@@ -1748,14 +1758,22 @@ void GruxEnemy::DrawImGuiDetails()
         jumpAttackPlanBackWeight = (std::max)(0.0f, jumpAttackPlanBackWeight);
         ImGui::Text("Skip Reposition On Next Intent Selection: %s",
             suppressCombatRepositionForNextIntentSelection ? "YES" : "NO");
+        ImGui::DragFloat("Post Attack CombatReposition Weight",
+            &postAttackCombatRepositionWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+        postAttackCombatRepositionWeight = std::clamp(
+            postAttackCombatRepositionWeight, 0.0f, 1000.0f);
 
         ImGui::SeparatorText("Attack Ready");
         ImGui::DragFloat("Front Attack Ready Duration", &frontAttackReadyDuration,
             0.01f, 0.0f, 3.0f, "%.2f sec");
         ImGui::DragFloat("Side Attack Ready Duration", &sideAttackReadyDuration,
             0.01f, 0.0f, 3.0f, "%.2f sec");
+        ImGui::DragFloat("CloseCombat Ready Facing Angle",
+            &closeCombatReadyFacingAngle, 0.1f, 0.0f, 30.0f, "%.1f deg");
         frontAttackReadyDuration = std::clamp(frontAttackReadyDuration, 0.0f, 3.0f);
         sideAttackReadyDuration = std::clamp(sideAttackReadyDuration, 0.0f, 3.0f);
+        closeCombatReadyFacingAngle = std::clamp(
+            closeCombatReadyFacingAngle, 0.0f, 30.0f);
 
 
         const float evaluationTotalWeight = GetTotalActionWeight();
@@ -1792,7 +1810,7 @@ void GruxEnemy::DrawImGuiDetails()
                         intentData.preferredMinDistance + minimumPreferredRangeWidth,
                         intentData.preferredMaxDistance);
                 }
-                ImGui::DragFloat("Positioning Arrival Inset", &intentData.positioningArrivalInset,
+                ImGui::DragFloat(U8("ˆÊ’uŽæ‚èŠ®—¹‚Æ‚Ý‚È‚·’l"), &intentData.positioningArrivalInset,
                     0.05f, 0.0f, 10.0f, "%.2f m");
                 intentData.positioningArrivalInset =
                     (std::max)(0.0f, intentData.positioningArrivalInset);
@@ -1894,8 +1912,11 @@ void GruxEnemy::DrawImGuiDetails()
             combatRepositionBackWeight = initialCombatRepositionBackWeight;
             dashAttackPlanBackWeight = initialDashAttackPlanBackWeight;
             jumpAttackPlanBackWeight = initialJumpAttackPlanBackWeight;
+            postAttackCombatRepositionWeight =
+                initialPostAttackCombatRepositionWeight;
             frontAttackReadyDuration = initialFrontAttackReadyDuration;
             sideAttackReadyDuration = initialSideAttackReadyDuration;
+            closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
         }
         ImGui::TextDisabled("Runtime only. Reset does not change active Cooldown Remaining.");
         ImGui::TextDisabled("Recovery edits affect an active Recovery on its next update.");
@@ -2711,6 +2732,19 @@ void GruxEnemy::UpdateIntentEffectiveWeights(const BossTargetContext& context)
                 (std::max)(0.0f, jumpAttackPlanBackWeight);
         }
     }
+
+    if (postAttackCombatRepositionBoostPending)
+    {
+        for (size_t i = 0; i < combatIntentData.size(); ++i)
+        {
+            if (combatIntentData[i].type != BossIntentType::CombatReposition)
+                continue;
+            combatIntentEffectiveWeights[i] = (std::max)(
+                combatIntentEffectiveWeights[i],
+                (std::max)(0.0f, postAttackCombatRepositionWeight));
+            break;
+        }
+    }
 }
 
 bool GruxEnemy::SelectIntentByWeight()
@@ -2719,7 +2753,10 @@ bool GruxEnemy::SelectIntentByWeight()
         return false;
 
     const BossTargetContext context = BuildTargetContext();
+    const bool applyPostAttackBoost = postAttackCombatRepositionBoostPending;
     UpdateIntentEffectiveWeights(context);
+    postAttackCombatRepositionBoostApplied = applyPostAttackBoost;
+    postAttackCombatRepositionBoostPending = false;
     if (suppressCombatRepositionForNextIntentSelection)
     {
         for (size_t i = 0; i < combatIntentData.size(); ++i)
@@ -2889,6 +2926,15 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
     intentLifecycleState = "Intent Completed";
     intentLifecycleTrace += " -> Intent Completed";
     intentLifecycleReason = "AttackStarted";
+}
+
+void GruxEnemy::OnSelectedAttackCompletedSuccessfully()
+{
+    if (bossAIMode != BossAIMode::CombatAI)
+        return;
+
+    postAttackCombatRepositionBoostPending = true;
+    postAttackCombatRepositionBoostApplied = false;
 }
 
 void GruxEnemy::OnSelectedActionStartFailed()
@@ -3566,9 +3612,16 @@ bool GruxEnemy::PreparePendingAttackFacing(const BossTargetContext& context)
     attackFacingEvaluationValid = context.valid;
     attackFacingEvaluationTolerance = GetAttackFacingTolerance(selectedAttackType);
     attackFacingEvaluationAngle = context.valid ? context.absoluteAngleDegrees : 0.0f;
-    attackFacingEvaluationRequired = context.valid &&
+    const bool attackFacingRequired = context.valid &&
         attackFacingEvaluationTolerance > 0.0f &&
         attackFacingEvaluationAngle > attackFacingEvaluationTolerance;
+    const bool isCloseCombat = IsCloseCombatAttackType(selectedAttackType);
+    currentFacingAngleBeforeReady = isCloseCombat
+        ? attackFacingEvaluationAngle
+        : 0.0f;
+    const bool readyFacingRequired = context.valid && isCloseCombat &&
+        attackFacingEvaluationAngle > closeCombatReadyFacingAngle;
+    attackFacingEvaluationRequired = attackFacingRequired || readyFacingRequired;
 
     if (!attackFacingEvaluationRequired)
         return false;
@@ -3576,6 +3629,9 @@ bool GruxEnemy::PreparePendingAttackFacing(const BossTargetContext& context)
     pendingAttackActionValid = true;
     pendingAttackFacingValid = true;
     pendingAttackFacingDirection = context.directionToPlayer;
+    pendingAttackFacingCompleteAngle = isCloseCombat
+        ? closeCombatReadyFacingAngle
+        : turnCompleteAngle;
     return true;
 }
 
@@ -3680,6 +3736,7 @@ void GruxEnemy::ClearPendingAttackFacing()
 {
     pendingAttackActionValid = false;
     pendingAttackFacingValid = false;
+    pendingAttackFacingCompleteAngle = turnCompleteAngle;
 }
 
 void GruxEnemy::StopAIMovement()
