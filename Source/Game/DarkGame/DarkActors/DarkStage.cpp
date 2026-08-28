@@ -117,6 +117,18 @@ void DarkStage::Update(float deltaTime)
 void DarkStage::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    ImGui::SeparatorText("Stage Geometry Visibility");
+    ImGui::Text("Current Area: %s",
+        stageGeometryArea == StageGeometryArea::MainRoom ? "MainRoom" : "BossRoom");
+    if (ImGui::Button("Show MainRoom"))
+        SetStageGeometryArea(StageGeometryArea::MainRoom);
+    ImGui::SameLine();
+    if (ImGui::Button("Show BossRoom"))
+        SetStageGeometryArea(StageGeometryArea::BossRoom);
+    ImGui::Text("MainRoom: %s", mainRoomMeshComponent && mainRoomMeshComponent->IsVisible() ? "Visible" : "Hidden");
+    ImGui::Text("TransitionArea: %s", transitionAreaMeshComponent && transitionAreaMeshComponent->IsVisible() ? "Visible" : "Hidden");
+    ImGui::Text("BossRoom: %s", bossRoomMeshComponent && bossRoomMeshComponent->IsVisible() ? "Visible" : "Hidden");
+    ImGui::Separator();
     if (ImGui::Button(U8("ƒ{ƒX‚Ì•”‰®‚É“ü‚é")))
     {
         StartBossRoomLightSequence();
@@ -131,6 +143,21 @@ void DarkStage::StartBossRoomLightSequence()
     bossRoomSequenceTime = 0.0f;
 }
 
+void DarkStage::SetStageGeometryArea(StageGeometryArea area)
+{
+    stageGeometryArea = area;
+    ApplyStageGeometryVisibility();
+}
+
+void DarkStage::ApplyStageGeometryVisibility()
+{
+    if (mainRoomMeshComponent)
+        mainRoomMeshComponent->SetIsVisible(stageGeometryArea == StageGeometryArea::MainRoom);
+    if (transitionAreaMeshComponent)
+        transitionAreaMeshComponent->SetIsVisible(true);
+    if (bossRoomMeshComponent)
+        bossRoomMeshComponent->SetIsVisible(stageGeometryArea == StageGeometryArea::BossRoom);
+}
 void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_ptr<StageAsset> transitionAreaAsset, std::shared_ptr<StageAsset> bossRoomAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset)
 {
     auto scene = GetOwnerScene();
@@ -146,12 +173,13 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
             meshComponent->model = asset->model;
             meshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Stage;
             meshComponent->SetIsCastShadow(false);
-            meshComponent->SetIsVisible(true);
+            return meshComponent;
         };
 
-        createStageMesh("MainRoomModel", mainRoomAsset);
-        createStageMesh("TransitionAreaModel", transitionAreaAsset);
-        createStageMesh("BossRoomModel", bossRoomAsset);
+        mainRoomMeshComponent = createStageMesh("MainRoomModel", mainRoomAsset);
+        transitionAreaMeshComponent = createStageMesh("TransitionAreaModel", transitionAreaAsset);
+        bossRoomMeshComponent = createStageMesh("BossRoomModel", bossRoomAsset);
+        ApplyStageGeometryVisibility();
     }
 
     {
