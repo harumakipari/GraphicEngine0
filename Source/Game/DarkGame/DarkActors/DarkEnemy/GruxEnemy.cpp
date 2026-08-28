@@ -1604,8 +1604,20 @@ void GruxEnemy::DrawImGuiDetails()
     if (IsCombatRepositionActive() && positioningDebugActive)
     {
         ImGui::SeparatorText("Active Combat Reposition");
-        ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.15f, 1.0f),
-            "*** REPOSITIONING ***");
+        if (combatRepositionSettling)
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.15f, 1.0f),
+                "*** REPOSITION SETTLE ***");
+        }
+        else
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.15f, 1.0f),
+                "*** REPOSITIONING ***");
+        }
+        ImGui::Text("Reposition Phase: %s",
+            combatRepositionSettling ? "Settling" : "Moving");
+        ImGui::Text("Settle Duration: %.3f sec", combatRepositionSettleDuration);
+        ImGui::Text("Settle Remaining: %.3f sec", combatRepositionSettleRemaining);
         ImGui::Text("Current Intent: CombatReposition");
         ImGui::Text("Current Action: %s",
             actionTypes[static_cast<int>(selectedActionType)]);
@@ -1942,6 +1954,10 @@ void GruxEnemy::DrawImGuiDetails()
             0.1f, 0.5f, 10.0f, "%.2f m/s");
         combatRepositionMoveSpeed = std::clamp(
             combatRepositionMoveSpeed, 0.5f, 10.0f);
+        ImGui::DragFloat("Combat Reposition Settle Duration",
+            &combatRepositionSettleDuration, 0.01f, 0.0f, 10.0f, "%.2f sec");
+        combatRepositionSettleDuration = std::clamp(
+            combatRepositionSettleDuration, 0.0f, 10.0f);
 
         ImGui::SeparatorText("Attack Ready");
         ImGui::DragFloat("Front Attack Ready Duration", &frontAttackReadyDuration,
@@ -2074,6 +2090,7 @@ void GruxEnemy::DrawImGuiDetails()
             relativeBackMinAngle = initialRelativeBackMinAngle;
             combatRepositionMoveDistance = initialCombatRepositionMoveDistance;
             combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;
+            combatRepositionSettleDuration = initialCombatRepositionSettleDuration;
             combatRepositionBackWeight = initialCombatRepositionBackWeight;
             dashAttackPlanBackWeight = initialDashAttackPlanBackWeight;
             jumpAttackPlanBackWeight = initialJumpAttackPlanBackWeight;

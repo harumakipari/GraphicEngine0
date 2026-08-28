@@ -89,6 +89,14 @@ public:
     }
 
     float GetPositioningArrivalDistance() const { return positioningArrivalDistance; }
+    float GetCombatRepositionSettleDuration() const { return combatRepositionSettleDuration; }
+    void SetCombatRepositionSettleDebug(bool active, float remaining)
+    {
+        combatRepositionSettling = active;
+        combatRepositionSettleRemaining = remaining;
+        if (active && currentPositioningDebug.valid)
+            currentPositioningDebug.endReason = "Settling";
+    }
     void UpdatePositioningAnimation(float actualSpeed, float deltaTime);
     void EndPositioningAnimation();
     void UpdatePositioningMovement(const DirectX::XMFLOAT3& moveDirection,
@@ -446,6 +454,7 @@ private:
     const float initialRelativeBackMinAngle = relativeBackMinAngle;
     static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // 横に練り歩く距離
     static constexpr float initialCombatRepositionMoveSpeed = 6.0f;
+    static constexpr float initialCombatRepositionSettleDuration = 1.5f;    // 目的地に付いた後の待つ秒数
 
     static constexpr float initialFrontAttackReadyDuration = 1.0f;
     static constexpr float initialSideAttackReadyDuration = 1.5f;
@@ -514,7 +523,10 @@ private:
     float dashAttackPlanBackWeight = 35.0f;
     float jumpAttackPlanBackWeight = 35.0f;
     float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;   // repositionの時に動く距離
-    float combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;// repositionの時に進むスピード
+    float combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;
+    float combatRepositionSettleDuration = initialCombatRepositionSettleDuration;
+    bool combatRepositionSettling = false;
+    float combatRepositionSettleRemaining = 0.0f;
     const float initialCombatRepositionBackWeight = combatRepositionBackWeight;
     const float initialDashAttackPlanBackWeight = dashAttackPlanBackWeight;
     const float initialJumpAttackPlanBackWeight = jumpAttackPlanBackWeight;

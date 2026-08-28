@@ -82,6 +82,9 @@ private:
     float traveledDistance = 0.0f;
     float elapsedTime = 0.0f;
     float stuckTimer = 0.0f;
+    float settleTimer = 0.0f;
+    bool settling = false;
+    const char* settleCompletionReason = "WorldTargetReached";
     bool endReasonSet = false;
 };
 

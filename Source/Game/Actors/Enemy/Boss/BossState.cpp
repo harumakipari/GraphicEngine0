@@ -151,7 +151,11 @@ void EnemyPositioningState::Enter()
     traveledDistance = 0.0f;
     elapsedTime = 0.0f;
     stuckTimer = 0.0f;
+    settleTimer = 0.0f;
+    settling = false;
+    settleCompletionReason = "WorldTargetReached";
     previousPosition = enemy->GetPosition();
+    enemy->SetCombatRepositionSettleDebug(false, 0.0f);
     endReasonSet = false;
 
     if (!positioningData)
@@ -184,6 +188,19 @@ void EnemyPositioningState::Execute(float deltaTime)
         owner->GetStateMachine()->ChangeState("EnemyThinkState");
     };
 
+    auto beginCombatRepositionSettle = [this, &finish](const char* completionReason)
+    {
+        enemy->StopAIMovement();
+        enemy->EndPositioningAnimation();
+        settling = true;
+        settleTimer = 0.0f;
+        settleCompletionReason = completionReason;
+        const float duration = enemy->GetCombatRepositionSettleDuration();
+        enemy->SetCombatRepositionSettleDebug(true, duration);
+        if (duration <= 0.0f)
+            finish(settleCompletionReason);
+    };
+
     if (enemy->GetBossAIMode() != BossAIMode::CombatAI)
     {
         finish("AIModeChanged");
@@ -192,6 +209,23 @@ void EnemyPositioningState::Execute(float deltaTime)
     if (!positioningData)
     {
         finish("Interrupted");
+        return;
+    }
+
+    if (settling)
+    {
+        if (!enemy->BuildTargetContext().valid)
+        {
+            finish("InvalidPlayer");
+            return;
+        }
+        enemy->StopAIMovement();
+        settleTimer += deltaTime;
+        const float duration = enemy->GetCombatRepositionSettleDuration();
+        enemy->SetCombatRepositionSettleDebug(
+            true, (std::max)(0.0f, duration - settleTimer));
+        if (settleTimer >= duration)
+            finish(settleCompletionReason);
         return;
     }
 
@@ -242,6 +276,11 @@ void EnemyPositioningState::Execute(float deltaTime)
     {
         if (targetRemainingDistance <= enemy->GetPositioningArrivalDistance())
         {
+            if (enemy->IsCombatRepositionActive())
+            {
+                beginCombatRepositionSettle("WorldTargetReached");
+                return;
+            }
             if (!enemy->IsCombatRepositionActive())
                 enemy->MarkIntentPositioningCompleted();
             finish("WorldTargetReached");
@@ -262,8 +301,15 @@ void EnemyPositioningState::Execute(float deltaTime)
     }
     if (traveledDistance >= positioningData->maxMoveDistance)
     {
-        finish(positioningData->completionType == BossPositioningCompletionType::TargetDistance
-            ? "MaxTravelDistance" : "DistanceReached");
+        const char* reason = positioningData->completionType == BossPositioningCompletionType::TargetDistance
+            ? "MaxTravelDistance" : "DistanceReached";
+        if (enemy->IsCombatRepositionActive() &&
+            std::strcmp(reason, "DistanceReached") == 0)
+        {
+            beginCombatRepositionSettle(reason);
+            return;
+        }
+        finish(reason);
         return;
     }
     if (elapsedTime >= positioningData->timeout)
@@ -289,6 +335,7 @@ void EnemyPositioningState::Exit()
     }
     enemy->StartSelectedActionCooldown();
     enemy->StopAIMovement();
+    enemy->SetCombatRepositionSettleDebug(false, 0.0f);
     enemy->EndPositioningAnimation();
     positioningData = std::nullopt;
 }
