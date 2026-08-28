@@ -345,6 +345,54 @@ void EnemyTurnState::Exit()
     enemy->EndTurnRotationDebug(timer);
     enemy->StopAIMovement();
 }
+void EnemyAttackReadyState::Enter()
+{
+    timer = 0.0f;
+    enemy->StopAIMovement();
+    enemy->BeginAttackReadyDebug();
+    enemy->PlayAttackReadySE();
+}
+
+void EnemyAttackReadyState::Execute(float deltaTime)
+{
+    if (enemy->GetBossAIMode() != BossAIMode::CombatAI)
+    {
+        enemy->SetLastAIDecision("Attack Ready ended: AI mode changed");
+        owner->GetStateMachine()->ChangeState("EnemyThinkState");
+        return;
+    }
+
+    if (!enemy->IsCloseCombatAttackType(enemy->GetSelectedAttackType()))
+    {
+        enemy->SetLastAIDecision("Attack Ready ended: invalid Attack type");
+        enemy->FailActiveIntent("AttackReadyInvalidAttack");
+        owner->GetStateMachine()->ChangeState("EnemyThinkState");
+        return;
+    }
+
+    const BossTargetContext context = enemy->BuildTargetContext();
+    if (!context.valid)
+    {
+        enemy->SetLastAIDecision("Attack Ready ended: invalid Player target");
+        enemy->FailActiveIntent("InvalidTarget");
+        owner->GetStateMachine()->ChangeState("EnemyThinkState");
+        return;
+    }
+
+    timer += deltaTime;
+    enemy->UpdateAttackReadyDebug(timer);
+    if (timer >= enemy->GetAttackReadyDuration())
+    {
+        enemy->SetLastAIDecision("Attack Ready complete: start selected Attack");
+        owner->GetStateMachine()->ChangeState("EnemyAttackState");
+    }
+}
+
+void EnemyAttackReadyState::Exit()
+{
+    enemy->EndAttackReadyDebug();
+    enemy->StopAIMovement();
+}
 
 // 攻撃の予兆ステートオブジェクト
 void EnemyDeathState::Enter()

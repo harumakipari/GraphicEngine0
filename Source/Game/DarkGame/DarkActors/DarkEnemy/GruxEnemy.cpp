@@ -93,6 +93,7 @@ void GruxEnemy::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<EnemyDeathState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyThinkState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyTurnState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyAttackReadyState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyRecoveryState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyPositioningState>(this));
@@ -1608,6 +1609,13 @@ void GruxEnemy::DrawImGuiDetails()
         lastResumedAttackValid
         ? attackTypes[static_cast<int>(lastResumedAttackType)]
         : "None");
+    ImGui::Text("Attack Ready Active: %s", attackReadyActive ? "YES" : "NO");
+    ImGui::Text("Attack Ready Duration: %.3f sec", attackReadyDuration);
+    ImGui::Text("Attack Ready Timer: %.3f sec", attackReadyDebugTimer);
+    ImGui::Text("Ready Attack Type: %s",
+        attackTypes[static_cast<int>(attackReadyDebugType)]);
+    ImGui::Text("Facing Complete SE Fired: %s",
+        attackReadySEFired ? "YES" : "NO");
 
     ImGui::Text("Current Yaw: %.3f deg", rotationDebugCurrentYaw);
     ImGui::Text("Player Direction Yaw: %.3f deg", rotationDebugPlayerYaw);
@@ -1646,6 +1654,7 @@ void GruxEnemy::DrawImGuiDetails()
     else if (std::strcmp(fullStateName, "EnemyThinkState") == 0) stateDisplayName = "Think";
     else if (std::strcmp(fullStateName, "EnemyTurnState") == 0) stateDisplayName = "Turn";
     else if (std::strcmp(fullStateName, "EnemyPositioningState") == 0) stateDisplayName = "Positioning";
+    else if (std::strcmp(fullStateName, "EnemyAttackReadyState") == 0) stateDisplayName = "Attack Ready";
     else if (std::strcmp(fullStateName, "EnemyAttackState") == 0) stateDisplayName = "Attack";
     else if (std::strcmp(fullStateName, "EnemyRecoveryState") == 0) stateDisplayName = "Recovery";
     else if (std::strcmp(fullStateName, "EnemyDeathState") == 0) stateDisplayName = "Death";
@@ -1725,6 +1734,23 @@ void GruxEnemy::DrawImGuiDetails()
             0.1f, 1.0f, 15.0f, "%.2f m");
         combatRepositionMoveDistance = std::clamp(
             combatRepositionMoveDistance, 1.0f, 15.0f);
+        ImGui::SeparatorText("Back Region Intent Weights");
+        ImGui::DragFloat("Combat Reposition Back Weight",
+            &combatRepositionBackWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+        ImGui::DragFloat("Dash Attack Plan Back Weight",
+            &dashAttackPlanBackWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+        ImGui::DragFloat("Jump Attack Plan Back Weight",
+            &jumpAttackPlanBackWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
+        combatRepositionBackWeight = (std::max)(0.0f, combatRepositionBackWeight);
+        dashAttackPlanBackWeight = (std::max)(0.0f, dashAttackPlanBackWeight);
+        jumpAttackPlanBackWeight = (std::max)(0.0f, jumpAttackPlanBackWeight);
+        ImGui::Text("Skip Reposition On Next Intent Selection: %s",
+            suppressCombatRepositionForNextIntentSelection ? "YES" : "NO");
+
+        ImGui::SeparatorText("Attack Ready");
+        ImGui::DragFloat("Attack Ready Duration", &attackReadyDuration,
+            0.01f, 0.0f, 0.5f, "%.2f sec");
+        attackReadyDuration = std::clamp(attackReadyDuration, 0.0f, 0.5f);
 
 
         const float evaluationTotalWeight = GetTotalActionWeight();
@@ -1860,6 +1886,10 @@ void GruxEnemy::DrawImGuiDetails()
             relativeFrontMaxAngle = initialRelativeFrontMaxAngle;
             relativeBackMinAngle = initialRelativeBackMinAngle;
             combatRepositionMoveDistance = initialCombatRepositionMoveDistance;
+            combatRepositionBackWeight = initialCombatRepositionBackWeight;
+            dashAttackPlanBackWeight = initialDashAttackPlanBackWeight;
+            jumpAttackPlanBackWeight = initialJumpAttackPlanBackWeight;
+            attackReadyDuration = initialAttackReadyDuration;
         }
         ImGui::TextDisabled("Runtime only. Reset does not change active Cooldown Remaining.");
         ImGui::TextDisabled("Recovery edits affect an active Recovery on its next update.");
@@ -2591,6 +2621,7 @@ void GruxEnemy::CompleteCombatReposition()
         return;
 
     activeIntent = std::nullopt;
+    suppressCombatRepositionForNextIntentSelection = true;
     activeIntentStep = BossIntentStep::Completed;
     intentPositioningAttempted = false;
     intentPositioningCompleted = true;
@@ -2666,6 +2697,12 @@ void GruxEnemy::UpdateIntentEffectiveWeights(const BossTargetContext& context)
             else if (combatIntentData[i].type == BossIntentType::CombatReposition)
                 combatIntentEffectiveWeights[i] =
                 (std::max)(0.0f, combatRepositionBackWeight);
+            else if (combatIntentData[i].type == BossIntentType::DashAttackPlan)
+                combatIntentEffectiveWeights[i] =
+                (std::max)(0.0f, dashAttackPlanBackWeight);
+            else if (combatIntentData[i].type == BossIntentType::JumpAttackPlan)
+                combatIntentEffectiveWeights[i] =
+                (std::max)(0.0f, jumpAttackPlanBackWeight);
         }
     }
 }
@@ -2677,6 +2714,18 @@ bool GruxEnemy::SelectIntentByWeight()
 
     const BossTargetContext context = BuildTargetContext();
     UpdateIntentEffectiveWeights(context);
+    if (suppressCombatRepositionForNextIntentSelection)
+    {
+        for (size_t i = 0; i < combatIntentData.size(); ++i)
+        {
+            if (combatIntentData[i].type == BossIntentType::CombatReposition)
+            {
+                combatIntentEffectiveWeights[i] = 0.0f;
+                break;
+            }
+        }
+        suppressCombatRepositionForNextIntentSelection = false;
+    }
     const float totalWeight = GetTotalIntentWeight();
     lastIntentRandomTotalWeight = totalWeight;
     lastIntentRandomRangeBegin.fill(0.0f);
@@ -3548,6 +3597,50 @@ float GruxEnemy::GetPendingAttackFacingAngle() const
     return DirectX::XMConvertToDegrees(std::acos(dot));
 }
 
+bool GruxEnemy::IsCloseCombatAttackType(const BossAttackType attackType) const
+{
+    return attackType == BossAttackType::PrimaryAttackLA ||
+        attackType == BossAttackType::PrimaryAttackRA ||
+        attackType == BossAttackType::FastCombo;
+}
+
+void GruxEnemy::BeginAttackReadyDebug()
+{
+    attackReadyActive = true;
+    attackReadyDebugTimer = 0.0f;
+    attackReadyDebugType = selectedAttackType;
+    attackReadySEFired = false;
+}
+
+void GruxEnemy::UpdateAttackReadyDebug(const float elapsedTime)
+{
+    attackReadyDebugTimer = elapsedTime;
+}
+
+void GruxEnemy::EndAttackReadyDebug()
+{
+    attackReadyActive = false;
+}
+
+bool GruxEnemy::PlayAttackReadySE()
+{
+    attackReadySEFired = false;
+    if (attackReadySEName.empty())
+        return false;
+
+    const std::string audioPath =
+        "./Data/Sound/SE/" + attackReadySEName + ".wav";
+    auto audio = CoreAudio::PlayOneShot(audioPath, attackReadySEVolume);
+    if (!audio)
+        return false;
+
+    const float pitch =
+        pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
+    audio->SetPitch(pitch);
+    attackReadySEFired = true;
+    return true;
+}
+
 bool GruxEnemy::ResumeSelectedAttackAfterTurn()
 {
     if (!pendingAttackActionValid || !pendingAttackFacingValid)
@@ -3564,7 +3657,9 @@ bool GruxEnemy::ResumeSelectedAttackAfterTurn()
     lastResumedAttackType = selectedAttackType;
     lastResumedAttackValid = true;
     ClearPendingAttackFacing();
-    stateMachine_->ChangeState("EnemyAttackState");
+    stateMachine_->ChangeState(IsCloseCombatAttackType(selectedAttackType)
+        ? "EnemyAttackReadyState"
+        : "EnemyAttackState");
     return true;
 }
 

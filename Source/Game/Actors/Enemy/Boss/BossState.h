@@ -97,6 +97,20 @@ private:
     float timer = 0.0f;
 };
 
+class EnemyAttackReadyState : public EnemyStateBase
+{
+public:
+    EnemyAttackReadyState(GruxEnemy* enemy) : EnemyStateBase(enemy) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "EnemyAttackReadyState"; }
+
+private:
+    float timer = 0.0f;
+};
+
+
 // 死亡ステートオブジェクト
 class EnemyDeathState : public EnemyStateBase
 {

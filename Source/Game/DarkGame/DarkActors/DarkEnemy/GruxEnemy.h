@@ -129,6 +129,14 @@ public:
     }
     float GetPendingAttackFacingAngle() const;
     bool ResumeSelectedAttackAfterTurn();
+    bool IsCloseCombatAttackType(BossAttackType attackType) const;
+    float GetAttackReadyDuration() const { return attackReadyDuration; }
+    void BeginAttackReadyDebug();
+    void UpdateAttackReadyDebug(float elapsedTime);
+    void EndAttackReadyDebug();
+    bool PlayAttackReadySE();
+
+
     void ClearPendingAttackFacing();
     void StopAIMovement();
     bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
@@ -366,6 +374,12 @@ private:
     bool attackFacingEvaluationRequired = false;
     bool lastResumedAttackValid = false;
     BossAttackType lastResumedAttackType = BossAttackType::PrimaryAttackLA;
+    bool attackReadyActive = false;
+    float attackReadyDebugTimer = 0.0f;
+    BossAttackType attackReadyDebugType = BossAttackType::PrimaryAttackLA;
+    bool attackReadySEFired = false;
+
+
     bool hasSelectedActionDebug = false;
     bool hasLastActionRandomRoll = false;
     float lastActionRandomRoll = 0.0f;
@@ -416,13 +430,17 @@ private:
     const float initialMiddleDistanceThreshold = middleDistanceThreshold;
     const float initialRelativeFrontMaxAngle = relativeFrontMaxAngle;
     const float initialRelativeBackMinAngle = relativeBackMinAngle;
-    static constexpr float initialCombatRepositionMoveDistance = 5.0f;  // 横に練り歩く距離
+    static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // 横に練り歩く距離
 
+    static constexpr float initialAttackReadyDuration = 0.50f;  // 攻撃の準備時間
 
     float turnSpeed = 480.0f;  // EnemyTurnStateでその場回転するときの速度
     float turnCompleteAngle = 15.0f;    // この角度以内なら回転完了とみなす
     float turnTimeout = 1.5f;   //   Turnがいつまでも完了しない場合の制限時間。現在は1.5秒でThinkへ戻る。
     std::string lastAIDecisionReason = "None";  // 最後にAIが行った判断理由を文字列で保存。ImGuiに表示。AIの動作確認用。
+    float attackReadyDuration = initialAttackReadyDuration;
+    std::string attackReadySEName = "enemy_attack_ready";
+    float attackReadySEVolume = 1.0f;
     struct PositioningDebugSnapshot
     {
         bool valid = false;
@@ -473,7 +491,13 @@ private:
     DirectX::XMFLOAT3 fixedPositioningTarget{};
     bool fixedPositioningTargetValid = false;
     float combatRepositionBackWeight = 80.0f;
+    float dashAttackPlanBackWeight = 35.0f;
+    float jumpAttackPlanBackWeight = 35.0f;
     float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;
+    const float initialCombatRepositionBackWeight = combatRepositionBackWeight;
+    const float initialDashAttackPlanBackWeight = dashAttackPlanBackWeight;
+    const float initialJumpAttackPlanBackWeight = jumpAttackPlanBackWeight;
+    bool suppressCombatRepositionForNextIntentSelection = false;
     BossRepositionReason repositionReason = BossRepositionReason::Normal;
     BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;
     RepositionTargetEvaluation leftRepositionTarget{};
