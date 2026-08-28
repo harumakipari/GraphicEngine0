@@ -328,7 +328,7 @@ void Player::Initialize(const Transform& transform)
         // 敵からの攻撃を受ける当たり判定用のコンポーネントを追加
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
         DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
-        height = size.y+0.5f;
+        height = size.y + 0.5f;
         radius = size.x * 0.5f;
         capsuleComponent->SetRadiusAndHeight(radius, height);
         capsuleComponent->SetMass(mass);
@@ -441,6 +441,7 @@ void Player::Initialize(const Transform& transform)
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f,1.0f,0.0f });
     // 軌跡初期化
     trail.Initialize();
+    SetRushWeaponVisual(false);
     // ラッシュ時のUIを作成
     auto uiManager = GetOwnerScene()->GetUIManager();
     rushButtonImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Y.png", "Y");
@@ -827,8 +828,8 @@ void Player::Update(float deltaTime)
         if (ghost.swordMeshComp)
         {
             ghost.swordMeshComp->plusAlphaCBuffer->data.emissionPower = swordGhostEmissive;
-            ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { swordGhostColor.x,swordGhostColor.y,swordGhostColor.z, ghost.alpha };
-            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeColor = { ghostEdgeColor.x,ghostEdgeColor.y,ghostEdgeColor.z,1.0f };
+            ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { activeGhostBaseColor.x,activeGhostBaseColor.y,activeGhostBaseColor.z, ghost.alpha };
+            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeColor = { activeGhostEdgeColor.x,activeGhostEdgeColor.y,activeGhostEdgeColor.z,1.0f };
             ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.innerColor = { ghostInnerColor.x,ghostInnerColor.y,ghostInnerColor.z,1.0f };
             ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeWidth = ghostEdgeWidth;
         }
@@ -930,6 +931,24 @@ void Player::RenderTrail(ID3D11DeviceContext* immediateContext)
     trail.Render(immediateContext);
 }
 
+void Player::SetRushWeaponVisual(const bool enabled)
+{
+    rushWeaponVisualEnabled = enabled;
+    const DirectX::XMFLOAT3 swordColor = enabled
+        ? rushSwordColor
+        : DirectX::XMFLOAT3{ 0.0f, 0.8f, 1.0f };
+
+    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
+    {
+        swordMeshComponent->plusAlphaCBuffer->data.cpuColor =
+        { swordColor.x, swordColor.y, swordColor.z, 0.0f };
+    }
+
+    trail.SetRushColorEnabled(enabled, rushSwordColor);
+    activeGhostBaseColor = enabled ? rushSwordColor : swordGhostColor;
+    activeGhostEdgeColor = enabled ? rushSwordColor : ghostEdgeColor;
+}
+
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
@@ -959,7 +978,8 @@ void Player::DrawImGuiDetails()
                 {
                     justStart = state.startTime;
                     justEnd = state.endTime;
-                }                else if (state.type == AnimationNotifyState::Type::TransitionWindow)
+                }
+                else if (state.type == AnimationNotifyState::Type::TransitionWindow)
                 {
                     dodgeStateEnd = state.startTime;
                 }
@@ -985,9 +1005,9 @@ void Player::DrawImGuiDetails()
         if (dodgeDurationDebug > FLT_EPSILON)
         {
             const auto timelineX = [&](float time)
-            {
-                return timelinePos.x + timelineWidth * std::clamp(time / dodgeDurationDebug, 0.0f, 1.0f);
-            };
+                {
+                    return timelinePos.x + timelineWidth * std::clamp(time / dodgeDurationDebug, 0.0f, 1.0f);
+                };
             drawList->AddRectFilled(ImVec2(timelineX(invincibleStart), timelinePos.y + 5.0f),
                 ImVec2(timelineX(invincibleEnd), timelinePos.y + 19.0f), IM_COL32(45, 150, 235, 255));
             drawList->AddRectFilled(ImVec2(timelineX(justStart), timelinePos.y + 19.0f),
@@ -1033,12 +1053,27 @@ void Player::DrawImGuiDetails()
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);
     ImGui::DragFloat(U8("剣の残像が残る時間"), &ghostFadeTime, 0.1f);
-    ImGui::ColorEdit3(U8("剣の残像の色"), &swordGhostColor.x);
+    const bool normalGhostBaseColorChanged =
+        ImGui::ColorEdit3(U8("剣の残像の色"), &swordGhostColor.x);
     ImGui::DragFloat(U8("残像のemissiveColor"), &swordGhostEmissive, 0.1f);
     ImGui::DragFloat(U8("残像を出す間隔"), &ghostInterval, 0.001f, 0.0f, 1.0f, "%.5f");
     ImGui::DragFloat(U8("剣の残像の輪郭"), &ghostEdgeWidth);
-    ImGui::ColorEdit3(U8("剣の残像のエッジの色"), &ghostEdgeColor.x);
+    const bool normalGhostEdgeColorChanged =
+        ImGui::ColorEdit3(U8("剣の残像のエッジの色"), &ghostEdgeColor.x);
     ImGui::ColorEdit3(U8("剣の残像の内部の色"), &ghostInnerColor.x);
+    if (!rushWeaponVisualEnabled && (normalGhostBaseColorChanged || normalGhostEdgeColorChanged))
+    {
+        SetRushWeaponVisual(false);
+    }
+
+    if (ImGui::CollapsingHeader(U8("剣のラッシュ中の見た目"), ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        if (ImGui::ColorEdit3(U8("ラッシの色"), &rushSwordColor.x) && rushWeaponVisualEnabled)
+        {
+            SetRushWeaponVisual(true);
+        }
+        ImGui::Checkbox("Rush Visual Active", &rushWeaponVisualEnabled);
+    }
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
     ImGui::SliderFloat("Walk Speed", &walkSpeed, 0.25f, 10.0f);
@@ -2279,8 +2314,8 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     const int appliedDamage = (std::max)(0, damage);
     hp = (std::max)(0, hp - appliedDamage);
     ++dodgeDebugDamageCount;
-    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav",0.3f);
-    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav",0.5f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav", 0.3f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav", 0.5f);
     ClearActionRequest("damage_applied");
     Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
     //if (sparkComponent)

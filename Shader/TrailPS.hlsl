@@ -5,6 +5,12 @@
 Texture2D noise2D : register(t30); // ノイズテクスチャ
 Texture3D noise3D : register(t31); // ノイズテクスチャ
 
+cbuffer TRAIL_CONSTANT_BUFFER : register(b13)
+{
+    // Alpha is used as the Rush color blend amount.
+    float4 rushColor;
+}
+
 float4 main(VS_OUT input) : SV_TARGET
 {
     //return 1;
@@ -55,6 +61,9 @@ float4 main(VS_OUT input) : SV_TARGET
 
     // 剣先だけ少し明るく
     col += float3(0.5f, 0.7f, 1.0f) * tip * 0.5f;
+
+    const float3 rushTrailColor = rushColor.rgb * (0.75f + tip * 0.75f);
+    col = lerp(col, rushTrailColor, saturate(rushColor.a));
 
     return float4(col, alpha);
 #else

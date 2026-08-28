@@ -7,6 +7,7 @@
 #include <vector>
 #include "Graphics/Core/Graphics.h"
 #include "Graphics/Core/Shader.h"
+#include "Graphics/Core/ConstantBuffer.h"
 
 class Trail
 {
@@ -26,7 +27,20 @@ public:
 
     void Render(ID3D11DeviceContext* immediateContext);
 
+    void SetRushColorEnabled(bool enabled, const DirectX::XMFLOAT3& rushColor)
+    {
+        trailConstants.data.rushColor = enabled
+            ? DirectX::XMFLOAT4{ rushColor.x, rushColor.y, rushColor.z, 1.0f }
+            : DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, 0.0f };
+    }
+
 private:
+    struct TrailConstants
+    {
+        // Alpha is the blend amount so zero preserves the existing trail colors.
+        DirectX::XMFLOAT4 rushColor{ 1.0f, 1.0f, 1.0f, 0.0f };
+    };
+
     // í∏ì_ç\ë¢ëÃÅ@GPUÇ…ëóÇÈÇ‡ÇÃ
     struct TrailVertex
     {
@@ -46,4 +60,5 @@ private:
     Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
     Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
+    ConstantBuffer<TrailConstants> trailConstants{ Graphics::GetDevice() };
 };

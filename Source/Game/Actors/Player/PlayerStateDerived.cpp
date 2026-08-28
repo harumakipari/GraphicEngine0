@@ -449,6 +449,7 @@ void PlayerDeathState::Exit()
 // ラッシュ
 void PlayerRushState::Enter()
 {
+    player->SetRushWeaponVisual(true);
     player->ForceResetPlayerSlow();
     player->HoldBossSlowForRush();
     // ラッシュコンボのアニメーション名
@@ -607,6 +608,7 @@ void PlayerRushState::Execute(float deltaTime)
 
 void PlayerRushState::Exit()
 {
+    player->SetRushWeaponVisual(false);
     comboIndex = 0;
     queuedAttackCount = 0;
     rushComboAdvanced = false;

@@ -195,6 +195,9 @@ public:
     // ラッシュ受付期間終了
     void EndRushAttackInput();
 
+    // Rush State owns the lifetime of this visual override.
+    void SetRushWeaponVisual(bool enabled);
+
     int GetMaxRushAttackCount() const { return std::clamp(maxRushAttackCount, 1, 7); }
 
     // ジャスト回避を受け付けるかどうか
@@ -401,6 +404,10 @@ private:
     bool isAttackActive = false;    // プレイヤーが攻撃状態に入る
     DirectX::XMFLOAT3 ghostEdgeColor = { 0.0f,0.042f,0.253f };  // 残像の剣のベースカラー
     DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 残像の剣のベースカラー
+    DirectX::XMFLOAT3 rushSwordColor = { 1.0f,0.58f,0.01f };
+    DirectX::XMFLOAT3 activeGhostBaseColor{};
+    DirectX::XMFLOAT3 activeGhostEdgeColor{};
+    bool rushWeaponVisualEnabled = false;
     float ghostEdgeWidth = 1.0f; // 残像の輪郭
     DirectX::XMFLOAT4X4 prevSwordWorld; // 前回の姿勢
     bool isPrevSwordWorldValid = false;

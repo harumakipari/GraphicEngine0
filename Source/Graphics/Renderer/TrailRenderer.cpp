@@ -180,6 +180,7 @@ void Trail::Render(ID3D11DeviceContext* immediateContext)
     // シェーダーリソースを送る
     immediateContext->PSSetShaderResources(30, 1, noise2d.GetAddressOf());
     immediateContext->PSSetShaderResources(31, 1, noise3d.GetAddressOf());
+    trailConstants.Activate(immediateContext, 13);
 
     RenderState::BindBlendState(immediateContext, BLEND_STATE::ADD);
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
