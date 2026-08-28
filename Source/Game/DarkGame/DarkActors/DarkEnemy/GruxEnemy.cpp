@@ -1749,8 +1749,8 @@ void GruxEnemy::DrawImGuiDetails()
 
         ImGui::SeparatorText("Attack Ready");
         ImGui::DragFloat("Attack Ready Duration", &attackReadyDuration,
-            0.01f, 0.0f, 0.5f, "%.2f sec");
-        attackReadyDuration = std::clamp(attackReadyDuration, 0.0f, 0.5f);
+            0.01f, 0.0f, 3.0f, "%.2f sec");
+        attackReadyDuration = std::clamp(attackReadyDuration, 0.0f, 3.0f);
 
 
         const float evaluationTotalWeight = GetTotalActionWeight();
@@ -3870,7 +3870,6 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
         {
             if (context.xzDistance > validMax)
                 return actionType == BossActionType::Approach;
-            return actionType == BossActionType::JumpAttack;
             return IsAttackPendingGoalAction(actionType, context);
         }
     }

@@ -432,7 +432,7 @@ private:
     const float initialRelativeBackMinAngle = relativeBackMinAngle;
     static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // ‰¡‚É—û‚è•à‚­‹——£
 
-    static constexpr float initialAttackReadyDuration = 0.50f;  // UŒ‚‚Ì€”õŠÔ
+    static constexpr float initialAttackReadyDuration = 1.5f;  // UŒ‚‚Ì€”õŠÔ
 
     float turnSpeed = 480.0f;  // EnemyTurnState‚Å‚»‚Ìê‰ñ“]‚·‚é‚Æ‚«‚Ì‘¬“x
     float turnCompleteAngle = 15.0f;    // ‚±‚ÌŠp“xˆÈ“à‚È‚ç‰ñ“]Š®—¹‚Æ‚İ‚È‚·
