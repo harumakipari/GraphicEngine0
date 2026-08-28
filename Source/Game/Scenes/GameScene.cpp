@@ -40,10 +40,6 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     loadStageThread = std::thread([&]()
         {
             PROFILE_SCOPE("Load StageModel");
-            stageAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/DarkStage.gltf",
-                ModelTypes::ModelMode::StaticMesh, false, true);
-            stageAsset->spawnPoints = stageAsset->model->spawnPoints;
-
             // メインの部屋のモデル
             mainRoomAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/MainRoom.gltf",
                 ModelTypes::ModelMode::StaticMesh, false, true);
@@ -563,14 +559,16 @@ void GameScene::SetUpActors()
         PROFILE_SCOPE("Create Stage");
         Transform stageTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
         auto stage = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStage>("stage", stageTr); // 元のモデルの scale を 0.4f
-        stage->SetModel(stageAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset, stageCandleStandAsset);
+        stage->SetModel(mainRoomAsset, transitionAreaAsset, bossRoomAsset, stageCandelabraAsset, stageBrazierAsset, stageGroundBrazierAsset, stageMeltedWaxAsset, stageStandingBrazierAsset, stageCandleStandAsset);
     }
 
     Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto doorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorLargeActor>("doorActor", doorTr);
 
-    for (auto point : stageAsset->spawnPoints)
+    for (const auto& areaAsset : { mainRoomAsset, transitionAreaAsset, bossRoomAsset })
     {
+        for (const auto& point : areaAsset->spawnPoints)
+        {
 #if 0
         if (point.name.rfind("Spawn_Door_Right", 0) == 0)
         {// 名前が "Spawn_Door_Right" で始まる場合、燭台を配置
@@ -587,6 +585,7 @@ void GameScene::SetUpActors()
             DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
             Transform smallDoorTr{ pos,point.worldRotation,point.worldScale };
             auto smallDoorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorSmallActor>("smallDoorActor", smallDoorTr);
+        }
         }
     }
 

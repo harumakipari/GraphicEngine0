@@ -131,24 +131,35 @@ void DarkStage::StartBossRoomLightSequence()
     bossRoomSequenceTime = 0.0f;
 }
 
-void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset)
+void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_ptr<StageAsset> transitionAreaAsset, std::shared_ptr<StageAsset> bossRoomAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset)
 {
     auto scene = GetOwnerScene();
 
 
-    std::shared_ptr<StaticMeshComponent> staticMeshComponent;
     {
-        PROFILE_SCOPE("Create StageModel");
-        staticMeshComponent = this->AddComponent<class StaticMeshComponent>("model", parentName);
-        staticMeshComponent->model = stageAsset->model;
-        staticMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Stage;
-        staticMeshComponent->SetIsCastShadow(false);
+        PROFILE_SCOPE("Create StageModels");
+        const auto createStageMesh = [this](
+            const char* componentName, const std::shared_ptr<StageAsset>& asset)
+        {
+            auto meshComponent = this->AddComponent<class StaticMeshComponent>(
+                componentName, parentName);
+            meshComponent->model = asset->model;
+            meshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Stage;
+            meshComponent->SetIsCastShadow(false);
+            meshComponent->SetIsVisible(true);
+        };
+
+        createStageMesh("MainRoomModel", mainRoomAsset);
+        createStageMesh("TransitionAreaModel", transitionAreaAsset);
+        createStageMesh("BossRoomModel", bossRoomAsset);
     }
 
     {
         PROFILE_SCOPE("Create StageActor");
 
-        for (auto point : stageAsset->spawnPoints)
+        for (const auto& areaAsset : { mainRoomAsset, transitionAreaAsset, bossRoomAsset })
+        {
+            for (const auto& point : areaAsset->spawnPoints)
         {
             if (point.name.rfind("Spawn_Particle_Steam", 0) == 0)
             {
@@ -303,6 +314,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::shared_ptr
                 pointLightComponent->SetSharedLightName("MainRoomPointLight");
             }
 
+            }
         }
     }
 

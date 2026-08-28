@@ -61,7 +61,6 @@ public:
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
 private:
 
-    std::shared_ptr<StageAsset> stageAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> mainRoomAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> bossRoomAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> transitionAreaAsset = std::make_shared<StageAsset>();
