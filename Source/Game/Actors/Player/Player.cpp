@@ -741,7 +741,10 @@ void Player::Update(float deltaTime)
                                 "[SwordHit] effect skipped: no valid hit position/normal");
                     }
                     hitActors.emplace(enemy);
-                    Time::SetSlow(0.0f, normalAttackHitStopDuration);
+                    const bool isRushHit = stateMachine_ &&
+                        std::string(stateMachine_->GetStateName()) == "Rush";
+                    Time::SetSlow(0.0f,
+                        isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
 
                 }
             }
@@ -1079,6 +1082,8 @@ void Player::DrawImGuiDetails()
     ImGui::SliderFloat("Walk Speed", &walkSpeed, 0.25f, 10.0f);
     ImGui::SliderFloat("Run Speed", &runSpeed, 0.25f, 15.0f);
     ImGui::DragFloat(U8("ヒットストップの時間"), &normalAttackHitStopDuration, 0.01f);
+    ImGui::DragFloat(U8("ラッシュ時のヒットストップの時間"), &rushHitStopDuration,
+        0.005f, 0.0f, 0.8f, "%.3f sec");
     ImGui::SliderFloat(
         "Forward Speed Scale", &forwardSpeedScale, 0.25f, 1.5f);
     ImGui::SliderFloat(

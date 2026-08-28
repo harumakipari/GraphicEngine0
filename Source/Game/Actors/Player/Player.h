@@ -321,6 +321,7 @@ public:
     int maxRushAttackCount = 7;
 
     float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
+    float rushHitStopDuration = 0.05f;
 
 public:
     // 描画用コンポーネントを追加
@@ -404,7 +405,7 @@ private:
     bool isAttackActive = false;    // プレイヤーが攻撃状態に入る
     DirectX::XMFLOAT3 ghostEdgeColor = { 0.0f,0.042f,0.253f };  // 残像の剣のベースカラー
     DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 残像の剣のベースカラー
-    DirectX::XMFLOAT3 rushSwordColor = { 1.0f,0.58f,0.01f };
+    DirectX::XMFLOAT3 rushSwordColor = { 1.0f,0.08f,0.01f };
     DirectX::XMFLOAT3 activeGhostBaseColor{};
     DirectX::XMFLOAT3 activeGhostEdgeColor{};
     bool rushWeaponVisualEnabled = false;
