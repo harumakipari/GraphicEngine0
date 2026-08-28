@@ -46,12 +46,7 @@ void EnemyThinkState::Execute(float deltaTime)
             return;
         }
 
-        if (!enemy->IsFacingPlayerForAttack(context))
-        {
-            enemy->SetLastAIDecision("Turn: Player outside attack facing angle");
-            owner->GetStateMachine()->ChangeState("EnemyTurnState");
-            return;
-        }
+        enemy->InvalidateCloseCombatIntentForBack(context);
 
         if (!enemy->GetActiveIntent() && !enemy->SelectIntentByWeight())
         {
@@ -121,6 +116,16 @@ void EnemyThinkState::Execute(float deltaTime)
         timer = (std::max)(0.0f, enemy->GetAttackInterval() - 0.25f);
         return;
     }
+    const BossTargetContext facingContext = enemy->BuildTargetContext();
+    if (enemy->PreparePendingAttackFacing(facingContext))
+    {
+        enemy->SetLastAIDecision("Turn: selected Attack requires facing");
+        enemy->MarkIntentAttackSelected();
+        attackSelected = true;
+        owner->GetStateMachine()->ChangeState("EnemyTurnState");
+        return;
+    }
+
 
     enemy->SetLastAIDecision("Action: Attack selected by weighted selection");
     enemy->MarkIntentAttackSelected();
@@ -163,6 +168,8 @@ void EnemyPositioningState::Execute(float deltaTime)
             std::strcmp(reason, "WorldTargetReached") == 0 ||
             std::strcmp(reason, "TargetDistanceReached") == 0 ||
             std::strcmp(reason, "DistanceReached") == 0;
+        if (completed && enemy->IsCombatRepositionActive())
+            enemy->CompleteCombatReposition();
         if (!completed)
             enemy->FailActiveIntent(reason);
         endReasonSet = true;
@@ -227,7 +234,8 @@ void EnemyPositioningState::Execute(float deltaTime)
     {
         if (targetRemainingDistance <= enemy->GetPositioningArrivalDistance())
         {
-            enemy->MarkIntentPositioningCompleted();
+            if (!enemy->IsCombatRepositionActive())
+                enemy->MarkIntentPositioningCompleted();
             finish("WorldTargetReached");
             return;
         }
@@ -280,6 +288,7 @@ void EnemyPositioningState::Exit()
 void EnemyTurnState::Enter()
 {
     timer = 0.0f;
+    enemy->BeginTurnRotationDebug("SelectedAttack");
     enemy->StopAIMovement();
     owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
 }
@@ -297,30 +306,43 @@ void EnemyTurnState::Execute(float deltaTime)
     const BossTargetContext context = enemy->BuildTargetContext();
     if (!context.valid)
     {
+        enemy->ClearPendingAttackFacing();
         enemy->SetLastAIDecision("Turn ended: no valid Player target");
         owner->GetStateMachine()->ChangeState("EnemyThinkState");
         return;
     }
 
-    if (context.absoluteAngleDegrees <= enemy->GetTurnCompleteAngle())
+    if (!enemy->HasPendingAttackFacing())
     {
-        enemy->SetLastAIDecision("Turn complete");
+        enemy->SetLastAIDecision("Turn ended: no pending Attack facing");
         owner->GetStateMachine()->ChangeState("EnemyThinkState");
         return;
     }
 
+    if (enemy->GetPendingAttackFacingAngle() <= enemy->GetTurnCompleteAngle())
+    {
+        enemy->SetLastAIDecision("Turn complete: resume selected Attack");
+        if (!enemy->ResumeSelectedAttackAfterTurn())
+            owner->GetStateMachine()->ChangeState("EnemyThinkState");
+        return;
+    }
+
     enemy->RotateTowardsPlayer(
-        context.directionToPlayer, enemy->GetTurnSpeed(), deltaTime);
+        enemy->GetPendingAttackFacingDirection(),
+        enemy->GetTurnSpeed(), deltaTime, "TurnState");
 
     if (timer >= enemy->GetTurnTimeout())
     {
         enemy->SetLastAIDecision("Turn ended: timeout");
+        enemy->ClearPendingAttackFacing();
         owner->GetStateMachine()->ChangeState("EnemyThinkState");
     }
 }
 
 void EnemyTurnState::Exit()
 {
+    enemy->ClearPendingAttackFacing();
+    enemy->EndTurnRotationDebug(timer);
     enemy->StopAIMovement();
 }
 
@@ -373,7 +395,7 @@ void EnemyAttackState::Execute(float deltaTime)
         if (context.valid)
         {
             enemy->RotateTowardsPlayer(
-                context.directionToPlayer, enemy->GetTurnSpeed(), deltaTime);
+                context.directionToPlayer, enemy->GetTurnSpeed(), deltaTime, "JumpTelegraph");
         }
 
         if (enemy->GetBodyAnimationController()->IsPlayAnimation())
@@ -400,7 +422,7 @@ void EnemyAttackState::Execute(float deltaTime)
         if (context.valid)
         {
             enemy->RotateTowardsPlayer(
-                context.directionToPlayer, enemy->GetTurnSpeed(), deltaTime);
+                context.directionToPlayer, enemy->GetTurnSpeed(), deltaTime, "DashTelegraph");
         }
 
         if (dashWindupTimer < enemy->GetDashWindupDuration())
@@ -466,6 +488,7 @@ void EnemyAttackState::Execute(float deltaTime)
 }
 void EnemyAttackState::Exit()
 {
+    enemy->ClearPendingAttackFacing();
     enemy->StartSelectedActionCooldown();
     enemy->ClearJumpAttackMotionWarpOverride();
     enemy->StopDashAttackMovement();

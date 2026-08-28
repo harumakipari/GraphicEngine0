@@ -54,6 +54,7 @@ enum class BossIntentType : uint8_t
     CloseCombat,
     DashAttackPlan,
     JumpAttackPlan,
+    CombatReposition,
 };
 
 enum class BossIntentStep : uint8_t
@@ -92,6 +93,8 @@ enum class BossActionType :uint8_t
     DashAttack,
     Approach,
     Retreat,
+    RepositionLeft,
+    RepositionRight,
 };
 
 enum class BossAttackType : uint8_t
@@ -114,8 +117,23 @@ enum class BossActionCandidateReason : uint8_t
     WrongDistance,
     Cooldown,
     ZeroWeight,
+    WrongRelativeRegion,
+    NoSafeDirection,
 };
 
+
+enum class BossRepositionReason : uint8_t
+{
+    Normal,
+    BackTaken,
+};
+
+enum class BossRepositionDirection : uint8_t
+{
+    None,
+    Left,
+    Right,
+};
 struct BossActionData
 {
     BossActionType type = BossActionType::AttackLA;

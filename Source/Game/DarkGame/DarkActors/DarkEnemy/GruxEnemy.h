@@ -64,6 +64,9 @@ public:
     void OnSelectedActionStartedSuccessfully();
     void OnSelectedActionStartFailed();
     void FailActiveIntent(const char* reason);
+    bool InvalidateCloseCombatIntentForBack(const BossTargetContext& context);
+    bool IsCombatRepositionActive() const;
+    void CompleteCombatReposition();
     const std::optional<BossIntentType>& GetActiveIntent() const { return activeIntent; }
     bool WasIntentPositioningAttempted() const { return intentPositioningAttempted; }
 
@@ -83,6 +86,7 @@ public:
         outTarget = fixedPositioningTarget;
         return true;
     }
+
     float GetPositioningArrivalDistance() const { return positioningArrivalDistance; }
     void UpdatePositioningAnimation(float actualSpeed, float deltaTime);
     void EndPositioningAnimation();
@@ -117,9 +121,20 @@ public:
     bool ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const;
     bool ShouldFailIntentForPositioningRetryLimit(const BossTargetContext& context) const;
     bool IsFacingPlayerForAttack(const BossTargetContext& context) const;
+    bool PreparePendingAttackFacing(const BossTargetContext& context);
+    bool HasPendingAttackFacing() const { return pendingAttackFacingValid; }
+    const DirectX::XMFLOAT3& GetPendingAttackFacingDirection() const
+    {
+        return pendingAttackFacingDirection;
+    }
+    float GetPendingAttackFacingAngle() const;
+    bool ResumeSelectedAttackAfterTurn();
+    void ClearPendingAttackFacing();
     void StopAIMovement();
     bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
-        float degreesPerSecond, float deltaTime);
+        float degreesPerSecond, float deltaTime, const char* debugSource);
+    void BeginTurnRotationDebug(const char* fromState);
+    void EndTurnRotationDebug(float duration);
     float GetTurnCompleteAngle() const { return turnCompleteAngle; }
     float GetTurnTimeout() const { return turnTimeout; }
     float GetTurnSpeed() const { return turnSpeed; }
@@ -151,6 +166,21 @@ private:
         const BossIntentData& intentData, float distance) const;
     bool GetIntentAttackValidRange(float& outMinDistance, float& outMaxDistance) const;
     bool IsAttackPendingGoalAction(BossActionType actionType, const BossTargetContext& context) const;
+    struct RepositionTargetEvaluation
+    {
+        DirectX::XMFLOAT3 desiredTarget{};
+        DirectX::XMFLOAT3 clampedTarget{};
+        float availableDistance = 0.0f;
+        bool wasClamped = false;
+        float clampDistance = 0.0f;
+        bool sufficientlyMovable = false;
+    };
+    void EvaluateRepositionTargets(const BossTargetContext& context);
+    void EvaluateClampedPositioningTarget(const DirectX::XMFLOAT3& startPosition,
+        const DirectX::XMFLOAT3& desiredTarget, RepositionTargetEvaluation& outEvaluation) const;
+    bool IsRepositionAction(BossActionType actionType) const;
+    const RepositionTargetEvaluation& GetRepositionTargetEvaluation(BossActionType actionType) const;
+    const char* GetRepositionFailureReason() const;
 
     // アクションが現在の距離(Region)で候補になるかを判定する関数
     bool IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const;
@@ -184,6 +214,11 @@ private:
     // ボスの距離範囲のデバック描画
     void DrawBossAIDebugWorld(const BossTargetContext& context) const;
     void DrawPositioningDebugWorld() const;
+    void BeginRotationDebugFrame();
+    void FinishRotationDebugFrame();
+    void RecordRotationDebugSource(const char* source,
+        const DirectX::XMFLOAT3& targetDirection, float requestedTurnSpeed);
+    void DrawRotationDebugWorld(const BossTargetContext& context) const;
 
 private:
     // 描画用コンポーネントを追加
@@ -241,12 +276,13 @@ private:
     std::string intentLifecycleTrace = "None";
     std::string intentLifecycleReason = "None";
 
-    static constexpr int intentCount = 3;
+    static constexpr int intentCount = 4;
     std::array<BossIntentData, intentCount> combatIntentData =
     { {
         { BossIntentType::CloseCombat, 60.0f, 30.0f, 25.0f, 4.0f, 5.5f, 0.25f },
         { BossIntentType::DashAttackPlan, 25.0f, 35.0f, 45.0f, 8.0f, 10.0f, 0.25f },
         { BossIntentType::JumpAttackPlan, 15.0f, 35.0f, 30.0f, 7.0f, 9.0f, 0.25f },
+        { BossIntentType::CombatReposition, 10.0f, 12.0f, 10.0f, 0.0f, 100.0f, 0.0f },
     } };
     std::array<float, intentCount> combatIntentEffectiveWeights{};
     bool hasLastIntentRandomRoll = false;
@@ -261,12 +297,15 @@ private:
     BossActionType lastActionType = BossActionType::AttackLA;
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
     std::optional<BossPositioningData> selectedPositioningData = std::nullopt;
+    bool pendingAttackActionValid = false;
+    bool pendingAttackFacingValid = false;
+    DirectX::XMFLOAT3 pendingAttackFacingDirection{ 0.0f, 0.0f, 1.0f };
 
     BossAttackType lastAttackType = BossAttackType::PrimaryAttackLA;
     bool hasLastAttack = false;
 
     // 行動のデータを定義する配列。攻撃の種類、距離条件などを設定する。
-    static constexpr int actionCount = 7;
+    static constexpr int actionCount = 9;
     std::array<BossActionData, actionCount> combatActionData =
     {
         {
@@ -277,6 +316,8 @@ private:
         { BossActionType::DashAttack,BossAttackType::DashAttack,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,4.0f},
         { BossActionType::Approach, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,40.0f,0.5f},
         { BossActionType::Retreat, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,40.0f,2.5f},
+        { BossActionType::RepositionLeft, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,50.0f,1.0f},
+        { BossActionType::RepositionRight, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,50.0f,1.0f},
     }
     };
 
@@ -288,7 +329,43 @@ private:
     std::array<float, actionCount> combatActionCooldownRemaining{};
 
     bool showBossAIDebug = false;
+    struct RotationSourceDebug
+    {
+        std::string source = "None";
+        float targetYaw = 0.0f;
+        float requestedTurnSpeed = 0.0f;
+    };
+    struct LastTurnDebug
+    {
+        bool valid = false;
+        std::string fromState = "None";
+        float startAngle = 0.0f;
+        float startTargetYaw = 0.0f;
+        float endAngle = 0.0f;
+        float duration = 0.0f;
+    };
+    bool showRotationDebug = false;
+    bool rotationDebugYawInitialized = false;
+    float rotationDebugPreviousYaw = 0.0f;
+    float rotationDebugCurrentYaw = 0.0f;
+    float rotationDebugPlayerYaw = 0.0f;
+    float rotationDebugActualYawDelta = 0.0f;
+    float rotationDebugRequestedTurnSpeed = 0.0f;
+    std::array<RotationSourceDebug, 8> rotationDebugSources{};
+    int rotationDebugSourceCount = 0;
+    DirectX::XMFLOAT3 rotationDebugTurnTargetDirection{};
+    bool rotationDebugTurnTargetValid = false;
+    LastTurnDebug lastTurnDebug{};
+    float activeTurnDebugStartAngle = 0.0f;
+    float activeTurnDebugTargetYaw = 0.0f;
+    std::string activeTurnDebugFromState = "None";
     BossTargetContext aiDebugTargetContext{};
+    bool attackFacingEvaluationValid = false;
+    float attackFacingEvaluationTolerance = 0.0f;
+    float attackFacingEvaluationAngle = 0.0f;
+    bool attackFacingEvaluationRequired = false;
+    bool lastResumedAttackValid = false;
+    BossAttackType lastResumedAttackType = BossAttackType::PrimaryAttackLA;
     bool hasSelectedActionDebug = false;
     bool hasLastActionRandomRoll = false;
     float lastActionRandomRoll = 0.0f;
@@ -314,10 +391,12 @@ private:
     float lastCombatSelectionDistance = 0.0f;   //  最後にAttack抽選を行ったときの距離。現在はImGui表示用として保持。
     float repeatWeightScale = 0.25f;    //  直前と同じAttackのWeightへ掛ける倍率。現在は0.25なので、同じ攻撃のWeightを25%まで下げる。
 
-    std::array<BossPositioningData, 2> combatPositioningData =
+    std::array<BossPositioningData, 4> combatPositioningData =
     { {
         { BossActionType::Approach, BossPositioningDirection::TowardPlayer, 20.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TargetDistance, 0.0f },
         { BossActionType::Retreat, BossPositioningDirection::AwayFromPlayer, 7.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TravelDistance, 0.0f },
+        { BossActionType::RepositionLeft, BossPositioningDirection::TowardPlayer, 3.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TravelDistance, 0.0f },
+        { BossActionType::RepositionRight, BossPositioningDirection::TowardPlayer, 3.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TravelDistance, 0.0f },
     } };
 
     //  StateMachineのタイミングと方向制御
@@ -328,13 +407,19 @@ private:
     float nearDistanceThreshold = 6.0f; // この距離以下は近距離とみなす
     float middleDistanceThreshold = 12.0f; // この距離以下は中距離とみなす
 
+    float relativeFrontMaxAngle = 50.0f;
+    float relativeBackMinAngle = 110.0f;
     const std::array<BossActionData, actionCount> initialCombatActionData = combatActionData;
     const std::array<BossIntentData, intentCount> initialCombatIntentData = combatIntentData;
     const std::array<BossAttackData, 5> initialCombatAttackData = combatAttackData;
     const float initialNearDistanceThreshold = nearDistanceThreshold;
     const float initialMiddleDistanceThreshold = middleDistanceThreshold;
+    const float initialRelativeFrontMaxAngle = relativeFrontMaxAngle;
+    const float initialRelativeBackMinAngle = relativeBackMinAngle;
+    static constexpr float initialCombatRepositionMoveDistance = 5.0f;  // 横に練り歩く距離
 
-    float turnSpeed = 720.0f;  // EnemyTurnStateでその場回転するときの速度
+
+    float turnSpeed = 480.0f;  // EnemyTurnStateでその場回転するときの速度
     float turnCompleteAngle = 15.0f;    // この角度以内なら回転完了とみなす
     float turnTimeout = 1.5f;   //   Turnがいつまでも完了しない場合の制限時間。現在は1.5秒でThinkへ戻る。
     std::string lastAIDecisionReason = "None";  // 最後にAIが行った判断理由を文字列で保存。ImGuiに表示。AIの動作確認用。
@@ -387,6 +472,20 @@ private:
     bool positioningAnimationMoving = false;
     DirectX::XMFLOAT3 fixedPositioningTarget{};
     bool fixedPositioningTargetValid = false;
+    float combatRepositionBackWeight = 80.0f;
+    float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;
+    BossRepositionReason repositionReason = BossRepositionReason::Normal;
+    BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;
+    RepositionTargetEvaluation leftRepositionTarget{};
+    RepositionTargetEvaluation rightRepositionTarget{};
+    bool repositionTargetsEvaluated = false;
+    std::string repositionCompletionReason = "None";
+    DirectX::XMFLOAT3 repositionDesiredTarget{};
+    DirectX::XMFLOAT3 repositionClampedTarget{};
+    float repositionLeftAvailableDistance = 0.0f;
+    float repositionRightAvailableDistance = 0.0f;
+    bool repositionSelectedTargetWasClamped = false;
+    bool repositionNoSafeDirection = false;
 
     bool positioningDebugActive = false;
     bool positioningWorldDebug = false;

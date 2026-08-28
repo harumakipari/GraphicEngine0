@@ -238,7 +238,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     gaugeFrameBackComponent->SetColor(CoreColor::White);
     uiManager->Add(gaugeFrameBackComponent);
     // Hpバー
-    hpFrameUiComponent = std::make_shared<UIGaugeComponent>("./Data/Textures/UI/HpBar/frame.png","./Data/Textures/UI/HpBar/bar.png", "EnemyHpBar");
+    hpFrameUiComponent = std::make_shared<UIGaugeComponent>("./Data/Textures/UI/HpBar/frame.png", "./Data/Textures/UI/HpBar/bar.png", "EnemyHpBar");
     hpFrameUiComponent->SetVisible(true);
     hpFrameUiComponent->SetPivot({ 0.0f,0.5f });
     hpFrameUiComponent->SetSize(gaugeSize);
@@ -261,6 +261,7 @@ void GruxEnemy::Update(float deltaTime)
     if (!IsAnimationEditorPreviewActive())
         UpdateActionCooldowns(deltaTime);
 
+    BeginRotationDebugFrame();
     Character::Update(deltaTime);
 
     // Animation Editor Preview中はこのBossだけGameplay/AI/攻撃判定を停止する。
@@ -285,11 +286,14 @@ void GruxEnemy::Update(float deltaTime)
     }
     characterMovementComponent->SetFrameAdditionalVelocity(motionWarpVelocity);
     characterMovementComponent->TickDeferredMovement(deltaTime);
+    FinishRotationDebugFrame();
 
 #ifdef USE_IMGUI
     aiDebugTargetContext = BuildTargetContext();
     if (showBossAIDebug)
         DrawBossAIDebugWorld(aiDebugTargetContext);
+    if (showRotationDebug)
+        DrawRotationDebugWorld(aiDebugTargetContext);
     if (positioningWorldDebug)
         DrawPositioningDebugWorld();
 #endif
@@ -608,11 +612,11 @@ void GruxEnemy::Update(float deltaTime)
             const std::shared_ptr<SceneComponent>& middle,
             const std::shared_ptr<SceneComponent>& tip, float radius,
             const DirectX::XMFLOAT4& color)
-        {
-            if (root) DebugRender::DrawSphere(root->GetComponentLocation(), radius, color, 0.0f, true);
-            if (middle) DebugRender::DrawSphere(middle->GetComponentLocation(), radius, color, 0.0f, true);
-            if (tip) DebugRender::DrawSphere(tip->GetComponentLocation(), radius, color, 0.0f, true);
-        };
+            {
+                if (root) DebugRender::DrawSphere(root->GetComponentLocation(), radius, color, 0.0f, true);
+                if (middle) DebugRender::DrawSphere(middle->GetComponentLocation(), radius, color, 0.0f, true);
+                if (tip) DebugRender::DrawSphere(tip->GetComponentLocation(), radius, color, 0.0f, true);
+            };
         if (leftHitBox)
             drawWeaponHitSpheres(weaponLeftRootComponent, weaponLeftMiddleComponent,
                 weaponLeftTipComponent, activeLeftHitBoxRadius, { 0.2f, 1.0f, 0.35f, 1.0f });
@@ -708,26 +712,26 @@ void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
     const float debugHeight = bossPosition.y + 1.0f;
 
     const auto drawRing = [&](float radius, const DirectX::XMFLOAT4& color)
-    {
-        for (int i = 0; i < segmentCount; ++i)
         {
-            const float angle0 = twoPi * static_cast<float>(i) / static_cast<float>(segmentCount);
-            const float angle1 = twoPi * static_cast<float>(i + 1) / static_cast<float>(segmentCount);
-            const DirectX::XMFLOAT3 start =
+            for (int i = 0; i < segmentCount; ++i)
             {
-                bossPosition.x + std::cos(angle0) * radius,
-                debugHeight,
-                bossPosition.z + std::sin(angle0) * radius
-            };
-            const DirectX::XMFLOAT3 end =
-            {
-                bossPosition.x + std::cos(angle1) * radius,
-                debugHeight,
-                bossPosition.z + std::sin(angle1) * radius
-            };
-            DebugRender::DrawLine(start, end, color, 0.0f, true);
-        }
-    };
+                const float angle0 = twoPi * static_cast<float>(i) / static_cast<float>(segmentCount);
+                const float angle1 = twoPi * static_cast<float>(i + 1) / static_cast<float>(segmentCount);
+                const DirectX::XMFLOAT3 start =
+                {
+                    bossPosition.x + std::cos(angle0) * radius,
+                    debugHeight,
+                    bossPosition.z + std::sin(angle0) * radius
+                };
+                const DirectX::XMFLOAT3 end =
+                {
+                    bossPosition.x + std::cos(angle1) * radius,
+                    debugHeight,
+                    bossPosition.z + std::sin(angle1) * radius
+                };
+                DebugRender::DrawLine(start, end, color, 0.0f, true);
+            }
+        };
 
     drawRing(nearDistanceThreshold, { 0.2f, 1.0f, 0.2f, 1.0f });
     drawRing(middleDistanceThreshold, { 1.0f, 0.7f, 0.1f, 1.0f });
@@ -778,6 +782,48 @@ void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
 #endif
 }
 
+void GruxEnemy::DrawRotationDebugWorld(const BossTargetContext& context) const
+{
+#ifdef USE_IMGUI
+    const DirectX::XMFLOAT3 position = GetPosition();
+    const float y = position.y + 0.35f;
+    const DirectX::XMFLOAT3 origin{ position.x, y, position.z };
+    DirectX::XMVECTOR forwardVector = DirectX::XMVector3Rotate(
+        DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
+        DirectX::XMLoadFloat4(&GetQuaternionRotation()));
+    DirectX::XMFLOAT3 forward{};
+    DirectX::XMStoreFloat3(&forward, forwardVector);
+    forward.y = 0.0f;
+    DebugRender::DrawLine(origin,
+        { origin.x + forward.x * 4.0f, y, origin.z + forward.z * 4.0f },
+        { 0.2f, 1.0f, 0.25f, 1.0f }, 0.0f, true);
+    if (context.valid)
+    {
+        DebugRender::DrawLine(origin,
+            { origin.x + context.directionToPlayer.x * 5.0f, y,
+                origin.z + context.directionToPlayer.z * 5.0f },
+            { 0.2f, 0.65f, 1.0f, 1.0f }, 0.0f, true);
+    }
+    if (positioningDebugActive)
+    {
+        const DirectX::XMFLOAT3& move = currentPositioningDebug.requestedMoveDirection;
+        DebugRender::DrawLine(origin,
+            { origin.x + move.x * 4.0f, y, origin.z + move.z * 4.0f },
+            { 1.0f, 0.75f, 0.1f, 1.0f }, 0.0f, true);
+    }
+    if (rotationDebugTurnTargetValid)
+    {
+        DebugRender::DrawLine(origin,
+            { origin.x + rotationDebugTurnTargetDirection.x * 4.5f, y,
+                origin.z + rotationDebugTurnTargetDirection.z * 4.5f },
+            { 1.0f, 0.2f, 0.8f, 1.0f }, 0.0f, true);
+    }
+#else
+    (void)context;
+#endif
+}
+
+
 void GruxEnemy::DrawPositioningDebugWorld() const
 {
 #ifdef USE_IMGUI
@@ -787,16 +833,16 @@ void GruxEnemy::DrawPositioningDebugWorld() const
     const float debugY = snapshot.valid ? snapshot.startBossPosition.y + 0.12f : GetPosition().y + 0.12f;
     const auto drawBounds = [debugY](float minX, float maxX, float minZ, float maxZ,
         const DirectX::XMFLOAT4& color)
-    {
-        const DirectX::XMFLOAT3 a{ minX, debugY, minZ };
-        const DirectX::XMFLOAT3 b{ maxX, debugY, minZ };
-        const DirectX::XMFLOAT3 c{ maxX, debugY, maxZ };
-        const DirectX::XMFLOAT3 d{ minX, debugY, maxZ };
-        DebugRender::DrawLine(a, b, color, 0.0f, true);
-        DebugRender::DrawLine(b, c, color, 0.0f, true);
-        DebugRender::DrawLine(c, d, color, 0.0f, true);
-        DebugRender::DrawLine(d, a, color, 0.0f, true);
-    };
+        {
+            const DirectX::XMFLOAT3 a{ minX, debugY, minZ };
+            const DirectX::XMFLOAT3 b{ maxX, debugY, minZ };
+            const DirectX::XMFLOAT3 c{ maxX, debugY, maxZ };
+            const DirectX::XMFLOAT3 d{ minX, debugY, maxZ };
+            DebugRender::DrawLine(a, b, color, 0.0f, true);
+            DebugRender::DrawLine(b, c, color, 0.0f, true);
+            DebugRender::DrawLine(c, d, color, 0.0f, true);
+            DebugRender::DrawLine(d, a, color, 0.0f, true);
+        };
 
     drawBounds(bossRoomMinX, bossRoomMaxX, bossRoomMinZ, bossRoomMaxZ,
         { 0.45f, 0.45f, 0.5f, 1.0f });
@@ -1043,6 +1089,8 @@ void GruxEnemy::DrawImGuiDetails()
         "DashAttack",
         "Approach",
         "Retreat",
+        "RepositionLeft",
+        "RepositionRight",
     };
 
     ImGui::SeparatorText("CombatAI v2 Positioning");
@@ -1052,9 +1100,11 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Forward Dot: %.3f", targetContext.forwardDot);
 
     ImGui::Text("Relative Region: %s", targetContext.valid ? relativeRegions[static_cast<int>(targetContext.region)] : "Invalid");
+    ImGui::Text("Front Max Angle: %.1f deg", relativeFrontMaxAngle);
+    ImGui::Text("Back Min Angle: %.1f deg", relativeBackMinAngle);
     ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
     ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
-    const char* intentTypes[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan" };
+    const char* intentTypes[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan", "CombatReposition" };
     const char* intentStepNames[] =
     {
         "Selecting",
@@ -1072,6 +1122,8 @@ void GruxEnemy::DrawImGuiDetails()
         "WrongDistance",
         "Cooldown",
         "ZeroWeight",
+        "WrongRelativeRegion",
+        "NoSafeDirection",
     };
     const char* activeIntentName = "None";
     if (activeIntent)
@@ -1089,6 +1141,9 @@ void GruxEnemy::DrawImGuiDetails()
             break;
         case BossIntentType::JumpAttackPlan:
             activeIntentGoal = "JumpAttack";
+            break;
+        case BossIntentType::CombatReposition:
+            activeIntentGoal = "Reposition";
             break;
         }
     }
@@ -1118,6 +1173,10 @@ void GruxEnemy::DrawImGuiDetails()
             activeIntentNextAction = rangeStatus == BossIntentRangeStatus::TooClose
                 ? "Retreat"
                 : (rangeStatus == BossIntentRangeStatus::TooFar ? "Approach" : "JumpAttack");
+        }
+        else if (*activeIntent == BossIntentType::CombatReposition)
+        {
+            activeIntentNextAction = "Reposition Left / Right";
         }
     }
 
@@ -1207,8 +1266,8 @@ void GruxEnemy::DrawImGuiDetails()
     {
         ImGui::Text("%s: %.2f - %.2f m",
             activeIntentStep == BossIntentStep::AttackPending
-                ? "AttackPending Effective Valid Range"
-                : "Attack Valid Range",
+            ? "AttackPending Effective Valid Range"
+            : "Attack Valid Range",
             effectiveAttackValidMin, attackValidMax);
         ImGui::Text("Current Player Distance: %.2f m", targetContext.xzDistance);
         ImGui::Text("Attack Valid: %s", attackValid ? "YES" : "NO");
@@ -1319,79 +1378,79 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::TreePop();
     }
 
-const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan" };
+    const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan", "CombatReposition" };
     const auto drawPosition = [](const char* label, const DirectX::XMFLOAT3& position)
-    {
-        ImGui::Text("%s: (%.2f, %.2f, %.2f)", label, position.x, position.y, position.z);
-    };
+        {
+            ImGui::Text("%s: (%.2f, %.2f, %.2f)", label, position.x, position.y, position.z);
+        };
     const auto drawPositioningSnapshot = [&](const PositioningDebugSnapshot& snapshot, bool active)
-    {
-        if (!snapshot.valid)
         {
-            ImGui::TextDisabled("No positioning record");
-            return;
-        }
-        const char* intentName = snapshot.intent
-            ? positioningIntentNames[static_cast<int>(*snapshot.intent)]
-            : "None";
-        ImGui::Text("Intent: %s", intentName);
-        ImGui::Text("Action: %s", actionTypes[static_cast<int>(snapshot.data.actionType)]);
-        ImGui::Text("Preferred Range: %.2f - %.2f m", snapshot.preferredMin, snapshot.preferredMax);
-        ImGui::Text("Start Player Distance: %.3f m", snapshot.startPlayerDistance);
-        ImGui::Text("Current/End Player Distance: %.3f m", snapshot.currentPlayerDistance);
-        ImGui::Text("Target Distance: %.3f m", snapshot.data.targetDistance);
-        drawPosition("Start Boss Position", snapshot.startBossPosition);
-        drawPosition("Start Player Position", snapshot.startPlayerPosition);
-        drawPosition("Desired Target Before Clamp", snapshot.desiredTargetPosition);
-        drawPosition("Positioning Target After Clamp", snapshot.clampedTargetPosition);
-        ImGui::Text("Was Clamped: %s", snapshot.targetWasClamped ? "YES" : "NO");
-        ImGui::Text("Clamp Distance: %.3f m", snapshot.targetClampDistance);
-        ImGui::Text("Available Move Distance: %.3f m", snapshot.availableMoveDistance);
-        ImGui::TextColored(snapshot.availableMoveDistance < minimumPositioningMoveDistance
-            ? ImVec4(1.0f, 0.45f, 0.2f, 1.0f) : ImVec4(0.5f, 1.0f, 0.5f, 1.0f),
-            "Below Minimum Diagnostic Distance: %s (%.2f m)",
-            snapshot.availableMoveDistance < minimumPositioningMoveDistance ? "YES" : "NO",
-            minimumPositioningMoveDistance);
-        drawPosition(active ? "Current Position" : "End Position", snapshot.currentPosition);
-        ImGui::Text("Planned Move: %.3f m", snapshot.plannedMoveDistance);
-        ImGui::Text("Actual Move (Start -> Current): %.3f m", snapshot.actualMoveDistance);
-        ImGui::Text("Traveled Path: %.3f m", snapshot.traveledPathDistance);
-        ImGui::Text("Target Remaining: %.3f m", snapshot.remainingDistance);
-        ImGui::Text("Requested Move Direction: (%.3f, %.3f, %.3f)",
-            snapshot.requestedMoveDirection.x, snapshot.requestedMoveDirection.y,
-            snapshot.requestedMoveDirection.z);
-        ImGui::Text("Requested Speed: %.3f m/s", snapshot.data.moveSpeed);
-        ImGui::Text("Input Magnitude: %.3f", snapshot.inputMagnitude);
-        ImGui::Text("Actual Move This Frame: %.4f m", snapshot.frameMovement);
-        ImGui::Text("Actual Speed (Position Delta): %.3f m/s", snapshot.actualSpeed);
-        if (characterMovementComponent)
-            ImGui::Text("Movement Component Actual Speed: %.3f m/s",
-                characterMovementComponent->GetActualHorizontalSpeed());
-        ImGui::Text("Positioning Time: %.3f / %.3f sec", snapshot.elapsedTime, snapshot.data.timeout);
-        ImGui::Text("Stuck: %.3f / %.3f sec (speed < %.3f m/s)",
-            snapshot.stuckTimer, snapshot.data.stuckTimeThreshold,
-            snapshot.data.stuckMovementThreshold);
-        ImGui::Text("Safe Bounds at Start: X %.2f - %.2f, Z %.2f - %.2f (Margin %.2f)",
-            snapshot.safeMinX, snapshot.safeMaxX, snapshot.safeMinZ, snapshot.safeMaxZ,
-            snapshot.safetyMargin);
-        ImGui::Text("Target In BossRoom Safe Bounds: YES (clamped before use)");
-        ImGui::TextDisabled("Wall Hit/Normal: Unavailable; movement RayCast result is not exposed");
-        ImGui::Text("Rotation: RotateTowardsPlayer(requested move direction), %.1f deg/s", turnSpeed);
-        const auto controller = GetBodyAnimationController();
-        if (active)
-        {
-            ImGui::SeparatorText("Positioning Animation");
-            ImGui::Text("Actual Speed: %.3f m/s", positioningAnimationActualSpeed);
-            ImGui::Text("Animation State: %s", positioningAnimationMoving ? "Moving" : "Idle");
-            ImGui::Text("Move Start Threshold: %.3f m/s", positioningMoveStartSpeedThreshold);
-            ImGui::Text("Move Stop Threshold: %.3f m/s", positioningMoveStopSpeedThreshold);
-            ImGui::Text("Move Stop Timer: %.3f / %.3f sec",
-                positioningMoveStopTimer, positioningMoveStopDelay);
-            ImGui::Text("Current Animation: %s",
-                controller ? controller->GetCurrentAnimationName().c_str() : "None");
-        }
-        ImGui::Text("End Reason: %s", snapshot.endReason.c_str());
-    };
+            if (!snapshot.valid)
+            {
+                ImGui::TextDisabled("No positioning record");
+                return;
+            }
+            const char* intentName = snapshot.intent
+                ? positioningIntentNames[static_cast<int>(*snapshot.intent)]
+                : "None";
+            ImGui::Text("Intent: %s", intentName);
+            ImGui::Text("Action: %s", actionTypes[static_cast<int>(snapshot.data.actionType)]);
+            ImGui::Text("Preferred Range: %.2f - %.2f m", snapshot.preferredMin, snapshot.preferredMax);
+            ImGui::Text("Start Player Distance: %.3f m", snapshot.startPlayerDistance);
+            ImGui::Text("Current/End Player Distance: %.3f m", snapshot.currentPlayerDistance);
+            ImGui::Text("Target Distance: %.3f m", snapshot.data.targetDistance);
+            drawPosition("Start Boss Position", snapshot.startBossPosition);
+            drawPosition("Start Player Position", snapshot.startPlayerPosition);
+            drawPosition("Desired Target Before Clamp", snapshot.desiredTargetPosition);
+            drawPosition("Positioning Target After Clamp", snapshot.clampedTargetPosition);
+            ImGui::Text("Was Clamped: %s", snapshot.targetWasClamped ? "YES" : "NO");
+            ImGui::Text("Clamp Distance: %.3f m", snapshot.targetClampDistance);
+            ImGui::Text("Available Move Distance: %.3f m", snapshot.availableMoveDistance);
+            ImGui::TextColored(snapshot.availableMoveDistance < minimumPositioningMoveDistance
+                ? ImVec4(1.0f, 0.45f, 0.2f, 1.0f) : ImVec4(0.5f, 1.0f, 0.5f, 1.0f),
+                "Below Minimum Move Distance: %s (%.2f m)",
+                snapshot.availableMoveDistance < minimumPositioningMoveDistance ? "YES" : "NO",
+                minimumPositioningMoveDistance);
+            drawPosition(active ? "Current Position" : "End Position", snapshot.currentPosition);
+            ImGui::Text("Planned Move: %.3f m", snapshot.plannedMoveDistance);
+            ImGui::Text("Actual Move (Start -> Current): %.3f m", snapshot.actualMoveDistance);
+            ImGui::Text("Traveled Path: %.3f m", snapshot.traveledPathDistance);
+            ImGui::Text("Target Remaining: %.3f m", snapshot.remainingDistance);
+            ImGui::Text("Requested Move Direction: (%.3f, %.3f, %.3f)",
+                snapshot.requestedMoveDirection.x, snapshot.requestedMoveDirection.y,
+                snapshot.requestedMoveDirection.z);
+            ImGui::Text("Requested Speed: %.3f m/s", snapshot.data.moveSpeed);
+            ImGui::Text("Input Magnitude: %.3f", snapshot.inputMagnitude);
+            ImGui::Text("Actual Move This Frame: %.4f m", snapshot.frameMovement);
+            ImGui::Text("Actual Speed (Position Delta): %.3f m/s", snapshot.actualSpeed);
+            if (characterMovementComponent)
+                ImGui::Text("Movement Component Actual Speed: %.3f m/s",
+                    characterMovementComponent->GetActualHorizontalSpeed());
+            ImGui::Text("Positioning Time: %.3f / %.3f sec", snapshot.elapsedTime, snapshot.data.timeout);
+            ImGui::Text("Stuck: %.3f / %.3f sec (speed < %.3f m/s)",
+                snapshot.stuckTimer, snapshot.data.stuckTimeThreshold,
+                snapshot.data.stuckMovementThreshold);
+            ImGui::Text("Safe Bounds at Start: X %.2f - %.2f, Z %.2f - %.2f (Margin %.2f)",
+                snapshot.safeMinX, snapshot.safeMaxX, snapshot.safeMinZ, snapshot.safeMaxZ,
+                snapshot.safetyMargin);
+            ImGui::Text("Target In BossRoom Safe Bounds: YES (clamped before use)");
+            ImGui::TextDisabled("Wall Hit/Normal: Unavailable; movement RayCast result is not exposed");
+            ImGui::Text("Rotation: RotateTowardsPlayer(requested move direction), %.1f deg/s", turnSpeed);
+            const auto controller = GetBodyAnimationController();
+            if (active)
+            {
+                ImGui::SeparatorText("Positioning Animation");
+                ImGui::Text("Actual Speed: %.3f m/s", positioningAnimationActualSpeed);
+                ImGui::Text("Animation State: %s", positioningAnimationMoving ? "Moving" : "Idle");
+                ImGui::Text("Move Start Threshold: %.3f m/s", positioningMoveStartSpeedThreshold);
+                ImGui::Text("Move Stop Threshold: %.3f m/s", positioningMoveStopSpeedThreshold);
+                ImGui::Text("Move Stop Timer: %.3f / %.3f sec",
+                    positioningMoveStopTimer, positioningMoveStopDelay);
+                ImGui::Text("Current Animation: %s",
+                    controller ? controller->GetCurrentAnimationName().c_str() : "None");
+            }
+            ImGui::Text("End Reason: %s", snapshot.endReason.c_str());
+        };
 
     ImGui::SeparatorText("Boss Room Positioning");
     ImGui::Text("BossRoom Bounds X: %.2f - %.2f", bossRoomMinX, bossRoomMaxX);
@@ -1405,7 +1464,7 @@ const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpA
     ImGui::DragFloat("Positioning Arrival Distance", &positioningArrivalDistance,
         0.01f, 0.01f, 2.0f, "%.2f m");
     positioningArrivalDistance = std::clamp(positioningArrivalDistance, 0.01f, 2.0f);
-    ImGui::DragFloat("Minimum Move Distance (Diagnostic Only)",
+    ImGui::DragFloat("Minimum Move Distance",
         &minimumPositioningMoveDistance, 0.05f, 0.0f, 5.0f, "%.2f m");
     minimumPositioningMoveDistance = (std::max)(0.0f, minimumPositioningMoveDistance);
     ImGui::SeparatorText("Positioning Animation Tuning");
@@ -1429,6 +1488,23 @@ const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpA
     ImGui::TextDisabled("Margin changes apply to the next Positioning target; active target stays fixed.");
     ImGui::SeparatorText("Boss Positioning Debug");
     ImGui::Checkbox("Positioning World Debug", &positioningWorldDebug);
+    ImGui::SeparatorText("Combat Reposition Debug");
+    const char* repositionReasonName = repositionReason == BossRepositionReason::BackTaken
+        ? "BackTaken" : "Normal";
+    const char* repositionDirectionName = selectedRepositionDirection == BossRepositionDirection::Left
+        ? "Left" : (selectedRepositionDirection == BossRepositionDirection::Right ? "Right" : "None");
+    ImGui::Text("Reposition Intent Weight: %.2f",
+        combatIntentEffectiveWeights[static_cast<int>(BossIntentType::CombatReposition)]);
+    ImGui::Text("Reposition Reason: %s", repositionReasonName);
+    ImGui::Text("Reposition Direction: %s", repositionDirectionName);
+    ImGui::Text("Left Available Distance: %.3f m", repositionLeftAvailableDistance);
+    ImGui::Text("Right Available Distance: %.3f m", repositionRightAvailableDistance);
+    ImGui::Text("Desired Target: (%.2f, %.2f, %.2f)",
+        repositionDesiredTarget.x, repositionDesiredTarget.y, repositionDesiredTarget.z);
+    ImGui::Text("Clamped Target: (%.2f, %.2f, %.2f)",
+        repositionClampedTarget.x, repositionClampedTarget.y, repositionClampedTarget.z);
+    ImGui::Text("Completion / Failure Reason: %s", repositionCompletionReason.c_str());
+    ImGui::Text("No Safe Direction: %s", repositionNoSafeDirection ? "YES" : "NO");
     ImGui::SeparatorText("Current Positioning");
     ImGui::Text("Active: %s", positioningDebugActive ? "YES" : "NO");
     if (positioningDebugActive)
@@ -1511,6 +1587,58 @@ const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpA
 
     ImGui::Begin("Boss AI Debug");
     ImGui::Checkbox("Show AI World Debug", &showBossAIDebug);
+    ImGui::SeparatorText("Boss Rotation Debug");
+    ImGui::Checkbox("Rotation Debug / World Lines", &showRotationDebug);
+    const char* rotationStateName = stateMachine_ ? stateMachine_->GetStateName() : "";
+    ImGui::Text("Current State: %s", rotationStateName[0] ? rotationStateName : "None");
+    ImGui::Text("Current Intent: %s", activeIntentName);
+    ImGui::Text("Intent Step: %s", intentStepNames[static_cast<int>(activeIntentStep)]);
+    ImGui::Text("Selected Attack: %s", attackTypes[static_cast<int>(selectedAttackType)]);
+    ImGui::Text("Facing Evaluation: %s", attackFacingEvaluationValid ? "Valid" : "None");
+    ImGui::Text("Facing Tolerance: %.1f deg", attackFacingEvaluationTolerance);
+    ImGui::Text("Angle To Player At Selection: %.3f deg", attackFacingEvaluationAngle);
+    ImGui::Text("Facing Required: %s", attackFacingEvaluationRequired ? "YES" : "NO");
+    ImGui::Text("Pending Facing Valid: %s", pendingAttackFacingValid ? "YES" : "NO");
+    const float pendingFacingYaw = pendingAttackFacingValid
+        ? DirectX::XMConvertToDegrees(std::atan2f(
+            pendingAttackFacingDirection.x, pendingAttackFacingDirection.z))
+        : 0.0f;
+    ImGui::Text("Pending Facing Yaw: %.3f deg", pendingFacingYaw);
+    ImGui::Text("Resume Attack: %s",
+        lastResumedAttackValid
+        ? attackTypes[static_cast<int>(lastResumedAttackType)]
+        : "None");
+
+    ImGui::Text("Current Yaw: %.3f deg", rotationDebugCurrentYaw);
+    ImGui::Text("Player Direction Yaw: %.3f deg", rotationDebugPlayerYaw);
+    ImGui::Text("Angle To Player: %.3f deg", targetContext.absoluteAngleDegrees);
+    ImGui::Text("Actual Yaw Delta This Frame: %.4f deg", rotationDebugActualYawDelta);
+    ImGui::Text("Requested Turn Speed: %.1f deg/s", rotationDebugRequestedTurnSpeed);
+    ImGui::Text("Rotation Sources This Frame: %d", rotationDebugSourceCount);
+    if (rotationDebugSourceCount == 0)
+        ImGui::TextDisabled("  None");
+    for (int i = 0; i < rotationDebugSourceCount; ++i)
+    {
+        const RotationSourceDebug& source = rotationDebugSources[i];
+        ImGui::Text("  %d. %s | Target Yaw %.2f | Speed %.1f",
+            i + 1, source.source.c_str(), source.targetYaw, source.requestedTurnSpeed);
+    }
+    ImGui::TextDisabled("World: Forward=Green, Player=Blue, Positioning=Yellow, Turn Target=Magenta");
+    ImGui::SeparatorText("Last Turn");
+    if (lastTurnDebug.valid)
+    {
+        ImGui::Text("From State: %s", lastTurnDebug.fromState.c_str());
+        ImGui::Text("Start Angle: %.3f deg", lastTurnDebug.startAngle);
+        ImGui::Text("Start Target Yaw: %.3f deg", lastTurnDebug.startTargetYaw);
+        ImGui::Text("End Angle: %.3f deg", lastTurnDebug.endAngle);
+        ImGui::Text("Duration: %.3f sec", lastTurnDebug.duration);
+        ImGui::Text("Turn Start / End Threshold: %.1f / %.1f deg",
+            attackFacingAngle, turnCompleteAngle);
+    }
+    else
+    {
+        ImGui::TextDisabled("No completed Turn recorded");
+    }
 
     const char* fullStateName = stateMachine_ ? stateMachine_->GetStateName() : "";
     const char* stateDisplayName = "None";
@@ -1542,6 +1670,8 @@ const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpA
         ImGui::Text("Distance: %.2f", targetContext.xzDistance);
         ImGui::Text("Angle to Player: %.2f deg", targetContext.absoluteAngleDegrees);
         ImGui::Text("Relative Region: %s", relativeRegions[static_cast<int>(targetContext.region)]);
+        ImGui::Text("Front Max Angle: %.1f deg", relativeFrontMaxAngle);
+        ImGui::Text("Back Min Angle: %.1f deg", relativeBackMinAngle);
         ImGui::Text("Distance Region:");
         for (int i = 0; i < static_cast<int>(std::size(distanceRegions)); ++i)
         {
@@ -1572,6 +1702,30 @@ const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpA
                 nearDistanceThreshold + minimumDistanceGap,
                 middleDistanceThreshold);
         }
+        constexpr float minimumRelativeSideAngleWidth = 5.0f;
+        ImGui::SeparatorText("Player Relative Region");
+        if (ImGui::DragFloat("Front Max Angle", &relativeFrontMaxAngle,
+            1.0f, 10.0f, 90.0f, "%.1f deg"))
+        {
+            relativeFrontMaxAngle = std::clamp(relativeFrontMaxAngle,
+                10.0f, relativeBackMinAngle - minimumRelativeSideAngleWidth);
+        }
+        if (ImGui::DragFloat("Back Min Angle", &relativeBackMinAngle,
+            1.0f, 90.0f, 170.0f, "%.1f deg"))
+        {
+            relativeBackMinAngle = std::clamp(relativeBackMinAngle,
+                relativeFrontMaxAngle + minimumRelativeSideAngleWidth, 170.0f);
+        }
+        relativeFrontMaxAngle = std::clamp(relativeFrontMaxAngle,
+            10.0f, relativeBackMinAngle - minimumRelativeSideAngleWidth);
+        relativeBackMinAngle = std::clamp(relativeBackMinAngle,
+            relativeFrontMaxAngle + minimumRelativeSideAngleWidth, 170.0f);
+        ImGui::SeparatorText("Combat Reposition");
+        ImGui::DragFloat("Move Distance", &combatRepositionMoveDistance,
+            0.1f, 1.0f, 15.0f, "%.2f m");
+        combatRepositionMoveDistance = std::clamp(
+            combatRepositionMoveDistance, 1.0f, 15.0f);
+
 
         const float evaluationTotalWeight = GetTotalActionWeight();
         const float intentEvaluationTotalWeight = GetTotalIntentWeight();
@@ -1703,6 +1857,9 @@ const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpA
             }
             nearDistanceThreshold = initialNearDistanceThreshold;
             middleDistanceThreshold = initialMiddleDistanceThreshold;
+            relativeFrontMaxAngle = initialRelativeFrontMaxAngle;
+            relativeBackMinAngle = initialRelativeBackMinAngle;
+            combatRepositionMoveDistance = initialCombatRepositionMoveDistance;
         }
         ImGui::TextDisabled("Runtime only. Reset does not change active Cooldown Remaining.");
         ImGui::TextDisabled("Recovery edits affect an active Recovery on its next update.");
@@ -1746,7 +1903,7 @@ const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpA
             const float probability = candidate && actionEvaluationTotalWeight > 0.0f
                 ? combatActionEffectiveWeights[i] / actionEvaluationTotalWeight
                 : 0.0f;
-            ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), "" );
+            ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), "");
             ImGui::SameLine();
             ImGui::Text("%.1f%%", probability * 100.0f);
             ImGui::TableSetColumnIndex(5);
@@ -1832,7 +1989,8 @@ std::string GruxEnemy::GetCurrentAttackNameForDebug() const
     case BossAttackType::DashAttack: attackName = "DashAttack"; break;
     case BossAttackType::LongRangeAttack: attackName = "LongRangeAttack"; break;
     }
-    return std::string(attackName) + " / " + animationName;}
+    return std::string(attackName) + " / " + animationName;
+}
 
 void GruxEnemy::TakeDamage(const int damage)
 {
@@ -2098,6 +2256,107 @@ const BossPositioningData* GruxEnemy::GetPositioningDataForAction(BossActionType
     return nullptr;
 }
 
+bool GruxEnemy::IsRepositionAction(const BossActionType actionType) const
+{
+    return actionType == BossActionType::RepositionLeft ||
+        actionType == BossActionType::RepositionRight;
+}
+
+const GruxEnemy::RepositionTargetEvaluation& GruxEnemy::GetRepositionTargetEvaluation(
+    const BossActionType actionType) const
+{
+    return actionType == BossActionType::RepositionRight
+        ? rightRepositionTarget : leftRepositionTarget;
+}
+
+const char* GruxEnemy::GetRepositionFailureReason() const
+{
+    return leftRepositionTarget.wasClamped && rightRepositionTarget.wasClamped
+        ? "BoundsBlocked" : "NoSafeDirection";
+}
+
+void GruxEnemy::EvaluateClampedPositioningTarget(
+    const DirectX::XMFLOAT3& startPosition,
+    const DirectX::XMFLOAT3& desiredTarget,
+    RepositionTargetEvaluation& outEvaluation) const
+{
+    outEvaluation = {};
+    outEvaluation.desiredTarget = desiredTarget;
+    outEvaluation.clampedTarget = desiredTarget;
+    constexpr float maximumMargin =
+        (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
+            (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
+    const float margin = std::clamp(bossRoomSafetyMargin, 0.0f, maximumMargin);
+    outEvaluation.clampedTarget.x = std::clamp(
+        outEvaluation.clampedTarget.x, bossRoomMinX + margin, bossRoomMaxX - margin);
+    outEvaluation.clampedTarget.z = std::clamp(
+        outEvaluation.clampedTarget.z, bossRoomMinZ + margin, bossRoomMaxZ - margin);
+    outEvaluation.clampedTarget.y = startPosition.y;
+
+    const float clampX = outEvaluation.clampedTarget.x - desiredTarget.x;
+    const float clampZ = outEvaluation.clampedTarget.z - desiredTarget.z;
+    outEvaluation.clampDistance = std::sqrt(clampX * clampX + clampZ * clampZ);
+    outEvaluation.wasClamped = outEvaluation.clampDistance > 0.0001f;
+    const float availableX = outEvaluation.clampedTarget.x - startPosition.x;
+    const float availableZ = outEvaluation.clampedTarget.z - startPosition.z;
+    outEvaluation.availableDistance = std::sqrt(
+        availableX * availableX + availableZ * availableZ);
+    outEvaluation.sufficientlyMovable =
+        outEvaluation.availableDistance >= minimumPositioningMoveDistance;
+}
+
+void GruxEnemy::EvaluateRepositionTargets(const BossTargetContext& context)
+{
+    repositionTargetsEvaluated = false;
+    repositionNoSafeDirection = false;
+    leftRepositionTarget = {};
+    rightRepositionTarget = {};
+    if (!context.valid)
+    {
+        repositionNoSafeDirection = true;
+        repositionCompletionReason = "NoSafeDirection";
+        return;
+    }
+
+    const DirectX::XMFLOAT3 bossPosition = GetPosition();
+    const DirectX::XMFLOAT3 leftDirection =
+    { -context.directionToPlayer.z, 0.0f, context.directionToPlayer.x };
+    const DirectX::XMFLOAT3 rightDirection =
+    { context.directionToPlayer.z, 0.0f, -context.directionToPlayer.x };
+    const DirectX::XMFLOAT3 leftDesired =
+    { bossPosition.x + leftDirection.x * combatRepositionMoveDistance,
+      bossPosition.y,
+      bossPosition.z + leftDirection.z * combatRepositionMoveDistance };
+    const DirectX::XMFLOAT3 rightDesired =
+    { bossPosition.x + rightDirection.x * combatRepositionMoveDistance,
+      bossPosition.y,
+      bossPosition.z + rightDirection.z * combatRepositionMoveDistance };
+    EvaluateClampedPositioningTarget(
+        bossPosition, leftDesired, leftRepositionTarget);
+    EvaluateClampedPositioningTarget(
+        bossPosition, rightDesired, rightRepositionTarget);
+
+    if (leftRepositionTarget.sufficientlyMovable &&
+        rightRepositionTarget.sufficientlyMovable &&
+        leftRepositionTarget.wasClamped && rightRepositionTarget.wasClamped)
+    {
+        constexpr float distanceEpsilon = 0.001f;
+        if (leftRepositionTarget.availableDistance + distanceEpsilon <
+            rightRepositionTarget.availableDistance)
+            leftRepositionTarget.sufficientlyMovable = false;
+        else if (rightRepositionTarget.availableDistance + distanceEpsilon <
+            leftRepositionTarget.availableDistance)
+            rightRepositionTarget.sufficientlyMovable = false;
+    }
+
+    repositionTargetsEvaluated = true;
+    repositionLeftAvailableDistance = leftRepositionTarget.availableDistance;
+    repositionRightAvailableDistance = rightRepositionTarget.availableDistance;
+    repositionNoSafeDirection = !leftRepositionTarget.sufficientlyMovable &&
+        !rightRepositionTarget.sufficientlyMovable;
+    if (repositionNoSafeDirection)
+        repositionCompletionReason = GetRepositionFailureReason();
+}
 void GruxEnemy::BeginPositioning(const BossPositioningData& data)
 {
     positioningAnimationMoving = false;
@@ -2129,7 +2388,7 @@ void GruxEnemy::BeginPositioning(const BossPositioningData& data)
         currentPositioningDebug.preferredMax = intentData->preferredMaxDistance;
     }
 
-fixedPositioningTargetValid = false;
+    fixedPositioningTargetValid = false;
     if (const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
     {
         currentPositioningDebug.startPlayerPosition = player->GetPosition();
@@ -2139,26 +2398,35 @@ fixedPositioningTargetValid = false;
         currentPositioningDebug.startPlayerDistance = distance;
         currentPositioningDebug.currentPlayerDistance = distance;
 
-        float directionX = distance > 0.0001f ? toPlayerX / distance : GetForward().x;
-        float directionZ = distance > 0.0001f ? toPlayerZ / distance : GetForward().z;
-        float moveDistance = 0.0f;
-        if (data.actionType == BossActionType::Retreat ||
-            data.direction == BossPositioningDirection::AwayFromPlayer)
+        if (IsRepositionAction(data.actionType))
         {
-            directionX *= -1.0f;
-            directionZ *= -1.0f;
-            moveDistance = (std::max)(0.0f, data.targetDistance - distance);
+            currentPositioningDebug.desiredTargetPosition = repositionDesiredTarget;
         }
         else
         {
-            moveDistance = (std::max)(0.0f, distance - data.targetDistance);
+            float directionX = distance > 0.0001f ? toPlayerX / distance : GetForward().x;
+            float directionZ = distance > 0.0001f ? toPlayerZ / distance : GetForward().z;
+            float moveDistance = 0.0f;
+            if (data.actionType == BossActionType::Retreat ||
+                data.direction == BossPositioningDirection::AwayFromPlayer)
+            {
+                directionX *= -1.0f;
+                directionZ *= -1.0f;
+                moveDistance = (std::max)(0.0f, data.targetDistance - distance);
+            }
+            else
+            {
+                moveDistance = (std::max)(0.0f, distance - data.targetDistance);
+            }
+            currentPositioningDebug.desiredTargetPosition = {
+                currentPositioningDebug.startBossPosition.x + directionX * moveDistance,
+                currentPositioningDebug.startBossPosition.y,
+                currentPositioningDebug.startBossPosition.z + directionZ * moveDistance };
         }
 
-        currentPositioningDebug.desiredTargetPosition = {
-            currentPositioningDebug.startBossPosition.x + directionX * moveDistance,
-            currentPositioningDebug.startBossPosition.y,
-            currentPositioningDebug.startBossPosition.z + directionZ * moveDistance };
-
+        RepositionTargetEvaluation targetEvaluation{};
+        EvaluateClampedPositioningTarget(currentPositioningDebug.startBossPosition,
+            currentPositioningDebug.desiredTargetPosition, targetEvaluation);
         constexpr float maximumMargin =
             (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
                 (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
@@ -2168,29 +2436,18 @@ fixedPositioningTargetValid = false;
         currentPositioningDebug.safeMaxX = bossRoomMaxX - margin;
         currentPositioningDebug.safeMinZ = bossRoomMinZ + margin;
         currentPositioningDebug.safeMaxZ = bossRoomMaxZ - margin;
-        currentPositioningDebug.clampedTargetPosition = currentPositioningDebug.desiredTargetPosition;
-        currentPositioningDebug.clampedTargetPosition.x = std::clamp(
-            currentPositioningDebug.clampedTargetPosition.x,
-            currentPositioningDebug.safeMinX, currentPositioningDebug.safeMaxX);
-        currentPositioningDebug.clampedTargetPosition.z = std::clamp(
-            currentPositioningDebug.clampedTargetPosition.z,
-            currentPositioningDebug.safeMinZ, currentPositioningDebug.safeMaxZ);
-        currentPositioningDebug.clampedTargetPosition.y = currentPositioningDebug.startBossPosition.y;
-
+        currentPositioningDebug.clampedTargetPosition = targetEvaluation.clampedTarget;
         const float plannedX = currentPositioningDebug.desiredTargetPosition.x - currentPositioningDebug.startBossPosition.x;
         const float plannedZ = currentPositioningDebug.desiredTargetPosition.z - currentPositioningDebug.startBossPosition.z;
         currentPositioningDebug.plannedMoveDistance = std::sqrt(plannedX * plannedX + plannedZ * plannedZ);
-        const float clampX = currentPositioningDebug.clampedTargetPosition.x - currentPositioningDebug.desiredTargetPosition.x;
-        const float clampZ = currentPositioningDebug.clampedTargetPosition.z - currentPositioningDebug.desiredTargetPosition.z;
-        currentPositioningDebug.targetClampDistance = std::sqrt(clampX * clampX + clampZ * clampZ);
-        currentPositioningDebug.targetWasClamped = currentPositioningDebug.targetClampDistance > 0.0001f;
-        const float availableX = currentPositioningDebug.clampedTargetPosition.x - currentPositioningDebug.startBossPosition.x;
-        const float availableZ = currentPositioningDebug.clampedTargetPosition.z - currentPositioningDebug.startBossPosition.z;
-        currentPositioningDebug.availableMoveDistance = std::sqrt(availableX * availableX + availableZ * availableZ);
+        currentPositioningDebug.targetClampDistance = targetEvaluation.clampDistance;
+        currentPositioningDebug.targetWasClamped = targetEvaluation.wasClamped;
+        currentPositioningDebug.availableMoveDistance = targetEvaluation.availableDistance;
         currentPositioningDebug.remainingDistance = currentPositioningDebug.availableMoveDistance;
 
         fixedPositioningTarget = currentPositioningDebug.clampedTargetPosition;
-        fixedPositioningTargetValid = true;
+        fixedPositioningTargetValid = IsRepositionAction(data.actionType)
+            ? targetEvaluation.sufficientlyMovable : true;
     }
 
     if (characterMovementComponent)
@@ -2257,7 +2514,7 @@ void GruxEnemy::UpdatePositioningMovement(const DirectX::XMFLOAT3& moveDirection
 {
     if (characterMovementComponent)
         characterMovementComponent->SetMoveDirection(moveDirection);
-    RotateTowardsPlayer(facingDirection, GetTurnSpeed(), deltaTime);
+    RotateTowardsPlayer(facingDirection, GetTurnSpeed(), deltaTime, "PositioningMovement");
 }
 
 void GruxEnemy::UpdatePositioningDebug(float traveledDistance, float elapsedTime, float stuckTimer,
@@ -2311,6 +2568,39 @@ void GruxEnemy::FinishPositioningDebug(const std::string& reason)
     lastPositioningDebug = currentPositioningDebug;
 }
 
+bool GruxEnemy::InvalidateCloseCombatIntentForBack(const BossTargetContext& context)
+{
+    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat ||
+        !context.valid || context.region != PlayerRelativeRegion::Back)
+    {
+        return false;
+    }
+
+    FailActiveIntent("WrongRelativeRegion");
+    return true;
+}
+
+bool GruxEnemy::IsCombatRepositionActive() const
+{
+    return activeIntent && *activeIntent == BossIntentType::CombatReposition;
+}
+
+void GruxEnemy::CompleteCombatReposition()
+{
+    if (!IsCombatRepositionActive())
+        return;
+
+    activeIntent = std::nullopt;
+    activeIntentStep = BossIntentStep::Completed;
+    intentPositioningAttempted = false;
+    intentPositioningCompleted = true;
+    intentRepositionReason = "None";
+    intentLifecycleState = "Intent Completed";
+    intentLifecycleTrace += " -> Reposition Completed";
+    intentLifecycleReason = "RepositionCompleted";
+    repositionCompletionReason = "RepositionCompleted";
+}
+
 bool GruxEnemy::TryStartIntent(BossIntentType intentType)
 {
     if (activeIntent)
@@ -2325,9 +2615,17 @@ bool GruxEnemy::TryStartIntent(BossIntentType intentType)
     intentLifecycleState = "Intent Started";
     intentLifecycleTrace = "Intent Started";
     intentLifecycleReason = "None";
+    if (intentType == BossIntentType::CombatReposition)
+    {
+        const BossTargetContext context = BuildTargetContext();
+        repositionReason = context.valid && context.region == PlayerRelativeRegion::Back
+            ? BossRepositionReason::BackTaken : BossRepositionReason::Normal;
+        repositionCompletionReason = "Running";
+        selectedRepositionDirection = BossRepositionDirection::None;
+    }
     return true;
-}
 
+}
 float GruxEnemy::GetTotalIntentWeight() const
 {
     float totalWeight = 0.0f;
@@ -2361,6 +2659,14 @@ void GruxEnemy::UpdateIntentEffectiveWeights(const BossTargetContext& context)
     {
         combatIntentEffectiveWeights[i] =
             GetIntentWeightForDistance(combatIntentData[i], context.distanceRegion);
+        if (context.region == PlayerRelativeRegion::Back)
+        {
+            if (combatIntentData[i].type == BossIntentType::CloseCombat)
+                combatIntentEffectiveWeights[i] = 0.0f;
+            else if (combatIntentData[i].type == BossIntentType::CombatReposition)
+                combatIntentEffectiveWeights[i] =
+                (std::max)(0.0f, combatRepositionBackWeight);
+        }
     }
 }
 
@@ -2440,7 +2746,9 @@ void GruxEnemy::MarkIntentPositioningAttempted()
                 selectedActionType == BossActionType::Retreat)) ||
         (*activeIntent == BossIntentType::JumpAttackPlan &&
             (selectedActionType == BossActionType::Approach ||
-                selectedActionType == BossActionType::Retreat));
+                selectedActionType == BossActionType::Retreat)) ||
+        (*activeIntent == BossIntentType::CombatReposition &&
+            IsRepositionAction(selectedActionType));
     if (!validPositioning)
         return;
 
@@ -2798,7 +3106,8 @@ void GruxEnemy::PrepareJumpAttackMotionWarpOverride()
         const float inverseDistance = 1.0f / currentJumpPlayerDistance;
         jumpMotionWarpDirection = { dx * inverseDistance, 0.0f, dz * inverseDistance };
         if (rotationComponent)
-            rotationComponent->SetDirectionImmediate(jumpMotionWarpDirection);
+            RecordRotationDebugSource("JumpAttackDirectionLock", jumpMotionWarpDirection, 0.0f);
+        rotationComponent->SetDirectionImmediate(jumpMotionWarpDirection);
     }
     else
     {
@@ -2846,7 +3155,8 @@ bool GruxEnemy::BeginDashAttackMovement()
     dashAttackMovementActive = true;
 
     if (rotationComponent)
-        rotationComponent->SetDirectionImmediate(dashAttackDirection);
+        RecordRotationDebugSource("DashAttackDirectionLock", dashAttackDirection, 0.0f);
+    rotationComponent->SetDirectionImmediate(dashAttackDirection);
     if (characterMovementComponent)
     {
         characterMovementComponent->SetFixedSpeed(dashAttackSpeed);
@@ -2884,7 +3194,8 @@ bool GruxEnemy::UpdateDashAttackMovement(float deltaTime)
     if (characterMovementComponent)
         characterMovementComponent->SetMoveDirection(directionToTarget);
     if (rotationComponent)
-        rotationComponent->SetDirectionImmediate(directionToTarget);
+        RecordRotationDebugSource("DashMovementTarget", directionToTarget, 0.0f);
+    rotationComponent->SetDirectionImmediate(directionToTarget);
     return false;
 }
 
@@ -3058,7 +3369,7 @@ void GruxEnemy::DrawDangerObbWorldDebug()
     const bool inside = GetPlayerDangerOverlapForDebug(selectedArea);
     const DirectX::XMFLOAT4 color = inside
         ? DirectX::XMFLOAT4{ 1.0f, 0.1f, 0.1f, 1.0f }
-        : DirectX::XMFLOAT4{ 1.0f, 0.8f, 0.15f, 1.0f };
+    : DirectX::XMFLOAT4{ 1.0f, 0.8f, 0.15f, 1.0f };
     DebugRender::DrawBox(selectedArea.WorldTransform(), selectedArea.size, color, 0.0f, true);
     DebugRender::DrawSphere(selectedArea.center, 0.1f, color, 0.0f, true);
 }
@@ -3157,9 +3468,9 @@ BossTargetContext GruxEnemy::BuildTargetContext() const
     // 内積から絶対角度を計算する
     context.absoluteAngleDegrees = DirectX::XMConvertToDegrees(std::acos(context.forwardDot));
 
-    if (context.absoluteAngleDegrees <= 45.0f)
+    if (context.absoluteAngleDegrees <= relativeFrontMaxAngle)
         context.region = PlayerRelativeRegion::Front;
-    else if (context.absoluteAngleDegrees < 135.0f)
+    else if (context.absoluteAngleDegrees < relativeBackMinAngle)
         context.region = PlayerRelativeRegion::Side;
     else
         context.region = PlayerRelativeRegion::Back;
@@ -3175,6 +3486,95 @@ bool GruxEnemy::IsFacingPlayerForAttack(
         context.absoluteAngleDegrees <= attackFacingAngle;
 }
 
+namespace
+{
+    float GetAttackFacingTolerance(const BossAttackType attackType)
+    {
+        switch (attackType)
+        {
+        case BossAttackType::PrimaryAttackLA:
+        case BossAttackType::PrimaryAttackRA:
+        case BossAttackType::FastCombo:
+            return 45.0f;
+        case BossAttackType::DashAttack:
+        case BossAttackType::JumpAttack:
+            return 90.0f;
+        default:
+            return 0.0f;
+        }
+    }
+}
+
+bool GruxEnemy::PreparePendingAttackFacing(const BossTargetContext& context)
+{
+    ClearPendingAttackFacing();
+    attackFacingEvaluationValid = context.valid;
+    attackFacingEvaluationTolerance = GetAttackFacingTolerance(selectedAttackType);
+    attackFacingEvaluationAngle = context.valid ? context.absoluteAngleDegrees : 0.0f;
+    attackFacingEvaluationRequired = context.valid &&
+        attackFacingEvaluationTolerance > 0.0f &&
+        attackFacingEvaluationAngle > attackFacingEvaluationTolerance;
+
+    if (!attackFacingEvaluationRequired)
+        return false;
+
+    pendingAttackActionValid = true;
+    pendingAttackFacingValid = true;
+    pendingAttackFacingDirection = context.directionToPlayer;
+    return true;
+}
+
+float GruxEnemy::GetPendingAttackFacingAngle() const
+{
+    if (!pendingAttackFacingValid)
+        return 0.0f;
+
+    DirectX::XMVECTOR forwardVector = DirectX::XMVector3Rotate(
+        DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
+        DirectX::XMLoadFloat4(&GetQuaternionRotation()));
+    DirectX::XMFLOAT3 forward{};
+    DirectX::XMStoreFloat3(&forward, forwardVector);
+    forward.y = 0.0f;
+    const float forwardLength = std::sqrt(forward.x * forward.x + forward.z * forward.z);
+    if (forwardLength <= FLT_EPSILON)
+        return 180.0f;
+    forward.x /= forwardLength;
+    forward.z /= forwardLength;
+
+    const float dot = std::clamp(
+        forward.x * pendingAttackFacingDirection.x +
+        forward.z * pendingAttackFacingDirection.z,
+        -1.0f, 1.0f);
+    return DirectX::XMConvertToDegrees(std::acos(dot));
+}
+
+bool GruxEnemy::ResumeSelectedAttackAfterTurn()
+{
+    if (!pendingAttackActionValid || !pendingAttackFacingValid)
+        return false;
+
+    const std::optional<BossAttackType> mappedAttack =
+        GetAttackTypeForAction(selectedActionType);
+    if (!mappedAttack || *mappedAttack != selectedAttackType)
+    {
+        ClearPendingAttackFacing();
+        return false;
+    }
+
+    lastResumedAttackType = selectedAttackType;
+    lastResumedAttackValid = true;
+    ClearPendingAttackFacing();
+    stateMachine_->ChangeState("EnemyAttackState");
+    return true;
+}
+
+void GruxEnemy::ClearPendingAttackFacing()
+
+{
+    pendingAttackActionValid = false;
+    pendingAttackFacingValid = false;
+}
+
 void GruxEnemy::StopAIMovement()
 {
     if (!characterMovementComponent)
@@ -3184,14 +3584,87 @@ void GruxEnemy::StopAIMovement()
     characterMovementComponent->ResetFixedSpeed();
 }
 
+void GruxEnemy::BeginRotationDebugFrame()
+{
+    rotationDebugSourceCount = 0;
+    rotationDebugRequestedTurnSpeed = 0.0f;
+    rotationDebugTurnTargetValid = false;
+}
+
+void GruxEnemy::FinishRotationDebugFrame()
+{
+    rotationDebugCurrentYaw = GetEulerRotation().y;
+    if (!rotationDebugYawInitialized)
+    {
+        rotationDebugPreviousYaw = rotationDebugCurrentYaw;
+        rotationDebugYawInitialized = true;
+    }
+    rotationDebugActualYawDelta = std::remainder(
+        rotationDebugCurrentYaw - rotationDebugPreviousYaw, 360.0f);
+    rotationDebugPreviousYaw = rotationDebugCurrentYaw;
+
+    const BossTargetContext context = BuildTargetContext();
+    if (context.valid)
+        rotationDebugPlayerYaw = DirectX::XMConvertToDegrees(
+            std::atan2f(context.directionToPlayer.x, context.directionToPlayer.z));
+}
+
+void GruxEnemy::RecordRotationDebugSource(const char* source,
+    const DirectX::XMFLOAT3& targetDirection, float requestedTurnSpeed)
+{
+    const float directionLengthSq = targetDirection.x * targetDirection.x +
+        targetDirection.z * targetDirection.z;
+    const float targetYaw = directionLengthSq > FLT_EPSILON
+        ? DirectX::XMConvertToDegrees(std::atan2f(targetDirection.x, targetDirection.z))
+        : rotationDebugCurrentYaw;
+    rotationDebugRequestedTurnSpeed = requestedTurnSpeed;
+    if (rotationDebugSourceCount < static_cast<int>(rotationDebugSources.size()))
+    {
+        RotationSourceDebug& entry = rotationDebugSources[rotationDebugSourceCount++];
+        entry.source = source ? source : "Unknown";
+        entry.targetYaw = targetYaw;
+        entry.requestedTurnSpeed = requestedTurnSpeed;
+    }
+    if (source && std::strcmp(source, "TurnState") == 0)
+    {
+        rotationDebugTurnTargetDirection = targetDirection;
+        rotationDebugTurnTargetValid = directionLengthSq > FLT_EPSILON;
+    }
+}
+
+void GruxEnemy::BeginTurnRotationDebug(const char* fromState)
+{
+    const BossTargetContext context = BuildTargetContext();
+    activeTurnDebugFromState = fromState ? fromState : "Unknown";
+    activeTurnDebugStartAngle = context.valid ? context.absoluteAngleDegrees : 0.0f;
+    activeTurnDebugTargetYaw = context.valid
+        ? DirectX::XMConvertToDegrees(std::atan2f(
+            context.directionToPlayer.x, context.directionToPlayer.z))
+        : GetEulerRotation().y;
+}
+
+void GruxEnemy::EndTurnRotationDebug(float duration)
+{
+    const BossTargetContext context = BuildTargetContext();
+    lastTurnDebug.valid = true;
+    lastTurnDebug.fromState = activeTurnDebugFromState;
+    lastTurnDebug.startAngle = activeTurnDebugStartAngle;
+    lastTurnDebug.startTargetYaw = activeTurnDebugTargetYaw;
+    lastTurnDebug.endAngle = context.valid ? context.absoluteAngleDegrees : 0.0f;
+    lastTurnDebug.duration = (std::max)(0.0f, duration);
+}
+
 bool GruxEnemy::RotateTowardsPlayer(
     const DirectX::XMFLOAT3& direction,
     const float degreesPerSecond,
-    const float deltaTime)
+    const float deltaTime,
+    const char* debugSource)
 {
+    RecordRotationDebugSource(debugSource, direction, degreesPerSecond);
     return rotationComponent && rotationComponent->RotateTowardsDirection(
         direction, degreesPerSecond, deltaTime);
 }
+
 
 // プレイヤーとの距離を取得する関数
 float GruxEnemy::GetDistanceToPlayer()
@@ -3302,6 +3775,7 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
         {
             if (context.xzDistance > validMax)
                 return actionType == BossActionType::Approach;
+            return actionType == BossActionType::JumpAttack;
             return IsAttackPendingGoalAction(actionType, context);
         }
     }
@@ -3332,7 +3806,11 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
         if (rangeStatus == BossIntentRangeStatus::TooFar)
             return actionType == BossActionType::Approach;
         return actionType == BossActionType::JumpAttack;
+    case BossIntentType::CombatReposition:
+        return actionType == BossActionType::RepositionLeft ||
+            actionType == BossActionType::RepositionRight;
     }
+
     return false;
 }
 
@@ -3384,9 +3862,29 @@ void GruxEnemy::UpdateActionCandidateFlags(const BossTargetContext& context)
             continue;
         }
 
+        const bool isCloseCombatAttack =
+            actionData.type == BossActionType::AttackLA ||
+            actionData.type == BossActionType::AttackRA ||
+            actionData.type == BossActionType::FastCombo;
+        if (*activeIntent == BossIntentType::CloseCombat &&
+            context.region == PlayerRelativeRegion::Back && isCloseCombatAttack)
+        {
+            combatActionCandidateReasons[i] = BossActionCandidateReason::WrongRelativeRegion;
+            continue;
+        }
+
         if (!IsActionForCurrentIntent(actionData.type, context))
         {
             combatActionCandidateReasons[i] = BossActionCandidateReason::NotForCurrentIntent;
+            continue;
+        }
+
+
+        if (*activeIntent == BossIntentType::CombatReposition &&
+            IsRepositionAction(actionData.type) &&
+            !GetRepositionTargetEvaluation(actionData.type).sufficientlyMovable)
+        {
+            combatActionCandidateReasons[i] = BossActionCandidateReason::NoSafeDirection;
             continue;
         }
 
@@ -3532,6 +4030,9 @@ bool GruxEnemy::SelectCombatAction()
 
 
     // 現在の距離領域に基づいて、候補となる行動を更新する
+    if (IsCombatRepositionActive())
+        EvaluateRepositionTargets(context);
+
     UpdateActionCandidateFlags(context);
     // 候補となる行動の重みを更新する
     UpdateActionEffectiveWeights();
@@ -3552,8 +4053,24 @@ bool GruxEnemy::SelectCombatAction()
     if (positioningData)
     {
         selectedPositioningData = *positioningData;
+        if (IsRepositionAction(selectedActionType))
+        {
+            const RepositionTargetEvaluation& evaluation =
+                GetRepositionTargetEvaluation(selectedActionType);
+            fixedPositioningTarget = evaluation.clampedTarget;
+            fixedPositioningTargetValid = evaluation.sufficientlyMovable;
+            repositionDesiredTarget = evaluation.desiredTarget;
+            repositionClampedTarget = evaluation.clampedTarget;
+            repositionSelectedTargetWasClamped = evaluation.wasClamped;
+            selectedRepositionDirection =
+                selectedActionType == BossActionType::RepositionLeft
+                ? BossRepositionDirection::Left : BossRepositionDirection::Right;
+            repositionCompletionReason = evaluation.sufficientlyMovable
+                ? "Running" : GetRepositionFailureReason();
+        }
+
         const BossIntentData* intentData = GetActiveIntentData();
-        if (intentData)
+        if (intentData && !IsRepositionAction(selectedActionType))
         {
             const float rangeWidth = (std::max)(0.0f,
                 intentData->preferredMaxDistance - intentData->preferredMinDistance);
