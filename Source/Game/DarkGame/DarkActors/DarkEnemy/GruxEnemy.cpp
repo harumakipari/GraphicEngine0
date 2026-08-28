@@ -1455,8 +1455,16 @@ void GruxEnemy::DrawImGuiDetails()
                         break;
                     }
                 }
-                ImGui::DragFloat("Max Move Distance", &data.maxMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
-                ImGui::DragFloat("Move Speed", &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
+                if (IsRepositionAction(data.actionType))
+                {
+                    ImGui::TextDisabled("Max Move Distance: Combat Reposition Distance");
+                    ImGui::TextDisabled("Move Speed: Combat Reposition Move Speed");
+                }
+                else
+                {
+                    ImGui::DragFloat("Max Move Distance", &data.maxMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
+                    ImGui::DragFloat("Move Speed", &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
+                }
                 ImGui::DragFloat("Timeout", &data.timeout, 0.05f, 0.01f, 20.0f, "%.2f sec");
                 ImGui::DragFloat("Stuck Time Threshold", &data.stuckTimeThreshold, 0.05f, 0.0f, 10.0f, "%.2f sec");
                 ImGui::DragFloat("Stuck Movement Threshold", &data.stuckMovementThreshold, 0.01f, 0.0f, 10.0f, "%.2f m/sec");
@@ -1593,6 +1601,31 @@ void GruxEnemy::DrawImGuiDetails()
         repositionClampedTarget.x, repositionClampedTarget.y, repositionClampedTarget.z);
     ImGui::Text("Completion / Failure Reason: %s", repositionCompletionReason.c_str());
     ImGui::Text("No Safe Direction: %s", repositionNoSafeDirection ? "YES" : "NO");
+    if (IsCombatRepositionActive() && positioningDebugActive)
+    {
+        ImGui::SeparatorText("Active Combat Reposition");
+        ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.15f, 1.0f),
+            "*** REPOSITIONING ***");
+        ImGui::Text("Current Intent: CombatReposition");
+        ImGui::Text("Current Action: %s",
+            actionTypes[static_cast<int>(selectedActionType)]);
+        ImGui::Text("Reposition Distance: %.2f m",
+            combatRepositionMoveDistance);
+        ImGui::Text("Combat Reposition Move Speed: %.2f m/s",
+            combatRepositionMoveSpeed);
+        ImGui::Text("Max Move Distance Actually Used: %.2f m",
+            currentPositioningDebug.data.maxMoveDistance);
+        ImGui::Text("Traveled Distance: %.3f m",
+            currentPositioningDebug.traveledPathDistance);
+        drawPosition("Target Position",
+            currentPositioningDebug.clampedTargetPosition);
+        ImGui::Text("Remaining Distance: %.3f m",
+            currentPositioningDebug.remainingDistance);
+        ImGui::Text("Completion Reason: %s",
+            currentPositioningDebug.endReason.c_str());
+        ImGui::Text("Reposition Suppression: %s",
+            suppressCombatRepositionForNextIntentSelection ? "YES" : "NO");
+    }
     ImGui::SeparatorText("Current Positioning");
     ImGui::Text("Active: %s", positioningDebugActive ? "YES" : "NO");
     if (positioningDebugActive)
@@ -1901,10 +1934,14 @@ void GruxEnemy::DrawImGuiDetails()
             suppressCombatRepositionForNextIntentSelection ? "YES" : "NO");
 
         ImGui::SeparatorText("Combat Reposition");
-        ImGui::DragFloat("Move Distance", &combatRepositionMoveDistance,
-            0.1f, 1.0f, 15.0f, "%.2f m");
+        ImGui::DragFloat("Combat Reposition Distance", &combatRepositionMoveDistance,
+            0.1f, 0.0f, 15.0f, "%.2f m");
         combatRepositionMoveDistance = std::clamp(
-            combatRepositionMoveDistance, 1.0f, 15.0f);
+            combatRepositionMoveDistance, 0.0f, 15.0f);
+        ImGui::DragFloat("Combat Reposition Move Speed", &combatRepositionMoveSpeed,
+            0.1f, 0.5f, 10.0f, "%.2f m/s");
+        combatRepositionMoveSpeed = std::clamp(
+            combatRepositionMoveSpeed, 0.5f, 10.0f);
 
         ImGui::SeparatorText("Attack Ready");
         ImGui::DragFloat("Front Attack Ready Duration", &frontAttackReadyDuration,
@@ -2036,6 +2073,7 @@ void GruxEnemy::DrawImGuiDetails()
             relativeFrontMaxAngle = initialRelativeFrontMaxAngle;
             relativeBackMinAngle = initialRelativeBackMinAngle;
             combatRepositionMoveDistance = initialCombatRepositionMoveDistance;
+            combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;
             combatRepositionBackWeight = initialCombatRepositionBackWeight;
             dashAttackPlanBackWeight = initialDashAttackPlanBackWeight;
             jumpAttackPlanBackWeight = initialJumpAttackPlanBackWeight;
@@ -4345,6 +4383,8 @@ bool GruxEnemy::SelectCombatAction()
         selectedPositioningData = *positioningData;
         if (IsRepositionAction(selectedActionType))
         {
+            selectedPositioningData->maxMoveDistance = combatRepositionMoveDistance;
+            selectedPositioningData->moveSpeed = combatRepositionMoveSpeed;
             const RepositionTargetEvaluation& evaluation =
                 GetRepositionTargetEvaluation(selectedActionType);
             fixedPositioningTarget = evaluation.clampedTarget;

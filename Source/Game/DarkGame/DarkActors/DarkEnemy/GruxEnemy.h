@@ -445,6 +445,7 @@ private:
     const float initialRelativeFrontMaxAngle = relativeFrontMaxAngle;
     const float initialRelativeBackMinAngle = relativeBackMinAngle;
     static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // 横に練り歩く距離
+    static constexpr float initialCombatRepositionMoveSpeed = 6.0f;
 
     static constexpr float initialFrontAttackReadyDuration = 1.0f;
     static constexpr float initialSideAttackReadyDuration = 1.5f;
@@ -512,7 +513,8 @@ private:
     float combatRepositionBackWeight = 80.0f;
     float dashAttackPlanBackWeight = 35.0f;
     float jumpAttackPlanBackWeight = 35.0f;
-    float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;
+    float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;   // repositionの時に動く距離
+    float combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;// repositionの時に進むスピード
     const float initialCombatRepositionBackWeight = combatRepositionBackWeight;
     const float initialDashAttackPlanBackWeight = dashAttackPlanBackWeight;
     const float initialJumpAttackPlanBackWeight = jumpAttackPlanBackWeight;
@@ -535,8 +537,8 @@ private:
     bool repositionSelectedTargetWasClamped = false;
     bool repositionNoSafeDirection = false;
 
-    bool positioningDebugActive = false;
-    bool positioningWorldDebug = false;
+    bool positioningDebugActive = true;
+    bool positioningWorldDebug = true;
     PositioningDebugSnapshot currentPositioningDebug{};
     PositioningDebugSnapshot lastPositioningDebug{};
     BossPositioningData activePositioningDebugData{};
