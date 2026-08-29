@@ -54,30 +54,6 @@
             "value": 1.0
         },
         {
-            "endTime": 0.50843745470047,
-            "hitBoxRadius": 0.800000011920929,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                2.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "",
-            "startTime": 0.01166666578501463,
-            "type": "ShowEmissive",
-            "value": 7.699999809265137
-        },
-        {
             "endTime": 0.5830000042915344,
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
