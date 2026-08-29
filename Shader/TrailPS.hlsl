@@ -9,6 +9,8 @@ cbuffer TRAIL_CONSTANT_BUFFER : register(b13)
 {
     // Alpha is used as the Rush color blend amount.
     float4 rushColor;
+    float emissiveStrength;
+    float3 padding;
 }
 
 float4 main(VS_OUT input) : SV_TARGET
@@ -64,6 +66,7 @@ float4 main(VS_OUT input) : SV_TARGET
 
     const float3 rushTrailColor = rushColor.rgb * (0.75f + tip * 0.75f);
     col = lerp(col, rushTrailColor, saturate(rushColor.a));
+    col *= emissiveStrength;
 
     return float4(col, alpha);
 #else

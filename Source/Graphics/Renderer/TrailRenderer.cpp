@@ -88,7 +88,7 @@ void Trail::UpdateTrail(float deltaTime)
     if (trailPoints.size() < 2)
         return;
 
-    const float maxLife = 0.5f;
+    const float maxLife = fadeLifetime;
 
 #if 0
     for (size_t i = 0; i < trailPoints.size(); i++)

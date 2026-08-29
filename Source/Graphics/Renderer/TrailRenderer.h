@@ -34,11 +34,23 @@ public:
             : DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, 0.0f };
     }
 
+    void SetEmissiveStrength(float emissiveStrength)
+    {
+        trailConstants.data.emissiveStrength = emissiveStrength;
+    }
+
+    void SetFadeLifetime(float lifetime)
+    {
+        fadeLifetime = (std::max)(lifetime, 0.001f);
+    }
+
 private:
     struct TrailConstants
     {
         // Alpha is the blend amount so zero preserves the existing trail colors.
         DirectX::XMFLOAT4 rushColor{ 1.0f, 1.0f, 1.0f, 0.0f };
+        float emissiveStrength = 1.0f;
+        DirectX::XMFLOAT3 padding{};
     };
 
     // 頂点構造体　GPUに送るもの
@@ -50,6 +62,7 @@ private:
     };
     std::vector<TrailVertex> vertices;
     size_t maxPoints = 1500; /**< 内部で扱える最大頂点数 */
+    float fadeLifetime = 0.5f;
 
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> noise2d;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> noise3d;

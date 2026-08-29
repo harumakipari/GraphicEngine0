@@ -315,6 +315,12 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     leftWeaponTrail.Initialize();
     rightWeaponTrail.Initialize();
+    leftWeaponTrail.SetRushColorEnabled(true, bossTrailColor);
+    rightWeaponTrail.SetRushColorEnabled(true, bossTrailColor);
+    leftWeaponTrail.SetEmissiveStrength(bossTrailEmissiveStrength);
+    rightWeaponTrail.SetEmissiveStrength(bossTrailEmissiveStrength);
+    leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
+    rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
 
     // Hpバー後ろ
     auto gaugeFrameBackComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/bar_back.png", "bar_back_ui");
@@ -353,6 +359,9 @@ void GruxEnemy::Update(float deltaTime)
 
     BeginRotationDebugFrame();
     Character::Update(deltaTime);
+
+    leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
+    rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
 
     // 軌跡の更新処理
     leftWeaponTrail.UpdateTrail(deltaTime);
@@ -755,6 +764,10 @@ void GruxEnemy::Update(float deltaTime)
 
 void GruxEnemy::RenderTrail(ID3D11DeviceContext* immediateContext)
 {
+    leftWeaponTrail.SetRushColorEnabled(true, bossTrailColor);
+    rightWeaponTrail.SetRushColorEnabled(true, bossTrailColor);
+    leftWeaponTrail.SetEmissiveStrength(bossTrailEmissiveStrength);
+    rightWeaponTrail.SetEmissiveStrength(bossTrailEmissiveStrength);
     leftWeaponTrail.Render(immediateContext);
     rightWeaponTrail.Render(immediateContext);
 }
@@ -1868,6 +1881,15 @@ void GruxEnemy::DrawImGuiDetails()
 
     if (ImGui::CollapsingHeader("Runtime Tuning", ImGuiTreeNodeFlags_DefaultOpen))
     {
+        ImGui::SeparatorText("Boss Sword Trail");
+        ImGui::ColorEdit3("Trail Color", &bossTrailColor.x);
+        ImGui::DragFloat("Trail Emissive Strength", &bossTrailEmissiveStrength,
+            0.05f, 0.0f, 8.0f, "%.2f");
+        ImGui::DragFloat("Trail Lifetime", &bossTrailLifetime,
+            0.01f, 0.05f, 2.0f, "%.2f sec");
+        bossTrailEmissiveStrength = std::clamp(bossTrailEmissiveStrength, 0.0f, 8.0f);
+        bossTrailLifetime = std::clamp(bossTrailLifetime, 0.05f, 2.0f);
+
         constexpr float minimumDistanceGap = 0.1f;
         ImGui::SeparatorText("Distance");
         if (ImGui::DragFloat("Near Distance", &nearDistanceThreshold, 0.1f, 0.0f, 100.0f, "%.2f"))

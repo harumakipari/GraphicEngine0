@@ -58,7 +58,7 @@
             "value": 1.0
         },
         {
-            "endTime": 0.30000001192092896,
+            "endTime": 0.3333944082260132,
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -77,8 +77,8 @@
             ],
             "moveDistance": 0.0,
             "parameter": "leftWeapon",
-            "startTime": 0.1718750298023224,
-            "type": "HitBox",
+            "startTime": 0.11367517709732056,
+            "type": "ShowTrail",
             "value": 1.0
         },
         {
@@ -103,6 +103,30 @@
             "parameter": "",
             "startTime": 0.17051273584365845,
             "type": "MotionWarp",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.30000001192092896,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "leftWeapon",
+            "startTime": 0.1718750298023224,
+            "type": "HitBox",
             "value": 1.0
         },
         {

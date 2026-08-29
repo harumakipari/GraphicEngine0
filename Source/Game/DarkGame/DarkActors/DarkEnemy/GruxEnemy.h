@@ -281,6 +281,10 @@ private:
     Trail rightWeaponTrail;
     bool showLeftWeaponTrail = false;
     bool showRightWeaponTrail = false;
+
+    // ãOê’ÇÃêF
+    DirectX::XMFLOAT3 bossTrailColor{ 1.0f, 1.0f, 1.0f };
+    float bossTrailEmissiveStrength = 7.0f;
     float bossTrailLifetime = 0.8f;
 
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // Existing normal hit effect

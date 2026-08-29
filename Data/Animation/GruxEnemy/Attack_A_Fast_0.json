@@ -106,6 +106,30 @@
             "value": 1.0
         },
         {
+            "endTime": 0.24285706877708435,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "rightWeapon",
+            "startTime": 0.09835167229175568,
+            "type": "ShowTrail",
+            "value": 1.0
+        },
+        {
             "endTime": 0.6000000238418579,
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
