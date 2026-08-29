@@ -276,6 +276,7 @@ private:
 
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // Existing normal hit effect
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
+    std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect
 
     std::shared_ptr<UIGaugeComponent> hpFrameUiComponent;   // HPÉoÅ[
 

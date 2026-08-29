@@ -758,8 +758,8 @@ void Player::Update(float deltaTime)
     // 剣のエミッシブを表示する
     if (swordMeshComponent)
     {// 剣にエミッシブを追加
-        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 8.0f;
-        //swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
+        //swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 8.0f;
+        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
     }
 
     // 軌跡の更新処理

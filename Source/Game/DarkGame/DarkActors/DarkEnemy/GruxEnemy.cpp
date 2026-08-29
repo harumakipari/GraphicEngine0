@@ -310,6 +310,8 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     rushHitRingEffectComponent = this->AddComponent<class ParticleComponent>("rushHitRingEffectComponent", parentName);
     rushHitRingEffectComponent->Load("./Data/Effect/Files/RushHitRingEffect.json");
+    rushHitSparkEffectComponent = this->AddComponent<class ParticleComponent>("rushHitSparkEffectComponent", parentName);
+    rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushHitSparkEffect.json");
 
     // HpÉoÅ[å„ÇÎ
     auto gaugeFrameBackComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/bar_back.png", "bar_back_ui");
@@ -2270,6 +2272,16 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
 
 void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos) const
 {
+    if (rushHitSparkEffectComponent)
+    {
+        rushHitSparkEffectComponent->SetWorldLocationDirect(hitPos);
+        rushHitSparkEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(
+            rushHitSparkEffectComponent->GetEffectHandle(),
+            rushHitSparkEffectComponent->GetComponentLocation(),
+            rushHitSparkEffectComponent->GetComponentEulerRotation());
+    }
+
     if (!rushHitRingEffectComponent)
         return;
 
