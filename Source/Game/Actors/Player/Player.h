@@ -137,7 +137,6 @@ public:
     // モード変更用関数
     void SetLocomotionMode(LocomotionMode mode);
 
-
 private:
     // 火花エフェクトの生成
     void SpawnSpark(DirectX::XMFLOAT3 hitPosition);
@@ -149,7 +148,6 @@ private:
     void CaptureActionRequest(float deltaTime);
 
     bool StoreActionRequest(ActionType type, float remainTime);
-
 
 public:
     // 入力コマンドによってステートが変わるかどうか
@@ -464,7 +462,6 @@ private:
     float rushBossSlowScale = 0.2f;
     float rushBossReturnDuration = 0.10f;
 
-
     // プレイヤーの壁に近づいた時の透明度
     float transparencyMinAlpha = 0.1f;  // 最小透明度
     float transparencyMaxAlpha = 0.2f;  // 最大透明度
@@ -472,9 +469,7 @@ private:
     // 演出中かどうか
     bool moviePerform = false;
 
-
     AnimationController::MoveDirection currentMoveDir = AnimationController::MoveDirection::Idle;
-
 
     friend class PlayerStateBase;
 };

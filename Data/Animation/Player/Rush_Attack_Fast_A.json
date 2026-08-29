@@ -6,7 +6,7 @@
             "parameter": "RushSword",
             "time": 0.17000000178813934,
             "type": "PlaySE",
-            "value": 1.0
+            "value": 0.5
         }
     ],
     "loop": false,

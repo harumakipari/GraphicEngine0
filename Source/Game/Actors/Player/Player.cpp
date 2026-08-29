@@ -29,14 +29,14 @@ namespace
 {
     constexpr std::array<const char*, 8> RushSwordSEs =
     {
-        "player_attack",
-        "player_attack",
-        "player_attack",
-        "player_attack",
-        "player_attack",
-        "player_attack",
-        "player_attack",
-        "player_attack",
+        "enemy_rush_damage1",
+        "enemy_rush_damage1",
+        "enemy_rush_damage1",
+        "enemy_rush_damage1",
+        "enemy_rush_damage1",
+        "enemy_rush_damage1",
+        "enemy_rush_damage1",
+        "enemy_rush_damage1",
     };
 
     std::string MotionWarpPositionString(const DirectX::XMFLOAT3& value)

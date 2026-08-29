@@ -1097,6 +1097,7 @@ RenderQueues SceneRenderer::BuildRenderQueues()
                         InstanceBatch batch;
                         batch.model = model.get();
                         batch.instances.push_back(instanceMesh);
+                        batch.pipeline = instanceMesh->GetPipeLineState();
                         queues.instanceBatches.push_back(std::move(batch));
                     }
                 }
