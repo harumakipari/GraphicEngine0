@@ -536,6 +536,7 @@ void AnimationController::CaptureEditorRuntimeSnapshot()
 
 void AnimationController::EndEditorPreview()
 {
+    EndAllEditorPreviewStates();
     editorPreviewPlaying = false;
     editorPreviewActive = false;
 
@@ -595,8 +596,13 @@ void AnimationController::BeginEditorPreview(const bool playing, const bool rese
     editorPreviewActive = true;
     editorPreviewPlaying = playing;
     if (resetTime)
+    {
+        EndAllEditorPreviewStates();
         editorPreviewTime = 0.0f;
+    }
     previousEditorPreviewTime = editorPreviewTime;
+    if (playing)
+        SyncEditorPreviewStates(editorPreviewTime);
     ApplyEditorPreviewPose();
 }
 
@@ -609,6 +615,7 @@ void AnimationController::SetEditorPreviewTime(const float time)
     editorPreviewPlaying = false;
     const float duration = target_->model->animations[selectedTimelineClip].duration;
     editorPreviewTime = std::clamp(time, 0.0f, duration);
+    SyncEditorPreviewStates(editorPreviewTime);
     previousEditorPreviewTime = editorPreviewTime;
     ApplyEditorPreviewPose();
 }
@@ -646,6 +653,19 @@ void AnimationController::UpdateEditorPreview(const float deltaTime)
             }
         }
 
+        if (wrapped)
+        {
+            ProcessEditorPreviewStatesForward(previousEditorPreviewTime, duration);
+            EndAllEditorPreviewStates();
+            SyncEditorPreviewStates(0.0f);
+            ProcessEditorPreviewStatesForward(0.0f, editorPreviewTime);
+        }
+        else
+        {
+            ProcessEditorPreviewStatesForward(previousEditorPreviewTime, editorPreviewTime);
+        }
+        SyncEditorPreviewStates(editorPreviewTime);
+
         if (wrapped || editorPreviewTime > previousEditorPreviewTime)
         {
             ProcessEditorPreviewEvents(
@@ -654,6 +674,103 @@ void AnimationController::UpdateEditorPreview(const float deltaTime)
     }
 
     ApplyEditorPreviewPose();
+}
+bool AnimationController::IsEditorPreviewStateDispatchable(const AnimationNotifyState& state) const
+{
+    return state.type != AnimationNotifyState::Type::MotionWarp;
+}
+void AnimationController::BeginEditorPreviewState(const size_t stateIndex)
+{
+    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+    if (assetIt == animationNotifyAssets.end() || stateIndex >= assetIt->second.notifyTrack.states.size())
+        return;
+
+    const AnimationNotifyState& state = assetIt->second.notifyTrack.states[stateIndex];
+    if (!IsEditorPreviewStateDispatchable(state))
+        return;
+    if (activeEditorPreviewStates.emplace(stateIndex, state).second)
+        OnNotifyBegin(state);
+}
+void AnimationController::EndEditorPreviewState(const size_t stateIndex)
+{
+    const auto activeIt = activeEditorPreviewStates.find(stateIndex);
+    if (activeIt == activeEditorPreviewStates.end())
+        return;
+
+    OnNotifyEnd(activeIt->second);
+    activeEditorPreviewStates.erase(activeIt);
+}
+void AnimationController::EndAllEditorPreviewStates()
+{
+    std::vector<size_t> activeIndices;
+    activeIndices.reserve(activeEditorPreviewStates.size());
+    for (const auto& [stateIndex, state] : activeEditorPreviewStates)
+        activeIndices.push_back(stateIndex);
+    for (const size_t stateIndex : activeIndices)
+        EndEditorPreviewState(stateIndex);
+    activeEditorPreviewStates.clear();
+}
+void AnimationController::SyncEditorPreviewStates(const float time)
+{
+    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+    if (assetIt == animationNotifyAssets.end())
+    {
+        EndAllEditorPreviewStates();
+        return;
+    }
+
+    const auto& states = assetIt->second.notifyTrack.states;
+    std::vector<size_t> activeIndices;
+    activeIndices.reserve(activeEditorPreviewStates.size());
+    for (const auto& [stateIndex, state] : activeEditorPreviewStates)
+        activeIndices.push_back(stateIndex);
+    for (const size_t stateIndex : activeIndices)
+    {
+        const bool shouldRemainActive = stateIndex < states.size() &&
+            IsEditorPreviewStateDispatchable(states[stateIndex]) &&
+            time >= states[stateIndex].startTime && time < states[stateIndex].endTime;
+        if (!shouldRemainActive)
+            EndEditorPreviewState(stateIndex);
+    }
+
+    for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
+    {
+        const AnimationNotifyState& state = states[stateIndex];
+        if (IsEditorPreviewStateDispatchable(state) &&
+            time >= state.startTime && time < state.endTime)
+        {
+            BeginEditorPreviewState(stateIndex);
+        }
+    }
+}
+void AnimationController::ProcessEditorPreviewStatesForward(
+    const float previousTime, const float currentTime)
+{
+    if (currentTime < previousTime)
+        return;
+
+    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+    if (assetIt == animationNotifyAssets.end())
+        return;
+
+    const auto& states = assetIt->second.notifyTrack.states;
+    for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
+    {
+        const AnimationNotifyState& state = states[stateIndex];
+        if (!IsEditorPreviewStateDispatchable(state))
+            continue;
+
+        if (!activeEditorPreviewStates.contains(stateIndex) &&
+            previousTime < state.startTime && currentTime >= state.startTime)
+        {
+            BeginEditorPreviewState(stateIndex);
+        }
+        if (activeEditorPreviewStates.contains(stateIndex) &&
+            previousTime < state.endTime && currentTime >= state.endTime)
+        {
+            EndEditorPreviewState(stateIndex);
+        }
+    }
 }
 void AnimationController::ProcessEditorPreviewEvents(
     const float previousTime, const float currentTime,
@@ -1051,6 +1168,7 @@ void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, flo
     ImGui::SameLine();
     if (ImGui::Button("Load"))
     {
+        EndAllEditorPreviewStates();
         LoadNotifyAsset(filename, asset);
     }
 
@@ -1661,6 +1779,7 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
     {
         if (selectedStateIndex >= 0)
         {
+            EndAllEditorPreviewStates();
             asset.notifyTrack.states.erase(
                 asset.notifyTrack.states.begin()
                 + selectedStateIndex);
@@ -1821,6 +1940,7 @@ void AnimationController::DrawTimeline()
         const bool selected = selectedTimelineClip == clip;
         if (ImGui::Selectable(listedAsset.animationName.c_str(), selected))
         {
+            EndAllEditorPreviewStates();
             selectedTimelineClip = clip;
             const std::string filename = "./Data/Animation/" + ownerName + "/" + listedAsset.animationName + ".json";
             LoadNotifyAsset(filename, listedAsset);

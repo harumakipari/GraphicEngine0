@@ -34,7 +34,7 @@
     },
     "states": [
         {
-            "endTime": 0.33226534724235535,
+            "endTime": 0.27725860476493835,
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 1.0,
@@ -79,6 +79,30 @@
             "parameter": "rightWeapon",
             "startTime": 0.1607932597398758,
             "type": "HitBox",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.2975050210952759,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "rightWeapon",
+            "startTime": 0.08712692558765411,
+            "type": "ShowTrail",
             "value": 1.0
         }
     ]

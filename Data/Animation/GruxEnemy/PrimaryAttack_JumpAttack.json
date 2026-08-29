@@ -3,16 +3,16 @@
     "animationName": "PrimaryAttack_JumpAttack",
     "events": [
         {
-            "parameter": "dodge_start",
-            "time": 0.19235460460186005,
-            "type": "PlaySE",
-            "value": 1.0
-        },
-        {
             "parameter": "boss_jump_attack_jump",
             "time": 0.19162090122699738,
             "type": "PlaySE",
             "value": 0.4300000071525574
+        },
+        {
+            "parameter": "dodge_start",
+            "time": 0.19235460460186005,
+            "type": "PlaySE",
+            "value": 1.0
         },
         {
             "parameter": "enemy_jump_attack",
@@ -127,6 +127,30 @@
             "parameter": "rightWeapon",
             "startTime": 0.8410029411315918,
             "type": "HitBox",
+            "value": 1.0
+        },
+        {
+            "endTime": 1.0043351650238037,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "rightWeapon",
+            "startTime": 0.6730389595031738,
+            "type": "ShowTrail",
             "value": 1.0
         }
     ]

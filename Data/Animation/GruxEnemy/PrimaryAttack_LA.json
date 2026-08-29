@@ -58,6 +58,30 @@
             "value": 1.0
         },
         {
+            "endTime": 0.3199999928474426,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "leftWeapon",
+            "startTime": 0.1057814359664917,
+            "type": "ShowTrail",
+            "value": 1.0
+        },
+        {
             "endTime": 0.30000001192092896,
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
@@ -79,30 +103,6 @@
             "parameter": "leftWeapon",
             "startTime": 0.1718750298023224,
             "type": "HitBox",
-            "value": 1.0
-        },
-        {
-            "endTime": 0.32,
-            "hitBoxRadius": 0.800000011920929,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                2.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "leftWeapon",
-            "startTime": 0.14,
-            "type": "ShowTrail",
             "value": 1.0
         },
         {

@@ -524,6 +524,12 @@ private:
     void ApplyEditorPreviewPose();
     void DrawEditorPreviewStates();
     void ProcessEditorPreviewEvents(float previousTime, float currentTime, float duration, bool wrapped);
+    void ProcessEditorPreviewStatesForward(float previousTime, float currentTime);
+    void SyncEditorPreviewStates(float time);
+    void EndAllEditorPreviewStates();
+    bool IsEditorPreviewStateDispatchable(const AnimationNotifyState& state) const;
+    void BeginEditorPreviewState(size_t stateIndex);
+    void EndEditorPreviewState(size_t stateIndex);
     void BeginEditorPreview(bool playing, bool resetTime);
     void SetEditorPreviewTime(float time);
     void CaptureEditorRuntimeSnapshot();
@@ -676,6 +682,7 @@ private:
     bool editorPreviewPlaying = false;
     float editorPreviewTime = 0.0f;
     float previousEditorPreviewTime = 0.0f;
+    std::unordered_map<size_t, AnimationNotifyState> activeEditorPreviewStates;
     bool editorPreviewShowDangerWindow = true;
     bool editorPreviewShowHitBox = true;
     EditorRuntimeSnapshot editorRuntimeSnapshot;
