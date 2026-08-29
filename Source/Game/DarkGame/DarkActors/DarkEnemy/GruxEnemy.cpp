@@ -2239,6 +2239,8 @@ std::string GruxEnemy::GetCurrentAttackNameForDebug() const
 void GruxEnemy::TakeDamage(const int damage)
 {
     //skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
+    // コントローラー振動を追加
+    InputSystem::SetVibration(0.8f, 0.05f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.3f);
     hp -= damage;
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
@@ -2270,22 +2272,38 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
 
 }
 
-void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos) const
+void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const
 {
+    DirectX::XMFLOAT3 enemyCenter = GetPosition();
+    constexpr float rushEffectHeightOffset = 1.3f;
+    enemyCenter.y += rushEffectHeightOffset;
+    playerPos.y += rushEffectHeightOffset;
+
+    // 敵→プレイヤー方向
+    DirectX::XMFLOAT3 forward = MathHelper::Normalize(MathHelper::Subtract(playerPos, enemyCenter));
+    // エフェクト生成位置
+    float spawnOffset = 0.8f;
+    DirectX::XMFLOAT3 rushEffectPosition = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
+
+    rushEffectPosition.x += MathHelper::RandomRange(-0.35f, 0.35f);
+    rushEffectPosition.y +=  MathHelper::RandomRange(-0.20f, 0.20f);
+    rushEffectPosition.z += MathHelper::RandomRange(-0.35f, 0.35f);
+
+
     if (rushHitSparkEffectComponent)
     {
-        rushHitSparkEffectComponent->SetWorldLocationDirect(hitPos);
+        rushHitSparkEffectComponent->SetWorldLocationDirect(rushEffectPosition);
         rushHitSparkEffectComponent->UpdateComponentToWorld();
         EffectManager::EmitParticle(
             rushHitSparkEffectComponent->GetEffectHandle(),
             rushHitSparkEffectComponent->GetComponentLocation(),
-            rushHitSparkEffectComponent->GetComponentEulerRotation());
+            { 0.0f, 0.0f, 0.0f });
     }
 
     if (!rushHitRingEffectComponent)
         return;
 
-    rushHitRingEffectComponent->SetWorldLocationDirect(hitPos);
+    rushHitRingEffectComponent->SetWorldLocationDirect(rushEffectPosition);
     rushHitRingEffectComponent->UpdateComponentToWorld();
     EffectManager::EmitParticle(
         rushHitRingEffectComponent->GetEffectHandle(),

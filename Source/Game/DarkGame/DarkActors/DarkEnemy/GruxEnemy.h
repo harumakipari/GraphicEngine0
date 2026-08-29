@@ -26,7 +26,7 @@ public:
     // ヒットエフェクトを生成する
     void SpawnHitEffect(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
 
-    void SpawnRushHitRing(DirectX::XMFLOAT3 hitPos) const;
+    void SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
 
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
 

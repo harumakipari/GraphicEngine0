@@ -1,6 +1,14 @@
 {
     "animationClip": 9,
     "animationName": "Stampede_Knockup_0",
+    "events": [
+        {
+            "parameter": "enemy_attack2",
+            "time": 0.2667885422706604,
+            "type": "PlaySE",
+            "value": 0.5400000214576721
+        }
+    ],
     "loop": false,
     "nextCombo": "",
     "playRate": 1.0,

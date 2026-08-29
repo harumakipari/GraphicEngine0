@@ -9,6 +9,12 @@
             "value": 1.0
         },
         {
+            "parameter": "boss_jump_attack_jump",
+            "time": 0.19162090122699738,
+            "type": "PlaySE",
+            "value": 0.4300000071525574
+        },
+        {
             "parameter": "enemy_jump_attack",
             "time": 0.8812195658683777,
             "type": "PlaySE",

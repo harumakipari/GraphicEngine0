@@ -29,14 +29,14 @@ namespace
 {
     constexpr std::array<const char*, 8> RushSwordSEs =
     {
-        "enemy_rush_damage1",
-        "enemy_rush_damage1",
-        "enemy_rush_damage1",
-        "enemy_rush_damage1",
-        "enemy_rush_damage1",
-        "enemy_rush_damage1",
-        "enemy_rush_damage1",
-        "enemy_rush_damage1",
+        "enemy_rush_damage3",
+        "enemy_rush_damage3",
+        "enemy_rush_damage3",
+        "enemy_rush_damage3",
+        "enemy_rush_damage3",
+        "enemy_rush_damage3",
+        "enemy_rush_damage3",
+        "enemy_rush_damage3",
     };
 
     std::string MotionWarpPositionString(const DirectX::XMFLOAT3& value)
@@ -745,7 +745,7 @@ void Player::Update(float deltaTime)
                         std::string(stateMachine_->GetStateName()) == "Rush";
                     if (isRushHit)
                     {
-                        enemy->SpawnRushHitRing(hit.hitPoint);
+                        enemy->SpawnRushHitRing(hit.hitPoint, hit.normal, playerPos);
                     }
                     Time::SetSlow(0.0f,
                         isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
