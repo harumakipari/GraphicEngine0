@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include "DarkStageAsset.h"
 #include "Core/Actor.h"
 #include "Components/Render/MeshComponent.h"
@@ -10,9 +11,10 @@ class ParticleComponent;
 class DarkStage :public Actor
 {
 public:
-    enum class StageGeometryArea
+    enum class StageArea
     {
         MainRoom,
+        Transition,
         BossRoom,
     };
 
@@ -29,17 +31,21 @@ public:
 
     void SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_ptr<StageAsset> transitionAreaAsset, std::shared_ptr<StageAsset> bossRoomAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset);
 
-    void SetStageGeometryArea(StageGeometryArea area);
-    StageGeometryArea GetStageGeometryArea() const { return stageGeometryArea; }
+    void SetStageArea(StageArea area);
+    StageArea GetStageArea() const { return currentStageArea; }
     
 private:
-    void ApplyStageGeometryVisibility();
+    void ApplyStageVisibility();
+    bool IsStageAreaVisible(StageArea area) const;
+    void RegisterFurnitureActor(StageArea area, const std::shared_ptr<Actor>& actor);
+    void SetActorMeshVisibility(const std::shared_ptr<Actor>& actor, bool visible);
 
     std::string parentName = "RootComponent";
     std::shared_ptr<StaticMeshComponent> mainRoomMeshComponent;
     std::shared_ptr<StaticMeshComponent> transitionAreaMeshComponent;
     std::shared_ptr<StaticMeshComponent> bossRoomMeshComponent;
-    StageGeometryArea stageGeometryArea = StageGeometryArea::MainRoom;
+    StageArea currentStageArea = StageArea::BossRoom;
+    std::array<std::vector<std::weak_ptr<Actor>>, 3> furnitureActorsByArea;
 
     // ボス部屋のライト
     std::vector<PointLightComponent*> bossRoomLightsLeft;

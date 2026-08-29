@@ -743,6 +743,10 @@ void Player::Update(float deltaTime)
                     hitActors.emplace(enemy);
                     const bool isRushHit = stateMachine_ &&
                         std::string(stateMachine_->GetStateName()) == "Rush";
+                    if (isRushHit)
+                    {
+                        enemy->SpawnRushHitRing(hit.hitPoint);
+                    }
                     Time::SetSlow(0.0f,
                         isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
 

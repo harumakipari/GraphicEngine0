@@ -1,0 +1,141 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "blendState": 2,
+            "burstCount": 1,
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 0,
+            "emissivePower": 1.0,
+            "emitCount": [
+                1,
+                1
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "emitRate": 0.0,
+            "emitterLifeTime": 0.30000001192092896,
+            "endColor": [
+                [
+                    1.0,
+                    0.11999999731779099,
+                    0.07999999821186066,
+                    0.0
+                ],
+                [
+                    1.0,
+                    0.11999999731779099,
+                    0.07999999821186066,
+                    0.0
+                ]
+            ],
+            "endSize": [
+                [
+                    6.300000190734863,
+                    6.300000190734863
+                ],
+                [
+                    6.300000190734863,
+                    6.300000190734863
+                ]
+            ],
+            "height": 1.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "isBurst": true,
+            "lifeTime": [
+                0.20000000298023224,
+                0.20000000298023224
+            ],
+            "loop": false,
+            "maxParticles": 32,
+            "name": "RushHitRing",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 1.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "shapeType": 0,
+            "speed": [
+                0.0,
+                0.0
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    0.4000000059604645,
+                    0.4000000059604645
+                ],
+                [
+                    0.4000000059604645,
+                    0.4000000059604645
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\Particles\\AuroraRing_R.png",
+            "textureSplitCount": [
+                1,
+                1
+            ],
+            "useGravity": false,
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
+        }
+    ],
+    "name": "RushHitRingEffect"
+}

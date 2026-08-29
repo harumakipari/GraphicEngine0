@@ -26,6 +26,8 @@ public:
     // ヒットエフェクトを生成する
     void SpawnHitEffect(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
 
+    void SpawnRushHitRing(DirectX::XMFLOAT3 hitPos) const;
+
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
 
     void OnAnimationNotifyEnd(const AnimationNotifyState& state)override;
@@ -272,7 +274,8 @@ private:
     std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // 右の武器の中間のコンポーネント
     std::shared_ptr<SceneComponent> weaponRightTipComponent;  // 右の武器の先端のコンポーネント
 
-    std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // ヒット時の剣のエフェクト
+    std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // Existing normal hit effect
+    std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
 
     std::shared_ptr<UIGaugeComponent> hpFrameUiComponent;   // HPバー
 

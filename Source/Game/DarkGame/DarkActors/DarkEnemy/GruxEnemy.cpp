@@ -308,6 +308,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     hitSwordEffectComponent->Load("./Data/Effect/Files/DarkStageBloodEffect.json");
     //hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
 
+    rushHitRingEffectComponent = this->AddComponent<class ParticleComponent>("rushHitRingEffectComponent", parentName);
+    rushHitRingEffectComponent->Load("./Data/Effect/Files/RushHitRingEffect.json");
+
     // Hpバー後ろ
     auto gaugeFrameBackComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/bar_back.png", "bar_back_ui");
     DirectX::XMFLOAT2 gaugeSize = { 221.0f,28.0f };
@@ -1870,14 +1873,14 @@ void GruxEnemy::DrawImGuiDetails()
 
         ImGui::SeparatorText("Combat Behavior");
         const auto getIntentData = [&](const BossIntentType type) -> BossIntentData&
-        {
-            for (BossIntentData& data : combatIntentData)
             {
-                if (data.type == type)
-                    return data;
-            }
-            return combatIntentData.front();
-        };
+                for (BossIntentData& data : combatIntentData)
+                {
+                    if (data.type == type)
+                        return data;
+                }
+                return combatIntentData.front();
+            };
         BossIntentData& closeCombatIntent =
             getIntentData(BossIntentType::CloseCombat);
         BossIntentData& repositionIntent =
@@ -1889,28 +1892,28 @@ void GruxEnemy::DrawImGuiDetails()
 
         const auto drawDistanceRegionWeights = [&](const char* regionName,
             float BossIntentData::* weightMember)
-        {
-            if (!ImGui::TreeNodeEx(regionName, ImGuiTreeNodeFlags_DefaultOpen))
-                return;
-            ImGui::PushID(regionName);
-            const auto totalBaseWeight = [&]()
             {
-                return closeCombatIntent.*weightMember +
-                    repositionIntent.*weightMember +
-                    dashIntent.*weightMember +
-                    jumpIntent.*weightMember;
+                if (!ImGui::TreeNodeEx(regionName, ImGuiTreeNodeFlags_DefaultOpen))
+                    return;
+                ImGui::PushID(regionName);
+                const auto totalBaseWeight = [&]()
+                    {
+                        return closeCombatIntent.*weightMember +
+                            repositionIntent.*weightMember +
+                            dashIntent.*weightMember +
+                            jumpIntent.*weightMember;
+                    };
+                DrawIntentWeightBar("Close Combat",
+                    closeCombatIntent.*weightMember, totalBaseWeight());
+                DrawIntentWeightBar("Combat Reposition",
+                    repositionIntent.*weightMember, totalBaseWeight());
+                DrawIntentWeightBar("Dash Attack",
+                    dashIntent.*weightMember, totalBaseWeight());
+                DrawIntentWeightBar("Jump Attack",
+                    jumpIntent.*weightMember, totalBaseWeight());
+                ImGui::PopID();
+                ImGui::TreePop();
             };
-            DrawIntentWeightBar("Close Combat",
-                closeCombatIntent.*weightMember, totalBaseWeight());
-            DrawIntentWeightBar("Combat Reposition",
-                repositionIntent.*weightMember, totalBaseWeight());
-            DrawIntentWeightBar("Dash Attack",
-                dashIntent.*weightMember, totalBaseWeight());
-            DrawIntentWeightBar("Jump Attack",
-                jumpIntent.*weightMember, totalBaseWeight());
-            ImGui::PopID();
-            ImGui::TreePop();
-        };
 
         drawDistanceRegionWeights("Near", &BossIntentData::nearWeight);
         drawDistanceRegionWeights("Middle", &BossIntentData::middleWeight);
@@ -1919,10 +1922,10 @@ void GruxEnemy::DrawImGuiDetails()
         if (ImGui::TreeNodeEx("Back", ImGuiTreeNodeFlags_DefaultOpen))
         {
             const auto totalBackWeight = [&]()
-            {
-                return combatRepositionBackWeight +
-                    dashAttackPlanBackWeight + jumpAttackPlanBackWeight;
-            };
+                {
+                    return combatRepositionBackWeight +
+                        dashAttackPlanBackWeight + jumpAttackPlanBackWeight;
+                };
             float disabledCloseCombatWeight = 0.0f;
             DrawIntentWeightBar("Close Combat", disabledCloseCombatWeight,
                 totalBackWeight(), false);
@@ -2247,29 +2250,35 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
     enemyCenter.y += hitEnemyEffectOffsetY;
     playerPos.y += hitPlayerEffectOffsetY;
 
-    if (auto actorManager = GetOwnerScene()->GetActorManager())
-    {
-        //Transform tr{ enemyCenter,{0.0f,0.0f,0.0f},{1.0f,1.0f,1.0f} };
-        //auto iceEffect = actorManager->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("iceFragment", tr);
-        //iceEffect->SetDirection(hitNormal, enemyCenter, playerPos);
+    // 敵→プレイヤー方向
+    DirectX::XMFLOAT3 forward = MathHelper::Normalize(MathHelper::Subtract(playerPos, enemyCenter));
+    // エフェクト生成位置
+    float spawnOffset = 0.8f;
+    DirectX::XMFLOAT3 spawnPos = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
+    spawnPos = hitPos;
 
-        // 敵→プレイヤー方向
-        DirectX::XMFLOAT3 forward = MathHelper::Normalize(MathHelper::Subtract(playerPos, enemyCenter));
-        // エフェクト生成位置
-        float spawnOffset = 0.8f;
-        DirectX::XMFLOAT3 spawnPos = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
-        spawnPos = hitPos;
+    //if (hitSwordEffectComponent)
+    //{
+    //    hitSwordEffectComponent->SetWorldLocationDirect(spawnPos);
+    //    hitSwordEffectComponent->UpdateComponentToWorld(); // これ入れないと最初に呼ばれる時に位置がずれる
+    //    XMFLOAT3 position = hitSwordEffectComponent->GetComponentLocation();
+    //    XMFLOAT3 rotation = hitSwordEffectComponent->GetComponentEulerRotation();
+    //    EffectManager::EmitParticle(hitSwordEffectComponent->GetEffectHandle(), position, rotation);
+    //}
 
-        if (hitSwordEffectComponent)
-        {
-            hitSwordEffectComponent->SetWorldLocationDirect(spawnPos);
-            hitSwordEffectComponent->UpdateComponentToWorld(); // これ入れないと最初に呼ばれる時に位置がずれる
-            XMFLOAT3 position = hitSwordEffectComponent->GetComponentLocation();
-            XMFLOAT3 rotation = hitSwordEffectComponent->GetComponentEulerRotation();
-            EffectManager::EmitParticle(hitSwordEffectComponent->GetEffectHandle(), position, rotation);
-        }
-    }
+}
 
+void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos) const
+{
+    if (!rushHitRingEffectComponent)
+        return;
+
+    rushHitRingEffectComponent->SetWorldLocationDirect(hitPos);
+    rushHitRingEffectComponent->UpdateComponentToWorld();
+    EffectManager::EmitParticle(
+        rushHitRingEffectComponent->GetEffectHandle(),
+        rushHitRingEffectComponent->GetComponentLocation(),
+        rushHitRingEffectComponent->GetComponentEulerRotation());
 }
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)

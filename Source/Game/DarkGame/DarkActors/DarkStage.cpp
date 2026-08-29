@@ -112,6 +112,9 @@ void DarkStage::Update(float deltaTime)
         }
     }
 
+    //SetStageArea(StageArea::BossRoom);
+    //SetStageArea(StageArea::MainRoom);
+
 }
 
 void DarkStage::DrawImGuiDetails()
@@ -119,12 +122,12 @@ void DarkStage::DrawImGuiDetails()
 #ifdef USE_IMGUI
     ImGui::SeparatorText("Stage Geometry Visibility");
     ImGui::Text("Current Area: %s",
-        stageGeometryArea == StageGeometryArea::MainRoom ? "MainRoom" : "BossRoom");
+        currentStageArea == StageArea::MainRoom ? "MainRoom" : "BossRoom");
     if (ImGui::Button("Show MainRoom"))
-        SetStageGeometryArea(StageGeometryArea::MainRoom);
+        SetStageArea(StageArea::MainRoom);
     ImGui::SameLine();
     if (ImGui::Button("Show BossRoom"))
-        SetStageGeometryArea(StageGeometryArea::BossRoom);
+        SetStageArea(StageArea::BossRoom);
     ImGui::Text("MainRoom: %s", mainRoomMeshComponent && mainRoomMeshComponent->IsVisible() ? "Visible" : "Hidden");
     ImGui::Text("TransitionArea: %s", transitionAreaMeshComponent && transitionAreaMeshComponent->IsVisible() ? "Visible" : "Hidden");
     ImGui::Text("BossRoom: %s", bossRoomMeshComponent && bossRoomMeshComponent->IsVisible() ? "Visible" : "Hidden");
@@ -143,21 +146,61 @@ void DarkStage::StartBossRoomLightSequence()
     bossRoomSequenceTime = 0.0f;
 }
 
-void DarkStage::SetStageGeometryArea(StageGeometryArea area)
+void DarkStage::SetStageArea(StageArea area)
 {
-    stageGeometryArea = area;
-    ApplyStageGeometryVisibility();
+    if (area == StageArea::Transition)
+        return;
+
+    currentStageArea = area;
+    ApplyStageVisibility();
 }
 
-void DarkStage::ApplyStageGeometryVisibility()
+bool DarkStage::IsStageAreaVisible(StageArea area) const
+{
+    return area == StageArea::Transition || area == currentStageArea;
+}
+
+void DarkStage::SetActorMeshVisibility(
+    const std::shared_ptr<Actor>& actor, bool visible)
+{
+    if (!actor)
+        return;
+
+    for (const auto& component : actor->GetComponents())
+    {
+        if (const auto meshComponent = std::dynamic_pointer_cast<MeshComponent>(component))
+            meshComponent->SetIsVisible(visible);
+    }
+}
+
+void DarkStage::RegisterFurnitureActor(
+    StageArea area, const std::shared_ptr<Actor>& actor)
+{
+    furnitureActorsByArea[static_cast<size_t>(area)].push_back(actor);
+    SetActorMeshVisibility(actor, IsStageAreaVisible(area));
+}
+
+void DarkStage::ApplyStageVisibility()
 {
     if (mainRoomMeshComponent)
-        mainRoomMeshComponent->SetIsVisible(stageGeometryArea == StageGeometryArea::MainRoom);
+        mainRoomMeshComponent->SetIsVisible(IsStageAreaVisible(StageArea::MainRoom));
     if (transitionAreaMeshComponent)
-        transitionAreaMeshComponent->SetIsVisible(true);
+        transitionAreaMeshComponent->SetIsVisible(IsStageAreaVisible(StageArea::Transition));
     if (bossRoomMeshComponent)
-        bossRoomMeshComponent->SetIsVisible(stageGeometryArea == StageGeometryArea::BossRoom);
+        bossRoomMeshComponent->SetIsVisible(IsStageAreaVisible(StageArea::BossRoom));
+
+    for (size_t areaIndex = 0; areaIndex < furnitureActorsByArea.size(); ++areaIndex)
+    {
+        const StageArea area = static_cast<StageArea>(areaIndex);
+        const bool visible = IsStageAreaVisible(area);
+        for (const auto& furnitureActor : furnitureActorsByArea[areaIndex])
+        {
+            if (const auto actor = furnitureActor.lock())
+                SetActorMeshVisibility(actor, visible);
+        }
+    }
 }
+
 void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_ptr<StageAsset> transitionAreaAsset, std::shared_ptr<StageAsset> bossRoomAsset, std::shared_ptr<StageAsset> stageCandelabraAsset, std::shared_ptr<StageAsset> stageBrazierAsset, std::shared_ptr<StageAsset> stageGroundBrazierAsset, std::shared_ptr<StageAsset> stageMeltedWaxAsset, std::shared_ptr<StageAsset> stageStandingBrazierAsset, std::shared_ptr<StageAsset> stageCandleStandAsset)
 {
     auto scene = GetOwnerScene();
@@ -179,16 +222,52 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
         mainRoomMeshComponent = createStageMesh("MainRoomModel", mainRoomAsset);
         transitionAreaMeshComponent = createStageMesh("TransitionAreaModel", transitionAreaAsset);
         bossRoomMeshComponent = createStageMesh("BossRoomModel", bossRoomAsset);
-        ApplyStageGeometryVisibility();
+        ApplyStageVisibility();
     }
 
     {
         PROFILE_SCOPE("Create StageActor");
 
-        for (const auto& areaAsset : { mainRoomAsset, transitionAreaAsset, bossRoomAsset })
+        struct StageSpawnSource
+        {
+            StageArea area;
+            const char* assetName;
+            std::shared_ptr<StageAsset> asset;
+        };
+        const StageSpawnSource areaAssets[] =
+        {
+            { StageArea::MainRoom, "MainRoom.gltf", mainRoomAsset },
+            { StageArea::Transition, "TransitionArea.gltf", transitionAreaAsset },
+            { StageArea::BossRoom, "BossRoom.gltf", bossRoomAsset },
+        };
+        const auto stageAreaName = [](StageArea area)
+        {
+            switch (area)
+            {
+            case StageArea::MainRoom: return "MainRoom";
+            case StageArea::Transition: return "Transition";
+            case StageArea::BossRoom: return "BossRoom";
+            default: return "Unknown";
+            }
+        };
+        for (const auto& [spawnArea, sourceAssetName, areaAsset] : areaAssets)
         {
             for (const auto& point : areaAsset->spawnPoints)
         {
+            const auto registerFurniture = [&, this](const std::shared_ptr<Actor>& actor)
+            {
+                RegisterFurnitureActor(spawnArea, actor);
+#ifdef _DEBUG
+                Logger::Log(
+                    "[Stage Furniture Area] SpawnPoint=" + point.name +
+                    " SourceAsset=" + sourceAssetName +
+                    " spawnArea=" + stageAreaName(spawnArea) +
+                    " RegisterArea=" + stageAreaName(spawnArea) +
+                    " Position=(" + std::to_string(point.worldPosition.x) + ", " +
+                    std::to_string(point.worldPosition.y) + ", " +
+                    std::to_string(point.worldPosition.z) + ")");
+#endif
+            };
             if (point.name.rfind("Spawn_Particle_Steam", 0) == 0)
             {
                 // 湯気のエフェクト
@@ -217,6 +296,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
             {// bossの部屋のシャンデリアを生成する
                 Transform chandelierTr{ {17.221f,13.996f,11.082f},point.worldRotation,{3.71f,3.51f,5.1f} };
                 auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("bossRoomChandelier", chandelierTr);
+                registerFurniture(chandelier);
             }
             else if (point.name.rfind("Spawn_Chandelier", 0) == 0)
             {// 名前が "Spawn_Chandelier" で始まる場合、シャンデリアを配置
@@ -229,17 +309,20 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                     point.worldScale
                 };
                 auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("chandelier", chandelierTr);
+                registerFurniture(chandelier);
             }
             else if (point.name.rfind("Spawn_MainChandelier", 0) == 0)
             {// メインの部屋のシャンデリアを生成する
                 Transform chandelierTr{ {-13.28f,13.266f,11.182f},point.worldRotation,{2.5f,2.5f,2.5f} };
                 auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("MainChandelier", chandelierTr);
+                registerFurniture(chandelier);
             }
             else if (point.name.rfind("Spawn_TorchSconce", 0) == 0)
             {
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
                 Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto candelabra = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageTorchSconceActor>("TorchSconce", candelabraTr);
+                registerFurniture(candelabra);
             }
             else if (point.name.rfind("Spawn_CandleStand", 0) == 0)
             {
@@ -247,6 +330,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candleStandTr{ pos,point.worldRotation,{1.0f,1.0f,1.0f} };
                 auto candleStand = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageCandleStandActor>("candleStand", candleStandTr);
                 candleStand->SetModel(stageCandleStandAsset);
+                registerFurniture(candleStand);
             }
             else if (point.name.rfind("Spawn_Candelabra", 0) == 0)
             {// 名前が "Spawn_Candelabra" で始まる場合、燭台を配置
@@ -254,6 +338,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto candelabra = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageCandelabraActor>("candelabra", candelabraTr);
                 candelabra->SetModel(stageCandelabraAsset);
+                registerFurniture(candelabra);
             }
             else if (point.name.rfind("Spawn_Brazier", 0) == 0)
             {// 名前が "Spawn_Brazier" で始まる場合、火鉢を配置
@@ -261,6 +346,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform brazierTr{ pos,point.worldRotation,point.worldScale };
                 auto brazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBrazierActor>("brazier", brazierTr);
                 brazier->SetModel(stageBrazierAsset);
+                registerFurniture(brazier);
             }
             else if (point.name.rfind("Spawn_GroundBrazier", 0) == 0)
             {// 名前が "Spawn_GroundBrazier" で始まる場合、地面の火鉢を配置
@@ -268,6 +354,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto groundBrazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageGroundBrazierActor>("GroundBrazier", candelabraTr);
                 groundBrazier->SetModel(stageGroundBrazierAsset);
+                registerFurniture(groundBrazier);
             }
             else if (point.name.rfind("Spawn_Melted_Wax", 0) == 0)
             {// 名前が "Spawn_Melted_Wax" で始まる場合、溶けた蝋を配置
@@ -275,6 +362,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto meltedWax = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageMeltedWaxActor>("MeltedWax", candelabraTr);
                 meltedWax->SetModel(stageMeltedWaxAsset);
+                registerFurniture(meltedWax);
             }
             else if (point.name.rfind("Spawn_Standing_Brazier", 0) == 0)
             {// 名前が "Spawn_Standing_Brazier" で始まる場合、スタンド式火鉢を配置
@@ -282,6 +370,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candelabraTr{ pos,{0,0,0,1},point.worldScale };
                 auto standingBrazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageStandingBrazierActor>("StandingBrazier", candelabraTr);
                 standingBrazier->SetModel(stageStandingBrazierAsset);
+                registerFurniture(standingBrazier);
             }
             else if (point.name.rfind("Spawn_JailDoor", 0) == 0)
             {
@@ -289,6 +378,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 pos.z = 12.0f;
                 Transform doorJailTr{ pos,point.worldRotation,point.worldScale };
                 auto doorJailActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DoorJailActor>("DoorJailActor", doorJailTr);
+                registerFurniture(doorJailActor);
 
             }
 #if 0
@@ -297,6 +387,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
                 Transform barrelTr{ pos,point.worldRotation,point.worldScale };
                 auto barrel = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBarrelActor>("barrel", barrelTr);
+                registerFurniture(barrel);
             }
 
 #endif // 0
