@@ -2325,6 +2325,8 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     ++dodgeDebugDamageCount;
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav", 0.3f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav", 0.5f);
+    // コントローラー振動
+    InputSystem::SetVibration(0.8f, 0.05f);
     ClearActionRequest("damage_applied");
     Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
     //if (sparkComponent)

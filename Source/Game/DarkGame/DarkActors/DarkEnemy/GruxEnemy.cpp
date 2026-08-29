@@ -2239,7 +2239,7 @@ std::string GruxEnemy::GetCurrentAttackNameForDebug() const
 void GruxEnemy::TakeDamage(const int damage)
 {
     //skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
-    // コントローラー振動を追加
+    // コントローラー振動
     InputSystem::SetVibration(0.8f, 0.05f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.3f);
     hp -= damage;
