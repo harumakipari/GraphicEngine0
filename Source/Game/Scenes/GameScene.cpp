@@ -130,6 +130,8 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         {
             RenderState::BindBlendState(immediateContext, BLEND_STATE::ADD);
             player->RenderTrail(immediateContext);
+            if (gruxEnemyActor)
+                gruxEnemyActor->RenderTrail(immediateContext);
         });
 
 

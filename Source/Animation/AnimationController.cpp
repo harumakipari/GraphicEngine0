@@ -1729,6 +1729,12 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             }
             break;
         case AnimationNotifyState::Type::ShowTrail:
+            char buffer[128];
+            strcpy_s(buffer, state.parameter.c_str());
+            if (ImGui::InputText(U8("‹OÕ‚ğ‚Â‚¯‚é•Ší"), buffer, sizeof(buffer)))
+            {
+                state.parameter = buffer;
+            }
             break;
         case AnimationNotifyState::Type::ShowEmissive:
             ImGui::DragFloat("Power", &state.value, 0.1f, 0, 20);

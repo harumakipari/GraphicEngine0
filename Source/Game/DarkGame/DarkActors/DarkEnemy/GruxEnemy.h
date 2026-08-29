@@ -7,6 +7,7 @@
 #include "UI/Widgets/Widget.h"
 #include "Animation/DangerArea.h"
 #include "Game/Actors/Enemy/Boss/BossAITypes.h"
+#include "Graphics/Renderer/TrailRenderer.h"
 #include <array>
 
 class GruxEnemy :public Enemy
@@ -17,6 +18,8 @@ public:
     void Initialize(const Transform& transform)override;
 
     void Update(float deltaTime)override;
+
+    void RenderTrail(ID3D11DeviceContext* immediateContext);
 
     void DrawImGuiDetails() override;
 
@@ -274,6 +277,12 @@ private:
     std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // 右の武器の中間のコンポーネント
     std::shared_ptr<SceneComponent> weaponRightTipComponent;  // 右の武器の先端のコンポーネント
 
+    Trail leftWeaponTrail;
+    Trail rightWeaponTrail;
+    bool showLeftWeaponTrail = false;
+    bool showRightWeaponTrail = false;
+    float bossTrailLifetime = 0.8f;
+
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // Existing normal hit effect
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect
@@ -472,7 +481,7 @@ private:
     float sideAttackReadyDuration = initialSideAttackReadyDuration;
     float closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
     float currentFacingAngleBeforeReady = 0.0f;
-    std::string attackReadySEName = "enemy_attack_ready";
+    std::string attackReadySEName = "enemy_attack_ready1";
     float attackReadySEVolume = 1.0f;
     struct PositioningDebugSnapshot
     {

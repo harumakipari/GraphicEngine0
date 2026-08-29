@@ -313,6 +313,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     rushHitSparkEffectComponent = this->AddComponent<class ParticleComponent>("rushHitSparkEffectComponent", parentName);
     rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushHitSparkEffect.json");
 
+    leftWeaponTrail.Initialize();
+    rightWeaponTrail.Initialize();
+
     // Hpバー後ろ
     auto gaugeFrameBackComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/bar_back.png", "bar_back_ui");
     DirectX::XMFLOAT2 gaugeSize = { 221.0f,28.0f };
@@ -350,6 +353,25 @@ void GruxEnemy::Update(float deltaTime)
 
     BeginRotationDebugFrame();
     Character::Update(deltaTime);
+
+    // 軌跡の更新処理
+    leftWeaponTrail.UpdateTrail(deltaTime);
+    rightWeaponTrail.UpdateTrail(deltaTime);
+
+    if (showLeftWeaponTrail && weaponLeftRootComponent && weaponLeftTipComponent)
+    {
+        leftWeaponTrail.trailPoints.push_back({
+            weaponLeftTipComponent->GetComponentLocation(),
+            weaponLeftRootComponent->GetComponentLocation(),
+            bossTrailLifetime });
+    }
+    if (showRightWeaponTrail && weaponRightRootComponent && weaponRightTipComponent)
+    {
+        rightWeaponTrail.trailPoints.push_back({
+            weaponRightTipComponent->GetComponentLocation(),
+            weaponRightRootComponent->GetComponentLocation(),
+            bossTrailLifetime });
+    }
 
     // Animation Editor Preview中はこのBossだけGameplay/AI/攻撃判定を停止する。
     // Character::Update内のPreview Pose更新は上で継続している。
@@ -729,6 +751,12 @@ void GruxEnemy::Update(float deltaTime)
         stateMachine_->ChangeState("EnemyDeathState");
     }
 #endif // 0
+}
+
+void GruxEnemy::RenderTrail(ID3D11DeviceContext* immediateContext)
+{
+    leftWeaponTrail.Render(immediateContext);
+    rightWeaponTrail.Render(immediateContext);
 }
 
 void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
@@ -2361,6 +2389,10 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         RefreshActiveDangerAreaFromNotify();
         break;
     case AnimationNotifyState::Type::ShowTrail:
+        if (state.parameter == leftWeapon || state.parameter == bothWeapon)
+            showLeftWeaponTrail = true;
+        if (state.parameter == rightWeapon || state.parameter == bothWeapon)
+            showRightWeaponTrail = true;
         break;
     case AnimationNotifyState::Type::ShowEmissive:
         break;
@@ -2449,6 +2481,10 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         ResetDangerArea();
         break;
     case AnimationNotifyState::Type::ShowTrail:
+        if (state.parameter == leftWeapon || state.parameter == bothWeapon)
+            showLeftWeaponTrail = false;
+        if (state.parameter == rightWeapon || state.parameter == bothWeapon)
+            showRightWeaponTrail = false;
         break;
     case AnimationNotifyState::Type::ShowEmissive:
         break;
@@ -2496,6 +2532,9 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 
 void GruxEnemy::OnAnimationChanged()
 {
+    showLeftWeaponTrail = false;
+    showRightWeaponTrail = false;
+
     auto controller = GetBodyAnimationController();
     if (!controller || controller->GetCurrentAnimationName() != "PrimaryAttack_LA")
     {
