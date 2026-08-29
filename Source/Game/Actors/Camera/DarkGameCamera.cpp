@@ -135,9 +135,76 @@ void DarkCameraActor::Update(float deltaTime)
 
     wallBlend = std::lerp(wallBlend, targetBlend, deltaTime * 8.0f);
 
-    SetPosition(currentPose.eye);
-    mainCameraComponent->lookTarget = currentPose.target;
+    UpdateCameraShake(deltaTime);
+
+    CameraPose renderPose = currentPose;
+    renderPose.eye = MathHelper::Add(renderPose.eye, shakePositionOffset);
+    renderPose.target = MathHelper::Add(renderPose.target, shakeTargetOffset);
+
+    SetPosition(renderPose.eye);
+    mainCameraComponent->lookTarget = renderPose.target;
     mainCameraComponent->useLookTarget = true;
+}
+
+void DarkCameraActor::PlayCameraShake(const float intensity, const float duration,
+    const float frequency, const float positionAmount, const float targetAmount)
+{
+    shakeIntensity = (std::max)(intensity, 0.0f);
+    shakeDuration = (std::max)(duration, 0.0f);
+    shakeFrequency = (std::max)(frequency, 0.0f);
+    shakePositionAmount = (std::max)(positionAmount, 0.0f);
+    shakeTargetAmount = (std::max)(targetAmount, 0.0f);
+    shakeElapsedTime = 0.0f;
+    currentShakeEnvelope = 0.0f;
+    shakePositionOffset = {};
+    shakeTargetOffset = {};
+    shakeActive = shakeIntensity > 0.0f && shakeDuration > FLT_EPSILON;
+}
+
+void DarkCameraActor::UpdateCameraShake(const float deltaTime)
+{
+    shakePositionOffset = {};
+    shakeTargetOffset = {};
+    currentShakeEnvelope = 0.0f;
+
+    if (!shakeActive)
+        return;
+
+    if (shakeElapsedTime >= shakeDuration)
+    {
+        shakeActive = false;
+        shakeElapsedTime = shakeDuration;
+        return;
+    }
+
+    const float normalizedTime = std::clamp(shakeElapsedTime / shakeDuration, 0.0f, 1.0f);
+    const float remaining = 1.0f - normalizedTime;
+    currentShakeEnvelope = remaining * remaining;
+
+    const float phase = shakeElapsedTime * shakeFrequency * DirectX::XM_2PI;
+    const float verticalWave =
+        (sinf(phase) + 0.35f * sinf(phase * 2.17f + 1.1f)) / 1.35f;
+    const float sideWave =
+        (cosf(phase * 1.37f + 0.4f) + 0.25f * sinf(phase * 0.73f + 2.0f)) / 1.25f;
+    const float pitchWave =
+        (sinf(phase * 0.73f + 1.7f) + 0.4f * cosf(phase * 1.91f)) / 1.4f;
+    const float yawWave =
+        (cosf(phase * 1.13f + 0.8f) + 0.3f * sinf(phase * 2.31f)) / 1.3f;
+
+    const DirectX::XMFLOAT3 forward = MathHelper::Normalize(
+        MathHelper::Subtract(currentPose.target, currentPose.eye));
+    const DirectX::XMFLOAT3 up{ 0.0f, 1.0f, 0.0f };
+    const DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
+    const float strength = shakeIntensity * currentShakeEnvelope;
+
+    shakePositionOffset = MathHelper::Add(
+        MathHelper::Multiply(up, verticalWave * shakePositionAmount * strength),
+        MathHelper::Multiply(right, sideWave * shakePositionAmount * strength * 0.35f));
+    shakeTargetOffset = MathHelper::Add(
+        MathHelper::Multiply(up, pitchWave * shakeTargetAmount * strength),
+        MathHelper::Multiply(right, yawWave * shakeTargetAmount * strength * 0.45f));
+
+    shakeElapsedTime = (std::min)(shakeElapsedTime + (std::max)(deltaTime, 0.0f), shakeDuration);
 }
 
 // ブレンドを開始する
@@ -848,6 +915,22 @@ void DarkCameraActor::DrawImGuiDetails()
         lockOnTargetWeight = std::clamp(lockOnTargetWeight, 0.0f, 1.0f);
         ImGui::DragFloat("LockOn Zoom In Speed", &lockOnZoomInSpeed, 0.01f, 0.0f, 30.0f);
         ImGui::DragFloat("LockOn Zoom Out Speed", &lockOnZoomOutSpeed, 0.01f, 0.0f, 30.0f);
+
+        ImGui::SeparatorText("Camera Shake");
+        ImGui::DragFloat("Shake Intensity", &testShakeIntensity, 0.05f, 0.0f, 5.0f, "%.2f");
+        ImGui::DragFloat("Shake Duration", &testShakeDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
+        ImGui::DragFloat("Shake Frequency", &testShakeFrequency, 0.1f, 0.1f, 30.0f, "%.1f Hz");
+        ImGui::DragFloat("Shake Position Amount", &testShakePositionAmount, 0.005f, 0.0f, 0.5f, "%.3f");
+        ImGui::DragFloat("Shake Target Amount", &testShakeTargetAmount, 0.01f, 0.0f, 1.0f, "%.3f");
+        if (ImGui::Button("Test Camera Shake"))
+        {
+            PlayCameraShake(testShakeIntensity, testShakeDuration, testShakeFrequency,
+                testShakePositionAmount, testShakeTargetAmount);
+        }
+        ImGui::Text("Active: %s", shakeActive ? "true" : "false");
+        ImGui::Text("Elapsed / Duration: %.3f / %.3f", shakeElapsedTime, shakeDuration);
+        ImGui::Text("Envelope: %.3f", currentShakeEnvelope);
+
         if (ImGui::Button("Reset Camera Tuning")) ResetCameraTuning();
     }
 

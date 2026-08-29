@@ -141,6 +141,9 @@ public:
 
     // Focus状態のポーズを作成する
     CameraPose CreateFocusPose();
+
+    void PlayCameraShake(float intensity, float duration, float frequency,
+        float positionAmount, float targetAmount);
 private:
     // 外部のカメラアクターとのブレンド状態を更新する
     void UpdateExternalBlend(float deltaTime);
@@ -159,6 +162,8 @@ private:
 
     // 実際の方向を更新する関数
     void UpdateRotation(float deltaTime);
+
+    void UpdateCameraShake(float deltaTime);
 
     // Eyeを計算する関数
     CameraPose CalculatePose(CameraMode mode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const;
@@ -225,6 +230,23 @@ private:
     float cameraDistance = 5.0f;
     float cameraHeight = 0.0f;
     float focusDistance = 0.0f;
+
+    float testShakeIntensity = 1.0f;
+    float testShakeDuration = 0.28f;
+    float testShakeFrequency = 12.0f;
+    float testShakePositionAmount = 0.035f;
+    float testShakeTargetAmount = 0.18f;
+
+    bool shakeActive = false;
+    float shakeElapsedTime = 0.0f;
+    float shakeDuration = 0.0f;
+    float shakeIntensity = 0.0f;
+    float shakeFrequency = 0.0f;
+    float shakePositionAmount = 0.0f;
+    float shakeTargetAmount = 0.0f;
+    float currentShakeEnvelope = 0.0f;
+    DirectX::XMFLOAT3 shakePositionOffset{};
+    DirectX::XMFLOAT3 shakeTargetOffset{};
 
     // モード別の構図調整値（初期値は従来値相当）
     CameraCompositionSettings tpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
