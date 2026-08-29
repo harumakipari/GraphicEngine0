@@ -19,6 +19,12 @@
             "time": 0.8812195658683777,
             "type": "PlaySE",
             "value": 0.4000000059604645
+        },
+        {
+            "parameter": "BossHeavyLanding",
+            "time": 0.8812195658683777,
+            "type": "CameraShake",
+            "value": 0.0
         }
     ],
     "loop": false,

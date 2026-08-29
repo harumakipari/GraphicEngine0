@@ -161,6 +161,18 @@ void DarkCameraActor::PlayCameraShake(const float intensity, const float duratio
     shakeActive = shakeIntensity > 0.0f && shakeDuration > FLT_EPSILON;
 }
 
+void DarkCameraActor::PlayCameraShakePreset(const std::string& presetName)
+{
+    if (presetName != "BossHeavyLanding")
+    {
+        const std::string message = "[CameraShake] Unknown preset: " + presetName;
+        Logger::Warning(Logger::LogCategory::Gameplay, message.c_str());
+        return;
+    }
+
+    PlayCameraShake(testShakeIntensity, testShakeDuration, testShakeFrequency,testShakePositionAmount, testShakeTargetAmount);
+}
+
 void DarkCameraActor::UpdateCameraShake(const float deltaTime)
 {
     shakePositionOffset = {};

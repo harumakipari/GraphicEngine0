@@ -785,8 +785,11 @@ void AnimationController::ProcessEditorPreviewEvents(
 
     for (const auto& event : assetIt->second.notifyTrack.events)
     {
-        if (event.type != AnimationNotifyEvent::Type::PlaySE)
+        if (event.type != AnimationNotifyEvent::Type::PlaySE &&
+            event.type != AnimationNotifyEvent::Type::CameraShake)
+        {
             continue;
+        }
 
         const bool crossed = wrapped
             ? ((previousTime < event.time && event.time <= duration) ||
@@ -1886,6 +1889,16 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
         }
         case AnimationNotifyEvent::Type::SpawnEffect:
             break;
+        case AnimationNotifyEvent::Type::CameraShake:
+        {
+            char buffer[128];
+            strcpy_s(buffer, event.parameter.c_str());
+            if (ImGui::InputText("Preset", buffer, sizeof(buffer)))
+            {
+                event.parameter = buffer;
+            }
+            break;
+        }
         }
     }
 

@@ -143,7 +143,8 @@ public:
     CameraPose CreateFocusPose();
 
     void PlayCameraShake(float intensity, float duration, float frequency,
-        float positionAmount, float targetAmount);
+    float positionAmount, float targetAmount);
+    void PlayCameraShakePreset(const std::string& presetName);
 private:
     // 外部のカメラアクターとのブレンド状態を更新する
     void UpdateExternalBlend(float deltaTime);

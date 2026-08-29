@@ -774,15 +774,34 @@ void GruxEnemy::RenderTrail(ID3D11DeviceContext* immediateContext)
 
 void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
 {
-    if (event.type != AnimationNotifyEvent::Type::PlaySE || event.parameter.empty())
-        return;
-
-    const std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
-    auto audio = CoreAudio::PlayOneShot(audioPath, event.value);
-    if (audio)
+    switch (event.type)
     {
-        const float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
-        audio->SetPitch(pitch);
+    case AnimationNotifyEvent::Type::PlaySE:
+    {
+        if (event.parameter.empty())
+            return;
+
+        const std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
+        auto audio = CoreAudio::PlayOneShot(audioPath, event.value);
+        if (audio)
+        {
+            const float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
+            audio->SetPitch(pitch);
+        }
+        break;
+    }
+    case AnimationNotifyEvent::Type::CameraShake:
+    {
+        if (event.parameter.empty())
+            return;
+
+        Camera* activeCamera = GetOwnerScene()->GetActiveCamera();
+        if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
+            darkCamera->PlayCameraShakePreset(event.parameter);
+        break;
+    }
+    case AnimationNotifyEvent::Type::SpawnEffect:
+        break;
     }
 }
 void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
@@ -2549,6 +2568,13 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:
         break;
+    case AnimationNotifyEvent::Type::CameraShake:
+    {
+        Camera* activeCamera = GetOwnerScene()->GetActiveCamera();
+        if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
+            darkCamera->PlayCameraShakePreset(event.parameter);
+        break;
+    }
     }
 }
 

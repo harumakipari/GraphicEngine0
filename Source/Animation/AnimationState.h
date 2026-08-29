@@ -58,6 +58,7 @@ struct AnimationNotifyEvent
     {
         PlaySE,
         SpawnEffect,
+        CameraShake,
     };
 
     Type type;
