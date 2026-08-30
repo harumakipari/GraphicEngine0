@@ -1,0 +1,15 @@
+{
+    "animationClip": 48,
+    "animationName": "Get_Up",
+    "events": [
+        {
+            "parameter": "player_get_up_voice1",
+            "time": 0.8511905074119568,
+            "type": "PlaySE",
+            "value": 0.5
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

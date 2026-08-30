@@ -139,6 +139,21 @@ public:
     float GetJumpAttackTelegraphStartTime() const { return jumpAttackTelegraphStartTime; }
     float GetJumpAttackTelegraphEndTime() const { return jumpAttackTelegraphEndTime; }
     float GetRecoveryDurationForCurrentAttack() const;
+    void SetNextRecoveryDuration(float duration, const char* source);
+    float ConsumeNextRecoveryDuration();
+    void UpdateRecoveryDebug(float elapsed, float duration)
+    {
+        recoveryElapsedDebug = elapsed;
+        currentRecoveryDurationDebug = duration;
+    }
+    float GetChargePlayerHitRecoveryDuration() const
+    {
+        return chargePlayerHitRecoveryDuration;
+    }
+    float GetPostStunRecoveryDuration() const
+    {
+        return postStunRecoveryDuration;
+    }
     int GetDamageForCurrentAttack() const;
     bool IsTransitionWindowActive() const { return transitionWindow; }
     int GetCurrentAttackHitCount() const { return currentAttackHitCount; }
@@ -650,6 +665,15 @@ private:
     std::string stunPhaseDebug = "None";
     float stunElapsedDebug = 0.0f;
     std::string deathAnimationName = "Death_A_0";
+
+    // Recovery‚Ö‚Ì‘JˆÚŒ³‚ªˆê“x‚¾‚¯ã‘‚«‚Å‚«‚éDurationB
+    float chargePlayerHitRecoveryDuration = 5.0f;   // •ÇDashUŒ‚‚ÌPlayer‚É“–‚½‚Á‚½‚ÌrecoveryŠÔ
+    float postStunRecoveryDuration = 0.1f;  // •ÇDashUŒ‚‚Ì•Ç‚É“–‚½‚Á‚½‚ÌrecoveryŠÔ
+    std::optional<float> nextRecoveryDuration;
+    std::string nextRecoverySource = "Default";
+    float currentRecoveryDurationDebug = 0.0f;
+    float recoveryElapsedDebug = 0.0f;
+    std::string recoverySourceDebug = "Default";
 
     bool isDeathPerform = false;
     float pitchBaseValue = 0.45f;

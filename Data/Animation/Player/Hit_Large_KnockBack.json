@@ -1,6 +1,14 @@
 {
     "animationClip": 49,
     "animationName": "Hit_Large_KnockBack",
+    "events": [
+        {
+            "parameter": "player_knock_voice1",
+            "time": 0.08461539447307587,
+            "type": "PlaySE",
+            "value": 0.8500000238418579
+        }
+    ],
     "loop": false,
     "nextCombo": "",
     "playRate": 1.0,

@@ -206,6 +206,7 @@ public:
 
 private:
     float timer = 0.0f;
+    float recoveryDuration = 0.0f;
 };
 
 

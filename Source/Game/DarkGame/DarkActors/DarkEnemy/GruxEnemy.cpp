@@ -2098,6 +2098,8 @@ void GruxEnemy::DrawImGuiDetails()
             0.01f, 0.0f, 10.0f, "%.2f sec");
         ImGui::DragFloat("Charge Speed", &chargeSpeed,
             0.1f, 0.1f, 50.0f, "%.2f m/s");
+        ImGui::DragFloat("Charge PlayerHit Recovery Duration",
+            &chargePlayerHitRecoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
         for (BossAttackData& attackData : combatAttackData)
         {
             if (attackData.type != BossAttackType::ChargeAttack)
@@ -2118,6 +2120,8 @@ void GruxEnemy::DrawImGuiDetails()
             0.01f, 0.1f, 1.0f, "%.2f");
         chargeWindupEndTime = (std::max)(0.0f, chargeWindupEndTime);
         chargeSpeed = (std::max)(0.1f, chargeSpeed);
+        chargePlayerHitRecoveryDuration =
+            (std::max)(0.0f, chargePlayerHitRecoveryDuration);
         chargeSafetyTimeout = (std::max)(0.5f, chargeSafetyTimeout);
         chargeWallCastSafetyMargin = (std::max)(0.0f, chargeWallCastSafetyMargin);
         chargeWallFacingThreshold = std::clamp(chargeWallFacingThreshold, 0.0f, 1.0f);
@@ -2152,6 +2156,15 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::Text("Safety Timeout: %.2f sec (%s)", chargeSafetyTimeout,
             chargeEndReasonDebug == ChargeAttackEndReason::SafetyTimeout
                 ? "TRIGGERED" : "Not Triggered");
+
+        ImGui::SeparatorText("Recovery Override");
+        ImGui::DragFloat("Post Stun Recovery Duration",
+            &postStunRecoveryDuration, 0.01f, 0.0f, 10.0f, "%.2f sec");
+        postStunRecoveryDuration = (std::max)(0.0f, postStunRecoveryDuration);
+        ImGui::Text("Current Recovery Duration: %.3f sec",
+            currentRecoveryDurationDebug);
+        ImGui::Text("Recovery Elapsed: %.3f sec", recoveryElapsedDebug);
+        ImGui::Text("Recovery Source: %s", recoverySourceDebug.c_str());
 
         ImGui::SeparatorText("Jump Attack Telegraph");
         const auto animationController = GetBodyAnimationController();
@@ -3544,6 +3557,27 @@ float GruxEnemy::GetRecoveryDurationForCurrentAttack() const
     }
 
     return (std::max)(0.0f, recoveryDuration);
+}
+
+void GruxEnemy::SetNextRecoveryDuration(float duration, const char* source)
+{
+    nextRecoveryDuration = (std::max)(0.0f, duration);
+    nextRecoverySource = source ? source : "Custom";
+}
+
+float GruxEnemy::ConsumeNextRecoveryDuration()
+{
+    const bool hasOverride = nextRecoveryDuration.has_value();
+    const float duration = hasOverride
+        ? *nextRecoveryDuration
+        : GetRecoveryDurationForCurrentAttack();
+    recoverySourceDebug = hasOverride ? nextRecoverySource : "Default";
+    currentRecoveryDurationDebug = duration;
+    recoveryElapsedDebug = 0.0f;
+
+    nextRecoveryDuration.reset();
+    nextRecoverySource = "Default";
+    return duration;
 }
 
 int GruxEnemy::GetDamageForCurrentAttack() const

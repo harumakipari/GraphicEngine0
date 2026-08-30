@@ -667,6 +667,12 @@ void EnemyChargeAttackState::Execute(float deltaTime)
             return;
         }
 
+        if (endReason == ChargeAttackEndReason::PlayerHit)
+        {
+            enemy->SetNextRecoveryDuration(
+                enemy->GetChargePlayerHitRecoveryDuration(), "ChargePlayerHit");
+        }
+
         owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
     }
 }
@@ -726,6 +732,8 @@ void EnemyStunState::Execute(float deltaTime)
     case Phase::End:
         if (controller->IsPlayAnimation())
             return;
+        enemy->SetNextRecoveryDuration(
+            enemy->GetPostStunRecoveryDuration(), "PostStun");
         owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
         break;
     }
@@ -741,13 +749,16 @@ void EnemyStunState::Exit()
 void EnemyRecoveryState::Enter()
 {
     timer = 0.0f;
+    recoveryDuration = enemy->ConsumeNextRecoveryDuration();
+    enemy->UpdateRecoveryDebug(timer, recoveryDuration);
     owner->PlayBodyAnimation("TravelMode_Idle_0");
 }
 
 void EnemyRecoveryState::Execute(float deltaTime)
 {
     timer += deltaTime;
-    if (timer >= enemy->GetRecoveryDurationForCurrentAttack())
+    enemy->UpdateRecoveryDebug(timer, recoveryDuration);
+    if (timer >= recoveryDuration)
         owner->GetStateMachine()->ChangeState("EnemyThinkState");
 }
 

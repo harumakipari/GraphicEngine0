@@ -1,0 +1,15 @@
+{
+    "animationClip": 28,
+    "animationName": "Knock_Down_End",
+    "events": [
+        {
+            "parameter": "boss_knock_end_voice",
+            "time": 0.8851047158241272,
+            "type": "PlaySE",
+            "value": 0.33000001311302185
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}
