@@ -212,6 +212,22 @@ public:
         return &assetIt->second;
     }
 
+    // Animation単位でRoot TranslationをPoseから除去する。
+    void SetRemoveRootTranslationFromPose(
+        const std::string& animationName, bool remove);
+    bool IsRemovingRootTranslationFromPose() const
+    {
+        return removeRootTranslationFromPoseDebug;
+    }
+    const DirectX::XMFLOAT3& GetRawRootLocalTranslation() const
+    {
+        return rawRootLocalTranslationDebug;
+    }
+    const DirectX::XMFLOAT3& GetAppliedRootLocalTranslation() const
+    {
+        return appliedRootLocalTranslationDebug;
+    }
+
     // ルートモーションを無視するかどうか
     void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
 
@@ -659,6 +675,13 @@ private:
     bool enableRootMotion = true;  // ルートモーションがある場合
 
     bool ignoreRootMotion = false; // ルートモーションを無視する
+
+    std::unordered_set<size_t> removeRootTranslationFromPoseClips;
+    bool currentAnimationRemovesRootTranslation = false;
+    bool removeRootTranslationDuringTransition = false;
+    bool removeRootTranslationFromPoseDebug = false;
+    DirectX::XMFLOAT3 rawRootLocalTranslationDebug{};
+    DirectX::XMFLOAT3 appliedRootLocalTranslationDebug{};
 
     float blendElapsedTime = 0.0f;  // ブレンド時に経過した時間
 

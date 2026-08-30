@@ -134,7 +134,28 @@ public:
     const char* GetName() const override { return "Damage"; }
 };
 
-class PlayerDeathState : public PlayerStateBase
+class PlayerKnockBackState : public PlayerStateBase
+{
+public:
+    enum class Phase : uint8_t
+    {
+        KnockBack,
+        GetUp,
+    };
+
+    PlayerKnockBackState(Player* player) : PlayerStateBase(player) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "KnockBack"; }
+    const char* GetPhaseName() const
+    {
+        return phase == Phase::KnockBack ? "KnockBack" : "GetUp";
+    }
+
+private:
+    Phase phase = Phase::KnockBack;
+};class PlayerDeathState : public PlayerStateBase
 {
 public:
     PlayerDeathState(Player* player) : PlayerStateBase(player) {}

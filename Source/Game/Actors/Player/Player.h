@@ -163,6 +163,9 @@ public:
     // 無敵判定を含め、成立した被弾だけを適用する
     bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition);
 
+    // Damageとは独立した、外部攻撃からの強制移動開始口。
+    bool StartKnockBack(const DirectX::XMFLOAT3& direction);
+
     void ClearActionRequest(const char* reason);
 
     const DirectX::XMFLOAT3& GetDamageKnockbackDirection() const
@@ -224,6 +227,11 @@ public:
     bool IsBossBattle() const { return isBossBattle; }
 
 private:
+    void BeginKnockBackMovement();
+    void UpdateKnockBackMovement(float deltaTime);
+    void StopKnockBackForcedMove();
+    void EndKnockBackMovement();
+
     // 動作更新処理
     void UpdateMovement();
 
@@ -240,6 +248,13 @@ private:
 
     DirectX::XMFLOAT3 damageKnockbackDirection{ 0.0f, 0.0f, 1.0f };
     float damageKnockbackPower = 2.5f;
+
+    DirectX::XMFLOAT3 knockBackDirection{ 0.0f, 0.0f, 1.0f };
+    float knockBackInitialSpeed = 8.0f;
+    float knockBackDuration = 0.45f;
+    float knockBackElapsed = 0.0f;
+    bool knockBackActive = false;
+    bool knockBackForcedMoveActive = false;
 
     // インタラクト対象検索
     IInteractable* FindInteractable();
@@ -478,4 +493,5 @@ private:
     AnimationController::MoveDirection currentMoveDir = AnimationController::MoveDirection::Idle;
 
     friend class PlayerStateBase;
+    friend class PlayerKnockBackState;
 };

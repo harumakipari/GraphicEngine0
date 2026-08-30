@@ -343,9 +343,17 @@ void AnimationController::OnUpdate(const float deltaTime)
 
     bool releaseNormalRootMotionSuppression = false;
 
+    InterleavedGltfModel::Node& rootNode = finalNodes.at(rootNodeIndex);
+    rawRootLocalTranslationDebug = rootNode.translation;
+    const bool removeRootTranslationFromPose =
+        enableRootMotion ||
+        currentAnimationRemovesRootTranslation ||
+        removeRootTranslationDuringTransition;
+    removeRootTranslationFromPoseDebug =
+        removeRootTranslationFromPose;
+
     if (enableRootMotion)
     {
-        InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
 
         if (!ignoreRootMotion)
         {
@@ -362,9 +370,9 @@ void AnimationController::OnUpdate(const float deltaTime)
                 // グローバル空間
                 DirectX::XMFLOAT3 position =
                 {
-                    node.globalTransform._41,
-                    node.globalTransform._42,
-                    node.globalTransform._43
+                    rootNode.globalTransform._41,
+                    rootNode.globalTransform._42,
+                    rootNode.globalTransform._43
                 };
 
                 if (resetRootMotionDelta)
@@ -458,12 +466,16 @@ void AnimationController::OnUpdate(const float deltaTime)
                 owner->SetPosition(translation);
             }
         }
-        // ルートノードの変位量を初期姿勢の値に設定。
-        node.translation = zeroTranslation;
+    }
 
-        // 子ノードのグローバル変換を再帰的に更新する。
+    if (removeRootTranslationFromPose)
+    {
+        // ActorへのRoot Motion適用とは独立して、Poseを既存基準へ戻す。
+        rootNode.translation = zeroTranslation;
         target_->model->CumulateTransforms(finalNodes);
     }
+    appliedRootLocalTranslationDebug = rootNode.translation;
+
     target_->SetModelNodes(finalNodes);
 
     target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
@@ -473,6 +485,9 @@ void AnimationController::OnUpdate(const float deltaTime)
         target->SetModelNodes(finalNodes);
         target->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
     }
+
+    if (transitionState == AnimationTransitionState::Completed)
+        removeRootTranslationDuringTransition = false;
 
     // 遷移完了フレームはRoot Motionを適用せず、
     // previousPositionの同期だけで終了する。
@@ -843,6 +858,22 @@ void AnimationController::DrawEditorPreviewStates()
             owner->DrawAnimationEditorPreviewState(state);
     }
 }
+void AnimationController::SetRemoveRootTranslationFromPose(
+    const std::string& animationName, bool remove)
+{
+    const auto animationIt = animationNameToIndex_.find(animationName);
+    if (animationIt == animationNameToIndex_.end())
+    {
+        Logger::Warning(std::format(
+            "Animation not found for in-place setting: {}", animationName));
+        return;
+    }
+
+    if (remove)
+        removeRootTranslationFromPoseClips.emplace(animationIt->second);
+    else
+        removeRootTranslationFromPoseClips.erase(animationIt->second);
+}
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
 {
 #if 0
@@ -863,6 +894,16 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
     }
 
     const size_t requestedClip = animationIt->second;
+    const bool requestedRemoveRootTranslation =
+        removeRootTranslationFromPoseClips.contains(requestedClip);
+    const bool outgoingPoseRemovesRootTranslation =
+        currentAnimationRemovesRootTranslation ||
+        removeRootTranslationDuringTransition;
+    removeRootTranslationDuringTransition =
+        isBlend && (outgoingPoseRemovesRootTranslation ||
+            requestedRemoveRootTranslation);
+    currentAnimationRemovesRootTranslation =
+        requestedRemoveRootTranslation;
 
     // Apply the per-animation Root Motion setting.
     // enableRootMotion=false always takes precedence over this flag.
@@ -963,6 +1004,9 @@ bool AnimationController::SetPlaybackRange(float startTime, float endTime)
 
 void AnimationController::ResetRootMotion(int animationClip)
 {
+    currentAnimationRemovesRootTranslation =
+        removeRootTranslationFromPoseClips.contains(animationClip);
+    removeRootTranslationDuringTransition = false;
     this->isAnimationFinished = false;
     transitionState = AnimationController::AnimationTransitionState::Completed;
     this->animationClip = animationClip;

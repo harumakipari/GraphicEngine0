@@ -427,6 +427,36 @@ void PlayerDamageState::Exit()
     player->ResetAnimationStateFlag();
 }
 
+void PlayerKnockBackState::Enter()
+{
+    phase = Phase::KnockBack;
+    player->BeginKnockBackMovement();
+    player->PlayBodyAnimation("Hit_Large_KnockBack", false, true, 0.1f, true);
+}
+
+void PlayerKnockBackState::Execute(float deltaTime)
+{
+    player->UpdateKnockBackMovement(deltaTime);
+
+    if (player->GetBodyAnimationController()->IsPlayAnimation())
+        return;
+
+    if (phase == Phase::KnockBack)
+    {
+        phase = Phase::GetUp;
+        player->PlayBodyAnimation("Get_Up", false, true, 0.05f, true);
+        return;
+    }
+
+    const DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
+    const char* targetState = MathHelper::Length(move) > 0.01f ? "Running" : "Idle";
+    player->GetStateMachine()->ChangeState(targetState);
+}
+
+void PlayerKnockBackState::Exit()
+{
+    player->EndKnockBackMovement();
+}
 void PlayerDeathState::Enter()
 {
     player->ClearActionRequest("death_enter");

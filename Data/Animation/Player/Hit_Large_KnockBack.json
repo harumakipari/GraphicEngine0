@@ -1,0 +1,19 @@
+{
+    "animationClip": 49,
+    "animationName": "Hit_Large_KnockBack",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 1.2199668884277344,
+                "value": 1.0
+            },
+            {
+                "time": 1.2568790912628174,
+                "value": 1.75999915599823
+            }
+        ]
+    }
+}

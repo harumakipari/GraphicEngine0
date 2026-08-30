@@ -205,6 +205,8 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Walk_Fwd", 47);
         controller->AddAnimation("Get_Up", 48);
         controller->AddAnimation("Hit_Large_KnockBack", 49);
+        controller->SetRemoveRootTranslationFromPose(
+            "Hit_Large_KnockBack", true);
 
         // ブレンドスペースに追加
         //controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
@@ -251,6 +253,7 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDodgeState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDamageState>(this));
+        stateMachine_->RegisterState(std::make_unique<PlayerKnockBackState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDeathState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerRushState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpState>(this));
@@ -1227,6 +1230,50 @@ void Player::DrawImGuiDetails()
     ImGui::Text("Player HP: %d / %d", hp, maxHp);
     ImGui::Text("invincibleWindow: %s", invincibleWindow ? "true" : "false");
     ImGui::Text("invincible: %s", invincible ? "true" : "false");
+    ImGui::SeparatorText("KnockBack Debug");
+    const auto* knockBackState = stateMachine_
+        ? dynamic_cast<const PlayerKnockBackState*>(stateMachine_->GetCurrentState())
+        : nullptr;
+    const auto animationController = GetBodyAnimationController();
+    ImGui::Text("KnockBack Active: %s", knockBackActive ? "true" : "false");
+    ImGui::Text("KnockBack Phase: %s",
+        knockBackState ? knockBackState->GetPhaseName() : "None");
+    ImGui::Text("KnockBack Direction: %.3f, %.3f, %.3f",
+        knockBackDirection.x, knockBackDirection.y, knockBackDirection.z);
+    ImGui::Text("ForcedMove Active: %s",
+        knockBackForcedMoveActive ? "true" : "false");
+    ImGui::Text("KnockBack Elapsed: %.3f sec", knockBackElapsed);
+    ImGui::DragFloat("KnockBack Duration", &knockBackDuration,
+        0.01f, 0.01f, 3.0f, "%.2f sec");
+    ImGui::DragFloat("KnockBack Initial Speed", &knockBackInitialSpeed,
+        0.1f, 0.0f, 30.0f, "%.2f");
+    ImGui::Text("KnockBack Speed: %.3f",
+        knockBackForcedMoveActive ? knockBackInitialSpeed : 0.0f);
+    ImGui::Text("Current Player State: %s",
+        stateMachine_ ? stateMachine_->GetStateName() : "None");
+    ImGui::Text("Current Animation: %s", animationController
+        ? animationController->GetCurrentAnimationName().c_str() : "None");
+    ImGui::Text("Animation Time: %.3f sec", animationController
+        ? animationController->GetCurrentAnimationTime() : 0.0f);
+    ImGui::Text("Animation Duration: %.3f sec", animationController
+        ? animationController->GetAnimationLength(
+            animationController->GetCurrentAnimationName()) : 0.0f);
+    ImGui::Text("Animation Finished: %s",
+        animationController && animationController->IsPlayAnimation()
+        ? "false" : "true");
+    ImGui::Text("Remove Root Translation From Pose: %s",
+        animationController &&
+        animationController->IsRemovingRootTranslationFromPose()
+        ? "true" : "false");
+    if (animationController)
+    {
+        const auto& rawRoot = animationController->GetRawRootLocalTranslation();
+        const auto& appliedRoot = animationController->GetAppliedRootLocalTranslation();
+        ImGui::Text("Root Local Translation Raw: %.3f, %.3f, %.3f",
+            rawRoot.x, rawRoot.y, rawRoot.z);
+        ImGui::Text("Root Local Translation Applied: %.3f, %.3f, %.3f",
+            appliedRoot.x, appliedRoot.y, appliedRoot.z);
+    }
 
 #endif
 }
@@ -1758,7 +1805,7 @@ void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XM
 void Player::CaptureActionRequest(float deltaTime)
 {
     const std::string currentState = stateMachine_->GetStateName();
-    if (currentState == "Damage" || currentState == "Death")
+    if (currentState == "Damage" || currentState == "KnockBack" || currentState == "Death")
     {
         if (bufferCommand.type != ActionType::None)
             ClearActionRequest("damage_or_death_state");
@@ -1987,7 +2034,8 @@ void Player::UpdateMovement()
 {
     const std::string currentState = GetStateMachine()->GetStateName();
     bool isDash = currentState == "Dash";
-    const bool suppressMovementInput = currentState == "Damage" || currentState == "Death";
+    const bool suppressMovementInput =
+        currentState == "Damage" || currentState == "KnockBack" || currentState == "Death";
 
     auto intent = inputComponent->GetIntent();
     if (suppressMovementInput)
@@ -2410,6 +2458,65 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     return true;
 }
 
+bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)
+{
+    if (!stateMachine_ || hp <= 0 ||
+        std::string(stateMachine_->GetStateName()) == "Death")
+    {
+        return false;
+    }
+
+    DirectX::XMFLOAT3 horizontalDirection = direction;
+    horizontalDirection.y = 0.0f;
+    if (MathHelper::Length(horizontalDirection) <= FLT_EPSILON)
+    {
+        horizontalDirection = GetForward();
+        horizontalDirection.y = 0.0f;
+    }
+    if (MathHelper::Length(horizontalDirection) <= FLT_EPSILON)
+        return false;
+
+    knockBackDirection = MathHelper::Normalize(horizontalDirection);
+    stateMachine_->ChangeState("KnockBack");
+    return true;
+}
+
+void Player::BeginKnockBackMovement()
+{
+    ClearActionRequest("knockback_enter");
+    knockBackInitialSpeed = (std::max)(0.0f, knockBackInitialSpeed);
+    knockBackDuration = (std::max)(0.01f, knockBackDuration);
+    knockBackElapsed = 0.0f;
+    knockBackActive = true;
+    knockBackForcedMoveActive = true;
+    characterMovementComponent->SetFixedSpeed(0.0f);
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->AddForcedMove(knockBackDirection, knockBackInitialSpeed, knockBackDuration);
+    DirectX::XMFLOAT3 rotation = MathHelper::Multiply(knockBackDirection, -1.0f);
+    rotationComponent->SetDirection(rotation);
+}
+
+void Player::UpdateKnockBackMovement(float deltaTime)
+{
+    knockBackElapsed = (std::min)(
+        knockBackElapsed + (std::max)(0.0f, deltaTime), knockBackDuration);
+    if (knockBackForcedMoveActive && knockBackElapsed >= knockBackDuration)
+        StopKnockBackForcedMove();
+}
+
+void Player::StopKnockBackForcedMove()
+{
+    knockBackForcedMoveActive = false;
+    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+}
+
+void Player::EndKnockBackMovement()
+{
+    knockBackActive = false;
+    StopKnockBackForcedMove();
+    characterMovementComponent->ResetFixedSpeed();
+}
 void Player::ClearActionRequest(const char* reason)
 {
     Logger::Log(Logger::LogCategory::Gameplay,

@@ -3812,6 +3812,10 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
     {
         if (hitPlayer->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
         {
+            DirectX::XMFLOAT3 knockBackDirection =
+                MathHelper::Subtract(hitPlayer->GetPosition(), GetPosition());
+            hitPlayer->StartKnockBack(knockBackDirection);
+
             hitActors.emplace(hitPlayer);
             ++currentAttackHitCount;
             chargeSelectedHitDebug = "PlayerHit";
