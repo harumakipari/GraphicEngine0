@@ -2,6 +2,7 @@
 #include "Game/State/StateBase.h"
 
 class Player;
+class GruxEnemy;
 
 class PlayerStateBase : public State
 {
@@ -207,6 +208,7 @@ private:
 
     std::vector<std::string> rushCombo; // ラッシュコンボのアニメーションを持つ
     RushPhase phase = RushPhase::DashToTarget;
+    std::weak_ptr<GruxEnemy> rushHpDisplayTarget;
 };
 
 #if 0

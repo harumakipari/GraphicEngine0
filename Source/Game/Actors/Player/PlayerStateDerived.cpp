@@ -2,6 +2,7 @@
 #include "PlayerStateDerived.h"
 #include "Game/Actors/Base/Character.h"
 #include "Game/Actors/Enemy/Enemy.h"
+#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Scene/Scene.h"
@@ -479,6 +480,7 @@ void PlayerDeathState::Exit()
 // ラッシュ
 void PlayerRushState::Enter()
 {
+    rushHpDisplayTarget.reset();
     player->SetRushWeaponVisual(true);
     player->ForceResetPlayerSlow();
     player->HoldBossSlowForRush();
@@ -510,6 +512,12 @@ void PlayerRushState::Enter()
 
     if (auto target = player->rushTarget.lock())
     {// 移動する
+        if (auto gruxTarget = std::dynamic_pointer_cast<GruxEnemy>(target))
+        {
+            rushHpDisplayTarget = gruxTarget;
+            gruxTarget->BeginRushHpDisplay();
+        }
+
         player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, 2.5f);
         // ルートモーションを無視する
         player->PlayBodyAnimation("0_Jog_Fwd", false, true, 0.2f, true);
@@ -638,6 +646,11 @@ void PlayerRushState::Execute(float deltaTime)
 
 void PlayerRushState::Exit()
 {
+    if (auto gruxTarget = rushHpDisplayTarget.lock())
+    {
+        gruxTarget->EndRushHpDisplay();
+    }
+    rushHpDisplayTarget.reset();
     player->SetRushWeaponVisual(false);
     comboIndex = 0;
     queuedAttackCount = 0;

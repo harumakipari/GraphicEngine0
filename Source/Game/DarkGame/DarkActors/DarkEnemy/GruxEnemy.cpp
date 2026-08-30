@@ -391,7 +391,7 @@ void GruxEnemy::Update(float deltaTime)
     // HPバーの更新
     const float currentHp = static_cast<float>((std::max)(hp, 0));
     const float uiDeltaTime = Time::UnscaledDeltaTime();
-    if (delayedHp > currentHp)
+    if (!rushHpDisplayActive && delayedHp > currentHp)
     {
         if (delayedHpDelayTimer > 0.0f)
         {
@@ -402,7 +402,7 @@ void GruxEnemy::Update(float deltaTime)
             delayedHp = (std::max)(currentHp, delayedHp - delayedHpFollowSpeed * uiDeltaTime);
         }
     }
-    else if (delayedHp < currentHp)
+    else if (!rushHpDisplayActive && delayedHp < currentHp)
     {
         // HP recovery synchronizes the delayed display immediately.
         delayedHp = currentHp;
@@ -1088,7 +1088,8 @@ void GruxEnemy::DrawImGuiDetails()
 
     ImGui::SeparatorText(U8("HPのUI"));
     ImGui::DragFloat("delayedHpDelayDuration", &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-    ImGui::DragFloat("delayedHpFollowSpeed", &delayedHpFollowSpeed, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::DragFloat("delayedHpFollowSpeed", &delayedHpFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
+    ImGui::DragFloat("delayedHpRushFollowSpeed", &delayedHpRushFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
     ImGui::ColorEdit4("bossHpCurrentColor", &bossHpCurrentColor.r);
     ImGui::ColorEdit4("bossHpDelayedColor", &bossHpDelayedColor.r);
 
@@ -2457,6 +2458,21 @@ std::string GruxEnemy::GetCurrentAttackNameForDebug() const
     return std::string(attackName) + " / " + animationName;
 }
 
+void GruxEnemy::BeginRushHpDisplay()
+{
+    rushHpDisplayActive = true;
+    delayedHp = static_cast<float>((std::max)(hp, 0));
+    delayedHpDelayTimer = 0.0f;
+}
+
+void GruxEnemy::EndRushHpDisplay()
+{
+    if (!rushHpDisplayActive)
+        return;
+
+    rushHpDisplayActive = false;
+    delayedHpDelayTimer = delayedHpDelayDuration;
+}
 void GruxEnemy::TakeDamage(const int damage)
 {
     //skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
@@ -2466,7 +2482,7 @@ void GruxEnemy::TakeDamage(const int damage)
 
     const int hpBeforeDamage = hp;
     hp -= damage;
-    if (hp < hpBeforeDamage)
+    if (!rushHpDisplayActive && hp < hpBeforeDamage)
     {
         // Restart from the HP immediately before each successful hit.
         delayedHp = static_cast<float>(hpBeforeDamage);
