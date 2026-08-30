@@ -591,12 +591,7 @@ void GruxEnemy::Update(float deltaTime)
                 }
                 else
                 {
-                    justDodgedActors.insert(player.get());
-                    player->StartJustDodgeSuccess(
-                        std::dynamic_pointer_cast<Enemy>(this->shared_from_this()));
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[BossAttack][JustDodgeSuccess] attackSequenceId=" +
-                        std::to_string(currentAttackSequenceId));
+                    TryStartJustDodgeSuccess(player.get());
                 }
             }
         }
@@ -2100,6 +2095,8 @@ void GruxEnemy::DrawImGuiDetails()
             0.1f, 0.1f, 50.0f, "%.2f m/s");
         ImGui::DragFloat("Charge PlayerHit Recovery Duration",
             &chargePlayerHitRecoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+        ImGui::DragFloat("Charge JustDodge Recovery Duration",
+            &chargeJustDodgeRecoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
         for (BossAttackData& attackData : combatAttackData)
         {
             if (attackData.type != BossAttackType::ChargeAttack)
@@ -2122,6 +2119,8 @@ void GruxEnemy::DrawImGuiDetails()
         chargeSpeed = (std::max)(0.1f, chargeSpeed);
         chargePlayerHitRecoveryDuration =
             (std::max)(0.0f, chargePlayerHitRecoveryDuration);
+        chargeJustDodgeRecoveryDuration =
+            (std::max)(0.0f, chargeJustDodgeRecoveryDuration);
         chargeSafetyTimeout = (std::max)(0.5f, chargeSafetyTimeout);
         chargeWallCastSafetyMargin = (std::max)(0.0f, chargeWallCastSafetyMargin);
         chargeWallFacingThreshold = std::clamp(chargeWallFacingThreshold, 0.0f, 1.0f);
@@ -2132,6 +2131,7 @@ void GruxEnemy::DrawImGuiDetails()
         switch (chargeEndReasonDebug)
         {
         case ChargeAttackEndReason::PlayerHit: chargeEndReasonName = "PlayerHit"; break;
+        case ChargeAttackEndReason::JustDodge: chargeEndReasonName = "JustDodge"; break;
         case ChargeAttackEndReason::WallHit: chargeEndReasonName = "WallHit"; break;
         case ChargeAttackEndReason::SafetyTimeout: chargeEndReasonName = "SafetyTimeout"; break;
         default: break;
@@ -2142,6 +2142,12 @@ void GruxEnemy::DrawImGuiDetails()
             chargeDirection.x, chargeDirection.y, chargeDirection.z);
         ImGui::Text("Charge Elapsed Time: %.3f sec", chargeElapsedTime);
         ImGui::Text("Charge Speed (Active Setting): %.3f", chargeSpeed);
+        ImGui::Text("DangerWindow Active: %s",
+            chargeDangerWindowActive ? "YES" : "NO");
+        ImGui::Text("Just Dodge Success: %s",
+            chargeJustDodgeSuccessDebug ? "YES" : "NO");
+        ImGui::Text("Charge Movement Active: %s",
+            chargeMovementActive ? "YES" : "NO");
         ImGui::Text("Player Cast Hit: %s", chargePlayerCastHitDebug ? "YES" : "NO");
         ImGui::Text("Player Hit Distance: %.3f", chargePlayerHitDistanceDebug);
         ImGui::Text("Player Hit Actor: %s", chargePlayerHitActorDebug.c_str());
@@ -3763,6 +3769,8 @@ bool GruxEnemy::BeginChargeAttackMovement()
     chargeWallHitDistanceDebug = 0.0f;
     chargeEndReasonDebug = ChargeAttackEndReason::None;
     chargeMovementActive = true;
+    chargeDangerWindowActive = true;
+    chargeJustDodgeSuccessDebug = false;
 
     PlayBodyAnimation("Stampede_0", true, true, 0.1f, true);
     if (rotationComponent)
@@ -3847,6 +3855,18 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
 
     if (playerIsFirst)
     {
+        if (chargeDangerWindowActive && TryStartJustDodgeSuccess(hitPlayer))
+        {
+            chargeJustDodgeSuccessDebug = true;
+            chargeSelectedHitDebug = "JustDodge";
+            chargeEndReasonDebug = ChargeAttackEndReason::JustDodge;
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[BossCharge][End] reason=JustDodge distance=" +
+                std::to_string(playerHit.distance));
+            StopChargeAttackMovement();
+            return chargeEndReasonDebug;
+        }
+
         if (hitPlayer->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
         {
             DirectX::XMFLOAT3 knockBackDirection =
@@ -3903,6 +3923,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
 void GruxEnemy::StopChargeAttackMovement()
 {
     chargeMovementActive = false;
+    chargeDangerWindowActive = false;
     StopAIMovement();
 }
 
@@ -3953,6 +3974,20 @@ void GruxEnemy::ResetJustDodgeRecords(const char* reason)
 bool GruxEnemy::HasJustDodgedAttack(const Actor* actor) const
 {
     return actor && justDodgedActors.contains(actor);
+}
+
+bool GruxEnemy::TryStartJustDodgeSuccess(Player* player)
+{
+    if (!player || !player->GetJustDodgeWindow() || HasJustDodgedAttack(player))
+        return false;
+
+    justDodgedActors.insert(player);
+    player->StartJustDodgeSuccess(
+        std::dynamic_pointer_cast<Enemy>(shared_from_this()));
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[BossAttack][JustDodgeSuccess] attackSequenceId=" +
+        std::to_string(currentAttackSequenceId));
+    return true;
 }
 
 void GruxEnemy::RefreshActiveHitBoxesFromNotifyStates()

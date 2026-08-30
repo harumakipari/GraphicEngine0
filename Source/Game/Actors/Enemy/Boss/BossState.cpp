@@ -656,6 +656,7 @@ void EnemyChargeAttackState::Execute(float deltaTime)
     if (endReason != ChargeAttackEndReason::None)
     {
         if (endReason == ChargeAttackEndReason::PlayerHit ||
+            endReason == ChargeAttackEndReason::JustDodge ||
             endReason == ChargeAttackEndReason::WallHit)
             enemy->OnSelectedAttackCompletedSuccessfully();
 
@@ -671,6 +672,11 @@ void EnemyChargeAttackState::Execute(float deltaTime)
         {
             enemy->SetNextRecoveryDuration(
                 enemy->GetChargePlayerHitRecoveryDuration(), "ChargePlayerHit");
+        }
+        else if (endReason == ChargeAttackEndReason::JustDodge)
+        {
+            enemy->SetNextRecoveryDuration(
+                enemy->GetChargeJustDodgeRecoveryDuration(), "ChargeJustDodge");
         }
 
         owner->GetStateMachine()->ChangeState("EnemyRecoveryState");

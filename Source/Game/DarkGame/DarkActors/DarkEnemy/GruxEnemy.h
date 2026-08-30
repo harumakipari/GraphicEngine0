@@ -10,6 +10,8 @@
 #include "Graphics/Renderer/TrailRenderer.h"
 #include <array>
 
+class Player;
+
 class GruxEnemy :public Enemy
 {
 public:
@@ -150,6 +152,10 @@ public:
     {
         return chargePlayerHitRecoveryDuration;
     }
+    float GetChargeJustDodgeRecoveryDuration() const
+    {
+        return chargeJustDodgeRecoveryDuration;
+    }
     float GetPostStunRecoveryDuration() const
     {
         return postStunRecoveryDuration;
@@ -262,6 +268,7 @@ private:
 
     void ResetJustDodgeRecords(const char* reason);
     bool HasJustDodgedAttack(const Actor* actor) const;
+    bool TryStartJustDodgeSuccess(Player* player);
     void ResetDangerArea();
     void CaptureInitialDangerObbSettings();
     AnimationNotifyState* GetSelectedDangerNotifyState();
@@ -647,6 +654,8 @@ private:
     float chargeWallCastRadiusScale = 0.80f;
     float chargeElapsedTime = 0.0f;
     bool chargeMovementActive = false;
+    bool chargeDangerWindowActive = false;
+    bool chargeJustDodgeSuccessDebug = false;
     DirectX::XMFLOAT3 chargeDirection{ 0.0f, 0.0f, 1.0f };
     std::string chargePhaseDebug = "None";
     float chargeWindupAnimationTimeDebug = 0.0f;
@@ -668,6 +677,7 @@ private:
 
     // Recovery‚Ö‚Ì‘JˆÚŒ³‚ªˆê“x‚¾‚¯ã‘‚«‚Å‚«‚éDurationB
     float chargePlayerHitRecoveryDuration = 5.0f;   // •ÇDashUŒ‚‚ÌPlayer‚É“–‚½‚Á‚½‚ÌrecoveryŠÔ
+    float chargeJustDodgeRecoveryDuration = 0.5f;
     float postStunRecoveryDuration = 0.1f;  // •ÇDashUŒ‚‚Ì•Ç‚É“–‚½‚Á‚½‚ÌrecoveryŠÔ
     std::optional<float> nextRecoveryDuration;
     std::string nextRecoverySource = "Default";
