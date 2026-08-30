@@ -1,6 +1,32 @@
 {
     "animationClip": 8,
     "animationName": "Stampede_0",
+    "events": [
+        {
+            "parameter": "boss_walk4",
+            "time": 0.12179477512836456,
+            "type": "PlaySE",
+            "value": 0.11999999731779099
+        },
+        {
+            "parameter": "boss_walk4",
+            "time": 0.2948717772960663,
+            "type": "PlaySE",
+            "value": 0.12999999523162842
+        },
+        {
+            "parameter": "boss_walk4",
+            "time": 0.4602561891078949,
+            "type": "PlaySE",
+            "value": 0.10000000149011612
+        },
+        {
+            "parameter": "boss_walk4",
+            "time": 0.6192318797111511,
+            "type": "PlaySE",
+            "value": 0.10999999940395355
+        }
+    ],
     "loop": false,
     "nextCombo": "",
     "playRate": 1.0,
@@ -15,6 +41,5 @@
                 "value": 1.0
             }
         ]
-    },
-    "states": []
+    }
 }

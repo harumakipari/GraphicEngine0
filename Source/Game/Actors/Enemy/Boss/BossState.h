@@ -155,6 +155,25 @@ private:
     float dashWindupTimer = 0.0f;
 };
 
+class EnemyChargeAttackState : public EnemyStateBase
+{
+public:
+    EnemyChargeAttackState(GruxEnemy* enemy) : EnemyStateBase(enemy) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "EnemyChargeAttackState"; }
+
+private:
+    enum class Phase
+    {
+        Windup,
+        Charging,
+    };
+
+    Phase phase = Phase::Windup;
+};
+
 class EnemyRecoveryState : public EnemyStateBase
 {
 public:

@@ -1,0 +1,21 @@
+{
+    "animationClip": 26,
+    "animationName": "Pre_FootSlide_0",
+    "events": [
+        {
+            "parameter": "boss_charge_foot_scrape1",
+            "time": 1.344017744064331,
+            "type": "PlaySE",
+            "value": 0.3100000023841858
+        },
+        {
+            "parameter": "boss_charge_foot_scrape1",
+            "time": 2.039377450942993,
+            "type": "PlaySE",
+            "value": 0.550000011920929
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

@@ -120,6 +120,12 @@ public:
     bool BeginDashAttackMovement();
     bool UpdateDashAttackMovement(float deltaTime);
     void StopDashAttackMovement();
+    bool BeginChargeAttackMovement();
+    ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime);
+    void StopChargeAttackMovement();
+    float GetChargeWindupEndTime() const { return chargeWindupEndTime; }
+    void SetChargePhaseDebug(const char* phase) { chargePhaseDebug = phase ? phase : "None"; }
+    void SetChargeWindupAnimationTimeDebug(float time) { chargeWindupAnimationTimeDebug = time; }
     float GetAttackInterval() const { return attackInterval; }
     float GetDashWindupDuration() const { return dashWindupDuration; }
     float GetJumpAttackTelegraphStartTime() const { return jumpAttackTelegraphStartTime; }
@@ -351,7 +357,7 @@ private:
     bool hasLastAttack = false;
 
     // 行動のデータを定義する配列。攻撃の種類、距離条件などを設定する。
-    static constexpr int actionCount = 9;
+    static constexpr int actionCount = 10;
     std::array<BossActionData, actionCount> combatActionData =
     {
         {
@@ -360,6 +366,7 @@ private:
         { BossActionType::FastCombo, BossAttackType::FastCombo ,BossDistanceRegion::Near,BossDistanceRegion::Near,40.0f,2.0f},
         { BossActionType::JumpAttack,BossAttackType::JumpAttack ,BossDistanceRegion::Middle,BossDistanceRegion::Middle,30.0f,3.0f},
         { BossActionType::DashAttack,BossAttackType::DashAttack,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,4.0f},
+        { BossActionType::ChargeAttack,BossAttackType::ChargeAttack,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,4.0f},
         { BossActionType::Approach, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,40.0f,0.5f},
         { BossActionType::Retreat, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,40.0f,2.5f},
         { BossActionType::RepositionLeft, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,50.0f,1.0f},
@@ -428,13 +435,14 @@ private:
     std::array<float, actionCount> lastActionRandomWeights{};
 
     // 攻撃ごとのデータを定義する配列。アニメーション名、距離条件、重みなどを設定する。
-    std::array<BossAttackData, 5> combatAttackData =
+    std::array<BossAttackData, 6> combatAttackData =
     { {
         { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f, 5 },
         { BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f, 1.30f, 5 },
         { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f, 5 },
         { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f, 5 },
         { BossAttackType::DashAttack, "Stampede_0 > Stampede_Knockup_0", 6.0f, 100.0f, 1.0f, 1.20f, 7 },
+        { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 1.20f, 0 },
     } };
 
     // 既存のAttack選択用
@@ -464,7 +472,7 @@ private:
     float relativeBackMinAngle = 110.0f;
     const std::array<BossActionData, actionCount> initialCombatActionData = combatActionData;
     const std::array<BossIntentData, intentCount> initialCombatIntentData = combatIntentData;
-    const std::array<BossAttackData, 5> initialCombatAttackData = combatAttackData;
+    const std::array<BossAttackData, 6> initialCombatAttackData = combatAttackData;
     const float initialNearDistanceThreshold = nearDistanceThreshold;
     const float initialMiddleDistanceThreshold = middleDistanceThreshold;
     const float initialRelativeFrontMaxAngle = relativeFrontMaxAngle;
@@ -605,6 +613,25 @@ private:
     DirectX::XMFLOAT3 dashAttackDirection{ 0.0f, 0.0f, 1.0f };
     DirectX::XMFLOAT3 dashAttackStartPosition{};
     DirectX::XMFLOAT3 dashTargetPosition{};
+
+    // ChargeAttack
+    float chargeWindupEndTime = 2.90f;
+    float chargeSpeed = 12.0f;
+    float chargeSafetyTimeout = 8.0f;
+    float chargeWallCastSafetyMargin = 0.10f;
+    float chargeWallFacingThreshold = 0.70f;
+    float chargeWallNormalYThreshold = 0.60f;
+    float chargeWallCastRadiusScale = 0.80f;
+    float chargeElapsedTime = 0.0f;
+    bool chargeMovementActive = false;
+    DirectX::XMFLOAT3 chargeDirection{ 0.0f, 0.0f, 1.0f };
+    std::string chargePhaseDebug = "None";
+    float chargeWindupAnimationTimeDebug = 0.0f;
+    bool chargeWallCastHitDebug = false;
+    float chargeWallFacingAmountDebug = 0.0f;
+    DirectX::XMFLOAT3 chargeWallHitNormalDebug{};
+    float chargeWallHitDistanceDebug = 0.0f;
+    ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;
 
     bool isDeathPerform = false;
     float pitchBaseValue = 0.45f;

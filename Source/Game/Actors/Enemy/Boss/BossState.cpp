@@ -72,7 +72,10 @@ void EnemyThinkState::Execute(float deltaTime)
         }
         enemy->SetLastAIDecision("Attack: DebugFixedAttack");
         attackSelected = true;
-        owner->GetStateMachine()->ChangeState("EnemyAttackState");
+        owner->GetStateMachine()->ChangeState(
+            enemy->GetSelectedAttackType() == BossAttackType::ChargeAttack
+                ? "EnemyChargeAttackState"
+                : "EnemyAttackState");
         return;
     }
 
@@ -137,7 +140,10 @@ void EnemyThinkState::Execute(float deltaTime)
     }
     else
     {
-        owner->GetStateMachine()->ChangeState("EnemyAttackState");
+        owner->GetStateMachine()->ChangeState(
+            enemy->GetSelectedAttackType() == BossAttackType::ChargeAttack
+                ? "EnemyChargeAttackState"
+                : "EnemyAttackState");
     }
 }
 void EnemyThinkState::Exit()
@@ -598,6 +604,64 @@ void EnemyAttackState::Exit()
     enemy->StartSelectedActionCooldown();
     enemy->ClearJumpAttackMotionWarpOverride();
     enemy->StopDashAttackMovement();
+    enemy->DisableAttackHitBoxes();
+}
+
+void EnemyChargeAttackState::Enter()
+{
+    phase = Phase::Windup;
+    enemy->StopAIMovement();
+    enemy->StartAttack();
+    enemy->SetChargePhaseDebug("Windup");
+    enemy->PlayBodyAnimation("Pre_FootSlide_0", false, true, 0.1f, true);
+    enemy->OnSelectedActionStartedSuccessfully();
+}
+
+void EnemyChargeAttackState::Execute(float deltaTime)
+{
+    if (phase == Phase::Windup)
+    {
+        const auto controller = enemy->GetBodyAnimationController();
+        const float animationTime = controller
+            ? controller->GetCurrentAnimationTime()
+            : 0.0f;
+        enemy->SetChargeWindupAnimationTimeDebug(animationTime);
+        const BossTargetContext context = enemy->BuildTargetContext();
+        if (context.valid)
+        {
+            enemy->RotateTowardsPlayer(
+                context.directionToPlayer, enemy->GetTurnSpeed(), deltaTime, "ChargeWindup");
+        }
+
+        if (animationTime < enemy->GetChargeWindupEndTime())
+            return;
+
+        if (!enemy->BeginChargeAttackMovement())
+        {
+            owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+            return;
+        }
+
+        phase = Phase::Charging;
+        enemy->SetChargePhaseDebug("Charging");
+        return;
+    }
+
+    const ChargeAttackEndReason endReason =
+        enemy->UpdateChargeAttackMovement(deltaTime);
+    if (endReason != ChargeAttackEndReason::None)
+    {
+        if (endReason == ChargeAttackEndReason::WallHit)
+            enemy->OnSelectedAttackCompletedSuccessfully();
+        owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+    }
+}
+
+void EnemyChargeAttackState::Exit()
+{
+    enemy->ClearPendingAttackFacing();
+    enemy->StartSelectedActionCooldown();
+    enemy->StopChargeAttackMovement();
     enemy->DisableAttackHitBoxes();
 }
 

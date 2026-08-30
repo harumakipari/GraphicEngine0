@@ -162,6 +162,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Dodge_B_180_Seq_0", 23);
     controller->AddAnimation("TravelMode_Start_0", 24);
     controller->AddAnimation("Pre_Stampede_0", 25);
+    controller->AddAnimation("Pre_FootSlide_0", 26);
 
     // ‘S‚Ä‚ÌNotifyAssets‚ðƒ[ƒh‚·‚é
     controller->LoadAllNotifyAssets(GetName());
@@ -176,6 +177,7 @@ void GruxEnemy::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<EnemyTurnState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyAttackReadyState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyAttackState>(this));
+        stateMachine_->RegisterState(std::make_unique<EnemyChargeAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyRecoveryState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyPositioningState>(this));
 
@@ -1047,6 +1049,7 @@ void GruxEnemy::DrawImGuiDetails()
         "PrimaryAttack_JumpAttack",
         "Stampede_0",
         "Stampede_0 > Stampede_Knockup_0",
+        "ChargeAttack",
         "LongRangeAttack (Not Implemented)",
     };
     if (ImGui::Combo("Debug Fixed Attack", &attackIndex, attackTypes, static_cast<int>(std::size(attackTypes))))
@@ -1234,6 +1237,7 @@ void GruxEnemy::DrawImGuiDetails()
         "FastCombo",
         "JumpAttack",
         "DashAttack",
+        "ChargeAttack",
         "Approach",
         "Retreat",
         "RepositionLeft",
@@ -1284,7 +1288,7 @@ void GruxEnemy::DrawImGuiDetails()
             activeIntentGoal = "CloseCombat Attack";
             break;
         case BossIntentType::DashAttackPlan:
-            activeIntentGoal = "DashAttack";
+            activeIntentGoal = "DashAttack / ChargeAttack";
             break;
         case BossIntentType::JumpAttackPlan:
             activeIntentGoal = "JumpAttack";
@@ -1313,7 +1317,7 @@ void GruxEnemy::DrawImGuiDetails()
         {
             activeIntentNextAction = rangeStatus == BossIntentRangeStatus::TooClose
                 ? "Retreat"
-                : (rangeStatus == BossIntentRangeStatus::TooFar ? "Approach" : "DashAttack");
+                : (rangeStatus == BossIntentRangeStatus::TooFar ? "Approach" : "DashAttack / ChargeAttack");
         }
         else if (*activeIntent == BossIntentType::JumpAttackPlan)
         {
@@ -1859,6 +1863,7 @@ void GruxEnemy::DrawImGuiDetails()
     else if (std::strcmp(fullStateName, "EnemyPositioningState") == 0) stateDisplayName = "Positioning";
     else if (std::strcmp(fullStateName, "EnemyAttackReadyState") == 0) stateDisplayName = "Attack Ready";
     else if (std::strcmp(fullStateName, "EnemyAttackState") == 0) stateDisplayName = "Attack";
+    else if (std::strcmp(fullStateName, "EnemyChargeAttackState") == 0) stateDisplayName = "Charge Attack";
     else if (std::strcmp(fullStateName, "EnemyRecoveryState") == 0) stateDisplayName = "Recovery";
     else if (std::strcmp(fullStateName, "EnemyDeathState") == 0) stateDisplayName = "Death";
 
@@ -2081,6 +2086,52 @@ void GruxEnemy::DrawImGuiDetails()
             }
             ImGui::PopID();
         }
+        ImGui::SeparatorText("Charge Attack");
+        ImGui::DragFloat("Charge Windup End Time", &chargeWindupEndTime,
+            0.01f, 0.0f, 10.0f, "%.2f sec");
+        ImGui::DragFloat("Charge Speed", &chargeSpeed,
+            0.1f, 0.1f, 50.0f, "%.2f m/s");
+        ImGui::DragFloat("Charge Safety Timeout", &chargeSafetyTimeout,
+            0.1f, 0.5f, 30.0f, "%.2f sec");
+        ImGui::DragFloat("Wall Cast Safety Margin", &chargeWallCastSafetyMargin,
+            0.01f, 0.0f, 2.0f, "%.2f m");
+        ImGui::DragFloat("Wall Facing Threshold", &chargeWallFacingThreshold,
+            0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::DragFloat("Wall Normal Y Threshold", &chargeWallNormalYThreshold,
+            0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::DragFloat("Wall Cast Radius Scale", &chargeWallCastRadiusScale,
+            0.01f, 0.1f, 1.0f, "%.2f");
+        chargeWindupEndTime = (std::max)(0.0f, chargeWindupEndTime);
+        chargeSpeed = (std::max)(0.1f, chargeSpeed);
+        chargeSafetyTimeout = (std::max)(0.5f, chargeSafetyTimeout);
+        chargeWallCastSafetyMargin = (std::max)(0.0f, chargeWallCastSafetyMargin);
+        chargeWallFacingThreshold = std::clamp(chargeWallFacingThreshold, 0.0f, 1.0f);
+        chargeWallNormalYThreshold = std::clamp(chargeWallNormalYThreshold, 0.0f, 1.0f);
+        chargeWallCastRadiusScale = std::clamp(chargeWallCastRadiusScale, 0.1f, 1.0f);
+
+        const char* chargeEndReasonName = "None";
+        switch (chargeEndReasonDebug)
+        {
+        case ChargeAttackEndReason::WallHit: chargeEndReasonName = "WallHit"; break;
+        case ChargeAttackEndReason::SafetyTimeout: chargeEndReasonName = "SafetyTimeout"; break;
+        default: break;
+        }
+        ImGui::Text("Charge Phase: %s", chargePhaseDebug.c_str());
+        ImGui::Text("Windup Animation Time: %.3f sec", chargeWindupAnimationTimeDebug);
+        ImGui::Text("Charge Direction: %.3f, %.3f, %.3f",
+            chargeDirection.x, chargeDirection.y, chargeDirection.z);
+        ImGui::Text("Charge Elapsed Time: %.3f sec", chargeElapsedTime);
+        ImGui::Text("Charge Speed (Active Setting): %.3f", chargeSpeed);
+        ImGui::Text("Wall Cast Hit: %s", chargeWallCastHitDebug ? "YES" : "NO");
+        ImGui::Text("Wall Facing Amount: %.3f", chargeWallFacingAmountDebug);
+        ImGui::Text("Wall Hit Normal: %.3f, %.3f, %.3f",
+            chargeWallHitNormalDebug.x, chargeWallHitNormalDebug.y, chargeWallHitNormalDebug.z);
+        ImGui::Text("Wall Hit Distance: %.3f", chargeWallHitDistanceDebug);
+        ImGui::Text("Charge End Reason: %s", chargeEndReasonName);
+        ImGui::Text("Safety Timeout: %.2f sec (%s)", chargeSafetyTimeout,
+            chargeEndReasonDebug == ChargeAttackEndReason::SafetyTimeout
+                ? "TRIGGERED" : "Not Triggered");
+
         ImGui::SeparatorText("Jump Attack Telegraph");
         const auto animationController = GetBodyAnimationController();
         const float telegraphClipDuration = animationController
@@ -2300,6 +2351,7 @@ std::string GruxEnemy::GetCurrentAttackNameForDebug() const
     case BossAttackType::JumpAttack: attackName = "JumpAttack"; break;
     case BossAttackType::Dash: attackName = "Dash"; break;
     case BossAttackType::DashAttack: attackName = "DashAttack"; break;
+    case BossAttackType::ChargeAttack: attackName = "ChargeAttack"; break;
     case BossAttackType::LongRangeAttack: attackName = "LongRangeAttack"; break;
     }
     return std::string(attackName) + " / " + animationName;
@@ -3195,7 +3247,8 @@ void GruxEnemy::MarkIntentAttackSelected()
             selectedActionType == BossActionType::FastCombo);
     const bool isDashAttackPlanAttack =
         *activeIntent == BossIntentType::DashAttackPlan &&
-        selectedActionType == BossActionType::DashAttack;
+        (selectedActionType == BossActionType::DashAttack ||
+            selectedActionType == BossActionType::ChargeAttack);
     const bool isJumpAttackPlanAttack =
         *activeIntent == BossIntentType::JumpAttackPlan &&
         selectedActionType == BossActionType::JumpAttack;
@@ -3219,7 +3272,8 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
             selectedActionType == BossActionType::FastCombo);
     const bool dashAttackGoalReached =
         *activeIntent == BossIntentType::DashAttackPlan &&
-        selectedActionType == BossActionType::DashAttack;
+        (selectedActionType == BossActionType::DashAttack ||
+            selectedActionType == BossActionType::ChargeAttack);
     const bool jumpAttackGoalReached =
         *activeIntent == BossIntentType::JumpAttackPlan &&
         selectedActionType == BossActionType::JumpAttack;
@@ -3426,6 +3480,7 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
         animationName = dashAnimations[stage];
         break;
     }
+    case BossAttackType::ChargeAttack: return false;
     case BossAttackType::LongRangeAttack: return false;
     }
 
@@ -3614,6 +3669,131 @@ void GruxEnemy::StopDashAttackMovement()
     dashAttackElapsedTime = 0.0f;
     StopAIMovement();
 }
+bool GruxEnemy::BeginChargeAttackMovement()
+{
+    StopChargeAttackMovement();
+
+    const BossTargetContext context = BuildTargetContext();
+    if (!context.valid)
+    {
+        chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
+        Logger::Warning(Logger::LogCategory::Gameplay,
+            "[BossCharge][StartFailed] reason=InvalidTarget");
+        return false;
+    }
+
+    chargeDirection = context.directionToPlayer;
+    chargeDirection.y = 0.0f;
+    const float directionLength = std::sqrt(
+        chargeDirection.x * chargeDirection.x +
+        chargeDirection.z * chargeDirection.z);
+    if (directionLength <= FLT_EPSILON)
+    {
+        chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
+        Logger::Warning(Logger::LogCategory::Gameplay,
+            "[BossCharge][StartFailed] reason=ZeroDirection");
+        return false;
+    }
+
+    chargeDirection.x /= directionLength;
+    chargeDirection.z /= directionLength;
+    chargeElapsedTime = 0.0f;
+    chargeWallCastHitDebug = false;
+    chargeWallFacingAmountDebug = 0.0f;
+    chargeWallHitNormalDebug = {};
+    chargeWallHitDistanceDebug = 0.0f;
+    chargeEndReasonDebug = ChargeAttackEndReason::None;
+    chargeMovementActive = true;
+
+    PlayBodyAnimation("Stampede_0", true, true, 0.1f, true);
+    if (rotationComponent)
+    {
+        RecordRotationDebugSource("ChargeDirectionLock", chargeDirection, 0.0f);
+        rotationComponent->SetDirectionImmediate(chargeDirection);
+    }
+    if (characterMovementComponent)
+    {
+        characterMovementComponent->SetFixedSpeed(chargeSpeed);
+        characterMovementComponent->SetInputMagnitude(1.0f);
+        characterMovementComponent->SetMoveDirection(chargeDirection);
+    }
+    return true;
+}
+
+ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
+{
+    if (!chargeMovementActive)
+        return chargeEndReasonDebug;
+
+    chargeElapsedTime += (std::max)(0.0f, deltaTime);
+    chargeWallCastHitDebug = false;
+    chargeWallFacingAmountDebug = 0.0f;
+    chargeWallHitNormalDebug = {};
+    chargeWallHitDistanceDebug = 0.0f;
+
+    const float frameMoveDistance = chargeSpeed * (std::max)(0.0f, deltaTime);
+    const float castDistance = frameMoveDistance + chargeWallCastSafetyMargin;
+    const float wallCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
+    DirectX::XMFLOAT3 castOrigin = GetPosition();
+    castOrigin.y += (std::max)(wallCastRadius + 0.05f, height * 0.5f);
+
+    HitResultWithActor wallHit{};
+    const uint32_t wallMask = CollisionHelper::MakeMask({
+        CollisionLayer::WorldStatic,
+        CollisionLayer::WorldProps,
+        CollisionLayer::WorldPropsNoRaycast,
+    });
+    if (Physics::Instance().SphereCast(
+        castOrigin, chargeDirection, castDistance, wallCastRadius, wallHit, wallMask))
+    {
+        chargeWallCastHitDebug = true;
+        chargeWallHitNormalDebug = wallHit.normal;
+        chargeWallHitDistanceDebug = wallHit.distance;
+        chargeWallFacingAmountDebug = -(
+            chargeDirection.x * wallHit.normal.x +
+            chargeDirection.z * wallHit.normal.z);
+
+        const bool facesCharge =
+            chargeWallFacingAmountDebug >= chargeWallFacingThreshold;
+        const bool isNotFloor =
+            std::abs(wallHit.normal.y) <= chargeWallNormalYThreshold;
+        if (facesCharge && isNotFloor)
+        {
+            chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[BossCharge][End] reason=WallHit distance=" +
+                std::to_string(wallHit.distance));
+            StopChargeAttackMovement();
+            return chargeEndReasonDebug;
+        }
+    }
+
+    if (chargeElapsedTime >= chargeSafetyTimeout)
+    {
+        chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
+        const std::string timeoutMessage =
+            "[BossCharge][End] reason=SafetyTimeout elapsed=" +
+            std::to_string(chargeElapsedTime);
+        Logger::Warning(Logger::LogCategory::Gameplay, timeoutMessage.c_str());
+        StopChargeAttackMovement();
+        return chargeEndReasonDebug;
+    }
+
+    if (characterMovementComponent)
+    {
+        characterMovementComponent->SetFixedSpeed(chargeSpeed);
+        characterMovementComponent->SetInputMagnitude(1.0f);
+        characterMovementComponent->SetMoveDirection(chargeDirection);
+    }
+    return ChargeAttackEndReason::None;
+}
+
+void GruxEnemy::StopChargeAttackMovement()
+{
+    chargeMovementActive = false;
+    StopAIMovement();
+}
+
 void GruxEnemy::StartAttack()
 {
     ClearJumpAttackMotionWarpOverride();
@@ -3906,6 +4086,7 @@ namespace
         case BossAttackType::FastCombo:
             return 45.0f;
         case BossAttackType::DashAttack:
+        case BossAttackType::ChargeAttack:
         case BossAttackType::JumpAttack:
             return 90.0f;
         default:
@@ -4034,7 +4215,10 @@ bool GruxEnemy::ResumeSelectedAttackAfterTurn()
     }
     else
     {
-        stateMachine_->ChangeState("EnemyAttackState");
+        stateMachine_->ChangeState(
+            selectedAttackType == BossAttackType::ChargeAttack
+                ? "EnemyChargeAttackState"
+                : "EnemyAttackState");
     }
     return true;
 }
@@ -4225,7 +4409,8 @@ bool GruxEnemy::IsAttackPendingGoalAction(
         return false;
 
     return (*activeIntent == BossIntentType::DashAttackPlan &&
-        actionType == BossActionType::DashAttack) ||
+        (actionType == BossActionType::DashAttack ||
+            actionType == BossActionType::ChargeAttack)) ||
         (*activeIntent == BossIntentType::JumpAttackPlan &&
             actionType == BossActionType::JumpAttack);
 }
@@ -4269,7 +4454,8 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
             return actionType == BossActionType::Retreat;
         if (rangeStatus == BossIntentRangeStatus::TooFar)
             return actionType == BossActionType::Approach;
-        return actionType == BossActionType::DashAttack;
+        return actionType == BossActionType::DashAttack ||
+            actionType == BossActionType::ChargeAttack;
 
     case BossIntentType::JumpAttackPlan:
         if (rangeStatus == BossIntentRangeStatus::TooClose)

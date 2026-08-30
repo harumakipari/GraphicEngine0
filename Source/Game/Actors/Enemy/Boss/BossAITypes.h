@@ -91,6 +91,7 @@ enum class BossActionType :uint8_t
     FastCombo,
     JumpAttack,
     DashAttack,
+    ChargeAttack,
     Approach,
     Retreat,
     RepositionLeft,
@@ -105,7 +106,15 @@ enum class BossAttackType : uint8_t
     JumpAttack,
     Dash,
     DashAttack,
+    ChargeAttack,
     LongRangeAttack,
+};
+
+enum class ChargeAttackEndReason : uint8_t
+{
+    None,
+    WallHit,
+    SafetyTimeout,
 };
 
 
