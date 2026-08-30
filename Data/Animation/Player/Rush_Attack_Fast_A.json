@@ -12,9 +12,22 @@
     "loop": false,
     "nextCombo": "Primary_Attack_Fast_B",
     "playRate": 1.5,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.47958606481552124,
+                "value": 1.0000003576278687
+            },
+            {
+                "time": 0.48100000619888306,
+                "value": 0.05000000074505806
+            }
+        ]
+    },
     "states": [
         {
             "endTime": 0.512082576751709,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -22,6 +35,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -37,6 +51,7 @@
         },
         {
             "endTime": 0.50843745470047,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -44,6 +59,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -59,6 +75,7 @@
         },
         {
             "endTime": 0.5830000042915344,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -66,6 +83,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -81,6 +99,7 @@
         },
         {
             "endTime": 0.23000000417232513,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -88,6 +107,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -103,6 +123,7 @@
         },
         {
             "endTime": 0.5811458230018616,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -110,6 +131,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [

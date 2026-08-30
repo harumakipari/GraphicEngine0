@@ -25,12 +25,21 @@
             {
                 "time": 0.15140624344348907,
                 "value": 1.0266666412353516
+            },
+            {
+                "time": 0.5199999809265137,
+                "value": 0.9866665005683899
+            },
+            {
+                "time": 0.5220000147819519,
+                "value": 0.10999999940395355
             }
         ]
     },
     "states": [
         {
             "endTime": 0.7916666865348816,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -38,6 +47,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -53,6 +63,7 @@
         },
         {
             "endTime": 0.3379998803138733,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -60,6 +71,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -75,6 +87,7 @@
         },
         {
             "endTime": 0.752291738986969,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -82,6 +95,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -97,6 +111,7 @@
         },
         {
             "endTime": 0.7916666865348816,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -104,6 +119,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [

@@ -1038,7 +1038,7 @@ void Player::DrawImGuiDetails()
     if (ImGui::TreeNode("Just Dodge Slow Motion"))
     {
         ImGui::SliderFloat("Time Scale", &justDodgeTimeScale, 0.10f, 1.00f);
-        ImGui::SliderFloat("Hold Duration", &justDodgeSlowHoldDuration, 0.00f, 1.00f, "%.2f sec");
+        ImGui::SliderFloat("Hold Duration", &justDodgeSlowHoldDuration, 0.00f, 2.0f, "%.2f sec");
         ImGui::SliderFloat("Return Duration", &justDodgeSlowReturnDuration, 0.00f, 0.50f, "%.2f sec");
         ImGui::SliderFloat("Rush Boss Slow Scale", &rushBossSlowScale, 0.10f, 1.00f);
         ImGui::SliderFloat("Rush Boss Return Duration", &rushBossReturnDuration, 0.00f, 0.50f, "%.2f sec");
@@ -1062,6 +1062,117 @@ void Player::DrawImGuiDetails()
         ImGui::Text("rushRequested: %s", rushRequestedDebug ? "true" : "false");
         ImGui::Text("rushTargetValid: %s", rushTarget.expired() ? "false" : "true");
         ImGui::Text("UI Alpha: %.3f", rushPromptAlpha);
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Initial Rush Debug"))
+    {
+        const auto controller = GetBodyAnimationController();
+        const std::string currentState = stateMachine_ ? stateMachine_->GetStateName() : "None";
+        const bool attackRequestActive = bufferCommand.type == ActionType::Attack;
+        const bool attackTriggeredThisFrame =
+            InputSystem::GetInputState("Attack", InputStateMask::Trigger);
+        const bool initialGuideVisible = CanShowInitialRushGuide();
+        const bool comboGuideVisible = CanShowRushComboGuide();
+        const bool uiVisible = initialGuideVisible || comboGuideVisible;
+        const bool acceptsInitialInput = CanAcceptInitialRushInput();
+
+        const char* playerSlowPhaseName = "Inactive";
+        switch (playerSlowPhase)
+        {
+        case JustDodgeSlowPhase::Hold:     playerSlowPhaseName = "Hold"; break;
+        case JustDodgeSlowPhase::Return:   playerSlowPhaseName = "Return"; break;
+        case JustDodgeSlowPhase::RushHold: playerSlowPhaseName = "RushHold"; break;
+        case JustDodgeSlowPhase::Inactive: break;
+        }
+
+        ImGui::Text("Just Dodge Success: %s", justDodgeSuccess ? "true" : "false");
+        ImGui::Text("Rush Input Accepting: %s", rushInputAccepting ? "true" : "false");
+        ImGui::TextColored(
+            acceptsInitialInput ? ImVec4(0.25f, 1.0f, 0.35f, 1.0f) : ImVec4(1.0f, 0.35f, 0.25f, 1.0f),
+            "Can Accept Initial Rush Input: %s",
+            acceptsInitialInput ? "ACCEPTING" : "NOT ACCEPTING");
+        ImGui::Text("Rush Requested: %s", rushRequestedDebug ? "true" : "false");
+        ImGui::Text("Current Player State: %s", currentState.c_str());
+        ImGui::Separator();
+        ImGui::Text("Player Slow Phase: %s", playerSlowPhaseName);
+        ImGui::Text("Player Time Scale: %.3f", GetTimeScale());
+        ImGui::Text("Slow Hold Timer: %.3f sec", playerSlowHoldTimer);
+        ImGui::Text("Slow Return Elapsed: %.3f sec", playerSlowReturnElapsed);
+        ImGui::Separator();
+        ImGui::Text("Dodge Animation Time: %.3f sec",
+            controller ? controller->GetCurrentAnimationTime() : 0.0f);
+        ImGui::Text("Dodge Animation Duration: %.3f sec",
+            controller ? controller->GetAnimationLength(controller->GetCurrentAnimationName()) : 0.0f);
+        ImGui::Text("Transition Window Active: %s", transitionWindow ? "true" : "false");
+        ImGui::Separator();
+        ImGui::TextColored(
+            attackRequestActive ? ImVec4(1.0f, 0.85f, 0.2f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
+            "Attack ActionRequest Active: %s", attackRequestActive ? "BUFFERED" : "false");
+        ImGui::Text("Attack ActionRequest Remaining Time: %.3f sec",
+            attackRequestActive ? bufferCommand.remainTime : 0.0f);
+        ImGui::Text("Attack Triggered This Frame: %s", attackTriggeredThisFrame ? "true" : "false");
+        ImGui::Separator();
+        ImGui::Text("Initial Rush Guide Visible: %s", initialGuideVisible ? "true" : "false");
+        ImGui::Text("Rush Combo Guide Visible: %s", comboGuideVisible ? "true" : "false");
+        ImGui::Text("UI Visible: %s", uiVisible ? "true" : "false");
+        ImGui::Text("Accepts Input: %s", acceptsInitialInput ? "true" : "false");
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Rush Combo Debug"))
+    {
+        const auto controller = GetBodyAnimationController();
+        const auto* rushState = stateMachine_
+            ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState())
+            : nullptr;
+        const bool attackRequestActive = bufferCommand.type == ActionType::Attack;
+        const bool animationPlaying = controller && controller->IsPlayAnimation();
+        const bool transitionObserved =
+            rushState && rushState->WasTransitionWindowObservedForDebug();
+        const int queuedAttackCount =
+            rushState ? rushState->GetQueuedAttackCountForDebug() : 0;
+        const bool finalRushAttack = rushState &&
+            rushState->GetComboIndex() + 1 >= GetMaxRushAttackCount();
+        const bool lateInputGraceActive = transitionObserved && animationPlaying &&
+            queuedAttackCount == 0 && !finalRushAttack;
+        const bool acceptsRushInput = rushState && !finalRushAttack &&
+            (inputWindow || lateInputGraceActive);
+        const bool initialGuideVisible = CanShowInitialRushGuide();
+        const bool comboGuideVisible = CanShowRushComboGuide();
+        const bool uiVisible = initialGuideVisible || comboGuideVisible;
+
+        ImGui::Text("Combo Index: %d", rushState ? rushState->GetComboIndex() : -1);
+        ImGui::Text("Current Rush Animation: %s", rushState
+            ? rushState->GetCurrentAttackAnimationForDebug().c_str() : "None");
+        ImGui::Text("Input Window: %s", inputWindow ? "true" : "false");
+        ImGui::Text("Transition Window: %s", transitionWindow ? "true" : "false");
+        ImGui::Text("Rush Transition Window Observed: %s", transitionObserved ? "true" : "false");
+        ImGui::Text("Late Input Grace Active: %s", lateInputGraceActive ? "true" : "false");
+        ImGui::TextColored(
+            acceptsRushInput ? ImVec4(0.25f, 1.0f, 0.35f, 1.0f) : ImVec4(1.0f, 0.35f, 0.25f, 1.0f),
+            "Accepts Rush Input: %s", acceptsRushInput ? "ACCEPTING" : "NOT ACCEPTING");
+        ImGui::TextColored(
+            queuedAttackCount > 0 ? ImVec4(0.25f, 0.8f, 1.0f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
+            "Queued Attack Count: %d%s", queuedAttackCount,
+            queuedAttackCount > 0 ? " (QUEUED)" : "");
+        ImGui::Separator();
+        ImGui::TextColored(
+            attackRequestActive ? ImVec4(1.0f, 0.85f, 0.2f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
+            "Attack ActionRequest Active: %s", attackRequestActive ? "BUFFERED" : "false");
+        ImGui::Text("Attack ActionRequest Remaining Time: %.3f sec",
+            attackRequestActive ? bufferCommand.remainTime : 0.0f);
+        ImGui::Text("Attack Triggered This Frame: %s",
+            InputSystem::GetInputState("Attack", InputStateMask::Trigger) ? "true" : "false");
+        ImGui::Separator();
+        ImGui::Text("Animation Time: %.3f sec",
+            controller ? controller->GetCurrentAnimationTime() : 0.0f);
+        ImGui::Text("Animation Duration: %.3f sec", controller
+            ? controller->GetAnimationLength(controller->GetCurrentAnimationName()) : 0.0f);
+        ImGui::Text("Animation Finished: %s", animationPlaying ? "false" : "true");
+        ImGui::Separator();
+        ImGui::Text("Initial Rush Guide Visible: %s", initialGuideVisible ? "true" : "false");
+        ImGui::Text("Rush Combo Guide Visible: %s", comboGuideVisible ? "true" : "false");
+        ImGui::Text("UI Visible: %s", uiVisible ? "true" : "false");
+        ImGui::Text("Accepts Input: %s", acceptsRushInput ? "true" : "false");
         ImGui::TreePop();
     }
     ImGui::DragFloat("transparencyMinAlpha", &transparencyMinAlpha, 0.05f);

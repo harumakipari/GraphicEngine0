@@ -53,6 +53,7 @@
     "states": [
         {
             "endTime": 0.6000000238418579,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -60,6 +61,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -74,7 +76,8 @@
             "value": 1.0
         },
         {
-            "endTime": 0.5299999713897705,
+            "endTime": 0.4319998621940613,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -82,6 +85,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -91,12 +95,13 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.1599999964237213,
-            "type": "JustDodgeWindow",
+            "startTime": 0.08941660076379776,
+            "type": "InputWindow",
             "value": 1.0
         },
         {
-            "endTime": 0.4706665873527527,
+            "endTime": 0.2662029266357422,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -104,6 +109,31 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.1582295447587967,
+            "type": "JustDodgeWindow",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.4706665873527527,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -119,6 +149,7 @@
         },
         {
             "endTime": 0.5419167876243591,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -126,6 +157,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [
@@ -140,29 +172,8 @@
             "value": 1.0
         },
         {
-            "endTime": 0.4319998621940613,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "",
-            "startTime": 0.08941660076379776,
-            "type": "InputWindow",
-            "value": 1.0
-        },
-        {
             "endTime": 1.933333158493042,
+            "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -170,6 +181,7 @@
             ],
             "justDodgeAreaSize": [
                 0.0,
+                2.0,
                 0.0
             ],
             "moveDirection": [

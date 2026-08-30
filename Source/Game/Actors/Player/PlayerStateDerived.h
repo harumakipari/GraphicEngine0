@@ -168,6 +168,9 @@ public:
     const char* GetName() const override { return "Rush"; }
     // 0-based Rush step. comboIndex remains the single source of truth.
     int GetComboIndex() const { return comboIndex; }
+    const std::string& GetCurrentAttackAnimationForDebug() const { return currentAttackAnimation; }
+    int GetQueuedAttackCountForDebug() const { return queuedAttackCount; }
+    bool WasTransitionWindowObservedForDebug() const { return rushTransitionWindowObserved; }
 private:
     bool AdvanceRushCombo();
     bool IsFinalRushAttack() const;

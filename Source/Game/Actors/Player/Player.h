@@ -457,11 +457,13 @@ private:
     float bossSlowHoldTimer = 0.0f;
     float playerSlowReturnElapsed = 0.0f;
     float bossSlowReturnElapsed = 0.0f;
+
+    
     float playerSlowReturnStartScale = 1.0f;
     float bossSlowReturnStartScale = 1.0f;
     float activeBossSlowReturnDuration = 0.10f;
-    float justDodgeTimeScale = 0.25f;
-    float justDodgeSlowHoldDuration = 0.40f;
+    float justDodgeTimeScale = 0.2f;    // ジャスト回避のタイムスケール
+    float justDodgeSlowHoldDuration = 1.0f;     // ジャスト回避の時間
     float justDodgeSlowReturnDuration = 0.10f;
     float rushBossSlowScale = 0.2f;
     float rushBossReturnDuration = 0.10f;
