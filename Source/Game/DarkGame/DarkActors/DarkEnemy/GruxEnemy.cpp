@@ -5,6 +5,7 @@
 #include "Components/Render/PointLightComponent.h"
 #include "Engine/Audio/Audio.h"
 #include "Engine/Scene/SceneBase.h"
+#include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
@@ -97,6 +98,7 @@ void GruxEnemy::Initialize(const Transform& transform)
 {
     maxHp = 75;
     hp = maxHp;
+    delayedHp = static_cast<float>(hp);
 
     std::string parentName = "GruxEnemy";
     Character::Initialize(transform);
@@ -331,10 +333,21 @@ void GruxEnemy::Initialize(const Transform& transform)
     leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
     rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
 
-    //  ボスHP UI：背景 → 遅延塗りつぶし → 現在の塗りつぶし → フレーム。
+    //  ボスHP UI：名前 -> 背景 → 遅延塗りつぶし → 現在の塗りつぶし → フレーム。
+    const DirectX::XMFLOAT2 hpNamePosition = { 980.0f, 85.0f };
     const DirectX::XMFLOAT2 hpPosition = { 650.0f, 115.0f };
     const DirectX::XMFLOAT2 hpPivot = { 0.0f, 0.5f };
     const DirectX::XMFLOAT2 hpScale = { 0.35f, 0.35f };
+
+    auto hpNameUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_name.png", "BossHpName");
+    hpNameUiComponent->SetWorldPosition(hpNamePosition);
+    hpNameUiComponent->SetSize({ 102.0f, 35.0f });
+    hpNameUiComponent->SetPivot({0.5f,0.5f});
+    hpNameUiComponent->SetScale({ 0.95f,0.95f });
+    hpNameUiComponent->SetColor(CoreColor::White);
+    hpNameUiComponent->zOrder = 10;
+    uiManager->Add(hpNameUiComponent);
+
 
     auto hpBackgroundUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_background.png", "BossHpBackground");
     hpBackgroundUiComponent->SetWorldPosition(hpPosition);
@@ -350,7 +363,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     hpDelayedFillUiComponent->SetSize({ 1897.0f, 36.0f });
     hpDelayedFillUiComponent->SetPivot(hpPivot);
     hpDelayedFillUiComponent->SetScale(hpScale);
-    hpDelayedFillUiComponent->SetColor(CoreColor(1.0f, 0.75f, 0.2f, 1.0f));
+    hpDelayedFillUiComponent->SetColor(bossHpDelayedColor);
     hpDelayedFillUiComponent->zOrder = 11;
     uiManager->Add(hpDelayedFillUiComponent);
 
@@ -359,7 +372,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     hpCurrentFillUiComponent->SetSize({ 1897.0f, 36.0f });
     hpCurrentFillUiComponent->SetPivot(hpPivot);
     hpCurrentFillUiComponent->SetScale(hpScale);
-    hpCurrentFillUiComponent->SetColor(CoreColor::White);
+    hpCurrentFillUiComponent->SetColor(bossHpCurrentColor);
     hpCurrentFillUiComponent->zOrder = 12;
     uiManager->Add(hpCurrentFillUiComponent);
 
@@ -376,12 +389,31 @@ void GruxEnemy::Initialize(const Transform& transform)
 void GruxEnemy::Update(float deltaTime)
 {
     // HPバーの更新
+    const float currentHp = static_cast<float>((std::max)(hp, 0));
+    const float uiDeltaTime = Time::UnscaledDeltaTime();
+    if (delayedHp > currentHp)
+    {
+        if (delayedHpDelayTimer > 0.0f)
+        {
+            delayedHpDelayTimer = (std::max)(0.0f, delayedHpDelayTimer - uiDeltaTime);
+        }
+        else
+        {
+            delayedHp = (std::max)(currentHp, delayedHp - delayedHpFollowSpeed * uiDeltaTime);
+        }
+    }
+    else if (delayedHp < currentHp)
+    {
+        // HP recovery synchronizes the delayed display immediately.
+        delayedHp = currentHp;
+        delayedHpDelayTimer = 0.0f;
+    }
+
     if (hpCurrentFillUiComponent && hpDelayedFillUiComponent)
     {
-        const float currentHp = static_cast<float>(hp);
         const float maximumHp = static_cast<float>(maxHp);
         hpCurrentFillUiComponent->SetValue(currentHp, maximumHp);
-        hpDelayedFillUiComponent->SetValue(currentHp, maximumHp);
+        hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
     }
 
     if (!IsAnimationEditorPreviewActive())
@@ -1053,6 +1085,13 @@ void GruxEnemy::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
     Character::DrawImGuiDetails();
+
+    ImGui::SeparatorText(U8("HPのUI"));
+    ImGui::DragFloat("delayedHpDelayDuration", &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::DragFloat("delayedHpFollowSpeed", &delayedHpFollowSpeed, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::ColorEdit4("bossHpCurrentColor", &bossHpCurrentColor.r);
+    ImGui::ColorEdit4("bossHpDelayedColor", &bossHpDelayedColor.r);
+
     ImGui::SeparatorText("Boss AI");
     int aiModeIndex = static_cast<int>(bossAIMode);
     const char* aiModes[] = { "CombatAI", "DebugFixedAttack" };
@@ -2182,7 +2221,7 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::Text("Charge End Reason: %s", chargeEndReasonName);
         ImGui::Text("Safety Timeout: %.2f sec (%s)", chargeSafetyTimeout,
             chargeEndReasonDebug == ChargeAttackEndReason::SafetyTimeout
-                ? "TRIGGERED" : "Not Triggered");
+            ? "TRIGGERED" : "Not Triggered");
 
         ImGui::SeparatorText("Recovery Override");
         ImGui::DragFloat("Post Stun Recovery Duration",
@@ -2424,7 +2463,15 @@ void GruxEnemy::TakeDamage(const int damage)
     // コントローラー振動
     InputSystem::SetVibration(0.8f, 0.05f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.3f);
+
+    const int hpBeforeDamage = hp;
     hp -= damage;
+    if (hp < hpBeforeDamage)
+    {
+        // Restart from the HP immediately before each successful hit.
+        delayedHp = static_cast<float>(hpBeforeDamage);
+        delayedHpDelayTimer = delayedHpDelayDuration;
+    }
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
 }
 
@@ -2468,7 +2515,7 @@ void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOA
     DirectX::XMFLOAT3 rushEffectPosition = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
 
     rushEffectPosition.x += MathHelper::RandomRange(-0.35f, 0.35f);
-    rushEffectPosition.y +=  MathHelper::RandomRange(-0.20f, 0.20f);
+    rushEffectPosition.y += MathHelper::RandomRange(-0.20f, 0.20f);
     rushEffectPosition.z += MathHelper::RandomRange(-0.35f, 0.35f);
 
 
@@ -3846,7 +3893,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
         CollisionLayer::WorldStatic,
         CollisionLayer::WorldProps,
         CollisionLayer::WorldPropsNoRaycast,
-    });
+        });
     const bool wallCastHit = Physics::Instance().SphereCast(
         castOrigin, chargeDirection, castDistance, bodyCastRadius, wallHit, wallMask);
     bool wallCandidate = false;
@@ -4385,8 +4432,8 @@ bool GruxEnemy::ResumeSelectedAttackAfterTurn()
     {
         stateMachine_->ChangeState(
             selectedAttackType == BossAttackType::ChargeAttack
-                ? "EnemyChargeAttackState"
-                : "EnemyAttackState");
+            ? "EnemyChargeAttackState"
+            : "EnemyAttackState");
     }
     return true;
 }

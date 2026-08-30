@@ -329,6 +329,12 @@ private:
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HPバー
+    float delayedHp = 0.0f;
+    float delayedHpDelayTimer = 0.0f;
+    float delayedHpDelayDuration = 0.25f;
+    float delayedHpFollowSpeed = 8.95f; // HPバーがどれくらい遅延するか
+    CoreColor bossHpCurrentColor{ 0.55f, 0.08f, 0.06f, 1.0f };
+    CoreColor bossHpDelayedColor{ 0.95f, 0.72f, 0.38f, 1.0f };
 
     bool rightHitBox = false;   // 右の剣の当たり判定
     bool leftHitBox = false;    // 左の剣の当たり判定
