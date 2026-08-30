@@ -399,7 +399,12 @@ void GruxEnemy::Update(float deltaTime)
         }
         else
         {
-            delayedHp = (std::max)(currentHp, delayedHp - delayedHpFollowSpeed * uiDeltaTime);
+            const float followSpeed = useRushDelayedHpFollowSpeed
+                ? delayedHpRushFollowSpeed
+                : delayedHpFollowSpeed;
+            delayedHp = (std::max)(currentHp, delayedHp - followSpeed * uiDeltaTime);
+            if (delayedHp <= currentHp)
+                useRushDelayedHpFollowSpeed = false;
         }
     }
     else if (!rushHpDisplayActive && delayedHp < currentHp)
@@ -407,6 +412,7 @@ void GruxEnemy::Update(float deltaTime)
         // HP recovery synchronizes the delayed display immediately.
         delayedHp = currentHp;
         delayedHpDelayTimer = 0.0f;
+        useRushDelayedHpFollowSpeed = false;
     }
 
     if (hpCurrentFillUiComponent && hpDelayedFillUiComponent)
@@ -2471,6 +2477,7 @@ void GruxEnemy::EndRushHpDisplay()
         return;
 
     rushHpDisplayActive = false;
+    useRushDelayedHpFollowSpeed = true;
     delayedHpDelayTimer = delayedHpDelayDuration;
 }
 void GruxEnemy::TakeDamage(const int damage)
@@ -2487,6 +2494,7 @@ void GruxEnemy::TakeDamage(const int damage)
         // Restart from the HP immediately before each successful hit.
         delayedHp = static_cast<float>(hpBeforeDamage);
         delayedHpDelayTimer = delayedHpDelayDuration;
+        useRushDelayedHpFollowSpeed = false;
     }
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
 }

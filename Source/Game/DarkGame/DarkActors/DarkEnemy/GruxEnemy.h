@@ -333,6 +333,7 @@ private:
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HPÉoÅ[
     bool rushHpDisplayActive = false;
+    bool useRushDelayedHpFollowSpeed = false;
     float delayedHp = 0.0f;
     float delayedHpDelayTimer = 0.0f;
     float delayedHpDelayDuration = 0.25f;
