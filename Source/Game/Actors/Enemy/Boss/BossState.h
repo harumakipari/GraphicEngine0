@@ -174,6 +174,27 @@ private:
     Phase phase = Phase::Windup;
 };
 
+class EnemyStunState : public EnemyStateBase
+{
+public:
+    EnemyStunState(GruxEnemy* enemy) : EnemyStateBase(enemy) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "EnemyStunState"; }
+
+private:
+    enum class Phase
+    {
+        Start,
+        Loop,
+        End,
+    };
+
+    Phase phase = Phase::Start;
+    float stunElapsedTime = 0.0f;
+};
+
 class EnemyRecoveryState : public EnemyStateBase
 {
 public:

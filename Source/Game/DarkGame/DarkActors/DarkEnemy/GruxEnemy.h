@@ -124,6 +124,14 @@ public:
     ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime);
     void StopChargeAttackMovement();
     float GetChargeWindupEndTime() const { return chargeWindupEndTime; }
+    float GetStunDuration() const { return stunDuration; }
+    bool IsDead() const { return hp <= 0; }
+    const std::string& GetDeathAnimationName() const { return deathAnimationName; }
+    void SetStunDebug(const char* phase, float elapsed)
+    {
+        stunPhaseDebug = phase ? phase : "None";
+        stunElapsedDebug = elapsed;
+    }
     void SetChargePhaseDebug(const char* phase) { chargePhaseDebug = phase ? phase : "None"; }
     void SetChargeWindupAnimationTimeDebug(float time) { chargeWindupAnimationTimeDebug = time; }
     float GetAttackInterval() const { return attackInterval; }
@@ -442,7 +450,7 @@ private:
         { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f, 5 },
         { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f, 5 },
         { BossAttackType::DashAttack, "Stampede_0 > Stampede_Knockup_0", 6.0f, 100.0f, 1.0f, 1.20f, 7 },
-        { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 5.0f, 7 },
+        { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 0.1f, 7 },
     } };
 
     // 既存のAttack選択用
@@ -636,6 +644,12 @@ private:
     DirectX::XMFLOAT3 chargeWallHitNormalDebug{};
     float chargeWallHitDistanceDebug = 0.0f;
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;
+
+    // Wall Hit後の行動不能時間。Start/End Animation時間とは分離する。
+    float stunDuration = 2.5f;
+    std::string stunPhaseDebug = "None";
+    float stunElapsedDebug = 0.0f;
+    std::string deathAnimationName = "Death_A_0";
 
     bool isDeathPerform = false;
     float pitchBaseValue = 0.45f;

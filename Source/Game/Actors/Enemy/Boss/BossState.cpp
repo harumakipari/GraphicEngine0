@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "BossState.h"
+
+#include "Engine/Audio/Audio.h"
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
@@ -74,8 +76,8 @@ void EnemyThinkState::Execute(float deltaTime)
         attackSelected = true;
         owner->GetStateMachine()->ChangeState(
             enemy->GetSelectedAttackType() == BossAttackType::ChargeAttack
-                ? "EnemyChargeAttackState"
-                : "EnemyAttackState");
+            ? "EnemyChargeAttackState"
+            : "EnemyAttackState");
         return;
     }
 
@@ -142,8 +144,8 @@ void EnemyThinkState::Execute(float deltaTime)
     {
         owner->GetStateMachine()->ChangeState(
             enemy->GetSelectedAttackType() == BossAttackType::ChargeAttack
-                ? "EnemyChargeAttackState"
-                : "EnemyAttackState");
+            ? "EnemyChargeAttackState"
+            : "EnemyAttackState");
     }
 }
 void EnemyThinkState::Exit()
@@ -179,33 +181,33 @@ void EnemyPositioningState::Enter()
 void EnemyPositioningState::Execute(float deltaTime)
 {
     auto finish = [this](const char* reason)
-    {
-        enemy->SetLastAIDecision(std::string("Positioning End: ") + reason);
-        enemy->FinishPositioningDebug(reason);
-        const bool completed =
-            std::strcmp(reason, "WorldTargetReached") == 0 ||
-            std::strcmp(reason, "TargetDistanceReached") == 0 ||
-            std::strcmp(reason, "DistanceReached") == 0;
-        if (completed && enemy->IsCombatRepositionActive())
-            enemy->CompleteCombatReposition();
-        if (!completed)
-            enemy->FailActiveIntent(reason);
-        endReasonSet = true;
-        owner->GetStateMachine()->ChangeState("EnemyThinkState");
-    };
+        {
+            enemy->SetLastAIDecision(std::string("Positioning End: ") + reason);
+            enemy->FinishPositioningDebug(reason);
+            const bool completed =
+                std::strcmp(reason, "WorldTargetReached") == 0 ||
+                std::strcmp(reason, "TargetDistanceReached") == 0 ||
+                std::strcmp(reason, "DistanceReached") == 0;
+            if (completed && enemy->IsCombatRepositionActive())
+                enemy->CompleteCombatReposition();
+            if (!completed)
+                enemy->FailActiveIntent(reason);
+            endReasonSet = true;
+            owner->GetStateMachine()->ChangeState("EnemyThinkState");
+        };
 
     auto beginCombatRepositionSettle = [this, &finish](const char* completionReason)
-    {
-        enemy->StopAIMovement();
-        enemy->EndPositioningAnimation();
-        settling = true;
-        settleTimer = 0.0f;
-        settleCompletionReason = completionReason;
-        const float duration = enemy->GetCombatRepositionSettleDuration();
-        enemy->SetCombatRepositionSettleDebug(true, duration);
-        if (duration <= 0.0f)
-            finish(settleCompletionReason);
-    };
+        {
+            enemy->StopAIMovement();
+            enemy->EndPositioningAnimation();
+            settling = true;
+            settleTimer = 0.0f;
+            settleCompletionReason = completionReason;
+            const float duration = enemy->GetCombatRepositionSettleDuration();
+            enemy->SetCombatRepositionSettleDebug(true, duration);
+            if (duration <= 0.0f)
+                finish(settleCompletionReason);
+        };
 
     if (enemy->GetBossAIMode() != BossAIMode::CombatAI)
     {
@@ -459,7 +461,9 @@ void EnemyAttackReadyState::Exit()
 // 攻撃の予兆ステートオブジェクト
 void EnemyDeathState::Enter()
 {
-    owner->PlayBodyAnimation("Death_A_0", false, true, 0.1f);
+    const std::string& animationName = enemy->GetDeathAnimationName();
+    const bool ignoreRootMotion = animationName == "Knock_Down_Death";
+    owner->PlayBodyAnimation(animationName, false, true, 0.1f, ignoreRootMotion);
 }
 
 void EnemyDeathState::Execute(float deltaTime)
@@ -654,6 +658,15 @@ void EnemyChargeAttackState::Execute(float deltaTime)
         if (endReason == ChargeAttackEndReason::PlayerHit ||
             endReason == ChargeAttackEndReason::WallHit)
             enemy->OnSelectedAttackCompletedSuccessfully();
+
+        if (endReason == ChargeAttackEndReason::WallHit)
+        {
+            //CoreAudio::PlayOneShot("./Data/Sound/SE/boss_wall_impact.wav", 5.0f);
+            
+            owner->GetStateMachine()->ChangeState("EnemyStunState");
+            return;
+        }
+
         owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
     }
 }
@@ -664,6 +677,65 @@ void EnemyChargeAttackState::Exit()
     enemy->StartSelectedActionCooldown();
     enemy->StopChargeAttackMovement();
     enemy->DisableAttackHitBoxes();
+}
+
+void EnemyStunState::Enter()
+{
+    phase = Phase::Start;
+    stunElapsedTime = 0.0f;
+    enemy->StopChargeAttackMovement();
+    enemy->StopAIMovement();
+    enemy->DisableAttackHitBoxes();
+    enemy->SetStunDebug("Start", stunElapsedTime);
+    owner->PlayBodyAnimation("Knock_Down_Start", false, true, 0.1f, true);
+}
+
+void EnemyStunState::Execute(float deltaTime)
+{
+    if (enemy->IsDead())
+        return;
+
+    const auto controller = enemy->GetBodyAnimationController();
+    if (!controller)
+    {
+        owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+        return;
+    }
+
+    switch (phase)
+    {
+    case Phase::Start:
+        if (controller->IsPlayAnimation())
+            return;
+        phase = Phase::Loop;
+        stunElapsedTime = 0.0f;
+        enemy->SetStunDebug("Loop", stunElapsedTime);
+        owner->PlayBodyAnimation("Knock_Down_Loop", true, true, 0.1f, true);
+        break;
+
+    case Phase::Loop:
+        stunElapsedTime += deltaTime;
+        enemy->SetStunDebug("Loop", stunElapsedTime);
+        if (stunElapsedTime < enemy->GetStunDuration())
+            return;
+        phase = Phase::End;
+        enemy->SetStunDebug("End", stunElapsedTime);
+        owner->PlayBodyAnimation("Knock_Down_End", false, true, 0.1f, true);
+        break;
+
+    case Phase::End:
+        if (controller->IsPlayAnimation())
+            return;
+        owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
+        break;
+    }
+}
+
+void EnemyStunState::Exit()
+{
+    enemy->StopAIMovement();
+    enemy->DisableAttackHitBoxes();
+    enemy->SetStunDebug("None", 0.0f);
 }
 
 void EnemyRecoveryState::Enter()
