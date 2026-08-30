@@ -327,7 +327,8 @@ private:
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect
 
-    std::shared_ptr<UIGaugeComponent> hpFrameUiComponent;   // HPバー
+    std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
+    std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HPバー
 
     bool rightHitBox = false;   // 右の剣の当たり判定
     bool leftHitBox = false;    // 左の剣の当たり判定
@@ -358,12 +359,13 @@ private:
     std::string intentLifecycleReason = "None";
 
     static constexpr int intentCount = 4;
+    // 意思決定の距離ごとによる重み
     std::array<BossIntentData, intentCount> combatIntentData =
     { {
         { BossIntentType::CloseCombat, 60.0f, 30.0f, 25.0f, 4.0f, 5.5f, 0.25f },
         { BossIntentType::DashAttackPlan, 25.0f, 35.0f, 45.0f, 8.0f, 10.0f, 0.25f },
         { BossIntentType::JumpAttackPlan, 15.0f, 35.0f, 30.0f, 7.0f, 9.0f, 0.25f },
-        { BossIntentType::CombatReposition, 10.0f, 12.0f, 10.0f, 0.0f, 100.0f, 0.0f },
+        { BossIntentType::CombatReposition, 3.0f, 12.0f, 10.0f, 0.0f, 100.0f, 0.0f },
     } };
     std::array<float, intentCount> combatIntentEffectiveWeights{};
     bool hasLastIntentRandomRoll = false;
@@ -391,9 +393,9 @@ private:
     std::array<BossActionData, actionCount> combatActionData =
     {
         {
-        { BossActionType::AttackLA, BossAttackType::PrimaryAttackLA ,BossDistanceRegion::Near,BossDistanceRegion::Near,30.0f,1.0f},
-        { BossActionType::AttackRA, BossAttackType::PrimaryAttackRA,BossDistanceRegion::Near,BossDistanceRegion::Near,30.0f,1.0f},
-        { BossActionType::FastCombo, BossAttackType::FastCombo ,BossDistanceRegion::Near,BossDistanceRegion::Near,40.0f,2.0f},
+        { BossActionType::AttackLA, BossAttackType::PrimaryAttackLA ,BossDistanceRegion::Near,BossDistanceRegion::Near,20.0f,1.0f},
+        { BossActionType::AttackRA, BossAttackType::PrimaryAttackRA,BossDistanceRegion::Near,BossDistanceRegion::Near,20.0f,1.0f},
+        { BossActionType::FastCombo, BossAttackType::FastCombo ,BossDistanceRegion::Near,BossDistanceRegion::Near,100.0f,2.0f},
         { BossActionType::JumpAttack,BossAttackType::JumpAttack ,BossDistanceRegion::Middle,BossDistanceRegion::Middle,30.0f,3.0f},
         { BossActionType::DashAttack,BossAttackType::DashAttack,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,4.0f},
         { BossActionType::ChargeAttack,BossAttackType::ChargeAttack,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,4.0f},

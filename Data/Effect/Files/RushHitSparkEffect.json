@@ -48,12 +48,12 @@
             ],
             "endSize": [
                 [
-                    2.5,
-                    2.5
+                    8.0,
+                    8.0
                 ],
                 [
-                    2.5,
-                    2.5
+                    8.0,
+                    8.0
                 ]
             ],
             "height": 1.0,
@@ -109,12 +109,12 @@
             ],
             "startSize": [
                 [
-                    2.5,
-                    2.5
+                    8.0,
+                    8.0
                 ],
                 [
-                    2.5,
-                    2.5
+                    8.0,
+                    8.0
                 ]
             ],
             "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\T_Spark_Core.PNG",

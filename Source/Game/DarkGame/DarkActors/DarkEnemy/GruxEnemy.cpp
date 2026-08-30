@@ -331,36 +331,57 @@ void GruxEnemy::Initialize(const Transform& transform)
     leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
     rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
 
-    // Hpバー後ろ
-    auto gaugeFrameBackComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/bar_back.png", "bar_back_ui");
-    DirectX::XMFLOAT2 gaugeSize = { 221.0f,28.0f };
-    DirectX::XMFLOAT2 gaugeScale = { 3.0f,3.0f };
-    gaugeFrameBackComponent->SetScale(gaugeScale);
-    gaugeFrameBackComponent->SetSize(gaugeSize);
-    gaugeFrameBackComponent->SetPivot({ 0.0f,0.5f });
-    gaugeFrameBackComponent->zOrder = 10;
-    gaugeFrameBackComponent->SetWorldPosition({ 650.0f,115.0f });
-    gaugeFrameBackComponent->SetColor(CoreColor::White);
-    uiManager->Add(gaugeFrameBackComponent);
-    // Hpバー
-    hpFrameUiComponent = std::make_shared<UIGaugeComponent>("./Data/Textures/UI/HpBar/frame.png", "./Data/Textures/UI/HpBar/bar.png", "EnemyHpBar");
-    hpFrameUiComponent->SetVisible(true);
-    hpFrameUiComponent->SetPivot({ 0.0f,0.5f });
-    hpFrameUiComponent->SetSize(gaugeSize);
-    hpFrameUiComponent->SetScale(gaugeScale);
-    hpFrameUiComponent->SetWorldPosition({ 650.0f,115.0f });
-    hpFrameUiComponent->zOrder = 15;
-    hpFrameUiComponent->SetGaugeFillSize(gaugeSize);
+    //  ボスHP UI：背景 → 遅延塗りつぶし → 現在の塗りつぶし → フレーム。
+    const DirectX::XMFLOAT2 hpPosition = { 650.0f, 115.0f };
+    const DirectX::XMFLOAT2 hpPivot = { 0.0f, 0.5f };
+    const DirectX::XMFLOAT2 hpScale = { 0.35f, 0.35f };
+
+    auto hpBackgroundUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_background.png", "BossHpBackground");
+    hpBackgroundUiComponent->SetWorldPosition(hpPosition);
+    hpBackgroundUiComponent->SetSize({ 1904.0f, 43.0f });
+    hpBackgroundUiComponent->SetPivot(hpPivot);
+    hpBackgroundUiComponent->SetScale(hpScale);
+    hpBackgroundUiComponent->SetColor(CoreColor::White);
+    hpBackgroundUiComponent->zOrder = 10;
+    uiManager->Add(hpBackgroundUiComponent);
+
+    hpDelayedFillUiComponent = std::make_shared<UIGaugeFillComponent>("./Data/Textures/UI/HpBar/boss_hp_fill.png", "BossHpDelayedFill");
+    hpDelayedFillUiComponent->SetWorldPosition(hpPosition);
+    hpDelayedFillUiComponent->SetSize({ 1897.0f, 36.0f });
+    hpDelayedFillUiComponent->SetPivot(hpPivot);
+    hpDelayedFillUiComponent->SetScale(hpScale);
+    hpDelayedFillUiComponent->SetColor(CoreColor(1.0f, 0.75f, 0.2f, 1.0f));
+    hpDelayedFillUiComponent->zOrder = 11;
+    uiManager->Add(hpDelayedFillUiComponent);
+
+    hpCurrentFillUiComponent = std::make_shared<UIGaugeFillComponent>("./Data/Textures/UI/HpBar/boss_hp_fill.png", "BossHpCurrentFill");
+    hpCurrentFillUiComponent->SetWorldPosition(hpPosition);
+    hpCurrentFillUiComponent->SetSize({ 1897.0f, 36.0f });
+    hpCurrentFillUiComponent->SetPivot(hpPivot);
+    hpCurrentFillUiComponent->SetScale(hpScale);
+    hpCurrentFillUiComponent->SetColor(CoreColor::White);
+    hpCurrentFillUiComponent->zOrder = 12;
+    uiManager->Add(hpCurrentFillUiComponent);
+
+    auto hpFrameUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_frame.png", "BossHpFrame");
+    hpFrameUiComponent->SetWorldPosition(hpPosition);
+    hpFrameUiComponent->SetSize({ 1909.0f, 49.0f });
+    hpFrameUiComponent->SetPivot(hpPivot);
+    hpFrameUiComponent->SetScale(hpScale);
     hpFrameUiComponent->SetColor(CoreColor::White);
+    hpFrameUiComponent->zOrder = 15;
     uiManager->Add(hpFrameUiComponent);
 }
 
 void GruxEnemy::Update(float deltaTime)
 {
     // HPバーの更新
-    if (hpFrameUiComponent)
+    if (hpCurrentFillUiComponent && hpDelayedFillUiComponent)
     {
-        hpFrameUiComponent->SetValue(static_cast<float>(hp), static_cast<float>(maxHp));
+        const float currentHp = static_cast<float>(hp);
+        const float maximumHp = static_cast<float>(maxHp);
+        hpCurrentFillUiComponent->SetValue(currentHp, maximumHp);
+        hpDelayedFillUiComponent->SetValue(currentHp, maximumHp);
     }
 
     if (!IsAnimationEditorPreviewActive())

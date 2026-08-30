@@ -791,6 +791,71 @@ private:
 };
 
 
+class UIGaugeFillComponent : public UIImageComponent
+{
+public:
+    UIGaugeFillComponent(const std::string& filename, const std::string& name)
+        : UIImageComponent(filename, name)
+    {
+    }
+
+    UIGaugeFillComponent(const std::string& name)
+        : UIImageComponent(name)
+    {
+    }
+
+    void Draw(ID3D11DeviceContext* immediateContext) override
+    {
+        if (value <= 0.0f)
+            return;
+
+        XMFLOAT2 drawSize = size;
+        SpriteUV drawUv = uv;
+
+        if (horizontal)
+        {
+            drawSize.x *= value;
+            drawUv.w *= value;
+        }
+        else
+        {
+            drawSize.y *= value;
+            drawUv.h *= value;
+        }
+
+        SpriteRenderer::Draw(
+            texture.get(),
+            worldPosition,
+            drawSize,
+            color,
+            drawUv,
+            worldAngle,
+            pivot,
+            scale
+        );
+    }
+
+    void SetValue(const float normalizedValue)
+    {
+        value = std::clamp(normalizedValue, 0.0f, 1.0f);
+    }
+
+    void SetValue(const float current, const float max)
+    {
+        SetValue(max > 0.0f ? current / max : 0.0f);
+    }
+
+    void SetHorizontal(const bool horizontal)
+    {
+        this->horizontal = horizontal;
+    }
+
+private:
+    float value = 1.0f;
+    bool horizontal = true;
+};
+
+
 class UIGaugeComponent : public UIImageComponent
 {
 public:
