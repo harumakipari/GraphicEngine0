@@ -10,7 +10,31 @@
         },
         {
             "parameter": "run_two_foot",
-            "time": 0.5412281155586243,
+            "time": 0.4759809374809265,
+            "type": "PlaySE",
+            "value": 0.12999999523162842
+        },
+        {
+            "parameter": "run_three_foot",
+            "time": 0.7846840620040894,
+            "type": "PlaySE",
+            "value": 0.12999999523162842
+        },
+        {
+            "parameter": "run_four_foot",
+            "time": 1.104052186012268,
+            "type": "PlaySE",
+            "value": 0.12999999523162842
+        },
+        {
+            "parameter": "run_five_foot",
+            "time": 1.4062504768371582,
+            "type": "PlaySE",
+            "value": 0.12999999523162842
+        },
+        {
+            "parameter": "run_six_foot",
+            "time": 1.7170343399047852,
             "type": "PlaySE",
             "value": 0.12999999523162842
         }

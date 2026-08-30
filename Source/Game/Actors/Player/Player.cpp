@@ -1300,52 +1300,67 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     }
 }
 
+void Player::HandleAnimationPlaySE(const AnimationNotifyEvent& event)
+{
+    if (event.parameter.empty())
+        return;
+
+    std::string soundName = event.parameter;
+    if (event.parameter == "RushSword")
+    {
+        if (std::string(stateMachine_->GetStateName()) != "Rush")
+        {
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[Rush][SwordSE] ignored: RushSword event fired outside Rush state");
+            return;
+        }
+
+        const auto* rushState =
+            dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
+        if (!rushState)
+        {
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[Rush][SwordSE] ignored: current state is not PlayerRushState");
+            return;
+        }
+
+        const int comboIndex = rushState->GetComboIndex();
+        if (comboIndex < 0 ||
+            comboIndex >= static_cast<int>(RushSwordSEs.size()))
+        {
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[Rush][SwordSE] ignored: comboIndex out of range: " +
+                std::to_string(comboIndex));
+            return;
+        }
+
+        soundName = RushSwordSEs[comboIndex];
+    }
+
+    const std::string audioPath = "./Data/Sound/SE/" + soundName + ".wav";
+    CoreAudio::PlayOneShot(audioPath, event.value);
+}
+
 void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
     switch (event.type)
     {
     case AnimationNotifyEvent::Type::PlaySE:
-    {
-        if (event.parameter != "")
-        {
-            std::string soundName = event.parameter;
-            if (event.parameter == "RushSword")
-            {
-                if (std::string(stateMachine_->GetStateName()) != "Rush")
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[Rush][SwordSE] ignored: RushSword event fired outside Rush state");
-                    break;
-                }
-
-                const auto* rushState =
-                    dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
-                if (!rushState)
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[Rush][SwordSE] ignored: current state is not PlayerRushState");
-                    break;
-                }
-
-                const int comboIndex = rushState->GetComboIndex();
-                if (comboIndex < 0 ||
-                    comboIndex >= static_cast<int>(RushSwordSEs.size()))
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[Rush][SwordSE] ignored: comboIndex out of range: " +
-                        std::to_string(comboIndex));
-                    break;
-                }
-
-                soundName = RushSwordSEs[comboIndex];
-            }
-
-            std::string audioPath = "./Data/Sound/SE/" + soundName + ".wav";
-            CoreAudio::PlayOneShot(audioPath, event.value);
-        }
-    }
-    break;
+        HandleAnimationPlaySE(event);
+        break;
     case AnimationNotifyEvent::Type::SpawnEffect:
+        break;
+    }
+}
+
+void Player::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
+{
+    switch (event.type)
+    {
+    case AnimationNotifyEvent::Type::PlaySE:
+        HandleAnimationPlaySE(event);
+        break;
+    default:
         break;
     }
 }

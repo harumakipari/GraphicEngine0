@@ -94,6 +94,8 @@ public:
 
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event)override;
 
+    void OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event) override;
+
     void OnAnimationChanged() override;
 
     // ブレンドスペースのアニメーションを使用するかの更新関数
@@ -138,6 +140,8 @@ public:
     void SetLocomotionMode(LocomotionMode mode);
 
 private:
+    void HandleAnimationPlaySE(const AnimationNotifyEvent& event);
+
     // 火花エフェクトの生成
     void SpawnSpark(DirectX::XMFLOAT3 hitPosition);
 
