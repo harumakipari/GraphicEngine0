@@ -163,6 +163,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("TravelMode_Start_0", 24);
     controller->AddAnimation("Pre_Stampede_0", 25);
     controller->AddAnimation("Pre_FootSlide_0", 26);
+    controller->AddAnimation("Knock_Down_Death", 27);
+    controller->AddAnimation("Knock_Down_End", 28);
+    controller->AddAnimation("Knock_Down_Loop", 29);
+    controller->AddAnimation("Knock_Down_Start", 30);
 
     // ‘S‚Ä‚ÌNotifyAssets‚ðƒ[ƒh‚·‚é
     controller->LoadAllNotifyAssets(GetName());
@@ -2091,6 +2095,14 @@ void GruxEnemy::DrawImGuiDetails()
             0.01f, 0.0f, 10.0f, "%.2f sec");
         ImGui::DragFloat("Charge Speed", &chargeSpeed,
             0.1f, 0.1f, 50.0f, "%.2f m/s");
+        for (BossAttackData& attackData : combatAttackData)
+        {
+            if (attackData.type != BossAttackType::ChargeAttack)
+                continue;
+            ImGui::DragInt("Charge Damage", &attackData.damagePerHit, 1.0f, 0, 1000);
+            attackData.damagePerHit = (std::max)(0, attackData.damagePerHit);
+            break;
+        }
         ImGui::DragFloat("Charge Safety Timeout", &chargeSafetyTimeout,
             0.1f, 0.5f, 30.0f, "%.2f sec");
         ImGui::DragFloat("Wall Cast Safety Margin", &chargeWallCastSafetyMargin,
@@ -2112,6 +2124,7 @@ void GruxEnemy::DrawImGuiDetails()
         const char* chargeEndReasonName = "None";
         switch (chargeEndReasonDebug)
         {
+        case ChargeAttackEndReason::PlayerHit: chargeEndReasonName = "PlayerHit"; break;
         case ChargeAttackEndReason::WallHit: chargeEndReasonName = "WallHit"; break;
         case ChargeAttackEndReason::SafetyTimeout: chargeEndReasonName = "SafetyTimeout"; break;
         default: break;
@@ -2122,6 +2135,11 @@ void GruxEnemy::DrawImGuiDetails()
             chargeDirection.x, chargeDirection.y, chargeDirection.z);
         ImGui::Text("Charge Elapsed Time: %.3f sec", chargeElapsedTime);
         ImGui::Text("Charge Speed (Active Setting): %.3f", chargeSpeed);
+        ImGui::Text("Player Cast Hit: %s", chargePlayerCastHitDebug ? "YES" : "NO");
+        ImGui::Text("Player Hit Distance: %.3f", chargePlayerHitDistanceDebug);
+        ImGui::Text("Player Hit Actor: %s", chargePlayerHitActorDebug.c_str());
+        ImGui::Text("Selected Hit: %s", chargeSelectedHitDebug.c_str());
+        ImGui::Text("Charge Damage: %d", GetDamageForCurrentAttack());
         ImGui::Text("Wall Cast Hit: %s", chargeWallCastHitDebug ? "YES" : "NO");
         ImGui::Text("Wall Facing Amount: %.3f", chargeWallFacingAmountDebug);
         ImGui::Text("Wall Hit Normal: %.3f, %.3f, %.3f",
@@ -3698,6 +3716,10 @@ bool GruxEnemy::BeginChargeAttackMovement()
     chargeDirection.x /= directionLength;
     chargeDirection.z /= directionLength;
     chargeElapsedTime = 0.0f;
+    chargePlayerCastHitDebug = false;
+    chargePlayerHitDistanceDebug = 0.0f;
+    chargePlayerHitActorDebug = "None";
+    chargeSelectedHitDebug = "None";
     chargeWallCastHitDebug = false;
     chargeWallFacingAmountDebug = 0.0f;
     chargeWallHitNormalDebug = {};
@@ -3726,6 +3748,10 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
         return chargeEndReasonDebug;
 
     chargeElapsedTime += (std::max)(0.0f, deltaTime);
+    chargePlayerCastHitDebug = false;
+    chargePlayerHitDistanceDebug = 0.0f;
+    chargePlayerHitActorDebug = "None";
+    chargeSelectedHitDebug = "None";
     chargeWallCastHitDebug = false;
     chargeWallFacingAmountDebug = 0.0f;
     chargeWallHitNormalDebug = {};
@@ -3733,9 +3759,21 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
 
     const float frameMoveDistance = chargeSpeed * (std::max)(0.0f, deltaTime);
     const float castDistance = frameMoveDistance + chargeWallCastSafetyMargin;
-    const float wallCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
+    const float bodyCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
     DirectX::XMFLOAT3 castOrigin = GetPosition();
-    castOrigin.y += (std::max)(wallCastRadius + 0.05f, height * 0.5f);
+    castOrigin.y += (std::max)(bodyCastRadius + 0.05f, height * 0.5f);
+
+    HitResultWithActor playerHit{};
+    const bool playerCastHit = Physics::Instance().SphereCast(
+        castOrigin, chargeDirection, castDistance, bodyCastRadius, playerHit,
+        CollisionHelper::ToBit(CollisionLayer::Player));
+    chargePlayerCastHitDebug = playerCastHit;
+    if (playerCastHit)
+    {
+        chargePlayerHitDistanceDebug = playerHit.distance;
+        if (playerHit.actor)
+            chargePlayerHitActorDebug = playerHit.actor->GetName();
+    }
 
     HitResultWithActor wallHit{};
     const uint32_t wallMask = CollisionHelper::MakeMask({
@@ -3743,8 +3781,10 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
         CollisionLayer::WorldProps,
         CollisionLayer::WorldPropsNoRaycast,
     });
-    if (Physics::Instance().SphereCast(
-        castOrigin, chargeDirection, castDistance, wallCastRadius, wallHit, wallMask))
+    const bool wallCastHit = Physics::Instance().SphereCast(
+        castOrigin, chargeDirection, castDistance, bodyCastRadius, wallHit, wallMask);
+    bool wallCandidate = false;
+    if (wallCastHit)
     {
         chargeWallCastHitDebug = true;
         chargeWallHitNormalDebug = wallHit.normal;
@@ -3757,19 +3797,50 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
             chargeWallFacingAmountDebug >= chargeWallFacingThreshold;
         const bool isNotFloor =
             std::abs(wallHit.normal.y) <= chargeWallNormalYThreshold;
-        if (facesCharge && isNotFloor)
+        wallCandidate = facesCharge && isNotFloor;
+    }
+
+    Player* hitPlayer = playerCastHit
+        ? dynamic_cast<Player*>(playerHit.actor)
+        : nullptr;
+    const bool playerCandidate =
+        hitPlayer && !hitActors.contains(hitPlayer);
+    const bool playerIsFirst = playerCandidate &&
+        (!wallCandidate || playerHit.distance <= wallHit.distance);
+
+    if (playerIsFirst)
+    {
+        if (hitPlayer->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
         {
-            chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
+            hitActors.emplace(hitPlayer);
+            ++currentAttackHitCount;
+            chargeSelectedHitDebug = "PlayerHit";
+            chargeEndReasonDebug = ChargeAttackEndReason::PlayerHit;
             Logger::Log(Logger::LogCategory::Gameplay,
-                "[BossCharge][End] reason=WallHit distance=" +
-                std::to_string(wallHit.distance));
+                "[BossCharge][End] reason=PlayerHit distance=" +
+                std::to_string(playerHit.distance) +
+                " damage=" + std::to_string(GetDamageForCurrentAttack()));
             StopChargeAttackMovement();
             return chargeEndReasonDebug;
         }
+
+        chargeSelectedHitDebug = "PlayerDamageRejected";
+    }
+
+    if (wallCandidate)
+    {
+        chargeSelectedHitDebug = "WallHit";
+        chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[BossCharge][End] reason=WallHit distance=" +
+            std::to_string(wallHit.distance));
+        StopChargeAttackMovement();
+        return chargeEndReasonDebug;
     }
 
     if (chargeElapsedTime >= chargeSafetyTimeout)
     {
+        chargeSelectedHitDebug = "SafetyTimeout";
         chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
         const std::string timeoutMessage =
             "[BossCharge][End] reason=SafetyTimeout elapsed=" +

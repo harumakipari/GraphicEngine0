@@ -442,7 +442,7 @@ private:
         { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f, 5 },
         { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f, 5 },
         { BossAttackType::DashAttack, "Stampede_0 > Stampede_Knockup_0", 6.0f, 100.0f, 1.0f, 1.20f, 7 },
-        { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 1.20f, 0 },
+        { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 1.20f, 7 },
     } };
 
     // Šù‘¶‚ÌAttack‘I‘ð—p
@@ -627,6 +627,10 @@ private:
     DirectX::XMFLOAT3 chargeDirection{ 0.0f, 0.0f, 1.0f };
     std::string chargePhaseDebug = "None";
     float chargeWindupAnimationTimeDebug = 0.0f;
+    bool chargePlayerCastHitDebug = false;
+    float chargePlayerHitDistanceDebug = 0.0f;
+    std::string chargePlayerHitActorDebug = "None";
+    std::string chargeSelectedHitDebug = "None";
     bool chargeWallCastHitDebug = false;
     float chargeWallFacingAmountDebug = 0.0f;
     DirectX::XMFLOAT3 chargeWallHitNormalDebug{};

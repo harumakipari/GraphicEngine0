@@ -113,6 +113,7 @@ enum class BossAttackType : uint8_t
 enum class ChargeAttackEndReason : uint8_t
 {
     None,
+    PlayerHit,
     WallHit,
     SafetyTimeout,
 };

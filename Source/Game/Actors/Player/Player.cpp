@@ -201,9 +201,10 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Rush_Attack_Fast_C", 43);
         controller->AddAnimation("Rush_Attack_Fast_End", 44);
         controller->AddAnimation("Rush_Attack_Fast_D", 45);
-
         controller->AddAnimation("Sprint_Fwd", 46);
         controller->AddAnimation("Walk_Fwd", 47);
+        controller->AddAnimation("Get_Up", 48);
+        controller->AddAnimation("Hit_Large_KnockBack", 49);
 
         // ブレンドスペースに追加
         //controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);

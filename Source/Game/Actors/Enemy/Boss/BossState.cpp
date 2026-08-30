@@ -651,7 +651,8 @@ void EnemyChargeAttackState::Execute(float deltaTime)
         enemy->UpdateChargeAttackMovement(deltaTime);
     if (endReason != ChargeAttackEndReason::None)
     {
-        if (endReason == ChargeAttackEndReason::WallHit)
+        if (endReason == ChargeAttackEndReason::PlayerHit ||
+            endReason == ChargeAttackEndReason::WallHit)
             enemy->OnSelectedAttackCompletedSuccessfully();
         owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
     }
