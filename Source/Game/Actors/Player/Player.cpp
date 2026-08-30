@@ -185,85 +185,25 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Hit_Combat_Large_L", 27);
         controller->AddAnimation("Hit_Combat_Large_R", 28);
         controller->AddAnimation("Hit_Combat_R", 29);
-        controller->AddAnimation("Run_Combat_Loop_F", 30);
-        controller->AddAnimation("Run_Fast_Combat_Loop_F", 31);
-        controller->AddAnimation("Idle_Combat_to_Idle_Seq_0", 32);
-        controller->AddAnimation("Idle_Idle_to_Combat_Seq_0", 33);
-        controller->AddAnimation("anim_OpenDoor_L_0", 34);
-        controller->AddAnimation("anim_OpenDoor_R_0", 35);
-        controller->AddAnimation("Idle_Noise_A_0", 36);
-        controller->AddAnimation("Idle_Noise_B_0", 37);
-        controller->AddAnimation("Aurora_Combat", 38);
-        controller->AddAnimation("Emote_Ice_Sculpture1_0", 39);
-        controller->AddAnimation("Level_Start1_0", 40);
-        controller->AddAnimation("Recall_0", 41);
-        controller->AddAnimation("Level_Start_Cut", 42);
-        controller->AddAnimation("Jog_Bwd", 43);
-        controller->AddAnimation("Jog_Left", 44);
-        controller->AddAnimation("Jog_Right", 45);
-        controller->AddAnimation("Walk_Bwd1", 46);
-        controller->AddAnimation("Walk_Fwd1", 47);
-        controller->AddAnimation("Walk_Left1", 48);
-        controller->AddAnimation("Walk_Right1", 49);
-        controller->AddAnimation("Jog_Fwd1", 50);
-        controller->AddAnimation("Walk_Fwd1", 51);
-        controller->AddAnimation("Sprint_Fwd5", 52);
-        controller->AddAnimation("Walk_Fwd2", 53);  // これだめ
-        controller->AddAnimation("Jog_Fwd2", 54);// これだめ
-        controller->AddAnimation("Jog_Bwd2", 55);
-        controller->AddAnimation("Jog_BwdLeft5", 56);
-        controller->AddAnimation("Jog_BwdRight5", 57);
-        controller->AddAnimation("Jog_FwdLeft5", 58);
-        controller->AddAnimation("Jog_FwdRight5", 59);
-        controller->AddAnimation("Jog_Left2", 60);
-        controller->AddAnimation("Jog_Right2", 61);
-        controller->AddAnimation("Rush_Attack_Fast_A", 62);
-        controller->AddAnimation("Rush_Attack_Fast_B", 63);
-        controller->AddAnimation("Rush_Attack_Fast_C", 64);
-        controller->AddAnimation("Rush_Attack_Fast_End", 65);
-        controller->AddAnimation("Walk_Fwd3", 66);
-        controller->AddAnimation("Jump", 67);
-        controller->AddAnimation("Rush_Attack_Fast_D", 68);
-        controller->AddAnimation("Jog_Bwd5", 69);
-        controller->AddAnimation("Jog_Fwd5", 70);
-        controller->AddAnimation("Jog_Left5", 71);
-        controller->AddAnimation("Jog_Right5", 72);
+        controller->AddAnimation("anim_OpenDoor_L_0", 30);
+        controller->AddAnimation("anim_OpenDoor_R_0", 31);
+        controller->AddAnimation("Idle_Noise_A_0", 32);
+        controller->AddAnimation("Idle_Noise_B_0", 33);
+        controller->AddAnimation("Emote_Ice_Sculpture1_0", 34);
+        controller->AddAnimation("Level_Start1_0", 35);
+        controller->AddAnimation("Recall_0", 36);
+        controller->AddAnimation("Level_Start_Cut", 37);
+        controller->AddAnimation("Jog_Bwd", 38);
+        controller->AddAnimation("Jog_Left", 39);
+        controller->AddAnimation("Jog_Right", 40);
+        controller->AddAnimation("Rush_Attack_Fast_A", 41);
+        controller->AddAnimation("Rush_Attack_Fast_B", 42);
+        controller->AddAnimation("Rush_Attack_Fast_C", 43);
+        controller->AddAnimation("Rush_Attack_Fast_End", 44);
+        controller->AddAnimation("Rush_Attack_Fast_D", 45);
 
-        controller->AddAnimation("1_Jog_Bwd", 73);
-        controller->AddAnimation("1_Jog_BwdLeft", 74);
-        controller->AddAnimation("1_Jog_BwdRight", 75);
-        controller->AddAnimation("1_Jog_Fwd", 76);
-        controller->AddAnimation("1_Jog_FwdLeft", 77);
-        controller->AddAnimation("1_Jog_FwdRight", 78);
-        controller->AddAnimation("1_Sprint_Fwd", 79);
-        controller->AddAnimation("1_Walk_Bwd", 80);
-        controller->AddAnimation("1_Walk_BwdLeft", 81);
-        controller->AddAnimation("1_Walk_BwdRight", 82);
-        controller->AddAnimation("1_Walk_Fwd", 83);
-        controller->AddAnimation("1_Walk_FwdLeft", 84);
-        controller->AddAnimation("1_Walk_FwdRight", 85);
-
-        controller->AddAnimation("Attack1", 86);
-        controller->AddAnimation("Attack2", 87);
-        controller->AddAnimation("Attack3", 88);
-
-        controller->AddAnimation("1_Jog_BwdLeft45", 89);
-        controller->AddAnimation("1_Jog_BwdRight45", 90);
-        controller->AddAnimation("1_Jog_FwdLeft45", 91);
-        controller->AddAnimation("1_Jog_FwdRight45", 92);
-
-        controller->AddAnimation("0_Jog_Bwd", 93);
-        controller->AddAnimation("0_Jog_BwdLeft45", 94);
-        controller->AddAnimation("0_Jog_BwdLeft90", 95);
-        controller->AddAnimation("0_Jog_BwdRight45", 96);
-        controller->AddAnimation("0_Jog_BwdRight90", 97);
-        controller->AddAnimation("0_Jog_Fwd", 98);
-        controller->AddAnimation("0_Jog_FwdLeft45", 99);
-        controller->AddAnimation("0_Jog_FwdLeft90", 100);
-        controller->AddAnimation("0_Jog_FwdRight45", 101);
-        controller->AddAnimation("0_Jog_FwdRight90", 102);
-        controller->AddAnimation("Sprint_Fwd", 103);
-        controller->AddAnimation("Walk_Fwd", 104);
+        controller->AddAnimation("Sprint_Fwd", 46);
+        controller->AddAnimation("Walk_Fwd", 47);
 
         // ブレンドスペースに追加
         //controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
@@ -314,7 +254,7 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerRushState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpAttackState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerInteractState>(this));
+        //stateMachine_->RegisterState(std::make_unique<PlayerInteractState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDashState>(this));
 
         // 初期ステートを設定
@@ -1730,10 +1670,10 @@ void Player::CaptureActionRequest(float deltaTime)
             std::string("[ActionRequest][Detected] action=Dash state=") + stateMachine_->GetStateName());
         StoreActionRequest(ActionType::Dash, 0.3f);
     }
-    if (InputSystem::GetInputState("Interact", InputStateMask::Trigger))
-    {
-        StoreActionRequest(ActionType::Interact, 0.3f);
-    }
+    //if (InputSystem::GetInputState("Interact", InputStateMask::Trigger))
+    //{
+    //    StoreActionRequest(ActionType::Interact, 0.3f);
+    //}
 }
 
 bool Player::StoreActionRequest(ActionType type, float remainTime)
@@ -1809,8 +1749,8 @@ bool Player::TryExecuteActionRequest()
     case ActionType::Jump:
         targetState = "Jump";
         break;
-    case ActionType::Interact:
-        targetState = "Interact";
+    //case ActionType::Interact:
+    //    targetState = "Interact";
         break;
     }
 

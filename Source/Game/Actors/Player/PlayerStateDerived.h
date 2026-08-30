@@ -185,6 +185,7 @@ private:
     RushPhase phase = RushPhase::DashToTarget;
 };
 
+#if 0
 // インタラクトステートオブジェクト
 class PlayerInteractState : public PlayerStateBase
 {
@@ -202,6 +203,8 @@ public:
     // ステート名を取得
     const char* GetName() const override { return "Interact"; }
 };
+#endif // 0
+
 
 // ジャンプステートオブジェクト
 class PlayerJumpState : public PlayerStateBase

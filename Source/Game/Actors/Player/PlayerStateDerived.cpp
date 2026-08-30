@@ -662,7 +662,7 @@ void PlayerRushState::ResetRushInputGrace()
     rushTransitionWindowObserved = false;
 }
 
-
+#if 0
 void PlayerInteractState::Enter()
 {
     switch (player->swordState)
@@ -689,6 +689,8 @@ void PlayerInteractState::Exit()
 {
 
 }
+#endif // 0
+
 void PlayerJumpState::Enter()
 {
     //ƒWƒƒƒ“ƒv‚Ì‰‘¬“x
