@@ -246,7 +246,7 @@ private:
     inline static constexpr const char* BossHeavyLandingPresetName = "BossHeavyLanding";
     inline static constexpr const char* BossWallImpactPresetName = "BossWallImpact";
     inline static constexpr const char* RushFinalPresetName = "RushFinal";
-
+    // カメラシェイクのプリセット
     CameraShakePreset bossHeavyLandingShake{1.0f,0.28f,12.0f,0.035f,0.18f};
     CameraShakePreset bossWallImpactShake{ 1.15f, 0.36f, 10.0f, 0.05f, 0.22f };
     CameraShakePreset rushFinalShake{ 0.9f, 0.16f, 18.0f, 0.02f, 0.14f };

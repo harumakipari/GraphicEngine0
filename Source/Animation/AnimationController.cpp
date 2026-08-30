@@ -1591,7 +1591,6 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
         float x = curvePos.x + (key.time / duration) * width;
         float y = curvePos.y + (1.0f - key.value / maxSpeed) * curveHeight;
 
-
         // “–‚½‚è”»’è‚ð’Ç‰Á
         char id[32];
         sprintf_s(id, "CurveKey_%d", i);
@@ -2261,6 +2260,32 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
 
         canExtractRootMotion = false;
+    }
+
+    // BlendSpace uses Jog_Fwd as its single locomotion Notify source.
+    const auto notifyClipIt = animationNameToIndex_.find("Jog_Fwd");
+    if (notifyClipIt != animationNameToIndex_.end())
+    {
+        const auto notifyAssetIt = animationNotifyAssets.find(notifyClipIt->second);
+        if (notifyAssetIt != animationNotifyAssets.end())
+        {
+            const float previousNotifyTime = previousLocomotionPhase * cycleDuration;
+            const float currentNotifyTime = currentLocomotionPhase * cycleDuration;
+            const bool wrapped = previousLocomotionPhase > currentLocomotionPhase;
+
+            for (const AnimationNotifyEvent& event : notifyAssetIt->second.notifyTrack.events)
+            {
+                const bool crossed = wrapped
+                    ? ((previousNotifyTime < event.time && event.time <= cycleDuration) ||
+                        (0.0f < event.time && event.time <= currentNotifyTime))
+                    : (previousNotifyTime < event.time && event.time <= currentNotifyTime);
+
+                if (crossed)
+                {
+                    OnNotifyEvent(event);
+                }
+            }
+        }
     }
 
     if (groupTransition /*|| blendSpaceTransition*/)
