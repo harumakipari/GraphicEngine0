@@ -163,14 +163,25 @@ void DarkCameraActor::PlayCameraShake(const float intensity, const float duratio
 
 void DarkCameraActor::PlayCameraShakePreset(const std::string& presetName)
 {
-    if (presetName != "BossHeavyLanding")
+    const CameraShakePreset* preset = FindCameraShakePreset(presetName);
+    if (!preset)
     {
         const std::string message = "[CameraShake] Unknown preset: " + presetName;
         Logger::Warning(Logger::LogCategory::Gameplay, message.c_str());
         return;
     }
 
-    PlayCameraShake(testShakeIntensity, testShakeDuration, testShakeFrequency,testShakePositionAmount, testShakeTargetAmount);
+    PlayCameraShake(preset->intensity, preset->duration, preset->frequency,
+        preset->positionAmount, preset->targetAmount);
+}
+
+const DarkCameraActor::CameraShakePreset* DarkCameraActor::FindCameraShakePreset(
+    const std::string& presetName) const
+{
+    if (presetName == BossHeavyLandingPresetName) return &bossHeavyLandingShake;
+    if (presetName == BossWallImpactPresetName) return &bossWallImpactShake;
+    if (presetName == RushFinalPresetName) return &rushFinalShake;
+    return nullptr;
 }
 
 void DarkCameraActor::UpdateCameraShake(const float deltaTime)
@@ -928,17 +939,29 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::DragFloat("LockOn Zoom In Speed", &lockOnZoomInSpeed, 0.01f, 0.0f, 30.0f);
         ImGui::DragFloat("LockOn Zoom Out Speed", &lockOnZoomOutSpeed, 0.01f, 0.0f, 30.0f);
 
-        ImGui::SeparatorText("Camera Shake");
-        ImGui::DragFloat("Shake Intensity", &testShakeIntensity, 0.05f, 0.0f, 5.0f, "%.2f");
-        ImGui::DragFloat("Shake Duration", &testShakeDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
-        ImGui::DragFloat("Shake Frequency", &testShakeFrequency, 0.1f, 0.1f, 30.0f, "%.1f Hz");
-        ImGui::DragFloat("Shake Position Amount", &testShakePositionAmount, 0.005f, 0.0f, 0.5f, "%.3f");
-        ImGui::DragFloat("Shake Target Amount", &testShakeTargetAmount, 0.01f, 0.0f, 1.0f, "%.3f");
-        if (ImGui::Button("Test Camera Shake"))
+        ImGui::SeparatorText("Camera Shake Presets");
+        const auto drawShakePreset = [this](const char* displayName, const char* presetName,
+            CameraShakePreset& preset)
         {
-            PlayCameraShake(testShakeIntensity, testShakeDuration, testShakeFrequency,
-                testShakePositionAmount, testShakeTargetAmount);
-        }
+            if (!ImGui::TreeNode(displayName)) return;
+
+            ImGui::PushID(presetName);
+            ImGui::DragFloat("Intensity", &preset.intensity, 0.05f, 0.0f, 5.0f, "%.2f");
+            ImGui::DragFloat("Duration", &preset.duration, 0.01f, 0.01f, 2.0f, "%.2f sec");
+            ImGui::DragFloat("Frequency", &preset.frequency, 0.1f, 0.1f, 30.0f, "%.1f Hz");
+            ImGui::DragFloat("Position Amount", &preset.positionAmount, 0.005f, 0.0f, 0.5f, "%.3f");
+            ImGui::DragFloat("Target Amount", &preset.targetAmount, 0.01f, 0.0f, 1.0f, "%.3f");
+            const std::string testLabel = "Test " + std::string(displayName);
+            if (ImGui::Button(testLabel.c_str())) PlayCameraShakePreset(presetName);
+            ImGui::PopID();
+            ImGui::TreePop();
+        };
+
+        drawShakePreset("Boss Heavy Landing", BossHeavyLandingPresetName, bossHeavyLandingShake);
+        drawShakePreset("Boss Wall Impact", BossWallImpactPresetName, bossWallImpactShake);
+        drawShakePreset("Rush Final", RushFinalPresetName, rushFinalShake);
+
+        ImGui::SeparatorText("Active Camera Shake");
         ImGui::Text("Active: %s", shakeActive ? "true" : "false");
         ImGui::Text("Elapsed / Duration: %.3f / %.3f", shakeElapsedTime, shakeDuration);
         ImGui::Text("Envelope: %.3f", currentShakeEnvelope);

@@ -33,6 +33,14 @@ public:
         float fovDegree = 35.0f;
         float horizontalOffset = 0.0f;
     };
+    struct CameraShakePreset
+    {
+        float intensity = 1.0f;
+        float duration = 0.28f;
+        float frequency = 12.0f;
+        float positionAmount = 0.035f;
+        float targetAmount = 0.18f;
+    };
 
 public:
     //引数付きコンストラクタ
@@ -166,6 +174,8 @@ private:
 
     void UpdateCameraShake(float deltaTime);
 
+    const CameraShakePreset* FindCameraShakePreset(const std::string& presetName) const;
+
     // Eyeを計算する関数
     CameraPose CalculatePose(CameraMode mode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const;
 
@@ -232,12 +242,16 @@ private:
     float cameraHeight = 0.0f;
     float focusDistance = 0.0f;
 
-    float testShakeIntensity = 1.0f;
-    float testShakeDuration = 0.28f;
-    float testShakeFrequency = 12.0f;
-    float testShakePositionAmount = 0.035f;
-    float testShakeTargetAmount = 0.18f;
+    // カメラシェイクのプリセット名
+    inline static constexpr const char* BossHeavyLandingPresetName = "BossHeavyLanding";
+    inline static constexpr const char* BossWallImpactPresetName = "BossWallImpact";
+    inline static constexpr const char* RushFinalPresetName = "RushFinal";
 
+    CameraShakePreset bossHeavyLandingShake{1.0f,0.28f,12.0f,0.035f,0.18f};
+    CameraShakePreset bossWallImpactShake{ 1.15f, 0.36f, 10.0f, 0.05f, 0.22f };
+    CameraShakePreset rushFinalShake{ 0.9f, 0.16f, 18.0f, 0.02f, 0.14f };
+
+    // Active shake state. Preset values are copied here when a shake starts.
     bool shakeActive = false;
     float shakeElapsedTime = 0.0f;
     float shakeDuration = 0.0f;
