@@ -29,6 +29,8 @@ public:
 
     void Update(float dt) override;
 
+    void DrawImGuiDetails() override;
+
     void SetMovieCameraComponent(std::shared_ptr<MovieCameraComponent> movieCameraComponent)
     {
         movieCameraWeakPtr = movieCameraComponent;
@@ -50,4 +52,13 @@ private:
     DoorMovieState doorMovieState = DoorMovieState::None;
     std::weak_ptr<MovieCameraComponent> movieCameraWeakPtr;
     float elapsedTimer = 0.0f;
+    float bossRoomZoomDuration = 2.0f;
+    float bossRoomZoomTargetFovDegree = 20.0f;
+    float bossRoomCameraMoveDistance =5.0f;
+    float bossRoomZoomStartFov = DirectX::XMConvertToRadians(35.0f);
+    float bossRoomZoomElapsed = 0.0f;
+    DirectX::XMFLOAT3 bossRoomZoomStartPosition{};
+    DirectX::XMFLOAT3 bossRoomZoomTargetPosition{};
+    DirectX::XMFLOAT4 bossRoomZoomStartRotation{};
+    DirectX::XMFLOAT4 bossRoomZoomTargetRotation{};
 };

@@ -129,7 +129,32 @@ void MovieCameraManagerActor::Update(float deltaTime)
         break;
     case DoorMovieState::PreBossRoomLerp:
     {
-        constexpr float duration = 3.0f;
+        const float duration = (std::max)(bossRoomZoomDuration, 0.01f);
+        bossRoomZoomStartFov = movieCamera->GetFov();
+        bossRoomZoomElapsed = 0.0f;
+        bossRoomZoomStartPosition = movieCamera->GetOwner()->GetPosition();
+        bossRoomZoomStartRotation = movieCamera->GetOwner()->GetQuaternionRotation();
+        const DirectX::XMFLOAT3 forward = movieCamera->GetForward();
+        bossRoomZoomTargetPosition =
+        {
+            bossRoomZoomStartPosition.x + forward.x * bossRoomCameraMoveDistance,
+            bossRoomZoomStartPosition.y + forward.y * bossRoomCameraMoveDistance,
+            bossRoomZoomStartPosition.z + forward.z * bossRoomCameraMoveDistance
+        };
+        bossRoomZoomTargetRotation = bossRoomZoomStartRotation;
+        if (gruxEnemy)
+        {
+            if (const auto& cameraTarget = gruxEnemy->GetCameraTargetComponent())
+            {
+                const DirectX::XMFLOAT3 targetDirection = MathHelper::Normalize(
+                    MathHelper::Subtract(
+                        cameraTarget->GetComponentLocation(),
+                        bossRoomZoomTargetPosition));
+                bossRoomZoomTargetRotation = MathHelper::LookRotation(
+                    targetDirection,
+                    { 0.0f, 1.0f, 0.0f });
+            }
+        }
         // ƒ{ƒX‚Ì–Ú‹Ê‚ð‚È‚­‚·
         if (gruxEnemyEye)
         {
@@ -145,6 +170,12 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {
             gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&]()
                 {
+                    if (auto camera = movieCameraWeakPtr.lock())
+                    {
+                        camera->GetOwner()->SetPosition(bossRoomZoomTargetPosition);
+                        camera->GetOwner()->SetQuaternionRotation(bossRoomZoomTargetRotation);
+                        camera->SetFov(DirectX::XMConvertToRadians(bossRoomZoomTargetFovDegree));
+                    }
                     doorMovieState = DoorMovieState::UpPlayerCombat;
                 });
         }
@@ -157,6 +188,41 @@ void MovieCameraManagerActor::Update(float deltaTime)
     }
         break;
     case DoorMovieState::BossRoomLerp:
+    {
+        bossRoomZoomElapsed = (std::min)(
+            bossRoomZoomElapsed + deltaTime,
+            (std::max)(bossRoomZoomDuration, 0.01f));
+
+        const float normalizedTime = std::clamp(
+            bossRoomZoomElapsed / (std::max)(bossRoomZoomDuration, 0.01f),
+            0.0f,
+            1.0f);
+        const float eased = normalizedTime * normalizedTime * (3.0f - 2.0f * normalizedTime);
+        DirectX::XMFLOAT3 position{};
+        position.x = std::lerp(bossRoomZoomStartPosition.x, bossRoomZoomTargetPosition.x, eased);
+        position.y = std::lerp(bossRoomZoomStartPosition.y, bossRoomZoomTargetPosition.y, eased);
+        position.z = std::lerp(bossRoomZoomStartPosition.z, bossRoomZoomTargetPosition.z, eased);
+        movieCamera->GetOwner()->SetPosition(position);
+
+        DirectX::XMVECTOR startRotation = DirectX::XMLoadFloat4(&bossRoomZoomStartRotation);
+        DirectX::XMVECTOR targetRotation = DirectX::XMLoadFloat4(&bossRoomZoomTargetRotation);
+        startRotation = DirectX::XMQuaternionNormalize(startRotation);
+        targetRotation = DirectX::XMQuaternionNormalize(targetRotation);
+        if (DirectX::XMVectorGetX(DirectX::XMVector4Dot(startRotation, targetRotation)) < 0.0f)
+        {
+            targetRotation = DirectX::XMVectorNegate(targetRotation);
+        }
+        const DirectX::XMVECTOR rotation = DirectX::XMQuaternionSlerp(
+            startRotation,
+            targetRotation,
+            eased);
+        DirectX::XMFLOAT4 quaternion{};
+        DirectX::XMStoreFloat4(&quaternion, rotation);
+        movieCamera->GetOwner()->SetQuaternionRotation(quaternion);
+
+        const float targetFov = DirectX::XMConvertToRadians(bossRoomZoomTargetFovDegree);
+        movieCamera->SetFov(std::lerp(bossRoomZoomStartFov, targetFov, eased));
+    }
         break;
     case DoorMovieState::UpPlayerCombat:
         movieCamera->SetOnMovieStart([&, doorActor, player, gruxEnemy]()
@@ -176,7 +242,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 // “G‚ÌˆÊ’u‚ð•”‰®‚Ì‰œ‚É‚·‚é
                 if (gruxEnemy)
                 {
-                    gruxEnemy->SetPosition({ 12.795f,-0.12f,10.774f });
                     gruxEnemy->SetEulerRotation({ 0.0f,-90.0f,0.0f });
                 }
                 doorMovieState = DoorMovieState::UpPlayerCombatMovie;
@@ -294,6 +359,18 @@ void MovieCameraManagerActor::Update(float deltaTime)
 
         break;
     }
+}
+
+void MovieCameraManagerActor::DrawImGuiDetails()
+{
+#ifdef USE_IMGUI
+    ImGui::DragFloat("Boss Room Zoom Duration", &bossRoomZoomDuration,
+        0.05f, 0.01f, 10.0f, "%.2f sec");
+    ImGui::DragFloat("Boss Room Zoom Target FOV", &bossRoomZoomTargetFovDegree,
+        0.1f, 10.0f, 60.0f, "%.1f deg");
+    ImGui::DragFloat("Boss Room Camera Move Distance", &bossRoomCameraMoveDistance,
+        0.05f, 0.0f, 3.0f, "%.2f m");
+#endif
 }
 
 void MovieCameraManagerActor::PlayMovie(const std::string& file)
