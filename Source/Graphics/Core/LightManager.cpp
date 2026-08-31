@@ -323,7 +323,7 @@ void LightManager::Update(float deltaTime)
     constants.iblIntensity = light.iblIntensity;
     constants.directionalLightEnable = static_cast<int>(light.directionalLightEnable);
     constants.pointLightEnable = static_cast<int>(light.pointLightEnable);
-    constants.pointLightCount = light.pointLightCount;
+    constants.pointLightCount = static_cast<int>(renderPointLights.size());
 
     constants.rimColor = light.rimColor;
     constants.rimIntensity = light.rimIntensity;
@@ -346,7 +346,7 @@ void LightManager::Update(float deltaTime)
 
     // デフォルト初期化
 #if 1
-    for (int i = 0; i < light.pointLightCount; i++)
+    for (int i = 0; i < constants.pointLightCount; i++)
     {
         constants.pointsLight[i] =
             (i < renderPointLights.size()) ? renderPointLights[i] : PointLight{};
@@ -357,7 +357,7 @@ void LightManager::Update(float deltaTime)
 #if 1
     if (showLightRange)
     {
-        for (int i = 0; i < light.pointLightCount; i++)
+        for (int i = 0; i < constants.pointLightCount; i++)
         {
             auto& light = constants.pointsLight[i];
 
@@ -397,11 +397,9 @@ void LightManager::CollectPointLightsFromScene(const Scene& scene)
         for (auto& light : components)
         {
             if (!light->IsUsePointLight()) continue;
+            if (scenePointLights.size() >= static_cast<size_t>(lightScene.pointLightCount))
+                return;
             scenePointLights.push_back(light->ToRenderLight());
-            if (scenePointLights.size() >= lightScene.pointLightCount)
-            {
-                break;
-            }
         }
     }
 }
@@ -431,6 +429,8 @@ void LightManager::DrawGui()
     ImGui::SliderFloat(U8("ライト強度"), &light.lightColor.w, 0.0f, 20.0f);
     CheckboxInt(U8("ポイントライト 有効"), &light.pointLightEnable);
     ImGui::SliderInt(U8("ポイントライト数"), &light.pointLightCount, 0, PointLightMaxCount);
+    ImGui::Text("Collected PointLight Count: %zu", scenePointLights.size());
+    ImGui::Text("GPU pointLightCount: %d", constants.pointLightCount);
     ImGui::Checkbox(U8("ライト範囲表示"), &showLightRange);
 
     ImGui::SliderFloat("Kc", &light.kc, 0.0f, 2.0f);

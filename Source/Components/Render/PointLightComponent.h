@@ -25,6 +25,7 @@ public:
 
 
     bool  IsUsePointLight()const { return enable; }
+    void SetUsePointLight(bool enabled) { enable = enabled; }
 
 private:
     bool enable = true;

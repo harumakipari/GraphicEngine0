@@ -75,6 +75,8 @@ public:
     void LightGui();
 
     const DirectX::XMFLOAT4& GetLightDirection() const { return constants.lightDirection; }
+    size_t GetCollectedPointLightCount() const { return scenePointLights.size(); }
+    int GetGpuPointLightCount() const { return constants.pointLightCount; }
 
     bool showLightRange = false; // ポイントライトの範囲をデバッグ表示するか
 

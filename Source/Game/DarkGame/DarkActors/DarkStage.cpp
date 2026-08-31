@@ -131,6 +131,22 @@ void DarkStage::DrawImGuiDetails()
     ImGui::Text("MainRoom: %s", mainRoomMeshComponent && mainRoomMeshComponent->IsVisible() ? "Visible" : "Hidden");
     ImGui::Text("TransitionArea: %s", transitionAreaMeshComponent && transitionAreaMeshComponent->IsVisible() ? "Visible" : "Hidden");
     ImGui::Text("BossRoom: %s", bossRoomMeshComponent && bossRoomMeshComponent->IsVisible() ? "Visible" : "Hidden");
+    const auto liveLightCount = [this](StageArea area)
+    {
+        size_t count = 0;
+        for (const auto& light : stageLightsByArea[static_cast<size_t>(area)])
+            count += light.expired() ? 0 : 1;
+        return count;
+    };
+    size_t enabledStageLightCount = 0;
+    for (const auto& areaLights : stageLightsByArea)
+        for (const auto& light : areaLights)
+            if (const auto component = light.lock(); component && component->IsUsePointLight())
+                ++enabledStageLightCount;
+    ImGui::Text("MainRoom Light Count: %zu", liveLightCount(StageArea::MainRoom));
+    ImGui::Text("Transition Light Count: %zu", liveLightCount(StageArea::Transition));
+    ImGui::Text("BossRoom Light Count: %zu", liveLightCount(StageArea::BossRoom));
+    ImGui::Text("Current Enabled Stage Light Count: %zu", enabledStageLightCount);
     ImGui::Separator();
     if (ImGui::Button(U8("ボスの部屋に入る")))
     {
@@ -153,6 +169,7 @@ void DarkStage::SetStageArea(StageArea area)
 
     currentStageArea = area;
     ApplyStageVisibility();
+    ApplyStageLightEnable();
 }
 
 bool DarkStage::IsStageAreaVisible(StageArea area) const
@@ -160,24 +177,25 @@ bool DarkStage::IsStageAreaVisible(StageArea area) const
     return area == StageArea::Transition || area == currentStageArea;
 }
 
-void DarkStage::SetActorMeshVisibility(
-    const std::shared_ptr<Actor>& actor, bool visible)
+void DarkStage::RegisterStageLight(
+    StageArea area, const std::shared_ptr<PointLightComponent>& light)
+{
+    if (!light)
+        return;
+    stageLightsByArea[static_cast<size_t>(area)].push_back(light);
+    light->SetUsePointLight(IsStageAreaVisible(area));
+}
+
+void DarkStage::RegisterActorStageLights(
+    StageArea area, const std::shared_ptr<Actor>& actor)
 {
     if (!actor)
         return;
-
     for (const auto& component : actor->GetComponents())
     {
-        if (const auto meshComponent = std::dynamic_pointer_cast<MeshComponent>(component))
-            meshComponent->SetIsVisible(visible);
+        if (const auto light = std::dynamic_pointer_cast<PointLightComponent>(component))
+            RegisterStageLight(area, light);
     }
-}
-
-void DarkStage::RegisterFurnitureActor(
-    StageArea area, const std::shared_ptr<Actor>& actor)
-{
-    furnitureActorsByArea[static_cast<size_t>(area)].push_back(actor);
-    SetActorMeshVisibility(actor, IsStageAreaVisible(area));
 }
 
 void DarkStage::ApplyStageVisibility()
@@ -189,14 +207,18 @@ void DarkStage::ApplyStageVisibility()
     if (bossRoomMeshComponent)
         bossRoomMeshComponent->SetIsVisible(IsStageAreaVisible(StageArea::BossRoom));
 
-    for (size_t areaIndex = 0; areaIndex < furnitureActorsByArea.size(); ++areaIndex)
+}
+
+void DarkStage::ApplyStageLightEnable()
+{
+    for (size_t areaIndex = 0; areaIndex < stageLightsByArea.size(); ++areaIndex)
     {
         const StageArea area = static_cast<StageArea>(areaIndex);
-        const bool visible = IsStageAreaVisible(area);
-        for (const auto& furnitureActor : furnitureActorsByArea[areaIndex])
+        const bool enabled = IsStageAreaVisible(area);
+        for (const auto& stageLight : stageLightsByArea[areaIndex])
         {
-            if (const auto actor = furnitureActor.lock())
-                SetActorMeshVisibility(actor, visible);
+            if (const auto light = stageLight.lock())
+                light->SetUsePointLight(enabled);
         }
     }
 }
@@ -231,42 +253,21 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
         struct StageSpawnSource
         {
             StageArea area;
-            const char* assetName;
             std::shared_ptr<StageAsset> asset;
         };
         const StageSpawnSource areaAssets[] =
         {
-            { StageArea::MainRoom, "MainRoom.gltf", mainRoomAsset },
-            { StageArea::Transition, "TransitionArea.gltf", transitionAreaAsset },
-            { StageArea::BossRoom, "BossRoom.gltf", bossRoomAsset },
+            { StageArea::MainRoom, mainRoomAsset },
+            { StageArea::Transition, transitionAreaAsset },
+            { StageArea::BossRoom, bossRoomAsset },
         };
-        const auto stageAreaName = [](StageArea area)
-        {
-            switch (area)
-            {
-            case StageArea::MainRoom: return "MainRoom";
-            case StageArea::Transition: return "Transition";
-            case StageArea::BossRoom: return "BossRoom";
-            default: return "Unknown";
-            }
-        };
-        for (const auto& [spawnArea, sourceAssetName, areaAsset] : areaAssets)
+        for (const auto& [spawnArea, areaAsset] : areaAssets)
         {
             for (const auto& point : areaAsset->spawnPoints)
         {
-            const auto registerFurniture = [&, this](const std::shared_ptr<Actor>& actor)
+            const auto registerActorLights = [this, spawnArea](const std::shared_ptr<Actor>& actor)
             {
-                RegisterFurnitureActor(spawnArea, actor);
-#ifdef _DEBUG
-                Logger::Log(
-                    "[Stage Furniture Area] SpawnPoint=" + point.name +
-                    " SourceAsset=" + sourceAssetName +
-                    " spawnArea=" + stageAreaName(spawnArea) +
-                    " RegisterArea=" + stageAreaName(spawnArea) +
-                    " Position=(" + std::to_string(point.worldPosition.x) + ", " +
-                    std::to_string(point.worldPosition.y) + ", " +
-                    std::to_string(point.worldPosition.z) + ")");
-#endif
+                RegisterActorStageLights(spawnArea, actor);
             };
             if (point.name.rfind("Spawn_Particle_Steam", 0) == 0)
             {
@@ -291,12 +292,13 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 pointLightComponent->SetRelativeLocationDirect(pos);
                 // ライトの名前からライトマネージャーの共有ライトを取得して設定
                 pointLightComponent->SetSharedLightName("FireBowl");
+                RegisterStageLight(spawnArea, pointLightComponent);
             }
             else if (point.name.rfind("Spawn_BossRoomChandelier", 0) == 0)
             {// bossの部屋のシャンデリアを生成する
                 Transform chandelierTr{ {17.221f,13.996f,11.082f},point.worldRotation,{3.71f,3.51f,5.1f} };
                 auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("bossRoomChandelier", chandelierTr);
-                registerFurniture(chandelier);
+                registerActorLights(chandelier);
             }
             else if (point.name.rfind("Spawn_Chandelier", 0) == 0)
             {// 名前が "Spawn_Chandelier" で始まる場合、シャンデリアを配置
@@ -309,20 +311,20 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                     point.worldScale
                 };
                 auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("chandelier", chandelierTr);
-                registerFurniture(chandelier);
+                registerActorLights(chandelier);
             }
             else if (point.name.rfind("Spawn_MainChandelier", 0) == 0)
             {// メインの部屋のシャンデリアを生成する
                 Transform chandelierTr{ {-13.28f,13.266f,11.182f},point.worldRotation,{2.5f,2.5f,2.5f} };
                 auto chandelier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageChandelierActor>("MainChandelier", chandelierTr);
-                registerFurniture(chandelier);
+                registerActorLights(chandelier);
             }
             else if (point.name.rfind("Spawn_TorchSconce", 0) == 0)
             {
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
                 Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto candelabra = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageTorchSconceActor>("TorchSconce", candelabraTr);
-                registerFurniture(candelabra);
+                registerActorLights(candelabra);
             }
             else if (point.name.rfind("Spawn_CandleStand", 0) == 0)
             {
@@ -330,7 +332,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candleStandTr{ pos,point.worldRotation,{1.0f,1.0f,1.0f} };
                 auto candleStand = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageCandleStandActor>("candleStand", candleStandTr);
                 candleStand->SetModel(stageCandleStandAsset);
-                registerFurniture(candleStand);
+                registerActorLights(candleStand);
             }
             else if (point.name.rfind("Spawn_Candelabra", 0) == 0)
             {// 名前が "Spawn_Candelabra" で始まる場合、燭台を配置
@@ -338,7 +340,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto candelabra = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageCandelabraActor>("candelabra", candelabraTr);
                 candelabra->SetModel(stageCandelabraAsset);
-                registerFurniture(candelabra);
+                registerActorLights(candelabra);
             }
             else if (point.name.rfind("Spawn_Brazier", 0) == 0)
             {// 名前が "Spawn_Brazier" で始まる場合、火鉢を配置
@@ -346,7 +348,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform brazierTr{ pos,point.worldRotation,point.worldScale };
                 auto brazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBrazierActor>("brazier", brazierTr);
                 brazier->SetModel(stageBrazierAsset);
-                registerFurniture(brazier);
+                registerActorLights(brazier);
             }
             else if (point.name.rfind("Spawn_GroundBrazier", 0) == 0)
             {// 名前が "Spawn_GroundBrazier" で始まる場合、地面の火鉢を配置
@@ -354,7 +356,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto groundBrazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageGroundBrazierActor>("GroundBrazier", candelabraTr);
                 groundBrazier->SetModel(stageGroundBrazierAsset);
-                registerFurniture(groundBrazier);
+                registerActorLights(groundBrazier);
             }
             else if (point.name.rfind("Spawn_Melted_Wax", 0) == 0)
             {// 名前が "Spawn_Melted_Wax" で始まる場合、溶けた蝋を配置
@@ -362,7 +364,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candelabraTr{ pos,point.worldRotation,point.worldScale };
                 auto meltedWax = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageMeltedWaxActor>("MeltedWax", candelabraTr);
                 meltedWax->SetModel(stageMeltedWaxAsset);
-                registerFurniture(meltedWax);
+                registerActorLights(meltedWax);
             }
             else if (point.name.rfind("Spawn_Standing_Brazier", 0) == 0)
             {// 名前が "Spawn_Standing_Brazier" で始まる場合、スタンド式火鉢を配置
@@ -370,7 +372,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 Transform candelabraTr{ pos,{0,0,0,1},point.worldScale };
                 auto standingBrazier = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageStandingBrazierActor>("StandingBrazier", candelabraTr);
                 standingBrazier->SetModel(stageStandingBrazierAsset);
-                registerFurniture(standingBrazier);
+                registerActorLights(standingBrazier);
             }
             else if (point.name.rfind("Spawn_JailDoor", 0) == 0)
             {
@@ -378,7 +380,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 pos.z = 12.0f;
                 Transform doorJailTr{ pos,point.worldRotation,point.worldScale };
                 auto doorJailActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DoorJailActor>("DoorJailActor", doorJailTr);
-                registerFurniture(doorJailActor);
+                registerActorLights(doorJailActor);
 
             }
 #if 0
@@ -387,7 +389,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
                 Transform barrelTr{ pos,point.worldRotation,point.worldScale };
                 auto barrel = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBarrelActor>("barrel", barrelTr);
-                registerFurniture(barrel);
+                registerActorLights(barrel);
             }
 
 #endif // 0
@@ -400,6 +402,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
                 pointLightComponent->SetRelativeLocationDirect(pos);
                 pointLightComponent->SetSharedLightName("TorchLight");
+                RegisterStageLight(spawnArea, pointLightComponent);
             }
             else if (point.name.rfind("Spawn_BossRoomLight", 0) == 0)
             {// ボスの部屋のPointLightを生成する
@@ -411,6 +414,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 pointLightComponent->SetSharedLightName("BossRoomPointLight");
                 //pointLightComponent->SetSharedLightName("ZeroLight");
                 bossRoomLightsLeft.push_back(pointLightComponent.get());
+                RegisterStageLight(spawnArea, pointLightComponent);
             }
             else if (point.name.rfind("Spawn_WallLight", 0) == 0)
             {// ボスの部屋の壁のPointLightを生成する
@@ -422,6 +426,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 pointLightComponent->SetSharedLightName("WallLight");
                 //pointLightComponent->SetSharedLightName("ZeroLight");
                 bossRoomLightsLeft.push_back(pointLightComponent.get());
+                RegisterStageLight(spawnArea, pointLightComponent);
             }
             else if (point.name.rfind("Spawn_MainRoomLight", 0) == 0)
             {// メインの部屋のPointLightを生成する
@@ -431,6 +436,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 auto pointLightComponent = this->AddComponent<PointLightComponent>(compName, parentName);
                 pointLightComponent->SetRelativeLocationDirect(pos);
                 pointLightComponent->SetSharedLightName("MainRoomPointLight");
+                RegisterStageLight(spawnArea, pointLightComponent);
             }
 
             }
@@ -438,6 +444,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
     }
 
 
+    ApplyStageLightEnable();
     StartBossRoomLightSequence();
 
 }

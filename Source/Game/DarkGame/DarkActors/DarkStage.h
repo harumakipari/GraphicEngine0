@@ -36,16 +36,17 @@ public:
     
 private:
     void ApplyStageVisibility();
+    void ApplyStageLightEnable();
     bool IsStageAreaVisible(StageArea area) const;
-    void RegisterFurnitureActor(StageArea area, const std::shared_ptr<Actor>& actor);
-    void SetActorMeshVisibility(const std::shared_ptr<Actor>& actor, bool visible);
+    void RegisterStageLight(StageArea area, const std::shared_ptr<PointLightComponent>& light);
+    void RegisterActorStageLights(StageArea area, const std::shared_ptr<Actor>& actor);
 
     std::string parentName = "RootComponent";
     std::shared_ptr<StaticMeshComponent> mainRoomMeshComponent;
     std::shared_ptr<StaticMeshComponent> transitionAreaMeshComponent;
     std::shared_ptr<StaticMeshComponent> bossRoomMeshComponent;
     StageArea currentStageArea = StageArea::BossRoom;
-    std::array<std::vector<std::weak_ptr<Actor>>, 3> furnitureActorsByArea;
+    std::array<std::vector<std::weak_ptr<PointLightComponent>>, 3> stageLightsByArea;
 
     // ボス部屋のライト
     std::vector<PointLightComponent*> bossRoomLightsLeft;
