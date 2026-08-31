@@ -141,8 +141,12 @@ void main(point GS_IN gin[1], inout TriangleStream<PS_IN> output)
     switch ((int) (particleDataBuffer[particleIndex].parameter.x + 0.5f))
     {
         case 0: // Billboard
-            rotationMatrix = mul(billbordMatrix, MatrixRotationRollPitchYaw(particleDataBuffer[particleIndex].rotation.xyz));
+        {
+            float zRotation = particleDataBuffer[particleIndex].rotation.z;
+            float4x4 localRollMatrix = MatrixRotationRollPitchYaw(float3(0.0f, 0.0f, zRotation));
+            rotationMatrix = mul(localRollMatrix, billbordMatrix);
             break;
+        }
         
         case 1: // StretchedBillboard
         {
