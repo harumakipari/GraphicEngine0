@@ -1,0 +1,447 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "alphaCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.800000011920929
+                },
+                {
+                    "time": 0.05000000074505806,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.75,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.8999999761581421,
+                    "value": 0.8999999761581421
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "blendState": 2,
+            "burstCount": 1,
+            "colorCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 1.0
+                }
+            ],
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 0,
+            "emissiveCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.20000000298023224
+                },
+                {
+                    "time": 0.029999999329447746,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.15000000596046448,
+                    "value": 0.8500000238418579
+                },
+                {
+                    "time": 0.699999988079071,
+                    "value": 0.8500000238418579
+                },
+                {
+                    "time": 0.8799999952316284,
+                    "value": 0.5
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "emissivePower": 15.0,
+            "emitCount": [
+                1,
+                1
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "emitRate": 0.0,
+            "emitterLifeTime": 0.4000000059604645,
+            "endColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "endSize": [
+                [
+                    1.2000000476837158,
+                    1.2000000476837158
+                ],
+                [
+                    1.2000000476837158,
+                    1.2000000476837158
+                ]
+            ],
+            "height": 0.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "isBurst": true,
+            "lifeTime": [
+                0.4000000059604645,
+                0.4000000059604645
+            ],
+            "loop": false,
+            "maxParticles": 1,
+            "name": "RushWhiteCore",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 0.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "shapeType": 0,
+            "sizeCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.15000000596046448
+                },
+                {
+                    "time": 0.03999999910593033,
+                    "value": 1.4500000476837158
+                },
+                {
+                    "time": 0.10000000149011612,
+                    "value": 1.149999976158142
+                },
+                {
+                    "time": 0.6499999761581421,
+                    "value": 1.149999976158142
+                },
+                {
+                    "time": 0.8500000238418579,
+                    "value": 1.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "sizeCurveMode": 1,
+            "speed": [
+                0.0,
+                0.0
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    1.7000000476837158,
+                    1.7000000476837158
+                ],
+                [
+                    1.7000000476837158,
+                    1.7000000476837158
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\white_core.png",
+            "textureSplitCount": [
+                1,
+                1
+            ],
+            "useGravity": false,
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
+        },
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "alphaCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.0
+                },
+                {
+                    "time": 0.041718751192092896,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.699999988079071,
+                    "value": 0.8500000238418579
+                },
+                {
+                    "time": 0.8799999952316284,
+                    "value": 0.5
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "blendState": 2,
+            "burstCount": 1,
+            "colorCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 1.0
+                }
+            ],
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 0,
+            "emissiveCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.10000000149011612
+                },
+                {
+                    "time": 0.029999999329447746,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.11999999731779099,
+                    "value": 0.8999999761581421
+                },
+                {
+                    "time": 0.6499999761581421,
+                    "value": 0.8500000238418579
+                },
+                {
+                    "time": 0.8500000238418579,
+                    "value": 0.44999998807907104
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "emissivePower": 4.0,
+            "emitCount": [
+                6,
+                6
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "emitRate": 0.0,
+            "emitterLifeTime": 0.3499999940395355,
+            "endColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "endSize": [
+                [
+                    3.5,
+                    0.3499999940395355
+                ],
+                [
+                    3.5,
+                    0.3499999940395355
+                ]
+            ],
+            "height": 0.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "isBurst": true,
+            "lifeTime": [
+                0.75,
+                0.75
+            ],
+            "loop": false,
+            "maxParticles": 6,
+            "name": "RushRadialRay",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 0.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    360.0
+                ]
+            ],
+            "shapeType": 0,
+            "sizeCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.10000000149011612
+                },
+                {
+                    "time": 0.049531251192092896,
+                    "value": 3.1999998092651367
+                },
+                {
+                    "time": 0.12148437649011612,
+                    "value": 2.866666793823242
+                },
+                {
+                    "time": 0.699999988079071,
+                    "value": 2.799999952316284
+                },
+                {
+                    "time": 0.8936718702316284,
+                    "value": 2.5500006675720215
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "sizeCurveMode": 1,
+            "speed": [
+                0.0,
+                0.0
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    3.5,
+                    0.3499999940395355
+                ],
+                [
+                    3.5,
+                    0.3499999940395355
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\RadialRay.png",
+            "textureSplitCount": [
+                1,
+                1
+            ],
+            "useGravity": false,
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
+        }
+    ],
+    "name": "RushCoreEffect"
+}
