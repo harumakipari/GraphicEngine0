@@ -9,6 +9,8 @@
 #include "DarkStagePointLightActor.h"
 #include "DoorActor.h"
 #include "Components/Effect/ParticleComponent.h"
+#include "Game/Actors/Player/Player.h"
+#include "Engine/Camera/CameraManager.h"
 #include "Engine/Scene/Scene.h"
 
 void DarkStage::Initialize(const Transform& transform)
@@ -96,6 +98,8 @@ void DarkStage::Initialize(const Transform& transform)
 
 void DarkStage::Update(float deltaTime)
 {
+    UpdateAutomaticStageState();
+
     if (!bossRoomSequencePlaying)
         return;
 #if 0
@@ -121,8 +125,14 @@ void DarkStage::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
     ImGui::SeparatorText("Stage Geometry Visibility");
-    ImGui::Text("Current Area: %s",
-        currentStageArea == StageArea::MainRoom ? "MainRoom" : "BossRoom");
+    const char* currentStageState = isMoviePlaying
+        ? "Movie: All Areas"
+        : (currentStageArea == StageArea::BossRoom
+            ? "Gameplay: Transition + BossRoom"
+            : "Gameplay: MainRoom + Transition");
+    ImGui::Text("Is Movie Playing: %s", isMoviePlaying ? "true" : "false");
+    ImGui::Text("BossRoom Entered: %s", isBossRoomEntered ? "true" : "false");
+    ImGui::Text("Current Stage State: %s", currentStageState);
     if (ImGui::Button("Show MainRoom"))
         SetStageArea(StageArea::MainRoom);
     ImGui::SameLine();
@@ -174,7 +184,43 @@ void DarkStage::SetStageArea(StageArea area)
 
 bool DarkStage::IsStageAreaVisible(StageArea area) const
 {
+    if (isMoviePlaying)
+        return true;
     return area == StageArea::Transition || area == currentStageArea;
+}
+
+void DarkStage::UpdateAutomaticStageState()
+{
+    const auto scene = GetOwnerScene();
+    if (!scene)
+        return;
+
+    const auto cameraManager = scene->GetCameraManager();
+    const bool moviePlaying = cameraManager && cameraManager->IsUseMovie();
+
+    bool bossRoomEntered = false;
+    if (const auto player = scene->GetActorManager()->GetActorOfType<Player>())
+        bossRoomEntered = player->IsBossBattle();
+
+    if (automaticStageStateInitialized &&
+        moviePlaying == isMoviePlaying &&
+        bossRoomEntered == isBossRoomEntered)
+    {
+        return;
+    }
+
+    automaticStageStateInitialized = true;
+    isMoviePlaying = moviePlaying;
+    isBossRoomEntered = bossRoomEntered;
+    if (!isMoviePlaying)
+    {
+        currentStageArea = isBossRoomEntered
+            ? StageArea::BossRoom
+            : StageArea::MainRoom;
+    }
+
+    ApplyStageVisibility();
+    ApplyStageLightEnable();
 }
 
 void DarkStage::RegisterStageLight(
