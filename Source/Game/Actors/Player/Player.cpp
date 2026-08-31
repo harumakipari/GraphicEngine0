@@ -730,19 +730,19 @@ void Player::Update(float deltaTime)
                 {
                     Logger::Log(U8("Œ•‚É“G‚ª“–‚½‚Á‚½"));
                     enemy->TakeDamage(GetCurrentAttackDamage());
-                    if (selectedEffectHit && hit.hasPosition && hit.hasNormal)
+                    const bool isRushHit = stateMachine_ &&
+                        std::string(stateMachine_->GetStateName()) == "Rush";
+                    if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
                     {
                         enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
                     }
-                    else
+                    else if (!isRushHit)
                     {
                         if (swordHitDebug)
                             Logger::Log(Logger::LogCategory::Physics,
                                 "[SwordHit] effect skipped: no valid hit position/normal");
                     }
                     hitActors.emplace(enemy);
-                    const bool isRushHit = stateMachine_ &&
-                        std::string(stateMachine_->GetStateName()) == "Rush";
                     if (isRushHit)
                     {
                         enemy->SpawnRushHitRing(hit.hitPoint, hit.normal, playerPos);

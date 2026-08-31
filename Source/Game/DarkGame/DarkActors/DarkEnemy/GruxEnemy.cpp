@@ -316,8 +316,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     uiManager->Add(lockOnTargetImageComponent);
 
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
-    hitSwordEffectComponent->Load("./Data/Effect/Files/DarkStageBloodEffect.json");
-    //hitSwordEffectComponent->Load("./Data/Effect/Files/DarkGameHitEffect.json");
+    hitSwordEffectComponent->Load("./Data/Effect/Files/NormalAttackHitEffect.json");
 
     rushHitRingEffectComponent = this->AddComponent<class ParticleComponent>("rushHitRingEffectComponent", parentName);
     rushHitRingEffectComponent->Load("./Data/Effect/Files/RushHitRingEffect.json");
@@ -2493,7 +2492,7 @@ void GruxEnemy::TakeDamage(const int damage)
 {
     skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = damageFlashStartValue;
     // コントローラー振動
-    InputSystem::SetVibration(0.8f, 0.05f);
+    InputSystem::SetVibration(0.8f, 0.1f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.3f);
 
     const int hpBeforeDamage = hp;
@@ -2514,7 +2513,7 @@ void GruxEnemy::TakeDamage(const int damage)
         if (lastHitVoiceIndex >= 0 && voiceIndex >= lastHitVoiceIndex)
             ++voiceIndex;
 
-        if (CoreAudio::PlayOneShot(hitVoicePaths[voiceIndex], 0.5f))
+        if (CoreAudio::PlayOneShot(hitVoicePaths[voiceIndex], 0.3f))
         {
             lastHitVoiceIndex = voiceIndex;
             hitVoiceCooldownTimer = hitVoiceCooldown;
@@ -2545,14 +2544,15 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
     DirectX::XMFLOAT3 spawnPos = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
     spawnPos = hitPos;
 
-    //if (hitSwordEffectComponent)
-    //{
-    //    hitSwordEffectComponent->SetWorldLocationDirect(spawnPos);
-    //    hitSwordEffectComponent->UpdateComponentToWorld(); // これ入れないと最初に呼ばれる時に位置がずれる
-    //    XMFLOAT3 position = hitSwordEffectComponent->GetComponentLocation();
-    //    XMFLOAT3 rotation = hitSwordEffectComponent->GetComponentEulerRotation();
-    //    EffectManager::EmitParticle(hitSwordEffectComponent->GetEffectHandle(), position, rotation);
-    //}
+    if (hitSwordEffectComponent)
+    {
+        hitSwordEffectComponent->SetWorldLocationDirect(spawnPos);
+        hitSwordEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(
+            hitSwordEffectComponent->GetEffectHandle(),
+            hitSwordEffectComponent->GetComponentLocation(),
+            { 0.0f, 0.0f, 0.0f });
+    }
 
 }
 
@@ -2569,9 +2569,9 @@ void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOA
     float spawnOffset = 0.8f;
     DirectX::XMFLOAT3 rushEffectPosition = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
 
-    rushEffectPosition.x += MathHelper::RandomRange(-0.35f, 0.35f);
-    rushEffectPosition.y += MathHelper::RandomRange(-0.20f, 0.20f);
-    rushEffectPosition.z += MathHelper::RandomRange(-0.35f, 0.35f);
+    rushEffectPosition.x += MathHelper::RandomRange(-0.45f, 0.45f);
+    rushEffectPosition.y += MathHelper::RandomRange(-0.20f, 0.80f);
+    rushEffectPosition.z += MathHelper::RandomRange(-0.45f, 0.45f);
 
 
     if (rushHitSparkEffectComponent)
