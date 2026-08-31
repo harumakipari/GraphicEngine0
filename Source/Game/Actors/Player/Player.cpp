@@ -81,6 +81,8 @@ namespace
 
 void Player::Initialize(const Transform& transform)
 {
+    delayedHp = static_cast<float>(hp);
+    delayedHpDelayTimer = 0.0f;
     std::string parentName = "skeletalComponent";
     // 描画用コンポーネントを追加
     {
@@ -414,27 +416,57 @@ void Player::Initialize(const Transform& transform)
     uiManager->Add(operateUiComponent);
 
     // Hpバー後ろ
-    auto gaugeFrameBackComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/bar_back.png", "bar_back_ui");
-    DirectX::XMFLOAT2 gaugeSize = { 221.0f,28.0f };
-    DirectX::XMFLOAT2 gaugeScale = { 1.5f,1.5f };
-    gaugeFrameBackComponent->SetScale(gaugeScale);
-    gaugeFrameBackComponent->SetSize(gaugeSize);
-    gaugeFrameBackComponent->SetPivot({ 0.0f,0.5f });
-    gaugeFrameBackComponent->zOrder = 10;
-    gaugeFrameBackComponent->SetWorldPosition({ 50.0f,115.0f });
-    gaugeFrameBackComponent->SetColor(CoreColor::White);
-    uiManager->Add(gaugeFrameBackComponent);
-    // Hpバー
-    hpFrameUiComponent = std::make_shared<UIGaugeComponent>("./Data/Textures/UI/HpBar/frame.png", "./Data/Textures/UI/HpBar/bar.png", "EnemyHpBar");
-    hpFrameUiComponent->SetVisible(true);
-    hpFrameUiComponent->SetPivot({ 0.0f,0.5f });
-    hpFrameUiComponent->SetSize(gaugeSize);
-    hpFrameUiComponent->SetScale(gaugeScale);
-    hpFrameUiComponent->SetWorldPosition({ 50.0f,115.0f });
-    hpFrameUiComponent->zOrder = 15;
-    hpFrameUiComponent->SetGaugeFillSize(gaugeSize);
+    const DirectX::XMFLOAT2 hpBarPosition = { 110.0f, 88.0f };
+    const DirectX::XMFLOAT2 hpIconPosition = { 50.0f, 75.0f };
+    const DirectX::XMFLOAT2 hpBarPivot = { 0.0f, 0.5f };
+    const DirectX::XMFLOAT2 hpBarScale = { 0.37f, 0.37f };
+
+    auto hpBackgroundUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/player_hp_background.png", "PlayerHpBackground");
+    hpBackgroundUiComponent->SetWorldPosition(hpBarPosition);
+    hpBackgroundUiComponent->SetSize({ 891.0f, 26.0f });
+    hpBackgroundUiComponent->SetPivot(hpBarPivot);
+    hpBackgroundUiComponent->SetScale(hpBarScale);
+    hpBackgroundUiComponent->SetColor(CoreColor::White);
+    hpBackgroundUiComponent->zOrder = 10;
+    uiManager->Add(hpBackgroundUiComponent);
+
+    hpDelayedFillUiComponent = std::make_shared<UIGaugeFillComponent>("./Data/Textures/UI/HpBar/player_hp_fill.png", "PlayerHpDelayedFill");
+    hpDelayedFillUiComponent->SetWorldPosition(hpBarPosition);
+    hpDelayedFillUiComponent->SetSize({ 889.0f, 22.0f });
+    hpDelayedFillUiComponent->SetPivot(hpBarPivot);
+    hpDelayedFillUiComponent->SetScale(hpBarScale);
+    hpDelayedFillUiComponent->SetColor(playerHpDelayedColor);
+    hpDelayedFillUiComponent->zOrder = 11;
+    hpDelayedFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+    uiManager->Add(hpDelayedFillUiComponent);
+
+    hpCurrentFillUiComponent = std::make_shared<UIGaugeFillComponent>("./Data/Textures/UI/HpBar/player_hp_fill.png", "PlayerHpCurrentFill");
+    hpCurrentFillUiComponent->SetWorldPosition(hpBarPosition);
+    hpCurrentFillUiComponent->SetSize({ 889.0f, 22.0f });
+    hpCurrentFillUiComponent->SetPivot(hpBarPivot);
+    hpCurrentFillUiComponent->SetScale(hpBarScale);
+    hpCurrentFillUiComponent->SetColor(playerHpCurrentColor);
+    hpCurrentFillUiComponent->zOrder = 12;
+    hpCurrentFillUiComponent->SetValue(static_cast<float>(hp), static_cast<float>(maxHp));
+    uiManager->Add(hpCurrentFillUiComponent);
+
+    auto hpFrameUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/player_hp_frame.png", "PlayerHpFrame");
+    hpFrameUiComponent->SetWorldPosition(hpBarPosition);
+    hpFrameUiComponent->SetSize({ 897.0f, 32.0f });
+    hpFrameUiComponent->SetPivot(hpBarPivot);
+    hpFrameUiComponent->SetScale(hpBarScale);
     hpFrameUiComponent->SetColor(CoreColor::White);
+    hpFrameUiComponent->zOrder = 15;
     uiManager->Add(hpFrameUiComponent);
+
+    auto hpIconUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/player_hp_icon.png", "PlayerHpIcon");
+    hpIconUiComponent->SetWorldPosition(hpIconPosition);
+    hpIconUiComponent->SetSize({ 54.0f, 55.0f });
+    hpIconUiComponent->SetPivot({ 0.0f, 0.5f });
+    hpIconUiComponent->SetScale({ 1.4f, 1.4f });
+    hpIconUiComponent->SetColor(CoreColor::White);
+    hpIconUiComponent->zOrder = 16;
+    uiManager->Add(hpIconUiComponent);
 
 }
 
@@ -442,10 +474,32 @@ void Player::Update(float deltaTime)
 {
     using namespace DirectX;
 
-    // HPバーの更新
-    if (hpFrameUiComponent)
+    // Player HP UI uses unscaled time so HitStop / Slow do not pause the delayed gauge.
+    const float currentHp = static_cast<float>((std::max)(hp, 0));
+    const float uiDeltaTime = Time::UnscaledDeltaTime();
+    if (delayedHp > currentHp)
     {
-        hpFrameUiComponent->SetValue(static_cast<float>(hp), static_cast<float>(maxHp));
+        if (delayedHpDelayTimer > 0.0f)
+        {
+            delayedHpDelayTimer = (std::max)(0.0f, delayedHpDelayTimer - uiDeltaTime);
+        }
+        else
+        {
+            delayedHp = (std::max)(currentHp, delayedHp - delayedHpFollowSpeed * uiDeltaTime);
+        }
+    }
+    else if (delayedHp < currentHp)
+    {
+        // HP recovery is reflected immediately without a delayed decrease effect.
+        delayedHp = currentHp;
+        delayedHpDelayTimer = 0.0f;
+    }
+
+    if (hpCurrentFillUiComponent && hpDelayedFillUiComponent)
+    {
+        const float maximumHp = static_cast<float>(maxHp);
+        hpCurrentFillUiComponent->SetValue(currentHp, maximumHp);
+        hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
     }
 
 
@@ -903,6 +957,17 @@ void Player::SetRushWeaponVisual(const bool enabled)
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    if (ImGui::CollapsingHeader("Player HP UI"))
+    {
+        ImGui::DragFloat("Delayed HP Hold Duration", &delayedHpDelayDuration,
+            0.01f, 0.0f, 2.0f, "%.2f sec");
+        ImGui::DragFloat("Delayed HP Follow Speed", &delayedHpFollowSpeed,
+            0.1f, 0.0f, 100.0f, "%.2f HP/sec");
+        if (ImGui::ColorEdit4("Current HP Color", &playerHpCurrentColor.r) && hpCurrentFillUiComponent)
+            hpCurrentFillUiComponent->SetColor(playerHpCurrentColor);
+        if (ImGui::ColorEdit4("Delayed HP Color", &playerHpDelayedColor.r) && hpDelayedFillUiComponent)
+            hpDelayedFillUiComponent->SetColor(playerHpDelayedColor);
+    }
     if (ImGui::CollapsingHeader("Just Dodge Debug", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Checkbox("Enable World HitBox Debug", &justDodgeDebugEnabled);
@@ -2435,8 +2500,14 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     }
     damageKnockbackDirection = direction;
 
+    const int hpBeforeDamage = hp;
     const int appliedDamage = (std::max)(0, damage);
     hp = (std::max)(0, hp - appliedDamage);
+    if (hp < hpBeforeDamage)
+    {
+        delayedHp = static_cast<float>(hpBeforeDamage);
+        delayedHpDelayTimer = delayedHpDelayDuration;
+    }
     ++dodgeDebugDamageCount;
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav", 0.3f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav", 0.5f);
