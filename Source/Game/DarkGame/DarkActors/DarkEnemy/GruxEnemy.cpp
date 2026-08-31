@@ -321,8 +321,9 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     rushHitRingEffectComponent = this->AddComponent<class ParticleComponent>("rushHitRingEffectComponent", parentName);
     rushHitRingEffectComponent->Load("./Data/Effect/Files/RushHitRingEffect.json");
+    // Rush被弾時のエフェクト
     rushHitSparkEffectComponent = this->AddComponent<class ParticleComponent>("rushHitSparkEffectComponent", parentName);
-    rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushHitSparkEffect.json");
+    rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushCoreEffect.json");
 
     leftWeaponTrail.Initialize();
     rightWeaponTrail.Initialize();
@@ -391,6 +392,7 @@ void GruxEnemy::Update(float deltaTime)
     // HPバーの更新
     const float currentHp = static_cast<float>((std::max)(hp, 0));
     const float uiDeltaTime = Time::UnscaledDeltaTime();
+    hitVoiceCooldownTimer = (std::max)(0.0f, hitVoiceCooldownTimer - uiDeltaTime);
     if (!rushHpDisplayActive && delayedHp > currentHp)
     {
         if (delayedHpDelayTimer > 0.0f)
@@ -495,7 +497,12 @@ void GruxEnemy::Update(float deltaTime)
 
     // 被弾時のフラッシュ
     {
-        skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = std::max<float>(0.0f, skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - deltaTime / flashDuration);
+        const float fadeSpeed = damageFlashDuration > 0.0f
+            ? damageFlashStartValue / damageFlashDuration
+            : damageFlashStartValue;
+        skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = (std::max)(
+            0.0f,
+            skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - fadeSpeed * deltaTime);
     }
 
     DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
@@ -1835,7 +1842,9 @@ void GruxEnemy::DrawImGuiDetails()
     }
     ImGui::DragFloat(U8("lockOnOffsetY"), &lockOnOffsetY, 0.05f, 0.1f, 10.0f);
     ImGui::DragFloat(U8("ロックオンプレイヤー側に押し出すオフセット"), &lockOnOffset, 0.05f, 0.1f, 10.0f);
-    ImGui::DragFloat(U8("被弾時のフラッシュ"), &flashDuration, 0.05f, 0.1f, 2.0f);
+    ImGui::DragFloat("Boss Damage Flash Duration", &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
+    ImGui::SliderFloat("Boss Damage Flash Strength", &damageFlashStartValue, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat("Boss Hit Voice Cooldown", &hitVoiceCooldown, 0.01f, 0.0f, 2.0f, "%.2f sec");
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
     ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
@@ -2482,13 +2491,35 @@ void GruxEnemy::EndRushHpDisplay()
 }
 void GruxEnemy::TakeDamage(const int damage)
 {
-    //skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 1.0f;
+    skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = damageFlashStartValue;
     // コントローラー振動
     InputSystem::SetVibration(0.8f, 0.05f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.3f);
 
     const int hpBeforeDamage = hp;
     hp -= damage;
+    if (hp > 0 && hitVoiceCooldownTimer <= 0.0f)
+    {
+        static constexpr std::array<const char*, 4> hitVoicePaths =
+        {
+            "./Data/Sound/SE/boss_hit_voice1.wav",
+            "./Data/Sound/SE/boss_hit_voice2.wav",
+            "./Data/Sound/SE/boss_hit_voice3.wav",
+            "./Data/Sound/SE/boss_hit_voice4.wav",
+        };
+
+        int voiceIndex = lastHitVoiceIndex < 0
+            ? MathHelper::RandomRange(0, static_cast<int>(hitVoicePaths.size()) - 1)
+            : MathHelper::RandomRange(0, static_cast<int>(hitVoicePaths.size()) - 2);
+        if (lastHitVoiceIndex >= 0 && voiceIndex >= lastHitVoiceIndex)
+            ++voiceIndex;
+
+        if (CoreAudio::PlayOneShot(hitVoicePaths[voiceIndex], 0.5f))
+        {
+            lastHitVoiceIndex = voiceIndex;
+            hitVoiceCooldownTimer = hitVoiceCooldown;
+        }
+    }
     if (!rushHpDisplayActive && hp < hpBeforeDamage)
     {
         // Restart from the HP immediately before each successful hit.

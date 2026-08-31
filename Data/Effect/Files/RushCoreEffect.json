@@ -194,12 +194,12 @@
             ],
             "startSize": [
                 [
-                    1.7000000476837158,
-                    1.7000000476837158
+                    2.0,
+                    2.0
                 ],
                 [
-                    1.7000000476837158,
-                    1.7000000476837158
+                    2.0,
+                    2.0
                 ]
             ],
             "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\white_core.png",
@@ -300,7 +300,7 @@
                     "value": 0.0
                 }
             ],
-            "emissivePower": 4.0,
+            "emissivePower": 3.0,
             "emitCount": [
                 6,
                 6
@@ -342,8 +342,8 @@
             ],
             "isBurst": true,
             "lifeTime": [
-                0.75,
-                0.75
+                0.550000011920929,
+                0.550000011920929
             ],
             "loop": false,
             "maxParticles": 6,
@@ -415,15 +415,15 @@
             ],
             "startSize": [
                 [
-                    3.5,
-                    0.3499999940395355
+                    3.299999952316284,
+                    0.10000000149011612
                 ],
                 [
-                    3.5,
-                    0.3499999940395355
+                    3.299999952316284,
+                    0.10000000149011612
                 ]
             ],
-            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\RadialRay.png",
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\RadialRay2.png",
             "textureSplitCount": [
                 1,
                 1

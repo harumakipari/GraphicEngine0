@@ -765,7 +765,11 @@ private:
     const AnimationNotifyState* activeDangerNotifyState = nullptr;
     bool dangerObbWorldDebug = false;
 
-    float flashDuration = 0.8f;   // 何秒でフラッシュしなくなるか
+    float damageFlashDuration = 0.20f;
+    float damageFlashStartValue = 0.60f;
+    float hitVoiceCooldown = 0.50f;
+    float hitVoiceCooldownTimer = 0.0f;
+    int lastHitVoiceIndex = -1;
 
     // アニメーション時にどれくらい移動するか
     std::vector<AnimationMotionWarp> animationMotionWarps;
