@@ -54,6 +54,12 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         occlusionFactor *= sampled.r;
     }
     const float occlusionStrength = m.occlusionTexture.strength;
+
+    const float damageFlashAmount = saturate(flashValue);
+    const float damageBodyAmount = saturate(
+        damageFlashAmount * modelEffectParameter.edgeWidth);
+    baseColorFactor.rgb = lerp(
+        baseColorFactor.rgb, cpuColor.rgb, damageBodyAmount);
     
     const float3 f0 = lerp(0.04, baseColorFactor.rgb, metallicFactor);
     const float3 f90 = 1.0;
@@ -131,6 +137,12 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     totalSpecular = lerp(totalSpecular, totalSpecular * occlusionFactor, occlusionStrength);
 
     float3 emissive = emissiveFactor;
+    const float damageRimFactor = pow(
+        1.0f - saturate(dot(N, V)), 3.0f);
+    emissive += cpuColor.rgb
+        * damageRimFactor
+        * damageFlashAmount
+        * modelEffectParameter.edgePower;
 #if 1
     float rimPower = lightDirection.w;
     float3 rim = CalcRimLight(N, V, rimColor.rgb, rimPower) * rimIntensity;

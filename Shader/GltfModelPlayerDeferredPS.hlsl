@@ -113,6 +113,12 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         baseColorFactor.rgb = BrightnessContrast(baseColorFactor.rgb, modelBrightness, modelContrast);
     }
 
+    const float damageFlashAmount = saturate(flashValue);
+    const float damageBodyAmount = saturate(
+        damageFlashAmount * modelEffectParameter.edgeWidth);
+    baseColorFactor.rgb = lerp(
+        baseColorFactor.rgb, cpuColor.rgb, damageBodyAmount);
+
     pout.albedo = baseColorFactor;
 
     pout.position = pin.wPosition; // world space 
@@ -133,6 +139,14 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         emissiveFactor = mask * float3(cpuColor.rgb) * emissionPower;
         pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // wの値 : スカイマップ１それ以外０    2: emissiveFlagとして使用
     }
+
+    const float3 V = normalize(cameraPosition.xyz - pin.wPosition.xyz);
+    const float damageRimFactor = pow(
+        1.0f - saturate(dot(N, V)), 3.0f);
+    pout.emissive.rgb += cpuColor.rgb
+        * damageRimFactor
+        * damageFlashAmount
+        * modelEffectParameter.edgePower;
 
     pout.material = float4(metallicFactor, roughnessFactor, occlusionFactor, materialType /*マテリアルタイプ*/);
     

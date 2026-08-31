@@ -474,6 +474,8 @@ void Player::Update(float deltaTime)
 {
     using namespace DirectX;
 
+    UpdateDamageFlash();
+
     // Player HP UI uses unscaled time so HitStop / Slow do not pause the delayed gauge.
     const float currentHp = static_cast<float>((std::max)(hp, 0));
     const float uiDeltaTime = Time::UnscaledDeltaTime();
@@ -967,6 +969,14 @@ void Player::DrawImGuiDetails()
             hpCurrentFillUiComponent->SetColor(playerHpCurrentColor);
         if (ImGui::ColorEdit4("Delayed HP Color", &playerHpDelayedColor.r) && hpDelayedFillUiComponent)
             hpDelayedFillUiComponent->SetColor(playerHpDelayedColor);
+        // îÌÉ_ÉÅÅ[ÉWéûÇÃê‘Ç≠Ç∑ÇÈ
+        ImGui::DragFloat("Damage Flash Duration", &damageFlashDuration,
+            0.01f, 0.01f, 1.0f, "%.2f sec");
+        ImGui::DragFloat("Damage Flash Body Tint Strength", &damageFlashBodyTintStrength,
+            0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::DragFloat("Damage Flash Rim Strength", &damageFlashRimStrength,
+            0.05f, 0.0f, 10.0f, "%.2f");
+
     }
     if (ImGui::CollapsingHeader("Just Dodge Debug", ImGuiTreeNodeFlags_DefaultOpen))
     {
@@ -2507,6 +2517,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     {
         delayedHp = static_cast<float>(hpBeforeDamage);
         delayedHpDelayTimer = delayedHpDelayDuration;
+        StartDamageFlash();
     }
     ++dodgeDebugDamageCount;
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav", 0.3f);
@@ -2527,6 +2538,47 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
         std::to_string(direction.y) + "," + std::to_string(direction.z));
     stateMachine_->ChangeState(targetState);
     return true;
+}
+
+void Player::StartDamageFlash()
+{
+    damageFlashTimer = (std::max)(0.0f, damageFlashDuration);
+    ApplyDamageFlash(damageFlashTimer > 0.0f ? 1.0f : 0.0f);
+}
+
+void Player::UpdateDamageFlash()
+{
+    if (damageFlashTimer > 0.0f)
+    {
+        damageFlashTimer = (std::max)(
+            0.0f, damageFlashTimer - Time::UnscaledDeltaTime());
+    }
+
+    const float flashAmount = damageFlashDuration > FLT_EPSILON
+        ? std::clamp(damageFlashTimer / damageFlashDuration, 0.0f, 1.0f)
+        : 0.0f;
+    ApplyDamageFlash(flashAmount);
+}
+
+void Player::ApplyDamageFlash(float flashAmount)
+{
+    const auto applyToMesh = [this, flashAmount](
+        const std::shared_ptr<SkeletalMeshComponent>& mesh)
+    {
+        if (!mesh)
+            return;
+
+        auto& constants = mesh->plusAlphaCBuffer->data;
+        constants.cpuColor.x = damageFlashColor.x;
+        constants.cpuColor.y = damageFlashColor.y;
+        constants.cpuColor.z = damageFlashColor.z;
+        constants.flashValue = flashAmount;
+        constants.effectParameters.edgeWidth = damageFlashBodyTintStrength;
+        constants.effectParameters.edgePower = damageFlashRimStrength;
+    };
+
+    applyToMesh(skeletalMeshComponent);
+    applyToMesh(skeletalMeshBlendComponent);
 }
 
 bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)

@@ -402,6 +402,16 @@ public:
     // ラッシュの時のコンボカウント（回避中にもラッシュをカウントするための変数）
     int rushQueuedAttackCount = 0;
 private:
+    void StartDamageFlash();
+    void UpdateDamageFlash();
+    void ApplyDamageFlash(float flashAmount);
+
+    float damageFlashTimer = 0.0f;
+    float damageFlashDuration = 0.25f;
+    float damageFlashBodyTintStrength = 0.5f;
+    float damageFlashRimStrength = 1.0f;
+    DirectX::XMFLOAT3 damageFlashColor = { 0.85f, 0.08f, 0.05f };
+
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     float hitStopTimer = 0.0f; // ヒットストップのタイマー
 
