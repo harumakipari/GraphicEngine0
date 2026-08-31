@@ -98,17 +98,28 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         pout.gBuffer3Normal = float4(T.xyz, objectType); // world space
     }
 
-    if ( materialType == MATERIAL_FUR)
+    if (materialType == MATERIAL_FUR)
     { // 服の時は
         baseColorFactor.rgb = HueSaturation(baseColorFactor.rgb, modelHueShift, modelSaturation);
         baseColorFactor.rgb = BrightnessContrast(baseColorFactor.rgb, modelBrightness, modelContrast);
     }
 
+
+    // 被ダメージ時の色変更処理
+    const float damageFlashAmount = saturate(flashValue);
+    const float damageBodyAmount = saturate(damageFlashAmount * modelEffectParameter.edgeWidth);
+    baseColorFactor.rgb = lerp(baseColorFactor.rgb, cpuColor.rgb, damageBodyAmount);
+
+
     pout.albedo = baseColorFactor;
 
-    pout.position = pin.wPosition; // world space 
+    pout.position = pin.wPosition; // world space
 
+    // 被ダメージ時の色変更処理
+    const float3 V = normalize(cameraPosition.xyz - pin.wPosition.xyz);
+    const float damageRimFactor = pow(1.0f - saturate(dot(N, V)), 3.0f);
     pout.emissive = float4(emissiveFactor, 0); // wの値 : スカイマップ１それ以外０    2: emissiveFlagとして使用
+    pout.emissive.rgb += cpuColor.rgb * damageRimFactor * damageFlashAmount * modelEffectParameter.edgePower;
 
     float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
     pout.velocity = float4(velocity, 1, 1);
