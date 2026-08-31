@@ -1,0 +1,87 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0]
+            ],
+            "alphaCurve": [
+                { "time": 0.0, "value": 0.8 },
+                { "time": 0.05, "value": 1.0 },
+                { "time": 0.75, "value": 1.0 },
+                { "time": 0.9, "value": 0.9 },
+                { "time": 1.0, "value": 0.0 }
+            ],
+            "blendState": 2,
+            "burstCount": 1,
+            "colorCurve": [
+                { "time": 0.0, "value": 0.0 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "directionAxis": [0.0, 1.0, 0.0],
+            "directionMode": 0,
+            "emissiveCurve": [
+                { "time": 0.0, "value": 0.2 },
+                { "time": 0.03, "value": 1.0 },
+                { "time": 0.15, "value": 0.85 },
+                { "time": 0.7, "value": 0.85 },
+                { "time": 0.88, "value": 0.5 },
+                { "time": 1.0, "value": 0.0 }
+            ],
+            "emissivePower": 15.0,
+            "emitCount": [1, 1],
+            "emitInterval": [0.0, 0.0],
+            "emitRate": 0.0,
+            "emitterLifeTime": 0.4,
+            "endColor": [
+                [1.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0]
+            ],
+            "endSize": [
+                [1.2, 1.2],
+                [1.2, 1.2]
+            ],
+            "height": 0.0,
+            "initialDelay": [0.0, 0.0],
+            "isBurst": true,
+            "lifeTime": [0.4, 0.4],
+            "loop": false,
+            "maxParticles": 1,
+            "name": "RushWhiteCore",
+            "positionOffset": [0.0, 0.0, 0.0],
+            "radius": 0.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0]
+            ],
+            "shapeType": 0,
+            "sizeCurve": [
+                { "time": 0.0, "value": 0.15 },
+                { "time": 0.04, "value": 1.45 },
+                { "time": 0.1, "value": 1.15 },
+                { "time": 0.65, "value": 1.15 },
+                { "time": 0.85, "value": 1.0 },
+                { "time": 1.0, "value": 0.0 }
+            ],
+            "sizeCurveMode": 1,
+            "speed": [0.0, 0.0],
+            "startColor": [
+                [1.0, 1.0, 1.0, 1.0],
+                [1.0, 1.0, 1.0, 1.0]
+            ],
+            "startSize": [
+                [1.2, 1.2],
+                [1.2, 1.2]
+            ],
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\white_core.png",
+            "textureSplitCount": [1, 1],
+            "useGravity": false,
+            "velocity": [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0]
+            ]
+        }
+    ],
+    "name": "RushWhiteCoreEffect"
+}
