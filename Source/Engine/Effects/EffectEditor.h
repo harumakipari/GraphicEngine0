@@ -41,8 +41,9 @@ private:
 	static bool DrawFloat(const char* label, float& value, float speed = 0.1f, float min = 0.0f, float max = 0.0f);
 	// ベクトルスライダー描画 ( Vector3 用 )
 	static bool DrawVector3(const char* label, Vector3& value, float speed = 0.1f, float min = 0.0f, float max = 0.0f);
-
+	// Legacy helper retained for source compatibility; Effect curves use CurveEditorWidget.
 	static void DrawCurve(const char* label, FloatCurve& curve, bool& dirty);
+
 
 #endif // USE_IMGUI
 

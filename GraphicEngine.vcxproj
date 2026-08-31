@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -292,6 +292,7 @@
     <ClCompile Include="Source\Engine\Debug\SceneEditor.cpp" />
     <ClCompile Include="Source\Engine\Easing\TestEasingHandler.cpp" />
     <ClCompile Include="Source\Engine\Effects\CoreComputeParticleSystem.cpp" />
+    <ClCompile Include="Source\Engine\Effects\CurveEditorWidget.cpp" />
     <ClCompile Include="Source\Engine\Effects\EffectEditor.cpp" />
     <ClCompile Include="Source\Engine\Effects\EffectManager.cpp" />
     <ClCompile Include="Source\Engine\Effects\HuskParticles.cpp" />
@@ -435,6 +436,7 @@
     <ClInclude Include="Source\Engine\Easing\TestEasingHandler.h" />
     <ClInclude Include="Source\Engine\Effects\CoreComputeParticleSystem.h" />
     <ClInclude Include="Source\Engine\Effects\EffectEditor.h" />
+    <ClInclude Include="Source\Engine\Effects\CurveEditorWidget.h" />
     <ClInclude Include="Source\Engine\Effects\EffectManager.h" />
     <ClInclude Include="Source\Engine\Effects\HuskParticles.h" />
     <ClInclude Include="Source\Engine\Framework\Framework.h" />

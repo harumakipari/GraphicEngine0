@@ -133,15 +133,18 @@ namespace ImCurveEdit
       return ret;
    }
 
-   int Edit(Delegate& delegate, const ImVec2& size, unsigned int id, const ImRect* clippingRect, ImVector<EditPoint>* selectedPoints)
+   int Edit(Delegate& delegate, const ImVec2& size, unsigned int id, const ImRect* clippingRect,
+      ImVector<EditPoint>* selectedPoints, EditState* editState)
    {
-      static bool selectingQuad = false;
-      static ImVec2 quadSelection;
-      static int overCurve = -1;
-      static int movingCurve = -1;
-      static bool scrollingV = false;
-      static std::set<EditPoint> selection;
-      static bool overSelectedPoint = false;
+      static EditState legacyState;
+      EditState& state = editState ? *editState : legacyState;
+      bool& selectingQuad = state.selectingQuad;
+      ImVec2& quadSelection = state.quadSelection;
+      int& overCurve = state.overCurve;
+      int& movingCurve = state.movingCurve;
+      bool& scrollingV = state.scrollingV;
+      std::set<EditPoint>& selection = state.selection;
+      bool& overSelectedPoint = state.overSelectedPoint;
 
       int ret = 0;
 
@@ -305,9 +308,9 @@ namespace ImCurveEdit
          overCurve = -1;
 
       // move selection
-      static bool pointsMoved = false;
-      static ImVec2 mousePosOrigin;
-      static std::vector<ImVec2> originalPoints;
+      bool& pointsMoved = state.pointsMoved;
+      ImVec2& mousePosOrigin = state.mousePosOrigin;
+      std::vector<ImVec2>& originalPoints = state.originalPoints;
       if (overSelectedPoint && io.MouseDown[0])
       {
          if ((fabsf(io.MouseDelta.x) > 0.f || fabsf(io.MouseDelta.y) > 0.f) && !selection.empty())

@@ -42,11 +42,61 @@ struct CurvePoint
 
 struct FloatCurve
 {
+    static constexpr size_t MaxPoints = 8;
     std::vector<CurvePoint> points;
+
+    static FloatCurve Linear() { return { { { 0.0f, 0.0f }, { 1.0f, 1.0f } } }; }
+    static FloatCurve ConstantOne() { return { { { 0.0f, 1.0f }, { 1.0f, 1.0f } } }; }
+
+    void Sanitize(float valueMin = 0.0f, float valueMax = 1.0f)
+    {
+        if (points.empty())
+        {
+            points = ConstantOne().points;
+            return;
+        }
+
+        for (auto& point : points)
+        {
+            point.time = std::clamp(point.time, 0.0f, 1.0f);
+            point.value = std::clamp(point.value, valueMin, valueMax);
+        }
+        std::stable_sort(points.begin(), points.end(), [](const CurvePoint& lhs, const CurvePoint& rhs)
+        {
+            return lhs.time < rhs.time;
+        });
+
+        std::vector<CurvePoint> uniquePoints;
+        uniquePoints.reserve(points.size());
+        constexpr float sameTimeEpsilon = 1.0e-5f;
+        for (const auto& point : points)
+        {
+            if (!uniquePoints.empty() && std::abs(uniquePoints.back().time - point.time) <= sameTimeEpsilon)
+                uniquePoints.back().value = point.value;
+            else
+                uniquePoints.push_back(point);
+        }
+        points = std::move(uniquePoints);
+
+        if (points.front().time > 0.0f)
+            points.insert(points.begin(), { 0.0f, points.front().value });
+        else
+            points.front().time = 0.0f;
+
+        if (points.back().time < 1.0f)
+            points.push_back({ 1.0f, points.back().value });
+        else
+            points.back().time = 1.0f;
+
+        while (points.size() > MaxPoints)
+            points.erase(points.end() - 2);
+    }
 
     float Evaluate(float t) const
     {
         if (points.empty()) return 1.0f;
+        if (t <= points.front().time) return points.front().value;
+        if (t >= points.back().time) return points.back().value;
 
         for (size_t i = 0; i < points.size() - 1; ++i)
         {
@@ -55,7 +105,9 @@ struct FloatCurve
 
             if (t >= p0.time && t <= p1.time)
             {
-                float lerpT = (t - p0.time) / (p1.time - p0.time);
+                const float duration = p1.time - p0.time;
+                if (duration <= 1.0e-5f) return p1.value;
+                float lerpT = (t - p0.time) / duration;
                 return p0.value + (p1.value - p0.value) * lerpT;
             }
         }
@@ -147,6 +199,7 @@ public:
 
 private:
     static int RegisterCurve(const FloatCurve& curve); // カーブ → 1Dテクスチャ化関数
+    static void RebuildCurveTexture();
 
     static void ClearEffectData(); // エフェクトデータクリア
 
@@ -182,6 +235,11 @@ public:
         Billboard = 0,		// ビルボード
         StretchedBillboard,	// ストレッチドビルボード
         FixedRotation,		// 固定回転
+    };
+    enum class SizeCurveMode : uint8_t
+    {
+        StartEnd = 0,
+        StartMultiplier,
     };
     // 形状定義
     enum class ShapeType : uint8_t
@@ -232,7 +290,7 @@ public:
     {
         Range<Vector3> velocity;					// 初速
         Range<Vector3> acceleration;				// 加速度
-        Range<float> lifeTime{ 1.0f, 1.0f };		// particleの 生存時間 
+        Range<float> lifeTime{ 1.0f, 1.0f };		// particleの 生存時間
         bool useGravity{ false };					// 重力使用フラグ
     };
     // ビジュアル設定構造体
@@ -247,9 +305,13 @@ public:
         Range<CoreColor> startColor;								// 開始色
         Range<CoreColor> endColor;									// 終了色
 
-        FloatCurve sizeCurve;
+        SizeCurveMode sizeCurveMode = SizeCurveMode::StartEnd;
+        FloatCurve sizeCurve = FloatCurve::Linear();
+        FloatCurve colorCurve = FloatCurve::Linear();
+        FloatCurve alphaCurve = FloatCurve::ConstantOne();
+        FloatCurve emissiveCurve = FloatCurve::ConstantOne();
         bool dirty = true; // GUIで編集されたかどうか（テクスチャ再生成フラグ）
-        int curveIndex = 1; // カーブテクスチャ内のインデックス
+        int curveIndex = 0; // 4本のカーブセット先頭インデックス
     };
     // エミッタデータ構造体
     struct ParticleEmitterData

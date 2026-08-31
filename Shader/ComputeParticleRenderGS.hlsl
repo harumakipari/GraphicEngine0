@@ -104,25 +104,26 @@ void main(point GS_IN gin[1], inout TriangleStream<PS_IN> output)
     bool isAlive = particleHeaderBuffer[vertexId].alive != 0;
     uint particleIndex = particleHeaderBuffer[vertexId].particleIndex;
     
-    //残り生存時間と誕生時の生存時間から割合を計算する。
-    float lifeTimeRate = !isAlive ? 0 : particleDataBuffer[particleIndex].parameter.y / particleDataBuffer[particleIndex].parameter.z;
+    // 0:生成直後、1:消滅直前となる経過寿命率へ統一する。
+    float remainingLifetime = particleDataBuffer[particleIndex].parameter.y;
+    float totalLifetime = particleDataBuffer[particleIndex].parameter.z;
+    float age01 = !isAlive || totalLifetime <= 0.0f ? 0.0f : saturate(1.0f - remainingLifetime / totalLifetime);
     
-    int curveIndex = (int) particleDataBuffer[particleIndex].customData.y;
-    float t = lifeTimeRate;
-    // カーブサンプリング
-    float curveValue = curveTextures.SampleLevel(samplerStates[LINEAR_CLAMP], float2(t, curveIndex), 0);
+    int curveBaseIndex = (int) particleDataBuffer[particleIndex].customData.y;
+    float sizeT = curveTextures.SampleLevel(samplerStates[LINEAR_CLAMP], float2(age01, curveBaseIndex + 0), 0).r;
+    float colorT = curveTextures.SampleLevel(samplerStates[LINEAR_CLAMP], float2(age01, curveBaseIndex + 1), 0).r;
+    float alphaMultiplier = curveTextures.SampleLevel(samplerStates[LINEAR_CLAMP], float2(age01, curveBaseIndex + 2), 0).r;
+    float emissiveMultiplier = curveTextures.SampleLevel(samplerStates[LINEAR_CLAMP], float2(age01, curveBaseIndex + 3), 0).r;
+    int sizeCurveMode = (int) particleDataBuffer[particleIndex].customData.z;
 
     //生存していない場合はスケールを０にしておく
-#if 1
-    float2 size = !isAlive ? float2(0, 0) : lerp(particleDataBuffer[particleIndex].scale.zw, particleDataBuffer[particleIndex].scale.xy, lifeTimeRate);
-#else
-
-    float2 baseSize = particleDataBuffer[particleIndex].scale.xy;
-
-    // カーブで倍率
-    float2 size = baseSize * curveValue;
-
-#endif
+    float2 size = float2(0, 0);
+    if (isAlive)
+    {
+        size = sizeCurveMode == 1
+            ? particleDataBuffer[particleIndex].scale.xy * sizeT
+            : lerp(particleDataBuffer[particleIndex].scale.xy, particleDataBuffer[particleIndex].scale.zw, sizeT);
+    }
 
     //ビルボード行列生成（ビュー行列の逆行列でいい。ただし移動値はいらない）
     //TODO: InverseView行列を定数バッファに設定する。
@@ -171,9 +172,13 @@ void main(point GS_IN gin[1], inout TriangleStream<PS_IN> output)
     
     //各種情報取得
     float4 texcoord = particleDataBuffer[particleIndex].texcoord;
-    float4 color = particleDataBuffer[particleIndex].color;
+    float4 startColor = particleDataBuffer[particleIndex].startColor;
+    float4 endColor = particleDataBuffer[particleIndex].endColor;
+    float4 color;
+    color.rgb = lerp(startColor.rgb, endColor.rgb, colorT);
+    color.a = lerp(startColor.a, endColor.a, age01) * alphaMultiplier;
 
-    float emissive = particleDataBuffer[particleIndex].customData.x;
+    float emissive = particleDataBuffer[particleIndex].customData.x * emissiveMultiplier;
 
     //頂点生成
     static const float4 vertexPositions[4] =

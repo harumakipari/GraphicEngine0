@@ -10,6 +10,36 @@
 #include "Graphics/Resource/Texture.h"
 #include "Math/MathHelper.h"
 
+namespace
+{
+    FloatCurve LoadCurve(const json& emitterJson, const char* key, FloatCurve defaultCurve,
+        float valueMin = 0.0f, float valueMax = 1.0f)
+    {
+        if (!emitterJson.contains(key) || !emitterJson[key].is_array()) return defaultCurve;
+
+        FloatCurve curve;
+        for (const auto& pointJson : emitterJson[key])
+        {
+            if (!pointJson.is_object()) continue;
+            curve.points.push_back({ pointJson.value("time", 0.0f), pointJson.value("value", 1.0f) });
+        }
+
+        if (curve.points.empty()) return defaultCurve;
+        curve.Sanitize(valueMin, valueMax);
+        return curve;
+    }
+
+    json SaveCurve(const FloatCurve& sourceCurve, float valueMin = 0.0f, float valueMax = 1.0f)
+    {
+        FloatCurve curve = sourceCurve;
+        curve.Sanitize(valueMin, valueMax);
+        json result = json::array();
+        for (const auto& point : curve.points)
+            result.push_back({ { "time", point.time }, { "value", point.value } });
+        return result;
+    }
+}
+
 void EffectManager::ClearAll()
 {
     ClearEffectData();
@@ -129,6 +159,15 @@ EffectHandle EffectManager::LoadEffectData(const std::string& filePath)
                     if (emitterJson.contains("endColor"))
                         emitterData.visualData.endColor = emitterJson["endColor"].get<Range<CoreColor>>();
 
+                    emitterData.visualData.sizeCurveMode = static_cast<SizeCurveMode>(
+                        emitterJson.value("sizeCurveMode", static_cast<uint8_t>(SizeCurveMode::StartEnd)));
+                    const float sizeCurveMax = emitterData.visualData.sizeCurveMode == SizeCurveMode::StartMultiplier ? 10.0f : 1.0f;
+                    emitterData.visualData.sizeCurve = LoadCurve(emitterJson, "sizeCurve", FloatCurve::Linear(), 0.0f, sizeCurveMax);
+                    emitterData.visualData.colorCurve = LoadCurve(emitterJson, "colorCurve", FloatCurve::Linear());
+                    emitterData.visualData.alphaCurve = LoadCurve(emitterJson, "alphaCurve", FloatCurve::ConstantOne());
+                    emitterData.visualData.emissiveCurve = LoadCurve(emitterJson, "emissiveCurve", FloatCurve::ConstantOne());
+                    emitterData.visualData.dirty = true;
+
                 }
 
                 // エミッタデータリストに追加
@@ -222,6 +261,12 @@ void EffectManager::SaveEffectData(EffectHandle handle, const std::string& fileP
             emitterJson["endSize"] = emitterData.visualData.endSize;
             emitterJson["startColor"] = emitterData.visualData.startColor;
             emitterJson["endColor"] = emitterData.visualData.endColor;
+            emitterJson["sizeCurveMode"] = static_cast<uint8_t>(emitterData.visualData.sizeCurveMode);
+            const float sizeCurveMax = emitterData.visualData.sizeCurveMode == SizeCurveMode::StartMultiplier ? 10.0f : 1.0f;
+            emitterJson["sizeCurve"] = SaveCurve(emitterData.visualData.sizeCurve, 0.0f, sizeCurveMax);
+            emitterJson["colorCurve"] = SaveCurve(emitterData.visualData.colorCurve);
+            emitterJson["alphaCurve"] = SaveCurve(emitterData.visualData.alphaCurve);
+            emitterJson["emissiveCurve"] = SaveCurve(emitterData.visualData.emissiveCurve);
         }
 
         // エミッタデータリストに追加
@@ -380,18 +425,12 @@ void EffectManager::EmitParticle(EffectHandle handle, const XMFLOAT3& pos, const
                 emitData.startColor = startColor;
                 emitData.endColor = endColor;
                 emitData.customData.x = emitterData.emitData.emissivePower;
-#if 1
-                int curveIndex = emitterData.visualData.curveIndex;
                 if (emitterData.visualData.dirty)
                 {
-                    int curveIndex = RegisterCurve(emitterData.visualData.sizeCurve);
-                    emitterData.visualData.dirty = false;   // このためにconst取っている
-                    emitData.customData.y = (float)curveIndex;
+                    RebuildCurveTexture();
                 }
-                emitData.customData.y = static_cast<float>(curveIndex);
-#else
                 emitData.customData.y = (float)emitterData.visualData.curveIndex;
-#endif // 0
+                emitData.customData.z = static_cast<float>(emitterData.visualData.sizeCurveMode);
             }
 
             // エミット
@@ -479,10 +518,6 @@ void EffectManager::Update(float deltaTime)
         {
             if (emitter.visualData.dirty)
             {
-                int index = RegisterCurve(emitter.visualData.sizeCurve);
-                emitter.visualData.curveIndex = index; // ←追加！
-                emitter.visualData.dirty = false;
-
                 curveDirty = true;
             }
         }
@@ -490,7 +525,7 @@ void EffectManager::Update(float deltaTime)
 
     if (curveDirty)
     {
-        UpdateCurveTexture(); // GPU転送
+        RebuildCurveTexture();
     }
 
     for (auto it = activeEmitters.begin(); it != activeEmitters.end(); )
@@ -888,7 +923,11 @@ Vector3 EffectManager::RandomConeDirection(const Vector3& dir, float coneAngle)
 
 void EffectManager::UpdateCurveTexture()
 {
-    if (curveData.empty()) return;
+    if (curveData.empty())
+    {
+        curveArraySRV.Reset();
+        return;
+    }
 
     int resolution = (int)curveData[0].size();
     int arraySize = (int)curveData.size();
@@ -911,6 +950,32 @@ void EffectManager::UpdateCurveTexture()
     Microsoft::WRL::ComPtr<ID3D11Texture1D> texture;
     Graphics::GetDevice()->CreateTexture1D(&desc, initData.data(), &texture);
     Graphics::GetDevice()->CreateShaderResourceView(texture.Get(), nullptr, &curveArraySRV);
+}
+
+void EffectManager::RebuildCurveTexture()
+{
+    curveData.clear();
+
+    for (auto& effect : effectData)
+    {
+        for (auto& emitter : effect.emitters)
+        {
+            auto& visual = emitter.visualData;
+            const float sizeCurveMax = visual.sizeCurveMode == SizeCurveMode::StartMultiplier ? 10.0f : 1.0f;
+            visual.sizeCurve.Sanitize(0.0f, sizeCurveMax);
+            visual.colorCurve.Sanitize();
+            visual.alphaCurve.Sanitize();
+            visual.emissiveCurve.Sanitize();
+
+            visual.curveIndex = RegisterCurve(visual.sizeCurve);
+            RegisterCurve(visual.colorCurve);
+            RegisterCurve(visual.alphaCurve);
+            RegisterCurve(visual.emissiveCurve);
+            visual.dirty = false;
+        }
+    }
+
+    UpdateCurveTexture();
 }
 
 // カーブ → 1Dテクスチャ化関数

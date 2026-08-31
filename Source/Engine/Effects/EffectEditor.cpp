@@ -1,6 +1,7 @@
 #include "pch.h"
 #define NOMINMAX
 #include "EffectEditor.h"
+#include "Engine/Effects/CurveEditorWidget.h"
 #include <filesystem>
 #ifdef USE_IMGUI
 #include <imgui.h>
@@ -242,7 +243,6 @@ void EffectEditor::DrawGUI()
                         DrawRangeFloat("Emit Interval", emitterData.emitData.emitInterval, 0.1f, 0.0f, 100.0f);
                         DrawFloat("Emit Rate", emitterData.emitData.emitRate, 0.1f, 0.0f, 1000.0f);
                         DrawFloat("Emit LifeTime", emitterData.emitData.emitterLifeTime, 0.1f, 0.0f, 1000.0f);
-                        DrawFloat("Emissive Power", emitterData.emitData.emissivePower, 1.0f, 0.0f, 30.0f);
                         ImGui::SliderInt("Emit burstCount", &emitterData.emitData.burstCount, 0, 50);
                         ImGui::Checkbox("Burst", &emitterData.emitData.isBurst);
                         ImGui::Checkbox("Loop", &emitterData.emitData.loop);
@@ -325,11 +325,103 @@ void EffectEditor::DrawGUI()
                     // ビジュアル設定
                     if (ImGui::TreeNode("Visual Settings"))
                     {
+                        ImGui::SeparatorText("Size");
+                        const char* sizeModeItems[] = { "Start-End", "Start Multiplier" };
+                        int sizeMode = static_cast<int>(emitterData.visualData.sizeCurveMode);
+                        if (ImGui::Combo("Mode##Size", &sizeMode, sizeModeItems, IM_ARRAYSIZE(sizeModeItems)))
+                        {
+                            emitterData.visualData.sizeCurveMode = static_cast<EffectManager::SizeCurveMode>(sizeMode);
+                            const float valueMax = emitterData.visualData.sizeCurveMode == EffectManager::SizeCurveMode::StartMultiplier ? 10.0f : 1.0f;
+                            emitterData.visualData.sizeCurve.Sanitize(0.0f, valueMax);
+                            emitterData.visualData.dirty = true;
+                        }
                         DrawRangeVector2("Start Size", emitterData.visualData.startSize, 0.1f);
-                        DrawRangeVector2("End Size", emitterData.visualData.endSize, 0.1f);
-                        DrawCurve("Size Curve", emitterData.visualData.sizeCurve, emitterData.visualData.dirty);
+                        if (emitterData.visualData.sizeCurveMode == EffectManager::SizeCurveMode::StartEnd)
+                        {
+                            DrawRangeVector2("End Size", emitterData.visualData.endSize, 0.1f);
+                            ImGui::TextDisabled("Curve: 0 = Start Size, 1 = End Size");
+                        }
+                        else
+                        {
+                            ImGui::TextDisabled("Curve: 1 = Start Size, 0.5 = half, 2 = double");
+                        }
+
+                        CurveEditorWidgetSettings sizeSettings;
+                        sizeSettings.valueMax = emitterData.visualData.sizeCurveMode == EffectManager::SizeCurveMode::StartMultiplier ? 10.0f : 1.0f;
+                        const auto sizeResult = CurveEditorWidget::Draw("SizeCurve", emitterData.visualData.sizeCurve, sizeSettings);
+                        emitterData.visualData.dirty |= sizeResult.changed;
+                        if (sizeResult.selectedPoint >= 0)
+                        {
+                            const auto& key = emitterData.visualData.sizeCurve.points[sizeResult.selectedPoint];
+                            Vector2 actualMin;
+                            Vector2 actualMax;
+                            if (emitterData.visualData.sizeCurveMode == EffectManager::SizeCurveMode::StartMultiplier)
+                            {
+                                actualMin = emitterData.visualData.startSize.min * key.value;
+                                actualMax = emitterData.visualData.startSize.max * key.value;
+                            }
+                            else
+                            {
+                                actualMin = emitterData.visualData.startSize.min +
+                                    (emitterData.visualData.endSize.min - emitterData.visualData.startSize.min) * key.value;
+                                actualMax = emitterData.visualData.startSize.max +
+                                    (emitterData.visualData.endSize.max - emitterData.visualData.startSize.max) * key.value;
+                            }
+                            ImGui::Text("Actual Size Preview: (%.2f, %.2f) - (%.2f, %.2f)", actualMin.x, actualMin.y, actualMax.x, actualMax.y);
+                        }
+
+                        ImGui::SeparatorText("Color");
                         DrawRangeColor("Start Color", emitterData.visualData.startColor);
                         DrawRangeColor("End Color", emitterData.visualData.endColor);
+                        ImGui::TextDisabled("Color Curve: 0 = Start Color, 1 = End Color (RGB only)");
+                        const ImVec4 startRepresentative(
+                            (emitterData.visualData.startColor.min.r + emitterData.visualData.startColor.max.r) * 0.5f,
+                            (emitterData.visualData.startColor.min.g + emitterData.visualData.startColor.max.g) * 0.5f,
+                            (emitterData.visualData.startColor.min.b + emitterData.visualData.startColor.max.b) * 0.5f, 1.0f);
+                        const ImVec4 endRepresentative(
+                            (emitterData.visualData.endColor.min.r + emitterData.visualData.endColor.max.r) * 0.5f,
+                            (emitterData.visualData.endColor.min.g + emitterData.visualData.endColor.max.g) * 0.5f,
+                            (emitterData.visualData.endColor.min.b + emitterData.visualData.endColor.max.b) * 0.5f, 1.0f);
+                        ImGui::ColorButton("Start##ColorBand", startRepresentative, ImGuiColorEditFlags_NoTooltip, ImVec2(24, 18));
+                        ImGui::SameLine();
+                        const ImVec2 bandMin = ImGui::GetCursorScreenPos();
+                        const ImVec2 bandMax(bandMin.x + 160.0f, bandMin.y + 18.0f);
+                        ImGui::GetWindowDrawList()->AddRectFilledMultiColor(bandMin, bandMax,
+                            ImGui::ColorConvertFloat4ToU32(startRepresentative), ImGui::ColorConvertFloat4ToU32(endRepresentative),
+                            ImGui::ColorConvertFloat4ToU32(endRepresentative), ImGui::ColorConvertFloat4ToU32(startRepresentative));
+                        ImGui::Dummy(ImVec2(160, 18));
+                        ImGui::SameLine();
+                        ImGui::ColorButton("End##ColorBand", endRepresentative, ImGuiColorEditFlags_NoTooltip, ImVec2(24, 18));
+                        CurveEditorWidgetSettings colorSettings;
+                        const auto colorResult = CurveEditorWidget::Draw("ColorCurve", emitterData.visualData.colorCurve, colorSettings);
+                        emitterData.visualData.dirty |= colorResult.changed;
+
+                        ImGui::SeparatorText("Alpha");
+                        ImGui::TextDisabled("Alpha Curve is a Transparency / Coverage multiplier.");
+                        CurveEditorWidgetSettings alphaSettings;
+                        const auto alphaResult = CurveEditorWidget::Draw("AlphaCurve", emitterData.visualData.alphaCurve, alphaSettings);
+                        emitterData.visualData.dirty |= alphaResult.changed;
+                        if (alphaResult.selectedPoint >= 0)
+                        {
+                            const auto& key = emitterData.visualData.alphaCurve.points[alphaResult.selectedPoint];
+                            const float startAlpha = (emitterData.visualData.startColor.min.a + emitterData.visualData.startColor.max.a) * 0.5f;
+                            const float endAlpha = (emitterData.visualData.endColor.min.a + emitterData.visualData.endColor.max.a) * 0.5f;
+                            const float baseAlpha = std::lerp(startAlpha, endAlpha, key.time);
+                            ImGui::Text("Base Alpha: %.3f  Multiplier: %.3f  Actual Alpha: %.3f", baseAlpha, key.value, baseAlpha * key.value);
+                        }
+
+                        ImGui::SeparatorText("Emissive");
+                        DrawFloat("Emissive Power", emitterData.emitData.emissivePower, 1.0f, 0.0f, 30.0f);
+                        ImGui::TextDisabled("For a clear Additive fade, reduce Emissive Curve to 0 too.");
+                        CurveEditorWidgetSettings emissiveSettings;
+                        const auto emissiveResult = CurveEditorWidget::Draw("EmissiveCurve", emitterData.visualData.emissiveCurve, emissiveSettings);
+                        emitterData.visualData.dirty |= emissiveResult.changed;
+                        if (emissiveResult.selectedPoint >= 0)
+                        {
+                            const auto& key = emitterData.visualData.emissiveCurve.points[emissiveResult.selectedPoint];
+                            ImGui::Text("Emissive Power: %.3f  Multiplier: %.3f  Actual Emissive: %.3f",
+                                emitterData.emitData.emissivePower, key.value, emitterData.emitData.emissivePower * key.value);
+                        }
                         ImGui::TreePop();
                     }
 
@@ -414,7 +506,7 @@ bool EffectEditor::DrawRangeUInt(const char* label, Range<unsigned int>& range, 
     }
 
     if (min == 0 && max == 0)
-        return changed; // Clamp不要判定  
+        return changed; // Clamp不要判定
 
 
     // 範囲制限
@@ -638,16 +730,29 @@ void EffectEditor::DrawCurve(const char* label, FloatCurve& curve, bool& dirty)
 {
     if (ImGui::TreeNode(label))
     {
+        bool changed = false;
+        curve.Sanitize();
+
         for (int i = 0; i < curve.points.size(); ++i)
         {
             ImGui::PushID(i);
 
-            ImGui::DragFloat("Time", &curve.points[i].time, 0.01f, 0.0f, 1.0f);
-            ImGui::DragFloat("Value", &curve.points[i].value, 0.01f, 0.0f, 5.0f);
+            if (i == 0 || i == curve.points.size() - 1)
+            {
+                ImGui::BeginDisabled();
+                ImGui::DragFloat("Time", &curve.points[i].time, 0.01f, 0.0f, 1.0f);
+                ImGui::EndDisabled();
+            }
+            else
+            {
+                changed |= ImGui::DragFloat("Time", &curve.points[i].time, 0.01f, 0.0f, 1.0f);
+            }
+            changed |= ImGui::DragFloat("Value", &curve.points[i].value, 0.01f, 0.0f, 1.0f);
 
-            if (ImGui::Button("Delete"))
+            if (i > 0 && i < curve.points.size() - 1 && ImGui::Button("Delete"))
             {
                 curve.points.erase(curve.points.begin() + i);
+                changed = true;
                 ImGui::PopID();
                 break;
             }
@@ -656,14 +761,16 @@ void EffectEditor::DrawCurve(const char* label, FloatCurve& curve, bool& dirty)
             ImGui::PopID();
         }
 
-        if (ImGui::Button("Add Point"))
+        if (curve.points.size() < FloatCurve::MaxPoints && ImGui::Button("Add Point"))
         {
             curve.points.push_back({ 0.5f, 1.0f });
+            changed = true;
         }
 
-        if (ImGui::Button("Apply"))
+        if (changed)
         {
-            dirty = true; // ←ここで初めて反映
+            curve.Sanitize();
+            dirty = true;
         }
 
         // カーブのプレビュー表示

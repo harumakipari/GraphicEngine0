@@ -25,6 +25,8 @@
 //
 #pragma once
 #include <stdint.h>
+#include <set>
+#include <vector>
 #include "imgui.h"
 
 struct ImRect;
@@ -57,6 +59,20 @@ namespace ImCurveEdit
       }
    };
 
+   struct EditState
+   {
+      bool selectingQuad = false;
+      ImVec2 quadSelection{};
+      int overCurve = -1;
+      int movingCurve = -1;
+      bool scrollingV = false;
+      std::set<EditPoint> selection;
+      bool overSelectedPoint = false;
+      bool pointsMoved = false;
+      ImVec2 mousePosOrigin{};
+      std::vector<ImVec2> originalPoints;
+   };
+
    struct Delegate
    {
       bool focused = false;
@@ -78,5 +94,6 @@ namespace ImCurveEdit
       virtual ~Delegate() = default;
    };
 
-   int Edit(Delegate& delegate, const ImVec2& size, unsigned int id, const ImRect* clippingRect = NULL, ImVector<EditPoint>* selectedPoints = NULL);
+   int Edit(Delegate& delegate, const ImVec2& size, unsigned int id, const ImRect* clippingRect = NULL,
+      ImVector<EditPoint>* selectedPoints = NULL, EditState* editState = NULL);
 }

@@ -1,0 +1,214 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "alphaCurve": [
+                {
+                    "time": 0.0,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.925000011920929,
+                    "value": 1.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "blendState": 2,
+            "burstCount": 0,
+            "colorCurve": [
+                {
+                    "time": 0.0,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.2109375,
+                    "value": 0.0
+                },
+                {
+                    "time": 0.5825781226158142,
+                    "value": 1.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 0,
+            "emissiveCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.7266666889190674
+                },
+                {
+                    "time": 0.9502343535423279,
+                    "value": 0.06666666269302368
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "emissivePower": 1.0,
+            "emitCount": [
+                1,
+                1
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "emitRate": 10.0,
+            "emitterLifeTime": 0.5,
+            "endColor": [
+                [
+                    0.0,
+                    1.0,
+                    0.15753412246704102,
+                    1.0
+                ],
+                [
+                    0.39726030826568604,
+                    1.0,
+                    0.0,
+                    1.0
+                ]
+            ],
+            "endSize": [
+                [
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0
+                ]
+            ],
+            "height": 1.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "isBurst": false,
+            "lifeTime": [
+                2.0,
+                2.0
+            ],
+            "loop": false,
+            "maxParticles": 7,
+            "name": "Emitter0",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 1.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "shapeType": 0,
+            "sizeCurve": [
+                {
+                    "time": 0.0,
+                    "value": 10.0
+                },
+                {
+                    "time": 0.22351562976837158,
+                    "value": 0.0
+                },
+                {
+                    "time": 0.3671875,
+                    "value": 10.0
+                },
+                {
+                    "time": 0.576171875,
+                    "value": 0.0
+                },
+                {
+                    "time": 0.71484375,
+                    "value": 10.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "sizeCurveMode": 1,
+            "speed": [
+                1.0,
+                1.0
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\Textures\\particle.png",
+            "textureSplitCount": [
+                1,
+                1
+            ],
+            "useGravity": false,
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
+        }
+    ],
+    "name": "Effect 7"
+}
