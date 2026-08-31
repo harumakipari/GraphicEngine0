@@ -1,164 +1,611 @@
 {
     "emitterDataList": [
         {
-            "acceleration": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
             "alphaCurve": [
-                { "time": 0.0, "value": 0.2 },
-                { "time": 0.03, "value": 1.0 },
-                { "time": 0.35, "value": 0.75 },
-                { "time": 1.0, "value": 0.0 }
+                {
+                    "time": 0.0,
+                    "value": 0.20000000298023224
+                },
+                {
+                    "time": 0.029999999329447746,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.3499999940395355,
+                    "value": 0.75
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
             ],
             "blendState": 2,
             "burstCount": 1,
-            "colorCurve": [{ "time": 0.0, "value": 0.0 }, { "time": 1.0, "value": 1.0 }],
-            "directionAxis": [0.0, 1.0, 0.0],
+            "colorCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 1.0
+                }
+            ],
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
             "directionMode": 0,
             "emissiveCurve": [
-                { "time": 0.0, "value": 0.3 },
-                { "time": 0.03, "value": 1.0 },
-                { "time": 0.3, "value": 0.7 },
-                { "time": 1.0, "value": 0.0 }
+                {
+                    "time": 0.0,
+                    "value": 0.30000001192092896
+                },
+                {
+                    "time": 0.029999999329447746,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.30000001192092896,
+                    "value": 0.699999988079071
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
             ],
             "emissivePower": 8.0,
-            "emitCount": [1, 1],
-            "emitInterval": [0.0, 0.0],
+            "emitCount": [
+                1,
+                1
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
             "emitRate": 0.0,
-            "emitterLifeTime": 0.12,
-            "endColor": [[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]],
-            "endSize": [[0.55, 0.55], [0.55, 0.55]],
+            "emitterLifeTime": 0.11999999731779099,
+            "endColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "endSize": [
+                [
+                    0.550000011920929,
+                    0.550000011920929
+                ],
+                [
+                    0.550000011920929,
+                    0.550000011920929
+                ]
+            ],
             "height": 0.0,
-            "initialDelay": [0.0, 0.0],
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
             "isBurst": true,
-            "lifeTime": [0.1, 0.1],
+            "lifeTime": [
+                0.30000001192092896,
+                0.30000001192092896
+            ],
             "loop": false,
             "maxParticles": 1,
             "name": "SmallWhiteCore",
-            "positionOffset": [0.0, 0.0, 0.0],
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "radius": 0.0,
             "renderingMode": 0,
-            "rotationEuler": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
             "shapeType": 0,
             "sizeCurve": [
-                { "time": 0.0, "value": 0.15 },
-                { "time": 0.04, "value": 1.25 },
-                { "time": 0.2, "value": 0.9 },
-                { "time": 0.55, "value": 0.45 },
-                { "time": 1.0, "value": 0.0 }
+                {
+                    "time": 0.0,
+                    "value": 0.15000000596046448
+                },
+                {
+                    "time": 0.03999999910593033,
+                    "value": 1.25
+                },
+                {
+                    "time": 0.20000000298023224,
+                    "value": 0.8999999761581421
+                },
+                {
+                    "time": 0.550000011920929,
+                    "value": 0.44999998807907104
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
             ],
             "sizeCurveMode": 1,
-            "speed": [0.0, 0.0],
-            "startColor": [[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]],
-            "startSize": [[0.55, 0.55], [0.55, 0.55]],
+            "speed": [
+                0.0,
+                0.0
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    0.949999988079071,
+                    0.949999988079071
+                ],
+                [
+                    0.949999988079071,
+                    0.949999988079071
+                ]
+            ],
             "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\white_core.png",
-            "textureSplitCount": [1, 1],
+            "textureSplitCount": [
+                1,
+                1
+            ],
             "useGravity": false,
-            "velocity": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
         },
         {
-            "acceleration": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
             "alphaCurve": [
-                { "time": 0.0, "value": 0.0 },
-                { "time": 0.04, "value": 0.9 },
-                { "time": 0.45, "value": 0.55 },
-                { "time": 1.0, "value": 0.0 }
+                {
+                    "time": 0.0,
+                    "value": 0.0
+                },
+                {
+                    "time": 0.03999999910593033,
+                    "value": 0.8999999761581421
+                },
+                {
+                    "time": 0.44999998807907104,
+                    "value": 0.550000011920929
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
             ],
             "blendState": 2,
             "burstCount": 1,
-            "colorCurve": [{ "time": 0.0, "value": 0.0 }, { "time": 1.0, "value": 1.0 }],
-            "directionAxis": [0.0, 1.0, 0.0],
-            "directionMode": 0,
+            "colorCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 1.0
+                }
+            ],
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 3,
             "emissiveCurve": [
-                { "time": 0.0, "value": 0.15 },
-                { "time": 0.04, "value": 1.0 },
-                { "time": 0.35, "value": 0.6 },
-                { "time": 1.0, "value": 0.0 }
+                {
+                    "time": 0.0,
+                    "value": 0.15000000596046448
+                },
+                {
+                    "time": 0.03999999910593033,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.3499999940395355,
+                    "value": 0.6000000238418579
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
             ],
             "emissivePower": 6.0,
-            "emitCount": [3, 3],
-            "emitInterval": [0.0, 0.0],
+            "emitCount": [
+                15,
+                15
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
             "emitRate": 0.0,
-            "emitterLifeTime": 0.11,
-            "endColor": [[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]],
-            "endSize": [[0.38, 0.04], [0.38, 0.04]],
+            "emitterLifeTime": 0.10999999940395355,
+            "endColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "endSize": [
+                [
+                    0.3799999952316284,
+                    0.03999999910593033
+                ],
+                [
+                    0.3799999952316284,
+                    0.03999999910593033
+                ]
+            ],
             "height": 0.0,
-            "initialDelay": [0.0, 0.0],
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
             "isBurst": true,
-            "lifeTime": [0.09, 0.09],
+            "lifeTime": [
+                0.38999998569488525,
+                0.38999998569488525
+            ],
             "loop": false,
-            "maxParticles": 3,
+            "maxParticles": 15,
             "name": "SmallWhiteSpark",
-            "positionOffset": [0.0, 0.0, 0.0],
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "radius": 0.0,
             "renderingMode": 0,
-            "rotationEuler": [[0.0, 0.0, 0.0], [0.0, 0.0, 360.0]],
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    360.0
+                ]
+            ],
             "shapeType": 0,
             "sizeCurve": [
-                { "time": 0.0, "value": 0.15 },
-                { "time": 0.05, "value": 1.05 },
-                { "time": 0.25, "value": 0.75 },
-                { "time": 0.6, "value": 0.4 },
-                { "time": 1.0, "value": 0.0 }
+                {
+                    "time": 0.0,
+                    "value": 0.15000000596046448
+                },
+                {
+                    "time": 0.05000000074505806,
+                    "value": 1.0499999523162842
+                },
+                {
+                    "time": 0.25,
+                    "value": 0.75
+                },
+                {
+                    "time": 0.6000000238418579,
+                    "value": 0.4000000059604645
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
             ],
             "sizeCurveMode": 1,
-            "speed": [0.0, 0.0],
-            "startColor": [[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]],
-            "startSize": [[0.38, 0.04], [0.38, 0.04]],
-            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\small_spark.png",
-            "textureSplitCount": [1, 1],
+            "speed": [
+                2.5999999046325684,
+                2.5999999046325684
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    0.18000000715255737,
+                    0.14000000059604645
+                ],
+                [
+                    0.18000000715255737,
+                    0.14000000059604645
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\Textures\\particle.png",
+            "textureSplitCount": [
+                1,
+                1
+            ],
             "useGravity": false,
-            "velocity": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
         },
         {
-            "acceleration": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
             "alphaCurve": [
-                { "time": 0.0, "value": 0.5 },
-                { "time": 0.15, "value": 0.4 },
-                { "time": 0.55, "value": 0.2 },
-                { "time": 1.0, "value": 0.0 }
+                {
+                    "time": 0.0,
+                    "value": 0.5
+                },
+                {
+                    "time": 0.15000000596046448,
+                    "value": 0.4000000059604645
+                },
+                {
+                    "time": 0.550000011920929,
+                    "value": 0.20000000298023224
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
             ],
             "blendState": 2,
             "burstCount": 1,
-            "colorCurve": [{ "time": 0.0, "value": 0.0 }, { "time": 1.0, "value": 1.0 }],
-            "directionAxis": [0.0, 1.0, 0.0],
+            "colorCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 1.0
+                }
+            ],
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
             "directionMode": 0,
             "emissiveCurve": [
-                { "time": 0.0, "value": 0.7 },
-                { "time": 0.2, "value": 0.5 },
-                { "time": 1.0, "value": 0.0 }
+                {
+                    "time": 0.0,
+                    "value": 0.699999988079071
+                },
+                {
+                    "time": 0.20000000298023224,
+                    "value": 0.5
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
             ],
             "emissivePower": 4.0,
-            "emitCount": [1, 1],
-            "emitInterval": [0.0, 0.0],
+            "emitCount": [
+                1,
+                1
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
             "emitRate": 0.0,
-            "emitterLifeTime": 0.11,
-            "endColor": [[1.0, 0.92, 0.85, 1.0], [1.0, 0.92, 0.85, 1.0]],
-            "endSize": [[0.3, 0.3], [0.3, 0.3]],
+            "emitterLifeTime": 0.10999999940395355,
+            "endColor": [
+                [
+                    1.0,
+                    0.9200000166893005,
+                    0.8500000238418579,
+                    1.0
+                ],
+                [
+                    1.0,
+                    0.9200000166893005,
+                    0.8500000238418579,
+                    1.0
+                ]
+            ],
+            "endSize": [
+                [
+                    0.30000001192092896,
+                    0.30000001192092896
+                ],
+                [
+                    0.30000001192092896,
+                    0.30000001192092896
+                ]
+            ],
             "height": 0.0,
-            "initialDelay": [0.0, 0.0],
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
             "isBurst": true,
-            "lifeTime": [0.09, 0.09],
+            "lifeTime": [
+                0.38999998569488525,
+                0.38999998569488525
+            ],
             "loop": false,
             "maxParticles": 1,
             "name": "SmallShockRing",
-            "positionOffset": [0.0, 0.0, 0.0],
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "radius": 0.0,
             "renderingMode": 0,
-            "rotationEuler": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
             "shapeType": 0,
             "sizeCurve": [
-                { "time": 0.0, "value": 0.35 },
-                { "time": 0.06, "value": 0.8 },
-                { "time": 0.35, "value": 1.25 },
-                { "time": 1.0, "value": 0.0 }
+                {
+                    "time": 0.0,
+                    "value": 0.3499999940395355
+                },
+                {
+                    "time": 0.05999999865889549,
+                    "value": 0.800000011920929
+                },
+                {
+                    "time": 0.3499999940395355,
+                    "value": 1.25
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
             ],
             "sizeCurveMode": 1,
-            "speed": [0.0, 0.0],
-            "startColor": [[1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0]],
-            "startSize": [[0.3, 0.3], [0.3, 0.3]],
+            "speed": [
+                0.699999988079071,
+                0.699999988079071
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    1.600000023841858,
+                    1.600000023841858
+                ],
+                [
+                    1.600000023841858,
+                    1.600000023841858
+                ]
+            ],
             "texturePath": ".\\Data\\Effect\\Particles\\AuroraRing.png",
-            "textureSplitCount": [1, 1],
+            "textureSplitCount": [
+                1,
+                1
+            ],
             "useGravity": false,
-            "velocity": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
         }
     ],
     "name": "NormalAttackHitEffect"
