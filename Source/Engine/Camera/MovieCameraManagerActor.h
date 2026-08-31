@@ -52,7 +52,7 @@ private:
     DoorMovieState doorMovieState = DoorMovieState::None;
     std::weak_ptr<MovieCameraComponent> movieCameraWeakPtr;
     float elapsedTimer = 0.0f;
-    float bossRoomZoomDuration = 2.0f;
+    float bossRoomZoomDuration = 3.0f;
     float bossRoomZoomTargetFovDegree = 20.0f;
     float bossRoomCameraMoveDistance =5.0f;
     float bossRoomZoomStartFov = DirectX::XMConvertToRadians(35.0f);
