@@ -28,6 +28,15 @@ public:
     //ìñÇΩÇ¡ÇΩéûÇÃèàóù
     void TakeDamage(int damage);
 
+    // Battle HUD visibility is decided by GameScene; Grux only owns its components.
+    void SetHpBarVisible(bool visible);
+
+    // Stops combat immediately while preserving HP and the current death animation.
+    void StopBattleActions();
+
+    // Clears Grux-owned transient combat state while preserving HP.
+    void ResetForBattleContinue(const Transform& battleStartTransform);
+
     void BeginRushHpDisplay();
     void EndRushHpDisplay();
 
@@ -332,6 +341,7 @@ private:
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HPÉoÅ[
+    std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;
     bool rushHpDisplayActive = false;
     bool useRushDelayedHpFollowSpeed = false;
     float delayedHp = 0.0f;

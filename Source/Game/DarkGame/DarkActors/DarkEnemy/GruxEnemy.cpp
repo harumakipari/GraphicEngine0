@@ -384,6 +384,97 @@ void GruxEnemy::Initialize(const Transform& transform)
     hpFrameUiComponent->SetColor(CoreColor::White);
     hpFrameUiComponent->zOrder = 15;
     uiManager->Add(hpFrameUiComponent);
+
+    hpBarUiComponents =
+    {
+        hpNameUiComponent,
+        hpBackgroundUiComponent,
+        hpDelayedFillUiComponent,
+        hpCurrentFillUiComponent,
+        hpFrameUiComponent,
+    };
+}
+
+void GruxEnemy::SetHpBarVisible(const bool visible)
+{
+    for (const auto& component : hpBarUiComponents)
+    {
+        if (!component)
+            continue;
+        component->SetVisible(visible);
+        component->SetEnable(visible);
+    }
+}
+
+void GruxEnemy::StopBattleActions()
+{
+    DisableAttackHitBoxes();
+    StopDashAttackMovement();
+    StopChargeAttackMovement();
+    StopAIMovement();
+    ClearActiveIntent();
+    ClearPendingAttackFacing();
+    ClearJumpAttackMotionWarpOverride();
+    ResetJustDodgeRecords("battle_stop");
+
+    pendingAttackActionValid = false;
+    selectedActionType = BossActionType::AttackLA;
+    selectedAttackType = BossAttackType::PrimaryAttackLA;
+    selectedPositioningData.reset();
+    hasSelectedActionDebug = false;
+    hasLastAttack = false;
+    lastSelectedIntent.reset();
+    fixedPositioningTargetValid = false;
+    combatRepositionSettling = false;
+    combatRepositionSettleRemaining = 0.0f;
+    positioningMoveStopTimer = 0.0f;
+    positioningAnimationActualSpeed = 0.0f;
+    positioningAnimationMoving = false;
+    transitionWindow = false;
+    hitActors.clear();
+    currentAttackHitCount = 0;
+    showLeftWeaponTrail = false;
+    showRightWeaponTrail = false;
+    leftWeaponTrail.trailPoints.clear();
+    rightWeaponTrail.trailPoints.clear();
+    nextRecoveryDuration.reset();
+    nextRecoverySource = "Default";
+    attackReadyActive = false;
+    attackReadyDebugTimer = 0.0f;
+    attackReadySEFired = false;
+    stunElapsedDebug = 0.0f;
+    recoveryElapsedDebug = 0.0f;
+    chargeElapsedTime = 0.0f;
+    dashAttackElapsedTime = 0.0f;
+    animationMotionWarps.clear();
+
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    characterMovementComponent->ResetFixedSpeed();
+    velocity = { 0.0f, 0.0f, 0.0f };
+}
+
+void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
+{
+    ResetTimeScale();
+    if (stateMachine_)
+        stateMachine_->ChangeState("EnemyIdleState");
+    StopBattleActions();
+
+    isDeathPerform = false;
+    rushHpDisplayActive = false;
+    useRushDelayedHpFollowSpeed = false;
+    delayedHp = static_cast<float>((std::max)(hp, 0));
+    delayedHpDelayTimer = 0.0f;
+    if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+    if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+
+    SetPosition(battleStartTransform.GetLocation());
+    SetQuaternionRotation(battleStartTransform.GetRotation());
+    SetScale(battleStartTransform.GetScale());
+    UpdateAllComponentTransforms();
 }
 
 void GruxEnemy::Update(float deltaTime)
@@ -2488,6 +2579,7 @@ void GruxEnemy::EndRushHpDisplay()
     useRushDelayedHpFollowSpeed = true;
     delayedHpDelayTimer = delayedHpDelayDuration;
 }
+
 void GruxEnemy::TakeDamage(const int damage)
 {
     skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = damageFlashStartValue;
@@ -4494,7 +4586,6 @@ bool GruxEnemy::ResumeSelectedAttackAfterTurn()
 }
 
 void GruxEnemy::ClearPendingAttackFacing()
-
 {
     pendingAttackActionValid = false;
     pendingAttackFacingValid = false;

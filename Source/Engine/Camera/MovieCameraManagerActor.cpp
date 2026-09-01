@@ -328,7 +328,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 {
                     DarkCameraActor::CameraPose start = darkCameraActor->CreatePoseFromMovie(movieCamera);
                     DarkCameraActor::CameraPose target = darkCameraActor->CreateFocusPose();
-                    darkCameraActor->StartExternalBlend(start, target, 2.0f, [player,gruxEnemy]()
+                    darkCameraActor->StartExternalBlend(start, target, 2.0f, [player,gruxEnemy,gameScene]()
                         {
                             if (player)
                             {
@@ -338,6 +338,10 @@ void MovieCameraManagerActor::Update(float deltaTime)
                             if (gruxEnemy)
                             {// ‚±‚±‚Åƒ{ƒX‚Ì–¼‘O‚ÌUI‚ðÁ‚·
                                 gruxEnemy->GetStateMachine()->ChangeState("EnemyIdleState");
+                            }
+                            if (gameScene)
+                            {
+                                gameScene->StartBossBattle();
                             }
 
                         }

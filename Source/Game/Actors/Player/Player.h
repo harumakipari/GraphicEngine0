@@ -120,6 +120,15 @@ public:
     // イベントシーン終了時に呼ぶ処理
     void EndEvent();
 
+    // Battle HUD visibility is decided by GameScene; Player only owns its components.
+    void SetHpBarVisible(bool visible);
+
+    // Clears Player-owned transient combat state and restores full HP at the saved battle start.
+    void ResetForBattleContinue(const Transform& battleStartTransform);
+
+    // Stops residual attacks when the battle has ended without restoring HP.
+    void StopBattleActions();
+
     // 軌跡を描画する処理
     void RenderTrail(ID3D11DeviceContext* immediateContext);
 
@@ -429,6 +438,7 @@ private:
     float ghostFadeTime = 0.6f; // 残像が残る時間
     DirectX::XMFLOAT3 swordGhostColor = { 0.5f,0.8f,1.6f }; // 残像の剣のベースカラー
     float swordGhostEmissive = 2.0f;    // 残像のemissiveColor
+    bool battleActionsSuspended = false;
     bool isAttackActive = false;    // プレイヤーが攻撃状態に入る
     DirectX::XMFLOAT3 ghostEdgeColor = { 0.0f,0.042f,0.253f };  // 残像の剣のベースカラー
     DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 残像の剣のベースカラー
@@ -448,6 +458,7 @@ private:
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;
+    std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;
     float delayedHp = 0.0f;
     float delayedHpDelayTimer = 0.0f;
     float delayedHpDelayDuration = 0.25f;

@@ -140,6 +140,9 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
 void GameScene::Start()
 {
+    battleFlowState = BattleFlowState::Intro;
+    battleStartTransformsSaved = false;
+    SetBattleHudVisible(false);
     // ゲームBGM
     gameBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("GameBgmActor");
     gameBgmActor->SetSource(L"./Data/Sound/BGM/game_bgm.wav");
@@ -188,6 +191,8 @@ void GameScene::Update(float deltaTime)
     using namespace DirectX;
 
     ZoneScopedN("Game Update");
+
+    UpdateBattleFlow();
 
     // ボスの部屋のラープのため
     if (bossLerpEasing)
@@ -471,6 +476,7 @@ void GameScene::Update(float deltaTime)
             gruxEnemyActor->GetStateMachine()->ChangeState("EnemyIdleState");
         }
         player->SetIsBossBattle(true);
+        StartBossBattle();
     }
 
 
@@ -481,6 +487,121 @@ void GameScene::Update(float deltaTime)
 }
 
 // 定数バッファの更新処理をシーンごとにカスタマイズできるようにするための仮想関数
+void GameScene::SetBattleHudVisible(const bool visible)
+{
+    if (player)
+        player->SetHpBarVisible(visible);
+    if (gruxEnemyActor)
+        gruxEnemyActor->SetHpBarVisible(visible);
+}
+
+void GameScene::StartBossBattle()
+{
+    if (!player || !gruxEnemyActor)
+        return;
+
+    if (player->GetRootComponent() && gruxEnemyActor->GetRootComponent())
+    {
+        playerBattleStartTransform = player->GetRootComponent()->GetComponentWorldTransform();
+        bossBattleStartTransform = gruxEnemyActor->GetRootComponent()->GetComponentWorldTransform();
+        battleStartTransformsSaved = true;
+    }
+
+    player->SetIsBossBattle(true);
+    battleFlowState = BattleFlowState::Playing;
+    SetBattleHudVisible(true);
+}
+
+void GameScene::EnterPlayerDead()
+{
+    battleFlowState = BattleFlowState::PlayerDead;
+    playerDeadElapsed = 0.0f;
+    SetBattleHudVisible(false);
+
+    if (gruxEnemyActor)
+    {
+        gruxEnemyActor->StopBattleActions();
+        gruxEnemyActor->SetTimeScale(0.0f);
+    }
+}
+
+void GameScene::ResetBattleForContinue()
+{
+    if (!battleStartTransformsSaved || !player || !gruxEnemyActor)
+        return;
+
+    Time::SetSlow(1.0f, 0.0f);
+
+    if (cameraManager->IsUseMovie())
+        cameraManager->ToggleMovieCamera(this);
+    if (darkCameraActor)
+        darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+
+    player->ResetForBattleContinue(playerBattleStartTransform);
+    gruxEnemyActor->ResetForBattleContinue(bossBattleStartTransform);
+
+    if (darkCameraActor)
+        darkCameraActor->RotateToPlayerForward();
+
+    SetBattleHudVisible(true);
+    battleFlowState = BattleFlowState::Playing;
+}
+
+void GameScene::EnterBossDead()
+{
+    battleFlowState = BattleFlowState::BossDead;
+    SetBattleHudVisible(false);
+
+    if (player)
+        player->StopBattleActions();
+    if (gruxEnemyActor)
+        gruxEnemyActor->StopBattleActions();
+}
+
+void GameScene::UpdateBattleFlow()
+{
+    switch (battleFlowState)
+    {
+    case BattleFlowState::Intro:
+        break;
+    case BattleFlowState::Playing:
+        if (gruxEnemyActor && gruxEnemyActor->GetHp() <= 0)
+        {
+            EnterBossDead();
+        }
+        else if (player && player->GetHp() <= 0)
+        {
+            EnterPlayerDead();
+        }
+        break;
+    case BattleFlowState::PlayerDead:
+        playerDeadElapsed += Time::UnscaledDeltaTime();
+        if (playerDeadElapsed >= continueWaitDelay)
+            battleFlowState = BattleFlowState::ContinueWait;
+        break;
+    case BattleFlowState::ContinueWait:
+        if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
+            battleFlowState = BattleFlowState::ResetForContinue;
+        break;
+    case BattleFlowState::ResetForContinue:
+        ResetBattleForContinue();
+        break;
+    case BattleFlowState::BossDead:
+        if (gruxEnemyActor && gruxEnemyActor->GetStateMachine() &&
+            std::string(gruxEnemyActor->GetStateMachine()->GetStateName()) == "EnemyDeathState")
+        {
+            battleFlowState = BattleFlowState::Victory;
+        }
+        break;
+    case BattleFlowState::Victory:
+        // タイトル画面に戻る
+        if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
+        {
+            SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
+        }
+        break;
+    }
+}
 void GameScene::UpdateConstants(ID3D11DeviceContext* immediateContext, float deltaTime)
 {
 }
@@ -572,22 +693,22 @@ void GameScene::SetUpActors()
         for (const auto& point : areaAsset->spawnPoints)
         {
 #if 0
-        if (point.name.rfind("Spawn_Door_Right", 0) == 0)
-        {// 名前が "Spawn_Door_Right" で始まる場合、燭台を配置
-            DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-            pos.x = -0.4f;
-            //Transform doorTr{ pos,point.worldRotation,point.worldScale };
-            Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-            auto doorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorLargeActor>("doorActor", doorTr);
-        }
+            if (point.name.rfind("Spawn_Door_Right", 0) == 0)
+            {// 名前が "Spawn_Door_Right" で始まる場合、燭台を配置
+                DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
+                pos.x = -0.4f;
+                //Transform doorTr{ pos,point.worldRotation,point.worldScale };
+                Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+                auto doorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorLargeActor>("doorActor", doorTr);
+            }
 
 #endif // 0
-        if (point.name.rfind("Spawn_SmallDoor", 0) == 0)
-        {
-            DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-            Transform smallDoorTr{ pos,point.worldRotation,point.worldScale };
-            auto smallDoorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorSmallActor>("smallDoorActor", smallDoorTr);
-        }
+            if (point.name.rfind("Spawn_SmallDoor", 0) == 0)
+            {
+                DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
+                Transform smallDoorTr{ pos,point.worldRotation,point.worldScale };
+                auto smallDoorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorSmallActor>("smallDoorActor", smallDoorTr);
+            }
         }
     }
 

@@ -30,6 +30,17 @@ class GruxEnemy;
 class GameScene : public SceneBase
 {
 public:
+    enum class BattleFlowState : uint8_t
+    {
+        Intro,
+        Playing,
+        PlayerDead,
+        ContinueWait,
+        ResetForContinue,
+        BossDead,
+        Victory,
+    };
+
     bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) override;
 
     void Start() override;
@@ -59,7 +70,15 @@ public:
 
     // カメラのモードを変更する
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
+
+    // Called when the existing boss-introduction camera blend has completed.
+    void StartBossBattle();
 private:
+    void UpdateBattleFlow();
+    void SetBattleHudVisible(bool visible);
+    void EnterPlayerDead();
+    void ResetBattleForContinue();
+    void EnterBossDead();
 
     std::shared_ptr<StageAsset> mainRoomAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> bossRoomAsset = std::make_shared<StageAsset>();
@@ -82,6 +101,13 @@ private:
     std::shared_ptr<Player> player;
 
     std::shared_ptr<GruxEnemy> gruxEnemyActor;
+
+    BattleFlowState battleFlowState = BattleFlowState::Intro;
+    Transform playerBattleStartTransform{};
+    Transform bossBattleStartTransform{};
+    bool battleStartTransformsSaved = false;
+    float playerDeadElapsed = 0.0f;
+    static constexpr float continueWaitDelay = 0.25f;
 
     std::unique_ptr<ClothSimulate> clothSimulate;
 

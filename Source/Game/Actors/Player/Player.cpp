@@ -468,11 +468,23 @@ void Player::Initialize(const Transform& transform)
     hpIconUiComponent->zOrder = 16;
     uiManager->Add(hpIconUiComponent);
 
+    hpBarUiComponents =
+    {
+        hpBackgroundUiComponent,
+        hpDelayedFillUiComponent,
+        hpCurrentFillUiComponent,
+        hpFrameUiComponent,
+        hpIconUiComponent,
+    };
+
 }
 
 void Player::Update(float deltaTime)
 {
     using namespace DirectX;
+
+    if (battleActionsSuspended)
+        return;
 
     UpdateDamageFlash();
 
@@ -1798,6 +1810,93 @@ void Player::EndEvent()
     InputSystem::SetInputEnabled(true);
     //　イベントが終わったのでplayerの透過処理を戻す
     this->moviePerform = false;
+}
+
+void Player::SetHpBarVisible(const bool visible)
+{
+    for (const auto& component : hpBarUiComponents)
+    {
+        if (!component)
+            continue;
+        component->SetVisible(visible);
+        component->SetEnable(visible);
+    }
+}
+
+void Player::StopBattleActions()
+{
+    // 
+    battleActionsSuspended = true;
+    SetTimeScale(0.0f);
+    ClearActionRequest("battle_end");
+    ClearAttackTarget();
+    EndAttack();
+    SetRushInputAcceptance(false);
+    SetRushInputDebugState(false, false);
+    hitBox = false;
+    inputWindow = false;
+    transitionWindow = false;
+    comboQueued = false;
+    invincible = false;
+    invincibleWindow = false;
+    justDodgeWindow = false;
+    justDodgeSuccess = false;
+    animationMotionWarps.clear();
+    hitActors.clear();
+    showTrail = false;
+    swordEmissivePower = 0.0f;
+    trail.trailPoints.clear();
+    SetRushWeaponVisual(false);
+    if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(false);
+    if (rushPromptTextComponent) rushPromptTextComponent->SetVisible(false);
+    for (auto& ghost : ghosts)
+    {
+        ghost.isVisible = false;
+        if (ghost.swordMeshComp) ghost.swordMeshComp->SetIsVisible(false);
+    }
+    StopAttackTargetRotation();
+    StopKnockBackForcedMove();
+    knockBackActive = false;
+    knockBackElapsed = 0.0f;
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    characterMovementComponent->ResetFixedSpeed();
+    velocity = { 0.0f, 0.0f, 0.0f };
+}
+
+void Player::ResetForBattleContinue(const Transform& battleStartTransform)
+{
+    battleActionsSuspended = false;
+    StopBattleActions();
+    battleActionsSuspended = false;
+
+    ForceResetPlayerSlow();
+    ForceResetBossSlow();
+    rushTarget.reset();
+    locomotionMode = LocomotionMode::None;
+    swordGhostElapsedTime = 0.0f;
+    swordGhostIndex = 0;
+    isPrevSwordWorldValid = false;
+    rushPromptAlpha = 0.0f;
+    damageFlashTimer = 0.0f;
+    hitStopTimer = 0.0f;
+    ApplyDamageFlash(0.0f);
+
+    hp = maxHp;
+    delayedHp = static_cast<float>(hp);
+    delayedHpDelayTimer = 0.0f;
+    if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+    if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+
+    SetPosition(battleStartTransform.GetLocation());
+    SetQuaternionRotation(battleStartTransform.GetRotation());
+    SetScale(battleStartTransform.GetScale());
+    UpdateAllComponentTransforms();
+
+    if (stateMachine_)
+        stateMachine_->ChangeState("Idle");
 }
 
 // 火花エフェクトの生成
