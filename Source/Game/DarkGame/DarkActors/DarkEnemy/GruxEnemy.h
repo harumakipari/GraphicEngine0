@@ -381,9 +381,9 @@ private:
     uint64_t currentAttackSequenceId = 0;
     int currentAttackHitCount = 0;
 
-    BossAIMode bossAIMode = BossAIMode::CombatAI;
     bool battleAIActive = true; // ボスバトルAIを使用するかどうか　falseならidleのまま
-    //BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;
+    //BossAIMode bossAIMode = BossAIMode::CombatAI;         // ボスのAIモード
+    BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;   // ボスのAIモード　デバック用
     BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
 
     std::optional<BossIntentType> activeIntent = std::nullopt;
