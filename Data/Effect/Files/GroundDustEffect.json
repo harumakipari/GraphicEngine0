@@ -1,0 +1,157 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [0.0, 0.15, 0.0],
+                [0.0, 0.35, 0.0]
+            ],
+            "alphaCurve": [
+                { "time": 0.0, "value": 0.0 },
+                { "time": 0.06, "value": 1.0 },
+                { "time": 0.35, "value": 0.9 },
+                { "time": 0.72, "value": 0.45 },
+                { "time": 1.0, "value": 0.0 }
+            ],
+            "blendState": 1,
+            "burstCount": 1,
+            "colorCurve": [
+                { "time": 0.0, "value": 0.0 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "directionAxis": [0.0, 1.0, 0.0],
+            "directionMode": 1,
+            "emissiveCurve": [
+                { "time": 0.0, "value": 1.0 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "emissivePower": 0.0,
+            "emitCount": [2, 3],
+            "emitInterval": [0.0, 0.025],
+            "emitRate": 0.0,
+            "emitterLifeTime": 0.1,
+            "endColor": [
+                [0.50, 0.46, 0.40, 0.55],
+                [0.62, 0.58, 0.52, 0.65]
+            ],
+            "endSize": [
+                [3.0, 2.2],
+                [4.0, 3.0]
+            ],
+            "height": 0.0,
+            "initialDelay": [0.0, 0.02],
+            "isBurst": true,
+            "lifeTime": [0.6, 0.8],
+            "loop": false,
+            "maxParticles": 32,
+            "name": "CentralDustPuff",
+            "positionOffset": [0.0, 0.2, 0.0],
+            "radius": 0.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 360.0]
+            ],
+            "shapeType": 0,
+            "sizeCurve": [
+                { "time": 0.0, "value": 0.18 },
+                { "time": 0.16, "value": 0.72 },
+                { "time": 0.48, "value": 0.9 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "sizeCurveMode": 0,
+            "speed": [0.15, 0.4],
+            "startColor": [
+                [0.58, 0.54, 0.48, 0.65],
+                [0.70, 0.66, 0.59, 0.8]
+            ],
+            "startSize": [
+                [0.35, 0.25],
+                [0.65, 0.45]
+            ],
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\T_Smoke_SubUV.PNG",
+            "textureSplitCount": [8, 8],
+            "useGravity": false,
+            "velocity": [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0]
+            ]
+        },
+        {
+            "acceleration": [
+                [-0.15, 0.05, -0.15],
+                [0.15, 0.25, 0.15]
+            ],
+            "alphaCurve": [
+                { "time": 0.0, "value": 0.0 },
+                { "time": 0.08, "value": 1.0 },
+                { "time": 0.4, "value": 0.82 },
+                { "time": 0.75, "value": 0.35 },
+                { "time": 1.0, "value": 0.0 }
+            ],
+            "blendState": 1,
+            "burstCount": 1,
+            "colorCurve": [
+                { "time": 0.0, "value": 0.0 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "directionAxis": [0.0, 1.0, 0.0],
+            "directionMode": 3,
+            "emissiveCurve": [
+                { "time": 0.0, "value": 1.0 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "emissivePower": 0.0,
+            "emitCount": [5, 7],
+            "emitInterval": [0.0, 0.035],
+            "emitRate": 0.0,
+            "emitterLifeTime": 0.12,
+            "endColor": [
+                [0.48, 0.44, 0.38, 0.45],
+                [0.60, 0.56, 0.50, 0.58]
+            ],
+            "endSize": [
+                [0.9, 0.65],
+                [1.5, 1.05]
+            ],
+            "height": 0.0,
+            "initialDelay": [0.0, 0.06],
+            "isBurst": true,
+            "lifeTime": [0.4, 0.65],
+            "loop": false,
+            "maxParticles": 48,
+            "name": "ScatteredDustPuffs",
+            "positionOffset": [0.0, 0.1, 0.0],
+            "radius": 0.8,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 360.0]
+            ],
+            "shapeType": 1,
+            "sizeCurve": [
+                { "time": 0.0, "value": 0.12 },
+                { "time": 0.18, "value": 0.68 },
+                { "time": 0.5, "value": 0.9 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "sizeCurveMode": 0,
+            "speed": [0.45, 1.25],
+            "startColor": [
+                [0.56, 0.52, 0.46, 0.6],
+                [0.68, 0.63, 0.56, 0.75]
+            ],
+            "startSize": [
+                [0.12, 0.09],
+                [0.3, 0.22]
+            ],
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\T_Smoke_SubUV.PNG",
+            "textureSplitCount": [8, 8],
+            "useGravity": false,
+            "velocity": [
+                [0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0]
+            ]
+        }
+    ],
+    "name": "GroundDustEffect"
+}
