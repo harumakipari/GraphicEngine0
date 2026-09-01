@@ -458,6 +458,26 @@ void PlayerKnockBackState::Exit()
 {
     player->EndKnockBackMovement();
 }
+void PlayerDeathPendingState::Enter()
+{
+    // Keep Actor/animation updates alive while removing actions that could
+    // continue during the death-camera performance.
+    player->ClearTransientBattleActions();
+    player->ResetAnimationStateFlag();
+    player->characterMovementComponent->SetFixedSpeed(0.0f);
+    player->characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    player->characterMovementComponent->SetInputMagnitude(0.0f);
+    Logger::Log(Logger::LogCategory::Gameplay, "[PlayerDeathPending][Enter] hp=0");
+}
+
+void PlayerDeathPendingState::Execute(float deltaTime)
+{
+}
+
+void PlayerDeathPendingState::Exit()
+{
+}
+
 void PlayerDeathState::Enter()
 {
     player->ClearActionRequest("death_enter");

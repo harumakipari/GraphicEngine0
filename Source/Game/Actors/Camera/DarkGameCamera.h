@@ -10,6 +10,7 @@ public:
         TPS,
         Focus,
         LockOn,
+        Death,
     };
     struct CameraPose
     {
@@ -138,6 +139,9 @@ public:
     // ブレンドを開始する
     void StartBlend(CameraMode current, CameraMode request);
 
+    // Blends to a Player/Boss-relative death composition and holds it.
+    void StartDeathMode(std::function<void()> onBlendFinished);
+
     // カメラをplayerのforward方向に向ける
     void RotateToPlayerForward();
 
@@ -233,6 +237,7 @@ private:
     float blendStartEyeDistance = 0.0f;
 
     bool isBlending = false;
+    std::function<void()> deathBlendFinished;
 
     // 調整値
     float rotateSpeed = 2.0f;
@@ -267,6 +272,8 @@ private:
     CameraCompositionSettings tpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
     CameraCompositionSettings focusSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
     CameraCompositionSettings lockOnSettings = { 10.0f, 0.4f, -0.3f, 45.0f, 0.0f };
+    CameraCompositionSettings deathSettings = { 3.0f, -1.0f, -0.35f, 35.0f, 0.9f };
+    float deathBossLookOffset = 0.65f;
     float bossTpsFovDegree = 44.0f;
     float lockOnPlayerLookHeight = -.15f;
     float lockOnEnemyLookHeight = -0.75f;

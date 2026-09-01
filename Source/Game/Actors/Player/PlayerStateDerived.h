@@ -156,7 +156,19 @@ public:
 
 private:
     Phase phase = Phase::KnockBack;
-};class PlayerDeathState : public PlayerStateBase
+};
+
+class PlayerDeathPendingState : public PlayerStateBase
+{
+public:
+    PlayerDeathPendingState(Player* player) : PlayerStateBase(player) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "DeathPending"; }
+};
+
+class PlayerDeathState : public PlayerStateBase
 {
 public:
     PlayerDeathState(Player* player) : PlayerStateBase(player) {}

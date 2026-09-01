@@ -231,6 +231,12 @@ void DarkCameraActor::UpdateCameraShake(const float deltaTime)
 }
 
 // ブレンドを開始する
+void DarkCameraActor::StartDeathMode(std::function<void()> onBlendFinished)
+{
+    deathBlendFinished = std::move(onBlendFinished);
+    SetRequestMode(CameraMode::Death);
+}
+
 void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
 {
     (void)from;
@@ -279,6 +285,14 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
         targetPitch = info.pitch;
         targetDistance = CalculateLockOnDistance();
         break;
+
+    case CameraMode::Death:
+    {
+        const CameraPose deathPose = CalculatePose(to, playerPos, currentYaw, currentPitch);
+        targetYaw = deathPose.yaw;
+        targetPitch = deathPose.pitch;
+        break;
+    }
     }
     blendTargetPose = CalculatePose(to, playerPos, targetYaw, targetPitch);
     blendStartFovDegree = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
@@ -464,6 +478,12 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
         desiredYaw = currentYaw;
         desiredPitch = currentPitch;
         mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
+        if (currentMode == CameraMode::Death && deathBlendFinished)
+        {
+            auto callback = std::move(deathBlendFinished);
+            deathBlendFinished = nullptr;
+            callback();
+        }
     }
 }
 
@@ -589,6 +609,9 @@ void DarkCameraActor::UpdateDesireRotation(float deltaTime)
                 }
             }
         }
+        break;
+    case CameraMode::Death:
+        // The death composition is derived from the actors, not camera input.
         break;
     }
 
@@ -785,6 +808,40 @@ void DarkCameraActor::UpdateLockOnTransitionDiagnostics()
 DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const
 {
     CameraPose pose{};
+
+    if (cameraMode == CameraMode::Death)
+    {
+        DirectX::XMFLOAT3 toBoss{};
+        if (auto enemy = enemyHead.lock())
+        {
+            toBoss = MathHelper::Subtract(enemy->GetComponentLocation(), playerPos);
+            toBoss.y = 0.0f;
+        }
+        if (MathHelper::Length(toBoss) <= FLT_EPSILON)
+            toBoss = { sinf(yaw), 0.0f, cosf(yaw) };
+        toBoss = MathHelper::Normalize(toBoss);
+
+        const DirectX::XMFLOAT3 worldUp{ 0.0f, 1.0f, 0.0f };
+        DirectX::XMFLOAT3 right = MathHelper::Cross(worldUp, toBoss);
+        if (MathHelper::Length(right) <= FLT_EPSILON)
+            right = { 1.0f, 0.0f, 0.0f };
+        right = MathHelper::Normalize(right);
+
+        pose.target = MathHelper::Add(
+            MathHelper::Add(playerPos, MathHelper::Multiply(toBoss, deathBossLookOffset)),
+            MathHelper::Multiply(worldUp, deathSettings.lookTargetHeight));
+        pose.eye = MathHelper::Add(
+            MathHelper::Add(
+                MathHelper::Subtract(playerPos, MathHelper::Multiply(toBoss, deathSettings.distance)),
+                MathHelper::Multiply(right, deathSettings.horizontalOffset)),
+            MathHelper::Multiply(worldUp, deathSettings.height));
+
+        const DirectX::XMFLOAT3 viewDirection = MathHelper::Normalize(
+            MathHelper::Subtract(pose.target, pose.eye));
+        pose.yaw = atan2f(viewDirection.x, viewDirection.z);
+        pose.pitch = asinf(std::clamp(viewDirection.y, -1.0f, 1.0f));
+        return pose;
+    }
 
     const CameraCompositionSettings* settings = &tpsSettings;
     if (cameraMode == CameraMode::Focus) settings = &focusSettings;

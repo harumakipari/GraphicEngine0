@@ -523,6 +523,28 @@ void GameScene::EnterPlayerDead()
 
     if (gruxEnemyActor)
         gruxEnemyActor->PauseBattleAI();
+
+    if (darkCameraActor && player)
+    {
+        std::weak_ptr<Player> weakPlayer = player;
+        darkCameraActor->StartDeathMode([weakPlayer]()
+            {
+                if (const auto lockedPlayer = weakPlayer.lock())
+                {
+                    const auto stateMachine = lockedPlayer->GetStateMachine();
+                    if (stateMachine &&
+                        std::string(stateMachine->GetStateName()) == "DeathPending")
+                    {
+                        stateMachine->ChangeState("Death");
+                    }
+                }
+            });
+    }
+    else if (player && player->GetStateMachine())
+    {
+        // Do not leave the Player pending if a camera is unavailable.
+        player->GetStateMachine()->ChangeState("Death");
+    }
 }
 
 void GameScene::ResetBattleForContinue()

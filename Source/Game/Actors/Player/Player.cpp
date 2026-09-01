@@ -256,6 +256,7 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerDodgeState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDamageState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerKnockBackState>(this));
+        stateMachine_->RegisterState(std::make_unique<PlayerDeathPendingState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDeathState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerWinState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerRushState>(this));
@@ -2041,7 +2042,8 @@ void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XM
 void Player::CaptureActionRequest(float deltaTime)
 {
     const std::string currentState = stateMachine_->GetStateName();
-    if (currentState == "Damage" || currentState == "KnockBack" || currentState == "Death")
+    if (currentState == "Damage" || currentState == "KnockBack" ||
+        currentState == "DeathPending" || currentState == "Death")
     {
         if (bufferCommand.type != ActionType::None)
             ClearActionRequest("damage_or_death_state");
@@ -2271,7 +2273,15 @@ void Player::UpdateMovement()
     const std::string currentState = GetStateMachine()->GetStateName();
     bool isDash = currentState == "Dash";
     const bool suppressMovementInput =
-        currentState == "Damage" || currentState == "KnockBack" || currentState == "Death";
+        currentState == "Damage" || currentState == "KnockBack" ||
+        currentState == "DeathPending" || currentState == "Death";
+
+    if (currentState == "DeathPending" || currentState == "Death")
+    {
+        characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+        characterMovementComponent->SetInputMagnitude(0.0f);
+        return;
+    }
 
     auto intent = inputComponent->GetIntent();
     if (suppressMovementInput)
@@ -2390,7 +2400,7 @@ void Player::UpdateMovement()
             // ‰ñ“]‚Í‚·‚®‚ÉŒü‚«‚ð•Ï‚¦‚Ä‚Ù‚µ‚¢‚½‚ß
             const std::string& state = GetStateMachine()->GetStateName();
             if (state != "Dodge" && state != "Attack" &&
-                state != "Damage" && state != "Death")
+                state != "Damage" && state != "DeathPending" && state != "Death")
             {// ‰ñ”ð‚Å‚Í‚È‚¢‚©‚ÂUŒ‚‚Å‚È‚¢‚Æ‚«‚Í
                 rotationComponent->SetDirection(moveDir);
             }
@@ -2651,7 +2661,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     }
 
     const std::string currentState = stateMachine_->GetStateName();
-    if (currentState == "Damage" || currentState == "Death")
+    if (currentState == "Damage" || currentState == "DeathPending" || currentState == "Death")
     {
         Logger::Log(Logger::LogCategory::Gameplay,
             "[PlayerDamage][Rejected] reason=damage_state state=" + currentState);
@@ -2692,7 +2702,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     //    sparkComponent->Play();
     //}
 
-    const char* targetState = hp > 0 ? "Damage" : "Death";
+    const char* targetState = hp > 0 ? "Damage" : "DeathPending";
     Logger::Log(Logger::LogCategory::Gameplay,
         "[PlayerDamage][Applied] targetState=" + std::string(targetState) +
         " knockback=" + std::to_string(direction.x) + "," +
@@ -2745,6 +2755,7 @@ void Player::ApplyDamageFlash(float flashAmount)
 bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)
 {
     if (!stateMachine_ || hp <= 0 ||
+        std::string(stateMachine_->GetStateName()) == "DeathPending" ||
         std::string(stateMachine_->GetStateName()) == "Death")
     {
         return false;

@@ -76,7 +76,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        //maxHp = 10000;
+        maxHp = 10;
         hp = maxHp;
     }
 
@@ -549,5 +549,6 @@ private:
 
     friend class PlayerStateBase;
     friend class PlayerKnockBackState;
+    friend class PlayerDeathPendingState;
     friend class PlayerWinState;
 };
