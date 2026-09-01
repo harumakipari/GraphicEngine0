@@ -25,6 +25,12 @@
             "time": 0.8693910241127014,
             "type": "CameraShake",
             "value": 0.0
+        },
+        {
+            "parameter": "GroundImpact",
+            "time": 0.8693910241127014,
+            "type": "SpawnEffect",
+            "value": 0.0
         }
     ],
     "loop": false,

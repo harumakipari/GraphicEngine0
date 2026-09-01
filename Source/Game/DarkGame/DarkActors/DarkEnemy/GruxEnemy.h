@@ -316,6 +316,7 @@ private:
     void RecordRotationDebugSource(const char* source,
         const DirectX::XMFLOAT3& targetDirection, float requestedTurnSpeed);
     void DrawRotationDebugWorld(const BossTargetContext& context) const;
+    void SpawnGroundImpactEffect() const;
 
 private:
     // 描画用コンポーネントを追加
@@ -354,6 +355,7 @@ private:
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // Existing normal hit effect
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect
+    std::shared_ptr<ParticleComponent> groundDustEffectComponent;
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HPバー

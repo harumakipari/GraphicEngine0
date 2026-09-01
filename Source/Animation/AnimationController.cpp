@@ -1931,7 +1931,15 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             break;
         }
         case AnimationNotifyEvent::Type::SpawnEffect:
+        {
+            char buffer[128];
+            strcpy_s(buffer, event.parameter.c_str());
+            if (ImGui::InputText("EffectName", buffer, sizeof(buffer)))
+            {
+                event.parameter = buffer;
+            }
             break;
+        }
         case AnimationNotifyEvent::Type::CameraShake:
         {
             char buffer[128];

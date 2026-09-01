@@ -324,6 +324,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     rushHitSparkEffectComponent = this->AddComponent<class ParticleComponent>("rushHitSparkEffectComponent", parentName);
     rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushCoreEffect.json");
 
+    groundDustEffectComponent = this->AddComponent<class ParticleComponent>("groundDustEffectComponent", parentName);
+    groundDustEffectComponent->Load("./Data/Effect/Files/GroundDustEffect.json");
+
     leftWeaponTrail.Initialize();
     rightWeaponTrail.Initialize();
     leftWeaponTrail.SetRushColorEnabled(true, bossTrailColor);
@@ -2718,6 +2721,27 @@ void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOA
         rushHitRingEffectComponent->GetComponentEulerRotation());
 }
 
+void GruxEnemy::SpawnGroundImpactEffect() const
+{
+    if (!groundDustEffectComponent)
+        return;
+
+    DirectX::XMFLOAT3 spawnPosition = GetPosition();
+    if (weaponRightTipComponent)
+    {
+        const DirectX::XMFLOAT3 weaponTipPosition =
+            weaponRightTipComponent->GetComponentLocation();
+        spawnPosition.x = weaponTipPosition.x;
+        spawnPosition.z = weaponTipPosition.z;
+    }
+
+    groundDustEffectComponent->SetWorldLocationDirect(spawnPosition);
+    groundDustEffectComponent->UpdateComponentToWorld();
+    EffectManager::EmitParticle(
+        groundDustEffectComponent->GetEffectHandle(),
+        groundDustEffectComponent->GetComponentLocation(),
+        { 0.0f, 0.0f, 0.0f });
+}
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {
     switch (state.type)
@@ -2905,6 +2929,8 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     }
     break;
     case AnimationNotifyEvent::Type::SpawnEffect:
+        if (event.parameter == "GroundImpact")
+            SpawnGroundImpactEffect();
         break;
     case AnimationNotifyEvent::Type::CameraShake:
     {
