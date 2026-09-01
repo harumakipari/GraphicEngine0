@@ -353,14 +353,14 @@ public:
     float rushPromptAnimationTimer = 0.0f;
     bool rushPromptWasVisible = false;
 
-    DirectX::XMFLOAT2 rushGuidePosition = { 520.0f, 450.0f };
-    DirectX::XMFLOAT2 rushButtonPosition = { 680.0f, 450.0f };
+    DirectX::XMFLOAT2 rushGuidePosition = { 1200.0f, 680.0f };
+    DirectX::XMFLOAT2 rushButtonPosition = { 1195.0f, 590.0f };
     DirectX::XMFLOAT2 rushWordPosition = { 800.0f, 450.0f };
     DirectX::XMFLOAT2 rushGuideSize = { 244.0f, 197.5f };
     DirectX::XMFLOAT2 rushButtonSize = { 104.0f, 116.0f };
     DirectX::XMFLOAT2 rushWordSize = { 124.5f, 68.0f };
-    DirectX::XMFLOAT2 rushGuideScale = { 1.0f, 1.0f };
-    DirectX::XMFLOAT2 rushButtonBaseScale = { 1.0f, 1.0f };
+    DirectX::XMFLOAT2 rushGuideScale = { 0.7f, 0.7f };
+    DirectX::XMFLOAT2 rushButtonBaseScale = { 0.88f, 0.88f };
     DirectX::XMFLOAT2 rushWordScale = { 1.0f, 1.0f };
 
     // 入力受付のコマンド

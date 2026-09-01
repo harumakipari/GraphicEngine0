@@ -139,7 +139,7 @@ public:
     // ブレンドを開始する
     void StartBlend(CameraMode current, CameraMode request);
 
-    // Blends to a Player/Boss-relative death composition and holds it.
+    // プレイヤーやボスに対する死亡時のカメラに変更
     void StartDeathMode(std::function<void()> onBlendFinished);
 
     // カメラをplayerのforward方向に向ける
@@ -154,8 +154,7 @@ public:
     // Focus状態のポーズを作成する
     CameraPose CreateFocusPose();
 
-    void PlayCameraShake(float intensity, float duration, float frequency,
-    float positionAmount, float targetAmount);
+    void PlayCameraShake(float intensity, float duration, float frequency,float positionAmount, float targetAmount);
     void PlayCameraShakePreset(const std::string& presetName);
 private:
     // 外部のカメラアクターとのブレンド状態を更新する

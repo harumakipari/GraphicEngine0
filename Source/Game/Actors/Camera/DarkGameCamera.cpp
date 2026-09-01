@@ -49,7 +49,6 @@ void DarkCameraActor::Initialize(const Transform& transform)
 
 void DarkCameraActor::Update(float deltaTime)
 {
-
     // プレイヤーの位置を取得
     auto playerHeadShared = playerHead.lock();
     if (!playerHeadShared)
@@ -146,8 +145,7 @@ void DarkCameraActor::Update(float deltaTime)
     mainCameraComponent->useLookTarget = true;
 }
 
-void DarkCameraActor::PlayCameraShake(const float intensity, const float duration,
-    const float frequency, const float positionAmount, const float targetAmount)
+void DarkCameraActor::PlayCameraShake(const float intensity, const float duration,const float frequency, const float positionAmount, const float targetAmount)
 {
     shakeIntensity = (std::max)(intensity, 0.0f);
     shakeDuration = (std::max)(duration, 0.0f);
