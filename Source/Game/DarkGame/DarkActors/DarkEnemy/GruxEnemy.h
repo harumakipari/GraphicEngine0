@@ -279,6 +279,10 @@ private:
 
     // ActionåÛï‚Ç∆Base WeightÇ©ÇÁEffective WeightÇçXêVÇ∑ÇÈ
     void UpdateActionEffectiveWeights();
+    bool IsCombatAttackAction(BossActionType actionType) const;
+    bool IsAttackActionForIntent(BossActionType actionType, BossIntentType intentType) const;
+    float GetRecentAttackPenalty(BossActionType actionType) const;
+    float GetIntentRecentAttackPenalty(BossIntentType intentType) const;
     void UpdateActionCooldowns(float deltaTime);
     void UpdateIntentEffectiveWeights(const BossTargetContext& context);
     float GetIntentWeightForDistance(const BossIntentData& data, BossDistanceRegion region) const;
@@ -413,6 +417,12 @@ private:
 
     BossActionType selectedActionType = BossActionType::AttackLA;
     BossActionType lastActionType = BossActionType::AttackLA;
+    std::optional<BossActionType> lastStartedCombatAttack = std::nullopt;
+    std::optional<BossActionType> secondLastStartedCombatAttack = std::nullopt;
+    static constexpr float initialRecentAttackPenaltyLast = 0.2f;          // íºãﬂÇÃçUåÇÇÃâ∫Ç∞ÇÈäÑçá
+    static constexpr float initialRecentAttackPenaltySecond = 0.45f;        // ÇQâÒÇÃçUåÇÇÃâ∫Ç∞ÇÈäÑçá
+    float recentAttackPenaltyLast = initialRecentAttackPenaltyLast;
+    float recentAttackPenaltySecond = initialRecentAttackPenaltySecond;
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
     std::optional<BossPositioningData> selectedPositioningData = std::nullopt;
     bool pendingAttackActionValid = false;

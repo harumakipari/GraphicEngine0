@@ -436,6 +436,8 @@ void GruxEnemy::StopBattleActions()
     selectedPositioningData.reset();
     hasSelectedActionDebug = false;
     hasLastAttack = false;
+    lastStartedCombatAttack.reset();
+    secondLastStartedCombatAttack.reset();
     lastSelectedIntent.reset();
     fixedPositioningTargetValid = false;
     combatRepositionSettling = false;
@@ -1436,6 +1438,18 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Back Min Angle: %.1f deg", relativeBackMinAngle);
     ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
     ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
+    ImGui::Text("Last Started Attack: %s",
+        lastStartedCombatAttack
+        ? actionTypes[static_cast<int>(*lastStartedCombatAttack)] : "None");
+    ImGui::Text("Second Last Started Attack: %s",
+        secondLastStartedCombatAttack
+        ? actionTypes[static_cast<int>(*secondLastStartedCombatAttack)] : "None");
+    ImGui::DragFloat("Last Attack Penalty", &recentAttackPenaltyLast,
+        0.01f, 0.01f, 1.0f, "%.2f");
+    ImGui::DragFloat("Second Last Attack Penalty", &recentAttackPenaltySecond,
+        0.01f, 0.01f, 1.0f, "%.2f");
+    recentAttackPenaltyLast = std::clamp(recentAttackPenaltyLast, 0.01f, 1.0f);
+    recentAttackPenaltySecond = std::clamp(recentAttackPenaltySecond, 0.01f, 1.0f);
     const char* intentTypes[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan", "CombatReposition" };
     const char* intentStepNames[] =
     {
@@ -2445,6 +2459,8 @@ void GruxEnemy::DrawImGuiDetails()
             frontAttackReadyDuration = initialFrontAttackReadyDuration;
             sideAttackReadyDuration = initialSideAttackReadyDuration;
             closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
+            recentAttackPenaltyLast = initialRecentAttackPenaltyLast;
+            recentAttackPenaltySecond = initialRecentAttackPenaltySecond;
         }
         ImGui::TextDisabled("Runtime only. Reset does not change active Cooldown Remaining.");
         ImGui::TextDisabled("Recovery edits affect an active Recovery on its next update.");
@@ -3361,6 +3377,9 @@ void GruxEnemy::UpdateIntentEffectiveWeights(const BossTargetContext& context)
                 combatIntentEffectiveWeights[i] =
                 (std::max)(0.0f, jumpAttackPlanBackWeight);
         }
+
+        combatIntentEffectiveWeights[i] *=
+            GetIntentRecentAttackPenalty(combatIntentData[i].type);
     }
 
     if (postAttackCombatRepositionBoostPending)
@@ -3541,6 +3560,14 @@ void GruxEnemy::MarkIntentAttackSelected()
 
 void GruxEnemy::OnSelectedActionStartedSuccessfully()
 {
+    if (bossAIMode == BossAIMode::CombatAI &&
+        IsCombatAttackAction(selectedActionType) &&
+        (!lastStartedCombatAttack || *lastStartedCombatAttack != selectedActionType))
+    {
+        secondLastStartedCombatAttack = lastStartedCombatAttack;
+        lastStartedCombatAttack = selectedActionType;
+    }
+
     if (!activeIntent)
         return;
 
@@ -4994,6 +5021,77 @@ void GruxEnemy::UpdateActionCooldowns(float deltaTime)
         remaining = (std::max)(0.0f, remaining - safeDeltaTime);
 }
 
+bool GruxEnemy::IsCombatAttackAction(BossActionType actionType) const
+{
+    for (const BossActionData& actionData : combatActionData)
+    {
+        if (actionData.type == actionType)
+            return actionData.attackType.has_value();
+    }
+    return false;
+}
+
+bool GruxEnemy::IsAttackActionForIntent(
+    BossActionType actionType, BossIntentType intentType) const
+{
+    switch (intentType)
+    {
+    case BossIntentType::CloseCombat:
+        return actionType == BossActionType::AttackLA ||
+            actionType == BossActionType::AttackRA ||
+            actionType == BossActionType::FastCombo;
+    case BossIntentType::DashAttackPlan:
+        return actionType == BossActionType::DashAttack ||
+            actionType == BossActionType::ChargeAttack;
+    case BossIntentType::JumpAttackPlan:
+        return actionType == BossActionType::JumpAttack;
+    case BossIntentType::CombatReposition:
+        return false;
+    }
+    return false;
+}
+
+float GruxEnemy::GetRecentAttackPenalty(BossActionType actionType) const
+{
+    if (lastStartedCombatAttack && *lastStartedCombatAttack == actionType)
+        return std::clamp(recentAttackPenaltyLast, 0.01f, 1.0f);
+    if (secondLastStartedCombatAttack && *secondLastStartedCombatAttack == actionType)
+        return std::clamp(recentAttackPenaltySecond, 0.01f, 1.0f);
+    return 1.0f;
+}
+
+float GruxEnemy::GetIntentRecentAttackPenalty(BossIntentType intentType) const
+{
+    float leastRestrictiveReadyPenalty = 0.0f;
+    float leastRestrictiveFallbackPenalty = 0.0f;
+    bool hasReadyAttack = false;
+    bool hasDefinedAttack = false;
+    for (size_t i = 0; i < combatActionData.size(); ++i)
+    {
+        const BossActionData& actionData = combatActionData[i];
+        if (!actionData.attackType || actionData.weight <= 0.0f ||
+            !IsAttackActionForIntent(actionData.type, intentType))
+        {
+            continue;
+        }
+
+        hasDefinedAttack = true;
+        const float penalty = GetRecentAttackPenalty(actionData.type);
+        leastRestrictiveFallbackPenalty = (std::max)(
+            leastRestrictiveFallbackPenalty, penalty);
+        if (combatActionCooldownRemaining[i] > 0.0f)
+            continue;
+
+        hasReadyAttack = true;
+        leastRestrictiveReadyPenalty = (std::max)(
+            leastRestrictiveReadyPenalty, penalty);
+    }
+
+    if (hasReadyAttack)
+        return leastRestrictiveReadyPenalty;
+    return hasDefinedAttack ? leastRestrictiveFallbackPenalty : 1.0f;
+}
+
 void GruxEnemy::UpdateActionEffectiveWeights()
 {
     // 前回の計算結果をリセット
@@ -5010,7 +5108,10 @@ void GruxEnemy::UpdateActionEffectiveWeights()
         if (baseWeight <= 0.0f)
             continue;
 
-        combatActionEffectiveWeights[i] = baseWeight;
+        float effectiveWeight = baseWeight;
+        if (combatActionData[i].attackType)
+            effectiveWeight *= GetRecentAttackPenalty(combatActionData[i].type);
+        combatActionEffectiveWeights[i] = (std::max)(0.0f, effectiveWeight);
     }
 }
 
