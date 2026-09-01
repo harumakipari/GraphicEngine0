@@ -202,6 +202,7 @@ public:
     bool CanShowInitialRushGuide() const;
     bool CanShowRushComboGuide() const;
     bool CanShowRushPrompt() const;
+    bool IsRushOpportunityActive() const;
     void SetRushInputAcceptance(bool accepting);
     void SetRushInputDebugState(bool judgeSuccess, bool rushRequested);
 

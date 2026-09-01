@@ -2847,6 +2847,15 @@ bool Player::CanShowRushPrompt() const
     return CanShowInitialRushGuide() || CanShowRushComboGuide();
 }
 
+bool Player::IsRushOpportunityActive() const
+{
+    if (!stateMachine_ || rushTarget.expired())
+        return false;
+
+    const std::string stateName = stateMachine_->GetStateName();
+    return (stateName == "Dodge" && justDodgeSuccess) || stateName == "Rush";
+}
+
 void Player::SetRushInputAcceptance(bool accepting)
 {
     if (rushInputAccepting == accepting)

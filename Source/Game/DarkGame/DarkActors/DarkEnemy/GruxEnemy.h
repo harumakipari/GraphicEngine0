@@ -160,6 +160,13 @@ public:
     float GetRecoveryDurationForCurrentAttack() const;
     void SetNextRecoveryDuration(float duration, const char* source);
     float ConsumeNextRecoveryDuration();
+    void SetPendingChargeRecoveryResult(ChargeAttackEndReason reason);
+    ChargeAttackEndReason GetPendingChargeRecoveryResult() const
+    {
+        return pendingChargeRecoveryResult;
+    }
+    ChargeAttackEndReason ConsumePendingChargeRecoveryResult();
+    void RequestCombatRepositionIntent();
     void UpdateRecoveryDebug(float elapsed, float duration)
     {
         recoveryElapsedDebug = elapsed;
@@ -616,6 +623,7 @@ private:
     const float initialDashAttackPlanBackWeight = dashAttackPlanBackWeight;
     const float initialJumpAttackPlanBackWeight = jumpAttackPlanBackWeight;
     bool suppressCombatRepositionForNextIntentSelection = false;
+    bool combatRepositionIntentPending = false;
     float postAttackCombatRepositionWeight = 45.0f;
     const float initialPostAttackCombatRepositionWeight =
         postAttackCombatRepositionWeight;
@@ -698,6 +706,7 @@ private:
     DirectX::XMFLOAT3 chargeWallHitNormalDebug{};
     float chargeWallHitDistanceDebug = 0.0f;
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;
+    ChargeAttackEndReason pendingChargeRecoveryResult = ChargeAttackEndReason::None;
 
     // Wall Hit後の行動不能時間。Start/End Animation時間とは分離する。
     float stunDuration = 2.5f;
@@ -706,8 +715,8 @@ private:
     std::string deathAnimationName = "Death_A_0";
 
     // Recoveryへの遷移元が一度だけ上書きできるDuration。
-    float chargePlayerHitRecoveryDuration = 5.0f;   // 壁Dash攻撃のPlayerに当たった時のrecovery時間
-    float chargeJustDodgeRecoveryDuration = 0.5f;
+    float chargePlayerHitRecoveryDuration = 0.8f;   // 壁Dash攻撃のPlayerに当たった時のrecovery時間
+    float chargeJustDodgeRecoveryDuration = 1.0f;   // 壁Dash攻撃のジャスト回避された時のrecovery時間
     float postStunRecoveryDuration = 0.1f;  // 壁Dash攻撃の壁に当たった時のrecovery時間
     std::optional<float> nextRecoveryDuration;
     std::string nextRecoverySource = "Default";

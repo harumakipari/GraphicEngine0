@@ -1,8 +1,11 @@
 #include "pch.h"
 #include "BossState.h"
 
+#include "Core/ActorManager.h"
 #include "Engine/Audio/Audio.h"
+#include "Engine/Scene/Scene.h"
 #include "Game/Actors/Enemy/Enemy.h"
+#include "Game/Actors/Player/Player.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
 EnemyStateBase::EnemyStateBase(GruxEnemy* actor) :State(actor), enemy(actor)
@@ -617,6 +620,7 @@ void EnemyAttackState::Exit()
 void EnemyChargeAttackState::Enter()
 {
     phase = Phase::Windup;
+    enemy->SetPendingChargeRecoveryResult(ChargeAttackEndReason::None);
     enemy->StopAIMovement();
     enemy->StartAttack();
     enemy->SetChargePhaseDebug("Windup");
@@ -658,9 +662,7 @@ void EnemyChargeAttackState::Execute(float deltaTime)
         enemy->UpdateChargeAttackMovement(deltaTime);
     if (endReason != ChargeAttackEndReason::None)
     {
-        if (endReason == ChargeAttackEndReason::PlayerHit ||
-            endReason == ChargeAttackEndReason::JustDodge ||
-            endReason == ChargeAttackEndReason::WallHit)
+        if (endReason == ChargeAttackEndReason::WallHit)
             enemy->OnSelectedAttackCompletedSuccessfully();
 
         if (endReason == ChargeAttackEndReason::WallHit)
@@ -673,11 +675,13 @@ void EnemyChargeAttackState::Execute(float deltaTime)
 
         if (endReason == ChargeAttackEndReason::PlayerHit)
         {
+            enemy->SetPendingChargeRecoveryResult(endReason);
             enemy->SetNextRecoveryDuration(
                 enemy->GetChargePlayerHitRecoveryDuration(), "ChargePlayerHit");
         }
         else if (endReason == ChargeAttackEndReason::JustDodge)
         {
+            enemy->SetPendingChargeRecoveryResult(endReason);
             enemy->SetNextRecoveryDuration(
                 enemy->GetChargeJustDodgeRecoveryDuration(), "ChargeJustDodge");
         }
@@ -767,8 +771,25 @@ void EnemyRecoveryState::Execute(float deltaTime)
 {
     timer += deltaTime;
     enemy->UpdateRecoveryDebug(timer, recoveryDuration);
-    if (timer >= recoveryDuration)
-        owner->GetStateMachine()->ChangeState("EnemyThinkState");
+    if (timer < recoveryDuration)
+        return;
+
+    const ChargeAttackEndReason chargeResult = enemy->GetPendingChargeRecoveryResult();
+    if (chargeResult == ChargeAttackEndReason::JustDodge)
+    {
+        const auto scene = enemy->GetOwnerScene();
+        const auto player = scene
+            ? scene->GetActorManager()->GetActorOfType<Player>()
+            : nullptr;
+        if (player && player->IsRushOpportunityActive())
+            return;
+    }
+
+    enemy->ConsumePendingChargeRecoveryResult();
+    if (chargeResult == ChargeAttackEndReason::PlayerHit)
+        enemy->RequestCombatRepositionIntent();
+
+    owner->GetStateMachine()->ChangeState("EnemyThinkState");
 }
 
 void EnemyRecoveryState::Exit()

@@ -452,6 +452,8 @@ void GruxEnemy::StopBattleActions()
     rightWeaponTrail.trailPoints.clear();
     nextRecoveryDuration.reset();
     nextRecoverySource = "Default";
+    pendingChargeRecoveryResult = ChargeAttackEndReason::None;
+    combatRepositionIntentPending = false;
     attackReadyActive = false;
     attackReadyDebugTimer = 0.0f;
     attackReadySEFired = false;
@@ -3380,6 +3382,15 @@ bool GruxEnemy::SelectIntentByWeight()
     if (activeIntent)
         return false;
 
+    if (combatRepositionIntentPending)
+    {
+        combatRepositionIntentPending = false;
+        postAttackCombatRepositionBoostPending = false;
+        postAttackCombatRepositionBoostApplied = false;
+        lastSelectedIntent = BossIntentType::CombatReposition;
+        return TryStartIntent(BossIntentType::CombatReposition);
+    }
+
     const BossTargetContext context = BuildTargetContext();
     const bool applyPostAttackBoost = postAttackCombatRepositionBoostPending;
     UpdateIntentEffectiveWeights(context);
@@ -3799,6 +3810,25 @@ void GruxEnemy::SetNextRecoveryDuration(float duration, const char* source)
     nextRecoverySource = source ? source : "Custom";
 }
 
+void GruxEnemy::SetPendingChargeRecoveryResult(ChargeAttackEndReason reason)
+{
+    pendingChargeRecoveryResult = reason;
+}
+
+ChargeAttackEndReason GruxEnemy::ConsumePendingChargeRecoveryResult()
+{
+    const ChargeAttackEndReason result = pendingChargeRecoveryResult;
+    pendingChargeRecoveryResult = ChargeAttackEndReason::None;
+    return result;
+}
+
+void GruxEnemy::RequestCombatRepositionIntent()
+{
+    combatRepositionIntentPending = true;
+    postAttackCombatRepositionBoostPending = false;
+    postAttackCombatRepositionBoostApplied = false;
+}
+
 float GruxEnemy::ConsumeNextRecoveryDuration()
 {
     const bool hasOverride = nextRecoveryDuration.has_value();
@@ -3961,6 +3991,7 @@ void GruxEnemy::StopDashAttackMovement()
 bool GruxEnemy::BeginChargeAttackMovement()
 {
     StopChargeAttackMovement();
+    pendingChargeRecoveryResult = ChargeAttackEndReason::None;
 
     const BossTargetContext context = BuildTargetContext();
     if (!context.valid)
