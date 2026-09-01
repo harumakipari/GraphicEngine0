@@ -18,6 +18,9 @@ void EnemyIdleState::Enter()
 // ステートで実行するメソッド
 void EnemyIdleState::Execute(float deltaTime)
 {
+    if (!enemy->IsBattleAIActive())
+        return;
+
     owner->GetStateMachine()->ChangeState("EnemyThinkState");
 }
 void EnemyIdleState::Exit()

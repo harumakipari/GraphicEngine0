@@ -489,6 +489,7 @@ void GameScene::Update(float deltaTime)
 // 定数バッファの更新処理をシーンごとにカスタマイズできるようにするための仮想関数
 void GameScene::SetBattleHudVisible(const bool visible)
 {
+
     if (player)
         player->SetHpBarVisible(visible);
     if (gruxEnemyActor)
@@ -510,6 +511,8 @@ void GameScene::StartBossBattle()
     player->SetIsBossBattle(true);
     battleFlowState = BattleFlowState::Playing;
     SetBattleHudVisible(true);
+    // 入力を受け付ける
+    InputSystem::SetInputEnabled(true);
 }
 
 void GameScene::EnterPlayerDead()
@@ -519,10 +522,7 @@ void GameScene::EnterPlayerDead()
     SetBattleHudVisible(false);
 
     if (gruxEnemyActor)
-    {
-        gruxEnemyActor->StopBattleActions();
-        gruxEnemyActor->SetTimeScale(0.0f);
-    }
+        gruxEnemyActor->PauseBattleAI();
 }
 
 void GameScene::ResetBattleForContinue()
@@ -539,11 +539,14 @@ void GameScene::ResetBattleForContinue()
 
     player->ResetForBattleContinue(playerBattleStartTransform);
     gruxEnemyActor->ResetForBattleContinue(bossBattleStartTransform);
+    gruxEnemyActor->ResumeBattleAI();
 
     if (darkCameraActor)
         darkCameraActor->RotateToPlayerForward();
 
     SetBattleHudVisible(true);
+    // 入力を受け付ける
+    InputSystem::SetInputEnabled(true);
     battleFlowState = BattleFlowState::Playing;
 }
 

@@ -406,6 +406,19 @@ void GruxEnemy::SetHpBarVisible(const bool visible)
     }
 }
 
+void GruxEnemy::PauseBattleAI()
+{
+    battleAIActive = false;
+    StopBattleActions();
+    if (stateMachine_)
+        stateMachine_->ChangeState("EnemyIdleState");
+}
+
+void GruxEnemy::ResumeBattleAI()
+{
+    battleAIActive = true;
+}
+
 void GruxEnemy::StopBattleActions()
 {
     DisableAttackHitBoxes();

@@ -34,6 +34,11 @@ public:
     // Stops combat immediately while preserving HP and the current death animation.
     void StopBattleActions();
 
+    // Suspends battle decisions while allowing the Actor and its animations to update.
+    void PauseBattleAI();
+    void ResumeBattleAI();
+    bool IsBattleAIActive() const { return battleAIActive; }
+
     // Clears Grux-owned transient combat state while preserving HP.
     void ResetForBattleContinue(const Transform& battleStartTransform);
 
@@ -364,6 +369,7 @@ private:
     int currentAttackHitCount = 0;
 
     BossAIMode bossAIMode = BossAIMode::CombatAI;
+    bool battleAIActive = true; // ボスバトルAIを使用するかどうか　falseならidleのまま
     //BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;
     BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
 

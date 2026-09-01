@@ -1806,8 +1806,7 @@ void Player::EndEvent()
     {
         operateUiComponent->SetVisible(true);
     }
-    // 入力を受け付ける
-    InputSystem::SetInputEnabled(true);
+
     //　イベントが終わったのでplayerの透過処理を戻す
     this->moviePerform = false;
 }
