@@ -477,6 +477,23 @@ void PlayerDeathState::Exit()
 {
 }
 
+void PlayerWinState::Enter()
+{
+    player->ClearTransientBattleActions();
+    player->ForceResetPlayerSlow();
+    player->ForceResetBossSlow();
+    player->PlayBodyAnimation("Idle", true, true, 0.2f);
+}
+
+void PlayerWinState::Execute(float deltaTime)
+{
+    (void)deltaTime;
+}
+
+void PlayerWinState::Exit()
+{
+}
+
 // ƒ‰ƒbƒVƒ…
 void PlayerRushState::Enter()
 {

@@ -257,6 +257,7 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerDamageState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerKnockBackState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDeathState>(this));
+        stateMachine_->RegisterState(std::make_unique<PlayerWinState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerRushState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerJumpAttackState>(this));
@@ -486,6 +487,8 @@ void Player::Update(float deltaTime)
     if (battleActionsSuspended)
         return;
 
+    const bool gameplayInputEnabled = !IsInWinState();
+
     UpdateDamageFlash();
 
     // Player HP UI uses unscaled time so HitStop / Slow do not pause the delayed gauge.
@@ -601,7 +604,7 @@ void Player::Update(float deltaTime)
     {
         characterMovementComponent->SetMoveSpeedSetting(walkSpeed, runSpeed);
     }
-    if (InputSystem::GetInputState("1"))
+    if (gameplayInputEnabled && InputSystem::GetInputState("1"))
     {
         stateMachine_->ChangeState("Rush");
     }
@@ -866,11 +869,14 @@ void Player::Update(float deltaTime)
     }
 
 
-    // 入力処理
-    CaptureActionRequest(deltaTime);
+    if (gameplayInputEnabled)
+    {
+        // 入力処理
+        CaptureActionRequest(deltaTime);
 
-    // 現在フレームの入力から移動方向を確定し、その直後に一度だけ位置を更新する。
-    UpdateMovement();
+        // 現在フレームの入力から移動方向を確定し、その直後に一度だけ位置を更新する。
+        UpdateMovement();
+    }
 
     // NotifyEnd is not guaranteed when an animation is interrupted or finishes
     // before the notify range ends. Do not carry that animation's warp forward.
@@ -899,7 +905,8 @@ void Player::Update(float deltaTime)
     if (swordCollisionComp)
         swordCollisionComp->SetIsVisibleDebugShape(hitBox);
 
-    FindInteractable();
+    if (gameplayInputEnabled)
+        FindInteractable();
 
     switch (swordState)
     {
@@ -916,23 +923,26 @@ void Player::Update(float deltaTime)
     //skeletalMeshComponent->UpdateCloth(elapsedTime);
     //skeletalMeshComponent->UpdateGlobalTransforms();
 
-    if (InputSystem::GetInputState("RB", InputStateMask::Trigger))
+    if (gameplayInputEnabled)
     {
-        Logger::Log("RBが押された");
-    }
-    if (InputSystem::GetInputState("LockOn", InputStateMask::Trigger))
-    {
-        Logger::Log("LockOnが押された");
-    }
-    if (InputSystem::GetInputState("RT", InputStateMask::Trigger))
-    {
-        Logger::Log("RTが押された");
-    }
-    if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
-    {
-        if (IInteractable* interactable = FindInteractable())
+        if (InputSystem::GetInputState("RB", InputStateMask::Trigger))
         {
-            interactable->Interact();
+            Logger::Log("RBが押された");
+        }
+        if (InputSystem::GetInputState("LockOn", InputStateMask::Trigger))
+        {
+            Logger::Log("LockOnが押された");
+        }
+        if (InputSystem::GetInputState("RT", InputStateMask::Trigger))
+        {
+            Logger::Log("RTが押された");
+        }
+        if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
+        {
+            if (IInteractable* interactable = FindInteractable())
+            {
+                interactable->Interact();
+            }
         }
     }
 
@@ -1824,9 +1834,25 @@ void Player::SetHpBarVisible(const bool visible)
 
 void Player::StopBattleActions()
 {
-    // 
     battleActionsSuspended = true;
     SetTimeScale(0.0f);
+    ClearTransientBattleActions();
+}
+
+void Player::EnterWinState()
+{
+    battleActionsSuspended = false;
+    if (stateMachine_)
+        stateMachine_->ChangeState("Win");
+}
+
+bool Player::IsInWinState() const
+{
+    return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Win";
+}
+
+void Player::ClearTransientBattleActions()
+{
     ClearActionRequest("battle_end");
     ClearAttackTarget();
     EndAttack();
@@ -1860,6 +1886,7 @@ void Player::StopBattleActions()
     characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
     characterMovementComponent->SetInputMagnitude(0.0f);
     characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->MoveToActor(std::shared_ptr<Actor>{}, 0.0f, 0.0f);
     characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
     characterMovementComponent->ResetFixedSpeed();
     velocity = { 0.0f, 0.0f, 0.0f };

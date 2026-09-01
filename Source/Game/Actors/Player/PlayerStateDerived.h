@@ -166,6 +166,16 @@ public:
     const char* GetName() const override { return "Death"; }
 };
 
+class PlayerWinState : public PlayerStateBase
+{
+public:
+    PlayerWinState(Player* player) : PlayerStateBase(player) {}
+    void Enter() override;
+    void Execute(float deltaTime) override;
+    void Exit() override;
+    const char* GetName() const override { return "Win"; }
+};
+
 // ラッシュステート
 class PlayerRushState : public PlayerStateBase
 {

@@ -556,9 +556,11 @@ void GameScene::EnterBossDead()
     SetBattleHudVisible(false);
 
     if (player)
-        player->StopBattleActions();
+        player->EnterWinState();
     if (gruxEnemyActor)
         gruxEnemyActor->StopBattleActions();
+    if (darkCameraActor)
+        darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
 }
 
 void GameScene::UpdateBattleFlow()
@@ -591,7 +593,9 @@ void GameScene::UpdateBattleFlow()
         break;
     case BattleFlowState::BossDead:
         if (gruxEnemyActor && gruxEnemyActor->GetStateMachine() &&
-            std::string(gruxEnemyActor->GetStateMachine()->GetStateName()) == "EnemyDeathState")
+            std::string(gruxEnemyActor->GetStateMachine()->GetStateName()) == "EnemyDeathState" &&
+            gruxEnemyActor->GetBodyAnimationController() &&
+            !gruxEnemyActor->GetBodyAnimationController()->IsPlayAnimation())
         {
             battleFlowState = BattleFlowState::Victory;
         }

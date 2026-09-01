@@ -129,6 +129,10 @@ public:
     // Stops residual attacks when the battle has ended without restoring HP.
     void StopBattleActions();
 
+    // Enters the terminal, animation-playing state used after the boss is defeated.
+    void EnterWinState();
+    bool IsInWinState() const;
+
     // 軌跡を描画する処理
     void RenderTrail(ID3D11DeviceContext* immediateContext);
 
@@ -149,6 +153,8 @@ public:
     void SetLocomotionMode(LocomotionMode mode);
 
 private:
+    void ClearTransientBattleActions();
+
     void HandleAnimationPlaySE(const AnimationNotifyEvent& event);
 
     // 火花エフェクトの生成
@@ -522,4 +528,5 @@ private:
 
     friend class PlayerStateBase;
     friend class PlayerKnockBackState;
+    friend class PlayerWinState;
 };
