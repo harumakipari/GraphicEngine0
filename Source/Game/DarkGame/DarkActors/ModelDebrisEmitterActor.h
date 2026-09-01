@@ -38,8 +38,8 @@ private:
         float baseAngleRadians);
     void DeactivateDebris(Debris& debris);
 
-    static constexpr int BlockCount = 2;
-    static constexpr int SmallDebriCount = 4;
+    static constexpr int BlockCount = 3;
+    static constexpr int SmallDebriCount = 7;
 
     std::vector<Debris> debrisPool;
     std::string parentName = "RootComponent";

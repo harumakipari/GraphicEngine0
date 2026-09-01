@@ -3,19 +3,26 @@
 
 namespace
 {
-    constexpr const char* BlockModelPath =
-        "./Data/Models/EffectDebri/Block/block1.gltf";
-    constexpr const char* SmallDebriModelPath =
-        "./Data/Models/EffectDebri/SmallDebri/debri.gltf";
+    constexpr const char* BlockModelPaths[] = {
+        "./Data/Models/EffectDebri/Block/block1.gltf",
+        "./Data/Models/EffectDebri/Block/block2.gltf",
+        "./Data/Models/EffectDebri/Block/block3.gltf",
+    };
+    constexpr const char* SmallDebriModelPaths[] = {
+        "./Data/Models/EffectDebri/SmallDebri/debri.gltf",
+        "./Data/Models/EffectDebri/SmallDebri/debri1.gltf",
+        "./Data/Models/EffectDebri/SmallDebri/debri2.gltf",
+    };
 }
 
 void ModelDebrisEmitterActor::Initialize(const Transform& transform)
 {
     debrisPool.reserve(BlockCount + SmallDebriCount);
     for (int i = 0; i < BlockCount; ++i)
-        InitializeDebris(DebrisType::Block, i, BlockModelPath);
+        InitializeDebris(DebrisType::Block, i, BlockModelPaths[i]);
     for (int i = 0; i < SmallDebriCount; ++i)
-        InitializeDebris(DebrisType::SmallDebri, i, SmallDebriModelPath);
+        InitializeDebris(DebrisType::SmallDebri, i,
+            SmallDebriModelPaths[i % std::size(SmallDebriModelPaths)]);
 }
 
 void ModelDebrisEmitterActor::InitializeDebris(
@@ -70,11 +77,11 @@ void ModelDebrisEmitterActor::ActivateDebris(
 
     const bool isBlock = debris.type == DebrisType::Block;
     const float horizontalSpeed = isBlock
-        ? MathHelper::RandomRange(2.0f, 3.2f)
+        ? MathHelper::RandomRange(1.6f, 2.8f)
         : MathHelper::RandomRange(2.5f, 4.8f);
     const float verticalSpeed = isBlock
-        ? MathHelper::RandomRange(1.8f, 2.6f)
-        : MathHelper::RandomRange(2.2f, 3.8f);
+        ? MathHelper::RandomRange(1.5f, 2.4f)
+        : MathHelper::RandomRange(2.5f, 4.2f);
 
     debris.active = true;
     debris.position = impactPosition;
@@ -97,8 +104,8 @@ void ModelDebrisEmitterActor::ActivateDebris(
         debris.angularVelocity.y = angularSpeedMin;
 
     debris.remainingLifetime = isBlock
-        ? MathHelper::RandomRange(0.8f, 1.0f)
-        : MathHelper::RandomRange(0.6f, 0.9f);
+        ? MathHelper::RandomRange(0.9f, 1.2f)
+        : MathHelper::RandomRange(0.7f, 1.0f);
     debris.scale = isBlock
         ? MathHelper::RandomRange(0.9f, 1.2f)
         : MathHelper::RandomRange(0.55f, 0.85f);

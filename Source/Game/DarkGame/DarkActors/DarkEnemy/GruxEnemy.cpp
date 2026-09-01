@@ -2741,8 +2741,8 @@ void GruxEnemy::SpawnGroundImpactEffect() const
         EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
 
         // ‘«Œ³‚É¶¬‚·‚é
-        spawnPosition = GetPosition();
-        groundDustEffectComponent->SetWorldLocationDirect(spawnPosition);
+        DirectX::XMFLOAT3 groundDustPosition= GetPosition();
+        groundDustEffectComponent->SetWorldLocationDirect(groundDustPosition);
         groundDustEffectComponent->UpdateComponentToWorld();
         EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
     }
