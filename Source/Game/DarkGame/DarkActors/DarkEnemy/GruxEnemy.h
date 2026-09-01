@@ -313,9 +313,10 @@ private:
     void DrawPositioningDebugWorld() const;
     void BeginRotationDebugFrame();
     void FinishRotationDebugFrame();
-    void RecordRotationDebugSource(const char* source,
-        const DirectX::XMFLOAT3& targetDirection, float requestedTurnSpeed);
+    void RecordRotationDebugSource(const char* source, const DirectX::XMFLOAT3& targetDirection, float requestedTurnSpeed);
     void DrawRotationDebugWorld(const BossTargetContext& context) const;
+
+    // ジャンプ攻撃の後に着地の時のエフェクトを生成する
     void SpawnGroundImpactEffect() const;
 
 private:

@@ -10,6 +10,7 @@
 #include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
+#include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
 #include "Physics/CollisionFunction.h"
 #include <random>
 
@@ -345,7 +346,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     auto hpNameUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_name.png", "BossHpName");
     hpNameUiComponent->SetWorldPosition(hpNamePosition);
     hpNameUiComponent->SetSize({ 102.0f, 35.0f });
-    hpNameUiComponent->SetPivot({0.5f,0.5f});
+    hpNameUiComponent->SetPivot({ 0.5f,0.5f });
     hpNameUiComponent->SetScale({ 0.95f,0.95f });
     hpNameUiComponent->SetColor(CoreColor::White);
     hpNameUiComponent->zOrder = 10;
@@ -2721,26 +2722,36 @@ void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOA
         rushHitRingEffectComponent->GetComponentEulerRotation());
 }
 
+// ジャンプ攻撃の後に着地の時のエフェクトを生成する
 void GruxEnemy::SpawnGroundImpactEffect() const
 {
-    if (!groundDustEffectComponent)
-        return;
-
     DirectX::XMFLOAT3 spawnPosition = GetPosition();
     if (weaponRightTipComponent)
     {
-        const DirectX::XMFLOAT3 weaponTipPosition =
-            weaponRightTipComponent->GetComponentLocation();
+        const DirectX::XMFLOAT3 weaponTipPosition = weaponRightTipComponent->GetComponentLocation();
         spawnPosition.x = weaponTipPosition.x;
         spawnPosition.z = weaponTipPosition.z;
     }
 
-    groundDustEffectComponent->SetWorldLocationDirect(spawnPosition);
-    groundDustEffectComponent->UpdateComponentToWorld();
-    EffectManager::EmitParticle(
-        groundDustEffectComponent->GetEffectHandle(),
-        groundDustEffectComponent->GetComponentLocation(),
-        { 0.0f, 0.0f, 0.0f });
+    if (groundDustEffectComponent)
+    {
+        // 武器の場所に生成する
+        groundDustEffectComponent->SetWorldLocationDirect(spawnPosition);
+        groundDustEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+
+        // 足元に生成する
+        spawnPosition = GetPosition();
+        groundDustEffectComponent->SetWorldLocationDirect(spawnPosition);
+        groundDustEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+    }
+
+    // 瓦礫を生成する
+    if (const auto debrisEmitter = GetOwnerScene()->GetActorManager()->GetActorOfType<ModelDebrisEmitterActor>())
+    {
+        debrisEmitter->Emit(spawnPosition);
+    }
 }
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {

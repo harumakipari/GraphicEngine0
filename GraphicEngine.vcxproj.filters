@@ -238,6 +238,9 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.cpp">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.cpp">
+      <Filter>Source\Game\DarkGame\DarkActors</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\DarkActors\InteractableActor.cpp">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
@@ -709,6 +712,9 @@
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.h">
+      <Filter>Source\Game\DarkGame\DarkActors</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.h">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\InteractableActor.h">

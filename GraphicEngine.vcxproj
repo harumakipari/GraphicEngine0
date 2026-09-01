@@ -329,6 +329,7 @@
     <ClCompile Include="Source\Game\Actors\Stage\TestSoftBody.cpp" />
     <ClCompile Include="Source\Game\Actors\WaterSphere\MorphModel.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\InteractableActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\LanternActor.cpp" />
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp" />
@@ -491,6 +492,7 @@
     <ClInclude Include="Source\Game\Actors\Stage\Stage.h" />
     <ClInclude Include="Source\Game\Actors\WaterSphere\MorphModel.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.h" />
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\InteractableActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStagePointLightActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\LanternActor.h" />

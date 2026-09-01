@@ -490,8 +490,8 @@ private:
     float delayedHpDelayTimer = 0.0f;
     float delayedHpDelayDuration = 0.25f;
     float delayedHpFollowSpeed = 25.0f;
-    CoreColor playerHpCurrentColor{ 0.70f, 0.10f, 0.08f, 1.0f };
-    CoreColor playerHpDelayedColor{ 0.95f, 0.78f, 0.45f, 1.0f };
+    CoreColor playerHpCurrentColor{ 0.302f, 0.565f, 0.644f, 1.0f };
+    CoreColor playerHpDelayedColor{ 0.711f, 0.958f, 0.993f, 1.0f };
 
     // ÉJÉÅÉâÇÃñ⁄ÇÃà íu
     std::shared_ptr<SceneComponent> cameraEyeComponent;
