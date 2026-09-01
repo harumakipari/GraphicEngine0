@@ -334,15 +334,34 @@ public:
 
     std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 
+    enum class RushPromptAnimationPhase : uint8_t
+    {
+        Hidden,
+        AppearGrow,
+        AppearSettle,
+        PulseGrow,
+        PulseReturn,
+    };
+
     bool rushInputAccepting = false;
     bool rushJudgeSuccessDebug = false;
     bool rushRequestedDebug = false;
     bool swordHitDebug = false;
     float rushPromptAlpha = 0.0f;
     float rushPromptFadeInDuration = 0.10f;
-    DirectX::XMFLOAT2 rushPromptPosition = { 640.0f, 450.0f };
-    DirectX::XMFLOAT2 rushPromptTextOffset = { 52.0f, 0.0f };
-    float rushPromptIconSize = 64.0f;
+    RushPromptAnimationPhase rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
+    float rushPromptAnimationTimer = 0.0f;
+    bool rushPromptWasVisible = false;
+
+    DirectX::XMFLOAT2 rushGuidePosition = { 520.0f, 450.0f };
+    DirectX::XMFLOAT2 rushButtonPosition = { 680.0f, 450.0f };
+    DirectX::XMFLOAT2 rushWordPosition = { 800.0f, 450.0f };
+    DirectX::XMFLOAT2 rushGuideSize = { 244.0f, 197.5f };
+    DirectX::XMFLOAT2 rushButtonSize = { 104.0f, 116.0f };
+    DirectX::XMFLOAT2 rushWordSize = { 124.5f, 68.0f };
+    DirectX::XMFLOAT2 rushGuideScale = { 1.0f, 1.0f };
+    DirectX::XMFLOAT2 rushButtonBaseScale = { 1.0f, 1.0f };
+    DirectX::XMFLOAT2 rushWordScale = { 1.0f, 1.0f };
 
     // 入力受付のコマンド
     ActionRequest bufferCommand{}; // 入力コマンド
@@ -413,8 +432,9 @@ public:
     float backwardSpeedScale = 1.0f;
 
     // ラッシュ時のUI
+    std::shared_ptr<UIImageComponent> rushGuideImageComponent;
     std::shared_ptr<UIImageComponent> rushButtonImageComponent;
-    std::shared_ptr<UITextComponent> rushPromptTextComponent;
+    std::shared_ptr<UIImageComponent> rushWordImageComponent;
     // ラッシュの時のコンボカウント（回避中にもラッシュをカウントするための変数）
     int rushQueuedAttackCount = 0;
 private:

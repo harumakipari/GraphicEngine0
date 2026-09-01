@@ -391,21 +391,34 @@ void Player::Initialize(const Transform& transform)
     SetRushWeaponVisual(false);
     // ラッシュ時のUIを作成
     auto uiManager = GetOwnerScene()->GetUIManager();
-    rushButtonImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Y.png", "Y");
-    rushButtonImageComponent->SetWorldPosition(rushPromptPosition);
-    rushButtonImageComponent->SetScale({ 1.0f,1.0f });
-    rushButtonImageComponent->SetSize({ rushPromptIconSize, rushPromptIconSize });
-    rushButtonImageComponent->SetPivot({ 0.5f,0.5f });
+    rushGuideImageComponent = std::make_shared<UIImageComponent>(
+        "./Data/Textures/UI/Rush/rush_x_a_b.png", "RushGuide");
+    rushGuideImageComponent->SetWorldPosition(rushGuidePosition);
+    rushGuideImageComponent->SetScale(rushGuideScale);
+    rushGuideImageComponent->SetSize(rushGuideSize);
+    rushGuideImageComponent->SetPivot({ 0.5f, 0.5f });
+    rushGuideImageComponent->SetVisible(false);
+    uiManager->Add(rushGuideImageComponent);
+
+    rushButtonImageComponent = std::make_shared<UIImageComponent>(
+        "./Data/Textures/UI/Rush/rush_y.png", "RushY");
+    rushButtonImageComponent->SetWorldPosition(rushButtonPosition);
+    rushButtonImageComponent->SetScale({
+        rushButtonBaseScale.x * 0.8f,
+        rushButtonBaseScale.y * 0.8f });
+    rushButtonImageComponent->SetSize(rushButtonSize);
+    rushButtonImageComponent->SetPivot({ 0.5f, 0.5f });
     rushButtonImageComponent->SetVisible(false);
     uiManager->Add(rushButtonImageComponent);
 
-    rushPromptTextComponent = std::make_shared<UITextComponent>("RushPromptText");
-    rushPromptTextComponent->SetText(L"RUSH");
-    rushPromptTextComponent->SetWorldPosition({ rushPromptPosition.x + rushPromptTextOffset.x,rushPromptPosition.y + rushPromptTextOffset.y });
-    rushPromptTextComponent->SetPivot({ 0.0f, 0.5f });
-    rushPromptTextComponent->SetScale({ 0.8f, 0.8f });
-    rushPromptTextComponent->SetVisible(false);
-    uiManager->Add(rushPromptTextComponent);
+    rushWordImageComponent = std::make_shared<UIImageComponent>(
+        "./Data/Textures/UI/Rush/rush_word.png", "RushWord");
+    rushWordImageComponent->SetWorldPosition(rushWordPosition);
+    rushWordImageComponent->SetScale(rushWordScale);
+    rushWordImageComponent->SetSize(rushWordSize);
+    rushWordImageComponent->SetPivot({ 0.5f, 0.5f });
+    rushWordImageComponent->SetVisible(false);
+    uiManager->Add(rushWordImageComponent);
     SetEulerRotation({ 0.0f,90.0f,0.0f });
 
     // 操作説明UIを入れる
@@ -1149,10 +1162,15 @@ void Player::DrawImGuiDetails()
     }
     if (ImGui::TreeNode("Rush Input Prompt"))
     {
-        ImGui::DragFloat("Position X", &rushPromptPosition.x, 1.0f);
-        ImGui::DragFloat("Position Y", &rushPromptPosition.y, 1.0f);
-        ImGui::DragFloat("Icon Size", &rushPromptIconSize, 1.0f, 1.0f, 512.0f);
-        ImGui::DragFloat2("Text Offset", &rushPromptTextOffset.x, 1.0f);
+        ImGui::DragFloat2("Guide Position", &rushGuidePosition.x, 1.0f);
+        ImGui::DragFloat2("Guide Size", &rushGuideSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2("Guide Scale", &rushGuideScale.x, 0.01f, 0.01f, 4.0f);
+        ImGui::DragFloat2("Y Position", &rushButtonPosition.x, 1.0f);
+        ImGui::DragFloat2("Y Size", &rushButtonSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2("Y Base Scale", &rushButtonBaseScale.x, 0.01f, 0.01f, 4.0f);
+        ImGui::DragFloat2("Word Position", &rushWordPosition.x, 1.0f);
+        ImGui::DragFloat2("Word Size", &rushWordSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2("Word Scale", &rushWordScale.x, 0.01f, 0.01f, 4.0f);
         ImGui::DragFloat("Fade In Duration", &rushPromptFadeInDuration, 0.01f, 0.0f, 1.0f);
         ImGui::Separator();
         ImGui::Text("CanAcceptInitialRushInput: %s", CanAcceptInitialRushInput() ? "true" : "false");
@@ -1606,6 +1624,13 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
         break;
     case AnimationNotifyEvent::Type::SpawnEffect:
         break;
+    case AnimationNotifyEvent::Type::GameplayEvent:
+        if (event.parameter == "rush_input_end" && stateMachine_ &&
+            std::string(stateMachine_->GetStateName()) == "Dodge")
+        {
+            SetRushInputAcceptance(false);
+        }
+        break;
     }
 }
 
@@ -1872,8 +1897,16 @@ void Player::ClearTransientBattleActions()
     swordEmissivePower = 0.0f;
     trail.trailPoints.clear();
     SetRushWeaponVisual(false);
+    if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(false);
     if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(false);
-    if (rushPromptTextComponent) rushPromptTextComponent->SetVisible(false);
+    if (rushWordImageComponent) rushWordImageComponent->SetVisible(false);
+    rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
+    rushPromptAnimationTimer = 0.0f;
+    rushPromptWasVisible = false;
+    if (rushButtonImageComponent)
+        rushButtonImageComponent->SetScale({
+            rushButtonBaseScale.x * 0.8f,
+            rushButtonBaseScale.y * 0.8f });
     for (auto& ghost : ghosts)
     {
         ghost.isVisible = false;
@@ -1906,6 +1939,9 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
     swordGhostIndex = 0;
     isPrevSwordWorldValid = false;
     rushPromptAlpha = 0.0f;
+    rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
+    rushPromptAnimationTimer = 0.0f;
+    rushPromptWasVisible = false;
     damageFlashTimer = 0.0f;
     hitStopTimer = 0.0f;
     ApplyDamageFlash(0.0f);
@@ -2876,8 +2912,18 @@ void Player::SetRushInputAcceptance(bool accepting)
             return;
 
         rushPromptAlpha = 0.0f;
-        if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(false);
-        if (rushPromptTextComponent) rushPromptTextComponent->SetVisible(false);
+        rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
+        rushPromptAnimationTimer = 0.0f;
+        rushPromptWasVisible = false;
+        if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(false);
+        if (rushButtonImageComponent)
+        {
+            rushButtonImageComponent->SetVisible(false);
+            rushButtonImageComponent->SetScale({
+                rushButtonBaseScale.x * 0.8f,
+                rushButtonBaseScale.y * 0.8f });
+        }
+        if (rushWordImageComponent) rushWordImageComponent->SetVisible(false);
     }
 }
 
@@ -2889,22 +2935,38 @@ void Player::SetRushInputDebugState(bool judgeSuccess, bool rushRequested)
 
 void Player::UpdateRushPromptUI()
 {
-    if (!rushButtonImageComponent || !rushPromptTextComponent)
+    if (!rushGuideImageComponent || !rushButtonImageComponent ||
+        !rushWordImageComponent)
     {
         return;
     }
 
-    const bool initialRush = CanShowInitialRushGuide();
-    const bool comboGuide = CanShowRushComboGuide();
-    const bool visible = initialRush || comboGuide;
+    const bool visible = CanShowInitialRushGuide() || CanShowRushComboGuide();
     if (!visible)
     {
         rushPromptAlpha = 0.0f;
+        rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
+        rushPromptAnimationTimer = 0.0f;
+        rushPromptWasVisible = false;
+        rushGuideImageComponent->SetVisible(false);
         rushButtonImageComponent->SetVisible(false);
-        rushPromptTextComponent->SetVisible(false);
+        rushWordImageComponent->SetVisible(false);
+        rushButtonImageComponent->SetScale({
+            rushButtonBaseScale.x * 0.8f,
+            rushButtonBaseScale.y * 0.8f });
         return;
     }
 
+    const bool becameVisible = !rushPromptWasVisible;
+    if (becameVisible)
+    {
+        rushPromptWasVisible = true;
+        rushPromptAnimationPhase = RushPromptAnimationPhase::AppearGrow;
+        rushPromptAnimationTimer = 0.0f;
+        rushPromptAlpha = 0.0f;
+    }
+
+    const float uiDeltaTime = Time::UnscaledDeltaTime();
     if (rushPromptFadeInDuration <= FLT_EPSILON)
     {
         rushPromptAlpha = 1.0f;
@@ -2912,24 +2974,103 @@ void Player::UpdateRushPromptUI()
     else
     {
         rushPromptAlpha = std::clamp(
-            rushPromptAlpha + Time::UnscaledDeltaTime() / rushPromptFadeInDuration,
+            rushPromptAlpha + uiDeltaTime / rushPromptFadeInDuration,
             0.0f, 1.0f);
     }
 
-    rushButtonImageComponent->SetWorldPosition(rushPromptPosition);
-    rushButtonImageComponent->SetSize({ rushPromptIconSize, rushPromptIconSize });
-    rushButtonImageComponent->SetColor(
-        DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, rushPromptAlpha });
+    if (!becameVisible)
+        rushPromptAnimationTimer += uiDeltaTime;
+
+    float buttonAnimationScale = 1.0f;
+    switch (rushPromptAnimationPhase)
+    {
+    case RushPromptAnimationPhase::Hidden:
+        rushPromptAnimationPhase = RushPromptAnimationPhase::AppearGrow;
+        rushPromptAnimationTimer = 0.0f;
+        buttonAnimationScale = 0.8f;
+        break;
+
+    case RushPromptAnimationPhase::AppearGrow:
+    {
+        constexpr float duration = 0.10f;
+        const float time = std::clamp(rushPromptAnimationTimer, 0.0f, duration);
+        buttonAnimationScale = std::clamp(
+            Easing::OutBack(time, duration, 1.0f, 1.15f, 0.8f),
+            0.8f, 1.15f);
+        if (rushPromptAnimationTimer >= duration)
+        {
+            rushPromptAnimationPhase = RushPromptAnimationPhase::AppearSettle;
+            rushPromptAnimationTimer = 0.0f;
+            buttonAnimationScale = 1.15f;
+        }
+        break;
+    }
+
+    case RushPromptAnimationPhase::AppearSettle:
+    {
+        constexpr float duration = 0.08f;
+        const float time = std::clamp(rushPromptAnimationTimer, 0.0f, duration);
+        buttonAnimationScale = Easing::OutQuad(time, duration, 1.0f, 1.15f);
+        if (rushPromptAnimationTimer >= duration)
+        {
+            rushPromptAnimationPhase = RushPromptAnimationPhase::PulseGrow;
+            rushPromptAnimationTimer = 0.0f;
+            buttonAnimationScale = 1.0f;
+        }
+        break;
+    }
+
+    case RushPromptAnimationPhase::PulseGrow:
+    {
+        constexpr float duration = 0.25f;
+        const float time = std::clamp(rushPromptAnimationTimer, 0.0f, duration);
+        buttonAnimationScale = Easing::InOutSine(time, duration, 1.12f, 1.0f);
+        if (rushPromptAnimationTimer >= duration)
+        {
+            rushPromptAnimationPhase = RushPromptAnimationPhase::PulseReturn;
+            rushPromptAnimationTimer = 0.0f;
+            buttonAnimationScale = 1.12f;
+        }
+        break;
+    }
+
+    case RushPromptAnimationPhase::PulseReturn:
+    {
+        constexpr float duration = 0.35f;
+        const float time = std::clamp(rushPromptAnimationTimer, 0.0f, duration);
+        buttonAnimationScale = Easing::OutQuad(time, duration, 1.0f, 1.12f);
+        if (rushPromptAnimationTimer >= duration)
+        {
+            rushPromptAnimationPhase = RushPromptAnimationPhase::PulseGrow;
+            rushPromptAnimationTimer = 0.0f;
+            buttonAnimationScale = 1.0f;
+        }
+        break;
+    }
+    }
+
+    const DirectX::XMFLOAT4 color{ 1.0f, 1.0f, 1.0f, rushPromptAlpha };
+
+    rushGuideImageComponent->SetWorldPosition(rushGuidePosition);
+    rushGuideImageComponent->SetSize(rushGuideSize);
+    rushGuideImageComponent->SetScale(rushGuideScale);
+    rushGuideImageComponent->SetColor(color);
+    rushGuideImageComponent->SetVisible(true);
+
+    rushButtonImageComponent->SetWorldPosition(rushButtonPosition);
+    rushButtonImageComponent->SetSize(rushButtonSize);
+    rushButtonImageComponent->SetScale({
+        rushButtonBaseScale.x * buttonAnimationScale,
+        rushButtonBaseScale.y * buttonAnimationScale });
+    rushButtonImageComponent->SetColor(color);
     rushButtonImageComponent->SetVisible(true);
 
-    rushPromptTextComponent->SetWorldPosition({
-        rushPromptPosition.x + rushPromptTextOffset.x,
-        rushPromptPosition.y + rushPromptTextOffset.y });
-    rushPromptTextComponent->SetText(initialRush ? L"RUSH" : L"ATTACK");
-    rushPromptTextComponent->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, rushPromptAlpha });
-    rushPromptTextComponent->SetVisible(true);
+    rushWordImageComponent->SetWorldPosition(rushWordPosition);
+    rushWordImageComponent->SetSize(rushWordSize);
+    rushWordImageComponent->SetScale(rushWordScale);
+    rushWordImageComponent->SetColor(color);
+    rushWordImageComponent->SetVisible(true);
 }
-
 // ジャスト回避成功時の処理
 void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 {

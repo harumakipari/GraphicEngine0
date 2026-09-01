@@ -1950,6 +1950,16 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             }
             break;
         }
+        case AnimationNotifyEvent::Type::GameplayEvent:
+        {
+            char buffer[128];
+            strcpy_s(buffer, event.parameter.c_str());
+            if (ImGui::InputText("Parameter", buffer, sizeof(buffer)))
+            {
+                event.parameter = buffer;
+            }
+            break;
+        }
         }
     }
 

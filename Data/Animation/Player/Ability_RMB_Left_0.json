@@ -13,6 +13,12 @@
             "time": 0.47999998927116394,
             "type": "PlaySE",
             "value": 0.30000001192092896
+        },
+        {
+            "parameter": "rush_input_end",
+            "time": 0.5419167876243591,
+            "type": "GameplayEvent",
+            "value": 0.0
         }
     ],
     "loop": false,
