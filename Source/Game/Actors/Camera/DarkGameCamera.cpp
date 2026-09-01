@@ -89,7 +89,9 @@ void DarkCameraActor::Update(float deltaTime)
     {
         const float fovDegree = isBlending
             ? std::lerp(blendStartFovDegree, blendTargetFovDegree,
-                std::clamp(blendTime / blendDuration, 0.0f, 1.0f))
+                std::clamp(blendTime / (requestMode == CameraMode::Death
+                    ? (std::max)(deathCameraSettings.deathBlendTime, 0.01f)
+                    : blendDuration), 0.0f, 1.0f))
             : GetFovDegreeForMode(currentMode);
         mainCameraComponent->SetFov(DirectX::XMConvertToRadians(fovDegree));
     }
@@ -426,7 +428,10 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
 
     blendTime += deltaTime;
 
-    float t = std::clamp(blendTime / blendDuration, 0.0f, 1.0f);
+    const float currentBlendDuration = requestMode == CameraMode::Death
+        ? (std::max)(deathCameraSettings.deathBlendTime, 0.01f)
+        : blendDuration;
+    float t = std::clamp(blendTime / currentBlendDuration, 0.0f, 1.0f);
 
     // 移動中のPlayer/Enemyを反映し、Blend完了次フレームとの差を残さない。
     CameraPose targetPose = blendTargetPose;
@@ -826,13 +831,13 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
         right = MathHelper::Normalize(right);
 
         pose.target = MathHelper::Add(
-            MathHelper::Add(playerPos, MathHelper::Multiply(toBoss, deathBossLookOffset)),
-            MathHelper::Multiply(worldUp, deathSettings.lookTargetHeight));
+            MathHelper::Add(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.bossLookWeight)),
+            MathHelper::Multiply(worldUp, deathCameraSettings.lookHeight));
         pose.eye = MathHelper::Add(
             MathHelper::Add(
-                MathHelper::Subtract(playerPos, MathHelper::Multiply(toBoss, deathSettings.distance)),
-                MathHelper::Multiply(right, deathSettings.horizontalOffset)),
-            MathHelper::Multiply(worldUp, deathSettings.height));
+                MathHelper::Subtract(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.foregroundDistance)),
+                MathHelper::Multiply(right, deathCameraSettings.sideOffset)),
+            MathHelper::Multiply(worldUp, deathCameraSettings.cameraHeight));
 
         const DirectX::XMFLOAT3 viewDirection = MathHelper::Normalize(
             MathHelper::Subtract(pose.target, pose.eye));
@@ -994,6 +999,20 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::DragFloat("LockOn Zoom In Speed", &lockOnZoomInSpeed, 0.01f, 0.0f, 30.0f);
         ImGui::DragFloat("LockOn Zoom Out Speed", &lockOnZoomOutSpeed, 0.01f, 0.0f, 30.0f);
 
+        ImGui::SeparatorText("Death Camera");
+        ImGui::DragFloat("Foreground Distance", &deathCameraSettings.foregroundDistance,
+            0.05f, 0.1f, 15.0f);
+        ImGui::DragFloat("Side Offset", &deathCameraSettings.sideOffset,
+            0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("Camera Height", &deathCameraSettings.cameraHeight,
+            0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("Look Height", &deathCameraSettings.lookHeight,
+            0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("Boss Look Weight", &deathCameraSettings.bossLookWeight,
+            0.05f, -5.0f, 10.0f);
+        ImGui::DragFloat("Death Blend Time", &deathCameraSettings.deathBlendTime,
+            0.01f, 0.01f, 5.0f, "%.2f sec");
+
         ImGui::SeparatorText("Camera Shake Presets");
         const auto drawShakePreset = [this](const char* displayName, const char* presetName,
             CameraShakePreset& preset)
@@ -1026,7 +1045,7 @@ void DarkCameraActor::DrawImGuiDetails()
 
     if (ImGui::CollapsingHeader("FOV Switching Debug", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        const char* modeNames[] = { "TPS", "Focus", "LockOn" };
+        const char* modeNames[] = { "TPS", "Focus", "LockOn", "Death" };
         const float currentFov = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
         const float desiredFov = isBlending ? blendTargetFovDegree : GetFovDegreeForMode(currentMode);
         ImGui::Text("Boss Battle: %s", IsBossBattle() ? "true" : "false");

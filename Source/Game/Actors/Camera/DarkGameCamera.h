@@ -42,6 +42,15 @@ public:
         float positionAmount = 0.035f;
         float targetAmount = 0.18f;
     };
+    struct DeathCameraSettings
+    {
+        float foregroundDistance = 3.0f;
+        float sideOffset = 0.9f;
+        float cameraHeight = -1.0f;
+        float lookHeight = -0.35f;
+        float bossLookWeight = 0.65f;
+        float deathBlendTime = 1.0f;
+    };
 
 public:
     //引数付きコンストラクタ
@@ -271,8 +280,7 @@ private:
     CameraCompositionSettings tpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
     CameraCompositionSettings focusSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
     CameraCompositionSettings lockOnSettings = { 10.0f, 0.4f, -0.3f, 45.0f, 0.0f };
-    CameraCompositionSettings deathSettings = { 3.0f, -1.0f, -0.35f, 35.0f, 0.9f };
-    float deathBossLookOffset = 0.65f;
+    DeathCameraSettings deathCameraSettings{};
     float bossTpsFovDegree = 44.0f;
     float lockOnPlayerLookHeight = -.15f;
     float lockOnEnemyLookHeight = -0.75f;
