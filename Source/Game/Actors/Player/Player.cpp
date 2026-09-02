@@ -376,14 +376,18 @@ void Player::Initialize(const Transform& transform)
     }
 
     // 固定Pose Ghostは通常のRender Queueへ出さず、SceneBaseから手動描画する。
-    playerPoseGhost.renderConstantsComponent =
-        this->AddComponent<SkeletalMeshComponent>("PlayerPoseGhost", parentName);
-    playerPoseGhost.renderConstantsComponent->SetModel(
-        "./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
-    playerPoseGhost.renderConstantsComponent->SetIsVisible(false);
-    playerPoseGhost.renderConstantsComponent->SetIsCastShadow(false);
-    playerPoseGhost.renderConstantsComponent->overrideForwardPipelineName = "PlayerSwordGhostPS";
-    playerPoseGhost.renderConstantsComponent->overrideDeferredPipelineName = "PlayerSwordGhostPS";
+    for (size_t ghostIndex = 0; ghostIndex < playerPoseGhosts.size(); ++ghostIndex)
+    {
+        auto& ghost = playerPoseGhosts[ghostIndex];
+        ghost.renderConstantsComponent = this->AddComponent<SkeletalMeshComponent>(
+            "PlayerPoseGhost" + std::to_string(ghostIndex), parentName);
+        ghost.renderConstantsComponent->SetModel(
+            "./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
+        ghost.renderConstantsComponent->SetIsVisible(false);
+        ghost.renderConstantsComponent->SetIsCastShadow(false);
+        ghost.renderConstantsComponent->overrideForwardPipelineName = "PlayerSwordGhostPS";
+        ghost.renderConstantsComponent->overrideDeferredPipelineName = "PlayerSwordGhostPS";
+    }
     ResetPlayerPoseGhost();
 
     // 火花エフェクト用のコンポーネントを追加
@@ -1061,6 +1065,15 @@ void Player::DrawImGuiDetails()
     {
         ImGui::DragFloat(U8("プレイヤーの残像のライフタイム"), &playerPoseGhostLifetime,0.01f, 0.0f, 5.0f, "%.2f sec");
         ImGui::DragFloat(U8("プレイヤーの残像の初回の透明度"), &playerPoseGhostInitialAlpha,0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::DragFloat("Player Ghost Spawn Interval", &playerGhostSpawnInterval,
+            0.001f, 0.0f, 1.0f, "%.3f sec");
+        ImGui::ColorEdit3("Player Ghost Color", &playerPoseGhostColor.x);
+        ImGui::DragFloat("Player Ghost Emissive", &playerPoseGhostEmissive,
+            0.1f, 0.0f, 50.0f);
+        ImGui::ColorEdit3("Player Ghost Edge Color", &playerPoseGhostEdgeColor.x);
+        ImGui::ColorEdit3("Player Ghost Inner Color", &playerPoseGhostInnerColor.x);
+        ImGui::DragFloat("Player Ghost Edge Width", &playerPoseGhostEdgeWidth,
+            0.01f, 0.0f, 10.0f);
     }
 
 
@@ -3338,67 +3351,136 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 
 void Player::CapturePlayerPoseGhost()
 {
-    if (!skeletalMeshComponent || !playerPoseGhost.renderConstantsComponent)
-        return;
+    ResetPlayerPoseGhost();
+    playerPoseGhostSpawnSequenceActive = true;
+    playerPoseGhostSpawnTimer = 0.0f;
+    nextPlayerPoseGhostIndex = 0;
+
+    if (CapturePlayerPoseGhost(nextPlayerPoseGhostIndex))
+        ++nextPlayerPoseGhostIndex;
+    else
+        playerPoseGhostSpawnSequenceActive = false;
+}
+
+bool Player::CapturePlayerPoseGhost(const size_t ghostIndex)
+{
+    if (ghostIndex >= playerPoseGhosts.size() || !skeletalMeshComponent)
+        return false;
+
+    auto& ghost = playerPoseGhosts[ghostIndex];
+    if (!ghost.renderConstantsComponent)
+        return false;
 
     const auto& currentNodes = skeletalMeshComponent->GetNodes();
     if (currentNodes.empty())
-        return;
+        return false;
 
-    playerPoseGhost.nodes = currentNodes;
-    playerPoseGhost.world = skeletalMeshComponent->GetComponentWorldTransform().ToWorldTransform();
-    playerPoseGhost.elapsedTime = 0.0f;
-    playerPoseGhost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f);
-    playerPoseGhost.isVisible = playerPoseGhost.alpha > 0.0f &&
+    ghost.nodes = currentNodes;
+    ghost.world = skeletalMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+    ghost.elapsedTime = 0.0f;
+    ghost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f);
+    ghost.isVisible = ghost.alpha > 0.0f &&
         playerPoseGhostLifetime > FLT_EPSILON;
 
-    auto& constants = playerPoseGhost.renderConstantsComponent->plusAlphaCBuffer->data;
-    constants.emissionPower = swordGhostEmissive;
+    auto& constants = ghost.renderConstantsComponent->plusAlphaCBuffer->data;
+    constants.emissionPower = playerPoseGhostEmissive;
     constants.cpuColor = {
-        activeGhostBaseColor.x,
-        activeGhostBaseColor.y,
-        activeGhostBaseColor.z,
-        playerPoseGhost.alpha };
+        playerPoseGhostColor.x,
+        playerPoseGhostColor.y,
+        playerPoseGhostColor.z,
+        ghost.alpha };
     constants.effectParameters.edgeColor = {
-        activeGhostEdgeColor.x,
-        activeGhostEdgeColor.y,
-        activeGhostEdgeColor.z,
+        playerPoseGhostEdgeColor.x,
+        playerPoseGhostEdgeColor.y,
+        playerPoseGhostEdgeColor.z,
         1.0f };
     constants.effectParameters.innerColor = {
-        ghostInnerColor.x,
-        ghostInnerColor.y,
-        ghostInnerColor.z,
+        playerPoseGhostInnerColor.x,
+        playerPoseGhostInnerColor.y,
+        playerPoseGhostInnerColor.z,
         1.0f };
-    constants.effectParameters.edgeWidth = ghostEdgeWidth;
+    constants.effectParameters.edgeWidth = playerPoseGhostEdgeWidth;
+    return true;
 }
 
 void Player::UpdatePlayerPoseGhost()
 {
-    if (!playerPoseGhost.isVisible)
-        return;
-
+    const float unscaledDeltaTime = Time::UnscaledDeltaTime();
     const float lifetime = (std::max)(playerPoseGhostLifetime, FLT_EPSILON);
-    playerPoseGhost.elapsedTime += Time::UnscaledDeltaTime();
-    const float normalizedAge = std::clamp(
-        playerPoseGhost.elapsedTime / lifetime, 0.0f, 1.0f);
-    playerPoseGhost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f) *
-        (1.0f - normalizedAge);
-    if (playerPoseGhost.renderConstantsComponent)
+    for (auto& ghost : playerPoseGhosts)
     {
-        playerPoseGhost.renderConstantsComponent->plusAlphaCBuffer->data.cpuColor.w =
-            playerPoseGhost.alpha;
+        if (!ghost.isVisible)
+            continue;
+
+        ghost.elapsedTime += unscaledDeltaTime;
+        const float normalizedAge = std::clamp(
+            ghost.elapsedTime / lifetime, 0.0f, 1.0f);
+        ghost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f) *
+            (1.0f - normalizedAge);
+        if (ghost.renderConstantsComponent)
+        {
+            auto& constants = ghost.renderConstantsComponent->plusAlphaCBuffer->data;
+            constants.emissionPower = playerPoseGhostEmissive;
+            constants.cpuColor = {
+                playerPoseGhostColor.x,
+                playerPoseGhostColor.y,
+                playerPoseGhostColor.z,
+                ghost.alpha };
+            constants.effectParameters.edgeColor = {
+                playerPoseGhostEdgeColor.x,
+                playerPoseGhostEdgeColor.y,
+                playerPoseGhostEdgeColor.z,
+                1.0f };
+            constants.effectParameters.innerColor = {
+                playerPoseGhostInnerColor.x,
+                playerPoseGhostInnerColor.y,
+                playerPoseGhostInnerColor.z,
+                1.0f };
+            constants.effectParameters.edgeWidth = playerPoseGhostEdgeWidth;
+        }
+
+        if (normalizedAge >= 1.0f)
+        {
+            ghost.nodes.clear();
+            ghost.alpha = 0.0f;
+            ghost.elapsedTime = 0.0f;
+            ghost.isVisible = false;
+        }
     }
 
-    if (normalizedAge >= 1.0f)
-        ResetPlayerPoseGhost();
+    if (!playerPoseGhostSpawnSequenceActive)
+        return;
+
+    const float spawnInterval = (std::max)(playerGhostSpawnInterval, 0.0f);
+    playerPoseGhostSpawnTimer += unscaledDeltaTime;
+    while (nextPlayerPoseGhostIndex < playerPoseGhosts.size() &&
+        (spawnInterval <= FLT_EPSILON || playerPoseGhostSpawnTimer >= spawnInterval))
+    {
+        if (spawnInterval > FLT_EPSILON)
+            playerPoseGhostSpawnTimer -= spawnInterval;
+        CapturePlayerPoseGhost(nextPlayerPoseGhostIndex);
+        ++nextPlayerPoseGhostIndex;
+    }
+
+    if (nextPlayerPoseGhostIndex >= playerPoseGhosts.size())
+    {
+        playerPoseGhostSpawnSequenceActive = false;
+        playerPoseGhostSpawnTimer = 0.0f;
+    }
 }
 
 void Player::ResetPlayerPoseGhost()
 {
-    playerPoseGhost.nodes.clear();
-    playerPoseGhost.alpha = 0.0f;
-    playerPoseGhost.elapsedTime = 0.0f;
-    playerPoseGhost.isVisible = false;
+    for (auto& ghost : playerPoseGhosts)
+    {
+        ghost.nodes.clear();
+        ghost.alpha = 0.0f;
+        ghost.elapsedTime = 0.0f;
+        ghost.isVisible = false;
+    }
+    playerPoseGhostSpawnTimer = 0.0f;
+    nextPlayerPoseGhostIndex = 0;
+    playerPoseGhostSpawnSequenceActive = false;
 }
 
 void Player::BeginPlayerSlowReturn()

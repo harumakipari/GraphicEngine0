@@ -448,7 +448,7 @@ public:
         float elapsedTime = 0.0f;
         bool isVisible = false;
     };
-    PlayerPoseGhost playerPoseGhost;
+    std::array<PlayerPoseGhost, 4> playerPoseGhosts;
 
     // ダッシュのスピード
     float dashSpeed = 6.2f;
@@ -511,12 +511,24 @@ private:
     DirectX::XMFLOAT3 activeGhostEdgeColor{};
     bool rushWeaponVisualEnabled = false;
     float ghostEdgeWidth = 1.0f; // 残像の輪郭
-    float playerPoseGhostInitialAlpha = 2.5f;   // プレイヤーの残像の初回の透明度
-    float playerPoseGhostLifetime = 1.0f;      // プレイヤーの残像のライフタイム
     DirectX::XMFLOAT4X4 prevSwordWorld; // 前回の姿勢
     bool isPrevSwordWorldValid = false;
 
+    // playerのジャスト回避の残像の調整値
+    float playerPoseGhostInitialAlpha = 2.5f;   // プレイヤーの残像の初回の透明度
+    float playerPoseGhostLifetime = 1.0f;      // プレイヤーの残像のライフタイム
+    float playerGhostSpawnInterval = 0.3f;
+    DirectX::XMFLOAT3 playerPoseGhostColor = { 0.5f, 0.8f, 1.6f };
+    float playerPoseGhostEmissive = 2.0f;
+    DirectX::XMFLOAT3 playerPoseGhostEdgeColor = { 0.0f, 0.042f, 0.253f };
+    DirectX::XMFLOAT3 playerPoseGhostInnerColor = { 1.0f, 1.0f, 1.0f };
+    float playerPoseGhostEdgeWidth = 1.0f;
+    float playerPoseGhostSpawnTimer = 0.0f;
+    size_t nextPlayerPoseGhostIndex = 0;
+    bool playerPoseGhostSpawnSequenceActive = false;
+
     void UpdatePlayerPoseGhost();
+    bool CapturePlayerPoseGhost(size_t ghostIndex);
 
     float weaponSphereRadius = 0.75f;    // 剣の球の当たり判定の半径
 

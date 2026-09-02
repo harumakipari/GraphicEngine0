@@ -682,23 +682,27 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
             }
         }
 
-        auto& playerGhost = player->playerPoseGhost;
-        if (playerGhost.isVisible && !playerGhost.nodes.empty() &&
-            playerGhost.renderConstantsComponent && player->skeletalMeshComponent &&
-            player->skeletalMeshComponent->model)
+        if (player->skeletalMeshComponent && player->skeletalMeshComponent->model)
         {
-            PipeLineStateDesc pipeline;
-            pipeline.pixelShader = ghostPs;
-            pipeline.blendState = BLEND_STATE::ADD;
-            RenderState::BindDepthStencilState(
-                immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
-            playerGhost.renderConstantsComponent->UpdatePlusAlphaConstants(immediateContext);
-            player->skeletalMeshComponent->model->Render(
-                immediateContext,
-                playerGhost.world,
-                playerGhost.nodes,
-                InterleavedGltfModel::RenderPass::All,
-                pipeline);
+            for (auto& playerGhost : player->playerPoseGhosts)
+            {
+                if (!playerGhost.isVisible || playerGhost.nodes.empty() ||
+                    !playerGhost.renderConstantsComponent)
+                    continue;
+
+                PipeLineStateDesc pipeline;
+                pipeline.pixelShader = ghostPs;
+                pipeline.blendState = BLEND_STATE::ADD;
+                RenderState::BindDepthStencilState(
+                    immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
+                playerGhost.renderConstantsComponent->UpdatePlusAlphaConstants(immediateContext);
+                player->skeletalMeshComponent->model->Render(
+                    immediateContext,
+                    playerGhost.world,
+                    playerGhost.nodes,
+                    InterleavedGltfModel::RenderPass::All,
+                    pipeline);
+            }
         }
     }
 
