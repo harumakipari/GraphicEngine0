@@ -319,6 +319,10 @@ private:
     // ジャンプ攻撃の後に着地の時のエフェクトを生成する
     void SpawnGroundImpactEffect() const;
 
+    // 武器同士の火花のエフェクトを生成する
+    void SpawnWeaponClashEffect() const;
+
+
 private:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;

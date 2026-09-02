@@ -2675,7 +2675,6 @@ void GruxEnemy::TakeDamage(const int damage)
 }
 
 // ヒットエフェクトを生成する
-// ヒットエフェクトを生成する
 void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const
 {
     DirectX::XMFLOAT3 enemyCenter = GetPosition();
@@ -2771,6 +2770,20 @@ void GruxEnemy::SpawnGroundImpactEffect() const
         debrisEmitter->Emit(spawnPosition);
     }
 }
+
+// 武器同士の火花のエフェクトを生成する
+void GruxEnemy::SpawnWeaponClashEffect() const
+{
+    DirectX::XMFLOAT3 spawnPosition = GetPosition();
+    if (weaponRightMiddleComponent)
+    {
+        const DirectX::XMFLOAT3 weaponTipPosition = weaponRightMiddleComponent->GetComponentLocation();
+        spawnPosition.x = weaponTipPosition.x;
+        spawnPosition.z = weaponTipPosition.z;
+    }
+
+}
+
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {
     switch (state.type)
@@ -2960,6 +2973,8 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     case AnimationNotifyEvent::Type::SpawnEffect:
         if (event.parameter == "GroundImpact")
             SpawnGroundImpactEffect();
+        if (event.parameter == "WeaponClash")
+            SpawnWeaponClashEffect();
         break;
     case AnimationNotifyEvent::Type::CameraShake:
     {

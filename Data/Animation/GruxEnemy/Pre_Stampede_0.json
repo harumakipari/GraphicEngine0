@@ -15,10 +15,22 @@
             "value": 1.0
         },
         {
+            "parameter": "WeaponClash",
+            "time": 1.93942129611969,
+            "type": "SpawnEffect",
+            "value": 0.0
+        },
+        {
             "parameter": "enemy_weapon_clash",
             "time": 2.4587912559509277,
             "type": "PlaySE",
             "value": 1.0
+        },
+        {
+            "parameter": "WeaponClash",
+            "time": 2.4577481746673584,
+            "type": "SpawnEffect",
+            "value": 0.0
         }
     ],
     "loop": false,
