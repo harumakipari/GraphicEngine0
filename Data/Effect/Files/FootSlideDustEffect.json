@@ -1,0 +1,60 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [[-0.08, 0.0, -0.03], [-0.03, 0.04, 0.03]],
+            "alphaCurve": [
+                { "time": 0.0, "value": 0.1 },
+                { "time": 0.1, "value": 0.78 },
+                { "time": 0.45, "value": 0.52 },
+                { "time": 0.72, "value": 0.25 },
+                { "time": 1.0, "value": 0.0 }
+            ],
+            "blendState": 1,
+            "burstCount": 1,
+            "colorCurve": [
+                { "time": 0.0, "value": 0.0 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "directionAxis": [1.0, 0.0, 0.0],
+            "directionMode": 0,
+            "emissiveCurve": [
+                { "time": 0.0, "value": 1.0 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "emissivePower": 1.0,
+            "emitCount": [2, 2],
+            "emitInterval": [0.0, 0.015],
+            "emitRate": 0.0,
+            "emitterLifeTime": 0.05,
+            "endColor": [[0.56, 0.51, 0.43, 0.28], [0.66, 0.60, 0.50, 0.38]],
+            "endSize": [[0.65, 0.25], [0.85, 0.36]],
+            "height": 0.0,
+            "initialDelay": [0.0, 0.02],
+            "isBurst": true,
+            "lifeTime": [0.32, 0.42],
+            "loop": false,
+            "maxParticles": 4,
+            "name": "MainFootDust",
+            "positionOffset": [0.0, 0.06, 0.0],
+            "radius": 0.0,
+            "renderingMode": 0,
+            "rotationEuler": [[0.0, 0.0, -8.0], [0.0, 0.0, 8.0]],
+            "shapeType": 0,
+            "sizeCurve": [
+                { "time": 0.0, "value": 0.25 },
+                { "time": 0.12, "value": 0.72 },
+                { "time": 0.4, "value": 0.94 },
+                { "time": 1.0, "value": 1.0 }
+            ],
+            "sizeCurveMode": 0,
+            "speed": [0.0, 0.0],
+            "startColor": [[0.64, 0.58, 0.49, 0.4], [0.74, 0.68, 0.58, 0.52]],
+            "startSize": [[0.28, 0.11], [0.38, 0.17]],
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\T_Smoke_SubUV.PNG",
+            "textureSplitCount": [8, 8],
+            "useGravity": false,
+            "velocity": [[0.45, 0.05, -0.08], [0.85, 0.12, 0.08]]
+        }
+    ],
+    "name": "FootSlideDustEffect"
+}

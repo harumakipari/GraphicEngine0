@@ -324,12 +324,12 @@ void GruxEnemy::Initialize(const Transform& transform)
     // Rush被弾時のエフェクト
     rushHitSparkEffectComponent = this->AddComponent<class ParticleComponent>("rushHitSparkEffectComponent", parentName);
     rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushCoreEffect.json");
-
+    // ジャンプ着地時の砂埃
     groundDustEffectComponent = this->AddComponent<class ParticleComponent>("groundDustEffectComponent", parentName);
-    groundDustEffectComponent->Load("./Data/Effect/Files/GroundDustEffect.json");
-
+    groundDustEffectComponent->Load("./Data/Effect/Files/GroundDustEffect1.json");
+    // 壁に当たった時の砂埃
     wallImpactDustEffectComponent = this->AddComponent<class ParticleComponent>("wallImpactDustEffectComponent", parentName);
-    wallImpactDustEffectComponent->Load("./Data/Effect/Files/WallImpactDustEffect.json");
+    wallImpactDustEffectComponent->Load("./Data/Effect/Files/WallImpactDustEffect1.json");
 
     wallImpactFlashEffectComponent = this->AddComponent<class ParticleComponent>("wallImpactFlashEffectComponent", parentName);
     wallImpactFlashEffectComponent->Load("./Data/Effect/Files/WallImpactFlashEffect.json");
@@ -2871,6 +2871,12 @@ void GruxEnemy::SpawnWeaponClashEffect() const
             metalSparkEffectComponent->GetComponentLocation(),
             { 0.0f, 0.0f, 0.0f });
     }
+}
+
+// 足を地面に擦る時のエフェクトを生成する
+void  GruxEnemy::SpawnFootScrapeEffect()const
+{
+   // 左足と右足。
 }
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)

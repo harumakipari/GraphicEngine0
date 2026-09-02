@@ -319,11 +319,15 @@ private:
     // ジャンプ攻撃の後に着地の時のエフェクトを生成する
     void SpawnGroundImpactEffect() const;
 
-    void SpawnWallImpactEffect(const DirectX::XMFLOAT3& impactPosition,
-        const DirectX::XMFLOAT3& wallNormal) const;
+    //壁に当たった時のエフェクトを生成する
+    void SpawnWallImpactEffect(const DirectX::XMFLOAT3& impactPosition, const DirectX::XMFLOAT3& wallNormal) const;
 
     // 武器同士の火花のエフェクトを生成する
     void SpawnWeaponClashEffect() const;
+
+    // 足を地面に擦る時のエフェクトを生成する
+    void SpawnFootScrapeEffect()const;
+
 
 
 private:
@@ -524,7 +528,7 @@ private:
     std::array<float, actionCount> lastActionRandomRangeEnd{};
     std::array<float, actionCount> lastActionRandomWeights{};
 
-    // 攻撃ごとのデータを定義する配列。アニメーション名、距離条件、重みなどを設定する。
+    // 攻撃ごとのデータを定義する配列。アニメーション名、距離条件、重み、攻撃量などを設定する。
     std::array<BossAttackData, 6> combatAttackData =
     { {
         { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f, 5 },

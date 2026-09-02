@@ -1,0 +1,15 @@
+{
+    "animationClip": 29,
+    "animationName": "Knock_Down_Loop",
+    "events": [
+        {
+            "parameter": "boss_stun",
+            "time": 0.1786324828863144,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}
