@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "ModelDebrisEmitterActor.h"
 
+#include "Engine/Audio/Audio.h"
+
 namespace
 {
     constexpr const char* BlockModelPaths[] = {
@@ -76,6 +78,9 @@ void ModelDebrisEmitterActor::Update(const float deltaTime)
 
 void ModelDebrisEmitterActor::Emit(const DirectX::XMFLOAT3& impactPosition)
 {
+    // SE‚ðÄ¶‚·‚é
+    CoreAudio::PlayOneShot("./Data/Sound/SE/debris.wav");
+
     const int emitCount = activeBlockCount + activeSmallDebriCount;
     const float angleStep = emitCount > 0
         ? DirectX::XM_2PI / static_cast<float>(emitCount)

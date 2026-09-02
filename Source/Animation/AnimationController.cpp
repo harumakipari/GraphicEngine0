@@ -53,6 +53,85 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 
 }
 
+bool AnimationController::ConfigureLocalPoseOverride(
+    const std::string& sourceAnimationName,
+    const float sourceTime,
+    const std::vector<std::string>& boneNames)
+{
+    ClearLocalPoseOverride();
+
+    if (!target_ || !target_->model)
+        return false;
+
+    const auto animationIt = animationNameToIndex_.find(sourceAnimationName);
+    if (animationIt == animationNameToIndex_.end() ||
+        animationIt->second >= target_->model->animations.size())
+    {
+        return false;
+    }
+
+    std::vector<InterleavedGltfModel::Node> sampledNodes =
+        target_->model->GetNodes();
+    target_->model->Animate(animationIt->second, sourceTime, sampledNodes);
+
+    localPoseOverrideBones.reserve(boneNames.size());
+    for (const std::string& boneName : boneNames)
+    {
+        const int nodeIndex = target_->FindIndexByName(boneName);
+        if (nodeIndex < 0 || static_cast<size_t>(nodeIndex) >= sampledNodes.size())
+        {
+            ClearLocalPoseOverride();
+            return false;
+        }
+
+        const auto& sampledNode = sampledNodes[static_cast<size_t>(nodeIndex)];
+        localPoseOverrideBones.push_back({
+            static_cast<size_t>(nodeIndex),
+            sampledNode.translation,
+            sampledNode.rotation });
+    }
+
+    localPoseOverrideActive = !localPoseOverrideBones.empty();
+    return localPoseOverrideActive;
+}
+
+void AnimationController::SetLocalPoseOverrideWeight(const float weight)
+{
+    localPoseOverrideWeight = std::clamp(weight, 0.0f, 1.0f);
+}
+
+void AnimationController::ClearLocalPoseOverride()
+{
+    localPoseOverrideBones.clear();
+    localPoseOverrideWeight = 0.0f;
+    localPoseOverrideActive = false;
+}
+
+void AnimationController::ApplyLocalPoseOverride()
+{
+    if (!localPoseOverrideActive || localPoseOverrideWeight <= 0.0f)
+        return;
+
+    for (const auto& overrideBone : localPoseOverrideBones)
+    {
+        auto& node = finalNodes.at(overrideBone.nodeIndex);
+        DirectX::XMStoreFloat3(
+            &node.translation,
+            DirectX::XMVectorLerp(
+                DirectX::XMLoadFloat3(&node.translation),
+                DirectX::XMLoadFloat3(&overrideBone.translation),
+                localPoseOverrideWeight));
+        DirectX::XMStoreFloat4(
+            &node.rotation,
+            DirectX::XMQuaternionNormalize(DirectX::XMQuaternionSlerp(
+                DirectX::XMLoadFloat4(&node.rotation),
+                DirectX::XMLoadFloat4(&overrideBone.rotation),
+                localPoseOverrideWeight)));
+    }
+
+    target_->model->CumulateTransforms(finalNodes);
+}
+
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
@@ -475,6 +554,8 @@ void AnimationController::OnUpdate(const float deltaTime)
         target_->model->CumulateTransforms(finalNodes);
     }
     appliedRootLocalTranslationDebug = rootNode.translation;
+
+    ApplyLocalPoseOverride();
 
     target_->SetModelNodes(finalNodes);
 

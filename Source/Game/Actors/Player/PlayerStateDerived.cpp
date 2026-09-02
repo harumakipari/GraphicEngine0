@@ -480,21 +480,49 @@ void PlayerDeathPendingState::Exit()
 
 void PlayerDeathState::Enter()
 {
+    constexpr float closedEyePoseTime = 4.125f;
+    static const std::vector<std::string> eyelidBoneNames =
+    {
+        "R_eye_lid_upper_mid",
+        "R_eye_lid_lower_mid",
+        "L_eye_lid_upper_mid",
+        "L_eye_lid_lower_mid"
+    };
+
+    elapsedTime = 0.0f;
     player->ClearActionRequest("death_enter");
     player->ResetAnimationStateFlag();
     player->characterMovementComponent->SetFixedSpeed(0.0f);
     player->characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
     player->characterMovementComponent->SetInputMagnitude(0.0f);
     player->PlayBodyAnimation("Hit_Combat_Death", false, true, 0.1f, true);
+    const auto controller = player->GetBodyAnimationController();
+    controller->ClearLocalPoseOverride();
+    controller->ConfigureLocalPoseOverride(
+        "Idle", closedEyePoseTime, eyelidBoneNames);
+    controller->SetLocalPoseOverrideWeight(0.0f);
     Logger::Log(Logger::LogCategory::Gameplay, "[PlayerDeath][Enter] hp=0");
 }
 
 void PlayerDeathState::Execute(float deltaTime)
 {
+    constexpr float closeEyeStartTime = 0.7f;
+    constexpr float closeEyeDuration = 0.4f;
+
+    elapsedTime += deltaTime;
+    const float normalizedCloseEyeTime = std::clamp(
+        (elapsedTime - closeEyeStartTime) / closeEyeDuration,
+        0.0f,
+        1.0f);
+    const float closeEyeWeight = normalizedCloseEyeTime * normalizedCloseEyeTime *
+        (3.0f - 2.0f * normalizedCloseEyeTime);
+    player->GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
 }
 
 void PlayerDeathState::Exit()
 {
+    player->GetBodyAnimationController()->ClearLocalPoseOverride();
+    elapsedTime = 0.0f;
 }
 
 void PlayerWinState::Enter()

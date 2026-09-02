@@ -1928,6 +1928,9 @@ void Player::ClearTransientBattleActions()
 
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
+    if (const auto controller = GetBodyAnimationController())
+        controller->ClearLocalPoseOverride();
+
     battleActionsSuspended = false;
     StopBattleActions();
     battleActionsSuspended = false;

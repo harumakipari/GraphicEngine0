@@ -176,6 +176,9 @@ public:
     void Execute(float deltaTime) override;
     void Exit() override;
     const char* GetName() const override { return "Death"; }
+
+private:
+    float elapsedTime = 0.0f;
 };
 
 class PlayerWinState : public PlayerStateBase

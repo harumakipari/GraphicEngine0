@@ -3,6 +3,7 @@
 // C++ 標準ライブラリ
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 // プロジェクトの他のヘッダ
 #include "Components/Render/MeshComponent.h"
@@ -151,6 +152,15 @@ public:
         const size_t clip = animationNameToIndex_[animationName];
         return target_->model->animations[clip].duration;
     }
+
+    // Samples selected bones from an animation and stores their local pose as a
+    // lightweight override. Scale is intentionally left to the base animation.
+    bool ConfigureLocalPoseOverride(
+        const std::string& sourceAnimationName,
+        float sourceTime,
+        const std::vector<std::string>& boneNames);
+    void SetLocalPoseOverrideWeight(float weight);
+    void ClearLocalPoseOverride();
 
     // NotifyTrack にイベントを追加する関数
     // Restrict the current one-shot animation to a runtime time range.
@@ -489,6 +499,15 @@ public:
 
 private:
 
+    struct LocalPoseOverrideBone
+    {
+        size_t nodeIndex = 0;
+        DirectX::XMFLOAT3 translation = {};
+        DirectX::XMFLOAT4 rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    };
+
+    void ApplyLocalPoseOverride();
+
 
     // それぞれのアニメーション再生時間を取る
     float GetLocomotionDuration(BlendGroup group);
@@ -574,6 +593,10 @@ private:
 
     // 描画に使用するノード
     std::vector<InterleavedGltfModel::Node> finalNodes;
+
+    std::vector<LocalPoseOverrideBone> localPoseOverrideBones;
+    float localPoseOverrideWeight = 0.0f;
+    bool localPoseOverrideActive = false;
 
     // BlendSpaceの完成結果
     std::vector<InterleavedGltfModel::Node> blendSpaceNodes;
