@@ -328,6 +328,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     groundDustEffectComponent = this->AddComponent<class ParticleComponent>("groundDustEffectComponent", parentName);
     groundDustEffectComponent->Load("./Data/Effect/Files/GroundDustEffect.json");
 
+    wallImpactDustEffectComponent = this->AddComponent<class ParticleComponent>("wallImpactDustEffectComponent", parentName);
+    wallImpactDustEffectComponent->Load("./Data/Effect/Files/WallImpactDustEffect.json");
+
     metalSparkEffectComponent = this->AddComponent<class ParticleComponent>("metalSparkEffectComponent", parentName);
     metalSparkEffectComponent->Load("./Data/Effect/Files/MetalSparkEffect1.json");
 
@@ -2778,6 +2781,57 @@ void GruxEnemy::SpawnGroundImpactEffect() const
     }
 }
 
+void GruxEnemy::SpawnWallImpactEffect(
+    const DirectX::XMFLOAT3& impactPosition,
+    const DirectX::XMFLOAT3& wallNormal) const
+{
+    DirectX::XMVECTOR normal = DirectX::XMLoadFloat3(&wallNormal);
+    if (DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(normal)) <= FLT_EPSILON)
+        normal = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+    else
+        normal = DirectX::XMVector3Normalize(normal);
+
+    DirectX::XMFLOAT3 normalizedWallNormal{};
+    DirectX::XMStoreFloat3(&normalizedWallNormal, normal);
+
+    if (wallImpactDustEffectComponent)
+    {
+        const DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+        const float upDotNormal = std::clamp(
+            DirectX::XMVectorGetX(DirectX::XMVector3Dot(up, normal)), -1.0f, 1.0f);
+        DirectX::XMVECTOR rotation = DirectX::XMQuaternionIdentity();
+        DirectX::XMVECTOR rotationAxis = DirectX::XMVector3Cross(up, normal);
+        if (DirectX::XMVectorGetX(
+            DirectX::XMVector3LengthSq(rotationAxis)) > FLT_EPSILON)
+        {
+            rotationAxis = DirectX::XMVector3Normalize(rotationAxis);
+            rotation = DirectX::XMQuaternionRotationAxis(
+                rotationAxis, std::acos(upDotNormal));
+        }
+        else if (upDotNormal < 0.0f)
+        {
+            rotation = DirectX::XMQuaternionRotationAxis(
+                DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), DirectX::XM_PI);
+        }
+
+        DirectX::XMFLOAT4 wallRotation{};
+        DirectX::XMStoreFloat4(&wallRotation, rotation);
+        wallImpactDustEffectComponent->SetWorldLocationDirect(impactPosition);
+        wallImpactDustEffectComponent->SetWorldRotationDirect(wallRotation);
+        wallImpactDustEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(
+            wallImpactDustEffectComponent->GetEffectHandle(),
+            wallImpactDustEffectComponent->GetComponentLocation(),
+            wallImpactDustEffectComponent->GetComponentEulerRotation());
+    }
+
+    if (const auto debrisEmitter =
+        GetOwnerScene()->GetActorManager()->GetActorOfType<ModelDebrisEmitterActor>())
+    {
+        debrisEmitter->Emit(impactPosition, normalizedWallNormal);
+    }
+}
+
 // 武器同士の火花のエフェクトを生成する
 void GruxEnemy::SpawnWeaponClashEffect() const
 {
@@ -4265,6 +4319,18 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
     {
         chargeSelectedHitDebug = "WallHit";
         chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
+        const float wallHitDistance = (std::max)(0.0f, wallHit.distance);
+        const DirectX::XMFLOAT3 impactPosition = wallHit.hasPosition
+            ? wallHit.hitPoint
+            : DirectX::XMFLOAT3{
+                castOrigin.x + chargeDirection.x * wallHitDistance,
+                castOrigin.y + chargeDirection.y * wallHitDistance,
+                castOrigin.z + chargeDirection.z * wallHitDistance };
+        const DirectX::XMFLOAT3 impactNormal = wallHit.hasNormal
+            ? wallHit.normal
+            : DirectX::XMFLOAT3{
+                -chargeDirection.x, -chargeDirection.y, -chargeDirection.z };
+        SpawnWallImpactEffect(impactPosition, impactNormal);
         Logger::Log(Logger::LogCategory::Gameplay,
             "[BossCharge][End] reason=WallHit distance=" +
             std::to_string(wallHit.distance));

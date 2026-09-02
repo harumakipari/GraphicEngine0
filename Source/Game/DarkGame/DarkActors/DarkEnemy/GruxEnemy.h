@@ -319,6 +319,9 @@ private:
     // ジャンプ攻撃の後に着地の時のエフェクトを生成する
     void SpawnGroundImpactEffect() const;
 
+    void SpawnWallImpactEffect(const DirectX::XMFLOAT3& impactPosition,
+        const DirectX::XMFLOAT3& wallNormal) const;
+
     // 武器同士の火花のエフェクトを生成する
     void SpawnWeaponClashEffect() const;
 
@@ -361,6 +364,7 @@ private:
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect
     std::shared_ptr<ParticleComponent> groundDustEffectComponent;
+    std::shared_ptr<ParticleComponent> wallImpactDustEffectComponent;
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;

@@ -31,6 +31,8 @@ public:
     void Initialize(const Transform& transform) override;
     void Update(float deltaTime) override;
     void Emit(const DirectX::XMFLOAT3& impactPosition);
+    void Emit(const DirectX::XMFLOAT3& impactPosition,
+        const DirectX::XMFLOAT3& outwardDirection);
     void DrawImGuiDetails() override;
 
 private:
@@ -51,6 +53,9 @@ private:
     void InitializeDebris(DebrisType type, int index, const char* modelPath);
     void ActivateDebris(Debris& debris, const DirectX::XMFLOAT3& impactPosition,
         float baseAngleRadians);
+    void ActivateDirectionalDebris(Debris& debris,
+        const DirectX::XMFLOAT3& impactPosition,
+        const DirectX::XMFLOAT3& outwardDirection);
     void DeactivateDebris(Debris& debris);
 
     static constexpr int MaxBlockPoolCount = 4;

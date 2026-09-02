@@ -105,6 +105,29 @@ void ModelDebrisEmitterActor::Emit(const DirectX::XMFLOAT3& impactPosition)
     }
 }
 
+void ModelDebrisEmitterActor::Emit(
+    const DirectX::XMFLOAT3& impactPosition,
+    const DirectX::XMFLOAT3& outwardDirection)
+{
+    DirectX::XMFLOAT3 horizontalDirection{
+        outwardDirection.x, 0.0f, outwardDirection.z };
+    const float directionLength = std::sqrt(
+        horizontalDirection.x * horizontalDirection.x +
+        horizontalDirection.z * horizontalDirection.z);
+    if (directionLength > FLT_EPSILON)
+    {
+        horizontalDirection.x /= directionLength;
+        horizontalDirection.z /= directionLength;
+    }
+    else
+    {
+        horizontalDirection = { 0.0f, 0.0f, 1.0f };
+    }
+
+    for (Debris& debris : debrisPool)
+        ActivateDirectionalDebris(debris, impactPosition, horizontalDirection);
+}
+
 void ModelDebrisEmitterActor::ActivateDebris(
     Debris& debris, const DirectX::XMFLOAT3& impactPosition, const float baseAngleRadians)
 {
@@ -136,6 +159,53 @@ void ModelDebrisEmitterActor::ActivateDebris(
         MathHelper::RandomRange(-angularSpeedMax, angularSpeedMax),
         MathHelper::RandomRange(-angularSpeedMax, angularSpeedMax) };
     // Avoid a nearly motionless roll while keeping each axis random.
+    if (MathHelper::Length(debris.angularVelocity) < angularSpeedMin)
+        debris.angularVelocity.y = angularSpeedMin;
+
+    debris.remainingLifetime = MathHelper::RandomRange(
+        settings.lifetimeMin, settings.lifetimeMax);
+    debris.scale = MathHelper::RandomRange(settings.scaleMin, settings.scaleMax);
+
+    debris.meshComponent->SetWorldLocationDirect(debris.position);
+    debris.meshComponent->SetRelativeEulerRotationDirect(debris.rotation);
+    debris.meshComponent->SetRelativeScaleDirect({ debris.scale, debris.scale, debris.scale });
+    debris.meshComponent->SetIsVisible(true);
+}
+
+void ModelDebrisEmitterActor::ActivateDirectionalDebris(
+    Debris& debris, const DirectX::XMFLOAT3& impactPosition,
+    const DirectX::XMFLOAT3& outwardDirection)
+{
+    constexpr float wallImpactHalfSpreadDegrees = 60.0f;
+    const float centerAngle = std::atan2(outwardDirection.x, outwardDirection.z);
+    const float angle = centerAngle + DirectX::XMConvertToRadians(
+        MathHelper::RandomRange(
+            -wallImpactHalfSpreadDegrees, wallImpactHalfSpreadDegrees));
+    const DirectX::XMFLOAT3 outward{ sinf(angle), 0.0f, cosf(angle) };
+
+    const bool isBlock = debris.type == DebrisType::Block;
+    const MotionSettings& settings = isBlock ? blockSettings : smallDebriSettings;
+    const float horizontalSpeed = MathHelper::RandomRange(
+        settings.horizontalSpeedMin, settings.horizontalSpeedMax);
+    const float verticalSpeed = MathHelper::RandomRange(
+        settings.upSpeedMin, settings.upSpeedMax);
+
+    debris.active = true;
+    debris.position = impactPosition;
+    debris.position.y += 0.05f;
+    debris.velocity = MathHelper::Multiply(outward, horizontalSpeed);
+    debris.velocity.y = verticalSpeed;
+    debris.rotation = {
+        MathHelper::RandomRange(0.0f, 360.0f),
+        MathHelper::RandomRange(0.0f, 360.0f),
+        MathHelper::RandomRange(0.0f, 360.0f) };
+
+    const float angularSpeedMin = settings.angularVelocityMinimumMagnitude;
+    const float angularSpeedMax = settings.angularVelocityMax;
+    debris.angularVelocity = {
+        MathHelper::RandomRange(-angularSpeedMax, angularSpeedMax),
+        MathHelper::RandomRange(-angularSpeedMax, angularSpeedMax),
+        MathHelper::RandomRange(-angularSpeedMax, angularSpeedMax) };
     if (MathHelper::Length(debris.angularVelocity) < angularSpeedMin)
         debris.angularVelocity.y = angularSpeedMin;
 

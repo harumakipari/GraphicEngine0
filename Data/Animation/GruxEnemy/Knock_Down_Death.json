@@ -1,0 +1,15 @@
+{
+    "animationClip": 27,
+    "animationName": "Knock_Down_Death",
+    "events": [
+        {
+            "parameter": "boss_death",
+            "time": 0.7264957427978516,
+            "type": "PlaySE",
+            "value": 0.7300000190734863
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}
