@@ -328,6 +328,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     groundDustEffectComponent = this->AddComponent<class ParticleComponent>("groundDustEffectComponent", parentName);
     groundDustEffectComponent->Load("./Data/Effect/Files/GroundDustEffect.json");
 
+    metalSparkEffectComponent = this->AddComponent<class ParticleComponent>("metalSparkEffectComponent", parentName);
+    metalSparkEffectComponent->Load("./Data/Effect/Files/MetalSparkEffect.json");
+
     leftWeaponTrail.Initialize();
     rightWeaponTrail.Initialize();
     leftWeaponTrail.SetRushColorEnabled(true, bossTrailColor);
@@ -999,6 +1002,10 @@ void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
                 groundDustEffectComponent->GetEffectHandle(),
                 groundDustEffectComponent->GetComponentLocation(),
                 { 0.0f, 0.0f, 0.0f });
+        }
+        else if (event.parameter == "WeaponClash")
+        {
+            SpawnWeaponClashEffect();
         }
         break;
     }
@@ -2779,9 +2786,19 @@ void GruxEnemy::SpawnWeaponClashEffect() const
     {
         const DirectX::XMFLOAT3 weaponTipPosition = weaponRightMiddleComponent->GetComponentLocation();
         spawnPosition.x = weaponTipPosition.x;
+        spawnPosition.y = weaponTipPosition.y;
         spawnPosition.z = weaponTipPosition.z;
     }
 
+    if (metalSparkEffectComponent)
+    {
+        metalSparkEffectComponent->SetWorldLocationDirect(spawnPosition);
+        metalSparkEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(
+            metalSparkEffectComponent->GetEffectHandle(),
+            metalSparkEffectComponent->GetComponentLocation(),
+            { 0.0f, 0.0f, 0.0f });
+    }
 }
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
