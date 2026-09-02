@@ -329,7 +329,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     groundDustEffectComponent->Load("./Data/Effect/Files/GroundDustEffect.json");
 
     metalSparkEffectComponent = this->AddComponent<class ParticleComponent>("metalSparkEffectComponent", parentName);
-    metalSparkEffectComponent->Load("./Data/Effect/Files/MetalSparkEffect.json");
+    metalSparkEffectComponent->Load("./Data/Effect/Files/MetalSparkEffect1.json");
 
     leftWeaponTrail.Initialize();
     rightWeaponTrail.Initialize();

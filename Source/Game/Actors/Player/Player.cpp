@@ -3076,6 +3076,9 @@ void Player::UpdateRushPromptUI()
         rushButtonImageComponent->SetScale({
             rushButtonBaseScale.x * 0.8f,
             rushButtonBaseScale.y * 0.8f });
+        rushWordImageComponent->SetScale({
+            rushWordScale.x * 0.9f,
+            rushWordScale.y * 0.9f });
         return;
     }
 
@@ -3104,12 +3107,14 @@ void Player::UpdateRushPromptUI()
         rushPromptAnimationTimer += uiDeltaTime;
 
     float buttonAnimationScale = 1.0f;
+    float wordAnimationScale = 1.0f;
     switch (rushPromptAnimationPhase)
     {
     case RushPromptAnimationPhase::Hidden:
         rushPromptAnimationPhase = RushPromptAnimationPhase::AppearGrow;
         rushPromptAnimationTimer = 0.0f;
         buttonAnimationScale = 0.8f;
+        wordAnimationScale = 0.9f;
         break;
 
     case RushPromptAnimationPhase::AppearGrow:
@@ -3119,11 +3124,15 @@ void Player::UpdateRushPromptUI()
         buttonAnimationScale = std::clamp(
             Easing::OutBack(time, duration, 1.0f, 1.15f, 0.8f),
             0.8f, 1.15f);
+        wordAnimationScale = std::clamp(
+            Easing::OutBack(time, duration, 1.0f, 1.08f, 0.9f),
+            0.9f, 1.08f);
         if (rushPromptAnimationTimer >= duration)
         {
             rushPromptAnimationPhase = RushPromptAnimationPhase::AppearSettle;
             rushPromptAnimationTimer = 0.0f;
             buttonAnimationScale = 1.15f;
+            wordAnimationScale = 1.08f;
         }
         break;
     }
@@ -3133,11 +3142,13 @@ void Player::UpdateRushPromptUI()
         constexpr float duration = 0.08f;
         const float time = std::clamp(rushPromptAnimationTimer, 0.0f, duration);
         buttonAnimationScale = Easing::OutQuad(time, duration, 1.0f, 1.15f);
+        wordAnimationScale = Easing::OutQuad(time, duration, 1.0f, 1.08f);
         if (rushPromptAnimationTimer >= duration)
         {
             rushPromptAnimationPhase = RushPromptAnimationPhase::PulseGrow;
             rushPromptAnimationTimer = 0.0f;
             buttonAnimationScale = 1.0f;
+            wordAnimationScale = 1.0f;
         }
         break;
     }
@@ -3147,11 +3158,13 @@ void Player::UpdateRushPromptUI()
         constexpr float duration = 0.25f;
         const float time = std::clamp(rushPromptAnimationTimer, 0.0f, duration);
         buttonAnimationScale = Easing::InOutSine(time, duration, 1.12f, 1.0f);
+        wordAnimationScale = Easing::InOutSine(time, duration, 1.05f, 1.0f);
         if (rushPromptAnimationTimer >= duration)
         {
             rushPromptAnimationPhase = RushPromptAnimationPhase::PulseReturn;
             rushPromptAnimationTimer = 0.0f;
             buttonAnimationScale = 1.12f;
+            wordAnimationScale = 1.05f;
         }
         break;
     }
@@ -3161,11 +3174,13 @@ void Player::UpdateRushPromptUI()
         constexpr float duration = 0.35f;
         const float time = std::clamp(rushPromptAnimationTimer, 0.0f, duration);
         buttonAnimationScale = Easing::OutQuad(time, duration, 1.0f, 1.12f);
+        wordAnimationScale = Easing::OutQuad(time, duration, 1.0f, 1.05f);
         if (rushPromptAnimationTimer >= duration)
         {
             rushPromptAnimationPhase = RushPromptAnimationPhase::PulseGrow;
             rushPromptAnimationTimer = 0.0f;
             buttonAnimationScale = 1.0f;
+            wordAnimationScale = 1.0f;
         }
         break;
     }
@@ -3189,7 +3204,9 @@ void Player::UpdateRushPromptUI()
 
     rushWordImageComponent->SetWorldPosition(rushWordPosition);
     rushWordImageComponent->SetSize(rushWordSize);
-    rushWordImageComponent->SetScale(rushWordScale);
+    rushWordImageComponent->SetScale({
+        rushWordScale.x * wordAnimationScale,
+        rushWordScale.y * wordAnimationScale });
     rushWordImageComponent->SetColor(color);
     rushWordImageComponent->SetVisible(true);
 }
