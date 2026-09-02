@@ -203,6 +203,12 @@ private:
     // LockOn構図の適応値を更新する
     void UpdateLockOnComposition(float deltaTime);
 
+    float CalculateRequiredLockOnFramingDistance();
+
+    // Collision 後の実カメラ位置から、Safe Frame を満たす垂直 FOV を逆算する
+    float CalculateRequiredLockOnFov(bool& outValid) const;
+    void UpdateLockOnFovFallback(float deltaTime);
+
     // LockOn開始時に前回の適応値を持ち越さない
     void ResetLockOnAdaptiveState();
 
@@ -308,6 +314,14 @@ private:
     float lockOnZoomInSpeed = 1.2f;
     float lockOnDistanceDeadZone = 0.15f;
     float lockOnCompositionLerpSpeed = 6.0f;
+    float lockOnSafeFrameHorizontalMargin = 0.12f;
+    float lockOnSafeFrameVerticalMargin = 0.12f;
+    float lockOnMaxFallbackFovDegree = 52.0f;
+    float lockOnFovExpandSpeed = 35.0f;
+    float lockOnFovReturnSpeed = 12.0f;
+    float lockOnFovFallbackEnterDeficit = 0.25f;
+    float lockOnFovFallbackExitDeficit = 0.08f;
+    float lockOnFovFallbackReturnDelay = 0.20f;
 
     float lockOnCollisionStrength = 0.0f;
     float lockOnCollisionRatioForAdaptive = 1.0f;
@@ -319,6 +333,19 @@ private:
     float adaptiveLockOnTargetWeight = 0.72f;
     float adaptiveLockOnHorizontalOffset = 0.0f;
     float adaptiveLockOnCameraDistance = 6.55f;
+    float lockOnHorizontalExtent = 0.0f;
+    float lockOnVerticalExtent = 0.0f;
+    float lockOnRequiredXDistance = 0.0f;
+    float lockOnRequiredYDistance = 0.0f;
+    float lockOnRequiredFramingDistance = 0.0f;
+    float lockOnExistingAdaptiveDistance = 0.0f;
+    float lockOnFramingDeficit = 0.0f;
+    bool lockOnFramingActive = false;
+    float lockOnRequiredFovDegree = 45.0f;
+    float lockOnTargetFovDegree = 45.0f;
+    float lockOnCurrentFovDegree = 45.0f;
+    float lockOnFovReturnDelayElapsed = 0.0f;
+    bool lockOnFovFallbackActive = false;
 
     // ランタイム調査値
     DirectX::XMFLOAT3 desiredEyePosition{};

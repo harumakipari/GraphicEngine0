@@ -25,7 +25,7 @@ void DarkCameraActor::Initialize(const Transform& transform)
     // targetをどこに置くか
     // 0 = Player
     // 1 = Enemy
-    lockOnTargetWeight = 0.72f;
+    lockOnTargetWeight = 0.5f;
     // 基本距離
     lockOnCameraDistance = 5.0f;
     // 敵との距離による増加量
@@ -119,6 +119,15 @@ void DarkCameraActor::Update(float deltaTime)
     cameraCollisionRatio = desiredCameraDistance > FLT_EPSILON
         ? actualCameraDistance / desiredCameraDistance
         : 1.0f;
+    lockOnFramingDeficit = currentMode == CameraMode::LockOn
+        ? lockOnRequiredFramingDistance - actualCameraDistance
+        : 0.0f;
+
+    // Blend 中の FOV は既存処理を優先し、安定した LockOn 時だけ Collision Fallback を適用する。
+    if (!isExternalBlending && !isBlending && currentMode == CameraMode::LockOn)
+    {
+        UpdateLockOnFovFallback(deltaTime);
+    }
 
     if (showCameraCollisionDebug)
     {
@@ -700,8 +709,13 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
     adaptiveLockOnTargetWeight = lockOnTargetWeight;
     adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset;
 
-    desiredLockOnCameraDistance =
+    lockOnExistingAdaptiveDistance =
         lockOnSettings.distance + lockOnMaxDistanceAdd * lockOnDistanceStrength;
+    lockOnRequiredFramingDistance = CalculateRequiredLockOnFramingDistance();
+    desiredLockOnCameraDistance = (std::max)(
+        lockOnExistingAdaptiveDistance, lockOnRequiredFramingDistance);
+    lockOnFramingActive =
+        lockOnRequiredFramingDistance > lockOnExistingAdaptiveDistance;
     currentLockOnZoomSpeed = desiredLockOnCameraDistance > currentLockOnCameraDistance
         ? lockOnZoomOutSpeed
         : lockOnZoomInSpeed;
@@ -720,6 +734,244 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
         lockOnCollisionStrength);
 }
 
+float DarkCameraActor::CalculateRequiredLockOnFramingDistance()
+{
+    lockOnHorizontalExtent = 0.0f;
+    lockOnVerticalExtent = 0.0f;
+    lockOnRequiredXDistance = 0.0f;
+    lockOnRequiredYDistance = 0.0f;
+
+    const float minimumLockOnDistance = (std::max)(lockOnSettings.distance, 0.1f);
+    const auto playerHeadShared = playerHead.lock();
+    const auto enemyHeadShared = enemyHead.lock();
+    if (!playerHeadShared || !enemyHeadShared)
+        return minimumLockOnDistance;
+
+    DirectX::XMFLOAT3 playerLookPosition = playerHeadShared->GetComponentLocation();
+    DirectX::XMFLOAT3 enemyLookPosition = enemyHeadShared->GetComponentLocation();
+    playerLookPosition.y += lockOnPlayerLookHeight;
+    enemyLookPosition.y += lockOnEnemyLookHeight;
+
+    const float targetWeight = std::clamp(lockOnTargetWeight, 0.0f, 1.0f);
+    const DirectX::XMFLOAT3 framingTarget = MathHelper::Lerp(
+        playerLookPosition, enemyLookPosition, targetWeight);
+
+    DirectX::XMFLOAT3 playerPosition = playerLookPosition;
+    DirectX::XMFLOAT3 enemyPosition = enemyLookPosition;
+    if (const auto player = playerHeadShared->GetOwner())
+        playerPosition = player->GetPosition();
+    if (const auto enemy = enemyHeadShared->GetOwner())
+        enemyPosition = enemy->GetPosition();
+
+    const DirectX::XMFLOAT3 playerToEnemy = MathHelper::Subtract(
+        enemyPosition, playerPosition);
+    float lockOnYaw = currentYaw;
+    if (std::abs(playerToEnemy.x) > FLT_EPSILON ||
+        std::abs(playerToEnemy.z) > FLT_EPSILON)
+    {
+        lockOnYaw = std::atan2(playerToEnemy.x, playerToEnemy.z) +
+            DirectX::XMConvertToRadians(lockOnYawOffsetDegree);
+    }
+    const float lockOnPitch = DirectX::XMConvertToRadians(lockOnPitchDegree);
+    const float cosPitch = std::cos(lockOnPitch);
+    const DirectX::XMFLOAT3 cameraForward{
+        std::sin(lockOnYaw) * cosPitch,
+        std::sin(lockOnPitch),
+        std::cos(lockOnYaw) * cosPitch };
+    const DirectX::XMFLOAT3 cameraRight{
+        std::cos(lockOnYaw), 0.0f, -std::sin(lockOnYaw) };
+    const DirectX::XMFLOAT3 cameraUp = MathHelper::Normalize(
+        MathHelper::Cross(cameraForward, cameraRight));
+
+    const float verticalFov = DirectX::XMConvertToRadians(lockOnSettings.fovDegree);
+    const float screenWidth = Graphics::GetScreenWidth();
+    const float screenHeight = Graphics::GetScreenHeight();
+    const float aspect = screenHeight > FLT_EPSILON
+        ? screenWidth / screenHeight
+        : 0.0f;
+    const float tanHalfVertical = std::tan(verticalFov * 0.5f);
+    const float tanHalfHorizontal = tanHalfVertical * aspect;
+    const float safeScaleX = 1.0f - 2.0f * std::clamp(
+        lockOnSafeFrameHorizontalMargin, 0.0f, 0.49f);
+    const float safeScaleY = 1.0f - 2.0f * std::clamp(
+        lockOnSafeFrameVerticalMargin, 0.0f, 0.49f);
+    const float horizontalDenominator = tanHalfHorizontal * safeScaleX;
+    const float verticalDenominator = tanHalfVertical * safeScaleY;
+    if (!std::isfinite(verticalFov) || verticalFov <= 0.0f ||
+        verticalFov >= DirectX::XM_PI || !std::isfinite(aspect) ||
+        aspect <= FLT_EPSILON || !std::isfinite(horizontalDenominator) ||
+        !std::isfinite(verticalDenominator) ||
+        horizontalDenominator <= FLT_EPSILON ||
+        verticalDenominator <= FLT_EPSILON)
+    {
+        return minimumLockOnDistance;
+    }
+
+    const auto evaluateSample = [&](const DirectX::XMFLOAT3& sample)
+    {
+        const DirectX::XMFLOAT3 relative = MathHelper::Subtract(
+            sample, framingTarget);
+        const float x = MathHelper::Dot(relative, cameraRight);
+        const float y = MathHelper::Dot(relative, cameraUp);
+        const float z = MathHelper::Dot(relative, cameraForward);
+        lockOnHorizontalExtent = (std::max)(lockOnHorizontalExtent, std::abs(x));
+        lockOnVerticalExtent = (std::max)(lockOnVerticalExtent, std::abs(y));
+        lockOnRequiredXDistance = (std::max)(lockOnRequiredXDistance,
+            std::abs(x) / horizontalDenominator - z);
+        lockOnRequiredYDistance = (std::max)(lockOnRequiredYDistance,
+            std::abs(y) / verticalDenominator - z);
+    };
+
+    evaluateSample(playerLookPosition);
+    evaluateSample(enemyLookPosition);
+    lockOnRequiredXDistance = (std::max)(lockOnRequiredXDistance, 0.0f);
+    lockOnRequiredYDistance = (std::max)(lockOnRequiredYDistance, 0.0f);
+    return (std::max)({
+        minimumLockOnDistance,
+        lockOnRequiredXDistance,
+        lockOnRequiredYDistance });
+}
+
+float DarkCameraActor::CalculateRequiredLockOnFov(bool& outValid) const
+{
+    outValid = false;
+    const auto playerHeadShared = playerHead.lock();
+    const auto enemyHeadShared = enemyHead.lock();
+    if (!playerHeadShared || !enemyHeadShared)
+        return lockOnSettings.fovDegree;
+
+    const DirectX::XMFLOAT3 forwardVector = MathHelper::Subtract(
+        currentPose.target, collisionPostEyePosition);
+    if (MathHelper::Length(forwardVector) <= 0.1f)
+        return lockOnSettings.fovDegree;
+
+    const DirectX::XMFLOAT3 cameraForward = MathHelper::Normalize(forwardVector);
+    const DirectX::XMFLOAT3 worldUp{ 0.0f, 1.0f, 0.0f };
+    const DirectX::XMFLOAT3 rightVector = MathHelper::Cross(worldUp, cameraForward);
+    if (MathHelper::Length(rightVector) <= FLT_EPSILON)
+        return lockOnSettings.fovDegree;
+
+    // CameraComponent::GetRight / LookAtLH と同じ cross 順序。
+    const DirectX::XMFLOAT3 cameraRight = MathHelper::Normalize(rightVector);
+    const DirectX::XMFLOAT3 cameraUp = MathHelper::Normalize(
+        MathHelper::Cross(cameraForward, cameraRight));
+
+    const float screenWidth = Graphics::GetScreenWidth();
+    const float screenHeight = Graphics::GetScreenHeight();
+    const float aspect = screenHeight > FLT_EPSILON
+        ? screenWidth / screenHeight
+        : 0.0f;
+    const float safeScaleX = 1.0f - 2.0f * std::clamp(
+        lockOnSafeFrameHorizontalMargin, 0.0f, 0.49f);
+    const float safeScaleY = 1.0f - 2.0f * std::clamp(
+        lockOnSafeFrameVerticalMargin, 0.0f, 0.49f);
+    if (!std::isfinite(aspect) || aspect <= FLT_EPSILON ||
+        safeScaleX <= FLT_EPSILON || safeScaleY <= FLT_EPSILON)
+    {
+        return lockOnSettings.fovDegree;
+    }
+
+    DirectX::XMFLOAT3 playerLookPosition = playerHeadShared->GetComponentLocation();
+    DirectX::XMFLOAT3 enemyLookPosition = enemyHeadShared->GetComponentLocation();
+    playerLookPosition.y += lockOnPlayerLookHeight;
+    enemyLookPosition.y += lockOnEnemyLookHeight;
+
+    float requiredTanVertical = 0.0f;
+    const auto evaluateSample = [&](const DirectX::XMFLOAT3& sample)
+    {
+        const DirectX::XMFLOAT3 relative = MathHelper::Subtract(
+            sample, collisionPostEyePosition);
+        const float x = std::abs(MathHelper::Dot(relative, cameraRight));
+        const float y = std::abs(MathHelper::Dot(relative, cameraUp));
+        const float z = MathHelper::Dot(relative, cameraForward);
+        constexpr float nearZ = 0.1f;
+        if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) || z <= nearZ)
+            return false;
+
+        const float requiredTanVerticalFromY = y / (z * safeScaleY);
+        const float requiredTanHorizontal = x / (z * safeScaleX);
+        const float requiredTanVerticalFromX = requiredTanHorizontal / aspect;
+        requiredTanVertical = (std::max)({
+            requiredTanVertical,
+            requiredTanVerticalFromY,
+            requiredTanVerticalFromX });
+        return std::isfinite(requiredTanVertical);
+    };
+
+    if (!evaluateSample(playerLookPosition) || !evaluateSample(enemyLookPosition))
+        return lockOnSettings.fovDegree;
+
+    const float requiredFovDegree = DirectX::XMConvertToDegrees(
+        2.0f * std::atan(requiredTanVertical));
+    if (!std::isfinite(requiredFovDegree))
+        return lockOnSettings.fovDegree;
+
+    outValid = true;
+    return requiredFovDegree;
+}
+
+void DarkCameraActor::UpdateLockOnFovFallback(float deltaTime)
+{
+    const float baseFovDegree = lockOnSettings.fovDegree;
+    const float maxFallbackFovDegree = (std::max)(
+        baseFovDegree, lockOnMaxFallbackFovDegree);
+    bool requiredFovValid = false;
+    lockOnRequiredFovDegree = CalculateRequiredLockOnFov(requiredFovValid);
+
+    const bool canEnterFallback = requiredFovValid && cameraHitWall &&
+        lockOnFramingDeficit > lockOnFovFallbackEnterDeficit &&
+        lockOnRequiredFovDegree > baseFovDegree;
+    const bool canRemainInFallback = requiredFovValid && cameraHitWall &&
+        lockOnFramingDeficit > lockOnFovFallbackExitDeficit &&
+        lockOnRequiredFovDegree > baseFovDegree;
+
+    if (!lockOnFovFallbackActive)
+    {
+        if (canEnterFallback)
+        {
+            lockOnFovFallbackActive = true;
+            lockOnFovReturnDelayElapsed = 0.0f;
+        }
+    }
+    else if (canRemainInFallback)
+    {
+        lockOnFovReturnDelayElapsed = 0.0f;
+    }
+    else
+    {
+        lockOnFovReturnDelayElapsed += (std::max)(deltaTime, 0.0f);
+        if (lockOnFovReturnDelayElapsed >= lockOnFovFallbackReturnDelay)
+        {
+            lockOnFovFallbackActive = false;
+            lockOnFovReturnDelayElapsed = 0.0f;
+        }
+    }
+
+    if (lockOnFovFallbackActive && (canEnterFallback || canRemainInFallback))
+    {
+        lockOnTargetFovDegree = std::clamp(
+            lockOnRequiredFovDegree, baseFovDegree, maxFallbackFovDegree);
+    }
+    else if (!lockOnFovFallbackActive)
+    {
+        lockOnTargetFovDegree = baseFovDegree;
+    }
+    // Return Delay 中は直前の Target FOV を保持する。
+
+    const float interpolationSpeed = lockOnTargetFovDegree > lockOnCurrentFovDegree
+        ? lockOnFovExpandSpeed
+        : lockOnFovReturnSpeed;
+    const float maxFovDelta = (std::max)(interpolationSpeed, 0.0f) *
+        (std::max)(deltaTime, 0.0f);
+    lockOnCurrentFovDegree += std::clamp(
+        lockOnTargetFovDegree - lockOnCurrentFovDegree,
+        -maxFovDelta,
+        maxFovDelta);
+    lockOnCurrentFovDegree = std::clamp(
+        lockOnCurrentFovDegree, baseFovDegree, maxFallbackFovDegree);
+    mainCameraComponent->SetFov(DirectX::XMConvertToRadians(lockOnCurrentFovDegree));
+}
+
 void DarkCameraActor::ResetLockOnAdaptiveState()
 {
     lockOnCollisionStrength = 0.0f;
@@ -733,6 +985,19 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
     currentLockOnZoomSpeed = 0.0f;
     adaptiveLockOnTargetWeight = lockOnTargetWeight;
     adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset;
+    lockOnHorizontalExtent = 0.0f;
+    lockOnVerticalExtent = 0.0f;
+    lockOnRequiredXDistance = 0.0f;
+    lockOnRequiredYDistance = 0.0f;
+    lockOnRequiredFramingDistance = lockOnSettings.distance;
+    lockOnExistingAdaptiveDistance = lockOnSettings.distance;
+    lockOnFramingDeficit = 0.0f;
+    lockOnFramingActive = false;
+    lockOnRequiredFovDegree = lockOnSettings.fovDegree;
+    lockOnTargetFovDegree = lockOnSettings.fovDegree;
+    lockOnCurrentFovDegree = lockOnSettings.fovDegree;
+    lockOnFovReturnDelayElapsed = 0.0f;
+    lockOnFovFallbackActive = false;
 }
 
 void DarkCameraActor::BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to)
@@ -1138,6 +1403,14 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::DragFloat("Zoom In Speed", &lockOnZoomInSpeed, 0.1f, 0.01f, 30.0f);
         ImGui::DragFloat("Distance Dead Zone", &lockOnDistanceDeadZone, 0.01f, 0.0f, 5.0f);
         ImGui::DragFloat("Composition Lerp Speed", &lockOnCompositionLerpSpeed, 0.1f, 0.1f, 30.0f);
+        ImGui::DragFloat("Safe Frame Horizontal Margin",
+            &lockOnSafeFrameHorizontalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
+        ImGui::DragFloat("Safe Frame Vertical Margin",
+            &lockOnSafeFrameVerticalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
+        lockOnSafeFrameHorizontalMargin = std::clamp(
+            lockOnSafeFrameHorizontalMargin, 0.0f, 0.49f);
+        lockOnSafeFrameVerticalMargin = std::clamp(
+            lockOnSafeFrameVerticalMargin, 0.0f, 0.49f);
         ImGui::Separator();
         ImGui::Text("Desired Eye: %.3f, %.3f, %.3f",
             desiredEyePosition.x, desiredEyePosition.y, desiredEyePosition.z);
@@ -1151,8 +1424,50 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::Text("Adaptive Collision Ratio: %.3f", lockOnCollisionRatioForAdaptive);
         ImGui::Text("Player-Boss Distance: %.3f", lockOnEnemyDistance);
         ImGui::Text("Base Distance: %.3f", lockOnSettings.distance);
+        ImGui::Text("Horizontal Extent: %.3f", lockOnHorizontalExtent);
+        ImGui::Text("Vertical Extent: %.3f", lockOnVerticalExtent);
+        ImGui::Text("Required X Distance: %.3f", lockOnRequiredXDistance);
+        ImGui::Text("Required Y Distance: %.3f", lockOnRequiredYDistance);
+        ImGui::Text("Required Framing Distance: %.3f",
+            lockOnRequiredFramingDistance);
+        ImGui::Text("Existing Adaptive Distance: %.3f",
+            lockOnExistingAdaptiveDistance);
         ImGui::Text("Desired Distance: %.3f", desiredLockOnCameraDistance);
         ImGui::Text("Current Adaptive Distance: %.3f", adaptiveLockOnCameraDistance);
+        ImGui::Text("Framing Deficit: %.3f", lockOnFramingDeficit);
+        ImGui::Text("Framing Active: %s", lockOnFramingActive ? "YES" : "NO");
+        ImGui::SeparatorText("Collision FOV Fallback");
+        ImGui::DragFloat("Max Fallback FOV", &lockOnMaxFallbackFovDegree,
+            0.1f, lockOnSettings.fovDegree, 90.0f, "%.1f deg");
+        ImGui::DragFloat("FOV Expand Speed", &lockOnFovExpandSpeed,
+            0.5f, 0.0f, 180.0f, "%.1f deg/s");
+        ImGui::DragFloat("FOV Return Speed", &lockOnFovReturnSpeed,
+            0.5f, 0.0f, 180.0f, "%.1f deg/s");
+        ImGui::DragFloat("Fallback Enter Deficit", &lockOnFovFallbackEnterDeficit,
+            0.01f, 0.0f, 10.0f, "%.2f m");
+        ImGui::DragFloat("Fallback Exit Deficit", &lockOnFovFallbackExitDeficit,
+            0.01f, 0.0f, 10.0f, "%.2f m");
+        ImGui::DragFloat("FOV Return Delay", &lockOnFovFallbackReturnDelay,
+            0.01f, 0.0f, 2.0f, "%.2f sec");
+        lockOnMaxFallbackFovDegree = (std::max)(
+            lockOnMaxFallbackFovDegree, lockOnSettings.fovDegree);
+        lockOnFovExpandSpeed = (std::max)(lockOnFovExpandSpeed, 0.0f);
+        lockOnFovReturnSpeed = (std::max)(lockOnFovReturnSpeed, 0.0f);
+        lockOnFovFallbackExitDeficit = (std::max)(
+            lockOnFovFallbackExitDeficit, 0.0f);
+        lockOnFovFallbackEnterDeficit = (std::max)(
+            lockOnFovFallbackEnterDeficit, lockOnFovFallbackExitDeficit);
+        lockOnFovFallbackReturnDelay = (std::max)(
+            lockOnFovFallbackReturnDelay, 0.0f);
+        ImGui::Text("Base LockOn FOV: %.2f", lockOnSettings.fovDegree);
+        ImGui::Text("Required FOV: %.2f", lockOnRequiredFovDegree);
+        ImGui::Text("Target FOV: %.2f", lockOnTargetFovDegree);
+        ImGui::Text("Current FOV: %.2f", lockOnCurrentFovDegree);
+        ImGui::Text("Max Fallback FOV: %.2f", lockOnMaxFallbackFovDegree);
+        ImGui::Text("FOV Fallback Active: %s",
+            lockOnFovFallbackActive ? "YES" : "NO");
+        ImGui::Text("Framing Deficit: %.3f", lockOnFramingDeficit);
+        ImGui::Text("Camera Collision Ratio: %.3f", cameraCollisionRatio);
         ImGui::Text("Distance Strength: %.3f", lockOnDistanceStrength);
         ImGui::Text("Zoom Speed: %.3f", currentLockOnZoomSpeed);
         ImGui::Text("Target Weight: %.3f", lockOnTargetWeight);
