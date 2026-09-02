@@ -207,8 +207,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Walk_Fwd", 47);
         controller->AddAnimation("Get_Up", 48);
         controller->AddAnimation("Hit_Large_KnockBack", 49);
-        controller->SetRemoveRootTranslationFromPose(
-            "Hit_Large_KnockBack", true);
+        controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
 
         // ブレンドスペースに追加
         //controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
@@ -393,7 +392,7 @@ void Player::Initialize(const Transform& transform)
     // ラッシュ時のUIを作成
     auto uiManager = GetOwnerScene()->GetUIManager();
     rushGuideImageComponent = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_x_a_b.png", "RushGuide");
+        "./Data/Textures/UI/Rush/rush_x_a_b1.png", "RushGuide");
     rushGuideImageComponent->SetWorldPosition(rushGuidePosition);
     rushGuideImageComponent->SetScale(rushGuideScale);
     rushGuideImageComponent->SetSize(rushGuideSize);
@@ -402,7 +401,7 @@ void Player::Initialize(const Transform& transform)
     uiManager->Add(rushGuideImageComponent);
 
     rushButtonImageComponent = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_y.png", "RushY");
+        "./Data/Textures/UI/Rush/rush_y1.png", "RushY");
     rushButtonImageComponent->SetWorldPosition(rushButtonPosition);
     rushButtonImageComponent->SetScale({
         rushButtonBaseScale.x * 0.8f,
@@ -413,7 +412,7 @@ void Player::Initialize(const Transform& transform)
     uiManager->Add(rushButtonImageComponent);
 
     rushWordImageComponent = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_word.png", "RushWord");
+        "./Data/Textures/UI/Rush/rush_word1.png", "RushWord");
     rushWordImageComponent->SetWorldPosition(rushWordPosition);
     rushWordImageComponent->SetScale(rushWordScale);
     rushWordImageComponent->SetSize(rushWordSize);
@@ -423,10 +422,10 @@ void Player::Initialize(const Transform& transform)
     SetEulerRotation({ 0.0f,90.0f,0.0f });
 
     // 操作説明UIを入れる
-    operateUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/operate_ui.png", "operate_ui");
-    operateUiComponent->SetWorldPosition({ 1000, 1000 });
-    operateUiComponent->SetSize({ 2400, 300 });
-    operateUiComponent->SetScale({ 0.3f,0.3f });
+    operateUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/operate_ui1.png", "operate_ui");
+    operateUiComponent->SetWorldPosition({ 1000, 1015 });
+    operateUiComponent->SetSize({ 1130, 285 });
+    operateUiComponent->SetScale({ 0.35f,0.35f });
     operateUiComponent->SetPivot({ 0.5f,0.5f });
     uiManager->Add(operateUiComponent);
 
@@ -995,6 +994,55 @@ void Player::SetRushWeaponVisual(const bool enabled)
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    if (ImGui::CollapsingHeader("Eye Close Debug"))
+    {
+        const bool manualControlsEnabled = !deathEyeCloseActive;
+        if (!manualControlsEnabled)
+            ImGui::BeginDisabled();
+
+        if (ImGui::Button("Close Eyes Preview"))
+        {
+            closeEyePreviewActive = RebuildEyeClosePoseOverride();
+            closeEyeWeight = closeEyePreviewActive ? 1.0f : 0.0f;
+            if (closeEyePreviewActive)
+                GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Open Eyes / Reset"))
+            ResetEyeCloseOverride();
+
+        if (ImGui::SliderFloat("Close Eye Weight", &closeEyeWeight, 0.0f, 1.0f))
+        {
+            if (!closeEyePreviewActive)
+                closeEyePreviewActive = RebuildEyeClosePoseOverride();
+            if (closeEyePreviewActive)
+                GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
+        }
+
+        if (!manualControlsEnabled)
+            ImGui::EndDisabled();
+
+        if (ImGui::SliderFloat("Closed Eye Pose Time", &closedEyePoseTime,
+            0.0f, 7.083f, "%.3f sec"))
+        {
+            if (closeEyePreviewActive || deathEyeCloseActive)
+                RebuildEyeClosePoseOverride();
+        }
+        ImGui::SliderFloat("Close Eye Start Time", &closeEyeStartTime,
+            0.0f, 3.0f, "%.3f sec");
+        ImGui::SliderFloat("Close Eye Duration", &closeEyeDuration,
+            0.01f, 2.0f, "%.3f sec");
+
+        ImGui::Separator();
+        ImGui::Text("Closed Pose Time : %.3f", closedEyePoseTime);
+        ImGui::Text("Start Time        : %.3f", closeEyeStartTime);
+        ImGui::Text("Duration          : %.3f", closeEyeDuration);
+        ImGui::Text("Weight            : %.3f", closeEyeWeight);
+        ImGui::Text("Control           : %s",
+            deathEyeCloseActive ? "Death Auto" :
+            closeEyePreviewActive ? "Manual Preview" : "Animation");
+    }
+
     if (ImGui::CollapsingHeader("Player HP UI"))
     {
         ImGui::DragFloat("Delayed HP Hold Duration", &delayedHpDelayDuration,
@@ -1928,8 +1976,7 @@ void Player::ClearTransientBattleActions()
 
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
-    if (const auto controller = GetBodyAnimationController())
-        controller->ClearLocalPoseOverride();
+    ResetEyeCloseOverride();
 
     battleActionsSuspended = false;
     StopBattleActions();
@@ -1963,6 +2010,69 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 
     if (stateMachine_)
         stateMachine_->ChangeState("Idle");
+}
+
+bool Player::RebuildEyeClosePoseOverride()
+{
+    static const std::vector<std::string> eyelidBoneNames =
+    {
+        "R_eye_lid_upper_mid",
+        "R_eye_lid_lower_mid",
+        "L_eye_lid_upper_mid",
+        "L_eye_lid_lower_mid"
+    };
+
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return false;
+
+    const float preservedWeight = closeEyeWeight;
+    if (!controller->ConfigureLocalPoseOverride(
+        "Idle", closedEyePoseTime, eyelidBoneNames))
+    {
+        closeEyeWeight = 0.0f;
+        return false;
+    }
+
+    controller->SetLocalPoseOverrideWeight(preservedWeight);
+    return true;
+}
+
+void Player::ResetEyeCloseOverride()
+{
+    if (const auto controller = GetBodyAnimationController())
+        controller->ClearLocalPoseOverride();
+
+    closeEyeWeight = 0.0f;
+    closeEyePreviewActive = false;
+    deathEyeCloseActive = false;
+}
+
+void Player::BeginDeathEyeClose()
+{
+    ResetEyeCloseOverride();
+    deathEyeCloseActive = true;
+    RebuildEyeClosePoseOverride();
+}
+
+void Player::UpdateDeathEyeClose(const float deathElapsedTime)
+{
+    if (!deathEyeCloseActive)
+        return;
+
+    const float normalizedCloseEyeTime = std::clamp(
+        (deathElapsedTime - closeEyeStartTime) /
+        (std::max)(closeEyeDuration, FLT_EPSILON),
+        0.0f,
+        1.0f);
+    closeEyeWeight = normalizedCloseEyeTime * normalizedCloseEyeTime *
+        (3.0f - 2.0f * normalizedCloseEyeTime);
+    GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
+}
+
+void Player::EndDeathEyeClose()
+{
+    ResetEyeCloseOverride();
 }
 
 // 火花エフェクトの生成
@@ -2706,9 +2816,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     //}
 
     const char* targetState = hp > 0 ? "Damage" : "DeathPending";
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[PlayerDamage][Applied] targetState=" + std::string(targetState) +
-        " knockback=" + std::to_string(direction.x) + "," +
+    Logger::Log(Logger::LogCategory::Gameplay,"[PlayerDamage][Applied] targetState=" + std::string(targetState) +" knockback=" + std::to_string(direction.x) + "," +
         std::to_string(direction.y) + "," + std::to_string(direction.z));
     stateMachine_->ChangeState(targetState);
     return true;

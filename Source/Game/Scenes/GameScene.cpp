@@ -533,8 +533,7 @@ void GameScene::EnterPlayerDead()
                 if (const auto lockedPlayer = weakPlayer.lock())
                 {
                     const auto stateMachine = lockedPlayer->GetStateMachine();
-                    if (stateMachine &&
-                        std::string(stateMachine->GetStateName()) == "DeathPending")
+                    if (stateMachine && std::string(stateMachine->GetStateName()) == "DeathPending")
                     {
                         stateMachine->ChangeState("Death");
                     }

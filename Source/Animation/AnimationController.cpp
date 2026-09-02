@@ -908,6 +908,8 @@ void AnimationController::ApplyEditorPreviewPose()
         target_->model->CumulateTransforms(finalNodes);
     }
 
+    ApplyLocalPoseOverride();
+
     target_->SetModelNodes(finalNodes);
     target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
     for (auto* extraTarget : extraTargets_)

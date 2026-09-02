@@ -86,7 +86,12 @@ public:
 
     void DrawImGuiDetails()override;
 
-    void Finalize()override { ForceResetPlayerSlow(); ForceResetBossSlow(); }
+    void Finalize()override
+    {
+        ResetEyeCloseOverride();
+        ForceResetPlayerSlow();
+        ForceResetBossSlow();
+    }
 
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
 
@@ -126,6 +131,10 @@ public:
     // Clears Player-owned transient combat state and restores full HP at the saved battle start.
     void ResetForBattleContinue(const Transform& battleStartTransform);
 
+    void BeginDeathEyeClose();
+    void UpdateDeathEyeClose(float deathElapsedTime);
+    void EndDeathEyeClose();
+
     // Stops residual attacks when the battle has ended without restoring HP.
     void StopBattleActions();
 
@@ -154,6 +163,9 @@ public:
 
 private:
     void ClearTransientBattleActions();
+
+    bool RebuildEyeClosePoseOverride();
+    void ResetEyeCloseOverride();
 
     void HandleAnimationPlaySE(const AnimationNotifyEvent& event);
 
@@ -353,9 +365,10 @@ public:
     float rushPromptAnimationTimer = 0.0f;
     bool rushPromptWasVisible = false;
 
+    // ラッシュのUIの数値
     DirectX::XMFLOAT2 rushGuidePosition = { 1200.0f, 680.0f };
     DirectX::XMFLOAT2 rushButtonPosition = { 1195.0f, 590.0f };
-    DirectX::XMFLOAT2 rushWordPosition = { 800.0f, 450.0f };
+    DirectX::XMFLOAT2 rushWordPosition = { 1197.0f, 532.0f };
     DirectX::XMFLOAT2 rushGuideSize = { 244.0f, 197.5f };
     DirectX::XMFLOAT2 rushButtonSize = { 104.0f, 116.0f };
     DirectX::XMFLOAT2 rushWordSize = { 124.5f, 68.0f };
@@ -447,6 +460,14 @@ private:
     float damageFlashBodyTintStrength = 0.5f;
     float damageFlashRimStrength = 1.0f;
     DirectX::XMFLOAT3 damageFlashColor = { 0.85f, 0.08f, 0.05f };
+
+    // 目を閉じる処理の変数
+    float closedEyePoseTime = 4.125f;
+    float closeEyeStartTime = 0.7f;
+    float closeEyeDuration = 0.4f;
+    float closeEyeWeight = 0.0f;
+    bool closeEyePreviewActive = false;
+    bool deathEyeCloseActive = false;
 
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     float hitStopTimer = 0.0f; // ヒットストップのタイマー
