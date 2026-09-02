@@ -356,7 +356,7 @@ private:
     bool showRightWeaponTrail = false;
 
     // ãOê’ÇÃêF
-    DirectX::XMFLOAT3 bossTrailColor{ 0.95f, 0.72f, 0.06f };
+    DirectX::XMFLOAT3 bossTrailColor{ 0.0f, 0.13f, 0.002f };
     float bossTrailEmissiveStrength = 7.0f;
     float bossTrailLifetime = 0.8f;
 

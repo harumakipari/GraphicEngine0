@@ -12,7 +12,7 @@
             "parameter": "boss_death",
             "time": 0.6464739441871643,
             "type": "PlaySE",
-            "value": 0.7599999904632568
+            "value": 1.0
         }
     ],
     "loop": false,

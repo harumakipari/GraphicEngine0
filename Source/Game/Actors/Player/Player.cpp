@@ -1063,8 +1063,8 @@ void Player::DrawImGuiDetails()
 
     if (ImGui::CollapsingHeader(U8("ジャスト回避のプレイヤーの残像")))
     {
-        ImGui::DragFloat(U8("プレイヤーの残像のライフタイム"), &playerPoseGhostLifetime,0.01f, 0.0f, 5.0f, "%.2f sec");
         ImGui::DragFloat(U8("プレイヤーの残像の初回の透明度"), &playerPoseGhostInitialAlpha,0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::DragFloat(U8("プレイヤーの残像のライフタイム"), &playerPoseGhostLifetime,0.01f, 0.0f, 5.0f, "%.2f sec");
         ImGui::DragFloat("Player Ghost Spawn Interval", &playerGhostSpawnInterval,
             0.001f, 0.0f, 1.0f, "%.3f sec");
         ImGui::ColorEdit3("Player Ghost Color", &playerPoseGhostColor.x);

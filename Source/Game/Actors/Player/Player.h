@@ -438,7 +438,7 @@ public:
     };
     std::array<SwordGhost, 8> ghosts;
 
-    // Just Dodge成立時のPlayer固定Pose Ghost（Phase 1は1枚のみ）
+    // Just Dodge成立時のPlayer固定Pose Ghost
     struct PlayerPoseGhost
     {
         std::shared_ptr<SkeletalMeshComponent> renderConstantsComponent;
@@ -448,7 +448,7 @@ public:
         float elapsedTime = 0.0f;
         bool isVisible = false;
     };
-    std::array<PlayerPoseGhost, 4> playerPoseGhosts;
+    std::array<PlayerPoseGhost, 6> playerPoseGhosts;
 
     // ダッシュのスピード
     float dashSpeed = 6.2f;
@@ -515,12 +515,12 @@ private:
     bool isPrevSwordWorldValid = false;
 
     // playerのジャスト回避の残像の調整値
-    float playerPoseGhostInitialAlpha = 2.5f;   // プレイヤーの残像の初回の透明度
-    float playerPoseGhostLifetime = 1.0f;      // プレイヤーの残像のライフタイム
-    float playerGhostSpawnInterval = 0.3f;
+    float playerPoseGhostInitialAlpha = 0.4f;   // プレイヤーの残像の初回の透明度
+    float playerPoseGhostLifetime = 0.81f;      // プレイヤーの残像のライフタイム
+    float playerGhostSpawnInterval = 0.25f;
     DirectX::XMFLOAT3 playerPoseGhostColor = { 0.5f, 0.8f, 1.6f };
     float playerPoseGhostEmissive = 2.0f;
-    DirectX::XMFLOAT3 playerPoseGhostEdgeColor = { 0.0f, 0.042f, 0.253f };
+    DirectX::XMFLOAT3 playerPoseGhostEdgeColor = { 0.973f, 0.911f, 0.443f };
     DirectX::XMFLOAT3 playerPoseGhostInnerColor = { 1.0f, 1.0f, 1.0f };
     float playerPoseGhostEdgeWidth = 1.0f;
     float playerPoseGhostSpawnTimer = 0.0f;
