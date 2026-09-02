@@ -88,6 +88,7 @@ public:
 
     void Finalize()override
     {
+        ResetPlayerPoseGhost();
         ResetEyeCloseOverride();
         ForceResetPlayerSlow();
         ForceResetBossSlow();
@@ -144,6 +145,9 @@ public:
 
     // 軌跡を描画する処理
     void RenderTrail(ID3D11DeviceContext* immediateContext);
+
+    void CapturePlayerPoseGhost();
+    void ResetPlayerPoseGhost();
 
     // Focus開始時のForwardを設定する
     void SetFocusDirection(const DirectX::XMFLOAT3& focusDir)
@@ -434,6 +438,18 @@ public:
     };
     std::array<SwordGhost, 8> ghosts;
 
+    // Just Dodge成立時のPlayer固定Pose Ghost（Phase 1は1枚のみ）
+    struct PlayerPoseGhost
+    {
+        std::shared_ptr<SkeletalMeshComponent> renderConstantsComponent;
+        std::vector<InterleavedGltfModel::Node> nodes;
+        DirectX::XMFLOAT4X4 world = {};
+        float alpha = 0.0f;
+        float elapsedTime = 0.0f;
+        bool isVisible = false;
+    };
+    PlayerPoseGhost playerPoseGhost;
+
     // ダッシュのスピード
     float dashSpeed = 6.2f;
     // 歩きのスピード
@@ -495,8 +511,12 @@ private:
     DirectX::XMFLOAT3 activeGhostEdgeColor{};
     bool rushWeaponVisualEnabled = false;
     float ghostEdgeWidth = 1.0f; // 残像の輪郭
+    float playerPoseGhostInitialAlpha = 2.5f;   // プレイヤーの残像の初回の透明度
+    float playerPoseGhostLifetime = 1.0f;      // プレイヤーの残像のライフタイム
     DirectX::XMFLOAT4X4 prevSwordWorld; // 前回の姿勢
     bool isPrevSwordWorldValid = false;
+
+    void UpdatePlayerPoseGhost();
 
     float weaponSphereRadius = 0.75f;    // 剣の球の当たり判定の半径
 
@@ -549,7 +569,7 @@ private:
     float playerSlowReturnElapsed = 0.0f;
     float bossSlowReturnElapsed = 0.0f;
 
-    
+
     float playerSlowReturnStartScale = 1.0f;
     float bossSlowReturnStartScale = 1.0f;
     float activeBossSlowReturnDuration = 0.10f;

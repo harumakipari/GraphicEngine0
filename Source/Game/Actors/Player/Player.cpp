@@ -375,6 +375,17 @@ void Player::Initialize(const Transform& transform)
         ghost.swordMeshComp->overrideDeferredPipelineName = "PlayerSwordGhostPS";
     }
 
+    // 固定Pose Ghostは通常のRender Queueへ出さず、SceneBaseから手動描画する。
+    playerPoseGhost.renderConstantsComponent =
+        this->AddComponent<SkeletalMeshComponent>("PlayerPoseGhost", parentName);
+    playerPoseGhost.renderConstantsComponent->SetModel(
+        "./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
+    playerPoseGhost.renderConstantsComponent->SetIsVisible(false);
+    playerPoseGhost.renderConstantsComponent->SetIsCastShadow(false);
+    playerPoseGhost.renderConstantsComponent->overrideForwardPipelineName = "PlayerSwordGhostPS";
+    playerPoseGhost.renderConstantsComponent->overrideDeferredPipelineName = "PlayerSwordGhostPS";
+    ResetPlayerPoseGhost();
+
     // 火花エフェクト用のコンポーネントを追加
     sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
     sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
@@ -496,6 +507,9 @@ void Player::Initialize(const Transform& transform)
 void Player::Update(float deltaTime)
 {
     using namespace DirectX;
+
+    // Just Dodge SlowやHitStopの影響を受けない実時間Fade。
+    UpdatePlayerPoseGhost();
 
     if (battleActionsSuspended)
         return;
@@ -994,7 +1008,7 @@ void Player::SetRushWeaponVisual(const bool enabled)
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
-    if (ImGui::CollapsingHeader("Eye Close Debug"))
+    if (ImGui::CollapsingHeader(U8("目を閉じるデバック")))
     {
         const bool manualControlsEnabled = !deathEyeCloseActive;
         if (!manualControlsEnabled)
@@ -1042,6 +1056,13 @@ void Player::DrawImGuiDetails()
             deathEyeCloseActive ? "Death Auto" :
             closeEyePreviewActive ? "Manual Preview" : "Animation");
     }
+
+    if (ImGui::CollapsingHeader(U8("ジャスト回避のプレイヤーの残像")))
+    {
+        ImGui::DragFloat(U8("プレイヤーの残像のライフタイム"), &playerPoseGhostLifetime,0.01f, 0.0f, 5.0f, "%.2f sec");
+        ImGui::DragFloat(U8("プレイヤーの残像の初回の透明度"), &playerPoseGhostInitialAlpha,0.01f, 0.0f, 1.0f, "%.2f");
+    }
+
 
     if (ImGui::CollapsingHeader("Player HP UI"))
     {
@@ -1961,6 +1982,7 @@ void Player::ClearTransientBattleActions()
         ghost.isVisible = false;
         if (ghost.swordMeshComp) ghost.swordMeshComp->SetIsVisible(false);
     }
+    ResetPlayerPoseGhost();
     StopAttackTargetRotation();
     StopKnockBackForcedMove();
     knockBackActive = false;
@@ -3286,6 +3308,7 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
+    CapturePlayerPoseGhost();
     // スローモーションにする
     // rush時のtargetを保存する
     rushTarget = enemy;
@@ -3311,6 +3334,71 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 
     // UIを表示する
     //rushButtonImageComponent->SetVisible(true);
+}
+
+void Player::CapturePlayerPoseGhost()
+{
+    if (!skeletalMeshComponent || !playerPoseGhost.renderConstantsComponent)
+        return;
+
+    const auto& currentNodes = skeletalMeshComponent->GetNodes();
+    if (currentNodes.empty())
+        return;
+
+    playerPoseGhost.nodes = currentNodes;
+    playerPoseGhost.world = skeletalMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+    playerPoseGhost.elapsedTime = 0.0f;
+    playerPoseGhost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f);
+    playerPoseGhost.isVisible = playerPoseGhost.alpha > 0.0f &&
+        playerPoseGhostLifetime > FLT_EPSILON;
+
+    auto& constants = playerPoseGhost.renderConstantsComponent->plusAlphaCBuffer->data;
+    constants.emissionPower = swordGhostEmissive;
+    constants.cpuColor = {
+        activeGhostBaseColor.x,
+        activeGhostBaseColor.y,
+        activeGhostBaseColor.z,
+        playerPoseGhost.alpha };
+    constants.effectParameters.edgeColor = {
+        activeGhostEdgeColor.x,
+        activeGhostEdgeColor.y,
+        activeGhostEdgeColor.z,
+        1.0f };
+    constants.effectParameters.innerColor = {
+        ghostInnerColor.x,
+        ghostInnerColor.y,
+        ghostInnerColor.z,
+        1.0f };
+    constants.effectParameters.edgeWidth = ghostEdgeWidth;
+}
+
+void Player::UpdatePlayerPoseGhost()
+{
+    if (!playerPoseGhost.isVisible)
+        return;
+
+    const float lifetime = (std::max)(playerPoseGhostLifetime, FLT_EPSILON);
+    playerPoseGhost.elapsedTime += Time::UnscaledDeltaTime();
+    const float normalizedAge = std::clamp(
+        playerPoseGhost.elapsedTime / lifetime, 0.0f, 1.0f);
+    playerPoseGhost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f) *
+        (1.0f - normalizedAge);
+    if (playerPoseGhost.renderConstantsComponent)
+    {
+        playerPoseGhost.renderConstantsComponent->plusAlphaCBuffer->data.cpuColor.w =
+            playerPoseGhost.alpha;
+    }
+
+    if (normalizedAge >= 1.0f)
+        ResetPlayerPoseGhost();
+}
+
+void Player::ResetPlayerPoseGhost()
+{
+    playerPoseGhost.nodes.clear();
+    playerPoseGhost.alpha = 0.0f;
+    playerPoseGhost.elapsedTime = 0.0f;
+    playerPoseGhost.isVisible = false;
 }
 
 void Player::BeginPlayerSlowReturn()
