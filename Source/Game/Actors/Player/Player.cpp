@@ -1092,6 +1092,18 @@ void Player::DrawImGuiDetails()
             0.01f, 0.0f, 10.0f);
     }
 
+    if (ImGui::CollapsingHeader(U8("プレイヤー瀕死状態時の数値調整")))
+    {
+        ImGui::DragInt(U8("瀕死判定HP"), &lowHpThreshold, 1, 0, 50);
+        ImGui::Checkbox(U8("瀕死演出有効"), &lowHpActive);
+        ImGui::DragFloat(U8("心拍間隔"), &heartbeatInterval, 0.01f, 0.0f, 5.0f, "%.2f sec");
+        ImGui::DragFloat(U8("脈動時間"), &lowHpPulseDuration, 0.01f, 0.0f, 5.0f, "%.2f sec");
+        ImGui::DragFloat(U8("瀕死赤発光強度"), &lowHpPulseFlashAmount, 0.01f, 0.0f, 5.0f, "%.2f");
+        ImGui::DragFloat(U8("瀕死ビネット濃度"), &lowHpVignetteBaseAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::DragFloat(U8("ビネット脈動最大濃度"), &lowHpVignettePulseAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
+    }
+
+
 
     if (ImGui::CollapsingHeader("Player HP UI"))
     {

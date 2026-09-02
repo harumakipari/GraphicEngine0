@@ -207,7 +207,26 @@ private:
     float CalculateRequiredLockOnFramingDistance();
 
     // Collision 後の実カメラ位置から、Safe Frame を満たす垂直 FOV を逆算する
-    float CalculateRequiredLockOnFov(bool& outValid) const;
+    struct LockOnFovSampleDiagnostics
+    {
+        DirectX::XMFLOAT3 cameraSpace{};
+        float requiredFovFromX = 0.0f;
+        float requiredFovFromY = 0.0f;
+        bool inFront = false;
+    };
+
+    struct LockOnFovDiagnostics
+    {
+        LockOnFovSampleDiagnostics player{};
+        LockOnFovSampleDiagnostics boss{};
+        std::string limiter = "Invalid";
+    };
+
+    float CalculateRequiredLockOnFov(bool& outValid);
+    float EvaluateRequiredLockOnFovFromEye(
+        const DirectX::XMFLOAT3& eye,
+        LockOnFovDiagnostics& diagnostics,
+        bool& outValid) const;
     void UpdateLockOnFovFallback(float deltaTime);
 
     // LockOn開始時に前回の適応値を持ち越さない
@@ -343,6 +362,8 @@ private:
     float lockOnFramingDeficit = 0.0f;
     bool lockOnFramingActive = false;
     float lockOnRequiredFovDegree = 45.0f;
+    float lockOnCollisionPreRequiredFovDegree = 45.0f;
+    LockOnFovDiagnostics lockOnFovDiagnostics{};
     float lockOnTargetFovDegree = 45.0f;
     float lockOnCurrentFovDegree = 45.0f;
     float lockOnFovReturnDelayElapsed = 0.0f;
@@ -394,6 +415,10 @@ private:
     float wallDistance = 7.1f;
     float cameraHitDistance = 0.0f; // カメラと壁の距離
     bool cameraHitWall = false;   // カメラが壁に当たったかどうか
+    bool cameraCollisionInitialOverlap = false;
+    DirectX::XMFLOAT3 cameraCollisionHitPoint{};
+    DirectX::XMFLOAT3 cameraCollisionHitNormal{};
+    float cameraCollisionHitDistance = 0.0f;
     float cameraFov = 35.0f;
     float wallBlend = 0.0f;
     float smoothHitDistance = 0.0f;

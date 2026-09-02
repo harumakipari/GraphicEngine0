@@ -832,16 +832,31 @@ float DarkCameraActor::CalculateRequiredLockOnFramingDistance()
         lockOnRequiredYDistance });
 }
 
-float DarkCameraActor::CalculateRequiredLockOnFov(bool& outValid) const
+float DarkCameraActor::CalculateRequiredLockOnFov(bool& outValid)
+{
+    LockOnFovDiagnostics collisionPreDiagnostics{};
+    bool collisionPreValid = false;
+    lockOnCollisionPreRequiredFovDegree = EvaluateRequiredLockOnFovFromEye(
+        collisionPreEyePosition, collisionPreDiagnostics, collisionPreValid);
+
+    return EvaluateRequiredLockOnFovFromEye(
+        collisionPostEyePosition, lockOnFovDiagnostics, outValid);
+}
+
+float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
+    const DirectX::XMFLOAT3& eye,
+    LockOnFovDiagnostics& diagnostics,
+    bool& outValid) const
 {
     outValid = false;
+    diagnostics = {};
     const auto playerHeadShared = playerHead.lock();
     const auto enemyHeadShared = enemyHead.lock();
     if (!playerHeadShared || !enemyHeadShared)
         return lockOnSettings.fovDegree;
 
     const DirectX::XMFLOAT3 forwardVector = MathHelper::Subtract(
-        currentPose.target, collisionPostEyePosition);
+        currentPose.target, eye);
     if (MathHelper::Length(forwardVector) <= 0.1f)
         return lockOnSettings.fovDegree;
 
@@ -877,29 +892,58 @@ float DarkCameraActor::CalculateRequiredLockOnFov(bool& outValid) const
     enemyLookPosition.y += lockOnEnemyLookHeight;
 
     float requiredTanVertical = 0.0f;
-    const auto evaluateSample = [&](const DirectX::XMFLOAT3& sample)
+    const auto evaluateSample = [&](const DirectX::XMFLOAT3& sample,
+        LockOnFovSampleDiagnostics& sampleDiagnostics,
+        const char* sampleName)
     {
         const DirectX::XMFLOAT3 relative = MathHelper::Subtract(
-            sample, collisionPostEyePosition);
-        const float x = std::abs(MathHelper::Dot(relative, cameraRight));
-        const float y = std::abs(MathHelper::Dot(relative, cameraUp));
+            sample, eye);
+        const float signedX = MathHelper::Dot(relative, cameraRight);
+        const float signedY = MathHelper::Dot(relative, cameraUp);
         const float z = MathHelper::Dot(relative, cameraForward);
+        sampleDiagnostics.cameraSpace = { signedX, signedY, z };
         constexpr float nearZ = 0.1f;
-        if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(z) || z <= nearZ)
+        sampleDiagnostics.inFront = std::isfinite(z) && z > nearZ;
+        if (!std::isfinite(signedX) || !std::isfinite(signedY) ||
+            !std::isfinite(z) || !sampleDiagnostics.inFront)
+        {
             return false;
+        }
 
+        const float x = std::abs(signedX);
+        const float y = std::abs(signedY);
         const float requiredTanVerticalFromY = y / (z * safeScaleY);
         const float requiredTanHorizontal = x / (z * safeScaleX);
         const float requiredTanVerticalFromX = requiredTanHorizontal / aspect;
-        requiredTanVertical = (std::max)({
-            requiredTanVertical,
-            requiredTanVerticalFromY,
-            requiredTanVerticalFromX });
+        sampleDiagnostics.requiredFovFromX = DirectX::XMConvertToDegrees(
+            2.0f * std::atan(requiredTanVerticalFromX));
+        sampleDiagnostics.requiredFovFromY = DirectX::XMConvertToDegrees(
+            2.0f * std::atan(requiredTanVerticalFromY));
+
+        if (requiredTanVerticalFromX > requiredTanVertical)
+        {
+            requiredTanVertical = requiredTanVerticalFromX;
+            diagnostics.limiter = std::string(sampleName) + "-X";
+        }
+        if (requiredTanVerticalFromY > requiredTanVertical)
+        {
+            requiredTanVertical = requiredTanVerticalFromY;
+            diagnostics.limiter = std::string(sampleName) + "-Y";
+        }
         return std::isfinite(requiredTanVertical);
     };
 
-    if (!evaluateSample(playerLookPosition) || !evaluateSample(enemyLookPosition))
+    const bool playerValid = evaluateSample(
+        playerLookPosition, diagnostics.player, "Player");
+    const bool bossValid = evaluateSample(
+        enemyLookPosition, diagnostics.boss, "Boss");
+    if (!playerValid || !bossValid)
+    {
+        diagnostics.limiter = !playerValid
+            ? "Invalid / Player Behind Camera"
+            : "Invalid / Boss Behind Camera";
         return lockOnSettings.fovDegree;
+    }
 
     const float requiredFovDegree = DirectX::XMConvertToDegrees(
         2.0f * std::atan(requiredTanVertical));
@@ -1224,8 +1268,16 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
 
     cameraHitWall = CollisionFunction::SphereRayCast(target, eye, hit, sphereCastRadius, mask);
     cameraCollisionHitName = "None";
+    cameraCollisionInitialOverlap = false;
+    cameraCollisionHitPoint = {};
+    cameraCollisionHitNormal = {};
+    cameraCollisionHitDistance = 0.0f;
     if (cameraHitWall)
     {
+        cameraCollisionInitialOverlap = hit.initialOverlap;
+        cameraCollisionHitPoint = hit.hitPoint;
+        cameraCollisionHitNormal = hit.normal;
+        cameraCollisionHitDistance = hit.distance;
         float collisionOffset = sphereCastRadius + 0.05f;
         // è≠ÇµéËëOÇ…èoÇ∑
         idealEye = MathHelper::Add(hit.hitPoint,
@@ -1422,6 +1474,18 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::Text("Actual Camera Distance: %.3f", actualCameraDistance);
         ImGui::Text("Collision Ratio: %.3f", cameraCollisionRatio);
         ImGui::Text("Adaptive Collision Ratio: %.3f", lockOnCollisionRatioForAdaptive);
+        ImGui::SeparatorText("Collision Diagnostics");
+        ImGui::Text("Collision Hit: %s", cameraHitWall ? "true" : "false");
+        ImGui::Text("Initial Overlap: %s",
+            cameraCollisionInitialOverlap ? "true" : "false");
+        ImGui::Text("SphereCast Hit Point: %.3f, %.3f, %.3f",
+            cameraCollisionHitPoint.x, cameraCollisionHitPoint.y,
+            cameraCollisionHitPoint.z);
+        ImGui::Text("SphereCast Hit Normal: %.3f, %.3f, %.3f",
+            cameraCollisionHitNormal.x, cameraCollisionHitNormal.y,
+            cameraCollisionHitNormal.z);
+        ImGui::Text("SphereCast Hit Distance: %.3f",
+            cameraCollisionHitDistance);
         ImGui::Text("Player-Boss Distance: %.3f", lockOnEnemyDistance);
         ImGui::Text("Base Distance: %.3f", lockOnSettings.distance);
         ImGui::Text("Horizontal Extent: %.3f", lockOnHorizontalExtent);
@@ -1461,6 +1525,31 @@ void DarkCameraActor::DrawImGuiDetails()
             lockOnFovFallbackReturnDelay, 0.0f);
         ImGui::Text("Base LockOn FOV: %.2f", lockOnSettings.fovDegree);
         ImGui::Text("Required FOV: %.2f", lockOnRequiredFovDegree);
+        ImGui::Text("Collision Pre Required FOV: %.2f",
+            lockOnCollisionPreRequiredFovDegree);
+        ImGui::Text("Collision Post Required FOV: %.2f",
+            lockOnRequiredFovDegree);
+        ImGui::SeparatorText("Player Camera Space");
+        ImGui::Text("Player X / Y / Z: %.3f / %.3f / %.3f",
+            lockOnFovDiagnostics.player.cameraSpace.x,
+            lockOnFovDiagnostics.player.cameraSpace.y,
+            lockOnFovDiagnostics.player.cameraSpace.z);
+        ImGui::Text("Player In Front: %s",
+            lockOnFovDiagnostics.player.inFront ? "true" : "false");
+        ImGui::Text("Player Required FOV From X / Y: %.2f / %.2f",
+            lockOnFovDiagnostics.player.requiredFovFromX,
+            lockOnFovDiagnostics.player.requiredFovFromY);
+        ImGui::SeparatorText("Boss Camera Space");
+        ImGui::Text("Boss X / Y / Z: %.3f / %.3f / %.3f",
+            lockOnFovDiagnostics.boss.cameraSpace.x,
+            lockOnFovDiagnostics.boss.cameraSpace.y,
+            lockOnFovDiagnostics.boss.cameraSpace.z);
+        ImGui::Text("Boss In Front: %s",
+            lockOnFovDiagnostics.boss.inFront ? "true" : "false");
+        ImGui::Text("Boss Required FOV From X / Y: %.2f / %.2f",
+            lockOnFovDiagnostics.boss.requiredFovFromX,
+            lockOnFovDiagnostics.boss.requiredFovFromY);
+        ImGui::Text("Framing Limiter: %s", lockOnFovDiagnostics.limiter.c_str());
         ImGui::Text("Target FOV: %.2f", lockOnTargetFovDegree);
         ImGui::Text("Current FOV: %.2f", lockOnCurrentFovDegree);
         ImGui::Text("Max Fallback FOV: %.2f", lockOnMaxFallbackFovDegree);
