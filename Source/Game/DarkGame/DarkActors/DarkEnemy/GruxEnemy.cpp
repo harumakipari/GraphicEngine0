@@ -274,6 +274,16 @@ void GruxEnemy::Initialize(const Transform& transform)
     weaponRightTipComponent = AddComponent<SceneComponent>("weaponRightTipComponent", "weaponRightRootComponent");
     weaponRightTipComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-1.6f });
 
+    // 左足のコンポーネントを追加
+    int socketLeftFootNode = skeletalMeshComponent->FindIndexByName("ik_foot_l");
+    leftFootComponent = AddComponent<SceneComponent>("leftFootComponent", parentName);
+    leftFootComponent->AttachToComponent(skeletalMeshComponent, socketLeftFootNode); // "ik_foot_l"
+
+    // 右足のコンポーネントを追加
+    int socketRightFootNode = skeletalMeshComponent->FindIndexByName("ik_foot_r");
+    rightFootComponent = AddComponent<SceneComponent>("rightFootComponent", parentName);
+    rightFootComponent->AttachToComponent(skeletalMeshComponent, socketRightFootNode); // "ik_foot_r"
+
     int leftEyeSocketNode = skeletalMeshComponent->FindIndexByName("L_eye");
     int rightEyeSocketNode = skeletalMeshComponent->FindIndexByName("R_eye");
 
@@ -333,9 +343,14 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     wallImpactFlashEffectComponent = this->AddComponent<class ParticleComponent>("wallImpactFlashEffectComponent", parentName);
     wallImpactFlashEffectComponent->Load("./Data/Effect/Files/WallImpactFlashEffect.json");
-
+    // 武器同士が当たった時の火花
     metalSparkEffectComponent = this->AddComponent<class ParticleComponent>("metalSparkEffectComponent", parentName);
     metalSparkEffectComponent->Load("./Data/Effect/Files/MetalSparkEffect1.json");
+
+    // 足摺のエフェクト
+    footScrapeEffectComponent = this->AddComponent<class ParticleComponent>("footScrapeEffectComponent", parentName);
+    footScrapeEffectComponent->Load("./Data/Effect/Files/FootSlideDustEffect1.json");
+
 
     leftWeaponTrail.Initialize();
     rightWeaponTrail.Initialize();
@@ -1012,6 +1027,14 @@ void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
         else if (event.parameter == "WeaponClash")
         {
             SpawnWeaponClashEffect();
+        }
+        else if (event.parameter == "LeftFootScrape")
+        {
+            SpawnLeftFootScrapeEffect();
+        }
+        else if (event.parameter == "RightFootScrape")
+        {
+            SpawnRightFootScrapeEffect();
         }
         break;
     }
@@ -2771,7 +2794,7 @@ void GruxEnemy::SpawnGroundImpactEffect() const
         EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
 
         // 足元に生成する
-        DirectX::XMFLOAT3 groundDustPosition= GetPosition();
+        DirectX::XMFLOAT3 groundDustPosition = GetPosition();
         groundDustEffectComponent->SetWorldLocationDirect(groundDustPosition);
         groundDustEffectComponent->UpdateComponentToWorld();
         EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
@@ -2873,10 +2896,48 @@ void GruxEnemy::SpawnWeaponClashEffect() const
     }
 }
 
-// 足を地面に擦る時のエフェクトを生成する
-void  GruxEnemy::SpawnFootScrapeEffect()const
+// 左足を地面に擦る時のエフェクトを生成する
+void  GruxEnemy::SpawnLeftFootScrapeEffect()const
 {
-   // 左足と右足。
+    DirectX::XMFLOAT3 spawnPosition = GetPosition();
+    if (leftFootComponent)
+    {
+        const DirectX::XMFLOAT3 leftFootPosition = leftFootComponent->GetComponentLocation();
+        spawnPosition.x = leftFootPosition.x;
+        spawnPosition.z = leftFootPosition.z;
+    }
+
+    if (footScrapeEffectComponent)
+    {
+        footScrapeEffectComponent->SetWorldLocationDirect(spawnPosition);
+        footScrapeEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(
+            footScrapeEffectComponent->GetEffectHandle(),
+            footScrapeEffectComponent->GetComponentLocation(),
+            { 0.0f, 0.0f, 0.0f });
+    }
+}
+
+// 右足を地面に擦る時のエフェクトを生成する
+void  GruxEnemy::SpawnRightFootScrapeEffect()const
+{
+    DirectX::XMFLOAT3 spawnPosition = GetPosition();
+    if (rightFootComponent)
+    {
+        const DirectX::XMFLOAT3 rightFootPosition = rightFootComponent->GetComponentLocation();
+        spawnPosition.x = rightFootPosition.x;
+        spawnPosition.z = rightFootPosition.z;
+    }
+
+    if (footScrapeEffectComponent)
+    {
+        footScrapeEffectComponent->SetWorldLocationDirect(spawnPosition);
+        footScrapeEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(
+            footScrapeEffectComponent->GetEffectHandle(),
+            footScrapeEffectComponent->GetComponentLocation(),
+            { 0.0f, 0.0f, 0.0f });
+    }
 }
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
@@ -3070,6 +3131,10 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
             SpawnGroundImpactEffect();
         if (event.parameter == "WeaponClash")
             SpawnWeaponClashEffect();
+        if (event.parameter == "LeftFootScrape")
+            SpawnLeftFootScrapeEffect();
+        if (event.parameter == "RightFootScrape")
+            SpawnRightFootScrapeEffect();
         break;
     case AnimationNotifyEvent::Type::CameraShake:
     {

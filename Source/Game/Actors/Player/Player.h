@@ -76,7 +76,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        maxHp = 10;
+        //maxHp = 10;
         hp = maxHp;
     }
 
@@ -88,6 +88,7 @@ public:
 
     void Finalize()override
     {
+        ResetLowHpEffects();
         ResetPlayerPoseGhost();
         ResetEyeCloseOverride();
         ForceResetPlayerSlow();
@@ -467,6 +468,23 @@ public:
     // ラッシュの時のコンボカウント（回避中にもラッシュをカウントするための変数）
     int rushQueuedAttackCount = 0;
 private:
+    void UpdateLowHpEffects();
+    void TriggerLowHpPulse();
+    void ResetLowHpEffects();
+
+    int lowHpThreshold = 13;
+    bool lowHpActive = false;
+    float heartbeatTimer = 0.0f;
+    float heartbeatInterval = 3.0f;
+    float lowHpPulseTimer = 0.0f;
+    float lowHpPulseDuration = 0.4f;
+    float lowHpPulseFlashAmount = 0.0f;
+    float lowHpVignetteBaseAlpha = 0.12f;
+    float lowHpVignettePulseAlpha = 0.32f;
+    std::string lowHpVignetteTexturePath = "./Data/Textures/UI/hp_low.png";
+    std::string heartbeatSEPath = "./Data/Sound/SE/player_heartbeat.wav";
+    std::shared_ptr<UIImageComponent> lowHpVignetteImageComponent;
+
     void StartDamageFlash();
     void UpdateDamageFlash();
     void ApplyDamageFlash(float flashAmount);

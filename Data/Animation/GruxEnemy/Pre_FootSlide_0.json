@@ -9,10 +9,22 @@
             "value": 0.3100000023841858
         },
         {
+            "parameter": "RightFootScrape",
+            "time": 1.3466442823410034,
+            "type": "SpawnEffect",
+            "value": 0.0
+        },
+        {
             "parameter": "boss_charge_foot_scrape5",
             "time": 2.039377450942993,
             "type": "PlaySE",
             "value": 0.550000011920929
+        },
+        {
+            "parameter": "LeftFootScrape",
+            "time": 2.039377450942993,
+            "type": "SpawnEffect",
+            "value": 0.0
         }
     ],
     "loop": false,

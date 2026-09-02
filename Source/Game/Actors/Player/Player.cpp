@@ -406,6 +406,20 @@ void Player::Initialize(const Transform& transform)
     SetRushWeaponVisual(false);
     // ÉâÉbÉVÉÖéûÇÃUIÇçÏê¨
     auto uiManager = GetOwnerScene()->GetUIManager();
+    if (!lowHpVignetteTexturePath.empty() &&
+        std::filesystem::exists(lowHpVignetteTexturePath))
+    {
+        lowHpVignetteImageComponent = std::make_shared<UIImageComponent>(
+            lowHpVignetteTexturePath, "LowHpVignette");
+        lowHpVignetteImageComponent->SetWorldPosition({ 960.0f, 540.0f });
+        lowHpVignetteImageComponent->SetSize({ 1920.0f, 1080.0f });
+        lowHpVignetteImageComponent->SetPivot({ 0.5f, 0.5f });
+        lowHpVignetteImageComponent->SetColor(CoreColor{ 1.0f, 0.12f, 0.08f, 0.0f });
+        lowHpVignetteImageComponent->SetVisible(false);
+        lowHpVignetteImageComponent->zOrder = 100;
+        uiManager->Add(lowHpVignetteImageComponent);
+    }
+
     rushGuideImageComponent = std::make_shared<UIImageComponent>(
         "./Data/Textures/UI/Rush/rush_x_a_b1.png", "RushGuide");
     rushGuideImageComponent->SetWorldPosition(rushGuidePosition);
@@ -515,12 +529,14 @@ void Player::Update(float deltaTime)
     // Just Dodge SlowÇ‚HitStopÇÃâeãøÇéÛÇØÇ»Ç¢é¿éûä‘FadeÅB
     UpdatePlayerPoseGhost();
 
+    // Low HP feedback must observe death/recovery even while battle actions are suspended.
+    UpdateLowHpEffects();
+    UpdateDamageFlash();
+
     if (battleActionsSuspended)
         return;
 
     const bool gameplayInputEnabled = !IsInWinState();
-
-    UpdateDamageFlash();
 
     // Player HP UI uses unscaled time so HitStop / Slow do not pause the delayed gauge.
     const float currentHp = static_cast<float>((std::max)(hp, 0));
@@ -2011,6 +2027,7 @@ void Player::ClearTransientBattleActions()
 
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
+    ResetLowHpEffects();
     ResetEyeCloseOverride();
 
     battleActionsSuspended = false;
@@ -2871,10 +2888,83 @@ void Player::UpdateDamageFlash()
             0.0f, damageFlashTimer - Time::UnscaledDeltaTime());
     }
 
-    const float flashAmount = damageFlashDuration > FLT_EPSILON
+    const float damageFlashAmount = damageFlashDuration > FLT_EPSILON
         ? std::clamp(damageFlashTimer / damageFlashDuration, 0.0f, 1.0f)
         : 0.0f;
-    ApplyDamageFlash(flashAmount);
+    ApplyDamageFlash((std::max)(damageFlashAmount, lowHpPulseFlashAmount));
+}
+
+void Player::UpdateLowHpEffects()
+{
+    const bool shouldBeLowHp = hp > 0 && hp <= lowHpThreshold;
+    if (!shouldBeLowHp)
+    {
+        if (lowHpActive || heartbeatTimer > 0.0f || lowHpPulseTimer > 0.0f ||
+            lowHpPulseFlashAmount > 0.0f)
+        {
+            ResetLowHpEffects();
+        }
+        return;
+    }
+
+    if (!lowHpActive)
+    {
+        lowHpActive = true;
+        heartbeatTimer = 0.0f;
+        TriggerLowHpPulse();
+    }
+
+    if (!CoreAudio::GetSystemPaused())
+    {
+        const float unscaledDeltaTime = (std::max)(0.0f, Time::UnscaledDeltaTime());
+        heartbeatTimer += unscaledDeltaTime;
+        lowHpPulseTimer = (std::max)(0.0f, lowHpPulseTimer - unscaledDeltaTime);
+
+        if (heartbeatInterval > FLT_EPSILON && heartbeatTimer >= heartbeatInterval)
+        {
+            heartbeatTimer = std::fmod(heartbeatTimer, heartbeatInterval);
+            TriggerLowHpPulse();
+        }
+    }
+
+    const float pulseLinear = lowHpPulseDuration > FLT_EPSILON
+        ? std::clamp(lowHpPulseTimer / lowHpPulseDuration, 0.0f, 1.0f)
+        : 0.0f;
+    const float pulseAmount = pulseLinear * pulseLinear * (3.0f - 2.0f * pulseLinear);
+    lowHpPulseFlashAmount = pulseAmount;
+
+    if (lowHpVignetteImageComponent)
+    {
+        const float alpha = std::lerp(
+            lowHpVignetteBaseAlpha, lowHpVignettePulseAlpha, pulseAmount);
+        lowHpVignetteImageComponent->SetColor(CoreColor{ 1.0f, 0.12f, 0.08f, alpha });
+        lowHpVignetteImageComponent->SetVisible(true);
+    }
+}
+
+void Player::TriggerLowHpPulse()
+{
+    lowHpPulseTimer = (std::max)(0.0f, lowHpPulseDuration);
+    lowHpPulseFlashAmount = lowHpPulseTimer > 0.0f ? 1.0f : 0.0f;
+
+    if (!heartbeatSEPath.empty() && std::filesystem::exists(heartbeatSEPath))
+    {
+        CoreAudio::PlayOneShot(heartbeatSEPath);
+    }
+}
+
+void Player::ResetLowHpEffects()
+{
+    lowHpActive = false;
+    heartbeatTimer = 0.0f;
+    lowHpPulseTimer = 0.0f;
+    lowHpPulseFlashAmount = 0.0f;
+
+    if (lowHpVignetteImageComponent)
+    {
+        lowHpVignetteImageComponent->SetColor(CoreColor{ 1.0f, 0.12f, 0.08f, 0.0f });
+        lowHpVignetteImageComponent->SetVisible(false);
+    }
 }
 
 void Player::ApplyDamageFlash(float flashAmount)

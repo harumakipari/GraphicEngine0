@@ -325,9 +325,11 @@ private:
     // 武器同士の火花のエフェクトを生成する
     void SpawnWeaponClashEffect() const;
 
-    // 足を地面に擦る時のエフェクトを生成する
-    void SpawnFootScrapeEffect()const;
+    // 左足を地面に擦る時のエフェクトを生成する
+    void SpawnLeftFootScrapeEffect()const;
 
+    // 右足を地面に擦る時のエフェクトを生成する
+    void SpawnRightFootScrapeEffect()const;
 
 
 private:
@@ -354,6 +356,10 @@ private:
     std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // 右の武器の中間のコンポーネント
     std::shared_ptr<SceneComponent> weaponRightTipComponent;  // 右の武器の先端のコンポーネント
 
+    std::shared_ptr<SceneComponent> leftFootComponent;      // 左足のコンポーネント
+    std::shared_ptr<SceneComponent> rightFootComponent;     // 右足のコンポーネント
+
+
     Trail leftWeaponTrail;
     Trail rightWeaponTrail;
     bool showLeftWeaponTrail = false;
@@ -371,6 +377,7 @@ private:
     std::shared_ptr<ParticleComponent> wallImpactDustEffectComponent;
     std::shared_ptr<ParticleComponent> wallImpactFlashEffectComponent;
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
+    std::shared_ptr<ParticleComponent> footScrapeEffectComponent;   // 足摺のエフェクト
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HPバー
