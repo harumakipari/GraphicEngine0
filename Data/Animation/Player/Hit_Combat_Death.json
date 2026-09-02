@@ -1,0 +1,21 @@
+{
+    "animationClip": 21,
+    "animationName": "Hit_Combat_Death",
+    "events": [
+        {
+            "parameter": "player_damage_voice",
+            "time": 0.41308024525642395,
+            "type": "PlaySE",
+            "value": 0.17000000178813934
+        },
+        {
+            "parameter": "player_death",
+            "time": 1.710265040397644,
+            "type": "PlaySE",
+            "value": 0.8399999737739563
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

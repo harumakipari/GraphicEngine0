@@ -369,8 +369,8 @@ public:
     DirectX::XMFLOAT2 rushGuidePosition = { 1200.0f, 680.0f };
     DirectX::XMFLOAT2 rushButtonPosition = { 1195.0f, 590.0f };
     DirectX::XMFLOAT2 rushWordPosition = { 1197.0f, 532.0f };
-    DirectX::XMFLOAT2 rushGuideSize = { 244.0f, 197.5f };
-    DirectX::XMFLOAT2 rushButtonSize = { 104.0f, 116.0f };
+    DirectX::XMFLOAT2 rushGuideSize = { 488.0f, 379.f };
+    DirectX::XMFLOAT2 rushButtonSize = { 300.0f, 300.0f };
     DirectX::XMFLOAT2 rushWordSize = { 124.5f, 68.0f };
     DirectX::XMFLOAT2 rushGuideScale = { 0.7f, 0.7f };
     DirectX::XMFLOAT2 rushButtonBaseScale = { 0.88f, 0.88f };

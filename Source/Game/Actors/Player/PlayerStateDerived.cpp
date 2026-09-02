@@ -471,9 +471,12 @@ void PlayerDeathPendingState::Enter()
     // ボスとプレイヤーの構図のために回転させる
     if (auto gruxEnemy = player->GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
     {
-        DirectX::XMFLOAT3 deathDirection = MathHelper::Subtract(player->GetPosition(), gruxEnemy->GetPosition());
-        deathDirection = MathHelper::Normalize(deathDirection);
-        player->rotationComponent->SetDirection(deathDirection);
+        DirectX::XMFLOAT3 deathDirection = MathHelper::Subtract(gruxEnemy->GetPosition(), player->GetPosition());deathDirection.y = 0.0f;
+        if (MathHelper::Length(deathDirection) > FLT_EPSILON)
+        {
+            deathDirection = MathHelper::Normalize(deathDirection);
+            player->rotationComponent->SetDirectionImmediate(deathDirection);
+        }
     }
 
 }

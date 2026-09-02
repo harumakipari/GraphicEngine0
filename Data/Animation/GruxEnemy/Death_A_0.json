@@ -1,0 +1,21 @@
+{
+    "animationClip": 18,
+    "animationName": "Death_A_0",
+    "events": [
+        {
+            "parameter": "boss_hit_voice1",
+            "time": 0.21304252743721008,
+            "type": "PlaySE",
+            "value": 0.3199999928474426
+        },
+        {
+            "parameter": "boss_death",
+            "time": 0.6464739441871643,
+            "type": "PlaySE",
+            "value": 0.7599999904632568
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}
