@@ -801,7 +801,8 @@ void AnimationController::ProcessEditorPreviewEvents(
     for (const auto& event : assetIt->second.notifyTrack.events)
     {
         if (event.type != AnimationNotifyEvent::Type::PlaySE &&
-            event.type != AnimationNotifyEvent::Type::CameraShake)
+            event.type != AnimationNotifyEvent::Type::CameraShake &&
+            event.type != AnimationNotifyEvent::Type::SpawnEffect)
         {
             continue;
         }

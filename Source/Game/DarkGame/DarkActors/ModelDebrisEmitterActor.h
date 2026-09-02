@@ -31,18 +31,49 @@ public:
     void Initialize(const Transform& transform) override;
     void Update(float deltaTime) override;
     void Emit(const DirectX::XMFLOAT3& impactPosition);
+    void DrawImGuiDetails() override;
 
 private:
+    struct MotionSettings
+    {
+        float horizontalSpeedMin;
+        float horizontalSpeedMax;
+        float upSpeedMin;
+        float upSpeedMax;
+        float lifetimeMin;
+        float lifetimeMax;
+        float scaleMin;
+        float scaleMax;
+        float angularVelocityMax;
+        float angularVelocityMinimumMagnitude;
+    };
+
     void InitializeDebris(DebrisType type, int index, const char* modelPath);
     void ActivateDebris(Debris& debris, const DirectX::XMFLOAT3& impactPosition,
         float baseAngleRadians);
     void DeactivateDebris(Debris& debris);
 
-    static constexpr int BlockCount = 3;
-    static constexpr int SmallDebriCount = 7;
+    static constexpr int MaxBlockPoolCount = 4;
+    static constexpr int MaxSmallDebriPoolCount = 8;
 
     std::vector<Debris> debrisPool;
     std::string parentName = "RootComponent";
 
     float gravity = 9.8f;
+    float spawnAngleRandomRange = 22.0f;
+    int activeBlockCount = 4;
+    int activeSmallDebriCount = 8;
+    MotionSettings blockSettings
+    {
+        2.5f, 3.5f,
+        3.f, 4.f,
+        1.2f, 1.5f,
+        1.3f, 1.7f,
+        420.0f, 180.0f };
+    MotionSettings smallDebriSettings{
+        3.3f, 5.2f,
+        2.5f, 4.2f,
+        1.4f, 1.7f,
+        2.f, 3.f,
+        720.0f, 300.0f };
 };

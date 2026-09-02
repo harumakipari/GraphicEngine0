@@ -982,6 +982,24 @@ void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
         break;
     }
     case AnimationNotifyEvent::Type::SpawnEffect:
+        if (event.parameter == "GroundImpact" && groundDustEffectComponent)
+        {
+            DirectX::XMFLOAT3 spawnPosition = GetPosition();
+            if (weaponRightTipComponent)
+            {
+                const DirectX::XMFLOAT3 weaponTipPosition =
+                    weaponRightTipComponent->GetComponentLocation();
+                spawnPosition.x = weaponTipPosition.x;
+                spawnPosition.z = weaponTipPosition.z;
+            }
+
+            groundDustEffectComponent->SetWorldLocationDirect(spawnPosition);
+            groundDustEffectComponent->UpdateComponentToWorld();
+            EffectManager::EmitParticle(
+                groundDustEffectComponent->GetEffectHandle(),
+                groundDustEffectComponent->GetComponentLocation(),
+                { 0.0f, 0.0f, 0.0f });
+        }
         break;
     }
 }
