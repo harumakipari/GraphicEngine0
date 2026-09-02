@@ -367,13 +367,13 @@ public:
 
     // ラッシュのUIの数値
     DirectX::XMFLOAT2 rushGuidePosition = { 1200.0f, 680.0f };
-    DirectX::XMFLOAT2 rushButtonPosition = { 1195.0f, 590.0f };
+    DirectX::XMFLOAT2 rushButtonPosition = { 1200.0f, 590.0f };
     DirectX::XMFLOAT2 rushWordPosition = { 1197.0f, 532.0f };
     DirectX::XMFLOAT2 rushGuideSize = { 488.0f, 379.f };
     DirectX::XMFLOAT2 rushButtonSize = { 300.0f, 300.0f };
     DirectX::XMFLOAT2 rushWordSize = { 124.5f, 68.0f };
-    DirectX::XMFLOAT2 rushGuideScale = { 0.7f, 0.7f };
-    DirectX::XMFLOAT2 rushButtonBaseScale = { 0.88f, 0.88f };
+    DirectX::XMFLOAT2 rushGuideScale = { 0.35f, 0.35f };
+    DirectX::XMFLOAT2 rushButtonBaseScale = { 0.35f, 0.35f };
     DirectX::XMFLOAT2 rushWordScale = { 1.0f, 1.0f };
 
     // 入力受付のコマンド
@@ -462,9 +462,9 @@ private:
     DirectX::XMFLOAT3 damageFlashColor = { 0.85f, 0.08f, 0.05f };
 
     // 目を閉じる処理の変数
-    float closedEyePoseTime = 4.125f;
-    float closeEyeStartTime = 0.7f;
-    float closeEyeDuration = 0.4f;
+    float closedEyePoseTime = 4.045f;
+    float closeEyeStartTime = 3.0f;
+    float closeEyeDuration = 1.4f;
     float closeEyeWeight = 0.0f;
     bool closeEyePreviewActive = false;
     bool deathEyeCloseActive = false;

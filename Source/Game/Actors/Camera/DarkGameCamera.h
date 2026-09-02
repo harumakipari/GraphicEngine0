@@ -44,10 +44,10 @@ public:
     };
     struct DeathCameraSettings
     {
-        float foregroundDistance = 3.0f;
-        float sideOffset = 0.9f;
-        float cameraHeight = -1.0f;
-        float lookHeight = -0.35f;
+        float foregroundDistance = 3.6f;
+        float sideOffset = -2.5f;
+        float cameraHeight = -0.55f;
+        float lookHeight = 0.5f;
         float bossLookWeight = 0.65f;
         float deathBlendTime = 1.0f;
     };
