@@ -365,6 +365,7 @@ private:
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect
     std::shared_ptr<ParticleComponent> groundDustEffectComponent;
     std::shared_ptr<ParticleComponent> wallImpactDustEffectComponent;
+    std::shared_ptr<ParticleComponent> wallImpactFlashEffectComponent;
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;

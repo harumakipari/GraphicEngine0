@@ -44,13 +44,22 @@ public:
     };
     struct DeathCameraSettings
     {
-        float foregroundDistance = 3.6f;
-        float sideOffset = -2.5f;
-        float cameraHeight = -0.55f;
-        float lookHeight = 0.5f;
-        float bossLookWeight = 0.65f;
+        float foregroundDistance = 3.15f;
+        float sideOffset = -1.1f;
+        float cameraHeight = -0.3f;
+        float lookHeight = -0.85f;
+        float bossLookWeight = 0.15f;
         float deathBlendTime = 1.0f;
     };
+    //struct DeathCameraSettings
+    //{
+    //    float foregroundDistance = 3.6f;
+    //    float sideOffset = -2.5f;
+    //    float cameraHeight = -0.55f;
+    //    float lookHeight = 0.5f;
+    //    float bossLookWeight = 0.65f;
+    //    float deathBlendTime = 1.0f;
+    //};
 
 public:
     //引数付きコンストラクタ

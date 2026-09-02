@@ -1,0 +1,222 @@
+{
+    "emitterDataList": [
+        {
+            "acceleration": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "alphaCurve": [
+                {
+                    "time": 0.0,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.20000000298023224,
+                    "value": 0.8999999761581421
+                },
+                {
+                    "time": 0.550000011920929,
+                    "value": 0.30000001192092896
+                },
+                {
+                    "time": 0.75,
+                    "value": 0.07999999821186066
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "blendState": 2,
+            "burstCount": 1,
+            "colorCurve": [
+                {
+                    "time": 0.0,
+                    "value": 1.0
+                },
+                {
+                    "time": 1.0,
+                    "value": 1.0
+                }
+            ],
+            "directionAxis": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "directionMode": 0,
+            "emissiveCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.800000011920929
+                },
+                {
+                    "time": 0.029999999329447746,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.20000000298023224,
+                    "value": 0.7799999713897705
+                },
+                {
+                    "time": 0.550000011920929,
+                    "value": 0.2199999988079071
+                },
+                {
+                    "time": 0.75,
+                    "value": 0.05000000074505806
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "emissivePower": 10.0,
+            "emitCount": [
+                1,
+                1
+            ],
+            "emitInterval": [
+                0.0,
+                0.0
+            ],
+            "emitRate": 0.0,
+            "emitterLifeTime": 0.07000000029802322,
+            "endColor": [
+                [
+                    1.0,
+                    0.8799999952316284,
+                    0.5799999833106995,
+                    1.0
+                ],
+                [
+                    1.0,
+                    0.9399999976158142,
+                    0.7200000286102295,
+                    1.0
+                ]
+            ],
+            "endSize": [
+                [
+                    0.6499999761581421,
+                    0.6499999761581421
+                ],
+                [
+                    0.8999999761581421,
+                    0.8999999761581421
+                ]
+            ],
+            "height": 0.0,
+            "initialDelay": [
+                0.0,
+                0.0
+            ],
+            "isBurst": true,
+            "lifeTime": [
+                0.05999999865889549,
+                0.07999999821186066
+            ],
+            "loop": false,
+            "maxParticles": 1,
+            "name": "WallImpactFlash",
+            "positionOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "radius": 0.0,
+            "renderingMode": 0,
+            "rotationEuler": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ],
+            "shapeType": 0,
+            "sizeCurve": [
+                {
+                    "time": 0.0,
+                    "value": 0.10000000149011612
+                },
+                {
+                    "time": 0.029999999329447746,
+                    "value": 1.0
+                },
+                {
+                    "time": 0.20000000298023224,
+                    "value": 0.75
+                },
+                {
+                    "time": 0.550000011920929,
+                    "value": 0.25
+                },
+                {
+                    "time": 1.0,
+                    "value": 0.0
+                }
+            ],
+            "sizeCurveMode": 1,
+            "speed": [
+                0.0,
+                0.0
+            ],
+            "startColor": [
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                [
+                    1.0,
+                    1.0,
+                    1.0,
+                    1.0
+                ]
+            ],
+            "startSize": [
+                [
+                    2.6500000953674316,
+                    2.6500000953674316
+                ],
+                [
+                    2.9000000953674316,
+                    2.9000000953674316
+                ]
+            ],
+            "texturePath": ".\\Data\\Effect\\DarkStageParticleTex\\white_core.png",
+            "textureSplitCount": [
+                1,
+                1
+            ],
+            "useGravity": false,
+            "velocity": [
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                [
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            ]
+        }
+    ],
+    "name": "WallImpactFlashEffect"
+}

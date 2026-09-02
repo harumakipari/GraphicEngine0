@@ -331,6 +331,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     wallImpactDustEffectComponent = this->AddComponent<class ParticleComponent>("wallImpactDustEffectComponent", parentName);
     wallImpactDustEffectComponent->Load("./Data/Effect/Files/WallImpactDustEffect.json");
 
+    wallImpactFlashEffectComponent = this->AddComponent<class ParticleComponent>("wallImpactFlashEffectComponent", parentName);
+    wallImpactFlashEffectComponent->Load("./Data/Effect/Files/WallImpactFlashEffect.json");
+
     metalSparkEffectComponent = this->AddComponent<class ParticleComponent>("metalSparkEffectComponent", parentName);
     metalSparkEffectComponent->Load("./Data/Effect/Files/MetalSparkEffect1.json");
 
@@ -2794,6 +2797,21 @@ void GruxEnemy::SpawnWallImpactEffect(
     DirectX::XMFLOAT3 normalizedWallNormal{};
     DirectX::XMStoreFloat3(&normalizedWallNormal, normal);
 
+    if (wallImpactFlashEffectComponent)
+    {
+        constexpr float flashSurfaceOffset = 0.03f;
+        const DirectX::XMFLOAT3 flashPosition{
+            impactPosition.x + normalizedWallNormal.x * flashSurfaceOffset,
+            impactPosition.y + normalizedWallNormal.y * flashSurfaceOffset,
+            impactPosition.z + normalizedWallNormal.z * flashSurfaceOffset };
+        wallImpactFlashEffectComponent->SetWorldLocationDirect(flashPosition);
+        wallImpactFlashEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(
+            wallImpactFlashEffectComponent->GetEffectHandle(),
+            wallImpactFlashEffectComponent->GetComponentLocation(),
+            { 0.0f, 0.0f, 0.0f });
+    }
+
     if (wallImpactDustEffectComponent)
     {
         const DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -4331,6 +4349,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
             : DirectX::XMFLOAT3{
                 -chargeDirection.x, -chargeDirection.y, -chargeDirection.z };
         SpawnWallImpactEffect(impactPosition, impactNormal);
+        Time::SetSlow(0.0f, 0.05f);
         Logger::Log(Logger::LogCategory::Gameplay,
             "[BossCharge][End] reason=WallHit distance=" +
             std::to_string(wallHit.distance));
