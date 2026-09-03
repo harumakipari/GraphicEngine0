@@ -86,6 +86,7 @@ public:
     void BeginIntentReevaluation();
     void MarkIntentAttackSelected();
     void OnSelectedActionStartedSuccessfully();
+    void RequestJumpAttackCameraAssist();
     void OnSelectedAttackCompletedSuccessfully();
     void OnSelectedActionStartFailed();
     void FailActiveIntent(const char* reason);

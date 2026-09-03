@@ -500,6 +500,9 @@ void EnemyAttackState::Enter()
         return;
     }
 
+    if (isJumpAttack)
+        enemy->RequestJumpAttackCameraAssist();
+
     if (!isJumpAttack)
         enemy->OnSelectedActionStartedSuccessfully();
 }

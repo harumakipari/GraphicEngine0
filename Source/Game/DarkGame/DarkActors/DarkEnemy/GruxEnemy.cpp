@@ -3788,6 +3788,19 @@ void GruxEnemy::MarkIntentAttackSelected()
     intentLifecycleTrace += " -> Attack Selected";
 }
 
+void GruxEnemy::RequestJumpAttackCameraAssist()
+{
+    Camera* activeCamera = GetOwnerScene()->GetActiveCamera();
+    if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
+    {
+        const DirectX::XMFLOAT3 bossCameraPosition = cameraTargetComponent
+            ? cameraTargetComponent->GetComponentLocation()
+            : GetPosition();
+        darkCamera->RequestOffscreenAttackAssist(
+            bossCameraPosition, 0.70f, 0.80f);
+    }
+}
+
 void GruxEnemy::OnSelectedActionStartedSuccessfully()
 {
     if (bossAIMode == BossAIMode::CombatAI &&
@@ -3805,15 +3818,11 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
     {
     case BossAttackType::ChargeAttack:
         cameraAssistStrength = 1.00f;
-        cameraAssistDuration = 0.40f;
-        break;
-    case BossAttackType::JumpAttack:
-        cameraAssistStrength = 0.70f;
-        cameraAssistDuration = 0.35f;
+        cameraAssistDuration = 0.50f;
         break;
     case BossAttackType::DashAttack:
         cameraAssistStrength = 0.65f;
-        cameraAssistDuration = 0.30f;
+        cameraAssistDuration = 0.80f;
         break;
     default:
         break;
