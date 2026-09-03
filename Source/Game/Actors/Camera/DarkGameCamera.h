@@ -131,6 +131,10 @@ public:
     // カメラモードをセットする
     void SetRequestMode(const CameraMode mode)
     {
+        if (mode != CameraMode::TPS)
+        {
+            CancelOffscreenAttackAssist();
+        }
         if (mode == requestMode)
         {
             return;
@@ -175,7 +179,38 @@ public:
 
     void PlayCameraShake(float intensity, float duration, float frequency,float positionAmount, float targetAmount);
     void PlayCameraShakePreset(const std::string& presetName);
+
+    void RequestOffscreenAttackAssist(
+        const DirectX::XMFLOAT3& worldPosition,
+        float strength,
+        float duration);
+    void CancelOffscreenAttackAssist();
 private:
+    struct ScreenProjectionResult
+    {
+        bool valid = false;
+        bool inFront = false;
+        bool insideViewport = false;
+        bool insideSafeFrame = false;
+        DirectX::XMFLOAT2 screenPosition{};
+        DirectX::XMFLOAT3 ndc{};
+        float clipW = 0.0f;
+    };
+
+    struct OffscreenAttackAssistState
+    {
+        bool active = false;
+        DirectX::XMFLOAT3 worldPosition{};
+        float strength = 0.0f;
+        float duration = 0.0f;
+        float elapsed = 0.0f;
+        float turnSign = 1.0f;
+    };
+
+    ScreenProjectionResult ProjectWorldPositionForOffscreenAssist(
+        const DirectX::XMFLOAT3& worldPosition) const;
+    void UpdateOffscreenAttackAssist(float deltaTime);
+
     // 外部のカメラアクターとのブレンド状態を更新する
     void UpdateExternalBlend(float deltaTime);
 
@@ -272,6 +307,19 @@ private:
 
     float currentPitch = 0.0f;
     float desiredPitch = 0.0f;
+
+
+    // TPSカメラの時にボスからカメラ外から攻撃された時の調整値
+    OffscreenAttackAssistState offscreenAttackAssist{};
+    ScreenProjectionResult offscreenAssistProjection{};
+    float offscreenAssistHorizontalSafeMargin = 0.12f;
+    float offscreenAssistVerticalSafeMargin = 0.12f;
+    float offscreenAssistMaxAngularSpeedDegree = 350.0f;
+    float offscreenAssistRightStickCancelThreshold = 0.22f;
+    float offscreenAssistRightStickMagnitude = 0.0f;
+    float offscreenAssistTargetYaw = 0.0f;
+    float offscreenAssistYawDelta = 0.0f;
+    float offscreenAssistAppliedYawStep = 0.0f;
 
     // ブレンド用のPoseを作成する
     CameraPose blendStartPose;

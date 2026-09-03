@@ -3798,6 +3798,40 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
         lastStartedCombatAttack = selectedActionType;
     }
 
+    // カメラ外にボスがいる時にカメラをボス側に補正する
+    float cameraAssistStrength = 0.0f;
+    float cameraAssistDuration = 0.0f;
+    switch (selectedAttackType)
+    {
+    case BossAttackType::ChargeAttack:
+        cameraAssistStrength = 1.00f;
+        cameraAssistDuration = 0.40f;
+        break;
+    case BossAttackType::JumpAttack:
+        cameraAssistStrength = 0.70f;
+        cameraAssistDuration = 0.35f;
+        break;
+    case BossAttackType::DashAttack:
+        cameraAssistStrength = 0.65f;
+        cameraAssistDuration = 0.30f;
+        break;
+    default:
+        break;
+    }
+
+    if (cameraAssistStrength > 0.0f && cameraAssistDuration > 0.0f)
+    {
+        Camera* activeCamera = GetOwnerScene()->GetActiveCamera();
+        if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
+        {
+            const DirectX::XMFLOAT3 bossCameraPosition = cameraTargetComponent
+                ? cameraTargetComponent->GetComponentLocation()
+                : GetPosition();
+            darkCamera->RequestOffscreenAttackAssist(
+                bossCameraPosition, cameraAssistStrength, cameraAssistDuration);
+        }
+    }
+
     if (!activeIntent)
         return;
 

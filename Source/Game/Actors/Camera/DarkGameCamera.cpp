@@ -53,6 +53,7 @@ void DarkCameraActor::Update(float deltaTime)
     auto playerHeadShared = playerHead.lock();
     if (!playerHeadShared)
     {
+        CancelOffscreenAttackAssist();
         return;
     }
     DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
@@ -195,6 +196,176 @@ const DarkCameraActor::CameraShakePreset* DarkCameraActor::FindCameraShakePreset
     return nullptr;
 }
 
+void DarkCameraActor::RequestOffscreenAttackAssist(
+    const DirectX::XMFLOAT3& worldPosition,
+    const float strength,
+    const float duration)
+{
+    offscreenAssistProjection =
+        ProjectWorldPositionForOffscreenAssist(worldPosition);
+    offscreenAssistAppliedYawStep = 0.0f;
+
+    if (currentMode != CameraMode::TPS || requestMode != CameraMode::TPS ||
+        isBlending || isExternalBlending || strength <= 0.0f || duration <= 0.0f ||
+        !offscreenAssistProjection.valid || offscreenAssistProjection.insideSafeFrame)
+    {
+        return;
+    }
+
+    DirectX::XMFLOAT3 toBoss =
+        MathHelper::Subtract(worldPosition, currentPose.target);
+    toBoss.y = 0.0f;
+    if (MathHelper::Length(toBoss) <= FLT_EPSILON)
+        return;
+
+    offscreenAttackAssist.active = true;
+    offscreenAttackAssist.worldPosition = worldPosition;
+    offscreenAttackAssist.strength = strength;
+    offscreenAttackAssist.duration = duration;
+    offscreenAttackAssist.elapsed = 0.0f;
+
+    offscreenAssistTargetYaw = atan2f(toBoss.x, toBoss.z);
+    offscreenAssistYawDelta =
+        MathHelper::ClampAngle(offscreenAssistTargetYaw - desiredYaw);
+    const float bossOnCameraRight =
+        toBoss.x * cosf(currentYaw) - toBoss.z * sinf(currentYaw);
+    if (std::abs(bossOnCameraRight) > FLT_EPSILON)
+        offscreenAttackAssist.turnSign = bossOnCameraRight > 0.0f ? 1.0f : -1.0f;
+    else
+        offscreenAttackAssist.turnSign = offscreenAssistYawDelta < 0.0f ? -1.0f : 1.0f;
+}
+
+void DarkCameraActor::CancelOffscreenAttackAssist()
+{
+    offscreenAttackAssist.active = false;
+    offscreenAssistAppliedYawStep = 0.0f;
+}
+
+DarkCameraActor::ScreenProjectionResult
+DarkCameraActor::ProjectWorldPositionForOffscreenAssist(
+    const DirectX::XMFLOAT3& worldPosition) const
+{
+    ScreenProjectionResult result{};
+    if (!mainCameraComponent)
+        return result;
+
+    using namespace DirectX;
+    const XMMATRIX view = XMLoadFloat4x4(&mainCameraComponent->GetView());
+    const XMMATRIX projection =
+        XMLoadFloat4x4(&mainCameraComponent->GetProjection());
+    const XMVECTOR world = XMVectorSet(
+        worldPosition.x, worldPosition.y, worldPosition.z, 1.0f);
+    const XMVECTOR clip = XMVector4Transform(world, view * projection);
+
+    XMFLOAT4 clipPosition{};
+    XMStoreFloat4(&clipPosition, clip);
+    result.clipW = clipPosition.w;
+    constexpr float clipWEpsilon = 0.0001f;
+    if (!std::isfinite(clipPosition.x) || !std::isfinite(clipPosition.y) ||
+        !std::isfinite(clipPosition.z) || !std::isfinite(clipPosition.w) ||
+        std::abs(clipPosition.w) <= clipWEpsilon)
+    {
+        return result;
+    }
+
+    result.valid = true;
+    result.inFront = clipPosition.w > clipWEpsilon;
+    result.ndc = {
+        clipPosition.x / clipPosition.w,
+        clipPosition.y / clipPosition.w,
+        clipPosition.z / clipPosition.w
+    };
+
+    float viewportX = 0.0f;
+    float viewportY = 0.0f;
+    float viewportWidth = 0.0f;
+    float viewportHeight = 0.0f;
+    Graphics::GetViewport(
+        viewportX, viewportY, viewportWidth, viewportHeight);
+    if (viewportWidth <= 0.0f || viewportHeight <= 0.0f)
+    {
+        result.valid = false;
+        return result;
+    }
+
+    result.screenPosition = {
+        viewportX + (result.ndc.x + 1.0f) * 0.5f * viewportWidth,
+        viewportY + (1.0f - result.ndc.y) * 0.5f * viewportHeight
+    };
+    result.insideViewport = result.inFront &&
+        std::abs(result.ndc.x) <= 1.0f &&
+        std::abs(result.ndc.y) <= 1.0f &&
+        result.ndc.z >= 0.0f && result.ndc.z <= 1.0f;
+
+    const float horizontalSafeExtent =
+        1.0f - 2.0f * std::clamp(
+            offscreenAssistHorizontalSafeMargin, 0.0f, 0.49f);
+    const float verticalSafeExtent =
+        1.0f - 2.0f * std::clamp(
+            offscreenAssistVerticalSafeMargin, 0.0f, 0.49f);
+    result.insideSafeFrame = result.insideViewport &&
+        std::abs(result.ndc.x) <= horizontalSafeExtent &&
+        std::abs(result.ndc.y) <= verticalSafeExtent;
+    return result;
+}
+
+void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
+{
+    offscreenAssistAppliedYawStep = 0.0f;
+    if (!offscreenAttackAssist.active)
+        return;
+
+    if (currentMode != CameraMode::TPS || requestMode != CameraMode::TPS ||
+        isBlending || isExternalBlending || !playerHead.lock())
+    {
+        CancelOffscreenAttackAssist();
+        return;
+    }
+
+    offscreenAssistProjection = ProjectWorldPositionForOffscreenAssist(
+        offscreenAttackAssist.worldPosition);
+    if (!offscreenAssistProjection.valid ||
+        offscreenAssistProjection.insideSafeFrame ||
+        offscreenAttackAssist.elapsed >= offscreenAttackAssist.duration)
+    {
+        CancelOffscreenAttackAssist();
+        return;
+    }
+
+    DirectX::XMFLOAT3 toBoss = MathHelper::Subtract(
+        offscreenAttackAssist.worldPosition, currentPose.target);
+    toBoss.y = 0.0f;
+    if (MathHelper::Length(toBoss) <= FLT_EPSILON)
+    {
+        CancelOffscreenAttackAssist();
+        return;
+    }
+
+    offscreenAssistTargetYaw = atan2f(toBoss.x, toBoss.z);
+    offscreenAssistYawDelta =
+        MathHelper::ClampAngle(offscreenAssistTargetYaw - desiredYaw);
+    constexpr float behindStabilizationRange =
+        DirectX::XM_PI / 180.0f * 2.0f;
+    if (std::abs(std::abs(offscreenAssistYawDelta) - DirectX::XM_PI) <=
+        behindStabilizationRange)
+    {
+        offscreenAssistYawDelta = std::copysign(
+            std::abs(offscreenAssistYawDelta), offscreenAttackAssist.turnSign);
+    }
+
+    const float maxStep = DirectX::XMConvertToRadians(
+        offscreenAssistMaxAngularSpeedDegree) *
+        offscreenAttackAssist.strength * deltaTime;
+    offscreenAssistAppliedYawStep = std::clamp(
+        offscreenAssistYawDelta, -maxStep, maxStep);
+    desiredYaw = MathHelper::ClampAngle(
+        desiredYaw + offscreenAssistAppliedYawStep);
+
+    offscreenAttackAssist.elapsed += deltaTime;
+    if (offscreenAttackAssist.elapsed >= offscreenAttackAssist.duration)
+        CancelOffscreenAttackAssist();
+}
+
 void DarkCameraActor::UpdateCameraShake(const float deltaTime)
 {
     shakePositionOffset = {};
@@ -250,6 +421,7 @@ void DarkCameraActor::StartDeathMode(std::function<void()> onBlendFinished)
 
 void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
 {
+    CancelOffscreenAttackAssist();
     (void)from;
     blendTime = 0.0f;
     isBlending = true;
@@ -354,6 +526,7 @@ void DarkCameraActor::RotateToPlayerForward()
 // 外部のカメラアクターとのブレンド用の関数
 void DarkCameraActor::StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration, std::function<void()> finishExternalBlend)
 {
+    CancelOffscreenAttackAssist();
     externalBlendDuration = duration;
     externalStartPose = start;
     externalTargetPose = target;
@@ -576,12 +749,20 @@ void DarkCameraActor::UpdateDesireRotation(float deltaTime)
     auto intent = inputComponent->GetIntent();
     // 右スティックの入力値
     DirectX::XMFLOAT2 rightStick = intent.rightMove;
+    offscreenAssistRightStickMagnitude = std::sqrt(
+        rightStick.x * rightStick.x + rightStick.y * rightStick.y);
     switch (currentMode)
     {
     case CameraMode::TPS:
+        if (offscreenAssistRightStickMagnitude >
+            offscreenAssistRightStickCancelThreshold)
+        {
+            CancelOffscreenAttackAssist();
+        }
         // 右スティックがYawになる
         desiredYaw += rightStick.x * rotateSpeed * deltaTime;
         desiredPitch += rightStick.y * rotateSpeed * deltaTime;
+        UpdateOffscreenAttackAssist(deltaTime);
         break;
     case CameraMode::Focus:
         if (std::abs(inputComponent->GetIntent().leftMove.x) >= FLT_EPSILON &&
@@ -1590,6 +1771,47 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::Text("Envelope: %.3f", currentShakeEnvelope);
 
         if (ImGui::Button("Reset Camera Tuning")) ResetCameraTuning();
+    }
+
+    if (ImGui::CollapsingHeader("TPS Offscreen Attack Assist",
+        ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::Text("Assist Active: %s",
+            offscreenAttackAssist.active ? "true" : "false");
+        ImGui::Text("Strength: %.3f", offscreenAttackAssist.strength);
+        ImGui::Text("Duration: %.3f", offscreenAttackAssist.duration);
+        ImGui::Text("Elapsed: %.3f", offscreenAttackAssist.elapsed);
+        ImGui::Text("Boss NDC: (%.3f, %.3f, %.3f)",
+            offscreenAssistProjection.ndc.x,
+            offscreenAssistProjection.ndc.y,
+            offscreenAssistProjection.ndc.z);
+        ImGui::Text("Boss In Front: %s",
+            offscreenAssistProjection.inFront ? "true" : "false");
+        ImGui::Text("Boss Inside Viewport: %s",
+            offscreenAssistProjection.insideViewport ? "true" : "false");
+        ImGui::Text("Boss Inside Safe Frame: %s",
+            offscreenAssistProjection.insideSafeFrame ? "true" : "false");
+        ImGui::Text("Current desiredYaw: %.3f deg",
+            DirectX::XMConvertToDegrees(desiredYaw));
+        ImGui::Text("Target Boss Yaw: %.3f deg",
+            DirectX::XMConvertToDegrees(offscreenAssistTargetYaw));
+        ImGui::Text("Yaw Delta: %.3f deg",
+            DirectX::XMConvertToDegrees(offscreenAssistYawDelta));
+        ImGui::Text("Applied Yaw Step: %.3f deg",
+            DirectX::XMConvertToDegrees(offscreenAssistAppliedYawStep));
+        ImGui::Text("Right Stick Magnitude: %.3f",
+            offscreenAssistRightStickMagnitude);
+
+        ImGui::SeparatorText("Tuning");
+        ImGui::DragFloat("Horizontal Safe Margin",
+            &offscreenAssistHorizontalSafeMargin, 0.005f, 0.0f, 0.49f);
+        ImGui::DragFloat("Vertical Safe Margin",
+            &offscreenAssistVerticalSafeMargin, 0.005f, 0.0f, 0.49f);
+        ImGui::DragFloat("Max Assist Angular Speed",
+            &offscreenAssistMaxAngularSpeedDegree, 1.0f, 0.0f, 720.0f,
+            "%.1f deg/sec");
+        ImGui::DragFloat("Right Stick Cancel Threshold",
+            &offscreenAssistRightStickCancelThreshold, 0.005f, 0.0f, 1.0f);
     }
 
     if (ImGui::CollapsingHeader("FOV Switching Debug", ImGuiTreeNodeFlags_DefaultOpen))

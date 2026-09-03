@@ -582,7 +582,10 @@ void GameScene::EnterBossDead()
     if (gruxEnemyActor)
         gruxEnemyActor->StopBattleActions();
     if (darkCameraActor)
+    {
+        darkCameraActor->CancelOffscreenAttackAssist();
         darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+    }
 }
 
 void GameScene::UpdateBattleFlow()
