@@ -146,6 +146,16 @@ public:
     float GetChargeWindupEndTime() const { return chargeWindupEndTime; }
     float GetStunDuration() const { return stunDuration; }
     bool IsDead() const { return hp <= 0; }
+    bool ConsumeBeginHuskParticleRequest()
+    {
+        const bool requested = beginHuskParticleRequest;
+        beginHuskParticleRequest = false;
+        return requested;
+    }
+    const std::shared_ptr<SkeletalMeshComponent>& GetSkeletalMeshComponent() const
+    {
+        return skeletalMeshComponent;
+    }
     const std::string& GetDeathAnimationName() const { return deathAnimationName; }
     void SetStunDebug(const char* phase, float elapsed)
     {
@@ -760,6 +770,7 @@ private:
     std::string recoverySourceDebug = "Default";
 
     bool isDeathPerform = false;
+    bool beginHuskParticleRequest = false;
     float pitchBaseValue = 0.45f;
 
     // 左目の位置用コンポーネントを追加　暗闇で光る目の表現用

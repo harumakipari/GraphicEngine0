@@ -159,6 +159,9 @@ protected:
     std::unique_ptr<husk_particles> huskParticles;
     std::unique_ptr<InterleavedGltfModel> particleMeshModel;
     std::unique_ptr<InterleavedGltfModel> swordGhostMeshModel;
+    bool gruxHuskCaptured = false;
+    bool gruxHuskCaptureRequested = false;
+    float gruxHuskDeathProgress = 0.0f;
 
 
     SIZE framebufferDimensions = {};

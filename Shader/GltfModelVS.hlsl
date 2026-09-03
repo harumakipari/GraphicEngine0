@@ -25,6 +25,7 @@ VS_OUT main(VS_IN vin)
     vin.position.w = 1;
     vout.position = mul(vin.position, mul(world, viewProjection));
     vout.wPosition = mul(vin.position, world);
+    vout.localPosition = vin.position.xyz;
 
     vout.currentClipPosition = vout.position;
     vout.previousClipPosition = mul(vin.position, mul(previousWorld, previousViewProjection));

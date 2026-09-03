@@ -48,6 +48,7 @@ struct VS_OUT
     float4 wNormal : NORMAL;
     float4 wTangent : TANGENT;
     float2 texcoord : TEXCOORD;
+    float3 localPosition : LOCAL_POSITION;
 
     float4 currentClipPosition : CURRENT_POSITION;
     float4 previousClipPosition : PREVIOUS_POSITION;
@@ -97,23 +98,23 @@ struct ModelEffectParameter
 
 cbuffer PLUS_ALPHA_CONSTANT_BUFFER : register(b5)
 {
-    float4 cpuColor; // F‚ğCPU‘¤‚Åw’è‚·‚é—p@iƒ_ƒ[ƒW“–‚½‚Á‚½‚Æ‚«‚Æ‚©j
+    float4 cpuColor; // è‰²ã‚’CPUå´ã§æŒ‡å®šã™ã‚‹ç”¨ã€€ï¼ˆãƒ€ãƒ¡ãƒ¼ã‚¸å½“ãŸã£ãŸã¨ãã¨ã‹ï¼‰
 
-    float modelHueShift; // F‘Š’²®
-    float modelSaturation; // Ê“x’²®
-    float modelBrightness; // –¾“x’²®
-    float modelDissolve; // ƒfƒBƒ]ƒ‹ƒu—p
+    float modelHueShift; // è‰²ç›¸èª¿æ•´
+    float modelSaturation; // å½©åº¦èª¿æ•´
+    float modelBrightness; // æ˜åº¦èª¿æ•´
+    float modelDissolve; // ãƒ‡ã‚£ã‚¾ãƒ«ãƒ–ç”¨
 
     float4 morphWeights;
 
-    float modelContrast; //ƒRƒ“ƒgƒ‰ƒXƒg’²®
-    float emissionPower; // ©ŒÈ”­Œõ‚Ì‹­‚³
-    float flashValue; //@”’‚­ƒtƒ‰ƒbƒVƒ…‚·‚é’l
-    int objectType; // ƒIƒuƒWƒFƒNƒg‚Ìí—Ş 0:’Êí 1:ƒvƒŒƒCƒ„[‚Æ‚©
+    float modelContrast; //ã‚³ãƒ³ãƒˆãƒ©ã‚¹ãƒˆèª¿æ•´
+    float emissionPower; // è‡ªå·±ç™ºå…‰ã®å¼·ã•
+    float flashValue; //ã€€ç™½ããƒ•ãƒ©ãƒƒã‚·ãƒ¥ã™ã‚‹å€¤
+    int objectType; // ã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®ç¨®é¡ 0:é€šå¸¸ 1:ãƒ—ãƒ¬ã‚¤ãƒ¤ãƒ¼ã¨ã‹
 
     ModelEffectParameter modelEffectParameter;
 
-    float chargePower; // “G‚ÌŠp‚È‚Ç‚ğŒõ‚ç‚¹‚é’l
+    float chargePower; // æ•µã®è§’ãªã©ã‚’å…‰ã‚‰ã›ã‚‹å€¤
 
 }
 
@@ -166,7 +167,7 @@ struct MaterialConstants
 
 StructuredBuffer<MaterialConstants> materials : register(t0);
 
-//PRIMITIVE_JOINT_CONSTANTS’è”ƒoƒbƒtƒ@‚ğ’è‹`
+//PRIMITIVE_JOINT_CONSTANTSå®šæ•°ãƒãƒƒãƒ•ã‚¡ã‚’å®šç¾©
 static const uint PRIMITIVE_MAX_JOINTS = 512;
 cbuffer PRIMITIVE_JOINT_CONSTANTS : register(b2)
 {

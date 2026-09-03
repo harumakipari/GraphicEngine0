@@ -5,6 +5,8 @@
 #include "Sampler.hlsli"
 
 
+
+
 #if 1
 #define BASECOLOR_TEXTURE 0 
 #define METALLIC_ROUGHNESS_TEXTURE 1 
@@ -21,6 +23,21 @@ struct PARTICLE
     float3 velocity;
     float age;
     int state;
+    float normalizedHeight;
+};
+
+cbuffer PARTICLE_CONSTANTS : register(b12)
+{
+    uint particle_count;
+    float particle_size;
+    float particle_option;
+    float delta_time;
+    float height_min;
+    float height_range;
+    float death_progress;
+    float detach_speed;
+    float gravity_;
+    float lifetime;
 };
 AppendStructuredBuffer<PARTICLE> particleBuffer : register(u1);
 
@@ -88,7 +105,7 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     T = normalize(T - N * dot(N, T));
     float3 B = normalize(cross(N, T) * sigma);
     
-    //”w–Ê‚É‚Â‚¢‚Ä‚ÍAÚü•ûŒü‚ÌŠî’êƒxƒNƒgƒ‹‚Í•„†‚ª”½“]‚·‚éB
+    //èƒŒé¢ã«ã¤ã„ã¦ã¯ã€æ¥ç·šæ–¹å‘ã®åŸºåº•ãƒ™ã‚¯ãƒˆãƒ«ã¯ç¬¦å·ãŒåè»¢ã™ã‚‹ã€‚
     if (isFrontFace == false)
     {
         T = -T;
@@ -107,7 +124,7 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     }
     
 #if 1
-    // “_ŒõŒ¹‚Ìˆ—
+    // ç‚¹å…‰æºã®å‡¦ç†
     float3 pointDiffuse = 0;
     float3 pointSpecular = 0;
     if (pointLightEnable != 0)
@@ -131,7 +148,7 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
                 const float3 R = reflect(-LP, N);
                 const float3 H = normalize(V + LP);
 
-                float3 pLi = float3(pointLights[i].color.xyz) * pointLights[i].color.w; // Œõ‚Ì‹P‚«
+                float3 pLi = float3(pointLights[i].color.xyz) * pointLights[i].color.w; // å…‰ã®è¼ã
 
                 const float NoH = max(0.0, dot(N, H));
                 const float HoV = max(0.0, dot(H, V));
@@ -142,13 +159,13 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         }
     }
 
-    // •½sŒõŒ¹‚Ìˆ—
+    // å¹³è¡Œå…‰æºã®å‡¦ç†
     float3 diffuse = 0;
     float3 specular = 0;
 
-     // ŠeŒõŒ¹‚É‘Î‚·‚éƒVƒF[ƒfƒBƒ“ƒOˆ—‚Ìƒ‹[ƒv 
+     // å„å…‰æºã«å¯¾ã™ã‚‹ã‚·ã‚§ãƒ¼ãƒ‡ã‚£ãƒ³ã‚°å‡¦ç†ã®ãƒ«ãƒ¼ãƒ—
     float3 L = normalize(-lightDirection.xyz);
-    float3 Li = float3(colorLight.x, colorLight.y, colorLight.z) * colorLight.w; //  Œõ‚Ì‹P‚«
+    float3 Li = float3(colorLight.x, colorLight.y, colorLight.z) * colorLight.w; //  å…‰ã®è¼ã
 
     const float NoL = max(0, 0.5 * dot(N, L) + 0.5);
     const float NoV = max(0, dot(N, V));
@@ -170,7 +187,7 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 #endif
 
 
-#if 1   // ‰æ‘œƒx[ƒX‚ÌÆ–¾
+#if 1   // ç”»åƒãƒ™ãƒ¼ã‚¹ã®ç…§æ˜
     float3 iblDiffuse = IblRadianceLambertian(N, V, roughnessFactor, cDiff, f0) * iblIntensity;
     float3 iblSpecular = IblRadianceGgx(N, V, roughnessFactor, f0) * iblIntensity;
 #endif
@@ -196,6 +213,8 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     p.velocity = 0;
     p.age = 0;
     p.state = 0;
+    p.normalizedHeight = saturate(
+        (pin.localPosition.y - height_min) / max(height_range, 0.0001));
     particleBuffer.Append(p);
 }
 #else

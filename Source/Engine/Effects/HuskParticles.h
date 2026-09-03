@@ -20,6 +20,7 @@ struct husk_particles
 		DirectX::XMFLOAT3 velocity;
 		float age{};
 		int state{};
+		float normalizedHeight{};
 	};
 
 	struct particle_constants
@@ -28,6 +29,12 @@ struct husk_particles
 		float particle_size{ 0.005f };
 		float particle_option{};
 		float delta_time{};
+		float height_min{};
+		float height_range{ 1.0f };
+		float death_progress{};
+		float detach_speed{ 0.35f };
+		float gravity{ -9.8f };
+		float lifetime{ 1.5f };
 	};
 	particle_constants particle_data;
 	std::unique_ptr<ConstantBuffer<particle_constants>> particleCBuffer;

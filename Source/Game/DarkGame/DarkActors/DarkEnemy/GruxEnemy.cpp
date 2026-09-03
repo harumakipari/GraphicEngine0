@@ -97,7 +97,8 @@ namespace
 
 void GruxEnemy::Initialize(const Transform& transform)
 {
-    maxHp = 75;
+    maxHp = 10;
+    //maxHp = 75;
     hp = maxHp;
     delayedHp = static_cast<float>(hp);
 
@@ -459,6 +460,7 @@ void GruxEnemy::StopBattleActions()
     ResetJustDodgeRecords("battle_stop");
 
     pendingAttackActionValid = false;
+    beginHuskParticleRequest = false;
     selectedActionType = BossActionType::AttackLA;
     selectedAttackType = BossAttackType::PrimaryAttackLA;
     selectedPositioningData.reset();
@@ -3113,6 +3115,12 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
+    if (event.parameter == "BeginHuskParticle" && isDeathPerform)
+    {
+        beginHuskParticleRequest = true;
+        return;
+    }
+
     switch (event.type)
     {
     case AnimationNotifyEvent::Type::PlaySE:

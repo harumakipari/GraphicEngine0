@@ -5,8 +5,12 @@ cbuffer PARTICLE_CONSTANTS : register(b12)
     float particle_size;
     float particle_option;
     float delta_time;
-    float4 position_on_near_plane;
-    float4 eye_position;
+    float height_min;
+    float height_range;
+    float death_progress;
+    float detach_speed;
+    float gravity_;
+    float lifetime;
 };
 
 #include "ViewConstants.hlsli"
@@ -30,4 +34,5 @@ struct particle
     float3 velocity;
     float age;
     int state;
+    float normalizedHeight;
 };

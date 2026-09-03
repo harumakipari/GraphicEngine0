@@ -21,6 +21,10 @@ void main(point VS_OUT input[1] : SV_POSITION, inout TriangleStream<GS_OUT> outp
     };
 	
     particle p = particle_buffer[input[0].vertex_id];
+    if (p.state == 2)
+    {
+        return;
+    }
 
     float3 Z = normalize(p.normal);
     float3 X = normalize(cross(Z, float3(0, 1, 0)));
@@ -34,7 +38,10 @@ void main(point VS_OUT input[1] : SV_POSITION, inout TriangleStream<GS_OUT> outp
         float3 corner_pos = billboard[vertex_index] * particle_size;
 
         element.position = mul(float4(p.position + mul(corner_pos, R), 1), viewProjection);
-        element.color = p.color;
+        const float fade = p.state == 1
+            ? saturate(1.0f - p.age / max(lifetime, 0.0001f))
+            : 1.0f;
+        element.color = float4(p.color.rgb, p.color.a * fade);
         element.texcoord = texcoords[vertex_index];
         output.Append(element);
     }

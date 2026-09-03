@@ -17,6 +17,7 @@
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Player/Player.h"
+#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Graphics/PostProcess/BloomEffect.h"
 #include "Graphics/PostProcess/DepthOfFieldEffect.h"
 #include "Graphics/PostProcess/FogEffect.h"
@@ -197,9 +198,29 @@ void SceneBase::Update(float deltaTime)
     {
         integrateParticles = !integrateParticles;
     }
-    if (integrateParticles)
+    auto grux = GetActorManager()->GetActorOfType<GruxEnemy>();
+    if (!grux)
     {
-        huskParticles->integrate(Graphics::GetDeviceContext(), deltaTime);
+        gruxHuskCaptured = false;
+        gruxHuskCaptureRequested = false;
+        gruxHuskDeathProgress = 0.0f;
+        if (huskParticles)
+        {
+            huskParticles->particle_data.particle_count = 0;
+        }
+    }
+    else
+    {
+        if (grux->ConsumeBeginHuskParticleRequest())
+            gruxHuskCaptureRequested = true;
+        if (gruxHuskCaptured)
+        {
+            gruxHuskDeathProgress = (std::min)(
+                gruxHuskDeathProgress + (std::max)(deltaTime, 0.0f), 1.0f);
+            huskParticles->particle_data.death_progress =
+                std::clamp(gruxHuskDeathProgress, 0.0f, 1.0f);
+            huskParticles->integrate(Graphics::GetDeviceContext(), deltaTime);
+        }
     }
 }
 
@@ -721,24 +742,37 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         //定数バッファ更新
 
         // HuskParticle
-#if 0
-        if (!integrateParticles)
+#if 1
+        if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>();
+            grux && gruxHuskCaptureRequested && !gruxHuskCaptured)
         {
             RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF, 0);
             RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
             RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
 
-            if (auto player = GetActorManager()->GetActorOfType<Player>())
+            const auto gruxMesh = grux->GetSkeletalMeshComponent();
+            if (gruxMesh && gruxMesh->model)
             {
-                auto world = player->swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
-                DirectX::XMStoreFloat4x4(&world, DirectX::XMLoadFloat4x4(&world) * DirectX::XMMatrixTranslation(0, 0, 0));
+                const auto aabb = gruxMesh->model->GetAABB();
+                huskParticles->particle_data.height_min = aabb.min.y;
+                huskParticles->particle_data.height_range =
+                    (std::max)(aabb.max.y - aabb.min.y, 0.001f);
+                huskParticles->particle_data.death_progress = 0.0f;
+                auto world = gruxMesh->GetComponentWorldTransform().ToWorldTransform();
                 huskParticles->accumulate_husk_particles(immediateContext, [&](ID3D11PixelShader* accumulate_husk_particles_ps)
                     {
                         PipeLineStateDesc pipeline;
                         pipeline.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
                         pipeline.pixelShader = accumulate_husk_particles_ps;
-                        particleMeshModel->Render(immediateContext, world, {}, InterleavedGltfModel::RenderPass::All, pipeline);
+                        gruxMesh->model->Render(immediateContext, world,
+                            gruxMesh->GetNodes(), InterleavedGltfModel::RenderPass::All, pipeline);
                     });
+                gruxHuskCaptured = true;
+                gruxHuskCaptureRequested = false;
+                gruxHuskDeathProgress = 0.0f;
+                gruxMesh->SetIsVisible(false);
+                Logger::Log("[HuskParticle] Grux captured particle_count=" +
+                    std::to_string(huskParticles->particle_data.particle_count));
             }
         }
 
@@ -747,7 +781,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
 
         huskParticles->render(immediateContext);
-#endif // 0
+#endif // 1
         // パーティクル描画
         EffectManager::Render(immediateContext);
 
