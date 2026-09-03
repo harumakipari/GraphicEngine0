@@ -498,6 +498,7 @@ float DarkCameraActor::GetFovDegreeForMode(CameraMode mode) const
 {
     if (mode == CameraMode::LockOn) return lockOnSettings.fovDegree;
     if (mode == CameraMode::Focus) return focusSettings.fovDegree;
+    if (mode == CameraMode::Death) return deathCameraSettings.fovDegree;
     return IsBossBattle() ? bossTpsFovDegree : tpsSettings.fovDegree;
 }
 
@@ -2056,6 +2057,8 @@ void DarkCameraActor::DrawImGuiDetails()
             0.05f, -10.0f, 10.0f);
         ImGui::DragFloat("Boss Look Weight", &deathCameraSettings.bossLookWeight,
             0.05f, -5.0f, 10.0f);
+        ImGui::SliderFloat("Death FOV", &deathCameraSettings.fovDegree,
+            10.0f, 120.0f, "%.1f deg");
         ImGui::DragFloat("Death Blend Time", &deathCameraSettings.deathBlendTime,
             0.01f, 0.01f, 5.0f, "%.2f sec");
 

@@ -76,7 +76,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        //maxHp = 10;
+        maxHp = 10;
         hp = maxHp;
     }
 
@@ -497,7 +497,7 @@ private:
 
     // –Ú‚ğ•Â‚¶‚éˆ—‚Ì•Ï”
     float closedEyePoseTime = 4.045f;
-    float closeEyeStartTime = 3.0f;
+    float closeEyeStartTime = 2.0f;
     float closeEyeDuration = 1.4f;
     float closeEyeWeight = 0.0f;
     bool closeEyePreviewActive = false;
