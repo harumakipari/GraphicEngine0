@@ -26,7 +26,7 @@ struct husk_particles
 	struct particle_constants
 	{
 		int particle_count{};
-		float particle_size{ 0.005f };
+		float particle_size{ 0.008f };
 		float particle_option{};
 		float delta_time{};
 		float height_min{};
@@ -35,16 +35,21 @@ struct husk_particles
 		float detach_speed{ 0.35f };
 		float gravity{ -9.8f };
 		float lifetime{ 1.5f };
-		float rise_speed{ 0.25f };
-		float max_start_delay{ 0.18f };
+		float rise_speed{ 0.5f };
+		float max_start_delay{ 0.28f };
 		float rise_speed_min_multiplier{ 0.6f };
 		float rise_speed_max_multiplier{ 1.4f };
 		float horizontal_random_speed{ 0.08f };
+		float fade_start_ratio{ 0.75f };
+		float lifetime_min_multiplier{ 0.85f };
+		float lifetime_max_multiplier{ 1.15f };
+		float display_ratio{ 0.75f };
 	};
 	particle_constants particle_data;
 	std::unique_ptr<ConstantBuffer<particle_constants>> particleCBuffer;
 
 	Microsoft::WRL::ComPtr<ID3D11Buffer> particle_buffer;
+	Microsoft::WRL::ComPtr<ID3D11Buffer> particle_backup_buffer;
 	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particle_buffer_uav;
 	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particle_append_buffer_uav;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particle_buffer_srv;
@@ -66,6 +71,8 @@ struct husk_particles
 
 	void integrate(ID3D11DeviceContext* immediate_context, float delta_time);
 	void render(ID3D11DeviceContext* immediate_context);
+	void backup_particles(ID3D11DeviceContext* immediate_context);
+	void restore_particles(ID3D11DeviceContext* immediate_context);
 
 	Microsoft::WRL::ComPtr<ID3D11PixelShader> accumulate_husk_particles_ps;
 	void accumulate_husk_particles(ID3D11DeviceContext* immediate_context, std::function<void(ID3D11PixelShader*)> drawcallback);

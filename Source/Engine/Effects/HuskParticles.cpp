@@ -21,6 +21,8 @@ husk_particles::husk_particles(ID3D11Device* device, size_t max_particle_count) 
     buffer_desc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
     hr = device->CreateBuffer(&buffer_desc, NULL, particle_buffer.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    hr = device->CreateBuffer(&buffer_desc, NULL, particle_backup_buffer.GetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     buffer_desc.ByteWidth = static_cast<UINT>(sizeof(uint32_t));
     buffer_desc.StructureByteStride = sizeof(uint32_t);
@@ -126,6 +128,16 @@ void husk_particles::render(ID3D11DeviceContext* immediate_context)
     immediate_context->PSSetShader(NULL, NULL, 0);
     immediate_context->GSSetShader(NULL, NULL, 0);
 }
+void husk_particles::backup_particles(ID3D11DeviceContext* immediate_context)
+{
+    immediate_context->CopyResource(particle_backup_buffer.Get(), particle_buffer.Get());
+}
+
+void husk_particles::restore_particles(ID3D11DeviceContext* immediate_context)
+{
+    immediate_context->CopyResource(particle_buffer.Get(), particle_backup_buffer.Get());
+}
+
 void husk_particles::accumulate_husk_particles(ID3D11DeviceContext* immediate_context, std::function<void(ID3D11PixelShader*)> drawcallback)
 {
     HRESULT hr{ S_OK };

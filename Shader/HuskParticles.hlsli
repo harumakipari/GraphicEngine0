@@ -16,6 +16,10 @@ cbuffer PARTICLE_CONSTANTS : register(b12)
     float rise_speed_min_multiplier;
     float rise_speed_max_multiplier;
     float horizontal_random_speed;
+    float fade_start_ratio;
+    float lifetime_min_multiplier;
+    float lifetime_max_multiplier;
+    float display_ratio;
 };
 
 #include "ViewConstants.hlsli"

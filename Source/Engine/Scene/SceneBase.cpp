@@ -203,6 +203,9 @@ void SceneBase::Update(float deltaTime)
     {
         gruxHuskCaptured = false;
         gruxHuskCaptureRequested = false;
+        gruxHuskPreviewCaptureRequested = false;
+        gruxHuskPlaybackActive = false;
+        gruxHuskBackupValid = false;
         gruxHuskDeathProgress = 0.0f;
         if (huskParticles)
         {
@@ -212,8 +215,14 @@ void SceneBase::Update(float deltaTime)
     else
     {
         if (grux->ConsumeBeginHuskParticleRequest())
+        {
             gruxHuskCaptureRequested = true;
-        if (gruxHuskCaptured)
+            // A real death event supersedes any previous debug preview capture.
+            gruxHuskCaptured = false;
+            gruxHuskPlaybackActive = false;
+            gruxHuskBackupValid = false;
+        }
+        if (gruxHuskPlaybackActive)
         {
             gruxHuskDeathProgress = (std::min)(
                 gruxHuskDeathProgress + (std::max)(deltaTime, 0.0f), 1.0f);
@@ -744,7 +753,8 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         // HuskParticle
 #if 1
         if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>();
-            grux && gruxHuskCaptureRequested && !gruxHuskCaptured)
+            grux && (gruxHuskCaptureRequested || gruxHuskPreviewCaptureRequested) &&
+            !gruxHuskCaptured)
         {
             RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF, 0);
             RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
@@ -769,8 +779,12 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                     });
                 gruxHuskCaptured = true;
                 gruxHuskCaptureRequested = false;
+                gruxHuskPreviewCaptureRequested = false;
+                gruxHuskPlaybackActive = true;
                 gruxHuskDeathProgress = 0.0f;
                 gruxMesh->SetIsVisible(false);
+                huskParticles->backup_particles(immediateContext);
+                gruxHuskBackupValid = true;
                 Logger::Log("[HuskParticle] Grux captured particle_count=" +
                     std::to_string(huskParticles->particle_data.particle_count));
             }
@@ -1121,6 +1135,54 @@ void SceneBase::DrawSceneSettingsTab()
     ImGui::Text("press K key to integrate particles");
     if (huskParticles)
     {
+        if (ImGui::Button("Capture & Play"))
+        {
+            // Invalidate the previous capture so the next deferred render captures
+            // the current animated pose and transform.
+            gruxHuskCaptured = false;
+            gruxHuskBackupValid = false;
+            gruxHuskPlaybackActive = false;
+            gruxHuskDeathProgress = 0.0f;
+            huskParticles->particle_data.death_progress = 0.0f;
+            huskParticles->particle_data.particle_count = 0;
+            if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
+            {
+                if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)
+                    mesh->SetIsVisible(true);
+            }
+            gruxHuskPreviewCaptureRequested = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Replay") && gruxHuskBackupValid)
+        {
+            huskParticles->restore_particles(Graphics::GetDeviceContext());
+            gruxHuskDeathProgress = 0.0f;
+            huskParticles->particle_data.death_progress = 0.0f;
+            gruxHuskPlaybackActive = true;
+            if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
+            {
+                if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)
+                    mesh->SetIsVisible(false);
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset"))
+        {
+            gruxHuskPlaybackActive = false;
+            gruxHuskDeathProgress = 0.0f;
+            huskParticles->particle_data.death_progress = 0.0f;
+            if (gruxHuskBackupValid)
+                huskParticles->restore_particles(Graphics::GetDeviceContext());
+            else
+                huskParticles->particle_data.particle_count = 0;
+            if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
+            {
+                if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)
+                    mesh->SetIsVisible(true);
+            }
+        }
+        ImGui::Text("Preview Capture Requested: %s", gruxHuskPreviewCaptureRequested ? "Yes" : "No");
+        ImGui::Text("Particle Backup: %s", gruxHuskBackupValid ? "Valid" : "None");
         ImGui::Checkbox("integrateParticles", &integrateParticles);
         ImGui::Text("accumulated husk particle count %d", huskParticles->particle_data.particle_count);
         ImGui::SliderFloat("particle_data.size", &huskParticles->particle_data.particle_size, +0.0f, +0.05f, "%.4f");
@@ -1129,10 +1191,20 @@ void SceneBase::DrawSceneSettingsTab()
         ImGui::SliderFloat("particle_data.rise_speed_min_multiplier", &huskParticles->particle_data.rise_speed_min_multiplier, 0.1f, 2.0f, "%.2fx");
         ImGui::SliderFloat("particle_data.rise_speed_max_multiplier", &huskParticles->particle_data.rise_speed_max_multiplier, 0.1f, 2.0f, "%.2fx");
         ImGui::SliderFloat("particle_data.horizontal_random_speed", &huskParticles->particle_data.horizontal_random_speed, 0.0f, 0.5f, "%.3f m/s");
+        ImGui::SliderFloat("particle_data.lifetime", &huskParticles->particle_data.lifetime, 0.1f, 10.0f, "%.3f sec");
+        ImGui::SliderFloat("particle_data.fade_start_ratio", &huskParticles->particle_data.fade_start_ratio, 0.0f, 1.0f, "%.3f");
+        ImGui::SliderFloat("particle_data.lifetime_min_multiplier", &huskParticles->particle_data.lifetime_min_multiplier, 0.1f, 2.0f, "%.2fx");
+        ImGui::SliderFloat("particle_data.lifetime_max_multiplier", &huskParticles->particle_data.lifetime_max_multiplier, 0.1f, 2.0f, "%.2fx");
+        ImGui::SliderFloat("particle_data.display_ratio", &huskParticles->particle_data.display_ratio, 0.0f, 1.0f, "%.2f");
         huskParticles->particle_data.max_start_delay = (std::max)(huskParticles->particle_data.max_start_delay, 0.0f);
         huskParticles->particle_data.rise_speed_min_multiplier = (std::max)(huskParticles->particle_data.rise_speed_min_multiplier, 0.0f);
         huskParticles->particle_data.rise_speed_max_multiplier = (std::max)(huskParticles->particle_data.rise_speed_max_multiplier, huskParticles->particle_data.rise_speed_min_multiplier);
         huskParticles->particle_data.horizontal_random_speed = (std::max)(huskParticles->particle_data.horizontal_random_speed, 0.0f);
+        huskParticles->particle_data.lifetime = (std::max)(huskParticles->particle_data.lifetime, 0.001f);
+        huskParticles->particle_data.fade_start_ratio = std::clamp(huskParticles->particle_data.fade_start_ratio, 0.0f, 1.0f);
+        huskParticles->particle_data.lifetime_min_multiplier = (std::max)(huskParticles->particle_data.lifetime_min_multiplier, 0.001f);
+        huskParticles->particle_data.lifetime_max_multiplier = (std::max)(huskParticles->particle_data.lifetime_max_multiplier, huskParticles->particle_data.lifetime_min_multiplier);
+        huskParticles->particle_data.display_ratio = std::clamp(huskParticles->particle_data.display_ratio, 0.0f, 1.0f);
     }
     ImGui::End();
 }

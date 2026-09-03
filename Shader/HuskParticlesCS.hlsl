@@ -7,6 +7,12 @@ float random01(uint seed)
     return frac(sin((float)seed * 12.9898f) * 43758.5453f);
 }
 
+float getParticleLifetime(uint id)
+{
+    const float lifetimeRandom = random01(id * 3u + 31u);
+    return lifetime * lerp(lifetime_min_multiplier, lifetime_max_multiplier, lifetimeRandom);
+}
+
 [numthreads(256, 1, 1)]
 void main(uint3 dtid : SV_DISPATCHTHREADID)
 {
@@ -40,7 +46,7 @@ void main(uint3 dtid : SV_DISPATCHTHREADID)
         {
             p.position += p.velocity * delta_time;
             p.age += delta_time;
-            if (p.age >= lifetime)
+            if (p.age >= getParticleLifetime(id))
             {
                 p.state = 2;
             }
