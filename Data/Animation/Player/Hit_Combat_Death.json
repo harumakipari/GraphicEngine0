@@ -9,6 +9,12 @@
             "value": 0.17000000178813934
         },
         {
+            "parameter": "DeathCameraStart",
+            "time": 0.13965173065662384,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
             "parameter": "player_death",
             "time": 1.710265040397644,
             "type": "PlaySE",

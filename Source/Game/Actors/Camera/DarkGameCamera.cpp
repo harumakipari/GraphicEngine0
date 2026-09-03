@@ -450,6 +450,12 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     blendStartEyeDistance = MathHelper::Distance(blendStartPose.eye, blendStartPose.target);
     float targetYaw = currentYaw;
     float targetPitch = currentPitch;
+    CameraPose selectedDeathPose{};
+    bool hasSelectedDeathPose = false;
+    deathBlendSelectedSide = "Fallback";
+    deathBlendDefaultValid = true;
+    deathBlendMirroredValid = false;
+    deathBlendMirroredTested = false;
     switch (to)
     {
     case CameraMode::TPS:
@@ -476,13 +482,38 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
 
     case CameraMode::Death:
     {
-        const CameraPose deathPose = CalculatePose(to, playerPos, currentYaw, currentPitch);
+        const CameraPose defaultPose = CalculateDeathPoseWithSideOffset(
+            playerPos, currentYaw, currentPitch, deathCameraSettings.sideOffset);
+        deathBlendDefaultValid = IsDeathPoseCollisionFree(defaultPose);
+        if (deathBlendDefaultValid)
+        {
+            selectedDeathPose = defaultPose;
+            deathBlendSideOffset = deathCameraSettings.sideOffset;
+            deathBlendSelectedSide = "Default";
+        }
+        else
+        {
+            const CameraPose mirroredPose = CalculateDeathPoseWithSideOffset(
+                playerPos, currentYaw, currentPitch,
+                -deathCameraSettings.sideOffset);
+            deathBlendMirroredValid = IsDeathPoseCollisionFree(mirroredPose);
+            deathBlendMirroredTested = true;
+            selectedDeathPose = deathBlendMirroredValid ? mirroredPose : defaultPose;
+            deathBlendSideOffset = deathBlendMirroredValid
+                ? -deathCameraSettings.sideOffset
+                : deathCameraSettings.sideOffset;
+            deathBlendSelectedSide = deathBlendMirroredValid ? "Mirrored" : "Fallback";
+        }
+        hasSelectedDeathPose = true;
+        const CameraPose& deathPose = selectedDeathPose;
         targetYaw = deathPose.yaw;
         targetPitch = deathPose.pitch;
         break;
     }
     }
-    blendTargetPose = CalculatePose(to, playerPos, targetYaw, targetPitch);
+    blendTargetPose = hasSelectedDeathPose
+        ? selectedDeathPose
+        : CalculatePose(to, playerPos, targetYaw, targetPitch);
     blendStartFovDegree = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
     blendTargetFovDegree = GetFovDegreeForMode(to);
 }
@@ -628,11 +659,17 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
     if (auto head = playerHead.lock())
     {
         const DirectX::XMFLOAT3 currentPlayerPos = head->GetComponentLocation();
-        targetPose = CalculatePose(
-            requestMode,
-            currentPlayerPos,
-            blendTargetPose.yaw,
-            blendTargetPose.pitch);
+        targetPose = requestMode == CameraMode::Death
+            ? CalculateDeathPoseWithSideOffset(
+                currentPlayerPos,
+                blendTargetPose.yaw,
+                blendTargetPose.pitch,
+                deathBlendSideOffset)
+            : CalculatePose(
+                requestMode,
+                currentPlayerPos,
+                blendTargetPose.yaw,
+                blendTargetPose.pitch);
     }
 
     // Target、視線方向、Distanceを表示中Poseから同じBlend率で補間する。
@@ -1847,42 +1884,25 @@ void DarkCameraActor::UpdateLockOnTransitionDiagnostics()
     lockOnTransitionDiagnosticsActive = false;
 }
 
+bool DarkCameraActor::IsDeathPoseCollisionFree(const CameraPose& pose) const
+{
+    HitResultWithActor hit{};
+    const uint32_t mask =
+        CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
+        CollisionHelper::ToBit(CollisionLayer::Floor) |
+        CollisionHelper::ToBit(CollisionLayer::WorldProps);
+    return !CollisionFunction::SphereRayCast(
+        pose.target, pose.eye, hit, sphereCastRadius, mask);
+}
+
 DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const
 {
     CameraPose pose{};
 
     if (cameraMode == CameraMode::Death)
     {
-        DirectX::XMFLOAT3 toBoss{};
-        if (auto enemy = enemyHead.lock())
-        {
-            toBoss = MathHelper::Subtract(enemy->GetComponentLocation(), playerPos);
-            toBoss.y = 0.0f;
-        }
-        if (MathHelper::Length(toBoss) <= FLT_EPSILON)
-            toBoss = { sinf(yaw), 0.0f, cosf(yaw) };
-        toBoss = MathHelper::Normalize(toBoss);
-
-        const DirectX::XMFLOAT3 worldUp{ 0.0f, 1.0f, 0.0f };
-        DirectX::XMFLOAT3 right = MathHelper::Cross(worldUp, toBoss);
-        if (MathHelper::Length(right) <= FLT_EPSILON)
-            right = { 1.0f, 0.0f, 0.0f };
-        right = MathHelper::Normalize(right);
-
-        pose.target = MathHelper::Add(
-            MathHelper::Add(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.bossLookWeight)),
-            MathHelper::Multiply(worldUp, deathCameraSettings.lookHeight));
-        pose.eye = MathHelper::Add(
-            MathHelper::Add(
-                MathHelper::Subtract(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.foregroundDistance)),
-                MathHelper::Multiply(right, deathCameraSettings.sideOffset)),
-            MathHelper::Multiply(worldUp, deathCameraSettings.cameraHeight));
-
-        const DirectX::XMFLOAT3 viewDirection = MathHelper::Normalize(
-            MathHelper::Subtract(pose.target, pose.eye));
-        pose.yaw = atan2f(viewDirection.x, viewDirection.z);
-        pose.pitch = asinf(std::clamp(viewDirection.y, -1.0f, 1.0f));
-        return pose;
+        return CalculateDeathPoseWithSideOffset(
+            playerPos, yaw, pitch, deathCameraSettings.sideOffset);
     }
 
     const CameraCompositionSettings* settings = &tpsSettings;
@@ -1945,10 +1965,48 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
     eye += XMVectorSet(0, settings->height, 0, 0);
 
     XMStoreFloat3(&pose.eye, eye);
-    //  yaw と pitch を保存
     pose.yaw = yaw;
     pose.pitch = pitch;
     return pose;
+}
+
+DarkCameraActor::CameraPose DarkCameraActor::CalculateDeathPoseWithSideOffset(
+    const DirectX::XMFLOAT3& playerPos,
+    float yaw,
+    float pitch,
+    float sideOffset) const
+{
+    CameraPose pose{};
+        DirectX::XMFLOAT3 toBoss{};
+        if (auto enemy = enemyHead.lock())
+        {
+            toBoss = MathHelper::Subtract(enemy->GetComponentLocation(), playerPos);
+            toBoss.y = 0.0f;
+        }
+        if (MathHelper::Length(toBoss) <= FLT_EPSILON)
+            toBoss = { sinf(yaw), 0.0f, cosf(yaw) };
+        toBoss = MathHelper::Normalize(toBoss);
+
+        const DirectX::XMFLOAT3 worldUp{ 0.0f, 1.0f, 0.0f };
+        DirectX::XMFLOAT3 right = MathHelper::Cross(worldUp, toBoss);
+        if (MathHelper::Length(right) <= FLT_EPSILON)
+            right = { 1.0f, 0.0f, 0.0f };
+        right = MathHelper::Normalize(right);
+
+        pose.target = MathHelper::Add(
+            MathHelper::Add(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.bossLookWeight)),
+            MathHelper::Multiply(worldUp, deathCameraSettings.lookHeight));
+        pose.eye = MathHelper::Add(
+            MathHelper::Add(
+                MathHelper::Subtract(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.foregroundDistance)),
+                MathHelper::Multiply(right, sideOffset)),
+            MathHelper::Multiply(worldUp, deathCameraSettings.cameraHeight));
+
+        const DirectX::XMFLOAT3 viewDirection = MathHelper::Normalize(
+            MathHelper::Subtract(pose.target, pose.eye));
+        pose.yaw = atan2f(viewDirection.x, viewDirection.z);
+        pose.pitch = asinf(std::clamp(viewDirection.y, -1.0f, 1.0f));
+        return pose;
 }
 
 // ロックオンのカメラ距離を計算する関数
@@ -2061,6 +2119,12 @@ void DarkCameraActor::DrawImGuiDetails()
             10.0f, 120.0f, "%.1f deg");
         ImGui::DragFloat("Death Blend Time", &deathCameraSettings.deathBlendTime,
             0.01f, 0.01f, 5.0f, "%.2f sec");
+        ImGui::Text("Selected Death Side: %s", deathBlendSelectedSide);
+        ImGui::Text("Default Pose: %s",
+            deathBlendDefaultValid ? "Valid" : "Blocked");
+        ImGui::Text("Mirrored Pose: %s",
+            !deathBlendMirroredTested ? "Not Tested" :
+            (deathBlendMirroredValid ? "Valid" : "Blocked"));
 
         ImGui::SeparatorText("Camera Shake Presets");
         const auto drawShakePreset = [this](const char* displayName, const char* presetName,

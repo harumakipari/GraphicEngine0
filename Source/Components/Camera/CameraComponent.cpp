@@ -394,17 +394,51 @@ void MovieCameraComponent::HandleKeyboardInput(float deltaTime)
 
 void MovieCameraComponent::SaveToJson(const std::string& path)
 {
+    if (actorRelativeEditMode && !actorRelativeBasis.valid)
+    {
+        Logger::Warning("Actor Relative Movie save skipped: basis is not set.");
+        return;
+    }
+
     using json = nlohmann::json;
     json j;
+
+    if (actorRelativeEditMode)
+        j["coordinateSpace"] = "ActorRelative";
 
     for (auto& k : keys)
     {
         json item;
 
+        DirectX::XMFLOAT3 position = k.position;
+        DirectX::XMFLOAT4 rotation = k.rotation;
+        if (actorRelativeEditMode)
+        {
+            using namespace DirectX;
+            const XMVECTOR delta = XMLoadFloat3(&k.position) -
+                XMLoadFloat3(&actorRelativeBasis.origin);
+            const XMVECTOR right = XMLoadFloat3(&actorRelativeBasis.right);
+            const XMVECTOR up = XMLoadFloat3(&actorRelativeBasis.up);
+            const XMVECTOR forward = XMLoadFloat3(&actorRelativeBasis.forward);
+            position =
+            {
+                XMVectorGetX(XMVector3Dot(delta, right)),
+                XMVectorGetX(XMVector3Dot(delta, up)),
+                XMVectorGetX(XMVector3Dot(delta, forward))
+            };
+
+            const XMVECTOR basis = XMQuaternionNormalize(
+                XMLoadFloat4(&actorRelativeBasis.basisRotation));
+            const XMVECTOR world = XMQuaternionNormalize(XMLoadFloat4(&k.rotation));
+            XMStoreFloat4(&rotation,
+                XMQuaternionNormalize(XMQuaternionMultiply(
+                    XMQuaternionInverse(basis), world)));
+        }
+
         item["name"] = k.name;
 
-        item["pos"] = { k.position.x, k.position.y, k.position.z };
-        item["rot"] = { k.rotation.x, k.rotation.y, k.rotation.z, k.rotation.w };
+        item["pos"] = { position.x, position.y, position.z };
+        item["rot"] = { rotation.x, rotation.y, rotation.z, rotation.w };
 
         item["fov"] = k.fov;
         item["duration"] = k.duration;
@@ -488,6 +522,162 @@ void MovieCameraComponent::LoadFromJson(const std::string& path)
 
         keys.push_back(k);
     }
+
+    const bool isActorRelative =
+        j.value("coordinateSpace", "World") == "ActorRelative";
+    actorRelativeEditMode = isActorRelative;
+    relativeKeysPendingConversion = isActorRelative;
+    if (isActorRelative && !suppressRelativeLoadConversion)
+    {
+        ConvertRelativeKeysToWorld();
+    }
+}
+
+MovieCameraComponent::ActorRelativeBasis
+MovieCameraComponent::CreateActorRelativeBasis(
+    const DirectX::XMFLOAT3& origin,
+    const DirectX::XMFLOAT3& forward)
+{
+    using namespace DirectX;
+
+    ActorRelativeBasis result{};
+    result.origin = origin;
+    result.forward = forward;
+    result.forward.y = 0.0f;
+    if (MathHelper::Length(result.forward) <= FLT_EPSILON)
+        result.forward = { 0.0f, 0.0f, 1.0f };
+    result.forward = MathHelper::Normalize(result.forward);
+
+    result.up = { 0.0f, 1.0f, 0.0f };
+    result.right = MathHelper::Cross(result.up, result.forward);
+    if (MathHelper::Length(result.right) <= FLT_EPSILON)
+        result.right = { 1.0f, 0.0f, 0.0f };
+    result.right = MathHelper::Normalize(result.right);
+
+    const float yaw = atan2f(result.forward.x, result.forward.z);
+    XMStoreFloat4(&result.basisRotation,
+        XMQuaternionNormalize(XMQuaternionRotationAxis(
+            XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), yaw)));
+    result.valid = true;
+    return result;
+}
+
+void MovieCameraComponent::SetActorRelativeBasis(const ActorRelativeBasis& basis)
+{
+    if (!basis.valid)
+    {
+        actorRelativeBasis.valid = false;
+        return;
+    }
+
+    actorRelativeBasis = CreateActorRelativeBasis(
+        basis.origin, basis.forward);
+    if (actorRelativeBasis.valid)
+        ConvertRelativeKeysToWorld();
+}
+
+void MovieCameraComponent::ConvertRelativeKeysToWorld()
+{
+    if (!actorRelativeBasis.valid || !relativeKeysPendingConversion)
+        return;
+
+    using namespace DirectX;
+    const XMVECTOR origin = XMLoadFloat3(&actorRelativeBasis.origin);
+    const XMVECTOR right = XMLoadFloat3(&actorRelativeBasis.right);
+    const XMVECTOR up = XMLoadFloat3(&actorRelativeBasis.up);
+    const XMVECTOR forward = XMLoadFloat3(&actorRelativeBasis.forward);
+    const XMVECTOR basis = XMQuaternionNormalize(
+        XMLoadFloat4(&actorRelativeBasis.basisRotation));
+
+    for (auto& key : keys)
+    {
+        const XMVECTOR local = XMLoadFloat3(&key.position);
+        const XMVECTOR world = origin
+            + right * XMVectorGetX(local)
+            + up * XMVectorGetY(local)
+            + forward * XMVectorGetZ(local);
+        XMStoreFloat3(&key.position, world);
+
+        const XMVECTOR localRotation = XMQuaternionNormalize(
+            XMLoadFloat4(&key.rotation));
+        XMStoreFloat4(&key.rotation,
+            XMQuaternionNormalize(XMQuaternionMultiply(basis, localRotation)));
+    }
+    relativeKeysPendingConversion = false;
+}
+
+void MovieCameraComponent::LoadFromJsonRelative(
+    const std::string& path,
+    const DirectX::XMFLOAT3& origin,
+    const DirectX::XMFLOAT3& forward)
+{
+    suppressRelativeLoadConversion = true;
+    LoadFromJson(path);
+    suppressRelativeLoadConversion = false;
+    actorRelativeEditMode = false;
+    relativeKeysPendingConversion = false;
+
+    using namespace DirectX;
+    const ActorRelativeBasis basis = CreateActorRelativeBasis(origin, forward);
+    const XMVECTOR basisQuaternion = XMQuaternionNormalize(
+        XMLoadFloat4(&basis.basisRotation));
+    const XMVECTOR rightVector = XMLoadFloat3(&basis.right);
+    const XMVECTOR upVector = XMLoadFloat3(&basis.up);
+    const XMVECTOR forwardBasisVector = XMLoadFloat3(&basis.forward);
+    const XMVECTOR originVector = XMLoadFloat3(&basis.origin);
+
+    for (auto& key : keys)
+    {
+        const XMVECTOR localPosition = XMLoadFloat3(&key.position);
+        const XMVECTOR worldPosition = originVector
+            + rightVector * XMVectorGetX(localPosition)
+            + upVector * XMVectorGetY(localPosition)
+            + forwardBasisVector * XMVectorGetZ(localPosition);
+        XMStoreFloat3(&key.position, worldPosition);
+
+        XMVECTOR localQuaternion = XMLoadFloat4(&key.rotation);
+        if (XMVectorGetX(XMVector4LengthSq(localQuaternion)) <= FLT_EPSILON)
+            localQuaternion = XMQuaternionIdentity();
+        localQuaternion = XMQuaternionNormalize(localQuaternion);
+        // Apply the authored local rotation after the actor basis.
+        XMStoreFloat4(&key.rotation,
+            XMQuaternionNormalize(XMQuaternionMultiply(basisQuaternion, localQuaternion)));
+    }
+}
+
+void MovieCameraComponent::CutToWorldPose(
+    const DirectX::XMFLOAT3& position,
+    const DirectX::XMFLOAT4& rotation,
+    float fov)
+{
+    auto owner = GetOwner();
+    if (!owner)
+        return;
+
+    ApplyWorldPose(position, rotation, fov);
+    time = 0.0f;
+    currentIndex = 0;
+    playing = false;
+    finished = false;
+}
+
+void MovieCameraComponent::ApplyWorldPose(
+    const DirectX::XMFLOAT3& position,
+    const DirectX::XMFLOAT4& rotation,
+    float fov)
+{
+    auto owner = GetOwner();
+    if (!owner)
+        return;
+
+    owner->SetPosition(position);
+    owner->SetQuaternionRotation(rotation);
+    // SetQuaternionRotationDirect updates the actor root only.  Refresh the
+    // component hierarchy before GetComponentRotation()/GetForward()/GetView()
+    // are queried in the same frame.
+    owner->UpdateAllComponentTransforms();
+    SetFov(fov);
+    useLookTarget = false;
 }
 
 void MovieCameraComponent::Start(bool reverse)
@@ -678,4 +868,16 @@ void MovieCameraComponent::UpdatePath(float dt)
             currentIndex++;
         }
     }
+}
+
+bool MovieCameraComponent::ApplyFirstFrameToOwner()
+{
+    if (keys.empty())
+        return false;
+
+    const auto& first = keys.front();
+    GetOwner()->SetPosition(first.position);
+    GetOwner()->SetQuaternionRotation(first.rotation);
+    fovY = first.fov;
+    return true;
 }

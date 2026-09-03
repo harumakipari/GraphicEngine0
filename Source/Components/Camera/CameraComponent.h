@@ -707,6 +707,20 @@ private:
 class MovieCameraComponent : public CameraComponent
 {
 public:
+    struct ActorRelativeBasis
+    {
+        DirectX::XMFLOAT3 origin{};
+        DirectX::XMFLOAT3 forward{ 0.0f, 0.0f, 1.0f };
+        DirectX::XMFLOAT3 right{ 1.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT3 up{ 0.0f, 1.0f, 0.0f };
+        DirectX::XMFLOAT4 basisRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
+        bool valid = false;
+    };
+
+    static ActorRelativeBasis CreateActorRelativeBasis(
+        const DirectX::XMFLOAT3& origin,
+        const DirectX::XMFLOAT3& forward);
+
     enum class EaseType
     {
         Linear,
@@ -798,6 +812,16 @@ public:
         this->useMovieCamera = useMovie;
     }
 
+    // Applies a world-space pose for an already enabled movie camera.
+    void CutToWorldPose(const DirectX::XMFLOAT3& position,
+        const DirectX::XMFLOAT4& rotation, float fov);
+    void ApplyWorldPose(const DirectX::XMFLOAT3& position,
+        const DirectX::XMFLOAT4& rotation, float fov);
+    float GetFirstKeyframeFov() const
+    {
+        return keys.empty() ? GetFov() : keys.front().fov;
+    }
+
     // ÉÄÅ[ÉrÅ[çƒê∂íÜÇ©Ç«Ç§Ç©ÇéÊìæÇ∑ÇÈ
     bool IsMovieFinish() const { return finished; }
 
@@ -809,13 +833,24 @@ public:
     void SaveToJson(const std::string& path);
 
     void LoadFromJson(const std::string& path);
+    void LoadFromJsonRelative(const std::string& path,
+        const DirectX::XMFLOAT3& origin,
+        const DirectX::XMFLOAT3& forward);
     void RefreshMovieFiles();
+
+    void SetActorRelativeBasis(const ActorRelativeBasis& basis);
+    void ClearActorRelativeBasis() { actorRelativeBasis.valid = false; }
+    bool IsActorRelativeBasisValid() const { return actorRelativeBasis.valid; }
 
     void DrawImGuiInspector()override
     {
 #ifdef USE_IMGUI
 
         SceneComponent::DrawImGuiInspector();
+
+        ImGui::Checkbox("Actor Relative Edit", &actorRelativeEditMode);
+        ImGui::Text("Actor Relative Basis: %s",
+            actorRelativeBasis.valid ? "Valid" : "Not Set");
 
         if (ImGui::Button("Add Key"))
         {
@@ -910,6 +945,7 @@ public:
 
     // =========================
     void Start(bool reverse = false);
+    bool ApplyFirstFrameToOwner();
 
     void SetOnMovieStart(const std::function<void()>& func)
     {
@@ -920,6 +956,7 @@ public:
     DirectX::XMFLOAT3 GetVirtualTarget(float distance = 5.0f) ;
 
 private:
+    void ConvertRelativeKeysToWorld();
     void HandleKeyboardInput(float deltaTime);
     void HandleMouseInput(float deltaTime)
     {
@@ -1028,6 +1065,10 @@ private:
 
     std::weak_ptr<TitleCamera> targetCamera;
     std::function<void()> onMovieStart;
+    ActorRelativeBasis actorRelativeBasis{};
+    bool actorRelativeEditMode = false;
+    bool relativeKeysPendingConversion = false;
+    bool suppressRelativeLoadConversion = false;
 };
 
 #endif //CAMERA_COMPONENT_H

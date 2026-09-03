@@ -137,6 +137,15 @@ public:
     void UpdateDeathEyeClose(float deathElapsedTime);
     void EndDeathEyeClose();
 
+    void SetDeathCameraStartCallback(std::function<void()> callback)
+    {
+        deathCameraStartCallback = std::move(callback);
+    }
+    void SetDeathCameraTransparencyDisabled(bool disabled)
+    {
+        deathCameraTransparencyDisabled = disabled;
+    }
+
     // Stops residual attacks when the battle has ended without restoring HP.
     void StopBattleActions();
 
@@ -249,6 +258,12 @@ public:
 
     // カメラの注視点の位置
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
+
+    const std::shared_ptr<SceneComponent>& GetDeathWideRightAnchor() const { return deathWideRightAnchor; }
+    const std::shared_ptr<SceneComponent>& GetDeathWideLeftAnchor() const { return deathWideLeftAnchor; }
+    const std::shared_ptr<SceneComponent>& GetDeathWideFrontAnchor() const { return deathWideFrontAnchor; }
+    const std::shared_ptr<SceneComponent>& GetDeathWideBackAnchor() const { return deathWideBackAnchor; }
+    const std::shared_ptr<SceneComponent>& GetDeathWideTarget() const { return deathWideTarget; }
 
     void AcquireAttackTarget();
     void UpdateAttackTargetRotation(float deltaTime);
@@ -568,6 +583,11 @@ private:
     std::shared_ptr<SceneComponent> cameraEyeComponent;
     // カメラの注視点の位置
     std::shared_ptr<SceneComponent> cameraTargetComponent;
+    std::shared_ptr<SceneComponent> deathWideRightAnchor;
+    std::shared_ptr<SceneComponent> deathWideLeftAnchor;
+    std::shared_ptr<SceneComponent> deathWideFrontAnchor;
+    std::shared_ptr<SceneComponent> deathWideBackAnchor;
+    std::shared_ptr<SceneComponent> deathWideTarget;
     // ボス戦時のオフセット
     float bossBattleCameraDistance = -3.0f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { -0.5f,2.0f,0.0f };
@@ -615,6 +635,8 @@ private:
 
     // 演出中かどうか
     bool moviePerform = false;
+    bool deathCameraTransparencyDisabled = false;
+    std::function<void()> deathCameraStartCallback;
 
     AnimationController::MoveDirection currentMoveDir = AnimationController::MoveDirection::Idle;
 

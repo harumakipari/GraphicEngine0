@@ -462,6 +462,7 @@ void PlayerDeathPendingState::Enter()
 {
     // アクターやアニメーションの更新を維持しつつ、死のカメラ演出中に継続する可能性のあるアクションを削除する。
     player->ClearTransientBattleActions();
+    player->SetDeathCameraTransparencyDisabled(true);
     player->ResetAnimationStateFlag();
     player->characterMovementComponent->SetFixedSpeed(0.0f);
     player->characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });

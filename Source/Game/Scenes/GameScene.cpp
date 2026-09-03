@@ -520,6 +520,7 @@ void GameScene::EnterPlayerDead()
 {
     battleFlowState = BattleFlowState::PlayerDead;
     playerDeadElapsed = 0.0f;
+    deathCameraStartRequested = false;
     SetBattleHudVisible(false);
 
     if (gruxEnemyActor)
@@ -527,24 +528,30 @@ void GameScene::EnterPlayerDead()
 
     if (darkCameraActor && player)
     {
-        std::weak_ptr<Player> weakPlayer = player;
-        darkCameraActor->StartDeathMode([weakPlayer]()
+        player->SetDeathCameraTransparencyDisabled(true);
+        player->SetDeathCameraStartCallback([this]()
             {
-                if (const auto lockedPlayer = weakPlayer.lock())
-                {
-                    const auto stateMachine = lockedPlayer->GetStateMachine();
-                    if (stateMachine && std::string(stateMachine->GetStateName()) == "DeathPending")
-                    {
-                        stateMachine->ChangeState("Death");
-                    }
-                }
+                OnPlayerDeathCameraStart();
             });
+        if (auto stateMachine = player->GetStateMachine())
+            stateMachine->ChangeState("Death");
     }
     else if (player && player->GetStateMachine())
     {
         // Do not leave the Player pending if a camera is unavailable.
+        player->SetDeathCameraTransparencyDisabled(true);
         player->GetStateMachine()->ChangeState("Death");
     }
+}
+
+void GameScene::OnPlayerDeathCameraStart()
+{
+    if (deathCameraStartRequested || battleFlowState != BattleFlowState::PlayerDead)
+        return;
+
+    deathCameraStartRequested = true;
+    if (darkCameraActor)
+        darkCameraActor->StartDeathMode(nullptr);
 }
 
 void GameScene::ResetBattleForContinue()
@@ -560,6 +567,8 @@ void GameScene::ResetBattleForContinue()
         darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
 
     player->ResetForBattleContinue(playerBattleStartTransform);
+    player->SetDeathCameraStartCallback(nullptr);
+    player->SetDeathCameraTransparencyDisabled(false);
     gruxEnemyActor->ResetForBattleContinue(bossBattleStartTransform);
     gruxEnemyActor->ResumeBattleAI();
 

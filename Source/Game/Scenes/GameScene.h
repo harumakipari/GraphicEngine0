@@ -77,6 +77,7 @@ private:
     void UpdateBattleFlow();
     void SetBattleHudVisible(bool visible);
     void EnterPlayerDead();
+    void OnPlayerDeathCameraStart();
     void ResetBattleForContinue();
     void EnterBossDead();
 
@@ -106,6 +107,7 @@ private:
     Transform playerBattleStartTransform{};
     Transform bossBattleStartTransform{};
     bool battleStartTransformsSaved = false;
+    bool deathCameraStartRequested = false;
     float playerDeadElapsed = 0.0f;
     static constexpr float continueWaitDelay = 0.25f;
 

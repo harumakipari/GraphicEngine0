@@ -402,6 +402,26 @@ void Player::Initialize(const Transform& transform)
     // カメラの注視点の位置のコンポーネントを追加
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f,1.0f,0.0f });
+
+    // プレイヤー死亡時のカメラの画角
+    const std::string rootParentName = GetRootComponentName();
+
+    deathWideRightAnchor = AddComponent<SceneComponent>("DeathWideRightAnchor", rootParentName);
+    deathWideRightAnchor->SetRelativeLocationDirect({ -5.0f,1.4f,-4.5f });
+
+    deathWideLeftAnchor = AddComponent<SceneComponent>("DeathWideLeftAnchor", rootParentName);
+    deathWideLeftAnchor->SetRelativeLocationDirect({ 6.6f,1.4f,4.5f });
+
+    deathWideFrontAnchor = AddComponent<SceneComponent>("DeathWideFrontAnchor", rootParentName);
+    deathWideFrontAnchor->SetRelativeLocationDirect({ 0.0f,1.8f,5.5f });
+
+    deathWideBackAnchor = AddComponent<SceneComponent>("DeathWideBackAnchor", rootParentName);
+    deathWideBackAnchor->SetRelativeLocationDirect({ 0.0f,1.8f,-5.5f });
+
+    deathWideTarget = AddComponent<SceneComponent>("DeathWideTarget", rootParentName);
+    deathWideTarget->SetRelativeLocationDirect({ 0.0f, 1.7f, 0.0f });
+
+
     // 軌跡初期化
     trail.Initialize();
     SetRushWeaponVisual(false);
@@ -569,7 +589,7 @@ void Player::Update(float deltaTime)
 
 
     // プレイヤーの透明化処理
-    if (moviePerform)
+    if (moviePerform || deathCameraTransparencyDisabled)
     {// 演出中は壁の近くでも透明化しない
         skeletalMeshComponent->SetIsVisible(true);
         skeletalMeshBlendComponent->SetIsVisible(false);
@@ -1737,7 +1757,16 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     case AnimationNotifyEvent::Type::SpawnEffect:
         break;
     case AnimationNotifyEvent::Type::GameplayEvent:
-        if (event.parameter == "rush_input_end" && stateMachine_ &&
+        if (event.parameter == "DeathCameraStart" && stateMachine_ &&
+            std::string(stateMachine_->GetStateName()) == "Death")
+        {
+            if (deathCameraStartCallback)
+            {
+                auto callback = std::move(deathCameraStartCallback);
+                callback();
+            }
+        }
+        else if (event.parameter == "rush_input_end" && stateMachine_ &&
             std::string(stateMachine_->GetStateName()) == "Dodge")
         {
             SetRushInputAcceptance(false);

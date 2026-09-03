@@ -49,7 +49,7 @@ public:
         float cameraHeight = -0.2f;
         float lookHeight = -0.85f;
         float bossLookWeight = -0.65f;
-        float deathBlendTime = 1.0f;
+        float deathBlendTime = 0.5f;
         float fovDegree = 22.6f;
     };
 
@@ -238,6 +238,12 @@ private:
 
     // Eyeを計算する関数
     CameraPose CalculatePose(CameraMode mode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const;
+    CameraPose CalculateDeathPoseWithSideOffset(
+        const DirectX::XMFLOAT3& playerPos,
+        float yaw,
+        float pitch,
+        float sideOffset) const;
+    bool IsDeathPoseCollisionFree(const CameraPose& pose) const;
 
     // LockOn構図の適応値を更新する
     void UpdateLockOnComposition(float deltaTime);
@@ -334,6 +340,11 @@ private:
     // ブレンド用のPoseを作成する
     CameraPose blendStartPose;
     CameraPose blendTargetPose;
+    float deathBlendSideOffset = 0.0f;
+    const char* deathBlendSelectedSide = "Fallback";
+    bool deathBlendDefaultValid = true;
+    bool deathBlendMirroredValid = false;
+    bool deathBlendMirroredTested = false;
 
     float blendTime = 0.0f;
     float blendDuration = 0.30f;
