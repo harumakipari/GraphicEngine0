@@ -35,6 +35,11 @@ struct husk_particles
 		float detach_speed{ 0.35f };
 		float gravity{ -9.8f };
 		float lifetime{ 1.5f };
+		float rise_speed{ 0.25f };
+		float max_start_delay{ 0.18f };
+		float rise_speed_min_multiplier{ 0.6f };
+		float rise_speed_max_multiplier{ 1.4f };
+		float horizontal_random_speed{ 0.08f };
 	};
 	particle_constants particle_data;
 	std::unique_ptr<ConstantBuffer<particle_constants>> particleCBuffer;

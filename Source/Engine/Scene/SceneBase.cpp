@@ -1124,6 +1124,15 @@ void SceneBase::DrawSceneSettingsTab()
         ImGui::Checkbox("integrateParticles", &integrateParticles);
         ImGui::Text("accumulated husk particle count %d", huskParticles->particle_data.particle_count);
         ImGui::SliderFloat("particle_data.size", &huskParticles->particle_data.particle_size, +0.0f, +0.05f, "%.4f");
+        ImGui::SliderFloat("particle_data.rise_speed", &huskParticles->particle_data.rise_speed, 0.0f, 2.0f, "%.3f m/s");
+        ImGui::SliderFloat("particle_data.max_start_delay", &huskParticles->particle_data.max_start_delay, 0.0f, 1.0f, "%.3f sec");
+        ImGui::SliderFloat("particle_data.rise_speed_min_multiplier", &huskParticles->particle_data.rise_speed_min_multiplier, 0.1f, 2.0f, "%.2fx");
+        ImGui::SliderFloat("particle_data.rise_speed_max_multiplier", &huskParticles->particle_data.rise_speed_max_multiplier, 0.1f, 2.0f, "%.2fx");
+        ImGui::SliderFloat("particle_data.horizontal_random_speed", &huskParticles->particle_data.horizontal_random_speed, 0.0f, 0.5f, "%.3f m/s");
+        huskParticles->particle_data.max_start_delay = (std::max)(huskParticles->particle_data.max_start_delay, 0.0f);
+        huskParticles->particle_data.rise_speed_min_multiplier = (std::max)(huskParticles->particle_data.rise_speed_min_multiplier, 0.0f);
+        huskParticles->particle_data.rise_speed_max_multiplier = (std::max)(huskParticles->particle_data.rise_speed_max_multiplier, huskParticles->particle_data.rise_speed_min_multiplier);
+        huskParticles->particle_data.horizontal_random_speed = (std::max)(huskParticles->particle_data.horizontal_random_speed, 0.0f);
     }
     ImGui::End();
 }

@@ -11,6 +11,11 @@ cbuffer PARTICLE_CONSTANTS : register(b12)
     float detach_speed;
     float gravity_;
     float lifetime;
+    float rise_speed;
+    float max_start_delay;
+    float rise_speed_min_multiplier;
+    float rise_speed_max_multiplier;
+    float horizontal_random_speed;
 };
 
 #include "ViewConstants.hlsli"
