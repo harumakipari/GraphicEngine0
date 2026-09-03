@@ -2163,11 +2163,11 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::SeparatorText("Boss Sword Trail");
         ImGui::ColorEdit3("Trail Color", &bossTrailColor.x);
         ImGui::DragFloat("Trail Emissive Strength", &bossTrailEmissiveStrength,
-            0.05f, 0.0f, 8.0f, "%.2f");
+            0.05f, 0.0f, 30.0f, "%.2f");
         ImGui::DragFloat("Trail Lifetime", &bossTrailLifetime,
-            0.01f, 0.05f, 2.0f, "%.2f sec");
-        bossTrailEmissiveStrength = std::clamp(bossTrailEmissiveStrength, 0.0f, 8.0f);
-        bossTrailLifetime = std::clamp(bossTrailLifetime, 0.05f, 2.0f);
+            0.01f, 0.05f, 5.0f, "%.2f sec");
+        bossTrailEmissiveStrength = std::clamp(bossTrailEmissiveStrength, 0.0f, 30.0f);
+        bossTrailLifetime = std::clamp(bossTrailLifetime, 0.05f, 5.0f);
 
         constexpr float minimumDistanceGap = 0.1f;
         ImGui::SeparatorText("Distance");

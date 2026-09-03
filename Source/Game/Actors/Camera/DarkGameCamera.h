@@ -262,6 +262,12 @@ private:
         const DirectX::XMFLOAT3& eye,
         LockOnFovDiagnostics& diagnostics,
         bool& outValid) const;
+    float EvaluateRequiredLockOnFovFromEye(
+        const DirectX::XMFLOAT3& eye,
+        const DirectX::XMFLOAT3& lookTarget,
+        LockOnFovDiagnostics& diagnostics,
+        bool& outValid) const;
+    void UpdateLockOnCompositionLookCorrection(float deltaTime);
     void UpdateLockOnWallLateralEscape(float deltaTime);
     bool ResolveWallLateralCandidateCollision(
         const DirectX::XMFLOAT3& target,
@@ -301,6 +307,7 @@ private:
 
 
     CameraPose currentPose;
+    DirectX::XMFLOAT3 compositionLookTarget{};
 
     float currentYaw = 0.0f;
     float desiredYaw = 0.0f;
@@ -427,6 +434,38 @@ private:
     float lockOnWallEscapeMoveSpeed = 5.0f;
     float lockOnWallEscapeReturnSpeed = 3.0f;
     float currentLateralEscapeOffset = 0.0f;
+    float currentCompositionYawCorrection = 0.0f;
+    float targetCompositionYawCorrection = 0.0f;
+    float compositionBaseYaw = 0.0f;
+    float compositionTargetYaw = 0.0f;
+    float compositionRequiredFovBefore = 0.0f;
+    float compositionRequiredFovAfter = 0.0f;
+    float currentRecoveryDistance = 0.0f;
+    float targetRecoveryDistance = 0.0f;
+    float recoveryMaxDistance = 3.0f;
+    float recoveryMoveSpeed = 3.0f;
+    float recoveryReturnSpeed = 2.0f;
+    float recoveryFovImprovementThreshold = 5.0f;
+    bool recoveryActive = false;
+    bool recoveryCandidateValid = false;
+    bool recoveryCandidateCollisionHit = false;
+    float recoveryDesiredTargetDistance = 0.0f;
+    float recoveryCollisionPostTargetDistance = 0.0f;
+    float recoveryWallEscapeFinalTargetDistance = 0.0f;
+    float recoveryLostDistance = 0.0f;
+    float recoveryRecoveredDistance = 0.0f;
+    float recoveryBaseRequiredFov = 0.0f;
+    float recoveryCandidateRequiredFov = 0.0f;
+    float recoveryFinalRequiredFov = 0.0f;
+    DirectX::XMFLOAT3 recoveryCandidateEye{};
+    bool compositionActive = false;
+    bool compositionPlayerInsideSafeFrame = false;
+    bool compositionBossInsideSafeFrame = false;
+    bool compositionPlayerInFront = false;
+    bool compositionBossInFront = false;
+    float compositionMaxCorrectionDegree = 10.0f;
+    float compositionAngularSpeedDegree = 60.0f;
+    float compositionDeadZoneDegree = 1.5f;
     float targetLateralEscapeOffset = 0.0f;
     float lockOnWallEscapeCurrentRequiredFov = 45.0f;
     float lockOnWallEscapeLeftNearRequiredFov = 45.0f;
@@ -449,6 +488,7 @@ private:
     DirectX::XMFLOAT3 desiredEyePosition{};
     DirectX::XMFLOAT3 collisionPreEyePosition{};
     DirectX::XMFLOAT3 collisionPostEyePosition{};
+    DirectX::XMFLOAT3 normalCollisionPostEyePosition{};
     float desiredCameraDistance = 0.0f;
     float actualCameraDistance = 0.0f;
     float lockOnEnemyDistance = 0.0f;

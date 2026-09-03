@@ -86,6 +86,8 @@ void DarkCameraActor::Update(float deltaTime)
         }
     }
 
+    compositionLookTarget = currentPose.target;
+
     if (!isExternalBlending)
     {
         const float fovDegree = isBlending
@@ -116,8 +118,10 @@ void DarkCameraActor::Update(float deltaTime)
     // “–‚½‚è”»’è‚ÅƒJƒƒ‰‚ÌˆÊ’u‚ðC³‚·‚é
     currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
     collisionPostEyePosition = currentPose.eye;
+    normalCollisionPostEyePosition = currentPose.eye;
     UpdateLockOnWallLateralEscape(deltaTime);
     collisionPostEyePosition = currentPose.eye;
+    UpdateLockOnCompositionLookCorrection(deltaTime);
     actualCameraDistance = MathHelper::Distance(currentPose.target, collisionPostEyePosition);
     cameraCollisionRatio = desiredCameraDistance > FLT_EPSILON
         ? actualCameraDistance / desiredCameraDistance
@@ -152,7 +156,8 @@ void DarkCameraActor::Update(float deltaTime)
 
     CameraPose renderPose = currentPose;
     renderPose.eye = MathHelper::Add(renderPose.eye, shakePositionOffset);
-    renderPose.target = MathHelper::Add(renderPose.target, shakeTargetOffset);
+    renderPose.target = MathHelper::Add(
+        compositionLookTarget, shakeTargetOffset);
 
     SetPosition(renderPose.eye);
     mainCameraComponent->lookTarget = renderPose.target;
@@ -1031,6 +1036,16 @@ float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
     LockOnFovDiagnostics& diagnostics,
     bool& outValid) const
 {
+    return EvaluateRequiredLockOnFovFromEye(
+        eye, currentPose.target, diagnostics, outValid);
+}
+
+float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
+    const DirectX::XMFLOAT3& eye,
+    const DirectX::XMFLOAT3& lookTarget,
+    LockOnFovDiagnostics& diagnostics,
+    bool& outValid) const
+{
     outValid = false;
     diagnostics = {};
     const auto playerHeadShared = playerHead.lock();
@@ -1039,7 +1054,7 @@ float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
         return lockOnSettings.fovDegree;
 
     const DirectX::XMFLOAT3 forwardVector = MathHelper::Subtract(
-        currentPose.target, eye);
+        lookTarget, eye);
     if (MathHelper::Length(forwardVector) <= 0.1f)
         return lockOnSettings.fovDegree;
 
@@ -1367,8 +1382,15 @@ void DarkCameraActor::UpdateLockOnFovFallback(float deltaTime)
     const float baseFovDegree = lockOnSettings.fovDegree;
     const float maxFallbackFovDegree = (std::max)(
         baseFovDegree, lockOnMaxFallbackFovDegree);
+    LockOnFovDiagnostics collisionPreDiagnostics{};
+    bool collisionPreValid = false;
+    lockOnCollisionPreRequiredFovDegree = EvaluateRequiredLockOnFovFromEye(
+        collisionPreEyePosition, currentPose.target,
+        collisionPreDiagnostics, collisionPreValid);
     bool requiredFovValid = false;
-    lockOnRequiredFovDegree = CalculateRequiredLockOnFov(requiredFovValid);
+    lockOnRequiredFovDegree = EvaluateRequiredLockOnFovFromEye(
+        collisionPostEyePosition, compositionLookTarget,
+        lockOnFovDiagnostics, requiredFovValid);
 
     const bool canEnterFallback = requiredFovValid && cameraHitWall &&
         lockOnFramingDeficit > lockOnFovFallbackEnterDeficit &&
@@ -1424,6 +1446,293 @@ void DarkCameraActor::UpdateLockOnFovFallback(float deltaTime)
     mainCameraComponent->SetFov(DirectX::XMConvertToRadians(lockOnCurrentFovDegree));
 }
 
+void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
+    const float deltaTime)
+{
+    compositionActive = false;
+    compositionPlayerInsideSafeFrame = false;
+    compositionBossInsideSafeFrame = false;
+    compositionPlayerInFront = false;
+    compositionBossInFront = false;
+    targetCompositionYawCorrection = 0.0f;
+    compositionRequiredFovBefore = lockOnSettings.fovDegree;
+    compositionRequiredFovAfter = lockOnSettings.fovDegree;
+
+    const auto moveCorrection = [&]()
+    {
+        const float maxDelta = DirectX::XMConvertToRadians(
+            (std::max)(compositionAngularSpeedDegree, 0.0f)) *
+            (std::max)(deltaTime, 0.0f);
+        currentCompositionYawCorrection += std::clamp(
+            targetCompositionYawCorrection - currentCompositionYawCorrection,
+            -maxDelta, maxDelta);
+        if (std::abs(currentCompositionYawCorrection) <
+            DirectX::XMConvertToRadians(0.01f))
+        {
+            currentCompositionYawCorrection = 0.0f;
+        }
+    };
+
+    bool beforeValid = false;
+    LockOnFovDiagnostics beforeDiagnostics{};
+    compositionRequiredFovBefore = EvaluateRequiredLockOnFovFromEye(
+        currentPose.eye, currentPose.target, beforeDiagnostics, beforeValid);
+    if (beforeValid)
+    {
+        const float currentFovDegree = DirectX::XMConvertToDegrees(
+            mainCameraComponent->GetFov());
+        compositionPlayerInFront = beforeDiagnostics.player.inFront;
+        compositionBossInFront = beforeDiagnostics.boss.inFront;
+        compositionPlayerInsideSafeFrame = compositionPlayerInFront &&
+            beforeDiagnostics.player.requiredFovFromX <= currentFovDegree &&
+            beforeDiagnostics.player.requiredFovFromY <= currentFovDegree;
+        compositionBossInsideSafeFrame = compositionBossInFront &&
+            beforeDiagnostics.boss.requiredFovFromX <= currentFovDegree &&
+            beforeDiagnostics.boss.requiredFovFromY <= currentFovDegree;
+    }
+
+    const bool eligible = currentMode == CameraMode::LockOn &&
+        !isBlending && !isExternalBlending && cameraHitWall &&
+        lockOnWallEscapeActive && beforeValid &&
+        compositionPlayerInFront && compositionBossInFront &&
+        (!compositionPlayerInsideSafeFrame ||
+            !compositionBossInsideSafeFrame);
+    if (eligible)
+    {
+        const auto player = playerHead.lock();
+        const auto boss = enemyHead.lock();
+        if (player && boss)
+        {
+            DirectX::XMFLOAT3 playerLookPosition =
+                player->GetComponentLocation();
+            DirectX::XMFLOAT3 bossLookPosition =
+                boss->GetComponentLocation();
+            playerLookPosition.y += lockOnPlayerLookHeight;
+            bossLookPosition.y += lockOnEnemyLookHeight;
+
+            DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(
+                playerLookPosition, currentPose.eye);
+            DirectX::XMFLOAT3 toBoss = MathHelper::Subtract(
+                bossLookPosition, currentPose.eye);
+            toPlayer.y = 0.0f;
+            toBoss.y = 0.0f;
+            const float playerLength = MathHelper::Length(toPlayer);
+            const float bossLength = MathHelper::Length(toBoss);
+            if (playerLength > FLT_EPSILON && bossLength > FLT_EPSILON)
+            {
+                toPlayer = MathHelper::Multiply(toPlayer, 1.0f / playerLength);
+                toBoss = MathHelper::Multiply(toBoss, 1.0f / bossLength);
+                const DirectX::XMFLOAT3 compositionDirection =
+                    MathHelper::Add(toPlayer, toBoss);
+                if (MathHelper::Length(compositionDirection) > FLT_EPSILON)
+                {
+                    compositionActive = true;
+                    compositionTargetYaw = atan2f(
+                        compositionDirection.x, compositionDirection.z);
+                    const DirectX::XMFLOAT3 baseDirection =
+                        MathHelper::Subtract(currentPose.target, currentPose.eye);
+                    compositionBaseYaw = atan2f(baseDirection.x, baseDirection.z);
+                    targetCompositionYawCorrection = MathHelper::ClampAngle(
+                        compositionTargetYaw - compositionBaseYaw);
+                    const float maxCorrection = DirectX::XMConvertToRadians(
+                        (std::max)(compositionMaxCorrectionDegree, 0.0f));
+                    targetCompositionYawCorrection = std::clamp(
+                        targetCompositionYawCorrection,
+                        -maxCorrection, maxCorrection);
+                    if (std::abs(targetCompositionYawCorrection) <
+                        DirectX::XMConvertToRadians(
+                            (std::max)(compositionDeadZoneDegree, 0.0f)))
+                    {
+                        targetCompositionYawCorrection = 0.0f;
+                    }
+                }
+            }
+        }
+    }
+
+    moveCorrection();
+    const DirectX::XMFLOAT3 lookVector = MathHelper::Subtract(
+        currentPose.target, currentPose.eye);
+    const float cosine = std::cos(currentCompositionYawCorrection);
+    const float sine = std::sin(currentCompositionYawCorrection);
+    const DirectX::XMFLOAT3 rotatedLookVector{
+        cosine * lookVector.x + sine * lookVector.z,
+        lookVector.y,
+        -sine * lookVector.x + cosine * lookVector.z
+    };
+    compositionLookTarget = MathHelper::Add(
+        currentPose.eye, rotatedLookVector);
+
+    LockOnFovDiagnostics afterDiagnostics{};
+    bool afterValid = false;
+    compositionRequiredFovAfter = EvaluateRequiredLockOnFovFromEye(
+        currentPose.eye, compositionLookTarget, afterDiagnostics, afterValid);
+    if (afterValid)
+        lockOnFovDiagnostics = afterDiagnostics;
+
+    recoveryActive = false;
+    recoveryCandidateValid = false;
+    recoveryCandidateCollisionHit = false;
+    recoveryDesiredTargetDistance = MathHelper::Distance(
+        currentPose.target, collisionPreEyePosition);
+    recoveryCollisionPostTargetDistance = MathHelper::Distance(
+        currentPose.target, normalCollisionPostEyePosition);
+    recoveryWallEscapeFinalTargetDistance = MathHelper::Distance(
+        currentPose.target, currentPose.eye);
+    recoveryLostDistance = (std::max)(
+        recoveryDesiredTargetDistance - recoveryCollisionPostTargetDistance, 0.0f);
+    recoveryRecoveredDistance = 0.0f;
+    recoveryBaseRequiredFov = compositionRequiredFovAfter;
+    recoveryCandidateRequiredFov = compositionRequiredFovAfter;
+    recoveryFinalRequiredFov = compositionRequiredFovAfter;
+
+    const bool recoveryEligible = currentMode == CameraMode::LockOn &&
+        !isBlending && !isExternalBlending && cameraHitWall &&
+        lockOnWallEscapeActive && beforeValid && compositionPlayerInFront &&
+        compositionBossInFront && !compositionPlayerInsideSafeFrame &&
+        compositionRequiredFovAfter > lockOnMaxFallbackFovDegree;
+
+    const auto calculateCompositionTarget =
+        [&](const DirectX::XMFLOAT3& eye,
+            DirectX::XMFLOAT3& outTarget,
+            LockOnFovDiagnostics& outDiagnostics,
+            float& outRequiredFov) -> bool
+    {
+        const auto player = playerHead.lock();
+        const auto boss = enemyHead.lock();
+        if (!player || !boss)
+            return false;
+
+        DirectX::XMFLOAT3 playerLook = player->GetComponentLocation();
+        DirectX::XMFLOAT3 bossLook = boss->GetComponentLocation();
+        playerLook.y += lockOnPlayerLookHeight;
+        bossLook.y += lockOnEnemyLookHeight;
+        DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(playerLook, eye);
+        DirectX::XMFLOAT3 toBoss = MathHelper::Subtract(bossLook, eye);
+        toPlayer.y = 0.0f;
+        toBoss.y = 0.0f;
+        const float playerLength = MathHelper::Length(toPlayer);
+        const float bossLength = MathHelper::Length(toBoss);
+        if (playerLength <= FLT_EPSILON || bossLength <= FLT_EPSILON)
+            return false;
+        toPlayer = MathHelper::Multiply(toPlayer, 1.0f / playerLength);
+        toBoss = MathHelper::Multiply(toBoss, 1.0f / bossLength);
+        const DirectX::XMFLOAT3 direction = MathHelper::Add(toPlayer, toBoss);
+        if (MathHelper::Length(direction) <= FLT_EPSILON)
+            return false;
+
+        const float targetYaw = atan2f(direction.x, direction.z);
+        const DirectX::XMFLOAT3 baseDirection = MathHelper::Subtract(
+            currentPose.target, eye);
+        const float baseYaw = atan2f(baseDirection.x, baseDirection.z);
+        float correction = MathHelper::ClampAngle(targetYaw - baseYaw);
+        const float maxCorrection = DirectX::XMConvertToRadians(
+            (std::max)(compositionMaxCorrectionDegree, 0.0f));
+        correction = std::clamp(correction, -maxCorrection, maxCorrection);
+        const float c = std::cos(correction);
+        const float s = std::sin(correction);
+        const DirectX::XMFLOAT3 lookVector = MathHelper::Subtract(
+            currentPose.target, eye);
+        const DirectX::XMFLOAT3 rotatedLookVector{
+            c * lookVector.x + s * lookVector.z,
+            lookVector.y,
+            -s * lookVector.x + c * lookVector.z
+        };
+        outTarget = MathHelper::Add(eye, rotatedLookVector);
+        bool valid = false;
+        outRequiredFov = EvaluateRequiredLockOnFovFromEye(
+            eye, outTarget, outDiagnostics, valid);
+        return valid && outDiagnostics.player.inFront &&
+            outDiagnostics.boss.inFront;
+    };
+
+    if (recoveryEligible)
+    {
+        const DirectX::XMFLOAT3 baseEye = currentPose.eye;
+        const DirectX::XMFLOAT3 toDesired = MathHelper::Subtract(
+            collisionPreEyePosition, baseEye);
+        const float distanceToDesired = MathHelper::Length(toDesired);
+        const float maxRecovery = (std::max)(recoveryMaxDistance, 0.0f);
+        const float candidateDistance = (std::min)(distanceToDesired, maxRecovery);
+        if (candidateDistance > FLT_EPSILON && distanceToDesired > FLT_EPSILON)
+        {
+            const DirectX::XMFLOAT3 candidateEye = MathHelper::Add(baseEye,
+                MathHelper::Multiply(toDesired, candidateDistance / distanceToDesired));
+            DirectX::XMFLOAT3 resolvedCandidateEye{};
+            bool candidateHit = false;
+            const bool collisionValid = ResolveWallLateralCandidateCollision(
+                currentPose.target, candidateEye, resolvedCandidateEye, candidateHit);
+            recoveryCandidateCollisionHit = candidateHit;
+            recoveryCandidateEye = resolvedCandidateEye;
+            DirectX::XMFLOAT3 candidateLookTarget{};
+            LockOnFovDiagnostics candidateDiagnostics{};
+            float candidateFov = compositionRequiredFovAfter;
+            recoveryCandidateValid = collisionValid &&
+                calculateCompositionTarget(resolvedCandidateEye,
+                    candidateLookTarget, candidateDiagnostics, candidateFov) &&
+                recoveryBaseRequiredFov - candidateFov >=
+                    recoveryFovImprovementThreshold;
+            recoveryCandidateRequiredFov = candidateFov;
+            if (recoveryCandidateValid)
+                targetRecoveryDistance = candidateDistance;
+            else
+                targetRecoveryDistance = 0.0f;
+        }
+        else
+        {
+            targetRecoveryDistance = 0.0f;
+        }
+    }
+    else
+    {
+        targetRecoveryDistance = 0.0f;
+    }
+
+    const float recoverySpeed = targetRecoveryDistance > currentRecoveryDistance
+        ? recoveryMoveSpeed : recoveryReturnSpeed;
+    const float recoveryStep = (std::max)(recoverySpeed, 0.0f) *
+        (std::max)(deltaTime, 0.0f);
+    currentRecoveryDistance += std::clamp(
+        targetRecoveryDistance - currentRecoveryDistance,
+        -recoveryStep, recoveryStep);
+
+    if (currentRecoveryDistance > FLT_EPSILON)
+    {
+        const DirectX::XMFLOAT3 baseEye = currentPose.eye;
+        const DirectX::XMFLOAT3 toDesired = MathHelper::Subtract(
+            collisionPreEyePosition, baseEye);
+        const float distanceToDesired = MathHelper::Length(toDesired);
+        if (distanceToDesired > FLT_EPSILON)
+        {
+            const float distance = (std::min)(currentRecoveryDistance,
+                distanceToDesired);
+            const DirectX::XMFLOAT3 recoveryEye = MathHelper::Add(baseEye,
+                MathHelper::Multiply(toDesired, distance / distanceToDesired));
+            DirectX::XMFLOAT3 resolvedEye{};
+            bool collisionHit = false;
+            if (ResolveWallLateralCandidateCollision(currentPose.target,
+                recoveryEye, resolvedEye, collisionHit))
+            {
+                currentPose.eye = resolvedEye;
+                collisionPostEyePosition = resolvedEye;
+                recoveryActive = true;
+                recoveryRecoveredDistance = MathHelper::Distance(
+                    baseEye, resolvedEye);
+
+                DirectX::XMFLOAT3 finalLookTarget{};
+                LockOnFovDiagnostics finalDiagnostics{};
+                if (calculateCompositionTarget(resolvedEye, finalLookTarget,
+                    finalDiagnostics, recoveryFinalRequiredFov))
+                {
+                    compositionLookTarget = finalLookTarget;
+                    lockOnFovDiagnostics = finalDiagnostics;
+                    compositionRequiredFovAfter = recoveryFinalRequiredFov;
+                }
+            }
+        }
+    }
+}
+
 void DarkCameraActor::ResetLockOnAdaptiveState()
 {
     lockOnCollisionStrength = 0.0f;
@@ -1455,6 +1764,13 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
     currentLateralEscapeOffset = 0.0f;
     targetLateralEscapeOffset = 0.0f;
     lockOnWallEscapeActive = false;
+    currentCompositionYawCorrection = 0.0f;
+    targetCompositionYawCorrection = 0.0f;
+    currentRecoveryDistance = 0.0f;
+    targetRecoveryDistance = 0.0f;
+    recoveryActive = false;
+    compositionLookTarget = currentPose.target;
+    compositionActive = false;
 }
 
 void DarkCameraActor::BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to)
@@ -2027,6 +2343,80 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::Text("Current Adaptive Distance: %.3f", adaptiveLockOnCameraDistance);
         ImGui::Text("Framing Deficit: %.3f", lockOnFramingDeficit);
         ImGui::Text("Framing Active: %s", lockOnFramingActive ? "YES" : "NO");
+        ImGui::SeparatorText("Composition Correction");
+        ImGui::Text("Composition Active: %s",
+            compositionActive ? "true" : "false");
+        ImGui::Text("Player Inside Safe Frame: %s",
+            compositionPlayerInsideSafeFrame ? "true" : "false");
+        ImGui::Text("Boss Inside Safe Frame: %s",
+            compositionBossInsideSafeFrame ? "true" : "false");
+        ImGui::Text("Player In Front: %s",
+            compositionPlayerInFront ? "true" : "false");
+        ImGui::Text("Boss In Front: %s",
+            compositionBossInFront ? "true" : "false");
+        ImGui::Text("Base Yaw: %.3f deg",
+            DirectX::XMConvertToDegrees(compositionBaseYaw));
+        ImGui::Text("Composition Target Yaw: %.3f deg",
+            DirectX::XMConvertToDegrees(compositionTargetYaw));
+        ImGui::Text("Target Correction: %.3f deg",
+            DirectX::XMConvertToDegrees(targetCompositionYawCorrection));
+        ImGui::Text("Current Correction: %.3f deg",
+            DirectX::XMConvertToDegrees(currentCompositionYawCorrection));
+        ImGui::Text("Required FOV Before Composition: %.2f",
+            compositionRequiredFovBefore);
+        ImGui::Text("Required FOV After Composition: %.2f",
+            compositionRequiredFovAfter);
+        ImGui::SeparatorText("Failure Distance Recovery");
+        ImGui::Text("Failure Recovery Active: %s",
+            recoveryActive ? "true" : "false");
+        ImGui::Text("Desired Eye Target Distance: %.3f",
+            recoveryDesiredTargetDistance);
+        ImGui::Text("Collision Post Target Distance: %.3f",
+            recoveryCollisionPostTargetDistance);
+        ImGui::Text("Wall Escape Final Target Distance: %.3f",
+            recoveryWallEscapeFinalTargetDistance);
+        ImGui::Text("Lost Distance: %.3f", recoveryLostDistance);
+        ImGui::Text("Recovered Distance: %.3f", recoveryRecoveredDistance);
+        ImGui::Text("Base Required FOV: %.2f", recoveryBaseRequiredFov);
+        ImGui::Text("Recovery Candidate Required FOV: %.2f",
+            recoveryCandidateRequiredFov);
+        ImGui::Text("Final Required FOV: %.2f", recoveryFinalRequiredFov);
+        ImGui::Text("Recovery Candidate Valid: %s",
+            recoveryCandidateValid ? "true" : "false");
+        ImGui::Text("Recovery Candidate Collision Hit: %s",
+            recoveryCandidateCollisionHit ? "true" : "false");
+        ImGui::Text("Current Recovery Distance: %.3f",
+            currentRecoveryDistance);
+        ImGui::Text("Target Recovery Distance: %.3f",
+            targetRecoveryDistance);
+        ImGui::DragFloat("Max Recovery Distance", &recoveryMaxDistance,
+            0.05f, 0.0f, 5.0f, "%.2f m");
+        ImGui::DragFloat("Recovery Move Speed", &recoveryMoveSpeed,
+            0.05f, 0.0f, 10.0f, "%.2f m/s");
+        ImGui::DragFloat("Recovery Return Speed", &recoveryReturnSpeed,
+            0.05f, 0.0f, 10.0f, "%.2f m/s");
+        ImGui::DragFloat("Recovery FOV Improvement Threshold",
+            &recoveryFovImprovementThreshold, 0.25f, 0.0f, 30.0f,
+            "%.1f deg");
+        recoveryMaxDistance = (std::max)(recoveryMaxDistance, 0.0f);
+        recoveryMoveSpeed = (std::max)(recoveryMoveSpeed, 0.0f);
+        recoveryReturnSpeed = (std::max)(recoveryReturnSpeed, 0.0f);
+        recoveryFovImprovementThreshold = (std::max)(
+            recoveryFovImprovementThreshold, 0.0f);
+        ImGui::DragFloat("Max Composition Correction",
+            &compositionMaxCorrectionDegree, 0.25f, 0.0f, 15.0f,
+            "%.1f deg");
+        ImGui::DragFloat("Composition Angular Speed",
+            &compositionAngularSpeedDegree, 1.0f, 0.0f, 180.0f,
+            "%.1f deg/sec");
+        ImGui::DragFloat("Composition Dead Zone",
+            &compositionDeadZoneDegree, 0.1f, 0.0f, 10.0f,
+            "%.1f deg");
+        compositionMaxCorrectionDegree = std::clamp(
+            compositionMaxCorrectionDegree, 0.0f, 15.0f);
+        compositionAngularSpeedDegree = (std::max)(
+            compositionAngularSpeedDegree, 0.0f);
+        compositionDeadZoneDegree = (std::max)(compositionDeadZoneDegree, 0.0f);
         ImGui::SeparatorText("Collision FOV Fallback");
         ImGui::DragFloat("Max Fallback FOV", &lockOnMaxFallbackFovDegree,
             0.1f, lockOnSettings.fovDegree, 90.0f, "%.1f deg");
