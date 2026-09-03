@@ -227,6 +227,12 @@ private:
         const DirectX::XMFLOAT3& eye,
         LockOnFovDiagnostics& diagnostics,
         bool& outValid) const;
+    void UpdateLockOnWallLateralEscape(float deltaTime);
+    bool ResolveWallLateralCandidateCollision(
+        const DirectX::XMFLOAT3& target,
+        const DirectX::XMFLOAT3& candidateEye,
+        DirectX::XMFLOAT3& outResolvedEye,
+        bool& outCollisionHit) const;
     void UpdateLockOnFovFallback(float deltaTime);
 
     // LockOn開始時に前回の適応値を持ち越さない
@@ -364,6 +370,28 @@ private:
     float lockOnRequiredFovDegree = 45.0f;
     float lockOnCollisionPreRequiredFovDegree = 45.0f;
     LockOnFovDiagnostics lockOnFovDiagnostics{};
+    float lockOnWallEscapeNearOffset = 1.0f;
+    float lockOnWallEscapeFarOffset = 3.0f;
+    float lockOnWallEscapeSevereFovThreshold = 60.0f;
+    float lockOnWallEscapeImprovementThreshold = 5.0f;
+    float lockOnWallEscapeSideSwitchImprovementThreshold = 6.0f;
+    float lockOnWallEscapeDistanceImprovementThreshold = 4.0f;
+    float lockOnWallEscapeMoveSpeed = 5.0f;
+    float lockOnWallEscapeReturnSpeed = 3.0f;
+    float currentLateralEscapeOffset = 0.0f;
+    float targetLateralEscapeOffset = 0.0f;
+    float lockOnWallEscapeCurrentRequiredFov = 45.0f;
+    float lockOnWallEscapeLeftNearRequiredFov = 45.0f;
+    float lockOnWallEscapeLeftFarRequiredFov = 45.0f;
+    float lockOnWallEscapeRightNearRequiredFov = 45.0f;
+    float lockOnWallEscapeRightFarRequiredFov = 45.0f;
+    float lockOnWallEscapeSelectedRequiredFov = 45.0f;
+    bool lockOnWallEscapeSevereComposition = false;
+    bool lockOnWallEscapeActive = false;
+    int currentEscapeSide = 0;
+    int targetEscapeSide = 0;
+    std::string lockOnWallEscapeSelectedCandidate = "None";
+    LockOnFovDiagnostics lockOnWallEscapeSelectedDiagnostics{};
     float lockOnTargetFovDegree = 45.0f;
     float lockOnCurrentFovDegree = 45.0f;
     float lockOnFovReturnDelayElapsed = 0.0f;

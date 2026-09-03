@@ -115,6 +115,8 @@ void DarkCameraActor::Update(float deltaTime)
     // “–‚½‚è”»’è‚ÅƒJƒƒ‰‚ÌˆÊ’u‚ðC³‚·‚é
     currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
     collisionPostEyePosition = currentPose.eye;
+    UpdateLockOnWallLateralEscape(deltaTime);
+    collisionPostEyePosition = currentPose.eye;
     actualCameraDistance = MathHelper::Distance(currentPose.target, collisionPostEyePosition);
     cameraCollisionRatio = desiredCameraDistance > FLT_EPSILON
         ? actualCameraDistance / desiredCameraDistance
@@ -954,6 +956,231 @@ float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
     return requiredFovDegree;
 }
 
+bool DarkCameraActor::ResolveWallLateralCandidateCollision(
+    const DirectX::XMFLOAT3& target,
+    const DirectX::XMFLOAT3& candidateEye,
+    DirectX::XMFLOAT3& outResolvedEye,
+    bool& outCollisionHit) const
+{
+    HitResultWithActor hit{};
+    const uint32_t mask =
+        CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
+        CollisionHelper::ToBit(CollisionLayer::Floor) |
+        CollisionHelper::ToBit(CollisionLayer::WorldProps);
+
+    outResolvedEye = candidateEye;
+    outCollisionHit = CollisionFunction::SphereRayCast(
+        target, candidateEye, hit, sphereCastRadius, mask);
+    if (!outCollisionHit)
+        return true;
+
+    if (hit.initialOverlap || !hit.hasPosition || !hit.hasNormal)
+        return false;
+
+    const float collisionOffset = sphereCastRadius + 0.05f;
+    outResolvedEye = MathHelper::Add(hit.hitPoint,
+        MathHelper::Multiply(hit.normal, collisionOffset));
+    return true;
+}
+
+void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
+{
+    struct Candidate
+    {
+        const char* name = "None";
+        int side = 0;
+        float distance = 0.0f;
+        float requiredFov = 45.0f;
+        DirectX::XMFLOAT3 resolvedEye{};
+        LockOnFovDiagnostics diagnostics{};
+        bool collisionHit = false;
+        bool valid = false;
+    };
+
+    lockOnWallEscapeSevereComposition = false;
+    lockOnWallEscapeSelectedCandidate = "None";
+    lockOnWallEscapeSelectedRequiredFov = lockOnSettings.fovDegree;
+    lockOnWallEscapeCurrentRequiredFov = lockOnSettings.fovDegree;
+    lockOnWallEscapeLeftNearRequiredFov = lockOnSettings.fovDegree;
+    lockOnWallEscapeLeftFarRequiredFov = lockOnSettings.fovDegree;
+    lockOnWallEscapeRightNearRequiredFov = lockOnSettings.fovDegree;
+    lockOnWallEscapeRightFarRequiredFov = lockOnSettings.fovDegree;
+    lockOnWallEscapeSelectedDiagnostics = {};
+    targetEscapeSide = 0;
+    targetLateralEscapeOffset = 0.0f;
+
+    if (isExternalBlending || isBlending || currentMode != CameraMode::LockOn)
+    {
+        currentEscapeSide = 0;
+        currentLateralEscapeOffset = 0.0f;
+        lockOnWallEscapeActive = false;
+        return;
+    }
+
+    const DirectX::XMFLOAT3 baseEye = collisionPostEyePosition;
+    const DirectX::XMFLOAT3 forward = MathHelper::Subtract(
+        currentPose.target, baseEye);
+    if (MathHelper::Length(forward) <= 0.1f)
+        return;
+
+    const DirectX::XMFLOAT3 worldUp{ 0.0f, 1.0f, 0.0f };
+    DirectX::XMFLOAT3 cameraRight = MathHelper::Cross(
+        worldUp, MathHelper::Normalize(forward));
+    if (MathHelper::Length(cameraRight) <= FLT_EPSILON)
+        return;
+    cameraRight = MathHelper::Normalize(cameraRight);
+
+    LockOnFovDiagnostics currentDiagnostics{};
+    bool currentValid = false;
+    lockOnWallEscapeCurrentRequiredFov = EvaluateRequiredLockOnFovFromEye(
+        baseEye, currentDiagnostics, currentValid);
+    lockOnWallEscapeSevereComposition = cameraHitWall &&
+        (!currentValid || !currentDiagnostics.player.inFront ||
+            !currentDiagnostics.boss.inFront ||
+            lockOnWallEscapeCurrentRequiredFov >=
+                lockOnWallEscapeSevereFovThreshold);
+
+    Candidate leftNear{ "Left Near", -1,
+        (std::max)(lockOnWallEscapeNearOffset, 0.0f) };
+    Candidate leftFar{ "Left Far", -1,
+        (std::max)(lockOnWallEscapeFarOffset, 0.0f) };
+    Candidate rightNear{ "Right Near", 1,
+        (std::max)(lockOnWallEscapeNearOffset, 0.0f) };
+    Candidate rightFar{ "Right Far", 1,
+        (std::max)(lockOnWallEscapeFarOffset, 0.0f) };
+
+    const auto evaluateCandidate = [&](Candidate& candidate)
+    {
+        const DirectX::XMFLOAT3 rawEye = MathHelper::Add(baseEye,
+            MathHelper::Multiply(cameraRight,
+                candidate.distance * static_cast<float>(candidate.side)));
+        const bool collisionValid = ResolveWallLateralCandidateCollision(
+            currentPose.target, rawEye, candidate.resolvedEye,
+            candidate.collisionHit);
+        if (!collisionValid)
+            return;
+
+        bool compositionValid = false;
+        candidate.requiredFov = EvaluateRequiredLockOnFovFromEye(
+            candidate.resolvedEye, candidate.diagnostics, compositionValid);
+        candidate.valid = compositionValid &&
+            candidate.diagnostics.player.inFront &&
+            candidate.diagnostics.boss.inFront;
+    };
+
+    Candidate* selected = nullptr;
+    if (lockOnWallEscapeSevereComposition)
+    {
+        evaluateCandidate(leftNear);
+        evaluateCandidate(leftFar);
+        evaluateCandidate(rightNear);
+        evaluateCandidate(rightFar);
+
+        lockOnWallEscapeLeftNearRequiredFov = leftNear.requiredFov;
+        lockOnWallEscapeLeftFarRequiredFov = leftFar.requiredFov;
+        lockOnWallEscapeRightNearRequiredFov = rightNear.requiredFov;
+        lockOnWallEscapeRightFarRequiredFov = rightFar.requiredFov;
+
+        const auto chooseDistance = [&](Candidate& nearCandidate,
+            Candidate& farCandidate) -> Candidate*
+        {
+            if (!nearCandidate.valid)
+                return farCandidate.valid ? &farCandidate : nullptr;
+            if (!farCandidate.valid)
+                return &nearCandidate;
+            return nearCandidate.requiredFov - farCandidate.requiredFov >=
+                lockOnWallEscapeDistanceImprovementThreshold
+                ? &farCandidate
+                : &nearCandidate;
+        };
+
+        Candidate* bestLeft = chooseDistance(leftNear, leftFar);
+        Candidate* bestRight = chooseDistance(rightNear, rightFar);
+        Candidate* currentSideCandidate = currentEscapeSide < 0
+            ? bestLeft
+            : currentEscapeSide > 0 ? bestRight : nullptr;
+        Candidate* oppositeCandidate = currentEscapeSide < 0
+            ? bestRight
+            : currentEscapeSide > 0 ? bestLeft : nullptr;
+
+        if (currentSideCandidate)
+        {
+            selected = currentSideCandidate;
+            if (oppositeCandidate &&
+                currentSideCandidate->requiredFov -
+                    oppositeCandidate->requiredFov >=
+                        lockOnWallEscapeSideSwitchImprovementThreshold)
+            {
+                selected = oppositeCandidate;
+            }
+        }
+        else if (oppositeCandidate)
+        {
+            selected = oppositeCandidate;
+        }
+        else if (bestLeft && bestRight)
+        {
+            selected = bestLeft->requiredFov <= bestRight->requiredFov
+                ? bestLeft
+                : bestRight;
+        }
+        else
+        {
+            selected = bestLeft ? bestLeft : bestRight;
+        }
+
+        if (selected)
+        {
+            const bool clearlyImproved = !currentValid ||
+                lockOnWallEscapeCurrentRequiredFov - selected->requiredFov >=
+                    lockOnWallEscapeImprovementThreshold;
+            if (!clearlyImproved)
+                selected = nullptr;
+        }
+    }
+
+    if (selected)
+    {
+        targetEscapeSide = selected->side;
+        targetLateralEscapeOffset = selected->distance *
+            static_cast<float>(selected->side);
+        currentEscapeSide = selected->side;
+        lockOnWallEscapeSelectedCandidate = selected->name;
+        lockOnWallEscapeSelectedRequiredFov = selected->requiredFov;
+        lockOnWallEscapeSelectedDiagnostics = selected->diagnostics;
+    }
+
+    const float speed = std::abs(targetLateralEscapeOffset) > FLT_EPSILON
+        ? lockOnWallEscapeMoveSpeed
+        : lockOnWallEscapeReturnSpeed;
+    const float maxOffsetDelta = (std::max)(speed, 0.0f) *
+        (std::max)(deltaTime, 0.0f);
+    currentLateralEscapeOffset += std::clamp(
+        targetLateralEscapeOffset - currentLateralEscapeOffset,
+        -maxOffsetDelta, maxOffsetDelta);
+    if (std::abs(currentLateralEscapeOffset) <= FLT_EPSILON &&
+        std::abs(targetLateralEscapeOffset) <= FLT_EPSILON)
+    {
+        currentLateralEscapeOffset = 0.0f;
+        currentEscapeSide = 0;
+    }
+
+    lockOnWallEscapeActive = std::abs(currentLateralEscapeOffset) > FLT_EPSILON;
+    if (!lockOnWallEscapeActive)
+        return;
+
+    const DirectX::XMFLOAT3 smoothedEye = MathHelper::Add(baseEye,
+        MathHelper::Multiply(cameraRight, currentLateralEscapeOffset));
+    DirectX::XMFLOAT3 resolvedSmoothedEye{};
+    bool finalCollisionHit = false;
+    if (ResolveWallLateralCandidateCollision(currentPose.target, smoothedEye,
+        resolvedSmoothedEye, finalCollisionHit))
+    {
+        currentPose.eye = resolvedSmoothedEye;
+        collisionPostEyePosition = resolvedSmoothedEye;
+    }
+}
+
 void DarkCameraActor::UpdateLockOnFovFallback(float deltaTime)
 {
     const float baseFovDegree = lockOnSettings.fovDegree;
@@ -1042,6 +1269,11 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
     lockOnCurrentFovDegree = lockOnSettings.fovDegree;
     lockOnFovReturnDelayElapsed = 0.0f;
     lockOnFovFallbackActive = false;
+    currentEscapeSide = 0;
+    targetEscapeSide = 0;
+    currentLateralEscapeOffset = 0.0f;
+    targetLateralEscapeOffset = 0.0f;
+    lockOnWallEscapeActive = false;
 }
 
 void DarkCameraActor::BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to)
@@ -1486,6 +1718,79 @@ void DarkCameraActor::DrawImGuiDetails()
             cameraCollisionHitNormal.z);
         ImGui::Text("SphereCast Hit Distance: %.3f",
             cameraCollisionHitDistance);
+        ImGui::SeparatorText("Wall Lateral Escape");
+        ImGui::DragFloat("Near Lateral Offset", &lockOnWallEscapeNearOffset,
+            0.05f, 0.0f, 5.0f, "%.2f m");
+        ImGui::DragFloat("Far Lateral Offset", &lockOnWallEscapeFarOffset,
+            0.05f, 0.0f, 5.0f, "%.2f m");
+        ImGui::DragFloat("Severe FOV Threshold",
+            &lockOnWallEscapeSevereFovThreshold,
+            0.5f, lockOnSettings.fovDegree, 120.0f, "%.1f deg");
+        ImGui::DragFloat("Required FOV Improvement Threshold",
+            &lockOnWallEscapeImprovementThreshold,
+            0.25f, 0.0f, 30.0f, "%.1f deg");
+        ImGui::DragFloat("Side Switch Improvement Threshold",
+            &lockOnWallEscapeSideSwitchImprovementThreshold,
+            0.25f, 0.0f, 30.0f, "%.1f deg");
+        ImGui::DragFloat("Distance Improvement Threshold",
+            &lockOnWallEscapeDistanceImprovementThreshold,
+            0.25f, 0.0f, 30.0f, "%.1f deg");
+        ImGui::DragFloat("Escape Move Speed", &lockOnWallEscapeMoveSpeed,
+            0.25f, 0.0f, 20.0f, "%.2f m/s");
+        ImGui::DragFloat("Escape Return Speed", &lockOnWallEscapeReturnSpeed,
+            0.25f, 0.0f, 20.0f, "%.2f m/s");
+        lockOnWallEscapeNearOffset = (std::max)(
+            lockOnWallEscapeNearOffset, 0.0f);
+        lockOnWallEscapeFarOffset = (std::max)(
+            lockOnWallEscapeFarOffset, lockOnWallEscapeNearOffset);
+        lockOnWallEscapeSevereFovThreshold = (std::max)(
+            lockOnWallEscapeSevereFovThreshold, lockOnSettings.fovDegree);
+        lockOnWallEscapeImprovementThreshold = (std::max)(
+            lockOnWallEscapeImprovementThreshold, 0.0f);
+        lockOnWallEscapeSideSwitchImprovementThreshold = (std::max)(
+            lockOnWallEscapeSideSwitchImprovementThreshold, 0.0f);
+        lockOnWallEscapeDistanceImprovementThreshold = (std::max)(
+            lockOnWallEscapeDistanceImprovementThreshold, 0.0f);
+        lockOnWallEscapeMoveSpeed = (std::max)(lockOnWallEscapeMoveSpeed, 0.0f);
+        lockOnWallEscapeReturnSpeed = (std::max)(lockOnWallEscapeReturnSpeed, 0.0f);
+        const char* currentEscapeSideName = currentEscapeSide < 0
+            ? "Left"
+            : currentEscapeSide > 0 ? "Right" : "None";
+        const char* targetEscapeSideName = targetEscapeSide < 0
+            ? "Left"
+            : targetEscapeSide > 0 ? "Right" : "None";
+        ImGui::Text("Severe Composition: %s",
+            lockOnWallEscapeSevereComposition ? "true" : "false");
+        ImGui::Text("Escape Active: %s",
+            lockOnWallEscapeActive ? "true" : "false");
+        ImGui::Text("Current Escape Side: %s", currentEscapeSideName);
+        ImGui::Text("Target Escape Side: %s", targetEscapeSideName);
+        ImGui::Text("Current Lateral Offset: %.3f", currentLateralEscapeOffset);
+        ImGui::Text("Target Lateral Offset: %.3f", targetLateralEscapeOffset);
+        ImGui::Text("Current Required FOV: %.2f",
+            lockOnWallEscapeCurrentRequiredFov);
+        ImGui::Text("Left Near / Far Required FOV: %.2f / %.2f",
+            lockOnWallEscapeLeftNearRequiredFov,
+            lockOnWallEscapeLeftFarRequiredFov);
+        ImGui::Text("Right Near / Far Required FOV: %.2f / %.2f",
+            lockOnWallEscapeRightNearRequiredFov,
+            lockOnWallEscapeRightFarRequiredFov);
+        ImGui::Text("Selected Candidate: %s",
+            lockOnWallEscapeSelectedCandidate.c_str());
+        ImGui::Text("Selected Candidate Required FOV: %.2f",
+            lockOnWallEscapeSelectedRequiredFov);
+        ImGui::Text("Selected Player X / Y / Z: %.3f / %.3f / %.3f",
+            lockOnWallEscapeSelectedDiagnostics.player.cameraSpace.x,
+            lockOnWallEscapeSelectedDiagnostics.player.cameraSpace.y,
+            lockOnWallEscapeSelectedDiagnostics.player.cameraSpace.z);
+        ImGui::Text("Selected Player In Front: %s",
+            lockOnWallEscapeSelectedDiagnostics.player.inFront ? "true" : "false");
+        ImGui::Text("Selected Boss X / Y / Z: %.3f / %.3f / %.3f",
+            lockOnWallEscapeSelectedDiagnostics.boss.cameraSpace.x,
+            lockOnWallEscapeSelectedDiagnostics.boss.cameraSpace.y,
+            lockOnWallEscapeSelectedDiagnostics.boss.cameraSpace.z);
+        ImGui::Text("Selected Boss In Front: %s",
+            lockOnWallEscapeSelectedDiagnostics.boss.inFront ? "true" : "false");
         ImGui::Text("Player-Boss Distance: %.3f", lockOnEnemyDistance);
         ImGui::Text("Base Distance: %.3f", lockOnSettings.distance);
         ImGui::Text("Horizontal Extent: %.3f", lockOnHorizontalExtent);
