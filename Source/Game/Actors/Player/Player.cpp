@@ -469,6 +469,24 @@ void Player::Initialize(const Transform& transform)
     rushWordImageComponent->SetPivot({ 0.5f, 0.5f });
     rushWordImageComponent->SetVisible(false);
     uiManager->Add(rushWordImageComponent);
+
+    lockOnGuideArrowImageComponent = std::make_shared<UIImageComponent>(
+        "./Data/Textures/UI/LT_arrow.png", "LockOnGuideArrow");
+    lockOnGuideArrowImageComponent->SetSize(lockOnGuideArrowSize);
+    lockOnGuideArrowImageComponent->SetScale(lockOnGuideArrowBaseScale);
+    lockOnGuideArrowImageComponent->SetPivot({ 0.5f, 0.5f });
+    lockOnGuideArrowImageComponent->SetVisible(false);
+    lockOnGuideArrowImageComponent->zOrder = 20;
+    uiManager->Add(lockOnGuideArrowImageComponent);
+
+    lockOnGuideButtonImageComponent = std::make_shared<UIImageComponent>(
+        "./Data/Textures/UI/LT_button.png", "LockOnGuideButton");
+    lockOnGuideButtonImageComponent->SetSize(lockOnGuideButtonSize);
+    lockOnGuideButtonImageComponent->SetScale(lockOnGuideButtonBaseScale);
+    lockOnGuideButtonImageComponent->SetPivot({ 0.5f, 0.5f });
+    lockOnGuideButtonImageComponent->SetVisible(false);
+    lockOnGuideButtonImageComponent->zOrder = 21;
+    uiManager->Add(lockOnGuideButtonImageComponent);
     SetEulerRotation({ 0.0f,90.0f,0.0f });
 
     // ‘€ìà–¾UI‚ð“ü‚ê‚é
@@ -553,6 +571,7 @@ void Player::Update(float deltaTime)
     // Low HP feedback must observe death/recovery even while battle actions are suspended.
     UpdateLowHpEffects();
     UpdateDamageFlash();
+    UpdateLockOnGuideUI();
 
     if (battleActionsSuspended)
         return;
@@ -1313,6 +1332,21 @@ void Player::DrawImGuiDetails()
         ImGui::Text("rushRequested: %s", rushRequestedDebug ? "true" : "false");
         ImGui::Text("rushTargetValid: %s", rushTarget.expired() ? "false" : "true");
         ImGui::Text("UI Alpha: %.3f", rushPromptAlpha);
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("LockOn Guide"))
+    {
+        ImGui::DragFloat("Delay", &lockOnGuideDelay, 0.05f, 0.0f, 10.0f);
+        ImGui::DragFloat("Pulse Period", &lockOnGuidePulsePeriod, 0.05f, 0.1f, 5.0f);
+        ImGui::DragFloat("Pulse Min Scale", &lockOnGuidePulseMinScale, 0.01f, 0.1f, 1.0f);
+        ImGui::DragFloat2("Arrow Size", &lockOnGuideArrowSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2("Arrow Base Scale", &lockOnGuideArrowBaseScale.x, 0.01f, 0.01f, 4.0f);
+        ImGui::DragFloat2("Button Size", &lockOnGuideButtonSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2("Button Base Scale", &lockOnGuideButtonBaseScale.x, 0.01f, 0.01f, 4.0f);
+        ImGui::DragFloat("Button Offset", &lockOnGuideButtonOffset, 1.0f, 0.0f, 500.0f);
+        ImGui::DragFloat("Edge Margin", &lockOnGuideEdgeMargin, 1.0f, 0.0f, 500.0f);
+        ImGui::DragFloat("Arrow Rotation Offset", &lockOnGuideArrowRotationOffset, 1.0f, -360.0f, 360.0f);
+        ImGui::Text("Visible: %s / Offscreen: %.2f", lockOnGuideVisible ? "true" : "false", lockOnGuideOffscreenElapsed);
         ImGui::TreePop();
     }
     if (ImGui::TreeNode("Initial Rush Debug"))
@@ -3220,6 +3254,130 @@ void Player::SetRushInputDebugState(bool judgeSuccess, bool rushRequested)
 {
     rushJudgeSuccessDebug = judgeSuccess;
     rushRequestedDebug = rushRequested;
+}
+
+void Player::HideAndResetLockOnGuideUI()
+{
+    lockOnGuideOffscreenElapsed = 0.0f;
+    lockOnGuidePulseElapsed = 0.0f;
+    lockOnGuideVisible = false;
+    if (lockOnGuideArrowImageComponent)
+    {
+        lockOnGuideArrowImageComponent->SetVisible(false);
+        lockOnGuideArrowImageComponent->SetScale(lockOnGuideArrowBaseScale);
+    }
+    if (lockOnGuideButtonImageComponent)
+    {
+        lockOnGuideButtonImageComponent->SetVisible(false);
+        lockOnGuideButtonImageComponent->SetScale(lockOnGuideButtonBaseScale);
+    }
+}
+
+void Player::UpdateLockOnGuideUI()
+{
+    using namespace DirectX;
+    if (!lockOnGuideArrowImageComponent || !lockOnGuideButtonImageComponent ||
+        !IsBossBattle() || GetHp() <= 0 || IsInWinState())
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+
+    auto boss = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>();
+    auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera());
+    if (!boss || boss->IsDead() || !camera ||
+        camera->GetMovementMode() == DarkCameraActor::CameraMode::LockOn)
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+
+    const auto target = boss->GetCameraTargetComponent();
+    if (!target)
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+    const auto projection = camera->ProjectWorldPositionForUI(
+        target->GetComponentLocation());
+    float vx = 0.0f, vy = 0.0f, vw = 0.0f, vh = 0.0f;
+    Graphics::GetViewport(vx, vy, vw, vh);
+    if (!projection.valid || vw <= 1.0f || vh <= 1.0f || projection.insideViewport)
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+
+    const float dt = Time::UnscaledDeltaTime();
+    lockOnGuideOffscreenElapsed += dt;
+    if (!lockOnGuideVisible && lockOnGuideOffscreenElapsed < lockOnGuideDelay)
+        return;
+
+    XMFLOAT2 center{ vx + vw * 0.5f, vy + vh * 0.5f };
+    XMFLOAT2 direction{
+        projection.screenPosition.x - center.x,
+        projection.screenPosition.y - center.y };
+    if (!projection.inFront)
+    {
+        direction.x = -direction.x;
+        direction.y = -direction.y;
+    }
+    const float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+    if (length <= FLT_EPSILON)
+        direction = { 0.0f, 1.0f };
+    else
+    {
+        direction.x /= length;
+        direction.y /= length;
+    }
+
+    const float uiScale = (std::min)(vw / 1920.0f, vh / 1080.0f);
+    const float marginX = lockOnGuideEdgeMargin * uiScale;
+    const float marginY = lockOnGuideEdgeMargin * uiScale;
+    const float left = vx + marginX;
+    const float right = vx + vw - marginX;
+    const float top = vy + marginY;
+    const float bottom = vy + vh - marginY;
+    float t = FLT_MAX;
+    if (direction.x > FLT_EPSILON) t = (std::min)(t, (right - center.x) / direction.x);
+    if (direction.x < -FLT_EPSILON) t = (std::min)(t, (left - center.x) / direction.x);
+    if (direction.y > FLT_EPSILON) t = (std::min)(t, (bottom - center.y) / direction.y);
+    if (direction.y < -FLT_EPSILON) t = (std::min)(t, (top - center.y) / direction.y);
+    if (!std::isfinite(t) || t <= 0.0f)
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+
+    const XMFLOAT2 arrowScreen{ center.x + direction.x * t, center.y + direction.y * t };
+    const XMFLOAT2 arrowUi = ConvertScreenToUI(arrowScreen);
+    const XMFLOAT2 buttonUi = ConvertScreenToUI({
+        arrowScreen.x - direction.x * lockOnGuideButtonOffset * uiScale,
+        arrowScreen.y - direction.y * lockOnGuideButtonOffset * uiScale });
+
+    lockOnGuideVisible = true;
+    lockOnGuidePulseElapsed = std::fmod(
+        lockOnGuidePulseElapsed + dt, (std::max)(lockOnGuidePulsePeriod, 0.01f));
+    const float half = (std::max)(lockOnGuidePulsePeriod * 0.5f, 0.01f);
+    const float phase = lockOnGuidePulseElapsed;
+    const float pulseScale = phase < half
+        ? Easing::InOutSine(phase, half, 1.0f, lockOnGuidePulseMinScale)
+        : Easing::InOutSine(phase - half, half, lockOnGuidePulseMinScale, 1.0f);
+
+    lockOnGuideArrowImageComponent->SetWorldPosition(arrowUi);
+    lockOnGuideArrowImageComponent->SetSize(lockOnGuideArrowSize);
+    lockOnGuideArrowImageComponent->SetScale(lockOnGuideArrowBaseScale);
+    lockOnGuideArrowImageComponent->SetWorldAngleDegree(
+        XMConvertToDegrees(std::atan2(direction.y, direction.x)) +
+        lockOnGuideArrowRotationOffset);
+    lockOnGuideArrowImageComponent->SetVisible(true);
+
+    lockOnGuideButtonImageComponent->SetWorldPosition(buttonUi);
+    lockOnGuideButtonImageComponent->SetSize(lockOnGuideButtonSize);
+    lockOnGuideButtonImageComponent->SetScale({
+        lockOnGuideButtonBaseScale.x * pulseScale,
+        lockOnGuideButtonBaseScale.y * pulseScale });
+    lockOnGuideButtonImageComponent->SetVisible(true);
 }
 
 void Player::UpdateRushPromptUI()

@@ -188,6 +188,17 @@ public:
         float strength,
         float duration);
     void CancelOffscreenAttackAssist();
+    struct WorldScreenProjection
+    {
+        bool valid = false;
+        bool inFront = false;
+        bool insideViewport = false;
+        DirectX::XMFLOAT2 screenPosition{};
+        DirectX::XMFLOAT3 ndc{};
+        float clipW = 0.0f;
+    };
+    WorldScreenProjection ProjectWorldPositionForUI(
+        const DirectX::XMFLOAT3& worldPosition) const;
 private:
     struct ScreenProjectionResult
     {

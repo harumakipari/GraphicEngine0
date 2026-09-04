@@ -314,6 +314,21 @@ DarkCameraActor::ProjectWorldPositionForOffscreenAssist(
     return result;
 }
 
+DarkCameraActor::WorldScreenProjection
+DarkCameraActor::ProjectWorldPositionForUI(
+    const DirectX::XMFLOAT3& worldPosition) const
+{
+    const auto projection = ProjectWorldPositionForOffscreenAssist(worldPosition);
+    WorldScreenProjection result{};
+    result.valid = projection.valid;
+    result.inFront = projection.inFront;
+    result.insideViewport = projection.insideViewport;
+    result.screenPosition = projection.screenPosition;
+    result.ndc = projection.ndc;
+    result.clipW = projection.clipW;
+    return result;
+}
+
 void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
 {
     offscreenAssistAppliedYawStep = 0.0f;

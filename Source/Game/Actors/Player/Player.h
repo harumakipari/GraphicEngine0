@@ -284,6 +284,8 @@ private:
     void UpdateMovement();
 
     void UpdateRushPromptUI();
+    void UpdateLockOnGuideUI();
+    void HideAndResetLockOnGuideUI();
 
     float GetRushDamageMultiplier() const;
     int GetCurrentAttackDamage() const;
@@ -480,6 +482,21 @@ public:
     std::shared_ptr<UIImageComponent> rushGuideImageComponent;
     std::shared_ptr<UIImageComponent> rushButtonImageComponent;
     std::shared_ptr<UIImageComponent> rushWordImageComponent;
+    std::shared_ptr<UIImageComponent> lockOnGuideArrowImageComponent;
+    std::shared_ptr<UIImageComponent> lockOnGuideButtonImageComponent;
+    float lockOnGuideOffscreenElapsed = 0.0f;
+    float lockOnGuidePulseElapsed = 0.0f;
+    bool lockOnGuideVisible = false;
+    float lockOnGuideDelay = 3.0f;
+    float lockOnGuidePulsePeriod = 1.2f;
+    float lockOnGuidePulseMinScale = 0.92f;
+    DirectX::XMFLOAT2 lockOnGuideArrowSize{ 96.0f, 64.0f };
+    DirectX::XMFLOAT2 lockOnGuideArrowBaseScale{ 1.0f, 1.0f };
+    DirectX::XMFLOAT2 lockOnGuideButtonSize{ 96.0f, 96.0f };
+    DirectX::XMFLOAT2 lockOnGuideButtonBaseScale{ 1.0f, 1.0f };
+    float lockOnGuideButtonOffset = 120.0f;
+    float lockOnGuideEdgeMargin = 90.0f;
+    float lockOnGuideArrowRotationOffset = 180.0f;
     // ラッシュの時のコンボカウント（回避中にもラッシュをカウントするための変数）
     int rushQueuedAttackCount = 0;
 private:
