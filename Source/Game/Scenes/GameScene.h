@@ -92,6 +92,10 @@ private:
     void OnPlayerDeathCameraStart();
     void ResetBattleForContinue();
     void EnterBossDead();
+    void CreateDeathResultUI();
+    void SetDeathResultVisible(bool visible);
+    void SelectDeathResult(int index);
+    void ExecuteDeathResult(int index);
 
     std::shared_ptr<StageAsset> mainRoomAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> bossRoomAsset = std::make_shared<StageAsset>();
@@ -124,6 +128,18 @@ private:
     float battleElapsedTime = 0.0f;
     float deathAttemptTime = 0.0f;
     float deathPresentationElapsed = 0.0f;
+    float deathResultDelay = 4.0f;
+    float deathResultInputDelay = 0.3f;
+    bool deathResultVisible = false;
+    bool deathResultInputEnabled = false;
+    int deathResultSelection = 0;
+    std::shared_ptr<UIImageComponent> deathResultDefeated;
+    std::shared_ptr<UIImageComponent> deathResultBattleTime;
+    std::array<std::shared_ptr<UIButtonComponent>, 3> deathResultButtons{};
+    DirectX::XMFLOAT2 deathResultDefeatedPosition{ 960.0f, 160.0f };
+    DirectX::XMFLOAT2 deathResultBattleTimePosition{ 960.0f, 330.0f };
+    DirectX::XMFLOAT2 deathResultButtonStartPosition{ 960.0f, 500.0f };
+    float deathResultButtonSpacing = 130.0f;
     static constexpr float continueWaitDelay = 0.25f;
 
     // Death staging bounds in world XZ coordinates.

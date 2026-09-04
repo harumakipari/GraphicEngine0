@@ -49,7 +49,7 @@ public:
         float cameraHeight = -0.2f;
         float lookHeight = -0.85f;
         float bossLookWeight = -0.65f;
-        float deathBlendTime = 0.5f;
+        float deathBlendTime = 1.0f;
         float fovDegree = 22.6f;
     };
 

@@ -95,6 +95,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         PROFILE_SCOPE("SetUpActors Init");
         //アクターをセット
         SetUpActors();
+        CreateDeathResultUI();
     }
 
     // クロスシミュレーション
@@ -524,6 +525,11 @@ void GameScene::EnterPlayerDead()
     playerDeadElapsed = 0.0f;
     deathPresentationElapsed = 0.0f;
     deathAttemptTime = battleElapsedTime;
+    deathResultVisible = false;
+    deathResultInputEnabled = false;
+    deathResultSelection = 0;
+    SetDeathResultVisible(false);
+    InputSystem::SetInputEnabled(false);
     deathCameraStartRequested = false;
     SetBattleHudVisible(false);
     if (player)
@@ -665,6 +671,64 @@ void GameScene::StageDeathActors()
     }
     gruxEnemyActor->SetDirectionImmediate(bossToPlayer);
 }
+void GameScene::CreateDeathResultUI()
+{
+    auto uiManager = GetUIManager();
+    deathResultDefeated = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/Defeat.png", "DeathResultDefeated");
+    deathResultBattleTime = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/battle_time.png", "DeathResultBattleTime");
+    deathResultDefeated->SetWorldPosition(deathResultDefeatedPosition);
+    deathResultBattleTime->SetWorldPosition(deathResultBattleTimePosition);
+    deathResultDefeated->SetPivot({ 0.5f, 0.5f });
+    deathResultBattleTime->SetPivot({ 0.5f, 0.5f });
+    deathResultDefeated->SetSize({ 640.0f, 160.0f });
+    deathResultBattleTime->SetSize({ 480.0f, 100.0f });
+    uiManager->Add(deathResultDefeated);
+    uiManager->Add(deathResultBattleTime);
+    const char* paths[] = { "continue_button.png", "restart_battle_button.png", "return_title_button.png" };
+    const char* names[] = { "DeathResultContinue", "DeathResultRestart", "DeathResultTitle" };
+    for (int i = 0; i < 3; ++i)
+    {
+        deathResultButtons[i] = std::make_shared<UIButtonComponent>(std::string("./Data/Textures/UI/Result/") + paths[i], names[i]);
+        deathResultButtons[i]->SetWorldPosition({ deathResultButtonStartPosition.x, deathResultButtonStartPosition.y + i * deathResultButtonSpacing });
+        deathResultButtons[i]->SetSize({ 640.0f, 110.0f });
+        deathResultButtons[i]->SetPivot({ 0.5f, 0.5f });
+        deathResultButtons[i]->SetVisible(false);
+        deathResultButtons[i]->SetEnable(false);
+        const int index = i;
+        deathResultButtons[i]->onClick = [this, index]() { ExecuteDeathResult(index); };
+        uiManager->Add(deathResultButtons[i]);
+        uiManager->AddButton(deathResultButtons[i]);
+    }
+    SetDeathResultVisible(false);
+}
+
+void GameScene::SetDeathResultVisible(const bool visible)
+{
+    deathResultVisible = visible;
+    if (deathResultDefeated) deathResultDefeated->SetVisible(visible);
+    if (deathResultBattleTime) deathResultBattleTime->SetVisible(visible);
+    for (auto& button : deathResultButtons)
+    {
+        if (button) { button->SetVisible(visible); button->SetEnable(visible && deathResultInputEnabled); }
+    }
+}
+
+void GameScene::SelectDeathResult(const int index)
+{
+    deathResultSelection = std::clamp(index, 0, 2);
+    if (deathResultButtons[deathResultSelection])
+        GetUIManager()->SetSelected(deathResultButtons[deathResultSelection].get());
+}
+
+void GameScene::ExecuteDeathResult(const int index)
+{
+    if (!deathResultInputEnabled) return;
+    deathResultInputEnabled = false;
+    SetDeathResultVisible(false);
+    if (index == 0) ResetBattleForContinue();
+    else if (index == 1) { battleElapsedTime = 0.0f; if (gruxEnemyActor) gruxEnemyActor->ResetForBattleRestart(bossBattleStartTransform); if (player) player->ResetForBattleContinue(playerBattleStartTransform); if (gruxEnemyActor) gruxEnemyActor->ResumeBattleAI(); StartBossBattle(); }
+    else SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
+}
 void GameScene::OnPlayerDeathCameraStart()
 {
     if (deathCameraStartRequested || battleFlowState != BattleFlowState::PlayerDead)
@@ -679,6 +743,12 @@ void GameScene::ResetBattleForContinue()
 {
     if (!battleStartTransformsSaved || !player || !gruxEnemyActor)
         return;
+
+    deathPresentationElapsed = 0.0f;
+    deathResultVisible = false;
+    deathResultInputEnabled = false;
+    deathResultSelection = 0;
+    SetDeathResultVisible(false);
 
     Time::SetSlow(1.0f, 0.0f);
 
@@ -739,12 +809,25 @@ void GameScene::UpdateBattleFlow()
     case BattleFlowState::PlayerDead:
         playerDeadElapsed += Time::UnscaledDeltaTime();
         deathPresentationElapsed += Time::UnscaledDeltaTime();
-        if (playerDeadElapsed >= continueWaitDelay)
+        if (!deathResultVisible && deathPresentationElapsed >= deathResultDelay)
+        {
+            deathResultSelection = 0;
+            deathResultVisible = true;
+            deathResultInputEnabled = false;
+            SetDeathResultVisible(true);
+            SelectDeathResult(0);
+        }
+        if (deathResultVisible && !deathResultInputEnabled &&
+            deathPresentationElapsed >= deathResultDelay + deathResultInputDelay)
+        {
+            deathResultInputEnabled = true;
+            SetDeathResultVisible(true);
+            InputSystem::SetInputEnabled(true);
             battleFlowState = BattleFlowState::ContinueWait;
+        }
         break;
     case BattleFlowState::ContinueWait:
-        if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
-            battleFlowState = BattleFlowState::ResetForContinue;
+        // Result UIButton callbacks own the selection and confirmation.
         break;
     case BattleFlowState::ResetForContinue:
         ResetBattleForContinue();
@@ -910,6 +993,14 @@ void GameScene::DrawGuiPlusAlpha()
     {
         ChangeCameraMode(TPSCameraController::CameraMode::TPS);
     }
+    ImGui::Separator();
+    ImGui::Text("Death Presentation");
+    ImGui::DragFloat("Result UI Delay", &deathResultDelay, 0.01f, 0.0f, 30.0f);
+    ImGui::DragFloat("Result Input Delay", &deathResultInputDelay, 0.01f, 0.0f, 10.0f);
+    ImGui::DragFloat2("Result Defeated Position", &deathResultDefeatedPosition.x, 1.0f);
+    ImGui::DragFloat2("Result BattleTime Position", &deathResultBattleTimePosition.x, 1.0f);
+    ImGui::DragFloat2("Result Button Start", &deathResultButtonStartPosition.x, 1.0f);
+    ImGui::DragFloat("Result Button Spacing", &deathResultButtonSpacing, 1.0f, 0.0f, 500.0f);
     if (ImGui::TreeNode("Death Staging"))
     {
         ImGui::DragFloat("Min Player X", &deathStagingMinPlayerX, 0.01f);

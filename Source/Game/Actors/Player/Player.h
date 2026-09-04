@@ -541,6 +541,8 @@ private:
     float deathColorFadeDelay = 3.4f;
     float deathColorFadeDuration = 1.7f;
     float deathVisualFade = 0.0f;
+    bool deathEyeCloseStarted = false;
+    bool deathVisualFadeStarted = false;
     DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f };
     float playerAliveEmissionPower = 20.9f;
 

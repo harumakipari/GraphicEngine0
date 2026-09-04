@@ -1128,8 +1128,8 @@ void Player::DrawImGuiDetails()
 
     if (ImGui::CollapsingHeader(U8("ジャスト回避のプレイヤーの残像")))
     {
-        ImGui::DragFloat(U8("プレイヤーの残像の初回の透明度"), &playerPoseGhostInitialAlpha,0.01f, 0.0f, 1.0f, "%.2f");
-        ImGui::DragFloat(U8("プレイヤーの残像のライフタイム"), &playerPoseGhostLifetime,0.01f, 0.0f, 5.0f, "%.2f sec");
+        ImGui::DragFloat(U8("プレイヤーの残像の初回の透明度"), &playerPoseGhostInitialAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::DragFloat(U8("プレイヤーの残像のライフタイム"), &playerPoseGhostLifetime, 0.01f, 0.0f, 5.0f, "%.2f sec");
         ImGui::DragFloat("Player Ghost Spawn Interval", &playerGhostSpawnInterval,
             0.001f, 0.0f, 1.0f, "%.3f sec");
         ImGui::ColorEdit3("Player Ghost Color", &playerPoseGhostColor.x);
@@ -2131,6 +2131,8 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
     ResetLowHpEffects();
     ResetEyeCloseOverride();
     deathVisualFade = 0.0f;
+    deathEyeCloseStarted = false;
+    deathVisualFadeStarted = false;
     if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
     {
         skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = 0.0f;
@@ -2206,12 +2208,16 @@ void Player::ResetEyeCloseOverride()
     closeEyeWeight = 0.0f;
     closeEyePreviewActive = false;
     deathEyeCloseActive = false;
+    deathEyeCloseStarted = false;
+    deathVisualFadeStarted = false;
 }
 
 void Player::BeginDeathEyeClose()
 {
     ResetEyeCloseOverride();
     deathVisualFade = 0.0f;
+    deathEyeCloseStarted = false;
+    deathVisualFadeStarted = false;
     if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
     {
         skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = 0.0f;
@@ -2226,6 +2232,9 @@ void Player::UpdateDeathEyeClose(const float deathElapsedTime)
     if (!deathEyeCloseActive)
         return;
 
+    if (!deathEyeCloseStarted && deathElapsedTime >= deathEyeCloseDelay)
+        deathEyeCloseStarted = true;
+
     const float normalizedCloseEyeTime = std::clamp(
         (deathElapsedTime - deathEyeCloseDelay) /
         (std::max)(deathEyeCloseDuration, FLT_EPSILON),
@@ -2238,6 +2247,9 @@ void Player::UpdateDeathEyeClose(const float deathElapsedTime)
 
 void Player::UpdateDeathVisualFade(const float deathElapsedTime)
 {
+    if (!deathVisualFadeStarted && deathElapsedTime >= deathColorFadeDelay)
+        deathVisualFadeStarted = true;
+
     deathVisualFade = std::clamp(
         (deathElapsedTime - deathColorFadeDelay) /
         (std::max)(deathColorFadeDuration, FLT_EPSILON),
@@ -2453,8 +2465,8 @@ bool Player::TryExecuteActionRequest()
     case ActionType::Jump:
         targetState = "Jump";
         break;
-    //case ActionType::Interact:
-    //    targetState = "Interact";
+        //case ActionType::Interact:
+        //    targetState = "Interact";
         break;
     }
 
@@ -2995,7 +3007,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     //}
 
     const char* targetState = hp > 0 ? "Damage" : "DeathPending";
-    Logger::Log(Logger::LogCategory::Gameplay,"[PlayerDamage][Applied] targetState=" + std::string(targetState) +" knockback=" + std::to_string(direction.x) + "," +
+    Logger::Log(Logger::LogCategory::Gameplay, "[PlayerDamage][Applied] targetState=" + std::string(targetState) + " knockback=" + std::to_string(direction.x) + "," +
         std::to_string(direction.y) + "," + std::to_string(direction.z));
     stateMachine_->ChangeState(targetState);
     return true;
@@ -3076,7 +3088,7 @@ void Player::TriggerLowHpPulse()
 
     if (!heartbeatSEPath.empty() && std::filesystem::exists(heartbeatSEPath))
     {
-        CoreAudio::PlayOneShot(heartbeatSEPath);
+        CoreAudio::PlayOneShot(heartbeatSEPath, 0.3f);
     }
 }
 
@@ -3098,18 +3110,18 @@ void Player::ApplyDamageFlash(float flashAmount)
 {
     const auto applyToMesh = [this, flashAmount](
         const std::shared_ptr<SkeletalMeshComponent>& mesh)
-    {
-        if (!mesh)
-            return;
+        {
+            if (!mesh)
+                return;
 
-        auto& constants = mesh->plusAlphaCBuffer->data;
-        constants.cpuColor.x = damageFlashColor.x;
-        constants.cpuColor.y = damageFlashColor.y;
-        constants.cpuColor.z = damageFlashColor.z;
-        constants.flashValue = flashAmount;
-        constants.effectParameters.edgeWidth = damageFlashBodyTintStrength;
-        constants.effectParameters.edgePower = damageFlashRimStrength;
-    };
+            auto& constants = mesh->plusAlphaCBuffer->data;
+            constants.cpuColor.x = damageFlashColor.x;
+            constants.cpuColor.y = damageFlashColor.y;
+            constants.cpuColor.z = damageFlashColor.z;
+            constants.flashValue = flashAmount;
+            constants.effectParameters.edgeWidth = damageFlashBodyTintStrength;
+            constants.effectParameters.edgePower = damageFlashRimStrength;
+        };
 
     applyToMesh(skeletalMeshComponent);
     applyToMesh(skeletalMeshBlendComponent);

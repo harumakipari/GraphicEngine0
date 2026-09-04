@@ -509,6 +509,15 @@ void GruxEnemy::StopBattleActions()
     velocity = { 0.0f, 0.0f, 0.0f };
 }
 
+void GruxEnemy::ResetForBattleRestart(const Transform& battleStartTransform)
+{
+    ResetForBattleContinue(battleStartTransform);
+    hp = maxHp;
+    delayedHp = static_cast<float>(hp);
+    if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+    if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+}
+
 void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
 {
     ResetTimeScale();

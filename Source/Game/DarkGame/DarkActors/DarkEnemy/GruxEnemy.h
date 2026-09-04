@@ -42,6 +42,7 @@ public:
 
     // Clears Grux-owned transient combat state while preserving HP.
     void ResetForBattleContinue(const Transform& battleStartTransform);
+    void ResetForBattleRestart(const Transform& battleStartTransform);
 
     void BeginRushHpDisplay();
     void EndRushHpDisplay();
