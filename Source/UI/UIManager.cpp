@@ -188,18 +188,19 @@ void UIManager::HandleGamepadUI(float deltaTime)
     // =========================
     // D-Pad入力（優先・1回だけ）
     // =========================
-    if (InputSystem::GetInputState("UIUp", InputStateMask::Trigger))
+    if (InputSystem::GetInputState("UILeft", InputStateMask::Trigger))
     {
         MoveSelection(-1);
         stickDelay = 0.2f;
         moved = true;
     }
-    else if (InputSystem::GetInputState("UIDown", InputStateMask::Trigger))
+    else if (InputSystem::GetInputState("UIRight", InputStateMask::Trigger))
     {
         MoveSelection(1);
         stickDelay = 0.2f;
         moved = true;
     }
+
 
     // =========================
     // スティック入力（D-Pad優先）
@@ -208,14 +209,14 @@ void UIManager::HandleGamepadUI(float deltaTime)
     {
         auto stick = InputSystem::GetLeftStick();
 
-        if (stick.y > 0.6f)
-        {
-            MoveSelection(-1);
-            stickDelay = 0.2f;
-        }
-        else if (stick.y < -0.6f)
+        if (stick.x > 0.6f)
         {
             MoveSelection(1);
+            stickDelay = 0.2f;
+        }
+        else if (stick.x < -0.6f)
+        {
+            MoveSelection(-1);
             stickDelay = 0.2f;
         }
     }

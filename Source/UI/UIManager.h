@@ -56,6 +56,7 @@ public:
     void SetMouseCaptured(const bool v) { mouseCaptured = v; }
 
     void SetSelected(UIButtonComponent* button);
+    UIButtonComponent* GetSelectedButton() const { return selectedButton; }
 
 private:
     // ゲームパッドでUIを操作

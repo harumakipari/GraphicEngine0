@@ -195,6 +195,7 @@ void GameScene::Update(float deltaTime)
     ZoneScopedN("Game Update");
 
     UpdateBattleFlow();
+    UpdateDeathResultUILayout();
 
     // ボスの部屋のラープのため
     if (bossLerpEasing)
@@ -553,7 +554,7 @@ void GameScene::EnterPlayerDead()
     }
     else if (player && player->GetStateMachine())
     {
-        // Do not leave the Player pending if a camera is unavailable.
+        //カメラがない場合は、プレーヤーの死亡ステートに遷移
         player->SetDeathCameraTransparencyDisabled(true);
         player->GetStateMachine()->ChangeState("Death");
     }
@@ -671,41 +672,50 @@ void GameScene::StageDeathActors()
     }
     gruxEnemyActor->SetDirectionImmediate(bossToPlayer);
 }
+
 void GameScene::CreateDeathResultUI()
 {
     auto uiManager = GetUIManager();
     deathResultDefeated = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/Defeat.png", "DeathResultDefeated");
-    deathResultBattleTime = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/battle_time.png", "DeathResultBattleTime");
+    deathResultDefeated->SetSize({ 1920.0f, 610.0f });
     deathResultDefeated->SetWorldPosition(deathResultDefeatedPosition);
-    deathResultBattleTime->SetWorldPosition({ deathResultBattleTimePosition.x, deathResultBattleTimePosition.y - 70.0f });
     deathResultDefeated->SetPivot({ 0.5f, 0.5f });
-    deathResultBattleTime->SetPivot({ 0.5f, 0.5f });
-    deathResultDefeated->SetSize({ 640.0f, 160.0f });
-    deathResultBattleTime->SetSize({ 480.0f, 100.0f });
     uiManager->Add(deathResultDefeated);
+
+    deathResultBattleTime = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/battle_time.png", "DeathResultBattleTime");
+    deathResultBattleTime->SetWorldPosition(deathResultBattleTimePosition);
+    deathResultBattleTime->SetPivot({ 0.5f, 0.5f });
+    deathResultBattleTime->SetSize({ 600.0f, 175.0f });
+    deathResultBattleTime->SetScale({ 0.4f,0.4f });
     uiManager->Add(deathResultBattleTime);
+
     const int timeDigits[] = { 0, 1, -1, 4, 2, -2, 3, 6 };
     for (int i = 0; i < 8; ++i)
     {
-        if (timeDigits[i] == -2) continue;
         const bool colon = timeDigits[i] == -1;
+        const bool dot = timeDigits[i] == -2;
         const std::string name = "DeathResultTime" + std::to_string(i);
-        const std::string path = colon ? "./Data/Textures/UI/timer_colon.png" : "./Data/Textures/UI/number.png";
+        const std::string path = colon ? "./Data/Textures/UI/timer_colon.png" :
+            (dot ? "./Data/Textures/UI/timer_dot.png" : "./Data/Textures/UI/number.png");
         deathResultTimeDigits[i] = std::make_shared<UIImageComponent>(path, name);
-        deathResultTimeDigits[i]->SetSize(colon ? DirectX::XMFLOAT2{ 48.0f, 128.0f } : DirectX::XMFLOAT2{ 96.0f, 128.0f });
+        deathResultTimeDigits[i]->SetSize(colon || dot ? DirectX::XMFLOAT2{ 48.0f, 128.0f } : DirectX::XMFLOAT2{ 96.0f, 128.0f });
         deathResultTimeDigits[i]->SetPivot({ 0.5f, 0.5f });
         deathResultTimeDigits[i]->SetScale(deathResultTimeNumberScale);
         deathResultTimeDigits[i]->SetVisible(false);
         uiManager->Add(deathResultTimeDigits[i]);
     }
-    UpdateDeathResultBattleTime();
+
+    UpdateDeathResultBattleTimeValue();
     const char* paths[] = { "continue_button.png", "restart_battle_button.png", "return_title_button.png" };
     const char* names[] = { "DeathResultContinue", "DeathResultRestart", "DeathResultTitle" };
+    const float buttonWidths[] = { 448.0f, 667.0f, 730.0f };
+    const float buttonHeight[] = { 70.0f,75.0f, 71.0f};
     for (int i = 0; i < 3; ++i)
     {
         deathResultButtons[i] = std::make_shared<UIButtonComponent>(std::string("./Data/Textures/UI/Result/") + paths[i], names[i]);
-        deathResultButtons[i]->SetWorldPosition({ deathResultButtonStartPosition.x, deathResultButtonStartPosition.y + i * deathResultButtonSpacing });
-        deathResultButtons[i]->SetSize({ 640.0f, 110.0f });
+        deathResultButtons[i]->SetSize({ buttonWidths[i], buttonHeight[i] });
+        deathResultButtons[i]->SetScale(deathResultButtonScale);
+        deathResultButtons[i]->SetUseHoverScale(false);
         deathResultButtons[i]->SetPivot({ 0.5f, 0.5f });
         deathResultButtons[i]->SetVisible(false);
         deathResultButtons[i]->SetEnable(false);
@@ -714,45 +724,148 @@ void GameScene::CreateDeathResultUI()
         uiManager->Add(deathResultButtons[i]);
         uiManager->AddButton(deathResultButtons[i]);
     }
+
+    deathResultSelectLineLeft = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/select_button_line.png", "DeathResultSelectLineLeft");
+    deathResultSelectLineRight = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/select_button_line.png", "DeathResultSelectLineRight");
+    for (const auto& line : { deathResultSelectLineLeft, deathResultSelectLineRight })
+    {
+        line->SetVisible(false);
+        uiManager->Add(line);
+    }
+    deathResultSelectLineLeft->SetPivot({ 1.0f,0.5f });
+    deathResultSelectLineRight->SetPivot({ 0.0f,0.5f });
     SetDeathResultVisible(false);
 }
 
 void GameScene::SetDeathResultVisible(const bool visible)
 {
     deathResultVisible = visible;
+    if (!visible) deathResultSelectLineAnimProgress = 0.0f;
     if (deathResultDefeated) deathResultDefeated->SetVisible(visible);
     if (deathResultBattleTime) deathResultBattleTime->SetVisible(visible);
-    if (visible) UpdateDeathResultBattleTime();
     for (auto& digit : deathResultTimeDigits)
         if (digit) digit->SetVisible(visible);
     for (auto& button : deathResultButtons)
     {
         if (button) { button->SetVisible(visible); button->SetEnable(visible && deathResultInputEnabled); }
     }
+    if (deathResultSelectLineLeft) deathResultSelectLineLeft->SetVisible(visible);
+    if (deathResultSelectLineRight) deathResultSelectLineRight->SetVisible(visible);
+    if (visible)
+    {
+        UpdateDeathResultBattleTimeValue();
+        UpdateDeathResultUILayout();
+    }
 }
 
 void GameScene::SelectDeathResult(const int index)
 {
-    deathResultSelection = std::clamp(index, 0, 2);
+    const int next = std::clamp(index, 0, 2);
+    if (next == deathResultSelection && deathResultSelectLineLeft && deathResultSelectLineLeft->IsVisible()) return;
+    deathResultSelection = next;
+    deathResultSelectLineAnimProgress = 0.0f;
     if (deathResultButtons[deathResultSelection])
         GetUIManager()->SetSelected(deathResultButtons[deathResultSelection].get());
 }
 
-void GameScene::UpdateDeathResultBattleTime()
+void GameScene::UpdateDeathResultBattleTimeValue()
 {
     const int totalCentiseconds = std::clamp(static_cast<int>(std::floor(deathAttemptTime * 100.0f + 0.5f)), 0, 99 * 60 * 100 + 59 * 100 + 99);
     const int minutes = totalCentiseconds / 6000;
     const int seconds = (totalCentiseconds / 100) % 60;
     const int centiseconds = totalCentiseconds % 100;
-    const int values[] = { minutes / 10, minutes % 10, -1, seconds / 10, seconds % 10, -2, centiseconds / 10, centiseconds % 10 };
+    deathResultTimeValues = { minutes / 10, minutes % 10, -1, seconds / 10, seconds % 10, -2, centiseconds / 10, centiseconds % 10 };
+}
+
+void GameScene::UpdateDeathResultBattleTimeLayout()
+{
+    const int minutes = deathResultTimeValues[0] * 10 + deathResultTimeValues[1];
+    int visibleCount = 0;
+    for (int i = 0; i < 8; ++i)
+        if (!(i == 0 && minutes < 10)) ++visibleCount;
+    int visibleIndex = 0;
     for (int i = 0; i < 8; ++i)
     {
         auto& digit = deathResultTimeDigits[i];
         if (!digit) continue;
-        digit->SetWorldPosition({ deathResultTimePosition.x + (i - 3.5f) * deathResultTimeNumberSpacing, deathResultTimePosition.y });
+        const bool show = !(i == 0 && minutes < 10);
+        digit->SetVisible(deathResultVisible && show);
+        if (!show) continue;
+        digit->SetWorldPosition({ deathResultTimePosition.x + (visibleIndex++ - (visibleCount - 1) * 0.5f) * deathResultTimeNumberSpacing, deathResultTimePosition.y });
         digit->SetScale(deathResultTimeNumberScale);
-        if (values[i] >= 0)
-            digit->SetUV({ values[i] * 96.0f, 0.0f, 96.0f, 128.0f });
+        if (deathResultTimeValues[i] >= 0)
+            digit->SetUV({ deathResultTimeValues[i] * 96.0f, 0.0f, 96.0f, 128.0f });
+    }
+}
+
+void GameScene::UpdateDeathResultUILayout()
+{
+    if (!deathResultVisible) return;
+    if (deathResultDefeated)
+    {
+        deathResultDefeated->SetWorldPosition(deathResultDefeatedPosition);
+        deathResultDefeated->SetScale(deathResultDefeatedScale);
+    }
+    if (deathResultBattleTime)
+    {
+        deathResultBattleTime->SetWorldPosition(deathResultBattleTimePosition);
+        deathResultBattleTime->SetScale(deathResultBattleTimeScale);
+    }
+    UpdateDeathResultBattleTimeLayout();
+    UpdateDeathResultMenu();
+}
+void GameScene::UpdateDeathResultMenu()
+{
+    if (!deathResultVisible) return;
+    float totalWidth = 0.0f;
+    for (const auto& button : deathResultButtons)
+        if (button) totalWidth += button->GetSize().x * deathResultButtonScale.x;
+    totalWidth += deathResultButtonHorizontalSpacing * 2.0f;
+    float cursorX = deathResultButtonStartPosition.x - totalWidth * 0.5f;
+    for (const auto& button : deathResultButtons)
+    {
+        if (!button) continue;
+        const float width = button->GetSize().x * deathResultButtonScale.x;
+        button->SetScale(deathResultButtonScale);
+        button->SetWorldPosition({ cursorX + width * 0.5f, deathResultButtonStartPosition.y });
+        cursorX += width + deathResultButtonHorizontalSpacing;
+    }
+
+    // UIManager owns D-Pad/Analog selection; mirror its current Result button.
+    if (auto* selected = GetUIManager()->GetSelectedButton())
+    {
+        for (int i = 0; i < static_cast<int>(deathResultButtons.size()); ++i)
+        {
+            if (deathResultButtons[i].get() == selected && i != deathResultSelection)
+            {
+                deathResultSelection = i;
+                deathResultSelectLineAnimProgress = 0.0f;
+            }
+        }
+    }
+    for (auto& button : deathResultButtons)
+        if (button) button->SetColor(CoreColor::White);
+
+    if (deathResultButtons[deathResultSelection])
+    {
+        const auto button = deathResultButtons[deathResultSelection];
+        const auto buttonPos = button->GetWorldPosition();
+        const auto buttonSize = button->GetSize();
+        const float buttonWidth = buttonSize.x * deathResultButtonScale.x;
+        const float lineWidth = buttonWidth * 0.5f;
+        const float lineY = buttonPos.y;
+        for (const auto& line : { deathResultSelectLineLeft, deathResultSelectLineRight })
+        {
+            if (!line) continue;
+            line->SetSize({ lineWidth, 5.0f });
+            line->SetScale({ deathResultSelectLineScale.x * deathResultSelectLineAnimProgress, deathResultSelectLineScale.y });
+            line->SetWorldPosition({ buttonPos.x, lineY });
+        }
+        if (deathResultSelectLineLeft)
+            deathResultSelectLineLeft->SetWorldPosition({ buttonPos.x - buttonWidth * 0.5f - deathResultSelectLineDistance - lineWidth * 0.5f, lineY });
+        if (deathResultSelectLineRight)
+            deathResultSelectLineRight->SetWorldPosition({ buttonPos.x + buttonWidth * 0.5f + deathResultSelectLineDistance + lineWidth * 0.5f, lineY });
+        deathResultSelectLineAnimProgress = (std::min)(1.0f, deathResultSelectLineAnimProgress + Time::UnscaledDeltaTime() / (std::max)(0.001f, deathResultSelectLineAnimDuration));
     }
 }
 
@@ -760,6 +873,8 @@ void GameScene::ExecuteDeathResult(const int index)
 {
     if (!deathResultInputEnabled) return;
     deathResultInputEnabled = false;
+    deathResultSelection = 0;
+    deathResultSelectLineAnimProgress = 0.0f;
     SetDeathResultVisible(false);
     if (index == 0) ResetBattleForContinue();
     else if (index == 1) { battleElapsedTime = 0.0f; if (gruxEnemyActor) gruxEnemyActor->ResetForBattleRestart(bossBattleStartTransform); if (player) player->ResetForBattleContinue(playerBattleStartTransform); if (gruxEnemyActor) gruxEnemyActor->ResumeBattleAI(); StartBossBattle(); }
@@ -848,6 +963,7 @@ void GameScene::UpdateBattleFlow()
         if (!deathResultVisible && deathPresentationElapsed >= deathResultDelay)
         {
             deathResultSelection = 0;
+            deathResultSelectLineAnimProgress = 0.0f;
             deathResultVisible = true;
             deathResultInputEnabled = false;
             SetDeathResultVisible(true);
@@ -1034,9 +1150,15 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat("Result UI Delay", &deathResultDelay, 0.01f, 0.0f, 30.0f);
     ImGui::DragFloat("Result Input Delay", &deathResultInputDelay, 0.01f, 0.0f, 10.0f);
     ImGui::DragFloat2("Result Defeated Position", &deathResultDefeatedPosition.x, 1.0f);
+    ImGui::DragFloat2("Result Defeated Scale", &deathResultDefeatedScale.x, 0.01f, 0.01f, 4.0f);
     ImGui::DragFloat2("Result BattleTime Position", &deathResultBattleTimePosition.x, 1.0f);
-    ImGui::DragFloat2("Result Button Start", &deathResultButtonStartPosition.x, 1.0f);
-    ImGui::DragFloat("Result Button Spacing", &deathResultButtonSpacing, 1.0f, 0.0f, 500.0f);
+    ImGui::DragFloat2("Result BattleTime Scale", &deathResultBattleTimeScale.x, 0.01f, 0.01f, 4.0f);
+    ImGui::DragFloat2("Result Button Start Position", &deathResultButtonStartPosition.x, 1.0f);
+    ImGui::DragFloat("Result Button Horizontal Spacing", &deathResultButtonHorizontalSpacing, 1.0f, 0.0f, 500.0f);
+    ImGui::DragFloat2("Result Button Scale", &deathResultButtonScale.x, 0.01f, 0.01f, 4.0f);
+    ImGui::DragFloat("Select Line Distance From Button", &deathResultSelectLineDistance, 1.0f, -200.0f, 200.0f);
+    ImGui::DragFloat2("Result Select Line Scale", &deathResultSelectLineScale.x, 0.01f, 0.01f, 10.0f);
+    ImGui::DragFloat("Result Select Line Animation Duration", &deathResultSelectLineAnimDuration, 0.01f, 0.01f, 1.0f);
     ImGui::DragFloat2("Battle Time Number Position", &deathResultTimePosition.x, 1.0f);
     ImGui::DragFloat2("Battle Time Number Scale", &deathResultTimeNumberScale.x, 0.01f, 0.01f, 4.0f);
     ImGui::DragFloat("Battle Time Number Spacing", &deathResultTimeNumberSpacing, 1.0f, 1.0f, 200.0f);

@@ -92,11 +92,15 @@ private:
     void OnPlayerDeathCameraStart();
     void ResetBattleForContinue();
     void EnterBossDead();
+    // éÄñSéûÇÃÉäÉUÉãÉgUIÇçÏê¨Ç∑ÇÈ
     void CreateDeathResultUI();
     void SetDeathResultVisible(bool visible);
     void SelectDeathResult(int index);
     void ExecuteDeathResult(int index);
-    void UpdateDeathResultBattleTime();
+    void UpdateDeathResultBattleTimeValue();
+    void UpdateDeathResultBattleTimeLayout();
+    void UpdateDeathResultUILayout();
+    void UpdateDeathResultMenu();
 
     std::shared_ptr<StageAsset> mainRoomAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> bossRoomAsset = std::make_shared<StageAsset>();
@@ -129,7 +133,7 @@ private:
     float battleElapsedTime = 0.0f;
     float deathAttemptTime = 0.0f;
     float deathPresentationElapsed = 0.0f;
-    float deathResultDelay = 4.0f;
+    float deathResultDelay = 5.0f;
     float deathResultInputDelay = 0.3f;
     bool deathResultVisible = false;
     bool deathResultInputEnabled = false;
@@ -137,14 +141,24 @@ private:
     std::shared_ptr<UIImageComponent> deathResultDefeated;
     std::shared_ptr<UIImageComponent> deathResultBattleTime;
     std::array<std::shared_ptr<UIButtonComponent>, 3> deathResultButtons{};
-    DirectX::XMFLOAT2 deathResultDefeatedPosition{ 960.0f, 160.0f };
-    DirectX::XMFLOAT2 deathResultBattleTimePosition{ 960.0f, 330.0f };
-    DirectX::XMFLOAT2 deathResultButtonStartPosition{ 960.0f, 500.0f };
-    float deathResultButtonSpacing = 130.0f;
+    DirectX::XMFLOAT2 deathResultDefeatedPosition{ 960.0f, 530.0f };
+    DirectX::XMFLOAT2 deathResultDefeatedScale{ 1.0f, 1.0f };
+    DirectX::XMFLOAT2 deathResultBattleTimePosition{ 770.0f, 550.0f };
+    DirectX::XMFLOAT2 deathResultBattleTimeScale{ 0.6f, 0.6f };
+    DirectX::XMFLOAT2 deathResultButtonStartPosition{ 1030.0f, 640.0f };
+    float deathResultButtonHorizontalSpacing = 100.0f;
+    DirectX::XMFLOAT2 deathResultButtonScale{ 0.45f, 0.45f };
     std::array<std::shared_ptr<UIImageComponent>, 8> deathResultTimeDigits{};
-    DirectX::XMFLOAT2 deathResultTimePosition{ 960.0f, 330.0f };
+    std::array<int, 8> deathResultTimeValues{};
+    DirectX::XMFLOAT2 deathResultTimePosition{ 1160.0f, 545.0f };
     DirectX::XMFLOAT2 deathResultTimeNumberScale{ 0.5f, 0.5f };
     float deathResultTimeNumberSpacing = 48.0f;
+    std::shared_ptr<UIImageComponent> deathResultSelectLineLeft;
+    std::shared_ptr<UIImageComponent> deathResultSelectLineRight;
+    float deathResultSelectLineDistance = -50.0f;
+    DirectX::XMFLOAT2 deathResultSelectLineScale{ 0.25f, 0.4f };
+    float deathResultSelectLineAnimDuration = 0.15f;
+    float deathResultSelectLineAnimProgress = 0.0f;
     static constexpr float continueWaitDelay = 0.25f;
 
     // Death staging bounds in world XZ coordinates.
