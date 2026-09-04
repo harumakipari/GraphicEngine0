@@ -121,6 +121,9 @@ private:
     bool battleStartTransformsSaved = false;
     bool deathCameraStartRequested = false;
     float playerDeadElapsed = 0.0f;
+    float battleElapsedTime = 0.0f;
+    float deathAttemptTime = 0.0f;
+    float deathPresentationElapsed = 0.0f;
     static constexpr float continueWaitDelay = 0.25f;
 
     // Death staging bounds in world XZ coordinates.

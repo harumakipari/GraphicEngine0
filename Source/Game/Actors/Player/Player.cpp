@@ -2021,6 +2021,22 @@ void Player::EndEvent()
     this->moviePerform = false;
 }
 
+void Player::SetGameplayHudVisible(const bool visible)
+{
+    SetHpBarVisible(visible);
+    if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(visible);
+    if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(visible);
+    if (rushWordImageComponent) rushWordImageComponent->SetVisible(visible);
+    if (visible)
+        UpdateRushPromptUI();
+    else
+    {
+        if (operateUiComponent) operateUiComponent->SetVisible(false);
+        HideAndResetLockOnGuideUI();
+        if (lowHpVignetteImageComponent) lowHpVignetteImageComponent->SetVisible(false);
+    }
+}
+
 void Player::SetHpBarVisible(const bool visible)
 {
     for (const auto& component : hpBarUiComponents)

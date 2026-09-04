@@ -129,6 +129,7 @@ public:
 
     // Battle HUD visibility is decided by GameScene; Player only owns its components.
     void SetHpBarVisible(bool visible);
+    void SetGameplayHudVisible(bool visible);
 
     // Clears Player-owned transient combat state and restores full HP at the saved battle start.
     void ResetForBattleContinue(const Transform& battleStartTransform);

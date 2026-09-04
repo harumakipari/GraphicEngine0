@@ -221,7 +221,7 @@ void GameScene::Update(float deltaTime)
     else
     {
         player->SetIsPlayerTransparency(true);
-        player->operateUiComponent->SetVisible(true);
+        player->operateUiComponent->SetVisible(battleFlowState == BattleFlowState::Playing);
     }
 
 
@@ -510,8 +510,10 @@ void GameScene::StartBossBattle()
     }
 
     player->SetIsBossBattle(true);
+    battleElapsedTime = 0.0f;
     battleFlowState = BattleFlowState::Playing;
     SetBattleHudVisible(true);
+    player->SetGameplayHudVisible(true);
     // “ü—Í‚ðŽó‚¯•t‚¯‚é
     InputSystem::SetInputEnabled(true);
 }
@@ -520,8 +522,12 @@ void GameScene::EnterPlayerDead()
 {
     battleFlowState = BattleFlowState::PlayerDead;
     playerDeadElapsed = 0.0f;
+    deathPresentationElapsed = 0.0f;
+    deathAttemptTime = battleElapsedTime;
     deathCameraStartRequested = false;
     SetBattleHudVisible(false);
+    if (player)
+        player->SetGameplayHudVisible(false);
 
     if (gruxEnemyActor)
         gruxEnemyActor->PauseBattleAI();
@@ -691,6 +697,7 @@ void GameScene::ResetBattleForContinue()
         darkCameraActor->RotateToPlayerForward();
 
     SetBattleHudVisible(true);
+    player->SetGameplayHudVisible(true);
     // “ü—Í‚ðŽó‚¯•t‚¯‚é
     InputSystem::SetInputEnabled(true);
     battleFlowState = BattleFlowState::Playing;
@@ -719,6 +726,7 @@ void GameScene::UpdateBattleFlow()
     case BattleFlowState::Intro:
         break;
     case BattleFlowState::Playing:
+        battleElapsedTime += Time::UnscaledDeltaTime();
         if (gruxEnemyActor && gruxEnemyActor->GetHp() <= 0)
         {
             EnterBossDead();
@@ -730,6 +738,7 @@ void GameScene::UpdateBattleFlow()
         break;
     case BattleFlowState::PlayerDead:
         playerDeadElapsed += Time::UnscaledDeltaTime();
+        deathPresentationElapsed += Time::UnscaledDeltaTime();
         if (playerDeadElapsed >= continueWaitDelay)
             battleFlowState = BattleFlowState::ContinueWait;
         break;
@@ -918,6 +927,10 @@ void GameScene::DrawGuiPlusAlpha()
             ImGui::PopID();
         }
         ImGui::TreePop();
+        ImGui::Text("deathAttemptTime : %.3f", deathAttemptTime);
+        ImGui::Text("battleElapsedTime : %.3f", battleElapsedTime);
+
+
     }
 
     ImGui::End();
