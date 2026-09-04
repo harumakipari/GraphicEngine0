@@ -96,6 +96,7 @@ private:
     void SetDeathResultVisible(bool visible);
     void SelectDeathResult(int index);
     void ExecuteDeathResult(int index);
+    void UpdateDeathResultBattleTime();
 
     std::shared_ptr<StageAsset> mainRoomAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> bossRoomAsset = std::make_shared<StageAsset>();
@@ -140,6 +141,10 @@ private:
     DirectX::XMFLOAT2 deathResultBattleTimePosition{ 960.0f, 330.0f };
     DirectX::XMFLOAT2 deathResultButtonStartPosition{ 960.0f, 500.0f };
     float deathResultButtonSpacing = 130.0f;
+    std::array<std::shared_ptr<UIImageComponent>, 8> deathResultTimeDigits{};
+    DirectX::XMFLOAT2 deathResultTimePosition{ 960.0f, 330.0f };
+    DirectX::XMFLOAT2 deathResultTimeNumberScale{ 0.5f, 0.5f };
+    float deathResultTimeNumberSpacing = 48.0f;
     static constexpr float continueWaitDelay = 0.25f;
 
     // Death staging bounds in world XZ coordinates.

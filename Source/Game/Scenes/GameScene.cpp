@@ -677,13 +677,28 @@ void GameScene::CreateDeathResultUI()
     deathResultDefeated = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/Defeat.png", "DeathResultDefeated");
     deathResultBattleTime = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/battle_time.png", "DeathResultBattleTime");
     deathResultDefeated->SetWorldPosition(deathResultDefeatedPosition);
-    deathResultBattleTime->SetWorldPosition(deathResultBattleTimePosition);
+    deathResultBattleTime->SetWorldPosition({ deathResultBattleTimePosition.x, deathResultBattleTimePosition.y - 70.0f });
     deathResultDefeated->SetPivot({ 0.5f, 0.5f });
     deathResultBattleTime->SetPivot({ 0.5f, 0.5f });
     deathResultDefeated->SetSize({ 640.0f, 160.0f });
     deathResultBattleTime->SetSize({ 480.0f, 100.0f });
     uiManager->Add(deathResultDefeated);
     uiManager->Add(deathResultBattleTime);
+    const int timeDigits[] = { 0, 1, -1, 4, 2, -2, 3, 6 };
+    for (int i = 0; i < 8; ++i)
+    {
+        if (timeDigits[i] == -2) continue;
+        const bool colon = timeDigits[i] == -1;
+        const std::string name = "DeathResultTime" + std::to_string(i);
+        const std::string path = colon ? "./Data/Textures/UI/timer_colon.png" : "./Data/Textures/UI/number.png";
+        deathResultTimeDigits[i] = std::make_shared<UIImageComponent>(path, name);
+        deathResultTimeDigits[i]->SetSize(colon ? DirectX::XMFLOAT2{ 48.0f, 128.0f } : DirectX::XMFLOAT2{ 96.0f, 128.0f });
+        deathResultTimeDigits[i]->SetPivot({ 0.5f, 0.5f });
+        deathResultTimeDigits[i]->SetScale(deathResultTimeNumberScale);
+        deathResultTimeDigits[i]->SetVisible(false);
+        uiManager->Add(deathResultTimeDigits[i]);
+    }
+    UpdateDeathResultBattleTime();
     const char* paths[] = { "continue_button.png", "restart_battle_button.png", "return_title_button.png" };
     const char* names[] = { "DeathResultContinue", "DeathResultRestart", "DeathResultTitle" };
     for (int i = 0; i < 3; ++i)
@@ -707,6 +722,9 @@ void GameScene::SetDeathResultVisible(const bool visible)
     deathResultVisible = visible;
     if (deathResultDefeated) deathResultDefeated->SetVisible(visible);
     if (deathResultBattleTime) deathResultBattleTime->SetVisible(visible);
+    if (visible) UpdateDeathResultBattleTime();
+    for (auto& digit : deathResultTimeDigits)
+        if (digit) digit->SetVisible(visible);
     for (auto& button : deathResultButtons)
     {
         if (button) { button->SetVisible(visible); button->SetEnable(visible && deathResultInputEnabled); }
@@ -718,6 +736,24 @@ void GameScene::SelectDeathResult(const int index)
     deathResultSelection = std::clamp(index, 0, 2);
     if (deathResultButtons[deathResultSelection])
         GetUIManager()->SetSelected(deathResultButtons[deathResultSelection].get());
+}
+
+void GameScene::UpdateDeathResultBattleTime()
+{
+    const int totalCentiseconds = std::clamp(static_cast<int>(std::floor(deathAttemptTime * 100.0f + 0.5f)), 0, 99 * 60 * 100 + 59 * 100 + 99);
+    const int minutes = totalCentiseconds / 6000;
+    const int seconds = (totalCentiseconds / 100) % 60;
+    const int centiseconds = totalCentiseconds % 100;
+    const int values[] = { minutes / 10, minutes % 10, -1, seconds / 10, seconds % 10, -2, centiseconds / 10, centiseconds % 10 };
+    for (int i = 0; i < 8; ++i)
+    {
+        auto& digit = deathResultTimeDigits[i];
+        if (!digit) continue;
+        digit->SetWorldPosition({ deathResultTimePosition.x + (i - 3.5f) * deathResultTimeNumberSpacing, deathResultTimePosition.y });
+        digit->SetScale(deathResultTimeNumberScale);
+        if (values[i] >= 0)
+            digit->SetUV({ values[i] * 96.0f, 0.0f, 96.0f, 128.0f });
+    }
 }
 
 void GameScene::ExecuteDeathResult(const int index)
@@ -1001,6 +1037,9 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat2("Result BattleTime Position", &deathResultBattleTimePosition.x, 1.0f);
     ImGui::DragFloat2("Result Button Start", &deathResultButtonStartPosition.x, 1.0f);
     ImGui::DragFloat("Result Button Spacing", &deathResultButtonSpacing, 1.0f, 0.0f, 500.0f);
+    ImGui::DragFloat2("Battle Time Number Position", &deathResultTimePosition.x, 1.0f);
+    ImGui::DragFloat2("Battle Time Number Scale", &deathResultTimeNumberScale.x, 0.01f, 0.01f, 4.0f);
+    ImGui::DragFloat("Battle Time Number Spacing", &deathResultTimeNumberSpacing, 1.0f, 1.0f, 200.0f);
     if (ImGui::TreeNode("Death Staging"))
     {
         ImGui::DragFloat("Min Player X", &deathStagingMinPlayerX, 0.01f);
