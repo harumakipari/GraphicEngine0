@@ -5,6 +5,7 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include <memory>
+#include <array>
 
 #include "Core/ActorManager.h"
 #include "Engine/Scene/SceneBase.h"
@@ -29,6 +30,15 @@ class GruxEnemy;
 
 class GameScene : public SceneBase
 {
+    enum class DeathStagingArea : uint8_t
+    {
+        Center, Front, Back, Left, Right, FrontLeft, FrontRight, BackLeft, BackRight
+    };
+
+    struct DeathStagingAreaSettings
+    {
+        float bossDistance = 2.5f;
+    };
 public:
     enum class BattleFlowState : uint8_t
     {
@@ -77,6 +87,8 @@ private:
     void UpdateBattleFlow();
     void SetBattleHudVisible(bool visible);
     void EnterPlayerDead();
+    void StageDeathActors();
+    DeathStagingArea DetermineDeathStagingArea(const DirectX::XMFLOAT3& originalPlayerPosition) const;
     void OnPlayerDeathCameraStart();
     void ResetBattleForContinue();
     void EnterBossDead();
@@ -110,6 +122,15 @@ private:
     bool deathCameraStartRequested = false;
     float playerDeadElapsed = 0.0f;
     static constexpr float continueWaitDelay = 0.25f;
+
+    // Death staging bounds in world XZ coordinates.
+    float deathStagingMinPlayerX = 0.0f;
+    float deathStagingMaxPlayerX = 17.425f;
+    float deathStagingMinPlayerZ = 1.0f;
+    float deathStagingMaxPlayerZ = 20.45f;
+    float deathStagingCornerInsetX = 0.8f;
+    float deathStagingCornerInsetZ = 0.8f;
+    std::array<DeathStagingAreaSettings, 9> deathStagingAreaSettings{};
 
     std::unique_ptr<ClothSimulate> clothSimulate;
 

@@ -36,6 +36,7 @@ public:
 
     // Suspends battle decisions while allowing the Actor and its animations to update.
     void PauseBattleAI();
+    void SetDirectionImmediate(const DirectX::XMFLOAT3& direction);
     void ResumeBattleAI();
     bool IsBattleAIActive() const { return battleAIActive; }
 

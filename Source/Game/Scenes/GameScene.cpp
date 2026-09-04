@@ -526,6 +526,9 @@ void GameScene::EnterPlayerDead()
     if (gruxEnemyActor)
         gruxEnemyActor->PauseBattleAI();
 
+    // プレイヤーが死亡した時のプレイヤーとボスの位置を調整
+    StageDeathActors();
+
     if (darkCameraActor && player)
     {
         player->SetDeathCameraTransparencyDisabled(true);
@@ -544,6 +547,118 @@ void GameScene::EnterPlayerDead()
     }
 }
 
+GameScene::DeathStagingArea GameScene::DetermineDeathStagingArea(
+    const DirectX::XMFLOAT3& originalPlayerPosition) const
+{
+    const bool front = originalPlayerPosition.x < deathStagingMinPlayerX;
+    const bool back = originalPlayerPosition.x > deathStagingMaxPlayerX;
+    const bool right = originalPlayerPosition.z < deathStagingMinPlayerZ;
+    const bool left = originalPlayerPosition.z > deathStagingMaxPlayerZ;
+
+    if (front && left) return DeathStagingArea::FrontLeft;
+    if (front && right) return DeathStagingArea::FrontRight;
+    if (back && left) return DeathStagingArea::BackLeft;
+    if (back && right) return DeathStagingArea::BackRight;
+    if (front) return DeathStagingArea::Front;
+    if (back) return DeathStagingArea::Back;
+    if (left) return DeathStagingArea::Left;
+    if (right) return DeathStagingArea::Right;
+    return DeathStagingArea::Center;
+}
+
+void GameScene::StageDeathActors()
+{
+    if (!player || !gruxEnemyActor)
+        return;
+
+    const DirectX::XMFLOAT3 originalPlayerPosition = player->GetPosition();
+    const DeathStagingArea stagingArea = DetermineDeathStagingArea(originalPlayerPosition);
+    const float targetBossDistance = deathStagingAreaSettings[static_cast<size_t>(stagingArea)].bossDistance;
+
+    float safeMinX = deathStagingMinPlayerX;
+    float safeMaxX = deathStagingMaxPlayerX;
+    float safeMinZ = deathStagingMinPlayerZ;
+    float safeMaxZ = deathStagingMaxPlayerZ;
+    switch (stagingArea)
+    {
+    case DeathStagingArea::FrontLeft:
+        safeMinX += deathStagingCornerInsetX;
+        safeMaxZ -= deathStagingCornerInsetZ;
+        break;
+    case DeathStagingArea::FrontRight:
+        safeMinX += deathStagingCornerInsetX;
+        safeMinZ += deathStagingCornerInsetZ;
+        break;
+    case DeathStagingArea::BackLeft:
+        safeMaxX -= deathStagingCornerInsetX;
+        safeMaxZ -= deathStagingCornerInsetZ;
+        break;
+    case DeathStagingArea::BackRight:
+        safeMaxX -= deathStagingCornerInsetX;
+        safeMinZ += deathStagingCornerInsetZ;
+        break;
+    default:
+        break;
+    }
+
+    DirectX::XMFLOAT3 safePlayerPosition = originalPlayerPosition;
+    safePlayerPosition.x = std::clamp(safePlayerPosition.x, safeMinX, safeMaxX);
+    safePlayerPosition.z = std::clamp(safePlayerPosition.z, safeMinZ, safeMaxZ);
+
+    const DirectX::XMFLOAT3 stagingOffset{
+        safePlayerPosition.x - originalPlayerPosition.x,
+        0.0f,
+        safePlayerPosition.z - originalPlayerPosition.z };
+    const DirectX::XMFLOAT3 originalBossPosition = gruxEnemyActor->GetPosition();
+    DirectX::XMFLOAT3 stagedBossPosition{
+        originalBossPosition.x + stagingOffset.x,
+        originalBossPosition.y,
+        originalBossPosition.z + stagingOffset.z };
+
+    if (std::abs(stagingOffset.x) > FLT_EPSILON ||
+        std::abs(stagingOffset.z) > FLT_EPSILON)
+    {
+        player->SetPosition(safePlayerPosition);
+    }
+
+    DirectX::XMFLOAT3 playerToBoss = MathHelper::Subtract(
+        stagedBossPosition, safePlayerPosition);
+    playerToBoss.y = 0.0f;
+    DirectX::XMFLOAT3 direction = playerToBoss;
+    if (MathHelper::Length(direction) > FLT_EPSILON)
+    {
+        direction = MathHelper::Normalize(direction);
+    }
+    else
+    {
+        direction = player->GetForward();
+        direction.y = 0.0f;
+        if (MathHelper::Length(direction) <= FLT_EPSILON)
+            direction = { 0.0f, 0.0f, 1.0f };
+        else
+            direction = MathHelper::Normalize(direction);
+    }
+
+    stagedBossPosition.x = safePlayerPosition.x + direction.x * targetBossDistance;
+    stagedBossPosition.z = safePlayerPosition.z + direction.z * targetBossDistance;
+    if (std::abs(stagedBossPosition.x - originalBossPosition.x) > FLT_EPSILON ||
+        std::abs(stagedBossPosition.z - originalBossPosition.z) > FLT_EPSILON)
+    {
+        gruxEnemyActor->SetPosition(stagedBossPosition);
+    }
+
+    DirectX::XMFLOAT3 bossToPlayer = MathHelper::Subtract(
+        safePlayerPosition, stagedBossPosition);
+    bossToPlayer.y = 0.0f;
+    if (MathHelper::Length(bossToPlayer) <= FLT_EPSILON)
+    {
+        bossToPlayer = player->GetForward();
+        bossToPlayer.x *= -1.0f;
+        bossToPlayer.y = 0.0f;
+        bossToPlayer.z *= -1.0f;
+    }
+    gruxEnemyActor->SetDirectionImmediate(bossToPlayer);
+}
 void GameScene::OnPlayerDeathCameraStart()
 {
     if (deathCameraStartRequested || battleFlowState != BattleFlowState::PlayerDead)
@@ -786,6 +901,25 @@ void GameScene::DrawGuiPlusAlpha()
     {
         ChangeCameraMode(TPSCameraController::CameraMode::TPS);
     }
+    if (ImGui::TreeNode("Death Staging"))
+    {
+        ImGui::DragFloat("Min Player X", &deathStagingMinPlayerX, 0.01f);
+        ImGui::DragFloat("Max Player X", &deathStagingMaxPlayerX, 0.01f);
+        ImGui::DragFloat("Min Player Z", &deathStagingMinPlayerZ, 0.01f);
+        ImGui::DragFloat("Max Player Z", &deathStagingMaxPlayerZ, 0.01f);
+        ImGui::DragFloat("Corner Inset X", &deathStagingCornerInsetX, 0.01f, 0.0f, 10.0f);
+        ImGui::DragFloat("Corner Inset Z", &deathStagingCornerInsetZ, 0.01f, 0.0f, 10.0f);
+        static constexpr const char* areaNames[] =
+        { "Center", "Front", "Back", "Left", "Right", "FrontLeft", "FrontRight", "BackLeft", "BackRight" };
+        for (size_t i = 0; i < deathStagingAreaSettings.size(); ++i)
+        {
+            ImGui::PushID(static_cast<int>(i));
+            ImGui::DragFloat(areaNames[i], &deathStagingAreaSettings[i].bossDistance, 0.01f, 0.0f, 20.0f);
+            ImGui::PopID();
+        }
+        ImGui::TreePop();
+    }
+
     ImGui::End();
 #endif
 

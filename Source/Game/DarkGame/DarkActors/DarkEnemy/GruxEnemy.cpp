@@ -435,6 +435,12 @@ void GruxEnemy::SetHpBarVisible(const bool visible)
     }
 }
 
+void GruxEnemy::SetDirectionImmediate(const DirectX::XMFLOAT3& direction)
+{
+    if (rotationComponent)
+        rotationComponent->SetDirectionImmediate(direction);
+}
+
 void GruxEnemy::PauseBattleAI()
 {
     battleAIActive = false;
