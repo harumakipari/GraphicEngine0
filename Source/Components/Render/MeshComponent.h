@@ -178,7 +178,9 @@ public:
 
         EffectParameters effectParameters = {};
 
-        float chargePower = 0.0f;   // “G‚ÌŠp‚È‚Ç‚ğŒõ‚ç‚¹‚é‚Ì‚Ég—p‚·‚éˆ—
+        float chargePower = 0.0f;
+        float deathVisualFade = 0.0f;
+        DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f };   // “G‚ÌŠp‚È‚Ç‚ğŒõ‚ç‚¹‚é‚Ì‚Ég—p‚·‚éˆ—
     };
     std::unique_ptr<ConstantBuffer<PlusAlphaConstants>> plusAlphaCBuffer;
 

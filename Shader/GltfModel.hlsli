@@ -115,6 +115,8 @@ cbuffer PLUS_ALPHA_CONSTANT_BUFFER : register(b5)
     ModelEffectParameter modelEffectParameter;
 
     float chargePower; // 敵の角などを光らせる値
+    float deathVisualFade;
+    float3 deathDeadEmissiveColor;
 
 }
 

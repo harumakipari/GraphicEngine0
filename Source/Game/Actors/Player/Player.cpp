@@ -91,7 +91,8 @@ void Player::Initialize(const Transform& transform)
         skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
         skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
-        skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
+        playerAliveEmissionPower = 20.9f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = playerAliveEmissionPower;   // 自己発光の強さを設定
         // 服の色のための色相変更
         skeletalMeshComponent->plusAlphaCBuffer->data.hueShift = -1.0f;
         skeletalMeshComponent->plusAlphaCBuffer->data.saturation = 0.442f;
@@ -1107,6 +1108,14 @@ void Player::DrawImGuiDetails()
         ImGui::SliderFloat("Close Eye Duration", &closeEyeDuration,
             0.01f, 2.0f, "%.3f sec");
 
+        ImGui::SliderFloat(U8("死亡時：目を閉じるまでの時間"), &deathEyeCloseDelay, 0.0f, 10.0f, "%.3f sec");
+        ImGui::SliderFloat(U8("死亡時：目を閉じる時間"), &deathEyeCloseDuration, 0.01f, 5.0f, "%.3f sec");
+        ImGui::SliderFloat(U8("死亡時：青い光が消え始まるまでの時間"), &deathColorFadeDelay, 0.0f, 10.0f, "%.3f sec");
+        ImGui::SliderFloat(U8("死亡時：青い光が消える時間"), &deathColorFadeDuration, 0.01f, 5.0f, "%.3f sec");
+        ImGui::ColorEdit3(U8("死亡時：発光部の色"), &deathDeadEmissiveColor.x);
+        ImGui::Text("Death Eye Weight: %.3f", closeEyeWeight);
+        ImGui::Text("Death Visual Fade: %.3f", deathVisualFade);
+
         ImGui::Separator();
         ImGui::Text("Closed Pose Time : %.3f", closedEyePoseTime);
         ImGui::Text("Start Time        : %.3f", closeEyeStartTime);
@@ -2121,6 +2130,13 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
     ResetLowHpEffects();
     ResetEyeCloseOverride();
+    deathVisualFade = 0.0f;
+    if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = 0.0f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathDeadEmissiveColor = deathDeadEmissiveColor;
+        skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = playerAliveEmissionPower;
+    }
 
     battleActionsSuspended = false;
     StopBattleActions();
@@ -2195,6 +2211,12 @@ void Player::ResetEyeCloseOverride()
 void Player::BeginDeathEyeClose()
 {
     ResetEyeCloseOverride();
+    deathVisualFade = 0.0f;
+    if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = 0.0f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathDeadEmissiveColor = deathDeadEmissiveColor;
+    }
     deathEyeCloseActive = true;
     RebuildEyeClosePoseOverride();
 }
@@ -2205,13 +2227,26 @@ void Player::UpdateDeathEyeClose(const float deathElapsedTime)
         return;
 
     const float normalizedCloseEyeTime = std::clamp(
-        (deathElapsedTime - closeEyeStartTime) /
-        (std::max)(closeEyeDuration, FLT_EPSILON),
+        (deathElapsedTime - deathEyeCloseDelay) /
+        (std::max)(deathEyeCloseDuration, FLT_EPSILON),
         0.0f,
         1.0f);
     closeEyeWeight = normalizedCloseEyeTime * normalizedCloseEyeTime *
         (3.0f - 2.0f * normalizedCloseEyeTime);
     GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
+}
+
+void Player::UpdateDeathVisualFade(const float deathElapsedTime)
+{
+    deathVisualFade = std::clamp(
+        (deathElapsedTime - deathColorFadeDelay) /
+        (std::max)(deathColorFadeDuration, FLT_EPSILON),
+        0.0f, 1.0f);
+    if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = deathVisualFade;
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathDeadEmissiveColor = deathDeadEmissiveColor;
+    }
 }
 
 void Player::EndDeathEyeClose()

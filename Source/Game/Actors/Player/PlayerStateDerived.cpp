@@ -6,6 +6,7 @@
 #include "Game/Actors/Player/Player.h"
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 
 PlayerStateBase::PlayerStateBase(Player* actor) :State(actor), player(actor)
@@ -505,8 +506,10 @@ void PlayerDeathState::Enter()
 
 void PlayerDeathState::Execute(float deltaTime)
 {
-    elapsedTime += deltaTime;
+    (void)deltaTime;
+    elapsedTime += Time::UnscaledDeltaTime();
     player->UpdateDeathEyeClose(elapsedTime);
+    player->UpdateDeathVisualFade(elapsedTime);
 }
 
 void PlayerDeathState::Exit()

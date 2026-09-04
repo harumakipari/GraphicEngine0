@@ -47,8 +47,14 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         emissiveFactor *= sampled.rgb;
 
         if (objectType == OBJECT_PLAYER || objectType == OBJECT_ENEMY)
-        { // player‚Ì‚ÍƒGƒ~ƒbƒVƒu‚ğ‹­‚ß‚Éo‚·
+        { // playerï¿½Ìï¿½ï¿½ÍƒGï¿½~ï¿½bï¿½Vï¿½uï¿½ï¿½ï¿½ï¿½ß‚Éoï¿½ï¿½
             emissiveFactor *= emissionPower;
+            if (objectType == OBJECT_PLAYER)
+            {
+                const float deathFade = saturate(deathVisualFade);
+                emissiveFactor = lerp(emissiveFactor, deathDeadEmissiveColor, deathFade);
+                emissiveFactor *= (1.0 - deathFade);
+            }
         }
     }
     
@@ -80,11 +86,11 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     T = normalize(T - N * dot(N, T));
     float3 B = normalize(cross(N, T) * sigma);
 
-    // TODO:ƒAƒ“ƒ`ƒGƒCƒŠƒAƒX‘Îô‚Éƒ‰ƒtƒlƒX‚ğ‰º‚°‚éˆ—‚ğ’Ç‰Á
+    // TODO:ï¿½Aï¿½ï¿½ï¿½`ï¿½Gï¿½Cï¿½ï¿½ï¿½Aï¿½Xï¿½Îï¿½Éƒï¿½ï¿½tï¿½lï¿½Xï¿½ï¿½ï¿½ï¿½ï¿½ï¿½éˆï¿½ï¿½ï¿½ï¿½Ç‰ï¿½
     //roughnessFactor = SpecularAntiAliasing(roughnessFactor, N, 0.05f);
 
 
-    //”w–Ê‚É‚Â‚¢‚Ä‚ÍAÚü•ûŒü‚ÌŠî’êƒxƒNƒgƒ‹‚Í•„†‚ª”½“]‚·‚éB
+    //ï¿½wï¿½Ê‚É‚Â‚ï¿½ï¿½Ä‚ÍAï¿½Úï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÌŠï¿½ï¿½xï¿½Nï¿½gï¿½ï¿½ï¿½Í•ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½]ï¿½ï¿½ï¿½ï¿½B
     if (isFrontFace == false)
     {
         T = -T;
@@ -108,13 +114,13 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     pout.velocity = float4(velocity, 0, 1);
 
     if (materialType == MATERIAL_CLOTH || materialType == MATERIAL_FUR)
-    { // •‚Ì‚Í
+    { // ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½
         baseColorFactor.rgb = HueSaturation(baseColorFactor.rgb, modelHueShift, modelSaturation);
         baseColorFactor.rgb = BrightnessContrast(baseColorFactor.rgb, modelBrightness, modelContrast);
     }
 
 
-    // ”íƒ_ƒ[ƒW‚ÌF•ÏXˆ—
+    // ï¿½ï¿½_ï¿½ï¿½ï¿½[ï¿½Wï¿½ï¿½ï¿½ÌFï¿½ÏXï¿½ï¿½ï¿½ï¿½
     const float damageFlashAmount = saturate(flashValue);
     const float damageBodyAmount = saturate(damageFlashAmount * modelEffectParameter.edgeWidth);
     baseColorFactor.rgb = lerp(baseColorFactor.rgb, cpuColor.rgb, damageBodyAmount);
@@ -123,7 +129,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
     pout.position = pin.wPosition; // world space 
 
-    pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // w‚Ì’l : ƒXƒJƒCƒ}ƒbƒv‚P‚»‚êˆÈŠO‚O    2: emissiveFlag‚Æ‚µ‚Äg—p
+    pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // wï¿½Ì’l : ï¿½Xï¿½Jï¿½Cï¿½}ï¿½bï¿½vï¿½Pï¿½ï¿½ï¿½ï¿½ÈŠOï¿½O    2: emissiveFlagï¿½Æ‚ï¿½ï¿½Ägï¿½p
 
     if (materialType == MATERIAL_EYE)
     {
@@ -137,15 +143,15 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
         float mask = maskColor * maskCenter;
         emissiveFactor = mask * float3(cpuColor.rgb) * emissionPower;
-        pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // w‚Ì’l : ƒXƒJƒCƒ}ƒbƒv‚P‚»‚êˆÈŠO‚O    2: emissiveFlag‚Æ‚µ‚Äg—p
+        pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // wï¿½Ì’l : ï¿½Xï¿½Jï¿½Cï¿½}ï¿½bï¿½vï¿½Pï¿½ï¿½ï¿½ï¿½ÈŠOï¿½O    2: emissiveFlagï¿½Æ‚ï¿½ï¿½Ägï¿½p
     }
 
-    // ”íƒ_ƒ[ƒW‚ÌF•ÏXˆ—
+    // ï¿½ï¿½_ï¿½ï¿½ï¿½[ï¿½Wï¿½ï¿½ï¿½ÌFï¿½ÏXï¿½ï¿½ï¿½ï¿½
     const float3 V = normalize(cameraPosition.xyz - pin.wPosition.xyz);
     const float damageRimFactor = pow(1.0f - saturate(dot(N, V)), 3.0f);
     pout.emissive.rgb += cpuColor.rgb * damageRimFactor * damageFlashAmount * modelEffectParameter.edgePower;
 
-    pout.material = float4(metallicFactor, roughnessFactor, occlusionFactor, materialType /*ƒ}ƒeƒŠƒAƒ‹ƒ^ƒCƒv*/);
+    pout.material = float4(metallicFactor, roughnessFactor, occlusionFactor, materialType /*ï¿½}ï¿½eï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½^ï¿½Cï¿½v*/);
     
     return pout;
 }

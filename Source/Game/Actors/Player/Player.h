@@ -137,6 +137,7 @@ public:
     void BeginDeathEyeClose();
     void UpdateDeathEyeClose(float deathElapsedTime);
     void EndDeathEyeClose();
+    void UpdateDeathVisualFade(float deathElapsedTime);
 
     void SetDeathCameraStartCallback(std::function<void()> callback)
     {
@@ -535,6 +536,13 @@ private:
     float closeEyeWeight = 0.0f;
     bool closeEyePreviewActive = false;
     bool deathEyeCloseActive = false;
+    float deathEyeCloseDelay = 2.0f;
+    float deathEyeCloseDuration = 1.4f;
+    float deathColorFadeDelay = 3.4f;
+    float deathColorFadeDuration = 1.7f;
+    float deathVisualFade = 0.0f;
+    DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f };
+    float playerAliveEmissionPower = 20.9f;
 
     DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     float hitStopTimer = 0.0f; // ヒットストップのタイマー
