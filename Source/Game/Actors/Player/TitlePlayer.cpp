@@ -35,6 +35,7 @@ void TitlePlayer::Initialize(const Transform& transform)
         skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
         skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/titlePlayer.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
+        skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = 1.0f;
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 20.9f;   // 自己発光の強さを設定
         // 服の色のための色相変更
         skeletalMeshComponent->plusAlphaCBuffer->data.hueShift = -1.0f;

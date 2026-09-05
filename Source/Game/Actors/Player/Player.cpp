@@ -28,6 +28,9 @@
 namespace
 {
     bool forceDitherTransparencyDebug = false;
+    float ditherTransparencyDebugAlpha = 0.6f;
+    float currentDitherTransparencyAlpha = 1.0f;
+    float currentCameraCollisionRatio = 1.0f;
 
     constexpr std::array<const char*, 8> RushSwordSEs =
     {
@@ -93,6 +96,7 @@ void Player::Initialize(const Transform& transform)
         skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
         skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
+        skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = 1.0f;
         playerAliveEmissionPower = 20.9f;
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = playerAliveEmissionPower;   // 自己発光の強さを設定
         // 服の色のための色相変更
@@ -366,6 +370,8 @@ void Player::Initialize(const Transform& transform)
     int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");
     swordSheathMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
     swordSheathMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
+    swordSheathMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerDeferredPS";
+    swordSheathMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.0f, 0.0f, 0.0f, 1.0f };
     swordSheathMeshComponent->AttachToComponent(skeletalMeshComponent, swordSheathSocketNode); // "VB root_weapon"
     swordSheathMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
     swordSheathMeshComponent->SetRelativeEulerRotationDirect({ 83.0f,-180.0f,-105.0f });
@@ -613,37 +619,37 @@ void Player::Update(float deltaTime)
 
 
     // プレイヤーの透明化処理
+    skeletalMeshComponent->SetIsVisible(true);
+    skeletalMeshBlendComponent->SetIsVisible(false);
+    float ditherAlpha = 1.0f;
+    currentCameraCollisionRatio = 1.0f;
+
     if (moviePerform || deathCameraTransparencyDisabled)
     {// 演出中は壁の近くでも透明化しない
-        skeletalMeshComponent->SetIsVisible(true);
-        skeletalMeshBlendComponent->SetIsVisible(false);
+        ditherAlpha = 1.0f;
     }
     else
     {
         if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
         {
-            float transparencyStartRation = 0.3f;
             float ratio = camera->GetCameraCollisionRatio();
-            if (ratio < transparencyStartRation)
+            currentCameraCollisionRatio = ratio;
+            if (ratio < transparencyStartRatio)
             {
-                skeletalMeshComponent->SetIsVisible(false);
-                skeletalMeshBlendComponent->SetIsVisible(true);
-
-                float t = std::clamp(ratio / transparencyStartRation, 0.0f, 1.0f);
+                float t = std::clamp(ratio / transparencyStartRatio, 0.0f, 1.0f);
                 t = t * t * (3.0f - 2.0f * t);
 
-                float alpha = std::lerp(transparencyMinAlpha, transparencyMaxAlpha, t);
-                if (forceDitherTransparencyDebug)
-                    alpha = 0.6f;
-                skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
-            }
-            else
-            {
-                skeletalMeshComponent->SetIsVisible(true);
-                skeletalMeshBlendComponent->SetIsVisible(false);
+                ditherAlpha = std::lerp(transparencyMinAlpha, transparencyMaxAlpha, t);
             }
         }
     }
+    if (forceDitherTransparencyDebug)
+        ditherAlpha = ditherTransparencyDebugAlpha;
+    ditherAlpha = std::clamp(ditherAlpha, 0.0f, 1.0f);
+    skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = ditherAlpha;
+    swordMeshComponent->plusAlphaCBuffer->data.cpuColor.w = ditherAlpha;
+    swordSheathMeshComponent->plusAlphaCBuffer->data.cpuColor.w = ditherAlpha;
+    currentDitherTransparencyAlpha = ditherAlpha;
 
     // Player/BossのSlowは独立させ、どちらも実時間で更新する。
     if (playerSlowPhase == JustDodgeSlowPhase::Hold)
@@ -1063,8 +1069,10 @@ void Player::SetRushWeaponVisual(const bool enabled)
 
     if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
     {
-        swordMeshComponent->plusAlphaCBuffer->data.cpuColor =
-        { swordColor.x, swordColor.y, swordColor.z, 0.0f };
+        auto& cpuColor = swordMeshComponent->plusAlphaCBuffer->data.cpuColor;
+        cpuColor.x = swordColor.x;
+        cpuColor.y = swordColor.y;
+        cpuColor.z = swordColor.z;
     }
 
     trail.SetRushColorEnabled(enabled, rushSwordColor);
@@ -1476,9 +1484,19 @@ void Player::DrawImGuiDetails()
         ImGui::Text("Accepts Input: %s", acceptsRushInput ? "true" : "false");
         ImGui::TreePop();
     }
-    ImGui::DragFloat("transparencyMinAlpha", &transparencyMinAlpha, 0.05f);
-    ImGui::DragFloat("transparencyMaxAlpha", &transparencyMaxAlpha, 0.05f);
-    ImGui::Checkbox("Force Dither Alpha 0.6 (Debug)", &forceDitherTransparencyDebug);
+    if (ImGui::TreeNode("Player Dither"))
+    {
+        ImGui::SliderFloat(U8("透過範囲"), &transparencyStartRatio, 0.0f, 1.0f);
+        if (ImGui::SliderFloat(U8("最小表示率"), &transparencyMinAlpha, 0.0f, 1.0f))
+            transparencyMinAlpha = (std::min)(transparencyMinAlpha, transparencyMaxAlpha);
+        if (ImGui::SliderFloat(U8("最大表示率"), &transparencyMaxAlpha, 0.0f, 1.0f))
+            transparencyMaxAlpha = (std::max)(transparencyMaxAlpha, transparencyMinAlpha);
+        ImGui::Text(U8("現在のカメラ衝突率: %.3f"), currentCameraCollisionRatio);
+        ImGui::Text(U8("現在の表示率: %.2f"), currentDitherTransparencyAlpha);
+        ImGui::Checkbox("Force Dither Override", &forceDitherTransparencyDebug);
+        ImGui::SliderFloat("Override Alpha", &ditherTransparencyDebugAlpha, 0.0f, 1.0f);
+        ImGui::TreePop();
+    }
     ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
     ImGui::DragFloat("MotionWarp attack surface distance",
         &motionWarpDesiredAttackSurfaceDistance, 0.01f, 0.3f, 1.0f);

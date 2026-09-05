@@ -76,7 +76,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        maxHp = 10;
+        //maxHp = 10;
         hp = maxHp;
     }
 
@@ -667,8 +667,9 @@ private:
     float rushBossReturnDuration = 0.10f;
 
     // プレイヤーの壁に近づいた時の透明度
-    float transparencyMinAlpha = 0.1f;  // 最小透明度
-    float transparencyMaxAlpha = 0.2f;  // 最大透明度
+    float transparencyStartRatio = 0.35f;
+    float transparencyMinAlpha = 0.25f;  // 最小透明度
+    float transparencyMaxAlpha = 1.f;  // 最大透明度
 
     // 演出中かどうか
     bool moviePerform = false;

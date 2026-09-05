@@ -11,6 +11,22 @@
 #define OCCLUSION_TEXTURE 4 
 Texture2D<float4> materialTextures[5] : register(t1);
 
+float Bayer4x4(float2 screenPosition)
+{
+    static const float bayer[16] =
+    {
+         0.0f,  8.0f,  2.0f, 10.0f,
+        12.0f,  4.0f, 14.0f,  6.0f,
+         3.0f, 11.0f,  1.0f,  9.0f,
+        15.0f,  7.0f, 13.0f,  5.0f
+    };
+
+    const int2 pixel = int2(floor(screenPosition));
+    const int x = pixel.x & 3;
+    const int y = pixel.y & 3;
+    return (bayer[y * 4 + x] + 0.5f) / 16.0f;
+}
+
 float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
 {
     const float GAMMA = 2.2;
@@ -24,6 +40,13 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         float4 sampled = materialTextures[BASE_COLOR_TEXTURE].Sample(samplerStates[ANISOTROPIC], pin.texcoord);
         sampled.rgb = pow(saturate(sampled.rgb), GAMMA);
         baseColorFactor *= sampled;
+    }
+
+    const float ditherAlpha = saturate(cpuColor.a);
+    if (ditherAlpha < 1.0f)
+    {
+        const float threshold = Bayer4x4(pin.position.xy);
+        clip(ditherAlpha - threshold);
     }
 
     float3 emissiveFactor = m.emissiveFactor;
