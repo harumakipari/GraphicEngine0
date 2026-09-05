@@ -66,6 +66,12 @@ private:
 
     float gravity = 9.8f;
     float spawnAngleRandomRange = 22.0f;
+    float directionalDebrisOutwardSpeedMultiplier = 1.45f;
+    float directionalDebrisUpwardSpeedMultiplier = 1.0f;
+    float directionalDebrisHalfSpreadDegrees = 60.0f;
+    float directionalDebrisSpeedRandomness = 1.2f;
+    float directionalDebrisAngularSpeedMultiplier = 1.0f;
+    float directionalDebrisLifetimeMultiplier = 1.0f;
     int activeBlockCount = 4;
     int activeSmallDebriCount = 8;
     MotionSettings blockSettings

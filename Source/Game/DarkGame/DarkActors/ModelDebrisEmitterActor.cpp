@@ -105,10 +105,11 @@ void ModelDebrisEmitterActor::Emit(const DirectX::XMFLOAT3& impactPosition)
     }
 }
 
-void ModelDebrisEmitterActor::Emit(
-    const DirectX::XMFLOAT3& impactPosition,
-    const DirectX::XMFLOAT3& outwardDirection)
+void ModelDebrisEmitterActor::Emit(const DirectX::XMFLOAT3& impactPosition,const DirectX::XMFLOAT3& outwardDirection)
 {
+    // SE‚ðÄ¶‚·‚é
+    CoreAudio::PlayOneShot("./Data/Sound/SE/debris.wav");
+
     DirectX::XMFLOAT3 horizontalDirection{
         outwardDirection.x, 0.0f, outwardDirection.z };
     const float directionLength = std::sqrt(
@@ -176,19 +177,32 @@ void ModelDebrisEmitterActor::ActivateDirectionalDebris(
     Debris& debris, const DirectX::XMFLOAT3& impactPosition,
     const DirectX::XMFLOAT3& outwardDirection)
 {
-    constexpr float wallImpactHalfSpreadDegrees = 60.0f;
     const float centerAngle = std::atan2(outwardDirection.x, outwardDirection.z);
     const float angle = centerAngle + DirectX::XMConvertToRadians(
         MathHelper::RandomRange(
-            -wallImpactHalfSpreadDegrees, wallImpactHalfSpreadDegrees));
+            -directionalDebrisHalfSpreadDegrees, directionalDebrisHalfSpreadDegrees));
     const DirectX::XMFLOAT3 outward{ sinf(angle), 0.0f, cosf(angle) };
 
     const bool isBlock = debris.type == DebrisType::Block;
     const MotionSettings& settings = isBlock ? blockSettings : smallDebriSettings;
+    const float horizontalSpeedCenter =
+        (settings.horizontalSpeedMin + settings.horizontalSpeedMax) * 0.5f;
+    const float horizontalSpeedHalfRange =
+        (settings.horizontalSpeedMax - settings.horizontalSpeedMin) * 0.5f *
+        directionalDebrisSpeedRandomness;
     const float horizontalSpeed = MathHelper::RandomRange(
-        settings.horizontalSpeedMin, settings.horizontalSpeedMax);
+        (std::max)(0.0f, horizontalSpeedCenter - horizontalSpeedHalfRange),
+        horizontalSpeedCenter + horizontalSpeedHalfRange) *
+        directionalDebrisOutwardSpeedMultiplier;
+    const float verticalSpeedCenter =
+        (settings.upSpeedMin + settings.upSpeedMax) * 0.5f;
+    const float verticalSpeedHalfRange =
+        (settings.upSpeedMax - settings.upSpeedMin) * 0.5f *
+        directionalDebrisSpeedRandomness;
     const float verticalSpeed = MathHelper::RandomRange(
-        settings.upSpeedMin, settings.upSpeedMax);
+        (std::max)(0.0f, verticalSpeedCenter - verticalSpeedHalfRange),
+        verticalSpeedCenter + verticalSpeedHalfRange) *
+        directionalDebrisUpwardSpeedMultiplier;
 
     debris.active = true;
     debris.position = impactPosition;
@@ -200,8 +214,10 @@ void ModelDebrisEmitterActor::ActivateDirectionalDebris(
         MathHelper::RandomRange(0.0f, 360.0f),
         MathHelper::RandomRange(0.0f, 360.0f) };
 
-    const float angularSpeedMin = settings.angularVelocityMinimumMagnitude;
-    const float angularSpeedMax = settings.angularVelocityMax;
+    const float angularSpeedMin = settings.angularVelocityMinimumMagnitude *
+        directionalDebrisAngularSpeedMultiplier;
+    const float angularSpeedMax = settings.angularVelocityMax *
+        directionalDebrisAngularSpeedMultiplier;
     debris.angularVelocity = {
         MathHelper::RandomRange(-angularSpeedMax, angularSpeedMax),
         MathHelper::RandomRange(-angularSpeedMax, angularSpeedMax),
@@ -210,7 +226,8 @@ void ModelDebrisEmitterActor::ActivateDirectionalDebris(
         debris.angularVelocity.y = angularSpeedMin;
 
     debris.remainingLifetime = MathHelper::RandomRange(
-        settings.lifetimeMin, settings.lifetimeMax);
+        settings.lifetimeMin, settings.lifetimeMax) *
+        directionalDebrisLifetimeMultiplier;
     debris.scale = MathHelper::RandomRange(settings.scaleMin, settings.scaleMax);
 
     debris.meshComponent->SetWorldLocationDirect(debris.position);
@@ -265,6 +282,36 @@ void ModelDebrisEmitterActor::DrawImGuiDetails()
             0, MaxSmallDebriPoolCount);
         ImGui::TextDisabled("Fixed Pool: Block %d / Small %d",
             MaxBlockPoolCount, MaxSmallDebriPoolCount);
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNodeEx("Directional (Wall Impact)", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::DragFloat("Outward Speed Multiplier",
+            &directionalDebrisOutwardSpeedMultiplier, 0.05f, 0.0f, 5.0f, "%.2fx");
+        ImGui::DragFloat("Upward Speed Multiplier",
+            &directionalDebrisUpwardSpeedMultiplier, 0.05f, 0.0f, 5.0f, "%.2fx");
+        ImGui::DragFloat("Half Spread",
+            &directionalDebrisHalfSpreadDegrees, 0.5f, 0.0f, 180.0f, "+/- %.1f deg");
+        ImGui::DragFloat("Speed Randomness",
+            &directionalDebrisSpeedRandomness, 0.05f, 0.0f, 3.0f, "%.2fx");
+        ImGui::DragFloat("Angular Speed Multiplier",
+            &directionalDebrisAngularSpeedMultiplier, 0.05f, 0.0f, 5.0f, "%.2fx");
+        ImGui::DragFloat("Lifetime Multiplier",
+            &directionalDebrisLifetimeMultiplier, 0.05f, 0.0f, 5.0f, "%.2fx");
+
+        directionalDebrisOutwardSpeedMultiplier =
+            (std::max)(directionalDebrisOutwardSpeedMultiplier, 0.0f);
+        directionalDebrisUpwardSpeedMultiplier =
+            (std::max)(directionalDebrisUpwardSpeedMultiplier, 0.0f);
+        directionalDebrisHalfSpreadDegrees =
+            std::clamp(directionalDebrisHalfSpreadDegrees, 0.0f, 180.0f);
+        directionalDebrisSpeedRandomness =
+            (std::max)(directionalDebrisSpeedRandomness, 0.0f);
+        directionalDebrisAngularSpeedMultiplier =
+            (std::max)(directionalDebrisAngularSpeedMultiplier, 0.0f);
+        directionalDebrisLifetimeMultiplier =
+            (std::max)(directionalDebrisLifetimeMultiplier, 0.0f);
         ImGui::TreePop();
     }
 
