@@ -10,6 +10,7 @@
 
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Input/InputSystem.h"
+#include "Engine/Audio/Audio.h"
 #include "Core/ActorManager.h"
 #include "Engine/Camera/MovieCameraManagerActor.h"
 #include "Engine/Debug/SceneEditor.h"
@@ -889,6 +890,7 @@ void GameScene::UpdateDeathResultMenu()
             {
                 deathResultSelection = i;
                 deathResultSelectLineAnimProgress = 0.0f;
+                CoreAudio::PlayOneShot("./Data/Sound/SE/button_select_move.wav", deathResultMoveSeVolume);
             }
         }
     }
@@ -981,6 +983,7 @@ void GameScene::UpdateDeathResultPresentation()
 void GameScene::ExecuteDeathResult(const int index)
 {
     if (!deathResultInputEnabled) return;
+    CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav", deathResultConfirmSeVolume);
     deathResultInputEnabled = false;
     deathResultSelection = 0;
     deathResultSelectLineAnimProgress = 0.0f;
@@ -1275,6 +1278,8 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat(U8("選択中ボタン 拡大率"), &deathResultSelectedScale, 0.01f, 1.0f, 2.0f);
     ImGui::ColorEdit4(U8("選択中ボタン 色"), &deathResultSelectedColor.r);
     ImGui::ColorEdit4(U8("非選択ボタン 色"), &deathResultUnselectedColor.r);
+    ImGui::SliderFloat("Result Move SE Volume", &deathResultMoveSeVolume, 0.0f, 2.0f);
+    ImGui::SliderFloat("Result Confirm SE Volume", &deathResultConfirmSeVolume, 0.0f, 2.0f);
     ImGui::DragFloat("Select Line Distance From Continue Button", &deathResultSelectLineDistances[0], 1.0f, -200.0f, 200.0f);
     ImGui::DragFloat("Select Line Distance From Restart Button", &deathResultSelectLineDistances[1], 1.0f, -200.0f, 200.0f);
     ImGui::DragFloat("Select Line Distance From Title Button", &deathResultSelectLineDistances[2], 1.0f, -200.0f, 200.0f);

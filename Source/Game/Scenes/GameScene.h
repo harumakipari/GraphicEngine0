@@ -196,6 +196,8 @@ private:
     float deathResultSelectedScale = 1.2f;
     CoreColor deathResultSelectedColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     CoreColor deathResultUnselectedColor{ 0.5f, 0.5f, 0.5f, 1.0f };
+    float deathResultMoveSeVolume = 1.0f;
+    float deathResultConfirmSeVolume = 1.0f;
     bool deathHudFadeCueFired = false;
     bool deathOverlayCueFired = false;
     bool deathDefeatedCueFired = false;

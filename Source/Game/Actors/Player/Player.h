@@ -542,6 +542,7 @@ private:
     float deathEyeCloseDuration = 1.4f;
     float deathColorFadeDelay = 4.018f;
     float deathColorFadeDuration = 2.05f;
+    float deathStoneFadeSeVolume = 2.0f;
     float deathVisualFade = 0.0f;
     bool deathEyeCloseStarted = false;
     bool deathVisualFadeStarted = false;

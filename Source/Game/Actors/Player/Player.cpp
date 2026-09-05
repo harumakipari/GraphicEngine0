@@ -1119,6 +1119,7 @@ void Player::DrawImGuiDetails()
         ImGui::SliderFloat(U8("Ž€–SŽžFÂ‚¢Œõ‚ªÁ‚¦Žn‚Ü‚é‚Ü‚Å‚ÌŽžŠÔ"), &deathColorFadeDelay, 0.0f, 10.0f, "%.3f sec");
         ImGui::SliderFloat(U8("Ž€–SŽžFÂ‚¢Œõ‚ªÁ‚¦‚éŽžŠÔ"), &deathColorFadeDuration, 0.01f, 5.0f, "%.3f sec");
         ImGui::ColorEdit3(U8("Ž€–SŽžF”­Œõ•”‚ÌF"), &deathDeadEmissiveColor.x);
+        ImGui::SliderFloat("Death Stone Fade SE Volume", &deathStoneFadeSeVolume, 0.0f, 2.0f);
         ImGui::Text("Death Eye Weight: %.3f", closeEyeWeight);
         ImGui::Text("Death Visual Fade: %.3f", deathVisualFade);
 
@@ -2292,7 +2293,10 @@ void Player::UpdateDeathEyeClose(const float deathElapsedTime)
 void Player::UpdateDeathVisualFade(const float deathElapsedTime)
 {
     if (!deathVisualFadeStarted && deathElapsedTime >= deathColorFadeDelay)
+    {
         deathVisualFadeStarted = true;
+        CoreAudio::PlayOneShot("./Data/Sound/SE/player_stone_fade_start.wav", deathStoneFadeSeVolume);
+    }
 
     deathVisualFade = std::clamp(
         (deathElapsedTime - deathColorFadeDelay) /
