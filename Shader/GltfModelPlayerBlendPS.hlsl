@@ -12,6 +12,22 @@
 #define OCCLUSION_TEXTURE 4 
 Texture2D<float4> materialTextures[5] : register(t1);
 
+float Bayer4x4(float2 screenPosition)
+{
+    static const float bayer[16] =
+    {
+         0.0f,  8.0f,  2.0f, 10.0f,
+        12.0f,  4.0f, 14.0f,  6.0f,
+         3.0f, 11.0f,  1.0f,  9.0f,
+        15.0f,  7.0f, 13.0f,  5.0f
+    };
+
+    const int2 pixel = int2(floor(screenPosition));
+    const int x = pixel.x & 3;
+    const int y = pixel.y & 3;
+    return (bayer[y * 4 + x] + 0.5f) / 16.0f;
+}
+
 float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
 {
     const float GAMMA = 2.2;
@@ -34,6 +50,7 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         float4 sampled = materialTextures[EMISSIVE_TEXTURE].Sample(samplerStates[ANISOTROPIC], pin.texcoord);
         sampled.rgb = pow(sampled.rgb, GAMMA);
         emissiveFactor *= sampled.rgb;
+        emissiveFactor *= emissionPower;
     }
     
     float roughnessFactor = m.pbrMetallicRoughness.roughnessFactor;
@@ -60,6 +77,11 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         damageFlashAmount * modelEffectParameter.edgeWidth);
     baseColorFactor.rgb = lerp(
         baseColorFactor.rgb, cpuColor.rgb, damageBodyAmount);
+    if (materialType == MATERIAL_CLOTH || materialType == MATERIAL_FUR)
+    {
+        baseColorFactor.rgb = HueSaturation(baseColorFactor.rgb, modelHueShift, modelSaturation);
+        baseColorFactor.rgb = BrightnessContrast(baseColorFactor.rgb, modelBrightness, modelContrast);
+    }
     
     const float3 f0 = lerp(0.04, baseColorFactor.rgb, metallicFactor);
     const float3 f90 = 1.0;
@@ -137,6 +159,13 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     totalSpecular = lerp(totalSpecular, totalSpecular * occlusionFactor, occlusionStrength);
 
     float3 emissive = emissiveFactor;
+    if (materialType == MATERIAL_EYE)
+    {
+        const float luminance = dot(baseColorFactor.rgb, float3(0.3, 0.59, 0.11));
+        const float dist = distance(pin.texcoord, float2(0.5, 0.5));
+        const float mask = (1.0 - step(0.1, luminance)) * (1.0 - smoothstep(0.1, 0.2, dist));
+        emissive = mask * cpuColor.rgb * emissionPower;
+    }
     const float damageRimFactor = pow(
         1.0f - saturate(dot(N, V)), 3.0f);
     emissive += cpuColor.rgb
@@ -145,18 +174,21 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         * modelEffectParameter.edgePower;
 #if 1
     float rimPower = lightDirection.w;
-    float3 rim = CalcRimLight(N, V, rimColor.rgb, rimPower) * rimIntensity;
+    float3 rimColorForPlayer = playerRimColor;
+    float rimIntensityForPlayer = playerRimIntensity;
+    if (materialType == MATERIAL_HAIR)
+    {
+        rimColorForPlayer = playerHairRimColor;
+        rimIntensityForPlayer = playerHairRimIntensity;
+    }
+    float3 rim = CalcRimLight(N, V, rimColorForPlayer, rimPower) * rimIntensityForPlayer;
 #endif
     float3 Lo = totalDiffuse + totalSpecular + emissive + rim;
 
-    if (materialType == MATERIAL_CLOTH || materialType == MATERIAL_FUR)
-    { // •ž‚ÌŽž‚Í
-        baseColorFactor.rgb = HueSaturation(baseColorFactor.rgb, modelHueShift, modelSaturation);
-        baseColorFactor.rgb = BrightnessContrast(baseColorFactor.rgb, modelBrightness, modelContrast);
-    }
+    const float alpha = saturate(cpuColor.a);
+    const float threshold = Bayer4x4(pin.position.xy);
+    clip(alpha - threshold);
 
-    baseColorFactor.a = cpuColor.a;
-
-    return float4(Lo, baseColorFactor.a);
+    return float4(Lo, 1.0f);
 
 }

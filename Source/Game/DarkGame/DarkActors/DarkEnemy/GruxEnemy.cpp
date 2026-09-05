@@ -426,12 +426,41 @@ void GruxEnemy::Initialize(const Transform& transform)
 
 void GruxEnemy::SetHpBarVisible(const bool visible)
 {
+    hpBarFadeEntries.clear();
     for (const auto& component : hpBarUiComponents)
     {
         if (!component)
             continue;
         component->SetVisible(visible);
         component->SetEnable(visible);
+    }
+}
+
+void GruxEnemy::BeginHpBarFadeOut()
+{
+    hpBarFadeEntries.clear();
+    for (const auto& core : hpBarUiComponents)
+    {
+        auto image = std::dynamic_pointer_cast<UIImageComponent>(core);
+        if (image && image->IsVisible())
+            hpBarFadeEntries.push_back({ image, image->color });
+    }
+}
+
+void GruxEnemy::SetHpBarFadeAlpha(const float alpha)
+{
+    const float clampedAlpha = std::clamp(alpha, 0.0f, 1.0f);
+    for (auto& entry : hpBarFadeEntries)
+    {
+        CoreColor color = entry.color;
+        color.a *= clampedAlpha;
+        entry.component->SetColor(color);
+    }
+    if (clampedAlpha <= 0.0f)
+    {
+        for (auto& entry : hpBarFadeEntries)
+            entry.component->SetColor(entry.color);
+        SetHpBarVisible(false);
     }
 }
 

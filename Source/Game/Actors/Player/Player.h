@@ -130,6 +130,8 @@ public:
     // Battle HUD visibility is decided by GameScene; Player only owns its components.
     void SetHpBarVisible(bool visible);
     void SetGameplayHudVisible(bool visible);
+    void BeginGameplayHudFadeOut();
+    void SetGameplayHudFadeAlpha(float alpha);
 
     // Clears Player-owned transient combat state and restores full HP at the saved battle start.
     void ResetForBattleContinue(const Transform& battleStartTransform);
@@ -536,10 +538,10 @@ private:
     float closeEyeWeight = 0.0f;
     bool closeEyePreviewActive = false;
     bool deathEyeCloseActive = false;
-    float deathEyeCloseDelay = 2.0f;
+    float deathEyeCloseDelay = 2.506f;
     float deathEyeCloseDuration = 1.4f;
-    float deathColorFadeDelay = 3.4f;
-    float deathColorFadeDuration = 1.7f;
+    float deathColorFadeDelay = 4.018f;
+    float deathColorFadeDuration = 2.05f;
     float deathVisualFade = 0.0f;
     bool deathEyeCloseStarted = false;
     bool deathVisualFadeStarted = false;
@@ -600,6 +602,12 @@ private:
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;
     std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;
+    struct GameplayHudFadeEntry
+    {
+        std::shared_ptr<UIImageComponent> component;
+        CoreColor color;
+    };
+    std::vector<GameplayHudFadeEntry> gameplayHudFadeEntries;
     float delayedHp = 0.0f;
     float delayedHpDelayTimer = 0.0f;
     float delayedHpDelayDuration = 0.25f;

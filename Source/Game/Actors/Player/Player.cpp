@@ -27,6 +27,8 @@
 
 namespace
 {
+    bool forceDitherTransparencyDebug = false;
+
     constexpr std::array<const char*, 8> RushSwordSEs =
     {
         "enemy_rush_damage3",
@@ -133,6 +135,8 @@ void Player::Initialize(const Transform& transform)
     skeletalMeshBlendComponent->plusAlphaCBuffer->data.saturation = 0.442f;
     skeletalMeshBlendComponent->plusAlphaCBuffer->data.brightness = 0.352f;
     skeletalMeshBlendComponent->plusAlphaCBuffer->data.contrast = 0.8f;
+    skeletalMeshBlendComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;
+    skeletalMeshBlendComponent->plusAlphaCBuffer->data.emissionPower = playerAliveEmissionPower;
     for (auto& material : skeletalMeshBlendComponent->model->materials)
     {
         if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
@@ -629,6 +633,8 @@ void Player::Update(float deltaTime)
                 t = t * t * (3.0f - 2.0f * t);
 
                 float alpha = std::lerp(transparencyMinAlpha, transparencyMaxAlpha, t);
+                if (forceDitherTransparencyDebug)
+                    alpha = 0.6f;
                 skeletalMeshBlendComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
             }
             else
@@ -1471,6 +1477,7 @@ void Player::DrawImGuiDetails()
     }
     ImGui::DragFloat("transparencyMinAlpha", &transparencyMinAlpha, 0.05f);
     ImGui::DragFloat("transparencyMaxAlpha", &transparencyMaxAlpha, 0.05f);
+    ImGui::Checkbox("Force Dither Alpha 0.6 (Debug)", &forceDitherTransparencyDebug);
     ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
     ImGui::DragFloat("MotionWarp attack surface distance",
         &motionWarpDesiredAttackSurfaceDistance, 0.01f, 0.3f, 1.0f);
@@ -2032,6 +2039,7 @@ void Player::EndEvent()
 
 void Player::SetGameplayHudVisible(const bool visible)
 {
+    gameplayHudFadeEntries.clear();
     SetHpBarVisible(visible);
     if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(visible);
     if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(visible);
@@ -2043,6 +2051,42 @@ void Player::SetGameplayHudVisible(const bool visible)
         if (operateUiComponent) operateUiComponent->SetVisible(false);
         HideAndResetLockOnGuideUI();
         if (lowHpVignetteImageComponent) lowHpVignetteImageComponent->SetVisible(false);
+    }
+}
+
+void Player::BeginGameplayHudFadeOut()
+{
+    gameplayHudFadeEntries.clear();
+    const auto capture = [this](const std::shared_ptr<UICoreComponent>& core)
+    {
+        auto image = std::dynamic_pointer_cast<UIImageComponent>(core);
+        if (image && image->IsVisible())
+            gameplayHudFadeEntries.push_back({ image, image->color });
+    };
+    for (const auto& component : hpBarUiComponents) capture(component);
+    capture(rushGuideImageComponent);
+    capture(rushButtonImageComponent);
+    capture(rushWordImageComponent);
+    capture(lockOnGuideArrowImageComponent);
+    capture(lockOnGuideButtonImageComponent);
+    capture(operateUiComponent);
+    capture(lowHpVignetteImageComponent);
+}
+
+void Player::SetGameplayHudFadeAlpha(const float alpha)
+{
+    const float clampedAlpha = std::clamp(alpha, 0.0f, 1.0f);
+    for (auto& entry : gameplayHudFadeEntries)
+    {
+        CoreColor color = entry.color;
+        color.a *= clampedAlpha;
+        entry.component->SetColor(color);
+    }
+    if (clampedAlpha <= 0.0f)
+    {
+        for (auto& entry : gameplayHudFadeEntries)
+            entry.component->SetColor(entry.color);
+        SetGameplayHudVisible(false);
     }
 }
 

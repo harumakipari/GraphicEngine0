@@ -40,6 +40,20 @@ class GameScene : public SceneBase
         float bossDistance = 2.5f;
     };
 public:
+    enum class DeathPresentationCue : uint8_t
+    {
+        GameplayHudFade,
+        OverlayFade,
+        DefeatedFade,
+        BattleTimeFade,
+        ButtonsFade,
+    };
+
+    void SetDeathPresentationCueCallback(std::function<void(DeathPresentationCue)> callback)
+    {
+        deathPresentationCueCallback = std::move(callback);
+    }
+
     enum class BattleFlowState : uint8_t
     {
         Intro,
@@ -101,6 +115,9 @@ private:
     void UpdateDeathResultBattleTimeLayout();
     void UpdateDeathResultUILayout();
     void UpdateDeathResultMenu();
+    void UpdateDeathResultPresentation();
+    void ResetDeathPresentationCues();
+    void FireDeathPresentationCue(DeathPresentationCue cue, bool& fired);
 
     std::shared_ptr<StageAsset> mainRoomAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> bossRoomAsset = std::make_shared<StageAsset>();
@@ -133,33 +150,60 @@ private:
     float battleElapsedTime = 0.0f;
     float deathAttemptTime = 0.0f;
     float deathPresentationElapsed = 0.0f;
-    float deathResultDelay = 5.0f;
-    float deathResultInputDelay = 0.3f;
+    float deathHudFadeDuration = 0.60f;
+    float deathOverlayStartTime = 4.6f;
+    float deathOverlayFadeDuration = 0.4f;
+    float deathOverlayMaxAlpha = 0.25f;
+    float deathDefeatedStartTime = 5.0f;
+    float deathDefeatedFadeDuration = 0.40f;
+    float deathBattleTimeStartTime = 5.1f;
+    float deathBattleTimeFadeDuration = 0.30f;
+    float deathButtonsStartTime = 5.2f;
+    float deathButtonsFadeDuration = 0.30f;
+    float deathSelectLineStartTime = 4.40f;
+    float deathResultInputEnableTime = 5.2f;
     bool deathResultVisible = false;
     bool deathResultInputEnabled = false;
     int deathResultSelection = 0;
+    std::shared_ptr<UIImageComponent> deathResultDarkOverlay;
     std::shared_ptr<UIImageComponent> deathResultDefeated;
     std::shared_ptr<UIImageComponent> deathResultBattleTime;
     std::array<std::shared_ptr<UIButtonComponent>, 3> deathResultButtons{};
     DirectX::XMFLOAT2 deathResultDefeatedPosition{ 960.0f, 530.0f };
     DirectX::XMFLOAT2 deathResultDefeatedScale{ 1.0f, 1.0f };
-    DirectX::XMFLOAT2 deathResultBattleTimePosition{ 770.0f, 550.0f };
-    DirectX::XMFLOAT2 deathResultBattleTimeScale{ 0.6f, 0.6f };
-    DirectX::XMFLOAT2 deathResultButtonStartPosition{ 1030.0f, 640.0f };
+    DirectX::XMFLOAT2 deathResultBattleTimePosition{ 770.0f, 594.0f };
+    DirectX::XMFLOAT2 deathResultBattleTimeScale{ 0.5f, 0.5f };
+    DirectX::XMFLOAT2 deathResultButtonStartPosition{ 1011.0f, 734.0f };
     float deathResultButtonHorizontalSpacing = 100.0f;
-    DirectX::XMFLOAT2 deathResultButtonScale{ 0.45f, 0.45f };
+    DirectX::XMFLOAT2 deathResultButtonScale{ 0.4f, 0.4f };
     std::array<std::shared_ptr<UIImageComponent>, 8> deathResultTimeDigits{};
     std::array<int, 8> deathResultTimeValues{};
-    DirectX::XMFLOAT2 deathResultTimePosition{ 1160.0f, 545.0f };
-    DirectX::XMFLOAT2 deathResultTimeNumberScale{ 0.5f, 0.5f };
-    float deathResultTimeNumberSpacing = 48.0f;
+    DirectX::XMFLOAT2 deathResultTimePosition{ 1160.0f, 584.0f };
+    DirectX::XMFLOAT2 deathResultTimeNumberScale{ 0.35f, 0.35f };
+    DirectX::XMFLOAT2 deathResultColonOffset{ 0.0f, 0.0f };
+    DirectX::XMFLOAT2 deathResultColonScale{ 3.5f, 2.2f };
+    DirectX::XMFLOAT2 deathResultDotOffset{ 0.0f, 0.0f };
+    DirectX::XMFLOAT2 deathResultDotScale{ 3.5f, 2.2f };
+    float deathResultTimeNumberSpacing = 30.0f;
     std::shared_ptr<UIImageComponent> deathResultSelectLineLeft;
     std::shared_ptr<UIImageComponent> deathResultSelectLineRight;
-    float deathResultSelectLineDistance = -50.0f;
-    DirectX::XMFLOAT2 deathResultSelectLineScale{ 0.25f, 0.4f };
+    std::array<float, 3> deathResultSelectLineDistances = { -21.0f,-39.0f,-39.0f };
+    DirectX::XMFLOAT2 deathResultSelectLineScale{ 0.12f, 0.4f };
     float deathResultSelectLineAnimDuration = 0.15f;
     float deathResultSelectLineAnimProgress = 0.0f;
+    float deathResultSelectedScale = 1.2f;
+    CoreColor deathResultSelectedColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+    CoreColor deathResultUnselectedColor{ 0.5f, 0.5f, 0.5f, 1.0f };
+    bool deathHudFadeCueFired = false;
+    bool deathOverlayCueFired = false;
+    bool deathDefeatedCueFired = false;
+    bool deathBattleTimeCueFired = false;
+    bool deathButtonsCueFired = false;
+    std::function<void(DeathPresentationCue)> deathPresentationCueCallback;
     static constexpr float continueWaitDelay = 0.25f;
+    float numberTexWidth = 198.f;
+    float numberTexHeight = 300.f;
+
 
     // Death staging bounds in world XZ coordinates.
     float deathStagingMinPlayerX = 0.0f;

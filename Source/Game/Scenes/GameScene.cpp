@@ -529,12 +529,15 @@ void GameScene::EnterPlayerDead()
     deathResultVisible = false;
     deathResultInputEnabled = false;
     deathResultSelection = 0;
+    ResetDeathPresentationCues();
     SetDeathResultVisible(false);
     InputSystem::SetInputEnabled(false);
     deathCameraStartRequested = false;
-    SetBattleHudVisible(false);
     if (player)
-        player->SetGameplayHudVisible(false);
+        player->BeginGameplayHudFadeOut();
+    if (gruxEnemyActor)
+        gruxEnemyActor->BeginHpBarFadeOut();
+    FireDeathPresentationCue(DeathPresentationCue::GameplayHudFade, deathHudFadeCueFired);
 
     if (gruxEnemyActor)
         gruxEnemyActor->PauseBattleAI();
@@ -676,10 +679,19 @@ void GameScene::StageDeathActors()
 void GameScene::CreateDeathResultUI()
 {
     auto uiManager = GetUIManager();
+    deathResultDarkOverlay = std::make_shared<UIImageComponent>("DeathResultDarkOverlay");
+    deathResultDarkOverlay->SetSize({ 1920.0f, 1080.0f });
+    deathResultDarkOverlay->SetWorldPosition({ 0.0f, 0.0f });
+    deathResultDarkOverlay->SetPivot({ 0.0f, 0.0f });
+    deathResultDarkOverlay->SetColor(CoreColor{ 0.0f, 0.0f, 0.0f, 0.0f });
+    deathResultDarkOverlay->zOrder = 20;
+    uiManager->Add(deathResultDarkOverlay);
+
     deathResultDefeated = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/Defeat.png", "DeathResultDefeated");
     deathResultDefeated->SetSize({ 1920.0f, 610.0f });
     deathResultDefeated->SetWorldPosition(deathResultDefeatedPosition);
     deathResultDefeated->SetPivot({ 0.5f, 0.5f });
+    deathResultDefeated->zOrder = 21;
     uiManager->Add(deathResultDefeated);
 
     deathResultBattleTime = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/battle_time.png", "DeathResultBattleTime");
@@ -687,6 +699,7 @@ void GameScene::CreateDeathResultUI()
     deathResultBattleTime->SetPivot({ 0.5f, 0.5f });
     deathResultBattleTime->SetSize({ 600.0f, 175.0f });
     deathResultBattleTime->SetScale({ 0.4f,0.4f });
+    deathResultBattleTime->zOrder = 21;
     uiManager->Add(deathResultBattleTime);
 
     const int timeDigits[] = { 0, 1, -1, 4, 2, -2, 3, 6 };
@@ -702,6 +715,7 @@ void GameScene::CreateDeathResultUI()
         deathResultTimeDigits[i]->SetPivot({ 0.5f, 0.5f });
         deathResultTimeDigits[i]->SetScale(deathResultTimeNumberScale);
         deathResultTimeDigits[i]->SetVisible(false);
+        deathResultTimeDigits[i]->zOrder = 21;
         uiManager->Add(deathResultTimeDigits[i]);
     }
 
@@ -721,6 +735,7 @@ void GameScene::CreateDeathResultUI()
         deathResultButtons[i]->SetEnable(false);
         const int index = i;
         deathResultButtons[i]->onClick = [this, index]() { ExecuteDeathResult(index); };
+        deathResultButtons[i]->zOrder = 21;
         uiManager->Add(deathResultButtons[i]);
         uiManager->AddButton(deathResultButtons[i]);
     }
@@ -734,6 +749,8 @@ void GameScene::CreateDeathResultUI()
     }
     deathResultSelectLineLeft->SetPivot({ 1.0f,0.5f });
     deathResultSelectLineRight->SetPivot({ 0.0f,0.5f });
+    deathResultSelectLineLeft->zOrder = 22;
+    deathResultSelectLineRight->zOrder = 22;
     SetDeathResultVisible(false);
 }
 
@@ -741,6 +758,7 @@ void GameScene::SetDeathResultVisible(const bool visible)
 {
     deathResultVisible = visible;
     if (!visible) deathResultSelectLineAnimProgress = 0.0f;
+    if (deathResultDarkOverlay) deathResultDarkOverlay->SetVisible(visible);
     if (deathResultDefeated) deathResultDefeated->SetVisible(visible);
     if (deathResultBattleTime) deathResultBattleTime->SetVisible(visible);
     for (auto& digit : deathResultTimeDigits)
@@ -784,6 +802,7 @@ void GameScene::UpdateDeathResultBattleTimeLayout()
     for (int i = 0; i < 8; ++i)
         if (!(i == 0 && minutes < 10)) ++visibleCount;
     int visibleIndex = 0;
+
     for (int i = 0; i < 8; ++i)
     {
         auto& digit = deathResultTimeDigits[i];
@@ -791,10 +810,26 @@ void GameScene::UpdateDeathResultBattleTimeLayout()
         const bool show = !(i == 0 && minutes < 10);
         digit->SetVisible(deathResultVisible && show);
         if (!show) continue;
-        digit->SetWorldPosition({ deathResultTimePosition.x + (visibleIndex++ - (visibleCount - 1) * 0.5f) * deathResultTimeNumberSpacing, deathResultTimePosition.y });
-        digit->SetScale(deathResultTimeNumberScale);
+        DirectX::XMFLOAT2 position{ deathResultTimePosition.x + (visibleIndex++ - (visibleCount - 1) * 0.5f) * deathResultTimeNumberSpacing, deathResultTimePosition.y };
+        DirectX::XMFLOAT2 scale = deathResultTimeNumberScale;
+        if (deathResultTimeValues[i] == -1)
+        {
+            position.x += deathResultColonOffset.x;
+            position.y += deathResultColonOffset.y;
+            scale.x *= deathResultColonScale.x;
+            scale.y *= deathResultColonScale.y;
+        }
+        else if (deathResultTimeValues[i] == -2)
+        {
+            position.x += deathResultDotOffset.x;
+            position.y += deathResultDotOffset.y;
+            scale.x *= deathResultDotScale.x;
+            scale.y *= deathResultDotScale.y;
+        }
+        digit->SetWorldPosition(position);
+        digit->SetScale(scale);
         if (deathResultTimeValues[i] >= 0)
-            digit->SetUV({ deathResultTimeValues[i] * 96.0f, 0.0f, 96.0f, 128.0f });
+            digit->SetUV({ deathResultTimeValues[i] * numberTexWidth, 0.0f, numberTexWidth, numberTexHeight });
     }
 }
 
@@ -843,8 +878,19 @@ void GameScene::UpdateDeathResultMenu()
             }
         }
     }
-    for (auto& button : deathResultButtons)
-        if (button) button->SetColor(CoreColor::White);
+    const float buttonsAlpha = std::clamp((deathPresentationElapsed - deathButtonsStartTime) /
+        (std::max)(0.001f, deathButtonsFadeDuration), 0.0f, 1.0f);
+    for (int i = 0; i < static_cast<int>(deathResultButtons.size()); ++i)
+    {
+        auto& button = deathResultButtons[i];
+        if (!button) continue;
+        const bool selected = i == deathResultSelection;
+        CoreColor color = selected ? deathResultSelectedColor : deathResultUnselectedColor;
+        color.a *= buttonsAlpha;
+        button->SetColor(color);
+        if (selected)
+            button->SetScale({ deathResultButtonScale.x * deathResultSelectedScale, deathResultButtonScale.y * deathResultSelectedScale });
+    }
 
     if (deathResultButtons[deathResultSelection])
     {
@@ -862,11 +908,60 @@ void GameScene::UpdateDeathResultMenu()
             line->SetWorldPosition({ buttonPos.x, lineY });
         }
         if (deathResultSelectLineLeft)
-            deathResultSelectLineLeft->SetWorldPosition({ buttonPos.x - buttonWidth * 0.5f - deathResultSelectLineDistance - lineWidth * 0.5f, lineY });
+            deathResultSelectLineLeft->SetWorldPosition({ buttonPos.x - buttonWidth * 0.5f - deathResultSelectLineDistances[deathResultSelection] - lineWidth * 0.5f, lineY });
         if (deathResultSelectLineRight)
-            deathResultSelectLineRight->SetWorldPosition({ buttonPos.x + buttonWidth * 0.5f + deathResultSelectLineDistance + lineWidth * 0.5f, lineY });
-        deathResultSelectLineAnimProgress = (std::min)(1.0f, deathResultSelectLineAnimProgress + Time::UnscaledDeltaTime() / (std::max)(0.001f, deathResultSelectLineAnimDuration));
+            deathResultSelectLineRight->SetWorldPosition({ buttonPos.x + buttonWidth * 0.5f + deathResultSelectLineDistances[deathResultSelection] + lineWidth * 0.5f, lineY });
+        if (deathPresentationElapsed >= deathSelectLineStartTime)
+            deathResultSelectLineAnimProgress = (std::min)(1.0f, deathResultSelectLineAnimProgress + Time::UnscaledDeltaTime() / (std::max)(0.001f, deathResultSelectLineAnimDuration));
     }
+}
+
+void GameScene::ResetDeathPresentationCues()
+{
+    deathHudFadeCueFired = deathOverlayCueFired = deathDefeatedCueFired = false;
+    deathBattleTimeCueFired = deathButtonsCueFired = false;
+}
+
+void GameScene::FireDeathPresentationCue(const DeathPresentationCue cue, bool& fired)
+{
+    if (fired) return;
+    fired = true;
+    if (deathPresentationCueCallback) deathPresentationCueCallback(cue);
+}
+
+void GameScene::UpdateDeathResultPresentation()
+{
+    const auto fade = [this](const float start, const float duration)
+    {
+        return std::clamp((deathPresentationElapsed - start) / (std::max)(0.001f, duration), 0.0f, 1.0f);
+    };
+    const float hudAlpha = 1.0f - fade(0.0f, deathHudFadeDuration);
+    if (player) player->SetGameplayHudFadeAlpha(hudAlpha);
+    if (gruxEnemyActor) gruxEnemyActor->SetHpBarFadeAlpha(hudAlpha);
+
+    if (!deathResultVisible)
+    {
+        deathResultVisible = true;
+        SetDeathResultVisible(true);
+        deathResultSelection = 0;
+        deathResultSelectLineAnimProgress = 0.0f;
+        if (deathResultButtons[0]) GetUIManager()->SetSelected(deathResultButtons[0].get());
+    }
+
+    const float overlayAlpha = fade(deathOverlayStartTime, deathOverlayFadeDuration);
+    const float defeatedAlpha = fade(deathDefeatedStartTime, deathDefeatedFadeDuration);
+    const float battleTimeAlpha = fade(deathBattleTimeStartTime, deathBattleTimeFadeDuration);
+    const float lineAlpha = fade(deathSelectLineStartTime, deathResultSelectLineAnimDuration);
+    if (deathResultDarkOverlay) deathResultDarkOverlay->SetColor(CoreColor{ 0.0f, 0.0f, 0.0f, deathOverlayMaxAlpha * overlayAlpha });
+    if (deathResultDefeated) deathResultDefeated->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, defeatedAlpha });
+    if (deathResultBattleTime) deathResultBattleTime->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, battleTimeAlpha });
+    for (auto& digit : deathResultTimeDigits) if (digit) digit->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, battleTimeAlpha });
+    for (auto& line : { deathResultSelectLineLeft, deathResultSelectLineRight }) if (line) line->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, lineAlpha });
+
+    if (deathPresentationElapsed >= deathOverlayStartTime) FireDeathPresentationCue(DeathPresentationCue::OverlayFade, deathOverlayCueFired);
+    if (deathPresentationElapsed >= deathDefeatedStartTime) FireDeathPresentationCue(DeathPresentationCue::DefeatedFade, deathDefeatedCueFired);
+    if (deathPresentationElapsed >= deathBattleTimeStartTime) FireDeathPresentationCue(DeathPresentationCue::BattleTimeFade, deathBattleTimeCueFired);
+    if (deathPresentationElapsed >= deathButtonsStartTime) FireDeathPresentationCue(DeathPresentationCue::ButtonsFade, deathButtonsCueFired);
 }
 
 void GameScene::ExecuteDeathResult(const int index)
@@ -960,17 +1055,8 @@ void GameScene::UpdateBattleFlow()
     case BattleFlowState::PlayerDead:
         playerDeadElapsed += Time::UnscaledDeltaTime();
         deathPresentationElapsed += Time::UnscaledDeltaTime();
-        if (!deathResultVisible && deathPresentationElapsed >= deathResultDelay)
-        {
-            deathResultSelection = 0;
-            deathResultSelectLineAnimProgress = 0.0f;
-            deathResultVisible = true;
-            deathResultInputEnabled = false;
-            SetDeathResultVisible(true);
-            SelectDeathResult(0);
-        }
-        if (deathResultVisible && !deathResultInputEnabled &&
-            deathPresentationElapsed >= deathResultDelay + deathResultInputDelay)
+        UpdateDeathResultPresentation();
+        if (!deathResultInputEnabled && deathPresentationElapsed >= deathResultInputEnableTime)
         {
             deathResultInputEnabled = true;
             SetDeathResultVisible(true);
@@ -980,6 +1066,8 @@ void GameScene::UpdateBattleFlow()
         break;
     case BattleFlowState::ContinueWait:
         // Result UIButton callbacks own the selection and confirmation.
+        deathPresentationElapsed += Time::UnscaledDeltaTime();
+        UpdateDeathResultPresentation();
         break;
     case BattleFlowState::ResetForContinue:
         ResetBattleForContinue();
@@ -1147,8 +1235,22 @@ void GameScene::DrawGuiPlusAlpha()
     }
     ImGui::Separator();
     ImGui::Text("Death Presentation");
-    ImGui::DragFloat("Result UI Delay", &deathResultDelay, 0.01f, 0.0f, 30.0f);
-    ImGui::DragFloat("Result Input Delay", &deathResultInputDelay, 0.01f, 0.0f, 10.0f);
+    ImGui::DragFloat(U8("HUDフェードアウト時間"), &deathHudFadeDuration, 0.01f, 0.01f, 5.0f);
+    ImGui::DragFloat(U8("背景暗転 開始時間"), &deathOverlayStartTime, 0.01f, 0.0f, 30.0f);
+    ImGui::DragFloat(U8("背景暗転 フェード時間"), &deathOverlayFadeDuration, 0.01f, 0.01f, 5.0f);
+    ImGui::SliderFloat(U8("背景暗転 最大濃度"), &deathOverlayMaxAlpha, 0.0f, 1.0f);
+
+    ImGui::DragFloat(U8("DEFEATED 表示開始時間"), &deathDefeatedStartTime, 0.01f, 0.0f, 30.0f);
+    ImGui::DragFloat(U8("DEFEATED フェード時間"), &deathDefeatedFadeDuration, 0.01f, 0.01f, 5.0f);
+
+    ImGui::DragFloat(U8("Battle Time 表示開始時間"), &deathBattleTimeStartTime, 0.01f, 0.0f, 30.0f);
+    ImGui::DragFloat(U8("Battle Time フェード時間"), &deathBattleTimeFadeDuration, 0.01f, 0.01f, 5.0f);
+
+    ImGui::DragFloat(U8("ボタン 表示開始時間"), &deathButtonsStartTime, 0.01f, 0.0f, 30.0f);
+    ImGui::DragFloat(U8("ボタン フェード時間"), &deathButtonsFadeDuration, 0.01f, 0.01f, 5.0f);
+
+    ImGui::DragFloat(U8("選択ライン 表示開始時間"), &deathSelectLineStartTime, 0.01f, 0.0f, 30.0f);
+    ImGui::DragFloat(U8("操作受付 開始時間"), &deathResultInputEnableTime, 0.01f, 0.0f, 30.0f);
     ImGui::DragFloat2("Result Defeated Position", &deathResultDefeatedPosition.x, 1.0f);
     ImGui::DragFloat2("Result Defeated Scale", &deathResultDefeatedScale.x, 0.01f, 0.01f, 4.0f);
     ImGui::DragFloat2("Result BattleTime Position", &deathResultBattleTimePosition.x, 1.0f);
@@ -1156,12 +1258,24 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat2("Result Button Start Position", &deathResultButtonStartPosition.x, 1.0f);
     ImGui::DragFloat("Result Button Horizontal Spacing", &deathResultButtonHorizontalSpacing, 1.0f, 0.0f, 500.0f);
     ImGui::DragFloat2("Result Button Scale", &deathResultButtonScale.x, 0.01f, 0.01f, 4.0f);
-    ImGui::DragFloat("Select Line Distance From Button", &deathResultSelectLineDistance, 1.0f, -200.0f, 200.0f);
+    ImGui::DragFloat(U8("選択中ボタン 拡大率"), &deathResultSelectedScale, 0.01f, 1.0f, 2.0f);
+    ImGui::ColorEdit4(U8("選択中ボタン 色"), &deathResultSelectedColor.r);
+    ImGui::ColorEdit4(U8("非選択ボタン 色"), &deathResultUnselectedColor.r);
+    ImGui::DragFloat("Select Line Distance From Continue Button", &deathResultSelectLineDistances[0], 1.0f, -200.0f, 200.0f);
+    ImGui::DragFloat("Select Line Distance From Restart Button", &deathResultSelectLineDistances[1], 1.0f, -200.0f, 200.0f);
+    ImGui::DragFloat("Select Line Distance From Title Button", &deathResultSelectLineDistances[2], 1.0f, -200.0f, 200.0f);
     ImGui::DragFloat2("Result Select Line Scale", &deathResultSelectLineScale.x, 0.01f, 0.01f, 10.0f);
     ImGui::DragFloat("Result Select Line Animation Duration", &deathResultSelectLineAnimDuration, 0.01f, 0.01f, 1.0f);
     ImGui::DragFloat2("Battle Time Number Position", &deathResultTimePosition.x, 1.0f);
     ImGui::DragFloat2("Battle Time Number Scale", &deathResultTimeNumberScale.x, 0.01f, 0.01f, 4.0f);
+    ImGui::DragFloat2("Battle Time Colon Offset", &deathResultColonOffset.x, 1.0f);
+    ImGui::DragFloat2("Battle Time Colon Scale", &deathResultColonScale.x, 0.01f, 0.01f, 4.0f);
+    ImGui::DragFloat2("Battle Time Dot Offset", &deathResultDotOffset.x, 1.0f);
+    ImGui::DragFloat2("Battle Time Dot Scale", &deathResultDotScale.x, 0.01f, 0.01f, 4.0f);
     ImGui::DragFloat("Battle Time Number Spacing", &deathResultTimeNumberSpacing, 1.0f, 1.0f, 200.0f);
+    ImGui::DragFloat("numberTexWidth", &numberTexWidth, 1.0f, 1.0f, 200.0f);
+    ImGui::DragFloat("numberTexHeight", &numberTexHeight, 1.0f, 1.0f, 300.0f);
+
     if (ImGui::TreeNode("Death Staging"))
     {
         ImGui::DragFloat("Min Player X", &deathStagingMinPlayerX, 0.01f);

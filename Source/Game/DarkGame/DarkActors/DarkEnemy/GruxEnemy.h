@@ -30,6 +30,8 @@ public:
 
     // Battle HUD visibility is decided by GameScene; Grux only owns its components.
     void SetHpBarVisible(bool visible);
+    void BeginHpBarFadeOut();
+    void SetHpBarFadeAlpha(float alpha);
 
     // Stops combat immediately while preserving HP and the current death animation.
     void StopBattleActions();
@@ -395,6 +397,12 @@ private:
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HPÉoÅ[
     std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;
+    struct HpBarFadeEntry
+    {
+        std::shared_ptr<UIImageComponent> component;
+        CoreColor color;
+    };
+    std::vector<HpBarFadeEntry> hpBarFadeEntries;
     bool rushHpDisplayActive = false;
     bool useRushDelayedHpFollowSpeed = false;
     float delayedHp = 0.0f;
