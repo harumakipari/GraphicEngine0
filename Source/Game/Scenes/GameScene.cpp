@@ -798,10 +798,24 @@ void GameScene::UpdateDeathResultBattleTimeValue()
 void GameScene::UpdateDeathResultBattleTimeLayout()
 {
     const int minutes = deathResultTimeValues[0] * 10 + deathResultTimeValues[1];
-    int visibleCount = 0;
-    for (int i = 0; i < 8; ++i)
-        if (!(i == 0 && minutes < 10)) ++visibleCount;
+    std::array<float, 8> layoutPositions{};
     int visibleIndex = 0;
+    int firstVisible = -1;
+    int lastVisible = -1;
+
+    for (int i = 0; i < 8; ++i)
+    {
+        if (i == 0 && minutes < 10) continue;
+        float groupSpacing = 0.0f;
+        if (i >= 3) groupSpacing += deathResultMinuteSecondSpacing;
+        if (i >= 6) groupSpacing += deathResultSecondCentisecondSpacing;
+        layoutPositions[i] = visibleIndex++ * deathResultTimeNumberSpacing + groupSpacing;
+        if (firstVisible < 0) firstVisible = i;
+        lastVisible = i;
+    }
+    const float layoutCenter = firstVisible >= 0
+        ? (layoutPositions[firstVisible] + layoutPositions[lastVisible]) * 0.5f
+        : 0.0f;
 
     for (int i = 0; i < 8; ++i)
     {
@@ -810,7 +824,7 @@ void GameScene::UpdateDeathResultBattleTimeLayout()
         const bool show = !(i == 0 && minutes < 10);
         digit->SetVisible(deathResultVisible && show);
         if (!show) continue;
-        DirectX::XMFLOAT2 position{ deathResultTimePosition.x + (visibleIndex++ - (visibleCount - 1) * 0.5f) * deathResultTimeNumberSpacing, deathResultTimePosition.y };
+        DirectX::XMFLOAT2 position{ deathResultTimePosition.x + layoutPositions[i] - layoutCenter, deathResultTimePosition.y };
         DirectX::XMFLOAT2 scale = deathResultTimeNumberScale;
         if (deathResultTimeValues[i] == -1)
         {
@@ -1273,6 +1287,8 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat2("Battle Time Dot Offset", &deathResultDotOffset.x, 1.0f);
     ImGui::DragFloat2("Battle Time Dot Scale", &deathResultDotScale.x, 0.01f, 0.01f, 4.0f);
     ImGui::DragFloat("Battle Time Number Spacing", &deathResultTimeNumberSpacing, 1.0f, 1.0f, 200.0f);
+    ImGui::DragFloat(U8("Battle Time ï™ÅEïb ä‘äu"), &deathResultMinuteSecondSpacing, 1.0f, -200.0f, 500.0f);
+    ImGui::DragFloat(U8("Battle Time ïbÅEè¨êî ä‘äu"), &deathResultSecondCentisecondSpacing, 1.0f, -200.0f, 500.0f);
     ImGui::DragFloat("numberTexWidth", &numberTexWidth, 1.0f, 1.0f, 200.0f);
     ImGui::DragFloat("numberTexHeight", &numberTexHeight, 1.0f, 1.0f, 300.0f);
 

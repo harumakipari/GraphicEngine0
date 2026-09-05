@@ -178,13 +178,15 @@ private:
     DirectX::XMFLOAT2 deathResultButtonScale{ 0.4f, 0.4f };
     std::array<std::shared_ptr<UIImageComponent>, 8> deathResultTimeDigits{};
     std::array<int, 8> deathResultTimeValues{};
-    DirectX::XMFLOAT2 deathResultTimePosition{ 1160.0f, 584.0f };
+    DirectX::XMFLOAT2 deathResultTimePosition{ 1160.0f, 588.0f };
     DirectX::XMFLOAT2 deathResultTimeNumberScale{ 0.35f, 0.35f };
-    DirectX::XMFLOAT2 deathResultColonOffset{ 0.0f, 0.0f };
+    DirectX::XMFLOAT2 deathResultColonOffset{ -8.0f, 0.0f };
     DirectX::XMFLOAT2 deathResultColonScale{ 3.5f, 2.2f };
-    DirectX::XMFLOAT2 deathResultDotOffset{ 0.0f, 0.0f };
+    DirectX::XMFLOAT2 deathResultDotOffset{ -15.0f, 0.0f };
     DirectX::XMFLOAT2 deathResultDotScale{ 3.5f, 2.2f };
     float deathResultTimeNumberSpacing = 30.0f;
+    float deathResultMinuteSecondSpacing = -18.0f;
+    float deathResultSecondCentisecondSpacing = -26.0f;
     std::shared_ptr<UIImageComponent> deathResultSelectLineLeft;
     std::shared_ptr<UIImageComponent> deathResultSelectLineRight;
     std::array<float, 3> deathResultSelectLineDistances = { -21.0f,-39.0f,-39.0f };
