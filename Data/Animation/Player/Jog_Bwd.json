@@ -1,0 +1,45 @@
+{
+    "animationClip": 38,
+    "animationName": "Jog_Bwd",
+    "events": [
+        {
+            "parameter": "FootRightContact",
+            "time": 0.1459999978542328,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootLeftContact",
+            "time": 0.41017815470695496,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootRightContact",
+            "time": 0.7089999914169312,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootLeftContact",
+            "time": 0.9885860085487366,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootLeftContact",
+            "time": 1.5386394262313843,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootRightContact",
+            "time": 1.2853494882583618,
+            "type": "GameplayEvent",
+            "value": 0.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

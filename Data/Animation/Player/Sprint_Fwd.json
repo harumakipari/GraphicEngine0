@@ -9,6 +9,18 @@
             "value": 0.23999999463558197
         },
         {
+            "parameter": "FootLeftContact",
+            "time": 0.1989820897579193,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootRightContact",
+            "time": 0.4647039473056793,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
             "parameter": "run_two_foot",
             "time": 0.39809292554855347,
             "type": "PlaySE",

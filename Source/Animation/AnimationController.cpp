@@ -311,37 +311,41 @@ void AnimationController::OnUpdate(const float deltaTime)
 
 
 
-    // NotifyTrack のイベント処理
-    const auto& notifyAsset = animationNotifyAssets[notifyAnimationClip];
-
-    auto& notifyTrack = notifyAsset.notifyTrack;
-    for (auto& state : notifyTrack.states)
+    // BlendSpace has its own locomotion-phase Notify path in UpdateBlendSpace().
+    if (!useBlendSpace)
     {
-        bool wasInside =
-            prevAnimationTime >= state.startTime &&
-            prevAnimationTime < state.endTime;
+        // NotifyTrack のイベント処理
+        const auto& notifyAsset = animationNotifyAssets[notifyAnimationClip];
 
-        bool isInside =
-            animationTime >= state.startTime &&
-            animationTime < state.endTime;
-
-        if (prevAnimationTime < state.startTime &&
-            animationTime >= state.startTime)
+        auto& notifyTrack = notifyAsset.notifyTrack;
+        for (auto& state : notifyTrack.states)
         {
-            OnNotifyBegin(state);
+            bool wasInside =
+                prevAnimationTime >= state.startTime &&
+                prevAnimationTime < state.endTime;
+
+            bool isInside =
+                animationTime >= state.startTime &&
+                animationTime < state.endTime;
+
+            if (prevAnimationTime < state.startTime &&
+                animationTime >= state.startTime)
+            {
+                OnNotifyBegin(state);
+            }
+            if (prevAnimationTime < state.endTime &&
+                animationTime >= state.endTime)
+            {
+                OnNotifyEnd(state);
+            }
         }
-        if (prevAnimationTime < state.endTime &&
-            animationTime >= state.endTime)
-        {
-            OnNotifyEnd(state);
-        }
-    }
 
-    for (auto& event : notifyTrack.events)
-    {
-        if (prevAnimationTime < event.time && animationTime >= event.time)
+        for (auto& event : notifyTrack.events)
         {
-            OnNotifyEvent(event);
+            if (prevAnimationTime < event.time && animationTime >= event.time)
+            {
+                OnNotifyEvent(event);
+            }
         }
     }
 

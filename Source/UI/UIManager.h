@@ -75,5 +75,4 @@ private:
     bool visible = true;
     bool enabled = true;
     bool mouseCaptured = false;
-
 };

@@ -1,0 +1,45 @@
+{
+    "animationClip": 40,
+    "animationName": "Jog_Right",
+    "events": [
+        {
+            "parameter": "FootRightContact",
+            "time": 0.25299885869026184,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootLeftContact",
+            "time": 0.5565981268882751,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootRightContact",
+            "time": 0.9150124192237854,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootLeftContact",
+            "time": 1.203853964805603,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootLeftContact",
+            "time": 1.834242343902588,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootRightContact",
+            "time": 1.5475103855133057,
+            "type": "GameplayEvent",
+            "value": 0.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

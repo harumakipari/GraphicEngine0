@@ -9,10 +9,22 @@
             "value": 0.14000000059604645
         },
         {
+            "parameter": "FootLeftContact",
+            "time": 0.25763368606567383,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
             "parameter": "run_two_foot",
             "time": 0.4759809374809265,
             "type": "PlaySE",
             "value": 0.12999999523162842
+        },
+        {
+            "parameter": "FootRightContact",
+            "time": 0.5420447587966919,
+            "type": "GameplayEvent",
+            "value": 0.0
         },
         {
             "parameter": "run_three_foot",
@@ -21,16 +33,40 @@
             "value": 0.12999999523162842
         },
         {
+            "parameter": "FootLeftContact",
+            "time": 0.8730924725532532,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
             "parameter": "run_four_foot",
             "time": 1.104052186012268,
             "type": "PlaySE",
             "value": 0.12999999523162842
         },
         {
+            "parameter": "FootRightContact",
+            "time": 1.1859320402145386,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
             "parameter": "run_five_foot",
             "time": 1.4062504768371582,
             "type": "PlaySE",
             "value": 0.12999999523162842
+        },
+        {
+            "parameter": "FootRightContact",
+            "time": 1.846373438835144,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootLeftContact",
+            "time": 1.5233089923858643,
+            "type": "GameplayEvent",
+            "value": 0.0
         },
         {
             "parameter": "run_six_foot",
