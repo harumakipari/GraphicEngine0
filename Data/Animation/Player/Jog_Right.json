@@ -4,40 +4,41 @@
     "events": [
         {
             "parameter": "FootRightContact",
-            "time": 0.25299885869026184,
+            "time": 0.19818231463432312,
             "type": "GameplayEvent",
             "value": 0.0
         },
         {
             "parameter": "FootLeftContact",
-            "time": 0.5565981268882751,
+            "time": 0.4715377688407898,
             "type": "GameplayEvent",
             "value": 0.0
         },
         {
             "parameter": "FootRightContact",
-            "time": 0.9150124192237854,
+            "time": 0.7467818260192871,
             "type": "GameplayEvent",
             "value": 0.0
         },
         {
             "parameter": "FootLeftContact",
-            "time": 1.203853964805603,
-            "type": "GameplayEvent",
-            "value": 0.0
-        },
-        {
-            "parameter": "FootLeftContact",
-            "time": 1.834242343902588,
+            "time": 1.026174783706665,
             "type": "GameplayEvent",
             "value": 0.0
         },
         {
             "parameter": "FootRightContact",
-            "time": 1.5475103855133057,
+            "time": 1.3358051776885986,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
+            "parameter": "FootLeftContact",
+            "time": 1.6577229499816895,
             "type": "GameplayEvent",
             "value": 0.0
         }
+
     ],
     "loop": false,
     "nextCombo": "",
