@@ -26,9 +26,7 @@ void PlayerIdleState::Execute(float deltaTime)
         return;
     }
     // 入力があれば走るステートに変更
-    auto inputComp = player->inputComponent;
-    DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
-    if (std::abs(dir.x - 0.0f) <= FLT_EPSILON && std::abs(dir.y - 0.0f) <= FLT_EPSILON && std::abs(dir.z - 0.0f) <= FLT_EPSILON)
+    if (player->characterMovementComponent->GetInputMagnitude() <= 0.0f)
     {
         return;
     }
@@ -68,10 +66,7 @@ void PlayerRunningState::Execute(float deltaTime)
     }
 
     // 入力がなければ待機ステートに変更
-    auto inputComp = player->inputComponent;
-
-    DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
-    if (std::abs(dir.x - 0.0f) <= FLT_EPSILON && std::abs(dir.y - 0.0f) <= FLT_EPSILON && std::abs(dir.z - 0.0f) <= FLT_EPSILON)
+    if (player->characterMovementComponent->GetInputMagnitude() <= 0.0f)
     {
         player->GetStateMachine()->ChangeState("Idle");
     }
