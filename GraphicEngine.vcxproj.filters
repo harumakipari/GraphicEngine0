@@ -1013,9 +1013,6 @@
     <FxCompile Include="Shader\GltfModelInstancedBatchingPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\GltfModelPlayerBlendPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\GltfModelPlayerDeferredPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>

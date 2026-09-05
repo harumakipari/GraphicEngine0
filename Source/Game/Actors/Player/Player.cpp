@@ -130,29 +130,6 @@ void Player::Initialize(const Transform& transform)
         }
     }
 
-    // 透明にできるplayerを追加
-    skeletalMeshBlendComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    skeletalMeshBlendComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/playerBlend.gltf", false, true);
-    skeletalMeshBlendComponent->overrideForwardPipelineName = "GltfModelPlayerBlendPS";
-    skeletalMeshBlendComponent->overrideDeferredPipelineName = "GltfModelPlayerBlendPS";
-    skeletalMeshBlendComponent->plusAlphaCBuffer->data.hueShift = -1.0f;
-    skeletalMeshBlendComponent->plusAlphaCBuffer->data.saturation = 0.442f;
-    skeletalMeshBlendComponent->plusAlphaCBuffer->data.brightness = 0.352f;
-    skeletalMeshBlendComponent->plusAlphaCBuffer->data.contrast = 0.8f;
-    skeletalMeshBlendComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;
-    skeletalMeshBlendComponent->plusAlphaCBuffer->data.emissionPower = playerAliveEmissionPower;
-    for (auto& material : skeletalMeshBlendComponent->model->materials)
-    {
-        if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
-            material.name == "M_Aurora_Dress_FrozenHearth" ||
-            material.name == "M_Aurora_Body_Metals_FrozenHearth" ||
-            material.name == "M_Aurora_Fur_FrozenHearth")
-        {// 服部分だったら、
-            material.materialType = MaterialType::Cloth;
-        }
-    }
-
-
     {
         PROFILE_SCOPE("Create PlayerAnimationController");
 
@@ -163,9 +140,6 @@ void Player::Initialize(const Transform& transform)
         // Player movement is input-driven; never apply animation Root Motion.
         controller->SetEnableRootMotion(false);
         controller->SetIgnoreRootMotion(true);
-        // 透明なモデルのアニメーションの動きを追加
-        controller->AddTarget(skeletalMeshBlendComponent.get());
-
         controller->AddAnimation("Idle", 0);
         controller->AddAnimation("Jog_Fwd", 1);
         controller->AddAnimation("Roll_front_0", 2);
@@ -620,7 +594,6 @@ void Player::Update(float deltaTime)
 
     // プレイヤーの透明化処理
     skeletalMeshComponent->SetIsVisible(true);
-    skeletalMeshBlendComponent->SetIsVisible(false);
     float ditherAlpha = 1.0f;
     currentCameraCollisionRatio = 1.0f;
 
@@ -3190,7 +3163,6 @@ void Player::ApplyDamageFlash(float flashAmount)
         };
 
     applyToMesh(skeletalMeshComponent);
-    applyToMesh(skeletalMeshBlendComponent);
 }
 
 bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)

@@ -76,7 +76,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        //maxHp = 10;
+        maxHp = 10;
         hp = maxHp;
     }
 
@@ -417,9 +417,6 @@ public:
 public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
-    // 描画用コンポーネント（透明）を追加
-    std::shared_ptr<SkeletalMeshComponent> skeletalMeshBlendComponent;
-
     std::shared_ptr<ParticleComponent> sparkComponent; // 火花エフェクト用コンポーネント
     std::shared_ptr<InputComponent> inputComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
