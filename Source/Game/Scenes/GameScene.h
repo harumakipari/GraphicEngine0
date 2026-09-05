@@ -106,6 +106,9 @@ private:
     void OnPlayerDeathCameraStart();
     void ResetBattleForContinue();
     void EnterBossDead();
+    void CreateBattleTimerUI();
+    void SetBattleTimerVisible(bool visible);
+    void UpdateBattleTimerUI();
     // éÄñSéûÇÃÉäÉUÉãÉgUIÇçÏê¨Ç∑ÇÈ
     void CreateDeathResultUI();
     void SetDeathResultVisible(bool visible);
@@ -148,6 +151,22 @@ private:
     bool deathCameraStartRequested = false;
     float playerDeadElapsed = 0.0f;
     float battleElapsedTime = 0.0f;
+    float finalBattleTime = 0.0f;
+    bool finalBattleTimeSaved = false;
+    std::shared_ptr<UIImageComponent> battleTimerHourglassFrame;
+    std::shared_ptr<UIImageComponent> battleTimerHourglassSand;
+    std::array<std::shared_ptr<UIImageComponent>, 5> battleTimerDigits{};
+    DirectX::XMFLOAT2 battleTimerUiPosition{ 1744.0f, 130.0f };
+    DirectX::XMFLOAT2 battleTimerUiScale{ 0.27f, 0.27f };
+    DirectX::XMFLOAT2 battleTimerHourglassSize{ 197.0f, 233.0f };
+    DirectX::XMFLOAT2 battleTimerHourglassOffset{88.0f,-52.0f};
+    DirectX::XMFLOAT2 battleTimerHourglassSandOffset{ 0.0f, 19.0f };
+    DirectX::XMFLOAT2 battleTimerColonOffset{2.0f,0.0f};
+    float battleTimerColonScale = 2.4f;
+    float battleTimerHourglassAngle = 0.0f;
+    float battleTimerNumberSpacing = 80.0f;
+    float battleTimerHourglassNumberSpacing = 72.0f;
+    bool battleTimerVisible = false;
     float deathAttemptTime = 0.0f;
     float deathPresentationElapsed = 0.0f;
     float deathHudFadeDuration = 0.60f;
