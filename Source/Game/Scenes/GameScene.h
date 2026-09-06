@@ -159,9 +159,9 @@ private:
     DirectX::XMFLOAT2 battleTimerUiPosition{ 1744.0f, 130.0f };
     DirectX::XMFLOAT2 battleTimerUiScale{ 0.27f, 0.27f };
     DirectX::XMFLOAT2 battleTimerHourglassSize{ 197.0f, 233.0f };
-    DirectX::XMFLOAT2 battleTimerHourglassOffset{88.0f,-52.0f};
+    DirectX::XMFLOAT2 battleTimerHourglassOffset{ 88.0f,-52.0f };
     DirectX::XMFLOAT2 battleTimerHourglassSandOffset{ 0.0f, 19.0f };
-    DirectX::XMFLOAT2 battleTimerColonOffset{2.0f,0.0f};
+    DirectX::XMFLOAT2 battleTimerColonOffset{ 2.0f,0.0f };
     float battleTimerColonScale = 2.4f;
     float battleTimerHourglassAngle = 0.0f;
     float battleTimerNumberSpacing = 80.0f;
@@ -215,8 +215,8 @@ private:
     float deathResultSelectedScale = 1.2f;
     CoreColor deathResultSelectedColor{ 1.0f, 1.0f, 1.0f, 1.0f };
     CoreColor deathResultUnselectedColor{ 0.5f, 0.5f, 0.5f, 1.0f };
-    float deathResultMoveSeVolume = 1.0f;
-    float deathResultConfirmSeVolume = 1.0f;
+    float deathResultMoveSeVolume = 0.15f;
+    float deathResultConfirmSeVolume = 0.1f;
     bool deathHudFadeCueFired = false;
     bool deathOverlayCueFired = false;
     bool deathDefeatedCueFired = false;
@@ -235,6 +235,7 @@ private:
     float deathStagingMaxPlayerZ = 20.45f;
     float deathStagingCornerInsetX = 0.8f;
     float deathStagingCornerInsetZ = 0.8f;
+    float deathStagingRightInset = 0.8f;
     std::array<DeathStagingAreaSettings, 9> deathStagingAreaSettings{};
 
     std::unique_ptr<ClothSimulate> clothSimulate;

@@ -605,6 +605,9 @@ void GameScene::StageDeathActors()
     float safeMaxZ = deathStagingMaxPlayerZ;
     switch (stagingArea)
     {
+    case DeathStagingArea::Right:
+        safeMinZ += deathStagingRightInset;
+        break;
     case DeathStagingArea::FrontLeft:
         safeMinX += deathStagingCornerInsetX;
         safeMaxZ -= deathStagingCornerInsetZ;
@@ -999,8 +1002,22 @@ void GameScene::UpdateDeathResultMenu()
         cursorX += width + deathResultButtonHorizontalSpacing;
     }
 
-    // UIManager owns D-Pad/Analog selection; mirror its current Result button.
-    if (auto* selected = GetUIManager()->GetSelectedButton())
+    auto* uiManager = GetUIManager();
+    if (!deathResultInputEnabled)
+    {
+        if (deathResultSelection != 0)
+        {
+            deathResultSelection = 0;
+            deathResultSelectLineAnimProgress = 0.0f;
+        }
+        if (deathResultButtons[0] &&
+            uiManager->GetSelectedButton() != deathResultButtons[0].get())
+        {
+            uiManager->SetSelected(deathResultButtons[0].get());
+        }
+    }
+    // UIManager owns D-Pad/Analog selection after Result input is enabled.
+    else if (auto* selected = uiManager->GetSelectedButton())
     {
         for (int i = 0; i < static_cast<int>(deathResultButtons.size()); ++i)
         {
@@ -1201,6 +1218,10 @@ void GameScene::UpdateBattleFlow()
         UpdateDeathResultPresentation();
         if (!deathResultInputEnabled && deathPresentationElapsed >= deathResultInputEnableTime)
         {
+            deathResultSelection = 0;
+            deathResultSelectLineAnimProgress = 0.0f;
+            if (deathResultButtons[0])
+                GetUIManager()->SetSelected(deathResultButtons[0].get());
             deathResultInputEnabled = true;
             SetDeathResultVisible(true);
             InputSystem::SetInputEnabled(true);
@@ -1449,6 +1470,7 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::DragFloat("Max Player Z", &deathStagingMaxPlayerZ, 0.01f);
         ImGui::DragFloat("Corner Inset X", &deathStagingCornerInsetX, 0.01f, 0.0f, 10.0f);
         ImGui::DragFloat("Corner Inset Z", &deathStagingCornerInsetZ, 0.01f, 0.0f, 10.0f);
+        ImGui::DragFloat("Death Staging Right Inset", &deathStagingRightInset, 0.01f, 0.0f, 10.0f);
         static constexpr const char* areaNames[] =
         { "Center", "Front", "Back", "Left", "Right", "FrontLeft", "FrontRight", "BackLeft", "BackRight" };
         for (size_t i = 0; i < deathStagingAreaSettings.size(); ++i)
