@@ -2164,6 +2164,7 @@ void Player::ClearTransientBattleActions()
 
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
+    lowHpPresentationSuppressed = false;
     ResetLowHpEffects();
     ResetEyeCloseOverride();
     deathVisualFade = 0.0f;
@@ -3074,6 +3075,17 @@ void Player::UpdateDamageFlash()
 
 void Player::UpdateLowHpEffects()
 {
+    if (lowHpPresentationSuppressed)
+    {
+        if (lowHpActive || heartbeatTimer > 0.0f || lowHpPulseTimer > 0.0f ||
+            lowHpPulseFlashAmount > 0.0f ||
+            (lowHpVignetteImageComponent && lowHpVignetteImageComponent->IsVisible()))
+        {
+            ResetLowHpEffects();
+        }
+        return;
+    }
+
     const bool shouldBeLowHp = hp > 0 && hp <= lowHpThreshold;
     if (!shouldBeLowHp)
     {
@@ -3118,6 +3130,12 @@ void Player::UpdateLowHpEffects()
         lowHpVignetteImageComponent->SetColor(CoreColor{ 1.0f, 0.12f, 0.08f, alpha });
         lowHpVignetteImageComponent->SetVisible(true);
     }
+}
+
+void Player::StopLowHpPresentation()
+{
+    lowHpPresentationSuppressed = true;
+    ResetLowHpEffects();
 }
 
 void Player::TriggerLowHpPulse()

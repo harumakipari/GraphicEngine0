@@ -194,6 +194,26 @@ void SceneBase::Update(float deltaTime)
 
 #endif // !USE_IMGUI
 
+
+    if (InputSystem::GetInputState("K", InputStateMask::Trigger))
+    {
+        // Invalidate the previous capture so the next deferred render captures
+        // the current animated pose and transform.
+        gruxHuskCaptured = false;
+        gruxHuskBackupValid = false;
+        gruxHuskPlaybackActive = false;
+        gruxHuskDeathProgress = 0.0f;
+        huskParticles->particle_data.death_progress = 0.0f;
+        huskParticles->particle_data.particle_count = 0;
+        if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
+        {
+            if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)
+                mesh->SetIsVisible(true);
+        }
+        gruxHuskPreviewCaptureRequested = true;
+    }
+
+
     if (InputSystem::GetInputState("P", InputStateMask::Trigger))
     {
         integrateParticles = !integrateParticles;

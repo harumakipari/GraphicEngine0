@@ -167,6 +167,10 @@ public:
     // ResetRootMotion clears this range whenever another animation is played.
     bool SetPlaybackRange(float startTime, float endTime);
 
+    // Samples a named clip at an exact time and keeps that skeletal pose without
+    // advancing runtime time or dispatching runtime animation events.
+    bool HoldAnimationPose(const std::string& animationName, float time);
+
     void AddNotifyState(const std::string& animationName, const float start, const float end,
         const AnimationNotifyState::Type type, const std::string& parameter = "", float animationSpeed = 1.0f)
     {

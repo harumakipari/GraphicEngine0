@@ -423,6 +423,13 @@ private:
 class CinematicCameraComponent :public CameraComponent
 {
 public:
+    struct CameraPose
+    {
+        DirectX::XMFLOAT3 position{};
+        DirectX::XMFLOAT4 rotation{ 0.0f, 0.0f, 0.0f, 1.0f };
+        float fov = DirectX::XMConvertToRadians(60.0f);
+    };
+
     CinematicCameraComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :CameraComponent(name, owner)
     {
         LoadBookmarksFromFile();
@@ -431,6 +438,11 @@ public:
     void Tick(const float deltaTime)override
     {
         if (!useCinematic) return;
+        if (poseBlending)
+        {
+            UpdatePoseBlend(deltaTime);
+            return;
+        }
         HandleKeyboardInput(deltaTime);
         HandleMouseInput(deltaTime);
         if (playingPath) {
@@ -439,6 +451,10 @@ public:
     }
 
     void SetIsUseCinematic(const bool useCinematic) { this->useCinematic = useCinematic; }
+
+    void CutToPose(const CameraPose& pose);
+    void BlendToPose(const CameraPose& pose, float duration);
+    bool IsBlending() const { return poseBlending; }
 
     std::vector<CameraBookmark> bookmarks;
 
@@ -454,23 +470,27 @@ private:
     void LoadBookmarksFromFile();
 
     void HandleKeyboardInput(float deltaTime);
+    void ApplyPose(const CameraPose& pose);
+    void UpdatePoseBlend(float deltaTime);
+    void SyncYawPitchFromRotation(const DirectX::XMFLOAT4& rotation);
     void HandleMouseInput(float deltaTime)
     {
 #if 1
-        if (InputSystem::GetInputState("MouseRight"))
-        {
-            int dx, dy;
-            InputSystem::GetMouseDelta(dx, dy);
+        if (!InputSystem::GetInputState("MouseRight"))
+            return;
 
-            AddYaw(dx * rotateSpeed);
-            AddPitch(dy * rotateSpeed);
+        int dx, dy;
+        InputSystem::GetMouseDelta(dx, dy);
 
-            //yaw += dx * rotateSpeed;
-            //pitch += dy * rotateSpeed;
+        AddYaw(dx * rotateSpeed);
+        AddPitch(dy * rotateSpeed);
 
-            // 上下向きすぎ防止（重要）
-            pitch = std::clamp(pitch, -DirectX::XM_PIDIV2 + 0.01f, DirectX::XM_PIDIV2 - 0.01f);
-        }
+        //yaw += dx * rotateSpeed;
+        //pitch += dy * rotateSpeed;
+
+        // 上下向きすぎ防止（重要）
+        pitch = std::clamp(pitch, -DirectX::XM_PIDIV2 + 0.01f, DirectX::XM_PIDIV2 - 0.01f);
+
         using namespace DirectX;
 
         // ワールドY軸Yaw
@@ -559,10 +579,12 @@ private:
             if (ImGui::DragFloat("yaw (deg)", &yawDeg, 0.5f))
             {
                 yaw = DirectX::XMConvertToRadians(yawDeg);
+                UpdateRotationFromYawPitch();
             }
             if (ImGui::DragFloat("pitch (deg)", &pitchDeg, 0.5f))
             {
                 pitch = DirectX::XMConvertToRadians(pitchDeg);
+                UpdateRotationFromYawPitch();
             }
             ImGui::SliderFloat("nearZ", &nearZ, 0.01f, 100.0f);
             ImGui::DragFloat("farZ", &farZ, 0.1f);
@@ -639,6 +661,7 @@ private:
 
     void StartCameraPath() {
         if (bookmarks.empty()) return;
+        poseBlending = false;
         playingPath = true;
         pathTime = 0.f;
         currentTarget = 1; // 1つ目のブックマークに向かう
@@ -701,6 +724,12 @@ private:
     float pathTime = 0.f;
     int currentTarget = 0;
     float pathDuration = 2.0f; // 秒単位
+
+    bool poseBlending = false;
+    CameraPose poseBlendStart{};
+    CameraPose poseBlendTarget{};
+    float poseBlendElapsed = 0.0f;
+    float poseBlendDuration = 0.0f;
 };
 
 

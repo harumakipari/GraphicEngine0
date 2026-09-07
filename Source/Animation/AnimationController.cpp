@@ -720,6 +720,33 @@ void AnimationController::SetEditorPreviewTime(const float time)
     ApplyEditorPreviewPose();
 }
 
+bool AnimationController::HoldAnimationPose(
+    const std::string& animationName, const float time)
+{
+    if (!target_ || !target_->model)
+        return false;
+
+    const auto animationIt = animationNameToIndex_.find(animationName);
+    if (animationIt == animationNameToIndex_.end() ||
+        animationIt->second >= target_->model->animations.size())
+    {
+        return false;
+    }
+
+    if (!editorPreviewActive)
+        CaptureEditorRuntimeSnapshot();
+
+    EndAllEditorPreviewStates();
+    selectedTimelineClip = animationIt->second;
+    editorPreviewActive = true;
+    editorPreviewPlaying = false;
+    const float duration = target_->model->animations[selectedTimelineClip].duration;
+    editorPreviewTime = std::clamp(time, 0.0f, duration);
+    previousEditorPreviewTime = editorPreviewTime;
+    ApplyEditorPreviewPose();
+    return true;
+}
+
 void AnimationController::UpdateEditorPreview(const float deltaTime)
 {
     if (selectedTimelineClip >= target_->model->animations.size())

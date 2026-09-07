@@ -76,7 +76,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        maxHp = 10;
+        //maxHp = 10;
         hp = maxHp;
     }
 
@@ -85,6 +85,9 @@ public:
     void Update(float deltaTime)override;
 
     void DrawImGuiDetails()override;
+
+    // Stops only the low-HP audiovisual presentation. HP is not modified.
+    void StopLowHpPresentation();
 
     void Finalize()override
     {
@@ -507,6 +510,7 @@ private:
 
     int lowHpThreshold = 13;
     bool lowHpActive = false;
+    bool lowHpPresentationSuppressed = false;
     float heartbeatTimer = 0.0f;
     float heartbeatInterval = 3.0f;
     float lowHpPulseTimer = 0.0f;

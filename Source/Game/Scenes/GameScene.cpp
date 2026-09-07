@@ -35,6 +35,15 @@
 #include "UI/UIManager.h"
 #include "UI/Game/Pause.h"
 
+namespace
+{
+    constexpr std::array<const char*, 3> BossDeathPresetPaths = {
+        "Data/Saves/ScenePresets/BossDeath_0.json",
+        "Data/Saves/ScenePresets/BossDeath_1.json",
+        "Data/Saves/ScenePresets/BossDeath_2.json",
+    };
+}
+
 bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
     PROFILE_FUNCTION();
@@ -98,6 +107,8 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         SetUpActors();
         CreateBattleTimerUI();
         CreateDeathResultUI();
+        CreateBossDeathFadeUI();
+        bossDeathShotsLoaded = LoadBossDeathShots();
     }
 
     // クロスシミュレーション
@@ -1176,15 +1187,361 @@ void GameScene::EnterBossDead()
     battleFlowState = BattleFlowState::BossDead;
     SetBattleTimerVisible(false);
     SetBattleHudVisible(false);
+    bossDeathPhase = BossDeathPhase::Reaction;
+    bossDeathPhaseElapsed = 0.0f;
+    bossDeathLandingHoldElapsed = 0.0f;
+    bossDeathLandingReached = false;
+    bossDeathPlaybackRangeApplied = false;
+    SetBossDeathFadeAlpha(0.0f);
 
     if (player)
+    {
+        player->StopLowHpPresentation();
         player->EnterWinState();
+    }
     if (gruxEnemyActor)
         gruxEnemyActor->StopBattleActions();
+    BeginBossDeathFacingPlayer();
+
+    if (gruxEnemyActor && gruxEnemyActor->GetBodyAnimationController())
+    {
+        const auto controller = gruxEnemyActor->GetBodyAnimationController();
+        if (controller->GetCurrentAnimationName() == "Death_A_0")
+        {
+            bossDeathPlaybackRangeApplied = controller->SetPlaybackRange(
+                0.0f, bossDeathPoseTime);
+        }
+    }
+
+    const float safeSlowScale = (std::max)(bossDeathSlowScale, 0.01f);
+    const float currentDeathTime = gruxEnemyActor && gruxEnemyActor->GetBodyAnimationController()
+        ? gruxEnemyActor->GetBodyAnimationController()->GetCurrentAnimationTime()
+        : 0.0f;
+    const float slowDuration =
+        (std::max)(bossDeathPoseTime - currentDeathTime, 0.0f) / safeSlowScale +
+        (std::max)(bossDeathLandingHoldDuration, 0.0f) + 0.5f;
+    Time::SetSlow(safeSlowScale, slowDuration);
     if (darkCameraActor)
     {
         darkCameraActor->CancelOffscreenAttackAssist();
         darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+    }
+}
+
+void GameScene::BeginBossDeathFacingPlayer()
+{
+    bossDeathFacingPlayer = false;
+    bossDeathFacePlayerElapsed = 0.0f;
+    if (!player || !gruxEnemyActor)
+        return;
+
+    const auto playerPosition = player->GetPosition();
+    const auto bossPosition = gruxEnemyActor->GetPosition();
+    const float directionX = playerPosition.x - bossPosition.x;
+    const float directionZ = playerPosition.z - bossPosition.z;
+    if (directionX * directionX + directionZ * directionZ <= FLT_EPSILON)
+        return;
+
+    bossDeathFaceStartRotation = gruxEnemyActor->GetQuaternionRotation();
+    const auto currentEulerDegree = gruxEnemyActor->GetEulerRotation();
+    const float targetYaw = std::atan2f(directionX, directionZ);
+    DirectX::XMStoreFloat4(
+        &bossDeathFaceTargetRotation,
+        DirectX::XMQuaternionRotationRollPitchYaw(
+            DirectX::XMConvertToRadians(currentEulerDegree.x),
+            targetYaw,
+            DirectX::XMConvertToRadians(currentEulerDegree.z)));
+    bossDeathFacingPlayer = true;
+}
+
+void GameScene::UpdateBossDeathFacingPlayer(const float unscaledDeltaTime)
+{
+    if (!bossDeathFacingPlayer || !gruxEnemyActor)
+        return;
+
+    bossDeathFacePlayerElapsed += (std::max)(unscaledDeltaTime, 0.0f);
+    const float duration = (std::max)(bossDeathFacePlayerDuration, FLT_EPSILON);
+    const float t = std::clamp(bossDeathFacePlayerElapsed / duration, 0.0f, 1.0f);
+    DirectX::XMFLOAT4 rotation{};
+    DirectX::XMStoreFloat4(&rotation, DirectX::XMQuaternionNormalize(
+        DirectX::XMQuaternionSlerp(
+            DirectX::XMLoadFloat4(&bossDeathFaceStartRotation),
+            DirectX::XMLoadFloat4(&bossDeathFaceTargetRotation), t)));
+    gruxEnemyActor->SetQuaternionRotation(rotation);
+    gruxEnemyActor->UpdateAllComponentTransforms();
+    if (t >= 1.0f)
+        bossDeathFacingPlayer = false;
+}
+
+bool GameScene::LoadBossDeathShots()
+{
+    try
+    {
+        for (size_t shotIndex = 0; shotIndex < BossDeathPresetPaths.size(); ++shotIndex)
+        {
+            SceneState sceneState{};
+            SceneEditor::LoadSceneState(BossDeathPresetPaths[shotIndex], sceneState);
+
+            const auto findActor = [&sceneState](const char* actorName)
+            {
+                return std::find_if(sceneState.actorStates.begin(), sceneState.actorStates.end(),
+                    [actorName](const ActorTransformState& actor)
+                    {
+                        return actor.name == actorName;
+                    });
+            };
+
+            const auto playerState = findActor("Player");
+            const auto bossState = findActor("GruxEnemy");
+            if (playerState == sceneState.actorStates.end() ||
+                bossState == sceneState.actorStates.end())
+            {
+                const std::string message = std::format(
+                    "Boss death preset is missing Player or GruxEnemy: {}",
+                    BossDeathPresetPaths[shotIndex]);
+                Logger::Error(Logger::LogCategory::System, message.c_str());
+                return false;
+            }
+
+            auto& shot = bossDeathShots[shotIndex];
+            shot.camera.position = sceneState.camera.position;
+            shot.camera.rotation = sceneState.camera.rotation;
+            shot.camera.fov = sceneState.camera.fov;
+            shot.player = { playerState->position, playerState->rotation };
+            shot.boss = { bossState->position, bossState->rotation };
+
+            const auto& shader = sceneState.shader;
+            shot.dof = {
+                shader.focusDistance,
+                shader.dofNearRange,
+                shader.dofRange,
+                shader.dofBlurStrength,
+                shader.enableBlur,
+                shader.enableDof,
+            };
+        }
+    }
+    catch (const std::exception& exception)
+    {
+        const std::string message = std::format(
+            "Failed to load boss death presets: {}", exception.what());
+        Logger::Error(Logger::LogCategory::System, message.c_str());
+        return false;
+    }
+
+    return true;
+}
+
+void GameScene::CreateBossDeathFadeUI()
+{
+    bossDeathFadeOverlay = std::make_shared<UIImageComponent>("BossDeathFadeOverlay");
+    bossDeathFadeOverlay->SetSize({ 1920.0f, 1080.0f });
+    bossDeathFadeOverlay->SetWorldPosition({ 0.0f, 0.0f });
+    bossDeathFadeOverlay->SetPivot({ 0.0f, 0.0f });
+    bossDeathFadeOverlay->SetColor(CoreColor{ 0.0f, 0.0f, 0.0f, 0.0f });
+    bossDeathFadeOverlay->SetVisible(false);
+    bossDeathFadeOverlay->SetEnable(false);
+    bossDeathFadeOverlay->zOrder = 1000;
+    GetUIManager()->Add(bossDeathFadeOverlay);
+}
+
+void GameScene::SetBossDeathFadeAlpha(const float alpha)
+{
+    if (!bossDeathFadeOverlay)
+        return;
+
+    const float clampedAlpha = std::clamp(alpha, 0.0f, 1.0f);
+    bossDeathFadeOverlay->SetColor(CoreColor{ 0.0f, 0.0f, 0.0f, clampedAlpha });
+    bossDeathFadeOverlay->SetVisible(clampedAlpha > 0.0f);
+}
+
+void GameScene::ApplyBossDeathDof(const BossDeathDofState& dof)
+{
+    auto& shader = GetSceneSettings().sceneShaderConstants;
+    shader.focusDistance = dof.focusDistance;
+    shader.dofNearRange = dof.nearRange;
+    shader.dofRange = dof.range;
+    shader.dofBlurStrength = dof.blurStrength;
+    shader.enableBlur = dof.enableBlur;
+    shader.enableDof = dof.enableDof;
+}
+
+void GameScene::CutToBossDeathShot(const size_t shotIndex)
+{
+    if (shotIndex >= bossDeathShots.size() || !cinemaCameraActor)
+        return;
+
+    if (auto* camera = dynamic_cast<CinematicCameraComponent*>(
+        cinemaCameraActor->GetCameraComponent()))
+    {
+        camera->CutToPose(bossDeathShots[shotIndex].camera);
+        ApplyBossDeathDof(bossDeathShots[shotIndex].dof);
+    }
+}
+
+bool GameScene::SetupBossDeathCinematic()
+{
+    if (!bossDeathShotsLoaded || !player || !gruxEnemyActor || !cinemaCameraActor)
+        return false;
+
+    if (const auto playerCapsule = std::dynamic_pointer_cast<ShapeComponent>(
+        player->FindComponentByName("capsuleComponent")))
+    {
+        playerCapsule->DisableCollision();
+    }
+    if (const auto bossCapsule = std::dynamic_pointer_cast<ShapeComponent>(
+        gruxEnemyActor->FindComponentByName("enemyCapsuleComponent")))
+    {
+        bossCapsule->DisableCollision();
+    }
+
+    const auto& setupShot = bossDeathShots[0];
+    player->SetPosition(setupShot.player.position);
+    player->SetQuaternionRotation(setupShot.player.rotation);
+    player->UpdateAllComponentTransforms();
+    gruxEnemyActor->SetPosition(setupShot.boss.position);
+    gruxEnemyActor->SetQuaternionRotation(setupShot.boss.rotation);
+    gruxEnemyActor->UpdateAllComponentTransforms();
+
+    const auto controller = gruxEnemyActor->GetBodyAnimationController();
+    if (!controller || !controller->HoldAnimationPose("Death_A_0", bossDeathPoseTime))
+    {
+        Logger::Error(Logger::LogCategory::System,
+            "Failed to hold Death_A_0 for boss death cinematic");
+        return false;
+    }
+
+    if (cameraManager->IsUseDebug())
+        cameraManager->ToggleCamera(this);
+    if (cameraManager->IsUseMovie())
+        cameraManager->ToggleMovieCamera(this);
+    if (!cameraManager->IsUseCinematic())
+        cameraManager->ToggleCinematicCamera(this);
+
+    // ToggleCinematicCamera copies the gameplay pose first. Overwrite every pose
+    // field and DOF in this same update so that copied pose is never rendered.
+    CutToBossDeathShot(bossDeathUseShot0 ? 0 : 1);
+    return true;
+}
+
+void GameScene::UpdateBossDeathCinematic()
+{
+    const float deltaTime = Time::UnscaledDeltaTime();
+    bossDeathPhaseElapsed += deltaTime;
+
+    switch (bossDeathPhase)
+    {
+    case BossDeathPhase::Reaction:
+    {
+        UpdateBossDeathFacingPlayer(deltaTime);
+        const auto controller = gruxEnemyActor
+            ? gruxEnemyActor->GetBodyAnimationController()
+            : nullptr;
+        if (!bossDeathPlaybackRangeApplied && controller &&
+            controller->GetCurrentAnimationName() == "Death_A_0")
+        {
+            bossDeathPlaybackRangeApplied = controller->SetPlaybackRange(
+                0.0f, bossDeathPoseTime);
+        }
+        if (!bossDeathLandingReached && controller &&
+            controller->GetCurrentAnimationName() == "Death_A_0" &&
+            controller->GetCurrentAnimationTime() >= bossDeathPoseTime)
+        {
+            // Freeze at the landing pose before the 1.619 sec gameplay event.
+            // SetupCinematic samples the same pose again after actor staging.
+            if (controller->HoldAnimationPose("Death_A_0", bossDeathPoseTime))
+            {
+                bossDeathLandingReached = true;
+                bossDeathLandingHoldElapsed = 0.0f;
+            }
+        }
+
+        if (bossDeathLandingReached)
+            bossDeathLandingHoldElapsed += deltaTime;
+
+        if (bossDeathLandingReached &&
+            bossDeathLandingHoldElapsed >= (std::max)(bossDeathLandingHoldDuration, 0.0f))
+        {
+            Time::SetSlow(1.0f, 0.0f);
+            bossDeathPhase = BossDeathPhase::FadeOut;
+            bossDeathPhaseElapsed = 0.0f;
+        }
+        break;
+    }
+
+    case BossDeathPhase::FadeOut:
+    {
+        const float duration = (std::max)(bossDeathFadeOutDuration, FLT_EPSILON);
+        SetBossDeathFadeAlpha(bossDeathPhaseElapsed / duration);
+        if (bossDeathPhaseElapsed >= duration)
+        {
+            SetBossDeathFadeAlpha(1.0f);
+            bossDeathPhase = BossDeathPhase::SetupCinematic;
+            bossDeathPhaseElapsed = 0.0f;
+        }
+        break;
+    }
+
+    case BossDeathPhase::SetupCinematic:
+        SetBossDeathFadeAlpha(1.0f);
+        if (SetupBossDeathCinematic())
+        {
+            bossDeathPhase = BossDeathPhase::FadeIn;
+            bossDeathPhaseElapsed = 0.0f;
+        }
+        break;
+
+    case BossDeathPhase::FadeIn:
+    {
+        const float duration = (std::max)(bossDeathFadeInDuration, FLT_EPSILON);
+        SetBossDeathFadeAlpha(1.0f - bossDeathPhaseElapsed / duration);
+        if (bossDeathPhaseElapsed >= duration)
+        {
+            SetBossDeathFadeAlpha(0.0f);
+            bossDeathPhase = bossDeathUseShot0
+                ? BossDeathPhase::Shot0
+                : BossDeathPhase::Shot1;
+            bossDeathPhaseElapsed = 0.0f;
+        }
+        break;
+    }
+
+    case BossDeathPhase::Shot0:
+        if (bossDeathPhaseElapsed >= (std::max)(bossDeathShot0HoldDuration, 0.0f))
+        {
+            CutToBossDeathShot(1);
+            bossDeathPhase = BossDeathPhase::Shot1;
+            bossDeathPhaseElapsed = 0.0f;
+        }
+        break;
+
+    case BossDeathPhase::Shot1:
+        if (bossDeathPhaseElapsed >= (std::max)(bossDeathShot1HoldDuration, 0.0f))
+        {
+            if (auto* camera = dynamic_cast<CinematicCameraComponent*>(
+                cinemaCameraActor->GetCameraComponent()))
+            {
+                camera->BlendToPose(
+                    bossDeathShots[2].camera,
+                    bossDeathShot1To2BlendDuration);
+            }
+            bossDeathPhase = BossDeathPhase::BlendToShot2;
+            bossDeathPhaseElapsed = 0.0f;
+        }
+        break;
+
+    case BossDeathPhase::BlendToShot2:
+        if (auto* camera = dynamic_cast<CinematicCameraComponent*>(
+            cinemaCameraActor->GetCameraComponent()); camera && !camera->IsBlending())
+        {
+            ApplyBossDeathDof(bossDeathShots[2].dof);
+            bossDeathPhase = BossDeathPhase::Shot2Preview;
+            bossDeathPhaseElapsed = 0.0f;
+        }
+        break;
+
+    case BossDeathPhase::Shot2Preview:
+        break;
     }
 }
 
@@ -1237,13 +1594,7 @@ void GameScene::UpdateBattleFlow()
         ResetBattleForContinue();
         break;
     case BattleFlowState::BossDead:
-        if (gruxEnemyActor && gruxEnemyActor->GetStateMachine() &&
-            std::string(gruxEnemyActor->GetStateMachine()->GetStateName()) == "EnemyDeathState" &&
-            gruxEnemyActor->GetBodyAnimationController() &&
-            !gruxEnemyActor->GetBodyAnimationController()->IsPlayAnimation())
-        {
-            battleFlowState = BattleFlowState::Victory;
-        }
+        UpdateBossDeathCinematic();
         break;
     case BattleFlowState::Victory:
         // タイトル画面に戻る
@@ -1415,6 +1766,29 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Text("Final Battle Time: %.3f%s", finalBattleTime,
         finalBattleTimeSaved ? "" : " (not saved)");
     UpdateBattleTimerUI();
+    ImGui::Separator();
+    if (ImGui::TreeNode("Boss Death Cinematic Preview"))
+    {
+        static constexpr std::array<const char*, 8> phaseNames = {
+            "Reaction", "FadeOut", "SetupCinematic", "FadeIn",
+            "Shot0", "Shot1", "BlendToShot2", "Shot2Preview"
+        };
+        ImGui::Text("Presets Loaded: %s", bossDeathShotsLoaded ? "Yes" : "No");
+        ImGui::Text("Phase: %s", phaseNames[static_cast<size_t>(bossDeathPhase)]);
+        ImGui::Text("Phase Elapsed: %.3f", bossDeathPhaseElapsed);
+        ImGui::Checkbox("Use Shot0", &bossDeathUseShot0);
+        ImGui::DragFloat(U8("死亡スロー倍率"), &bossDeathSlowScale, 0.01f, 0.01f, 1.0f);
+        ImGui::DragFloat(U8("プレイヤー方向へ向く時間"), &bossDeathFacePlayerDuration, 0.01f, 0.0f, 1.0f);
+        ImGui::DragFloat(U8("死亡ポーズ基準時刻"), &bossDeathPoseTime, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat(U8("着地後余韻時間"), &bossDeathLandingHoldDuration, 0.01f, 0.0f, 5.0f);
+        ImGui::DragFloat(U8("暗転時間"), &bossDeathFadeOutDuration, 0.01f, 0.01f, 5.0f);
+        ImGui::DragFloat(U8("暗転解除時間"), &bossDeathFadeInDuration, 0.01f, 0.01f, 5.0f);
+        ImGui::DragFloat("Shot0 Hold Duration", &bossDeathShot0HoldDuration, 0.01f, 0.0f, 10.0f);
+        ImGui::DragFloat("Shot1 Hold Duration", &bossDeathShot1HoldDuration, 0.01f, 0.0f, 10.0f);
+        ImGui::DragFloat("Shot1 To Shot2 Blend Duration",
+            &bossDeathShot1To2BlendDuration, 0.01f, 0.0f, 10.0f);
+        ImGui::TreePop();
+    }
     ImGui::Separator();
     ImGui::Text("Death Presentation");
     ImGui::DragFloat(U8("HUDフェードアウト時間"), &deathHudFadeDuration, 0.01f, 0.01f, 5.0f);

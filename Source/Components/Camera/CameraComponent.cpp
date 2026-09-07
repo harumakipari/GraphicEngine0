@@ -279,6 +279,113 @@ void CinematicCameraComponent::HandleKeyboardInput(float deltaTime)
 
 }
 
+void CinematicCameraComponent::CutToPose(const CameraPose& pose)
+{
+    poseBlending = false;
+    playingPath = false;
+    poseBlendElapsed = 0.0f;
+    poseBlendDuration = 0.0f;
+    ApplyPose(pose);
+}
+
+void CinematicCameraComponent::BlendToPose(const CameraPose& pose, float duration)
+{
+    if (duration <= 0.0f)
+    {
+        CutToPose(pose);
+        return;
+    }
+
+    auto owner = GetOwner();
+    if (!owner)
+        return;
+
+    poseBlendStart.position = owner->GetPosition();
+    poseBlendStart.rotation = owner->GetQuaternionRotation();
+    poseBlendStart.fov = GetFov();
+    poseBlendTarget = pose;
+    poseBlendElapsed = 0.0f;
+    poseBlendDuration = duration;
+    playingPath = false;
+    poseBlending = true;
+}
+
+void CinematicCameraComponent::ApplyPose(const CameraPose& pose)
+{
+    auto owner = GetOwner();
+    if (!owner)
+        return;
+
+    using namespace DirectX;
+    XMVECTOR rotation = XMLoadFloat4(&pose.rotation);
+    if (XMVector4Equal(rotation, XMVectorZero()))
+        rotation = XMQuaternionIdentity();
+    rotation = XMQuaternionNormalize(rotation);
+
+    XMFLOAT4 normalizedRotation{};
+    XMStoreFloat4(&normalizedRotation, rotation);
+    owner->SetPosition(pose.position);
+    owner->SetQuaternionRotation(normalizedRotation);
+    owner->UpdateAllComponentTransforms();
+    SetFov(pose.fov);
+    useLookTarget = false;
+    SyncYawPitchFromRotation(normalizedRotation);
+}
+
+void CinematicCameraComponent::UpdatePoseBlend(float deltaTime)
+{
+    poseBlendElapsed += (std::max)(deltaTime, 0.0f);
+    const float t = std::clamp(
+        poseBlendElapsed / (std::max)(poseBlendDuration, FLT_EPSILON),
+        0.0f, 1.0f);
+
+    CameraPose pose{};
+    pose.position =
+    {
+        std::lerp(poseBlendStart.position.x, poseBlendTarget.position.x, t),
+        std::lerp(poseBlendStart.position.y, poseBlendTarget.position.y, t),
+        std::lerp(poseBlendStart.position.z, poseBlendTarget.position.z, t)
+    };
+
+    using namespace DirectX;
+    XMVECTOR startRotation = XMLoadFloat4(&poseBlendStart.rotation);
+    XMVECTOR targetRotation = XMLoadFloat4(&poseBlendTarget.rotation);
+    if (XMVector4Equal(startRotation, XMVectorZero()))
+        startRotation = XMQuaternionIdentity();
+    if (XMVector4Equal(targetRotation, XMVectorZero()))
+        targetRotation = XMQuaternionIdentity();
+    startRotation = XMQuaternionNormalize(startRotation);
+    targetRotation = XMQuaternionNormalize(targetRotation);
+    if (XMVectorGetX(XMVector4Dot(startRotation, targetRotation)) < 0.0f)
+        targetRotation = XMVectorNegate(targetRotation);
+    XMStoreFloat4(&pose.rotation,
+        XMQuaternionSlerp(startRotation, targetRotation, t));
+    pose.fov = std::lerp(poseBlendStart.fov, poseBlendTarget.fov, t);
+
+    if (t >= 1.0f)
+    {
+        ApplyPose(poseBlendTarget);
+        poseBlending = false;
+        return;
+    }
+
+    ApplyPose(pose);
+}
+
+void CinematicCameraComponent::SyncYawPitchFromRotation(
+    const DirectX::XMFLOAT4& rotation)
+{
+    using namespace DirectX;
+    const XMVECTOR forward = XMVector3Rotate(
+        XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
+        XMQuaternionNormalize(XMLoadFloat4(&rotation)));
+    const float forwardX = XMVectorGetX(forward);
+    const float forwardY = XMVectorGetY(forward);
+    const float forwardZ = XMVectorGetZ(forward);
+    yaw = atan2f(forwardX, forwardZ);
+    pitch = atan2f(-forwardY,
+        sqrtf(forwardX * forwardX + forwardZ * forwardZ));
+}
 
 // ï€ë∂ä÷êî
 void CinematicCameraComponent::SaveBookmarksToFile()
