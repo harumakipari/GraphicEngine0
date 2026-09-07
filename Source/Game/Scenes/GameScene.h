@@ -27,6 +27,7 @@
 #include "PBD/PBDSystem.h"
 
 class GruxEnemy;
+class CoreStandaloneAudioSource;
 
 class GameScene : public SceneBase
 {
@@ -109,6 +110,18 @@ private:
         PlayerApproach,
         RecallLeadIn,
         RecallPingPong,
+        FinishTriggered,
+        HuskDelay,
+        HuskPreview,
+    };
+
+    enum class BossDeathFinishPromptAnimationPhase : uint8_t
+    {
+        Hidden,
+        AppearGrow,
+        AppearSettle,
+        PulseGrow,
+        PulseReturn,
     };
 
     struct CinematicActorPose
@@ -146,7 +159,13 @@ private:
     void ResetBossDeathDebugPreview();
     bool LoadBossDeathShots();
     void CreateBossDeathFadeUI();
+    void CreateBossDeathFinishUI();
     void SetBossDeathFadeAlpha(float alpha);
+    void SetBossDeathFinishUIVisible(bool visible);
+    void UpdateBossDeathFinishUI();
+    void StartBossDeathGroanLoop();
+    void StopBossDeathGroanLoop();
+    void UpdateBossDeathPromptLoop(float deltaTime);
     void UpdateBossDeathCinematic();
     bool SetupBossDeathCinematic();
     void ApplyBossDeathDof(const BossDeathDofState& dof);
@@ -215,17 +234,44 @@ private:
     float bossDeathDeathBStartTime = 0.367f;
     float bossDeathDeathBEndTime = 1.625f;
     float bossDeathDeathBPlaybackRate = 0.44f;
+    float bossDeathDeathBPromptMinTime = 1.34f;
+    float bossDeathDeathBPromptMaxTime = 1.65f;
+    float bossDeathDeathBPromptTime = 1.34f;
+    float bossDeathDeathBPromptDirection = 1.0f;
+    float bossDeathDeathBPromptPlaybackRate = 0.10f;
     DirectX::XMFLOAT3 bossDeathDeathBPositionOffset{ 1.0f,0.0f,0.0f };
     float bossDeathPlayerApproachDuration = 2.96f;
     DirectX::XMFLOAT3 bossDeathApproachStartPosition{ 4.025f,-0.1f,11.723f };
     DirectX::XMFLOAT4 bossDeathApproachStartRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    DirectX::XMFLOAT3 bossDeathFinishPlayerPositionOffset{-0.61f,0.0f,0.0f};
+    DirectX::XMFLOAT3 bossDeathFinishPlayerPositionOffset{ -0.61f,0.0f,0.0f };
+    DirectX::XMFLOAT2 bossDeathFinishUIPositionOffset{ 7.0f,-134.0f };
     float bossDeathRecallPromptMinTime = 1.155f;
     float bossDeathRecallPromptMaxTime = 1.225f;
     float bossDeathRecallPromptTime = 1.163f;
     float bossDeathRecallPromptDirection = 1.0f;
     float bossDeathRecallPromptPlaybackRate = 0.07f;
+    float bossDeathRecallFinishHitTime = 2.240f;
+    float bossDeathHuskDelay = 0.4f;
+    bool bossDeathFinishInputEnabled = false;
+    bool bossDeathFinishUIVisible = false;
+    float bossDeathFinishUIAlpha = 0.0f;
+    float bossDeathFinishUIFadeInDuration = 0.10f;
+    float bossDeathFinishUIPulseTimer = 0.0f;
+    BossDeathFinishPromptAnimationPhase bossDeathFinishUIPulsePhase = BossDeathFinishPromptAnimationPhase::Hidden;
+    DirectX::XMFLOAT2 bossDeathFinishGuidePosition{ 1200.0f, 674.0f };
+    DirectX::XMFLOAT2 bossDeathFinishButtonPosition{ 1200.0f, 600.0f };
+    DirectX::XMFLOAT2 bossDeathFinishWordPosition{ 1202.0f, 542.0f };
+    DirectX::XMFLOAT2 bossDeathFinishGuideSize{ 488.0f, 379.0f };
+    DirectX::XMFLOAT2 bossDeathFinishButtonSize{ 300.0f, 300.0f };
+    DirectX::XMFLOAT2 bossDeathFinishWordSize{ 124.5f, 68.0f };
+    DirectX::XMFLOAT2 bossDeathFinishGuideScale{ 0.32f, 0.32f };
+    DirectX::XMFLOAT2 bossDeathFinishButtonBaseScale{ 0.32f, 0.32f };
+    DirectX::XMFLOAT2 bossDeathFinishWordScale{ 1.05f, 0.78f };
     std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;
+    std::shared_ptr<UIImageComponent> bossDeathFinishGuideImage;
+    std::shared_ptr<UIImageComponent> bossDeathFinishButtonImage;
+    std::shared_ptr<UIImageComponent> bossDeathFinishWordImage;
+    std::shared_ptr<CoreStandaloneAudioSource> bossDeathGroanAudio;
     std::shared_ptr<UIImageComponent> battleTimerHourglassFrame;
     std::shared_ptr<UIImageComponent> battleTimerHourglassSand;
     std::array<std::shared_ptr<UIImageComponent>, 5> battleTimerDigits{};

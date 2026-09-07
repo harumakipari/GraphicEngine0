@@ -171,8 +171,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Knock_Down_End", 28);
     controller->AddAnimation("Knock_Down_Loop", 29);
     controller->AddAnimation("Knock_Down_Start", 30);
-    controller->AddAnimation("Death_B_Cut", 31);
-    controller->AddAnimation("Ultimate_Roar_Cut", 32);
+    controller->AddAnimation("Death_Fwd", 31);
     // Death clipだけRoot Translationを含むため、Actor位置へ適用せずPoseもin-place化する。
     controller->SetRemoveRootTranslationFromPose("Knock_Down_Death", true);
 

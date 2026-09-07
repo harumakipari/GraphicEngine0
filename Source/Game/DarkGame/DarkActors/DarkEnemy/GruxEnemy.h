@@ -10,6 +10,8 @@
 #include "Graphics/Renderer/TrailRenderer.h"
 #include <array>
 
+#include "Engine/Audio/Audio.h"
+
 class Player;
 
 class GruxEnemy :public Enemy
@@ -163,6 +165,11 @@ public:
         const bool requested = beginHuskParticleRequest;
         beginHuskParticleRequest = false;
         return requested;
+    }
+    void RequestBeginHuskParticle()
+    {
+        beginHuskParticleRequest = true;
+        CoreAudio::PlayOneShot("./Data/Sound/SE/boss_dead_dissolve.wav");
     }
     const std::shared_ptr<SkeletalMeshComponent>& GetSkeletalMeshComponent() const
     {

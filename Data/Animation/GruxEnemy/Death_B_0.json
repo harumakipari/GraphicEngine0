@@ -1,0 +1,15 @@
+{
+    "animationClip": 19,
+    "animationName": "Death_B_0",
+    "events": [
+        {
+            "parameter": "boss_death",
+            "time": 0.534809947013855,
+            "type": "PlaySE",
+            "value": 0.9900000095367432
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}
