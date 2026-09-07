@@ -100,14 +100,15 @@ public:
 private:
     enum class BossDeathPhase : uint8_t
     {
-        Reaction,
         FadeOut,
         SetupCinematic,
-        FadeIn,
-        Shot0,
-        Shot1,
-        BlendToShot2,
-        Shot2Preview,
+        FadeInScream,
+        DeathScream,
+        DeathFall,
+        DeathLanding,
+        PlayerApproach,
+        RecallLeadIn,
+        RecallPingPong,
     };
 
     struct CinematicActorPose
@@ -149,8 +150,7 @@ private:
     bool SetupBossDeathCinematic();
     void ApplyBossDeathDof(const BossDeathDofState& dof);
     void CutToBossDeathShot(size_t shotIndex);
-    void BeginBossDeathFacingPlayer();
-    void UpdateBossDeathFacingPlayer(float unscaledDeltaTime);
+    void ClampBossDeathPreviewTuning();
     void CreateBattleTimerUI();
     void SetBattleTimerVisible(bool visible);
     void UpdateBattleTimerUI();
@@ -198,27 +198,26 @@ private:
     float battleElapsedTime = 0.0f;
     float finalBattleTime = 0.0f;
     bool finalBattleTimeSaved = false;
-    std::array<BossDeathShotState, 3> bossDeathShots{};
+    std::array<BossDeathShotState, 5> bossDeathShots{};
     bool bossDeathShotsLoaded = false;
-    bool bossDeathUseShot0 = false;
-    BossDeathPhase bossDeathPhase = BossDeathPhase::Reaction;
+    BossDeathPhase bossDeathPhase = BossDeathPhase::FadeOut;
     float bossDeathPhaseElapsed = 0.0f;
-    float bossDeathLandingHoldDuration = 0.3f;
-    float bossDeathLandingHoldElapsed = 0.0f;
-    bool bossDeathLandingReached = false;
-    bool bossDeathPlaybackRangeApplied = false;
-    float bossDeathSlowScale = 0.30f;
-    float bossDeathFacePlayerDuration = 0.12f;
-    float bossDeathFacePlayerElapsed = 0.0f;
-    bool bossDeathFacingPlayer = false;
-    DirectX::XMFLOAT4 bossDeathFaceStartRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    DirectX::XMFLOAT4 bossDeathFaceTargetRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    float bossDeathFadeOutDuration = 0.35f;
-    float bossDeathFadeInDuration = 0.40f;
-    float bossDeathShot0HoldDuration = 1.5f;
-    float bossDeathShot1HoldDuration = 1.50f;
-    float bossDeathShot1To2BlendDuration = 2.00f;
-    float bossDeathPoseTime = 1.425f;   // Shot0‚ÉBoss‚Í‚Ç‚ÌPose‚Å‘JˆÚ‚·‚é‚©
+    float bossDeathFadeOutDuration = 1.6f;
+    float bossDeathFadeInDuration = 1.6f;
+    float bossDeathRoarStartTime = 0.0f;
+    float bossDeathRoarEndTime = 1.4f;
+    float bossDeathFallToLandingBlendDuration = 1.f;
+    float bossDeathDeathBStartTime = 0.0f;
+    float bossDeathDeathBEndTime = 1.625f;
+    DirectX::XMFLOAT3 bossDeathDeathBPositionOffset{};
+    float bossDeathPlayerApproachDuration = 4.5f;
+    DirectX::XMFLOAT3 bossDeathApproachStartPosition{};
+    DirectX::XMFLOAT4 bossDeathApproachStartRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
+    float bossDeathRecallPromptMinTime = 1.155f;
+    float bossDeathRecallPromptMaxTime = 1.225f;
+    float bossDeathRecallPromptTime = 1.163f;
+    float bossDeathRecallPromptDirection = 1.0f;
+    float bossDeathRecallPromptPlaybackRate = 0.07f;
     std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;
     std::shared_ptr<UIImageComponent> battleTimerHourglassFrame;
     std::shared_ptr<UIImageComponent> battleTimerHourglassSand;

@@ -171,6 +171,10 @@ public:
     // advancing runtime time or dispatching runtime animation events.
     bool HoldAnimationPose(const std::string& animationName, float time);
 
+    // Leaves a pose held by HoldAnimationPose and restores runtime animation
+    // ownership. Callers can start another animation in the same update.
+    void ReleaseHeldAnimationPose();
+
     void AddNotifyState(const std::string& animationName, const float start, const float end,
         const AnimationNotifyState::Type type, const std::string& parameter = "", float animationSpeed = 1.0f)
     {

@@ -467,6 +467,10 @@ void EnemyAttackReadyState::Exit()
 // 攻撃の予兆ステートオブジェクト
 void EnemyDeathState::Enter()
 {
+    enemy->StopBattleActions();
+    if (enemy->IsCinematicDeathAnimationOwnedExternally())
+        return;
+
     const std::string& animationName = enemy->GetDeathAnimationName();
     const bool ignoreRootMotion = animationName == "Knock_Down_Death";
     owner->PlayBodyAnimation(animationName, false, true, 0.1f, ignoreRootMotion);

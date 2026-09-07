@@ -747,6 +747,11 @@ bool AnimationController::HoldAnimationPose(
     return true;
 }
 
+void AnimationController::ReleaseHeldAnimationPose()
+{
+    EndEditorPreview();
+}
+
 void AnimationController::UpdateEditorPreview(const float deltaTime)
 {
     if (selectedTimelineClip >= target_->model->animations.size())

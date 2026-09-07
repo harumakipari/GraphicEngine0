@@ -37,11 +37,26 @@
 
 namespace
 {
-    constexpr std::array<const char*, 3> BossDeathPresetPaths = {
-        "Data/Saves/ScenePresets/BossDeath_0.json",
-        "Data/Saves/ScenePresets/BossDeath_1.json",
-        "Data/Saves/ScenePresets/BossDeath_2.json",
+    enum BossDeathShotIndex : size_t
+    {
+        BossDeathScream,
+        BossDeathFall,
+        BossDeathLanding,
+        BossDeathFinish,
+        BossDeathResult,
+        BossDeathShotCount,
     };
+
+    constexpr std::array<const char*, BossDeathShotCount> BossDeathPresetPaths = {
+        "Data/Saves/ScenePresets/BossDeath_Scream.json",
+        "Data/Saves/ScenePresets/BossDeath_Fall.json",
+        "Data/Saves/ScenePresets/BossDeath_Landing.json",
+        "Data/Saves/ScenePresets/BossDeath_Finish.json",
+        "Data/Saves/ScenePresets/BossDeath_Result.json",
+    };
+
+    constexpr float RecallFirstSeTime = 1.4f;
+    constexpr float RecallTimeSafetyMargin = 0.001f;
 }
 
 bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
@@ -258,13 +273,18 @@ void GameScene::Update(float deltaTime)
         clothSimulate->Update(deltaTime);
     }
 
-    if (InputSystem::GetInputState("LockOn", InputStateMask::Press))
-    {// 押している間ロックオンする
-        ChangeCameraMode(TPSCameraController::CameraMode::BossBattle);
-    }
-    else
+    // CinematicCamera owns the view throughout the boss-death sequence.
+    // Do not let held LockOn input mutate the gameplay-camera request mode.
+    if (battleFlowState != BattleFlowState::BossDead)
     {
-        ChangeCameraMode(TPSCameraController::CameraMode::TPS);
+        if (InputSystem::GetInputState("LockOn", InputStateMask::Press))
+        {// 押している間ロックオンする
+            ChangeCameraMode(TPSCameraController::CameraMode::BossBattle);
+        }
+        else
+        {
+            ChangeCameraMode(TPSCameraController::CameraMode::TPS);
+        }
     }
 
 
@@ -856,7 +876,7 @@ void GameScene::CreateDeathResultUI()
     const char* paths[] = { "continue_button.png", "restart_battle_button.png", "return_title_button.png" };
     const char* names[] = { "DeathResultContinue", "DeathResultRestart", "DeathResultTitle" };
     const float buttonWidths[] = { 448.0f, 667.0f, 730.0f };
-    const float buttonHeight[] = { 70.0f,75.0f, 71.0f};
+    const float buttonHeight[] = { 70.0f,75.0f, 71.0f };
     for (int i = 0; i < 3; ++i)
     {
         deathResultButtons[i] = std::make_shared<UIButtonComponent>(std::string("./Data/Textures/UI/Result/") + paths[i], names[i]);
@@ -1094,9 +1114,9 @@ void GameScene::FireDeathPresentationCue(const DeathPresentationCue cue, bool& f
 void GameScene::UpdateDeathResultPresentation()
 {
     const auto fade = [this](const float start, const float duration)
-    {
-        return std::clamp((deathPresentationElapsed - start) / (std::max)(0.001f, duration), 0.0f, 1.0f);
-    };
+        {
+            return std::clamp((deathPresentationElapsed - start) / (std::max)(0.001f, duration), 0.0f, 1.0f);
+        };
     const float hudAlpha = 1.0f - fade(0.0f, deathHudFadeDuration);
     if (player) player->SetGameplayHudFadeAlpha(hudAlpha);
     if (gruxEnemyActor) gruxEnemyActor->SetHpBarFadeAlpha(hudAlpha);
@@ -1187,11 +1207,10 @@ void GameScene::EnterBossDead()
     battleFlowState = BattleFlowState::BossDead;
     SetBattleTimerVisible(false);
     SetBattleHudVisible(false);
-    bossDeathPhase = BossDeathPhase::Reaction;
+    bossDeathPhase = BossDeathPhase::FadeOut;
     bossDeathPhaseElapsed = 0.0f;
-    bossDeathLandingHoldElapsed = 0.0f;
-    bossDeathLandingReached = false;
-    bossDeathPlaybackRangeApplied = false;
+    bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
+    bossDeathRecallPromptDirection = 1.0f;
     SetBossDeathFadeAlpha(0.0f);
 
     if (player)
@@ -1201,76 +1220,12 @@ void GameScene::EnterBossDead()
     }
     if (gruxEnemyActor)
         gruxEnemyActor->StopBattleActions();
-    BeginBossDeathFacingPlayer();
-
-    if (gruxEnemyActor && gruxEnemyActor->GetBodyAnimationController())
-    {
-        const auto controller = gruxEnemyActor->GetBodyAnimationController();
-        if (controller->GetCurrentAnimationName() == "Death_A_0")
-        {
-            bossDeathPlaybackRangeApplied = controller->SetPlaybackRange(
-                0.0f, bossDeathPoseTime);
-        }
-    }
-
-    const float safeSlowScale = (std::max)(bossDeathSlowScale, 0.01f);
-    const float currentDeathTime = gruxEnemyActor && gruxEnemyActor->GetBodyAnimationController()
-        ? gruxEnemyActor->GetBodyAnimationController()->GetCurrentAnimationTime()
-        : 0.0f;
-    const float slowDuration =
-        (std::max)(bossDeathPoseTime - currentDeathTime, 0.0f) / safeSlowScale +
-        (std::max)(bossDeathLandingHoldDuration, 0.0f) + 0.5f;
-    Time::SetSlow(safeSlowScale, slowDuration);
+    Time::SetSlow(1.0f, 0.0f);
     if (darkCameraActor)
     {
         darkCameraActor->CancelOffscreenAttackAssist();
         darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
     }
-}
-
-void GameScene::BeginBossDeathFacingPlayer()
-{
-    bossDeathFacingPlayer = false;
-    bossDeathFacePlayerElapsed = 0.0f;
-    if (!player || !gruxEnemyActor)
-        return;
-
-    const auto playerPosition = player->GetPosition();
-    const auto bossPosition = gruxEnemyActor->GetPosition();
-    const float directionX = playerPosition.x - bossPosition.x;
-    const float directionZ = playerPosition.z - bossPosition.z;
-    if (directionX * directionX + directionZ * directionZ <= FLT_EPSILON)
-        return;
-
-    bossDeathFaceStartRotation = gruxEnemyActor->GetQuaternionRotation();
-    const auto currentEulerDegree = gruxEnemyActor->GetEulerRotation();
-    const float targetYaw = std::atan2f(directionX, directionZ);
-    DirectX::XMStoreFloat4(
-        &bossDeathFaceTargetRotation,
-        DirectX::XMQuaternionRotationRollPitchYaw(
-            DirectX::XMConvertToRadians(currentEulerDegree.x),
-            targetYaw,
-            DirectX::XMConvertToRadians(currentEulerDegree.z)));
-    bossDeathFacingPlayer = true;
-}
-
-void GameScene::UpdateBossDeathFacingPlayer(const float unscaledDeltaTime)
-{
-    if (!bossDeathFacingPlayer || !gruxEnemyActor)
-        return;
-
-    bossDeathFacePlayerElapsed += (std::max)(unscaledDeltaTime, 0.0f);
-    const float duration = (std::max)(bossDeathFacePlayerDuration, FLT_EPSILON);
-    const float t = std::clamp(bossDeathFacePlayerElapsed / duration, 0.0f, 1.0f);
-    DirectX::XMFLOAT4 rotation{};
-    DirectX::XMStoreFloat4(&rotation, DirectX::XMQuaternionNormalize(
-        DirectX::XMQuaternionSlerp(
-            DirectX::XMLoadFloat4(&bossDeathFaceStartRotation),
-            DirectX::XMLoadFloat4(&bossDeathFaceTargetRotation), t)));
-    gruxEnemyActor->SetQuaternionRotation(rotation);
-    gruxEnemyActor->UpdateAllComponentTransforms();
-    if (t >= 1.0f)
-        bossDeathFacingPlayer = false;
 }
 
 bool GameScene::LoadBossDeathShots()
@@ -1283,13 +1238,13 @@ bool GameScene::LoadBossDeathShots()
             SceneEditor::LoadSceneState(BossDeathPresetPaths[shotIndex], sceneState);
 
             const auto findActor = [&sceneState](const char* actorName)
-            {
-                return std::find_if(sceneState.actorStates.begin(), sceneState.actorStates.end(),
-                    [actorName](const ActorTransformState& actor)
-                    {
-                        return actor.name == actorName;
-                    });
-            };
+                {
+                    return std::find_if(sceneState.actorStates.begin(), sceneState.actorStates.end(),
+                        [actorName](const ActorTransformState& actor)
+                        {
+                            return actor.name == actorName;
+                        });
+                };
 
             const auto playerState = findActor("Player");
             const auto bossState = findActor("GruxEnemy");
@@ -1320,6 +1275,10 @@ bool GameScene::LoadBossDeathShots()
                 shader.enableDof,
             };
         }
+
+        // The editable approach start defaults to the staged Fall player pose.
+        bossDeathApproachStartPosition =
+            bossDeathShots[BossDeathFall].player.position;
     }
     catch (const std::exception& exception)
     {
@@ -1395,21 +1354,16 @@ bool GameScene::SetupBossDeathCinematic()
         bossCapsule->DisableCollision();
     }
 
-    const auto& setupShot = bossDeathShots[0];
-    player->SetPosition(setupShot.player.position);
-    player->SetQuaternionRotation(setupShot.player.rotation);
+    // Boss uses the Scream staging transform. Player starts from the shared
+    // Fall/Landing transform and approaches the Finish transform later.
+    const auto& screamShot = bossDeathShots[BossDeathScream];
+    const auto& fallShot = bossDeathShots[BossDeathFall];
+    player->SetPosition(fallShot.player.position);
+    player->SetQuaternionRotation(fallShot.player.rotation);
     player->UpdateAllComponentTransforms();
-    gruxEnemyActor->SetPosition(setupShot.boss.position);
-    gruxEnemyActor->SetQuaternionRotation(setupShot.boss.rotation);
+    gruxEnemyActor->SetPosition(screamShot.boss.position);
+    gruxEnemyActor->SetQuaternionRotation(screamShot.boss.rotation);
     gruxEnemyActor->UpdateAllComponentTransforms();
-
-    const auto controller = gruxEnemyActor->GetBodyAnimationController();
-    if (!controller || !controller->HoldAnimationPose("Death_A_0", bossDeathPoseTime))
-    {
-        Logger::Error(Logger::LogCategory::System,
-            "Failed to hold Death_A_0 for boss death cinematic");
-        return false;
-    }
 
     if (cameraManager->IsUseDebug())
         cameraManager->ToggleCamera(this);
@@ -1420,55 +1374,76 @@ bool GameScene::SetupBossDeathCinematic()
 
     // ToggleCinematicCamera copies the gameplay pose first. Overwrite every pose
     // field and DOF in this same update so that copied pose is never rendered.
-    CutToBossDeathShot(bossDeathUseShot0 ? 0 : 1);
+    CutToBossDeathShot(BossDeathScream);
+    gruxEnemyActor->PlayBodyAnimation("Ultimate_Roar_0", false, true, 0.1f, true);
+    if (const auto controller = gruxEnemyActor->GetBodyAnimationController();
+        !controller || !controller->SetPlaybackRange(
+            bossDeathRoarStartTime, bossDeathRoarEndTime))
+    {
+        Logger::Error(Logger::LogCategory::System,
+            "Failed to set Ultimate_Roar_0 playback range for boss death preview");
+    }
     return true;
+}
+
+void GameScene::ClampBossDeathPreviewTuning()
+{
+    bossDeathFallToLandingBlendDuration =
+        (std::max)(bossDeathFallToLandingBlendDuration, 0.0f);
+    bossDeathPlayerApproachDuration =
+        (std::max)(bossDeathPlayerApproachDuration, 0.0f);
+    bossDeathRecallPromptPlaybackRate =
+        (std::max)(bossDeathRecallPromptPlaybackRate, 0.0f);
+
+    const float recallMaxLimit = RecallFirstSeTime - RecallTimeSafetyMargin;
+    bossDeathRecallPromptMinTime = std::clamp(
+        bossDeathRecallPromptMinTime,
+        0.0f,
+        recallMaxLimit - RecallTimeSafetyMargin);
+    bossDeathRecallPromptMaxTime = std::clamp(
+        bossDeathRecallPromptMaxTime,
+        bossDeathRecallPromptMinTime + RecallTimeSafetyMargin,
+        recallMaxLimit);
+
+    if (gruxEnemyActor)
+    {
+        if (const auto controller = gruxEnemyActor->GetBodyAnimationController())
+        {
+            const auto clampPlaybackRange = [](float& start, float& end,
+                const float duration)
+                {
+                    constexpr float Margin = 0.001f;
+                    if (!std::isfinite(duration) || duration <= Margin)
+                    {
+                        start = 0.0f;
+                        end = (std::max)(duration, 0.0f);
+                        return;
+                    }
+
+                    start = std::clamp(start, 0.0f, duration - Margin);
+                    end = std::clamp(end, start + Margin, duration);
+                };
+
+            const float roarDuration =
+                controller->GetAnimationLength("Ultimate_Roar_0");
+            clampPlaybackRange(
+                bossDeathRoarStartTime, bossDeathRoarEndTime, roarDuration);
+
+            const float deathBDuration = controller->GetAnimationLength("Death_B_0");
+            clampPlaybackRange(
+                bossDeathDeathBStartTime, bossDeathDeathBEndTime, deathBDuration);
+        }
+    }
 }
 
 void GameScene::UpdateBossDeathCinematic()
 {
     const float deltaTime = Time::UnscaledDeltaTime();
+    ClampBossDeathPreviewTuning();
     bossDeathPhaseElapsed += deltaTime;
 
     switch (bossDeathPhase)
     {
-    case BossDeathPhase::Reaction:
-    {
-        UpdateBossDeathFacingPlayer(deltaTime);
-        const auto controller = gruxEnemyActor
-            ? gruxEnemyActor->GetBodyAnimationController()
-            : nullptr;
-        if (!bossDeathPlaybackRangeApplied && controller &&
-            controller->GetCurrentAnimationName() == "Death_A_0")
-        {
-            bossDeathPlaybackRangeApplied = controller->SetPlaybackRange(
-                0.0f, bossDeathPoseTime);
-        }
-        if (!bossDeathLandingReached && controller &&
-            controller->GetCurrentAnimationName() == "Death_A_0" &&
-            controller->GetCurrentAnimationTime() >= bossDeathPoseTime)
-        {
-            // Freeze at the landing pose before the 1.619 sec gameplay event.
-            // SetupCinematic samples the same pose again after actor staging.
-            if (controller->HoldAnimationPose("Death_A_0", bossDeathPoseTime))
-            {
-                bossDeathLandingReached = true;
-                bossDeathLandingHoldElapsed = 0.0f;
-            }
-        }
-
-        if (bossDeathLandingReached)
-            bossDeathLandingHoldElapsed += deltaTime;
-
-        if (bossDeathLandingReached &&
-            bossDeathLandingHoldElapsed >= (std::max)(bossDeathLandingHoldDuration, 0.0f))
-        {
-            Time::SetSlow(1.0f, 0.0f);
-            bossDeathPhase = BossDeathPhase::FadeOut;
-            bossDeathPhaseElapsed = 0.0f;
-        }
-        break;
-    }
-
     case BossDeathPhase::FadeOut:
     {
         const float duration = (std::max)(bossDeathFadeOutDuration, FLT_EPSILON);
@@ -1486,62 +1461,206 @@ void GameScene::UpdateBossDeathCinematic()
         SetBossDeathFadeAlpha(1.0f);
         if (SetupBossDeathCinematic())
         {
-            bossDeathPhase = BossDeathPhase::FadeIn;
+            bossDeathPhase = BossDeathPhase::FadeInScream;
             bossDeathPhaseElapsed = 0.0f;
         }
         break;
 
-    case BossDeathPhase::FadeIn:
+    case BossDeathPhase::FadeInScream:
     {
         const float duration = (std::max)(bossDeathFadeInDuration, FLT_EPSILON);
         SetBossDeathFadeAlpha(1.0f - bossDeathPhaseElapsed / duration);
         if (bossDeathPhaseElapsed >= duration)
         {
             SetBossDeathFadeAlpha(0.0f);
-            bossDeathPhase = bossDeathUseShot0
-                ? BossDeathPhase::Shot0
-                : BossDeathPhase::Shot1;
+            bossDeathPhase = BossDeathPhase::DeathScream;
             bossDeathPhaseElapsed = 0.0f;
         }
         break;
     }
 
-    case BossDeathPhase::Shot0:
-        if (bossDeathPhaseElapsed >= (std::max)(bossDeathShot0HoldDuration, 0.0f))
+    case BossDeathPhase::DeathScream:
+    {
+        const auto controller = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController()
+            : nullptr;
+        if (controller &&
+            controller->GetCurrentAnimationName() == "Ultimate_Roar_0" &&
+            !controller->IsPlayAnimation())
         {
-            CutToBossDeathShot(1);
-            bossDeathPhase = BossDeathPhase::Shot1;
+            CutToBossDeathShot(BossDeathFall);
+            gruxEnemyActor->PlayBodyAnimation(
+                "Knock_Down_Start", false, true, 0.1f, true);
+            bossDeathPhase = BossDeathPhase::DeathFall;
             bossDeathPhaseElapsed = 0.0f;
         }
         break;
+    }
 
-    case BossDeathPhase::Shot1:
-        if (bossDeathPhaseElapsed >= (std::max)(bossDeathShot1HoldDuration, 0.0f))
+    case BossDeathPhase::DeathFall:
+    {
+        const auto controller = gruxEnemyActor
+            ? gruxEnemyActor->GetBodyAnimationController()
+            : nullptr;
+        if (controller &&
+            controller->GetCurrentAnimationName() == "Knock_Down_Start" &&
+            !controller->IsPlayAnimation())
         {
             if (auto* camera = dynamic_cast<CinematicCameraComponent*>(
                 cinemaCameraActor->GetCameraComponent()))
             {
                 camera->BlendToPose(
-                    bossDeathShots[2].camera,
-                    bossDeathShot1To2BlendDuration);
+                    bossDeathShots[BossDeathLanding].camera,
+                    bossDeathFallToLandingBlendDuration);
             }
-            bossDeathPhase = BossDeathPhase::BlendToShot2;
+            ApplyBossDeathDof(bossDeathShots[BossDeathLanding].dof);
+
+            const auto& landingBossPose = bossDeathShots[BossDeathLanding].boss;
+            DirectX::XMFLOAT3 deathBPosition = landingBossPose.position;
+            deathBPosition.x += bossDeathDeathBPositionOffset.x;
+            deathBPosition.y += bossDeathDeathBPositionOffset.y;
+            deathBPosition.z += bossDeathDeathBPositionOffset.z;
+            gruxEnemyActor->SetPosition(deathBPosition);
+            gruxEnemyActor->SetQuaternionRotation(landingBossPose.rotation);
+            gruxEnemyActor->UpdateAllComponentTransforms();
+
+            gruxEnemyActor->PlayBodyAnimation(
+                "Death_B_0", false, true, 0.1f, true);
+            if (!controller->SetPlaybackRange(
+                bossDeathDeathBStartTime, bossDeathDeathBEndTime))
+            {
+                Logger::Error(Logger::LogCategory::System,
+                    "Failed to set Death_B_0 playback range for boss death preview");
+            }
+            bossDeathPhase = BossDeathPhase::DeathLanding;
             bossDeathPhaseElapsed = 0.0f;
         }
         break;
+    }
 
-    case BossDeathPhase::BlendToShot2:
-        if (auto* camera = dynamic_cast<CinematicCameraComponent*>(
-            cinemaCameraActor->GetCameraComponent()); camera && !camera->IsBlending())
+    case BossDeathPhase::DeathLanding:
+    {
+        const auto controller = gruxEnemyActor
+            ? gruxEnemyActor->GetBodyAnimationController()
+            : nullptr;
+        if (controller &&
+            controller->GetCurrentAnimationName() == "Death_B_0" &&
+            controller->GetCurrentAnimationTime() >= bossDeathDeathBEndTime &&
+            controller->HoldAnimationPose("Death_B_0", bossDeathDeathBEndTime))
         {
-            ApplyBossDeathDof(bossDeathShots[2].dof);
-            bossDeathPhase = BossDeathPhase::Shot2Preview;
+            player->SetPosition(bossDeathApproachStartPosition);
+            player->UpdateAllComponentTransforms();
+            bossDeathApproachStartRotation = player->GetQuaternionRotation();
+            player->PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, true);
+            bossDeathPhase = BossDeathPhase::PlayerApproach;
             bossDeathPhaseElapsed = 0.0f;
         }
         break;
+    }
 
-    case BossDeathPhase::Shot2Preview:
+    case BossDeathPhase::PlayerApproach:
+    {
+        const float duration = (std::max)(
+            bossDeathPlayerApproachDuration, FLT_EPSILON);
+        const float t = std::clamp(bossDeathPhaseElapsed / duration, 0.0f, 1.0f);
+        const float smoothT = t * t * (3.0f - 2.0f * t);
+        const auto& finishPose = bossDeathShots[BossDeathFinish].player;
+
+        DirectX::XMFLOAT3 position{};
+        position.x = std::lerp(
+            bossDeathApproachStartPosition.x, finishPose.position.x, smoothT);
+        position.y = std::lerp(
+            bossDeathApproachStartPosition.y, finishPose.position.y, smoothT);
+        position.z = std::lerp(
+            bossDeathApproachStartPosition.z, finishPose.position.z, smoothT);
+        DirectX::XMFLOAT4 rotation{};
+        DirectX::XMStoreFloat4(&rotation, DirectX::XMQuaternionNormalize(
+            DirectX::XMQuaternionSlerp(
+                DirectX::XMLoadFloat4(&bossDeathApproachStartRotation),
+                DirectX::XMLoadFloat4(&finishPose.rotation), smoothT)));
+
+        player->SetPosition(position);
+        player->SetQuaternionRotation(rotation);
+        player->UpdateAllComponentTransforms();
+
+        if (t >= 1.0f)
+        {
+            player->SetPosition(finishPose.position);
+            player->SetQuaternionRotation(finishPose.rotation);
+            player->UpdateAllComponentTransforms();
+            CutToBossDeathShot(BossDeathFinish);
+            player->PlayBodyAnimation("Recall_0", false, true, 0.15f, true);
+            if (const auto controller = player->GetBodyAnimationController();
+                !controller || !controller->SetPlaybackRange(
+                    0.0f, bossDeathRecallPromptMinTime))
+            {
+                Logger::Error(Logger::LogCategory::System,
+                    "Failed to set Recall_0 playback range for boss death preview");
+            }
+            bossDeathPhase = BossDeathPhase::RecallLeadIn;
+            bossDeathPhaseElapsed = 0.0f;
+        }
         break;
+    }
+
+    case BossDeathPhase::RecallLeadIn:
+    {
+        const auto controller = player
+            ? player->GetBodyAnimationController()
+            : nullptr;
+        if (controller &&
+            controller->GetCurrentAnimationName() == "Recall_0" &&
+            !controller->IsPlayAnimation())
+        {
+            // Recall's runtime ShowTrail state starts at 0.24 sec but its end at
+            // 1.4 sec is intentionally never reached. Clear only transient
+            // battle presentation before pose-only sampling begins.
+            player->ClearTransientBattleActions();
+            bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
+            bossDeathRecallPromptDirection = 1.0f;
+            if (controller->HoldAnimationPose(
+                "Recall_0", bossDeathRecallPromptTime))
+            {
+                bossDeathPhase = BossDeathPhase::RecallPingPong;
+                bossDeathPhaseElapsed = 0.0f;
+            }
+        }
+        break;
+    }
+
+    case BossDeathPhase::RecallPingPong:
+    {
+        bossDeathRecallPromptTime +=
+            bossDeathRecallPromptDirection *
+            bossDeathRecallPromptPlaybackRate * deltaTime;
+
+        // Reflect overshoot at both endpoints. The loop also handles a large
+        // debug-frame delta crossing the very short range more than once.
+        while (bossDeathRecallPromptTime > bossDeathRecallPromptMaxTime ||
+            bossDeathRecallPromptTime < bossDeathRecallPromptMinTime)
+        {
+            if (bossDeathRecallPromptTime > bossDeathRecallPromptMaxTime)
+            {
+                bossDeathRecallPromptTime =
+                    bossDeathRecallPromptMaxTime -
+                    (bossDeathRecallPromptTime - bossDeathRecallPromptMaxTime);
+                bossDeathRecallPromptDirection = -1.0f;
+            }
+            else
+            {
+                bossDeathRecallPromptTime =
+                    bossDeathRecallPromptMinTime +
+                    (bossDeathRecallPromptMinTime - bossDeathRecallPromptTime);
+                bossDeathRecallPromptDirection = 1.0f;
+            }
+        }
+
+        if (const auto controller = player->GetBodyAnimationController())
+        {
+            controller->HoldAnimationPose(
+                "Recall_0", bossDeathRecallPromptTime);
+        }
+        break;
+    }
     }
 }
 
@@ -1656,6 +1775,8 @@ void GameScene::SetUpActors()
 
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
     gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
+    // Only this scene's boss-death flow owns the death animation sequence.
+    gruxEnemyActor->SetCinematicDeathAnimationOwnedExternally(true);
 
     Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     darkCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkCameraActor>("darkCameraActor", darkCameraTr);
@@ -1769,24 +1890,48 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Separator();
     if (ImGui::TreeNode("Boss Death Cinematic Preview"))
     {
-        static constexpr std::array<const char*, 8> phaseNames = {
-            "Reaction", "FadeOut", "SetupCinematic", "FadeIn",
-            "Shot0", "Shot1", "BlendToShot2", "Shot2Preview"
+        static constexpr std::array<const char*, 9> phaseNames = {
+            "FadeOut", "SetupCinematic", "FadeInScream",
+            "DeathScream", "DeathFall", "DeathLanding",
+            "PlayerApproach", "RecallLeadIn", "RecallPingPong"
         };
         ImGui::Text("Presets Loaded: %s", bossDeathShotsLoaded ? "Yes" : "No");
         ImGui::Text("Phase: %s", phaseNames[static_cast<size_t>(bossDeathPhase)]);
         ImGui::Text("Phase Elapsed: %.3f", bossDeathPhaseElapsed);
-        ImGui::Checkbox("Use Shot0", &bossDeathUseShot0);
-        ImGui::DragFloat(U8("死亡スロー倍率"), &bossDeathSlowScale, 0.01f, 0.01f, 1.0f);
-        ImGui::DragFloat(U8("プレイヤー方向へ向く時間"), &bossDeathFacePlayerDuration, 0.01f, 0.0f, 1.0f);
-        ImGui::DragFloat(U8("死亡ポーズ基準時刻"), &bossDeathPoseTime, 0.001f, 0.0f, 10.0f);
-        ImGui::DragFloat(U8("着地後余韻時間"), &bossDeathLandingHoldDuration, 0.01f, 0.0f, 5.0f);
         ImGui::DragFloat(U8("暗転時間"), &bossDeathFadeOutDuration, 0.01f, 0.01f, 5.0f);
         ImGui::DragFloat(U8("暗転解除時間"), &bossDeathFadeInDuration, 0.01f, 0.01f, 5.0f);
-        ImGui::DragFloat("Shot0 Hold Duration", &bossDeathShot0HoldDuration, 0.01f, 0.0f, 10.0f);
-        ImGui::DragFloat("Shot1 Hold Duration", &bossDeathShot1HoldDuration, 0.01f, 0.0f, 10.0f);
-        ImGui::DragFloat("Shot1 To Shot2 Blend Duration",
-            &bossDeathShot1To2BlendDuration, 0.01f, 0.0f, 10.0f);
+
+        ImGui::SeparatorText("Scream");
+        ImGui::DragFloat("Ultimate Roar Start Time",
+            &bossDeathRoarStartTime, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat("Ultimate Roar End Time",
+            &bossDeathRoarEndTime, 0.001f, 0.0f, 10.0f);
+
+        ImGui::SeparatorText("Fall / Landing");
+        ImGui::DragFloat("Fall To Landing Blend Duration",
+            &bossDeathFallToLandingBlendDuration, 0.01f, 0.0f, 10.0f);
+        ImGui::DragFloat("Death_B Start Time",
+            &bossDeathDeathBStartTime, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat("Death_B End Time",
+            &bossDeathDeathBEndTime, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat3("Death_B Boss Position Offset",
+            &bossDeathDeathBPositionOffset.x, 0.01f);
+
+        ImGui::SeparatorText("Player Approach");
+        ImGui::DragFloat3("Player Approach Start Position",
+            &bossDeathApproachStartPosition.x, 0.01f);
+        ImGui::DragFloat("Player Approach Duration",
+            &bossDeathPlayerApproachDuration, 0.01f, 0.0f, 10.0f);
+
+        ImGui::SeparatorText("Finish");
+        ImGui::DragFloat("Recall Prompt Min Time",
+            &bossDeathRecallPromptMinTime, 0.001f, 0.0f, RecallFirstSeTime);
+        ImGui::DragFloat("Recall Prompt Max Time",
+            &bossDeathRecallPromptMaxTime, 0.001f, 0.0f, RecallFirstSeTime);
+        ImGui::DragFloat("Recall Prompt Playback Rate",
+            &bossDeathRecallPromptPlaybackRate, 0.01f, 0.0f, 3.0f);
+        ClampBossDeathPreviewTuning();
+        ImGui::Text("Recall Prompt Time: %.3f", bossDeathRecallPromptTime);
         ImGui::TreePop();
     }
     ImGui::Separator();

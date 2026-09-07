@@ -150,6 +150,14 @@ public:
     float GetChargeWindupEndTime() const { return chargeWindupEndTime; }
     float GetStunDuration() const { return stunDuration; }
     bool IsDead() const { return hp <= 0; }
+    void SetCinematicDeathAnimationOwnedExternally(const bool owned)
+    {
+        cinematicDeathAnimationOwnedExternally = owned;
+    }
+    bool IsCinematicDeathAnimationOwnedExternally() const
+    {
+        return cinematicDeathAnimationOwnedExternally;
+    }
     bool ConsumeBeginHuskParticleRequest()
     {
         const bool requested = beginHuskParticleRequest;
@@ -768,6 +776,7 @@ private:
     std::string stunPhaseDebug = "None";
     float stunElapsedDebug = 0.0f;
     std::string deathAnimationName = "Death_A_0";
+    bool cinematicDeathAnimationOwnedExternally = false;
 
     // Recovery‚Ö‚Ì‘JˆÚŒ³‚ªˆê“x‚¾‚¯ã‘‚«‚Å‚«‚éDurationB
     float chargePlayerHitRecoveryDuration = 0.8f;   // •ÇDashUŒ‚‚ÌPlayer‚É“–‚½‚Á‚½Žž‚ÌrecoveryŽžŠÔ

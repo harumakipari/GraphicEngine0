@@ -156,6 +156,10 @@ public:
     // Stops residual attacks when the battle has ended without restoring HP.
     void StopBattleActions();
 
+    // Clears temporary combat visuals/actions without changing HP, transform,
+    // or the current player state.
+    void ClearTransientBattleActions();
+
     // Enters the terminal, animation-playing state used after the boss is defeated.
     void EnterWinState();
     bool IsInWinState() const;
@@ -183,8 +187,6 @@ public:
     void SetLocomotionMode(LocomotionMode mode);
 
 private:
-    void ClearTransientBattleActions();
-
     bool RebuildEyeClosePoseOverride();
     void ResetEyeCloseOverride();
 
