@@ -1357,6 +1357,9 @@
     <None Include="Shader\WiredShapeRenderer.hlsli">
       <Filter>Shader</Filter>
     </None>
+    <None Include="Shader\HuskParticleConstants.hlsli">
+      <Filter>Shader</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="External">

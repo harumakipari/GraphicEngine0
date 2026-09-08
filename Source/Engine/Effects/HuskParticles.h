@@ -46,14 +46,30 @@ struct husk_particles
         float lifetime_max_multiplier{ 1.15f };
         float display_ratio{ 0.75f };
         float debug_normalized_x{}; // Debug display only; reuses b12 padding.
+        float boundary_width{ 0.01f };
+        float boundary_emissive_strength{ 4.0f };
+        float detach_glow_duration{ 0.2f };
+        float detach_glow_strength{ 0.2f };
+        DirectX::XMFLOAT3 body_color_multiplier{ 1.0f, 1.0f, 1.0f };
+        float body_brightness{ 1.0f };
+        float use_scene_color_capture{ 1.0f };
+        float scene_color_depth_threshold{ 0.000001f }; // Device depth [0, 1].
+        float scene_color_capture_ready{}; // Set only for the capture upload.
+        float capture_padding{};
     };
     static_assert(sizeof(particle) == 64, "Husk particle GPU stride must stay unchanged");
     static_assert(offsetof(particle, normalizedX) == 60, "Husk normalizedX layout");
-    static_assert(sizeof(particle_constants) == 80, "Husk b12 must occupy five registers");
+    static_assert(sizeof(particle_constants) == 128, "Husk b12 must occupy eight registers");
     static_assert(offsetof(particle_constants, world_x_min) == 16, "Husk b12 X range layout");
     static_assert(offsetof(particle_constants, death_progress) == 24, "Husk b12 progress layout");
     static_assert(offsetof(particle_constants, display_ratio) == 72, "Husk b12 display layout");
     static_assert(offsetof(particle_constants, debug_normalized_x) == 76, "Husk b12 debug layout");
+    static_assert(offsetof(particle_constants, boundary_width) == 80, "Husk b12 glow layout");
+    static_assert(offsetof(particle_constants, detach_glow_strength) == 92, "Husk b12 glow end layout");
+    static_assert(offsetof(particle_constants, body_color_multiplier) == 96, "Husk b12 body color layout");
+    static_assert(offsetof(particle_constants, body_brightness) == 108, "Husk b12 body brightness layout");
+    static_assert(offsetof(particle_constants, use_scene_color_capture) == 112, "Husk b12 capture layout");
+    static_assert(offsetof(particle_constants, scene_color_capture_ready) == 120, "Husk b12 capture ready layout");
 #ifdef _DEBUG
     // CPU-only diagnostics. Never uploaded to a shader constant/particle buffer.
     struct capture_x_measurement
@@ -99,5 +115,5 @@ struct husk_particles
     void restore_particles(ID3D11DeviceContext* immediate_context);
 
     Microsoft::WRL::ComPtr<ID3D11PixelShader> accumulate_husk_particles_ps;
-    void accumulate_husk_particles(ID3D11DeviceContext* immediate_context, std::function<void(ID3D11PixelShader*)> drawcallback);
+    void accumulate_husk_particles(ID3D11DeviceContext* immediate_context, std::function<void(ID3D11PixelShader*)> drawcallback, ID3D11ShaderResourceView* sceneColor, ID3D11ShaderResourceView* sceneDepth);
 };

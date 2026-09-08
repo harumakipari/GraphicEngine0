@@ -3,16 +3,16 @@
     "animationName": "Hit_Combat_Death",
     "events": [
         {
+            "parameter": "DeathCameraStart",
+            "time": 1.78402841091156,
+            "type": "GameplayEvent",
+            "value": 0.0
+        },
+        {
             "parameter": "player_damage_voice",
             "time": 0.41308024525642395,
             "type": "PlaySE",
             "value": 0.17000000178813934
-        },
-        {
-            "parameter": "DeathCameraStart",
-            "time": 0.13965173065662384,
-            "type": "GameplayEvent",
-            "value": 0.0
         },
         {
             "parameter": "player_death",

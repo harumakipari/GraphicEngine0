@@ -703,6 +703,47 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         };
         // メインフレームバッファとブルームエフェクトを組み合わせて描画
         fullscreenQuad->Blit(immediateContext, shaderResourceViews, 0, _countof(shaderResourceViews), deferredPs.Get());
+
+        // Capture the current boss pose before forward transparency, using lit HDR.
+        if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>();
+            grux && (gruxHuskCaptureRequested || gruxHuskPreviewCaptureRequested) &&
+            !gruxHuskCaptured)
+        {
+            RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF, 0);
+            RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
+            RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
+
+            const auto gruxMesh = grux->GetSkeletalMeshComponent();
+            if (gruxMesh && gruxMesh->model)
+            {
+                huskParticles->particle_data.death_progress = 0.0f;
+                auto world = gruxMesh->GetComponentWorldTransform().ToWorldTransform();
+                huskParticles->accumulate_husk_particles(immediateContext, [&](ID3D11PixelShader* accumulate_husk_particles_ps)
+                    {
+                        PipeLineStateDesc pipeline;
+                        pipeline.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
+                        pipeline.pixelShader = accumulate_husk_particles_ps;
+                        gruxMesh->model->Render(immediateContext, world,
+                            gruxMesh->GetNodes(), InterleavedGltfModel::RenderPass::All, pipeline);
+                    }, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->depthStencilShaderResourceView);
+                gruxHuskCaptured = true;
+                gruxHuskCaptureRequested = false;
+                gruxHuskPreviewCaptureRequested = false;
+                gruxHuskPlaybackActive = true;
+                gruxHuskDeathProgress = 0.0f;
+                gruxMesh->SetIsVisible(false);
+                huskParticles->backup_particles(immediateContext);
+#ifdef _DEBUG
+                huskCapturedWorldXMin = huskParticles->particle_data.world_x_min;
+                huskCapturedWorldXMax = huskParticles->particle_data.world_x_max;
+#endif
+                gruxHuskBackupValid = true;
+                Logger::Log("[HuskParticle] Grux captured particle_count=" +
+                    std::to_string(huskParticles->particle_data.particle_count));
+            }
+        }
+
+
         frameBuffer->Deactivate(immediateContext);
         //multipleRenderTargets->Deactivate(immediateContext);
     }
@@ -779,44 +820,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 
         // HuskParticle
 #if 1
-        if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>();
-            grux && (gruxHuskCaptureRequested || gruxHuskPreviewCaptureRequested) &&
-            !gruxHuskCaptured)
-        {
-            RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF, 0);
-            RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
-            RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-
-            const auto gruxMesh = grux->GetSkeletalMeshComponent();
-            if (gruxMesh && gruxMesh->model)
-            {
-                huskParticles->particle_data.death_progress = 0.0f;
-                auto world = gruxMesh->GetComponentWorldTransform().ToWorldTransform();
-                huskParticles->accumulate_husk_particles(immediateContext, [&](ID3D11PixelShader* accumulate_husk_particles_ps)
-                    {
-                        PipeLineStateDesc pipeline;
-                        pipeline.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
-                        pipeline.pixelShader = accumulate_husk_particles_ps;
-                        gruxMesh->model->Render(immediateContext, world,
-                            gruxMesh->GetNodes(), InterleavedGltfModel::RenderPass::All, pipeline);
-                    });
-                gruxHuskCaptured = true;
-                gruxHuskCaptureRequested = false;
-                gruxHuskPreviewCaptureRequested = false;
-                gruxHuskPlaybackActive = true;
-                gruxHuskDeathProgress = 0.0f;
-                gruxMesh->SetIsVisible(false);
-                huskParticles->backup_particles(immediateContext);
-#ifdef _DEBUG
-                huskCapturedWorldXMin = huskParticles->particle_data.world_x_min;
-                huskCapturedWorldXMax = huskParticles->particle_data.world_x_max;
-#endif
-                gruxHuskBackupValid = true;
-                Logger::Log("[HuskParticle] Grux captured particle_count=" +
-                    std::to_string(huskParticles->particle_data.particle_count));
-            }
-        }
-
         RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON, 0);
         RenderState::BindBlendState(immediateContext, BLEND_STATE::ALPHA);
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
@@ -1219,6 +1222,24 @@ void SceneBase::DrawSceneSettingsTab()
         ImGui::DragFloat("Husk Dissolve Duration", &huskDissolveDuration, 0.01f, 0.001f, 60.0f, "%.3f sec");
         huskDissolveDuration = (std::max)(huskDissolveDuration, 0.001f);
         ImGui::TextUnformatted("World X changes require Capture & Play; Replay keeps the captured range.");
+        bool useSceneColorCapture = huskParticles->particle_data.use_scene_color_capture > 0.5f;
+        if (ImGui::Checkbox("Husk Use Scene Color Capture", &useSceneColorCapture))
+            huskParticles->particle_data.use_scene_color_capture = useSceneColorCapture ? 1.0f : 0.0f;
+        ImGui::DragFloat("Husk Scene Color Depth Threshold",
+            &huskParticles->particle_data.scene_color_depth_threshold, 0.0000001f, 0.0f, 0.001f, "%.7f");
+        huskParticles->particle_data.scene_color_depth_threshold =
+            (std::max)(huskParticles->particle_data.scene_color_depth_threshold, 0.0f);
+        ImGui::TextUnformatted("Scene color / depth threshold changes require Capture & Play (not Replay).");
+        ImGui::DragFloat("Husk Body Color R", &huskParticles->particle_data.body_color_multiplier.x, 0.01f, 0.0f, 4.0f, "%.3f");
+        ImGui::DragFloat("Husk Body Color G", &huskParticles->particle_data.body_color_multiplier.y, 0.01f, 0.0f, 4.0f, "%.3f");
+        ImGui::DragFloat("Husk Body Color B", &huskParticles->particle_data.body_color_multiplier.z, 0.01f, 0.0f, 4.0f, "%.3f");
+        ImGui::DragFloat("Husk Body Brightness", &huskParticles->particle_data.body_brightness, 0.01f, 0.0f, 4.0f, "%.3f");
+        ImGui::TextUnformatted("Body: state 0 only; 1.0 = unchanged. Glow and alpha are independent.");
+        ImGui::DragFloat("Husk Boundary Width", &huskParticles->particle_data.boundary_width, 0.001f, 0.0f, 1.0f, "%.3f");
+        ImGui::DragFloat("Husk Boundary Emissive Strength", &huskParticles->particle_data.boundary_emissive_strength, 0.1f, 0.0f, 20.0f);
+        ImGui::DragFloat("Husk Detach Glow Duration", &huskParticles->particle_data.detach_glow_duration, 0.01f, 0.0f, 2.0f, "%.3f sec");
+        ImGui::DragFloat("Husk Detach Glow Strength", &huskParticles->particle_data.detach_glow_strength, 0.1f, 0.0f, 20.0f);
+        ImGui::TextUnformatted("Glow: live rendering only; Normalized X debug colors override glow.");
 #ifdef _DEBUG
         bool debugNormalizedX = huskParticles->particle_data.debug_normalized_x > 0.5f;
         if (ImGui::Checkbox("Husk Debug Normalized X", &debugNormalizedX))

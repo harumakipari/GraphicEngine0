@@ -142,7 +142,7 @@ void husk_particles::restore_particles(ID3D11DeviceContext* immediate_context)
     immediate_context->CopyResource(particle_buffer.Get(), particle_backup_buffer.Get());
 }
 
-void husk_particles::accumulate_husk_particles(ID3D11DeviceContext* immediate_context, std::function<void(ID3D11PixelShader*)> drawcallback)
+void husk_particles::accumulate_husk_particles(ID3D11DeviceContext* immediate_context, std::function<void(ID3D11PixelShader*)> drawcallback, ID3D11ShaderResourceView* sceneColor, ID3D11ShaderResourceView* sceneDepth)
 {
     HRESULT hr{ S_OK };
 
@@ -177,10 +177,18 @@ void husk_particles::accumulate_husk_particles(ID3D11DeviceContext* immediate_co
         1, 1, particle_append_buffer_uav.GetAddressOf(), &initial_count
     );
 
+    // RTV/DSV are detached above. Material textures occupy t0-t5; IBL uses t32-t35.
+    ID3D11ShaderResourceView* captureViews[] = { sceneColor, sceneDepth };
+    immediate_context->PSSetShaderResources(24, 2, captureViews);
     // Capture must see current b12 even before the first integrate/render.
     particleCBuffer->data = particle_data;
+    particleCBuffer->data.scene_color_capture_ready = sceneColor && sceneDepth ? 1.0f : 0.0f;
     particleCBuffer->Activate(immediate_context, 12);
     drawcallback(accumulate_husk_particles_ps.Get());
+
+    // Unbind both reads before restoring the color RTV and scene DSV.
+    ID3D11ShaderResourceView* nullCaptureViews[2] = {};
+    immediate_context->PSSetShaderResources(24, 2, nullCaptureViews);
 
     immediate_context->OMSetRenderTargetsAndUnorderedAccessViews(
         1, cached_render_target_view.GetAddressOf(), cached_depth_stencil_view.Get(),

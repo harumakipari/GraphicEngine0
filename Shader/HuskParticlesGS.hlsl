@@ -44,6 +44,30 @@ void main(point VS_OUT input[1] : SV_POSITION, inout TriangleStream<GS_OUT> outp
         return;
     }
 
+    // Highlight the attached surface only; detached particles use their own age glow.
+    // normalizedX is the captured scalar, never recomputed from a moving position.
+    const float boundaryDistance = abs(p.normalizedX - death_progress);
+    const float boundaryMask = p.state == 0 && boundary_width > 0.0f
+        ? 1.0f - smoothstep(0.0f, max(boundary_width, 0.0001f), boundaryDistance)
+        : 0.0f;
+    // Duration includes the hold and fade: default 0-.15s hold, .15-.25s fade.
+    const float glowDuration = max(detach_glow_duration, 0.0001f);
+    const float detachMask = p.state == 1 && detach_glow_duration > 0.0f
+        ? 1.0f - smoothstep(glowDuration * 0.6f, glowDuration, p.age)
+        : 0.0f;
+    const float3 boundaryColor = float3(0.65f, 0.85f, 1.0f);
+    const float3 detachColor = float3(0.12f, 0.45f, 1.0f);
+    const float3 glow = boundaryColor * boundaryMask * max(boundary_emissive_strength, 0.0f)
+        + detachColor * detachMask * max(detach_glow_strength, 0.0f);
+
+    // Render-only correction of the attached body. Keep captured color and glow intact.
+    float3 bodyColor = p.color.rgb;
+    if (p.state == 0)
+    {
+        bodyColor *= max(body_color_multiplier, float3(0.0f, 0.0f, 0.0f))
+            * max(body_brightness, 0.0f);
+    }
+
     float3 Z = normalize(p.normal);
     float3 X = normalize(cross(Z, float3(0, 1, 0)));
     float3 Y = normalize(cross(Z, X));
@@ -71,7 +95,7 @@ void main(point VS_OUT input[1] : SV_POSITION, inout TriangleStream<GS_OUT> outp
             ? lerp(float3(1, 0, 0), float3(0, 1, 0), normalizedX * 2.0f)
             : lerp(float3(0, 1, 0), float3(0, 0, 1), (normalizedX - 0.5f) * 2.0f);
         element.color = float4(
-            debug_normalized_x > 0.5f ? debugColor : p.color.rgb, p.color.a * fade);
+            debug_normalized_x > 0.5f ? debugColor : bodyColor + glow, p.color.a * fade);
         element.texcoord = texcoords[vertex_index];
         output.Append(element);
     }

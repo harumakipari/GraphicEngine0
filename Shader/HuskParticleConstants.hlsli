@@ -24,6 +24,16 @@ cbuffer PARTICLE_CONSTANTS : register(b12)
     float lifetime_max_multiplier;
     float display_ratio;
     float debug_normalized_x;
+    float boundary_width;
+    float boundary_emissive_strength;
+    float detach_glow_duration;
+    float detach_glow_strength;
+    float3 body_color_multiplier;
+    float body_brightness;
+    float use_scene_color_capture;
+    float scene_color_depth_threshold;
+    float scene_color_capture_ready;
+    float capture_padding;
 };
 
 #endif

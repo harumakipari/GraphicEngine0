@@ -28,6 +28,8 @@ struct PARTICLE
 
 #include "HuskParticleConstants.hlsli"
 AppendStructuredBuffer<PARTICLE> particleBuffer : register(u1);
+Texture2D<float4> huskSceneColor : register(t24);
+Texture2D<float> huskSceneDepth : register(t25);
 
 void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 {
@@ -192,6 +194,31 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 #endif
     float3 Lo = totalDiffuse + totalSpecular + emissive /* + rim*/;
 
+    // Match only the visible surface at this exact pixel, before post effects.
+    // Keep the existing lighting for occluded surfaces or unavailable resources.
+    if (use_scene_color_capture > 0.5f && scene_color_capture_ready > 0.5f
+        && all(isfinite(pin.position.xyz))
+        && pin.position.z >= 0.0f && pin.position.z <= 1.0f)
+    {
+        uint colorWidth, colorHeight, depthWidth, depthHeight;
+        huskSceneColor.GetDimensions(colorWidth, colorHeight);
+        huskSceneDepth.GetDimensions(depthWidth, depthHeight);
+        // Capture viewport is the full, origin-zero HDR framebuffer viewport.
+        if (colorWidth == depthWidth && colorHeight == depthHeight
+            && all(pin.position.xy >= 0.0f)
+            && pin.position.x < (float)colorWidth && pin.position.y < (float)colorHeight)
+        {
+            const int2 pixel = int2(pin.position.xy);
+            const float sceneDepth = huskSceneDepth.Load(int3(pixel, 0));
+            if (isfinite(sceneDepth) && sceneDepth >= 0.0f && sceneDepth < 1.0f
+                && abs(pin.position.z - sceneDepth) <= max(scene_color_depth_threshold, 0.0f))
+            {
+                const float3 sceneRGB = huskSceneColor.Load(int3(pixel, 0)).rgb;
+                if (all(isfinite(sceneRGB)))
+                    Lo = sceneRGB;
+            }
+        }
+    }
     float4 color = float4(Lo, baseColorFactor.a);
     
     PARTICLE p;
