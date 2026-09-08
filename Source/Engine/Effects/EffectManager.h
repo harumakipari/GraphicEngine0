@@ -1,6 +1,9 @@
 #pragma once
 
 #include <memory>
+#include <atomic>
+#include <cstdint>
+#include <mutex>
 #include <string>
 
 #include "Engine/Effects/CoreComputeParticleSystem.h"
@@ -126,8 +129,18 @@ struct FloatCurve
 typedef int EffectHandle;
 
 
+using EffectPlaybackId = std::uint64_t;
+inline constexpr EffectPlaybackId InvalidEffectPlaybackId = 0;
+
+struct EffectPlaybackState
+{
+    EffectPlaybackId id = InvalidEffectPlaybackId;
+    std::atomic<bool> stopped{ false };
+};
+
 struct EffectAttachInfo
 {
+    std::shared_ptr<EffectPlaybackState> playback;
     EffectHandle handle;
     std::weak_ptr<SceneComponent> target;
 
@@ -169,13 +182,17 @@ public:
     static void SaveEffectDataWithDialog(EffectHandle handle);
 
     // エフェクト再生
-    static void Play(EffectHandle handle, const DirectX::XMFLOAT3& position = {}, const DirectX::XMFLOAT3& rotationEulerDegree = {});
+    static EffectPlaybackId Play(EffectHandle handle, const DirectX::XMFLOAT3& position = {}, const DirectX::XMFLOAT3& rotationEulerDegree = {});
 
     // エフェクト再生（コンポーネントにアタッチ）
-    static void PlayAttached(EffectHandle handle, const std::shared_ptr<SceneComponent>& target, bool followPosition = true, bool followRotation = true);
+    static EffectPlaybackId PlayAttached(EffectHandle handle, const std::shared_ptr<SceneComponent>& target, bool followPosition = true, bool followRotation = true);
 
     // 全エフェクト停止
     static void StopAll();
+
+    // Stops this playback only, including queued and attached emitters.
+    static void Stop(EffectPlaybackId id);
+    static bool IsPlaying(EffectPlaybackId id);
 
     // エフェクトデータコピー
     static EffectHandle CopyEffectData(EffectHandle srcHandle);
@@ -341,6 +358,7 @@ public:
 
     struct ActiveEmitter
     {
+        std::shared_ptr<EffectPlaybackState> playback;
         EffectHandle handle;
         const ParticleEmitterData* data;
 
@@ -359,7 +377,31 @@ public:
 
     static inline std::vector<EffectAttachInfo> attachedEffects; // エフェクトデータリスト
 
+    // Only Update's thread may access these live emitter containers.
     static inline std::vector<ActiveEmitter> activeEmitters;
+private:
+    struct PendingPlayback
+    {
+        EffectHandle handle = -1;
+        XMFLOAT3 position{};
+        XMFLOAT3 rotation{};
+        std::shared_ptr<EffectPlaybackState> playback;
+        bool attached = false;
+        std::weak_ptr<SceneComponent> target;
+        bool followPosition = true;
+        bool followRotation = true;
+    };
+
+    static EffectPlaybackId QueuePlayback(PendingPlayback request);
+    static void ConsumePendingPlaybacks();
+    static void StartEmitters(EffectHandle handle, const XMFLOAT3& position,
+        const XMFLOAT3& rotation, const std::shared_ptr<EffectPlaybackState>& playback);
+
+    // The mutex protects only requests and ID lookup, never GPU work.
+    static inline std::mutex playbackMutex;
+    static inline EffectPlaybackId nextPlaybackId = 1;
+    static inline std::vector<PendingPlayback> pendingPlaybacks;
+    static inline std::unordered_map<EffectPlaybackId, std::weak_ptr<EffectPlaybackState>> playbacks;
 private:
     friend class EffectEditor;
     //エディタが開いているか

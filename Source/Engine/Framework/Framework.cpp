@@ -169,13 +169,20 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
 
     //// 画面を初期化する（色を指定してレンダーターゲットをクリア）
     // 画面クリア
-    Graphics::Clear(0.2f, 0.2f, 0.2f, 0.0f);
+    if (skipRendering)
+        Graphics::Clear(0.0f, 0.0f, 0.0f, 1.0f);
+    else
+        Graphics::Clear(0.2f, 0.2f, 0.2f, 0.0f);
 
     // レンダーターゲット設定
     Graphics::SetRenderTargets();
 
+    // A newly started scene has no rendered viewport texture yet.
+    // Present the black clear without drawing the scene or its GUI.
+    if (skipRendering)
+        return;
+
     // SCENE_TRANSITION
-    if (!skipRendering)
     {
         {
             ZoneScopedN("Scene Render");
@@ -183,11 +190,6 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
             Scene::_render(immediateContext, elapsed_time);//
         }
         //gameManager->GenerateOutputAll();
-    }
-    else
-    {
-        back->Render(immediateContext, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-        Logger::Log(U8("backを通った"));
     }
     {
 #ifdef USE_IMGUI

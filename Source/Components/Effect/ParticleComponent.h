@@ -6,7 +6,8 @@ class ParticleComponent : public SceneComponent
 {
 public:
     ParticleComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :SceneComponent(name, owner) {}
-    ~ParticleComponent() override = default;
+    ~ParticleComponent() override;
+    void OnUnregister() override;
 public:
     struct LineData
     {
@@ -63,6 +64,8 @@ public:
     // デバッグGUI描画
     void DrawImGuiInspector() override;
 private:
+    void TrackPlayback(EffectPlaybackId id);
+    std::vector<EffectPlaybackId> playbackIds;
     EffectHandle effectHandle = -1; 	// エフェクトハンドル
     bool isPlaying = false;				// 再生中フラグ
     AddSettings settings; 				// 追加設定

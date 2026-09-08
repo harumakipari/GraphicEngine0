@@ -295,24 +295,96 @@ void EffectManager::SaveEffectDataWithDialog(EffectHandle handle)
 }
 
 // エフェクト再生
-void EffectManager::Play(EffectHandle handle, const DirectX::XMFLOAT3& pos, const DirectX::XMFLOAT3& rot)
+EffectPlaybackId EffectManager::QueuePlayback(PendingPlayback request)
 {
+    if (request.handle < 0) return InvalidEffectPlaybackId;
+    request.playback = std::make_shared<EffectPlaybackState>();
+    std::lock_guard<std::mutex> lock(playbackMutex);
+    const auto id = nextPlaybackId++;
+    request.playback->id = id;
+    playbacks[id] = request.playback;
+    pendingPlaybacks.push_back(std::move(request));
+    return id;
+}
+
+EffectPlaybackId EffectManager::Play(EffectHandle handle, const XMFLOAT3& pos, const XMFLOAT3& rot)
+{
+    PendingPlayback request;
+    request.handle = handle;
+    request.position = pos;
+    request.rotation = rot;
+    return QueuePlayback(std::move(request));
+}
+
+void EffectManager::Stop(EffectPlaybackId id)
+{
+    if (id == InvalidEffectPlaybackId) return;
+    std::lock_guard<std::mutex> lock(playbackMutex);
+    auto it = playbacks.find(id);
+    if (it == playbacks.end()) return;
+    if (auto playback = it->second.lock())
+        playback->stopped.store(true);
+    playbacks.erase(it);
+}
+
+bool EffectManager::IsPlaying(EffectPlaybackId id)
+{
+    std::lock_guard<std::mutex> lock(playbackMutex);
+    auto it = playbacks.find(id);
+    if (it == playbacks.end()) return false;
+    auto playback = it->second.lock();
+    if (playback && !playback->stopped.load()) return true;
+    playbacks.erase(it);
+    return false;
+}
+
+void EffectManager::ConsumePendingPlaybacks()
+{
+    std::vector<PendingPlayback> requests;
+    {
+        std::lock_guard<std::mutex> lock(playbackMutex);
+        requests.swap(pendingPlaybacks);
+        std::erase_if(playbacks, [](const auto& entry) { return entry.second.expired(); });
+    }
+    for (auto& request : requests)
+    {
+        if (request.playback->stopped.load()) continue;
+        if (request.attached)
+        {
+            if (request.target.expired()) continue;
+            EffectAttachInfo info;
+            info.handle = request.handle;
+            info.playback = request.playback;
+            info.target = request.target;
+            info.followPosition = request.followPosition;
+            info.followRotation = request.followRotation;
+            info.emitInterval = 0.02f;
+            info.lifeTime = 0.5f;
+            attachedEffects.push_back(std::move(info));
+        }
+        else
+        {
+            StartEmitters(request.handle, request.position, request.rotation, request.playback);
+        }
+    }
+}
+
+void EffectManager::StartEmitters(EffectHandle handle, const XMFLOAT3& pos, const XMFLOAT3& rot,
+    const std::shared_ptr<EffectPlaybackState>& playback)
+{
+    if (playback->stopped.load() || handle < 0 || handle >= effectData.size()) return;
     for (auto& emitterData : effectData[handle].emitters)
     {
         ActiveEmitter emitter;
+        emitter.playback = playback;
         emitter.handle = handle;
         emitter.data = &emitterData;
         emitter.lifeTime = emitterData.emitData.emitterLifeTime;
         emitter.loop = emitterData.emitData.loop;
         emitter.position = pos;
         emitter.rotation = rot;
-        emitter.emitAccumulator = 0.0f;
-        emitter.hasBurst = false; // 一回だけBurstするために
-        activeEmitters.push_back(emitter); // エミッタを起動
+        activeEmitters.push_back(std::move(emitter));
     }
-
-    return;
-
 }
 
 void EffectManager::EmitParticle(EffectHandle handle, const XMFLOAT3& pos, const XMFLOAT3& rot)
@@ -442,25 +514,17 @@ void EffectManager::EmitParticle(EffectHandle handle, const XMFLOAT3& pos, const
 
 
 // エフェクト再生（コンポーネントにアタッチ）
-void EffectManager::PlayAttached(EffectHandle handle, const std::shared_ptr<SceneComponent>& target, bool followPosition, bool followRotation)
+EffectPlaybackId EffectManager::PlayAttached(EffectHandle handle,
+    const std::shared_ptr<SceneComponent>& target, bool followPosition, bool followRotation)
 {
-    if (!target) return;
-
-    EffectAttachInfo info;
-    info.handle = handle;
-    info.target = target;
-    info.followPosition = followPosition;
-    info.followRotation = followRotation;
-
-    info.emitInterval = 0.02f;   // ★必須
-    info.emitTimer = 0.0f;
-
-    info.lifeTime = 0.5f;        // ★必須（星が吸い込まれる時間）
-    info.elapsed = 0.0f;
-
-
-
-    attachedEffects.push_back(info);
+    if (!target) return InvalidEffectPlaybackId;
+    PendingPlayback request;
+    request.handle = handle;
+    request.attached = true;
+    request.target = target;
+    request.followPosition = followPosition;
+    request.followRotation = followRotation;
+    return QueuePlayback(std::move(request));
 }
 
 EffectHandle EffectManager::CopyEffectData(EffectHandle srcHandle)
@@ -510,6 +574,7 @@ void EffectManager::Initialize()
 
 void EffectManager::Update(float deltaTime)
 {
+    ConsumePendingPlaybacks();
     bool curveDirty = false;
 
     for (auto& effect : effectData)
@@ -531,6 +596,11 @@ void EffectManager::Update(float deltaTime)
     for (auto it = activeEmitters.begin(); it != activeEmitters.end(); )
     {
         auto& emitter = *it;
+        if (emitter.playback->stopped.load())
+        {
+            it = activeEmitters.erase(it);
+            continue;
+        }
         const auto& data = *emitter.data;
 
         emitter.elapsed += deltaTime;
@@ -538,7 +608,7 @@ void EffectManager::Update(float deltaTime)
         // Burst処理（最初の1回だけ）
         if (data.emitData.isBurst && !emitter.hasBurst)
         {
-            for (int i = 0; i < data.emitData.burstCount; ++i)
+            for (int i = 0; i < data.emitData.burstCount && !emitter.playback->stopped.load(); ++i)
             {
                 EmitParticle(emitter.handle, emitter.position, emitter.rotation);
             }
@@ -556,7 +626,7 @@ void EffectManager::Update(float deltaTime)
             {
                 emitter.emitAccumulator -= emitCount;
 
-                for (int i = 0; i < emitCount; ++i)
+                for (int i = 0; i < emitCount && !emitter.playback->stopped.load(); ++i)
                 {
                     EmitParticle(emitter.handle, emitter.position, emitter.rotation);
                 }
@@ -588,7 +658,7 @@ void EffectManager::Update(float deltaTime)
     {
         auto& attached = *it;
         auto target = attached.target.lock();
-        if (!target)
+        if (!target || attached.playback->stopped.load())
         {
             it = attachedEffects.erase(it);
             continue;
@@ -608,7 +678,7 @@ void EffectManager::Update(float deltaTime)
         // ★ 一定間隔で Emit
         if (attached.emitTimer >= attached.emitInterval)
         {
-            Play(attached.handle, pos, rot);
+            StartEmitters(attached.handle, pos, rot, attached.playback);
             attached.emitTimer = 0.0f;
         }
 

@@ -5,13 +5,32 @@
 
 //REGISTER_COMPONENT(ParticleComponent, "Effects");
 
+ParticleComponent::~ParticleComponent()
+{
+    Stop();
+}
+
+void ParticleComponent::OnUnregister()
+{
+    Stop();
+    SceneComponent::OnUnregister();
+}
+
+void ParticleComponent::TrackPlayback(EffectPlaybackId id)
+{
+    std::erase_if(playbackIds, [](EffectPlaybackId oldId) { return !EffectManager::IsPlaying(oldId); });
+    if (id != InvalidEffectPlaybackId) playbackIds.push_back(id);
+}
+
 void ParticleComponent::Load(const std::string& filePath)
 {
+    Stop();
     effectHandle = EffectManager::LoadEffectData(filePath);
 }
 
 void ParticleComponent::Play()
 {
+    Stop();
     // エフェクト再生
     if (effectHandle != -1)
     {
@@ -34,7 +53,7 @@ void ParticleComponent::Play()
         // 再生開始遅延経過時間リセット
         elapsedDelayTime = 0.0f;
         // ★最初の1発
-        EffectManager::Play(effectHandle, position, rotation);
+        TrackPlayback(EffectManager::Play(effectHandle, position, rotation));
 
     }
 }
@@ -42,14 +61,17 @@ void ParticleComponent::Play()
 // エフェクトをアタッチ先に再生
 void ParticleComponent::PlayAttached()
 {
+    Stop();
     if (effectHandle == -1) return;
 
-    EffectManager::PlayAttached(effectHandle, shared_from_this());
+    TrackPlayback(EffectManager::PlayAttached(effectHandle, shared_from_this()));
     isPlaying = true;
 }
 
 void ParticleComponent::Stop()
 {
+    for (auto id : playbackIds) EffectManager::Stop(id);
+    playbackIds.clear();
     // エフェクト停止
     isPlaying = false;
 }
@@ -99,7 +121,7 @@ void ParticleComponent::Tick(float deltaTime)
         while (emitTimer >= safeInterval)
         {
             emitTimer -= safeInterval;
-            EffectManager::Play(effectHandle, position, rotation);
+            TrackPlayback(EffectManager::Play(effectHandle, position, rotation));
         }
     }
     else
@@ -140,6 +162,7 @@ void ParticleComponent::DrawImGuiInspector()
     if (ImGui::Button("Load Effect"))
     {
         // ダイアログを開いてエフェクトデータを読み込む
+        Stop();
         effectHandle = EffectManager::LoadEffectDataWithDialog();
     }
     ImGui::SameLine();
