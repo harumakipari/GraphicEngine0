@@ -193,6 +193,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Emote_Win", 50);
         controller->AddAnimation("Walk_Fwd_Stop_Fast", 51);
         controller->AddAnimation("Walk_Fwd_Stop", 52);
+        controller->AddAnimation("Jog_Fwd_Stop", 53);
         controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
 
         // ブレンドスペースに追加

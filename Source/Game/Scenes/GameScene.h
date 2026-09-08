@@ -108,6 +108,7 @@ private:
         DeathFall,
         DeathLanding,
         PlayerApproach,
+        PlayerWalkStop,
         RecallLeadIn,
         RecallPingPong,
         FinishTriggered,
@@ -248,6 +249,11 @@ private:
     float bossDeathScreamHoldDirection = 1.0f;
     DirectX::XMFLOAT3 bossDeathFwdPositionOffset{ 0.6f,0.0f,0.0f };
     float bossDeathPlayerApproachDuration = 2.7f;
+    float bossDeathWalkStopStartDistance = 0.35f;
+    DirectX::XMFLOAT3 bossDeathWalkStopStartPosition{};
+    DirectX::XMFLOAT3 bossDeathWalkStopFinishPosition{};
+    DirectX::XMFLOAT4 bossDeathWalkStopStartRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
+    DirectX::XMFLOAT4 bossDeathWalkStopFinishRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
     DirectX::XMFLOAT3 bossDeathApproachStartPosition{ 5.025f,-0.1f,11.723f };
     DirectX::XMFLOAT4 bossDeathApproachStartRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
     DirectX::XMFLOAT3 bossDeathFinishPlayerPositionOffset{ 0.01f,0.0f,0.0f };

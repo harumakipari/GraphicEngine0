@@ -1271,6 +1271,10 @@ void GameScene::EnterBossDead()
     battleFlowState = BattleFlowState::BossDead;
     SetBattleTimerVisible(false);
     SetBattleHudVisible(false);
+    bossDeathWalkStopStartPosition = {};
+    bossDeathWalkStopFinishPosition = {};
+    bossDeathWalkStopStartRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    bossDeathWalkStopFinishRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     bossDeathPhase = BossDeathPhase::FadeOut;
     bossDeathPhaseElapsed = 0.0f;
     bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
@@ -1388,6 +1392,10 @@ void GameScene::ResetBossDeathDebugPreview()
         ApplyBossDeathDof(bossDeathGameplayDof);
     bossDeathGameplayDofCaptured = false;
 
+    bossDeathWalkStopStartPosition = {};
+    bossDeathWalkStopFinishPosition = {};
+    bossDeathWalkStopStartRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    bossDeathWalkStopFinishRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     bossDeathPhase = BossDeathPhase::FadeOut;
     bossDeathPhaseElapsed = 0.0f;
     bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
@@ -1838,6 +1846,8 @@ void GameScene::ClampBossDeathPreviewTuning()
         bossDeathFwdPlaybackRate, 0.1f, 2.0f);
     bossDeathPlayerApproachDuration =
         (std::max)(bossDeathPlayerApproachDuration, 0.0f);
+    bossDeathWalkStopStartDistance = std::isfinite(bossDeathWalkStopStartDistance)
+        ? std::clamp(bossDeathWalkStopStartDistance, 0.0f, 2.0f) : 0.35f;
     bossDeathRecallPromptPlaybackRate =
         (std::max)(bossDeathRecallPromptPlaybackRate, 0.0f);
     bossDeathFwdPromptPlaybackRate =
@@ -2103,13 +2113,22 @@ void GameScene::UpdateBossDeathCinematic()
         const float duration = (std::max)(
             bossDeathPlayerApproachDuration, FLT_EPSILON);
         const float t = std::clamp(bossDeathPhaseElapsed / duration, 0.0f, 1.0f);
-        const float smoothT = t * t * (3.0f - 2.0f * t);
+        float smoothT = t * t * (3.0f - 2.0f * t);
         const auto& finishPose = bossDeathShots[BossDeathFinish].player;
         DirectX::XMFLOAT3 adjustedFinishPosition = finishPose.position;
         adjustedFinishPosition.x += bossDeathFinishPlayerPositionOffset.x;
         adjustedFinishPosition.y += bossDeathFinishPlayerPositionOffset.y;
         adjustedFinishPosition.z += bossDeathFinishPlayerPositionOffset.z;
 
+        const float approachDistance = DirectX::XMVectorGetX(DirectX::XMVector3Length(
+            DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&adjustedFinishPosition),
+                DirectX::XMLoadFloat3(&bossDeathApproachStartPosition))));
+        const float stopStartT = approachDistance > FLT_EPSILON
+            ? 1.0f - (std::min)(bossDeathWalkStopStartDistance / approachDistance, 1.0f)
+            : 0.0f;
+        // Clamp at the threshold even when a long frame crosses it.
+        const bool startStop = smoothT >= stopStartT;
+        smoothT = (std::min)(smoothT, stopStartT);
         DirectX::XMFLOAT3 position{};
         position.x = std::lerp(
             bossDeathApproachStartPosition.x, adjustedFinishPosition.x, smoothT);
@@ -2127,10 +2146,48 @@ void GameScene::UpdateBossDeathCinematic()
         player->SetQuaternionRotation(rotation);
         player->UpdateAllComponentTransforms();
 
-        if (t >= 1.0f)
+        if (startStop)
         {
-            player->SetPosition(adjustedFinishPosition);
-            player->SetQuaternionRotation(finishPose.rotation);
+            bossDeathWalkStopStartPosition = player->GetPosition();
+            bossDeathWalkStopFinishPosition = adjustedFinishPosition;
+            bossDeathWalkStopStartRotation = player->GetQuaternionRotation();
+            bossDeathWalkStopFinishRotation = finishPose.rotation;
+            if (const auto controller = player->GetBodyAnimationController())
+                controller->ResetAnimationRate();
+            // Player root motion is disabled; only this scene moves the actor.
+            player->PlayBodyAnimation("Walk_Fwd_Stop_Fast", false, true, 0.1f, true);
+            bossDeathPhase = BossDeathPhase::PlayerWalkStop;
+            bossDeathPhaseElapsed = 0.0f;
+        }
+        break;
+    }
+
+    case BossDeathPhase::PlayerWalkStop:
+    {
+        UpdateBossDeathPromptLoop(deltaTime);
+        const auto controller = player->GetBodyAnimationController();
+        if (!controller || controller->GetCurrentAnimationName() != "Walk_Fwd_Stop_Fast")
+            break;
+
+        const float duration = (std::max)(controller->GetAnimationLength("Walk_Fwd_Stop_Fast"), FLT_EPSILON);
+        const float t = std::clamp(controller->GetCurrentAnimationTime() / duration, 0.0f, 1.0f);
+        const float easeOut = 1.0f - (1.0f - t) * (1.0f - t);
+        DirectX::XMFLOAT3 position{};
+        DirectX::XMStoreFloat3(&position, DirectX::XMVectorLerp(
+            DirectX::XMLoadFloat3(&bossDeathWalkStopStartPosition),
+            DirectX::XMLoadFloat3(&bossDeathWalkStopFinishPosition), easeOut));
+        DirectX::XMFLOAT4 rotation{};
+        DirectX::XMStoreFloat4(&rotation, DirectX::XMQuaternionNormalize(DirectX::XMQuaternionSlerp(
+            DirectX::XMLoadFloat4(&bossDeathWalkStopStartRotation),
+            DirectX::XMLoadFloat4(&bossDeathWalkStopFinishRotation), easeOut)));
+        player->SetPosition(position);
+        player->SetQuaternionRotation(rotation);
+        player->UpdateAllComponentTransforms();
+
+        if (!controller->IsPlayAnimation())
+        {
+            player->SetPosition(bossDeathWalkStopFinishPosition);
+            player->SetQuaternionRotation(bossDeathWalkStopFinishRotation);
             player->UpdateAllComponentTransforms();
             CutToBossDeathShot(BossDeathFinish);
             player->PlayBodyAnimation("Recall_0", false, true, 0.15f, true);
@@ -2507,10 +2564,10 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Separator();
     if (ImGui::TreeNode("Boss Death Cinematic Preview"))
     {
-        static constexpr std::array<const char*, 12> phaseNames = {
+        static constexpr std::array<const char*, 13> phaseNames = {
             "FadeOut", "SetupCinematic", "FadeInScream",
             "DeathScream", "DeathFall", "DeathLanding",
-            "PlayerApproach", "RecallLeadIn", "RecallPingPong",
+            "PlayerApproach", "PlayerWalkStop", "RecallLeadIn", "RecallPingPong",
             "FinishTriggered", "HuskDelay", "HuskPreview"
         };
         ImGui::Text("Presets Loaded: %s", bossDeathShotsLoaded ? "Yes" : "No");
@@ -2560,6 +2617,9 @@ void GameScene::DrawGuiPlusAlpha()
             &bossDeathApproachStartPosition.x, 0.01f);
         ImGui::DragFloat("Player Approach Duration",
             &bossDeathPlayerApproachDuration, 0.01f, 0.0f, 10.0f);
+
+        ImGui::DragFloat("Boss Death Walk Stop Start Distance",
+            &bossDeathWalkStopStartDistance, 0.01f, 0.0f, 2.0f, "%.2f m");
 
         ImGui::SeparatorText("Finish");
         ImGui::DragFloat3("Finish Player Position Offset",
