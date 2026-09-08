@@ -1231,10 +1231,15 @@ void GameScene::EnterBossDead()
     bossDeathPhaseElapsed = 0.0f;
     bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
     bossDeathRecallPromptDirection = 1.0f;
-    bossDeathDeathBPromptTime = bossDeathDeathBPromptMinTime;
-    bossDeathDeathBPromptDirection = 1.0f;
+    bossDeathFwdPromptTime = bossDeathFwdPromptMinTime;
+    bossDeathFwdPromptDirection = 1.0f;
     bossDeathFinishInputEnabled = false;
     StopBossDeathGroanLoop();
+    if (bossDeathVoiceAudio)
+    {
+        bossDeathVoiceAudio->Stop(false);
+        bossDeathVoiceAudio.reset();
+    }
     SetBossDeathFinishUIVisible(false);
     SetBossDeathFadeAlpha(0.0f);
 
@@ -1268,6 +1273,11 @@ void GameScene::ResetBossDeathDebugPreview()
 
     Time::SetSlow(1.0f, 0.0f);
     StopBossDeathGroanLoop();
+    if (bossDeathVoiceAudio)
+    {
+        bossDeathVoiceAudio->Stop(false);
+        bossDeathVoiceAudio.reset();
+    }
 
     // Release pose-only preview ownership before asking either state machine to
     // start its normal idle animation.
@@ -1331,8 +1341,8 @@ void GameScene::ResetBossDeathDebugPreview()
     bossDeathPhaseElapsed = 0.0f;
     bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
     bossDeathRecallPromptDirection = 1.0f;
-    bossDeathDeathBPromptTime = bossDeathDeathBPromptMinTime;
-    bossDeathDeathBPromptDirection = 1.0f;
+    bossDeathFwdPromptTime = bossDeathFwdPromptMinTime;
+    bossDeathFwdPromptDirection = 1.0f;
     bossDeathApproachStartRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     bossDeathFinishInputEnabled = false;
     SetBossDeathFinishUIVisible(false);
@@ -1632,9 +1642,9 @@ void GameScene::UpdateBossDeathFinishUI()
 void GameScene::StartBossDeathGroanLoop()
 {
     StopBossDeathGroanLoop();
-    bossDeathGroanAudio = std::make_shared<CoreStandaloneAudioSource>(L"./Data/Sound/SE/boss_death_grown.wav");
-    //bossDeathGroanAudio = std::make_shared<CoreStandaloneAudioSource>(L"./Data/Sound/SE/enemy_groan.wav");
-    bossDeathGroanAudio->SetVolume(0.2f);
+    //bossDeathGroanAudio = std::make_shared<CoreStandaloneAudioSource>(L"./Data/Sound/SE/boss_death_grown.wav");
+    bossDeathGroanAudio = std::make_shared<CoreStandaloneAudioSource>(L"./Data/Sound/SE/enemy_groan.wav");
+    bossDeathGroanAudio->SetVolume(0.05f);
     bossDeathGroanAudio->Play(true);
 }
 
@@ -1649,25 +1659,25 @@ void GameScene::StopBossDeathGroanLoop()
 
 void GameScene::UpdateBossDeathPromptLoop(const float deltaTime)
 {
-    bossDeathDeathBPromptTime +=
-        bossDeathDeathBPromptDirection *
-        bossDeathDeathBPromptPlaybackRate * deltaTime;
-    while (bossDeathDeathBPromptTime > bossDeathDeathBPromptMaxTime ||
-        bossDeathDeathBPromptTime < bossDeathDeathBPromptMinTime)
+    bossDeathFwdPromptTime +=
+        bossDeathFwdPromptDirection *
+        bossDeathFwdPromptPlaybackRate * deltaTime;
+    while (bossDeathFwdPromptTime > bossDeathFwdPromptMaxTime ||
+        bossDeathFwdPromptTime < bossDeathFwdPromptMinTime)
     {
-        if (bossDeathDeathBPromptTime > bossDeathDeathBPromptMaxTime)
+        if (bossDeathFwdPromptTime > bossDeathFwdPromptMaxTime)
         {
-            bossDeathDeathBPromptTime =
-                bossDeathDeathBPromptMaxTime -
-                (bossDeathDeathBPromptTime - bossDeathDeathBPromptMaxTime);
-            bossDeathDeathBPromptDirection = -1.0f;
+            bossDeathFwdPromptTime =
+                bossDeathFwdPromptMaxTime -
+                (bossDeathFwdPromptTime - bossDeathFwdPromptMaxTime);
+            bossDeathFwdPromptDirection = -1.0f;
         }
         else
         {
-            bossDeathDeathBPromptTime =
-                bossDeathDeathBPromptMinTime +
-                (bossDeathDeathBPromptMinTime - bossDeathDeathBPromptTime);
-            bossDeathDeathBPromptDirection = 1.0f;
+            bossDeathFwdPromptTime =
+                bossDeathFwdPromptMinTime +
+                (bossDeathFwdPromptMinTime - bossDeathFwdPromptTime);
+            bossDeathFwdPromptDirection = 1.0f;
         }
     }
 
@@ -1675,8 +1685,7 @@ void GameScene::UpdateBossDeathPromptLoop(const float deltaTime)
     {
         if (const auto controller = gruxEnemyActor->GetBodyAnimationController())
         {
-            controller->HoldAnimationPose(
-                "Death_B_0", bossDeathDeathBPromptTime);
+            controller->HoldAnimationPose("Death_B_0", bossDeathFwdPromptTime);
         }
     }
 }
@@ -1757,7 +1766,7 @@ bool GameScene::SetupBossDeathCinematic()
         controller->SetAnimationRate(bossDeathRoarPlaybackRate);
     gruxEnemyActor->PlayBodyAnimation("Ultimate_Roar_0", false, true, 0.1f, true);
     if (!controller || !controller->SetPlaybackRange(
-            bossDeathRoarStartTime, bossDeathRoarEndTime))
+        bossDeathRoarStartTime, bossDeathRoarEndTime))
     {
         Logger::Error(Logger::LogCategory::System,
             "Failed to set Ultimate_Roar_0 playback range for boss death preview");
@@ -1773,14 +1782,14 @@ void GameScene::ClampBossDeathPreviewTuning()
         bossDeathRoarPlaybackRate, 0.1f, 2.0f);
     bossDeathStunPlaybackRate = std::clamp(
         bossDeathStunPlaybackRate, 0.1f, 2.0f);
-    bossDeathDeathBPlaybackRate = std::clamp(
-        bossDeathDeathBPlaybackRate, 0.1f, 2.0f);
+    bossDeathFwdPlaybackRate = std::clamp(
+        bossDeathFwdPlaybackRate, 0.1f, 2.0f);
     bossDeathPlayerApproachDuration =
         (std::max)(bossDeathPlayerApproachDuration, 0.0f);
     bossDeathRecallPromptPlaybackRate =
         (std::max)(bossDeathRecallPromptPlaybackRate, 0.0f);
-    bossDeathDeathBPromptPlaybackRate =
-        (std::max)(bossDeathDeathBPromptPlaybackRate, 0.0f);
+    bossDeathFwdPromptPlaybackRate =
+        (std::max)(bossDeathFwdPromptPlaybackRate, 0.0f);
     bossDeathHuskDelay = (std::max)(bossDeathHuskDelay, 0.0f);
 
     const float recallMaxLimit = RecallFirstSeTime - RecallTimeSafetyMargin;
@@ -1817,13 +1826,13 @@ void GameScene::ClampBossDeathPreviewTuning()
             clampPlaybackRange(
                 bossDeathRoarStartTime, bossDeathRoarEndTime, roarDuration);
 
-            const float deathBDuration = controller->GetAnimationLength("Death_B_0");
+            const float deathFwdDuration = controller->GetAnimationLength("Death_B_0");
             clampPlaybackRange(
-                bossDeathDeathBStartTime, bossDeathDeathBEndTime, deathBDuration);
+                bossDeathFwdStartTime, bossDeathFwdEndTime, deathFwdDuration);
             clampPlaybackRange(
-                bossDeathDeathBPromptMinTime,
-                bossDeathDeathBPromptMaxTime,
-                deathBDuration);
+                bossDeathFwdPromptMinTime,
+                bossDeathFwdPromptMaxTime,
+                deathFwdDuration);
         }
     }
 }
@@ -1910,22 +1919,22 @@ void GameScene::UpdateBossDeathCinematic()
             ApplyBossDeathDof(bossDeathShots[BossDeathLanding].dof);
 
             const auto& landingBossPose = bossDeathShots[BossDeathLanding].boss;
-            DirectX::XMFLOAT3 deathBPosition = landingBossPose.position;
-            deathBPosition.x += bossDeathDeathBPositionOffset.x;
-            deathBPosition.y += bossDeathDeathBPositionOffset.y;
-            deathBPosition.z += bossDeathDeathBPositionOffset.z;
-            gruxEnemyActor->SetPosition(deathBPosition);
+            DirectX::XMFLOAT3 deathFwdPosition = landingBossPose.position;
+            deathFwdPosition.x += bossDeathFwdPositionOffset.x;
+            deathFwdPosition.y += bossDeathFwdPositionOffset.y;
+            deathFwdPosition.z += bossDeathFwdPositionOffset.z;
+            gruxEnemyActor->SetPosition(deathFwdPosition);
             gruxEnemyActor->SetQuaternionRotation(landingBossPose.rotation);
             gruxEnemyActor->UpdateAllComponentTransforms();
 
-            controller->SetAnimationRate(bossDeathDeathBPlaybackRate);
+            controller->SetAnimationRate(bossDeathFwdPlaybackRate);
             gruxEnemyActor->PlayBodyAnimation(
                 "Death_B_0", false, true, 0.1f, true);
             if (!controller->SetPlaybackRange(
-                bossDeathDeathBStartTime, bossDeathDeathBEndTime))
+                bossDeathFwdStartTime, bossDeathFwdEndTime))
             {
                 Logger::Error(Logger::LogCategory::System,
-                    "Failed to set Death_B_0 playback range for boss death preview");
+                    "Failed to set Death_Fwd playback range for boss death preview");
             }
             bossDeathPhase = BossDeathPhase::DeathLanding;
             bossDeathPhaseElapsed = 0.0f;
@@ -1940,13 +1949,12 @@ void GameScene::UpdateBossDeathCinematic()
             : nullptr;
         if (controller &&
             controller->GetCurrentAnimationName() == "Death_B_0" &&
-            controller->GetCurrentAnimationTime() >= bossDeathDeathBEndTime)
+            controller->GetCurrentAnimationTime() >= bossDeathFwdEndTime)
         {
             controller->ResetAnimationRate();
-            bossDeathDeathBPromptTime = bossDeathDeathBPromptMinTime;
-            bossDeathDeathBPromptDirection = 1.0f;
-            if (!controller->HoldAnimationPose(
-                "Death_B_0", bossDeathDeathBPromptTime))
+            bossDeathFwdPromptTime = bossDeathFwdPromptMinTime;
+            bossDeathFwdPromptDirection = 1.0f;
+            if (!controller->HoldAnimationPose("Death_B_0", bossDeathFwdPromptTime))
             {
                 break;
             }
@@ -2081,9 +2089,6 @@ void GameScene::UpdateBossDeathCinematic()
         {
             bossDeathFinishInputEnabled = false;
             SetBossDeathFinishUIVisible(false);
-            StopBossDeathGroanLoop();
-            if (const auto controller = gruxEnemyActor->GetBodyAnimationController())
-                controller->ReleaseHeldAnimationPose();
             if (const auto controller = player->GetBodyAnimationController())
             {
                 const float resumeTime = bossDeathRecallPromptTime;
@@ -2106,6 +2111,7 @@ void GameScene::UpdateBossDeathCinematic()
 
     case BossDeathPhase::FinishTriggered:
     {
+        UpdateBossDeathPromptLoop(deltaTime);
         const auto controller = player
             ? player->GetBodyAnimationController()
             : nullptr;
@@ -2113,8 +2119,16 @@ void GameScene::UpdateBossDeathCinematic()
             controller->GetCurrentAnimationName() == "Recall_0" &&
             controller->GetCurrentAnimationTime() >= bossDeathRecallFinishHitTime)
         {
+            StopBossDeathGroanLoop();
+            if (const auto bossController =
+                gruxEnemyActor->GetBodyAnimationController())
+            {
+                bossController->ReleaseHeldAnimationPose();
+            }
             // ƒ{ƒXŽ€–S’f–––‚
-            CoreAudio::PlayOneShot("./Data/Sound/SE/boss_death_voice.wav", 1.0f);
+            if (bossDeathVoiceAudio)
+                bossDeathVoiceAudio->Stop(false);
+            bossDeathVoiceAudio = CoreAudio::PlayOneShot("./Data/Sound/SE/boss_death_voice1.wav", 1.0f);
             bossDeathPhase = BossDeathPhase::HuskDelay;
             bossDeathPhaseElapsed = 0.0f;
         }
@@ -2388,20 +2402,20 @@ void GameScene::DrawGuiPlusAlpha()
             &bossDeathStunPlaybackRate, 0.01f, 0.1f, 2.0f);
         ImGui::DragFloat("Fall To Landing Blend Duration",
             &bossDeathFallToLandingBlendDuration, 0.01f, 0.0f, 10.0f);
-        ImGui::DragFloat("Death_B Start Time",
-            &bossDeathDeathBStartTime, 0.001f, 0.0f, 10.0f);
-        ImGui::DragFloat("Death_B End Time",
-            &bossDeathDeathBEndTime, 0.001f, 0.0f, 10.0f);
-        ImGui::DragFloat("Death_B Playback Rate",
-            &bossDeathDeathBPlaybackRate, 0.01f, 0.1f, 2.0f);
-        ImGui::DragFloat("Death_B Prompt Min Time",
-            &bossDeathDeathBPromptMinTime, 0.001f, 0.0f, 10.0f);
-        ImGui::DragFloat("Death_B Prompt Max Time",
-            &bossDeathDeathBPromptMaxTime, 0.001f, 0.0f, 10.0f);
-        ImGui::DragFloat("Death_B Prompt Playback Rate",
-            &bossDeathDeathBPromptPlaybackRate, 0.01f, 0.0f, 2.0f);
-        ImGui::DragFloat3("Death_B Boss Position Offset",
-            &bossDeathDeathBPositionOffset.x, 0.01f);
+        ImGui::DragFloat("Death Fwd Start Time",
+            &bossDeathFwdStartTime, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat("Death Fwd End Time",
+            &bossDeathFwdEndTime, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat("Death Fwd Playback Rate",
+            &bossDeathFwdPlaybackRate, 0.01f, 0.1f, 2.0f);
+        ImGui::DragFloat("Death Fwd Prompt Min Time",
+            &bossDeathFwdPromptMinTime, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat("Death Fwd Prompt Max Time",
+            &bossDeathFwdPromptMaxTime, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat("Death Fwd Prompt Playback Rate",
+            &bossDeathFwdPromptPlaybackRate, 0.01f, 0.0f, 2.0f);
+        ImGui::DragFloat3("Death Fwd Boss Position Offset",
+            &bossDeathFwdPositionOffset.x, 0.01f);
 
         ImGui::SeparatorText("Player Approach");
         ImGui::DragFloat3("Player Approach Start Position",

@@ -105,16 +105,13 @@ void ModelDebrisEmitterActor::Emit(const DirectX::XMFLOAT3& impactPosition)
     }
 }
 
-void ModelDebrisEmitterActor::Emit(const DirectX::XMFLOAT3& impactPosition,const DirectX::XMFLOAT3& outwardDirection)
+void ModelDebrisEmitterActor::Emit(const DirectX::XMFLOAT3& impactPosition, const DirectX::XMFLOAT3& outwardDirection)
 {
     // SE‚ðÄ¶‚·‚é
     CoreAudio::PlayOneShot("./Data/Sound/SE/debris.wav");
 
-    DirectX::XMFLOAT3 horizontalDirection{
-        outwardDirection.x, 0.0f, outwardDirection.z };
-    const float directionLength = std::sqrt(
-        horizontalDirection.x * horizontalDirection.x +
-        horizontalDirection.z * horizontalDirection.z);
+    DirectX::XMFLOAT3 horizontalDirection = { outwardDirection.x, 0.0f, outwardDirection.z };
+    const float directionLength = std::sqrt(horizontalDirection.x * horizontalDirection.x + horizontalDirection.z * horizontalDirection.z);
     if (directionLength > FLT_EPSILON)
     {
         horizontalDirection.x /= directionLength;
