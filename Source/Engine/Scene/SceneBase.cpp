@@ -245,6 +245,11 @@ void SceneBase::Update(float deltaTime)
         if (gruxHuskPlaybackActive)
         {
             const float huskDeltaTime = (std::max)(Time::UnscaledDeltaTime(), 0.0f);
+#ifdef _DEBUG
+            if (huskDebugProgressOverride)
+                gruxHuskDeathProgress = std::clamp(huskDebugProgress, 0.0f, 1.0f);
+            else
+#endif
             gruxHuskDeathProgress = std::clamp(
                 gruxHuskDeathProgress + huskDeltaTime / (std::max)(huskDissolveDuration, 0.001f),
                 0.0f, 1.0f);
@@ -802,6 +807,10 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                 gruxHuskDeathProgress = 0.0f;
                 gruxMesh->SetIsVisible(false);
                 huskParticles->backup_particles(immediateContext);
+#ifdef _DEBUG
+                huskCapturedWorldXMin = huskParticles->particle_data.world_x_min;
+                huskCapturedWorldXMax = huskParticles->particle_data.world_x_max;
+#endif
                 gruxHuskBackupValid = true;
                 Logger::Log("[HuskParticle] Grux captured particle_count=" +
                     std::to_string(huskParticles->particle_data.particle_count));
@@ -1210,6 +1219,53 @@ void SceneBase::DrawSceneSettingsTab()
         ImGui::DragFloat("Husk Dissolve Duration", &huskDissolveDuration, 0.01f, 0.001f, 60.0f, "%.3f sec");
         huskDissolveDuration = (std::max)(huskDissolveDuration, 0.001f);
         ImGui::TextUnformatted("World X changes require Capture & Play; Replay keeps the captured range.");
+#ifdef _DEBUG
+        bool debugNormalizedX = huskParticles->particle_data.debug_normalized_x > 0.5f;
+        if (ImGui::Checkbox("Husk Debug Normalized X", &debugNormalizedX))
+            huskParticles->particle_data.debug_normalized_x = debugNormalizedX ? 1.0f : 0.0f;
+        ImGui::TextColored(ImVec4(1, 0, 0, 1), "0.0 = Red");
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0, 1, 0, 1), "0.5 = Green");
+        ImGui::SameLine();
+        ImGui::TextColored(ImVec4(0, 0.4f, 1, 1), "1.0 = Blue");
+        if (gruxHuskBackupValid)
+        {
+            ImGui::Text("Captured World X Min / Max: %.4f / %.4f",
+                huskCapturedWorldXMin, huskCapturedWorldXMax);
+            const float boundaryX = huskCapturedWorldXMin +
+                huskParticles->particle_data.death_progress *
+                (std::max)(huskCapturedWorldXMax - huskCapturedWorldXMin, 0.0001f);
+            ImGui::Text("Threshold World X: %.4f (captured range)", boundaryX);
+        }
+        else
+            ImGui::TextUnformatted("Captured World X Min / Max: No capture");
+        ImGui::TextUnformatted("Actual particle World X extrema: not read back.");
+        ImGui::Text("Husk death_progress: %.4f", huskParticles->particle_data.death_progress);
+
+        bool restartDebugPreview = ImGui::Checkbox(
+            "Husk Debug Progress Override", &huskDebugProgressOverride);
+        if (huskDebugProgressOverride)
+        {
+            restartDebugPreview |= ImGui::SliderFloat(
+                "Husk Debug Progress", &huskDebugProgress, 0.0f, 1.0f, "%.3f");
+            ImGui::TextUnformatted("Slider changes restore the capture; threshold stays fixed.");
+            ImGui::TextUnformatted("Particles still move/fade. Replay retries the same threshold.");
+        }
+        if (restartDebugPreview && gruxHuskBackupValid)
+        {
+            // Particle state is irreversible in the CS. Restore on either slider
+            // direction so a lower threshold never retains already detached particles.
+            huskParticles->restore_particles(Graphics::GetDeviceContext());
+            gruxHuskDeathProgress = huskDebugProgressOverride ? huskDebugProgress : 0.0f;
+            huskParticles->particle_data.death_progress = gruxHuskDeathProgress;
+            gruxHuskPlaybackActive = true;
+            if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
+            {
+                if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)
+                    mesh->SetIsVisible(false);
+            }
+        }
+#endif
         ImGui::SliderFloat("particle_data.size", &huskParticles->particle_data.particle_size, +0.0f, +0.05f, "%.4f");
         ImGui::SliderFloat("particle_data.rise_speed", &huskParticles->particle_data.rise_speed, 0.0f, 2.0f, "%.3f m/s");
         ImGui::SliderFloat("particle_data.max_start_delay", &huskParticles->particle_data.max_start_delay, 0.0f, 1.0f, "%.3f sec");

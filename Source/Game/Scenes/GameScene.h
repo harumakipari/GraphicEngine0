@@ -166,6 +166,7 @@ private:
     void StartBossDeathGroanLoop();
     void StopBossDeathGroanLoop();
     void UpdateBossDeathPromptLoop(float deltaTime);
+    void UpdateBossDeathScreamHold(float deltaTime);
     void UpdateBossDeathCinematic();
     bool SetupBossDeathCinematic();
     void ApplyBossDeathDof(const BossDeathDofState& dof);
@@ -230,6 +231,7 @@ private:
     float bossDeathRoarEndTime = 1.176f;
     float bossDeathRoarPlaybackRate = 0.71f;
     float bossDeathStunPlaybackRate = 0.5f;
+    float bossDeathStunToDeathBlend = 0.25f;
     float bossDeathFallToLandingBlendDuration = 1.0f;
     float bossDeathFwdStartTime = 0.498f;
     float bossDeathFwdEndTime = 2.233f;
@@ -239,6 +241,11 @@ private:
     float bossDeathFwdPromptTime = 1.55f;
     float bossDeathFwdPromptDirection = 1.0f;
     float bossDeathFwdPromptPlaybackRate = 0.10f;
+    float bossDeathScreamHoldMin = 1.474f;
+    float bossDeathScreamHoldMax = 1.588f;
+    float bossDeathScreamHoldRate = 0.30f;
+    float bossDeathScreamHoldTime = 1.50f;
+    float bossDeathScreamHoldDirection = 1.0f;
     DirectX::XMFLOAT3 bossDeathFwdPositionOffset{ 0.6f,0.0f,0.0f };
     float bossDeathPlayerApproachDuration = 2.7f;
     DirectX::XMFLOAT3 bossDeathApproachStartPosition{ 5.025f,-0.1f,11.723f };
@@ -255,7 +262,7 @@ private:
     float bossDeathFinishHoldPlaybackRate = 0.07f;
     float bossDeathFinishHoldTime = 1.58f;
     float bossDeathFinishHoldDirection = 1.0f;
-    float bossDeathRecallFinishHitTime = 2.240f;
+    float bossDeathRecallFinishHitTime = 1.875f;
     float bossDeathHuskDelay = 1.4f;
     bool bossDeathFinishInputEnabled = false;
     bool bossDeathFinishUIVisible = false;

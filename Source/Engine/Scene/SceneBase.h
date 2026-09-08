@@ -166,6 +166,12 @@ protected:
     bool gruxHuskPreviewCaptureRequested = false;
     bool gruxHuskPlaybackActive = false;
     bool gruxHuskBackupValid = false;
+#ifdef _DEBUG
+    float huskCapturedWorldXMin = 0.0f;
+    float huskCapturedWorldXMax = 0.0f;
+    bool huskDebugProgressOverride = false;
+    float huskDebugProgress = 0.0f;
+#endif
 
 
     SIZE framebufferDimensions = {};

@@ -56,6 +56,47 @@ namespace
         "Data/Saves/ScenePresets/BossDeath_Result.json",
     };
 
+    // Move the held sample into the requested interval before reflecting.
+    // This is only a Death_B sample clock, not an animation blend.
+    void AdvanceBossDeathHold(float& time, float& direction, float minTime,
+        float maxTime, float rate, float entryRate, float deltaTime)
+    {
+        float remaining = (std::max)(deltaTime, 0.0f);
+        if (time < minTime || time > maxTime)
+        {
+            const float target = time < minTime ? minTime : maxTime;
+            direction = time < minTime ? 1.0f : -1.0f;
+            if (entryRate <= 0.0f)
+                return;
+            const float entryDuration = std::abs(target - time) / entryRate;
+            if (remaining < entryDuration)
+            {
+                time += direction * entryRate * remaining;
+                return;
+            }
+            time = target;
+            remaining -= entryDuration;
+        }
+
+        const float span = maxTime - minTime;
+        if (span <= 0.0f || rate <= 0.0f)
+            return;
+        time += direction * std::fmod(rate * remaining, 2.0f * span);
+        while (time > maxTime || time < minTime)
+        {
+            if (time > maxTime)
+            {
+                time = maxTime - (time - maxTime);
+                direction = -1.0f;
+            }
+            else
+            {
+                time = minTime + (minTime - time);
+                direction = 1.0f;
+            }
+        }
+    }
+
     constexpr float RecallFirstSeTime = 1.4f;
     constexpr float RecallTimeSafetyMargin = 0.001f;
 }
@@ -297,11 +338,14 @@ void GameScene::Update(float deltaTime)
     {
         InputSystem::SetCursorVisible(true);
     }
-#if 0
-    if (InputSystem::GetInputState("0", InputStateMask::Trigger))
+
+    if (InputSystem::GetInputState("F2", InputStateMask::Trigger))
     {
         SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
     }
+
+
+#if 0
 
     if (InputSystem::GetInputState("2", InputStateMask::Trigger))
     {
@@ -1235,6 +1279,8 @@ void GameScene::EnterBossDead()
     bossDeathFinishHoldDirection = 1.0f;
     bossDeathFwdPromptTime = bossDeathFwdPromptMinTime;
     bossDeathFwdPromptDirection = 1.0f;
+    bossDeathScreamHoldTime = bossDeathScreamHoldMin;
+    bossDeathScreamHoldDirection = 1.0f;
     bossDeathFinishInputEnabled = false;
     StopBossDeathGroanLoop();
     if (bossDeathVoiceAudio)
@@ -1350,6 +1396,8 @@ void GameScene::ResetBossDeathDebugPreview()
     bossDeathFinishHoldDirection = 1.0f;
     bossDeathFwdPromptTime = bossDeathFwdPromptMinTime;
     bossDeathFwdPromptDirection = 1.0f;
+    bossDeathScreamHoldTime = bossDeathScreamHoldMin;
+    bossDeathScreamHoldDirection = 1.0f;
     bossDeathApproachStartRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     bossDeathFinishInputEnabled = false;
     SetBossDeathFinishUIVisible(false);
@@ -1666,27 +1714,9 @@ void GameScene::StopBossDeathGroanLoop()
 
 void GameScene::UpdateBossDeathPromptLoop(const float deltaTime)
 {
-    bossDeathFwdPromptTime +=
-        bossDeathFwdPromptDirection *
-        bossDeathFwdPromptPlaybackRate * deltaTime;
-    while (bossDeathFwdPromptTime > bossDeathFwdPromptMaxTime ||
-        bossDeathFwdPromptTime < bossDeathFwdPromptMinTime)
-    {
-        if (bossDeathFwdPromptTime > bossDeathFwdPromptMaxTime)
-        {
-            bossDeathFwdPromptTime =
-                bossDeathFwdPromptMaxTime -
-                (bossDeathFwdPromptTime - bossDeathFwdPromptMaxTime);
-            bossDeathFwdPromptDirection = -1.0f;
-        }
-        else
-        {
-            bossDeathFwdPromptTime =
-                bossDeathFwdPromptMinTime +
-                (bossDeathFwdPromptMinTime - bossDeathFwdPromptTime);
-            bossDeathFwdPromptDirection = 1.0f;
-        }
-    }
+    AdvanceBossDeathHold(bossDeathFwdPromptTime, bossDeathFwdPromptDirection,
+        bossDeathFwdPromptMinTime, bossDeathFwdPromptMaxTime,
+        bossDeathFwdPromptPlaybackRate, bossDeathFwdPlaybackRate, deltaTime);
 
     if (gruxEnemyActor)
     {
@@ -1695,6 +1725,21 @@ void GameScene::UpdateBossDeathPromptLoop(const float deltaTime)
             controller->HoldAnimationPose("Death_B_0", bossDeathFwdPromptTime);
         }
     }
+}
+
+void GameScene::UpdateBossDeathScreamHold(const float deltaTime)
+{
+    if (!gruxEnemyActor)
+        return;
+    const auto mesh = gruxEnemyActor->GetSkeletalMeshComponent();
+    if (!mesh || !mesh->IsVisible())
+        return; // The captured particles no longer follow the animated mesh.
+
+    AdvanceBossDeathHold(bossDeathScreamHoldTime, bossDeathScreamHoldDirection,
+        bossDeathScreamHoldMin, bossDeathScreamHoldMax,
+        bossDeathScreamHoldRate, bossDeathScreamHoldRate, deltaTime);
+    if (const auto controller = gruxEnemyActor->GetBodyAnimationController())
+        controller->HoldAnimationPose("Death_B_0", bossDeathScreamHoldTime);
 }
 
 void GameScene::SetBossDeathFadeAlpha(const float alpha)
@@ -1797,6 +1842,10 @@ void GameScene::ClampBossDeathPreviewTuning()
         (std::max)(bossDeathRecallPromptPlaybackRate, 0.0f);
     bossDeathFwdPromptPlaybackRate =
         (std::max)(bossDeathFwdPromptPlaybackRate, 0.0f);
+    bossDeathStunToDeathBlend = std::isfinite(bossDeathStunToDeathBlend)
+        ? std::clamp(bossDeathStunToDeathBlend, 0.0f, 1.0f) : 0.25f;
+    bossDeathScreamHoldRate = std::isfinite(bossDeathScreamHoldRate)
+        ? std::clamp(bossDeathScreamHoldRate, 0.0f, 2.0f) : 0.30f;
     bossDeathHuskDelay = (std::max)(bossDeathHuskDelay, 0.0f);
 
     bossDeathFinishHoldPlaybackRate = std::isfinite(bossDeathFinishHoldPlaybackRate)
@@ -1862,6 +1911,11 @@ void GameScene::ClampBossDeathPreviewTuning()
                 bossDeathFwdPromptMinTime,
                 bossDeathFwdPromptMaxTime,
                 deathFwdDuration);
+            if (!std::isfinite(bossDeathScreamHoldMin))
+                bossDeathScreamHoldMin = 1.50f;
+            if (!std::isfinite(bossDeathScreamHoldMax))
+                bossDeathScreamHoldMax = 1.58f;
+            clampPlaybackRange(bossDeathScreamHoldMin, bossDeathScreamHoldMax, deathFwdDuration);
         }
     }
 }
@@ -1871,6 +1925,11 @@ void GameScene::UpdateBossDeathCinematic()
     const float deltaTime = Time::UnscaledDeltaTime();
     ClampBossDeathPreviewTuning();
     bossDeathPhaseElapsed += deltaTime;
+
+    // Keep the boss held until capture hides its mesh, including a pending capture.
+    if (bossDeathPhase == BossDeathPhase::HuskDelay ||
+        bossDeathPhase == BossDeathPhase::HuskPreview)
+        UpdateBossDeathScreamHold(deltaTime);
 
     if (bossDeathPhase == BossDeathPhase::HuskDelay ||
         bossDeathPhase == BossDeathPhase::HuskPreview)
@@ -1996,7 +2055,7 @@ void GameScene::UpdateBossDeathCinematic()
 
             controller->SetAnimationRate(bossDeathFwdPlaybackRate);
             gruxEnemyActor->PlayBodyAnimation(
-                "Death_B_0", false, true, 0.1f, true);
+                "Death_B_0", false, true, bossDeathStunToDeathBlend, true);
             if (!controller->SetPlaybackRange(
                 bossDeathFwdStartTime, bossDeathFwdEndTime))
             {
@@ -2019,8 +2078,10 @@ void GameScene::UpdateBossDeathCinematic()
             controller->GetCurrentAnimationTime() >= bossDeathFwdEndTime)
         {
             controller->ResetAnimationRate();
-            bossDeathFwdPromptTime = bossDeathFwdPromptMinTime;
-            bossDeathFwdPromptDirection = 1.0f;
+            // Own the endpoint pose first; walking never restarts the boss clip.
+            bossDeathFwdPromptTime = controller->GetCurrentAnimationTime();
+            bossDeathFwdPromptDirection =
+                bossDeathFwdPromptTime >= bossDeathFwdPromptMaxTime ? -1.0f : 1.0f;
             if (!controller->HoldAnimationPose("Death_B_0", bossDeathFwdPromptTime))
             {
                 break;
@@ -2187,11 +2248,9 @@ void GameScene::UpdateBossDeathCinematic()
             controller->GetCurrentAnimationTime() >= bossDeathRecallFinishHitTime)
         {
             StopBossDeathGroanLoop();
-            if (const auto bossController =
-                gruxEnemyActor->GetBodyAnimationController())
-            {
-                bossController->ReleaseHeldAnimationPose();
-            }
+            // Keep pose ownership and enter the narrower interval continuously.
+            bossDeathScreamHoldTime = bossDeathFwdPromptTime;
+            bossDeathScreamHoldDirection = bossDeathFwdPromptDirection;
             // ƒ{ƒXŽ€–S’f–––‚
             if (bossDeathVoiceAudio)
                 bossDeathVoiceAudio->Stop(false);
@@ -2471,6 +2530,14 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::SeparatorText("Fall / Landing");
         ImGui::DragFloat("Stun Playback Rate",
             &bossDeathStunPlaybackRate, 0.01f, 0.1f, 2.0f);
+        ImGui::DragFloat("Boss Death Stun To Death Blend",
+            &bossDeathStunToDeathBlend, 0.01f, 0.0f, 1.0f);
+        ImGui::DragFloat("Boss Death Scream Hold Min",
+            &bossDeathScreamHoldMin, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat("Boss Death Scream Hold Max",
+            &bossDeathScreamHoldMax, 0.001f, 0.0f, 10.0f);
+        ImGui::DragFloat("Boss Death Scream Hold Rate",
+            &bossDeathScreamHoldRate, 0.01f, 0.0f, 2.0f);
         ImGui::DragFloat("Fall To Landing Blend Duration",
             &bossDeathFallToLandingBlendDuration, 0.01f, 0.0f, 10.0f);
         ImGui::DragFloat("Death Fwd Start Time",

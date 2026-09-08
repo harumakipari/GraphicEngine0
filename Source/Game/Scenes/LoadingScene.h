@@ -61,5 +61,8 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D11PixelShader> loadingPs;
 
+    // UI design-space position and independent scale; equal X/Y preserves the aspect ratio.
+    DirectX::XMFLOAT2 logoPosition = { 960.0f, 540.0f };
+    DirectX::XMFLOAT2 logoScale = { 0.4f, 0.96f };
     std::shared_ptr<UIImageComponent> imageUiComponent;
 };

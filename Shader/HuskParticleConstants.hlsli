@@ -23,7 +23,7 @@ cbuffer PARTICLE_CONSTANTS : register(b12)
     float lifetime_min_multiplier;
     float lifetime_max_multiplier;
     float display_ratio;
-    float particle_padding;
+    float debug_normalized_x;
 };
 
 #endif

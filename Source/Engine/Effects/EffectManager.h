@@ -78,6 +78,11 @@ struct FloatCurve
         }
         points = std::move(uniquePoints);
 
+        if (points.empty())
+        {
+            return;
+        }
+
         if (points.front().time > 0.0f)
             points.insert(points.begin(), { 0.0f, points.front().value });
         else

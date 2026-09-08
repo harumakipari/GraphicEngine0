@@ -21,6 +21,22 @@
 #include "Graphics/PostProcess/BloomEffect.h"
 
 
+namespace
+{
+    constexpr float LogoFadeStart = 2.0f; // Logo Fade Start (seconds)
+    constexpr float LogoFadeEnd = 3.5f;   // Logo Fade End (seconds)
+
+    DirectX::XMFLOAT2 GetLoadingLogoCenter()
+    {
+        float x, y, width, height;
+        Graphics::GetViewport(x, y, width, height);
+        // Sprite::Render scales coordinates from its 1920 x 1080 UI design space.
+        const float uiScale = std::min<float>(width / 1920.0f, height / 1080.0f);
+        if (uiScale <= 0.0f) return { 960.0f, 540.0f };
+        return { width * 0.5f / uiScale, height * 0.5f / uiScale };
+    }
+}
+
 bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
 #if 0
@@ -148,9 +164,12 @@ void LoadingScene::Start()
 
     // ロード画面に出すタイトルテクスチャ
     imageUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/title_logo1.png", "title");
-    imageUiComponent->SetWorldPosition({ 680, 270 });
-    imageUiComponent->SetScale({ 1.2f,1.2f });
+    logoPosition = GetLoadingLogoCenter();
+    imageUiComponent->SetWorldPosition(logoPosition);
+    imageUiComponent->SetPivot({ 0.5f, 0.5f });
+    imageUiComponent->SetScale(logoScale);
     imageUiComponent->SetSize({ 1000, 200 });
+    imageUiComponent->SetColor(DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, 0.0f });
     uiManager->Add(imageUiComponent);
 }
 
@@ -178,6 +197,13 @@ void LoadingScene::SetUpActors()
 void LoadingScene::Update(float deltaTime)
 {
     SceneBase::Update(deltaTime);
+
+    const float fade = std::clamp((sceneCBuffer->data.elapsedTime - LogoFadeStart)
+        / (LogoFadeEnd - LogoFadeStart), 0.0f, 1.0f);
+    const float logoAlpha = fade * fade * (3.0f - 2.0f * fade);
+    imageUiComponent->SetColor(DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, logoAlpha });
+    imageUiComponent->SetWorldPosition(logoPosition);
+    imageUiComponent->SetScale(logoScale);
 
 
     loadingTime -= deltaTime;
@@ -407,15 +433,20 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
     }
 
     // UIの描画
-    Draw(immediateContext);
-
-    ExecuteHooks(RenderPass::UI, immediateContext);
+    // Background first. The UI path below restores its required render states.
+    RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
+    RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF);
+    RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
 
     ID3D11ShaderResourceView* shaderResourceViews[]
     {
         nullptr
     };
     fullscreenQuad->Blit(immediateContext, shaderResourceViews, 0, 1, loadingPs.Get());
+
+    // SceneBase::Draw binds ALPHA / ZT_OFF_ZW_OFF / SOLID_CULL_NONE before UI drawing.
+    Draw(immediateContext);
+    ExecuteHooks(RenderPass::UI, immediateContext);
 
 
 
@@ -455,6 +486,18 @@ void LoadingScene::DrawGuiPlusAlpha()
 {
 #ifdef USE_IMGUI
     ImGui::Begin(U8("調整"));
+    ImGui::TextUnformatted("Logo Layout (UI coordinates, center pivot)");
+    bool layoutChanged = false;
+    layoutChanged |= ImGui::DragFloat("Logo Position X", &logoPosition.x, 1.0f, 0.0f, 0.0f, "%.1f");
+    layoutChanged |= ImGui::DragFloat("Logo Position Y", &logoPosition.y, 1.0f, 0.0f, 0.0f, "%.1f");
+    layoutChanged |= ImGui::DragFloat("Logo Scale X", &logoScale.x, 0.01f, 0.01f, 10.0f, "%.3f");
+    layoutChanged |= ImGui::DragFloat("Logo Scale Y", &logoScale.y, 0.01f, 0.01f, 10.0f, "%.3f");
+    ImGui::TextUnformatted("Equal Scale X / Y preserves the original layout aspect ratio.");
+    if (layoutChanged && imageUiComponent)
+    {
+        imageUiComponent->SetWorldPosition(logoPosition);
+        imageUiComponent->SetScale(logoScale);
+    }
     ImGui::End();
 #endif
 

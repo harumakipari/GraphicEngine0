@@ -45,7 +45,7 @@ struct husk_particles
         float lifetime_min_multiplier{ 0.85f };
         float lifetime_max_multiplier{ 1.15f };
         float display_ratio{ 0.75f };
-        float padding{};
+        float debug_normalized_x{}; // Debug display only; reuses b12 padding.
     };
     static_assert(sizeof(particle) == 64, "Husk particle GPU stride must stay unchanged");
     static_assert(offsetof(particle, normalizedX) == 60, "Husk normalizedX layout");
@@ -53,6 +53,7 @@ struct husk_particles
     static_assert(offsetof(particle_constants, world_x_min) == 16, "Husk b12 X range layout");
     static_assert(offsetof(particle_constants, death_progress) == 24, "Husk b12 progress layout");
     static_assert(offsetof(particle_constants, display_ratio) == 72, "Husk b12 display layout");
+    static_assert(offsetof(particle_constants, debug_normalized_x) == 76, "Husk b12 debug layout");
     particle_constants particle_data;
     std::unique_ptr<ConstantBuffer<particle_constants>> particleCBuffer;
 
@@ -70,7 +71,7 @@ struct husk_particles
     Microsoft::WRL::ComPtr<ID3D11InputLayout> input_layout;
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> compute_shader;
 
-    husk_particles(ID3D11Device* pDevice, size_t max_particle_count = 1000000);
+    husk_particles(ID3D11Device* pDevice, size_t max_particle_count = 3000000);
     husk_particles(const husk_particles&) = delete;
     husk_particles& operator=(const husk_particles&) = delete;
     husk_particles(husk_particles&&) noexcept = delete;

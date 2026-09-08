@@ -65,7 +65,13 @@ void main(point VS_OUT input[1] : SV_POSITION, inout TriangleStream<GS_OUT> outp
                 ? 1.0f - saturate((lifeRatio - fadeStart) / fadeDenominator)
                 : 1.0f)
             : 1.0f;
-        element.color = float4(p.color.rgb, p.color.a * fade);
+        // Read the captured scalar, never the moving position. Preserve p.color.
+        const float normalizedX = saturate(p.normalizedX);
+        const float3 debugColor = normalizedX <= 0.5f
+            ? lerp(float3(1, 0, 0), float3(0, 1, 0), normalizedX * 2.0f)
+            : lerp(float3(0, 1, 0), float3(0, 0, 1), (normalizedX - 0.5f) * 2.0f);
+        element.color = float4(
+            debug_normalized_x > 0.5f ? debugColor : p.color.rgb, p.color.a * fade);
         element.texcoord = texcoords[vertex_index];
         output.Append(element);
     }
