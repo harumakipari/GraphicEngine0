@@ -1230,7 +1230,7 @@ void SceneBase::DrawSceneSettingsTab()
         ImGui::TextColored(ImVec4(0, 0.4f, 1, 1), "1.0 = Blue");
         if (gruxHuskBackupValid)
         {
-            ImGui::Text("Captured World X Min / Max: %.4f / %.4f",
+            ImGui::Text("Capture Settings World X Min / Max: %.4f / %.4f",
                 huskCapturedWorldXMin, huskCapturedWorldXMax);
             const float boundaryX = huskCapturedWorldXMin +
                 huskParticles->particle_data.death_progress *
@@ -1238,8 +1238,25 @@ void SceneBase::DrawSceneSettingsTab()
             ImGui::Text("Threshold World X: %.4f (captured range)", boundaryX);
         }
         else
-            ImGui::TextUnformatted("Captured World X Min / Max: No capture");
-        ImGui::TextUnformatted("Actual particle World X extrema: not read back.");
+            ImGui::TextUnformatted("Capture Settings World X Min / Max: No capture");
+        const auto& capturedX = huskParticles->captured_x;
+        if (capturedX.valid)
+        {
+            ImGui::Text("Captured X Min: %.6f", capturedX.minimum);
+            ImGui::Text("Captured X Max: %.6f", capturedX.maximum);
+            ImGui::Text("Captured X Range: %.6f", capturedX.maximum - capturedX.minimum);
+            ImGui::Text("Measured capture particles: %u", capturedX.particle_count);
+        }
+        else if (!capturedX.attempted)
+            ImGui::TextUnformatted("Captured X Min / Max / Range: No measurement yet");
+        else if (FAILED(capturedX.result))
+            ImGui::Text("Captured X readback failed: 0x%08X (count %u)",
+                static_cast<unsigned int>(capturedX.result), capturedX.particle_count);
+        else
+            ImGui::TextUnformatted("Captured X Min / Max / Range: No finite particles");
+        if (capturedX.non_finite_count != 0)
+            ImGui::Text("Non-finite X: %u (extrema use finite positions only)", capturedX.non_finite_count);
+        ImGui::TextUnformatted("Measured at last capture; Replay and simulation do not refresh this.");
         ImGui::Text("Husk death_progress: %.4f", huskParticles->particle_data.death_progress);
 
         bool restartDebugPreview = ImGui::Checkbox(

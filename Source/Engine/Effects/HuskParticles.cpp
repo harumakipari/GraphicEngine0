@@ -2,6 +2,10 @@
 #include "HuskParticles.h"
 
 #include <random>
+#ifdef _DEBUG
+#include <cmath>
+#include <limits>
+#endif
 #include "Graphics/Core/Shader.h"
 #include "Engine/Utility/Win32Utils.h"
 
@@ -191,8 +195,69 @@ void husk_particles::accumulate_husk_particles(ID3D11DeviceContext* immediate_co
     immediate_context->Unmap(particle_count_buffer.Get(), 0);
 
     particle_data.particle_count = count;
+#ifdef _DEBUG
+    // Once per completed capture, before any integration or display filtering.
+    measure_captured_world_x(immediate_context, count);
+#endif
 
 #if 1
     immediate_context->RSSetViewports(viewport_count, cached_viewports);
 #endif
 }
+
+#ifdef _DEBUG
+void husk_particles::measure_captured_world_x(ID3D11DeviceContext* context, UINT count)
+{
+    captured_x = {};
+    captured_x.attempted = true;
+    captured_x.particle_count = count;
+    if (count == 0) return;
+    // Do not scan unallocated entries or report an incomplete range as a full capture.
+    if (count > max_particle_count)
+    {
+        captured_x.result = E_INVALIDARG;
+        return;
+    }
+
+    D3D11_BUFFER_DESC desc{};
+    desc.ByteWidth = static_cast<UINT>(sizeof(particle) * count);
+    desc.Usage = D3D11_USAGE_STAGING;
+    desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+    Microsoft::WRL::ComPtr<ID3D11Device> device;
+    context->GetDevice(device.GetAddressOf());
+    Microsoft::WRL::ComPtr<ID3D11Buffer> readback;
+    captured_x.result = device->CreateBuffer(&desc, nullptr, readback.GetAddressOf());
+    if (FAILED(captured_x.result)) return;
+
+    // Buffer boxes use byte offsets. Copy only the appended prefix, not full capacity.
+    const D3D11_BOX region{ 0, 0, 0, desc.ByteWidth, 1, 1 };
+    context->CopySubresourceRegion(readback.Get(), 0, 0, 0, 0, particle_buffer.Get(), 0, &region);
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    captured_x.result = context->Map(readback.Get(), 0, D3D11_MAP_READ, 0, &mapped);
+    if (FAILED(captured_x.result)) return;
+
+    const auto* particles = static_cast<const particle*>(mapped.pData);
+    float minimum = (std::numeric_limits<float>::max)();
+    float maximum = (std::numeric_limits<float>::lowest)();
+    for (UINT i = 0; i < count; ++i)
+    {
+        const float x = particles[i].position.x;
+        if (!std::isfinite(x))
+        {
+            ++captured_x.non_finite_count;
+            continue;
+        }
+        minimum = (std::min)(minimum, x);
+        maximum = (std::max)(maximum, x);
+    }
+    context->Unmap(readback.Get(), 0);
+
+    captured_x.valid = captured_x.non_finite_count < count;
+    if (captured_x.valid)
+    {
+        captured_x.minimum = minimum;
+        captured_x.maximum = maximum;
+    }
+    // The temporary staging allocation is released here; only the summary survives.
+}
+#endif

@@ -490,6 +490,8 @@ public:
     std::shared_ptr<UIImageComponent> rushWordImageComponent;
     std::shared_ptr<UIImageComponent> lockOnGuideArrowImageComponent;
     std::shared_ptr<UIImageComponent> lockOnGuideButtonImageComponent;
+
+    // ロックオンのガイドUIの調整値
     float lockOnGuideOffscreenElapsed = 0.0f;
     float lockOnGuidePulseElapsed = 0.0f;
     bool lockOnGuideVisible = false;
@@ -497,7 +499,7 @@ public:
     float lockOnGuidePulsePeriod = 1.2f;
     float lockOnGuidePulseMinScale = 0.92f;
     DirectX::XMFLOAT2 lockOnGuideArrowSize{ 96.0f, 64.0f };
-    DirectX::XMFLOAT2 lockOnGuideArrowBaseScale{ 1.0f, 1.0f };
+    DirectX::XMFLOAT2 lockOnGuideArrowBaseScale{ 0.5f, 0.7f };
     DirectX::XMFLOAT2 lockOnGuideButtonSize{ 96.0f, 96.0f };
     DirectX::XMFLOAT2 lockOnGuideButtonBaseScale{ 1.0f, 1.0f };
     float lockOnGuideButtonOffset = 120.0f;

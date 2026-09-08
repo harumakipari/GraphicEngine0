@@ -30,8 +30,8 @@ struct husk_particles
         float particle_size{ 0.008f };
         float particle_option{};
         float delta_time{};
-        float world_x_min{ 13.0f };
-        float world_x_max{ 20.0f };
+        float world_x_min{ 6.695f };
+        float world_x_max{ 12.519f };
         float death_progress{};
         float detach_speed{ 0.35f };
         float gravity{ -9.8f };
@@ -54,6 +54,21 @@ struct husk_particles
     static_assert(offsetof(particle_constants, death_progress) == 24, "Husk b12 progress layout");
     static_assert(offsetof(particle_constants, display_ratio) == 72, "Husk b12 display layout");
     static_assert(offsetof(particle_constants, debug_normalized_x) == 76, "Husk b12 debug layout");
+#ifdef _DEBUG
+    // CPU-only diagnostics. Never uploaded to a shader constant/particle buffer.
+    struct capture_x_measurement
+    {
+        bool attempted = false;
+        bool valid = false;
+        HRESULT result = S_OK;
+        UINT particle_count = 0;
+        UINT non_finite_count = 0;
+        float minimum = 0.0f;
+        float maximum = 0.0f;
+    };
+    capture_x_measurement captured_x;
+    void measure_captured_world_x(ID3D11DeviceContext* context, UINT count);
+#endif
     particle_constants particle_data;
     std::unique_ptr<ConstantBuffer<particle_constants>> particleCBuffer;
 
