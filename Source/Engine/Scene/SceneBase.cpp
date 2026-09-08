@@ -244,11 +244,13 @@ void SceneBase::Update(float deltaTime)
         }
         if (gruxHuskPlaybackActive)
         {
-            gruxHuskDeathProgress = (std::min)(
-                gruxHuskDeathProgress + (std::max)(deltaTime, 0.0f), 1.0f);
+            const float huskDeltaTime = (std::max)(Time::UnscaledDeltaTime(), 0.0f);
+            gruxHuskDeathProgress = std::clamp(
+                gruxHuskDeathProgress + huskDeltaTime / (std::max)(huskDissolveDuration, 0.001f),
+                0.0f, 1.0f);
             huskParticles->particle_data.death_progress =
                 std::clamp(gruxHuskDeathProgress, 0.0f, 1.0f);
-            huskParticles->integrate(Graphics::GetDeviceContext(), deltaTime);
+            huskParticles->integrate(Graphics::GetDeviceContext(), huskDeltaTime);
         }
     }
 }
@@ -783,10 +785,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
             const auto gruxMesh = grux->GetSkeletalMeshComponent();
             if (gruxMesh && gruxMesh->model)
             {
-                const auto aabb = gruxMesh->model->GetAABB();
-                huskParticles->particle_data.height_min = aabb.min.y;
-                huskParticles->particle_data.height_range =
-                    (std::max)(aabb.max.y - aabb.min.y, 0.001f);
                 huskParticles->particle_data.death_progress = 0.0f;
                 auto world = gruxMesh->GetComponentWorldTransform().ToWorldTransform();
                 huskParticles->accumulate_husk_particles(immediateContext, [&](ID3D11PixelShader* accumulate_husk_particles_ps)
@@ -1205,6 +1203,13 @@ void SceneBase::DrawSceneSettingsTab()
         ImGui::Text("Particle Backup: %s", gruxHuskBackupValid ? "Valid" : "None");
         ImGui::Checkbox("integrateParticles", &integrateParticles);
         ImGui::Text("accumulated husk particle count %d", huskParticles->particle_data.particle_count);
+        ImGui::DragFloat("Husk World X Min", &huskParticles->particle_data.world_x_min, 0.01f);
+        ImGui::DragFloat("Husk World X Max", &huskParticles->particle_data.world_x_max, 0.01f);
+        huskParticles->particle_data.world_x_max = (std::max)(
+            huskParticles->particle_data.world_x_max, huskParticles->particle_data.world_x_min + 0.0001f);
+        ImGui::DragFloat("Husk Dissolve Duration", &huskDissolveDuration, 0.01f, 0.001f, 60.0f, "%.3f sec");
+        huskDissolveDuration = (std::max)(huskDissolveDuration, 0.001f);
+        ImGui::TextUnformatted("World X changes require Capture & Play; Replay keeps the captured range.");
         ImGui::SliderFloat("particle_data.size", &huskParticles->particle_data.particle_size, +0.0f, +0.05f, "%.4f");
         ImGui::SliderFloat("particle_data.rise_speed", &huskParticles->particle_data.rise_speed, 0.0f, 2.0f, "%.3f m/s");
         ImGui::SliderFloat("particle_data.max_start_delay", &huskParticles->particle_data.max_start_delay, 0.0f, 1.0f, "%.3f sec");

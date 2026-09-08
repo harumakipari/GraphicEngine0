@@ -1231,6 +1231,8 @@ void GameScene::EnterBossDead()
     bossDeathPhaseElapsed = 0.0f;
     bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
     bossDeathRecallPromptDirection = 1.0f;
+    bossDeathFinishHoldTime = bossDeathFinishHoldMinTime;
+    bossDeathFinishHoldDirection = 1.0f;
     bossDeathFwdPromptTime = bossDeathFwdPromptMinTime;
     bossDeathFwdPromptDirection = 1.0f;
     bossDeathFinishInputEnabled = false;
@@ -1282,7 +1284,10 @@ void GameScene::ResetBossDeathDebugPreview()
     // Release pose-only preview ownership before asking either state machine to
     // start its normal idle animation.
     if (const auto controller = player->GetBodyAnimationController())
+    {
         controller->ReleaseHeldAnimationPose();
+        controller->ResetAnimationRate();
+    }
     if (const auto controller = gruxEnemyActor->GetBodyAnimationController())
     {
         controller->ReleaseHeldAnimationPose();
@@ -1341,6 +1346,8 @@ void GameScene::ResetBossDeathDebugPreview()
     bossDeathPhaseElapsed = 0.0f;
     bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
     bossDeathRecallPromptDirection = 1.0f;
+    bossDeathFinishHoldTime = bossDeathFinishHoldMinTime;
+    bossDeathFinishHoldDirection = 1.0f;
     bossDeathFwdPromptTime = bossDeathFwdPromptMinTime;
     bossDeathFwdPromptDirection = 1.0f;
     bossDeathApproachStartRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -1792,6 +1799,28 @@ void GameScene::ClampBossDeathPreviewTuning()
         (std::max)(bossDeathFwdPromptPlaybackRate, 0.0f);
     bossDeathHuskDelay = (std::max)(bossDeathHuskDelay, 0.0f);
 
+    bossDeathFinishHoldPlaybackRate = std::isfinite(bossDeathFinishHoldPlaybackRate)
+        ? std::clamp(bossDeathFinishHoldPlaybackRate, 0.0f, 3.0f) : 0.07f;
+    if (player)
+    {
+        if (const auto controller = player->GetBodyAnimationController())
+        {
+            const float duration = controller->GetAnimationLength("Recall_0");
+            if (std::isfinite(duration) && duration >= 0.0f)
+            {
+                const float margin = (std::min)(0.001f, duration);
+                bossDeathFinishHoldMinTime = std::clamp(
+                    std::isfinite(bossDeathFinishHoldMinTime) ? bossDeathFinishHoldMinTime : 1.58f,
+                    0.0f, duration - margin);
+                bossDeathFinishHoldMaxTime = std::clamp(
+                    std::isfinite(bossDeathFinishHoldMaxTime) ? bossDeathFinishHoldMaxTime : 1.70f,
+                    bossDeathFinishHoldMinTime + margin, duration);
+                bossDeathFinishHoldTime = std::clamp(bossDeathFinishHoldTime,
+                    bossDeathFinishHoldMinTime, bossDeathFinishHoldMaxTime);
+            }
+        }
+    }
+
     const float recallMaxLimit = RecallFirstSeTime - RecallTimeSafetyMargin;
     bossDeathRecallPromptMinTime = std::clamp(
         bossDeathRecallPromptMinTime,
@@ -1842,6 +1871,44 @@ void GameScene::UpdateBossDeathCinematic()
     const float deltaTime = Time::UnscaledDeltaTime();
     ClampBossDeathPreviewTuning();
     bossDeathPhaseElapsed += deltaTime;
+
+    if (bossDeathPhase == BossDeathPhase::HuskDelay ||
+        bossDeathPhase == BossDeathPhase::HuskPreview)
+    {
+        const float span = bossDeathFinishHoldMaxTime - bossDeathFinishHoldMinTime;
+        if (span > 0.0f)
+        {
+            // Remove whole round trips, then reflect overshoot as in Recall Prompt.
+            const float advance = std::fmod(
+                bossDeathFinishHoldPlaybackRate * (std::max)(deltaTime, 0.0f), 2.0f * span);
+            bossDeathFinishHoldTime += bossDeathFinishHoldDirection * advance;
+            while (bossDeathFinishHoldTime > bossDeathFinishHoldMaxTime ||
+                bossDeathFinishHoldTime < bossDeathFinishHoldMinTime)
+            {
+                if (bossDeathFinishHoldTime > bossDeathFinishHoldMaxTime)
+                {
+                    bossDeathFinishHoldTime = bossDeathFinishHoldMaxTime -
+                        (bossDeathFinishHoldTime - bossDeathFinishHoldMaxTime);
+                    bossDeathFinishHoldDirection = -1.0f;
+                }
+                else
+                {
+                    bossDeathFinishHoldTime = bossDeathFinishHoldMinTime +
+                        (bossDeathFinishHoldMinTime - bossDeathFinishHoldTime);
+                    bossDeathFinishHoldDirection = 1.0f;
+                }
+            }
+        }
+        else
+        {
+            bossDeathFinishHoldTime = bossDeathFinishHoldMinTime;
+        }
+        if (player)
+        {
+            if (const auto controller = player->GetBodyAnimationController())
+                controller->HoldAnimationPose("Recall_0", bossDeathFinishHoldTime);
+        }
+    }
 
     switch (bossDeathPhase)
     {
@@ -2129,6 +2196,10 @@ void GameScene::UpdateBossDeathCinematic()
             if (bossDeathVoiceAudio)
                 bossDeathVoiceAudio->Stop(false);
             bossDeathVoiceAudio = CoreAudio::PlayOneShot("./Data/Sound/SE/boss_death_voice1.wav", 1.0f);
+            bossDeathFinishHoldTime = bossDeathFinishHoldMinTime;
+            bossDeathFinishHoldDirection = 1.0f;
+            controller->ResetAnimationRate();
+            controller->HoldAnimationPose("Recall_0", bossDeathFinishHoldTime);
             bossDeathPhase = BossDeathPhase::HuskDelay;
             bossDeathPhaseElapsed = 0.0f;
         }
@@ -2453,6 +2524,14 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::DragFloat("Recall Prompt Playback Rate",
             &bossDeathRecallPromptPlaybackRate, 0.01f, 0.0f, 3.0f);
         ClampBossDeathPreviewTuning();
+        ImGui::DragFloat("Finish Hold Min Time",
+            &bossDeathFinishHoldMinTime, 0.001f);
+        ImGui::DragFloat("Finish Hold Max Time",
+            &bossDeathFinishHoldMaxTime, 0.001f);
+        ImGui::DragFloat("Finish Hold Playback Rate",
+            &bossDeathFinishHoldPlaybackRate, 0.01f, 0.0f, 3.0f);
+        ClampBossDeathPreviewTuning();
+        ImGui::Text("Finish Hold Time: %.3f", bossDeathFinishHoldTime);
         ImGui::Text("Recall Prompt Time: %.3f", bossDeathRecallPromptTime);
         ImGui::TreePop();
     }

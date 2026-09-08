@@ -23,22 +23,10 @@ struct PARTICLE
     float3 velocity;
     float age;
     int state;
-    float normalizedHeight;
+    float normalizedX;
 };
 
-cbuffer PARTICLE_CONSTANTS : register(b12)
-{
-    uint particle_count;
-    float particle_size;
-    float particle_option;
-    float delta_time;
-    float height_min;
-    float height_range;
-    float death_progress;
-    float detach_speed;
-    float gravity_;
-    float lifetime;
-};
+#include "HuskParticleConstants.hlsli"
 AppendStructuredBuffer<PARTICLE> particleBuffer : register(u1);
 
 void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
@@ -213,8 +201,8 @@ void main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     p.velocity = 0;
     p.age = 0;
     p.state = 0;
-    p.normalizedHeight = saturate(
-        (pin.localPosition.y - height_min) / max(height_range, 0.0001));
+    p.normalizedX = saturate(
+        (pin.wPosition.x - world_x_min) / max(world_x_max - world_x_min, 0.0001));
     particleBuffer.Append(p);
 }
 #else

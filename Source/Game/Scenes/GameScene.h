@@ -230,7 +230,7 @@ private:
     float bossDeathRoarEndTime = 1.176f;
     float bossDeathRoarPlaybackRate = 0.71f;
     float bossDeathStunPlaybackRate = 0.5f;
-    float bossDeathFallToLandingBlendDuration = 1.52f;
+    float bossDeathFallToLandingBlendDuration = 1.0f;
     float bossDeathFwdStartTime = 0.498f;
     float bossDeathFwdEndTime = 2.233f;
     float bossDeathFwdPlaybackRate = 0.44f;
@@ -250,8 +250,13 @@ private:
     float bossDeathRecallPromptTime = 1.163f;
     float bossDeathRecallPromptDirection = 1.0f;
     float bossDeathRecallPromptPlaybackRate = 0.07f;
+    float bossDeathFinishHoldMinTime = 1.72f;
+    float bossDeathFinishHoldMaxTime = 1.875f;
+    float bossDeathFinishHoldPlaybackRate = 0.07f;
+    float bossDeathFinishHoldTime = 1.58f;
+    float bossDeathFinishHoldDirection = 1.0f;
     float bossDeathRecallFinishHitTime = 2.240f;
-    float bossDeathHuskDelay = 0.4f;
+    float bossDeathHuskDelay = 1.4f;
     bool bossDeathFinishInputEnabled = false;
     bool bossDeathFinishUIVisible = false;
     float bossDeathFinishUIAlpha = 0.0f;

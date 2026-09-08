@@ -162,6 +162,7 @@ protected:
     bool gruxHuskCaptured = false;
     bool gruxHuskCaptureRequested = false;
     float gruxHuskDeathProgress = 0.0f;
+    float huskDissolveDuration = 6.0f;
     bool gruxHuskPreviewCaptureRequested = false;
     bool gruxHuskPlaybackActive = false;
     bool gruxHuskBackupValid = false;

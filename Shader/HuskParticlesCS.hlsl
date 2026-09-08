@@ -24,7 +24,7 @@ void main(uint3 dtid : SV_DISPATCHTHREADID)
         {
             p.age += delta_time;
             const float startDelay = random01(id * 3u + 11u) * max_start_delay;
-            if (p.normalizedHeight >= 1.0f - death_progress &&
+            if (p.normalizedX <= death_progress &&
                 p.age >= startDelay)
             {
                 const float speedRandom = random01(id * 3u + 17u);

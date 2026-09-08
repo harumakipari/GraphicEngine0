@@ -1126,6 +1126,7 @@
     <None Include="Shader\geometricPrimitive.hlsli" />
     <None Include="Shader\GltfModel.hlsli" />
     <None Include="Shader\HuskParticles.hlsli" />
+    <None Include="Shader\HuskParticleConstants.hlsli" />
     <None Include="Shader\imageBasedLighting.hlsli" />
     <None Include="Shader\Lights.hlsli" />
     <None Include="Shader\ModelType.hlsli" />

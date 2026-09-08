@@ -173,6 +173,9 @@ void husk_particles::accumulate_husk_particles(ID3D11DeviceContext* immediate_co
         1, 1, particle_append_buffer_uav.GetAddressOf(), &initial_count
     );
 
+    // Capture must see current b12 even before the first integrate/render.
+    particleCBuffer->data = particle_data;
+    particleCBuffer->Activate(immediate_context, 12);
     drawcallback(accumulate_husk_particles_ps.Get());
 
     immediate_context->OMSetRenderTargetsAndUnorderedAccessViews(
