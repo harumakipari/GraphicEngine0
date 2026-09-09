@@ -138,6 +138,11 @@ public:
         return animationTime;
     }
 
+    // Evaluates weapon visual notify states at the currently sampled local time.
+    // This also works while an animation pose is held by the editor-preview path.
+    bool EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower,
+        bool& outHasShowTrail, bool& outHasShowEmissive) const;
+
     void ResetRootMotion(const std::string& animationName, const bool loop = false, const bool isBlend = true, const float blendTime = 0.3f);
 
     void DrawImGui();
@@ -145,6 +150,10 @@ public:
     void DrawTimeline();
 
     bool IsEditorPreviewActive() const { return editorPreviewActive; }
+    float GetCurrentSampledAnimationTime() const
+    {
+        return editorPreviewActive ? editorPreviewTime : animationTime;
+    }
 
     size_t GetAnimationClip()const { return animationClip; }
 

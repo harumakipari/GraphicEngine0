@@ -550,6 +550,40 @@ void Player::Initialize(const Transform& transform)
 
 }
 
+void Player::UpdateWeaponVisualPresentation(const float deltaTime)
+{
+    const auto controller = GetBodyAnimationController();
+    bool evaluatedShowTrail = false;
+    float evaluatedEmissivePower = 0.0f;
+    bool hasShowTrailState = false;
+    bool hasShowEmissiveState = false;
+    const bool hasWeaponVisualState = controller && controller->EvaluateWeaponVisualState(
+        evaluatedShowTrail, evaluatedEmissivePower, hasShowTrailState, hasShowEmissiveState);
+    (void)hasShowTrailState;
+    (void)hasShowEmissiveState;
+
+    showTrail = hasWeaponVisualState && evaluatedShowTrail;
+    swordEmissivePower = hasWeaponVisualState ? evaluatedEmissivePower : 0.0f;
+
+    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
+        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
+
+
+    if (!hasWeaponVisualState)
+    {
+        trail.trailPoints.clear();
+        return;
+    }
+    if (!swordRootComponent || !swordTipComponent)
+        return;
+
+    const DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
+    const DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
+
+    trail.UpdateTrail(deltaTime);
+    if (showTrail)
+        trail.trailPoints.push_back({ swordTipPos, swordRootPos, trailRemainTime });
+}
 void Player::Update(float deltaTime)
 {
     using namespace DirectX;
@@ -569,6 +603,8 @@ void Player::Update(float deltaTime)
     {
         if (const auto controller = GetBodyAnimationController())
             controller->OnUpdate(deltaTime);
+
+        UpdateWeaponVisualPresentation(deltaTime);
         return;
     }
 
@@ -950,8 +986,10 @@ void Player::Update(float deltaTime)
     {
         if (const auto controller = GetBodyAnimationController())
             controller->OnUpdate(deltaTime);
+        UpdateWeaponVisualPresentation(deltaTime);
         return;
     }
+
 
     if (hitStopTimer > 0.0f)
     {
@@ -993,6 +1031,10 @@ void Player::Update(float deltaTime)
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(deltaTime);
 
+    // Win-state presentation animations are sampled by local time after the
+    // AnimationController update. Combat/input processing remains unchanged.
+    if (IsInWinState())
+        UpdateWeaponVisualPresentation(deltaTime);
     // Dodge State更新後の受付状態を、そのフレームのUIへ反映する。
     UpdateRushPromptUI();
 

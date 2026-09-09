@@ -2214,6 +2214,44 @@ void AnimationController::DrawTimeline()
 }
 
 
+bool AnimationController::EvaluateWeaponVisualState(
+    bool& outShowTrail, float& outEmissivePower,
+    bool& outHasShowTrail, bool& outHasShowEmissive) const
+{
+    outShowTrail = false;
+    outEmissivePower = 0.0f;
+    outHasShowTrail = false;
+    outHasShowEmissive = false;
+
+    const size_t clip = editorPreviewActive ? selectedTimelineClip : animationClip;
+    const float time = editorPreviewActive ? editorPreviewTime : animationTime;
+    const auto assetIt = animationNotifyAssets.find(clip);
+    if (assetIt == animationNotifyAssets.end())
+        return false;
+
+    bool hasWeaponVisualState = false;
+    for (const auto& state : assetIt->second.notifyTrack.states)
+    {
+        const bool active = time >= state.startTime && time < state.endTime;
+        switch (state.type)
+        {
+        case AnimationNotifyState::Type::ShowTrail:
+            hasWeaponVisualState = true;
+            outHasShowTrail = true;
+            outShowTrail = outShowTrail || active;
+            break;
+        case AnimationNotifyState::Type::ShowEmissive:
+            hasWeaponVisualState = true;
+            outHasShowEmissive = true;
+            if (active)
+                outEmissivePower = state.value;
+            break;
+        default:
+            break;
+        }
+    }
+    return hasWeaponVisualState;
+}
 void AnimationController::OnNotifyBegin(const AnimationNotifyState& state)
 {
     if (!owner)

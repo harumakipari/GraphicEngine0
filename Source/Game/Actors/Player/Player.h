@@ -296,6 +296,7 @@ private:
 
     // “®ìXVˆ—
     void UpdateMovement();
+    void UpdateWeaponVisualPresentation(float deltaTime);
 
     void UpdateRushPromptUI();
     void UpdateLockOnGuideUI();
