@@ -15,16 +15,16 @@
             "value": 0.0
         },
         {
-            "parameter": "enemy_jump_attack",
-            "time": 0.3688969314098358,
-            "type": "PlaySE",
-            "value": 1.0
-        },
-        {
             "parameter": "GroundImpact",
             "time": 0.3681319057941437,
             "type": "SpawnEffect",
             "value": 0.0
+        },
+        {
+            "parameter": "enemy_jump_attack",
+            "time": 0.3688969314098358,
+            "type": "PlaySE",
+            "value": 1.0
         }
     ],
     "loop": false,

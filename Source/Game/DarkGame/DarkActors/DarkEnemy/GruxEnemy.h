@@ -365,6 +365,9 @@ private:
     // 右足を地面に擦る時のエフェクトを生成する
     void SpawnRightFootScrapeEffect()const;
 
+    // 地面に倒れたときのエフェクトを生成する
+    void SpawnGroundDownEffect()const;
+
 
 private:
     // 描画用コンポーネントを追加
@@ -389,6 +392,8 @@ private:
     std::shared_ptr<SceneComponent> weaponRightRootComponent; // 右の武器の根元のコンポーネント
     std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // 右の武器の中間のコンポーネント
     std::shared_ptr<SceneComponent> weaponRightTipComponent;  // 右の武器の先端のコンポーネント
+
+    std::shared_ptr<SceneComponent> beltComponent;  // ベルトのコンポーネント
 
     std::shared_ptr<SceneComponent> leftFootComponent;      // 左足のコンポーネント
     std::shared_ptr<SceneComponent> rightFootComponent;     // 右足のコンポーネント

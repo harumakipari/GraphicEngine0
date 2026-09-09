@@ -1,0 +1,15 @@
+{
+    "animationClip": 32,
+    "animationName": "HitReact_Front",
+    "events": [
+        {
+            "parameter": "boss_hit_voice3",
+            "time": 0.0526556670665741,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

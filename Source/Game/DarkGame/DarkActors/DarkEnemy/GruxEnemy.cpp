@@ -291,6 +291,12 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightFootComponent = AddComponent<SceneComponent>("rightFootComponent", parentName);
     rightFootComponent->AttachToComponent(skeletalMeshComponent, socketRightFootNode); // "ik_foot_r"
 
+    //　ベルトのコンポーネントを追加
+    int socketBeltNode = skeletalMeshComponent->FindIndexByName("belt");
+    beltComponent = AddComponent<SceneComponent>("beltComponent", parentName);
+    beltComponent->AttachToComponent(skeletalMeshComponent, socketBeltNode); // "belt"
+
+
     int leftEyeSocketNode = skeletalMeshComponent->FindIndexByName("L_eye");
     int rightEyeSocketNode = skeletalMeshComponent->FindIndexByName("R_eye");
 
@@ -1132,6 +1138,11 @@ void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
         {
             SpawnRightFootScrapeEffect();
         }
+        else if (event.parameter == "GroundDown")
+        {
+            SpawnGroundDownEffect();
+        }
+
         break;
     }
 }
@@ -3037,6 +3048,38 @@ void  GruxEnemy::SpawnRightFootScrapeEffect()const
     }
 }
 
+// 地面に倒れたときのエフェクトを生成する
+void GruxEnemy::SpawnGroundDownEffect()const
+{
+    DirectX::XMFLOAT3 spawnPosition = GetPosition();
+    if (beltComponent)
+    {
+        const DirectX::XMFLOAT3 beltPosition = beltComponent->GetComponentLocation();
+        spawnPosition.x = beltPosition.x;
+        spawnPosition.z = beltPosition.z;
+    }
+
+    if (groundDustEffectComponent)
+    {
+        // 武器の場所に生成する
+        groundDustEffectComponent->SetWorldLocationDirect(spawnPosition);
+        groundDustEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+
+        // 足元に生成する
+        DirectX::XMFLOAT3 groundDustPosition = GetPosition();
+        groundDustEffectComponent->SetWorldLocationDirect(groundDustPosition);
+        groundDustEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+    }
+
+    // 瓦礫を生成する
+    if (const auto debrisEmitter = GetOwnerScene()->GetActorManager()->GetActorOfType<ModelDebrisEmitterActor>())
+    {
+        debrisEmitter->Emit(spawnPosition);
+    }
+}
+
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {
     if (finalHitReactionActive) return;
@@ -3241,6 +3284,8 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
             SpawnLeftFootScrapeEffect();
         if (event.parameter == "RightFootScrape")
             SpawnRightFootScrapeEffect();
+        if (event.parameter == "GroundDown")
+            SpawnGroundDownEffect();
         break;
     case AnimationNotifyEvent::Type::CameraShake:
     {

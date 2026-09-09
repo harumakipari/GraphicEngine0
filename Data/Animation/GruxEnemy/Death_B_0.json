@@ -9,7 +9,7 @@
             "value": 0.9900000095367432
         },
         {
-            "parameter": "GroundImpact",
+            "parameter": "GroundDown",
             "time": 0.5282738208770752,
             "type": "SpawnEffect",
             "value": 0.0
