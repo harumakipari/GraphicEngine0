@@ -4,9 +4,21 @@
     "events": [
         {
             "parameter": "boss_death",
-            "time": 0.534809947013855,
+            "time": 0.527369499206543,
             "type": "PlaySE",
             "value": 0.9900000095367432
+        },
+        {
+            "parameter": "GroundImpact",
+            "time": 0.5282738208770752,
+            "type": "SpawnEffect",
+            "value": 0.0
+        },
+        {
+            "parameter": "BossWallImpact",
+            "time": 0.5282738208770752,
+            "type": "CameraShake",
+            "value": 0.0
         }
     ],
     "loop": false,

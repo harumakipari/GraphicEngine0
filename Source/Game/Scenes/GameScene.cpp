@@ -2430,7 +2430,7 @@ void GameScene::UpdateBossDeathCinematic()
             // ƒ{ƒXŽ€–S’f–––‚
             if (bossDeathVoiceAudio)
                 bossDeathVoiceAudio->Stop(false);
-            bossDeathVoiceAudio = CoreAudio::PlayOneShot("./Data/Sound/SE/boss_death_voice1.wav", 1.0f);
+            bossDeathVoiceAudio = CoreAudio::PlayOneShot("./Data/Sound/SE/boss_death_voice1.wav", 3.0f);
             bossDeathFinishHoldTime = bossDeathFinishHoldMinTime;
             bossDeathFinishHoldDirection = 1.0f;
             controller->ResetAnimationRate();
