@@ -15,6 +15,7 @@
 class AudioSourceComponent;
 class IInteractable;
 class Enemy;
+class GruxEnemy;
 
 class Player :public Character
 {
@@ -143,6 +144,10 @@ public:
     void UpdateDeathEyeClose(float deathElapsedTime);
     void EndDeathEyeClose();
     void UpdateDeathVisualFade(float deathElapsedTime);
+
+    void SetFinalHitCallback(std::function<void(GruxEnemy*, const DirectX::XMFLOAT3&)> callback)
+    { finalHitCallback = std::move(callback); }
+    void BeginFinalHitWait();
 
     void SetDeathCameraStartCallback(std::function<void()> callback)
     {
@@ -679,6 +684,8 @@ private:
     // ââèoíÜÇ©Ç«Ç§Ç©
     bool moviePerform = false;
     bool deathCameraTransparencyDisabled = false;
+    bool finalHitWaiting = false;
+    std::function<void(GruxEnemy*, const DirectX::XMFLOAT3&)> finalHitCallback;
     std::function<void()> deathCameraStartCallback;
 
     AnimationController::MoveDirection currentMoveDir = AnimationController::MoveDirection::Idle;

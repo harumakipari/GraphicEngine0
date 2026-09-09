@@ -1,6 +1,8 @@
 #pragma once
 
 #include <windows.h>
+#include <array>
+#include <source_location>
 
 class Time
 {
@@ -38,11 +40,29 @@ public:
     }
 
     // スロー再生　scale倍にスローにしてduration後に戻る
-    static void SetSlow(float scale, float duration)
+    static void SetSlow(float scale, float duration,
+        const std::source_location caller = std::source_location::current())
     {
+        ObserveScaleDebug("Direct write observed before SetSlow (caller unknown)");
+        RecordScaleDebug(timeScale, scale, "SetSlow", caller.function_name());
         timeScale = scale;
         slowTimer = duration;
+        observedScaleDebug = timeScale;
     }
+
+    struct ScaleChangeDebug
+    {
+        unsigned long long milliseconds = 0;
+        float before = 1.0f;
+        float after = 1.0f;
+        const char* reason = "";
+        const char* caller = "";
+    };
+    static const std::array<ScaleChangeDebug, 32>& GetScaleHistoryDebug() { return scaleHistoryDebug; }
+    static size_t GetScaleHistoryCountDebug() { return scaleHistoryCountDebug; }
+
+    // Read-only diagnostic access; does not consume or reset the timer.
+    static float GetSlowTimer() { return slowTimer; }
 
     static inline float timeScale{ 1.0f };
 
@@ -52,6 +72,12 @@ private:
     static inline double unscaledDeltaTime{ 0.0f };
 
     static inline float slowTimer = 0.0f;
+
+    static void RecordScaleDebug(float before, float after, const char* reason, const char* caller);
+    static void ObserveScaleDebug(const char* reason);
+    static std::array<ScaleChangeDebug, 32> scaleHistoryDebug;
+    static inline size_t scaleHistoryCountDebug = 0;
+    static inline float observedScaleDebug = 1.0f;
 
 private:
     double secondsPerCount{ 0.0 };

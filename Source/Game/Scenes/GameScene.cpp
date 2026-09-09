@@ -526,7 +526,10 @@ void GameScene::Update(float deltaTime)
     if (InputSystem::GetInputState("F9", InputStateMask::Trigger))
     {
         if (battleFlowState == BattleFlowState::BossDead ||
-            battleFlowState == BattleFlowState::Victory)
+            battleFlowState == BattleFlowState::Victory ||
+            battleFlowState == BattleFlowState::FinalHitSlow ||
+            battleFlowState == BattleFlowState::FinalHitSlowRecovery ||
+            battleFlowState == BattleFlowState::FinalHitAftermath)
         {
             ResetBossDeathDebugPreview();
             return;
@@ -1255,8 +1258,58 @@ void GameScene::ResetBattleForContinue()
     battleFlowState = BattleFlowState::Playing;
 }
 
+void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& source)
+{
+    if (battleFlowState != BattleFlowState::Playing || boss != gruxEnemyActor.get())
+        return;
+    using namespace DirectX;
+    // +Z forward / +X right, matching Character::UpdateDirectionVectors and Grux AI.
+    XMFLOAT3 direction{ source.x - boss->GetPosition().x, 0.0f,
+        source.z - boss->GetPosition().z };
+    XMFLOAT3 local{};
+    XMStoreFloat3(&local, XMVector3Rotate(XMLoadFloat3(&direction),
+        XMQuaternionInverse(XMLoadFloat4(&boss->GetQuaternionRotation()))));
+    if (local.x * local.x + local.z * local.z < FLT_EPSILON)
+        finalHitDirection = "Front";
+    else if (std::abs(local.z) > std::abs(local.x))
+        finalHitDirection = local.z > 0.0f ? "Front" : "Back";
+    else
+        finalHitDirection = local.x >= 0.0f ? "Right" : "Left";
+    finalHitReaction = "HitReact_" + finalHitDirection;
+    finalHitSlowScale = std::isfinite(finalHitSlowScale)
+        ? std::clamp(finalHitSlowScale, 0.01f, 1.0f) : 0.20f;
+    finalHitSlowDuration = std::isfinite(finalHitSlowDuration)
+        ? std::clamp(finalHitSlowDuration, 0.01f, 2.0f) : 0.30f;
+    finalHitAftermathDuration = std::isfinite(finalHitAftermathDuration)
+        ? std::clamp(finalHitAftermathDuration, 0.0f, 2.0f) : 0.15f;
+    finalHitRecoveryElapsed = 0.0f;
+    finalHitRecoveryDurationActive = 0.0f;
+    finalHitRecoveryProgress = 0.0f;
+    recoveryStartScale = finalHitSlowScale;
+    currentRecoveryScale = finalHitSlowScale;
+    finalHitReactionTimeDebug = 0.0f;
+    finalHitReactionCutReached = false;
+    finalHitDebugStartMilliseconds = GetTickCount64();
+    finalHitDebugElapsedSeconds = 0.0;
+    finalHitTimer = finalHitSlowDuration;
+    finalHitPending = true; // Do not consume time from before this frame's hit.
+    battleFlowState = BattleFlowState::FinalHitSlow;
+    finalBattleTime = battleElapsedTime + Time::UnscaledDeltaTime();
+    finalBattleTimeSaved = true;
+    player->BeginFinalHitWait();
+    boss->BeginFinalHitReaction(finalHitReaction);
+    // Replace the ordinary hit stop. GameScene owns the unscaled hold/recovery
+    // timers so Time::Tick cannot snap to 1 before recovery starts.
+    Time::SetSlow(finalHitSlowScale, 0.0f);
+}
+
 void GameScene::EnterBossDead()
 {
+    // Restore global time before entering FadeOut, including reaction cuts mid-slow.
+    Time::SetSlow(1.0f, 0.0f);
+    finalHitPending = false;
+    finalHitTimer = 0.0f;
+    if (gruxEnemyActor) gruxEnemyActor->EndFinalHitReaction();
     const auto& gameplayShader = GetSceneSettings().sceneShaderConstants;
     bossDeathGameplayDof = {
         gameplayShader.focusDistance,
@@ -1306,7 +1359,6 @@ void GameScene::EnterBossDead()
         if (const auto controller = gruxEnemyActor->GetBodyAnimationController())
             controller->ResetAnimationRate();
     }
-    Time::SetSlow(1.0f, 0.0f);
     if (darkCameraActor)
     {
         darkCameraActor->CancelOffscreenAttackAssist();
@@ -1323,6 +1375,17 @@ void GameScene::ResetBossDeathDebugPreview()
         return;
     }
 
+    finalHitPending = false;
+    finalHitTimer = 0.0f;
+    finalHitRecoveryElapsed = 0.0f;
+    finalHitRecoveryDurationActive = 0.0f;
+    finalHitRecoveryProgress = 0.0f;
+    recoveryStartScale = 1.0f;
+    currentRecoveryScale = 1.0f;
+    finalHitReactionTimeDebug = 0.0f;
+    finalHitReactionCutReached = false;
+    finalHitDirection = "None";
+    finalHitReaction.clear();
     Time::SetSlow(1.0f, 0.0f);
     StopBossDeathGroanLoop();
     if (bossDeathVoiceAudio)
@@ -2340,6 +2403,32 @@ void GameScene::UpdateBossDeathCinematic()
 
 void GameScene::UpdateBattleFlow()
 {
+    // Independent wall clock for diagnostics only; retain the final sample after the wait.
+    if (battleFlowState == BattleFlowState::FinalHitSlow ||
+        battleFlowState == BattleFlowState::FinalHitSlowRecovery ||
+        battleFlowState == BattleFlowState::FinalHitAftermath)
+    {
+        finalHitDebugElapsedSeconds =
+            (GetTickCount64() - finalHitDebugStartMilliseconds) / 1000.0;
+        // Actors have already updated this frame. Preserve the evaluated pose
+        // through EndFinalHitReaction; do not seek, replay, or switch to Idle.
+        const auto controller = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
+        if (controller && !finalHitReaction.empty() &&
+            controller->GetCurrentAnimationName() == finalHitReaction)
+        {
+            finalHitReactionTimeDebug = controller->GetCurrentAnimationTime();
+            const float duration = (std::max)(0.0f, controller->GetAnimationLength(finalHitReaction));
+            const float cutTime = std::isfinite(finalHitReactionCutTime)
+                ? std::clamp(finalHitReactionCutTime, 0.0f, duration)
+                : (std::min)(0.365f, duration);
+            if (finalHitReactionTimeDebug >= cutTime)
+            {
+                finalHitReactionCutReached = true;
+                EnterBossDead();
+                return;
+            }
+        }
+    }
     switch (battleFlowState)
     {
     case BattleFlowState::Intro:
@@ -2361,6 +2450,59 @@ void GameScene::UpdateBattleFlow()
             EnterPlayerDead();
         }
         UpdateBattleTimerUI();
+        break;
+    case BattleFlowState::FinalHitSlow:
+        if (finalHitPending)
+        {
+            finalHitPending = false;
+            break;
+        }
+        finalHitTimer -= Time::UnscaledDeltaTime();
+        if (finalHitTimer <= 0.0f)
+        {
+            recoveryStartScale = Time::timeScale;
+            currentRecoveryScale = recoveryStartScale;
+            finalHitRecoveryElapsed = 0.0f;
+            finalHitRecoveryProgress = 0.0f;
+            finalHitRecoveryDurationActive = std::isfinite(finalHitSlowRecoveryDuration)
+                ? std::clamp(finalHitSlowRecoveryDuration, 0.0f, 1.0f) : 0.30f;
+            finalHitTimer = 0.0f;
+            Time::SetSlow(recoveryStartScale, 0.0f);
+            battleFlowState = BattleFlowState::FinalHitSlowRecovery;
+            if (finalHitRecoveryDurationActive <= 0.0f)
+            {
+                finalHitRecoveryProgress = 1.0f;
+                currentRecoveryScale = 1.0f;
+                Time::SetSlow(1.0f, 0.0f);
+                finalHitTimer = finalHitAftermathDuration;
+                battleFlowState = BattleFlowState::FinalHitAftermath;
+            }
+        }
+        break;
+    case BattleFlowState::FinalHitSlowRecovery:
+    {
+        finalHitRecoveryElapsed = (std::min)(finalHitRecoveryDurationActive,
+            finalHitRecoveryElapsed + Time::UnscaledDeltaTime());
+        finalHitRecoveryProgress = finalHitRecoveryDurationActive > 0.0f
+            ? std::clamp(finalHitRecoveryElapsed / finalHitRecoveryDurationActive, 0.0f, 1.0f)
+            : 1.0f;
+        const float t = finalHitRecoveryProgress;
+        const float smoothT = t * t * (3.0f - 2.0f * t);
+        currentRecoveryScale = std::lerp(recoveryStartScale, 1.0f, smoothT);
+        Time::SetSlow(currentRecoveryScale, 0.0f);
+        if (finalHitRecoveryProgress >= 1.0f)
+        {
+            currentRecoveryScale = 1.0f;
+            Time::SetSlow(1.0f, 0.0f);
+            finalHitTimer = finalHitAftermathDuration;
+            battleFlowState = BattleFlowState::FinalHitAftermath;
+        }
+        break;
+    }
+    case BattleFlowState::FinalHitAftermath:
+        finalHitTimer -= Time::UnscaledDeltaTime();
+        if (finalHitTimer <= 0.0f)
+            EnterBossDead();
         break;
     case BattleFlowState::PlayerDead:
         playerDeadElapsed += Time::UnscaledDeltaTime();
@@ -2451,6 +2593,8 @@ void GameScene::SetUpActors()
     gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
     // Only this scene's boss-death flow owns the death animation sequence.
     gruxEnemyActor->SetCinematicDeathAnimationOwnedExternally(true);
+    player->SetFinalHitCallback([this](GruxEnemy* boss, const DirectX::XMFLOAT3& source)
+        { OnPlayerFinalHit(boss, source); });
 
     Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     darkCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkCameraActor>("darkCameraActor", darkCameraTr);
@@ -2570,6 +2714,99 @@ void GameScene::DrawGuiPlusAlpha()
             "PlayerApproach", "PlayerWalkStop", "RecallLeadIn", "RecallPingPong",
             "FinishTriggered", "HuskDelay", "HuskPreview"
         };
+        ImGui::DragFloat("Final Hit Slow Scale", &finalHitSlowScale, 0.01f, 0.01f, 1.0f);
+        ImGui::DragFloat("Final Hit Slow Duration", &finalHitSlowDuration, 0.01f, 0.01f, 2.0f);
+        ImGui::DragFloat("Final Hit Slow Recovery Duration", &finalHitSlowRecoveryDuration,
+            0.01f, 0.0f, 1.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Final Hit Aftermath Duration", &finalHitAftermathDuration, 0.01f, 0.0f, 2.0f);
+        if (gruxEnemyActor)
+        {
+            if (const auto controller = gruxEnemyActor->GetBodyAnimationController())
+            {
+                const std::string reactionName = finalHitReaction.empty() ? "HitReact_Front" : finalHitReaction;
+                const float duration = (std::max)(0.0f, controller->GetAnimationLength(reactionName));
+                ImGui::DragFloat("Final Hit Reaction Cut Time", &finalHitReactionCutTime,
+                    0.001f, 0.0f, duration, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+            }
+        }
+        ImGui::Text("Current Hit Reaction Animation Time: %.6f s", finalHitReactionTimeDebug);
+        ImGui::Text("Reaction Cut Time: %.6f s", finalHitReactionCutTime);
+        ImGui::Text("Cut Time Reached: %s", finalHitReactionCutReached ? "Yes" : "No");
+        ImGui::Text("Final Hit Direction: %s", finalHitDirection.c_str());
+        ImGui::Text("Final Hit Reaction: %s", finalHitReaction.empty() ? "None" : finalHitReaction.c_str());
+        ImGui::Text("Final Hit Wait: %s (%.3f sec)",
+            battleFlowState == BattleFlowState::FinalHitSlow ? "Slow" :
+            battleFlowState == BattleFlowState::FinalHitSlowRecovery ? "Recovery" :
+            battleFlowState == BattleFlowState::FinalHitAftermath ? "Aftermath" : "Inactive", finalHitTimer);
+        ImGui::SeparatorText("Final Hit Measurements (read only)");
+        static constexpr const char* battleFlowNames[] = {
+            "Intro", "Playing", "FinalHitSlow", "FinalHitSlowRecovery", "FinalHitAftermath", "PlayerDead",
+            "ContinueWait", "ResetForContinue", "BossDead", "Victory"
+        };
+        ImGui::Text("BattleFlow: %s", battleFlowNames[static_cast<size_t>(battleFlowState)]);
+        ImGui::Text("Final Hit wall elapsed (Slow + Recovery + Aftermath): %.3f s", finalHitDebugElapsedSeconds);
+        ImGui::Text("Final Hit Timer: %.6f s", finalHitTimer);
+        ImGui::Text("Final Hit Recovery Timer (elapsed / duration): %.6f / %.6f s",
+            finalHitRecoveryElapsed, finalHitRecoveryDurationActive);
+        ImGui::Text("Final Hit Recovery Progress: %.6f", finalHitRecoveryProgress);
+        ImGui::Text("Recovery Start Scale: %.6f", recoveryStartScale);
+        ImGui::Text("Current Recovery Scale: %.6f", currentRecoveryScale);
+        ImGui::Text("Global TimeScale: %.6f", Time::timeScale);
+        ImGui::Text("DeltaTime: %.6f / UnscaledDeltaTime: %.6f s",
+            Time::DeltaTime(), Time::UnscaledDeltaTime());
+        ImGui::Text("Frame Delta / Unscaled: %.6f", Time::UnscaledDeltaTime() > 0.0f
+            ? Time::DeltaTime() / Time::UnscaledDeltaTime() : 0.0f);
+        ImGui::Text("Time slowTimer: %.6f s", Time::GetSlowTimer());
+        const auto drawAnimationMeasurements = [](const char* label, const Character* actor)
+        {
+            if (!actor)
+            {
+                ImGui::Text("%s: unavailable", label);
+                return;
+            }
+            ImGui::Text("%s Actor TimeScale: %.6f", label, actor->GetTimeScale());
+            const auto controller = actor->GetBodyAnimationController();
+            if (!controller)
+            {
+                ImGui::Text("%s Animation: unavailable", label);
+                return;
+            }
+            ImGui::Text("%s Animation: %s", label, controller->GetCurrentAnimationName().c_str());
+            ImGui::Text("%s Animation time: %.6f s", label, controller->GetCurrentAnimationTime());
+            const float rate = controller->GetLastEffectivePlaybackRateDebug();
+            ImGui::Text("%s Effective clip rate (last update): %.6f", label, rate);
+            ImGui::Text("%s Animation update dt: %.6f s", label, controller->GetLastUpdateDeltaTimeDebug());
+            ImGui::Text("%s Rate vs real time (last frame): %.6f", label,
+                Time::UnscaledDeltaTime() > 0.0f
+                ? rate * controller->GetLastUpdateDeltaTimeDebug() / Time::UnscaledDeltaTime() : 0.0f);
+            ImGui::Text("%s blendFactor: %.6f / Playing: %s / BlendSpace: %s / Preview: %s",
+                label, controller->GetBlendFactorDebug(), controller->IsPlayAnimation() ? "Yes" : "No",
+                controller->IsUsingBlendSpace() ? "Yes" : "No", controller->IsEditorPreviewActive() ? "Yes" : "No");
+        };
+        drawAnimationMeasurements("Player", player.get());
+        drawAnimationMeasurements("Boss", gruxEnemyActor.get());
+        if (ImGui::TreeNode("Global Scale History (last 32 changes)"))
+        {
+            ImGui::TextWrapped("SetSlow records its caller; automatic expiry is labelled. "
+                "Direct assignments are detected at the next Tick/SetSlow with an unknown caller; "
+                "multiple direct writes between samples may not be visible.");
+            const auto& history = Time::GetScaleHistoryDebug();
+            for (size_t i = 0; i < Time::GetScaleHistoryCountDebug(); ++i)
+            {
+                const auto& change = history[i];
+                const double relativeSeconds = (static_cast<double>(change.milliseconds) -
+                    static_cast<double>(finalHitDebugStartMilliseconds)) / 1000.0;
+                ImGui::Text("t=%+.3f s: %.6f -> %.6f | %s", relativeSeconds,
+                    change.before, change.after, change.reason);
+                ImGui::TextWrapped("  %s", change.caller);
+            }
+            ImGui::TreePop();
+        }
+        ImGui::TextWrapped("Clip rate = controller rate * asset playRate * speedCurve, sampled before time advances. "
+            "Zero in BlendSpace/preview or when runtime evaluation is skipped. "
+            "Values describe the last update; a finished clip can clamp its time. "
+            "Global scale can change after the frame DeltaTime was computed.");
+        ImGui::Separator();
         ImGui::Text("Presets Loaded: %s", bossDeathShotsLoaded ? "Yes" : "No");
         ImGui::Text("Phase: %s", phaseNames[static_cast<size_t>(bossDeathPhase)]);
         ImGui::Text("Phase Elapsed: %.3f", bossDeathPhaseElapsed);

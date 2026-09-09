@@ -136,6 +136,8 @@ void AnimationController::ApplyLocalPoseOverride()
 void AnimationController::OnUpdate(const float deltaTime)
 {
     ZoneScopedN("Animation Update");
+    lastEffectivePlaybackRateDebug = 0.0f;
+    lastUpdateDeltaTimeDebug = deltaTime;
 
     const DirectX::XMFLOAT3 actorPositionAtBegin =owner->GetPosition();
 
@@ -198,6 +200,7 @@ void AnimationController::OnUpdate(const float deltaTime)
             asset.playRate *
             curveRate;
 
+        lastEffectivePlaybackRateDebug = normalPlayRate;
         animationTime +=
             deltaTime * normalPlayRate;
 

@@ -564,6 +564,13 @@ void Player::Update(float deltaTime)
     if (battleActionsSuspended)
         return;
 
+    if (finalHitWaiting)
+    {
+        if (const auto controller = GetBodyAnimationController())
+            controller->OnUpdate(deltaTime);
+        return;
+    }
+
     const bool gameplayInputEnabled = !IsInWinState();
 
     // Player HP UI uses unscaled time so HitStop / Slow do not pause the delayed gauge.
@@ -820,7 +827,9 @@ void Player::Update(float deltaTime)
                 if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
                 {
                     Logger::Log(U8("剣に敵が当たった"));
+                    const int previousHP = enemy->GetHp();
                     enemy->TakeDamage(GetCurrentAttackDamage());
+                    const bool lethalHit = previousHP > 0 && enemy->GetHp() <= 0;
                     const bool isRushHit = stateMachine_ &&
                         std::string(stateMachine_->GetStateName()) == "Rush";
                     if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
@@ -840,6 +849,8 @@ void Player::Update(float deltaTime)
                     }
                     Time::SetSlow(0.0f,
                         isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
+                    if (lethalHit && finalHitCallback)
+                        finalHitCallback(enemy, GetPosition());
 
                 }
             }
@@ -934,6 +945,13 @@ void Player::Update(float deltaTime)
     }
 
     // ヒットストップ処理
+    if (finalHitWaiting)
+    {
+        if (const auto controller = GetBodyAnimationController())
+            controller->OnUpdate(deltaTime);
+        return;
+    }
+
     if (hitStopTimer > 0.0f)
     {
         hitStopTimer -= Time::UnscaledDeltaTime();
@@ -1572,6 +1590,7 @@ void Player::DrawImGuiDetails()
 
 void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {
+    if (finalHitWaiting) return;
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
@@ -1681,6 +1700,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 
 void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 {
+    if (finalHitWaiting) return;
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
@@ -1794,6 +1814,7 @@ void Player::HandleAnimationPlaySE(const AnimationNotifyEvent& event)
 
 void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
+    if (finalHitWaiting) return;
     switch (event.type)
     {
     case AnimationNotifyEvent::Type::PlaySE:
@@ -2103,8 +2124,18 @@ void Player::StopBattleActions()
     ClearTransientBattleActions();
 }
 
+void Player::BeginFinalHitWait()
+{
+    finalHitWaiting = true;
+    ForceResetPlayerSlow();
+    ForceResetBossSlow();
+    hitStopTimer = 0.0f;
+    ClearTransientBattleActions();
+}
+
 void Player::EnterWinState()
 {
+    finalHitWaiting = false;
     battleActionsSuspended = false;
     if (stateMachine_)
         stateMachine_->ChangeState("Win");
@@ -2167,6 +2198,7 @@ void Player::ClearTransientBattleActions()
 
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
+    finalHitWaiting = false;
     lowHpPresentationSuppressed = false;
     ResetLowHpEffects();
     ResetEyeCloseOverride();
@@ -2992,6 +3024,7 @@ void Player::RecordNormalDodgeDebug()
 //当たった時の処理
 bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition)
 {
+    if (finalHitWaiting) return false;
     if (invincibleWindow)
     {
         if (stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge")

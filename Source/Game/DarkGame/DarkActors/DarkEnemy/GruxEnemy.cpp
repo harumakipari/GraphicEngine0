@@ -172,6 +172,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Knock_Down_Loop", 29);
     controller->AddAnimation("Knock_Down_Start", 30);
     controller->AddAnimation("Death_Fwd", 31);
+    controller->AddAnimation("HitReact_Front", 32);
+    controller->AddAnimation("HitReact_Back", 33);
+    controller->AddAnimation("HitReact_Left", 34);
+    controller->AddAnimation("HitReact_Right", 35);
     // Death clipだけRoot Translationを含むため、Actor位置へ適用せずPoseもin-place化する。
     controller->SetRemoveRootTranslationFromPose("Knock_Down_Death", true);
 
@@ -550,6 +554,8 @@ void GruxEnemy::ResetForBattleRestart(const Transform& battleStartTransform)
 
 void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
 {
+    EndFinalHitReaction();
+    finalHitReactionHeld = false;
     ResetTimeScale();
     if (stateMachine_)
         stateMachine_->ChangeState("EnemyIdleState");
@@ -569,12 +575,36 @@ void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
     UpdateAllComponentTransforms();
 }
 
+void GruxEnemy::BeginFinalHitReaction(const std::string& animationName)
+{
+    // Release only the Rush HP hold; keep the player's final attack state intact.
+    EndRushHpDisplay();
+    // Enter the existing terminal AI state before taking animation ownership.
+    isDeathPerform = true;
+    stateMachine_->ChangeState("EnemyDeathState");
+    finalHitReactionActive = true;
+    finalHitReactionHeld = false;
+    StopBattleActions();
+    ResetTimeScale();
+    if (const auto controller = GetBodyAnimationController())
+    {
+        controller->ResetAnimationRate();
+        controller->SetRemoveRootTranslationFromPose(animationName, true);
+    }
+    PlayBodyAnimation(animationName, false, true, 0.1f, true);
+}
+
+void GruxEnemy::EndFinalHitReaction()
+{
+    finalHitReactionHeld = finalHitReactionActive;
+    finalHitReactionActive = false;
+}
+
 void GruxEnemy::Update(float deltaTime)
 {
     // HPバーの更新
     const float currentHp = static_cast<float>((std::max)(hp, 0));
     const float uiDeltaTime = Time::UnscaledDeltaTime();
-    hitVoiceCooldownTimer = (std::max)(0.0f, hitVoiceCooldownTimer - uiDeltaTime);
     if (!rushHpDisplayActive && delayedHp > currentHp)
     {
         if (delayedHpDelayTimer > 0.0f)
@@ -605,6 +635,24 @@ void GruxEnemy::Update(float deltaTime)
         hpCurrentFillUiComponent->SetValue(currentHp, maximumHp);
         hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
     }
+
+    // Leave the last reaction pose still during fade; the existing cinematic
+    // animation request releases this hold without taking editor ownership.
+    if (finalHitReactionHeld)
+    {
+        const auto controller = GetBodyAnimationController();
+        if (controller && controller->GetCurrentAnimationName().starts_with("HitReact_"))
+            return;
+        finalHitReactionHeld = false;
+    }
+    if (finalHitReactionActive)
+    {
+        if (const auto controller = GetBodyAnimationController())
+            controller->OnUpdate(deltaTime);
+        return;
+    }
+
+    hitVoiceCooldownTimer = (std::max)(0.0f, hitVoiceCooldownTimer - uiDeltaTime);
 
     if (!IsAnimationEditorPreviewActive())
         UpdateActionCooldowns(deltaTime);
@@ -2718,6 +2766,7 @@ void GruxEnemy::EndRushHpDisplay()
 
 void GruxEnemy::TakeDamage(const int damage)
 {
+    if (finalHitReactionActive) return;
     skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = damageFlashStartValue;
     // コントローラー振動
     InputSystem::SetVibration(0.8f, 0.1f);
@@ -2989,6 +3038,7 @@ void  GruxEnemy::SpawnRightFootScrapeEffect()const
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {
+    if (finalHitReactionActive) return;
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
@@ -3085,6 +3135,7 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 
 void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 {
+    if (finalHitReactionActive) return;
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
@@ -3160,6 +3211,7 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
+    if (finalHitReactionActive) return;
     if (event.parameter == "BeginHuskParticle" && isDeathPerform)
     {
         beginHuskParticleRequest = true;

@@ -2,6 +2,26 @@
 #include "Time.h"
 #include <imgui.h>
 
+std::array<Time::ScaleChangeDebug, 32> Time::scaleHistoryDebug{};
+
+void Time::RecordScaleDebug(float before, float after, const char* reason, const char* caller)
+{
+    if (before == after) return;
+    if (scaleHistoryCountDebug == scaleHistoryDebug.size())
+    {
+        for (size_t i = 1; i < scaleHistoryDebug.size(); ++i)
+            scaleHistoryDebug[i - 1] = scaleHistoryDebug[i];
+        --scaleHistoryCountDebug;
+    }
+    scaleHistoryDebug[scaleHistoryCountDebug++] = { GetTickCount64(), before, after, reason, caller };
+}
+
+void Time::ObserveScaleDebug(const char* reason)
+{
+    RecordScaleDebug(observedScaleDebug, timeScale, reason, "Unknown direct assignment");
+    observedScaleDebug = timeScale;
+}
+
 Time::Time()
 {
     LONGLONG counts_per_sec;
@@ -53,6 +73,7 @@ void Time::Stop()
 
 void Time::Tick() // 毎フレーム呼び出す。
 {
+    ObserveScaleDebug("Direct write observed at Time::Tick (caller unknown)");
     if (stopped)
     {
         deltaTime = 0.0;
@@ -82,7 +103,9 @@ void Time::Tick() // 毎フレーム呼び出す。
 
         if (slowTimer <= 0.0f)
         {
+            RecordScaleDebug(timeScale, 1.0f, "slowTimer expired", "Time::Tick");
             timeScale = 1.0f;
+            observedScaleDebug = timeScale;
         }
     }
 }

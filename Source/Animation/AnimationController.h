@@ -102,6 +102,11 @@ public:
 
     void OnUpdate(const float deltaTime);
 
+    // Values actually used by the last runtime update, before advancing the curve.
+    float GetLastEffectivePlaybackRateDebug() const { return lastEffectivePlaybackRateDebug; }
+    float GetLastUpdateDeltaTimeDebug() const { return lastUpdateDeltaTimeDebug; }
+    float GetBlendFactorDebug() const { return blendFactor; }
+
     // アニメーションの再生倍率を変更する関数
     void SetAnimationRate(const float animationRate) { this->animationRate = animationRate; }
 
@@ -659,6 +664,8 @@ private:
     float prevAnimationTime = 0.0f;
 
     //アニメーション時間
+    float lastEffectivePlaybackRateDebug = 0.0f;
+    float lastUpdateDeltaTimeDebug = 0.0f;
     float animationTime = 0.0f;
 
     // Negative means that the animation uses its full clip duration.

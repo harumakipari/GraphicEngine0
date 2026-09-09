@@ -37,6 +37,8 @@ public:
 
     // Stops combat immediately while preserving HP and the current death animation.
     void StopBattleActions();
+    void BeginFinalHitReaction(const std::string& animationName);
+    void EndFinalHitReaction();
 
     // Suspends battle decisions while allowing the Actor and its animations to update.
     void PauseBattleAI();
@@ -274,6 +276,8 @@ public:
 
 
 private:
+    bool finalHitReactionActive = false;
+    bool finalHitReactionHeld = false;
     // ƒvƒŒƒCƒ„[‚Æ‚Ì‹——£‚ğæ“¾‚·‚éŠÖ”
     float GetDistanceToPlayer();
 

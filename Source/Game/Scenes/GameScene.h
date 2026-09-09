@@ -59,6 +59,9 @@ public:
     {
         Intro,
         Playing,
+        FinalHitSlow,
+        FinalHitSlowRecovery,
+        FinalHitAftermath,
         PlayerDead,
         ContinueWait,
         ResetForContinue,
@@ -211,6 +214,27 @@ private:
 
     std::shared_ptr<GruxEnemy> gruxEnemyActor;
 
+    void OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& source);
+
+    float finalHitSlowScale = 0.20f;
+    float finalHitSlowDuration = 1.80f;
+    float finalHitAftermathDuration = 1.f;
+    float finalHitSlowRecoveryDuration = 0.30f;
+    float finalHitRecoveryElapsed = 0.0f;
+    float finalHitRecoveryDurationActive = 0.0f;
+    float finalHitRecoveryProgress = 0.0f;
+    float recoveryStartScale = 1.0f;
+    float currentRecoveryScale = 1.0f;
+    float finalHitTimer = 0.0f;
+    unsigned long long finalHitDebugStartMilliseconds = 0;
+    double finalHitDebugElapsedSeconds = 0.0;
+    bool finalHitPending = false;
+    float finalHitReactionCutTime = 0.365f; // ここでfadeに遷移するタイミング
+
+    float finalHitReactionTimeDebug = 0.0f;
+    bool finalHitReactionCutReached = false;
+    std::string finalHitDirection = "None";
+    std::string finalHitReaction;
     BattleFlowState battleFlowState = BattleFlowState::Intro;
     Transform playerBattleStartTransform{};
     Transform bossBattleStartTransform{};
