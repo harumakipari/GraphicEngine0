@@ -598,6 +598,9 @@ void GameScene::DisableCinematicCameraDebugInput()
 
 void GameScene::StartBossBattle()
 {
+    victoryResultPhase = VictoryResultPhase::None;
+    victoryResultDelayElapsed = 0.0f;
+    ResetHuskCompletionTracking();
     DisableCinematicCameraDebugInput();
     if (!player || !gruxEnemyActor)
         return;
@@ -1381,6 +1384,9 @@ void GameScene::EnterBossDead()
 
 void GameScene::ResetBossDeathDebugPreview()
 {
+    victoryResultPhase = VictoryResultPhase::None;
+    victoryResultDelayElapsed = 0.0f;
+    ResetHuskCompletionTracking();
     DisableCinematicCameraDebugInput();
     if (!battleStartTransformsSaved || !player || !gruxEnemyActor)
     {
@@ -2410,7 +2416,77 @@ void GameScene::UpdateBossDeathCinematic()
         break;
 
     case BossDeathPhase::HuskPreview:
-        // Result transition is intentionally not connected yet.
+        if (IsHuskComplete())
+            EnterVictoryResult();
+        break;
+    }
+}
+
+void GameScene::EnterVictoryResult()
+{
+    if (battleFlowState != BattleFlowState::BossDead || !bossDeathShotsLoaded ||
+        !cinemaCameraActor ||
+        !dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()))
+        return;
+
+    DisableCinematicCameraDebugInput();
+    Time::SetSlow(1.0f, 0.0f);
+    if (cameraManager->IsUseDebug()) cameraManager->ToggleCamera(this);
+    if (cameraManager->IsUseMovie()) cameraManager->ToggleMovieCamera(this);
+    if (!cameraManager->IsUseCinematic()) cameraManager->ToggleCinematicCamera(this);
+    auto* camera = dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent());
+    const float blendDuration = std::isfinite(victoryCameraBlendDuration)
+        ? std::clamp(victoryCameraBlendDuration, 0.0f, 2.0f) : 0.60f;
+    camera->BlendToPose(bossDeathShots[BossDeathResult].camera, blendDuration);
+    ApplyBossDeathDof(bossDeathShots[BossDeathResult].dof);
+    if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
+    {
+        controller->ReleaseHeldAnimationPose();
+        controller->ResetAnimationRate();
+        player->PlayBodyAnimation("Idle", true, true, 0.2f, true);
+    }
+    battleFlowState = BattleFlowState::Victory;
+    victoryResultDelayElapsed = 0.0f;
+    victoryResultPhase = VictoryResultPhase::CameraBlend;
+}
+
+void GameScene::UpdateVictoryResult()
+{
+    DisableCinematicCameraDebugInput();
+    const auto controller = player ? player->GetBodyAnimationController() : nullptr;
+    auto* camera = cinemaCameraActor
+        ? dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()) : nullptr;
+    switch (victoryResultPhase)
+    {
+    case VictoryResultPhase::CameraBlend:
+        if (camera && !camera->IsBlending() && controller)
+        {
+            controller->ResetAnimationRate();
+            player->PlayBodyAnimation("Emote_Win", false, true, 0.2f, true);
+            controller->SetPlaybackRange(0.0f, victoryEmoteEndTime);
+            victoryResultPhase = VictoryResultPhase::WinEmote;
+        }
+        break;
+    case VictoryResultPhase::WinEmote:
+        if (controller && controller->GetCurrentAnimationName() == "Emote_Win" &&
+            controller->GetCurrentAnimationTime() >= victoryEmoteEndTime)
+        {
+            player->PlayBodyAnimation("Idle", true, true, 0.2f, true);
+            victoryResultDelayElapsed = 0.0f;
+            victoryResultPhase = VictoryResultPhase::ResultDelay;
+        }
+        break;
+    case VictoryResultPhase::ResultDelay:
+    {
+        const float duration = std::isfinite(victoryResultDelayDuration)
+            ? std::clamp(victoryResultDelayDuration, 0.0f, 2.0f) : 0.70f;
+        victoryResultDelayElapsed = (std::min)(duration,
+            victoryResultDelayElapsed + (std::max)(0.0f, Time::UnscaledDeltaTime()));
+        if (victoryResultDelayElapsed >= duration)
+            victoryResultPhase = VictoryResultPhase::CameraIntroComplete;
+        break;
+    }
+    default:
         break;
     }
 }
@@ -2546,11 +2622,7 @@ void GameScene::UpdateBattleFlow()
         UpdateBossDeathCinematic();
         break;
     case BattleFlowState::Victory:
-        // ƒ^ƒCƒgƒ‹‰æ–Ê‚É–ß‚é
-        if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
-        {
-            SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
-        }
+        UpdateVictoryResult();
         break;
     }
 }
@@ -2821,6 +2893,29 @@ void GameScene::DrawGuiPlusAlpha()
             "Values describe the last update; a finished clip can clamp its time. "
             "Global scale can change after the frame DeltaTime was computed.");
         ImGui::Separator();
+        ImGui::SeparatorText("Victory Camera Intro");
+        static constexpr const char* victoryPhaseNames[] = { "None", "CameraBlend", "WinEmote", "ResultDelay", "CameraIntroComplete" };
+        ImGui::Text("Victory Result Phase: %s", victoryPhaseNames[static_cast<size_t>(victoryResultPhase)]);
+        ImGui::DragFloat("Result Camera Blend Duration", &victoryCameraBlendDuration,
+            0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+        const auto* resultCamera = cinemaCameraActor
+            ? dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()) : nullptr;
+        ImGui::Text("IsBlending: %s", resultCamera && resultCamera->IsBlending() ? "Yes" : "No");
+        const auto resultController = player ? player->GetBodyAnimationController() : nullptr;
+        ImGui::Text("Player Current Animation: %s", resultController
+            ? resultController->GetCurrentAnimationName().c_str() : "None");
+        ImGui::Text("Player Animation Time: %.3f s", resultController
+            ? resultController->GetCurrentAnimationTime() : 0.0f);
+        ImGui::Text("Emote End Time: %.2f s", victoryEmoteEndTime);
+        ImGui::Text("Emote_Win Clip Duration: %.3f s", resultController
+            ? resultController->GetAnimationLength("Emote_Win") : 0.0f);
+        ImGui::Text("Husk Capture Started: %s", HasHuskCaptureStarted() ? "Yes" : "No");
+        ImGui::Text("Husk Playback Elapsed: %.3f s", GetHuskPlaybackElapsed());
+        ImGui::Text("Husk Completion Duration: %.3f s", GetHuskCompletionDuration());
+        ImGui::Text("Husk Complete: %s", IsHuskComplete() ? "Yes" : "No");
+        ImGui::Text("Result Delay Timer: %.3f s", victoryResultDelayElapsed);
+        ImGui::DragFloat("Result Delay", &victoryResultDelayDuration,
+            0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
         ImGui::Text("Presets Loaded: %s", bossDeathShotsLoaded ? "Yes" : "No");
         ImGui::Text("Phase: %s", phaseNames[static_cast<size_t>(bossDeathPhase)]);
         ImGui::Text("Phase Elapsed: %.3f", bossDeathPhaseElapsed);

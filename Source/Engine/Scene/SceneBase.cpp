@@ -144,6 +144,57 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     return true;
 }
 
+void SceneBase::ResetHuskCompletionTracking()
+{
+    huskCompletionTracking = false;
+    huskPlaybackElapsed = 0.0;
+    huskCompletionDuration = 0.0;
+    huskAllDetachedElapsed = -1.0;
+}
+
+void SceneBase::BeginHuskCompletionTracking()
+{
+    ResetHuskCompletionTracking();
+    if (!huskParticles) return;
+    huskCompletionTracking = true;
+    UpdateHuskCompletionTracking(0.0f);
+}
+
+void SceneBase::UpdateHuskCompletionTracking(float deltaTime)
+{
+    if (!huskCompletionTracking || !huskParticles) return;
+    huskPlaybackElapsed += (std::max)(0.0f, deltaTime);
+    const auto& settings = huskParticles->particle_data;
+    constexpr double safetyMargin = 0.05;
+    const double dissolve = (std::max)(0.001f, huskDissolveDuration);
+    const double startDelay = (std::max)(0.0f, settings.max_start_delay);
+    const double maxLifetime = (std::max)(0.0f, settings.lifetime) *
+        (std::max)(0.0f, (std::max)(settings.lifetime_min_multiplier, settings.lifetime_max_multiplier));
+    // Never shorten a running guarantee when the debug settings are edited.
+    huskCompletionDuration = (std::max)(huskCompletionDuration,
+        (std::max)(dissolve, startDelay) + maxLifetime + safetyMargin);
+    // Observe the actual boundary too: rounding or debug changes can delay it.
+    if (gruxHuskDeathProgress >= 1.0f && huskPlaybackElapsed >= startDelay)
+    {
+        if (huskAllDetachedElapsed < 0.0)
+            huskAllDetachedElapsed = huskPlaybackElapsed;
+        huskCompletionDuration = (std::max)(huskCompletionDuration,
+            huskAllDetachedElapsed + maxLifetime + safetyMargin);
+    }
+    else
+        huskAllDetachedElapsed = -1.0;
+}
+
+bool SceneBase::IsHuskComplete() const
+{
+#ifdef _DEBUG
+    if (huskDebugProgressOverride) return false;
+#endif
+    return HasHuskCaptureStarted() && gruxHuskPlaybackActive &&
+        gruxHuskDeathProgress >= 1.0f && huskAllDetachedElapsed >= 0.0 &&
+        huskPlaybackElapsed >= huskCompletionDuration;
+}
+
 void SceneBase::Update(float deltaTime)
 {
     // アクターの前フレームの姿勢を保存
@@ -202,6 +253,7 @@ void SceneBase::Update(float deltaTime)
         gruxHuskCaptured = false;
         gruxHuskBackupValid = false;
         gruxHuskPlaybackActive = false;
+        ResetHuskCompletionTracking();
         gruxHuskDeathProgress = 0.0f;
         huskParticles->particle_data.death_progress = 0.0f;
         huskParticles->particle_data.particle_count = 0;
@@ -225,6 +277,7 @@ void SceneBase::Update(float deltaTime)
         gruxHuskCaptureRequested = false;
         gruxHuskPreviewCaptureRequested = false;
         gruxHuskPlaybackActive = false;
+        ResetHuskCompletionTracking();
         gruxHuskBackupValid = false;
         gruxHuskDeathProgress = 0.0f;
         if (huskParticles)
@@ -240,6 +293,7 @@ void SceneBase::Update(float deltaTime)
             // A real death event supersedes any previous debug preview capture.
             gruxHuskCaptured = false;
             gruxHuskPlaybackActive = false;
+            ResetHuskCompletionTracking();
             gruxHuskBackupValid = false;
         }
         if (gruxHuskPlaybackActive)
@@ -256,6 +310,7 @@ void SceneBase::Update(float deltaTime)
             huskParticles->particle_data.death_progress =
                 std::clamp(gruxHuskDeathProgress, 0.0f, 1.0f);
             huskParticles->integrate(Graphics::GetDeviceContext(), huskDeltaTime);
+            UpdateHuskCompletionTracking(huskDeltaTime);
         }
     }
 }
@@ -731,6 +786,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                 gruxHuskPreviewCaptureRequested = false;
                 gruxHuskPlaybackActive = true;
                 gruxHuskDeathProgress = 0.0f;
+                BeginHuskCompletionTracking();
                 gruxMesh->SetIsVisible(false);
                 huskParticles->backup_particles(immediateContext);
 #ifdef _DEBUG
@@ -1172,6 +1228,7 @@ void SceneBase::DrawSceneSettingsTab()
             gruxHuskCaptured = false;
             gruxHuskBackupValid = false;
             gruxHuskPlaybackActive = false;
+            ResetHuskCompletionTracking();
             gruxHuskDeathProgress = 0.0f;
             huskParticles->particle_data.death_progress = 0.0f;
             huskParticles->particle_data.particle_count = 0;
@@ -1189,6 +1246,7 @@ void SceneBase::DrawSceneSettingsTab()
             gruxHuskDeathProgress = 0.0f;
             huskParticles->particle_data.death_progress = 0.0f;
             gruxHuskPlaybackActive = true;
+            BeginHuskCompletionTracking();
             if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
             {
                 if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)
@@ -1199,6 +1257,7 @@ void SceneBase::DrawSceneSettingsTab()
         if (ImGui::Button("Reset"))
         {
             gruxHuskPlaybackActive = false;
+            ResetHuskCompletionTracking();
             gruxHuskDeathProgress = 0.0f;
             huskParticles->particle_data.death_progress = 0.0f;
             if (gruxHuskBackupValid)
@@ -1297,6 +1356,7 @@ void SceneBase::DrawSceneSettingsTab()
             gruxHuskDeathProgress = huskDebugProgressOverride ? huskDebugProgress : 0.0f;
             huskParticles->particle_data.death_progress = gruxHuskDeathProgress;
             gruxHuskPlaybackActive = true;
+            BeginHuskCompletionTracking();
             if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
             {
                 if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)

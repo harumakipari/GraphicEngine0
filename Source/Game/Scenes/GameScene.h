@@ -177,6 +177,14 @@ private:
     void ApplyBossDeathDof(const BossDeathDofState& dof);
     void CutToBossDeathShot(size_t shotIndex);
     void ClampBossDeathPreviewTuning();
+    enum class VictoryResultPhase { None, CameraBlend, WinEmote, ResultDelay, CameraIntroComplete };
+    void EnterVictoryResult();
+    void UpdateVictoryResult();
+    VictoryResultPhase victoryResultPhase = VictoryResultPhase::None;
+    float victoryResultDelayElapsed = 0.0f;
+    float victoryResultDelayDuration = 0.70f;
+    float victoryCameraBlendDuration = 0.60f;
+    static constexpr float victoryEmoteEndTime = 1.48f;
     void CreateBattleTimerUI();
     void SetBattleTimerVisible(bool visible);
     void UpdateBattleTimerUI();

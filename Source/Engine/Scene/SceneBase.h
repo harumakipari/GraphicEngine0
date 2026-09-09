@@ -57,6 +57,11 @@ public:
     virtual bool OnSizeChanged(ID3D11Device* device, UINT64 width, UINT height) override;
     void DrawGui() override;
 
+    bool HasHuskCaptureStarted() const { return huskCompletionTracking && gruxHuskCaptured; }
+    double GetHuskPlaybackElapsed() const { return huskPlaybackElapsed; }
+    double GetHuskCompletionDuration() const { return huskCompletionDuration; }
+    bool IsHuskComplete() const;
+
     void RegisterRenderHook(const RenderPass pass, const RenderHook& hook)
     {
         renderHooks[pass].push_back(hook);
@@ -166,6 +171,13 @@ protected:
     bool gruxHuskPreviewCaptureRequested = false;
     bool gruxHuskPlaybackActive = false;
     bool gruxHuskBackupValid = false;
+    void ResetHuskCompletionTracking();
+    void BeginHuskCompletionTracking();
+    void UpdateHuskCompletionTracking(float deltaTime);
+    bool huskCompletionTracking = false;
+    double huskPlaybackElapsed = 0.0;
+    double huskCompletionDuration = 0.0;
+    double huskAllDetachedElapsed = -1.0;
 #ifdef _DEBUG
     float huskCapturedWorldXMin = 0.0f;
     float huskCapturedWorldXMax = 0.0f;
