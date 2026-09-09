@@ -11,7 +11,7 @@ void UIManager::Update(float deltaTime)
     if (!enabled) return;
 
     // コントローラー用のUIを操作  
-    HandleGamepadUI(Time::UnscaledDeltaTime());
+    if (navigationEnabled) HandleGamepadUI(Time::UnscaledDeltaTime());
 
     if (!pendingAdd.empty())
     {

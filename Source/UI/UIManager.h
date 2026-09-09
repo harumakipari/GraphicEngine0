@@ -55,6 +55,7 @@ public:
     bool IsMouseCaptured() const { return mouseCaptured; }
     void SetMouseCaptured(const bool v) { mouseCaptured = v; }
 
+    void SetNavigationEnabled(bool value) { navigationEnabled = value; }
     void SetSelected(UIButtonComponent* button);
     UIButtonComponent* GetSelectedButton() const { return selectedButton; }
 
@@ -72,6 +73,7 @@ private:
     UIButtonComponent* selectedButton = nullptr; // 現在選択されているボタン（コントローラー、キーボード操作用）
     std::vector<std::shared_ptr<UIButtonComponent>> buttons;
 
+    bool navigationEnabled = true;
     bool visible = true;
     bool enabled = true;
     bool mouseCaptured = false;

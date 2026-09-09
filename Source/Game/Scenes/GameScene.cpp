@@ -1390,6 +1390,11 @@ void GameScene::EnterBossDead()
 
 void GameScene::ResetBossDeathDebugPreview()
 {
+    RestartBossBattle();
+}
+
+void GameScene::RestartBossBattle()
+{
     ResetVictoryResultBackground();
     victoryResultPhase = VictoryResultPhase::None;
     victoryResultDelayElapsed = 0.0f;
@@ -1398,10 +1403,17 @@ void GameScene::ResetBossDeathDebugPreview()
     if (!battleStartTransformsSaved || !player || !gruxEnemyActor)
     {
         Logger::Warning(Logger::LogCategory::System,
-            "Boss death debug reset skipped because battle-start state is unavailable");
+            "Boss battle restart skipped because battle-start state is unavailable");
         return;
     }
 
+    deathResultInputEnabled = false;
+    deathPresentationElapsed = 0.0f;
+    deathResultSelection = 0;
+    SetDeathResultVisible(false);
+    GetUIManager()->SetSelected(nullptr);
+    player->SetDeathCameraStartCallback(nullptr);
+    player->SetDeathCameraTransparencyDisabled(false);
     finalHitPending = false;
     finalHitTimer = 0.0f;
     finalHitRecoveryElapsed = 0.0f;
@@ -2587,11 +2599,18 @@ void GameScene::CreateVictoryResultBackground()
                 "VictoryTime" + std::to_string(row) + "_" + std::to_string(i),
                 { punctuation ? 48.0f : 96.0f, 128.0f });
         }
+    victoryButtons[0] = create("./Data/Textures/UI/Result/restart_battle_button.png",
+        "VictoryRestartButton", { 668.0f, 75.0f });
+    victoryButtons[1] = create("./Data/Textures/UI/Result/return_title_button.png",
+        "VictoryTitleButton", { 730.0f, 71.0f });
+    victorySelectLine = create("./Data/Textures/UI/Result/select_button_line.png",
+        "VictorySelectLine", { 113.0f, 5.0f });
     ResetVictoryResultBackground();
 }
 
 void GameScene::ResetVictoryResultBackground()
 {
+    ResetVictoryButtons();
     victoryIsNewRecord = false;
     victoryRank = VictoryRank::C;
     victoryClearTime = 0.0;
@@ -2622,6 +2641,93 @@ void GameScene::UpdateVictoryResultBackground()
     UpdateVictoryResultContents();
 }
 
+void GameScene::ResetVictoryButtons()
+{
+    victoryButtonsVisible = false;
+    victoryButtonAlpha = 0.0f;
+    victoryButtonFadeTimer = 0.0f;
+    victoryButtonStickDelay = 0.0f;
+    victorySelectedButton = 0;
+    victoryButtonInputEnabled = false;
+    victoryButtonInputArmed = false;
+    victoryResultPhase = VictoryResultPhase::None;
+    victoryResultDelayElapsed = 0.0f;
+    GetUIManager()->SetNavigationEnabled(true);
+    UpdateVictoryButtonLayout();
+}
+
+void GameScene::UpdateVictoryButtonLayout()
+{
+    for (size_t i = 0; i < victoryButtons.size(); ++i)
+    {
+        if (!victoryButtons[i]) continue;
+        victoryButtons[i]->SetWorldPosition(victoryButtonPositions[i]);
+        victoryButtons[i]->SetScale({ victoryButtonScales[i], victoryButtonScales[i] });
+        victoryButtons[i]->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, victoryButtonAlpha });
+        victoryButtons[i]->SetVisible(victoryButtonsVisible);
+    }
+    if (victorySelectLine)
+    {
+        const auto& position = victoryButtonPositions[victorySelectedButton];
+        victorySelectLine->SetWorldPosition({ position.x + victorySelectLineOffset.x,
+            position.y + victorySelectLineOffset.y });
+        victorySelectLine->SetScale(victorySelectLineScale);
+        victorySelectLine->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, victoryButtonAlpha });
+        victorySelectLine->SetVisible(victoryButtonsVisible);
+    }
+}
+
+void GameScene::UpdateVictoryButtonInput()
+{
+    if (!victoryButtonInputEnabled || victoryResultPhase != VictoryResultPhase::Interactive) return;
+    // Use the same actions and stick threshold as UIManager, scoped to these two images.
+    // Require neutral input after entering Interactive, then accept fresh triggers only.
+    const float stickX = InputSystem::GetLeftStick().x;
+    if (!victoryButtonInputArmed)
+    {
+        if (!InputSystem::GetInputState("UISubmit", InputStateMask::Press) &&
+            !InputSystem::GetInputState("UILeft", InputStateMask::Press) &&
+            !InputSystem::GetInputState("UIRight", InputStateMask::Press) &&
+            !InputSystem::GetInputState("Left", InputStateMask::Press) &&
+            !InputSystem::GetInputState("Right", InputStateMask::Press) && std::abs(stickX) <= 0.6f)
+            victoryButtonInputArmed = true;
+        return;
+    }
+    victoryButtonStickDelay = (std::max)(0.0f, victoryButtonStickDelay - Time::UnscaledDeltaTime());
+    int direction = 0;
+    if (InputSystem::GetInputState("UILeft", InputStateMask::Trigger) ||
+        InputSystem::GetInputState("Left", InputStateMask::Trigger)) direction = -1;
+    else if (InputSystem::GetInputState("UIRight", InputStateMask::Trigger) ||
+        InputSystem::GetInputState("Right", InputStateMask::Trigger)) direction = 1;
+    else if (victoryButtonStickDelay <= 0.0f)
+        direction = stickX > 0.6f ? 1 : stickX < -0.6f ? -1 : 0;
+    if (direction != 0)
+    {
+        const int next = std::clamp(victorySelectedButton + direction, 0, 1);
+        if (next != victorySelectedButton)
+        {
+            victorySelectedButton = next;
+            CoreAudio::PlayOneShot("./Data/Sound/SE/button_select_move.wav", deathResultMoveSeVolume);
+        }
+        victoryButtonStickDelay = 0.2f;
+    }
+    if (InputSystem::GetInputState("UISubmit", InputStateMask::Trigger)) ExecuteVictoryResult();
+}
+
+void GameScene::ExecuteVictoryResult()
+{
+    if (!victoryButtonInputEnabled || victoryResultPhase != VictoryResultPhase::Interactive) return;
+    if (victorySelectedButton == 0 && (!battleStartTransformsSaved || !player || !gruxEnemyActor)) return;
+    victoryButtonInputEnabled = false;
+    victoryButtonInputArmed = false;
+    CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav", deathResultConfirmSeVolume);
+    if (victorySelectedButton == 0)
+        RestartBossBattle();
+    else
+        SceneTransitionManager::Instance().RequestTransition("LoadingScene",
+            { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
+}
+
 void GameScene::EnterVictoryResult()
 {
     if (battleFlowState != BattleFlowState::BossDead || !bossDeathShotsLoaded ||
@@ -2630,6 +2736,10 @@ void GameScene::EnterVictoryResult()
         return;
 
     ResetVictoryResultBackground();
+    GetUIManager()->SetNavigationEnabled(false);
+    GetUIManager()->SetSelected(nullptr);
+    deathResultInputEnabled = false;
+    SetDeathResultVisible(false);
     CaptureVictoryResult();
     DisableCinematicCameraDebugInput();
     Time::SetSlow(1.0f, 0.0f);
@@ -2700,13 +2810,36 @@ void GameScene::UpdateVictoryResult()
         victoryResultDelayElapsed = (std::min)(duration,
             victoryResultDelayElapsed + (std::max)(0.0f, Time::UnscaledDeltaTime()));
         if (victoryResultDelayElapsed >= duration)
-            victoryResultPhase = VictoryResultPhase::CameraIntroComplete;
+        {
+            victoryButtonsVisible = true;
+            victoryButtonFadeTimer = 0.0f;
+            victoryResultPhase = VictoryResultPhase::ShowButtons;
+        }
         break;
     }
+    case VictoryResultPhase::ShowButtons:
+    {
+        const float duration = std::isfinite(victoryButtonFadeDuration)
+            ? std::clamp(victoryButtonFadeDuration, 0.0f, 1.0f) : 0.25f;
+        victoryButtonFadeTimer = (std::min)(duration,
+            victoryButtonFadeTimer + (std::max)(0.0f, Time::UnscaledDeltaTime()));
+        victoryButtonAlpha = duration > 0.0f ? victoryButtonFadeTimer / duration : 1.0f;
+        if (victoryButtonFadeTimer >= duration)
+        {
+            victoryResultPhase = VictoryResultPhase::Interactive;
+            victoryButtonInputEnabled = true;
+            victoryButtonInputArmed = false;
+        }
+        break;
+    }
+    case VictoryResultPhase::Interactive:
+        UpdateVictoryButtonInput();
+        break;
     default:
         break;
     }
     UpdateVictoryResultBackground();
+    UpdateVictoryButtonLayout();
 }
 
 void GameScene::UpdateBattleFlow()
@@ -3112,7 +3245,7 @@ void GameScene::DrawGuiPlusAlpha()
             "Global scale can change after the frame DeltaTime was computed.");
         ImGui::Separator();
         ImGui::SeparatorText("Victory Camera Intro");
-        static constexpr const char* victoryPhaseNames[] = { "None", "CameraBlend", "WinEmote", "ResultDelay", "CameraIntroComplete" };
+        static constexpr const char* victoryPhaseNames[] = { "None", "CameraBlend", "WinEmote", "ResultDelay", "ShowButtons", "Interactive" };
         ImGui::Text("Victory Result Phase: %s", victoryPhaseNames[static_cast<size_t>(victoryResultPhase)]);
         ImGui::DragFloat("Result Camera Blend Duration", &victoryCameraBlendDuration,
             0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
@@ -3152,6 +3285,23 @@ void GameScene::DrawGuiPlusAlpha()
                 ImGui::DragFloat("Scale", &victoryUIScales[i], 0.01f, 0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::PopID();
         }
+        ImGui::SeparatorText("Victory Result Buttons");
+        ImGui::DragFloat("Victory Button Fade Duration", &victoryButtonFadeDuration,
+            0.01f, 0.0f, 1.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::Text("Button Fade Timer: %.3f s", victoryButtonFadeTimer);
+        ImGui::Text("Selected Button Index: %d", victorySelectedButton);
+        ImGui::Text("Interactive: %s", victoryResultPhase == VictoryResultPhase::Interactive &&
+            victoryButtonInputEnabled ? "Yes" : "No");
+        ImGui::DragFloat2("Restart Button Position", &victoryButtonPositions[0].x, 1.0f);
+        ImGui::DragFloat("Restart Button Scale", &victoryButtonScales[0], 0.01f,
+            0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat2("Return Title Button Position", &victoryButtonPositions[1].x, 1.0f);
+        ImGui::DragFloat("Return Title Button Scale", &victoryButtonScales[1], 0.01f,
+            0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat2("Victory Select Line Offset", &victorySelectLineOffset.x, 1.0f);
+        ImGui::DragFloat2("Victory Select Line Scale", &victorySelectLineScale.x, 0.01f,
+            0.01f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        UpdateVictoryButtonLayout();
         ImGui::SeparatorText("Result Time Layout");
         ImGui::TextDisabled("Shared by Clear / Best Time. Spacing and Y offsets are UI pixels.");
         ImGui::DragFloat("Result Time Digit Scale", &victoryUIScales[1], 0.01f, 0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);

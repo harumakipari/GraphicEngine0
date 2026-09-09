@@ -1,12 +1,18 @@
 {
-    "animationClip": 36,
-    "animationName": "Result_Down_Start",
+    "animationClip": 30,
+    "animationName": "Knock_Down_Start",
     "events": [
         {
             "parameter": "BossWallImpact",
             "time": 0.007233271840959787,
             "type": "CameraShake",
             "value": 0.0
+        },
+        {
+            "parameter": "boss_wall_impact",
+            "time": 0.007287521380931139,
+            "type": "PlaySE",
+            "value": 5.0
         },
         {
             "parameter": "boss_knock_start_voice",

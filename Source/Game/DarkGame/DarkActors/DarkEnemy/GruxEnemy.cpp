@@ -176,6 +176,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("HitReact_Back", 33);
     controller->AddAnimation("HitReact_Left", 34);
     controller->AddAnimation("HitReact_Right", 35);
+    controller->AddAnimation("Result_Down_Start", 36);
     // Death clipだけRoot Translationを含むため、Actor位置へ適用せずPoseもin-place化する。
     controller->SetRemoveRootTranslationFromPose("Knock_Down_Death", true);
 
