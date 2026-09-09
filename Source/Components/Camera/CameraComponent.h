@@ -443,14 +443,18 @@ public:
             UpdatePoseBlend(deltaTime);
             return;
         }
-        HandleKeyboardInput(deltaTime);
-        HandleMouseInput(deltaTime);
+        if (cinematicCameraDebugInputEnabled)
+        {
+            HandleKeyboardInput(deltaTime);
+            HandleMouseInput(deltaTime);
+        }
         if (playingPath) {
             UpdateCameraPath(deltaTime);
         }
     }
 
     void SetIsUseCinematic(const bool useCinematic) { this->useCinematic = useCinematic; }
+    void SetDebugInputEnabled(bool enabled) { cinematicCameraDebugInputEnabled = enabled; }
 
     void CutToPose(const CameraPose& pose);
     void BlendToPose(const CameraPose& pose, float duration);
@@ -462,6 +466,7 @@ private:
     float moveSpeed = 2.0f;
     float rotateSpeed = 0.001f;
     bool useCinematic = false;
+    bool cinematicCameraDebugInputEnabled = false;
 
     // ï€ë∂ä÷êî
     void SaveBookmarksToFile();
@@ -565,6 +570,7 @@ private:
         if (ImGui::TreeNode((name_ + "  camera").c_str()))
         {
             ImGui::Checkbox("useCinematic", &useCinematic);
+            ImGui::Checkbox("Cinematic Camera Debug Input", &cinematicCameraDebugInputEnabled);
             ImGui::DragFloat("moveSpeed", &moveSpeed, 0.1f);
             ImGui::DragFloat("rotateSpeed", &rotateSpeed, 0.1f);
 

@@ -589,8 +589,16 @@ void GameScene::SetBattleHudVisible(const bool visible)
         gruxEnemyActor->SetHpBarVisible(visible);
 }
 
+void GameScene::DisableCinematicCameraDebugInput()
+{
+    if (!cinemaCameraActor) return;
+    if (auto* camera = dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()))
+        camera->SetDebugInputEnabled(false);
+}
+
 void GameScene::StartBossBattle()
 {
+    DisableCinematicCameraDebugInput();
     if (!player || !gruxEnemyActor)
         return;
 
@@ -616,6 +624,7 @@ void GameScene::StartBossBattle()
 
 void GameScene::EnterPlayerDead()
 {
+    DisableCinematicCameraDebugInput();
     battleFlowState = BattleFlowState::PlayerDead;
     SetBattleTimerVisible(false);
     playerDeadElapsed = 0.0f;
@@ -965,6 +974,7 @@ void GameScene::CreateDeathResultUI()
 
 void GameScene::SetDeathResultVisible(const bool visible)
 {
+    if (visible) DisableCinematicCameraDebugInput();
     deathResultVisible = visible;
     if (!visible) deathResultSelectLineAnimProgress = 0.0f;
     if (deathResultDarkOverlay) deathResultDarkOverlay->SetVisible(visible);
@@ -1226,6 +1236,7 @@ void GameScene::OnPlayerDeathCameraStart()
 
 void GameScene::ResetBattleForContinue()
 {
+    DisableCinematicCameraDebugInput();
     if (!battleStartTransformsSaved || !player || !gruxEnemyActor)
         return;
 
@@ -1262,6 +1273,7 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
 {
     if (battleFlowState != BattleFlowState::Playing || boss != gruxEnemyActor.get())
         return;
+    DisableCinematicCameraDebugInput();
     using namespace DirectX;
     // +Z forward / +X right, matching Character::UpdateDirectionVectors and Grux AI.
     XMFLOAT3 direction{ source.x - boss->GetPosition().x, 0.0f,
@@ -1305,6 +1317,7 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
 
 void GameScene::EnterBossDead()
 {
+    DisableCinematicCameraDebugInput();
     // Restore global time before entering FadeOut, including reaction cuts mid-slow.
     Time::SetSlow(1.0f, 0.0f);
     finalHitPending = false;
@@ -1368,6 +1381,7 @@ void GameScene::EnterBossDead()
 
 void GameScene::ResetBossDeathDebugPreview()
 {
+    DisableCinematicCameraDebugInput();
     if (!battleStartTransformsSaved || !player || !gruxEnemyActor)
     {
         Logger::Warning(Logger::LogCategory::System,

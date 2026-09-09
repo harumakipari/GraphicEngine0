@@ -154,6 +154,7 @@ private:
 
     void UpdateBattleFlow();
     void SetBattleHudVisible(bool visible);
+    void DisableCinematicCameraDebugInput();
     void EnterPlayerDead();
     void StageDeathActors();
     DeathStagingArea DetermineDeathStagingArea(const DirectX::XMFLOAT3& originalPlayerPosition) const;
