@@ -1,5 +1,8 @@
 #include "pch.h"
 #include "GameScene.h"
+#include <json.hpp>
+#include <fstream>
+#include <filesystem>
 
 #ifdef USE_IMGUI
 #define IMGUI_ENABLE_DOCKING
@@ -164,6 +167,8 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         SetUpActors();
         CreateBattleTimerUI();
         CreateDeathResultUI();
+        LoadVictoryBestTime();
+        CreateVictoryResultBackground();
         CreateBossDeathFadeUI();
         CreateBossDeathFinishUI();
         bossDeathShotsLoaded = LoadBossDeathShots();
@@ -598,6 +603,7 @@ void GameScene::DisableCinematicCameraDebugInput()
 
 void GameScene::StartBossBattle()
 {
+    ResetVictoryResultBackground();
     victoryResultPhase = VictoryResultPhase::None;
     victoryResultDelayElapsed = 0.0f;
     ResetHuskCompletionTracking();
@@ -1384,6 +1390,7 @@ void GameScene::EnterBossDead()
 
 void GameScene::ResetBossDeathDebugPreview()
 {
+    ResetVictoryResultBackground();
     victoryResultPhase = VictoryResultPhase::None;
     victoryResultDelayElapsed = 0.0f;
     ResetHuskCompletionTracking();
@@ -2422,6 +2429,182 @@ void GameScene::UpdateBossDeathCinematic()
     }
 }
 
+void GameScene::LoadVictoryBestTime()
+{
+    // Same JSON representation as scene saves; only the boss clear record is stored.
+    const char* path = "Data/Saves/BossBestTime.json";
+    try
+    {
+        if (!std::filesystem::exists(path)) return;
+        std::ifstream input(path);
+        if (!input) throw std::runtime_error("Cannot open boss best time");
+        nlohmann::json data;
+        input >> data;
+        const double value = data.at("bossBestTimeSeconds").get<double>();
+        if (!std::isfinite(value) || value < 0.0)
+            throw std::runtime_error("Invalid boss best time");
+        victoryBestTime = value;
+        victoryBestTimeValid = true;
+    }
+    catch (const std::exception& error)
+    {
+        Logger::Warning(Logger::LogCategory::System,
+            (std::string("Boss best time load failed: ") + error.what()).c_str());
+    }
+}
+
+void GameScene::CaptureVictoryResult()
+{
+    const bool validClear = finalBattleTimeSaved && std::isfinite(finalBattleTime) && finalBattleTime >= 0.0f;
+    victoryClearTime = validClear ? static_cast<double>(finalBattleTime) : 0.0;
+    victoryIsNewRecord = validClear && (!victoryBestTimeValid || victoryClearTime < victoryBestTime);
+    if (victoryIsNewRecord)
+    {
+        victoryBestTime = victoryClearTime;
+        victoryBestTimeValid = true;
+        try
+        {
+            std::filesystem::create_directories("Data/Saves");
+            const char* temporaryPath = "Data/Saves/BossBestTime.json.tmp";
+            {
+                std::ofstream output(temporaryPath, std::ios::trunc);
+                output.exceptions(std::ios::badbit | std::ios::failbit);
+                output << nlohmann::json{ { "bossBestTimeSeconds", victoryBestTime } }.dump(4);
+                output.close();
+            }
+            // Keep the previous record intact until the complete new JSON is written.
+            if (!MoveFileExA(temporaryPath, "Data/Saves/BossBestTime.json",
+                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
+                throw std::runtime_error("Cannot replace boss best time save");
+        }
+        catch (const std::exception& error)
+        {
+            Logger::Warning(Logger::LogCategory::System,
+                (std::string("Boss best time save failed: ") + error.what()).c_str());
+        }
+    }
+    victoryDisplayedBestTime = victoryBestTimeValid ? victoryBestTime : 0.0;
+    const float s = std::isfinite(victoryRankSLimit) ? (std::max)(0.0f, victoryRankSLimit) : 60.0f;
+    const float a = std::isfinite(victoryRankALimit) ? (std::max)(s, victoryRankALimit) : (std::max)(s, 90.0f);
+    const float b = std::isfinite(victoryRankBLimit) ? (std::max)(a, victoryRankBLimit) : (std::max)(a, 120.0f);
+    victoryRank = victoryClearTime <= s ? VictoryRank::S : victoryClearTime <= a ? VictoryRank::A :
+        victoryClearTime <= b ? VictoryRank::B : VictoryRank::C;
+}
+
+void GameScene::UpdateVictoryResultContents()
+{
+    const auto apply = [this](const std::shared_ptr<UIImageComponent>& image, size_t layout, bool show)
+    {
+        if (!image) return;
+        image->SetWorldPosition(victoryUIPositions[layout]);
+        image->SetScale({ victoryUIScales[layout], victoryUIScales[layout] });
+        image->SetVisible(resultUITriggered && show);
+        image->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, resultBackgroundAlpha });
+    };
+    apply(victoryLabels[0], 0, true);
+    apply(victoryLabels[1], 2, true);
+    apply(victoryLabels[2], 4, victoryIsNewRecord);
+    for (size_t i = 0; i < victoryRankImages.size(); ++i)
+        apply(victoryRankImages[i], 5, i == static_cast<size_t>(victoryRank));
+    const double times[] = { victoryClearTime, victoryDisplayedBestTime };
+    for (size_t row = 0; row < victoryTimeDigits.size(); ++row)
+    {
+        // Match Defeat's atlas and rounded centiseconds, but always keep both minute digits.
+        const int total = static_cast<int>(std::clamp(std::floor(times[row] * 100.0 + 0.5), 0.0, 599999.0));
+        const int minutes = total / 6000, seconds = total / 100 % 60, fraction = total % 100;
+        const int values[] = { minutes / 10, minutes % 10, -1, seconds / 10, seconds % 10, -2, fraction / 10, fraction % 10 };
+        const size_t layout = row == 0 ? 1 : 3;
+        const float scale = victoryUIScales[layout];
+        float x = victoryUIPositions[layout].x - 336.0f * scale;
+        for (size_t i = 0; i < victoryTimeDigits[row].size(); ++i)
+        {
+            const float width = values[i] < 0 ? 48.0f : 96.0f;
+            auto& digit = victoryTimeDigits[row][i];
+            apply(digit, layout, true);
+            if (digit)
+            {
+                digit->SetWorldPosition({ x + width * scale * 0.5f, victoryUIPositions[layout].y });
+                if (values[i] >= 0)
+                    digit->SetUV({ values[i] * numberTexWidth, 0.0f, numberTexWidth, numberTexHeight });
+            }
+            x += width * scale;
+        }
+    }
+}
+
+void GameScene::CreateVictoryResultBackground()
+{
+    victoryResultBackground = std::make_shared<UIImageComponent>(
+        "./Data/Textures/UI/Result/clear_result_back.png", "VictoryResultBackground");
+    victoryResultBackground->SetSize({ 1155.0f, 1080.0f });
+    victoryResultBackground->SetWorldPosition({ 0.0f, 0.0f });
+    victoryResultBackground->SetPivot({ 0.0f, 0.0f });
+    victoryResultBackground->zOrder = 20;
+    GetUIManager()->Add(victoryResultBackground);
+    const char* labelPaths[] = { "clear_time.png", "best_time.png", "new_record.png" };
+    const DirectX::XMFLOAT2 labelSizes[] = { { 587.0f, 174.0f }, { 495.0f, 174.0f }, { 535.0f, 111.0f } };
+    auto create = [this](const std::string& path, const std::string& name, DirectX::XMFLOAT2 size)
+    {
+        auto image = std::make_shared<UIImageComponent>(path, name);
+        image->SetSize(size);
+        image->SetPivot({ 0.5f, 0.5f });
+        image->zOrder = 21;
+        image->SetVisible(false);
+        image->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, 0.0f });
+        GetUIManager()->Add(image);
+        return image;
+    };
+    for (size_t i = 0; i < victoryLabels.size(); ++i)
+        victoryLabels[i] = create(std::string("./Data/Textures/UI/Result/") + labelPaths[i],
+            "VictoryLabel" + std::to_string(i), labelSizes[i]);
+    const char* rankPaths[] = { "rank_s.png", "rank_a.png", "rank_b.png", "rank_c.png" };
+    for (size_t i = 0; i < victoryRankImages.size(); ++i)
+        victoryRankImages[i] = create(std::string("./Data/Textures/UI/Result/") + rankPaths[i],
+            "VictoryRank" + std::to_string(i), { 650.0f, 650.0f });
+    for (size_t row = 0; row < victoryTimeDigits.size(); ++row)
+        for (size_t i = 0; i < victoryTimeDigits[row].size(); ++i)
+        {
+            const bool punctuation = i == 2 || i == 5;
+            const char* path = i == 2 ? "timer_colon.png" : i == 5 ? "timer_dot.png" : "number.png";
+            victoryTimeDigits[row][i] = create(std::string("./Data/Textures/UI/") + path,
+                "VictoryTime" + std::to_string(row) + "_" + std::to_string(i),
+                { punctuation ? 48.0f : 96.0f, 128.0f });
+        }
+    ResetVictoryResultBackground();
+}
+
+void GameScene::ResetVictoryResultBackground()
+{
+    victoryIsNewRecord = false;
+    victoryRank = VictoryRank::C;
+    victoryClearTime = 0.0;
+    victoryDisplayedBestTime = 0.0;
+    resultUITriggered = false;
+    resultBackgroundFadeStarted = false;
+    resultBackgroundFadeElapsed = 0.0f;
+    resultBackgroundAlpha = 0.0f;
+    if (victoryResultBackground)
+    {
+        victoryResultBackground->SetVisible(false);
+        victoryResultBackground->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, 0.0f });
+    }
+    UpdateVictoryResultContents();
+}
+
+void GameScene::UpdateVictoryResultBackground()
+{
+    if (!resultBackgroundFadeStarted) return;
+    const float duration = std::isfinite(resultBackgroundFadeDuration)
+        ? std::clamp(resultBackgroundFadeDuration, 0.0f, 1.0f) : 0.25f;
+    resultBackgroundFadeElapsed = (std::min)(duration,
+        resultBackgroundFadeElapsed + (std::max)(0.0f, Time::UnscaledDeltaTime()));
+    resultBackgroundAlpha = duration > 0.0f
+        ? std::clamp(resultBackgroundFadeElapsed / duration, 0.0f, 1.0f) : 1.0f;
+    if (victoryResultBackground)
+        victoryResultBackground->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, resultBackgroundAlpha });
+    UpdateVictoryResultContents();
+}
+
 void GameScene::EnterVictoryResult()
 {
     if (battleFlowState != BattleFlowState::BossDead || !bossDeathShotsLoaded ||
@@ -2429,6 +2612,8 @@ void GameScene::EnterVictoryResult()
         !dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()))
         return;
 
+    ResetVictoryResultBackground();
+    CaptureVictoryResult();
     DisableCinematicCameraDebugInput();
     Time::SetSlow(1.0f, 0.0f);
     if (cameraManager->IsUseDebug()) cameraManager->ToggleCamera(this);
@@ -2441,9 +2626,11 @@ void GameScene::EnterVictoryResult()
     ApplyBossDeathDof(bossDeathShots[BossDeathResult].dof);
     if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
     {
-        controller->ReleaseHeldAnimationPose();
+        controller->ReleaseHeldAnimationPose(true);
         controller->ResetAnimationRate();
-        player->PlayBodyAnimation("Idle", true, true, 0.2f, true);
+        const float idleBlend = std::isfinite(resultRecallToIdleBlendDuration)
+            ? std::clamp(resultRecallToIdleBlendDuration, 0.0f, 0.5f) : 0.15f;
+        player->PlayBodyAnimation("Idle", true, idleBlend > 0.0f, idleBlend, true);
     }
     battleFlowState = BattleFlowState::Victory;
     victoryResultDelayElapsed = 0.0f;
@@ -2468,6 +2655,19 @@ void GameScene::UpdateVictoryResult()
         }
         break;
     case VictoryResultPhase::WinEmote:
+        if (!resultUITriggered && controller &&
+            controller->GetCurrentAnimationName() == "Emote_Win")
+        {
+            const float triggerTime = std::isfinite(resultUITriggerAnimationTime)
+                ? std::clamp(resultUITriggerAnimationTime, 0.0f, victoryEmoteEndTime) : 1.17f;
+            if (controller->GetCurrentAnimationTime() >= triggerTime)
+            {
+                resultUITriggered = true;
+                resultBackgroundFadeStarted = true;
+                resultBackgroundFadeElapsed = 0.0f;
+                if (victoryResultBackground) victoryResultBackground->SetVisible(true);
+            }
+        }
         if (controller && controller->GetCurrentAnimationName() == "Emote_Win" &&
             controller->GetCurrentAnimationTime() >= victoryEmoteEndTime)
         {
@@ -2489,6 +2689,7 @@ void GameScene::UpdateVictoryResult()
     default:
         break;
     }
+    UpdateVictoryResultBackground();
 }
 
 void GameScene::UpdateBattleFlow()
@@ -2907,6 +3108,37 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::Text("Player Animation Time: %.3f s", resultController
             ? resultController->GetCurrentAnimationTime() : 0.0f);
         ImGui::Text("Emote End Time: %.2f s", victoryEmoteEndTime);
+        ImGui::DragFloat("Result Recall To Idle Blend Duration", &resultRecallToIdleBlendDuration,
+            0.01f, 0.0f, 0.5f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::Text("Emote_Win Current Time: %.3f s", resultController &&
+            resultController->GetCurrentAnimationName() == "Emote_Win"
+                ? resultController->GetCurrentAnimationTime() : 0.0f);
+        ImGui::DragFloat("Result UI Trigger Animation Time", &resultUITriggerAnimationTime,
+            0.01f, 0.0f, victoryEmoteEndTime, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::Text("UI Triggered: %s", resultUITriggered ? "Yes" : "No");
+        ImGui::Text("New Record: %s", victoryIsNewRecord ? "Yes" : "No");
+        ImGui::Text("Saved Best: %.3f s (%s)", victoryBestTime, victoryBestTimeValid ? "Valid" : "None");
+        ImGui::Text("Result Rank: %s", std::array<const char*, 4>{ "S", "A", "B", "C" }[static_cast<size_t>(victoryRank)]);
+        ImGui::DragFloat("Victory S Limit", &victoryRankSLimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Victory A Limit", &victoryRankALimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Victory B Limit", &victoryRankBLimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+        victoryRankALimit = (std::max)(victoryRankSLimit, victoryRankALimit);
+        victoryRankBLimit = (std::max)(victoryRankALimit, victoryRankBLimit);
+        ImGui::TextDisabled("Rank limits apply to the next Victory.");
+        const char* layoutNames[] = { "Clear Time Label", "Clear Time Digits", "Best Time Label", "Best Time Digits", "New Record", "Rank" };
+        for (size_t i = 0; i < victoryUIPositions.size(); ++i)
+        {
+            ImGui::PushID(layoutNames[i]);
+            ImGui::TextUnformatted(layoutNames[i]);
+            ImGui::DragFloat2("Position", &victoryUIPositions[i].x, 1.0f);
+            ImGui::DragFloat("Scale", &victoryUIScales[i], 0.01f, 0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::PopID();
+        }
+        UpdateVictoryResultContents();
+        ImGui::DragFloat("Result Background Fade Duration", &resultBackgroundFadeDuration,
+            0.01f, 0.0f, 1.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::Text("Result Background Fade Timer: %.3f s", resultBackgroundFadeElapsed);
+        ImGui::Text("Result Background Alpha: %.3f", resultBackgroundAlpha);
         ImGui::Text("Emote_Win Clip Duration: %.3f s", resultController
             ? resultController->GetAnimationLength("Emote_Win") : 0.0f);
         ImGui::Text("Husk Capture Started: %s", HasHuskCaptureStarted() ? "Yes" : "No");

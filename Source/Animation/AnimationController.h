@@ -178,7 +178,8 @@ public:
 
     // Leaves a pose held by HoldAnimationPose and restores runtime animation
     // ownership. Callers can start another animation in the same update.
-    void ReleaseHeldAnimationPose();
+    // Optionally keep the displayed pose as the source of an immediate animation blend.
+    void ReleaseHeldAnimationPose(bool preserveBlendSource = false);
 
     void AddNotifyState(const std::string& animationName, const float start, const float end,
         const AnimationNotifyState::Type type, const std::string& parameter = "", float animationSpeed = 1.0f)

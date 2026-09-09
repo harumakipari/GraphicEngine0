@@ -93,3 +93,4 @@ Data/Models/TitleStage0712/
 Data/Models/ParticleMesh/Fragment/
 .dotnet-cli/
 Data/Models/EffectDebri/
+Data/Saves/BossBestTime.json

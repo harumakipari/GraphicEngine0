@@ -180,6 +180,42 @@ private:
     enum class VictoryResultPhase { None, CameraBlend, WinEmote, ResultDelay, CameraIntroComplete };
     void EnterVictoryResult();
     void UpdateVictoryResult();
+    void CreateVictoryResultBackground();
+    void ResetVictoryResultBackground();
+    void UpdateVictoryResultBackground();
+    std::shared_ptr<UIImageComponent> victoryResultBackground;
+    enum class VictoryRank { S, A, B, C };
+    void LoadVictoryBestTime();
+    void CaptureVictoryResult();
+    void UpdateVictoryResultContents();
+    bool victoryBestTimeValid = false;
+    double victoryBestTime = 0.0;
+    double victoryClearTime = 0.0;
+    double victoryDisplayedBestTime = 0.0;
+    bool victoryIsNewRecord = false;
+    VictoryRank victoryRank = VictoryRank::C;
+    float victoryRankSLimit = 60.0f;
+    float victoryRankALimit = 90.0f;
+    float victoryRankBLimit = 120.0f;
+    std::array<std::shared_ptr<UIImageComponent>, 3> victoryLabels{};
+    std::array<std::shared_ptr<UIImageComponent>, 4> victoryRankImages{};
+    std::array<std::array<std::shared_ptr<UIImageComponent>, 8>, 2> victoryTimeDigits{};
+    // Clear label, clear digits, best label, best digits, new record, rank.
+    std::array<DirectX::XMFLOAT2, 6> victoryUIPositions
+    { {
+        { 420.0f, 620.0f }, { 737.0f, 609.0f }, { 416.0f, 701.0f },
+        { 737.0f, 693.0f }, { 873.0f, 698.0f }, { 586.0f, 360.0f }
+    }
+    };
+    std::array<float, 6> victoryUIScales{ { 0.37f, 0.33f, 0.39f, 0.33f, 0.35f, 0.45f } };
+    float resultRecallToIdleBlendDuration = 0.26f;
+    // Weapon bone drops rapidly between 1.13 and 1.20 seconds in Emote_Slice_0.
+    float resultUITriggerAnimationTime = 1.17f;
+    float resultBackgroundFadeDuration = 0.25f;
+    float resultBackgroundFadeElapsed = 0.0f;
+    float resultBackgroundAlpha = 0.0f;
+    bool resultUITriggered = false;
+    bool resultBackgroundFadeStarted = false;
     VictoryResultPhase victoryResultPhase = VictoryResultPhase::None;
     float victoryResultDelayElapsed = 0.0f;
     float victoryResultDelayDuration = 0.70f;

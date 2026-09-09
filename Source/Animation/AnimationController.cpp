@@ -750,8 +750,23 @@ bool AnimationController::HoldAnimationPose(
     return true;
 }
 
-void AnimationController::ReleaseHeldAnimationPose()
+void AnimationController::ReleaseHeldAnimationPose(bool preserveBlendSource)
 {
+    if (preserveBlendSource && editorPreviewActive)
+    {
+        const auto heldNodes = finalNodes;
+        EndEditorPreview();
+        // ResetRootMotion uses finalNodes as the next blend's source pose.
+        finalNodes = heldNodes;
+        target_->SetModelNodes(finalNodes);
+        target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+        for (auto* extraTarget : extraTargets_)
+        {
+            extraTarget->SetModelNodes(finalNodes);
+            extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+        }
+        return;
+    }
     EndEditorPreview();
 }
 
