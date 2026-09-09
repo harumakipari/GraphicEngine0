@@ -2514,20 +2514,37 @@ void GameScene::UpdateVictoryResultContents()
         const int minutes = total / 6000, seconds = total / 100 % 60, fraction = total % 100;
         const int values[] = { minutes / 10, minutes % 10, -1, seconds / 10, seconds % 10, -2, fraction / 10, fraction % 10 };
         const size_t layout = row == 0 ? 1 : 3;
-        const float scale = victoryUIScales[layout];
-        float x = victoryUIPositions[layout].x - 336.0f * scale;
+        const float gaps[] = { resultTimeDigitSpacing, resultTimeMinuteColonSpacing,
+            resultTimeColonSecondSpacing, resultTimeDigitSpacing, resultTimeSecondDotSpacing,
+            resultTimeDotMillisecondSpacing, resultTimeDigitSpacing };
+        std::array<float, 8> scales{};
+        std::array<float, 8> widths{};
+        float totalWidth = 0.0f;
+        for (size_t i = 0; i < widths.size(); ++i)
+        {
+            scales[i] = i == 2 ? resultTimeColonScale : i == 5 ? resultTimeDotScale : victoryUIScales[1];
+            // Match creation sizes. Spacing is in unscaled UI pixels.
+            widths[i] = (values[i] < 0 ? 48.0f : 96.0f) * scales[i];
+            totalWidth += widths[i];
+            if (i < widths.size() - 1) totalWidth += gaps[i];
+        }
+        // Preserve each row's center anchor as the layout changes.
+        float x = victoryUIPositions[layout].x - totalWidth * 0.5f;
         for (size_t i = 0; i < victoryTimeDigits[row].size(); ++i)
         {
-            const float width = values[i] < 0 ? 48.0f : 96.0f;
             auto& digit = victoryTimeDigits[row][i];
             apply(digit, layout, true);
             if (digit)
             {
-                digit->SetWorldPosition({ x + width * scale * 0.5f, victoryUIPositions[layout].y });
+                const float yOffset = i == 2 ? resultTimeColonYOffset : i == 5 ? resultTimeDotYOffset : 0.0f;
+                digit->SetScale({ scales[i], scales[i] });
+                digit->SetWorldPosition({ x + widths[i] * 0.5f, victoryUIPositions[layout].y + yOffset });
                 if (values[i] >= 0)
                     digit->SetUV({ values[i] * numberTexWidth, 0.0f, numberTexWidth, numberTexHeight });
             }
-            x += width * scale;
+            // Next left edge = previous scaled right edge + spacing.
+            x += widths[i];
+            if (i < widths.size() - 1) x += gaps[i];
         }
     }
 }
@@ -3131,9 +3148,22 @@ void GameScene::DrawGuiPlusAlpha()
             ImGui::PushID(layoutNames[i]);
             ImGui::TextUnformatted(layoutNames[i]);
             ImGui::DragFloat2("Position", &victoryUIPositions[i].x, 1.0f);
-            ImGui::DragFloat("Scale", &victoryUIScales[i], 0.01f, 0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+            if (i != 1 && i != 3)
+                ImGui::DragFloat("Scale", &victoryUIScales[i], 0.01f, 0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::PopID();
         }
+        ImGui::SeparatorText("Result Time Layout");
+        ImGui::TextDisabled("Shared by Clear / Best Time. Spacing and Y offsets are UI pixels.");
+        ImGui::DragFloat("Result Time Digit Scale", &victoryUIScales[1], 0.01f, 0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Result Time Digit Spacing", &resultTimeDigitSpacing, 0.1f, -30.0f, 30.0f, "%.1f px", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Result Time Minute Colon Spacing", &resultTimeMinuteColonSpacing, 0.1f, -30.0f, 30.0f, "%.1f px", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Result Time Colon Second Spacing", &resultTimeColonSecondSpacing, 0.1f, -30.0f, 30.0f, "%.1f px", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Result Time Second Dot Spacing", &resultTimeSecondDotSpacing, 0.1f, -30.0f, 30.0f, "%.1f px", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Result Time Dot Millisecond Spacing", &resultTimeDotMillisecondSpacing, 0.1f, -30.0f, 30.0f, "%.1f px", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Result Time Colon Scale", &resultTimeColonScale, 0.01f, 0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Result Time Colon Y Offset", &resultTimeColonYOffset, 0.1f, -100.0f, 100.0f, "%.1f px", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Result Time Dot Scale", &resultTimeDotScale, 0.01f, 0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Result Time Dot Y Offset", &resultTimeDotYOffset, 0.1f, -100.0f, 100.0f, "%.1f px", ImGuiSliderFlags_AlwaysClamp);
         UpdateVictoryResultContents();
         ImGui::DragFloat("Result Background Fade Duration", &resultBackgroundFadeDuration,
             0.01f, 0.0f, 1.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);

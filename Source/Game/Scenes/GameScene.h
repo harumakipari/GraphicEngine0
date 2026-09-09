@@ -204,10 +204,20 @@ private:
     std::array<DirectX::XMFLOAT2, 6> victoryUIPositions
     { {
         { 420.0f, 620.0f }, { 737.0f, 609.0f }, { 416.0f, 701.0f },
-        { 737.0f, 693.0f }, { 873.0f, 698.0f }, { 586.0f, 360.0f }
+        { 737.0f, 693.0f }, { 997.0f, 610.0f }, { 586.0f, 360.0f }
     }
     };
-    std::array<float, 6> victoryUIScales{ { 0.37f, 0.33f, 0.39f, 0.33f, 0.35f, 0.45f } };
+    std::array<float, 6> victoryUIScales{ { 0.37f, 0.33f, 0.39f, 0.33f, 0.46f, 0.45f } };
+    // victoryUIScales[1] is the shared digit scale; slot 3 is unused.
+    float resultTimeDigitSpacing = -3.4f;
+    float resultTimeMinuteColonSpacing = -10.2f;
+    float resultTimeColonSecondSpacing = -12.6f;
+    float resultTimeSecondDotSpacing = -17.9f;
+    float resultTimeDotMillisecondSpacing = -18.3f;
+    float resultTimeColonScale = 0.73f;
+    float resultTimeColonYOffset = 0.0f;
+    float resultTimeDotScale = 0.76f;
+    float resultTimeDotYOffset = 0.0f;
     float resultRecallToIdleBlendDuration = 0.26f;
     // Weapon bone drops rapidly between 1.13 and 1.20 seconds in Emote_Slice_0.
     float resultUITriggerAnimationTime = 1.17f;

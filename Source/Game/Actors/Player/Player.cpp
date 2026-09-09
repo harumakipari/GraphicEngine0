@@ -194,6 +194,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Walk_Fwd_Stop_Fast", 51);
         controller->AddAnimation("Walk_Fwd_Stop", 52);
         controller->AddAnimation("Jog_Fwd_Stop", 53);
+        controller->AddAnimation("Result_Recall", 54);
         controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
 
         // ブレンドスペースに追加
