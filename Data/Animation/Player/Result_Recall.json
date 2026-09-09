@@ -20,11 +20,52 @@
     "playRate": 1.0,
     "states": [
         {
-            "value": 1.0,
             "endTime": 1.3999998569488525,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
             "parameter": "",
             "startTime": 0.24000048637390137,
-            "type": "ShowTrail"
+            "type": "ShowTrail",
+            "value": 1.0
+        },
+        {
+            "endTime": 1.7824158668518066,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.2637363076210022,
+            "type": "ShowEmissive",
+            "value": 10.0
         }
     ]
 }

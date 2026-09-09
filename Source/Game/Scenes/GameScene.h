@@ -184,11 +184,14 @@ private:
     void UpdateVictoryButtonInput();
     void ExecuteVictoryResult();
     std::array<std::shared_ptr<UIImageComponent>, 2> victoryButtons{};
-    std::shared_ptr<UIImageComponent> victorySelectLine;
-    std::array<DirectX::XMFLOAT2, 2> victoryButtonPositions{ { { 390.0f, 840.0f }, { 800.0f, 840.0f } } };
+    std::array<std::shared_ptr<UIImageComponent>, 2> victorySelectLines{};
+    std::array<DirectX::XMFLOAT2, 2> victoryButtonPositions{ { { 355.0f, 840.0f }, { 820.0f, 840.0f } } };
     std::array<float, 2> victoryButtonScales{ { 0.45f, 0.45f } };
-    DirectX::XMFLOAT2 victorySelectLineOffset{ 0.0f, 30.0f };
-    DirectX::XMFLOAT2 victorySelectLineScale{ 2.5f, 1.0f };
+    DirectX::XMFLOAT2 victorySelectLineOffset{ 6.0f, 0.0f };
+    DirectX::XMFLOAT2 victorySelectLineScale{ 0.29f, 0.18f };
+    float victorySelectedButtonScale = 0.97f;
+    float victoryUnselectedButtonScale = 0.83f;
+    float victoryUnselectedButtonBrightness = 0.60f;
     float victoryButtonFadeDuration = 0.25f;
     float victoryButtonFadeTimer = 0.0f;
     float victoryButtonAlpha = 0.0f;
@@ -197,6 +200,7 @@ private:
     bool victoryButtonsVisible = false;
     bool victoryButtonInputEnabled = false;
     bool victoryButtonInputArmed = false;
+    bool victoryButtonFeedbackEnabled = false;
     void EnterVictoryResult();
     void UpdateVictoryResult();
     void CreateVictoryResultBackground();

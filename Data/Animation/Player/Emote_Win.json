@@ -1,6 +1,32 @@
 {
     "animationClip": 50,
     "animationName": "Emote_Win",
+    "events": [
+        {
+            "parameter": "player_level_voice",
+            "time": 0.17857106029987335,
+            "type": "PlaySE",
+            "value": 1.0
+        },
+        {
+            "parameter": "player_attack",
+            "time": 1.0079364776611328,
+            "type": "PlaySE",
+            "value": 1.0
+        },
+        {
+            "parameter": "player_recall_voice",
+            "time": 1.007936716079712,
+            "type": "PlaySE",
+            "value": 1.0
+        },
+        {
+            "parameter": "bell",
+            "time": 1.0198416709899902,
+            "type": "PlaySE",
+            "value": 3.0
+        }
+    ],
     "loop": false,
     "nextCombo": "",
     "playRate": 1.0,
@@ -23,5 +49,31 @@
                 "value": 0.986667275428772
             }
         ]
-    }
+    },
+    "states": [
+        {
+            "endTime": 1.6166660785675049,
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.9642853736877441,
+            "type": "ShowTrail",
+            "value": 1.0
+        }
+    ]
 }

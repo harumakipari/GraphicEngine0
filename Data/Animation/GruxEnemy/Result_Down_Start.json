@@ -1,24 +1,30 @@
 {
-    "animationClip": 30,
-    "animationName": "Knock_Down_Start",
+    "animationClip": 36,
+    "animationName": "Result_Down_Start",
     "events": [
         {
+            "parameter": "boss_knock_start_voice",
+            "time": 0.36799317598342896,
+            "type": "PlaySE",
+            "value": 3.0
+        },
+        {
             "parameter": "BossWallImpact",
-            "time": 0.007233271840959787,
+            "time": 0.3681318759918213,
             "type": "CameraShake",
             "value": 0.0
         },
         {
-            "parameter": "boss_wall_impact",
-            "time": 0.007287521380931139,
+            "parameter": "enemy_jump_attack",
+            "time": 0.3688969314098358,
             "type": "PlaySE",
-            "value": 5.0
+            "value": 1.0
         },
         {
-            "parameter": "boss_knock_start_voice",
-            "time": 0.36813217401504517,
-            "type": "PlaySE",
-            "value": 3.0
+            "parameter": "GroundImpact",
+            "time": 0.3681319057941437,
+            "type": "SpawnEffect",
+            "value": 0.0
         }
     ],
     "loop": false,

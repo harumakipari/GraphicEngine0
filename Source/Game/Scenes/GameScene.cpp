@@ -41,6 +41,26 @@
 
 namespace
 {
+    // Shared visual feedback; each result owns its selection range and tuning.
+    void ApplyResultButtonFeedback(UIImageComponent& button, const DirectX::XMFLOAT2& baseScale,
+        bool selected, float selectedScale, float unselectedScale,
+        const CoreColor& selectedColor, const CoreColor& unselectedColor, float alpha)
+    {
+        const float scale = selected ? selectedScale : unselectedScale;
+        button.SetScale({ baseScale.x * scale, baseScale.y * scale });
+        CoreColor color = selected ? selectedColor : unselectedColor;
+        color.a *= alpha;
+        button.SetColor(color);
+    }
+
+    bool ChangeResultSelection(int& selection, int next, float volume)
+    {
+        if (selection == next) return false;
+        selection = next;
+        CoreAudio::PlayOneShot("./Data/Sound/SE/button_select_move.wav", volume);
+        return true;
+    }
+
     enum BossDeathShotIndex : size_t
     {
         BossDeathScream,
@@ -272,6 +292,7 @@ void GameScene::Update(float deltaTime)
     ZoneScopedN("Game Update");
 
     UpdateBattleFlow();
+    UpdateVictoryButtonLayout();
     UpdateDeathResultUILayout();
 
     // ボスの部屋のラープのため
@@ -1129,9 +1150,8 @@ void GameScene::UpdateDeathResultMenu()
         {
             if (deathResultButtons[i].get() == selected && i != deathResultSelection)
             {
-                deathResultSelection = i;
-                deathResultSelectLineAnimProgress = 0.0f;
-                CoreAudio::PlayOneShot("./Data/Sound/SE/button_select_move.wav", deathResultMoveSeVolume);
+                if (ChangeResultSelection(deathResultSelection, i, deathResultMoveSeVolume))
+                    deathResultSelectLineAnimProgress = 0.0f;
             }
         }
     }
@@ -1142,11 +1162,8 @@ void GameScene::UpdateDeathResultMenu()
         auto& button = deathResultButtons[i];
         if (!button) continue;
         const bool selected = i == deathResultSelection;
-        CoreColor color = selected ? deathResultSelectedColor : deathResultUnselectedColor;
-        color.a *= buttonsAlpha;
-        button->SetColor(color);
-        if (selected)
-            button->SetScale({ deathResultButtonScale.x * deathResultSelectedScale, deathResultButtonScale.y * deathResultSelectedScale });
+        ApplyResultButtonFeedback(*button, deathResultButtonScale, selected,
+            deathResultSelectedScale, 1.0f, deathResultSelectedColor, deathResultUnselectedColor, buttonsAlpha);
     }
 
     if (deathResultButtons[deathResultSelection])
@@ -1966,7 +1983,7 @@ void GameScene::ClampBossDeathPreviewTuning()
     {
         if (const auto controller = player->GetBodyAnimationController())
         {
-            const float duration = controller->GetAnimationLength("Recall_0");
+            const float duration = controller->GetAnimationLength("Result_Recall");
             if (std::isfinite(duration) && duration >= 0.0f)
             {
                 const float margin = (std::min)(0.001f, duration);
@@ -2077,7 +2094,7 @@ void GameScene::UpdateBossDeathCinematic()
         if (player)
         {
             if (const auto controller = player->GetBodyAnimationController())
-                controller->HoldAnimationPose("Recall_0", bossDeathFinishHoldTime);
+                controller->HoldAnimationPose("Result_Recall", bossDeathFinishHoldTime);
         }
     }
 
@@ -2130,7 +2147,7 @@ void GameScene::UpdateBossDeathCinematic()
             controller->ResetAnimationRate();
             controller->SetAnimationRate(bossDeathStunPlaybackRate);
             gruxEnemyActor->PlayBodyAnimation(
-                "Knock_Down_Start", false, true, 0.1f, true);
+                "Result_Down_Start", false, true, 0.1f, true);
             bossDeathPhase = BossDeathPhase::DeathFall;
             bossDeathPhaseElapsed = 0.0f;
         }
@@ -2143,7 +2160,7 @@ void GameScene::UpdateBossDeathCinematic()
             ? gruxEnemyActor->GetBodyAnimationController()
             : nullptr;
         if (controller &&
-            controller->GetCurrentAnimationName() == "Knock_Down_Start" &&
+            controller->GetCurrentAnimationName() == "Result_Down_Start" &&
             !controller->IsPlayAnimation())
         {
             controller->ResetAnimationRate();
@@ -2292,13 +2309,13 @@ void GameScene::UpdateBossDeathCinematic()
             player->SetQuaternionRotation(bossDeathWalkStopFinishRotation);
             player->UpdateAllComponentTransforms();
             CutToBossDeathShot(BossDeathFinish);
-            player->PlayBodyAnimation("Recall_0", false, true, 0.15f, true);
+            player->PlayBodyAnimation("Result_Recall", false, true, 0.15f, true);
             if (const auto controller = player->GetBodyAnimationController();
                 !controller || !controller->SetPlaybackRange(
                     0.0f, bossDeathRecallPromptMinTime))
             {
                 Logger::Error(Logger::LogCategory::System,
-                    "Failed to set Recall_0 playback range for boss death preview");
+                    "Failed to set Result_Recall playback range for boss death preview");
             }
             bossDeathPhase = BossDeathPhase::RecallLeadIn;
             bossDeathPhaseElapsed = 0.0f;
@@ -2313,7 +2330,7 @@ void GameScene::UpdateBossDeathCinematic()
             ? player->GetBodyAnimationController()
             : nullptr;
         if (controller &&
-            controller->GetCurrentAnimationName() == "Recall_0" &&
+            controller->GetCurrentAnimationName() == "Result_Recall" &&
             !controller->IsPlayAnimation())
         {
             // Recall's runtime ShowTrail state starts at 0.24 sec but its end at
@@ -2323,7 +2340,7 @@ void GameScene::UpdateBossDeathCinematic()
             bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
             bossDeathRecallPromptDirection = 1.0f;
             if (controller->HoldAnimationPose(
-                "Recall_0", bossDeathRecallPromptTime))
+                "Result_Recall", bossDeathRecallPromptTime))
             {
                 bossDeathPhase = BossDeathPhase::RecallPingPong;
                 bossDeathPhaseElapsed = 0.0f;
@@ -2366,7 +2383,7 @@ void GameScene::UpdateBossDeathCinematic()
         if (const auto controller = player->GetBodyAnimationController())
         {
             controller->HoldAnimationPose(
-                "Recall_0", bossDeathRecallPromptTime);
+                "Result_Recall", bossDeathRecallPromptTime);
         }
 
         const bool finishTriggered = bossDeathFinishInputEnabled &&
@@ -2381,12 +2398,12 @@ void GameScene::UpdateBossDeathCinematic()
                 const float resumeTime = bossDeathRecallPromptTime;
                 controller->ReleaseHeldAnimationPose();
                 player->PlayBodyAnimation(
-                    "Recall_0", false, false, 0.0f, true);
+                    "Result_Recall", false, false, 0.0f, true);
                 if (!controller->SetPlaybackRange(
                     resumeTime, bossDeathRecallFinishHitTime))
                 {
                     Logger::Error(Logger::LogCategory::System,
-                        "Failed to resume Recall_0 for boss finish preview");
+                        "Failed to resume Result_Recall for boss finish preview");
                 }
             }
             player->ClearTransientBattleActions();
@@ -2403,7 +2420,7 @@ void GameScene::UpdateBossDeathCinematic()
             ? player->GetBodyAnimationController()
             : nullptr;
         if (controller &&
-            controller->GetCurrentAnimationName() == "Recall_0" &&
+            controller->GetCurrentAnimationName() == "Result_Recall" &&
             controller->GetCurrentAnimationTime() >= bossDeathRecallFinishHitTime)
         {
             StopBossDeathGroanLoop();
@@ -2417,7 +2434,7 @@ void GameScene::UpdateBossDeathCinematic()
             bossDeathFinishHoldTime = bossDeathFinishHoldMinTime;
             bossDeathFinishHoldDirection = 1.0f;
             controller->ResetAnimationRate();
-            controller->HoldAnimationPose("Recall_0", bossDeathFinishHoldTime);
+            controller->HoldAnimationPose("Result_Recall", bossDeathFinishHoldTime);
             bossDeathPhase = BossDeathPhase::HuskDelay;
             bossDeathPhaseElapsed = 0.0f;
         }
@@ -2603,8 +2620,9 @@ void GameScene::CreateVictoryResultBackground()
         "VictoryRestartButton", { 668.0f, 75.0f });
     victoryButtons[1] = create("./Data/Textures/UI/Result/return_title_button.png",
         "VictoryTitleButton", { 730.0f, 71.0f });
-    victorySelectLine = create("./Data/Textures/UI/Result/select_button_line.png",
-        "VictorySelectLine", { 113.0f, 5.0f });
+    for (size_t i = 0; i < victorySelectLines.size(); ++i)
+        victorySelectLines[i] = create("./Data/Textures/UI/Result/select_button_line.png",
+            i == 0 ? "VictorySelectLineLeft" : "VictorySelectLineRight", { 113.0f, 5.0f });
     ResetVictoryResultBackground();
 }
 
@@ -2662,18 +2680,37 @@ void GameScene::UpdateVictoryButtonLayout()
     {
         if (!victoryButtons[i]) continue;
         victoryButtons[i]->SetWorldPosition(victoryButtonPositions[i]);
-        victoryButtons[i]->SetScale({ victoryButtonScales[i], victoryButtonScales[i] });
-        victoryButtons[i]->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, victoryButtonAlpha });
+        const CoreColor normal{ 1.0f, 1.0f, 1.0f, 1.0f };
+        const CoreColor dimmed{ victoryUnselectedButtonBrightness, victoryUnselectedButtonBrightness,
+            victoryUnselectedButtonBrightness, 1.0f };
+        if (victoryButtonFeedbackEnabled)
+            ApplyResultButtonFeedback(*victoryButtons[i], { victoryButtonScales[i], victoryButtonScales[i] },
+                i == static_cast<size_t>(victorySelectedButton), victorySelectedButtonScale,
+                victoryUnselectedButtonScale, normal, dimmed, victoryButtonAlpha);
+        else
+        {
+            victoryButtons[i]->SetScale({ victoryButtonScales[i], victoryButtonScales[i] });
+            victoryButtons[i]->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, victoryButtonAlpha });
+        }
         victoryButtons[i]->SetVisible(victoryButtonsVisible);
     }
-    if (victorySelectLine)
+    const auto& selectedButton = victoryButtons[victorySelectedButton];
+    const auto& buttonPosition = victoryButtonPositions[victorySelectedButton];
+    const float buttonWidth = selectedButton ? selectedButton->GetSize().x *
+        victoryButtonScales[victorySelectedButton] * victorySelectedButtonScale : 0.0f;
+    const float lineWidth = victorySelectLines[0] ? victorySelectLines[0]->GetSize().x * victorySelectLineScale.x : 0.0f;
+    const float lineY = buttonPosition.y + victorySelectLineOffset.y;
+    const float lineDistance = buttonWidth * 0.5f + victorySelectLineOffset.x;
+    for (size_t i = 0; i < victorySelectLines.size(); ++i)
     {
-        const auto& position = victoryButtonPositions[victorySelectedButton];
-        victorySelectLine->SetWorldPosition({ position.x + victorySelectLineOffset.x,
-            position.y + victorySelectLineOffset.y });
-        victorySelectLine->SetScale(victorySelectLineScale);
-        victorySelectLine->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, victoryButtonAlpha });
-        victorySelectLine->SetVisible(victoryButtonsVisible);
+        const auto& line = victorySelectLines[i];
+        if (!line) continue;
+        line->SetScale(victorySelectLineScale);
+        line->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, victoryButtonAlpha });
+        line->SetVisible(victoryButtonsVisible && (victoryResultPhase == VictoryResultPhase::ShowButtons ||
+            (victoryResultPhase == VictoryResultPhase::Interactive && victoryButtonInputEnabled)));
+        const float side = i == 0 ? -1.0f : 1.0f;
+        line->SetWorldPosition({ buttonPosition.x + side * (lineDistance + lineWidth * 0.5f), lineY });
     }
 }
 
@@ -2704,11 +2741,7 @@ void GameScene::UpdateVictoryButtonInput()
     if (direction != 0)
     {
         const int next = std::clamp(victorySelectedButton + direction, 0, 1);
-        if (next != victorySelectedButton)
-        {
-            victorySelectedButton = next;
-            CoreAudio::PlayOneShot("./Data/Sound/SE/button_select_move.wav", deathResultMoveSeVolume);
-        }
+        ChangeResultSelection(victorySelectedButton, next, deathResultMoveSeVolume);
         victoryButtonStickDelay = 0.2f;
     }
     if (InputSystem::GetInputState("UISubmit", InputStateMask::Trigger)) ExecuteVictoryResult();
@@ -2827,6 +2860,7 @@ void GameScene::UpdateVictoryResult()
         if (victoryButtonFadeTimer >= duration)
         {
             victoryResultPhase = VictoryResultPhase::Interactive;
+            victoryButtonFeedbackEnabled = true;
             victoryButtonInputEnabled = true;
             victoryButtonInputArmed = false;
         }
@@ -3298,8 +3332,16 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::DragFloat2("Return Title Button Position", &victoryButtonPositions[1].x, 1.0f);
         ImGui::DragFloat("Return Title Button Scale", &victoryButtonScales[1], 0.01f,
             0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat2("Victory Select Line Offset", &victorySelectLineOffset.x, 1.0f);
-        ImGui::DragFloat2("Victory Select Line Scale", &victorySelectLineScale.x, 0.01f,
+        ImGui::DragFloat("Victory Selected Button Scale", &victorySelectedButtonScale, 0.01f,
+            0.5f, 1.5f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Victory Unselected Button Scale", &victoryUnselectedButtonScale, 0.01f,
+            0.5f, 1.5f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Victory Unselected Button Brightness", &victoryUnselectedButtonBrightness, 0.01f,
+            0.0f, 1.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::TextDisabled("Scale multipliers use each button's base scale. Line offset is from its left edge.");
+        ImGui::DragFloat("Victory Select Line Horizontal Offset", &victorySelectLineOffset.x, 1.0f, 0.0f, 300.0f);
+        ImGui::DragFloat("Victory Select Line Y Offset", &victorySelectLineOffset.y, 1.0f, -200.0f, 200.0f);
+        ImGui::DragFloat2("Victory Select Line Scale X/Y", &victorySelectLineScale.x, 0.01f,
             0.01f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
         UpdateVictoryButtonLayout();
         ImGui::SeparatorText("Result Time Layout");
