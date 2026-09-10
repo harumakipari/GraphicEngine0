@@ -11,8 +11,12 @@
 #include <array>
 
 #include "Engine/Audio/Audio.h"
+#include "Game/DarkGame/BehaviorTree/BehaviorData.h"
+
 
 class Player;
+class BehaviorTree;
+class NodeBase;
 
 class GruxEnemy :public Enemy
 {
@@ -881,6 +885,12 @@ private:
     std::vector<AnimationMotionWarp> animationMotionWarps;
 
     friend class GruxEnemyEyeActor;
+
+    // ビヘイビアツリー
+    std::unique_ptr<BehaviorTree>	aiTree = nullptr;
+    std::unique_ptr<BehaviorData>	behaviorData = nullptr;
+    NodeBase* activeNode = nullptr;
+
 };
 
 
@@ -929,6 +939,8 @@ private:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
+
+
 
 };
 

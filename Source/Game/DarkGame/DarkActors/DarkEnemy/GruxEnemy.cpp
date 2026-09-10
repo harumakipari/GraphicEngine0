@@ -1,5 +1,7 @@
 #include "pch.h"
 
+#include <random>
+
 #include "GruxEnemy.h"
 
 #include "Components/Render/PointLightComponent.h"
@@ -12,7 +14,11 @@
 #include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
 #include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
 #include "Physics/CollisionFunction.h"
-#include <random>
+
+#include "Game/DarkGame/BehaviorTree/BehaviorData.h"
+#include "Game/DarkGame/BehaviorTree/BehaviorTree.h"
+#include "Game/DarkGame/BehaviorTree/ActionBase.h"
+#include "Game/DarkGame/BehaviorTree/JudgementBase.h"
 
 #ifdef USE_IMGUI
 namespace
@@ -434,7 +440,19 @@ void GruxEnemy::Initialize(const Transform& transform)
         hpCurrentFillUiComponent,
         hpFrameUiComponent,
     };
+
+
+    // ビヘイビアツリー設定
+    behaviorData = std::make_unique<BehaviorData>();
+    aiTree = std::make_unique<BehaviorTree>(this);
+
+    aiTree->AddNode("", "Root", 0, BehaviorTree::SelectRule::Priority, nullptr, nullptr);
+
+
 }
+
+
+
 
 void GruxEnemy::SetHpBarVisible(const bool visible)
 {

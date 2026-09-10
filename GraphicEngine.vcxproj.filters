@@ -403,6 +403,21 @@
     <ClCompile Include="Source\Test\SoftBody2d.cpp">
       <Filter>Source\Test</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\JudgementDerived.cpp">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.cpp">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\BehaviorData.cpp">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\BehaviorTree.cpp">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\NodeBase.cpp">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="External\imgui\imconfig.h">
@@ -956,6 +971,27 @@
     </ClInclude>
     <ClInclude Include="Source\Test\SoftBody2d.h">
       <Filter>Source\Test</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\BehaviorTree.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\NodeBase.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\JudgementBase.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\JudgementDerived.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionBase.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\BehaviorData.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1556,6 +1592,9 @@
     </Filter>
     <Filter Include="Shader">
       <UniqueIdentifier>{8f40bc09-f170-4103-abd0-fd67cf91bb37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\DarkGame\BehaviorTree">
+      <UniqueIdentifier>{813377e3-7256-45fd-995e-929b20cbf819}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

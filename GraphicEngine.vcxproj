@@ -310,6 +310,11 @@
     <ClCompile Include="Source\Game\Actors\Camera\DarkGameCamera.cpp" />
     <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\BehaviorData.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\BehaviorTree.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\JudgementDerived.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\NodeBase.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkClothActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.cpp" />
@@ -475,6 +480,13 @@
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h" />
     <ClInclude Include="Source\Game\Actors\Stage\Props\ClothActor.h" />
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionBase.h" />
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.h" />
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\BehaviorData.h" />
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\BehaviorTree.h" />
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\JudgementBase.h" />
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\JudgementDerived.h" />
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\NodeBase.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkClothActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.h" />
