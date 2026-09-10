@@ -284,13 +284,14 @@ public:
     // PlayerがFastComboの攻撃範囲内にいるか
     bool IsFastComboInRange() const;
     // Playerが攻撃可能な正面角度内にいるか
-    bool IsPlayerInFastComboFacingRange(const BossTargetContext& context) const; 
+    bool IsPlayerInFastComboFacingRange(const BossTargetContext& context) const;
+    bool IsPlayerInFastComboFaceCompleteRange(const BossTargetContext& context) const;
 
     // FastCombo開始前の接近処理
     // FastCombo用の接近処理を開始
     void BeginFastComboApproach();
     // 接近処理を更新し、完了したかを返す
-    bool UpdateFastComboApproach(float deltaTime);    
+    bool UpdateFastComboApproach(float deltaTime);
 
     // BehaviorTreeから実行する攻撃の設定
     void SetSelectedAttackForBehaviorTree(BossAttackType type)
@@ -337,7 +338,7 @@ public:
         return behaviorTreeFastComboEnabled;
     }
 
-    struct CloseCombatSettings { float minRange=0.0f; float executeMaxRange=6.0f; float planMaxRange=10.0f; float facingLimitDegrees=35.0f; };
+    struct CloseCombatSettings { float minRange=0.0f; float executeMaxRange=6.0f; float planMaxRange=10.0f; float facingLimitDegrees=35.0f; float faceCompleteAngleDegrees=7.0f; };
     const CloseCombatSettings& GetCloseCombatSettings() const { return closeCombatSettings; }
     const std::string& GetBehaviorTreeCurrentNode() const { return behaviorTreeCurrentNode; }
     const std::string& GetBehaviorTreePreviousNode() const { return behaviorTreePreviousNode; }
@@ -586,7 +587,7 @@ private:
     }
     };
 
-    // 各行動が距離条件を満たしているかのフラグ　
+    // 各行動が距離条件を満たしているかのフラグ
     std::array<bool, actionCount> combatActionCandidateFlags{};
     std::array<BossActionCandidateReason, actionCount> combatActionCandidateReasons{};
     // 各行動の有効な重み。距離条件とRepeat条件を考慮した有効な重み
@@ -878,7 +879,7 @@ private:
     // 右目の位置用コンポーネントを追加　暗闇で光る目の表現用
     std::shared_ptr<SceneComponent> rightEyeSceneComponent;
 
-    // カメラの注視点の位置 
+    // カメラの注視点の位置
     std::shared_ptr<SceneComponent> cameraTargetComponent;
     // ボス戦時のオフセット
     float bossBattleCameraDistance = 0.0f;

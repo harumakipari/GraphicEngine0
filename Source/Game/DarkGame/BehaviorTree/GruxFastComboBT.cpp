@@ -91,10 +91,10 @@ ActionBase::State FacePlayerIfNeeded::Run(float dt)
     auto c = owner->BuildTargetContext();
     if (!c.valid)
         return State::Failed;
-    if (owner->IsPlayerInFastComboFacingRange(c))
+    if (owner->IsPlayerInFastComboFaceCompleteRange(c))
         return State::Complete;
     owner->RotateTowardsPlayer(c.directionToPlayer, owner->GetTurnSpeed(), dt, "BT_FacePlayer");
-    return owner->IsPlayerInFastComboFacingRange(owner->BuildTargetContext()) ? State::Complete : State::Run;
+    return owner->IsPlayerInFastComboFaceCompleteRange(owner->BuildTargetContext()) ? State::Complete : State::Run;
 }
 
 ActionBase::State StartFastCombo::Run(float)
@@ -277,6 +277,11 @@ bool GruxEnemy::IsFastComboInRange() const
 bool GruxEnemy::IsPlayerInFastComboFacingRange(const BossTargetContext& c) const
 {
     return c.valid && c.absoluteAngleDegrees <= closeCombatSettings.facingLimitDegrees;
+}
+
+bool GruxEnemy::IsPlayerInFastComboFaceCompleteRange(const BossTargetContext& c) const
+{
+    return c.valid && c.absoluteAngleDegrees <= closeCombatSettings.faceCompleteAngleDegrees;
 }
 
 void GruxEnemy::BeginFastComboApproach()

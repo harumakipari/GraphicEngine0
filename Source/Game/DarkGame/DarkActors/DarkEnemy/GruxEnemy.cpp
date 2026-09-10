@@ -2144,10 +2144,12 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Close Execute Max Range", &closeCombatSettings.executeMaxRange, 0.1f, closeCombatSettings.minRange, 100.0f, "%.2f");
     ImGui::DragFloat("Close Plan Max Range", &closeCombatSettings.planMaxRange, 0.1f, closeCombatSettings.executeMaxRange, 100.0f, "%.2f");
     ImGui::DragFloat("Close Attack Facing Limit", &closeCombatSettings.facingLimitDegrees, 1.0f, 0.0f, 180.0f, "%.1f deg");
+    ImGui::DragFloat("Face Complete Angle", &closeCombatSettings.faceCompleteAngleDegrees, 0.5f, 0.0f, 90.0f, "%.1f deg");
     closeCombatSettings.minRange = (std::max)(0.0f, closeCombatSettings.minRange);
     closeCombatSettings.executeMaxRange = (std::max)(closeCombatSettings.minRange, closeCombatSettings.executeMaxRange);
     closeCombatSettings.planMaxRange = (std::max)(closeCombatSettings.executeMaxRange, closeCombatSettings.planMaxRange);
     closeCombatSettings.facingLimitDegrees = std::clamp(closeCombatSettings.facingLimitDegrees, 0.0f, 180.0f);
+    closeCombatSettings.faceCompleteAngleDegrees = std::clamp(closeCombatSettings.faceCompleteAngleDegrees, 0.0f, 90.0f);
     const auto facingDebugContext = BuildTargetContext();
     ImGui::Text("Player Facing Angle: %.1f deg", facingDebugContext.absoluteAngleDegrees);
     ImGui::Text("Facing OK: %s", IsPlayerInFastComboFacingRange(facingDebugContext) ? "true" : "false");
