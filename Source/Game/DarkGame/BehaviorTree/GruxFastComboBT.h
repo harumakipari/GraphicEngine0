@@ -93,7 +93,7 @@ public:
     State Run(float) override;
 };
 
-// FastComboを開始する
+
 class StartFastCombo : public ActionBase
 {
 public:

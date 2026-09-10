@@ -192,6 +192,9 @@ public:
     float GetDashWindupDuration() const { return dashWindupDuration; }
     float GetJumpAttackTelegraphStartTime() const { return jumpAttackTelegraphStartTime; }
     float GetJumpAttackTelegraphEndTime() const { return jumpAttackTelegraphEndTime; }
+    float GetJumpAttackDesiredStartDistance() const { return jumpDesiredStartDistance; }
+    float GetJumpSetupDistanceMin() const { return jumpSetupDistanceMin; }
+    float GetJumpSetupDistanceMax() const { return jumpSetupDistanceMax; }
     float GetRecoveryDurationForCurrentAttack() const;
     void SetNextRecoveryDuration(float duration, const char* source);
     float ConsumeNextRecoveryDuration();
@@ -227,6 +230,24 @@ public:
     std::string GetCurrentAttackNameForDebug() const;
     BossTargetContext BuildTargetContext() const;
     void RefreshFastComboTargetContext(int stage);
+    struct AttackSetupTargetContext { bool valid=false; DirectX::XMFLOAT3 targetPosition{}; float arrivalTolerance=0.3f; float timeout=3.0f; float maxMoveDistance=20.0f; float moveSpeed=6.0f; float stuckMovementThreshold=0.1f; float stuckTimeThreshold=0.5f; };
+    enum class AttackSetupMoveResult { Running, Arrived, Timeout, Stuck, InvalidTarget, MaxDistanceReached };
+    bool CanPlanJumpAttack() const;
+    bool PrepareJumpAttackSetupTarget();
+    bool FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount) const;
+    bool HasAttackSetupTarget() const { return attackSetupTarget.valid; }
+    const AttackSetupTargetContext& GetAttackSetupTarget() const { return attackSetupTarget; }
+    void ClearAttackSetupTarget();
+    void BeginAttackSetupMovement();
+    AttackSetupMoveResult UpdateAttackSetupMovement(float deltaTime);
+    void StopAttackSetupMovement();
+    float GetAttackSetupRemainingDistance() const { return attackSetupRemainingDistance; }
+    float GetAttackSetupElapsedTime() const { return attackSetupElapsedTime; }
+    float GetAttackSetupPlannedMoveDistance() const { return attackSetupPlannedMoveDistance; }
+    float GetJumpSetupMinimumMoveDistance() const { return jumpSetupMinimumMoveDistance; }
+    bool StartJumpAttackTelegraph();
+    bool UpdateJumpAttackTelegraph(float deltaTime);
+    bool StartJumpAttackExecution();
     const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
     bool ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const;
     bool ShouldFailIntentForPositioningRetryLimit(const BossTargetContext& context) const;
@@ -644,6 +665,16 @@ private:
     float interStageFaceDelay = 0.25f;
     FastComboRuntimeState fastComboRuntimeState = FastComboRuntimeState::Attack;
     int fastComboRuntimeStage = -1;
+    AttackSetupTargetContext attackSetupTarget{};
+    DirectX::XMFLOAT3 attackSetupPreviousPosition{};
+    float attackSetupElapsedTime=0.0f;
+    float attackSetupTraveledDistance=0.0f;
+    float attackSetupRemainingDistance=0.0f;
+    float attackSetupStuckTime=0.0f;
+    bool attackSetupMovementActive=false;
+    float attackSetupChosenDistance=0.0f;
+    float attackSetupPlannedMoveDistance=0.0f;
+    int attackSetupCandidateCount=0;
     bool attackFacingEvaluationValid = false;
     float attackFacingEvaluationTolerance = 0.0f;
     float attackFacingEvaluationAngle = 0.0f;
@@ -820,11 +851,18 @@ private:
 
     // JumpAttackのMotionWarp用
     float maxJumpDistance = 12.5f;//  JumpAttackで実際に移動してよい最大距離。プレイヤーが遠くても12.5より長くは移動しない。
-    float desiredAttackDistance = 0.1f; //  JumpAttack後にプレイヤーとの間へ残したい距離
+    float desiredAttackDistance = 0.1f;
+    float jumpDesiredStartDistance = 4.5f;
+    float jumpSetupDistanceMin = 6.5f;
+    float jumpSetupDistanceMax = 8.5f;
+    float jumpSetupMinimumMoveDistance = 3.0f;
+    float attackSetupCandidateAngleStep = 30.0f;
+    float attackSetupClampTolerance = 0.75f; //  JumpAttack後にプレイヤーとの間へ残したい距離
     float jumpAttackTelegraphStartTime = 1.4f;  // 予備動作の開始アニメーション時間
     float jumpAttackTelegraphEndTime = 2.6f;
     float currentJumpPlayerDistance = 0.0f; //  JumpAttack開始時点のプレイヤーまでの距離
     float calculatedJumpDistance = 0.0f;    //  最終的にMotionWarpで移動する距離
+    bool jumpAttackExecutionStartCalledDebug = false;
     bool jumpMotionWarpOverrideActive = false;  // 通常のAnimation Notifyに設定された移動距離ではなく、JumpAttack用に計算した距離と方向を使用するかどうか
     DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  //  JumpAttack開始時のプレイヤー位置
     DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  //  ボスからJumpAttack開始時のプレイヤー位置へ向かう正規化済み方向

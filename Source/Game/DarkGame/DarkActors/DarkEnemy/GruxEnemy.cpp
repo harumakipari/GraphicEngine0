@@ -20,6 +20,7 @@
 #include "Game/DarkGame/BehaviorTree/ActionBase.h"
 #include "Game/DarkGame/BehaviorTree/JudgementBase.h"
 #include "Game/DarkGame/BehaviorTree/GruxFastComboBT.h"
+#include "Game/DarkGame/BehaviorTree/GruxJumpAttackBT.h"
 
 #ifdef USE_IMGUI
 namespace
@@ -455,10 +456,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("Death", "StartDeath", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTStartDeath>(this));
     aiTree->AddNode("Death", "ExecuteDeath", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTExecuteDeath>(this));
 
-    aiTree->AddNode("Root", "Attack", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
+    aiTree->AddNode("Root", "Attack", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
     aiTree->AddNode("Root", "Idle", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
-    aiTree->AddNode("Attack", "FastComboPlan", 0, BehaviorTree::SelectRule::Sequence, nullptr, nullptr);
+    aiTree->AddNode("Attack", "FastComboPlan", 1, BehaviorTree::SelectRule::Sequence, nullptr, nullptr);
 
     aiTree->AddNode("FastComboPlan", "CanPlanFastCombo", 0, BehaviorTree::SelectRule::Non, std::make_unique<::CanPlanFastCombo>(this), std::make_unique<BTCompleteAction>(this));
     aiTree->AddNode("FastComboPlan", "ApproachIfNeeded", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ApproachIfNeeded>(this));
@@ -468,6 +469,17 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("FastComboPlan", "StartFastCombo", 4, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartFastCombo>(this));
     aiTree->AddNode("FastComboPlan", "ExecuteFastCombo", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteFastCombo>(this));
     aiTree->AddNode("FastComboPlan", "ExecuteRecovery", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteFastComboRecovery>(this));
+
+    aiTree->AddNode("Attack", "JumpAttack", 0, BehaviorTree::SelectRule::Sequence, nullptr, nullptr);
+
+    aiTree->AddNode("JumpAttack", "CanPlanJumpAttack", 0, BehaviorTree::SelectRule::Non, std::make_unique<::CanPlanJumpAttack>(this), std::make_unique<BTCompleteAction>(this));
+    aiTree->AddNode("JumpAttack", "PrepareJumpSetupTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareJumpSetupTarget>(this));
+    aiTree->AddNode("JumpAttack", "MoveToAttackSetupTarget", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToAttackSetupTarget>(this));
+    aiTree->AddNode("JumpAttack", "FacePlayerIfNeeded", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FaceJumpPlayerIfNeeded>(this));
+    aiTree->AddNode("JumpAttack", "CanExecuteJumpAttack", 4, BehaviorTree::SelectRule::Non, std::make_unique<::CanExecuteJumpAttack>(this), std::make_unique<BTCompleteAction>(this));
+    aiTree->AddNode("JumpAttack", "StartJumpAttack", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartJumpAttack>(this));
+    aiTree->AddNode("JumpAttack", "ExecuteJumpAttack", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteJumpAttack>(this));
+    aiTree->AddNode("JumpAttack", "ExecuteRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteJumpAttackRecovery>(this));
 
 
 }
@@ -540,6 +552,7 @@ void GruxEnemy::StopBattleActions()
     StopDashAttackMovement();
     StopChargeAttackMovement();
     StopAIMovement();
+    ClearAttackSetupTarget();
     ClearActiveIntent();
     ClearPendingAttackFacing();
     ClearJumpAttackMotionWarpOverride();
@@ -2158,7 +2171,7 @@ void GruxEnemy::DrawImGuiDetails()
     interStageFaceDelay = std::clamp(interStageFaceDelay, 0.0f, 0.5f);
     const auto facingDebugContext = BuildTargetContext();
     ImGui::Text(U8("プレイヤーとの角度: %.1f deg"), facingDebugContext.absoluteAngleDegrees);
-    ImGui::Text("攻撃可能角度内: %s", IsPlayerInFastComboFacingRange(facingDebugContext) ? "true" : "false");
+    ImGui::Text(U8("攻撃可能角度内: %s"), IsPlayerInFastComboFacingRange(facingDebugContext) ? "true" : "false");
     ImGui::Checkbox(U8("近距離攻撃範囲を表示"), &showCloseCombatDebugRange);
     ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
     ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
@@ -2195,7 +2208,62 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::TreePop();
     }
     ImGui::Text("Last Decision Reason: %s", lastAIDecisionReason.c_str());
+    ImGui::SeparatorText("Attack Setup Target Debug");
+    ImGui::Text("Attack Setup Target Valid: %s", attackSetupTarget.valid ? "true" : "false");
+    ImGui::Text("Attack Setup Target Position: (%.3f, %.3f, %.3f)", attackSetupTarget.targetPosition.x, attackSetupTarget.targetPosition.y, attackSetupTarget.targetPosition.z);
+    ImGui::Text("Remaining Distance: %.3f", attackSetupRemainingDistance);
+    ImGui::Text("Elapsed Time: %.3f", attackSetupElapsedTime);
+    ImGui::Text("Current Move Result: %s", attackSetupMovementActive ? "Running" : (attackSetupTarget.valid ? "Ready" : "None"));
+    ImGui::Text(U8("\u5b9f\u969b\u306e\u6e96\u5099\u79fb\u52d5\u8ddd\u96e2: %.3f"), attackSetupPlannedMoveDistance);
+    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7 \u6e96\u5099 \u6700\u4f4e\u79fb\u52d5\u8ddd\u96e2: %.3f"), jumpSetupMinimumMoveDistance);
+    float setupAngle = 0.0f;
+    { const auto p = GetPosition(); const float dx = attackSetupTarget.targetPosition.x - p.x; const float dz = attackSetupTarget.targetPosition.z - p.z; if (std::abs(dx) + std::abs(dz) > FLT_EPSILON) setupAngle = DirectX::XMConvertToDegrees(std::atan2f(dx, dz)); }
+    ImGui::Text(U8("\u30bf\u30fc\u30b2\u30c3\u30c8\u65b9\u5411\u89d2\u5ea6: %.2f deg"), setupAngle);
+    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7\u6e96\u5099\u8ddd\u96e2: %.3f"), GetJumpAttackDesiredStartDistance());
+    ImGui::SeparatorText(U8("ジャンプ攻撃位置調整"));
+    ImGui::DragFloat(
+        U8("位置調整距離 最小"),
+        &jumpSetupDistanceMin,
+        0.1f, 0.1f, 30.0f, "%.2f");
+
+    ImGui::DragFloat(
+        U8("位置調整距離 最大"),
+        &jumpSetupDistanceMax,
+        0.1f, 0.1f, 30.0f, "%.2f");
+
+    jumpSetupDistanceMin = (std::max)(0.1f, jumpSetupDistanceMin);
+    jumpSetupDistanceMax = (std::max)(jumpSetupDistanceMin, jumpSetupDistanceMax);
+    ImGui::DragFloat(U8("\u30b8\u30e3\u30f3\u30d7\u6e96\u5099 \u6700\u4f4e\u79fb\u52d5\u8ddd\u96e2"), &jumpSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
+    jumpSetupMinimumMoveDistance = (std::max)(0.0f, jumpSetupMinimumMoveDistance);
+
+    ImGui::Text(
+        U8("目標位置は有効か: %s"),
+        attackSetupTarget.valid ? "true" : "false");
+
+    ImGui::Text(
+        U8("目標位置: (%.3f, %.3f, %.3f)"),
+        attackSetupTarget.targetPosition.x,
+        attackSetupTarget.targetPosition.y,
+        attackSetupTarget.targetPosition.z);
+
+    ImGui::Text(
+        U8("目標までの残り距離: %.3f"),
+        attackSetupRemainingDistance);
+
+    ImGui::Text(
+        U8("選択された移動距離: %.3f"),
+        attackSetupChosenDistance);
+
+    ImGui::Text(
+        U8("候補数: %d"),
+        attackSetupCandidateCount);
     ImGui::SeparatorText("JumpAttack Debug");
+    const auto jumpController = GetBodyAnimationController();
+    const std::string jumpAnimation = jumpController ? jumpController->GetCurrentAnimationName() : std::string{};
+    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7BT\u72b6\u614b: %s"), behaviorTreeCurrentNode.c_str());
+    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7\u4e88\u5146\u518d\u751f\u4e2d: %s"), jumpAnimation == "Pre_Stampede_0" ? "true" : "false");
+    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7Stage: %d"), jumpAnimation == "PrimaryAttack_JumpAttack" ? 1 : jumpAnimation == "Pre_Stampede_0" ? 0 : -1);
+    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7MotionWarp\u6709\u52b9: %s"), jumpMotionWarpOverrideActive ? "true" : "false");
     ImGui::DragFloat("Max Jump Distance", &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
     ImGui::DragFloat("Desired Attack Distance", &desiredAttackDistance, 0.05f, 0.0f, 10.0f, "%.2f");
     currentJumpPlayerDistance = GetDistanceToPlayer();
@@ -4347,6 +4415,32 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
     return true;
 }
 
+bool GruxEnemy::StartJumpAttackTelegraph()
+{
+    StartAttack();
+    jumpAttackExecutionStartCalledDebug = false;
+    StopAIMovement();
+    return PlayAttackStage(BossAttackType::JumpAttack, 0);
+}
+
+bool GruxEnemy::UpdateJumpAttackTelegraph(float deltaTime)
+{
+    const BossTargetContext context = BuildTargetContext();
+    if (!context.valid)
+        return false;
+    RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), deltaTime, "BT_JumpTelegraph");
+    const auto controller = GetBodyAnimationController();
+    return !controller || !controller->IsPlayAnimation();
+}
+
+bool GruxEnemy::StartJumpAttackExecution()
+{
+    jumpAttackExecutionStartCalledDebug = true;
+if (!PlayAttackStage(BossAttackType::JumpAttack, 1))
+        return false;
+    OnSelectedActionStartedSuccessfully();
+    return true;
+}
 bool GruxEnemy::PlayAttackAnimationByName(const std::string& animationName)
 {
     const auto controller = GetBodyAnimationController();
@@ -4981,6 +5075,110 @@ void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
 
         easingRunner->StartHandler(handler, accessor);
     }
+}
+
+bool GruxEnemy::CanPlanJumpAttack() const
+{
+    const auto context = BuildTargetContext();
+    if (!context.valid || IsDead())
+        return false;
+    for (size_t i = 0; i < combatAttackData.size(); ++i)
+    {
+        if (combatAttackData[i].type == BossAttackType::JumpAttack)
+            return combatActionCooldownRemaining[i] <= 0.0f;
+    }
+    return false;
+}
+bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount) const
+{
+    outTarget = {};
+    outDistance = 0.0f;
+    outCandidateCount = 0;
+    const auto scene = GetOwnerScene();
+    const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
+    if (!player || player->IsPendingKill())
+        return false;
+
+    const DirectX::XMFLOAT3 playerPosition = player->GetPosition();
+    const DirectX::XMFLOAT3 bossPosition = GetPosition();
+    const float baseX = bossPosition.x - playerPosition.x;
+    const float baseZ = bossPosition.z - playerPosition.z;
+    const float baseLength = std::sqrt(baseX * baseX + baseZ * baseZ);
+    const DirectX::XMFLOAT3 baseDirection = baseLength > FLT_EPSILON
+        ? DirectX::XMFLOAT3{ baseX / baseLength, 0.0f, baseZ / baseLength }
+        : GetForward();
+    static thread_local std::mt19937 randomEngine{ std::random_device{}() };
+    std::uniform_real_distribution<float> distanceDistribution(
+        (std::min)(minDistance, maxDistance), (std::max)(minDistance, maxDistance));
+    const float setupDistance = distanceDistribution(randomEngine);
+    const float safeAngleStep = (std::max)(1.0f, angleStep);
+    const float safeClampTolerance = (std::max)(0.0f, clampTolerance);
+    for (int index = 0; index <= 12; ++index)
+    {
+        const float magnitude = static_cast<float>((index + 1) / 2);
+        const float signedStep = index == 0 ? 0.0f : (index % 2 == 1 ? magnitude : -magnitude);
+        const float angle = DirectX::XMConvertToRadians(signedStep * safeAngleStep);
+        const float rotatedX = baseDirection.x * std::cos(angle) - baseDirection.z * std::sin(angle);
+        const float rotatedZ = baseDirection.x * std::sin(angle) + baseDirection.z * std::cos(angle);
+        const DirectX::XMFLOAT3 originalCandidate{
+            playerPosition.x + rotatedX * setupDistance, playerPosition.y,
+            playerPosition.z + rotatedZ * setupDistance };
+        RepositionTargetEvaluation evaluation{};
+        EvaluateClampedPositioningTarget(bossPosition, originalCandidate, evaluation);
+        ++outCandidateCount;
+        const float clampDeltaX = evaluation.clampedTarget.x - originalCandidate.x;
+        const float clampDeltaZ = evaluation.clampedTarget.z - originalCandidate.z;
+        const float clampDistance = std::sqrt(clampDeltaX * clampDeltaX + clampDeltaZ * clampDeltaZ);
+        if (clampDistance > safeClampTolerance)
+            continue;
+        const float moveX = evaluation.clampedTarget.x - bossPosition.x;
+        const float moveZ = evaluation.clampedTarget.z - bossPosition.z;
+        if (std::sqrt(moveX * moveX + moveZ * moveZ) < (std::max)(0.0f, minimumMoveDistance))
+            continue;
+        outTarget = evaluation.clampedTarget;
+        outDistance = setupDistance;
+        return true;
+    }
+    return false;
+}
+
+bool GruxEnemy::PrepareJumpAttackSetupTarget()
+{
+    DirectX::XMFLOAT3 target{};
+    float setupDistance = 0.0f;
+    int candidateCount = 0;
+    if (!FindAttackSetupTarget(jumpSetupDistanceMin, jumpSetupDistanceMax,
+        attackSetupCandidateAngleStep, attackSetupClampTolerance, jumpSetupMinimumMoveDistance,
+        target, setupDistance, candidateCount))
+    {
+        ClearAttackSetupTarget();
+        attackSetupCandidateCount = candidateCount;
+        return false;
+    }
+    attackSetupTarget = {};
+    attackSetupTarget.targetPosition = target;
+    attackSetupTarget.valid = true;
+    attackSetupRemainingDistance = std::sqrt(
+        (target.x - GetPosition().x) * (target.x - GetPosition().x) +
+        (target.z - GetPosition().z) * (target.z - GetPosition().z));
+    attackSetupChosenDistance = setupDistance;
+    const float moveX = target.x - GetPosition().x;
+    const float moveZ = target.z - GetPosition().z;
+    attackSetupPlannedMoveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
+    attackSetupCandidateCount = candidateCount;
+    return true;
+}
+void GruxEnemy::ClearAttackSetupTarget() { attackSetupTarget={}; attackSetupMovementActive=false; attackSetupElapsedTime=attackSetupTraveledDistance=attackSetupRemainingDistance=attackSetupStuckTime=attackSetupPlannedMoveDistance=0.0f; }
+void GruxEnemy::BeginAttackSetupMovement() { attackSetupMovementActive=attackSetupTarget.valid; attackSetupPreviousPosition=GetPosition(); attackSetupElapsedTime=attackSetupTraveledDistance=attackSetupStuckTime=0.0f; }
+void GruxEnemy::StopAttackSetupMovement() { attackSetupMovementActive=false; StopAIMovement(); EndPositioningAnimation(); }
+GruxEnemy::AttackSetupMoveResult GruxEnemy::UpdateAttackSetupMovement(float dt)
+{
+    if (!attackSetupTarget.valid) return AttackSetupMoveResult::InvalidTarget; if (!attackSetupMovementActive) BeginAttackSetupMovement();
+    attackSetupElapsedTime += (std::max)(0.0f,dt); const auto pos=GetPosition(); float dx=attackSetupTarget.targetPosition.x-pos.x,dz=attackSetupTarget.targetPosition.z-pos.z; attackSetupRemainingDistance=std::sqrt(dx*dx+dz*dz);
+    if (attackSetupRemainingDistance<=attackSetupTarget.arrivalTolerance) return AttackSetupMoveResult::Arrived; if (attackSetupElapsedTime>=attackSetupTarget.timeout) return AttackSetupMoveResult::Timeout;
+    float mx=pos.x-attackSetupPreviousPosition.x,mz=pos.z-attackSetupPreviousPosition.z; float frameMove=std::sqrt(mx*mx+mz*mz); attackSetupTraveledDistance+=frameMove; attackSetupPreviousPosition=pos; if(frameMove<attackSetupTarget.stuckMovementThreshold) attackSetupStuckTime+=dt; else attackSetupStuckTime=0.0f;
+    if(attackSetupTraveledDistance>=attackSetupTarget.maxMoveDistance) return AttackSetupMoveResult::MaxDistanceReached; if(attackSetupStuckTime>=attackSetupTarget.stuckTimeThreshold) return AttackSetupMoveResult::Stuck;
+    if(characterMovementComponent){ const DirectX::XMFLOAT3 moveDirection{dx/attackSetupRemainingDistance,0.0f,dz/attackSetupRemainingDistance}; characterMovementComponent->SetFixedSpeed(attackSetupTarget.moveSpeed); characterMovementComponent->SetInputMagnitude(1.0f); characterMovementComponent->SetMoveDirection(moveDirection); RotateTowardsPlayer(moveDirection, GetTurnSpeed(), dt, "AttackSetupMovement"); } UpdatePositioningAnimation(dt>0.0f?frameMove/dt:0.0f,dt); return AttackSetupMoveResult::Running;
 }
 
 void GruxEnemy::RefreshFastComboTargetContext(int stage)
