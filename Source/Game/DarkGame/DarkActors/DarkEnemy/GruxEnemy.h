@@ -277,6 +277,61 @@ public:
 
     // 抽選結果をmemberへ保存する関数
     bool SelectCombatAction();
+    // FastComboの実行可否・条件判定
+    // FastComboを攻撃候補として選択できるか
+    bool CanPlanFastCombo() const;
+    // 現在FastComboを実行できる状態か
+    bool CanExecuteFastCombo() const;
+    // PlayerがFastComboの攻撃範囲内にいるか
+    bool IsFastComboInRange() const;
+    // Playerが攻撃可能な正面角度内にいるか
+    bool IsPlayerInFastComboFacingRange(const BossTargetContext& context) const; 
+
+    // FastCombo開始前の接近処理
+    // FastCombo用の接近処理を開始
+    void BeginFastComboApproach();
+    // 接近処理を更新し、完了したかを返す
+    bool UpdateFastComboApproach(float deltaTime);    
+
+
+    // BehaviorTreeから実行する攻撃の設定
+    void SetSelectedAttackForBehaviorTree(BossAttackType type)
+    {
+        selectedAttackType = type;
+    }
+
+    // BehaviorTreeで実行した攻撃の終了結果
+    enum class BehaviorAttackResult
+    {
+        None,        // 結果未確定
+        Success,     // 攻撃正常終了
+        JustDodged   // Playerのジャスト回避により中断
+    };
+
+    void SetBehaviorAttackResult(BehaviorAttackResult result)
+    {
+        behaviorAttackResult = result;
+    }
+
+    // BehaviorTree用の攻撃終了後Recoveryの処理を開始
+    void BeginRecovery() const;
+
+    // BehaviorTree用の攻撃終了後Recovery時間を取得
+    float GetBehaviorRecoveryDuration() const;
+
+    // BehaviorTreeの更新
+    void UpdateBehaviorTree(float deltaTime);
+
+    // FastComboをBehaviorTree制御にするか
+    void SetBehaviorTreeFastComboEnabled(bool enabled)
+    {
+        behaviorTreeFastComboEnabled = enabled;
+    }
+
+    bool IsBehaviorTreeFastComboEnabled() const
+    {
+        return behaviorTreeFastComboEnabled;
+    }
 
 
 private:
@@ -890,6 +945,9 @@ private:
     std::unique_ptr<BehaviorTree>	aiTree = nullptr;
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;
     NodeBase* activeNode = nullptr;
+    bool behaviorTreeFastComboEnabled = false;
+    BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;
+    bool behaviorApproachActive = false;
 
 };
 

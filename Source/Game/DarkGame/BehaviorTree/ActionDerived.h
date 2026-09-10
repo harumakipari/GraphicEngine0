@@ -16,3 +16,5 @@ public:
 	ActionBase::State Run(float elapsedTime);
 };
 
+
+#include "GruxFastComboBT.h"

@@ -19,6 +19,7 @@
 #include "Game/DarkGame/BehaviorTree/BehaviorTree.h"
 #include "Game/DarkGame/BehaviorTree/ActionBase.h"
 #include "Game/DarkGame/BehaviorTree/JudgementBase.h"
+#include "Game/DarkGame/BehaviorTree/GruxFastComboBT.h"
 
 #ifdef USE_IMGUI
 namespace
@@ -447,6 +448,15 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree = std::make_unique<BehaviorTree>(this);
 
     aiTree->AddNode("", "Root", 0, BehaviorTree::SelectRule::Priority, nullptr, nullptr);
+    aiTree->AddNode("Root", "Attack", 0, BehaviorTree::SelectRule::Sequence, nullptr, nullptr);
+    aiTree->AddNode("Attack", "FastComboPlan", 0, BehaviorTree::SelectRule::Sequence, nullptr, nullptr);
+    aiTree->AddNode("FastComboPlan", "CanPlanFastCombo", 0, BehaviorTree::SelectRule::Non, std::make_unique<::CanPlanFastCombo>(this), std::make_unique<BTCompleteAction>(this));
+    aiTree->AddNode("FastComboPlan", "ApproachIfNeeded", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ApproachIfNeeded>(this));
+    aiTree->AddNode("FastComboPlan", "FacePlayerIfNeeded", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FacePlayerIfNeeded>(this));
+    aiTree->AddNode("FastComboPlan", "CanExecuteFastCombo", 3, BehaviorTree::SelectRule::Non, std::make_unique<::CanExecuteFastCombo>(this), std::make_unique<BTCompleteAction>(this));
+    aiTree->AddNode("FastComboPlan", "StartFastCombo", 4, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartFastCombo>(this));
+    aiTree->AddNode("FastComboPlan", "ExecuteFastCombo", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteFastCombo>(this));
+    aiTree->AddNode("FastComboPlan", "ExecuteRecovery", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteFastComboRecovery>(this));
 
 
 }
@@ -683,7 +693,19 @@ void GruxEnemy::Update(float deltaTime)
         UpdateActionCooldowns(deltaTime);
 
     BeginRotationDebugFrame();
-    Character::Update(deltaTime);
+
+    // Behavior
+    if (behaviorTreeFastComboEnabled)
+    {
+        UpdateBehaviorTree(deltaTime);
+        auto savedStateMachine = stateMachine_; stateMachine_.reset();
+        Character::Update(deltaTime);
+        stateMachine_ = savedStateMachine;
+    }
+    else
+    {
+        Character::Update(deltaTime);
+    }
 
     leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
     rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
@@ -2109,6 +2131,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Jump Override: %s", jumpMotionWarpOverrideActive ? "Active" : "Inactive");
     ImGui::Text("Selected Attack: %s", attackTypes[static_cast<int>(selectedAttackType)]);
     ImGui::Text("Current AI Mode: %s", aiModes[static_cast<int>(bossAIMode)]);
+    ImGui::Checkbox("BehaviorTree FastCombo", &behaviorTreeFastComboEnabled);
     ImGui::Text("Last Attack: %s",
         hasLastAttack ? attackTypes[static_cast<int>(lastAttackType)] : "None");
     ImGui::DragFloat("Repeat Weight Scale", &repeatWeightScale, 0.01f, 0.0f, 1.0f, "%.2f");
