@@ -448,12 +448,23 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree = std::make_unique<BehaviorTree>(this);
 
     aiTree->AddNode("", "Root", 0, BehaviorTree::SelectRule::Priority, nullptr, nullptr);
-    aiTree->AddNode("Root", "Attack", 0, BehaviorTree::SelectRule::Sequence, nullptr, nullptr);
+
+    aiTree->AddNode("Root", "Death", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<DeadJudgment>(this), nullptr);
+
+    aiTree->AddNode("Death", "CheckDead", 0, BehaviorTree::SelectRule::Non, std::make_unique<AlwaysJudgment>(this), std::make_unique<BTCompleteAction>(this));
+    aiTree->AddNode("Death", "StartDeath", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTStartDeath>(this));
+    aiTree->AddNode("Death", "ExecuteDeath", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTExecuteDeath>(this));
+
+    aiTree->AddNode("Root", "Attack", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
+    aiTree->AddNode("Root", "Idle", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
+
     aiTree->AddNode("Attack", "FastComboPlan", 0, BehaviorTree::SelectRule::Sequence, nullptr, nullptr);
+
     aiTree->AddNode("FastComboPlan", "CanPlanFastCombo", 0, BehaviorTree::SelectRule::Non, std::make_unique<::CanPlanFastCombo>(this), std::make_unique<BTCompleteAction>(this));
     aiTree->AddNode("FastComboPlan", "ApproachIfNeeded", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ApproachIfNeeded>(this));
     aiTree->AddNode("FastComboPlan", "FacePlayerIfNeeded", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FacePlayerIfNeeded>(this));
     aiTree->AddNode("FastComboPlan", "CanExecuteFastCombo", 3, BehaviorTree::SelectRule::Non, std::make_unique<::CanExecuteFastCombo>(this), std::make_unique<BTCompleteAction>(this));
+    aiTree->AddNode("FastComboPlan", "PrepareFastCombo", 4, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<PrepareFastCombo>(this));
     aiTree->AddNode("FastComboPlan", "StartFastCombo", 4, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartFastCombo>(this));
     aiTree->AddNode("FastComboPlan", "ExecuteFastCombo", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteFastCombo>(this));
     aiTree->AddNode("FastComboPlan", "ExecuteRecovery", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteFastComboRecovery>(this));
@@ -755,7 +766,7 @@ void GruxEnemy::Update(float deltaTime)
 
 #ifdef USE_IMGUI
     aiDebugTargetContext = BuildTargetContext();
-    if (showBossAIDebug)
+    if (showBossAIDebug || showCloseCombatDebugRange)
         DrawBossAIDebugWorld(aiDebugTargetContext);
     if (showRotationDebug)
         DrawRotationDebugWorld(aiDebugTargetContext);
@@ -1264,6 +1275,10 @@ void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
 
     drawRing(nearDistanceThreshold, { 0.2f, 1.0f, 0.2f, 1.0f });
     drawRing(middleDistanceThreshold, { 1.0f, 0.7f, 0.1f, 1.0f });
+    if (showCloseCombatDebugRange) { drawRing(closeCombatSettings.minRange, { 0.2f, 0.8f, 1.0f, 1.0f }); drawRing(closeCombatSettings.executeMaxRange, { 0.2f, 1.0f, 0.2f, 1.0f }); drawRing(closeCombatSettings.planMaxRange, { 1.0f, 0.2f, 0.8f, 1.0f }); }
+    const float facingLength = closeCombatSettings.executeMaxRange;
+    const float forwardYaw = std::atan2(GetForward().x, GetForward().z);
+    for (const float side : { -1.0f, 1.0f }) { const float a = forwardYaw + side * DirectX::XMConvertToRadians(closeCombatSettings.facingLimitDegrees); const DirectX::XMFLOAT3 end{ bossPosition.x + std::sin(a) * facingLength, debugHeight, bossPosition.z + std::cos(a) * facingLength }; DebugRender::DrawLine({ bossPosition.x, debugHeight, bossPosition.z }, end, { 1.0f, 0.8f, 0.1f, 1.0f }, 0.0f, true); }
 
     if (const BossIntentData* intentData = GetActiveIntentData())
     {
@@ -2116,11 +2131,34 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::SeparatorText("Last Positioning");
     drawPositioningSnapshot(lastPositioningDebug, false);
 
-    ImGui::DragFloat("Attack Facing Angle", &attackFacingAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+    ImGui::DragFloat("Idle Duration", &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::DragFloat("FastCombo Prepare Duration", &fastComboPrepareDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::DragFloat("FastCombo Approach Max Duration", &fastComboApproachMaxDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
+    behaviorIdleDuration = (std::max)(0.0f, behaviorIdleDuration);
+    fastComboPrepareDuration = (std::max)(0.0f, fastComboPrepareDuration);
+    fastComboApproachMaxDuration = (std::max)(0.0f, fastComboApproachMaxDuration);
+    ImGui::SeparatorText("Close Combat Settings");
+    ImGui::DragFloat("Close Min Range", &closeCombatSettings.minRange, 0.1f, 0.0f, 100.0f, "%.2f");
+    ImGui::DragFloat("Close Execute Max Range", &closeCombatSettings.executeMaxRange, 0.1f, closeCombatSettings.minRange, 100.0f, "%.2f");
+    ImGui::DragFloat("Close Plan Max Range", &closeCombatSettings.planMaxRange, 0.1f, closeCombatSettings.executeMaxRange, 100.0f, "%.2f");
+    ImGui::DragFloat("Close Attack Facing Limit", &closeCombatSettings.facingLimitDegrees, 1.0f, 0.0f, 180.0f, "%.1f deg");
+    closeCombatSettings.minRange = (std::max)(0.0f, closeCombatSettings.minRange);
+    closeCombatSettings.executeMaxRange = (std::max)(closeCombatSettings.minRange, closeCombatSettings.executeMaxRange);
+    closeCombatSettings.planMaxRange = (std::max)(closeCombatSettings.executeMaxRange, closeCombatSettings.planMaxRange);
+    closeCombatSettings.facingLimitDegrees = std::clamp(closeCombatSettings.facingLimitDegrees, 0.0f, 180.0f);
+    const auto facingDebugContext = BuildTargetContext();
+    ImGui::Text("Player Facing Angle: %.1f deg", facingDebugContext.absoluteAngleDegrees);
+    ImGui::Text("Facing OK: %s", IsPlayerInFastComboFacingRange(facingDebugContext) ? "true" : "false");
+    ImGui::Checkbox("Show Close Combat Debug Range", &showCloseCombatDebugRange);
     ImGui::DragFloat("Turn Speed", &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
     ImGui::DragFloat("Turn Complete Angle", &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     ImGui::DragFloat("Turn Timeout", &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::Text("Current AI State: %s", stateMachine_ ? stateMachine_->GetStateName() : "None");
+    ImGui::Text("BehaviorTree Enabled: %s", behaviorTreeFastComboEnabled ? "true" : "false");
+    ImGui::Text("BT Current Node: %s", behaviorTreeCurrentNode.c_str());
+    ImGui::Text("BT Previous Node: %s", behaviorTreePreviousNode.c_str());
+    ImGui::Text("BT Last Result: %s", behaviorTreeLastResult.c_str());
+    ImGui::Text("BT Last Judgment: %s", behaviorTreeLastJudgment.c_str());
     ImGui::Text("Last Decision Reason: %s", lastAIDecisionReason.c_str());
     ImGui::SeparatorText("JumpAttack Debug");
     ImGui::DragFloat("Max Jump Distance", &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
@@ -4983,7 +5021,7 @@ bool GruxEnemy::IsFacingPlayerForAttack(
     const BossTargetContext& context) const
 {
     return context.valid &&
-        context.absoluteAngleDegrees <= attackFacingAngle;
+        context.absoluteAngleDegrees <= closeCombatSettings.facingLimitDegrees;
 }
 
 namespace

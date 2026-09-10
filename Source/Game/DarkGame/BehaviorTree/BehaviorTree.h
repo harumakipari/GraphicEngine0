@@ -1,4 +1,5 @@
 #pragma once
+#include "ActionBase.h"
 
 
 class ActionBase;
@@ -36,6 +37,7 @@ public:
 
 	// ビヘイビアツリーを実行する関数
 	NodeBase* Run(NodeBase* actionNode, BehaviorData* data, float elapsedTime);
+    ActionBase::State GetLastRunResult() const { return lastRunResult; }
 
 	// 登録されているノードを削除する関数
 	void NodeAllClear();
@@ -44,4 +46,5 @@ private:
 	// ルートノード
 	std::shared_ptr<NodeBase> root;
 	GruxEnemy* owner;
+    ActionBase::State lastRunResult = ActionBase::State::Run;
 };

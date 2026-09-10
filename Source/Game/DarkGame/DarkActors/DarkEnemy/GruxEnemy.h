@@ -318,6 +318,11 @@ public:
 
     // BehaviorTree用の攻撃終了後Recovery時間を取得
     float GetBehaviorRecoveryDuration() const;
+    // BehaviorTree用の攻撃準備時間を取得
+    float GetBehaviorPrepareDuration() const { return fastComboPrepareDuration; }
+    float GetFastComboApproachMaxDuration() const { return fastComboApproachMaxDuration; }
+    // BehaviorTree用の待機時間を取得
+    float GetBehaviorIdleDuration() const { return behaviorIdleDuration; }
 
     // BehaviorTreeの更新
     void UpdateBehaviorTree(float deltaTime);
@@ -334,6 +339,13 @@ public:
     }
 
 
+    struct CloseCombatSettings { float minRange=0.0f; float executeMaxRange=6.0f; float planMaxRange=10.0f; float facingLimitDegrees=35.0f; };
+    const CloseCombatSettings& GetCloseCombatSettings() const { return closeCombatSettings; }
+    const std::string& GetBehaviorTreeCurrentNode() const { return behaviorTreeCurrentNode; }
+    const std::string& GetBehaviorTreePreviousNode() const { return behaviorTreePreviousNode; }
+    const std::string& GetBehaviorTreeLastResult() const { return behaviorTreeLastResult; }
+    const std::string& GetBehaviorTreeLastJudgment() const { return behaviorTreeLastJudgment; }
+    void SetBehaviorTreeLastJudgment(const std::string& value) { behaviorTreeLastJudgment = value; }
 private:
     bool finalHitReactionActive = false;
     bool finalHitReactionHeld = false;
@@ -946,8 +958,17 @@ private:
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;
     NodeBase* activeNode = nullptr;
     bool behaviorTreeFastComboEnabled = false;
+    CloseCombatSettings closeCombatSettings;
+    bool showCloseCombatDebugRange = false;
+    std::string behaviorTreeCurrentNode = "None";
+    std::string behaviorTreePreviousNode = "None";
+    std::string behaviorTreeLastResult = "None";
+    std::string behaviorTreeLastJudgment = "None";
     BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;
     bool behaviorApproachActive = false;
+    float fastComboPrepareDuration = 0.5f;
+    float fastComboApproachMaxDuration = 1.5f;  // FastCombo縺ｮ譛螟ｧ霑ｽ霍｡譎る俣
+    float behaviorIdleDuration = 1.0f;// 待機時間
 
 };
 

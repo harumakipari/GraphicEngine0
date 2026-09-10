@@ -145,7 +145,7 @@ public:
     int GetHp() const { return hp; }
 
     //進行方向の単位ベクトルを取得する
-    const DirectX::XMFLOAT3& GetForward()
+    const DirectX::XMFLOAT3& GetForward() const
     {
         return front;
     }

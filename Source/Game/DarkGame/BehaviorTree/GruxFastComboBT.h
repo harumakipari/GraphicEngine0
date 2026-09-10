@@ -1,27 +1,72 @@
-#pragma once
+ï»¿#pragma once
 #include "ActionBase.h"
 #include "JudgementBase.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
-// ‹ß‹——£UŒ‚‚ğ—\’è‚·‚é‚©‚Ç‚¤‚©
+// æ­»äº¡å‡¦ç†ã‚’é–‹å§‹ã™ã‚‹
+class BTStartDeath : public ActionBase
+{
+public:
+    using ActionBase::ActionBase;
+    State Run(float) override;
+private:
+    bool started = false;
+};
+
+// æ­»äº¡å‡¦ç†ã‚’æ›´æ–°ã™ã‚‹
+class BTExecuteDeath : public ActionBase
+{
+public:
+    using ActionBase::ActionBase;
+    State Run(float) override;
+};
+
+// ãƒœã‚¹ãŒæ­»äº¡ã—ãŸã‹ã©ã†ã‹
+class DeadJudgment : public JudgementBase
+{
+public:
+    using JudgementBase::JudgementBase;
+    bool Judgment() override;
+};
+
+// å¸¸ã«trueã‚’è¿”ã™
+class AlwaysJudgment : public JudgementBase
+{
+public:
+    using JudgementBase::JudgementBase;
+    bool Judgment() override { return true; }
+};
+
+// å¾…æ©Ÿå‡¦ç†
+class BTIdle : public ActionBase
+{
+public:
+    using ActionBase::ActionBase;
+    State Run(float deltaTime) override;
+private:
+    float timer = 0.0f;
+    bool started = false;
+};
+
+// FastComboã‚’æ”»æ’ƒå€™è£œã¨ã—ã¦é¸æŠã§ãã‚‹ã‹
 class CanPlanFastCombo : public JudgementBase
 {
 public:
     CanPlanFastCombo(GruxEnemy* enemy) :JudgementBase(enemy) {};
-    // ”»’è
+    // FastComboã®è¨ˆç”»å¯å¦ã‚’åˆ¤å®šã™ã‚‹
     bool Judgment() override;
 };
 
-// ‹ß‹——£UŒ‚‚ğÀs‚Å‚«‚é‚©
+// FastComboã‚’å®Ÿè¡Œã§ãã‚‹ã‹åˆ¤å®šã™ã‚‹
 class CanExecuteFastCombo : public JudgementBase
 {
 public:
     CanExecuteFastCombo(GruxEnemy* enemy) :JudgementBase(enemy) {};
-    // ”»’è
+    // FastComboã®å³æ™‚å®Ÿè¡Œå¯å¦ã‚’åˆ¤å®šã™ã‚‹
     bool Judgment() override;
 };
 
-// 
+// å¸¸ã«å®Œäº†ã™ã‚‹æ¡ä»¶é€šéç”¨Action
 class BTCompleteAction : public ActionBase
 {
 public:
@@ -29,17 +74,18 @@ public:
     ActionBase::State Run(float elapsedTime) override { return State::Complete; }
 };
 
-// ƒvƒŒƒCƒ„[‚É‹ß‚Ã‚­
+// FastComboã®å°„ç¨‹ã¾ã§æ¥è¿‘ã™ã‚‹
 class ApproachIfNeeded : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
 private:
-    bool started=false;
+    bool started = false;
+    float timer = 0.0f;
 };
 
-// ƒvƒŒƒCƒ„[‚Ì•û‚ğŒü‚­
+// Playeræ–¹å‘ã¸å‘ãç›´ã‚‹
 class FacePlayerIfNeeded : public ActionBase
 {
 public:
@@ -47,7 +93,7 @@ public:
     State Run(float) override;
 };
 
-// ‹ß‹——£UŒ‚‚ğŠJn‚·‚é
+// FastComboã‚’é–‹å§‹ã™ã‚‹
 class StartFastCombo : public ActionBase
 {
 public:
@@ -55,7 +101,7 @@ public:
     State Run(float) override;
 };
 
-// ‹ß‹——£UŒ‚‚ğÀs‚·‚é
+// FastComboã‚’å®Ÿè¡Œã™ã‚‹
 class ExecuteFastCombo : public ActionBase
 {
 public:
@@ -65,14 +111,26 @@ private:
     int stage = 0;
     int stageHitCount = 0;
     bool started = false;
+    bool finishAfterAnimation = false;
 };
 
-// ‹ß‹——£UŒ‚Œã‚ÌŒãŒ„
+// FastComboå¾Œã®Recovery
 class ExecuteFastComboRecovery : public ActionBase
 {
-    float timer=0.0f;
-    bool started=false;
+private:
+    float timer = 0.0f;
+    bool started = false;
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
+};
+
+// FastComboé–‹å§‹å‰ã®çŸ­ã„æº–å‚™æ™‚é–“
+class PrepareFastCombo : public ActionBase
+{
+    float timer = 0.0f;
+    bool started = false;
+public:
+    using ActionBase::ActionBase;
+    State Run(float deltaTime) override;
 };

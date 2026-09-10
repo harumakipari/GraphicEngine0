@@ -72,6 +72,7 @@ NodeBase* BehaviorTree::Run(NodeBase* actionNode, BehaviorData* data, float elap
 {
 	// ノード実行
 	ActionBase::State state = actionNode->Run(elapsedTime);
+    lastRunResult = state;
 
 	// 正常終了
 	if (state == ActionBase::State::Complete)

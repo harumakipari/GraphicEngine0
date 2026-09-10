@@ -1,14 +1,57 @@
-#include "pch.h"
+ï»¿#include "pch.h"
 #include "GruxFastComboBT.h"
+#include "NodeBase.h"
 
 bool CanPlanFastCombo::Judgment()
 {
-    return owner->CanPlanFastCombo();
+    const bool result = owner->CanPlanFastCombo();
+    owner->SetBehaviorTreeLastJudgment(result ? "CanPlanFastCombo: true" : "CanPlanFastCombo: false");
+    return result;
 }
 
 bool CanExecuteFastCombo::Judgment()
 {
-    return owner->CanExecuteFastCombo();
+    const bool result = owner->CanExecuteFastCombo();
+    owner->SetBehaviorTreeLastJudgment(result ? "CanExecuteFastCombo: true" : "CanExecuteFastCombo: false");
+    return result;
+}
+
+// ãƒœã‚¹ãŒæ­»äº¡ã—ãŸã‹ã©ã†ã‹
+bool DeadJudgment::Judgment()
+{
+    return owner->IsDead();
+}
+
+ActionBase::State BTStartDeath::Run(float)
+{
+    //GruxEnemyã®æ—¢å­˜ã®æ›´æ–°çµ‚äº†æ™‚ã®æ­»äº¡å‡¦ç†ãŒDeathStateã‚’é–‹å§‹ã™ã‚‹ã€‚
+    started = true;
+    return State::Complete;
+}
+
+ActionBase::State BTExecuteDeath::Run(float)
+{
+    return owner->IsDead() ? State::Run : State::Complete;
+}
+
+ActionBase::State BTIdle::Run(float deltaTime)
+{
+    if (!started)
+    {
+        timer = 0.0f;
+        started = true;
+        owner->StopAIMovement();
+        const auto controller = owner->GetBodyAnimationController();
+        if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
+            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+    }
+    timer += deltaTime;
+    if (timer < owner->GetBehaviorIdleDuration())
+    {
+        return State::Run;
+    }
+    started = false;
+    return State::Complete;
 }
 
 ActionBase::State ApproachIfNeeded::Run(float dt)
@@ -17,18 +60,29 @@ ActionBase::State ApproachIfNeeded::Run(float dt)
     {
         owner->StopAIMovement();
         started = false;
+        timer = 0.0f;
         return State::Complete;
     }
     if (!started)
     {
         owner->BeginFastComboApproach();
         started = true;
+        timer = 0.0f;
+    }
+    timer += dt;
+    if (timer >= owner->GetFastComboApproachMaxDuration())
+    {
+        owner->StopAIMovement();
+        started = false;
+        timer = 0.0f;
+        return State::Failed;
     }
     if (!owner->UpdateFastComboApproach(dt))
         return State::Run;
     owner->StopAIMovement();
     started = false;
-    return owner->CanExecuteFastCombo() ? State::Complete : State::Failed;
+    timer = 0.0f;
+    return State::Complete;
 }
 
 ActionBase::State FacePlayerIfNeeded::Run(float dt)
@@ -44,7 +98,6 @@ ActionBase::State FacePlayerIfNeeded::Run(float dt)
 
 ActionBase::State StartFastCombo::Run(float)
 {
-    if (!owner->CanExecuteFastCombo()) return State::Failed;
     owner->SetSelectedAttackForBehaviorTree(BossAttackType::FastCombo);
     owner->StartAttack();
     owner->OnSelectedActionStartedSuccessfully();
@@ -58,31 +111,47 @@ ActionBase::State ExecuteFastCombo::Run(float)
         stage = 0;
         stageHitCount = owner->GetCurrentAttackHitCount();
         started = true;
+        finishAfterAnimation = false;
         if (!owner->PlayAttackStage(BossAttackType::FastCombo, stage))
         {
             started = false;
             return State::Failed;
         }
     }
+    if (finishAfterAnimation)
+    {
+        auto controller = owner->GetBodyAnimationController();
+        if (controller && controller->IsPlayAnimation())
+            return State::Run;
+        owner->StartSelectedActionCooldown();
+        started = false;
+        finishAfterAnimation = false;
+        return State::Complete;
+    }
+
+    if (owner->GetCurrentAttackHitCount() > stageHitCount || owner->WasCurrentAttackSequenceJustDodged())
+    {
+        owner->OnSelectedAttackCompletedSuccessfully();
+        const bool justDodged = owner->WasCurrentAttackSequenceJustDodged();
+        owner->SetBehaviorAttackResult(justDodged ? GruxEnemy::BehaviorAttackResult::JustDodged : GruxEnemy::BehaviorAttackResult::Success);
+        owner->DisableAttackHitBoxes();
+        finishAfterAnimation = true;
+        return State::Run;
+    }
+
     if (owner->IsTransitionWindowActive())
     {
-        if (owner->GetCurrentAttackHitCount() > stageHitCount || owner->WasCurrentAttackSequenceJustDodged())
-        {
-            owner->OnSelectedAttackCompletedSuccessfully();
-            owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::JustDodged);
-            owner->StartSelectedActionCooldown();
-            started = false;
-            return State::Complete;
-        }
         auto c = owner->GetBodyAnimationController();
         auto a = c ? c->GetAnimationAsset(c->GetCurrentAnimationName()) : nullptr;
+
         if (a && !a->nextCombo.empty())
         {
             ++stage;
             stageHitCount = owner->GetCurrentAttackHitCount();
             if (!owner->PlayAttackAnimationByName(a->nextCombo))
             {
-                started = false; return State::Failed;
+                started = false;
+                return State::Failed;
             }
             return State::Run;
         }
@@ -93,7 +162,8 @@ ActionBase::State ExecuteFastCombo::Run(float)
     owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success);
     owner->StartSelectedActionCooldown();
     started = false;
-    return State::Complete;
+    if (!owner->GetBodyAnimationController()->IsPlayAnimation())
+        return State::Complete;
 }
 
 ActionBase::State ExecuteFastComboRecovery::Run(float dt)
@@ -111,29 +181,38 @@ ActionBase::State ExecuteFastComboRecovery::Run(float dt)
     return State::Complete;
 }
 
-// ‹ß‹——£UŒ‚‚ğ—\’è‚µ‚Ä‚¢‚¢‚©‚Ç‚¤‚©
+ActionBase::State PrepareFastCombo::Run(float deltaTime)
+{
+    if (!started)
+    {
+        timer = 0.0f;
+        started = true;
+        owner->StopAIMovement();
+        const auto controller = owner->GetBodyAnimationController();
+        if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
+            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+        owner->PlayAttackReadySE();
+    }
+    timer += deltaTime;
+    if (timer < owner->GetBehaviorPrepareDuration())
+        return State::Run;
+    started = false;
+    return State::Complete;
+}
+
+// è¿‘è·é›¢æ”»æ’ƒã‚’äºˆå®šã—ã¦ã„ã„ã‹ã©ã†ã‹
 bool GruxEnemy::CanPlanFastCombo() const
 {
     const auto c = BuildTargetContext();
     if (!c.valid || c.region == PlayerRelativeRegion::Back)
-    {// player‚ªŒã‚ë‚É‚¢‚é
+    {// playerãŒå¾Œã‚ã«ã„ã‚‹æ™‚
         return false;
     }
-    float maxRange = 0.0f;
+    float maxRange = closeCombatSettings.planMaxRange;
     for (const auto& a : combatAttackData)
     {
         if (a.type == BossAttackType::FastCombo)
-        {// ‹ß‹——£UŒ‚‚ÌÅ‘å”ÍˆÍ‚ğæ“¾‚·‚é
-            maxRange = a.maxDistance;
-            break;
-        }
-    }
-    float approachRange = 0.0f;
-    for (const auto& p : combatPositioningData)
-    {
-        if (p.actionType == BossActionType::Approach)
-        {// ‹ß‚Ã‚­‚ÌÅ‘å‹——£
-            approachRange = p.maxMoveDistance;
+        {// è¿‘è·é›¢æ”»æ’ƒã®æœ€å¤§ç¯„å›²ã‚’å–å¾—ã™ã‚‹
             break;
         }
     }
@@ -145,21 +224,21 @@ bool GruxEnemy::CanPlanFastCombo() const
             return false;
         }
     }
-    return c.xzDistance <= maxRange + approachRange;
+    return c.xzDistance <= maxRange;
 }
 
-// ‹ß‹——£UŒ‚‚ªÀs‰Â”\‚©‚Ç‚¤‚©
+// è¿‘è·é›¢æ”»æ’ƒãŒå®Ÿè¡Œå¯èƒ½ã‹ã©ã†ã‹
 bool GruxEnemy::CanExecuteFastCombo() const
 {
     const auto c = BuildTargetContext();
     if (!c.valid || !IsPlayerInFastComboFacingRange(c))
         return false;
-    float minRange = 0.0f, maxRange = 0.0f;
+    float minRange = closeCombatSettings.minRange, maxRange = closeCombatSettings.executeMaxRange;
     for (const auto& a : combatAttackData)
     {
         if (a.type == BossAttackType::FastCombo)
         {
-            minRange = a.minDistance; maxRange = a.maxDistance; break;
+            break;
         }
     }
 
@@ -168,7 +247,7 @@ bool GruxEnemy::CanExecuteFastCombo() const
     for (size_t i = 0; i < combatActionData.size(); ++i)
     {
         if (combatActionData[i].type == BossActionType::FastCombo)
-            return combatActionData[i].weight > 0.0f && combatActionCooldownRemaining[i] <= 0.0f;
+            return combatActionCooldownRemaining[i] <= 0.0f;
     }
     return false;
 }
@@ -177,31 +256,30 @@ bool GruxEnemy::IsFastComboInRange() const
 {
     const auto c = BuildTargetContext();
     if (!c.valid) return false;
-    for (const auto& a : combatAttackData)
-        if (a.type == BossAttackType::FastCombo)
-            return c.xzDistance >= a.minDistance && c.xzDistance <= a.maxDistance;
-    return false;
+    return c.xzDistance >= closeCombatSettings.minRange && c.xzDistance <= closeCombatSettings.executeMaxRange;
 }
 
 bool GruxEnemy::IsPlayerInFastComboFacingRange(const BossTargetContext& c) const
 {
-    return IsFacingPlayerForAttack(c);
+    return c.valid && c.absoluteAngleDegrees <= closeCombatSettings.facingLimitDegrees;
 }
 
 void GruxEnemy::BeginFastComboApproach()
 {
-    PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
+    const auto controller = GetBodyAnimationController();
+    if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Fwd_0")
+        PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
     behaviorApproachActive = true;
 }
 
 bool GruxEnemy::UpdateFastComboApproach(float dt)
 {
     const auto c = BuildTargetContext();
-    if (!c.valid) 
+    if (!c.valid)
         return false;
-    if (CanExecuteFastCombo()) 
+    if (IsFastComboInRange())
         return true;
-    if (characterMovementComponent) 
+    if (characterMovementComponent)
     {
         for (const auto& p : combatPositioningData)
         {
@@ -219,10 +297,10 @@ bool GruxEnemy::UpdateFastComboApproach(float dt)
 }
 
 
-// Recovery‚Ìˆ—‚ğŠJn
+// Recoveryã®å‡¦ç†ã‚’é–‹å§‹
 void GruxEnemy::BeginRecovery() const
 {
-    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true);
 }
 
 
@@ -241,12 +319,31 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
     if (!aiTree || !behaviorData)
         return;
     if (!activeNode)
-    {// Œ»İÀs‚³‚ê‚Ä‚¢‚éƒm[ƒh‚ª–³‚¯‚ê‚Î
-        // Ÿ‚ÉÀs‚·‚éƒm[ƒh‚ğ„˜_‚·‚éB
+    {// ç¾åœ¨å®Ÿè¡Œã•ã‚Œã¦ã„ã‚‹ãƒãƒ¼ãƒ‰ãŒç„¡ã‘ã‚Œã°
+        // æ¬¡ã«å®Ÿè¡Œã™ã‚‹ãƒãƒ¼ãƒ‰ã‚’æ¨è«–ã™ã‚‹ã€‚
         activeNode = aiTree->ActiveNodeInference(behaviorData.get());
+        behaviorTreeCurrentNode = activeNode ? activeNode->GetName() : "None";
     }
     if (!activeNode)
         return;
-    // ƒrƒwƒCƒrƒAƒcƒŠ[‚©‚çƒm[ƒh‚ğÀsB
+    behaviorTreePreviousNode = activeNode->GetName();
+    behaviorTreeCurrentNode = activeNode->GetName();
     activeNode = aiTree->Run(activeNode, behaviorData.get(), dt);
+    const auto result = aiTree->GetLastRunResult();
+    behaviorTreeLastResult = result == ActionBase::State::Run ? "Run" : result == ActionBase::State::Complete ? "Complete" : "Failed";
+
+    if (!activeNode)
+    {
+        behaviorTreeCurrentNode = "None";
+        return;
+    }
+    if (result == ActionBase::State::Complete)
+    {
+        behaviorTreeCurrentNode = "None";
+    }
+    else if (activeNode->GetName() != behaviorTreePreviousNode)
+    {
+        behaviorTreeCurrentNode = activeNode->GetName();
+        behaviorTreeLastResult = "Complete";
+    }
 }
