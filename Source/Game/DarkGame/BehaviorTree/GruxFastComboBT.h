@@ -112,6 +112,8 @@ private:
     int stageHitCount = 0;
     bool started = false;
     bool finishAfterAnimation = false;
+    float timer = 0.0f;
+    GruxEnemy::FastComboRuntimeState runtimeState = GruxEnemy::FastComboRuntimeState::Attack;
 };
 
 // FastCombo後のRecovery

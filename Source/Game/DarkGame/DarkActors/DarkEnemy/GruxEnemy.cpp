@@ -2145,24 +2145,55 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Close Plan Max Range", &closeCombatSettings.planMaxRange, 0.1f, closeCombatSettings.executeMaxRange, 100.0f, "%.2f");
     ImGui::DragFloat("Close Attack Facing Limit", &closeCombatSettings.facingLimitDegrees, 1.0f, 0.0f, 180.0f, "%.1f deg");
     ImGui::DragFloat("Face Complete Angle", &closeCombatSettings.faceCompleteAngleDegrees, 0.5f, 0.0f, 90.0f, "%.1f deg");
+    ImGui::DragFloat("Inter Stage Face Complete Angle", &interStageFaceCompleteAngle, 0.5f, 0.0f, 90.0f, "%.1f deg");
+    ImGui::DragFloat("Inter Stage Max Facing Angle", &interStageMaxFacingAngle, 0.5f, 0.0f, 180.0f, "%.1f deg");
+    ImGui::DragFloat("Inter Stage Face Delay", &interStageFaceDelay, 0.01f, 0.0f, 0.5f, "%.2f sec");
     closeCombatSettings.minRange = (std::max)(0.0f, closeCombatSettings.minRange);
     closeCombatSettings.executeMaxRange = (std::max)(closeCombatSettings.minRange, closeCombatSettings.executeMaxRange);
     closeCombatSettings.planMaxRange = (std::max)(closeCombatSettings.executeMaxRange, closeCombatSettings.planMaxRange);
     closeCombatSettings.facingLimitDegrees = std::clamp(closeCombatSettings.facingLimitDegrees, 0.0f, 180.0f);
     closeCombatSettings.faceCompleteAngleDegrees = std::clamp(closeCombatSettings.faceCompleteAngleDegrees, 0.0f, 90.0f);
+    interStageFaceCompleteAngle = std::clamp(interStageFaceCompleteAngle, 0.0f, 90.0f);
+    interStageMaxFacingAngle = std::clamp(interStageMaxFacingAngle, 0.0f, 180.0f);
+    interStageFaceDelay = std::clamp(interStageFaceDelay, 0.0f, 0.5f);
     const auto facingDebugContext = BuildTargetContext();
-    ImGui::Text("Player Facing Angle: %.1f deg", facingDebugContext.absoluteAngleDegrees);
-    ImGui::Text("Facing OK: %s", IsPlayerInFastComboFacingRange(facingDebugContext) ? "true" : "false");
-    ImGui::Checkbox("Show Close Combat Debug Range", &showCloseCombatDebugRange);
-    ImGui::DragFloat("Turn Speed", &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
-    ImGui::DragFloat("Turn Complete Angle", &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
-    ImGui::DragFloat("Turn Timeout", &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
-    ImGui::Text("Current AI State: %s", stateMachine_ ? stateMachine_->GetStateName() : "None");
-    ImGui::Text("BehaviorTree Enabled: %s", behaviorTreeFastComboEnabled ? "true" : "false");
-    ImGui::Text("BT Current Node: %s", behaviorTreeCurrentNode.c_str());
-    ImGui::Text("BT Previous Node: %s", behaviorTreePreviousNode.c_str());
-    ImGui::Text("BT Last Result: %s", behaviorTreeLastResult.c_str());
-    ImGui::Text("BT Last Judgment: %s", behaviorTreeLastJudgment.c_str());
+    ImGui::Text(U8("プレイヤーとの角度: %.1f deg"), facingDebugContext.absoluteAngleDegrees);
+    ImGui::Text("攻撃可能角度内: %s", IsPlayerInFastComboFacingRange(facingDebugContext) ? "true" : "false");
+    ImGui::Checkbox(U8("近距離攻撃範囲を表示"), &showCloseCombatDebugRange);
+    ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
+    ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+    ImGui::DragFloat(U8("旋回タイムアウト"), &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
+    ImGui::Text(U8("現在のAIステート: %s"), stateMachine_ ? stateMachine_->GetStateName() : "None");
+    ImGui::Text(U8("BehaviorTree 有効: %s"), behaviorTreeFastComboEnabled ? "true" : "false");
+    ImGui::Text(U8("BT 現在ノード: %s"), behaviorTreeCurrentNode.c_str());
+    ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
+    ImGui::Text(U8("BT 前回実行結果: %s"), behaviorTreeLastResult.c_str());
+    ImGui::Text(U8("BT 前回判定: %s"), behaviorTreeLastJudgment.c_str());
+    if (ImGui::TreeNode(U8("FastCombo ターゲット情報")))
+    {
+        const char* runtimeStateName = fastComboRuntimeState == FastComboRuntimeState::Attack ? "Attack" : fastComboRuntimeState == FastComboRuntimeState::InterStageDelay ? "InterStageDelay" : "InterStageFacing";
+        ImGui::Text(U8("現在のコンボ段階: %d"), fastComboRuntimeStage);
+        ImGui::Text(U8("FastCombo 実行状態: %s"), runtimeStateName);
+        ImGui::Text(U8("ターゲットとの角度: %.2f deg"), fastComboTargetContext.absoluteAngleDegrees);
+        ImGui::Text(U8("段間旋回 完了角度: %.2f deg"), interStageFaceCompleteAngle);
+        ImGui::Text(U8("段間旋回 最大許容角度: %.2f deg"), interStageMaxFacingAngle);
+        ImGui::Text(U8("段間旋回 待機時間: %.2f sec"), interStageFaceDelay);
+        ImGui::Text(U8("最後に取得したコンボ段階: %s"),
+            fastComboTargetStage >= 0 ? (fastComboTargetStage == 0 ? "A" : fastComboTargetStage == 1 ? "B" : "C") : "None");
+        static constexpr const char* sampleLabels[] = { "A Start", "A -> B", "B -> C" };
+        for (int i = 0; i <= fastComboTargetStage; ++i)
+        {
+            const auto& context = fastComboStageTargetContexts[i];
+            ImGui::Text("%s: Target Context %s", sampleLabels[i], context.valid ? "Valid" : "Invalid");
+            if (!context.valid)
+                continue;
+            ImGui::Text(U8(" プレイヤーまでの距離: %.3f /プレイヤーとの角度: %.2f deg"),
+                context.xzDistance, context.absoluteAngleDegrees);
+            ImGui::Text("  Direction To Player: (%.3f, %.3f, %.3f)",
+                context.directionToPlayer.x, context.directionToPlayer.y, context.directionToPlayer.z);
+        }
+        ImGui::TreePop();
+    }
     ImGui::Text("Last Decision Reason: %s", lastAIDecisionReason.c_str());
     ImGui::SeparatorText("JumpAttack Debug");
     ImGui::DragFloat("Max Jump Distance", &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
@@ -4950,6 +4981,21 @@ void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
 
         easingRunner->StartHandler(handler, accessor);
     }
+}
+
+void GruxEnemy::RefreshFastComboTargetContext(int stage)
+{
+    if (stage < 0 || stage >= static_cast<int>(fastComboStageTargetContexts.size()))
+        return;
+
+    if (stage == 0)
+        fastComboStageTargetContexts = {};
+
+    // Snapshot only: do not rotate, move, or change MotionWarp here.
+    // Replace invalid contexts too, so a missing player cannot leave a stale target.
+    fastComboTargetContext = BuildTargetContext();
+    fastComboStageTargetContexts[stage] = fastComboTargetContext;
+    fastComboTargetStage = stage;
 }
 
 BossTargetContext GruxEnemy::BuildTargetContext() const

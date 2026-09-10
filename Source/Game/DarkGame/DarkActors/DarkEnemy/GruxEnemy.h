@@ -226,6 +226,8 @@ public:
     float GetActiveHitBoxElapsedForDebug() const;
     std::string GetCurrentAttackNameForDebug() const;
     BossTargetContext BuildTargetContext() const;
+    void RefreshFastComboTargetContext(int stage);
+    const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
     bool ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const;
     bool ShouldFailIntentForPositioningRetryLimit(const BossTargetContext& context) const;
     bool IsFacingPlayerForAttack(const BossTargetContext& context) const;
@@ -340,6 +342,14 @@ public:
 
     struct CloseCombatSettings { float minRange=0.0f; float executeMaxRange=6.0f; float planMaxRange=10.0f; float facingLimitDegrees=35.0f; float faceCompleteAngleDegrees=7.0f; };
     const CloseCombatSettings& GetCloseCombatSettings() const { return closeCombatSettings; }
+    float GetInterStageFaceCompleteAngle() const { return interStageFaceCompleteAngle; }
+    float GetInterStageMaxFacingAngle() const { return interStageMaxFacingAngle; }
+    float GetInterStageFaceDelay() const { return interStageFaceDelay; }
+    enum class FastComboRuntimeState { Attack, InterStageDelay, InterStageFacing };
+    void SetFastComboRuntimeState(FastComboRuntimeState state) { fastComboRuntimeState = state; }
+    FastComboRuntimeState GetFastComboRuntimeState() const { return fastComboRuntimeState; }
+    int GetFastComboRuntimeStage() const { return fastComboRuntimeStage; }
+    void SetFastComboRuntimeStage(int stage) { fastComboRuntimeStage = stage; }
     const std::string& GetBehaviorTreeCurrentNode() const { return behaviorTreeCurrentNode; }
     const std::string& GetBehaviorTreePreviousNode() const { return behaviorTreePreviousNode; }
     const std::string& GetBehaviorTreeLastResult() const { return behaviorTreeLastResult; }
@@ -626,6 +636,14 @@ private:
     float activeTurnDebugTargetYaw = 0.0f;
     std::string activeTurnDebugFromState = "None";
     BossTargetContext aiDebugTargetContext{};
+    BossTargetContext fastComboTargetContext{};
+    std::array<BossTargetContext, 3> fastComboStageTargetContexts{};
+    int fastComboTargetStage = -1;
+    float interStageFaceCompleteAngle = 10.0f;
+    float interStageMaxFacingAngle = 70.0f;
+    float interStageFaceDelay = 0.25f;
+    FastComboRuntimeState fastComboRuntimeState = FastComboRuntimeState::Attack;
+    int fastComboRuntimeStage = -1;
     bool attackFacingEvaluationValid = false;
     float attackFacingEvaluationTolerance = 0.0f;
     float attackFacingEvaluationAngle = 0.0f;

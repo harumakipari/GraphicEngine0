@@ -105,68 +105,69 @@ ActionBase::State StartFastCombo::Run(float)
     return State::Complete;
 }
 
-ActionBase::State ExecuteFastCombo::Run(float)
+ActionBase::State ExecuteFastCombo::Run(float dt)
 {
     if (!started)
     {
-        stage = 0;
-        stageHitCount = owner->GetCurrentAttackHitCount();
-        started = true;
-        finishAfterAnimation = false;
-        if (!owner->PlayAttackStage(BossAttackType::FastCombo, stage))
-        {
-            started = false;
-            return State::Failed;
-        }
+        stage = 0; stageHitCount = owner->GetCurrentAttackHitCount(); started = true;
+        finishAfterAnimation = false; timer = 0.0f;
+        runtimeState = GruxEnemy::FastComboRuntimeState::Attack;
+        owner->SetFastComboRuntimeStage(stage); owner->SetFastComboRuntimeState(runtimeState);
+        owner->RefreshFastComboTargetContext(stage);
+        if (!owner->PlayAttackStage(BossAttackType::FastCombo, stage)) { started = false; return State::Failed; }
     }
     if (finishAfterAnimation)
     {
         auto controller = owner->GetBodyAnimationController();
-        if (controller && controller->IsPlayAnimation())
-            return State::Run;
-        owner->StartSelectedActionCooldown();
-        started = false;
-        finishAfterAnimation = false;
-        return State::Complete;
+        if (controller && controller->IsPlayAnimation()) return State::Run;
+        owner->StartSelectedActionCooldown(); started = false; finishAfterAnimation = false; return State::Complete;
     }
-
     if (owner->GetCurrentAttackHitCount() > stageHitCount || owner->WasCurrentAttackSequenceJustDodged())
     {
-        owner->OnSelectedAttackCompletedSuccessfully();
         const bool justDodged = owner->WasCurrentAttackSequenceJustDodged();
+        owner->OnSelectedAttackCompletedSuccessfully();
         owner->SetBehaviorAttackResult(justDodged ? GruxEnemy::BehaviorAttackResult::JustDodged : GruxEnemy::BehaviorAttackResult::Success);
-        owner->DisableAttackHitBoxes();
-        finishAfterAnimation = true;
+        owner->DisableAttackHitBoxes(); finishAfterAnimation = true; return State::Run;
+    }
+    if (runtimeState == GruxEnemy::FastComboRuntimeState::InterStageDelay)
+    {
+        timer += dt;
+        if (timer < owner->GetInterStageFaceDelay()) return State::Run;
+        runtimeState = GruxEnemy::FastComboRuntimeState::InterStageFacing; owner->SetFastComboRuntimeState(runtimeState);
+    }
+    if (runtimeState == GruxEnemy::FastComboRuntimeState::InterStageFacing)
+    {
+        const BossTargetContext context = owner->BuildTargetContext();
+        if (!context.valid || context.absoluteAngleDegrees > owner->GetInterStageMaxFacingAngle())
+        {
+            owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success);
+            owner->DisableAttackHitBoxes(); finishAfterAnimation = true; runtimeState = GruxEnemy::FastComboRuntimeState::Attack; owner->SetFastComboRuntimeState(runtimeState); return State::Run;
+        }
+        if (context.absoluteAngleDegrees > owner->GetInterStageFaceCompleteAngle())
+        { owner->RotateTowardsPlayer(context.directionToPlayer, owner->GetTurnSpeed(), dt, "FastComboInterStageFacing"); return State::Run; }
+        runtimeState = GruxEnemy::FastComboRuntimeState::Attack; owner->SetFastComboRuntimeState(runtimeState);
+        stageHitCount = owner->GetCurrentAttackHitCount();
+        auto controller = owner->GetBodyAnimationController();
+        auto animation = controller ? controller->GetAnimationAsset(controller->GetCurrentAnimationName()) : nullptr;
+        if (!animation || animation->nextCombo.empty() || !owner->PlayAttackAnimationByName(animation->nextCombo))
+        { owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success); owner->DisableAttackHitBoxes(); finishAfterAnimation = true; return State::Run; }
         return State::Run;
     }
-
     if (owner->IsTransitionWindowActive())
     {
-        auto c = owner->GetBodyAnimationController();
-        auto a = c ? c->GetAnimationAsset(c->GetCurrentAnimationName()) : nullptr;
-
-        if (a && !a->nextCombo.empty())
+        auto controller = owner->GetBodyAnimationController();
+        auto animation = controller ? controller->GetAnimationAsset(controller->GetCurrentAnimationName()) : nullptr;
+        if (animation && !animation->nextCombo.empty())
         {
-            ++stage;
-            stageHitCount = owner->GetCurrentAttackHitCount();
-            if (!owner->PlayAttackAnimationByName(a->nextCombo))
-            {
-                started = false;
-                return State::Failed;
-            }
-            return State::Run;
+            ++stage; owner->RefreshFastComboTargetContext(stage); owner->SetFastComboRuntimeStage(stage);
+            if (!owner->GetFastComboTargetContext().valid || owner->GetFastComboTargetContext().absoluteAngleDegrees > owner->GetInterStageMaxFacingAngle())
+            { owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success); owner->DisableAttackHitBoxes(); finishAfterAnimation = true; return State::Run; }
+            timer = 0.0f; runtimeState = GruxEnemy::FastComboRuntimeState::InterStageDelay; owner->SetFastComboRuntimeState(runtimeState); owner->StopAIMovement(); return State::Run;
         }
     }
-    if (owner->GetBodyAnimationController()->IsPlayAnimation())
-        return State::Run;
-    owner->OnSelectedAttackCompletedSuccessfully();
-    owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success);
-    owner->StartSelectedActionCooldown();
-    started = false;
-    if (!owner->GetBodyAnimationController()->IsPlayAnimation())
-        return State::Complete;
+    if (owner->GetBodyAnimationController()->IsPlayAnimation()) return State::Run;
+    owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success); owner->StartSelectedActionCooldown(); started = false; return State::Complete;
 }
-
 ActionBase::State ExecuteFastComboRecovery::Run(float dt)
 {
     if (!started)
