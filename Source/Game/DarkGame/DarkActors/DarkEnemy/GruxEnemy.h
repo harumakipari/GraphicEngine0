@@ -13,7 +13,6 @@
 #include "Engine/Audio/Audio.h"
 #include "Game/DarkGame/BehaviorTree/BehaviorData.h"
 
-
 class Player;
 class BehaviorTree;
 class NodeBase;
@@ -256,7 +255,6 @@ public:
     void EndAttackReadyDebug();
     bool PlayAttackReadySE();
 
-
     void ClearPendingAttackFacing();
     void StopAIMovement();
     bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
@@ -274,12 +272,13 @@ public:
     // ボスの名前の演出を開始する
     void StartGruxNamePerform(float duration, float start = 0.0f, float end = 1.0f);
 
-
     // 抽選結果をmemberへ保存する関数
     bool SelectCombatAction();
     // FastComboの実行可否・条件判定
     // FastComboを攻撃候補として選択できるか
     bool CanPlanFastCombo() const;
+    void StartFastComboApproachRetryCooldown();
+    bool IsFastComboApproachRetryCooldownActive() const;
     // 現在FastComboを実行できる状態か
     bool CanExecuteFastCombo() const;
     // PlayerがFastComboの攻撃範囲内にいるか
@@ -292,7 +291,6 @@ public:
     void BeginFastComboApproach();
     // 接近処理を更新し、完了したかを返す
     bool UpdateFastComboApproach(float deltaTime);    
-
 
     // BehaviorTreeから実行する攻撃の設定
     void SetSelectedAttackForBehaviorTree(BossAttackType type)
@@ -321,6 +319,7 @@ public:
     // BehaviorTree用の攻撃準備時間を取得
     float GetBehaviorPrepareDuration() const { return fastComboPrepareDuration; }
     float GetFastComboApproachMaxDuration() const { return fastComboApproachMaxDuration; }
+    float GetFastComboApproachRetryCooldown() const { return fastComboApproachRetryCooldown; }
     // BehaviorTree用の待機時間を取得
     float GetBehaviorIdleDuration() const { return behaviorIdleDuration; }
 
@@ -337,7 +336,6 @@ public:
     {
         return behaviorTreeFastComboEnabled;
     }
-
 
     struct CloseCombatSettings { float minRange=0.0f; float executeMaxRange=6.0f; float planMaxRange=10.0f; float facingLimitDegrees=35.0f; };
     const CloseCombatSettings& GetCloseCombatSettings() const { return closeCombatSettings; }
@@ -411,7 +409,6 @@ private:
     void DrawDangerObbWorldDebug();
     void PrepareJumpAttackMotionWarpOverride();
 
-
     void RefreshActiveHitBoxesFromNotifyStates();
     // ボスの距離範囲のデバック描画
     void DrawBossAIDebugWorld(const BossTargetContext& context) const;
@@ -438,7 +435,6 @@ private:
 
     // 地面に倒れたときのエフェクトを生成する
     void SpawnGroundDownEffect()const;
-
 
 private:
     // 描画用コンポーネントを追加
@@ -468,7 +464,6 @@ private:
 
     std::shared_ptr<SceneComponent> leftFootComponent;      // 左足のコンポーネント
     std::shared_ptr<SceneComponent> rightFootComponent;     // 右足のコンポーネント
-
 
     Trail leftWeaponTrail;
     Trail rightWeaponTrail;
@@ -641,7 +636,6 @@ private:
     BossAttackType attackReadyDebugType = BossAttackType::PrimaryAttackLA;
     bool attackReadySEFired = false;
     AttackReadyReason attackReadyReason = AttackReadyReason::Front;
-
 
     bool hasSelectedActionDebug = false;
     bool hasLastActionRandomRoll = false;
@@ -967,11 +961,12 @@ private:
     BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;
     bool behaviorApproachActive = false;
     float fastComboPrepareDuration = 0.5f;
-    float fastComboApproachMaxDuration = 1.5f;  // FastCombo縺ｮ譛螟ｧ霑ｽ霍｡譎る俣
+    float fastComboApproachMaxDuration = 1.5f;
+    float fastComboApproachRetryCooldown = 2.0f;
+    float fastComboApproachRetryRemaining = 0.0f;
     float behaviorIdleDuration = 1.0f;// 待機時間
 
 };
-
 
 class KnightActor : public Character
 {
@@ -1019,7 +1014,6 @@ private:
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
 
-
-
 };
+
 

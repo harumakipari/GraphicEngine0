@@ -73,6 +73,7 @@ ActionBase::State ApproachIfNeeded::Run(float dt)
     if (timer >= owner->GetFastComboApproachMaxDuration())
     {
         owner->StopAIMovement();
+        owner->StartFastComboApproachRetryCooldown();
         started = false;
         timer = 0.0f;
         return State::Failed;
@@ -203,6 +204,10 @@ ActionBase::State PrepareFastCombo::Run(float deltaTime)
 // 近距離攻撃を予定していいかどうか
 bool GruxEnemy::CanPlanFastCombo() const
 {
+    if (IsFastComboApproachRetryCooldownActive())
+    {// 近距離攻撃のクールタイムだったら、予定しない
+        return false;
+    }
     const auto c = BuildTargetContext();
     if (!c.valid || c.region == PlayerRelativeRegion::Back)
     {// playerが後ろにいる時
@@ -225,6 +230,16 @@ bool GruxEnemy::CanPlanFastCombo() const
         }
     }
     return c.xzDistance <= maxRange;
+}
+
+void GruxEnemy::StartFastComboApproachRetryCooldown()
+{
+    fastComboApproachRetryRemaining = fastComboApproachRetryCooldown;
+}
+
+bool GruxEnemy::IsFastComboApproachRetryCooldownActive() const
+{
+    return fastComboApproachRetryRemaining > 0.0f;
 }
 
 // 近距離攻撃が実行可能かどうか
@@ -316,6 +331,7 @@ float GruxEnemy::GetBehaviorRecoveryDuration() const
 
 void GruxEnemy::UpdateBehaviorTree(float dt)
 {
+    fastComboApproachRetryRemaining = (std::max)(0.0f, fastComboApproachRetryRemaining - dt);
     if (!aiTree || !behaviorData)
         return;
     if (!activeNode)

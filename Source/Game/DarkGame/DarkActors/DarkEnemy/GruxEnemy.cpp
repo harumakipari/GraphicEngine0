@@ -2137,6 +2137,8 @@ void GruxEnemy::DrawImGuiDetails()
     behaviorIdleDuration = (std::max)(0.0f, behaviorIdleDuration);
     fastComboPrepareDuration = (std::max)(0.0f, fastComboPrepareDuration);
     fastComboApproachMaxDuration = (std::max)(0.0f, fastComboApproachMaxDuration);
+    ImGui::DragFloat("FastCombo Approach Retry Cooldown", &fastComboApproachRetryCooldown, 0.05f, 0.0f, 30.0f, "%.2f sec");
+    fastComboApproachRetryCooldown = (std::max)(0.0f, fastComboApproachRetryCooldown);
     ImGui::SeparatorText("Close Combat Settings");
     ImGui::DragFloat("Close Min Range", &closeCombatSettings.minRange, 0.1f, 0.0f, 100.0f, "%.2f");
     ImGui::DragFloat("Close Execute Max Range", &closeCombatSettings.executeMaxRange, 0.1f, closeCombatSettings.minRange, 100.0f, "%.2f");
