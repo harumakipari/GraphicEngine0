@@ -2,6 +2,7 @@
 
 // C++ 標準ライブラリ
 #include <memory>
+#include <functional>
 #include <string>
 
 // 他ライブラリ
@@ -82,6 +83,7 @@ public:
     }
 
     const std::vector<InterleavedGltfModel::Node>& GetNodes() const { return modelNodes; }
+    virtual const std::vector<InterleavedGltfModel::Node>& GetRenderPoseNodes() const { return modelNodes; }
 
     void SetModelNodes(const std::vector<InterleavedGltfModel::Node>& nodes) { modelNodes = nodes; }
 
@@ -223,6 +225,13 @@ public:
 
     Transform GetSocketTransform(int socketNode) const override;
 
+    // Evaluated at draw time. Shared animation/socket nodes are never modified.
+    void SetRenderLocalYOffsetProvider(const std::string& nodeName, std::function<float()> provider)
+    {
+        renderOffsetNodeName = nodeName;
+        renderLocalYOffsetProvider = std::move(provider);
+    }
+
     void AppendAnimations(const std::vector<std::string>& filenames) const
     {
         //model->AddAnimations(filenames);
@@ -255,12 +264,12 @@ public:
 
     void Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world, InterleavedGltfModel::RenderPass pass) const override
     {
-        model->Render(immediateContext, world, modelNodes, pass, pipeLineState_);
+        model->Render(immediateContext, world, GetRenderPoseNodes(), pass, pipeLineState_);
     }
 
     void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const override
     {
-        model->CastShadow(immediateContext, world, modelNodes);
+        model->CastShadow(immediateContext, world, GetRenderPoseNodes());
     }
 
     DirectX::XMFLOAT3 GetJointWorldPosition(const std::string& name)
@@ -275,7 +284,10 @@ public:
     }
 
 private:
-
+    const std::vector<InterleavedGltfModel::Node>& GetRenderPoseNodes() const override;
+    std::string renderOffsetNodeName;
+    std::function<float()> renderLocalYOffsetProvider;
+    mutable std::vector<InterleavedGltfModel::Node> renderPoseNodes;
 };
 
 class StaticMeshComponent :public MeshComponent

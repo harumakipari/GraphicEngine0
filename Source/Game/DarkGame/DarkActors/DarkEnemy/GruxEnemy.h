@@ -276,6 +276,7 @@ public:
     void CleanupRoarBT(const char* status);
     void TickRoarLifecycle(float dt);
     void DrawRoarBTDebug();
+    float GetRoarRenderFootOffset() const;
     BossTargetContext BuildTargetContext() const;
     void RefreshFastComboTargetContext(int stage);
     struct AttackSetupTargetContext { bool valid=false; DirectX::XMFLOAT3 targetPosition{}; float arrivalTolerance=0.3f; float timeout=3.0f; float maxMoveDistance=20.0f; float moveSpeed=6.0f; float stuckMovementThreshold=0.1f; float stuckTimeThreshold=0.5f; };
@@ -709,6 +710,8 @@ private:
     float defensiveTooCloseDistance = 5.2f;
     float roarRadius = 5.0f;
     float roarHeightTolerance = 2.0f;
+    float roarLevelStartFootOffset = -0.30f;
+    float roarLevelStartFootOffsetEndTime = 0.30f;
     float roarPreStampedeStartTime = 3.4f;  // ™ôšKŠJnŠÔ
     float roarPreStampedeEndTime = 7.1f;    // ™ôšKI—¹ŠÔ
     float roarCooldownDuration = 10.0f;

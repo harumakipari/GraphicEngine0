@@ -4,12 +4,32 @@
     "events": [
         {
             "parameter": "RoarShockwave",
-            "time": 0.30,
+            "time": 0.30000001192092896,
             "type": "GameplayEvent",
             "value": 0.0
         }
     ],
     "loop": false,
     "nextCombo": "",
-    "playRate": 1.0
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.01677878387272358,
+                "value": 0.17333409190177917
+            },
+            {
+                "time": 0.10486579686403275,
+                "value": 0.29333361983299255
+            },
+            {
+                "time": 0.19714786112308502,
+                "value": 0.9866665005683899
+            },
+            {
+                "time": 0.6585571765899658,
+                "value": 0.9866667985916138
+            }
+        ]
+    }
 }

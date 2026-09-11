@@ -42,7 +42,7 @@ void SceneRenderer::RenderOpaque(ID3D11DeviceContext* immediateContext, const st
         meshComponent->UpdatePlusAlphaConstants(immediateContext);
 
         // --- ConvexCollisionComponent があって、MeshComponent が一致する場合のみノードを置き換える ---
-        std::vector<InterleavedGltfModel::Node> animatedNodes = meshComponent->GetNodes();
+        std::vector<InterleavedGltfModel::Node> animatedNodes = meshComponent->GetRenderPoseNodes();
         if (auto* convex = meshComponent->GetOwner()->GetComponent<ConvexCollisionComponent>())
         {
             if (convex->GetMeshComponent() == meshComponent) // ←これで MeshComponent が対象か確認
@@ -103,7 +103,7 @@ void SceneRenderer::RenderMask(ID3D11DeviceContext* immediateContext, const std:
             Draw(immediateContext,
                 meshComponent,
                 worldMat, previousWorldMat,
-                meshComponent->GetNodes(),
+                meshComponent->GetRenderPoseNodes(),
                 InterleavedGltfModel::RenderPass::Mask);
         }
         else
@@ -111,7 +111,7 @@ void SceneRenderer::RenderMask(ID3D11DeviceContext* immediateContext, const std:
             DrawWithStaticBatching(immediateContext,
                 meshComponent,
                 worldMat, previousWorldMat,
-                meshComponent->GetNodes(),
+                meshComponent->GetRenderPoseNodes(),
                 InterleavedGltfModel::RenderPass::Mask);
         }
     }
@@ -142,7 +142,7 @@ void SceneRenderer::RenderBlend(ID3D11DeviceContext* immediateContext, const std
             Draw(immediateContext,
                 meshComponent,
                 worldMat, previousWorldMat,
-                meshComponent->GetNodes(),
+                meshComponent->GetRenderPoseNodes(),
                 InterleavedGltfModel::RenderPass::Blend);
         }
         else
@@ -150,7 +150,7 @@ void SceneRenderer::RenderBlend(ID3D11DeviceContext* immediateContext, const std
             DrawWithStaticBatching(immediateContext,
                 meshComponent,
                 worldMat, previousWorldMat,
-                meshComponent->GetNodes(),
+                meshComponent->GetRenderPoseNodes(),
                 InterleavedGltfModel::RenderPass::Blend);
         }
     }
@@ -202,7 +202,7 @@ void SceneRenderer::CastShadowRender(ID3D11DeviceContext* immediateContext, cons
             CastShadow(immediateContext,
                 meshComponent,
                 worldMat,
-                meshComponent->GetNodes(),
+                meshComponent->GetRenderPoseNodes(),
                 InterleavedGltfModel::RenderPass::All);
         }
         else
@@ -211,7 +211,7 @@ void SceneRenderer::CastShadowRender(ID3D11DeviceContext* immediateContext, cons
                 immediateContext,
                 meshComponent,
                 worldMat,
-                meshComponent->GetNodes());
+                meshComponent->GetRenderPoseNodes());
         }
 
 #endif // 0
@@ -237,7 +237,7 @@ void SceneRenderer::CastShadowMapRender(ID3D11DeviceContext* immediateContext, c
             CastShadowMap(immediateContext,
                 meshComponent,
                 worldMat,
-                meshComponent->GetNodes(),
+                meshComponent->GetRenderPoseNodes(),
                 InterleavedGltfModel::RenderPass::All);
         }
         else
@@ -246,7 +246,7 @@ void SceneRenderer::CastShadowMapRender(ID3D11DeviceContext* immediateContext, c
             //    immediateContext,
             //    meshComponent,
             //    worldMat,
-            //    meshComponent->GetNodes());
+            //    meshComponent->GetRenderPoseNodes());
         }
 
     }
@@ -598,7 +598,7 @@ void SceneRenderer::CastShadow(ID3D11DeviceContext* immediateContext, const Mesh
 {
     const InterleavedGltfModel* model = meshComponent->model.get();
     _ASSERT_EXPR(model != nullptr, L"meshComponent->model is null!");
-    const std::vector<InterleavedGltfModel::Node>& nodes{ animatedNodes.size() > 0 ? animatedNodes : meshComponent->GetNodes() };
+    const std::vector<InterleavedGltfModel::Node>& nodes{ animatedNodes.size() > 0 ? animatedNodes : meshComponent->GetRenderPoseNodes() };
     immediateContext->PSSetShaderResources(0, 1, model->materialResourceView.GetAddressOf());
     //カスケードシャドウマップ
 

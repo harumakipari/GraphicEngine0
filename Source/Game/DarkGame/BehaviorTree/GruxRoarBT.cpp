@@ -129,7 +129,7 @@ bool GruxEnemy::BeginRoarBT()
     StopAIMovement();
     DisableAttackHitBoxes();
     roarBT = {};
-    PlayBodyAnimation("Pre_Stampede_0", false, false, 0.0f, true);
+    PlayBodyAnimation("Pre_Stampede_0", false, true, 0.05f, true);
     if (!controller->SetPlaybackRange(roarPreStampedeStartTime, roarPreStampedeEndTime))
     {
         roarBT.stage = RoarStage::Telegraph;
@@ -164,7 +164,7 @@ int GruxEnemy::UpdateRoarBT(float dt)
     if (time + 0.02f < roarBT.endTime) return fail("Animation stopped early");
     if (roarBT.stage == RoarStage::Telegraph)
     {
-        PlayBodyAnimation("LevelStart_0", false, false, 0.0f, true);
+        PlayBodyAnimation("LevelStart_0", false, true, 0.15f, true);
         roarBT.stage = RoarStage::Shockwave;
         roarBT.previousTime = 0.0f;
         roarBT.stalled = 0.0f;
@@ -232,11 +232,37 @@ void GruxEnemy::TickRoarLifecycle(float dt)
     }
 }
 
+float GruxEnemy::GetRoarRenderFootOffset() const
+{
+    // Query at draw time so interruption, preview and animation changes cannot
+    // leave a stale offset between the animation update and a render pass.
+    const auto controller = GetBodyAnimationController();
+    if (roarBT.stage != RoarStage::Shockwave || !IsRoarExecutionAllowed() ||
+        !activeNode || (activeNode->GetName() != "ExecuteRoar" && activeNode->GetName() != "FinishRoar") ||
+        !controller || !controller->IsPlayAnimation() || controller->GetCurrentAnimationName() != "LevelStart_0" ||
+        !std::isfinite(roarLevelStartFootOffset) || !std::isfinite(roarLevelStartFootOffsetEndTime) ||
+        roarLevelStartFootOffsetEndTime <= 0.0f)
+        return 0.0f;
+    const float time = controller->GetCurrentAnimationTime();
+    if (!std::isfinite(time)) return 0.0f;
+    return roarLevelStartFootOffset * (1.0f - std::clamp(time / roarLevelStartFootOffsetEndTime, 0.0f, 1.0f));
+}
+
 void GruxEnemy::DrawRoarBTDebug()
 {
 #ifdef USE_IMGUI
     ImGui::SeparatorText(U8("咆哮BT"));
     ImGui::Checkbox(U8("攻撃行動を無効化"), &disableAttackBehaviorsForDebug);
+    ImGui::DragFloat(U8("咆哮 LevelStart 足元補正"), &roarLevelStartFootOffset, 0.01f, -2.0f, 2.0f, "%.3f m");
+    ImGui::DragFloat(U8("咆哮 足元補正終了時間"), &roarLevelStartFootOffsetEndTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
+    if (!std::isfinite(roarLevelStartFootOffset)) roarLevelStartFootOffset = 0.0f;
+    roarLevelStartFootOffsetEndTime = std::isfinite(roarLevelStartFootOffsetEndTime)
+        ? (std::max)(0.0f, roarLevelStartFootOffsetEndTime) : 0.0f;
+    ImGui::Text(U8("咆哮 足元補正 現在値: %.3f"), GetRoarRenderFootOffset());
+    const auto footController = GetBodyAnimationController();
+    ImGui::Text(U8("LevelStart 再生時間: %.3f"),
+        footController && footController->GetCurrentAnimationName() == "LevelStart_0"
+        ? footController->GetCurrentAnimationTime() : 0.0f);
     const auto roarController = GetBodyAnimationController();
     const float clipDuration = roarController ? roarController->GetAnimationLength("Pre_Stampede_0") : 60.0f;
     const float rangeLimit = std::isfinite(clipDuration) ? (std::max)(0.05f, clipDuration) : 60.0f;
