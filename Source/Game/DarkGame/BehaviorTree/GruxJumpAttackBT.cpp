@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "GruxJumpAttackBT.h"
+#include "GruxDashAttackBT.h"
 #include "NodeBase.h"
 
 bool CanPlanJumpAttack::Judgment()
@@ -10,7 +11,9 @@ bool CanPlanJumpAttack::Judgment()
 
 bool CanPlanAnyAttack::Judgment()
 {
-    const bool result = owner->CanPlanFastCombo() || owner->CanPlanJumpAttack();
+    // Match the Plan-parent gates, including Dash's battle / stun availability.
+    const bool result = owner->CanPlanFastCombo() || owner->CanPlanJumpAttack() ||
+        DashPlanAvailable(owner).Judgment();
     owner->SetBehaviorTreeLastJudgment(result ? "CanPlanAnyAttack: true" : "CanPlanAnyAttack: false");
     return result;
 }

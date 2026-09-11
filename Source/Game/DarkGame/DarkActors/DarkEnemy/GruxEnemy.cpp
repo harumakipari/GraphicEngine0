@@ -458,12 +458,11 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("Death", "StartDeath", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTStartDeath>(this));
     aiTree->AddNode("Death", "ExecuteDeath", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTExecuteDeath>(this));
 
-    aiTree->AddNode("Root", "Attack", 2, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
+    aiTree->AddNode("Root", "Attack", 2, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
     aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
     aiTree->AddNode("Attack", "FastComboPlan", 2, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
 
-    aiTree->AddNode("FastComboPlan", "CanPlanFastCombo", 0, BehaviorTree::SelectRule::Non, std::make_unique<::CanPlanFastCombo>(this), std::make_unique<BTCompleteAction>(this));
     aiTree->AddNode("FastComboPlan", "ApproachIfNeeded", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ApproachIfNeeded>(this));
     aiTree->AddNode("FastComboPlan", "FacePlayerIfNeeded", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FacePlayerIfNeeded>(this));
     aiTree->AddNode("FastComboPlan", "CanExecuteFastCombo", 3, BehaviorTree::SelectRule::Non, std::make_unique<::CanExecuteFastCombo>(this), std::make_unique<BTCompleteAction>(this));
@@ -472,20 +471,18 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("FastComboPlan", "ExecuteFastCombo", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteFastCombo>(this));
     aiTree->AddNode("FastComboPlan", "ExecuteAttackRecovery", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteAttackRecovery>(this));
 
-    aiTree->AddNode("Attack", "JumpAttack", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanJumpAttack>(this), std::make_unique<BTCompleteAction>(this));
+    aiTree->AddNode("Attack", "JumpAttackPlan", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanJumpAttack>(this), nullptr);
 
-    aiTree->AddNode("JumpAttack", "CanPlanJumpAttack", 0, BehaviorTree::SelectRule::Non, std::make_unique<::CanPlanJumpAttack>(this), std::make_unique<BTCompleteAction>(this));
-    aiTree->AddNode("JumpAttack", "PrepareJumpSetupTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareJumpSetupTarget>(this));
-    aiTree->AddNode("JumpAttack", "MoveToAttackSetupTarget", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToAttackSetupTarget>(this));
-    aiTree->AddNode("JumpAttack", "FacePlayerIfNeeded", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FaceJumpPlayerIfNeeded>(this));
-    aiTree->AddNode("JumpAttack", "CanExecuteJumpAttack", 4, BehaviorTree::SelectRule::Non, std::make_unique<::CanExecuteJumpAttack>(this), std::make_unique<BTCompleteAction>(this));
-    aiTree->AddNode("JumpAttack", "StartJumpAttack", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartJumpAttack>(this));
-    aiTree->AddNode("JumpAttack", "ExecuteJumpAttack", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteJumpAttack>(this));
-    aiTree->AddNode("JumpAttack", "ExecuteAttackRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteAttackRecovery>(this));
+    aiTree->AddNode("JumpAttackPlan", "PrepareJumpSetupTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareJumpSetupTarget>(this));
+    aiTree->AddNode("JumpAttackPlan", "MoveToAttackSetupTarget", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToAttackSetupTarget>(this));
+    aiTree->AddNode("JumpAttackPlan", "FacePlayerIfNeeded", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FaceJumpPlayerIfNeeded>(this));
+    aiTree->AddNode("JumpAttackPlan", "CanExecuteJumpAttack", 4, BehaviorTree::SelectRule::Non, std::make_unique<::CanExecuteJumpAttack>(this), std::make_unique<BTCompleteAction>(this));
+    aiTree->AddNode("JumpAttackPlan", "StartJumpAttack", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartJumpAttack>(this));
+    aiTree->AddNode("JumpAttackPlan", "ExecuteJumpAttack", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteJumpAttack>(this));
+    aiTree->AddNode("JumpAttackPlan", "ExecuteAttackRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteAttackRecovery>(this));
 
     aiTree->AddNode("Attack", "DashAttackPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<DashPlanAvailable>(this), nullptr);
 
-    aiTree->AddNode("DashAttackPlan", "CanPlanDashAttack", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::CanPlanDashAttack>(this));
     aiTree->AddNode("DashAttackPlan", "PrepareDashSetupTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<PrepareDashSetupTarget>(this));
     aiTree->AddNode("DashAttackPlan", "MoveToAttackSetupTarget", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToAttackSetupTarget>(this));
     aiTree->AddNode("DashAttackPlan", "FacePlayerIfNeeded", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<FaceDashPlayerIfNeeded>(this));
