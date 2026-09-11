@@ -22,6 +22,7 @@
 #include "Game/DarkGame/BehaviorTree/GruxFastComboBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxJumpAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxDashAttackBT.h"
+#include "Game/DarkGame/BehaviorTree/GruxChargeAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/AttackRecoveryBT.h"
 
 #ifdef USE_IMGUI
@@ -167,7 +168,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("Jump_Land_0", 14);
     controller->AddAnimation("Jump_Loop_0", 15);
     controller->AddAnimation("Jump_Start_0", 16);
-    controller->AddAnimation("Jump_Land_1", 17);
+    controller->AddAnimation("LevelStart_0", 17);
     controller->AddAnimation("Death_A_0", 18);
     controller->AddAnimation("Death_B_0", 19);
     controller->AddAnimation("Attack_A_Fast_0", 20);
@@ -461,7 +462,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("Root", "Attack", 2, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
     aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
-    aiTree->AddNode("Attack", "FastComboPlan", 2, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
+    aiTree->AddNode("Attack", "FastComboPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
 
     aiTree->AddNode("FastComboPlan", "ApproachIfNeeded", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ApproachIfNeeded>(this));
     aiTree->AddNode("FastComboPlan", "FacePlayerIfNeeded", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FacePlayerIfNeeded>(this));
@@ -471,7 +472,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("FastComboPlan", "ExecuteFastCombo", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteFastCombo>(this));
     aiTree->AddNode("FastComboPlan", "ExecuteAttackRecovery", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteAttackRecovery>(this));
 
-    aiTree->AddNode("Attack", "JumpAttackPlan", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanJumpAttack>(this), nullptr);
+    aiTree->AddNode("Attack", "JumpAttackPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanJumpAttack>(this), nullptr);
 
     aiTree->AddNode("JumpAttackPlan", "PrepareJumpSetupTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareJumpSetupTarget>(this));
     aiTree->AddNode("JumpAttackPlan", "MoveToAttackSetupTarget", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToAttackSetupTarget>(this));
@@ -490,6 +491,17 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("DashAttackPlan", "StartDashAttack", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartDashAttack>(this));
     aiTree->AddNode("DashAttackPlan", "ExecuteDashAttack", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteDashAttack>(this));
     aiTree->AddNode("DashAttackPlan", "ExecuteAttackRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteAttackRecovery>(this));
+
+    aiTree->AddNode("Attack", "ChargeAttackPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanChargeAttack>(this), nullptr);
+
+    aiTree->AddNode("ChargeAttackPlan", "PrepareChargeSetupTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareChargeSetupTarget>(this));
+    aiTree->AddNode("ChargeAttackPlan", "MoveToAttackSetupTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToAttackSetupTarget>(this));
+    aiTree->AddNode("ChargeAttackPlan", "FacePlayerIfNeeded", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FaceChargePlayerIfNeeded>(this));
+    aiTree->AddNode("ChargeAttackPlan", "CanExecuteChargeAttack", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::CanExecuteChargeAttack>(this));
+    aiTree->AddNode("ChargeAttackPlan", "StartChargeAttack", 4, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartChargeAttack>(this));
+    aiTree->AddNode("ChargeAttackPlan", "ExecuteChargeAttack", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteChargeAttack>(this));
+    aiTree->AddNode("ChargeAttackPlan", "ResolveChargeResult", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ResolveChargeResult>(this));
+    aiTree->AddNode("ChargeAttackPlan", "ExecuteChargeRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteChargeRecovery>(this));
 }
 
 void GruxEnemy::SetHpBarVisible(const bool visible)
@@ -553,6 +565,12 @@ void GruxEnemy::ResumeBattleAI()
 
 void GruxEnemy::StopBattleActions()
 {
+    if (IsChargeAttackBTActive())
+    {
+        CleanupChargeAttackBT();
+        activeNode = nullptr;
+        if (behaviorData) behaviorData->Init();
+    }
     if (IsDashAttackBTActive())
     {
         CleanupDashAttackBT();
@@ -672,6 +690,13 @@ void GruxEnemy::EndFinalHitReaction()
 
 void GruxEnemy::Update(float deltaTime)
 {
+    // Charge cleanup precedes cinematic/editor early returns and does not overwrite their animation.
+    if (ShouldAbortChargeAttackBT())
+    {
+        CleanupChargeAttackBT();
+        activeNode = nullptr;
+        if (behaviorData) behaviorData->Init();
+    }
     // HPバーの更新
     const float currentHp = static_cast<float>((std::max)(hp, 0));
     const float uiDeltaTime = Time::UnscaledDeltaTime();
@@ -744,6 +769,8 @@ void GruxEnemy::Update(float deltaTime)
     if (behaviorTreeFastComboEnabled)
     {
         UpdateBehaviorTree(deltaTime);
+        if (IsChargeAttackBTActive() && (!activeNode || aiTree->GetLastRunResult() == ActionBase::State::Failed))
+            CleanupChargeAttackBT();
         if (IsDashAttackBTActive() && (!activeNode || aiTree->GetLastRunResult() == ActionBase::State::Failed))
             CleanupDashAttackBT();
         auto savedStateMachine = stateMachine_; stateMachine_.reset();
@@ -1460,6 +1487,7 @@ void GruxEnemy::DrawPositioningDebugWorld() const
 
 void GruxEnemy::DrawImGuiDetails()
 {
+    DrawChargeAttackBTDebug();
 #ifdef USE_IMGUI
     Character::DrawImGuiDetails();
 

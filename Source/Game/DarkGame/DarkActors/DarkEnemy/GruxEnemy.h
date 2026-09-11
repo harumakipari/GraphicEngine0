@@ -162,6 +162,30 @@ public:
     bool BeginDashAttackMovement();
     bool UpdateDashAttackMovement(float deltaTime, bool keepLockedDirection = false);
     void StopDashAttackMovement();
+    enum class ChargeBTPhase { None, Setup, Facing, Telegraph, Charging, Result, Stun, RecoveryPending, Recovery, RecoveryPostconditions };
+    enum class ChargeBTStunPhase { None, Start, Loop, End };
+    enum class ChargeBTStepResult { Running, Complete, Failed };
+    bool CanPlanChargeAttack() const;
+    bool PrepareChargeAttackSetupTarget();
+    ChargeBTStepResult UpdateChargeAttackFacingBT(float deltaTime);
+    bool CanExecuteChargeAttack() const;
+    void StartChargeAttackBT();
+    bool BeginSingleChargeBT();
+    ChargeBTStepResult UpdateSingleChargeBT(float deltaTime);
+    ChargeBTStepResult ResolveChargeResultBT(float deltaTime);
+    bool BeginChargeStunBT();
+    ChargeBTStepResult UpdateChargeStunBT(float deltaTime);
+    void FinishChargeAttackBT();
+    void FailChargeAttackBT();
+    bool IsChargeAttackBTActive() const { return chargeBT.phase != ChargeBTPhase::None; }
+    ChargeBTPhase GetChargeBTPhase() const { return chargeBT.phase; }
+    ChargeAttackEndReason GetChargeBTResult() const { return chargeBT.result; }
+    void BeginChargeRecoveryBT() { chargeBT.phase = ChargeBTPhase::Recovery; }
+    void MarkChargeRecoveryTimerFinishedBT() { chargeBT.phase = ChargeBTPhase::RecoveryPostconditions; }
+    ChargeBTStepResult FinishChargeRecoveryBT();
+    bool ShouldAbortChargeAttackBT() const;
+    void CleanupChargeAttackBT();
+    void DrawChargeAttackBTDebug();
     bool BeginChargeAttackMovement();
     ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime);
     void StopChargeAttackMovement();
@@ -903,6 +927,28 @@ private:
     DirectX::XMFLOAT3 dashTargetPosition{};
 
     // ChargeAttack
+    bool IsChargeBTExecutionAllowed() const;
+    bool UpdateChargeAnimationWatchdogBT(float animationTime, float deltaTime);
+    struct ChargeBTRuntime
+    {
+        ChargeBTPhase phase = ChargeBTPhase::None;
+        ChargeBTStunPhase stunPhase = ChargeBTStunPhase::None;
+        ChargeAttackEndReason result = ChargeAttackEndReason::None;
+        bool failed = false;
+        bool attackStarted = false;
+        bool cooldownStarted = false;
+        BossActionType previousAction = BossActionType::AttackLA;
+        std::string initialStateName;
+        float facingElapsed = 0.0f;
+        float animationElapsed = 0.0f;
+        float animationStalled = 0.0f;
+        float previousAnimationTime = 0.0f;
+        float stunElapsed = 0.0f;
+        float recoveryDuration = 0.0f;
+    } chargeBT;
+    float chargeSetupDistanceMin = 8.0f;
+    float chargeSetupDistanceMax = 10.0f;
+    float chargeSetupMinimumMoveDistance = 3.0f;
     float chargeWindupEndTime = 2.90f;
     float chargeSpeed = 12.0f;
     float chargeSafetyTimeout = 8.0f;

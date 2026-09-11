@@ -317,6 +317,7 @@
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxJumpAttackBT.cpp" />
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\AttackRecoveryBT.cpp" />
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxDashAttackBT.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxChargeAttackBT.cpp" />
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\JudgementDerived.cpp" />
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\NodeBase.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkClothActor.cpp" />
@@ -492,6 +493,7 @@
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxJumpAttackBT.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\AttackRecoveryBT.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxDashAttackBT.h" />
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxChargeAttackBT.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\JudgementBase.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\JudgementDerived.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\NodeBase.h" />

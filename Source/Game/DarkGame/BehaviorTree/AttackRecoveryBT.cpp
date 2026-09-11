@@ -8,7 +8,8 @@ ActionBase::State ExecuteAttackRecovery::Run(float deltaTime)
     if (!started || sequenceId != owner->GetCurrentAttackSequenceId())
     {
         sequenceId = owner->GetCurrentAttackSequenceId();
-        duration = owner->GetSelectedAttackRecoveryDuration();
+        duration = consumeRecoveryOverride ? owner->ConsumeNextRecoveryDuration()
+            : owner->GetSelectedAttackRecoveryDuration();
         owner->BeginRecovery();
         timer = 0.0f;
         started = true;
