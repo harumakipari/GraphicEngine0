@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Components/Controller/ControllerComponent.h"
 #include "Components/Effect/ParticleComponent.h"
 #include "Core/Actor.h"
@@ -30,7 +30,7 @@ public:
 
     void DrawImGuiDetails() override;
 
-    //“–‚½‚Á‚½‚Ìˆ—
+    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½
     void TakeDamage(int damage);
 
     // Battle HUD visibility is decided by GameScene; Grux only owns its components.
@@ -56,7 +56,7 @@ public:
     void BeginRushHpDisplay();
     void EndRushHpDisplay();
 
-    // ƒqƒbƒgƒGƒtƒFƒNƒg‚ğ¶¬‚·‚é
+    // ï¿½qï¿½bï¿½gï¿½Gï¿½tï¿½Fï¿½Nï¿½gï¿½ğ¶ï¿½ï¿½ï¿½ï¿½ï¿½
     void SpawnHitEffect(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
 
     void SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
@@ -73,12 +73,12 @@ public:
 
     void OnAnimationChanged() override;
 
-    // UŒ‚ŠJn‚Én‚ß‚éˆ—
+    // ï¿½Uï¿½ï¿½ï¿½Jï¿½nï¿½ï¿½ï¿½Énï¿½ß‚éˆï¿½ï¿½
     void StartAttack();
 
     void DisableAttackHitBoxes();
 
-    // Action‚Ì‘I‘ğŒ‹‰Ê‚ğæ“¾‚·‚é
+    // Actionï¿½Ì‘Iï¿½ï¿½ï¿½ï¿½Ê‚ï¿½æ“¾ï¿½ï¿½ï¿½ï¿½
     BossActionType GetSelectedActionType() const
     {
         return selectedActionType;
@@ -266,6 +266,7 @@ public:
     enum class RoarStage { None, Telegraph, Shockwave };
     bool AreAttackBehaviorsDisabledForDebug() const { return disableAttackBehaviorsForDebug; }
     bool CanPlanRoar() const;
+    bool CanPlanRetreat() const;
     bool EvaluateRoarPlanForDebug() const;
     std::string GetRoarRejectReasonForDebug() const;
     bool IsRoarExecutionAllowed() const;
@@ -279,8 +280,11 @@ public:
     float GetRoarRenderFootOffset() const;
     BossTargetContext BuildTargetContext() const;
     void RefreshFastComboTargetContext(int stage);
-    struct AttackSetupTargetContext { bool valid=false; DirectX::XMFLOAT3 targetPosition{}; float arrivalTolerance=0.3f; float timeout=3.0f; float maxMoveDistance=20.0f; float moveSpeed=6.0f; float stuckMovementThreshold=0.1f; float stuckTimeThreshold=0.5f; };
-    enum class AttackSetupMoveResult { Running, Arrived, Timeout, Stuck, InvalidTarget, MaxDistanceReached };
+    struct PositioningTargetContext { bool valid=false; DirectX::XMFLOAT3 targetPosition{}; float arrivalTolerance=0.3f; float timeout=3.0f; float maxMoveDistance=20.0f; float moveSpeed=6.0f; float stuckMovementThreshold=0.1f; float stuckTimeThreshold=0.5f; };
+    struct PositioningTargetRuntime { DirectX::XMFLOAT3 previousPosition{}; float elapsed=0.0f; float traveledDistance=0.0f; float remainingDistance=0.0f; float stuckTime=0.0f; bool movementActive=false; };
+    enum class PositioningMoveResult { None, Running, Arrived, Timeout, Stuck, InvalidTarget, MaxDistanceReached };
+    using AttackSetupTargetContext = PositioningTargetContext;
+    using AttackSetupMoveResult = PositioningMoveResult;
     bool CanPlanJumpAttack() const;
     bool PrepareJumpAttackSetupTarget();
     bool FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount) const;
@@ -290,6 +294,10 @@ public:
     void BeginAttackSetupMovement();
     AttackSetupMoveResult UpdateAttackSetupMovement(float deltaTime);
     void StopAttackSetupMovement();
+    bool PrepareRetreatTarget();
+    PositioningMoveResult UpdateRetreatMovement(float deltaTime);
+    void FinishRetreatMovement(bool arrived);
+    void RecordRetreatMoveResult(PositioningMoveResult result);
     float GetAttackSetupRemainingDistance() const { return attackSetupRemainingDistance; }
     float GetAttackSetupElapsedTime() const { return attackSetupElapsedTime; }
     float GetAttackSetupPlannedMoveDistance() const { return attackSetupPlannedMoveDistance; }
@@ -338,45 +346,45 @@ public:
     float GetTurnSpeed() const { return turnSpeed; }
     void SetLastAIDecision(const std::string& reason) { lastAIDecisionReason = reason; }
 
-    // ƒJƒƒ‰‚Ì’‹“_‚ÌˆÊ’u
+    // ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½Ì’ï¿½ï¿½ï¿½ï¿½_ï¿½ÌˆÊ’u
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 
-    // ƒ{ƒX‚Ì–¼‘O‚Ì‰‰o‚ğŠJn‚·‚é
+    // ï¿½{ï¿½Xï¿½Ì–ï¿½ï¿½Oï¿½Ì‰ï¿½ï¿½oï¿½ï¿½Jï¿½nï¿½ï¿½ï¿½ï¿½
     void StartGruxNamePerform(float duration, float start = 0.0f, float end = 1.0f);
 
-    // ’Š‘IŒ‹‰Ê‚ğmember‚Ö•Û‘¶‚·‚éŠÖ”
+    // ï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½Ê‚ï¿½memberï¿½Ö•Û‘ï¿½ï¿½ï¿½ï¿½ï¿½Öï¿½
     bool SelectCombatAction();
-    // FastCombo‚ÌÀs‰Â”ÛEğŒ”»’è
-    // FastCombo‚ğUŒ‚Œó•â‚Æ‚µ‚Ä‘I‘ğ‚Å‚«‚é‚©
+    // FastComboï¿½Ìï¿½ï¿½sï¿½Â”ÛEï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // FastComboï¿½ï¿½Uï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½Ä‘Iï¿½ï¿½Å‚ï¿½ï¿½é‚©
     bool CanPlanFastCombo() const;
     void StartFastComboApproachRetryCooldown();
     bool IsFastComboApproachRetryCooldownActive() const;
-    // Œ»İFastCombo‚ğÀs‚Å‚«‚éó‘Ô‚©
+    // ï¿½ï¿½ï¿½ï¿½FastComboï¿½ï¿½ï¿½ï¿½sï¿½Å‚ï¿½ï¿½ï¿½ï¿½Ô‚ï¿½
     bool CanExecuteFastCombo() const;
-    // Player‚ªFastCombo‚ÌUŒ‚”ÍˆÍ“à‚É‚¢‚é‚©
+    // Playerï¿½ï¿½FastComboï¿½ÌUï¿½ï¿½ï¿½ÍˆÍ“ï¿½É‚ï¿½ï¿½é‚©
     bool IsFastComboInRange() const;
-    // Player‚ªUŒ‚‰Â”\‚È³–ÊŠp“x“à‚É‚¢‚é‚©
+    // Playerï¿½ï¿½ï¿½Uï¿½ï¿½ï¿½Â”\ï¿½Èï¿½ï¿½ÊŠpï¿½xï¿½ï¿½É‚ï¿½ï¿½é‚©
     bool IsPlayerInFastComboFacingRange(const BossTargetContext& context) const;
     bool IsPlayerInFastComboFaceCompleteRange(const BossTargetContext& context) const;
 
-    // FastComboŠJn‘O‚ÌÚ‹ßˆ—
-    // FastCombo—p‚ÌÚ‹ßˆ—‚ğŠJn
+    // FastComboï¿½Jï¿½nï¿½Oï¿½ÌÚ‹ßï¿½ï¿½ï¿½
+    // FastComboï¿½pï¿½ÌÚ‹ßï¿½ï¿½ï¿½ï¿½ï¿½Jï¿½n
     void BeginFastComboApproach();
-    // Ú‹ßˆ—‚ğXV‚µAŠ®—¹‚µ‚½‚©‚ğ•Ô‚·
+    // ï¿½Ú‹ßï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½Vï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô‚ï¿½
     bool UpdateFastComboApproach(float deltaTime);
 
-    // BehaviorTree‚©‚çÀs‚·‚éUŒ‚‚Ìİ’è
+    // BehaviorTreeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½sï¿½ï¿½ï¿½ï¿½Uï¿½ï¿½ï¿½Ìİ’ï¿½
     void SetSelectedAttackForBehaviorTree(BossAttackType type)
     {
         selectedAttackType = type;
     }
 
-    // BehaviorTree‚ÅÀs‚µ‚½UŒ‚‚ÌI—¹Œ‹‰Ê
+    // BehaviorTreeï¿½Åï¿½ï¿½sï¿½ï¿½ï¿½ï¿½ï¿½Uï¿½ï¿½ï¿½ÌIï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     enum class BehaviorAttackResult
     {
-        None,        // Œ‹‰Ê–¢Šm’è
-        Success,     // UŒ‚³íI—¹
-        JustDodged   // Player‚ÌƒWƒƒƒXƒg‰ñ”ğ‚É‚æ‚è’†’f
+        None,        // ï¿½ï¿½ï¿½Ê–ï¿½ï¿½mï¿½ï¿½
+        Success,     // ï¿½Uï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Iï¿½ï¿½
+        JustDodged   // Playerï¿½ÌƒWï¿½ï¿½ï¿½Xï¿½gï¿½ï¿½ï¿½É‚ï¿½è’†ï¿½f
     };
 
     void SetBehaviorAttackResult(BehaviorAttackResult result)
@@ -384,22 +392,22 @@ public:
         behaviorAttackResult = result;
     }
 
-    // BehaviorTree—p‚ÌUŒ‚I—¹ŒãRecovery‚Ìˆ—‚ğŠJn
+    // BehaviorTreeï¿½pï¿½ÌUï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½Recoveryï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½Jï¿½n
     void BeginRecovery() const;
 
-    // BehaviorTree—p‚ÌUŒ‚I—¹ŒãRecoveryŠÔ‚ğæ“¾
+    // BehaviorTreeï¿½pï¿½ÌUï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½Recoveryï¿½ï¿½ï¿½Ô‚ï¿½æ“¾
     float GetSelectedAttackRecoveryDuration() const { return GetRecoveryDurationForCurrentAttack(); }
-    // BehaviorTree—p‚ÌUŒ‚€”õŠÔ‚ğæ“¾
+    // BehaviorTreeï¿½pï¿½ÌUï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô‚ï¿½æ“¾
     float GetBehaviorPrepareDuration() const { return fastComboPrepareDuration; }
     float GetFastComboApproachMaxDuration() const { return fastComboApproachMaxDuration; }
     float GetFastComboApproachRetryCooldown() const { return fastComboApproachRetryCooldown; }
-    // BehaviorTree—p‚Ì‘Ò‹@ŠÔ‚ğæ“¾
+    // BehaviorTreeï¿½pï¿½Ì‘Ò‹@ï¿½ï¿½ï¿½Ô‚ï¿½æ“¾
     float GetBehaviorIdleDuration() const { return behaviorIdleDuration; }
 
-    // BehaviorTree‚ÌXV
+    // BehaviorTreeï¿½ÌXï¿½V
     void UpdateBehaviorTree(float deltaTime);
 
-    // FastCombo‚ğBehaviorTree§Œä‚É‚·‚é‚©
+    // FastComboï¿½ï¿½BehaviorTreeï¿½ï¿½ï¿½ï¿½É‚ï¿½ï¿½é‚©
     void SetBehaviorTreeFastComboEnabled(bool enabled)
     {
         behaviorTreeFastComboEnabled = enabled;
@@ -428,13 +436,13 @@ public:
 private:
     bool finalHitReactionActive = false;
     bool finalHitReactionHeld = false;
-    // ƒvƒŒƒCƒ„[‚Æ‚Ì‹——£‚ğæ“¾‚·‚éŠÖ”
+    // ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Æ‚Ì‹ï¿½ï¿½ï¿½ï¿½ï¿½æ“¾ï¿½ï¿½ï¿½ï¿½Öï¿½
     float GetDistanceToPlayer();
 
-    // ƒvƒŒƒCƒ„[‚Æ‚Ì‹——£‚É‰‚¶‚½‹——£—Ìˆæ‚ğæ“¾‚·‚éŠÖ”
+    // ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Æ‚Ì‹ï¿½ï¿½ï¿½ï¿½É‰ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ìˆï¿½ï¿½æ“¾ï¿½ï¿½ï¿½ï¿½Öï¿½
     BossDistanceRegion GetDistanceRegion(float distance) const;
 
-    // Œ»İ‚Ì‹——£—Ìˆæ‚ÉŠî‚Ã‚¢‚ÄAŒó•â‚Æ‚È‚és“®‚ğ‘I‘ğ‚·‚éŠÖ”
+    // ï¿½ï¿½ï¿½İ‚Ì‹ï¿½ï¿½ï¿½ï¿½Ìˆï¿½ÉŠï¿½Ã‚ï¿½ï¿½ÄAï¿½ï¿½ï¿½Æ‚È‚ï¿½sï¿½ï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½Öï¿½
     void UpdateActionCandidateFlags(const BossTargetContext& context);
     bool IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const;
     const BossIntentData* GetActiveIntentData() const;
@@ -458,10 +466,10 @@ private:
     const RepositionTargetEvaluation& GetRepositionTargetEvaluation(BossActionType actionType) const;
     const char* GetRepositionFailureReason() const;
 
-    // ƒAƒNƒVƒ‡ƒ“‚ªŒ»İ‚Ì‹——£(Region)‚ÅŒó•â‚É‚È‚é‚©‚ğ”»’è‚·‚éŠÖ”
+    // ï¿½Aï¿½Nï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İ‚Ì‹ï¿½ï¿½ï¿½(Region)ï¿½ÅŒï¿½ï¿½É‚È‚é‚©ï¿½ğ”»’è‚·ï¿½ï¿½Öï¿½
     bool IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const;
 
-    // ActionŒó•â‚ÆBase Weight‚©‚çEffective Weight‚ğXV‚·‚é
+    // Actionï¿½ï¿½ï¿½ï¿½Base Weightï¿½ï¿½ï¿½ï¿½Effective Weightï¿½ï¿½Xï¿½Vï¿½ï¿½ï¿½ï¿½
     void UpdateActionEffectiveWeights();
     bool IsCombatAttackAction(BossActionType actionType) const;
     bool IsAttackActionForIntent(BossActionType actionType, BossIntentType intentType) const;
@@ -472,10 +480,10 @@ private:
     float GetIntentWeightForDistance(const BossIntentData& data, BossDistanceRegion region) const;
     float GetTotalIntentWeight() const;
 
-    // Action‚ÌEffective Weight‡Œv‚ğ‹‚ß‚éŠÖ”
+    // Actionï¿½ï¿½Effective Weightï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ß‚ï¿½Öï¿½
     float GetTotalActionWeight() const;
 
-    // Weight‚ÉŠî‚Ã‚¢‚Äs“®‚ğ‘I‘ğ‚·‚éŠÖ”BŒó•â‚ª‚È‚¢ê‡‚Ístd::nullopt‚ğ•Ô‚·
+    // Weightï¿½ÉŠï¿½Ã‚ï¿½ï¿½Äsï¿½ï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½Öï¿½ï¿½Bï¿½ï¿½â‚ªï¿½È‚ï¿½ï¿½ê‡ï¿½ï¿½std::nulloptï¿½ï¿½Ô‚ï¿½
     std::optional<BossActionType> SelectActionByWeight();
 
     void ResetJustDodgeRecords(const char* reason);
@@ -491,67 +499,72 @@ private:
     void PrepareJumpAttackMotionWarpOverride();
 
     void RefreshActiveHitBoxesFromNotifyStates();
-    // ƒ{ƒX‚Ì‹——£”ÍˆÍ‚ÌƒfƒoƒbƒN•`‰æ
+    // ï¿½{ï¿½Xï¿½Ì‹ï¿½ï¿½ï¿½ï¿½ÍˆÍ‚Ìƒfï¿½oï¿½bï¿½Nï¿½`ï¿½ï¿½
     void DrawBossAIDebugWorld(const BossTargetContext& context) const;
     void DrawPositioningDebugWorld() const;
+    void DrawRetreatDebugWorld() const;
+    PositioningMoveResult UpdatePositioningTargetMovement(PositioningTargetContext& target,
+        PositioningTargetRuntime& runtime, float deltaTime, const char* debugSource);
+    void ClearPositioningTarget(PositioningTargetContext& target, PositioningTargetRuntime& runtime);
     void BeginRotationDebugFrame();
     void FinishRotationDebugFrame();
     void RecordRotationDebugSource(const char* source, const DirectX::XMFLOAT3& targetDirection, float requestedTurnSpeed);
     void DrawRotationDebugWorld(const BossTargetContext& context) const;
 
-    // ƒWƒƒƒ“ƒvUŒ‚‚ÌŒã‚É’…’n‚Ì‚ÌƒGƒtƒFƒNƒg‚ğ¶¬‚·‚é
+    // ï¿½Wï¿½ï¿½ï¿½ï¿½ï¿½vï¿½Uï¿½ï¿½ï¿½ÌŒï¿½É’ï¿½ï¿½nï¿½Ìï¿½ï¿½ÌƒGï¿½tï¿½Fï¿½Nï¿½gï¿½ğ¶ï¿½ï¿½ï¿½ï¿½ï¿½
     void SpawnGroundImpactEffect() const;
 
-    //•Ç‚É“–‚½‚Á‚½‚ÌƒGƒtƒFƒNƒg‚ğ¶¬‚·‚é
+    //ï¿½Ç‚É“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÌƒGï¿½tï¿½Fï¿½Nï¿½gï¿½ğ¶ï¿½ï¿½ï¿½ï¿½ï¿½
     void SpawnWallImpactEffect(const DirectX::XMFLOAT3& impactPosition, const DirectX::XMFLOAT3& wallNormal) const;
 
-    // •Ší“¯m‚Ì‰Î‰Ô‚ÌƒGƒtƒFƒNƒg‚ğ¶¬‚·‚é
+    // ï¿½ï¿½ï¿½í“¯ï¿½mï¿½Ì‰Î‰Ô‚ÌƒGï¿½tï¿½Fï¿½Nï¿½gï¿½ğ¶ï¿½ï¿½ï¿½ï¿½ï¿½
     void SpawnWeaponClashEffect() const;
 
-    // ¶‘«‚ğ’n–Ê‚ÉC‚é‚ÌƒGƒtƒFƒNƒg‚ğ¶¬‚·‚é
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½nï¿½Ê‚ÉCï¿½éï¿½ÌƒGï¿½tï¿½Fï¿½Nï¿½gï¿½ğ¶ï¿½ï¿½ï¿½ï¿½ï¿½
     void SpawnLeftFootScrapeEffect()const;
 
-    // ‰E‘«‚ğ’n–Ê‚ÉC‚é‚ÌƒGƒtƒFƒNƒg‚ğ¶¬‚·‚é
+    // ï¿½Eï¿½ï¿½ï¿½ï¿½nï¿½Ê‚ÉCï¿½éï¿½ÌƒGï¿½tï¿½Fï¿½Nï¿½gï¿½ğ¶ï¿½ï¿½ï¿½ï¿½ï¿½
     void SpawnRightFootScrapeEffect()const;
 
-    // ’n–Ê‚É“|‚ê‚½‚Æ‚«‚ÌƒGƒtƒFƒNƒg‚ğ¶¬‚·‚é
+    // ï¿½nï¿½Ê‚É“|ï¿½ê‚½ï¿½Æ‚ï¿½ï¿½ÌƒGï¿½tï¿½Fï¿½Nï¿½gï¿½ğ¶ï¿½ï¿½ï¿½ï¿½ï¿½
     void SpawnGroundDownEffect()const;
 
 private:
-    // •`‰æ—pƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á
+    // ï¿½`ï¿½ï¿½pï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½ï¿½Ç‰ï¿½
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
-    // ‰ñ“]ƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á
+    // ï¿½ï¿½]ï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½ï¿½Ç‰ï¿½
     std::shared_ptr<RotationComponent> rotationComponent;
-    // ƒLƒƒƒ‰ƒNƒ^[ƒ€[ƒuƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á
+    // ï¿½Lï¿½ï¿½ï¿½ï¿½ï¿½Nï¿½^ï¿½[ï¿½ï¿½ï¿½[ï¿½uï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½ï¿½Ç‰ï¿½
     std::shared_ptr<CharacterMovementComponent> characterMovementComponent;
 
-    // ¶‚Ì•Ší‚Ì“–‚½‚è”»’è‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
+    // ï¿½ï¿½ï¿½Ì•ï¿½ï¿½ï¿½Ì“ï¿½ï¿½ï¿½ï¿½è”»ï¿½ï¿½ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
+    std::shared_ptr<CapsuleComponent> enemyCapsuleComponent;
     std::shared_ptr<CapsuleComponent> leftWeaponCollisionComp;
-    // ‰E‚Ì•Ší‚Ì“–‚½‚è”»’è‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
+    // ï¿½Eï¿½Ì•ï¿½ï¿½ï¿½Ì“ï¿½ï¿½ï¿½ï¿½è”»ï¿½ï¿½ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
     std::shared_ptr<CapsuleComponent> rightWeaponCollisionComp;
     std::string leftWeapon = "leftWeapon";
     std::string rightWeapon = "rightWeapon";
     std::string bothWeapon = "bothWeapon";
 
-    std::shared_ptr<SceneComponent> weaponLeftRootComponent; // ¶‚Ì•Ší‚ÌªŒ³‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
-    std::shared_ptr<SceneComponent> weaponLeftMiddleComponent; // ¶‚Ì•Ší‚Ì’†ŠÔ‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
-    std::shared_ptr<SceneComponent> weaponLeftTipComponent;  // ¶‚Ì•Ší‚Ìæ’[‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
+    std::shared_ptr<SceneComponent> weaponLeftRootComponent; // ï¿½ï¿½ï¿½Ì•ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
+    std::shared_ptr<SceneComponent> weaponLeftMiddleComponent; // ï¿½ï¿½ï¿½Ì•ï¿½ï¿½ï¿½Ì’ï¿½ï¿½Ô‚ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
+    std::shared_ptr<SceneComponent> weaponLeftTipComponent;  // ï¿½ï¿½ï¿½Ì•ï¿½ï¿½ï¿½Ìï¿½[ï¿½ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
 
-    std::shared_ptr<SceneComponent> weaponRightRootComponent; // ‰E‚Ì•Ší‚ÌªŒ³‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
-    std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // ‰E‚Ì•Ší‚Ì’†ŠÔ‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
-    std::shared_ptr<SceneComponent> weaponRightTipComponent;  // ‰E‚Ì•Ší‚Ìæ’[‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
+    std::shared_ptr<SceneComponent> weaponRightRootComponent; // ï¿½Eï¿½Ì•ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
+    std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // ï¿½Eï¿½Ì•ï¿½ï¿½ï¿½Ì’ï¿½ï¿½Ô‚ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
+    std::shared_ptr<SceneComponent> weaponRightTipComponent;  // ï¿½Eï¿½Ì•ï¿½ï¿½ï¿½Ìï¿½[ï¿½ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
 
-    std::shared_ptr<SceneComponent> beltComponent;  // ƒxƒ‹ƒg‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
+    std::shared_ptr<SceneComponent> beltComponent;  // ï¿½xï¿½ï¿½ï¿½gï¿½ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
 
-    std::shared_ptr<SceneComponent> leftFootComponent;      // ¶‘«‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
-    std::shared_ptr<SceneComponent> rightFootComponent;     // ‰E‘«‚ÌƒRƒ“ƒ|[ƒlƒ“ƒg
+    std::shared_ptr<SceneComponent> leftFootComponent;      // ï¿½ï¿½ï¿½ï¿½ï¿½ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
+    std::shared_ptr<SceneComponent> rightFootComponent;     // ï¿½Eï¿½ï¿½ï¿½ÌƒRï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½g
 
     Trail leftWeaponTrail;
     Trail rightWeaponTrail;
     bool showLeftWeaponTrail = false;
     bool showRightWeaponTrail = false;
 
-    // ‹OÕ‚ÌF
+    // ï¿½Oï¿½Õ‚ÌF
     DirectX::XMFLOAT3 bossTrailColor{ 0.0f, 0.13f, 0.002f };
     float bossTrailEmissiveStrength = 7.0f;
     float bossTrailLifetime = 0.8f;
@@ -563,10 +576,10 @@ private:
     std::shared_ptr<ParticleComponent> wallImpactDustEffectComponent;
     std::shared_ptr<ParticleComponent> wallImpactFlashEffectComponent;
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
-    std::shared_ptr<ParticleComponent> footScrapeEffectComponent;   // ‘« ‚ÌƒGƒtƒFƒNƒg
+    std::shared_ptr<ParticleComponent> footScrapeEffectComponent;   // ï¿½ï¿½ï¿½ï¿½ï¿½ÌƒGï¿½tï¿½Fï¿½Nï¿½g
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
-    std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HPƒo[
+    std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HPï¿½oï¿½[
     std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;
     struct HpBarFadeEntry
     {
@@ -579,25 +592,25 @@ private:
     float delayedHp = 0.0f;
     float delayedHpDelayTimer = 0.0f;
     float delayedHpDelayDuration = 0.25f;
-    float delayedHpFollowSpeed = 8.95f; // HPƒo[‚ª‚Ç‚ê‚­‚ç‚¢’x‰„‚·‚é‚©
-    float delayedHpRushFollowSpeed = 12.0f; // HPƒo[‚ª‚Ç‚ê‚­‚ç‚¢Rush‚É’x‰„‚·‚é‚©
+    float delayedHpFollowSpeed = 8.95f; // HPï¿½oï¿½[ï¿½ï¿½ï¿½Ç‚ê‚­ï¿½ç‚¢ï¿½xï¿½ï¿½ï¿½ï¿½ï¿½é‚©
+    float delayedHpRushFollowSpeed = 12.0f; // HPï¿½oï¿½[ï¿½ï¿½ï¿½Ç‚ê‚­ï¿½ç‚¢Rushï¿½ï¿½ï¿½É’xï¿½ï¿½ï¿½ï¿½ï¿½é‚©
     CoreColor bossHpCurrentColor{ 0.55f, 0.08f, 0.06f, 1.0f };
     CoreColor bossHpDelayedColor{ 0.95f, 0.72f, 0.38f, 1.0f };
 
-    bool rightHitBox = false;   // ‰E‚ÌŒ•‚Ì“–‚½‚è”»’è
-    bool leftHitBox = false;    // ¶‚ÌŒ•‚Ì“–‚½‚è”»’è
+    bool rightHitBox = false;   // ï¿½Eï¿½ÌŒï¿½ï¿½Ì“ï¿½ï¿½ï¿½ï¿½è”»ï¿½ï¿½
+    bool leftHitBox = false;    // ï¿½ï¿½ï¿½ÌŒï¿½ï¿½Ì“ï¿½ï¿½ï¿½ï¿½è”»ï¿½ï¿½
     bool isDangerWindow = false;
 
-    // ƒqƒbƒg’†‚É“–‚½‚Á‚½“G‚ğ‹L˜^‚·‚é
+    // ï¿½qï¿½bï¿½gï¿½ï¿½ï¿½É“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Gï¿½ï¿½Lï¿½^ï¿½ï¿½ï¿½ï¿½
     std::unordered_set<Actor*> hitActors;
     // Players that successfully just-dodged the current attack sequence.
     std::unordered_set<const Actor*> justDodgedActors;
     uint64_t currentAttackSequenceId = 0;
     int currentAttackHitCount = 0;
 
-    bool battleAIActive = true; // ƒ{ƒXƒoƒgƒ‹AI‚ğg—p‚·‚é‚©‚Ç‚¤‚©@false‚È‚çidle‚Ì‚Ü‚Ü
-    //BossAIMode bossAIMode = BossAIMode::CombatAI;         // ƒ{ƒX‚ÌAIƒ‚[ƒh
-    BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;   // ƒ{ƒX‚ÌAIƒ‚[ƒh@ƒfƒoƒbƒN—p
+    bool battleAIActive = true; // ï¿½{ï¿½Xï¿½oï¿½gï¿½ï¿½AIï¿½ï¿½gï¿½pï¿½ï¿½ï¿½é‚©ï¿½Ç‚ï¿½ï¿½ï¿½ï¿½@falseï¿½È‚ï¿½idleï¿½Ì‚Ü‚ï¿½
+    //BossAIMode bossAIMode = BossAIMode::CombatAI;         // ï¿½{ï¿½Xï¿½ï¿½AIï¿½ï¿½ï¿½[ï¿½h
+    BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;   // ï¿½{ï¿½Xï¿½ï¿½AIï¿½ï¿½ï¿½[ï¿½hï¿½@ï¿½fï¿½oï¿½bï¿½Nï¿½p
     BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
 
     std::optional<BossIntentType> activeIntent = std::nullopt;
@@ -614,7 +627,7 @@ private:
     std::string intentLifecycleReason = "None";
 
     static constexpr int intentCount = 4;
-    // ˆÓvŒˆ’è‚Ì‹——£‚²‚Æ‚É‚æ‚éd‚İ
+    // ï¿½Óvï¿½ï¿½ï¿½ï¿½Ì‹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚É‚ï¿½ï¿½dï¿½ï¿½
     std::array<BossIntentData, intentCount> combatIntentData =
     { {
         { BossIntentType::CloseCombat, 60.0f, 30.0f, 25.0f, 4.0f, 5.5f, 0.25f },
@@ -635,8 +648,8 @@ private:
     BossActionType lastActionType = BossActionType::AttackLA;
     std::optional<BossActionType> lastStartedCombatAttack = std::nullopt;
     std::optional<BossActionType> secondLastStartedCombatAttack = std::nullopt;
-    static constexpr float initialRecentAttackPenaltyLast = 0.2f;          // ’¼‹ß‚ÌUŒ‚‚Ì‰º‚°‚éŠ„‡
-    static constexpr float initialRecentAttackPenaltySecond = 0.45f;        // ‚Q‰ñ‚ÌUŒ‚‚Ì‰º‚°‚éŠ„‡
+    static constexpr float initialRecentAttackPenaltyLast = 0.2f;          // ï¿½ï¿½ï¿½ß‚ÌUï¿½ï¿½ï¿½Ì‰ï¿½ï¿½ï¿½ï¿½éŠ„ï¿½ï¿½
+    static constexpr float initialRecentAttackPenaltySecond = 0.45f;        // ï¿½Qï¿½ï¿½ÌUï¿½ï¿½ï¿½Ì‰ï¿½ï¿½ï¿½ï¿½éŠ„ï¿½ï¿½
     float recentAttackPenaltyLast = initialRecentAttackPenaltyLast;
     float recentAttackPenaltySecond = initialRecentAttackPenaltySecond;
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
@@ -649,7 +662,7 @@ private:
     BossAttackType lastAttackType = BossAttackType::PrimaryAttackLA;
     bool hasLastAttack = false;
 
-    // s“®‚Ìƒf[ƒ^‚ğ’è‹`‚·‚é”z—ñBUŒ‚‚Ìí—ŞA‹——£ğŒ‚È‚Ç‚ğİ’è‚·‚éB
+    // ï¿½sï¿½ï¿½ï¿½Ìƒfï¿½[ï¿½^ï¿½ï¿½ï¿½`ï¿½ï¿½ï¿½ï¿½zï¿½ï¿½Bï¿½Uï¿½ï¿½ï¿½Ìï¿½ŞAï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚Ç‚ï¿½İ’è‚·ï¿½ï¿½B
     static constexpr int actionCount = 10;
     std::array<BossActionData, actionCount> combatActionData =
     {
@@ -667,10 +680,10 @@ private:
     }
     };
 
-    // Šes“®‚ª‹——£ğŒ‚ğ–‚½‚µ‚Ä‚¢‚é‚©‚Ìƒtƒ‰ƒO
+    // ï¿½eï¿½sï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ğ–‚ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½é‚©ï¿½Ìƒtï¿½ï¿½ï¿½O
     std::array<bool, actionCount> combatActionCandidateFlags{};
     std::array<BossActionCandidateReason, actionCount> combatActionCandidateReasons{};
-    // Šes“®‚Ì—LŒø‚Èd‚İB‹——£ğŒ‚ÆRepeatğŒ‚ğl—¶‚µ‚½—LŒø‚Èd‚İ
+    // ï¿½eï¿½sï¿½ï¿½ï¿½Ì—Lï¿½ï¿½ï¿½Èdï¿½İBï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Repeatï¿½ï¿½ï¿½ï¿½ï¿½lï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Lï¿½ï¿½ï¿½Èdï¿½ï¿½
     std::array<float, actionCount> combatActionEffectiveWeights{};
     std::array<float, actionCount> combatActionCooldownRemaining{};
 
@@ -712,10 +725,78 @@ private:
     float roarHeightTolerance = 2.0f;
     float roarLevelStartFootOffset = -0.30f;
     float roarLevelStartFootOffsetEndTime = 0.30f;
-    float roarPreStampedeStartTime = 3.4f;  // ™ôšKŠJnŠÔ
-    float roarPreStampedeEndTime = 7.1f;    // ™ôšKI—¹ŠÔ
-    float roarCooldownDuration = 10.0f;
+    float roarPreStampedeStartTime = 3.4f;  // ï¿½ï¿½Kï¿½Jï¿½nï¿½ï¿½ï¿½ï¿½
+    float roarPreStampedeEndTime = 7.1f;    // ï¿½ï¿½Kï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float roarCooldownDuration = 30.0f;
     float roarCooldownRemaining = 0.0f;
+    float retreatDistanceMin = 5.0f;    // é€€é¿è·é›¢ æœ€å°
+    float retreatDistanceMax = 12.0f;// é€€é¿è·é›¢ã€€æœ€å¤§
+    float retreatMinimumMoveDistance = 5.0f;
+    float retreatMoveSpeed = 6.0f;
+    float retreatRetryCooldownDuration = 0.5f;
+    float retreatRetryCooldownRemaining = 0.0f;
+    enum class RetreatCandidateRejectReason { None, Clamp, DistanceIncrease, MinimumMoveDistance, CapsuleCast, Other };
+    struct RetreatCandidateDebug { DirectX::XMFLOAT3 position{}; RetreatCandidateRejectReason rejectReason=RetreatCandidateRejectReason::None; bool pathBlocked=false; bool accepted=false; };
+    struct RetreatRuntime
+    {
+        DirectX::XMFLOAT3 playerSnapshot{};
+        DirectX::XMFLOAT3 gruxSnapshot{};
+        float startingPlayerDistance=0.0f;
+        float plannedPlayerDistance=0.0f;
+        float plannedMoveDistance=0.0f;
+        int candidateCount=0;
+        int clampRejectCount=0;
+        int distanceIncreaseRejectCount=0;
+        int minimumMoveRejectCount=0;
+        int capsuleCastRejectCount=0;
+        int otherRejectCount=0;
+        bool lastCapsuleCastHit=false;
+        bool lastCapsuleCastWorldStatic=false;
+        bool lastCapsuleCastWorldProps=false;
+        bool lastCapsuleCastConvex=false;
+        DirectX::XMFLOAT3 lastCapsuleHitPosition{};
+        float lastCapsuleHitDistance=0.0f;
+        DirectX::XMFLOAT3 capsulePoint1{};
+        DirectX::XMFLOAT3 capsulePoint2{};
+        float capsuleRadius=0.0f;
+        float capsuleSegmentLength=0.0f;
+        DirectX::XMFLOAT3 collisionComponentPosition{};
+        DirectX::XMFLOAT3 collisionComponentScale{};
+        float collisionConfiguredRadius=0.0f;
+        float collisionConfiguredHeight=0.0f;
+        float collisionOffsetY=0.0f;
+        float collisionPhysXHalfHeight=0.0f;
+        DirectX::XMFLOAT3 collisionPhysXPoint1{};
+        DirectX::XMFLOAT3 collisionPhysXPoint2{};
+        float collisionPhysXMinY=0.0f;
+        float collisionPhysXMaxY=0.0f;
+        float retreatCastMinY=0.0f;
+        float retreatCastMaxY=0.0f;
+        bool retreatSweepUsesSphere=false;
+        bool retreatSweepInitialOverlap=false;
+        bool retreatSweepHasNormal=false;
+        DirectX::XMFLOAT3 retreatSweepHitNormal{};
+        float retreatSweepPenetrationDepth=0.0f;
+        std::string retreatSweepHitActor="None";
+        std::string retreatSweepHitComponent="None";
+        int retreatSweepIgnoredSupportContactCount=0;
+        bool retreatSweepPathBlocked=false;
+        DirectX::XMFLOAT3 retreatSweepBlockingNormal{};
+        float retreatSweepBlockingDistance=0.0f;
+        std::string retreatSweepBlockingActor="None";
+        std::string retreatSweepBlockingComponent="None";
+        std::string failureReason="None";
+        std::vector<RetreatCandidateDebug> candidates;
+    } retreatRuntime;
+    PositioningTargetContext retreatTarget{};
+    PositioningTargetRuntime retreatMovementRuntime{};
+    PositioningTargetRuntime attackSetupRuntime{};
+    bool retreatWorldDebug = true;
+    DirectX::XMFLOAT3 retreatDebugTargetPosition{};
+    float retreatRemainingDistance = 0.0f;
+    PositioningMoveResult retreatLastMoveResult = PositioningMoveResult::None;
+    std::string retreatCompleteReason = "None";
+
     struct RoarRuntime
     {
         RoarStage stage = RoarStage::None;
@@ -769,7 +850,7 @@ private:
     std::array<float, actionCount> lastActionRandomRangeEnd{};
     std::array<float, actionCount> lastActionRandomWeights{};
 
-    // UŒ‚‚²‚Æ‚Ìƒf[ƒ^‚ğ’è‹`‚·‚é”z—ñBƒAƒjƒ[ƒVƒ‡ƒ“–¼A‹——£ğŒAd‚İAUŒ‚—Ê‚È‚Ç‚ğİ’è‚·‚éB
+    // ï¿½Uï¿½ï¿½ï¿½ï¿½ï¿½Æ‚Ìƒfï¿½[ï¿½^ï¿½ï¿½ï¿½`ï¿½ï¿½ï¿½ï¿½zï¿½ï¿½Bï¿½Aï¿½jï¿½ï¿½ï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Aï¿½dï¿½İAï¿½Uï¿½ï¿½ï¿½Ê‚È‚Ç‚ï¿½İ’è‚·ï¿½ï¿½B
     std::array<BossAttackData, 6> combatAttackData =
     { {
         { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f, 5 },
@@ -780,12 +861,12 @@ private:
         { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 0.1f, 13 },
     } };
 
-    // Šù‘¶‚ÌAttack‘I‘ğ—p
-    std::array<float, 5> combatEffectiveWeights{};  // ‹——£ğŒ‚ÆRepeatğŒ‚ğl—¶‚µ‚½—LŒø‚Èd‚İ
-    std::array<bool, 5> combatCandidateFlags{}; // ŠeUŒ‚‚ª‹——£ğŒ‚ğ–‚½‚µ‚Ä‚¢‚é‚©‚Ìƒtƒ‰ƒO@å‚ÉImGui‚Åg—pB
-    float currentCombatPlayerDistance = 0.0f;   // Attack‘I‘ğ“_‚ÌƒvƒŒƒCƒ„[‚Æ‚Ì‹——£B‹——£ğŒ‚Ì”»’è‚É’¼Úg—pB
-    float lastCombatSelectionDistance = 0.0f;   //  ÅŒã‚ÉAttack’Š‘I‚ğs‚Á‚½‚Æ‚«‚Ì‹——£BŒ»İ‚ÍImGui•\¦—p‚Æ‚µ‚Ä•ÛB
-    float repeatWeightScale = 0.25f;    //  ’¼‘O‚Æ“¯‚¶Attack‚ÌWeight‚ÖŠ|‚¯‚é”{—¦BŒ»İ‚Í0.25‚È‚Ì‚ÅA“¯‚¶UŒ‚‚ÌWeight‚ğ25%‚Ü‚Å‰º‚°‚éB
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Attackï¿½Iï¿½ï¿½p
+    std::array<float, 5> combatEffectiveWeights{};  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Repeatï¿½ï¿½ï¿½ï¿½ï¿½lï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Lï¿½ï¿½ï¿½Èdï¿½ï¿½
+    std::array<bool, 5> combatCandidateFlags{}; // ï¿½eï¿½Uï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ğ–‚ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½é‚©ï¿½Ìƒtï¿½ï¿½ï¿½Oï¿½@ï¿½ï¿½ï¿½ImGuiï¿½Ågï¿½pï¿½B
+    float currentCombatPlayerDistance = 0.0f;   // Attackï¿½Iï¿½ï¿½ï¿½ï¿½_ï¿½Ìƒvï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Æ‚Ì‹ï¿½ï¿½ï¿½ï¿½Bï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì”ï¿½ï¿½ï¿½É’ï¿½ï¿½Úgï¿½pï¿½B
+    float lastCombatSelectionDistance = 0.0f;   //  ï¿½ÅŒï¿½ï¿½Attackï¿½ï¿½ï¿½Iï¿½ï¿½sï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½Ì‹ï¿½ï¿½ï¿½ï¿½Bï¿½ï¿½ï¿½İ‚ï¿½ImGuiï¿½\ï¿½ï¿½ï¿½pï¿½Æ‚ï¿½ï¿½Ä•Ûï¿½ï¿½B
+    float repeatWeightScale = 0.25f;    //  ï¿½ï¿½ï¿½Oï¿½Æ“ï¿½ï¿½ï¿½Attackï¿½ï¿½Weightï¿½ÖŠ|ï¿½ï¿½ï¿½ï¿½{ï¿½ï¿½ï¿½Bï¿½ï¿½ï¿½İ‚ï¿½0.25ï¿½È‚Ì‚ÅAï¿½ï¿½ï¿½ï¿½ï¿½Uï¿½ï¿½ï¿½ï¿½Weightï¿½ï¿½25%ï¿½Ü‚Å‰ï¿½ï¿½ï¿½ï¿½ï¿½B
 
     std::array<BossPositioningData, 4> combatPositioningData =
     { {
@@ -795,13 +876,13 @@ private:
         { BossActionType::RepositionRight, BossPositioningDirection::TowardPlayer, 3.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TravelDistance, 0.0f },
     } };
 
-    //  StateMachine‚Ìƒ^ƒCƒ~ƒ“ƒO‚Æ•ûŒü§Œä
-    float attackInterval = 0.1f;   // EnemyThinkState‚Ö“ü‚Á‚Ä‚©‚çAttack‘I‘ğ‚ğŠJn‚·‚é‚Ü‚Å‚Ì‘Ò‚¿ŠÔB
-    float recoveryDuration = 0.5f;  //  UŒ‚I—¹ŒãAEnemyRecoveryState‚É‘Øİ‚·‚éŠÔBŒ»İ‚Í‘SAttack‹¤’Ê‚Ì0.5•bB
-    float attackFacingAngle = 35.0f;    // ‚±‚ÌŠp“xˆÈ“à‚È‚çUŒ‚‰Â”\‚Æ‚İ‚È‚·
+    //  StateMachineï¿½Ìƒ^ï¿½Cï¿½~ï¿½ï¿½ï¿½Oï¿½Æ•ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float attackInterval = 0.1f;   // EnemyThinkStateï¿½Ö“ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½Attackï¿½Iï¿½ï¿½ï¿½Jï¿½nï¿½ï¿½ï¿½ï¿½Ü‚Å‚Ì‘Ò‚ï¿½ï¿½ï¿½ï¿½ÔB
+    float recoveryDuration = 0.5f;  //  ï¿½Uï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½AEnemyRecoveryStateï¿½É‘Øİ‚ï¿½ï¿½éï¿½ÔBï¿½ï¿½ï¿½İ‚Í‘SAttackï¿½ï¿½ï¿½Ê‚ï¿½0.5ï¿½bï¿½B
+    float attackFacingAngle = 35.0f;    // ï¿½ï¿½ï¿½ÌŠpï¿½xï¿½È“ï¿½È‚ï¿½Uï¿½ï¿½ï¿½Â”\ï¿½Æ‚İ‚È‚ï¿½
 
-    float nearDistanceThreshold = 6.0f; // ‚±‚Ì‹——£ˆÈ‰º‚Í‹ß‹——£‚Æ‚İ‚È‚·
-    float middleDistanceThreshold = 12.0f; // ‚±‚Ì‹——£ˆÈ‰º‚Í’†‹——£‚Æ‚İ‚È‚·
+    float nearDistanceThreshold = 6.0f; // ï¿½ï¿½ï¿½Ì‹ï¿½ï¿½ï¿½ï¿½È‰ï¿½ï¿½Í‹ß‹ï¿½ï¿½ï¿½ï¿½Æ‚İ‚È‚ï¿½
+    float middleDistanceThreshold = 12.0f; // ï¿½ï¿½ï¿½Ì‹ï¿½ï¿½ï¿½ï¿½È‰ï¿½ï¿½Í’ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚İ‚È‚ï¿½
 
     float relativeFrontMaxAngle = 50.0f;
     float relativeBackMinAngle = 110.0f;
@@ -812,18 +893,18 @@ private:
     const float initialMiddleDistanceThreshold = middleDistanceThreshold;
     const float initialRelativeFrontMaxAngle = relativeFrontMaxAngle;
     const float initialRelativeBackMinAngle = relativeBackMinAngle;
-    static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // ‰¡‚É—û‚è•à‚­‹——£
+    static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // ï¿½ï¿½ï¿½É—ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     static constexpr float initialCombatRepositionMoveSpeed = 6.0f;
-    static constexpr float initialCombatRepositionSettleDuration = 1.5f;    // –Ú“I’n‚É•t‚¢‚½Œã‚Ì‘Ò‚Â•b”
+    static constexpr float initialCombatRepositionSettleDuration = 1.5f;    // ï¿½Ú“Iï¿½nï¿½É•tï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ì‘Ò‚Â•bï¿½ï¿½
 
     static constexpr float initialFrontAttackReadyDuration = 1.0f;
     static constexpr float initialSideAttackReadyDuration = 1.5f;
     static constexpr float initialCloseCombatReadyFacingAngle = 7.5f;
 
-    float turnSpeed = 480.0f;  // EnemyTurnState‚Å‚»‚Ìê‰ñ“]‚·‚é‚Æ‚«‚Ì‘¬“x
-    float turnCompleteAngle = 15.0f;    // ‚±‚ÌŠp“xˆÈ“à‚È‚ç‰ñ“]Š®—¹‚Æ‚İ‚È‚·
-    float turnTimeout = 1.5f;   //   Turn‚ª‚¢‚Â‚Ü‚Å‚àŠ®—¹‚µ‚È‚¢ê‡‚Ì§ŒÀŠÔBŒ»İ‚Í1.5•b‚ÅThink‚Ö–ß‚éB
-    std::string lastAIDecisionReason = "None";  // ÅŒã‚ÉAI‚ªs‚Á‚½”»’f——R‚ğ•¶š—ñ‚Å•Û‘¶BImGui‚É•\¦BAI‚Ì“®ìŠm”F—pB
+    float turnSpeed = 480.0f;  // EnemyTurnStateï¿½Å‚ï¿½ï¿½Ìï¿½ï¿½]ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½Ì‘ï¿½ï¿½x
+    float turnCompleteAngle = 15.0f;    // ï¿½ï¿½ï¿½ÌŠpï¿½xï¿½È“ï¿½È‚ï¿½ï¿½]ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚İ‚È‚ï¿½
+    float turnTimeout = 1.5f;   //   Turnï¿½ï¿½ï¿½ï¿½ï¿½Â‚Ü‚Å‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½ï¿½ê‡ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÔBï¿½ï¿½ï¿½İ‚ï¿½1.5ï¿½bï¿½ï¿½Thinkï¿½Ö–ß‚ï¿½B
+    std::string lastAIDecisionReason = "None";  // ï¿½ÅŒï¿½ï¿½AIï¿½ï¿½ï¿½sï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½fï¿½ï¿½ï¿½Rï¿½ğ•¶ï¿½ï¿½ï¿½Å•Û‘ï¿½ï¿½BImGuiï¿½É•\ï¿½ï¿½ï¿½BAIï¿½Ì“ï¿½ï¿½ï¿½mï¿½Fï¿½pï¿½B
     float frontAttackReadyDuration = initialFrontAttackReadyDuration;
     float sideAttackReadyDuration = initialSideAttackReadyDuration;
     float closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
@@ -882,7 +963,7 @@ private:
     float combatRepositionBackWeight = 80.0f;
     float dashAttackPlanBackWeight = 35.0f;
     float jumpAttackPlanBackWeight = 35.0f;
-    float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;   // reposition‚Ì‚É“®‚­‹——£
+    float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;   // repositionï¿½Ìï¿½ï¿½É“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     float combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;
     float combatRepositionSettleDuration = initialCombatRepositionSettleDuration;
     bool combatRepositionSettling = false;
@@ -920,37 +1001,37 @@ private:
     float positioningDebugStuckTimer = 0.0f;
     std::string positioningEndReason = "None";
 
-    // FastCombo‚Ì˜A‘±UŒ‚—p
-    bool transitionWindow = false;      // Animation Notify‚ÌTransitionWindow‚ªŒ»İ—LŒø‚©‚ğ•\‚·BFastCombo‚ÅŸ‚ÌƒRƒ“ƒ{’iŠK‚Öi‚ß‚éƒ^ƒCƒ~ƒ“ƒO‚Ì”»’è‚Ég—pB
+    // FastComboï¿½Ì˜Aï¿½ï¿½ï¿½Uï¿½ï¿½ï¿½p
+    bool transitionWindow = false;      // Animation Notifyï¿½ï¿½TransitionWindowï¿½ï¿½ï¿½ï¿½ï¿½İ—Lï¿½ï¿½ï¿½ï¿½ï¿½ï¿½\ï¿½ï¿½ï¿½BFastComboï¿½Åï¿½ï¿½ÌƒRï¿½ï¿½ï¿½{ï¿½iï¿½Kï¿½Öiï¿½ß‚ï¿½^ï¿½Cï¿½~ï¿½ï¿½ï¿½Oï¿½Ì”ï¿½ï¿½ï¿½Égï¿½pï¿½B
 
-    // JumpAttack‚ÌMotionWarp—p
-    float maxJumpDistance = 12.5f;      // JumpAttack‚ÅÀÛ‚ÉˆÚ“®‚µ‚Ä‚æ‚¢Å‘å‹——£BƒvƒŒƒCƒ„[‚ª‰“‚­‚Ä‚à12.5‚æ‚è’·‚­‚ÍˆÚ“®‚µ‚È‚¢B
+    // JumpAttackï¿½ï¿½MotionWarpï¿½p
+    float maxJumpDistance = 12.5f;      // JumpAttackï¿½Åï¿½ï¿½Û‚ÉˆÚ“ï¿½ï¿½ï¿½ï¿½Ä‚æ‚¢ï¿½Å‘å‹—ï¿½ï¿½ï¿½Bï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½12.5ï¿½ï¿½è’·ï¿½ï¿½ï¿½ÍˆÚ“ï¿½ï¿½ï¿½ï¿½È‚ï¿½ï¿½B
     float desiredAttackDistance = 0.1f;
     float jumpDesiredStartDistance = 4.5f;
     float jumpSetupDistanceMin = 6.5f;
     float jumpSetupDistanceMax = 8.5f;
-    float jumpSetupMinimumMoveDistance = 5.0f;  // JumpAttack‚ÅÅ’áŒÀˆÚ“®‹——£
+    float jumpSetupMinimumMoveDistance = 5.0f;  // JumpAttackï¿½ÅÅ’ï¿½ï¿½ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ï¿½
     float attackSetupCandidateAngleStep = 30.0f;
-    float attackSetupClampTolerance = 0.75f;    //  JumpAttackŒã‚ÉƒvƒŒƒCƒ„[‚Æ‚ÌŠÔ‚Öc‚µ‚½‚¢‹——£
-    float jumpAttackTelegraphStartTime = 1.4f;  // —\”õ“®ì‚ÌŠJnƒAƒjƒ[ƒVƒ‡ƒ“ŠÔ
+    float attackSetupClampTolerance = 0.75f;    //  JumpAttackï¿½ï¿½Éƒvï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Æ‚ÌŠÔ‚Öcï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    float jumpAttackTelegraphStartTime = 1.4f;  // ï¿½\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÌŠJï¿½nï¿½Aï¿½jï¿½ï¿½ï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     float jumpAttackTelegraphEndTime = 2.6f;
-    float currentJumpPlayerDistance = 0.0f; //  JumpAttackŠJn“_‚ÌƒvƒŒƒCƒ„[‚Ü‚Å‚Ì‹——£
-    float calculatedJumpDistance = 0.0f;    //  ÅI“I‚ÉMotionWarp‚ÅˆÚ“®‚·‚é‹——£
+    float currentJumpPlayerDistance = 0.0f; //  JumpAttackï¿½Jï¿½nï¿½ï¿½ï¿½_ï¿½Ìƒvï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Ü‚Å‚Ì‹ï¿½ï¿½ï¿½
+    float calculatedJumpDistance = 0.0f;    //  ï¿½ÅIï¿½Iï¿½ï¿½MotionWarpï¿½ÅˆÚ“ï¿½ï¿½ï¿½ï¿½é‹—ï¿½ï¿½
     bool jumpAttackExecutionStartCalledDebug = false;
-    bool jumpMotionWarpOverrideActive = false;  // ’Êí‚ÌAnimation Notify‚Éİ’è‚³‚ê‚½ˆÚ“®‹——£‚Å‚Í‚È‚­AJumpAttack—p‚ÉŒvZ‚µ‚½‹——£‚Æ•ûŒü‚ğg—p‚·‚é‚©‚Ç‚¤‚©
-    DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  //  JumpAttackŠJn‚ÌƒvƒŒƒCƒ„[ˆÊ’u
-    DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  //  ƒ{ƒX‚©‚çJumpAttackŠJn‚ÌƒvƒŒƒCƒ„[ˆÊ’u‚ÖŒü‚©‚¤³‹K‰»Ï‚İ•ûŒü
+    bool jumpMotionWarpOverrideActive = false;  // ï¿½Êï¿½ï¿½Animation Notifyï¿½Éİ’è‚³ï¿½ê‚½ï¿½Ú“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å‚Í‚È‚ï¿½ï¿½AJumpAttackï¿½pï¿½ÉŒvï¿½Zï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ•ï¿½ï¿½ï¿½ï¿½ï¿½gï¿½pï¿½ï¿½ï¿½é‚©ï¿½Ç‚ï¿½ï¿½ï¿½
+    DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  //  JumpAttackï¿½Jï¿½nï¿½ï¿½ï¿½Ìƒvï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Ê’u
+    DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  //  ï¿½{ï¿½Xï¿½ï¿½ï¿½ï¿½JumpAttackï¿½Jï¿½nï¿½ï¿½ï¿½Ìƒvï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Ê’uï¿½ÖŒï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Kï¿½ï¿½ï¿½Ï‚İ•ï¿½ï¿½ï¿½
 
     // DashAttack
     float dashSetupDistanceMin = 8.0f;
     float dashSetupDistanceMax = 10.0f;
-    float dashSetupMinimumMoveDistance = 5.0f;  // ƒ_ƒbƒVƒ…ˆÚ“®Å’á‹——£
+    float dashSetupMinimumMoveDistance = 5.0f;  // ï¿½_ï¿½bï¿½Vï¿½ï¿½ï¿½Ú“ï¿½ï¿½Å’á‹—ï¿½ï¿½
     DashBTPhase dashBTPhase = DashBTPhase::None;
     bool dashBTAttackStarted = false;
     BossActionType dashBTPreviousAction = BossActionType::AttackLA;
     float dashBTTelegraphElapsed = 0.0f;
     float dashBTTraveledDistance = 0.0f;
-    float dashWindupDuration = 1.40f;   // —\”õ“®ì‚ÌŠÔ
+    float dashWindupDuration = 1.40f;   // ï¿½\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½
     float dashAttackSpeed = 12.0f;
     float minDashAttackDistance = 4.0f;
     float maxDashAttackDistance = 16.0f;
@@ -1013,17 +1094,17 @@ private:
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;
     ChargeAttackEndReason pendingChargeRecoveryResult = ChargeAttackEndReason::None;
 
-    // Wall HitŒã‚Ìs“®•s”\ŠÔBStart/End AnimationŠÔ‚Æ‚Í•ª—£‚·‚éB
+    // Wall Hitï¿½ï¿½Ìsï¿½ï¿½ï¿½sï¿½\ï¿½ï¿½ï¿½ÔBStart/End Animationï¿½ï¿½ï¿½Ô‚Æ‚Í•ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½B
     float stunDuration = 2.5f;
     std::string stunPhaseDebug = "None";
     float stunElapsedDebug = 0.0f;
     std::string deathAnimationName = "Death_A_0";
     bool cinematicDeathAnimationOwnedExternally = false;
 
-    // Recovery‚Ö‚Ì‘JˆÚŒ³‚ªˆê“x‚¾‚¯ã‘‚«‚Å‚«‚éDurationB
-    float chargePlayerHitRecoveryDuration = 0.8f;   // •ÇDashUŒ‚‚ÌPlayer‚É“–‚½‚Á‚½‚ÌrecoveryŠÔ
-    float chargeJustDodgeRecoveryDuration = 1.0f;   // •ÇDashUŒ‚‚ÌƒWƒƒƒXƒg‰ñ”ğ‚³‚ê‚½‚ÌrecoveryŠÔ
-    float postStunRecoveryDuration = 0.1f;  // •ÇDashUŒ‚‚Ì•Ç‚É“–‚½‚Á‚½‚ÌrecoveryŠÔ
+    // Recoveryï¿½Ö‚Ì‘Jï¿½ÚŒï¿½ï¿½ï¿½ï¿½ï¿½xï¿½ï¿½ï¿½ï¿½ï¿½ã‘ï¿½ï¿½ï¿½Å‚ï¿½ï¿½ï¿½Durationï¿½B
+    float chargePlayerHitRecoveryDuration = 0.8f;   // ï¿½ï¿½Dashï¿½Uï¿½ï¿½ï¿½ï¿½Playerï¿½É“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½recoveryï¿½ï¿½ï¿½ï¿½
+    float chargeJustDodgeRecoveryDuration = 1.0f;   // ï¿½ï¿½Dashï¿½Uï¿½ï¿½ï¿½ÌƒWï¿½ï¿½ï¿½Xï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ê‚½ï¿½ï¿½ï¿½ï¿½recoveryï¿½ï¿½ï¿½ï¿½
+    float postStunRecoveryDuration = 0.1f;  // ï¿½ï¿½Dashï¿½Uï¿½ï¿½ï¿½Ì•Ç‚É“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½recoveryï¿½ï¿½ï¿½ï¿½
     std::optional<float> nextRecoveryDuration;
     std::string nextRecoverySource = "Default";
     float currentRecoveryDurationDebug = 0.0f;
@@ -1034,25 +1115,25 @@ private:
     bool beginHuskParticleRequest = false;
     float pitchBaseValue = 0.45f;
 
-    // ¶–Ú‚ÌˆÊ’u—pƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á@ˆÃˆÅ‚ÅŒõ‚é–Ú‚Ì•\Œ»—p
+    // ï¿½ï¿½ï¿½Ú‚ÌˆÊ’uï¿½pï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½ï¿½Ç‰ï¿½ï¿½@ï¿½ÃˆÅ‚ÅŒï¿½ï¿½ï¿½Ú‚Ì•\ï¿½ï¿½ï¿½p
     std::shared_ptr<SceneComponent> leftEyeSceneComponent;
-    // ‰E–Ú‚ÌˆÊ’u—pƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á@ˆÃˆÅ‚ÅŒõ‚é–Ú‚Ì•\Œ»—p
+    // ï¿½Eï¿½Ú‚ÌˆÊ’uï¿½pï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½ï¿½Ç‰ï¿½ï¿½@ï¿½ÃˆÅ‚ÅŒï¿½ï¿½ï¿½Ú‚Ì•\ï¿½ï¿½ï¿½p
     std::shared_ptr<SceneComponent> rightEyeSceneComponent;
 
-    // ƒJƒƒ‰‚Ì’‹“_‚ÌˆÊ’u
+    // ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½Ì’ï¿½ï¿½ï¿½ï¿½_ï¿½ÌˆÊ’u
     std::shared_ptr<SceneComponent> cameraTargetComponent;
-    // ƒ{ƒXí‚ÌƒIƒtƒZƒbƒg
+    // ï¿½{ï¿½Xï¿½íï¿½ÌƒIï¿½tï¿½Zï¿½bï¿½g
     float bossBattleCameraDistance = 0.0f;
     //float bossBattleCameraRightDistance = 2.5f;
     float bossBattleCameraRightDistance = 0.0f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,0.0f,0.0f };
 
-    // ‘OƒtƒŒ[ƒ€‚Ì¶‚Ì•Ší
+    // ï¿½Oï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½Ìï¿½ï¿½Ì•ï¿½ï¿½ï¿½
     DirectX::XMFLOAT3 prevWeaponLeftRootPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponLeftMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponLeftTipPos = { 0.0f,0.0f,0.0f };
 
-    // ‘OƒtƒŒ[ƒ€‚Ì‰E‚Ì•Ší
+    // ï¿½Oï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½Ì‰Eï¿½Ì•ï¿½ï¿½ï¿½
     DirectX::XMFLOAT3 prevWeaponRightRootPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponRightMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponRightTipPos = { 0.0f,0.0f,0.0f };
@@ -1060,26 +1141,26 @@ private:
     float hitWeaponRadius = 0.8f;
     float activeLeftHitBoxRadius = 0.8f;
     float activeRightHitBoxRadius = 0.8f;
-    std::vector<const AnimationNotifyState*> activeHitBoxNotifyStates;   // •Ší‚Ì”¼Œa
-    float enemyScale = 1.7f;    // “G‚ÌƒXƒP[ƒ‹
-    float hitEnemyEffectOffsetY = 2.2f;  // ƒqƒbƒgƒGƒtƒFƒNƒg‚ÌƒIƒtƒZƒbƒgY
-    float hitPlayerEffectOffsetY = 2.4f;  // ƒqƒbƒgƒGƒtƒFƒNƒg‚ÌƒIƒtƒZƒbƒgY
+    std::vector<const AnimationNotifyState*> activeHitBoxNotifyStates;   // ï¿½ï¿½ï¿½ï¿½Ì”ï¿½ï¿½a
+    float enemyScale = 1.7f;    // ï¿½Gï¿½ÌƒXï¿½Pï¿½[ï¿½ï¿½
+    float hitEnemyEffectOffsetY = 2.2f;  // ï¿½qï¿½bï¿½gï¿½Gï¿½tï¿½Fï¿½Nï¿½gï¿½ÌƒIï¿½tï¿½Zï¿½bï¿½gY
+    float hitPlayerEffectOffsetY = 2.4f;  // ï¿½qï¿½bï¿½gï¿½Gï¿½tï¿½Fï¿½Nï¿½gï¿½ÌƒIï¿½tï¿½Zï¿½bï¿½gY
 
-    // “oêƒV[ƒ“‚Ìƒ{ƒX–¼‘O‚ÌUI
+    // ï¿½oï¿½ï¿½Vï¿½[ï¿½ï¿½ï¿½Ìƒ{ï¿½Xï¿½ï¿½ï¿½Oï¿½ï¿½UI
     std::shared_ptr<UIImageComponent> gruxNameImageComponent;
     std::unique_ptr<EasingRunner> easingRunner;
     float easingFactorAlpha = 0.0f;
 
-    // ƒƒbƒNƒIƒ“‚ÌƒCƒ[ƒWƒ‚ƒfƒ‹
+    // ï¿½ï¿½ï¿½bï¿½Nï¿½Iï¿½ï¿½ï¿½ÌƒCï¿½ï¿½ï¿½[ï¿½Wï¿½ï¿½ï¿½fï¿½ï¿½
     std::shared_ptr<SkeletalMeshComponent> lockOnTargetMeshComponent;
-    float lockOnOffset = 0.0f;  // ƒvƒŒƒCƒ„[‘¤‚É‰Ÿ‚µo‚·ƒIƒtƒZƒbƒg
+    float lockOnOffset = 0.0f;  // ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½É‰ï¿½ï¿½ï¿½ï¿½oï¿½ï¿½ï¿½Iï¿½tï¿½Zï¿½bï¿½g
     float lockOnOffsetY = 1.65f;
-    // ƒƒbƒNƒIƒ“‚ÌƒCƒ[ƒWUI
+    // ï¿½ï¿½ï¿½bï¿½Nï¿½Iï¿½ï¿½ï¿½ÌƒCï¿½ï¿½ï¿½[ï¿½WUI
     std::shared_ptr<UIImageComponent> lockOnTargetImageComponent;
 
-    // ƒWƒƒƒXƒg‰ñ”ğ‚Ì‹éŒ`‚Ì”ÍˆÍ
+    // ï¿½Wï¿½ï¿½ï¿½Xï¿½gï¿½ï¿½ï¿½Ì‹ï¿½`ï¿½Ì”Íˆï¿½
     DirectX::XMFLOAT3 justDodgeAreaSize = { 0.0f,2.0f,0.0f };
-    // ƒWƒƒƒXƒg‰ñ”ğ‚Ì‹éŒ`‚ÌƒIƒtƒZƒbƒg
+    // ï¿½Wï¿½ï¿½ï¿½Xï¿½gï¿½ï¿½ï¿½Ì‹ï¿½`ï¿½ÌƒIï¿½tï¿½Zï¿½bï¿½g
     DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };
     DangerArea dangerArea{};
     struct DangerObbInitialValue
@@ -1103,12 +1184,12 @@ private:
     float hitVoiceCooldownTimer = 0.0f;
     int lastHitVoiceIndex = -1;
 
-    // ƒAƒjƒ[ƒVƒ‡ƒ“‚É‚Ç‚ê‚­‚ç‚¢ˆÚ“®‚·‚é‚©
+    // ï¿½Aï¿½jï¿½ï¿½ï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É‚Ç‚ê‚­ï¿½ç‚¢ï¿½Ú“ï¿½ï¿½ï¿½ï¿½é‚©
     std::vector<AnimationMotionWarp> animationMotionWarps;
 
     friend class GruxEnemyEyeActor;
 
-    // ƒrƒwƒCƒrƒAƒcƒŠ[
+    // ï¿½rï¿½wï¿½Cï¿½rï¿½Aï¿½cï¿½ï¿½ï¿½[
     std::unique_ptr<BehaviorTree>	aiTree = nullptr;
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;
     NodeBase* activeNode = nullptr;
@@ -1125,7 +1206,7 @@ private:
     float fastComboApproachMaxDuration = 1.5f;
     float fastComboApproachRetryCooldown = 2.0f;
     float fastComboApproachRetryRemaining = 0.0f;
-    float behaviorIdleDuration = 1.0f;// ‘Ò‹@ŠÔ
+    float behaviorIdleDuration = 1.0f;// ï¿½Ò‹@ï¿½ï¿½ï¿½ï¿½
 
 };
 
@@ -1139,7 +1220,7 @@ public:
     void Update(float elapsedTime)override;
 
 private:
-    // •`‰æ—pƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á
+    // ï¿½`ï¿½ï¿½pï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½ï¿½Ç‰ï¿½
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
 
@@ -1155,7 +1236,7 @@ public:
     void Update(float elapsedTime)override;
 
 private:
-    // •`‰æ—pƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á
+    // ï¿½`ï¿½ï¿½pï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½ï¿½Ç‰ï¿½
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
 
@@ -1171,7 +1252,7 @@ public:
     void Update(float elapsedTime)override;
 
 private:
-    // •`‰æ—pƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ’Ç‰Á
+    // ï¿½`ï¿½ï¿½pï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½ï¿½Ç‰ï¿½
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
 

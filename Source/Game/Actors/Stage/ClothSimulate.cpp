@@ -489,7 +489,6 @@ void ClothSimulate::FetchTextures(ID3D11Device* device, const tinygltf::Model& g
 void ClothSimulate::Update(float deltaTine)
 {
 
-    DebugRender::DrawSphere(cbuffer->data.windEmitPosition, 0.5f, { 1.0f,1.0f,0.0f,1.0f });
 
 }
 

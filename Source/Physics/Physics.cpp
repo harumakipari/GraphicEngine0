@@ -748,6 +748,142 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
     return hit;
 }
 
+namespace
+{
+    void CopyPositioningPathSafetyHit(const physx::PxSweepHit& source,
+        PositioningPathSafetyHit& destination)
+    {
+        destination.hit = true;
+        destination.initialOverlap = source.hadInitialOverlap();
+        destination.hasNormal = source.flags.isSet(physx::PxHitFlag::eNORMAL);
+        if (source.flags.isSet(physx::PxHitFlag::ePOSITION))
+            destination.position = { source.position.x, source.position.y, source.position.z };
+        if (destination.hasNormal)
+            destination.normal = { source.normal.x, source.normal.y, source.normal.z };
+        destination.distance = source.distance;
+        destination.penetrationDepth = destination.initialOverlap
+            ? (std::max)(0.0f, -source.distance) : 0.0f;
+        destination.actor = source.actor && source.actor->userData
+            ? static_cast<Actor*>(source.actor->userData) : nullptr;
+        destination.component = source.shape && source.shape->userData
+            ? static_cast<CollisionComponent*>(source.shape->userData) : nullptr;
+    }
+
+    class PositioningPathSafetyFilter final : public physx::PxQueryFilterCallback
+    {
+    public:
+        PositioningPathSafetyFilter(const PositioningPathSafetyPolicy& inPolicy,
+            PositioningPathSafetyResult& inResult)
+            : policy(inPolicy), result(inResult) {}
+
+        physx::PxQueryHitType::Enum preFilter(const physx::PxFilterData& filterData,
+            const physx::PxShape* shape, const physx::PxRigidActor*, physx::PxHitFlags&) override
+        {
+            return (shape->getQueryFilterData().word0 & filterData.word0) != 0
+                ? physx::PxQueryHitType::eTOUCH : physx::PxQueryHitType::eNONE;
+        }
+
+        physx::PxQueryHitType::Enum postFilter(const physx::PxFilterData&,
+            const physx::PxQueryHit& hit, const physx::PxShape*, const physx::PxRigidActor*) override
+        {
+            const auto& sweepHit = static_cast<const physx::PxSweepHit&>(hit);
+            const bool isSupportContact = sweepHit.hadInitialOverlap() &&
+                sweepHit.flags.isSet(physx::PxHitFlag::eNORMAL) &&
+                sweepHit.normal.y >= policy.floorNormalThreshold &&
+                -sweepHit.distance <= policy.supportPenetrationTolerance;
+            if (isSupportContact)
+            {
+                ++result.ignoredSupportContactCount;
+                if (!result.ignoredSupportContact.hit)
+                    CopyPositioningPathSafetyHit(sweepHit, result.ignoredSupportContact);
+                return physx::PxQueryHitType::eNONE;
+            }
+            return physx::PxQueryHitType::eBLOCK;
+        }
+
+    private:
+        const PositioningPathSafetyPolicy& policy;
+        PositioningPathSafetyResult& result;
+    };
+}
+
+bool Physics::SweepPositioningPath(const PositioningSweepShape& shape,
+    const DirectX::XMFLOAT3& direction, float distance, uint32_t wantToHitLayer,
+    const PositioningPathSafetyPolicy& policy, PositioningPathSafetyResult& result)
+{
+    result = {};
+    if (!pxScene || distance <= 0.0f || shape.radius <= 0.0f)
+        return false;
+
+    physx::PxQueryFilterData filterData(
+        physx::PxQueryFlag::eDYNAMIC | physx::PxQueryFlag::eSTATIC |
+        physx::PxQueryFlag::ePREFILTER | physx::PxQueryFlag::ePOSTFILTER);
+    filterData.data.word0 = wantToHitLayer;
+    PositioningPathSafetyFilter filter(policy, result);
+    physx::PxSweepBuffer sweepBuffer;
+    const physx::PxVec3 unitDirection(direction.x, direction.y, direction.z);
+    const physx::PxHitFlags hitFlags = physx::PxHitFlag::ePOSITION |
+        physx::PxHitFlag::eNORMAL | physx::PxHitFlag::eMTD;
+
+    const auto executeSweep = [&](const physx::PxGeometry& geometry,
+        const physx::PxTransform& transform)
+        {
+            return pxScene->sweep(geometry, transform, unitDirection, distance, sweepBuffer,
+                hitFlags, filterData, &filter);
+        };
+
+    bool anyHit = false;
+    if (shape.type == PositioningSweepShape::Type::Sphere)
+    {
+        const physx::PxSphereGeometry geometry(shape.radius);
+        anyHit = executeSweep(geometry, physx::PxTransform(
+            physx::PxVec3(shape.center.x, shape.center.y, shape.center.z)));
+    }
+    else
+    {
+        const DirectX::XMFLOAT3 segment{
+            shape.point2.x - shape.point1.x,
+            shape.point2.y - shape.point1.y,
+            shape.point2.z - shape.point1.z };
+        const float segmentLength = std::sqrt(segment.x * segment.x + segment.y * segment.y + segment.z * segment.z);
+        if (segmentLength <= FLT_EPSILON)
+        {
+            const physx::PxSphereGeometry geometry(shape.radius);
+            anyHit = executeSweep(geometry, physx::PxTransform(
+                physx::PxVec3(shape.point1.x, shape.point1.y, shape.point1.z)));
+        }
+        else
+        {
+            const DirectX::XMFLOAT3 axis{ segment.x / segmentLength, segment.y / segmentLength, segment.z / segmentLength };
+            const DirectX::XMVECTOR axisX = DirectX::XMVectorSet(1, 0, 0, 0);
+            const DirectX::XMVECTOR targetAxis = DirectX::XMLoadFloat3(&axis);
+            DirectX::XMVECTOR rotation = DirectX::XMQuaternionIdentity();
+            const DirectX::XMVECTOR cross = DirectX::XMVector3Cross(axisX, targetAxis);
+            if (DirectX::XMVector3NotEqual(cross, DirectX::XMVectorZero()))
+            {
+                const float angle = acosf(DirectX::XMVectorGetX(DirectX::XMVector3Dot(axisX, targetAxis)));
+                rotation = DirectX::XMQuaternionRotationAxis(DirectX::XMVector3Normalize(cross), angle);
+            }
+            DirectX::XMFLOAT4 rotationValue{};
+            DirectX::XMStoreFloat4(&rotationValue, rotation);
+            const physx::PxCapsuleGeometry geometry(shape.radius, segmentLength * 0.5f);
+            const DirectX::XMFLOAT3 center{
+                (shape.point1.x + shape.point2.x) * 0.5f,
+                (shape.point1.y + shape.point2.y) * 0.5f,
+                (shape.point1.z + shape.point2.z) * 0.5f };
+            anyHit = executeSweep(geometry, physx::PxTransform(
+                physx::PxVec3(center.x, center.y, center.z),
+                physx::PxQuat(rotationValue.x, rotationValue.y, rotationValue.z, rotationValue.w)));
+        }
+    }
+
+    if (sweepBuffer.hasBlock)
+    {
+        CopyPositioningPathSafetyHit(sweepBuffer.block, result.blockingHit);
+        result.pathBlocked = true;
+    }
+    return anyHit && result.pathBlocked;
+}
 // カプセルキャスト
 bool Physics::CapsuleCast(
     const DirectX::XMFLOAT3& point1,

@@ -326,6 +326,8 @@ private:
     CameraMode requestMode = CameraMode::TPS;   // “ü—Í‚ª—v‹‚µ‚Ä‚¢‚éƒ‚[ƒh
 
 
+    void DrawDeathCameraDebug(const CameraPose& appliedPose) const;
+    bool showDeathCameraDebug = false;
     CameraPose currentPose;
     DirectX::XMFLOAT3 compositionLookTarget{};
 

@@ -12,6 +12,25 @@ class CanPlanAnyDefensive : public CanPlanRoar
 {
 public:
     using CanPlanRoar::CanPlanRoar;
+    bool Judgment() override;
+};
+class CanPlanRetreat : public JudgementBase
+{
+public:
+    using JudgementBase::JudgementBase;
+    bool Judgment() override;
+};
+class PrepareRetreatTarget : public ActionBase
+{
+public:
+    using ActionBase::ActionBase;
+    State Run(float) override;
+};
+class MoveToPositioningTarget : public ActionBase
+{
+public:
+    using ActionBase::ActionBase;
+    State Run(float dt) override;
 };
 class StartRoar : public ActionBase
 {

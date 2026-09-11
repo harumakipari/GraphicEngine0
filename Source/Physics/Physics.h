@@ -10,6 +10,7 @@
 
 class Actor;
 class ShapeComponent;
+class CollisionComponent;
 
 /// ヒット結果
 struct HitResult
@@ -34,6 +35,44 @@ struct HitResultWithActor
 };
 
 /// マテリアルタイプ
+// Positioning movement uses this shape to test path clearance without changing
+// the behavior of the engine-wide query callbacks.
+struct PositioningSweepShape
+{
+    enum class Type { Sphere, Capsule };
+    Type type = Type::Sphere;
+    DirectX::XMFLOAT3 center{};
+    DirectX::XMFLOAT3 point1{};
+    DirectX::XMFLOAT3 point2{};
+    float radius = 0.0f;
+};
+
+struct PositioningPathSafetyPolicy
+{
+    float floorNormalThreshold = 0.7f;
+    float supportPenetrationTolerance = 0.30f;
+};
+
+struct PositioningPathSafetyHit
+{
+    bool hit = false;
+    bool initialOverlap = false;
+    bool hasNormal = false;
+    DirectX::XMFLOAT3 position{};
+    DirectX::XMFLOAT3 normal{};
+    float distance = 0.0f;
+    float penetrationDepth = 0.0f;
+    Actor* actor = nullptr;
+    CollisionComponent* component = nullptr;
+};
+
+struct PositioningPathSafetyResult
+{
+    bool pathBlocked = false;
+    int ignoredSupportContactCount = 0;
+    PositioningPathSafetyHit ignoredSupportContact{};
+    PositioningPathSafetyHit blockingHit{};
+};
 enum class PhysicsMaterialType : uint8_t
 {
     Default,
@@ -102,6 +141,11 @@ public:
     bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
     bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResultWithActor& result, uint32_t wantToHitLayer = 0xFFFFFF, bool useMTD = false);
 
+    // Positioning-specific path sweep. Initial support overlaps accepted by policy
+    // are excluded in a per-call callback, and later walls remain blocking hits.
+    bool SweepPositioningPath(const PositioningSweepShape& shape,
+        const DirectX::XMFLOAT3& direction, float distance, uint32_t wantToHitLayer,
+        const PositioningPathSafetyPolicy& policy, PositioningPathSafetyResult& result);
     // カプセルキャスト
     bool CapsuleCast(const DirectX::XMFLOAT3& point1, const DirectX::XMFLOAT3& point2, float radius, const DirectX::XMFLOAT3& direction, float distance, bool trigger, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
 

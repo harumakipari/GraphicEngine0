@@ -162,6 +162,32 @@ void DarkCameraActor::Update(float deltaTime)
     SetPosition(renderPose.eye);
     mainCameraComponent->lookTarget = renderPose.target;
     mainCameraComponent->useLookTarget = true;
+    DrawDeathCameraDebug(renderPose);
+}
+
+void DarkCameraActor::DrawDeathCameraDebug(const CameraPose& appliedPose) const
+{
+    if (!showDeathCameraDebug || isExternalBlending ||
+        !(currentMode == CameraMode::Death || (isBlending && requestMode == CameraMode::Death)))
+        return;
+    const auto playerAnchor = playerHead.lock();
+    const auto bossAnchor = enemyHead.lock();
+    if (!playerAnchor || !bossAnchor || !playerAnchor->GetOwner() || !bossAnchor->GetOwner())
+        return;
+
+    // Read the actors after GameScene's staging. Use actor origins, not head sockets.
+    const auto playerPosition = playerAnchor->GetOwner()->GetPosition();
+    const auto bossPosition = bossAnchor->GetOwner()->GetPosition();
+    const DirectX::XMFLOAT4 playerColor{ 0.1f, 0.9f, 1.0f, 1.0f };
+    const DirectX::XMFLOAT4 bossColor{ 1.0f, 0.25f, 0.25f, 1.0f };
+    const DirectX::XMFLOAT4 cameraColor{ 1.0f, 0.8f, 0.1f, 1.0f };
+    const DirectX::XMFLOAT4 targetColor{ 0.3f, 1.0f, 0.3f, 1.0f };
+    DebugRender::DrawSphere(playerPosition, 0.25f, playerColor, 0.0f, true);
+    DebugRender::DrawSphere(bossPosition, 0.35f, bossColor, 0.0f, true);
+    DebugRender::DrawSphere(appliedPose.eye, 0.50f, cameraColor, 0.0f, true);
+    DebugRender::DrawSphere(appliedPose.target, 0.15f, targetColor, 0.0f, true);
+    DebugRender::DrawLine(playerPosition, bossPosition, playerColor, 0.0f, true);
+    DebugRender::DrawLine(appliedPose.eye, appliedPose.target, cameraColor, 0.0f, true);
 }
 
 void DarkCameraActor::PlayCameraShake(const float intensity, const float duration,const float frequency, const float positionAmount, const float targetAmount)
@@ -2120,6 +2146,15 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::DragFloat("LockOn Zoom Out Speed", &lockOnZoomOutSpeed, 0.01f, 0.0f, 30.0f);
 
         ImGui::SeparatorText("Death Camera");
+        ImGui::Checkbox("Show Death Camera Debug", &showDeathCameraDebug);
+        if (showDeathCameraDebug)
+        {
+            ImGui::TextColored(ImVec4(0.1f, 0.9f, 1.0f, 1.0f), "Cyan: Player / Player -> Boss");
+            ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), "Red: Boss");
+            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.1f, 1.0f), "Yellow: Applied Camera / Camera -> Look Target");
+            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "Green: Look Target");
+            ImGui::TextUnformatted("Death mode only. During transition, shows the applied blended pose.");
+        }
         ImGui::DragFloat("Foreground Distance", &deathCameraSettings.foregroundDistance,
             0.05f, 0.1f, 15.0f);
         ImGui::DragFloat("Side Offset", &deathCameraSettings.sideOffset,

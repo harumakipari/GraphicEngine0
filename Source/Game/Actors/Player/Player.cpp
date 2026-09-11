@@ -747,7 +747,6 @@ void Player::Update(float deltaTime)
             bossBattleCameraOffset
         );
         cameraEyeComponent->SetWorldLocationDirect(eyePos);
-        DebugRender::DrawSphere(eyePos, 0.5f, { 1.0f,1.0f,0.0f,1.0f }, true);
     }
 
     // 剣の真ん中、根本、先の座標を取得する
@@ -2387,7 +2386,6 @@ void Player::EndDeathEyeClose()
 // 火花エフェクトの生成
 void Player::SpawnSpark(DirectX::XMFLOAT3 pos)
 {
-    DebugRender::DrawSphere(pos, 0.2f, { 1, 0.5f, 0, 1 }, 0.3f, true);
     if (sparkComponent)
     {
         sparkComponent->SetWorldLocationDirect(pos);

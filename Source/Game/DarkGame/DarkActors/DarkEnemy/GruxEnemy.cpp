@@ -24,6 +24,7 @@
 #include "Game/DarkGame/BehaviorTree/GruxDashAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxChargeAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxRoarBT.h"
+#include "Physics/CollisionFunction.h"
 #include "Game/DarkGame/BehaviorTree/AttackRecoveryBT.h"
 
 #ifdef USE_IMGUI
@@ -232,6 +233,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     //　身体の当たり判定
     {
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("enemyCapsuleComponent", parentName);
+        enemyCapsuleComponent = capsuleComponent;
         //DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
         //size = MathHelper::Multiply(size, GetScale().x);
         //height = size.y;
@@ -472,6 +474,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("RoarPlan", "StartRoar", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartRoar>(this));
     aiTree->AddNode("RoarPlan", "ExecuteRoar", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteRoar>(this));
     aiTree->AddNode("RoarPlan", "FinishRoar", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FinishRoar>(this));
+
+    aiTree->AddNode("Defensive", "RetreatPlan", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanRetreat>(this), nullptr);
+    aiTree->AddNode("RetreatPlan", "PrepareRetreatTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareRetreatTarget>(this));
+    aiTree->AddNode("RetreatPlan", "MoveToPositioningTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToPositioningTarget>(this));
 
     aiTree->AddNode("Root", "Attack", 2, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
     aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
@@ -857,6 +863,8 @@ void GruxEnemy::Update(float deltaTime)
         DrawRotationDebugWorld(aiDebugTargetContext);
     if (positioningWorldDebug)
         DrawPositioningDebugWorld();
+    if (retreatWorldDebug)
+        DrawRetreatDebugWorld();
 #endif
 
     SetScale({ enemyScale,enemyScale,enemyScale });
@@ -1504,10 +1512,8 @@ void GruxEnemy::DrawPositioningDebugWorld() const
     (void)this;
 #endif
 }
+
 //　ボスAIのImGui描画
-
-
-
 void GruxEnemy::DrawImGuiDetails()
 {
     DrawChargeAttackBTDebug();
@@ -5349,17 +5355,90 @@ bool GruxEnemy::PrepareJumpAttackSetupTarget()
     attackSetupCandidateCount = candidateCount;
     return true;
 }
-void GruxEnemy::ClearAttackSetupTarget() { attackSetupTarget={}; attackSetupMovementActive=false; attackSetupElapsedTime=attackSetupTraveledDistance=attackSetupRemainingDistance=attackSetupStuckTime=attackSetupPlannedMoveDistance=0.0f; }
-void GruxEnemy::BeginAttackSetupMovement() { attackSetupMovementActive=attackSetupTarget.valid; attackSetupPreviousPosition=GetPosition(); attackSetupElapsedTime=attackSetupTraveledDistance=attackSetupStuckTime=0.0f; }
-void GruxEnemy::StopAttackSetupMovement() { attackSetupMovementActive=false; StopAIMovement(); EndPositioningAnimation(); }
+void GruxEnemy::ClearPositioningTarget(PositioningTargetContext& target, PositioningTargetRuntime& runtime)
+{
+    target = {};
+    runtime = {};
+}
+
+GruxEnemy::PositioningMoveResult GruxEnemy::UpdatePositioningTargetMovement(
+    PositioningTargetContext& target, PositioningTargetRuntime& runtime, float dt,
+    const char* debugSource)
+{
+    if (!target.valid)
+        return PositioningMoveResult::InvalidTarget;
+    if (!runtime.movementActive)
+    {
+        runtime.movementActive = true;
+        runtime.previousPosition = GetPosition();
+    }
+    const float safeDt = (std::max)(0.0f, dt);
+    runtime.elapsed += safeDt;
+    const auto position = GetPosition();
+    const float dx = target.targetPosition.x - position.x;
+    const float dz = target.targetPosition.z - position.z;
+    runtime.remainingDistance = std::sqrt(dx * dx + dz * dz);
+    if (runtime.remainingDistance <= target.arrivalTolerance)
+        return PositioningMoveResult::Arrived;
+    if (runtime.elapsed >= target.timeout)
+        return PositioningMoveResult::Timeout;
+    const float movedX = position.x - runtime.previousPosition.x;
+    const float movedZ = position.z - runtime.previousPosition.z;
+    const float frameMovement = std::sqrt(movedX * movedX + movedZ * movedZ);
+    runtime.traveledDistance += frameMovement;
+    runtime.previousPosition = position;
+    runtime.stuckTime = frameMovement < target.stuckMovementThreshold
+        ? runtime.stuckTime + safeDt : 0.0f;
+    if (runtime.traveledDistance >= target.maxMoveDistance)
+        return PositioningMoveResult::MaxDistanceReached;
+    if (runtime.stuckTime >= target.stuckTimeThreshold)
+        return PositioningMoveResult::Stuck;
+    if (!characterMovementComponent || !rotationComponent)
+        return PositioningMoveResult::InvalidTarget;
+    const DirectX::XMFLOAT3 direction{ dx / runtime.remainingDistance, 0.0f,
+        dz / runtime.remainingDistance };
+    characterMovementComponent->SetFixedSpeed(target.moveSpeed);
+    characterMovementComponent->SetInputMagnitude(1.0f);
+    characterMovementComponent->SetMoveDirection(direction);
+    RotateTowardsPlayer(direction, GetTurnSpeed(), safeDt, debugSource);
+    UpdatePositioningAnimation(safeDt > 0.0f ? frameMovement / safeDt : 0.0f, safeDt);
+    return PositioningMoveResult::Running;
+}
+
+void GruxEnemy::ClearAttackSetupTarget()
+{
+    ClearPositioningTarget(attackSetupTarget, attackSetupRuntime);
+    attackSetupMovementActive = false;
+    attackSetupElapsedTime = attackSetupTraveledDistance = attackSetupRemainingDistance =
+        attackSetupStuckTime = attackSetupPlannedMoveDistance = 0.0f;
+}
+void GruxEnemy::BeginAttackSetupMovement()
+{
+    attackSetupRuntime = {};
+    attackSetupRuntime.movementActive = attackSetupTarget.valid;
+    attackSetupRuntime.previousPosition = GetPosition();
+    attackSetupMovementActive = attackSetupRuntime.movementActive;
+    attackSetupPreviousPosition = attackSetupRuntime.previousPosition;
+    attackSetupElapsedTime = attackSetupTraveledDistance = attackSetupStuckTime = 0.0f;
+}
+void GruxEnemy::StopAttackSetupMovement()
+{
+    attackSetupRuntime.movementActive = false;
+    attackSetupMovementActive = false;
+    StopAIMovement();
+    EndPositioningAnimation();
+}
 GruxEnemy::AttackSetupMoveResult GruxEnemy::UpdateAttackSetupMovement(float dt)
 {
-    if (!attackSetupTarget.valid) return AttackSetupMoveResult::InvalidTarget; if (!attackSetupMovementActive) BeginAttackSetupMovement();
-    attackSetupElapsedTime += (std::max)(0.0f,dt); const auto pos=GetPosition(); float dx=attackSetupTarget.targetPosition.x-pos.x,dz=attackSetupTarget.targetPosition.z-pos.z; attackSetupRemainingDistance=std::sqrt(dx*dx+dz*dz);
-    if (attackSetupRemainingDistance<=attackSetupTarget.arrivalTolerance) return AttackSetupMoveResult::Arrived; if (attackSetupElapsedTime>=attackSetupTarget.timeout) return AttackSetupMoveResult::Timeout;
-    float mx=pos.x-attackSetupPreviousPosition.x,mz=pos.z-attackSetupPreviousPosition.z; float frameMove=std::sqrt(mx*mx+mz*mz); attackSetupTraveledDistance+=frameMove; attackSetupPreviousPosition=pos; if(frameMove<attackSetupTarget.stuckMovementThreshold) attackSetupStuckTime+=dt; else attackSetupStuckTime=0.0f;
-    if(attackSetupTraveledDistance>=attackSetupTarget.maxMoveDistance) return AttackSetupMoveResult::MaxDistanceReached; if(attackSetupStuckTime>=attackSetupTarget.stuckTimeThreshold) return AttackSetupMoveResult::Stuck;
-    if(characterMovementComponent){ const DirectX::XMFLOAT3 moveDirection{dx/attackSetupRemainingDistance,0.0f,dz/attackSetupRemainingDistance}; characterMovementComponent->SetFixedSpeed(attackSetupTarget.moveSpeed); characterMovementComponent->SetInputMagnitude(1.0f); characterMovementComponent->SetMoveDirection(moveDirection); RotateTowardsPlayer(moveDirection, GetTurnSpeed(), dt, "AttackSetupMovement"); } UpdatePositioningAnimation(dt>0.0f?frameMove/dt:0.0f,dt); return AttackSetupMoveResult::Running;
+    const auto result = UpdatePositioningTargetMovement(attackSetupTarget, attackSetupRuntime,
+        dt, "AttackSetupMovement");
+    attackSetupMovementActive = attackSetupRuntime.movementActive;
+    attackSetupPreviousPosition = attackSetupRuntime.previousPosition;
+    attackSetupElapsedTime = attackSetupRuntime.elapsed;
+    attackSetupTraveledDistance = attackSetupRuntime.traveledDistance;
+    attackSetupRemainingDistance = attackSetupRuntime.remainingDistance;
+    attackSetupStuckTime = attackSetupRuntime.stuckTime;
+    return result;
 }
 
 void GruxEnemy::RefreshFastComboTargetContext(int stage)
