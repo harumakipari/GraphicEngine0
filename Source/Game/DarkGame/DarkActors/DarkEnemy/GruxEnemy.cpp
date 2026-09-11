@@ -21,6 +21,8 @@
 #include "Game/DarkGame/BehaviorTree/JudgementBase.h"
 #include "Game/DarkGame/BehaviorTree/GruxFastComboBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxJumpAttackBT.h"
+#include "Game/DarkGame/BehaviorTree/GruxDashAttackBT.h"
+#include "Game/DarkGame/BehaviorTree/AttackRecoveryBT.h"
 
 #ifdef USE_IMGUI
 namespace
@@ -456,10 +458,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("Death", "StartDeath", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTStartDeath>(this));
     aiTree->AddNode("Death", "ExecuteDeath", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTExecuteDeath>(this));
 
-    aiTree->AddNode("Root", "Attack", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
-    aiTree->AddNode("Root", "Idle", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
+    aiTree->AddNode("Root", "Attack", 2, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
+    aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
-    aiTree->AddNode("Attack", "FastComboPlan", 1, BehaviorTree::SelectRule::Sequence, nullptr, nullptr);
+    aiTree->AddNode("Attack", "FastComboPlan", 2, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
 
     aiTree->AddNode("FastComboPlan", "CanPlanFastCombo", 0, BehaviorTree::SelectRule::Non, std::make_unique<::CanPlanFastCombo>(this), std::make_unique<BTCompleteAction>(this));
     aiTree->AddNode("FastComboPlan", "ApproachIfNeeded", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ApproachIfNeeded>(this));
@@ -468,9 +470,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("FastComboPlan", "PrepareFastCombo", 4, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<PrepareFastCombo>(this));
     aiTree->AddNode("FastComboPlan", "StartFastCombo", 4, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartFastCombo>(this));
     aiTree->AddNode("FastComboPlan", "ExecuteFastCombo", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteFastCombo>(this));
-    aiTree->AddNode("FastComboPlan", "ExecuteRecovery", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteFastComboRecovery>(this));
+    aiTree->AddNode("FastComboPlan", "ExecuteAttackRecovery", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteAttackRecovery>(this));
 
-    aiTree->AddNode("Attack", "JumpAttack", 0, BehaviorTree::SelectRule::Sequence, nullptr, nullptr);
+    aiTree->AddNode("Attack", "JumpAttack", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanJumpAttack>(this), std::make_unique<BTCompleteAction>(this));
 
     aiTree->AddNode("JumpAttack", "CanPlanJumpAttack", 0, BehaviorTree::SelectRule::Non, std::make_unique<::CanPlanJumpAttack>(this), std::make_unique<BTCompleteAction>(this));
     aiTree->AddNode("JumpAttack", "PrepareJumpSetupTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareJumpSetupTarget>(this));
@@ -479,13 +481,19 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("JumpAttack", "CanExecuteJumpAttack", 4, BehaviorTree::SelectRule::Non, std::make_unique<::CanExecuteJumpAttack>(this), std::make_unique<BTCompleteAction>(this));
     aiTree->AddNode("JumpAttack", "StartJumpAttack", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartJumpAttack>(this));
     aiTree->AddNode("JumpAttack", "ExecuteJumpAttack", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteJumpAttack>(this));
-    aiTree->AddNode("JumpAttack", "ExecuteRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteJumpAttackRecovery>(this));
+    aiTree->AddNode("JumpAttack", "ExecuteAttackRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteAttackRecovery>(this));
 
+    aiTree->AddNode("Attack", "DashAttackPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<DashPlanAvailable>(this), nullptr);
 
+    aiTree->AddNode("DashAttackPlan", "CanPlanDashAttack", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::CanPlanDashAttack>(this));
+    aiTree->AddNode("DashAttackPlan", "PrepareDashSetupTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<PrepareDashSetupTarget>(this));
+    aiTree->AddNode("DashAttackPlan", "MoveToAttackSetupTarget", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToAttackSetupTarget>(this));
+    aiTree->AddNode("DashAttackPlan", "FacePlayerIfNeeded", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<FaceDashPlayerIfNeeded>(this));
+    aiTree->AddNode("DashAttackPlan", "CanExecuteDashAttack", 4, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::CanExecuteDashAttack>(this));
+    aiTree->AddNode("DashAttackPlan", "StartDashAttack", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartDashAttack>(this));
+    aiTree->AddNode("DashAttackPlan", "ExecuteDashAttack", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteDashAttack>(this));
+    aiTree->AddNode("DashAttackPlan", "ExecuteAttackRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<ExecuteAttackRecovery>(this));
 }
-
-
-
 
 void GruxEnemy::SetHpBarVisible(const bool visible)
 {
@@ -548,6 +556,12 @@ void GruxEnemy::ResumeBattleAI()
 
 void GruxEnemy::StopBattleActions()
 {
+    if (IsDashAttackBTActive())
+    {
+        CleanupDashAttackBT();
+        activeNode = nullptr;
+        if (behaviorData) behaviorData->Init();
+    }
     DisableAttackHitBoxes();
     StopDashAttackMovement();
     StopChargeAttackMovement();
@@ -718,10 +732,23 @@ void GruxEnemy::Update(float deltaTime)
 
     BeginRotationDebugFrame();
 
+    // Dash owns cleanup even when the BT is disabled or an external state interrupts it.
+    if (IsDashAttackBTActive() &&
+        (!behaviorTreeFastComboEnabled || !battleAIActive || IsDead() ||
+            (stateMachine_ && (std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") == 0 ||
+                std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") == 0))))
+    {
+        CleanupDashAttackBT();
+        activeNode = nullptr;
+        if (behaviorData) behaviorData->Init();
+    }
+
     // Behavior
     if (behaviorTreeFastComboEnabled)
     {
         UpdateBehaviorTree(deltaTime);
+        if (IsDashAttackBTActive() && (!activeNode || aiTree->GetLastRunResult() == ActionBase::State::Failed))
+            CleanupDashAttackBT();
         auto savedStateMachine = stateMachine_; stateMachine_.reset();
         Character::Update(deltaTime);
         stateMachine_ = savedStateMachine;
@@ -1825,6 +1852,46 @@ void GruxEnemy::DrawImGuiDetails()
     }
 
 
+    ImGui::SeparatorText(U8("ダッシュBT"));
+    ImGui::DragFloat(U8("ダッシュ準備距離 最小"),&dashSetupDistanceMin,0.1f,0.1f,30.0f,"%.2f m");
+    ImGui::DragFloat(U8("ダッシュ準備距離 最大"),&dashSetupDistanceMax,0.1f,0.1f,30.0f,"%.2f m");
+    ImGui::DragFloat(U8("ダッシュ準備 最低移動距離"),&dashSetupMinimumMoveDistance,0.1f,0.0f,30.0f,"%.2f m");
+    dashSetupDistanceMin = (std::max)(0.1f, dashSetupDistanceMin);
+    dashSetupDistanceMax = (std::max)(dashSetupDistanceMin, dashSetupDistanceMax);
+    dashSetupMinimumMoveDistance = (std::max)(0.0f, dashSetupMinimumMoveDistance);
+    const char* dashPhaseNames[] =
+    {
+        U8("待機"),
+        U8("準備移動"),
+        U8("旋回"),
+        U8("予兆"),
+        U8("ダッシュ"),
+        U8("打ち上げ"),
+        U8("後隙")
+    };
+    const int dashStage =
+        dashBTPhase == DashBTPhase::Telegraph ? 0 :
+        dashBTPhase == DashBTPhase::Movement ? 1 :
+        dashBTPhase == DashBTPhase::Knockup ? 2 :-1;
+
+    ImGui::Text(U8("ダッシュBT状態: %s"),dashPhaseNames[static_cast<int>(dashBTPhase)]);
+    ImGui::Text(U8("ダッシュ予兆中: %s"),dashBTPhase == DashBTPhase::Telegraph? U8("はい"): U8("いいえ"));
+    ImGui::Text(U8("ダッシュStage: %d"),dashStage);
+    ImGui::Text(U8("ダッシュ固定方向: (%.3f, %.3f, %.3f)"),dashAttackDirection.x,dashAttackDirection.y,dashAttackDirection.z);
+    ImGui::Text(U8("ダッシュ予定距離: %.2f m"),calculatedDashAttackDistance);
+    ImGui::Text(U8("ダッシュ移動距離: %.2f m"),dashBTTraveledDistance);
+    ImGui::Text(U8("ダッシュ残り時間: %.2f sec"),dashBTPhase == DashBTPhase::Movement? (std::max)(0.0f, dashAttackTimeout - dashAttackElapsedTime): 0.0f);
+    const char* recoveryAttackName = "None";
+    for (const auto& attack : combatAttackData)
+    {
+        if (attack.type == selectedAttackType)
+        {
+            recoveryAttackName = attack.animationName.c_str();
+            break;
+        }
+    }
+    ImGui::Text(U8("現在の攻撃: %s"),recoveryAttackName);
+    ImGui::Text(U8("現在の後隙時間: %.2f sec"),GetSelectedAttackRecoveryDuration());
 
     ImGui::Text("Active Intent: %s", activeIntentName);
     ImGui::Text("Intent Goal: %s", activeIntentGoal);
@@ -2214,12 +2281,34 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Remaining Distance: %.3f", attackSetupRemainingDistance);
     ImGui::Text("Elapsed Time: %.3f", attackSetupElapsedTime);
     ImGui::Text("Current Move Result: %s", attackSetupMovementActive ? "Running" : (attackSetupTarget.valid ? "Ready" : "None"));
-    ImGui::Text(U8("\u5b9f\u969b\u306e\u6e96\u5099\u79fb\u52d5\u8ddd\u96e2: %.3f"), attackSetupPlannedMoveDistance);
-    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7 \u6e96\u5099 \u6700\u4f4e\u79fb\u52d5\u8ddd\u96e2: %.3f"), jumpSetupMinimumMoveDistance);
+    ImGui::Text(
+        U8("実際の準備移動距離: %.3f"),
+        attackSetupPlannedMoveDistance);
+
+    ImGui::Text(
+        U8("ジャンプ準備 最低移動距離: %.3f"),
+        jumpSetupMinimumMoveDistance);
+
     float setupAngle = 0.0f;
-    { const auto p = GetPosition(); const float dx = attackSetupTarget.targetPosition.x - p.x; const float dz = attackSetupTarget.targetPosition.z - p.z; if (std::abs(dx) + std::abs(dz) > FLT_EPSILON) setupAngle = DirectX::XMConvertToDegrees(std::atan2f(dx, dz)); }
-    ImGui::Text(U8("\u30bf\u30fc\u30b2\u30c3\u30c8\u65b9\u5411\u89d2\u5ea6: %.2f deg"), setupAngle);
-    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7\u6e96\u5099\u8ddd\u96e2: %.3f"), GetJumpAttackDesiredStartDistance());
+    {
+        const auto p = GetPosition();
+        const float dx = attackSetupTarget.targetPosition.x - p.x;
+        const float dz = attackSetupTarget.targetPosition.z - p.z;
+
+        if (std::abs(dx) + std::abs(dz) > FLT_EPSILON)
+        {
+            setupAngle =
+                DirectX::XMConvertToDegrees(std::atan2f(dx, dz));
+        }
+    }
+
+    ImGui::Text(
+        U8("ターゲット方向角度: %.2f deg"),
+        setupAngle);
+
+    ImGui::Text(
+        U8("ジャンプ準備距離: %.3f"),
+        GetJumpAttackDesiredStartDistance());
     ImGui::SeparatorText(U8("ジャンプ攻撃位置調整"));
     ImGui::DragFloat(
         U8("位置調整距離 最小"),
@@ -2233,7 +2322,7 @@ void GruxEnemy::DrawImGuiDetails()
 
     jumpSetupDistanceMin = (std::max)(0.1f, jumpSetupDistanceMin);
     jumpSetupDistanceMax = (std::max)(jumpSetupDistanceMin, jumpSetupDistanceMax);
-    ImGui::DragFloat(U8("\u30b8\u30e3\u30f3\u30d7\u6e96\u5099 \u6700\u4f4e\u79fb\u52d5\u8ddd\u96e2"), &jumpSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
+    ImGui::DragFloat(U8("ジャンプ最低移動距離"), &jumpSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
     jumpSetupMinimumMoveDistance = (std::max)(0.0f, jumpSetupMinimumMoveDistance);
 
     ImGui::Text(
@@ -2257,15 +2346,50 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text(
         U8("候補数: %d"),
         attackSetupCandidateCount);
-    ImGui::SeparatorText("JumpAttack Debug");
+    ImGui::SeparatorText(U8("ジャンプ攻撃デバッグ"));
+
     const auto jumpController = GetBodyAnimationController();
-    const std::string jumpAnimation = jumpController ? jumpController->GetCurrentAnimationName() : std::string{};
-    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7BT\u72b6\u614b: %s"), behaviorTreeCurrentNode.c_str());
-    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7\u4e88\u5146\u518d\u751f\u4e2d: %s"), jumpAnimation == "Pre_Stampede_0" ? "true" : "false");
-    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7Stage: %d"), jumpAnimation == "PrimaryAttack_JumpAttack" ? 1 : jumpAnimation == "Pre_Stampede_0" ? 0 : -1);
-    ImGui::Text(U8("\u30b8\u30e3\u30f3\u30d7MotionWarp\u6709\u52b9: %s"), jumpMotionWarpOverrideActive ? "true" : "false");
-    ImGui::DragFloat("Max Jump Distance", &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
-    ImGui::DragFloat("Desired Attack Distance", &desiredAttackDistance, 0.05f, 0.0f, 10.0f, "%.2f");
+
+    const std::string jumpAnimation =
+        jumpController
+        ? jumpController->GetCurrentAnimationName()
+        : std::string{};
+
+    ImGui::Text(
+        U8("ジャンプBT状態: %s"),
+        behaviorTreeCurrentNode.c_str());
+
+    ImGui::Text(
+        U8("ジャンプ予兆再生中: %s"),
+        jumpAnimation == "Pre_Stampede_0" ? "true" : "false");
+
+    ImGui::Text(
+        U8("ジャンプStage: %d"),
+        jumpAnimation == "PrimaryAttack_JumpAttack"
+        ? 1
+        : jumpAnimation == "Pre_Stampede_0"
+        ? 0
+        : -1);
+
+    ImGui::Text(
+        U8("ジャンプMotionWarp有効: %s"),
+        jumpMotionWarpOverrideActive ? "true" : "false");
+
+    ImGui::DragFloat(
+        U8("最大ジャンプ距離"),
+        &maxJumpDistance,
+        0.05f,
+        0.0f,
+        30.0f,
+        "%.2f");
+
+    ImGui::DragFloat(
+        U8("攻撃時の理想距離"),
+        &desiredAttackDistance,
+        0.05f,
+        0.0f,
+        10.0f,
+        "%.2f");
     currentJumpPlayerDistance = GetDistanceToPlayer();
     ImGui::Text("Current Player Distance: %.3f", currentJumpPlayerDistance);
     ImGui::Text("Calculated Jump Distance: %.3f", calculatedJumpDistance);
@@ -4608,7 +4732,7 @@ bool GruxEnemy::BeginDashAttackMovement()
     return true;
 }
 
-bool GruxEnemy::UpdateDashAttackMovement(float deltaTime)
+bool GruxEnemy::UpdateDashAttackMovement(float deltaTime, bool keepLockedDirection)
 {
     if (!dashAttackMovementActive)
         return true;
@@ -4632,7 +4756,9 @@ bool GruxEnemy::UpdateDashAttackMovement(float deltaTime)
     }
 
     const float inverseDistance = 1.0f / remainingDistance;
-    const DirectX::XMFLOAT3 directionToTarget = { dx * inverseDistance, 0.0f, dz * inverseDistance };
+    const DirectX::XMFLOAT3 directionToTarget = keepLockedDirection
+        ? dashAttackDirection
+        : DirectX::XMFLOAT3{ dx * inverseDistance, 0.0f, dz * inverseDistance };
     if (characterMovementComponent)
         characterMovementComponent->SetMoveDirection(directionToTarget);
     if (rotationComponent)
@@ -5089,6 +5215,7 @@ bool GruxEnemy::CanPlanJumpAttack() const
     }
     return false;
 }
+
 bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount) const
 {
     outTarget = {};

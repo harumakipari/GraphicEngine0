@@ -132,18 +132,3 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
     started = false;
     return State::Complete;
 }
-
-ActionBase::State ExecuteJumpAttackRecovery::Run(float dt)
-{
-    if (!started)
-    {
-        owner->BeginRecovery();
-        timer = 0.0f;
-        started = true;
-    }
-    timer += dt;
-    if (timer < owner->GetBehaviorRecoveryDuration())
-        return State::Run;
-    started = false;
-    return State::Complete;
-}

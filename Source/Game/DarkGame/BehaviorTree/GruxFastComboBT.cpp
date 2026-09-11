@@ -169,21 +169,6 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
     if (owner->GetBodyAnimationController()->IsPlayAnimation()) return State::Run;
     owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success); owner->StartSelectedActionCooldown(); started = false; return State::Complete;
 }
-ActionBase::State ExecuteFastComboRecovery::Run(float dt)
-{
-    if (!started)
-    {
-        owner->BeginRecovery();
-        timer = 0.0f;
-        started = true;
-    }
-    timer += dt;
-    if (timer < owner->GetBehaviorRecoveryDuration())
-        return State::Run;
-    started = false;
-    return State::Complete;
-}
-
 ActionBase::State PrepareFastCombo::Run(float deltaTime)
 {
     if (!started)
@@ -325,16 +310,6 @@ void GruxEnemy::BeginRecovery() const
     PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true);
 }
 
-
-float GruxEnemy::GetBehaviorRecoveryDuration() const
-{
-    for (const auto& a : combatAttackData)
-    {
-        if (a.type == BossAttackType::FastCombo)
-            return a.recoveryDuration;
-    }
-    return recoveryDuration;
-}
 
 void GruxEnemy::UpdateBehaviorTree(float dt)
 {

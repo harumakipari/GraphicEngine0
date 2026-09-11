@@ -65,13 +65,3 @@ private:
     bool finishAfterAnimation = false;
     int stageHitCount = 0;
 };
-
-class ExecuteJumpAttackRecovery : public ActionBase
-{
-public:
-    using ActionBase::ActionBase;
-    State Run(float) override;
-private:
-    bool started = false;
-    float timer = 0.0f;
-};

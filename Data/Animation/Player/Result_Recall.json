@@ -20,7 +20,7 @@
     "playRate": 1.0,
     "states": [
         {
-            "endTime": 1.3999998569488525,
+            "endTime": 2.425640821456909,
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -44,7 +44,7 @@
             "value": 1.0
         },
         {
-            "endTime": 1.7824158668518066,
+            "endTime": 2.434431552886963,
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,

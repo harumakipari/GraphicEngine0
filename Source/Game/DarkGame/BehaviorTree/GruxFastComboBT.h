@@ -116,16 +116,6 @@ private:
     GruxEnemy::FastComboRuntimeState runtimeState = GruxEnemy::FastComboRuntimeState::Attack;
 };
 
-// FastCombo後のRecovery
-class ExecuteFastComboRecovery : public ActionBase
-{
-private:
-    float timer = 0.0f;
-    bool started = false;
-public:
-    using ActionBase::ActionBase;
-    State Run(float) override;
-};
 
 // FastCombo開始前の短い準備時間
 class PrepareFastCombo : public ActionBase

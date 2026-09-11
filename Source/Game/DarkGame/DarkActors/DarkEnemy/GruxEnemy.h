@@ -148,8 +148,19 @@ public:
     bool PlayAttackAnimationByName(const std::string& animationName);
     void BeginAdditionalAttackStage();
     void ClearJumpAttackMotionWarpOverride();
+    bool CanPlanDashAttack() const;
+    bool PrepareDashAttackSetupTarget();
+    bool CanExecuteDashAttack() const;
+    bool StartDashAttackTelegraph();
+    enum class DashBTPhase { None, Setup, Facing, Telegraph, Movement, Knockup, Recovery };
+    enum class DashBTResult { Running, Complete, Failed };
+    DashBTResult UpdateDashAttackBT(float deltaTime);
+    void CleanupDashAttackBT();
+    void FinishDashAttackBT();
+    bool IsDashAttackBTActive() const { return dashBTPhase != DashBTPhase::None; }
+    void SetDashBTFacing() { dashBTPhase = DashBTPhase::Facing; }
     bool BeginDashAttackMovement();
-    bool UpdateDashAttackMovement(float deltaTime);
+    bool UpdateDashAttackMovement(float deltaTime, bool keepLockedDirection = false);
     void StopDashAttackMovement();
     bool BeginChargeAttackMovement();
     ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime);
@@ -339,7 +350,7 @@ public:
     void BeginRecovery() const;
 
     // BehaviorTree用の攻撃終了後Recovery時間を取得
-    float GetBehaviorRecoveryDuration() const;
+    float GetSelectedAttackRecoveryDuration() const { return GetRecoveryDurationForCurrentAttack(); }
     // BehaviorTree用の攻撃準備時間を取得
     float GetBehaviorPrepareDuration() const { return fastComboPrepareDuration; }
     float GetFastComboApproachMaxDuration() const { return fastComboApproachMaxDuration; }
@@ -855,7 +866,7 @@ private:
     float jumpDesiredStartDistance = 4.5f;
     float jumpSetupDistanceMin = 6.5f;
     float jumpSetupDistanceMax = 8.5f;
-    float jumpSetupMinimumMoveDistance = 3.0f;
+    float jumpSetupMinimumMoveDistance = 5.0f;  // JumpAttackで最低限移動距離
     float attackSetupCandidateAngleStep = 30.0f;
     float attackSetupClampTolerance = 0.75f; //  JumpAttack後にプレイヤーとの間へ残したい距離
     float jumpAttackTelegraphStartTime = 1.4f;  // 予備動作の開始アニメーション時間
@@ -868,6 +879,14 @@ private:
     DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  //  ボスからJumpAttack開始時のプレイヤー位置へ向かう正規化済み方向
 
     // DashAttack
+    float dashSetupDistanceMin = 8.0f;
+    float dashSetupDistanceMax = 10.0f;
+    float dashSetupMinimumMoveDistance = 5.0f;  // ダッシュ移動最低距離
+    DashBTPhase dashBTPhase = DashBTPhase::None;
+    bool dashBTAttackStarted = false;
+    BossActionType dashBTPreviousAction = BossActionType::AttackLA;
+    float dashBTTelegraphElapsed = 0.0f;
+    float dashBTTraveledDistance = 0.0f;
     float dashWindupDuration = 1.40f;   // 予備動作の時間
     float dashAttackSpeed = 12.0f;
     float minDashAttackDistance = 4.0f;
