@@ -1,0 +1,15 @@
+{
+    "animationClip": 17,
+    "animationName": "LevelStart_0",
+    "events": [
+        {
+            "parameter": "RoarShockwave",
+            "time": 0.30,
+            "type": "GameplayEvent",
+            "value": 0.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

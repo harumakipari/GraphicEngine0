@@ -23,6 +23,7 @@
 #include "Game/DarkGame/BehaviorTree/GruxJumpAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxDashAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxChargeAttackBT.h"
+#include "Game/DarkGame/BehaviorTree/GruxRoarBT.h"
 #include "Game/DarkGame/BehaviorTree/AttackRecoveryBT.h"
 
 #ifdef USE_IMGUI
@@ -303,7 +304,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightFootComponent->AttachToComponent(skeletalMeshComponent, socketRightFootNode); // "ik_foot_r"
 
     //　ベルトのコンポーネントを追加
-    int socketBeltNode = skeletalMeshComponent->FindIndexByName("belt");
+    int socketBeltNode = skeletalMeshComponent->FindIndexByName("muscle_pec_r");
     beltComponent = AddComponent<SceneComponent>("beltComponent", parentName);
     beltComponent->AttachToComponent(skeletalMeshComponent, socketBeltNode); // "belt"
 
@@ -459,6 +460,13 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("Death", "StartDeath", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTStartDeath>(this));
     aiTree->AddNode("Death", "ExecuteDeath", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTExecuteDeath>(this));
 
+    aiTree->AddNode("Root", "Defensive", 1, BehaviorTree::SelectRule::Priority, std::make_unique<::CanPlanAnyDefensive>(this), nullptr);
+
+    aiTree->AddNode("Defensive", "RoarPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanRoar>(this), nullptr);
+    aiTree->AddNode("RoarPlan", "StartRoar", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartRoar>(this));
+    aiTree->AddNode("RoarPlan", "ExecuteRoar", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteRoar>(this));
+    aiTree->AddNode("RoarPlan", "FinishRoar", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::FinishRoar>(this));
+
     aiTree->AddNode("Root", "Attack", 2, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
     aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
@@ -565,6 +573,12 @@ void GruxEnemy::ResumeBattleAI()
 
 void GruxEnemy::StopBattleActions()
 {
+    if (IsRoarBTActive())
+    {
+        CleanupRoarBT("Interrupted");
+        activeNode = nullptr;
+        if (behaviorData) behaviorData->Init();
+    }
     if (IsChargeAttackBTActive())
     {
         CleanupChargeAttackBT();
@@ -690,6 +704,7 @@ void GruxEnemy::EndFinalHitReaction()
 
 void GruxEnemy::Update(float deltaTime)
 {
+    TickRoarLifecycle(deltaTime);
     // Charge cleanup precedes cinematic/editor early returns and does not overwrite their animation.
     if (ShouldAbortChargeAttackBT())
     {
@@ -1337,6 +1352,8 @@ void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
             }
         };
 
+    drawRing(defensiveTooCloseDistance, { 0.1f, 0.8f, 1.0f, 1.0f });
+    drawRing(roarRadius, { 1.0f, 0.15f, 0.6f, 1.0f });
     drawRing(nearDistanceThreshold, { 0.2f, 1.0f, 0.2f, 1.0f });
     drawRing(middleDistanceThreshold, { 1.0f, 0.7f, 0.1f, 1.0f });
     if (showCloseCombatDebugRange) { drawRing(closeCombatSettings.minRange, { 0.2f, 0.8f, 1.0f, 1.0f }); drawRing(closeCombatSettings.executeMaxRange, { 0.2f, 1.0f, 0.2f, 1.0f }); drawRing(closeCombatSettings.planMaxRange, { 1.0f, 0.2f, 0.8f, 1.0f }); }
@@ -1488,6 +1505,7 @@ void GruxEnemy::DrawPositioningDebugWorld() const
 void GruxEnemy::DrawImGuiDetails()
 {
     DrawChargeAttackBTDebug();
+    DrawRoarBTDebug();
 #ifdef USE_IMGUI
     Character::DrawImGuiDetails();
 
@@ -3586,6 +3604,11 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
+    if (event.type == AnimationNotifyEvent::Type::GameplayEvent && event.parameter == "RoarShockwave")
+    {
+        ApplyRoarShockwave();
+        return;
+    }
     if (finalHitReactionActive) return;
     if (event.parameter == "BeginHuskParticle" && isDeathPerform)
     {

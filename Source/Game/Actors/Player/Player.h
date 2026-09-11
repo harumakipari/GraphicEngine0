@@ -77,7 +77,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        maxHp = 10;
+        //maxHp = 10;
         hp = maxHp;
     }
 
@@ -219,6 +219,7 @@ public:
     bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition);
 
     // Damageとは独立した、外部攻撃からの強制移動開始口。
+    bool CanReceiveKnockBack() const;
     bool StartKnockBack(const DirectX::XMFLOAT3& direction);
 
     void ClearActionRequest(const char* reason);

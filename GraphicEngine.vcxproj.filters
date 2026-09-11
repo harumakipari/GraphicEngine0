@@ -412,6 +412,9 @@
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxChargeAttackBT.cpp">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxRoarBT.cpp">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxDashAttackBT.cpp">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClCompile>
@@ -1003,6 +1006,9 @@
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxChargeAttackBT.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxRoarBT.h">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxDashAttackBT.h">

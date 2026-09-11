@@ -3262,6 +3262,16 @@ void Player::ApplyDamageFlash(float flashAmount)
     applyToMesh(skeletalMeshComponent);
 }
 
+// Non-damaging reactions use the same immunity gates as TryTakeDamage,
+// without damage state, sound, vibration or dodge-record side effects.
+bool Player::CanReceiveKnockBack() const
+{
+    if (!stateMachine_ || hp <= 0 || IsPendingKill() || finalHitWaiting || invincibleWindow || invincible)
+        return false;
+    const std::string state = stateMachine_->GetStateName();
+    return state != "Damage" && state != "DeathPending" && state != "Death";
+}
+
 bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)
 {
     if (!stateMachine_ || hp <= 0 ||

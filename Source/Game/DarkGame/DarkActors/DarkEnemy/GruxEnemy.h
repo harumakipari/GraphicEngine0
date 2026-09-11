@@ -263,6 +263,19 @@ public:
     bool WasCurrentAttackSequenceJustDodged() const { return !justDodgedActors.empty(); }
     float GetActiveHitBoxElapsedForDebug() const;
     std::string GetCurrentAttackNameForDebug() const;
+    enum class RoarStage { None, Telegraph, Shockwave };
+    bool AreAttackBehaviorsDisabledForDebug() const { return disableAttackBehaviorsForDebug; }
+    bool CanPlanRoar() const;
+    bool EvaluateRoarPlanForDebug() const;
+    std::string GetRoarRejectReasonForDebug() const;
+    bool IsRoarExecutionAllowed() const;
+    bool IsRoarBTActive() const { return roarBT.stage != RoarStage::None; }
+    bool BeginRoarBT();
+    int UpdateRoarBT(float dt);
+    void ApplyRoarShockwave();
+    void CleanupRoarBT(const char* status);
+    void TickRoarLifecycle(float dt);
+    void DrawRoarBTDebug();
     BossTargetContext BuildTargetContext() const;
     void RefreshFastComboTargetContext(int stage);
     struct AttackSetupTargetContext { bool valid=false; DirectX::XMFLOAT3 targetPosition{}; float arrivalTolerance=0.3f; float timeout=3.0f; float maxMoveDistance=20.0f; float moveSpeed=6.0f; float stuckMovementThreshold=0.1f; float stuckTimeThreshold=0.5f; };
@@ -692,6 +705,29 @@ private:
     float activeTurnDebugTargetYaw = 0.0f;
     std::string activeTurnDebugFromState = "None";
     BossTargetContext aiDebugTargetContext{};
+    bool disableAttackBehaviorsForDebug = false;
+    float defensiveTooCloseDistance = 5.2f;
+    float roarRadius = 5.0f;
+    float roarHeightTolerance = 2.0f;
+    float roarPreStampedeStartTime = 3.4f;  // 咆哮開始時間
+    float roarPreStampedeEndTime = 7.1f;    // 咆哮終了時間
+    float roarCooldownDuration = 10.0f;
+    float roarCooldownRemaining = 0.0f;
+    struct RoarRuntime
+    {
+        RoarStage stage = RoarStage::None;
+        bool shockwaveFired = false;
+        bool hitPlayer = false;
+        float elapsed = 0.0f;
+        float stalled = 0.0f;
+        float previousTime = 0.0f;
+        float endTime = 0.0f;
+    } roarBT;
+    std::string roarBTStatus = "Idle";
+    mutable bool roarPlanDebugEvaluated = false;
+    mutable bool roarPlanDebugLastResult = false;
+    mutable std::string roarPlanDebugLastRejectReason;
+    mutable std::string roarPlanDebugLastNode;
     BossTargetContext fastComboTargetContext{};
     std::array<BossTargetContext, 3> fastComboStageTargetContexts{};
     int fastComboTargetStage = -1;
@@ -882,17 +918,17 @@ private:
     std::string positioningEndReason = "None";
 
     // FastComboの連続攻撃用
-    bool transitionWindow = false;  //   Animation NotifyのTransitionWindowが現在有効かを表す。FastComboで次のコンボ段階へ進めるタイミングの判定に使用。
+    bool transitionWindow = false;      // Animation NotifyのTransitionWindowが現在有効かを表す。FastComboで次のコンボ段階へ進めるタイミングの判定に使用。
 
     // JumpAttackのMotionWarp用
-    float maxJumpDistance = 12.5f;//  JumpAttackで実際に移動してよい最大距離。プレイヤーが遠くても12.5より長くは移動しない。
+    float maxJumpDistance = 12.5f;      // JumpAttackで実際に移動してよい最大距離。プレイヤーが遠くても12.5より長くは移動しない。
     float desiredAttackDistance = 0.1f;
     float jumpDesiredStartDistance = 4.5f;
     float jumpSetupDistanceMin = 6.5f;
     float jumpSetupDistanceMax = 8.5f;
     float jumpSetupMinimumMoveDistance = 5.0f;  // JumpAttackで最低限移動距離
     float attackSetupCandidateAngleStep = 30.0f;
-    float attackSetupClampTolerance = 0.75f; //  JumpAttack後にプレイヤーとの間へ残したい距離
+    float attackSetupClampTolerance = 0.75f;    //  JumpAttack後にプレイヤーとの間へ残したい距離
     float jumpAttackTelegraphStartTime = 1.4f;  // 予備動作の開始アニメーション時間
     float jumpAttackTelegraphEndTime = 2.6f;
     float currentJumpPlayerDistance = 0.0f; //  JumpAttack開始時点のプレイヤーまでの距離
