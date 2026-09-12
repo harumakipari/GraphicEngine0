@@ -37,8 +37,7 @@ void BehaviorTree::AddNode(std::string parentName,
 				priority,
 				selectRule,
 				std::move(judgment),
-				std::move(action)
-			);
+				std::move(action), owner);
 			parentShared->AddChild(addNode);
 		}
 	}
@@ -52,8 +51,7 @@ void BehaviorTree::AddNode(std::string parentName,
 				priority,
 				selectRule,
 				std::move(judgment),
-				std::move(action)
-			);
+				std::move(action), owner);
 		}
 	}
 }

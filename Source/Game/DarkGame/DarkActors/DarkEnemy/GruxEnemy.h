@@ -283,6 +283,10 @@ public:
     void DrawRoarBTDebug();
     float GetRoarRenderFootOffset() const;
     BossTargetContext BuildTargetContext() const;
+    bool IsNearFrontForAttackSelection() const;
+    bool IsDefensiveBackForBehavior(const BossTargetContext& context) const;
+    float GetNearFrontFastComboProbability() const { return nearFrontFastComboProbability; }
+    void RecordAttackSelectorDebug(const char* mode, int count, float probability, float roll, const char* selected);
     void RefreshFastComboTargetContext(int stage);
     struct PositioningTargetContext { bool valid=false; DirectX::XMFLOAT3 targetPosition{}; float arrivalTolerance=0.3f; float timeout=3.0f; float maxMoveDistance=20.0f; float moveSpeed=6.0f; float stuckMovementThreshold=0.1f; float stuckTimeThreshold=0.5f; };
     struct PositioningTargetRuntime { DirectX::XMFLOAT3 previousPosition{}; float elapsed=0.0f; float traveledDistance=0.0f; float remainingDistance=0.0f; float stuckTime=0.0f; bool movementActive=false; };
@@ -941,6 +945,14 @@ private:
     float recoveryDuration = 0.5f;  //  ?U???I????AEnemyRecoveryState?????????B?????SAttack?????0.5?b?B
     float attackFacingAngle = 35.0f;    // ????p?x?????U???”\?????
 
+    float nearFrontFastComboProbability = 0.70f;
+    float fastComboFrontMaxAngle = 60.0f;
+    float defensiveBackMinAngle = 120.0f;
+    std::string attackSelectorDebugMode = "Uniform";
+    int attackSelectorDebugCandidateCount = 0;
+    float attackSelectorDebugProbability = 0.0f;
+    float attackSelectorDebugRoll = 0.0f;
+    std::string attackSelectorDebugSelected = "None";
     float nearDistanceThreshold = 6.0f; // ?????????????????????
     float middleDistanceThreshold = 12.0f; // ??????????????????????
 

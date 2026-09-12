@@ -257,7 +257,7 @@ bool GruxEnemy::CanPlanRetreat() const
         !rotationComponent || !enemyCapsuleComponent)
         return false;
     const auto context = BuildTargetContext();
-    return context.valid && context.region == PlayerRelativeRegion::Back &&
+    return IsDefensiveBackForBehavior(context) &&
         context.xzDistance <= defensiveTooCloseDistance;
 }
 
@@ -790,7 +790,7 @@ bool GruxEnemy::EvaluateRoarPlanForDebug() const
         IsOtherBTActionForRoar(activeNode))
         return false;
     const auto context = BuildTargetContext();
-    return context.valid && context.region == PlayerRelativeRegion::Back &&
+    return IsDefensiveBackForBehavior(context) &&
         context.xzDistance <= defensiveTooCloseDistance;
 }
 
@@ -830,7 +830,7 @@ std::string GruxEnemy::GetRoarRejectReasonForDebug() const
         return std::string(U8("他BT行動中: ")) + activeNode->GetName();
     const auto context = BuildTargetContext();
     if (!context.valid) return U8("TargetContextが無効");
-    if (context.region != PlayerRelativeRegion::Back) return U8("背後ではない");
+    if (!IsDefensiveBackForBehavior(context)) return U8("背後ではない");
     if (!(context.xzDistance <= defensiveTooCloseDistance)) return U8("距離が遠い");
     return U8("なし");
 }
@@ -995,6 +995,8 @@ void GruxEnemy::DrawRoarBTDebug()
     roarPreStampedeEndTime = std::isfinite(roarPreStampedeEndTime)
         ? std::clamp(roarPreStampedeEndTime, roarPreStampedeStartTime + 0.05f, rangeLimit) : rangeLimit;
     ImGui::DragFloat(U8("防御行動 至近距離"), &defensiveTooCloseDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+    ImGui::DragFloat(U8("防御行動 Back最小角度"), &defensiveBackMinAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+    defensiveBackMinAngle = std::clamp(defensiveBackMinAngle, 0.0f, 180.0f);
     ImGui::DragFloat(U8("咆哮 範囲"), &roarRadius, 0.1f, 0.0f, 30.0f, "%.2f m");
     ImGui::DragFloat(U8("咆哮 高低差許容"), &roarHeightTolerance, 0.1f, 0.0f, 30.0f, "%.2f m");
     const float previousCooldownDuration = roarCooldownDuration;
@@ -1034,7 +1036,9 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::Text(U8("Roar TooClose距離: %.2f"), defensiveTooCloseDistance);
     ImGui::Text(U8("Roar 距離条件OK: %s"), tf(context.xzDistance <= defensiveTooCloseDistance));
     ImGui::Text(U8("Roar Player Region: %s"), region);
-    ImGui::Text(U8("Roar Back条件OK: %s"), tf(context.region == PlayerRelativeRegion::Back));
+    ImGui::Text(U8("Defensive Back判定: %s"), tf(IsDefensiveBackForBehavior(context)));
+    ImGui::Text(U8("Player相対角度: %.2f deg"), context.absoluteAngleDegrees);
+    ImGui::Text(U8("Roar Back条件OK: %s"), tf(IsDefensiveBackForBehavior(context)));
     ImGui::Text(U8("Roar Cooldown残り: %.2f"), roarCooldownRemaining);
     ImGui::Text(U8("Roar Cooldown条件OK: %s"), tf(!(roarCooldownRemaining > 0.0f)));
     ImGui::Text(U8("Roar 実行中: %s"), tf(IsRoarBTActive()));

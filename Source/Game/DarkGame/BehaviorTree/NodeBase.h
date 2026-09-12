@@ -3,6 +3,7 @@
 #include "BehaviorTree.h"
 #include "ActionBase.h"
 #include "JudgementBase.h"
+class GruxEnemy;
 
 class BehaviorData;
 
@@ -16,13 +17,13 @@ public:
 		int priority,
 		BehaviorTree::SelectRule selectRule,
 		std::unique_ptr<JudgementBase> judgment,
-		std::unique_ptr<ActionBase> action)
+		std::unique_ptr<ActionBase> action, GruxEnemy* owner = nullptr)
 		: name(std::move(name)),
 		parent(parent),
 		priority(priority),
 		selectRule(selectRule),
 		judgment(std::move(judgment)),
-		action(std::move(action))
+		action(std::move(action)), owner(owner)
 	{
 	}
 	// デストラクタ
@@ -41,6 +42,7 @@ public:
 	NodeBase* SelectPriority(std::vector<std::shared_ptr<NodeBase>>* list);
 	// ランダム選択
 	NodeBase* SelectRandom(std::vector<std::shared_ptr<NodeBase>>* list);
+	NodeBase* SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* list);
 	// シーケンス選択
 	NodeBase* SelectSequence(std::vector<std::shared_ptr<NodeBase>>* list, BehaviorData* data);
 	// ノード検索
@@ -57,5 +59,6 @@ protected:
 	std::unique_ptr<JudgementBase>	judgment;		// 判定クラス
 	std::unique_ptr<ActionBase>	action;			// 実行クラス
 	unsigned int					priority;		// 優先順位
-	std::weak_ptr<NodeBase>		parent;				// 親ノード
+	std::weak_ptr<NodeBase>		parent;
+	GruxEnemy* owner = nullptr;				// 親ノード
 };

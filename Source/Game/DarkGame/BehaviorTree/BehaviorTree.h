@@ -18,7 +18,8 @@ public:
 		Priority,			// 優先順位
 		Sequence,			// シーケンス
 		SequentialLooping,	// シーケンシャルルーピング
-		Random,				// ランダム
+		Random,
+        AttackRandom,				// ランダム
 	};
 
 public:

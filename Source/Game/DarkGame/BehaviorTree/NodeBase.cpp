@@ -68,6 +68,9 @@ NodeBase* NodeBase::Inference(BehaviorData* data)
     case BehaviorTree::SelectRule::Random:
         result = SelectRandom(&list);
         break;
+    case BehaviorTree::SelectRule::AttackRandom:
+        result = SelectAttackRandom(&list);
+        break;
         // シーケンス
     case BehaviorTree::SelectRule::Sequence:
     case BehaviorTree::SelectRule::SequentialLooping:
@@ -125,6 +128,34 @@ NodeBase* NodeBase::SelectRandom(std::vector<std::shared_ptr<NodeBase>>* list)
     return list->at(selectNo).get();
 }
 
+NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* list)
+{
+    if (!list || list->empty()) return nullptr;
+    std::vector<NodeBase*> nonFast;
+    NodeBase* fast = nullptr;
+    for (const auto& node : *list)
+    {
+        if (node->GetName() == "FastComboPlan") fast = node.get();
+        else nonFast.push_back(node.get());
+    }
+
+    const bool nearFront = owner && owner->IsNearFrontForAttackSelection();
+    const float probability = nearFront && fast ? owner->GetNearFrontFastComboProbability() : 0.0f;
+    const float roll = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
+    NodeBase* selected = nullptr;
+    const char* mode = nearFront && fast ? "NearFrontWeighted" : "Uniform";
+    if (nearFront && fast && (nonFast.empty() || roll < probability))
+        selected = fast;
+    else
+    {
+        const size_t count = nonFast.size();
+        if (count > 0) selected = nonFast[static_cast<size_t>(rand()) % count];
+        else selected = fast;
+    }
+    if (owner) owner->RecordAttackSelectorDebug(mode, static_cast<int>(list->size()), probability, roll,
+        selected ? selected->GetName().c_str() : "None");
+    return selected;
+}
 // シーケンス・シーケンシャルルーピングでノード選択
 NodeBase* NodeBase::SelectSequence(std::vector<std::shared_ptr<NodeBase>>* list, BehaviorData* data)
 {

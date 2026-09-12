@@ -484,7 +484,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("RepositionPlan", "PrepareRepositionTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareRepositionTarget>(this));
     aiTree->AddNode("RepositionPlan", "MoveToRepositionTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToRepositionTarget>(this));
     aiTree->AddNode("RepositionPlan", "WaitAfterReposition", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::WaitAfterReposition>(this));
-    aiTree->AddNode("CombatDecision", "Attack", 1, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
+    aiTree->AddNode("CombatDecision", "Attack", 1, BehaviorTree::SelectRule::AttackRandom, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
     aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
     aiTree->AddNode("Attack", "FastComboPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
@@ -1865,6 +1865,19 @@ void GruxEnemy::DrawImGuiDetails()
         "RepositionRight",
     };
 
+    ImGui::SeparatorText("Attack Selector");
+    ImGui::DragFloat(U8("近距離正面 FastCombo確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat(U8("FastCombo Front最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+    fastComboFrontMaxAngle = std::clamp(fastComboFrontMaxAngle, 0.0f, 180.0f);
+    const BossTargetContext attackSelectorContext = BuildTargetContext();
+    ImGui::Text(U8("FastCombo Front判定: %s"), attackSelectorContext.valid && attackSelectorContext.absoluteAngleDegrees <= fastComboFrontMaxAngle ? "true" : "false");
+    ImGui::Text(U8("Player相対角度: %.2f deg"), attackSelectorContext.absoluteAngleDegrees);
+    nearFrontFastComboProbability = std::clamp(nearFrontFastComboProbability, 0.0f, 1.0f);
+    ImGui::Text(U8("Attack選択モード: %s"), attackSelectorDebugMode.c_str());
+    ImGui::Text(U8("Attack候補数: %d"), attackSelectorDebugCandidateCount);
+    ImGui::Text(U8("FastCombo選択確率: %.2f"), attackSelectorDebugProbability);
+    ImGui::Text(U8("Attack抽選値: %.3f"), attackSelectorDebugRoll);
+    ImGui::Text(U8("選択Attack: %s"), attackSelectorDebugSelected.c_str());
     ImGui::SeparatorText("CombatAI v2 Positioning");
     ImGui::Text("Current Distance: %.3f", targetContext.xzDistance);
     ImGui::Text("Absolute Angle: %.3f", targetContext.absoluteAngleDegrees);
@@ -5593,6 +5606,26 @@ void GruxEnemy::RefreshFastComboTargetContext(int stage)
     fastComboTargetStage = stage;
 }
 
+bool GruxEnemy::IsNearFrontForAttackSelection() const
+{
+    const BossTargetContext context = BuildTargetContext();
+    return context.valid && context.distanceRegion == BossDistanceRegion::Near &&
+        context.absoluteAngleDegrees <= fastComboFrontMaxAngle;
+}
+
+bool GruxEnemy::IsDefensiveBackForBehavior(const BossTargetContext& context) const
+{
+    return context.valid && context.absoluteAngleDegrees >= defensiveBackMinAngle;
+}
+
+void GruxEnemy::RecordAttackSelectorDebug(const char* mode, int count, float probability, float roll, const char* selected)
+{
+    attackSelectorDebugMode = mode ? mode : "Uniform";
+    attackSelectorDebugCandidateCount = count;
+    attackSelectorDebugProbability = probability;
+    attackSelectorDebugRoll = roll;
+    attackSelectorDebugSelected = selected ? selected : "None";
+}
 BossTargetContext GruxEnemy::BuildTargetContext() const
 {
     BossTargetContext context{};
