@@ -644,6 +644,8 @@ void GameScene::StartBossBattle()
     finalBattleTime = 0.0f;
     finalBattleTimeSaved = false;
     battleFlowState = BattleFlowState::Playing;
+    // Resume is idempotent and also handles repeated StartBossBattle calls.
+    gruxEnemyActor->ResumeBattleAI();
     SetBattleTimerVisible(true);
     UpdateBattleTimerUI();
     SetBattleHudVisible(true);
@@ -3062,6 +3064,9 @@ void GameScene::SetUpActors()
 
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
     gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
+    // Battle AI remains paused throughout the pre-battle approach and intro movie.
+    if (gruxEnemyActor)
+        gruxEnemyActor->PauseBattleAI();
     // Only this scene's boss-death flow owns the death animation sequence.
     gruxEnemyActor->SetCinematicDeathAnimationOwnedExternally(true);
     player->SetFinalHitCallback([this](GruxEnemy* boss, const DirectX::XMFLOAT3& source)

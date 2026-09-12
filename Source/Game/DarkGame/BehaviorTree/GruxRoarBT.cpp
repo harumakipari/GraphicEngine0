@@ -1027,6 +1027,7 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::Text(U8("Roar Player生存: %s"), tf(player && player->GetHp() > 0));
     ImGui::Text(U8("Roar Grux生存: %s"), tf(!IsDead()));
     ImGui::Text(U8("Roar 戦闘AI有効: %s"), tf(battleAIActive));
+    ImGui::Text(U8("Battle AI Active: %s"), tf(battleAIActive));
     ImGui::Text(U8("Roar Defensive開始可能: %s"), tf(IsRoarExecutionAllowed()));
     ImGui::Text(U8("Roar TargetContext有効: %s"), tf(context.valid));
     ImGui::Text(U8("Roar Player距離: %.2f"), context.xzDistance);

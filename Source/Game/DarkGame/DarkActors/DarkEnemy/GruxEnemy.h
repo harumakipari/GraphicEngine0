@@ -40,6 +40,7 @@ public:
 
     // Stops combat immediately while preserving HP and the current death animation.
     void StopBattleActions();
+    void AbortBehaviorTreeForDeath();
     void BeginFinalHitReaction(const std::string& animationName);
     void EndFinalHitReaction();
 

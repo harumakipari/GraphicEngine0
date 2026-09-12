@@ -598,6 +598,13 @@ void GruxEnemy::ResumeBattleAI()
     battleAIActive = true;
 }
 
+void GruxEnemy::AbortBehaviorTreeForDeath()
+{
+    activeNode = nullptr;
+    if (behaviorData) behaviorData->Init();
+    if (aiTree) aiTree->ResetActionRuntimes();
+}
+
 void GruxEnemy::StopBattleActions()
 {
     if (IsRoarBTActive())
@@ -827,6 +834,16 @@ void GruxEnemy::EndFinalHitReaction()
 void GruxEnemy::Update(float deltaTime)
 {
     TickRoarLifecycle(deltaTime);
+    // Resolve boss death before advancing any active BT action.
+    if (hp <= 0 && !isDeathPerform)
+    {
+        isDeathPerform = true;
+        AbortBehaviorTreeForDeath();
+        StopBattleActions();
+        if (stateMachine_)
+            stateMachine_->ChangeState("EnemyDeathState");
+    }
+
     // Charge cleanup precedes cinematic/editor early returns and does not overwrite their animation.
     if (ShouldAbortChargeAttackBT())
     {
@@ -1315,11 +1332,7 @@ void GruxEnemy::Update(float deltaTime)
 #endif // 0
 
 #if 1
-    if (hp <= 0 && !isDeathPerform)
-    {
-        isDeathPerform = true;
-        stateMachine_->ChangeState("EnemyDeathState");
-    }
+
 #endif // 0
 }
 
