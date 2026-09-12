@@ -864,10 +864,13 @@ void Player::Update(float deltaTime)
                 {
                     Logger::Log(U8("Œ•‚É“G‚ª“–‚½‚Á‚½"));
                     const int previousHP = enemy->GetHp();
-                    enemy->TakeDamage(GetCurrentAttackDamage());
-                    const bool lethalHit = previousHP > 0 && enemy->GetHp() <= 0;
                     const bool isRushHit = stateMachine_ &&
                         std::string(stateMachine_->GetStateName()) == "Rush";
+                    const bool isNormalFourthHit = !isRushHit &&
+                        currentAttackAnimation == "Primary_Attack_Fast_D1_1";
+                    enemy->TakeDamageFromPlayerAttack(GetCurrentAttackDamage(),
+                        isNormalFourthHit, playerPos);
+                    const bool lethalHit = previousHP > 0 && enemy->GetHp() <= 0;
                     if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
                     {
                         enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);

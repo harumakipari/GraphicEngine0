@@ -278,7 +278,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
             // “G‚ÌƒAƒjƒ[ƒVƒ‡ƒ“‚ðŽ~‚ß‚é
             if (gruxEnemy)
             {
-                gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0");
+                gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
+                    "MovieCameraManager::UpPlayerMovie");
                 gruxEnemy->SetBodyAnimationRate(0.0f);
             }
             doorMovieState = DoorMovieState::DoorOpening;
@@ -469,7 +470,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
             PlayMovie(bossNameMovieFileName);
             if (gruxEnemy)
             {
-                gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0");
+                gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
+                    "MovieCameraManager::EnemyName");
                 gruxEnemy->StartGruxNamePerform(1.5f);
             }
             if (player)

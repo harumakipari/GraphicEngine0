@@ -30,9 +30,22 @@ public:
 
     void DrawImGuiDetails() override;
 
+    // Diagnostic-only wrapper. The default keeps existing callers behaviorally identical.
+    void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true,
+        float blendTime = 0.3f, bool ignoreRootMotion = false,
+        const char* debugSource = "Unattributed") const;
+    const std::string& GetLastAnimationRequestDebug() const { return lastAnimationRequestDebug; }
+    const std::string& GetPreviousAnimationRequestDebug() const { return previousAnimationRequestDebug; }
+    const std::string& GetAnimationRequestSourceDebug() const { return animationRequestSourceDebug; }
+    const std::string& GetAnimationRequestBattleFlowDebug() const { return animationRequestBattleFlowDebug; }
+    const std::string& GetAnimationRequestBossDeathPhaseDebug() const { return animationRequestBossDeathPhaseDebug; }
+    uint64_t GetAnimationRequestFrameDebug() const { return animationRequestFrameDebug; }
     //???????????????
     void TakeDamage(int damage);
-
+    // Player's sword hit path supplies semantic hit information without changing
+    // the generic damage entry point used by existing callers.
+    void TakeDamageFromPlayerAttack(int damage, bool isNormalFourthHit,
+        const DirectX::XMFLOAT3& hitSourcePosition);
     // Battle HUD visibility is decided by GameScene; Grux only owns its components.
     void SetHpBarVisible(bool visible);
     void BeginHpBarFadeOut();
@@ -204,6 +217,12 @@ public:
     {
         return cinematicDeathAnimationOwnedExternally;
     }
+    // Read-only death-flow diagnostics for GameScene.
+    bool IsDeathPerformingForDebug() const { return isDeathPerform; }
+    bool IsFinalHitReactionActiveForDebug() const { return finalHitReactionActive; }
+    bool IsFinalHitReactionHeldForDebug() const { return finalHitReactionHeld; }
+    bool IsFourthHitReactionActiveForDebug() const { return fourthHitReactionActive; }
+    bool IsBeginHuskParticleRequestedForDebug() const { return beginHuskParticleRequest; }
     bool ConsumeBeginHuskParticleRequest()
     {
         const bool requested = beginHuskParticleRequest;
@@ -452,8 +471,22 @@ public:
     const std::string& GetBehaviorTreeLastJudgment() const { return behaviorTreeLastJudgment; }
     void SetBehaviorTreeLastJudgment(const std::string& value) { behaviorTreeLastJudgment = value; }
 private:
+    void ResetBehaviorTreeRuntime();
+    void BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePosition);
+    void EndFourthHitReaction();
+    void ResetFourthHitReactionDebug();
     bool finalHitReactionActive = false;
     bool finalHitReactionHeld = false;
+    bool fourthHitReactionActive = false;
+    float fourthHitReactionRemaining = 0.0f;
+    float fourthHitReactionChance = 1.0f;  // ‹¯‚ÝŠm—¦
+    float fourthHitReactionDuration = 1.25f;
+    float fourthHitReactionLastRoll = -1.0f;
+    bool fourthHitReactionHasLastRoll = false;
+    bool fourthHitReactionLastWon = false;
+    float fourthHitReactionLastDirectionDot = 0.0f;
+    std::string fourthHitReactionDirection = "None";
+    std::string fourthHitReactionAnimation = "None";
     // ?v???C???[???????????????
     float GetDistanceToPlayer();
 
@@ -1202,6 +1235,14 @@ private:
 
     bool isDeathPerform = false;
     bool beginHuskParticleRequest = false;
+    // Animation request history used only to identify external death-cinematic overwrites.
+    uint64_t animationDebugFrameCounter = 0;
+    mutable std::string lastAnimationRequestDebug = "None";
+    mutable std::string previousAnimationRequestDebug = "None";
+    mutable std::string animationRequestSourceDebug = "None";
+    mutable std::string animationRequestBattleFlowDebug = "None";
+    mutable std::string animationRequestBossDeathPhaseDebug = "None";
+    mutable uint64_t animationRequestFrameDebug = 0;
     float pitchBaseValue = 0.45f;
 
     // ??????u?p?R???|?[?l???g?????@?ÈlO?????\???p

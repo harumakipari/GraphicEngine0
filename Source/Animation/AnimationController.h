@@ -106,6 +106,9 @@ public:
     float GetLastEffectivePlaybackRateDebug() const { return lastEffectivePlaybackRateDebug; }
     float GetLastUpdateDeltaTimeDebug() const { return lastUpdateDeltaTimeDebug; }
     float GetBlendFactorDebug() const { return blendFactor; }
+    float GetAnimationRateDebug() const { return animationRate; }
+    float GetPlaybackEndTimeDebug() const { return playbackEndTime; }
+    bool IsHeldAnimationPoseDebug() const { return editorPreviewActive && !editorPreviewPlaying; }
 
     // アニメーションの再生倍率を変更する関数
     void SetAnimationRate(const float animationRate) { this->animationRate = animationRate; }

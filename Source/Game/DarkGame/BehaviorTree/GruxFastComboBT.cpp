@@ -44,7 +44,8 @@ ActionBase::State BTIdle::Run(float deltaTime)
         owner->StopAIMovement();
         const auto controller = owner->GetBodyAnimationController();
         if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
-            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
+                "BTIdleOrPrepareFastCombo");
     }
     timer += deltaTime;
     if (timer < owner->GetBehaviorIdleDuration())
@@ -179,7 +180,8 @@ ActionBase::State PrepareFastCombo::Run(float deltaTime)
         owner->StopAIMovement();
         const auto controller = owner->GetBodyAnimationController();
         if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
-            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
+                "BTIdleOrPrepareFastCombo");
         owner->PlayAttackReadySE();
     }
     timer += deltaTime;
@@ -308,7 +310,8 @@ bool GruxEnemy::UpdateFastComboApproach(float dt)
 // Recovery??????
 void GruxEnemy::BeginRecovery() const
 {
-    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true);
+    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true,
+        "GruxEnemy::BeginRecovery");
 }
 
 void GruxEnemy::RecordBehaviorAttackCompleted()

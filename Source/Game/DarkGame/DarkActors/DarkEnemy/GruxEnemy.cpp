@@ -11,6 +11,7 @@
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
+#include "Game/Scenes/GameScene.h"
 #include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
 #include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
 #include "Physics/CollisionFunction.h"
@@ -111,7 +112,7 @@ namespace
 void GruxEnemy::Initialize(const Transform& transform)
 {
     maxHp = 10;
-    //maxHp = 75;
+    maxHp = 75;
     hp = maxHp;
     delayedHp = static_cast<float>(hp);
 
@@ -578,6 +579,7 @@ void GruxEnemy::SetDirectionImmediate(const DirectX::XMFLOAT3& direction)
 void GruxEnemy::PauseBattleAI()
 {
     battleAIActive = false;
+    ResetFourthHitReactionDebug();
     StopBattleActions();
 
     // Pausing a battle is an abort, not a battle restart. Discard BT execution
@@ -600,11 +602,92 @@ void GruxEnemy::ResumeBattleAI()
 
 void GruxEnemy::AbortBehaviorTreeForDeath()
 {
+    ResetBehaviorTreeRuntime();
+}
+
+void GruxEnemy::ResetBehaviorTreeRuntime()
+{
     activeNode = nullptr;
     if (behaviorData) behaviorData->Init();
     if (aiTree) aiTree->ResetActionRuntimes();
 }
 
+void GruxEnemy::ResetFourthHitReactionDebug()
+{
+    fourthHitReactionActive = false;
+    fourthHitReactionRemaining = 0.0f;
+    fourthHitReactionLastRoll = -1.0f;
+    fourthHitReactionHasLastRoll = false;
+    fourthHitReactionLastWon = false;
+    fourthHitReactionLastDirectionDot = 0.0f;
+    fourthHitReactionDirection = "None";
+    fourthHitReactionAnimation = "None";
+}
+
+void GruxEnemy::EndFourthHitReaction()
+{
+    fourthHitReactionActive = false;
+    fourthHitReactionRemaining = 0.0f;
+}
+
+void GruxEnemy::BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePosition)
+{
+    if (hp <= 0 || isDeathPerform || finalHitReactionActive || finalHitReactionHeld)
+        return;
+
+    // Stop all combat-owned movement, hit boxes, and warps before taking
+    // temporary ownership of the body animation.
+    StopBattleActions();
+    ResetBehaviorTreeRuntime();
+    ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
+    ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
+    retreatRuntime = {};
+    repositionRuntime = {};
+
+    DirectX::XMFLOAT3 forward = GetForward();
+    forward.y = 0.0f;
+    DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(hitSourcePosition, GetPosition());
+    toPlayer.y = 0.0f;
+    const float forwardLength = std::sqrt(forward.x * forward.x + forward.z * forward.z);
+    const float toPlayerLength = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.z * toPlayer.z);
+    fourthHitReactionLastDirectionDot =
+        forwardLength > FLT_EPSILON && toPlayerLength > FLT_EPSILON
+        ? (forward.x * toPlayer.x + forward.z * toPlayer.z) / (forwardLength * toPlayerLength)
+        : 0.0f;
+
+    const bool frontHit = fourthHitReactionLastDirectionDot >= 0.0f;
+    fourthHitReactionDirection = frontHit ? "Front" : "Back";
+    fourthHitReactionAnimation = frontHit ? "HitReact_Front" : "HitReact_Back";
+    fourthHitReactionRemaining = std::clamp(fourthHitReactionDuration, 0.0f, 2.0f);
+    fourthHitReactionActive = fourthHitReactionRemaining > 0.0f;
+
+    if (const auto controller = GetBodyAnimationController())
+        controller->SetRemoveRootTranslationFromPose(fourthHitReactionAnimation, true);
+    PlayBodyAnimation(fourthHitReactionAnimation, false, true, 0.1f, true);
+}
+
+void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,
+    const bool blend, const float blendTime, const bool ignoreRootMotion,
+    const char* debugSource) const
+{
+    previousAnimationRequestDebug = lastAnimationRequestDebug;
+    if (const auto controller = GetBodyAnimationController())
+        previousAnimationRequestDebug = controller->GetCurrentAnimationName();
+    lastAnimationRequestDebug = name;
+    animationRequestSourceDebug = debugSource ? debugSource : "Unattributed";
+    animationRequestFrameDebug = animationDebugFrameCounter;
+    if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
+    {
+        animationRequestBattleFlowDebug = gameScene->GetBattleFlowStateDebugName();
+        animationRequestBossDeathPhaseDebug = gameScene->GetBossDeathPhaseDebugName();
+    }
+    else
+    {
+        animationRequestBattleFlowDebug = "NonGameScene";
+        animationRequestBossDeathPhaseDebug = "None";
+    }
+    Character::PlayBodyAnimation(name, loop, blend, blendTime, ignoreRootMotion);
+}
 void GruxEnemy::StopBattleActions()
 {
     if (IsRoarBTActive())
@@ -630,6 +713,13 @@ void GruxEnemy::StopBattleActions()
     StopChargeAttackMovement();
     StopAIMovement();
     ClearAttackSetupTarget();
+    // Death/abort must also discard non-attack positioning targets. Otherwise a
+    // deferred Reposition/Retreat completion can request its idle animation
+    // after GameScene has taken cinematic animation ownership.
+    ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
+    ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
+    retreatRuntime = {};
+    repositionRuntime = {};
     ClearActiveIntent();
     ClearPendingAttackFacing();
     ClearJumpAttackMotionWarpOverride();
@@ -698,6 +788,7 @@ void GruxEnemy::ResetBehaviorTreeForBattleRestart()
 
 void GruxEnemy::ResetCombatRuntimeForBattleRestart()
 {
+    ResetFourthHitReactionDebug();
     ClearAttackSetupTarget();
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
@@ -792,7 +883,8 @@ void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
     ResetCombatRuntimeForBattleRestart();
     if (stateMachine_)
         stateMachine_->ChangeState("EnemyIdleState");
-    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
+        "GruxEnemy::ResetForBattleContinue");
 
     isDeathPerform = false;
     rushHpDisplayActive = false;
@@ -835,8 +927,11 @@ void GruxEnemy::EndFinalHitReaction()
 
 void GruxEnemy::Update(float deltaTime)
 {
+    ++animationDebugFrameCounter;
     TickRoarLifecycle(deltaTime);
     // Resolve boss death before advancing any active BT action.
+    if (hp <= 0)
+        EndFourthHitReaction();
     if (hp <= 0 && !isDeathPerform)
     {
         isDeathPerform = true;
@@ -900,6 +995,20 @@ void GruxEnemy::Update(float deltaTime)
     {
         if (const auto controller = GetBodyAnimationController())
             controller->OnUpdate(deltaTime);
+        return;
+    }
+
+    // This is intentionally separate from FinalHitReaction and EnemyStunState.
+    // It owns only the short fourth-normal-hit interruption window.
+    if (fourthHitReactionActive)
+    {
+        if (const auto controller = GetBodyAnimationController())
+            controller->OnUpdate(deltaTime);
+        fourthHitReactionRemaining = (std::max)(0.0f,
+            fourthHitReactionRemaining - (std::max)(0.0f, deltaTime));
+        if (fourthHitReactionRemaining <= 0.0f)
+            EndFourthHitReaction();
+        // Root inference resumes on the next frame after this early return.
         return;
     }
 
@@ -2638,6 +2747,30 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Boss Damage Flash Duration", &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
     ImGui::SliderFloat("Boss Damage Flash Strength", &damageFlashStartValue, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Boss Hit Voice Cooldown", &hitVoiceCooldown, 0.01f, 0.0f, 2.0f, "%.2f sec");
+    ImGui::SeparatorText(U8("4段目 HitReaction"));
+    ImGui::DragFloat(U8("4段目 HitReaction確率"), &fourthHitReactionChance,
+        0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat(U8("4段目 HitReaction時間"), &fourthHitReactionDuration,
+        0.01f, 0.0f, 2.0f, "%.2f sec");
+    fourthHitReactionChance = std::clamp(fourthHitReactionChance, 0.0f, 1.0f);
+    fourthHitReactionDuration = std::clamp(fourthHitReactionDuration, 0.0f, 2.0f);
+    ImGui::Text(U8("4段目 HitReaction Active: %s"),
+        fourthHitReactionActive ? "true" : "false");
+    ImGui::Text(U8("4段目 HitReaction残り: %.3f sec"), fourthHitReactionRemaining);
+    ImGui::Text(U8("4段目 Hit方向: %s"), fourthHitReactionDirection.c_str());
+    ImGui::Text(U8("4段目 Hit方向 Dot: %.3f"), fourthHitReactionLastDirectionDot);
+    ImGui::Text(U8("4段目 HitReact Animation: %s"), fourthHitReactionAnimation.c_str());
+    if (fourthHitReactionHasLastRoll)
+    {
+        ImGui::Text(U8("4段目 HitReaction抽選値: %.3f"), fourthHitReactionLastRoll);
+        ImGui::Text(U8("4段目 HitReaction当選: %s"),
+            fourthHitReactionLastWon ? "true" : "false");
+    }
+    else
+    {
+        ImGui::Text(U8("4段目 HitReaction抽選値: 未抽選"));
+        ImGui::Text(U8("4段目 HitReaction当選: 未抽選"));
+    }
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
     ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
@@ -3289,6 +3422,12 @@ void GruxEnemy::EndRushHpDisplay()
 
 void GruxEnemy::TakeDamage(const int damage)
 {
+    TakeDamageFromPlayerAttack(damage, false, {});
+}
+
+void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormalFourthHit,
+    const DirectX::XMFLOAT3& hitSourcePosition)
+{
     if (finalHitReactionActive) return;
     skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = damageFlashStartValue;
     // コントローラー振動
@@ -3327,6 +3466,20 @@ void GruxEnemy::TakeDamage(const int damage)
         useRushDelayedHpFollowSpeed = false;
     }
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
+
+    // This function is reached only after Player's per-attack hitActors check,
+    // so each confirmed fourth-hit damage instance receives exactly one roll.
+    if (isNormalFourthHit && hp > 0)
+    {
+        static thread_local std::mt19937 randomEngine{ std::random_device{}() };
+        std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
+        fourthHitReactionLastRoll = distribution(randomEngine);
+        fourthHitReactionHasLastRoll = true;
+        fourthHitReactionLastWon = fourthHitReactionLastRoll <
+            std::clamp(fourthHitReactionChance, 0.0f, 1.0f);
+        if (fourthHitReactionLastWon)
+            BeginFourthHitReaction(hitSourcePosition);
+    }
 }
 
 // ヒットエフェクトを生成する
@@ -3593,7 +3746,7 @@ void GruxEnemy::SpawnGroundDownEffect()const
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {
-    if (finalHitReactionActive) return;
+    if (finalHitReactionActive || fourthHitReactionActive) return;
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
@@ -3690,7 +3843,7 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 
 void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 {
-    if (finalHitReactionActive) return;
+    if (finalHitReactionActive || fourthHitReactionActive) return;
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
@@ -3771,7 +3924,7 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
         ApplyRoarShockwave();
         return;
     }
-    if (finalHitReactionActive) return;
+    if (finalHitReactionActive || fourthHitReactionActive) return;
     if (event.parameter == "BeginHuskParticle" && isDeathPerform)
     {
         beginHuskParticleRequest = true;
@@ -3966,7 +4119,8 @@ void GruxEnemy::BeginPositioning(const BossPositioningData& data)
     const bool isIdlePlaying = controller && controller->IsPlayAnimation() &&
         controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
     if (!isIdlePlaying)
-        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
+        "GruxEnemy::BeginPositioning");
 
     positioningDebugActive = true;
     activePositioningDebugData = data;
@@ -4094,19 +4248,28 @@ void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
     const bool idlePlaying = controller && controller->IsPlayAnimation() &&
         controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
     if (!idlePlaying)
-        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
+        "GruxEnemy::UpdatePositioningAnimation");
 }
 
 void GruxEnemy::EndPositioningAnimation()
 {
+    // Runtime cleanup is always required, including a death/BT abort.
     positioningAnimationActualSpeed = 0.0f;
     positioningMoveStopTimer = 0.0f;
     positioningAnimationMoving = false;
+
+    // GameScene exclusively owns the boss clip during its death cinematic.
+    // Do not let a late Reposition/Retreat/AttackSetup cleanup replace it with Idle.
+    if (isDeathPerform && cinematicDeathAnimationOwnedExternally)
+        return;
+
     const auto controller = GetBodyAnimationController();
     const bool idlePlaying = controller && controller->IsPlayAnimation() &&
         controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
     if (!idlePlaying)
-        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
+            "GruxEnemy::EndPositioningAnimation");
 }
 
 void GruxEnemy::UpdatePositioningMovement(const DirectX::XMFLOAT3& moveDirection,

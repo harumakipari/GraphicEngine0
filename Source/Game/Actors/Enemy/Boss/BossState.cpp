@@ -15,7 +15,8 @@ EnemyStateBase::EnemyStateBase(GruxEnemy* actor) :State(actor), enemy(actor)
 // 待機ステートオブジェクト
 void EnemyIdleState::Enter()
 {
-    owner->PlayBodyAnimation("TravelMode_Idle_0");
+    enemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
+        "EnemyIdleState::Enter");
 }
 
 // ステートで実行するメソッド
@@ -359,7 +360,8 @@ void EnemyTurnState::Enter()
     timer = 0.0f;
     enemy->BeginTurnRotationDebug("SelectedAttack");
     enemy->StopAIMovement();
-    owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+    enemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
+        "EnemyTurnState::Enter");
 }
 
 void EnemyTurnState::Execute(float deltaTime)
@@ -771,7 +773,8 @@ void EnemyRecoveryState::Enter()
     timer = 0.0f;
     recoveryDuration = enemy->ConsumeNextRecoveryDuration();
     enemy->UpdateRecoveryDebug(timer, recoveryDuration);
-    owner->PlayBodyAnimation("TravelMode_Idle_0");
+    enemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
+        "EnemyRecoveryState::Enter");
 }
 
 void EnemyRecoveryState::Execute(float deltaTime)

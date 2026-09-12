@@ -101,7 +101,10 @@ public:
 
     // Called when the existing boss-introduction camera blend has completed.
     void StartBossBattle();
-private:
+
+    // Read-only labels consumed by Grux animation-request diagnostics.
+    const char* GetBattleFlowStateDebugName() const;
+    const char* GetBossDeathPhaseDebugName() const;private:
     enum class BossDeathPhase : uint8_t
     {
         FadeOut,
@@ -334,6 +337,10 @@ private:
     bool bossDeathGameplayDofCaptured = false;
     BossDeathPhase bossDeathPhase = BossDeathPhase::FadeOut;
     float bossDeathPhaseElapsed = 0.0f;
+    // Diagnostic-only death-flow event history. It never drives game logic.
+    int bossDeathEnterCallCount = 0;
+    BattleFlowState bossDeathLastEnterPreviousFlow = BattleFlowState::Intro;
+    std::string bossDeathLastHpZeroDetectionSource = "Other";
     float bossDeathFadeOutDuration = 1.6f;
     float bossDeathFadeInDuration = 1.6f;
     float bossDeathRoarStartTime = 0.17f;

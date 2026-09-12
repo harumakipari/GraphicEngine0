@@ -236,6 +236,26 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     return true;
 }
 
+const char* GameScene::GetBattleFlowStateDebugName() const
+{
+    static constexpr const char* names[] = {
+        "Intro", "Playing", "FinalHitSlow", "FinalHitSlowRecovery", "FinalHitAftermath",
+        "PlayerDead", "ContinueWait", "ResetForContinue", "BossDead", "Victory"
+    };
+    const size_t index = static_cast<size_t>(battleFlowState);
+    return index < std::size(names) ? names[index] : "Unknown";
+}
+
+const char* GameScene::GetBossDeathPhaseDebugName() const
+{
+    static constexpr const char* names[] = {
+        "FadeOut", "SetupCinematic", "FadeInScream", "DeathScream", "DeathFall",
+        "DeathLanding", "PlayerApproach", "PlayerWalkStop", "RecallLeadIn", "RecallPingPong",
+        "FinishTriggered", "HuskDelay", "HuskPreview"
+    };
+    const size_t index = static_cast<size_t>(bossDeathPhase);
+    return index < std::size(names) ? names[index] : "Unknown";
+}
 void GameScene::Start()
 {
     battleFlowState = BattleFlowState::Intro;
@@ -1322,6 +1342,8 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
 {
     if (battleFlowState != BattleFlowState::Playing || boss != gruxEnemyActor.get())
         return;
+    // Diagnostic only: retain the lethal-hit callback route until EnterBossDead.
+    bossDeathLastHpZeroDetectionSource = "FinalHit callback";
     DisableCinematicCameraDebugInput();
     using namespace DirectX;
     // +Z forward / +X right, matching Character::UpdateDirectionVectors and Grux AI.
@@ -1366,6 +1388,9 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
 
 void GameScene::EnterBossDead()
 {
+    // Diagnostic only: capture every entry before this method overwrites the flow.
+    ++bossDeathEnterCallCount;
+    bossDeathLastEnterPreviousFlow = battleFlowState;
     DisableCinematicCameraDebugInput();
     // Restore global time before entering FadeOut, including reaction cuts mid-slow.
     Time::SetSlow(1.0f, 0.0f);
@@ -1967,7 +1992,8 @@ bool GameScene::SetupBossDeathCinematic()
     const auto controller = gruxEnemyActor->GetBodyAnimationController();
     if (controller)
         controller->SetAnimationRate(bossDeathRoarPlaybackRate);
-    gruxEnemyActor->PlayBodyAnimation("Ultimate_Roar_0", false, true, 0.1f, true);
+    gruxEnemyActor->PlayBodyAnimation("Ultimate_Roar_0", false, true, 0.1f, true,
+        "GameScene::SetupBossDeathCinematic");
     if (!controller || !controller->SetPlaybackRange(
         bossDeathRoarStartTime, bossDeathRoarEndTime))
     {
@@ -2944,6 +2970,8 @@ void GameScene::UpdateBattleFlow()
                 finalBattleTime = battleElapsedTime;
                 finalBattleTimeSaved = true;
             }
+            // Diagnostic only: this is the direct HP<=0 fallback route.
+            bossDeathLastHpZeroDetectionSource = "UpdateBattleFlow fallback";
             EnterBossDead();
         }
         else if (player && player->GetHp() <= 0)
@@ -3226,6 +3254,139 @@ void GameScene::DrawGuiPlusAlpha()
             "PlayerApproach", "PlayerWalkStop", "RecallLeadIn", "RecallPingPong",
             "FinishTriggered", "HuskDelay", "HuskPreview"
         };
+        ImGui::SeparatorText("Boss Death Flow Debug (read only)");
+        static constexpr const char* battleFlowDebugNames[] = {
+            "Intro", "Playing", "FinalHitSlow", "FinalHitSlowRecovery", "FinalHitAftermath", "PlayerDead",
+            "ContinueWait", "ResetForContinue", "BossDead", "Victory"
+        };
+        const auto flowName = [&](BattleFlowState state)
+        {
+            const size_t index = static_cast<size_t>(state);
+            return index < std::size(battleFlowDebugNames) ? battleFlowDebugNames[index] : "Unknown";
+        };
+        const size_t phaseIndex = static_cast<size_t>(bossDeathPhase);
+        const char* phaseName = phaseIndex < phaseNames.size() ? phaseNames[phaseIndex] : "Unknown";
+        const auto bossController = gruxEnemyActor
+            ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
+        const char* actualAnimation = bossController
+            ? bossController->GetCurrentAnimationName().c_str() : "None";
+        const char* expectedAnimation = "None";
+        bool animationCompletionMet = false;
+        switch (bossDeathPhase)
+        {
+        case BossDeathPhase::DeathScream:
+            expectedAnimation = "Ultimate_Roar_0";
+            animationCompletionMet = bossController &&
+                bossController->GetCurrentAnimationName() == expectedAnimation &&
+                !bossController->IsPlayAnimation();
+            break;
+        case BossDeathPhase::DeathFall:
+            expectedAnimation = "Result_Down_Start";
+            animationCompletionMet = bossController &&
+                bossController->GetCurrentAnimationName() == expectedAnimation &&
+                !bossController->IsPlayAnimation();
+            break;
+        case BossDeathPhase::DeathLanding:
+            expectedAnimation = "Death_B_0";
+            animationCompletionMet = bossController &&
+                bossController->GetCurrentAnimationName() == expectedAnimation &&
+                bossController->GetCurrentAnimationTime() >= bossDeathFwdEndTime;
+            break;
+        case BossDeathPhase::SetupCinematic:
+            animationCompletionMet = bossDeathShotsLoaded && player && gruxEnemyActor && cinemaCameraActor;
+            break;
+        case BossDeathPhase::HuskPreview:
+            animationCompletionMet = IsHuskComplete();
+            break;
+        default:
+            animationCompletionMet = true;
+            break;
+        }
+        const bool animationMatch = std::string(expectedAnimation) == "None" ||
+            (bossController && bossController->GetCurrentAnimationName() == expectedAnimation);
+
+        std::string setupFailureReason;
+        const auto addSetupFailure = [&](const char* reason)
+        {
+            if (!setupFailureReason.empty()) setupFailureReason += ", ";
+            setupFailureReason += reason;
+        };
+        if (!bossDeathShotsLoaded) addSetupFailure("BossDeathPresetMissing");
+        if (!player) addSetupFailure("PlayerMissing");
+        if (!gruxEnemyActor) addSetupFailure("GruxMissing");
+        if (!cinemaCameraActor) addSetupFailure("CinematicCameraMissing");
+        if (setupFailureReason.empty()) setupFailureReason = "None";
+
+        std::string huskWaitReason;
+        if (!huskParticles) huskWaitReason = "HuskParticlesMissing";
+        else if (bossDeathPhase != BossDeathPhase::HuskDelay &&
+            bossDeathPhase != BossDeathPhase::HuskPreview) huskWaitReason = "PhaseNotHusk";
+        else if (bossDeathPhase == BossDeathPhase::HuskDelay) huskWaitReason = "HuskDelay";
+        else if (gruxEnemyActor && gruxEnemyActor->IsBeginHuskParticleRequestedForDebug()) huskWaitReason = "RequestPendingConsume";
+        else if (gruxHuskCaptureRequested || gruxHuskPreviewCaptureRequested) huskWaitReason = "CapturePending";
+        else if (!gruxHuskPlaybackActive) huskWaitReason = "PlaybackNotStarted";
+        else if (!IsHuskComplete()) huskWaitReason = "WaitingCompletion";
+        else huskWaitReason = "None";
+
+        const char* stopReason = "None";
+        if (battleFlowState != BattleFlowState::BossDead) stopReason = "NotInBossDead";
+        else if (bossDeathPhase == BossDeathPhase::SetupCinematic && setupFailureReason != "None") stopReason = "SetupCinematicWaiting";
+        else if (bossDeathPhase == BossDeathPhase::DeathScream && !animationCompletionMet) stopReason = "WaitingDeathScreamAnimation";
+        else if (bossDeathPhase == BossDeathPhase::DeathFall && !animationCompletionMet) stopReason = "WaitingDeathFallAnimation";
+        else if (bossDeathPhase == BossDeathPhase::DeathLanding && !animationCompletionMet) stopReason = "WaitingDeathLandingAnimation";
+        else if (bossDeathPhase == BossDeathPhase::HuskPreview && !IsHuskComplete()) stopReason = "WaitingHusk";
+
+        ImGui::Text("BattleFlowState: %s", flowName(battleFlowState));
+        ImGui::Text("BossDeathPhase: %s", phaseName);
+        ImGui::Text("BossDeathPhaseElapsed: %.3f sec", bossDeathPhaseElapsed);
+        ImGui::Text("bossDeathShotsLoaded: %s", bossDeathShotsLoaded ? "true" : "false");
+        ImGui::Text("SetupCinematic Player valid: %s", player ? "true" : "false");
+        ImGui::Text("SetupCinematic Grux valid: %s", gruxEnemyActor ? "true" : "false");
+        ImGui::Text("SetupCinematic CinematicCamera valid: %s", cinemaCameraActor ? "true" : "false");
+        ImGui::Text("SetupCinematic BossDeathPreset valid: %s", bossDeathShotsLoaded ? "true" : "false");
+        ImGui::Text("SetupCinematic failure reason: %s", setupFailureReason.c_str());
+        ImGui::Text(U8("Boss Death Stop Reason: %s"), stopReason);
+        ImGui::SeparatorText("Grux Death Debug (read only)");
+        ImGui::Text("HP: %d", gruxEnemyActor ? gruxEnemyActor->GetHp() : 0);
+        ImGui::Text("isDeathPerform: %s", gruxEnemyActor && gruxEnemyActor->IsDeathPerformingForDebug() ? "true" : "false");
+        ImGui::Text("FinalHitReaction active: %s", gruxEnemyActor && gruxEnemyActor->IsFinalHitReactionActiveForDebug() ? "true" : "false");
+        ImGui::Text("FinalHitReaction held: %s", gruxEnemyActor && gruxEnemyActor->IsFinalHitReactionHeldForDebug() ? "true" : "false");
+        ImGui::Text("FourthHitReaction active: %s", gruxEnemyActor && gruxEnemyActor->IsFourthHitReactionActiveForDebug() ? "true" : "false");
+        const auto stateMachine = gruxEnemyActor ? gruxEnemyActor->GetStateMachine() : nullptr;
+        ImGui::Text("StateMachine State: %s", stateMachine ? stateMachine->GetStateName() : "None");
+        ImGui::Text("BT Current Node: %s", gruxEnemyActor ? gruxEnemyActor->GetBehaviorTreeCurrentNode().c_str() : "None");
+        ImGui::Text("Current Animation Name: %s", actualAnimation);
+        ImGui::Text("Animation Time: %.3f sec", bossController ? bossController->GetCurrentAnimationTime() : 0.0f);
+        ImGui::Text("Animation Playing: %s", bossController && bossController->IsPlayAnimation() ? "true" : "false");
+        ImGui::Text("Animation Held Pose: %s", bossController && bossController->IsHeldAnimationPoseDebug() ? "true" : "false");
+        ImGui::Text("Animation Rate: %.3f", bossController ? bossController->GetAnimationRateDebug() : 0.0f);
+        ImGui::Text("Playback Range End: %.3f (negative = full clip)", bossController ? bossController->GetPlaybackEndTimeDebug() : -1.0f);
+        ImGui::SeparatorText("Last Grux Animation Request (read only)");
+        ImGui::Text("Last Animation Request: %s", gruxEnemyActor ? gruxEnemyActor->GetLastAnimationRequestDebug().c_str() : "None");
+        ImGui::Text("Previous Animation: %s", gruxEnemyActor ? gruxEnemyActor->GetPreviousAnimationRequestDebug().c_str() : "None");
+        ImGui::Text("Animation Request Source: %s", gruxEnemyActor ? gruxEnemyActor->GetAnimationRequestSourceDebug().c_str() : "None");
+        ImGui::Text("Animation Request Frame: %llu", static_cast<unsigned long long>(
+            gruxEnemyActor ? gruxEnemyActor->GetAnimationRequestFrameDebug() : 0));
+        ImGui::Text("BattleFlowState at Request: %s", gruxEnemyActor ?
+            gruxEnemyActor->GetAnimationRequestBattleFlowDebug().c_str() : "None");
+        ImGui::Text("BossDeathPhase at Request: %s", gruxEnemyActor ?
+            gruxEnemyActor->GetAnimationRequestBossDeathPhaseDebug().c_str() : "None");
+        ImGui::SeparatorText("Death Phase Animation Check (read only)");
+        ImGui::Text("Expected Animation: %s", expectedAnimation);
+        ImGui::Text("Actual Animation: %s", actualAnimation);
+        ImGui::Text("Animation Match: %s", animationMatch ? "true" : "false");
+        ImGui::Text("Phase End Condition Met: %s", animationCompletionMet ? "true" : "false");
+        ImGui::SeparatorText("Husk Debug (read only)");
+        ImGui::Text("Husk Requested: %s", (gruxEnemyActor && gruxEnemyActor->IsBeginHuskParticleRequestedForDebug()) ||
+            gruxHuskCaptureRequested || gruxHuskPreviewCaptureRequested ? "true" : "false");
+        ImGui::Text("Husk Started: %s", HasHuskCaptureStarted() || gruxHuskPlaybackActive ? "true" : "false");
+        ImGui::Text("Husk Complete: %s", IsHuskComplete() ? "true" : "false");
+        ImGui::Text("Husk Wait Reason: %s", huskWaitReason.c_str());
+        ImGui::SeparatorText("EnterBossDead Debug (read only)");
+        ImGui::Text("EnterBossDead Call Count: %d", bossDeathEnterCallCount);
+        ImGui::Text("Last EnterBossDead BattleFlowState: %s", flowName(bossDeathLastEnterPreviousFlow));
+        ImGui::Text("HP0 Detection Route: %s", bossDeathLastHpZeroDetectionSource.c_str());
+        ImGui::Separator();
         ImGui::DragFloat("Final Hit Slow Scale", &finalHitSlowScale, 0.01f, 0.01f, 1.0f);
         ImGui::DragFloat("Final Hit Slow Duration", &finalHitSlowDuration, 0.01f, 0.01f, 2.0f);
         ImGui::DragFloat("Final Hit Slow Recovery Duration", &finalHitSlowRecoveryDuration,
