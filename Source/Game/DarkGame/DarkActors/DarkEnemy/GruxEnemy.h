@@ -733,7 +733,7 @@ private:
     std::string activeTurnDebugFromState = "None";
     BossTargetContext aiDebugTargetContext{};
     bool disableAttackBehaviorsForDebug = false;
-    float defensiveTooCloseDistance = 5.2f;
+    float defensiveTooCloseDistance = 4.5f;
     float roarRadius = 5.0f;
     float roarHeightTolerance = 2.0f;
     float roarLevelStartFootOffset = -0.30f;
@@ -945,15 +945,15 @@ private:
     float recoveryDuration = 0.5f;  //  ?U???I????AEnemyRecoveryState?????????B?????SAttack?????0.5?b?B
     float attackFacingAngle = 35.0f;    // ????p?x?????U???”\?????
 
-    float nearFrontFastComboProbability = 0.70f;
-    float fastComboFrontMaxAngle = 60.0f;
+    float nearFrontFastComboProbability = 0.85f;
+    float fastComboFrontMaxAngle = 90.0f;
     float defensiveBackMinAngle = 120.0f;
     std::string attackSelectorDebugMode = "Uniform";
     int attackSelectorDebugCandidateCount = 0;
     float attackSelectorDebugProbability = 0.0f;
     float attackSelectorDebugRoll = 0.0f;
     std::string attackSelectorDebugSelected = "None";
-    float nearDistanceThreshold = 6.0f; // ?????????????????????
+    float nearDistanceThreshold = 8.0f; // ?????????????????????
     float middleDistanceThreshold = 12.0f; // ??????????????????????
 
     float relativeFrontMaxAngle = 50.0f;
