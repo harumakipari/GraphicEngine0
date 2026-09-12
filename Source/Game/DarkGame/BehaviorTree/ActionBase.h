@@ -18,6 +18,7 @@ public:
 
 	// Àsˆ—(ƒˆ‰¼‘zŠÖ”)
 	virtual ActionBase::State Run(float elapsedTime) = 0;
+	virtual void ResetRuntime() {}
 protected:
 	GruxEnemy* owner;
 };

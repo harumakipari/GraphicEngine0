@@ -12,6 +12,12 @@ BehaviorTree::~BehaviorTree()
 {
 }
 
+void BehaviorTree::ResetActionRuntimes()
+{
+    if (root) root->ResetActionRuntimes();
+    lastRunResult = ActionBase::State::Run;
+}
+
 void BehaviorTree::AddNode(std::string parentName,
 	std::string entryName,
 	int priority,

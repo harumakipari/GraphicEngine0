@@ -77,6 +77,8 @@ ActionBase::State StartJumpAttack::Run(float)
             started = false;
             return State::Failed;
         }
+        // Match the former EnemyAttackState path: notify at telegraph start.
+        owner->RequestJumpAttackCameraAssist();
         started = true;
     }
     started = false;

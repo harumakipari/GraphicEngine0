@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Components/Controller/ControllerComponent.h"
 #include "Components/Effect/ParticleComponent.h"
 #include "Core/Actor.h"
@@ -30,7 +30,7 @@ public:
 
     void DrawImGuiDetails() override;
 
-    //�����������̏���
+    //???????????????
     void TakeDamage(int damage);
 
     // Battle HUD visibility is decided by GameScene; Grux only owns its components.
@@ -51,12 +51,14 @@ public:
 
     // Clears Grux-owned transient combat state while preserving HP.
     void ResetForBattleContinue(const Transform& battleStartTransform);
+    void ResetBehaviorTreeForBattleRestart();
+    void ResetCombatRuntimeForBattleRestart();
     void ResetForBattleRestart(const Transform& battleStartTransform);
 
     void BeginRushHpDisplay();
     void EndRushHpDisplay();
 
-    // �q�b�g�G�t�F�N�g�𐶐�����
+    // ?q?b?g?G?t?F?N?g????????
     void SpawnHitEffect(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
 
     void SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
@@ -73,12 +75,12 @@ public:
 
     void OnAnimationChanged() override;
 
-    // �U���J�n���Ɏn�߂鏈��
+    // ?U???J?n????n?????
     void StartAttack();
 
     void DisableAttackHitBoxes();
 
-    // Action�̑I����ʂ�擾����
+    // Action??I???????????
     BossActionType GetSelectedActionType() const
     {
         return selectedActionType;
@@ -298,6 +300,9 @@ public:
     PositioningMoveResult UpdateRetreatMovement(float deltaTime);
     void FinishRetreatMovement(bool arrived);
     void RecordRetreatMoveResult(PositioningMoveResult result);
+    bool CanPlanAnyCombatDecision(); void BeginCombatDecisionInference(); bool CanPlanReposition() const;
+    bool PrepareRepositionTarget(); PositioningMoveResult UpdateRepositionMovement(float deltaTime);
+    void FinishRepositionMovement(bool arrived); void RecordBehaviorAttackCompleted();
     float GetAttackSetupRemainingDistance() const { return attackSetupRemainingDistance; }
     float GetAttackSetupElapsedTime() const { return attackSetupElapsedTime; }
     float GetAttackSetupPlannedMoveDistance() const { return attackSetupPlannedMoveDistance; }
@@ -346,45 +351,45 @@ public:
     float GetTurnSpeed() const { return turnSpeed; }
     void SetLastAIDecision(const std::string& reason) { lastAIDecisionReason = reason; }
 
-    // �J�����̒����_�̈ʒu
+    // ?J??????????_???u
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 
-    // �{�X�̖��O�̉��o��J�n����
+    // ?{?X????O????o??J?n????
     void StartGruxNamePerform(float duration, float start = 0.0f, float end = 1.0f);
 
-    // ���I���ʂ�member�֕ۑ�����֐�
+    // ???I?????member??????????
     bool SelectCombatAction();
-    // FastCombo�̎��s�ہE�������
-    // FastCombo��U�����Ƃ��đI��ł��邩
+    // FastCombo?"??s?�EE???????
+    // FastCombo??U????????dI??l???
     bool CanPlanFastCombo() const;
     void StartFastComboApproachRetryCooldown();
     bool IsFastComboApproachRetryCooldownActive() const;
-    // ����FastCombo����s�ł����Ԃ�
+    // ????FastCombo????s?l??????
     bool CanExecuteFastCombo() const;
-    // Player��FastCombo�̍U���͈͓�ɂ��邩
+    // Player??FastCombo??U??????????
     bool IsFastComboInRange() const;
-    // Player���U���\�Ȑ��ʊp�x��ɂ��邩
+    // Player???U???�\?????p?x??????
     bool IsPlayerInFastComboFacingRange(const BossTargetContext& context) const;
     bool IsPlayerInFastComboFaceCompleteRange(const BossTargetContext& context) const;
 
-    // FastCombo�J�n�O�̐ڋߏ���
-    // FastCombo�p�̐ڋߏ�����J�n
+    // FastCombo?J?n?O???????
+    // FastCombo?p?????????J?n
     void BeginFastComboApproach();
-    // �ڋߏ�����X�V���A������������Ԃ�
+    // ????????X?V???A??????????????
     bool UpdateFastComboApproach(float deltaTime);
 
-    // BehaviorTree������s����U���̐ݒ�
+    // BehaviorTree??????s????U??????
     void SetSelectedAttackForBehaviorTree(BossAttackType type)
     {
         selectedAttackType = type;
     }
 
-    // BehaviorTree�Ŏ��s�����U���̏I������
+    // BehaviorTree?O??s?????U????I??????
     enum class BehaviorAttackResult
     {
-        None,        // ���ʖ��m��
-        Success,     // �U������I��
-        JustDodged   // Player�̃W���X�g���ɂ�蒆�f
+        None,        // ??????m??
+        Success,     // ?U??????I??
+        JustDodged   // Player?~W???X?g???????f
     };
 
     void SetBehaviorAttackResult(BehaviorAttackResult result)
@@ -392,22 +397,22 @@ public:
         behaviorAttackResult = result;
     }
 
-    // BehaviorTree�p�̍U���I����Recovery�̏�����J�n
+    // BehaviorTree?p??U???I????Recovery???????J?n
     void BeginRecovery() const;
 
-    // BehaviorTree�p�̍U���I����Recovery���Ԃ�擾
+    // BehaviorTree?p??U???I????Recovery??????
     float GetSelectedAttackRecoveryDuration() const { return GetRecoveryDurationForCurrentAttack(); }
-    // BehaviorTree�p�̍U���������Ԃ�擾
+    // BehaviorTree?p??U????????????
     float GetBehaviorPrepareDuration() const { return fastComboPrepareDuration; }
     float GetFastComboApproachMaxDuration() const { return fastComboApproachMaxDuration; }
     float GetFastComboApproachRetryCooldown() const { return fastComboApproachRetryCooldown; }
-    // BehaviorTree�p�̑ҋ@���Ԃ�擾
+    // BehaviorTree?p???@??????
     float GetBehaviorIdleDuration() const { return behaviorIdleDuration; }
 
-    // BehaviorTree�̍X�V
+    // BehaviorTree??X?V
     void UpdateBehaviorTree(float deltaTime);
 
-    // FastCombo��BehaviorTree����ɂ��邩
+    // FastCombo??BehaviorTree????????
     void SetBehaviorTreeFastComboEnabled(bool enabled)
     {
         behaviorTreeFastComboEnabled = enabled;
@@ -436,13 +441,13 @@ public:
 private:
     bool finalHitReactionActive = false;
     bool finalHitReactionHeld = false;
-    // �v���C���[�Ƃ̋�����擾����֐�
+    // ?v???C???[???????????????
     float GetDistanceToPlayer();
 
-    // �v���C���[�Ƃ̋����ɉ����������̈��擾����֐�
+    // ?v???C???[????????????????????????????
     BossDistanceRegion GetDistanceRegion(float distance) const;
 
-    // ���݂̋����̈�Ɋ�Â��āA���ƂȂ�s����I�����֐�
+    // ?????????????�??aA??????s????I???????
     void UpdateActionCandidateFlags(const BossTargetContext& context);
     bool IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const;
     const BossIntentData* GetActiveIntentData() const;
@@ -466,10 +471,10 @@ private:
     const RepositionTargetEvaluation& GetRepositionTargetEvaluation(BossActionType actionType) const;
     const char* GetRepositionFailureReason() const;
 
-    // �A�N�V���������݂̋���(Region)�Ō��ɂȂ邩�𔻒肷��֐�
+    // ?A?N?V??????????????(Region)?O?????????????
     bool IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const;
 
-    // Action����Base Weight����Effective Weight��X�V����
+    // Action????Base Weight????Effective Weight??X?V????
     void UpdateActionEffectiveWeights();
     bool IsCombatAttackAction(BossActionType actionType) const;
     bool IsAttackActionForIntent(BossActionType actionType, BossIntentType intentType) const;
@@ -480,10 +485,10 @@ private:
     float GetIntentWeightForDistance(const BossIntentData& data, BossDistanceRegion region) const;
     float GetTotalIntentWeight() const;
 
-    // Action��Effective Weight���v����߂�֐�
+    // Action??Effective Weight???v????????
     float GetTotalActionWeight() const;
 
-    // Weight�Ɋ�Â��čs����I�����֐��B��₪�Ȃ��ꍇ��std::nullopt��Ԃ�
+    // Weight???�??cs????I????????B??????????std::nullopt????
     std::optional<BossActionType> SelectActionByWeight();
 
     void ResetJustDodgeRecords(const char* reason);
@@ -499,7 +504,7 @@ private:
     void PrepareJumpAttackMotionWarpOverride();
 
     void RefreshActiveHitBoxesFromNotifyStates();
-    // �{�X�̋����͈͂̃f�o�b�N�`��
+    // ?{?X????????~f?o?b?N?`??
     void DrawBossAIDebugWorld(const BossTargetContext& context) const;
     void DrawPositioningDebugWorld() const;
     void DrawRetreatDebugWorld() const;
@@ -511,60 +516,60 @@ private:
     void RecordRotationDebugSource(const char* source, const DirectX::XMFLOAT3& targetDirection, float requestedTurnSpeed);
     void DrawRotationDebugWorld(const BossTargetContext& context) const;
 
-    // �W�����v�U���̌�ɒ��n�̎��̃G�t�F�N�g�𐶐�����
+    // ?W?????v?U????????n?"??~G?t?F?N?g????????
     void SpawnGroundImpactEffect() const;
 
-    //�ǂɓ����������̃G�t�F�N�g�𐶐�����
+    //?????????????~G?t?F?N?g????????
     void SpawnWallImpactEffect(const DirectX::XMFLOAT3& impactPosition, const DirectX::XMFLOAT3& wallNormal) const;
 
-    // ���퓯�m�̉ΉԂ̃G�t�F�N�g�𐶐�����
+    // ?????m????~G?t?F?N?g????????
     void SpawnWeaponClashEffect() const;
 
-    // ������n�ʂɎC�鎞�̃G�t�F�N�g�𐶐�����
+    // ??????n???C???~G?t?F?N?g????????
     void SpawnLeftFootScrapeEffect()const;
 
-    // �E����n�ʂɎC�鎞�̃G�t�F�N�g�𐶐�����
+    // ?E????n???C???~G?t?F?N?g????????
     void SpawnRightFootScrapeEffect()const;
 
-    // �n�ʂɓ|�ꂽ�Ƃ��̃G�t�F�N�g�𐶐�����
+    // ?n???|??????~G?t?F?N?g????????
     void SpawnGroundDownEffect()const;
 
 private:
-    // �`��p�R���|�[�l���g��ǉ�
+    // ?`??p?R???|?[?l???g????
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
-    // ��]�R���|�[�l���g��ǉ�
+    // ??]?R???|?[?l???g????
     std::shared_ptr<RotationComponent> rotationComponent;
-    // �L�����N�^�[���[�u�R���|�[�l���g��ǉ�
+    // ?L?????N?^?[???[?u?R???|?[?l???g????
     std::shared_ptr<CharacterMovementComponent> characterMovementComponent;
 
-    // ���̕���̓����蔻��̃R���|�[�l���g
+    // ???????????????~R???|?[?l???g
     std::shared_ptr<CapsuleComponent> enemyCapsuleComponent;
     std::shared_ptr<CapsuleComponent> leftWeaponCollisionComp;
-    // �E�̕���̓����蔻��̃R���|�[�l���g
+    // ?E?????????????~R???|?[?l???g
     std::shared_ptr<CapsuleComponent> rightWeaponCollisionComp;
     std::string leftWeapon = "leftWeapon";
     std::string rightWeapon = "rightWeapon";
     std::string bothWeapon = "bothWeapon";
 
-    std::shared_ptr<SceneComponent> weaponLeftRootComponent; // ���̕���̍����̃R���|�[�l���g
-    std::shared_ptr<SceneComponent> weaponLeftMiddleComponent; // ���̕���̒��Ԃ̃R���|�[�l���g
-    std::shared_ptr<SceneComponent> weaponLeftTipComponent;  // ���̕���̐�[�̃R���|�[�l���g
+    std::shared_ptr<SceneComponent> weaponLeftRootComponent; // ????????????~R???|?[?l???g
+    std::shared_ptr<SceneComponent> weaponLeftMiddleComponent; // ???????????~R???|?[?l???g
+    std::shared_ptr<SceneComponent> weaponLeftTipComponent;  // ?????????[?~R???|?[?l???g
 
-    std::shared_ptr<SceneComponent> weaponRightRootComponent; // �E�̕���̍����̃R���|�[�l���g
-    std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // �E�̕���̒��Ԃ̃R���|�[�l���g
-    std::shared_ptr<SceneComponent> weaponRightTipComponent;  // �E�̕���̐�[�̃R���|�[�l���g
+    std::shared_ptr<SceneComponent> weaponRightRootComponent; // ?E??????????~R???|?[?l???g
+    std::shared_ptr<SceneComponent> weaponRightMiddleComponent; // ?E?????????~R???|?[?l???g
+    std::shared_ptr<SceneComponent> weaponRightTipComponent;  // ?E???????[?~R???|?[?l???g
 
-    std::shared_ptr<SceneComponent> beltComponent;  // �x���g�̃R���|�[�l���g
+    std::shared_ptr<SceneComponent> beltComponent;  // ?x???g?~R???|?[?l???g
 
-    std::shared_ptr<SceneComponent> leftFootComponent;      // �����̃R���|�[�l���g
-    std::shared_ptr<SceneComponent> rightFootComponent;     // �E���̃R���|�[�l���g
+    std::shared_ptr<SceneComponent> leftFootComponent;      // ?????~R???|?[?l???g
+    std::shared_ptr<SceneComponent> rightFootComponent;     // ?E???~R???|?[?l???g
 
     Trail leftWeaponTrail;
     Trail rightWeaponTrail;
     bool showLeftWeaponTrail = false;
     bool showRightWeaponTrail = false;
 
-    // �O�Ղ̐F
+    // ?O???F
     DirectX::XMFLOAT3 bossTrailColor{ 0.0f, 0.13f, 0.002f };
     float bossTrailEmissiveStrength = 7.0f;
     float bossTrailLifetime = 0.8f;
@@ -576,10 +581,10 @@ private:
     std::shared_ptr<ParticleComponent> wallImpactDustEffectComponent;
     std::shared_ptr<ParticleComponent> wallImpactFlashEffectComponent;
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
-    std::shared_ptr<ParticleComponent> footScrapeEffectComponent;   // �����̃G�t�F�N�g
+    std::shared_ptr<ParticleComponent> footScrapeEffectComponent;   // ?????~G?t?F?N?g
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
-    std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HP�o�[
+    std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HP?o?[
     std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;
     struct HpBarFadeEntry
     {
@@ -592,25 +597,25 @@ private:
     float delayedHp = 0.0f;
     float delayedHpDelayTimer = 0.0f;
     float delayedHpDelayDuration = 0.25f;
-    float delayedHpFollowSpeed = 8.95f; // HP�o�[���ǂꂭ�炢�x�����邩
-    float delayedHpRushFollowSpeed = 12.0f; // HP�o�[���ǂꂭ�炢Rush���ɒx�����邩
+    float delayedHpFollowSpeed = 8.95f; // HP?o?[????????x??????
+    float delayedHpRushFollowSpeed = 12.0f; // HP?o?[???????Rush????x??????
     CoreColor bossHpCurrentColor{ 0.55f, 0.08f, 0.06f, 1.0f };
     CoreColor bossHpDelayedColor{ 0.95f, 0.72f, 0.38f, 1.0f };
 
-    bool rightHitBox = false;   // �E�̌��̓����蔻��
-    bool leftHitBox = false;    // ���̌��̓����蔻��
+    bool rightHitBox = false;   // ?E????????????
+    bool leftHitBox = false;    // ??????????????
     bool isDangerWindow = false;
 
-    // �q�b�g���ɓ��������G��L�^����
+    // ?q?b?g????????????G??L?^????
     std::unordered_set<Actor*> hitActors;
     // Players that successfully just-dodged the current attack sequence.
     std::unordered_set<const Actor*> justDodgedActors;
     uint64_t currentAttackSequenceId = 0;
     int currentAttackHitCount = 0;
 
-    bool battleAIActive = true; // �{�X�o�g��AI��g�p���邩�ǂ����@false�Ȃ�idle�̂܂�
-    //BossAIMode bossAIMode = BossAIMode::CombatAI;         // �{�X��AI���[�h
-    BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;   // �{�X��AI���[�h�@�f�o�b�N�p
+    bool battleAIActive = true; // ?{?X?o?g??AI??g?p??????????@false???idle?^??
+    //BossAIMode bossAIMode = BossAIMode::CombatAI;         // ?{?X??AI???[?h
+    BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;   // ?{?X??AI???[?h?@?f?o?b?N?p
     BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
 
     std::optional<BossIntentType> activeIntent = std::nullopt;
@@ -627,7 +632,7 @@ private:
     std::string intentLifecycleReason = "None";
 
     static constexpr int intentCount = 4;
-    // �ӎv����̋������Ƃɂ��d��
+    // ??v???????????????d??
     std::array<BossIntentData, intentCount> combatIntentData =
     { {
         { BossIntentType::CloseCombat, 60.0f, 30.0f, 25.0f, 4.0f, 5.5f, 0.25f },
@@ -648,8 +653,8 @@ private:
     BossActionType lastActionType = BossActionType::AttackLA;
     std::optional<BossActionType> lastStartedCombatAttack = std::nullopt;
     std::optional<BossActionType> secondLastStartedCombatAttack = std::nullopt;
-    static constexpr float initialRecentAttackPenaltyLast = 0.2f;          // ���߂̍U���̉����銄��
-    static constexpr float initialRecentAttackPenaltySecond = 0.45f;        // �Q��̍U���̉����銄��
+    static constexpr float initialRecentAttackPenaltyLast = 0.2f;          // ?????U???????????
+    static constexpr float initialRecentAttackPenaltySecond = 0.45f;        // ?Q???U???????????
     float recentAttackPenaltyLast = initialRecentAttackPenaltyLast;
     float recentAttackPenaltySecond = initialRecentAttackPenaltySecond;
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
@@ -662,7 +667,7 @@ private:
     BossAttackType lastAttackType = BossAttackType::PrimaryAttackLA;
     bool hasLastAttack = false;
 
-    // �s���̃f�[�^���`����z��B�U���̎�ށA��������Ȃǂ�ݒ肷��B
+    // ?s???~f?[?^???`????z??B?U???"??A???????????????B
     static constexpr int actionCount = 10;
     std::array<BossActionData, actionCount> combatActionData =
     {
@@ -680,10 +685,10 @@ private:
     }
     };
 
-    // �e�s������������𖞂����Ă��邩�̃t���O
+    // ?e?s??????????????????A????~t???O
     std::array<bool, actionCount> combatActionCandidateFlags{};
     std::array<BossActionCandidateReason, actionCount> combatActionCandidateReasons{};
-    // �e�s���̗L���ȏd�݁B���������Repeat�����l�������L���ȏd��
+    // ?e?s????L????d??B?????????Repeat?????l???????L????d??
     std::array<float, actionCount> combatActionEffectiveWeights{};
     std::array<float, actionCount> combatActionCooldownRemaining{};
 
@@ -725,12 +730,12 @@ private:
     float roarHeightTolerance = 2.0f;
     float roarLevelStartFootOffset = -0.30f;
     float roarLevelStartFootOffsetEndTime = 0.30f;
-    float roarPreStampedeStartTime = 3.4f;  // ��K�J�n����
-    float roarPreStampedeEndTime = 7.1f;    // ��K�I������
+    float roarPreStampedeStartTime = 3.4f;  // ??K?J?n????
+    float roarPreStampedeEndTime = 7.1f;    // ??K?I??????
     float roarCooldownDuration = 30.0f;
-    float roarCooldownRemaining = 0.0f;
-    float retreatDistanceMin = 5.0f;    // 退避距離 最小
-    float retreatDistanceMax = 12.0f;// 退避距離　最大
+    float roarCooldownRemaining = 0.0f; 
+    float retreatDistanceMin = 5.0f;    // ???? ??
+    float retreatDistanceMax = 12.0f;// ???????
     float retreatMinimumMoveDistance = 5.0f;
     float retreatMoveSpeed = 6.0f;
     float retreatRetryCooldownDuration = 0.5f;
@@ -796,6 +801,13 @@ private:
     float retreatRemainingDistance = 0.0f;
     PositioningMoveResult retreatLastMoveResult = PositioningMoveResult::None;
     std::string retreatCompleteReason = "None";
+    enum class RepositionType { SideMove, BackOff }; enum class RepositionCandidateRejectReason { None, Clamp, MinimumMoveDistance, Sweep };
+    struct RepositionCandidateDebug { DirectX::XMFLOAT3 position{}; RepositionCandidateRejectReason rejectReason=RepositionCandidateRejectReason::None; float score=0.0f; bool accepted=false; bool pathBlocked=false; };
+    struct RepositionRuntime { RepositionType type=RepositionType::SideMove; DirectX::XMFLOAT3 playerSnapshot{}; DirectX::XMFLOAT3 gruxSnapshot{}; int candidateCount=0, clampRejectCount=0, minimumMoveRejectCount=0, sweepRejectCount=0; float selectedScore=0.0f; std::string failureReason="None"; std::vector<RepositionCandidateDebug> candidates; } repositionRuntime;
+    PositioningTargetContext repositionTarget{}; PositioningTargetRuntime repositionMovementRuntime{}; int consecutiveAttackCount=0;
+    float repositionCooldownDuration=3.0f, repositionCooldownRemaining=0.0f, repositionRetryCooldownDuration=0.75f, repositionRetryCooldownRemaining=0.0f;
+    float repositionMinimumMoveDistance=2.0f, repositionMoveSpeed=6.0f, repositionSideMoveProbability=0.65f, repositionBackOffProbability=0.35f, repositionBackOffDistanceMin=2.5f, repositionBackOffDistanceMax=4.0f;
+    std::array<float, 4> repositionChanceByAttackCount{0.10f,0.25f,0.50f,1.0f}; mutable bool repositionDecisionCached=false, repositionDecisionResult=false; mutable float repositionDecisionRoll=0.0f; bool repositionCanPlanDebug=false; std::string lastCombatDecision="None"; bool repositionWorldDebug=true;
 
     struct RoarRuntime
     {
@@ -850,7 +862,7 @@ private:
     std::array<float, actionCount> lastActionRandomRangeEnd{};
     std::array<float, actionCount> lastActionRandomWeights{};
 
-    // �U�����Ƃ̃f�[�^���`����z��B�A�j���[�V�������A��������A�d�݁A�U���ʂȂǂ�ݒ肷��B
+    // ?U??????~f?[?^???`????z??B?A?j???[?V???????A????????A?d??A?U???????????B
     std::array<BossAttackData, 6> combatAttackData =
     { {
         { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f, 5 },
@@ -861,12 +873,12 @@ private:
         { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 0.1f, 13 },
     } };
 
-    // ������Attack�I��p
-    std::array<float, 5> combatEffectiveWeights{};  // ���������Repeat�����l�������L���ȏd��
-    std::array<bool, 5> combatCandidateFlags{}; // �e�U������������𖞂����Ă��邩�̃t���O�@���ImGui�Ŏg�p�B
-    float currentCombatPlayerDistance = 0.0f;   // Attack�I����_�̃v���C���[�Ƃ̋����B��������̔���ɒ��ڎg�p�B
-    float lastCombatSelectionDistance = 0.0f;   //  �Ō��Attack���I��s�����Ƃ��̋����B���݂�ImGui�\���p�Ƃ��ĕێ��B
-    float repeatWeightScale = 0.25f;    //  ���O�Ɠ���Attack��Weight�֊|����{���B���݂�0.25�Ȃ̂ŁA�����U����Weight��25%�܂ŉ�����B
+    // ??????Attack?I??p
+    std::array<float, 5> combatEffectiveWeights{};  // ?????????Repeat?????l???????L????d??
+    std::array<bool, 5> combatCandidateFlags{}; // ?e?U??????????????????A????~t???O?@???ImGui?Og?p?B
+    float currentCombatPlayerDistance = 0.0f;   // Attack?I????_?~v???C???[???????B????????????????g?p?B
+    float lastCombatSelectionDistance = 0.0f;   //  ?O??Attack???I??s?????????????B?????ImGui?\???p????e???B
+    float repeatWeightScale = 0.25f;    //  ???O?????Attack??Weight??|????{???B?????0.25??^LA?????U????Weight??25%????????B
 
     std::array<BossPositioningData, 4> combatPositioningData =
     { {
@@ -876,13 +888,13 @@ private:
         { BossActionType::RepositionRight, BossPositioningDirection::TowardPlayer, 3.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TravelDistance, 0.0f },
     } };
 
-    //  StateMachine�̃^�C�~���O�ƕ�������
-    float attackInterval = 0.1f;   // EnemyThinkState�֓����Ă���Attack�I���J�n����܂ł̑҂����ԁB
-    float recoveryDuration = 0.5f;  //  �U���I����AEnemyRecoveryState�ɑ؍݂��鎞�ԁB���݂͑SAttack���ʂ�0.5�b�B
-    float attackFacingAngle = 35.0f;    // ���̊p�x�ȓ�Ȃ�U���\�Ƃ݂Ȃ�
+    //  StateMachine?~^?C?~???O?????????
+    float attackInterval = 0.1f;   // EnemyThinkState??????A???Attack?I???J?n?????l???????B
+    float recoveryDuration = 0.5f;  //  ?U???I????AEnemyRecoveryState?????????B?????SAttack?????0.5?b?B
+    float attackFacingAngle = 35.0f;    // ????p?x?????U???�\?????
 
-    float nearDistanceThreshold = 6.0f; // ���̋����ȉ��͋ߋ����Ƃ݂Ȃ�
-    float middleDistanceThreshold = 12.0f; // ���̋����ȉ��͒������Ƃ݂Ȃ�
+    float nearDistanceThreshold = 6.0f; // ?????????????????????
+    float middleDistanceThreshold = 12.0f; // ??????????????????????
 
     float relativeFrontMaxAngle = 50.0f;
     float relativeBackMinAngle = 110.0f;
@@ -893,18 +905,18 @@ private:
     const float initialMiddleDistanceThreshold = middleDistanceThreshold;
     const float initialRelativeFrontMaxAngle = relativeFrontMaxAngle;
     const float initialRelativeBackMinAngle = relativeBackMinAngle;
-    static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // ���ɗ���������
+    static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // ?????????????
     static constexpr float initialCombatRepositionMoveSpeed = 6.0f;
-    static constexpr float initialCombatRepositionSettleDuration = 1.5f;    // �ړI�n�ɕt������̑҂b��
+    static constexpr float initialCombatRepositionSettleDuration = 1.5f;    // ??I?n??t????????�b??
 
     static constexpr float initialFrontAttackReadyDuration = 1.0f;
     static constexpr float initialSideAttackReadyDuration = 1.5f;
     static constexpr float initialCloseCombatReadyFacingAngle = 7.5f;
 
-    float turnSpeed = 480.0f;  // EnemyTurnState�ł��̏��]����Ƃ��̑��x
-    float turnCompleteAngle = 15.0f;    // ���̊p�x�ȓ�Ȃ��]�����Ƃ݂Ȃ�
-    float turnTimeout = 1.5f;   //   Turn�����܂ł�������Ȃ��ꍇ�̐������ԁB���݂�1.5�b��Think�֖߂�B
-    std::string lastAIDecisionReason = "None";  // �Ō��AI���s�������f���R�𕶎���ŕۑ��BImGui�ɕ\���BAI�̓���m�F�p�B
+    float turnSpeed = 480.0f;  // EnemyTurnState?l?????]??????????x
+    float turnCompleteAngle = 15.0f;    // ????p?x??????]?????????
+    float turnTimeout = 1.5f;   //   Turn?????�El????????????????????B?????1.5?b??Think????B
+    std::string lastAIDecisionReason = "None";  // ?O??AI???s???????f???R??????r???BImGui??\???BAI?????m?F?p?B
     float frontAttackReadyDuration = initialFrontAttackReadyDuration;
     float sideAttackReadyDuration = initialSideAttackReadyDuration;
     float closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
@@ -963,7 +975,7 @@ private:
     float combatRepositionBackWeight = 80.0f;
     float dashAttackPlanBackWeight = 35.0f;
     float jumpAttackPlanBackWeight = 35.0f;
-    float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;   // reposition�̎��ɓ�������
+    float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;   // reposition?"??????????
     float combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;
     float combatRepositionSettleDuration = initialCombatRepositionSettleDuration;
     bool combatRepositionSettling = false;
@@ -1001,37 +1013,37 @@ private:
     float positioningDebugStuckTimer = 0.0f;
     std::string positioningEndReason = "None";
 
-    // FastCombo�̘A���U���p
-    bool transitionWindow = false;      // Animation Notify��TransitionWindow�����ݗL������\���BFastCombo�Ŏ��̃R���{�i�K�֐i�߂�^�C�~���O�̔���Ɏg�p�B
+    // FastCombo??A???U???p
+    bool transitionWindow = false;      // Animation Notify??TransitionWindow??????L??????\???BFastCombo?O??~R???{?i?K??i???^?C?~???O??????g?p?B
 
-    // JumpAttack��MotionWarp�p
-    float maxJumpDistance = 12.5f;      // JumpAttack�Ŏ��ۂɈړ����Ă悢�ő勗���B�v���C���[�������Ă�12.5��蒷���͈ړ����Ȃ��B
+    // JumpAttack??MotionWarp?p
+    float maxJumpDistance = 12.5f;      // JumpAttack?O?????????A??o????B?v???C???[???????A?12.5???????????????B
     float desiredAttackDistance = 0.1f;
     float jumpDesiredStartDistance = 4.5f;
     float jumpSetupDistanceMin = 6.5f;
     float jumpSetupDistanceMax = 8.5f;
-    float jumpSetupMinimumMoveDistance = 5.0f;  // JumpAttack�ōŒ���ړ�����
+    float jumpSetupMinimumMoveDistance = 5.0f;  // JumpAttack?oO?????????
     float attackSetupCandidateAngleStep = 30.0f;
-    float attackSetupClampTolerance = 0.75f;    //  JumpAttack��Ƀv���C���[�Ƃ̊Ԃ֎c����������
-    float jumpAttackTelegraphStartTime = 1.4f;  // �\������̊J�n�A�j���[�V��������
+    float attackSetupClampTolerance = 0.75f;    //  JumpAttack???v???C???[?????c??????????
+    float jumpAttackTelegraphStartTime = 1.4f;  // ?\???????J?n?A?j???[?V????????
     float jumpAttackTelegraphEndTime = 2.6f;
-    float currentJumpPlayerDistance = 0.0f; //  JumpAttack�J�n���_�̃v���C���[�܂ł̋���
-    float calculatedJumpDistance = 0.0f;    //  �ŏI�I��MotionWarp�ňړ����鋗��
+    float currentJumpPlayerDistance = 0.0f; //  JumpAttack?J?n???_?~v???C???[??l????
+    float calculatedJumpDistance = 0.0f;    //  ?oI?I??MotionWarp?n????????
     bool jumpAttackExecutionStartCalledDebug = false;
-    bool jumpMotionWarpOverrideActive = false;  // �ʏ��Animation Notify�ɐݒ肳�ꂽ�ړ������ł͂Ȃ��AJumpAttack�p�Ɍv�Z���������ƕ�����g�p���邩�ǂ���
-    DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  //  JumpAttack�J�n���̃v���C���[�ʒu
-    DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  //  �{�X����JumpAttack�J�n���̃v���C���[�ʒu�֌��������K���ςݕ���
+    bool jumpMotionWarpOverrideActive = false;  // ????Animation Notify??????????????l????AJumpAttack?p??v?Z???????????????g?p?????????
+    DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  //  JumpAttack?J?n???~v???C???[??u
+    DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  //  ?{?X????JumpAttack?J?n???~v???C???[??u??????????K????????
 
     // DashAttack
     float dashSetupDistanceMin = 8.0f;
     float dashSetupDistanceMax = 10.0f;
-    float dashSetupMinimumMoveDistance = 5.0f;  // �_�b�V���ړ��Œ዗��
+    float dashSetupMinimumMoveDistance = 5.0f;  // ?_?b?V??????O???
     DashBTPhase dashBTPhase = DashBTPhase::None;
     bool dashBTAttackStarted = false;
     BossActionType dashBTPreviousAction = BossActionType::AttackLA;
     float dashBTTelegraphElapsed = 0.0f;
     float dashBTTraveledDistance = 0.0f;
-    float dashWindupDuration = 1.40f;   // �\������̎���
+    float dashWindupDuration = 1.40f;   // ?\??????"???
     float dashAttackSpeed = 12.0f;
     float minDashAttackDistance = 4.0f;
     float maxDashAttackDistance = 16.0f;
@@ -1094,17 +1106,17 @@ private:
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;
     ChargeAttackEndReason pendingChargeRecoveryResult = ChargeAttackEndReason::None;
 
-    // Wall Hit��̍s���s�\���ԁBStart/End Animation���ԂƂ͕�������B
+    // Wall Hit???s???s?\????BStart/End Animation?????????????B
     float stunDuration = 2.5f;
     std::string stunPhaseDebug = "None";
     float stunElapsedDebug = 0.0f;
     std::string deathAnimationName = "Death_A_0";
     bool cinematicDeathAnimationOwnedExternally = false;
 
-    // Recovery�ւ̑J�ڌ�����x�����㏑���ł���Duration�B
-    float chargePlayerHitRecoveryDuration = 0.8f;   // ��Dash�U����Player�ɓ�����������recovery����
-    float chargeJustDodgeRecoveryDuration = 1.0f;   // ��Dash�U���̃W���X�g�����ꂽ����recovery����
-    float postStunRecoveryDuration = 0.1f;  // ��Dash�U���̕ǂɓ�����������recovery����
+    // Recovery???J???????x?????????l???Duration?B
+    float chargePlayerHitRecoveryDuration = 0.8f;   // ??Dash?U????Player?????????????recovery????
+    float chargeJustDodgeRecoveryDuration = 1.0f;   // ??Dash?U???~W???X?g??????????recovery????
+    float postStunRecoveryDuration = 0.1f;  // ??Dash?U?????????????????recovery????
     std::optional<float> nextRecoveryDuration;
     std::string nextRecoverySource = "Default";
     float currentRecoveryDurationDebug = 0.0f;
@@ -1115,25 +1127,25 @@ private:
     bool beginHuskParticleRequest = false;
     float pitchBaseValue = 0.45f;
 
-    // ���ڂ̈ʒu�p�R���|�[�l���g��ǉ��@�ÈłŌ���ڂ̕\���p
+    // ??????u?p?R???|?[?l???g?????@?�lO?????\???p
     std::shared_ptr<SceneComponent> leftEyeSceneComponent;
-    // �E�ڂ̈ʒu�p�R���|�[�l���g��ǉ��@�ÈłŌ���ڂ̕\���p
+    // ?E????u?p?R???|?[?l???g?????@?�lO?????\???p
     std::shared_ptr<SceneComponent> rightEyeSceneComponent;
 
-    // �J�����̒����_�̈ʒu
+    // ?J??????????_???u
     std::shared_ptr<SceneComponent> cameraTargetComponent;
-    // �{�X�펞�̃I�t�Z�b�g
+    // ?{?X???~I?t?Z?b?g
     float bossBattleCameraDistance = 0.0f;
     //float bossBattleCameraRightDistance = 2.5f;
     float bossBattleCameraRightDistance = 0.0f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,0.0f,0.0f };
 
-    // �O�t���[���̍��̕���
+    // ?O?t???[??????????
     DirectX::XMFLOAT3 prevWeaponLeftRootPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponLeftMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponLeftTipPos = { 0.0f,0.0f,0.0f };
 
-    // �O�t���[���̉E�̕���
+    // ?O?t???[????E?????
     DirectX::XMFLOAT3 prevWeaponRightRootPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponRightMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponRightTipPos = { 0.0f,0.0f,0.0f };
@@ -1141,26 +1153,26 @@ private:
     float hitWeaponRadius = 0.8f;
     float activeLeftHitBoxRadius = 0.8f;
     float activeRightHitBoxRadius = 0.8f;
-    std::vector<const AnimationNotifyState*> activeHitBoxNotifyStates;   // ����̔��a
-    float enemyScale = 1.7f;    // �G�̃X�P�[��
-    float hitEnemyEffectOffsetY = 2.2f;  // �q�b�g�G�t�F�N�g�̃I�t�Z�b�gY
-    float hitPlayerEffectOffsetY = 2.4f;  // �q�b�g�G�t�F�N�g�̃I�t�Z�b�gY
+    std::vector<const AnimationNotifyState*> activeHitBoxNotifyStates;   // ???????a
+    float enemyScale = 1.7f;    // ?G?~X?P?[??
+    float hitEnemyEffectOffsetY = 2.2f;  // ?q?b?g?G?t?F?N?g?~I?t?Z?b?gY
+    float hitPlayerEffectOffsetY = 2.4f;  // ?q?b?g?G?t?F?N?g?~I?t?Z?b?gY
 
-    // �o��V�[���̃{�X���O��UI
+    // ?o??V?[???~{?X???O??UI
     std::shared_ptr<UIImageComponent> gruxNameImageComponent;
     std::unique_ptr<EasingRunner> easingRunner;
     float easingFactorAlpha = 0.0f;
 
-    // ���b�N�I���̃C���[�W���f��
+    // ???b?N?I???~C???[?W???f??
     std::shared_ptr<SkeletalMeshComponent> lockOnTargetMeshComponent;
-    float lockOnOffset = 0.0f;  // �v���C���[���ɉ����o���I�t�Z�b�g
+    float lockOnOffset = 0.0f;  // ?v???C???[????????o???I?t?Z?b?g
     float lockOnOffsetY = 1.65f;
-    // ���b�N�I���̃C���[�WUI
+    // ???b?N?I???~C???[?WUI
     std::shared_ptr<UIImageComponent> lockOnTargetImageComponent;
 
-    // �W���X�g���̋�`�͈̔�
+    // ?W???X?g?????`????
     DirectX::XMFLOAT3 justDodgeAreaSize = { 0.0f,2.0f,0.0f };
-    // �W���X�g���̋�`�̃I�t�Z�b�g
+    // ?W???X?g?????`?~I?t?Z?b?g
     DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };
     DangerArea dangerArea{};
     struct DangerObbInitialValue
@@ -1184,12 +1196,12 @@ private:
     float hitVoiceCooldownTimer = 0.0f;
     int lastHitVoiceIndex = -1;
 
-    // �A�j���[�V�������ɂǂꂭ�炢�ړ����邩
+    // ?A?j???[?V???????????????????
     std::vector<AnimationMotionWarp> animationMotionWarps;
 
     friend class GruxEnemyEyeActor;
 
-    // �r�w�C�r�A�c���[
+    // ?r?w?C?r?A?c???[
     std::unique_ptr<BehaviorTree>	aiTree = nullptr;
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;
     NodeBase* activeNode = nullptr;
@@ -1200,13 +1212,14 @@ private:
     std::string behaviorTreePreviousNode = "None";
     std::string behaviorTreeLastResult = "None";
     std::string behaviorTreeLastJudgment = "None";
+    bool behaviorTreeRestartReady = false;
     BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;
     bool behaviorApproachActive = false;
     float fastComboPrepareDuration = 0.5f;
     float fastComboApproachMaxDuration = 1.5f;
     float fastComboApproachRetryCooldown = 2.0f;
     float fastComboApproachRetryRemaining = 0.0f;
-    float behaviorIdleDuration = 1.0f;// �ҋ@����
+    float behaviorIdleDuration = 1.0f;// ??@????
 
 };
 
@@ -1220,7 +1233,7 @@ public:
     void Update(float elapsedTime)override;
 
 private:
-    // �`��p�R���|�[�l���g��ǉ�
+    // ?`??p?R???|?[?l???g????
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
 
@@ -1236,7 +1249,7 @@ public:
     void Update(float elapsedTime)override;
 
 private:
-    // �`��p�R���|�[�l���g��ǉ�
+    // ?`??p?R???|?[?l???g????
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
 
@@ -1252,7 +1265,7 @@ public:
     void Update(float elapsedTime)override;
 
 private:
-    // �`��p�R���|�[�l���g��ǉ�
+    // ?`??p?R???|?[?l???g????
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
 

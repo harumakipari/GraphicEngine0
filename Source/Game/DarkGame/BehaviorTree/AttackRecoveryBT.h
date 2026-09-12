@@ -10,7 +10,8 @@ public:
     ExecuteAttackRecovery(GruxEnemy* enemy, bool consumeOverride)
         : ActionBase(enemy), consumeRecoveryOverride(consumeOverride) {}
     State Run(float deltaTime) override;
-    void Reset() { started = false; timer = 0.0f; duration = 0.0f; }
+    void Reset() { started = false; sequenceId = 0; timer = 0.0f; duration = 0.0f; }
+    void ResetRuntime() override { Reset(); }
 private:
     bool consumeRecoveryOverride = false;
     bool started = false;

@@ -49,6 +49,7 @@ public:
 	NodeBase* Inference(BehaviorData* data);
 	// 実行
 	ActionBase::State Run(float elapsedTime);
+	void ResetActionRuntimes();
 	std::vector<std::shared_ptr<NodeBase>>		children;		// 子ノード
 protected:
 	std::string						name;			// 名前

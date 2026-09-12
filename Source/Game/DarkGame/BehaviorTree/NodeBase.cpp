@@ -169,6 +169,12 @@ NodeBase* NodeBase::SelectSequence(std::vector<std::shared_ptr<NodeBase>>* list,
 }
 
 // 判定
+void NodeBase::ResetActionRuntimes()
+{
+    if (action) action->ResetRuntime();
+    for (const auto& child : children) child->ResetActionRuntimes();
+}
+
 bool NodeBase::Judgment()
 {
     // judgmentあればメンバ関数Judgment()実行した結果をリターン。

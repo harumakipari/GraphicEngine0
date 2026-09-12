@@ -38,6 +38,7 @@ public:
 	// ビヘイビアツリーを実行する関数
 	NodeBase* Run(NodeBase* actionNode, BehaviorData* data, float elapsedTime);
     ActionBase::State GetLastRunResult() const { return lastRunResult; }
+	void ResetActionRuntimes();
 
 	// 登録されているノードを削除する関数
 	void NodeAllClear();

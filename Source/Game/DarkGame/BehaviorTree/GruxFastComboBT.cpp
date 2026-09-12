@@ -1,4 +1,4 @@
-﻿#include "pch.h"
+#include "pch.h"
 #include "GruxFastComboBT.h"
 #include "NodeBase.h"
 
@@ -17,7 +17,7 @@ bool CanExecuteFastCombo::Judgment()
     return result;
 }
 
-// ボスが死亡したかどうか
+// ???????????
 bool DeadJudgment::Judgment()
 {
     return owner->IsDead();
@@ -25,7 +25,7 @@ bool DeadJudgment::Judgment()
 
 ActionBase::State BTStartDeath::Run(float)
 {
-    //GruxEnemyの既存の更新終了時の死亡処理がDeathStateを開始する。
+    //GruxEnemy???????????????DeathState??????
     started = true;
     return State::Complete;
 }
@@ -188,23 +188,23 @@ ActionBase::State PrepareFastCombo::Run(float deltaTime)
     return State::Complete;
 }
 
-// 近距離攻撃を予定していいかどうか
+// ????????????????
 bool GruxEnemy::CanPlanFastCombo() const
 {
     if (IsFastComboApproachRetryCooldownActive())
-    {// 近距離攻撃のクールタイムだったら、予定しない
+    {// ??????????????????????
         return false;
     }
     const auto c = BuildTargetContext();
     if (!c.valid || c.region == PlayerRelativeRegion::Back)
-    {// playerが後ろにいる時
+    {// player???????
         return false;
     }
     float maxRange = closeCombatSettings.planMaxRange;
     for (const auto& a : combatAttackData)
     {
         if (a.type == BossAttackType::FastCombo)
-        {// 近距離攻撃の最大範囲を取得する
+        {// ???????????????
             break;
         }
     }
@@ -229,7 +229,7 @@ bool GruxEnemy::IsFastComboApproachRetryCooldownActive() const
     return fastComboApproachRetryRemaining > 0.0f;
 }
 
-// 近距離攻撃が実行可能かどうか
+// ??????????????
 bool GruxEnemy::CanExecuteFastCombo() const
 {
     const auto c = BuildTargetContext();
@@ -304,7 +304,7 @@ bool GruxEnemy::UpdateFastComboApproach(float dt)
 }
 
 
-// Recoveryの処理を開始
+// Recovery??????
 void GruxEnemy::BeginRecovery() const
 {
     PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true);
@@ -314,11 +314,14 @@ void GruxEnemy::BeginRecovery() const
 void GruxEnemy::UpdateBehaviorTree(float dt)
 {
     fastComboApproachRetryRemaining = (std::max)(0.0f, fastComboApproachRetryRemaining - dt);
+    repositionCooldownRemaining = (std::max)(0.0f, repositionCooldownRemaining - (std::max)(0.0f, dt));
+    repositionRetryCooldownRemaining = (std::max)(0.0f, repositionRetryCooldownRemaining - (std::max)(0.0f, dt));
     if (!aiTree || !behaviorData)
         return;
     if (!activeNode)
-    {// 現在実行されているノードが無ければ
-        // 次に実行するノードを推論する。
+    {// ?????????????????
+        // ???????????????
+        BeginCombatDecisionInference();
         activeNode = aiTree->ActiveNodeInference(behaviorData.get());
         behaviorTreeCurrentNode = activeNode ? activeNode->GetName() : "None";
     }
@@ -332,6 +335,8 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
 
     if (!activeNode)
     {
+        if (result == ActionBase::State::Complete && (behaviorTreePreviousNode == "ExecuteAttackRecovery" || behaviorTreePreviousNode == "ExecuteChargeRecovery"))
+            RecordBehaviorAttackCompleted();
         behaviorTreeCurrentNode = "None";
         return;
     }

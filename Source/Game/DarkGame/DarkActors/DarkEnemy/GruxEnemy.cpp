@@ -479,7 +479,11 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("RetreatPlan", "PrepareRetreatTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareRetreatTarget>(this));
     aiTree->AddNode("RetreatPlan", "MoveToPositioningTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToPositioningTarget>(this));
 
-    aiTree->AddNode("Root", "Attack", 2, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
+    aiTree->AddNode("Root", "CombatDecision", 2, BehaviorTree::SelectRule::Priority, std::make_unique<::CanPlanAnyCombatDecision>(this), nullptr);
+    aiTree->AddNode("CombatDecision", "RepositionPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanReposition>(this), nullptr);
+    aiTree->AddNode("RepositionPlan", "PrepareRepositionTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareRepositionTarget>(this));
+    aiTree->AddNode("RepositionPlan", "MoveToRepositionTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToRepositionTarget>(this));
+    aiTree->AddNode("CombatDecision", "Attack", 1, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
     aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
     aiTree->AddNode("Attack", "FastComboPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
@@ -574,6 +578,16 @@ void GruxEnemy::PauseBattleAI()
 {
     battleAIActive = false;
     StopBattleActions();
+
+    // Pausing a battle is an abort, not a battle restart. Discard BT execution
+    // state so no action can resume during the death/result presentation.
+    activeNode = nullptr;
+    if (behaviorData) behaviorData->Init();
+    if (aiTree) aiTree->ResetActionRuntimes();
+    behaviorTreeCurrentNode = "None";
+    behaviorTreePreviousNode = "None";
+    behaviorTreeLastResult = "None";
+
     if (stateMachine_)
         stateMachine_->ChangeState("EnemyIdleState");
 }
@@ -657,6 +671,95 @@ void GruxEnemy::StopBattleActions()
     velocity = { 0.0f, 0.0f, 0.0f };
 }
 
+void GruxEnemy::ResetBehaviorTreeForBattleRestart()
+{
+    activeNode = nullptr;
+    if (behaviorData) behaviorData->Init();
+    if (aiTree) aiTree->ResetActionRuntimes();
+    behaviorTreeCurrentNode = "None";
+    behaviorTreePreviousNode = "None";
+    behaviorTreeLastResult = "None";
+    behaviorTreeLastJudgment = "None";
+    repositionDecisionCached = false;
+    repositionDecisionResult = false;
+    repositionDecisionRoll = 0.0f;
+    repositionCanPlanDebug = false;
+    behaviorTreeRestartReady = true;
+}
+
+void GruxEnemy::ResetCombatRuntimeForBattleRestart()
+{
+    ClearAttackSetupTarget();
+    ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
+    ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
+    retreatRuntime = {};
+    repositionRuntime = {};
+    retreatDebugTargetPosition = {};
+    retreatRemainingDistance = 0.0f;
+    retreatLastMoveResult = PositioningMoveResult::None;
+    retreatCompleteReason = "None";
+
+    combatActionCooldownRemaining.fill(0.0f);
+    selectedAttackType = BossAttackType::PrimaryAttackLA;
+    selectedActionType = BossActionType::AttackLA;
+    pendingAttackActionValid = false;
+    roarBT = {};
+    roarBTStatus = "Idle";
+    roarCooldownRemaining = 0.0f;
+    retreatRetryCooldownRemaining = 0.0f;
+    repositionCooldownRemaining = 0.0f;
+    repositionRetryCooldownRemaining = 0.0f;
+    consecutiveAttackCount = 0;
+    lastCombatDecision = "None";
+
+    fastComboTargetContext = {};
+    fastComboStageTargetContexts = {};
+    fastComboTargetStage = -1;
+    fastComboRuntimeState = FastComboRuntimeState::Attack;
+    fastComboRuntimeStage = -1;
+    fastComboApproachRetryRemaining = 0.0f;
+    behaviorApproachActive = false;
+    behaviorAttackResult = BehaviorAttackResult::None;
+    currentAttackSequenceId = 0;
+    currentAttackHitCount = 0;
+    hitActors.clear();
+    ResetJustDodgeRecords("battle_restart");
+    DisableAttackHitBoxes();
+    animationMotionWarps.clear();
+    jumpMotionWarpOverrideActive = false;
+    jumpAttackStartPlayerPosition = {};
+    jumpMotionWarpDirection = { 0.0f, 0.0f, 1.0f };
+    calculatedJumpDistance = 0.0f;
+    nextRecoveryDuration.reset();
+    nextRecoverySource = "Default";
+    pendingChargeRecoveryResult = ChargeAttackEndReason::None;
+
+    dashBTPhase = DashBTPhase::None;
+    dashBTAttackStarted = false;
+    dashBTPreviousAction = BossActionType::AttackLA;
+    dashBTTelegraphElapsed = 0.0f;
+    dashBTTraveledDistance = 0.0f;
+    dashAttackDirection = {};
+    dashAttackStartPosition = {};
+    dashTargetPosition = {};
+    dashAttackElapsedTime = 0.0f;
+
+    dashAttackMovementActive = false;
+    chargeBT = {};
+    chargeMovementActive = false;
+    chargeDangerWindowActive = false;
+    chargeElapsedTime = 0.0f;
+
+    StopAIMovement();
+    EndPositioningAnimation();
+    if (characterMovementComponent)
+    {
+        characterMovementComponent->SetMoveDirection({});
+        characterMovementComponent->SetInputMagnitude(0.0f);
+        characterMovementComponent->SetFrameAdditionalVelocity({});
+        characterMovementComponent->ResetFixedSpeed();
+    }
+}
 void GruxEnemy::ResetForBattleRestart(const Transform& battleStartTransform)
 {
     ResetForBattleContinue(battleStartTransform);
@@ -671,9 +774,12 @@ void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
     EndFinalHitReaction();
     finalHitReactionHeld = false;
     ResetTimeScale();
+    StopBattleActions();
+    ResetBehaviorTreeForBattleRestart();
+    ResetCombatRuntimeForBattleRestart();
     if (stateMachine_)
         stateMachine_->ChangeState("EnemyIdleState");
-    StopBattleActions();
+    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
 
     isDeathPerform = false;
     rushHpDisplayActive = false;
@@ -793,7 +899,7 @@ void GruxEnemy::Update(float deltaTime)
     }
 
     // Behavior
-    if (behaviorTreeFastComboEnabled)
+    if (behaviorTreeFastComboEnabled && battleAIActive)
     {
         UpdateBehaviorTree(deltaTime);
         if (IsChargeAttackBTActive() && (!activeNode || aiTree->GetLastRunResult() == ActionBase::State::Failed))

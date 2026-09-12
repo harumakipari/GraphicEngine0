@@ -1,19 +1,20 @@
-ï»¿#pragma once
+#pragma once
 #include "ActionBase.h"
 #include "JudgementBase.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
-// æ­»äº¡å‡¦ç†ã‚’é–‹å§‹ã™ã‚‹
+// €–Sˆ—‚ğŠJn‚·‚é
 class BTStartDeath : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
+    void ResetRuntime() override { started = false; }
 private:
     bool started = false;
 };
 
-// æ­»äº¡å‡¦ç†ã‚’æ›´æ–°ã™ã‚‹
+// €–Sˆ—‚ğXV‚·‚é
 class BTExecuteDeath : public ActionBase
 {
 public:
@@ -21,7 +22,7 @@ public:
     State Run(float) override;
 };
 
-// ãƒœã‚¹ãŒæ­»äº¡ã—ãŸã‹ã©ã†ã‹
+// ƒ{ƒX‚ª€–S‚µ‚½‚©‚Ç‚¤‚©
 class DeadJudgment : public JudgementBase
 {
 public:
@@ -29,7 +30,7 @@ public:
     bool Judgment() override;
 };
 
-// å¸¸ã«trueã‚’è¿”ã™
+// í‚Étrue‚ğ•Ô‚·
 class AlwaysJudgment : public JudgementBase
 {
 public:
@@ -37,36 +38,37 @@ public:
     bool Judgment() override { return true; }
 };
 
-// å¾…æ©Ÿå‡¦ç†
+// ‘Ò‹@ˆ—
 class BTIdle : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
     State Run(float deltaTime) override;
+    void ResetRuntime() override { timer = 0.0f; started = false; }
 private:
     float timer = 0.0f;
     bool started = false;
 };
 
-// FastComboã‚’æ”»æ’ƒå€™è£œã¨ã—ã¦é¸æŠã§ãã‚‹ã‹
+// FastCombo‚ğUŒ‚Œó•â‚Æ‚µ‚Ä‘I‘ğ‚Å‚«‚é‚©
 class CanPlanFastCombo : public JudgementBase
 {
 public:
     CanPlanFastCombo(GruxEnemy* enemy) :JudgementBase(enemy) {};
-    // FastComboã®è¨ˆç”»å¯å¦ã‚’åˆ¤å®šã™ã‚‹
+    // FastCombo‚ÌŒv‰æ‰Â”Û‚ğ”»’è‚·‚é
     bool Judgment() override;
 };
 
-// FastComboã‚’å®Ÿè¡Œã§ãã‚‹ã‹åˆ¤å®šã™ã‚‹
+// FastCombo‚ğÀs‚Å‚«‚é‚©”»’è‚·‚é
 class CanExecuteFastCombo : public JudgementBase
 {
 public:
     CanExecuteFastCombo(GruxEnemy* enemy) :JudgementBase(enemy) {};
-    // FastComboã®å³æ™‚å®Ÿè¡Œå¯å¦ã‚’åˆ¤å®šã™ã‚‹
+    // FastCombo‚Ì‘¦Às‰Â”Û‚ğ”»’è‚·‚é
     bool Judgment() override;
 };
 
-// å¸¸ã«å®Œäº†ã™ã‚‹æ¡ä»¶é€šéç”¨Action
+// í‚ÉŠ®—¹‚·‚éğŒ’Ê‰ß—pAction
 class BTCompleteAction : public ActionBase
 {
 public:
@@ -74,18 +76,19 @@ public:
     ActionBase::State Run(float elapsedTime) override { return State::Complete; }
 };
 
-// FastComboã®å°„ç¨‹ã¾ã§æ¥è¿‘ã™ã‚‹
+// FastCombo‚ÌË’ö‚Ü‚ÅÚ‹ß‚·‚é
 class ApproachIfNeeded : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
+    void ResetRuntime() override { started = false; timer = 0.0f; }
 private:
     bool started = false;
     float timer = 0.0f;
 };
 
-// Playeræ–¹å‘ã¸å‘ãç›´ã‚‹
+// Player•ûŒü‚ÖŒü‚«’¼‚é
 class FacePlayerIfNeeded : public ActionBase
 {
 public:
@@ -101,12 +104,13 @@ public:
     State Run(float) override;
 };
 
-// FastComboã‚’å®Ÿè¡Œã™ã‚‹
+// FastCombo‚ğÀs‚·‚é
 class ExecuteFastCombo : public ActionBase
 {
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
+    void ResetRuntime() override { stage = 0; stageHitCount = 0; started = false; finishAfterAnimation = false; timer = 0.0f; runtimeState = GruxEnemy::FastComboRuntimeState::Attack; }
 private:
     int stage = 0;
     int stageHitCount = 0;
@@ -117,7 +121,7 @@ private:
 };
 
 
-// FastComboé–‹å§‹å‰ã®çŸ­ã„æº–å‚™æ™‚é–“
+// FastComboŠJn‘O‚Ì’Z‚¢€”õŠÔ
 class PrepareFastCombo : public ActionBase
 {
     float timer = 0.0f;
@@ -125,4 +129,5 @@ class PrepareFastCombo : public ActionBase
 public:
     using ActionBase::ActionBase;
     State Run(float deltaTime) override;
+    void ResetRuntime() override { timer = 0.0f; started = false; }
 };
