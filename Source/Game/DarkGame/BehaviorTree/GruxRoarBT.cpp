@@ -160,7 +160,17 @@ namespace
     }
 }
 bool CanPlanRoar::Judgment() { return owner->CanPlanRoar(); }
-bool CanPlanAnyDefensive::Judgment() { const bool result = owner->CanPlanRoar() || owner->CanPlanRetreat(); owner->RecordCombatDecisionDebugDefensive(result); return result; }
+bool CanPlanAnyDefensive::Judgment()
+{
+    if (!owner->CanPlanAttackAgainstCurrentPlayer())
+    {
+        owner->RecordCombatDecisionDebugDefensive(false);
+        return false;
+    }
+    const bool result = owner->CanPlanRoar() || owner->CanPlanRetreat();
+    owner->RecordCombatDecisionDebugDefensive(result);
+    return result;
+}
 bool CanPlanRetreat::Judgment() { return owner->CanPlanRetreat(); }
 bool CanPlanAnyCombatDecision::Judgment() { return owner->CanPlanAnyCombatDecision(); }
 bool CanPlanReposition::Judgment() { return owner->CanPlanReposition(); }
@@ -235,6 +245,16 @@ bool GruxEnemy::IsRoarExecutionAllowed() const
     }
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     return player && !player->IsPendingKill() && player->GetHp() > 0;
+}
+
+bool GruxEnemy::CanPlanAttackAgainstCurrentPlayer() const
+{
+    const auto scene = GetOwnerScene();
+    if (!scene)
+        return false;
+
+    const auto player = scene->GetActorManager()->GetActorOfType<Player>();
+    return player && !player->IsPendingKill() && player->IsBossAttackTargetAvailable();
 }
 
 bool GruxEnemy::CanPlanRoar() const
@@ -528,7 +548,9 @@ void GruxEnemy::BeginCombatDecisionInference()
     repositionDecisionResult = false;
     repositionDecisionRoll = 0.0f;
     repositionCanPlanDebug = false;
-    if (!IsRoarExecutionAllowed() || CanPlanRoar() || CanPlanRetreat() ||
+    const bool defensiveAvailable = CanPlanAttackAgainstCurrentPlayer() &&
+        (CanPlanRoar() || CanPlanRetreat());
+    if (!IsRoarExecutionAllowed() || defensiveAvailable ||
         repositionCooldownRemaining > 0.0f || repositionRetryCooldownRemaining > 0.0f ||
         repositionTarget.valid || repositionMovementRuntime.movementActive || !rotationComponent ||
         !characterMovementComponent || !enemyCapsuleComponent)
@@ -548,12 +570,24 @@ bool GruxEnemy::CanPlanAnyCombatDecision()
 {
     if (!repositionDecisionCached)
         BeginCombatDecisionInference();
-    combatDecisionDebugFastCombo = CanPlanFastCombo();
-    combatDecisionDebugJump = CanPlanJumpAttack();
-    combatDecisionDebugDash = CanPlanDashAttack();
-    combatDecisionDebugCharge = CanPlanChargeAttack();
-    const bool canPlanAttack = combatDecisionDebugFastCombo || combatDecisionDebugJump ||
-        combatDecisionDebugDash || combatDecisionDebugCharge;
+    const bool playerAvailableForAttack = CanPlanAttackAgainstCurrentPlayer();
+    if (playerAvailableForAttack)
+    {
+        combatDecisionDebugFastCombo = CanPlanFastCombo();
+        combatDecisionDebugJump = CanPlanJumpAttack();
+        combatDecisionDebugDash = CanPlanDashAttack();
+        combatDecisionDebugCharge = CanPlanChargeAttack();
+    }
+    else
+    {
+        combatDecisionDebugFastCombo = false;
+        combatDecisionDebugJump = false;
+        combatDecisionDebugDash = false;
+        combatDecisionDebugCharge = false;
+    }
+    const bool canPlanAttack = playerAvailableForAttack &&
+        (combatDecisionDebugFastCombo || combatDecisionDebugJump ||
+            combatDecisionDebugDash || combatDecisionDebugCharge);
     combatDecisionDebugCanPlanAnyAttack = canPlanAttack;
     const bool canPlan = CanPlanReposition() || canPlanAttack;
     combatDecisionDebugCanPlanAny = canPlan;
@@ -567,8 +601,10 @@ bool GruxEnemy::CanPlanReposition()
     const bool movementInactive = !repositionMovementRuntime.movementActive;
     const bool cooldownReady = repositionCooldownRemaining <= 0.0f;
     const bool retryReady = repositionRetryCooldownRemaining <= 0.0f;
-    const bool roarAvailable = CanPlanRoar();
-    const bool retreatAvailable = !roarAvailable && CanPlanRetreat();
+    // When the Player cannot act, Defensive is suppressed but Reposition remains allowed.
+    const bool playerAvailableForDefensive = CanPlanAttackAgainstCurrentPlayer();
+    const bool roarAvailable = playerAvailableForDefensive && CanPlanRoar();
+    const bool retreatAvailable = playerAvailableForDefensive && !roarAvailable && CanPlanRetreat();
     const bool defensiveInactive = !roarAvailable && !retreatAvailable;
     const bool nodeAllowed = !activeNode || activeNode->GetName() == "PrepareRepositionTarget";
     const bool executionAllowed = IsRoarExecutionAllowed();
@@ -1197,6 +1233,9 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::Text(U8("Root 推論開始activeNode: %s"), combatDecisionDebugActiveNodeAtStart.c_str());
     ImGui::Text(U8("Root Defensive Judgment: %s"), combatDecisionDebugDefensiveResult.c_str());
     ImGui::Text(U8("Root 最終選択Node: %s"), combatDecisionDebugRootSelectedNode.c_str());
+    const bool playerAvailableForBossPlans = CanPlanAttackAgainstCurrentPlayer();
+    ImGui::Text(U8("Boss Attack抑制中: %s"), playerAvailableForBossPlans ? "false" : "true");
+    ImGui::Text(U8("Boss Defensive抑制中: %s"), playerAvailableForBossPlans ? "false" : "true");
     ImGui::Text(U8("CanPlanAnyCombatDecision: %s"), combatDecisionDebugCanPlanAny ? "true" : "false");
     ImGui::Text(U8("CanPlanReposition: %s (%s)"), combatDecisionDebugCanPlanReposition ? "true" : "false", combatDecisionDebugRepositionReason.c_str());
     ImGui::Text(U8("CanPlanAnyAttack: %s [Fast=%s Jump=%s Dash=%s Charge=%s]"),

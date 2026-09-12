@@ -633,6 +633,7 @@ void GruxEnemy::StopBattleActions()
     ClearActiveIntent();
     ClearPendingAttackFacing();
     ClearJumpAttackMotionWarpOverride();
+    ClearFastComboStepIn();
     ResetJustDodgeRecords("battle_stop");
 
     pendingAttackActionValid = false;
@@ -728,6 +729,7 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     fastComboTargetStage = -1;
     fastComboRuntimeState = FastComboRuntimeState::Attack;
     fastComboRuntimeStage = -1;
+    ClearFastComboStepIn();
     fastComboApproachRetryRemaining = 0.0f;
     behaviorApproachActive = false;
     behaviorAttackResult = BehaviorAttackResult::None;
@@ -1865,7 +1867,17 @@ void GruxEnemy::DrawImGuiDetails()
         "RepositionRight",
     };
 
-    ImGui::SeparatorText("Attack Selector");
+    ImGui::SeparatorText("FastCombo Step-In");
+    ImGui::DragFloat(U8("FastCombo 理想攻撃距離"), &fastComboDesiredAttackDistance, 0.1f, 0.0f, 20.0f, "%.2f m");
+    ImGui::DragFloat(U8("FastCombo Step-In Ratio"), &fastComboStepInRatio, 0.05f, 0.0f, 2.0f, "%.2f");
+    const char* stepNames[] = { "A", "B", "C" };
+    for (int i = 0; i < 3; ++i) { ImGui::DragFloat((std::string("FastCombo ") + stepNames[i] + " 最大Step-In").c_str(), &fastComboMaxStepInDistance[i], 0.1f, 0.0f, 6.0f, "%.2f m"); fastComboMaxStepInDistance[i] = std::clamp(fastComboMaxStepInDistance[i], 0.0f, 6.0f); }
+    ImGui::Text(U8("FastCombo Step-In Stage: %d"), fastComboStepInStage);
+    ImGui::Text(U8("FastCombo Step-In距離: %.2f m"), fastComboStepInDistance);
+    ImGui::Text(U8("FastCombo Step-In残り距離: %.2f m"), fastComboStepInRemainingDistance);
+    ImGui::Text(U8("FastCombo Step-In方向: (%.2f, %.2f, %.2f)"), fastComboStepInDirection.x, fastComboStepInDirection.y, fastComboStepInDirection.z);
+    ImGui::Text(U8("FastCombo Step-In有効: %s"), fastComboStepInActive ? "true" : "false");
+    ImGui::Text(U8("FastCombo Player距離: %.2f m"), fastComboTargetContext.xzDistance);
     ImGui::DragFloat(U8("近距離正面 FastCombo確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat(U8("FastCombo Front最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     fastComboFrontMaxAngle = std::clamp(fastComboFrontMaxAngle, 0.0f, 180.0f);
@@ -5606,6 +5618,53 @@ void GruxEnemy::RefreshFastComboTargetContext(int stage)
     fastComboTargetStage = stage;
 }
 
+void GruxEnemy::BeginFastComboStepIn(int stage)
+{
+    ClearFastComboStepIn();
+    if (stage < 0 || stage >= static_cast<int>(fastComboMaxStepInDistance.size()) || !characterMovementComponent)
+        return;
+    const BossTargetContext& context = fastComboTargetContext;
+    if (!context.valid || context.region == PlayerRelativeRegion::Back)
+        return;
+    const float distanceError = context.xzDistance - fastComboDesiredAttackDistance;
+    const float stepDistance = std::clamp(distanceError * fastComboStepInRatio,
+        0.0f, fastComboMaxStepInDistance[stage]);
+    if (stepDistance <= 0.001f || fastComboStepInSpeed <= 0.001f)
+        return;
+    fastComboStepInActive = true;
+    fastComboStepInStage = stage;
+    fastComboStepInDistance = stepDistance;
+    fastComboStepInRemainingDistance = stepDistance;
+    fastComboStepInElapsed = 0.0f;
+    fastComboStepInDirection = context.directionToPlayer;
+    characterMovementComponent->AddForcedMove(fastComboStepInDirection, fastComboStepInSpeed,
+        stepDistance / fastComboStepInSpeed);
+}
+
+bool GruxEnemy::UpdateFastComboStepIn(float deltaTime)
+{
+    if (!fastComboStepInActive)
+        return false;
+    const float dt = (std::max)(0.0f, deltaTime);
+    fastComboStepInElapsed += dt;
+    fastComboStepInRemainingDistance = (std::max)(0.0f,
+        fastComboStepInDistance - fastComboStepInElapsed * fastComboStepInSpeed);
+    if (fastComboStepInRemainingDistance <= 0.001f)
+        ClearFastComboStepIn();
+    return fastComboStepInActive;
+}
+
+void GruxEnemy::ClearFastComboStepIn()
+{
+    if (characterMovementComponent)
+        characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    fastComboStepInActive = false;
+    fastComboStepInStage = -1;
+    fastComboStepInDistance = 0.0f;
+    fastComboStepInRemainingDistance = 0.0f;
+    fastComboStepInElapsed = 0.0f;
+    fastComboStepInDirection = {};
+}
 bool GruxEnemy::IsNearFrontForAttackSelection() const
 {
     const BossTargetContext context = BuildTargetContext();

@@ -1587,6 +1587,9 @@ void Player::DrawImGuiDetails()
         ? dynamic_cast<const PlayerKnockBackState*>(stateMachine_->GetCurrentState())
         : nullptr;
     const auto animationController = GetBodyAnimationController();
+    ImGui::Text(U8("Player BossUŒ‚‘ÎÛ‰Â”\: %s"),
+        IsBossAttackTargetAvailable() ? "true" : "false");
+    ImGui::Text(U8("Player KnockBack’†: %s"), knockBackState ? "true" : "false");
     ImGui::Text("KnockBack Active: %s", knockBackActive ? "true" : "false");
     ImGui::Text("KnockBack Phase: %s",
         knockBackState ? knockBackState->GetPhaseName() : "None");
@@ -3268,6 +3271,24 @@ bool Player::CanReceiveKnockBack() const
         return false;
     const std::string state = stateMachine_->GetStateName();
     return state != "Damage" && state != "DeathPending" && state != "Death";
+}
+
+bool Player::IsBossAttackTargetAvailable() const
+{
+    if (!stateMachine_ || hp <= 0 || IsPendingKill())
+        return false;
+
+    const State* currentState = stateMachine_->GetCurrentState();
+    if (!currentState)
+        return false;
+
+    // PlayerKnockBackState owns both Hit_Large_KnockBack and Get_Up.
+    // Keep the Boss independent from Player state-name strings.
+    if (dynamic_cast<const PlayerKnockBackState*>(currentState))
+        return false;
+
+    return !dynamic_cast<const PlayerDeathPendingState*>(currentState) &&
+        !dynamic_cast<const PlayerDeathState*>(currentState);
 }
 
 bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)

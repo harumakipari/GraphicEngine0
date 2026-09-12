@@ -269,6 +269,8 @@ public:
     std::string GetCurrentAttackNameForDebug() const;
     enum class RoarStage { None, Telegraph, Shockwave };
     bool AreAttackBehaviorsDisabledForDebug() const { return disableAttackBehaviorsForDebug; }
+    // Common Player availability gate for new Attack/Defensive plans.
+    bool CanPlanAttackAgainstCurrentPlayer() const;
     bool CanPlanRoar() const;
     bool CanPlanRetreat() const;
     bool EvaluateRoarPlanForDebug() const;
@@ -288,8 +290,11 @@ public:
     float GetNearFrontFastComboProbability() const { return nearFrontFastComboProbability; }
     void RecordAttackSelectorDebug(const char* mode, int count, float probability, float roll, const char* selected);
     void RefreshFastComboTargetContext(int stage);
-    struct PositioningTargetContext { bool valid=false; DirectX::XMFLOAT3 targetPosition{}; float arrivalTolerance=0.3f; float timeout=3.0f; float maxMoveDistance=20.0f; float moveSpeed=6.0f; float stuckMovementThreshold=0.1f; float stuckTimeThreshold=0.5f; };
-    struct PositioningTargetRuntime { DirectX::XMFLOAT3 previousPosition{}; float elapsed=0.0f; float traveledDistance=0.0f; float remainingDistance=0.0f; float stuckTime=0.0f; bool movementActive=false; };
+    void BeginFastComboStepIn(int stage);
+    bool UpdateFastComboStepIn(float deltaTime);
+    void ClearFastComboStepIn();
+    struct PositioningTargetContext { bool valid = false; DirectX::XMFLOAT3 targetPosition{}; float arrivalTolerance = 0.3f; float timeout = 3.0f; float maxMoveDistance = 20.0f; float moveSpeed = 6.0f; float stuckMovementThreshold = 0.1f; float stuckTimeThreshold = 0.5f; };
+    struct PositioningTargetRuntime { DirectX::XMFLOAT3 previousPosition{}; float elapsed = 0.0f; float traveledDistance = 0.0f; float remainingDistance = 0.0f; float stuckTime = 0.0f; bool movementActive = false; };
     enum class PositioningMoveResult { None, Running, Arrived, Timeout, Stuck, InvalidTarget, MaxDistanceReached };
     using AttackSetupTargetContext = PositioningTargetContext;
     using AttackSetupMoveResult = PositioningMoveResult;
@@ -431,7 +436,7 @@ public:
         return behaviorTreeFastComboEnabled;
     }
 
-    struct CloseCombatSettings { float minRange=0.0f; float executeMaxRange=6.0f; float planMaxRange=10.0f; float facingLimitDegrees=35.0f; float faceCompleteAngleDegrees=7.0f; };
+    struct CloseCombatSettings { float minRange = 0.0f; float executeMaxRange = 6.0f; float planMaxRange = 10.0f; float facingLimitDegrees = 35.0f; float faceCompleteAngleDegrees = 7.0f; };
     const CloseCombatSettings& GetCloseCombatSettings() const { return closeCombatSettings; }
     float GetInterStageFaceCompleteAngle() const { return interStageFaceCompleteAngle; }
     float GetInterStageMaxFacingAngle() const { return interStageMaxFacingAngle; }
@@ -734,14 +739,14 @@ private:
     BossTargetContext aiDebugTargetContext{};
     bool disableAttackBehaviorsForDebug = false;
     float defensiveTooCloseDistance = 4.5f;
-    float roarRadius = 5.0f;
+    float roarRadius = 5.5f;
     float roarHeightTolerance = 2.0f;
     float roarLevelStartFootOffset = -0.30f;
     float roarLevelStartFootOffsetEndTime = 0.30f;
     float roarPreStampedeStartTime = 3.4f;  // ??K?J?n????
     float roarPreStampedeEndTime = 7.1f;    // ??K?I??????
     float roarCooldownDuration = 30.0f;
-    float roarCooldownRemaining = 0.0f; 
+    float roarCooldownRemaining = 0.0f;
     float retreatDistanceMin = 5.0f;    // ???? ??
     float retreatDistanceMax = 12.0f;// ???????
     float retreatMinimumMoveDistance = 5.0f;
@@ -749,56 +754,56 @@ private:
     float retreatRetryCooldownDuration = 0.5f;
     float retreatRetryCooldownRemaining = 0.0f;
     enum class RetreatCandidateRejectReason { None, Clamp, DistanceIncrease, MinimumMoveDistance, CapsuleCast, Other };
-    struct RetreatCandidateDebug { DirectX::XMFLOAT3 position{}; RetreatCandidateRejectReason rejectReason=RetreatCandidateRejectReason::None; bool pathBlocked=false; bool accepted=false; };
+    struct RetreatCandidateDebug { DirectX::XMFLOAT3 position{}; RetreatCandidateRejectReason rejectReason = RetreatCandidateRejectReason::None; bool pathBlocked = false; bool accepted = false; };
     struct RetreatRuntime
     {
         DirectX::XMFLOAT3 playerSnapshot{};
         DirectX::XMFLOAT3 gruxSnapshot{};
-        float startingPlayerDistance=0.0f;
-        float plannedPlayerDistance=0.0f;
-        float plannedMoveDistance=0.0f;
-        int candidateCount=0;
-        int clampRejectCount=0;
-        int distanceIncreaseRejectCount=0;
-        int minimumMoveRejectCount=0;
-        int capsuleCastRejectCount=0;
-        int otherRejectCount=0;
-        bool lastCapsuleCastHit=false;
-        bool lastCapsuleCastWorldStatic=false;
-        bool lastCapsuleCastWorldProps=false;
-        bool lastCapsuleCastConvex=false;
+        float startingPlayerDistance = 0.0f;
+        float plannedPlayerDistance = 0.0f;
+        float plannedMoveDistance = 0.0f;
+        int candidateCount = 0;
+        int clampRejectCount = 0;
+        int distanceIncreaseRejectCount = 0;
+        int minimumMoveRejectCount = 0;
+        int capsuleCastRejectCount = 0;
+        int otherRejectCount = 0;
+        bool lastCapsuleCastHit = false;
+        bool lastCapsuleCastWorldStatic = false;
+        bool lastCapsuleCastWorldProps = false;
+        bool lastCapsuleCastConvex = false;
         DirectX::XMFLOAT3 lastCapsuleHitPosition{};
-        float lastCapsuleHitDistance=0.0f;
+        float lastCapsuleHitDistance = 0.0f;
         DirectX::XMFLOAT3 capsulePoint1{};
         DirectX::XMFLOAT3 capsulePoint2{};
-        float capsuleRadius=0.0f;
-        float capsuleSegmentLength=0.0f;
+        float capsuleRadius = 0.0f;
+        float capsuleSegmentLength = 0.0f;
         DirectX::XMFLOAT3 collisionComponentPosition{};
         DirectX::XMFLOAT3 collisionComponentScale{};
-        float collisionConfiguredRadius=0.0f;
-        float collisionConfiguredHeight=0.0f;
-        float collisionOffsetY=0.0f;
-        float collisionPhysXHalfHeight=0.0f;
+        float collisionConfiguredRadius = 0.0f;
+        float collisionConfiguredHeight = 0.0f;
+        float collisionOffsetY = 0.0f;
+        float collisionPhysXHalfHeight = 0.0f;
         DirectX::XMFLOAT3 collisionPhysXPoint1{};
         DirectX::XMFLOAT3 collisionPhysXPoint2{};
-        float collisionPhysXMinY=0.0f;
-        float collisionPhysXMaxY=0.0f;
-        float retreatCastMinY=0.0f;
-        float retreatCastMaxY=0.0f;
-        bool retreatSweepUsesSphere=false;
-        bool retreatSweepInitialOverlap=false;
-        bool retreatSweepHasNormal=false;
+        float collisionPhysXMinY = 0.0f;
+        float collisionPhysXMaxY = 0.0f;
+        float retreatCastMinY = 0.0f;
+        float retreatCastMaxY = 0.0f;
+        bool retreatSweepUsesSphere = false;
+        bool retreatSweepInitialOverlap = false;
+        bool retreatSweepHasNormal = false;
         DirectX::XMFLOAT3 retreatSweepHitNormal{};
-        float retreatSweepPenetrationDepth=0.0f;
-        std::string retreatSweepHitActor="None";
-        std::string retreatSweepHitComponent="None";
-        int retreatSweepIgnoredSupportContactCount=0;
-        bool retreatSweepPathBlocked=false;
+        float retreatSweepPenetrationDepth = 0.0f;
+        std::string retreatSweepHitActor = "None";
+        std::string retreatSweepHitComponent = "None";
+        int retreatSweepIgnoredSupportContactCount = 0;
+        bool retreatSweepPathBlocked = false;
         DirectX::XMFLOAT3 retreatSweepBlockingNormal{};
-        float retreatSweepBlockingDistance=0.0f;
-        std::string retreatSweepBlockingActor="None";
-        std::string retreatSweepBlockingComponent="None";
-        std::string failureReason="None";
+        float retreatSweepBlockingDistance = 0.0f;
+        std::string retreatSweepBlockingActor = "None";
+        std::string retreatSweepBlockingComponent = "None";
+        std::string failureReason = "None";
         std::vector<RetreatCandidateDebug> candidates;
     } retreatRuntime;
     PositioningTargetContext retreatTarget{};
@@ -813,53 +818,53 @@ private:
     struct RepositionCandidateDebug
     {
         DirectX::XMFLOAT3 position{};
-        RepositionCandidateRejectReason rejectReason=RepositionCandidateRejectReason::None;
-        bool accepted=false;
-        bool pathBlocked=false;
+        RepositionCandidateRejectReason rejectReason = RepositionCandidateRejectReason::None;
+        bool accepted = false;
+        bool pathBlocked = false;
     };
     struct RepositionRuntime
     {
         DirectX::XMFLOAT3 playerSnapshot{};
         DirectX::XMFLOAT3 gruxSnapshot{};
-        float startingPlayerDistance=0.0f;
-        float plannedPlayerDistance=0.0f;
-        float plannedMoveDistance=0.0f;
-        int candidateCount=0;
-        int clampAppliedCount=0;
-        int clampPostClampRejectCount=0;
-        int clampPostClampAcceptedCount=0;
+        float startingPlayerDistance = 0.0f;
+        float plannedPlayerDistance = 0.0f;
+        float plannedMoveDistance = 0.0f;
+        int candidateCount = 0;
+        int clampAppliedCount = 0;
+        int clampPostClampRejectCount = 0;
+        int clampPostClampAcceptedCount = 0;
         DirectX::XMFLOAT3 lastClampedTarget{};
-        float lastClampDistance=0.0f;
-        int playerDistanceTooCloseRejectCount=0;
-        int minimumMoveRejectCount=0;
-        int sweepRejectCount=0;
-        std::string failureReason="None";
+        float lastClampDistance = 0.0f;
+        int playerDistanceTooCloseRejectCount = 0;
+        int minimumMoveRejectCount = 0;
+        int sweepRejectCount = 0;
+        std::string failureReason = "None";
         std::vector<RepositionCandidateDebug> candidates;
     } repositionRuntime;
     PositioningTargetContext repositionTarget{}; PositioningTargetRuntime repositionMovementRuntime{};
-    float repositionRemainingDistance=0.0f;
-    float repositionDistanceMin=6.0f, repositionDistanceMax=13.0f;
-    float repositionMinimumMoveDistance=5.0f, repositionMinimumPlayerDistance=4.0f, repositionMoveSpeed=6.0f;
-    float repositionArrivalWaitDuration=0.5f;
+    float repositionRemainingDistance = 0.0f;
+    float repositionDistanceMin = 6.0f, repositionDistanceMax = 13.0f;
+    float repositionMinimumMoveDistance = 5.0f, repositionMinimumPlayerDistance = 4.0f, repositionMoveSpeed = 6.0f;
+    float repositionArrivalWaitDuration = 0.5f;
     int consecutiveAttackCount = 0;
     std::array<float, 4> repositionChanceByAttackCount{ 0.10f, 0.25f, 0.60f, 1.0f };
     mutable bool repositionDecisionCached = false;
     mutable bool repositionDecisionResult = false;
     mutable float repositionDecisionRoll = 0.0f;
     bool repositionCanPlanDebug = false;
-    unsigned long long combatDecisionDebugInferenceSerial=0;
-    std::string combatDecisionDebugActiveNodeAtStart="None";
-    std::string combatDecisionDebugDefensiveResult="NotEvaluated";
-    std::string combatDecisionDebugRootSelectedNode="None";
-    std::string combatDecisionDebugFailureReason="None";
-    std::string combatDecisionDebugRepositionReason="NotEvaluated";
-    bool combatDecisionDebugCanPlanAny=false;
-    bool combatDecisionDebugCanPlanReposition=false;
-    bool combatDecisionDebugCanPlanAnyAttack=false;
-    bool combatDecisionDebugFastCombo=false, combatDecisionDebugJump=false, combatDecisionDebugDash=false, combatDecisionDebugCharge=false;
-    float repositionCooldownDuration=3.0f, repositionCooldownRemaining=0.0f, repositionRetryCooldownDuration=0.75f, repositionRetryCooldownRemaining=0.0f;
+    unsigned long long combatDecisionDebugInferenceSerial = 0;
+    std::string combatDecisionDebugActiveNodeAtStart = "None";
+    std::string combatDecisionDebugDefensiveResult = "NotEvaluated";
+    std::string combatDecisionDebugRootSelectedNode = "None";
+    std::string combatDecisionDebugFailureReason = "None";
+    std::string combatDecisionDebugRepositionReason = "NotEvaluated";
+    bool combatDecisionDebugCanPlanAny = false;
+    bool combatDecisionDebugCanPlanReposition = false;
+    bool combatDecisionDebugCanPlanAnyAttack = false;
+    bool combatDecisionDebugFastCombo = false, combatDecisionDebugJump = false, combatDecisionDebugDash = false, combatDecisionDebugCharge = false;
+    float repositionCooldownDuration = 3.0f, repositionCooldownRemaining = 0.0f, repositionRetryCooldownDuration = 0.75f, repositionRetryCooldownRemaining = 0.0f;
 
-    std::string lastCombatDecision="None";
+    std::string lastCombatDecision = "None";
 
     struct RoarRuntime
     {
@@ -880,20 +885,30 @@ private:
     std::array<BossTargetContext, 3> fastComboStageTargetContexts{};
     int fastComboTargetStage = -1;
     float interStageFaceCompleteAngle = 10.0f;
+    float fastComboDesiredAttackDistance = 2.8f;
+    float fastComboStepInRatio = 1.0f;
+    std::array<float, 3> fastComboMaxStepInDistance{ 2.0f, 2.5f, 3.0f };
+    float fastComboStepInSpeed = 8.0f;
     float interStageMaxFacingAngle = 70.0f;
     float interStageFaceDelay = 0.25f;
     FastComboRuntimeState fastComboRuntimeState = FastComboRuntimeState::Attack;
+    bool fastComboStepInActive = false;
+    int fastComboStepInStage = -1;
+    float fastComboStepInDistance = 0.0f;
+    float fastComboStepInRemainingDistance = 0.0f;
+    float fastComboStepInElapsed = 0.0f;
+    DirectX::XMFLOAT3 fastComboStepInDirection{};
     int fastComboRuntimeStage = -1;
     AttackSetupTargetContext attackSetupTarget{};
     DirectX::XMFLOAT3 attackSetupPreviousPosition{};
-    float attackSetupElapsedTime=0.0f;
-    float attackSetupTraveledDistance=0.0f;
-    float attackSetupRemainingDistance=0.0f;
-    float attackSetupStuckTime=0.0f;
-    bool attackSetupMovementActive=false;
-    float attackSetupChosenDistance=0.0f;
-    float attackSetupPlannedMoveDistance=0.0f;
-    int attackSetupCandidateCount=0;
+    float attackSetupElapsedTime = 0.0f;
+    float attackSetupTraveledDistance = 0.0f;
+    float attackSetupRemainingDistance = 0.0f;
+    float attackSetupStuckTime = 0.0f;
+    bool attackSetupMovementActive = false;
+    float attackSetupChosenDistance = 0.0f;
+    float attackSetupPlannedMoveDistance = 0.0f;
+    int attackSetupCandidateCount = 0;
     bool attackFacingEvaluationValid = false;
     float attackFacingEvaluationTolerance = 0.0f;
     float attackFacingEvaluationAngle = 0.0f;
@@ -919,10 +934,10 @@ private:
     { {
         { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f, 5 },
         { BossAttackType::PrimaryAttackRA, "PrimaryAttack_RA", 0.0f, 5.0f, 1.0f, 1.30f, 5 },
-        { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f, 5 },
-        { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f, 5 },
-        { BossAttackType::DashAttack, "Stampede_0 > Stampede_Knockup_0", 6.0f, 100.0f, 1.0f, 1.20f, 7 },
-        { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 0.1f, 13 },
+        { BossAttackType::FastCombo, "FastCombo", 0.0f, 6.0f, 1.0f, 2.0f, 4 },
+        { BossAttackType::JumpAttack, "PrimaryAttack_JumpAttack", 4.5f, 12.0f, 1.0f, 2.80f, 4 },
+        { BossAttackType::DashAttack, "Stampede_0 > Stampede_Knockup_0", 6.0f, 100.0f, 1.0f, 1.20f, 6 },
+        { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 0.1f, 10 },
     } };
 
     // ??????Attack?I??p
@@ -943,9 +958,9 @@ private:
     //  StateMachine?~^?C?~???O?????????
     float attackInterval = 0.1f;   // EnemyThinkState??????A???Attack?I???J?n?????l???????B
     float recoveryDuration = 0.5f;  //  ?U???I????AEnemyRecoveryState?????????B?????SAttack?????0.5?b?B
-    float attackFacingAngle = 35.0f;    // ????p?x?????U???”\?????
+    float attackFacingAngle = 45.0f;    // ????p?x?????U???”\?????
 
-    float nearFrontFastComboProbability = 0.85f;
+    float nearFrontFastComboProbability = 0.7f;
     float fastComboFrontMaxAngle = 90.0f;
     float defensiveBackMinAngle = 120.0f;
     std::string attackSelectorDebugMode = "Uniform";
@@ -1081,7 +1096,7 @@ private:
     float desiredAttackDistance = 0.1f;
     float jumpDesiredStartDistance = 4.5f;
     float jumpSetupDistanceMin = 6.5f;
-    float jumpSetupDistanceMax = 8.5f;
+    float jumpSetupDistanceMax = 10.f;
     float jumpSetupMinimumMoveDistance = 5.0f;  // JumpAttack?oO?????????
     float attackSetupCandidateAngleStep = 30.0f;
     float attackSetupClampTolerance = 0.75f;    //  JumpAttack???v???C???[?????c??????????
@@ -1278,7 +1293,7 @@ private:
     BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;
     bool behaviorApproachActive = false;
     float fastComboPrepareDuration = 0.5f;
-    float fastComboApproachMaxDuration = 1.5f;
+    float fastComboApproachMaxDuration = 5.0f;
     float fastComboApproachRetryCooldown = 2.0f;
     float fastComboApproachRetryRemaining = 0.0f;
     float behaviorIdleDuration = 1.0f;// ??@????

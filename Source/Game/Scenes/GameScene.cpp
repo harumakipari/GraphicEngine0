@@ -252,11 +252,21 @@ void GameScene::Start()
 
     // ボスBGM
     bossBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("BossBgmActor");
-    bossBgmActor->SetSource(L"./Data/Sound/BGM/boss_bgm.wav");
+    bossBgmActor->SetSource(L"./Data/Sound/BGM/boss_phase1_bgm1.wav");
     bossBgmActor->SetLoop(true);
     bossBgmActor->SetBgm(true);
     //bossBgmActor->Play();
-    bossBgmActor->SetVolume(0.02f);
+    bossBgmActor->SetVolume(0.2f);
+    bossDeathSecondBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("BossDeathSecondBgmActor");
+    bossDeathSecondBgmActor->SetSource(L"./Data/Sound/BGM/boss_death_second_bgm.wav");
+    bossDeathSecondBgmActor->SetLoop(true);
+    bossDeathSecondBgmActor->SetBgm(true);
+    bossDeathSecondBgmActor->SetVolume(0.2f);
+    playerDeathBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("PlayerDeathBgmActor");
+    playerDeathBgmActor->SetSource(L"./Data/Sound/BGM/player_death_bgm_1.wav");
+    playerDeathBgmActor->SetLoop(true);
+    playerDeathBgmActor->SetBgm(true);
+    playerDeathBgmActor->SetVolume(0.2f);
 
 #if 0
     cameraManager->ToggleCinematicCamera(this);
@@ -285,11 +295,19 @@ void GameScene::Start()
 
 }
 
+void GameScene::BeginBossBattleBgmFadeOut(){if(bossBgmFading||!bossBgmActor)return;bossBgmFadeStartVolume=bossBgmActor->GetVolume();bossBgmFadeElapsed=0.0f;bossBgmFading=true;}
+void GameScene::BeginPlayerDeathBgmFadeOut(){if(playerBgmFading||!bossBgmActor)return;bossBgmFadeStartVolume=bossBgmActor->GetVolume();bossBgmFadeElapsed=0.0f;playerBgmFading=true;}
+void GameScene::UpdateDeathBgmFade(float dt){if((!bossBgmFading && !playerBgmFading)||!bossBgmActor)return;const float d=playerBgmFading?playerDeathBgmFadeTime:bossDeathBgmFadeTime;bossBgmFadeElapsed+=dt;const float t=d>0.0f?std::clamp(bossBgmFadeElapsed/d,0.0f,1.0f):1.0f;bossBgmActor->SetVolume(std::lerp(bossBgmFadeStartVolume,0.0f,t));if(t>=1.0f){bossBgmActor->Stop(false);bossBgmFading=false;playerBgmFading=false;}}
+void GameScene::PlayBossDeathSecondBgm(){if(!bossDeathSecondBgmPlayed&&bossDeathSecondBgmActor){bossDeathSecondBgmPlayed=true;bossDeathSecondBgmActor->Play();}}
+void GameScene::PlayPlayerDeathBgm(){if(!playerDeathBgmPlayed&&playerDeathBgmActor){playerDeathBgmPlayed=true;playerDeathBgmActor->Play();}}
+void GameScene::ResetDeathBgmState(bool restart){if(bossDeathSecondBgmActor)bossDeathSecondBgmActor->Stop(false);if(playerDeathBgmActor)playerDeathBgmActor->Stop(false);bossDeathSecondBgmPlayed=false;playerDeathBgmPlayed=false;bossBgmFading=false;playerBgmFading=false;bossBgmFadeElapsed=0.0f;if(bossBgmActor){bossBgmActor->SetVolume(0.02f);if(restart)bossBgmActor->Play();}}
+
 void GameScene::Update(float deltaTime)
 {
     using namespace DirectX;
 
     ZoneScopedN("Game Update");
+    UpdateDeathBgmFade(Time::UnscaledDeltaTime());
 
     UpdateBattleFlow();
     UpdateVictoryButtonLayout();
@@ -658,6 +676,7 @@ void GameScene::EnterPlayerDead()
 {
     DisableCinematicCameraDebugInput();
     battleFlowState = BattleFlowState::PlayerDead;
+    BeginPlayerDeathBgmFadeOut();
     SetBattleTimerVisible(false);
     playerDeadElapsed = 0.0f;
     deathPresentationElapsed = 0.0f;
@@ -1218,6 +1237,7 @@ void GameScene::UpdateDeathResultPresentation()
     if (!deathResultVisible)
     {
         deathResultVisible = true;
+        PlayPlayerDeathBgm();
         SetDeathResultVisible(true);
         deathResultSelection = 0;
         deathResultSelectLineAnimProgress = 0.0f;
@@ -1264,6 +1284,7 @@ void GameScene::OnPlayerDeathCameraStart()
 
 void GameScene::ResetBattleForContinue()
 {
+    ResetDeathBgmState(true);
     DisableCinematicCameraDebugInput();
     if (!battleStartTransformsSaved || !player || !gruxEnemyActor)
         return;
@@ -1414,6 +1435,7 @@ void GameScene::ResetBossDeathDebugPreview()
 
 void GameScene::RestartBossBattle()
 {
+    ResetDeathBgmState(true);
     ResetVictoryResultBackground();
     victoryResultPhase = VictoryResultPhase::None;
     victoryResultDelayElapsed = 0.0f;
@@ -2132,6 +2154,7 @@ void GameScene::UpdateBossDeathCinematic()
         {
             SetBossDeathFadeAlpha(0.0f);
             bossDeathPhase = BossDeathPhase::DeathScream;
+            BeginBossBattleBgmFadeOut();
             bossDeathPhaseElapsed = 0.0f;
         }
         break;
@@ -2217,6 +2240,7 @@ void GameScene::UpdateBossDeathCinematic()
             {
                 break;
             }
+            PlayBossDeathSecondBgm();
             StartBossDeathGroanLoop();
             player->SetPosition(bossDeathApproachStartPosition);
             player->UpdateAllComponentTransforms();
@@ -3138,6 +3162,8 @@ void GameScene::SetUpActors()
 
 bool GameScene::Uninitialize(ID3D11Device* device)
 {
+    if (bossDeathSecondBgmActor) bossDeathSecondBgmActor->Stop(false);
+    if (playerDeathBgmActor) playerDeathBgmActor->Stop(false);
     SceneBase::Uninitialize(device);
     Physics::Instance().Finalize();
     return true;
@@ -3147,6 +3173,16 @@ void GameScene::DrawGuiPlusAlpha()
 {
 #ifdef USE_IMGUI
     ImGui::Begin("GameScene");
+    ImGui::SeparatorText("BGM Debug");
+    ImGui::Text("Boss BGM Fading: %s", bossBgmFading ? "true" : "false");
+    ImGui::Text("Player Fade Triggered: %s", playerBgmFading ? "true" : "false");
+    ImGui::Text("Boss BGM Fade Elapsed: %.3f", bossBgmFadeElapsed);
+    ImGui::Text("Boss BGM Fade Start Volume: %.3f", bossBgmFadeStartVolume);
+    ImGui::Text("Boss BGM Volume: %.3f", bossBgmActor ? bossBgmActor->GetVolume() : 0.0f);
+    ImGui::Text("Boss Death Second Played: %s", bossDeathSecondBgmPlayed ? "true" : "false");
+    ImGui::Text("Player Death BGM Played: %s", playerDeathBgmPlayed ? "true" : "false");
+    ImGui::Text("Death Result Visible: %s", deathResultVisible ? "true" : "false");
+    ImGui::Text("Boss Death Phase: %d", static_cast<int>(bossDeathPhase));
     if (ImGui::Button(U8("ボスの部屋を明るくする")))
     {
         StartBossRoomLerp(0.0f, 1.0f, 3.0f);

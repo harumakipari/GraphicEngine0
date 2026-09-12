@@ -110,7 +110,7 @@ class ExecuteFastCombo : public ActionBase
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
-    void ResetRuntime() override { stage = 0; stageHitCount = 0; started = false; finishAfterAnimation = false; timer = 0.0f; runtimeState = GruxEnemy::FastComboRuntimeState::Attack; }
+    void ResetRuntime() override { owner->ClearFastComboStepIn(); stage = 0; stageHitCount = 0; started = false; finishAfterAnimation = false; timer = 0.0f; runtimeState = GruxEnemy::FastComboRuntimeState::Attack; }
 private:
     int stage = 0;
     int stageHitCount = 0;

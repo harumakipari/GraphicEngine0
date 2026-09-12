@@ -16,6 +16,11 @@ bool CanPlanAnyAttack::Judgment()
         owner->SetBehaviorTreeLastJudgment("CanPlanAnyAttack: false (debug disabled)");
         return false;
     }
+    if (!owner->CanPlanAttackAgainstCurrentPlayer())
+    {
+        owner->SetBehaviorTreeLastJudgment("CanPlanAnyAttack: false (player unavailable)");
+        return false;
+    }
     // Match the Plan-parent gates, including Dash's battle / stun availability.
     const bool result = owner->CanPlanFastCombo() || owner->CanPlanJumpAttack() ||
         DashPlanAvailable(owner).Judgment() || owner->CanPlanChargeAttack();

@@ -174,6 +174,12 @@ private:
     void UpdateBossDeathPromptLoop(float deltaTime);
     void UpdateBossDeathScreamHold(float deltaTime);
     void UpdateBossDeathCinematic();
+    void UpdateDeathBgmFade(float deltaTime);
+    void BeginBossBattleBgmFadeOut();
+    void BeginPlayerDeathBgmFadeOut();
+    void ResetDeathBgmState(bool restartBossBgm);
+    void PlayBossDeathSecondBgm();
+    void PlayPlayerDeathBgm();
     bool SetupBossDeathCinematic();
     void ApplyBossDeathDof(const BossDeathDofState& dof);
     void CutToBossDeathShot(size_t shotIndex);
@@ -499,6 +505,16 @@ private:
     std::shared_ptr<BgmActor> gameBgmActor;
     // ボスBGMアクター
     std::shared_ptr<BgmActor> bossBgmActor;
+    std::shared_ptr<BgmActor> bossDeathSecondBgmActor;
+    std::shared_ptr<BgmActor> playerDeathBgmActor;
+    float bossDeathBgmFadeTime = 1.0f;
+    float playerDeathBgmFadeTime = 1.0f;
+    float bossBgmFadeStartVolume = 0.0f;
+    float bossBgmFadeElapsed = 0.0f;
+    bool bossBgmFading = false;
+    bool playerBgmFading = false;
+    bool bossDeathSecondBgmPlayed = false;
+    bool playerDeathBgmPlayed = false;
 
     // 布アクター
     std::shared_ptr<DarkClothActor> darkClothActor;

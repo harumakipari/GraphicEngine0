@@ -77,7 +77,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        maxHp = 10;
+        //maxHp = 10;
         hp = maxHp;
     }
 
@@ -221,6 +221,10 @@ public:
     // Damageとは独立した、外部攻撃からの強制移動開始口。
     bool CanReceiveKnockBack() const;
     bool StartKnockBack(const DirectX::XMFLOAT3& direction);
+
+    // True only while a Boss may begin a new attack against this Player.
+    // Future GetUp grace time belongs inside this API.
+    bool IsBossAttackTargetAvailable() const;
 
     void ClearActionRequest(const char* reason);
 
@@ -418,9 +422,9 @@ public:
     ActionRequest bufferCommand{}; // 入力コマンド
 
     // Rush combat tuning values. Kept together for future runtime tuning.
-    int normalAttackDamage = 1;
-    float rushDamageMultiplier = 2.0f;
-    float finalRushDamageMultiplier = 3.0f;
+    int normalAttackDamage = 2;
+    float rushDamageMultiplier = 1.5f;
+    float finalRushDamageMultiplier = 2.5f;
     int maxRushAttackCount = 7;
 
     float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
