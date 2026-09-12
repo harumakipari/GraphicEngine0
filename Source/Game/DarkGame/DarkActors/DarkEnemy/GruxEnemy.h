@@ -300,9 +300,11 @@ public:
     PositioningMoveResult UpdateRetreatMovement(float deltaTime);
     void FinishRetreatMovement(bool arrived);
     void RecordRetreatMoveResult(PositioningMoveResult result);
-    bool CanPlanAnyCombatDecision(); void BeginCombatDecisionInference(); bool CanPlanReposition() const;
-    bool PrepareRepositionTarget(); PositioningMoveResult UpdateRepositionMovement(float deltaTime);
-    void FinishRepositionMovement(bool arrived); void RecordBehaviorAttackCompleted();
+    bool CanPlanAnyCombatDecision(); bool CanPlanCombatBagAttack(); bool CanPlanReposition(); void ReserveCombatBagItemIfNeeded();
+    void BeginCombatDecisionDebugInference(); void CompleteCombatDecisionDebugInference(const char* selectedNode); void RecordCombatDecisionDebugDefensive(bool result);
+    bool PrepareRepositionTarget(); PositioningMoveResult UpdateRepositionMovement(float deltaTime); void CommitPendingCombatBagAttack(); void ReleasePendingCombatBagItem(const char* reason);
+    void FinishRepositionMovement(bool arrived); void CompleteRepositionArrivalWait();
+    float GetRepositionArrivalWaitDuration() const { return repositionArrivalWaitDuration; }
     float GetAttackSetupRemainingDistance() const { return attackSetupRemainingDistance; }
     float GetAttackSetupElapsedTime() const { return attackSetupElapsedTime; }
     float GetAttackSetupPlannedMoveDistance() const { return attackSetupPlannedMoveDistance; }
@@ -801,13 +803,60 @@ private:
     float retreatRemainingDistance = 0.0f;
     PositioningMoveResult retreatLastMoveResult = PositioningMoveResult::None;
     std::string retreatCompleteReason = "None";
-    enum class RepositionType { SideMove, BackOff }; enum class RepositionCandidateRejectReason { None, Clamp, MinimumMoveDistance, Sweep };
-    struct RepositionCandidateDebug { DirectX::XMFLOAT3 position{}; RepositionCandidateRejectReason rejectReason=RepositionCandidateRejectReason::None; float score=0.0f; bool accepted=false; bool pathBlocked=false; };
-    struct RepositionRuntime { RepositionType type=RepositionType::SideMove; DirectX::XMFLOAT3 playerSnapshot{}; DirectX::XMFLOAT3 gruxSnapshot{}; int candidateCount=0, clampRejectCount=0, minimumMoveRejectCount=0, sweepRejectCount=0; float selectedScore=0.0f; std::string failureReason="None"; std::vector<RepositionCandidateDebug> candidates; } repositionRuntime;
-    PositioningTargetContext repositionTarget{}; PositioningTargetRuntime repositionMovementRuntime{}; int consecutiveAttackCount=0;
+    enum class RepositionCandidateRejectReason { None, Clamp, PlayerDistanceTooClose, MinimumMoveDistance, Sweep };
+    struct RepositionCandidateDebug
+    {
+        DirectX::XMFLOAT3 position{};
+        RepositionCandidateRejectReason rejectReason=RepositionCandidateRejectReason::None;
+        bool accepted=false;
+        bool pathBlocked=false;
+    };
+    struct RepositionRuntime
+    {
+        DirectX::XMFLOAT3 playerSnapshot{};
+        DirectX::XMFLOAT3 gruxSnapshot{};
+        float startingPlayerDistance=0.0f;
+        float plannedPlayerDistance=0.0f;
+        float plannedMoveDistance=0.0f;
+        int candidateCount=0;
+        int clampAppliedCount=0;
+        int clampPostClampRejectCount=0;
+        int clampPostClampAcceptedCount=0;
+        DirectX::XMFLOAT3 lastClampedTarget{};
+        float lastClampDistance=0.0f;
+        int playerDistanceTooCloseRejectCount=0;
+        int minimumMoveRejectCount=0;
+        int sweepRejectCount=0;
+        std::string failureReason="None";
+        std::vector<RepositionCandidateDebug> candidates;
+    } repositionRuntime;
+    PositioningTargetContext repositionTarget{}; PositioningTargetRuntime repositionMovementRuntime{};
+    float repositionRemainingDistance=0.0f;
+    float repositionDistanceMin=6.0f, repositionDistanceMax=13.0f;
+    float repositionMinimumMoveDistance=5.0f, repositionMinimumPlayerDistance=4.0f, repositionMoveSpeed=6.0f;
+    float repositionArrivalWaitDuration=0.5f;
+    enum class CombatBagItem { Attack, Reposition };
+    struct CombatBagDefinition { int attackCount=2; int repositionCount=1; };
+    enum class CombatBagPhase { Phase1, Phase2 };
+    CombatBagDefinition combatBagPhase1{2,1}; CombatBagDefinition combatBagPhase2{3,1};
+    CombatBagPhase combatBagCurrentPhase=CombatBagPhase::Phase1; CombatBagPhase combatBagRemainingPhase=CombatBagPhase::Phase1;
+    std::vector<CombatBagItem> combatBagRemaining; std::optional<CombatBagItem> pendingCombatBagItem; std::optional<size_t> pendingCombatBagIndex;
+    std::string combatBagLastEvent="None";
+    unsigned long long combatDecisionDebugInferenceSerial=0;
+    std::string combatDecisionDebugActiveNodeAtStart="None";
+    std::string combatDecisionDebugDefensiveResult="NotEvaluated";
+    std::string combatDecisionDebugLastDraw="None";
+    std::string combatDecisionDebugLastReleaseReason="None";
+    std::string combatDecisionDebugRootSelectedNode="None";
+    std::string combatDecisionDebugFailureReason="None";
+    std::string combatDecisionDebugRepositionReason="NotEvaluated";
+    bool combatDecisionDebugCanPlanAny=false;
+    bool combatDecisionDebugCanPlanReposition=false;
+    bool combatDecisionDebugCanPlanAnyAttack=false;
+    bool combatDecisionDebugFastCombo=false, combatDecisionDebugJump=false, combatDecisionDebugDash=false, combatDecisionDebugCharge=false;
     float repositionCooldownDuration=3.0f, repositionCooldownRemaining=0.0f, repositionRetryCooldownDuration=0.75f, repositionRetryCooldownRemaining=0.0f;
-    float repositionMinimumMoveDistance=2.0f, repositionMoveSpeed=6.0f, repositionSideMoveProbability=0.65f, repositionBackOffProbability=0.35f, repositionBackOffDistanceMin=2.5f, repositionBackOffDistanceMax=4.0f;
-    std::array<float, 4> repositionChanceByAttackCount{0.10f,0.25f,0.50f,1.0f}; mutable bool repositionDecisionCached=false, repositionDecisionResult=false; mutable float repositionDecisionRoll=0.0f; bool repositionCanPlanDebug=false; std::string lastCombatDecision="None"; bool repositionWorldDebug=true;
+
+    std::string lastCombatDecision="None";
 
     struct RoarRuntime
     {

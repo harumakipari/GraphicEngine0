@@ -138,6 +138,7 @@ bool GruxEnemy::StartDashAttackTelegraph()
     dashBTPhase = DashBTPhase::Telegraph;
     if (!PlayAttackStage(BossAttackType::DashAttack, 0))
         return false;
+    CommitPendingCombatBagAttack();
     OnSelectedActionStartedSuccessfully();
     return true;
 }

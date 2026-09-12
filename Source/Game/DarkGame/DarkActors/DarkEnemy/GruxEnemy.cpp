@@ -312,7 +312,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightFootComponent->AttachToComponent(skeletalMeshComponent, socketRightFootNode); // "ik_foot_r"
 
     //　ベルトのコンポーネントを追加
-    int socketBeltNode = skeletalMeshComponent->FindIndexByName("muscle_pec_r");
+    int socketBeltNode = skeletalMeshComponent->FindIndexByName("head");
     beltComponent = AddComponent<SceneComponent>("beltComponent", parentName);
     beltComponent->AttachToComponent(skeletalMeshComponent, socketBeltNode); // "belt"
 
@@ -483,7 +483,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("CombatDecision", "RepositionPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanReposition>(this), nullptr);
     aiTree->AddNode("RepositionPlan", "PrepareRepositionTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareRepositionTarget>(this));
     aiTree->AddNode("RepositionPlan", "MoveToRepositionTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToRepositionTarget>(this));
-    aiTree->AddNode("CombatDecision", "Attack", 1, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
+    aiTree->AddNode("RepositionPlan", "WaitAfterReposition", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::WaitAfterReposition>(this));
+    aiTree->AddNode("CombatDecision", "Attack", 1, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanCombatBagAttack>(this), nullptr);
     aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
     aiTree->AddNode("Attack", "FastComboPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
@@ -587,6 +588,8 @@ void GruxEnemy::PauseBattleAI()
     behaviorTreeCurrentNode = "None";
     behaviorTreePreviousNode = "None";
     behaviorTreeLastResult = "None";
+    pendingCombatBagItem.reset();
+    pendingCombatBagIndex.reset();
 
     if (stateMachine_)
         stateMachine_->ChangeState("EnemyIdleState");
@@ -680,10 +683,10 @@ void GruxEnemy::ResetBehaviorTreeForBattleRestart()
     behaviorTreePreviousNode = "None";
     behaviorTreeLastResult = "None";
     behaviorTreeLastJudgment = "None";
-    repositionDecisionCached = false;
-    repositionDecisionResult = false;
-    repositionDecisionRoll = 0.0f;
-    repositionCanPlanDebug = false;
+    pendingCombatBagItem.reset();
+    pendingCombatBagIndex.reset();
+    combatBagLastEvent = "Reset";
+    combatBagRemaining.clear();
     behaviorTreeRestartReady = true;
 }
 
@@ -709,7 +712,10 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     retreatRetryCooldownRemaining = 0.0f;
     repositionCooldownRemaining = 0.0f;
     repositionRetryCooldownRemaining = 0.0f;
-    consecutiveAttackCount = 0;
+    combatBagRemaining.clear();
+    pendingCombatBagItem.reset();
+    pendingCombatBagIndex.reset();
+    combatBagLastEvent = "Reset";
     lastCombatDecision = "None";
 
     fastComboTargetContext = {};

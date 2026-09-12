@@ -22,12 +22,23 @@ public:
 };
 class CanPlanAnyCombatDecision : public JudgementBase
 { public: using JudgementBase::JudgementBase; bool Judgment() override; };
+class CanPlanCombatBagAttack : public JudgementBase
+{ public: using JudgementBase::JudgementBase; bool Judgment() override; };
 class CanPlanReposition : public JudgementBase
 { public: using JudgementBase::JudgementBase; bool Judgment() override; };
 class PrepareRepositionTarget : public ActionBase
 { public: using ActionBase::ActionBase; State Run(float) override; };
 class MoveToRepositionTarget : public ActionBase
 { public: using ActionBase::ActionBase; State Run(float) override; };
+class WaitAfterReposition : public ActionBase
+{
+public:
+    using ActionBase::ActionBase;
+    State Run(float dt) override;
+    void ResetRuntime() override { elapsed = 0.0f; }
+private:
+    float elapsed = 0.0f;
+};
 
 class PrepareRetreatTarget : public ActionBase
 {

@@ -102,6 +102,7 @@ ActionBase::State StartFastCombo::Run(float)
 {
     owner->SetSelectedAttackForBehaviorTree(BossAttackType::FastCombo);
     owner->StartAttack();
+    owner->CommitPendingCombatBagAttack();
     owner->OnSelectedActionStartedSuccessfully();
     return State::Complete;
 }
@@ -321,9 +322,11 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
     if (!activeNode)
     {// ?????????????????
         // ???????????????
-        BeginCombatDecisionInference();
+
+        BeginCombatDecisionDebugInference();
         activeNode = aiTree->ActiveNodeInference(behaviorData.get());
         behaviorTreeCurrentNode = activeNode ? activeNode->GetName() : "None";
+        CompleteCombatDecisionDebugInference(behaviorTreeCurrentNode.c_str());
     }
     if (!activeNode)
         return;
@@ -335,8 +338,8 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
 
     if (!activeNode)
     {
-        if (result == ActionBase::State::Complete && (behaviorTreePreviousNode == "ExecuteAttackRecovery" || behaviorTreePreviousNode == "ExecuteChargeRecovery"))
-            RecordBehaviorAttackCompleted();
+        if (result == ActionBase::State::Failed)
+            ReleasePendingCombatBagItem("PlanFailed");
         behaviorTreeCurrentNode = "None";
         return;
     }

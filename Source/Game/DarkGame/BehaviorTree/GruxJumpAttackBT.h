@@ -60,7 +60,7 @@ class ExecuteJumpAttack : public ActionBase
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
-    void ResetRuntime() override { started = false; executionStarted = false; finishAfterAnimation = false; stageHitCount = 0; }
+    void ResetRuntime() override;
 private:
     bool started = false;
     bool executionStarted = false;

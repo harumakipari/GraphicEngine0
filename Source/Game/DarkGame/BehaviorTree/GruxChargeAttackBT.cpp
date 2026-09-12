@@ -199,6 +199,7 @@ void GruxEnemy::StartChargeAttackBT()
     SetPendingChargeRecoveryResult(ChargeAttackEndReason::None);
     SetChargePhaseDebug("Windup");
     PlayBodyAnimation("Pre_FootSlide_0", false, true, 0.1f, true);
+    CommitPendingCombatBagAttack();
     OnSelectedActionStartedSuccessfully();
 }
 

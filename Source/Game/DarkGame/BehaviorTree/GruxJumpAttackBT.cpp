@@ -77,6 +77,7 @@ ActionBase::State StartJumpAttack::Run(float)
             started = false;
             return State::Failed;
         }
+        owner->CommitPendingCombatBagAttack();
         // Match the former EnemyAttackState path: notify at telegraph start.
         owner->RequestJumpAttackCameraAssist();
         started = true;
@@ -100,6 +101,9 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
     {
         if (controller && controller->IsPlayAnimation())
             return State::Run;
+        // The jump animation and its MotionWarp have finished. Clear before
+        // this action completes so the following recovery/root cannot inherit it.
+        owner->ClearJumpAttackMotionWarpOverride();
         owner->StartSelectedActionCooldown();
         started = false;
         return State::Complete;
@@ -119,7 +123,12 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
         if (!owner->UpdateJumpAttackTelegraph(dt))
             return State::Run;
         if (!owner->StartJumpAttackExecution())
+        {
+            owner->ClearJumpAttackMotionWarpOverride();
+            started = false;
+            executionStarted = false;
             return State::Failed;
+        }
         executionStarted = true;
         stageHitCount = owner->GetCurrentAttackHitCount();
         return State::Run;
@@ -136,9 +145,24 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
     }
     if (controller && controller->IsPlayAnimation())
         return State::Run;
+
+    // A controller disappearing or an animation interruption also reaches this
+    // terminal path; both must release the Jump-only override.
     owner->OnSelectedAttackCompletedSuccessfully();
     owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success);
+    owner->ClearJumpAttackMotionWarpOverride();
     owner->StartSelectedActionCooldown();
     started = false;
     return State::Complete;
+}
+
+void ExecuteJumpAttack::ResetRuntime()
+{
+    // BehaviorTree::ResetActionRuntimes is the BT abort path. This clear is
+    // idempotent, so resetting an inactive Jump action is harmless.
+    owner->ClearJumpAttackMotionWarpOverride();
+    started = false;
+    executionStarted = false;
+    finishAfterAnimation = false;
+    stageHitCount = 0;
 }
