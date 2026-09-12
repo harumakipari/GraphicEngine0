@@ -196,10 +196,11 @@ void GruxEnemy::StartChargeAttackBT()
     chargeBT.animationElapsed = 0.0f;
     chargeBT.animationStalled = 0.0f;
     chargeBT.previousAnimationTime = 0.0f;
+    chargeDirectionLocked = false;
+    chargeDirection = {};
     SetPendingChargeRecoveryResult(ChargeAttackEndReason::None);
     SetChargePhaseDebug("Windup");
     PlayBodyAnimation("Pre_FootSlide_0", false, true, 0.1f, true);
-    CommitPendingCombatBagAttack();
     OnSelectedActionStartedSuccessfully();
 }
 
@@ -245,7 +246,13 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateSingleChargeBT(float dt)
         }
         const float animationTime = controller->GetCurrentAnimationTime();
         SetChargeWindupAnimationTimeDebug(animationTime);
-        RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_ChargeWindup");
+        if (animationTime < chargeDirectionLockTime)
+            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_ChargeWindup");
+        else if (!chargeDirectionLocked && !LockChargeDirectionToPlayer())
+        {
+            FailChargeAttackBT();
+            return ChargeBTStepResult::Complete;
+        }
         if (animationTime >= GetChargeWindupEndTime())
         {
             if (!BeginSingleChargeBT()) FailChargeAttackBT();
@@ -409,6 +416,7 @@ void GruxEnemy::CleanupChargeAttackBT()
     positioningAnimationMoving = false;
     positioningAnimationActualSpeed = positioningMoveStopTimer = 0.0f;
     chargeDirection = {};
+    chargeDirectionLocked = false;
     chargeElapsedTime = 0.0f;
     chargeEndReasonDebug = ChargeAttackEndReason::None;
     chargeWindupAnimationTimeDebug = 0.0f;
@@ -430,22 +438,111 @@ void GruxEnemy::DrawChargeAttackBTDebug()
 {
 #ifdef USE_IMGUI
     ImGui::SeparatorText(U8("突進BT"));
-    ImGui::DragFloat(U8("突進準備距離 最小"), &chargeSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
-    ImGui::DragFloat(U8("突進準備距離 最大"), &chargeSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
-    ImGui::DragFloat(U8("突進準備 最低移動距離"), &chargeSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+
+    ImGui::DragFloat(
+        U8("突進準備距離 最小"),
+        &chargeSetupDistanceMin,
+        0.1f, 0.1f, 30.0f, "%.2f m");
+
+    ImGui::DragFloat(
+        U8("突進準備距離 最大"),
+        &chargeSetupDistanceMax,
+        0.1f, 0.1f, 30.0f, "%.2f m");
+
+    ImGui::DragFloat(
+        U8("突進準備 最低移動距離"),
+        &chargeSetupMinimumMoveDistance,
+        0.1f, 0.0f, 30.0f, "%.2f m");
+
     chargeSetupDistanceMin = (std::max)(0.1f, chargeSetupDistanceMin);
     chargeSetupDistanceMax = (std::max)(chargeSetupDistanceMin, chargeSetupDistanceMax);
     chargeSetupMinimumMoveDistance = (std::max)(0.0f, chargeSetupMinimumMoveDistance);
-    const char* phaseNames[] = {U8("待機"), U8("準備移動"), U8("旋回"), U8("予兆"), U8("突進"),
-        U8("結果判定"), U8("スタン"), U8("後隙開始待ち"), U8("後隙"), U8("後隙後の条件待ち")};
-    const char* resultNames[] = {U8("未確定"), U8("プレイヤー命中"), U8("ジャスト回避"), U8("壁衝突"), U8("時間切れ")};
-    const char* stunNames[] = {U8("なし"), U8("開始"), U8("継続"), U8("終了")};
-    ImGui::Text(U8("突進BT状態: %s"), phaseNames[static_cast<int>(chargeBT.phase)]);
-    ImGui::Text(U8("突進予兆中: %s"), chargeBT.phase == ChargeBTPhase::Telegraph ? U8("はい") : U8("いいえ"));
-    ImGui::Text(U8("突進固定方向: (%.3f, %.3f, %.3f)"), chargeDirection.x, chargeDirection.y, chargeDirection.z);
-    ImGui::Text(U8("突進経過時間: %.2f sec"), chargeElapsedTime);
-    ImGui::Text(U8("突進終了理由: %s"), chargeBT.failed ? U8("開始・実行失敗") : resultNames[static_cast<int>(chargeBT.result)]);
-    ImGui::Text(U8("スタン状態: %s"), stunNames[static_cast<int>(chargeBT.stunPhase)]);
-    ImGui::Text(U8("今回の後隙時間: %.2f sec"), chargeBT.recoveryDuration);
+
+    // ★ 方向固定時刻を調整可能にする
+    ImGui::DragFloat(
+        U8("突進 方向固定時刻"),
+        &chargeDirectionLockTime,
+        0.01f,
+        0.0f,
+        GetChargeWindupEndTime(),
+        "%.2f sec");
+
+    chargeDirectionLockTime =
+        std::clamp(
+            chargeDirectionLockTime,
+            0.0f,
+            GetChargeWindupEndTime());
+
+    // 開始時刻は現在値表示だけ
+    ImGui::Text(
+        U8("突進 開始時刻: %.2f sec"),
+        GetChargeWindupEndTime());
+
+    const char* phaseNames[] =
+    {
+        U8("待機"),
+        U8("準備移動"),
+        U8("旋回"),
+        U8("予兆"),
+        U8("突進"),
+        U8("結果判定"),
+        U8("スタン"),
+        U8("後隙開始待ち"),
+        U8("後隙"),
+        U8("後隙後の条件待ち")
+    };
+
+    const char* resultNames[] =
+    {
+        U8("未確定"),
+        U8("プレイヤー命中"),
+        U8("ジャスト回避"),
+        U8("壁衝突"),
+        U8("時間切れ")
+    };
+
+    const char* stunNames[] =
+    {
+        U8("なし"),
+        U8("開始"),
+        U8("継続"),
+        U8("終了")
+    };
+
+    ImGui::Text(
+        U8("突進 方向固定済み: %s"),
+        chargeDirectionLocked ? U8("はい") : U8("いいえ"));
+
+    ImGui::Text(
+        U8("突進 固定方向: (%.3f, %.3f, %.3f)"),
+        chargeDirection.x,
+        chargeDirection.y,
+        chargeDirection.z);
+
+    ImGui::Text(
+        U8("突進BT状態: %s"),
+        phaseNames[static_cast<int>(chargeBT.phase)]);
+
+    ImGui::Text(
+        U8("突進予兆中: %s"),
+        chargeBT.phase == ChargeBTPhase::Telegraph ? U8("はい") : U8("いいえ"));
+
+    ImGui::Text(
+        U8("突進経過時間: %.2f sec"),
+        chargeElapsedTime);
+
+    ImGui::Text(
+        U8("突進終了理由: %s"),
+        chargeBT.failed
+        ? U8("開始・実行失敗")
+        : resultNames[static_cast<int>(chargeBT.result)]);
+
+    ImGui::Text(
+        U8("スタン状態: %s"),
+        stunNames[static_cast<int>(chargeBT.stunPhase)]);
+
+    ImGui::DragFloat(
+        U8("今回の後隙時間: %.2f sec"),
+        &chargeBT.recoveryDuration,0.05f);
 #endif
 }

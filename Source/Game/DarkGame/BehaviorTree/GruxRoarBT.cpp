@@ -7,6 +7,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Core/ActorManager.h"
 #include "Physics/CollisionFunction.h"
+#include <map>
 
 namespace
 {
@@ -43,10 +44,27 @@ namespace
         int ignoredSupportContactCount = 0;
         bool pathBlocked = false;
         DirectX::XMFLOAT3 blockingNormal{};
+        DirectX::XMFLOAT3 blockingPosition{};
         float blockingDistance = 0.0f;
         std::string blockingActorName = "None";
         std::string blockingComponentName = "None";
+        DirectX::XMFLOAT3 start{};
+        DirectX::XMFLOAT3 direction{};
+        DirectX::XMFLOAT3 target{};
+        float distance = 0.0f;
+        float radius = 0.0f;
+        float halfHeight = 0.0f;
+        DirectX::XMFLOAT3 center{};
+        uint32_t blockingLayer = 0;
+        bool supportContactHit = false;
+        bool supportInitialOverlap = false;
+        float supportPenetrationDepth = 0.0f;
+        DirectX::XMFLOAT3 supportNormal{};
     };
+
+    std::vector<RetreatSweepDebugHit> g_repositionSweepDiagnostics;
+    std::map<std::string, int> g_repositionSweepActorCounts;
+    std::map<std::string, int> g_repositionSweepComponentCounts;
 
     void CopyPositioningPathSafetyDebugHit(const PositioningPathSafetyHit& source,
         RetreatSweepDebugHit& destination)
@@ -107,19 +125,35 @@ namespace
 
         if (debugHit)
         {
+            debugHit->center = shape.center;
+            debugHit->radius = shape.capsule.r;
+            debugHit->halfHeight = shape.halfHeight;
+            debugHit->direction = direction;
+            debugHit->distance = distance;
             debugHit->ignoredSupportContactCount = pathResult.ignoredSupportContactCount;
             debugHit->pathBlocked = pathResult.pathBlocked;
+            if (pathResult.ignoredSupportContact.hit)
+            {
+                debugHit->supportContactHit = true;
+                debugHit->supportInitialOverlap = pathResult.ignoredSupportContact.initialOverlap;
+                debugHit->supportPenetrationDepth = pathResult.ignoredSupportContact.penetrationDepth;
+                debugHit->supportNormal = pathResult.ignoredSupportContact.normal;
+            }
             CopyPositioningPathSafetyDebugHit(
                 pathResult.ignoredSupportContact.hit ? pathResult.ignoredSupportContact : pathResult.blockingHit,
                 *debugHit);
             if (pathResult.blockingHit.hit)
             {
                 debugHit->blockingNormal = pathResult.blockingHit.normal;
+                debugHit->blockingPosition = pathResult.blockingHit.position;
                 debugHit->blockingDistance = pathResult.blockingHit.distance;
                 if (pathResult.blockingHit.actor)
                     debugHit->blockingActorName = pathResult.blockingHit.actor->GetName();
                 if (pathResult.blockingHit.component)
+                {
                     debugHit->blockingComponentName = pathResult.blockingHit.component->GetName();
+                    debugHit->blockingLayer = pathResult.blockingHit.component->GetCollisionLayer();
+                }
             }
         }
         return pathBlocked;
@@ -129,7 +163,6 @@ bool CanPlanRoar::Judgment() { return owner->CanPlanRoar(); }
 bool CanPlanAnyDefensive::Judgment() { const bool result = owner->CanPlanRoar() || owner->CanPlanRetreat(); owner->RecordCombatDecisionDebugDefensive(result); return result; }
 bool CanPlanRetreat::Judgment() { return owner->CanPlanRetreat(); }
 bool CanPlanAnyCombatDecision::Judgment() { return owner->CanPlanAnyCombatDecision(); }
-bool CanPlanCombatBagAttack::Judgment() { return owner->CanPlanCombatBagAttack(); }
 bool CanPlanReposition::Judgment() { return owner->CanPlanReposition(); }
 ActionBase::State PrepareRepositionTarget::Run(float)
 {
@@ -446,11 +479,13 @@ void GruxEnemy::FinishRetreatMovement(bool arrived)
 {
     StopAIMovement();
     EndPositioningAnimation();
-    if (!arrived && retreatRuntime.failureReason == U8("�Ȃ�"))
-        retreatRuntime.failureReason = U8("�ړ����s");
+    if (!arrived && retreatRuntime.failureReason == U8("なし"))
+        retreatRuntime.failureReason = U8("移動失敗");
     retreatCompleteReason = arrived ? U8("Arrived: Remaining Distance <= Arrival Tolerance")
         : retreatRuntime.failureReason;
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
+    if (arrived)
+        consecutiveAttackCount = 0;
     retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
 }
 void GruxEnemy::RecordRetreatMoveResult(PositioningMoveResult result)
@@ -463,8 +498,6 @@ void GruxEnemy::BeginCombatDecisionDebugInference()
     ++combatDecisionDebugInferenceSerial;
     combatDecisionDebugActiveNodeAtStart = activeNode ? activeNode->GetName() : "None";
     combatDecisionDebugDefensiveResult = "NotEvaluated";
-    combatDecisionDebugLastDraw = "None";
-    combatDecisionDebugLastReleaseReason = "None";
     combatDecisionDebugRootSelectedNode = "None";
     combatDecisionDebugFailureReason = "None";
     combatDecisionDebugRepositionReason = "NotEvaluated";
@@ -489,120 +522,47 @@ void GruxEnemy::RecordCombatDecisionDebugDefensive(bool result)
     combatDecisionDebugDefensiveResult = result ? "True" : "False";
 }
 
-void GruxEnemy::ReserveCombatBagItemIfNeeded()
+void GruxEnemy::BeginCombatDecisionInference()
 {
-    if (pendingCombatBagItem)
+    repositionDecisionCached = true;
+    repositionDecisionResult = false;
+    repositionDecisionRoll = 0.0f;
+    repositionCanPlanDebug = false;
+    if (!IsRoarExecutionAllowed() || CanPlanRoar() || CanPlanRetreat() ||
+        repositionCooldownRemaining > 0.0f || repositionRetryCooldownRemaining > 0.0f ||
+        repositionTarget.valid || repositionMovementRuntime.movementActive || !rotationComponent ||
+        !characterMovementComponent || !enemyCapsuleComponent)
         return;
-
-    // A phase change takes effect only at this decision boundary, never while
-    // an already committed attack or reposition is running.
-    if (combatBagRemainingPhase != combatBagCurrentPhase)
-        combatBagRemaining.clear();
-
-    if (combatBagRemaining.empty())
-    {
-        const CombatBagDefinition& definition =
-            combatBagCurrentPhase == CombatBagPhase::Phase2 ? combatBagPhase2 : combatBagPhase1;
-        for (int i = 0; i < (std::max)(0, definition.attackCount); ++i)
-            combatBagRemaining.push_back(CombatBagItem::Attack);
-        for (int i = 0; i < (std::max)(0, definition.repositionCount); ++i)
-            combatBagRemaining.push_back(CombatBagItem::Reposition);
-        static thread_local std::mt19937 engine{ std::random_device{}() };
-        std::shuffle(combatBagRemaining.begin(), combatBagRemaining.end(), engine);
-        combatBagRemainingPhase = combatBagCurrentPhase;
-        combatBagLastEvent = "Refill";
-    }
-
-    if (combatBagRemaining.empty())
-    {
-        combatDecisionDebugFailureReason = "BagEmptyAfterRefill";
+    const auto context = BuildTargetContext();
+    if (!context.valid || context.distanceRegion == BossDistanceRegion::Far)
         return;
-    }
-
+    const int index = (std::min)(consecutiveAttackCount, 3);
+    const float chance = std::clamp(repositionChanceByAttackCount[index], 0.0f, 1.0f);
     static thread_local std::mt19937 engine{ std::random_device{}() };
-    const size_t index = std::uniform_int_distribution<size_t>(0, combatBagRemaining.size() - 1)(engine);
-    pendingCombatBagIndex = index;
-    pendingCombatBagItem = combatBagRemaining[index];
-    combatBagLastEvent = *pendingCombatBagItem == CombatBagItem::Attack
-        ? "Draw Attack" : "Draw Reposition";
-    combatDecisionDebugLastDraw = *pendingCombatBagItem == CombatBagItem::Attack ? "Attack" : "Reposition";
-}
-
-void GruxEnemy::CommitPendingCombatBagAttack()
-{
-    if (!pendingCombatBagItem || *pendingCombatBagItem != CombatBagItem::Attack)
-        return;
-    if (pendingCombatBagIndex && *pendingCombatBagIndex < combatBagRemaining.size() &&
-        combatBagRemaining[*pendingCombatBagIndex] == CombatBagItem::Attack)
-        combatBagRemaining.erase(combatBagRemaining.begin() + *pendingCombatBagIndex);
-    else
-    {
-        const auto it = std::find(combatBagRemaining.begin(), combatBagRemaining.end(), CombatBagItem::Attack);
-        if (it != combatBagRemaining.end()) combatBagRemaining.erase(it);
-    }
-    pendingCombatBagItem.reset();
-    pendingCombatBagIndex.reset();
-    combatBagLastEvent = "Commit Attack";
-    lastCombatDecision = "Attack";
-}
-
-void GruxEnemy::ReleasePendingCombatBagItem(const char* reason)
-{
-    if (!pendingCombatBagItem)
-        return;
-    const char* itemName = *pendingCombatBagItem == CombatBagItem::Attack ? "Attack" : "Reposition";
-    combatBagLastEvent = std::string("Release ") + itemName +
-        (reason ? std::string(": ") + reason : "");
-    combatDecisionDebugLastReleaseReason = reason ? reason : "None";
-    combatDecisionDebugFailureReason = std::string(itemName) + "Unavailable: " + combatDecisionDebugLastReleaseReason;
-    pendingCombatBagItem.reset();
-    pendingCombatBagIndex.reset();
+    repositionDecisionRoll = std::uniform_real_distribution<float>(0.0f, 1.0f)(engine);
+    repositionDecisionResult = repositionDecisionRoll < chance;
+    repositionCanPlanDebug = repositionDecisionResult;
 }
 
 bool GruxEnemy::CanPlanAnyCombatDecision()
 {
-    // This judgment is reached only after Root has rejected Defensive.
-    ReserveCombatBagItemIfNeeded();
-    if (!pendingCombatBagItem)
-    {
-        combatDecisionDebugCanPlanAny = false;
-        if (combatDecisionDebugFailureReason == "None") combatDecisionDebugFailureReason = "NoPendingBagItem";
-        return false;
-    }
-    if (*pendingCombatBagItem == CombatBagItem::Reposition)
-    {
-        const bool canPlan = CanPlanReposition();
-        combatDecisionDebugCanPlanAny = canPlan;
-        if (canPlan) return true;
-        ReleasePendingCombatBagItem("RepositionUnavailable");
-        return false;
-    }
-    const bool canPlan = CanPlanCombatBagAttack();
-    combatDecisionDebugCanPlanAny = canPlan;
-    if (canPlan) return true;
-    ReleasePendingCombatBagItem("NoAttackCandidate");
-    return false;
-}
-
-bool GruxEnemy::CanPlanCombatBagAttack()
-{
-    if (!pendingCombatBagItem || *pendingCombatBagItem != CombatBagItem::Attack)
-    {
-        combatDecisionDebugCanPlanAnyAttack = false;
-        return false;
-    }
+    if (!repositionDecisionCached)
+        BeginCombatDecisionInference();
     combatDecisionDebugFastCombo = CanPlanFastCombo();
     combatDecisionDebugJump = CanPlanJumpAttack();
     combatDecisionDebugDash = CanPlanDashAttack();
     combatDecisionDebugCharge = CanPlanChargeAttack();
-    combatDecisionDebugCanPlanAnyAttack = combatDecisionDebugFastCombo || combatDecisionDebugJump ||
+    const bool canPlanAttack = combatDecisionDebugFastCombo || combatDecisionDebugJump ||
         combatDecisionDebugDash || combatDecisionDebugCharge;
-    return combatDecisionDebugCanPlanAnyAttack;
+    combatDecisionDebugCanPlanAnyAttack = canPlanAttack;
+    const bool canPlan = CanPlanReposition() || canPlanAttack;
+    combatDecisionDebugCanPlanAny = canPlan;
+    return canPlan;
 }
 
 bool GruxEnemy::CanPlanReposition()
 {
-    const bool hasPendingReposition = pendingCombatBagItem && *pendingCombatBagItem == CombatBagItem::Reposition;
+    const bool decisionAllows = repositionDecisionCached && repositionDecisionResult;
     const bool targetInactive = !repositionTarget.valid;
     const bool movementInactive = !repositionMovementRuntime.movementActive;
     const bool cooldownReady = repositionCooldownRemaining <= 0.0f;
@@ -613,11 +573,11 @@ bool GruxEnemy::CanPlanReposition()
     const bool nodeAllowed = !activeNode || activeNode->GetName() == "PrepareRepositionTarget";
     const bool executionAllowed = IsRoarExecutionAllowed();
     const bool componentsValid = rotationComponent && characterMovementComponent && enemyCapsuleComponent;
-    const bool result = hasPendingReposition && targetInactive && movementInactive && cooldownReady && retryReady &&
+    const bool result = decisionAllows && targetInactive && movementInactive && cooldownReady && retryReady &&
         defensiveInactive && nodeAllowed && executionAllowed && componentsValid;
     combatDecisionDebugCanPlanReposition = result;
     if (result) combatDecisionDebugRepositionReason = "Ready";
-    else if (!hasPendingReposition) combatDecisionDebugRepositionReason = "PendingIsNotReposition";
+    else if (!decisionAllows) combatDecisionDebugRepositionReason = "ProbabilityRejected";
     else if (!targetInactive) combatDecisionDebugRepositionReason = "TargetAlreadyActive";
     else if (!movementInactive) combatDecisionDebugRepositionReason = "MovementAlreadyActive";
     else if (!cooldownReady) combatDecisionDebugRepositionReason = "RepositionCooldown";
@@ -625,30 +585,16 @@ bool GruxEnemy::CanPlanReposition()
     else if (roarAvailable) combatDecisionDebugRepositionReason = "RoarAvailable";
     else if (retreatAvailable) combatDecisionDebugRepositionReason = "RetreatAvailable";
     else if (!nodeAllowed) combatDecisionDebugRepositionReason = std::string("ActiveNode=") + activeNode->GetName();
-    else if (!executionAllowed)
-    {
-        if (!behaviorTreeFastComboEnabled) combatDecisionDebugRepositionReason = "BTDisabled";
-        else if (!battleAIActive) combatDecisionDebugRepositionReason = "BattleAIInactive";
-        else if (IsDead()) combatDecisionDebugRepositionReason = "GruxDead";
-        else if (IsPendingKill()) combatDecisionDebugRepositionReason = "GruxPendingKill";
-        else if (isDeathPerform) combatDecisionDebugRepositionReason = "DeathPerform";
-        else if (finalHitReactionActive || finalHitReactionHeld) combatDecisionDebugRepositionReason = "FinalHitReaction";
-        else if (IsAnimationEditorPreviewActive()) combatDecisionDebugRepositionReason = "AnimationEditorPreview";
-        else if (IsChargeAttackBTActive() || chargeMovementActive) combatDecisionDebugRepositionReason = "ChargeActive";
-        else if (IsDashAttackBTActive() || dashAttackMovementActive) combatDecisionDebugRepositionReason = "DashActive";
-        else if (jumpMotionWarpOverrideActive) combatDecisionDebugRepositionReason = "JumpMotionWarpActive";
-        else if (!characterMovementComponent) combatDecisionDebugRepositionReason = "MissingCharacterMovement";
-        else if (!GetBodyAnimationController()) combatDecisionDebugRepositionReason = "MissingAnimationController";
-        else if (!GetOwnerScene()) combatDecisionDebugRepositionReason = "MissingOwnerScene";
-        else if (stateMachine_ && std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") == 0) combatDecisionDebugRepositionReason = "LegacyDeathState";
-        else if (stateMachine_ && std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") == 0) combatDecisionDebugRepositionReason = "LegacyStunState";
-        else combatDecisionDebugRepositionReason = "PlayerInvalidOrDead";
-    }
+    else if (!executionAllowed) combatDecisionDebugRepositionReason = "ExecutionUnavailable";
     else combatDecisionDebugRepositionReason = "MissingComponent";
     return result;
 }
+
 bool GruxEnemy::PrepareRepositionTarget()
 {
+    g_repositionSweepDiagnostics.clear();
+    g_repositionSweepActorCounts.clear();
+    g_repositionSweepComponentCounts.clear();
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
     repositionRuntime = {};
     repositionRemainingDistance = 0.0f;
@@ -756,7 +702,16 @@ bool GruxEnemy::PrepareRepositionTarget()
 
             const DirectX::XMFLOAT3 moveDirection{ moveX / moveDistance, 0.0f, moveZ / moveDistance };
             HitResult hit{};
-            debug.pathBlocked = SweepRetreatPath(sweepShape, moveDirection, moveDistance, hit, obstacleMask);
+            RetreatSweepDebugHit sweepDebug{};
+            sweepDebug.start = repositionRuntime.gruxSnapshot;
+            sweepDebug.target = evaluation.clampedTarget;
+            debug.pathBlocked = SweepRetreatPath(sweepShape, moveDirection, moveDistance, hit, obstacleMask, &sweepDebug);
+            g_repositionSweepDiagnostics.push_back(sweepDebug);
+            if (debug.pathBlocked)
+            {
+                ++g_repositionSweepActorCounts[sweepDebug.blockingActorName];
+                ++g_repositionSweepComponentCounts[sweepDebug.blockingComponentName];
+            }
             if (debug.pathBlocked)
             {
                 debug.rejectReason = RepositionCandidateRejectReason::Sweep;
@@ -783,21 +738,6 @@ bool GruxEnemy::PrepareRepositionTarget()
             repositionRuntime.plannedPlayerDistance = plannedPlayerDistance;
             repositionRuntime.failureReason = "None";
 
-            // This is the Combat Bag commit point: a safe fixed target now exists.
-            if (pendingCombatBagItem && *pendingCombatBagItem == CombatBagItem::Reposition)
-            {
-                if (pendingCombatBagIndex && *pendingCombatBagIndex < combatBagRemaining.size() &&
-                    combatBagRemaining[*pendingCombatBagIndex] == CombatBagItem::Reposition)
-                    combatBagRemaining.erase(combatBagRemaining.begin() + *pendingCombatBagIndex);
-                else
-                {
-                    const auto it = std::find(combatBagRemaining.begin(), combatBagRemaining.end(), CombatBagItem::Reposition);
-                    if (it != combatBagRemaining.end()) combatBagRemaining.erase(it);
-                }
-                pendingCombatBagItem.reset();
-                pendingCombatBagIndex.reset();
-                combatBagLastEvent = "Commit Reposition";
-            }
             lastCombatDecision = "Reposition";
             return true;
         }
@@ -806,6 +746,7 @@ bool GruxEnemy::PrepareRepositionTarget()
     repositionRuntime.failureReason = "NoSafeTarget";
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
     repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
+
     return false;
 }
 GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRepositionMovement(float dt)
@@ -838,8 +779,8 @@ void GruxEnemy::FinishRepositionMovement(bool arrived)
 }
 void GruxEnemy::CompleteRepositionArrivalWait()
 {
-    // The target was committed during Prepare.  Waiting never changes Bag state.
     repositionCooldownRemaining = repositionCooldownDuration;
+    consecutiveAttackCount = 0;
     lastCombatDecision = "Reposition";
 }
 
@@ -1241,54 +1182,77 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::Text(U8("Retreat再試行残り: %.2f sec"), retreatRetryCooldownRemaining);
     ImGui::Text(U8("Retreat失敗理由: %s"), retreatRuntime.failureReason.c_str());
     ImGui::SeparatorText(U8("Reposition BT"));
-    std::string combatBagText;
-    for (const CombatBagItem item : combatBagRemaining)
-    {
-        if (!combatBagText.empty()) combatBagText += ' ';
-        combatBagText += item == CombatBagItem::Attack ? 'A' : 'R';
-    }
-    const char* combatBagPending = !pendingCombatBagItem ? "None" :
-        (*pendingCombatBagItem == CombatBagItem::Attack ? "Attack" : "Reposition");
-    ImGui::Text(U8("Combat Bag �c��: %s"), combatBagText.empty() ? "Empty" : combatBagText.c_str());
-    ImGui::Text(U8("Combat Bag Pending: %s"), combatBagPending);
-    ImGui::Text(U8("���݂�Combat Decision: %s"), lastCombatDecision.c_str());
-    ImGui::Text(U8("Bag Attack��: %d"), (combatBagCurrentPhase == CombatBagPhase::Phase2 ? combatBagPhase2.attackCount : combatBagPhase1.attackCount));
-    ImGui::Text(U8("Bag Reposition��: %d"), (combatBagCurrentPhase == CombatBagPhase::Phase2 ? combatBagPhase2.repositionCount : combatBagPhase1.repositionCount));
-    ImGui::Text(U8("Combat Bag Event: %s"), combatBagLastEvent.c_str());
-    ImGui::Text(U8("Combat Bag �Ō��Draw: %s"), combatDecisionDebugLastDraw.c_str());
-    ImGui::Text(U8("Combat Bag �Ō��Release���R: %s"), combatDecisionDebugLastReleaseReason.c_str());
-    ImGui::Text(U8("Root ���_�ԍ�: %llu"), combatDecisionDebugInferenceSerial);
-    ImGui::Text(U8("Root ���_�J�nactiveNode: %s"), combatDecisionDebugActiveNodeAtStart.c_str());
+    ImGui::Text(U8("連続Attack回数: %d"), consecutiveAttackCount);
+    const int chanceIndex = (std::min)(consecutiveAttackCount, 3);
+    ImGui::DragFloat(U8("Reposition選択確率"), &repositionChanceByAttackCount[chanceIndex], 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::Text(U8("Reposition抽選値: %.3f"), repositionDecisionRoll);
+    ImGui::Text(U8("Reposition抽選結果: %s"), repositionDecisionResult ? "当選" : "落選");
+    ImGui::Text(U8("現在のCombat Decision: %s"), lastCombatDecision.c_str());
+    ImGui::Text(U8("Root 推論番号: %llu"), combatDecisionDebugInferenceSerial);
+    ImGui::Text(U8("Root 推論開始activeNode: %s"), combatDecisionDebugActiveNodeAtStart.c_str());
     ImGui::Text(U8("Root Defensive Judgment: %s"), combatDecisionDebugDefensiveResult.c_str());
-    ImGui::Text(U8("Root �ŏI�I��Node: %s"), combatDecisionDebugRootSelectedNode.c_str());
+    ImGui::Text(U8("Root 最終選択Node: %s"), combatDecisionDebugRootSelectedNode.c_str());
     ImGui::Text(U8("CanPlanAnyCombatDecision: %s"), combatDecisionDebugCanPlanAny ? "true" : "false");
     ImGui::Text(U8("CanPlanReposition: %s (%s)"), combatDecisionDebugCanPlanReposition ? "true" : "false", combatDecisionDebugRepositionReason.c_str());
     ImGui::Text(U8("CanPlanAnyAttack: %s [Fast=%s Jump=%s Dash=%s Charge=%s]"),
         combatDecisionDebugCanPlanAnyAttack ? "true" : "false", combatDecisionDebugFastCombo ? "true" : "false",
         combatDecisionDebugJump ? "true" : "false", combatDecisionDebugDash ? "true" : "false", combatDecisionDebugCharge ? "true" : "false");
-    ImGui::Text(U8("Combat Decision���s���R: %s"), combatDecisionDebugFailureReason.c_str());
+    ImGui::Text(U8("Combat Decision失敗理由: %s"), combatDecisionDebugFailureReason.c_str());
     ImGui::Text(U8("Repositionクールダウン残り: %.2f"), repositionCooldownRemaining);
     ImGui::Text(U8("Reposition再試行待ち: %.2f"), repositionRetryCooldownRemaining);
-    ImGui::Text(U8("現在のCombat Decision: %s"), lastCombatDecision.c_str());
-    ImGui::DragFloat(U8("Reposition���� �ŏ�"), &repositionDistanceMin, 0.1f, 0.0f, 30.0f, "%.2f");
-    ImGui::DragFloat(U8("Reposition���� �ő�"), &repositionDistanceMax, 0.1f, 0.0f, 30.0f, "%.2f");
-    ImGui::DragFloat(U8("Reposition �Œ�ړ�����"), &repositionMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
-    ImGui::DragFloat(U8("Reposition Player�ŏ�����"), &repositionMinimumPlayerDistance, 0.1f, 0.0f, 30.0f, "%.2f");
-    ImGui::DragFloat(U8("Reposition ������ҋ@����"), &repositionArrivalWaitDuration, 0.01f, 0.0f, 2.0f, "%.2f");
+    ImGui::Text(U8("最後にCommitしたCombat Decision: %s"), lastCombatDecision.c_str());
+    ImGui::DragFloat(U8("Reposition距離 最小"), &repositionDistanceMin, 0.1f, 0.0f, 30.0f, "%.2f");
+    ImGui::DragFloat(U8("Reposition距離 最大"), &repositionDistanceMax, 0.1f, 0.0f, 30.0f, "%.2f");
+    ImGui::DragFloat(U8("Reposition 最低移動距離"), &repositionMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
+    ImGui::DragFloat(U8("Reposition Player最小距離"), &repositionMinimumPlayerDistance, 0.1f, 0.0f, 30.0f, "%.2f");
+    ImGui::DragFloat(U8("Reposition 到着後待機時間"), &repositionArrivalWaitDuration, 0.01f, 0.0f, 2.0f, "%.2f");
     ImGui::Text(U8("Reposition Target: (%.2f, %.2f, %.2f)"), repositionTarget.targetPosition.x, repositionTarget.targetPosition.y, repositionTarget.targetPosition.z);
-    ImGui::Text(U8("Reposition�\��ړ�����: %.2f"), repositionRuntime.plannedMoveDistance);
-    ImGui::Text(U8("Reposition Target��Player����: %.2f"), repositionRuntime.plannedPlayerDistance);
-    ImGui::Text(U8("Reposition�c�苗��: %.2f"), repositionRemainingDistance);
-    ImGui::Text(U8("Reposition��␔: %d"), repositionRuntime.candidateCount);
-    ImGui::Text(U8("Reposition Clamp�K�p��: %d"), repositionRuntime.clampAppliedCount);
-    ImGui::Text(U8("Reposition Clamp��̗p��: %d"), repositionRuntime.clampPostClampAcceptedCount);
-    ImGui::Text(U8("Reposition Clamp��s�̗p��: %d"), repositionRuntime.clampPostClampRejectCount);
-    ImGui::Text(U8("Reposition Clamp��Target: (%.2f, %.2f, %.2f)"), repositionRuntime.lastClampedTarget.x, repositionRuntime.lastClampedTarget.y, repositionRuntime.lastClampedTarget.z);
-    ImGui::Text(U8("Reposition Clamp����: %.2f"), repositionRuntime.lastClampDistance);
-    ImGui::Text(U8("Reposition Player�����s����: %d"), repositionRuntime.playerDistanceTooCloseRejectCount);
-    ImGui::Text(U8("Reposition �Œ�ړ��������s��: %d"), repositionRuntime.minimumMoveRejectCount);
-    ImGui::Text(U8("Reposition Sweep���s��: %d"), repositionRuntime.sweepRejectCount);
-    ImGui::Text(U8("Reposition���s���R: %s"), repositionRuntime.failureReason.c_str());
+    ImGui::Text(U8("Reposition予定移動距離: %.2f"), repositionRuntime.plannedMoveDistance);
+    ImGui::Text(U8("Reposition Target時Player距離: %.2f"), repositionRuntime.plannedPlayerDistance);
+    ImGui::Text(U8("Reposition残り距離: %.2f"), repositionRemainingDistance);
+    ImGui::Text(U8("Reposition候補数: %d"), repositionRuntime.candidateCount);
+    ImGui::Text(U8("Reposition Clamp適用数: %d"), repositionRuntime.clampAppliedCount);
+    ImGui::Text(U8("Reposition Clamp後採用数: %d"), repositionRuntime.clampPostClampAcceptedCount);
+    ImGui::Text(U8("Reposition Clamp後不採用数: %d"), repositionRuntime.clampPostClampRejectCount);
+    ImGui::Text(U8("Reposition Clamp後Target: (%.2f, %.2f, %.2f)"), repositionRuntime.lastClampedTarget.x, repositionRuntime.lastClampedTarget.y, repositionRuntime.lastClampedTarget.z);
+    ImGui::Text(U8("Reposition Clamp距離: %.2f"), repositionRuntime.lastClampDistance);
+    ImGui::Text(U8("Reposition Player距離不足数: %d"), repositionRuntime.playerDistanceTooCloseRejectCount);
+    ImGui::Text(U8("Reposition 最低移動距離失敗数: %d"), repositionRuntime.minimumMoveRejectCount);
+    ImGui::Text(U8("Reposition Sweep失敗数: %d"), repositionRuntime.sweepRejectCount);
+    ImGui::Text(U8("Reposition失敗理由: %s"), repositionRuntime.failureReason.c_str());
+    if (!g_repositionSweepDiagnostics.empty())
+    {
+        auto top = [](const std::map<std::string, int>& counts)
+        {
+            std::vector<std::pair<std::string, int>> values(counts.begin(), counts.end());
+            std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+            return values;
+        };
+        const auto actors = top(g_repositionSweepActorCounts);
+        const auto components = top(g_repositionSweepComponentCounts);
+        ImGui::SeparatorText(U8("Reposition Sweep Hit集計"));
+        for (size_t i = 0; i < (std::min)(size_t(3), actors.size()); ++i)
+            ImGui::Text(U8("Actor %d: %s (%d)"), static_cast<int>(i + 1), actors[i].first.c_str(), actors[i].second);
+        for (size_t i = 0; i < (std::min)(size_t(3), components.size()); ++i)
+            ImGui::Text(U8("Component %d: %s (%d)"), static_cast<int>(i + 1), components[i].first.c_str(), components[i].second);
+        const auto& last = g_repositionSweepDiagnostics.back();
+        ImGui::Text(U8("最多Hit Actor: %s"), actors.empty() ? "None" : actors.front().first.c_str());
+        ImGui::Text(U8("最多Hit Component: %s"), components.empty() ? "None" : components.front().first.c_str());
+        ImGui::Text(U8("最多Hit回数: %d"), actors.empty() ? 0 : actors.front().second);
+        ImGui::Text(U8("Sweep開始: (%.2f, %.2f, %.2f)"), last.start.x, last.start.y, last.start.z);
+        ImGui::Text(U8("Clamp後Target: (%.2f, %.2f, %.2f)"), last.target.x, last.target.y, last.target.z);
+        ImGui::Text(U8("Sweep方向: (%.3f, %.3f, %.3f) 距離 %.3f"), last.direction.x, last.direction.y, last.direction.z, last.distance);
+        ImGui::Text(U8("Shape Center: (%.2f, %.2f, %.2f) Radius %.3f HalfHeight %.3f"), last.center.x, last.center.y, last.center.z, last.radius, last.halfHeight);
+        ImGui::Text(U8("InitialOverlap: %s Distance: %.3f Penetration: %.3f"), tf(last.initialOverlap), last.blockingDistance, last.penetrationDepth);
+        ImGui::Text(U8("Normal: (%.3f, %.3f, %.3f)"), last.normal.x, last.normal.y, last.normal.z);
+        ImGui::Text(U8("Block位置: (%.2f, %.2f, %.2f) Normal: (%.3f, %.3f, %.3f)"),
+            last.blockingPosition.x, last.blockingPosition.y, last.blockingPosition.z,
+            last.blockingNormal.x, last.blockingNormal.y, last.blockingNormal.z);
+        ImGui::Text(U8("Hit Actor: %s Component: %s Layer: 0x%X"), last.blockingActorName.c_str(), last.blockingComponentName.c_str(), last.blockingLayer);
+        ImGui::Text(U8("Support無視数: %d PathBlocked: %s"), last.ignoredSupportContactCount, tf(last.pathBlocked));
+        ImGui::Text(U8("Support Contact: %s InitialOverlap: %s NormalY: %.3f Penetration: %.3f"),
+            tf(last.supportContactHit), tf(last.supportInitialOverlap), last.supportNormal.y, last.supportPenetrationDepth);
+    }
 #endif
 }
 
@@ -1339,6 +1303,17 @@ void GruxEnemy::DrawRetreatDebugWorld() const
         target.y = y;
         DebugRender::DrawSphere(target, 0.32f, { 1.0f, 0.8f, 0.15f, 1.0f }, 0.0f, true);
         DebugRender::DrawLine(start, target, { 1.0f, 0.8f, 0.15f, 1.0f }, 0.0f, true);
+    }
+    for (const auto& sweep : g_repositionSweepDiagnostics)
+    {
+        DebugRender::DrawLine(sweep.start, sweep.target, { 1.0f, 0.1f, 0.8f, 1.0f }, 0.0f, true);
+        const DirectX::XMFLOAT3 block{
+            sweep.start.x + sweep.direction.x * sweep.blockingDistance,
+            sweep.start.y + sweep.direction.y * sweep.blockingDistance,
+            sweep.start.z + sweep.direction.z * sweep.blockingDistance };
+        DebugRender::DrawSphere(block, 0.18f, { 1.0f, 0.05f, 0.05f, 1.0f }, 0.0f, true);
+        DebugRender::DrawLine(block, { block.x + sweep.normal.x, block.y + sweep.normal.y, block.z + sweep.normal.z },
+            { 1.0f, 0.9f, 0.1f, 1.0f }, 0.0f, true);
     }
 #else
     (void)this;

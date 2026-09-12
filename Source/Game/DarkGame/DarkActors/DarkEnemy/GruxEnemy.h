@@ -189,6 +189,7 @@ public:
     void CleanupChargeAttackBT();
     void DrawChargeAttackBTDebug();
     bool BeginChargeAttackMovement();
+    bool LockChargeDirectionToPlayer();
     ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime);
     void StopChargeAttackMovement();
     float GetChargeWindupEndTime() const { return chargeWindupEndTime; }
@@ -300,9 +301,9 @@ public:
     PositioningMoveResult UpdateRetreatMovement(float deltaTime);
     void FinishRetreatMovement(bool arrived);
     void RecordRetreatMoveResult(PositioningMoveResult result);
-    bool CanPlanAnyCombatDecision(); bool CanPlanCombatBagAttack(); bool CanPlanReposition(); void ReserveCombatBagItemIfNeeded();
+    bool CanPlanAnyCombatDecision(); bool CanPlanReposition(); void BeginCombatDecisionInference(); void RecordBehaviorAttackCompleted();
     void BeginCombatDecisionDebugInference(); void CompleteCombatDecisionDebugInference(const char* selectedNode); void RecordCombatDecisionDebugDefensive(bool result);
-    bool PrepareRepositionTarget(); PositioningMoveResult UpdateRepositionMovement(float deltaTime); void CommitPendingCombatBagAttack(); void ReleasePendingCombatBagItem(const char* reason);
+    bool PrepareRepositionTarget(); PositioningMoveResult UpdateRepositionMovement(float deltaTime);
     void FinishRepositionMovement(bool arrived); void CompleteRepositionArrivalWait();
     float GetRepositionArrivalWaitDuration() const { return repositionArrivalWaitDuration; }
     float GetAttackSetupRemainingDistance() const { return attackSetupRemainingDistance; }
@@ -835,18 +836,15 @@ private:
     float repositionDistanceMin=6.0f, repositionDistanceMax=13.0f;
     float repositionMinimumMoveDistance=5.0f, repositionMinimumPlayerDistance=4.0f, repositionMoveSpeed=6.0f;
     float repositionArrivalWaitDuration=0.5f;
-    enum class CombatBagItem { Attack, Reposition };
-    struct CombatBagDefinition { int attackCount=2; int repositionCount=1; };
-    enum class CombatBagPhase { Phase1, Phase2 };
-    CombatBagDefinition combatBagPhase1{2,1}; CombatBagDefinition combatBagPhase2{3,1};
-    CombatBagPhase combatBagCurrentPhase=CombatBagPhase::Phase1; CombatBagPhase combatBagRemainingPhase=CombatBagPhase::Phase1;
-    std::vector<CombatBagItem> combatBagRemaining; std::optional<CombatBagItem> pendingCombatBagItem; std::optional<size_t> pendingCombatBagIndex;
-    std::string combatBagLastEvent="None";
+    int consecutiveAttackCount = 0;
+    std::array<float, 4> repositionChanceByAttackCount{ 0.10f, 0.25f, 0.60f, 1.0f };
+    mutable bool repositionDecisionCached = false;
+    mutable bool repositionDecisionResult = false;
+    mutable float repositionDecisionRoll = 0.0f;
+    bool repositionCanPlanDebug = false;
     unsigned long long combatDecisionDebugInferenceSerial=0;
     std::string combatDecisionDebugActiveNodeAtStart="None";
     std::string combatDecisionDebugDefensiveResult="NotEvaluated";
-    std::string combatDecisionDebugLastDraw="None";
-    std::string combatDecisionDebugLastReleaseReason="None";
     std::string combatDecisionDebugRootSelectedNode="None";
     std::string combatDecisionDebugFailureReason="None";
     std::string combatDecisionDebugRepositionReason="NotEvaluated";
@@ -1131,6 +1129,7 @@ private:
     float chargeSetupDistanceMax = 10.0f;
     float chargeSetupMinimumMoveDistance = 3.0f;
     float chargeWindupEndTime = 2.90f;
+    float chargeDirectionLockTime = 2.90f;
     float chargeSpeed = 12.0f;
     float chargeSafetyTimeout = 8.0f;
     float chargeWallCastSafetyMargin = 0.10f;
@@ -1142,6 +1141,7 @@ private:
     bool chargeDangerWindowActive = false;
     bool chargeJustDodgeSuccessDebug = false;
     DirectX::XMFLOAT3 chargeDirection{ 0.0f, 0.0f, 1.0f };
+    bool chargeDirectionLocked = false;
     std::string chargePhaseDebug = "None";
     float chargeWindupAnimationTimeDebug = 0.0f;
     bool chargePlayerCastHitDebug = false;
@@ -1254,9 +1254,9 @@ private:
     std::unique_ptr<BehaviorTree>	aiTree = nullptr;
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;
     NodeBase* activeNode = nullptr;
-    bool behaviorTreeFastComboEnabled = false;
+    bool behaviorTreeFastComboEnabled = true;
     CloseCombatSettings closeCombatSettings;
-    bool showCloseCombatDebugRange = false;
+    bool showCloseCombatDebugRange = true;
     std::string behaviorTreeCurrentNode = "None";
     std::string behaviorTreePreviousNode = "None";
     std::string behaviorTreeLastResult = "None";

@@ -22,8 +22,6 @@ public:
 };
 class CanPlanAnyCombatDecision : public JudgementBase
 { public: using JudgementBase::JudgementBase; bool Judgment() override; };
-class CanPlanCombatBagAttack : public JudgementBase
-{ public: using JudgementBase::JudgementBase; bool Judgment() override; };
 class CanPlanReposition : public JudgementBase
 { public: using JudgementBase::JudgementBase; bool Judgment() override; };
 class PrepareRepositionTarget : public ActionBase

@@ -484,7 +484,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("RepositionPlan", "PrepareRepositionTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareRepositionTarget>(this));
     aiTree->AddNode("RepositionPlan", "MoveToRepositionTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToRepositionTarget>(this));
     aiTree->AddNode("RepositionPlan", "WaitAfterReposition", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::WaitAfterReposition>(this));
-    aiTree->AddNode("CombatDecision", "Attack", 1, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanCombatBagAttack>(this), nullptr);
+    aiTree->AddNode("CombatDecision", "Attack", 1, BehaviorTree::SelectRule::Random, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
     aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
     aiTree->AddNode("Attack", "FastComboPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
@@ -588,8 +588,6 @@ void GruxEnemy::PauseBattleAI()
     behaviorTreeCurrentNode = "None";
     behaviorTreePreviousNode = "None";
     behaviorTreeLastResult = "None";
-    pendingCombatBagItem.reset();
-    pendingCombatBagIndex.reset();
 
     if (stateMachine_)
         stateMachine_->ChangeState("EnemyIdleState");
@@ -683,10 +681,10 @@ void GruxEnemy::ResetBehaviorTreeForBattleRestart()
     behaviorTreePreviousNode = "None";
     behaviorTreeLastResult = "None";
     behaviorTreeLastJudgment = "None";
-    pendingCombatBagItem.reset();
-    pendingCombatBagIndex.reset();
-    combatBagLastEvent = "Reset";
-    combatBagRemaining.clear();
+    consecutiveAttackCount = 0;
+    repositionDecisionCached = false;
+    repositionDecisionResult = false;
+    repositionDecisionRoll = 0.0f;
     behaviorTreeRestartReady = true;
 }
 
@@ -712,10 +710,10 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     retreatRetryCooldownRemaining = 0.0f;
     repositionCooldownRemaining = 0.0f;
     repositionRetryCooldownRemaining = 0.0f;
-    combatBagRemaining.clear();
-    pendingCombatBagItem.reset();
-    pendingCombatBagIndex.reset();
-    combatBagLastEvent = "Reset";
+    consecutiveAttackCount = 0;
+    repositionDecisionCached = false;
+    repositionDecisionResult = false;
+    repositionDecisionRoll = 0.0f;
     lastCombatDecision = "None";
 
     fastComboTargetContext = {};
@@ -2924,6 +2922,8 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::SeparatorText("Charge Attack");
         ImGui::DragFloat("Charge Windup End Time", &chargeWindupEndTime,
             0.01f, 0.0f, 10.0f, "%.2f sec");
+        ImGui::DragFloat(U8("突E�� 方向固定時刻"), &chargeDirectionLockTime,
+            0.01f, 0.0f, chargeWindupEndTime, "%.2f sec");
         ImGui::DragFloat("Charge Speed", &chargeSpeed,
             0.1f, 0.1f, 50.0f, "%.2f m/s");
         ImGui::DragFloat("Charge PlayerHit Recovery Duration",
@@ -4959,21 +4959,8 @@ bool GruxEnemy::BeginChargeAttackMovement()
         return false;
     }
 
-    chargeDirection = context.directionToPlayer;
-    chargeDirection.y = 0.0f;
-    const float directionLength = std::sqrt(
-        chargeDirection.x * chargeDirection.x +
-        chargeDirection.z * chargeDirection.z);
-    if (directionLength <= FLT_EPSILON)
-    {
-        chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
-        Logger::Warning(Logger::LogCategory::Gameplay,
-            "[BossCharge][StartFailed] reason=ZeroDirection");
+    if (!chargeDirectionLocked && !LockChargeDirectionToPlayer())
         return false;
-    }
-
-    chargeDirection.x /= directionLength;
-    chargeDirection.z /= directionLength;
     chargeElapsedTime = 0.0f;
     chargePlayerCastHitDebug = false;
     chargePlayerHitDistanceDebug = 0.0f;
@@ -5000,6 +4987,31 @@ bool GruxEnemy::BeginChargeAttackMovement()
         characterMovementComponent->SetInputMagnitude(1.0f);
         characterMovementComponent->SetMoveDirection(chargeDirection);
     }
+    return true;
+}
+
+bool GruxEnemy::LockChargeDirectionToPlayer()
+{
+    if (chargeDirectionLocked) return true;
+    const BossTargetContext context = BuildTargetContext();
+    if (!context.valid)
+    {
+        chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
+        Logger::Warning(Logger::LogCategory::Gameplay, "[BossCharge][DirectionLockFailed] reason=InvalidTarget");
+        return false;
+    }
+    chargeDirection = context.directionToPlayer;
+    chargeDirection.y = 0.0f;
+    const float directionLength = std::sqrt(chargeDirection.x * chargeDirection.x + chargeDirection.z * chargeDirection.z);
+    if (directionLength <= FLT_EPSILON)
+    {
+        chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
+        Logger::Warning(Logger::LogCategory::Gameplay, "[BossCharge][DirectionLockFailed] reason=ZeroDirection");
+        return false;
+    }
+    chargeDirection.x /= directionLength;
+    chargeDirection.z /= directionLength;
+    chargeDirectionLocked = true;
     return true;
 }
 
