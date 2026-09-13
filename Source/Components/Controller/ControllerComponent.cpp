@@ -269,6 +269,29 @@ void RotationComponent::SetDirectionImmediate(const DirectX::XMFLOAT3& dir)
         owner->SetQuaternionRotation(targetRotation_);
     lerpTime_ = rotateTime_;
 }
+void RotationComponent::ForceDirectionImmediate(const DirectX::XMFLOAT3& dir)
+{
+    if (fabs(dir.x) < 0.001f && fabs(dir.z) < 0.001f)
+        return;
+
+    if (auto owner = owner_.lock())
+    {
+        direction_ = dir;
+        previousDirection_ = dir;
+        const DirectX::XMFLOAT3 rotation = owner->GetEulerRotation();
+        const float pitch = DirectX::XMConvertToRadians(rotation.x);
+        const float roll = DirectX::XMConvertToRadians(rotation.z);
+        const float yaw = std::atan2f(dir.x, dir.z);
+        DirectX::XMStoreFloat4(
+            &targetRotation_,
+            DirectX::XMQuaternionRotationRollPitchYaw(pitch, yaw, roll));
+        startRotation_ = targetRotation_;
+        startAngle_ = { rotation.x, DirectX::XMConvertToDegrees(yaw), rotation.z };
+        lerpTime_ = rotateTime_;
+        owner->SetQuaternionRotation(targetRotation_);
+    }
+}
+
 bool RotationComponent::RotateTowardsDirection(
     const DirectX::XMFLOAT3& direction,
     const float maxDegreesPerSecond,
@@ -324,6 +347,10 @@ void InputComponent::Tick(float)
 {
     intent_.leftMove = { 0,0,0 };
     intent_.rightMove = { 0.0f,0.0f };
+
+    if (!InputSystem::IsInputEnabled())
+        return;
+
     auto scene = Scene::GetCurrentScene();
     if (!scene)
     {

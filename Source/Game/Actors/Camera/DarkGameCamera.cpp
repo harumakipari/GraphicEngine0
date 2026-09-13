@@ -602,6 +602,39 @@ void DarkCameraActor::RotateToPlayerForward()
 }
 
 // 外部のカメラアクターとのブレンド用の関数
+void DarkCameraActor::SnapToTpsDirection(const DirectX::XMFLOAT3& direction)
+{
+    if (fabs(direction.x) < 0.001f && fabs(direction.z) < 0.001f)
+        return;
+
+    CancelOffscreenAttackAssist();
+    isBlending = false;
+    blendTime = 0.0f;
+    deathBlendFinished = nullptr;
+    isExternalBlending = false;
+    externalBlendTime = 0.0f;
+    externalBlendDuration = 0.0f;
+    finishedExternalBlend = nullptr;
+
+    currentMode = CameraMode::TPS;
+    requestMode = CameraMode::TPS;
+    currentYaw = atan2f(direction.x, direction.z);
+    desiredYaw = currentYaw;
+    desiredPitch = currentPitch;
+
+    if (const auto playerHeadShared = playerHead.lock())
+    {
+        currentPose = CalculatePose(
+            CameraMode::TPS,
+            playerHeadShared->GetComponentLocation(),
+            currentYaw,
+            currentPitch);
+        compositionLookTarget = currentPose.target;
+    }
+
+    mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
+}
+
 void DarkCameraActor::StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration, std::function<void()> finishExternalBlend)
 {
     CancelOffscreenAttackAssist();
@@ -672,13 +705,25 @@ void DarkCameraActor::UpdateExternalBlend(float deltaTime)
 
     if (t >= 1.0f)
     {
-        if (finishedExternalBlend)
-        {
-            finishedExternalBlend();
-            finishedExternalBlend = nullptr;
-        }
-        isExternalBlending = false;
+        currentPose = externalTargetPose;
+        currentYaw = externalTargetPose.yaw;
+        currentPitch = externalTargetPose.pitch;
+        desiredYaw = currentYaw;
+        desiredPitch = currentPitch;
         currentMode = CameraMode::TPS;
+        requestMode = CameraMode::TPS;
+        mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
+
+        isBlending = false;
+        blendTime = 0.0f;
+        deathBlendFinished = nullptr;
+        isExternalBlending = false;
+        externalBlendTime = externalBlendDuration;
+
+        auto callback = std::move(finishedExternalBlend);
+        finishedExternalBlend = nullptr;
+        if (callback)
+            callback();
     }
 }
 

@@ -163,6 +163,7 @@ public:
     DeathStagingArea DetermineDeathStagingArea(const DirectX::XMFLOAT3& originalPlayerPosition) const;
     void OnPlayerDeathCameraStart();
     void ResetBattleForContinue();
+    void ResetBattleFacingAndCamera();
     void EnterBossDead();
     void ResetBossDeathDebugPreview();
     void RestartBossBattle();

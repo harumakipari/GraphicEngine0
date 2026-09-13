@@ -2297,6 +2297,19 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 
     if (stateMachine_)
         stateMachine_->ChangeState("Idle");
+
+    if (const auto controller = GetBodyAnimationController())
+    {
+        controller->ReleaseHeldAnimationPose();
+        controller->ResetAnimationRate();
+        controller->PlayAnimationImmediate("Idle", true, true);
+    }
+}
+
+void Player::ForceDirectionImmediate(const DirectX::XMFLOAT3& direction)
+{
+    if (rotationComponent)
+        rotationComponent->ForceDirectionImmediate(direction);
 }
 
 bool Player::RebuildEyeClosePoseOverride()

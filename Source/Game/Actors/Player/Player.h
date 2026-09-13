@@ -139,6 +139,7 @@ public:
 
     // Clears Player-owned transient combat state and restores full HP at the saved battle start.
     void ResetForBattleContinue(const Transform& battleStartTransform);
+    void ForceDirectionImmediate(const DirectX::XMFLOAT3& direction);
 
     void BeginDeathEyeClose();
     void UpdateDeathEyeClose(float deathElapsedTime);

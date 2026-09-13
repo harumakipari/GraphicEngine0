@@ -1303,6 +1303,24 @@ void GameScene::OnPlayerDeathCameraStart()
         darkCameraActor->StartDeathMode(nullptr);
 }
 
+void GameScene::ResetBattleFacingAndCamera()
+{
+    if (!player || !gruxEnemyActor)
+        return;
+
+    DirectX::XMFLOAT3 toBoss = MathHelper::Subtract(
+        gruxEnemyActor->GetPosition(), player->GetPosition());
+    toBoss.y = 0.0f;
+    if (MathHelper::Length(toBoss) <= FLT_EPSILON)
+        return;
+
+    toBoss = MathHelper::Normalize(toBoss);
+    player->ForceDirectionImmediate(toBoss);
+    player->UpdateAllComponentTransforms();
+    if (darkCameraActor)
+        darkCameraActor->SnapToTpsDirection(toBoss);
+}
+
 void GameScene::ResetBattleForContinue()
 {
     ResetDeathBgmState(true);
@@ -1327,10 +1345,8 @@ void GameScene::ResetBattleForContinue()
     player->SetDeathCameraStartCallback(nullptr);
     player->SetDeathCameraTransparencyDisabled(false);
     gruxEnemyActor->ResetForBattleContinue(bossBattleStartTransform);
+    ResetBattleFacingAndCamera();
     gruxEnemyActor->ResumeBattleAI();
-
-    if (darkCameraActor)
-        darkCameraActor->RotateToPlayerForward();
 
     SetBattleHudVisible(true);
     player->SetGameplayHudVisible(true);
@@ -1516,6 +1532,7 @@ void GameScene::RestartBossBattle()
     player->ClearTransientBattleActions();
     player->ResetForBattleContinue(playerBattleStartTransform);
     gruxEnemyActor->ResetForBattleRestart(bossBattleStartTransform);
+    ResetBattleFacingAndCamera();
     gruxEnemyActor->ResumeBattleAI();
 
     if (const auto playerCapsule = std::dynamic_pointer_cast<ShapeComponent>(
@@ -1551,12 +1568,6 @@ void GameScene::RestartBossBattle()
         cameraManager->ToggleMovieCamera(this);
     if (cameraManager->IsUseDebug())
         cameraManager->ToggleCamera(this);
-    if (darkCameraActor)
-    {
-        darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-        darkCameraActor->RotateToPlayerForward();
-    }
-
     if (bossDeathGameplayDofCaptured)
         ApplyBossDeathDof(bossDeathGameplayDof);
     bossDeathGameplayDofCaptured = false;

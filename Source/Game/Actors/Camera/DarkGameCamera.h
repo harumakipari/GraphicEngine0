@@ -170,6 +170,7 @@ public:
 
     // カメラをplayerのforward方向に向ける
     void RotateToPlayerForward();
+    void SnapToTpsDirection(const DirectX::XMFLOAT3& direction);
 
     // 外部のカメラアクターとのブレンド用の関数
     void StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration,std::function<void()> finishExternalBlend);
