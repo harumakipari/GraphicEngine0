@@ -64,6 +64,9 @@ public:
     // Read-only diagnostic access; does not consume or reset the timer.
     static float GetSlowTimer() { return slowTimer; }
 
+    // Timed global zero-scale slows are hit stop; pause writes timeScale directly.
+    static bool IsHitStopActive() { return timeScale == 0.0f && slowTimer > 0.0f; }
+
     static inline float timeScale{ 1.0f };
 
 private:

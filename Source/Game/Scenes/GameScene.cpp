@@ -2963,7 +2963,16 @@ void GameScene::UpdateBattleFlow()
         break;
     case BattleFlowState::Playing:
         if (!IsPaused())
-            battleElapsedTime += Time::UnscaledDeltaTime();
+        {
+            float timerDelta = Time::UnscaledDeltaTime();
+            if (!Time::IsHitStopActive() && player && gruxEnemyActor)
+            {
+                const float slowScale = (std::min)(player->GetTimeScale(), gruxEnemyActor->GetTimeScale());
+                if (std::isfinite(slowScale))
+                    timerDelta *= std::clamp(slowScale, 0.0f, 1.0f);
+            }
+            battleElapsedTime += timerDelta;
+        }
         if (gruxEnemyActor && gruxEnemyActor->GetHp() <= 0)
         {
             if (!finalBattleTimeSaved)
