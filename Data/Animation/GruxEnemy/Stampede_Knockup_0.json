@@ -27,6 +27,11 @@
     "states": [
         {
             "endTime": 0.3699023723602295,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -50,31 +55,12 @@
             "value": 1.0
         },
         {
-            "endTime": 0.5473132729530334,
-            "hitBoxRadius": 1.2000000476837158,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                2.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "bothWeapon",
-            "startTime": 0.24951140582561493,
-            "type": "HitBox",
-            "value": 1.0
-        },
-        {
             "endTime": 0.5498294234275818,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -95,6 +81,35 @@
             "parameter": "rightWeapon",
             "startTime": 0.18975600600242615,
             "type": "ShowTrail",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.5473132729530334,
+            "hitBoxOffset": [
+                -0.3799999952316284,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 1.2999999523162842,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "rightWeapon",
+            "startTime": 0.24951140582561493,
+            "type": "HitBox",
             "value": 1.0
         }
     ]

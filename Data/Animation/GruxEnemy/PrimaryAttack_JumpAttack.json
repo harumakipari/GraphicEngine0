@@ -15,12 +15,6 @@
             "value": 1.0
         },
         {
-            "parameter": "enemy_jump_attack",
-            "time": 0.8812195658683777,
-            "type": "PlaySE",
-            "value": 0.4000000059604645
-        },
-        {
             "parameter": "BossWallImpact",
             "time": 0.8693910241127014,
             "type": "CameraShake",
@@ -31,6 +25,12 @@
             "time": 0.8693910241127014,
             "type": "SpawnEffect",
             "value": 0.0
+        },
+        {
+            "parameter": "enemy_jump_attack",
+            "time": 0.8812195658683777,
+            "type": "PlaySE",
+            "value": 0.4000000059604645
         }
     ],
     "loop": false,
@@ -71,6 +71,11 @@
     "states": [
         {
             "endTime": 0.8576621413230896,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -95,6 +100,11 @@
         },
         {
             "endTime": 1.0043351650238037,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -119,6 +129,11 @@
         },
         {
             "endTime": 1.1971379518508911,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -143,7 +158,12 @@
         },
         {
             "endTime": 0.9274508357048035,
-            "hitBoxRadius": 0.800000011920929,
+            "hitBoxOffset": [
+                -0.7099999785423279,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 1.1699999570846558,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,

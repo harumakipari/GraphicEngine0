@@ -1383,6 +1383,7 @@ void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, flo
     {
         ImGui::Checkbox("DangerWindow", &editorPreviewShowDangerWindow);
         ImGui::Checkbox("HitBox", &editorPreviewShowHitBox);
+        ImGui::Checkbox(U8("HitBox Sweep\u8868\u793a"), &editorPreviewShowHitBoxSweep);
     }
 
     ImGui::Separator();
@@ -2009,6 +2010,7 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             }
             if (ImGui::DragFloat("HitBox Radius", &state.hitBoxRadius, 0.01f, 0.01f, 5.0f))
                 state.hitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
+            ImGui::DragFloat3(U8("HitBox Offset"), &state.hitBoxOffset.x, 0.01f, -5.0f, 5.0f);
             break;
         }
         case AnimationNotifyState::Type::InputWindow:
@@ -3357,6 +3359,7 @@ void AnimationController::SaveNotifyAsset(const std::string& filename, const Ani
         j["type"] = std::string(magic_enum::enum_name(state.type));
         j["parameter"] = state.parameter;
         j["hitBoxRadius"] = state.hitBoxRadius;
+        j["hitBoxOffset"] = state.hitBoxOffset;
         j["value"] = state.value;
         j["moveDistance"] = state.moveDistance;
         j["moveDirection"] = state.moveDirection;
@@ -3446,6 +3449,8 @@ void AnimationController::LoadNotifyAsset(const std::string& filename, Animation
 
             state.parameter = j.value("parameter", "");
             state.hitBoxRadius = ([&] { const float radius = j.value("hitBoxRadius", 0.8f); return radius < 0.01f ? 0.01f : radius; }());
+            if (j.contains("hitBoxOffset"))
+                j["hitBoxOffset"].get_to(state.hitBoxOffset);
             state.value = j.value("value", 1.0f);
             if (j.contains("moveDirection"))
             {

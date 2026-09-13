@@ -152,7 +152,11 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
         stageHitCount = owner->GetCurrentAttackHitCount();
         auto controller = owner->GetBodyAnimationController();
         auto animation = controller ? controller->GetAnimationAsset(controller->GetCurrentAnimationName()) : nullptr;
-        if (!animation || animation->nextCombo.empty() || !owner->PlayAttackAnimationByName(animation->nextCombo))
+        if (!animation || animation->nextCombo.empty())
+        { owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success); owner->DisableAttackHitBoxes(); finishAfterAnimation = true; return State::Run; }
+        owner->ClearFastComboStepIn();
+        owner->RefreshFastComboTargetContext(stage);
+        if (!owner->PlayAttackAnimationByName(animation->nextCombo))
         { owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success); owner->DisableAttackHitBoxes(); finishAfterAnimation = true; return State::Run; }
         return State::Run;
     }
@@ -162,7 +166,7 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
         auto animation = controller ? controller->GetAnimationAsset(controller->GetCurrentAnimationName()) : nullptr;
         if (animation && !animation->nextCombo.empty())
         {
-            ++stage; owner->RefreshFastComboTargetContext(stage); owner->BeginFastComboStepIn(stage); owner->SetFastComboRuntimeStage(stage);
+            ++stage; owner->ClearFastComboStepIn(); owner->SetFastComboRuntimeStage(stage);
             if (!owner->GetFastComboTargetContext().valid || owner->GetFastComboTargetContext().absoluteAngleDegrees > owner->GetInterStageMaxFacingAngle())
             { owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success); owner->DisableAttackHitBoxes(); finishAfterAnimation = true; return State::Run; }
             timer = 0.0f; runtimeState = GruxEnemy::FastComboRuntimeState::InterStageDelay; owner->SetFastComboRuntimeState(runtimeState); owner->StopAIMovement(); return State::Run;

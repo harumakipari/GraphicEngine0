@@ -309,9 +309,10 @@ public:
     float GetNearFrontFastComboProbability() const { return nearFrontFastComboProbability; }
     void RecordAttackSelectorDebug(const char* mode, int count, float probability, float roll, const char* selected);
     void RefreshFastComboTargetContext(int stage);
-    void BeginFastComboStepIn(int stage);
+    void BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime);
     bool UpdateFastComboStepIn(float deltaTime);
     void ClearFastComboStepIn();
+    bool IsFastComboMotionWarpNotify(const AnimationNotifyState& state) const;
     struct PositioningTargetContext { bool valid = false; DirectX::XMFLOAT3 targetPosition{}; float arrivalTolerance = 0.3f; float timeout = 3.0f; float maxMoveDistance = 20.0f; float moveSpeed = 6.0f; float stuckMovementThreshold = 0.1f; float stuckTimeThreshold = 0.5f; };
     struct PositioningTargetRuntime { DirectX::XMFLOAT3 previousPosition{}; float elapsed = 0.0f; float traveledDistance = 0.0f; float remainingDistance = 0.0f; float stuckTime = 0.0f; bool movementActive = false; };
     enum class PositioningMoveResult { None, Running, Arrived, Timeout, Stuck, InvalidTarget, MaxDistanceReached };
@@ -918,10 +919,10 @@ private:
     std::array<BossTargetContext, 3> fastComboStageTargetContexts{};
     int fastComboTargetStage = -1;
     float interStageFaceCompleteAngle = 10.0f;
-    float fastComboDesiredAttackDistance = 2.8f;
+    float fastComboDesiredAttackDistance = 3.0f;
     float fastComboStepInRatio = 1.0f;
-    std::array<float, 3> fastComboMaxStepInDistance{ 2.0f, 2.5f, 3.0f };
-    float fastComboStepInSpeed = 8.0f;
+    std::array<float, 3> fastComboMaxStepInDistance{ 1.5f, 2.f, 2.0f };
+    float fastComboStepInMaxSpeed = 30.0f;
     float interStageMaxFacingAngle = 70.0f;
     float interStageFaceDelay = 0.25f;
     FastComboRuntimeState fastComboRuntimeState = FastComboRuntimeState::Attack;
@@ -931,6 +932,11 @@ private:
     float fastComboStepInRemainingDistance = 0.0f;
     float fastComboStepInElapsed = 0.0f;
     DirectX::XMFLOAT3 fastComboStepInDirection{};
+    float fastComboStepInNotifyStartTime = 0.0f;
+    float fastComboStepInNotifyEndTime = 0.0f;
+    float fastComboStepInDuration = 0.0f;
+    float fastComboStepInCalculatedSpeed = 0.0f;
+    float fastComboStepInAppliedSpeed = 0.0f;
     int fastComboRuntimeStage = -1;
     AttackSetupTargetContext attackSetupTarget{};
     DirectX::XMFLOAT3 attackSetupPreviousPosition{};
@@ -1258,6 +1264,18 @@ private:
     float bossBattleCameraRightDistance = 0.0f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,0.0f,0.0f };
 
+struct WeaponHitBoxPoints
+    {
+        DirectX::XMFLOAT3 root{};
+        DirectX::XMFLOAT3 middle{};
+        DirectX::XMFLOAT3 tip{};
+    };
+    WeaponHitBoxPoints BuildWeaponHitBoxPoints(
+        const std::shared_ptr<SceneComponent>& root,
+        const std::shared_ptr<SceneComponent>& middle,
+        const std::shared_ptr<SceneComponent>& tip,
+        const DirectX::XMFLOAT3& localOffset) const;
+
     // ?O?t???[??????????
     DirectX::XMFLOAT3 prevWeaponLeftRootPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevWeaponLeftMidPos = { 0.0f,0.0f,0.0f };
@@ -1271,7 +1289,15 @@ private:
     float hitWeaponRadius = 0.8f;
     float activeLeftHitBoxRadius = 0.8f;
     float activeRightHitBoxRadius = 0.8f;
+    DirectX::XMFLOAT3 activeLeftHitBoxOffset{};
+    DirectX::XMFLOAT3 activeRightHitBoxOffset{};
     std::vector<const AnimationNotifyState*> activeHitBoxNotifyStates;   // ???????a
+    WeaponHitBoxPoints editorPreviewLeftHitBoxPoints{};
+    WeaponHitBoxPoints editorPreviewRightHitBoxPoints{};
+    const AnimationNotifyState* editorPreviewLeftHitBoxState = nullptr;
+    const AnimationNotifyState* editorPreviewRightHitBoxState = nullptr;
+    float editorPreviewLeftHitBoxTime = -1.0f;
+    float editorPreviewRightHitBoxTime = -1.0f;
     float enemyScale = 1.7f;    // ?G?~X?P?[??
     float hitEnemyEffectOffsetY = 2.2f;  // ?q?b?g?G?t?F?N?g?~I?t?Z?b?gY
     float hitPlayerEffectOffsetY = 2.4f;  // ?q?b?g?G?t?F?N?g?~I?t?Z?b?gY

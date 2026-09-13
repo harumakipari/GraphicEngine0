@@ -421,9 +421,6 @@
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\AttackRecoveryBT.cpp">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxFastComboBT.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\BehaviorData.cpp">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClCompile>
@@ -431,6 +428,12 @@
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\NodeBase.cpp">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxFastComboBT.cpp">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxJumpAttackBT.cpp">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClCompile>
   </ItemGroup>
@@ -1017,10 +1020,13 @@
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\AttackRecoveryBT.h">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxFastComboBT.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\BehaviorData.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxFastComboBT.h">
+      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxJumpAttackBT.h">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
   </ItemGroup>

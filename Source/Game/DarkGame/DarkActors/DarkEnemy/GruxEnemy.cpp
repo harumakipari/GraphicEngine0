@@ -1080,6 +1080,7 @@ void GruxEnemy::Update(float deltaTime)
     if (!GetBodyAnimationController()->IsPlayAnimation())
     {
         animationMotionWarps.clear();
+        ClearFastComboStepIn();
     }
 
     DirectX::XMFLOAT3 motionWarpVelocity = { 0.0f, 0.0f, 0.0f };
@@ -1294,9 +1295,12 @@ void GruxEnemy::Update(float deltaTime)
     {
         bool isLeftHit = false;
 
-        DirectX::XMFLOAT3 weaponLeftRootPos = weaponLeftRootComponent->GetComponentLocation();
-        DirectX::XMFLOAT3 weaponLeftMidPos = weaponLeftMiddleComponent->GetComponentLocation();
-        DirectX::XMFLOAT3 weaponLeftTipPos = weaponLeftTipComponent->GetComponentLocation();
+        const WeaponHitBoxPoints weaponLeftPoints = BuildWeaponHitBoxPoints(
+            weaponLeftRootComponent, weaponLeftMiddleComponent, weaponLeftTipComponent,
+            activeLeftHitBoxOffset);
+        const DirectX::XMFLOAT3& weaponLeftRootPos = weaponLeftPoints.root;
+        const DirectX::XMFLOAT3& weaponLeftMidPos = weaponLeftPoints.middle;
+        const DirectX::XMFLOAT3& weaponLeftTipPos = weaponLeftPoints.tip;
 
         HitResultWithActor leftRootHit;
         HitResultWithActor leftMidHit;
@@ -1349,9 +1353,12 @@ void GruxEnemy::Update(float deltaTime)
     {
         bool isRightHit = false;
 
-        DirectX::XMFLOAT3 weaponRightRootPos = weaponRightRootComponent->GetComponentLocation();
-        DirectX::XMFLOAT3 weaponRightMidPos = weaponRightMiddleComponent->GetComponentLocation();
-        DirectX::XMFLOAT3 weaponRightTipPos = weaponRightTipComponent->GetComponentLocation();
+        const WeaponHitBoxPoints weaponRightPoints = BuildWeaponHitBoxPoints(
+            weaponRightRootComponent, weaponRightMiddleComponent, weaponRightTipComponent,
+            activeRightHitBoxOffset);
+        const DirectX::XMFLOAT3& weaponRightRootPos = weaponRightPoints.root;
+        const DirectX::XMFLOAT3& weaponRightMidPos = weaponRightPoints.middle;
+        const DirectX::XMFLOAT3& weaponRightTipPos = weaponRightPoints.tip;
 
         HitResultWithActor rightRootHit;
         HitResultWithActor rightMidHit;
@@ -1524,6 +1531,29 @@ void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
         break;
     }
 }
+GruxEnemy::WeaponHitBoxPoints GruxEnemy::BuildWeaponHitBoxPoints(
+    const std::shared_ptr<SceneComponent>& root,
+    const std::shared_ptr<SceneComponent>& middle,
+    const std::shared_ptr<SceneComponent>& tip,
+    const DirectX::XMFLOAT3& localOffset) const
+{
+    const auto offsetPoint = [&localOffset](const std::shared_ptr<SceneComponent>& component)
+        {
+            if (!component)
+                return DirectX::XMFLOAT3{};
+            DirectX::XMVECTOR offset = DirectX::XMLoadFloat3(&localOffset);
+            const DirectX::XMFLOAT4 componentRotation =
+                component->GetComponentWorldTransform().GetRotation();
+            offset = DirectX::XMVector3Rotate(offset,
+                DirectX::XMLoadFloat4(&componentRotation));
+            DirectX::XMFLOAT3 worldOffset{};
+            DirectX::XMStoreFloat3(&worldOffset, offset);
+            const DirectX::XMFLOAT3 base = component->GetComponentLocation();
+            return DirectX::XMFLOAT3{ base.x + worldOffset.x, base.y + worldOffset.y,
+                base.z + worldOffset.z };
+        };
+    return { offsetPoint(root), offsetPoint(middle), offsetPoint(tip) };
+}
 void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
 {
     constexpr DirectX::XMFLOAT4 dangerPreviewColor{ 0.15f, 0.85f, 1.0f, 1.0f };
@@ -1539,37 +1569,61 @@ void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& stat
             dangerPreviewColor, 0.0f, true);
         return;
     }
-
     if (state.type != AnimationNotifyState::Type::HitBox)
         return;
 
-    const auto drawWeapon = [this](
-        const std::shared_ptr<SceneComponent>& root,
-        const std::shared_ptr<SceneComponent>& middle,
-        const std::shared_ptr<SceneComponent>& tip,
-        const DirectX::XMFLOAT4& color,
-        const float radius)
+    const auto controller = GetBodyAnimationController();
+    const bool drawSweep = controller && controller->IsEditorPreviewPlaying() &&
+        controller->IsEditorPreviewHitBoxSweepVisible();
+    const float currentTime = controller ? controller->GetCurrentSampledAnimationTime() : 0.0f;
+    const auto drawPoints = [](const WeaponHitBoxPoints& points, float radius,
+        const DirectX::XMFLOAT4& color)
+        {
+            DebugRender::DrawSphere(points.root, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(points.middle, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(points.tip, radius, color, 0.0f, true);
+            DebugRender::DrawLine(points.root, points.middle, color, 0.0f, true);
+            DebugRender::DrawLine(points.middle, points.tip, color, 0.0f, true);
+        };
+    const auto drawSweepPoints = [](const WeaponHitBoxPoints& previous,
+        const WeaponHitBoxPoints& current, float radius, const DirectX::XMFLOAT4& color)
+        {
+            DebugRender::DrawLine(previous.root, current.root, color, 0.0f, true);
+            DebugRender::DrawLine(previous.middle, current.middle, color, 0.0f, true);
+            DebugRender::DrawLine(previous.tip, current.tip, color, 0.0f, true);
+            DebugRender::DrawSphere(previous.root, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(previous.middle, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(previous.tip, radius, color, 0.0f, true);
+        };
+    const auto drawWeapon = [&](const std::shared_ptr<SceneComponent>& root,
+        const std::shared_ptr<SceneComponent>& middle, const std::shared_ptr<SceneComponent>& tip,
+        const DirectX::XMFLOAT4& color, WeaponHitBoxPoints& previous,
+        const AnimationNotifyState*& previousState, float& previousTime)
         {
             if (!root || !middle || !tip)
                 return;
-
-            const DirectX::XMFLOAT3 rootPos = root->GetComponentLocation();
-            const DirectX::XMFLOAT3 middlePos = middle->GetComponentLocation();
-            const DirectX::XMFLOAT3 tipPos = tip->GetComponentLocation();
-            DebugRender::DrawSphere(rootPos, radius, color, 0.0f, true);
-            DebugRender::DrawSphere(middlePos, radius, color, 0.0f, true);
-            DebugRender::DrawSphere(tipPos, radius, color, 0.0f, true);
-            DebugRender::DrawLine(rootPos, middlePos, color, 0.0f, true);
-            DebugRender::DrawLine(middlePos, tipPos, color, 0.0f, true);
+            const WeaponHitBoxPoints current = BuildWeaponHitBoxPoints(root, middle, tip,
+                state.hitBoxOffset);
+            const bool contiguous = previousState == &state && currentTime >= previousTime &&
+                currentTime - previousTime <= 0.1f;
+            if (drawSweep && contiguous)
+                drawSweepPoints(previous, current, state.hitBoxRadius, color);
+            drawPoints(current, state.hitBoxRadius, color);
+            previous = current;
+            previousState = &state;
+            previousTime = currentTime;
         };
 
     if (state.parameter == leftWeapon || state.parameter == bothWeapon)
-        drawWeapon(weaponLeftRootComponent, weaponLeftMiddleComponent,
-            weaponLeftTipComponent, leftHitBoxPreviewColor, state.hitBoxRadius);
+        drawWeapon(weaponLeftRootComponent, weaponLeftMiddleComponent, weaponLeftTipComponent,
+            leftHitBoxPreviewColor, editorPreviewLeftHitBoxPoints,
+            editorPreviewLeftHitBoxState, editorPreviewLeftHitBoxTime);
     if (state.parameter == rightWeapon || state.parameter == bothWeapon)
-        drawWeapon(weaponRightRootComponent, weaponRightMiddleComponent,
-            weaponRightTipComponent, rightHitBoxPreviewColor, state.hitBoxRadius);
+        drawWeapon(weaponRightRootComponent, weaponRightMiddleComponent, weaponRightTipComponent,
+            rightHitBoxPreviewColor, editorPreviewRightHitBoxPoints,
+            editorPreviewRightHitBoxState, editorPreviewRightHitBoxTime);
 }
+
 void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
 {
 #ifdef USE_IMGUI
@@ -1981,11 +2035,19 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat(U8("FastCombo Step-In Ratio"), &fastComboStepInRatio, 0.05f, 0.0f, 2.0f, "%.2f");
     const char* stepNames[] = { "A", "B", "C" };
     for (int i = 0; i < 3; ++i) { ImGui::DragFloat((std::string("FastCombo ") + stepNames[i] + " 最大Step-In").c_str(), &fastComboMaxStepInDistance[i], 0.1f, 0.0f, 6.0f, "%.2f m"); fastComboMaxStepInDistance[i] = std::clamp(fastComboMaxStepInDistance[i], 0.0f, 6.0f); }
+    ImGui::DragFloat(U8("FastCombo Step-In\u6700\u5927\u901f\u5ea6"), &fastComboStepInMaxSpeed, 0.5f, 1.0f, 60.0f, "%.2f m/s");
+    fastComboStepInMaxSpeed = std::clamp(fastComboStepInMaxSpeed, 1.0f, 60.0f);
     ImGui::Text(U8("FastCombo Step-In Stage: %d"), fastComboStepInStage);
     ImGui::Text(U8("FastCombo Step-In距離: %.2f m"), fastComboStepInDistance);
     ImGui::Text(U8("FastCombo Step-In残り距離: %.2f m"), fastComboStepInRemainingDistance);
     ImGui::Text(U8("FastCombo Step-In方向: (%.2f, %.2f, %.2f)"), fastComboStepInDirection.x, fastComboStepInDirection.y, fastComboStepInDirection.z);
     ImGui::Text(U8("FastCombo Step-In有効: %s"), fastComboStepInActive ? "true" : "false");
+    ImGui::Text(U8("FastCombo Step-In Notify\u958b\u59cb: %.3f sec"), fastComboStepInNotifyStartTime);
+    ImGui::Text(U8("FastCombo Step-In Notify\u7d42\u4e86: %.3f sec"), fastComboStepInNotifyEndTime);
+    ImGui::Text(U8("FastCombo Step-In Duration: %.3f sec"), fastComboStepInDuration);
+    ImGui::Text(U8("FastCombo Step-In\u8a08\u7b97\u901f\u5ea6: %.2f m/s"), fastComboStepInCalculatedSpeed);
+    ImGui::Text(U8("FastCombo Step-In\u9069\u7528\u901f\u5ea6: %.2f m/s"), fastComboStepInAppliedSpeed);
+    ImGui::Text(U8("FastCombo Step-In\u6700\u5927\u901f\u5ea6: %.2f m/s"), fastComboStepInMaxSpeed);
     ImGui::Text(U8("FastCombo Player距離: %.2f m"), fastComboTargetContext.xzDistance);
     ImGui::DragFloat(U8("近距離正面 FastCombo確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat(U8("FastCombo Front最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
@@ -3754,19 +3816,23 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         if (state.parameter == rightWeapon || state.parameter == bothWeapon)
         {
             Logger::Log(U8("右の当たり判定を開始しました"));
-            prevWeaponRightRootPos = weaponRightRootComponent->GetComponentLocation();
-            prevWeaponRightMidPos = weaponRightMiddleComponent->GetComponentLocation();
-            prevWeaponRightTipPos = weaponRightTipComponent->GetComponentLocation();
+            const WeaponHitBoxPoints points = BuildWeaponHitBoxPoints(weaponRightRootComponent, weaponRightMiddleComponent, weaponRightTipComponent, state.hitBoxOffset);
+            prevWeaponRightRootPos = points.root;
+            prevWeaponRightMidPos = points.middle;
+            prevWeaponRightTipPos = points.tip;
             activeRightHitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
+            activeRightHitBoxOffset = state.hitBoxOffset;
             rightHitBox = true;
         }
         if (state.parameter == leftWeapon || state.parameter == bothWeapon)
         {
             Logger::Log(U8("左の当たり判定を開始しました"));
-            prevWeaponLeftRootPos = weaponLeftRootComponent->GetComponentLocation();
-            prevWeaponLeftMidPos = weaponLeftMiddleComponent->GetComponentLocation();
-            prevWeaponLeftTipPos = weaponLeftTipComponent->GetComponentLocation();
+            const WeaponHitBoxPoints points = BuildWeaponHitBoxPoints(weaponLeftRootComponent, weaponLeftMiddleComponent, weaponLeftTipComponent, state.hitBoxOffset);
+            prevWeaponLeftRootPos = points.root;
+            prevWeaponLeftMidPos = points.middle;
+            prevWeaponLeftTipPos = points.tip;
             activeLeftHitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
+            activeLeftHitBoxOffset = state.hitBoxOffset;
             leftHitBox = true;
         }
         RefreshActiveHitBoxesFromNotifyStates();
@@ -3804,6 +3870,13 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::MotionWarp:
     {
+        if (IsFastComboMotionWarpNotify(state))
+        {
+            // FastCombo uses this notify solely as the Step-In time window.
+            // Do not also add its authored MotionWarp velocity.
+            BeginFastComboStepIn(fastComboRuntimeStage, state.startTime, state.endTime);
+            break;
+        }
         // アニメーション側で指定したローカル方向
         DirectX::XMFLOAT3 localDirection = state.moveDirection;
         // プレイヤーの向いている方向を考慮してワールド方向へ変換
@@ -3897,6 +3970,11 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::MotionWarp:
     {
+        if (IsFastComboMotionWarpNotify(state))
+        {
+            ClearFastComboStepIn();
+            break;
+        }
         const auto activeWarp = std::find_if(
             animationMotionWarps.begin(), animationMotionWarps.end(),
             [&](const AnimationMotionWarp& warp)
@@ -5393,6 +5471,8 @@ void GruxEnemy::DisableAttackHitBoxes()
     rightHitBox = false;
     activeLeftHitBoxRadius = hitWeaponRadius;
     activeRightHitBoxRadius = hitWeaponRadius;
+    activeLeftHitBoxOffset = {};
+    activeRightHitBoxOffset = {};
     activeHitBoxNotifyStates.clear();
     transitionWindow = false;
     isDangerWindow = false;
@@ -5438,6 +5518,8 @@ void GruxEnemy::RefreshActiveHitBoxesFromNotifyStates()
     rightHitBox = false;
     activeLeftHitBoxRadius = hitWeaponRadius;
     activeRightHitBoxRadius = hitWeaponRadius;
+    activeLeftHitBoxOffset = {};
+    activeRightHitBoxOffset = {};
 
     for (const AnimationNotifyState* activeState : activeHitBoxNotifyStates)
     {
@@ -5448,11 +5530,13 @@ void GruxEnemy::RefreshActiveHitBoxesFromNotifyStates()
         {
             leftHitBox = true;
             activeLeftHitBoxRadius = radius;
+            activeLeftHitBoxOffset = activeState->hitBoxOffset;
         }
         if (activeState->parameter == rightWeapon || activeState->parameter == bothWeapon)
         {
             rightHitBox = true;
             activeRightHitBoxRadius = radius;
+            activeRightHitBoxOffset = activeState->hitBoxOffset;
         }
     }
 }
@@ -5781,18 +5865,39 @@ void GruxEnemy::RefreshFastComboTargetContext(int stage)
     fastComboTargetStage = stage;
 }
 
-void GruxEnemy::BeginFastComboStepIn(int stage)
+bool GruxEnemy::IsFastComboMotionWarpNotify(const AnimationNotifyState& state) const
+{
+    if (selectedAttackType != BossAttackType::FastCombo ||
+        fastComboRuntimeStage < 0 || fastComboRuntimeStage > 2)
+        return false;
+
+    static constexpr const char* fastComboAnimations[] =
+    {
+        "Attack_A_Fast_0", "Attack_B_Fast_0", "Attack_C_Fast_0"
+    };
+    const auto controller = GetBodyAnimationController();
+    return controller && state.type == AnimationNotifyState::Type::MotionWarp &&
+        controller->GetCurrentAnimationName() == fastComboAnimations[fastComboRuntimeStage];
+}
+
+void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime)
 {
     ClearFastComboStepIn();
     if (stage < 0 || stage >= static_cast<int>(fastComboMaxStepInDistance.size()) || !characterMovementComponent)
         return;
-    const BossTargetContext& context = fastComboTargetContext;
+    const BossTargetContext& context = fastComboStageTargetContexts[stage];
     if (!context.valid || context.region == PlayerRelativeRegion::Back)
         return;
     const float distanceError = context.xzDistance - fastComboDesiredAttackDistance;
     const float stepDistance = std::clamp(distanceError * fastComboStepInRatio,
         0.0f, fastComboMaxStepInDistance[stage]);
-    if (stepDistance <= 0.001f || fastComboStepInSpeed <= 0.001f)
+    const float notifyDuration = notifyEndTime - notifyStartTime;
+    fastComboStepInNotifyStartTime = notifyStartTime;
+    fastComboStepInNotifyEndTime = notifyEndTime;
+    fastComboStepInDuration = notifyDuration;
+    fastComboStepInCalculatedSpeed = notifyDuration > 0.001f ? stepDistance / notifyDuration : 0.0f;
+    fastComboStepInAppliedSpeed = (std::min)(fastComboStepInCalculatedSpeed, fastComboStepInMaxSpeed);
+    if (notifyDuration <= 0.001f || stepDistance <= 0.001f || fastComboStepInAppliedSpeed <= 0.001f)
         return;
     fastComboStepInActive = true;
     fastComboStepInStage = stage;
@@ -5800,8 +5905,8 @@ void GruxEnemy::BeginFastComboStepIn(int stage)
     fastComboStepInRemainingDistance = stepDistance;
     fastComboStepInElapsed = 0.0f;
     fastComboStepInDirection = context.directionToPlayer;
-    characterMovementComponent->AddForcedMove(fastComboStepInDirection, fastComboStepInSpeed,
-        stepDistance / fastComboStepInSpeed);
+    characterMovementComponent->AddForcedMove(fastComboStepInDirection, fastComboStepInAppliedSpeed,
+        notifyDuration);
 }
 
 bool GruxEnemy::UpdateFastComboStepIn(float deltaTime)
@@ -5811,12 +5916,9 @@ bool GruxEnemy::UpdateFastComboStepIn(float deltaTime)
     const float dt = (std::max)(0.0f, deltaTime);
     fastComboStepInElapsed += dt;
     fastComboStepInRemainingDistance = (std::max)(0.0f,
-        fastComboStepInDistance - fastComboStepInElapsed * fastComboStepInSpeed);
-    if (fastComboStepInRemainingDistance <= 0.001f)
-        ClearFastComboStepIn();
+        fastComboStepInDistance - fastComboStepInElapsed * fastComboStepInAppliedSpeed);
     return fastComboStepInActive;
 }
-
 void GruxEnemy::ClearFastComboStepIn()
 {
     if (characterMovementComponent)

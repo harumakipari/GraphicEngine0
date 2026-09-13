@@ -153,6 +153,8 @@ public:
     void DrawTimeline();
 
     bool IsEditorPreviewActive() const { return editorPreviewActive; }
+    bool IsEditorPreviewPlaying() const { return editorPreviewPlaying; }
+    bool IsEditorPreviewHitBoxSweepVisible() const { return editorPreviewShowHitBoxSweep; }
     float GetCurrentSampledAnimationTime() const
     {
         return editorPreviewActive ? editorPreviewTime : animationTime;
@@ -759,6 +761,7 @@ private:
     std::unordered_map<size_t, AnimationNotifyState> activeEditorPreviewStates;
     bool editorPreviewShowDangerWindow = true;
     bool editorPreviewShowHitBox = true;
+    bool editorPreviewShowHitBoxSweep = true;
     EditorRuntimeSnapshot editorRuntimeSnapshot;
 
     std::string ownerName = "";    // コントローラーを所有しているオーナーの名前
