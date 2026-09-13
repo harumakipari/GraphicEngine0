@@ -1012,6 +1012,80 @@ void AnimationController::SetRemoveRootTranslationFromPose(
     else
         removeRootTranslationFromPoseClips.erase(animationIt->second);
 }
+bool AnimationController::PlayAnimationImmediate(
+    const std::string& animationName, const bool loop, const bool ignoreRootMotion)
+{
+    if (!target_ || !target_->model)
+        return false;
+
+    const auto animationIt = animationNameToIndex_.find(animationName);
+    if (animationIt == animationNameToIndex_.end() ||
+        animationIt->second >= target_->model->animations.size())
+    {
+        Logger::Warning(std::format(
+            "Animation not found for immediate playback: {}", animationName));
+        return false;
+    }
+
+    // A held preview restores its saved runtime before this method overwrites it.
+    EndEditorPreview();
+
+    const size_t requestedClip = animationIt->second;
+    currentAnimationRemovesRootTranslation =
+        removeRootTranslationFromPoseClips.contains(requestedClip);
+    removeRootTranslationDuringTransition = false;
+    suppressNormalRootMotionUntilTransitionCompleted = false;
+    suppressNormalRootMotionObservedTransition = false;
+    pendingLocomotionPhaseTransfer = false;
+
+    useBlendSpace = false;
+    blendSpaceTransition = false;
+    blendSpaceElapsed = 0.0f;
+    groupTransition = false;
+    groupTransitionElapsed = 0.0f;
+
+    animationClip = requestedClip;
+    animationNextClip = requestedClip;
+    notifyAnimationClip = requestedClip;
+    currentAnimationName = animationName;
+    animationTime = 0.0f;
+    prevAnimationTime = 0.0f;
+    playbackEndTime = -1.0f;
+    isAnimationLoop = loop;
+    isAnimationFinished = false;
+    requestStopLoop = false;
+    this->ignoreRootMotion = ignoreRootMotion;
+    resetRootMotionDelta = true;
+
+    transitionState = AnimationTransitionState::Completed;
+    isBlendingAnimation = false;
+    transitionTime = 0.0f;
+    blendElapsedTime = 0.0f;
+    blendFactor = 0.0f;
+
+    target_->model->Animate(requestedClip, 0.0f, finalNodes);
+    animationNodes[Origin] = finalNodes;
+    animationNodes[Next] = finalNodes;
+    const InterleavedGltfModel::Node& rootNode = finalNodes.at(rootNodeIndex);
+    previousPosition = {
+        rootNode.globalTransform._41,
+        rootNode.globalTransform._42,
+        rootNode.globalTransform._43
+    };
+    zeroTranslation = rootNode.translation;
+
+    target_->SetModelNodes(finalNodes);
+    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+    for (auto* extraTarget : extraTargets_)
+    {
+        extraTarget->SetModelNodes(finalNodes);
+        extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+    }
+
+    owner->OnAnimationChanged();
+    return true;
+}
+
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
 {
 #if 0

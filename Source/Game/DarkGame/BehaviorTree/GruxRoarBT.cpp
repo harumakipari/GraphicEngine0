@@ -202,6 +202,14 @@ ActionBase::State MoveToRepositionTarget::Run(float dt)
         owner->BeginInitialRepositionFallback();
     return arrived ? State::Complete : State::Failed;
 }
+ActionBase::State WaitBeforeInitialReposition::Run(float dt)
+{
+    elapsed += (std::max)(0.0f, dt);
+    if (elapsed < 1.5f) // 1.5秒待機してからボス戦を始める
+        return State::Run;
+    elapsed = 0.0f;
+    return State::Complete;
+}
 ActionBase::State WaitAfterReposition::Run(float dt)
 {
     elapsed += (std::max)(0.0f, dt);

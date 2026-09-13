@@ -148,6 +148,10 @@ public:
 
     void ResetRootMotion(const std::string& animationName, const bool loop = false, const bool isBlend = true, const float blendTime = 0.3f);
 
+    // Immediately samples a clip at time zero and clears every transition source.
+    // This is intended for hard runtime resets where the previous pose must not blend.
+    bool PlayAnimationImmediate(const std::string& animationName, bool loop = true, bool ignoreRootMotion = false);
+
     void DrawImGui();
 
     void DrawTimeline();

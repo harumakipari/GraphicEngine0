@@ -470,9 +470,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("Death", "ExecuteDeath", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTExecuteDeath>(this));
 
     aiTree->AddNode("Root", "InitialRepositionPlan", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanInitialReposition>(this), nullptr);
-    aiTree->AddNode("InitialRepositionPlan", "PrepareInitialRepositionTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareInitialRepositionTarget>(this));
-    aiTree->AddNode("InitialRepositionPlan", "MoveToInitialRepositionTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToRepositionTarget>(this));
-    aiTree->AddNode("InitialRepositionPlan", "WaitAfterInitialReposition", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::WaitAfterReposition>(this));
+    aiTree->AddNode("InitialRepositionPlan", "WaitBeforeInitialReposition", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::WaitBeforeInitialReposition>(this));
+    aiTree->AddNode("InitialRepositionPlan", "PrepareInitialRepositionTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareInitialRepositionTarget>(this));
+    aiTree->AddNode("InitialRepositionPlan", "MoveToInitialRepositionTarget", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToRepositionTarget>(this));
+    aiTree->AddNode("InitialRepositionPlan", "WaitAfterInitialReposition", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::WaitAfterReposition>(this));
 
     aiTree->AddNode("Root", "Defensive", 2, BehaviorTree::SelectRule::Priority, std::make_unique<::CanPlanAnyDefensive>(this), nullptr);
 
@@ -874,6 +875,10 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
 void GruxEnemy::ResetForBattleRestart(const Transform& battleStartTransform)
 {
     ResetForBattleContinue(battleStartTransform);
+    if (const auto controller = GetBodyAnimationController())
+    {
+        controller->PlayAnimationImmediate("TravelMode_Idle_0", true, true);
+    }
     hp = maxHp;
     delayedHp = static_cast<float>(hp);
     if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));

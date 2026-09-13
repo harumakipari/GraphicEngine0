@@ -32,6 +32,15 @@ class PrepareRepositionTarget : public ActionBase
 { public: using ActionBase::ActionBase; State Run(float) override; };
 class MoveToRepositionTarget : public ActionBase
 { public: using ActionBase::ActionBase; State Run(float) override; };
+class WaitBeforeInitialReposition : public ActionBase
+{
+public:
+    using ActionBase::ActionBase;
+    State Run(float dt) override;
+    void ResetRuntime() override { elapsed = 0.0f; }
+private:
+    float elapsed = 0.0f;
+};
 class WaitAfterReposition : public ActionBase
 {
 public:
