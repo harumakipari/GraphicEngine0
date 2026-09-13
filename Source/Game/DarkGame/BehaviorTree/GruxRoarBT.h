@@ -22,8 +22,12 @@ public:
 };
 class CanPlanAnyCombatDecision : public JudgementBase
 { public: using JudgementBase::JudgementBase; bool Judgment() override; };
+class CanPlanInitialReposition : public JudgementBase
+{ public: using JudgementBase::JudgementBase; bool Judgment() override; };
 class CanPlanReposition : public JudgementBase
 { public: using JudgementBase::JudgementBase; bool Judgment() override; };
+class PrepareInitialRepositionTarget : public ActionBase
+{ public: using ActionBase::ActionBase; State Run(float) override; };
 class PrepareRepositionTarget : public ActionBase
 { public: using ActionBase::ActionBase; State Run(float) override; };
 class MoveToRepositionTarget : public ActionBase

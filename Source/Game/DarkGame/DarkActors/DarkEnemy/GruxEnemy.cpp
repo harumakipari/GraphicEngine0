@@ -112,7 +112,7 @@ namespace
 void GruxEnemy::Initialize(const Transform& transform)
 {
     maxHp = 10;
-    maxHp = 75;
+    //maxHp = 75;
     hp = maxHp;
     delayedHp = static_cast<float>(hp);
 
@@ -469,7 +469,12 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("Death", "StartDeath", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTStartDeath>(this));
     aiTree->AddNode("Death", "ExecuteDeath", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTExecuteDeath>(this));
 
-    aiTree->AddNode("Root", "Defensive", 1, BehaviorTree::SelectRule::Priority, std::make_unique<::CanPlanAnyDefensive>(this), nullptr);
+    aiTree->AddNode("Root", "InitialRepositionPlan", 1, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanInitialReposition>(this), nullptr);
+    aiTree->AddNode("InitialRepositionPlan", "PrepareInitialRepositionTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareInitialRepositionTarget>(this));
+    aiTree->AddNode("InitialRepositionPlan", "MoveToInitialRepositionTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToRepositionTarget>(this));
+    aiTree->AddNode("InitialRepositionPlan", "WaitAfterInitialReposition", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::WaitAfterReposition>(this));
+
+    aiTree->AddNode("Root", "Defensive", 2, BehaviorTree::SelectRule::Priority, std::make_unique<::CanPlanAnyDefensive>(this), nullptr);
 
     aiTree->AddNode("Defensive", "RoarPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanRoar>(this), nullptr);
     aiTree->AddNode("RoarPlan", "StartRoar", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::StartRoar>(this));
@@ -480,13 +485,13 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("RetreatPlan", "PrepareRetreatTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareRetreatTarget>(this));
     aiTree->AddNode("RetreatPlan", "MoveToPositioningTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToPositioningTarget>(this));
 
-    aiTree->AddNode("Root", "CombatDecision", 2, BehaviorTree::SelectRule::Priority, std::make_unique<::CanPlanAnyCombatDecision>(this), nullptr);
+    aiTree->AddNode("Root", "CombatDecision", 3, BehaviorTree::SelectRule::Priority, std::make_unique<::CanPlanAnyCombatDecision>(this), nullptr);
     aiTree->AddNode("CombatDecision", "RepositionPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanReposition>(this), nullptr);
     aiTree->AddNode("RepositionPlan", "PrepareRepositionTarget", 0, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::PrepareRepositionTarget>(this));
     aiTree->AddNode("RepositionPlan", "MoveToRepositionTarget", 1, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::MoveToRepositionTarget>(this));
     aiTree->AddNode("RepositionPlan", "WaitAfterReposition", 2, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::WaitAfterReposition>(this));
     aiTree->AddNode("CombatDecision", "Attack", 1, BehaviorTree::SelectRule::AttackRandom, std::make_unique<::CanPlanAnyAttack>(this), nullptr);
-    aiTree->AddNode("Root", "Idle", 3, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
+    aiTree->AddNode("Root", "Idle", 4, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<BTIdle>(this));
 
     aiTree->AddNode("Attack", "FastComboPlan", 0, BehaviorTree::SelectRule::Sequence, std::make_unique<::CanPlanFastCombo>(this), nullptr);
 
@@ -809,6 +814,8 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     retreatRetryCooldownRemaining = 0.0f;
     repositionCooldownRemaining = 0.0f;
     repositionRetryCooldownRemaining = 0.0f;
+    initialRepositionPending = true;
+    initialRepositionFallbackIdlePending = false;
     consecutiveAttackCount = 0;
     repositionDecisionCached = false;
     repositionDecisionResult = false;

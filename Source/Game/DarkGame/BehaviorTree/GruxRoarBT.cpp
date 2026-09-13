@@ -162,6 +162,11 @@ namespace
 bool CanPlanRoar::Judgment() { return owner->CanPlanRoar(); }
 bool CanPlanAnyDefensive::Judgment()
 {
+    if (owner->IsInitialRepositionFallbackIdlePending())
+    {
+        owner->RecordCombatDecisionDebugDefensive(false);
+        return false;
+    }
     if (!owner->CanPlanAttackAgainstCurrentPlayer())
     {
         owner->RecordCombatDecisionDebugDefensive(false);
@@ -173,7 +178,15 @@ bool CanPlanAnyDefensive::Judgment()
 }
 bool CanPlanRetreat::Judgment() { return owner->CanPlanRetreat(); }
 bool CanPlanAnyCombatDecision::Judgment() { return owner->CanPlanAnyCombatDecision(); }
+bool CanPlanInitialReposition::Judgment() { return owner->CanPlanInitialReposition(); }
 bool CanPlanReposition::Judgment() { return owner->CanPlanReposition(); }
+ActionBase::State PrepareInitialRepositionTarget::Run(float)
+{
+    if (owner->PrepareRepositionTarget())
+        return State::Complete;
+    owner->BeginInitialRepositionFallback();
+    return State::Failed;
+}
 ActionBase::State PrepareRepositionTarget::Run(float)
 {
     return owner->PrepareRepositionTarget() ? State::Complete : State::Failed;
@@ -185,6 +198,8 @@ ActionBase::State MoveToRepositionTarget::Run(float dt)
         return State::Run;
     const bool arrived = result == GruxEnemy::PositioningMoveResult::Arrived;
     owner->FinishRepositionMovement(arrived);
+    if (!arrived && owner->IsInitialRepositionPending())
+        owner->BeginInitialRepositionFallback();
     return arrived ? State::Complete : State::Failed;
 }
 ActionBase::State WaitAfterReposition::Run(float dt)
@@ -568,6 +583,12 @@ void GruxEnemy::BeginCombatDecisionInference()
 
 bool GruxEnemy::CanPlanAnyCombatDecision()
 {
+    if (initialRepositionFallbackIdlePending)
+    {
+        combatDecisionDebugCanPlanAny = false;
+        combatDecisionDebugCanPlanAnyAttack = false;
+        return false;
+    }
     if (!repositionDecisionCached)
         BeginCombatDecisionInference();
     const bool playerAvailableForAttack = CanPlanAttackAgainstCurrentPlayer();
@@ -596,7 +617,8 @@ bool GruxEnemy::CanPlanAnyCombatDecision()
 
 bool GruxEnemy::CanPlanReposition()
 {
-    const bool decisionAllows = repositionDecisionCached && repositionDecisionResult;
+    const bool initialReposition = CanPlanInitialReposition();
+    const bool decisionAllows = initialReposition || (repositionDecisionCached && repositionDecisionResult);
     const bool targetInactive = !repositionTarget.valid;
     const bool movementInactive = !repositionMovementRuntime.movementActive;
     const bool cooldownReady = repositionCooldownRemaining <= 0.0f;
@@ -606,11 +628,13 @@ bool GruxEnemy::CanPlanReposition()
     const bool roarAvailable = playerAvailableForDefensive && CanPlanRoar();
     const bool retreatAvailable = playerAvailableForDefensive && !roarAvailable && CanPlanRetreat();
     const bool defensiveInactive = !roarAvailable && !retreatAvailable;
-    const bool nodeAllowed = !activeNode || activeNode->GetName() == "PrepareRepositionTarget";
+    const bool nodeAllowed = !activeNode || activeNode->GetName() == "PrepareRepositionTarget" ||
+        activeNode->GetName() == "PrepareInitialRepositionTarget";
     const bool executionAllowed = IsRoarExecutionAllowed();
     const bool componentsValid = rotationComponent && characterMovementComponent && enemyCapsuleComponent;
-    const bool result = decisionAllows && targetInactive && movementInactive && cooldownReady && retryReady &&
-        defensiveInactive && nodeAllowed && executionAllowed && componentsValid;
+    const bool normalRepositionReady = cooldownReady && retryReady && defensiveInactive && executionAllowed;
+    const bool result = !initialRepositionFallbackIdlePending && decisionAllows && targetInactive && movementInactive &&
+        nodeAllowed && componentsValid && (initialReposition || normalRepositionReady);
     combatDecisionDebugCanPlanReposition = result;
     if (result) combatDecisionDebugRepositionReason = "Ready";
     else if (!decisionAllows) combatDecisionDebugRepositionReason = "ProbabilityRejected";
@@ -638,7 +662,8 @@ bool GruxEnemy::PrepareRepositionTarget()
     if (!CanPlanReposition())
     {
         repositionRuntime.failureReason = "StartConditionFailed";
-        repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
+        if (!IsInitialRepositionPending())
+            repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
         return false;
     }
 
@@ -646,7 +671,8 @@ bool GruxEnemy::PrepareRepositionTarget()
     if (!player)
     {
         repositionRuntime.failureReason = "PlayerMissing";
-        repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
+        if (!IsInitialRepositionPending())
+            repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
         return false;
     }
 
@@ -677,13 +703,26 @@ bool GruxEnemy::PrepareRepositionTarget()
         CollisionHelper::ToBit(CollisionLayer::Convex);
     const RetreatSweepShape sweepShape = BuildRetreatSweepShape(*enemyCapsuleComponent);
 
+    struct SafeRepositionCandidate
+    {
+        DirectX::XMFLOAT3 position{};
+        float moveDistance = 0.0f;
+        float plannedPlayerDistance = 0.0f;
+        int candidateIndex = -1;
+        float angleDegrees = 0.0f;
+        float candidateDistance = 0.0f;
+    };
+    std::vector<SafeRepositionCandidate> safeCandidates;
+    safeCandidates.reserve(distances.size() * 13);
+
     for (const float distance : distances)
     {
         for (int index = 0; index <= 12; ++index)
         {
             const float magnitude = static_cast<float>((index + 1) / 2);
             const float signedStep = index == 0 ? 0.0f : (index % 2 == 1 ? magnitude : -magnitude);
-            const float angle = DirectX::XMConvertToRadians(signedStep * 30.0f);
+            const float angleDegrees = signedStep * 30.0f;
+            const float angle = DirectX::XMConvertToRadians(angleDegrees);
             const float directionX = awayX * std::cos(angle) - awayZ * std::sin(angle);
             const float directionZ = awayX * std::sin(angle) + awayZ * std::cos(angle);
             const DirectX::XMFLOAT3 desired{
@@ -695,7 +734,9 @@ bool GruxEnemy::PrepareRepositionTarget()
             EvaluateClampedPositioningTarget(repositionRuntime.gruxSnapshot, desired, evaluation);
             RepositionCandidateDebug debug{};
             debug.position = evaluation.clampedTarget;
-            ++repositionRuntime.candidateCount;
+            debug.candidateIndex = repositionRuntime.candidateCount++;
+            debug.angleDegrees = angleDegrees;
+            debug.candidateDistance = distance;
             const float moveX = evaluation.clampedTarget.x - repositionRuntime.gruxSnapshot.x;
             const float moveZ = evaluation.clampedTarget.z - repositionRuntime.gruxSnapshot.z;
             const float moveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
@@ -761,27 +802,44 @@ bool GruxEnemy::PrepareRepositionTarget()
                 ++repositionRuntime.clampPostClampAcceptedCount;
             debug.accepted = true;
             repositionRuntime.candidates.push_back(debug);
-            repositionTarget = {};
-            repositionTarget.valid = true;
-            repositionTarget.targetPosition = evaluation.clampedTarget;
-            repositionTarget.arrivalTolerance = 0.3f;
-            repositionTarget.timeout = 3.0f;
-            repositionTarget.maxMoveDistance = moveDistance + 1.0f;
-            repositionTarget.moveSpeed = repositionMoveSpeed;
-            repositionTarget.stuckMovementThreshold = 0.01f;
-            repositionTarget.stuckTimeThreshold = 0.5f;
-            repositionRuntime.plannedMoveDistance = moveDistance;
-            repositionRuntime.plannedPlayerDistance = plannedPlayerDistance;
-            repositionRuntime.failureReason = "None";
-
-            lastCombatDecision = "Reposition";
-            return true;
+            safeCandidates.push_back({ evaluation.clampedTarget, moveDistance, plannedPlayerDistance,
+                debug.candidateIndex, angleDegrees, distance });
         }
+    }
+
+    repositionRuntime.safeCandidateCount = static_cast<int>(safeCandidates.size());
+    if (!safeCandidates.empty())
+    {
+        static thread_local std::mt19937 randomEngine{ std::random_device{}() };
+        std::uniform_int_distribution<size_t> distribution(0, safeCandidates.size() - 1);
+        const auto& selected = safeCandidates[distribution(randomEngine)];
+        repositionRuntime.selectedCandidateIndex = selected.candidateIndex;
+        repositionRuntime.selectedCandidateAngleDegrees = selected.angleDegrees;
+        repositionRuntime.selectedCandidateDistance = selected.candidateDistance;
+        repositionRuntime.selectedInitialReposition = IsInitialRepositionPending();
+        repositionRuntime.candidates[static_cast<size_t>(selected.candidateIndex)].selected = true;
+
+        repositionTarget = {};
+        repositionTarget.valid = true;
+        repositionTarget.targetPosition = selected.position;
+        repositionTarget.arrivalTolerance = 0.3f;
+        repositionTarget.timeout = 3.0f;
+        repositionTarget.maxMoveDistance = selected.moveDistance + 1.0f;
+        repositionTarget.moveSpeed = repositionMoveSpeed;
+        repositionTarget.stuckMovementThreshold = 0.01f;
+        repositionTarget.stuckTimeThreshold = 0.5f;
+        repositionRuntime.plannedMoveDistance = selected.moveDistance;
+        repositionRuntime.plannedPlayerDistance = selected.plannedPlayerDistance;
+        repositionRuntime.failureReason = "None";
+
+        lastCombatDecision = "Reposition";
+        return true;
     }
 
     repositionRuntime.failureReason = "NoSafeTarget";
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
-    repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
+    if (!IsInitialRepositionPending())
+        repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
 
     return false;
 }
@@ -810,14 +868,37 @@ void GruxEnemy::FinishRepositionMovement(bool arrived)
     StopAIMovement();
     EndPositioningAnimation();
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
-    if (!arrived)
+    if (!arrived && !IsInitialRepositionPending())
         repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
+}
+void GruxEnemy::BeginInitialRepositionFallback()
+{
+    initialRepositionPending = false;
+    initialRepositionFallbackIdlePending = true;
+    repositionDecisionCached = false;
+    repositionDecisionResult = false;
+    repositionDecisionRoll = 0.0f;
+}
+void GruxEnemy::CompleteInitialRepositionFallbackIdle()
+{
+    initialRepositionFallbackIdlePending = false;
+    repositionDecisionCached = false;
+    repositionDecisionResult = false;
+    repositionDecisionRoll = 0.0f;
 }
 void GruxEnemy::CompleteRepositionArrivalWait()
 {
+    const bool completedInitialReposition = initialRepositionPending;
     repositionCooldownRemaining = repositionCooldownDuration;
     consecutiveAttackCount = 0;
     lastCombatDecision = "Reposition";
+    if (completedInitialReposition)
+    {
+        initialRepositionPending = false;
+        repositionDecisionCached = false;
+        repositionDecisionResult = false;
+        repositionDecisionRoll = 0.0f;
+    }
 }
 
 bool GruxEnemy::EvaluateRoarPlanForDebug() const
@@ -1255,6 +1336,22 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::Text(U8("Reposition Target時Player距離: %.2f"), repositionRuntime.plannedPlayerDistance);
     ImGui::Text(U8("Reposition残り距離: %.2f"), repositionRemainingDistance);
     ImGui::Text(U8("Reposition候補数: %d"), repositionRuntime.candidateCount);
+    ImGui::Text(U8("Reposition Safe Candidate数: %d"), repositionRuntime.safeCandidateCount);
+    ImGui::Text(U8("Reposition 選択Candidate Index: %d"), repositionRuntime.selectedCandidateIndex);
+    ImGui::Text(U8("Reposition 選択角度: %.1f deg"), repositionRuntime.selectedCandidateAngleDegrees);
+    ImGui::Text(U8("Reposition 選択距離: %.2f m"), repositionRuntime.selectedCandidateDistance);
+    ImGui::Text(U8("Initial Reposition: %s"), repositionRuntime.selectedInitialReposition ? "true" : "false");
+    if (ImGui::TreeNode(U8("Reposition Candidate Debug")))
+    {
+        for (const auto& candidate : repositionRuntime.candidates)
+        {
+            const char* state = candidate.selected ? "Selected" : candidate.accepted ? "Safe" : "Reject";
+            ImGui::Text(U8("[%d] %s Angle %.1f Distance %.2f Position (%.2f, %.2f, %.2f)"),
+                candidate.candidateIndex, state, candidate.angleDegrees, candidate.candidateDistance,
+                candidate.position.x, candidate.position.y, candidate.position.z);
+        }
+        ImGui::TreePop();
+    }
     ImGui::Text(U8("Reposition Clamp適用数: %d"), repositionRuntime.clampAppliedCount);
     ImGui::Text(U8("Reposition Clamp後採用数: %d"), repositionRuntime.clampPostClampAcceptedCount);
     ImGui::Text(U8("Reposition Clamp後不採用数: %d"), repositionRuntime.clampPostClampRejectCount);

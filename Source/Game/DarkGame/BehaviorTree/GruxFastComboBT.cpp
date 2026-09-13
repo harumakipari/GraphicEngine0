@@ -53,6 +53,8 @@ ActionBase::State BTIdle::Run(float deltaTime)
         return State::Run;
     }
     started = false;
+    if (owner->IsInitialRepositionFallbackIdlePending())
+        owner->CompleteInitialRepositionFallbackIdle();
     return State::Complete;
 }
 

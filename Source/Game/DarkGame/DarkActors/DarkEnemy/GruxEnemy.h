@@ -333,6 +333,11 @@ public:
     void RecordRetreatMoveResult(PositioningMoveResult result);
     bool CanPlanAnyCombatDecision(); bool CanPlanReposition(); void BeginCombatDecisionInference(); void RecordBehaviorAttackCompleted();
     void BeginCombatDecisionDebugInference(); void CompleteCombatDecisionDebugInference(const char* selectedNode); void RecordCombatDecisionDebugDefensive(bool result);
+    bool CanPlanInitialReposition() const { return initialRepositionPending && !initialRepositionFallbackIdlePending; }
+    bool IsInitialRepositionPending() const { return initialRepositionPending; }
+    bool IsInitialRepositionFallbackIdlePending() const { return initialRepositionFallbackIdlePending; }
+    void BeginInitialRepositionFallback();
+    void CompleteInitialRepositionFallbackIdle();
     bool PrepareRepositionTarget(); PositioningMoveResult UpdateRepositionMovement(float deltaTime);
     void FinishRepositionMovement(bool arrived); void CompleteRepositionArrivalWait();
     float GetRepositionArrivalWaitDuration() const { return repositionArrivalWaitDuration; }
@@ -440,7 +445,10 @@ public:
     float GetFastComboApproachMaxDuration() const { return fastComboApproachMaxDuration; }
     float GetFastComboApproachRetryCooldown() const { return fastComboApproachRetryCooldown; }
     // BehaviorTree?p???@??????
-    float GetBehaviorIdleDuration() const { return behaviorIdleDuration; }
+    float GetBehaviorIdleDuration() const
+    {
+        return initialRepositionFallbackIdlePending ? initialRepositionFallbackIdleDuration : behaviorIdleDuration;
+    }
 
     // BehaviorTree??X?V
     void UpdateBehaviorTree(float deltaTime);
@@ -852,8 +860,12 @@ private:
     struct RepositionCandidateDebug
     {
         DirectX::XMFLOAT3 position{};
+        int candidateIndex = -1;
+        float angleDegrees = 0.0f;
+        float candidateDistance = 0.0f;
         RepositionCandidateRejectReason rejectReason = RepositionCandidateRejectReason::None;
         bool accepted = false;
+        bool selected = false;
         bool pathBlocked = false;
     };
     struct RepositionRuntime
@@ -864,6 +876,11 @@ private:
         float plannedPlayerDistance = 0.0f;
         float plannedMoveDistance = 0.0f;
         int candidateCount = 0;
+        int safeCandidateCount = 0;
+        int selectedCandidateIndex = -1;
+        float selectedCandidateAngleDegrees = 0.0f;
+        float selectedCandidateDistance = 0.0f;
+        bool selectedInitialReposition = false;
         int clampAppliedCount = 0;
         int clampPostClampRejectCount = 0;
         int clampPostClampAcceptedCount = 0;
@@ -880,6 +897,9 @@ private:
     float repositionDistanceMin = 6.0f, repositionDistanceMax = 13.0f;
     float repositionMinimumMoveDistance = 5.0f, repositionMinimumPlayerDistance = 4.0f, repositionMoveSpeed = 6.0f;
     float repositionArrivalWaitDuration = 0.5f;
+    bool initialRepositionPending = true;
+    bool initialRepositionFallbackIdlePending = false;
+    float initialRepositionFallbackIdleDuration = 0.2f;
     int consecutiveAttackCount = 0;
     std::array<float, 4> repositionChanceByAttackCount{ 0.10f, 0.25f, 0.60f, 1.0f };
     mutable bool repositionDecisionCached = false;
