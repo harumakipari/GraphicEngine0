@@ -1435,6 +1435,9 @@ void Player::DrawImGuiDetails()
 
         ImGui::Text("Just Dodge Success: %s", justDodgeSuccess ? "true" : "false");
         ImGui::Text("Rush Input Accepting: %s", rushInputAccepting ? "true" : "false");
+        ImGui::Text(U8("Rush受付終了理由: %s"), rushInputEndReasonDebug.c_str());
+        ImGui::Text("rush_input_end Notify Received: %s",
+            rushInputEndNotifyReceivedDebug ? "true" : "false");
         ImGui::TextColored(
             acceptsInitialInput ? ImVec4(0.25f, 1.0f, 0.35f, 1.0f) : ImVec4(1.0f, 0.35f, 0.25f, 1.0f),
             "Can Accept Initial Rush Input: %s",
@@ -1883,7 +1886,9 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
         else if (event.parameter == "rush_input_end" && stateMachine_ &&
             std::string(stateMachine_->GetStateName()) == "Dodge")
         {
-            SetRushInputAcceptance(false);
+            // Retain this notify for animation timing/debug only. Initial Rush
+            // acceptance remains open until Dodge resolves at TransitionWindow.
+            rushInputEndNotifyReceivedDebug = true;
         }
         break;
     }
@@ -3122,6 +3127,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav", 0.5f);
     // コントローラー振動
     InputSystem::SetVibration(0.8f, 0.15f);
+    SetRushInputAcceptance(false, "Damage");
     ClearActionRequest("damage_applied");
     Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
     //if (sparkComponent)
@@ -3314,6 +3320,7 @@ bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)
         return false;
 
     knockBackDirection = MathHelper::Normalize(horizontalDirection);
+    SetRushInputAcceptance(false, "KnockBack");
     stateMachine_->ChangeState("KnockBack");
     return true;
 }
@@ -3445,8 +3452,17 @@ bool Player::IsRushOpportunityActive() const
     return (stateName == "Dodge" && justDodgeSuccess) || stateName == "Rush";
 }
 
-void Player::SetRushInputAcceptance(bool accepting)
+void Player::SetRushInputAcceptance(bool accepting, const char* endReason)
 {
+    if (accepting)
+    {
+        rushInputEndReasonDebug = "None";
+    }
+    else if (endReason)
+    {
+        rushInputEndReasonDebug = endReason;
+    }
+
     if (rushInputAccepting == accepting)
     {
         return;
@@ -3841,6 +3857,8 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
+    rushInputEndNotifyReceivedDebug = false;
+    rushInputEndReasonDebug = "None";
     CapturePlayerPoseGhost();
     // スローモーションにする
     // rush時のtargetを保存する

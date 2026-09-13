@@ -248,7 +248,7 @@ public:
     bool CanShowRushComboGuide() const;
     bool CanShowRushPrompt() const;
     bool IsRushOpportunityActive() const;
-    void SetRushInputAcceptance(bool accepting);
+    void SetRushInputAcceptance(bool accepting, const char* endReason = nullptr);
     void SetRushInputDebugState(bool judgeSuccess, bool rushRequested);
 
     // Player/Bossの解除タイミングを独立して管理する。
@@ -398,6 +398,8 @@ public:
     };
 
     bool rushInputAccepting = false;
+    bool rushInputEndNotifyReceivedDebug = false;
+    std::string rushInputEndReasonDebug = "None";
     bool rushJudgeSuccessDebug = false;
     bool rushRequestedDebug = false;
     bool swordHitDebug = false;

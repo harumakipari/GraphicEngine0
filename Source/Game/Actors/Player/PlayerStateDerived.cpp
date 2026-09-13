@@ -270,7 +270,7 @@ void PlayerDodgeState::Enter()
 {
     player->BeginDodgeDebug();
     player->ResetAnimationStateFlag();
-    player->SetRushInputAcceptance(false);
+    player->SetRushInputAcceptance(false, "None");
     player->SetRushInputDebugState(false, false);
 
     // 攻撃中は移動速度を0にする
@@ -312,7 +312,8 @@ void PlayerDodgeState::Execute(float deltaTime)
     }
     if (player->rushTarget.expired())
     {
-        player->SetRushInputAcceptance(false);
+        player->SetRushInputAcceptance(false, "RushTargetExpired");
+        rushRequested = false;
     }
     player->SetRushInputDebugState(judgeSuccess, rushRequested);
     if (judgeSuccess)
@@ -332,11 +333,12 @@ void PlayerDodgeState::Execute(float deltaTime)
             if (rushRequested)
             {
                 Logger::Log(U8("ラッシュへ"));
+                player->SetRushInputAcceptance(false, "RushStarted");
                 player->GetStateMachine()->ChangeState("Rush");
             }
             else
             {
-                player->SetRushInputAcceptance(false);
+                player->SetRushInputAcceptance(false, "TransitionWithoutRush");
                 DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
                 if (MathHelper::Length(move) > 0.1f)
                 {
@@ -352,7 +354,7 @@ void PlayerDodgeState::Execute(float deltaTime)
     }
     else if (player->transitionWindow)
     {
-        player->SetRushInputAcceptance(false);
+        player->SetRushInputAcceptance(false, "TransitionWithoutRush");
 
         DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
 
@@ -368,7 +370,7 @@ void PlayerDodgeState::Execute(float deltaTime)
 #if 1
     if (!player->GetBodyAnimationController()->IsPlayAnimation())
     {// 保険
-        player->SetRushInputAcceptance(false);
+        player->SetRushInputAcceptance(false, "DodgeFinished");
         player->GetStateMachine()->ChangeState("Idle");
     }
 #endif // 0
@@ -458,6 +460,7 @@ void PlayerDeathPendingState::Enter()
 {
     // アクターやアニメーションの更新を維持しつつ、死のカメラ演出中に継続する可能性のあるアクションを削除する。
     player->ClearTransientBattleActions();
+    player->SetRushInputAcceptance(false, "Death");
     player->SetDeathCameraTransparencyDisabled(true);
     player->ResetAnimationStateFlag();
     player->characterMovementComponent->SetFixedSpeed(0.0f);
