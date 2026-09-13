@@ -307,7 +307,11 @@ public:
     bool IsNearFrontForAttackSelection() const;
     bool IsDefensiveBackForBehavior(const BossTargetContext& context) const;
     float GetNearFrontFastComboProbability() const { return nearFrontFastComboProbability; }
-    void RecordAttackSelectorDebug(const char* mode, int count, float probability, float roll, const char* selected);
+    float GetAttackRepeatPenaltyForPlan(const std::string& planName) const;
+    void RecordAttackSelectorDebug(const char* mode, int count, float fastComboBaseProbability,
+        float fastComboEffectiveProbability, float roll, const char* selected,
+        const char* repeatPenaltyTarget, float baseWeight, float effectiveWeight,
+        bool repeatPenaltyApplied);
     void RefreshFastComboTargetContext(int stage);
     void BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime);
     bool UpdateFastComboStepIn(float deltaTime);
@@ -420,6 +424,23 @@ public:
     void SetSelectedAttackForBehaviorTree(BossAttackType type)
     {
         selectedAttackType = type;
+        switch (type)
+        {
+        case BossAttackType::FastCombo:
+            selectedActionType = BossActionType::FastCombo;
+            break;
+        case BossAttackType::JumpAttack:
+            selectedActionType = BossActionType::JumpAttack;
+            break;
+        case BossAttackType::DashAttack:
+            selectedActionType = BossActionType::DashAttack;
+            break;
+        case BossAttackType::ChargeAttack:
+            selectedActionType = BossActionType::ChargeAttack;
+            break;
+        default:
+            break;
+        }
     }
 
     // BehaviorTree?O??s?????U????I??????
@@ -532,6 +553,7 @@ private:
     // Action????Base Weight????Effective Weight??X?V????
     void UpdateActionEffectiveWeights();
     bool IsCombatAttackAction(BossActionType actionType) const;
+    bool IsRepeatPenaltyCombatAttack(BossActionType actionType) const;
     bool IsAttackActionForIntent(BossActionType actionType, BossIntentType intentType) const;
     float GetRecentAttackPenalty(BossActionType actionType) const;
     float GetIntentRecentAttackPenalty(BossIntentType intentType) const;
@@ -708,10 +730,8 @@ private:
     BossActionType lastActionType = BossActionType::AttackLA;
     std::optional<BossActionType> lastStartedCombatAttack = std::nullopt;
     std::optional<BossActionType> secondLastStartedCombatAttack = std::nullopt;
-    static constexpr float initialRecentAttackPenaltyLast = 0.2f;          // ?????U???????????
-    static constexpr float initialRecentAttackPenaltySecond = 0.45f;        // ?Q???U???????????
-    float recentAttackPenaltyLast = initialRecentAttackPenaltyLast;
-    float recentAttackPenaltySecond = initialRecentAttackPenaltySecond;
+    static constexpr float initialRepeatAttackPenalty = 0.25f;
+    float repeatAttackPenalty = initialRepeatAttackPenalty;
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
     std::optional<BossPositioningData> selectedPositioningData = std::nullopt;
     bool pendingAttackActionValid = false;
@@ -1025,8 +1045,13 @@ private:
     std::string attackSelectorDebugMode = "Uniform";
     int attackSelectorDebugCandidateCount = 0;
     float attackSelectorDebugProbability = 0.0f;
+    float attackSelectorDebugEffectiveProbability = 0.0f;
     float attackSelectorDebugRoll = 0.0f;
     std::string attackSelectorDebugSelected = "None";
+    std::string attackSelectorDebugRepeatPenaltyTarget = "None";
+    float attackSelectorDebugBaseWeight = 1.0f;
+    float attackSelectorDebugEffectiveWeight = 1.0f;
+    bool attackSelectorDebugRepeatPenaltyApplied = false;
     float nearDistanceThreshold = 8.0f; // ?????????????????????
     float middleDistanceThreshold = 12.0f; // ??????????????????????
 

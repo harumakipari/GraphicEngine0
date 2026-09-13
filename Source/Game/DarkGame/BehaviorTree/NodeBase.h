@@ -29,7 +29,7 @@ public:
 	// デストラクタ
 	~NodeBase();
 	// 名前ゲッター
-	std::string GetName() { return name; }
+	std::string GetName() const  { return name; }
 	// 優先順位ゲッター
 	int GetPriority() { return priority; }
 	// 子ノード追加

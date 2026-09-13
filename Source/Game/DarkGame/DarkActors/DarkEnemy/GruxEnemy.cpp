@@ -112,7 +112,7 @@ namespace
 void GruxEnemy::Initialize(const Transform& transform)
 {
     maxHp = 10;
-    //maxHp = 75;
+    maxHp = 75;
     hp = maxHp;
     delayedHp = static_cast<float>(hp);
 
@@ -2084,18 +2084,23 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Back Min Angle: %.1f deg", relativeBackMinAngle);
     ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
     ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
-    ImGui::Text("Last Started Attack: %s",
+    ImGui::Text(U8("直近Attack: %s"),
         lastStartedCombatAttack
         ? actionTypes[static_cast<int>(*lastStartedCombatAttack)] : "None");
-    ImGui::Text("Second Last Started Attack: %s",
+    ImGui::Text(U8("2回前Attack: %s"),
         secondLastStartedCombatAttack
         ? actionTypes[static_cast<int>(*secondLastStartedCombatAttack)] : "None");
-    ImGui::DragFloat("Last Attack Penalty", &recentAttackPenaltyLast,
-        0.01f, 0.01f, 1.0f, "%.2f");
-    ImGui::DragFloat("Second Last Attack Penalty", &recentAttackPenaltySecond,
-        0.01f, 0.01f, 1.0f, "%.2f");
-    recentAttackPenaltyLast = std::clamp(recentAttackPenaltyLast, 0.01f, 1.0f);
-    recentAttackPenaltySecond = std::clamp(recentAttackPenaltySecond, 0.01f, 1.0f);
+    ImGui::DragFloat(U8("Attack Repeat Penalty"), &repeatAttackPenalty,
+        0.01f, 0.05f, 1.0f, "%.2f");
+    repeatAttackPenalty = std::clamp(repeatAttackPenalty, 0.05f, 1.0f);
+    ImGui::Text(U8("Repeat Penalty対象: %s"), attackSelectorDebugRepeatPenaltyTarget.c_str());
+    ImGui::Text(U8("通常Weight: %.2f"), attackSelectorDebugBaseWeight);
+    ImGui::Text(U8("補正後Weight: %.2f"), attackSelectorDebugEffectiveWeight);
+    ImGui::Text(U8("FastCombo基本確率: %.3f"), attackSelectorDebugProbability);
+    ImGui::Text(U8("FastCombo補正後確率: %.3f"), attackSelectorDebugEffectiveProbability);
+    ImGui::Text(U8("最終選択Attack: %s"), attackSelectorDebugSelected.c_str());
+    ImGui::Text(U8("Repeat Penalty Applied: %s"),
+        attackSelectorDebugRepeatPenaltyApplied ? "true" : "false");
     const char* intentTypes[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan", "CombatReposition" };
     const char* intentStepNames[] =
     {
@@ -3342,8 +3347,7 @@ void GruxEnemy::DrawImGuiDetails()
             frontAttackReadyDuration = initialFrontAttackReadyDuration;
             sideAttackReadyDuration = initialSideAttackReadyDuration;
             closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
-            recentAttackPenaltyLast = initialRecentAttackPenaltyLast;
-            recentAttackPenaltySecond = initialRecentAttackPenaltySecond;
+            repeatAttackPenalty = initialRepeatAttackPenalty;
         }
         ImGui::TextDisabled("Runtime only. Reset does not change active Cooldown Remaining.");
         ImGui::TextDisabled("Recovery edits affect an active Recovery on its next update.");
@@ -4724,8 +4728,7 @@ void GruxEnemy::RequestJumpAttackCameraAssist()
 void GruxEnemy::OnSelectedActionStartedSuccessfully()
 {
     if (bossAIMode == BossAIMode::CombatAI &&
-        IsCombatAttackAction(selectedActionType) &&
-        (!lastStartedCombatAttack || *lastStartedCombatAttack != selectedActionType))
+        IsRepeatPenaltyCombatAttack(selectedActionType))
     {
         secondLastStartedCombatAttack = lastStartedCombatAttack;
         lastStartedCombatAttack = selectedActionType;
@@ -5954,13 +5957,34 @@ bool GruxEnemy::IsDefensiveBackForBehavior(const BossTargetContext& context) con
     return context.valid && context.absoluteAngleDegrees >= defensiveBackMinAngle;
 }
 
-void GruxEnemy::RecordAttackSelectorDebug(const char* mode, int count, float probability, float roll, const char* selected)
+float GruxEnemy::GetAttackRepeatPenaltyForPlan(const std::string& planName) const
+{
+    if (planName == "FastComboPlan")
+        return GetRecentAttackPenalty(BossActionType::FastCombo);
+    if (planName == "JumpAttackPlan")
+        return GetRecentAttackPenalty(BossActionType::JumpAttack);
+    if (planName == "DashAttackPlan")
+        return GetRecentAttackPenalty(BossActionType::DashAttack);
+    if (planName == "ChargeAttackPlan")
+        return GetRecentAttackPenalty(BossActionType::ChargeAttack);
+    return 1.0f;
+}
+
+void GruxEnemy::RecordAttackSelectorDebug(const char* mode, int count, float fastComboBaseProbability,
+    float fastComboEffectiveProbability, float roll, const char* selected,
+    const char* repeatPenaltyTarget, float baseWeight, float effectiveWeight,
+    bool repeatPenaltyApplied)
 {
     attackSelectorDebugMode = mode ? mode : "Uniform";
     attackSelectorDebugCandidateCount = count;
-    attackSelectorDebugProbability = probability;
+    attackSelectorDebugProbability = fastComboBaseProbability;
+    attackSelectorDebugEffectiveProbability = fastComboEffectiveProbability;
     attackSelectorDebugRoll = roll;
     attackSelectorDebugSelected = selected ? selected : "None";
+    attackSelectorDebugRepeatPenaltyTarget = repeatPenaltyTarget ? repeatPenaltyTarget : "None";
+    attackSelectorDebugBaseWeight = baseWeight;
+    attackSelectorDebugEffectiveWeight = effectiveWeight;
+    attackSelectorDebugRepeatPenaltyApplied = repeatPenaltyApplied;
 }
 BossTargetContext GruxEnemy::BuildTargetContext() const
 {
@@ -6561,6 +6585,14 @@ bool GruxEnemy::IsCombatAttackAction(BossActionType actionType) const
     return false;
 }
 
+bool GruxEnemy::IsRepeatPenaltyCombatAttack(BossActionType actionType) const
+{
+    return actionType == BossActionType::FastCombo ||
+        actionType == BossActionType::JumpAttack ||
+        actionType == BossActionType::DashAttack ||
+        actionType == BossActionType::ChargeAttack;
+}
+
 bool GruxEnemy::IsAttackActionForIntent(
     BossActionType actionType, BossIntentType intentType) const
 {
@@ -6583,11 +6615,15 @@ bool GruxEnemy::IsAttackActionForIntent(
 
 float GruxEnemy::GetRecentAttackPenalty(BossActionType actionType) const
 {
-    if (lastStartedCombatAttack && *lastStartedCombatAttack == actionType)
-        return std::clamp(recentAttackPenaltyLast, 0.01f, 1.0f);
-    if (secondLastStartedCombatAttack && *secondLastStartedCombatAttack == actionType)
-        return std::clamp(recentAttackPenaltySecond, 0.01f, 1.0f);
-    return 1.0f;
+    if (!IsRepeatPenaltyCombatAttack(actionType) ||
+        !lastStartedCombatAttack || !secondLastStartedCombatAttack ||
+        *lastStartedCombatAttack != actionType ||
+        *secondLastStartedCombatAttack != actionType)
+    {
+        return 1.0f;
+    }
+
+    return std::clamp(repeatAttackPenalty, 0.05f, 1.0f);
 }
 
 float GruxEnemy::GetIntentRecentAttackPenalty(BossIntentType intentType) const

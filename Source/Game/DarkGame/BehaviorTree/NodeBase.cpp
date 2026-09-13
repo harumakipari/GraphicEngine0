@@ -131,6 +131,7 @@ NodeBase* NodeBase::SelectRandom(std::vector<std::shared_ptr<NodeBase>>* list)
 NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* list)
 {
     if (!list || list->empty()) return nullptr;
+
     std::vector<NodeBase*> nonFast;
     NodeBase* fast = nullptr;
     for (const auto& node : *list)
@@ -140,20 +141,71 @@ NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* l
     }
 
     const bool nearFront = owner && owner->IsNearFrontForAttackSelection();
-    const float probability = nearFront && fast ? owner->GetNearFrontFastComboProbability() : 0.0f;
+    const float fastComboBaseProbability = nearFront && fast
+        ? owner->GetNearFrontFastComboProbability() : 0.0f;
+    const float fastComboPenalty = fast && owner
+        ? owner->GetAttackRepeatPenaltyForPlan(fast->GetName()) : 1.0f;
+    const float fastComboEffectiveProbability = std::clamp(
+        fastComboBaseProbability * fastComboPenalty, 0.0f, 1.0f);
     const float roll = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
     NodeBase* selected = nullptr;
     const char* mode = nearFront && fast ? "NearFrontWeighted" : "Uniform";
-    if (nearFront && fast && (nonFast.empty() || roll < probability))
+
+    if (nearFront && fast && (nonFast.empty() || roll < fastComboEffectiveProbability))
+    {
         selected = fast;
+    }
+    else if (!nonFast.empty())
+    {
+        float totalWeight = 0.0f;
+        for (const NodeBase* node : nonFast)
+            totalWeight += owner ? owner->GetAttackRepeatPenaltyForPlan(node->GetName()) : 1.0f;
+
+        const float weightedRoll = static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * totalWeight;
+        float accumulatedWeight = 0.0f;
+        for (NodeBase* node : nonFast)
+        {
+            accumulatedWeight += owner ? owner->GetAttackRepeatPenaltyForPlan(node->GetName()) : 1.0f;
+            if (weightedRoll <= accumulatedWeight)
+            {
+                selected = node;
+                break;
+            }
+        }
+        if (!selected)
+            selected = nonFast.back();
+    }
     else
     {
-        const size_t count = nonFast.size();
-        if (count > 0) selected = nonFast[static_cast<size_t>(rand()) % count];
-        else selected = fast;
+        selected = fast;
     }
-    if (owner) owner->RecordAttackSelectorDebug(mode, static_cast<int>(list->size()), probability, roll,
-        selected ? selected->GetName().c_str() : "None");
+
+    const NodeBase* repeatPenaltyTarget = nullptr;
+    if (owner)
+    {
+        for (const auto& node : *list)
+        {
+            if (owner->GetAttackRepeatPenaltyForPlan(node->GetName()) < 1.0f)
+            {
+                repeatPenaltyTarget = node.get();
+                break;
+            }
+        }
+    }
+
+    const float debugBaseWeight = selected ? 1.0f : 0.0f;
+    const float debugEffectiveWeight = repeatPenaltyTarget && owner
+        ? owner->GetAttackRepeatPenaltyForPlan(repeatPenaltyTarget->GetName())
+        : debugBaseWeight;
+    const bool repeatPenaltyApplied = repeatPenaltyTarget != nullptr;
+    if (owner)
+    {
+        owner->RecordAttackSelectorDebug(mode, static_cast<int>(list->size()),
+            fastComboBaseProbability, fastComboEffectiveProbability, roll,
+            selected ? selected->GetName().c_str() : "None",
+            repeatPenaltyTarget ? repeatPenaltyTarget->GetName().c_str() : "None",
+            debugBaseWeight, debugEffectiveWeight, repeatPenaltyApplied);
+    }
     return selected;
 }
 // シーケンス・シーケンシャルルーピングでノード選択
