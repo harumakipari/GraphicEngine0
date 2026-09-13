@@ -1290,7 +1290,7 @@ void GameScene::ExecuteDeathResult(const int index)
     deathResultSelectLineAnimProgress = 0.0f;
     SetDeathResultVisible(false);
     if (index == 0) ResetBattleForContinue();
-    else if (index == 1) { battleElapsedTime = 0.0f; if (gruxEnemyActor) gruxEnemyActor->ResetForBattleRestart(bossBattleStartTransform); if (player) player->ResetForBattleContinue(playerBattleStartTransform); if (gruxEnemyActor) gruxEnemyActor->ResumeBattleAI(); StartBossBattle(); }
+    else if (index == 1) RestartBossBattle();
     else SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
 }
 void GameScene::OnPlayerDeathCameraStart()
