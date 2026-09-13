@@ -924,7 +924,7 @@ private:
     std::array<float, 3> fastComboMaxStepInDistance{ 1.5f, 2.f, 2.0f };
     float fastComboStepInMaxSpeed = 30.0f;
     float interStageMaxFacingAngle = 70.0f;
-    float interStageFaceDelay = 0.25f;
+    float interStageFaceDelay = 0.5f;
     FastComboRuntimeState fastComboRuntimeState = FastComboRuntimeState::Attack;
     bool fastComboStepInActive = false;
     int fastComboStepInStage = -1;

@@ -2629,9 +2629,9 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::Text(U8("現在のコンボ段階: %d"), fastComboRuntimeStage);
         ImGui::Text(U8("FastCombo 実行状態: %s"), runtimeStateName);
         ImGui::Text(U8("ターゲットとの角度: %.2f deg"), fastComboTargetContext.absoluteAngleDegrees);
-        ImGui::Text(U8("段間旋回 完了角度: %.2f deg"), interStageFaceCompleteAngle);
-        ImGui::Text(U8("段間旋回 最大許容角度: %.2f deg"), interStageMaxFacingAngle);
-        ImGui::Text(U8("段間旋回 待機時間: %.2f sec"), interStageFaceDelay);
+        ImGui::DragFloat(U8("段間旋回 完了角度:"), &interStageFaceCompleteAngle,0.5f);
+        ImGui::DragFloat(U8("段間旋回 最大許容角度:"), &interStageMaxFacingAngle,0.5f);
+        ImGui::DragFloat(U8("段間旋回 待機時間: "), &interStageFaceDelay,0.1f);
         ImGui::Text(U8("最後に取得したコンボ段階: %s"),
             fastComboTargetStage >= 0 ? (fastComboTargetStage == 0 ? "A" : fastComboTargetStage == 1 ? "B" : "C") : "None");
         static constexpr const char* sampleLabels[] = { "A Start", "A -> B", "B -> C" };

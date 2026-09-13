@@ -40,6 +40,8 @@
 
 namespace
 {
+    constexpr float BossBgmVolume = 0.2f;
+
     // Shared visual feedback; each result owns its selection range and tuning.
     void ApplyResultButtonFeedback(UIImageComponent& button, const DirectX::XMFLOAT2& baseScale,
         bool selected, float selectedScale, float unselectedScale,
@@ -275,7 +277,7 @@ void GameScene::Start()
     bossBgmActor->SetLoop(true);
     bossBgmActor->SetBgm(true);
     //bossBgmActor->Play();
-    bossBgmActor->SetVolume(0.2f);
+    bossBgmActor->SetVolume(BossBgmVolume);
     bossDeathSecondBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("BossDeathSecondBgmActor");
     bossDeathSecondBgmActor->SetSource(L"./Data/Sound/BGM/boss_death_second_bgm.wav");
     bossDeathSecondBgmActor->SetLoop(true);
@@ -319,7 +321,7 @@ void GameScene::BeginPlayerDeathBgmFadeOut(){if(playerBgmFading||!bossBgmActor)r
 void GameScene::UpdateDeathBgmFade(float dt){if((!bossBgmFading && !playerBgmFading)||!bossBgmActor)return;const float d=playerBgmFading?playerDeathBgmFadeTime:bossDeathBgmFadeTime;bossBgmFadeElapsed+=dt;const float t=d>0.0f?std::clamp(bossBgmFadeElapsed/d,0.0f,1.0f):1.0f;bossBgmActor->SetVolume(std::lerp(bossBgmFadeStartVolume,0.0f,t));if(t>=1.0f){bossBgmActor->Stop(false);bossBgmFading=false;playerBgmFading=false;}}
 void GameScene::PlayBossDeathSecondBgm(){if(!bossDeathSecondBgmPlayed&&bossDeathSecondBgmActor){bossDeathSecondBgmPlayed=true;bossDeathSecondBgmActor->Play();}}
 void GameScene::PlayPlayerDeathBgm(){if(!playerDeathBgmPlayed&&playerDeathBgmActor){playerDeathBgmPlayed=true;playerDeathBgmActor->Play();}}
-void GameScene::ResetDeathBgmState(bool restart){if(bossDeathSecondBgmActor)bossDeathSecondBgmActor->Stop(false);if(playerDeathBgmActor)playerDeathBgmActor->Stop(false);bossDeathSecondBgmPlayed=false;playerDeathBgmPlayed=false;bossBgmFading=false;playerBgmFading=false;bossBgmFadeElapsed=0.0f;if(bossBgmActor){bossBgmActor->SetVolume(0.02f);if(restart)bossBgmActor->Play();}}
+void GameScene::ResetDeathBgmState(bool restart){if(bossDeathSecondBgmActor)bossDeathSecondBgmActor->Stop(false);if(playerDeathBgmActor)playerDeathBgmActor->Stop(false);bossDeathSecondBgmPlayed=false;playerDeathBgmPlayed=false;bossBgmFading=false;playerBgmFading=false;bossBgmFadeElapsed=0.0f;if(bossBgmActor){bossBgmActor->SetVolume(BossBgmVolume);if(restart)bossBgmActor->Play();}}
 
 void GameScene::Update(float deltaTime)
 {
