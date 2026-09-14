@@ -100,7 +100,7 @@ void TitleScene::Start()
 {
     // ƒQ[ƒ€BGM
     gameBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("GameBgmActor");
-    gameBgmActor->SetSource(L"./Data/Sound/BGM/game_bgm.wav");
+    gameBgmActor->SetSource(L"./Data/Sound/BGM/title_bgm.wav");
     gameBgmActor->SetLoop(true);
     gameBgmActor->SetBgm(true);
     gameBgmActor->Play();

@@ -111,8 +111,8 @@ namespace
 
 void GruxEnemy::Initialize(const Transform& transform)
 {
-    maxHp = 10;
-    maxHp = 75;
+    maxHp = 50;
+    //maxHp = 75;
     hp = maxHp;
     delayedHp = static_cast<float>(hp);
 

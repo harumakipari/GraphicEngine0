@@ -509,7 +509,7 @@ private:
     bool finalHitReactionHeld = false;
     bool fourthHitReactionActive = false;
     float fourthHitReactionRemaining = 0.0f;
-    float fourthHitReactionChance = 1.0f;  // ‹¯‚ÝŠm—¦
+    float fourthHitReactionChance = 0.3f;  // ‹¯‚ÝŠm—¦
     float fourthHitReactionDuration = 1.25f;
     float fourthHitReactionLastRoll = -1.0f;
     bool fourthHitReactionHasLastRoll = false;

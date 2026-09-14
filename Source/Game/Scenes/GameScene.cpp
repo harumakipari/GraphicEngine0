@@ -265,7 +265,7 @@ void GameScene::Start()
     SetBattleHudVisible(false);
     // ƒQ[ƒ€BGM
     gameBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("GameBgmActor");
-    gameBgmActor->SetSource(L"./Data/Sound/BGM/game_bgm.wav");
+    gameBgmActor->SetSource(L"./Data/Sound/BGM/game_bgm1.wav");
     gameBgmActor->SetLoop(true);
     gameBgmActor->SetBgm(true);
     gameBgmActor->Play();
@@ -278,16 +278,18 @@ void GameScene::Start()
     bossBgmActor->SetBgm(true);
     //bossBgmActor->Play();
     bossBgmActor->SetVolume(BossBgmVolume);
+
     bossDeathSecondBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("BossDeathSecondBgmActor");
     bossDeathSecondBgmActor->SetSource(L"./Data/Sound/BGM/boss_death_second_bgm.wav");
     bossDeathSecondBgmActor->SetLoop(true);
     bossDeathSecondBgmActor->SetBgm(true);
-    bossDeathSecondBgmActor->SetVolume(0.2f);
+    bossDeathSecondBgmActor->SetVolume(0.45f);
+
     playerDeathBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("PlayerDeathBgmActor");
     playerDeathBgmActor->SetSource(L"./Data/Sound/BGM/player_death_bgm_1.wav");
     playerDeathBgmActor->SetLoop(true);
     playerDeathBgmActor->SetBgm(true);
-    playerDeathBgmActor->SetVolume(0.2f);
+    playerDeathBgmActor->SetVolume(0.35f);
 
 #if 0
     cameraManager->ToggleCinematicCamera(this);

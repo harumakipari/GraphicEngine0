@@ -3,7 +3,7 @@
     "animationName": "Result_Recall",
     "events": [
         {
-            "parameter": "boss_damage_finish",
+            "parameter": "boss_damage_finish1",
             "time": 1.399999976158142,
             "type": "PlaySE",
             "value": 1.0
@@ -12,7 +12,7 @@
             "parameter": "player_recall_voice",
             "time": 1.399999976158142,
             "type": "PlaySE",
-            "value": 1.2000000476837158
+            "value": 2.0
         }
     ],
     "loop": false,
