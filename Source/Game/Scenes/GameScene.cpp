@@ -310,6 +310,12 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     phase1BreakWaitingForRush = false;
     phase2TransitionStep = Phase2TransitionStep::None;
     phase2StepElapsed = 0.0f;
+    if ((phase2PlayerEmoteActive || phase2PlayerEmoteEndPoseHeld) && player)
+        player->PlayBodyAnimation("Idle", true, true, 0.0f, true);
+    phase2PlayerEmoteActive = false;
+    phase2PlayerEmoteEndPoseHeld = false;
+    if (player)
+        player->ClearSwordTrailForPhaseTransition();
     phase2RecallActorPoseApplied = false;
     phase2TpsReturnBlendActive = false;
     phase2CurrentShot = "None";
@@ -404,9 +410,13 @@ void GameScene::CutToPhase2Shot(const size_t shotIndex)
 
 void GameScene::BeginPhase2Cinematic()
 {
-    phase2TransitionStep = Phase2TransitionStep::BossRecall;
+    phase2TransitionStep = Phase2TransitionStep::RecallPreWait;
     phase2StepElapsed = 0.0f;
+    phase2PlayerEmoteActive = false;
+    phase2PlayerEmoteEndPoseHeld = false;
     phase2CurrentShot = "boss_recall";
+    if (player)
+        player->ClearSwordTrailForPhaseTransition();
     ApplyPhase2RecallActorPose();
 
     if (cameraManager->IsUseDebug()) cameraManager->ToggleCamera(this);
@@ -415,12 +425,11 @@ void GameScene::BeginPhase2Cinematic()
     CutToPhase2Shot(0);
 
     if (gruxEnemyActor)
-        gruxEnemyActor->PlayBodyAnimation("PrimaryAttack_Recall", false, true, 0.1f, true,
-            "GameScene::Phase2BossRecall");
+        gruxEnemyActor->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.1f, true,
+            "GameScene::Phase2RecallPreWait");
     if (player)
         player->PlayBodyAnimation("Idle", true, true, 0.1f, true);
 }
-
 void GameScene::BeginPhase2Transition()
 {
     if (bossPhase != BossPhase::Phase1 || !player || !gruxEnemyActor)
@@ -428,6 +437,7 @@ void GameScene::BeginPhase2Transition()
 
     ResetBossPhaseRuntime(BossPhase::TransitionToPhase2);
     finalHitPending = false;
+    InputSystem::SetInputEnabled(false);
     Time::SetSlow(1.0f, 0.0f);
     player->StartEvent();
     player->StopBattleActions();
@@ -439,6 +449,7 @@ void GameScene::BeginPhase2Transition()
 
 void GameScene::BeginPhase2TpsReturnBlend()
 {
+    InputSystem::SetInputEnabled(false);
     phase2TransitionStep = Phase2TransitionStep::ReturnToTps;
     phase2TpsReturnBlendActive = true;
     phase2CurrentShot = "TPS Return Blend";
@@ -486,8 +497,30 @@ void GameScene::UpdatePhase2Cinematic()
     if (bossPhase != BossPhase::TransitionToPhase2)
         return;
 
+    // Transition ownership is exclusive until the TPS blend completion callback.
+    InputSystem::SetInputEnabled(false);
+
     switch (phase2TransitionStep)
     {
+    case Phase2TransitionStep::RecallPreWait:
+    {
+        if (const auto controller = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController() : nullptr)
+            controller->OnUpdate(Time::UnscaledDeltaTime());
+
+        const float waitDuration = std::clamp(phase2RecallPreWaitDuration, 0.0f, 3.0f);
+        phase2StepElapsed = (std::min)(waitDuration,
+            phase2StepElapsed + Time::UnscaledDeltaTime());
+        if (phase2StepElapsed < waitDuration)
+            break;
+
+        if (gruxEnemyActor)
+            gruxEnemyActor->PlayBodyAnimation("PrimaryAttack_Recall", false, true, 0.1f, true,
+                "GameScene::Phase2BossRecall");
+        phase2TransitionStep = Phase2TransitionStep::BossRecall;
+        phase2StepElapsed = 0.0f;
+        break;
+    }
+
     case Phase2TransitionStep::BossRecall:
     {
         const auto controller = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
@@ -514,27 +547,84 @@ void GameScene::UpdatePhase2Cinematic()
             gruxEnemyActor->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.1f, true,
                 "GameScene::Phase2BossRecallComplete");
 
-        phase2TransitionStep = Phase2TransitionStep::PlayerRecall;
+        phase2TransitionStep = Phase2TransitionStep::PlayerEmotePreWait;
         phase2StepElapsed = 0.0f;
         phase2CurrentShot = "boss_recall_player";
         CutToPhase2Shot(1);
+        phase2PlayerEmoteActive = false;
+        phase2PlayerEmoteEndPoseHeld = false;
         if (player)
             player->PlayBodyAnimation("Idle", true, true, 0.1f, true);
         break;
     }
-    case Phase2TransitionStep::PlayerRecall:
+
+    case Phase2TransitionStep::PlayerEmotePreWait:
+    {
         if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
             controller->OnUpdate(Time::UnscaledDeltaTime());
-        phase2StepElapsed += Time::UnscaledDeltaTime();
-        if (phase2StepElapsed >= phase2PlayerRecallDuration)
-            BeginPhase2TpsReturnBlend();
+
+        const float waitDuration = std::clamp(phase2PlayerEmotePreWaitDuration, 0.0f, 3.0f);
+        phase2StepElapsed = (std::min)(waitDuration,
+            phase2StepElapsed + Time::UnscaledDeltaTime());
+        if (phase2StepElapsed < waitDuration)
+            break;
+
+        phase2PlayerEmoteActive = false;
+        phase2PlayerEmoteEndPoseHeld = false;
+        if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
+        {
+            player->PlayBodyAnimation("Emote_Win", false, true, 0.2f, true);
+            phase2PlayerEmoteActive = controller->SetPlaybackRange(
+                0.0f, std::clamp(phase2PlayerEmoteEndTime, 0.0f,
+                    controller->GetAnimationLength("Emote_Win")));
+        }
+        phase2TransitionStep = Phase2TransitionStep::PlayerEmote;
+        phase2StepElapsed = 0.0f;
         break;
+    }
+
+    case Phase2TransitionStep::PlayerEmote:
+    {
+        const auto controller = player ? player->GetBodyAnimationController() : nullptr;
+        if (controller)
+            controller->OnUpdate(Time::UnscaledDeltaTime());
+
+        const bool emoteFinished = !controller || !phase2PlayerEmoteActive ||
+            (controller->GetCurrentAnimationName() == "Emote_Win" && !controller->IsPlayAnimation());
+        if (!emoteFinished)
+            break;
+
+        // Do not request Idle here: the playback-range endpoint is the held pose.
+        phase2PlayerEmoteActive = false;
+        phase2PlayerEmoteEndPoseHeld = controller &&
+            controller->GetCurrentAnimationName() == "Emote_Win";
+        phase2TransitionStep = Phase2TransitionStep::PlayerEmotePostWait;
+        phase2StepElapsed = 0.0f;
+        break;
+    }
+
+    case Phase2TransitionStep::PlayerEmotePostWait:
+    {
+        // No controller update or animation request while the Emote_Win endpoint pose is held.
+        const float waitDuration = std::clamp(phase2PlayerEmotePostWaitDuration, 0.0f, 3.0f);
+        phase2StepElapsed = (std::min)(waitDuration,
+            phase2StepElapsed + Time::UnscaledDeltaTime());
+        if (phase2StepElapsed < waitDuration)
+            break;
+
+        // Starting Idle releases SetPlaybackRange only after the hold has completed.
+        if (player)
+            player->PlayBodyAnimation("Idle", true, true, 0.2f, true);
+        phase2PlayerEmoteEndPoseHeld = false;
+        BeginPhase2TpsReturnBlend();
+        break;
+    }
+
     case Phase2TransitionStep::ReturnToTps:
     case Phase2TransitionStep::None:
         break;
     }
 }
-
 void GameScene::UpdatePhase2Transition()
 {
     UpdatePhase2Cinematic();
@@ -3567,9 +3657,47 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Text(U8("Phase1 Break Pending: %s"), phase1BreakPending ? "true" : "false");
     ImGui::Text(U8("Phase2 Transition Requested: %s"), phase2TransitionRequested ? "true" : "false");
     ImGui::Text(U8("Waiting For Rush End: %s"), phase1BreakWaitingForRush ? "true" : "false");
-    static constexpr const char* phase2StepNames[] = { "None", "BossRecall", "PlayerRecall", "ReturnToTps" };
+    static constexpr const char* phase2StepNames[] = { "None", "RecallPreWait", "BossRecall", "PlayerEmotePreWait", "PlayerEmote", "PlayerEmotePostWait", "ReturnToTps" };
     ImGui::Text(U8("Phase2 Transition Step: %s"),
         phase2StepNames[static_cast<size_t>(phase2TransitionStep)]);
+    ImGui::DragFloat(U8("Phase2 Recall\u524DWait"), &phase2RecallPreWaitDuration,
+        0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+    const float recallPreWaitElapsed = phase2TransitionStep == Phase2TransitionStep::RecallPreWait
+        ? phase2StepElapsed : 0.0f;
+    const float recallPreWaitRemaining = (std::max)(0.0f,
+        phase2RecallPreWaitDuration - recallPreWaitElapsed);
+    const auto phase2BossController = gruxEnemyActor
+        ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
+    const auto phase2PlayerController = player ? player->GetBodyAnimationController() : nullptr;
+    ImGui::Text(U8("Recall PreWait\u7D4C\u904E: %.3f"), recallPreWaitElapsed);
+    ImGui::Text(U8("Recall PreWait\u6B8B\u308A: %.3f"), recallPreWaitRemaining);
+    ImGui::Text(U8("Recall Animation Time: %.3f"), phase2BossController &&
+        phase2BossController->GetCurrentAnimationName() == "PrimaryAttack_Recall"
+            ? phase2BossController->GetCurrentAnimationTime() : 0.0f);
+    const float emotePreWaitElapsed = phase2TransitionStep == Phase2TransitionStep::PlayerEmotePreWait
+        ? phase2StepElapsed : 0.0f;
+    const float emotePostWaitElapsed = phase2TransitionStep == Phase2TransitionStep::PlayerEmotePostWait
+        ? phase2StepElapsed : 0.0f;
+    ImGui::DragFloat(U8("Phase2 Emote\u524DWait"), &phase2PlayerEmotePreWaitDuration,
+        0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::Text(U8("Phase2 Emote\u524DWait\u7D4C\u904E: %.3f"), emotePreWaitElapsed);
+    ImGui::Text(U8("Phase2 Emote\u524DWait\u6B8B\u308A: %.3f"), (std::max)(0.0f,
+        phase2PlayerEmotePreWaitDuration - emotePreWaitElapsed));
+    ImGui::Text(U8("Player Emote Active: %s"), phase2PlayerEmoteActive ? "true" : "false");
+    ImGui::Text(U8("Player Emote Time: %.3f"), phase2PlayerController &&
+        phase2PlayerController->GetCurrentAnimationName() == "Emote_Win"
+            ? phase2PlayerController->GetCurrentAnimationTime() : 0.0f);
+    ImGui::DragFloat(U8("Player Emote EndTime"), &phase2PlayerEmoteEndTime,
+        0.001f, 0.001f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat(U8("Phase2 Emote\u5F8CWait"), &phase2PlayerEmotePostWaitDuration,
+        0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::Text(U8("Phase2 Emote\u5F8CWait\u7D4C\u904E: %.3f"), emotePostWaitElapsed);
+    ImGui::Text(U8("Phase2 Emote\u5F8CWait\u6B8B\u308A: %.3f"), (std::max)(0.0f,
+        phase2PlayerEmotePostWaitDuration - emotePostWaitElapsed));
+    ImGui::Text(U8("Emote\u7D42\u7AEFPose\u4FDD\u6301: %s"),
+        phase2PlayerEmoteEndPoseHeld ? "true" : "false");
+    ImGui::Text(U8("Player Sword Trail Active: %s"),
+        player && player->IsSwordTrailActiveForPhaseTransition() ? "true" : "false");
     ImGui::Text(U8("Phase2 Current Shot: %s"), phase2CurrentShot.c_str());
     ImGui::Text(U8("boss_recall Actor Pose Applied: %s"),
         phase2RecallActorPoseApplied ? "true" : "false");

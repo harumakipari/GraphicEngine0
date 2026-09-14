@@ -172,6 +172,12 @@ public:
     // or the current player state.
     void ClearTransientBattleActions();
     void ClearBattleVisualsForPhaseTransition();
+    // Clears the player-owned sword trail history and sampling cache before a cinematic teleport.
+    void ClearSwordTrailForPhaseTransition();
+    bool IsSwordTrailActiveForPhaseTransition() const
+    {
+        return showTrail || !trail.trailPoints.empty();
+    }
 
     // Enters the terminal, animation-playing state used after the boss is defeated.
     void EnterWinState();

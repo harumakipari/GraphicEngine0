@@ -571,7 +571,7 @@ void Player::UpdateWeaponVisualPresentation(const float deltaTime)
 
     if (!hasWeaponVisualState)
     {
-        trail.trailPoints.clear();
+        trail.Clear();
         return;
     }
     if (!swordRootComponent || !swordTipComponent)
@@ -2226,7 +2226,7 @@ void Player::ClearTransientBattleActions()
     hitActors.clear();
     showTrail = false;
     swordEmissivePower = 0.0f;
-    trail.trailPoints.clear();
+    trail.Clear();
     SetRushWeaponVisual(false);
     if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(false);
     if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(false);
@@ -2257,9 +2257,25 @@ void Player::ClearTransientBattleActions()
     velocity = { 0.0f, 0.0f, 0.0f };
 }
 
+void Player::ClearSwordTrailForPhaseTransition()
+{
+    // The trail is CPU-side history. Clear both its active notify result and
+    // cached sword transform so a cinematic teleport cannot bridge old/new poses.
+    showTrail = false;
+    trail.Clear();
+    isPrevSwordWorldValid = false;
+    prevSwordRootPos = { 0.0f, 0.0f, 0.0f };
+    prevSwordMidPos = { 0.0f, 0.0f, 0.0f };
+    prevSwordTipPos = { 0.0f, 0.0f, 0.0f };
+    swordEmissivePower = 0.0f;
+    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
+        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
+}
+
 void Player::ClearBattleVisualsForPhaseTransition()
 {
     ClearTransientBattleActions();
+    ClearSwordTrailForPhaseTransition();
     swordGhostElapsedTime = 0.0f;
     swordGhostIndex = 0;
     if (sparkComponent)

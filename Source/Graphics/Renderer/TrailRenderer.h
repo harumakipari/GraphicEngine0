@@ -23,6 +23,9 @@ public:
 
     void Initialize();
 
+    // Resets both the input history and the derived CPU geometry cache.
+    void Clear();
+
     void UpdateTrail(float deltaTime);
 
     void Render(ID3D11DeviceContext* immediateContext);

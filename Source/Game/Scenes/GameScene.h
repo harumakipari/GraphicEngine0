@@ -124,8 +124,11 @@ private:
     enum class Phase2TransitionStep : uint8_t
     {
         None,
+        RecallPreWait,
         BossRecall,
-        PlayerRecall,
+        PlayerEmotePreWait,
+        PlayerEmote,
+        PlayerEmotePostWait,
         ReturnToTps,
     };
 
@@ -387,7 +390,12 @@ private:
     bool phase2RecallActorPoseApplied = false;
     bool phase2TpsReturnBlendActive = false;
     float phase2StepElapsed = 0.0f;
-    float phase2PlayerRecallDuration = 0.75f;
+    float phase2RecallPreWaitDuration = 1.0f;
+    float phase2PlayerEmotePreWaitDuration = 0.5f;
+    float phase2PlayerEmoteEndTime = 0.515f;
+    float phase2PlayerEmotePostWaitDuration = 0.5f;
+    bool phase2PlayerEmoteActive = false;
+    bool phase2PlayerEmoteEndPoseHeld = false;
     float phase2TpsReturnBlendDuration = 1.0f;
     std::string phase2CurrentShot = "None";
     Transform playerBattleStartTransform{};

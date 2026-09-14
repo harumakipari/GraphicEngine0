@@ -75,6 +75,12 @@ void Trail::Initialize()
 }
 
 
+void Trail::Clear()
+{
+    trailPoints.clear();
+    vertices.clear();
+}
+
 void Trail::UpdateTrail(float deltaTime)
 {
     for (auto& p : trailPoints)
@@ -172,6 +178,9 @@ void Trail::UpdateTrail(float deltaTime)
 
 void Trail::Render(ID3D11DeviceContext* immediateContext)
 {
+    if (vertices.empty())
+        return;
+
     HRESULT hr{ S_OK };
     D3D11_MAPPED_SUBRESOURCE mappedSubresource{};
     hr = immediateContext->Map(vertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedSubresource);

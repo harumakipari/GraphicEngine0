@@ -767,8 +767,8 @@ void GruxEnemy::StopBattleActions()
     currentAttackHitCount = 0;
     showLeftWeaponTrail = false;
     showRightWeaponTrail = false;
-    leftWeaponTrail.trailPoints.clear();
-    rightWeaponTrail.trailPoints.clear();
+    leftWeaponTrail.Clear();
+    rightWeaponTrail.Clear();
     nextRecoveryDuration.reset();
     nextRecoverySource = "Default";
     pendingChargeRecoveryResult = ChargeAttackEndReason::None;
