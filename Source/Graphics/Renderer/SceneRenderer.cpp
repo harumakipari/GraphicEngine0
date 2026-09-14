@@ -394,6 +394,19 @@ void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshCompon
                     immediateContext->PSSetShaderResources(1, static_cast<UINT>(shaderResourceViews.size()), shaderResourceViews.data());
 
 
+                    const bool isGruxDeferred = meshComponent->overrideDeferredPipelineName.has_value() &&
+                        *meshComponent->overrideDeferredPipelineName == "GltfModelDeferredGruxPS";
+                    if (isGruxDeferred)
+                    {
+                        ID3D11ShaderResourceView* phase2BaseColorTexture = shaderResourceViews[0];
+                        if (material.name == "M_Grux_Qilin_Torso")
+                        {
+                            const auto skeletalMesh = dynamic_cast<const SkeletalMeshComponent*>(meshComponent);
+                            if (skeletalMesh && skeletalMesh->GetPhase2BaseColorTextureSRV())
+                                phase2BaseColorTexture = skeletalMesh->GetPhase2BaseColorTextureSRV();
+                        }
+                        immediateContext->PSSetShaderResources(6, 1, &phase2BaseColorTexture);
+                    }
                     if (primitive.indexBufferView.buffer > -1)
                     {
                         // INTERLEAVED_GLTF_MODEL
@@ -1019,7 +1032,6 @@ void SceneRenderer::CastShadowMap(ID3D11DeviceContext* immediateContext, const M
                         shaderResourceViews.at(textureIndex) = textureIndices[textureIndex] > -1 ? model->textureResourceViews.at(model->textures.at(textureIndices[textureIndex]).source).Get() : nullShaderResourceView;
                     }
                     immediateContext->PSSetShaderResources(1, static_cast<UINT>(shaderResourceViews.size()), shaderResourceViews.data());
-
                     if (primitive.indexBufferView.buffer > -1)
                     {
                         immediateContext->IASetIndexBuffer(model->buffers.at(primitive.indexBufferView.buffer).Get(), primitive.indexBufferView.format, 0);

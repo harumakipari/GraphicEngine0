@@ -121,6 +121,9 @@ void GruxEnemy::Initialize(const Transform& transform)
     Character::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
     skeletalMeshComponent->SetModel("./Data/Models/Characters/GruxQilin/boss.gltf", false, true);
+    const bool phase2TorsoLoaded = skeletalMeshComponent->LoadPhase2BaseColorTexture(
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Torso_BaseColor_Phase2.DDS");
+    _ASSERT_EXPR(phase2TorsoLoaded, L"Failed to load Grux Phase2 Torso BaseColor texture.");
     const std::weak_ptr<GruxEnemy> roarPoseOwner = std::static_pointer_cast<GruxEnemy>(shared_from_this());
     skeletalMeshComponent->SetRenderLocalYOffsetProvider("pelvis", [roarPoseOwner]()
         {
@@ -224,7 +227,6 @@ void GruxEnemy::Initialize(const Transform& transform)
         // 初期ステートを設定
         //stateMachine_->ChangeState("EnemyIdleState");
     }
-
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
     // アニメーションコントローラーのオーナーの名前を設定する
@@ -968,6 +970,8 @@ void GruxEnemy::SetPhaseTransformProgress(const float progress)
     phaseTransformProgress = std::clamp(progress, 0.0f, 1.0f);
     enemyScale = std::lerp(phase1BossScale, phase2BossScale, phaseTransformProgress);
     SetScale({ enemyScale, enemyScale, enemyScale });
+    if (skeletalMeshComponent)
+        skeletalMeshComponent->SetPhase2TextureBlendProgress(phaseTransformProgress);
     UpdateAllComponentTransforms();
 }
 

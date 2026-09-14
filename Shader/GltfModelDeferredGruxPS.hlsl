@@ -8,6 +8,14 @@
 #define EMISSIVE_TEXTURE 3
 #define OCCLUSION_TEXTURE 4 
 Texture2D<float4> materialTextures[5] : register(t1);
+Texture2D<float4> phase2BaseColorTexture : register(t6);
+
+cbuffer PHASE2_TEXTURE_BLEND_CONSTANT_BUFFER : register(b6)
+{
+    float phase2TransformProgress;
+    int phase2TextureDebugMode;
+    float2 phase2TextureBlendPadding;
+}
 
 GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 {
@@ -18,12 +26,21 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     const MaterialConstants m = materials[material];
 
     float4 baseColorFactor = m.pbrMetallicRoughness.baseColorFactor;
+    float3 phase2RawRgb = 0.0;
+    float3 phase2LinearAlbedo = 0.0;
+    float3 blendedAlbedoBeforeFlash = baseColorFactor.rgb;
     const int baseColorTexture = m.pbrMetallicRoughness.basecolorTexture.index;
     if (baseColorTexture > -1)
     {
         float4 sampled = materialTextures[BASE_COLOR_TEXTURE].Sample(samplerStates[ANISOTROPIC], pin.texcoord);
         sampled.rgb = pow(sampled.rgb, GAMMA);
+        float4 phase2Sampled = phase2BaseColorTexture.Sample(samplerStates[ANISOTROPIC], pin.texcoord);
+        phase2RawRgb = phase2Sampled.rgb;
+        phase2Sampled.rgb = pow(phase2Sampled.rgb, GAMMA);
+        phase2LinearAlbedo = baseColorFactor.rgb * phase2Sampled.rgb;
+        sampled = lerp(sampled, phase2Sampled, saturate(phase2TransformProgress));
         baseColorFactor *= sampled;
+        blendedAlbedoBeforeFlash = baseColorFactor.rgb;
     }
     if (m.alphaMode == 0 /*OPAQUE*/)
     {
@@ -109,7 +126,23 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     // êFí≤êÆÅEéûä‘í≤êÆ
     finalAlbedo = lerp(finalAlbedo, float3(1.0,0, 0), flash);
 
-    pout.albedo = float4(finalAlbedo, baseColorFactor.a);
+    // Modes 1-3 intentionally bypass deferred lighting and scene post-lighting effects.
+    // Tone mapping remains active, so comparison with Mode 0 isolates the lighting path.
+    if (phase2TextureDebugMode != 0)
+    {
+        float3 debugAlbedo = phase2RawRgb;
+        if (phase2TextureDebugMode == 2)
+            debugAlbedo = phase2LinearAlbedo;
+        else if (phase2TextureDebugMode == 3)
+            debugAlbedo = blendedAlbedoBeforeFlash;
+
+        pout.albedo = float4(debugAlbedo, baseColorFactor.a);
+        pout.gBuffer3Normal.w = OBJECT_NO_LIGHTING;
+    }
+    else
+    {
+        pout.albedo = float4(finalAlbedo, baseColorFactor.a);
+    }
 
     pout.position = pin.wPosition; // world space 
 

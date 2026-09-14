@@ -3857,7 +3857,25 @@ void GameScene::DrawGuiPlusAlpha()
         0.01f, 0.0f, 15.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Phase2 Transform End Time"), &phase2TransformEndTime,
         0.01f, 0.0f, 15.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Text(U8("Phase2 Transform Progress: %.3f"), phase2TransformProgress);
+    if (ImGui::DragFloat(U8("Phase2 Transform Progress"), &phase2TransformProgress,
+        0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp) && gruxEnemyActor)
+    {
+        gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
+    }
+    const char* phase2TextureDebugModeItems[] =
+    {
+        "Normal",
+        "Phase2 Texture Raw",
+        "Phase2 Linear Albedo",
+        "Final Blended Albedo",
+    };
+    if (ImGui::Combo(U8("Phase2 Torso Debug Mode"), &phase2TextureDebugMode,
+        phase2TextureDebugModeItems, IM_ARRAYSIZE(phase2TextureDebugModeItems)) && gruxEnemyActor)
+    {
+        const auto& skeletalMesh = gruxEnemyActor->GetSkeletalMeshComponent();
+        if (skeletalMesh)
+            skeletalMesh->SetPhase2TextureDebugMode(phase2TextureDebugMode);
+    }
     ImGui::Text(U8("Phase2 Transform Started: %s"), phase2TransformStarted ? "true" : "false");
     ImGui::Text(U8("Phase2 Transform Completed: %s"), phase2TransformCompleted ? "true" : "false");
     const float emotePreWaitElapsed = phase2TransitionStep == Phase2TransitionStep::PlayerEmotePreWait

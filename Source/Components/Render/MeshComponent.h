@@ -210,8 +210,37 @@ protected:
 class SkeletalMeshComponent :public MeshComponent
 {
 public:
+    struct Phase2TextureBlendConstants
+    {
+        float progress = 0.0f;
+        int debugMode = 0;
+        DirectX::XMFLOAT2 padding = { 0.0f, 0.0f };
+    };
+
     SkeletalMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :MeshComponent(name, owner)
     {
+        phase2TextureBlendCBuffer = std::make_unique<ConstantBuffer<Phase2TextureBlendConstants>>(Graphics::GetDevice());
+    }
+
+    bool LoadPhase2BaseColorTexture(const std::wstring& filename)
+    {
+        return phase2BaseColorTexture.Load(Graphics::GetDevice(), filename);
+    }
+    void SetPhase2TextureBlendProgress(const float progress)
+    {
+        phase2TextureBlendCBuffer->data.progress = std::clamp(progress, 0.0f, 1.0f);
+    }
+    void SetPhase2TextureDebugMode(const int debugMode)
+    {
+        phase2TextureBlendCBuffer->data.debugMode = std::clamp(debugMode, 0, 3);
+    }
+    ID3D11ShaderResourceView* GetPhase2BaseColorTextureSRV() const
+    {
+        return phase2BaseColorTexture.GetSRV();
+    }
+    void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const override
+    {
+        phase2TextureBlendCBuffer->Activate(immediateContext, 6);
     }
 
     void SetModel(const std::string& filename, bool isSaveVerticesData = false, bool convertToLHS = false)override
@@ -284,6 +313,9 @@ public:
     }
 
 private:
+    Texture phase2BaseColorTexture;
+    std::unique_ptr<ConstantBuffer<Phase2TextureBlendConstants>> phase2TextureBlendCBuffer;
+
     const std::vector<InterleavedGltfModel::Node>& GetRenderPoseNodes() const override;
     std::string renderOffsetNodeName;
     std::function<float()> renderLocalYOffsetProvider;

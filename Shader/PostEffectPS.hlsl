@@ -243,7 +243,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     const float aspect = (float) height / width;
 
-    if (enableCascadedShadowMaps)
+    if (enableCascadedShadowMaps && objectType != OBJECT_NO_LIGHTING)
     {
         color.rgb = ApplyShadow(color.rgb, positionWorldSpace, (positionViewSpace.z), shadowMapDimensions, positionNdc.xyz, sceneNormal, lightDirection.xyz);
         float shadowFactor = velocityTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).w;
@@ -255,7 +255,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     //color.rgb = ApplyShadowMaps(color.rgb, positionWorldSpace);
 
-    if (enableFog)
+    if (enableFog && objectType != OBJECT_NO_LIGHTING)
     {
         float linearDepth = positionViewSpace.z;
 
@@ -282,14 +282,14 @@ float4 main(VS_OUT pin) : SV_TARGET
     }
 
     // ブルーム処理
-    if (enableBloom)
+    if (enableBloom && objectType != OBJECT_NO_LIGHTING)
     {
         float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);
         color.rgb += bloom.rgb;
     }
 
     // SSRの処理
-    if (enableSSR)
+    if (enableSSR && objectType != OBJECT_NO_LIGHTING)
     {
         //float3 reflectColor = reflectionTexture.Sample(samplerStates[LINEAR_CLAMP], pin.texcoord).rgb;
         //return float4(reflectColor.rgb, 1);
@@ -332,7 +332,7 @@ float4 main(VS_OUT pin) : SV_TARGET
             }
         }
         float occlusion = accumulatedOcclusion / weight;
-        if (objectType != OBJECT_PLAYER)
+        if (objectType != OBJECT_PLAYER && objectType != OBJECT_NO_LIGHTING)
         { // プレイヤーはSSAOの影響を受けないようにする
             color *= occlusion;
         }
