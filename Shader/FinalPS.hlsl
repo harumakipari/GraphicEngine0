@@ -12,7 +12,16 @@ Texture2D normalTexture : register(t3);
 Texture2D materialTexture : register(t4);
 Texture2D emissiveTexture : register(t5);
 Texture2D bloomTexture : register(t6);
+Texture2D gBufferAlbedoTexture : register(t7);
+Texture2D deferredLitColorTexture : register(t8);
 
+float3 LinearToSrgb(float3 linearColor)
+{
+    linearColor = max(linearColor, 0.0);
+    const float3 low = linearColor * 12.92;
+    const float3 high = 1.055 * pow(linearColor, 1.0 / 2.4) - 0.055;
+    return lerp(low, high, step(0.0031308, linearColor));
+}
 
 float4 main(VS_OUT pin) : SV_TARGET
 {
@@ -81,6 +90,9 @@ float4 main(VS_OUT pin) : SV_TARGET
         finalColor.rgb = ToneCurve(finalColor.rgb, toneMappingValue);
     }
 
+    float4 toneMappedColor = finalColor;
+
+
     float4 sampled = normalTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
     int objectType = sampled.w;
 
@@ -112,6 +124,27 @@ float4 main(VS_OUT pin) : SV_TARGET
     if (objectType==OBJECT_PLAYER)
     {
         //finalColor.a = 0.1f;
+    }
+
+    // Debug views bypass all later FinalPS composition, then share the single display encode below.
+    // Modes >= 2 are raw linear HDR and may clip on an SDR display.
+    if (finalColorDebugMode == 1)
+    {
+        finalColor = gBufferAlbedoTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
+    }
+    else if (finalColorDebugMode == 2 || finalColorDebugMode >= 4)
+    {
+        finalColor = deferredLitColorTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
+    }
+    else if (finalColorDebugMode == 3)
+    {
+        finalColor = toneMappedColor;
+    }
+
+    // The swap-chain RTV is UNORM, not UNORM_SRGB. Encode exactly once at display output.
+    if (useFinalSrgbEncode != 0)
+    {
+        finalColor.rgb = LinearToSrgb(finalColor.rgb);
     }
 
     return finalColor;

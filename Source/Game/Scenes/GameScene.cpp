@@ -3862,6 +3862,40 @@ void GameScene::DrawGuiPlusAlpha()
     {
         gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
     }
+    if (gruxEnemyActor)
+    {
+        float phase2MaskMinYOffset = gruxEnemyActor->GetPhase2MaskMinYOffset();
+        float phase2MaskMaxYOffset = gruxEnemyActor->GetPhase2MaskMaxYOffset();
+        float phase2MaskSoftness = gruxEnemyActor->GetPhase2MaskSoftness();
+        const bool phase2MaskOffsetChanged =
+            ImGui::DragFloat(U8("Phase2 Mask MinY Offset"), &phase2MaskMinYOffset,
+                0.01f, -2.0f, 5.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp) |
+            ImGui::DragFloat(U8("Phase2 Mask MaxY Offset"), &phase2MaskMaxYOffset,
+                0.01f, -2.0f, 5.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+        if (phase2MaskOffsetChanged)
+            gruxEnemyActor->SetPhase2MaskOffsets(phase2MaskMinYOffset, phase2MaskMaxYOffset);
+        if (ImGui::DragFloat(U8("Phase2 Mask Softness"), &phase2MaskSoftness,
+            0.005f, 0.0f, 0.3f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
+        {
+            gruxEnemyActor->SetPhase2MaskSoftness(phase2MaskSoftness);
+        }
+        ImGui::Text(U8("Phase2 World MinY: %.3f"), gruxEnemyActor->GetPhase2WorldMinY());
+        ImGui::Text(U8("Phase2 World MaxY: %.3f"), gruxEnemyActor->GetPhase2WorldMaxY());
+        ImGui::Text(U8("Current Boss Scale: %.3f  Transform Progress: %.3f"),
+            gruxEnemyActor->GetCurrentPhaseScale(), phase2TransformProgress);
+        if (const auto& skeletalMesh = gruxEnemyActor->GetSkeletalMeshComponent())
+        {
+            ImGui::Text("Gear Phase2 Texture Loaded: %s",
+                skeletalMesh->IsPhase2BaseColorTextureLoaded("M_Grux_Qilin_Gear") ? "true" : "false");
+            ImGui::Text("Torso Phase2 Texture Loaded: %s",
+                skeletalMesh->IsPhase2BaseColorTextureLoaded("M_Grux_Qilin_Torso") ? "true" : "false");
+            ImGui::Text("Head Phase2 Texture Loaded: %s",
+                skeletalMesh->IsPhase2BaseColorTextureLoaded("M_Grux_Qilin_Head") ? "true" : "false");
+            ImGui::Text("LegsHands Phase2 Texture Loaded: %s",
+                skeletalMesh->IsPhase2BaseColorTextureLoaded("M_Grux_Qilin_LegsHands") ? "true" : "false");
+        }
+    }
+
     const char* phase2TextureDebugModeItems[] =
     {
         "Normal",

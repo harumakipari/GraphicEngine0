@@ -69,6 +69,7 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     multipleRenderTargets = std::make_unique<decltype(multipleRenderTargets)::element_type>(device, static_cast<uint32_t>(width), height, 3);
 
     frameBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
+    deferredLightingDebugBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     finalBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     imGuiGizmoBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
 
@@ -345,6 +346,7 @@ bool SceneBase::OnSizeChanged(ID3D11Device* device, const UINT64 width, UINT hei
     depthOfFieldEffect->Initialize(device, static_cast<uint32_t>(width), height);
 
     frameBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
+    deferredLightingDebugBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     finalBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     imGuiGizmoBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
 
@@ -390,7 +392,9 @@ void SceneBase::UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, floa
     shaderCBuffer->data.dofRange = shader.dofRange;
     shaderCBuffer->data.dofBlurStrength = shader.dofBlurStrength;
 
-    shaderCBuffer->data.objectIblIntensity = shader.objectIblIntensity;
+    shaderCBuffer->data.objectIblDiffuseIntensity = shader.objectIblDiffuseIntensity;
+    shaderCBuffer->data.objectIblSpecularIntensity = shader.objectIblSpecularIntensity;
+
     //shaderCBuffer->data.renderStep = shader.renderStep; // これはImGuiで
     shaderCBuffer->data.enableToneMapping = shader.enableToneMapping;
     shaderCBuffer->data.enableSsao = shader.enableSsao;
@@ -412,6 +416,8 @@ void SceneBase::UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, floa
     shaderCBuffer->data.bossRoomLerpFactor = shader.bossRoomLerpFactor;
     shaderCBuffer->data.bossRoomColor = shader.bossRoomColor;
     shaderCBuffer->data.enableEyeBloom = shader.enableEyeBloom;
+    shaderCBuffer->data.useFinalSrgbEncode = shader.useFinalSrgbEncode;
+    shaderCBuffer->data.finalColorDebugMode = shader.finalColorDebugMode;
 
     sceneCBuffer->Activate(immediateContext, 1);
     shaderCBuffer->Activate(immediateContext, 9);
@@ -759,6 +765,15 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         // メインフレームバッファとブルームエフェクトを組み合わせて描画
         fullscreenQuad->Blit(immediateContext, shaderResourceViews, 0, _countof(shaderResourceViews), deferredPs.Get());
 
+        // Modes 2+ show the Deferred Lighting target directly. This copy is made before TAA, fog, SSAO, SSR, bloom, DoF, tone mapping, and final grading.
+        if (Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants.finalColorDebugMode >= 2)
+        {
+            Microsoft::WRL::ComPtr<ID3D11Resource> deferredLitSource;
+            Microsoft::WRL::ComPtr<ID3D11Resource> deferredLitDestination;
+            frameBuffer->shaderResourceViews[0]->GetResource(deferredLitSource.GetAddressOf());
+            deferredLightingDebugBuffer->shaderResourceViews[0]->GetResource(deferredLitDestination.GetAddressOf());
+            immediateContext->CopyResource(deferredLitDestination.Get(), deferredLitSource.Get());
+        }
         // Capture the current boss pose before forward transparency, using lit HDR.
         if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>();
             grux && (gruxHuskCaptureRequested || gruxHuskPreviewCaptureRequested) &&
@@ -995,6 +1010,8 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)],   // msrMap  w: material Type
         gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::EMISSIVE)],   // emissive w: shaderFlag
         sceneEffectManager->GetOutput("BloomEffect"),
+        gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::COLOR)], // GBuffer Albedo
+        deferredLightingDebugBuffer->shaderResourceViews[0].Get(), // copied immediately after Deferred Lighting
     };
     {
         TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Final Composite");
@@ -1429,9 +1446,31 @@ void SceneBase::DrawPostEffectTab()
     ImGui::Combo("Render Step", &shaderCBuffer->data.renderStep, renderStepItems, IM_ARRAYSIZE(renderStepItems));
 
 
-    ImGui::SliderFloat("objectIblIntensity", &shader.objectIblIntensity, 0.0f, +30.0f);
+    ImGui::SliderFloat("Object IBL Diffuse Intensity", &shader.objectIblDiffuseIntensity, 0.0f, 30.0f);
+    ImGui::SliderFloat("Object IBL Specular Intensity", &shader.objectIblSpecularIntensity, 0.0f, 30.0f);
+
     ImGui::Checkbox("Enable TAA", &useTAA);
     CheckboxInt("Enable ToneMapping", &shader.enableToneMapping);
+    CheckboxInt("Use Final SRGB Encode", &shader.useFinalSrgbEncode);
+    const char* finalColorDebugItems[] =
+    {
+        "Normal Final",
+        "GBuffer Albedo",
+        "Full Deferred Lighting",
+        "ToneMapped Linear",
+        "Diffuse Only",
+        "Direct Light Only",
+        "Point Light Only",
+        "IBL Diffuse Only",
+        "Specular Only",
+        "Directional Specular Only",
+        "Point Specular Only",
+        "IBL Specular Only",
+        "Rim Only",
+        "Emissive Only",
+    };
+    ImGui::Combo("Final Color Debug View", &shader.finalColorDebugMode,
+        finalColorDebugItems, IM_ARRAYSIZE(finalColorDebugItems));
     CheckboxInt("Enable SSAO", &shader.enableSsao);
     CheckboxInt("Enable SSR", &shader.enableSsr);
     CheckboxInt("Enable Bloom", &shader.enableBloom);

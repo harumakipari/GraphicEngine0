@@ -213,8 +213,11 @@ public:
     struct Phase2TextureBlendConstants
     {
         float progress = 0.0f;
+        float worldMinY = 0.0f;
+        float worldMaxY = 1.0f;
+        float maskSoftness = 0.05f;
         int debugMode = 0;
-        DirectX::XMFLOAT2 padding = { 0.0f, 0.0f };
+        DirectX::XMFLOAT3 padding = { 0.0f, 0.0f, 0.0f };
     };
 
     SkeletalMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :MeshComponent(name, owner)
@@ -226,6 +229,18 @@ public:
     {
         return phase2BaseColorTexture.Load(Graphics::GetDevice(), filename);
     }
+    bool LoadPhase2BaseColorTexture(const std::string& materialName, const std::wstring& filename)
+    {
+        if (materialName == "M_Grux_Qilin_Torso")
+            return phase2BaseColorTexture.Load(Graphics::GetDevice(), filename);
+        if (materialName == "M_Grux_Qilin_Gear")
+            return phase2GearBaseColorTexture.Load(Graphics::GetDevice(), filename);
+        if (materialName == "M_Grux_Qilin_Head")
+            return phase2HeadBaseColorTexture.Load(Graphics::GetDevice(), filename);
+        if (materialName == "M_Grux_Qilin_LegsHands")
+            return phase2LegsHandsBaseColorTexture.Load(Graphics::GetDevice(), filename);
+        return false;
+    }
     void SetPhase2TextureBlendProgress(const float progress)
     {
         phase2TextureBlendCBuffer->data.progress = std::clamp(progress, 0.0f, 1.0f);
@@ -234,9 +249,30 @@ public:
     {
         phase2TextureBlendCBuffer->data.debugMode = std::clamp(debugMode, 0, 3);
     }
+    void SetPhase2TextureBlendWorldYRange(const float worldMinY, const float worldMaxY,
+        const float maskSoftness)
+    {
+        phase2TextureBlendCBuffer->data.worldMinY = worldMinY;
+        phase2TextureBlendCBuffer->data.worldMaxY = (std::max)(worldMaxY, worldMinY + 0.0001f);
+        phase2TextureBlendCBuffer->data.maskSoftness = std::clamp(maskSoftness, 0.0f, 0.3f);
+    }
+    float GetPhase2TextureBlendWorldMinY() const { return phase2TextureBlendCBuffer->data.worldMinY; }
+    float GetPhase2TextureBlendWorldMaxY() const { return phase2TextureBlendCBuffer->data.worldMaxY; }
     ID3D11ShaderResourceView* GetPhase2BaseColorTextureSRV() const
     {
         return phase2BaseColorTexture.GetSRV();
+    }
+    ID3D11ShaderResourceView* GetPhase2BaseColorTextureSRV(const std::string& materialName) const
+    {
+        if (materialName == "M_Grux_Qilin_Torso") return phase2BaseColorTexture.GetSRV();
+        if (materialName == "M_Grux_Qilin_Gear") return phase2GearBaseColorTexture.GetSRV();
+        if (materialName == "M_Grux_Qilin_Head") return phase2HeadBaseColorTexture.GetSRV();
+        if (materialName == "M_Grux_Qilin_LegsHands") return phase2LegsHandsBaseColorTexture.GetSRV();
+        return nullptr;
+    }
+    bool IsPhase2BaseColorTextureLoaded(const std::string& materialName) const
+    {
+        return GetPhase2BaseColorTextureSRV(materialName) != nullptr;
     }
     void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const override
     {
@@ -314,6 +350,9 @@ public:
 
 private:
     Texture phase2BaseColorTexture;
+    Texture phase2GearBaseColorTexture;
+    Texture phase2HeadBaseColorTexture;
+    Texture phase2LegsHandsBaseColorTexture;
     std::unique_ptr<ConstantBuffer<Phase2TextureBlendConstants>> phase2TextureBlendCBuffer;
 
     const std::vector<InterleavedGltfModel::Node>& GetRenderPoseNodes() const override;

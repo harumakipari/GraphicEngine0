@@ -131,6 +131,7 @@ protected:
     std::unique_ptr<FullScreenQuad> fullscreenQuad;
 
     std::unique_ptr<FrameBuffer> frameBuffer;
+    std::unique_ptr<FrameBuffer> deferredLightingDebugBuffer;
     std::unique_ptr<FrameBuffer> finalBuffer;
     std::unique_ptr<FrameBuffer> imGuiGizmoBuffer;
 

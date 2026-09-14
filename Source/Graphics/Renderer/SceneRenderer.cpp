@@ -399,11 +399,16 @@ void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshCompon
                     if (isGruxDeferred)
                     {
                         ID3D11ShaderResourceView* phase2BaseColorTexture = shaderResourceViews[0];
-                        if (material.name == "M_Grux_Qilin_Torso")
+                        const auto skeletalMesh = dynamic_cast<const SkeletalMeshComponent*>(meshComponent);
+                        if (skeletalMesh)
                         {
-                            const auto skeletalMesh = dynamic_cast<const SkeletalMeshComponent*>(meshComponent);
-                            if (skeletalMesh && skeletalMesh->GetPhase2BaseColorTextureSRV())
-                                phase2BaseColorTexture = skeletalMesh->GetPhase2BaseColorTextureSRV();
+                            // Only the named Grux materials receive an alternate Phase2 texture.
+                            // A missing texture deliberately keeps this material's Phase1 BaseColor SRV.
+                            if (ID3D11ShaderResourceView* phase2Srv =
+                                skeletalMesh->GetPhase2BaseColorTextureSRV(material.name))
+                            {
+                                phase2BaseColorTexture = phase2Srv;
+                            }
                         }
                         immediateContext->PSSetShaderResources(6, 1, &phase2BaseColorTexture);
                     }

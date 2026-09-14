@@ -1,0 +1,27 @@
+{
+    "animationClip": 6,
+    "animationName": "PrimaryAttack_Recall",
+    "events": [
+        {
+            "parameter": "boss_weapon_drop",
+            "time": 1.274725317955017,
+            "type": "PlaySE",
+            "value": 1.0
+        },
+        {
+            "parameter": "boss_weapon_drop",
+            "time": 1.9836740493774414,
+            "type": "PlaySE",
+            "value": 1.0
+        },
+        {
+            "parameter": "boss_recall_voice",
+            "time": 5.274268627166748,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0
+}

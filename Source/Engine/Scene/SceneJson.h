@@ -120,7 +120,9 @@ inline void to_json(nlohmann::json& j, const SceneShaderConstants& s)
         {"dofRange", s.dofRange},
         {"dofBlurStrength", s.dofBlurStrength},
 
-        {"objectIblIntensity", s.objectIblIntensity},
+        {"objectIblDiffuseIntensity", s.objectIblDiffuseIntensity},
+        {"objectIblSpecularIntensity", s.objectIblSpecularIntensity},
+
         {"renderStep", s.renderStep},
         {"enableToneMapping", s.enableToneMapping},
         {"enableSsao", s.enableSsao},
@@ -143,6 +145,8 @@ inline void to_json(nlohmann::json& j, const SceneShaderConstants& s)
 
         {"bossRoomColor", s.bossRoomColor},
         {"enableEyeBloom", s.enableEyeBloom},
+        {"useFinalSrgbEncode", s.useFinalSrgbEncode},
+        {"finalColorDebugMode", s.finalColorDebugMode},
     };
 }
 
@@ -164,7 +168,18 @@ inline void from_json(const nlohmann::json& j, SceneShaderConstants& s)
     if (j.contains("dofRange")) j.at("dofRange").get_to(s.dofRange);
     if (j.contains("dofBlurStrength")) j.at("dofBlurStrength").get_to(s.dofBlurStrength);
 
-    if (j.contains("objectIblIntensity")) j.at("objectIblIntensity").get_to(s.objectIblIntensity);
+    // Legacy presets use one enemy IBL value. Apply it to both new controls,
+    // then let either explicit new value override its corresponding channel.
+    if (j.contains("objectIblIntensity"))
+    {
+        float legacyObjectIblIntensity = s.objectIblDiffuseIntensity;
+        j.at("objectIblIntensity").get_to(legacyObjectIblIntensity);
+        s.objectIblDiffuseIntensity = legacyObjectIblIntensity;
+        s.objectIblSpecularIntensity = legacyObjectIblIntensity;
+    }
+    if (j.contains("objectIblDiffuseIntensity")) j.at("objectIblDiffuseIntensity").get_to(s.objectIblDiffuseIntensity);
+    if (j.contains("objectIblSpecularIntensity")) j.at("objectIblSpecularIntensity").get_to(s.objectIblSpecularIntensity);
+
     if (j.contains("renderStep")) j.at("renderStep").get_to(s.renderStep);
     if (j.contains("enableToneMapping")) j.at("enableToneMapping").get_to(s.enableToneMapping);
     if (j.contains("enableSsao")) j.at("enableSsao").get_to(s.enableSsao);
@@ -187,8 +202,8 @@ inline void from_json(const nlohmann::json& j, SceneShaderConstants& s)
 
     if (j.contains("bossRoomColor")) j.at("bossRoomColor").get_to(s.bossRoomColor);
     if (j.contains("enableEyeBloom")) j.at("enableEyeBloom").get_to(s.enableEyeBloom);
-
-
+    if (j.contains("useFinalSrgbEncode")) j.at("useFinalSrgbEncode").get_to(s.useFinalSrgbEncode);
+    if (j.contains("finalColorDebugMode")) j.at("finalColorDebugMode").get_to(s.finalColorDebugMode);
 }
 
 // CascadeShadow

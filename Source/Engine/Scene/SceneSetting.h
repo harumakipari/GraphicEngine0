@@ -61,7 +61,9 @@ struct SceneShaderConstants
     float dofRange = 80.0f;  // 被写界深度範囲
     float dofBlurStrength = 1.0f;
 
-    float objectIblIntensity = 23.0f; // オブジェクトのIblIntensity (今は骸骨を明るくするために)
+    float objectIblDiffuseIntensity = 23.0f; // Enemy IBL diffuse visibility support
+    float objectIblSpecularIntensity = 23.0f; // Enemy IBL specular reflection strength
+
     int renderStep = 0; // デバック表示用のレンダーステップ
     int enableToneMapping = 1; // トーンマッピング有効化フラグ
     int enableSsao = 1;
@@ -84,6 +86,11 @@ struct SceneShaderConstants
 
     DirectX::XMFLOAT3 bossRoomColor = { 0.0f,0.0f,0.0f };
     int enableEyeBloom = 0;
+
+    // FinalPS encodes the linear scene result for the UNORM swap-chain backbuffer.
+    int useFinalSrgbEncode = 1;
+    int finalColorDebugMode = 0;
+    float finalSrgbEncodePadding[2] = {};
 };
 
 

@@ -263,7 +263,9 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
         shaderCBuffer->data.dofRange = shader.dofRange;
         shaderCBuffer->data.dofBlurStrength = shader.dofBlurStrength;
 
-        shaderCBuffer->data.objectIblIntensity = shader.objectIblIntensity;
+        shaderCBuffer->data.objectIblDiffuseIntensity = shader.objectIblDiffuseIntensity;
+        shaderCBuffer->data.objectIblSpecularIntensity = shader.objectIblSpecularIntensity;
+
         //shaderCBuffer->data.renderStep = shader.renderStep; // ‚±‚ê‚ÍImGui‚Å
         shaderCBuffer->data.enableToneMapping = shader.enableToneMapping;
         shaderCBuffer->data.enableSsao = shader.enableSsao;

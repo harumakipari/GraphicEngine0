@@ -21,51 +21,102 @@ using namespace Microsoft::WRL;
 static map<wstring, ComPtr<ID3D11ShaderResourceView>> resources;
 
 
-// テクスチャをファイルから読み込み、シェーダーリソースビューを作成する関数
- HRESULT LoadTextureFromFile(ID3D11Device* device,
-    const wchar_t* filename, ID3D11ShaderResourceView** shaderResourceView,
+HRESULT LoadTextureFromFile(
+    ID3D11Device* device,
+    const wchar_t* filename,
+    ID3D11ShaderResourceView** shaderResourceView,
     D3D11_TEXTURE2D_DESC* texture2dDesc)
 {
-    HRESULT hr{ S_OK };
-    ComPtr<ID3D11Resource> resource;// DirectXのリソース（テクスチャ）の格納場所
+    HRESULT hr = S_OK;
 
-    // すでにロードされたテクスチャがキャッシュにあるか確認
-    auto it = resources.find(filename);// resourcesというキャッシュの中でfilenameに対応するテクスチャを探す
-    if (it != resources.end())// 見つかった場合
+    ComPtr<ID3D11Resource> resource;
+
+    auto it = resources.find(filename);
+
+    if (it != resources.end())
     {
-        *shaderResourceView = it->second.Get();// 既存のリソースビューを取得
-        (*shaderResourceView)->AddRef();// 参照カウントを1増やしてリソースを保護
-        (*shaderResourceView)->GetResource(resource.GetAddressOf());// リソース自体を取得
+        *shaderResourceView = it->second.Get();
+        (*shaderResourceView)->AddRef();
+
+        (*shaderResourceView)->GetResource(
+            resource.GetAddressOf());
     }
-    else  // 見つからない場合、新しく読み込む
+    else
     {
-        //DDSファイルをロードしてシェーダーリソースビュー
         std::filesystem::path ddsFilename(filename);
         ddsFilename.replace_extension("dds");
-        if (std::filesystem::exists(ddsFilename.c_str()))
+
+        if (std::filesystem::exists(ddsFilename))
         {
-            hr = CreateDDSTextureFromFile(device, ddsFilename.c_str(), resource.GetAddressOf(), shaderResourceView);
-            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+            OutputDebugStringW(L"[Texture] DDS : ");
+            OutputDebugStringW(ddsFilename.c_str());
+            OutputDebugStringW(L"\n");
+
+            hr = CreateDDSTextureFromFile(
+                device,
+                ddsFilename.c_str(),
+                resource.GetAddressOf(),
+                shaderResourceView);
         }
         else
         {
-            hr = CreateWICTextureFromFile(device, filename, resource.GetAddressOf(), shaderResourceView);
-            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+            OutputDebugStringW(L"[Texture] WIC : ");
+            OutputDebugStringW(filename);
+            OutputDebugStringW(L"\n");
+
+            hr = CreateWICTextureFromFile(
+                device,
+                filename,
+                resource.GetAddressOf(),
+                shaderResourceView);
         }
-        resources.insert(make_pair(filename, *shaderResourceView));
+
+        if (FAILED(hr))
+        {
+            _ASSERT_EXPR(false, hr_trace(hr));
+            return hr;
+        }
+
+        resources.insert(
+            make_pair(filename, *shaderResourceView));
     }
 
     if (texture2dDesc)
     {
-        // 読み込んだテクスチャをID3D11Texture2D（2Dテクスチャの形式）に変換
-        ComPtr<ID3D11Texture2D> texture2d;// 2Dテクスチャ用のポインタ
-        hr = resource.Get()->QueryInterface<ID3D11Texture2D>(texture2d.GetAddressOf()); // 変換
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        // 変換したテクスチャの情報（解像度、フォーマットなど）を取得
+        if (!resource)
+            return E_FAIL;
+
+        D3D11_RESOURCE_DIMENSION dimension;
+        resource->GetType(&dimension);
+
+        if (dimension != D3D11_RESOURCE_DIMENSION_TEXTURE2D)
+        {
+            char buffer[128];
+
+            sprintf_s(
+                buffer,
+                "[Texture] Not Texture2D. dimension = %d\n",
+                static_cast<int>(dimension));
+
+            OutputDebugStringA(buffer);
+
+            return E_NOINTERFACE;
+        }
+
+        ComPtr<ID3D11Texture2D> texture2d;
+
+        hr = resource.As(&texture2d);
+
+        if (FAILED(hr))
+        {
+            _ASSERT_EXPR(false, hr_trace(hr));
+            return hr;
+        }
+
         texture2d->GetDesc(texture2dDesc);
     }
 
-    return hr;
+    return S_OK;
 }
 
 //ダミーテクスチャの作成

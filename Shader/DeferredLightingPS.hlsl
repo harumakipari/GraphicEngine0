@@ -168,8 +168,8 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     if (objectType == OBJECT_ENEMY)
     { // “G‚ÌŽž‚Í–¾‚é‚­‚·‚é
-        iblDiffuse = IblRadianceLambertian(N, V, roughnessFactor, cDiff, f0) * objectIblIntensity;
-        iblSpecular = IblRadianceGgx(N, V, roughnessFactor, f0) * objectIblIntensity;
+        iblDiffuse = IblRadianceLambertian(N, V, roughnessFactor, cDiff, f0) * objectIblDiffuseIntensity;
+        iblSpecular = IblRadianceGgx(N, V, roughnessFactor, f0) * objectIblSpecularIntensity;
     }
 
     if (objectType == OBJECT_DOOR)
@@ -178,12 +178,21 @@ float4 main(VS_OUT pin) : SV_TARGET
     }
 #endif
 
-    float3 totalDiffuse = diffuse + (pointDiffuse * pointLightDiffuseIntensity) + iblDiffuse;
-    float3 totalSpecular = specular + (pointSpecular * pointLightSpecularIntensity) + iblSpecular;
+    // Keep each HDR contribution separate for the Deferred Lighting debug views.
+    // These are the exact terms used by the normal composite below.
+    const float3 directionalDiffuse = diffuse * occlusionFactor * diffuseIntensity;
 
 
-    totalDiffuse = totalDiffuse * occlusionFactor * diffuseIntensity;
-    totalSpecular = totalSpecular * occlusionFactor * specularIntensity;
+
+
+    const float3 directionalSpecular = specular * occlusionFactor * specularIntensity;
+    const float3 pointLightDiffuse = pointDiffuse * pointLightDiffuseIntensity * occlusionFactor * diffuseIntensity;
+    const float3 pointLightSpecular = pointSpecular * pointLightSpecularIntensity * occlusionFactor * specularIntensity;
+    const float3 iblDiffuseContribution = iblDiffuse * occlusionFactor * diffuseIntensity;
+    const float3 iblSpecularContribution = iblSpecular * occlusionFactor * specularIntensity;
+
+    float3 totalDiffuse = directionalDiffuse + pointLightDiffuse + iblDiffuseContribution;
+    float3 totalSpecular = directionalSpecular + pointLightSpecular + iblSpecularContribution;
 
 
 
@@ -207,10 +216,23 @@ float4 main(VS_OUT pin) : SV_TARGET
 #endif
     float3 ambient = baseColor.rgb * 0.05;
 
-    float3 lo = totalDiffuse + totalSpecular + (emissive) + rim /*+ ambient*/;
+    const float3 directLight = directionalDiffuse + directionalSpecular;
+    const float3 pointLight = pointLightDiffuse + pointLightSpecular;
+    const float3 fullDeferredLighting = totalDiffuse + totalSpecular + emissive + rim /*+ ambient*/;
 
+    // Deferred Lighting component debug views. FinalPS bypasses all post effects
+    // for modes >= 2, so these values remain linear HDR (and intentionally may
+    // clip on an SDR display when a channel exceeds 1.0).
+    if (finalColorDebugMode == 4) return float4(totalDiffuse, 1.0f);                 // Diffuse Only
+    if (finalColorDebugMode == 5) return float4(directLight, 1.0f);                  // Direct Light Only
+    if (finalColorDebugMode == 6) return float4(pointLight, 1.0f);                   // Point Light Only
+    if (finalColorDebugMode == 7) return float4(iblDiffuseContribution, 1.0f);      // IBL Diffuse Only
+    if (finalColorDebugMode == 8) return float4(totalSpecular, 1.0f);                // Specular Only
+    if (finalColorDebugMode == 9) return float4(rim, 1.0f);                          // Rim Only
+    if (finalColorDebugMode == 10) return float4(emissive, 1.0f);                    // Emissive Only
+    if (finalColorDebugMode == 11) return float4(directionalSpecular, 1.0f);         // Directional Specular Only
+    if (finalColorDebugMode == 12) return float4(pointLightSpecular, 1.0f);          // Point Specular Only
+    if (finalColorDebugMode == 13) return float4(iblSpecularContribution, 1.0f);     // IBL Specular Only
 
-
-
-    return float4(lo, 1.0f);
+    return float4(fullDeferredLighting, 1.0f);
 }

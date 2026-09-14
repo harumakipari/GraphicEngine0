@@ -1646,7 +1646,7 @@
         "enableToneMapping": 1,
         "focusDistance": 4.599999904632568,
         "hueShift": -0.02800000086426735,
-        "objectIblIntensity": 23.0,
+        "objectIblIntensity": 1.0,
         "renderStep": 0,
         "saturation": 0.03999999910593033,
         "shadowColor": 0.800000011920929,

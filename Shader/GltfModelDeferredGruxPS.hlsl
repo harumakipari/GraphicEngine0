@@ -13,8 +13,11 @@ Texture2D<float4> phase2BaseColorTexture : register(t6);
 cbuffer PHASE2_TEXTURE_BLEND_CONSTANT_BUFFER : register(b6)
 {
     float phase2TransformProgress;
+    float phase2WorldMinY;
+    float phase2WorldMaxY;
+    float phase2MaskSoftness;
     int phase2TextureDebugMode;
-    float2 phase2TextureBlendPadding;
+    float3 phase2TextureBlendPadding;
 }
 
 GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
@@ -27,6 +30,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 
     float4 baseColorFactor = m.pbrMetallicRoughness.baseColorFactor;
     float3 phase2RawRgb = 0.0;
+    float3 phase2LinearRgb = 0.0;
     float3 phase2LinearAlbedo = 0.0;
     float3 blendedAlbedoBeforeFlash = baseColorFactor.rgb;
     const int baseColorTexture = m.pbrMetallicRoughness.basecolorTexture.index;
@@ -37,8 +41,19 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         float4 phase2Sampled = phase2BaseColorTexture.Sample(samplerStates[ANISOTROPIC], pin.texcoord);
         phase2RawRgb = phase2Sampled.rgb;
         phase2Sampled.rgb = pow(phase2Sampled.rgb, GAMMA);
+        phase2LinearRgb = phase2Sampled.rgb;
         phase2LinearAlbedo = baseColorFactor.rgb * phase2Sampled.rgb;
-        sampled = lerp(sampled, phase2Sampled, saturate(phase2TransformProgress));
+        const float normalizedHeight = saturate(
+            (pin.wPosition.y - phase2WorldMinY) /
+            max(phase2WorldMaxY - phase2WorldMinY, 0.0001f));
+        const float softness = max(phase2MaskSoftness, 0.00001f);
+        // Move a soft boundary upward. Extending it past both ends guarantees
+        // Progress 0 = Phase1 and Progress 1 = Phase2 across the whole torso.
+        const float boundary = lerp(-softness, 1.0f + softness,
+            saturate(phase2TransformProgress));
+        const float phase2Weight = 1.0f - smoothstep(
+            boundary - softness, boundary + softness, normalizedHeight);
+        sampled = lerp(sampled, phase2Sampled, phase2Weight);
         baseColorFactor *= sampled;
         blendedAlbedoBeforeFlash = baseColorFactor.rgb;
     }
@@ -130,7 +145,8 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     // Tone mapping remains active, so comparison with Mode 0 isolates the lighting path.
     if (phase2TextureDebugMode != 0)
     {
-        float3 debugAlbedo = phase2RawRgb;
+        // Mode 1 is decoded here so the FinalPS display encode reproduces the raw sRGB texture.
+        float3 debugAlbedo = phase2LinearRgb;
         if (phase2TextureDebugMode == 2)
             debugAlbedo = phase2LinearAlbedo;
         else if (phase2TextureDebugMode == 3)

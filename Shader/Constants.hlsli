@@ -27,7 +27,9 @@ cbuffer SHADER_CONSTANT_BUFFER : register(b9)
     float dofRange; // 被写界深度範囲
     float dofBlurStrength;
 
-    float objectIblIntensity; //オブジェクトごとのiblIntensity
+    float objectIblDiffuseIntensity; // Enemy IBL diffuse multiplier
+    float objectIblSpecularIntensity; // Enemy IBL specular multiplier
+
     int renderStep;
     int enableToneMapping;
     int enableSSAO;
@@ -50,6 +52,10 @@ cbuffer SHADER_CONSTANT_BUFFER : register(b9)
 
     float3 bossRoomColor;
     int enableEyeBloom;
+
+    int useFinalSrgbEncode;
+    int finalColorDebugMode;
+    float2 finalSrgbEncodePadding;
 
 }
 cbuffer CSM_CONSTANTS : register(b3)

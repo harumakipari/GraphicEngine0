@@ -84,9 +84,16 @@ public:
     // GameScene supplies only shared cinematic progress; Grux owns scale tuning and application.
     void SetPhaseTransformProgress(float progress);
     void SetPhaseScaleRange(float phase1Scale, float phase2Scale);
+    void SetPhase2MaskOffsets(float minYOffset, float maxYOffset);
+    void SetPhase2MaskSoftness(float softness);
     float GetPhase1BossScale() const { return phase1BossScale; }
     float GetPhase2BossScale() const { return phase2BossScale; }
     float GetCurrentPhaseScale() const { return enemyScale; }
+    float GetPhase2MaskMinYOffset() const { return phase2MaskMinYOffset; }
+    float GetPhase2MaskMaxYOffset() const { return phase2MaskMaxYOffset; }
+    float GetPhase2MaskSoftness() const { return phase2MaskSoftness; }
+    float GetPhase2WorldMinY() const { return phase2WorldMinY; }
+    float GetPhase2WorldMaxY() const { return phase2WorldMaxY; }
     int GetMaxHp() const { return maxHp; }
     void AdvanceDelayedHpBarForPhaseTransition();
     bool IsDelayedHpSettled() const;
@@ -1369,9 +1376,16 @@ struct WeaponHitBoxPoints
     const AnimationNotifyState* editorPreviewRightHitBoxState = nullptr;
     float editorPreviewLeftHitBoxTime = -1.0f;
     float editorPreviewRightHitBoxTime = -1.0f;
+    void UpdatePhase2TextureBlendWorldYRange();
     float phase1BossScale = 1.7f;
     float phase2BossScale = 2.1f;
     float phaseTransformProgress = 0.0f;
+    // Model-space offsets are scaled every frame from the current boss scale.
+    float phase2MaskMinYOffset = 0.0f;
+    float phase2MaskMaxYOffset = 2.6f;
+    float phase2MaskSoftness = 0.05f;
+    float phase2WorldMinY = 0.0f;
+    float phase2WorldMaxY = 1.0f;
     float enemyScale = 1.7f;    // ?G?~X?P?[??
     float hitEnemyEffectOffsetY = 2.2f;  // ?q?b?g?G?t?F?N?g?~I?t?Z?b?gY
     float hitPlayerEffectOffsetY = 2.4f;  // ?q?b?g?G?t?F?N?g?~I?t?Z?b?gY

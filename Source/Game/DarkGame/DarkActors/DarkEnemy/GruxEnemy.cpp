@@ -121,9 +121,24 @@ void GruxEnemy::Initialize(const Transform& transform)
     Character::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
     skeletalMeshComponent->SetModel("./Data/Models/Characters/GruxQilin/boss.gltf", false, true);
-    const bool phase2TorsoLoaded = skeletalMeshComponent->LoadPhase2BaseColorTexture(
+    const auto loadPhase2BaseColor = [this](const char* materialName, const std::wstring& filename)
+    {
+        const bool loaded = skeletalMeshComponent->LoadPhase2BaseColorTexture(materialName, filename);
+        if (!loaded)
+        {
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[Phase2Texture] Missing " + std::string(materialName) +
+                " Phase2 BaseColor; using the material Phase1 BaseColor fallback.");
+        }
+    };
+    loadPhase2BaseColor("M_Grux_Qilin_Torso",
         L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Torso_BaseColor_Phase2.DDS");
-    _ASSERT_EXPR(phase2TorsoLoaded, L"Failed to load Grux Phase2 Torso BaseColor texture.");
+    loadPhase2BaseColor("M_Grux_Qilin_Gear",
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Gear_BaseColor_Phase2.png");
+    loadPhase2BaseColor("M_Grux_Qilin_Head",
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Head_BaseColor_Phase2.DDS");
+    loadPhase2BaseColor("M_Grux_Qilin_LegsHands",
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_LegsHands_BaseColor_Phase2.DDS");
     const std::weak_ptr<GruxEnemy> roarPoseOwner = std::static_pointer_cast<GruxEnemy>(shared_from_this());
     skeletalMeshComponent->SetRenderLocalYOffsetProvider("pelvis", [roarPoseOwner]()
         {
@@ -143,7 +158,7 @@ void GruxEnemy::Initialize(const Transform& transform)
         }
         else if (material.name == "M_Grux_Qilin_Gear")
         {// ˜r—Ö
-            material.materialType = MaterialType::Metallic;
+            //material.materialType = MaterialType::Metallic;
         }
         else if (material.name == "M_Grux_Qilin_Hore")
         {// ‚Â‚Ì
@@ -970,9 +985,36 @@ void GruxEnemy::SetPhaseTransformProgress(const float progress)
     phaseTransformProgress = std::clamp(progress, 0.0f, 1.0f);
     enemyScale = std::lerp(phase1BossScale, phase2BossScale, phaseTransformProgress);
     SetScale({ enemyScale, enemyScale, enemyScale });
+    UpdatePhase2TextureBlendWorldYRange();
     if (skeletalMeshComponent)
         skeletalMeshComponent->SetPhase2TextureBlendProgress(phaseTransformProgress);
     UpdateAllComponentTransforms();
+}
+
+void GruxEnemy::SetPhase2MaskOffsets(const float minYOffset, const float maxYOffset)
+{
+    phase2MaskMinYOffset = std::clamp(minYOffset, -2.0f, 5.0f);
+    phase2MaskMaxYOffset = (std::max)(std::clamp(maxYOffset, -2.0f, 5.0f),
+        phase2MaskMinYOffset + 0.0001f);
+    UpdatePhase2TextureBlendWorldYRange();
+}
+
+void GruxEnemy::SetPhase2MaskSoftness(const float softness)
+{
+    phase2MaskSoftness = std::clamp(softness, 0.0f, 0.3f);
+    UpdatePhase2TextureBlendWorldYRange();
+}
+
+void GruxEnemy::UpdatePhase2TextureBlendWorldYRange()
+{
+    const float currentBossScale = (std::max)(GetScale().y, 0.0001f);
+    const float bossWorldY = GetPosition().y;
+    phase2WorldMinY = bossWorldY + phase2MaskMinYOffset * currentBossScale;
+    phase2WorldMaxY = bossWorldY + phase2MaskMaxYOffset * currentBossScale;
+    phase2WorldMaxY = (std::max)(phase2WorldMaxY, phase2WorldMinY + 0.0001f);
+    if (skeletalMeshComponent)
+        skeletalMeshComponent->SetPhase2TextureBlendWorldYRange(
+            phase2WorldMinY, phase2WorldMaxY, phase2MaskSoftness);
 }
 
 void GruxEnemy::SetBattleHp(const int currentHp, const int maximumHp)
@@ -1054,6 +1096,7 @@ void GruxEnemy::EndFinalHitReaction()
 
 void GruxEnemy::Update(float deltaTime)
 {
+    UpdatePhase2TextureBlendWorldYRange();
     ++animationDebugFrameCounter;
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
     if (gameScene && gameScene->IsPhase1BreakPending())
