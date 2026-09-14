@@ -41,6 +41,14 @@ class GameScene : public SceneBase
         float bossDistance = 2.5f;
     };
 public:
+    // Boss health remains phase-local for future phase-specific UI.
+    enum class BossPhase : uint8_t
+    {
+        Phase1,
+        TransitionToPhase2,
+        Phase2,
+    };
+
     enum class DeathPresentationCue : uint8_t
     {
         GameplayHudFade,
@@ -104,7 +112,23 @@ public:
 
     // Read-only labels consumed by Grux animation-request diagnostics.
     const char* GetBattleFlowStateDebugName() const;
-    const char* GetBossDeathPhaseDebugName() const;private:
+    const char* GetBossDeathPhaseDebugName() const;
+    BossPhase GetBossPhase() const { return bossPhase; }
+    const char* GetBossPhaseDebugName() const;
+    int GetBossCurrentHp() const;
+    int GetBossMaxHp() const;
+    bool IsBossPhaseTransitionActive() const { return bossPhase == BossPhase::TransitionToPhase2; }
+    bool IsPhase1BreakPending() const { return phase1BreakPending; }
+    bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
+private:
+    enum class Phase2TransitionStep : uint8_t
+    {
+        None,
+        BossRecall,
+        PlayerRecall,
+        ReturnToTps,
+    };
+
     enum class BossDeathPhase : uint8_t
     {
         FadeOut,
@@ -137,6 +161,13 @@ public:
         DirectX::XMFLOAT4 rotation{ 0.0f, 0.0f, 0.0f, 1.0f };
     };
 
+    struct Phase2CinematicShot
+    {
+        CinematicCameraComponent::CameraPose camera{};
+        CinematicActorPose player{};
+        CinematicActorPose boss{};
+    };
+
     struct BossDeathDofState
     {
         float focusDistance = 0.0f;
@@ -156,6 +187,19 @@ public:
     };
 
     void UpdateBattleFlow();
+    void BeginPhase2Transition();
+    void UpdatePhase2Transition();
+    void ResetBossPhaseRuntime(BossPhase phase);
+    void ApplyBossPhaseHp(BossPhase phase);
+    void CaptureContinueBossCheckpoint();
+    void BeginPhase1BreakPending();
+    void UpdatePhase1BreakPending();
+    bool LoadPhase2CinematicShots();
+    void BeginPhase2Cinematic();
+    void UpdatePhase2Cinematic();
+    void ApplyPhase2RecallActorPose();
+    void CutToPhase2Shot(size_t shotIndex);
+    void BeginPhase2TpsReturnBlend();
     void SetBattleHudVisible(bool visible);
     void DisableCinematicCameraDebugInput();
     void EnterPlayerDead();
@@ -324,6 +368,28 @@ public:
     std::string finalHitDirection = "None";
     std::string finalHitReaction;
     BattleFlowState battleFlowState = BattleFlowState::Intro;
+    BossPhase bossPhase = BossPhase::Phase1;
+    // Transition is not checkpointable; Continue uses only stable combat phases.
+    BossPhase continueCheckpointPhase = BossPhase::Phase1;
+    int continueCheckpointBossHp = 30;
+    int continueCheckpointBossMaxHp = 30;
+    // Tuning values apply at battle reset and at the Phase1 -> Phase2 handoff.
+    int phase1MaxHp = 30;
+    int phase2MaxHp = 50;
+    float phase2TransitionElapsed = 0.0f;
+    float phase2TransitionWaitDuration = 3.0f;  // phase2Ç…çsÇ≠transition
+    bool phase1BreakPending = false;
+    bool phase2TransitionRequested = false;
+    bool phase1BreakWaitingForRush = false;
+    Phase2TransitionStep phase2TransitionStep = Phase2TransitionStep::None;
+    std::array<Phase2CinematicShot, 2> phase2CinematicShots{};
+    bool phase2CinematicShotsLoaded = false;
+    bool phase2RecallActorPoseApplied = false;
+    bool phase2TpsReturnBlendActive = false;
+    float phase2StepElapsed = 0.0f;
+    float phase2PlayerRecallDuration = 0.75f;
+    float phase2TpsReturnBlendDuration = 1.0f;
+    std::string phase2CurrentShot = "None";
     Transform playerBattleStartTransform{};
     Transform bossBattleStartTransform{};
     bool battleStartTransformsSaved = false;

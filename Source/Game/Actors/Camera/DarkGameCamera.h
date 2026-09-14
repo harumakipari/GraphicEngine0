@@ -174,6 +174,7 @@ public:
 
     // 外部のカメラアクターとのブレンド用の関数
     void StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration,std::function<void()> finishExternalBlend);
+    void CancelExternalBlend();
 
     // ムービーカメラコンポーネントからカメラポーズを作成する
     CameraPose CreatePoseFromMovie(const std::shared_ptr<MovieCameraComponent>& movieCamera);

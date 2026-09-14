@@ -59,15 +59,23 @@ public:
 
     // Suspends battle decisions while allowing the Actor and its animations to update.
     void PauseBattleAI();
+    // Aborts runtime without requesting Idle; a future transition animation owns the controller.
+    void PauseBattleAIForPhaseTransition();
     void SetDirectionImmediate(const DirectX::XMFLOAT3& direction);
     void ResumeBattleAI();
     bool IsBattleAIActive() const { return battleAIActive; }
+    bool IsPhaseTransitionCombatStopped() const { return phaseTransitionCombatStopped; }
 
     // Clears Grux-owned transient combat state while preserving HP.
     void ResetForBattleContinue(const Transform& battleStartTransform);
     void ResetBehaviorTreeForBattleRestart();
     void ResetCombatRuntimeForBattleRestart();
     void ResetForBattleRestart(const Transform& battleStartTransform);
+    void SetBattleHp(int currentHp, int maximumHp);
+    int GetMaxHp() const { return maxHp; }
+    void AdvanceDelayedHpBarForPhaseTransition();
+    bool IsDelayedHpSettled() const;
+    void ClearDamageVisualsForPhaseTransition();
 
     void BeginRushHpDisplay();
     void EndRushHpDisplay();
@@ -690,6 +698,7 @@ private:
     uint64_t currentAttackSequenceId = 0;
     int currentAttackHitCount = 0;
 
+    bool phaseTransitionCombatStopped = false;
     bool battleAIActive = true; // ?{?X?o?g??AI??g?p??????????@false???idle?^??
     //BossAIMode bossAIMode = BossAIMode::CombatAI;         // ?{?X??AI???[?h
     BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;   // ?{?X??AI???[?h?@?f?o?b?N?p

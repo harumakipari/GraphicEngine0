@@ -2177,6 +2177,14 @@ void Player::StopBattleActions()
     ClearTransientBattleActions();
 }
 
+void Player::ResumeBattleActionsAfterEvent()
+{
+    battleActionsSuspended = false;
+    ResetTimeScale();
+    if (stateMachine_)
+        stateMachine_->ChangeState("Idle");
+}
+
 void Player::BeginFinalHitWait()
 {
     finalHitWaiting = true;
@@ -2249,6 +2257,20 @@ void Player::ClearTransientBattleActions()
     velocity = { 0.0f, 0.0f, 0.0f };
 }
 
+void Player::ClearBattleVisualsForPhaseTransition()
+{
+    ClearTransientBattleActions();
+    swordGhostElapsedTime = 0.0f;
+    swordGhostIndex = 0;
+    if (sparkComponent)
+        sparkComponent->Stop();
+    damageFlashTimer = 0.0f;
+    hitStopTimer = 0.0f;
+    ApplyDamageFlash(0.0f);
+    // ClearTransientBattleActions also clears sword trails, Rush/JustDodge
+    // ghosts, motion warps, weapon visuals, hit boxes, and player-owned targets.
+    // Stop only the ParticleComponent owned by this Player; movie effects stay intact.
+}
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
     finalHitWaiting = false;

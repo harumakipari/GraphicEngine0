@@ -77,7 +77,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        //maxHp = 10;
+        maxHp = 10;
         hp = maxHp;
     }
 
@@ -161,10 +161,17 @@ public:
 
     // Stops residual attacks when the battle has ended without restoring HP.
     void StopBattleActions();
+    // Releases the temporary phase-transition action lock without resetting HP or position.
+    void ResumeBattleActionsAfterEvent();
+    bool IsRushActiveForPhaseTransition() const
+    {
+        return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush";
+    }
 
     // Clears temporary combat visuals/actions without changing HP, transform,
     // or the current player state.
     void ClearTransientBattleActions();
+    void ClearBattleVisualsForPhaseTransition();
 
     // Enters the terminal, animation-playing state used after the boss is defeated.
     void EnterWinState();

@@ -649,6 +649,13 @@ void DarkCameraActor::StartExternalBlend(const CameraPose& start, const CameraPo
 }
 
 // ムービーカメラコンポーネントからカメラポーズを作成する
+void DarkCameraActor::CancelExternalBlend()
+{
+    isExternalBlending = false;
+    externalBlendTime = 0.0f;
+    externalBlendDuration = 0.0f;
+    finishedExternalBlend = nullptr;
+}
 DarkCameraActor::CameraPose DarkCameraActor::CreatePoseFromMovie(const std::shared_ptr<MovieCameraComponent>& movieCamera)
 {
     using namespace DirectX;

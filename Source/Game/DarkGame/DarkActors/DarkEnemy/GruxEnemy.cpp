@@ -601,8 +601,22 @@ void GruxEnemy::PauseBattleAI()
         stateMachine_->ChangeState("EnemyIdleState");
 }
 
+void GruxEnemy::PauseBattleAIForPhaseTransition()
+{
+    phaseTransitionCombatStopped = true;
+    battleAIActive = false;
+    ResetFourthHitReactionDebug();
+    StopBattleActions();
+    ResetBehaviorTreeRuntime();
+    behaviorTreeCurrentNode = "None";
+    behaviorTreePreviousNode = "None";
+    behaviorTreeLastResult = "None";
+    // Do not request EnemyIdleState here: future transition animation owns this pose.
+}
+
 void GruxEnemy::ResumeBattleAI()
 {
+    phaseTransitionCombatStopped = false;
     battleAIActive = true;
 }
 
@@ -912,6 +926,51 @@ void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
     UpdateAllComponentTransforms();
 }
 
+void GruxEnemy::SetBattleHp(const int currentHp, const int maximumHp)
+{
+    maxHp = (std::max)(maximumHp, 1);
+    hp = std::clamp(currentHp, 0, maxHp);
+    delayedHp = static_cast<float>(hp);
+    delayedHpDelayTimer = 0.0f;
+    rushHpDisplayActive = false;
+    useRushDelayedHpFollowSpeed = false;
+    if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+    if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+}
+
+void GruxEnemy::AdvanceDelayedHpBarForPhaseTransition()
+{
+    const float currentHp = static_cast<float>((std::max)(hp, 0));
+    const float uiDeltaTime = Time::UnscaledDeltaTime();
+    if (!rushHpDisplayActive && delayedHp > currentHp)
+    {
+        if (delayedHpDelayTimer > 0.0f)
+            delayedHpDelayTimer = (std::max)(0.0f, delayedHpDelayTimer - uiDeltaTime);
+        else
+        {
+            const float followSpeed = useRushDelayedHpFollowSpeed
+                ? delayedHpRushFollowSpeed : delayedHpFollowSpeed;
+            delayedHp = (std::max)(currentHp, delayedHp - followSpeed * uiDeltaTime);
+            if (delayedHp <= currentHp)
+                useRushDelayedHpFollowSpeed = false;
+        }
+    }
+    if (hpCurrentFillUiComponent)
+        hpCurrentFillUiComponent->SetValue(currentHp, static_cast<float>(maxHp));
+    if (hpDelayedFillUiComponent)
+        hpDelayedFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+}
+
+bool GruxEnemy::IsDelayedHpSettled() const
+{
+    return !rushHpDisplayActive && delayedHp <= 0.001f;
+}
+
+void GruxEnemy::ClearDamageVisualsForPhaseTransition()
+{
+    if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
+        skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+}
 void GruxEnemy::BeginFinalHitReaction(const std::string& animationName)
 {
     // Release only the Rush HP hold; keep the player's final attack state intact.
@@ -940,11 +999,28 @@ void GruxEnemy::EndFinalHitReaction()
 void GruxEnemy::Update(float deltaTime)
 {
     ++animationDebugFrameCounter;
+    const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+    if (gameScene && gameScene->IsPhase1BreakPending())
+    {
+        AdvanceDelayedHpBarForPhaseTransition();
+        if (const auto controller = GetBodyAnimationController())
+            controller->OnUpdate(deltaTime);
+        return;
+    }
+    if (phaseTransitionCombatStopped ||
+        (gameScene && gameScene->IsBossPhaseTransitionActive()))
+    {
+        // Freeze the interrupted combat animation rather than requesting Idle.
+        // This prevents its remaining notifies/root motion from restarting combat.
+        return;
+    }
     TickRoarLifecycle(deltaTime);
     // Resolve boss death before advancing any active BT action.
     if (hp <= 0)
         EndFourthHitReaction();
-    if (hp <= 0 && !isDeathPerform)
+    const bool phaseTransitionOwnsDefeat = gameScene && gameScene->IsBossPhaseTransitionActive();
+    if (hp <= 0 && !isDeathPerform && !phaseTransitionOwnsDefeat &&
+        !(gameScene && gameScene->IsPhase1BreakPending()))
     {
         isDeathPerform = true;
         AbortBehaviorTreeForDeath();
@@ -3514,6 +3590,13 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
 
     const int hpBeforeDamage = hp;
     hp -= damage;
+    if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+        gameScene && gameScene->GetBossPhase() == GameScene::BossPhase::Phase1)
+    {
+        hp = (std::max)(hp, 0);
+        if (hpCurrentFillUiComponent)
+            hpCurrentFillUiComponent->SetValue(static_cast<float>(hp), static_cast<float>(maxHp));
+    }
     if (hp > 0 && hitVoiceCooldownTimer <= 0.0f)
     {
         static constexpr std::array<const char*, 4> hitVoicePaths =
@@ -3824,6 +3907,8 @@ void GruxEnemy::SpawnGroundDownEffect()const
 
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {
+    if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+        gameScene && (gameScene->IsPhase1BreakPending() || gameScene->IsBossPhaseTransitionActive())) return;
     if (finalHitReactionActive || fourthHitReactionActive) return;
     switch (state.type)
     {
@@ -3932,6 +4017,8 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 
 void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 {
+    if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+        gameScene && (gameScene->IsPhase1BreakPending() || gameScene->IsBossPhaseTransitionActive())) return;
     if (finalHitReactionActive || fourthHitReactionActive) return;
     switch (state.type)
     {
