@@ -77,7 +77,7 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        maxHp = 10;
+        //maxHp = 10;
         hp = maxHp;
     }
 
@@ -172,12 +172,15 @@ public:
     // or the current player state.
     void ClearTransientBattleActions();
     void ClearBattleVisualsForPhaseTransition();
+    // Leaves the player in a deterministic, non-locomotion state before a cinematic.
+    void NeutralizeForPhase2Cinematic();
     // Clears the player-owned sword trail history and sampling cache before a cinematic teleport.
     void ClearSwordTrailForPhaseTransition();
     bool IsSwordTrailActiveForPhaseTransition() const
     {
         return showTrail || !trail.trailPoints.empty();
     }
+    bool IsLockOnGuideVisible() const { return lockOnGuideVisible; }
 
     // Enters the terminal, animation-playing state used after the boss is defeated.
     void EnterWinState();

@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include <random>
+#include <cstring>
 
 #include "GruxEnemy.h"
 
@@ -603,6 +604,7 @@ void GruxEnemy::PauseBattleAI()
 
 void GruxEnemy::PauseBattleAIForPhaseTransition()
 {
+    phase2CinematicAnimationOwnedExternally = true;
     phaseTransitionCombatStopped = true;
     battleAIActive = false;
     ResetFourthHitReactionDebug();
@@ -616,6 +618,7 @@ void GruxEnemy::PauseBattleAIForPhaseTransition()
 
 void GruxEnemy::ResumeBattleAI()
 {
+    phase2CinematicAnimationOwnedExternally = false;
     phaseTransitionCombatStopped = false;
     battleAIActive = true;
 }
@@ -686,10 +689,36 @@ void GruxEnemy::BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePositio
     PlayBodyAnimation(fourthHitReactionAnimation, false, true, 0.1f, true);
 }
 
+void GruxEnemy::ForcePhase2CinematicIdleImmediate(const char* debugSource)
+{
+    previousAnimationRequestDebug = lastAnimationRequestDebug;
+    if (const auto controller = GetBodyAnimationController())
+    {
+        previousAnimationRequestDebug = controller->GetCurrentAnimationName();
+        lastAnimationRequestDebug = "TravelMode_Idle_0";
+        animationRequestSourceDebug = debugSource ? debugSource : "GameScene::Phase2ImmediateIdle";
+        animationRequestFrameDebug = animationDebugFrameCounter;
+        if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
+        {
+            animationRequestBattleFlowDebug = gameScene->GetBattleFlowStateDebugName();
+            animationRequestBossDeathPhaseDebug = gameScene->GetBossDeathPhaseDebugName();
+        }
+        else
+        {
+            animationRequestBattleFlowDebug = "NonGameScene";
+            animationRequestBossDeathPhaseDebug = "None";
+        }
+        controller->PlayAnimationImmediate("TravelMode_Idle_0", true, true);
+    }
+}
 void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,
     const bool blend, const float blendTime, const bool ignoreRootMotion,
     const char* debugSource) const
 {
+    const bool phase2GameSceneRequest = debugSource &&
+        std::strncmp(debugSource, "GameScene::Phase2", sizeof("GameScene::Phase2") - 1) == 0;
+    if (phase2CinematicAnimationOwnedExternally && !phase2GameSceneRequest)
+        return;
     previousAnimationRequestDebug = lastAnimationRequestDebug;
     if (const auto controller = GetBodyAnimationController())
         previousAnimationRequestDebug = controller->GetCurrentAnimationName();
@@ -901,6 +930,7 @@ void GruxEnemy::ResetForBattleRestart(const Transform& battleStartTransform)
 
 void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
 {
+    phase2CinematicAnimationOwnedExternally = false;
     EndFinalHitReaction();
     finalHitReactionHeld = false;
     ResetTimeScale();
@@ -923,6 +953,21 @@ void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
     SetPosition(battleStartTransform.GetLocation());
     SetQuaternionRotation(battleStartTransform.GetRotation());
     SetScale(battleStartTransform.GetScale());
+    UpdateAllComponentTransforms();
+}
+
+void GruxEnemy::SetPhaseScaleRange(const float phase1Scale, const float phase2Scale)
+{
+    phase1BossScale = std::clamp(phase1Scale, 0.01f, 10.0f);
+    phase2BossScale = std::clamp(phase2Scale, 0.01f, 10.0f);
+    SetPhaseTransformProgress(phaseTransformProgress);
+}
+
+void GruxEnemy::SetPhaseTransformProgress(const float progress)
+{
+    phaseTransformProgress = std::clamp(progress, 0.0f, 1.0f);
+    enemyScale = std::lerp(phase1BossScale, phase2BossScale, phaseTransformProgress);
+    SetScale({ enemyScale, enemyScale, enemyScale });
     UpdateAllComponentTransforms();
 }
 
@@ -970,6 +1015,13 @@ void GruxEnemy::ClearDamageVisualsForPhaseTransition()
 {
     if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
         skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+}
+void GruxEnemy::HideLockOnVisualsForPhaseTransition()
+{
+    if (lockOnTargetMeshComponent)
+        lockOnTargetMeshComponent->SetIsVisible(false);
+    if (lockOnTargetImageComponent)
+        lockOnTargetImageComponent->SetVisible(false);
 }
 void GruxEnemy::BeginFinalHitReaction(const std::string& animationName)
 {
@@ -2929,7 +2981,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
     ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
-    ImGui::DragFloat(U8("enemyScale"), &enemyScale, 0.1f);
+    ImGui::Text(U8("Current Phase Scale: %.3f"), enemyScale);
     ImGui::DragFloat(U8("hitEnemyEffectOffsetY"), &hitEnemyEffectOffsetY, 0.1f);
     ImGui::DragFloat(U8("hitPlayerEffectOffsetY"), &hitPlayerEffectOffsetY, 0.1f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);

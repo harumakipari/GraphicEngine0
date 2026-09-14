@@ -65,6 +65,15 @@ public:
     void ResumeBattleAI();
     bool IsBattleAIActive() const { return battleAIActive; }
     bool IsPhaseTransitionCombatStopped() const { return phaseTransitionCombatStopped; }
+    void SetPhase2CinematicAnimationOwnedExternally(bool owned)
+    {
+        phase2CinematicAnimationOwnedExternally = owned;
+    }
+    bool IsPhase2CinematicAnimationOwnedExternally() const
+    {
+        return phase2CinematicAnimationOwnedExternally;
+    }
+    void ForcePhase2CinematicIdleImmediate(const char* debugSource);
 
     // Clears Grux-owned transient combat state while preserving HP.
     void ResetForBattleContinue(const Transform& battleStartTransform);
@@ -72,10 +81,17 @@ public:
     void ResetCombatRuntimeForBattleRestart();
     void ResetForBattleRestart(const Transform& battleStartTransform);
     void SetBattleHp(int currentHp, int maximumHp);
+    // GameScene supplies only shared cinematic progress; Grux owns scale tuning and application.
+    void SetPhaseTransformProgress(float progress);
+    void SetPhaseScaleRange(float phase1Scale, float phase2Scale);
+    float GetPhase1BossScale() const { return phase1BossScale; }
+    float GetPhase2BossScale() const { return phase2BossScale; }
+    float GetCurrentPhaseScale() const { return enemyScale; }
     int GetMaxHp() const { return maxHp; }
     void AdvanceDelayedHpBarForPhaseTransition();
     bool IsDelayedHpSettled() const;
     void ClearDamageVisualsForPhaseTransition();
+    void HideLockOnVisualsForPhaseTransition();
 
     void BeginRushHpDisplay();
     void EndRushHpDisplay();
@@ -1282,6 +1298,7 @@ private:
     float stunElapsedDebug = 0.0f;
     std::string deathAnimationName = "Death_A_0";
     bool cinematicDeathAnimationOwnedExternally = false;
+    bool phase2CinematicAnimationOwnedExternally = false;
 
     // Recovery???J???????x?????????l???Duration?B
     float chargePlayerHitRecoveryDuration = 0.8f;   // ??Dash?U????Player?????????????recovery????
@@ -1352,6 +1369,9 @@ struct WeaponHitBoxPoints
     const AnimationNotifyState* editorPreviewRightHitBoxState = nullptr;
     float editorPreviewLeftHitBoxTime = -1.0f;
     float editorPreviewRightHitBoxTime = -1.0f;
+    float phase1BossScale = 1.7f;
+    float phase2BossScale = 2.1f;
+    float phaseTransformProgress = 0.0f;
     float enemyScale = 1.7f;    // ?G?~X?P?[??
     float hitEnemyEffectOffsetY = 2.2f;  // ?q?b?g?G?t?F?N?g?~I?t?Z?b?gY
     float hitPlayerEffectOffsetY = 2.4f;  // ?q?b?g?G?t?F?N?g?~I?t?Z?b?gY

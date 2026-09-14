@@ -263,7 +263,7 @@ void Player::Initialize(const Transform& transform)
         // 敵からの攻撃を受ける当たり判定用のコンポーネントを追加
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
         DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
-        height = size.y + 0.5f;
+        height = size.y + 1.5f;
         radius = size.x * 0.5f;
         capsuleComponent->SetRadiusAndHeight(radius, height);
         capsuleComponent->SetMass(mass);
@@ -2286,6 +2286,34 @@ void Player::ClearBattleVisualsForPhaseTransition()
     // ClearTransientBattleActions also clears sword trails, Rush/JustDodge
     // ghosts, motion warps, weapon visuals, hit boxes, and player-owned targets.
     // Stop only the ParticleComponent owned by this Player; movie effects stay intact.
+}
+void Player::NeutralizeForPhase2Cinematic()
+{
+    ClearBattleVisualsForPhaseTransition();
+    if (inputComponent)
+        inputComponent->ClearIntent();
+
+    // StopBattleActions clears movement, but make the cinematic contract explicit.
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->MoveToActor(std::shared_ptr<Actor>{}, 0.0f, 0.0f);
+    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    characterMovementComponent->ResetFixedSpeed();
+    velocity = { 0.0f, 0.0f, 0.0f };
+
+    currentAttackAnimation = startAttackAnimation;
+    rushTarget.reset();
+    locomotionMode = LocomotionMode::Idle;
+    HideAndResetLockOnGuideUI();
+    if (stateMachine_)
+        stateMachine_->ChangeState("Idle");
+    if (const auto controller = GetBodyAnimationController())
+    {
+        controller->ReleaseHeldAnimationPose();
+        controller->SetUseBlendSpace(false);
+        controller->PlayAnimationImmediate("Idle", true, true);
+    }
 }
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {

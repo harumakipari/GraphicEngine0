@@ -30,6 +30,7 @@ public:
     InputComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :Component(name, owner) {}
 
     const MoveIntent& GetIntent() const { return intent_; }
+    void ClearIntent() { intent_ = {}; }
 
     void Tick(float) override;
 

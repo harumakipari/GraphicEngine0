@@ -124,6 +124,8 @@ private:
     enum class Phase2TransitionStep : uint8_t
     {
         None,
+        RecallFadeOut,
+        RecallFadeIn,
         RecallPreWait,
         BossRecall,
         PlayerEmotePreWait,
@@ -199,6 +201,7 @@ private:
     void UpdatePhase1BreakPending();
     bool LoadPhase2CinematicShots();
     void BeginPhase2Cinematic();
+    void SetupPhase2RecallCinematic();
     void UpdatePhase2Cinematic();
     void ApplyPhase2RecallActorPose();
     void CutToPhase2Shot(size_t shotIndex);
@@ -390,7 +393,15 @@ private:
     bool phase2RecallActorPoseApplied = false;
     bool phase2TpsReturnBlendActive = false;
     float phase2StepElapsed = 0.0f;
+    float phase2RecallFadeOutDuration = 1.5f;
+    float phase2RecallFadeInDuration = 1.0f;
+    float phase2RecallFadeAlpha = 0.0f;
     float phase2RecallPreWaitDuration = 1.0f;
+    float phase2TransformStartTime = 5.3f;
+    float phase2TransformEndTime = 8.0f;
+    float phase2TransformProgress = 0.0f;
+    bool phase2TransformStarted = false;
+    bool phase2TransformCompleted = false;
     float phase2PlayerEmotePreWaitDuration = 0.5f;
     float phase2PlayerEmoteEndTime = 0.515f;
     float phase2PlayerEmotePostWaitDuration = 0.5f;
