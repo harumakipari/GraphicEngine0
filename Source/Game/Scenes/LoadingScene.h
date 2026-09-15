@@ -61,6 +61,37 @@ private:
 
     Microsoft::WRL::ComPtr<ID3D11PixelShader> loadingPs;
 
+    // LoadingPS-only parameters. Keep this animation tuning out of shared scene constants.
+    struct LoadingParticleConstants
+    {
+        float spawnOutsideDistance = 0.65f;
+        float bezierCurveAmount = 1.15f;
+        float startDelayRange = 0.30f;
+        float gatherStart = 0.45f;
+        float gatherDuration = 2.05f;
+        float gatherEase = 1.85f;
+        float finalClusterRadius = 0.055f;
+        float fadeOutAlpha = 1.0f;
+    };
+    std::unique_ptr<ConstantBuffer<LoadingParticleConstants>> loadingParticleCBuffer;
+    bool loadingSoundPlayed = false;
+
+    enum class FadeOutState
+    {
+        Waiting,
+        Holding,
+        FadingOut,
+        BlackFrame,
+        Transition,
+    };
+    FadeOutState fadeOutState = FadeOutState::Waiting;
+    float fadeOutStateElapsed = 0.0f;
+    float fadeOutAlpha = 1.0f;
+    float fadeOutProgress = 0.0f;
+    float fadeOutHoldDuration = 0.75f;
+    float fadeOutDuration = 0.60f;
+    bool blackFrameRendered = false;
+
     // UI design-space position and independent scale; equal X/Y preserves the aspect ratio.
     DirectX::XMFLOAT2 logoPosition = { 960.0f, 540.0f };
     DirectX::XMFLOAT2 logoScale = { 0.4f, 0.96f };

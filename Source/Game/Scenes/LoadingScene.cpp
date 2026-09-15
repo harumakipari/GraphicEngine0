@@ -19,6 +19,7 @@
 #include "Engine/Input/InputSystem.h"
 #include "Core/ActorManager.h"
 #include "Graphics/PostProcess/BloomEffect.h"
+#include "Engine/Audio/Audio.h"
 
 
 namespace
@@ -138,6 +139,8 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
     }
 
 
+    loadingParticleCBuffer = std::make_unique<ConstantBuffer<LoadingParticleConstants>>(device);
+
     HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/LoadingPS.cso", loadingPs.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
@@ -161,6 +164,19 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
 void LoadingScene::Start()
 {
     SetUpActors();
+
+    fadeOutState = FadeOutState::Waiting;
+    fadeOutStateElapsed = 0.0f;
+    fadeOutAlpha = 1.0f;
+    fadeOutProgress = 0.0f;
+    blackFrameRendered = false;
+    loadingParticleCBuffer->data.fadeOutAlpha = fadeOutAlpha;
+
+    if (!loadingSoundPlayed)
+    {
+        CoreAudio::PlayOneShot("./Data/Sound/SE/loading.wav",5.0f);
+        loadingSoundPlayed = true;
+    }
 
     // ロード画面に出すタイトルテクスチャ
     imageUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/title_logo1.png", "title");
@@ -198,28 +214,62 @@ void LoadingScene::Update(float deltaTime)
 {
     SceneBase::Update(deltaTime);
 
-    const float fade = std::clamp((sceneCBuffer->data.elapsedTime - LogoFadeStart)
+    loadingTime -= deltaTime;
+
+    switch (fadeOutState)
+    {
+    case FadeOutState::Waiting:
+        // Keep the existing minimum display time and wait for async preload completion.
+        if (_has_finished_preloading() /*&& loadingTime <= 0.0f*/)
+        {
+            fadeOutState = FadeOutState::Holding;
+            fadeOutStateElapsed = 0.0f;
+        }
+        break;
+    case FadeOutState::Holding:
+        fadeOutStateElapsed += deltaTime;
+        if (fadeOutStateElapsed >= fadeOutHoldDuration)
+        {
+            fadeOutState = FadeOutState::FadingOut;
+            fadeOutStateElapsed = 0.0f;
+        }
+        break;
+    case FadeOutState::FadingOut:
+    {
+        fadeOutStateElapsed += deltaTime;
+        fadeOutProgress = std::clamp(fadeOutStateElapsed / (std::max)(fadeOutDuration, 0.001f), 0.0f, 1.0f);
+        const float smoothProgress = fadeOutProgress * fadeOutProgress * (3.0f - 2.0f * fadeOutProgress);
+        fadeOutAlpha = 1.0f - smoothProgress;
+        if (fadeOutProgress >= 1.0f)
+        {
+            fadeOutAlpha = 0.0f;
+            fadeOutState = FadeOutState::BlackFrame;
+            blackFrameRendered = false;
+        }
+        break;
+    }
+    case FadeOutState::BlackFrame:
+        // Render has submitted an opaque black LoadingPS frame before transition.
+        if (blackFrameRendered)
+        {
+            fadeOutState = FadeOutState::Transition;
+            _transition(preload_scene, {});
+        }
+        break;
+    case FadeOutState::Transition:
+        break;
+    }
+
+    loadingParticleCBuffer->data.fadeOutAlpha = fadeOutAlpha;
+
+    const float logoFade = std::clamp((sceneCBuffer->data.elapsedTime - LogoFadeStart)
         / (LogoFadeEnd - LogoFadeStart), 0.0f, 1.0f);
-    const float logoAlpha = fade * fade * (3.0f - 2.0f * fade);
+    const float logoFadeInAlpha = logoFade * logoFade * (3.0f - 2.0f * logoFade);
+    const float logoAlpha = logoFadeInAlpha * fadeOutAlpha;
     imageUiComponent->SetColor(DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, logoAlpha });
     imageUiComponent->SetWorldPosition(logoPosition);
     imageUiComponent->SetScale(logoScale);
-
-
-    loadingTime -= deltaTime;
-
-
-    if (_has_finished_preloading() && loadingTime <= 0.0f)
-    {
-        _transition(preload_scene, {});
-    }
-
-
-
 }
-
-
-
 bool LoadingScene::Uninitialize(ID3D11Device* device)
 {
     SceneBase::Uninitialize(device);
@@ -444,7 +494,14 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
     {
         nullptr
     };
+    loadingParticleCBuffer->Activate(immediateContext, 12);
     fullscreenQuad->Blit(immediateContext, shaderResourceViews, 0, 1, loadingPs.Get());
+
+    if (fadeOutState == FadeOutState::BlackFrame)
+    {
+        // This LoadingScene render is the required fully black Present before transition.
+        blackFrameRendered = true;
+    }
 
     // SceneBase::Draw binds ALPHA / ZT_OFF_ZW_OFF / SOLID_CULL_NONE before UI drawing.
     Draw(immediateContext);
@@ -474,6 +531,7 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
     {
         nullptr
     };
+    loadingParticleCBuffer->Activate(immediateContext, 12);
     fullscreenQuad->Blit(immediateContext, shaderResourceViews, 0, 1, loadingPs.Get());
 
 #ifdef USE_IMGUI
@@ -488,6 +546,30 @@ void LoadingScene::DrawGuiPlusAlpha()
 {
 #ifdef USE_IMGUI
     ImGui::Begin(U8("調整"));
+    ImGui::TextUnformatted("Particle Inflow");
+    ImGui::DragFloat("Spawn Outside Distance", &loadingParticleCBuffer->data.spawnOutsideDistance, 0.01f, 0.0f, 3.0f, "%.3f");
+    ImGui::DragFloat("Bezier Curve Amount", &loadingParticleCBuffer->data.bezierCurveAmount, 0.01f, 0.0f, 3.0f, "%.3f");
+    ImGui::DragFloat("Start Delay Range", &loadingParticleCBuffer->data.startDelayRange, 0.005f, 0.0f, 1.0f, "%.3f");
+    ImGui::DragFloat("Gather Start", &loadingParticleCBuffer->data.gatherStart, 0.01f, 0.0f, 5.0f, "%.3f");
+    ImGui::DragFloat("Gather Duration", &loadingParticleCBuffer->data.gatherDuration, 0.01f, 0.05f, 6.0f, "%.3f");
+    ImGui::DragFloat("Gather Ease", &loadingParticleCBuffer->data.gatherEase, 0.01f, 0.1f, 5.0f, "%.3f");
+    ImGui::DragFloat("Final Cluster Radius", &loadingParticleCBuffer->data.finalClusterRadius, 0.002f, 0.0f, 0.5f, "%.3f");
+    ImGui::Separator();
+    ImGui::TextUnformatted("Fade Out");
+    ImGui::DragFloat("Fade Out Hold Duration", &fadeOutHoldDuration, 0.01f, 0.0f, 5.0f, "%.3f");
+    ImGui::DragFloat("Fade Out Duration", &fadeOutDuration, 0.01f, 0.01f, 5.0f, "%.3f");
+    const char* fadeStateName = "Waiting";
+    switch (fadeOutState)
+    {
+    case FadeOutState::Waiting:    fadeStateName = "Waiting"; break;
+    case FadeOutState::Holding:    fadeStateName = "Holding"; break;
+    case FadeOutState::FadingOut:  fadeStateName = "FadingOut"; break;
+    case FadeOutState::BlackFrame: fadeStateName = "BlackFrame"; break;
+    case FadeOutState::Transition: fadeStateName = "Transition"; break;
+    }
+    ImGui::Text("Fade State: %s", fadeStateName);
+    ImGui::Text("Fade Out Progress: %.3f", fadeOutProgress);
+    ImGui::Separator();
     ImGui::TextUnformatted("Logo Layout (UI coordinates, center pivot)");
     bool layoutChanged = false;
     layoutChanged |= ImGui::DragFloat("Logo Position X", &logoPosition.x, 1.0f, 0.0f, 0.0f, "%.1f");
