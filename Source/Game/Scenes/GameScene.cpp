@@ -303,6 +303,7 @@ void GameScene::CaptureContinueBossCheckpoint()
 }
 void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
 {
+    if (auto* manager = GetCameraManager()) manager->ClearCameraShake();
     bossPhase = phase;
     phase2TransitionElapsed = 0.0f;
     phase1BreakPending = false;
@@ -2178,6 +2179,7 @@ void GameScene::EnterBossDead()
 
 void GameScene::ResetBossDeathDebugPreview()
 {
+    if (auto* manager = GetCameraManager()) manager->ClearCameraShake();
     RestartBossBattle();
 }
 

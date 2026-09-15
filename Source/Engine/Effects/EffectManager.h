@@ -102,7 +102,39 @@ struct FloatCurve
 
     float Evaluate(float t) const
     {
+#if defined(_DEBUG)
+        struct DebugSnapshot
+        {
+            const void* thisAddress;
+            const void* pointsAddress;
+            const void* dataAddress;
+            size_t size;
+            size_t capacity;
+            float t;
+            unsigned long threadId;
+        };
+        volatile DebugSnapshot debugEntry{
+            this, &points, points.data(), points.size(), points.capacity(), t, ::GetCurrentThreadId() };
+#endif
         if (points.empty()) return 1.0f;
+#if defined(_DEBUG)
+        volatile DebugSnapshot debugAfterEmpty{
+            this, &points, points.data(), points.size(), points.capacity(), t, ::GetCurrentThreadId() };
+#endif
+        if (points.size() == 0)
+        {
+            ::DebugBreak();
+            return 1.0f;
+        }
+#if defined(_DEBUG)
+        volatile DebugSnapshot debugBeforeFront{
+            this, &points, points.data(), points.size(), points.capacity(), t, ::GetCurrentThreadId() };
+        if (points.empty())
+        {
+            ::DebugBreak();
+            return 1.0f;
+        }
+#endif
         if (t <= points.front().time) return points.front().value;
         if (t >= points.back().time) return points.back().value;
 
@@ -127,6 +159,11 @@ struct FloatCurve
 
 // エフェクトハンドル
 typedef int EffectHandle;
+
+using EffectRuntimeId = std::uint64_t;
+using EmitterRuntimeId = std::uint64_t;
+inline constexpr EffectRuntimeId InvalidEffectRuntimeId = 0;
+inline constexpr EmitterRuntimeId InvalidEmitterRuntimeId = 0;
 
 
 using EffectPlaybackId = std::uint64_t;
@@ -338,6 +375,7 @@ public:
     // エミッタデータ構造体
     struct ParticleEmitterData
     {
+        EmitterRuntimeId runtimeId = InvalidEmitterRuntimeId;
         std::string name;				// エミッタ名
 
         EmitterEmitData emitData;		// エミット設定
@@ -348,6 +386,7 @@ public:
     // エフェクトデータ構造体
     struct EffectData
     {
+        EffectRuntimeId runtimeId = InvalidEffectRuntimeId;
         std::string name; // エフェクト名
         std::vector<ParticleEmitterData> emitters; // エミッタデータリスト
     private:
@@ -359,8 +398,8 @@ public:
     struct ActiveEmitter
     {
         std::shared_ptr<EffectPlaybackState> playback;
-        EffectHandle handle;
-        const ParticleEmitterData* data;
+        EffectRuntimeId effectRuntimeId = InvalidEffectRuntimeId;
+        EmitterRuntimeId emitterRuntimeId = InvalidEmitterRuntimeId;
 
         float emitAccumulator = 0.0f;
 
@@ -397,11 +436,23 @@ private:
     static void StartEmitters(EffectHandle handle, const XMFLOAT3& position,
         const XMFLOAT3& rotation, const std::shared_ptr<EffectPlaybackState>& playback);
 
+    static EffectRuntimeId AllocateEffectRuntimeId();
+    static EmitterRuntimeId AllocateEmitterRuntimeId();
+    static EffectData* FindEffectDataByRuntimeId(EffectRuntimeId runtimeId);
+    static const ParticleEmitterData* FindEmitterDataByRuntimeId(
+        EffectRuntimeId effectRuntimeId, EmitterRuntimeId emitterRuntimeId);
+    static EffectHandle FindEffectHandleByRuntimeId(EffectRuntimeId runtimeId);
+    static void RemoveActiveEmittersForEffect(EffectRuntimeId runtimeId);
+    static void RemoveActiveEmittersForEmitter(
+        EffectRuntimeId effectRuntimeId, EmitterRuntimeId emitterRuntimeId);
+
     // The mutex protects only requests and ID lookup, never GPU work.
     static inline std::mutex playbackMutex;
     static inline EffectPlaybackId nextPlaybackId = 1;
     static inline std::vector<PendingPlayback> pendingPlaybacks;
     static inline std::unordered_map<EffectPlaybackId, std::weak_ptr<EffectPlaybackState>> playbacks;
+    static inline EffectRuntimeId nextEffectRuntimeId = 1;
+    static inline EmitterRuntimeId nextEmitterRuntimeId = 1;
 private:
     friend class EffectEditor;
     //エディタが開いているか

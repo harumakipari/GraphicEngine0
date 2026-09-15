@@ -1674,9 +1674,8 @@ void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
         if (event.parameter.empty())
             return;
 
-        Camera* activeCamera = GetOwnerScene()->GetActiveCamera();
-        if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
-            darkCamera->PlayCameraShakePreset(event.parameter);
+        if (auto* cameraManager = GetOwnerScene()->GetCameraManager())
+            cameraManager->PlayCameraShakePreset(event.parameter);
         break;
     }
     case AnimationNotifyEvent::Type::SpawnEffect:
@@ -4321,9 +4320,8 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
         break;
     case AnimationNotifyEvent::Type::CameraShake:
     {
-        Camera* activeCamera = GetOwnerScene()->GetActiveCamera();
-        if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
-            darkCamera->PlayCameraShakePreset(event.parameter);
+        if (auto* cameraManager = GetOwnerScene()->GetCameraManager())
+            cameraManager->PlayCameraShakePreset(event.parameter);
         break;
     }
     }

@@ -442,7 +442,7 @@ public:
 
     // Rush combat tuning values. Kept together for future runtime tuning.
     int normalAttackDamage = 2;
-    float rushDamageMultiplier = 1.5f;
+    float rushDamageMultiplier = 1.f;
     float finalRushDamageMultiplier = 2.5f;
     int maxRushAttackCount = 7;
 

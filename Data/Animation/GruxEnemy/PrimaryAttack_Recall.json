@@ -16,7 +16,7 @@
             "type": "ControllerRumble"
         },
         {
-            "parameter": "BossWallImpact",
+            "parameter": "BossWeaponDrop",
             "time": 1.1941392421722412,
             "type": "CameraShake",
             "value": 0.0
@@ -34,14 +34,8 @@
             "value": 1.0
         },
         {
-            "parameter": "",
+            "parameter": "BossWeaponDrop",
             "time": 1.912087082862854,
-            "type": "CameraShake",
-            "value": 0.0
-        },
-        {
-            "parameter": "DropRightWeapon",
-            "time": 1.9120875597000122,
             "type": "CameraShake",
             "value": 0.0
         },
@@ -51,6 +45,12 @@
             "rightMotorStrength": 0.0,
             "time": 1.9120879173278809,
             "type": "ControllerRumble"
+        },
+        {
+            "parameter": "DropRightWeapon",
+            "time": 1.912087321281433,
+            "type": "SpawnEffect",
+            "value": 0.0
         },
         {
             "parameter": "boss_recall_voice",

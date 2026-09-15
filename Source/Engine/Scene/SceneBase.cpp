@@ -314,6 +314,7 @@ void SceneBase::Update(float deltaTime)
             UpdateHuskCompletionTracking(huskDeltaTime);
         }
     }
+    if (cameraManager) cameraManager->Update(deltaTime);
 }
 
 
@@ -434,7 +435,7 @@ void SceneBase::Render(ID3D11DeviceContext* immediateContext, float deltaTime)
     ViewConstants data = {};
     if (auto camera = cameraManager->GetRenderCamera(this))
     {
-        data = camera->GetViewConstants();
+        data = cameraManager->GetRenderViewConstants(this);
         sceneRender.UpdateViewConstants(immediateContext, data);
     }
     else
@@ -470,7 +471,7 @@ void SceneBase::ForwardRender(ID3D11DeviceContext* immediateContext)
     if (!camera)
         return;
 
-    ViewConstants data = camera->GetViewConstants();
+    ViewConstants data = cameraManager->GetRenderViewConstants(this);
 
     // スカイマップを描画
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF);
@@ -534,7 +535,7 @@ void SceneBase::ForwardRender(ID3D11DeviceContext* immediateContext)
 
     if (camera)
     {
-        ViewConstants data = camera->GetViewConstants();
+        ViewConstants data = cameraManager->GetRenderViewConstants(this);
         cameraView = data.view;
         cameraProjection = data.projection;
     }
@@ -660,7 +661,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 #if 0
     if (camera)
     {
-        ViewConstants data = camera->GetViewConstants();
+        ViewConstants data = cameraManager->GetRenderViewConstants(this);
         cameraView = data.view;
         cameraProjection = data.projection;
     }
@@ -1090,6 +1091,7 @@ void SceneBase::DrawGui()
     ProfileDrawUI();
     uiManager->DrawImGUi();
     EffectEditor::DrawGUI();
+    if (cameraManager) cameraManager->DrawImGuiDetails(this);
     DrawShortcutInfo();
     skyMap->DrawImGui();
     cascadedShadowMaps->DrawImGui();
@@ -1538,7 +1540,7 @@ void SceneBase::DrawGizmo()
     //if (auto camera = CameraManager::GetRenderCamera(this))
     if (auto camera = cameraManager->GetRenderCamera(this))
     {
-        ViewConstants data = camera->GetViewConstants();
+        ViewConstants data = cameraManager->GetRenderViewConstants(this);
         CameraView = XMLoadFloat4x4(&data.view);
         CameraProjection = XMLoadFloat4x4(&data.projection);
     }

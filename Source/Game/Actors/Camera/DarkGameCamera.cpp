@@ -4,6 +4,8 @@
 #include "Game/Actors/Player/Player.h"
 #include "Engine/Debug/DebugRender.h"
 #include "Physics/CollisionFunction.h"
+#include "Engine/Scene/Scene.h"
+#include "Engine/Scene/Scene.h"
 
 namespace
 {
@@ -152,12 +154,7 @@ void DarkCameraActor::Update(float deltaTime)
 
     wallBlend = std::lerp(wallBlend, targetBlend, deltaTime * 8.0f);
 
-    UpdateCameraShake(deltaTime);
-
     CameraPose renderPose = currentPose;
-    renderPose.eye = MathHelper::Add(renderPose.eye, shakePositionOffset);
-    renderPose.target = MathHelper::Add(
-        compositionLookTarget, shakeTargetOffset);
 
     SetPosition(renderPose.eye);
     mainCameraComponent->lookTarget = renderPose.target;
@@ -192,6 +189,7 @@ void DarkCameraActor::DrawDeathCameraDebug(const CameraPose& appliedPose) const
 
 void DarkCameraActor::PlayCameraShake(const float intensity, const float duration,const float frequency, const float positionAmount, const float targetAmount)
 {
+    if (auto* scene = GetOwnerScene()) if (auto* manager = scene->GetCameraManager()) { manager->PlayCameraShake(intensity, duration, frequency, positionAmount, targetAmount); return; }
     shakeIntensity = (std::max)(intensity, 0.0f);
     shakeDuration = (std::max)(duration, 0.0f);
     shakeFrequency = (std::max)(frequency, 0.0f);
@@ -206,6 +204,7 @@ void DarkCameraActor::PlayCameraShake(const float intensity, const float duratio
 
 void DarkCameraActor::PlayCameraShakePreset(const std::string& presetName)
 {
+    if (auto* scene = GetOwnerScene()) if (auto* manager = scene->GetCameraManager()) { manager->PlayCameraShakePreset(presetName); return; }
     const CameraShakePreset* preset = FindCameraShakePreset(presetName);
     if (!preset)
     {
@@ -224,6 +223,7 @@ const DarkCameraActor::CameraShakePreset* DarkCameraActor::FindCameraShakePreset
     if (presetName == BossRoarPresetName) return &bossRoarShake;
     if (presetName == BossWallImpactPresetName) return &bossWallImpactShake;
     if (presetName == RushFinalPresetName) return &rushFinalShake;
+    if (presetName == BossWeaponDropPresetName) return &bossWeaponDropShake;
     return nullptr;
 }
 

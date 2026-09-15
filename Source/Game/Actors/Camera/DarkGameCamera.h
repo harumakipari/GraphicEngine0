@@ -384,10 +384,13 @@ private:
     inline static constexpr const char* BossRoarPresetName = "BossRoar";
     inline static constexpr const char* BossWallImpactPresetName = "BossWallImpact";
     inline static constexpr const char* RushFinalPresetName = "RushFinal";
+    inline static constexpr const char* BossWeaponDropPresetName = "BossWeaponDrop";
+
     // カメラシェイクのプリセット
-    CameraShakePreset bossRoarShake{1.f,1.5f,12.0f,0.035f,0.4f};
+    CameraShakePreset bossRoarShake{0.5f,1.5f,12.0f,0.035f,0.4f};
     CameraShakePreset bossWallImpactShake{ 1.15f, 0.36f, 10.0f, 0.05f, 0.22f };
     CameraShakePreset rushFinalShake{ 0.9f, 0.16f, 18.0f, 0.02f, 0.14f };
+    CameraShakePreset bossWeaponDropShake{ 0.5f, 0.36f, 10.0f, 0.035f, 0.22f };
 
     // Active shake state. Preset values are copied here when a shake starts.
     bool shakeActive = false;

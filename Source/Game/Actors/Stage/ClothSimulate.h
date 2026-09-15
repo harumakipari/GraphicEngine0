@@ -125,6 +125,21 @@ public:
     };
     std::unique_ptr<ConstantBuffer<ClothSimulateCBuffer>> cbuffer;
 
+    // ClothUpdateCS uses b6 for collision planes. Keep this buffer owned by
+    // the cloth simulation so it is independent of other slot-6 users.
+    struct ClothPlane
+    {
+        DirectX::XMFLOAT3 normal = { 0.0f, 1.0f, 0.0f };
+        float d = 0.0f;
+    };
+    struct ClothPlaneCBuffer
+    {
+        ClothPlane planes[4];
+    };
+    static_assert(sizeof(ClothPlane) == 16, "ClothPlane must match HLSL Plane packing");
+    static_assert(sizeof(ClothPlaneCBuffer) == 64, "ClothPlaneCBuffer must contain four 16-byte planes");
+    std::unique_ptr<ConstantBuffer<ClothPlaneCBuffer>> planeCBuffer;
+
     float windPhaseOffset = 5.0f;
     float windBase = 6.0f;
     DirectX::XMFLOAT3 windEmitPosition = {};

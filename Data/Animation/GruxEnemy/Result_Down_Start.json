@@ -9,7 +9,7 @@
             "value": 3.0
         },
         {
-            "parameter": "BossWallImpact",
+            "parameter": "BossWeaponDrop",
             "time": 0.3681318759918213,
             "type": "CameraShake",
             "value": 0.0

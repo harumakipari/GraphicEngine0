@@ -125,6 +125,7 @@ ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) 
         serialization(cereal::make_nvp("textures", textures), cereal::make_nvp("images", images));
     }
     cbuffer = std::make_unique<ConstantBuffer<ClothSimulateCBuffer>>(device);
+    planeCBuffer = std::make_unique<ConstantBuffer<ClothPlaneCBuffer>>(device);
 
     CreateAndUploadResources(device);
 }
@@ -1139,6 +1140,8 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
 {
     ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
     cbuffer->Activate(immediateContext, 10);
+    ID3D11Buffer* planeBuffer = planeCBuffer->GetBuffer();
+    immediateContext->UpdateSubresource(planeBuffer, 0, nullptr, &planeCBuffer->data, 0, 0);
 
     for (auto& mesh : meshes)
     {
@@ -1162,6 +1165,10 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
 
             //for (int i = 0; i < 10; i++)
             {
+                // ClothUpdateCS declares PLANE_CBUFFER at b6. Bind only the
+                // compute-shader slot immediately before dispatch so other
+                // stages are unaffected by this fix.
+                immediateContext->CSSetConstantBuffers(6, 1, &planeBuffer);
                 immediateContext->Dispatch(threadGroupCountX, 1, 1);
             }
             // UAVÇâèú

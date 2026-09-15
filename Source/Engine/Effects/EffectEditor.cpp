@@ -6,6 +6,22 @@
 #ifdef USE_IMGUI
 #include <imgui.h>
 #endif // USE_IMGUI
+
+#if defined(_DEBUG)
+namespace
+{
+    void DebugLogEditorMutation(const char* label, const void* data,
+        size_t size, size_t capacity, uint64_t effectId = 0, uint64_t emitterId = 0)
+    {
+        char buffer[512]{};
+        sprintf_s(buffer, sizeof(buffer),
+            "[EffectMutation] %s tid=%lu effectData=%p/%zu/%zu effectRuntimeId=%llu emitterRuntimeId=%llu\n",
+            label, ::GetCurrentThreadId(), data, size, capacity,
+            static_cast<unsigned long long>(effectId), static_cast<unsigned long long>(emitterId));
+        ::OutputDebugStringA(buffer);
+    }
+}
+#endif
 #include "Graphics/Core/Graphics.h"
 #include "Engine/Utility/JsonFileHandler.h"
 #include "Engine/Utility/Dialog.h"
@@ -94,6 +110,8 @@ void EffectEditor::DrawGUI()
 #if 0
                     if (ImGui::MenuItem("Delete"))
                     {
+                        const auto runtimeId = effect.runtimeId;
+                        EffectManager::RemoveActiveEmittersForEffect(runtimeId);
                         EffectManager::effectData.erase(EffectManager::effectData.begin() + emitterIndex);
                         // 現在のエフェクトハンドルが削除された場合、無効にする
                         if (currentEffectHandle == static_cast<EffectHandle>(emitterIndex))
@@ -107,8 +125,14 @@ void EffectEditor::DrawGUI()
 #endif // 0
                     if (ImGui::MenuItem("Copy"))
                     {
+#if defined(_DEBUG)
+                        DebugLogEditorMutation("EffectEditor Copy BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), effect.runtimeId);
+#endif
                         // エフェクトデータをコピー（複製）
                         EffectManager::CopyEffectData(static_cast<EffectHandle>(emitterIndex));
+#if defined(_DEBUG)
+                        DebugLogEditorMutation("EffectEditor Copy AFTER", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity());
+#endif
                     }
                     ImGui::EndPopup();
                 }
@@ -121,6 +145,9 @@ void EffectEditor::DrawGUI()
             // 新しいエフェクトデータ追加ボタン
             if (ImGui::Button("Add New Effect Data"))
             {
+#if defined(_DEBUG)
+                DebugLogEditorMutation("EffectEditor CreateEffect BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity());
+#endif
                 currentEffectHandle = EffectManager::CreateEffectData();
                 // 追加したエフェクトデータの名前を設定
                 EffectManager::effectData[currentEffectHandle].name = "Effect " + std::to_string(currentEffectHandle);
@@ -129,6 +156,9 @@ void EffectEditor::DrawGUI()
             // 全エフェクトデータクリアボタン
             if (ImGui::Button("Clear All Effect Data"))
             {
+#if defined(_DEBUG)
+                DebugLogEditorMutation("EffectEditor ClearEffect BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity());
+#endif
                 EffectManager::ClearEffectData();
                 currentEffectHandle = -1;
             }
@@ -428,7 +458,16 @@ void EffectEditor::DrawGUI()
                     // エミッタ削除ボタン
                     if (ImGui::Button("Remove"))
                     {
+#if defined(_DEBUG)
+                        DebugLogEditorMutation("EffectEditor Emitter erase BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId, emitterData.runtimeId);
+#endif
+                        EffectManager::RemoveActiveEmittersForEmitter(
+                            EffectManager::effectData.at(currentEffectHandle).runtimeId,
+                            emitterData.runtimeId);
                         emitterDataList.erase(emitterDataList.begin() + i);
+#if defined(_DEBUG)
+                        DebugLogEditorMutation("EffectEditor Emitter erase AFTER", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId);
+#endif
                         ImGui::TreePop();
                         ImGui::PopID();
                         break;
@@ -440,13 +479,25 @@ void EffectEditor::DrawGUI()
             }
             if (ImGui::Button("+", ImVec2(25, 25)))
             {
+#if defined(_DEBUG)
+                DebugLogEditorMutation("EffectEditor Emitter emplace BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId);
+#endif
                 auto& data = emitterDataList.emplace_back();
+                data.runtimeId = EffectManager::AllocateEmitterRuntimeId();
                 data.name = "Emitter" + std::to_string(emitterDataList.size() - 1);
             }
             ImGui::SameLine();
             if (ImGui::Button("Clear Emitters"))
             {
+#if defined(_DEBUG)
+                DebugLogEditorMutation("EffectEditor Emitter clear BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId);
+#endif
+                EffectManager::RemoveActiveEmittersForEffect(
+                    EffectManager::effectData.at(currentEffectHandle).runtimeId);
                 emitterDataList.clear();
+#if defined(_DEBUG)
+                DebugLogEditorMutation("EffectEditor Emitter clear AFTER", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId);
+#endif
             }
         }
 

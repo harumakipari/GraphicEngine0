@@ -33,6 +33,8 @@ public:
     }
     ~ConstantBuffer() = default;
 
+    ID3D11Buffer* GetBuffer() const { return constantBuffer.Get(); }
+
     void Activate(ID3D11DeviceContext* immediateContext, int slot)
     {
         HRESULT hr = S_OK;
