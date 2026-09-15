@@ -104,6 +104,8 @@ public:
     // ボスの目のみBloomをつける
     void SetEyeBloom(bool enable);
 
+    void BeginGameBgmFadeOut();
+
     // カメラのモードを変更する
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
 
@@ -228,6 +230,7 @@ private:
     void UpdateBossDeathPromptLoop(float deltaTime);
     void UpdateBossDeathScreamHold(float deltaTime);
     void UpdateBossDeathCinematic();
+    void UpdateGameBgmFadeOut(float deltaTime);
     void UpdateDeathBgmFade(float deltaTime);
     void BeginBossBattleBgmFadeOut();
     void BeginPlayerDeathBgmFadeOut();
@@ -610,6 +613,10 @@ private:
 
     // ゲームBGMアクター
     std::shared_ptr<BgmActor> gameBgmActor;
+    float gameBgmFadeDuration = 0.75f;
+    float gameBgmFadeStartVolume = 0.0f;
+    float gameBgmFadeElapsed = 0.0f;
+    bool gameBgmFading = false;
     // ボスBGMアクター
     std::shared_ptr<BgmActor> bossBgmActor;
     std::shared_ptr<BgmActor> phase2BgmActor;

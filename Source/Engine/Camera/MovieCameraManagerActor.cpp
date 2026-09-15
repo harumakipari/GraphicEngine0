@@ -866,16 +866,6 @@ void MovieCameraManagerActor::UpdateDeathWideAnchorPreview()
 // ドアを開くムービーを再生する
 void MovieCameraManagerActor::PlayDoorMovie()
 {
-    // BGMを止める
-    auto bgmActors = GetOwnerScene()->GetActorManager()->GetActorsOfType <BgmActor>();
-    for (auto bgmActor : bgmActors)
-    {
-        if (bgmActor->GetName() == "GameBgmActor")
-        {
-            bgmActor->Stop();
-        }
-    }
-
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
     {
         // 演出が始まったことをことを通知する

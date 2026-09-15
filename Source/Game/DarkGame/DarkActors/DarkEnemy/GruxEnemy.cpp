@@ -4199,6 +4199,12 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
+    if (event.type == AnimationNotifyEvent::Type::GameplayEvent && event.parameter == "GameBgmFadeOut")
+    {
+        if (auto* gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
+            gameScene->BeginGameBgmFadeOut();
+        return;
+    }
     if (event.type == AnimationNotifyEvent::Type::GameplayEvent && event.parameter == "RoarShockwave")
     {
         ApplyRoarShockwave();

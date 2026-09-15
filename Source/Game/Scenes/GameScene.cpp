@@ -941,6 +941,28 @@ void GameScene::BeginBossBattleBgmFadeOut()
     bossBgmFading = true;
 }
 
+void GameScene::BeginGameBgmFadeOut()
+{
+    if (battleFlowState != BattleFlowState::Intro || gameBgmFading || !gameBgmActor) return;
+    gameBgmFadeStartVolume = gameBgmActor->GetVolume();
+    gameBgmFadeElapsed = 0.0f;
+    gameBgmFading = true;
+}
+
+void GameScene::UpdateGameBgmFadeOut(const float deltaTime)
+{
+    if (!gameBgmFading || !gameBgmActor) return;
+    gameBgmFadeElapsed += (std::max)(0.0f, deltaTime);
+    const float duration = (std::max)(gameBgmFadeDuration, 0.001f);
+    const float t = std::clamp(gameBgmFadeElapsed / duration, 0.0f, 1.0f);
+    gameBgmActor->SetVolume(std::lerp(gameBgmFadeStartVolume, 0.0f, t));
+    if (t >= 1.0f)
+    {
+        gameBgmActor->Stop(false);
+        gameBgmFading = false;
+    }
+}
+
 void GameScene::BeginPlayerDeathBgmFadeOut()
 {
     const auto activeBgm = GetActiveBossBgmActor();
@@ -986,6 +1008,7 @@ void GameScene::Update(float deltaTime)
     using namespace DirectX;
 
     ZoneScopedN("Game Update");
+    UpdateGameBgmFadeOut(Time::UnscaledDeltaTime());
     UpdateDeathBgmFade(Time::UnscaledDeltaTime());
     UpdatePhase2BgmCrossFade(Time::UnscaledDeltaTime());
 
@@ -4122,6 +4145,11 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Text(U8("TPS Return Blend Active: %s"),
         phase2TpsReturnBlendActive ? "true" : "false");
     ImGui::SeparatorText("BGM Debug");
+    ImGui::Text("Game BGM Fading: %s", gameBgmFading ? "true" : "false");
+    ImGui::Text("Game BGM Fade Elapsed: %.3f", gameBgmFadeElapsed);
+    ImGui::Text("Game BGM Volume: %.3f", gameBgmActor ? gameBgmActor->GetVolume() : 0.0f);
+    ImGui::DragFloat("Game BGM Fade Duration", &gameBgmFadeDuration,
+        0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Text("Boss BGM Fading: %s", bossBgmFading ? "true" : "false");
     ImGui::Text("Player Fade Triggered: %s", playerBgmFading ? "true" : "false");
     ImGui::Text("Boss BGM Fade Elapsed: %.3f", bossBgmFadeElapsed);

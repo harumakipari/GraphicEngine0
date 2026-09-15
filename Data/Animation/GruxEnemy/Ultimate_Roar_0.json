@@ -7,6 +7,12 @@
             "time": 0.18700000643730164,
             "type": "PlaySE",
             "value": 0.4000000059604645
+        },
+        {
+            "parameter": "GameBgmFadeOut",
+            "time": 0.18700000643730164,
+            "type": "GameplayEvent",
+            "value": 0.0
         }
     ],
     "loop": false,
