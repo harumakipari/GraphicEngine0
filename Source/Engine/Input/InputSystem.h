@@ -293,12 +293,9 @@ public:
     }
 
     // コントローラー振動を開始する
-    static void SetVibration(float power, float duration)
-    {
-        vibrationPower = std::clamp(power, 0.0f, 1.0f);
-        vibrationDuration = duration;
-        vibrationTimer = duration;
-    }
+    static void SetVibration(float power, float duration);
+    static void RequestRumble(float leftMotorStrength, float rightMotorStrength, float duration);
+    static void StopRumble();
 
     // 入力を有効化・無効化する
     static void SetInputEnabled(bool enabled)
@@ -368,9 +365,9 @@ private:
     static inline float viewportW = 0;
     static inline float viewportH = 0;
 
-    static inline float vibrationTimer = 0.0f; // 振動の残り時間
-    static inline float vibrationDuration = 0.0f; // 振動の総時間
-    static inline float vibrationPower = 0.0f; // 振動の強さ（0.0f～1.0f）
+    static inline float rumbleTimer = 0.0f; // 振動の残り時間
+    static inline float rumbleLeftMotorStrength = 0.0f; // 振動の総時間
+    static inline float rumbleRightMotorStrength = 0.0f; // 振動の強さ（0.0f～1.0f）
 
     static inline bool inputEnabled = true; // 入力することができるかどうか
 };

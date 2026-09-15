@@ -13,6 +13,19 @@
             "time": 0.18700000643730164,
             "type": "GameplayEvent",
             "value": 0.0
+        },
+        {
+            "duration": 1.3799999952316284,
+            "leftMotorStrength": 0.47999998927116394,
+            "rightMotorStrength": 0.47999998927116394,
+            "time": 0.18717947602272034,
+            "type": "ControllerRumble"
+        },
+        {
+            "parameter": "BossRoar",
+            "time": 0.18717947602272034,
+            "type": "CameraShake",
+            "value": 0.0
         }
     ],
     "loop": false,

@@ -1,6 +1,19 @@
 #include "pch.h"
 #include "Character.h"
 
+#include "Engine/Input/InputSystem.h"
+
+void Character::HandleCommonAnimationNotifyEvent(const AnimationNotifyEvent& event)
+{
+    if (event.type != AnimationNotifyEvent::Type::ControllerRumble)
+        return;
+
+    InputSystem::RequestRumble(
+        event.leftMotorStrength,
+        event.rightMotorStrength,
+        event.duration);
+}
+
 void Character::UpdateDirectionVectors()
 {
     using namespace DirectX;

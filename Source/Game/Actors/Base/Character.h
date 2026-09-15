@@ -189,6 +189,8 @@ public:
 
     virtual void OnAnimationNotifyEvent(const AnimationNotifyEvent& event) {}
 
+    void HandleCommonAnimationNotifyEvent(const AnimationNotifyEvent& event);
+
     // Editor-only visualization hook; it must not mutate gameplay state.
     virtual void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) {}
 

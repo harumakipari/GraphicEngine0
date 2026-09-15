@@ -221,7 +221,7 @@ void DarkCameraActor::PlayCameraShakePreset(const std::string& presetName)
 const DarkCameraActor::CameraShakePreset* DarkCameraActor::FindCameraShakePreset(
     const std::string& presetName) const
 {
-    if (presetName == BossHeavyLandingPresetName) return &bossHeavyLandingShake;
+    if (presetName == BossRoarPresetName) return &bossRoarShake;
     if (presetName == BossWallImpactPresetName) return &bossWallImpactShake;
     if (presetName == RushFinalPresetName) return &rushFinalShake;
     return nullptr;
@@ -2246,7 +2246,7 @@ void DarkCameraActor::DrawImGuiDetails()
             ImGui::TreePop();
         };
 
-        drawShakePreset("Boss Heavy Landing", BossHeavyLandingPresetName, bossHeavyLandingShake);
+        drawShakePreset("Boss Roar", BossRoarPresetName, bossRoarShake);
         drawShakePreset("Boss Wall Impact", BossWallImpactPresetName, bossWallImpactShake);
         drawShakePreset("Rush Final", RushFinalPresetName, rushFinalShake);
 

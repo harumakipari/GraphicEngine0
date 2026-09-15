@@ -298,6 +298,8 @@ void TitlePlayer::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 
 void TitlePlayer::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
+    HandleCommonAnimationNotifyEvent(event);
+
     switch (event.type)
     {
     case AnimationNotifyEvent::Type::PlaySE:

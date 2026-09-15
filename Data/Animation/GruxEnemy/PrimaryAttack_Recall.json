@@ -4,21 +4,72 @@
     "events": [
         {
             "parameter": "boss_weapon_drop",
-            "time": 1.274725317955017,
+            "time": 1.186813235282898,
             "type": "PlaySE",
             "value": 1.0
         },
         {
+            "duration": 0.25,
+            "leftMotorStrength": 0.0,
+            "rightMotorStrength": 1.0,
+            "time": 1.1941392421722412,
+            "type": "ControllerRumble"
+        },
+        {
+            "parameter": "BossWallImpact",
+            "time": 1.1941392421722412,
+            "type": "CameraShake",
+            "value": 0.0
+        },
+        {
+            "parameter": "DropLeftWeapon",
+            "time": 1.1941392421722412,
+            "type": "SpawnEffect",
+            "value": 0.0
+        },
+        {
             "parameter": "boss_weapon_drop",
-            "time": 1.9836740493774414,
+            "time": 1.9104139804840088,
             "type": "PlaySE",
             "value": 1.0
+        },
+        {
+            "parameter": "",
+            "time": 1.912087082862854,
+            "type": "CameraShake",
+            "value": 0.0
+        },
+        {
+            "parameter": "DropRightWeapon",
+            "time": 1.9120875597000122,
+            "type": "CameraShake",
+            "value": 0.0
+        },
+        {
+            "duration": 0.25,
+            "leftMotorStrength": 1.0,
+            "rightMotorStrength": 0.0,
+            "time": 1.9120879173278809,
+            "type": "ControllerRumble"
         },
         {
             "parameter": "boss_recall_voice",
             "time": 5.274268627166748,
             "type": "PlaySE",
             "value": 1.0
+        },
+        {
+            "duration": 2.450000047683716,
+            "leftMotorStrength": 0.8100000023841858,
+            "rightMotorStrength": 0.8100000023841858,
+            "time": 5.27472448348999,
+            "type": "ControllerRumble"
+        },
+        {
+            "parameter": "BossRoar",
+            "time": 5.274724960327148,
+            "type": "CameraShake",
+            "value": 0.0
         }
     ],
     "loop": false,

@@ -331,7 +331,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightFootComponent->AttachToComponent(skeletalMeshComponent, socketRightFootNode); // "ik_foot_r"
 
     //　ベルトのコンポーネントを追加
-    int socketBeltNode = skeletalMeshComponent->FindIndexByName("head");
+    int socketBeltNode = skeletalMeshComponent->FindIndexByName("neck_03");
     beltComponent = AddComponent<SceneComponent>("beltComponent", parentName);
     beltComponent->AttachToComponent(skeletalMeshComponent, socketBeltNode); // "belt"
 
@@ -1713,6 +1713,14 @@ void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
         else if (event.parameter == "GroundDown")
         {
             SpawnGroundDownEffect();
+        }
+        else if (event.parameter == "DropLeftWeapon")
+        {
+            SpawnDropLeftWeaponEffect();
+        }
+        else if (event.parameter == "DropRightWeapon")
+        {
+            SpawnDropRightWeaponEffect();
         }
 
         break;
@@ -4004,6 +4012,68 @@ void GruxEnemy::SpawnGroundDownEffect()const
     }
 }
 
+void GruxEnemy::SpawnDropLeftWeaponEffect()const
+{
+    DirectX::XMFLOAT3 spawnPosition = GetPosition();
+    if (weaponLeftRootComponent)
+    {
+        const DirectX::XMFLOAT3 weaponPosition = weaponLeftRootComponent->GetComponentLocation();
+        spawnPosition.x = weaponPosition.x;
+        spawnPosition.z = weaponPosition.z;
+    }
+
+    if (groundDustEffectComponent)
+    {
+        // 武器の場所に生成する
+        groundDustEffectComponent->SetWorldLocationDirect(spawnPosition);
+        groundDustEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+
+        // 足元に生成する
+        DirectX::XMFLOAT3 groundDustPosition = GetPosition();
+        groundDustEffectComponent->SetWorldLocationDirect(groundDustPosition);
+        groundDustEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+    }
+
+    // 瓦礫を生成する
+    if (const auto debrisEmitter = GetOwnerScene()->GetActorManager()->GetActorOfType<ModelDebrisEmitterActor>())
+    {
+        debrisEmitter->Emit(spawnPosition);
+    }
+}
+
+void GruxEnemy::SpawnDropRightWeaponEffect()const
+{
+    DirectX::XMFLOAT3 spawnPosition = GetPosition();
+    if (weaponRightRootComponent)
+    {
+        const DirectX::XMFLOAT3 weaponPosition = weaponRightRootComponent->GetComponentLocation();
+        spawnPosition.x = weaponPosition.x;
+        spawnPosition.z = weaponPosition.z;
+    }
+
+    if (groundDustEffectComponent)
+    {
+        // 武器の場所に生成する
+        groundDustEffectComponent->SetWorldLocationDirect(spawnPosition);
+        groundDustEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+
+        // 足元に生成する
+        DirectX::XMFLOAT3 groundDustPosition = GetPosition();
+        groundDustEffectComponent->SetWorldLocationDirect(groundDustPosition);
+        groundDustEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(groundDustEffectComponent->GetEffectHandle(), groundDustEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+    }
+
+    // 瓦礫を生成する
+    if (const auto debrisEmitter = GetOwnerScene()->GetActorManager()->GetActorOfType<ModelDebrisEmitterActor>())
+    {
+        debrisEmitter->Emit(spawnPosition);
+    }
+}
+
 void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 {
     if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
@@ -4199,6 +4269,8 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
+    HandleCommonAnimationNotifyEvent(event);
+
     if (event.type == AnimationNotifyEvent::Type::GameplayEvent && event.parameter == "GameBgmFadeOut")
     {
         if (auto* gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
@@ -4241,6 +4313,11 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
             SpawnRightFootScrapeEffect();
         if (event.parameter == "GroundDown")
             SpawnGroundDownEffect();
+        if (event.parameter == "DropLeftWeapon")
+            SpawnDropLeftWeaponEffect();
+        if (event.parameter == "DropRightWeapon")
+            SpawnDropRightWeaponEffect();
+
         break;
     case AnimationNotifyEvent::Type::CameraShake:
     {

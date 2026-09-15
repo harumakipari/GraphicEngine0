@@ -297,6 +297,32 @@ void InputSystem::Initialize()
 
 
 // 更新処理
+void InputSystem::SetVibration(const float power, const float duration)
+{
+    RequestRumble(power, power, duration);
+}
+
+void InputSystem::RequestRumble(float leftMotorStrength, float rightMotorStrength, float duration)
+{
+    rumbleLeftMotorStrength = std::clamp(leftMotorStrength, 0.0f, 1.0f);
+    rumbleRightMotorStrength = std::clamp(rightMotorStrength, 0.0f, 1.0f);
+    rumbleTimer = (std::max)(duration, 0.0f);
+    if (rumbleTimer <= 0.0f)
+        StopRumble();
+}
+
+void InputSystem::StopRumble()
+{
+    rumbleLeftMotorStrength = 0.0f;
+    rumbleRightMotorStrength = 0.0f;
+    rumbleTimer = 0.0f;
+    if (!isGamePadConnected)
+        return;
+
+    XINPUT_VIBRATION vibration = {};
+    XInputSetState(slot, &vibration);
+}
+
 void InputSystem::Update(float deltaTime)
 {
     // UIがマウスを使用しているかどうかのフラグをリセット
@@ -320,26 +346,24 @@ void InputSystem::Update(float deltaTime)
                 mAxis[static_cast<size_t>(Side::Right)][static_cast<size_t>(Axis::X)], mAxis[static_cast<size_t>(Side::Right)][static_cast<size_t>(Axis::Y)]);
 
             // 振動の更新
-            if (vibrationTimer > 0.0f)
+            if (rumbleTimer > 0.0f)
             {
-                vibrationTimer -= deltaTime;
-
-                WORD motor = static_cast<WORD>(vibrationPower * 65535.0f);
-
-                XINPUT_VIBRATION vibration = {};
-                vibration.wLeftMotorSpeed = motor;   // 低周波（重い）
-                vibration.wRightMotorSpeed = motor;  // 高周波（軽い）
-
-                XInputSetState(slot, &vibration);
+                rumbleTimer -= deltaTime;
+                if (rumbleTimer <= 0.0f)
+                {
+                    StopRumble();
+                }
+                else
+                {
+                    XINPUT_VIBRATION vibration = {};
+                    vibration.wLeftMotorSpeed = static_cast<WORD>(rumbleLeftMotorStrength * 65535.0f);
+                    vibration.wRightMotorSpeed = static_cast<WORD>(rumbleRightMotorStrength * 65535.0f);
+                    XInputSetState(slot, &vibration);
+                }
             }
             else
             {
-                // 停止
-                XINPUT_VIBRATION vibration = {};
-                vibration.wLeftMotorSpeed = 0;
-                vibration.wRightMotorSpeed = 0;
-
-                XInputSetState(slot, &vibration);
+                StopRumble();
             }
         }
         else

@@ -1865,6 +1865,8 @@ void Player::HandleAnimationPlaySE(const AnimationNotifyEvent& event)
 
 void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
+    HandleCommonAnimationNotifyEvent(event);
+
     if (finalHitWaiting) return;
     switch (event.type)
     {

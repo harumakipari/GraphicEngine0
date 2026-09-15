@@ -63,6 +63,7 @@ struct AnimationNotifyEvent
         SpawnEffect,
         CameraShake,
         GameplayEvent,
+        ControllerRumble,
     };
 
     Type type;
@@ -70,6 +71,9 @@ struct AnimationNotifyEvent
     std::string parameter;
 
     float value = 0.0f; // ‰¹‚Ìvolume‚È‚Ç
+    float leftMotorStrength = 0.0f;
+    float rightMotorStrength = 0.0f;
+    float duration = 0.0f;
 };
 
 struct AnimationNotifyTrack

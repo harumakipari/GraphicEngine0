@@ -12,6 +12,7 @@
 #include "Game/Actors/Base/Character.h"
 #include "Animation/DangerArea.h"
 #include "Engine/Debug/DebugRender.h"
+#include "Engine/Input/InputSystem.h"
 
 AnimationController::AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex)
 {
@@ -639,6 +640,7 @@ void AnimationController::CaptureEditorRuntimeSnapshot()
 
 void AnimationController::EndEditorPreview()
 {
+    InputSystem::StopRumble();
     EndAllEditorPreviewStates();
     editorPreviewPlaying = false;
     editorPreviewActive = false;
@@ -700,6 +702,7 @@ void AnimationController::BeginEditorPreview(const bool playing, const bool rese
     editorPreviewPlaying = playing;
     if (resetTime)
     {
+        InputSystem::StopRumble();
         EndAllEditorPreviewStates();
         editorPreviewTime = 0.0f;
     }
@@ -800,6 +803,7 @@ void AnimationController::UpdateEditorPreview(const float deltaTime)
             {
                 editorPreviewTime = duration;
                 editorPreviewPlaying = false;
+                InputSystem::StopRumble();
             }
         }
 
@@ -937,7 +941,8 @@ void AnimationController::ProcessEditorPreviewEvents(
     {
         if (event.type != AnimationNotifyEvent::Type::PlaySE &&
             event.type != AnimationNotifyEvent::Type::CameraShake &&
-            event.type != AnimationNotifyEvent::Type::SpawnEffect)
+            event.type != AnimationNotifyEvent::Type::SpawnEffect &&
+            event.type != AnimationNotifyEvent::Type::ControllerRumble)
         {
             continue;
         }
@@ -947,7 +952,10 @@ void AnimationController::ProcessEditorPreviewEvents(
                 (0.0f < event.time && event.time <= currentTime))
             : (previousTime < event.time && currentTime >= event.time);
         if (crossed)
+        {
+            owner->HandleCommonAnimationNotifyEvent(event);
             owner->OnAnimationEditorPreviewEvent(event);
+        }
     }
 }
 void AnimationController::ApplyEditorPreviewPose()
@@ -2162,6 +2170,13 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
             {
                 event.parameter = buffer;
             }
+            break;
+        }
+        case AnimationNotifyEvent::Type::ControllerRumble:
+        {
+            ImGui::DragFloat("Left Motor Strength", &event.leftMotorStrength, 0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat("Right Motor Strength", &event.rightMotorStrength, 0.01f, 0.0f, 1.0f);
+            ImGui::DragFloat("Duration", &event.duration, 0.01f, 0.0f);
             break;
         }
         case AnimationNotifyEvent::Type::GameplayEvent:
@@ -3453,8 +3468,17 @@ void AnimationController::SaveNotifyAsset(const std::string& filename, const Ani
             std::string(
                 magic_enum::enum_name(event.type));
 
-        j["parameter"] = event.parameter;
-        j["value"] = event.value;
+        if (event.type == AnimationNotifyEvent::Type::ControllerRumble)
+        {
+            j["leftMotorStrength"] = event.leftMotorStrength;
+            j["rightMotorStrength"] = event.rightMotorStrength;
+            j["duration"] = event.duration;
+        }
+        else
+        {
+            j["parameter"] = event.parameter;
+            j["value"] = event.value;
+        }
 
         root["events"].push_back(j);
     }
@@ -3572,6 +3596,12 @@ void AnimationController::LoadNotifyAsset(const std::string& filename, Animation
 
             event.value =
                 j.value("value", 0.0f);
+            event.leftMotorStrength =
+                j.value("leftMotorStrength", 0.0f);
+            event.rightMotorStrength =
+                j.value("rightMotorStrength", 0.0f);
+            event.duration =
+                j.value("duration", 0.0f);
 
             asset.notifyTrack.events.push_back(event);
         }
