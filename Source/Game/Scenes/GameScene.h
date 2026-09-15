@@ -231,7 +231,12 @@ private:
     void UpdateDeathBgmFade(float deltaTime);
     void BeginBossBattleBgmFadeOut();
     void BeginPlayerDeathBgmFadeOut();
-    void ResetDeathBgmState(bool restartBossBgm);
+    void ResetDeathBgmState(BossPhase restartPhase);
+    void BeginPhase2BgmCrossFade(float recallAnimationTime);
+    void UpdatePhase2BgmCrossFade(float deltaTime);
+    void ResetBossBattleBgm(BossPhase phase, bool play);
+    std::shared_ptr<BgmActor> GetActiveBossBgmActor() const;
+    const char* GetCurrentBossBgmDebugName() const;
     void PlayBossDeathSecondBgm();
     void PlayPlayerDeathBgm();
     bool SetupBossDeathCinematic();
@@ -403,6 +408,14 @@ private:
     int phase2TextureDebugMode = 0;
     bool phase2TransformStarted = false;
     bool phase2TransformCompleted = false;
+    // Transform completion persists after Recall, so this guard makes the BGM switch one-shot.
+    bool phase2BgmStarted = false;
+    bool phase2BgmCrossFadeActive = false;
+    float phase2BgmFadeElapsed = 0.0f;
+    float phase2BgmFadeOutDuration = 0.5f;
+    float phase2BgmFadeInDuration = 0.5f;
+    float phase2BgmPhase1StartVolume = 0.0f;
+    float phase2BgmTriggerTime = -1.0f;
     float phase2PlayerEmotePreWaitDuration = 0.5f;
     float phase2PlayerEmoteEndTime = 0.515f;
     float phase2PlayerEmotePostWaitDuration = 0.5f;
@@ -599,6 +612,7 @@ private:
     std::shared_ptr<BgmActor> gameBgmActor;
     // ボスBGMアクター
     std::shared_ptr<BgmActor> bossBgmActor;
+    std::shared_ptr<BgmActor> phase2BgmActor;
     std::shared_ptr<BgmActor> bossDeathSecondBgmActor;
     std::shared_ptr<BgmActor> playerDeathBgmActor;
     float bossDeathBgmFadeTime = 1.0f;
