@@ -3405,6 +3405,7 @@ void GruxEnemy::DrawImGuiDetails()
         case ChargeAttackEndReason::PlayerHit: chargeEndReasonName = "PlayerHit"; break;
         case ChargeAttackEndReason::JustDodge: chargeEndReasonName = "JustDodge"; break;
         case ChargeAttackEndReason::WallHit: chargeEndReasonName = "WallHit"; break;
+        case ChargeAttackEndReason::LegComplete: chargeEndReasonName = "LegComplete"; break;
         case ChargeAttackEndReason::SafetyTimeout: chargeEndReasonName = "SafetyTimeout"; break;
         default: break;
         }
@@ -5634,7 +5635,7 @@ bool GruxEnemy::LockChargeDirectionToPlayer()
     return true;
 }
 
-ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
+ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, bool allowTripleWallTurn)
 {
     if (!chargeMovementActive)
         return chargeEndReasonDebug;
@@ -5652,6 +5653,11 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
     chargeWallFacingAmountDebug = 0.0f;
     chargeWallHitNormalDebug = {};
     chargeWallHitDistanceDebug = 0.0f;
+    if (chargeBT.tripleChargeActive)
+    {
+        chargeBT.tripleCurrentWallClearance = 0.0f;
+        chargeBT.tripleWallTurnCandidate = false;
+    }
 
     const float frameMoveDistance = chargeSpeed * (std::max)(0.0f, deltaTime);
     const float castDistance = frameMoveDistance + chargeWallCastSafetyMargin;
@@ -5694,6 +5700,11 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
         const bool isNotFloor =
             std::abs(wallHit.normal.y) <= chargeWallNormalYThreshold;
         wallCandidate = facesCharge && isNotFloor;
+        if (chargeBT.tripleChargeActive)
+        {
+            chargeBT.tripleCurrentWallClearance = (std::max)(0.0f, wallHit.distance);
+            chargeBT.tripleWallTurnCandidate = wallCandidate;
+        }
     }
 
     Player* hitPlayer = playerCastHit
@@ -5741,6 +5752,16 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
 
     if (wallCandidate)
     {
+        if (allowTripleWallTurn && chargeBT.tripleChargeIndex < 2 &&
+            chargeBT.tripleChargeActive &&
+            wallHit.distance <= chargeBT.tripleChargeWallTurnClearance)
+        {
+            chargeBT.tripleWallTurnTriggered = true;
+            chargeSelectedHitDebug = "LegComplete";
+            chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
+            StopChargeAttackMovement();
+            return chargeEndReasonDebug;
+        }
         chargeSelectedHitDebug = "WallHit";
         chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
         const float wallHitDistance = (std::max)(0.0f, wallHit.distance);

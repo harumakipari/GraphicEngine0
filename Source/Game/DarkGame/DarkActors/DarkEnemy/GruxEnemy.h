@@ -210,6 +210,7 @@ public:
     bool UpdateDashAttackMovement(float deltaTime, bool keepLockedDirection = false);
     void StopDashAttackMovement();
     enum class ChargeBTPhase { None, Setup, Facing, Telegraph, Charging, Result, Stun, RecoveryPending, Recovery, RecoveryPostconditions };
+    enum class TripleChargePhase { None, InitialWindup, Charging, InterChargeTransition, Completed, Aborted };
     enum class ChargeBTStunPhase { None, Start, Loop, End };
     enum class ChargeBTStepResult { Running, Complete, Failed };
     bool CanPlanChargeAttack() const;
@@ -219,6 +220,11 @@ public:
     void StartChargeAttackBT();
     bool BeginSingleChargeBT();
     ChargeBTStepResult UpdateSingleChargeBT(float deltaTime);
+    ChargeBTStepResult UpdateChargeAttackBT(float deltaTime);
+    ChargeBTStepResult UpdateTripleChargeBT(float deltaTime);
+    bool IsPhase2ChargeActive();
+    bool BeginTripleChargeLeg();
+    bool BeginTripleChargeTransition();
     ChargeBTStepResult ResolveChargeResultBT(float deltaTime);
     bool BeginChargeStunBT();
     ChargeBTStepResult UpdateChargeStunBT(float deltaTime);
@@ -235,7 +241,7 @@ public:
     void DrawChargeAttackBTDebug();
     bool BeginChargeAttackMovement();
     bool LockChargeDirectionToPlayer();
-    ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime);
+    ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime, bool allowTripleWallTurn = false);
     void StopChargeAttackMovement();
     float GetChargeWindupEndTime() const { return chargeWindupEndTime; }
     float GetStunDuration() const { return stunDuration; }
@@ -1277,6 +1283,25 @@ private:
         float previousAnimationTime = 0.0f;
         float stunElapsed = 0.0f;
         float recoveryDuration = 0.0f;
+        float activeStunDuration = 0.0f;
+        TripleChargePhase triplePhase = TripleChargePhase::None;
+        bool tripleChargeActive = false;
+        int tripleChargeIndex = 0;
+        float tripleChargeTransitionElapsed = 0.0f;
+        float tripleChargeTransitionDuration = 0.9f;
+        float tripleChargeLegElapsed = 0.0f;
+        float tripleChargeLegDistance = 0.0f;
+        DirectX::XMFLOAT3 tripleChargeDirections[3]{};
+        DirectX::XMFLOAT3 tripleChargeStartPositions[3]{};
+        bool tripleFinalWallHit = false;
+        bool tripleEarlyWallHit = false;
+        float tripleWallStunDurationMultiplier = 3.0f;
+        float tripleChargeWallTurnClearance = 0.75f;
+        float tripleChargeLegMaxDistance = 50.0f;
+        float tripleChargeLegMaxDuration = 50.0f;
+        float tripleCurrentWallClearance = 0.0f;
+        bool tripleWallTurnCandidate = false;
+        bool tripleWallTurnTriggered = false;
     } chargeBT;
     float chargeSetupDistanceMin = 8.0f;
     float chargeSetupDistanceMax = 10.0f;

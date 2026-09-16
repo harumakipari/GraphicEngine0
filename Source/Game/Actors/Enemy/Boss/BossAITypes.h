@@ -116,6 +116,7 @@ enum class ChargeAttackEndReason : uint8_t
     PlayerHit,
     JustDodge,
     WallHit,
+    LegComplete,
     SafetyTimeout,
 };
 
