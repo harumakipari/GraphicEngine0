@@ -226,6 +226,14 @@ public:
     bool BeginTripleChargeLeg();
     bool BeginTripleChargeTransition();
     bool BeginTripleChargeTelegraph();
+
+    bool EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition,
+
+        const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const;
+    bool EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPosition,
+        const DirectX::XMFLOAT3& direction, float& outClearance,
+        DirectX::XMFLOAT3& outNormal, DirectX::XMFLOAT3& outHitPosition,
+        std::string& outActorName, std::string& outComponentName, bool& outHit) const;
     void HideTripleChargeTelegraph();
     void DrawTripleChargeTelegraphDebug() const;
     ChargeBTStepResult ResolveChargeResultBT(float deltaTime);
@@ -441,7 +449,7 @@ public:
 
     // ???I?????member??????????
     bool SelectCombatAction();
-    // FastCombo?"??s?・E???????
+    // FastCombo?"??s??EE???????
     // FastCombo??U????????dI??l???
     bool CanPlanFastCombo() const;
     void StartFastComboApproachRetryCooldown();
@@ -450,7 +458,7 @@ public:
     bool CanExecuteFastCombo() const;
     // Player??FastCombo??U??????????
     bool IsFastComboInRange() const;
-    // Player???U???能?????p?x??????
+    // Player???U????\?????p?x??????
     bool IsPlayerInFastComboFacingRange(const BossTargetContext& context) const;
     bool IsPlayerInFastComboFaceCompleteRange(const BossTargetContext& context) const;
 
@@ -555,7 +563,7 @@ private:
     bool finalHitReactionHeld = false;
     bool fourthHitReactionActive = false;
     float fourthHitReactionRemaining = 0.0f;
-    float fourthHitReactionChance = 0.3f;  // 怯み確率
+    float fourthHitReactionChance = 0.3f;  // ?????m??
     float fourthHitReactionDuration = 1.25f;
     float fourthHitReactionLastRoll = -1.0f;
     bool fourthHitReactionHasLastRoll = false;
@@ -569,7 +577,7 @@ private:
     // ?v???C???[????????????????????????????
     BossDistanceRegion GetDistanceRegion(float distance) const;
 
-    // ?????????????ﾂ??aA??????s????I???????
+    // ????????????????aA??????s????I???????
     void UpdateActionCandidateFlags(const BossTargetContext& context);
     bool IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const;
     const BossIntentData* GetActiveIntentData() const;
@@ -611,7 +619,7 @@ private:
     // Action??Effective Weight???v????????
     float GetTotalActionWeight() const;
 
-    // Weight???ﾂ??cs????I????????B??????????std::nullopt????
+    // Weight??????cs????I????????B??????????std::nullopt????
     std::optional<BossActionType> SelectActionByWeight();
 
     void ResetJustDodgeRecords(const char* reason);
@@ -1089,7 +1097,7 @@ private:
     //  StateMachine?~^?C?~???O?????????
     float attackInterval = 0.1f;   // EnemyThinkState??????A???Attack?I???J?n?????l???????B
     float recoveryDuration = 0.5f;  //  ?U???I????AEnemyRecoveryState?????????B?????SAttack?????0.5?b?B
-    float attackFacingAngle = 45.0f;    // ????p?x?????U???能?????
+    float attackFacingAngle = 45.0f;    // ????p?x?????U????\?????
 
     float nearFrontFastComboProbability = 0.7f;
     float fastComboFrontMaxAngle = 90.0f;
@@ -1118,7 +1126,7 @@ private:
     const float initialRelativeBackMinAngle = relativeBackMinAngle;
     static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // ?????????????
     static constexpr float initialCombatRepositionMoveSpeed = 6.0f;
-    static constexpr float initialCombatRepositionSettleDuration = 1.5f;    // ??I?n??t????????秒??
+    static constexpr float initialCombatRepositionSettleDuration = 1.5f;    // ??I?n??t?????????b??
 
     static constexpr float initialFrontAttackReadyDuration = 1.0f;
     static constexpr float initialSideAttackReadyDuration = 1.5f;
@@ -1126,7 +1134,7 @@ private:
 
     float turnSpeed = 480.0f;  // EnemyTurnState?l?????]??????????x
     float turnCompleteAngle = 15.0f;    // ????p?x??????]?????????
-    float turnTimeout = 1.5f;   //   Turn?????・l????????????????????B?????1.5?b??Think????B
+    float turnTimeout = 1.5f;   //   Turn??????El????????????????????B?????1.5?b??Think????B
     std::string lastAIDecisionReason = "None";  // ?O??AI???s???????f???R??????r???BImGui??\???BAI?????m?F?p?B
     float frontAttackReadyDuration = initialFrontAttackReadyDuration;
     float sideAttackReadyDuration = initialSideAttackReadyDuration;
@@ -1274,6 +1282,50 @@ private:
     bool UpdateChargeAnimationWatchdogBT(float animationTime, float deltaTime);
     struct ChargeBTRuntime
     {
+        struct TripleChargeTelegraphSnapshot
+        {
+            uint64_t generation = 0;
+            int chargeIndex = 0;
+            DirectX::XMFLOAT3 direction{};
+            bool directionLocked = false;
+            DirectX::XMFLOAT3 castOrigin{};
+            DirectX::XMFLOAT3 castEnd{};
+            DirectX::XMFLOAT3 requestedPosition{};
+            DirectX::XMFLOAT4 requestedRotation{};
+            float requestedYaw = 0.0f;
+            DirectX::XMFLOAT3 requestedScale{};
+            DirectX::XMFLOAT3 relativePosition{};
+            DirectX::XMFLOAT3 relativeScale{};
+            DirectX::XMFLOAT3 componentWorldPosition{};
+            DirectX::XMFLOAT3 componentWorldScale{};
+            DirectX::XMFLOAT4X4 componentWorldMatrix{};
+            DirectX::XMFLOAT3 actualMeshStart{};
+            DirectX::XMFLOAT3 actualMeshEnd{};
+            DirectX::XMFLOAT3 startPosition{};
+            DirectX::XMFLOAT3 gruxPosition{};
+            DirectX::XMFLOAT3 gruxScale{ 1.0f, 1.0f, 1.0f };
+            bool rawWallHit = false;
+            bool wallHit = false;
+            float wallDistance = 0.0f;
+            float worldStaticDistance = 0.0f;
+            float boundaryDistance = 0.0f;
+            std::string lengthSource = "MaxDistanceFallback";
+            DirectX::XMFLOAT3 hitPosition{};
+            DirectX::XMFLOAT3 hitNormal{};
+            float length = 0.0f;
+            float wallCastRadius = 0.0f;
+            float playerCastRadius = 0.0f;
+            float wallTurnClearance = 0.0f;
+            float maxDistance = 0.0f;
+            float capsuleRadius = 0.0f;
+            float phase2Scale = 0.0f;
+            float phase2TransformProgress = 0.0f;
+            bool bossInFinalPhase = false;
+            std::string wallHitActor = "None";
+            std::string wallHitComponent = "None";
+            uint32_t wallHitLayer = 0;
+        };
+
         ChargeBTPhase phase = ChargeBTPhase::None;
         ChargeBTStunPhase stunPhase = ChargeBTStunPhase::None;
         ChargeAttackEndReason result = ChargeAttackEndReason::None;
@@ -1293,7 +1345,7 @@ private:
         bool tripleChargeActive = false;
         int tripleChargeIndex = 0;
         float tripleChargeTransitionElapsed = 0.0f;
-        float tripleChargeTransitionDuration = 0.9f;
+        float tripleChargeTransitionDuration = 0.7f;
         float tripleChargeLegElapsed = 0.0f;
         float tripleChargeLegDistance = 0.0f;
         float tripleChargeTelegraphElapsed = 0.0f;
@@ -1309,6 +1361,12 @@ private:
         float tripleChargeTelegraphWidth = 0.0f;
         bool tripleChargeTelegraphWallHit = false;
         float tripleChargeTelegraphWallDistance = 0.0f;
+        float tripleChargeTelegraphWorldStaticDistance = 0.0f;
+        float tripleChargeTelegraphBoundaryDistance = 0.0f;
+        std::string tripleChargeTelegraphLengthSource = "MaxDistanceFallback";
+        std::array<TripleChargeTelegraphSnapshot, 3> tripleChargeTelegraphSnapshots{};
+        uint64_t tripleChargeTelegraphSnapshotCount = 0;
+        uint64_t tripleChargeTelegraphSnapshotWriteIndex = 0;
         bool tripleBeginTripleChargeLegCalled = false;
         bool tripleBeginTripleChargeLegResult = false;
         bool tripleBeginChargeMovementResult = false;
@@ -1320,12 +1378,56 @@ private:
         bool tripleFinalWallHit = false;
         bool tripleEarlyWallHit = false;
         float tripleWallStunDurationMultiplier = 3.0f;
-        float tripleChargeWallTurnClearance = 0.85f;
+        float tripleChargeWallTurnClearance = 3.5f;
         float tripleChargeLegMaxDistance = 50.0f;
         float tripleChargeLegMaxDuration = 50.0f;
         float tripleCurrentWallClearance = 0.0f;
         bool tripleWallTurnCandidate = false;
         bool tripleWallTurnTriggered = false;
+
+        bool tripleChargeRepositionActive = false;
+
+        bool tripleChargeRepositionRequired = false;
+
+        DirectX::XMFLOAT3 tripleChargeRepositionStartPosition{};
+
+        DirectX::XMFLOAT3 tripleChargeRepositionTargetPosition{};
+
+        DirectX::XMFLOAT3 tripleChargeRepositionCurrentPosition{};
+
+        DirectX::XMFLOAT3 tripleChargeRepositionDirection{};
+
+        float tripleChargeRepositionRequiredClearance = 0.0f;
+
+        float tripleChargeRepositionCurrentClearance = 0.0f;
+
+        float tripleChargeRepositionShortage = 0.0f;
+
+        float tripleChargeRepositionPlannedDistance = 0.0f;
+
+        float tripleChargeRepositionMovedDistance = 0.0f;
+
+        bool tripleChargeRepositionValidationBefore = false;
+
+        bool tripleChargeRepositionValidationAfter = false;
+        DirectX::XMFLOAT3 tripleChargeRepositionPlayerPositionBefore{};
+        DirectX::XMFLOAT3 tripleChargeRepositionPlayerPositionAfter{};
+        DirectX::XMFLOAT3 tripleChargeRepositionDirectionBefore{};
+        DirectX::XMFLOAT3 tripleChargeRepositionDirectionAfter{};
+        DirectX::XMFLOAT3 tripleChargeFinalLockedDirection{};
+        DirectX::XMFLOAT3 tripleChargeFinalValidationOrigin{};
+        DirectX::XMFLOAT3 tripleChargeFinalValidationDirection{};
+        float tripleChargeFinalValidationClearance = 0.0f;
+        bool tripleChargeFinalValidationResult = false;
+        DirectX::XMFLOAT3 tripleChargeSideWallHitPosition{};
+        DirectX::XMFLOAT3 tripleChargeSideWallHitNormal{};
+        float tripleChargeSideClearance = 0.0f;
+        bool tripleChargeSideWallHit = false;
+        std::string tripleChargeSideWallActor;
+        std::string tripleChargeSideWallComponent;
+        float tripleChargeForwardCorrectionDistance = 0.0f;
+        float tripleChargeSideCorrectionDistance = 0.0f;
+        bool tripleChargeFinalPathSafe = false;
     } chargeBT;
     float chargeSetupDistanceMin = 8.0f;
     float chargeSetupDistanceMax = 10.0f;
@@ -1337,11 +1439,19 @@ private:
     float chargeWallCastSafetyMargin = 0.10f;
     float chargeWallFacingThreshold = 0.70f;
     float chargeWallNormalYThreshold = 0.60f;
-    float chargePlayerCastRadiusScale = 0.80f;
-    float chargeWallCastRadiusScale = 0.15f;
+    float chargePlayerCastRadiusScale = 0.88f;
+    float chargeWallCastRadiusScale = 0.3f;
     float chargeStartValidationClearance = 0.05f;
-    float tripleChargeTelegraphHoldDuration = 0.30f;
-    float tripleChargeTelegraphGroundOffset = 0.03f;
+
+    float tripleChargeRepositionMaxDistance = 0.8f;
+
+    float tripleChargeRepositionSafetyMargin = 0.15f;
+
+    float tripleChargeRepositionSpeed = 3.0f;
+    float tripleChargeRepositionSideSafetyMargin = 0.20f;
+    float tripleChargeTelegraphHoldDuration = 0.65f;
+    float tripleChargeTelegraphGroundOffset = 0.1f;
+    float tripleChargeTelegraphFixedWorldY = 0.35f;
     float tripleChargeTelegraphForwardOffset = 0.30f;
     float tripleChargeTelegraphMaxDistance = 30.0f;
     float tripleChargeTelegraphWidthMultiplier = 1.0f;
@@ -1406,9 +1516,9 @@ private:
     mutable uint64_t animationRequestFrameDebug = 0;
     float pitchBaseValue = 0.45f;
 
-    // ??????u?p?R???|?[?l???g?????@?ﾈlO?????\???p
+    // ??????u?p?R???|?[?l???g?????@??lO?????\???p
     std::shared_ptr<SceneComponent> leftEyeSceneComponent;
-    // ?E????u?p?R???|?[?l???g?????@?ﾈlO?????\???p
+    // ?E????u?p?R???|?[?l???g?????@??lO?????\???p
     std::shared_ptr<SceneComponent> rightEyeSceneComponent;
 
     // ?J??????????_???u

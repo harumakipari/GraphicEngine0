@@ -378,6 +378,8 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     tripleChargeTelegraphMeshComponent = AddComponent<StaticMeshComponent>("tripleChargeTelegraph", parentName);
     tripleChargeTelegraphMeshComponent->SetModel("./Data/Models/EffectModel/ChargeTelegraphPlane.glb");
+    tripleChargeTelegraphMeshComponent->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
+    tripleChargeTelegraphMeshComponent->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
     tripleChargeTelegraphMeshComponent->SetIsCastShadow(false);
     tripleChargeTelegraphMeshComponent->SetIsVisible(false);
     tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1.0f, 0.16f, 0.03f, 1.0f };
@@ -5536,6 +5538,66 @@ void GruxEnemy::StopDashAttackMovement()
     dashAttackElapsedTime = 0.0f;
     StopAIMovement();
 }
+bool GruxEnemy::EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition,
+    const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const
+{
+    outClearance = 0.0f;
+    outHit = false;
+    const float directionLength = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+    if (directionLength <= 0.0001f) return false;
+    const DirectX::XMFLOAT3 normalizedDirection{ direction.x / directionLength, 0.0f, direction.z / directionLength };
+    const float wallCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
+    const float validationCastDistance = (std::max)(chargeStartValidationClearance, chargeWallCastSafetyMargin + chargeStartValidationClearance);
+    DirectX::XMFLOAT3 validationOrigin = startPosition;
+    validationOrigin.y += (std::max)(wallCastRadius + 0.05f, height * 0.5f);
+    const uint32_t validationWallMask = CollisionHelper::MakeMask({ CollisionLayer::WorldStatic, CollisionLayer::WorldProps, CollisionLayer::WorldPropsNoRaycast, });
+    HitResultWithActor validationHit{};
+    outHit = Physics::Instance().SphereCast(validationOrigin, normalizedDirection, validationCastDistance, wallCastRadius, validationHit, validationWallMask);
+    if (outHit)
+        outClearance = (std::max)(0.0f, validationHit.distance);
+    else outClearance = validationCastDistance;
+    return true;
+}
+
+bool GruxEnemy::EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPosition,
+    const DirectX::XMFLOAT3& direction, float& outClearance,
+    DirectX::XMFLOAT3& outNormal, DirectX::XMFLOAT3& outHitPosition,
+    std::string& outActorName, std::string& outComponentName, bool& outHit) const
+{
+    outClearance = 0.0f;
+    outNormal = {};
+    outHitPosition = {};
+    outActorName = "None";
+    outComponentName = "None";
+    outHit = false;
+    const float length = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+    if (length <= 0.0001f) return false;
+    const DirectX::XMFLOAT3 forward{ direction.x / length, 0.0f, direction.z / length };
+    const DirectX::XMFLOAT3 side{ -forward.z, 0.0f, forward.x };
+    const float wallRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
+    const float required = wallRadius + chargeWallCastSafetyMargin + tripleChargeRepositionSideSafetyMargin;
+    const float castDistance = required + tripleChargeRepositionMaxDistance;
+    DirectX::XMFLOAT3 origin = startPosition;
+    origin.y += (std::max)(wallRadius + 0.05f, height * 0.5f);
+    const uint32_t wallMask = CollisionHelper::MakeMask({ CollisionLayer::WorldStatic, CollisionLayer::WorldProps, CollisionLayer::WorldPropsNoRaycast, });
+    float nearest = FLT_MAX;
+    for (const float sign : { -1.0f, 1.0f })
+    {
+        const DirectX::XMFLOAT3 castDirection{ side.x * sign, 0.0f, side.z * sign };
+        HitResultWithActor hit{};
+        if (!Physics::Instance().SphereCast(origin, castDirection, castDistance, wallRadius, hit, wallMask)) continue;
+        if (std::abs(hit.normal.y) > chargeWallNormalYThreshold) continue;
+        if (hit.distance >= nearest) continue;
+        nearest = hit.distance;
+        outHit = true;
+        outClearance = (std::max)(0.0f, hit.distance);
+        outNormal = hit.normal;
+        outHitPosition = hit.hitPoint;
+        if (hit.actor) outActorName = hit.actor->GetName();
+        if (hit.component) outComponentName = hit.component->GetName();
+    }
+    return true;
+}
 bool GruxEnemy::BeginChargeAttackMovement()
 {
     StopChargeAttackMovement();
@@ -5567,32 +5629,23 @@ bool GruxEnemy::BeginChargeAttackMovement()
     chargePlayerCastRadiusDebug = (std::max)(0.05f, radius * chargePlayerCastRadiusScale);
     chargeWallCastRadiusDebug = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
     chargeStartFailureReasonDebug = "None";
-    const float validationCastDistance = (std::max)(
-        chargeStartValidationClearance, chargeWallCastSafetyMargin + chargeStartValidationClearance);
-    DirectX::XMFLOAT3 validationOrigin = chargeStartPositionDebug;
-    validationOrigin.y += (std::max)(chargeWallCastRadiusDebug + 0.05f, height * 0.5f);
-    const uint32_t validationWallMask = CollisionHelper::MakeMask({
-        CollisionLayer::WorldStatic,
-        CollisionLayer::WorldProps,
-        CollisionLayer::WorldPropsNoRaycast,
-        });
-    HitResultWithActor validationHit{};
-    const bool validationHitWall = Physics::Instance().SphereCast(
-        validationOrigin, chargeDirection, validationCastDistance,
-        chargeWallCastRadiusDebug, validationHit, validationWallMask);
-    if (validationHitWall)
+    float validationClearance = 0.0f;
+    bool validationHitWall = false;
+    const bool validationMeasured = EvaluateChargeStartClearance(
+        chargeStartPositionDebug, chargeDirection, validationClearance, validationHitWall);
+    (void)validationHitWall;
+    chargeStartClearanceDebug = validationClearance;
+    if (!validationMeasured)
     {
-        chargeStartClearanceDebug = (std::max)(0.0f, validationHit.distance);
-        if (chargeStartClearanceDebug <= chargeStartValidationClearance)
-        {
-            chargeStartFailureReasonDebug = "InitialWallContact";
-            SetChargePhaseDebug("StartValidationFailed");
-            return false;
-        }
+        chargeStartFailureReasonDebug = "DirectionInvalid";
+        SetChargePhaseDebug("StartValidationFailed");
+        return false;
     }
-    else
+    if (validationClearance <= chargeStartValidationClearance)
     {
-        chargeStartClearanceDebug = validationCastDistance;
+        chargeStartFailureReasonDebug = "InitialWallContact";
+        SetChargePhaseDebug("StartValidationFailed");
+        return false;
     }
     chargeStartValidationValidDebug = true;
     chargeElapsedTime = 0.0f;

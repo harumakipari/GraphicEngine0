@@ -329,6 +329,45 @@ bool GruxEnemy::BeginTripleChargeTransition()
         "GruxEnemy::BeginTripleChargeTransition");
     chargeBT.triplePhase = TripleChargePhase::InterChargeTransition;
     chargeBT.tripleChargeTransitionElapsed = 0.0f;
+    chargeBT.tripleChargeRepositionActive = false;
+    chargeBT.tripleChargeRepositionRequired = false;
+    chargeBT.tripleChargeRepositionStartPosition = GetPosition();
+    chargeBT.tripleChargeRepositionTargetPosition = chargeBT.tripleChargeRepositionStartPosition;
+    chargeBT.tripleChargeRepositionCurrentPosition = chargeBT.tripleChargeRepositionStartPosition;
+    chargeBT.tripleChargeRepositionDirection = {};
+    chargeBT.tripleChargeRepositionRequiredClearance = 0.0f;
+    chargeBT.tripleChargeRepositionCurrentClearance = 0.0f;
+    chargeBT.tripleChargeRepositionShortage = 0.0f;
+    chargeBT.tripleChargeRepositionPlannedDistance = 0.0f;
+    chargeBT.tripleChargeRepositionMovedDistance = 0.0f;
+    chargeBT.tripleChargeRepositionValidationBefore = false;
+    chargeBT.tripleChargeRepositionValidationAfter = false;
+    chargeBT.tripleChargeRepositionPlayerPositionBefore = {};
+    chargeBT.tripleChargeRepositionPlayerPositionAfter = {};
+    chargeBT.tripleChargeRepositionDirectionBefore = {};
+    chargeBT.tripleChargeRepositionDirectionAfter = {};
+    chargeBT.tripleChargeFinalLockedDirection = {};
+    chargeBT.tripleChargeFinalValidationOrigin = {};
+    chargeBT.tripleChargeFinalValidationDirection = {};
+    chargeBT.tripleChargeFinalValidationClearance = 0.0f;
+    chargeBT.tripleChargeFinalValidationResult = false;
+    chargeBT.tripleChargeSideWallHitPosition = {};
+    chargeBT.tripleChargeSideWallHitNormal = {};
+    chargeBT.tripleChargeSideClearance = 0.0f;
+    chargeBT.tripleChargeSideWallHit = false;
+    chargeBT.tripleChargeSideWallActor = "None";
+    chargeBT.tripleChargeSideWallComponent = "None";
+    chargeBT.tripleChargeForwardCorrectionDistance = 0.0f;
+    chargeBT.tripleChargeSideCorrectionDistance = 0.0f;
+    chargeBT.tripleChargeFinalPathSafe = false;
+    const auto transitionScene = GetOwnerScene();
+    const auto transitionPlayer = transitionScene
+        ? transitionScene->GetActorManager()->GetActorOfType<Player>() : nullptr;
+    if (transitionPlayer)
+        chargeBT.tripleChargeRepositionPlayerPositionBefore = transitionPlayer->GetPosition();
+    const auto transitionContext = BuildTargetContext();
+    if (transitionContext.valid)
+        chargeBT.tripleChargeRepositionDirectionBefore = transitionContext.directionToPlayer;
     chargeBT.tripleWallTurnTriggered = false;
     SetChargePhaseDebug("TripleTransition");
     return true;
@@ -365,53 +404,148 @@ bool GruxEnemy::BeginTripleChargeTelegraph()
     const float wallRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
     const float playerRadius = (std::max)(0.05f, radius * chargePlayerCastRadiusScale);
     const float castDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
+    const DirectX::XMFLOAT3 startPosition{
+        GetPosition().x + normalizedDirection.x * tripleChargeTelegraphForwardOffset,
+        tripleChargeTelegraphFixedWorldY,
+        GetPosition().z + normalizedDirection.z * tripleChargeTelegraphForwardOffset };
     DirectX::XMFLOAT3 castOrigin = GetPosition();
+    castOrigin.x = startPosition.x;
+    castOrigin.z = startPosition.z;
     castOrigin.y += (std::max)((std::max)(playerRadius, wallRadius) + 0.05f, height * 0.5f);
 
-    const uint32_t wallMask = CollisionHelper::MakeMask({
-        CollisionLayer::WorldStatic,
-        CollisionLayer::WorldProps,
-        CollisionLayer::WorldPropsNoRaycast,
-        });
-    HitResult wallHit{};
+    // Telegraph-only query. Gameplay Wall SphereCast remains in
+    // UpdateChargeAttackMovement() with its original mask and conditions.
+    const uint32_t telegraphWallMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic);
+    HitResultWithActor wallHit{};
     const bool rawWallHit = Physics::Instance().SphereCast(
-        castOrigin, normalizedDirection, castDistance, wallRadius, wallHit, wallMask);
-    const float facingAmount = rawWallHit
-        ? -(normalizedDirection.x * wallHit.normal.x + normalizedDirection.z * wallHit.normal.z)
-        : 0.0f;
-    const bool wallCandidate = rawWallHit &&
-        facingAmount >= chargeWallFacingThreshold &&
-        std::abs(wallHit.normal.y) <= chargeWallNormalYThreshold;
+        castOrigin, normalizedDirection, castDistance, wallRadius, wallHit, telegraphWallMask);
+
+    const float worldStaticDistance = rawWallHit ? (std::max)(0.0f, wallHit.distance) : 0.0f;
+    const float boundaryDistance = [&]()
+    {
+        constexpr float epsilon = 1.0e-5f;
+        float result = FLT_MAX;
+        const auto consider = [&result](const float distance)
+        {
+            if (distance >= 0.0f && distance < result)
+                result = distance;
+        };
+        if (normalizedDirection.x > epsilon)
+            consider((bossRoomMaxX - startPosition.x) / normalizedDirection.x);
+        else if (normalizedDirection.x < -epsilon)
+            consider((bossRoomMinX - startPosition.x) / normalizedDirection.x);
+        if (normalizedDirection.z > epsilon)
+            consider((bossRoomMaxZ - startPosition.z) / normalizedDirection.z);
+        else if (normalizedDirection.z < -epsilon)
+            consider((bossRoomMinZ - startPosition.z) / normalizedDirection.z);
+        return result == FLT_MAX ? 0.0f : result;
+    }();
+    chargeBT.tripleChargeTelegraphWorldStaticDistance = worldStaticDistance;
+    chargeBT.tripleChargeTelegraphBoundaryDistance = boundaryDistance;
 
     float telegraphLength = castDistance;
-    if (wallCandidate)
+    if (rawWallHit)
     {
         chargeBT.tripleChargeTelegraphWallHit = true;
-        chargeBT.tripleChargeTelegraphWallDistance = (std::max)(0.0f, wallHit.distance);
-        telegraphLength = chargeBT.tripleChargeIndex < 2
-            ? (std::max)(0.0f, wallHit.distance - chargeBT.tripleChargeWallTurnClearance)
-            : (std::max)(0.0f, wallHit.distance);
+        chargeBT.tripleChargeTelegraphWallDistance = worldStaticDistance;
+        telegraphLength = worldStaticDistance;
+        chargeBT.tripleChargeTelegraphLengthSource = "WorldStatic";
+    }
+    else if (boundaryDistance > 0.0f)
+    {
+        chargeBT.tripleChargeTelegraphWallHit = false;
+        chargeBT.tripleChargeTelegraphWallDistance = 0.0f;
+        telegraphLength = boundaryDistance;
+        chargeBT.tripleChargeTelegraphLengthSource = "BossRoomBoundary";
     }
     else
     {
         chargeBT.tripleChargeTelegraphWallHit = false;
         chargeBT.tripleChargeTelegraphWallDistance = 0.0f;
+        chargeBT.tripleChargeTelegraphLengthSource = "MaxDistanceFallback";
     }
     telegraphLength = (std::max)(0.1f, telegraphLength);
 
     const float telegraphWidth = playerRadius * 2.0f *
         (std::max)(0.0f, tripleChargeTelegraphWidthMultiplier);
-    const DirectX::XMFLOAT3 startPosition{
-        GetPosition().x + normalizedDirection.x * tripleChargeTelegraphForwardOffset,
-        GetPosition().y + tripleChargeTelegraphGroundOffset,
-        GetPosition().z + normalizedDirection.z * tripleChargeTelegraphForwardOffset };
-
     chargeBT.tripleChargeTelegraphDirection = normalizedDirection;
     chargeBT.tripleChargeTelegraphStartPosition = startPosition;
     chargeBT.tripleChargeTelegraphLength = telegraphLength;
     chargeBT.tripleChargeTelegraphWidth = telegraphWidth;
     chargeBT.tripleChargeTelegraphVisible = showTripleChargeTelegraph &&
         tripleChargeTelegraphMeshComponent != nullptr;
+
+    // Diagnostic snapshot only. Gameplay cast conditions and length calculation
+    // remain unchanged; retain the last three generation results for comparison.
+    const size_t snapshotIndex = static_cast<size_t>(
+        chargeBT.tripleChargeTelegraphSnapshotWriteIndex % chargeBT.tripleChargeTelegraphSnapshots.size());
+    auto& snapshot = chargeBT.tripleChargeTelegraphSnapshots[snapshotIndex];
+    snapshot = {};
+    snapshot.generation = ++chargeBT.tripleChargeTelegraphSnapshotCount;
+    snapshot.chargeIndex = index;
+    snapshot.direction = normalizedDirection;
+    snapshot.directionLocked = chargeDirectionLocked;
+    snapshot.castOrigin = castOrigin;
+    snapshot.castEnd = {
+        castOrigin.x + normalizedDirection.x * castDistance,
+        castOrigin.y + normalizedDirection.y * castDistance,
+        castOrigin.z + normalizedDirection.z * castDistance };
+    snapshot.startPosition = startPosition;
+    snapshot.gruxPosition = GetPosition();
+    snapshot.gruxScale = GetScale();
+    snapshot.rawWallHit = rawWallHit;
+    snapshot.wallHit = rawWallHit;
+    // Preserve the raw query distance even when the existing Candidate filter
+    // rejects the surface; this is diagnostic data only.
+    snapshot.wallDistance = rawWallHit ? (std::max)(0.0f, wallHit.distance) : 0.0f;
+    snapshot.worldStaticDistance = worldStaticDistance;
+    snapshot.boundaryDistance = boundaryDistance;
+    snapshot.lengthSource = chargeBT.tripleChargeTelegraphLengthSource;
+    snapshot.length = telegraphLength;
+    snapshot.wallCastRadius = wallRadius;
+    snapshot.playerCastRadius = playerRadius;
+    snapshot.wallTurnClearance = chargeBT.tripleChargeWallTurnClearance;
+    snapshot.maxDistance = tripleChargeTelegraphMaxDistance;
+    snapshot.capsuleRadius = radius;
+    snapshot.phase2Scale = enemyScale;
+    snapshot.phase2TransformProgress = phaseTransformProgress;
+    snapshot.bossInFinalPhase = IsPhase2ChargeActive();
+    if (rawWallHit)
+    {
+        snapshot.hitPosition = wallHit.hitPoint;
+        snapshot.hitNormal = wallHit.normal;
+        if (wallHit.actor)
+            snapshot.wallHitActor = wallHit.actor->GetName();
+        if (wallHit.component)
+        {
+            snapshot.wallHitComponent = wallHit.component->GetName();
+            snapshot.wallHitLayer = wallHit.component->GetCollisionLayer();
+        }
+    }
+    ++chargeBT.tripleChargeTelegraphSnapshotWriteIndex;
+
+    if (showTripleChargeTelegraph)
+    {
+        const DirectX::XMFLOAT3 castEnd{
+            castOrigin.x + normalizedDirection.x * castDistance,
+            castOrigin.y + normalizedDirection.y * castDistance,
+            castOrigin.z + normalizedDirection.z * castDistance };
+        const DirectX::XMFLOAT4 castColor{ 1.0f, 0.75f, 0.10f, 1.0f };
+        DebugRender::DrawLine(castOrigin, castEnd, castColor, 0.0f, true);
+        DebugRender::DrawSphere(castOrigin, wallRadius, castColor, 0.0f, true);
+        DebugRender::DrawSphere(castEnd, wallRadius, castColor, 0.0f, true);
+        if (rawWallHit)
+        {
+            DebugRender::DrawSphere(wallHit.hitPoint, 0.12f,
+                { 1.0f, 0.15f, 0.05f, 1.0f }, 0.0f, true);
+            const DirectX::XMFLOAT3 normalEnd{
+                wallHit.hitPoint.x + wallHit.normal.x,
+                wallHit.hitPoint.y + wallHit.normal.y,
+                wallHit.hitPoint.z + wallHit.normal.z };
+            DebugRender::DrawLine(wallHit.hitPoint, normalEnd,
+                { 1.0f, 0.15f, 0.05f, 1.0f }, 0.0f, true);
+        }
+    }
 
     if (tripleChargeTelegraphMeshComponent)
     {
@@ -428,12 +562,43 @@ bool GruxEnemy::BeginTripleChargeTelegraph()
         const auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f);
         DirectX::XMFLOAT4 rotationFloat{};
         DirectX::XMStoreFloat4(&rotationFloat, rotation);
-        tripleChargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
         const DirectX::XMFLOAT3 rootScale = GetScale();
-        tripleChargeTelegraphMeshComponent->SetRelativeScaleDirect({
+        const DirectX::XMFLOAT3 requestedScale{
             telegraphWidth / (std::abs(rootScale.x) > 0.001f ? rootScale.x : 1.0f),
             1.0f,
-            telegraphLength / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) });
+            telegraphLength / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
+        tripleChargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
+        tripleChargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
+
+        snapshot.requestedPosition = startPosition;
+        snapshot.requestedRotation = rotationFloat;
+        snapshot.requestedYaw = yaw;
+        snapshot.requestedScale = requestedScale;
+        snapshot.relativePosition = tripleChargeTelegraphMeshComponent->GetRelativeLocation();
+        snapshot.relativeScale = tripleChargeTelegraphMeshComponent->GetRelativeScale();
+        snapshot.componentWorldPosition = tripleChargeTelegraphMeshComponent->GetComponentLocation();
+        snapshot.componentWorldScale = tripleChargeTelegraphMeshComponent->GetComponentScale();
+        snapshot.componentWorldMatrix =
+            tripleChargeTelegraphMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+        const auto worldMatrix = tripleChargeTelegraphMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+        const auto transformPoint = [&worldMatrix](const DirectX::XMFLOAT3& point)
+        {
+            DirectX::XMFLOAT3 result{};
+            DirectX::XMStoreFloat3(&result,
+                DirectX::XMVector3TransformCoord(DirectX::XMLoadFloat3(&point),
+                    DirectX::XMLoadFloat4x4(&worldMatrix)));
+            return result;
+        };
+        snapshot.actualMeshStart = transformPoint({ 0.0f, 0.0f, 0.0f });
+        snapshot.actualMeshEnd = transformPoint({ 0.0f, 0.0f, -1.0f });
+        if (showTripleChargeTelegraph)
+        {
+            const DirectX::XMFLOAT4 meshColor{ 0.25f, 1.0f, 0.35f, 1.0f };
+            DebugRender::DrawLine(snapshot.actualMeshStart, snapshot.actualMeshEnd,
+                meshColor, 0.0f, true);
+            DebugRender::DrawSphere(snapshot.actualMeshStart, 0.10f, meshColor, 0.0f, true);
+            DebugRender::DrawSphere(snapshot.actualMeshEnd, 0.10f, meshColor, 0.0f, true);
+        }
         tripleChargeTelegraphMeshComponent->SetIsVisible(chargeBT.tripleChargeTelegraphVisible);
         (void)centerPosition; // The asset pivot is the start edge, not the center.
     }
@@ -540,10 +705,213 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         }
         chargeBT.tripleChargeTransitionElapsed += (std::max)(0.0f, dt);
         RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_TripleChargeTransition");
+
+        // Before locking the next leg, ensure the current position has enough
+        // forward clearance.  This is deliberately limited to legs 2/3;
+        // the existing BeginChargeAttackMovement validation remains authoritative.
+        const float directionLength = std::sqrt(
+            context.directionToPlayer.x * context.directionToPlayer.x +
+            context.directionToPlayer.z * context.directionToPlayer.z);
+        if (directionLength > 0.0001f)
+        {
+            const DirectX::XMFLOAT3 nextDirection{
+                context.directionToPlayer.x / directionLength, 0.0f,
+                context.directionToPlayer.z / directionLength };
+            float clearance = 0.0f;
+            bool wallHit = false;
+            const DirectX::XMFLOAT3 currentPosition = GetPosition();
+            const bool clearanceMeasured = EvaluateChargeStartClearance(
+                currentPosition, nextDirection, clearance, wallHit);
+            const float requiredClearance = chargeStartValidationClearance +
+                tripleChargeRepositionSafetyMargin;
+            float sideClearance = 0.0f;
+            DirectX::XMFLOAT3 sideNormal{};
+            DirectX::XMFLOAT3 sideHitPosition{};
+            std::string sideActor;
+            std::string sideComponent;
+            bool sideWallHit = false;
+            EvaluateChargeSideClearance(currentPosition, nextDirection,
+                sideClearance, sideNormal, sideHitPosition, sideActor,
+                sideComponent, sideWallHit);
+            chargeBT.tripleChargeRepositionCurrentPosition = currentPosition;
+            chargeBT.tripleChargeRepositionCurrentClearance = clearance;
+            chargeBT.tripleChargeRepositionRequiredClearance = requiredClearance;
+            chargeBT.tripleChargeRepositionValidationBefore = clearanceMeasured &&
+                clearance > chargeStartValidationClearance;
+            chargeBT.tripleChargeRepositionShortage = wallHit
+                ? (std::max)(0.0f, requiredClearance - clearance) : 0.0f;
+            const float requiredSideClearance = (std::max)(0.05f,
+                radius * chargeWallCastRadiusScale) + chargeWallCastSafetyMargin +
+                tripleChargeRepositionSideSafetyMargin;
+            const float sideShortage = sideWallHit
+                ? (std::max)(0.0f, requiredSideClearance - sideClearance) : 0.0f;
+            chargeBT.tripleChargeSideClearance = sideClearance;
+            chargeBT.tripleChargeSideWallHit = sideWallHit;
+            chargeBT.tripleChargeSideWallHitPosition = sideHitPosition;
+            chargeBT.tripleChargeSideWallHitNormal = sideNormal;
+            chargeBT.tripleChargeSideWallActor = sideActor;
+            chargeBT.tripleChargeSideWallComponent = sideComponent;
+            chargeBT.tripleChargeForwardCorrectionDistance = chargeBT.tripleChargeRepositionShortage;
+            chargeBT.tripleChargeSideCorrectionDistance = sideShortage;
+            if (showChargeCastDebug)
+            {
+                const DirectX::XMFLOAT4 repositionColor{ 0.75f, 0.20f, 1.0f, 1.0f };
+                DebugRender::DrawLine(chargeBT.tripleChargeRepositionStartPosition,
+                    chargeBT.tripleChargeRepositionTargetPosition, repositionColor, 0.0f, true);
+                DebugRender::DrawSphere(chargeBT.tripleChargeRepositionTargetPosition,
+                    0.10f, repositionColor, 0.0f, true);
+                if (sideWallHit)
+                {
+                    DebugRender::DrawSphere(sideHitPosition, 0.12f,
+                        { 1.0f, 0.05f, 0.80f, 1.0f }, 0.0f, true);
+                    DebugRender::DrawLine(sideHitPosition,
+                        { sideHitPosition.x + sideNormal.x,
+                            sideHitPosition.y + sideNormal.y,
+                            sideHitPosition.z + sideNormal.z },
+                        { 1.0f, 0.05f, 0.80f, 1.0f }, 0.0f, true);
+                }
+            }
+
+            if (clearanceMeasured && !chargeBT.tripleChargeRepositionActive &&
+                (chargeBT.tripleChargeRepositionShortage > 0.0f || sideShortage > 0.0f))
+            {
+                DirectX::XMFLOAT3 inwardNormal = sideNormal;
+                const DirectX::XMFLOAT3 roomCenter{
+                    (bossRoomMinX + bossRoomMaxX) * 0.5f, currentPosition.y,
+                    (bossRoomMinZ + bossRoomMaxZ) * 0.5f };
+                const float toCenterX = roomCenter.x - currentPosition.x;
+                const float toCenterZ = roomCenter.z - currentPosition.z;
+                if (inwardNormal.x * toCenterX + inwardNormal.z * toCenterZ < 0.0f)
+                {
+                    inwardNormal.x = -inwardNormal.x;
+                    inwardNormal.z = -inwardNormal.z;
+                }
+                DirectX::XMFLOAT3 correction{
+                    -nextDirection.x * chargeBT.tripleChargeRepositionShortage +
+                        inwardNormal.x * sideShortage,
+                    0.0f,
+                    -nextDirection.z * chargeBT.tripleChargeRepositionShortage +
+                        inwardNormal.z * sideShortage };
+                const float correctionLength = std::sqrt(
+                    correction.x * correction.x + correction.z * correction.z);
+                const float plannedDistance = (std::min)(correctionLength,
+                    tripleChargeRepositionMaxDistance);
+                const float wallRadius = (std::max)(0.05f,
+                    radius * chargeWallCastRadiusScale);
+                const float boundaryMargin = (std::max)(
+                    bossRoomSafetyMargin,
+                    wallRadius + chargeWallCastSafetyMargin);
+                chargeBT.tripleChargeRepositionRequired = true;
+                chargeBT.tripleChargeRepositionActive = plannedDistance > 0.0001f;
+                chargeBT.tripleChargeRepositionStartPosition = currentPosition;
+                chargeBT.tripleChargeRepositionDirection = correctionLength > 0.0001f
+                    ? DirectX::XMFLOAT3{ correction.x / correctionLength, 0.0f, correction.z / correctionLength }
+                    : DirectX::XMFLOAT3{};
+                chargeBT.tripleChargeRepositionPlannedDistance = plannedDistance;
+                chargeBT.tripleChargeRepositionTargetPosition = currentPosition;
+                chargeBT.tripleChargeRepositionTargetPosition.x +=
+                    chargeBT.tripleChargeRepositionDirection.x * plannedDistance;
+                chargeBT.tripleChargeRepositionTargetPosition.z +=
+                    chargeBT.tripleChargeRepositionDirection.z * plannedDistance;
+                chargeBT.tripleChargeRepositionTargetPosition.x = std::clamp(
+                    chargeBT.tripleChargeRepositionTargetPosition.x,
+                    bossRoomMinX + boundaryMargin, bossRoomMaxX - boundaryMargin);
+                chargeBT.tripleChargeRepositionTargetPosition.z = std::clamp(
+                    chargeBT.tripleChargeRepositionTargetPosition.z,
+                    bossRoomMinZ + boundaryMargin, bossRoomMaxZ - boundaryMargin);
+            }
+
+            if (chargeBT.tripleChargeRepositionActive)
+            {
+                const DirectX::XMFLOAT3 beforeMove = GetPosition();
+                const DirectX::XMFLOAT3 target = chargeBT.tripleChargeRepositionTargetPosition;
+                const float dx = target.x - beforeMove.x;
+                const float dz = target.z - beforeMove.z;
+                const float remaining = std::sqrt(dx * dx + dz * dz);
+                const float step = tripleChargeRepositionSpeed * (std::max)(0.0f, dt);
+                DirectX::XMFLOAT3 moved = beforeMove;
+                if (remaining <= step || remaining <= 0.0001f)
+                {
+                    moved = target;
+                    chargeBT.tripleChargeRepositionActive = false;
+                }
+                else
+                {
+                    moved.x += dx / remaining * step;
+                    moved.z += dz / remaining * step;
+                }
+                SetPosition(moved);
+                chargeBT.tripleChargeRepositionCurrentPosition = moved;
+                const float mdx = moved.x - chargeBT.tripleChargeRepositionStartPosition.x;
+                const float mdz = moved.z - chargeBT.tripleChargeRepositionStartPosition.z;
+                chargeBT.tripleChargeRepositionMovedDistance = std::sqrt(mdx * mdx + mdz * mdz);
+                bool ignoredWallHit = false;
+                EvaluateChargeStartClearance(moved, nextDirection,
+                    chargeBT.tripleChargeRepositionCurrentClearance, ignoredWallHit);
+                chargeBT.tripleChargeRepositionValidationAfter =
+                    chargeBT.tripleChargeRepositionCurrentClearance > chargeStartValidationClearance;
+            }
+        }
         if (chargeBT.tripleChargeTransitionElapsed < chargeBT.tripleChargeTransitionDuration)
             return ChargeBTStepResult::Running;
+        // Rebuild all target-dependent state after the final repositioned
+        // position has been applied. The old pre-reposition direction is
+        // never reused for the next leg.
+        const auto finalContext = BuildTargetContext();
+        if (!finalContext.valid)
+        {
+            FailChargeAttackBT();
+            chargeBT.triplePhase = TripleChargePhase::Aborted;
+            return ChargeBTStepResult::Complete;
+        }
+        chargeBT.tripleChargeRepositionCurrentPosition = GetPosition();
+        chargeBT.tripleChargeRepositionDirectionAfter = finalContext.directionToPlayer;
+        const auto finalScene = GetOwnerScene();
+        const auto finalPlayer = finalScene
+            ? finalScene->GetActorManager()->GetActorOfType<Player>() : nullptr;
+        if (finalPlayer)
+            chargeBT.tripleChargeRepositionPlayerPositionAfter = finalPlayer->GetPosition();
         chargeDirectionLocked = false;
-        if (!LockChargeDirectionToPlayer() || !BeginTripleChargeTelegraph())
+        chargeDirection = {};
+        if (!LockChargeDirectionToPlayer())
+        {
+            FailChargeAttackBT();
+            chargeBT.triplePhase = TripleChargePhase::Aborted;
+            return ChargeBTStepResult::Complete;
+        }
+        chargeBT.tripleChargeFinalLockedDirection = chargeDirection;
+        chargeBT.tripleChargeFinalValidationOrigin = GetPosition();
+        chargeBT.tripleChargeFinalValidationDirection = chargeDirection;
+        bool finalValidationHit = false;
+        const bool finalValidationMeasured = EvaluateChargeStartClearance(
+            chargeBT.tripleChargeFinalValidationOrigin,
+            chargeBT.tripleChargeFinalValidationDirection,
+            chargeBT.tripleChargeFinalValidationClearance,
+            finalValidationHit);
+        chargeBT.tripleChargeFinalValidationResult = finalValidationMeasured &&
+            (!finalValidationHit || chargeBT.tripleChargeFinalValidationClearance > chargeStartValidationClearance);
+        float finalSideClearance = 0.0f;
+        DirectX::XMFLOAT3 finalSideNormal{};
+        DirectX::XMFLOAT3 finalSideHitPosition{};
+        std::string finalSideActor;
+        std::string finalSideComponent;
+        bool finalSideHit = false;
+        EvaluateChargeSideClearance(chargeBT.tripleChargeFinalValidationOrigin,
+            chargeBT.tripleChargeFinalValidationDirection, finalSideClearance,
+            finalSideNormal, finalSideHitPosition, finalSideActor,
+            finalSideComponent, finalSideHit);
+        chargeBT.tripleChargeSideClearance = finalSideClearance;
+        chargeBT.tripleChargeSideWallHit = finalSideHit;
+        chargeBT.tripleChargeSideWallHitPosition = finalSideHitPosition;
+        chargeBT.tripleChargeSideWallHitNormal = finalSideNormal;
+        chargeBT.tripleChargeSideWallActor = finalSideActor;
+        chargeBT.tripleChargeSideWallComponent = finalSideComponent;
+        const float finalRequiredSideClearance = (std::max)(0.05f,
+            radius * chargeWallCastRadiusScale) + chargeWallCastSafetyMargin +
+            tripleChargeRepositionSideSafetyMargin;
+        chargeBT.tripleChargeFinalPathSafe = chargeBT.tripleChargeFinalValidationResult &&
+            (!finalSideHit || finalSideClearance > finalRequiredSideClearance);
+        if (!BeginTripleChargeTelegraph())
         {
             FailChargeAttackBT();
             chargeBT.triplePhase = TripleChargePhase::Aborted;
@@ -920,9 +1288,14 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::DragFloat(U8("三連突進 1・2段目 最大突進時間"), &chargeBT.tripleChargeLegMaxDuration, 0.05f, 0.1f, 10.0f, "%.2f sec");
     ImGui::DragFloat(U8("三連突進 段間切り返し時間"), &chargeBT.tripleChargeTransitionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
     ImGui::DragFloat(U8("三連突進 最終壁スタン倍率"), &chargeBT.tripleWallStunDurationMultiplier, 0.05f, 1.0f, 5.0f, "%.2fx");
+    ImGui::DragFloat("Triple Charge Reposition Max Distance", &tripleChargeRepositionMaxDistance, 0.05f, 0.0f, 2.0f, "%.2f m");
+    ImGui::DragFloat("Triple Charge Reposition Safety Margin", &tripleChargeRepositionSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
+    ImGui::DragFloat("Triple Charge Reposition Speed", &tripleChargeRepositionSpeed, 0.05f, 0.1f, 10.0f, "%.2f m/s");
+    ImGui::DragFloat("Triple Charge Reposition Side Safety Margin", &tripleChargeRepositionSideSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
     ImGui::Checkbox("Show Triple Charge Telegraph", &showTripleChargeTelegraph);
     ImGui::DragFloat("Triple Charge Telegraph Hold Duration", &tripleChargeTelegraphHoldDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
     ImGui::DragFloat("Triple Charge Telegraph Ground Offset", &tripleChargeTelegraphGroundOffset, 0.005f, -0.1f, 0.5f, "%.3f m");
+    ImGui::DragFloat("Triple Charge Telegraph Fixed World Y", &tripleChargeTelegraphFixedWorldY, 0.01f, -5.0f, 5.0f, "%.3f");
     ImGui::DragFloat("Triple Charge Telegraph Forward Offset", &tripleChargeTelegraphForwardOffset, 0.01f, -1.0f, 2.0f, "%.2f m");
     ImGui::DragFloat("Triple Charge Telegraph Max Distance", &tripleChargeTelegraphMaxDistance, 0.1f, 0.1f, 100.0f, "%.2f m");
     ImGui::DragFloat("Triple Charge Telegraph Width Multiplier", &tripleChargeTelegraphWidthMultiplier, 0.01f, 0.0f, 3.0f, "%.2fx");
@@ -931,6 +1304,10 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     chargeBT.tripleChargeLegMaxDuration = (std::max)(0.1f, chargeBT.tripleChargeLegMaxDuration);
     chargeBT.tripleChargeTransitionDuration = (std::max)(0.0f, chargeBT.tripleChargeTransitionDuration);
     chargeBT.tripleWallStunDurationMultiplier = (std::max)(1.0f, chargeBT.tripleWallStunDurationMultiplier);
+    tripleChargeRepositionMaxDistance = (std::max)(0.0f, tripleChargeRepositionMaxDistance);
+    tripleChargeRepositionSafetyMargin = (std::max)(0.0f, tripleChargeRepositionSafetyMargin);
+    tripleChargeRepositionSpeed = (std::max)(0.1f, tripleChargeRepositionSpeed);
+    tripleChargeRepositionSideSafetyMargin = (std::max)(0.0f, tripleChargeRepositionSideSafetyMargin);
     tripleChargeTelegraphHoldDuration = std::clamp(tripleChargeTelegraphHoldDuration, 0.0f, 1.0f);
     tripleChargeTelegraphMaxDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
     tripleChargeTelegraphWidthMultiplier = (std::max)(0.0f, tripleChargeTelegraphWidthMultiplier);
@@ -1050,15 +1427,117 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::Text(U8("Current Leg Distance: %.3f m"), chargeBT.tripleChargeLegDistance);
     ImGui::Text(U8("Current Leg Elapsed: %.3f sec"), chargeBT.tripleChargeLegElapsed);
     ImGui::Text(U8("Triple Charge Transition Elapsed: %.3f sec"), chargeBT.tripleChargeTransitionElapsed);
+    ImGui::Text("Triple Charge Reposition Active: %s", chargeBT.tripleChargeRepositionActive ? "true" : "false");
+    ImGui::Text("Triple Charge Reposition Required: %s", chargeBT.tripleChargeRepositionRequired ? "true" : "false");
+    ImGui::Text("Reposition Start: (%.2f, %.2f, %.2f)", chargeBT.tripleChargeRepositionStartPosition.x, chargeBT.tripleChargeRepositionStartPosition.y, chargeBT.tripleChargeRepositionStartPosition.z);
+    ImGui::Text("Reposition Target: (%.2f, %.2f, %.2f)", chargeBT.tripleChargeRepositionTargetPosition.x, chargeBT.tripleChargeRepositionTargetPosition.y, chargeBT.tripleChargeRepositionTargetPosition.z);
+    ImGui::Text("Reposition Current: (%.2f, %.2f, %.2f)", chargeBT.tripleChargeRepositionCurrentPosition.x, chargeBT.tripleChargeRepositionCurrentPosition.y, chargeBT.tripleChargeRepositionCurrentPosition.z);
+    ImGui::Text("Reposition Final Position: (%.2f, %.2f, %.2f)", chargeBT.tripleChargeRepositionCurrentPosition.x, chargeBT.tripleChargeRepositionCurrentPosition.y, chargeBT.tripleChargeRepositionCurrentPosition.z);
+    ImGui::Text("Reposition Direction: (%.2f, %.2f, %.2f)", chargeBT.tripleChargeRepositionDirection.x, chargeBT.tripleChargeRepositionDirection.y, chargeBT.tripleChargeRepositionDirection.z);
+    ImGui::Text("Reposition Clearance Required/Current: %.3f / %.3f", chargeBT.tripleChargeRepositionRequiredClearance, chargeBT.tripleChargeRepositionCurrentClearance);
+    ImGui::Text("Reposition Shortage/Planned/Moved: %.3f / %.3f / %.3f", chargeBT.tripleChargeRepositionShortage, chargeBT.tripleChargeRepositionPlannedDistance, chargeBT.tripleChargeRepositionMovedDistance);
+    ImGui::Text("Reposition Validation Before/After: %s / %s", chargeBT.tripleChargeRepositionValidationBefore ? "Valid" : "Invalid", chargeBT.tripleChargeRepositionValidationAfter ? "Valid" : "Invalid");
+    ImGui::Text("Player Before Reposition: (%.2f, %.2f, %.2f)", chargeBT.tripleChargeRepositionPlayerPositionBefore.x, chargeBT.tripleChargeRepositionPlayerPositionBefore.y, chargeBT.tripleChargeRepositionPlayerPositionBefore.z);
+    ImGui::Text("Player After Reposition: (%.2f, %.2f, %.2f)", chargeBT.tripleChargeRepositionPlayerPositionAfter.x, chargeBT.tripleChargeRepositionPlayerPositionAfter.y, chargeBT.tripleChargeRepositionPlayerPositionAfter.z);
+    ImGui::Text("Direction Before/After: (%.2f, %.2f, %.2f) / (%.2f, %.2f, %.2f)",
+        chargeBT.tripleChargeRepositionDirectionBefore.x, chargeBT.tripleChargeRepositionDirectionBefore.y, chargeBT.tripleChargeRepositionDirectionBefore.z,
+        chargeBT.tripleChargeRepositionDirectionAfter.x, chargeBT.tripleChargeRepositionDirectionAfter.y, chargeBT.tripleChargeRepositionDirectionAfter.z);
+    ImGui::Text("Final Locked Charge Direction: (%.3f, %.3f, %.3f)", chargeBT.tripleChargeFinalLockedDirection.x, chargeBT.tripleChargeFinalLockedDirection.y, chargeBT.tripleChargeFinalLockedDirection.z);
+    ImGui::Text("Final Validation Origin: (%.3f, %.3f, %.3f)", chargeBT.tripleChargeFinalValidationOrigin.x, chargeBT.tripleChargeFinalValidationOrigin.y, chargeBT.tripleChargeFinalValidationOrigin.z);
+    ImGui::Text("Final Validation Direction: (%.3f, %.3f, %.3f)", chargeBT.tripleChargeFinalValidationDirection.x, chargeBT.tripleChargeFinalValidationDirection.y, chargeBT.tripleChargeFinalValidationDirection.z);
+    ImGui::Text("Final Validation Clearance: %.3f", chargeBT.tripleChargeFinalValidationClearance);
+    ImGui::Text("Final Validation Result: %s", chargeBT.tripleChargeFinalValidationResult ? "Valid" : "Invalid");
+    ImGui::Text("Final Charge Direction: (%.3f, %.3f, %.3f)", chargeBT.tripleChargeFinalLockedDirection.x, chargeBT.tripleChargeFinalLockedDirection.y, chargeBT.tripleChargeFinalLockedDirection.z);
+    ImGui::Text("Forward Clearance: %.3f / Side Clearance: %.3f", chargeBT.tripleChargeFinalValidationClearance, chargeBT.tripleChargeSideClearance);
+    ImGui::Text("Side Wall Hit: %s  Distance: %.3f", chargeBT.tripleChargeSideWallHit ? "true" : "false", chargeBT.tripleChargeSideClearance);
+    ImGui::Text("Side Wall Normal: (%.3f, %.3f, %.3f)", chargeBT.tripleChargeSideWallHitNormal.x, chargeBT.tripleChargeSideWallHitNormal.y, chargeBT.tripleChargeSideWallHitNormal.z);
+    ImGui::Text("Side Wall Actor/Component: %s / %s", chargeBT.tripleChargeSideWallActor.c_str(), chargeBT.tripleChargeSideWallComponent.c_str());
+    ImGui::Text("Forward/Side Correction: %.3f / %.3f", chargeBT.tripleChargeForwardCorrectionDistance, chargeBT.tripleChargeSideCorrectionDistance);
+    ImGui::Text("Final Path Safe: %s", chargeBT.tripleChargeFinalPathSafe ? "true" : "false");
     ImGui::Text("Telegraph Visible: %s", chargeBT.tripleChargeTelegraphVisible ? "true" : "false");
     ImGui::Text("Telegraph Direction: (%.3f, %.3f, %.3f)", chargeBT.tripleChargeTelegraphDirection.x,
         chargeBT.tripleChargeTelegraphDirection.y, chargeBT.tripleChargeTelegraphDirection.z);
     ImGui::Text("Telegraph Start Position: (%.3f, %.3f, %.3f)", chargeBT.tripleChargeTelegraphStartPosition.x,
         chargeBT.tripleChargeTelegraphStartPosition.y, chargeBT.tripleChargeTelegraphStartPosition.z);
+    ImGui::Text("Grux World Y: %.3f", GetPosition().y);
+    ImGui::Text("Telegraph Fixed World Y: %.3f", tripleChargeTelegraphFixedWorldY);
+    ImGui::Text("Final Telegraph World Y: %.3f", chargeBT.tripleChargeTelegraphStartPosition.y);
     ImGui::Text("Telegraph Length: %.3f m", chargeBT.tripleChargeTelegraphLength);
     ImGui::Text("Telegraph Width: %.3f m", chargeBT.tripleChargeTelegraphWidth);
     ImGui::Text("Telegraph Wall Hit: %s", chargeBT.tripleChargeTelegraphWallHit ? "true" : "false");
     ImGui::Text("Telegraph Wall Distance: %.3f m", chargeBT.tripleChargeTelegraphWallDistance);
+    ImGui::Text("Telegraph Length Source: %s", chargeBT.tripleChargeTelegraphLengthSource.c_str());
+    ImGui::Text("WorldStatic Distance: %.3f m", chargeBT.tripleChargeTelegraphWorldStaticDistance);
+    ImGui::Text("Boundary Distance: %.3f m", chargeBT.tripleChargeTelegraphBoundaryDistance);
+    ImGui::SeparatorText("Telegraph Cast Snapshots");
+    for (int displayIndex = 0; displayIndex < 3; ++displayIndex)
+    {
+        if (chargeBT.tripleChargeTelegraphSnapshotCount <= static_cast<uint64_t>(displayIndex))
+            continue;
+        const uint64_t newest = chargeBT.tripleChargeTelegraphSnapshotWriteIndex == 0
+            ? 0 : chargeBT.tripleChargeTelegraphSnapshotWriteIndex - 1;
+        const size_t snapshotIndex = static_cast<size_t>(
+            (newest + chargeBT.tripleChargeTelegraphSnapshots.size() - displayIndex) %
+            chargeBT.tripleChargeTelegraphSnapshots.size());
+        const auto& snapshot = chargeBT.tripleChargeTelegraphSnapshots[snapshotIndex];
+        ImGui::Text("Telegraph Snapshot [%d] %s (Generation %llu, Leg %d)", displayIndex,
+            displayIndex == 0 ? "Latest" : displayIndex == 1 ? "Previous" : "Previous 2",
+            static_cast<unsigned long long>(snapshot.generation), snapshot.chargeIndex + 1);
+        ImGui::Text("  Phase: %s, Final Phase: %s, Progress: %.3f, Scale: (%.3f, %.3f, %.3f)",
+            snapshot.bossInFinalPhase ? "Phase2" : "Phase1",
+            snapshot.bossInFinalPhase ? "true" : "false", snapshot.phase2TransformProgress,
+            snapshot.gruxScale.x, snapshot.gruxScale.y, snapshot.gruxScale.z);
+        ImGui::Text("  Grux: (%.3f, %.3f, %.3f), Dir: (%.3f, %.3f, %.3f), Locked: %s",
+            snapshot.gruxPosition.x, snapshot.gruxPosition.y, snapshot.gruxPosition.z,
+            snapshot.direction.x, snapshot.direction.y, snapshot.direction.z,
+            snapshot.directionLocked ? "true" : "false");
+        ImGui::Text("  Requested Pos: (%.3f, %.3f, %.3f), Yaw: %.3f",
+            snapshot.requestedPosition.x, snapshot.requestedPosition.y, snapshot.requestedPosition.z,
+            snapshot.requestedYaw);
+        ImGui::Text("  Requested Rot: (%.3f, %.3f, %.3f, %.3f), Scale: (%.3f, %.3f, %.3f)",
+            snapshot.requestedRotation.x, snapshot.requestedRotation.y,
+            snapshot.requestedRotation.z, snapshot.requestedRotation.w,
+            snapshot.requestedScale.x, snapshot.requestedScale.y, snapshot.requestedScale.z);
+        ImGui::Text("  Relative Pos: (%.3f, %.3f, %.3f), Relative Scale: (%.3f, %.3f, %.3f)",
+            snapshot.relativePosition.x, snapshot.relativePosition.y, snapshot.relativePosition.z,
+            snapshot.relativeScale.x, snapshot.relativeScale.y, snapshot.relativeScale.z);
+        ImGui::Text("  Component World Pos: (%.3f, %.3f, %.3f), World Scale: (%.3f, %.3f, %.3f)",
+            snapshot.componentWorldPosition.x, snapshot.componentWorldPosition.y,
+            snapshot.componentWorldPosition.z, snapshot.componentWorldScale.x,
+            snapshot.componentWorldScale.y, snapshot.componentWorldScale.z);
+        ImGui::Text("  Mesh World Start: (%.3f, %.3f, %.3f), End: (%.3f, %.3f, %.3f)",
+            snapshot.actualMeshStart.x, snapshot.actualMeshStart.y, snapshot.actualMeshStart.z,
+            snapshot.actualMeshEnd.x, snapshot.actualMeshEnd.y, snapshot.actualMeshEnd.z);
+        ImGui::Text("  World Matrix: [%.3f %.3f %.3f %.3f]",
+            snapshot.componentWorldMatrix._11, snapshot.componentWorldMatrix._12,
+            snapshot.componentWorldMatrix._13, snapshot.componentWorldMatrix._14);
+        ImGui::Text("               [%.3f %.3f %.3f %.3f]",
+            snapshot.componentWorldMatrix._21, snapshot.componentWorldMatrix._22,
+            snapshot.componentWorldMatrix._23, snapshot.componentWorldMatrix._24);
+        ImGui::Text("               [%.3f %.3f %.3f %.3f]",
+            snapshot.componentWorldMatrix._31, snapshot.componentWorldMatrix._32,
+            snapshot.componentWorldMatrix._33, snapshot.componentWorldMatrix._34);
+        ImGui::Text("               [%.3f %.3f %.3f %.3f]",
+            snapshot.componentWorldMatrix._41, snapshot.componentWorldMatrix._42,
+            snapshot.componentWorldMatrix._43, snapshot.componentWorldMatrix._44);
+        ImGui::Text("  CastOrigin: (%.3f, %.3f, %.3f), CastEnd: (%.3f, %.3f, %.3f)",
+            snapshot.castOrigin.x, snapshot.castOrigin.y, snapshot.castOrigin.z,
+            snapshot.castEnd.x, snapshot.castEnd.y, snapshot.castEnd.z);
+        ImGui::Text("  Start: (%.3f, %.3f, %.3f), RawHit: %s, WorldStaticHit: %s, Dist: %.3f, Length: %.3f",
+            snapshot.startPosition.x, snapshot.startPosition.y, snapshot.startPosition.z,
+            snapshot.rawWallHit ? "true" : "false", snapshot.wallHit ? "true" : "false",
+            snapshot.wallDistance, snapshot.length);
+        ImGui::Text("  Length Source: %s, WorldStatic: %.3f, Boundary: %.3f",
+            snapshot.lengthSource.c_str(), snapshot.worldStaticDistance, snapshot.boundaryDistance);
+        ImGui::Text("  HitPos: (%.3f, %.3f, %.3f), Normal: (%.3f, %.3f, %.3f)",
+            snapshot.hitPosition.x, snapshot.hitPosition.y, snapshot.hitPosition.z,
+            snapshot.hitNormal.x, snapshot.hitNormal.y, snapshot.hitNormal.z);
+        ImGui::Text("  Actor: %s, Component: %s, Layer: 0x%08X",
+            snapshot.wallHitActor.c_str(), snapshot.wallHitComponent.c_str(), snapshot.wallHitLayer);
+        ImGui::Text("  WallRadius: %.3f, PlayerRadius: %.3f, TurnClearance: %.3f, Max: %.3f, Capsule: %.3f",
+            snapshot.wallCastRadius, snapshot.playerCastRadius, snapshot.wallTurnClearance,
+            snapshot.maxDistance, snapshot.capsuleRadius);
+    }
     ImGui::Text("Telegraph Hold Elapsed: %.3f sec", chargeBT.tripleChargeTelegraphElapsed);
     ImGui::Text("Telegraph Hold Duration: %.3f sec", tripleChargeTelegraphHoldDuration);
     ImGui::Text("BeginTripleChargeLeg Called: %s", chargeBT.tripleBeginTripleChargeLegCalled ? "true" : "false");

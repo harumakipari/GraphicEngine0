@@ -232,6 +232,15 @@ public:
             AddPipeLineState("forwardBlendStaticMesh", desc);
         }
 
+        // ChargeTelegraphPlane Unlit forward Blend
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelChargeTelegraphUnlitPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
+            AddPipeLineState("chargeTelegraphUnlitForward", desc);
+        }
+
         // StaticMesh deferred Blend —p
         {
             hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
