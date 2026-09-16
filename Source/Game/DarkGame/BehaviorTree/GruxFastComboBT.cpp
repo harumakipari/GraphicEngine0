@@ -329,6 +329,8 @@ void GruxEnemy::RecordBehaviorAttackCompleted()
 
 void GruxEnemy::UpdateBehaviorTree(float dt)
 {
+    ++debugUpdateBehaviorTreeCallCount;
+    debugLastBehaviorTreeDeltaTime = dt;
     fastComboApproachRetryRemaining = (std::max)(0.0f, fastComboApproachRetryRemaining - dt);
     repositionCooldownRemaining = (std::max)(0.0f, repositionCooldownRemaining - (std::max)(0.0f, dt));
     repositionRetryCooldownRemaining = (std::max)(0.0f, repositionRetryCooldownRemaining - (std::max)(0.0f, dt));
@@ -345,12 +347,17 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
         CompleteCombatDecisionDebugInference(behaviorTreeCurrentNode.c_str());
     }
     if (!activeNode)
+    {
+        debugCurrentActiveBTNode = "None";
         return;
+    }
+    debugCurrentActiveBTNode = activeNode->GetName();
     behaviorTreePreviousNode = activeNode->GetName();
     behaviorTreeCurrentNode = activeNode->GetName();
     activeNode = aiTree->Run(activeNode, behaviorData.get(), dt);
     const auto result = aiTree->GetLastRunResult();
     behaviorTreeLastResult = result == ActionBase::State::Run ? "Run" : result == ActionBase::State::Complete ? "Complete" : "Failed";
+    debugCurrentActiveBTNode = activeNode ? activeNode->GetName() : "None";
 
     if (!activeNode)
     {

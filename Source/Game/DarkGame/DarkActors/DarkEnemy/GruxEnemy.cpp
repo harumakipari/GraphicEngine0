@@ -376,6 +376,14 @@ void GruxEnemy::Initialize(const Transform& transform)
     lockOnTargetMeshComponent->SetIsVisible(false);
     lockOnTargetMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
 
+    tripleChargeTelegraphMeshComponent = AddComponent<StaticMeshComponent>("tripleChargeTelegraph", parentName);
+    tripleChargeTelegraphMeshComponent->SetModel("./Data/Models/EffectModel/ChargeTelegraphPlane.glb");
+    tripleChargeTelegraphMeshComponent->SetIsCastShadow(false);
+    tripleChargeTelegraphMeshComponent->SetIsVisible(false);
+    tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1.0f, 0.16f, 0.03f, 1.0f };
+    tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
+    tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+
     lockOnTargetImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/lock_on.png", "lockOn");
     lockOnTargetImageComponent->SetVisible(true);
     lockOnTargetImageComponent->SetPivot({ 0.5f,0.5f });
@@ -5536,6 +5544,7 @@ bool GruxEnemy::BeginChargeAttackMovement()
     const BossTargetContext context = BuildTargetContext();
     if (!context.valid)
     {
+        chargeStartFailureReasonDebug = "InvalidTargetContext";
         chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
         Logger::Warning(Logger::LogCategory::Gameplay,
             "[BossCharge][StartFailed] reason=InvalidTarget");
@@ -5543,7 +5552,10 @@ bool GruxEnemy::BeginChargeAttackMovement()
     }
 
     if (!chargeDirectionLocked && !LockChargeDirectionToPlayer())
+    {
+        chargeStartFailureReasonDebug = "DirectionLockFailed";
         return false;
+    }
 
     // Reject a charge that starts with its swept body already touching a wall.
     // This is a start-position failure, not a normal forward WallHit.
@@ -5618,6 +5630,7 @@ bool GruxEnemy::LockChargeDirectionToPlayer()
     const BossTargetContext context = BuildTargetContext();
     if (!context.valid)
     {
+        chargeStartFailureReasonDebug = "InvalidTargetContext";
         chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
         Logger::Warning(Logger::LogCategory::Gameplay, "[BossCharge][DirectionLockFailed] reason=InvalidTarget");
         return false;

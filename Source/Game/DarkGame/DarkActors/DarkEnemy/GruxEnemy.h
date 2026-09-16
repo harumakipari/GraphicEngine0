@@ -210,7 +210,7 @@ public:
     bool UpdateDashAttackMovement(float deltaTime, bool keepLockedDirection = false);
     void StopDashAttackMovement();
     enum class ChargeBTPhase { None, Setup, Facing, Telegraph, Charging, Result, Stun, RecoveryPending, Recovery, RecoveryPostconditions };
-    enum class TripleChargePhase { None, InitialWindup, Charging, InterChargeTransition, Completed, Aborted };
+    enum class TripleChargePhase { None, InitialWindup, Charging, InterChargeTransition, TelegraphHold, Completed, Aborted };
     enum class ChargeBTStunPhase { None, Start, Loop, End };
     enum class ChargeBTStepResult { Running, Complete, Failed };
     bool CanPlanChargeAttack() const;
@@ -225,6 +225,9 @@ public:
     bool IsPhase2ChargeActive();
     bool BeginTripleChargeLeg();
     bool BeginTripleChargeTransition();
+    bool BeginTripleChargeTelegraph();
+    void HideTripleChargeTelegraph();
+    void DrawTripleChargeTelegraphDebug() const;
     ChargeBTStepResult ResolveChargeResultBT(float deltaTime);
     bool BeginChargeStunBT();
     ChargeBTStepResult UpdateChargeStunBT(float deltaTime);
@@ -236,7 +239,7 @@ public:
     void BeginChargeRecoveryBT() { chargeBT.phase = ChargeBTPhase::Recovery; }
     void MarkChargeRecoveryTimerFinishedBT() { chargeBT.phase = ChargeBTPhase::RecoveryPostconditions; }
     ChargeBTStepResult FinishChargeRecoveryBT();
-    bool ShouldAbortChargeAttackBT() const;
+    bool ShouldAbortChargeAttackBT() ;
     void CleanupChargeAttackBT();
     void DrawChargeAttackBTDebug();
     bool BeginChargeAttackMovement();
@@ -542,6 +545,7 @@ public:
     const std::string& GetBehaviorTreeLastResult() const { return behaviorTreeLastResult; }
     const std::string& GetBehaviorTreeLastJudgment() const { return behaviorTreeLastJudgment; }
     void SetBehaviorTreeLastJudgment(const std::string& value) { behaviorTreeLastJudgment = value; }
+    void RecordExecuteChargeAttackRunDebug();
 private:
     void ResetBehaviorTreeRuntime();
     void BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePosition);
@@ -704,7 +708,8 @@ private:
     std::shared_ptr<ParticleComponent> wallImpactDustEffectComponent;
     std::shared_ptr<ParticleComponent> wallImpactFlashEffectComponent;
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
-    std::shared_ptr<ParticleComponent> footScrapeEffectComponent;   // ?????~G?t?F?N?g
+    std::shared_ptr<ParticleComponent> footScrapeEffectComponent;
+    std::shared_ptr<StaticMeshComponent> tripleChargeTelegraphMeshComponent;   // ?????~G?t?F?N?g
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HP?o?[
@@ -1291,6 +1296,25 @@ private:
         float tripleChargeTransitionDuration = 0.9f;
         float tripleChargeLegElapsed = 0.0f;
         float tripleChargeLegDistance = 0.0f;
+        float tripleChargeTelegraphElapsed = 0.0f;
+        uint64_t tripleChargeTelegraphCallCount = 0;
+        uint64_t tripleChargeRuntimeInitializeCount = 0;
+        TripleChargePhase triplePhaseAtUpdateEntry = TripleChargePhase::None;
+        TripleChargePhase triplePhaseAtUpdateExit = TripleChargePhase::None;
+        uint64_t triplePhaseChangeCount = 0;
+        bool tripleChargeTelegraphVisible = false;
+        DirectX::XMFLOAT3 tripleChargeTelegraphDirection{};
+        DirectX::XMFLOAT3 tripleChargeTelegraphStartPosition{};
+        float tripleChargeTelegraphLength = 0.0f;
+        float tripleChargeTelegraphWidth = 0.0f;
+        bool tripleChargeTelegraphWallHit = false;
+        float tripleChargeTelegraphWallDistance = 0.0f;
+        bool tripleBeginTripleChargeLegCalled = false;
+        bool tripleBeginTripleChargeLegResult = false;
+        bool tripleBeginChargeMovementResult = false;
+        bool tripleHoldEndChargeStartValidation = false;
+        float tripleHoldEndChargeStartClearance = 0.0f;
+        std::string tripleHoldEndChargeStartFailureReason = "None";
         DirectX::XMFLOAT3 tripleChargeDirections[3]{};
         DirectX::XMFLOAT3 tripleChargeStartPositions[3]{};
         bool tripleFinalWallHit = false;
@@ -1316,6 +1340,12 @@ private:
     float chargePlayerCastRadiusScale = 0.80f;
     float chargeWallCastRadiusScale = 0.15f;
     float chargeStartValidationClearance = 0.05f;
+    float tripleChargeTelegraphHoldDuration = 0.30f;
+    float tripleChargeTelegraphGroundOffset = 0.03f;
+    float tripleChargeTelegraphForwardOffset = 0.30f;
+    float tripleChargeTelegraphMaxDistance = 30.0f;
+    float tripleChargeTelegraphWidthMultiplier = 1.0f;
+    bool showTripleChargeTelegraph = true;
     float chargeElapsedTime = 0.0f;
     bool chargeMovementActive = false;
     bool chargeDangerWindowActive = false;
@@ -1492,6 +1522,30 @@ struct WeaponHitBoxPoints
     std::string behaviorTreePreviousNode = "None";
     std::string behaviorTreeLastResult = "None";
     std::string behaviorTreeLastJudgment = "None";
+    mutable bool debugShouldAbortChargeBT = false;
+    mutable bool debugAbortBehaviorTreeDisabled = false;
+    mutable bool debugAbortExecutionNotAllowed = false;
+    mutable bool debugAbortActiveNodeNull = false;
+    mutable bool debugAbortStateMismatch = false;
+    mutable std::string debugChargeExecutionNotAllowedReason = "None";
+    bool debugChargeBTAbortDetected = false;
+    bool debugCleanupChargeAttackBTCalled = false;
+    bool debugFailChargeAttackBTCalled = false;
+    bool debugFinishChargeRecoveryBTCalled = false;
+    std::string debugLastChargeAbortReason = "None";
+    std::string debugCurrentActiveBTNode = "None";
+    uint64_t debugUpdateBehaviorTreeCallCount = 0;
+    uint64_t debugExecuteChargeAttackRunCount = 0;
+    uint64_t debugUpdateTripleChargeBTCallCount = 0;
+    float debugLastBehaviorTreeDeltaTime = 0.0f;
+    uint64_t debugTelegraphHoldUpdateCount = 0;
+    float debugTelegraphHoldLastDeltaTime = 0.0f;
+    std::string debugTelegraphEntryActiveNode = "None";
+    std::string debugTelegraphEntryInitialState = "None";
+    std::string debugTelegraphEntryCurrentState = "None";
+    std::string debugTelegraphEntryBTLastResult = "None";
+    uint64_t debugTelegraphEntryUpdateBTCount = 0;
+    uint64_t debugTelegraphEntryTripleUpdateCount = 0;
     bool behaviorTreeRestartReady = false;
     BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;
     bool behaviorApproachActive = false;

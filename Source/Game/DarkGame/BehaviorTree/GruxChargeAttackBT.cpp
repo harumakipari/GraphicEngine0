@@ -1,5 +1,6 @@
 ﻿#include "pch.h"
 #include "GruxChargeAttackBT.h"
+#include "NodeBase.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/State/StateMachine.h"
@@ -18,6 +19,11 @@ namespace
         default: return ActionBase::State::Failed;
         }
     }
+}
+
+void GruxEnemy::RecordExecuteChargeAttackRunDebug()
+{
+    ++debugExecuteChargeAttackRunCount;
 }
 
 bool CanPlanChargeAttack::Judgment()
@@ -50,6 +56,7 @@ ActionBase::State StartChargeAttack::Run(float)
 }
 ActionBase::State ExecuteChargeAttack::Run(float dt)
 {
+    owner->RecordExecuteChargeAttackRunDebug();
     return ToActionState(owner->UpdateChargeAttackBT(dt));
 }
 ActionBase::State ResolveChargeResult::Run(float dt)
@@ -79,10 +86,16 @@ ActionBase::State ExecuteChargeRecovery::Run(float dt)
 
 bool GruxEnemy::IsChargeBTExecutionAllowed() const
 {
-    return !IsDead() && battleAIActive && !finalHitReactionActive && !finalHitReactionHeld &&
-        !IsAnimationEditorPreviewActive() &&
-        (!stateMachine_ || (std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") != 0 &&
-            std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") != 0));
+    debugChargeExecutionNotAllowedReason = "None";
+    if (IsDead()) debugChargeExecutionNotAllowedReason = "Dead";
+    else if (!battleAIActive) debugChargeExecutionNotAllowedReason = "BattleAIInactive";
+    else if (finalHitReactionActive) debugChargeExecutionNotAllowedReason = "FinalHitReactionActive";
+    else if (finalHitReactionHeld) debugChargeExecutionNotAllowedReason = "FinalHitReactionHeld";
+    else if (IsAnimationEditorPreviewActive()) debugChargeExecutionNotAllowedReason = "AnimationEditorPreview";
+    else if (stateMachine_ && (!std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") ||
+        !std::strcmp(stateMachine_->GetStateName(), "EnemyStunState")))
+        debugChargeExecutionNotAllowedReason = stateMachine_->GetStateName();
+    return debugChargeExecutionNotAllowedReason == "None";
 }
 
 bool GruxEnemy::CanPlanChargeAttack() const
@@ -101,6 +114,28 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
 {
     if (!CanPlanChargeAttack())
         return false;
+    debugShouldAbortChargeBT = false;
+    debugAbortBehaviorTreeDisabled = false;
+    debugAbortExecutionNotAllowed = false;
+    debugAbortActiveNodeNull = false;
+    debugAbortStateMismatch = false;
+    debugChargeExecutionNotAllowedReason = "None";
+    debugChargeBTAbortDetected = false;
+    debugCleanupChargeAttackBTCalled = false;
+    debugFailChargeAttackBTCalled = false;
+    debugFinishChargeRecoveryBTCalled = false;
+    debugLastChargeAbortReason = "None";
+    debugUpdateBehaviorTreeCallCount = 0;
+    debugExecuteChargeAttackRunCount = 0;
+    debugUpdateTripleChargeBTCallCount = 0;
+    debugTelegraphHoldUpdateCount = 0;
+    debugTelegraphHoldLastDeltaTime = 0.0f;
+    debugTelegraphEntryActiveNode = "None";
+    debugTelegraphEntryInitialState = "None";
+    debugTelegraphEntryCurrentState = "None";
+    debugTelegraphEntryBTLastResult = "None";
+    debugTelegraphEntryUpdateBTCount = 0;
+    debugTelegraphEntryTripleUpdateCount = 0;
     chargeBT = {};
     chargeBT.phase = ChargeBTPhase::Setup;
     chargeBT.previousAction = selectedActionType;
@@ -174,6 +209,9 @@ bool GruxEnemy::CanExecuteChargeAttack() const
 void GruxEnemy::FailChargeAttackBT()
 {
     if (!IsChargeAttackBTActive()) return;
+    debugFailChargeAttackBTCalled = true;
+    debugLastChargeAbortReason = "FailChargeAttackBT";
+    HideTripleChargeTelegraph();
     StopChargeAttackMovement();
     DisableAttackHitBoxes();
     ClearAttackSetupTarget();
@@ -198,6 +236,7 @@ void GruxEnemy::StartChargeAttackBT()
     StartAttack(); // Once per whole attack, never once per leg.
     chargeBT.attackStarted = true;
     chargeBT.tripleChargeActive = IsPhase2ChargeActive();
+    ++chargeBT.tripleChargeRuntimeInitializeCount;
     chargeBT.triplePhase = chargeBT.tripleChargeActive
         ? TripleChargePhase::InitialWindup : TripleChargePhase::None;
     chargeBT.tripleChargeIndex = 0;
@@ -240,7 +279,25 @@ bool GruxEnemy::IsPhase2ChargeActive()
 
 bool GruxEnemy::BeginTripleChargeLeg()
 {
-    if (!BeginChargeAttackMovement())
+    chargeBT.tripleBeginTripleChargeLegCalled = true;
+    chargeBT.tripleBeginTripleChargeLegResult = false;
+    chargeBT.tripleBeginChargeMovementResult = false;
+    HideTripleChargeTelegraph();
+    const bool movementStarted = BeginChargeAttackMovement();
+    chargeBT.tripleBeginChargeMovementResult = movementStarted;
+    chargeBT.tripleHoldEndChargeStartValidation = chargeStartValidationValidDebug;
+    chargeBT.tripleHoldEndChargeStartClearance = chargeStartClearanceDebug;
+    chargeBT.tripleHoldEndChargeStartFailureReason = chargeStartFailureReasonDebug;
+    if (!movementStarted &&
+        (chargeStartFailureReasonDebug == "InvalidTargetContext" ||
+            chargeStartFailureReasonDebug == "DirectionLockFailed"))
+    {
+        chargeBT.tripleHoldEndChargeStartValidation = false;
+        chargeBT.tripleHoldEndChargeStartClearance = 0.0f;
+    }
+    if (!movementStarted && chargeBT.tripleHoldEndChargeStartFailureReason == "None")
+        chargeBT.tripleHoldEndChargeStartFailureReason = "Other";
+    if (!movementStarted)
         return false;
     chargeBT.result = ChargeAttackEndReason::None;
     const int index = std::clamp(chargeBT.tripleChargeIndex, 0, 2);
@@ -254,6 +311,7 @@ bool GruxEnemy::BeginTripleChargeLeg()
     chargeBT.triplePhase = TripleChargePhase::Charging;
     chargeBT.phase = ChargeBTPhase::Charging;
     SetChargePhaseDebug(index == 0 ? "TripleCharge1" : index == 1 ? "TripleCharge2" : "TripleCharge3");
+    chargeBT.tripleBeginTripleChargeLegResult = true;
     return true;
 }
 
@@ -276,6 +334,137 @@ bool GruxEnemy::BeginTripleChargeTransition()
     return true;
 }
 
+void GruxEnemy::HideTripleChargeTelegraph()
+{
+    if (tripleChargeTelegraphMeshComponent)
+        tripleChargeTelegraphMeshComponent->SetIsVisible(false);
+    chargeBT.tripleChargeTelegraphVisible = false;
+}
+
+bool GruxEnemy::BeginTripleChargeTelegraph()
+{
+    if (!chargeBT.tripleChargeActive)
+        return false;
+    ++chargeBT.tripleChargeTelegraphCallCount;
+
+    debugTelegraphEntryActiveNode = activeNode ? activeNode->GetName() : "None";
+    debugTelegraphEntryInitialState = chargeBT.initialStateName;
+    debugTelegraphEntryCurrentState = stateMachine_ ? stateMachine_->GetStateName() : "None";
+    debugTelegraphEntryBTLastResult = behaviorTreeLastResult;
+    debugTelegraphEntryUpdateBTCount = debugUpdateBehaviorTreeCallCount;
+    debugTelegraphEntryTripleUpdateCount = debugUpdateTripleChargeBTCallCount;
+
+    const int index = std::clamp(chargeBT.tripleChargeIndex, 0, 2);
+    const DirectX::XMFLOAT3 direction = chargeDirection;
+    const float directionLength = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+    if (directionLength <= FLT_EPSILON)
+        return false;
+
+    const DirectX::XMFLOAT3 normalizedDirection{
+        direction.x / directionLength, 0.0f, direction.z / directionLength };
+    const float wallRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
+    const float playerRadius = (std::max)(0.05f, radius * chargePlayerCastRadiusScale);
+    const float castDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
+    DirectX::XMFLOAT3 castOrigin = GetPosition();
+    castOrigin.y += (std::max)((std::max)(playerRadius, wallRadius) + 0.05f, height * 0.5f);
+
+    const uint32_t wallMask = CollisionHelper::MakeMask({
+        CollisionLayer::WorldStatic,
+        CollisionLayer::WorldProps,
+        CollisionLayer::WorldPropsNoRaycast,
+        });
+    HitResult wallHit{};
+    const bool rawWallHit = Physics::Instance().SphereCast(
+        castOrigin, normalizedDirection, castDistance, wallRadius, wallHit, wallMask);
+    const float facingAmount = rawWallHit
+        ? -(normalizedDirection.x * wallHit.normal.x + normalizedDirection.z * wallHit.normal.z)
+        : 0.0f;
+    const bool wallCandidate = rawWallHit &&
+        facingAmount >= chargeWallFacingThreshold &&
+        std::abs(wallHit.normal.y) <= chargeWallNormalYThreshold;
+
+    float telegraphLength = castDistance;
+    if (wallCandidate)
+    {
+        chargeBT.tripleChargeTelegraphWallHit = true;
+        chargeBT.tripleChargeTelegraphWallDistance = (std::max)(0.0f, wallHit.distance);
+        telegraphLength = chargeBT.tripleChargeIndex < 2
+            ? (std::max)(0.0f, wallHit.distance - chargeBT.tripleChargeWallTurnClearance)
+            : (std::max)(0.0f, wallHit.distance);
+    }
+    else
+    {
+        chargeBT.tripleChargeTelegraphWallHit = false;
+        chargeBT.tripleChargeTelegraphWallDistance = 0.0f;
+    }
+    telegraphLength = (std::max)(0.1f, telegraphLength);
+
+    const float telegraphWidth = playerRadius * 2.0f *
+        (std::max)(0.0f, tripleChargeTelegraphWidthMultiplier);
+    const DirectX::XMFLOAT3 startPosition{
+        GetPosition().x + normalizedDirection.x * tripleChargeTelegraphForwardOffset,
+        GetPosition().y + tripleChargeTelegraphGroundOffset,
+        GetPosition().z + normalizedDirection.z * tripleChargeTelegraphForwardOffset };
+
+    chargeBT.tripleChargeTelegraphDirection = normalizedDirection;
+    chargeBT.tripleChargeTelegraphStartPosition = startPosition;
+    chargeBT.tripleChargeTelegraphLength = telegraphLength;
+    chargeBT.tripleChargeTelegraphWidth = telegraphWidth;
+    chargeBT.tripleChargeTelegraphVisible = showTripleChargeTelegraph &&
+        tripleChargeTelegraphMeshComponent != nullptr;
+
+    if (tripleChargeTelegraphMeshComponent)
+    {
+        const DirectX::XMFLOAT3 endPosition{
+            startPosition.x + normalizedDirection.x * telegraphLength,
+            startPosition.y,
+            startPosition.z + normalizedDirection.z * telegraphLength };
+        const DirectX::XMFLOAT3 centerPosition{
+            (startPosition.x + endPosition.x) * 0.5f,
+            startPosition.y,
+            (startPosition.z + endPosition.z) * 0.5f };
+        tripleChargeTelegraphMeshComponent->SetWorldLocationDirect(startPosition);
+        const float yaw = std::atan2(-normalizedDirection.x, -normalizedDirection.z);
+        const auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f);
+        DirectX::XMFLOAT4 rotationFloat{};
+        DirectX::XMStoreFloat4(&rotationFloat, rotation);
+        tripleChargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
+        const DirectX::XMFLOAT3 rootScale = GetScale();
+        tripleChargeTelegraphMeshComponent->SetRelativeScaleDirect({
+            telegraphWidth / (std::abs(rootScale.x) > 0.001f ? rootScale.x : 1.0f),
+            1.0f,
+            telegraphLength / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) });
+        tripleChargeTelegraphMeshComponent->SetIsVisible(chargeBT.tripleChargeTelegraphVisible);
+        (void)centerPosition; // The asset pivot is the start edge, not the center.
+    }
+    return true;
+}
+
+void GruxEnemy::DrawTripleChargeTelegraphDebug() const
+{
+    if (!chargeBT.tripleChargeTelegraphVisible)
+        return;
+    const auto& start = chargeBT.tripleChargeTelegraphStartPosition;
+    const auto& direction = chargeBT.tripleChargeTelegraphDirection;
+    const float length = chargeBT.tripleChargeTelegraphLength;
+    const float halfWidth = chargeBT.tripleChargeTelegraphWidth * 0.5f;
+    const DirectX::XMFLOAT3 end{
+        start.x + direction.x * length, start.y + 0.01f,
+        start.z + direction.z * length };
+    const DirectX::XMFLOAT3 debugStart{ start.x, start.y + 0.01f, start.z };
+    const DirectX::XMFLOAT3 lateral{ -direction.z * halfWidth, 0.0f, direction.x * halfWidth };
+    const DirectX::XMFLOAT3 leftStart{ debugStart.x + lateral.x, debugStart.y, debugStart.z + lateral.z };
+    const DirectX::XMFLOAT3 rightStart{ debugStart.x - lateral.x, debugStart.y, debugStart.z - lateral.z };
+    const DirectX::XMFLOAT3 leftEnd{ end.x + lateral.x, end.y, end.z + lateral.z };
+    const DirectX::XMFLOAT3 rightEnd{ end.x - lateral.x, end.y, end.z - lateral.z };
+    const DirectX::XMFLOAT4 color{ 1.0f, 0.25f, 0.05f, 1.0f };
+    DebugRender::DrawLine(debugStart, end, color, 0.0f, true);
+    DebugRender::DrawLine(leftStart, leftEnd, color, 0.0f, true);
+    DebugRender::DrawLine(rightStart, rightEnd, color, 0.0f, true);
+    DebugRender::DrawSphere(debugStart, 0.08f, color, 0.0f, true);
+    DebugRender::DrawSphere(end, 0.08f, color, 0.0f, true);
+}
+
 GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackBT(float dt)
 {
     return chargeBT.tripleChargeActive ? UpdateTripleChargeBT(dt) : UpdateSingleChargeBT(dt);
@@ -283,6 +472,9 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackBT(float dt)
 
 GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
 {
+    ++debugUpdateTripleChargeBTCallCount;
+    chargeBT.triplePhaseAtUpdateEntry = chargeBT.triplePhase;
+    chargeBT.triplePhaseAtUpdateExit = chargeBT.triplePhase;
     if (!IsChargeAttackBTActive()) return ChargeBTStepResult::Failed;
     if (chargeBT.phase == ChargeBTPhase::Result) return ChargeBTStepResult::Complete;
     const auto controller = GetBodyAnimationController();
@@ -293,7 +485,8 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         return ChargeBTStepResult::Complete;
     }
 
-    if (chargeBT.phase == ChargeBTPhase::Telegraph)
+    if (chargeBT.phase == ChargeBTPhase::Telegraph &&
+        chargeBT.triplePhase == TripleChargePhase::InitialWindup)
     {
         const auto context = BuildTargetContext();
         if (!context.valid || controller->GetCurrentAnimationName() != "Pre_FootSlide_0")
@@ -314,12 +507,17 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         }
         if (animationTime >= GetChargeWindupEndTime())
         {
-            if (!BeginTripleChargeLeg())
+            if (!BeginTripleChargeTelegraph())
             {
                 FailChargeAttackBT();
                 chargeBT.triplePhase = TripleChargePhase::Aborted;
                 return ChargeBTStepResult::Complete;
             }
+            chargeBT.triplePhase = TripleChargePhase::TelegraphHold;
+            chargeBT.triplePhaseAtUpdateExit = chargeBT.triplePhase;
+            ++chargeBT.triplePhaseChangeCount;
+            chargeBT.tripleChargeTelegraphElapsed = 0.0f;
+            SetChargePhaseDebug("TripleTelegraphHold");
             return ChargeBTStepResult::Running;
         }
         if (!controller->IsPlayAnimation() || !UpdateChargeAnimationWatchdogBT(animationTime, dt))
@@ -345,7 +543,29 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         if (chargeBT.tripleChargeTransitionElapsed < chargeBT.tripleChargeTransitionDuration)
             return ChargeBTStepResult::Running;
         chargeDirectionLocked = false;
-        if (!LockChargeDirectionToPlayer() || !BeginTripleChargeLeg())
+        if (!LockChargeDirectionToPlayer() || !BeginTripleChargeTelegraph())
+        {
+            FailChargeAttackBT();
+            chargeBT.triplePhase = TripleChargePhase::Aborted;
+            return ChargeBTStepResult::Complete;
+        }
+        chargeBT.triplePhase = TripleChargePhase::TelegraphHold;
+        chargeBT.triplePhaseAtUpdateExit = chargeBT.triplePhase;
+        ++chargeBT.triplePhaseChangeCount;
+        chargeBT.tripleChargeTelegraphElapsed = 0.0f;
+        SetChargePhaseDebug("TripleTelegraphHold");
+        return ChargeBTStepResult::Running;
+    }
+
+    if (chargeBT.triplePhase == TripleChargePhase::TelegraphHold)
+    {
+        ++debugTelegraphHoldUpdateCount;
+        debugTelegraphHoldLastDeltaTime = dt;
+        chargeBT.tripleChargeTelegraphElapsed += (std::max)(0.0f, dt);
+        DrawTripleChargeTelegraphDebug();
+        if (chargeBT.tripleChargeTelegraphElapsed < tripleChargeTelegraphHoldDuration)
+            return ChargeBTStepResult::Running;
+        if (!BeginTripleChargeLeg())
         {
             FailChargeAttackBT();
             chargeBT.triplePhase = TripleChargePhase::Aborted;
@@ -485,6 +705,7 @@ bool GruxEnemy::BeginChargeStunBT()
 {
     const auto controller = GetBodyAnimationController();
     if (!controller) return false;
+    HideTripleChargeTelegraph();
     for (const char* name : {"Knock_Down_Start", "Knock_Down_Loop", "Knock_Down_End"})
         if (!controller->GetAnimationAsset(name)) return false;
     StopChargeAttackMovement();
@@ -544,6 +765,7 @@ void GruxEnemy::FinishChargeAttackBT()
         chargeBT.cooldownStarted = true;
     }
     StopChargeAttackMovement();
+    HideTripleChargeTelegraph();
     DisableAttackHitBoxes();
     ClearAttackSetupTarget();
 }
@@ -594,6 +816,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
 
 GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
 {
+    debugFinishChargeRecoveryBTCalled = true;
     if (chargeBT.phase != ChargeBTPhase::RecoveryPostconditions) return ChargeBTStepResult::Failed;
     if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::JustDodge)
     {
@@ -607,14 +830,31 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
     return ChargeBTStepResult::Complete;
 }
 
-bool GruxEnemy::ShouldAbortChargeAttackBT() const
+bool GruxEnemy::ShouldAbortChargeAttackBT()
 {
-    return IsChargeAttackBTActive() && (!behaviorTreeFastComboEnabled || !IsChargeBTExecutionAllowed() ||
-        !activeNode || (stateMachine_ && stateMachine_->GetStateName() != chargeBT.initialStateName));
+    debugAbortBehaviorTreeDisabled = !behaviorTreeFastComboEnabled;
+    debugAbortExecutionNotAllowed = !IsChargeBTExecutionAllowed();
+    debugAbortActiveNodeNull = !activeNode;
+    debugAbortStateMismatch = stateMachine_ && stateMachine_->GetStateName() != chargeBT.initialStateName;
+    debugShouldAbortChargeBT = IsChargeAttackBTActive() &&
+        (debugAbortBehaviorTreeDisabled || debugAbortExecutionNotAllowed ||
+            debugAbortActiveNodeNull || debugAbortStateMismatch);
+    if (debugShouldAbortChargeBT)
+    {
+        debugChargeBTAbortDetected = true;
+        debugLastChargeAbortReason = debugAbortBehaviorTreeDisabled ? "BehaviorTreeDisabled" :
+            debugAbortExecutionNotAllowed ? "ExecutionNotAllowed" :
+            debugAbortActiveNodeNull ? "ActiveNodeNull" : "StateMismatch";
+    }
+    return debugShouldAbortChargeBT;
 }
 
 void GruxEnemy::CleanupChargeAttackBT()
 {
+    debugCleanupChargeAttackBTCalled = true;
+    if (debugLastChargeAbortReason == "None")
+        debugLastChargeAbortReason = "CleanupChargeAttackBT";
+    HideTripleChargeTelegraph();
     if (!IsChargeAttackBTActive()) return;
     FinishChargeAttackBT(); // Idempotent; no cooldown before StartAttack, none per leg.
     const float tripleTurnClearance = chargeBT.tripleChargeWallTurnClearance;
@@ -680,11 +920,20 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::DragFloat(U8("三連突進 1・2段目 最大突進時間"), &chargeBT.tripleChargeLegMaxDuration, 0.05f, 0.1f, 10.0f, "%.2f sec");
     ImGui::DragFloat(U8("三連突進 段間切り返し時間"), &chargeBT.tripleChargeTransitionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
     ImGui::DragFloat(U8("三連突進 最終壁スタン倍率"), &chargeBT.tripleWallStunDurationMultiplier, 0.05f, 1.0f, 5.0f, "%.2fx");
+    ImGui::Checkbox("Show Triple Charge Telegraph", &showTripleChargeTelegraph);
+    ImGui::DragFloat("Triple Charge Telegraph Hold Duration", &tripleChargeTelegraphHoldDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
+    ImGui::DragFloat("Triple Charge Telegraph Ground Offset", &tripleChargeTelegraphGroundOffset, 0.005f, -0.1f, 0.5f, "%.3f m");
+    ImGui::DragFloat("Triple Charge Telegraph Forward Offset", &tripleChargeTelegraphForwardOffset, 0.01f, -1.0f, 2.0f, "%.2f m");
+    ImGui::DragFloat("Triple Charge Telegraph Max Distance", &tripleChargeTelegraphMaxDistance, 0.1f, 0.1f, 100.0f, "%.2f m");
+    ImGui::DragFloat("Triple Charge Telegraph Width Multiplier", &tripleChargeTelegraphWidthMultiplier, 0.01f, 0.0f, 3.0f, "%.2fx");
     chargeBT.tripleChargeWallTurnClearance = (std::max)(0.0f, chargeBT.tripleChargeWallTurnClearance);
     chargeBT.tripleChargeLegMaxDistance = (std::max)(0.1f, chargeBT.tripleChargeLegMaxDistance);
     chargeBT.tripleChargeLegMaxDuration = (std::max)(0.1f, chargeBT.tripleChargeLegMaxDuration);
     chargeBT.tripleChargeTransitionDuration = (std::max)(0.0f, chargeBT.tripleChargeTransitionDuration);
     chargeBT.tripleWallStunDurationMultiplier = (std::max)(1.0f, chargeBT.tripleWallStunDurationMultiplier);
+    tripleChargeTelegraphHoldDuration = std::clamp(tripleChargeTelegraphHoldDuration, 0.0f, 1.0f);
+    tripleChargeTelegraphMaxDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
+    tripleChargeTelegraphWidthMultiplier = (std::max)(0.0f, tripleChargeTelegraphWidthMultiplier);
 
     ImGui::DragFloat("Charge Player Cast Radius Scale", &chargePlayerCastRadiusScale,
         0.01f, 0.1f, 2.0f, "%.2f");
@@ -785,10 +1034,10 @@ void GruxEnemy::DrawChargeAttackBTDebug()
         U8("今回の後隙時間: %.2f sec"),
         &chargeBT.recoveryDuration,0.05f);
 
-    const char* triplePhaseNames[] = { U8("なし"), U8("初回予兆"), U8("突進"), U8("切り返し"), U8("完了"), U8("中断") };
+    const char* triplePhaseNames[] = { U8("なし"), U8("初回予兆"), U8("突進"), U8("切り返し"), U8("Telegraph Hold"), U8("完了"), U8("中断") };
     const int triplePhaseIndex = static_cast<int>(chargeBT.triplePhase);
     ImGui::Text(U8("Triple Charge Active: %s"), chargeBT.tripleChargeActive ? U8("ON") : U8("OFF"));
-    ImGui::Text(U8("Triple Charge Phase: %s"), triplePhaseNames[std::clamp(triplePhaseIndex, 0, 5)]);
+    ImGui::Text(U8("Triple Charge Phase: %s"), triplePhaseNames[std::clamp(triplePhaseIndex, 0, 6)]);
     ImGui::Text(U8("Triple Charge Index: %d"), chargeBT.tripleChargeIndex);
     for (int i = 0; i < 3; ++i)
         ImGui::Text(U8("Charge %d Direction: (%.3f, %.3f, %.3f)"), i + 1,
@@ -801,6 +1050,57 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::Text(U8("Current Leg Distance: %.3f m"), chargeBT.tripleChargeLegDistance);
     ImGui::Text(U8("Current Leg Elapsed: %.3f sec"), chargeBT.tripleChargeLegElapsed);
     ImGui::Text(U8("Triple Charge Transition Elapsed: %.3f sec"), chargeBT.tripleChargeTransitionElapsed);
+    ImGui::Text("Telegraph Visible: %s", chargeBT.tripleChargeTelegraphVisible ? "true" : "false");
+    ImGui::Text("Telegraph Direction: (%.3f, %.3f, %.3f)", chargeBT.tripleChargeTelegraphDirection.x,
+        chargeBT.tripleChargeTelegraphDirection.y, chargeBT.tripleChargeTelegraphDirection.z);
+    ImGui::Text("Telegraph Start Position: (%.3f, %.3f, %.3f)", chargeBT.tripleChargeTelegraphStartPosition.x,
+        chargeBT.tripleChargeTelegraphStartPosition.y, chargeBT.tripleChargeTelegraphStartPosition.z);
+    ImGui::Text("Telegraph Length: %.3f m", chargeBT.tripleChargeTelegraphLength);
+    ImGui::Text("Telegraph Width: %.3f m", chargeBT.tripleChargeTelegraphWidth);
+    ImGui::Text("Telegraph Wall Hit: %s", chargeBT.tripleChargeTelegraphWallHit ? "true" : "false");
+    ImGui::Text("Telegraph Wall Distance: %.3f m", chargeBT.tripleChargeTelegraphWallDistance);
+    ImGui::Text("Telegraph Hold Elapsed: %.3f sec", chargeBT.tripleChargeTelegraphElapsed);
+    ImGui::Text("Telegraph Hold Duration: %.3f sec", tripleChargeTelegraphHoldDuration);
+    ImGui::Text("BeginTripleChargeLeg Called: %s", chargeBT.tripleBeginTripleChargeLegCalled ? "true" : "false");
+    ImGui::Text("BeginTripleChargeLeg Result: %s", chargeBT.tripleBeginTripleChargeLegResult ? "true" : "false");
+    ImGui::Text("BeginChargeAttackMovement Result: %s", chargeBT.tripleBeginChargeMovementResult ? "true" : "false");
+    ImGui::Text("Hold-End Charge Start Validation: %s", chargeBT.tripleHoldEndChargeStartValidation ? "Valid" : "Invalid");
+    ImGui::Text("Hold-End Charge Start Clearance: %.3f m", chargeBT.tripleHoldEndChargeStartClearance);
+    ImGui::Text("Hold-End Charge Start Failure Reason: %s", chargeBT.tripleHoldEndChargeStartFailureReason.c_str());
+    ImGui::SeparatorText("Telegraph BT Continuation Debug");
+    ImGui::Text("Should Abort Charge BT: %s", debugShouldAbortChargeBT ? "true" : "false");
+    ImGui::Text("Abort: BehaviorTree Disabled: %s", debugAbortBehaviorTreeDisabled ? "true" : "false");
+    ImGui::Text("Abort: Execution Not Allowed: %s", debugAbortExecutionNotAllowed ? "true" : "false");
+    ImGui::Text("Abort: ActiveNode Null: %s", debugAbortActiveNodeNull ? "true" : "false");
+    ImGui::Text("Abort: State Mismatch: %s", debugAbortStateMismatch ? "true" : "false");
+    ImGui::Text("Charge Initial State Name: %s", chargeBT.initialStateName.c_str());
+    ImGui::Text("Current State Machine State Name: %s", stateMachine_ ? stateMachine_->GetStateName() : "None");
+    ImGui::Text("IsChargeBTExecutionAllowed Reason: %s", debugChargeExecutionNotAllowedReason.c_str());
+    ImGui::Text("Current Active BT Node: %s", debugCurrentActiveBTNode.c_str());
+    ImGui::Text("Previous Active BT Node: %s", behaviorTreePreviousNode.c_str());
+    ImGui::Text("BehaviorTree Last Run Result: %s", behaviorTreeLastResult.c_str());
+    ImGui::Text("UpdateBehaviorTree Call Count: %llu", static_cast<unsigned long long>(debugUpdateBehaviorTreeCallCount));
+    ImGui::Text("ExecuteChargeAttack Run Count: %llu", static_cast<unsigned long long>(debugExecuteChargeAttackRunCount));
+    ImGui::Text("UpdateTripleChargeBT Call Count: %llu", static_cast<unsigned long long>(debugUpdateTripleChargeBTCallCount));
+    ImGui::Text("Last BehaviorTree dt: %.4f sec", debugLastBehaviorTreeDeltaTime);
+    ImGui::Text("Telegraph Entry Active Node: %s", debugTelegraphEntryActiveNode.c_str());
+    ImGui::Text("Telegraph Entry Initial State: %s", debugTelegraphEntryInitialState.c_str());
+    ImGui::Text("Telegraph Entry Current State: %s", debugTelegraphEntryCurrentState.c_str());
+    ImGui::Text("Telegraph Entry BT Last Result: %s", debugTelegraphEntryBTLastResult.c_str());
+    ImGui::Text("Telegraph Entry UpdateBT Count: %llu", static_cast<unsigned long long>(debugTelegraphEntryUpdateBTCount));
+    ImGui::Text("Telegraph Entry TripleUpdate Count: %llu", static_cast<unsigned long long>(debugTelegraphEntryTripleUpdateCount));
+    ImGui::Text("Telegraph Hold Update Count: %llu", static_cast<unsigned long long>(debugTelegraphHoldUpdateCount));
+    ImGui::Text("Telegraph Hold Last dt: %.4f sec", debugTelegraphHoldLastDeltaTime);
+    ImGui::Text("BeginTripleChargeTelegraph Call Count: %llu", static_cast<unsigned long long>(chargeBT.tripleChargeTelegraphCallCount));
+    ImGui::Text("Triple Runtime Initialize Count: %llu", static_cast<unsigned long long>(chargeBT.tripleChargeRuntimeInitializeCount));
+    ImGui::Text("Triple Phase At Update Entry: %s", triplePhaseNames[std::clamp(static_cast<int>(chargeBT.triplePhaseAtUpdateEntry), 0, 6)]);
+    ImGui::Text("Triple Phase At Update Exit: %s", triplePhaseNames[std::clamp(static_cast<int>(chargeBT.triplePhaseAtUpdateExit), 0, 6)]);
+    ImGui::Text("Triple Phase Assignment Count: %llu", static_cast<unsigned long long>(chargeBT.triplePhaseChangeCount));
+    ImGui::Text("CleanupChargeAttackBT Called: %s", debugCleanupChargeAttackBTCalled ? "true" : "false");
+    ImGui::Text("FailChargeAttackBT Called: %s", debugFailChargeAttackBTCalled ? "true" : "false");
+    ImGui::Text("FinishChargeRecoveryBT Called: %s", debugFinishChargeRecoveryBTCalled ? "true" : "false");
+    ImGui::Text("Charge BT Abort Detected: %s", debugChargeBTAbortDetected ? "true" : "false");
+    ImGui::Text("Last Charge Abort/Cleanup Reason: %s", debugLastChargeAbortReason.c_str());
     ImGui::Text(U8("Current Wall Clearance: %.3f m"), chargeBT.tripleCurrentWallClearance);
     ImGui::Text(U8("Wall Turn Candidate: %s"), chargeBT.tripleWallTurnCandidate ? U8("true") : U8("false"));
     ImGui::Text(U8("Wall Turn Triggered: %s"), chargeBT.tripleWallTurnTriggered ? U8("true") : U8("false"));
