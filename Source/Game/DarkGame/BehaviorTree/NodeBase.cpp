@@ -132,6 +132,20 @@ NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* l
 {
     if (!list || list->empty()) return nullptr;
 
+    if (owner && owner->IsForceBehaviorTreeChargeEnabled())
+    {
+        for (const auto& node : *list)
+        {
+            if (node->GetName() == "ChargeAttackPlan")
+            {
+                owner->RecordAttackSelectorDebug(
+                    "ForceBehaviorTreeCharge", static_cast<int>(list->size()),
+                    0.0f, 0.0f, 0.0f, "ChargeAttackPlan", "None",
+                    1.0f, 1.0f, false);
+                return node.get();
+            }
+        }
+    }
     std::vector<NodeBase*> nonFast;
     NodeBase* fast = nullptr;
     for (const auto& node : *list)

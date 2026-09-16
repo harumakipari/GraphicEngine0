@@ -355,7 +355,7 @@ public:
     using AttackSetupMoveResult = PositioningMoveResult;
     bool CanPlanJumpAttack() const;
     bool PrepareJumpAttackSetupTarget();
-    bool FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount) const;
+    bool FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount, float boundaryMarginOverride = -1.0f) const;
     bool HasAttackSetupTarget() const { return attackSetupTarget.valid; }
     const AttackSetupTargetContext& GetAttackSetupTarget() const { return attackSetupTarget; }
     void ClearAttackSetupTarget();
@@ -516,6 +516,11 @@ public:
         return behaviorTreeFastComboEnabled;
     }
 
+    bool IsForceBehaviorTreeChargeEnabled() const
+    {
+        return forceBehaviorTreeCharge;
+    }
+
     struct CloseCombatSettings { float minRange = 0.0f; float executeMaxRange = 6.0f; float planMaxRange = 10.0f; float facingLimitDegrees = 35.0f; float faceCompleteAngleDegrees = 7.0f; };
     const CloseCombatSettings& GetCloseCombatSettings() const { return closeCombatSettings; }
     float GetInterStageFaceCompleteAngle() const { return interStageFaceCompleteAngle; }
@@ -573,7 +578,7 @@ private:
     };
     void EvaluateRepositionTargets(const BossTargetContext& context);
     void EvaluateClampedPositioningTarget(const DirectX::XMFLOAT3& startPosition,
-        const DirectX::XMFLOAT3& desiredTarget, RepositionTargetEvaluation& outEvaluation) const;
+        const DirectX::XMFLOAT3& desiredTarget, RepositionTargetEvaluation& outEvaluation, float boundaryMarginOverride = -1.0f) const;
     bool IsRepositionAction(BossActionType actionType) const;
     const RepositionTargetEvaluation& GetRepositionTargetEvaluation(BossActionType actionType) const;
     const char* GetRepositionFailureReason() const;
@@ -1284,6 +1289,7 @@ private:
     float chargeWallFacingThreshold = 0.70f;
     float chargeWallNormalYThreshold = 0.60f;
     float chargeWallCastRadiusScale = 0.80f;
+    float chargeStartValidationClearance = 0.05f;
     float chargeElapsedTime = 0.0f;
     bool chargeMovementActive = false;
     bool chargeDangerWindowActive = false;
@@ -1300,6 +1306,13 @@ private:
     float chargeWallFacingAmountDebug = 0.0f;
     DirectX::XMFLOAT3 chargeWallHitNormalDebug{};
     float chargeWallHitDistanceDebug = 0.0f;
+    DirectX::XMFLOAT3 chargeStartPositionDebug{};
+    DirectX::XMFLOAT3 chargeCurrentPositionDebug{};
+    float chargeTraveledDistanceDebug = 0.0f;
+    bool chargeStartValidationValidDebug = false;
+    float chargeStartClearanceDebug = 0.0f;
+    float chargeWallCastRadiusDebug = 0.0f;
+    std::string chargeStartFailureReasonDebug = "None";
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;
     ChargeAttackEndReason pendingChargeRecoveryResult = ChargeAttackEndReason::None;
 
@@ -1442,6 +1455,7 @@ struct WeaponHitBoxPoints
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;
     NodeBase* activeNode = nullptr;
     bool behaviorTreeFastComboEnabled = true;
+    bool forceBehaviorTreeCharge = false;
     CloseCombatSettings closeCombatSettings;
     bool showCloseCombatDebugRange = true;
     std::string behaviorTreeCurrentNode = "None";

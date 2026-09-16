@@ -21,9 +21,13 @@ bool CanPlanAnyAttack::Judgment()
         owner->SetBehaviorTreeLastJudgment("CanPlanAnyAttack: false (player unavailable)");
         return false;
     }
-    // Match the Plan-parent gates, including Dash's battle / stun availability.
-    const bool result = owner->CanPlanFastCombo() || owner->CanPlanJumpAttack() ||
-        DashPlanAvailable(owner).Judgment() || owner->CanPlanChargeAttack();
+    // In Force BehaviorTree Charge mode, keep the normal Attack gate but let
+    // the Charge plan be the sole plan selected by AttackRandom. The plan's
+    // internal nodes are still executed normally.
+    const bool result = owner->IsForceBehaviorTreeChargeEnabled()
+        ? owner->CanPlanChargeAttack()
+        : owner->CanPlanFastCombo() || owner->CanPlanJumpAttack() ||
+            DashPlanAvailable(owner).Judgment() || owner->CanPlanChargeAttack();
     owner->SetBehaviorTreeLastJudgment(result ? "CanPlanAnyAttack: true" : "CanPlanAnyAttack: false");
     return result;
 }

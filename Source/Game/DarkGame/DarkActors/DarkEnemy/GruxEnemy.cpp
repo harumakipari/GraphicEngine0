@@ -2024,6 +2024,8 @@ void GruxEnemy::DrawImGuiDetails()
             ClearActiveIntent();
     }
 
+    ImGui::Checkbox("Force BehaviorTree Charge", &forceBehaviorTreeCharge);
+
     int attackIndex = static_cast<int>(debugFixedAttackType);
     const char* attackTypes[] =
     {
@@ -3395,6 +3397,7 @@ void GruxEnemy::DrawImGuiDetails()
         chargeWallFacingThreshold = std::clamp(chargeWallFacingThreshold, 0.0f, 1.0f);
         chargeWallNormalYThreshold = std::clamp(chargeWallNormalYThreshold, 0.0f, 1.0f);
         chargeWallCastRadiusScale = std::clamp(chargeWallCastRadiusScale, 0.1f, 1.0f);
+        chargeStartValidationClearance = (std::max)(0.001f, chargeStartValidationClearance);
 
         const char* chargeEndReasonName = "None";
         switch (chargeEndReasonDebug)
@@ -3406,6 +3409,17 @@ void GruxEnemy::DrawImGuiDetails()
         default: break;
         }
         ImGui::Text("Charge Phase: %s", chargePhaseDebug.c_str());
+        ImGui::Text("Charge Start Position: %.3f, %.3f, %.3f",
+            chargeStartPositionDebug.x, chargeStartPositionDebug.y, chargeStartPositionDebug.z);
+        ImGui::Text("Charge Current Position: %.3f, %.3f, %.3f",
+            chargeCurrentPositionDebug.x, chargeCurrentPositionDebug.y, chargeCurrentPositionDebug.z);
+        ImGui::Text("Charge Traveled Distance: %.3f", chargeTraveledDistanceDebug);
+        ImGui::Text("Charge Start Validation: %s",
+            chargeStartValidationValidDebug ? "Valid" : "Invalid");
+        ImGui::Text("Charge Start Clearance: %.3f", chargeStartClearanceDebug);
+        ImGui::Text("Charge Wall Cast Radius: %.3f", chargeWallCastRadiusDebug);
+        ImGui::Text("Charge Start Failure Reason: %s",
+            chargeStartFailureReasonDebug.c_str());
         ImGui::Text("Windup Animation Time: %.3f sec", chargeWindupAnimationTimeDebug);
         ImGui::Text("Charge Direction: %.3f, %.3f, %.3f",
             chargeDirection.x, chargeDirection.y, chargeDirection.z);
@@ -4396,7 +4410,8 @@ const char* GruxEnemy::GetRepositionFailureReason() const
 void GruxEnemy::EvaluateClampedPositioningTarget(
     const DirectX::XMFLOAT3& startPosition,
     const DirectX::XMFLOAT3& desiredTarget,
-    RepositionTargetEvaluation& outEvaluation) const
+    RepositionTargetEvaluation& outEvaluation,
+    float boundaryMarginOverride) const
 {
     outEvaluation = {};
     outEvaluation.desiredTarget = desiredTarget;
@@ -4404,7 +4419,8 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
     constexpr float maximumMargin =
         (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
             (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
-    const float margin = std::clamp(bossRoomSafetyMargin, 0.0f, maximumMargin);
+    const float requestedMargin = boundaryMarginOverride >= 0.0f ? boundaryMarginOverride : bossRoomSafetyMargin;
+    const float margin = std::clamp(requestedMargin, 0.0f, maximumMargin);
     outEvaluation.clampedTarget.x = std::clamp(
         outEvaluation.clampedTarget.x, bossRoomMinX + margin, bossRoomMaxX - margin);
     outEvaluation.clampedTarget.z = std::clamp(
@@ -5094,7 +5110,7 @@ void GruxEnemy::FailActiveIntent(const char* reason)
 
 void GruxEnemy::StartSelectedActionCooldown()
 {
-    if (bossAIMode != BossAIMode::CombatAI)
+    if (bossAIMode != BossAIMode::CombatAI || forceBehaviorTreeCharge)
         return;
 
     for (size_t i = 0; i < combatActionData.size(); ++i)
@@ -5526,6 +5542,44 @@ bool GruxEnemy::BeginChargeAttackMovement()
 
     if (!chargeDirectionLocked && !LockChargeDirectionToPlayer())
         return false;
+
+    // Reject a charge that starts with its swept body already touching a wall.
+    // This is a start-position failure, not a normal forward WallHit.
+    chargeStartPositionDebug = GetPosition();
+    chargeCurrentPositionDebug = chargeStartPositionDebug;
+    chargeTraveledDistanceDebug = 0.0f;
+    chargeStartValidationValidDebug = false;
+    chargeStartClearanceDebug = 0.0f;
+    chargeWallCastRadiusDebug = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
+    chargeStartFailureReasonDebug = "None";
+    const float validationCastDistance = (std::max)(
+        chargeStartValidationClearance, chargeWallCastSafetyMargin + chargeStartValidationClearance);
+    DirectX::XMFLOAT3 validationOrigin = chargeStartPositionDebug;
+    validationOrigin.y += (std::max)(chargeWallCastRadiusDebug + 0.05f, height * 0.5f);
+    const uint32_t validationWallMask = CollisionHelper::MakeMask({
+        CollisionLayer::WorldStatic,
+        CollisionLayer::WorldProps,
+        CollisionLayer::WorldPropsNoRaycast,
+        });
+    HitResultWithActor validationHit{};
+    const bool validationHitWall = Physics::Instance().SphereCast(
+        validationOrigin, chargeDirection, validationCastDistance,
+        chargeWallCastRadiusDebug, validationHit, validationWallMask);
+    if (validationHitWall)
+    {
+        chargeStartClearanceDebug = (std::max)(0.0f, validationHit.distance);
+        if (chargeStartClearanceDebug <= chargeStartValidationClearance)
+        {
+            chargeStartFailureReasonDebug = "InitialWallContact";
+            SetChargePhaseDebug("StartValidationFailed");
+            return false;
+        }
+    }
+    else
+    {
+        chargeStartClearanceDebug = validationCastDistance;
+    }
+    chargeStartValidationValidDebug = true;
     chargeElapsedTime = 0.0f;
     chargePlayerCastHitDebug = false;
     chargePlayerHitDistanceDebug = 0.0f;
@@ -5586,6 +5640,10 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime)
         return chargeEndReasonDebug;
 
     chargeElapsedTime += (std::max)(0.0f, deltaTime);
+    chargeCurrentPositionDebug = GetPosition();
+    const float traveledX = chargeCurrentPositionDebug.x - chargeStartPositionDebug.x;
+    const float traveledZ = chargeCurrentPositionDebug.z - chargeStartPositionDebug.z;
+    chargeTraveledDistanceDebug = std::sqrt(traveledX * traveledX + traveledZ * traveledZ);
     chargePlayerCastHitDebug = false;
     chargePlayerHitDistanceDebug = 0.0f;
     chargePlayerHitActorDebug = "None";
@@ -5974,7 +6032,7 @@ bool GruxEnemy::CanPlanJumpAttack() const
     return false;
 }
 
-bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount) const
+bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount, float boundaryMarginOverride) const
 {
     outTarget = {};
     outDistance = 0.0f;
@@ -6009,7 +6067,7 @@ bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, floa
             playerPosition.x + rotatedX * setupDistance, playerPosition.y,
             playerPosition.z + rotatedZ * setupDistance };
         RepositionTargetEvaluation evaluation{};
-        EvaluateClampedPositioningTarget(bossPosition, originalCandidate, evaluation);
+        EvaluateClampedPositioningTarget(bossPosition, originalCandidate, evaluation, boundaryMarginOverride);
         ++outCandidateCount;
         const float clampDeltaX = evaluation.clampedTarget.x - originalCandidate.x;
         const float clampDeltaZ = evaluation.clampedTarget.z - originalCandidate.z;

@@ -92,7 +92,7 @@ bool GruxEnemy::CanPlanChargeAttack() const
         return false;
     for (size_t i = 0; i < combatActionData.size(); ++i)
         if (combatActionData[i].type == BossActionType::ChargeAttack)
-            return combatActionCooldownRemaining[i] <= 0.0f;
+            return forceBehaviorTreeCharge || combatActionCooldownRemaining[i] <= 0.0f;
     return false;
 }
 
@@ -114,9 +114,13 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
     DirectX::XMFLOAT3 target{};
     float chosenDistance = 0.0f;
     int candidateCount = 0;
+    const float chargeCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
+    constexpr float chargeSetupExtraClearance = 0.05f;
+    const float chargeSetupBoundaryMargin = (std::max)(
+        bossRoomSafetyMargin, chargeCastRadius + chargeWallCastSafetyMargin + chargeSetupExtraClearance);
     if (!FindAttackSetupTarget(chargeSetupDistanceMin, chargeSetupDistanceMax,
         attackSetupCandidateAngleStep, attackSetupClampTolerance, chargeSetupMinimumMoveDistance,
-        target, chosenDistance, candidateCount))
+        target, chosenDistance, candidateCount, chargeSetupBoundaryMargin))
     {
         CleanupChargeAttackBT();
         return false;
