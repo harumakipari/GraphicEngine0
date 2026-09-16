@@ -419,6 +419,7 @@ void SceneBase::UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, floa
     shaderCBuffer->data.enableEyeBloom = shader.enableEyeBloom;
     shaderCBuffer->data.useFinalSrgbEncode = shader.useFinalSrgbEncode;
     shaderCBuffer->data.finalColorDebugMode = shader.finalColorDebugMode;
+    shaderCBuffer->data.hairSpecularDebugDisableMask = shader.hairSpecularDebugDisableMask;
 
     sceneCBuffer->Activate(immediateContext, 1);
     shaderCBuffer->Activate(immediateContext, 9);
@@ -1473,6 +1474,22 @@ void SceneBase::DrawPostEffectTab()
     };
     ImGui::Combo("Final Color Debug View", &shader.finalColorDebugMode,
         finalColorDebugItems, IM_ARRAYSIZE(finalColorDebugItems));
+    // Hair-only specular isolation toggles. These bits reuse the existing
+    // final-sRGB padding bytes, so the shared shader CB layout is unchanged.
+    const auto hairSpecularToggle = [&](const char* label, const int bit)
+    {
+        bool disabled = (shader.hairSpecularDebugDisableMask & bit) != 0;
+        if (ImGui::Checkbox(label, &disabled))
+        {
+            if (disabled)
+                shader.hairSpecularDebugDisableMask |= bit;
+            else
+                shader.hairSpecularDebugDisableMask &= ~bit;
+        }
+    };
+    hairSpecularToggle("Disable Hair IBL Specular", 4);
+    hairSpecularToggle("Disable Hair Point Specular", 2);
+    hairSpecularToggle("Disable Hair Directional Specular", 1);
     CheckboxInt("Enable SSAO", &shader.enableSsao);
     CheckboxInt("Enable SSR", &shader.enableSsr);
     CheckboxInt("Enable Bloom", &shader.enableBloom);

@@ -17,7 +17,7 @@ cbuffer PHASE2_TEXTURE_BLEND_CONSTANT_BUFFER : register(b6)
     float phase2WorldMaxY;
     float phase2MaskSoftness;
     int phase2TextureDebugMode;
-    float3 phase2TextureBlendPadding;
+    float3 phase2HairTint;
 }
 
 GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
@@ -41,6 +41,11 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         float4 phase2Sampled = phase2BaseColorTexture.Sample(samplerStates[ANISOTROPIC], pin.texcoord);
         phase2RawRgb = phase2Sampled.rgb;
         phase2Sampled.rgb = pow(phase2Sampled.rgb, GAMMA);
+        if (materialType == MATERIAL_HAIR)
+        {
+            // Preserve the Hair texture detail while moving Phase2 toward warm charcoal.
+            phase2Sampled.rgb *= phase2HairTint;
+        }
         phase2LinearRgb = phase2Sampled.rgb;
         phase2LinearAlbedo = baseColorFactor.rgb * phase2Sampled.rgb;
         const float normalizedHeight = saturate(

@@ -217,8 +217,10 @@ public:
         float worldMaxY = 1.0f;
         float maskSoftness = 0.05f;
         int debugMode = 0;
-        DirectX::XMFLOAT3 padding = { 0.0f, 0.0f, 0.0f };
+        DirectX::XMFLOAT3 hairTint = { 1.0f, 1.0f, 1.0f };
     };
+    static_assert(sizeof(Phase2TextureBlendConstants) == 32,
+        "Phase2TextureBlendConstants must remain 32 bytes for the HLSL cbuffer layout");
 
     SkeletalMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :MeshComponent(name, owner)
     {
@@ -248,6 +250,14 @@ public:
     void SetPhase2TextureDebugMode(const int debugMode)
     {
         phase2TextureBlendCBuffer->data.debugMode = std::clamp(debugMode, 0, 3);
+    }
+    void SetPhase2HairTint(const DirectX::XMFLOAT3& tint)
+    {
+        phase2TextureBlendCBuffer->data.hairTint = tint;
+    }
+    const DirectX::XMFLOAT3& GetPhase2HairTint() const
+    {
+        return phase2TextureBlendCBuffer->data.hairTint;
     }
     void SetPhase2TextureBlendWorldYRange(const float worldMinY, const float worldMaxY,
         const float maskSoftness)

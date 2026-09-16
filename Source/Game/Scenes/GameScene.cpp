@@ -4051,6 +4051,9 @@ void GameScene::DrawGuiPlusAlpha()
             gruxEnemyActor->GetCurrentPhaseScale(), phase2TransformProgress);
         if (const auto& skeletalMesh = gruxEnemyActor->GetSkeletalMeshComponent())
         {
+            DirectX::XMFLOAT3 phase2HairTint = skeletalMesh->GetPhase2HairTint();
+            if (ImGui::ColorEdit3("Phase2 Hair Tint RGB", &phase2HairTint.x))
+                skeletalMesh->SetPhase2HairTint(phase2HairTint);
             ImGui::Text("Gear Phase2 Texture Loaded: %s",
                 skeletalMesh->IsPhase2BaseColorTextureLoaded("M_Grux_Qilin_Gear") ? "true" : "false");
             ImGui::Text("Torso Phase2 Texture Loaded: %s",

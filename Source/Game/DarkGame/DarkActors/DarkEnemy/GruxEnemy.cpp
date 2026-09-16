@@ -152,7 +152,11 @@ void GruxEnemy::Initialize(const Transform& transform)
 
     for (auto& material : skeletalMeshComponent->model->materials)
     {
-        if (material.name == "M_Grux_Qilin_Eye")
+        if (material.name == "MIC_Hair_Demo_Qilin")
+        {
+            material.materialType = MaterialType::Hair;
+        }
+        else if (material.name == "M_Grux_Qilin_Eye")
         {// –Ú‚¾‚Á‚½‚çA
             material.materialType = MaterialType::Eye;
         }

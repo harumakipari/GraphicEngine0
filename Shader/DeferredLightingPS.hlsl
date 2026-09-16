@@ -185,11 +185,22 @@ float4 main(VS_OUT pin) : SV_TARGET
 
 
 
-    const float3 directionalSpecular = specular * occlusionFactor * specularIntensity;
+    float3 directionalSpecular = specular * occlusionFactor * specularIntensity;
     const float3 pointLightDiffuse = pointDiffuse * pointLightDiffuseIntensity * occlusionFactor * diffuseIntensity;
-    const float3 pointLightSpecular = pointSpecular * pointLightSpecularIntensity * occlusionFactor * specularIntensity;
+    float3 pointLightSpecular = pointSpecular * pointLightSpecularIntensity * occlusionFactor * specularIntensity;
     const float3 iblDiffuseContribution = iblDiffuse * occlusionFactor * diffuseIntensity;
-    const float3 iblSpecularContribution = iblSpecular * occlusionFactor * specularIntensity;
+    float3 iblSpecularContribution = iblSpecular * occlusionFactor * specularIntensity;
+
+    // These debug switches are deliberately restricted to enemy hair. They
+    // zero only the selected specular contribution; diffuse and all other
+    // materials remain untouched.
+    const bool isHairEnemy = (objectType == OBJECT_ENEMY && materialType == MATERIAL_HAIR);
+    //if (isHairEnemy)
+    //{
+    //    if ((hairSpecularDebugDisableMask & 1) != 0) directionalSpecular = 0.0f;
+    //    if ((hairSpecularDebugDisableMask & 2) != 0) pointLightSpecular = 0.0f;
+    //    if ((hairSpecularDebugDisableMask & 4) != 0) iblSpecularContribution = 0.0f;
+    //}
 
     float3 totalDiffuse = directionalDiffuse + pointLightDiffuse + iblDiffuseContribution;
     float3 totalSpecular = directionalSpecular + pointLightSpecular + iblSpecularContribution;
@@ -199,7 +210,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 #if 1
     float3 rim = 0;
 
-    if (objectType == OBJECT_ENEMY)
+    if (objectType == OBJECT_ENEMY && !isHairEnemy)
     {
         rim = CalcRimLight(N, V, rimColor, rimPower) * rimIntensity;
     }

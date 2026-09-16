@@ -90,7 +90,10 @@ struct SceneShaderConstants
     // FinalPS encodes the linear scene result for the UNORM swap-chain backbuffer.
     int useFinalSrgbEncode = 1;
     int finalColorDebugMode = 0;
-    float finalSrgbEncodePadding[2] = {};
+    // Reuse the existing 8-byte padding without changing the shader constant-buffer layout.
+    // Bits: 1 = directional, 2 = point, 4 = IBL Hair specular disable.
+    int hairSpecularDebugDisableMask = 0;
+    float hairSpecularDebugPadding = 0.0f;
 };
 
 

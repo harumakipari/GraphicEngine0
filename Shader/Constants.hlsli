@@ -55,7 +55,9 @@ cbuffer SHADER_CONSTANT_BUFFER : register(b9)
 
     int useFinalSrgbEncode;
     int finalColorDebugMode;
-    float2 finalSrgbEncodePadding;
+    // Reuses the existing 8-byte padding; bit 1=directional, 2=point, 4=IBL Hair specular disable.
+    int hairSpecularDebugDisableMask;
+    float hairSpecularDebugPadding;
 
 }
 cbuffer CSM_CONSTANTS : register(b3)

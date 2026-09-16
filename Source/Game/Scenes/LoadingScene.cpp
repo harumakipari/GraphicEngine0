@@ -337,6 +337,7 @@ void LoadingScene::Render(ID3D11DeviceContext* immediateContext, float deltaTime
         shaderCBuffer->data.bossRoomLerpFactor = shader.bossRoomLerpFactor;
         shaderCBuffer->data.bossRoomColor = shader.bossRoomColor;
         shaderCBuffer->data.enableEyeBloom = shader.enableEyeBloom;
+        shaderCBuffer->data.hairSpecularDebugDisableMask = shader.hairSpecularDebugDisableMask;
 
         sceneCBuffer->Activate(immediateContext, 1);
         shaderCBuffer->Activate(immediateContext, 9);
