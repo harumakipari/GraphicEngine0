@@ -262,6 +262,13 @@ bool GruxEnemy::BeginTripleChargeTransition()
     if (chargeBT.tripleChargeIndex > 2)
         return false;
     StopChargeAttackMovement();
+    PlayBodyAnimation(
+        "TravelMode_Idle_0",
+        true,
+        true,
+        0.15f,
+        true,
+        "GruxEnemy::BeginTripleChargeTransition");
     chargeBT.triplePhase = TripleChargePhase::InterChargeTransition;
     chargeBT.tripleChargeTransitionElapsed = 0.0f;
     chargeBT.tripleWallTurnTriggered = false;

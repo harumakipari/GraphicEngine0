@@ -1296,7 +1296,7 @@ private:
         bool tripleFinalWallHit = false;
         bool tripleEarlyWallHit = false;
         float tripleWallStunDurationMultiplier = 3.0f;
-        float tripleChargeWallTurnClearance = 0.6f;
+        float tripleChargeWallTurnClearance = 0.85f;
         float tripleChargeLegMaxDistance = 50.0f;
         float tripleChargeLegMaxDuration = 50.0f;
         float tripleCurrentWallClearance = 0.0f;
