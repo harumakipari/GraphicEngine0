@@ -202,6 +202,8 @@ public:
     DodgeDirection GetDodgeDirection()const { return dodgeDirection; }
     const DirectX::XMFLOAT3& GetDodgeWorldDirection() const { return dodgeWorldDirection; }
     bool UsesDodgeWorldDirection() const { return useDodgeWorldDirection; }
+    // Resolves and stores the world-space direction for the current Dodge.
+    void CaptureDodgeWorldDirectionSnapshot();
 
     void SetIsPlayerTransparency(const bool isTransparency) { moviePerform = !isTransparency; }
 
@@ -285,6 +287,8 @@ public:
 
     // ジャスト回避を受け付けるかどうか
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
+    // Checks the stored Dodge direction against an arbitrary attacker position.
+    bool CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition);
     void BeginDodgeDebug();
     void UpdateDodgeDebug(float deltaTime);
     void RecordNormalDodgeDebug();
@@ -380,6 +384,12 @@ public:
     float dodgeDuration = 0.5f; // 回避するときの時間
 
     bool justDodgeDebugEnabled = false;
+    float justDodgeMaxTowardAttackerDot = 0.25f;
+    DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{};
+    bool dodgeWorldDirectionSnapshotValid = false;
+    DirectX::XMFLOAT3 directionToAttackerDebug{};
+    float justDodgeDirectionDotDebug = 0.0f;
+    bool justDodgeDirectionResultDebug = false;
     float dodgeDebugElapsed = 0.0f;
     bool normalDodgeRecordedThisDodge = false;
     bool justDodgeRecordedThisDodge = false;

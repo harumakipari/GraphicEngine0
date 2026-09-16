@@ -1230,6 +1230,19 @@ void Player::DrawImGuiDetails()
     if (ImGui::CollapsingHeader("Just Dodge Debug", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Checkbox("Enable World HitBox Debug", &justDodgeDebugEnabled);
+        ImGui::DragFloat("Just Dodge Max Toward Attacker Dot",
+            &justDodgeMaxTowardAttackerDot, 0.01f, -1.0f, 1.0f, "%.2f");
+        ImGui::Text("Current Dodge World Direction: (%.3f, %.3f, %.3f)%s",
+            dodgeWorldDirectionSnapshot.x, dodgeWorldDirectionSnapshot.y,
+            dodgeWorldDirectionSnapshot.z,
+            dodgeWorldDirectionSnapshotValid ? "" : " (invalid)");
+        ImGui::Text("Direction To Attacker: (%.3f, %.3f, %.3f)",
+            directionToAttackerDebug.x, directionToAttackerDebug.y,
+            directionToAttackerDebug.z);
+        ImGui::Text("Current Dot: %.3f  Threshold: %.3f",
+            justDodgeDirectionDotDebug, justDodgeMaxTowardAttackerDot);
+        ImGui::Text("Direction Result: %s",
+            justDodgeDirectionResultDebug ? "OK" : "NG");
         const bool isDodging = stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge";
         const auto controller = GetBodyAnimationController();
         const float animationTime = controller ? controller->GetCurrentAnimationTime() : 0.0f;
@@ -3861,6 +3874,70 @@ void Player::UpdateRushPromptUI()
         rushWordScale.y * wordAnimationScale });
     rushWordImageComponent->SetColor(color);
     rushWordImageComponent->SetVisible(true);
+}
+void Player::CaptureDodgeWorldDirectionSnapshot()
+{
+    DirectX::XMFLOAT3 direction{};
+    if (useDodgeWorldDirection)
+    {
+        direction = dodgeWorldDirection;
+    }
+    else
+    {
+        switch (dodgeDirection)
+        {
+        case DodgeDirection::Forward:  direction = { 0.0f, 0.0f, 1.0f }; break;
+        case DodgeDirection::Backward: direction = { 0.0f, 0.0f, -1.0f }; break;
+        case DodgeDirection::Left:     direction = { -1.0f, 0.0f, 0.0f }; break;
+        case DodgeDirection::Right:    direction = { 1.0f, 0.0f, 0.0f }; break;
+        }
+
+        const float yaw = DirectX::XMConvertToRadians(GetEulerRotation().y);
+        const float sinYaw = std::sinf(yaw);
+        const float cosYaw = std::cosf(yaw);
+        direction =
+        {
+            direction.x * cosYaw + direction.z * sinYaw,
+            0.0f,
+            -direction.x * sinYaw + direction.z * cosYaw
+        };
+    }
+
+    direction.y = 0.0f;
+    const float length = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+    dodgeWorldDirectionSnapshotValid = length > 0.0001f;
+    dodgeWorldDirectionSnapshot = dodgeWorldDirectionSnapshotValid
+        ? DirectX::XMFLOAT3{ direction.x / length, 0.0f, direction.z / length }
+        : DirectX::XMFLOAT3{};
+}
+
+bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
+{
+    DirectX::XMFLOAT3 toAttacker =
+    {
+        attackerPosition.x - GetPosition().x,
+        0.0f,
+        attackerPosition.z - GetPosition().z
+    };
+    const float attackerLength = std::sqrt(
+        toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
+    directionToAttackerDebug = attackerLength > 0.0001f
+        ? DirectX::XMFLOAT3{ toAttacker.x / attackerLength, 0.0f, toAttacker.z / attackerLength }
+        : DirectX::XMFLOAT3{};
+
+    if (!dodgeWorldDirectionSnapshotValid || attackerLength <= 0.0001f)
+    {
+        justDodgeDirectionDotDebug = 0.0f;
+        justDodgeDirectionResultDebug = false;
+        return false;
+    }
+
+    justDodgeDirectionDotDebug =
+        dodgeWorldDirectionSnapshot.x * directionToAttackerDebug.x +
+        dodgeWorldDirectionSnapshot.z * directionToAttackerDebug.z;
+    justDodgeDirectionResultDebug =
+        justDodgeDirectionDotDebug <= justDodgeMaxTowardAttackerDot;
+    return justDodgeDirectionResultDebug;
 }
 // ƒWƒƒƒXƒg‰ñ”ð¬Œ÷Žž‚Ìˆ—
 void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)

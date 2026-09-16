@@ -280,6 +280,7 @@ void PlayerDodgeState::Enter()
     {
         player->rotationComponent->SetDirection(player->GetDodgeWorldDirection());
     }
+    player->CaptureDodgeWorldDirectionSnapshot();
 
     switch (player->GetDodgeDirection())
     {

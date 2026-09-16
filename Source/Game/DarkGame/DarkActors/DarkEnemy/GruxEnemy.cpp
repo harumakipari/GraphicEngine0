@@ -5785,6 +5785,9 @@ bool GruxEnemy::TryStartJustDodgeSuccess(Player* player)
     if (!player || !player->GetJustDodgeWindow() || HasJustDodgedAttack(player))
         return false;
 
+    if (!player->CanJustDodgeAgainst(GetPosition()))
+        return false;
+
     justDodgedActors.insert(player);
     player->StartJustDodgeSuccess(
         std::dynamic_pointer_cast<Enemy>(shared_from_this()));
