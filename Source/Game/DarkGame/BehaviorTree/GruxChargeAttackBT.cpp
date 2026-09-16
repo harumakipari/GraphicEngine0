@@ -679,6 +679,17 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     chargeBT.tripleChargeTransitionDuration = (std::max)(0.0f, chargeBT.tripleChargeTransitionDuration);
     chargeBT.tripleWallStunDurationMultiplier = (std::max)(1.0f, chargeBT.tripleWallStunDurationMultiplier);
 
+    ImGui::DragFloat("Charge Player Cast Radius Scale", &chargePlayerCastRadiusScale,
+        0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::DragFloat("Charge Wall Cast Radius Scale", &chargeWallCastRadiusScale,
+        0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::Checkbox("Show Charge Cast Debug", &showChargeCastDebug);
+    if (showChargeCastDebug)
+    {
+        ImGui::Checkbox("Show Player Cast", &showPlayerCastDebug);
+        ImGui::Checkbox("Show Wall Cast", &showWallCastDebug);
+    }
+
     // ★ 方向固定時刻を調整可能にする
     ImGui::DragFloat(
         U8("突進 方向固定時刻"),

@@ -1296,7 +1296,7 @@ private:
         bool tripleFinalWallHit = false;
         bool tripleEarlyWallHit = false;
         float tripleWallStunDurationMultiplier = 3.0f;
-        float tripleChargeWallTurnClearance = 0.75f;
+        float tripleChargeWallTurnClearance = 0.6f;
         float tripleChargeLegMaxDistance = 50.0f;
         float tripleChargeLegMaxDuration = 50.0f;
         float tripleCurrentWallClearance = 0.0f;
@@ -1313,7 +1313,8 @@ private:
     float chargeWallCastSafetyMargin = 0.10f;
     float chargeWallFacingThreshold = 0.70f;
     float chargeWallNormalYThreshold = 0.60f;
-    float chargeWallCastRadiusScale = 0.80f;
+    float chargePlayerCastRadiusScale = 0.80f;
+    float chargeWallCastRadiusScale = 0.15f;
     float chargeStartValidationClearance = 0.05f;
     float chargeElapsedTime = 0.0f;
     bool chargeMovementActive = false;
@@ -1336,7 +1337,11 @@ private:
     float chargeTraveledDistanceDebug = 0.0f;
     bool chargeStartValidationValidDebug = false;
     float chargeStartClearanceDebug = 0.0f;
+    float chargePlayerCastRadiusDebug = 0.0f;
     float chargeWallCastRadiusDebug = 0.0f;
+    bool showChargeCastDebug = false;
+    bool showPlayerCastDebug = true;
+    bool showWallCastDebug = true;
     std::string chargeStartFailureReasonDebug = "None";
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;
     ChargeAttackEndReason pendingChargeRecoveryResult = ChargeAttackEndReason::None;
