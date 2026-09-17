@@ -226,6 +226,7 @@ public:
     bool BeginTripleChargeLeg();
     bool BeginTripleChargeTransition();
     bool BeginTripleChargeTelegraph();
+    void UpdateTripleChargeTelegraphTransform(float lengthProgress);
 
     bool EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition,
 
@@ -1345,7 +1346,7 @@ private:
         bool tripleChargeActive = false;
         int tripleChargeIndex = 0;
         float tripleChargeTransitionElapsed = 0.0f;
-        float tripleChargeTransitionDuration = 0.7f;
+        float tripleChargeTransitionDuration = 0.65f;
         float tripleChargeLegElapsed = 0.0f;
         float tripleChargeLegDistance = 0.0f;
         float tripleChargeTelegraphElapsed = 0.0f;
@@ -1377,8 +1378,8 @@ private:
         DirectX::XMFLOAT3 tripleChargeStartPositions[3]{};
         bool tripleFinalWallHit = false;
         bool tripleEarlyWallHit = false;
-        float tripleWallStunDurationMultiplier = 3.0f;
-        float tripleChargeWallTurnClearance = 3.5f;
+        float tripleWallStunDurationMultiplier = 2.5f;
+        float tripleChargeWallTurnClearance = 5.0f;
         float tripleChargeLegMaxDistance = 50.0f;
         float tripleChargeLegMaxDuration = 50.0f;
         float tripleCurrentWallClearance = 0.0f;
@@ -1450,6 +1451,7 @@ private:
     float tripleChargeRepositionSpeed = 3.0f;
     float tripleChargeRepositionSideSafetyMargin = 0.20f;
     float tripleChargeTelegraphHoldDuration = 0.65f;
+    float tripleChargeTelegraphExpandDuration = 0.18f;
     float tripleChargeTelegraphGroundOffset = 0.1f;
     float tripleChargeTelegraphFixedWorldY = 0.35f;
     float tripleChargeTelegraphForwardOffset = 0.30f;
@@ -1714,5 +1716,4 @@ private:
     std::shared_ptr<RotationComponent> rotationComponent;
 
 };
-
 

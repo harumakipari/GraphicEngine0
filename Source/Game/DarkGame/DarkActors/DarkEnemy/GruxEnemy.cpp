@@ -377,7 +377,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     lockOnTargetMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
 
     tripleChargeTelegraphMeshComponent = AddComponent<StaticMeshComponent>("tripleChargeTelegraph", parentName);
-    tripleChargeTelegraphMeshComponent->SetModel("./Data/Models/EffectModel/ChargeTelegraphPlane.glb");
+    tripleChargeTelegraphMeshComponent->SetModel("./Data/Models/EffectModel/ChargeTelegraphPlane2.glb");
     tripleChargeTelegraphMeshComponent->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
     tripleChargeTelegraphMeshComponent->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
     tripleChargeTelegraphMeshComponent->SetIsCastShadow(false);

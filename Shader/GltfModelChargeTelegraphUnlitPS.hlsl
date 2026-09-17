@@ -19,7 +19,11 @@ float4 main(VS_OUT pin) : SV_TARGET0
             .Sample(samplerStates[ANISOTROPIC], pin.texcoord).r);
     }
 
-    const float3 telegraphColor = float3(1.0f, 0.12f, 0.0f);
     const float alpha = saturate(mask * m.pbrMetallicRoughness.baseColorFactor.a);
-    return float4(telegraphColor, alpha);
+    // The mask's brightest band is the thin core; retain the existing mask
+    // for alpha so black/zero-alpha texels remain transparent.
+    const float core = smoothstep(0.72f, 0.95f, mask);
+    const float3 glowColor = float3(1.0f, 0.08f, 0.0f);
+    const float3 coreColor = float3(1.0f, 0.5f, 0.03f);
+    return float4(lerp(glowColor, coreColor, core), alpha);
 }

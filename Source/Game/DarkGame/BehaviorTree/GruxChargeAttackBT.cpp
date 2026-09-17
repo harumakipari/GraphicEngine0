@@ -602,7 +602,37 @@ bool GruxEnemy::BeginTripleChargeTelegraph()
         tripleChargeTelegraphMeshComponent->SetIsVisible(chargeBT.tripleChargeTelegraphVisible);
         (void)centerPosition; // The asset pivot is the start edge, not the center.
     }
+    // Keep the boss-side edge fixed and reveal the plane towards its end.
+    UpdateTripleChargeTelegraphTransform(0.0f);
     return true;
+}
+
+void GruxEnemy::UpdateTripleChargeTelegraphTransform(float lengthProgress)
+{
+    if (!tripleChargeTelegraphMeshComponent)
+        return;
+    const float progress = std::clamp(lengthProgress, 0.0f, 1.0f);
+    const DirectX::XMFLOAT3 direction = chargeBT.tripleChargeTelegraphDirection;
+    const float directionLength = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+    if (directionLength <= FLT_EPSILON)
+        return;
+    const float yaw = std::atan2(-direction.x, -direction.z);
+    const auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f);
+    DirectX::XMFLOAT4 rotationFloat{};
+    DirectX::XMStoreFloat4(&rotationFloat, rotation);
+    const DirectX::XMFLOAT3 rootScale = GetScale();
+    const float width = chargeBT.tripleChargeTelegraphWidth;
+    const float length = chargeBT.tripleChargeTelegraphLength * progress;
+    const DirectX::XMFLOAT3 requestedScale{
+        width / (std::abs(rootScale.x) > 0.001f ? rootScale.x : 1.0f),
+        1.0f,
+        length / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
+    // ChargeTelegraphPlane2's local -Z axis starts at the local origin;
+    // changing only Z scale therefore preserves the world-space start edge.
+    tripleChargeTelegraphMeshComponent->SetWorldLocationDirect(
+        chargeBT.tripleChargeTelegraphStartPosition);
+    tripleChargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
+    tripleChargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
 }
 
 void GruxEnemy::DrawTripleChargeTelegraphDebug() const
@@ -930,8 +960,15 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         ++debugTelegraphHoldUpdateCount;
         debugTelegraphHoldLastDeltaTime = dt;
         chargeBT.tripleChargeTelegraphElapsed += (std::max)(0.0f, dt);
+        const float expandDuration = (std::max)(0.001f, tripleChargeTelegraphExpandDuration);
+        const float expandProgress = std::clamp(
+            chargeBT.tripleChargeTelegraphElapsed / expandDuration, 0.0f, 1.0f);
+        // Ease-out cubic: quick initial extension, gentle settle at full length.
+        const float easedProgress = 1.0f - std::pow(1.0f - expandProgress, 3.0f);
+        UpdateTripleChargeTelegraphTransform(easedProgress);
         DrawTripleChargeTelegraphDebug();
-        if (chargeBT.tripleChargeTelegraphElapsed < tripleChargeTelegraphHoldDuration)
+        if (chargeBT.tripleChargeTelegraphElapsed < expandDuration +
+            tripleChargeTelegraphHoldDuration)
             return ChargeBTStepResult::Running;
         if (!BeginTripleChargeLeg())
         {
@@ -1293,6 +1330,7 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::DragFloat("Triple Charge Reposition Speed", &tripleChargeRepositionSpeed, 0.05f, 0.1f, 10.0f, "%.2f m/s");
     ImGui::DragFloat("Triple Charge Reposition Side Safety Margin", &tripleChargeRepositionSideSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
     ImGui::Checkbox("Show Triple Charge Telegraph", &showTripleChargeTelegraph);
+    ImGui::DragFloat("Triple Charge Telegraph Expand Duration", &tripleChargeTelegraphExpandDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
     ImGui::DragFloat("Triple Charge Telegraph Hold Duration", &tripleChargeTelegraphHoldDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
     ImGui::DragFloat("Triple Charge Telegraph Ground Offset", &tripleChargeTelegraphGroundOffset, 0.005f, -0.1f, 0.5f, "%.3f m");
     ImGui::DragFloat("Triple Charge Telegraph Fixed World Y", &tripleChargeTelegraphFixedWorldY, 0.01f, -5.0f, 5.0f, "%.3f");
@@ -1308,6 +1346,7 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     tripleChargeRepositionSafetyMargin = (std::max)(0.0f, tripleChargeRepositionSafetyMargin);
     tripleChargeRepositionSpeed = (std::max)(0.1f, tripleChargeRepositionSpeed);
     tripleChargeRepositionSideSafetyMargin = (std::max)(0.0f, tripleChargeRepositionSideSafetyMargin);
+    tripleChargeTelegraphExpandDuration = std::clamp(tripleChargeTelegraphExpandDuration, 0.0f, 1.0f);
     tripleChargeTelegraphHoldDuration = std::clamp(tripleChargeTelegraphHoldDuration, 0.0f, 1.0f);
     tripleChargeTelegraphMaxDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
     tripleChargeTelegraphWidthMultiplier = (std::max)(0.0f, tripleChargeTelegraphWidthMultiplier);
@@ -1538,6 +1577,10 @@ void GruxEnemy::DrawChargeAttackBTDebug()
             snapshot.wallCastRadius, snapshot.playerCastRadius, snapshot.wallTurnClearance,
             snapshot.maxDistance, snapshot.capsuleRadius);
     }
+    ImGui::Text("Telegraph Expand Duration: %.3f sec", tripleChargeTelegraphExpandDuration);
+    ImGui::Text("Telegraph Expand Progress: %.3f", std::clamp(
+        chargeBT.tripleChargeTelegraphElapsed /
+            (std::max)(0.001f, tripleChargeTelegraphExpandDuration), 0.0f, 1.0f));
     ImGui::Text("Telegraph Hold Elapsed: %.3f sec", chargeBT.tripleChargeTelegraphElapsed);
     ImGui::Text("Telegraph Hold Duration: %.3f sec", tripleChargeTelegraphHoldDuration);
     ImGui::Text("BeginTripleChargeLeg Called: %s", chargeBT.tripleBeginTripleChargeLegCalled ? "true" : "false");
