@@ -4,6 +4,7 @@
 #include <memory>
 #include <functional>
 #include <string>
+#include <cstdint>
 
 // 他ライブラリ
 #include <DirectXMath.h>
@@ -73,6 +74,10 @@ public:
     virtual void SetIsOnlyShadow(bool isOnlyShadow) { this->isOnlyShadow = isOnlyShadow; }
 
     virtual bool IsVisible() const { return isVisible_; }
+
+    uint64_t GetDebugRenderCallCount() const { return debugRenderCallCount_; }
+    void ResetDebugRenderCallCount() const { debugRenderCallCount_ = 0; }
+    void RecordDebugRenderCall() const { ++debugRenderCallCount_; }
 
     // 他のメッシュコンポーネントに必要な外部からの定数バッファ更新するためのフック関数
     virtual void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const {}
@@ -190,6 +195,7 @@ public:
 protected:
     //描画するかどうか
     bool isVisible_ = true;
+    mutable uint64_t debugRenderCallCount_ = 0;
     // 影をつけるかどうか
     bool isCastShadow_ = true;
     // シャドウマップで影をつけるかどうか

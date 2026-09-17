@@ -737,10 +737,10 @@ void GameScene::UpdatePhase2Cinematic()
         phase2PlayerEmoteEndPoseHeld = false;
         if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
         {
-            player->PlayBodyAnimation("Emote_Win", false, true, 0.2f, true);
+            player->PlayBodyAnimation("Emote_Phase2", false, true, 0.2f, true);
             phase2PlayerEmoteActive = controller->SetPlaybackRange(
                 0.0f, std::clamp(phase2PlayerEmoteEndTime, 0.0f,
-                    controller->GetAnimationLength("Emote_Win")));
+                    controller->GetAnimationLength("Emote_Phase2")));
         }
         phase2TransitionStep = Phase2TransitionStep::PlayerEmote;
         phase2StepElapsed = 0.0f;
@@ -754,14 +754,14 @@ void GameScene::UpdatePhase2Cinematic()
             controller->OnUpdate(Time::UnscaledDeltaTime());
 
         const bool emoteFinished = !controller || !phase2PlayerEmoteActive ||
-            (controller->GetCurrentAnimationName() == "Emote_Win" && !controller->IsPlayAnimation());
+            (controller->GetCurrentAnimationName() == "Emote_Phase2" && !controller->IsPlayAnimation());
         if (!emoteFinished)
             break;
 
         // Do not request Idle here: the playback-range endpoint is the held pose.
         phase2PlayerEmoteActive = false;
         phase2PlayerEmoteEndPoseHeld = controller &&
-            controller->GetCurrentAnimationName() == "Emote_Win";
+            controller->GetCurrentAnimationName() == "Emote_Phase2";
         phase2TransitionStep = Phase2TransitionStep::PlayerEmotePostWait;
         phase2StepElapsed = 0.0f;
         break;
@@ -4096,7 +4096,7 @@ void GameScene::DrawGuiPlusAlpha()
         phase2PlayerEmotePreWaitDuration - emotePreWaitElapsed));
     ImGui::Text(U8("Player Emote Active: %s"), phase2PlayerEmoteActive ? "true" : "false");
     ImGui::Text(U8("Player Emote Time: %.3f"), phase2PlayerController &&
-        phase2PlayerController->GetCurrentAnimationName() == "Emote_Win"
+        phase2PlayerController->GetCurrentAnimationName() == "Emote_Phase2"
             ? phase2PlayerController->GetCurrentAnimationTime() : 0.0f);
     ImGui::DragFloat(U8("Player Emote EndTime"), &phase2PlayerEmoteEndTime,
         0.001f, 0.001f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);

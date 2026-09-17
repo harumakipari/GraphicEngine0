@@ -770,6 +770,7 @@ void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,
 }
 void GruxEnemy::StopBattleActions()
 {
+    HideDashTelegraphVisual();
     if (IsRoarBTActive())
     {
         CleanupRoarBT("Interrupted");
@@ -868,6 +869,7 @@ void GruxEnemy::ResetBehaviorTreeForBattleRestart()
 
 void GruxEnemy::ResetCombatRuntimeForBattleRestart()
 {
+    HideDashTelegraphVisual();
     ResetFourthHitReactionDebug();
     ClearAttackSetupTarget();
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
@@ -931,6 +933,13 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     dashBTCurrentDashHitStartCount = 0;
     dashBTAbortRemainingDashes = false;
     dashBTTransitionElapsed = 0.0f;
+    dashBTTelegraphHoldDuration = 0.0f;
+    dashBTDirectionLocked = false;
+    dashBTMovementSnapshotPrepared = false;
+    dashBTPredictedKnockupPosition = {};
+    dashBTActualKnockupStartPosition = {};
+    dashBTPredictionError = 0.0f;
+    dashBTKnockupPositionCaptured = false;
     dashAttackDirection = {};
     dashAttackStartPosition = {};
     dashTargetPosition = {};
@@ -1314,6 +1323,9 @@ void GruxEnemy::Update(float deltaTime)
         DrawPositioningDebugWorld();
     if (retreatWorldDebug)
         DrawRetreatDebugWorld();
+    UpdateDashTelegraphVisualDebug();
+    if (dashTelegraphActive || forceShowDashTelegraph)
+        DrawDashTelegraphDebugWorld();
 #endif
 
     SetScale({ enemyScale,enemyScale,enemyScale });
@@ -1968,6 +1980,21 @@ void GruxEnemy::DrawRotationDebugWorld(const BossTargetContext& context) const
 }
 
 
+void GruxEnemy::DrawDashTelegraphDebugWorld() const
+{
+    if (!dashTelegraphSnapshotValid)
+        return;
+    DirectX::XMFLOAT3 start = dashTelegraphLineStart;
+    DirectX::XMFLOAT3 end = dashTelegraphLineEnd;
+    const float debugY = dashTelegraphLineYOffset + 0.02f;
+    start.y = debugY;
+    end.y = debugY;
+    const DirectX::XMFLOAT4 color{ 0.15f, 0.9f, 1.0f, 1.0f };
+    DebugRender::DrawSphere(start, 0.16f, color, 0.0f, true);
+    DebugRender::DrawSphere(end, 0.20f, { 1.0f, 0.25f, 0.9f, 1.0f }, 0.0f, true);
+    DebugRender::DrawLine(start, end, color, 0.0f, true);
+}
+
 void GruxEnemy::DrawPositioningDebugWorld() const
 {
 #ifdef USE_IMGUI
@@ -2475,6 +2502,149 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text(U8("ダッシュ移動距離: %.2f m"),dashBTTraveledDistance);
     ImGui::Text(U8("ダッシュ残り時間: %.2f sec"),dashBTPhase == DashBTPhase::Movement? (std::max)(0.0f, dashAttackTimeout - dashAttackElapsedTime): 0.0f);
     ImGui::SeparatorText("Triple Dash Runtime");
+    if (ImGui::Checkbox("Show Dash Telegraph", &showDashTelegraph) && !showDashTelegraph)
+        HideDashTelegraphVisual();
+    ImGui::Text("Telegraph Active: %s", dashTelegraphActive ? "true" : "false");
+    if (ImGui::Checkbox("Force Show Dash Telegraph", &forceShowDashTelegraph))
+    {
+        if (forceShowDashTelegraph)
+            UpdateDashTelegraphVisualDebug();
+        else if (dashBTPhase != DashBTPhase::Telegraph && dashBTPhase != DashBTPhase::InterDashTransition)
+            HideDashTelegraphVisual();
+    }
+    ImGui::Text("Telegraph Snapshot Valid: %s", dashTelegraphSnapshotValid ? "true" : "false");
+    ImGui::Text("Line Start: (%.3f, %.3f, %.3f)", dashTelegraphLineStart.x, dashTelegraphLineStart.y, dashTelegraphLineStart.z);
+    ImGui::Text("Line End: (%.3f, %.3f, %.3f)", dashTelegraphLineEnd.x, dashTelegraphLineEnd.y, dashTelegraphLineEnd.z);
+    ImGui::Text("Line Length: %.3f m", dashTelegraphLineLength);
+    ImGui::DragFloat("Line Width", &dashTelegraphLineWidth, 0.01f, 0.01f, 8.0f, "%.3f m");
+    dashTelegraphLineWidth = (std::max)(0.01f, dashTelegraphLineWidth);
+    ImGui::Text("Fan Position: (%.3f, %.3f, %.3f)", dashTelegraphFanPosition.x, dashTelegraphFanPosition.y, dashTelegraphFanPosition.z);
+    ImGui::Text("Fan Forward: (%.3f, %.3f, %.3f)", dashTelegraphFanForward.x, dashTelegraphFanForward.y, dashTelegraphFanForward.z);
+    ImGui::DragFloat("Fan Radius", &dashTelegraphFanRadius, 0.05f, 0.01f, 20.0f, "%.2f m");
+    dashTelegraphFanRadius = (std::max)(0.01f, dashTelegraphFanRadius);
+    ImGui::DragFloat("Line Y Offset", &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
+    ImGui::DragFloat("Fan Y Offset", &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
+    const auto drawDashTelegraphMeshDebug = [](const char* label, const std::shared_ptr<StaticMeshComponent>& mesh)
+    {
+        ImGui::SeparatorText(label);
+        if (!mesh)
+        {
+            ImGui::Text("Component: Not Created");
+            return;
+        }
+        const auto& world = mesh->GetComponentWorldTransform();
+        const auto pos = world.GetLocation();
+        const auto rotation = world.GetRotation();
+        const auto scale = world.GetScale();
+        const auto euler = world.GetEulerRotation();
+        const auto matrix = world.ToWorldTransform();
+        ImGui::Text("Visible: %s", mesh->IsVisible() ? "true" : "false");
+        ImGui::Text("Model Loaded: %s", mesh->model ? "true" : "false");
+        ImGui::Text("Pipeline: %s / %s", mesh->overrideDeferredPipelineName ? mesh->overrideDeferredPipelineName->c_str() : "None", mesh->overrideForwardPipelineName ? mesh->overrideForwardPipelineName->c_str() : "None");
+        ImGui::Text("Render Eligible: %s", (mesh->IsVisible() && mesh->model && mesh->overrideForwardPipelineName == "chargeTelegraphUnlitForward") ? "true" : "false");
+        ImGui::Text("Render Function Call Count: %llu", static_cast<unsigned long long>(mesh->GetDebugRenderCallCount()));
+        ImGui::Text("World Position: (%.3f, %.3f, %.3f)", pos.x, pos.y, pos.z);
+        ImGui::Text("World Rotation Q: (%.4f, %.4f, %.4f, %.4f)", rotation.x, rotation.y, rotation.z, rotation.w);
+        ImGui::Text("World Yaw: %.2f deg", DirectX::XMConvertToDegrees(euler.y));
+        ImGui::Text("World Scale: (%.3f, %.3f, %.3f)", scale.x, scale.y, scale.z);
+        ImGui::Text("World Matrix R0: %.3f %.3f %.3f %.3f", matrix._11, matrix._12, matrix._13, matrix._14);
+        ImGui::Text("World Matrix R1: %.3f %.3f %.3f %.3f", matrix._21, matrix._22, matrix._23, matrix._24);
+        ImGui::Text("World Matrix R2: %.3f %.3f %.3f %.3f", matrix._31, matrix._32, matrix._33, matrix._34);
+        ImGui::Text("World Matrix R3: %.3f %.3f %.3f %.3f", matrix._41, matrix._42, matrix._43, matrix._44);
+        ImGui::Text("World Local +Y (Plane Normal): (%.3f, %.3f, %.3f)", matrix._21, matrix._22, matrix._23);
+        ImGui::Text("World Local -Z (Forward): (%.3f, %.3f, %.3f)", -matrix._31, -matrix._32, -matrix._33);
+        if (!mesh->model)
+            return;
+        // StaticMesh geometry is stored in batchMeshes, not meshes. GetAABB()
+        // currently only handles meshes, so compute the diagnostic AABB from the
+        // retained batch vertices for the Dash Line without changing gameplay/render data.
+        AABB box = mesh->model->GetAABB();
+        if (mesh->model->mode == ModelTypes::ModelMode::StaticMesh)
+        {
+            DirectX::XMFLOAT3 minValue{ FLT_MAX, FLT_MAX, FLT_MAX };
+            DirectX::XMFLOAT3 maxValue{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
+            bool hasVertex = false;
+            for (const auto& batchMesh : mesh->model->batchMeshes)
+                for (const auto& vertex : batchMesh.cachedVertices)
+                {
+                    hasVertex = true;
+                    minValue.x = (std::min)(minValue.x, vertex.position.x);
+                    minValue.y = (std::min)(minValue.y, vertex.position.y);
+                    minValue.z = (std::min)(minValue.z, vertex.position.z);
+                    maxValue.x = (std::max)(maxValue.x, vertex.position.x);
+                    maxValue.y = (std::max)(maxValue.y, vertex.position.y);
+                    maxValue.z = (std::max)(maxValue.z, vertex.position.z);
+                }
+            if (hasVertex)
+                box = { minValue, maxValue };
+        }
+        const DirectX::XMFLOAT3 size{ box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z };
+        ImGui::Text("Model AABB Min: (%.3f, %.3f, %.3f)", box.min.x, box.min.y, box.min.z);
+        ImGui::Text("Model AABB Max: (%.3f, %.3f, %.3f)", box.max.x, box.max.y, box.max.z);
+        ImGui::Text("Model Size: (%.3f, %.3f, %.3f)", size.x, size.y, size.z);
+        DirectX::XMFLOAT3 worldMin{ FLT_MAX, FLT_MAX, FLT_MAX };
+        DirectX::XMFLOAT3 worldMax{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
+        const auto worldMatrix = world.ToMatrix();
+        for (const float x : { box.min.x, box.max.x })
+            for (const float y : { box.min.y, box.max.y })
+                for (const float z : { box.min.z, box.max.z })
+                {
+                    DirectX::XMFLOAT3 point{};
+                    DirectX::XMStoreFloat3(&point, DirectX::XMVector3TransformCoord(
+                        DirectX::XMVectorSet(x, y, z, 1.0f), worldMatrix));
+                    worldMin.x = (std::min)(worldMin.x, point.x);
+                    worldMin.y = (std::min)(worldMin.y, point.y);
+                    worldMin.z = (std::min)(worldMin.z, point.z);
+                    worldMax.x = (std::max)(worldMax.x, point.x);
+                    worldMax.y = (std::max)(worldMax.y, point.y);
+                    worldMax.z = (std::max)(worldMax.z, point.z);
+                }
+        ImGui::Text("Transformed World AABB Min: (%.3f, %.3f, %.3f)", worldMin.x, worldMin.y, worldMin.z);
+        ImGui::Text("Transformed World AABB Max: (%.3f, %.3f, %.3f)", worldMax.x, worldMax.y, worldMax.z);
+        ImGui::Text("Transformed World AABB Size: (%.3f, %.3f, %.3f)", worldMax.x - worldMin.x, worldMax.y - worldMin.y, worldMax.z - worldMin.z);
+        ImGui::Text("Materials / Textures / Images: %d / %d / %d", static_cast<int>(mesh->model->materials.size()), static_cast<int>(mesh->model->textures.size()), static_cast<int>(mesh->model->images.size()));
+        if (!mesh->model->materials.empty())
+        {
+            const int index = mesh->model->materials.front().data.pbrMetallicRoughness.basecolorTexture.index;
+            ImGui::Text("BaseColor Mask Texture Index: %d", index);
+            if (index >= 0 && index < static_cast<int>(mesh->model->textures.size()))
+            {
+                const auto& texture = mesh->model->textures[index];
+                ImGui::Text("Mask Texture: %s (Image %d)", texture.name.c_str(), texture.source);
+                const bool srvReady = texture.source >= 0 && texture.source < static_cast<int>(mesh->model->textureResourceViews.size()) && mesh->model->textureResourceViews[texture.source].Get() != nullptr;
+                ImGui::Text("Mask Texture SRV Ready: %s", srvReady ? "true" : "false");
+            }
+        }
+    };
+    drawDashTelegraphMeshDebug("Dash Telegraph Line Mesh", dashTelegraphLineMeshComponent);
+    if (dashTelegraphLineMeshComponent && dashTelegraphLineMeshComponent->model)
+    {
+        AABB lineBox{};
+        lineBox.min = { FLT_MAX, FLT_MAX, FLT_MAX };
+        lineBox.max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
+        for (const auto& batchMesh : dashTelegraphLineMeshComponent->model->batchMeshes)
+            for (const auto& vertex : batchMesh.cachedVertices)
+            {
+                lineBox.min.x = (std::min)(lineBox.min.x, vertex.position.x);
+                lineBox.min.y = (std::min)(lineBox.min.y, vertex.position.y);
+                lineBox.min.z = (std::min)(lineBox.min.z, vertex.position.z);
+                lineBox.max.x = (std::max)(lineBox.max.x, vertex.position.x);
+                lineBox.max.y = (std::max)(lineBox.max.y, vertex.position.y);
+                lineBox.max.z = (std::max)(lineBox.max.z, vertex.position.z);
+            }
+        const auto lineWorld = dashTelegraphLineMeshComponent->GetComponentWorldTransform().ToMatrix();
+        DirectX::XMFLOAT3 meshStart{}, meshEnd{};
+        DirectX::XMStoreFloat3(&meshStart, DirectX::XMVector3TransformCoord(
+            DirectX::XMVectorSet(0.0f, 0.0f, lineBox.max.z, 1.0f), lineWorld));
+        DirectX::XMStoreFloat3(&meshEnd, DirectX::XMVector3TransformCoord(
+            DirectX::XMVectorSet(0.0f, 0.0f, lineBox.min.z, 1.0f), lineWorld));
+        const float meshLength = std::sqrt((meshEnd.x - meshStart.x) * (meshEnd.x - meshStart.x) +
+            (meshEnd.z - meshStart.z) * (meshEnd.z - meshStart.z));
+        ImGui::Text("Line Mesh Forward Start: (%.3f, %.3f, %.3f)", meshStart.x, meshStart.y, meshStart.z);
+        ImGui::Text("Line Mesh Forward End: (%.3f, %.3f, %.3f)", meshEnd.x, meshEnd.y, meshEnd.z);
+        ImGui::Text("Line Mesh Effective Length: %.3f m (Requested %.3f m)", meshLength, dashTelegraphLineLength);
+    }
+    drawDashTelegraphMeshDebug("Dash Telegraph Fan Mesh", dashTelegraphFanMeshComponent);
     ImGui::Text("Triple Dash Active: %s", dashBTTripleDashActive ? "true" : "false");
     ImGui::Text("Dash Index / Max Count: %d / %d", dashBTDashIndex + 1, dashBTDashMaxCount);
     const char* dashRuntimePhase = dashBTPhase == DashBTPhase::Telegraph ? "Dash1 Windup" :
@@ -2482,13 +2652,36 @@ void GruxEnemy::DrawImGuiDetails()
         dashBTPhase == DashBTPhase::Knockup ? "Dash Knockup" :
         dashBTPhase == DashBTPhase::InterDashTransition ? "InterDashTransition" : "Inactive";
     ImGui::Text("Dash Phase: %s", dashRuntimePhase);
+    ImGui::DragFloat("Direction Lock Time", &dashBTDirectionLockTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+    dashBTDirectionLockTime = (std::max)(0.0f, dashBTDirectionLockTime);
+    ImGui::DragFloat("Inter Dash Tracking Duration", &dashBTInterDashTrackingDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
+    dashBTInterDashTrackingDuration = (std::max)(0.0f, dashBTInterDashTrackingDuration);
     ImGui::DragFloat("Transition Duration", &dashBTTransitionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
     dashBTTransitionDuration = (std::max)(0.0f, dashBTTransitionDuration);
     ImGui::Text("Transition Elapsed: %.3f sec", dashBTTransitionElapsed);
+    ImGui::Text("Direction Locked: %s", dashBTDirectionLocked ? "true" : "false");
+    ImGui::Text("Telegraph Hold Duration: %.3f sec", dashBTTelegraphHoldDuration);
+    const float dashTimeUntilStart = dashBTPhase == DashBTPhase::Telegraph
+        ? (std::max)(0.0f, GetDashWindupDuration() - dashBTTelegraphElapsed)
+        : dashBTPhase == DashBTPhase::InterDashTransition
+        ? (std::max)(0.0f, dashBTTransitionDuration - dashBTTransitionElapsed) : 0.0f;
+    ImGui::Text("Time Until Dash Start: %.3f sec", dashTimeUntilStart);
+    ImGui::Text("Locked Direction: (%.3f, %.3f, %.3f)", dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
+    ImGui::Text("Locked Predicted Knockup Position: (%.3f, %.3f, %.3f)",
+        dashBTPredictedKnockupPosition.x, dashBTPredictedKnockupPosition.y,
+        dashBTPredictedKnockupPosition.z);
     ImGui::Text("Current Dash Start Position: (%.3f, %.3f, %.3f)", dashAttackStartPosition.x, dashAttackStartPosition.y, dashAttackStartPosition.z);
     ImGui::Text("Current Dash Direction: (%.3f, %.3f, %.3f)", dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
     ImGui::Text("Current Dash Target Position: (%.3f, %.3f, %.3f)", dashTargetPosition.x, dashTargetPosition.y, dashTargetPosition.z);
     ImGui::Text("Current Dash Distance: %.3f", calculatedDashAttackDistance);
+    ImGui::Text("Predicted Knockup Position: (%.3f, %.3f, %.3f)",
+        dashBTPredictedKnockupPosition.x, dashBTPredictedKnockupPosition.y,
+        dashBTPredictedKnockupPosition.z);
+    ImGui::Text("Actual Knockup Start Position: (%.3f, %.3f, %.3f)",
+        dashBTActualKnockupStartPosition.x, dashBTActualKnockupStartPosition.y,
+        dashBTActualKnockupStartPosition.z);
+    ImGui::Text("Prediction Error: %s%.3f m", dashBTKnockupPositionCaptured ? "" : "Pending / ",
+        dashBTPredictionError);
     const char* recoveryAttackName = "None";
     for (const auto& attack : combatAttackData)
     {
@@ -5486,10 +5679,8 @@ void GruxEnemy::ClearJumpAttackMotionWarpOverride()
     animationMotionWarps.clear();
 }
 
-bool GruxEnemy::BeginDashAttackMovement()
+bool GruxEnemy::PrepareDashAttackMovementSnapshot()
 {
-    StopDashAttackMovement();
-
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     if (!player)
         return false;
@@ -5514,12 +5705,42 @@ bool GruxEnemy::BeginDashAttackMovement()
         bossPosition.y,
         bossPosition.z + dashAttackDirection.z * calculatedDashAttackDistance
     };
-    dashAttackElapsedTime = 0.0f;
-    dashAttackMovementActive = true;
+    // Stampede's nominal endpoint is governed by the same arrival/timeout
+    // limits as UpdateDashAttackMovement. It remains a prediction only.
+    const float nominalTravelDistance = std::clamp(
+        (std::min)(calculatedDashAttackDistance - dashArrivalDistance,
+            dashAttackSpeed * dashAttackTimeout),
+        0.0f, calculatedDashAttackDistance);
+    dashBTPredictedKnockupPosition =
+    {
+        bossPosition.x + dashAttackDirection.x * nominalTravelDistance,
+        bossPosition.y,
+        bossPosition.z + dashAttackDirection.z * nominalTravelDistance
+    };
+    dashBTActualKnockupStartPosition = {};
+    dashBTPredictionError = 0.0f;
+    dashBTKnockupPositionCaptured = false;
+    dashBTMovementSnapshotPrepared = true;
 
+    // Direction is fixed at this same point. Hold time may follow, but neither
+    // the visual prediction nor the later movement may resample the player.
     if (rotationComponent)
         RecordRotationDebugSource("DashAttackDirectionLock", dashAttackDirection, 0.0f);
     rotationComponent->SetDirectionImmediate(dashAttackDirection);
+    return true;
+}
+
+bool GruxEnemy::BeginDashAttackMovement()
+{
+    HideDashTelegraphVisual();
+    StopDashAttackMovement();
+    // Legacy/direct callers retain the old immediate-snapshot behavior. Dash
+    // BT normally prepares this at Direction Lock before entering its hold.
+    if (!dashBTMovementSnapshotPrepared && !PrepareDashAttackMovementSnapshot())
+        return false;
+
+    dashAttackElapsedTime = 0.0f;
+    dashAttackMovementActive = true;
     if (characterMovementComponent)
     {
         characterMovementComponent->SetFixedSpeed(dashAttackSpeed);
@@ -5528,7 +5749,6 @@ bool GruxEnemy::BeginDashAttackMovement()
     }
     return true;
 }
-
 bool GruxEnemy::UpdateDashAttackMovement(float deltaTime, bool keepLockedDirection)
 {
     if (!dashAttackMovementActive)

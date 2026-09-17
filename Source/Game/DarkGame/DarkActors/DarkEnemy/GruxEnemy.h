@@ -206,6 +206,13 @@ public:
     void FinishDashAttackBT();
     bool IsDashAttackBTActive() const { return dashBTPhase != DashBTPhase::None; }
     void SetDashBTFacing() { dashBTPhase = DashBTPhase::Facing; }
+    bool PrepareDashAttackMovementSnapshot();
+    void EnsureDashTelegraphVisual();
+    void BeginDashTelegraphVisual();
+    void ApplyDashTelegraphVisualSnapshot();
+    void HideDashTelegraphVisual();
+    void UpdateDashTelegraphVisualDebug();
+    void DrawDashTelegraphDebugWorld() const;
     bool BeginDashAttackMovement();
     bool UpdateDashAttackMovement(float deltaTime, bool keepLockedDirection = false);
     void StopDashAttackMovement();
@@ -740,6 +747,8 @@ private:
     std::shared_ptr<StaticMeshComponent> tripleChargeTelegraphMeshComponent;   // ?????~G?t?F?N?g
     std::shared_ptr<StaticMeshComponent> jumpTelegraphMeshComponent;
     std::shared_ptr<StaticMeshComponent> jumpTelegraphInnerMeshComponent;   // ?????~G?t?F?N?g
+    std::shared_ptr<StaticMeshComponent> dashTelegraphLineMeshComponent;
+    std::shared_ptr<StaticMeshComponent> dashTelegraphFanMeshComponent;
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HP?o?[
@@ -1322,8 +1331,32 @@ private:
     int dashBTDashMaxCount = 1;
     int dashBTCurrentDashHitStartCount = 0;
     bool dashBTAbortRemainingDashes = false;
-    float dashBTTransitionDuration = 0.25f;
+    // Lock timing creates a stable visual-only telegraph window before each dash leg.
+    float dashBTDirectionLockTime = 1.10f;
+    float dashBTInterDashTrackingDuration = 0.10f;
+    float dashBTTransitionDuration = 0.40f;
     float dashBTTransitionElapsed = 0.0f;
+    float dashBTTelegraphHoldDuration = 0.0f;
+    bool dashBTDirectionLocked = false;
+    bool dashBTMovementSnapshotPrepared = false;
+    DirectX::XMFLOAT3 dashBTPredictedKnockupPosition{};
+    DirectX::XMFLOAT3 dashBTActualKnockupStartPosition{};
+    float dashBTPredictionError = 0.0f;
+    bool dashBTKnockupPositionCaptured = false;
+    // Visual-only Direction Lock snapshot; it never re-targets gameplay.
+    bool showDashTelegraph = true;
+    bool dashTelegraphActive = false;
+    bool forceShowDashTelegraph = false;
+    bool dashTelegraphSnapshotValid = false;
+    float dashTelegraphLineWidth = 4.f;
+    float dashTelegraphFanRadius = 3.0f;
+    float dashTelegraphLineYOffset = 0.345f;
+    float dashTelegraphFanYOffset = 0.350f;
+    DirectX::XMFLOAT3 dashTelegraphLineStart{};
+    DirectX::XMFLOAT3 dashTelegraphLineEnd{};
+    float dashTelegraphLineLength = 0.0f;
+    DirectX::XMFLOAT3 dashTelegraphFanPosition{};
+    DirectX::XMFLOAT3 dashTelegraphFanForward{};
     float dashWindupDuration = 1.40f;   // ?\??????"???
     float dashAttackSpeed = 12.0f;
     float minDashAttackDistance = 4.0f;

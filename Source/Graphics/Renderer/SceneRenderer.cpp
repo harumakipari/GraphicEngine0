@@ -598,6 +598,8 @@ void SceneRenderer::DrawWithStaticBatching(ID3D11DeviceContext* immediateContext
         }
         immediateContext->PSSetShaderResources(1, static_cast<UINT>(shaderResourceViews.size()), shaderResourceViews.data());
 
+        // The next branch issues either DrawIndexed or Draw for this exact component.
+        meshComponent->RecordDebugRenderCall();
         if (batchMesh.indexBufferView.buffer > -1)
         {
             immediateContext->IASetIndexBuffer(model->buffers.at(batchMesh.indexBufferView.buffer).Get(), batchMesh.indexBufferView.format, 0);

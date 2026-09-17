@@ -483,7 +483,12 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 pointLightComponent->SetSharedLightName("MainRoomPointLight");
                 RegisterStageLight(spawnArea, pointLightComponent);
             }
-
+            else if (point.name.rfind("Spawn_Painting", 0) == 0)
+            {// ƒƒCƒ“‚Ì•”‰®‚ÌŠG‰æ‚ð¶¬‚·‚é
+                DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
+                Transform paintingTr{ pos,point.worldRotation,point.worldScale };
+                auto paintingActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("PaintingActor", paintingTr);
+            }
             }
         }
     }

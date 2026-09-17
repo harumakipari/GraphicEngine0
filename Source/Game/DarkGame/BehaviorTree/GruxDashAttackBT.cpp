@@ -3,6 +3,103 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/State/StateMachine.h"
 
+void GruxEnemy::EnsureDashTelegraphVisual()
+{
+    if (!dashTelegraphLineMeshComponent)
+        dashTelegraphLineMeshComponent = AddComponent<StaticMeshComponent>("dashTelegraphLine", "GruxEnemy");
+    if (!dashTelegraphFanMeshComponent)
+        dashTelegraphFanMeshComponent = AddComponent<StaticMeshComponent>("dashTelegraphFan", "GruxEnemy");
+
+    const auto configure = [](const std::shared_ptr<StaticMeshComponent>& mesh, const char* modelPath,
+        const bool retainVerticesForDebug)
+    {
+        if (!mesh->model)
+            mesh->SetModel(modelPath, retainVerticesForDebug);
+        if (mesh->model)
+            for (auto& material : mesh->model->materials)
+                material.data.alphaMode = 2; // BLEND: asset mask supplies alpha.
+        mesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
+        mesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
+        mesh->SetIsCastShadow(false);
+        mesh->SetIsVisible(false);
+        mesh->SetUsingAbsoluteLocation(true);
+        mesh->SetUsingAbsoluteRotation(true);
+        mesh->SetUsingAbsoluteScale(true);
+        mesh->plusAlphaCBuffer->data.cpuColor = { 1.0f, 0.16f, 0.03f, 1.0f };
+        mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
+        mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+    };
+    // The on-disk asset name intentionally follows the supplied filename
+    configure(dashTelegraphLineMeshComponent, "./Data/Models/EffectModel/DashTelegraphPlane.glb", true);
+    configure(dashTelegraphFanMeshComponent, "./Data/Models/EffectModel/DashTelegraphFan.glb", false);
+}
+
+void GruxEnemy::BeginDashTelegraphVisual()
+{
+    // Copy the locked gameplay snapshot once. It remains valid after BT cleanup
+    // so Force Show can inspect this exact leg later.
+    dashTelegraphLineStart = dashAttackStartPosition;
+    dashTelegraphLineEnd = dashBTPredictedKnockupPosition;
+    dashTelegraphFanPosition = { dashBTPredictedKnockupPosition.x,
+        dashTelegraphFanYOffset, dashBTPredictedKnockupPosition.z };
+    dashTelegraphFanForward = dashAttackDirection;
+    const float dx = dashTelegraphLineEnd.x - dashTelegraphLineStart.x;
+    const float dz = dashTelegraphLineEnd.z - dashTelegraphLineStart.z;
+    dashTelegraphLineLength = std::sqrt(dx * dx + dz * dz);
+    dashTelegraphSnapshotValid = dashTelegraphLineLength > FLT_EPSILON;
+    ApplyDashTelegraphVisualSnapshot();
+}
+
+void GruxEnemy::ApplyDashTelegraphVisualSnapshot()
+{
+    if (!dashTelegraphSnapshotValid ||
+        (!showDashTelegraph && !forceShowDashTelegraph))
+    {
+        HideDashTelegraphVisual();
+        return;
+    }
+
+    EnsureDashTelegraphVisual();
+    if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
+        return;
+
+    // Both Dash assets are local -Z forward. The line model pivot is its start edge.
+    const float yaw = std::atan2(-dashTelegraphFanForward.x, -dashTelegraphFanForward.z);
+    DirectX::XMFLOAT4 rotation{};
+    DirectX::XMStoreFloat4(&rotation,
+        DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f));
+    // These components use absolute transforms. As in Jump Telegraph, their
+    // relative values are therefore the intended world values; SetWorld* would
+    // first apply Grux's inverse parent transform and place the mesh incorrectly.
+    dashTelegraphLineMeshComponent->SetRelativeLocationDirect({
+        dashTelegraphLineStart.x, dashTelegraphLineYOffset, dashTelegraphLineStart.z });
+    dashTelegraphLineMeshComponent->SetRelativeRotationDirect(rotation);
+    dashTelegraphLineMeshComponent->SetRelativeScaleDirect({
+        dashTelegraphLineWidth, 1.0f, dashTelegraphLineLength });
+    dashTelegraphFanMeshComponent->SetRelativeLocationDirect(dashTelegraphFanPosition);
+    dashTelegraphFanMeshComponent->SetRelativeRotationDirect(rotation);
+    dashTelegraphFanMeshComponent->SetRelativeScaleDirect({
+        dashTelegraphFanRadius, 1.0f, dashTelegraphFanRadius });
+    dashTelegraphLineMeshComponent->SetIsVisible(true);
+    dashTelegraphFanMeshComponent->SetIsVisible(true);
+    dashTelegraphActive = true;
+}
+
+void GruxEnemy::HideDashTelegraphVisual()
+{
+    if (dashTelegraphLineMeshComponent)
+        dashTelegraphLineMeshComponent->SetIsVisible(false);
+    if (dashTelegraphFanMeshComponent)
+        dashTelegraphFanMeshComponent->SetIsVisible(false);
+    dashTelegraphActive = false;
+}
+
+void GruxEnemy::UpdateDashTelegraphVisualDebug()
+{
+    if (forceShowDashTelegraph)
+        ApplyDashTelegraphVisualSnapshot();
+}
+
 bool DashPlanAvailable::Judgment()
 {
     const auto machine = owner->GetStateMachine();
@@ -143,6 +240,9 @@ bool GruxEnemy::StartDashAttackTelegraph()
     dashBTAbortRemainingDashes = false;
     dashBTTransitionElapsed = 0.0f;
     dashBTTelegraphElapsed = 0.0f;
+    dashBTTelegraphHoldDuration = 0.0f;
+    dashBTDirectionLocked = false;
+    dashBTMovementSnapshotPrepared = false;
     dashBTPhase = DashBTPhase::Telegraph;
     if (!PlayAttackStage(BossAttackType::DashAttack, 0))
         return false;
@@ -164,12 +264,28 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         if (!context.valid)
             return DashBTResult::Failed;
         StopAIMovement();
-        RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_DashTelegraph");
+        const float windupDuration = GetDashWindupDuration();
+        const float directionLockTime = std::clamp(dashBTDirectionLockTime,
+            0.0f, windupDuration);
+        // Only the pre-lock interval tracks the player. The snapshot captures
+        // the same data later used by Stage 1 movement, so a visual can safely
+        // occupy the remaining windup without target resampling.
+        if (!dashBTDirectionLocked && dashBTTelegraphElapsed < directionLockTime)
+            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_DashTelegraph");
         dashBTTelegraphElapsed += dt;
-        if (dashBTTelegraphElapsed < GetDashWindupDuration())
+        if (!dashBTDirectionLocked && dashBTTelegraphElapsed >= directionLockTime)
+        {
+            if (!PrepareDashAttackMovementSnapshot())
+                return DashBTResult::Failed;
+            dashBTDirectionLocked = true;
+            dashBTTelegraphHoldDuration = (std::max)(0.0f,
+                windupDuration - directionLockTime);
+            BeginDashTelegraphVisual();
+        }
+        if (dashBTTelegraphElapsed < windupDuration)
             return DashBTResult::Running;
         BeginAdditionalAttackStage();
-        // Stage 1 calls BeginDashAttackMovement once, sampling the latest target.
+        // Stage 1 starts movement from the Direction Lock snapshot only.
         if (!PlayAttackStage(BossAttackType::DashAttack, 1))
             return DashBTResult::Failed;
         dashBTPhase = DashBTPhase::Movement;
@@ -200,6 +316,17 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         StopDashAttackMovement();
         BeginAdditionalAttackStage();
         dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
+        // This is the exact actor position at the Stage1 -> Knockup handoff.
+        // Compare it with the nominal arrival/timeout prediction captured when
+        // this dash leg began; do not alter movement to make them agree.
+        dashBTActualKnockupStartPosition = GetPosition();
+        const float predictionDx = dashBTActualKnockupStartPosition.x -
+            dashBTPredictedKnockupPosition.x;
+        const float predictionDz = dashBTActualKnockupStartPosition.z -
+            dashBTPredictedKnockupPosition.z;
+        dashBTPredictionError = std::sqrt(predictionDx * predictionDx +
+            predictionDz * predictionDz);
+        dashBTKnockupPositionCaptured = true;
         if (!PlayAttackStage(BossAttackType::DashAttack, 2))
             return DashBTResult::Failed;
         dashBTPhase = DashBTPhase::Knockup;
@@ -220,6 +347,9 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             DisableAttackHitBoxes();
             dashBTPhase = DashBTPhase::InterDashTransition;
             dashBTTransitionElapsed = 0.0f;
+            dashBTTelegraphHoldDuration = 0.0f;
+            dashBTDirectionLocked = false;
+            dashBTMovementSnapshotPrepared = false;
             return DashBTResult::Running;
         }
         SetBehaviorAttackResult(WasCurrentAttackSequenceJustDodged()
@@ -229,17 +359,30 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         return DashBTResult::Complete;
     case DashBTPhase::InterDashTransition:
     {
-        // Between dashes we intentionally track the player again; direction is
-        // locked anew by PlayAttackStage(1) -> BeginDashAttackMovement().
+        // The beginning of each inter-dash transition tracks the player. Once
+        // locked, its remaining duration is a stable telegraph hold interval.
         StopDashAttackMovement();
         DisableAttackHitBoxes();
         const auto context = BuildTargetContext();
         if (!context.valid)
             return DashBTResult::Failed;
-        RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt,
-            "BT_DashInterTransition");
+        const float transitionDuration = (std::max)(0.0f, dashBTTransitionDuration);
+        const float trackingDuration = std::clamp(dashBTInterDashTrackingDuration,
+            0.0f, transitionDuration);
+        if (!dashBTDirectionLocked && dashBTTransitionElapsed < trackingDuration)
+            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt,
+                "BT_DashInterTransition");
         dashBTTransitionElapsed += dt;
-        if (dashBTTransitionElapsed < dashBTTransitionDuration)
+        if (!dashBTDirectionLocked && dashBTTransitionElapsed >= trackingDuration)
+        {
+            if (!PrepareDashAttackMovementSnapshot())
+                return DashBTResult::Failed;
+            dashBTDirectionLocked = true;
+            dashBTTelegraphHoldDuration = (std::max)(0.0f,
+                transitionDuration - trackingDuration);
+            BeginDashTelegraphVisual();
+        }
+        if (dashBTTransitionElapsed < transitionDuration)
             return DashBTResult::Running;
 
         ++dashBTDashIndex;
@@ -266,6 +409,7 @@ void GruxEnemy::FinishDashAttackBT()
 
 void GruxEnemy::CleanupDashAttackBT()
 {
+    HideDashTelegraphVisual();
     if (!IsDashAttackBTActive())
         return;
     if (dashBTAttackStarted)
@@ -292,6 +436,13 @@ void GruxEnemy::CleanupDashAttackBT()
     dashBTCurrentDashHitStartCount = 0;
     dashBTAbortRemainingDashes = false;
     dashBTTransitionElapsed = 0.0f;
+    dashBTTelegraphHoldDuration = 0.0f;
+    dashBTDirectionLocked = false;
+    dashBTMovementSnapshotPrepared = false;
+    dashBTPredictedKnockupPosition = {};
+    dashBTActualKnockupStartPosition = {};
+    dashBTPredictionError = 0.0f;
+    dashBTKnockupPositionCaptured = false;
     dashAttackDirection = {};
     dashAttackStartPosition = {};
     dashTargetPosition = {};
