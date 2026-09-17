@@ -211,7 +211,7 @@ void GruxEnemy::FailChargeAttackBT()
     if (!IsChargeAttackBTActive()) return;
     debugFailChargeAttackBTCalled = true;
     debugLastChargeAbortReason = "FailChargeAttackBT";
-    HideTripleChargeTelegraph();
+    HideChargeTelegraphVisual();
     StopChargeAttackMovement();
     DisableAttackHitBoxes();
     ClearAttackSetupTarget();
@@ -264,6 +264,7 @@ void GruxEnemy::StartChargeAttackBT()
 bool GruxEnemy::BeginSingleChargeBT()
 {
     // Existing entry owns the direction snapshot, timer, danger flag, animation and velocity.
+    HideChargeTelegraphVisual();
     if (!BeginChargeAttackMovement()) return false;
     chargeBT.result = ChargeAttackEndReason::None;
     chargeBT.phase = ChargeBTPhase::Charging;
@@ -282,7 +283,7 @@ bool GruxEnemy::BeginTripleChargeLeg()
     chargeBT.tripleBeginTripleChargeLegCalled = true;
     chargeBT.tripleBeginTripleChargeLegResult = false;
     chargeBT.tripleBeginChargeMovementResult = false;
-    HideTripleChargeTelegraph();
+    HideChargeTelegraphVisual();
     const bool movementStarted = BeginChargeAttackMovement();
     chargeBT.tripleBeginChargeMovementResult = movementStarted;
     chargeBT.tripleHoldEndChargeStartValidation = chargeStartValidationValidDebug;
@@ -373,17 +374,15 @@ bool GruxEnemy::BeginTripleChargeTransition()
     return true;
 }
 
-void GruxEnemy::HideTripleChargeTelegraph()
+void GruxEnemy::HideChargeTelegraphVisual()
 {
     if (tripleChargeTelegraphMeshComponent)
         tripleChargeTelegraphMeshComponent->SetIsVisible(false);
     chargeBT.tripleChargeTelegraphVisible = false;
 }
 
-bool GruxEnemy::BeginTripleChargeTelegraph()
+bool GruxEnemy::BeginChargeTelegraphVisual()
 {
-    if (!chargeBT.tripleChargeActive)
-        return false;
     ++chargeBT.tripleChargeTelegraphCallCount;
 
     debugTelegraphEntryActiveNode = activeNode ? activeNode->GetName() : "None";
@@ -603,11 +602,11 @@ bool GruxEnemy::BeginTripleChargeTelegraph()
         (void)centerPosition; // The asset pivot is the start edge, not the center.
     }
     // Keep the boss-side edge fixed and reveal the plane towards its end.
-    UpdateTripleChargeTelegraphTransform(0.0f);
+    UpdateChargeTelegraphVisual(0.0f);
     return true;
 }
 
-void GruxEnemy::UpdateTripleChargeTelegraphTransform(float lengthProgress)
+void GruxEnemy::UpdateChargeTelegraphVisual(float lengthProgress)
 {
     if (!tripleChargeTelegraphMeshComponent)
         return;
@@ -702,7 +701,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         }
         if (animationTime >= GetChargeWindupEndTime())
         {
-            if (!BeginTripleChargeTelegraph())
+            if (!BeginChargeTelegraphVisual())
             {
                 FailChargeAttackBT();
                 chargeBT.triplePhase = TripleChargePhase::Aborted;
@@ -941,7 +940,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             tripleChargeRepositionSideSafetyMargin;
         chargeBT.tripleChargeFinalPathSafe = chargeBT.tripleChargeFinalValidationResult &&
             (!finalSideHit || finalSideClearance > finalRequiredSideClearance);
-        if (!BeginTripleChargeTelegraph())
+        if (!BeginChargeTelegraphVisual())
         {
             FailChargeAttackBT();
             chargeBT.triplePhase = TripleChargePhase::Aborted;
@@ -965,7 +964,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             chargeBT.tripleChargeTelegraphElapsed / expandDuration, 0.0f, 1.0f);
         // Ease-out cubic: quick initial extension, gentle settle at full length.
         const float easedProgress = 1.0f - std::pow(1.0f - expandProgress, 3.0f);
-        UpdateTripleChargeTelegraphTransform(easedProgress);
+        UpdateChargeTelegraphVisual(easedProgress);
         DrawTripleChargeTelegraphDebug();
         if (chargeBT.tripleChargeTelegraphElapsed < expandDuration +
             tripleChargeTelegraphHoldDuration)
@@ -1075,13 +1074,28 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateSingleChargeBT(float dt)
         SetChargeWindupAnimationTimeDebug(animationTime);
         if (animationTime < chargeDirectionLockTime)
             RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_ChargeWindup");
-        else if (!chargeDirectionLocked && !LockChargeDirectionToPlayer())
+        else if (!chargeDirectionLocked)
         {
-            FailChargeAttackBT();
-            return ChargeBTStepResult::Complete;
+            if (!LockChargeDirectionToPlayer() || !BeginChargeTelegraphVisual())
+            {
+                FailChargeAttackBT();
+                return ChargeBTStepResult::Complete;
+            }
+            chargeBT.tripleChargeTelegraphElapsed = 0.0f;
+        }
+        if (chargeDirectionLocked && chargeBT.tripleChargeTelegraphVisible)
+        {
+            chargeBT.tripleChargeTelegraphElapsed = (std::max)(
+                0.0f, animationTime - chargeDirectionLockTime);
+            const float expandDuration = (std::max)(0.001f, tripleChargeTelegraphExpandDuration);
+            const float expandProgress = std::clamp(
+                chargeBT.tripleChargeTelegraphElapsed / expandDuration, 0.0f, 1.0f);
+            UpdateChargeTelegraphVisual(expandProgress);
+            DrawTripleChargeTelegraphDebug();
         }
         if (animationTime >= GetChargeWindupEndTime())
         {
+            HideChargeTelegraphVisual();
             if (!BeginSingleChargeBT()) FailChargeAttackBT();
             return chargeBT.failed ? ChargeBTStepResult::Complete : ChargeBTStepResult::Running;
         }
@@ -1110,7 +1124,7 @@ bool GruxEnemy::BeginChargeStunBT()
 {
     const auto controller = GetBodyAnimationController();
     if (!controller) return false;
-    HideTripleChargeTelegraph();
+    HideChargeTelegraphVisual();
     for (const char* name : {"Knock_Down_Start", "Knock_Down_Loop", "Knock_Down_End"})
         if (!controller->GetAnimationAsset(name)) return false;
     StopChargeAttackMovement();
@@ -1170,7 +1184,7 @@ void GruxEnemy::FinishChargeAttackBT()
         chargeBT.cooldownStarted = true;
     }
     StopChargeAttackMovement();
-    HideTripleChargeTelegraph();
+    HideChargeTelegraphVisual();
     DisableAttackHitBoxes();
     ClearAttackSetupTarget();
 }
@@ -1259,7 +1273,7 @@ void GruxEnemy::CleanupChargeAttackBT()
     debugCleanupChargeAttackBTCalled = true;
     if (debugLastChargeAbortReason == "None")
         debugLastChargeAbortReason = "CleanupChargeAttackBT";
-    HideTripleChargeTelegraph();
+    HideChargeTelegraphVisual();
     if (!IsChargeAttackBTActive()) return;
     FinishChargeAttackBT(); // Idempotent; no cooldown before StartAttack, none per leg.
     const float tripleTurnClearance = chargeBT.tripleChargeWallTurnClearance;

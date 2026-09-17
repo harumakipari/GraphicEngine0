@@ -225,8 +225,8 @@ public:
     bool IsPhase2ChargeActive();
     bool BeginTripleChargeLeg();
     bool BeginTripleChargeTransition();
-    bool BeginTripleChargeTelegraph();
-    void UpdateTripleChargeTelegraphTransform(float lengthProgress);
+    bool BeginChargeTelegraphVisual();
+    void UpdateChargeTelegraphVisual(float lengthProgress);
 
     bool EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition,
 
@@ -235,7 +235,7 @@ public:
         const DirectX::XMFLOAT3& direction, float& outClearance,
         DirectX::XMFLOAT3& outNormal, DirectX::XMFLOAT3& outHitPosition,
         std::string& outActorName, std::string& outComponentName, bool& outHit) const;
-    void HideTripleChargeTelegraph();
+    void HideChargeTelegraphVisual();
     void DrawTripleChargeTelegraphDebug() const;
     ChargeBTStepResult ResolveChargeResultBT(float deltaTime);
     bool BeginChargeStunBT();
@@ -1485,8 +1485,8 @@ private:
     float chargeSetupDistanceMin = 8.0f;
     float chargeSetupDistanceMax = 10.0f;
     float chargeSetupMinimumMoveDistance = 3.0f;
-    float chargeWindupEndTime = 2.90f;
-    float chargeDirectionLockTime = 2.90f;
+    float chargeWindupEndTime = 3.0f;
+    float chargeDirectionLockTime = 2.35f;
     float chargeSpeed = 12.0f;
     float chargeSafetyTimeout = 8.0f;
     float chargeWallCastSafetyMargin = 0.10f;
