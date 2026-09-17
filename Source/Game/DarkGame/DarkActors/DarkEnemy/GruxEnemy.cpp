@@ -3713,6 +3713,13 @@ void GruxEnemy::EndRushHpDisplay()
     delayedHpDelayTimer = delayedHpDelayDuration;
 }
 
+bool GruxEnemy::IsStunned() const
+{
+    if (chargeBT.phase == ChargeBTPhase::Stun)
+        return true;
+    return stateMachine_ && std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") == 0;
+}
+
 void GruxEnemy::TakeDamage(const int damage)
 {
     TakeDamageFromPlayerAttack(damage, false, {});
@@ -3777,7 +3784,7 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
         fourthHitReactionHasLastRoll = true;
         fourthHitReactionLastWon = fourthHitReactionLastRoll <
             std::clamp(fourthHitReactionChance, 0.0f, 1.0f);
-        if (fourthHitReactionLastWon)
+        if (fourthHitReactionLastWon && !IsStunned())
             BeginFourthHitReaction(hitSourcePosition);
     }
 }

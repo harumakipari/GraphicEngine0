@@ -244,6 +244,7 @@ public:
     void FailChargeAttackBT();
     bool IsChargeAttackBTActive() const { return chargeBT.phase != ChargeBTPhase::None; }
     ChargeBTPhase GetChargeBTPhase() const { return chargeBT.phase; }
+    bool IsStunned() const;
     ChargeAttackEndReason GetChargeBTResult() const { return chargeBT.result; }
     void BeginChargeRecoveryBT() { chargeBT.phase = ChargeBTPhase::Recovery; }
     void MarkChargeRecoveryTimerFinishedBT() { chargeBT.phase = ChargeBTPhase::RecoveryPostconditions; }
