@@ -401,6 +401,21 @@ public:
     bool StartJumpAttackTelegraph();
     bool UpdateJumpAttackTelegraph(float deltaTime);
     bool StartJumpAttackExecution();
+    void EnsureJumpTelegraphMesh();
+    void ShowJumpTelegraphForCurrentJump();
+    void HideJumpTelegraph();
+    enum class TripleJumpPhase { None, InitialTelegraph, Jumping, InterJumpTransition, Completed, Aborted };
+    bool IsTripleJumpPhase2() const;
+    void BeginTripleJumpRuntime();
+    bool StartTripleJumpJump();
+    void BeginTripleJumpTransition();
+    bool UpdateTripleJumpTransition(float deltaTime);
+    void CompleteTripleJumpRuntime();
+    void AbortTripleJumpRuntime();
+    bool IsTripleJumpActive() const { return tripleJumpActive; }
+    int GetTripleJumpIndex() const { return tripleJumpIndex; }
+    TripleJumpPhase GetTripleJumpPhase() const { return tripleJumpPhase; }
+    void DrawTripleJumpDebug();
     const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
     bool ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const;
     bool ShouldFailIntentForPositioningRetryLimit(const BossTargetContext& context) const;
@@ -719,6 +734,7 @@ private:
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
     std::shared_ptr<ParticleComponent> footScrapeEffectComponent;
     std::shared_ptr<StaticMeshComponent> tripleChargeTelegraphMeshComponent;   // ?????~G?t?F?N?g
+    std::shared_ptr<StaticMeshComponent> jumpTelegraphMeshComponent;   // ?????~G?t?F?N?g
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HP?o?[
@@ -1249,6 +1265,19 @@ private:
     float jumpAttackTelegraphEndTime = 2.6f;
     float currentJumpPlayerDistance = 0.0f; //  JumpAttack?J?n???_?~v???C???[??l????
     float calculatedJumpDistance = 0.0f;    //  ?oI?I??MotionWarp?n????????
+    bool tripleJumpActive = false;
+    int tripleJumpIndex = 0;
+    TripleJumpPhase tripleJumpPhase = TripleJumpPhase::None;
+    float tripleJumpTransitionElapsed = 0.0f;
+    float tripleJumpTransitionDuration = 0.35f;
+    float jumpTelegraphScale = 3.0f;// ジャンプ予兆モデルの大きさ
+    DirectX::XMFLOAT3 jumpTelegraphWorldPosition{}; // ジャンプ攻撃の間
+    DirectX::XMFLOAT3 tripleJumpPlayerPosition{};
+    DirectX::XMFLOAT3 tripleJumpStartPosition{};
+    DirectX::XMFLOAT3 tripleJumpLockedDirection{};
+    float tripleJumpPlannedDistance = 0.0f;
+    DirectX::XMFLOAT3 tripleJumpPlannedLandingPosition{};
+    bool tripleJumpTargetLockActive = false;
     bool jumpAttackExecutionStartCalledDebug = false;
     bool jumpMotionWarpOverrideActive = false;  // ????Animation Notify??????????????l????AJumpAttack?p??v?Z???????????????g?p?????????
     DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  //  JumpAttack?J?n???~v???C???[??u

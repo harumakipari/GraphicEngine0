@@ -62,6 +62,7 @@ public:
     State Run(float) override;
     void ResetRuntime() override;
 private:
+    State RunTripleJump(float deltaTime);
     bool started = false;
     bool executionStarted = false;
     bool finishAfterAnimation = false;

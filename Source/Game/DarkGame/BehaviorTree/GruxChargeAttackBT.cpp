@@ -1299,6 +1299,7 @@ void GruxEnemy::CleanupChargeAttackBT()
 void GruxEnemy::DrawChargeAttackBTDebug()
 {
 #ifdef USE_IMGUI
+    DrawTripleJumpDebug();
     ImGui::SeparatorText(U8("突進BT"));
 
     ImGui::DragFloat(
