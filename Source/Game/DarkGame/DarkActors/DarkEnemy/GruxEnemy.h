@@ -404,6 +404,7 @@ public:
     void EnsureJumpTelegraphMesh();
     void ShowJumpTelegraphForCurrentJump();
     void HideJumpTelegraph();
+    void UpdateJumpTelegraphProgress();
     enum class TripleJumpPhase { None, InitialTelegraph, Jumping, InterJumpTransition, Completed, Aborted };
     bool IsTripleJumpPhase2() const;
     void BeginTripleJumpRuntime();
@@ -734,7 +735,8 @@ private:
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
     std::shared_ptr<ParticleComponent> footScrapeEffectComponent;
     std::shared_ptr<StaticMeshComponent> tripleChargeTelegraphMeshComponent;   // ?????~G?t?F?N?g
-    std::shared_ptr<StaticMeshComponent> jumpTelegraphMeshComponent;   // ?????~G?t?F?N?g
+    std::shared_ptr<StaticMeshComponent> jumpTelegraphMeshComponent;
+    std::shared_ptr<StaticMeshComponent> jumpTelegraphInnerMeshComponent;   // ?????~G?t?F?N?g
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
     std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HP?o?[
@@ -1269,8 +1271,21 @@ private:
     int tripleJumpIndex = 0;
     TripleJumpPhase tripleJumpPhase = TripleJumpPhase::None;
     float tripleJumpTransitionElapsed = 0.0f;
-    float tripleJumpTransitionDuration = 0.35f;
-    float jumpTelegraphScale = 3.0f;// ジャンプ予兆モデルの大きさ
+    float tripleJumpTransitionDuration = 0.3f;
+    float jumpTelegraphScale = 4.0f;// ジャンプ予兆モデルの大きさ
+    float jumpTelegraphInnerStartScale = 0.01f;
+    float jumpTelegraphLandingTime = 0.869391f;
+    float jumpTelegraphProgress = 0.0f;
+    float jumpTelegraphCurrentAnimationTime = 0.0f;
+    float jumpTelegraphInnerCurrentScale = 0.75f;
+    int jumpTelegraphInnerScaleCurve = 0;
+    bool jumpTelegraphEnableRotation = true;
+    float jumpTelegraphOuterRotationSpeed = 360.0f;
+    float jumpTelegraphInnerRotationSpeed = -360.0f;
+    float jumpTelegraphInnerScaleProgress = 0.0f;
+    float jumpTelegraphOuterRotation = 0.0f;
+    float jumpTelegraphInnerRotation = 0.0f;
+    float jumpTelegraphOffset = 0.05f;// ジャンプ予兆モデルのオフセット
     DirectX::XMFLOAT3 jumpTelegraphWorldPosition{}; // ジャンプ攻撃の間
     DirectX::XMFLOAT3 tripleJumpPlayerPosition{};
     DirectX::XMFLOAT3 tripleJumpStartPosition{};
@@ -1375,7 +1390,7 @@ private:
         bool tripleChargeActive = false;
         int tripleChargeIndex = 0;
         float tripleChargeTransitionElapsed = 0.0f;
-        float tripleChargeTransitionDuration = 0.65f;
+        float tripleChargeTransitionDuration = 0.5f;
         float tripleChargeLegElapsed = 0.0f;
         float tripleChargeLegDistance = 0.0f;
         float tripleChargeTelegraphElapsed = 0.0f;

@@ -14,22 +14,30 @@ bool GruxEnemy::IsTripleJumpPhase2() const
 
 void GruxEnemy::EnsureJumpTelegraphMesh()
 {
-    if (jumpTelegraphMeshComponent)
-        return;
-    jumpTelegraphMeshComponent = AddComponent<StaticMeshComponent>("jumpTelegraphCircle", "GruxEnemy");
-    jumpTelegraphMeshComponent->SetModel("./Data/Models/EffectModel/JumpTeregraphPlane.glb");
-    jumpTelegraphMeshComponent->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
-    jumpTelegraphMeshComponent->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
-    jumpTelegraphMeshComponent->SetIsCastShadow(false);
-    jumpTelegraphMeshComponent->SetIsVisible(false);
-    // This component remains owned by Grux for lifetime management, but its
-    // transform must not inherit MotionWarp (or any other owner transform).
-    jumpTelegraphMeshComponent->SetUsingAbsoluteLocation(true);
-    jumpTelegraphMeshComponent->SetUsingAbsoluteRotation(true);
-    jumpTelegraphMeshComponent->SetUsingAbsoluteScale(true);
-    jumpTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1.0f, 0.16f, 0.03f, 1.0f };
-    jumpTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
-    jumpTelegraphMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+    if (!jumpTelegraphMeshComponent)
+        jumpTelegraphMeshComponent = AddComponent<StaticMeshComponent>("jumpTelegraphCircle", "GruxEnemy");
+    if (!jumpTelegraphInnerMeshComponent)
+        jumpTelegraphInnerMeshComponent = AddComponent<StaticMeshComponent>("jumpTelegraphInnerCircle", "GruxEnemy");
+    const auto configureMesh = [](const std::shared_ptr<StaticMeshComponent>& mesh)
+    {
+        if (!mesh->model)
+            mesh->SetModel("./Data/Models/EffectModel/JumpTeregraphPlane.glb");
+        if (mesh->model)
+            for (auto& material : mesh->model->materials)
+                material.data.alphaMode = 2; // BLEND (mask alpha)
+        mesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
+        mesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
+        mesh->SetIsCastShadow(false);
+        mesh->SetIsVisible(false);
+        mesh->SetUsingAbsoluteLocation(true);
+        mesh->SetUsingAbsoluteRotation(true);
+        mesh->SetUsingAbsoluteScale(true);
+        mesh->plusAlphaCBuffer->data.cpuColor = { 1.0f, 0.16f, 0.03f, 1.0f };
+        mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
+        mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+    };
+    configureMesh(jumpTelegraphMeshComponent);
+    configureMesh(jumpTelegraphInnerMeshComponent);
 }
 
 void GruxEnemy::ShowJumpTelegraphForCurrentJump()
@@ -54,18 +62,80 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
     // Take one world-space snapshot per jump. With absolute location enabled,
     // relativeLocation_ is interpreted as world space and is deliberately not
     // recomputed while MotionWarp moves Grux.
-    jumpTelegraphWorldPosition = { landing.x, 0.35f, landing.z };
+    jumpTelegraphWorldPosition = { landing.x, 0.350f, landing.z };
     jumpTelegraphMeshComponent->SetRelativeLocationDirect(jumpTelegraphWorldPosition);
     jumpTelegraphMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     jumpTelegraphMeshComponent->SetRelativeScaleDirect({
         jumpTelegraphScale, jumpTelegraphScale, jumpTelegraphScale });
     jumpTelegraphMeshComponent->SetIsVisible(true);
+
+    jumpTelegraphProgress = 0.0f;
+    jumpTelegraphCurrentAnimationTime = 0.0f;
+    jumpTelegraphInnerCurrentScale = jumpTelegraphInnerStartScale;
+    jumpTelegraphInnerMeshComponent->SetRelativeLocationDirect(
+        { jumpTelegraphWorldPosition.x, 0.355f, jumpTelegraphWorldPosition.z });
+    jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
+    jumpTelegraphInnerMeshComponent->SetRelativeScaleDirect({
+        jumpTelegraphInnerCurrentScale, jumpTelegraphInnerCurrentScale,
+        jumpTelegraphInnerCurrentScale });
+    jumpTelegraphOuterRotation = 0.0f;
+    jumpTelegraphInnerRotation = 0.0f;
+    jumpTelegraphInnerScaleProgress = 0.0f;
+    jumpTelegraphMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
+    jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
+    jumpTelegraphInnerMeshComponent->SetIsVisible(true);
+}
+
+void GruxEnemy::UpdateJumpTelegraphProgress()
+{
+    if (!jumpTelegraphInnerMeshComponent || !jumpTelegraphInnerMeshComponent->IsVisible())
+        return;
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return;
+    jumpTelegraphCurrentAnimationTime = controller->GetCurrentAnimationTime();
+    jumpTelegraphProgress = std::clamp(
+        jumpTelegraphCurrentAnimationTime / jumpTelegraphLandingTime, 0.0f, 1.0f);
+    jumpTelegraphInnerScaleProgress = jumpTelegraphInnerScaleCurve == 1
+        ? jumpTelegraphProgress * jumpTelegraphProgress
+        : jumpTelegraphProgress;
+    jumpTelegraphInnerCurrentScale = std::lerp(
+        jumpTelegraphInnerStartScale, jumpTelegraphScale, jumpTelegraphInnerScaleProgress);
+    if (jumpTelegraphEnableRotation)
+    {
+        jumpTelegraphOuterRotation = jumpTelegraphCurrentAnimationTime * jumpTelegraphOuterRotationSpeed;
+        jumpTelegraphInnerRotation = jumpTelegraphCurrentAnimationTime * jumpTelegraphInnerRotationSpeed;
+        const auto toRotation = [](float degrees)
+        {
+            return DirectX::XMQuaternionRotationRollPitchYaw(
+                0.0f, DirectX::XMConvertToRadians(degrees), 0.0f);
+        };
+        DirectX::XMFLOAT4 outerRotation{}, innerRotation{};
+        DirectX::XMStoreFloat4(&outerRotation, toRotation(jumpTelegraphOuterRotation));
+        DirectX::XMStoreFloat4(&innerRotation, toRotation(jumpTelegraphInnerRotation));
+        jumpTelegraphMeshComponent->SetRelativeRotationDirect(outerRotation);
+        jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect(innerRotation);
+    }
+    else
+    {
+        jumpTelegraphOuterRotation = 0.0f;
+        jumpTelegraphInnerRotation = 0.0f;
+        jumpTelegraphMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
+        jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
+    }
+    jumpTelegraphMeshComponent->SetRelativeScaleDirect({
+        jumpTelegraphScale, jumpTelegraphScale, jumpTelegraphScale });
+    jumpTelegraphInnerMeshComponent->SetRelativeScaleDirect({
+        jumpTelegraphInnerCurrentScale, jumpTelegraphInnerCurrentScale,
+        jumpTelegraphInnerCurrentScale });
 }
 
 void GruxEnemy::HideJumpTelegraph()
 {
     if (jumpTelegraphMeshComponent)
         jumpTelegraphMeshComponent->SetIsVisible(false);
+    if (jumpTelegraphInnerMeshComponent)
+        jumpTelegraphInnerMeshComponent->SetIsVisible(false);
 }
 
 void GruxEnemy::BeginTripleJumpRuntime()
@@ -183,7 +253,17 @@ void GruxEnemy::DrawTripleJumpDebug()
     ImGui::DragFloat("Jump Telegraph Scale", &jumpTelegraphScale,
         0.01f, 0.01f, 10.0f, "%.2f");
     jumpTelegraphScale = (std::max)(0.01f, jumpTelegraphScale);
-    ImGui::Text("Jump Telegraph Ground Offset: 0.35 m (fixed)");
+    ImGui::DragFloat("Inner Start Scale", &jumpTelegraphInnerStartScale,
+        0.01f, 0.01f, 10.0f, "%.2f");
+    jumpTelegraphInnerStartScale = (std::max)(0.01f, jumpTelegraphInnerStartScale);
+    ImGui::Combo("Inner Scale Curve", &jumpTelegraphInnerScaleCurve,
+        "Linear\0EaseIn\0\0");
+    ImGui::Checkbox("Enable Rotation", &jumpTelegraphEnableRotation);
+    ImGui::DragFloat("Outer Rotation Speed", &jumpTelegraphOuterRotationSpeed,
+        1.0f, -360.0f, 360.0f, "%.1f deg/sec");
+    ImGui::DragFloat("Inner Rotation Speed", &jumpTelegraphInnerRotationSpeed,
+        1.0f, -360.0f, 360.0f, "%.1f deg/sec");
+    ImGui::DragFloat("Jump Telegraph Ground Offset",&jumpTelegraphOffset,0.01f);
     ImGui::DragFloat("Inter Jump Transition Duration", &tripleJumpTransitionDuration,
         0.01f, 0.0f, 1.0f, "%.2f sec");
     tripleJumpTransitionDuration = (std::max)(0.0f, tripleJumpTransitionDuration);
@@ -213,6 +293,15 @@ void GruxEnemy::DrawTripleJumpDebug()
     ImGui::Text("Telegraph World Snapshot: (%.3f, %.3f, %.3f)",
         jumpTelegraphWorldPosition.x, jumpTelegraphWorldPosition.y,
         jumpTelegraphWorldPosition.z);
+    ImGui::Text("Jump Telegraph Progress: %.3f", jumpTelegraphProgress);
+    ImGui::Text("Scale Progress: %.3f", jumpTelegraphInnerScaleProgress);
+    ImGui::Text("Inner Scale Curve: %s", jumpTelegraphInnerScaleCurve == 1 ? "EaseIn" : "Linear");
+    ImGui::Text("Current Animation Time: %.6f sec", jumpTelegraphCurrentAnimationTime);
+    ImGui::Text("Landing Time: %.6f sec", jumpTelegraphLandingTime);
+    ImGui::Text("Outer Scale: %.3f", jumpTelegraphScale);
+    ImGui::Text("Current Inner Scale: %.3f", jumpTelegraphInnerCurrentScale);
+    ImGui::Text("Outer Rotation: %.3f deg", jumpTelegraphOuterRotation);
+    ImGui::Text("Inner Rotation: %.3f deg", jumpTelegraphInnerRotation);
     ImGui::Text("Inter Jump Transition Elapsed: %.3f sec", tripleJumpTransitionElapsed);
     ImGui::Text("Player Position: (%.3f, %.3f, %.3f)", tripleJumpPlayerPosition.x,
         tripleJumpPlayerPosition.y, tripleJumpPlayerPosition.z);
@@ -396,6 +485,7 @@ ActionBase::State ExecuteJumpAttack::RunTripleJump(float dt)
 
     if (owner->GetTripleJumpPhase() != GruxEnemy::TripleJumpPhase::Jumping)
         return State::Run;
+    owner->UpdateJumpTelegraphProgress();
     if (owner->GetCurrentAttackHitCount() > stageHitCount ||
         owner->WasCurrentAttackSequenceJustDodged())
     {
@@ -494,6 +584,7 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
         finishAfterAnimation = true;
         return State::Run;
     }
+    owner->UpdateJumpTelegraphProgress();
     if (controller && controller->IsPlayAnimation())
         return State::Run;
 
