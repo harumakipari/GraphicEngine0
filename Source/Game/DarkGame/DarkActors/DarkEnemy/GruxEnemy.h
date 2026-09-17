@@ -199,7 +199,7 @@ public:
     bool PrepareDashAttackSetupTarget();
     bool CanExecuteDashAttack() const;
     bool StartDashAttackTelegraph();
-    enum class DashBTPhase { None, Setup, Facing, Telegraph, Movement, Knockup, Recovery };
+    enum class DashBTPhase { None, Setup, Facing, Telegraph, Movement, Knockup, InterDashTransition, Recovery };
     enum class DashBTResult { Running, Complete, Failed };
     DashBTResult UpdateDashAttackBT(float deltaTime);
     void CleanupDashAttackBT();
@@ -1316,6 +1316,14 @@ private:
     BossActionType dashBTPreviousAction = BossActionType::AttackLA;
     float dashBTTelegraphElapsed = 0.0f;
     float dashBTTraveledDistance = 0.0f;
+    // Dash count is deliberately independent of DashAttack's three animation stages.
+    bool dashBTTripleDashActive = false;
+    int dashBTDashIndex = 0;
+    int dashBTDashMaxCount = 1;
+    int dashBTCurrentDashHitStartCount = 0;
+    bool dashBTAbortRemainingDashes = false;
+    float dashBTTransitionDuration = 0.25f;
+    float dashBTTransitionElapsed = 0.0f;
     float dashWindupDuration = 1.40f;   // ?\??????"???
     float dashAttackSpeed = 12.0f;
     float minDashAttackDistance = 4.0f;

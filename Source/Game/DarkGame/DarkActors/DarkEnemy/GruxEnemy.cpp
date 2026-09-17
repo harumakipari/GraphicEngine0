@@ -925,6 +925,12 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     dashBTPreviousAction = BossActionType::AttackLA;
     dashBTTelegraphElapsed = 0.0f;
     dashBTTraveledDistance = 0.0f;
+    dashBTTripleDashActive = false;
+    dashBTDashIndex = 0;
+    dashBTDashMaxCount = 1;
+    dashBTCurrentDashHitStartCount = 0;
+    dashBTAbortRemainingDashes = false;
+    dashBTTransitionElapsed = 0.0f;
     dashAttackDirection = {};
     dashAttackStartPosition = {};
     dashTargetPosition = {};
@@ -2453,13 +2459,8 @@ void GruxEnemy::DrawImGuiDetails()
     dashSetupMinimumMoveDistance = (std::max)(0.0f, dashSetupMinimumMoveDistance);
     const char* dashPhaseNames[] =
     {
-        U8("待機"),
-        U8("準備移動"),
-        U8("旋回"),
-        U8("予兆"),
-        U8("ダッシュ"),
-        U8("打ち上げ"),
-        U8("後隙")
+        "None", "Setup", "Facing", "Windup", "Movement", "Knockup",
+        "InterDashTransition", "Recovery"
     };
     const int dashStage =
         dashBTPhase == DashBTPhase::Telegraph ? 0 :
@@ -2473,6 +2474,21 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text(U8("ダッシュ予定距離: %.2f m"),calculatedDashAttackDistance);
     ImGui::Text(U8("ダッシュ移動距離: %.2f m"),dashBTTraveledDistance);
     ImGui::Text(U8("ダッシュ残り時間: %.2f sec"),dashBTPhase == DashBTPhase::Movement? (std::max)(0.0f, dashAttackTimeout - dashAttackElapsedTime): 0.0f);
+    ImGui::SeparatorText("Triple Dash Runtime");
+    ImGui::Text("Triple Dash Active: %s", dashBTTripleDashActive ? "true" : "false");
+    ImGui::Text("Dash Index / Max Count: %d / %d", dashBTDashIndex + 1, dashBTDashMaxCount);
+    const char* dashRuntimePhase = dashBTPhase == DashBTPhase::Telegraph ? "Dash1 Windup" :
+        dashBTPhase == DashBTPhase::Movement ? "Dash Movement" :
+        dashBTPhase == DashBTPhase::Knockup ? "Dash Knockup" :
+        dashBTPhase == DashBTPhase::InterDashTransition ? "InterDashTransition" : "Inactive";
+    ImGui::Text("Dash Phase: %s", dashRuntimePhase);
+    ImGui::DragFloat("Transition Duration", &dashBTTransitionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
+    dashBTTransitionDuration = (std::max)(0.0f, dashBTTransitionDuration);
+    ImGui::Text("Transition Elapsed: %.3f sec", dashBTTransitionElapsed);
+    ImGui::Text("Current Dash Start Position: (%.3f, %.3f, %.3f)", dashAttackStartPosition.x, dashAttackStartPosition.y, dashAttackStartPosition.z);
+    ImGui::Text("Current Dash Direction: (%.3f, %.3f, %.3f)", dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
+    ImGui::Text("Current Dash Target Position: (%.3f, %.3f, %.3f)", dashTargetPosition.x, dashTargetPosition.y, dashTargetPosition.z);
+    ImGui::Text("Current Dash Distance: %.3f", calculatedDashAttackDistance);
     const char* recoveryAttackName = "None";
     for (const auto& attack : combatAttackData)
     {

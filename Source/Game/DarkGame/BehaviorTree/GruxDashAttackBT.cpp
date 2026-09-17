@@ -134,6 +134,14 @@ bool GruxEnemy::StartDashAttackTelegraph()
     ClearAttackSetupTarget();
     StartAttack(); // Exactly once for the entire three-stage attack.
     dashBTAttackStarted = true;
+    // Reuse the exact final-phase predicate already used by Triple Jump; Dash's
+    // animation stages remain 0=Pre, 1=Stampede, 2=Knockup in either phase.
+    dashBTTripleDashActive = IsTripleJumpPhase2();
+    dashBTDashIndex = 0;
+    dashBTDashMaxCount = dashBTTripleDashActive ? 3 : 1;
+    dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
+    dashBTAbortRemainingDashes = false;
+    dashBTTransitionElapsed = 0.0f;
     dashBTTelegraphElapsed = 0.0f;
     dashBTPhase = DashBTPhase::Telegraph;
     if (!PlayAttackStage(BossAttackType::DashAttack, 0))
@@ -169,14 +177,29 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
     }
     case DashBTPhase::Movement:
     {
+        if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
+            WasCurrentAttackSequenceJustDodged())
+        {
+            // Do not cut Stampede/Knockup: only prevent another dash once this
+            // dash's required animation stages have completed.
+            dashBTAbortRemainingDashes = true;
+        }
         const auto position = GetPosition();
         dashBTTraveledDistance = (position.x - dashAttackStartPosition.x) * dashAttackDirection.x +
             (position.z - dashAttackStartPosition.z) * dashAttackDirection.z;
         const bool finished = UpdateDashAttackMovement(dt, true);
         if (!finished && controller->IsPlayAnimation())
             return DashBTResult::Running;
+        // Movement and hit notifications may be updated in the same frame.
+        // Sample once more before resetting the per-animation-stage hit list.
+        if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
+            WasCurrentAttackSequenceJustDodged())
+        {
+            dashBTAbortRemainingDashes = true;
+        }
         StopDashAttackMovement();
         BeginAdditionalAttackStage();
+        dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
         if (!PlayAttackStage(BossAttackType::DashAttack, 2))
             return DashBTResult::Failed;
         dashBTPhase = DashBTPhase::Knockup;
@@ -184,13 +207,52 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
     }
     case DashBTPhase::Knockup:
         // Hit / Just Dodge never short-circuits the final attack animation.
+        if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
+            WasCurrentAttackSequenceJustDodged())
+        {
+            dashBTAbortRemainingDashes = true;
+        }
         if (controller->IsPlayAnimation())
             return DashBTResult::Running;
+        if (!dashBTAbortRemainingDashes && dashBTDashIndex + 1 < dashBTDashMaxCount)
+        {
+            StopDashAttackMovement();
+            DisableAttackHitBoxes();
+            dashBTPhase = DashBTPhase::InterDashTransition;
+            dashBTTransitionElapsed = 0.0f;
+            return DashBTResult::Running;
+        }
         SetBehaviorAttackResult(WasCurrentAttackSequenceJustDodged()
             ? BehaviorAttackResult::JustDodged : BehaviorAttackResult::Success);
         OnSelectedAttackCompletedSuccessfully();
         FinishDashAttackBT();
         return DashBTResult::Complete;
+    case DashBTPhase::InterDashTransition:
+    {
+        // Between dashes we intentionally track the player again; direction is
+        // locked anew by PlayAttackStage(1) -> BeginDashAttackMovement().
+        StopDashAttackMovement();
+        DisableAttackHitBoxes();
+        const auto context = BuildTargetContext();
+        if (!context.valid)
+            return DashBTResult::Failed;
+        RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt,
+            "BT_DashInterTransition");
+        dashBTTransitionElapsed += dt;
+        if (dashBTTransitionElapsed < dashBTTransitionDuration)
+            return DashBTResult::Running;
+
+        ++dashBTDashIndex;
+        // Per-stage reset: hitActors and Notify state are reset, while sequence
+        // outcome data (Just Dodge / cumulative hit count) remains intact.
+        BeginAdditionalAttackStage();
+        DisableAttackHitBoxes();
+        if (!PlayAttackStage(BossAttackType::DashAttack, 1))
+            return DashBTResult::Failed;
+        dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
+        dashBTPhase = DashBTPhase::Movement;
+        return DashBTResult::Running;
+    }
     default:
         return DashBTResult::Failed;
     }
@@ -224,6 +286,12 @@ void GruxEnemy::CleanupDashAttackBT()
     dashBTPhase = DashBTPhase::None;
     dashBTTelegraphElapsed = 0.0f;
     dashBTTraveledDistance = 0.0f;
+    dashBTTripleDashActive = false;
+    dashBTDashIndex = 0;
+    dashBTDashMaxCount = 1;
+    dashBTCurrentDashHitStartCount = 0;
+    dashBTAbortRemainingDashes = false;
+    dashBTTransitionElapsed = 0.0f;
     dashAttackDirection = {};
     dashAttackStartPosition = {};
     dashTargetPosition = {};

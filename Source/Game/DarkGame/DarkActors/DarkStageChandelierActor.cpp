@@ -226,8 +226,6 @@ void DarkStageTorchSconceActor::Initialize(const Transform& transform)
 
 }
 
-
-
 void DarkStagePaintingActor::Initialize(const Transform& transform)
 {
     std::string parentName = "PaintingMesh";

@@ -19,6 +19,20 @@
             "time": 0.5282738208770752,
             "type": "CameraShake",
             "value": 0.0
+        },
+        {
+            "duration": 0.18000000715255737,
+            "leftMotorStrength": 0.30000001192092896,
+            "rightMotorStrength": 0.30000001192092896,
+            "time": 0.5297619700431824,
+            "type": "ControllerRumble"
+        },
+        {
+            "duration": 0.3400000035762787,
+            "leftMotorStrength": 0.3100000023841858,
+            "rightMotorStrength": 0.3199999928474426,
+            "time": 0.958332896232605,
+            "type": "ControllerRumble"
         }
     ],
     "loop": false,
