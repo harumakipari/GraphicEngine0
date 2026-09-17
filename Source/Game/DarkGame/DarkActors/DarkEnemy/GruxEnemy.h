@@ -404,6 +404,8 @@ public:
     void EnsureJumpTelegraphMesh();
     void ShowJumpTelegraphForCurrentJump();
     void HideJumpTelegraph();
+    void BeginJumpTelegraphImpactFlash();
+    void UpdateJumpTelegraphImpactFlash(float deltaTime);
     void UpdateJumpTelegraphProgress();
     enum class TripleJumpPhase { None, InitialTelegraph, Jumping, InterJumpTransition, Completed, Aborted };
     bool IsTripleJumpPhase2() const;
@@ -1285,6 +1287,12 @@ private:
     float jumpTelegraphInnerScaleProgress = 0.0f;
     float jumpTelegraphOuterRotation = 0.0f;
     float jumpTelegraphInnerRotation = 0.0f;
+    bool jumpTelegraphEnableImpactFlash = true;
+    float jumpTelegraphImpactFlashDuration = 0.10f;
+    float jumpTelegraphImpactFlashIntensity = 5.f;
+    bool jumpTelegraphImpactFlashActive = false;
+    float jumpTelegraphImpactFlashElapsed = 0.0f;
+    float jumpTelegraphImpactFlashProgress = 0.0f;
     float jumpTelegraphOffset = 0.05f;// ジャンプ予兆モデルのオフセット
     DirectX::XMFLOAT3 jumpTelegraphWorldPosition{}; // ジャンプ攻撃の間
     DirectX::XMFLOAT3 tripleJumpPlayerPosition{};

@@ -88,7 +88,8 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
 
 void GruxEnemy::UpdateJumpTelegraphProgress()
 {
-    if (!jumpTelegraphInnerMeshComponent || !jumpTelegraphInnerMeshComponent->IsVisible())
+    if (jumpTelegraphImpactFlashActive || !jumpTelegraphInnerMeshComponent ||
+        !jumpTelegraphInnerMeshComponent->IsVisible())
         return;
     const auto controller = GetBodyAnimationController();
     if (!controller)
@@ -130,12 +131,62 @@ void GruxEnemy::UpdateJumpTelegraphProgress()
         jumpTelegraphInnerCurrentScale });
 }
 
+void GruxEnemy::BeginJumpTelegraphImpactFlash()
+{
+    if (!jumpTelegraphEnableImpactFlash || !jumpTelegraphMeshComponent ||
+        !jumpTelegraphInnerMeshComponent || !jumpTelegraphMeshComponent->IsVisible())
+        return;
+    jumpTelegraphImpactFlashActive = true;
+    jumpTelegraphImpactFlashElapsed = 0.0f;
+    jumpTelegraphImpactFlashProgress = 0.0f;
+    jumpTelegraphInnerCurrentScale = jumpTelegraphScale;
+    jumpTelegraphInnerScaleProgress = 1.0f;
+    jumpTelegraphInnerMeshComponent->SetRelativeScaleDirect({
+        jumpTelegraphScale, jumpTelegraphScale, jumpTelegraphScale });
+}
+
+void GruxEnemy::UpdateJumpTelegraphImpactFlash(float deltaTime)
+{
+    if (!jumpTelegraphImpactFlashActive)
+        return;
+    const float duration = (std::max)(0.001f, jumpTelegraphImpactFlashDuration);
+    jumpTelegraphImpactFlashElapsed += (std::max)(0.0f, deltaTime);
+    jumpTelegraphImpactFlashProgress = std::clamp(
+        jumpTelegraphImpactFlashElapsed / duration, 0.0f, 1.0f);
+    const float remaining = 1.0f - jumpTelegraphImpactFlashProgress;
+    const float flash = jumpTelegraphEnableImpactFlash
+        ? jumpTelegraphImpactFlashIntensity * remaining : 0.0f;
+    const float alphaFade = remaining;
+    for (const auto& mesh : { jumpTelegraphMeshComponent, jumpTelegraphInnerMeshComponent })
+    {
+        if (!mesh || !mesh->plusAlphaCBuffer)
+            continue;
+        mesh->plusAlphaCBuffer->data.flashValue = flash;
+        // The shared telegraph shader uses modelBrightness as a per-component
+        // alpha multiplier; Charge Telegraph never writes this value.
+        mesh->plusAlphaCBuffer->data.brightness = alphaFade - 1.0f;
+    }
+    if (jumpTelegraphImpactFlashProgress >= 1.0f)
+        HideJumpTelegraph();
+}
+
 void GruxEnemy::HideJumpTelegraph()
 {
+    jumpTelegraphImpactFlashActive = false;
+    jumpTelegraphImpactFlashElapsed = 0.0f;
+    jumpTelegraphImpactFlashProgress = 0.0f;
     if (jumpTelegraphMeshComponent)
+    {
+        jumpTelegraphMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+        jumpTelegraphMeshComponent->plusAlphaCBuffer->data.brightness = 0.0f;
         jumpTelegraphMeshComponent->SetIsVisible(false);
+    }
     if (jumpTelegraphInnerMeshComponent)
+    {
+        jumpTelegraphInnerMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+        jumpTelegraphInnerMeshComponent->plusAlphaCBuffer->data.brightness = 0.0f;
         jumpTelegraphInnerMeshComponent->SetIsVisible(false);
+    }
 }
 
 void GruxEnemy::BeginTripleJumpRuntime()
@@ -263,6 +314,13 @@ void GruxEnemy::DrawTripleJumpDebug()
         1.0f, -360.0f, 360.0f, "%.1f deg/sec");
     ImGui::DragFloat("Inner Rotation Speed", &jumpTelegraphInnerRotationSpeed,
         1.0f, -360.0f, 360.0f, "%.1f deg/sec");
+    ImGui::Checkbox("Enable Impact Flash", &jumpTelegraphEnableImpactFlash);
+    ImGui::DragFloat("Impact Flash Duration", &jumpTelegraphImpactFlashDuration,
+        0.01f, 0.01f, 1.0f, "%.2f sec");
+    ImGui::DragFloat("Impact Flash Intensity", &jumpTelegraphImpactFlashIntensity,
+        0.05f, 0.0f, 2.0f, "%.2f");
+    jumpTelegraphImpactFlashDuration = (std::max)(0.001f, jumpTelegraphImpactFlashDuration);
+    jumpTelegraphImpactFlashIntensity = (std::max)(0.0f, jumpTelegraphImpactFlashIntensity);
     ImGui::DragFloat("Jump Telegraph Ground Offset",&jumpTelegraphOffset,0.01f);
     ImGui::DragFloat("Inter Jump Transition Duration", &tripleJumpTransitionDuration,
         0.01f, 0.0f, 1.0f, "%.2f sec");
@@ -300,6 +358,9 @@ void GruxEnemy::DrawTripleJumpDebug()
     ImGui::Text("Landing Time: %.6f sec", jumpTelegraphLandingTime);
     ImGui::Text("Outer Scale: %.3f", jumpTelegraphScale);
     ImGui::Text("Current Inner Scale: %.3f", jumpTelegraphInnerCurrentScale);
+    ImGui::Text("Impact Flash Active: %s", jumpTelegraphImpactFlashActive ? "true" : "false");
+    ImGui::Text("Impact Flash Progress: %.3f", jumpTelegraphImpactFlashProgress);
+    ImGui::Text("Impact Flash Elapsed: %.3f sec", jumpTelegraphImpactFlashElapsed);
     ImGui::Text("Outer Rotation: %.3f deg", jumpTelegraphOuterRotation);
     ImGui::Text("Inner Rotation: %.3f deg", jumpTelegraphInnerRotation);
     ImGui::Text("Inter Jump Transition Elapsed: %.3f sec", tripleJumpTransitionElapsed);

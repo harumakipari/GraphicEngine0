@@ -1248,6 +1248,9 @@ void GruxEnemy::Update(float deltaTime)
         Character::Update(deltaTime);
     }
 
+    // Impact Flash is visual-only and follows the same scaled delta as Grux/Animation.
+    UpdateJumpTelegraphImpactFlash(deltaTime);
+
     leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
     rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
 
@@ -4299,6 +4302,12 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
     HandleCommonAnimationNotifyEvent(event);
+
+    if (event.type == AnimationNotifyEvent::Type::SpawnEffect &&
+        event.parameter == "GroundImpact")
+    {
+        BeginJumpTelegraphImpactFlash();
+    }
 
     if (event.type == AnimationNotifyEvent::Type::GameplayEvent && event.parameter == "GameBgmFadeOut")
     {
