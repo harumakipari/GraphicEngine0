@@ -3,6 +3,7 @@
 #include "NodeBase.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Actors/Player/Player.h"
+#include "Game/Scenes/GameScene.h"
 #include "Game/State/StateMachine.h"
 #include "Engine/Scene/Scene.h"
 #include "Core/ActorManager.h"
@@ -981,6 +982,7 @@ bool GruxEnemy::BeginRoarBT()
     roarBT.stage = RoarStage::Telegraph;
     roarBT.previousTime = roarPreStampedeStartTime;
     roarBT.endTime = roarPreStampedeEndTime;
+    ShowRoarTelegraph();
     roarBTStatus = "Running";
     roarCooldownRemaining = roarCooldownDuration;
     return true;
@@ -1001,6 +1003,7 @@ int GruxEnemy::UpdateRoarBT(float dt)
     roarBT.previousTime = time;
     if (roarBT.stalled > 2.0f || roarBT.elapsed > 60.0f) return fail("Playback timeout");
     StopAIMovement();
+    UpdateRoarTelegraphTransform();
     if (controller->IsPlayAnimation()) return 0;
     // A stopped clip is only a successful completion at its expected end.
     if (time + 0.02f < roarBT.endTime) return fail("Animation stopped early");
@@ -1026,12 +1029,14 @@ void GruxEnemy::ApplyRoarShockwave()
         return;
     // Consume the event even on a miss: moving into the radius later must not hit.
     roarBT.shockwaveFired = true;
+    HideRoarTelegraph();
     SpawnGroundImpactEffect();
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     if (!player || roarBT.hitPlayer || !player->CanReceiveKnockBack()) return;
     auto direction = MathHelper::Subtract(player->GetPosition(), GetPosition());
     if (std::abs(direction.y) > roarHeightTolerance) return;
     direction.y = 0.0f;
+    const float roarRadius = GetRoarAttackRadius();
     if (direction.x * direction.x + direction.z * direction.z > roarRadius * roarRadius) return;
     if (MathHelper::Length(direction) < 0.0001f)
     {
@@ -1042,8 +1047,93 @@ void GruxEnemy::ApplyRoarShockwave()
     roarBT.hitPlayer = player->StartKnockBack(direction);
 }
 
+float GruxEnemy::GetRoarAttackRadius() const
+{
+    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+    return scene && scene->IsBossInFinalPhase()
+        ? roarRadiusPhase2
+        : roarRadiusPhase1;
+}
+
+void GruxEnemy::EnsureRoarTelegraphMeshes()
+{
+    if (!roarTelegraphOuterMeshComponent)
+        roarTelegraphOuterMeshComponent = AddComponent<StaticMeshComponent>("roarTelegraphOuter", "GruxEnemy");
+    if (!roarTelegraphFillMeshComponent)
+        roarTelegraphFillMeshComponent = AddComponent<StaticMeshComponent>("roarTelegraphFill", "GruxEnemy");
+
+    const auto configureMesh = [](const std::shared_ptr<StaticMeshComponent>& mesh,
+        const char* modelPath, const DirectX::XMFLOAT4& color)
+    {
+        if (!mesh->model)
+            mesh->SetModel(modelPath);
+        if (mesh->model)
+            for (auto& material : mesh->model->materials)
+                material.data.alphaMode = 2; // BLEND
+        mesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
+        mesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
+        mesh->SetIsCastShadow(false);
+        mesh->SetIsVisible(false);
+        mesh->SetUsingAbsoluteLocation(true);
+        mesh->SetUsingAbsoluteRotation(true);
+        mesh->SetUsingAbsoluteScale(true);
+        mesh->plusAlphaCBuffer->data.cpuColor = color;
+        mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
+        mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+    };
+
+    configureMesh(roarTelegraphOuterMeshComponent,
+        "./Data/Models/EffectModel/RoarTelegraphOuter1.glb", { 1.0f, 0.16f, 0.03f, 1.0f });
+    configureMesh(roarTelegraphFillMeshComponent,
+        "./Data/Models/EffectModel/RoarTelegraphFill.glb", { 1.0f, 0.08f, 0.03f, 1.0f });
+}
+
+void GruxEnemy::ShowRoarTelegraph()
+{
+    EnsureRoarTelegraphMeshes();
+    if (!roarTelegraphOuterMeshComponent || !roarTelegraphFillMeshComponent)
+        return;
+    UpdateRoarTelegraphTransform();
+    roarTelegraphOuterMeshComponent->SetIsVisible(true);
+    roarTelegraphFillMeshComponent->SetIsVisible(true);
+}
+
+void GruxEnemy::UpdateRoarTelegraphTransform()
+{
+    if (!roarTelegraphOuterMeshComponent || !roarTelegraphFillMeshComponent)
+        return;
+
+    const DirectX::XMFLOAT3 position = GetPosition();
+    const float radius = GetRoarAttackRadius();
+    roarTelegraphOuterWorldPosition = { position.x, roarTelegraphOuterYOffset, position.z };
+    roarTelegraphFillWorldPosition = { position.x, roarTelegraphFillYOffset, position.z };
+    const DirectX::XMFLOAT4 identityRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
+    const DirectX::XMFLOAT3 scale{ radius, 1.0f, radius };
+
+    roarTelegraphOuterMeshComponent->SetRelativeLocationDirect(roarTelegraphOuterWorldPosition);
+    roarTelegraphOuterMeshComponent->SetRelativeRotationDirect(identityRotation);
+    roarTelegraphOuterMeshComponent->SetRelativeScaleDirect(scale);
+    roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.brightness =
+        std::clamp(roarTelegraphOuterAlpha, 0.0f, 1.0f) - 1.0f;
+
+    roarTelegraphFillMeshComponent->SetRelativeLocationDirect(roarTelegraphFillWorldPosition);
+    roarTelegraphFillMeshComponent->SetRelativeRotationDirect(identityRotation);
+    roarTelegraphFillMeshComponent->SetRelativeScaleDirect(scale);
+    roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.brightness =
+        std::clamp(roarTelegraphFillAlpha, 0.0f, 1.0f) - 1.0f;
+}
+
+void GruxEnemy::HideRoarTelegraph()
+{
+    if (roarTelegraphOuterMeshComponent)
+        roarTelegraphOuterMeshComponent->SetIsVisible(false);
+    if (roarTelegraphFillMeshComponent)
+        roarTelegraphFillMeshComponent->SetIsVisible(false);
+}
+
 void GruxEnemy::CleanupRoarBT(const char* status)
 {
+    HideRoarTelegraph();
     if (IsRoarBTActive())
     {
         StopAIMovement();
@@ -1122,22 +1212,43 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::DragFloat(U8("防御行動 至近距離"), &defensiveTooCloseDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
     ImGui::DragFloat(U8("防御行動 Back最小角度"), &defensiveBackMinAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     defensiveBackMinAngle = std::clamp(defensiveBackMinAngle, 0.0f, 180.0f);
-    ImGui::DragFloat(U8("咆哮 範囲"), &roarRadius, 0.1f, 0.0f, 30.0f, "%.2f m");
+    ImGui::DragFloat("Roar Radius Phase1", &roarRadiusPhase1, 0.1f, 0.0f, 30.0f, "%.2f m");
+    ImGui::DragFloat("Roar Radius Phase2", &roarRadiusPhase2, 0.1f, 0.0f, 30.0f, "%.2f m");
     ImGui::DragFloat(U8("咆哮 高低差許容"), &roarHeightTolerance, 0.1f, 0.0f, 30.0f, "%.2f m");
     const float previousCooldownDuration = roarCooldownDuration;
     ImGui::DragFloat(U8("咆哮クールタイム"), &roarCooldownDuration, 0.1f, 0.0f, 120.0f, "%.2f sec");
     defensiveTooCloseDistance = (std::max)(0.0f, defensiveTooCloseDistance);
-    roarRadius = (std::max)(0.0f, roarRadius);
+    roarRadiusPhase1 = (std::max)(0.0f, roarRadiusPhase1);
+    roarRadiusPhase2 = (std::max)(0.0f, roarRadiusPhase2);
     roarHeightTolerance = (std::max)(0.0f, roarHeightTolerance);
     roarCooldownDuration = (std::max)(0.0f, roarCooldownDuration);
     if (roarCooldownRemaining > 0.0f && roarCooldownDuration != previousCooldownDuration)
         roarCooldownRemaining = (std::max)(0.0f,
             roarCooldownRemaining + roarCooldownDuration - previousCooldownDuration);
     const auto context = BuildTargetContext();
+    const auto phaseScene = dynamic_cast<GameScene*>(GetOwnerScene());
+    const bool isPhase2 = phaseScene && phaseScene->IsBossInFinalPhase();
     const char* region = !context.valid ? "None" : context.region == PlayerRelativeRegion::Back ? "Back" :
         context.region == PlayerRelativeRegion::Side ? "Side" : "Front";
     ImGui::Text(U8("咆哮BT状態: %s"), roarBTStatus.c_str());
     ImGui::Text(U8("咆哮Stage: %d"), static_cast<int>(roarBT.stage));
+    ImGui::Text("Current Roar Radius: %.2f m", GetRoarAttackRadius());
+    ImGui::Text("Current Phase: %s", isPhase2 ? "Phase2" : "Phase1");
+    ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat("Roar Telegraph Fill Alpha", &roarTelegraphFillAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
+    roarTelegraphOuterAlpha = std::clamp(roarTelegraphOuterAlpha, 0.0f, 1.0f);
+    roarTelegraphFillAlpha = std::clamp(roarTelegraphFillAlpha, 0.0f, 1.0f);
+    const bool roarTelegraphVisible = roarTelegraphOuterMeshComponent &&
+        roarTelegraphFillMeshComponent && roarTelegraphOuterMeshComponent->IsVisible() &&
+        roarTelegraphFillMeshComponent->IsVisible();
+    ImGui::Text("Roar Telegraph Visible: %s", roarTelegraphVisible ? "true" : "false");
+    ImGui::Text("Roar Telegraph Radius: %.2f m", GetRoarAttackRadius());
+    ImGui::Text("Roar Telegraph Outer Position: (%.3f, %.3f, %.3f)",
+        roarTelegraphOuterWorldPosition.x, roarTelegraphOuterWorldPosition.y,
+        roarTelegraphOuterWorldPosition.z);
+    ImGui::Text("Roar Telegraph Fill Position: (%.3f, %.3f, %.3f)",
+        roarTelegraphFillWorldPosition.x, roarTelegraphFillWorldPosition.y,
+        roarTelegraphFillWorldPosition.z);
     ImGui::Text(U8("咆哮衝撃波 発動済み: %s"), roarBT.shockwaveFired ? "true" : "false");
     ImGui::Text(U8("Player距離: %.2f m"), context.xzDistance);
     ImGui::Text(U8("Player位置Region: %s"), region);

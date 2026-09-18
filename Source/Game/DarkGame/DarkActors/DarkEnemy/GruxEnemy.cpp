@@ -771,6 +771,7 @@ void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,
 void GruxEnemy::StopBattleActions()
 {
     HideDashTelegraphVisual();
+    HideRoarTelegraph();
     if (IsRoarBTActive())
     {
         CleanupRoarBT("Interrupted");
@@ -1885,7 +1886,7 @@ void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
         };
 
     drawRing(defensiveTooCloseDistance, { 0.1f, 0.8f, 1.0f, 1.0f });
-    drawRing(roarRadius, { 1.0f, 0.15f, 0.6f, 1.0f });
+    drawRing(GetRoarAttackRadius(), { 1.0f, 0.15f, 0.6f, 1.0f });
     drawRing(nearDistanceThreshold, { 0.2f, 1.0f, 0.2f, 1.0f });
     drawRing(middleDistanceThreshold, { 1.0f, 0.7f, 0.1f, 1.0f });
     if (showCloseCombatDebugRange) { drawRing(closeCombatSettings.minRange, { 0.2f, 0.8f, 1.0f, 1.0f }); drawRing(closeCombatSettings.executeMaxRange, { 0.2f, 1.0f, 0.2f, 1.0f }); drawRing(closeCombatSettings.planMaxRange, { 1.0f, 0.2f, 0.8f, 1.0f }); }

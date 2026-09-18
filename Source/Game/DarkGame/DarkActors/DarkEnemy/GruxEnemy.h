@@ -363,6 +363,11 @@ public:
     bool BeginRoarBT();
     int UpdateRoarBT(float dt);
     void ApplyRoarShockwave();
+    float GetRoarAttackRadius() const;
+    void EnsureRoarTelegraphMeshes();
+    void ShowRoarTelegraph();
+    void UpdateRoarTelegraphTransform();
+    void HideRoarTelegraph();
     void CleanupRoarBT(const char* status);
     void TickRoarLifecycle(float dt);
     void DrawRoarBTDebug();
@@ -754,6 +759,8 @@ private:
     std::shared_ptr<StaticMeshComponent> tripleChargeTelegraphMeshComponent;   // ?????~G?t?F?N?g
     std::shared_ptr<StaticMeshComponent> jumpTelegraphMeshComponent;
     std::shared_ptr<StaticMeshComponent> jumpTelegraphInnerMeshComponent;   // ?????~G?t?F?N?g
+    std::shared_ptr<StaticMeshComponent> roarTelegraphOuterMeshComponent;
+    std::shared_ptr<StaticMeshComponent> roarTelegraphFillMeshComponent;
     std::shared_ptr<StaticMeshComponent> dashTelegraphLineMeshComponent;
     std::shared_ptr<StaticMeshComponent> dashTelegraphFanMeshComponent;
 
@@ -899,7 +906,14 @@ private:
     BossTargetContext aiDebugTargetContext{};
     bool disableAttackBehaviorsForDebug = false;
     float defensiveTooCloseDistance = 4.5f;
-    float roarRadius = 5.5f;
+    float roarRadiusPhase1 = 5.5f;
+    float roarRadiusPhase2 = 7.0f;
+    float roarTelegraphOuterAlpha = 0.85f;
+    float roarTelegraphFillAlpha = 0.20f;
+    float roarTelegraphOuterYOffset = 0.350f;
+    float roarTelegraphFillYOffset = 0.345f;
+    DirectX::XMFLOAT3 roarTelegraphOuterWorldPosition{};
+    DirectX::XMFLOAT3 roarTelegraphFillWorldPosition{};
     float roarHeightTolerance = 2.0f;
     float roarLevelStartFootOffset = -0.30f;
     float roarLevelStartFootOffsetEndTime = 0.30f;
