@@ -599,6 +599,8 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
             DebugRender::DrawSphere(snapshot.actualMeshEnd, 0.10f, meshColor, 0.0f, true);
         }
         tripleChargeTelegraphMeshComponent->SetIsVisible(chargeBT.tripleChargeTelegraphVisible);
+        if (chargeBT.tripleChargeTelegraphVisible)
+            PlayBossTelegraphSE("boss_charge_telegraph.wav");
         (void)centerPosition; // The asset pivot is the start edge, not the center.
     }
     // Keep the boss-side edge fixed and reveal the plane towards its end.

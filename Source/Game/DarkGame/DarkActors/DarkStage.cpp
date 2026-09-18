@@ -493,7 +493,6 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
         }
     }
 
-
     ApplyStageLightEnable();
     StartBossRoomLightSequence();
 

@@ -4545,6 +4545,18 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     }
 }
 
+void GruxEnemy::PlayBossTelegraphSE(const char* fileName)
+{
+    if (!fileName || !*fileName)
+        return;
+
+    const std::string audioPath = std::string("./Data/Sound/SE/") + fileName;
+    if (const auto audio = CoreAudio::PlayOneShot(audioPath, 1.0f))
+    {
+        const float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
+        audio->SetPitch(pitch);
+    }
+}
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
     HandleCommonAnimationNotifyEvent(event);

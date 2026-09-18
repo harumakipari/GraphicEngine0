@@ -207,6 +207,7 @@ public:
     bool IsDashAttackBTActive() const { return dashBTPhase != DashBTPhase::None; }
     void SetDashBTFacing() { dashBTPhase = DashBTPhase::Facing; }
     bool PrepareDashAttackMovementSnapshot();
+    void PlayBossTelegraphSE(const char* fileName);
     void EnsureDashTelegraphVisual();
     void BeginDashTelegraphVisual();
     void ApplyDashTelegraphVisualSnapshot();

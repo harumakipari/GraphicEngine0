@@ -72,6 +72,8 @@ void GruxEnemy::BeginDashTelegraphVisual()
     dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.brightness = -1.0f;
     dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
     dashTelegraphFanMeshComponent->SetIsVisible(false);
+    // The line is now actually visible; this is a one-shot attack entry, not Update.
+    PlayBossTelegraphSE("boss_dash_telegraph.wav");
 }
 
 void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)

@@ -84,6 +84,7 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
     jumpTelegraphMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     jumpTelegraphInnerMeshComponent->SetIsVisible(true);
+    PlayBossTelegraphSE("boss_jump_telegraph.wav");
 }
 
 void GruxEnemy::UpdateJumpTelegraphProgress()
