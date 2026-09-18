@@ -3,9 +3,21 @@
     "animationName": "Pre_Stampede_0",
     "events": [
         {
+            "parameter": "DashAttackDirectionLock",
+            "time": 0.5,
+            "type": "GameplayEvent",
+            "value": 1.0
+        },
+        {
             "parameter": "enemy_head_shake_bell",
             "time": 0.8516482710838318,
             "type": "PlaySE",
+            "value": 1.0
+        },
+        {
+            "parameter": "DashAttackStart",
+            "time": 0.8530218601226807,
+            "type": "GameplayEvent",
             "value": 1.0
         },
         {
@@ -41,5 +53,25 @@
     ],
     "loop": false,
     "nextCombo": "",
-    "playRate": 1.0
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.4907718896865845,
+                "value": 0.8666665554046631
+            },
+            {
+                "time": 0.7172813415527344,
+                "value": 0.520000159740448
+            },
+            {
+                "time": 1.1640105247497559,
+                "value": 0.5200002193450928
+            },
+            {
+                "time": 1.2000000476837158,
+                "value": 1.0
+            }
+        ]
+    }
 }

@@ -36,6 +36,7 @@ void GruxEnemy::EnsureDashTelegraphVisual()
 
 void GruxEnemy::BeginDashTelegraphVisual()
 {
+    HideDashTelegraphVisual();
     // Copy the locked gameplay snapshot once. It remains valid after BT cleanup
     // so Force Show can inspect this exact leg later.
     dashTelegraphLineStart = dashAttackStartPosition;
@@ -47,7 +48,215 @@ void GruxEnemy::BeginDashTelegraphVisual()
     const float dz = dashTelegraphLineEnd.z - dashTelegraphLineStart.z;
     dashTelegraphLineLength = std::sqrt(dx * dx + dz * dz);
     dashTelegraphSnapshotValid = dashTelegraphLineLength > FLT_EPSILON;
+    if (!dashTelegraphSnapshotValid || (!showDashTelegraph && !forceShowDashTelegraph))
+        return;
+
+    EnsureDashTelegraphVisual();
     ApplyDashTelegraphVisualSnapshot();
+    dashTelegraphVisualState = DashTelegraphVisualState::LineExpanding;
+    dashTelegraphVisualElapsed = 0.0f;
+    dashTelegraphLineExpandProgress = 0.0f;
+    dashTelegraphLineDynamicShrinkActive = false;
+    dashTelegraphDynamicLineStart = dashTelegraphLineStart;
+    dashTelegraphCurrentLineLength = dashTelegraphLineLength;
+    dashTelegraphLineShrinkProgress = 0.0f;
+    // No FadeOut is armed until the authored Knockup event arrives.
+    dashTelegraphLineFadeOutElapsed = -1.0f;
+    dashTelegraphLineAlpha = 1.0f;
+    dashTelegraphFanFadeInProgress = 0.0f;
+    dashTelegraphFanAlpha = 0.0f;
+    dashTelegraphFanFlashActive = false;
+    dashTelegraphLineMeshComponent->SetRelativeScaleDirect({ dashTelegraphLineWidth, 1.0f, 0.0f });
+    dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.brightness = 0.0f;
+    dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+    dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.brightness = -1.0f;
+    dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+    dashTelegraphFanMeshComponent->SetIsVisible(false);
+}
+
+void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
+{
+    if (forceShowDashTelegraph || dashTelegraphVisualState == DashTelegraphVisualState::Hidden)
+        return;
+    if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
+        return;
+    const float dt = (std::max)(0.0f, deltaTime);
+    const auto setLineAlpha = [&](float alpha)
+    {
+        dashTelegraphLineAlpha = std::clamp(alpha, 0.0f, 1.0f);
+        dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.brightness = dashTelegraphLineAlpha - 1.0f;
+    };
+    const auto setFanAlpha = [&](float alpha)
+    {
+        dashTelegraphFanAlpha = std::clamp(alpha, 0.0f, 1.0f);
+        dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.brightness = dashTelegraphFanAlpha - 1.0f;
+    };
+
+    if (dashTelegraphLineDynamicShrinkActive)
+        UpdateDashTelegraphLineShrink();
+
+    dashTelegraphVisualElapsed += dt;
+    switch (dashTelegraphVisualState)
+    {
+    case DashTelegraphVisualState::LineExpanding:
+    {
+        const float duration = (std::max)(0.001f, dashTelegraphLineExpandDuration);
+        const float linear = std::clamp(dashTelegraphVisualElapsed / duration, 0.0f, 1.0f);
+        dashTelegraphLineExpandProgress = 1.0f - (1.0f - linear) * (1.0f - linear);
+        dashTelegraphLineMeshComponent->SetRelativeScaleDirect({
+            dashTelegraphLineWidth, 1.0f, dashTelegraphLineLength * dashTelegraphLineExpandProgress });
+        if (linear >= 1.0f)
+        {
+            dashTelegraphVisualState = DashTelegraphVisualState::FanFadingIn;
+            dashTelegraphVisualElapsed = 0.0f;
+            dashTelegraphFanMeshComponent->SetIsVisible(true);
+        }
+        break;
+    }
+    case DashTelegraphVisualState::FanFadingIn:
+    {
+        const float duration = (std::max)(0.001f, dashTelegraphFanFadeInDuration);
+        dashTelegraphFanFadeInProgress = std::clamp(dashTelegraphVisualElapsed / duration, 0.0f, 1.0f);
+        setFanAlpha(dashTelegraphFanFadeInProgress);
+        if (dashTelegraphFanFadeInProgress >= 1.0f)
+            dashTelegraphVisualState = DashTelegraphVisualState::Holding;
+        break;
+    }
+    case DashTelegraphVisualState::DashActive:
+        // Dash start and Flash completion retain the locked Line/Fan snapshot.
+        break;
+    case DashTelegraphVisualState::FanFlashing:
+    {
+        const float duration = (std::max)(0.001f, dashTelegraphFanFlashDuration);
+        const float progress = std::clamp(dashTelegraphVisualElapsed / duration, 0.0f, 1.0f);
+        dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue =
+            dashTelegraphFanFlashIntensity * (1.0f - progress);
+        if (progress >= 1.0f)
+        {
+            // Flash is a Timeline event, but it must not implicitly hide the fan.
+            // The authored FadeOut event owns that later transition.
+            dashTelegraphVisualState = DashTelegraphVisualState::DashActive;
+            dashTelegraphVisualElapsed = 0.0f;
+            dashTelegraphFanFlashActive = false;
+            dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+        }
+        break;
+    }
+    case DashTelegraphVisualState::FanFadingOut:
+    {
+        const float lineDuration = (std::max)(0.001f, dashTelegraphLineFadeOutDuration);
+        const float fanDuration = (std::max)(0.001f, dashTelegraphFanFadeOutDuration);
+        const float lineProgress = std::clamp(dashTelegraphVisualElapsed / lineDuration, 0.0f, 1.0f);
+        const float fanProgress = std::clamp(dashTelegraphVisualElapsed / fanDuration, 0.0f, 1.0f);
+        setLineAlpha(dashTelegraphLineFadeOutStartAlpha * (1.0f - lineProgress));
+        setFanAlpha(dashTelegraphFanFadeOutStartAlpha * (1.0f - fanProgress));
+        if (dashTelegraphLineAlpha <= 0.0f)
+            dashTelegraphLineMeshComponent->SetIsVisible(false);
+        if (dashTelegraphFanAlpha <= 0.0f)
+            dashTelegraphFanMeshComponent->SetIsVisible(false);
+        if (dashTelegraphLineAlpha <= 0.0f && dashTelegraphFanAlpha <= 0.0f)
+            HideDashTelegraphVisual();
+        break;
+    }
+    default: break;
+    }
+}
+
+void GruxEnemy::BeginDashTelegraphFanFlash()
+{
+    if (dashTelegraphVisualState == DashTelegraphVisualState::Hidden ||
+        !dashTelegraphFanMeshComponent || !dashTelegraphFanMeshComponent->IsVisible())
+        return;
+    dashTelegraphVisualState = DashTelegraphVisualState::FanFlashing;
+    dashTelegraphVisualElapsed = 0.0f;
+    dashTelegraphFanFlashActive = true;
+}
+
+void GruxEnemy::BeginDashTelegraphLineShrink()
+{
+    if (dashTelegraphVisualState == DashTelegraphVisualState::Hidden ||
+        !dashTelegraphLineMeshComponent || !dashTelegraphLineMeshComponent->IsVisible() ||
+        dashTelegraphLineLength <= dashTelegraphLineMinimumVisibleLength)
+        return;
+
+    dashTelegraphLineDynamicShrinkActive = true;
+    dashTelegraphDynamicLineStart = dashTelegraphLineStart;
+    dashTelegraphCurrentLineLength = dashTelegraphLineLength;
+    dashTelegraphLineShrinkProgress = 0.0f;
+}
+
+void GruxEnemy::UpdateDashTelegraphLineShrink()
+{
+    if (!dashTelegraphLineDynamicShrinkActive || !dashTelegraphLineMeshComponent)
+        return;
+
+    const float originalDx = dashTelegraphLineEnd.x - dashTelegraphLineStart.x;
+    const float originalDz = dashTelegraphLineEnd.z - dashTelegraphLineStart.z;
+    const float originalLength = std::sqrt(originalDx * originalDx + originalDz * originalDz);
+    if (originalLength <= dashTelegraphLineMinimumVisibleLength)
+    {
+        dashTelegraphLineMeshComponent->SetIsVisible(false);
+        dashTelegraphLineDynamicShrinkActive = false;
+        dashTelegraphCurrentLineLength = 0.0f;
+        dashTelegraphLineShrinkProgress = 1.0f;
+        return;
+    }
+
+    // Use Grux's locked-path progress, never the player's current position.
+    const DirectX::XMFLOAT3 gruxPosition = GetPosition();
+    const float forwardX = originalDx / originalLength;
+    const float forwardZ = originalDz / originalLength;
+    const float projectedDistance = std::clamp(
+        (gruxPosition.x - dashTelegraphLineStart.x) * forwardX +
+        (gruxPosition.z - dashTelegraphLineStart.z) * forwardZ,
+        0.0f, originalLength);
+    dashTelegraphDynamicLineStart = {
+        dashTelegraphLineStart.x + forwardX * projectedDistance,
+        dashTelegraphLineStart.y,
+        dashTelegraphLineStart.z + forwardZ * projectedDistance };
+    const float remainingDx = dashTelegraphLineEnd.x - dashTelegraphDynamicLineStart.x;
+    const float remainingDz = dashTelegraphLineEnd.z - dashTelegraphDynamicLineStart.z;
+    dashTelegraphCurrentLineLength = std::sqrt(remainingDx * remainingDx + remainingDz * remainingDz);
+    dashTelegraphLineShrinkProgress = std::clamp(projectedDistance / originalLength, 0.0f, 1.0f);
+
+    if (dashTelegraphCurrentLineLength <= dashTelegraphLineMinimumVisibleLength)
+    {
+        dashTelegraphLineMeshComponent->SetIsVisible(false);
+        dashTelegraphLineDynamicShrinkActive = false;
+        return;
+    }
+
+    // The mesh pivot is its local start edge; place that edge at the moving
+    // start and scale only the recomputed remaining segment toward the fixed end.
+    const float yaw = std::atan2(-remainingDx, -remainingDz);
+    DirectX::XMFLOAT4 rotation{};
+    DirectX::XMStoreFloat4(&rotation,
+        DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f));
+    dashTelegraphLineMeshComponent->SetRelativeLocationDirect({
+        dashTelegraphDynamicLineStart.x, dashTelegraphLineYOffset, dashTelegraphDynamicLineStart.z });
+    dashTelegraphLineMeshComponent->SetRelativeRotationDirect(rotation);
+    dashTelegraphLineMeshComponent->SetRelativeScaleDirect({
+        dashTelegraphLineWidth, 1.0f, dashTelegraphCurrentLineLength });
+}
+
+void GruxEnemy::BeginDashTelegraphFadeOut()
+{
+    if (dashTelegraphVisualState == DashTelegraphVisualState::Hidden ||
+        forceShowDashTelegraph || !dashTelegraphFanMeshComponent ||
+        !dashTelegraphFanMeshComponent->IsVisible())
+        return;
+
+    dashTelegraphFadeOutEventReceived = true;
+    dashTelegraphFadeOutActive = true;
+    dashTelegraphVisualState = DashTelegraphVisualState::FanFadingOut;
+    dashTelegraphVisualElapsed = 0.0f;
+    dashTelegraphLineDynamicShrinkActive = false;
+    dashTelegraphLineFadeOutStartAlpha = dashTelegraphLineMeshComponent &&
+        dashTelegraphLineMeshComponent->IsVisible() ? dashTelegraphLineAlpha : 0.0f;
+    dashTelegraphFanFadeOutStartAlpha = dashTelegraphFanAlpha;
+    dashTelegraphFanFlashActive = false;
+    dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+    dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
 }
 
 void GruxEnemy::ApplyDashTelegraphVisualSnapshot()
@@ -92,6 +301,32 @@ void GruxEnemy::HideDashTelegraphVisual()
     if (dashTelegraphFanMeshComponent)
         dashTelegraphFanMeshComponent->SetIsVisible(false);
     dashTelegraphActive = false;
+    dashTelegraphVisualState = DashTelegraphVisualState::Hidden;
+    dashTelegraphVisualElapsed = 0.0f;
+    dashTelegraphLineExpandProgress = 0.0f;
+    dashTelegraphLineDynamicShrinkActive = false;
+    dashTelegraphDynamicLineStart = {};
+    dashTelegraphCurrentLineLength = 0.0f;
+    dashTelegraphLineShrinkProgress = 0.0f;
+    dashTelegraphLineFadeOutElapsed = 0.0f;
+    dashTelegraphLineAlpha = 0.0f;
+    dashTelegraphFanFadeInProgress = 0.0f;
+    dashTelegraphFanAlpha = 0.0f;
+    dashTelegraphFanFlashActive = false;
+    dashTelegraphFadeOutEventReceived = false;
+    dashTelegraphFadeOutActive = false;
+    dashTelegraphLineFadeOutStartAlpha = 0.0f;
+    dashTelegraphFanFadeOutStartAlpha = 0.0f;
+    if (dashTelegraphLineMeshComponent)
+    {
+        dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.brightness = 0.0f;
+        dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+    }
+    if (dashTelegraphFanMeshComponent)
+    {
+        dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.brightness = 0.0f;
+        dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+    }
 }
 
 void GruxEnemy::UpdateDashTelegraphVisualDebug()
@@ -243,6 +478,10 @@ bool GruxEnemy::StartDashAttackTelegraph()
     dashBTTelegraphHoldDuration = 0.0f;
     dashBTDirectionLocked = false;
     dashBTMovementSnapshotPrepared = false;
+    dashBTDirectionLockRequested = false;
+    dashBTDashStartRequested = false;
+    dashBTDirectionLockEventReceived = false;
+    dashBTDashStartEventReceived = false;
     dashBTPhase = DashBTPhase::Telegraph;
     if (!PlayAttackStage(BossAttackType::DashAttack, 0))
         return false;
@@ -264,31 +503,40 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         if (!context.valid)
             return DashBTResult::Failed;
         StopAIMovement();
-        const float windupDuration = GetDashWindupDuration();
-        const float directionLockTime = std::clamp(dashBTDirectionLockTime,
-            0.0f, windupDuration);
-        // Only the pre-lock interval tracks the player. The snapshot captures
-        // the same data later used by Stage 1 movement, so a visual can safely
-        // occupy the remaining windup without target resampling.
-        if (!dashBTDirectionLocked && dashBTTelegraphElapsed < directionLockTime)
+
+        // Dash 1 stays on Pre_Stampede until its authored events arrive. This
+        // makes tracking, lock, telegraph hold and Stampede start follow the
+        // Animation Playhead after the Speed Curve has been applied.
+        if (!dashBTDirectionLocked)
             RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_DashTelegraph");
-        dashBTTelegraphElapsed += dt;
-        if (!dashBTDirectionLocked && dashBTTelegraphElapsed >= directionLockTime)
+
+        if (!dashBTDirectionLocked && dashBTDirectionLockRequested)
         {
+            dashBTDirectionLockRequested = false;
             if (!PrepareDashAttackMovementSnapshot())
                 return DashBTResult::Failed;
             dashBTDirectionLocked = true;
-            dashBTTelegraphHoldDuration = (std::max)(0.0f,
-                windupDuration - directionLockTime);
+            dashBTTelegraphHoldDuration = 0.0f;
             BeginDashTelegraphVisual();
         }
-        if (dashBTTelegraphElapsed < windupDuration)
+
+        if (dashBTDirectionLocked && dashBTDashStartRequested)
+        {
+            dashBTDashStartRequested = false;
+            BeginAdditionalAttackStage();
+            // Stage 1 starts movement from the Direction Lock snapshot only.
+            if (!PlayAttackStage(BossAttackType::DashAttack, 1))
+                return DashBTResult::Failed;
+            BeginDashTelegraphLineShrink();
+            dashBTPhase = DashBTPhase::Movement;
             return DashBTResult::Running;
-        BeginAdditionalAttackStage();
-        // Stage 1 starts movement from the Direction Lock snapshot only.
-        if (!PlayAttackStage(BossAttackType::DashAttack, 1))
+        }
+
+        // A malformed/missing event must fail through the existing cleanup path
+        // rather than leave a Telegraph visible forever.
+        if (controller->GetCurrentAnimationName() != "Pre_Stampede_0" ||
+            !controller->IsPlayAnimation())
             return DashBTResult::Failed;
-        dashBTPhase = DashBTPhase::Movement;
         return DashBTResult::Running;
     }
     case DashBTPhase::Movement:
@@ -350,6 +598,11 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             dashBTTelegraphHoldDuration = 0.0f;
             dashBTDirectionLocked = false;
             dashBTMovementSnapshotPrepared = false;
+            // Dash 2/3 use InterDashTransition, not Pre_Stampede events.
+            dashBTDirectionLockRequested = false;
+            dashBTDashStartRequested = false;
+            dashBTDirectionLockEventReceived = false;
+            dashBTDashStartEventReceived = false;
             return DashBTResult::Running;
         }
         SetBehaviorAttackResult(WasCurrentAttackSequenceJustDodged()
@@ -392,6 +645,7 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         DisableAttackHitBoxes();
         if (!PlayAttackStage(BossAttackType::DashAttack, 1))
             return DashBTResult::Failed;
+        BeginDashTelegraphLineShrink();
         dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
         dashBTPhase = DashBTPhase::Movement;
         return DashBTResult::Running;
@@ -439,6 +693,10 @@ void GruxEnemy::CleanupDashAttackBT()
     dashBTTelegraphHoldDuration = 0.0f;
     dashBTDirectionLocked = false;
     dashBTMovementSnapshotPrepared = false;
+    dashBTDirectionLockRequested = false;
+    dashBTDashStartRequested = false;
+    dashBTDirectionLockEventReceived = false;
+    dashBTDashStartEventReceived = false;
     dashBTPredictedKnockupPosition = {};
     dashBTActualKnockupStartPosition = {};
     dashBTPredictionError = 0.0f;

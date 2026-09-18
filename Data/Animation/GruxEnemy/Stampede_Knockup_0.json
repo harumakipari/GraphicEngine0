@@ -3,6 +3,18 @@
     "animationName": "Stampede_Knockup_0",
     "events": [
         {
+            "parameter": "DashAttackTelegraphFlash",
+            "time": 0.2199999988079071,
+            "type": "GameplayEvent",
+            "value": 1.0
+        },
+        {
+            "parameter": "DashAttackTelegraphFadeOut",
+            "time": 0.550000011920929,
+            "type": "GameplayEvent",
+            "value": 1.0
+        },
+        {
             "parameter": "enemy_attack2",
             "time": 0.2667885422706604,
             "type": "PlaySE",

@@ -210,6 +210,11 @@ public:
     void EnsureDashTelegraphVisual();
     void BeginDashTelegraphVisual();
     void ApplyDashTelegraphVisualSnapshot();
+    void UpdateDashTelegraphVisual(float deltaTime);
+    void BeginDashTelegraphFanFlash();
+    void BeginDashTelegraphLineShrink();
+    void UpdateDashTelegraphLineShrink();
+    void BeginDashTelegraphFadeOut();
     void HideDashTelegraphVisual();
     void UpdateDashTelegraphVisualDebug();
     void DrawDashTelegraphDebugWorld() const;
@@ -304,6 +309,7 @@ public:
     void SetChargePhaseDebug(const char* phase) { chargePhaseDebug = phase ? phase : "None"; }
     void SetChargeWindupAnimationTimeDebug(float time) { chargeWindupAnimationTimeDebug = time; }
     float GetAttackInterval() const { return attackInterval; }
+    // Legacy EnemyAttackState compatibility; Dash BT no longer reads this gate.
     float GetDashWindupDuration() const { return dashWindupDuration; }
     float GetJumpAttackTelegraphStartTime() const { return jumpAttackTelegraphStartTime; }
     float GetJumpAttackTelegraphEndTime() const { return jumpAttackTelegraphEndTime; }
@@ -1331,8 +1337,12 @@ private:
     int dashBTDashMaxCount = 1;
     int dashBTCurrentDashHitStartCount = 0;
     bool dashBTAbortRemainingDashes = false;
-    // Lock timing creates a stable visual-only telegraph window before each dash leg.
-    float dashBTDirectionLockTime = 1.10f;
+    // Dash 1 consumes these on the BT update following the authored Pre_Stampede events.
+    // They deliberately do not participate in Dash 2/3's fixed inter-dash transition.
+    bool dashBTDirectionLockRequested = false;
+    bool dashBTDashStartRequested = false;
+    bool dashBTDirectionLockEventReceived = false;
+    bool dashBTDashStartEventReceived = false;
     float dashBTInterDashTrackingDuration = 0.10f;
     float dashBTTransitionDuration = 0.40f;
     float dashBTTransitionElapsed = 0.0f;
@@ -1348,8 +1358,32 @@ private:
     bool dashTelegraphActive = false;
     bool forceShowDashTelegraph = false;
     bool dashTelegraphSnapshotValid = false;
+    enum class DashTelegraphVisualState { Hidden, LineExpanding, FanFadingIn, Holding, DashActive, FanFlashing, FanFadingOut };
+    DashTelegraphVisualState dashTelegraphVisualState = DashTelegraphVisualState::Hidden;
+    float dashTelegraphVisualElapsed = 0.0f;
+    float dashTelegraphLineExpandDuration = 0.15f;
+    float dashTelegraphLineExpandProgress = 0.0f;
+    bool dashTelegraphLineDynamicShrinkActive = false;
+    DirectX::XMFLOAT3 dashTelegraphDynamicLineStart{};
+    float dashTelegraphCurrentLineLength = 0.0f;
+    float dashTelegraphLineShrinkProgress = 0.0f;
+    float dashTelegraphLineMinimumVisibleLength = 0.05f;
+    float dashTelegraphLineFadeOutDuration = 0.12f;
+    float dashTelegraphLineFadeOutElapsed = 0.0f;
+    float dashTelegraphLineAlpha = 0.0f;
+    float dashTelegraphFanFadeInDuration = 0.12f;
+    float dashTelegraphFanFadeInProgress = 0.0f;
+    float dashTelegraphFanAlpha = 0.0f;
+    bool dashTelegraphFanFlashActive = false;
+    float dashTelegraphFanFlashDuration = 0.05f;
+    float dashTelegraphFanFlashIntensity = 2.0f;
+    float dashTelegraphFanFadeOutDuration = 0.10f;
+    float dashTelegraphLineFadeOutStartAlpha = 0.0f;
+    float dashTelegraphFanFadeOutStartAlpha = 0.0f;
+    bool dashTelegraphFadeOutEventReceived = false;
+    bool dashTelegraphFadeOutActive = false;
     float dashTelegraphLineWidth = 4.f;
-    float dashTelegraphFanRadius = 3.0f;
+    float dashTelegraphFanRadius = 4.0f;    // 突進の扇形モデルのスケール
     float dashTelegraphLineYOffset = 0.345f;
     float dashTelegraphFanYOffset = 0.350f;
     DirectX::XMFLOAT3 dashTelegraphLineStart{};
@@ -1357,7 +1391,8 @@ private:
     float dashTelegraphLineLength = 0.0f;
     DirectX::XMFLOAT3 dashTelegraphFanPosition{};
     DirectX::XMFLOAT3 dashTelegraphFanForward{};
-    float dashWindupDuration = 1.40f;   // ?\??????"???
+    // Used only by the legacy EnemyAttackState path, not Dash BT's Timeline gate.
+    float dashWindupDuration = 1.40f;
     float dashAttackSpeed = 12.0f;
     float minDashAttackDistance = 4.0f;
     float maxDashAttackDistance = 16.0f;
@@ -1472,8 +1507,8 @@ private:
         DirectX::XMFLOAT3 tripleChargeStartPositions[3]{};
         bool tripleFinalWallHit = false;
         bool tripleEarlyWallHit = false;
-        float tripleWallStunDurationMultiplier = 2.5f;
-        float tripleChargeWallTurnClearance = 5.0f;
+        float tripleWallStunDurationMultiplier = 1.8f;
+        float tripleChargeWallTurnClearance = 7.0f;
         float tripleChargeLegMaxDistance = 50.0f;
         float tripleChargeLegMaxDuration = 50.0f;
         float tripleCurrentWallClearance = 0.0f;

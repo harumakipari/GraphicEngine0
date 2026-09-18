@@ -1265,6 +1265,7 @@ void GruxEnemy::Update(float deltaTime)
 
     // Impact Flash is visual-only and follows the same scaled delta as Grux/Animation.
     UpdateJumpTelegraphImpactFlash(deltaTime);
+    UpdateDashTelegraphVisual(deltaTime);
 
     leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
     rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
@@ -2505,6 +2506,31 @@ void GruxEnemy::DrawImGuiDetails()
     if (ImGui::Checkbox("Show Dash Telegraph", &showDashTelegraph) && !showDashTelegraph)
         HideDashTelegraphVisual();
     ImGui::Text("Telegraph Active: %s", dashTelegraphActive ? "true" : "false");
+    ImGui::Text("Telegraph Line Visible: %s", dashTelegraphLineMeshComponent && dashTelegraphLineMeshComponent->IsVisible() ? "true" : "false");
+    ImGui::Text("Telegraph Fan Visible: %s", dashTelegraphFanMeshComponent && dashTelegraphFanMeshComponent->IsVisible() ? "true" : "false");
+    ImGui::Text("FadeOut Event Received: %s", dashTelegraphFadeOutEventReceived ? "true" : "false");
+    ImGui::Text("FadeOut Active: %s", dashTelegraphFadeOutActive ? "true" : "false");
+    const char* dashTelegraphVisualStateNames[] = { "Hidden", "LineExpanding", "FanFadingIn", "Holding", "DashActive", "FanFlashing", "FanFadingOut" };
+    ImGui::Text("Visual State: %s", dashTelegraphVisualStateNames[static_cast<int>(dashTelegraphVisualState)]);
+    ImGui::DragFloat("Line Expand Duration", &dashTelegraphLineExpandDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+    ImGui::Text("Line Expand Progress: %.3f", dashTelegraphLineExpandProgress);
+    ImGui::DragFloat("Line Fade Out Duration", &dashTelegraphLineFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+    ImGui::Text("Line Alpha: %.3f", dashTelegraphLineAlpha);
+    ImGui::Text("Line Dynamic Shrink Active: %s", dashTelegraphLineDynamicShrinkActive ? "true" : "false");
+    ImGui::Text("Dynamic Line Start: (%.3f, %.3f, %.3f)",
+        dashTelegraphDynamicLineStart.x, dashTelegraphDynamicLineStart.y, dashTelegraphDynamicLineStart.z);
+    ImGui::Text("Fixed Line End: (%.3f, %.3f, %.3f)",
+        dashTelegraphLineEnd.x, dashTelegraphLineEnd.y, dashTelegraphLineEnd.z);
+    ImGui::Text("Current / Original Line Length: %.3f / %.3f m",
+        dashTelegraphCurrentLineLength, dashTelegraphLineLength);
+    ImGui::Text("Dash Line Progress: %.3f", dashTelegraphLineShrinkProgress);
+    ImGui::DragFloat("Fan Fade In Duration", &dashTelegraphFanFadeInDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+    ImGui::Text("Fan Fade In Progress: %.3f", dashTelegraphFanFadeInProgress);
+    ImGui::Text("Fan Alpha: %.3f", dashTelegraphFanAlpha);
+    ImGui::Text("Fan Flash Active: %s", dashTelegraphFanFlashActive ? "true" : "false");
+    ImGui::DragFloat("Fan Flash Duration", &dashTelegraphFanFlashDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+    ImGui::DragFloat("Fan Flash Intensity", &dashTelegraphFanFlashIntensity, 0.05f, 0.0f, 8.0f, "%.2f");
+    ImGui::DragFloat("Fan Fade Out Duration", &dashTelegraphFanFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
     if (ImGui::Checkbox("Force Show Dash Telegraph", &forceShowDashTelegraph))
     {
         if (forceShowDashTelegraph)
@@ -2652,8 +2678,16 @@ void GruxEnemy::DrawImGuiDetails()
         dashBTPhase == DashBTPhase::Knockup ? "Dash Knockup" :
         dashBTPhase == DashBTPhase::InterDashTransition ? "InterDashTransition" : "Inactive";
     ImGui::Text("Dash Phase: %s", dashRuntimePhase);
-    ImGui::DragFloat("Direction Lock Time", &dashBTDirectionLockTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
-    dashBTDirectionLockTime = (std::max)(0.0f, dashBTDirectionLockTime);
+    const auto dashTelegraphController = GetBodyAnimationController();
+    const bool isPreStampede = dashTelegraphController &&
+        dashTelegraphController->GetCurrentAnimationName() == "Pre_Stampede_0";
+    ImGui::Text("Current Animation Name: %s", dashTelegraphController
+        ? dashTelegraphController->GetCurrentAnimationName().c_str() : "None");
+    ImGui::Text("Pre_Stampede Current Animation Time: %s%.3f sec",
+        isPreStampede ? "" : "N/A / ",
+        isPreStampede ? dashTelegraphController->GetCurrentAnimationTime() : 0.0f);
+    ImGui::Text("Direction Lock Event Received: %s", dashBTDirectionLockEventReceived ? "true" : "false");
+    ImGui::Text("Dash Start Event Received: %s", dashBTDashStartEventReceived ? "true" : "false");
     ImGui::DragFloat("Inter Dash Tracking Duration", &dashBTInterDashTrackingDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
     dashBTInterDashTrackingDuration = (std::max)(0.0f, dashBTInterDashTrackingDuration);
     ImGui::DragFloat("Transition Duration", &dashBTTransitionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
@@ -2661,11 +2695,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Transition Elapsed: %.3f sec", dashBTTransitionElapsed);
     ImGui::Text("Direction Locked: %s", dashBTDirectionLocked ? "true" : "false");
     ImGui::Text("Telegraph Hold Duration: %.3f sec", dashBTTelegraphHoldDuration);
-    const float dashTimeUntilStart = dashBTPhase == DashBTPhase::Telegraph
-        ? (std::max)(0.0f, GetDashWindupDuration() - dashBTTelegraphElapsed)
-        : dashBTPhase == DashBTPhase::InterDashTransition
-        ? (std::max)(0.0f, dashBTTransitionDuration - dashBTTransitionElapsed) : 0.0f;
-    ImGui::Text("Time Until Dash Start: %.3f sec", dashTimeUntilStart);
+    ImGui::Text("Dash 1 Start Gate: GameplayEvent");
     ImGui::Text("Locked Direction: (%.3f, %.3f, %.3f)", dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
     ImGui::Text("Locked Predicted Knockup Position: (%.3f, %.3f, %.3f)",
         dashBTPredictedKnockupPosition.x, dashBTPredictedKnockupPosition.y,
@@ -4519,10 +4549,46 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
     HandleCommonAnimationNotifyEvent(event);
 
+    const auto controller = GetBodyAnimationController();
+    const bool isDashWindup = IsDashAttackBTActive() &&
+        dashBTPhase == DashBTPhase::Telegraph && controller &&
+        controller->GetCurrentAnimationName() == "Pre_Stampede_0";
+    if (event.type == AnimationNotifyEvent::Type::GameplayEvent &&
+        event.parameter == "DashAttackDirectionLock" && isDashWindup)
+    {
+        // The BT consumes this next update, where it safely snapshots the target.
+        dashBTDirectionLockRequested = true;
+        dashBTDirectionLockEventReceived = true;
+        return;
+    }
+
+    if (event.type == AnimationNotifyEvent::Type::GameplayEvent &&
+        event.parameter == "DashAttackStart" && isDashWindup)
+    {
+        // Do not transition animation/movement from a Notify callback.
+        dashBTDashStartRequested = true;
+        dashBTDashStartEventReceived = true;
+        return;
+    }
+
     if (event.type == AnimationNotifyEvent::Type::SpawnEffect &&
         event.parameter == "GroundImpact")
     {
         BeginJumpTelegraphImpactFlash();
+    }
+
+    if (event.type == AnimationNotifyEvent::Type::GameplayEvent &&
+        event.parameter == "DashAttackTelegraphFlash")
+    {
+        BeginDashTelegraphFanFlash();
+        return;
+    }
+
+    if (event.type == AnimationNotifyEvent::Type::GameplayEvent &&
+        event.parameter == "DashAttackTelegraphFadeOut")
+    {
+        BeginDashTelegraphFadeOut();
+        return;
     }
 
     if (event.type == AnimationNotifyEvent::Type::GameplayEvent && event.parameter == "GameBgmFadeOut")
@@ -5732,7 +5798,10 @@ bool GruxEnemy::PrepareDashAttackMovementSnapshot()
 
 bool GruxEnemy::BeginDashAttackMovement()
 {
-    HideDashTelegraphVisual();
+    // Dash BT keeps the locked Telegraph snapshot through Stampede/Knockup.
+    // Legacy/direct callers retain their previous immediate cleanup behavior.
+    if (!IsDashAttackBTActive())
+        HideDashTelegraphVisual();
     StopDashAttackMovement();
     // Legacy/direct callers retain the old immediate-snapshot behavior. Dash
     // BT normally prepares this at Direction Lock before entering its hold.
