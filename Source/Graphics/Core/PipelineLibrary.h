@@ -241,6 +241,15 @@ public:
             AddPipeLineState("chargeTelegraphUnlitForward", desc);
         }
 
+        // RoarTelegraphFill Unlit forward Blend
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelRoarTelegraphUnlitPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+            desc.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
+            AddPipeLineState("roarTelegraphUnlitForward", desc);
+        }
+
         // StaticMesh deferred Blend —p
         {
             hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());

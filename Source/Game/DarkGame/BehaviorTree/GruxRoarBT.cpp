@@ -972,6 +972,7 @@ bool GruxEnemy::BeginRoarBT()
     StopAIMovement();
     DisableAttackHitBoxes();
     roarBT = {};
+    roarTelegraphProgress = 0.0f;
     PlayBodyAnimation("Pre_Stampede_0", false, true, 0.05f, true);
     if (!controller->SetPlaybackRange(roarPreStampedeStartTime, roarPreStampedeEndTime))
     {
@@ -1003,6 +1004,7 @@ int GruxEnemy::UpdateRoarBT(float dt)
     roarBT.previousTime = time;
     if (roarBT.stalled > 2.0f || roarBT.elapsed > 60.0f) return fail("Playback timeout");
     StopAIMovement();
+    UpdateRoarTelegraphProgress();
     UpdateRoarTelegraphTransform();
     if (controller->IsPlayAnimation()) return 0;
     // A stopped clip is only a successful completion at its expected end.
@@ -1029,6 +1031,8 @@ void GruxEnemy::ApplyRoarShockwave()
         return;
     // Consume the event even on a miss: moving into the radius later must not hit.
     roarBT.shockwaveFired = true;
+    roarTelegraphProgress = 1.0f;
+    UpdateRoarTelegraphTransform();
     HideRoarTelegraph();
     SpawnGroundImpactEffect();
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
@@ -1086,6 +1090,13 @@ void GruxEnemy::EnsureRoarTelegraphMeshes()
         "./Data/Models/EffectModel/RoarTelegraphOuter1.glb", { 1.0f, 0.16f, 0.03f, 1.0f });
     configureMesh(roarTelegraphFillMeshComponent,
         "./Data/Models/EffectModel/RoarTelegraphFill.glb", { 1.0f, 0.08f, 0.03f, 1.0f });
+
+    // Roar owns both visual layers through its dedicated tint / glow shader.
+    // Charge / Jump / Dash remain on the shared Telegraph shader.
+    roarTelegraphOuterMeshComponent->overrideDeferredPipelineName = "roarTelegraphUnlitForward";
+    roarTelegraphOuterMeshComponent->overrideForwardPipelineName = "roarTelegraphUnlitForward";
+    roarTelegraphFillMeshComponent->overrideDeferredPipelineName = "roarTelegraphUnlitForward";
+    roarTelegraphFillMeshComponent->overrideForwardPipelineName = "roarTelegraphUnlitForward";
 }
 
 void GruxEnemy::ShowRoarTelegraph()
@@ -1109,18 +1120,70 @@ void GruxEnemy::UpdateRoarTelegraphTransform()
     roarTelegraphFillWorldPosition = { position.x, roarTelegraphFillYOffset, position.z };
     const DirectX::XMFLOAT4 identityRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
     const DirectX::XMFLOAT3 scale{ radius, 1.0f, radius };
+    const float t = std::clamp(roarTelegraphProgress, 0.0f, 1.0f);
+    roarTelegraphVisualProgress = t * t * (3.0f - 2.0f * t);
+    const auto lerp = [this](float minimum, float maximum)
+    {
+        return minimum + (maximum - minimum) * roarTelegraphVisualProgress;
+    };
+    roarTelegraphFillTintCurrent = {
+        lerp(roarTelegraphFillTintMin.x, roarTelegraphFillTintMax.x),
+        lerp(roarTelegraphFillTintMin.y, roarTelegraphFillTintMax.y),
+        lerp(roarTelegraphFillTintMin.z, roarTelegraphFillTintMax.z) };
+    roarTelegraphFillGlowCurrent = lerp(roarTelegraphFillGlowMin, roarTelegraphFillGlowMax);
+    roarTelegraphFillAlphaCurrent = lerp(roarTelegraphFillAlphaMin, roarTelegraphFillAlphaMax);
 
     roarTelegraphOuterMeshComponent->SetRelativeLocationDirect(roarTelegraphOuterWorldPosition);
     roarTelegraphOuterMeshComponent->SetRelativeRotationDirect(identityRotation);
     roarTelegraphOuterMeshComponent->SetRelativeScaleDirect(scale);
     roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.brightness =
         std::clamp(roarTelegraphOuterAlpha, 0.0f, 1.0f) - 1.0f;
+    roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.cpuColor = {
+        roarTelegraphOuterTint.x, roarTelegraphOuterTint.y, roarTelegraphOuterTint.z, 1.0f };
+    roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.emissionPower = 1.0f;
 
     roarTelegraphFillMeshComponent->SetRelativeLocationDirect(roarTelegraphFillWorldPosition);
     roarTelegraphFillMeshComponent->SetRelativeRotationDirect(identityRotation);
     roarTelegraphFillMeshComponent->SetRelativeScaleDirect(scale);
     roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.brightness =
-        std::clamp(roarTelegraphFillAlpha, 0.0f, 1.0f) - 1.0f;
+        std::clamp(roarTelegraphFillAlphaCurrent, 0.0f, 1.0f) - 1.0f;
+    roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.cpuColor = {
+        roarTelegraphFillTintCurrent.x, roarTelegraphFillTintCurrent.y, roarTelegraphFillTintCurrent.z, 1.0f };
+    roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.emissionPower =
+        (std::max)(0.0f, roarTelegraphFillGlowCurrent);
+}
+
+void GruxEnemy::UpdateRoarTelegraphProgress()
+{
+    const auto controller = GetBodyAnimationController();
+    if (!controller || roarBT.stage == RoarStage::None)
+        return;
+
+    // The two sections are weighted by their Animation Timeline spans, not
+    // world time.  Speed Curve therefore changes how quickly the playhead
+    // reaches each value, while preserving pose-aligned progress.
+    constexpr float shockwaveEventTime = 0.30f;
+    const float preDuration = (std::max)(0.0f, roarPreStampedeEndTime - roarPreStampedeStartTime);
+    const float totalDuration = preDuration + shockwaveEventTime;
+    if (totalDuration <= 0.0f)
+    {
+        roarTelegraphProgress = 0.0f;
+        return;
+    }
+
+    const float preWeight = preDuration / totalDuration;
+    const float time = controller->GetCurrentAnimationTime();
+    if (roarBT.stage == RoarStage::Telegraph)
+    {
+        const float preProgress = preDuration > 0.0f
+            ? std::clamp((time - roarPreStampedeStartTime) / preDuration, 0.0f, 1.0f)
+            : 1.0f;
+        roarTelegraphProgress = preProgress * preWeight;
+        return;
+    }
+
+    const float shockwaveProgress = std::clamp(time / shockwaveEventTime, 0.0f, 1.0f);
+    roarTelegraphProgress = preWeight + (1.0f - preWeight) * shockwaveProgress;
 }
 
 void GruxEnemy::HideRoarTelegraph()
@@ -1134,6 +1197,11 @@ void GruxEnemy::HideRoarTelegraph()
 void GruxEnemy::CleanupRoarBT(const char* status)
 {
     HideRoarTelegraph();
+    roarTelegraphProgress = 0.0f;
+    roarTelegraphVisualProgress = 0.0f;
+    roarTelegraphFillTintCurrent = roarTelegraphFillTintMin;
+    roarTelegraphFillGlowCurrent = roarTelegraphFillGlowMin;
+    roarTelegraphFillAlphaCurrent = roarTelegraphFillAlphaMin;
     if (IsRoarBTActive())
     {
         StopAIMovement();
@@ -1232,12 +1300,30 @@ void GruxEnemy::DrawRoarBTDebug()
         context.region == PlayerRelativeRegion::Side ? "Side" : "Front";
     ImGui::Text(U8("咆哮BT状態: %s"), roarBTStatus.c_str());
     ImGui::Text(U8("咆哮Stage: %d"), static_cast<int>(roarBT.stage));
+    ImGui::Text("Current Animation Name: %s", roarController ? roarController->GetCurrentAnimationName().c_str() : "None");
+    ImGui::Text("Current Animation Time: %.3f", roarController ? roarController->GetCurrentAnimationTime() : 0.0f);
+    ImGui::Text("Roar Telegraph Progress: %.3f", roarTelegraphProgress);
+    ImGui::Text("Visual Progress: %.3f", roarTelegraphVisualProgress);
+    ImGui::ProgressBar(std::clamp(roarTelegraphProgress, 0.0f, 1.0f), ImVec2(-FLT_MIN, 0.0f));
     ImGui::Text("Current Roar Radius: %.2f m", GetRoarAttackRadius());
     ImGui::Text("Current Phase: %s", isPhase2 ? "Phase2" : "Phase1");
     ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::DragFloat("Roar Telegraph Fill Alpha", &roarTelegraphFillAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::ColorEdit3("Roar Outer Tint Color", &roarTelegraphOuterTint.x);
+    ImGui::ColorEdit3("Roar Fill Tint Min", &roarTelegraphFillTintMin.x);
+    ImGui::ColorEdit3("Roar Fill Tint Max", &roarTelegraphFillTintMax.x);
+    ImGui::DragFloat("Roar Fill Glow Min", &roarTelegraphFillGlowMin, 0.05f, 0.0f, 20.0f, "%.2f");
+    ImGui::DragFloat("Roar Fill Glow Max", &roarTelegraphFillGlowMax, 0.05f, 0.0f, 20.0f, "%.2f");
+    ImGui::DragFloat("Roar Fill Alpha Min", &roarTelegraphFillAlphaMin, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat("Roar Fill Alpha Max", &roarTelegraphFillAlphaMax, 0.01f, 0.0f, 1.0f, "%.2f");
     roarTelegraphOuterAlpha = std::clamp(roarTelegraphOuterAlpha, 0.0f, 1.0f);
-    roarTelegraphFillAlpha = std::clamp(roarTelegraphFillAlpha, 0.0f, 1.0f);
+    roarTelegraphFillGlowMin = (std::max)(0.0f, roarTelegraphFillGlowMin);
+    roarTelegraphFillGlowMax = (std::max)(roarTelegraphFillGlowMin, roarTelegraphFillGlowMax);
+    roarTelegraphFillAlphaMin = std::clamp(roarTelegraphFillAlphaMin, 0.0f, 1.0f);
+    roarTelegraphFillAlphaMax = std::clamp(roarTelegraphFillAlphaMax, roarTelegraphFillAlphaMin, 1.0f);
+    ImGui::Text("Current Fill Tint: (%.3f, %.3f, %.3f)",
+        roarTelegraphFillTintCurrent.x, roarTelegraphFillTintCurrent.y, roarTelegraphFillTintCurrent.z);
+    ImGui::Text("Current Fill Glow: %.3f", roarTelegraphFillGlowCurrent);
+    ImGui::Text("Current Fill Alpha: %.3f", roarTelegraphFillAlphaCurrent);
     const bool roarTelegraphVisible = roarTelegraphOuterMeshComponent &&
         roarTelegraphFillMeshComponent && roarTelegraphOuterMeshComponent->IsVisible() &&
         roarTelegraphFillMeshComponent->IsVisible();

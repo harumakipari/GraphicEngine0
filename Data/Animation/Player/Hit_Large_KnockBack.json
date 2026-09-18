@@ -15,9 +15,9 @@
             "value": 1.0
         },
         {
-            "duration": 0.2199999988079071,
-            "leftMotorStrength": 0.3700000047683716,
-            "rightMotorStrength": 0.3700000047683716,
+            "duration": 0.25,
+            "leftMotorStrength": 0.5899999737739563,
+            "rightMotorStrength": 0.5899999737739563,
             "time": 0.7461607456207275,
             "type": "ControllerRumble"
         }

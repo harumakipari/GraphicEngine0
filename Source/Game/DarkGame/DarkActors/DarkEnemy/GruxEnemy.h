@@ -367,6 +367,7 @@ public:
     void EnsureRoarTelegraphMeshes();
     void ShowRoarTelegraph();
     void UpdateRoarTelegraphTransform();
+    void UpdateRoarTelegraphProgress();
     void HideRoarTelegraph();
     void CleanupRoarBT(const char* status);
     void TickRoarLifecycle(float dt);
@@ -909,7 +910,20 @@ private:
     float roarRadiusPhase1 = 5.5f;
     float roarRadiusPhase2 = 7.0f;
     float roarTelegraphOuterAlpha = 0.85f;
-    float roarTelegraphFillAlpha = 0.20f;
+    DirectX::XMFLOAT3 roarTelegraphOuterTint{ 1.0f, 0.08f, 0.03f };
+    DirectX::XMFLOAT3 roarTelegraphFillTintMin{ 1.0f, 0.08f, 0.03f };
+    DirectX::XMFLOAT3 roarTelegraphFillTintMax{ 1.0f, 0.15f, 0.03f };
+    float roarTelegraphFillGlowMin = 1.0f;
+    float roarTelegraphFillGlowMax = 10.0f;
+    float roarTelegraphFillAlphaMin = 0.20f;
+    float roarTelegraphFillAlphaMax = 0.8f;
+    DirectX::XMFLOAT3 roarTelegraphFillTintCurrent{ 1.0f, 0.08f, 0.03f };
+    float roarTelegraphFillGlowCurrent = 1.0f;
+    float roarTelegraphFillAlphaCurrent = 0.20f;
+
+
+    float roarTelegraphProgress = 0.0f;
+    float roarTelegraphVisualProgress = 0.0f;
     float roarTelegraphOuterYOffset = 0.350f;
     float roarTelegraphFillYOffset = 0.345f;
     DirectX::XMFLOAT3 roarTelegraphOuterWorldPosition{};

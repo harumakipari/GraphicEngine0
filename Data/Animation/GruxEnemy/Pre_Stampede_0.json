@@ -49,6 +49,13 @@
             "time": 3.5439558029174805,
             "type": "PlaySE",
             "value": 0.10999999940395355
+        },
+        {
+            "duration": 1.7000000476837158,
+            "leftMotorStrength": 0.20000000298023224,
+            "rightMotorStrength": 0.20000000298023224,
+            "time": 3.5439560413360596,
+            "type": "ControllerRumble"
         }
     ],
     "loop": false,
