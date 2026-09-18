@@ -566,6 +566,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("ChargeAttackPlan", "ExecuteChargeAttack", 5, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteChargeAttack>(this));
     aiTree->AddNode("ChargeAttackPlan", "ResolveChargeResult", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ResolveChargeResult>(this));
     aiTree->AddNode("ChargeAttackPlan", "ExecuteChargeRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteChargeRecovery>(this));
+
+    EnsureRoarFloatingDebris();
 }
 
 void GruxEnemy::SetHpBarVisible(const bool visible)
@@ -772,6 +774,7 @@ void GruxEnemy::StopBattleActions()
 {
     HideDashTelegraphVisual();
     HideRoarTelegraph();
+    HideRoarFloatingDebris();
     if (IsRoarBTActive())
     {
         CleanupRoarBT("Interrupted");

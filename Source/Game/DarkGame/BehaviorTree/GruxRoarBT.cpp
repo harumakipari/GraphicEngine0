@@ -971,6 +971,7 @@ bool GruxEnemy::BeginRoarBT()
     { roarBTStatus = "Invalid playback range"; return false; }
     StopAIMovement();
     DisableAttackHitBoxes();
+    HideRoarFloatingDebris();
     roarBT = {};
     roarTelegraphProgress = 0.0f;
     PlayBodyAnimation("Pre_Stampede_0", false, true, 0.05f, true);
@@ -984,6 +985,8 @@ bool GruxEnemy::BeginRoarBT()
     roarBT.previousTime = roarPreStampedeStartTime;
     roarBT.endTime = roarPreStampedeEndTime;
     ShowRoarTelegraph();
+    InitializeRoarFloatingDebris();
+    UpdateRoarFloatingDebris();
     roarBTStatus = "Running";
     roarCooldownRemaining = roarCooldownDuration;
     return true;
@@ -1006,6 +1009,7 @@ int GruxEnemy::UpdateRoarBT(float dt)
     StopAIMovement();
     UpdateRoarTelegraphProgress();
     UpdateRoarTelegraphTransform();
+    UpdateRoarFloatingDebris();
     if (controller->IsPlayAnimation()) return 0;
     // A stopped clip is only a successful completion at its expected end.
     if (time + 0.02f < roarBT.endTime) return fail("Animation stopped early");
@@ -1033,7 +1037,9 @@ void GruxEnemy::ApplyRoarShockwave()
     roarBT.shockwaveFired = true;
     roarTelegraphProgress = 1.0f;
     UpdateRoarTelegraphTransform();
+    UpdateRoarFloatingDebris();
     HideRoarTelegraph();
+    HideRoarFloatingDebris();
     SpawnGroundImpactEffect();
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     if (!player || roarBT.hitPlayer || !player->CanReceiveKnockBack()) return;
@@ -1194,9 +1200,127 @@ void GruxEnemy::HideRoarTelegraph()
         roarTelegraphFillMeshComponent->SetIsVisible(false);
 }
 
+void GruxEnemy::EnsureRoarFloatingDebris()
+{
+    constexpr const char* debrisModels[] = {
+        "./Data/Models/EffectDebri/SmallDebri/debri.gltf",
+        "./Data/Models/EffectDebri/SmallDebri/debri1.gltf",
+        "./Data/Models/EffectDebri/SmallDebri/debri2.gltf",
+    };
+
+    for (size_t index = 0; index < roarFloatingDebris.size(); ++index)
+    {
+        auto& debris = roarFloatingDebris[index];
+        if (!debris.meshComponent)
+        {
+            debris.meshComponent = AddComponent<SkeletalMeshComponent>(
+                "RoarFloatingDebris_" + std::to_string(index), "GruxEnemy");
+            debris.meshComponent->SetModel(debrisModels[index % std::size(debrisModels)]);
+            debris.meshComponent->SetIsCastShadow(false);
+            debris.meshComponent->SetUsingAbsoluteLocation(true);
+            debris.meshComponent->SetUsingAbsoluteRotation(true);
+            debris.meshComponent->SetUsingAbsoluteScale(true);
+        }
+        debris.meshComponent->SetIsVisible(false);
+    }
+}
+
+void GruxEnemy::InitializeRoarFloatingDebris()
+{
+    EnsureRoarFloatingDebris();
+    if (!roarFloatingDebrisEnabled)
+    {
+        HideRoarFloatingDebris();
+        return;
+    }
+
+    const float innerRatio = std::clamp(roarFloatingDebrisInnerRatio, 0.0f, 1.0f);
+    const float outerRatio = std::clamp(roarFloatingDebrisOuterRatio, innerRatio, 1.0f);
+    const float minHeight = (std::max)(0.0f, roarFloatingDebrisMinHeight);
+    const float maxHeight = (std::max)(minHeight, roarFloatingDebrisMaxHeight);
+    const float minScale = (std::max)(0.0f, roarFloatingDebrisScaleMin);
+    const float maxScale = (std::max)(minScale, roarFloatingDebrisScaleMax);
+    const float thresholdStart = 0.22f;
+    const float thresholdEnd = 0.84f;
+    const float thresholdStep = roarFloatingDebris.size() > 1
+        ? (thresholdEnd - thresholdStart) / static_cast<float>(roarFloatingDebris.size() - 1)
+        : 0.0f;
+
+    for (size_t index = 0; index < roarFloatingDebris.size(); ++index)
+    {
+        auto& debris = roarFloatingDebris[index];
+        const float angle = MathHelper::RandomRange(0.0f, DirectX::XM_2PI);
+        debris.normalizedDirection = { std::sin(angle), 0.0f, std::cos(angle) };
+        debris.normalizedRingDistance = MathHelper::RandomRange(innerRatio, outerRatio);
+        debris.spawnThreshold = std::clamp(
+            thresholdStart + thresholdStep * static_cast<float>(index) +
+            MathHelper::RandomRange(-0.025f, 0.025f),
+            0.20f, 0.90f);
+        debris.baseScale = MathHelper::RandomRange(minScale, maxScale);
+        debris.maxFloatHeight = MathHelper::RandomRange(minHeight, maxHeight);
+        debris.baseRotation = {
+            MathHelper::RandomRange(0.0f, 360.0f),
+            MathHelper::RandomRange(0.0f, 360.0f),
+            MathHelper::RandomRange(0.0f, 360.0f) };
+        debris.rotationAmount = {
+            MathHelper::RandomRange(-25.0f, 25.0f),
+            MathHelper::RandomRange(-40.0f, 40.0f),
+            MathHelper::RandomRange(-25.0f, 25.0f) };
+        debris.meshComponent->SetIsVisible(false);
+    }
+}
+
+void GruxEnemy::UpdateRoarFloatingDebris()
+{
+    if (!roarFloatingDebrisEnabled)
+    {
+        HideRoarFloatingDebris();
+        return;
+    }
+
+    const DirectX::XMFLOAT3 center = GetPosition();
+    const float radius = GetRoarAttackRadius();
+    for (auto& debris : roarFloatingDebris)
+    {
+        if (!debris.meshComponent || roarTelegraphProgress < debris.spawnThreshold)
+        {
+            if (debris.meshComponent) debris.meshComponent->SetIsVisible(false);
+            continue;
+        }
+
+        const float localProgress = std::clamp(
+            (roarTelegraphProgress - debris.spawnThreshold) /
+            (1.0f - debris.spawnThreshold), 0.0f, 1.0f);
+        const float easedProgress = localProgress * localProgress * (3.0f - 2.0f * localProgress);
+        const float ringDistance = radius * debris.normalizedRingDistance;
+        const DirectX::XMFLOAT3 position{
+            center.x + debris.normalizedDirection.x * ringDistance,
+            center.y + 0.05f + debris.maxFloatHeight * easedProgress,
+            center.z + debris.normalizedDirection.z * ringDistance };
+        const DirectX::XMFLOAT3 rotation{
+            debris.baseRotation.x + debris.rotationAmount.x * easedProgress,
+            debris.baseRotation.y + debris.rotationAmount.y * easedProgress,
+            debris.baseRotation.z + debris.rotationAmount.z * easedProgress };
+
+        debris.meshComponent->SetRelativeLocationDirect(position);
+        debris.meshComponent->SetRelativeEulerRotationDirect(rotation);
+        debris.meshComponent->SetRelativeScaleDirect(
+            { debris.baseScale, debris.baseScale, debris.baseScale });
+        debris.meshComponent->SetIsVisible(true);
+    }
+}
+
+void GruxEnemy::HideRoarFloatingDebris()
+{
+    for (auto& debris : roarFloatingDebris)
+        if (debris.meshComponent)
+            debris.meshComponent->SetIsVisible(false);
+}
+
 void GruxEnemy::CleanupRoarBT(const char* status)
 {
     HideRoarTelegraph();
+    HideRoarFloatingDebris();
     roarTelegraphProgress = 0.0f;
     roarTelegraphVisualProgress = 0.0f;
     roarTelegraphFillTintCurrent = roarTelegraphFillTintMin;
@@ -1324,6 +1448,27 @@ void GruxEnemy::DrawRoarBTDebug()
         roarTelegraphFillTintCurrent.x, roarTelegraphFillTintCurrent.y, roarTelegraphFillTintCurrent.z);
     ImGui::Text("Current Fill Glow: %.3f", roarTelegraphFillGlowCurrent);
     ImGui::Text("Current Fill Alpha: %.3f", roarTelegraphFillAlphaCurrent);
+    ImGui::Checkbox("Floating Debris Enabled", &roarFloatingDebrisEnabled);
+    ImGui::Text("Floating Debris Count: %zu", roarFloatingDebris.size());
+    ImGui::DragFloat("Roar Floating Debris Inner Ratio", &roarFloatingDebrisInnerRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat("Roar Floating Debris Outer Ratio", &roarFloatingDebrisOuterRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat("Roar Floating Debris Min Height", &roarFloatingDebrisMinHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
+    ImGui::DragFloat("Roar Floating Debris Max Height", &roarFloatingDebrisMaxHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
+    ImGui::DragFloat("Roar Floating Debris Scale Min", &roarFloatingDebrisScaleMin, 0.01f, 0.0f, 5.0f, "%.2f");
+    ImGui::DragFloat("Roar Floating Debris Scale Max", &roarFloatingDebrisScaleMax, 0.01f, 0.0f, 5.0f, "%.2f");
+    roarFloatingDebrisInnerRatio = std::clamp(roarFloatingDebrisInnerRatio, 0.0f, 1.0f);
+    roarFloatingDebrisOuterRatio = std::clamp(roarFloatingDebrisOuterRatio, roarFloatingDebrisInnerRatio, 1.0f);
+    roarFloatingDebrisMinHeight = (std::max)(0.0f, roarFloatingDebrisMinHeight);
+    roarFloatingDebrisMaxHeight = (std::max)(roarFloatingDebrisMinHeight, roarFloatingDebrisMaxHeight);
+    roarFloatingDebrisScaleMin = (std::max)(0.0f, roarFloatingDebrisScaleMin);
+    roarFloatingDebrisScaleMax = (std::max)(roarFloatingDebrisScaleMin, roarFloatingDebrisScaleMax);
+    if (!roarFloatingDebrisEnabled)
+        HideRoarFloatingDebris();
+    int activeFloatingDebrisCount = 0;
+    for (const auto& debris : roarFloatingDebris)
+        if (debris.meshComponent && debris.meshComponent->IsVisible())
+            ++activeFloatingDebrisCount;
+    ImGui::Text("Active Debris Count: %d", activeFloatingDebrisCount);
     const bool roarTelegraphVisible = roarTelegraphOuterMeshComponent &&
         roarTelegraphFillMeshComponent && roarTelegraphOuterMeshComponent->IsVisible() &&
         roarTelegraphFillMeshComponent->IsVisible();

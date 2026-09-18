@@ -369,6 +369,10 @@ public:
     void UpdateRoarTelegraphTransform();
     void UpdateRoarTelegraphProgress();
     void HideRoarTelegraph();
+    void EnsureRoarFloatingDebris();
+    void InitializeRoarFloatingDebris();
+    void UpdateRoarFloatingDebris();
+    void HideRoarFloatingDebris();
     void CleanupRoarBT(const char* status);
     void TickRoarLifecycle(float dt);
     void DrawRoarBTDebug();
@@ -926,6 +930,26 @@ private:
     float roarTelegraphVisualProgress = 0.0f;
     float roarTelegraphOuterYOffset = 0.350f;
     float roarTelegraphFillYOffset = 0.345f;
+    struct RoarFloatingDebris
+    {
+        std::shared_ptr<SkeletalMeshComponent> meshComponent;
+        DirectX::XMFLOAT3 normalizedDirection{};
+        float normalizedRingDistance = 0.0f;
+        float spawnThreshold = 1.0f;
+        float baseScale = 1.0f;
+        float maxFloatHeight = 0.0f;
+        DirectX::XMFLOAT3 baseRotation{};
+        DirectX::XMFLOAT3 rotationAmount{};
+    };
+    static constexpr size_t RoarFloatingDebrisCount = 25;
+    std::array<RoarFloatingDebris, RoarFloatingDebrisCount> roarFloatingDebris{};
+    bool roarFloatingDebrisEnabled = true;
+    float roarFloatingDebrisInnerRatio = 0.30f;
+    float roarFloatingDebrisOuterRatio = 0.90f;
+    float roarFloatingDebrisMinHeight = 0.20f;
+    float roarFloatingDebrisMaxHeight = 2.50f;
+    float roarFloatingDebrisScaleMin = 0.75f;
+    float roarFloatingDebrisScaleMax = 2.5f;
     DirectX::XMFLOAT3 roarTelegraphOuterWorldPosition{};
     DirectX::XMFLOAT3 roarTelegraphFillWorldPosition{};
     float roarHeightTolerance = 2.0f;
