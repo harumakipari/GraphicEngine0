@@ -403,6 +403,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     // ƒWƒƒƒ“ƒv’…’nŽž‚Ì»šº
     groundDustEffectComponent = this->AddComponent<class ParticleComponent>("groundDustEffectComponent", parentName);
     groundDustEffectComponent->Load("./Data/Effect/Files/GroundDustEffect1.json");
+    roarGroundBurstEffectComponent = this->AddComponent<class ParticleComponent>("roarGroundBurstEffectComponent", parentName);
+    roarGroundBurstEffectComponent->Load("./Data/Effect/Files/RoarGroundBurstEffect.json");
     // •Ç‚É“–‚½‚Á‚½Žž‚Ì»šº
     wallImpactDustEffectComponent = this->AddComponent<class ParticleComponent>("wallImpactDustEffectComponent", parentName);
     wallImpactDustEffectComponent->Load("./Data/Effect/Files/WallImpactDustEffect1.json");

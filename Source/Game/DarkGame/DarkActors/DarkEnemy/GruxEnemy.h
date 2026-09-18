@@ -373,6 +373,7 @@ public:
     void InitializeRoarFloatingDebris();
     void UpdateRoarFloatingDebris();
     void HideRoarFloatingDebris();
+    void SpawnRoarGroundBurst();
     void CleanupRoarBT(const char* status);
     void TickRoarLifecycle(float dt);
     void DrawRoarBTDebug();
@@ -757,6 +758,7 @@ private:
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect
     std::shared_ptr<ParticleComponent> groundDustEffectComponent;
+    std::shared_ptr<ParticleComponent> roarGroundBurstEffectComponent;
     std::shared_ptr<ParticleComponent> wallImpactDustEffectComponent;
     std::shared_ptr<ParticleComponent> wallImpactFlashEffectComponent;
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
@@ -950,6 +952,13 @@ private:
     float roarFloatingDebrisMaxHeight = 2.50f;
     float roarFloatingDebrisScaleMin = 0.75f;
     float roarFloatingDebrisScaleMax = 2.5f;
+    bool roarGroundBurstEnabled = true;
+    float roarGroundBurstInnerRingRatio = 0.38f;
+    float roarGroundBurstOuterRingRatio = 0.75f;
+    float roarGroundBurstAngleJitterDegrees = 8.0f;
+    float roarGroundBurstRadiusJitter = 0.04f;
+    float roarGroundBurstYOffset = 0.0f;
+    int roarGroundBurstLastSpawnCount = 0;
     DirectX::XMFLOAT3 roarTelegraphOuterWorldPosition{};
     DirectX::XMFLOAT3 roarTelegraphFillWorldPosition{};
     float roarHeightTolerance = 2.0f;

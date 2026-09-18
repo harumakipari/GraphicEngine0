@@ -1040,6 +1040,7 @@ void GruxEnemy::ApplyRoarShockwave()
     UpdateRoarFloatingDebris();
     HideRoarTelegraph();
     HideRoarFloatingDebris();
+    SpawnRoarGroundBurst();
     SpawnGroundImpactEffect();
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     if (!player || roarBT.hitPlayer || !player->CanReceiveKnockBack()) return;
@@ -1198,6 +1199,52 @@ void GruxEnemy::HideRoarTelegraph()
         roarTelegraphOuterMeshComponent->SetIsVisible(false);
     if (roarTelegraphFillMeshComponent)
         roarTelegraphFillMeshComponent->SetIsVisible(false);
+}
+
+void GruxEnemy::SpawnRoarGroundBurst()
+{
+    roarGroundBurstLastSpawnCount = 0;
+    if (!roarGroundBurstEnabled || !roarGroundBurstEffectComponent)
+        return;
+
+    const DirectX::XMFLOAT3 center = GetPosition();
+    const float attackRadius = GetRoarAttackRadius();
+    if (attackRadius <= FLT_EPSILON)
+        return;
+
+    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+    const bool isPhase2 = scene && scene->IsBossInFinalPhase();
+    const int innerCount = isPhase2 ? 4 : 3;
+    const int outerCount = isPhase2 ? 8 : 6;
+    const float innerRatio = std::clamp(roarGroundBurstInnerRingRatio, 0.0f, 1.0f);
+    const float outerRatio = std::clamp(roarGroundBurstOuterRingRatio, innerRatio, 1.0f);
+    const float angleJitterRadians = DirectX::XMConvertToRadians(
+        (std::max)(0.0f, roarGroundBurstAngleJitterDegrees));
+    const float radiusJitter = (std::max)(0.0f, roarGroundBurstRadiusJitter);
+    const EffectHandle effectHandle = roarGroundBurstEffectComponent->GetEffectHandle();
+
+    const auto emitRing = [&](const int count, const float ringRatio, const float phaseOffset)
+    {
+        for (int index = 0; index < count; ++index)
+        {
+            const float baseAngle = DirectX::XM_2PI *
+                (static_cast<float>(index) / static_cast<float>(count)) + phaseOffset;
+            const float angle = baseAngle + MathHelper::RandomRange(
+                -angleJitterRadians, angleJitterRadians);
+            const float ratio = std::clamp(ringRatio + MathHelper::RandomRange(
+                -radiusJitter, radiusJitter), 0.0f, 1.0f);
+            const float distance = attackRadius * ratio;
+            const DirectX::XMFLOAT3 spawnPosition{
+                center.x + sinf(angle) * distance,
+                center.y + roarGroundBurstYOffset,
+                center.z + cosf(angle) * distance };
+            EffectManager::EmitParticle(effectHandle, spawnPosition, { 0.0f, 0.0f, 0.0f });
+            ++roarGroundBurstLastSpawnCount;
+        }
+    };
+
+    emitRing(innerCount, innerRatio, 0.0f);
+    emitRing(outerCount, outerRatio, DirectX::XM_PI / static_cast<float>(outerCount));
 }
 
 void GruxEnemy::EnsureRoarFloatingDebris()
@@ -1456,12 +1503,23 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::DragFloat("Roar Floating Debris Max Height", &roarFloatingDebrisMaxHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
     ImGui::DragFloat("Roar Floating Debris Scale Min", &roarFloatingDebrisScaleMin, 0.01f, 0.0f, 5.0f, "%.2f");
     ImGui::DragFloat("Roar Floating Debris Scale Max", &roarFloatingDebrisScaleMax, 0.01f, 0.0f, 5.0f, "%.2f");
+    ImGui::Checkbox("Roar Ground Burst Enabled", &roarGroundBurstEnabled);
+    ImGui::DragFloat("Roar Ground Burst Inner Ring Ratio", &roarGroundBurstInnerRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat("Roar Ground Burst Outer Ring Ratio", &roarGroundBurstOuterRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+    ImGui::DragFloat("Roar Ground Burst Angle Jitter", &roarGroundBurstAngleJitterDegrees, 0.25f, 0.0f, 45.0f, "%.1f deg");
+    ImGui::DragFloat("Roar Ground Burst Radius Jitter", &roarGroundBurstRadiusJitter, 0.005f, 0.0f, 0.25f, "%.3f");
+    ImGui::DragFloat("Roar Ground Burst Y Offset", &roarGroundBurstYOffset, 0.01f, -1.0f, 1.0f, "%.2f m");
     roarFloatingDebrisInnerRatio = std::clamp(roarFloatingDebrisInnerRatio, 0.0f, 1.0f);
     roarFloatingDebrisOuterRatio = std::clamp(roarFloatingDebrisOuterRatio, roarFloatingDebrisInnerRatio, 1.0f);
     roarFloatingDebrisMinHeight = (std::max)(0.0f, roarFloatingDebrisMinHeight);
     roarFloatingDebrisMaxHeight = (std::max)(roarFloatingDebrisMinHeight, roarFloatingDebrisMaxHeight);
     roarFloatingDebrisScaleMin = (std::max)(0.0f, roarFloatingDebrisScaleMin);
     roarFloatingDebrisScaleMax = (std::max)(roarFloatingDebrisScaleMin, roarFloatingDebrisScaleMax);
+    roarGroundBurstInnerRingRatio = std::clamp(roarGroundBurstInnerRingRatio, 0.0f, 1.0f);
+    roarGroundBurstOuterRingRatio = std::clamp(roarGroundBurstOuterRingRatio,
+        roarGroundBurstInnerRingRatio, 1.0f);
+    roarGroundBurstAngleJitterDegrees = (std::max)(0.0f, roarGroundBurstAngleJitterDegrees);
+    roarGroundBurstRadiusJitter = (std::max)(0.0f, roarGroundBurstRadiusJitter);
     if (!roarFloatingDebrisEnabled)
         HideRoarFloatingDebris();
     int activeFloatingDebrisCount = 0;
@@ -1469,6 +1527,7 @@ void GruxEnemy::DrawRoarBTDebug()
         if (debris.meshComponent && debris.meshComponent->IsVisible())
             ++activeFloatingDebrisCount;
     ImGui::Text("Active Debris Count: %d", activeFloatingDebrisCount);
+    ImGui::Text("Last Ground Burst Spawn Count: %d", roarGroundBurstLastSpawnCount);
     const bool roarTelegraphVisible = roarTelegraphOuterMeshComponent &&
         roarTelegraphFillMeshComponent && roarTelegraphOuterMeshComponent->IsVisible() &&
         roarTelegraphFillMeshComponent->IsVisible();
