@@ -15,6 +15,13 @@
             "value": 0.0
         },
         {
+            "duration": 0.15000000596046448,
+            "leftMotorStrength": 0.36000001430511475,
+            "rightMotorStrength": 0.0,
+            "time": 1.3492059707641602,
+            "type": "ControllerRumble"
+        },
+        {
             "parameter": "boss_charge_foot_scrape5",
             "time": 2.039377450942993,
             "type": "PlaySE",
@@ -25,6 +32,13 @@
             "time": 2.039377450942993,
             "type": "SpawnEffect",
             "value": 0.0
+        },
+        {
+            "duration": 0.15000000596046448,
+            "leftMotorStrength": 0.0,
+            "rightMotorStrength": 0.4000000059604645,
+            "time": 2.0393776893615723,
+            "type": "ControllerRumble"
         }
     ],
     "loop": false,

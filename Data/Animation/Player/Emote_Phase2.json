@@ -1,0 +1,66 @@
+{
+    "animationClip": 55,
+    "animationName": "Emote_Phase2",
+    "events": [
+        {
+            "parameter": "player_level_voice",
+            "time": 0.17900000512599945,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.010906070470809937,
+                "value": 0.33333346247673035
+            },
+            {
+                "time": 0.3671700358390808,
+                "value": 0.34666669368743896
+            },
+            {
+                "time": 0.4180648922920227,
+                "value": 0.48000019788742065
+            },
+            {
+                "time": 0.5598434805870056,
+                "value": 0.9466664791107178
+            }
+        ]
+    },
+    "states": [
+        {
+            "endTime": 0.8230160474777222,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.1507936716079712,
+            "type": "ShowEmissive",
+            "value": 20.0
+        }
+    ]
+}

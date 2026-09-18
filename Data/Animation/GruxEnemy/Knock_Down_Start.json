@@ -15,6 +15,13 @@
             "value": 5.0
         },
         {
+            "duration": 0.3199999928474426,
+            "leftMotorStrength": 0.3400000035762787,
+            "rightMotorStrength": 0.3400000035762787,
+            "time": 0.007326014339923859,
+            "type": "ControllerRumble"
+        },
+        {
             "parameter": "boss_knock_start_voice",
             "time": 0.36813217401504517,
             "type": "PlaySE",
