@@ -374,6 +374,10 @@ public:
     void InitializeRoarFloatingDebris();
     void UpdateRoarFloatingDebris();
     void HideRoarFloatingDebris();
+    void EnsureRoarImpactDebris();
+    void SpawnRoarImpactDebris();
+    void UpdateRoarImpactDebris(float scaledDeltaTime);
+    void HideRoarImpactDebris();
     void SpawnRoarGroundBurst();
     void CleanupRoarBT(const char* status);
     void TickRoarLifecycle(float dt);
@@ -937,6 +941,7 @@ private:
     struct RoarFloatingDebris
     {
         std::shared_ptr<SkeletalMeshComponent> meshComponent;
+        bool active = false;
         DirectX::XMFLOAT3 normalizedDirection{};
         float normalizedRingDistance = 0.0f;
         float spawnThreshold = 1.0f;
@@ -945,7 +950,7 @@ private:
         DirectX::XMFLOAT3 baseRotation{};
         DirectX::XMFLOAT3 rotationAmount{};
     };
-    static constexpr size_t RoarFloatingDebrisCount = 25;
+    static constexpr size_t RoarFloatingDebrisCount = 15;
     std::array<RoarFloatingDebris, RoarFloatingDebrisCount> roarFloatingDebris{};
     bool roarFloatingDebrisEnabled = true;
     float roarFloatingDebrisInnerRatio = 0.30f;
@@ -954,6 +959,42 @@ private:
     float roarFloatingDebrisMaxHeight = 2.50f;
     float roarFloatingDebrisScaleMin = 0.75f;
     float roarFloatingDebrisScaleMax = 2.5f;
+    struct RoarImpactDebris
+    {
+        std::shared_ptr<SkeletalMeshComponent> meshComponent;
+        bool active = false;
+        bool isBlock = false;
+        DirectX::XMFLOAT3 position{};
+        DirectX::XMFLOAT3 velocity{};
+        DirectX::XMFLOAT3 rotation{};
+        DirectX::XMFLOAT3 angularVelocity{};
+        float lifetime = 0.0f;
+        float elapsedTime = 0.0f;
+        float scale = 1.0f;
+    };
+    static constexpr size_t RoarImpactDebrisPoolCount = 16;
+    std::array<RoarImpactDebris, RoarImpactDebrisPoolCount> roarImpactDebris{};
+    bool roarImpactDebrisEnabled = true;
+    float roarImpactDebrisSpawnHeight = 0.10f;
+    float roarImpactDebrisGravity = 9.8f;
+    float roarImpactDebrisAngleJitterDegrees = 8.0f;
+    float roarImpactDebrisRadiusJitter = 0.04f;
+    float roarImpactDebrisSmallHorizontalSpeedMin = 1.5f;
+    float roarImpactDebrisSmallHorizontalSpeedMax = 3.2f;
+    float roarImpactDebrisSmallVerticalSpeedMin = 2.6f;
+    float roarImpactDebrisSmallVerticalSpeedMax = 4.2f;
+    float roarImpactDebrisSmallLifetimeMin = 1.0f;
+    float roarImpactDebrisSmallLifetimeMax = 1.5f;
+    float roarImpactDebrisBlockHorizontalSpeedMin = 0.8f;
+    float roarImpactDebrisBlockHorizontalSpeedMax = 2.2f;
+    float roarImpactDebrisBlockVerticalSpeedMin = 2.0f;
+    float roarImpactDebrisBlockVerticalSpeedMax = 3.2f;
+    float roarImpactDebrisBlockLifetimeMin = 1.1f;
+    float roarImpactDebrisBlockLifetimeMax = 1.6f;
+    float roarImpactDebrisSmallScaleMin = 2.0f;
+    float roarImpactDebrisSmallScaleMax = 3.0f;
+    float roarImpactDebrisBlockScaleMin = 1.3f;
+    float roarImpactDebrisBlockScaleMax = 1.7f;
     bool roarGroundBurstEnabled = true;
     float roarGroundBurstInnerRingRatio = 0.38f;
     float roarGroundBurstOuterRingRatio = 0.75f;

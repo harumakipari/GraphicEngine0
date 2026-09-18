@@ -1252,8 +1252,8 @@ void EffectManager::RebuildCurveTexture()
 #if defined(_DEBUG)
             logOwner("AFTER alpha RegisterCurve");
             logOwner("BEFORE emissive RegisterCurve");
-#endif
             DebugLogCurveState("emissive before RegisterCurve", &effect, &emitter, &visual, visual.emissiveCurve);
+#endif
             RegisterCurve(visual.emissiveCurve);
 #if defined(_DEBUG)
             logOwner("AFTER emissive RegisterCurve");

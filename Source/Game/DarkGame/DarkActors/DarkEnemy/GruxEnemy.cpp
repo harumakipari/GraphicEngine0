@@ -405,6 +405,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     groundDustEffectComponent->Load("./Data/Effect/Files/GroundDustEffect1.json");
     roarGroundBurstEffectComponent = this->AddComponent<class ParticleComponent>("roarGroundBurstEffectComponent", parentName);
     roarGroundBurstEffectComponent->Load("./Data/Effect/Files/RoarGroundBurstEffect.json");
+    EnsureRoarImpactDebris();
     // •Ç‚É“–‚½‚Á‚½Žž‚Ì»šº
     wallImpactDustEffectComponent = this->AddComponent<class ParticleComponent>("wallImpactDustEffectComponent", parentName);
     wallImpactDustEffectComponent->Load("./Data/Effect/Files/WallImpactDustEffect1.json");
@@ -777,6 +778,7 @@ void GruxEnemy::StopBattleActions()
     HideDashTelegraphVisual();
     HideRoarTelegraph();
     HideRoarFloatingDebris();
+    HideRoarImpactDebris();
     if (IsRoarBTActive())
     {
         CleanupRoarBT("Interrupted");
@@ -1131,6 +1133,7 @@ void GruxEnemy::EndFinalHitReaction()
 
 void GruxEnemy::Update(float deltaTime)
 {
+    UpdateRoarImpactDebris(Time::DeltaTime());
     UpdatePhase2TextureBlendWorldYRange();
     ++animationDebugFrameCounter;
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
