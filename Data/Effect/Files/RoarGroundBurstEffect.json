@@ -61,8 +61,8 @@
             ],
             "emissivePower": 1.0,
             "emitCount": [
-                8,
-                8
+                4,
+                4
             ],
             "emitInterval": [
                 0.0,

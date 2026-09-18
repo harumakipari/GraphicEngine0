@@ -106,7 +106,8 @@ public:
     // ?q?b?g?G?t?F?N?g????????
     void SpawnHitEffect(DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
 
-    void SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const;
+    void SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal,
+        DirectX::XMFLOAT3 playerPos, bool hasHitPosition, bool hasHitNormal) const;
 
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
 
@@ -757,6 +758,7 @@ private:
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // Existing normal hit effect
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect
+    float rushHitEffectSurfaceOffset = 0.08f;
     std::shared_ptr<ParticleComponent> groundDustEffectComponent;
     std::shared_ptr<ParticleComponent> roarGroundBurstEffectComponent;
     std::shared_ptr<ParticleComponent> wallImpactDustEffectComponent;

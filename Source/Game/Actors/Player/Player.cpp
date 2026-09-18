@@ -885,7 +885,8 @@ void Player::Update(float deltaTime)
                     hitActors.emplace(enemy);
                     if (isRushHit)
                     {
-                        enemy->SpawnRushHitRing(hit.hitPoint, hit.normal, playerPos);
+                        enemy->SpawnRushHitRing(hit.hitPoint, hit.normal, playerPos,
+                            hit.hasPosition, hit.hasNormal);
                     }
                     Time::SetSlow(0.0f,
                         isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);

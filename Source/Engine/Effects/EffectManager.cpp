@@ -4,6 +4,7 @@
 #include "Components/Base/SceneComponent.h"
 #include "Engine/Utility/Win32Utils.h"
 #include "Graphics/Core/Graphics.h"
+#include "Graphics/Core/RenderState.h"
 #include "Engine/Utility/JsonFileHandler.h"
 #include "Engine/Utility/Dialog.h"
 #include "Engine/Utility/JsonUtils.h"
@@ -868,8 +869,16 @@ void EffectManager::Render(ID3D11DeviceContext* immediateContext)
     //パーティクルシステム描画
     for (auto& [effectFilePath, particleSystemList] : particleSystems)
     {
+        const bool isRushEffect =
+            effectFilePath == "./Data/Effect/Files/RushCoreEffect.json" ||
+            effectFilePath == "./Data/Effect/Files/RushHitRingEffect.json";
         for (auto& [texturePath, particleSystem] : particleSystemList)
         {
+            const DEPTH_STATE depthState =
+                debugRushParticleDepthTestDisabled && isRushEffect
+                ? DEPTH_STATE::ZT_OFF_ZW_OFF
+                : DEPTH_STATE::ZT_ON_ZW_OFF;
+            RenderState::BindDepthStencilState(immediateContext, depthState, 1);
             // 描画前設定
             RenderState::BindBlendState(immediateContext, particleSystem->blendState);
 

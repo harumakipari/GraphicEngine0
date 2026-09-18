@@ -67,6 +67,13 @@ void EffectEditor::DrawGUI()
 
         }
 
+        if (ImGui::CollapsingHeader("Particle Debug"))
+        {
+            ImGui::Checkbox("Rush Particle Depth Test Disabled",
+                &EffectManager::debugRushParticleDepthTestDisabled);
+            ImGui::TextDisabled("Only RushCoreEffect.json and RushHitRingEffect.json are affected.");
+        }
+
         // エフェクトデータリスト
         if (ImGui::CollapsingHeader("Effect Data List", ImGuiTreeNodeFlags_Leaf))
         {
@@ -254,7 +261,16 @@ void EffectEditor::DrawGUI()
                             emitterData.visualData.renderingMode = static_cast<EffectManager::RenderingMode>(renderingModeIndex);
                         }
 
-                        const char* blendStateItems[] = { "Opaque", "Transparency", "Additive", "Subtraction", "Multiply" };
+                        // Keep this order aligned one-to-one with BLEND_STATE.
+                        const char* blendStateItems[] =
+                        {
+                            "Opaque",
+                            "Alpha",
+                            "Additive",
+                            "Multiply",
+                            "Alpha (MRT)",
+                            "Opaque (MRT)",
+                        };
                         int blendStateIndex = static_cast<int>(emitterData.visualData.blendState);
                         if (ImGui::Combo("Blend State", &blendStateIndex, blendStateItems, IM_ARRAYSIZE(blendStateItems)))
                         {

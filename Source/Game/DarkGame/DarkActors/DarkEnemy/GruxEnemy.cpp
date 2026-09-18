@@ -2079,6 +2079,10 @@ void GruxEnemy::DrawImGuiDetails()
 
     ImGui::Checkbox("Force BehaviorTree Charge", &forceBehaviorTreeCharge);
 
+    ImGui::SeparatorText("Rush Hit Effect");
+    ImGui::DragFloat("Surface Offset", &rushHitEffectSurfaceOffset,
+        0.005f, 0.0f, 0.20f, "%.3f m");
+
     int attackIndex = static_cast<int>(debugFixedAttackType);
     const char* attackTypes[] =
     {
@@ -4060,22 +4064,45 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
 
 }
 
-void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos) const
+void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos,
+    DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos,
+    bool hasHitPosition, bool hasHitNormal) const
 {
-    DirectX::XMFLOAT3 enemyCenter = GetPosition();
-    constexpr float rushEffectHeightOffset = 1.3f;
-    enemyCenter.y += rushEffectHeightOffset;
-    playerPos.y += rushEffectHeightOffset;
+    const auto isFiniteVector = [](const DirectX::XMFLOAT3& value)
+    {
+        return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
+    };
+    const float normalLengthSq = hitNormal.x * hitNormal.x +
+        hitNormal.y * hitNormal.y + hitNormal.z * hitNormal.z;
+    const bool useSurfaceSpawn = hasHitPosition && hasHitNormal &&
+        isFiniteVector(hitPos) && isFiniteVector(hitNormal) && normalLengthSq > 0.000001f;
 
-    // 敵→プレイヤー方向
-    DirectX::XMFLOAT3 forward = MathHelper::Normalize(MathHelper::Subtract(playerPos, enemyCenter));
-    // エフェクト生成位置
-    float spawnOffset = 0.8f;
-    DirectX::XMFLOAT3 rushEffectPosition = MathHelper::Add(enemyCenter, MathHelper::Multiply(forward, spawnOffset));
+    DirectX::XMFLOAT3 rushEffectPosition{};
+    if (useSurfaceSpawn)
+    {
+        const float inverseNormalLength = 1.0f / std::sqrt(normalLengthSq);
+        hitNormal = MathHelper::Multiply(hitNormal, inverseNormalLength);
+        rushEffectPosition = MathHelper::Add(hitPos,
+            MathHelper::Multiply(hitNormal,
+                std::clamp(rushHitEffectSurfaceOffset, 0.0f, 0.20f)));
+    }
+    else
+    {
+        DirectX::XMFLOAT3 enemyCenter = GetPosition();
+        constexpr float rushEffectHeightOffset = 1.3f;
+        enemyCenter.y += rushEffectHeightOffset;
+        playerPos.y += rushEffectHeightOffset;
 
-    rushEffectPosition.x += MathHelper::RandomRange(-0.45f, 0.45f);
-    rushEffectPosition.y += MathHelper::RandomRange(-0.20f, 0.80f);
-    rushEffectPosition.z += MathHelper::RandomRange(-0.45f, 0.45f);
+        // Preserve the legacy visual placement and random spread only when
+        // the sword sweep did not provide a usable impact surface.
+        const DirectX::XMFLOAT3 forward = MathHelper::Normalize(
+            MathHelper::Subtract(playerPos, enemyCenter));
+        rushEffectPosition = MathHelper::Add(enemyCenter,
+            MathHelper::Multiply(forward, 0.8f));
+        rushEffectPosition.x += MathHelper::RandomRange(-0.45f, 0.45f);
+        rushEffectPosition.y += MathHelper::RandomRange(-0.20f, 0.80f);
+        rushEffectPosition.z += MathHelper::RandomRange(-0.45f, 0.45f);
+    }
 
 
     if (rushHitSparkEffectComponent)

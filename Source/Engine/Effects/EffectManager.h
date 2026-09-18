@@ -458,6 +458,9 @@ private:
     //エディタが開いているか
     static inline bool isOpen = false;
 
+    // Debug-only override. Restricted to the two Rush effect files in Render().
+    static inline bool debugRushParticleDepthTestDisabled = false;
+
     //パーティクルシステム管理用マップ定義
     using ParticleSystems = std::unordered_map<std::string/*texturePath*/, std::unique_ptr<CoreComputeParticleSystem>>;
 
