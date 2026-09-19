@@ -20,6 +20,7 @@
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Enemy/Enemy.h"
+#include "Game/Scenes/GameScene.h"
 #include "Game/DarkGame/Interactable.h"
 #include "Game/DarkGame/DarkActors/InteractableActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
@@ -3263,7 +3264,9 @@ void Player::UpdateDamageFlash()
 
 void Player::UpdateLowHpEffects()
 {
-    if (lowHpPresentationSuppressed)
+    const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+    const bool phase2Cinematic = gameScene && gameScene->IsBossPhaseTransitionActive();
+    if (lowHpPresentationSuppressed || phase2Cinematic)
     {
         if (lowHpActive || heartbeatTimer > 0.0f || lowHpPulseTimer > 0.0f ||
             lowHpPulseFlashAmount > 0.0f ||
