@@ -1045,7 +1045,7 @@ void GruxEnemy::ApplyRoarShockwave()
     SpawnRoarGroundBurst();
     SpawnGroundImpactEffect();
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-    if (!player || roarBT.hitPlayer || !player->CanReceiveKnockBack()) return;
+    if (!player || roarBT.hitPlayer) return;
     auto direction = MathHelper::Subtract(player->GetPosition(), GetPosition());
     if (std::abs(direction.y) > roarHeightTolerance) return;
     direction.y = 0.0f;
@@ -1056,7 +1056,12 @@ void GruxEnemy::ApplyRoarShockwave()
         direction = GetForward();
         direction.y = 0.0f;
     }
-    // Damage is deliberately separate from the radial query and knockback response.
+    if (!player->TryTakeDamage(
+        roarDamage, GetPosition(), Player::DamagePolicy::IgnoreDodgeIFrames))
+    {
+        return;
+    }
+
     roarBT.hitPlayer = player->StartKnockBack(direction);
 }
 
@@ -1602,12 +1607,14 @@ void GruxEnemy::DrawRoarBTDebug()
     defensiveBackMinAngle = std::clamp(defensiveBackMinAngle, 0.0f, 180.0f);
     ImGui::DragFloat("Roar Radius Phase1", &roarRadiusPhase1, 0.1f, 0.0f, 30.0f, "%.2f m");
     ImGui::DragFloat("Roar Radius Phase2", &roarRadiusPhase2, 0.1f, 0.0f, 30.0f, "%.2f m");
+    ImGui::DragInt("Roar Damage", &roarDamage, 1.0f, 0, 1000);
     ImGui::DragFloat(U8("咆哮 高低差許容"), &roarHeightTolerance, 0.1f, 0.0f, 30.0f, "%.2f m");
     const float previousCooldownDuration = roarCooldownDuration;
     ImGui::DragFloat(U8("咆哮クールタイム"), &roarCooldownDuration, 0.1f, 0.0f, 120.0f, "%.2f sec");
     defensiveTooCloseDistance = (std::max)(0.0f, defensiveTooCloseDistance);
     roarRadiusPhase1 = (std::max)(0.0f, roarRadiusPhase1);
     roarRadiusPhase2 = (std::max)(0.0f, roarRadiusPhase2);
+    roarDamage = (std::max)(0, roarDamage);
     roarHeightTolerance = (std::max)(0.0f, roarHeightTolerance);
     roarCooldownDuration = (std::max)(0.0f, roarCooldownDuration);
     if (roarCooldownRemaining > 0.0f && roarCooldownDuration != previousCooldownDuration)

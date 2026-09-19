@@ -474,7 +474,7 @@ private:
     DirectX::XMFLOAT4 bossDeathWalkStopFinishRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
     DirectX::XMFLOAT3 bossDeathApproachStartPosition{ 5.025f,-0.1f,11.723f };
     DirectX::XMFLOAT4 bossDeathApproachStartRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    DirectX::XMFLOAT3 bossDeathFinishPlayerPositionOffset{ 0.01f,0.0f,0.0f };
+    DirectX::XMFLOAT3 bossDeathFinishPlayerPositionOffset{ -0.9f,0.0f,0.0f };
     DirectX::XMFLOAT2 bossDeathFinishUIPositionOffset{ 7.0f,-134.0f };
     float bossDeathRecallPromptMinTime = 1.155f;
     float bossDeathRecallPromptMaxTime = 1.225f;

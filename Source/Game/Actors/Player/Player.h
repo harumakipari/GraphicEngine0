@@ -44,6 +44,13 @@ public:
         Interact,
     };
 
+    // Selects which Player invulnerability gates a damage source may ignore.
+    enum class DamagePolicy :uint8_t
+    {
+        Normal,
+        IgnoreDodgeIFrames,
+    };
+
     struct ActionRequest
     {
         ActionType type = ActionType::None;
@@ -235,7 +242,8 @@ public:
     void ConsumeActionRequest(ActionType expectedType);
 
     // 無敵判定を含め、成立した被弾だけを適用する
-    bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition);
+    bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition,
+        DamagePolicy policy = DamagePolicy::Normal);
 
     // Damageとは独立した、外部攻撃からの強制移動開始口。
     bool CanReceiveKnockBack() const;

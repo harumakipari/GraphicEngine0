@@ -3170,12 +3170,16 @@ void Player::RecordNormalDodgeDebug()
 }
 
 //“–‚½‚Á‚½Žž‚Ìˆ—
-bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition)
+bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition,
+    const DamagePolicy policy)
 {
     if (finalHitWaiting) return false;
-    if (invincibleWindow)
+    const std::string currentState = stateMachine_->GetStateName();
+    const bool ignoreDodgeIFrames =
+        policy == DamagePolicy::IgnoreDodgeIFrames && currentState == "Dodge";
+    if (invincibleWindow && !ignoreDodgeIFrames)
     {
-        if (stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge")
+        if (currentState == "Dodge")
             RecordNormalDodgeDebug();
         Logger::Log(Logger::LogCategory::Gameplay,
             "[PlayerDamage][Rejected] reason=invincibleWindow hp=" + std::to_string(hp));
@@ -3188,7 +3192,6 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
         return false;
     }
 
-    const std::string currentState = stateMachine_->GetStateName();
     if (currentState == "Damage" || currentState == "DeathPending" || currentState == "Death")
     {
         Logger::Log(Logger::LogCategory::Gameplay,

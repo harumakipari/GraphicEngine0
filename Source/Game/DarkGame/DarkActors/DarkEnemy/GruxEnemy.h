@@ -921,6 +921,7 @@ private:
     float defensiveTooCloseDistance = 4.5f;
     float roarRadiusPhase1 = 5.5f;
     float roarRadiusPhase2 = 7.0f;
+    int roarDamage = 10;
     float roarTelegraphOuterAlpha = 0.85f;
     DirectX::XMFLOAT3 roarTelegraphOuterTint{ 1.0f, 0.08f, 0.03f };
     DirectX::XMFLOAT3 roarTelegraphFillTintMin{ 1.0f, 0.08f, 0.03f };
@@ -936,8 +937,8 @@ private:
 
     float roarTelegraphProgress = 0.0f;
     float roarTelegraphVisualProgress = 0.0f;
-    float roarTelegraphOuterYOffset = 0.350f;
-    float roarTelegraphFillYOffset = 0.345f;
+    float roarTelegraphOuterYOffset = 0.250f;
+    float roarTelegraphFillYOffset = 0.245f;
     struct RoarFloatingDebris
     {
         std::shared_ptr<SkeletalMeshComponent> meshComponent;
@@ -981,20 +982,20 @@ private:
     float roarImpactDebrisRadiusJitter = 0.04f;
     float roarImpactDebrisSmallHorizontalSpeedMin = 1.5f;
     float roarImpactDebrisSmallHorizontalSpeedMax = 3.2f;
-    float roarImpactDebrisSmallVerticalSpeedMin = 2.6f;
-    float roarImpactDebrisSmallVerticalSpeedMax = 4.2f;
+    float roarImpactDebrisSmallVerticalSpeedMin = 4.2f;
+    float roarImpactDebrisSmallVerticalSpeedMax = 7.6f;
     float roarImpactDebrisSmallLifetimeMin = 1.0f;
     float roarImpactDebrisSmallLifetimeMax = 1.5f;
     float roarImpactDebrisBlockHorizontalSpeedMin = 0.8f;
-    float roarImpactDebrisBlockHorizontalSpeedMax = 2.2f;
-    float roarImpactDebrisBlockVerticalSpeedMin = 2.0f;
-    float roarImpactDebrisBlockVerticalSpeedMax = 3.2f;
+    float roarImpactDebrisBlockHorizontalSpeedMax = 3.5f;
+    float roarImpactDebrisBlockVerticalSpeedMin = 4.5f;
+    float roarImpactDebrisBlockVerticalSpeedMax = 7.8f;
     float roarImpactDebrisBlockLifetimeMin = 1.1f;
     float roarImpactDebrisBlockLifetimeMax = 1.6f;
-    float roarImpactDebrisSmallScaleMin = 2.0f;
-    float roarImpactDebrisSmallScaleMax = 3.0f;
-    float roarImpactDebrisBlockScaleMin = 1.3f;
-    float roarImpactDebrisBlockScaleMax = 1.7f;
+    float roarImpactDebrisSmallScaleMin = 2.5f;
+    float roarImpactDebrisSmallScaleMax = 3.5f;
+    float roarImpactDebrisBlockScaleMin = 1.8f;
+    float roarImpactDebrisBlockScaleMax = 2.2f;
     bool roarGroundBurstEnabled = true;
     float roarGroundBurstInnerRingRatio = 0.38f;
     float roarGroundBurstOuterRingRatio = 0.75f;
