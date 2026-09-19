@@ -50,6 +50,13 @@ public:
     void SetHpBarVisible(bool visible);
     void BeginHpBarFadeOut();
     void SetHpBarFadeAlpha(float alpha);
+    // Manual preview only. GameScene will own the cinematic trigger in a later phase.
+    void BeginPhase2HpBarPreview(int presentationMaxHp);
+    void ResetPhase2HpBarPreview();
+    void DrawPhase2HpBarPreviewGui();
+    void BeginPhase2HpBarPresentation(int presentationMaxHp);
+    void CompletePhase2HpBarPresentation();
+    void SetHpBarVisualProfileForBattlePhase(bool phase2);
 
     // Stops combat immediately while preserving HP and the current death animation.
     void StopBattleActions();
@@ -782,7 +789,42 @@ private:
     std::shared_ptr<StaticMeshComponent> dashTelegraphFanMeshComponent;
 
     std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent;
-    std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;   // HP?o?[
+    std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent;
+    std::shared_ptr<UIImageComponent> hpNameUiComponent;
+    std::shared_ptr<UIImageComponent> hpBackgroundUiComponent;
+    std::shared_ptr<UIImageComponent> hpFrameUiComponent;
+    std::shared_ptr<Sprite> hpPhase1BackgroundTexture;
+    std::shared_ptr<Sprite> hpPhase1FillTexture;
+    std::shared_ptr<Sprite> hpPhase1FrameTexture;
+    std::shared_ptr<Sprite> hpPhase2BackgroundTexture;
+    std::shared_ptr<Sprite> hpPhase2FillTexture;
+    std::shared_ptr<Sprite> hpPhase2FrameTexture;
+    enum class HpBarVisualProfile : uint8_t { Phase1, Phase2 };
+    enum class Phase2HpBarPreviewState : uint8_t
+    {
+        Hidden,
+        RevealingFrame,
+        WaitingForFill,
+        Filling,
+        Complete,
+    };
+    HpBarVisualProfile hpBarVisualProfile = HpBarVisualProfile::Phase1;
+    Phase2HpBarPreviewState phase2HpBarPreviewState = Phase2HpBarPreviewState::Hidden;
+    DirectX::XMFLOAT2 phase2HpBarPreviewPosition{ 650.0f, 115.0f };
+    DirectX::XMFLOAT2 phase2HpBarPreviewFrameSize{ 895.65f, 17.15f };
+    float phase2HpBarPreviewFrameRevealDuration = 1.50f;
+    float phase2HpBarPreviewFillDelay = 0.15f;
+    float phase2HpBarPreviewFillDuration = 1.50f;
+    float phase2HpBarPreviewElapsed = 0.0f;
+    float phase2HpBarPreviewFrameProgress = 0.0f;
+    float phase2HpBarPreviewFillProgress = 0.0f;
+    float phase2HpBarPreviewPresentationHp = 0.0f;
+    int phase2HpBarPreviewPresentationMaxHp = 1;
+    bool phase2HpBarPreviewRestoreVisible = false;
+    void ApplyHpBarVisualProfile(HpBarVisualProfile profile);
+    void UpdatePhase2HpBarPreview();
+    void UpdatePhase2HpBarPreviewLayout();
+    bool IsPhase2HpBarPreviewActive() const;
     std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;
     struct HpBarFadeEntry
     {

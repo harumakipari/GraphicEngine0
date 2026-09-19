@@ -3634,6 +3634,12 @@ void Player::HideAndResetLockOnGuideUI()
 void Player::UpdateLockOnGuideUI()
 {
     using namespace DirectX;
+    if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+        gameScene && gameScene->IsBossPhaseTransitionActive())
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
     if (!lockOnGuideArrowImageComponent || !lockOnGuideButtonImageComponent ||
         !IsBossBattle() || GetHp() <= 0 || IsInWinState())
     {

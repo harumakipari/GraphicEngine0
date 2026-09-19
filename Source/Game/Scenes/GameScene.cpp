@@ -308,6 +308,7 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     phase2TransitionElapsed = 0.0f;
     phase1BreakPending = false;
     phase2TransitionRequested = false;
+    phase2BossRoarHpBarStarted = false;
     phase1BreakWaitingForRush = false;
     phase2TransitionStep = Phase2TransitionStep::None;
     phase2StepElapsed = 0.0f;
@@ -335,6 +336,9 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     if (gruxEnemyActor)
     {
         gruxEnemyActor->SetPhase2CinematicAnimationOwnedExternally(false);
+        gruxEnemyActor->SetHpBarFadeAlpha(1.0f);
+        if (phase != BossPhase::TransitionToPhase2)
+            gruxEnemyActor->SetHpBarVisualProfileForBattlePhase(phase == BossPhase::Phase2);
         gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
         gruxEnemyActor->HideLockOnVisualsForPhaseTransition();
     }
@@ -358,6 +362,16 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
         continueCheckpointPhase = phase;
 }
 
+void GameScene::NotifyPhase2BossRoar()
+{
+    if (bossPhase != BossPhase::TransitionToPhase2 ||
+        phase2TransitionStep != Phase2TransitionStep::BossRecall ||
+        phase2BossRoarHpBarStarted || !gruxEnemyActor)
+        return;
+
+    phase2BossRoarHpBarStarted = true;
+    gruxEnemyActor->BeginPhase2HpBarPresentation(phase2MaxHp);
+}
 void GameScene::BeginPhase1BreakPending()
 {
     if (bossPhase != BossPhase::Phase1 || phase1BreakPending || !gruxEnemyActor)
@@ -380,6 +394,7 @@ void GameScene::UpdatePhase1BreakPending()
     if (phase1BreakWaitingForRush || !gruxEnemyActor || !gruxEnemyActor->IsDelayedHpSettled())
         return;
 
+    gruxEnemyActor->BeginHpBarFadeOut();
     BeginPhase2Transition();
 }
 
@@ -494,6 +509,8 @@ void GameScene::BeginPhase2Transition()
     Time::SetSlow(1.0f, 0.0f);
     player->StartEvent();
     player->StopBattleActions();
+    player->SetGameplayHudVisible(false);
+    SetBattleTimerVisible(false);
     player->NeutralizeForPhase2Cinematic();
     gruxEnemyActor->PauseBattleAIForPhaseTransition();
     gruxEnemyActor->HideLockOnVisualsForPhaseTransition();
@@ -518,6 +535,8 @@ void GameScene::BeginPhase2TpsReturnBlend()
         phase2TransitionStep = Phase2TransitionStep::None;
         phase2CurrentShot = "None";
         bossPhase = BossPhase::Phase2;
+        if (gruxEnemyActor)
+            gruxEnemyActor->CompletePhase2HpBarPresentation();
         ApplyBossPhaseHp(BossPhase::Phase2); // Single, UI-hookable Phase2 HP handoff point.
         CaptureContinueBossCheckpoint();
         if (player)
@@ -530,6 +549,11 @@ void GameScene::BeginPhase2TpsReturnBlend()
             gruxEnemyActor->ResetTimeScale();
             gruxEnemyActor->ResumeBattleAI();
         }
+        SetBattleTimerVisible(true);
+        UpdateBattleTimerUI();
+        SetBattleHudVisible(true);
+        if (player)
+            player->SetGameplayHudVisible(true);
         InputSystem::SetInputEnabled(true);
     };
 
@@ -584,6 +608,8 @@ void GameScene::UpdatePhase2Cinematic()
         phase2RecallFadeAlpha = duration <= 0.001f ? 1.0f :
             std::clamp(phase2StepElapsed / duration, 0.0f, 1.0f);
         SetBossDeathFadeAlpha(phase2RecallFadeAlpha);
+        if (gruxEnemyActor)
+            gruxEnemyActor->SetHpBarFadeAlpha(1.0f - phase2RecallFadeAlpha);
         if (phase2RecallFadeAlpha < 1.0f)
             break;
 
@@ -2050,6 +2076,8 @@ void GameScene::ResetBattleForContinue()
 
     SetBattleHudVisible(true);
     player->SetGameplayHudVisible(true);
+    SetBattleTimerVisible(true);
+    UpdateBattleTimerUI();
     // “ü—Í‚ðŽó‚¯•t‚¯‚é
     InputSystem::SetInputEnabled(true);
     battleFlowState = BattleFlowState::Playing;
@@ -4149,6 +4177,9 @@ void GameScene::DrawGuiPlusAlpha()
         phase2RecallActorPoseApplied ? "true" : "false");
     ImGui::Text(U8("TPS Return Blend Active: %s"),
         phase2TpsReturnBlendActive ? "true" : "false");
+    ImGui::SeparatorText("Phase2 Boss HP Preview");
+    if (gruxEnemyActor)
+        gruxEnemyActor->DrawPhase2HpBarPreviewGui();
     ImGui::SeparatorText("BGM Debug");
     ImGui::Text("Game BGM Fading: %s", gameBgmFading ? "true" : "false");
     ImGui::Text("Game BGM Fade Elapsed: %.3f", gameBgmFadeElapsed);

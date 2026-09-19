@@ -119,6 +119,8 @@ public:
     const char* GetBossPhaseDebugName() const;
     int GetBossCurrentHp() const;
     int GetBossMaxHp() const;
+    int GetPhase2MaxHpForPresentation() const { return phase2MaxHp; }
+    void NotifyPhase2BossRoar();
     bool IsBossPhaseTransitionActive() const { return bossPhase == BossPhase::TransitionToPhase2; }
     bool IsPhase1BreakPending() const { return phase1BreakPending; }
     bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
@@ -394,6 +396,7 @@ private:
     float phase2TransitionWaitDuration = 3.0f;  // phase2Ç…çsÇ≠transition
     bool phase1BreakPending = false;
     bool phase2TransitionRequested = false;
+    bool phase2BossRoarHpBarStarted = false;
     bool phase1BreakWaitingForRush = false;
     Phase2TransitionStep phase2TransitionStep = Phase2TransitionStep::None;
     std::array<Phase2CinematicShot, 2> phase2CinematicShots{};
