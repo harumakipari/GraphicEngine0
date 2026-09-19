@@ -424,6 +424,14 @@ bool GruxEnemy::PrepareRetreatTarget()
                 retreatRuntime.candidates.push_back(debug);
                 continue;
             }
+            if (evaluation.bossRoomPathBlocked)
+            {
+                debug.rejectReason = RetreatCandidateRejectReason::BossRoomProbe;
+                debug.pathBlocked = true;
+                ++retreatRuntime.bossRoomProbeRejectCount;
+                retreatRuntime.candidates.push_back(debug);
+                continue;
+            }
             const DirectX::XMFLOAT3 moveDirection{ moveX / moveDistance, 0.0f, moveZ / moveDistance };
             HitResult hit{};
             RetreatSweepDebugHit sweepDebugHit{};
@@ -786,6 +794,14 @@ bool GruxEnemy::PrepareRepositionTarget()
                 continue;
             }
 
+            if (evaluation.bossRoomPathBlocked)
+            {
+                debug.rejectReason = RepositionCandidateRejectReason::Sweep;
+                ++repositionRuntime.sweepRejectCount;
+                recordClampPostEvaluationReject();
+                repositionRuntime.candidates.push_back(debug);
+                continue;
+            }
             const DirectX::XMFLOAT3 moveDirection{ moveX / moveDistance, 0.0f, moveZ / moveDistance };
             HitResult hit{};
             RetreatSweepDebugHit sweepDebug{};
@@ -1836,6 +1852,7 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::Text(U8("Retreat 距離増加失敗数: %d"), retreatRuntime.distanceIncreaseRejectCount);
     ImGui::Text(U8("Retreat 最低移動距離失敗数: %d"), retreatRuntime.minimumMoveRejectCount);
     ImGui::Text(U8("Retreat CapsuleCast失敗数: %d"), retreatRuntime.capsuleCastRejectCount);
+    ImGui::Text("Retreat BossRoom Probe Rejects: %d", retreatRuntime.bossRoomProbeRejectCount);
     ImGui::Text(U8("Retreat その他失敗数: %d"), retreatRuntime.otherRejectCount);
     ImGui::SeparatorText(U8("Retreat CapsuleCast Debug"));
     ImGui::Text(U8("CapsuleCast Hit: %s"), tf(retreatRuntime.lastCapsuleCastHit));
@@ -2035,6 +2052,7 @@ void GruxEnemy::DrawRetreatDebugWorld() const
             : candidate.rejectReason == RetreatCandidateRejectReason::DistanceIncrease ? DirectX::XMFLOAT4{ 1.0f, 0.85f, 0.15f, 1.0f }
             : candidate.rejectReason == RetreatCandidateRejectReason::MinimumMoveDistance ? DirectX::XMFLOAT4{ 0.2f, 0.7f, 1.0f, 1.0f }
             : candidate.rejectReason == RetreatCandidateRejectReason::CapsuleCast ? DirectX::XMFLOAT4{ 1.0f, 0.15f, 0.15f, 1.0f }
+            : candidate.rejectReason == RetreatCandidateRejectReason::BossRoomProbe ? DirectX::XMFLOAT4{ 0.95f, 0.35f, 1.0f, 1.0f }
             : DirectX::XMFLOAT4{ 0.6f, 0.6f, 0.6f, 1.0f };
         DebugRender::DrawSphere(point, candidate.accepted ? 0.28f : 0.14f, color, 0.0f, true);
         DebugRender::DrawLine(start, point, color, 0.0f, true);

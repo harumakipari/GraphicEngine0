@@ -14,6 +14,7 @@
 #include "Game/Actors/Player/Player.h"
 #include "Game/Scenes/GameScene.h"
 #include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
+#include "Game/DarkGame/DarkActors/DarkStage.h"
 #include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
 #include "Physics/CollisionFunction.h"
 
@@ -5047,6 +5048,27 @@ const char* GruxEnemy::GetRepositionFailureReason() const
         ? "BoundsBlocked" : "NoSafeDirection";
 }
 
+bool GruxEnemy::ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPosition,
+    const DirectX::XMFLOAT3& desiredTarget, DirectX::XMFLOAT3& outResolvedTarget,
+    bool& outPathBlocked) const
+{
+    outResolvedTarget = desiredTarget;
+    outPathBlocked = false;
+    const auto scene = GetOwnerScene();
+    const auto stage = scene ? scene->GetActorManager()->GetActorOfType<DarkStage>() : nullptr;
+    if (!stage || !stage->IsBossRoomWallCollisionEnabled() || !characterMovementComponent)
+        return false;
+
+    const float probeRadius = characterMovementComponent->GetActiveHorizontalWallProbeRadius();
+    const float probeOriginY = startPosition.y + (std::max)(1.0f, probeRadius + 0.05f);
+    DarkStage::BossRoomHorizontalMoveResult result;
+    if (!stage->ResolveBossRoomHorizontalMove(startPosition, desiredTarget,
+        probeOriginY, probeRadius, result) || !result.valid)
+        return false;
+    outResolvedTarget = result.resolvedTarget;
+    outPathBlocked = result.pathBlocked;
+    return true;
+}
 void GruxEnemy::EvaluateClampedPositioningTarget(
     const DirectX::XMFLOAT3& startPosition,
     const DirectX::XMFLOAT3& desiredTarget,
@@ -5056,15 +5078,24 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
     outEvaluation = {};
     outEvaluation.desiredTarget = desiredTarget;
     outEvaluation.clampedTarget = desiredTarget;
-    constexpr float maximumMargin =
-        (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
-            (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
-    const float requestedMargin = boundaryMarginOverride >= 0.0f ? boundaryMarginOverride : bossRoomSafetyMargin;
-    const float margin = std::clamp(requestedMargin, 0.0f, maximumMargin);
-    outEvaluation.clampedTarget.x = std::clamp(
-        outEvaluation.clampedTarget.x, bossRoomMinX + margin, bossRoomMaxX - margin);
-    outEvaluation.clampedTarget.z = std::clamp(
-        outEvaluation.clampedTarget.z, bossRoomMinZ + margin, bossRoomMaxZ - margin);
+    DirectX::XMFLOAT3 bossRoomTarget{};
+    if (ResolveBossRoomPositioningMove(startPosition, desiredTarget, bossRoomTarget,
+        outEvaluation.bossRoomPathBlocked))
+    {
+        outEvaluation.clampedTarget = bossRoomTarget;
+    }
+    else
+    {
+        constexpr float maximumMargin =
+            (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
+                (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
+        const float requestedMargin = boundaryMarginOverride >= 0.0f ? boundaryMarginOverride : bossRoomSafetyMargin;
+        const float margin = std::clamp(requestedMargin, 0.0f, maximumMargin);
+        outEvaluation.clampedTarget.x = std::clamp(
+            outEvaluation.clampedTarget.x, bossRoomMinX + margin, bossRoomMaxX - margin);
+        outEvaluation.clampedTarget.z = std::clamp(
+            outEvaluation.clampedTarget.z, bossRoomMinZ + margin, bossRoomMaxZ - margin);
+    }
     outEvaluation.clampedTarget.y = startPosition.y;
 
     const float clampX = outEvaluation.clampedTarget.x - desiredTarget.x;

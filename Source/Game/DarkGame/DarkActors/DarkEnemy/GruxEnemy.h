@@ -429,6 +429,9 @@ public:
     bool IsInitialRepositionFallbackIdlePending() const { return initialRepositionFallbackIdlePending; }
     void BeginInitialRepositionFallback();
     void CompleteInitialRepositionFallbackIdle();
+    bool ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPosition,
+        const DirectX::XMFLOAT3& desiredTarget, DirectX::XMFLOAT3& outResolvedTarget,
+        bool& outPathBlocked) const;
     bool PrepareRepositionTarget(); PositioningMoveResult UpdateRepositionMovement(float deltaTime);
     void FinishRepositionMovement(bool arrived); void CompleteRepositionArrivalWait();
     float GetRepositionArrivalWaitDuration() const { return repositionArrivalWaitDuration; }
@@ -651,6 +654,7 @@ private:
         bool wasClamped = false;
         float clampDistance = 0.0f;
         bool sufficientlyMovable = false;
+        bool bossRoomPathBlocked = false;
     };
     void EvaluateRepositionTargets(const BossTargetContext& context);
     void EvaluateClampedPositioningTarget(const DirectX::XMFLOAT3& startPosition,
@@ -1064,7 +1068,7 @@ private:
     float retreatMoveSpeed = 6.0f;
     float retreatRetryCooldownDuration = 0.5f;
     float retreatRetryCooldownRemaining = 0.0f;
-    enum class RetreatCandidateRejectReason { None, Clamp, DistanceIncrease, MinimumMoveDistance, CapsuleCast, Other };
+    enum class RetreatCandidateRejectReason { None, Clamp, DistanceIncrease, MinimumMoveDistance, CapsuleCast, BossRoomProbe, Other };
     struct RetreatCandidateDebug { DirectX::XMFLOAT3 position{}; RetreatCandidateRejectReason rejectReason = RetreatCandidateRejectReason::None; bool pathBlocked = false; bool accepted = false; };
     struct RetreatRuntime
     {
@@ -1078,6 +1082,7 @@ private:
         int distanceIncreaseRejectCount = 0;
         int minimumMoveRejectCount = 0;
         int capsuleCastRejectCount = 0;
+        int bossRoomProbeRejectCount = 0;
         int otherRejectCount = 0;
         bool lastCapsuleCastHit = false;
         bool lastCapsuleCastWorldStatic = false;

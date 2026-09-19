@@ -871,6 +871,15 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                     moved.x += dx / remaining * step;
                     moved.z += dz / remaining * step;
                 }
+                DirectX::XMFLOAT3 bossRoomResolvedMove{};
+                bool bossRoomPathBlocked = false;
+                if (ResolveBossRoomPositioningMove(beforeMove, moved, bossRoomResolvedMove,
+                    bossRoomPathBlocked))
+                {
+                    moved = bossRoomResolvedMove;
+                    if (bossRoomPathBlocked)
+                        chargeBT.tripleChargeRepositionActive = false;
+                }
                 SetPosition(moved);
                 chargeBT.tripleChargeRepositionCurrentPosition = moved;
                 const float mdx = moved.x - chargeBT.tripleChargeRepositionStartPosition.x;

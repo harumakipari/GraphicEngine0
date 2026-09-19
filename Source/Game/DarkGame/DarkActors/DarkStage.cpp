@@ -359,6 +359,113 @@ void DarkStage::UpdateBossRoomWallProbeSettings()
         bossRoomGruxWallProbeRadiusScale, bossRoomGruxWallVisualClearance, activeBossRoomGruxWallProbeRadius);
 }
 
+bool DarkStage::ResolveBossRoomHorizontalMove(const DirectX::XMFLOAT3& startPosition,
+    const DirectX::XMFLOAT3& desiredTarget, float probeOriginY,
+    float probeRadius, BossRoomHorizontalMoveResult& outResult) const
+{
+    outResult = {};
+    if (!bossRoomWallCollisionEnabled || bossRoomWallCollisionComponents.size() != 4 ||
+        bossRoomWallCollisionHalfExtents.size() != bossRoomWallCollisionComponents.size())
+        return false;
+
+    struct WallPlane { DirectX::XMFLOAT3 point{}; DirectX::XMFLOAT3 inwardNormal{}; };
+    std::array<DirectX::XMFLOAT3, 4> centers{};
+    DirectX::XMFLOAT3 interiorReference{};
+    for (size_t index = 0; index < bossRoomWallCollisionComponents.size(); ++index)
+    {
+        const auto& wall = bossRoomWallCollisionComponents[index];
+        if (!wall) return false;
+        centers[index] = wall->GetComponentWorldTransform().GetLocation();
+        interiorReference.x += centers[index].x;
+        interiorReference.y += centers[index].y;
+        interiorReference.z += centers[index].z;
+    }
+    const float count = static_cast<float>(centers.size());
+    interiorReference.x /= count;
+    interiorReference.y /= count;
+    interiorReference.z /= count;
+
+    std::array<WallPlane, 4> planes{};
+    for (size_t index = 0; index < bossRoomWallCollisionComponents.size(); ++index)
+    {
+        const auto& transform = bossRoomWallCollisionComponents[index]->GetComponentWorldTransform();
+        const auto& extent = bossRoomWallCollisionHalfExtents[index];
+        const bool useLocalX = extent.x <= extent.z;
+        const float thickness = useLocalX ? extent.x : extent.z;
+        const DirectX::XMVECTOR localAxis = useLocalX
+            ? DirectX::XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f)
+            : DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+        const DirectX::XMFLOAT4 rotationValue = transform.GetRotation();
+        const DirectX::XMVECTOR rotation = DirectX::XMLoadFloat4(&rotationValue);
+        DirectX::XMFLOAT3 normal{};
+        DirectX::XMStoreFloat3(&normal, DirectX::XMVector3Rotate(localAxis, rotation));
+        normal.y = 0.0f;
+        const float normalLength = std::sqrt(normal.x * normal.x + normal.z * normal.z);
+        if (normalLength <= 0.0001f || thickness <= 0.0f) return false;
+        normal.x /= normalLength;
+        normal.z /= normalLength;
+        const auto center = centers[index];
+        if ((interiorReference.x - center.x) * normal.x +
+            (interiorReference.z - center.z) * normal.z < 0.0f)
+        {
+            normal.x = -normal.x;
+            normal.z = -normal.z;
+        }
+        planes[index].inwardNormal = normal;
+        planes[index].point = { center.x + normal.x * thickness, center.y,
+            center.z + normal.z * thickness };
+    }
+
+    const float clearance = (std::max)(0.01f, probeRadius);
+    DirectX::XMFLOAT3 resolved = desiredTarget;
+    for (int pass = 0; pass < 8; ++pass)
+    {
+        bool adjusted = false;
+        for (const auto& plane : planes)
+        {
+            const float signedDistance = (resolved.x - plane.point.x) * plane.inwardNormal.x +
+                (resolved.z - plane.point.z) * plane.inwardNormal.z;
+            if (signedDistance < clearance)
+            {
+                const float correction = clearance - signedDistance;
+                resolved.x += plane.inwardNormal.x * correction;
+                resolved.z += plane.inwardNormal.z * correction;
+                adjusted = true;
+            }
+        }
+        if (!adjusted) break;
+    }
+    for (const auto& plane : planes)
+    {
+        const float signedDistance = (resolved.x - plane.point.x) * plane.inwardNormal.x +
+            (resolved.z - plane.point.z) * plane.inwardNormal.z;
+        if (signedDistance < clearance - 0.001f) return false;
+    }
+
+    const float dx = resolved.x - startPosition.x;
+    const float dz = resolved.z - startPosition.z;
+    const float distance = std::sqrt(dx * dx + dz * dz);
+    if (distance > 0.0001f)
+    {
+        const DirectX::XMFLOAT3 direction{ dx / distance, 0.0f, dz / distance };
+        HitResult hit{};
+        const uint32_t mask = CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast);
+        if (Physics::Instance().SphereCast({ startPosition.x, probeOriginY, startPosition.z },
+            direction, distance, clearance, hit, mask) && !hit.initialOverlap)
+        {
+            const float allowed = (std::max)(0.0f, hit.distance - 0.01f);
+            resolved.x = startPosition.x + direction.x * allowed;
+            resolved.z = startPosition.z + direction.z * allowed;
+            outResult.pathBlocked = true;
+        }
+    }
+    outResult.valid = true;
+    outResult.targetClamped = std::sqrt(
+        (resolved.x - desiredTarget.x) * (resolved.x - desiredTarget.x) +
+        (resolved.z - desiredTarget.z) * (resolved.z - desiredTarget.z)) > 0.0001f;
+    outResult.resolvedTarget = resolved;
+    return true;
+}
 void DarkStage::DrawBossRoomWallCollisionDebug() const
 {
     if (!showBossRoomWallCollisionDebug)

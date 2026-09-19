@@ -33,6 +33,18 @@ public:
 
     void SetStageArea(StageArea area);
     StageArea GetStageArea() const { return currentStageArea; }
+    bool IsBossRoomWallCollisionEnabled() const { return bossRoomWallCollisionEnabled; }
+
+    struct BossRoomHorizontalMoveResult
+    {
+        bool valid = false;
+        bool targetClamped = false;
+        bool pathBlocked = false;
+        DirectX::XMFLOAT3 resolvedTarget{};
+    };
+    bool ResolveBossRoomHorizontalMove(const DirectX::XMFLOAT3& startPosition,
+        const DirectX::XMFLOAT3& desiredTarget, float probeOriginY,
+        float probeRadius, BossRoomHorizontalMoveResult& outResult) const;
     
 private:
     void ApplyStageVisibility();
