@@ -601,6 +601,7 @@ private:
 
                 // 名前を編集できる
                 char nameBuf[64];
+                if (bookmarks.empty()) return;
                 strncpy_s(nameBuf, bookmarks[i].name.c_str(), sizeof(nameBuf));
                 if (ImGui::InputText("Name", nameBuf, sizeof(nameBuf)))
                 {
@@ -988,7 +989,7 @@ public:
     }
 
     // 現在のカメラ姿勢から仮想targetを計算する
-    DirectX::XMFLOAT3 GetVirtualTarget(float distance = 5.0f) ;
+    DirectX::XMFLOAT3 GetVirtualTarget(float distance = 5.0f);
 
 private:
     void ConvertRelativeKeysToWorld();

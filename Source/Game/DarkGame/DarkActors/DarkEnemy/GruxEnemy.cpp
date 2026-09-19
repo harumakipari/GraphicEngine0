@@ -661,6 +661,10 @@ void GruxEnemy::ResumeBattleAI()
 
 void GruxEnemy::AbortBehaviorTreeForDeath()
 {
+    // Death is terminal for the current battle. Resetting action runtime alone
+    // is insufficient because the normal update path would infer a new node on
+    // the next frame.
+    battleAIActive = false;
     ResetBehaviorTreeRuntime();
 }
 
@@ -1116,6 +1120,7 @@ void GruxEnemy::BeginFinalHitReaction(const std::string& animationName)
     finalHitReactionActive = true;
     finalHitReactionHeld = false;
     StopBattleActions();
+    AbortBehaviorTreeForDeath();
     ResetTimeScale();
     if (const auto controller = GetBodyAnimationController())
     {
@@ -1160,8 +1165,8 @@ void GruxEnemy::Update(float deltaTime)
         !(gameScene && gameScene->IsPhase1BreakPending()))
     {
         isDeathPerform = true;
-        AbortBehaviorTreeForDeath();
         StopBattleActions();
+        AbortBehaviorTreeForDeath();
         if (stateMachine_)
             stateMachine_->ChangeState("EnemyDeathState");
     }
