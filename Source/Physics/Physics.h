@@ -15,11 +15,12 @@ class CollisionComponent;
 /// ヒット結果
 struct HitResult
 {
-    DirectX::XMFLOAT3	position = {};
-    DirectX::XMFLOAT3	normal = {};
+    DirectX::XMFLOAT3 position = {};
+    DirectX::XMFLOAT3 normal = {};
     float distance = 0.0f;
+    bool initialOverlap = false;
+    uint32_t layerMask = 0;
 };
-
 /// Actor除法付きヒット結果
 struct HitResultWithActor
 {

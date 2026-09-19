@@ -38,7 +38,9 @@ private:
     void ApplyStageVisibility();
     void ApplyStageLightEnable();
     void UpdateAutomaticStageState();
-    bool IsStageAreaVisible(StageArea area) const;
+    void SetBossRoomWallCollisionEnabled(bool enabled);
+    void UpdateBossRoomWallProbeSettings();
+    void DrawBossRoomWallCollisionDebug() const;    bool IsStageAreaVisible(StageArea area) const;
     void RegisterStageLight(StageArea area, const std::shared_ptr<PointLightComponent>& light);
     void RegisterActorStageLights(StageArea area, const std::shared_ptr<Actor>& actor);
 
@@ -46,6 +48,9 @@ private:
     std::shared_ptr<StaticMeshComponent> mainRoomMeshComponent;
     std::shared_ptr<StaticMeshComponent> transitionAreaMeshComponent;
     std::shared_ptr<StaticMeshComponent> bossRoomMeshComponent;
+    std::shared_ptr<StaticMeshComponent> bossRoomCollisionModelComponent;
+    std::vector<std::shared_ptr<BoxComponent>> bossRoomWallCollisionComponents;
+    std::vector<DirectX::XMFLOAT3> bossRoomWallCollisionHalfExtents;
     StageArea currentStageArea = StageArea::MainRoom;
     std::array<std::vector<std::weak_ptr<PointLightComponent>>, 3> stageLightsByArea;
     bool isMoviePlaying = false;
@@ -53,6 +58,14 @@ private:
     bool automaticStageStateInitialized = false;
 
     // ボス部屋のライト
+    bool bossRoomWallCollisionEnabled = false;
+    bool showBossRoomWallCollisionDebug = false;
+    float bossRoomPlayerWallProbeRadiusScale = 1.0f;
+    float bossRoomPlayerWallVisualClearance = 0.10f;
+    float bossRoomGruxWallProbeRadiusScale = 0.5f;
+    float bossRoomGruxWallVisualClearance = 0.15f;
+    float activeBossRoomPlayerWallProbeRadius = 0.4f;
+    float activeBossRoomGruxWallProbeRadius = 0.4f;
     std::vector<PointLightComponent*> bossRoomLightsLeft;
     bool bossRoomSequencePlaying = false;
     float bossRoomSequenceTime = 0.0f;

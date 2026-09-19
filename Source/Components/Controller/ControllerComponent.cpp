@@ -185,39 +185,106 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
     }
 
     // 壁とのレイキャスト
-    DirectX::XMFLOAT3 horizontalMove =
-    {
-        nextPos.x - pos.x,
-        0,
-        nextPos.z - pos.z
-    };
-
-    float dist = sqrt(horizontalMove.x * horizontalMove.x + horizontalMove.z * horizontalMove.z);
+    DirectX::XMFLOAT3 horizontalMove = { nextPos.x - pos.x, 0.0f, nextPos.z - pos.z };
+    lastRequestedHorizontalMoveForDebug_ = horizontalMove;
+    lastResolvedHorizontalMoveForDebug_ = {};
     lastWallRayCastHitForDebug_ = false;
-
+    lastStageWallRayCastHitForDebug_ = false;
+    lastBossRoomWallSphereCastHitForDebug_ = false;
+    lastWallProbeUsedSphereCastForDebug_ = false;
+    lastWallProbeInitialOverlapForDebug_ = false;
+    lastWallProbeHitLayerForDebug_ = 0;
+    lastWallProbeOriginForDebug_ = {};
+    lastWallProbeDirectionForDebug_ = {};
+    lastWallProbeDistanceForDebug_ = 0.0f;
+    HitResult bossRoomProbeHitForCharge{};
+    bool bossRoomProbeInwardContactForCharge = false;
+    if (bossRoomProbeChargeWallHitArmed_)
+        bossRoomProbeChargeWallHitEvent_ = {};
+    const float dist = sqrtf(horizontalMove.x * horizontalMove.x + horizontalMove.z * horizontalMove.z);
     if (dist > 0.001f)
     {
-        horizontalMove.x /= dist;
-        horizontalMove.z /= dist;
-
-        HitResult wallHit;
-        uint32_t mask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) | CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast)
-            | CollisionHelper::ToBit(CollisionLayer::WorldProps);
-
-        if (Physics::Instance().RayCast(
-            { pos.x, pos.y + 1.0f, pos.z },
-            horizontalMove,
-            dist + radius_,
-            wallHit,
-            mask))
+        const DirectX::XMFLOAT3 moveDirection = { horizontalMove.x / dist, 0.0f, horizontalMove.z / dist };
+        const uint32_t stageMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) | CollisionHelper::ToBit(CollisionLayer::WorldProps);
+        const uint32_t bossMask = CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast);
+        const uint32_t legacyMask = bossRoomWallProbeEnabled_ ? stageMask : stageMask | bossMask;
+        HitResult stageHit;
+        if (Physics::Instance().RayCast({ pos.x, pos.y + 1.0f, pos.z }, moveDirection, dist + radius_, stageHit, legacyMask))
         {
             lastWallRayCastHitForDebug_ = true;
-            lastWallCollisionPositionForDebug_ = wallHit.position;
+            lastStageWallRayCastHitForDebug_ = true;
+            lastWallCollisionPositionForDebug_ = stageHit.position;
             nextPos.x = pos.x;
             nextPos.z = pos.z;
         }
+        else if (bossRoomWallProbeEnabled_)
+        {
+            const float probeRadius = GetActiveHorizontalWallProbeRadius();
+            const DirectX::XMFLOAT3 probeOrigin = { pos.x, pos.y + (std::max)(1.0f, probeRadius + 0.05f), pos.z };
+            HitResult wallHit;
+            lastWallProbeUsedSphereCastForDebug_ = true;
+            lastWallProbeOriginForDebug_ = probeOrigin;
+            lastWallProbeDirectionForDebug_ = moveDirection;
+            lastWallProbeDistanceForDebug_ = dist;
+            if (Physics::Instance().SphereCast(probeOrigin, moveDirection, dist, probeRadius, wallHit, bossMask))
+            {
+                lastWallRayCastHitForDebug_ = true;
+                lastBossRoomWallSphereCastHitForDebug_ = true;
+                lastWallProbeInitialOverlapForDebug_ = wallHit.initialOverlap;
+                lastWallProbeHitLayerForDebug_ = wallHit.layerMask;
+                lastWallCollisionPositionForDebug_ = wallHit.position;
+                // Initial-overlap normals are intentionally not used to constrain motion.
+                if (!wallHit.initialOverlap)
+                {
+                    const float intoWall = horizontalMove.x * wallHit.normal.x + horizontalMove.z * wallHit.normal.z;
+                    if (intoWall < -0.0001f)
+                    {
+                        bossRoomProbeInwardContactForCharge = true;
+                        bossRoomProbeHitForCharge = wallHit;
+                        DirectX::XMFLOAT3 slide = { horizontalMove.x - wallHit.normal.x * intoWall, 0.0f, horizontalMove.z - wallHit.normal.z * intoWall };
+                        const float slideDistance = sqrtf(slide.x * slide.x + slide.z * slide.z);
+                        if (slideDistance <= 0.001f)
+                        {
+                            nextPos.x = pos.x;
+                            nextPos.z = pos.z;
+                        }
+                        else
+                        {
+                            slide.x /= slideDistance;
+                            slide.z /= slideDistance;
+                            HitResult slideHit;
+                            float allowed = slideDistance;
+                            if (Physics::Instance().SphereCast(probeOrigin, slide, slideDistance, probeRadius, slideHit, bossMask) && !slideHit.initialOverlap)
+                                allowed = (std::max)(0.0f, slideHit.distance - 0.01f);
+                            nextPos.x = pos.x + slide.x * allowed;
+                            nextPos.z = pos.z + slide.z * allowed;
+                        }
+                    }
+                }
+            }
+        }
     }
-
+    lastResolvedHorizontalMoveForDebug_ = { nextPos.x - pos.x, 0.0f, nextPos.z - pos.z };
+    if (bossRoomProbeChargeWallHitArmed_ && bossRoomProbeInwardContactForCharge &&
+        !bossRoomProbeHitForCharge.initialOverlap && dist > 0.001f)
+    {
+        const DirectX::XMFLOAT3 moveDirection = { horizontalMove.x / dist, 0.0f, horizontalMove.z / dist };
+        const float resolvedForward =
+            lastResolvedHorizontalMoveForDebug_.x * moveDirection.x +
+            lastResolvedHorizontalMoveForDebug_.z * moveDirection.z;
+        const float forwardMoveLost = (std::max)(0.0f, dist - resolvedForward);
+        if (forwardMoveLost > 0.01f)
+        {
+            bossRoomProbeChargeWallHitEvent_.pending = true;
+            bossRoomProbeChargeWallHitEvent_.hitPosition = bossRoomProbeHitForCharge.position;
+            bossRoomProbeChargeWallHitEvent_.hitNormal = bossRoomProbeHitForCharge.normal;
+            bossRoomProbeChargeWallHitEvent_.hitLayer = bossRoomProbeHitForCharge.layerMask;
+            bossRoomProbeChargeWallHitEvent_.initialOverlap = false;
+            bossRoomProbeChargeWallHitEvent_.requestedMove = horizontalMove;
+            bossRoomProbeChargeWallHitEvent_.resolvedMove = lastResolvedHorizontalMoveForDebug_;
+            bossRoomProbeChargeWallHitEvent_.forwardMoveLost = forwardMoveLost;
+        }
+    }
     if (deltaTime > FLT_EPSILON)
     {
         const float actualDeltaX = nextPos.x - pos.x;

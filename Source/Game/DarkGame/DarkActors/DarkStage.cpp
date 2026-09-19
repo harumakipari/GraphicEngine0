@@ -10,8 +10,11 @@
 #include "DoorActor.h"
 #include "Components/Effect/ParticleComponent.h"
 #include "Game/Actors/Player/Player.h"
+#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Engine/Camera/CameraManager.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Debug/DebugRender.h"
+#include "Components/Controller/ControllerComponent.h"
 
 void DarkStage::Initialize(const Transform& transform)
 {
@@ -71,6 +74,49 @@ void DarkStage::Initialize(const Transform& transform)
     }
 #endif // 0
     {
+        PROFILE_SCOPE("Create BossRoomWallCollision");
+        bossRoomCollisionModelComponent = this->AddComponent<StaticMeshComponent>("bossRoomCollisionModel", parentName);
+        bossRoomCollisionModelComponent->SetModel("./Data/Models/DarkStage_Collision/BossRoomCollision.glb", true, false);
+        bossRoomCollisionModelComponent->SetIsCastShadow(false);
+        bossRoomCollisionModelComponent->SetIsVisible(false);
+
+        const auto isBossRoomWallNode = [](const std::string& name)
+        {
+            return name == "COL_Wall" || name == "COL_Wall.018" ||
+                name == "COL_Wall.019" || name == "COL_Wall.021";
+        };
+        for (const auto& node : bossRoomCollisionModelComponent->model->GetNodes())
+        {
+            if (!isBossRoomWallNode(node.name))
+                continue;
+
+            DirectX::XMVECTOR scale, rotation, translation;
+            if (!DirectX::XMMatrixDecompose(&scale, &rotation, &translation,
+                DirectX::XMLoadFloat4x4(&node.globalTransform)))
+                continue;
+
+            DirectX::XMFLOAT3 halfExtent;
+            DirectX::XMFLOAT4 worldRotation;
+            DirectX::XMFLOAT3 worldPosition;
+            DirectX::XMStoreFloat3(&halfExtent, scale);
+            DirectX::XMStoreFloat4(&worldRotation, rotation);
+            DirectX::XMStoreFloat3(&worldPosition, translation);
+
+            auto wall = AddComponent<BoxComponent>("BossRoomCollision_" + node.name, parentName);
+            wall->SetHalfBoxExtent(halfExtent);
+            wall->SetRelativeLocationDirect(MathHelper::ConvertRHtoLh(worldPosition));
+            wall->SetRelativeRotationDirect(worldRotation);
+            wall->SetStatic(true);
+            wall->SetLayer(CollisionLayer::WorldPropsNoRaycast);
+            wall->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
+            wall->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Block);
+            wall->Initialize();
+            wall->DisableCollision();
+            bossRoomWallCollisionComponents.push_back(wall);
+            bossRoomWallCollisionHalfExtents.push_back(halfExtent);
+        }
+    }
+    {
         PROFILE_SCOPE("Create FloorCollision");
         std::shared_ptr<StaticMeshComponent> floorCollisionModel = this->AddComponent<StaticMeshComponent>("floorCollisionModel", parentName);
         floorCollisionModel->SetModel("./Data/Models/DarkStage_Collision/DarkStage_CollisionFloor.glb", true, true);
@@ -98,6 +144,8 @@ void DarkStage::Initialize(const Transform& transform)
 void DarkStage::Update(float deltaTime)
 {
     UpdateAutomaticStageState();
+    UpdateBossRoomWallProbeSettings();
+    DrawBossRoomWallCollisionDebug();
 
     if (!bossRoomSequencePlaying)
         return;
@@ -140,7 +188,35 @@ void DarkStage::DrawImGuiDetails()
     ImGui::Text("MainRoom: %s", mainRoomMeshComponent && mainRoomMeshComponent->IsVisible() ? "Visible" : "Hidden");
     ImGui::Text("TransitionArea: %s", transitionAreaMeshComponent && transitionAreaMeshComponent->IsVisible() ? "Visible" : "Hidden");
     ImGui::Text("BossRoom: %s", bossRoomMeshComponent && bossRoomMeshComponent->IsVisible() ? "Visible" : "Hidden");
-    const auto liveLightCount = [this](StageArea area)
+    ImGui::SeparatorText("BossRoom Wall Collision");
+    ImGui::Checkbox("Show BossRoom Wall Collision Debug", &showBossRoomWallCollisionDebug);
+    ImGui::Text("BossRoom Wall Collision: %s", bossRoomWallCollisionEnabled ? "Enabled" : "Disabled");
+    ImGui::Text("BossRoom Wall Collider Count: %zu", bossRoomWallCollisionComponents.size());
+    ImGui::DragFloat("Player BossRoom Probe Radius Scale", &bossRoomPlayerWallProbeRadiusScale, 0.01f, 0.1f, 2.0f);
+    ImGui::DragFloat("Player BossRoom Visual Clearance", &bossRoomPlayerWallVisualClearance, 0.01f, 0.0f, 2.0f);
+    ImGui::DragFloat("Grux BossRoom Probe Radius Scale", &bossRoomGruxWallProbeRadiusScale, 0.01f, 0.1f, 2.0f);
+    ImGui::DragFloat("Grux BossRoom Visual Clearance", &bossRoomGruxWallVisualClearance, 0.01f, 0.0f, 2.0f);
+    const auto drawProbeDebug = [](const char* label, const std::shared_ptr<Actor>& actor, const char* capsuleName)
+    {
+        const auto movement = actor ? std::dynamic_pointer_cast<CharacterMovementComponent>(actor->FindComponentByName("movementComponent")) : nullptr;
+        const auto capsule = actor ? std::dynamic_pointer_cast<CapsuleComponent>(actor->FindComponentByName(capsuleName)) : nullptr;
+        if (!movement || !capsule) return;
+        const auto scale = actor->GetScale();
+        ImGui::SeparatorText(label);
+        ImGui::Text("Probe Enabled: %s | Capsule Radius: %.3f | Root Scale: (%.3f, %.3f, %.3f)", movement->IsBossRoomWallProbeEnabled() ? "YES" : "NO", capsule->GetRadius(), scale.x, scale.y, scale.z);
+        ImGui::Text("Final Probe Radius: %.3f | Stage Ray Hit: %s | BossRoom Sphere Hit: %s", movement->GetBossRoomWallProbeRadius(), movement->GetLastStageWallRayCastHitForDebug() ? "YES" : "NO", movement->GetLastBossRoomWallSphereCastHitForDebug() ? "YES" : "NO");
+        const auto origin = movement->GetLastWallProbeOriginForDebug(); const auto direction = movement->GetLastWallProbeDirectionForDebug();
+        ImGui::Text("Sphere Origin: (%.2f, %.2f, %.2f) Dir: (%.2f, %.2f, %.2f) Dist: %.3f", origin.x, origin.y, origin.z, direction.x, direction.y, direction.z, movement->GetLastWallProbeDistanceForDebug());
+        ImGui::Text("Sphere Initial Overlap: %s | Hit Layer: 0x%X", movement->GetLastWallProbeInitialOverlapForDebug() ? "YES" : "NO", movement->GetLastWallProbeHitLayerForDebug());
+        if (movement->GetLastBossRoomWallSphereCastHitForDebug()) { const auto hit = movement->GetLastWallCollisionPositionForDebug(); ImGui::Text("Sphere Hit Position: (%.2f, %.2f, %.2f)", hit.x, hit.y, hit.z); }
+        const auto requested = movement->GetLastRequestedHorizontalMoveForDebug(); const auto resolved = movement->GetLastResolvedHorizontalMoveForDebug();
+        ImGui::Text("Requested Move: (%.3f, %.3f) Final Move: (%.3f, %.3f)", requested.x, requested.z, resolved.x, resolved.z);
+    };
+    if (const auto scene = GetOwnerScene())
+    {
+        drawProbeDebug("Player BossRoom Probe", scene->GetActorManager()->GetActorOfType<Player>(), "capsuleComponent");
+        drawProbeDebug("Grux BossRoom Probe", scene->GetActorManager()->GetActorOfType<GruxEnemy>(), "enemyCapsuleComponent");
+    }    const auto liveLightCount = [this](StageArea area)
     {
         size_t count = 0;
         for (const auto& light : stageLightsByArea[static_cast<size_t>(area)])
@@ -211,6 +287,7 @@ void DarkStage::UpdateAutomaticStageState()
     automaticStageStateInitialized = true;
     isMoviePlaying = moviePlaying;
     isBossRoomEntered = bossRoomEntered;
+    SetBossRoomWallCollisionEnabled(isBossRoomEntered);
     if (!isMoviePlaying)
     {
         currentStageArea = isBossRoomEntered
@@ -220,6 +297,85 @@ void DarkStage::UpdateAutomaticStageState()
 
     ApplyStageVisibility();
     ApplyStageLightEnable();
+}
+
+void DarkStage::SetBossRoomWallCollisionEnabled(const bool enabled)
+{
+    if (bossRoomWallCollisionEnabled == enabled)
+        return;
+
+    bossRoomWallCollisionEnabled = enabled;
+    for (const auto& wall : bossRoomWallCollisionComponents)
+    {
+        if (!wall)
+            continue;
+        if (enabled)
+            wall->EnableCollision();
+        else
+            wall->DisableCollision();
+    }
+
+    if (const auto scene = GetOwnerScene())
+    {
+        const auto setProbeEnabled = [enabled](const std::shared_ptr<Actor>& actor)
+        {
+            if (!actor)
+                return;
+            if (const auto movement = std::dynamic_pointer_cast<CharacterMovementComponent>(actor->FindComponentByName("movementComponent")))
+                movement->SetBossRoomWallProbeEnabled(enabled);
+        };
+        setProbeEnabled(scene->GetActorManager()->GetActorOfType<Player>());
+        setProbeEnabled(scene->GetActorManager()->GetActorOfType<GruxEnemy>());
+    }
+}
+
+void DarkStage::UpdateBossRoomWallProbeSettings()
+{
+    const auto scene = GetOwnerScene();
+    if (!scene)
+        return;
+
+    const auto updateProbe = [this](const std::shared_ptr<Actor>& actor, const char* capsuleName,
+        const float radiusScale, const float clearance, float& activeRadius)
+    {
+        if (!actor)
+            return;
+        const auto movement = std::dynamic_pointer_cast<CharacterMovementComponent>(actor->FindComponentByName("movementComponent"));
+        const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(actor->FindComponentByName(capsuleName));
+        if (!movement || !capsule)
+            return;
+
+        // GetRadius is authored, unscaled data. Apply XZ actor scale exactly once.
+        const DirectX::XMFLOAT3 actorScale = actor->GetScale();
+        const float horizontalScale = (std::max)(0.01f, (std::max)(fabsf(actorScale.x), fabsf(actorScale.z)));
+        activeRadius = (std::max)(0.01f, capsule->GetRadius() * horizontalScale * radiusScale + clearance);
+        movement->SetBossRoomWallProbeRadius(activeRadius);
+        movement->SetBossRoomWallProbeEnabled(bossRoomWallCollisionEnabled);
+    };
+
+    updateProbe(scene->GetActorManager()->GetActorOfType<Player>(), "capsuleComponent",
+        bossRoomPlayerWallProbeRadiusScale, bossRoomPlayerWallVisualClearance, activeBossRoomPlayerWallProbeRadius);
+    updateProbe(scene->GetActorManager()->GetActorOfType<GruxEnemy>(), "enemyCapsuleComponent",
+        bossRoomGruxWallProbeRadiusScale, bossRoomGruxWallVisualClearance, activeBossRoomGruxWallProbeRadius);
+}
+
+void DarkStage::DrawBossRoomWallCollisionDebug() const
+{
+    if (!showBossRoomWallCollisionDebug)
+        return;
+
+    const DirectX::XMFLOAT4 color = bossRoomWallCollisionEnabled
+        ? DirectX::XMFLOAT4{ 0.15f, 1.0f, 0.3f, 1.0f }
+        : DirectX::XMFLOAT4{ 1.0f, 0.2f, 0.15f, 1.0f };
+    for (size_t index = 0; index < bossRoomWallCollisionComponents.size(); ++index)
+    {
+        const auto& wall = bossRoomWallCollisionComponents[index];
+        if (!wall || index >= bossRoomWallCollisionHalfExtents.size())
+            continue;
+        const auto halfExtent = bossRoomWallCollisionHalfExtents[index];
+        DebugRender::DrawBox(wall->GetComponentWorldTransform().ToWorldTransform(),
+            { halfExtent.x * 2.0f, halfExtent.y * 2.0f, halfExtent.z * 2.0f }, color, 0.0f, true);
+    }
 }
 
 void DarkStage::RegisterStageLight(

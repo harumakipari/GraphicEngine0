@@ -101,6 +101,54 @@ public:
     float GetActualHorizontalSpeed() const { return actualHorizontalSpeed_; }
     float GetFinalMoveSpeed() const { return finalMoveSpeed_; }
     bool GetLastWallRayCastHitForDebug() const { return lastWallRayCastHitForDebug_; }
+    bool GetLastWallProbeUsedSphereCastForDebug() const { return lastWallProbeUsedSphereCastForDebug_; }
+    bool GetLastStageWallRayCastHitForDebug() const { return lastStageWallRayCastHitForDebug_; }
+    bool GetLastBossRoomWallSphereCastHitForDebug() const { return lastBossRoomWallSphereCastHitForDebug_; }
+    bool GetLastWallProbeInitialOverlapForDebug() const { return lastWallProbeInitialOverlapForDebug_; }
+    uint32_t GetLastWallProbeHitLayerForDebug() const { return lastWallProbeHitLayerForDebug_; }
+    const DirectX::XMFLOAT3& GetLastWallProbeOriginForDebug() const { return lastWallProbeOriginForDebug_; }
+    const DirectX::XMFLOAT3& GetLastWallProbeDirectionForDebug() const { return lastWallProbeDirectionForDebug_; }
+    float GetLastWallProbeDistanceForDebug() const { return lastWallProbeDistanceForDebug_; }
+    const DirectX::XMFLOAT3& GetLastRequestedHorizontalMoveForDebug() const { return lastRequestedHorizontalMoveForDebug_; }
+    const DirectX::XMFLOAT3& GetLastResolvedHorizontalMoveForDebug() const { return lastResolvedHorizontalMoveForDebug_; }
+
+    struct BossRoomProbeMoveBlockEvent
+    {
+        bool pending = false;
+        DirectX::XMFLOAT3 hitPosition{};
+        DirectX::XMFLOAT3 hitNormal{};
+        uint32_t hitLayer = 0;
+        bool initialOverlap = false;
+        DirectX::XMFLOAT3 requestedMove{};
+        DirectX::XMFLOAT3 resolvedMove{};
+        float forwardMoveLost = 0.0f;
+    };
+
+    void SetBossRoomProbeChargeWallHitArmed(const bool armed)
+    {
+        bossRoomProbeChargeWallHitArmed_ = armed;
+        if (!armed) ClearBossRoomProbeChargeWallHitEvent();
+    }
+    void ClearBossRoomProbeChargeWallHitEvent() { bossRoomProbeChargeWallHitEvent_ = {}; }
+    bool ConsumeBossRoomProbeChargeWallHitEvent(BossRoomProbeMoveBlockEvent& outEvent)
+    {
+        if (!bossRoomProbeChargeWallHitEvent_.pending) return false;
+        outEvent = bossRoomProbeChargeWallHitEvent_;
+        bossRoomProbeChargeWallHitEvent_ = {};
+        return true;
+    }
+
+    // DarkStage owns this state so the movement probe and BossRoom wall colliders
+    // always become active together.
+    void SetBossRoomWallProbeEnabled(const bool enabled) { bossRoomWallProbeEnabled_ = enabled; }
+    bool IsBossRoomWallProbeEnabled() const { return bossRoomWallProbeEnabled_; }
+    void SetBossRoomWallProbeRadius(const float radius) { bossRoomWallProbeRadius_ = (std::max)(radius, 0.01f); }
+    float GetBossRoomWallProbeRadius() const { return bossRoomWallProbeRadius_; }
+    float GetActiveHorizontalWallProbeRadius() const
+    {
+        return bossRoomWallProbeEnabled_ ? bossRoomWallProbeRadius_ : radius_;
+    }
+
     const DirectX::XMFLOAT3& GetLastWallCollisionPositionForDebug() const
     {
         return lastWallCollisionPositionForDebug_;
@@ -214,6 +262,20 @@ private:
     float gravity_ = -4.9f;
     float groundOffset_ = 1.0f;
     float radius_ = 0.4f;
+    bool bossRoomWallProbeEnabled_ = false;
+    float bossRoomWallProbeRadius_ = 0.4f;
+    bool lastWallProbeUsedSphereCastForDebug_ = false;
+    bool lastStageWallRayCastHitForDebug_ = false;
+    bool lastBossRoomWallSphereCastHitForDebug_ = false;
+    bool lastWallProbeInitialOverlapForDebug_ = false;
+    uint32_t lastWallProbeHitLayerForDebug_ = 0;
+    DirectX::XMFLOAT3 lastWallProbeOriginForDebug_{};
+    DirectX::XMFLOAT3 lastWallProbeDirectionForDebug_{};
+    float lastWallProbeDistanceForDebug_ = 0.0f;
+    DirectX::XMFLOAT3 lastRequestedHorizontalMoveForDebug_{};
+    DirectX::XMFLOAT3 lastResolvedHorizontalMoveForDebug_{};
+    bool bossRoomProbeChargeWallHitArmed_ = false;
+    BossRoomProbeMoveBlockEvent bossRoomProbeChargeWallHitEvent_{};
     bool useGravity = true;
 
     float initialSpeed = 1.0f; // èâë¨

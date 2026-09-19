@@ -6360,6 +6360,11 @@ bool GruxEnemy::BeginChargeAttackMovement()
     chargeWallHitDistanceDebug = 0.0f;
     chargeEndReasonDebug = ChargeAttackEndReason::None;
     chargeMovementActive = true;
+    if (characterMovementComponent)
+    {
+        characterMovementComponent->ClearBossRoomProbeChargeWallHitEvent();
+        characterMovementComponent->SetBossRoomProbeChargeWallHitArmed(true);
+    }
     chargeDangerWindowActive = true;
     chargeJustDodgeSuccessDebug = false;
 
@@ -6422,6 +6427,47 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     chargeWallFacingAmountDebug = 0.0f;
     chargeWallHitNormalDebug = {};
     chargeWallHitDistanceDebug = 0.0f;
+    CharacterMovementComponent::BossRoomProbeMoveBlockEvent bossRoomProbeBlockEvent;
+    if (characterMovementComponent &&
+        characterMovementComponent->ConsumeBossRoomProbeChargeWallHitEvent(bossRoomProbeBlockEvent))
+    {
+        const float requestedLength = std::sqrt(
+            bossRoomProbeBlockEvent.requestedMove.x * bossRoomProbeBlockEvent.requestedMove.x +
+            bossRoomProbeBlockEvent.requestedMove.z * bossRoomProbeBlockEvent.requestedMove.z);
+        const float requestedAlongCharge = requestedLength > 0.001f
+            ? (bossRoomProbeBlockEvent.requestedMove.x * chargeDirection.x +
+               bossRoomProbeBlockEvent.requestedMove.z * chargeDirection.z) / requestedLength
+            : 0.0f;
+        const uint32_t bossRoomWallLayer = CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast);
+        if (!bossRoomProbeBlockEvent.initialOverlap &&
+            (bossRoomProbeBlockEvent.hitLayer & bossRoomWallLayer) != 0 &&
+            requestedAlongCharge > 0.95f && bossRoomProbeBlockEvent.forwardMoveLost > 0.01f)
+        {
+            if (allowTripleWallTurn && chargeBT.tripleChargeActive &&
+                chargeBT.tripleChargeIndex < 2)
+            {
+                chargeBT.tripleWallTurnTriggered = true;
+                chargeSelectedHitDebug = "BossRoomProbeLegComplete";
+                chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
+                StopChargeAttackMovement();
+                return chargeEndReasonDebug;
+            }
+
+            chargeSelectedHitDebug = "BossRoomProbeWallHit";
+            chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
+            const DirectX::XMFLOAT3 currentPosition = GetPosition();
+            const DirectX::XMFLOAT3 impactPosition = {
+                currentPosition.x, bossRoomProbeBlockEvent.hitPosition.y, currentPosition.z };
+            SpawnWallImpactEffect(impactPosition, bossRoomProbeBlockEvent.hitNormal);
+            Time::SetSlow(0.0f, 0.05f);
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[BossCharge][End] reason=BossRoomProbeWallHit lost=" +
+                std::to_string(bossRoomProbeBlockEvent.forwardMoveLost));
+            StopChargeAttackMovement();
+            return chargeEndReasonDebug;
+        }
+    }
+
     if (chargeBT.tripleChargeActive)
     {
         chargeBT.tripleCurrentWallClearance = 0.0f;
@@ -6629,6 +6675,8 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 
 void GruxEnemy::StopChargeAttackMovement()
 {
+    if (characterMovementComponent)
+        characterMovementComponent->SetBossRoomProbeChargeWallHitArmed(false);
     chargeMovementActive = false;
     chargeDangerWindowActive = false;
     StopAIMovement();

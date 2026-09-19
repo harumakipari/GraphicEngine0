@@ -536,6 +536,8 @@ bool Physics::RayCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& 
         result.position = DirectX::XMFLOAT3(p.x, p.y, p.z);
         result.normal = DirectX::XMFLOAT3(n.x, n.y, n.z);
         result.distance = pxRaycastBuffer.block.distance;
+        result.initialOverlap = false;
+        result.layerMask = pxRaycastBuffer.block.shape->getQueryFilterData().word0;
 
         distance = result.distance;
     }
@@ -591,6 +593,8 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
         result.position = DirectX::XMFLOAT3(p.x, p.y, p.z);
         result.normal = DirectX::XMFLOAT3(n.x, n.y, n.z);
         result.distance = pxSweepBuffer.block.distance;
+        result.initialOverlap = pxSweepBuffer.block.hadInitialOverlap();
+        result.layerMask = pxSweepBuffer.block.shape->getQueryFilterData().word0;
 
         distance = result.distance;
     }
