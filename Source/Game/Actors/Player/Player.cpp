@@ -599,7 +599,17 @@ void Player::Update(float deltaTime)
     UpdateLockOnGuideUI();
 
     if (battleActionsSuspended)
+    {
+        const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+        if (gameScene && gameScene->IsBossPhaseTransitionActive())
+        {
+            // Phase2 cinematic advances its animation controller from GameScene while
+            // combat remains suspended. Apply the notify-derived weapon visuals here
+            // without resuming input, hit boxes, movement, or attack processing.
+            UpdateWeaponVisualPresentation(deltaTime);
+        }
         return;
+    }
 
     if (finalHitWaiting)
     {
