@@ -434,6 +434,7 @@ public:
     bool StartJumpAttackExecution();
     void EnsureJumpTelegraphMesh();
     void ShowJumpTelegraphForCurrentJump();
+    void DrawJumpLandingDebugWorld() const;
     void HideJumpTelegraph();
     void BeginJumpTelegraphImpactFlash();
     void UpdateJumpTelegraphImpactFlash(float deltaTime);
@@ -683,6 +684,9 @@ private:
     void RefreshActiveDangerAreaFromNotify();
     void DrawDangerObbWorldDebug();
     void PrepareJumpAttackMotionWarpOverride();
+    void CaptureJumpLandingMotionWarpEndSnapshot();
+    void CaptureJumpLandingGroundImpactSnapshot();
+    void UpdateJumpLandingDebugWallSnapshot();
 
     void RefreshActiveHitBoxesFromNotifyStates();
     // ?{?X????????~f?o?b?N?`??
@@ -1379,7 +1383,7 @@ private:
     bool transitionWindow = false;      // Animation Notify??TransitionWindow??????L??????\???BFastCombo?O??~R???{?i?K??i???^?C?~???O??????g?p?B
 
     // JumpAttack??MotionWarp?p
-    float maxJumpDistance = 12.5f;      // JumpAttack?O?????????A??o????B?v???C???[???????A?12.5???????????????B
+    float maxJumpDistance = 17.5f;      // JumpAttack?O?????????A??o????B?v???C???[???????A?12.5???????????????B
     float desiredAttackDistance = 0.1f;
     float jumpDesiredStartDistance = 4.5f;
     float jumpSetupDistanceMin = 6.5f;
@@ -1424,6 +1428,25 @@ private:
     DirectX::XMFLOAT3 tripleJumpPlannedLandingPosition{};
     bool tripleJumpTargetLockActive = false;
     bool jumpAttackExecutionStartCalledDebug = false;
+    // Temporary Jump landing diagnostics. Values are reset once per jump telegraph.
+    bool showJumpLandingDebug = true;
+    bool jumpLandingDebugSnapshotValid = false;
+    bool jumpLandingDebugMotionWarpEndCaptured = false;
+    bool jumpLandingDebugGroundImpactCaptured = false;
+    bool jumpLandingDebugWallHit = false;
+    float jumpLandingDebugPlayerDistance = 0.0f;
+    float jumpLandingDebugRequestedDistance = 0.0f;
+    float jumpLandingDebugCalculatedDistance = 0.0f;
+    float jumpLandingDebugTargetErrorXZ = 0.0f;
+    DirectX::XMFLOAT3 jumpLandingDebugPlayerSnapshot{};
+    DirectX::XMFLOAT3 jumpLandingDebugPlannedLanding{};
+    DirectX::XMFLOAT3 jumpLandingDebugTelegraphCenter{};
+    DirectX::XMFLOAT3 jumpLandingDebugMotionWarpEndBossRoot{};
+    DirectX::XMFLOAT3 jumpLandingDebugGroundImpactBossRoot{};
+    DirectX::XMFLOAT3 jumpLandingDebugGroundImpactWeaponRoot{};
+    DirectX::XMFLOAT3 jumpLandingDebugGroundImpactWeaponMiddle{};
+    DirectX::XMFLOAT3 jumpLandingDebugGroundImpactWeaponTip{};
+    DirectX::XMFLOAT3 jumpLandingDebugWallCollisionPosition{};
     bool jumpMotionWarpOverrideActive = false;  // ????Animation Notify??????????????l????AJumpAttack?p??v?Z???????????????g?p?????????
     DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  //  JumpAttack?J?n???~v???C???[??u
     DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  //  ?{?X????JumpAttack?J?n???~v???C???[??u??????????K????????

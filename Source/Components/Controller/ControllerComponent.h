@@ -100,6 +100,11 @@ public:
 
     float GetActualHorizontalSpeed() const { return actualHorizontalSpeed_; }
     float GetFinalMoveSpeed() const { return finalMoveSpeed_; }
+    bool GetLastWallRayCastHitForDebug() const { return lastWallRayCastHitForDebug_; }
+    const DirectX::XMFLOAT3& GetLastWallCollisionPositionForDebug() const
+    {
+        return lastWallCollisionPositionForDebug_;
+    }
 
     // 速度を取得する
     DirectX::XMFLOAT3 GetVelocity() const
@@ -239,6 +244,9 @@ private:
     float moveSpeedScale_ = 1.0f;
     float finalMoveSpeed_ = 0.0f;
     float actualHorizontalSpeed_ = 0.0f;
+    // Observation only: records the result of the existing horizontal wall ray.
+    bool lastWallRayCastHitForDebug_ = false;
+    DirectX::XMFLOAT3 lastWallCollisionPositionForDebug_{};
     // 固定のスピードを使用するかどうか
     bool useFixedSpeed = false;
     bool deferredMovementTick_ = false;

@@ -193,6 +193,7 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
     };
 
     float dist = sqrt(horizontalMove.x * horizontalMove.x + horizontalMove.z * horizontalMove.z);
+    lastWallRayCastHitForDebug_ = false;
 
     if (dist > 0.001f)
     {
@@ -210,6 +211,8 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
             wallHit,
             mask))
         {
+            lastWallRayCastHitForDebug_ = true;
+            lastWallCollisionPositionForDebug_ = wallHit.position;
             nextPos.x = pos.x;
             nextPos.z = pos.z;
         }

@@ -1326,6 +1326,9 @@ void GruxEnemy::Update(float deltaTime)
     }
     characterMovementComponent->SetFrameAdditionalVelocity(motionWarpVelocity);
     characterMovementComponent->TickDeferredMovement(deltaTime);
+    if (jumpMotionWarpOverrideActive)
+        UpdateJumpLandingDebugWallSnapshot();
+    DrawJumpLandingDebugWorld();
     FinishRotationDebugFrame();
 
 #ifdef USE_IMGUI
@@ -3243,6 +3246,24 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("Current Player Distance: %.3f", currentJumpPlayerDistance);
     ImGui::Text("Calculated Jump Distance: %.3f", calculatedJumpDistance);
     ImGui::Text("Jump Override: %s", jumpMotionWarpOverrideActive ? "Active" : "Inactive");
+    ImGui::Checkbox("Show Jump Landing Debug", &showJumpLandingDebug);
+    if (showJumpLandingDebug)
+    {
+        ImGui::SeparatorText("Jump Landing Measurements");
+        ImGui::Text("Player Distance: %.3f", currentJumpPlayerDistance);
+        ImGui::Text("Requested Jump Distance: %.3f", jumpLandingDebugRequestedDistance);
+        ImGui::Text("Clamped / Calculated Jump Distance: %.3f", jumpLandingDebugCalculatedDistance);
+        ImGui::Text("maxJumpDistance: %.3f", maxJumpDistance);
+        ImGui::Text("desiredAttackDistance: %.3f", desiredAttackDistance);
+        ImGui::Text("Planned Landing: (%.3f, %.3f, %.3f)", jumpLandingDebugPlannedLanding.x, jumpLandingDebugPlannedLanding.y, jumpLandingDebugPlannedLanding.z);
+        ImGui::Text("Telegraph World Position: (%.3f, %.3f, %.3f)", jumpLandingDebugTelegraphCenter.x, jumpLandingDebugTelegraphCenter.y, jumpLandingDebugTelegraphCenter.z);
+        ImGui::Text("MotionWarp End Boss Root: %s (%.3f, %.3f, %.3f)", jumpLandingDebugMotionWarpEndCaptured ? "Captured" : "Pending", jumpLandingDebugMotionWarpEndBossRoot.x, jumpLandingDebugMotionWarpEndBossRoot.y, jumpLandingDebugMotionWarpEndBossRoot.z);
+        ImGui::Text("GroundImpact Boss Root: %s (%.3f, %.3f, %.3f)", jumpLandingDebugGroundImpactCaptured ? "Captured" : "Pending", jumpLandingDebugGroundImpactBossRoot.x, jumpLandingDebugGroundImpactBossRoot.y, jumpLandingDebugGroundImpactBossRoot.z);
+        ImGui::Text("Target Error XZ: %.3f", jumpLandingDebugTargetErrorXZ);
+        ImGui::Text("Wall RayCast Hit: %s", jumpLandingDebugWallHit ? "YES" : "NO");
+        if (jumpLandingDebugWallHit)
+            ImGui::Text("Wall Collision Position: (%.3f, %.3f, %.3f)", jumpLandingDebugWallCollisionPosition.x, jumpLandingDebugWallCollisionPosition.y, jumpLandingDebugWallCollisionPosition.z);
+    }
     ImGui::Text("Selected Attack: %s", attackTypes[static_cast<int>(selectedAttackType)]);
     ImGui::Text("Current AI Mode: %s", aiModes[static_cast<int>(bossAIMode)]);
     ImGui::Checkbox("BehaviorTree FastCombo", &behaviorTreeFastComboEnabled);
@@ -4561,6 +4582,8 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::MotionWarp:
     {
+        if (jumpMotionWarpOverrideActive)
+            CaptureJumpLandingMotionWarpEndSnapshot();
         if (IsFastComboMotionWarpNotify(state))
         {
             ClearFastComboStepIn();
@@ -4627,6 +4650,7 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     if (event.type == AnimationNotifyEvent::Type::SpawnEffect &&
         event.parameter == "GroundImpact")
     {
+        CaptureJumpLandingGroundImpactSnapshot();
         BeginJumpTelegraphImpactFlash();
     }
 
@@ -5789,6 +5813,49 @@ void GruxEnemy::PrepareJumpAttackMotionWarpOverride()
         jumpMotionWarpDirection = { 0.0f, 0.0f, 0.0f };
     }
     jumpMotionWarpOverrideActive = true;
+}
+
+void GruxEnemy::CaptureJumpLandingMotionWarpEndSnapshot()
+{
+    if (!showJumpLandingDebug || !jumpLandingDebugSnapshotValid ||
+        jumpLandingDebugMotionWarpEndCaptured)
+        return;
+    jumpLandingDebugMotionWarpEndBossRoot = GetPosition();
+    jumpLandingDebugMotionWarpEndCaptured = true;
+}
+
+void GruxEnemy::CaptureJumpLandingGroundImpactSnapshot()
+{
+    const auto controller = GetBodyAnimationController();
+    if (!showJumpLandingDebug || !jumpLandingDebugSnapshotValid ||
+        jumpLandingDebugGroundImpactCaptured || !controller ||
+        controller->GetCurrentAnimationName() != "PrimaryAttack_JumpAttack")
+        return;
+
+    jumpLandingDebugGroundImpactBossRoot = GetPosition();
+    const WeaponHitBoxPoints weaponPoints = BuildWeaponHitBoxPoints(
+        weaponRightRootComponent, weaponRightMiddleComponent, weaponRightTipComponent,
+        activeRightHitBoxOffset);
+    jumpLandingDebugGroundImpactWeaponRoot = weaponPoints.root;
+    jumpLandingDebugGroundImpactWeaponMiddle = weaponPoints.middle;
+    jumpLandingDebugGroundImpactWeaponTip = weaponPoints.tip;
+    const float dx = jumpLandingDebugGroundImpactBossRoot.x - jumpLandingDebugPlannedLanding.x;
+    const float dz = jumpLandingDebugGroundImpactBossRoot.z - jumpLandingDebugPlannedLanding.z;
+    jumpLandingDebugTargetErrorXZ = std::sqrt(dx * dx + dz * dz);
+    jumpLandingDebugGroundImpactCaptured = true;
+}
+
+void GruxEnemy::UpdateJumpLandingDebugWallSnapshot()
+{
+    if (!showJumpLandingDebug || !jumpLandingDebugSnapshotValid ||
+        !characterMovementComponent || jumpLandingDebugWallHit)
+        return;
+    if (characterMovementComponent->GetLastWallRayCastHitForDebug())
+    {
+        jumpLandingDebugWallHit = true;
+        jumpLandingDebugWallCollisionPosition =
+            characterMovementComponent->GetLastWallCollisionPositionForDebug();
+    }
 }
 
 void GruxEnemy::ClearJumpAttackMotionWarpOverride()

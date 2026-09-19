@@ -63,6 +63,27 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
     // relativeLocation_ is interpreted as world space and is deliberately not
     // recomputed while MotionWarp moves Grux.
     jumpTelegraphWorldPosition = { landing.x, 0.350f, landing.z };
+    if (showJumpLandingDebug)
+    {
+        jumpLandingDebugSnapshotValid = true;
+        jumpLandingDebugMotionWarpEndCaptured = false;
+        jumpLandingDebugGroundImpactCaptured = false;
+        jumpLandingDebugWallHit = false;
+        jumpLandingDebugPlayerDistance = currentJumpPlayerDistance;
+        jumpLandingDebugRequestedDistance = currentJumpPlayerDistance - desiredAttackDistance;
+        jumpLandingDebugCalculatedDistance = calculatedJumpDistance;
+        jumpLandingDebugTargetErrorXZ = 0.0f;
+        jumpLandingDebugPlayerSnapshot = tripleJumpActive
+            ? tripleJumpPlayerPosition : jumpAttackStartPlayerPosition;
+        jumpLandingDebugPlannedLanding = landing;
+        jumpLandingDebugTelegraphCenter = jumpTelegraphWorldPosition;
+        jumpLandingDebugMotionWarpEndBossRoot = {};
+        jumpLandingDebugGroundImpactBossRoot = {};
+        jumpLandingDebugGroundImpactWeaponRoot = {};
+        jumpLandingDebugGroundImpactWeaponMiddle = {};
+        jumpLandingDebugGroundImpactWeaponTip = {};
+        jumpLandingDebugWallCollisionPosition = {};
+    }
     jumpTelegraphMeshComponent->SetRelativeLocationDirect(jumpTelegraphWorldPosition);
     jumpTelegraphMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     jumpTelegraphMeshComponent->SetRelativeScaleDirect({
@@ -85,6 +106,59 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
     jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     jumpTelegraphInnerMeshComponent->SetIsVisible(true);
     PlayBossTelegraphSE("boss_jump_telegraph.wav");
+}
+
+void GruxEnemy::DrawJumpLandingDebugWorld() const
+{
+#ifdef USE_IMGUI
+    if (!showJumpLandingDebug || !jumpLandingDebugSnapshotValid)
+        return;
+
+    constexpr DirectX::XMFLOAT4 playerColor{ 1.0f, 1.0f, 1.0f, 1.0f };
+    constexpr DirectX::XMFLOAT4 plannedColor{ 0.15f, 1.0f, 0.15f, 1.0f };
+    constexpr DirectX::XMFLOAT4 telegraphColor{ 1.0f, 0.1f, 0.1f, 1.0f };
+    constexpr DirectX::XMFLOAT4 impactColor{ 0.15f, 0.35f, 1.0f, 1.0f };
+    constexpr DirectX::XMFLOAT4 weaponSnapshotColor{ 1.0f, 0.95f, 0.1f, 1.0f };
+    constexpr DirectX::XMFLOAT4 weaponSweepColor{ 1.0f, 0.25f, 0.85f, 1.0f };
+
+    DebugRender::DrawSphere(jumpLandingDebugPlayerSnapshot, 0.16f, playerColor, 0.0f, true);
+    DebugRender::DrawSphere(jumpLandingDebugPlannedLanding, 0.16f, plannedColor, 0.0f, true);
+    DebugRender::DrawSphere(jumpLandingDebugTelegraphCenter, 0.16f, telegraphColor, 0.0f, true);
+    if (jumpLandingDebugGroundImpactCaptured)
+    {
+        DebugRender::DrawSphere(jumpLandingDebugGroundImpactBossRoot, 0.18f, impactColor, 0.0f, true);
+        DebugRender::DrawLine(jumpLandingDebugPlannedLanding,
+            jumpLandingDebugGroundImpactBossRoot, impactColor, 0.0f, true);
+        DebugRender::DrawSphere(jumpLandingDebugGroundImpactWeaponRoot, 0.12f,
+            weaponSnapshotColor, 0.0f, true);
+        DebugRender::DrawSphere(jumpLandingDebugGroundImpactWeaponMiddle, 0.12f,
+            weaponSnapshotColor, 0.0f, true);
+        DebugRender::DrawSphere(jumpLandingDebugGroundImpactWeaponTip, 0.12f,
+            weaponSnapshotColor, 0.0f, true);
+        DebugRender::DrawLine(jumpLandingDebugGroundImpactWeaponRoot,
+            jumpLandingDebugGroundImpactWeaponMiddle, weaponSnapshotColor, 0.0f, true);
+        DebugRender::DrawLine(jumpLandingDebugGroundImpactWeaponMiddle,
+            jumpLandingDebugGroundImpactWeaponTip, weaponSnapshotColor, 0.0f, true);
+    }
+
+    const auto controller = GetBodyAnimationController();
+    if (rightHitBox && controller &&
+        controller->GetCurrentAnimationName() == "PrimaryAttack_JumpAttack")
+    {
+        const WeaponHitBoxPoints current = BuildWeaponHitBoxPoints(
+            weaponRightRootComponent, weaponRightMiddleComponent, weaponRightTipComponent,
+            activeRightHitBoxOffset);
+        const WeaponHitBoxPoints previous{ prevWeaponRightRootPos, prevWeaponRightMidPos,
+            prevWeaponRightTipPos };
+        const float radius = activeRightHitBoxRadius;
+        DebugRender::DrawLine(previous.root, current.root, weaponSweepColor, 0.0f, true);
+        DebugRender::DrawLine(previous.middle, current.middle, weaponSweepColor, 0.0f, true);
+        DebugRender::DrawLine(previous.tip, current.tip, weaponSweepColor, 0.0f, true);
+        DebugRender::DrawSphere(current.root, radius, weaponSweepColor, 0.0f, true);
+        DebugRender::DrawSphere(current.middle, radius, weaponSweepColor, 0.0f, true);
+        DebugRender::DrawSphere(current.tip, radius, weaponSweepColor, 0.0f, true);
+    }
+#endif
 }
 
 void GruxEnemy::UpdateJumpTelegraphProgress()
