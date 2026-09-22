@@ -636,6 +636,16 @@ void PlayerRushState::Execute(float deltaTime)
     {
         const bool animationPlaying =
             player->GetBodyAnimationController()->IsPlayAnimation();
+
+        if (player->IsPhase1LastHitRushFollowUpStopRequested())
+        {
+            queuedAttackCount = 0;
+            if (player->bufferCommand.type == Player::ActionType::Attack)
+                player->ConsumeActionRequest(Player::ActionType::Attack);
+            if (!animationPlaying)
+                phase = RushPhase::Finished;
+            break;
+        }
         if (player->transitionWindow)
         {
             rushTransitionWindowObserved = true;
@@ -722,6 +732,7 @@ void PlayerRushState::Exit()
     elapsedTime = 0.0f;
     Logger::Log(Logger::LogCategory::Gameplay, "[Rush][Exit] combo state reset");
 
+    player->ClearPhase1LastHitRushFollowUpStop();
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
     player->GetBodyAnimationController()->ResetAnimationRate();
     player->ForceResetPlayerSlow();

@@ -175,6 +175,21 @@ public:
         return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush";
     }
 
+    // Stops follow-up Rush attacks after a Phase1 Last Hit without interrupting the active attack.
+    void RequestPhase1LastHitRushFollowUpStop()
+    {
+        if (IsRushActiveForPhaseTransition())
+            phase1LastHitRushFollowUpStopRequested = true;
+    }
+    bool IsPhase1LastHitRushFollowUpStopRequested() const
+    {
+        return phase1LastHitRushFollowUpStopRequested;
+    }
+    void ClearPhase1LastHitRushFollowUpStop()
+    {
+        phase1LastHitRushFollowUpStopRequested = false;
+    }
+
     // Clears temporary combat visuals/actions without changing HP, transform,
     // or the current player state.
     void ClearTransientBattleActions();
@@ -433,6 +448,7 @@ public:
     };
 
     bool rushInputAccepting = false;
+    bool phase1LastHitRushFollowUpStopRequested = false;
     bool rushInputEndNotifyReceivedDebug = false;
     std::string rushInputEndReasonDebug = "None";
     bool rushJudgeSuccessDebug = false;

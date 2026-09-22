@@ -221,6 +221,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->AddAnimation("HitReact_Left", 34);
     controller->AddAnimation("HitReact_Right", 35);
     controller->AddAnimation("Result_Down_Start", 36);
+    controller->AddAnimation("Hit_Combat_Large_B", 37);
+    controller->AddAnimation("Hit_Combat_Large_F", 38);
+    controller->AddAnimation("Hit_Combat_Large_L", 39);
+    controller->AddAnimation("Hit_Combat_Large_R", 40);
     // Death clipだけRoot Translationを含むため、Actor位置へ適用せずPoseもin-place化する。
     controller->SetRemoveRootTranslationFromPose("Knock_Down_Death", true);
 
@@ -1364,6 +1368,35 @@ void GruxEnemy::HideLockOnVisualsForPhaseTransition()
         lockOnTargetMeshComponent->SetIsVisible(false);
     if (lockOnTargetImageComponent)
         lockOnTargetImageComponent->SetVisible(false);
+}
+void GruxEnemy::BeginPhase1LastHitReaction(const DirectX::XMFLOAT3& hitSourcePosition)
+{
+    using namespace DirectX;
+
+    // Match the Phase2 final-hit local-space convention: +Z is front and +X is right.
+    const XMFLOAT3 bossPosition = GetPosition();
+    const XMFLOAT4 bossRotation = GetQuaternionRotation();
+    XMFLOAT3 hitDirection{ hitSourcePosition.x - bossPosition.x, 0.0f,
+        hitSourcePosition.z - bossPosition.z };
+    XMFLOAT3 localDirection{};
+    XMStoreFloat3(&localDirection, XMVector3Rotate(XMLoadFloat3(&hitDirection),
+        XMQuaternionInverse(XMLoadFloat4(&bossRotation))));
+
+    const char* animationName = "Hit_Combat_Large_F";
+    if (localDirection.x * localDirection.x + localDirection.z * localDirection.z >= FLT_EPSILON)
+    {
+        if (std::abs(localDirection.z) > std::abs(localDirection.x))
+            animationName = localDirection.z > 0.0f ? "Hit_Combat_Large_F" : "Hit_Combat_Large_B";
+        else
+            animationName = localDirection.x >= 0.0f ? "Hit_Combat_Large_R" : "Hit_Combat_Large_L";
+    }
+
+    // This is a phase-break reaction, not a terminal death reaction. Keep the
+    // existing Rush/HP-bar wait and Phase2 transition ownership intact.
+    StopBattleActions();
+    if (const auto controller = GetBodyAnimationController())
+        controller->SetRemoveRootTranslationFromPose(animationName, true);
+    PlayBodyAnimation(animationName, false, true, 0.1f, true);
 }
 void GruxEnemy::BeginFinalHitReaction(const std::string& animationName)
 {

@@ -2087,9 +2087,13 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
 {
     if (battleFlowState != BattleFlowState::Playing || boss != gruxEnemyActor.get())
         return;
+    CoreAudio::PlayOneShot("./Data/Sound/SE/boss_last_hit.wav", 1.0f);
     if (bossPhase == BossPhase::Phase1)
     {
         BeginPhase1BreakPending();
+        if (player)
+            player->RequestPhase1LastHitRushFollowUpStop();
+        boss->BeginPhase1LastHitReaction(source);
         return;
     }
     if (bossPhase == BossPhase::TransitionToPhase2)
