@@ -235,7 +235,8 @@ void GruxEnemy::StartChargeAttackBT()
     ClearAttackSetupTarget();
     StartAttack(); // Once per whole attack, never once per leg.
     chargeBT.attackStarted = true;
-    chargeBT.tripleChargeActive = IsPhase2ChargeActive();
+    chargeBT.phase2SettingsLatched = IsPhase2ChargeActive();
+    chargeBT.tripleChargeActive = chargeBT.phase2SettingsLatched;
     ++chargeBT.tripleChargeRuntimeInitializeCount;
     chargeBT.triplePhase = chargeBT.tripleChargeActive
         ? TripleChargePhase::InitialWindup : TripleChargePhase::None;
@@ -401,7 +402,7 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
     const DirectX::XMFLOAT3 normalizedDirection{
         direction.x / directionLength, 0.0f, direction.z / directionLength };
     const float wallRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
-    const float playerRadius = (std::max)(0.05f, radius * chargePlayerCastRadiusScale);
+    const float playerRadius = (std::max)(0.05f, radius * GetActiveChargePlayerCastRadiusScale());
     const float castDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
     const DirectX::XMFLOAT3 startPosition{
         GetPosition().x + normalizedDirection.x * tripleChargeTelegraphForwardOffset,
@@ -465,8 +466,7 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
     }
     telegraphLength = (std::max)(0.1f, telegraphLength);
 
-    const float telegraphWidth = playerRadius * 2.0f *
-        (std::max)(0.0f, tripleChargeTelegraphWidthMultiplier);
+    const float telegraphWidth = playerRadius * 2.0f;
     chargeBT.tripleChargeTelegraphDirection = normalizedDirection;
     chargeBT.tripleChargeTelegraphStartPosition = startPosition;
     chargeBT.tripleChargeTelegraphLength = telegraphLength;
@@ -1373,7 +1373,7 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::DragFloat("Triple Charge Telegraph Fixed World Y", &tripleChargeTelegraphFixedWorldY, 0.01f, -5.0f, 5.0f, "%.3f");
     ImGui::DragFloat("Triple Charge Telegraph Forward Offset", &tripleChargeTelegraphForwardOffset, 0.01f, -1.0f, 2.0f, "%.2f m");
     ImGui::DragFloat("Triple Charge Telegraph Max Distance", &tripleChargeTelegraphMaxDistance, 0.1f, 0.1f, 100.0f, "%.2f m");
-    ImGui::DragFloat("Triple Charge Telegraph Width Multiplier", &tripleChargeTelegraphWidthMultiplier, 0.01f, 0.0f, 3.0f, "%.2fx");
+    tripleChargeTelegraphWidthMultiplier = 1.0f;
     chargeBT.tripleChargeWallTurnClearance = (std::max)(0.0f, chargeBT.tripleChargeWallTurnClearance);
     chargeBT.tripleChargeLegMaxDistance = (std::max)(0.1f, chargeBT.tripleChargeLegMaxDistance);
     chargeBT.tripleChargeLegMaxDuration = (std::max)(0.1f, chargeBT.tripleChargeLegMaxDuration);
@@ -1386,12 +1386,31 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     tripleChargeTelegraphExpandDuration = std::clamp(tripleChargeTelegraphExpandDuration, 0.0f, 1.0f);
     tripleChargeTelegraphHoldDuration = std::clamp(tripleChargeTelegraphHoldDuration, 0.0f, 1.0f);
     tripleChargeTelegraphMaxDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
-    tripleChargeTelegraphWidthMultiplier = (std::max)(0.0f, tripleChargeTelegraphWidthMultiplier);
+    tripleChargeTelegraphWidthMultiplier = 1.0f;
 
-    ImGui::DragFloat("Charge Player Cast Radius Scale", &chargePlayerCastRadiusScale,
+    ImGui::DragFloat(U8("第一形態時のChargeの速さ"), &chargeSpeed,
+        0.1f, 0.1f, 50.0f, "%.2f m/s");
+    ImGui::DragFloat(U8("第二形態時のChargeの速さ"), &chargeSpeedPhase2,
+        0.1f, 0.1f, 50.0f, "%.2f m/s");
+
+    for (BossAttackData& attackData : combatAttackData)
+    {
+        if (attackData.type != BossAttackType::ChargeAttack)
+            continue;
+        ImGui::DragInt("Charge Damage (Phase 1)", &attackData.damagePerHit, 1.0f, 0, 1000);
+        attackData.damagePerHit = (std::max)(0, attackData.damagePerHit);
+        break;
+    }
+    ImGui::DragInt("Charge Damage (Phase 2)", &chargeDamagePhase2, 1.0f, 0, 1000);
+    chargeDamagePhase2 = (std::max)(0, chargeDamagePhase2);
+
+    ImGui::DragFloat(U8("第一形態時突進当たり判定"), &chargePlayerCastRadiusScale,
+        0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::DragFloat(U8("第二形態時突進当たり判定"), &chargePlayerCastRadiusScalePhase2,
         0.01f, 0.1f, 2.0f, "%.2f");
     ImGui::DragFloat("Charge Wall Cast Radius Scale", &chargeWallCastRadiusScale,
         0.01f, 0.1f, 2.0f, "%.2f");
+    chargePlayerCastRadiusScalePhase2 = std::clamp(chargePlayerCastRadiusScalePhase2, 0.1f, 2.0f);
     ImGui::Checkbox("Show Charge Cast Debug", &showChargeCastDebug);
     if (showChargeCastDebug)
     {

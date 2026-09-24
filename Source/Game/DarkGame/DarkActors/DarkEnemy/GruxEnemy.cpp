@@ -3946,22 +3946,12 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::SeparatorText("Charge Attack");
         ImGui::DragFloat("Charge Windup End Time", &chargeWindupEndTime,
             0.01f, 0.0f, 10.0f, "%.2f sec");
-        ImGui::DragFloat(U8("遯・ｲ 譁ｹ蜷大崋螳壽凾蛻ｻ"), &chargeDirectionLockTime,
+        ImGui::DragFloat(U8("突進ロックオン方向時間"), &chargeDirectionLockTime,
             0.01f, 0.0f, chargeWindupEndTime, "%.2f sec");
-        ImGui::DragFloat("Charge Speed", &chargeSpeed,
-            0.1f, 0.1f, 50.0f, "%.2f m/s");
         ImGui::DragFloat("Charge PlayerHit Recovery Duration",
             &chargePlayerHitRecoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
         ImGui::DragFloat("Charge JustDodge Recovery Duration",
             &chargeJustDodgeRecoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-        for (BossAttackData& attackData : combatAttackData)
-        {
-            if (attackData.type != BossAttackType::ChargeAttack)
-                continue;
-            ImGui::DragInt("Charge Damage", &attackData.damagePerHit, 1.0f, 0, 1000);
-            attackData.damagePerHit = (std::max)(0, attackData.damagePerHit);
-            break;
-        }
         ImGui::DragFloat("Charge Safety Timeout", &chargeSafetyTimeout,
             0.1f, 0.5f, 30.0f, "%.2f sec");
         ImGui::DragFloat("Wall Cast Safety Margin", &chargeWallCastSafetyMargin,
@@ -3973,6 +3963,7 @@ void GruxEnemy::DrawImGuiDetails()
 
         chargeWindupEndTime = (std::max)(0.0f, chargeWindupEndTime);
         chargeSpeed = (std::max)(0.1f, chargeSpeed);
+        chargeSpeedPhase2 = (std::max)(0.1f, chargeSpeedPhase2);
         chargePlayerHitRecoveryDuration =
             (std::max)(0.0f, chargePlayerHitRecoveryDuration);
         chargeJustDodgeRecoveryDuration =
@@ -4012,7 +4003,12 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::Text("Charge Direction: %.3f, %.3f, %.3f",
             chargeDirection.x, chargeDirection.y, chargeDirection.z);
         ImGui::Text("Charge Elapsed Time: %.3f sec", chargeElapsedTime);
-        ImGui::Text("Charge Speed (Active Setting): %.3f", chargeSpeed);
+        const float activeChargeCastRadius = (std::max)(0.05f,
+            radius * GetActiveChargePlayerCastRadiusScale());
+        ImGui::Text("Charge Speed (Active Setting): %.3f", GetActiveChargeSpeed());
+        ImGui::Text("Charge Player Cast Radius / Width: %.3f / %.3f m",
+            activeChargeCastRadius, activeChargeCastRadius * 2.0f);
+        ImGui::Text("Charge Damage (Active Setting): %d", GetActiveChargeDamage());
         ImGui::Text("DangerWindow Active: %s",
             chargeDangerWindowActive ? "YES" : "NO");
         ImGui::Text("Just Dodge Success: %s",
@@ -4023,7 +4019,7 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::Text("Player Hit Distance: %.3f", chargePlayerHitDistanceDebug);
         ImGui::Text("Player Hit Actor: %s", chargePlayerHitActorDebug.c_str());
         ImGui::Text("Selected Hit: %s", chargeSelectedHitDebug.c_str());
-        ImGui::Text("Charge Damage: %d", GetDamageForCurrentAttack());
+        ImGui::Text("Charge Damage: %d", GetActiveChargeDamage());
         ImGui::Text("Wall Cast Hit: %s", chargeWallCastHitDebug ? "YES" : "NO");
         ImGui::Text("Wall Facing Amount: %.3f", chargeWallFacingAmountDebug);
         ImGui::Text("Wall Hit Normal: %.3f, %.3f, %.3f",
@@ -6097,6 +6093,29 @@ float GruxEnemy::ConsumeNextRecoveryDuration()
     return duration;
 }
 
+float GruxEnemy::GetActiveChargeSpeed() const
+{
+    return chargeBT.phase2SettingsLatched ? chargeSpeedPhase2 : chargeSpeed;
+}
+
+float GruxEnemy::GetActiveChargePlayerCastRadiusScale() const
+{
+    return chargeBT.phase2SettingsLatched
+        ? chargePlayerCastRadiusScalePhase2 : chargePlayerCastRadiusScale;
+}
+
+int GruxEnemy::GetActiveChargeDamage() const
+{
+    if (chargeBT.phase2SettingsLatched)
+        return (std::max)(0, chargeDamagePhase2);
+
+    for (const BossAttackData& attackData : combatAttackData)
+    {
+        if (attackData.type == BossAttackType::ChargeAttack)
+            return (std::max)(0, attackData.damagePerHit);
+    }
+    return 1;
+}
 int GruxEnemy::GetDamageForCurrentAttack() const
 {
     for (const BossAttackData& attackData : combatAttackData)
@@ -6404,7 +6423,7 @@ bool GruxEnemy::BeginChargeAttackMovement()
     chargeTraveledDistanceDebug = 0.0f;
     chargeStartValidationValidDebug = false;
     chargeStartClearanceDebug = 0.0f;
-    chargePlayerCastRadiusDebug = (std::max)(0.05f, radius * chargePlayerCastRadiusScale);
+    chargePlayerCastRadiusDebug = (std::max)(0.05f, radius * GetActiveChargePlayerCastRadiusScale());
     chargeWallCastRadiusDebug = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
     chargeStartFailureReasonDebug = "None";
     float validationClearance = 0.0f;
@@ -6453,7 +6472,7 @@ bool GruxEnemy::BeginChargeAttackMovement()
     }
     if (characterMovementComponent)
     {
-        characterMovementComponent->SetFixedSpeed(chargeSpeed);
+        characterMovementComponent->SetFixedSpeed(GetActiveChargeSpeed());
         characterMovementComponent->SetInputMagnitude(1.0f);
         characterMovementComponent->SetMoveDirection(chargeDirection);
     }
@@ -6551,9 +6570,9 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         chargeBT.tripleWallTurnCandidate = false;
     }
 
-    const float frameMoveDistance = chargeSpeed * (std::max)(0.0f, deltaTime);
+    const float frameMoveDistance = GetActiveChargeSpeed() * (std::max)(0.0f, deltaTime);
     const float castDistance = frameMoveDistance + chargeWallCastSafetyMargin;
-    const float playerCastRadius = (std::max)(0.05f, radius * chargePlayerCastRadiusScale);
+    const float playerCastRadius = (std::max)(0.05f, radius * GetActiveChargePlayerCastRadiusScale());
     const float wallCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
     chargePlayerCastRadiusDebug = playerCastRadius;
     chargeWallCastRadiusDebug = wallCastRadius;
@@ -6674,7 +6693,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             return chargeEndReasonDebug;
         }
 
-        if (hitPlayer->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
+        if (hitPlayer->TryTakeDamage(GetActiveChargeDamage(), GetPosition()))
         {
             DirectX::XMFLOAT3 knockBackDirection =
                 MathHelper::Subtract(hitPlayer->GetPosition(), GetPosition());
@@ -6687,7 +6706,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             Logger::Log(Logger::LogCategory::Gameplay,
                 "[BossCharge][End] reason=PlayerHit distance=" +
                 std::to_string(playerHit.distance) +
-                " damage=" + std::to_string(GetDamageForCurrentAttack()));
+                " damage=" + std::to_string(GetActiveChargeDamage()));
             StopChargeAttackMovement();
             return chargeEndReasonDebug;
         }
@@ -6743,7 +6762,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 
     if (characterMovementComponent)
     {
-        characterMovementComponent->SetFixedSpeed(chargeSpeed);
+        characterMovementComponent->SetFixedSpeed(GetActiveChargeSpeed());
         characterMovementComponent->SetInputMagnitude(1.0f);
         characterMovementComponent->SetMoveDirection(chargeDirection);
     }

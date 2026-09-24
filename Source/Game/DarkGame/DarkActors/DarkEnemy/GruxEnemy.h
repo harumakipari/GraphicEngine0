@@ -245,6 +245,9 @@ public:
     ChargeBTStepResult UpdateChargeAttackBT(float deltaTime);
     ChargeBTStepResult UpdateTripleChargeBT(float deltaTime);
     bool IsPhase2ChargeActive();
+    float GetActiveChargeSpeed() const;
+    float GetActiveChargePlayerCastRadiusScale() const;
+    int GetActiveChargeDamage() const;
     bool BeginTripleChargeLeg();
     bool BeginTripleChargeTransition();
     bool BeginChargeTelegraphVisual();
@@ -1656,6 +1659,7 @@ private:
         float activeStunDuration = 0.0f;
         TripleChargePhase triplePhase = TripleChargePhase::None;
         bool tripleChargeActive = false;
+        bool phase2SettingsLatched = false;
         int tripleChargeIndex = 0;
         float tripleChargeTransitionElapsed = 0.0f;
         float tripleChargeTransitionDuration = 0.3f;
@@ -1747,12 +1751,15 @@ private:
     float chargeSetupMinimumMoveDistance = 3.0f;
     float chargeWindupEndTime = 3.0f;
     float chargeDirectionLockTime = 2.35f;
-    float chargeSpeed = 12.0f;
+    float chargeSpeed = 15.0f;
+    float chargeSpeedPhase2 = 18.0f;
     float chargeSafetyTimeout = 8.0f;
     float chargeWallCastSafetyMargin = 0.10f;
     float chargeWallFacingThreshold = 0.70f;
     float chargeWallNormalYThreshold = 0.60f;
     float chargePlayerCastRadiusScale = 0.88f;
+    float chargePlayerCastRadiusScalePhase2 = 1.65f;
+    int chargeDamagePhase2 = 12;
     float chargeWallCastRadiusScale = 0.3f;
     float chargeStartValidationClearance = 0.05f;
 

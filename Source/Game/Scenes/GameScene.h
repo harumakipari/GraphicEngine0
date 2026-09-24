@@ -38,7 +38,7 @@ class GameScene : public SceneBase
 
     struct DeathStagingAreaSettings
     {
-        float bossDistance = 2.5f;
+        float bossDistance = 4.5f;
     };
 public:
     // Boss health remains phase-local for future phase-specific UI.
