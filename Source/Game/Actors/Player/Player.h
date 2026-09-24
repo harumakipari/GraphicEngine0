@@ -181,6 +181,23 @@ public:
         if (IsRushActiveForPhaseTransition())
             phase1LastHitRushFollowUpStopRequested = true;
     }
+    // Defers the visual-pose latch until the current frame's animation update completes.
+    void RequestPhase1LastHitVisualPoseLatch()
+    {
+        phase1LastHitVisualPoseLatchRequested = true;
+    }
+    bool IsPhase1LastHitVisualPoseLatchRequested() const
+    {
+        return phase1LastHitVisualPoseLatchRequested;
+    }
+    bool IsPhase1LastHitAttackFinishedForTransition() const
+    {
+        const auto controller = GetBodyAnimationController();
+        if (!controller || !controller->IsVisualPoseLatched() || !stateMachine_)
+            return false;
+        const std::string stateName = stateMachine_->GetStateName();
+        return stateName != "Attack" && stateName != "Rush";
+    }
     bool IsPhase1LastHitRushFollowUpStopRequested() const
     {
         return phase1LastHitRushFollowUpStopRequested;
@@ -286,6 +303,7 @@ public:
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
 
     bool CanAcceptInitialRushInput() const;
+    void LatchPhase1LastHitVisualPoseAfterAnimationUpdate();
     bool CanShowInitialRushGuide() const;
     bool CanShowRushComboGuide() const;
     bool CanShowRushPrompt() const;
@@ -449,6 +467,7 @@ public:
 
     bool rushInputAccepting = false;
     bool phase1LastHitRushFollowUpStopRequested = false;
+    bool phase1LastHitVisualPoseLatchRequested = false;
     bool rushInputEndNotifyReceivedDebug = false;
     std::string rushInputEndReasonDebug = "None";
     bool rushJudgeSuccessDebug = false;

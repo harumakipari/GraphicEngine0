@@ -565,15 +565,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 
     ApplyLocalPoseOverride();
 
-    target_->SetModelNodes(finalNodes);
-
-    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-
-    for (auto* target : extraTargets_)
-    {
-        target->SetModelNodes(finalNodes);
-        target->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-    }
+    ApplyRuntimeVisualPose();
 
     if (transitionState == AnimationTransitionState::Completed)
         removeRootTranslationDuringTransition = false;
@@ -695,6 +687,8 @@ void AnimationController::EndEditorPreview()
 }
 void AnimationController::BeginEditorPreview(const bool playing, const bool resetTime)
 {
+    ReleaseLatchedVisualPose();
+
     if (!editorPreviewActive)
         CaptureEditorRuntimeSnapshot();
 
@@ -714,6 +708,8 @@ void AnimationController::BeginEditorPreview(const bool playing, const bool rese
 
 void AnimationController::SetEditorPreviewTime(const float time)
 {
+    ReleaseLatchedVisualPose();
+
     if (!target_ || !target_->model || selectedTimelineClip >= target_->model->animations.size())
         return;
 
@@ -741,6 +737,8 @@ bool AnimationController::HoldAnimationPose(
 
     if (!editorPreviewActive)
         CaptureEditorRuntimeSnapshot();
+
+    ReleaseLatchedVisualPose();
 
     EndAllEditorPreviewStates();
     selectedTimelineClip = animationIt->second;
@@ -773,6 +771,64 @@ void AnimationController::ReleaseHeldAnimationPose(bool preserveBlendSource)
     EndEditorPreview();
 }
 
+bool AnimationController::LatchCurrentVisualPose()
+{
+    if (editorPreviewActive || !target_ || !target_->model || finalNodes.size() != target_->model->GetNodes().size())
+        return false;
+    if (visualPoseLatchActive)
+    {
+        if (IsVisualPoseLatchValid()) return true;
+        ReleaseLatchedVisualPose();
+    }
+    visualPoseLatchNodes = finalNodes;
+    visualPoseLatchTargets.clear();
+    visualPoseLatchTargets.push_back({ target_, target_->model.get(), visualPoseLatchNodes.size() });
+    for (auto* extraTarget : extraTargets_)
+    {
+        if (!extraTarget || !extraTarget->model || extraTarget->model->GetNodes().size() != visualPoseLatchNodes.size())
+        {
+            visualPoseLatchNodes.clear(); visualPoseLatchTargets.clear(); return false;
+        }
+        visualPoseLatchTargets.push_back({ extraTarget, extraTarget->model.get(), visualPoseLatchNodes.size() });
+    }
+    visualPoseLatchActive = true;
+    ApplyRuntimeVisualPose();
+    return true;
+}
+
+void AnimationController::ReleaseLatchedVisualPose()
+{
+    const bool wasLatched = visualPoseLatchActive;
+    visualPoseLatchActive = false;
+    visualPoseLatchNodes.clear();
+    visualPoseLatchTargets.clear();
+    if (wasLatched && !editorPreviewActive) ApplyRuntimeVisualPose();
+}
+
+bool AnimationController::IsVisualPoseLatchValid() const
+{
+    if (!visualPoseLatchActive || visualPoseLatchNodes.empty() || visualPoseLatchTargets.size() != extraTargets_.size() + 1) return false;
+    const auto isTargetValid = [this](const VisualPoseLatchTarget& latchTarget, SkeletalMeshComponent* expectedTarget)
+        { return expectedTarget && expectedTarget->model && latchTarget.target == expectedTarget && latchTarget.model == expectedTarget->model.get() && latchTarget.nodeCount == visualPoseLatchNodes.size() && expectedTarget->model->GetNodes().size() == latchTarget.nodeCount; };
+    if (!isTargetValid(visualPoseLatchTargets.front(), target_)) return false;
+    for (size_t index = 0; index < extraTargets_.size(); ++index) if (!isTargetValid(visualPoseLatchTargets[index + 1], extraTargets_[index])) return false;
+    return true;
+}
+
+const std::vector<InterleavedGltfModel::Node>& AnimationController::GetRuntimeVisualPoseNodes()
+{
+    if (visualPoseLatchActive && !IsVisualPoseLatchValid()) { visualPoseLatchActive = false; visualPoseLatchNodes.clear(); visualPoseLatchTargets.clear(); }
+    return visualPoseLatchActive ? visualPoseLatchNodes : finalNodes;
+}
+
+void AnimationController::ApplyRuntimeVisualPose()
+{
+    if (!target_) return;
+    const auto& visualPoseNodes = GetRuntimeVisualPoseNodes();
+    target_->SetModelNodes(visualPoseNodes);
+    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+    for (auto* extraTarget : extraTargets_) { extraTarget->SetModelNodes(visualPoseNodes); extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None); }
+}
 void AnimationController::UpdateEditorPreview(const float deltaTime)
 {
     if (selectedTimelineClip >= target_->model->animations.size())
@@ -1082,13 +1138,7 @@ bool AnimationController::PlayAnimationImmediate(
     };
     zeroTranslation = rootNode.translation;
 
-    target_->SetModelNodes(finalNodes);
-    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-    for (auto* extraTarget : extraTargets_)
-    {
-        extraTarget->SetModelNodes(finalNodes);
-        extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-    }
+    ApplyRuntimeVisualPose();
 
     owner->OnAnimationChanged();
     return true;

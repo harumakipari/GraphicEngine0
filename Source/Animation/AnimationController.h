@@ -199,6 +199,11 @@ public:
     // Optionally keep the displayed pose as the source of an immediate animation blend.
     void ReleaseHeldAnimationPose(bool preserveBlendSource = false);
 
+    // Freezes only the pose sent to mesh components; runtime animation continues.
+    bool LatchCurrentVisualPose();
+    void ReleaseLatchedVisualPose();
+    bool IsVisualPoseLatched() const { return visualPoseLatchActive; }
+
     void AddNotifyState(const std::string& animationName, const float start, const float end,
         const AnimationNotifyState::Type type, const std::string& parameter = "", float animationSpeed = 1.0f)
     {
@@ -601,6 +606,9 @@ private:
     void SetEditorPreviewTime(float time);
     void CaptureEditorRuntimeSnapshot();
     void EndEditorPreview();
+    bool IsVisualPoseLatchValid() const;
+    const std::vector<InterleavedGltfModel::Node>& GetRuntimeVisualPoseNodes();
+    void ApplyRuntimeVisualPose();
 
 public:
     // ブレンドスペース
@@ -625,6 +633,16 @@ private:
 
     // 描画に使用するノード
     std::vector<InterleavedGltfModel::Node> finalNodes;
+
+    struct VisualPoseLatchTarget
+    {
+        SkeletalMeshComponent* target = nullptr;
+        const InterleavedGltfModel* model = nullptr;
+        size_t nodeCount = 0;
+    };
+    std::vector<InterleavedGltfModel::Node> visualPoseLatchNodes;
+    std::vector<VisualPoseLatchTarget> visualPoseLatchTargets;
+    bool visualPoseLatchActive = false;
 
     std::vector<LocalPoseOverrideBone> localPoseOverrideBones;
     float localPoseOverrideWeight = 0.0f;

@@ -7,13 +7,13 @@
 #include "Graphics/Resource/Texture.h"
 
 // Catmull- Rom 補完関数
-static DirectX::XMVECTOR CatmullRom(DirectX::XMVECTOR p0,DirectX::XMVECTOR p1,DirectX::XMVECTOR p2,DirectX::XMVECTOR p3,float t)
+static DirectX::XMVECTOR CatmullRom(DirectX::XMVECTOR p0, DirectX::XMVECTOR p1, DirectX::XMVECTOR p2, DirectX::XMVECTOR p3, float t)
 {
     float t2 = t * t;
     float t3 = t2 * t;
 
     return DirectX::XMVectorScale(
-    DirectX::XMVectorAdd(
+        DirectX::XMVectorAdd(
             DirectX::XMVectorAdd(
                 DirectX::XMVectorScale(p1, 2.0f),
                 DirectX::XMVectorScale(DirectX::XMVectorSubtract(p2, p0), t)),
@@ -180,6 +180,68 @@ void Trail::Render(ID3D11DeviceContext* immediateContext)
 {
     if (vertices.empty())
         return;
+
+    // 必要なバッファサイズを計算
+    const size_t requiredBytes =
+        sizeof(TrailVertex) * vertices.size();
+
+    // VertexBufferの現在の容量を取得
+    D3D11_BUFFER_DESC bufferDesc{};
+
+    if (vertexBuffer)
+    {
+        vertexBuffer->GetDesc(&bufferDesc);
+    }
+
+    // VertexBufferの容量が不足していたら再生成
+    if (!vertexBuffer || requiredBytes > bufferDesc.ByteWidth)
+    {
+        // 頻繁な再生成を防ぐため、必要容量の2倍を確保
+        const size_t newBufferBytes = requiredBytes * 2;
+
+        // UINTの上限を超える場合は描画しない
+        if (newBufferBytes > UINT_MAX)
+            return;
+
+        D3D11_BUFFER_DESC newDesc{};
+
+        newDesc.ByteWidth =
+            static_cast<UINT>(newBufferBytes);
+
+        newDesc.Usage =
+            D3D11_USAGE_DYNAMIC;
+
+        newDesc.BindFlags =
+            D3D11_BIND_VERTEX_BUFFER;
+
+        newDesc.CPUAccessFlags =
+            D3D11_CPU_ACCESS_WRITE;
+
+        // Deviceを取得
+        Microsoft::WRL::ComPtr<ID3D11Device> device;
+
+        immediateContext->GetDevice(
+            device.GetAddressOf()
+        );
+
+        // 新しいVertexBufferを作成
+        Microsoft::WRL::ComPtr<ID3D11Buffer> newBuffer;
+
+        HRESULT hr = device->CreateBuffer(
+            &newDesc,
+            nullptr,
+            newBuffer.GetAddressOf()
+        );
+
+        if (FAILED(hr))
+        {
+            _ASSERT_EXPR(false, hr_trace(hr));
+            return;
+        }
+
+        // VertexBufferを差し替える
+        vertexBuffer = std::move(newBuffer);
+    }
 
     HRESULT hr{ S_OK };
     D3D11_MAPPED_SUBRESOURCE mappedSubresource{};

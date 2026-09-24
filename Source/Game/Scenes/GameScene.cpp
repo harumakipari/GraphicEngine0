@@ -309,7 +309,13 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     phase1BreakPending = false;
     phase2TransitionRequested = false;
     phase2BossRoarHpBarStarted = false;
+    if (phase1FinalHitDebugActive && !phase1FinalHitDebugSummaryLogged)
+        FinishPhase1FinalHitDebugSummary("phase-reset");
     phase1BreakWaitingForRush = false;
+    phase1FinalHitFadePending = false;
+    phase1FinalHitTimePhase = Phase1FinalHitTimePhase::None;
+    phase1FinalHitTimeElapsed = 0.0f;
+    phase1FinalHitDebugSampleHitStopFrame = false;
     phase2TransitionStep = Phase2TransitionStep::None;
     phase2StepElapsed = 0.0f;
     phase2RecallFadeAlpha = 0.0f;
@@ -379,10 +385,111 @@ void GameScene::BeginPhase1BreakPending()
 
     phase1BreakPending = true;
     phase2TransitionRequested = true;
+    InputSystem::SetInputEnabled(false);
     phase1BreakWaitingForRush = player && player->IsRushActiveForPhaseTransition();
     // Existing Rush/reaction animation is allowed to finish, but it cannot deal
     // damage or open a new danger window while the phase break is pending.
     gruxEnemyActor->DisableAttackHitBoxes();
+}
+
+void GameScene::StartPhase1FinalHitTimeSequence()
+{
+    phase1FinalHitTimePhase = Phase1FinalHitTimePhase::HitStop;
+    phase1FinalHitTimeElapsed = 0.0f;
+    phase1FinalHitDebugActive = true;
+    phase1FinalHitDebugSummaryLogged = false;
+    phase1FinalHitDebugSampleHitStopFrame = false;
+    phase1FinalHitDebugHitStopFrames = 0;
+    phase1FinalHitDebugZeroGlobalDeltaFrames = 0;
+    phase1FinalHitDebugPlayerNonZeroFrames = 0;
+    phase1FinalHitDebugBossNonZeroFrames = 0;
+    phase1FinalHitDebugPlayerLastDelta = 0.0f;
+    phase1FinalHitDebugBossLastDelta = 0.0f;
+    phase1FinalHitDebugPlayerMaxDelta = 0.0f;
+    phase1FinalHitDebugBossMaxDelta = 0.0f;
+    // Replace the ordinary sword-hit stop with this phase-specific, unscaled sequence.
+    Time::SetSlow(0.0f, 0.3f);
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[Phase1FinalHit][HitStopBegin] customDuration={:.3f} setSlowDuration={:.3f} timeScale={:.3f} initialDeltaTime={:.6f} slowTimer={:.3f}",
+        phase1FinalHitHitStopDuration, 0.3f, Time::timeScale, Time::DeltaTime(),
+        Time::GetSlowTimer()).c_str());
+}
+
+void GameScene::UpdatePhase1FinalHitTimeSequence()
+{
+    phase1FinalHitDebugSampleHitStopFrame = false;
+    if (phase1FinalHitTimePhase != Phase1FinalHitTimePhase::HitStop)
+        return;
+
+    const float frameUnscaledDelta = Time::UnscaledDeltaTime();
+    const float configuredDuration = (std::max)(0.0f, phase1FinalHitHitStopDuration);
+    const bool actorFrameIsHitStop =
+        phase1FinalHitTimeElapsed + frameUnscaledDelta < configuredDuration;
+    phase1FinalHitTimeElapsed += frameUnscaledDelta;
+    if (actorFrameIsHitStop)
+        phase1FinalHitDebugSampleHitStopFrame = true;
+    if (phase1FinalHitTimeElapsed < configuredDuration)
+        return;
+
+    FinishPhase1FinalHitDebugSummary("hitstop-end");
+    phase1FinalHitTimePhase = Phase1FinalHitTimePhase::Slow;
+    const float slowScale = std::clamp(phase1FinalHitSlowScale, 0.01f, 1.0f);
+    Time::SetSlow(slowScale, 0.0f);
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[Phase1FinalHit][StrongSlowBegin] elapsed={:.3f} timeScale={:.3f} deltaTimeBeforeActorUpdate={:.6f}",
+        phase1FinalHitTimeElapsed, Time::timeScale, Time::DeltaTime()).c_str());
+}
+
+void GameScene::RecordPhase1FinalHitHitStopFrameSample()
+{
+    if (!phase1FinalHitDebugActive || !phase1FinalHitDebugSampleHitStopFrame)
+        return;
+
+    ++phase1FinalHitDebugHitStopFrames;
+    const float globalDelta = Time::DeltaTime();
+    if (std::abs(globalDelta) <= FLT_EPSILON)
+        ++phase1FinalHitDebugZeroGlobalDeltaFrames;
+
+    const auto playerController = player ? player->GetBodyAnimationController() : nullptr;
+    const auto bossController = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
+    const float playerDelta = playerController
+        ? playerController->GetLastUpdateDeltaTimeDebug() : -1.0f;
+    const float bossDelta = bossController
+        ? bossController->GetLastUpdateDeltaTimeDebug() : -1.0f;
+    phase1FinalHitDebugPlayerLastDelta = playerDelta;
+    phase1FinalHitDebugBossLastDelta = bossDelta;
+    if (playerDelta > FLT_EPSILON)
+    {
+        ++phase1FinalHitDebugPlayerNonZeroFrames;
+        phase1FinalHitDebugPlayerMaxDelta =
+            (std::max)(phase1FinalHitDebugPlayerMaxDelta, playerDelta);
+    }
+    if (bossDelta > FLT_EPSILON)
+    {
+        ++phase1FinalHitDebugBossNonZeroFrames;
+        phase1FinalHitDebugBossMaxDelta =
+            (std::max)(phase1FinalHitDebugBossMaxDelta, bossDelta);
+    }
+}
+
+void GameScene::FinishPhase1FinalHitDebugSummary(const char* reason)
+{
+    if (!phase1FinalHitDebugActive || phase1FinalHitDebugSummaryLogged)
+        return;
+
+    phase1FinalHitDebugSummaryLogged = true;
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[Phase1FinalHit][HitStopSummary] reason={} elapsed={:.3f} frames={} zeroGlobalDeltaFrames={} playerNonZeroFrames={} bossNonZeroFrames={} playerLastDelta={:.6f} bossLastDelta={:.6f} playerMaxDelta={:.6f} bossMaxDelta={:.6f}",
+        reason ? reason : "unknown", phase1FinalHitTimeElapsed,
+        phase1FinalHitDebugHitStopFrames,
+        phase1FinalHitDebugZeroGlobalDeltaFrames,
+        phase1FinalHitDebugPlayerNonZeroFrames,
+        phase1FinalHitDebugBossNonZeroFrames,
+        phase1FinalHitDebugPlayerLastDelta,
+        phase1FinalHitDebugBossLastDelta,
+        phase1FinalHitDebugPlayerMaxDelta,
+        phase1FinalHitDebugBossMaxDelta).c_str());
+    phase1FinalHitDebugActive = false;
 }
 
 void GameScene::UpdatePhase1BreakPending()
@@ -390,11 +497,18 @@ void GameScene::UpdatePhase1BreakPending()
     if (!phase1BreakPending)
         return;
 
+    if (phase1FinalHitFadePending)
+    {
+        UpdatePhase2Transition();
+        return;
+    }
+
     phase1BreakWaitingForRush = player && player->IsRushActiveForPhaseTransition();
-    if (phase1BreakWaitingForRush || !gruxEnemyActor || !gruxEnemyActor->IsDelayedHpSettled())
+    if (phase1BreakWaitingForRush || !player ||
+        !player->IsPhase1LastHitAttackFinishedForTransition() ||
+        !gruxEnemyActor || !gruxEnemyActor->IsDelayedHpSettled())
         return;
 
-    gruxEnemyActor->BeginHpBarFadeOut();
     BeginPhase2Transition();
 }
 
@@ -475,6 +589,8 @@ void GameScene::SetupPhase2RecallCinematic()
     {
         // A second visual cleanup under black prevents any one-frame residue
         // between the initial combat abort and the actor teleport.
+        if (const auto controller = player->GetBodyAnimationController())
+            controller->ReleaseLatchedVisualPose();
         player->NeutralizeForPhase2Cinematic();
     }
     if (gruxEnemyActor)
@@ -503,7 +619,18 @@ void GameScene::BeginPhase2Transition()
     if (bossPhase != BossPhase::Phase1 || !player || !gruxEnemyActor)
         return;
 
+    // Keep the completed Player/Boss presentation untouched while RecallFadeOut begins.
+    phase1FinalHitFadePending = true;
+    InputSystem::SetInputEnabled(false);
+    Time::SetSlow(1.0f, 0.0f);
+    BeginPhase2Cinematic();
+}
+void GameScene::CompletePhase2TransitionAtBlack()
+{
+    // All stateful/visual cleanup is intentionally deferred until alpha reaches 1.
     ResetBossPhaseRuntime(BossPhase::TransitionToPhase2);
+    if (gruxEnemyActor)
+        gruxEnemyActor->BeginHpBarFadeOut();
     finalHitPending = false;
     InputSystem::SetInputEnabled(false);
     Time::SetSlow(1.0f, 0.0f);
@@ -520,7 +647,12 @@ void GameScene::BeginPhase2Transition()
         darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
         darkCameraActor->SnapToTpsDirection(player->GetForward());
     }
-    BeginPhase2Cinematic();
+    SetupPhase2RecallCinematic();
+    phase1FinalHitFadePending = false;
+    phase2RecallFadeAlpha = 1.0f;
+    SetBossDeathFadeAlpha(1.0f);
+    phase2TransitionStep = Phase2TransitionStep::RecallFadeIn;
+    phase2StepElapsed = 0.0f;
 }
 void GameScene::BeginPhase2TpsReturnBlend()
 {
@@ -576,7 +708,7 @@ void GameScene::BeginPhase2TpsReturnBlend()
 
 void GameScene::UpdatePhase2Cinematic()
 {
-    if (bossPhase != BossPhase::TransitionToPhase2)
+    if (bossPhase != BossPhase::TransitionToPhase2 && !phase1FinalHitFadePending)
         return;
 
     const bool keepPhase2BossIdle =
@@ -613,9 +745,7 @@ void GameScene::UpdatePhase2Cinematic()
         if (phase2RecallFadeAlpha < 1.0f)
             break;
 
-        SetupPhase2RecallCinematic();
-        phase2TransitionStep = Phase2TransitionStep::RecallFadeIn;
-        phase2StepElapsed = 0.0f;
+        CompletePhase2TransitionAtBlack();
         break;
     }
 
@@ -1076,6 +1206,7 @@ void GameScene::Update(float deltaTime)
 
 
     SceneBase::Update(deltaTime);
+    RecordPhase1FinalHitHitStopFrameSample();
 
     // GameplayŽžŠÔ‚Ö“¯Šú‚µAHitStop’†‚ÍPhysX‚¾‚¯‚ªi‚Þ‚¸‚ê‚ð–h‚®B
     if (deltaTime > FLT_EPSILON)
@@ -2087,12 +2218,20 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
 {
     if (battleFlowState != BattleFlowState::Playing || boss != gruxEnemyActor.get())
         return;
-    CoreAudio::PlayOneShot("./Data/Sound/SE/boss_last_hit.wav", 1.0f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/boss_last_hit.wav", 3.0f);
     if (bossPhase == BossPhase::Phase1)
     {
+        StartPhase1FinalHitTimeSequence();
         BeginPhase1BreakPending();
         if (player)
+        {
+            const bool rushWasActive = player->IsRushActiveForPhaseTransition();
+            player->RequestPhase1LastHitVisualPoseLatch();
             player->RequestPhase1LastHitRushFollowUpStop();
+            // Release only the Rush-owned Boss slow; Rush::Exit keeps its existing cleanup.
+            if (rushWasActive)
+                player->BeginBossSlowReturn(true);
+        }
         boss->BeginPhase1LastHitReaction(source);
         return;
     }
@@ -2118,7 +2257,7 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
     finalHitSlowScale = std::isfinite(finalHitSlowScale)
         ? std::clamp(finalHitSlowScale, 0.01f, 1.0f) : 0.20f;
     finalHitSlowDuration = std::isfinite(finalHitSlowDuration)
-        ? std::clamp(finalHitSlowDuration, 0.01f, 2.0f) : 0.30f;
+        ? std::clamp(finalHitSlowDuration, 0.01f, 5.0f) : 0.30f;
     finalHitAftermathDuration = std::isfinite(finalHitAftermathDuration)
         ? std::clamp(finalHitAftermathDuration, 0.0f, 2.0f) : 0.15f;
     finalHitRecoveryElapsed = 0.0f;
@@ -2139,7 +2278,7 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
     boss->BeginFinalHitReaction(finalHitReaction);
     // Replace the ordinary hit stop. GameScene owns the unscaled hold/recovery
     // timers so Time::Tick cannot snap to 1 before recovery starts.
-    Time::SetSlow(finalHitSlowScale, 0.0f);
+    Time::SetSlow(finalHitSlowScale, finalHitSlowDuration);
 }
 
 void GameScene::EnterBossDead()
@@ -3727,6 +3866,7 @@ void GameScene::UpdateBattleFlow()
         }
         if (phase1BreakPending)
         {
+            UpdatePhase1FinalHitTimeSequence();
             UpdatePhase1BreakPending();
             UpdateBattleTimerUI();
             break;

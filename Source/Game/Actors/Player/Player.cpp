@@ -2238,6 +2238,7 @@ bool Player::IsInWinState() const
 void Player::ClearTransientBattleActions()
 {
     ClearActionRequest("battle_end");
+    phase1LastHitVisualPoseLatchRequested = false;
     ClearAttackTarget();
     EndAttack();
     SetRushInputAcceptance(false);
@@ -2346,6 +2347,9 @@ void Player::NeutralizeForPhase2Cinematic()
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
     finalHitWaiting = false;
+    phase1LastHitVisualPoseLatchRequested = false;
+    if (const auto controller = GetBodyAnimationController())
+        controller->ReleaseLatchedVisualPose();
     lowHpPresentationSuppressed = false;
     ResetLowHpEffects();
     ResetEyeCloseOverride();
@@ -3520,6 +3524,16 @@ int Player::GetCurrentAttackDamage() const
 
     return static_cast<int>(std::lround(
         static_cast<float>(baseDamage) * GetRushDamageMultiplier()));
+}
+
+void Player::LatchPhase1LastHitVisualPoseAfterAnimationUpdate()
+{
+    if (!phase1LastHitVisualPoseLatchRequested)
+        return;
+
+    phase1LastHitVisualPoseLatchRequested = false;
+    if (const auto controller = GetBodyAnimationController())
+        controller->LatchCurrentVisualPose();
 }
 
 bool Player::CanAcceptInitialRushInput() const

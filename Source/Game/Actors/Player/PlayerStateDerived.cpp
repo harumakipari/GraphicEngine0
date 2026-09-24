@@ -173,7 +173,15 @@ void PlayerAttackState::Execute(float deltaTime)
 {
     player->UpdateAttackTargetRotation(deltaTime);
 
-    if (player->inputWindow)
+    if (player->IsPhase1LastHitVisualPoseLatchRequested())
+    {
+        player->comboQueued = false;
+        dodgeQueued = false;
+        if (player->bufferCommand.type != Player::ActionType::None)
+            player->ClearActionRequest("phase1_final_hit");
+    }
+
+    if (player->inputWindow && !player->IsPhase1LastHitVisualPoseLatchRequested())
     {
         switch (player->bufferCommand.type)
         {
@@ -251,6 +259,13 @@ void PlayerAttackState::Exit()
 {
     if (!continuingComboTransition)
     {
+        const auto controller = player->GetBodyAnimationController();
+        const bool naturalAnimationEnd = controller && !controller->IsPlayAnimation();
+        if (naturalAnimationEnd)
+        {
+            // Latch only the completed attack pose before Idle/locomotion replaces the clip.
+            player->LatchPhase1LastHitVisualPoseAfterAnimationUpdate();
+        }
         player->currentAttackAnimation = player->startAttackAnimation;
         player->comboQueued = false;
         dodgeQueued = false;
@@ -705,6 +720,9 @@ void PlayerRushState::Execute(float deltaTime)
     case RushPhase::Finished:
         if (!player->GetBodyAnimationController()->IsPlayAnimation())
         {
+            // Rush reaches Idle only after Finished observes the clip end.
+            // Latch here so the direct Idle path cannot capture an in-flight pose.
+            player->LatchPhase1LastHitVisualPoseAfterAnimationUpdate();
             player->GetStateMachine()->ChangeState("Idle");
         }
         break;

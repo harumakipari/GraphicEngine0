@@ -1652,7 +1652,7 @@ private:
         bool tripleChargeActive = false;
         int tripleChargeIndex = 0;
         float tripleChargeTransitionElapsed = 0.0f;
-        float tripleChargeTransitionDuration = 0.5f;
+        float tripleChargeTransitionDuration = 0.3f;
         float tripleChargeLegElapsed = 0.0f;
         float tripleChargeLegDistance = 0.0f;
         float tripleChargeTelegraphElapsed = 0.0f;
@@ -1684,7 +1684,7 @@ private:
         DirectX::XMFLOAT3 tripleChargeStartPositions[3]{};
         bool tripleFinalWallHit = false;
         bool tripleEarlyWallHit = false;
-        float tripleWallStunDurationMultiplier = 1.8f;
+        float tripleWallStunDurationMultiplier = 1.3f;
         float tripleChargeWallTurnClearance = 15.0f;
         float tripleChargeLegMaxDistance = 50.0f;
         float tripleChargeLegMaxDuration = 50.0f;

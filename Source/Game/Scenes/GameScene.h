@@ -125,6 +125,13 @@ public:
     bool IsPhase1BreakPending() const { return phase1BreakPending; }
     bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
 private:
+    enum class Phase1FinalHitTimePhase : uint8_t
+    {
+        None,
+        HitStop,
+        Slow,
+    };
+
     enum class Phase2TransitionStep : uint8_t
     {
         None,
@@ -197,12 +204,17 @@ private:
 
     void UpdateBattleFlow();
     void BeginPhase2Transition();
+    void CompletePhase2TransitionAtBlack();
     void UpdatePhase2Transition();
     void ResetBossPhaseRuntime(BossPhase phase);
     void ApplyBossPhaseHp(BossPhase phase);
     void CaptureContinueBossCheckpoint();
     void BeginPhase1BreakPending();
     void UpdatePhase1BreakPending();
+    void StartPhase1FinalHitTimeSequence();
+    void UpdatePhase1FinalHitTimeSequence();
+    void RecordPhase1FinalHitHitStopFrameSample();
+    void FinishPhase1FinalHitDebugSummary(const char* reason);
     bool LoadPhase2CinematicShots();
     void BeginPhase2Cinematic();
     void SetupPhase2RecallCinematic();
@@ -364,8 +376,8 @@ private:
 
     void OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& source);
 
-    float finalHitSlowScale = 0.20f;
-    float finalHitSlowDuration = 1.80f;
+    float finalHitSlowScale = 0.05f;
+    float finalHitSlowDuration = 2.0f;
     float finalHitAftermathDuration = 1.f;
     float finalHitSlowRecoveryDuration = 0.30f;
     float finalHitRecoveryElapsed = 0.0f;
@@ -391,13 +403,29 @@ private:
     int continueCheckpointBossMaxHp = 30;
     // Tuning values apply at battle reset and at the Phase1 -> Phase2 handoff.
     int phase1MaxHp = 30;
-    int phase2MaxHp = 50;
+    int phase2MaxHp = 55;
     float phase2TransitionElapsed = 0.0f;
     float phase2TransitionWaitDuration = 3.0f;  // phase2Ç…çsÇ≠transition
     bool phase1BreakPending = false;
     bool phase2TransitionRequested = false;
     bool phase2BossRoarHpBarStarted = false;
     bool phase1BreakWaitingForRush = false;
+    bool phase1FinalHitFadePending = false;
+    Phase1FinalHitTimePhase phase1FinalHitTimePhase = Phase1FinalHitTimePhase::None;
+    float phase1FinalHitTimeElapsed = 0.0f;
+    float phase1FinalHitHitStopDuration = 0.12f;
+    float phase1FinalHitSlowScale = 0.15f;
+    bool phase1FinalHitDebugActive = false;
+    bool phase1FinalHitDebugSummaryLogged = false;
+    bool phase1FinalHitDebugSampleHitStopFrame = false;
+    int phase1FinalHitDebugHitStopFrames = 0;
+    int phase1FinalHitDebugZeroGlobalDeltaFrames = 0;
+    int phase1FinalHitDebugPlayerNonZeroFrames = 0;
+    int phase1FinalHitDebugBossNonZeroFrames = 0;
+    float phase1FinalHitDebugPlayerLastDelta = 0.0f;
+    float phase1FinalHitDebugBossLastDelta = 0.0f;
+    float phase1FinalHitDebugPlayerMaxDelta = 0.0f;
+    float phase1FinalHitDebugBossMaxDelta = 0.0f;
     Phase2TransitionStep phase2TransitionStep = Phase2TransitionStep::None;
     std::array<Phase2CinematicShot, 2> phase2CinematicShots{};
     bool phase2CinematicShotsLoaded = false;
