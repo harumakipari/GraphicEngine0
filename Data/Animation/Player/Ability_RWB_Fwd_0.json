@@ -59,6 +59,11 @@
     "states": [
         {
             "endTime": 0.6000000238418579,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -83,6 +88,11 @@
         },
         {
             "endTime": 0.30338215827941895,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -107,6 +117,11 @@
         },
         {
             "endTime": 0.4706665873527527,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -123,7 +138,7 @@
                 0.0,
                 1.0
             ],
-            "moveDistance": 2.0999999046325684,
+            "moveDistance": 2.799999952316284,
             "parameter": "",
             "startTime": 0.1643332690000534,
             "type": "MotionWarp",
@@ -131,6 +146,11 @@
         },
         {
             "endTime": 0.5419167876243591,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -155,6 +175,11 @@
         },
         {
             "endTime": 1.933333158493042,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,

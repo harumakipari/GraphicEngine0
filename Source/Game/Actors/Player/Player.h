@@ -34,6 +34,14 @@ public:
         Right,
     };
 
+    enum class HitReactionDirection :uint8_t
+    {
+        Front,
+        Back,
+        Left,
+        Right,
+    };
+
     enum class ActionType :uint8_t
     {
         None,
@@ -311,6 +319,7 @@ public:
         return damageKnockbackDirection;
     }
     float GetDamageKnockbackPower() const { return damageKnockbackPower; }
+    HitReactionDirection GetHitReactionDirection() const { return hitReactionDirection; }
 
     // 攻撃開始時の処理
     void StartAttack();
@@ -750,6 +759,7 @@ private:
     DodgeDirection dodgeDirection = DodgeDirection::Backward;
     DirectX::XMFLOAT3 dodgeWorldDirection{};
     bool useDodgeWorldDirection = false;
+    HitReactionDirection hitReactionDirection = HitReactionDirection::Front;
     // 歩き走りダッシュのステート管理
     LocomotionMode locomotionMode = LocomotionMode::Idle;
 

@@ -440,7 +440,7 @@ private:
     float phase2RecallFadeOutDuration = 1.5f;
     float phase2RecallFadeInDuration = 1.0f;
     float phase2RecallFadeAlpha = 0.0f;
-    float phase2RecallPreWaitDuration = 0.05f;
+    float phase2RecallPreWaitDuration = 0.01f;
     float phase2TransformStartTime = 5.3f;
     float phase2TransformEndTime = 8.0f;
     float phase2TransformProgress = 0.0f;

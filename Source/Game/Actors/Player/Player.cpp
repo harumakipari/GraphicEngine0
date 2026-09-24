@@ -3386,6 +3386,57 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     //    sparkComponent->Play();
     //}
 
+    if (hp > 0)
+    {
+        DirectX::XMFLOAT3 toAttacker =
+        {
+            attackerPosition.x - GetPosition().x,
+            0.0f,
+            attackerPosition.z - GetPosition().z
+        };
+        const float attackerLength = std::sqrt(
+            toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
+        if (attackerLength <= 0.0001f)
+        {
+            hitReactionDirection = HitReactionDirection::Front;
+        }
+        else
+        {
+            toAttacker.x /= attackerLength;
+            toAttacker.z /= attackerLength;
+
+            DirectX::XMFLOAT3 forward = GetForward();
+            forward.y = 0.0f;
+            const float forwardLength = std::sqrt(
+                forward.x * forward.x + forward.z * forward.z);
+            DirectX::XMFLOAT3 right = GetRight();
+            right.y = 0.0f;
+            const float rightLength = std::sqrt(
+                right.x * right.x + right.z * right.z);
+
+            if (forwardLength <= 0.0001f || rightLength <= 0.0001f)
+            {
+                hitReactionDirection = HitReactionDirection::Front;
+            }
+            else
+            {
+                forward.x /= forwardLength;
+                forward.z /= forwardLength;
+                right.x /= rightLength;
+                right.z /= rightLength;
+
+                const float forwardDot = toAttacker.x * forward.x + toAttacker.z * forward.z;
+                const float rightDot = toAttacker.x * right.x + toAttacker.z * right.z;
+                if (std::abs(forwardDot) >= std::abs(rightDot))
+                    hitReactionDirection = forwardDot >= 0.0f
+                        ? HitReactionDirection::Front : HitReactionDirection::Back;
+                else
+                    hitReactionDirection = rightDot >= 0.0f
+                        ? HitReactionDirection::Left : HitReactionDirection::Right;
+            }
+        }
+    }
+
     const char* targetState = hp > 0 ? "Damage" : "DeathPending";
     Logger::Log(Logger::LogCategory::Gameplay, "[PlayerDamage][Applied] targetState=" + std::string(targetState) + " knockback=" + std::to_string(direction.x) + "," +
         std::to_string(direction.y) + "," + std::to_string(direction.z));

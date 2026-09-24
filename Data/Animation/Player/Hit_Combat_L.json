@@ -1,0 +1,38 @@
+{
+    "animationClip": 23,
+    "animationName": "Hit_Combat_L",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "states": [
+        {
+            "endTime": 0.18473762273788452,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                -1.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.699999988079071,
+            "parameter": "",
+            "startTime": 0.1228632852435112,
+            "type": "MotionWarp",
+            "value": 1.0
+        }
+    ]
+}

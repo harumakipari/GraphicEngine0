@@ -416,7 +416,23 @@ void PlayerDamageState::Enter()
 {
     player->ResetAnimationStateFlag();
     player->characterMovementComponent->SetFixedSpeed(0.0f);
-    player->PlayBodyAnimation("Hit_Combat_F", false, true, 0.1f, true);
+    const char* animationName = "Hit_Combat_F";
+    switch (player->GetHitReactionDirection())
+    {
+    case Player::HitReactionDirection::Back:
+        animationName = "Hit_Combat_B";
+        break;
+    case Player::HitReactionDirection::Left:
+        animationName = "Hit_Combat_L";
+        break;
+    case Player::HitReactionDirection::Right:
+        animationName = "Hit_Combat_R";
+        break;
+    case Player::HitReactionDirection::Front:
+    default:
+        break;
+    }
+    player->PlayBodyAnimation(animationName, false, true, 0.1f, true);
 
     //const DirectX::XMFLOAT3& direction = player->GetDamageKnockbackDirection();
     //const float power = player->GetDamageKnockbackPower();
