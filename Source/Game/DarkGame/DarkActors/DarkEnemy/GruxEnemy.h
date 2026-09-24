@@ -970,8 +970,8 @@ private:
     BossTargetContext aiDebugTargetContext{};
     bool disableAttackBehaviorsForDebug = false;
     float defensiveTooCloseDistance = 4.5f;
-    float roarRadiusPhase1 = 5.5f;
-    float roarRadiusPhase2 = 7.0f;
+    float roarRadiusPhase1 = 7.0f;
+    float roarRadiusPhase2 = 10.0f;
     int roarDamage = 10;
     float roarTelegraphOuterAlpha = 0.85f;
     DirectX::XMFLOAT3 roarTelegraphOuterTint{ 1.0f, 0.08f, 0.03f };
@@ -1060,7 +1060,7 @@ private:
     float roarLevelStartFootOffset = -0.30f;
     float roarLevelStartFootOffsetEndTime = 0.30f;
     float roarPreStampedeStartTime = 3.4f;  // ??K?J?n????
-    float roarPreStampedeEndTime = 7.1f;    // ??K?I??????
+    float roarPreStampedeEndTime = 4.8f;    // ??K?I??????
     float roarCooldownDuration = 30.0f;
     float roarCooldownRemaining = 0.0f;
     float retreatDistanceMin = 5.0f;    // ???? ??
@@ -1449,6 +1449,9 @@ private:
     float tripleJumpTransitionElapsed = 0.0f;
     float tripleJumpTransitionDuration = 0.3f;
     float jumpTelegraphScale = 4.0f;// ジャンプ予兆モデルの大きさ
+    bool jumpTelegraphEmissiveEnabled = true;
+    DirectX::XMFLOAT3 jumpTelegraphEmissiveColor{ 1.0f, 0.16f, 0.03f };
+    float jumpTelegraphEmissiveIntensity = 15.0f;
     float jumpTelegraphInnerStartScale = 0.01f;
     float jumpTelegraphLandingTime = 0.869391f;
     float jumpTelegraphProgress = 0.0f;
@@ -1560,6 +1563,9 @@ private:
     bool dashTelegraphFadeOutEventReceived = false;
     bool dashTelegraphFadeOutActive = false;
     float dashTelegraphLineWidth = 4.f;
+    bool dashTelegraphEmissiveEnabled = true;
+    DirectX::XMFLOAT3 dashTelegraphEmissiveColor{ 1.0f, 0.16f, 0.03f };
+    float dashTelegraphEmissiveIntensity = 15.0f;
     float dashTelegraphFanRadius = 4.0f;    // 突進の扇形モデルのスケール
     float dashTelegraphLineYOffset = 0.345f;
     float dashTelegraphFanYOffset = 0.350f;
@@ -1763,6 +1769,9 @@ private:
     float tripleChargeTelegraphForwardOffset = 0.30f;
     float tripleChargeTelegraphMaxDistance = 30.0f;
     float tripleChargeTelegraphWidthMultiplier = 1.0f;
+    bool tripleChargeTelegraphEmissiveEnabled = true;
+    DirectX::XMFLOAT3 tripleChargeTelegraphEmissiveColor{ 1.0f, 0.16f, 0.03f };
+    float tripleChargeTelegraphEmissiveIntensity = 15.0f;
     bool showTripleChargeTelegraph = true;
     float chargeElapsedTime = 0.0f;
     bool chargeMovementActive = false;

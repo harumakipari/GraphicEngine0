@@ -82,6 +82,15 @@ void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
         return;
     if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
         return;
+    const DirectX::XMFLOAT4 emissiveColor{
+        dashTelegraphEmissiveColor.x, dashTelegraphEmissiveColor.y, dashTelegraphEmissiveColor.z, 1.0f };
+    const float emissiveIntensity = dashTelegraphEmissiveEnabled
+        ? (std::max)(0.0f, dashTelegraphEmissiveIntensity) : 0.0f;
+    for (const auto& mesh : { dashTelegraphLineMeshComponent, dashTelegraphFanMeshComponent })
+    {
+        mesh->plusAlphaCBuffer->data.cpuColor = emissiveColor;
+        mesh->plusAlphaCBuffer->data.emissionPower = emissiveIntensity;
+    }
     const float dt = (std::max)(0.0f, deltaTime);
     const auto setLineAlpha = [&](float alpha)
     {

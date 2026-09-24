@@ -2823,6 +2823,11 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text("FadeOut Active: %s", dashTelegraphFadeOutActive ? "true" : "false");
     const char* dashTelegraphVisualStateNames[] = { "Hidden", "LineExpanding", "FanFadingIn", "Holding", "DashActive", "FanFlashing", "FanFadingOut" };
     ImGui::Text("Visual State: %s", dashTelegraphVisualStateNames[static_cast<int>(dashTelegraphVisualState)]);
+    ImGui::Checkbox("Dash Telegraph Emissive Enabled", &dashTelegraphEmissiveEnabled);
+    ImGui::ColorEdit3("Dash Telegraph Emissive Color", &dashTelegraphEmissiveColor.x);
+    ImGui::DragFloat("Dash Telegraph Emissive Intensity", &dashTelegraphEmissiveIntensity,
+        0.05f, 0.0f, 20.0f, "%.2f");
+    dashTelegraphEmissiveIntensity = (std::max)(0.0f, dashTelegraphEmissiveIntensity);
     ImGui::DragFloat("Line Expand Duration", &dashTelegraphLineExpandDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
     ImGui::Text("Line Expand Progress: %.3f", dashTelegraphLineExpandProgress);
     ImGui::DragFloat("Line Fade Out Duration", &dashTelegraphLineFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");

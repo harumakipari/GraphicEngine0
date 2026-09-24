@@ -45,6 +45,18 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
     EnsureJumpTelegraphMesh();
     if (!jumpTelegraphMeshComponent)
         return;
+    const DirectX::XMFLOAT4 emissiveColor{
+        jumpTelegraphEmissiveColor.x, jumpTelegraphEmissiveColor.y, jumpTelegraphEmissiveColor.z, 1.0f };
+    const float emissiveIntensity = jumpTelegraphEmissiveEnabled
+        ? (std::max)(0.0f, jumpTelegraphEmissiveIntensity) : 0.0f;
+    for (const auto& mesh : { jumpTelegraphMeshComponent, jumpTelegraphInnerMeshComponent })
+    {
+        if (mesh && mesh->plusAlphaCBuffer)
+        {
+            mesh->plusAlphaCBuffer->data.cpuColor = emissiveColor;
+            mesh->plusAlphaCBuffer->data.emissionPower = emissiveIntensity;
+        }
+    }
     const DirectX::XMFLOAT3 landing = tripleJumpActive
         ? tripleJumpPlannedLandingPosition
         : DirectX::XMFLOAT3{
@@ -378,6 +390,11 @@ void GruxEnemy::DrawTripleJumpDebug()
     ImGui::SeparatorText("Triple Jump Settings");
     ImGui::DragFloat("Jump Telegraph Scale", &jumpTelegraphScale,
         0.01f, 0.01f, 10.0f, "%.2f");
+    ImGui::Checkbox("Jump Telegraph Emissive Enabled", &jumpTelegraphEmissiveEnabled);
+    ImGui::ColorEdit3("Jump Telegraph Emissive Color", &jumpTelegraphEmissiveColor.x);
+    ImGui::DragFloat("Jump Telegraph Emissive Intensity", &jumpTelegraphEmissiveIntensity,
+        0.05f, 0.0f, 20.0f, "%.2f");
+    jumpTelegraphEmissiveIntensity = (std::max)(0.0f, jumpTelegraphEmissiveIntensity);
     jumpTelegraphScale = (std::max)(0.01f, jumpTelegraphScale);
     ImGui::DragFloat("Inner Start Scale", &jumpTelegraphInnerStartScale,
         0.01f, 0.01f, 10.0f, "%.2f");

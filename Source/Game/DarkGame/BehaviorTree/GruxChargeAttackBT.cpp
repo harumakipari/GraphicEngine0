@@ -548,6 +548,12 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
 
     if (tripleChargeTelegraphMeshComponent)
     {
+        tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = {
+            tripleChargeTelegraphEmissiveColor.x, tripleChargeTelegraphEmissiveColor.y,
+            tripleChargeTelegraphEmissiveColor.z, 1.0f };
+        tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower =
+            tripleChargeTelegraphEmissiveEnabled
+            ? (std::max)(0.0f, tripleChargeTelegraphEmissiveIntensity) : 0.0f;
         const DirectX::XMFLOAT3 endPosition{
             startPosition.x + normalizedDirection.x * telegraphLength,
             startPosition.y,
@@ -1356,6 +1362,11 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::DragFloat("Triple Charge Reposition Speed", &tripleChargeRepositionSpeed, 0.05f, 0.1f, 10.0f, "%.2f m/s");
     ImGui::DragFloat("Triple Charge Reposition Side Safety Margin", &tripleChargeRepositionSideSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
     ImGui::Checkbox("Show Triple Charge Telegraph", &showTripleChargeTelegraph);
+    ImGui::Checkbox("Triple Charge Telegraph Emissive Enabled", &tripleChargeTelegraphEmissiveEnabled);
+    ImGui::ColorEdit3("Triple Charge Telegraph Emissive Color", &tripleChargeTelegraphEmissiveColor.x);
+    ImGui::DragFloat("Triple Charge Telegraph Emissive Intensity", &tripleChargeTelegraphEmissiveIntensity,
+        0.05f, 0.0f, 20.0f, "%.2f");
+    tripleChargeTelegraphEmissiveIntensity = (std::max)(0.0f, tripleChargeTelegraphEmissiveIntensity);
     ImGui::DragFloat("Triple Charge Telegraph Expand Duration", &tripleChargeTelegraphExpandDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
     ImGui::DragFloat("Triple Charge Telegraph Hold Duration", &tripleChargeTelegraphHoldDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
     ImGui::DragFloat("Triple Charge Telegraph Ground Offset", &tripleChargeTelegraphGroundOffset, 0.005f, -0.1f, 0.5f, "%.3f m");
