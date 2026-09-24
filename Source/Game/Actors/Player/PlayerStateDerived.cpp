@@ -173,7 +173,7 @@ void PlayerAttackState::Execute(float deltaTime)
 {
     player->UpdateAttackTargetRotation(deltaTime);
 
-    if (player->IsPhase1LastHitVisualPoseLatchRequested())
+    if (player->IsFinalHitVisualPoseLatchRequested())
     {
         player->comboQueued = false;
         dodgeQueued = false;
@@ -181,7 +181,7 @@ void PlayerAttackState::Execute(float deltaTime)
             player->ClearActionRequest("phase1_final_hit");
     }
 
-    if (player->inputWindow && !player->IsPhase1LastHitVisualPoseLatchRequested())
+    if (player->inputWindow && !player->IsFinalHitVisualPoseLatchRequested())
     {
         switch (player->bufferCommand.type)
         {
@@ -264,7 +264,11 @@ void PlayerAttackState::Exit()
         if (naturalAnimationEnd)
         {
             // Latch only the completed attack pose before Idle/locomotion replaces the clip.
-            player->LatchPhase1LastHitVisualPoseAfterAnimationUpdate();
+            player->LatchFinalHitVisualPoseAfterAnimationUpdate();
+        }
+        else if (player->IsFinalHitAttackDrainActive())
+        {
+            player->MarkFinalHitAttackDrainInterrupted();
         }
         player->currentAttackAnimation = player->startAttackAnimation;
         player->comboQueued = false;
@@ -618,8 +622,9 @@ void PlayerRushState::Execute(float deltaTime)
     if (auto target = player->rushTarget.lock())
     {
         const auto targetStateMachine = target->GetStateMachine();
-        if (!target->IsAlive() || target->IsPendingKill() ||
-            (targetStateMachine && std::string(targetStateMachine->GetStateName()) == "EnemyDeathState"))
+        if ((!target->IsAlive() || target->IsPendingKill() ||
+            (targetStateMachine && std::string(targetStateMachine->GetStateName()) == "EnemyDeathState")) &&
+            !player->IsFinalHitAttackDrainActive())
         {
             player->BeginBossSlowReturn(true);
             player->GetStateMachine()->ChangeState("Idle");
@@ -652,13 +657,22 @@ void PlayerRushState::Execute(float deltaTime)
         const bool animationPlaying =
             player->GetBodyAnimationController()->IsPlayAnimation();
 
-        if (player->IsPhase1LastHitRushFollowUpStopRequested())
+        if (player->IsFinalHitRushFollowUpStopRequested())
         {
             queuedAttackCount = 0;
             if (player->bufferCommand.type == Player::ActionType::Attack)
                 player->ConsumeActionRequest(Player::ActionType::Attack);
             if (!animationPlaying)
+            {
+                if (player->GetPhase2RushFinalHitDebugEventId() != 0)
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[Phase2RushFinalHit][Rush][NaturalEnd] event=" + std::to_string(player->GetPhase2RushFinalHitDebugEventId()) +
+                        " step=" + std::to_string(comboIndex) +
+                        " followUpSuppressed=true -> Finished");
+                }
                 phase = RushPhase::Finished;
+            }
             break;
         }
         if (player->transitionWindow)
@@ -712,6 +726,13 @@ void PlayerRushState::Execute(float deltaTime)
             }
             else
             {
+                if (player->GetPhase2RushFinalHitDebugEventId() != 0)
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[Phase2RushFinalHit][Rush][NaturalEnd] event=" + std::to_string(player->GetPhase2RushFinalHitDebugEventId()) +
+                        " step=" + std::to_string(comboIndex) +
+                        " followUpSuppressed=false -> Finished");
+                }
                 phase = RushPhase::Finished;
             }
         }
@@ -722,7 +743,13 @@ void PlayerRushState::Execute(float deltaTime)
         {
             // Rush reaches Idle only after Finished observes the clip end.
             // Latch here so the direct Idle path cannot capture an in-flight pose.
-            player->LatchPhase1LastHitVisualPoseAfterAnimationUpdate();
+            player->LatchFinalHitVisualPoseAfterAnimationUpdate();
+            if (player->GetPhase2RushFinalHitDebugEventId() != 0)
+            {
+                Logger::Log(Logger::LogCategory::Gameplay,
+                    "[Phase2RushFinalHit][Rush][Idle] event=" + std::to_string(player->GetPhase2RushFinalHitDebugEventId()) +
+                    " visualLatched=" + std::string(player->GetBodyAnimationController()->IsVisualPoseLatched() ? "true" : "false"));
+            }
             player->GetStateMachine()->ChangeState("Idle");
         }
         break;
@@ -731,6 +758,18 @@ void PlayerRushState::Execute(float deltaTime)
 
 void PlayerRushState::Exit()
 {
+    const uint64_t debugEventId = player->GetPhase2RushFinalHitDebugEventId();
+    if (debugEventId != 0)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][Rush][ExitBegin] event=" + std::to_string(debugEventId) +
+            " visualLatched=" + std::string(player->GetBodyAnimationController()->IsVisualPoseLatched() ? "true" : "false"));
+    }
+    if (player->IsFinalHitAttackDrainActive() &&
+        !player->IsFinalHitAttackDrainLatched())
+    {
+        player->MarkFinalHitAttackDrainInterrupted();
+    }
     if (auto gruxTarget = rushHpDisplayTarget.lock())
     {
         gruxTarget->EndRushHpDisplay();
@@ -750,12 +789,18 @@ void PlayerRushState::Exit()
     elapsedTime = 0.0f;
     Logger::Log(Logger::LogCategory::Gameplay, "[Rush][Exit] combo state reset");
 
-    player->ClearPhase1LastHitRushFollowUpStop();
+    player->ClearFinalHitRushFollowUpStop();
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
     player->GetBodyAnimationController()->ResetAnimationRate();
     player->ForceResetPlayerSlow();
     player->BeginBossSlowReturn(true);
     player->invincible = false;  // ラッシュ攻撃中は無敵状態解除
+    if (debugEventId != 0)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][Rush][ExitEnd] event=" + std::to_string(debugEventId) +
+            " visualLatched=" + std::string(player->GetBodyAnimationController()->IsVisualPoseLatched() ? "true" : "false"));
+    }
 }
 
 bool PlayerRushState::AdvanceRushCombo()

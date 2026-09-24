@@ -123,15 +123,15 @@ void GruxEnemy::Initialize(const Transform& transform)
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
     skeletalMeshComponent->SetModel("./Data/Models/Characters/GruxQilin/boss.gltf", false, true);
     const auto loadPhase2BaseColor = [this](const char* materialName, const std::wstring& filename)
-    {
-        const bool loaded = skeletalMeshComponent->LoadPhase2BaseColorTexture(materialName, filename);
-        if (!loaded)
         {
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[Phase2Texture] Missing " + std::string(materialName) +
-                " Phase2 BaseColor; using the material Phase1 BaseColor fallback.");
-        }
-    };
+            const bool loaded = skeletalMeshComponent->LoadPhase2BaseColorTexture(materialName, filename);
+            if (!loaded)
+            {
+                Logger::Log(Logger::LogCategory::Gameplay,
+                    "[Phase2Texture] Missing " + std::string(materialName) +
+                    " Phase2 BaseColor; using the material Phase1 BaseColor fallback.");
+            }
+        };
     loadPhase2BaseColor("M_Grux_Qilin_Torso",
         L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Torso_BaseColor_Phase2.DDS");
     loadPhase2BaseColor("M_Grux_Qilin_Gear",
@@ -1420,7 +1420,8 @@ void GruxEnemy::BeginFinalHitReaction(const std::string& animationName)
 
 void GruxEnemy::EndFinalHitReaction()
 {
-    finalHitReactionHeld = finalHitReactionActive;
+    if (finalHitReactionActive)
+        finalHitReactionHeld = true;
     finalHitReactionActive = false;
 }
 
@@ -2789,9 +2790,9 @@ void GruxEnemy::DrawImGuiDetails()
 
 
     ImGui::SeparatorText(U8("ダッシュBT"));
-    ImGui::DragFloat(U8("ダッシュ準備距離 最小"),&dashSetupDistanceMin,0.1f,0.1f,30.0f,"%.2f m");
-    ImGui::DragFloat(U8("ダッシュ準備距離 最大"),&dashSetupDistanceMax,0.1f,0.1f,30.0f,"%.2f m");
-    ImGui::DragFloat(U8("ダッシュ準備 最低移動距離"),&dashSetupMinimumMoveDistance,0.1f,0.0f,30.0f,"%.2f m");
+    ImGui::DragFloat(U8("ダッシュ準備距離 最小"), &dashSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
+    ImGui::DragFloat(U8("ダッシュ準備距離 最大"), &dashSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
+    ImGui::DragFloat(U8("ダッシュ準備 最低移動距離"), &dashSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
     dashSetupDistanceMin = (std::max)(0.1f, dashSetupDistanceMin);
     dashSetupDistanceMax = (std::max)(dashSetupDistanceMin, dashSetupDistanceMax);
     dashSetupMinimumMoveDistance = (std::max)(0.0f, dashSetupMinimumMoveDistance);
@@ -2803,15 +2804,15 @@ void GruxEnemy::DrawImGuiDetails()
     const int dashStage =
         dashBTPhase == DashBTPhase::Telegraph ? 0 :
         dashBTPhase == DashBTPhase::Movement ? 1 :
-        dashBTPhase == DashBTPhase::Knockup ? 2 :-1;
+        dashBTPhase == DashBTPhase::Knockup ? 2 : -1;
 
-    ImGui::Text(U8("ダッシュBT状態: %s"),dashPhaseNames[static_cast<int>(dashBTPhase)]);
-    ImGui::Text(U8("ダッシュ予兆中: %s"),dashBTPhase == DashBTPhase::Telegraph? U8("はい"): U8("いいえ"));
-    ImGui::Text(U8("ダッシュStage: %d"),dashStage);
-    ImGui::Text(U8("ダッシュ固定方向: (%.3f, %.3f, %.3f)"),dashAttackDirection.x,dashAttackDirection.y,dashAttackDirection.z);
-    ImGui::Text(U8("ダッシュ予定距離: %.2f m"),calculatedDashAttackDistance);
-    ImGui::Text(U8("ダッシュ移動距離: %.2f m"),dashBTTraveledDistance);
-    ImGui::Text(U8("ダッシュ残り時間: %.2f sec"),dashBTPhase == DashBTPhase::Movement? (std::max)(0.0f, dashAttackTimeout - dashAttackElapsedTime): 0.0f);
+    ImGui::Text(U8("ダッシュBT状態: %s"), dashPhaseNames[static_cast<int>(dashBTPhase)]);
+    ImGui::Text(U8("ダッシュ予兆中: %s"), dashBTPhase == DashBTPhase::Telegraph ? U8("はい") : U8("いいえ"));
+    ImGui::Text(U8("ダッシュStage: %d"), dashStage);
+    ImGui::Text(U8("ダッシュ固定方向: (%.3f, %.3f, %.3f)"), dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
+    ImGui::Text(U8("ダッシュ予定距離: %.2f m"), calculatedDashAttackDistance);
+    ImGui::Text(U8("ダッシュ移動距離: %.2f m"), dashBTTraveledDistance);
+    ImGui::Text(U8("ダッシュ残り時間: %.2f sec"), dashBTPhase == DashBTPhase::Movement ? (std::max)(0.0f, dashAttackTimeout - dashAttackElapsedTime) : 0.0f);
     ImGui::SeparatorText("Triple Dash Runtime");
     if (ImGui::Checkbox("Show Dash Telegraph", &showDashTelegraph) && !showDashTelegraph)
         HideDashTelegraphVisual();
@@ -2861,97 +2862,97 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Line Y Offset", &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
     ImGui::DragFloat("Fan Y Offset", &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
     const auto drawDashTelegraphMeshDebug = [](const char* label, const std::shared_ptr<StaticMeshComponent>& mesh)
-    {
-        ImGui::SeparatorText(label);
-        if (!mesh)
         {
-            ImGui::Text("Component: Not Created");
-            return;
-        }
-        const auto& world = mesh->GetComponentWorldTransform();
-        const auto pos = world.GetLocation();
-        const auto rotation = world.GetRotation();
-        const auto scale = world.GetScale();
-        const auto euler = world.GetEulerRotation();
-        const auto matrix = world.ToWorldTransform();
-        ImGui::Text("Visible: %s", mesh->IsVisible() ? "true" : "false");
-        ImGui::Text("Model Loaded: %s", mesh->model ? "true" : "false");
-        ImGui::Text("Pipeline: %s / %s", mesh->overrideDeferredPipelineName ? mesh->overrideDeferredPipelineName->c_str() : "None", mesh->overrideForwardPipelineName ? mesh->overrideForwardPipelineName->c_str() : "None");
-        ImGui::Text("Render Eligible: %s", (mesh->IsVisible() && mesh->model && mesh->overrideForwardPipelineName == "chargeTelegraphUnlitForward") ? "true" : "false");
-        ImGui::Text("Render Function Call Count: %llu", static_cast<unsigned long long>(mesh->GetDebugRenderCallCount()));
-        ImGui::Text("World Position: (%.3f, %.3f, %.3f)", pos.x, pos.y, pos.z);
-        ImGui::Text("World Rotation Q: (%.4f, %.4f, %.4f, %.4f)", rotation.x, rotation.y, rotation.z, rotation.w);
-        ImGui::Text("World Yaw: %.2f deg", DirectX::XMConvertToDegrees(euler.y));
-        ImGui::Text("World Scale: (%.3f, %.3f, %.3f)", scale.x, scale.y, scale.z);
-        ImGui::Text("World Matrix R0: %.3f %.3f %.3f %.3f", matrix._11, matrix._12, matrix._13, matrix._14);
-        ImGui::Text("World Matrix R1: %.3f %.3f %.3f %.3f", matrix._21, matrix._22, matrix._23, matrix._24);
-        ImGui::Text("World Matrix R2: %.3f %.3f %.3f %.3f", matrix._31, matrix._32, matrix._33, matrix._34);
-        ImGui::Text("World Matrix R3: %.3f %.3f %.3f %.3f", matrix._41, matrix._42, matrix._43, matrix._44);
-        ImGui::Text("World Local +Y (Plane Normal): (%.3f, %.3f, %.3f)", matrix._21, matrix._22, matrix._23);
-        ImGui::Text("World Local -Z (Forward): (%.3f, %.3f, %.3f)", -matrix._31, -matrix._32, -matrix._33);
-        if (!mesh->model)
-            return;
-        // StaticMesh geometry is stored in batchMeshes, not meshes. GetAABB()
-        // currently only handles meshes, so compute the diagnostic AABB from the
-        // retained batch vertices for the Dash Line without changing gameplay/render data.
-        AABB box = mesh->model->GetAABB();
-        if (mesh->model->mode == ModelTypes::ModelMode::StaticMesh)
-        {
-            DirectX::XMFLOAT3 minValue{ FLT_MAX, FLT_MAX, FLT_MAX };
-            DirectX::XMFLOAT3 maxValue{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
-            bool hasVertex = false;
-            for (const auto& batchMesh : mesh->model->batchMeshes)
-                for (const auto& vertex : batchMesh.cachedVertices)
-                {
-                    hasVertex = true;
-                    minValue.x = (std::min)(minValue.x, vertex.position.x);
-                    minValue.y = (std::min)(minValue.y, vertex.position.y);
-                    minValue.z = (std::min)(minValue.z, vertex.position.z);
-                    maxValue.x = (std::max)(maxValue.x, vertex.position.x);
-                    maxValue.y = (std::max)(maxValue.y, vertex.position.y);
-                    maxValue.z = (std::max)(maxValue.z, vertex.position.z);
-                }
-            if (hasVertex)
-                box = { minValue, maxValue };
-        }
-        const DirectX::XMFLOAT3 size{ box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z };
-        ImGui::Text("Model AABB Min: (%.3f, %.3f, %.3f)", box.min.x, box.min.y, box.min.z);
-        ImGui::Text("Model AABB Max: (%.3f, %.3f, %.3f)", box.max.x, box.max.y, box.max.z);
-        ImGui::Text("Model Size: (%.3f, %.3f, %.3f)", size.x, size.y, size.z);
-        DirectX::XMFLOAT3 worldMin{ FLT_MAX, FLT_MAX, FLT_MAX };
-        DirectX::XMFLOAT3 worldMax{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
-        const auto worldMatrix = world.ToMatrix();
-        for (const float x : { box.min.x, box.max.x })
-            for (const float y : { box.min.y, box.max.y })
-                for (const float z : { box.min.z, box.max.z })
-                {
-                    DirectX::XMFLOAT3 point{};
-                    DirectX::XMStoreFloat3(&point, DirectX::XMVector3TransformCoord(
-                        DirectX::XMVectorSet(x, y, z, 1.0f), worldMatrix));
-                    worldMin.x = (std::min)(worldMin.x, point.x);
-                    worldMin.y = (std::min)(worldMin.y, point.y);
-                    worldMin.z = (std::min)(worldMin.z, point.z);
-                    worldMax.x = (std::max)(worldMax.x, point.x);
-                    worldMax.y = (std::max)(worldMax.y, point.y);
-                    worldMax.z = (std::max)(worldMax.z, point.z);
-                }
-        ImGui::Text("Transformed World AABB Min: (%.3f, %.3f, %.3f)", worldMin.x, worldMin.y, worldMin.z);
-        ImGui::Text("Transformed World AABB Max: (%.3f, %.3f, %.3f)", worldMax.x, worldMax.y, worldMax.z);
-        ImGui::Text("Transformed World AABB Size: (%.3f, %.3f, %.3f)", worldMax.x - worldMin.x, worldMax.y - worldMin.y, worldMax.z - worldMin.z);
-        ImGui::Text("Materials / Textures / Images: %d / %d / %d", static_cast<int>(mesh->model->materials.size()), static_cast<int>(mesh->model->textures.size()), static_cast<int>(mesh->model->images.size()));
-        if (!mesh->model->materials.empty())
-        {
-            const int index = mesh->model->materials.front().data.pbrMetallicRoughness.basecolorTexture.index;
-            ImGui::Text("BaseColor Mask Texture Index: %d", index);
-            if (index >= 0 && index < static_cast<int>(mesh->model->textures.size()))
+            ImGui::SeparatorText(label);
+            if (!mesh)
             {
-                const auto& texture = mesh->model->textures[index];
-                ImGui::Text("Mask Texture: %s (Image %d)", texture.name.c_str(), texture.source);
-                const bool srvReady = texture.source >= 0 && texture.source < static_cast<int>(mesh->model->textureResourceViews.size()) && mesh->model->textureResourceViews[texture.source].Get() != nullptr;
-                ImGui::Text("Mask Texture SRV Ready: %s", srvReady ? "true" : "false");
+                ImGui::Text("Component: Not Created");
+                return;
             }
-        }
-    };
+            const auto& world = mesh->GetComponentWorldTransform();
+            const auto pos = world.GetLocation();
+            const auto rotation = world.GetRotation();
+            const auto scale = world.GetScale();
+            const auto euler = world.GetEulerRotation();
+            const auto matrix = world.ToWorldTransform();
+            ImGui::Text("Visible: %s", mesh->IsVisible() ? "true" : "false");
+            ImGui::Text("Model Loaded: %s", mesh->model ? "true" : "false");
+            ImGui::Text("Pipeline: %s / %s", mesh->overrideDeferredPipelineName ? mesh->overrideDeferredPipelineName->c_str() : "None", mesh->overrideForwardPipelineName ? mesh->overrideForwardPipelineName->c_str() : "None");
+            ImGui::Text("Render Eligible: %s", (mesh->IsVisible() && mesh->model && mesh->overrideForwardPipelineName == "chargeTelegraphUnlitForward") ? "true" : "false");
+            ImGui::Text("Render Function Call Count: %llu", static_cast<unsigned long long>(mesh->GetDebugRenderCallCount()));
+            ImGui::Text("World Position: (%.3f, %.3f, %.3f)", pos.x, pos.y, pos.z);
+            ImGui::Text("World Rotation Q: (%.4f, %.4f, %.4f, %.4f)", rotation.x, rotation.y, rotation.z, rotation.w);
+            ImGui::Text("World Yaw: %.2f deg", DirectX::XMConvertToDegrees(euler.y));
+            ImGui::Text("World Scale: (%.3f, %.3f, %.3f)", scale.x, scale.y, scale.z);
+            ImGui::Text("World Matrix R0: %.3f %.3f %.3f %.3f", matrix._11, matrix._12, matrix._13, matrix._14);
+            ImGui::Text("World Matrix R1: %.3f %.3f %.3f %.3f", matrix._21, matrix._22, matrix._23, matrix._24);
+            ImGui::Text("World Matrix R2: %.3f %.3f %.3f %.3f", matrix._31, matrix._32, matrix._33, matrix._34);
+            ImGui::Text("World Matrix R3: %.3f %.3f %.3f %.3f", matrix._41, matrix._42, matrix._43, matrix._44);
+            ImGui::Text("World Local +Y (Plane Normal): (%.3f, %.3f, %.3f)", matrix._21, matrix._22, matrix._23);
+            ImGui::Text("World Local -Z (Forward): (%.3f, %.3f, %.3f)", -matrix._31, -matrix._32, -matrix._33);
+            if (!mesh->model)
+                return;
+            // StaticMesh geometry is stored in batchMeshes, not meshes. GetAABB()
+            // currently only handles meshes, so compute the diagnostic AABB from the
+            // retained batch vertices for the Dash Line without changing gameplay/render data.
+            AABB box = mesh->model->GetAABB();
+            if (mesh->model->mode == ModelTypes::ModelMode::StaticMesh)
+            {
+                DirectX::XMFLOAT3 minValue{ FLT_MAX, FLT_MAX, FLT_MAX };
+                DirectX::XMFLOAT3 maxValue{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
+                bool hasVertex = false;
+                for (const auto& batchMesh : mesh->model->batchMeshes)
+                    for (const auto& vertex : batchMesh.cachedVertices)
+                    {
+                        hasVertex = true;
+                        minValue.x = (std::min)(minValue.x, vertex.position.x);
+                        minValue.y = (std::min)(minValue.y, vertex.position.y);
+                        minValue.z = (std::min)(minValue.z, vertex.position.z);
+                        maxValue.x = (std::max)(maxValue.x, vertex.position.x);
+                        maxValue.y = (std::max)(maxValue.y, vertex.position.y);
+                        maxValue.z = (std::max)(maxValue.z, vertex.position.z);
+                    }
+                if (hasVertex)
+                    box = { minValue, maxValue };
+            }
+            const DirectX::XMFLOAT3 size{ box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z };
+            ImGui::Text("Model AABB Min: (%.3f, %.3f, %.3f)", box.min.x, box.min.y, box.min.z);
+            ImGui::Text("Model AABB Max: (%.3f, %.3f, %.3f)", box.max.x, box.max.y, box.max.z);
+            ImGui::Text("Model Size: (%.3f, %.3f, %.3f)", size.x, size.y, size.z);
+            DirectX::XMFLOAT3 worldMin{ FLT_MAX, FLT_MAX, FLT_MAX };
+            DirectX::XMFLOAT3 worldMax{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
+            const auto worldMatrix = world.ToMatrix();
+            for (const float x : { box.min.x, box.max.x })
+                for (const float y : { box.min.y, box.max.y })
+                    for (const float z : { box.min.z, box.max.z })
+                    {
+                        DirectX::XMFLOAT3 point{};
+                        DirectX::XMStoreFloat3(&point, DirectX::XMVector3TransformCoord(
+                            DirectX::XMVectorSet(x, y, z, 1.0f), worldMatrix));
+                        worldMin.x = (std::min)(worldMin.x, point.x);
+                        worldMin.y = (std::min)(worldMin.y, point.y);
+                        worldMin.z = (std::min)(worldMin.z, point.z);
+                        worldMax.x = (std::max)(worldMax.x, point.x);
+                        worldMax.y = (std::max)(worldMax.y, point.y);
+                        worldMax.z = (std::max)(worldMax.z, point.z);
+                    }
+            ImGui::Text("Transformed World AABB Min: (%.3f, %.3f, %.3f)", worldMin.x, worldMin.y, worldMin.z);
+            ImGui::Text("Transformed World AABB Max: (%.3f, %.3f, %.3f)", worldMax.x, worldMax.y, worldMax.z);
+            ImGui::Text("Transformed World AABB Size: (%.3f, %.3f, %.3f)", worldMax.x - worldMin.x, worldMax.y - worldMin.y, worldMax.z - worldMin.z);
+            ImGui::Text("Materials / Textures / Images: %d / %d / %d", static_cast<int>(mesh->model->materials.size()), static_cast<int>(mesh->model->textures.size()), static_cast<int>(mesh->model->images.size()));
+            if (!mesh->model->materials.empty())
+            {
+                const int index = mesh->model->materials.front().data.pbrMetallicRoughness.basecolorTexture.index;
+                ImGui::Text("BaseColor Mask Texture Index: %d", index);
+                if (index >= 0 && index < static_cast<int>(mesh->model->textures.size()))
+                {
+                    const auto& texture = mesh->model->textures[index];
+                    ImGui::Text("Mask Texture: %s (Image %d)", texture.name.c_str(), texture.source);
+                    const bool srvReady = texture.source >= 0 && texture.source < static_cast<int>(mesh->model->textureResourceViews.size()) && mesh->model->textureResourceViews[texture.source].Get() != nullptr;
+                    ImGui::Text("Mask Texture SRV Ready: %s", srvReady ? "true" : "false");
+                }
+            }
+        };
     drawDashTelegraphMeshDebug("Dash Telegraph Line Mesh", dashTelegraphLineMeshComponent);
     if (dashTelegraphLineMeshComponent && dashTelegraphLineMeshComponent->model)
     {
@@ -3031,8 +3032,8 @@ void GruxEnemy::DrawImGuiDetails()
             break;
         }
     }
-    ImGui::Text(U8("現在の攻撃: %s"),recoveryAttackName);
-    ImGui::Text(U8("現在の後隙時間: %.2f sec"),GetSelectedAttackRecoveryDuration());
+    ImGui::Text(U8("現在の攻撃: %s"), recoveryAttackName);
+    ImGui::Text(U8("現在の後隙時間: %.2f sec"), GetSelectedAttackRecoveryDuration());
 
     ImGui::Text("Active Intent: %s", activeIntentName);
     ImGui::Text("Intent Goal: %s", activeIntentGoal);
@@ -3396,9 +3397,9 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::Text(U8("現在のコンボ段階: %d"), fastComboRuntimeStage);
         ImGui::Text(U8("FastCombo 実行状態: %s"), runtimeStateName);
         ImGui::Text(U8("ターゲットとの角度: %.2f deg"), fastComboTargetContext.absoluteAngleDegrees);
-        ImGui::DragFloat(U8("段間旋回 完了角度:"), &interStageFaceCompleteAngle,0.5f);
-        ImGui::DragFloat(U8("段間旋回 最大許容角度:"), &interStageMaxFacingAngle,0.5f);
-        ImGui::DragFloat(U8("段間旋回 待機時間: "), &interStageFaceDelay,0.1f);
+        ImGui::DragFloat(U8("段間旋回 完了角度:"), &interStageFaceCompleteAngle, 0.5f);
+        ImGui::DragFloat(U8("段間旋回 最大許容角度:"), &interStageMaxFacingAngle, 0.5f);
+        ImGui::DragFloat(U8("段間旋回 待機時間: "), &interStageFaceDelay, 0.1f);
         ImGui::Text(U8("最後に取得したコンボ段階: %s"),
             fastComboTargetStage >= 0 ? (fastComboTargetStage == 0 ? "A" : fastComboTargetStage == 1 ? "B" : "C") : "None");
         static constexpr const char* sampleLabels[] = { "A Start", "A -> B", "B -> C" };
@@ -3964,7 +3965,7 @@ void GruxEnemy::DrawImGuiDetails()
             0.01f, 0.0f, 1.0f, "%.2f");
         ImGui::DragFloat("Wall Normal Y Threshold", &chargeWallNormalYThreshold,
             0.01f, 0.0f, 1.0f, "%.2f");
-   
+
         chargeWindupEndTime = (std::max)(0.0f, chargeWindupEndTime);
         chargeSpeed = (std::max)(0.1f, chargeSpeed);
         chargePlayerHitRecoveryDuration =
@@ -4299,6 +4300,13 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
     skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = damageFlashStartValue;
     // コントローラー振動
     InputSystem::SetVibration(0.8f, 0.1f);
+    // カメラシェイク
+    if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
+    {
+        std::string presetName = "BossRoar";
+        camera->PlayCameraShakePreset(presetName);
+    }
+
     CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.3f);
 
     const int hpBeforeDamage = hp;
@@ -4387,9 +4395,9 @@ void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos,
     bool hasHitPosition, bool hasHitNormal) const
 {
     const auto isFiniteVector = [](const DirectX::XMFLOAT3& value)
-    {
-        return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
-    };
+        {
+            return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
+        };
     const float normalLengthSq = hitNormal.x * hitNormal.x +
         hitNormal.y * hitNormal.y + hitNormal.z * hitNormal.z;
     const bool useSurfaceSpawn = hasHitPosition && hasHitNormal &&
@@ -5205,7 +5213,7 @@ void GruxEnemy::BeginPositioning(const BossPositioningData& data)
         controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
     if (!isIdlePlaying)
         PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
-        "GruxEnemy::BeginPositioning");
+            "GruxEnemy::BeginPositioning");
 
     positioningDebugActive = true;
     activePositioningDebugData = data;
@@ -5334,7 +5342,7 @@ void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
         controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
     if (!idlePlaying)
         PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
-        "GruxEnemy::UpdatePositioningAnimation");
+            "GruxEnemy::UpdatePositioningAnimation");
 }
 
 void GruxEnemy::EndPositioningAnimation()
@@ -6017,7 +6025,7 @@ bool GruxEnemy::UpdateJumpAttackTelegraph(float deltaTime)
 bool GruxEnemy::StartJumpAttackExecution()
 {
     jumpAttackExecutionStartCalledDebug = true;
-if (!PlayAttackStage(BossAttackType::JumpAttack, 1))
+    if (!PlayAttackStage(BossAttackType::JumpAttack, 1))
         return false;
     OnSelectedActionStartedSuccessfully();
     return true;
@@ -6500,7 +6508,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             bossRoomProbeBlockEvent.requestedMove.z * bossRoomProbeBlockEvent.requestedMove.z);
         const float requestedAlongCharge = requestedLength > 0.001f
             ? (bossRoomProbeBlockEvent.requestedMove.x * chargeDirection.x +
-               bossRoomProbeBlockEvent.requestedMove.z * chargeDirection.z) / requestedLength
+                bossRoomProbeBlockEvent.requestedMove.z * chargeDirection.z) / requestedLength
             : 0.0f;
         const uint32_t bossRoomWallLayer = CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast);
         if (!bossRoomProbeBlockEvent.initialOverlap &&
@@ -6574,20 +6582,20 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             castOrigin.y + chargeDirection.y * castDistance,
             castOrigin.z + chargeDirection.z * castDistance };
         const auto drawCast = [&](const float castRadius, const DirectX::XMFLOAT4& color, const bool enabled)
-        {
-            if (!enabled) return;
-            constexpr int sampleCount = 4;
-            for (int i = 0; i <= sampleCount; ++i)
             {
-                const float t = static_cast<float>(i) / static_cast<float>(sampleCount);
-                const DirectX::XMFLOAT3 point{
-                    castOrigin.x + (castEnd.x - castOrigin.x) * t,
-                    castOrigin.y + (castEnd.y - castOrigin.y) * t,
-                    castOrigin.z + (castEnd.z - castOrigin.z) * t };
-                DebugRender::DrawSphere(point, castRadius, color, 0.0f, true);
-            }
-            DebugRender::DrawLine(castOrigin, castEnd, color, 0.0f, true);
-        };
+                if (!enabled) return;
+                constexpr int sampleCount = 4;
+                for (int i = 0; i <= sampleCount; ++i)
+                {
+                    const float t = static_cast<float>(i) / static_cast<float>(sampleCount);
+                    const DirectX::XMFLOAT3 point{
+                        castOrigin.x + (castEnd.x - castOrigin.x) * t,
+                        castOrigin.y + (castEnd.y - castOrigin.y) * t,
+                        castOrigin.z + (castEnd.z - castOrigin.z) * t };
+                    DebugRender::DrawSphere(point, castRadius, color, 0.0f, true);
+                }
+                DebugRender::DrawLine(castOrigin, castEnd, color, 0.0f, true);
+            };
         drawCast(playerCastRadius, { 0.15f, 0.85f, 1.0f, 1.0f }, showPlayerCastDebug);
         drawCast(wallCastRadius, { 1.0f, 0.35f, 0.10f, 1.0f }, showWallCastDebug);
     }
@@ -7004,7 +7012,7 @@ bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, floa
     const float baseLength = std::sqrt(baseX * baseX + baseZ * baseZ);
     const DirectX::XMFLOAT3 baseDirection = baseLength > FLT_EPSILON
         ? DirectX::XMFLOAT3{ baseX / baseLength, 0.0f, baseZ / baseLength }
-        : GetForward();
+    : GetForward();
     static thread_local std::mt19937 randomEngine{ std::random_device{}() };
     std::uniform_real_distribution<float> distanceDistribution(
         (std::min)(minDistance, maxDistance), (std::max)(minDistance, maxDistance));

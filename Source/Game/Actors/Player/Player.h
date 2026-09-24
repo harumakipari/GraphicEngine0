@@ -155,7 +155,7 @@ public:
 
     void SetFinalHitCallback(std::function<void(GruxEnemy*, const DirectX::XMFLOAT3&)> callback)
     { finalHitCallback = std::move(callback); }
-    void BeginFinalHitWait();
+    bool BeginFinalHitWait();
 
     void SetDeathCameraStartCallback(std::function<void()> callback)
     {
@@ -175,20 +175,19 @@ public:
         return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush";
     }
 
-    // Stops follow-up Rush attacks after a Phase1 Last Hit without interrupting the active attack.
-    void RequestPhase1LastHitRushFollowUpStop()
+    // Shared by lethal hits in either phase: finish the active clip and suppress follow-ups.
+    void RequestFinalHitRushFollowUpStop()
     {
         if (IsRushActiveForPhaseTransition())
-            phase1LastHitRushFollowUpStopRequested = true;
+            finalHitRushFollowUpStopRequested = true;
     }
-    // Defers the visual-pose latch until the current frame's animation update completes.
-    void RequestPhase1LastHitVisualPoseLatch()
+    void RequestFinalHitVisualPoseLatch()
     {
-        phase1LastHitVisualPoseLatchRequested = true;
+        finalHitVisualPoseLatchRequested = true;
     }
-    bool IsPhase1LastHitVisualPoseLatchRequested() const
+    bool IsFinalHitVisualPoseLatchRequested() const
     {
-        return phase1LastHitVisualPoseLatchRequested;
+        return finalHitVisualPoseLatchRequested;
     }
     bool IsPhase1LastHitAttackFinishedForTransition() const
     {
@@ -198,14 +197,34 @@ public:
         const std::string stateName = stateMachine_->GetStateName();
         return stateName != "Attack" && stateName != "Rush";
     }
+    bool IsFinalHitRushFollowUpStopRequested() const
+    {
+        return finalHitRushFollowUpStopRequested;
+    }
+    void ClearFinalHitRushFollowUpStop()
+    {
+        finalHitRushFollowUpStopRequested = false;
+    }
     bool IsPhase1LastHitRushFollowUpStopRequested() const
     {
-        return phase1LastHitRushFollowUpStopRequested;
+        return IsFinalHitRushFollowUpStopRequested();
     }
     void ClearPhase1LastHitRushFollowUpStop()
     {
-        phase1LastHitRushFollowUpStopRequested = false;
+        ClearFinalHitRushFollowUpStop();
     }
+    bool IsFinalHitAttackDrainComplete() const;
+    bool IsFinalHitAttackDrainActive() const { return finalHitAttackDrainActive; }
+    bool IsFinalHitAttackDrainLatched() const { return finalHitAttackDrainCompleted; }
+    void SetPhase2RushFinalHitDebugEnabled(bool enabled)
+    {
+        phase2RushFinalHitDebugEnabled = enabled;
+        if (!enabled) phase2RushFinalHitDebugEventId = 0;
+    }
+    bool IsPhase2RushFinalHitDebugEnabled() const { return phase2RushFinalHitDebugEnabled; }
+    void SetPhase2RushFinalHitDebugEventId(uint64_t eventId) { phase2RushFinalHitDebugEventId = eventId; }
+    uint64_t GetPhase2RushFinalHitDebugEventId() const { return phase2RushFinalHitDebugEventId; }
+    void MarkFinalHitAttackDrainInterrupted();
 
     // Clears temporary combat visuals/actions without changing HP, transform,
     // or the current player state.
@@ -303,7 +322,7 @@ public:
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
 
     bool CanAcceptInitialRushInput() const;
-    void LatchPhase1LastHitVisualPoseAfterAnimationUpdate();
+    bool LatchFinalHitVisualPoseAfterAnimationUpdate();
     bool CanShowInitialRushGuide() const;
     bool CanShowRushComboGuide() const;
     bool CanShowRushPrompt() const;
@@ -466,8 +485,14 @@ public:
     };
 
     bool rushInputAccepting = false;
-    bool phase1LastHitRushFollowUpStopRequested = false;
-    bool phase1LastHitVisualPoseLatchRequested = false;
+    bool finalHitRushFollowUpStopRequested = false;
+    bool finalHitVisualPoseLatchRequested = false;
+    bool finalHitAttackDrainActive = false;
+    bool finalHitAttackDrainCompleted = false;
+    bool finalHitAttackDrainFailed = false;
+    // Temporary diagnostic state. It is written only by the Phase 2 Rush final-hit path.
+    bool phase2RushFinalHitDebugEnabled = false;
+    uint64_t phase2RushFinalHitDebugEventId = 0;
     bool rushInputEndNotifyReceivedDebug = false;
     std::string rushInputEndReasonDebug = "None";
     bool rushJudgeSuccessDebug = false;

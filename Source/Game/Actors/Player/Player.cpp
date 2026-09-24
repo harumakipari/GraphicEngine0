@@ -613,6 +613,8 @@ void Player::Update(float deltaTime)
 
     if (finalHitWaiting)
     {
+        if (finalHitAttackDrainActive && stateMachine_)
+            stateMachine_->Update(deltaTime);
         if (const auto controller = GetBodyAnimationController())
             controller->OnUpdate(deltaTime);
 
@@ -902,7 +904,34 @@ void Player::Update(float deltaTime)
                     Time::SetSlow(0.0f,
                         isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
                     if (lethalHit && finalHitCallback)
+                    {
+                        if (isRushHit && phase2RushFinalHitDebugEnabled)
+                        {
+                            const auto controller = GetBodyAnimationController();
+                            const auto* rushState = stateMachine_
+                                ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState())
+                                : nullptr;
+                            const std::string animationName = controller ? controller->GetCurrentAnimationName() : std::string{};
+                            const bool animationPlaying = controller && controller->IsPlayAnimation();
+                            const float animationTime = controller ? controller->GetCurrentAnimationTime() : 0.0f;
+                            const float animationLength = controller ? controller->GetCurrentAnimationLength() : 0.0f;
+                            Logger::Log(Logger::LogCategory::Gameplay,
+                                "[Phase2RushFinalHit][LethalBeforeCallback] event=pending"
+                                " state=" + std::string(stateMachine_->GetStateName()) +
+                                " rushStep=" + std::to_string(rushState ? rushState->GetComboIndex() : -1) +
+                                " rushPhase=" + std::string(rushState ? rushState->GetPhaseNameForDebug() : "Unknown") +
+                                " animation=" + animationName +
+                                " rushAnimation=" + (rushState ? rushState->GetCurrentAttackAnimationForDebug() : "") +
+                                " playing=" + std::string(animationPlaying ? "true" : "false") +
+                                " time=" + std::to_string(animationTime) +
+                                " length=" + std::to_string(animationLength) +
+                                " ended=" + std::string(!animationPlaying ? "true" : "false") +
+                                " latchRequested=" + std::string(finalHitVisualPoseLatchRequested ? "true" : "false") +
+                                " latched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false") +
+                                " timeScale=" + std::to_string(GetTimeScale()));
+                        }
                         finalHitCallback(enemy, GetPosition());
+                    }
 
                 }
             }
@@ -2213,13 +2242,116 @@ void Player::ResumeBattleActionsAfterEvent()
         stateMachine_->ChangeState("Idle");
 }
 
-void Player::BeginFinalHitWait()
+bool Player::BeginFinalHitWait()
 {
     finalHitWaiting = true;
     ForceResetPlayerSlow();
     ForceResetBossSlow();
     hitStopTimer = 0.0f;
-    ClearTransientBattleActions();
+
+    finalHitAttackDrainActive = false;
+    finalHitAttackDrainCompleted = false;
+    finalHitAttackDrainFailed = false;
+    const auto controller = GetBodyAnimationController();
+    const std::string stateName = stateMachine_ ? stateMachine_->GetStateName() : "";
+    const bool supportedAttackState = stateName == "Attack" || stateName == "Rush";
+    const std::string animationName = controller
+        ? controller->GetCurrentAnimationName() : std::string{};
+    const auto* rushState = stateMachine_ && stateName == "Rush"
+        ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
+    const std::string rushAttackAnimation = rushState
+        ? rushState->GetCurrentAttackAnimationForDebug() : std::string{};
+    const bool expectedAttackClip = stateName == "Attack"
+        ? animationName == currentAttackAnimation
+        : stateName == "Rush" && rushState && animationName == rushAttackAnimation;
+    const bool validCurrentAttack = supportedAttackState && controller &&
+        controller->IsPlayAnimation() && expectedAttackClip &&
+        controller->GetAnimationLength(animationName) > FLT_EPSILON;
+    const uint64_t debugEventId = phase2RushFinalHitDebugEventId;
+    const bool debugRushEvent = debugEventId != 0;
+    if (debugRushEvent)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][BeginFinalHitWait][Enter] event=" + std::to_string(debugEventId) +
+            " state=" + stateName +
+            " isRush=" + std::string(stateName == "Rush" ? "true" : "false") +
+            " controller=" + std::string(controller ? "true" : "false") +
+            " playing=" + std::string(controller && controller->IsPlayAnimation() ? "true" : "false") +
+            " animation=" + animationName +
+            " currentAttackAnimation=" + currentAttackAnimation +
+            " animationMatches=" + std::string(animationName == currentAttackAnimation ? "true" : "false") +
+            " rushCurrentAttackAnimation=" + rushAttackAnimation +
+            " rushAnimationMatches=" + std::string(animationName == rushAttackAnimation ? "true" : "false") +
+            " latchRequested=" + std::string(finalHitVisualPoseLatchRequested ? "true" : "false") +
+            " latched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false"));
+    }
+
+    if (!validCurrentAttack)
+    {
+        if (debugRushEvent)
+        {
+            std::string rejectedBy;
+            if (!supportedAttackState) rejectedBy += "unsupportedState ";
+            if (!controller) rejectedBy += "noController ";
+            else
+            {
+                if (!controller->IsPlayAnimation()) rejectedBy += "notPlaying ";
+                if (!expectedAttackClip) rejectedBy += "unexpectedClip ";
+                if (controller->GetAnimationLength(animationName) <= FLT_EPSILON) rejectedBy += "zeroLength ";
+            }
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[Phase2RushFinalHit][BeginFinalHitWait][Exit] event=" + std::to_string(debugEventId) +
+                " reserved=false rejectedBy=" + rejectedBy +
+                " followUpStop=" + std::string(finalHitRushFollowUpStopRequested ? "true" : "false") +
+                " return=false");
+        }
+        // An unexpected state/clip is not treated as a completed attack pose.
+        // Fall through to the existing safe cleanup without creating a wait.
+        finalHitAttackDrainFailed = true;
+        ClearTransientBattleActions();
+        return false;
+    }
+
+    finalHitAttackDrainActive = true;
+    RequestFinalHitVisualPoseLatch();
+    RequestFinalHitRushFollowUpStop();
+    if (debugRushEvent)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][BeginFinalHitWait][Exit] event=" + std::to_string(debugEventId) +
+            " reserved=true followUpStop=" + std::string(finalHitRushFollowUpStopRequested ? "true" : "false") +
+            " latchRequested=" + std::string(finalHitVisualPoseLatchRequested ? "true" : "false") +
+            " return=true");
+    }
+    ClearActionRequest("final_hit_attack_drain");
+    ClearAttackTarget();
+    SetRushInputAcceptance(false, "FinalHit");
+    SetRushInputDebugState(false, false);
+    hitBox = false;
+    inputWindow = false;
+    transitionWindow = false;
+    comboQueued = false;
+    invincible = false;
+    invincibleWindow = false;
+    justDodgeWindow = false;
+    justDodgeSuccess = false;
+    animationMotionWarps.clear();
+    hitActors.clear();
+    showTrail = false;
+    swordEmissivePower = 0.0f;
+    trail.Clear();
+    StopAttackTargetRotation();
+    StopKnockBackForcedMove();
+    knockBackActive = false;
+    knockBackElapsed = 0.0f;
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->MoveToActor(std::shared_ptr<Actor>{}, 0.0f, 0.0f);
+    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    characterMovementComponent->ResetFixedSpeed();
+    velocity = { 0.0f, 0.0f, 0.0f };
+    return true;
 }
 
 void Player::EnterWinState()
@@ -2238,7 +2370,8 @@ bool Player::IsInWinState() const
 void Player::ClearTransientBattleActions()
 {
     ClearActionRequest("battle_end");
-    phase1LastHitVisualPoseLatchRequested = false;
+    finalHitVisualPoseLatchRequested = false;
+    finalHitRushFollowUpStopRequested = false;
     ClearAttackTarget();
     EndAttack();
     SetRushInputAcceptance(false);
@@ -2347,7 +2480,11 @@ void Player::NeutralizeForPhase2Cinematic()
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
     finalHitWaiting = false;
-    phase1LastHitVisualPoseLatchRequested = false;
+    finalHitVisualPoseLatchRequested = false;
+    finalHitRushFollowUpStopRequested = false;
+    finalHitAttackDrainActive = false;
+    finalHitAttackDrainCompleted = false;
+    finalHitAttackDrainFailed = false;
     if (const auto controller = GetBodyAnimationController())
         controller->ReleaseLatchedVisualPose();
     lowHpPresentationSuppressed = false;
@@ -3526,14 +3663,60 @@ int Player::GetCurrentAttackDamage() const
         static_cast<float>(baseDamage) * GetRushDamageMultiplier()));
 }
 
-void Player::LatchPhase1LastHitVisualPoseAfterAnimationUpdate()
+bool Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
 {
-    if (!phase1LastHitVisualPoseLatchRequested)
-        return;
+    if (!finalHitVisualPoseLatchRequested)
+        return false;
 
-    phase1LastHitVisualPoseLatchRequested = false;
-    if (const auto controller = GetBodyAnimationController())
-        controller->LatchCurrentVisualPose();
+    finalHitVisualPoseLatchRequested = false;
+    const auto controller = GetBodyAnimationController();
+    const uint64_t debugEventId = phase2RushFinalHitDebugEventId;
+    if (debugEventId != 0)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][Latch][Before] event=" + std::to_string(debugEventId) +
+            " animation=" + (controller ? controller->GetCurrentAnimationName() : "") +
+            " playing=" + std::string(controller && controller->IsPlayAnimation() ? "true" : "false") +
+            " alreadyLatched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false"));
+    }
+    const bool latched = controller && controller->LatchCurrentVisualPose();
+    if (finalHitAttackDrainActive)
+    {
+        finalHitAttackDrainCompleted = latched;
+        finalHitAttackDrainFailed = !latched;
+        if (!latched)
+            finalHitAttackDrainActive = false;
+    }
+    if (debugEventId != 0)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][Latch][After] event=" + std::to_string(debugEventId) +
+            " success=" + std::string(latched ? "true" : "false") +
+            " visualLatched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false") +
+            " drainActive=" + std::string(finalHitAttackDrainActive ? "true" : "false") +
+            " drainLatched=" + std::string(finalHitAttackDrainCompleted ? "true" : "false"));
+    }
+    return latched;
+}
+
+bool Player::IsFinalHitAttackDrainComplete() const
+{
+    if (finalHitAttackDrainFailed || !finalHitAttackDrainActive)
+        return true;
+    if (!finalHitAttackDrainCompleted)
+        return false;
+    if (!stateMachine_)
+        return true;
+    const std::string stateName = stateMachine_->GetStateName();
+    return stateName != "Attack" && stateName != "Rush";
+}
+
+void Player::MarkFinalHitAttackDrainInterrupted()
+{
+    finalHitAttackDrainActive = false;
+    finalHitAttackDrainCompleted = false;
+    finalHitAttackDrainFailed = true;
+    finalHitVisualPoseLatchRequested = false;
 }
 
 bool Player::CanAcceptInitialRushInput() const

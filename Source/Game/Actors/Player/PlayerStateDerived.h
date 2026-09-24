@@ -218,6 +218,16 @@ public:
     const std::string& GetCurrentAttackAnimationForDebug() const { return currentAttackAnimation; }
     int GetQueuedAttackCountForDebug() const { return queuedAttackCount; }
     bool WasTransitionWindowObservedForDebug() const { return rushTransitionWindowObserved; }
+    const char* GetPhaseNameForDebug() const
+    {
+        switch (phase)
+        {
+        case RushPhase::DashToTarget: return "DashToTarget";
+        case RushPhase::Attack: return "Attack";
+        case RushPhase::Finished: return "Finished";
+        default: return "Unknown";
+        }
+    }
 private:
     bool AdvanceRushCombo();
     bool IsFinalRushAttack() const;

@@ -305,6 +305,8 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
 {
     if (auto* manager = GetCameraManager()) manager->ClearCameraShake();
     bossPhase = phase;
+    if (player)
+        player->SetPhase2RushFinalHitDebugEnabled(phase == BossPhase::Phase2);
     phase2TransitionElapsed = 0.0f;
     phase1BreakPending = false;
     phase2TransitionRequested = false;
@@ -316,6 +318,9 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     phase1FinalHitTimePhase = Phase1FinalHitTimePhase::None;
     phase1FinalHitTimeElapsed = 0.0f;
     phase1FinalHitDebugSampleHitStopFrame = false;
+    phase2FinalHitGateActive = false;
+    phase2FinalHitReactionComplete = false;
+    phase2FinalHitAttackWaitRequired = false;
     phase2TransitionStep = Phase2TransitionStep::None;
     phase2StepElapsed = 0.0f;
     phase2RecallFadeAlpha = 0.0f;
@@ -667,6 +672,8 @@ void GameScene::BeginPhase2TpsReturnBlend()
         phase2TransitionStep = Phase2TransitionStep::None;
         phase2CurrentShot = "None";
         bossPhase = BossPhase::Phase2;
+        if (player)
+            player->SetPhase2RushFinalHitDebugEnabled(true);
         if (gruxEnemyActor)
             gruxEnemyActor->CompletePhase2HpBarPresentation();
         ApplyBossPhaseHp(BossPhase::Phase2); // Single, UI-hookable Phase2 HP handoff point.
@@ -2226,8 +2233,8 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
         if (player)
         {
             const bool rushWasActive = player->IsRushActiveForPhaseTransition();
-            player->RequestPhase1LastHitVisualPoseLatch();
-            player->RequestPhase1LastHitRushFollowUpStop();
+            player->RequestFinalHitVisualPoseLatch();
+            player->RequestFinalHitRushFollowUpStop();
             // Release only the Rush-owned Boss slow; Rush::Exit keeps its existing cleanup.
             if (rushWasActive)
                 player->BeginBossSlowReturn(true);
@@ -2237,6 +2244,20 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
     }
     if (bossPhase == BossPhase::TransitionToPhase2)
         return;
+    const bool phase2RushFinalHit = player && player->IsRushActiveForPhaseTransition();
+    if (phase2RushFinalHit)
+    {
+        phase2RushFinalHitDebugEventId = ++phase2RushFinalHitDebugNextEventId;
+        phase2RushFinalHitDebugActive = true;
+        phase2RushFinalHitDebugGateSnapshotValid = false;
+        player->SetPhase2RushFinalHitDebugEventId(phase2RushFinalHitDebugEventId);
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][Callback] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
+            " route=FinalHitCallback state=Rush");
+    }
+    phase2FinalHitGateActive = true;
+    phase2FinalHitReactionComplete = false;
+    phase2FinalHitAttackWaitRequired = false;
     // Diagnostic only: retain the lethal-hit callback route until EnterBossDead.
     bossDeathLastHpZeroDetectionSource = "FinalHit callback";
     DisableCinematicCameraDebugInput();
@@ -2274,15 +2295,70 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
     battleFlowState = BattleFlowState::FinalHitSlow;
     finalBattleTime = battleElapsedTime + Time::UnscaledDeltaTime();
     finalBattleTimeSaved = true;
-    player->BeginFinalHitWait();
+    if (player)
+        phase2FinalHitAttackWaitRequired = player->BeginFinalHitWait();
+    if (phase2RushFinalHitDebugActive)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][Gate] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
+            " waitRequired=" + std::string(phase2FinalHitAttackWaitRequired ? "true" : "false"));
+    }
     boss->BeginFinalHitReaction(finalHitReaction);
     // Replace the ordinary hit stop. GameScene owns the unscaled hold/recovery
     // timers so Time::Tick cannot snap to 1 before recovery starts.
     Time::SetSlow(finalHitSlowScale, finalHitSlowDuration);
 }
 
+bool GameScene::IsPhase2FinalHitGateComplete() const
+{
+    if (!phase2FinalHitGateActive)
+        return false;
+    const bool playerAttackComplete = !phase2FinalHitAttackWaitRequired ||
+        !player || player->IsFinalHitAttackDrainComplete();
+    return phase2FinalHitReactionComplete && playerAttackComplete;
+}
+
+void GameScene::BeginPhase2FinalHitHpFallback()
+{
+    if (phase2FinalHitGateActive)
+        return;
+
+    // HP can reach zero through a route without the lethal-hit callback. In
+    // that case there is no owned boss reaction to await, but an active Player
+    // attack still receives the same natural-completion drain.
+    phase2FinalHitGateActive = true;
+    phase2FinalHitReactionComplete = true;
+    phase2FinalHitAttackWaitRequired = player && player->BeginFinalHitWait();
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[Phase2RushFinalHit][Fallback] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
+        " route=HPZero waitRequired=" + std::string(phase2FinalHitAttackWaitRequired ? "true" : "false") +
+        " playerState=" + std::string(player && player->GetStateMachine() ? player->GetStateMachine()->GetStateName() : "None"));
+}
+
 void GameScene::EnterBossDead()
 {
+    if (bossPhase == BossPhase::Phase2)
+    {
+        if (!phase2FinalHitGateActive)
+        {
+            BeginPhase2FinalHitHpFallback();
+            return;
+        }
+        if (!IsPhase2FinalHitGateComplete())
+            return;
+        phase2FinalHitGateActive = false;
+        phase2FinalHitReactionComplete = false;
+        phase2FinalHitAttackWaitRequired = false;
+    }
+    if (phase2RushFinalHitDebugActive)
+    {
+        const bool latched = player && player->GetBodyAnimationController() &&
+            player->GetBodyAnimationController()->IsVisualPoseLatched();
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][EnterBossDead] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
+            " state=" + std::string(player && player->GetStateMachine() ? player->GetStateMachine()->GetStateName() : "None") +
+            " visualLatched=" + std::string(latched ? "true" : "false"));
+    }
     // Diagnostic only: capture every entry before this method overwrites the flow.
     ++bossDeathEnterCallCount;
     bossDeathLastEnterPreviousFlow = battleFlowState;
@@ -2311,6 +2387,15 @@ void GameScene::EnterBossDead()
     bossDeathWalkStopStartRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     bossDeathWalkStopFinishRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     bossDeathPhase = BossDeathPhase::FadeOut;
+    if (phase2RushFinalHitDebugActive)
+    {
+        const bool latched = player && player->GetBodyAnimationController() &&
+            player->GetBodyAnimationController()->IsVisualPoseLatched();
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][DeathFadeOut] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
+            " visualLatched=" + std::string(latched ? "true" : "false"));
+        phase2RushFinalHitDebugActive = false;
+    }
     bossDeathPhaseElapsed = 0.0f;
     bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
     bossDeathRecallPromptDirection = 1.0f;
@@ -2855,6 +2940,11 @@ bool GameScene::SetupBossDeathCinematic()
     if (!bossDeathShotsLoaded || !player || !gruxEnemyActor || !cinemaCameraActor)
         return false;
 
+    // SetupCinematic is entered only after FadeOut has set the overlay to full
+    // black. Release the combat pose latch before staging the Player or cameras.
+    if (const auto controller = player->GetBodyAnimationController())
+        controller->ReleaseLatchedVisualPose();
+
     if (const auto playerCapsule = std::dynamic_pointer_cast<ShapeComponent>(
         player->FindComponentByName("capsuleComponent")))
     {
@@ -3382,7 +3472,7 @@ void GameScene::UpdateBossDeathCinematic()
                 bossDeathVoiceAudio->Stop(false);
             bossDeathVoiceAudio = CoreAudio::PlayOneShot("./Data/Sound/SE/boss_death_voice1.wav", 3.0f);
             // コントローラー振動
-            InputSystem::SetVibration(1.5f, 1.5f);
+            InputSystem::SetVibration(1.2f, 1.3f);
 
             bossDeathFinishHoldTime = bossDeathFinishHoldMinTime;
             bossDeathFinishHoldDirection = 1.0f;
@@ -3849,13 +3939,49 @@ void GameScene::UpdateBattleFlow()
             const float cutTime = std::isfinite(finalHitReactionCutTime)
                 ? std::clamp(finalHitReactionCutTime, 0.0f, duration)
                 : (std::min)(0.365f, duration);
-            if (finalHitReactionTimeDebug >= cutTime)
+            if (finalHitReactionTimeDebug >= cutTime && !finalHitReactionCutReached)
             {
                 finalHitReactionCutReached = true;
-                EnterBossDead();
-                return;
+                phase2FinalHitReactionComplete = true;
+                if (phase2RushFinalHitDebugActive)
+                {
+                    Logger::Log(Logger::LogCategory::Gameplay,
+                        "[Phase2RushFinalHit][ReactionCut] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
+                        " time=" + std::to_string(finalHitReactionTimeDebug) +
+                        " cutTime=" + std::to_string(cutTime));
+                }
+                gruxEnemyActor->EndFinalHitReaction();
             }
         }
+    }
+    if (phase2RushFinalHitDebugActive && phase2FinalHitGateActive)
+    {
+        const bool attackComplete = !phase2FinalHitAttackWaitRequired || !player ||
+            player->IsFinalHitAttackDrainComplete();
+        const bool latched = player && player->GetBodyAnimationController() &&
+            player->GetBodyAnimationController()->IsVisualPoseLatched();
+        const bool rushExited = !player || !player->IsRushActiveForPhaseTransition();
+        if (!phase2RushFinalHitDebugGateSnapshotValid ||
+            attackComplete != phase2RushFinalHitDebugLastAttackComplete ||
+            latched != phase2RushFinalHitDebugLastLatched ||
+            rushExited != phase2RushFinalHitDebugLastRushExited)
+        {
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[Phase2RushFinalHit][GateState] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
+                " attackComplete=" + std::string(attackComplete ? "true" : "false") +
+                " visualLatched=" + std::string(latched ? "true" : "false") +
+                " rushExited=" + std::string(rushExited ? "true" : "false") +
+                " reactionComplete=" + std::string(phase2FinalHitReactionComplete ? "true" : "false"));
+            phase2RushFinalHitDebugGateSnapshotValid = true;
+            phase2RushFinalHitDebugLastAttackComplete = attackComplete;
+            phase2RushFinalHitDebugLastLatched = latched;
+            phase2RushFinalHitDebugLastRushExited = rushExited;
+        }
+    }
+    if (phase2FinalHitGateActive && IsPhase2FinalHitGateComplete())
+    {
+        EnterBossDead();
+        return;
     }
     switch (battleFlowState)
     {
@@ -3898,7 +4024,7 @@ void GameScene::UpdateBattleFlow()
             }
             // Diagnostic only: this is the direct HP<=0 fallback route.
             bossDeathLastHpZeroDetectionSource = "UpdateBattleFlow fallback";
-            EnterBossDead();
+            BeginPhase2FinalHitHpFallback();
         }
         else if (player && player->GetHp() <= 0)
         {
@@ -3958,7 +4084,20 @@ void GameScene::UpdateBattleFlow()
     case BattleFlowState::FinalHitAftermath:
         finalHitTimer -= Time::UnscaledDeltaTime();
         if (finalHitTimer <= 0.0f)
-            EnterBossDead();
+        {
+            // A valid reaction continues at normal time if its configured cut
+            // lies beyond the slow/recovery/aftermath window. Only a missing or
+            // replaced reaction takes the anomaly escape.
+            const auto controller = gruxEnemyActor
+                ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
+            if (!phase2FinalHitReactionComplete &&
+                (!controller || finalHitReaction.empty() ||
+                    controller->GetCurrentAnimationName() != finalHitReaction))
+            {
+                phase2FinalHitReactionComplete = true;
+            }
+            finalHitTimer = 0.0f;
+        }
         break;
     case BattleFlowState::PlayerDead:
         playerDeadElapsed += Time::UnscaledDeltaTime();

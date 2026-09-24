@@ -231,6 +231,8 @@ private:
     void ResetBattleForContinue();
     void ResetBattleFacingAndCamera();
     void EnterBossDead();
+    void BeginPhase2FinalHitHpFallback();
+    bool IsPhase2FinalHitGateComplete() const;
     void ResetBossDeathDebugPreview();
     void RestartBossBattle();
     bool LoadBossDeathShots();
@@ -299,9 +301,9 @@ private:
     double victoryDisplayedBestTime = 0.0;
     bool victoryIsNewRecord = false;
     VictoryRank victoryRank = VictoryRank::C;
-    float victoryRankSLimit = 60.0f;
-    float victoryRankALimit = 90.0f;
-    float victoryRankBLimit = 120.0f;
+    float victoryRankSLimit = 90.0f;
+    float victoryRankALimit = 120.0f;
+    float victoryRankBLimit = 180.0f;
     std::array<std::shared_ptr<UIImageComponent>, 3> victoryLabels{};
     std::array<std::shared_ptr<UIImageComponent>, 4> victoryRankImages{};
     std::array<std::array<std::shared_ptr<UIImageComponent>, 8>, 2> victoryTimeDigits{};
@@ -390,6 +392,9 @@ private:
     double finalHitDebugElapsedSeconds = 0.0;
     bool finalHitPending = false;
     float finalHitReactionCutTime = 0.365f; // ここでfadeに遷移するタイミング
+    bool phase2FinalHitGateActive = false;
+    bool phase2FinalHitReactionComplete = false;
+    bool phase2FinalHitAttackWaitRequired = false;
 
     float finalHitReactionTimeDebug = 0.0f;
     bool finalHitReactionCutReached = false;
@@ -435,7 +440,7 @@ private:
     float phase2RecallFadeOutDuration = 1.5f;
     float phase2RecallFadeInDuration = 1.0f;
     float phase2RecallFadeAlpha = 0.0f;
-    float phase2RecallPreWaitDuration = 1.0f;
+    float phase2RecallPreWaitDuration = 0.05f;
     float phase2TransformStartTime = 5.3f;
     float phase2TransformEndTime = 8.0f;
     float phase2TransformProgress = 0.0f;
@@ -475,6 +480,14 @@ private:
     int bossDeathEnterCallCount = 0;
     BattleFlowState bossDeathLastEnterPreviousFlow = BattleFlowState::Intro;
     std::string bossDeathLastHpZeroDetectionSource = "Other";
+    // Temporary Phase 2 Rush final-hit diagnostic state. It never drives battle flow.
+    uint64_t phase2RushFinalHitDebugNextEventId = 0;
+    uint64_t phase2RushFinalHitDebugEventId = 0;
+    bool phase2RushFinalHitDebugActive = false;
+    bool phase2RushFinalHitDebugGateSnapshotValid = false;
+    bool phase2RushFinalHitDebugLastAttackComplete = false;
+    bool phase2RushFinalHitDebugLastLatched = false;
+    bool phase2RushFinalHitDebugLastRushExited = false;
     float bossDeathFadeOutDuration = 1.6f;
     float bossDeathFadeInDuration = 1.6f;
     float bossDeathRoarStartTime = 0.17f;
