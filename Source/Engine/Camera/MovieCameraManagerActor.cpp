@@ -866,6 +866,11 @@ void MovieCameraManagerActor::UpdateDeathWideAnchorPreview()
 // ドアを開くムービーを再生する
 void MovieCameraManagerActor::PlayDoorMovie()
 {
+    if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
+    {
+        gameScene->EnterBossRoomLockOnScope();
+    }
+
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
     {
         // 演出が始まったことをことを通知する

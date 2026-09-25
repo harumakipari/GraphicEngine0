@@ -391,12 +391,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
     tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
 
-    lockOnTargetImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/lock_on.png", "lockOn");
-    lockOnTargetImageComponent->SetVisible(true);
-    lockOnTargetImageComponent->SetPivot({ 0.5f,0.5f });
-    lockOnTargetImageComponent->SetSize({ 150.0f,150.0f });
-    uiManager->Add(lockOnTargetImageComponent);
-
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
     hitSwordEffectComponent->Load("./Data/Effect/Files/NormalAttackHitEffect.json");
 
@@ -1366,8 +1360,6 @@ void GruxEnemy::HideLockOnVisualsForPhaseTransition()
 {
     if (lockOnTargetMeshComponent)
         lockOnTargetMeshComponent->SetIsVisible(false);
-    if (lockOnTargetImageComponent)
-        lockOnTargetImageComponent->SetVisible(false);
 }
 void GruxEnemy::BeginPhase1LastHitReaction(const DirectX::XMFLOAT3& hitSourcePosition)
 {
@@ -1705,18 +1697,6 @@ void GruxEnemy::Update(float deltaTime)
     lockOnTargetMeshComponent->SetWorldLocationDirect({ lockOnPos });
     DirectX::XMFLOAT4 rotation = MathHelper::LookRotation(toPlayerDir, { 0,1,0 });
     lockOnTargetMeshComponent->SetRelativeRotationDirect(rotation);
-
-    DirectX::XMFLOAT2 lockOnUiPos = WorldToUI(lockOnPos);
-    lockOnTargetImageComponent->SetWorldPosition(lockOnUiPos);
-
-    if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
-    {
-        // Display Grux's existing marker only while Grux is the selected target.
-        const auto selectedTarget = camera->GetEnemyHead();
-        const bool isSelected = selectedTarget && selectedTarget->GetOwner() == this;
-        lockOnTargetImageComponent->SetVisible(
-            camera->GetMovementMode() == DarkCameraActor::CameraMode::LockOn && isSelected);
-    }
 
 #endif // 0
 

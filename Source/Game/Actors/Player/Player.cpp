@@ -3022,27 +3022,26 @@ void Player::UpdateMovement()
         }
         else
         {
-            if (isBossBattle)
+            GameScene::LockOnTargetSelectionResult selectionResult =
+                GameScene::LockOnTargetSelectionResult::NoCandidate;
+            if (focus)
             {
-                if (focus)
-                {
-                    camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
-                }
-                else
-                {
-                    camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-                }
+                if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
+                    selectionResult = gameScene->UpdateLockOnTargetSelection();
+            }
+
+            if (!focus || selectionResult == GameScene::LockOnTargetSelectionResult::Invalidated)
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+            }
+            else if (selectionResult == GameScene::LockOnTargetSelectionResult::Selected)
+            {
+                camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
             }
             else
             {
-                if (focus)
-                {
-                    camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
-                }
-                else
-                {
-                    camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-                }
+                // This input found no current target, so preserve ordinary Focus.
+                camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
             }
         }
 #endif // 0

@@ -4,6 +4,7 @@
 #include "Components/Render/PointLightComponent.h"
 #include "Engine/Debug/DebugRender.h"
 #include "Engine/Scene/SceneBase.h"
+#include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Physics/CollisionFunction.h"
 
@@ -151,7 +152,19 @@ bool SkeletonWarriorActor::TakeDamageFromPlayer(int damage)
         return false;
 
     hp = (std::max)(0, hp - damage);
-    CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.25f);
+
+    // コントローラー振動
+    InputSystem::SetVibration(0.8f, 0.1f);
+    // カメラシェイク
+    if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
+    {
+        std::string presetName = "BossRoar";
+        camera->PlayCameraShakePreset(presetName);
+    }
+
+    CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.3f);
+
+
     if (hp > 0)
         return true;
 

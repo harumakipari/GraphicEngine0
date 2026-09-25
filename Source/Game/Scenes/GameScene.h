@@ -28,6 +28,7 @@
 
 class GruxEnemy;
 class CoreStandaloneAudioSource;
+class SceneComponent;
 
 class GameScene : public SceneBase
 {
@@ -109,9 +110,19 @@ public:
     // カメラのモードを変更する
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
 
+    // Called when the boss-room door movie begins, before the boss-introduction blend completes.
+    void EnterBossRoomLockOnScope();
+
     // Called when the existing boss-introduction camera blend has completed.
     void StartBossBattle();
 
+    enum class LockOnTargetSelectionResult : uint8_t
+    {
+        Selected,
+        NoCandidate,
+        Invalidated,
+    };
+    LockOnTargetSelectionResult UpdateLockOnTargetSelection();
     // Read-only labels consumed by Grux animation-request diagnostics.
     const char* GetBattleFlowStateDebugName() const;
     const char* GetBossDeathPhaseDebugName() const;
@@ -125,7 +136,9 @@ public:
     bool IsPhase1BreakPending() const { return phase1BreakPending; }
     bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
 private:
-    void UpdateLockOnTargetSelection();
+    void CreateLockOnTargetUI();
+    void UpdateLockOnTargetUI();
+    void HideLockOnTargetUI();
     enum class Phase1FinalHitTimePhase : uint8_t
     {
         None,
@@ -377,8 +390,19 @@ private:
 
     std::shared_ptr<GruxEnemy> gruxEnemyActor;
 
+    // Shared LockOn marker state. The weak target reference lets a future
+    // multi-part marker react to acquisition, release, and target changes.
+    std::shared_ptr<UIImageComponent> lockOnTargetImageComponent;
+    std::weak_ptr<SceneComponent> lockOnTargetComponent;
+
     // Selection happens once per held-input start; Rush keeps its own target.
     bool lockOnInputHeldLastFrame = false;
+    bool lockOnTargetSelectedForHeldInput = false;
+
+    // The door movie marks the gameplay boundary between corridor enemies and Grux.
+    // An input held through that transition must not acquire Grux automatically.
+    bool bossRoomLockOnScopeActive = false;
+    bool lockOnRequiresReleaseAfterBossRoomEntry = false;
 
     void OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& source);
 

@@ -24,7 +24,6 @@
 #include "Game/Actors/Stage/Cloth.h"
 
 
-#include "Physics/Physics.h"
 #include "Game/DarkGame/DarkActors/DarkStage.h"
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
@@ -33,6 +32,8 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemyEyeActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
+#include "Physics/Physics.h"
+#include "Physics/CollisionFunction.h"
 
 #include "Physics/CollisionSystem.h"
 #include "UI/UIManager.h"
@@ -191,6 +192,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         PROFILE_SCOPE("SetUpActors Init");
         //アクターをセット
         SetUpActors();
+        CreateLockOnTargetUI();
         CreateBattleTimerUI();
         CreateDeathResultUI();
         LoadVictoryBestTime();
@@ -1167,35 +1169,104 @@ void GameScene::ResetDeathBgmState(const BossPhase restartPhase)
     ResetBossBattleBgm(restartPhase, true);
 }
 
-void GameScene::UpdateLockOnTargetSelection()
+void GameScene::CreateLockOnTargetUI()
+{
+    lockOnTargetImageComponent = std::make_shared<UIImageComponent>(
+        "./Data/Textures/UI/lock_on.png", "LockOnTarget");
+    lockOnTargetImageComponent->SetPivot({ 0.5f, 0.5f });
+    lockOnTargetImageComponent->SetSize({ 150.0f, 150.0f });
+    lockOnTargetImageComponent->SetVisible(false);
+    GetUIManager()->Add(lockOnTargetImageComponent);
+}
+
+void GameScene::HideLockOnTargetUI()
+{
+    if (lockOnTargetImageComponent)
+        lockOnTargetImageComponent->SetVisible(false);
+    lockOnTargetComponent.reset();
+}
+
+void GameScene::UpdateLockOnTargetUI()
+{
+    if (!lockOnTargetImageComponent)
+        return;
+
+    if (!darkCameraActor ||
+        darkCameraActor->GetMovementMode() != DarkCameraActor::CameraMode::LockOn ||
+        !darkCameraActor->HasValidLockOnTarget())
+    {
+        HideLockOnTargetUI();
+        return;
+    }
+
+    const auto target = darkCameraActor->GetEnemyHead();
+    if (!target)
+    {
+        HideLockOnTargetUI();
+        return;
+    }
+
+    // STEP 4-2 uses this identity transition to restart acquisition animation.
+    if (lockOnTargetComponent.lock() != target)
+        lockOnTargetComponent = target;
+
+    const auto projection = darkCameraActor->ProjectWorldPositionForUI(
+        target->GetComponentLocation());
+    if (!projection.valid || !projection.inFront || !projection.insideViewport)
+    {
+        // Retain a valid off-screen LockOn target; only hide its UI.
+        lockOnTargetImageComponent->SetVisible(false);
+        return;
+    }
+
+    lockOnTargetImageComponent->SetWorldPosition(ConvertScreenToUI(projection.screenPosition));
+    lockOnTargetImageComponent->SetVisible(true);
+}
+
+GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
 {
     if (!darkCameraActor || !player || battleFlowState == BattleFlowState::BossDead ||
         bossPhase == BossPhase::TransitionToPhase2)
     {
         lockOnInputHeldLastFrame = false;
-        return;
+        lockOnTargetSelectedForHeldInput = false;
+        return LockOnTargetSelectionResult::NoCandidate;
     }
 
     const bool lockOnHeld = InputSystem::GetInputState("LockOn", InputStateMask::Press);
     if (!lockOnHeld)
     {
         lockOnInputHeldLastFrame = false;
-        return;
+        lockOnTargetSelectedForHeldInput = false;
+        lockOnRequiresReleaseAfterBossRoomEntry = false;
+        return LockOnTargetSelectionResult::NoCandidate;
     }
 
-    // If the held target died between frames, do not allow Player's held-input
-    // request to keep a stale LockOn camera alive.
+    // Do not reinterpret a button held while entering the room as a request to
+    // acquire Grux. The next release and press performs the normal selection.
+    if (lockOnRequiresReleaseAfterBossRoomEntry)
+        return LockOnTargetSelectionResult::Invalidated;
+
     if (lockOnInputHeldLastFrame)
     {
+        // A held input keeps its first selected target fixed. If that target was
+        // invalidated, force the existing TPS recovery; a failed selection stays
+        // in Focus and must not be reinterpreted as the old camera target.
+        if (!lockOnTargetSelectedForHeldInput)
+            return LockOnTargetSelectionResult::NoCandidate;
+
         if (!darkCameraActor->HasValidLockOnTarget())
         {
             darkCameraActor->ClearEnemyHead();
             darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+            lockOnTargetSelectedForHeldInput = false;
+            return LockOnTargetSelectionResult::Invalidated;
         }
-        return;
+        return LockOnTargetSelectionResult::Selected;
     }
 
     lockOnInputHeldLastFrame = true;
+    lockOnTargetSelectedForHeldInput = false;
     const float maxDistance = darkCameraActor->GetLockOnTargetSelectionMaxDistance();
     const float maxDistanceSq = maxDistance * maxDistance;
     const auto enemies = GetActorManager()->GetActorsOfType<Enemy>();
@@ -1218,6 +1289,12 @@ void GameScene::UpdateLockOnTargetSelection()
         // Keep that behavior while normal enemies remain constrained to the local,
         // on-screen candidate rules introduced for STEP 4.
         const bool isGrux = std::dynamic_pointer_cast<GruxEnemy>(enemy) != nullptr;
+
+        // Before the boss-room door movie, only corridor enemies may be acquired.
+        // Once it starts, only Grux may be acquired; their individual visibility
+        // and distance rules below remain unchanged.
+        if (bossRoomLockOnScopeActive != isGrux)
+            continue;
 
         DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), player->GetPosition());
         delta.y = 0.0f;
@@ -1259,16 +1336,18 @@ void GameScene::UpdateLockOnTargetSelection()
     if (selectedTarget)
     {
         darkCameraActor->SetEnemyHead(selectedTarget);
+        lockOnTargetSelectedForHeldInput = true;
         Logger::Log(Logger::LogCategory::Gameplay, std::format(
             "[LockOn][Selected] target={} distanceXZ={:.3f}",
             selectedEnemy->GetName(), std::sqrt(selectedDistanceSq)));
+        return LockOnTargetSelectionResult::Selected;
     }
-    else
-    {
-        darkCameraActor->ClearEnemyHead();
-        darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-        Logger::Log(Logger::LogCategory::Gameplay, "[LockOn][Selected] no valid target");
-    }
+
+    // Do not leave a previous target (for example Grux) available to this input.
+    // Player will deliberately enter Focus when the current selection has no target.
+    darkCameraActor->ClearEnemyHead();
+    Logger::Log(Logger::LogCategory::Gameplay, "[LockOn][Selected] no valid target");
+    return LockOnTargetSelectionResult::NoCandidate;
 }
 void GameScene::Update(float deltaTime)
 {
@@ -1318,6 +1397,7 @@ void GameScene::Update(float deltaTime)
     UpdateLockOnTargetSelection();
 
     SceneBase::Update(deltaTime);
+    UpdateLockOnTargetUI();
     RecordPhase1FinalHitHitStopFrameSample();
 
     // Gameplay時間へ同期し、HitStop中はPhysXだけが進むずれを防ぐ。
@@ -1613,8 +1693,32 @@ void GameScene::DisableCinematicCameraDebugInput()
         camera->SetDebugInputEnabled(false);
 }
 
+void GameScene::EnterBossRoomLockOnScope()
+{
+    if (bossRoomLockOnScopeActive)
+        return;
+
+    bossRoomLockOnScopeActive = true;
+    lockOnRequiresReleaseAfterBossRoomEntry = true;
+    lockOnInputHeldLastFrame = false;
+    lockOnTargetSelectedForHeldInput = false;
+
+    if (!darkCameraActor)
+        return;
+
+    const auto target = darkCameraActor->GetEnemyHead();
+    const auto targetOwner = target ? target->GetOwner() : nullptr;
+    if (targetOwner && !dynamic_cast<GruxEnemy*>(targetOwner))
+    {
+        darkCameraActor->ClearEnemyHead();
+        darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+        HideLockOnTargetUI();
+    }
+}
+
 void GameScene::StartBossBattle()
 {
+    EnterBossRoomLockOnScope();
     ResetVictoryResultBackground();
     victoryResultPhase = VictoryResultPhase::None;
     victoryResultDelayElapsed = 0.0f;
