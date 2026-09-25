@@ -15,7 +15,7 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     //skeletalMeshComponent->SetModel("./Data/Models/Characters/Skeleton/Skeleton.gltf");
     skeletalMeshComponent->SetModel("./Data/Models/Characters/Skeleton/Skeleton.gltf", false, true);
     skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Enemy;   // オブジェクトの種類を Enemy に設定
-    skeletalMeshComponent->SetRelativeLocationDirect({ 0.0f,-0.3f,0.0f });
+    skeletalMeshComponent->SetRelativeLocationDirect({ 0.0f,-0.f,0.0f });
 
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
@@ -23,10 +23,10 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     controller->AddAnimation("Walk", 0);
     controller->AddAnimation("Attack", 1);
     controller->AddAnimation("Idle", 2);
+    controller->AddAnimation("Death", 3);
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
     // アニメーションコントローラーのオーナーの名前を設定する
-    // Notify assets are authored under Data/Animation/Skeleton, not the scene actor name.
     controller->SetOwnerName("Skeleton");
     // 全てのNotifyAssetsをロードする
     controller->LoadAllNotifyAssets("Skeleton");
@@ -88,6 +88,9 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
 
     // 回転用コンポーネントを追加
     rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
+    // Shared LockOn target name lets GameScene select this Enemy without a type branch.
+    cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
+    cameraTargetComponent->SetRelativeLocationDirect({ 0.0f, 1.15f, 0.0f });
     hp = maxHp;
 
 #if 0
@@ -157,7 +160,8 @@ bool SkeletonWarriorActor::TakeDamageFromPlayer(int damage)
     isDangerWindow = false;
     activeDangerNotifyState = nullptr;
     ResetWeaponSweep();
-    PlayBodyAnimation("Idle", true, true, 0.1f, true);
+    PlayBodyAnimation("Death", false, true, 0.1f, true);
+
     if (sword) sword->SetIsVisible(false);
     if (shield) shield->SetIsVisible(false);
     if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(

@@ -1711,15 +1711,11 @@ void GruxEnemy::Update(float deltaTime)
 
     if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
     {
-        // カメラがロックオンモードの時のみ表示する
-        if (camera->GetMovementMode() == DarkCameraActor::CameraMode::LockOn)
-        {
-            lockOnTargetImageComponent->SetVisible(true);
-        }
-        else
-        {
-            lockOnTargetImageComponent->SetVisible(false);
-        }
+        // Display Grux's existing marker only while Grux is the selected target.
+        const auto selectedTarget = camera->GetEnemyHead();
+        const bool isSelected = selectedTarget && selectedTarget->GetOwner() == this;
+        lockOnTargetImageComponent->SetVisible(
+            camera->GetMovementMode() == DarkCameraActor::CameraMode::LockOn && isSelected);
     }
 
 #endif // 0

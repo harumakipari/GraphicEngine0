@@ -125,6 +125,7 @@ public:
     bool IsPhase1BreakPending() const { return phase1BreakPending; }
     bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
 private:
+    void UpdateLockOnTargetSelection();
     enum class Phase1FinalHitTimePhase : uint8_t
     {
         None,
@@ -375,6 +376,9 @@ private:
     std::shared_ptr<Player> player;
 
     std::shared_ptr<GruxEnemy> gruxEnemyActor;
+
+    // Selection happens once per held-input start; Rush keeps its own target.
+    bool lockOnInputHeldLastFrame = false;
 
     void OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& source);
 

@@ -46,6 +46,7 @@ public:
         bool hasHitPosition, bool hasHitNormal) override;
     bool IsDead() const { return state == State::Dead; }
     int GetMaxHp() const { return maxHp; }
+    const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() const { return cameraTargetComponent; }
 
 private:
     void BeginAttack(const DirectX::XMFLOAT3& directionToPlayer);
@@ -68,6 +69,7 @@ private:
     std::shared_ptr<SkeletalMeshComponent> sword;
     std::shared_ptr<SkeletalMeshComponent> shield;
     std::shared_ptr<RotationComponent> rotationComponent;
+    std::shared_ptr<SceneComponent> cameraTargetComponent;
     std::shared_ptr<SceneComponent> weaponRootPoint;
     std::shared_ptr<SceneComponent> weaponTipPoint;
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent;

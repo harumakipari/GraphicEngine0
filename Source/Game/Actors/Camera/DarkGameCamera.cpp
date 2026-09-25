@@ -2,6 +2,7 @@
 #include "DarkGameCamera.h"
 
 #include "Game/Actors/Player/Player.h"
+#include "Game/Actors/Enemy/Enemy.h"
 #include "Engine/Debug/DebugRender.h"
 #include "Physics/CollisionFunction.h"
 #include "Engine/Scene/Scene.h"
@@ -16,6 +17,12 @@ namespace
     }
 }
 
+bool DarkCameraActor::HasValidLockOnTarget() const
+{
+    const auto target = enemyHead.lock();
+    const auto* enemy = target ? dynamic_cast<const Enemy*>(target->GetOwner()) : nullptr;
+    return enemy && !enemy->IsDefeated() && !enemy->IsPendingKill();
+}
 void DarkCameraActor::Initialize(const Transform& transform)
 {
     std::string parentName = "DarkCameraActor";

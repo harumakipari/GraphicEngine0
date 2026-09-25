@@ -820,9 +820,9 @@ private:
     Phase2HpBarPreviewState phase2HpBarPreviewState = Phase2HpBarPreviewState::Hidden;
     DirectX::XMFLOAT2 phase2HpBarPreviewPosition{ 650.0f, 115.0f };
     DirectX::XMFLOAT2 phase2HpBarPreviewFrameSize{ 895.65f, 17.15f };
-    float phase2HpBarPreviewFrameRevealDuration = 1.50f;
-    float phase2HpBarPreviewFillDelay = 0.15f;
-    float phase2HpBarPreviewFillDuration = 1.50f;
+    float phase2HpBarPreviewFrameRevealDuration = 2.0f;
+    float phase2HpBarPreviewFillDelay = 0.3f;
+    float phase2HpBarPreviewFillDuration = 2.3f;
     float phase2HpBarPreviewElapsed = 0.0f;
     float phase2HpBarPreviewFrameProgress = 0.0f;
     float phase2HpBarPreviewFillProgress = 0.0f;

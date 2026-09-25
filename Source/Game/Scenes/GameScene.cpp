@@ -1167,6 +1167,109 @@ void GameScene::ResetDeathBgmState(const BossPhase restartPhase)
     ResetBossBattleBgm(restartPhase, true);
 }
 
+void GameScene::UpdateLockOnTargetSelection()
+{
+    if (!darkCameraActor || !player || battleFlowState == BattleFlowState::BossDead ||
+        bossPhase == BossPhase::TransitionToPhase2)
+    {
+        lockOnInputHeldLastFrame = false;
+        return;
+    }
+
+    const bool lockOnHeld = InputSystem::GetInputState("LockOn", InputStateMask::Press);
+    if (!lockOnHeld)
+    {
+        lockOnInputHeldLastFrame = false;
+        return;
+    }
+
+    // If the held target died between frames, do not allow Player's held-input
+    // request to keep a stale LockOn camera alive.
+    if (lockOnInputHeldLastFrame)
+    {
+        if (!darkCameraActor->HasValidLockOnTarget())
+        {
+            darkCameraActor->ClearEnemyHead();
+            darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+        }
+        return;
+    }
+
+    lockOnInputHeldLastFrame = true;
+    const float maxDistance = darkCameraActor->GetLockOnTargetSelectionMaxDistance();
+    const float maxDistanceSq = maxDistance * maxDistance;
+    const auto enemies = GetActorManager()->GetActorsOfType<Enemy>();
+    std::shared_ptr<Enemy> selectedEnemy;
+    std::shared_ptr<SceneComponent> selectedTarget;
+    float selectedDistanceSq = FLT_MAX;
+    float selectedScreenDistanceSq = FLT_MAX;
+
+    for (const auto& enemy : enemies)
+    {
+        if (!enemy || enemy->IsDefeated() || enemy->IsPendingKill())
+            continue;
+        const auto target = std::dynamic_pointer_cast<SceneComponent>(
+            enemy->FindComponentByName("cameraTargetComponent"));
+        if (!target)
+            continue;
+
+        // Grux used to be assigned directly as the camera's LockOn target, so it
+        // could be acquired from any direction and at the boss battle's full range.
+        // Keep that behavior while normal enemies remain constrained to the local,
+        // on-screen candidate rules introduced for STEP 4.
+        const bool isGrux = std::dynamic_pointer_cast<GruxEnemy>(enemy) != nullptr;
+
+        DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), player->GetPosition());
+        delta.y = 0.0f;
+        const float distanceSq = delta.x * delta.x + delta.z * delta.z;
+        if (!isGrux && distanceSq > maxDistanceSq)
+            continue;
+
+        float screenDistanceSq = FLT_MAX;
+        const auto projection = darkCameraActor->ProjectWorldPositionForUI(
+            target->GetComponentLocation());
+        if (!isGrux)
+        {
+            if (!projection.valid || !projection.inFront || !projection.insideViewport)
+                continue;
+
+            screenDistanceSq = projection.ndc.x * projection.ndc.x +
+                projection.ndc.y * projection.ndc.y;
+        }
+        else if (projection.valid && projection.inFront && projection.insideViewport)
+        {
+            // Preserve the existing centrality tie-break whenever Grux is visible,
+            // but do not require visibility to acquire him.
+            screenDistanceSq = projection.ndc.x * projection.ndc.x +
+                projection.ndc.y * projection.ndc.y;
+        }
+        constexpr float distanceTieEpsilonSq = 0.01f;
+        const bool closer = distanceSq < selectedDistanceSq - distanceTieEpsilonSq;
+        const bool tiedButMoreCentral = std::abs(distanceSq - selectedDistanceSq) <=
+            distanceTieEpsilonSq && screenDistanceSq < selectedScreenDistanceSq;
+        if (closer || tiedButMoreCentral)
+        {
+            selectedEnemy = enemy;
+            selectedTarget = target;
+            selectedDistanceSq = distanceSq;
+            selectedScreenDistanceSq = screenDistanceSq;
+        }
+    }
+
+    if (selectedTarget)
+    {
+        darkCameraActor->SetEnemyHead(selectedTarget);
+        Logger::Log(Logger::LogCategory::Gameplay, std::format(
+            "[LockOn][Selected] target={} distanceXZ={:.3f}",
+            selectedEnemy->GetName(), std::sqrt(selectedDistanceSq)));
+    }
+    else
+    {
+        darkCameraActor->ClearEnemyHead();
+        darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+        Logger::Log(Logger::LogCategory::Gameplay, "[LockOn][Selected] no valid target");
+    }
+}
 void GameScene::Update(float deltaTime)
 {
     using namespace DirectX;
@@ -1211,6 +1314,8 @@ void GameScene::Update(float deltaTime)
 
 
 
+
+    UpdateLockOnTargetSelection();
 
     SceneBase::Update(deltaTime);
     RecordPhase1FinalHitHitStopFrameSample();
@@ -4191,7 +4296,7 @@ void GameScene::SetUpActors()
         { OnPlayerFinalHit(boss, source); });
 
     // メインの部屋にチュートリアル用の骸骨を追加。
-    Transform tutorialSkeletonTr(DirectX::XMFLOAT3{ -10.0f,0.0f,10.75f },
+    Transform tutorialSkeletonTr(DirectX::XMFLOAT3{ -10.0f,-0.3f,10.75f },
         DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
     this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
         "Skeleton", tutorialSkeletonTr);

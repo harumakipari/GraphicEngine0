@@ -104,6 +104,10 @@ public:
         return this->enemyHead.lock();
     }
 
+    void ClearEnemyHead() { enemyHead.reset(); }
+    bool HasValidLockOnTarget() const;
+    float GetLockOnTargetSelectionMaxDistance() const { return lockOnTargetSelectionMaxDistance; }
+
     float GetCameraCollisionRatio()const
     {
         return cameraCollisionRatio;
@@ -132,8 +136,10 @@ public:
     CameraMode GetMovementMode()const { return requestMode; }
 
     // カメラモードをセットする
-    void SetRequestMode(const CameraMode mode)
+    void SetRequestMode(CameraMode mode)
     {
+        if (mode == CameraMode::LockOn && !HasValidLockOnTarget())
+            mode = CameraMode::TPS;
         if (mode != CameraMode::TPS)
         {
             CancelOffscreenAttackAssist();
@@ -553,6 +559,8 @@ private:
     float lockOnDistanceScale = 0.25f;
     // 最大距離
     float lockOnMaxDistance = 8.0f;
+    // Candidate selection range; independent from the camera zoom cap above.
+    float lockOnTargetSelectionMaxDistance = 20.0f;
     // Pitch
     float lockOnPitchDegree = -10.0f;
     // 当たり判定のスフィアキャストの球の大きさ
