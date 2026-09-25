@@ -2,6 +2,7 @@
 #include "SkeletonWarriorEnemy.h"
 
 #include "Components/Render/PointLightComponent.h"
+#include "Engine/Debug/DebugRender.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/Player/Player.h"
 #include "Physics/CollisionFunction.h"
@@ -25,9 +26,10 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
     // アニメーションコントローラーのオーナーの名前を設定する
-    controller->SetOwnerName(GetName());
+    // Notify assets are authored under Data/Animation/Skeleton, not the scene actor name.
+    controller->SetOwnerName("Skeleton");
     // 全てのNotifyAssetsをロードする
-    controller->LoadAllNotifyAssets(GetName());
+    controller->LoadAllNotifyAssets("Skeleton");
 
 
     PlayBodyAnimation("Idle");
@@ -127,6 +129,8 @@ void SkeletonWarriorActor::Update(float elapsedTime)
     case State::Dead:
         break;
     }
+
+    DrawDangerAreaDebug();
 }
 
 void SkeletonWarriorActor::TakeDamage(int damage)
@@ -140,6 +144,8 @@ void SkeletonWarriorActor::TakeDamage(int damage)
 
     state = State::Dead;
     attackHitActive = false;
+    isDangerWindow = false;
+    activeDangerNotifyState = nullptr;
     ResetWeaponSweep();
     PlayBodyAnimation("Idle", true, true, 0.1f, true);
     if (sword) sword->SetIsVisible(false);
@@ -151,10 +157,19 @@ void SkeletonWarriorActor::BeginAttack(const DirectX::XMFLOAT3& directionToPlaye
     if (rotationComponent)
         rotationComponent->SetDirection(directionToPlayer);
 
+    // The just-dodge area must stay aligned with the committed swing, rather
+    // than rotating after a player who moves during the animation.
+    lockedAttackForward = directionToPlayer;
+    lockedAttackUp = { 0.0f, 1.0f, 0.0f };
+    lockedAttackRight = { directionToPlayer.z, 0.0f, -directionToPlayer.x };
+
     state = State::Attacking;
     stateElapsed = 0.0f;
     attackHitActive = false;
+    isDangerWindow = false;
+    activeDangerNotifyState = nullptr;
     hasHitPlayerThisAttack = false;
+    hasJustDodgedPlayerThisAttack = false;
     ResetWeaponSweep();
     PlayBodyAnimation("Attack", false, true, 0.08f, true);
 }
@@ -162,6 +177,11 @@ void SkeletonWarriorActor::BeginAttack(const DirectX::XMFLOAT3& directionToPlaye
 void SkeletonWarriorActor::UpdateAttack(float elapsedTime, Player& player)
 {
     stateElapsed += elapsedTime;
+    RefreshDangerAreaFromNotify();
+    if (isDangerWindow)
+    {
+        UpdateDangerWindow(player);
+    }
     const bool hitWindow = stateElapsed >= attackHitStartTime && stateElapsed <= attackHitEndTime;
     if (hitWindow)
     {
@@ -181,6 +201,8 @@ void SkeletonWarriorActor::UpdateAttack(float elapsedTime, Player& player)
         state = State::Recovery;
         stateElapsed = 0.0f;
         attackHitActive = false;
+        isDangerWindow = false;
+        activeDangerNotifyState = nullptr;
         ResetWeaponSweep();
         PlayBodyAnimation("Idle", true, true, 0.1f, true);
     }
@@ -219,12 +241,177 @@ void SkeletonWarriorActor::UpdateWeaponSweep(Player& player)
     previousWeaponRoot = root;
     previousWeaponTip = tip;
 
-    if (hasHitPlayerThisAttack || (!rootSucceeded && !tipSucceeded))
+    if (hasHitPlayerThisAttack || hasJustDodgedPlayerThisAttack ||
+        (!rootSucceeded && !tipSucceeded))
         return;
 
     const HitResultWithActor& hit = rootSucceeded ? rootHit : tipHit;
-    if (hit.actor == &player && player.TryTakeDamage(attackDamage, GetPosition()))
+    if (hit.actor != &player)
+        return;
+
+    if (player.TryTakeDamage(attackDamage, GetPosition()))
         hasHitPlayerThisAttack = true;
+}
+
+bool SkeletonWarriorActor::TryStartJustDodgeSuccess(Player& player)
+{
+    if (hasJustDodgedPlayerThisAttack || !isDangerWindow ||
+        !player.GetJustDodgeWindow() || !player.CanJustDodgeAgainst(GetPosition()))
+    {
+        return false;
+    }
+
+    const auto self = std::dynamic_pointer_cast<Enemy>(shared_from_this());
+    if (!self)
+        return false;
+
+    hasJustDodgedPlayerThisAttack = true;
+    player.StartJustDodgeSuccess(self);
+    return true;
+}
+
+void SkeletonWarriorActor::UpdateDangerWindow(Player& player)
+{
+    if (hasJustDodgedPlayerThisAttack || !IsPlayerInsideDangerArea(player) ||
+        !player.GetJustDodgeWindow())
+    {
+        return;
+    }
+
+    TryStartJustDodgeSuccess(player);
+}
+
+void SkeletonWarriorActor::RefreshDangerAreaFromNotify()
+{
+    const AnimationNotifyState* notify = activeDangerNotifyState;
+    if (!notify)
+        notify = GetAttackDangerNotifyState();
+    if (!notify)
+        return;
+
+    dangerArea = BuildDangerArea(GetPosition(), lockedAttackRight, lockedAttackUp,
+        lockedAttackForward, notify->justDodgeAreaOffset, notify->justDodgeAreaSize);
+}
+
+bool SkeletonWarriorActor::IsPlayerInsideDangerArea(Player& player) const
+{
+    DirectX::XMFLOAT3 capsuleCenter = player.GetPosition();
+    float capsuleRadius = 0.0f;
+    float capsuleHeight = 0.0f;
+    if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(
+        player.FindComponentByName("capsuleComponent")))
+    {
+        capsuleCenter = capsule->GetComponentLocation();
+        capsuleRadius = capsule->GetRadius();
+        capsuleHeight = capsule->GetHeight();
+    }
+    return dangerArea.IntersectsPlayerCapsule(capsuleCenter, capsuleRadius, capsuleHeight).overlap;
+}
+
+AnimationNotifyState* SkeletonWarriorActor::GetAttackDangerNotifyState()
+{
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return nullptr;
+    auto* asset = controller->GetNotifyAssetForRuntimeTuning(1);
+    if (!asset)
+        return nullptr;
+    for (auto& notify : asset->notifyTrack.states)
+    {
+        if (notify.type == AnimationNotifyState::Type::DangerWindow)
+            return &notify;
+    }
+    return nullptr;
+}
+
+void SkeletonWarriorActor::DrawDangerAreaDebug() const
+{
+    if (!dangerAreaDebug || state != State::Attacking)
+        return;
+
+    const DirectX::XMFLOAT4 color = hasJustDodgedPlayerThisAttack
+        ? DirectX::XMFLOAT4{ 0.15f, 1.0f, 0.25f, 1.0f }
+        : isDangerWindow ? DirectX::XMFLOAT4{ 1.0f, 0.2f, 0.1f, 1.0f }
+        : DirectX::XMFLOAT4{ 1.0f, 0.75f, 0.15f, 1.0f };
+    DebugRender::DrawBox(dangerArea.WorldTransform(), dangerArea.size, color, 0.0f, true);
+    DebugRender::DrawSphere(dangerArea.center, 0.08f, color, 0.0f, true);
+}
+
+void SkeletonWarriorActor::OnAnimationNotifyBegin(const AnimationNotifyState& notify)
+{
+    Enemy::OnAnimationNotifyBegin(notify);
+    if (state != State::Attacking || notify.type != AnimationNotifyState::Type::DangerWindow)
+        return;
+
+    activeDangerNotifyState = &notify;
+    isDangerWindow = true;
+    RefreshDangerAreaFromNotify();
+}
+
+void SkeletonWarriorActor::OnAnimationNotifyEnd(const AnimationNotifyState& notify)
+{
+    Enemy::OnAnimationNotifyEnd(notify);
+    if (notify.type != AnimationNotifyState::Type::DangerWindow ||
+        activeDangerNotifyState != &notify)
+    {
+        return;
+    }
+
+    isDangerWindow = false;
+    activeDangerNotifyState = nullptr;
+}
+
+void SkeletonWarriorActor::DrawImGuiDetails()
+{
+#ifdef USE_IMGUI
+    Character::DrawImGuiDetails();
+
+    ImGui::SeparatorText("Tutorial Skeleton Danger Area");
+    ImGui::Checkbox("Danger Area Debug", &dangerAreaDebug);
+    AnimationNotifyState* notify = GetAttackDangerNotifyState();
+    const auto controller = GetBodyAnimationController();
+    if (!notify || !controller)
+    {
+        ImGui::TextDisabled("Attack DangerWindow notify data is not loaded.");
+        return;
+    }
+
+    const float animationLength = controller->GetAnimationLength("Attack");
+    bool changed = false;
+    changed |= ImGui::DragFloat("DangerWindow Start (sec)", &notify->startTime,
+        0.01f, 0.0f, animationLength, "%.3f");
+    changed |= ImGui::DragFloat("DangerWindow End (sec)", &notify->endTime,
+        0.01f, 0.0f, animationLength, "%.3f");
+    notify->startTime = (std::clamp)(notify->startTime, 0.0f, animationLength);
+    notify->endTime = (std::clamp)(notify->endTime, notify->startTime, animationLength);
+    ImGui::TextDisabled("Center Offset (local: X=Right, Y=Up, Z=Forward)");
+    changed |= ImGui::DragFloat3("Danger Area Center Offset", &notify->justDodgeAreaOffset.x,
+        0.05f, -20.0f, 20.0f, "%.2f");
+    ImGui::TextDisabled("Full Size (Width, Height, Depth)");
+    changed |= ImGui::DragFloat3("Danger Area Size", &notify->justDodgeAreaSize.x,
+        0.05f, 0.0f, 20.0f, "%.2f");
+    notify->justDodgeAreaSize.x = (std::max)(0.0f, notify->justDodgeAreaSize.x);
+    notify->justDodgeAreaSize.y = (std::max)(0.0f, notify->justDodgeAreaSize.y);
+    notify->justDodgeAreaSize.z = (std::max)(0.0f, notify->justDodgeAreaSize.z);
+    if (changed && isDangerWindow)
+        RefreshDangerAreaFromNotify();
+
+    ImGui::Text("Animation Length: %.3f sec", animationLength);
+    ImGui::Text("DangerWindow Active: %s", isDangerWindow ? "YES" : "NO");
+    ImGui::Text("Just Dodge Succeeded: %s", hasJustDodgedPlayerThisAttack ? "YES" : "NO");
+
+    auto* asset = controller->GetNotifyAssetForRuntimeTuning(1);
+    const size_t stateIndex = static_cast<size_t>(notify - asset->notifyTrack.states.data());
+    if (ImGui::Button("Save Attack Danger Area"))
+    {
+        std::string savePath;
+        const auto result = controller->SaveDangerObbForRuntimeTuning(1, stateIndex, *notify, savePath);
+        dangerAreaSaveStatus = result == AnimationController::RuntimeDangerObbSaveResult::Saved
+            ? "Saved: " + savePath : "Save failed";
+    }
+    if (!dangerAreaSaveStatus.empty())
+        ImGui::TextUnformatted(dangerAreaSaveStatus.c_str());
+#endif
 }
 
 void SkeletonWarriorActor::ResetWeaponSweep()
@@ -241,4 +428,3 @@ DirectX::XMFLOAT3 SkeletonWarriorActor::GetWeaponTipPosition() const
 {
     return weaponTipPoint ? weaponTipPoint->GetComponentLocation() : GetPosition();
 }
-

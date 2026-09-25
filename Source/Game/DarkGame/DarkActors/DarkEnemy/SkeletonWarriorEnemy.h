@@ -1,6 +1,7 @@
 #pragma once
 #include "Components/Controller/ControllerComponent.h"
 #include "Core/Actor.h"
+#include "Animation/DangerArea.h"
 #include "Game/Actors/Enemy/Enemy.h"
 
 
@@ -28,6 +29,9 @@ public:
     void Initialize(const Transform& transform)override;
 
     void Update(float elapsedTime)override;
+    void DrawImGuiDetails() override;
+    void OnAnimationNotifyBegin(const AnimationNotifyState& state) override;
+    void OnAnimationNotifyEnd(const AnimationNotifyState& state) override;
 
     // Player-side generic Enemy damage routing is intentionally deferred to STEP 2.
     void TakeDamage(int damage);
@@ -41,6 +45,12 @@ private:
     void UpdateAttack(float elapsedTime, class Player& player);
     void UpdateRecovery(float elapsedTime);
     void UpdateWeaponSweep(class Player& player);
+    void UpdateDangerWindow(class Player& player);
+    bool TryStartJustDodgeSuccess(class Player& player);
+    void RefreshDangerAreaFromNotify();
+    bool IsPlayerInsideDangerArea(class Player& player) const;
+    AnimationNotifyState* GetAttackDangerNotifyState();
+    void DrawDangerAreaDebug() const;
     void ResetWeaponSweep();
     DirectX::XMFLOAT3 GetWeaponRootPosition() const;
     DirectX::XMFLOAT3 GetWeaponTipPosition() const;
@@ -57,10 +67,19 @@ private:
     State state = State::Idle;
     float stateElapsed = 0.0f;
     bool attackHitActive = false;
+    bool isDangerWindow = false;
     bool hasHitPlayerThisAttack = false;
+    bool hasJustDodgedPlayerThisAttack = false;
     bool hasPreviousWeaponPoints = false;
     DirectX::XMFLOAT3 previousWeaponRoot{};
     DirectX::XMFLOAT3 previousWeaponTip{};
+    const AnimationNotifyState* activeDangerNotifyState = nullptr;
+    DangerArea dangerArea{};
+    DirectX::XMFLOAT3 lockedAttackRight{ 1.0f, 0.0f, 0.0f };
+    DirectX::XMFLOAT3 lockedAttackUp{ 0.0f, 1.0f, 0.0f };
+    DirectX::XMFLOAT3 lockedAttackForward{ 0.0f, 0.0f, 1.0f };
+    bool dangerAreaDebug = false;
+    std::string dangerAreaSaveStatus;
 
     // Tutorial tuning, isolated from Grux and Player combat settings.
     int maxHp = 6;
@@ -71,7 +90,7 @@ private:
     float attackHitEndTime = 0.76f;
     float recoveryDuration = 0.85f;
     int attackDamage = 4;
-    float weaponHitRadius = 1.f;
+    float weaponHitRadius = 0.5f;
     DirectX::XMFLOAT3 weaponRootOffset{ 0.0f, 0.0f, 0.0f };
     DirectX::XMFLOAT3 weaponTipOffset{ 0.0f, 0.0f, 1.05f };
 };
