@@ -475,6 +475,9 @@ public:
     float lastJustWindowRatio = 0.0f;
     float lastJustBossHitBoxElapsed = -1.0f;
     float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
+    // Normal-enemy Rush stops at capsule surface separation plus this margin.
+    // Grux deliberately keeps its legacy fixed 2.5 m stop distance.
+    float normalEnemyRushSurfaceMargin = 0.15f;
     float motionWarpDesiredAttackSurfaceDistance = 0.5f;
     float attackRotationMaxCorrectionDegrees = 55.0f;
     float attackRotationSpeedDegrees = 240.0f;
@@ -507,6 +510,7 @@ public:
     bool rushJudgeSuccessDebug = false;
     bool rushRequestedDebug = false;
     bool swordHitDebug = false;
+    bool rushSweepHitThisHitBoxDebug = false;
     float rushPromptAlpha = 0.0f;
     float rushPromptFadeInDuration = 0.10f;
     RushPromptAnimationPhase rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;

@@ -47,5 +47,22 @@ public:
 
     virtual void UpdateParticle(ID3D11DeviceContext* immediate_context, float deltaTime, ParticleSystem* p) {};
 
+    // Normal enemies opt in to Player damage without inheriting boss-specific
+    // phase, UI, or cinematic behavior.
+    virtual bool TakeDamageFromPlayer(int damage) { (void)damage; return false; }
+    virtual bool IsDefeated() const { return !IsAlive() || IsPendingKill(); }
+    virtual void SpawnPlayerHitEffect(const DirectX::XMFLOAT3& hitPosition,
+        const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition)
+    {
+        (void)hitPosition; (void)hitNormal; (void)playerPosition;
+    }
+    virtual void SpawnPlayerRushHitEffect(const DirectX::XMFLOAT3& hitPosition,
+        const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition,
+        bool hasHitPosition, bool hasHitNormal)
+    {
+        (void)hitPosition; (void)hitNormal; (void)playerPosition;
+        (void)hasHitPosition; (void)hasHitNormal;
+    }
+
     virtual bool OnMessage(const Telegram& msg) { return false; }
 };

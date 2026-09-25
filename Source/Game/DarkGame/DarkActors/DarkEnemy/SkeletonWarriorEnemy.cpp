@@ -56,6 +56,15 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     weaponTipPoint = AddComponent<SceneComponent>("SwordHitTip", "SwordMesh");
     weaponTipPoint->SetRelativeLocationDirect(weaponTipOffset);
 
+    // Reuse the established Player-vs-Grux impact assets, owned by this
+    // normal enemy so their positions follow the skeleton rather than the boss.
+    hitSwordEffectComponent = AddComponent<ParticleComponent>("SkeletonHitEffect", parentName);
+    hitSwordEffectComponent->Load("./Data/Effect/Files/NormalAttackHitEffect.json");
+    rushHitRingEffectComponent = AddComponent<ParticleComponent>("SkeletonRushHitRing", parentName);
+    rushHitRingEffectComponent->Load("./Data/Effect/Files/RushHitRingEffect.json");
+    rushHitSparkEffectComponent = AddComponent<ParticleComponent>("SkeletonRushHitSpark", parentName);
+    rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushCoreEffect.json");
+
     // “–‚½‚è”»’è
     {
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
@@ -133,14 +142,15 @@ void SkeletonWarriorActor::Update(float elapsedTime)
     DrawDangerAreaDebug();
 }
 
-void SkeletonWarriorActor::TakeDamage(int damage)
+bool SkeletonWarriorActor::TakeDamageFromPlayer(int damage)
 {
     if (state == State::Dead || damage <= 0)
-        return;
+        return false;
 
     hp = (std::max)(0, hp - damage);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_damage.wav", 0.25f);
     if (hp > 0)
-        return;
+        return true;
 
     state = State::Dead;
     attackHitActive = false;
@@ -150,6 +160,66 @@ void SkeletonWarriorActor::TakeDamage(int damage)
     PlayBodyAnimation("Idle", true, true, 0.1f, true);
     if (sword) sword->SetIsVisible(false);
     if (shield) shield->SetIsVisible(false);
+    if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(
+        FindComponentByName("capsuleComponent")))
+    {
+        capsule->DisableCollision();
+    }
+    return true;
+}
+
+void SkeletonWarriorActor::SpawnPlayerHitEffect(const DirectX::XMFLOAT3& hitPosition,
+    const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition)
+{
+    (void)hitNormal;
+    (void)playerPosition;
+    if (!hitSwordEffectComponent)
+        return;
+
+    hitSwordEffectComponent->SetWorldLocationDirect(hitPosition);
+    hitSwordEffectComponent->UpdateComponentToWorld();
+    EffectManager::EmitParticle(hitSwordEffectComponent->GetEffectHandle(),
+        hitSwordEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+}
+
+void SkeletonWarriorActor::SpawnPlayerRushHitEffect(const DirectX::XMFLOAT3& hitPosition,
+    const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition,
+    const bool hasHitPosition, const bool hasHitNormal)
+{
+    DirectX::XMFLOAT3 surfaceNormal = hitNormal;
+    const float normalLengthSq = surfaceNormal.x * surfaceNormal.x + surfaceNormal.y * surfaceNormal.y + surfaceNormal.z * surfaceNormal.z;
+    const bool useSurfacePosition = hasHitPosition && hasHitNormal && normalLengthSq > 0.000001f;
+    DirectX::XMFLOAT3 effectPosition{};
+    if (useSurfacePosition)
+    {
+        surfaceNormal = MathHelper::Multiply(surfaceNormal, 1.0f / std::sqrt(normalLengthSq));
+        effectPosition = MathHelper::Add(hitPosition, MathHelper::Multiply(surfaceNormal, 0.05f));
+    }
+    else
+    {
+        effectPosition = GetPosition();
+        effectPosition.y += 1.1f;
+        DirectX::XMFLOAT3 direction = MathHelper::Subtract(playerPosition, effectPosition);
+        direction.y = 0.0f;
+        if (MathHelper::Length(direction) > FLT_EPSILON)
+            effectPosition = MathHelper::Add(effectPosition, MathHelper::Multiply(MathHelper::Normalize(direction), 0.5f));
+    }
+
+    if (rushHitSparkEffectComponent)
+    {
+        rushHitSparkEffectComponent->SetWorldLocationDirect(effectPosition);
+        rushHitSparkEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(rushHitSparkEffectComponent->GetEffectHandle(),
+            rushHitSparkEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+    }
+    if (rushHitRingEffectComponent)
+    {
+        rushHitRingEffectComponent->SetWorldLocationDirect(effectPosition);
+        rushHitRingEffectComponent->UpdateComponentToWorld();
+        EffectManager::EmitParticle(rushHitRingEffectComponent->GetEffectHandle(),
+            rushHitRingEffectComponent->GetComponentLocation(),
+            rushHitRingEffectComponent->GetComponentEulerRotation());
+    }
 }
 
 void SkeletonWarriorActor::BeginAttack(const DirectX::XMFLOAT3& directionToPlayer)

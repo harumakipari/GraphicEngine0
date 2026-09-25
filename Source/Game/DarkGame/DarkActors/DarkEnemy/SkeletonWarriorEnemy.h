@@ -4,6 +4,7 @@
 #include "Animation/DangerArea.h"
 #include "Game/Actors/Enemy/Enemy.h"
 
+class ParticleComponent;
 
 class SwordActor : public Actor
 {
@@ -23,6 +24,9 @@ public:
 
 class SkeletonWarriorActor :public Enemy
 {
+private:
+    enum class State : uint8_t { Idle, Attacking, Recovery, Dead };
+
 public:
     explicit SkeletonWarriorActor(const std::string& actorName) :Enemy(actorName) {}
 
@@ -33,14 +37,17 @@ public:
     void OnAnimationNotifyBegin(const AnimationNotifyState& state) override;
     void OnAnimationNotifyEnd(const AnimationNotifyState& state) override;
 
-    // Player-side generic Enemy damage routing is intentionally deferred to STEP 2.
-    void TakeDamage(int damage);
+    bool TakeDamageFromPlayer(int damage) override;
+    bool IsDefeated() const override { return state == State::Dead; }
+    void SpawnPlayerHitEffect(const DirectX::XMFLOAT3& hitPosition,
+        const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition) override;
+    void SpawnPlayerRushHitEffect(const DirectX::XMFLOAT3& hitPosition,
+        const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition,
+        bool hasHitPosition, bool hasHitNormal) override;
     bool IsDead() const { return state == State::Dead; }
     int GetMaxHp() const { return maxHp; }
 
 private:
-    enum class State : uint8_t { Idle, Attacking, Recovery, Dead };
-
     void BeginAttack(const DirectX::XMFLOAT3& directionToPlayer);
     void UpdateAttack(float elapsedTime, class Player& player);
     void UpdateRecovery(float elapsedTime);
@@ -63,6 +70,9 @@ private:
     std::shared_ptr<RotationComponent> rotationComponent;
     std::shared_ptr<SceneComponent> weaponRootPoint;
     std::shared_ptr<SceneComponent> weaponTipPoint;
+    std::shared_ptr<ParticleComponent> hitSwordEffectComponent;
+    std::shared_ptr<ParticleComponent> rushHitRingEffectComponent;
+    std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent;
 
     State state = State::Idle;
     float stateElapsed = 0.0f;
@@ -82,13 +92,13 @@ private:
     std::string dangerAreaSaveStatus;
 
     // Tutorial tuning, isolated from Grux and Player combat settings.
-    int maxHp = 6;
+    int maxHp = 8;
     float facePlayerDistance = 12.0f;
     float attackRange = 3.0f;
     float attackDuration = 1.05f;
     float attackHitStartTime = 0.42f;
     float attackHitEndTime = 0.76f;
-    float recoveryDuration = 0.85f;
+    float recoveryDuration = 5.85f;
     int attackDamage = 4;
     float weaponHitRadius = 0.5f;
     DirectX::XMFLOAT3 weaponRootOffset{ 0.0f, 0.0f, 0.0f };

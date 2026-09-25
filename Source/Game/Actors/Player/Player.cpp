@@ -809,6 +809,8 @@ void Player::Update(float deltaTime)
         float selectedOverlapDepth = FLT_MAX;
         float selectedDamageToi = FLT_MAX;
         const bool anySweepHit = sweeps[0].hit || sweeps[1].hit || sweeps[2].hit;
+        if (swordHitDebug && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
+            rushSweepHitThisHitBoxDebug = rushSweepHitThisHitBoxDebug || anySweepHit;
 
         for (const SwordSweepResult& sweep : sweeps)
         {
@@ -874,12 +876,12 @@ void Player::Update(float deltaTime)
             const HitResultWithActor& hit = selectedHit->result;
             if (!hitActors.contains(hit.actor))
             {
+                const bool isRushHit = stateMachine_ &&
+                    std::string(stateMachine_->GetStateName()) == "Rush";
                 if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
                 {
                     Logger::Log(U8("剣に敵が当たった"));
                     const int previousHP = enemy->GetHp();
-                    const bool isRushHit = stateMachine_ &&
-                        std::string(stateMachine_->GetStateName()) == "Rush";
                     const bool isNormalFourthHit = !isRushHit &&
                         currentAttackAnimation == "Primary_Attack_Fast_D1_1";
                     enemy->TakeDamageFromPlayerAttack(GetCurrentAttackDamage(),
@@ -932,7 +934,27 @@ void Player::Update(float deltaTime)
                         }
                         finalHitCallback(enemy, GetPosition());
                     }
-
+                }
+                else if (auto enemy = dynamic_cast<Enemy*>(hit.actor);
+                    enemy && !enemy->IsDefeated() &&
+                    enemy->TakeDamageFromPlayer(GetCurrentAttackDamage()))
+                {
+                    if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
+                        enemy->SpawnPlayerHitEffect(hit.hitPoint, hit.normal, playerPos);
+                    hitActors.emplace(enemy);
+                    if (isRushHit)
+                    {
+                        enemy->SpawnPlayerRushHitEffect(hit.hitPoint, hit.normal, playerPos,
+                            hit.hasPosition, hit.hasNormal);
+                        if (swordHitDebug)
+                        {
+                            Logger::Log(Logger::LogCategory::Physics, std::format(
+                                "[Rush][SwordHit] source={} target={} damageApplied=true hpAfter={} effectsRequested=RushHitRingEffect,RushCoreEffect",
+                                selectedHit->source, enemy->GetName(), enemy->GetHp()));
+                        }
+                    }
+                    Time::SetSlow(0.0f,
+                        isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
                 }
             }
         }
@@ -1379,6 +1401,8 @@ void Player::DrawImGuiDetails()
     ImGui::Checkbox(U8("ボス戦カメラ"), &isBossBattle);
     ImGui::DragFloat(U8("剣の球の当たり判定の半径"), &weaponSphereRadius, 0.05f);
     ImGui::Checkbox("Sword Hit Debug", &swordHitDebug);
+    ImGui::DragFloat("Normal Enemy Rush Surface Margin", &normalEnemyRushSurfaceMargin,
+        0.01f, 0.0f, 1.0f, "%.3f m");
     ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
     ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);
@@ -1702,6 +1726,16 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::HitBox:
         Logger::Log(U8("当たり判定を開始しました"));
         hitBox = true;
+        if (swordHitDebug && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
+        {
+            rushSweepHitThisHitBoxDebug = false;
+            const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
+            const auto controller = GetBodyAnimationController();
+            Logger::Log(Logger::LogCategory::Physics, std::format(
+                "[Rush][HitBoxBegin] step={} animation={}",
+                rushState ? rushState->GetComboIndex() : -1,
+                controller ? controller->GetCurrentAnimationName() : ""));
+        }
         if (stateMachine_->GetStateName() == "Attack")
             StopAttackTargetRotation();
         break;
@@ -1812,6 +1846,13 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::HitBox:
         //Logger::Log(U8("当たり判定を終了しました"));
         hitBox = false;
+        if (swordHitDebug && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
+        {
+            const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
+            Logger::Log(Logger::LogCategory::Physics, std::format(
+                "[Rush][HitBoxEnd] step={} sweepHit={}",
+                rushState ? rushState->GetComboIndex() : -1, rushSweepHitThisHitBoxDebug));
+        }
         break;
     case AnimationNotifyState::Type::InputWindow:
         inputWindow = false;
@@ -2878,7 +2919,7 @@ void Player::AcquireAttackTarget()
             Actor* targetOwner = targetHead->GetOwner();
             for (const auto& enemy : enemies)
             {
-                if (enemy && enemy.get() == targetOwner)
+                if (enemy && !enemy->IsDefeated() && enemy.get() == targetOwner)
                 {
                     attackTarget = enemy;
                     break;
@@ -2892,7 +2933,7 @@ void Player::AcquireAttackTarget()
         float nearestDistance = FLT_MAX;
         for (const auto& enemy : enemies)
         {
-            if (!enemy)
+                if (!enemy || enemy->IsDefeated())
                 continue;
             DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), GetPosition());
             delta.y = 0.0f;
@@ -2915,7 +2956,7 @@ void Player::UpdateAttackTargetRotation(float deltaTime)
         return;
 
     const auto target = attackTarget.lock();
-    if (!target)
+    if (!target || target->IsDefeated())
     {
         attackRotationTracking = false;
         return;

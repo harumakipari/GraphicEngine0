@@ -604,13 +604,60 @@ void PlayerRushState::Enter()
 
     if (auto target = player->rushTarget.lock())
     {// 移動する
-        if (auto gruxTarget = std::dynamic_pointer_cast<GruxEnemy>(target))
+        const auto gruxTarget = std::dynamic_pointer_cast<GruxEnemy>(target);
+        if (gruxTarget)
         {
             rushHpDisplayTarget = gruxTarget;
             gruxTarget->BeginRushHpDisplay();
         }
 
-        player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, 2.5f);
+        constexpr float gruxRushStopDistance = 2.5f;
+        constexpr float minimumNormalEnemyRushStopDistance = 0.25f;
+        float rushStopDistance = gruxRushStopDistance;
+        float playerRadius = 0.0f;
+        float targetRadius = 0.0f;
+        bool usedCapsuleDistance = false;
+
+        // MoveToActor compares Actor positions in XZ, while both character
+        // capsules are only offset vertically. The horizontal center distance
+        // can therefore use their radii directly for normal enemies.
+        if (!gruxTarget)
+        {
+            const auto playerCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                player->FindComponentByName("capsuleComponent"));
+            const auto targetCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                target->FindComponentByName("capsuleComponent"));
+            if (playerCapsule && targetCapsule)
+            {
+                playerRadius = playerCapsule->GetRadius();
+                targetRadius = targetCapsule->GetRadius();
+                if (std::isfinite(playerRadius) && std::isfinite(targetRadius) &&
+                    playerRadius > 0.0f && targetRadius > 0.0f)
+                {
+                    float surfaceMargin = player->normalEnemyRushSurfaceMargin;
+                    if (!std::isfinite(surfaceMargin))
+                        surfaceMargin = 0.0f;
+                    surfaceMargin = std::clamp(surfaceMargin, 0.0f, 1.0f);
+                    rushStopDistance = (std::max)(minimumNormalEnemyRushStopDistance,
+                        playerRadius + targetRadius + surfaceMargin);
+                    usedCapsuleDistance = true;
+                }
+            }
+        }
+
+        if (player->swordHitDebug)
+        {
+            DirectX::XMFLOAT3 targetDelta = MathHelper::Subtract(target->GetPosition(), player->GetPosition());
+            targetDelta.y = 0.0f;
+            Logger::Log(Logger::LogCategory::Gameplay, std::format(
+                "[Rush][StopDistance] target={} type={} playerRadius={:.3f} targetRadius={:.3f} "
+                "surfaceMargin={:.3f} stopDistance={:.3f} startCenterDistance={:.3f} capsuleFormula={}",
+                target->GetName(), gruxTarget ? "GruxFixed" : "NormalEnemy",
+                playerRadius, targetRadius, player->normalEnemyRushSurfaceMargin,
+                rushStopDistance, MathHelper::Length(targetDelta), usedCapsuleDistance));
+        }
+
+        player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, rushStopDistance);
         // ルートモーションを無視する
         player->PlayBodyAnimation("0_Jog_Fwd", false, true, 0.2f, true);
     }
@@ -638,9 +685,8 @@ void PlayerRushState::Execute(float deltaTime)
     if (auto target = player->rushTarget.lock())
     {
         const auto targetStateMachine = target->GetStateMachine();
-        if ((!target->IsAlive() || target->IsPendingKill() ||
-            (targetStateMachine && std::string(targetStateMachine->GetStateName()) == "EnemyDeathState")) &&
-            !player->IsFinalHitAttackDrainActive())
+        if (target->IsDefeated() ||
+            (targetStateMachine && std::string(targetStateMachine->GetStateName()) == "EnemyDeathState")&&(!player->IsFinalHitAttackDrainActive()))
         {
             player->BeginBossSlowReturn(true);
             player->GetStateMachine()->ChangeState("Idle");
@@ -664,6 +710,33 @@ void PlayerRushState::Execute(float deltaTime)
         if (player->characterMovementComponent->IsMoveToActorFinished())
         {// targetまで付いたら、
             Logger::Log(U8("Rush中のtargetまで移動完了"));
+            if (player->swordHitDebug)
+            {
+                if (const auto target = player->rushTarget.lock())
+                {
+                    DirectX::XMFLOAT3 targetDelta = MathHelper::Subtract(target->GetPosition(), player->GetPosition());
+                    targetDelta.y = 0.0f;
+                    const auto playerCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                        player->FindComponentByName("capsuleComponent"));
+                    const auto targetCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                        target->FindComponentByName("capsuleComponent"));
+                    float capsuleCenterDistanceXZ = 0.0f;
+                    float capsuleCenterDistance3D = 0.0f;
+                    if (playerCapsule && targetCapsule)
+                    {
+                        DirectX::XMFLOAT3 capsuleDelta = MathHelper::Subtract(
+                            targetCapsule->GetComponentLocation(), playerCapsule->GetComponentLocation());
+                        capsuleCenterDistance3D = MathHelper::Length(capsuleDelta);
+                        capsuleDelta.y = 0.0f;
+                        capsuleCenterDistanceXZ = MathHelper::Length(capsuleDelta);
+                    }
+                    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+                        "[Rush][AttackBegin] target={} actorCenterDistanceXZ={:.3f} "
+                        "capsuleCenterDistanceXZ={:.3f} capsuleCenterDistance3D={:.3f}",
+                        target->GetName(), MathHelper::Length(targetDelta),
+                        capsuleCenterDistanceXZ, capsuleCenterDistance3D));
+                }
+            }
             player->PlayBodyAnimation(currentAttackAnimation, false);
             phase = RushPhase::Attack;
         }
