@@ -4190,6 +4190,12 @@ void GameScene::SetUpActors()
     player->SetFinalHitCallback([this](GruxEnemy* boss, const DirectX::XMFLOAT3& source)
         { OnPlayerFinalHit(boss, source); });
 
+    // メインの部屋にチュートリアル用の骸骨を追加。
+    Transform tutorialSkeletonTr(DirectX::XMFLOAT3{ -10.0f,0.0f,10.75f },
+        DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
+    this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
+        "Skeleton", tutorialSkeletonTr);
+
     Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     darkCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkCameraActor>("darkCameraActor", darkCameraTr);
     SetActiveCamera(darkCameraActor);

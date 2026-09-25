@@ -1,0 +1,38 @@
+{
+    "animationClip": 1,
+    "animationName": "Attack",
+    "loop": false,
+    "nextCombo": "",
+    "playRate": 1.0,
+    "states": [
+        {
+            "endTime": 0.5612637996673584,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                4.0,
+                2.0,
+                4.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.2032965123653412,
+            "type": "DangerWindow",
+            "value": 1.0
+        }
+    ]
+}
