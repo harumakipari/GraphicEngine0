@@ -116,6 +116,64 @@
             "value": 1.0
         },
         {
+            "endTime": 0.4706665873527527,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                -1.0
+            ],
+            "moveDistance": 2.799999952316284,
+            "parameter": "",
+            "startTime": 0.12927280366420746,
+            "type": "MotionWarp",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.5419167876243591,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                1.0,
+                0.0
+            ],
+            "moveDistance": 1.2000000476837158,
+            "parameter": "",
+            "startTime": 0.12759755551815033,
+            "type": "MotionWarp",
+            "value": 1.0
+        },
+        {
             "endTime": 0.2662029266357422,
             "hitBoxOffset": [
                 0.0,
@@ -145,64 +203,6 @@
             "value": 1.0
         },
         {
-            "endTime": 0.4706665873527527,
-            "hitBoxOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "hitBoxRadius": 0.800000011920929,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                2.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                -1.0
-            ],
-            "moveDistance": 2.799999952316284,
-            "parameter": "",
-            "startTime": 0.1643332690000534,
-            "type": "MotionWarp",
-            "value": 1.0
-        },
-        {
-            "endTime": 0.5419167876243591,
-            "hitBoxOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "hitBoxRadius": 0.800000011920929,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                2.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                1.0,
-                0.0
-            ],
-            "moveDistance": 1.2000000476837158,
-            "parameter": "",
-            "startTime": 0.16766665875911713,
-            "type": "MotionWarp",
-            "value": 1.0
-        },
-        {
             "endTime": 1.933333158493042,
             "hitBoxOffset": [
                 0.0,
@@ -227,7 +227,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 1.5281695127487183,
+            "startTime": 1.3979463577270508,
             "type": "TransitionWindow",
             "value": 1.0
         }

@@ -226,7 +226,14 @@ public:
         isPaused = pause;
     }
 
-    static inline bool showEditor = false;    // エディタの有効化フラグ
+    enum class EditorDisplayMode
+    {
+        Normal,
+        AnimationEditorOnly,
+    };
+
+    static inline bool showEditor = false; // Editor visibility flag.
+    static inline EditorDisplayMode editorDisplayMode = EditorDisplayMode::Normal;
 
 private:
     bool Initialize();

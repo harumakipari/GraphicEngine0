@@ -140,7 +140,7 @@
             ],
             "moveDistance": 2.799999952316284,
             "parameter": "",
-            "startTime": 0.1643332690000534,
+            "startTime": 0.12544886767864227,
             "type": "MotionWarp",
             "value": 1.0
         },
@@ -169,7 +169,7 @@
             ],
             "moveDistance": 1.2000000476837158,
             "parameter": "",
-            "startTime": 0.16766665875911713,
+            "startTime": 0.128782257437706,
             "type": "MotionWarp",
             "value": 1.0
         },
@@ -198,7 +198,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 1.5281695127487183,
+            "startTime": 1.4017952680587769,
             "type": "TransitionWindow",
             "value": 1.0
         }

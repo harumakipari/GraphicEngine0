@@ -12,6 +12,7 @@
 #include "Engine/Effects/EffectEditor.h"
 #include "Engine/Effects/EffectManager.h"
 #include "Engine/Framework/Framework.h"
+#include "Game/Actors/Base/Character.h"
 
 #include "Engine/Input/InputSystem.h"
 #include "Engine/Utility/Time.h"
@@ -1060,7 +1061,7 @@ void SceneBase::DrawGui()
     DrawDockSpace();
     DrawViewport();
 
-    if (enableLightGui)
+    if (Framework::editorDisplayMode != Framework::EditorDisplayMode::AnimationEditorOnly && enableLightGui)
     {
         if (lightManager)
         {
@@ -1068,7 +1069,7 @@ void SceneBase::DrawGui()
         }
     }
 
-    if (enableSceneGui)
+    if (Framework::editorDisplayMode != Framework::EditorDisplayMode::AnimationEditorOnly && enableSceneGui)
     {
         SceneEditor::Draw();
     }
@@ -1078,6 +1079,26 @@ void SceneBase::DrawGui()
     if (!Framework::showEditor)
     {
         //useDrawDebug = false;
+        return;
+    }
+
+    if (Framework::editorDisplayMode == Framework::EditorDisplayMode::AnimationEditorOnly)
+    {
+        ImGui::Begin("Animation Editor Only");
+        if (const auto character = dynamic_cast<Character*>(selectedActor_.get()))
+        {
+            character->DrawAnimationEditorImGui();
+        }
+        else if (selectedActor_)
+        {
+            ImGui::TextUnformatted("The selected actor is not a Character.");
+        }
+        else
+        {
+            ImGui::TextUnformatted("Select a Character in Normal Editor mode, then press F10.");
+        }
+        ImGui::TextUnformatted("Press F10 to return to Normal Editor mode.");
+        ImGui::End();
         return;
     }
 

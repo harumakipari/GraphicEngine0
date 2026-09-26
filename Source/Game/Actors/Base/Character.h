@@ -169,13 +169,21 @@ public:
     virtual bool CanMove() { return canMove; }
 
 
-    void DrawImGuiDetails()override
+    void DrawAnimationEditorImGui()
     {
 #ifdef USE_IMGUI
         for (auto& controller : animationControllers | std::views::values)
         {
-            controller->DrawImGui();
+            if (controller)
+                controller->DrawImGui();
         }
+#endif
+    }
+
+    void DrawImGuiDetails()override
+    {
+#ifdef USE_IMGUI
+        DrawAnimationEditorImGui();
         if (stateMachine_)
         {
             stateMachine_->DrawImGui();

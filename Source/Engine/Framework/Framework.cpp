@@ -135,6 +135,12 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
         Graphics::StylizeWindow(!showEditor);
     }
 
+    if (showEditor && (GetAsyncKeyState(VK_F10) & 1))
+    {
+        editorDisplayMode = editorDisplayMode == EditorDisplayMode::Normal
+            ? EditorDisplayMode::AnimationEditorOnly
+            : EditorDisplayMode::Normal;
+    }
 #endif
     //パーティクルシステム更新
     {
