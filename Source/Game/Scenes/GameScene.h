@@ -136,7 +136,7 @@ public:
     bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
 private:
     void CreateLockOnTargetUI();
-    void UpdateLockOnTargetUI();
+    void UpdateLockOnTargetUI(float deltaTime);
     void HideLockOnTargetUI();
     enum class Phase1FinalHitTimePhase : uint8_t
     {
@@ -391,8 +391,37 @@ private:
 
     // Shared LockOn marker state. The weak target reference lets a future
     // multi-part marker react to acquisition, release, and target changes.
-    std::shared_ptr<UIImageComponent> lockOnTargetImageComponent;
+    enum class LockOnTargetUIAnimationPhase : uint8_t
+    {
+        Hidden,
+        Gathering,
+        Hold,
+        Rotating,
+    };
+
+    // All five images share the projected target position and centered pivot.
+    std::shared_ptr<UIImageComponent> lockOnTargetCenterImageComponent;
+    std::shared_ptr<UIImageComponent> lockOnTargetTopImageComponent;
+    std::shared_ptr<UIImageComponent> lockOnTargetBottomImageComponent;
+    std::shared_ptr<UIImageComponent> lockOnTargetLeftImageComponent;
+    std::shared_ptr<UIImageComponent> lockOnTargetRightImageComponent;
     std::weak_ptr<SceneComponent> lockOnTargetComponent;
+    LockOnTargetUIAnimationPhase lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Hidden;
+    float lockOnTargetUIAnimationElapsed = 0.0f;
+    float lockOnTargetUIRotationDegree = 0.0f;
+    float lockOnTargetUIStartOffset = 200.0f;   // ç≈èâÇÃélÇ¬ÇÃUIÇÃèâä˙à íu
+    float lockOnTargetUIGatherDuration = 0.25f;
+    float lockOnTargetUIHoldDuration = 0.08f;
+    float lockOnTargetUIRotationSpeedDegree = 15.0f;
+    float lockOnTargetUISize = 150.0f;
+    float skeletonLockOnTargetUIOverallScale = 0.15f;
+    DirectX::XMFLOAT2 skeletonLockOnTargetUIOverallOffset = { 0.0f, 0.0f };
+    float gruxLockOnTargetUIOverallScale = 0.15f;
+    DirectX::XMFLOAT2 gruxLockOnTargetUIOverallOffset = { 0.0f, 70.5f };
+    DirectX::XMFLOAT2 lockOnTargetUITopFinalOffset = { 0.0f, -97.0f };
+    DirectX::XMFLOAT2 lockOnTargetUIBottomFinalOffset = { 0.0f, 96.5f };
+    DirectX::XMFLOAT2 lockOnTargetUILeftFinalOffset = { -101.0f, 0.0f };
+    DirectX::XMFLOAT2 lockOnTargetUIRightFinalOffset = { 102.5f, 0.0f };
 
     // Selection happens once per held-input start; Rush keeps its own target.
     bool lockOnInputHeldLastFrame = false;

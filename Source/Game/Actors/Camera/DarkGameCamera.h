@@ -156,7 +156,7 @@ public:
         }
         if (mode == CameraMode::LockOn && requestMode != CameraMode::LockOn)
         {
-            //CoreAudio::PlayOneShot("./Data/Sound/SE/lock_on1.wav",0.4f);
+            CoreAudio::PlayOneShot("./Data/Sound/SE/lock_on3.wav",5.0f);
             ResetLockOnAdaptiveState();
         }
         if (isBlending)
