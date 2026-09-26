@@ -158,7 +158,7 @@ protected:
     DirectX::XMFLOAT4 shadowLightDirection = { -0.75f, -0.581f, -0.4f, 0.0f };
 
     bool useDeferredRendering = true;
-    bool useDrawDebug = true;
+    bool useDrawDebug = false;
 
     // HuskParticle—p
     bool integrateParticles = false;

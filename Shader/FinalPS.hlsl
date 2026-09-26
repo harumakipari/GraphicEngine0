@@ -114,12 +114,6 @@ float4 main(VS_OUT pin) : SV_TARGET
         finalColor.rgb += emissive;
     }
 
-    // ƒuƒ‹[ƒ€ˆ—
-    if (enableEyeBloom == 1)
-    {
-        float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);
-        finalColor.rgb += bloom.rgb;
-    }
 
     if (objectType==OBJECT_PLAYER)
     {

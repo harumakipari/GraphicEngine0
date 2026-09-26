@@ -250,9 +250,6 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp">
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.cpp">
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
     </ClCompile>
@@ -762,9 +759,6 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.h">
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.h">
-      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.h">
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
     </ClInclude>
@@ -1106,12 +1100,6 @@
     <FxCompile Include="Shader\ElasticBuildsVS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\EnemyEyeFlarePS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\EnemyEyeModelPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\FinalPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
@@ -1299,9 +1287,6 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\SSRPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\StarEyeOpaquePS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\TemporalAntiAliasingPS.hlsl">

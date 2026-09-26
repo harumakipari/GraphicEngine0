@@ -85,7 +85,6 @@ struct SceneShaderConstants
     float bossRoomLerpFactor = 1.0f;
 
     DirectX::XMFLOAT3 bossRoomColor = { 0.0f,0.0f,0.0f };
-    int enableEyeBloom = 0;
 
     // FinalPS encodes the linear scene result for the UNORM swap-chain backbuffer.
     int useFinalSrgbEncode = 1;

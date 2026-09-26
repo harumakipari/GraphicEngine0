@@ -323,7 +323,6 @@
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\NodeBase.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkClothActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBarrelActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.cpp" />
@@ -501,7 +500,6 @@
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\NodeBase.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkClothActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemyEyeActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageAsset.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageBarrelActor.h" />
@@ -736,18 +734,6 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
-    </FxCompile>
-    <FxCompile Include="Shader\EnemyEyeFlarePS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-    </FxCompile>
-    <FxCompile Include="Shader\EnemyEyeModelPS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shader\FinalPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
@@ -1078,12 +1064,6 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="Shader\SSRPS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-    </FxCompile>
-    <FxCompile Include="Shader\StarEyeOpaquePS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>

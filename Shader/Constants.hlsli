@@ -51,7 +51,6 @@ cbuffer SHADER_CONSTANT_BUFFER : register(b9)
     float bossRoomLerpFactor;
 
     float3 bossRoomColor;
-    int enableEyeBloom;
 
     int useFinalSrgbEncode;
     int finalColorDebugMode;

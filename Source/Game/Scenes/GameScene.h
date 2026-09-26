@@ -103,7 +103,6 @@ public:
     void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
 
     // ƒ{ƒX‚Ì–Ú‚Ì‚ÝBloom‚ð‚Â‚¯‚é
-    void SetEyeBloom(bool enable);
 
     void BeginGameBgmFadeOut();
 

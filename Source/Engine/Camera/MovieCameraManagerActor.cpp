@@ -8,7 +8,6 @@
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemyEyeActor.h"
 #include "Game/Scenes/GameScene.h"
 #include "Physics/CollisionFunction.h"
 #include "Components/CollisionShape/ShapeComponent.h"
@@ -210,7 +209,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
     auto gameScene = dynamic_cast<GameScene*>(scene);
 
     auto gruxEnemy = actorManager->GetActorOfType<GruxEnemy>();
-    auto gruxEnemyEye = actorManager->GetActorOfType<GruxEnemyEyeActor>();
 
     if (movieCamera && player && gruxEnemy)
     {
@@ -266,7 +264,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 // ボスの部屋を暗くする
                 gameScene->SetBossRoomLerpFactor(0.0f);
                 // 目のBloomのみをオンにする
-                gameScene->SetEyeBloom(true);
             }
             // ドアが開くカメラワーク
             PlayMovie(doorOpenMovieFileName);
@@ -291,22 +288,12 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {// ドアが開いたら、
             CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_groan.wav", 0.2f);
             // 敵の目玉が光る
-            if (gruxEnemyEye)
-            {
-                gruxEnemyEye->StartEyeFlash([&]()
-                    {
-                        //doorMovieState = DoorMovieState::PreBossRoomLerp;
-                    });
-                doorMovieState = DoorMovieState::EnemyEyeFlash;
-                doorMovieState = DoorMovieState::PreBossRoomLerp;
-            }
+            doorMovieState = DoorMovieState::PreBossRoomLerp;
             if (player)
             {
                 player->SetEulerRotation({ 0.0f,108.3f,0.0f });
             }
         }
-        break;
-    case DoorMovieState::EnemyEyeFlash:
         break;
     case DoorMovieState::PreBossRoomLerp:
     {
@@ -337,19 +324,10 @@ void MovieCameraManagerActor::Update(float deltaTime)
             }
         }
         // ボスの目玉をなくす
-        if (gruxEnemyEye)
-        {
-            gruxEnemyEye->ToSmallEyeModel(duration, [&, gameScene, gruxEnemy]()
-                {
-                    // 目のBloomのみをオフにして、Bloomをオンにする
-                    gameScene->SetEyeBloom(false);
-                    gruxEnemy->GetBodyAnimationController()->ResetAnimationRate();
-                });
-        }
         // 部屋を徐々に明るくする
         if (gameScene)
         {
-            gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&]()
+            gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&,gruxEnemy]()
                 {
                     if (auto camera = movieCameraWeakPtr.lock())
                     {
@@ -357,6 +335,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
                         camera->GetOwner()->SetQuaternionRotation(bossRoomZoomTargetRotation);
                         camera->SetFov(DirectX::XMConvertToRadians(bossRoomZoomTargetFovDegree));
                     }
+                    gruxEnemy->GetBodyAnimationController()->ResetAnimationRate();
                     doorMovieState = DoorMovieState::UpPlayerCombat;
                 });
         }

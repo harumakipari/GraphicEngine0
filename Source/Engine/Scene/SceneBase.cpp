@@ -416,7 +416,6 @@ void SceneBase::UpdateConstantBuffer(ID3D11DeviceContext* immediateContext, floa
 
     shaderCBuffer->data.bossRoomLerpFactor = shader.bossRoomLerpFactor;
     shaderCBuffer->data.bossRoomColor = shader.bossRoomColor;
-    shaderCBuffer->data.enableEyeBloom = shader.enableEyeBloom;
     shaderCBuffer->data.useFinalSrgbEncode = shader.useFinalSrgbEncode;
     shaderCBuffer->data.finalColorDebugMode = shader.finalColorDebugMode;
     shaderCBuffer->data.hairSpecularDebugDisableMask = shader.hairSpecularDebugDisableMask;
@@ -1497,7 +1496,6 @@ void SceneBase::DrawPostEffectTab()
     CheckboxInt("Enable Dof", &shader.enableDof);
     CheckboxInt("Enable Fog", &shader.enableFog);
     CheckboxInt("Enable CSM", &shader.enableCascadedShadowMaps);
-    CheckboxInt("Enable EyeBloom", &shader.enableEyeBloom);
     ImGui::SliderFloat("split_u", &shader.splitU, 0.0f, +1.0f);
     ImGui::DragFloat("slopeBias", &shader.slopeBias, 0.00001f, -0.01f, 0.01f, "%.8f");
     ImGui::DragFloat(U8("ÉgÅ[Éìí≤êÆ"), &shader.toneMappingValue, 0.05f, 0.0f, +1.0f);

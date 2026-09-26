@@ -30,7 +30,6 @@
 #include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
 #include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
-#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemyEyeActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
 #include "Physics/Physics.h"
 #include "Physics/CollisionFunction.h"
@@ -4372,8 +4371,6 @@ void GameScene::SetUpActors()
     darkClothActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
 
 
-    Transform bossEyeTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto enemyEyeActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemyEyeActor>("GruxEnemyEyeActor", bossEyeTr);
 
     Transform iceTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto iceActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("IceFragmentEmitterActor", iceTr);
@@ -5238,21 +5235,6 @@ void GameScene::SetBossRoomLerpFactor(float lerpFactor)
 }
 
 // ボスの目のみBloomをオンにする
-void GameScene::SetEyeBloom(bool enable)
-{
-    auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
-    if (enable)
-    {// オンにする
-        shader.enableEyeBloom = true;
-        shader.enableBloom = false;
-    }
-    else
-    {// オフにする
-        shader.enableEyeBloom = false;
-        shader.enableBloom = true;
-    }
-
-}
 
 // ボスの部屋の色のラープを開始する関数
 void GameScene::StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished)
