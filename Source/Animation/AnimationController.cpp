@@ -2092,27 +2092,7 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
     sprintf_s(text, "%.2f", speed);
     drawList->AddText(ImVec2(currentX + 5, curvePos.y), IM_COL32(255, 255, 0, 255), text);
 
-    if (ImGui::IsKeyPressed(ImGuiKey_Delete))
-    {
-        if (selectedStateIndex >= 0)
-        {
-            EndAllEditorPreviewStates();
-            asset.notifyTrack.states.erase(
-                asset.notifyTrack.states.begin()
-                + selectedStateIndex);
 
-            selectedStateIndex = -1;
-        }
-
-        if (selectedEventIndex >= 0)
-        {
-            asset.notifyTrack.events.erase(
-                asset.notifyTrack.events.begin()
-                + selectedEventIndex);
-
-            selectedEventIndex = -1;
-        }
-    }
 }
 
 // Notify‚ÌÚ×Ý’è‚ÌImGui•`‰æ
@@ -2333,7 +2313,27 @@ void AnimationController::DrawTimeline()
     DrawStateTimeline(asset, duration, width, height, labelWidth, trackHeight, handleSize, drawList, timelinePos);
     DrawEventTimeline(asset, duration, width, labelWidth, trackHeight, drawList);
 
-    const std::string curveHeader = "Animation Curve [" + std::to_string(asset.speedCurve.keys.size()) + " Keys]";
+    if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+    {
+        if (selectedStateIndex >= 0)
+        {
+            if (selectedStateIndex < static_cast<int>(asset.notifyTrack.states.size()))
+            {
+                EndAllEditorPreviewStates();
+                asset.notifyTrack.states.erase(asset.notifyTrack.states.begin() + selectedStateIndex);
+            }
+            selectedStateIndex = -1;
+        }
+
+        if (selectedEventIndex >= 0)
+        {
+            if (selectedEventIndex < static_cast<int>(asset.notifyTrack.events.size()))
+                asset.notifyTrack.events.erase(asset.notifyTrack.events.begin() + selectedEventIndex);
+            selectedEventIndex = -1;
+        }
+    }
+
+    const std::string curveHeader = "Animation Curve [" + std::to_string(asset.speedCurve.keys.size()) + " Keys]###SpeedCurveHeader";
     ImGui::SetNextItemOpen(false, ImGuiCond_Once);
     if (ImGui::CollapsingHeader(curveHeader.c_str()))
     {

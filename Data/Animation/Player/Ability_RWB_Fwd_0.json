@@ -40,7 +40,7 @@
             },
             {
                 "time": 0.35283342003822327,
-                "value": 0.5733335614204407
+                "value": 0.73333340883255
             },
             {
                 "time": 0.42774975299835205,
@@ -84,35 +84,6 @@
             "parameter": "",
             "startTime": 0.05000000074505806,
             "type": "Invincible",
-            "value": 1.0
-        },
-        {
-            "endTime": 0.30338215827941895,
-            "hitBoxOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "hitBoxRadius": 0.800000011920929,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                2.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "",
-            "startTime": 0.1599999964237213,
-            "type": "JustDodgeWindow",
             "value": 1.0
         },
         {
@@ -174,6 +145,35 @@
             "value": 1.0
         },
         {
+            "endTime": 0.30338215827941895,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.1599999964237213,
+            "type": "JustDodgeWindow",
+            "value": 1.0
+        },
+        {
             "endTime": 1.933333158493042,
             "hitBoxOffset": [
                 0.0,
@@ -198,7 +198,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 1.4017952680587769,
+            "startTime": 1.0950298309326172,
             "type": "TransitionWindow",
             "value": 1.0
         }

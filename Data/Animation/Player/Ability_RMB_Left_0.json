@@ -39,8 +39,8 @@
                 "value": 0.9866670966148376
             },
             {
-                "time": 0.35283342003822327,
-                "value": 0.5733335614204407
+                "time": 0.347622275352478,
+                "value": 0.73333340883255
             },
             {
                 "time": 0.42774975299835205,
@@ -87,7 +87,7 @@
             "value": 1.0
         },
         {
-            "endTime": 0.2980707287788391,
+            "endTime": 0.5419167876243591,
             "hitBoxOffset": [
                 0.0,
                 0.0,
@@ -106,13 +106,13 @@
             ],
             "moveDirection": [
                 0.0,
-                0.0,
+                1.0,
                 0.0
             ],
-            "moveDistance": 0.0,
+            "moveDistance": 1.2000000476837158,
             "parameter": "",
-            "startTime": 0.1599999964237213,
-            "type": "JustDodgeWindow",
+            "startTime": 0.128782257437706,
+            "type": "MotionWarp",
             "value": 1.0
         },
         {
@@ -145,7 +145,7 @@
             "value": 1.0
         },
         {
-            "endTime": 0.5419167876243591,
+            "endTime": 0.2980707287788391,
             "hitBoxOffset": [
                 0.0,
                 0.0,
@@ -164,13 +164,13 @@
             ],
             "moveDirection": [
                 0.0,
-                1.0,
+                0.0,
                 0.0
             ],
-            "moveDistance": 1.2000000476837158,
+            "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.128782257437706,
-            "type": "MotionWarp",
+            "startTime": 0.1599999964237213,
+            "type": "JustDodgeWindow",
             "value": 1.0
         },
         {
@@ -198,7 +198,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 1.401795744895935,
+            "startTime": 1.0950303077697754,
             "type": "TransitionWindow",
             "value": 1.0
         }
