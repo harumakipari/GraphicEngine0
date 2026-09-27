@@ -1778,8 +1778,6 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, float d
                 255,
                 255,
                 255));
-
-        ImGui::Dummy(ImVec2(0, trackHeight));
     }
 }
 
@@ -1898,7 +1896,7 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
         drawList->AddLine(ImVec2(curvePos.x, y), ImVec2(curvePos.x + width, y), IM_COL32(70, 70, 70, 255));
     }
 
-    float maxSpeed = 2.0f;
+    float maxSpeed = 3.0f;
 
     for (int i = 0; i < asset.speedCurve.keys.size(); ++i)
     {
@@ -2229,11 +2227,11 @@ void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
         CurveKey editedKey = asset.speedCurve.keys[selectedCurveKey];
         const float duration = target_->model->animations[asset.animationClip].duration;
         bool changed = ImGui::DragFloat("Time##CurveKey", &editedKey.time, 0.001f, 0.0f, duration, "%.3f");
-        changed |= ImGui::DragFloat("Value##CurveKey", &editedKey.value, 0.01f, 0.0f, 2.0f, "%.3f");
+        changed |= ImGui::DragFloat("Value##CurveKey", &editedKey.value, 0.01f, 0.0f, 3.0f, "%.3f");
         if (changed)
         {
             editedKey.time = std::clamp(editedKey.time, 0.0f, duration);
-            editedKey.value = std::clamp(editedKey.value, 0.0f, 2.0f);
+            editedKey.value = std::clamp(editedKey.value, 0.0f, 3.0f);
             asset.speedCurve.keys[selectedCurveKey] = editedKey;
             std::sort(asset.speedCurve.keys.begin(), asset.speedCurve.keys.end(),
                 [](const CurveKey& a, const CurveKey& b) { return a.time < b.time; });
@@ -2256,8 +2254,8 @@ void AnimationController::DrawTimeline()
     ImGui::Begin("Animation Sequence");
 
     const float availableWidth = ImGui::GetContentRegionAvail().x;
-    const float listWidth = std::clamp(availableWidth * 0.18f, 180.0f, 280.0f);
-    const float inspectorWidth = std::clamp(availableWidth * 0.24f, 220.0f, 360.0f);
+    const float listWidth = std::clamp(availableWidth * 0.16f, 180.0f, 260.0f);
+    const float inspectorWidth = std::clamp(availableWidth * 0.21f, 220.0f, 320.0f);
     const float editorWidth = (std::max)(320.0f, availableWidth - listWidth - inspectorWidth);
 
     ImGui::Columns(3);
@@ -2300,7 +2298,7 @@ void AnimationController::DrawTimeline()
 
     auto& asset = it->second;
     const float duration = target_->model->animations[asset.animationClip].duration;
-    const float trackHeight = 24.0f;
+    const float trackHeight = 20.0f;
     const float labelWidth = 100.0f;
     const float handleSize = 40.0f;
     const float height = 30.0f;
@@ -2311,6 +2309,7 @@ void AnimationController::DrawTimeline()
     ImDrawList* drawList = ImGui::GetWindowDrawList();
     ImVec2 timelinePos = ImGui::GetCursorScreenPos();
     DrawStateTimeline(asset, duration, width, height, labelWidth, trackHeight, handleSize, drawList, timelinePos);
+    ImGui::Dummy(ImVec2(0, 6.0f));
     DrawEventTimeline(asset, duration, width, labelWidth, trackHeight, drawList);
 
     if (ImGui::IsKeyPressed(ImGuiKey_Delete))

@@ -410,9 +410,9 @@ private:
     float lockOnTargetUIAnimationElapsed = 0.0f;
     float lockOnTargetUIRotationDegree = 0.0f;
     float lockOnTargetUIStartOffset = 200.0f;   // Å‰‚Ìl‚Â‚ÌUI‚Ì‰ŠúˆÊ’u
-    float lockOnTargetUIGatherDuration = 0.25f;
+    float lockOnTargetUIGatherDuration = 0.3f;
     float lockOnTargetUIHoldDuration = 0.08f;
-    float lockOnTargetUIRotationSpeedDegree = 15.0f;
+    float lockOnTargetUIRotationSpeedDegree = 72.0f;
     float lockOnTargetUISize = 150.0f;
     float skeletonLockOnTargetUIOverallScale = 0.15f;
     DirectX::XMFLOAT2 skeletonLockOnTargetUIOverallOffset = { 0.0f, 0.0f };
