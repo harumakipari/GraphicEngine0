@@ -2800,7 +2800,8 @@ void GruxEnemy::DrawImGuiDetails()
     const char* dashTelegraphVisualStateNames[] = { "Hidden", "LineExpanding", "FanFadingIn", "Holding", "DashActive", "FanFlashing", "FanFadingOut" };
     ImGui::Text("Visual State: %s", dashTelegraphVisualStateNames[static_cast<int>(dashTelegraphVisualState)]);
     ImGui::Checkbox("Dash Telegraph Emissive Enabled", &dashTelegraphEmissiveEnabled);
-    ImGui::ColorEdit3("Dash Telegraph Emissive Color", &dashTelegraphEmissiveColor.x);
+    ImGui::ColorEdit3("Dash Telegraph Phase 1 Emissive Color", &dashTelegraphPhase1EmissiveColor.x);
+    ImGui::ColorEdit3("Dash Telegraph Phase 2 Emissive Color", &dashTelegraphPhase2EmissiveColor.x);
     ImGui::DragFloat("Dash Telegraph Emissive Intensity", &dashTelegraphEmissiveIntensity,
         0.05f, 0.0f, 20.0f, "%.2f");
     dashTelegraphEmissiveIntensity = (std::max)(0.0f, dashTelegraphEmissiveIntensity);

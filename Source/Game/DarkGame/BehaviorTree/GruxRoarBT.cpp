@@ -1150,6 +1150,14 @@ void GruxEnemy::UpdateRoarTelegraphTransform()
     roarTelegraphFillWorldPosition = { position.x, roarTelegraphFillYOffset, position.z };
     const DirectX::XMFLOAT4 identityRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
     const DirectX::XMFLOAT3 scale{ radius, 1.0f, radius };
+    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+    const bool isPhase2 = scene && scene->IsBossInFinalPhase();
+    const DirectX::XMFLOAT3& outerTint = isPhase2
+        ? roarTelegraphPhase2OuterTint : roarTelegraphPhase1OuterTint;
+    const DirectX::XMFLOAT3& fillTintMin = isPhase2
+        ? roarTelegraphPhase2FillTintMin : roarTelegraphPhase1FillTintMin;
+    const DirectX::XMFLOAT3& fillTintMax = isPhase2
+        ? roarTelegraphPhase2FillTintMax : roarTelegraphPhase1FillTintMax;
     const float t = std::clamp(roarTelegraphProgress, 0.0f, 1.0f);
     roarTelegraphVisualProgress = t * t * (3.0f - 2.0f * t);
     const auto lerp = [this](float minimum, float maximum)
@@ -1157,9 +1165,9 @@ void GruxEnemy::UpdateRoarTelegraphTransform()
         return minimum + (maximum - minimum) * roarTelegraphVisualProgress;
     };
     roarTelegraphFillTintCurrent = {
-        lerp(roarTelegraphFillTintMin.x, roarTelegraphFillTintMax.x),
-        lerp(roarTelegraphFillTintMin.y, roarTelegraphFillTintMax.y),
-        lerp(roarTelegraphFillTintMin.z, roarTelegraphFillTintMax.z) };
+        lerp(fillTintMin.x, fillTintMax.x),
+        lerp(fillTintMin.y, fillTintMax.y),
+        lerp(fillTintMin.z, fillTintMax.z) };
     roarTelegraphFillGlowCurrent = lerp(roarTelegraphFillGlowMin, roarTelegraphFillGlowMax);
     roarTelegraphFillAlphaCurrent = lerp(roarTelegraphFillAlphaMin, roarTelegraphFillAlphaMax);
 
@@ -1169,7 +1177,7 @@ void GruxEnemy::UpdateRoarTelegraphTransform()
     roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.brightness =
         std::clamp(roarTelegraphOuterAlpha, 0.0f, 1.0f) - 1.0f;
     roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.cpuColor = {
-        roarTelegraphOuterTint.x, roarTelegraphOuterTint.y, roarTelegraphOuterTint.z, 1.0f };
+        outerTint.x, outerTint.y, outerTint.z, 1.0f };
     roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.emissionPower = 1.0f;
 
     roarTelegraphFillMeshComponent->SetRelativeLocationDirect(roarTelegraphFillWorldPosition);
@@ -1540,7 +1548,9 @@ void GruxEnemy::CleanupRoarBT(const char* status)
     HideRoarImpactDebris();
     roarTelegraphProgress = 0.0f;
     roarTelegraphVisualProgress = 0.0f;
-    roarTelegraphFillTintCurrent = roarTelegraphFillTintMin;
+    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+    roarTelegraphFillTintCurrent = scene && scene->IsBossInFinalPhase()
+        ? roarTelegraphPhase2FillTintMin : roarTelegraphPhase1FillTintMin;
     roarTelegraphFillGlowCurrent = roarTelegraphFillGlowMin;
     roarTelegraphFillAlphaCurrent = roarTelegraphFillAlphaMin;
     if (IsRoarBTActive())
@@ -1651,9 +1661,12 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::Text("Current Roar Radius: %.2f m", GetRoarAttackRadius());
     ImGui::Text("Current Phase: %s", isPhase2 ? "Phase2" : "Phase1");
     ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::ColorEdit3("Roar Outer Tint Color", &roarTelegraphOuterTint.x);
-    ImGui::ColorEdit3("Roar Fill Tint Min", &roarTelegraphFillTintMin.x);
-    ImGui::ColorEdit3("Roar Fill Tint Max", &roarTelegraphFillTintMax.x);
+    ImGui::ColorEdit3("Roar Phase 1 Outer Tint", &roarTelegraphPhase1OuterTint.x);
+    ImGui::ColorEdit3("Roar Phase 1 Fill Tint Min", &roarTelegraphPhase1FillTintMin.x);
+    ImGui::ColorEdit3("Roar Phase 1 Fill Tint Max", &roarTelegraphPhase1FillTintMax.x);
+    ImGui::ColorEdit3("Roar Phase 2 Outer Tint", &roarTelegraphPhase2OuterTint.x);
+    ImGui::ColorEdit3("Roar Phase 2 Fill Tint Min", &roarTelegraphPhase2FillTintMin.x);
+    ImGui::ColorEdit3("Roar Phase 2 Fill Tint Max", &roarTelegraphPhase2FillTintMax.x);
     ImGui::DragFloat("Roar Fill Glow Min", &roarTelegraphFillGlowMin, 0.05f, 0.0f, 20.0f, "%.2f");
     ImGui::DragFloat("Roar Fill Glow Max", &roarTelegraphFillGlowMax, 0.05f, 0.0f, 20.0f, "%.2f");
     ImGui::DragFloat("Roar Fill Alpha Min", &roarTelegraphFillAlphaMin, 0.01f, 0.0f, 1.0f, "%.2f");

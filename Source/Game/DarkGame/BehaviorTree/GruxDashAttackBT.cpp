@@ -2,6 +2,7 @@
 #include "GruxDashAttackBT.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/State/StateMachine.h"
+#include "Game/Scenes/GameScene.h"
 
 void GruxEnemy::EnsureDashTelegraphVisual()
 {
@@ -82,8 +83,10 @@ void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
         return;
     if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
         return;
-    const DirectX::XMFLOAT4 emissiveColor{
-        dashTelegraphEmissiveColor.x, dashTelegraphEmissiveColor.y, dashTelegraphEmissiveColor.z, 1.0f };
+    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+    const DirectX::XMFLOAT3& phaseColor = scene && scene->IsBossInFinalPhase()
+        ? dashTelegraphPhase2EmissiveColor : dashTelegraphPhase1EmissiveColor;
+    const DirectX::XMFLOAT4 emissiveColor{ phaseColor.x, phaseColor.y, phaseColor.z, 1.0f };
     const float emissiveIntensity = dashTelegraphEmissiveEnabled
         ? (std::max)(0.0f, dashTelegraphEmissiveIntensity) : 0.0f;
     for (const auto& mesh : { dashTelegraphLineMeshComponent, dashTelegraphFanMeshComponent })

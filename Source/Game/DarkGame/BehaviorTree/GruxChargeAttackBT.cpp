@@ -548,9 +548,11 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
 
     if (tripleChargeTelegraphMeshComponent)
     {
+        const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+        const DirectX::XMFLOAT3& phaseColor = scene && scene->IsBossInFinalPhase()
+            ? tripleChargeTelegraphPhase2EmissiveColor : tripleChargeTelegraphPhase1EmissiveColor;
         tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = {
-            tripleChargeTelegraphEmissiveColor.x, tripleChargeTelegraphEmissiveColor.y,
-            tripleChargeTelegraphEmissiveColor.z, 1.0f };
+            phaseColor.x, phaseColor.y, phaseColor.z, 1.0f };
         tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower =
             tripleChargeTelegraphEmissiveEnabled
             ? (std::max)(0.0f, tripleChargeTelegraphEmissiveIntensity) : 0.0f;
@@ -1363,7 +1365,8 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::DragFloat("Triple Charge Reposition Side Safety Margin", &tripleChargeRepositionSideSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
     ImGui::Checkbox("Show Triple Charge Telegraph", &showTripleChargeTelegraph);
     ImGui::Checkbox("Triple Charge Telegraph Emissive Enabled", &tripleChargeTelegraphEmissiveEnabled);
-    ImGui::ColorEdit3("Triple Charge Telegraph Emissive Color", &tripleChargeTelegraphEmissiveColor.x);
+    ImGui::ColorEdit3("Triple Charge Telegraph Phase 1 Emissive Color", &tripleChargeTelegraphPhase1EmissiveColor.x);
+    ImGui::ColorEdit3("Triple Charge Telegraph Phase 2 Emissive Color", &tripleChargeTelegraphPhase2EmissiveColor.x);
     ImGui::DragFloat("Triple Charge Telegraph Emissive Intensity", &tripleChargeTelegraphEmissiveIntensity,
         0.05f, 0.0f, 20.0f, "%.2f");
     tripleChargeTelegraphEmissiveIntensity = (std::max)(0.0f, tripleChargeTelegraphEmissiveIntensity);

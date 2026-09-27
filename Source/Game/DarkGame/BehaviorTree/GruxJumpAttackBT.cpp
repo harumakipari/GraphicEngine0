@@ -45,8 +45,10 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
     EnsureJumpTelegraphMesh();
     if (!jumpTelegraphMeshComponent)
         return;
-    const DirectX::XMFLOAT4 emissiveColor{
-        jumpTelegraphEmissiveColor.x, jumpTelegraphEmissiveColor.y, jumpTelegraphEmissiveColor.z, 1.0f };
+    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+    const DirectX::XMFLOAT3& phaseColor = scene && scene->IsBossInFinalPhase()
+        ? jumpTelegraphPhase2EmissiveColor : jumpTelegraphPhase1EmissiveColor;
+    const DirectX::XMFLOAT4 emissiveColor{ phaseColor.x, phaseColor.y, phaseColor.z, 1.0f };
     const float emissiveIntensity = jumpTelegraphEmissiveEnabled
         ? (std::max)(0.0f, jumpTelegraphEmissiveIntensity) : 0.0f;
     for (const auto& mesh : { jumpTelegraphMeshComponent, jumpTelegraphInnerMeshComponent })
@@ -391,7 +393,8 @@ void GruxEnemy::DrawTripleJumpDebug()
     ImGui::DragFloat("Jump Telegraph Scale", &jumpTelegraphScale,
         0.01f, 0.01f, 10.0f, "%.2f");
     ImGui::Checkbox("Jump Telegraph Emissive Enabled", &jumpTelegraphEmissiveEnabled);
-    ImGui::ColorEdit3("Jump Telegraph Emissive Color", &jumpTelegraphEmissiveColor.x);
+    ImGui::ColorEdit3("Jump Telegraph Phase 1 Emissive Color", &jumpTelegraphPhase1EmissiveColor.x);
+    ImGui::ColorEdit3("Jump Telegraph Phase 2 Emissive Color", &jumpTelegraphPhase2EmissiveColor.x);
     ImGui::DragFloat("Jump Telegraph Emissive Intensity", &jumpTelegraphEmissiveIntensity,
         0.05f, 0.0f, 20.0f, "%.2f");
     jumpTelegraphEmissiveIntensity = (std::max)(0.0f, jumpTelegraphEmissiveIntensity);

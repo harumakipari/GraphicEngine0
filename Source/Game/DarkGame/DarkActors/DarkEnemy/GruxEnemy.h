@@ -977,14 +977,17 @@ private:
     float roarRadiusPhase2 = 10.0f;
     int roarDamage = 10;
     float roarTelegraphOuterAlpha = 0.85f;
-    DirectX::XMFLOAT3 roarTelegraphOuterTint{ 1.0f, 0.08f, 0.03f };
-    DirectX::XMFLOAT3 roarTelegraphFillTintMin{ 1.0f, 0.08f, 0.03f };
-    DirectX::XMFLOAT3 roarTelegraphFillTintMax{ 1.0f, 0.15f, 0.03f };
+    DirectX::XMFLOAT3 roarTelegraphPhase1OuterTint{ 0.05f, 0.72f, 1.0f };
+    DirectX::XMFLOAT3 roarTelegraphPhase1FillTintMin{ 0.03f, 0.50f, 0.95f };
+    DirectX::XMFLOAT3 roarTelegraphPhase1FillTintMax{ 0.12f, 0.90f, 1.0f };
+    DirectX::XMFLOAT3 roarTelegraphPhase2OuterTint{ 1.0f, 0.08f, 0.03f };
+    DirectX::XMFLOAT3 roarTelegraphPhase2FillTintMin{ 1.0f, 0.08f, 0.03f };
+    DirectX::XMFLOAT3 roarTelegraphPhase2FillTintMax{ 1.0f, 0.15f, 0.03f };
     float roarTelegraphFillGlowMin = 1.0f;
     float roarTelegraphFillGlowMax = 10.0f;
     float roarTelegraphFillAlphaMin = 0.20f;
     float roarTelegraphFillAlphaMax = 0.8f;
-    DirectX::XMFLOAT3 roarTelegraphFillTintCurrent{ 1.0f, 0.08f, 0.03f };
+    DirectX::XMFLOAT3 roarTelegraphFillTintCurrent{ 0.03f, 0.50f, 0.95f };
     float roarTelegraphFillGlowCurrent = 1.0f;
     float roarTelegraphFillAlphaCurrent = 0.20f;
 
@@ -1453,7 +1456,8 @@ private:
     float tripleJumpTransitionDuration = 0.3f;
     float jumpTelegraphScale = 4.0f;// ジャンプ予兆モデルの大きさ
     bool jumpTelegraphEmissiveEnabled = true;
-    DirectX::XMFLOAT3 jumpTelegraphEmissiveColor{ 1.0f, 0.16f, 0.03f };
+    DirectX::XMFLOAT3 jumpTelegraphPhase1EmissiveColor{ 0.05f, 0.75f, 1.0f };
+    DirectX::XMFLOAT3 jumpTelegraphPhase2EmissiveColor{ 1.0f, 0.16f, 0.03f };
     float jumpTelegraphEmissiveIntensity = 15.0f;
     float jumpTelegraphInnerStartScale = 0.01f;
     float jumpTelegraphLandingTime = 0.869391f;
@@ -1567,7 +1571,8 @@ private:
     bool dashTelegraphFadeOutActive = false;
     float dashTelegraphLineWidth = 4.f;
     bool dashTelegraphEmissiveEnabled = true;
-    DirectX::XMFLOAT3 dashTelegraphEmissiveColor{ 1.0f, 0.16f, 0.03f };
+    DirectX::XMFLOAT3 dashTelegraphPhase1EmissiveColor{ 0.05f, 0.75f, 1.0f };
+    DirectX::XMFLOAT3 dashTelegraphPhase2EmissiveColor{ 1.0f, 0.16f, 0.03f };
     float dashTelegraphEmissiveIntensity = 15.0f;
     float dashTelegraphFanRadius = 4.0f;    // 突進の扇形モデルのスケール
     float dashTelegraphLineYOffset = 0.345f;
@@ -1777,7 +1782,8 @@ private:
     float tripleChargeTelegraphMaxDistance = 30.0f;
     float tripleChargeTelegraphWidthMultiplier = 1.0f;
     bool tripleChargeTelegraphEmissiveEnabled = true;
-    DirectX::XMFLOAT3 tripleChargeTelegraphEmissiveColor{ 1.0f, 0.16f, 0.03f };
+    DirectX::XMFLOAT3 tripleChargeTelegraphPhase1EmissiveColor{ 0.05f, 0.75f, 1.0f };
+    DirectX::XMFLOAT3 tripleChargeTelegraphPhase2EmissiveColor{ 1.0f, 0.16f, 0.03f };
     float tripleChargeTelegraphEmissiveIntensity = 15.0f;
     bool showTripleChargeTelegraph = true;
     float chargeElapsedTime = 0.0f;
