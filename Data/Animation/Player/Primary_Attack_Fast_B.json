@@ -21,13 +21,25 @@
             {
                 "time": 0.033541664481163025,
                 "value": 0.9600001573562622
+            },
+            {
+                "time": 0.24801591038703918,
+                "value": 0.9599999785423279
+            },
+            {
+                "time": 0.2797622084617615,
+                "value": 0.5000001192092896
             }
         ]
     },
     "states": [
-
         {
             "endTime": 0.5084376335144043,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -52,6 +64,11 @@
         },
         {
             "endTime": 0.2131248265504837,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -76,6 +93,11 @@
         },
         {
             "endTime": 0.26499998569488525,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -100,6 +122,11 @@
         },
         {
             "endTime": 0.5830000042915344,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -124,6 +151,11 @@
         },
         {
             "endTime": 0.5830000042915344,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -142,7 +174,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.4000000059604645,
+            "startTime": 0.325387567281723,
             "type": "TransitionWindow",
             "value": 1.0
         }

@@ -122,6 +122,8 @@ public:
 
     void OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event) override;
 
+    void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
+
     void OnAnimationChanged() override;
 
     // ブレンドスペースのアニメーションを使用するかの更新関数

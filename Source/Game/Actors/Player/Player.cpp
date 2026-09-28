@@ -2004,6 +2004,26 @@ void Player::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
     }
 }
 
+void Player::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
+{
+    if (state.type != AnimationNotifyState::Type::HitBox ||
+        !swordRootComponent || !swordMiddleComponent || !swordTipComponent)
+    {
+        return;
+    }
+
+    constexpr DirectX::XMFLOAT4 hitBoxPreviewColor{ 0.25f, 1.0f, 0.45f, 1.0f };
+    const DirectX::XMFLOAT3 root = swordRootComponent->GetComponentLocation();
+    const DirectX::XMFLOAT3 middle = swordMiddleComponent->GetComponentLocation();
+    const DirectX::XMFLOAT3 tip = swordTipComponent->GetComponentLocation();
+
+    DebugRender::DrawSphere(root, weaponSphereRadius, hitBoxPreviewColor, 0.0f, true);
+    DebugRender::DrawSphere(middle, weaponSphereRadius, hitBoxPreviewColor, 0.0f, true);
+    DebugRender::DrawSphere(tip, weaponSphereRadius, hitBoxPreviewColor, 0.0f, true);
+    DebugRender::DrawLine(root, middle, hitBoxPreviewColor, 0.0f, true);
+    DebugRender::DrawLine(middle, tip, hitBoxPreviewColor, 0.0f, true);
+}
+
 void Player::OnAnimationChanged()
 {
     // Reset active warps even when the previous animation's NotifyEnd was skipped.

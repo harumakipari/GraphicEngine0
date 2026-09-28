@@ -659,7 +659,7 @@ void PlayerRushState::Enter()
 
         player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, rushStopDistance);
         // ルートモーションを無視する
-        player->PlayBodyAnimation("0_Jog_Fwd", false, true, 0.2f, true);
+        player->PlayBodyAnimation("CombatRush_Fwd", false, true, 0.2f, true);
     }
 
     rushComboAdvanced = false;

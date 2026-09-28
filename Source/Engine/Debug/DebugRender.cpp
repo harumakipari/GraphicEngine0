@@ -260,10 +260,38 @@ void DebugRender::WiredRender(ID3D11DeviceContext* immediateContext)
         case DebugDrawType::Box:
             if (cmd.hasTransform)
             {
-                const DirectX::XMFLOAT3 primitiveHalfExtent = {
+                const DirectX::XMFLOAT3 halfExtent = {
                     cmd.size.x * 0.5f, cmd.size.y * 0.5f, cmd.size.z * 0.5f
                 };
-                Graphics::GetShapeRenderer()->DrawBox(cmd.transform, primitiveHalfExtent, cmd.color);
+                const DirectX::XMFLOAT3 localCorners[] = {
+                    { -halfExtent.x, -halfExtent.y, -halfExtent.z },
+                    {  halfExtent.x, -halfExtent.y, -halfExtent.z },
+                    {  halfExtent.x,  halfExtent.y, -halfExtent.z },
+                    { -halfExtent.x,  halfExtent.y, -halfExtent.z },
+                    { -halfExtent.x, -halfExtent.y,  halfExtent.z },
+                    {  halfExtent.x, -halfExtent.y,  halfExtent.z },
+                    {  halfExtent.x,  halfExtent.y,  halfExtent.z },
+                    { -halfExtent.x,  halfExtent.y,  halfExtent.z },
+                };
+                constexpr uint32_t edges[][2] = {
+                    { 0, 1 }, { 1, 2 }, { 2, 3 }, { 3, 0 },
+                    { 4, 5 }, { 5, 6 }, { 6, 7 }, { 7, 4 },
+                    { 0, 4 }, { 1, 5 }, { 2, 6 }, { 3, 7 },
+                };
+
+                DirectX::XMFLOAT3 worldCorners[std::size(localCorners)];
+                const DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&cmd.transform);
+                for (size_t i = 0; i < std::size(localCorners); ++i)
+                {
+                    DirectX::XMStoreFloat3(&worldCorners[i],
+                        DirectX::XMVector3Transform(DirectX::XMLoadFloat3(&localCorners[i]), transform));
+                }
+
+                for (const auto& edge : edges)
+                {
+                    ShapeRenderer::DrawLineSegment(immediateContext,
+                        worldCorners[edge[0]], worldCorners[edge[1]], cmd.color);
+                }
                 break;
             }
             ShapeRenderer::DrawBoxCenter(

@@ -12,9 +12,26 @@
     "loop": false,
     "nextCombo": "Primary_Attack_Fast_D1_1",
     "playRate": 1.0,
+    "speedCurve": {
+        "keys": [
+            {
+                "time": 0.23412677645683289,
+                "value": 0.8400001525878906
+            },
+            {
+                "time": 0.2876984179019928,
+                "value": 0.48000022768974304
+            }
+        ]
+    },
     "states": [
         {
             "endTime": 0.1963541954755783,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -39,6 +56,11 @@
         },
         {
             "endTime": 0.408541738986969,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -63,6 +85,11 @@
         },
         {
             "endTime": 0.27000001072883606,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -87,6 +114,11 @@
         },
         {
             "endTime": 0.5830000042915344,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -111,6 +143,11 @@
         },
         {
             "endTime": 0.5830000042915344,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,
@@ -129,7 +166,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.4000000059604645,
+            "startTime": 0.34347543120384216,
             "type": "TransitionWindow",
             "value": 1.0
         }

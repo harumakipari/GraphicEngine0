@@ -1566,31 +1566,6 @@ void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, float d
             timelinePos.y + height),
         IM_COL32(60, 60, 60, 255));
 
-    for (int i = 0; i <= 10; i++)
-    {
-        float x =
-            timelinePos.x +
-            width * i / 10.0f;
-
-        float t =
-            duration * i / 10.0f;
-
-        drawList->AddLine(
-            ImVec2(x, timelinePos.y),
-            ImVec2(x, timelinePos.y + 5),
-            IM_COL32(255, 255, 255, 255));
-
-        char buffer[32];
-        sprintf_s(buffer, "%.2f", t);
-
-        drawList->AddText(
-            ImVec2(
-                x - 10,
-                timelinePos.y + 12),
-            IM_COL32(255, 255, 255, 255),
-            buffer);
-    }
-    ImGui::Dummy(ImVec2(0, 40));
     for (int stateIndex = 0; stateIndex < asset.notifyTrack.states.size(); stateIndex++)
     {
         ImU32 color = (selectedStateIndex == stateIndex) ? IM_COL32(0, 255, 100, 255) : IM_COL32(0, 180, 0, 255);
