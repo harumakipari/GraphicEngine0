@@ -423,6 +423,13 @@ void EnemyAttackReadyState::Enter()
     enemy->StopAIMovement();
     enemy->BeginAttackReadyDebug();
     enemy->PlayAttackReadySE();
+    switch (enemy->GetSelectedAttackType())
+    {
+    case BossAttackType::PrimaryAttackLA: enemy->StartWeaponTelegraph("PrimaryAttack_LA"); break;
+    case BossAttackType::PrimaryAttackRA: enemy->StartWeaponTelegraph("PrimaryAttack_RA"); break;
+    case BossAttackType::FastCombo: enemy->StartWeaponTelegraph("Attack_A_Fast_0"); break;
+    default: break;
+    }
 }
 
 void EnemyAttackReadyState::Execute(float deltaTime)
@@ -605,6 +612,7 @@ void EnemyAttackState::Execute(float deltaTime)
             enemy->BeginAdditionalAttackStage();
             stageStartHitCount = enemy->GetCurrentAttackHitCount();
             ++comboStage;
+            enemy->StartWeaponTelegraph(nextAnimation);
             if (!enemy->PlayAttackAnimationByName(nextAnimation))
                 owner->GetStateMachine()->ChangeState("EnemyRecoveryState");
             return;

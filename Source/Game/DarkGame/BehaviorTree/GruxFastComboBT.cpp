@@ -158,6 +158,7 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
         { owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success); owner->DisableAttackHitBoxes(); finishAfterAnimation = true; return State::Run; }
         owner->ClearFastComboStepIn();
         owner->RefreshFastComboTargetContext(stage);
+        owner->StartWeaponTelegraph(animation->nextCombo);
         if (!owner->PlayAttackAnimationByName(animation->nextCombo))
         { owner->OnSelectedAttackCompletedSuccessfully(); owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success); owner->DisableAttackHitBoxes(); finishAfterAnimation = true; return State::Run; }
         return State::Run;
@@ -189,6 +190,7 @@ ActionBase::State PrepareFastCombo::Run(float deltaTime)
             owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
                 "BTIdleOrPrepareFastCombo");
         owner->PlayAttackReadySE();
+        owner->StartWeaponTelegraph("Attack_A_Fast_0");
     }
     timer += deltaTime;
     if (timer < owner->GetBehaviorPrepareDuration())

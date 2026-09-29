@@ -97,10 +97,7 @@ private:
     int maxHp = 8;
     float facePlayerDistance = 12.0f;
     float attackRange = 3.0f;
-    float attackDuration = 1.05f;
-    float attackHitStartTime = 0.42f;
-    float attackHitEndTime = 0.76f;
-    float recoveryDuration = 5.85f;
+    float recoveryDuration = 2.85f;
     int attackDamage = 4;
     float weaponHitRadius = 0.5f;
     DirectX::XMFLOAT3 weaponRootOffset{ 0.0f, 0.0f, 0.0f };

@@ -35,12 +35,6 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
 
     PlayBodyAnimation("Idle");
 
-    // 盾
-    //shield = AddComponent<SkeletalMeshComponent>("ShieldMesh", parentName);
-    //shield->SetModel("./Data/Models/Weapons/Shield/Shield.gltf");
-    //shield->AttachToComponent(skeletalMeshComponent, 11); // "Hand_l_end"
-
-
     int handRightSocketNode = skeletalMeshComponent->FindIndexByName("Hand_r_end");
 
     // 剣
@@ -94,19 +88,13 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f, 1.15f, 0.0f });
     hp = maxHp;
 
-#if 0
-    auto scene = dynamic_cast<SceneBase*>(Scene::GetCurrentScene());
+#if 1
     // ポイントライトコンポーネントを追加
     auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
     pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
-    auto lightManager = scene->GetLightManager();
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
-    if (auto shared = lightManager->FindSharedLight("EnemyPointLight"))
-    {
-        pointLightComponent->SetSharedParam(shared);
-    }
+    pointLightComponent->SetSharedLightName("PlayerPointLight");
 #endif // 0
-
 }
 
 void SkeletonWarriorActor::Update(float elapsedTime)
@@ -261,29 +249,22 @@ void SkeletonWarriorActor::BeginAttack(const DirectX::XMFLOAT3& directionToPlaye
     PlayBodyAnimation("Attack", false, true, 0.08f, true);
 }
 
-void SkeletonWarriorActor::UpdateAttack(float elapsedTime, Player& player)
+void SkeletonWarriorActor::UpdateAttack(float /*elapsedTime*/, Player& player)
 {
-    stateElapsed += elapsedTime;
     RefreshDangerAreaFromNotify();
     if (isDangerWindow)
     {
         UpdateDangerWindow(player);
     }
-    const bool hitWindow = stateElapsed >= attackHitStartTime && stateElapsed <= attackHitEndTime;
-    if (hitWindow)
-    {
-        if (!attackHitActive)
-            ResetWeaponSweep();
-        attackHitActive = true;
-        UpdateWeaponSweep(player);
-    }
-    else if (attackHitActive)
-    {
-        attackHitActive = false;
-        ResetWeaponSweep();
-    }
 
-    if (stateElapsed >= attackDuration)
+    if (attackHitActive)
+        UpdateWeaponSweep(player);
+
+    const auto controller = GetBodyAnimationController();
+    const bool isAttackAnimation = controller && controller->GetCurrentAnimationName() == "Attack";
+    const bool naturalAttackEnd = isAttackAnimation && !controller->IsPlayAnimation();
+    const bool attackInterrupted = controller && !isAttackAnimation;
+    if (naturalAttackEnd || attackInterrupted)
     {
         state = State::Recovery;
         stateElapsed = 0.0f;
@@ -291,7 +272,11 @@ void SkeletonWarriorActor::UpdateAttack(float elapsedTime, Player& player)
         isDangerWindow = false;
         activeDangerNotifyState = nullptr;
         ResetWeaponSweep();
-        PlayBodyAnimation("Idle", true, true, 0.1f, true);
+
+        // A naturally completed Attack may return to Idle. Do not overwrite an
+        // externally requested animation (Death, hit reaction, etc.).
+        if (naturalAttackEnd)
+            PlayBodyAnimation("Idle", true, true, 0.1f, true);
     }
 }
 
@@ -427,25 +412,44 @@ void SkeletonWarriorActor::DrawDangerAreaDebug() const
 void SkeletonWarriorActor::OnAnimationNotifyBegin(const AnimationNotifyState& notify)
 {
     Enemy::OnAnimationNotifyBegin(notify);
-    if (state != State::Attacking || notify.type != AnimationNotifyState::Type::DangerWindow)
+    if (state != State::Attacking)
         return;
 
-    activeDangerNotifyState = &notify;
-    isDangerWindow = true;
-    RefreshDangerAreaFromNotify();
+    switch (notify.type)
+    {
+    case AnimationNotifyState::Type::HitBox:
+        attackHitActive = true;
+        ResetWeaponSweep();
+        break;
+    case AnimationNotifyState::Type::DangerWindow:
+        activeDangerNotifyState = &notify;
+        isDangerWindow = true;
+        RefreshDangerAreaFromNotify();
+        break;
+    default:
+        break;
+    }
 }
 
 void SkeletonWarriorActor::OnAnimationNotifyEnd(const AnimationNotifyState& notify)
 {
     Enemy::OnAnimationNotifyEnd(notify);
-    if (notify.type != AnimationNotifyState::Type::DangerWindow ||
-        activeDangerNotifyState != &notify)
+    switch (notify.type)
     {
-        return;
+    case AnimationNotifyState::Type::HitBox:
+        attackHitActive = false;
+        ResetWeaponSweep();
+        break;
+    case AnimationNotifyState::Type::DangerWindow:
+        if (activeDangerNotifyState == &notify)
+        {
+            isDangerWindow = false;
+            activeDangerNotifyState = nullptr;
+        }
+        break;
+    default:
+        break;
     }
-
-    isDangerWindow = false;
-    activeDangerNotifyState = nullptr;
 }
 
 void SkeletonWarriorActor::DrawImGuiDetails()

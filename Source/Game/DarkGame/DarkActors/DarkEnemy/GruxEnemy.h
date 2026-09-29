@@ -504,6 +504,7 @@ public:
     void UpdateAttackReadyDebug(float elapsedTime);
     void EndAttackReadyDebug();
     bool PlayAttackReadySE();
+    void StartWeaponTelegraph(const std::string& animationName);
 
     void ClearPendingAttackFacing();
     void StopAIMovement();
@@ -635,8 +636,19 @@ private:
     float weaponEmissiveIntensity = 7.0f;
     DirectX::XMFLOAT3 weaponTelegraphRimColor = { 1.0f, 0.35f, 0.0f };
 
-    void UpdateWeaponTelegraphRimLight();
+    void UpdateWeaponTelegraphRimLight(float deltaTime);
     void ResetWeaponTelegraphRimLight();
+    bool weaponTelegraphActive = false;
+    bool weaponTelegraphFadingOut = false;
+    std::string weaponTelegraphAnimationName;
+    float weaponTelegraphLeadDuration = 0.0f;
+    float weaponTelegraphShowEmissiveEndTime = 0.0f;
+    float weaponTelegraphMaximumPower = 0.0f;
+    float weaponTelegraphElapsed = 0.0f;
+    float weaponTelegraphCurrentPower = 0.0f;
+    float weaponTelegraphFadeOutElapsed = 0.0f;
+    float weaponTelegraphFadeOutStartPower = 0.0f;
+    float weaponTelegraphFadeOutDuration = 0.15f;
 
     void ResetBehaviorTreeRuntime();
     void BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePosition);

@@ -1023,29 +1023,70 @@ void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,
     }
     Character::PlayBodyAnimation(name, loop, blend, blendTime, ignoreRootMotion);
 }
-void GruxEnemy::UpdateWeaponTelegraphRimLight()
+void GruxEnemy::StartWeaponTelegraph(const std::string& animationName)
 {
-    const auto controller = GetBodyAnimationController();
-    float maximumPower = 0.0f;
-    float progress = 0.0f;
-    if (!controller || !controller->EvaluateShowEmissiveState(maximumPower, progress))
-    {
-        ResetWeaponTelegraphRimLight();
-        return;
-    }
+    // A missing ShowEmissive state must not leave a prior attack's telegraph alive.
+    ResetWeaponTelegraphRimLight();
 
-    const float currentPower = (std::max)(0.0f, maximumPower) * std::clamp(progress, 0.0f, 1.0f);
-    if (skeletalMeshComponent)
+    const auto controller = GetBodyAnimationController();
+    const auto* asset = controller ? controller->GetAnimationAsset(animationName) : nullptr;
+    if (!asset) return;
+    const auto state = std::find_if(asset->notifyTrack.states.begin(), asset->notifyTrack.states.end(),
+        [](const AnimationNotifyState& value) { return value.type == AnimationNotifyState::Type::ShowEmissive; });
+    if (state == asset->notifyTrack.states.end()) return;
+
+    weaponTelegraphActive = true;
+    weaponTelegraphAnimationName = animationName;
+    weaponTelegraphLeadDuration = GetAttackReadyDuration();
+    weaponTelegraphShowEmissiveEndTime = state->endTime;
+    weaponTelegraphMaximumPower = (std::max)(0.0f, state->value);
+    weaponTelegraphElapsed = 0.0f;
+    weaponTelegraphCurrentPower = 0.0f;
+}
+
+void GruxEnemy::UpdateWeaponTelegraphRimLight(float deltaTime)
+{
+    if (!weaponTelegraphActive && !weaponTelegraphFadingOut) return;
+    if (weaponTelegraphFadingOut)
     {
-        skeletalMeshComponent->SetRuntimeMaterialRimLight(
-            "M_Grux_Qilin_Weapon", weaponTelegraphRimColor, currentPower);
+        weaponTelegraphFadeOutElapsed += (std::max)(0.0f, deltaTime);
+        const float duration = (std::max)(0.001f, weaponTelegraphFadeOutDuration);
+        weaponTelegraphCurrentPower = weaponTelegraphFadeOutStartPower *
+            (1.0f - std::clamp(weaponTelegraphFadeOutElapsed / duration, 0.0f, 1.0f));
+        if (weaponTelegraphFadeOutElapsed >= duration) { ResetWeaponTelegraphRimLight(); return; }
     }
+    else
+    {
+        weaponTelegraphElapsed += (std::max)(0.0f, deltaTime);
+        float timelineTime = (std::min)(weaponTelegraphElapsed, weaponTelegraphLeadDuration);
+        if (const auto controller = GetBodyAnimationController(); controller &&
+            controller->GetCurrentAnimationName() == weaponTelegraphAnimationName)
+        {
+            timelineTime = weaponTelegraphLeadDuration +
+                (std::min)(controller->GetCurrentAnimationTime(), weaponTelegraphShowEmissiveEndTime);
+            if (controller->GetCurrentAnimationTime() >= weaponTelegraphShowEmissiveEndTime)
+            {
+                weaponTelegraphActive = false;
+                weaponTelegraphFadingOut = true;
+                weaponTelegraphFadeOutElapsed = 0.0f;
+                weaponTelegraphFadeOutStartPower = weaponTelegraphCurrentPower = weaponTelegraphMaximumPower;
+            }
+        }
+        if (!weaponTelegraphFadingOut)
+            weaponTelegraphCurrentPower = weaponTelegraphMaximumPower * std::clamp(
+                timelineTime / (weaponTelegraphLeadDuration + weaponTelegraphShowEmissiveEndTime), 0.0f, 1.0f);
+    }
+    if (skeletalMeshComponent) skeletalMeshComponent->SetRuntimeMaterialRimLight(
+        "M_Grux_Qilin_Weapon", weaponTelegraphRimColor, weaponTelegraphCurrentPower);
 }
 
 void GruxEnemy::ResetWeaponTelegraphRimLight()
 {
-    if (skeletalMeshComponent)
-        skeletalMeshComponent->ClearRuntimeMaterialRimLight("M_Grux_Qilin_Weapon");
+    weaponTelegraphActive = false;
+    weaponTelegraphFadingOut = false;
+    weaponTelegraphCurrentPower = 0.0f;
+    weaponTelegraphFadeOutElapsed = 0.0f;
+    if (skeletalMeshComponent) skeletalMeshComponent->ClearRuntimeMaterialRimLight("M_Grux_Qilin_Weapon");
 }
 void GruxEnemy::StopBattleActions()
 {
@@ -1591,7 +1632,7 @@ void GruxEnemy::Update(float deltaTime)
         Character::Update(deltaTime);
     }
 
-    UpdateWeaponTelegraphRimLight();
+    UpdateWeaponTelegraphRimLight(deltaTime);
 
     // Impact Flash is visual-only and follows the same scaled delta as Grux/Animation.
     UpdateJumpTelegraphImpactFlash(deltaTime);
@@ -2385,6 +2426,7 @@ void GruxEnemy::DrawImGuiDetails()
     }
 
     ImGui::ColorEdit3("Weapon Telegraph Rim Color", &weaponTelegraphRimColor.x);
+    ImGui::DragFloat("Weapon Telegraph Fade Out", &weaponTelegraphFadeOutDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
 
     ImGui::SeparatorText(U8("HP‚ÌUI"));
     ImGui::DragFloat("delayedHpDelayDuration", &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
@@ -5090,7 +5132,10 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 
 void GruxEnemy::OnAnimationChanged()
 {
-    ResetWeaponTelegraphRimLight();
+    const auto telegraphController = GetBodyAnimationController();
+    if ((!weaponTelegraphActive && !weaponTelegraphFadingOut) || !telegraphController ||
+        (!weaponTelegraphFadingOut && telegraphController->GetCurrentAnimationName() != weaponTelegraphAnimationName))
+        ResetWeaponTelegraphRimLight();
     showLeftWeaponTrail = false;
     showRightWeaponTrail = false;
 
