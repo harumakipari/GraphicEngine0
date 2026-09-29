@@ -30,7 +30,7 @@ struct husk_particles
         float particle_size{ 0.008f };
         float particle_option{};
         float delta_time{};
-        float world_x_min{ 6.695f };
+        float world_x_min{ 5.585f };
         float world_x_max{ 12.519f };
         float death_progress{};
         float detach_speed{ 0.35f };

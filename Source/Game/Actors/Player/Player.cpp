@@ -884,8 +884,20 @@ void Player::Update(float deltaTime)
                     const int previousHP = enemy->GetHp();
                     const bool isNormalFourthHit = !isRushHit &&
                         currentAttackAnimation == "Primary_Attack_Fast_D1_1";
+                    GruxEnemy::PlayerAttackHitType hitType =
+                        isNormalFourthHit ? GruxEnemy::PlayerAttackHitType::ComboFinal
+                        : GruxEnemy::PlayerAttackHitType::Normal;
+                    if (isRushHit)
+                    {
+                        const auto* rushState = dynamic_cast<const PlayerRushState*>(
+                            stateMachine_->GetCurrentState());
+                        hitType = rushState &&
+                            rushState->GetComboIndex() + 1 >= GetMaxRushAttackCount()
+                            ? GruxEnemy::PlayerAttackHitType::RushFinal
+                            : GruxEnemy::PlayerAttackHitType::Rush;
+                    }
                     enemy->TakeDamageFromPlayerAttack(GetCurrentAttackDamage(),
-                        isNormalFourthHit, playerPos);
+                        isNormalFourthHit, hitType, playerPos);
                     const bool lethalHit = previousHP > 0 && enemy->GetHp() <= 0;
                     if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
                     {
@@ -4344,6 +4356,7 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     Logger::Log(Logger::LogCategory::Gameplay, std::format(
         "[JustDodgeSE] frame={} sound=just_dodge3.wav", debugFrame));
     CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge3.wav", 1.5f);
+    InputSystem::SetVibration(0.30f, 0.06f);
 
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;

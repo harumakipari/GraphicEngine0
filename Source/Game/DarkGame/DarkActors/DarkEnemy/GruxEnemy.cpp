@@ -3577,6 +3577,18 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Boss Damage Flash Duration", &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
     ImGui::SliderFloat("Boss Damage Flash Strength", &damageFlashStartValue, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Boss Hit Voice Cooldown", &hitVoiceCooldown, 0.01f, 0.0f, 2.0f, "%.2f sec");
+    if (ImGui::TreeNode(U8("プレイヤーに攻撃された時のコントローラー振動")))
+    {
+        ImGui::DragFloat("Normal Strength", &normalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("Normal Duration", &normalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+        ImGui::DragFloat("Combo Final Strength", &comboFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("Combo Final Duration", &comboFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+        ImGui::DragFloat("Rush Strength", &rushHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("Rush Duration", &rushHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+        ImGui::DragFloat("Rush Final Strength", &rushFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("Rush Final Duration", &rushFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+        ImGui::TreePop();
+    }
     ImGui::SeparatorText(U8("4段目 HitReaction"));
     ImGui::DragFloat(U8("4段目 HitReaction確率"), &fourthHitReactionChance,
         0.01f, 0.0f, 1.0f, "%.2f");
@@ -4268,16 +4280,14 @@ bool GruxEnemy::IsStunned() const
 
 void GruxEnemy::TakeDamage(const int damage)
 {
-    TakeDamageFromPlayerAttack(damage, false, {});
+    TakeDamageFromPlayerAttack(damage, false, PlayerAttackHitType::Normal, {});
 }
 
 void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormalFourthHit,
-    const DirectX::XMFLOAT3& hitSourcePosition)
+    const PlayerAttackHitType hitType, const DirectX::XMFLOAT3& hitSourcePosition)
 {
     if (finalHitReactionActive) return;
     skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = damageFlashStartValue;
-    // コントローラー振動
-    InputSystem::SetVibration(0.8f, 0.1f);
     // カメラシェイク
     if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
     {
@@ -4289,6 +4299,30 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
 
     const int hpBeforeDamage = hp;
     hp -= damage;
+    if (hp < hpBeforeDamage)
+    {
+        float rumbleStrength = normalHitRumbleStrength;
+        float rumbleDuration = normalHitRumbleDuration;
+        switch (hitType)
+        {
+        case PlayerAttackHitType::ComboFinal:
+            rumbleStrength = comboFinalHitRumbleStrength;
+            rumbleDuration = comboFinalHitRumbleDuration;
+            break;
+        case PlayerAttackHitType::Rush:
+            rumbleStrength = rushHitRumbleStrength;
+            rumbleDuration = rushHitRumbleDuration;
+            break;
+        case PlayerAttackHitType::RushFinal:
+            rumbleStrength = rushFinalHitRumbleStrength;
+            rumbleDuration = rushFinalHitRumbleDuration;
+            break;
+        case PlayerAttackHitType::Normal:
+        default:
+            break;
+        }
+        InputSystem::SetVibration(rumbleStrength, rumbleDuration);
+    }
     if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
         gameScene && gameScene->GetBossPhase() == GameScene::BossPhase::Phase1)
     {
