@@ -174,7 +174,7 @@
             "value": 1.0
         },
         {
-            "endTime": 1.933333158493042,
+            "endTime": 1.8934705257415771,
             "hitBoxOffset": [
                 0.0,
                 0.0,
@@ -198,7 +198,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.8957169055938721,
+            "startTime": 0.8558542728424072,
             "type": "TransitionWindow",
             "value": 1.0
         }
