@@ -289,6 +289,7 @@ private:
 
     // 剣の攻撃判定
     void CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end);
+    DirectX::XMFLOAT3 GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const;
 
     // 入力処理をまとめる
     void CaptureActionRequest(float deltaTime);
@@ -436,6 +437,8 @@ public:
     bool comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
     bool inputWindow = false;   // コンボ受付をするかどうか
     bool hitBox = false;   // 武器の当たり判定をつける
+    float activeHitBoxRadius = 0.75f;
+    DirectX::XMFLOAT3 activeHitBoxOffset{ 0.0f, 0.0f, 0.0f };
     bool transitionWindow = false;  // ステート遷移してもいいかどうか
     bool justDodgeWindow = false;  // ジャスト回避受付時間
     bool justDodgeSuccess = false; // ジャスト回避成功フラグ

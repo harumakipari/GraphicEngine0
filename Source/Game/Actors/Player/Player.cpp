@@ -764,9 +764,9 @@ void Player::Update(float deltaTime)
     }
 
     // 剣の真ん中、根本、先の座標を取得する
-    DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
-    DirectX::XMFLOAT3 swordMidPos = swordMiddleComponent->GetComponentLocation();
-    DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
+    DirectX::XMFLOAT3 swordRootPos = GetHitBoxPoint(swordRootComponent, activeHitBoxOffset);
+    DirectX::XMFLOAT3 swordMidPos = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
+    DirectX::XMFLOAT3 swordTipPos = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
 
     // 当たり判定が有効な時にスフィアキャストをする
     if (hitBox)
@@ -795,11 +795,11 @@ void Player::Update(float deltaTime)
 
         const uint32_t enemyLayer = CollisionHelper::ToBit(CollisionLayer::Enemy);
         sweeps[0].hit = CollisionFunction::SphereRayCast(
-            prevSwordRootPos, swordRootPos, sweeps[0].result, weaponSphereRadius, enemyLayer, true);
+            prevSwordRootPos, swordRootPos, sweeps[0].result, activeHitBoxRadius, enemyLayer, true);
         sweeps[1].hit = CollisionFunction::SphereRayCast(
-            prevSwordMidPos, swordMidPos, sweeps[1].result, weaponSphereRadius, enemyLayer, true);
+            prevSwordMidPos, swordMidPos, sweeps[1].result, activeHitBoxRadius, enemyLayer, true);
         sweeps[2].hit = CollisionFunction::SphereRayCast(
-            prevSwordTipPos, swordTipPos, sweeps[2].result, weaponSphereRadius, enemyLayer, true);
+            prevSwordTipPos, swordTipPos, sweeps[2].result, activeHitBoxRadius, enemyLayer, true);
 
         constexpr float minSweepLength = 0.0001f;
         const SwordSweepResult* selectedNormalHit = nullptr;
@@ -1737,6 +1737,11 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     {
     case AnimationNotifyState::Type::HitBox:
         Logger::Log(U8("当たり判定を開始しました"));
+        activeHitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
+        activeHitBoxOffset = state.hitBoxOffset;
+        prevSwordRootPos = GetHitBoxPoint(swordRootComponent, activeHitBoxOffset);
+        prevSwordMidPos = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
+        prevSwordTipPos = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
         hitBox = true;
         if (swordHitDebug && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
         {
@@ -1858,6 +1863,8 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::HitBox:
         //Logger::Log(U8("当たり判定を終了しました"));
         hitBox = false;
+        activeHitBoxRadius = weaponSphereRadius;
+        activeHitBoxOffset = {};
         if (swordHitDebug && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
         {
             const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
@@ -2025,13 +2032,14 @@ void Player::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
     }
 
     constexpr DirectX::XMFLOAT4 hitBoxPreviewColor{ 0.25f, 1.0f, 0.45f, 1.0f };
-    const DirectX::XMFLOAT3 root = swordRootComponent->GetComponentLocation();
-    const DirectX::XMFLOAT3 middle = swordMiddleComponent->GetComponentLocation();
-    const DirectX::XMFLOAT3 tip = swordTipComponent->GetComponentLocation();
+    const float radius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
+    const DirectX::XMFLOAT3 root = GetHitBoxPoint(swordRootComponent, state.hitBoxOffset);
+    const DirectX::XMFLOAT3 middle = GetHitBoxPoint(swordMiddleComponent, state.hitBoxOffset);
+    const DirectX::XMFLOAT3 tip = GetHitBoxPoint(swordTipComponent, state.hitBoxOffset);
 
-    DebugRender::DrawSphere(root, weaponSphereRadius, hitBoxPreviewColor, 0.0f, true);
-    DebugRender::DrawSphere(middle, weaponSphereRadius, hitBoxPreviewColor, 0.0f, true);
-    DebugRender::DrawSphere(tip, weaponSphereRadius, hitBoxPreviewColor, 0.0f, true);
+    DebugRender::DrawSphere(root, radius, hitBoxPreviewColor, 0.0f, true);
+    DebugRender::DrawSphere(middle, radius, hitBoxPreviewColor, 0.0f, true);
+    DebugRender::DrawSphere(tip, radius, hitBoxPreviewColor, 0.0f, true);
     DebugRender::DrawLine(root, middle, hitBoxPreviewColor, 0.0f, true);
     DebugRender::DrawLine(middle, tip, hitBoxPreviewColor, 0.0f, true);
 }
@@ -2044,6 +2052,8 @@ void Player::OnAnimationChanged()
     comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
     inputWindow = false;   // コンボ受付をするかどうか
     hitBox = false;     // 当たり判定
+    activeHitBoxRadius = weaponSphereRadius;
+    activeHitBoxOffset = {};
     justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
     invincibleWindow = false;   // 無敵状態かどうか
     justDodgeSuccess = false; // ジャスト回避が成功したかどうか
@@ -2726,6 +2736,18 @@ void Player::SpawnSpark(DirectX::XMFLOAT3 pos)
 }
 
 // 剣の攻撃判定
+DirectX::XMFLOAT3 Player::GetHitBoxPoint(
+    const std::shared_ptr<SceneComponent>& component,
+    const DirectX::XMFLOAT3& localOffset) const
+{
+    const DirectX::XMFLOAT3 base = component->GetComponentLocation();
+    DirectX::XMVECTOR offset = DirectX::XMLoadFloat3(&localOffset);
+    const DirectX::XMFLOAT4 rotation = component->GetComponentWorldTransform().GetRotation();
+    offset = DirectX::XMVector3Rotate(offset, DirectX::XMLoadFloat4(&rotation));
+    DirectX::XMFLOAT3 worldOffset{};
+    DirectX::XMStoreFloat3(&worldOffset, offset);
+    return { base.x + worldOffset.x, base.y + worldOffset.y, base.z + worldOffset.z };
+}
 void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end)
 {
     if (stateMachine_->GetStateName() != "Attack")

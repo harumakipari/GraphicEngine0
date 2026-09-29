@@ -34,6 +34,35 @@
     },
     "states": [
         {
+            "endTime": 0.1810549795627594,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.0,
+            "type": "ShowEmissive",
+            "value": 20.0
+        },
+        {
             "endTime": 0.33226534724235535,
             "hitBoxOffset": [
                 0.0,
@@ -92,35 +121,6 @@
             "value": 1.0
         },
         {
-            "endTime": 0.2757630944252014,
-            "hitBoxOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "hitBoxRadius": 0.800000011920929,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                2.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                1.0
-            ],
-            "moveDistance": 1.100000023841858,
-            "parameter": "",
-            "startTime": 0.21794871985912323,
-            "type": "MotionWarp",
-            "value": 1.0
-        },
-        {
             "endTime": 0.27520984411239624,
             "hitBoxOffset": [
                 0.0,
@@ -147,6 +147,35 @@
             "parameter": "rightWeapon",
             "startTime": 0.21683721244335175,
             "type": "HitBox",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.2757630944252014,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                1.0
+            ],
+            "moveDistance": 1.100000023841858,
+            "parameter": "",
+            "startTime": 0.21794871985912323,
+            "type": "MotionWarp",
             "value": 1.0
         }
     ]

@@ -630,6 +630,14 @@ public:
     void SetBehaviorTreeLastJudgment(const std::string& value) { behaviorTreeLastJudgment = value; }
     void RecordExecuteChargeAttackRunDebug();
 private:
+    bool weaponEmissiveEnabled = true;
+    DirectX::XMFLOAT3 weaponEmissiveColor = { 0.0f, 0.0f, 0.0f };
+    float weaponEmissiveIntensity = 7.0f;
+    DirectX::XMFLOAT3 weaponTelegraphRimColor = { 1.0f, 0.35f, 0.0f };
+
+    void UpdateWeaponTelegraphRimLight();
+    void ResetWeaponTelegraphRimLight();
+
     void ResetBehaviorTreeRuntime();
     void BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePosition);
     void EndFourthHitReaction();
@@ -1971,7 +1979,7 @@ struct WeaponHitBoxPoints
     bool behaviorTreeFastComboEnabled = true;
     bool forceBehaviorTreeCharge = false;
     CloseCombatSettings closeCombatSettings;
-    bool showCloseCombatDebugRange = true;
+    bool showCloseCombatDebugRange = false;
     std::string behaviorTreeCurrentNode = "None";
     std::string behaviorTreePreviousNode = "None";
     std::string behaviorTreeLastResult = "None";

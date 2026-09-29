@@ -475,6 +475,9 @@ public:
             OcclusionTextureInfo occlusionTexture;
             TextureInfo emissiveTexture;
 
+            DirectX::XMFLOAT3 rimColor = { 0.0f, 0.0f, 0.0f };
+            float rimPower = 0.0f;
+
             template<class T>
             void serialize(T& archive)
             {
@@ -490,6 +493,7 @@ public:
                 );
             }
         };
+        static_assert(sizeof(Cbuffer) == 112, "Material Cbuffer must match HLSL MaterialConstants stride.");
         Cbuffer data;
 
         template<class T>

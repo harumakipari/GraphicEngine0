@@ -216,6 +216,20 @@ protected:
 class SkeletalMeshComponent :public MeshComponent
 {
 public:
+    // Component-owned material data prevents shared model resources from being modified.
+    void SetRuntimeMaterialEmissive(const std::string& materialName, bool enabled,
+        const DirectX::XMFLOAT3& color, float intensity);
+    void ClearRuntimeMaterialEmissive(const std::string& materialName);
+    void SetRuntimeMaterialRimLight(const std::string& materialName,
+        const DirectX::XMFLOAT3& color, float power);
+    void ClearRuntimeMaterialRimLight(const std::string& materialName);
+    ID3D11ShaderResourceView* GetRuntimeMaterialResourceView() const
+    {
+        return runtimeMaterialResourceView.Get();
+    }
+    // Called by SceneRenderer immediately before this component is drawn.
+    void UpdateRuntimeMaterialOverrides(ID3D11DeviceContext* immediateContext) const;
+
     struct Phase2TextureBlendConstants
     {
         float progress = 0.0f;
@@ -301,6 +315,11 @@ public:
         //model = std::make_shared<InterleavedGltfModel>(device, filename, ModelTypes::ModelMode::SkeletalMesh, isSaveVerticesData);
         model = AssetManager::Get().LoadModel(device, filename, ModelTypes::ModelMode::SkeletalMesh, isSaveVerticesData, convertToLHS);
         modelNodes = model->GetNodes();
+        runtimeMaterialData.clear();
+        sourceMaterialData.clear();
+        runtimeMaterialBuffer.Reset();
+        runtimeMaterialResourceView.Reset();
+        runtimeMaterialOverridesDirty = false;
     }
 
 
@@ -365,6 +384,14 @@ public:
     }
 
 private:
+    void CreateRuntimeMaterialOverrideBuffer(ID3D11Device* device);
+
+    std::vector<InterleavedGltfModel::Material::Cbuffer> runtimeMaterialData;
+    std::vector<InterleavedGltfModel::Material::Cbuffer> sourceMaterialData;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> runtimeMaterialBuffer;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> runtimeMaterialResourceView;
+    mutable bool runtimeMaterialOverridesDirty = false;
+
     Texture phase2BaseColorTexture;
     Texture phase2GearBaseColorTexture;
     Texture phase2HeadBaseColorTexture;

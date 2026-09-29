@@ -1023,8 +1023,33 @@ void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,
     }
     Character::PlayBodyAnimation(name, loop, blend, blendTime, ignoreRootMotion);
 }
+void GruxEnemy::UpdateWeaponTelegraphRimLight()
+{
+    const auto controller = GetBodyAnimationController();
+    float maximumPower = 0.0f;
+    float progress = 0.0f;
+    if (!controller || !controller->EvaluateShowEmissiveState(maximumPower, progress))
+    {
+        ResetWeaponTelegraphRimLight();
+        return;
+    }
+
+    const float currentPower = (std::max)(0.0f, maximumPower) * std::clamp(progress, 0.0f, 1.0f);
+    if (skeletalMeshComponent)
+    {
+        skeletalMeshComponent->SetRuntimeMaterialRimLight(
+            "M_Grux_Qilin_Weapon", weaponTelegraphRimColor, currentPower);
+    }
+}
+
+void GruxEnemy::ResetWeaponTelegraphRimLight()
+{
+    if (skeletalMeshComponent)
+        skeletalMeshComponent->ClearRuntimeMaterialRimLight("M_Grux_Qilin_Weapon");
+}
 void GruxEnemy::StopBattleActions()
 {
+    ResetWeaponTelegraphRimLight();
     HideDashTelegraphVisual();
     HideRoarTelegraph();
     HideRoarFloatingDebris();
@@ -1426,6 +1451,7 @@ void GruxEnemy::Update(float deltaTime)
     UpdatePhase2HpBarPreview();
     if (gameScene && gameScene->IsPhase1BreakPending())
     {
+        ResetWeaponTelegraphRimLight();
         AdvanceDelayedHpBarForPhaseTransition();
         if (const auto controller = GetBodyAnimationController())
             controller->OnUpdate(deltaTime);
@@ -1434,6 +1460,7 @@ void GruxEnemy::Update(float deltaTime)
     if (phaseTransitionCombatStopped ||
         (gameScene && gameScene->IsBossPhaseTransitionActive()))
     {
+        ResetWeaponTelegraphRimLight();
         // Freeze the interrupted combat animation rather than requesting Idle.
         // This prevents its remaining notifies/root motion from restarting combat.
         return;
@@ -1500,11 +1527,15 @@ void GruxEnemy::Update(float deltaTime)
     {
         const auto controller = GetBodyAnimationController();
         if (controller && controller->GetCurrentAnimationName().starts_with("HitReact_"))
+        {
+            ResetWeaponTelegraphRimLight();
             return;
+        }
         finalHitReactionHeld = false;
     }
     if (finalHitReactionActive)
     {
+        ResetWeaponTelegraphRimLight();
         if (const auto controller = GetBodyAnimationController())
             controller->OnUpdate(deltaTime);
         return;
@@ -1514,6 +1545,7 @@ void GruxEnemy::Update(float deltaTime)
     // It owns only the short fourth-normal-hit interruption window.
     if (fourthHitReactionActive)
     {
+        ResetWeaponTelegraphRimLight();
         if (const auto controller = GetBodyAnimationController())
             controller->OnUpdate(deltaTime);
         fourthHitReactionRemaining = (std::max)(0.0f,
@@ -1558,6 +1590,8 @@ void GruxEnemy::Update(float deltaTime)
     {
         Character::Update(deltaTime);
     }
+
+    UpdateWeaponTelegraphRimLight();
 
     // Impact Flash is visual-only and follows the same scaled delta as Grux/Animation.
     UpdateJumpTelegraphImpactFlash(deltaTime);
@@ -2336,6 +2370,21 @@ void GruxEnemy::DrawImGuiDetails()
     DrawRoarBTDebug();
 #ifdef USE_IMGUI
     Character::DrawImGuiDetails();
+
+    ImGui::SeparatorText("Weapon Emissive (Runtime Override)");
+    bool weaponEmissiveChanged = false;
+    weaponEmissiveChanged |= ImGui::Checkbox("Weapon Emissive Enabled", &weaponEmissiveEnabled);
+    weaponEmissiveChanged |= ImGui::ColorEdit3("Weapon Emissive Color", &weaponEmissiveColor.x);
+    weaponEmissiveChanged |= ImGui::DragFloat("Weapon Emissive Intensity", &weaponEmissiveIntensity,
+        0.05f, 0.0f, 50.0f, "%.2f");
+    weaponEmissiveIntensity = (std::max)(0.0f, weaponEmissiveIntensity);
+    if (weaponEmissiveChanged && skeletalMeshComponent)
+    {
+        skeletalMeshComponent->SetRuntimeMaterialEmissive("M_Grux_Qilin_Weapon",
+            weaponEmissiveEnabled, weaponEmissiveColor, weaponEmissiveIntensity);
+    }
+
+    ImGui::ColorEdit3("Weapon Telegraph Rim Color", &weaponTelegraphRimColor.x);
 
     ImGui::SeparatorText(U8("HP‚ÌUI"));
     ImGui::DragFloat("delayedHpDelayDuration", &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
@@ -5041,6 +5090,7 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 
 void GruxEnemy::OnAnimationChanged()
 {
+    ResetWeaponTelegraphRimLight();
     showLeftWeaponTrail = false;
     showRightWeaponTrail = false;
 

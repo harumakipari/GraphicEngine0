@@ -484,6 +484,10 @@ public:
             OcclusionTextureInfo occlusionTexture;
             TextureInfo emissiveTexture;
 
+            // Per-material rim light. Runtime components may override these values.
+            DirectX::XMFLOAT3 rimColor = { 0.0f, 0.0f, 0.0f };
+            float rimPower = 0.0f;
+
             template<class T>
             void serialize(T& archive)
             {

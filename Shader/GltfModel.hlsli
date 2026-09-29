@@ -165,6 +165,9 @@ struct MaterialConstants
     NormalTextureInfo normalTexture;
     OcclusionTextureInfo occlusionTexture;
     TextureInfo emissiveTexture;
+
+    float3 rimColor;
+    float rimPower;
 };
 
 StructuredBuffer<MaterialConstants> materials : register(t0);

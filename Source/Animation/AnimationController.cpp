@@ -2367,6 +2367,42 @@ bool AnimationController::EvaluateWeaponVisualState(
     }
     return hasWeaponVisualState;
 }
+bool AnimationController::EvaluateShowEmissiveState(float& outPower, float& outProgress) const
+{
+    outPower = 0.0f;
+    outProgress = 0.0f;
+
+    const size_t clip = editorPreviewActive ? selectedTimelineClip : animationClip;
+    const float time = editorPreviewActive ? editorPreviewTime : animationTime;
+    const auto assetIt = animationNotifyAssets.find(clip);
+    if (assetIt == animationNotifyAssets.end())
+        return false;
+
+    bool activeStateFound = false;
+    float strongestCurrentPower = 0.0f;
+    for (const auto& state : assetIt->second.notifyTrack.states)
+    {
+        if (state.type != AnimationNotifyState::Type::ShowEmissive ||
+            time < state.startTime || time >= state.endTime)
+        {
+            continue;
+        }
+
+        const float duration = state.endTime - state.startTime;
+        const float progress = duration > 0.0f
+            ? std::clamp((time - state.startTime) / duration, 0.0f, 1.0f)
+            : 1.0f;
+        const float currentPower = (std::max)(0.0f, state.value) * progress;
+        if (!activeStateFound || currentPower > strongestCurrentPower)
+        {
+            activeStateFound = true;
+            strongestCurrentPower = currentPower;
+            outPower = (std::max)(0.0f, state.value);
+            outProgress = progress;
+        }
+    }
+    return activeStateFound;
+}
 void AnimationController::OnNotifyBegin(const AnimationNotifyState& state)
 {
     if (!owner)

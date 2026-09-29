@@ -257,7 +257,14 @@ void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshCompon
 {
     // Še MeshComponent ‚Ì model ‚ðŽæ‚èo‚·
     const InterleavedGltfModel* model = meshComponent->model.get();
-    immediateContext->PSSetShaderResources(0, 1, model->materialResourceView.GetAddressOf());
+    ID3D11ShaderResourceView* materialResourceView = model->materialResourceView.Get();
+    if (const auto skeletalMesh = dynamic_cast<const SkeletalMeshComponent*>(meshComponent))
+    {
+        skeletalMesh->UpdateRuntimeMaterialOverrides(immediateContext);
+        if (ID3D11ShaderResourceView* runtimeMaterialResourceView = skeletalMesh->GetRuntimeMaterialResourceView())
+            materialResourceView = runtimeMaterialResourceView;
+    }
+    immediateContext->PSSetShaderResources(0, 1, &materialResourceView);
     std::function<void(int)> traverse = [&](int nodeIndex)->void
         {
             if (nodeIndex < 0 || nodeIndex >= static_cast<int>(animatedNodes.size()))

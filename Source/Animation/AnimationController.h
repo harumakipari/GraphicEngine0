@@ -145,6 +145,8 @@ public:
     // This also works while an animation pose is held by the editor-preview path.
     bool EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower,
         bool& outHasShowTrail, bool& outHasShowEmissive) const;
+    // Returns the active ShowEmissive state at the sampled runtime/editor time.
+    bool EvaluateShowEmissiveState(float& outPower, float& outProgress) const;
 
     void ResetRootMotion(const std::string& animationName, const bool loop = false, const bool isBlend = true, const float blendTime = 0.3f);
 

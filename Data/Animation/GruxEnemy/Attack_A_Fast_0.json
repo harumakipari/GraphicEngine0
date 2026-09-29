@@ -19,8 +19,12 @@
                 "value": 0.18666678667068481
             },
             {
-                "time": 0.105201356112957,
-                "value": 0.2000003159046173
+                "time": 0.07142855226993561,
+                "value": 0.18000003695487976
+            },
+            {
+                "time": 0.13173198699951172,
+                "value": 0.12999999523162842
             },
             {
                 "time": 0.14496652781963348,
@@ -33,6 +37,35 @@
         ]
     },
     "states": [
+        {
+            "endTime": 0.14742298424243927,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.800000011920929,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.0,
+            "type": "ShowEmissive",
+            "value": 20.0
+        },
         {
             "endTime": 0.45494508743286133,
             "hitBoxOffset": [
