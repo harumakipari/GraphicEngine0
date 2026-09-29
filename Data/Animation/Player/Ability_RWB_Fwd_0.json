@@ -25,7 +25,7 @@
     "nextCombo": "",
     "playRate": 1.0,
     "speedCurve": {
-         "keys": [
+        "keys": [
             {
                 "time": 0.016916699707508087,
                 "value": 1.979999303817749
@@ -198,7 +198,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 1.0950298309326172,
+            "startTime": 0.8957167863845825,
             "type": "TransitionWindow",
             "value": 1.0
         }

@@ -1951,16 +1951,16 @@ struct WeaponHitBoxPoints
     float hitVoiceCooldown = 0.50f;
     float hitVoiceCooldownTimer = 0.0f;
     int lastHitVoiceIndex = -1;
-    float normalHitRumbleStrength = 0.35f;
-    float normalHitRumbleDuration = 0.07f;
-    float comboFinalHitRumbleStrength = 0.55f;
-    float comboFinalHitRumbleDuration = 0.10f;
-    float rushHitRumbleStrength = 0.25f;
-    float rushHitRumbleDuration = 0.05f;
-    float rushFinalHitRumbleStrength = 0.65f;
-    float rushFinalHitRumbleDuration = 0.12f;
+    float normalHitRumbleStrength = 1.2f;
+    float normalHitRumbleDuration = 0.135f;
+    float comboFinalHitRumbleStrength = 1.65f;
+    float comboFinalHitRumbleDuration = 0.165f;
+    float rushHitRumbleStrength = 1.4f;
+    float rushHitRumbleDuration = 0.125f;
+    float rushFinalHitRumbleStrength = 1.5f;
+    float rushFinalHitRumbleDuration = 0.185f;
 
-    // ?A?j???[?V???????????????????
+
     std::vector<AnimationMotionWarp> animationMotionWarps;
 
 
