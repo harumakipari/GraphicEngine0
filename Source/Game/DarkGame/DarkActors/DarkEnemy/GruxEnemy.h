@@ -30,6 +30,21 @@ public:
         RushFinal,
     };
 
+    struct ChargeWindTrailRuntime
+    {
+        Trail trail;
+        bool active = false;
+        float age = 0.0f;
+        float lifetime = 0.0f;
+        DirectX::XMFLOAT3 center{};
+        DirectX::XMFLOAT3 backwardVelocity{};
+        float width = 0.05f;
+        float lateralWobbleAmplitude = 0.0f;
+        float verticalWobbleAmplitude = 0.0f;
+        float wobbleFrequency = 0.0f;
+        float randomPhase = 0.0f;
+    };
+
     explicit GruxEnemy(const std::string& actorName) :Enemy(actorName) {}
 
     void Initialize(const Transform& transform)override;
@@ -294,6 +309,10 @@ public:
     bool BeginChargeAttackMovement();
     bool LockChargeDirectionToPlayer();
     ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime, bool allowTripleWallTurn = false);
+    void StartChargeWindTrails();
+    void UpdateChargeWindTrails(float deltaTime);
+    void StopChargeWindTrails();
+    void SpawnChargeWindTrail(struct ChargeWindTrailRuntime& streak);
     void StopChargeAttackMovement();
     float GetChargeWindupEndTime() const { return chargeWindupEndTime; }
     float GetStunDuration() const { return stunDuration; }
@@ -807,6 +826,34 @@ private:
     Trail rightWeaponTrail;
     bool showLeftWeaponTrail = false;
     bool showRightWeaponTrail = false;
+
+
+    static constexpr size_t chargeWindTrailCount = 10;
+    std::array<ChargeWindTrailRuntime, chargeWindTrailCount> chargeWindTrails{};
+    bool chargeWindTrailsActive = false;
+    bool chargeWindTrailEnabled = true;
+    int chargeWindTrailActiveCount = static_cast<int>(chargeWindTrailCount);
+    DirectX::XMFLOAT3 chargeWindTrailColor{ 0.70f, 0.84f, 0.92f };
+    float chargeWindTrailEmissiveStrength = 1.5f;
+    float chargeWindTrailLifetimeMin = 0.35f;
+    float chargeWindTrailLifetimeMax = 0.5f;
+    float chargeWindTrailSpeedMin = 18.0f;
+    float chargeWindTrailSpeedMax = 24.0f;
+    float chargeWindTrailWidthMin = 0.15f;
+    float chargeWindTrailWidthMax = 0.3f;
+    float chargeWindTrailHeadWidthScale = 1.0f;
+    float chargeWindTrailTailWidthScale = 0.1f;
+    float chargeWindTrailLateralSpawnRange = 1.4f;
+    float chargeWindTrailHeightMin = 0.35f;
+    float chargeWindTrailHeightMax = 2.2f;
+    float chargeWindTrailForwardMin = -0.2f;
+    float chargeWindTrailForwardMax = 0.5f;
+    float chargeWindTrailLateralWobbleMin = 0.025f;
+    float chargeWindTrailLateralWobbleMax = 0.07f;
+    float chargeWindTrailVerticalWobbleMin = 0.015f;
+    float chargeWindTrailVerticalWobbleMax = 0.05f;
+    float chargeWindTrailWobbleFrequencyMin = 3.0f;
+    float chargeWindTrailWobbleFrequencyMax = 6.0f;
 
     // ?O???F
     DirectX::XMFLOAT3 bossTrailColor{ 0.0f, 0.13f, 0.002f };
@@ -2007,12 +2054,13 @@ struct WeaponHitBoxPoints
     std::vector<AnimationMotionWarp> animationMotionWarps;
 
 
-    // ?r?w?C?r?A?c???[
     std::unique_ptr<BehaviorTree>	aiTree = nullptr;
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;
     NodeBase* activeNode = nullptr;
     bool behaviorTreeFastComboEnabled = true;
-    bool forceBehaviorTreeCharge = false;
+    
+    bool forceBehaviorTreeCharge = true;
+
     CloseCombatSettings closeCombatSettings;
     bool showCloseCombatDebugRange = false;
     std::string behaviorTreeCurrentNode = "None";

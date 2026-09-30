@@ -428,6 +428,12 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightWeaponTrail.SetEmissiveStrength(bossTrailEmissiveStrength);
     leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
     rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
+    for (auto& streak : chargeWindTrails)
+    {
+        streak.trail.Initialize();
+        streak.trail.SetRushColorEnabled(true, chargeWindTrailColor);
+        streak.trail.SetEmissiveStrength(chargeWindTrailEmissiveStrength);
+    }
 
     //  ボスHP UI：名前 -> 背景 → 遅延塗りつぶし → 現在の塗りつぶし → フレーム。
     const DirectX::XMFLOAT2 hpNamePosition = { 980.0f, 85.0f };
@@ -2127,6 +2133,15 @@ void GruxEnemy::RenderTrail(ID3D11DeviceContext* immediateContext)
     rightWeaponTrail.SetEmissiveStrength(bossTrailEmissiveStrength);
     leftWeaponTrail.Render(immediateContext);
     rightWeaponTrail.Render(immediateContext);
+
+    for (auto& streak : chargeWindTrails)
+    {
+        if (!streak.active)
+            continue;
+        streak.trail.SetRushColorEnabled(true, chargeWindTrailColor);
+        streak.trail.SetEmissiveStrength(chargeWindTrailEmissiveStrength);
+        streak.trail.Render(immediateContext);
+    }
 }
 
 void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
@@ -2491,10 +2506,34 @@ void GruxEnemy::DrawPositioningDebugWorld() const
 //　ボスAIのImGui描画
 void GruxEnemy::DrawImGuiDetails()
 {
+    if (ImGui::CollapsingHeader(U8("突進風エフェクト")))
+    {
+        ImGui::Checkbox("Enable", &chargeWindTrailEnabled);
+        ImGui::DragInt("Trail Count", &chargeWindTrailActiveCount, 1.0f, 1, static_cast<int>(chargeWindTrailCount));
+        ImGui::DragFloat("Lifetime Min", &chargeWindTrailLifetimeMin, 0.01f, 0.01f, 5.0f, "%.2f sec"); ImGui::DragFloat("Lifetime Max", &chargeWindTrailLifetimeMax, 0.01f, 0.01f, 5.0f, "%.2f sec");
+        ImGui::DragFloat("Backward Speed Min", &chargeWindTrailSpeedMin, 0.1f, 0.0f, 100.0f); ImGui::DragFloat("Backward Speed Max", &chargeWindTrailSpeedMax, 0.1f, 0.0f, 100.0f);
+        ImGui::DragFloat("Width Min", &chargeWindTrailWidthMin, 0.005f, 0.001f, 5.0f); ImGui::DragFloat("Width Max", &chargeWindTrailWidthMax, 0.005f, 0.001f, 5.0f);
+        ImGui::DragFloat("Head Width Scale", &chargeWindTrailHeadWidthScale, 0.01f, 0.0f, 3.0f); ImGui::DragFloat("Tail Width Scale", &chargeWindTrailTailWidthScale, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("Lateral Range", &chargeWindTrailLateralSpawnRange, 0.01f, 0.0f, 10.0f); ImGui::DragFloat("Height Min", &chargeWindTrailHeightMin, 0.01f, -5.0f, 10.0f); ImGui::DragFloat("Height Max", &chargeWindTrailHeightMax, 0.01f, -5.0f, 10.0f);
+        ImGui::DragFloat("Forward Min", &chargeWindTrailForwardMin, 0.01f, -10.0f, 10.0f); ImGui::DragFloat("Forward Max", &chargeWindTrailForwardMax, 0.01f, -10.0f, 10.0f);
+        ImGui::DragFloat("Lateral Wobble Min", &chargeWindTrailLateralWobbleMin, 0.005f, 0.0f, 5.0f); ImGui::DragFloat("Lateral Wobble Max", &chargeWindTrailLateralWobbleMax, 0.005f, 0.0f, 5.0f);
+        ImGui::DragFloat("Vertical Wobble Min", &chargeWindTrailVerticalWobbleMin, 0.005f, 0.0f, 5.0f); ImGui::DragFloat("Vertical Wobble Max", &chargeWindTrailVerticalWobbleMax, 0.005f, 0.0f, 5.0f);
+        ImGui::DragFloat("Frequency Min", &chargeWindTrailWobbleFrequencyMin, 0.1f, 0.0f, 50.0f); ImGui::DragFloat("Frequency Max", &chargeWindTrailWobbleFrequencyMax, 0.1f, 0.0f, 50.0f);
+        ImGui::ColorEdit3("Color", &chargeWindTrailColor.x);
+        ImGui::DragFloat("Emissive", &chargeWindTrailEmissiveStrength, 0.05f, 0.0f, 30.0f);
+        chargeWindTrailActiveCount = std::clamp(chargeWindTrailActiveCount, 1, static_cast<int>(chargeWindTrailCount));
+        chargeWindTrailLifetimeMax = (std::max)(chargeWindTrailLifetimeMin, chargeWindTrailLifetimeMax); chargeWindTrailSpeedMax = (std::max)(chargeWindTrailSpeedMin, chargeWindTrailSpeedMax); chargeWindTrailWidthMax = (std::max)(chargeWindTrailWidthMin, chargeWindTrailWidthMax);
+        chargeWindTrailHeightMax = (std::max)(chargeWindTrailHeightMin, chargeWindTrailHeightMax); chargeWindTrailForwardMax = (std::max)(chargeWindTrailForwardMin, chargeWindTrailForwardMax);
+        chargeWindTrailLateralWobbleMax = (std::max)(chargeWindTrailLateralWobbleMin, chargeWindTrailLateralWobbleMax); chargeWindTrailVerticalWobbleMax = (std::max)(chargeWindTrailVerticalWobbleMin, chargeWindTrailVerticalWobbleMax); chargeWindTrailWobbleFrequencyMax = (std::max)(chargeWindTrailWobbleFrequencyMin, chargeWindTrailWobbleFrequencyMax);
+        if (!chargeWindTrailEnabled) StopChargeWindTrails();
+    }
+
     DrawChargeAttackBTDebug();
     DrawRoarBTDebug();
 #ifdef USE_IMGUI
     Character::DrawImGuiDetails();
+
+
 
     ImGui::SeparatorText("Weapon Emissive (Runtime Override)");
     bool weaponEmissiveChanged = false;
@@ -3777,6 +3816,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::Text(U8("4段目 Hit方向: %s"), fourthHitReactionDirection.c_str());
     ImGui::Text(U8("4段目 Hit方向 Dot: %.3f"), fourthHitReactionLastDirectionDot);
     ImGui::Text(U8("4段目 HitReact Animation: %s"), fourthHitReactionAnimation.c_str());
+
     if (fourthHitReactionHasLastRoll)
     {
         ImGui::Text(U8("4段目 HitReaction抽選値: %.3f"), fourthHitReactionLastRoll);
@@ -4108,6 +4148,7 @@ void GruxEnemy::DrawImGuiDetails()
             ImGui::PopID();
         }
         ImGui::SeparatorText("Charge Attack");
+
         ImGui::DragFloat("Charge Windup End Time", &chargeWindupEndTime,
             0.01f, 0.0f, 10.0f, "%.2f sec");
         ImGui::DragFloat(U8("突進ロックオン方向時間"), &chargeDirectionLockTime,
@@ -6671,6 +6712,7 @@ bool GruxEnemy::BeginChargeAttackMovement()
     chargeWallHitDistanceDebug = 0.0f;
     chargeEndReasonDebug = ChargeAttackEndReason::None;
     chargeMovementActive = true;
+    StartChargeWindTrails();
     if (characterMovementComponent)
     {
         characterMovementComponent->ClearBossRoomProbeChargeWallHitEvent();
@@ -6725,6 +6767,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     if (!chargeMovementActive)
         return chargeEndReasonDebug;
 
+    UpdateChargeWindTrails(deltaTime);
     chargeElapsedTime += (std::max)(0.0f, deltaTime);
     chargeCurrentPositionDebug = GetPosition();
     const float traveledX = chargeCurrentPositionDebug.x - chargeStartPositionDebug.x;
@@ -7071,8 +7114,174 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     return ChargeAttackEndReason::None;
 }
 
+void GruxEnemy::StartChargeWindTrails()
+{
+    if (!chargeWindTrailEnabled)
+    {
+        StopChargeWindTrails();
+        return;
+    }
+
+    chargeWindTrailsActive = true;
+    const size_t activeCount = static_cast<size_t>(std::clamp(
+        chargeWindTrailActiveCount, 1, static_cast<int>(chargeWindTrailCount)));
+    for (size_t index = 0; index < chargeWindTrails.size(); ++index)
+    {
+        auto& streak = chargeWindTrails[index];
+        if (index < activeCount)
+            SpawnChargeWindTrail(streak);
+        else
+        {
+            streak.active = false;
+            streak.trail.Clear();
+        }
+    }
+}
+
+void GruxEnemy::UpdateChargeWindTrails(float deltaTime)
+{
+    if (!chargeWindTrailsActive || !chargeMovementActive)
+        return;
+
+    const float safeDeltaTime = (std::max)(0.0f, deltaTime);
+    const float directionLength = std::sqrt(
+        chargeDirection.x * chargeDirection.x + chargeDirection.z * chargeDirection.z);
+    if (directionLength <= FLT_EPSILON)
+        return;
+
+    const DirectX::XMFLOAT3 forward{
+        chargeDirection.x / directionLength, 0.0f, chargeDirection.z / directionLength };
+    const DirectX::XMFLOAT3 right{ forward.z, 0.0f, -forward.x };
+
+    for (auto& streak : chargeWindTrails)
+    {
+        streak.trail.UpdateTrail(safeDeltaTime);
+        if (!streak.active || streak.age >= streak.lifetime)
+        {
+            SpawnChargeWindTrail(streak);
+            continue;
+        }
+
+        const float previousAge = streak.age;
+        streak.age += safeDeltaTime;
+        if (streak.age >= streak.lifetime)
+        {
+            SpawnChargeWindTrail(streak);
+            continue;
+        }
+
+        const float previousPhase = streak.randomPhase + previousAge * streak.wobbleFrequency;
+        const float currentPhase = streak.randomPhase + streak.age * streak.wobbleFrequency;
+        const float lateralDelta = (std::sin(currentPhase) - std::sin(previousPhase)) *
+            streak.lateralWobbleAmplitude;
+        const float verticalDelta = (std::cos(currentPhase) - std::cos(previousPhase)) *
+            streak.verticalWobbleAmplitude;
+        streak.center.x += streak.backwardVelocity.x * safeDeltaTime + right.x * lateralDelta;
+        streak.center.y += streak.backwardVelocity.y * safeDeltaTime + verticalDelta;
+        streak.center.z += streak.backwardVelocity.z * safeDeltaTime + right.z * lateralDelta;
+
+        const float widthScale = std::lerp(chargeWindTrailHeadWidthScale, chargeWindTrailTailWidthScale, std::clamp(streak.age / streak.lifetime, 0.0f, 1.0f));
+        const float halfWidth = streak.width * widthScale * 0.5f;
+        const DirectX::XMFLOAT3 tip{
+            streak.center.x + right.x * halfWidth,
+            streak.center.y,
+            streak.center.z + right.z * halfWidth };
+        const DirectX::XMFLOAT3 root{
+            streak.center.x - right.x * halfWidth,
+            streak.center.y,
+            streak.center.z - right.z * halfWidth };
+        streak.trail.trailPoints.push_back({ tip, root, streak.lifetime });
+    }
+}
+
+void GruxEnemy::StopChargeWindTrails()
+{
+    chargeWindTrailsActive = false;
+    for (auto& streak : chargeWindTrails)
+    {
+        streak.active = false;
+        streak.age = 0.0f;
+        streak.lifetime = 0.0f;
+        streak.trail.Clear();
+    }
+}
+
+void GruxEnemy::SpawnChargeWindTrail(ChargeWindTrailRuntime& streak)
+{
+    const float directionLength = std::sqrt(
+        chargeDirection.x * chargeDirection.x + chargeDirection.z * chargeDirection.z);
+    if (directionLength <= FLT_EPSILON)
+    {
+        streak.active = false;
+        streak.trail.Clear();
+        return;
+    }
+
+    const DirectX::XMFLOAT3 forward{
+        chargeDirection.x / directionLength, 0.0f, chargeDirection.z / directionLength };
+    const DirectX::XMFLOAT3 right{ forward.z, 0.0f, -forward.x };
+    const float lateralSpawn = MathHelper::RandomRange(-chargeWindTrailLateralSpawnRange, chargeWindTrailLateralSpawnRange);
+    const float verticalSpawn = MathHelper::RandomRange(chargeWindTrailHeightMin, chargeWindTrailHeightMax);
+    const float forwardSpawn = MathHelper::RandomRange(chargeWindTrailForwardMin, chargeWindTrailForwardMax);
+
+    streak.trail.Clear();
+    streak.active = true;
+    streak.age = 0.0f;
+    streak.lifetime = MathHelper::RandomRange(chargeWindTrailLifetimeMin, chargeWindTrailLifetimeMax);
+    streak.width = MathHelper::RandomRange(chargeWindTrailWidthMin, chargeWindTrailWidthMax);
+    streak.lateralWobbleAmplitude = MathHelper::RandomRange(
+        chargeWindTrailLateralWobbleMin, chargeWindTrailLateralWobbleMax);
+    streak.verticalWobbleAmplitude = MathHelper::RandomRange(
+        chargeWindTrailVerticalWobbleMin, chargeWindTrailVerticalWobbleMax);
+    streak.wobbleFrequency = MathHelper::RandomRange(
+        chargeWindTrailWobbleFrequencyMin, chargeWindTrailWobbleFrequencyMax);
+    streak.randomPhase = MathHelper::RandomRange(0.0f, DirectX::XM_2PI);
+    const float backwardSpeed = MathHelper::RandomRange(chargeWindTrailSpeedMin, chargeWindTrailSpeedMax);
+    streak.backwardVelocity = { -forward.x * backwardSpeed, 0.0f, -forward.z * backwardSpeed };
+
+    DirectX::XMFLOAT3 pos = GetPosition();
+    streak.center = {
+        pos.x + right.x * lateralSpawn + forward.x * forwardSpawn,
+        pos.y + verticalSpawn,
+        pos.z + right.z * lateralSpawn + forward.z * forwardSpawn };
+
+    const float initialLateral = std::sin(streak.randomPhase) * streak.lateralWobbleAmplitude;
+    const float initialVertical = std::cos(streak.randomPhase) * streak.verticalWobbleAmplitude;
+    streak.center.x += right.x * initialLateral;
+    streak.center.y += initialVertical;
+    streak.center.z += right.z * initialLateral;
+    streak.trail.SetFadeLifetime(streak.lifetime);
+
+    constexpr float seedStep = 0.0125f;
+    for (int pointIndex = 3; pointIndex >= 0; --pointIndex)
+    {
+        const float sampleAge = -seedStep * static_cast<float>(pointIndex);
+        const float samplePhase = streak.randomPhase + sampleAge * streak.wobbleFrequency;
+        const float lateralOffset = (std::sin(samplePhase) - std::sin(streak.randomPhase)) *
+            streak.lateralWobbleAmplitude;
+        const float verticalOffset = (std::cos(samplePhase) - std::cos(streak.randomPhase)) *
+            streak.verticalWobbleAmplitude;
+        const DirectX::XMFLOAT3 sampleCenter{
+            streak.center.x + streak.backwardVelocity.x * sampleAge + right.x * lateralOffset,
+            streak.center.y + verticalOffset,
+            streak.center.z + streak.backwardVelocity.z * sampleAge + right.z * lateralOffset };
+        const float widthScale = std::lerp(chargeWindTrailHeadWidthScale, chargeWindTrailTailWidthScale, static_cast<float>(pointIndex) / 3.0f);
+        const float halfWidth = streak.width * widthScale * 0.5f;
+        const DirectX::XMFLOAT3 tip{
+            sampleCenter.x + right.x * halfWidth,
+            sampleCenter.y,
+            sampleCenter.z + right.z * halfWidth };
+        const DirectX::XMFLOAT3 root{
+            sampleCenter.x - right.x * halfWidth,
+            sampleCenter.y,
+            sampleCenter.z - right.z * halfWidth };
+        streak.trail.trailPoints.push_back({ tip, root, streak.lifetime });
+    }
+}
+
 void GruxEnemy::StopChargeAttackMovement()
 {
+    StopChargeWindTrails();
     if (characterMovementComponent)
         characterMovementComponent->SetBossRoomProbeChargeWallHitArmed(false);
     chargeMovementActive = false;

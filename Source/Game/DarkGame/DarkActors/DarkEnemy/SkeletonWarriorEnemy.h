@@ -14,9 +14,7 @@ private:
 
 public:
     explicit SkeletonWarriorActor(const std::string& actorName) :Enemy(actorName) {}
-
     void Initialize(const Transform& transform)override;
-
     void Update(float elapsedTime)override;
     void DrawImGuiDetails() override;
     void OnAnimationNotifyBegin(const AnimationNotifyState& state) override;
