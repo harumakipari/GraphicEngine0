@@ -655,6 +655,7 @@ private:
     float weaponTelegraphFadeOutDuration = 0.15f;
 
     void ResetBehaviorTreeRuntime();
+    void LogInterruptedChargeRecoveryEvent(const char* event, const char* attack = nullptr);
     void BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePosition);
     void EndFourthHitReaction();
     void ResetFourthHitReactionDebug();
@@ -877,6 +878,17 @@ private:
     bool rushHpDisplayActive = false;
     // Holds only the Grux whose active Charge was cancelled by Player Rush.
     bool rushCombatHoldActive = false;
+    // Charge was cancelled safely; after Rush ends, wait using the existing
+    // Charge Just Dodge recovery setting before allowing a new BT inference.
+    bool interruptedChargeRecoveryPending = false;
+    bool interruptedChargeRecoveryActive = false;
+    float interruptedChargeRecoveryTimer = 0.0f;
+    float interruptedChargeRecoveryDuration = 0.0f;
+    // Debug-only monotonic simulation stamp used by ChargeRecovery Gameplay logs.
+    uint64_t interruptedChargeRecoveryLogFrame = 0;
+    float interruptedChargeRecoveryLogGameTime = 0.0f;
+    bool interruptedChargeRecoveryRootResumeLogPending = false;
+    bool interruptedChargeRecoveryNextAttackLogPending = false;
     bool useRushDelayedHpFollowSpeed = false;
     float delayedHp = 0.0f;
     float delayedHpDelayTimer = 0.0f;
@@ -1802,7 +1814,7 @@ private:
     float chargePlayerCastRadiusScalePhase2 = 1.5f;
     // ChargeçUåÇéûÇÃÉWÉÉÉXÉgâÒîÇÃîªíË
     float chargeJustDodgeCastRadiusScale = 1.8f;
-    float chargeJustDodgeCastRadiusScalePhase2 = 2.5f;
+    float chargeJustDodgeCastRadiusScalePhase2 = 2.8f;
     int chargeDamagePhase2 = 10;
     float chargeWallCastRadiusScale = 0.3f;
     float chargeStartValidationClearance = 0.05f;
@@ -1867,7 +1879,7 @@ private:
 
     // Recovery???J???????x?????????l???Duration?B
     float chargePlayerHitRecoveryDuration = 0.8f;   // ??Dash?U????Player?????????????recovery????
-    float chargeJustDodgeRecoveryDuration = 1.0f;   // ??Dash?U???~W???X?g??????????recovery????
+    float chargeJustDodgeRecoveryDuration = 2.0f;   // ??Dash?U???~W???X?g??????????recovery????
     float postStunRecoveryDuration = 0.1f;  // ??Dash?U?????????????????recovery????
     std::optional<float> nextRecoveryDuration;
     std::string nextRecoverySource = "Default";

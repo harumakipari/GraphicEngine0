@@ -1280,6 +1280,14 @@ void GruxEnemy::NotifyPlayerRushStarted(Player* player)
         return;
 
     rushCombatHoldActive = true;
+    // Capture the existing Charge Just Dodge recovery value before Cleanup
+    // discards the Charge BT runtime. The timer itself starts only after Rush.
+    interruptedChargeRecoveryPending = true;
+    interruptedChargeRecoveryActive = false;
+    interruptedChargeRecoveryTimer = 0.0f;
+    interruptedChargeRecoveryDuration = GetChargeJustDodgeRecoveryDuration();
+    interruptedChargeRecoveryRootResumeLogPending = false;
+    interruptedChargeRecoveryNextAttackLogPending = false;
     debugLastChargeAbortReason = "RushStarted";
     Logger::Log(Logger::LogCategory::Gameplay,
         "[BossCharge][Abort] reason=RushStarted");
@@ -1303,8 +1311,17 @@ void GruxEnemy::NotifyPlayerRushEnded(Player* player)
         return;
 
     // PlayerRushState::Exit is invoked for every StateMachine transition away
-    // from Rush. The next normal Grux update will infer the BT Root again.
+    // from Rush. Start Charge recovery on the next normal Grux update; Rush time
+    // is deliberately not counted as recovery time.
     rushCombatHoldActive = false;
+    LogInterruptedChargeRecoveryEvent("RushEnded");
+    if (interruptedChargeRecoveryPending)
+    {
+        interruptedChargeRecoveryPending = false;
+        interruptedChargeRecoveryActive = true;
+        interruptedChargeRecoveryTimer = 0.0f;
+        LogInterruptedChargeRecoveryEvent("Started");
+    }
 }
 
 bool GruxEnemy::ShouldAbortChargeAttackBT()

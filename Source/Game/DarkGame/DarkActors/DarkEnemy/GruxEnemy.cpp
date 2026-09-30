@@ -1091,6 +1091,12 @@ void GruxEnemy::ResetWeaponTelegraphRimLight()
 void GruxEnemy::StopBattleActions()
 {
     rushCombatHoldActive = false;
+    interruptedChargeRecoveryPending = false;
+    interruptedChargeRecoveryActive = false;
+    interruptedChargeRecoveryTimer = 0.0f;
+    interruptedChargeRecoveryDuration = 0.0f;
+    interruptedChargeRecoveryRootResumeLogPending = false;
+    interruptedChargeRecoveryNextAttackLogPending = false;
     ResetWeaponTelegraphRimLight();
     HideDashTelegraphVisual();
     HideRoarTelegraph();
@@ -1271,6 +1277,12 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     dashAttackElapsedTime = 0.0f;
 
     dashAttackMovementActive = false;
+    interruptedChargeRecoveryPending = false;
+    interruptedChargeRecoveryActive = false;
+    interruptedChargeRecoveryTimer = 0.0f;
+    interruptedChargeRecoveryDuration = 0.0f;
+    interruptedChargeRecoveryRootResumeLogPending = false;
+    interruptedChargeRecoveryNextAttackLogPending = false;
     chargeBT = {};
     chargeMovementActive = false;
     chargeDangerWindowActive = false;
@@ -1484,8 +1496,28 @@ void GruxEnemy::EndFinalHitReaction()
     finalHitReactionActive = false;
 }
 
+void GruxEnemy::LogInterruptedChargeRecoveryEvent(const char* event, const char* attack)
+{
+    std::string message = std::string("[ChargeRecovery] ") + (event ? event : "Unknown") +
+        " frame=" + std::to_string(interruptedChargeRecoveryLogFrame) +
+        " gameTime=" + std::to_string(interruptedChargeRecoveryLogGameTime) +
+        " interruptedChargeRecoveryActive=" + (interruptedChargeRecoveryActive ? "true" : "false") +
+        " interruptedChargeRecoveryTimer=" + std::to_string(interruptedChargeRecoveryTimer) +
+        " chargeJustDodgeRecoveryDuration=" + std::to_string(GetChargeJustDodgeRecoveryDuration()) +
+        " rushCombatHoldActive=" + (rushCombatHoldActive ? "true" : "false");
+    if (event && std::strcmp(event, "Started") == 0)
+        message += " duration=" + std::to_string(interruptedChargeRecoveryDuration);
+    if (event && std::strcmp(event, "Finished") == 0)
+        message += " elapsed=" + std::to_string(interruptedChargeRecoveryTimer);
+    if (attack)
+        message += " attack=" + std::string(attack);
+    Logger::Log(Logger::LogCategory::Gameplay, message);
+}
+
 void GruxEnemy::Update(float deltaTime)
 {
+    ++interruptedChargeRecoveryLogFrame;
+    interruptedChargeRecoveryLogGameTime += (std::max)(0.0f, deltaTime);
     UpdateRoarImpactDebris(Time::DeltaTime());
     UpdatePhase2TextureBlendWorldYRange();
     ++animationDebugFrameCounter;
@@ -1617,6 +1649,41 @@ void GruxEnemy::Update(float deltaTime)
         UpdateJumpTelegraphImpactFlash(deltaTime);
         UpdateDashTelegraphVisual(deltaTime);
         return;
+    }
+
+    // The cancelled Charge has no live BT runtime to resume. Keep the Rush
+    // exposed pose and suppress all AI/BT work until its existing Just Dodge
+    // recovery duration has elapsed after Rush actually ended.
+    if (interruptedChargeRecoveryActive)
+    {
+        StopAIMovement();
+        interruptedChargeRecoveryTimer += (std::max)(0.0f, deltaTime);
+        UpdateRecoveryDebug(interruptedChargeRecoveryTimer, interruptedChargeRecoveryDuration);
+        recoverySourceDebug = "InterruptedCharge";
+        auto savedStateMachine = stateMachine_;
+        stateMachine_.reset();
+        Character::Update(deltaTime);
+        stateMachine_ = savedStateMachine;
+        UpdateWeaponTelegraphRimLight(deltaTime);
+        UpdateJumpTelegraphImpactFlash(deltaTime);
+        UpdateDashTelegraphVisual(deltaTime);
+        if (interruptedChargeRecoveryTimer >= interruptedChargeRecoveryDuration)
+        {
+            LogInterruptedChargeRecoveryEvent("Finished");
+            interruptedChargeRecoveryActive = false;
+            interruptedChargeRecoveryTimer = 0.0f;
+            interruptedChargeRecoveryDuration = 0.0f;
+            interruptedChargeRecoveryRootResumeLogPending = true;
+            interruptedChargeRecoveryNextAttackLogPending = true;
+        }
+        // Root inference starts next frame, never in the timer-completion frame.
+        return;
+    }
+
+    if (interruptedChargeRecoveryRootResumeLogPending)
+    {
+        interruptedChargeRecoveryRootResumeLogPending = false;
+        LogInterruptedChargeRecoveryEvent("BTRootResumed");
     }
 
     BeginRotationDebugFrame();
@@ -5855,6 +5922,26 @@ void GruxEnemy::RequestJumpAttackCameraAssist()
 
 void GruxEnemy::OnSelectedActionStartedSuccessfully()
 {
+    if (interruptedChargeRecoveryNextAttackLogPending)
+    {
+        interruptedChargeRecoveryNextAttackLogPending = false;
+        const char* attack = "Unknown";
+        switch (selectedActionType)
+        {
+        case BossActionType::AttackLA: attack = "AttackLA"; break;
+        case BossActionType::AttackRA: attack = "AttackRA"; break;
+        case BossActionType::FastCombo: attack = "FastCombo"; break;
+        case BossActionType::JumpAttack: attack = "JumpAttack"; break;
+        case BossActionType::DashAttack: attack = "DashAttack"; break;
+        case BossActionType::ChargeAttack: attack = "ChargeAttack"; break;
+        case BossActionType::Approach: attack = "Approach"; break;
+        case BossActionType::Retreat: attack = "Retreat"; break;
+        case BossActionType::RepositionLeft: attack = "RepositionLeft"; break;
+        case BossActionType::RepositionRight: attack = "RepositionRight"; break;
+        }
+        LogInterruptedChargeRecoveryEvent("NextAttackStarted", attack);
+    }
+
     if (bossAIMode == BossAIMode::CombatAI &&
         IsRepeatPenaltyCombatAttack(selectedActionType))
     {

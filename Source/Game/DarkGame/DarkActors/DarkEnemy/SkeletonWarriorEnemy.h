@@ -6,21 +6,6 @@
 
 class ParticleComponent;
 
-class SwordActor : public Actor
-{
-public:
-    void Initialize(const Transform& transform) override
-    {
-    }
-};
-
-class ShieldActor : public Actor
-{
-public:
-    void Initialize(const Transform& transform) override
-    {
-    }
-};
 
 class SkeletonWarriorActor :public Enemy
 {

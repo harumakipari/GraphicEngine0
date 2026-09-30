@@ -588,6 +588,9 @@ void Player::UpdateWeaponVisualPresentation(const float deltaTime)
 }
 void Player::Update(float deltaTime)
 {
+    ++initialRushInputTraceFrame;
+    initialRushInputTraceGameTime += (std::max)(0.0f, deltaTime);
+    initialRushInputTraceUnscaledTime += (std::max)(0.0f, Time::UnscaledDeltaTime());
     using namespace DirectX;
 
     // Just Dodge SlowÇ‚HitStopÇÃâeãøÇéÛÇØÇ»Ç¢é¿éûä‘FadeÅB
@@ -1766,6 +1769,8 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::TransitionWindow:
         transitionWindow = true;
+        if (initialRushInputTraceActive)
+            LogInitialRushInputTrace("TransitionWindowReached");
         Logger::Log(U8("ëJà⁄ãñâ¬ãÊä‘ÇäJénÇµÇ‹ÇµÇΩ"));
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
@@ -3906,6 +3911,45 @@ bool Player::IsRushOpportunityActive() const
     return (stateName == "Dodge" && justDodgeSuccess) || stateName == "Rush";
 }
 
+void Player::LogInitialRushInputTrace(const char* event, const char* detail)
+{
+    const auto controller = GetBodyAnimationController();
+    const float animationTime = controller ? controller->GetCurrentAnimationTime() : -1.0f;
+    const float effectivePlaybackRate = controller ? controller->GetLastEffectivePlaybackRateDebug() : 0.0f;
+    float transitionStartTime = -1.0f;
+    if (controller)
+    {
+        if (const auto asset = controller->GetAnimationAsset(controller->GetCurrentAnimationName()))
+        {
+            for (const auto& state : asset->notifyTrack.states)
+            {
+                if (state.type == AnimationNotifyState::Type::TransitionWindow)
+                {
+                    transitionStartTime = state.startTime;
+                    break;
+                }
+            }
+        }
+    }
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[InitialRushInput] {} frame={} gameTime={:.6f} unscaledGameTime={:.6f} elapsedGame={:.6f} elapsedUnscaled={:.6f} animationTime={:.6f} effectivePlaybackRate={:.6f} actorTimeScale={:.6f} effectiveAnimationRate={:.6f} rushInputAccepting={} rushRequested={} justDodgeSuccess={} transitionWindowStart={:.6f} detail={}",
+        event ? event : "Unknown",
+        initialRushInputTraceFrame,
+        initialRushInputTraceGameTime,
+        initialRushInputTraceUnscaledTime,
+        initialRushInputTraceGameTime - initialRushInputTraceStartGameTime,
+        initialRushInputTraceUnscaledTime - initialRushInputTraceStartUnscaledTime,
+        animationTime,
+        effectivePlaybackRate,
+        GetTimeScale(),
+        effectivePlaybackRate * GetTimeScale(),
+        rushInputAccepting,
+        rushRequestedDebug,
+        justDodgeSuccess,
+        transitionStartTime,
+        detail ? detail : "None"));
+}
+
 void Player::SetRushInputAcceptance(bool accepting, const char* endReason)
 {
     if (accepting)
@@ -3923,6 +3967,18 @@ void Player::SetRushInputAcceptance(bool accepting, const char* endReason)
     }
 
     rushInputAccepting = accepting;
+    if (initialRushInputTraceActive)
+        LogInitialRushInputTrace(accepting ? "InputAcceptanceOn" : "InputAcceptanceOff", endReason);
+    if (!accepting && endReason &&
+        (std::strcmp(endReason, "TransitionWithoutRush") == 0 ||
+            std::strcmp(endReason, "DodgeFinished") == 0 ||
+            std::strcmp(endReason, "RushTargetExpired") == 0 ||
+            std::strcmp(endReason, "Damage") == 0 ||
+            std::strcmp(endReason, "KnockBack") == 0 ||
+            std::strcmp(endReason, "Death") == 0))
+    {
+        initialRushInputTraceActive = false;
+    }
     if (accepting)
     {
         rushPromptAlpha = 0.0f;
@@ -4405,6 +4461,11 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
         BeginPlayerSlowReturn();
         BeginBossSlowReturn();
     }
+
+    initialRushInputTraceActive = true;
+    initialRushInputTraceStartGameTime = initialRushInputTraceGameTime;
+    initialRushInputTraceStartUnscaledTime = initialRushInputTraceUnscaledTime;
+    LogInitialRushInputTrace("JustDodgeSuccess");
 
     // âÊñ ÇÃêFÇïœÇ¶ÇÈ
 

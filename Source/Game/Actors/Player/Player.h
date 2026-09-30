@@ -341,6 +341,7 @@ public:
     bool IsRushOpportunityActive() const;
     void SetRushInputAcceptance(bool accepting, const char* endReason = nullptr);
     void SetRushInputDebugState(bool judgeSuccess, bool rushRequested);
+    void LogInitialRushInputTrace(const char* event, const char* detail = nullptr);
 
     // Player/Bossの解除タイミングを独立して管理する。
     void BeginPlayerSlowReturn();
@@ -502,6 +503,13 @@ public:
     };
 
     bool rushInputAccepting = false;
+    // Diagnostic-only clock and state for measuring the initial Just Dodge -> Rush input window.
+    bool initialRushInputTraceActive = false;
+    uint64_t initialRushInputTraceFrame = 0;
+    float initialRushInputTraceGameTime = 0.0f;
+    float initialRushInputTraceUnscaledTime = 0.0f;
+    float initialRushInputTraceStartGameTime = 0.0f;
+    float initialRushInputTraceStartUnscaledTime = 0.0f;
     bool finalHitRushFollowUpStopRequested = false;
     bool finalHitVisualPoseLatchRequested = false;
     bool finalHitAttackDrainActive = false;
@@ -788,14 +796,14 @@ private:
     float playerSlowReturnElapsed = 0.0f;
     float bossSlowReturnElapsed = 0.0f;
 
-
+    // ジャスト回避時のスローの調整
     float playerSlowReturnStartScale = 1.0f;
     float bossSlowReturnStartScale = 1.0f;
     float activeBossSlowReturnDuration = 0.10f;
-    float justDodgeTimeScale = 0.2f;    // ジャスト回避のタイムスケール
-    float justDodgeSlowHoldDuration = 1.0f;     // ジャスト回避の時間
+    float justDodgeTimeScale = 0.15f;    // ジャスト回避のタイムスケール
+    float justDodgeSlowHoldDuration = 1.3f;     // ジャスト回避の時間
     float justDodgeSlowReturnDuration = 0.10f;
-    float rushBossSlowScale = 0.2f;
+    float rushBossSlowScale = 0.10f;
     float rushBossReturnDuration = 0.10f;
 
     // プレイヤーの壁に近づいた時の透明度

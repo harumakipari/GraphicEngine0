@@ -343,6 +343,7 @@ void PlayerDodgeState::Execute(float deltaTime)
         {
             rushRequested = true;
             player->SetRushInputDebugState(judgeSuccess, rushRequested);
+            player->LogInitialRushInputTrace("AttackInputAccepted");
             player->SetRushInputAcceptance(false);
             player->BeginPlayerSlowReturn();
             player->HoldBossSlowForRush();
@@ -572,6 +573,11 @@ void PlayerWinState::Exit()
 // ƒ‰ƒbƒVƒ…
 void PlayerRushState::Enter()
 {
+    if (player->initialRushInputTraceActive)
+    {
+        player->LogInitialRushInputTrace("RushStateEntered");
+        player->initialRushInputTraceActive = false;
+    }
     rushHpDisplayTarget.reset();
     player->SetRushWeaponVisual(true);
     player->ForceResetPlayerSlow();
