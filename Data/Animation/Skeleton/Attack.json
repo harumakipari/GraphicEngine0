@@ -22,35 +22,6 @@
     },
     "states": [
         {
-            "endTime": 0.76,
-            "hitBoxOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "hitBoxRadius": 0.5,
-            "justDodgeAreaOffset": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "justDodgeAreaSize": [
-                0.0,
-                2.0,
-                0.0
-            ],
-            "moveDirection": [
-                0.0,
-                0.0,
-                0.0
-            ],
-            "moveDistance": 0.0,
-            "parameter": "",
-            "startTime": 0.42,
-            "type": "HitBox",
-            "value": 1.0
-        },
-        {
             "endTime": 0.5969784259796143,
             "hitBoxOffset": [
                 0.0,
@@ -75,8 +46,37 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.10714253783226013,
+            "startTime": 0.27724558115005493,
             "type": "DangerWindow",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.7599999904632568,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "hitBoxRadius": 0.5,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                2.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.41999998688697815,
+            "type": "HitBox",
             "value": 1.0
         }
     ]

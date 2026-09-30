@@ -284,6 +284,10 @@ bool GruxEnemy::BeginTripleChargeLeg()
     chargeBT.tripleBeginTripleChargeLegCalled = true;
     chargeBT.tripleBeginTripleChargeLegResult = false;
     chargeBT.tripleBeginChargeMovementResult = false;
+    // A triple Charge is one attack sequence, but each leg owns its own dodge and
+    // damage eligibility. Keep the sequence id while resetting per-leg records.
+    ResetJustDodgeRecords("triple_charge_leg_start");
+    hitActors.clear();
     HideChargeTelegraphVisual();
     const bool movementStarted = BeginChargeAttackMovement();
     chargeBT.tripleBeginChargeMovementResult = movementStarted;
@@ -1268,6 +1272,41 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
     return ChargeBTStepResult::Complete;
 }
 
+void GruxEnemy::NotifyPlayerRushStarted(Player* player)
+{
+    // PlayerRushState::Enter calls this only after it locks Player's rushTarget
+    // to this Grux. Charge execution is the remaining cancellation guard.
+    if (!player || !IsChargeAttackBTActive())
+        return;
+
+    rushCombatHoldActive = true;
+    debugLastChargeAbortReason = "RushStarted";
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[BossCharge][Abort] reason=RushStarted");
+
+    // Cleanup owns Charge movement, danger/hit boxes, telegraph and triple-leg
+    // runtime. ResetBehaviorTreeRuntime is the existing formal route back to Root.
+    CleanupChargeAttackBT();
+    // Rush is a visual hold, not a WallHit Stun: keep a dedicated exposed pose
+    // while the Rush hold detaches Grux AI/state updates.
+    PlayBodyAnimation("Stun_Idle", true, true, 0.15f, true,
+        "GruxEnemy::NotifyPlayerRushStarted");
+    ResetBehaviorTreeRuntime();
+    behaviorTreeCurrentNode = "None";
+    behaviorTreePreviousNode = "None";
+    behaviorTreeLastResult = "None";
+}
+
+void GruxEnemy::NotifyPlayerRushEnded(Player* player)
+{
+    if (!player)
+        return;
+
+    // PlayerRushState::Exit is invoked for every StateMachine transition away
+    // from Rush. The next normal Grux update will infer the BT Root again.
+    rushCombatHoldActive = false;
+}
+
 bool GruxEnemy::ShouldAbortChargeAttackBT()
 {
     debugAbortBehaviorTreeDisabled = !behaviorTreeFastComboEnabled;
@@ -1300,7 +1339,7 @@ void GruxEnemy::CleanupChargeAttackBT()
     const float tripleMaxDuration = chargeBT.tripleChargeLegMaxDuration;
     const float tripleTransitionDuration = chargeBT.tripleChargeTransitionDuration;
     const float tripleStunMultiplier = chargeBT.tripleWallStunDurationMultiplier;
-    const bool preserveAnimation = IsDead() || finalHitReactionActive || finalHitReactionHeld ||
+    const bool preserveAnimation = rushCombatHoldActive || IsDead() || finalHitReactionActive || finalHitReactionHeld ||
         IsAnimationEditorPreviewActive() || (stateMachine_ && stateMachine_->GetStateName() != chargeBT.initialStateName);
     if (!preserveAnimation) EndPositioningAnimation();
     positioningAnimationMoving = false;
@@ -1411,13 +1450,20 @@ void GruxEnemy::DrawChargeAttackBTDebug()
         0.01f, 0.1f, 2.0f, "%.2f");
     ImGui::DragFloat(U8("第二形態時突進当たり判定"), &chargePlayerCastRadiusScalePhase2,
         0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::DragFloat(U8("第一形態時Charge Just Dodge判定"), &chargeJustDodgeCastRadiusScale,
+        0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::DragFloat(U8("第二形態時Charge Just Dodge判定"), &chargeJustDodgeCastRadiusScalePhase2,
+        0.01f, 0.1f, 5.0f, "%.2f");
     ImGui::DragFloat("Charge Wall Cast Radius Scale", &chargeWallCastRadiusScale,
         0.01f, 0.1f, 2.0f, "%.2f");
     chargePlayerCastRadiusScalePhase2 = std::clamp(chargePlayerCastRadiusScalePhase2, 0.1f, 2.0f);
+    chargeJustDodgeCastRadiusScale = std::clamp(chargeJustDodgeCastRadiusScale, 0.1f, 2.0f);
+    chargeJustDodgeCastRadiusScalePhase2 = std::clamp(chargeJustDodgeCastRadiusScalePhase2, 0.1f, 5.0f);
     ImGui::Checkbox("Show Charge Cast Debug", &showChargeCastDebug);
     if (showChargeCastDebug)
     {
         ImGui::Checkbox("Show Player Cast", &showPlayerCastDebug);
+        ImGui::Checkbox("Show Just Dodge Cast", &showJustDodgeCastDebug);
         ImGui::Checkbox("Show Wall Cast", &showWallCastDebug);
     }
 

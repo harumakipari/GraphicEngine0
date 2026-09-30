@@ -1090,6 +1090,7 @@ void GruxEnemy::ResetWeaponTelegraphRimLight()
 }
 void GruxEnemy::StopBattleActions()
 {
+    rushCombatHoldActive = false;
     ResetWeaponTelegraphRimLight();
     HideDashTelegraphVisual();
     HideRoarTelegraph();
@@ -1601,6 +1602,22 @@ void GruxEnemy::Update(float deltaTime)
 
     if (!IsAnimationEditorPreviewActive())
         UpdateActionCooldowns(deltaTime);
+
+    // Rush cancels only Charge, then holds this Grux's AI until PlayerRushState::Exit.
+    // Keep the regular Character/animation update, but detach the StateMachine so
+    // neither it nor the Behavior Tree can start a new combat action during Rush.
+    if (rushCombatHoldActive)
+    {
+        StopAIMovement();
+        auto savedStateMachine = stateMachine_;
+        stateMachine_.reset();
+        Character::Update(deltaTime);
+        stateMachine_ = savedStateMachine;
+        UpdateWeaponTelegraphRimLight(deltaTime);
+        UpdateJumpTelegraphImpactFlash(deltaTime);
+        UpdateDashTelegraphVisual(deltaTime);
+        return;
+    }
 
     BeginRotationDebugFrame();
 
@@ -4075,7 +4092,8 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::Text("Charge Start Validation: %s",
             chargeStartValidationValidDebug ? "Valid" : "Invalid");
         ImGui::Text("Charge Start Clearance: %.3f", chargeStartClearanceDebug);
-        ImGui::Text("Charge Player Cast Radius: %.3f", chargePlayerCastRadiusDebug);
+        ImGui::Text("Charge Damage Cast Radius: %.3f", chargePlayerCastRadiusDebug);
+        ImGui::Text("Charge Just Dodge Cast Radius: %.3f", chargeJustDodgeCastRadiusDebug);
         ImGui::Text("Charge Wall Cast Radius: %.3f", chargeWallCastRadiusDebug);
         ImGui::Text("Charge Start Failure Reason: %s",
             chargeStartFailureReasonDebug.c_str());
@@ -4085,9 +4103,13 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::Text("Charge Elapsed Time: %.3f sec", chargeElapsedTime);
         const float activeChargeCastRadius = (std::max)(0.05f,
             radius * GetActiveChargePlayerCastRadiusScale());
+        const float activeChargeJustDodgeCastRadius = (std::max)(0.05f, radius *
+            (chargeBT.phase2SettingsLatched ? chargeJustDodgeCastRadiusScalePhase2 : chargeJustDodgeCastRadiusScale));
         ImGui::Text("Charge Speed (Active Setting): %.3f", GetActiveChargeSpeed());
-        ImGui::Text("Charge Player Cast Radius / Width: %.3f / %.3f m",
+        ImGui::Text("Charge Damage Cast Radius / Width: %.3f / %.3f m",
             activeChargeCastRadius, activeChargeCastRadius * 2.0f);
+        ImGui::Text("Charge Just Dodge Cast Radius / Width: %.3f / %.3f m",
+            activeChargeJustDodgeCastRadius, activeChargeJustDodgeCastRadius * 2.0f);
         ImGui::Text("Charge Damage (Active Setting): %d", GetActiveChargeDamage());
         ImGui::Text("DangerWindow Active: %s",
             chargeDangerWindowActive ? "YES" : "NO");
@@ -6679,8 +6701,12 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     const float frameMoveDistance = GetActiveChargeSpeed() * (std::max)(0.0f, deltaTime);
     const float castDistance = frameMoveDistance + chargeWallCastSafetyMargin;
     const float playerCastRadius = (std::max)(0.05f, radius * GetActiveChargePlayerCastRadiusScale());
+    const float justDodgeCastScale = chargeBT.phase2SettingsLatched
+        ? chargeJustDodgeCastRadiusScalePhase2 : chargeJustDodgeCastRadiusScale;
+    const float justDodgeCastRadius = (std::max)(0.05f, radius * justDodgeCastScale);
     const float wallCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
     chargePlayerCastRadiusDebug = playerCastRadius;
+    chargeJustDodgeCastRadiusDebug = justDodgeCastRadius;
     chargeWallCastRadiusDebug = wallCastRadius;
     DirectX::XMFLOAT3 castOrigin = GetPosition();
     castOrigin.y += (std::max)((std::max)(playerCastRadius, wallCastRadius) + 0.05f, height * 0.5f);
@@ -6688,6 +6714,10 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     HitResultWithActor playerHit{};
     const bool playerCastHit = Physics::Instance().SphereCast(
         castOrigin, chargeDirection, castDistance, playerCastRadius, playerHit,
+        CollisionHelper::ToBit(CollisionLayer::Player));
+    HitResultWithActor justDodgeHit{};
+    const bool justDodgeCastHit = Physics::Instance().SphereCast(
+        castOrigin, chargeDirection, castDistance, justDodgeCastRadius, justDodgeHit,
         CollisionHelper::ToBit(CollisionLayer::Player));
     chargePlayerCastHitDebug = playerCastHit;
     if (playerCastHit)
@@ -6727,6 +6757,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
                 DebugRender::DrawLine(castOrigin, castEnd, color, 0.0f, true);
             };
         drawCast(playerCastRadius, { 0.15f, 0.85f, 1.0f, 1.0f }, showPlayerCastDebug);
+        drawCast(justDodgeCastRadius, { 0.75f, 0.30f, 1.0f, 1.0f }, showJustDodgeCastDebug);
         drawCast(wallCastRadius, { 1.0f, 0.35f, 0.10f, 1.0f }, showWallCastDebug);
     }
 
@@ -6784,22 +6815,48 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         hitPlayer && !hitActors.contains(hitPlayer);
     const bool playerIsFirst = playerCandidate &&
         (!wallCandidate || playerHit.distance <= wallHit.distance);
+    Player* justDodgePlayer = justDodgeCastHit
+        ? dynamic_cast<Player*>(justDodgeHit.actor)
+        : nullptr;
+    const bool justDodgeCandidate = justDodgePlayer && !hitActors.contains(justDodgePlayer);
+    // Use the Just Dodge cast's own contact distance against the same valid wall.
+    // This prevents the larger acceptance radius from reaching through a wall.
+    const bool justDodgePlayerIsFirst = justDodgeCandidate &&
+        (!wallCandidate || justDodgeHit.distance <= wallHit.distance);
+    const bool justDodgeWindow = justDodgePlayer && justDodgePlayer->GetJustDodgeWindow();
+    const bool alreadyDodged = justDodgePlayer && HasJustDodgedAttack(justDodgePlayer);
+    bool tryStartJustDodgeCalled = false;
+    bool tryStartJustDodgeResult = false;
+    bool directionEvaluated = false;
+    bool directionValid = false;
+
+    if (justDodgePlayerIsFirst && chargeDangerWindowActive)
+    {
+        tryStartJustDodgeCalled = true;
+        tryStartJustDodgeResult = TryStartJustDodgeSuccess(justDodgePlayer);
+        // TryStartJustDodgeSuccess checks direction only after these two gates.
+        // Mirror that diagnostic value without changing its outcome.
+        directionEvaluated = justDodgeWindow && !alreadyDodged;
+        if (directionEvaluated)
+            directionValid = tryStartJustDodgeResult || justDodgePlayer->CanJustDodgeAgainst(GetPosition());
+        if (tryStartJustDodgeResult)
+        {
+            // Charge alone stays committed after a Just Dodge. TryStartJustDodgeSuccess
+            // still starts the slow/Rush opportunity; only an actual Rush cancels Charge.
+            chargeJustDodgeSuccessDebug = true;
+            chargeSelectedHitDebug = "JustDodge";
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[BossCharge][JustDodge] continuing distance=" +
+                std::to_string(justDodgeHit.distance));
+        }
+    }
 
     if (playerIsFirst)
     {
-        if (chargeDangerWindowActive && TryStartJustDodgeSuccess(hitPlayer))
-        {
-            chargeJustDodgeSuccessDebug = true;
-            chargeSelectedHitDebug = "JustDodge";
-            chargeEndReasonDebug = ChargeAttackEndReason::JustDodge;
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[BossCharge][End] reason=JustDodge distance=" +
-                std::to_string(playerHit.distance));
-            StopChargeAttackMovement();
-            return chargeEndReasonDebug;
-        }
-
-        if (hitPlayer->TryTakeDamage(GetActiveChargeDamage(), GetPosition()))
+        // A Just Dodge consumes this Charge leg for the player. Keep moving, but
+        // never damage that player again until the next triple-charge leg resets it.
+        if (!HasJustDodgedAttack(hitPlayer) &&
+            hitPlayer->TryTakeDamage(GetActiveChargeDamage(), GetPosition()))
         {
             DirectX::XMFLOAT3 knockBackDirection =
                 MathHelper::Subtract(hitPlayer->GetPosition(), GetPosition());
@@ -6818,6 +6875,58 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         }
 
         chargeSelectedHitDebug = "PlayerDamageRejected";
+    }
+
+    if (playerCastHit)
+    {
+        const int tripleLeg = chargeBT.tripleChargeActive
+            ? std::clamp(chargeBT.tripleChargeIndex, 0, 2) + 1 : 0;
+        const bool beginLegSucceeded = !chargeBT.tripleChargeActive ||
+            chargeBT.tripleBeginTripleChargeLegResult;
+        std::string result = "Rejected: Unknown";
+        if (!hitPlayer) result = "Rejected: HitActorNotPlayer";
+        else if (!playerCandidate) result = "Rejected: PlayerAlreadyHit";
+        else if (!playerIsFirst) result = "Rejected: WallFirst";
+        else if (!chargeDangerWindowActive) result = "Rejected: DangerWindowInactive";
+        else if (!justDodgeWindow) result = "Rejected: JustDodgeWindowInactive";
+        else if (alreadyDodged) result = "Rejected: AlreadyDodged";
+        else if (!directionValid) result = "Rejected: DirectionInvalid";
+        else if (tryStartJustDodgeResult) result = "Success";
+        else result = "Rejected: TryStartJustDodgeSuccess";
+
+        const std::string signature = std::to_string(tripleLeg) + "|" +
+            std::to_string(beginLegSucceeded) + "|" + std::to_string(wallCastHit) + "|" +
+            std::to_string(wallCandidate) + "|" + std::to_string(playerCandidate) + "|" +
+            std::to_string(playerIsFirst) + "|" + std::to_string(chargeDangerWindowActive) + "|" +
+            std::to_string(justDodgeWindow) + "|" + std::to_string(alreadyDodged) + "|" +
+            std::to_string(directionEvaluated) + "|" + std::to_string(directionValid) + "|" +
+            std::to_string(tryStartJustDodgeCalled) + "|" + std::to_string(tryStartJustDodgeResult) +
+            "|" + result;
+        static const GruxEnemy* lastOwner = nullptr;
+        static int lastLeg = -1;
+        static std::string lastSignature;
+        if (lastOwner != this || lastLeg != tripleLeg || lastSignature != signature)
+        {
+            lastOwner = this;
+            lastLeg = tripleLeg;
+            lastSignature = signature;
+            const std::string legName = tripleLeg > 0 ? "Leg" + std::to_string(tripleLeg) : "Single";
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[ChargeJD][" + legName + "] " +
+                "BeginLeg=" + (beginLegSucceeded ? "true" : "false") +
+                " PlayerHit=true PlayerDistance=" + std::to_string(playerHit.distance) +
+                " WallHit=" + (wallCastHit ? "true" : "false") +
+                " WallDistance=" + (wallCastHit ? std::to_string(wallHit.distance) : "N/A") +
+                " WallCandidate=" + (wallCandidate ? "true" : "false") +
+                " PlayerIsFirst=" + (playerIsFirst ? "true" : "false") +
+                " DangerWindow=" + (chargeDangerWindowActive ? "true" : "false") +
+                " JustDodgeWindow=" + (justDodgeWindow ? "true" : "false") +
+                " DirectionValid=" + (directionEvaluated ? (directionValid ? "true" : "false") : "N/A") +
+                " AlreadyDodged=" + (alreadyDodged ? "true" : "false") +
+                " TryStartCalled=" + (tryStartJustDodgeCalled ? "true" : "false") +
+                " TryStartResult=" + (tryStartJustDodgeCalled ? (tryStartJustDodgeResult ? "true" : "false") : "N/A") +
+                " Result=" + result);
+        }
     }
 
     if (wallCandidate)

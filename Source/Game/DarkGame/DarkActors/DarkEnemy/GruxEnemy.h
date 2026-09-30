@@ -284,6 +284,10 @@ public:
     void BeginChargeRecoveryBT() { chargeBT.phase = ChargeBTPhase::Recovery; }
     void MarkChargeRecoveryTimerFinishedBT() { chargeBT.phase = ChargeBTPhase::RecoveryPostconditions; }
     ChargeBTStepResult FinishChargeRecoveryBT();
+    // PlayerRushState notifies only its current Grux target. This cancels a
+    // charge that provided that Rush opportunity without affecting other attacks.
+    void NotifyPlayerRushStarted(Player* player);
+    void NotifyPlayerRushEnded(Player* player);
     bool ShouldAbortChargeAttackBT() ;
     void CleanupChargeAttackBT();
     void DrawChargeAttackBTDebug();
@@ -871,6 +875,8 @@ private:
     };
     std::vector<HpBarFadeEntry> hpBarFadeEntries;
     bool rushHpDisplayActive = false;
+    // Holds only the Grux whose active Charge was cancelled by Player Rush.
+    bool rushCombatHoldActive = false;
     bool useRushDelayedHpFollowSpeed = false;
     float delayedHp = 0.0f;
     float delayedHpDelayTimer = 0.0f;
@@ -1024,8 +1030,8 @@ private:
 
     float roarTelegraphProgress = 0.0f;
     float roarTelegraphVisualProgress = 0.0f;
-    float roarTelegraphOuterYOffset = 0.250f;
-    float roarTelegraphFillYOffset = 0.245f;
+    float roarTelegraphOuterYOffset = 0.07f;
+    float roarTelegraphFillYOffset = 0.07f;
     struct RoarFloatingDebris
     {
         std::shared_ptr<SkeletalMeshComponent> meshComponent;
@@ -1605,8 +1611,8 @@ private:
     DirectX::XMFLOAT3 dashTelegraphPhase2EmissiveColor{ 1.0f, 0.16f, 0.03f };
     float dashTelegraphEmissiveIntensity = 15.0f;
     float dashTelegraphFanRadius = 4.0f;    // 突進の扇形モデルのスケール
-    float dashTelegraphLineYOffset = 0.345f;
-    float dashTelegraphFanYOffset = 0.350f;
+    float dashTelegraphLineYOffset = 0.07f;
+    float dashTelegraphFanYOffset = 0.07f;
     DirectX::XMFLOAT3 dashTelegraphLineStart{};
     DirectX::XMFLOAT3 dashTelegraphLineEnd{};
     float dashTelegraphLineLength = 0.0f;
@@ -1793,8 +1799,11 @@ private:
     float chargeWallFacingThreshold = 0.70f;
     float chargeWallNormalYThreshold = 0.60f;
     float chargePlayerCastRadiusScale = 0.88f;
-    float chargePlayerCastRadiusScalePhase2 = 1.65f;
-    int chargeDamagePhase2 = 12;
+    float chargePlayerCastRadiusScalePhase2 = 1.5f;
+    // Charge攻撃時のジャスト回避の判定
+    float chargeJustDodgeCastRadiusScale = 1.8f;
+    float chargeJustDodgeCastRadiusScalePhase2 = 2.5f;
+    int chargeDamagePhase2 = 10;
     float chargeWallCastRadiusScale = 0.3f;
     float chargeStartValidationClearance = 0.05f;
 
@@ -1838,9 +1847,11 @@ private:
     bool chargeStartValidationValidDebug = false;
     float chargeStartClearanceDebug = 0.0f;
     float chargePlayerCastRadiusDebug = 0.0f;
+    float chargeJustDodgeCastRadiusDebug = 0.0f;
     float chargeWallCastRadiusDebug = 0.0f;
     bool showChargeCastDebug = false;
     bool showPlayerCastDebug = true;
+    bool showJustDodgeCastDebug = true;
     bool showWallCastDebug = true;
     std::string chargeStartFailureReasonDebug = "None";
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;

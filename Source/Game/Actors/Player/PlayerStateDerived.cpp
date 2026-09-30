@@ -609,6 +609,7 @@ void PlayerRushState::Enter()
         {
             rushHpDisplayTarget = gruxTarget;
             gruxTarget->BeginRushHpDisplay();
+            gruxTarget->NotifyPlayerRushStarted(player);
         }
 
         constexpr float gruxRushStopDistance = 2.5f;
@@ -861,6 +862,7 @@ void PlayerRushState::Exit()
     }
     if (auto gruxTarget = rushHpDisplayTarget.lock())
     {
+        gruxTarget->NotifyPlayerRushEnded(player);
         gruxTarget->EndRushHpDisplay();
     }
     rushHpDisplayTarget.reset();
