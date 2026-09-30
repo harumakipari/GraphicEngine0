@@ -100,6 +100,9 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
 void SkeletonWarriorActor::Update(float elapsedTime)
 {
     Enemy::Update(elapsedTime);
+    if (IsAnimationEditorPreviewActive())
+        return;
+    ResetAnimationEditorPreviewWeaponSweep();
     if (state == State::Dead)
         return;
 
@@ -292,8 +295,8 @@ void SkeletonWarriorActor::UpdateRecovery(float elapsedTime)
 
 void SkeletonWarriorActor::UpdateWeaponSweep(Player& player)
 {
-    const DirectX::XMFLOAT3 root = GetWeaponRootPosition();
-    const DirectX::XMFLOAT3 tip = GetWeaponTipPosition();
+    const DirectX::XMFLOAT3 root = GetWeaponHitPoint(weaponRootPoint, activeWeaponHitOffset);
+    const DirectX::XMFLOAT3 tip = GetWeaponHitPoint(weaponTipPoint, activeWeaponHitOffset);
     if (!hasPreviousWeaponPoints)
     {
         previousWeaponRoot = root;
@@ -306,9 +309,9 @@ void SkeletonWarriorActor::UpdateWeaponSweep(Player& player)
     HitResultWithActor tipHit;
     const uint32_t playerMask = CollisionHelper::ToBit(CollisionLayer::Player);
     const bool rootSucceeded = CollisionFunction::SphereRayCast(
-        previousWeaponRoot, root, rootHit, weaponHitRadius, playerMask);
+        previousWeaponRoot, root, rootHit, activeWeaponHitRadius, playerMask);
     const bool tipSucceeded = CollisionFunction::SphereRayCast(
-        previousWeaponTip, tip, tipHit, weaponHitRadius, playerMask);
+        previousWeaponTip, tip, tipHit, activeWeaponHitRadius, playerMask);
 
     previousWeaponRoot = root;
     previousWeaponTip = tip;
@@ -418,6 +421,8 @@ void SkeletonWarriorActor::OnAnimationNotifyBegin(const AnimationNotifyState& no
     switch (notify.type)
     {
     case AnimationNotifyState::Type::HitBox:
+        activeWeaponHitRadius = (std::max)(0.01f, notify.hitBoxRadius);
+        activeWeaponHitOffset = notify.hitBoxOffset;
         attackHitActive = true;
         ResetWeaponSweep();
         break;
@@ -505,17 +510,67 @@ void SkeletonWarriorActor::DrawImGuiDetails()
 #endif
 }
 
+void SkeletonWarriorActor::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
+{
+    if (state.type != AnimationNotifyState::Type::HitBox || !weaponRootPoint || !weaponTipPoint)
+        return;
+
+    constexpr DirectX::XMFLOAT4 previewColor{ 0.25f, 1.0f, 0.45f, 1.0f };
+    const auto controller = GetBodyAnimationController();
+    const bool drawSweep = controller && controller->IsEditorPreviewPlaying() &&
+        controller->IsEditorPreviewHitBoxSweepVisible();
+    const float currentTime = controller ? controller->GetCurrentSampledAnimationTime() : 0.0f;
+    const float radius = (std::max)(0.01f, state.hitBoxRadius);
+    const DirectX::XMFLOAT3 root = GetWeaponHitPoint(weaponRootPoint, state.hitBoxOffset);
+    const DirectX::XMFLOAT3 tip = GetWeaponHitPoint(weaponTipPoint, state.hitBoxOffset);
+    const bool contiguous = editorPreviewHasPreviousWeaponPoints &&
+        editorPreviewWeaponHitBoxState == &state && currentTime >= editorPreviewWeaponHitBoxTime &&
+        currentTime - editorPreviewWeaponHitBoxTime <= 0.1f;
+
+    if (!drawSweep || !contiguous)
+        ResetAnimationEditorPreviewWeaponSweep();
+    else
+    {
+        DebugRender::DrawLine(editorPreviewPreviousWeaponRoot, root, previewColor, 0.0f, true);
+        DebugRender::DrawLine(editorPreviewPreviousWeaponTip, tip, previewColor, 0.0f, true);
+        DebugRender::DrawSphere(editorPreviewPreviousWeaponRoot, radius, previewColor, 0.0f, true);
+        DebugRender::DrawSphere(editorPreviewPreviousWeaponTip, radius, previewColor, 0.0f, true);
+    }
+
+    DebugRender::DrawSphere(root, radius, previewColor, 0.0f, true);
+    DebugRender::DrawSphere(tip, radius, previewColor, 0.0f, true);
+    DebugRender::DrawLine(root, tip, previewColor, 0.0f, true);
+
+    editorPreviewHasPreviousWeaponPoints = true;
+    editorPreviewPreviousWeaponRoot = root;
+    editorPreviewPreviousWeaponTip = tip;
+    editorPreviewWeaponHitBoxState = &state;
+    editorPreviewWeaponHitBoxTime = currentTime;
+}
+
 void SkeletonWarriorActor::ResetWeaponSweep()
 {
     hasPreviousWeaponPoints = false;
 }
 
-DirectX::XMFLOAT3 SkeletonWarriorActor::GetWeaponRootPosition() const
+void SkeletonWarriorActor::ResetAnimationEditorPreviewWeaponSweep()
 {
-    return weaponRootPoint ? weaponRootPoint->GetComponentLocation() : GetPosition();
+    editorPreviewHasPreviousWeaponPoints = false;
+    editorPreviewWeaponHitBoxState = nullptr;
+    editorPreviewWeaponHitBoxTime = -1.0f;
 }
 
-DirectX::XMFLOAT3 SkeletonWarriorActor::GetWeaponTipPosition() const
+DirectX::XMFLOAT3 SkeletonWarriorActor::GetWeaponHitPoint(
+    const std::shared_ptr<SceneComponent>& point, const DirectX::XMFLOAT3& localOffset) const
 {
-    return weaponTipPoint ? weaponTipPoint->GetComponentLocation() : GetPosition();
+    if (!point)
+        return GetPosition();
+
+    DirectX::XMVECTOR offset = DirectX::XMLoadFloat3(&localOffset);
+    const DirectX::XMFLOAT4 rotation = point->GetComponentWorldTransform().GetRotation();
+    offset = DirectX::XMVector3Rotate(offset, DirectX::XMLoadFloat4(&rotation));
+    DirectX::XMFLOAT3 worldOffset{};
+    DirectX::XMStoreFloat3(&worldOffset, offset);
+    const DirectX::XMFLOAT3 base = point->GetComponentLocation();
+    return { base.x + worldOffset.x, base.y + worldOffset.y, base.z + worldOffset.z };
 }

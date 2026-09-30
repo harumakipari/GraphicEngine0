@@ -21,6 +21,7 @@ public:
     void DrawImGuiDetails() override;
     void OnAnimationNotifyBegin(const AnimationNotifyState& state) override;
     void OnAnimationNotifyEnd(const AnimationNotifyState& state) override;
+    void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
 
     bool TakeDamageFromPlayer(int damage) override;
     bool IsDefeated() const override { return state == State::Dead; }
@@ -45,8 +46,9 @@ private:
     AnimationNotifyState* GetAttackDangerNotifyState();
     void DrawDangerAreaDebug() const;
     void ResetWeaponSweep();
-    DirectX::XMFLOAT3 GetWeaponRootPosition() const;
-    DirectX::XMFLOAT3 GetWeaponTipPosition() const;
+    void ResetAnimationEditorPreviewWeaponSweep();
+    DirectX::XMFLOAT3 GetWeaponHitPoint(const std::shared_ptr<SceneComponent>& point,
+        const DirectX::XMFLOAT3& localOffset) const;
 
 private:
     // 描画用コンポーネントを追加
@@ -70,6 +72,13 @@ private:
     bool hasPreviousWeaponPoints = false;
     DirectX::XMFLOAT3 previousWeaponRoot{};
     DirectX::XMFLOAT3 previousWeaponTip{};
+    float activeWeaponHitRadius = 0.01f;
+    DirectX::XMFLOAT3 activeWeaponHitOffset{};
+    bool editorPreviewHasPreviousWeaponPoints = false;
+    DirectX::XMFLOAT3 editorPreviewPreviousWeaponRoot{};
+    DirectX::XMFLOAT3 editorPreviewPreviousWeaponTip{};
+    const AnimationNotifyState* editorPreviewWeaponHitBoxState = nullptr;
+    float editorPreviewWeaponHitBoxTime = -1.0f;
     const AnimationNotifyState* activeDangerNotifyState = nullptr;
     DangerArea dangerArea{};
     DirectX::XMFLOAT3 lockedAttackRight{ 1.0f, 0.0f, 0.0f };
@@ -84,7 +93,6 @@ private:
     float attackRange = 3.0f;
     float recoveryDuration = 2.85f;
     int attackDamage = 4;
-    float weaponHitRadius = 0.5f;
     DirectX::XMFLOAT3 weaponRootOffset{ 0.0f, 0.0f, 0.0f };
     DirectX::XMFLOAT3 weaponTipOffset{ 0.0f, 0.0f, 1.05f };
 };
