@@ -12,6 +12,11 @@ public:
         LockOn,
         Death,
     };
+    enum class TpsCameraProfile : uint8_t
+    {
+        Corridor,
+        Standard,
+    };
     struct CameraPose
     {
         DirectX::XMFLOAT3 eye;
@@ -33,6 +38,13 @@ public:
         float lookTargetHeight = 0.0f;
         float fovDegree = 35.0f;
         float horizontalOffset = 0.0f;
+    };
+    struct LockOnProfile
+    {
+        float fovDegree = 45.0f;
+        float maxFallbackFovDegree = 52.0f;
+        float distance = 10.0f;
+        float maxDistanceAdd = 2.0f;
     };
     struct CameraShakePreset
     {
@@ -168,6 +180,9 @@ public:
         requestMode = mode;
     }
 
+    void SetTpsCameraProfile(TpsCameraProfile profile);
+    TpsCameraProfile GetTpsCameraProfile() const { return tpsCameraProfile; }
+
     // ブレンドを開始する
     void StartBlend(CameraMode current, CameraMode request);
 
@@ -207,6 +222,8 @@ public:
     };
     WorldScreenProjection ProjectWorldPositionForUI(
         const DirectX::XMFLOAT3& worldPosition) const;
+    bool IsNormalEnemyLockOnProjectionWithinScreenRadius(
+        const WorldScreenProjection& projection) const;
 private:
     struct ScreenProjectionResult
     {
@@ -306,12 +323,17 @@ private:
 
     // LockOn開始時に前回の適応値を持ち越さない
     void ResetLockOnAdaptiveState();
+    void InitializeLockOnTransitionDistanceSnapshot();
+    float ClampEnemyLockOnDistanceToProfile(float distance, const LockOnProfile& profile) const;
 
     // TPS <-> LockOn切替時の壁際構図を追跡する
     void BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to);
     void UpdateLockOnTransitionDiagnostics();
 
     bool IsBossBattle() const;
+    bool IsGruxLockOnTarget() const;
+    const CameraCompositionSettings& GetActiveTpsSettings() const;
+    LockOnProfile GetActiveLockOnProfile() const;
     float GetFovDegreeForMode(CameraMode mode) const;
     void ResetCameraTuning();
 
@@ -369,6 +391,7 @@ private:
 
     float blendTime = 0.0f;
     float blendDuration = 0.30f;
+    float blendDurationOverride = 0.0f;
     float blendStartFovDegree = 35.0f;
     float blendTargetFovDegree = 35.0f;
     float blendStartEyeYaw = 0.0f;
@@ -411,11 +434,16 @@ private:
     DirectX::XMFLOAT3 shakeTargetOffset{};
 
     // モード別の構図調整値（初期値は従来値相当）
-    CameraCompositionSettings tpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
+    CameraCompositionSettings corridorTpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
+    CameraCompositionSettings standardTpsSettings = { 7.15f, 0.05f, 0.75f, 40.0f, 0.0f };
+    CameraCompositionSettings bossTpsSettings = { 6.45f, 0.05f, 0.75f, 44.0f, 0.0f };
     CameraCompositionSettings focusSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
+    // Existing LockOn settings are the Grux profile and must remain unchanged.
     CameraCompositionSettings lockOnSettings = { 10.0f, 0.4f, -0.3f, 45.0f, 0.0f };
+    LockOnProfile compactEnemyLockOnProfile = { 35.0f, 38.0f, 6.45f, 1.0f };
+    LockOnProfile standardEnemyLockOnProfile = { 40.0f, 43.0f, 7.15f, 1.0f };
     DeathCameraSettings deathCameraSettings{};
-    float bossTpsFovDegree = 44.0f;
+    TpsCameraProfile tpsCameraProfile = TpsCameraProfile::Corridor;
     float lockOnPlayerLookHeight = -.15f;
     float lockOnEnemyLookHeight = -0.75f;
 
@@ -458,6 +486,7 @@ private:
     float lockOnRequiredYDistance = 0.0f;
     float lockOnRequiredFramingDistance = 0.0f;
     float lockOnExistingAdaptiveDistance = 0.0f;
+    float lockOnTransitionSnapshotDistance = 0.0f;
     float lockOnFramingDeficit = 0.0f;
     bool lockOnFramingActive = false;
     float lockOnRequiredFovDegree = 45.0f;
@@ -561,6 +590,8 @@ private:
     float lockOnMaxDistance = 8.0f;
     // Candidate selection range; independent from the camera zoom cap above.
     float lockOnTargetSelectionMaxDistance = 20.0f;
+    float normalEnemyLockOnScreenRadius = 0.60f;
+    bool showNormalEnemyLockOnScreenRadiusDebug = false;
     // Pitch
     float lockOnPitchDegree = -10.0f;
     // 当たり判定のスフィアキャストの球の大きさ
@@ -582,9 +613,12 @@ private:
     std::string cameraCollisionHitName = "None";
     bool showCameraCollisionDebug = false;
 
-    CameraCompositionSettings initialTpsSettings{};
+    CameraCompositionSettings initialCorridorTpsSettings{};
+    CameraCompositionSettings initialStandardTpsSettings{};
+    CameraCompositionSettings initialBossTpsSettings{};
     CameraCompositionSettings initialLockOnSettings{};
-    float initialBossTpsFovDegree = 44.0f;
+    LockOnProfile initialCompactEnemyLockOnProfile{};
+    LockOnProfile initialStandardEnemyLockOnProfile{};
     float initialLockOnEnemyLookHeight = 0.0f;
     float initialLockOnTargetWeight = 0.0f;
     float initialLockOnZoomInSpeed = 0.0f;

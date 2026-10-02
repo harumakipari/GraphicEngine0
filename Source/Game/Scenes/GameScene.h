@@ -135,6 +135,7 @@ public:
     bool IsPhase1BreakPending() const { return phase1BreakPending; }
     bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
 private:
+    void UpdateTutorialCameraProfileTrigger();
     void CreateLockOnTargetUI();
     void UpdateLockOnTargetUI(float deltaTime);
     void HideLockOnTargetUI();
@@ -703,6 +704,12 @@ private:
 
     std::shared_ptr<DarkCameraActor> darkCameraActor;
 
+    // A scene-owned, non-physical volume: it has no collider and only changes
+    // the camera profile after the player crosses the tutorial corridor exit.
+    DirectX::XMFLOAT3 tutorialCameraProfileTriggerCenter{ -25.0f, 1.0f, 10.75f };
+    DirectX::XMFLOAT3 tutorialCameraProfileTriggerSize{ 2.0f, 3.0f, 8.0f };
+    bool tutorialCameraProfileTriggerFired = false;
+    bool showTutorialCameraProfileTriggerDebug = false;
     // ボスの部屋のラープのための変数
     std::unique_ptr<EasingRunner> bossLerpEasing;
     float bossLerpEasingFactor = 0.0f;

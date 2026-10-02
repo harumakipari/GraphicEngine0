@@ -1,11 +1,10 @@
 #include "pch.h"
 #include "DarkGameCamera.h"
-
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Enemy/Enemy.h"
+#include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Engine/Debug/DebugRender.h"
 #include "Physics/CollisionFunction.h"
-#include "Engine/Scene/Scene.h"
 #include "Engine/Scene/Scene.h"
 
 namespace
@@ -47,9 +46,12 @@ void DarkCameraActor::Initialize(const Transform& transform)
     isExternalBlending = false;
     ResetLockOnAdaptiveState();
 
-    initialTpsSettings = tpsSettings;
+    initialCorridorTpsSettings = corridorTpsSettings;
+    initialStandardTpsSettings = standardTpsSettings;
+    initialBossTpsSettings = bossTpsSettings;
     initialLockOnSettings = lockOnSettings;
-    initialBossTpsFovDegree = bossTpsFovDegree;
+    initialCompactEnemyLockOnProfile = compactEnemyLockOnProfile;
+    initialStandardEnemyLockOnProfile = standardEnemyLockOnProfile;
     initialLockOnEnemyLookHeight = lockOnEnemyLookHeight;
     initialLockOnTargetWeight = lockOnTargetWeight;
     initialLockOnZoomInSpeed = lockOnZoomInSpeed;
@@ -103,7 +105,7 @@ void DarkCameraActor::Update(float deltaTime)
             ? std::lerp(blendStartFovDegree, blendTargetFovDegree,
                 std::clamp(blendTime / (requestMode == CameraMode::Death
                     ? (std::max)(deathCameraSettings.deathBlendTime, 0.01f)
-                    : blendDuration), 0.0f, 1.0f))
+                    : (blendDurationOverride > 0.0f ? blendDurationOverride : blendDuration)), 0.0f, 1.0f))
             : GetFovDegreeForMode(currentMode);
         mainCameraComponent->SetFov(DirectX::XMConvertToRadians(fovDegree));
     }
@@ -362,6 +364,19 @@ DarkCameraActor::ProjectWorldPositionForUI(
     return result;
 }
 
+bool DarkCameraActor::IsNormalEnemyLockOnProjectionWithinScreenRadius(
+    const WorldScreenProjection& projection) const
+{
+    const float screenHeight = Graphics::GetScreenHeight();
+    const float aspect = screenHeight > FLT_EPSILON
+        ? Graphics::GetScreenWidth() / screenHeight
+        : 1.0f;
+    const float normalizedDistanceSq =
+        (projection.ndc.x * aspect) * (projection.ndc.x * aspect) +
+        projection.ndc.y * projection.ndc.y;
+    const float radius = (std::max)(normalEnemyLockOnScreenRadius, 0.0f);
+    return normalizedDistanceSq <= radius * radius;
+}
 void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
 {
     offscreenAssistAppliedYawStep = 0.0f;
@@ -472,11 +487,28 @@ void DarkCameraActor::StartDeathMode(std::function<void()> onBlendFinished)
     SetRequestMode(CameraMode::Death);
 }
 
+void DarkCameraActor::SetTpsCameraProfile(const TpsCameraProfile profile)
+{
+    if (tpsCameraProfile == profile)
+        return;
+
+    tpsCameraProfile = profile;
+
+    // LockOn keeps its current composition. The selected profile is applied by
+    // the existing LockOn -> TPS blend when LockOn ends.
+    if (!isExternalBlending && currentMode == CameraMode::TPS && requestMode == CameraMode::TPS)
+    {
+        StartBlend(CameraMode::TPS, CameraMode::TPS);
+        blendDurationOverride = 0.30f;
+    }
+}
+
 void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
 {
     CancelOffscreenAttackAssist();
     (void)from;
     blendTime = 0.0f;
+    blendDurationOverride = 0.0f;
     isBlending = true;
 
     // プレイヤーの位置を取得
@@ -522,6 +554,7 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     }
 
     case CameraMode::LockOn:
+        InitializeLockOnTransitionDistanceSnapshot();
         CameraDirectionInfo info = CreateLockOnInfo();
         targetYaw = info.yaw;
         targetPitch = info.pitch;
@@ -573,21 +606,56 @@ bool DarkCameraActor::IsBossBattle() const
     return player && player->IsBossBattle();
 }
 
+bool DarkCameraActor::IsGruxLockOnTarget() const
+{
+    const auto target = enemyHead.lock();
+    return target && dynamic_cast<const GruxEnemy*>(target->GetOwner());
+}
+
+const DarkCameraActor::CameraCompositionSettings& DarkCameraActor::GetActiveTpsSettings() const
+{
+    if (IsBossBattle())
+        return bossTpsSettings;
+    return tpsCameraProfile == TpsCameraProfile::Corridor
+        ? corridorTpsSettings
+        : standardTpsSettings;
+}
+
+DarkCameraActor::LockOnProfile DarkCameraActor::GetActiveLockOnProfile() const
+{
+    if (IsGruxLockOnTarget())
+    {
+        return {
+            lockOnSettings.fovDegree,
+            lockOnMaxFallbackFovDegree,
+            lockOnSettings.distance,
+            lockOnMaxDistanceAdd };
+    }
+
+    const auto target = enemyHead.lock();
+    const auto enemy = target ? dynamic_cast<const Enemy*>(target->GetOwner()) : nullptr;
+    return enemy && enemy->GetLockOnCameraProfile() == EnemyLockOnCameraProfile::Standard
+        ? standardEnemyLockOnProfile
+        : compactEnemyLockOnProfile;
+}
+
 float DarkCameraActor::GetFovDegreeForMode(CameraMode mode) const
 {
-    if (mode == CameraMode::LockOn) return lockOnSettings.fovDegree;
+    if (mode == CameraMode::LockOn) return GetActiveLockOnProfile().fovDegree;
     if (mode == CameraMode::Focus) return focusSettings.fovDegree;
     if (mode == CameraMode::Death) return deathCameraSettings.fovDegree;
-    return IsBossBattle() ? bossTpsFovDegree : tpsSettings.fovDegree;
+    return GetActiveTpsSettings().fovDegree;
 }
 
 void DarkCameraActor::ResetCameraTuning()
 {
-    tpsSettings.fovDegree = initialTpsSettings.fovDegree;
-    tpsSettings.distance = initialTpsSettings.distance;
-    bossTpsFovDegree = initialBossTpsFovDegree;
+    corridorTpsSettings = initialCorridorTpsSettings;
+    standardTpsSettings = initialStandardTpsSettings;
+    bossTpsSettings = initialBossTpsSettings;
     lockOnSettings.fovDegree = initialLockOnSettings.fovDegree;
     lockOnSettings.distance = initialLockOnSettings.distance;
+    compactEnemyLockOnProfile = initialCompactEnemyLockOnProfile;
+    standardEnemyLockOnProfile = initialStandardEnemyLockOnProfile;
     lockOnEnemyLookHeight = initialLockOnEnemyLookHeight;
     lockOnTargetWeight = initialLockOnTargetWeight;
     lockOnZoomInSpeed = initialLockOnZoomInSpeed;
@@ -729,6 +797,7 @@ void DarkCameraActor::UpdateExternalBlend(float deltaTime)
         mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
 
         isBlending = false;
+        blendDurationOverride = 0.0f;
         blendTime = 0.0f;
         deathBlendFinished = nullptr;
         isExternalBlending = false;
@@ -751,7 +820,7 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
 
     const float currentBlendDuration = requestMode == CameraMode::Death
         ? (std::max)(deathCameraSettings.deathBlendTime, 0.01f)
-        : blendDuration;
+        : (blendDurationOverride > 0.0f ? blendDurationOverride : blendDuration);
     float t = std::clamp(blendTime / currentBlendDuration, 0.0f, 1.0f);
 
     // 移動中のPlayer/Enemyを反映し、Blend完了次フレームとの差を残さない。
@@ -971,6 +1040,7 @@ void DarkCameraActor::UpdateRotation(float deltaTime)
 
 void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
 {
+    const LockOnProfile activeProfile = GetActiveLockOnProfile();
     auto playerHeadShared = playerHead.lock();
     auto enemyHeadShared = enemyHead.lock();
     if (!playerHeadShared || !enemyHeadShared)
@@ -1036,10 +1106,10 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
     adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset;
 
     lockOnExistingAdaptiveDistance =
-        lockOnSettings.distance + lockOnMaxDistanceAdd * lockOnDistanceStrength;
+        activeProfile.distance + activeProfile.maxDistanceAdd * lockOnDistanceStrength;
     lockOnRequiredFramingDistance = CalculateRequiredLockOnFramingDistance();
-    desiredLockOnCameraDistance = (std::max)(
-        lockOnExistingAdaptiveDistance, lockOnRequiredFramingDistance);
+    desiredLockOnCameraDistance = ClampEnemyLockOnDistanceToProfile(
+        (std::max)(lockOnExistingAdaptiveDistance, lockOnRequiredFramingDistance), activeProfile);
     lockOnFramingActive =
         lockOnRequiredFramingDistance > lockOnExistingAdaptiveDistance;
     currentLockOnZoomSpeed = desiredLockOnCameraDistance > currentLockOnCameraDistance
@@ -1062,12 +1132,13 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
 
 float DarkCameraActor::CalculateRequiredLockOnFramingDistance()
 {
+    const LockOnProfile activeProfile = GetActiveLockOnProfile();
     lockOnHorizontalExtent = 0.0f;
     lockOnVerticalExtent = 0.0f;
     lockOnRequiredXDistance = 0.0f;
     lockOnRequiredYDistance = 0.0f;
 
-    const float minimumLockOnDistance = (std::max)(lockOnSettings.distance, 0.1f);
+    const float minimumLockOnDistance = (std::max)(activeProfile.distance, 0.1f);
     const auto playerHeadShared = playerHead.lock();
     const auto enemyHeadShared = enemyHead.lock();
     if (!playerHeadShared || !enemyHeadShared)
@@ -1109,7 +1180,7 @@ float DarkCameraActor::CalculateRequiredLockOnFramingDistance()
     const DirectX::XMFLOAT3 cameraUp = MathHelper::Normalize(
         MathHelper::Cross(cameraForward, cameraRight));
 
-    const float verticalFov = DirectX::XMConvertToRadians(lockOnSettings.fovDegree);
+    const float verticalFov = DirectX::XMConvertToRadians(activeProfile.fovDegree);
     const float screenWidth = Graphics::GetScreenWidth();
     const float screenHeight = Graphics::GetScreenHeight();
     const float aspect = screenHeight > FLT_EPSILON
@@ -1189,18 +1260,18 @@ float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
     const auto playerHeadShared = playerHead.lock();
     const auto enemyHeadShared = enemyHead.lock();
     if (!playerHeadShared || !enemyHeadShared)
-        return lockOnSettings.fovDegree;
+        return GetActiveLockOnProfile().fovDegree;
 
     const DirectX::XMFLOAT3 forwardVector = MathHelper::Subtract(
         lookTarget, eye);
     if (MathHelper::Length(forwardVector) <= 0.1f)
-        return lockOnSettings.fovDegree;
+        return GetActiveLockOnProfile().fovDegree;
 
     const DirectX::XMFLOAT3 cameraForward = MathHelper::Normalize(forwardVector);
     const DirectX::XMFLOAT3 worldUp{ 0.0f, 1.0f, 0.0f };
     const DirectX::XMFLOAT3 rightVector = MathHelper::Cross(worldUp, cameraForward);
     if (MathHelper::Length(rightVector) <= FLT_EPSILON)
-        return lockOnSettings.fovDegree;
+        return GetActiveLockOnProfile().fovDegree;
 
     // CameraComponent::GetRight / LookAtLH と同じ cross 順序。
     const DirectX::XMFLOAT3 cameraRight = MathHelper::Normalize(rightVector);
@@ -1219,7 +1290,7 @@ float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
     if (!std::isfinite(aspect) || aspect <= FLT_EPSILON ||
         safeScaleX <= FLT_EPSILON || safeScaleY <= FLT_EPSILON)
     {
-        return lockOnSettings.fovDegree;
+        return GetActiveLockOnProfile().fovDegree;
     }
 
     DirectX::XMFLOAT3 playerLookPosition = playerHeadShared->GetComponentLocation();
@@ -1278,13 +1349,13 @@ float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
         diagnostics.limiter = !playerValid
             ? "Invalid / Player Behind Camera"
             : "Invalid / Boss Behind Camera";
-        return lockOnSettings.fovDegree;
+        return GetActiveLockOnProfile().fovDegree;
     }
 
     const float requiredFovDegree = DirectX::XMConvertToDegrees(
         2.0f * std::atan(requiredTanVertical));
     if (!std::isfinite(requiredFovDegree))
-        return lockOnSettings.fovDegree;
+        return GetActiveLockOnProfile().fovDegree;
 
     outValid = true;
     return requiredFovDegree;
@@ -1333,12 +1404,13 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
 
     lockOnWallEscapeSevereComposition = false;
     lockOnWallEscapeSelectedCandidate = "None";
-    lockOnWallEscapeSelectedRequiredFov = lockOnSettings.fovDegree;
-    lockOnWallEscapeCurrentRequiredFov = lockOnSettings.fovDegree;
-    lockOnWallEscapeLeftNearRequiredFov = lockOnSettings.fovDegree;
-    lockOnWallEscapeLeftFarRequiredFov = lockOnSettings.fovDegree;
-    lockOnWallEscapeRightNearRequiredFov = lockOnSettings.fovDegree;
-    lockOnWallEscapeRightFarRequiredFov = lockOnSettings.fovDegree;
+    const float baseFovDegree = GetActiveLockOnProfile().fovDegree;
+    lockOnWallEscapeSelectedRequiredFov = baseFovDegree;
+    lockOnWallEscapeCurrentRequiredFov = baseFovDegree;
+    lockOnWallEscapeLeftNearRequiredFov = baseFovDegree;
+    lockOnWallEscapeLeftFarRequiredFov = baseFovDegree;
+    lockOnWallEscapeRightNearRequiredFov = baseFovDegree;
+    lockOnWallEscapeRightFarRequiredFov = baseFovDegree;
     lockOnWallEscapeSelectedDiagnostics = {};
     targetEscapeSide = 0;
     targetLateralEscapeOffset = 0.0f;
@@ -1517,9 +1589,10 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
 
 void DarkCameraActor::UpdateLockOnFovFallback(float deltaTime)
 {
-    const float baseFovDegree = lockOnSettings.fovDegree;
+    const LockOnProfile activeProfile = GetActiveLockOnProfile();
+    const float baseFovDegree = activeProfile.fovDegree;
     const float maxFallbackFovDegree = (std::max)(
-        baseFovDegree, lockOnMaxFallbackFovDegree);
+        baseFovDegree, activeProfile.maxFallbackFovDegree);
     LockOnFovDiagnostics collisionPreDiagnostics{};
     bool collisionPreValid = false;
     lockOnCollisionPreRequiredFovDegree = EvaluateRequiredLockOnFovFromEye(
@@ -1587,14 +1660,15 @@ void DarkCameraActor::UpdateLockOnFovFallback(float deltaTime)
 void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
     const float deltaTime)
 {
+    const LockOnProfile activeProfile = GetActiveLockOnProfile();
     compositionActive = false;
     compositionPlayerInsideSafeFrame = false;
     compositionBossInsideSafeFrame = false;
     compositionPlayerInFront = false;
     compositionBossInFront = false;
     targetCompositionYawCorrection = 0.0f;
-    compositionRequiredFovBefore = lockOnSettings.fovDegree;
-    compositionRequiredFovAfter = lockOnSettings.fovDegree;
+    compositionRequiredFovBefore = activeProfile.fovDegree;
+    compositionRequiredFovAfter = activeProfile.fovDegree;
 
     const auto moveCorrection = [&]()
     {
@@ -1728,7 +1802,7 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
         !isBlending && !isExternalBlending && cameraHitWall &&
         lockOnWallEscapeActive && beforeValid && compositionPlayerInFront &&
         compositionBossInFront && !compositionPlayerInsideSafeFrame &&
-        compositionRequiredFovAfter > lockOnMaxFallbackFovDegree;
+        compositionRequiredFovAfter > activeProfile.maxFallbackFovDegree;
 
     const auto calculateCompositionTarget =
         [&](const DirectX::XMFLOAT3& eye,
@@ -1873,14 +1947,15 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
 
 void DarkCameraActor::ResetLockOnAdaptiveState()
 {
+    const LockOnProfile activeProfile = GetActiveLockOnProfile();
     lockOnCollisionStrength = 0.0f;
     lockOnCollisionRatioForAdaptive = 1.0f;
     lockOnDistanceStrength = 0.0f;
     lockOnDistanceForZoom = 0.0f;
     lockOnEnemyDistance = 0.0f;
-    desiredLockOnCameraDistance = lockOnSettings.distance;
-    currentLockOnCameraDistance = lockOnSettings.distance;
-    adaptiveLockOnCameraDistance = lockOnSettings.distance;
+    desiredLockOnCameraDistance = activeProfile.distance;
+    currentLockOnCameraDistance = activeProfile.distance;
+    adaptiveLockOnCameraDistance = activeProfile.distance;
     currentLockOnZoomSpeed = 0.0f;
     adaptiveLockOnTargetWeight = lockOnTargetWeight;
     adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset;
@@ -1888,15 +1963,34 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
     lockOnVerticalExtent = 0.0f;
     lockOnRequiredXDistance = 0.0f;
     lockOnRequiredYDistance = 0.0f;
-    lockOnRequiredFramingDistance = lockOnSettings.distance;
-    lockOnExistingAdaptiveDistance = lockOnSettings.distance;
+    lockOnRequiredFramingDistance = activeProfile.distance;
+    lockOnExistingAdaptiveDistance = activeProfile.distance;
+    lockOnTransitionSnapshotDistance = activeProfile.distance;
     lockOnFramingDeficit = 0.0f;
     lockOnFramingActive = false;
-    lockOnRequiredFovDegree = lockOnSettings.fovDegree;
-    lockOnTargetFovDegree = lockOnSettings.fovDegree;
-    lockOnCurrentFovDegree = lockOnSettings.fovDegree;
+    lockOnRequiredFovDegree = activeProfile.fovDegree;
+    lockOnTargetFovDegree = activeProfile.fovDegree;
+    lockOnCurrentFovDegree = activeProfile.fovDegree;
     lockOnFovReturnDelayElapsed = 0.0f;
     lockOnFovFallbackActive = false;
+    if (lockOnTransitionDiagnosticsActive && lockOnTransitionTo == CameraMode::LockOn)
+    {
+        const auto target = enemyHead.lock();
+        const auto enemy = target ? dynamic_cast<const Enemy*>(target->GetOwner()) : nullptr;
+        const char* profileName = IsGruxLockOnTarget() ? "Grux"
+            : enemy && enemy->GetLockOnCameraProfile() == EnemyLockOnCameraProfile::Standard
+                ? "Standard" : "Compact";
+        Logger::Log(std::string("[LockOnTransition][Init] Profile=") + profileName +
+            " TPSDistance=" + std::to_string(GetActiveTpsSettings().distance) +
+            " BaseDistance=" + std::to_string(activeProfile.distance) +
+            " MaxDistanceAdd=" + std::to_string(activeProfile.maxDistanceAdd) +
+            " CurrentDistance=" + std::to_string(currentLockOnCameraDistance) +
+            " DesiredDistance=" + std::to_string(desiredLockOnCameraDistance) +
+            " AdaptiveDistance=" + std::to_string(adaptiveLockOnCameraDistance) +
+            " SnapshotDistance=" + std::to_string(lockOnTransitionSnapshotDistance) +
+            " SafeFrameRequired=" + std::to_string(lockOnRequiredFramingDistance) +
+            " BaseFOV=" + std::to_string(activeProfile.fovDegree));
+    }
     currentEscapeSide = 0;
     targetEscapeSide = 0;
     currentLateralEscapeOffset = 0.0f;
@@ -1911,6 +2005,53 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
     compositionActive = false;
 }
 
+float DarkCameraActor::ClampEnemyLockOnDistanceToProfile(
+    float distance, const LockOnProfile& profile) const
+{
+    // Preserve the Grux range and tuning exactly. Enemy profiles have an
+    // explicit base + add range, so both their snapshot and runtime target
+    // must stay inside it.
+    if (IsGruxLockOnTarget())
+        return distance;
+
+    const float minimum = (std::max)(profile.distance, 0.1f);
+    const float maximum = minimum + (std::max)(profile.maxDistanceAdd, 0.0f);
+    return std::clamp(distance, minimum, maximum);
+}
+
+void DarkCameraActor::InitializeLockOnTransitionDistanceSnapshot()
+{
+    const LockOnProfile activeProfile = GetActiveLockOnProfile();
+    lockOnTransitionSnapshotDistance = activeProfile.distance;
+
+    // Grux already has a tuned transition and adaptive range. Retain the
+    // reset base-distance behavior for that path.
+    if (IsGruxLockOnTarget())
+        return;
+
+    const auto playerHeadShared = playerHead.lock();
+    const auto enemyHeadShared = enemyHead.lock();
+    if (!playerHeadShared || !enemyHeadShared)
+        return;
+
+    lockOnEnemyDistance = MathHelper::Distance(
+        playerHeadShared->GetComponentLocation(), enemyHeadShared->GetComponentLocation());
+    lockOnDistanceForZoom = lockOnEnemyDistance;
+    const float enemyRange = (std::max)(
+        lockOnDistanceFull - lockOnDistanceStart, FLT_EPSILON);
+    const float enemyDistanceInput =
+        (lockOnDistanceForZoom - lockOnDistanceStart) / enemyRange;
+    lockOnDistanceStrength = SmoothStep01(enemyDistanceInput);
+    lockOnExistingAdaptiveDistance =
+        activeProfile.distance + activeProfile.maxDistanceAdd * lockOnDistanceStrength;
+    lockOnRequiredFramingDistance = CalculateRequiredLockOnFramingDistance();
+
+    lockOnTransitionSnapshotDistance = ClampEnemyLockOnDistanceToProfile(
+        (std::max)(lockOnExistingAdaptiveDistance, lockOnRequiredFramingDistance), activeProfile);
+    currentLockOnCameraDistance = lockOnTransitionSnapshotDistance;
+    desiredLockOnCameraDistance = lockOnTransitionSnapshotDistance;
+    adaptiveLockOnCameraDistance = lockOnTransitionSnapshotDistance;
+}
 void DarkCameraActor::BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to)
 {
     (void)from;
@@ -1951,14 +2092,60 @@ void DarkCameraActor::UpdateLockOnTransitionDiagnostics()
     transitionMaxAdaptiveTargetWeightDelta = std::max<float>(transitionMaxAdaptiveTargetWeightDelta, deltas[4]);
 
     const char* direction = lockOnTransitionTo == CameraMode::LockOn ? "TPS->LockOn" : "LockOn->TPS";
-    Logger::Log(std::string("[LockOnTransition][") + direction + "][frame=" +
-        std::to_string(lockOnTransitionDiagnosticsFrame) + "] DesiredEye=(" +
-        std::to_string(desiredEyePosition.x) + "," + std::to_string(desiredEyePosition.y) + "," +
-        std::to_string(desiredEyePosition.z) + ") CollisionPostEye=(" +
-        std::to_string(collisionPostEyePosition.x) + "," + std::to_string(collisionPostEyePosition.y) + "," +
-        std::to_string(collisionPostEyePosition.z) + ") CollisionRatio=" + std::to_string(cameraCollisionRatio) +
-        " AdaptiveDistance=" + std::to_string(adaptiveLockOnCameraDistance) +
-        " AdaptiveTargetWeight=" + std::to_string(adaptiveLockOnTargetWeight));
+    if (lockOnTransitionTo == CameraMode::LockOn)
+    {
+        const LockOnProfile activeProfile = GetActiveLockOnProfile();
+        const auto target = enemyHead.lock();
+        const auto enemy = target ? dynamic_cast<const Enemy*>(target->GetOwner()) : nullptr;
+        const char* profileName = IsGruxLockOnTarget() ? "Grux"
+            : enemy && enemy->GetLockOnCameraProfile() == EnemyLockOnCameraProfile::Standard
+                ? "Standard" : "Compact";
+        const float blendDurationForLog = blendDurationOverride > 0.0f
+            ? blendDurationOverride : blendDuration;
+        const float blendProgress = isBlending
+            ? std::clamp(blendTime / (std::max)(blendDurationForLog, FLT_EPSILON), 0.0f, 1.0f)
+            : 1.0f;
+        const float finalFovDegree = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
+        Logger::Log(std::string("[LockOnTransition][TPS->LockOn][frame=") +
+            std::to_string(lockOnTransitionDiagnosticsFrame) + "] Mode=" +
+            std::to_string(static_cast<int>(currentMode)) + " RequestMode=" +
+            std::to_string(static_cast<int>(requestMode)) + " Blending=" +
+            (isBlending ? "true" : "false") + " BlendProgress=" + std::to_string(blendProgress) +
+            " Profile=" + profileName +
+            " TPSDistance=" + std::to_string(GetActiveTpsSettings().distance) +
+            " BaseDistance=" + std::to_string(activeProfile.distance) +
+            " MaxDistanceAdd=" + std::to_string(activeProfile.maxDistanceAdd) +
+            " CurrentDistance=" + std::to_string(currentLockOnCameraDistance) +
+            " DesiredDistance=" + std::to_string(desiredLockOnCameraDistance) +
+            " AdaptiveDistance=" + std::to_string(adaptiveLockOnCameraDistance) +
+            " SnapshotDistance=" + std::to_string(lockOnTransitionSnapshotDistance) +
+            " SafeFrameRequired=" + std::to_string(lockOnRequiredFramingDistance) +
+            " ExistingAdaptiveDistance=" + std::to_string(lockOnExistingAdaptiveDistance) +
+            " PreEye=(" + std::to_string(collisionPreEyePosition.x) + "," +
+            std::to_string(collisionPreEyePosition.y) + "," + std::to_string(collisionPreEyePosition.z) +
+            ") PostEye=(" + std::to_string(collisionPostEyePosition.x) + "," +
+            std::to_string(collisionPostEyePosition.y) + "," + std::to_string(collisionPostEyePosition.z) +
+            ") FinalDistance=" + std::to_string(actualCameraDistance) +
+            " CollisionRatio=" + std::to_string(cameraCollisionRatio) +
+            " CameraHitWall=" + (cameraHitWall ? "true" : "false") +
+            " BaseFOV=" + std::to_string(activeProfile.fovDegree) +
+            " RequiredFOV=" + std::to_string(lockOnRequiredFovDegree) +
+            " FallbackTargetFOV=" + std::to_string(lockOnTargetFovDegree) +
+            " FallbackCurrentFOV=" + std::to_string(lockOnCurrentFovDegree) +
+            " FinalFOV=" + std::to_string(finalFovDegree));
+    }
+    else
+    {
+        Logger::Log(std::string("[LockOnTransition][") + direction + "][frame=" +
+            std::to_string(lockOnTransitionDiagnosticsFrame) + "] DesiredEye=(" +
+            std::to_string(desiredEyePosition.x) + "," + std::to_string(desiredEyePosition.y) + "," +
+            std::to_string(desiredEyePosition.z) + ") CollisionPostEye=(" +
+            std::to_string(collisionPostEyePosition.x) + "," + std::to_string(collisionPostEyePosition.y) + "," +
+            std::to_string(collisionPostEyePosition.z) + ") CollisionRatio=" + std::to_string(cameraCollisionRatio) +
+            " AdaptiveDistance=" + std::to_string(adaptiveLockOnCameraDistance) +
+            " SnapshotDistance=" + std::to_string(lockOnTransitionSnapshotDistance) +
+            " AdaptiveTargetWeight=" + std::to_string(adaptiveLockOnTargetWeight));
+    }
 
     ++lockOnTransitionDiagnosticsFrame;
     if (lockOnTransitionDiagnosticsFrame < 30)
@@ -2005,7 +2192,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
             playerPos, yaw, pitch, deathCameraSettings.sideOffset);
     }
 
-    const CameraCompositionSettings* settings = &tpsSettings;
+    const CameraCompositionSettings* settings = &GetActiveTpsSettings();
     if (cameraMode == CameraMode::Focus) settings = &focusSettings;
     if (cameraMode == CameraMode::LockOn) settings = &lockOnSettings;
     float distance = settings->distance;
@@ -2192,12 +2379,36 @@ void DarkCameraActor::DrawImGuiDetails()
 #ifdef USE_IMGUI
     if (ImGui::CollapsingHeader("Runtime Camera Tuning", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        ImGui::DragFloat("TPS FOV", &tpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
-        ImGui::DragFloat("TPS Distance", &tpsSettings.distance, 0.05f, 0.1f, 30.0f);
-        ImGui::DragFloat("Boss TPS FOV", &bossTpsFovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("Standard TPS FOV", &standardTpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("Standard TPS Distance", &standardTpsSettings.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("Normal Enemy LockOn Screen Radius", &normalEnemyLockOnScreenRadius,
+            0.01f, 0.0f, 1.5f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::Checkbox("Show Normal Enemy LockOn Screen Radius", &showNormalEnemyLockOnScreenRadiusDebug);
+        if (showNormalEnemyLockOnScreenRadiusDebug)
+        {
+            const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+            const ImVec2 center{ displaySize.x * 0.5f, displaySize.y * 0.5f };
+            const float radiusPixels = normalEnemyLockOnScreenRadius * displaySize.y * 0.5f;
+            ImGui::GetForegroundDrawList()->AddCircle(center, radiusPixels,
+                IM_COL32(255, 220, 80, 220), 64, 2.0f);
+        }
         ImGui::Separator();
-        ImGui::DragFloat("LockOn FOV", &lockOnSettings.fovDegree, 0.1f, 10.0f, 120.0f);
-        ImGui::DragFloat("LockOn Base Distance", &lockOnSettings.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("Grux LockOn FOV", &lockOnSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("Grux LockOn Base Distance", &lockOnSettings.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::SeparatorText("Compact Enemy LockOn Profile");
+        ImGui::DragFloat("Compact LockOn FOV", &compactEnemyLockOnProfile.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("Compact LockOn FOV Fallback Max", &compactEnemyLockOnProfile.maxFallbackFovDegree, 0.1f, compactEnemyLockOnProfile.fovDegree, 90.0f);
+        ImGui::DragFloat("Compact LockOn Base Distance", &compactEnemyLockOnProfile.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("Compact LockOn Max Distance Add", &compactEnemyLockOnProfile.maxDistanceAdd, 0.05f, 0.0f, 10.0f);
+        compactEnemyLockOnProfile.maxFallbackFovDegree = (std::max)(
+            compactEnemyLockOnProfile.maxFallbackFovDegree, compactEnemyLockOnProfile.fovDegree);
+        ImGui::SeparatorText("Standard Enemy LockOn Profile");
+        ImGui::DragFloat("Standard LockOn FOV", &standardEnemyLockOnProfile.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("Standard LockOn FOV Fallback Max", &standardEnemyLockOnProfile.maxFallbackFovDegree, 0.1f, standardEnemyLockOnProfile.fovDegree, 90.0f);
+        ImGui::DragFloat("Standard LockOn Base Distance", &standardEnemyLockOnProfile.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("Standard LockOn Max Distance Add", &standardEnemyLockOnProfile.maxDistanceAdd, 0.05f, 0.0f, 10.0f);
+        standardEnemyLockOnProfile.maxFallbackFovDegree = (std::max)(
+            standardEnemyLockOnProfile.maxFallbackFovDegree, standardEnemyLockOnProfile.fovDegree);
         ImGui::DragFloat("LockOn Enemy Look Height", &lockOnEnemyLookHeight, 0.05f, -10.0f, 10.0f);
         ImGui::SliderFloat("LockOn LookAt Bias (0=Player, 1=Boss)", &lockOnTargetWeight, 0.0f, 1.0f);
         lockOnTargetWeight = std::clamp(lockOnTargetWeight, 0.0f, 1.0f);
@@ -2316,8 +2527,8 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::Text("Requested Mode: %s", modeNames[static_cast<int>(requestMode)]);
         ImGui::Text("Current FOV: %.2f deg", currentFov);
         ImGui::Text("Desired FOV: %.2f deg", desiredFov);
-        ImGui::Text("TPS / Boss TPS / LockOn: %.2f / %.2f / %.2f deg",
-            tpsSettings.fovDegree, bossTpsFovDegree, lockOnSettings.fovDegree);
+        ImGui::Text("Corridor / Standard / Boss TPS / LockOn: %.2f / %.2f / %.2f / %.2f deg",
+            corridorTpsSettings.fovDegree, standardTpsSettings.fovDegree, bossTpsSettings.fovDegree, GetActiveLockOnProfile().fovDegree);
         if (isBlending)
             ImGui::Text("FOV Blend: %.2f -> %.2f deg", blendStartFovDegree, blendTargetFovDegree);
     }
@@ -2359,11 +2570,11 @@ void DarkCameraActor::DrawImGuiDetails()
     ImGui::DragFloat(U8("blendDuration"), &blendDuration, 0.01f, 0.01f, 1.0f);
     if (ImGui::TreeNode("TPS Composition"))
     {
-        ImGui::DragFloat("Distance##TPS", &tpsSettings.distance, 0.05f, 0.1f, 30.0f);
-        ImGui::DragFloat("Height##TPS", &tpsSettings.height, 0.05f, -10.0f, 10.0f);
-        ImGui::DragFloat("LookTarget Height##TPS", &tpsSettings.lookTargetHeight, 0.05f, -10.0f, 10.0f);
-        ImGui::DragFloat("FOV##TPS", &tpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
-        ImGui::DragFloat("Shoulder Offset##TPS", &tpsSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("Distance##TPS", &standardTpsSettings.distance, 0.05f, 0.1f, 30.0f);
+        ImGui::DragFloat("Height##TPS", &standardTpsSettings.height, 0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("LookTarget Height##TPS", &standardTpsSettings.lookTargetHeight, 0.05f, -10.0f, 10.0f);
+        ImGui::DragFloat("FOV##TPS", &standardTpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+        ImGui::DragFloat("Shoulder Offset##TPS", &standardTpsSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
         ImGui::TreePop();
     }
     if (ImGui::TreeNode("Focus Composition"))
@@ -2396,7 +2607,7 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::DragFloat("Collision Ratio Hysteresis", &lockOnCollisionRatioHysteresis, 0.005f, 0.0f, 0.2f);
         ImGui::DragFloat("Distance Start", &lockOnDistanceStart, 0.05f, 0.0f, 30.0f);
         ImGui::DragFloat("Distance Full", &lockOnDistanceFull, 0.05f, 0.0f, 30.0f);
-        ImGui::DragFloat("Max Distance Add", &lockOnMaxDistanceAdd, 0.05f, 0.0f, 10.0f);
+        ImGui::DragFloat("Grux Max Distance Add", &lockOnMaxDistanceAdd, 0.05f, 0.0f, 10.0f);
         ImGui::DragFloat("Zoom Out Speed", &lockOnZoomOutSpeed, 0.1f, 0.01f, 30.0f);
         ImGui::DragFloat("Zoom In Speed", &lockOnZoomInSpeed, 0.1f, 0.01f, 30.0f);
         ImGui::DragFloat("Distance Dead Zone", &lockOnDistanceDeadZone, 0.01f, 0.0f, 5.0f);
@@ -2506,7 +2717,7 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::Text("Selected Boss In Front: %s",
             lockOnWallEscapeSelectedDiagnostics.boss.inFront ? "true" : "false");
         ImGui::Text("Player-Boss Distance: %.3f", lockOnEnemyDistance);
-        ImGui::Text("Base Distance: %.3f", lockOnSettings.distance);
+        ImGui::Text("Base Distance: %.3f", GetActiveLockOnProfile().distance);
         ImGui::Text("Horizontal Extent: %.3f", lockOnHorizontalExtent);
         ImGui::Text("Vertical Extent: %.3f", lockOnVerticalExtent);
         ImGui::Text("Required X Distance: %.3f", lockOnRequiredXDistance);
@@ -2594,7 +2805,7 @@ void DarkCameraActor::DrawImGuiDetails()
             compositionAngularSpeedDegree, 0.0f);
         compositionDeadZoneDegree = (std::max)(compositionDeadZoneDegree, 0.0f);
         ImGui::SeparatorText("Collision FOV Fallback");
-        ImGui::DragFloat("Max Fallback FOV", &lockOnMaxFallbackFovDegree,
+        ImGui::DragFloat("Grux Max Fallback FOV", &lockOnMaxFallbackFovDegree,
             0.1f, lockOnSettings.fovDegree, 90.0f, "%.1f deg");
         ImGui::DragFloat("FOV Expand Speed", &lockOnFovExpandSpeed,
             0.5f, 0.0f, 180.0f, "%.1f deg/s");
@@ -2616,7 +2827,7 @@ void DarkCameraActor::DrawImGuiDetails()
             lockOnFovFallbackEnterDeficit, lockOnFovFallbackExitDeficit);
         lockOnFovFallbackReturnDelay = (std::max)(
             lockOnFovFallbackReturnDelay, 0.0f);
-        ImGui::Text("Base LockOn FOV: %.2f", lockOnSettings.fovDegree);
+        ImGui::Text("Base LockOn FOV: %.2f", GetActiveLockOnProfile().fovDegree);
         ImGui::Text("Required FOV: %.2f", lockOnRequiredFovDegree);
         ImGui::Text("Collision Pre Required FOV: %.2f",
             lockOnCollisionPreRequiredFovDegree);
@@ -2645,7 +2856,7 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::Text("Framing Limiter: %s", lockOnFovDiagnostics.limiter.c_str());
         ImGui::Text("Target FOV: %.2f", lockOnTargetFovDegree);
         ImGui::Text("Current FOV: %.2f", lockOnCurrentFovDegree);
-        ImGui::Text("Max Fallback FOV: %.2f", lockOnMaxFallbackFovDegree);
+        ImGui::Text("Max Fallback FOV: %.2f", GetActiveLockOnProfile().maxFallbackFovDegree);
         ImGui::Text("FOV Fallback Active: %s",
             lockOnFovFallbackActive ? "YES" : "NO");
         ImGui::Text("Framing Deficit: %.3f", lockOnFramingDeficit);

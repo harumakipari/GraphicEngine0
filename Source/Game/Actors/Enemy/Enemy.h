@@ -3,6 +3,12 @@
 
 struct ParticleSystem;
 
+enum class EnemyLockOnCameraProfile : uint8_t
+{
+    Compact,
+    Standard,
+};
+
 enum class MessageType :int
 {
     MsgCallHelp,
@@ -65,4 +71,17 @@ public:
     }
 
     virtual bool OnMessage(const Telegram& msg) { return false; }
+
+    EnemyLockOnCameraProfile GetLockOnCameraProfile() const
+    {
+        return lockOnCameraProfile;
+    }
+
+    void SetLockOnCameraProfile(const EnemyLockOnCameraProfile profile)
+    {
+        lockOnCameraProfile = profile;
+    }
+
+private:
+    EnemyLockOnCameraProfile lockOnCameraProfile = EnemyLockOnCameraProfile::Compact;
 };

@@ -45,11 +45,9 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     sword->SetRelativeEulerRotationDirect({ 0.0f, 90.f, 0.0f });
     sword->SetRelativeScaleDirect({ 1.37f,1.37f,1.37f });
 
-    // 剣コンポーネントを親とする    剣の先と剣の元のコンポーネント
+    // Runtime attack detection sweeps this single root point between frames.
     weaponRootPoint = AddComponent<SceneComponent>("SwordHitRoot", "SwordMesh");
     weaponRootPoint->SetRelativeLocationDirect(weaponRootOffset);
-    weaponTipPoint = AddComponent<SceneComponent>("SwordHitTip", "SwordMesh");
-    weaponTipPoint->SetRelativeLocationDirect(weaponTipOffset);
 
     // Reuse the established Player-vs-Grux impact assets, owned by this
     // normal enemy so their positions follow the skeleton rather than the boss.
@@ -106,35 +104,64 @@ void SkeletonWarriorActor::Update(float elapsedTime)
     if (state == State::Dead)
         return;
 
-    auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-    if (!player || player->IsPendingKill() || player->GetHp() <= 0)
-        return;
-
-    DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(player->GetPosition(), GetPosition());
-    toPlayer.y = 0.0f;
-    const float playerDistance = MathHelper::Length(toPlayer);
-    const DirectX::XMFLOAT3 directionToPlayer = playerDistance > 0.0001f
-        ? MathHelper::Normalize(toPlayer) : GetForward();
-
-    switch (state)
+    // Enemy::Update above stays active. Only this actor's decision/update loop
+    // is suppressed, preserving LockOn, animation, damage, death, and transforms.
+    if (!tutorialPassive)
     {
-    case State::Idle:
-        if (playerDistance <= facePlayerDistance && rotationComponent)
-            rotationComponent->SetDirection(directionToPlayer);
-        if (playerDistance <= attackRange)
-            BeginAttack(directionToPlayer);
-        break;
-    case State::Attacking:
-        UpdateAttack(elapsedTime, *player);
-        break;
-    case State::Recovery:
-        UpdateRecovery(elapsedTime);
-        break;
-    case State::Dead:
-        break;
+        auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+        if (player && !player->IsPendingKill() && player->GetHp() > 0)
+        {
+            DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(player->GetPosition(), GetPosition());
+            toPlayer.y = 0.0f;
+            const float playerDistance = MathHelper::Length(toPlayer);
+            const DirectX::XMFLOAT3 directionToPlayer = playerDistance > 0.0001f
+                ? MathHelper::Normalize(toPlayer) : GetForward();
+
+            switch (state)
+            {
+            case State::Idle:
+                if (playerDistance <= facePlayerDistance && rotationComponent)
+                    rotationComponent->SetDirection(directionToPlayer);
+                if (playerDistance <= attackRange)
+                    BeginAttack(directionToPlayer);
+                break;
+            case State::Attacking:
+                UpdateAttack(elapsedTime, *player);
+                break;
+            case State::Recovery:
+                UpdateRecovery(elapsedTime);
+                break;
+            case State::Dead:
+                break;
+            }
+        }
     }
 
     DrawDangerAreaDebug();
+}
+
+void SkeletonWarriorActor::SetTutorialPassive(bool enabled)
+{
+    if (tutorialPassive == enabled)
+        return;
+
+    tutorialPassive = enabled;
+    if (!tutorialPassive || state == State::Dead)
+        return;
+
+    // An editor toggle can occur during a swing. Clear only AI-owned combat
+    // state so no pending attack notify leaves an active hit window behind.
+    const bool wasInCombatState = state == State::Attacking || state == State::Recovery;
+    state = State::Idle;
+    stateElapsed = 0.0f;
+    attackHitActive = false;
+    isDangerWindow = false;
+    activeDangerNotifyState = nullptr;
+    hasHitPlayerThisAttack = false;
+    hasJustDodgedPlayerThisAttack = false;
+    ResetWeaponSweep();
+    if (wasInCombatState)
+        PlayBodyAnimation("Idle", true, true, 0.1f, true);
 }
 
 bool SkeletonWarriorActor::TakeDamageFromPlayer(int damage)
@@ -232,6 +259,8 @@ void SkeletonWarriorActor::SpawnPlayerRushHitEffect(const DirectX::XMFLOAT3& hit
 
 void SkeletonWarriorActor::BeginAttack(const DirectX::XMFLOAT3& directionToPlayer)
 {
+    if (tutorialPassive)
+        return;
     if (rotationComponent)
         rotationComponent->SetDirection(directionToPlayer);
 
@@ -296,32 +325,24 @@ void SkeletonWarriorActor::UpdateRecovery(float elapsedTime)
 void SkeletonWarriorActor::UpdateWeaponSweep(Player& player)
 {
     const DirectX::XMFLOAT3 root = GetWeaponHitPoint(weaponRootPoint, activeWeaponHitOffset);
-    const DirectX::XMFLOAT3 tip = GetWeaponHitPoint(weaponTipPoint, activeWeaponHitOffset);
-    if (!hasPreviousWeaponPoints)
+    if (!hasPreviousWeaponRoot)
     {
         previousWeaponRoot = root;
-        previousWeaponTip = tip;
-        hasPreviousWeaponPoints = true;
+        hasPreviousWeaponRoot = true;
         return;
     }
 
     HitResultWithActor rootHit;
-    HitResultWithActor tipHit;
     const uint32_t playerMask = CollisionHelper::ToBit(CollisionLayer::Player);
     const bool rootSucceeded = CollisionFunction::SphereRayCast(
         previousWeaponRoot, root, rootHit, activeWeaponHitRadius, playerMask);
-    const bool tipSucceeded = CollisionFunction::SphereRayCast(
-        previousWeaponTip, tip, tipHit, activeWeaponHitRadius, playerMask);
 
     previousWeaponRoot = root;
-    previousWeaponTip = tip;
 
-    if (hasHitPlayerThisAttack || hasJustDodgedPlayerThisAttack ||
-        (!rootSucceeded && !tipSucceeded))
+    if (hasHitPlayerThisAttack || hasJustDodgedPlayerThisAttack || !rootSucceeded)
         return;
 
-    const HitResultWithActor& hit = rootSucceeded ? rootHit : tipHit;
-    if (hit.actor != &player)
+    if (rootHit.actor != &player)
         return;
 
     if (player.TryTakeDamage(attackDamage, GetPosition()))
@@ -415,7 +436,7 @@ void SkeletonWarriorActor::DrawDangerAreaDebug() const
 void SkeletonWarriorActor::OnAnimationNotifyBegin(const AnimationNotifyState& notify)
 {
     Enemy::OnAnimationNotifyBegin(notify);
-    if (state != State::Attacking)
+    if (tutorialPassive || state != State::Attacking)
         return;
 
     switch (notify.type)
@@ -462,6 +483,11 @@ void SkeletonWarriorActor::DrawImGuiDetails()
 #ifdef USE_IMGUI
     Character::DrawImGuiDetails();
 
+    bool passive = tutorialPassive;
+    if (ImGui::Checkbox("Tutorial Passive", &passive))
+        SetTutorialPassive(passive);
+    ImGui::TextDisabled("Passive disables only this Skeleton's AI attack and facing behavior.");
+
     ImGui::SeparatorText("Tutorial Skeleton Danger Area");
     ImGui::Checkbox("Danger Area Debug", &dangerAreaDebug);
     AnimationNotifyState* notify = GetAttackDangerNotifyState();
@@ -496,6 +522,8 @@ void SkeletonWarriorActor::DrawImGuiDetails()
     ImGui::Text("DangerWindow Active: %s", isDangerWindow ? "YES" : "NO");
     ImGui::Text("Just Dodge Succeeded: %s", hasJustDodgedPlayerThisAttack ? "YES" : "NO");
 
+    ImGui::DragFloat("attackRange", &attackRange, 0.1f, 0.0f, 7.0f);
+
     auto* asset = controller->GetNotifyAssetForRuntimeTuning(1);
     const size_t stateIndex = static_cast<size_t>(notify - asset->notifyTrack.states.data());
     if (ImGui::Button("Save Attack Danger Area"))
@@ -512,7 +540,7 @@ void SkeletonWarriorActor::DrawImGuiDetails()
 
 void SkeletonWarriorActor::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
 {
-    if (state.type != AnimationNotifyState::Type::HitBox || !weaponRootPoint || !weaponTipPoint)
+    if (state.type != AnimationNotifyState::Type::HitBox || !weaponRootPoint)
         return;
 
     constexpr DirectX::XMFLOAT4 previewColor{ 0.25f, 1.0f, 0.45f, 1.0f };
@@ -522,8 +550,7 @@ void SkeletonWarriorActor::DrawAnimationEditorPreviewState(const AnimationNotify
     const float currentTime = controller ? controller->GetCurrentSampledAnimationTime() : 0.0f;
     const float radius = (std::max)(0.01f, state.hitBoxRadius);
     const DirectX::XMFLOAT3 root = GetWeaponHitPoint(weaponRootPoint, state.hitBoxOffset);
-    const DirectX::XMFLOAT3 tip = GetWeaponHitPoint(weaponTipPoint, state.hitBoxOffset);
-    const bool contiguous = editorPreviewHasPreviousWeaponPoints &&
+    const bool contiguous = editorPreviewHasPreviousWeaponRoot &&
         editorPreviewWeaponHitBoxState == &state && currentTime >= editorPreviewWeaponHitBoxTime &&
         currentTime - editorPreviewWeaponHitBoxTime <= 0.1f;
 
@@ -532,30 +559,25 @@ void SkeletonWarriorActor::DrawAnimationEditorPreviewState(const AnimationNotify
     else
     {
         DebugRender::DrawLine(editorPreviewPreviousWeaponRoot, root, previewColor, 0.0f, true);
-        DebugRender::DrawLine(editorPreviewPreviousWeaponTip, tip, previewColor, 0.0f, true);
         DebugRender::DrawSphere(editorPreviewPreviousWeaponRoot, radius, previewColor, 0.0f, true);
-        DebugRender::DrawSphere(editorPreviewPreviousWeaponTip, radius, previewColor, 0.0f, true);
     }
 
     DebugRender::DrawSphere(root, radius, previewColor, 0.0f, true);
-    DebugRender::DrawSphere(tip, radius, previewColor, 0.0f, true);
-    DebugRender::DrawLine(root, tip, previewColor, 0.0f, true);
 
-    editorPreviewHasPreviousWeaponPoints = true;
+    editorPreviewHasPreviousWeaponRoot = true;
     editorPreviewPreviousWeaponRoot = root;
-    editorPreviewPreviousWeaponTip = tip;
     editorPreviewWeaponHitBoxState = &state;
     editorPreviewWeaponHitBoxTime = currentTime;
 }
 
 void SkeletonWarriorActor::ResetWeaponSweep()
 {
-    hasPreviousWeaponPoints = false;
+    hasPreviousWeaponRoot = false;
 }
 
 void SkeletonWarriorActor::ResetAnimationEditorPreviewWeaponSweep()
 {
-    editorPreviewHasPreviousWeaponPoints = false;
+    editorPreviewHasPreviousWeaponRoot = false;
     editorPreviewWeaponHitBoxState = nullptr;
     editorPreviewWeaponHitBoxTime = -1.0f;
 }

@@ -22,7 +22,7 @@
     },
     "states": [
         {
-            "endTime": 0.5969784259796143,
+            "endTime": 0.7670817375183105,
             "hitBoxOffset": [
                 0.0,
                 0.0,
@@ -54,10 +54,10 @@
             "endTime": 0.7599999904632568,
             "hitBoxOffset": [
                 0.0,
-                0.0,
+                1.0199999809265137,
                 0.0
             ],
-            "hitBoxRadius": 0.5,
+            "hitBoxRadius": 0.20999999344348907,
             "justDodgeAreaOffset": [
                 0.0,
                 0.0,
@@ -75,7 +75,7 @@
             ],
             "moveDistance": 0.0,
             "parameter": "",
-            "startTime": 0.41999998688697815,
+            "startTime": 0.5699999928474426,
             "type": "HitBox",
             "value": 1.0
         }

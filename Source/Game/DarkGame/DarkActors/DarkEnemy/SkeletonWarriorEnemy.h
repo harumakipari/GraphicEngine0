@@ -31,7 +31,8 @@ public:
     bool IsDead() const { return state == State::Dead; }
     int GetMaxHp() const { return maxHp; }
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() const { return cameraTargetComponent; }
-
+    void SetTutorialPassive(bool enabled);
+    bool IsTutorialPassive() const { return tutorialPassive; }
 private:
     void BeginAttack(const DirectX::XMFLOAT3& directionToPlayer);
     void UpdateAttack(float elapsedTime, class Player& player);
@@ -56,7 +57,6 @@ private:
     std::shared_ptr<RotationComponent> rotationComponent;
     std::shared_ptr<SceneComponent> cameraTargetComponent;
     std::shared_ptr<SceneComponent> weaponRootPoint;
-    std::shared_ptr<SceneComponent> weaponTipPoint;
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent;
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent;
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent;
@@ -67,14 +67,12 @@ private:
     bool isDangerWindow = false;
     bool hasHitPlayerThisAttack = false;
     bool hasJustDodgedPlayerThisAttack = false;
-    bool hasPreviousWeaponPoints = false;
+    bool hasPreviousWeaponRoot = false;
     DirectX::XMFLOAT3 previousWeaponRoot{};
-    DirectX::XMFLOAT3 previousWeaponTip{};
     float activeWeaponHitRadius = 0.01f;
     DirectX::XMFLOAT3 activeWeaponHitOffset{};
-    bool editorPreviewHasPreviousWeaponPoints = false;
+    bool editorPreviewHasPreviousWeaponRoot = false;
     DirectX::XMFLOAT3 editorPreviewPreviousWeaponRoot{};
-    DirectX::XMFLOAT3 editorPreviewPreviousWeaponTip{};
     const AnimationNotifyState* editorPreviewWeaponHitBoxState = nullptr;
     float editorPreviewWeaponHitBoxTime = -1.0f;
     const AnimationNotifyState* activeDangerNotifyState = nullptr;
@@ -85,14 +83,16 @@ private:
     bool dangerAreaDebug = false;
     std::string dangerAreaSaveStatus;
 
+    // Per-actor tutorial switch. It suppresses only combat AI; animation,
+    // damage, death, collision, and LockOn participation remain active.
+    bool tutorialPassive = false;
     // Tutorial tuning, isolated from Grux and Player combat settings.
     int maxHp = 8;
     float facePlayerDistance = 12.0f;
-    float attackRange = 3.0f;
+    float attackRange = 4.0f;
     float recoveryDuration = 2.85f;
     int attackDamage = 4;
     DirectX::XMFLOAT3 weaponRootOffset{ 0.0f, 0.0f, 0.0f };
-    DirectX::XMFLOAT3 weaponTipOffset{ 0.0f, 0.0f, 1.05f };
 };
 
 

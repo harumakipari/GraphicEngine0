@@ -17,6 +17,7 @@
 #include "Core/ActorManager.h"
 #include "Engine/Camera/MovieCameraManagerActor.h"
 #include "Engine/Debug/SceneEditor.h"
+#include "Engine/Debug/DebugRender.h"
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 
@@ -1438,6 +1439,8 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
         {
             if (!projection.valid || !projection.inFront || !projection.insideViewport)
                 continue;
+            if (!darkCameraActor->IsNormalEnemyLockOnProjectionWithinScreenRadius(projection))
+                continue;
 
             screenDistanceSq = projection.ndc.x * projection.ndc.x +
                 projection.ndc.y * projection.ndc.y;
@@ -1478,6 +1481,26 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
     Logger::Log(Logger::LogCategory::Gameplay, "[LockOn][Selected] no valid target");
     return LockOnTargetSelectionResult::NoCandidate;
 }
+void GameScene::UpdateTutorialCameraProfileTrigger()
+{
+    if (!player || !darkCameraActor || tutorialCameraProfileTriggerFired)
+        return;
+
+    const DirectX::XMFLOAT3 position = player->GetPosition();
+    const DirectX::XMFLOAT3 halfSize{
+        tutorialCameraProfileTriggerSize.x * 0.5f,
+        tutorialCameraProfileTriggerSize.y * 0.5f,
+        tutorialCameraProfileTriggerSize.z * 0.5f };
+    const bool inside =
+        std::abs(position.x - tutorialCameraProfileTriggerCenter.x) <= halfSize.x &&
+        std::abs(position.y - tutorialCameraProfileTriggerCenter.y) <= halfSize.y &&
+        std::abs(position.z - tutorialCameraProfileTriggerCenter.z) <= halfSize.z;
+    if (!inside)
+        return;
+
+    tutorialCameraProfileTriggerFired = true;
+    darkCameraActor->SetTpsCameraProfile(DarkCameraActor::TpsCameraProfile::Standard);
+}
 void GameScene::Update(float deltaTime)
 {
     using namespace DirectX;
@@ -1508,6 +1531,8 @@ void GameScene::Update(float deltaTime)
     {
         SetLightViewFocus(player->GetPosition());
     }
+    UpdateTutorialCameraProfileTrigger();
+
     // シネマカメラだったらまたはムービーカメラだったらプレイヤーを透明化しない
     if (cameraManager->IsUseCinematic() || cameraManager->IsUseMovie())
     {
@@ -4527,10 +4552,19 @@ void GameScene::SetUpActors()
         { OnPlayerFinalHit(boss, source); });
 
     // メインの部屋にチュートリアル用の骸骨を追加。
-    Transform tutorialSkeletonTr(DirectX::XMFLOAT3{ -10.0f,-0.3f,10.75f },
+    Transform tutorialPassiveSkeletonTr(DirectX::XMFLOAT3{ -39.42f,-0.08f,11.808f },
+        DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
+    auto tutorialPassiveSkeleton = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
+        "TutorialPassiveSkeleton", tutorialPassiveSkeletonTr);
+    tutorialPassiveSkeleton->SetTutorialPassive(true);
+    tutorialPassiveSkeleton->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Compact);
+
+    // Stage 2 deliberately uses the same class with its default, normal AI.
+    Transform tutorialDodgeSkeletonTr(DirectX::XMFLOAT3{ -10.0f,-0.3f,10.75f },
         DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
-    this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
-        "Skeleton", tutorialSkeletonTr);
+    auto tutorialDodgeSkeleton = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
+        "TutorialDodgeSkeleton", tutorialDodgeSkeletonTr);
+    tutorialDodgeSkeleton->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Standard);
 
     Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     darkCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkCameraActor>("darkCameraActor", darkCameraTr);
@@ -4612,6 +4646,13 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Text(U8("Boss Phase: %s"), GetBossPhaseDebugName());
     ImGui::Text(U8("Boss HP: %d"), GetBossCurrentHp());
     ImGui::Text(U8("Boss MaxHP: %d"), GetBossMaxHp());
+    ImGui::SeparatorText("Tutorial Camera Profile Trigger");
+    ImGui::DragFloat3("Corridor Exit Trigger Center", &tutorialCameraProfileTriggerCenter.x,
+        0.05f, -100.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat3("Corridor Exit Trigger Size", &tutorialCameraProfileTriggerSize.x,
+        0.05f, 0.05f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::Checkbox("Show Corridor Exit Trigger", &showTutorialCameraProfileTriggerDebug);
+    ImGui::Text("Corridor Exit Trigger Fired: %s", tutorialCameraProfileTriggerFired ? "true" : "false");
     ImGui::DragInt(U8("Phase1 MaxHP"), &phase1MaxHp, 1.0f, 1, 500);
     ImGui::DragInt(U8("Phase2 MaxHP"), &phase2MaxHp, 1.0f, 1, 500);
     ImGui::Text(U8("Transition Combat Stopped: %s"),
@@ -5369,6 +5410,14 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::End();
 #endif
 
+    if (showTutorialCameraProfileTriggerDebug)
+    {
+        DebugRender::DrawBox(tutorialCameraProfileTriggerCenter, tutorialCameraProfileTriggerSize,
+            tutorialCameraProfileTriggerFired
+                ? DirectX::XMFLOAT4{ 0.2f, 0.9f, 0.35f, 1.0f }
+                : DirectX::XMFLOAT4{ 1.0f, 0.75f, 0.15f, 1.0f },
+            0.0f, true);
+    }
 }
 
 
