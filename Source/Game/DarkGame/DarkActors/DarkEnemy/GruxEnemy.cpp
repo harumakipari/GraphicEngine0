@@ -30,6 +30,42 @@
 #include "Physics/CollisionFunction.h"
 #include "Game/DarkGame/BehaviorTree/AttackRecoveryBT.h"
 
+class MainChargeWindMeshComponent final : public StaticMeshComponent
+{
+public:
+    struct Constants
+    {
+        DirectX::XMFLOAT2 maskScrollSpeed{};
+        float opacity = 0.5f;
+        float radialSpeed = 1.0f;
+        float radialTiling = 2.0f;
+        int maskFlowMode = 0;
+        DirectX::XMFLOAT2 padding{};
+    };
+
+    MainChargeWindMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner)
+        : StaticMeshComponent(name, owner), constants_(Graphics::GetDevice())
+    {
+    }
+
+    void SetWindConstants(const DirectX::XMFLOAT2& scrollSpeed, const float opacity,
+        const float radialSpeed, const float radialTiling, const int maskFlowMode)
+    {
+        constants_.data.maskScrollSpeed = scrollSpeed;
+        constants_.data.opacity = opacity;
+        constants_.data.radialSpeed = radialSpeed;
+        constants_.data.radialTiling = radialTiling;
+        constants_.data.maskFlowMode = maskFlowMode;
+    }
+
+    void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const override
+    {
+        constants_.Activate(immediateContext, 6);
+    }
+
+private:
+    mutable ConstantBuffer<Constants> constants_;
+};
 #ifdef USE_IMGUI
 namespace
 {
@@ -390,6 +426,18 @@ void GruxEnemy::Initialize(const Transform& transform)
     tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1.0f, 0.16f, 0.03f, 1.0f };
     tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
     tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+
+    // Temporary mesh: replace this path with GruxMainChargeWind.glb when the dedicated asset is ready.
+    mainChargeWindMeshComponent = AddComponent<MainChargeWindMeshComponent>("mainChargeWind", parentName);
+    mainChargeWindMeshComponent->SetModel("./Data/Models/EffectModel/ChargeWindModel1.glb");
+    for (auto& material : mainChargeWindMeshComponent->model->materials)
+        material.data.alphaMode = 2; // BLEND: Main Wind supplies mask alpha.
+    mainChargeWindMeshComponent->overrideDeferredPipelineName = "mainChargeWindForward";
+    mainChargeWindMeshComponent->overrideForwardPipelineName = "mainChargeWindForward";
+    mainChargeWindMeshComponent->SetIsCastShadow(false);
+    mainChargeWindMeshComponent->SetIsVisible(false);
+    mainChargeWindMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+    ApplyMainChargeWindSettings();
 
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
     hitSwordEffectComponent->Load("./Data/Effect/Files/NormalAttackHitEffect.json");
@@ -2528,6 +2576,27 @@ void GruxEnemy::DrawImGuiDetails()
         if (!chargeWindTrailEnabled) StopChargeWindTrails();
     }
 
+    if (ImGui::CollapsingHeader(U8("“Ëi•—ƒ‚ƒfƒ‹")))
+    {
+        ImGui::Checkbox("Enable##MainChargeWind", &mainChargeWindEnabled);
+        ImGui::DragFloat3("Local Position##MainChargeWind", &mainChargeWindLocalPosition.x, 0.05f);
+        ImGui::DragFloat3("Local Rotation##MainChargeWind", &mainChargeWindLocalRotation.x, 1.0f);
+        ImGui::DragFloat3("Local Scale##MainChargeWind", &mainChargeWindLocalScale.x, 0.05f, 0.01f, 50.0f);
+        ImGui::Combo("Mask Flow##MainChargeWind", &mainChargeWindMaskFlowMode, "Linear\0Radial\0");
+        ImGui::DragFloat2("Scroll Speed##MainChargeWind", &mainChargeWindScrollSpeed.x, 0.01f, -10.0f, 10.0f);
+        ImGui::DragFloat("Radial Speed##MainChargeWind", &mainChargeWindRadialSpeed, 0.01f, -10.0f, 10.0f);
+        ImGui::DragFloat("Radial Tiling##MainChargeWind", &mainChargeWindRadialTiling, 0.01f, 0.01f, 32.0f);
+        ImGui::ColorEdit3("Color##MainChargeWind", &mainChargeWindColor.x);
+        ImGui::DragFloat("Emission Power##MainChargeWind", &mainChargeWindEmissionPower, 0.05f, 0.0f, 30.0f);
+        ImGui::DragFloat("Opacity##MainChargeWind", &mainChargeWindOpacity, 0.01f, 0.0f, 1.0f);
+        mainChargeWindOpacity = std::clamp(mainChargeWindOpacity, 0.0f, 1.0f);
+        mainChargeWindEmissionPower = (std::max)(0.0f, mainChargeWindEmissionPower);
+        mainChargeWindMaskFlowMode = std::clamp(mainChargeWindMaskFlowMode, 0, 1);
+        mainChargeWindRadialTiling = (std::max)(0.01f, mainChargeWindRadialTiling);
+        ApplyMainChargeWindSettings();
+        if (mainChargeWindMeshComponent && chargeMovementActive)
+            mainChargeWindMeshComponent->SetIsVisible(mainChargeWindEnabled);
+    }
     DrawChargeAttackBTDebug();
     DrawRoarBTDebug();
 #ifdef USE_IMGUI
@@ -6712,6 +6781,10 @@ bool GruxEnemy::BeginChargeAttackMovement()
     chargeWallHitDistanceDebug = 0.0f;
     chargeEndReasonDebug = ChargeAttackEndReason::None;
     chargeMovementActive = true;
+    ApplyMainChargeWindSettings();
+    if (mainChargeWindMeshComponent)
+        mainChargeWindMeshComponent->SetIsVisible(mainChargeWindEnabled);
+
     StartChargeWindTrails();
     if (characterMovementComponent)
     {
@@ -7114,6 +7187,24 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     return ChargeAttackEndReason::None;
 }
 
+void GruxEnemy::ApplyMainChargeWindSettings()
+{
+    if (!mainChargeWindMeshComponent)
+        return;
+
+    mainChargeWindMeshComponent->SetRelativeLocationDirect(mainChargeWindLocalPosition);
+    mainChargeWindMeshComponent->SetRelativeEulerRotationDirect(mainChargeWindLocalRotation);
+    mainChargeWindMeshComponent->SetRelativeScaleDirect(mainChargeWindLocalScale);
+    mainChargeWindMeshComponent->SetWindConstants(
+        mainChargeWindScrollSpeed, std::clamp(mainChargeWindOpacity, 0.0f, 1.0f),
+        mainChargeWindRadialSpeed, (std::max)(0.01f, mainChargeWindRadialTiling),
+        std::clamp(mainChargeWindMaskFlowMode, 0, 1));
+    mainChargeWindMeshComponent->plusAlphaCBuffer->data.cpuColor = {
+        mainChargeWindColor.x, mainChargeWindColor.y, mainChargeWindColor.z, 1.0f };
+    mainChargeWindMeshComponent->plusAlphaCBuffer->data.emissionPower =
+        (std::max)(0.0f, mainChargeWindEmissionPower);
+}
+
 void GruxEnemy::StartChargeWindTrails()
 {
     if (!chargeWindTrailEnabled)
@@ -7282,6 +7373,8 @@ void GruxEnemy::SpawnChargeWindTrail(ChargeWindTrailRuntime& streak)
 void GruxEnemy::StopChargeAttackMovement()
 {
     StopChargeWindTrails();
+    if (mainChargeWindMeshComponent)
+        mainChargeWindMeshComponent->SetIsVisible(false);
     if (characterMovementComponent)
         characterMovementComponent->SetBossRoomProbeChargeWallHitArmed(false);
     chargeMovementActive = false;

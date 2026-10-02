@@ -241,6 +241,14 @@ public:
             AddPipeLineState("chargeTelegraphUnlitForward", desc);
         }
 
+        // Main Charge Wind unlit forward additive
+        {
+            hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelMainChargeWindPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());
+            _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+            desc.blendState = BLEND_STATE::ADD;
+            AddPipeLineState("mainChargeWindForward", desc);
+        }
         // RoarTelegraphFill Unlit forward Blend
         {
             hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelRoarTelegraphUnlitPS.cso", desc.pixelShader.ReleaseAndGetAddressOf());

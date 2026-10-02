@@ -522,8 +522,15 @@ public:
     std::string rushInputEndReasonDebug = "None";
     bool rushJudgeSuccessDebug = false;
     bool rushRequestedDebug = false;
-    bool swordHitDebug = false;
+    bool swordHitDebug = true;
     bool rushSweepHitThisHitBoxDebug = false;
+    // Read-only diagnostics for Rush_Attack_Fast_A step 0. These never affect gameplay.
+    bool rushFirstHitDebugActive = false;
+    bool rushFirstHitDebugCapturedThisRush = false;
+    bool rushFirstHitRootHitDebug = false;
+    bool rushFirstHitMidHitDebug = false;
+    bool rushFirstHitTipHitDebug = false;
+    bool rushFirstHitDamageAppliedDebug = false;
     float rushPromptAlpha = 0.0f;
     float rushPromptFadeInDuration = 0.10f;
     RushPromptAnimationPhase rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;

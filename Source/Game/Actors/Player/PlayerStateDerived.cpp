@@ -737,14 +737,30 @@ void PlayerRushState::Execute(float deltaTime)
                         capsuleDelta.y = 0.0f;
                         capsuleCenterDistanceXZ = MathHelper::Length(capsuleDelta);
                     }
+                    DirectX::XMFLOAT3 targetDirection = targetDelta;
+                    const float targetDistance = MathHelper::Length(targetDirection);
+                    if (targetDistance > FLT_EPSILON)
+                        targetDirection = MathHelper::Multiply(targetDirection, 1.0f / targetDistance);
+                    DirectX::XMFLOAT3 playerForward = player->GetForward();
+                    playerForward.y = 0.0f;
+                    const float forwardLength = MathHelper::Length(playerForward);
+                    if (forwardLength > FLT_EPSILON)
+                        playerForward = MathHelper::Multiply(playerForward, 1.0f / forwardLength);
+                    const float facingDot = playerForward.x * targetDirection.x +
+                        playerForward.z * targetDirection.z;
                     Logger::Log(Logger::LogCategory::Gameplay, std::format(
                         "[Rush][AttackBegin] target={} actorCenterDistanceXZ={:.3f} "
-                        "capsuleCenterDistanceXZ={:.3f} capsuleCenterDistance3D={:.3f}",
+                        "capsuleCenterDistanceXZ={:.3f} capsuleCenterDistance3D={:.3f} "
+                        "forward=({:.3f},{:.3f},{:.3f}) targetDirXZ=({:.3f},{:.3f},{:.3f}) facingDot={:.3f}",
                         target->GetName(), MathHelper::Length(targetDelta),
-                        capsuleCenterDistanceXZ, capsuleCenterDistance3D));
+                        capsuleCenterDistanceXZ, capsuleCenterDistance3D,
+                        playerForward.x, playerForward.y, playerForward.z,
+                        targetDirection.x, targetDirection.y, targetDirection.z, facingDot));
                 }
             }
-            player->PlayBodyAnimation(currentAttackAnimation, false);
+            // Diagnostic: remove only the CombatRush_Fwd -> first Rush attack pose blend.
+            // Later Rush combo transitions still use PlayBodyAnimation's 0.3 s default.
+            player->PlayBodyAnimation(currentAttackAnimation, false, true, 0.0f);
             phase = RushPhase::Attack;
         }
         break;

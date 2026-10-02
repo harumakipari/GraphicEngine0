@@ -58,6 +58,9 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     rushHitSparkEffectComponent = AddComponent<ParticleComponent>("SkeletonRushHitSpark", parentName);
     rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushCoreEffect.json");
 
+    // “ª‚ÌŠ•‚Ìƒ‚ƒfƒ‹‚ð’Ç‰Á
+
+
 
 #endif // 0
     // “–‚½‚è”»’è

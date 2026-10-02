@@ -804,6 +804,103 @@ void Player::Update(float deltaTime)
         sweeps[2].hit = CollisionFunction::SphereRayCast(
             prevSwordTipPos, swordTipPos, sweeps[2].result, activeHitBoxRadius, enemyLayer, true);
 
+        const auto* rushStateForDebug = stateMachine_
+            ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
+        const auto animationControllerForDebug = GetBodyAnimationController();
+        const bool isRushFirstHitDebug = swordHitDebug && rushFirstHitDebugActive;
+        if (isRushFirstHitDebug)
+        {
+            rushFirstHitRootHitDebug = rushFirstHitRootHitDebug || sweeps[0].hit;
+            rushFirstHitMidHitDebug = rushFirstHitMidHitDebug || sweeps[1].hit;
+            rushFirstHitTipHitDebug = rushFirstHitTipHitDebug || sweeps[2].hit;
+
+            DirectX::XMFLOAT3 targetPosition{};
+            DirectX::XMFLOAT3 targetDirection{};
+            float actorCenterDistanceXZ = 0.0f;
+            float capsuleCenterDistanceXZ = 0.0f;
+            float playerRadius = 0.0f;
+            float targetRadius = 0.0f;
+            float capsuleSurfaceDistance = 0.0f;
+            float rushStopDistance = 2.5f;
+            std::shared_ptr<CapsuleComponent> targetCapsule;
+            if (const auto target = rushTarget.lock())
+            {
+                targetPosition = target->GetPosition();
+                targetDirection = MathHelper::Subtract(targetPosition, GetPosition());
+                targetDirection.y = 0.0f;
+                actorCenterDistanceXZ = MathHelper::Length(targetDirection);
+                if (actorCenterDistanceXZ > FLT_EPSILON)
+                    targetDirection = MathHelper::Multiply(targetDirection, 1.0f / actorCenterDistanceXZ);
+
+                const auto playerCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                    FindComponentByName("capsuleComponent"));
+                targetCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                    target->FindComponentByName("capsuleComponent"));
+                if (playerCapsule && targetCapsule)
+                {
+                    playerRadius = playerCapsule->GetRadius();
+                    targetRadius = targetCapsule->GetRadius();
+                    DirectX::XMFLOAT3 capsuleDelta = MathHelper::Subtract(
+                        targetCapsule->GetComponentLocation(), playerCapsule->GetComponentLocation());
+                    capsuleDelta.y = 0.0f;
+                    capsuleCenterDistanceXZ = MathHelper::Length(capsuleDelta);
+                    capsuleSurfaceDistance = capsuleCenterDistanceXZ - playerRadius - targetRadius;
+                    if (!std::dynamic_pointer_cast<GruxEnemy>(target))
+                    {
+                        rushStopDistance = (std::max)(0.25f, playerRadius + targetRadius +
+                            std::clamp(normalEnemyRushSurfaceMargin, 0.0f, 1.0f));
+                    }
+                }
+            }
+
+            DirectX::XMFLOAT3 playerForward = GetForward();
+            playerForward.y = 0.0f;
+            const float forwardLength = MathHelper::Length(playerForward);
+            if (forwardLength > FLT_EPSILON)
+                playerForward = MathHelper::Multiply(playerForward, 1.0f / forwardLength);
+            const float facingDot = playerForward.x * targetDirection.x + playerForward.z * targetDirection.z;
+
+            Logger::Log(Logger::LogCategory::Physics, std::format(
+                "[RushFirstHit] frame={} animationTime={:.4f} playerPos=({:.3f},{:.3f},{:.3f}) "
+                "targetPos=({:.3f},{:.3f},{:.3f}) actorCenterXZ={:.3f} capsuleCenterXZ={:.3f} "
+                "capsuleSurface={:.3f} playerRadius={:.3f} targetRadius={:.3f} rushStopDistance={:.3f} "
+                "forward=({:.3f},{:.3f},{:.3f}) targetDirXZ=({:.3f},{:.3f},{:.3f}) facingDot={:.3f} "
+                "radius={:.3f} offset=({:.3f},{:.3f},{:.3f}) "
+                "root prev=({:.3f},{:.3f},{:.3f}) current=({:.3f},{:.3f},{:.3f}) length={:.3f} hit={} "
+                "mid prev=({:.3f},{:.3f},{:.3f}) current=({:.3f},{:.3f},{:.3f}) length={:.3f} hit={} "
+                "tip prev=({:.3f},{:.3f},{:.3f}) current=({:.3f},{:.3f},{:.3f}) length={:.3f} hit={}",
+                initialRushInputTraceFrame, animationControllerForDebug->GetCurrentAnimationTime(),
+                GetPosition().x, GetPosition().y, GetPosition().z,
+                targetPosition.x, targetPosition.y, targetPosition.z,
+                actorCenterDistanceXZ, capsuleCenterDistanceXZ, capsuleSurfaceDistance,
+                playerRadius, targetRadius, rushStopDistance,
+                playerForward.x, playerForward.y, playerForward.z,
+                targetDirection.x, targetDirection.y, targetDirection.z, facingDot,
+                activeHitBoxRadius, activeHitBoxOffset.x, activeHitBoxOffset.y, activeHitBoxOffset.z,
+                sweeps[0].start.x, sweeps[0].start.y, sweeps[0].start.z,
+                sweeps[0].end.x, sweeps[0].end.y, sweeps[0].end.z, sweeps[0].sweepLength, sweeps[0].hit,
+                sweeps[1].start.x, sweeps[1].start.y, sweeps[1].start.z,
+                sweeps[1].end.x, sweeps[1].end.y, sweeps[1].end.z, sweeps[1].sweepLength, sweeps[1].hit,
+                sweeps[2].start.x, sweeps[2].start.y, sweeps[2].start.z,
+                sweeps[2].end.x, sweeps[2].end.y, sweeps[2].end.z, sweeps[2].sweepLength, sweeps[2].hit));
+
+            constexpr DirectX::XMFLOAT4 rootColor{ 0.25f, 1.0f, 0.45f, 1.0f };
+            constexpr DirectX::XMFLOAT4 midColor{ 1.0f, 0.9f, 0.2f, 1.0f };
+            constexpr DirectX::XMFLOAT4 tipColor{ 1.0f, 0.35f, 0.85f, 1.0f };
+            const DirectX::XMFLOAT4 colors[] = { rootColor, midColor, tipColor };
+            for (size_t index = 0; index < std::size(sweeps); ++index)
+            {
+                DebugRender::DrawSphere(sweeps[index].end, activeHitBoxRadius, colors[index], 0.0f, true);
+                DebugRender::DrawSphere(sweeps[index].start, activeHitBoxRadius, colors[index], 0.0f, true);
+                DebugRender::DrawLine(sweeps[index].start, sweeps[index].end, colors[index], 0.0f, true);
+            }
+            if (targetCapsule)
+            {
+                const Capsule capsule = targetCapsule->ToCapsule();
+                DebugRender::DrawCapsule(capsule.a, capsule.b, capsule.r,
+                    { 0.2f, 0.85f, 1.0f, 1.0f }, 0.0f, true);
+            }
+        }
         constexpr float minSweepLength = 0.0001f;
         const SwordSweepResult* selectedNormalHit = nullptr;
         const SwordSweepResult* selectedOverlapHit = nullptr;
@@ -954,6 +1051,8 @@ void Player::Update(float deltaTime)
                     enemy && !enemy->IsDefeated() &&
                     enemy->TakeDamageFromPlayer(GetCurrentAttackDamage()))
                 {
+                    if (isRushHit && rushFirstHitDebugActive)
+                        rushFirstHitDamageAppliedDebug = true;
                     if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
                         enemy->SpawnPlayerHitEffect(hit.hitPoint, hit.normal, playerPos);
                     hitActors.emplace(enemy);
@@ -1739,6 +1838,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     switch (state.type)
     {
     case AnimationNotifyState::Type::HitBox:
+    {
         Logger::Log(U8("当たり判定を開始しました"));
         activeHitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
         activeHitBoxOffset = state.hitBoxOffset;
@@ -1746,6 +1846,91 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         prevSwordMidPos = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
         prevSwordTipPos = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
         hitBox = true;
+        const auto* rushStateForFirstHitDebug = stateMachine_
+            ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
+        const auto controllerForFirstHitDebug = GetBodyAnimationController();
+        const std::string controllerAnimationName = controllerForFirstHitDebug
+            ? controllerForFirstHitDebug->GetCurrentAnimationName() : "";
+        const std::string rushAnimationName = rushStateForFirstHitDebug
+            ? rushStateForFirstHitDebug->GetCurrentAttackAnimationForDebug() : "";
+        const bool controllerIsRushAttackA = controllerAnimationName == "Rush_Attack_Fast_A";
+        const bool rushStateIsRushAttackA = rushAnimationName == "Rush_Attack_Fast_A";
+        if (rushStateForFirstHitDebug)
+        {
+            Logger::Log(Logger::LogCategory::Physics, std::format(
+                "[RushFirstHit][DebugCondition] swordHitDebug={} currentAnimationName={} rushAnimation={} comboIndex={} phase={} "
+                "hitBoxActive={} controllerIsRushAttackA={} rushStateIsRushAttackA={} capturedThisRush={}",
+                swordHitDebug, controllerAnimationName, rushAnimationName,
+                rushStateForFirstHitDebug->GetComboIndex(), rushStateForFirstHitDebug->GetPhaseNameForDebug(),
+                hitBox, controllerIsRushAttackA, rushStateIsRushAttackA, rushFirstHitDebugCapturedThisRush));
+        }
+        // During the 0.3 sec transition the controller name can still be the
+        // outgoing CombatRush_Fwd clip. The Rush state's requested clip is the
+        // reliable companion signal for this Notify; either A signal arms it.
+        rushFirstHitDebugActive = swordHitDebug && rushStateForFirstHitDebug &&
+            !rushFirstHitDebugCapturedThisRush &&
+            (controllerIsRushAttackA || rushStateIsRushAttackA);
+        if (rushFirstHitDebugActive)
+        {
+            rushFirstHitDebugCapturedThisRush = true;
+            rushFirstHitRootHitDebug = false;
+            rushFirstHitMidHitDebug = false;
+            rushFirstHitTipHitDebug = false;
+            rushFirstHitDamageAppliedDebug = false;
+
+            DirectX::XMFLOAT3 targetPosition{};
+            DirectX::XMFLOAT3 targetDirection{};
+            float actorCenterDistanceXZ = 0.0f;
+            float playerRadius = 0.0f;
+            float targetRadius = 0.0f;
+            float capsuleSurfaceDistance = 0.0f;
+            if (const auto target = rushTarget.lock())
+            {
+                targetPosition = target->GetPosition();
+                targetDirection = MathHelper::Subtract(targetPosition, GetPosition());
+                targetDirection.y = 0.0f;
+                actorCenterDistanceXZ = MathHelper::Length(targetDirection);
+                if (actorCenterDistanceXZ > FLT_EPSILON)
+                    targetDirection = MathHelper::Multiply(targetDirection, 1.0f / actorCenterDistanceXZ);
+                const auto playerCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                    FindComponentByName("capsuleComponent"));
+                const auto targetCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
+                    target->FindComponentByName("capsuleComponent"));
+                if (playerCapsule && targetCapsule)
+                {
+                    playerRadius = playerCapsule->GetRadius();
+                    targetRadius = targetCapsule->GetRadius();
+                    DirectX::XMFLOAT3 capsuleDelta = MathHelper::Subtract(
+                        targetCapsule->GetComponentLocation(), playerCapsule->GetComponentLocation());
+                    capsuleDelta.y = 0.0f;
+                    capsuleSurfaceDistance = MathHelper::Length(capsuleDelta) - playerRadius - targetRadius;
+                }
+            }
+            DirectX::XMFLOAT3 playerForward = GetForward();
+            playerForward.y = 0.0f;
+            const float forwardLength = MathHelper::Length(playerForward);
+            if (forwardLength > FLT_EPSILON)
+                playerForward = MathHelper::Multiply(playerForward, 1.0f / forwardLength);
+            const float facingDot = playerForward.x * targetDirection.x + playerForward.z * targetDirection.z;
+            const DirectX::XMFLOAT3 root = GetHitBoxPoint(swordRootComponent, activeHitBoxOffset);
+            const DirectX::XMFLOAT3 mid = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
+            const DirectX::XMFLOAT3 tip = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
+            const float blendFactor = controllerForFirstHitDebug->GetBlendFactorDebug();
+            Logger::Log(Logger::LogCategory::Physics, std::format(
+                "[RushFirstHit][Begin] frame={} animationTime={:.4f} blendActive={} blendFactor={:.3f} "
+                "playerPos=({:.3f},{:.3f},{:.3f}) targetPos=({:.3f},{:.3f},{:.3f}) "
+                "actorCenterXZ={:.3f} capsuleSurface={:.3f} playerRadius={:.3f} targetRadius={:.3f} "
+                "forward=({:.3f},{:.3f},{:.3f}) targetDirXZ=({:.3f},{:.3f},{:.3f}) facingDot={:.3f} "
+                "root=({:.3f},{:.3f},{:.3f}) mid=({:.3f},{:.3f},{:.3f}) tip=({:.3f},{:.3f},{:.3f})",
+                initialRushInputTraceFrame, controllerForFirstHitDebug->GetCurrentAnimationTime(),
+                blendFactor < 0.999f, blendFactor,
+                GetPosition().x, GetPosition().y, GetPosition().z,
+                targetPosition.x, targetPosition.y, targetPosition.z,
+                actorCenterDistanceXZ, capsuleSurfaceDistance, playerRadius, targetRadius,
+                playerForward.x, playerForward.y, playerForward.z,
+                targetDirection.x, targetDirection.y, targetDirection.z, facingDot,
+                root.x, root.y, root.z, mid.x, mid.y, mid.z, tip.x, tip.y, tip.z));
+        }
         if (swordHitDebug && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
         {
             rushSweepHitThisHitBoxDebug = false;
@@ -1759,6 +1944,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         if (stateMachine_->GetStateName() == "Attack")
             StopAttackTargetRotation();
         break;
+    }
     case AnimationNotifyState::Type::InputWindow:
         inputWindow = true;
         Logger::Log(U8("入力受付を開始しました"));
@@ -1867,6 +2053,17 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     {
     case AnimationNotifyState::Type::HitBox:
         //Logger::Log(U8("当たり判定を終了しました"));
+        if (rushFirstHitDebugActive)
+        {
+            Logger::Log(Logger::LogCategory::Physics, std::format(
+                "[RushFirstHit][End] frame={} animationTime={:.4f} damageApplied={} rootHit={} midHit={} tipHit={} allMiss={}",
+                initialRushInputTraceFrame,
+                GetBodyAnimationController() ? GetBodyAnimationController()->GetCurrentAnimationTime() : -1.0f,
+                rushFirstHitDamageAppliedDebug, rushFirstHitRootHitDebug,
+                rushFirstHitMidHitDebug, rushFirstHitTipHitDebug,
+                !rushFirstHitRootHitDebug && !rushFirstHitMidHitDebug && !rushFirstHitTipHitDebug));
+            rushFirstHitDebugActive = false;
+        }
         hitBox = false;
         activeHitBoxRadius = weaponSphereRadius;
         activeHitBoxOffset = {};
@@ -4443,6 +4640,8 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     CapturePlayerPoseGhost();
     // スローモーションにする
     // rush時のtargetを保存する
+    rushFirstHitDebugActive = false;
+    rushFirstHitDebugCapturedThisRush = false;
     rushTarget = enemy;
 
     const float scale = std::clamp(justDodgeTimeScale, 0.10f, 1.0f);

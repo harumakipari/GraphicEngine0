@@ -1073,6 +1073,9 @@
     <FxCompile Include="Shader\ComputeParticleUpdateCS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
+    <FxCompile Include="Shader\GltfModelMainChargeWindPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
     <FxCompile Include="Shader\GltfModelDeferredGruxPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>

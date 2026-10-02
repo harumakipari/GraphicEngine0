@@ -17,6 +17,7 @@ class Player;
 class BehaviorTree;
 class NodeBase;
 
+class MainChargeWindMeshComponent;
 class GruxEnemy :public Enemy
 {
 public:
@@ -303,13 +304,14 @@ public:
     // charge that provided that Rush opportunity without affecting other attacks.
     void NotifyPlayerRushStarted(Player* player);
     void NotifyPlayerRushEnded(Player* player);
-    bool ShouldAbortChargeAttackBT() ;
+    bool ShouldAbortChargeAttackBT();
     void CleanupChargeAttackBT();
     void DrawChargeAttackBTDebug();
     bool BeginChargeAttackMovement();
     bool LockChargeDirectionToPlayer();
     ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime, bool allowTripleWallTurn = false);
     void StartChargeWindTrails();
+    void ApplyMainChargeWindSettings();
     void UpdateChargeWindTrails(float deltaTime);
     void StopChargeWindTrails();
     void SpawnChargeWindTrail(struct ChargeWindTrailRuntime& streak);
@@ -855,6 +857,18 @@ private:
     float chargeWindTrailWobbleFrequencyMin = 3.0f;
     float chargeWindTrailWobbleFrequencyMax = 6.0f;
 
+    bool mainChargeWindEnabled = true;
+    DirectX::XMFLOAT3 mainChargeWindLocalPosition{ 0.0f, 1.05f, 0.8f };
+    DirectX::XMFLOAT3 mainChargeWindLocalRotation{ 0.0f,90.0f,90.0f };
+    DirectX::XMFLOAT3 mainChargeWindLocalScale{ 1.0f, 1.0f, 1.0f };
+    //DirectX::XMFLOAT3 mainChargeWindLocalScale{ 2.25f, 1.0f, 2.0f };
+    DirectX::XMFLOAT2 mainChargeWindScrollSpeed{ 0.0f, 0.0f };
+    int mainChargeWindMaskFlowMode = 1; // 0: Linear, 1: Radial
+    float mainChargeWindRadialSpeed = 1.45f;
+    float mainChargeWindRadialTiling = 3.0f;
+    DirectX::XMFLOAT3 mainChargeWindColor{ 0.70f, 0.85f, 1.00f };
+    float mainChargeWindEmissionPower = 1.5f;
+    float mainChargeWindOpacity = 0.5f;
     // ?O???F
     DirectX::XMFLOAT3 bossTrailColor{ 0.0f, 0.13f, 0.002f };
     float bossTrailEmissiveStrength = 7.0f;
@@ -870,6 +884,7 @@ private:
     std::shared_ptr<ParticleComponent> wallImpactFlashEffectComponent;
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;
     std::shared_ptr<ParticleComponent> footScrapeEffectComponent;
+    std::shared_ptr<MainChargeWindMeshComponent> mainChargeWindMeshComponent;
     std::shared_ptr<StaticMeshComponent> tripleChargeTelegraphMeshComponent;   // ?????~G?t?F?N?g
     std::shared_ptr<StaticMeshComponent> jumpTelegraphMeshComponent;
     std::shared_ptr<StaticMeshComponent> jumpTelegraphInnerMeshComponent;   // ?????~G?t?F?N?g
@@ -1959,7 +1974,7 @@ private:
     float bossBattleCameraRightDistance = 0.0f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,0.0f,0.0f };
 
-struct WeaponHitBoxPoints
+    struct WeaponHitBoxPoints
     {
         DirectX::XMFLOAT3 root{};
         DirectX::XMFLOAT3 middle{};
@@ -2058,8 +2073,8 @@ struct WeaponHitBoxPoints
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;
     NodeBase* activeNode = nullptr;
     bool behaviorTreeFastComboEnabled = true;
-    
-    bool forceBehaviorTreeCharge = false;
+
+    bool forceBehaviorTreeCharge = true;
 
     CloseCombatSettings closeCombatSettings;
     bool showCloseCombatDebugRange = false;
