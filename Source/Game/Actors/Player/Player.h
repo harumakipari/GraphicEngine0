@@ -481,12 +481,13 @@ public:
     float lastJustWindowRatio = 0.0f;
     float lastJustBossHitBoxElapsed = -1.0f;
     float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
-    // Normal-enemy Rush stops at capsule surface separation plus this margin.
-    // Grux deliberately keeps its legacy fixed 2.5 m stop distance.
+
+    // 通常攻撃でどれくらい攻撃を補正するか
     float normalEnemyRushSurfaceMargin = 0.15f;
     float motionWarpDesiredAttackSurfaceDistance = 0.5f;
     float attackRotationMaxCorrectionDegrees = 55.0f;
     float attackRotationSpeedDegrees = 240.0f;
+    float attackAssistMaxDistance = 8.0f;
     std::weak_ptr<Enemy> attackTarget;
     float attackRotationStartYaw = 0.0f;
     bool attackRotationTracking = false;

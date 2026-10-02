@@ -1739,8 +1739,17 @@ void Player::DrawImGuiDetails()
         &attackRotationMaxCorrectionDegrees, 1.0f, 45.0f, 60.0f);
     ImGui::DragFloat("Attack rotation speed (deg/sec)",
         &attackRotationSpeedDegrees, 5.0f, 30.0f, 720.0f);
-
-
+    if (ImGui::TreeNode("Attack Assist Debug"))
+    {
+        ImGui::DragFloat("Assist Search Radius", &attackAssistMaxDistance,
+            0.05f, 0.0f, 20.0f, "%.2f m");
+        ImGui::Text("Assist Search Radius: %.2f m", attackAssistMaxDistance);
+        if (const auto target = attackTarget.lock(); target && !target->IsDefeated())
+            ImGui::Text("Current attackTarget: %s", target->GetName().c_str());
+        else
+            ImGui::Text("Current attackTarget: None");
+        ImGui::TreePop();
+    }
     // コンボの始まりを設定する
     if (ImGui::BeginCombo(U8("コンボの始まり"), startAttackAnimation.c_str()))
     {
@@ -3165,47 +3174,43 @@ bool Player::TryExecuteActionRequest()
 void Player::AcquireAttackTarget()
 {
     attackTarget.reset();
+    float selectedDistance = 0.0f;
+    float nearestDistance = FLT_MAX;
     const auto enemies = GetOwnerScene()->GetActorManager()->GetActorsOfType<Enemy>();
+    for (const auto& enemy : enemies)
+    {
+        if (!enemy || enemy->IsDefeated() || enemy->IsPendingKill())
+            continue;
 
-    // Prefer the camera's LockOn/Focus target when it is an Enemy in this scene.
-    if (const auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
-    {
-        if (const auto targetHead = camera->GetEnemyHead())
+        DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), GetPosition());
+        delta.y = 0.0f;
+        const float distance = MathHelper::Length(delta);
+        if (distance > attackAssistMaxDistance)
+            continue;
+
+        if (distance < nearestDistance)
         {
-            Actor* targetOwner = targetHead->GetOwner();
-            for (const auto& enemy : enemies)
-            {
-                if (enemy && !enemy->IsDefeated() && enemy.get() == targetOwner)
-                {
-                    attackTarget = enemy;
-                    break;
-                }
-            }
-        }
-    }
-    // TPS/no lock-on fallback: nearest valid Enemy.
-    if (attackTarget.expired())
-    {
-        float nearestDistance = FLT_MAX;
-        for (const auto& enemy : enemies)
-        {
-                if (!enemy || enemy->IsDefeated())
-                continue;
-            DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), GetPosition());
-            delta.y = 0.0f;
-            const float distance = MathHelper::Length(delta);
-            if (distance < nearestDistance)
-            {
-                nearestDistance = distance;
-                attackTarget = enemy;
-            }
+            nearestDistance = distance;
+            selectedDistance = distance;
+            attackTarget = enemy;
         }
     }
 
     attackRotationStartYaw = GetEulerRotation().y;
     attackRotationTracking = !attackTarget.expired();
-}
 
+    if (const auto target = attackTarget.lock())
+    {
+        Logger::Log(Logger::LogCategory::Gameplay, std::format(
+            "[AttackAssist] Target={} Distance={:.3f}",
+            target->GetName(), selectedDistance));
+    }
+    else
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[AttackAssist] Target=None Distance=N/A");
+    }
+}
 void Player::UpdateAttackTargetRotation(float deltaTime)
 {
     if (!attackRotationTracking || hitBox)

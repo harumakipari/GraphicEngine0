@@ -758,9 +758,9 @@ void PlayerRushState::Execute(float deltaTime)
                         targetDirection.x, targetDirection.y, targetDirection.z, facingDot));
                 }
             }
-            // Diagnostic: remove only the CombatRush_Fwd -> first Rush attack pose blend.
+            // Diagnostic: shorten only the CombatRush_Fwd -> first Rush attack pose blend.
             // Later Rush combo transitions still use PlayBodyAnimation's 0.3 s default.
-            player->PlayBodyAnimation(currentAttackAnimation, false, true, 0.0f);
+            player->PlayBodyAnimation(currentAttackAnimation, false, true, 0.10f);
             phase = RushPhase::Attack;
         }
         break;
