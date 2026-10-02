@@ -13,12 +13,12 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     std::string parentName = "SkeletonWarriorMeshComponent";
     Enemy::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
-    //skeletalMeshComponent->SetModel("./Data/Models/Characters/Skeleton/Skeleton.gltf");
     skeletalMeshComponent->SetModel("./Data/Models/Characters/Skeleton/Skeleton.gltf", false, true);
     skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Enemy;   // オブジェクトの種類を Enemy に設定
     skeletalMeshComponent->SetRelativeLocationDirect({ 0.0f,-0.f,0.0f });
 
     // アニメーションコントローラーを作成
+#if 1
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
     auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     controller->AddAnimation("Walk", 0);
@@ -58,6 +58,8 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     rushHitSparkEffectComponent = AddComponent<ParticleComponent>("SkeletonRushHitSpark", parentName);
     rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushCoreEffect.json");
 
+
+#endif // 0
     // 当たり判定
     {
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
@@ -98,6 +100,8 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
 void SkeletonWarriorActor::Update(float elapsedTime)
 {
     Enemy::Update(elapsedTime);
+
+
     if (IsAnimationEditorPreviewActive())
         return;
     ResetAnimationEditorPreviewWeaponSweep();
@@ -422,15 +426,12 @@ AnimationNotifyState* SkeletonWarriorActor::GetAttackDangerNotifyState()
 
 void SkeletonWarriorActor::DrawDangerAreaDebug() const
 {
-    if (!dangerAreaDebug || state != State::Attacking)
+    if (!dangerAreaDebug || state != State::Attacking || !isDangerWindow)
         return;
 
-    const DirectX::XMFLOAT4 color = hasJustDodgedPlayerThisAttack
-        ? DirectX::XMFLOAT4{ 0.15f, 1.0f, 0.25f, 1.0f }
-        : isDangerWindow ? DirectX::XMFLOAT4{ 1.0f, 0.2f, 0.1f, 1.0f }
-        : DirectX::XMFLOAT4{ 1.0f, 0.75f, 0.15f, 1.0f };
-    DebugRender::DrawBox(dangerArea.WorldTransform(), dangerArea.size, color, 0.0f, true);
-    DebugRender::DrawSphere(dangerArea.center, 0.08f, color, 0.0f, true);
+    constexpr DirectX::XMFLOAT4 dangerColor{ 0.65f, 0.25f, 1.0f, 1.0f };
+    DebugRender::DrawBox(dangerArea.WorldTransform(), dangerArea.size, dangerColor, 0.0f, true);
+    DebugRender::DrawSphere(dangerArea.center, 0.08f, dangerColor, 0.0f, true);
 }
 
 void SkeletonWarriorActor::OnAnimationNotifyBegin(const AnimationNotifyState& notify)
@@ -540,6 +541,18 @@ void SkeletonWarriorActor::DrawImGuiDetails()
 
 void SkeletonWarriorActor::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
 {
+    constexpr DirectX::XMFLOAT4 dangerPreviewColor{ 0.65f, 0.25f, 1.0f, 1.0f };
+    if (state.type == AnimationNotifyState::Type::DangerWindow)
+    {
+        const DangerArea previewArea = BuildDangerArea(
+            GetPosition(), GetRight(), GetUp(), GetForward(),
+            state.justDodgeAreaOffset, state.justDodgeAreaSize);
+        DebugRender::DrawBox(previewArea.WorldTransform(), previewArea.size,
+            dangerPreviewColor, 0.0f, true);
+        DebugRender::DrawSphere(previewArea.center, 0.08f, dangerPreviewColor, 0.0f, true);
+        return;
+    }
+
     if (state.type != AnimationNotifyState::Type::HitBox || !weaponRootPoint)
         return;
 
