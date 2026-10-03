@@ -4522,10 +4522,8 @@ void GameScene::SetUpActors()
     auto movieCameraManagerActor = GetActorManager()->CreateAndRegisterActorWithTransform<MovieCameraManagerActor>("movieCameraManager", movieCameraTr);
     movieCameraManagerActor->SetMovieCameraComponent(movieCameraActor->GetMovieCameraComponent());
 
-    Transform clothTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    darkClothActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
-
-
+    //Transform clothTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    //darkClothActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
 
     Transform iceTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto iceActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("IceFragmentEmitterActor", iceTr);
@@ -5408,7 +5406,91 @@ void GameScene::DrawGuiPlusAlpha()
     }
 
     ImGui::End();
+
+    if (darkCameraActor && darkCameraActor->IsNormalEnemyLockOnScreenRadiusDebugEnabled() && player)
+    {
+        float viewportX = 0.0f;
+        float viewportY = 0.0f;
+        float viewportWidth = 0.0f;
+        float viewportHeight = 0.0f;
+        Graphics::GetViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+        ImDrawList* drawList = ImGui::GetForegroundDrawList();
+        drawList->PushClipRect(
+            ImVec2(viewportX, viewportY),
+            ImVec2(viewportX + viewportWidth, viewportY + viewportHeight), true);
+
+        const float maxDistance = darkCameraActor->GetLockOnTargetSelectionMaxDistance();
+        const float maxDistanceSq = maxDistance * maxDistance;
+        for (const auto& enemy : GetActorManager()->GetActorsOfType<Enemy>())
+        {
+            if (!enemy || std::dynamic_pointer_cast<GruxEnemy>(enemy))
+                continue;
+
+            const auto target = std::dynamic_pointer_cast<SceneComponent>(
+                enemy->FindComponentByName("cameraTargetComponent"));
+            if (!target)
+                continue;
+
+            DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), player->GetPosition());
+            delta.y = 0.0f;
+            const float distanceSq = delta.x * delta.x + delta.z * delta.z;
+            const auto projection = darkCameraActor->ProjectWorldPositionForUI(
+                target->GetComponentLocation());
+            const bool insideScreenRadius = projection.valid && projection.inFront &&
+                projection.insideViewport &&
+                darkCameraActor->IsNormalEnemyLockOnProjectionWithinScreenRadius(projection);
+            const bool candidate = !enemy->IsDefeated() && !enemy->IsPendingKill() &&
+                !bossRoomLockOnScopeActive && distanceSq <= maxDistanceSq && insideScreenRadius;
+            const ImU32 color = candidate
+                ? IM_COL32(80, 255, 110, 255)
+                : insideScreenRadius ? IM_COL32(255, 180, 50, 255)
+                : IM_COL32(255, 80, 80, 255);
+
+            if (projection.valid && projection.inFront)
+            {
+                const ImVec2 position{ projection.screenPosition.x, projection.screenPosition.y };
+                drawList->AddCircle(position, 7.0f, color, 16, 2.0f);
+                drawList->AddLine(
+                    ImVec2(position.x - 10.0f, position.y),
+                    ImVec2(position.x + 10.0f, position.y), color, 1.5f);
+                drawList->AddLine(
+                    ImVec2(position.x, position.y - 10.0f),
+                    ImVec2(position.x, position.y + 10.0f), color, 1.5f);
+                const char* status = candidate ? "Candidate"
+                    : insideScreenRadius ? "Other filter" : "Out of range";
+                const std::string label = enemy->GetName() + " [" + status + "]";
+                drawList->AddText(ImVec2(position.x + 12.0f, position.y - 8.0f), color, label.c_str());
+            }
+        }
+        drawList->PopClipRect();
+    }
 #endif
+
+    if (darkCameraActor && darkCameraActor->IsNormalEnemyLockOnScreenRadiusDebugEnabled() && player)
+    {
+        const DirectX::XMFLOAT3 playerPosition = player->GetPosition();
+        const float radius = darkCameraActor->GetLockOnTargetSelectionMaxDistance();
+        constexpr int segmentCount = 48;
+        constexpr float twoPi = DirectX::XM_2PI;
+        const DirectX::XMFLOAT4 rangeColor{ 0.25f, 0.85f, 1.0f, 1.0f };
+        for (int segment = 0; segment < segmentCount; ++segment)
+        {
+            const float firstAngle = twoPi * static_cast<float>(segment) / segmentCount;
+            const float secondAngle = twoPi * static_cast<float>(segment + 1) / segmentCount;
+            DirectX::XMFLOAT3 first{
+                playerPosition.x + std::cos(firstAngle) * radius,
+                playerPosition.y + 0.05f,
+                playerPosition.z + std::sin(firstAngle) * radius };
+            DirectX::XMFLOAT3 second{
+                playerPosition.x + std::cos(secondAngle) * radius,
+                playerPosition.y + 0.05f,
+                playerPosition.z + std::sin(secondAngle) * radius };
+            DebugRender::DrawLine(first, second, rangeColor, 0.0f, true);
+        }
+        DebugRender::DrawSphere(
+            { playerPosition.x, playerPosition.y + 0.05f, playerPosition.z },
+            0.12f, rangeColor, 0.0f, true);
+    }
 
     if (showTutorialCameraProfileTriggerDebug)
     {

@@ -41,9 +41,9 @@ public:
     };
     struct LockOnProfile
     {
-        float fovDegree = 45.0f;
+        float fovDegree = 35.0f;
         float maxFallbackFovDegree = 52.0f;
-        float distance = 10.0f;
+        float distance = 8.4f;
         float maxDistanceAdd = 2.0f;
     };
     struct CameraShakePreset
@@ -118,6 +118,7 @@ public:
 
     void ClearEnemyHead() { enemyHead.reset(); }
     bool HasValidLockOnTarget() const;
+    bool IsNormalEnemyLockOnScreenRadiusDebugEnabled() const { return showNormalEnemyLockOnScreenRadiusDebug; }
     float GetLockOnTargetSelectionMaxDistance() const { return lockOnTargetSelectionMaxDistance; }
 
     float GetCameraCollisionRatio()const
@@ -435,7 +436,7 @@ private:
 
     // モード別の構図調整値（初期値は従来値相当）
     CameraCompositionSettings corridorTpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
-    CameraCompositionSettings standardTpsSettings = { 7.15f, 0.05f, 0.75f, 40.0f, 0.0f };
+    CameraCompositionSettings standardTpsSettings = { 7.15f, 0.05f, 0.75f, 35.0f, 0.0f };
     CameraCompositionSettings bossTpsSettings = { 6.45f, 0.05f, 0.75f, 44.0f, 0.0f };
     CameraCompositionSettings focusSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
     // Existing LockOn settings are the Grux profile and must remain unchanged.
@@ -589,8 +590,8 @@ private:
     // 最大距離
     float lockOnMaxDistance = 8.0f;
     // Candidate selection range; independent from the camera zoom cap above.
-    float lockOnTargetSelectionMaxDistance = 20.0f;
-    float normalEnemyLockOnScreenRadius = 0.60f;
+    float lockOnTargetSelectionMaxDistance = 11.0f;
+    float normalEnemyLockOnScreenRadius = 1.45f;
     bool showNormalEnemyLockOnScreenRadiusDebug = false;
     // Pitch
     float lockOnPitchDegree = -10.0f;

@@ -2383,14 +2383,23 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::DragFloat("Standard TPS Distance", &standardTpsSettings.distance, 0.05f, 0.1f, 30.0f);
         ImGui::DragFloat("Normal Enemy LockOn Screen Radius", &normalEnemyLockOnScreenRadius,
             0.01f, 0.0f, 1.5f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Normal Enemy LockOn Max Distance", &lockOnTargetSelectionMaxDistance,
+            0.1f, 3.0f, 20.0f, "%.1f m", ImGuiSliderFlags_AlwaysClamp);
         ImGui::Checkbox("Show Normal Enemy LockOn Screen Radius", &showNormalEnemyLockOnScreenRadiusDebug);
         if (showNormalEnemyLockOnScreenRadiusDebug)
         {
-            const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
-            const ImVec2 center{ displaySize.x * 0.5f, displaySize.y * 0.5f };
-            const float radiusPixels = normalEnemyLockOnScreenRadius * displaySize.y * 0.5f;
+            float viewportX = 0.0f;
+            float viewportY = 0.0f;
+            float viewportWidth = 0.0f;
+            float viewportHeight = 0.0f;
+            Graphics::GetViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+            const ImVec2 center{ viewportX + viewportWidth * 0.5f, viewportY + viewportHeight * 0.5f };
+            const float radiusPixels = normalEnemyLockOnScreenRadius * viewportHeight * 0.5f;
             ImGui::GetForegroundDrawList()->AddCircle(center, radiusPixels,
                 IM_COL32(255, 220, 80, 220), 64, 2.0f);
+            ImGui::GetForegroundDrawList()->AddCircleFilled(center, 4.0f,
+                IM_COL32(255, 220, 80, 255));
+            ImGui::Text("Radius overlay: yellow boundary / green candidate / orange other filter / red outside");
         }
         ImGui::Separator();
         ImGui::DragFloat("Grux LockOn FOV", &lockOnSettings.fovDegree, 0.1f, 10.0f, 120.0f);
