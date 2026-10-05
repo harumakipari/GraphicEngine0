@@ -1,6 +1,7 @@
 #pragma once
 #include <stack>
 #include <memory>
+#include <array>
 #include "Game/Actors/Base/Character.h"
 #include "Engine/Input/GamePad.h"
 
@@ -75,6 +76,27 @@ public:
     };
 
     // 回避方向
+    // Tutorial progression will later decide when these items are revealed or
+    // learned. Player owns only their HUD presentation.
+    enum class OperationGuideItem : uint8_t
+    {
+        L,
+        LT,
+        Y,
+        X,
+        R,
+        Count,
+    };
+
+    struct OperationGuideItemState
+    {
+        std::shared_ptr<UIImageComponent> image;
+        DirectX::XMFLOAT2 position{};
+        DirectX::XMFLOAT2 baseScale{ 0.35f, 0.35f };
+        bool visible = false;
+        bool learned = false;
+        float animationTimer = 0.0f;
+    };
     enum class LocomotionMode :uint8_t
     {
         None,
@@ -151,6 +173,12 @@ public:
     // Battle HUD visibility is decided by GameScene; Player only owns its components.
     void SetHpBarVisible(bool visible);
     void SetGameplayHudVisible(bool visible);
+    void SetOperationGuideHudVisible(bool visible);
+    void SetOperationGuideItemVisible(OperationGuideItem item, bool visible);
+    void SetOperationGuideItemLearned(OperationGuideItem item, bool learned = true);
+    bool IsOperationGuideItemVisible(OperationGuideItem item) const;
+    bool IsOperationGuideItemLearned(OperationGuideItem item) const;
+    bool IsDodging() const { return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge"; }
     void BeginGameplayHudFadeOut();
     void SetGameplayHudFadeAlpha(float alpha);
 
@@ -400,6 +428,9 @@ private:
     void UpdateRushPromptUI();
     void UpdateLockOnGuideUI();
     void HideAndResetLockOnGuideUI();
+    void InitializeOperationGuideUI();
+    void UpdateOperationGuideUI();
+    void RefreshOperationGuideUIVisibility();
 
     float GetRushDamageMultiplier() const;
     int GetCurrentAttackDamage() const;
@@ -449,7 +480,14 @@ public:
     // アニメーション時にどれくらい移動するか
     std::vector<AnimationMotionWarp> animationMotionWarps;
     // 操作UI
-    std::shared_ptr<UIImageComponent> operateUiComponent;
+    // These presentation states are independent of HUD-wide visibility so an
+    // event can hide the HUD without losing tutorial progress.
+    std::array<OperationGuideItemState,
+        static_cast<size_t>(OperationGuideItem::Count)> operationGuideItems;
+    bool operationGuideGameplayHudVisible = true;
+    bool operationGuideEventVisible = true;
+    float operationGuidePulseAmplitude = 0.185f;
+    float operationGuidePulseSpeed = 3.5f; // radians / second
 
 
     bool invincibleWindow = false; // アニメーションによる無敵状態かどうか

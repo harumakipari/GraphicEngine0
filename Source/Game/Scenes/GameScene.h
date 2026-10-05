@@ -27,6 +27,8 @@
 #include "PBD/PBDSystem.h"
 
 class GruxEnemy;
+class Enemy;
+class SkeletonWarriorActor;
 class CoreStandaloneAudioSource;
 class SceneComponent;
 
@@ -136,6 +138,10 @@ public:
     bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
 private:
     void UpdateTutorialCameraProfileTrigger();
+    bool EvaluateLockOnCandidate(const std::shared_ptr<Enemy>& enemy,
+        std::shared_ptr<SceneComponent>& outTarget, float& outDistanceSq,
+        float& outScreenDistanceSq) const;
+    void UpdateOperationGuideTutorial(LockOnTargetSelectionResult selectionResult);
     void CreateLockOnTargetUI();
     void UpdateLockOnTargetUI(float deltaTime);
     void HideLockOnTargetUI();
@@ -710,6 +716,14 @@ private:
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerSize{ 2.0f, 3.0f, 8.0f };
     bool tutorialCameraProfileTriggerFired = false;
     bool showTutorialCameraProfileTriggerDebug = false;
+    std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
+    bool tutorialPassiveSkeletonLockOnCandidate = false;
+    int tutorialPassiveSkeletonYHpBaseline = -1;
+    bool tutorialPassiveSkeletonYHpBaselineCaptured = false;
+    std::shared_ptr<SkeletonWarriorActor> tutorialDodgeSkeletonActor;
+    bool tutorialDodgeSkeletonAttackRange = false;
+    bool tutorialDodgeGuideActivated = false;
+    std::weak_ptr<Enemy> lockOnSelectedEnemy;
     // ボスの部屋のラープのための変数
     std::unique_ptr<EasingRunner> bossLerpEasing;
     float bossLerpEasingFactor = 0.0f;

@@ -32,7 +32,6 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     // ‘S‚Ä‚ÌNotifyAssets‚ðƒ[ƒh‚·‚é
     controller->LoadAllNotifyAssets("Skeleton");
 
-
     PlayBodyAnimation("Idle");
 
 #if 0
@@ -137,7 +136,7 @@ void SkeletonWarriorActor::Update(float elapsedTime)
             case State::Idle:
                 if (playerDistance <= facePlayerDistance && rotationComponent)
                     rotationComponent->SetDirection(directionToPlayer);
-                if (playerDistance <= attackRange)
+                if (IsPlayerWithinAttackRange(*player))
                     BeginAttack(directionToPlayer);
                 break;
             case State::Attacking:
@@ -270,6 +269,13 @@ void SkeletonWarriorActor::SpawnPlayerRushHitEffect(const DirectX::XMFLOAT3& hit
             rushHitRingEffectComponent->GetComponentLocation(),
             rushHitRingEffectComponent->GetComponentEulerRotation());
     }
+}
+
+bool SkeletonWarriorActor::IsPlayerWithinAttackRange(const Player& player) const
+{
+    DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(player.GetPosition(), GetPosition());
+    toPlayer.y = 0.0f;
+    return MathHelper::Length(toPlayer) <= attackRange;
 }
 
 void SkeletonWarriorActor::BeginAttack(const DirectX::XMFLOAT3& directionToPlayer)

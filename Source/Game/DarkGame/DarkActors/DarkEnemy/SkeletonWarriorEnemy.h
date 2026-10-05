@@ -33,6 +33,7 @@ public:
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() const { return cameraTargetComponent; }
     void SetTutorialPassive(bool enabled);
     bool IsTutorialPassive() const { return tutorialPassive; }
+    bool IsPlayerWithinAttackRange(const class Player& player) const;
 private:
     void BeginAttack(const DirectX::XMFLOAT3& directionToPlayer);
     void UpdateAttack(float elapsedTime, class Player& player);
@@ -89,8 +90,8 @@ private:
     // Tutorial tuning, isolated from Grux and Player combat settings.
     int maxHp = 8;
     float facePlayerDistance = 12.0f;
-    float attackRange = 4.0f;
-    float recoveryDuration = 2.85f;
+    float attackRange = 7.0f;
+    float recoveryDuration = 2.0f;
     int attackDamage = 4;
     DirectX::XMFLOAT3 weaponRootOffset{ 0.0f, 0.0f, 0.0f };
 };

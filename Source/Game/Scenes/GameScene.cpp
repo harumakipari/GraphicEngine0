@@ -1353,6 +1353,53 @@ void GameScene::UpdateLockOnTargetUI(float deltaTime)
         ring->SetVisible(true);
     }
 }
+bool GameScene::EvaluateLockOnCandidate(const std::shared_ptr<Enemy>& enemy,
+    std::shared_ptr<SceneComponent>& outTarget, float& outDistanceSq,
+    float& outScreenDistanceSq) const
+{
+    outTarget.reset();
+    outDistanceSq = FLT_MAX;
+    outScreenDistanceSq = FLT_MAX;
+    if (!darkCameraActor || !player || !enemy || enemy->IsDefeated() || enemy->IsPendingKill() ||
+        battleFlowState == BattleFlowState::BossDead || bossPhase == BossPhase::TransitionToPhase2)
+        return false;
+
+    const auto target = std::dynamic_pointer_cast<SceneComponent>(
+        enemy->FindComponentByName("cameraTargetComponent"));
+    if (!target)
+        return false;
+
+    const bool isGrux = std::dynamic_pointer_cast<GruxEnemy>(enemy) != nullptr;
+    if (bossRoomLockOnScopeActive != isGrux)
+        return false;
+
+    DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), player->GetPosition());
+    delta.y = 0.0f;
+    const float distanceSq = delta.x * delta.x + delta.z * delta.z;
+    const float maxDistance = darkCameraActor->GetLockOnTargetSelectionMaxDistance();
+    if (!isGrux && distanceSq > maxDistance * maxDistance)
+        return false;
+
+    const auto projection = darkCameraActor->ProjectWorldPositionForUI(target->GetComponentLocation());
+    float screenDistanceSq = FLT_MAX;
+    if (!isGrux)
+    {
+        if (!projection.valid || !projection.inFront || !projection.insideViewport ||
+            !darkCameraActor->IsNormalEnemyLockOnProjectionWithinScreenRadius(projection))
+            return false;
+        screenDistanceSq = projection.ndc.x * projection.ndc.x + projection.ndc.y * projection.ndc.y;
+    }
+    else if (projection.valid && projection.inFront && projection.insideViewport)
+    {
+        screenDistanceSq = projection.ndc.x * projection.ndc.x + projection.ndc.y * projection.ndc.y;
+    }
+
+    outTarget = target;
+    outDistanceSq = distanceSq;
+    outScreenDistanceSq = screenDistanceSq;
+    return true;
+}
+
 GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
 {
     if (!darkCameraActor || !player || battleFlowState == BattleFlowState::BossDead ||
@@ -1360,6 +1407,7 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
     {
         lockOnInputHeldLastFrame = false;
         lockOnTargetSelectedForHeldInput = false;
+        lockOnSelectedEnemy.reset();
         return LockOnTargetSelectionResult::NoCandidate;
     }
 
@@ -1369,27 +1417,23 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
         lockOnInputHeldLastFrame = false;
         lockOnTargetSelectedForHeldInput = false;
         lockOnRequiresReleaseAfterBossRoomEntry = false;
+        lockOnSelectedEnemy.reset();
         return LockOnTargetSelectionResult::NoCandidate;
     }
 
-    // Do not reinterpret a button held while entering the room as a request to
-    // acquire Grux. The next release and press performs the normal selection.
     if (lockOnRequiresReleaseAfterBossRoomEntry)
         return LockOnTargetSelectionResult::Invalidated;
 
     if (lockOnInputHeldLastFrame)
     {
-        // A held input keeps its first selected target fixed. If that target was
-        // invalidated, force the existing TPS recovery; a failed selection stays
-        // in Focus and must not be reinterpreted as the old camera target.
         if (!lockOnTargetSelectedForHeldInput)
             return LockOnTargetSelectionResult::NoCandidate;
-
         if (!darkCameraActor->HasValidLockOnTarget())
         {
             darkCameraActor->ClearEnemyHead();
             darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
             lockOnTargetSelectedForHeldInput = false;
+            lockOnSelectedEnemy.reset();
             return LockOnTargetSelectionResult::Invalidated;
         }
         return LockOnTargetSelectionResult::Selected;
@@ -1397,62 +1441,20 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
 
     lockOnInputHeldLastFrame = true;
     lockOnTargetSelectedForHeldInput = false;
-    const float maxDistance = darkCameraActor->GetLockOnTargetSelectionMaxDistance();
-    const float maxDistanceSq = maxDistance * maxDistance;
     const auto enemies = GetActorManager()->GetActorsOfType<Enemy>();
     std::shared_ptr<Enemy> selectedEnemy;
     std::shared_ptr<SceneComponent> selectedTarget;
     float selectedDistanceSq = FLT_MAX;
     float selectedScreenDistanceSq = FLT_MAX;
-
+    constexpr float distanceTieEpsilonSq = 0.01f;
     for (const auto& enemy : enemies)
     {
-        if (!enemy || enemy->IsDefeated() || enemy->IsPendingKill())
-            continue;
-        const auto target = std::dynamic_pointer_cast<SceneComponent>(
-            enemy->FindComponentByName("cameraTargetComponent"));
-        if (!target)
-            continue;
-
-        // Grux used to be assigned directly as the camera's LockOn target, so it
-        // could be acquired from any direction and at the boss battle's full range.
-        // Keep that behavior while normal enemies remain constrained to the local,
-        // on-screen candidate rules introduced for STEP 4.
-        const bool isGrux = std::dynamic_pointer_cast<GruxEnemy>(enemy) != nullptr;
-
-        // Before the boss-room door movie, only corridor enemies may be acquired.
-        // Once it starts, only Grux may be acquired; their individual visibility
-        // and distance rules below remain unchanged.
-        if (bossRoomLockOnScopeActive != isGrux)
-            continue;
-
-        DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), player->GetPosition());
-        delta.y = 0.0f;
-        const float distanceSq = delta.x * delta.x + delta.z * delta.z;
-        if (!isGrux && distanceSq > maxDistanceSq)
-            continue;
-
+        std::shared_ptr<SceneComponent> target;
+        float distanceSq = FLT_MAX;
         float screenDistanceSq = FLT_MAX;
-        const auto projection = darkCameraActor->ProjectWorldPositionForUI(
-            target->GetComponentLocation());
-        if (!isGrux)
-        {
-            if (!projection.valid || !projection.inFront || !projection.insideViewport)
-                continue;
-            if (!darkCameraActor->IsNormalEnemyLockOnProjectionWithinScreenRadius(projection))
-                continue;
+        if (!EvaluateLockOnCandidate(enemy, target, distanceSq, screenDistanceSq))
+            continue;
 
-            screenDistanceSq = projection.ndc.x * projection.ndc.x +
-                projection.ndc.y * projection.ndc.y;
-        }
-        else if (projection.valid && projection.inFront && projection.insideViewport)
-        {
-            // Preserve the existing centrality tie-break whenever Grux is visible,
-            // but do not require visibility to acquire him.
-            screenDistanceSq = projection.ndc.x * projection.ndc.x +
-                projection.ndc.y * projection.ndc.y;
-        }
-        constexpr float distanceTieEpsilonSq = 0.01f;
         const bool closer = distanceSq < selectedDistanceSq - distanceTieEpsilonSq;
         const bool tiedButMoreCentral = std::abs(distanceSq - selectedDistanceSq) <=
             distanceTieEpsilonSq && screenDistanceSq < selectedScreenDistanceSq;
@@ -1469,17 +1471,76 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
     {
         darkCameraActor->SetEnemyHead(selectedTarget);
         lockOnTargetSelectedForHeldInput = true;
+        lockOnSelectedEnemy = selectedEnemy;
         Logger::Log(Logger::LogCategory::Gameplay, std::format(
             "[LockOn][Selected] target={} distanceXZ={:.3f}",
             selectedEnemy->GetName(), std::sqrt(selectedDistanceSq)));
         return LockOnTargetSelectionResult::Selected;
     }
 
-    // Do not leave a previous target (for example Grux) available to this input.
-    // Player will deliberately enter Focus when the current selection has no target.
     darkCameraActor->ClearEnemyHead();
+    lockOnSelectedEnemy.reset();
     Logger::Log(Logger::LogCategory::Gameplay, "[LockOn][Selected] no valid target");
     return LockOnTargetSelectionResult::NoCandidate;
+}
+
+void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult selectionResult)
+{
+    tutorialPassiveSkeletonLockOnCandidate = false;
+    if (!player || !tutorialPassiveSkeletonActor)
+        return;
+
+    std::shared_ptr<SceneComponent> target;
+    float distanceSq = FLT_MAX;
+    float screenDistanceSq = FLT_MAX;
+    tutorialPassiveSkeletonLockOnCandidate = EvaluateLockOnCandidate(
+        tutorialPassiveSkeletonActor, target, distanceSq, screenDistanceSq);
+    if (tutorialPassiveSkeletonLockOnCandidate)
+        player->SetOperationGuideItemVisible(Player::OperationGuideItem::LT, true);
+
+    const auto selectedEnemy = lockOnSelectedEnemy.lock();
+    if (selectionResult == LockOnTargetSelectionResult::Selected &&
+        selectedEnemy && selectedEnemy.get() == tutorialPassiveSkeletonActor.get())
+    {
+        player->SetOperationGuideItemLearned(Player::OperationGuideItem::LT);
+        if (!player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y))
+        {
+            player->SetOperationGuideItemVisible(Player::OperationGuideItem::Y, true);
+            tutorialPassiveSkeletonYHpBaseline = tutorialPassiveSkeletonActor->GetHp();
+            tutorialPassiveSkeletonYHpBaselineCaptured = true;
+        }
+    }
+
+    if (player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y) &&
+        !player->IsOperationGuideItemLearned(Player::OperationGuideItem::Y))
+    {
+        const int tutorialSkeletonHp = tutorialPassiveSkeletonActor->GetHp();
+        if (!tutorialPassiveSkeletonYHpBaselineCaptured)
+        {
+            tutorialPassiveSkeletonYHpBaseline = tutorialSkeletonHp;
+            tutorialPassiveSkeletonYHpBaselineCaptured = true;
+        }
+        else if (tutorialSkeletonHp < tutorialPassiveSkeletonYHpBaseline)
+        {
+            player->SetOperationGuideItemLearned(Player::OperationGuideItem::Y);
+        }
+    }
+
+    tutorialDodgeSkeletonAttackRange = tutorialDodgeSkeletonActor &&
+        tutorialDodgeSkeletonActor->IsPlayerWithinAttackRange(*player);
+    if (tutorialDodgeSkeletonAttackRange && !tutorialDodgeGuideActivated)
+    {
+        tutorialDodgeGuideActivated = true;
+        player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, true);
+    }
+
+    if (tutorialDodgeGuideActivated &&
+        player->IsOperationGuideItemVisible(Player::OperationGuideItem::X) &&
+        !player->IsOperationGuideItemLearned(Player::OperationGuideItem::X) &&
+        player->IsDodging())
+    {
+        player->SetOperationGuideItemLearned(Player::OperationGuideItem::X);
+    }
 }
 void GameScene::UpdateTutorialCameraProfileTrigger()
 {
@@ -1537,18 +1598,22 @@ void GameScene::Update(float deltaTime)
     if (cameraManager->IsUseCinematic() || cameraManager->IsUseMovie())
     {
         player->SetIsPlayerTransparency(false);
-        player->operateUiComponent->SetVisible(false);
+        player->SetOperationGuideHudVisible(false);
     }
     else
     {
         player->SetIsPlayerTransparency(true);
-        player->operateUiComponent->SetVisible(battleFlowState == BattleFlowState::Playing);
+        const bool operationGuideInputAvailable = InputSystem::IsInputEnabled() &&
+            !cameraManager->IsUseDebug() && !cameraManager->IsUseCinematic() &&
+            !cameraManager->IsUseMovie();
+        player->SetOperationGuideHudVisible(operationGuideInputAvailable);
     }
 
 
 
 
-    UpdateLockOnTargetSelection();
+    const auto lockOnSelectionResult = UpdateLockOnTargetSelection();
+    UpdateOperationGuideTutorial(lockOnSelectionResult);
 
     SceneBase::Update(deltaTime);
     UpdateLockOnTargetUI(deltaTime);
@@ -4552,17 +4617,17 @@ void GameScene::SetUpActors()
     // メインの部屋にチュートリアル用の骸骨を追加。
     Transform tutorialPassiveSkeletonTr(DirectX::XMFLOAT3{ -39.42f,-0.08f,11.808f },
         DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
-    auto tutorialPassiveSkeleton = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
+    tutorialPassiveSkeletonActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
         "TutorialPassiveSkeleton", tutorialPassiveSkeletonTr);
-    tutorialPassiveSkeleton->SetTutorialPassive(true);
-    tutorialPassiveSkeleton->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Compact);
+    tutorialPassiveSkeletonActor->SetTutorialPassive(true);
+    tutorialPassiveSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Compact);
 
     // Stage 2 deliberately uses the same class with its default, normal AI.
     Transform tutorialDodgeSkeletonTr(DirectX::XMFLOAT3{ -10.0f,-0.3f,10.75f },
         DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
-    auto tutorialDodgeSkeleton = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
+    tutorialDodgeSkeletonActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
         "TutorialDodgeSkeleton", tutorialDodgeSkeletonTr);
-    tutorialDodgeSkeleton->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Standard);
+    tutorialDodgeSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Standard);
 
     Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     darkCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkCameraActor>("darkCameraActor", darkCameraTr);
@@ -4651,6 +4716,18 @@ void GameScene::DrawGuiPlusAlpha()
         0.05f, 0.05f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Checkbox("Show Corridor Exit Trigger", &showTutorialCameraProfileTriggerDebug);
     ImGui::Text("Corridor Exit Trigger Fired: %s", tutorialCameraProfileTriggerFired ? "true" : "false");
+    ImGui::SeparatorText("Operation Guide Tutorial");
+    ImGui::Text("L Learned: %s", player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::L) ? "true" : "false");
+    ImGui::Text("R Learned: %s", player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::R) ? "true" : "false");
+    ImGui::Text("Tutorial Skeleton LockOn Candidate: %s", tutorialPassiveSkeletonLockOnCandidate ? "true" : "false");
+    ImGui::Text("LT Visible / Learned: %s / %s",
+        player && player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT) ? "true" : "false",
+        player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::LT) ? "true" : "false");
+    ImGui::Text("Y Visible: %s", player && player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y) ? "true" : "false");
+    ImGui::Text("Tutorial Dodge Skeleton AttackRange: %s", tutorialDodgeSkeletonAttackRange ? "true" : "false");
+    ImGui::Text("X Visible / Learned: %s / %s",
+        player && player->IsOperationGuideItemVisible(Player::OperationGuideItem::X) ? "true" : "false",
+        player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::X) ? "true" : "false");
     ImGui::DragInt(U8("Phase1 MaxHP"), &phase1MaxHp, 1.0f, 1, 500);
     ImGui::DragInt(U8("Phase2 MaxHP"), &phase2MaxHp, 1.0f, 1, 500);
     ImGui::Text(U8("Transition Combat Stopped: %s"),

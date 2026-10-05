@@ -481,12 +481,7 @@ void Player::Initialize(const Transform& transform)
     SetEulerRotation({ 0.0f,90.0f,0.0f });
 
     // 操作説明UIを入れる
-    operateUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/operate_ui1.png", "operate_ui");
-    operateUiComponent->SetWorldPosition({ 1000, 1015 });
-    operateUiComponent->SetSize({ 1130, 285 });
-    operateUiComponent->SetScale({ 0.35f,0.35f });
-    operateUiComponent->SetPivot({ 0.5f,0.5f });
-    uiManager->Add(operateUiComponent);
+    InitializeOperationGuideUI();
 
     // Hpバー後ろ
     const DirectX::XMFLOAT2 hpBarPosition = { 110.0f, 88.0f };
@@ -598,6 +593,7 @@ void Player::Update(float deltaTime)
 
     // Low HP feedback must observe death/recovery even while battle actions are suspended.
     UpdateLowHpEffects();
+    UpdateOperationGuideUI();
     UpdateDamageFlash();
     UpdateLockOnGuideUI();
 
@@ -1297,9 +1293,147 @@ void Player::SetRushWeaponVisual(const bool enabled)
     activeGhostEdgeColor = enabled ? rushSwordColor : ghostEdgeColor;
 }
 
+void Player::InitializeOperationGuideUI()
+{
+    const auto uiManager = GetOwnerScene()->GetUIManager();
+    constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> texturePaths =
+    {
+        "./Data/Textures/UI/operate_L.png", "./Data/Textures/UI/operate_LT.png",
+        "./Data/Textures/UI/operate_Y.png", "./Data/Textures/UI/operate_X.png",
+        "./Data/Textures/UI/operate_R.png",
+    };
+    constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> names =
+    {
+        "OperationGuideL", "OperationGuideLT", "OperationGuideY", "OperationGuideX", "OperationGuideR",
+    };
+    constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> positions =
+    {
+        DirectX::XMFLOAT2{ 844.7f, 1015.0f }, DirectX::XMFLOAT2{ 926.6f, 1015.0f },
+        DirectX::XMFLOAT2{ 1009.5f, 1015.0f }, DirectX::XMFLOAT2{ 1072.6f, 1015.0f },
+        DirectX::XMFLOAT2{ 1145.2f, 1015.0f },
+    };
+    constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> sizes =
+    {
+        DirectX::XMFLOAT2{ 178.0f, 258.0f }, DirectX::XMFLOAT2{ 290.0f, 270.0f },
+        DirectX::XMFLOAT2{ 184.0f, 279.0f }, DirectX::XMFLOAT2{ 182.0f, 271.0f },
+        DirectX::XMFLOAT2{ 233.0f, 249.0f },
+    };
+    for (size_t index = 0; index < operationGuideItems.size(); ++index)
+    {
+        auto& item = operationGuideItems[index];
+        item.position = positions[index];
+        item.baseScale = { 0.35f, 0.35f };
+        item.visible = index == static_cast<size_t>(OperationGuideItem::L) || index == static_cast<size_t>(OperationGuideItem::R);
+        item.learned = false;
+        item.animationTimer = 0.0f;
+        item.image = std::make_shared<UIImageComponent>(texturePaths[index], names[index]);
+        item.image->SetWorldPosition(item.position);
+        item.image->SetSize(sizes[index]);
+        item.image->SetScale(item.baseScale);
+        item.image->SetPivot({ 0.5f, 0.5f });
+        item.image->SetVisible(false);
+        uiManager->Add(item.image);
+    }
+    RefreshOperationGuideUIVisibility();
+}
+
+void Player::UpdateOperationGuideUI()
+{
+    const float deltaTime = (std::max)(0.0f, Time::UnscaledDeltaTime());
+    const float amplitude = std::clamp(operationGuidePulseAmplitude, 0.0f, 1.0f);
+    const float speed = (std::max)(0.0f, operationGuidePulseSpeed);
+    const auto stickWasUsed = [](const DirectX::XMFLOAT2& stick)
+    {
+        constexpr float threshold = 0.20f;
+        return stick.x * stick.x + stick.y * stick.y >= threshold * threshold;
+    };
+    if (operationGuideGameplayHudVisible && operationGuideEventVisible)
+    {
+        if (IsOperationGuideItemVisible(OperationGuideItem::L) &&
+            stickWasUsed(InputSystem::GetLeftStick()))
+            SetOperationGuideItemLearned(OperationGuideItem::L);
+        if (IsOperationGuideItemVisible(OperationGuideItem::R) &&
+            stickWasUsed(InputSystem::GetRightStick()))
+            SetOperationGuideItemLearned(OperationGuideItem::R);
+    }
+    for (auto& item : operationGuideItems)
+    {
+        if (!item.image) continue;
+        item.image->SetWorldPosition(item.position);
+        float pulseScale = 1.0f;
+        if (item.visible && !item.learned)
+        {
+            item.animationTimer += deltaTime;
+            pulseScale += amplitude * 0.5f * (std::sin(item.animationTimer * speed) + 1.0f);
+        }
+        else
+        {
+            item.animationTimer = 0.0f;
+        }
+        item.image->SetScale({ item.baseScale.x * pulseScale, item.baseScale.y * pulseScale });
+    }
+    RefreshOperationGuideUIVisibility();
+}
+
+void Player::RefreshOperationGuideUIVisibility()
+{
+    for (auto& item : operationGuideItems)
+        if (item.image) item.image->SetVisible(operationGuideGameplayHudVisible && operationGuideEventVisible && item.visible);
+}
+
+void Player::SetOperationGuideHudVisible(const bool visible)
+{
+    operationGuideGameplayHudVisible = visible;
+    RefreshOperationGuideUIVisibility();
+}
+void Player::SetOperationGuideItemVisible(const OperationGuideItem item, const bool visible)
+{
+    auto& state = operationGuideItems[static_cast<size_t>(item)];
+    state.visible = visible;
+    if (!visible)
+        state.animationTimer = 0.0f;
+    RefreshOperationGuideUIVisibility();
+}
+
+void Player::SetOperationGuideItemLearned(const OperationGuideItem item, const bool learned)
+{
+    auto& state = operationGuideItems[static_cast<size_t>(item)];
+    state.learned = learned;
+    if (learned)
+        state.animationTimer = 0.0f;
+}
+
+bool Player::IsOperationGuideItemVisible(const OperationGuideItem item) const
+{
+    return operationGuideItems[static_cast<size_t>(item)].visible;
+}
+
+bool Player::IsOperationGuideItemLearned(const OperationGuideItem item) const
+{
+    return operationGuideItems[static_cast<size_t>(item)].learned;
+}
+
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    if (ImGui::CollapsingHeader("Operation Guide UI", ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::DragFloat("Pulse Amplitude", &operationGuidePulseAmplitude, 0.005f, 0.0f, 0.50f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Pulse Speed (rad/sec)", &operationGuidePulseSpeed, 0.05f, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> labels = { "L", "LT", "Y", "X", "R" };
+        for (size_t index = 0; index < operationGuideItems.size(); ++index)
+        {
+            auto& item = operationGuideItems[index];
+            ImGui::PushID(static_cast<int>(index));
+            ImGui::SeparatorText(labels[index]);
+            ImGui::Checkbox("Visible", &item.visible);
+            ImGui::Checkbox("Learned", &item.learned);
+            ImGui::DragFloat2("Position", &item.position.x, 1.0f, 0.0f, 1920.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragFloat2("Base Scale", &item.baseScale.x, 0.005f, 0.01f, 2.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::Text("Animation Timer: %.2f", item.animationTimer);
+            ImGui::PopID();
+        }
+    }
     if (ImGui::CollapsingHeader(U8("目を閉じるデバック")))
     {
         const bool manualControlsEnabled = !deathEyeCloseActive;
@@ -2434,10 +2568,8 @@ void Player::ResetAnimationStateFlag()
 void Player::StartEvent()
 {
     // 操作UIを非表示する
-    if (operateUiComponent)
-    {
-        operateUiComponent->SetVisible(false);
-    }
+    operationGuideEventVisible = false;
+    RefreshOperationGuideUIVisibility();
     // 入力を受け付けない
     InputSystem::SetInputEnabled(false);
     //　イベント中はplayerの透過処理をなくす
@@ -2448,10 +2580,8 @@ void Player::StartEvent()
 void Player::EndEvent()
 {
     // 操作UIを表示する
-    if (operateUiComponent)
-    {
-        operateUiComponent->SetVisible(true);
-    }
+    operationGuideEventVisible = true;
+    RefreshOperationGuideUIVisibility();
 
     //　イベントが終わったのでplayerの透過処理を戻す
     this->moviePerform = false;
@@ -2461,6 +2591,7 @@ void Player::SetGameplayHudVisible(const bool visible)
 {
     gameplayHudFadeEntries.clear();
     SetHpBarVisible(visible);
+    SetOperationGuideHudVisible(visible);
     if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(visible);
     if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(visible);
     if (rushWordImageComponent) rushWordImageComponent->SetVisible(visible);
@@ -2468,7 +2599,7 @@ void Player::SetGameplayHudVisible(const bool visible)
         UpdateRushPromptUI();
     else
     {
-        if (operateUiComponent) operateUiComponent->SetVisible(false);
+        SetOperationGuideHudVisible(false);
         HideAndResetLockOnGuideUI();
         if (lowHpVignetteImageComponent) lowHpVignetteImageComponent->SetVisible(false);
     }
@@ -2489,7 +2620,7 @@ void Player::BeginGameplayHudFadeOut()
     capture(rushWordImageComponent);
     capture(lockOnGuideArrowImageComponent);
     capture(lockOnGuideButtonImageComponent);
-    capture(operateUiComponent);
+    for (const auto& item : operationGuideItems) capture(item.image);
     capture(lowHpVignetteImageComponent);
 }
 
