@@ -6,6 +6,7 @@
 #include "Engine/Debug/DebugRender.h"
 #include "Physics/CollisionFunction.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Utility/Time.h"
 
 namespace
 {
@@ -97,6 +98,7 @@ void DarkCameraActor::Update(float deltaTime)
         }
     }
 
+    UpdateCombatPresentation(deltaTime);
     compositionLookTarget = currentPose.target;
 
     if (!isExternalBlending)
@@ -146,6 +148,7 @@ void DarkCameraActor::Update(float deltaTime)
     {
         UpdateLockOnFovFallback(deltaTime);
     }
+    ApplyCombatPresentationFov();
 
     if (showCameraCollisionDebug)
     {
@@ -1587,6 +1590,231 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
     }
 }
 
+void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
+{
+    const auto head = playerHead.lock();
+    const auto* player = head ? dynamic_cast<const Player*>(head->GetOwner()) : nullptr;
+    const bool allowed = player && !isExternalBlending && currentMode != CameraMode::Death && requestMode != CameraMode::Death;
+    const bool rush = allowed && player->IsRushActive();
+    const bool just = allowed && player->IsJustDodgePresentationActive();
+    const float dt = (std::max)(Time::UnscaledDeltaTime(), 0.0f);
+    if (!allowed)
+    {
+        combatPresentationMode = CombatPresentationMode::None;
+        combatPresentationPhase = CombatPresentationPhase::Inactive;
+        combatPresentationBlend = combatPresentationRushBlend = 0.0f;
+        combatPresentationRushRotationBlend = combatPresentationRushFovBlend = 0.0f;
+        combatPresentationRushStartPitch = 0.0f;
+        combatPresentationRushIntroElapsed = combatPresentationRushTravelBlend = 0.0f;
+        combatPresentationRushStartedFromJustDodge = false;
+        combatPresentationRushTarget.reset();
+        combatPresentationJustDodgeSignalLastFrame = false;
+        return;
+    }
+    if (rush)
+    {
+        if (const auto target = player->GetRushTarget()) combatPresentationRushTarget = target;
+        if (combatPresentationMode != CombatPresentationMode::Rush)
+        {
+            combatPresentationRushStartedFromJustDodge = combatPresentationMode == CombatPresentationMode::JustDodge && combatPresentationBlend > FLT_EPSILON;
+            combatPresentationRushBlend = 0.0f;
+            combatPresentationRushRotationBlend = 0.0f;
+            combatPresentationRushFovBlend = 0.0f;
+            combatPresentationRushStartPitch = currentPitch;
+            combatPresentationRushIntroElapsed = 0.0f;
+            combatPresentationRushTravelBlend = 0.0f;
+            combatPresentationMode = CombatPresentationMode::Rush;
+            combatPresentationPhase = CombatPresentationPhase::Enter;
+            combatPresentationPhaseElapsed = 0.0f;
+        }
+    }
+    else if (just && !combatPresentationJustDodgeSignalLastFrame && combatPresentationMode != CombatPresentationMode::Rush)
+    {
+        combatPresentationMode = CombatPresentationMode::JustDodge;
+        combatPresentationPhase = CombatPresentationPhase::Enter;
+        combatPresentationPhaseElapsed = 0.0f;
+    }
+    else if (combatPresentationMode == CombatPresentationMode::Rush && combatPresentationPhase != CombatPresentationPhase::Exit)
+    {
+        // Keep the presentation pitch as the normal camera pitch.  The next
+        // TPS/LockOn update therefore starts from this shot instead of the
+        // pre-Rush input pitch.
+        const float t = std::clamp(combatPresentationRushBlend, 0.0f, 1.0f);
+        const float easedT = t * t * (3.0f - 2.0f * t);
+        const float rushTargetPitch = DirectX::XMConvertToRadians(rushPresentationTargetPitchDegree);
+        currentPitch = desiredPitch = std::lerp(combatPresentationRushStartPitch, rushTargetPitch, easedT);
+        currentPose = CalculatePose(currentMode, head->GetComponentLocation(), currentYaw, currentPitch);
+        combatPresentationPhase = CombatPresentationPhase::Exit;
+        combatPresentationPhaseElapsed = 0.0f;
+    }
+    combatPresentationJustDodgeSignalLastFrame = just;
+    if (combatPresentationPhase == CombatPresentationPhase::Inactive) return;
+    combatPresentationPhaseElapsed += dt;
+    const auto blend = [this, dt](const float time, const bool enter)
+    {
+        combatPresentationBlend = std::clamp(combatPresentationBlend + (enter ? 1.0f : -1.0f) * (time > FLT_EPSILON ? dt / time : 1.0f), 0.0f, 1.0f);
+    };
+    if (combatPresentationPhase == CombatPresentationPhase::Enter)
+    {
+        const float time = combatPresentationMode == CombatPresentationMode::Rush ? rushPresentationEnterTime : justDodgePresentationEnterTime;
+        blend(time, true);
+        if (combatPresentationMode == CombatPresentationMode::Rush)
+        {
+            combatPresentationRushBlend = std::clamp(combatPresentationRushBlend + (time > FLT_EPSILON ? dt / time : 1.0f), 0.0f, 1.0f);
+            combatPresentationRushRotationBlend = combatPresentationRushBlend;
+            combatPresentationRushFovBlend = combatPresentationRushBlend;
+            combatPresentationRushIntroElapsed += dt;
+        }
+        if (combatPresentationBlend >= 1.0f && (combatPresentationMode != CombatPresentationMode::Rush || combatPresentationRushBlend >= 1.0f))
+        {
+            combatPresentationPhase = CombatPresentationPhase::Hold;
+            combatPresentationPhaseElapsed = 0.0f;
+        }
+    }
+    else if (combatPresentationPhase == CombatPresentationPhase::Hold)
+    {
+        if (combatPresentationMode == CombatPresentationMode::Rush)
+        {
+            combatPresentationRushIntroElapsed += dt;
+            const float travelTime = (std::max)(rushPresentationIntroToTravelBlendTime, 0.0f);
+            const float travelStart = (std::max)(rushPresentationIntroDuration, 0.0f);
+            combatPresentationRushTravelBlend = std::clamp(
+                travelTime > FLT_EPSILON
+                    ? (combatPresentationRushIntroElapsed - travelStart) / travelTime
+                    : (combatPresentationRushIntroElapsed >= travelStart ? 1.0f : 0.0f),
+                0.0f, 1.0f);
+        }
+        else if (combatPresentationPhaseElapsed >= (std::max)(justDodgePresentationHoldTime, 0.0f))
+        {
+            combatPresentationPhase = CombatPresentationPhase::Exit;
+            combatPresentationPhaseElapsed = 0.0f;
+        }
+    }
+    else if (combatPresentationPhase == CombatPresentationPhase::Exit)
+    {
+        if (combatPresentationMode == CombatPresentationMode::Rush)
+        {
+            const auto fadeOut = [dt](float& value, const float time)
+            {
+                value = std::clamp(value - (time > FLT_EPSILON ? dt / time : 1.0f), 0.0f, 1.0f);
+            };
+            fadeOut(combatPresentationBlend, rushPresentationPositionExitTime);
+            fadeOut(combatPresentationRushRotationBlend, rushPresentationRotationExitTime);
+            fadeOut(combatPresentationRushFovBlend, rushPresentationFovExitTime);
+        }
+        else
+        {
+            blend(justDodgePresentationExitTime, false);
+        }
+        if (combatPresentationBlend <= 0.0f &&
+            (combatPresentationMode != CombatPresentationMode::Rush ||
+                (combatPresentationRushRotationBlend <= 0.0f && combatPresentationRushFovBlend <= 0.0f)))
+        {
+            combatPresentationMode = CombatPresentationMode::None;
+            combatPresentationPhase = CombatPresentationPhase::Inactive;
+            combatPresentationRushBlend = 0.0f;
+            combatPresentationRushRotationBlend = 0.0f;
+            combatPresentationRushFovBlend = 0.0f;
+            combatPresentationRushStartPitch = 0.0f;
+            combatPresentationRushIntroElapsed = combatPresentationRushTravelBlend = 0.0f;
+            combatPresentationRushStartedFromJustDodge = false;
+            combatPresentationRushTarget.reset();
+        }
+    }
+    if (combatPresentationBlend > FLT_EPSILON && head)
+        ApplyCombatPresentationPose(head->GetComponentLocation(), combatPresentationRushTarget.lock());
+}
+
+void DarkCameraActor::ApplyCombatPresentationPose(const DirectX::XMFLOAT3& playerLookPosition, const std::shared_ptr<Enemy>& rushTarget)
+{
+    const CameraPose base = currentPose;
+    const auto smoothStep = [](float value)
+    {
+        value = std::clamp(value, 0.0f, 1.0f);
+        return value * value * (3.0f - 2.0f * value);
+    };
+    const auto justEye = [&]()
+    {
+        const auto direction = MathHelper::Normalize(MathHelper::Subtract(base.eye, base.target));
+        return MathHelper::Add(base.target, MathHelper::Multiply(direction, (std::max)(0.1f, MathHelper::Distance(base.eye, base.target) + justDodgePresentationDistanceOffset)));
+    };
+    if (combatPresentationMode == CombatPresentationMode::JustDodge)
+    {
+        currentPose.eye = MathHelper::Lerp(base.eye, justEye(), smoothStep(combatPresentationBlend));
+        return;
+    }
+    if (combatPresentationMode != CombatPresentationMode::Rush || !rushTarget) return;
+
+    // Prefer the rush target's actual look component when it is available.
+    DirectX::XMFLOAT3 enemyLookPosition = rushTarget->GetPosition();
+    if (const auto targetHead = enemyHead.lock(); targetHead)
+    {
+        const auto targetOwner = targetHead->GetOwner();
+        if (targetOwner && targetOwner == rushTarget.get())
+            enemyLookPosition = targetHead->GetComponentLocation();
+    }
+    enemyLookPosition.y += lockOnEnemyLookHeight;
+
+    DirectX::XMFLOAT3 travelDirection = MathHelper::Subtract(rushTarget->GetPosition(), playerLookPosition);
+    travelDirection.y = 0.0f;
+    if (MathHelper::Length(travelDirection) <= FLT_EPSILON) { travelDirection = GetForward(); travelDirection.y = 0.0f; }
+    travelDirection = MathHelper::Normalize(travelDirection);
+
+    const float travelBlend = smoothStep(combatPresentationRushTravelBlend);
+    const float yawOffset = std::lerp(rushPresentationIntroYawOffsetDegree, rushPresentationTravelYawOffsetDegree, travelBlend);
+    const float sideOffset = std::lerp(rushPresentationIntroSideOffset, rushPresentationTravelSideOffset, travelBlend);
+    const float heightOffset = std::lerp(rushPresentationIntroHeightOffset, rushPresentationTravelHeightOffset, travelBlend);
+    const float distanceOffset = std::lerp(rushPresentationIntroDistanceOffset, rushPresentationTravelDistanceOffset, travelBlend);
+    const float targetWeight = std::clamp(std::lerp(rushPresentationIntroEnemyTargetWeight, rushPresentationTravelEnemyTargetWeight, travelBlend), 0.0f, 1.0f);
+
+    const float rotationBlend = smoothStep(combatPresentationRushRotationBlend);
+    const float yaw = atan2f(travelDirection.x, travelDirection.z) +
+        DirectX::XMConvertToRadians(yawOffset * rotationBlend);
+    const float introEnterBlend = smoothStep(combatPresentationRushBlend);
+    const float presentationBlend = smoothStep(combatPresentationBlend);
+    const float rushTargetPitch = DirectX::XMConvertToRadians(rushPresentationTargetPitchDegree);
+    const float rushPitch = std::lerp(combatPresentationRushStartPitch, rushTargetPitch, introEnterBlend);
+    // Blend back to the normal TPS/LockOn pitch during Rush exit.
+    const float appliedPitch = std::lerp(base.pitch, rushPitch, presentationBlend);
+    const DirectX::XMFLOAT3 forward{ sinf(yaw) * cosf(rushPitch), sinf(rushPitch), cosf(yaw) * cosf(rushPitch) };
+    const DirectX::XMFLOAT3 right{ cosf(yaw), 0.0f, -sinf(yaw) };
+    const DirectX::XMFLOAT3 target = MathHelper::Lerp(playerLookPosition, enemyLookPosition, targetWeight);
+    DirectX::XMFLOAT3 eye = MathHelper::Subtract(target, MathHelper::Multiply(forward, (std::max)(0.1f, MathHelper::Distance(base.eye, base.target) + distanceOffset)));
+    eye = MathHelper::Add(eye, MathHelper::Multiply(right, sideOffset));
+    eye.y += heightOffset;
+
+    // SmoothStep prevents a linear yaw/pitch sweep both into Intro and from Intro to Travel.
+    const DirectX::XMFLOAT3 startEye = combatPresentationRushStartedFromJustDodge ? justEye() : base.eye;
+    const DirectX::XMFLOAT3 transitionedTarget = MathHelper::Lerp(base.target, target, introEnterBlend);
+    const DirectX::XMFLOAT3 transitionedEye = MathHelper::Lerp(startEye, eye, introEnterBlend);
+    currentPose.target = MathHelper::Lerp(base.target, transitionedTarget, presentationBlend);
+    currentPose.eye = MathHelper::Lerp(base.eye, transitionedEye, presentationBlend);
+    currentPose.pitch = appliedPitch;
+}
+
+void DarkCameraActor::ApplyCombatPresentationFov()
+{
+    const bool rushFovStillBlending = combatPresentationMode == CombatPresentationMode::Rush && combatPresentationRushFovBlend > FLT_EPSILON;
+    if ((combatPresentationBlend <= FLT_EPSILON && !rushFovStillBlending) || isExternalBlending || currentMode == CameraMode::Death || requestMode == CameraMode::Death) return;
+    const auto smoothStep = [](float value)
+    {
+        value = std::clamp(value, 0.0f, 1.0f);
+        return value * value * (3.0f - 2.0f * value);
+    };
+    const float base = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
+    float fov = base;
+    if (combatPresentationMode == CombatPresentationMode::JustDodge)
+        fov = base + justDodgePresentationFovOffsetDegree * smoothStep(combatPresentationBlend);
+    else if (combatPresentationMode == CombatPresentationMode::Rush)
+    {
+        const float start = combatPresentationRushStartedFromJustDodge ? base + justDodgePresentationFovOffsetDegree : base;
+        const float rushFov = std::lerp(rushPresentationIntroFovDegree, rushPresentationTravelFovDegree, smoothStep(combatPresentationRushTravelBlend));
+        fov = std::lerp(base, std::lerp(start, rushFov, smoothStep(combatPresentationRushBlend)), smoothStep(combatPresentationRushFovBlend));
+    }
+    if (currentMode == CameraMode::LockOn && lockOnFovFallbackActive) fov = (std::max)(fov, base);
+    mainCameraComponent->SetFov(DirectX::XMConvertToRadians(std::clamp(fov, 10.0f, 120.0f)));
+}
+
 void DarkCameraActor::UpdateLockOnFovFallback(float deltaTime)
 {
     const LockOnProfile activeProfile = GetActiveLockOnProfile();
@@ -2423,6 +2651,54 @@ void DarkCameraActor::DrawImGuiDetails()
         lockOnTargetWeight = std::clamp(lockOnTargetWeight, 0.0f, 1.0f);
         ImGui::DragFloat("LockOn Zoom In Speed", &lockOnZoomInSpeed, 0.01f, 0.0f, 30.0f);
         ImGui::DragFloat("LockOn Zoom Out Speed", &lockOnZoomOutSpeed, 0.01f, 0.0f, 30.0f);
+
+        ImGui::SeparatorText("Combat Presentation");
+        const char* presentationModes[] = { "None", "Just Dodge", "Rush" };
+        const char* presentationPhases[] = { "Inactive", "Enter", "Hold", "Exit" };
+        ImGui::Text("%s / %s / Blend %.2f", presentationModes[static_cast<int>(combatPresentationMode)], presentationPhases[static_cast<int>(combatPresentationPhase)], combatPresentationBlend);
+        if (ImGui::TreeNode("Just Dodge Presentation"))
+        {
+            ImGui::DragFloat("FOV Offset", &justDodgePresentationFovOffsetDegree, 0.1f, -45.0f, 45.0f, "%.1f deg");
+            ImGui::DragFloat("Distance Offset", &justDodgePresentationDistanceOffset, 0.01f, -5.0f, 5.0f);
+            ImGui::DragFloat("Enter Time", &justDodgePresentationEnterTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+            ImGui::DragFloat("Hold Time", &justDodgePresentationHoldTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
+            ImGui::DragFloat("Exit Time", &justDodgePresentationExitTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Rush Presentation"))
+        {
+            ImGui::Text("Stage: %s  Travel Blend: %.2f",
+                combatPresentationRushTravelBlend > 0.0f ? "Travel" : "Intro",
+                combatPresentationRushTravelBlend);
+            if (ImGui::TreeNode("Intro"))
+            {
+                ImGui::DragFloat("Yaw Offset##RushIntro", &rushPresentationIntroYawOffsetDegree, 0.5f, -180.0f, 180.0f, "%.1f deg");
+                ImGui::DragFloat("Side Offset##RushIntro", &rushPresentationIntroSideOffset, 0.01f, -10.0f, 10.0f);
+                ImGui::DragFloat("Height Offset##RushIntro", &rushPresentationIntroHeightOffset, 0.01f, -10.0f, 10.0f);
+                ImGui::DragFloat("Distance Offset##RushIntro", &rushPresentationIntroDistanceOffset, 0.01f, -10.0f, 10.0f);
+                ImGui::SliderFloat("Enemy Target Weight##RushIntro", &rushPresentationIntroEnemyTargetWeight, 0.0f, 1.0f);
+                ImGui::DragFloat("FOV##RushIntro", &rushPresentationIntroFovDegree, 0.1f, 10.0f, 120.0f, "%.1f deg");
+                ImGui::DragFloat("Duration##RushIntro", &rushPresentationIntroDuration, 0.01f, 0.0f, 5.0f, "%.2f sec");
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Travel"))
+            {
+                ImGui::DragFloat("Yaw Offset##RushTravel", &rushPresentationTravelYawOffsetDegree, 0.5f, -180.0f, 180.0f, "%.1f deg");
+                ImGui::DragFloat("Side Offset##RushTravel", &rushPresentationTravelSideOffset, 0.01f, -10.0f, 10.0f);
+                ImGui::DragFloat("Height Offset##RushTravel", &rushPresentationTravelHeightOffset, 0.01f, -10.0f, 10.0f);
+                ImGui::DragFloat("Distance Offset##RushTravel", &rushPresentationTravelDistanceOffset, 0.01f, -10.0f, 10.0f);
+                ImGui::SliderFloat("Enemy Target Weight##RushTravel", &rushPresentationTravelEnemyTargetWeight, 0.0f, 1.0f);
+                ImGui::DragFloat("FOV##RushTravel", &rushPresentationTravelFovDegree, 0.1f, 10.0f, 120.0f, "%.1f deg");
+                ImGui::TreePop();
+            }
+            ImGui::DragFloat("Intro to Travel Blend Time", &rushPresentationIntroToTravelBlendTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+            ImGui::DragFloat("Rush Target Pitch Degree", &rushPresentationTargetPitchDegree, 0.5f, -89.0f, 89.0f, "%.1f deg");
+            ImGui::DragFloat("Enter Time##Rush", &rushPresentationEnterTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+            ImGui::DragFloat("Rotation Exit Time##Rush", &rushPresentationRotationExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
+            ImGui::DragFloat("Position / Distance Exit Time##Rush", &rushPresentationPositionExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
+            ImGui::DragFloat("FOV Exit Time##Rush", &rushPresentationFovExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
+            ImGui::TreePop();
+        }
 
         ImGui::SeparatorText("Death Camera");
         ImGui::Checkbox("Show Death Camera Debug", &showDeathCameraDebug);

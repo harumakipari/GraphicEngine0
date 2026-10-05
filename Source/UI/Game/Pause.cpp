@@ -12,17 +12,17 @@ void Pause::Initialize(const Transform& transform)
 
     auto uiManager = scene->GetUIManager();
 
-    pauseBackImage = std::make_shared<UIImageComponent>("./Data/Textures/ScissorsUI/back.png", "back");
+    pauseBackImage = std::make_shared<UIImageComponent>("./Data/Textures/Pause/back.png", "back");
     pauseBackImage->SetWorldPosition({ 1920 * 0.5f, 1080 * 0.5f });
     pauseBackImage->SetPivot({ 0.5f,0.5f });
     pauseBackImage->SetScale({ 1.0f,1.0f });
     pauseBackImage->SetSize({ 1920, 1080 });
-    pauseBackImage->SetColor(DirectX::XMFLOAT4{ 0.24f,0.08f,0.127f,0.5f });
+    pauseBackImage->SetColor(DirectX::XMFLOAT4{ 0.2f,0.2f,0.2f,0.5f });
     pauseBackImage->SetVisible(false);
     pauseBackImage->zOrder = 95; // 奥
     uiManager->Add(pauseBackImage);
 
-    pausePanel = std::make_shared<UIImageComponent>("./Data/Textures/ScissorsUI/pause_panel.png", "pause_panel");
+    pausePanel = std::make_shared<UIImageComponent>("./Data/Textures/Pause/pause_panel.png", "pause_panel");
     pausePanel->SetWorldPosition({ 1920 * 0.5f, 1080 * 0.5f });
     pausePanel->SetPivot({ 0.5f,0.5f });
     pausePanel->SetScale({ 1.0f,1.0f });
@@ -33,7 +33,7 @@ void Pause::Initialize(const Transform& transform)
 
     // メニューボタン
     {
-        menuButton = std::make_shared<UIButtonComponent>("./Data/Textures/ScissorsUI/menu.png", "menu");
+        menuButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/menu.png", "menu");
         menuButton->SetWorldPosition({ 100, 85 });
         menuButton->SetPivot({ 0.5f,0.5f });
         menuButton->SetSize({ 140, 140 });
@@ -46,7 +46,7 @@ void Pause::Initialize(const Transform& transform)
     }
 
     // ゲームへ戻る
-    closeButton = std::make_shared<UIButtonComponent>("./Data/Textures/ScissorsUI/back_to_game.png", "back_to_game");
+    closeButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/back_to_game.png", "back_to_game");
     closeButton->SetWorldPosition({ 979, 463 });
     closeButton->SetPivot({ 0.5f,0.5f });
     closeButton->SetSize({ 391, 123 });
@@ -60,7 +60,7 @@ void Pause::Initialize(const Transform& transform)
         };
     uiManager->Add(closeButton);
 
-    returnTitleButton = std::make_shared<UIButtonComponent>("./Data/Textures/ScissorsUI/back_to_title.png", "back_to_title");
+    returnTitleButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/back_to_title.png", "back_to_title");
     returnTitleButton->SetWorldPosition({ 980, 607 });
     returnTitleButton->SetPivot({ 0.5f,0.5f });
     returnTitleButton->SetSize({ 391, 123 });

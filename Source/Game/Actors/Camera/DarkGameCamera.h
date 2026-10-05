@@ -2,6 +2,8 @@
 #include "Camera.h"
 #include "Components/Controller/ControllerComponent.h"
 
+class Enemy;
+
 class DarkCameraActor :public Camera
 {
 public:
@@ -321,6 +323,9 @@ private:
         DirectX::XMFLOAT3& outResolvedEye,
         bool& outCollisionHit) const;
     void UpdateLockOnFovFallback(float deltaTime);
+    void UpdateCombatPresentation(float deltaTime);
+    void ApplyCombatPresentationPose(const DirectX::XMFLOAT3& playerPosition, const std::shared_ptr<Enemy>& rushTarget);
+    void ApplyCombatPresentationFov();
 
     // LockOn開始時に前回の適応値を持ち越さない
     void ResetLockOnAdaptiveState();
@@ -551,6 +556,55 @@ private:
     float lockOnCurrentFovDegree = 45.0f;
     float lockOnFovReturnDelayElapsed = 0.0f;
     bool lockOnFovFallbackActive = false;
+    enum class CombatPresentationMode : uint8_t { None, JustDodge, Rush };
+    enum class CombatPresentationPhase : uint8_t { Inactive, Enter, Hold, Exit };
+    CombatPresentationMode combatPresentationMode = CombatPresentationMode::None;
+    CombatPresentationPhase combatPresentationPhase = CombatPresentationPhase::Inactive;
+    float combatPresentationBlend = 0.0f;
+    float combatPresentationRushBlend = 0.0f;
+    float combatPresentationRushRotationBlend = 0.0f;
+    float combatPresentationRushFovBlend = 0.0f;
+    float combatPresentationRushStartPitch = 0.0f;
+    float combatPresentationRushIntroElapsed = 0.0f;
+    float combatPresentationRushTravelBlend = 0.0f;
+    bool combatPresentationRushStartedFromJustDodge = false;
+    float combatPresentationPhaseElapsed = 0.0f;
+    bool combatPresentationJustDodgeSignalLastFrame = false;
+    std::weak_ptr<Enemy> combatPresentationRushTarget;
+    float justDodgePresentationFovOffsetDegree = -7.0f;
+    float justDodgePresentationDistanceOffset = -1.7f;
+    float justDodgePresentationEnterTime = 0.06f;
+    float justDodgePresentationHoldTime = 0.35f;
+    float justDodgePresentationExitTime = 0.45f;
+    // Rush is deliberately split into a short face-focused intro and a
+    // travel-focused shot. Do not keep the intro's large yaw during travel.
+    float rushPresentationIntroYawOffsetDegree = 140.0f;
+    float rushPresentationIntroSideOffset = 1.85f;
+    float rushPresentationIntroHeightOffset = 0.35f;
+    float rushPresentationIntroDistanceOffset = 1.05f;
+    float rushPresentationIntroFovDegree = 35.0f;
+    float rushPresentationIntroEnemyTargetWeight = 0.3f;
+    float rushPresentationIntroDuration = 0.30f;
+
+    float rushPresentationTravelYawOffsetDegree = 140.0f;
+    float rushPresentationTravelSideOffset = 1.85f;
+    float rushPresentationTravelHeightOffset = 0.35f;
+    float rushPresentationTravelDistanceOffset = -1.05f;
+    float rushPresentationTravelFovDegree = 25.0f;
+    float rushPresentationTravelEnemyTargetWeight = 0.3f;
+    //float rushPresentationTravelYawOffsetDegree = 8.0f;
+    //float rushPresentationTravelSideOffset = 0.55f;
+    //float rushPresentationTravelHeightOffset = 0.15f;
+    //float rushPresentationTravelDistanceOffset = -0.20f;
+    //float rushPresentationTravelFovDegree = 45.0f;
+    //float rushPresentationTravelEnemyTargetWeight = 0.65f;
+    float rushPresentationIntroToTravelBlendTime = 0.20f;
+    // Absolute presentation pitch; negative raises the camera in this camera convention.
+    float rushPresentationTargetPitchDegree = -8.0f;
+    float rushPresentationEnterTime = 0.10f;
+    float rushPresentationRotationExitTime = 0.35f;
+    float rushPresentationPositionExitTime = 0.55f;
+    float rushPresentationFovExitTime = 0.70f;
 
     // ランタイム調査値
     DirectX::XMFLOAT3 desiredEyePosition{};

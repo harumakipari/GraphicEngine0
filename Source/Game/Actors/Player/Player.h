@@ -216,6 +216,12 @@ public:
     {
         return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush";
     }
+    bool IsRushActive() const { return IsRushActiveForPhaseTransition(); }
+    bool IsJustDodgePresentationActive() const
+    {
+        return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge" && justDodgeSuccess;
+    }
+    std::shared_ptr<Enemy> GetRushTarget() const { return rushTarget.lock(); }
 
     // Shared by lethal hits in either phase: finish the active clip and suppress follow-ups.
     void RequestFinalHitRushFollowUpStop()
