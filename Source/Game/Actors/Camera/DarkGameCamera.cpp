@@ -248,8 +248,11 @@ void DarkCameraActor::RequestOffscreenAttackAssist(
         ProjectWorldPositionForOffscreenAssist(worldPosition);
     offscreenAssistAppliedYawStep = 0.0f;
 
+    const auto playerHeadShared = playerHead.lock();
+    const auto* player = playerHeadShared ? dynamic_cast<const Player*>(playerHeadShared->GetOwner()) : nullptr;
     if (currentMode != CameraMode::TPS || requestMode != CameraMode::TPS ||
-        isBlending || isExternalBlending || strength <= 0.0f || duration <= 0.0f ||
+        isBlending || isExternalBlending || combatPresentationMode == CombatPresentationMode::Rush ||
+        (player && player->IsRushActive()) || strength <= 0.0f || duration <= 0.0f ||
         !offscreenAssistProjection.valid || offscreenAssistProjection.insideSafeFrame)
     {
         return;
@@ -266,6 +269,8 @@ void DarkCameraActor::RequestOffscreenAttackAssist(
     offscreenAttackAssist.strength = strength;
     offscreenAttackAssist.duration = duration;
     offscreenAttackAssist.elapsed = 0.0f;
+    offscreenAssistPitchStart = currentPitch;
+    offscreenAssistPitchBlend = 0.0f;
 
     offscreenAssistTargetYaw = atan2f(toBoss.x, toBoss.z);
     offscreenAssistYawDelta =
@@ -386,8 +391,12 @@ void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
     if (!offscreenAttackAssist.active)
         return;
 
+    const auto playerHeadShared = playerHead.lock();
+    const auto* player = playerHeadShared ? dynamic_cast<const Player*>(playerHeadShared->GetOwner()) : nullptr;
     if (currentMode != CameraMode::TPS || requestMode != CameraMode::TPS ||
-        isBlending || isExternalBlending || !playerHead.lock())
+        isBlending || isExternalBlending || !playerHeadShared ||
+        combatPresentationMode == CombatPresentationMode::Rush ||
+        (player && player->IsRushActive()))
     {
         CancelOffscreenAttackAssist();
         return;
@@ -431,6 +440,17 @@ void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
         offscreenAssistYawDelta, -maxStep, maxStep);
     desiredYaw = MathHelper::ClampAngle(
         desiredYaw + offscreenAssistAppliedYawStep);
+
+    // Pitch shares this assist's start/update/end lifecycle with yaw, but uses
+    // an absolute target and its own SmoothStep duration.
+    const float pitchBlendTime = (std::max)(offscreenAssistPitchBlendTime, 0.0f);
+    const float pitchProgress = pitchBlendTime > FLT_EPSILON
+        ? (offscreenAttackAssist.elapsed + deltaTime) / pitchBlendTime
+        : 1.0f;
+    offscreenAssistPitchBlend = SmoothStep01(pitchProgress);
+    const float targetPitch = DirectX::XMConvertToRadians(offscreenAssistTargetPitchDegree);
+    currentPitch = desiredPitch = std::lerp(
+        offscreenAssistPitchStart, targetPitch, offscreenAssistPitchBlend);
 
     offscreenAttackAssist.elapsed += deltaTime;
     if (offscreenAttackAssist.elapsed >= offscreenAttackAssist.duration)
@@ -2787,6 +2807,7 @@ void DarkCameraActor::DrawImGuiDetails()
             DirectX::XMConvertToDegrees(offscreenAssistYawDelta));
         ImGui::Text("Applied Yaw Step: %.3f deg",
             DirectX::XMConvertToDegrees(offscreenAssistAppliedYawStep));
+        ImGui::Text("Pitch Blend: %.3f", offscreenAssistPitchBlend);
         ImGui::Text("Right Stick Magnitude: %.3f",
             offscreenAssistRightStickMagnitude);
 
@@ -2798,6 +2819,10 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::DragFloat("Max Assist Angular Speed",
             &offscreenAssistMaxAngularSpeedDegree, 1.0f, 0.0f, 720.0f,
             "%.1f deg/sec");
+        ImGui::DragFloat("Offscreen Attack Target Pitch Degree",
+            &offscreenAssistTargetPitchDegree, 0.5f, -89.0f, 89.0f, "%.1f deg");
+        ImGui::DragFloat("Pitch Blend Time",
+            &offscreenAssistPitchBlendTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
         ImGui::DragFloat("Right Stick Cancel Threshold",
             &offscreenAssistRightStickCancelThreshold, 0.005f, 0.0f, 1.0f);
     }

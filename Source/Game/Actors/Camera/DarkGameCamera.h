@@ -385,6 +385,10 @@ private:
     float offscreenAssistTargetYaw = 0.0f;
     float offscreenAssistYawDelta = 0.0f;
     float offscreenAssistAppliedYawStep = 0.0f;
+    float offscreenAssistPitchStart = 0.0f;
+    float offscreenAssistPitchBlend = 0.0f;
+    float offscreenAssistTargetPitchDegree = -5.0f;
+    float offscreenAssistPitchBlendTime = 0.20f;
 
     // ブレンド用のPoseを作成する
     CameraPose blendStartPose;
@@ -602,9 +606,9 @@ private:
     // Absolute presentation pitch; negative raises the camera in this camera convention.
     float rushPresentationTargetPitchDegree = -8.0f;
     float rushPresentationEnterTime = 0.10f;
-    float rushPresentationRotationExitTime = 0.35f;
-    float rushPresentationPositionExitTime = 0.55f;
-    float rushPresentationFovExitTime = 0.70f;
+    float rushPresentationRotationExitTime = 0.6f;
+    float rushPresentationPositionExitTime = 0.8f;
+    float rushPresentationFovExitTime = 1.0f;
 
     // ランタイム調査値
     DirectX::XMFLOAT3 desiredEyePosition{};
