@@ -666,7 +666,12 @@ void PlayerRushState::Enter()
 
         player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, rushStopDistance);
         // ルートモーションを無視する
-        player->PlayBodyAnimation("CombatRush_Fwd", false, true, 0.2f, true);
+        if (const auto controller = player->GetBodyAnimationController())
+        {
+            constexpr float rushApproachPoseTime = 0.766f;
+            controller->BlendToHeldAnimationPose(
+                "Jog_Fwd", rushApproachPoseTime, player->rushApproachPoseBlendTime);
+        }
     }
 
     rushComboAdvanced = false;
@@ -758,8 +763,10 @@ void PlayerRushState::Execute(float deltaTime)
                         targetDirection.x, targetDirection.y, targetDirection.z, facingDot));
                 }
             }
-            // Diagnostic: shorten only the CombatRush_Fwd -> first Rush attack pose blend.
+            // The held Jog_Fwd approach pose remains the source of the first Rush attack blend.
             // Later Rush combo transitions still use PlayBodyAnimation's 0.3 s default.
+            if (const auto controller = player->GetBodyAnimationController())
+                controller->ReleaseRuntimeHeldAnimationPose(true);
             player->PlayBodyAnimation(currentAttackAnimation, false, true, 0.10f);
             phase = RushPhase::Attack;
         }
@@ -870,6 +877,8 @@ void PlayerRushState::Execute(float deltaTime)
 
 void PlayerRushState::Exit()
 {
+    if (const auto controller = player->GetBodyAnimationController())
+        controller->ReleaseRuntimeHeldAnimationPose();
     const uint64_t debugEventId = player->GetPhase2RushFinalHitDebugEventId();
     if (debugEventId != 0)
     {

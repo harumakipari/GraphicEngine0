@@ -1887,6 +1887,8 @@ void Player::DrawImGuiDetails()
         ImGui::TreePop();
     }
     ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
+    ImGui::DragFloat("Rush Approach Pose Blend Time", &rushApproachPoseBlendTime,
+        0.005f, 0.0f, 0.5f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("MotionWarp attack surface distance",
         &motionWarpDesiredAttackSurfaceDistance, 0.01f, 0.3f, 1.0f);
     ImGui::DragFloat("Attack rotation max correction (deg)",

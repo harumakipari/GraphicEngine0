@@ -196,6 +196,16 @@ public:
     // advancing runtime time or dispatching runtime animation events.
     bool HoldAnimationPose(const std::string& animationName, float time);
 
+    // Blends from the currently displayed runtime pose to an exact clip sample,
+    // then keeps that sample without advancing animation time or dispatching
+    // animation events. This is intended for gameplay presentation poses.
+    bool BlendToHeldAnimationPose(const std::string& animationName, float time, float blendTime);
+    void ReleaseRuntimeHeldAnimationPose(bool preserveBlendSource = false);
+    bool IsRuntimeHeldAnimationPose() const
+    {
+        return runtimeHeldPoseActive || runtimeHeldPoseTransitionActive;
+    }
+
     // Leaves a pose held by HoldAnimationPose and restores runtime animation
     // ownership. Callers can start another animation in the same update.
     // Optionally keep the displayed pose as the source of an immediate animation blend.
@@ -635,6 +645,10 @@ private:
 
     // ï`âÊÇ…égópÇ∑ÇÈÉmÅ[Éh
     std::vector<InterleavedGltfModel::Node> finalNodes;
+
+    std::vector<InterleavedGltfModel::Node> runtimeHeldPoseNodes;
+    bool runtimeHeldPoseActive = false;
+    bool runtimeHeldPoseTransitionActive = false;
 
     struct VisualPoseLatchTarget
     {

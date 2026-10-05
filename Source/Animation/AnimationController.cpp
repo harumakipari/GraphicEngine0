@@ -155,6 +155,43 @@ void AnimationController::OnUpdate(const float deltaTime)
         return;
     }
 
+    if (runtimeHeldPoseTransitionActive)
+    {
+        blendElapsedTime += (std::max)(0.0f, deltaTime);
+        blendFactor = transitionTime > FLT_EPSILON
+            ? std::clamp(blendElapsedTime / transitionTime, 0.0f, 1.0f)
+            : 1.0f;
+        target_->model->BlendAnimations(
+            animationNodes[Origin], runtimeHeldPoseNodes, blendFactor, finalNodes);
+        target_->SetModelNodes(finalNodes);
+        target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+        for (auto* extraTarget : extraTargets_)
+        {
+            extraTarget->SetModelNodes(finalNodes);
+            extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+        }
+
+        if (blendFactor >= 1.0f)
+        {
+            finalNodes = runtimeHeldPoseNodes;
+            runtimeHeldPoseTransitionActive = false;
+            runtimeHeldPoseActive = true;
+        }
+        return;
+    }
+
+    if (runtimeHeldPoseActive)
+    {
+        finalNodes = runtimeHeldPoseNodes;
+        target_->SetModelNodes(finalNodes);
+        target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+        for (auto* extraTarget : extraTargets_)
+        {
+            extraTarget->SetModelNodes(finalNodes);
+            extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+        }
+        return;
+    }
     bool normalAnimationLoopedThisFrame = false;
     float unwrappedAnimationTime = animationTime;
     float normalAnimationDuration = 0.0f;
@@ -751,6 +788,63 @@ bool AnimationController::HoldAnimationPose(
     return true;
 }
 
+bool AnimationController::BlendToHeldAnimationPose(
+    const std::string& animationName, const float time, const float blendTime)
+{
+    if (!target_ || !target_->model)
+        return false;
+
+    const auto animationIt = animationNameToIndex_.find(animationName);
+    if (animationIt == animationNameToIndex_.end() ||
+        animationIt->second >= target_->model->animations.size())
+    {
+        return false;
+    }
+
+    EndEditorPreview();
+    ReleaseLatchedVisualPose();
+
+    const size_t clip = animationIt->second;
+    const float duration = target_->model->animations[clip].duration;
+    runtimeHeldPoseNodes = target_->model->GetNodes();
+    target_->model->Animate(clip, std::clamp(time, 0.0f, duration), runtimeHeldPoseNodes);
+    if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(runtimeHeldPoseNodes.size()))
+    {
+        runtimeHeldPoseNodes[rootNodeIndex].translation = zeroTranslation;
+        target_->model->CumulateTransforms(runtimeHeldPoseNodes);
+    }
+
+    animationNodes[Origin] = finalNodes;
+    runtimeHeldPoseActive = false;
+    runtimeHeldPoseTransitionActive = true;
+    blendElapsedTime = 0.0f;
+    transitionTime = (std::max)(0.0f, blendTime);
+    blendFactor = 0.0f;
+    isAnimationFinished = false;
+    return true;
+}
+
+void AnimationController::ReleaseRuntimeHeldAnimationPose(const bool preserveBlendSource)
+{
+    if (!runtimeHeldPoseActive && !runtimeHeldPoseTransitionActive)
+        return;
+
+    if (preserveBlendSource && !runtimeHeldPoseNodes.empty())
+    {
+        finalNodes = runtimeHeldPoseNodes;
+        target_->SetModelNodes(finalNodes);
+        target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+        for (auto* extraTarget : extraTargets_)
+        {
+            extraTarget->SetModelNodes(finalNodes);
+            extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+        }
+    }
+
+    runtimeHeldPoseActive = false;
+    runtimeHeldPoseTransitionActive = false;
+    runtimeHeldPoseNodes.clear();
+}
 void AnimationController::ReleaseHeldAnimationPose(bool preserveBlendSource)
 {
     if (preserveBlendSource && editorPreviewActive)

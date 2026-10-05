@@ -529,6 +529,7 @@ public:
     float lastJustWindowRatio = 0.0f;
     float lastJustBossHitBoxElapsed = -1.0f;
     float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
+    float rushApproachPoseBlendTime = 0.12f;
 
     // 通常攻撃でどれくらい攻撃を補正するか
     float normalEnemyRushSurfaceMargin = 0.15f;
