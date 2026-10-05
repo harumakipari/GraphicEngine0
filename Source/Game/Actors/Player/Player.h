@@ -126,6 +126,7 @@ public:
 
     // Stops only the low-HP audiovisual presentation. HP is not modified.
     void StopLowHpPresentation();
+    void SetLowHpPresentationCinematicSuppressed(bool suppressed);
 
     void Finalize()override
     {
@@ -698,6 +699,7 @@ private:
     int lowHpThreshold = 13;
     bool lowHpActive = false;
     bool lowHpPresentationSuppressed = false;
+    bool lowHpPresentationCinematicSuppressed = false;
     float heartbeatTimer = 0.0f;
     float heartbeatInterval = 3.0f;
     float lowHpPulseTimer = 0.0f;

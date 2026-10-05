@@ -721,6 +721,8 @@ private:
     bool tutorialPassiveSkeletonLockOnCandidate = false;
     int tutorialPassiveSkeletonYHpBaseline = -1;
     bool tutorialPassiveSkeletonYHpBaselineCaptured = false;
+    int tutorialDodgeSkeletonYHpBaseline = -1;
+    bool tutorialDodgeSkeletonYHpBaselineCaptured = false;
     std::shared_ptr<SkeletonWarriorActor> tutorialDodgeSkeletonActor;
     bool tutorialDodgeSkeletonAttackRange = false;
     bool tutorialDodgeGuideActivated = false;

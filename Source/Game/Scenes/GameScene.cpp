@@ -1493,6 +1493,21 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
     if (!player || !tutorialPassiveSkeletonActor)
         return;
 
+    const auto revealYAndCaptureTutorialSkeletonHp = [this]()
+    {
+        if (player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y))
+            return;
+
+        player->SetOperationGuideItemVisible(Player::OperationGuideItem::Y, true);
+        tutorialPassiveSkeletonYHpBaseline = tutorialPassiveSkeletonActor->GetHp();
+        tutorialPassiveSkeletonYHpBaselineCaptured = true;
+        if (tutorialDodgeSkeletonActor)
+        {
+            tutorialDodgeSkeletonYHpBaseline = tutorialDodgeSkeletonActor->GetHp();
+            tutorialDodgeSkeletonYHpBaselineCaptured = true;
+        }
+    };
+
     std::shared_ptr<SceneComponent> target;
     float distanceSq = FLT_MAX;
     float screenDistanceSq = FLT_MAX;
@@ -1502,28 +1517,39 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
         player->SetOperationGuideItemVisible(Player::OperationGuideItem::LT, true);
 
     const auto selectedEnemy = lockOnSelectedEnemy.lock();
-    if (selectionResult == LockOnTargetSelectionResult::Selected &&
-        selectedEnemy && selectedEnemy.get() == tutorialPassiveSkeletonActor.get())
+    const bool selectedTutorialSkeleton = selectedEnemy &&
+        (selectedEnemy.get() == tutorialPassiveSkeletonActor.get() ||
+         (tutorialDodgeSkeletonActor && selectedEnemy.get() == tutorialDodgeSkeletonActor.get()));
+    if (selectionResult == LockOnTargetSelectionResult::Selected && selectedTutorialSkeleton &&
+        player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT))
     {
         player->SetOperationGuideItemLearned(Player::OperationGuideItem::LT);
-        if (!player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y))
-        {
-            player->SetOperationGuideItemVisible(Player::OperationGuideItem::Y, true);
-            tutorialPassiveSkeletonYHpBaseline = tutorialPassiveSkeletonActor->GetHp();
-            tutorialPassiveSkeletonYHpBaselineCaptured = true;
-        }
+        revealYAndCaptureTutorialSkeletonHp();
     }
 
     if (player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y) &&
         !player->IsOperationGuideItemLearned(Player::OperationGuideItem::Y))
     {
-        const int tutorialSkeletonHp = tutorialPassiveSkeletonActor->GetHp();
-        if (!tutorialPassiveSkeletonYHpBaselineCaptured)
+        const auto detectTutorialSkeletonHit = [](const std::shared_ptr<SkeletonWarriorActor>& skeleton,
+            int& baselineHp, bool& baselineCaptured)
         {
-            tutorialPassiveSkeletonYHpBaseline = tutorialSkeletonHp;
-            tutorialPassiveSkeletonYHpBaselineCaptured = true;
-        }
-        else if (tutorialSkeletonHp < tutorialPassiveSkeletonYHpBaseline)
+            if (!skeleton)
+                return false;
+
+            const int currentHp = skeleton->GetHp();
+            if (!baselineCaptured)
+            {
+                baselineHp = currentHp;
+                baselineCaptured = true;
+                return false;
+            }
+            return currentHp < baselineHp;
+        };
+
+        if (detectTutorialSkeletonHit(tutorialPassiveSkeletonActor,
+                tutorialPassiveSkeletonYHpBaseline, tutorialPassiveSkeletonYHpBaselineCaptured) ||
+            detectTutorialSkeletonHit(tutorialDodgeSkeletonActor,
+                tutorialDodgeSkeletonYHpBaseline, tutorialDodgeSkeletonYHpBaselineCaptured))
         {
             player->SetOperationGuideItemLearned(Player::OperationGuideItem::Y);
         }
@@ -1534,6 +1560,7 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
     if (tutorialDodgeSkeletonAttackRange && !tutorialDodgeGuideActivated)
     {
         tutorialDodgeGuideActivated = true;
+        revealYAndCaptureTutorialSkeletonHp();
         player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, true);
     }
 
@@ -1597,14 +1624,15 @@ void GameScene::Update(float deltaTime)
     }
     UpdateTutorialCameraProfileTrigger();
 
+    const bool isCinematicOrMovie = cameraManager->IsUseCinematic() || cameraManager->IsUseMovie();
+    player->SetLowHpPresentationCinematicSuppressed(isCinematicOrMovie);
     const bool playerInputAvailable = InputSystem::IsInputEnabled() &&
-        !cameraManager->IsUseDebug() && !cameraManager->IsUseCinematic() &&
-        !cameraManager->IsUseMovie();
+        !cameraManager->IsUseDebug() && !isCinematicOrMovie;
     if (!player->IsBossBattle())
         player->SetHpBarVisible(playerInputAvailable);
 
     // シネマカメラだったらまたはムービーカメラだったらプレイヤーを透明化しない
-    if (cameraManager->IsUseCinematic() || cameraManager->IsUseMovie())
+    if (isCinematicOrMovie)
     {
         player->SetIsPlayerTransparency(false);
         player->SetOperationGuideHudVisible(false);
@@ -1968,7 +1996,19 @@ void GameScene::StartBossBattle()
     player->EndEvent();
     player->ClearMinimumHp();
     if (isInitialTutorialBossEntry)
+    {
+        const auto completeOperationGuide = [this](const Player::OperationGuideItem item)
+        {
+            player->SetOperationGuideItemVisible(item, true);
+            player->SetOperationGuideItemLearned(item);
+        };
+        completeOperationGuide(Player::OperationGuideItem::L);
+        completeOperationGuide(Player::OperationGuideItem::LT);
+        completeOperationGuide(Player::OperationGuideItem::Y);
+        completeOperationGuide(Player::OperationGuideItem::X);
+        completeOperationGuide(Player::OperationGuideItem::R);
         player->RestoreHpToMaxWithUiAnimation();
+    }
 
     if (player->GetRootComponent() && gruxEnemyActor->GetRootComponent())
     {
@@ -4656,18 +4696,6 @@ void GameScene::SetUpActors()
     darkCameraActor->SetEnemyHead(gruxEnemyActor->GetCameraTargetComponent());
 
 
-#if 0
-    Transform dustParticleTr(DirectX::XMFLOAT3{ -27.0f,0.0f,11.0f }, DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,1.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto dustParticleActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("dustParticle", dustParticleTr);
-    auto dustParticle = dustParticleActor->AddComponent<ParticleComponent>("dustComponent");
-    dustParticle->Load("./Data/Effect/Files/DustEffect.json");
-    ParticleComponent::AddSettings settings
-    {
-        .loop = true, // ループ再生
-    };
-    dustParticle->SetAddSettings(settings);
-    dustParticle->Play();
-#endif // 0
 
     loadStageThread.join();
     loadStageAssetsThread.join();
@@ -4685,17 +4713,6 @@ void GameScene::SetUpActors()
     {
         for (const auto& point : areaAsset->spawnPoints)
         {
-#if 0
-            if (point.name.rfind("Spawn_Door_Right", 0) == 0)
-            {// 名前が "Spawn_Door_Right" で始まる場合、燭台を配置
-                DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                pos.x = -0.4f;
-                //Transform doorTr{ pos,point.worldRotation,point.worldScale };
-                Transform doorTr(DirectX::XMFLOAT3{ -6.0f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-                auto doorActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DoorLargeActor>("doorActor", doorTr);
-            }
-
-#endif // 0
             if (point.name.rfind("Spawn_SmallDoor", 0) == 0)
             {
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
@@ -4704,6 +4721,10 @@ void GameScene::SetUpActors()
             }
         }
     }
+
+    // ポーズアクターを生成
+    //auto pauseActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor");
+    //pauseActor->SetRetrySceneName("GameScene");
 
 }
 

@@ -1325,9 +1325,9 @@ void Player::InitializeOperationGuideUI()
     };
     constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> positions =
     {
-        DirectX::XMFLOAT2{ 844.7f, 1015.0f }, DirectX::XMFLOAT2{ 926.6f, 1015.0f },
-        DirectX::XMFLOAT2{ 1009.5f, 1015.0f }, DirectX::XMFLOAT2{ 1072.6f, 1015.0f },
-        DirectX::XMFLOAT2{ 1145.2f, 1015.0f },
+        DirectX::XMFLOAT2{ 844.7f, 1015.0f }, DirectX::XMFLOAT2{ 926.6f, 1013.0f },
+        DirectX::XMFLOAT2{ 999.5f, 1011.0f }, DirectX::XMFLOAT2{ 1068.6f, 1010.0f },
+        DirectX::XMFLOAT2{ 1143.2f, 1013.0f },
     };
     constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> sizes =
     {
@@ -1395,7 +1395,8 @@ void Player::UpdateOperationGuideUI()
 void Player::RefreshOperationGuideUIVisibility()
 {
     for (auto& item : operationGuideItems)
-        if (item.image) item.image->SetVisible(operationGuideGameplayHudVisible && operationGuideEventVisible && item.visible);
+        if (item.image) item.image->SetVisible(
+            operationGuideGameplayHudVisible && operationGuideEventVisible && hp > 0 && item.visible);
 }
 
 void Player::SetOperationGuideHudVisible(const bool visible)
@@ -2586,6 +2587,7 @@ void Player::ResetAnimationStateFlag()
 // イベントシーン開始時に呼ぶ処理
 void Player::StartEvent()
 {
+    SetLowHpPresentationCinematicSuppressed(true);
     // 操作UIを非表示する
     operationGuideEventVisible = false;
     RefreshOperationGuideUIVisibility();
@@ -3856,6 +3858,8 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
         delayedHpDelayTimer = delayedHpDelayDuration;
         StartDamageFlash();
     }
+    if (hp <= 0)
+        RefreshOperationGuideUIVisibility();
     ++dodgeDebugDamageCount;
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav", 0.3f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav", 0.5f);
@@ -3951,7 +3955,7 @@ void Player::UpdateLowHpEffects()
 {
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
     const bool phase2Cinematic = gameScene && gameScene->IsBossPhaseTransitionActive();
-    if (lowHpPresentationSuppressed || phase2Cinematic)
+    if (lowHpPresentationSuppressed || lowHpPresentationCinematicSuppressed || phase2Cinematic)
     {
         if (lowHpActive || heartbeatTimer > 0.0f || lowHpPulseTimer > 0.0f ||
             lowHpPulseFlashAmount > 0.0f ||
@@ -4012,6 +4016,13 @@ void Player::StopLowHpPresentation()
 {
     lowHpPresentationSuppressed = true;
     ResetLowHpEffects();
+}
+
+void Player::SetLowHpPresentationCinematicSuppressed(const bool suppressed)
+{
+    lowHpPresentationCinematicSuppressed = suppressed;
+    if (suppressed)
+        ResetLowHpEffects();
 }
 
 void Player::TriggerLowHpPulse()

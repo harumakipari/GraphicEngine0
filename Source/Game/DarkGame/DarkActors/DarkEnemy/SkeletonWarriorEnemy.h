@@ -45,6 +45,7 @@ private:
     bool IsPlayerInsideDangerArea(class Player& player) const;
     AnimationNotifyState* GetAttackDangerNotifyState();
     void DrawDangerAreaDebug() const;
+    void DrawWeaponHitDebug() const;
     void ResetWeaponSweep();
     void ResetAnimationEditorPreviewWeaponSweep();
     DirectX::XMFLOAT3 GetWeaponHitPoint(const std::shared_ptr<SceneComponent>& point,
@@ -58,6 +59,8 @@ private:
     std::shared_ptr<RotationComponent> rotationComponent;
     std::shared_ptr<SceneComponent> cameraTargetComponent;
     std::shared_ptr<SceneComponent> weaponRootPoint;
+    std::shared_ptr<SceneComponent> weaponMiddlePoint;
+    std::shared_ptr<SceneComponent> weaponTipPoint;
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent;
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent;
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent;
@@ -70,10 +73,14 @@ private:
     bool hasJustDodgedPlayerThisAttack = false;
     bool hasPreviousWeaponRoot = false;
     DirectX::XMFLOAT3 previousWeaponRoot{};
+    DirectX::XMFLOAT3 previousWeaponMiddle{};
+    DirectX::XMFLOAT3 previousWeaponTip{};
     float activeWeaponHitRadius = 0.01f;
     DirectX::XMFLOAT3 activeWeaponHitOffset{};
     bool editorPreviewHasPreviousWeaponRoot = false;
     DirectX::XMFLOAT3 editorPreviewPreviousWeaponRoot{};
+    DirectX::XMFLOAT3 editorPreviewPreviousWeaponMiddle{};
+    DirectX::XMFLOAT3 editorPreviewPreviousWeaponTip{};
     const AnimationNotifyState* editorPreviewWeaponHitBoxState = nullptr;
     float editorPreviewWeaponHitBoxTime = -1.0f;
     const AnimationNotifyState* activeDangerNotifyState = nullptr;
@@ -82,6 +89,7 @@ private:
     DirectX::XMFLOAT3 lockedAttackUp{ 0.0f, 1.0f, 0.0f };
     DirectX::XMFLOAT3 lockedAttackForward{ 0.0f, 0.0f, 1.0f };
     bool dangerAreaDebug = false;
+    bool weaponHitDebug = false;
     std::string dangerAreaSaveStatus;
 
     // Per-actor tutorial switch. It suppresses only combat AI; animation,
@@ -93,7 +101,7 @@ private:
     float attackRange = 7.0f;
     float recoveryDuration = 2.0f;
     int attackDamage = 4;
-    DirectX::XMFLOAT3 weaponRootOffset{ 0.0f, 0.0f, 0.0f };
+    DirectX::XMFLOAT3 weaponRootOffset{ 0.0f, -0.5f, 0.0f };
 };
 
 

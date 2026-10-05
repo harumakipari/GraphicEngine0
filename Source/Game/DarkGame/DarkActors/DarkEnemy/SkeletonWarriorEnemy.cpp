@@ -52,9 +52,13 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     sword->SetRelativeEulerRotationDirect({ 0.0f, 90.f, 0.0f });
     sword->SetRelativeScaleDirect({ 1.37f,1.37f,1.37f });
 
-    // Runtime attack detection sweeps this single root point between frames.
+    // Runtime attack detection samples the sword root, middle, and tip between frames.
     weaponRootPoint = AddComponent<SceneComponent>("SwordHitRoot", "SwordMesh");
     weaponRootPoint->SetRelativeLocationDirect(weaponRootOffset);
+    weaponMiddlePoint = AddComponent<SceneComponent>("SwordHitMiddle", "SwordHitRoot");
+    weaponMiddlePoint->SetRelativeLocationDirect({ 0.0f, 0.6f, 0.0f });
+    weaponTipPoint = AddComponent<SceneComponent>("SwordHitTip", "SwordHitRoot");
+    weaponTipPoint->SetRelativeLocationDirect({ 0.0f, 1.2f, 0.0f });
 
     // Reuse the established Player-vs-Grux impact assets, owned by this
     // normal enemy so their positions follow the skeleton rather than the boss.
@@ -346,24 +350,41 @@ void SkeletonWarriorActor::UpdateRecovery(float elapsedTime)
 void SkeletonWarriorActor::UpdateWeaponSweep(Player& player)
 {
     const DirectX::XMFLOAT3 root = GetWeaponHitPoint(weaponRootPoint, activeWeaponHitOffset);
+    const DirectX::XMFLOAT3 middle = GetWeaponHitPoint(weaponMiddlePoint, activeWeaponHitOffset);
+    const DirectX::XMFLOAT3 tip = GetWeaponHitPoint(weaponTipPoint, activeWeaponHitOffset);
     if (!hasPreviousWeaponRoot)
     {
         previousWeaponRoot = root;
+        previousWeaponMiddle = middle;
+        previousWeaponTip = tip;
         hasPreviousWeaponRoot = true;
         return;
     }
 
     HitResultWithActor rootHit;
+    HitResultWithActor middleHit;
+    HitResultWithActor tipHit;
     const uint32_t playerMask = CollisionHelper::ToBit(CollisionLayer::Player);
     const bool rootSucceeded = CollisionFunction::SphereRayCast(
         previousWeaponRoot, root, rootHit, activeWeaponHitRadius, playerMask);
+    const bool middleSucceeded = CollisionFunction::SphereRayCast(
+        previousWeaponMiddle, middle, middleHit, activeWeaponHitRadius, playerMask);
+    const bool tipSucceeded = CollisionFunction::SphereRayCast(
+        previousWeaponTip, tip, tipHit, activeWeaponHitRadius, playerMask);
+
+    if (weaponHitDebug)
+        DrawWeaponHitDebug();
 
     previousWeaponRoot = root;
+    previousWeaponMiddle = middle;
+    previousWeaponTip = tip;
 
-    if (hasHitPlayerThisAttack || hasJustDodgedPlayerThisAttack || !rootSucceeded)
+    if (hasHitPlayerThisAttack || hasJustDodgedPlayerThisAttack)
         return;
 
-    if (rootHit.actor != &player)
+    const HitResultWithActor* hit = rootSucceeded ? &rootHit :
+        middleSucceeded ? &middleHit : tipSucceeded ? &tipHit : nullptr;
+    if (!hit || hit->actor != &player)
         return;
 
     if (player.TryTakeDamage(attackDamage, GetPosition()))
@@ -508,6 +529,7 @@ void SkeletonWarriorActor::DrawImGuiDetails()
 
     ImGui::SeparatorText("Tutorial Skeleton Danger Area");
     ImGui::Checkbox("Danger Area Debug", &dangerAreaDebug);
+    ImGui::Checkbox("Weapon Hit Debug", &weaponHitDebug);
     AnimationNotifyState* notify = GetAttackDangerNotifyState();
     const auto controller = GetBodyAnimationController();
     if (!notify || !controller)
@@ -570,8 +592,11 @@ void SkeletonWarriorActor::DrawAnimationEditorPreviewState(const AnimationNotify
         return;
     }
 
-    if (state.type != AnimationNotifyState::Type::HitBox || !weaponRootPoint)
+    if (state.type != AnimationNotifyState::Type::HitBox ||
+        !weaponRootPoint || !weaponMiddlePoint || !weaponTipPoint)
+    {
         return;
+    }
 
     constexpr DirectX::XMFLOAT4 previewColor{ 0.25f, 1.0f, 0.45f, 1.0f };
     const auto controller = GetBodyAnimationController();
@@ -580,6 +605,8 @@ void SkeletonWarriorActor::DrawAnimationEditorPreviewState(const AnimationNotify
     const float currentTime = controller ? controller->GetCurrentSampledAnimationTime() : 0.0f;
     const float radius = (std::max)(0.01f, state.hitBoxRadius);
     const DirectX::XMFLOAT3 root = GetWeaponHitPoint(weaponRootPoint, state.hitBoxOffset);
+    const DirectX::XMFLOAT3 middle = GetWeaponHitPoint(weaponMiddlePoint, state.hitBoxOffset);
+    const DirectX::XMFLOAT3 tip = GetWeaponHitPoint(weaponTipPoint, state.hitBoxOffset);
     const bool contiguous = editorPreviewHasPreviousWeaponRoot &&
         editorPreviewWeaponHitBoxState == &state && currentTime >= editorPreviewWeaponHitBoxTime &&
         currentTime - editorPreviewWeaponHitBoxTime <= 0.1f;
@@ -589,15 +616,47 @@ void SkeletonWarriorActor::DrawAnimationEditorPreviewState(const AnimationNotify
     else
     {
         DebugRender::DrawLine(editorPreviewPreviousWeaponRoot, root, previewColor, 0.0f, true);
+        DebugRender::DrawLine(editorPreviewPreviousWeaponMiddle, middle, previewColor, 0.0f, true);
+        DebugRender::DrawLine(editorPreviewPreviousWeaponTip, tip, previewColor, 0.0f, true);
         DebugRender::DrawSphere(editorPreviewPreviousWeaponRoot, radius, previewColor, 0.0f, true);
+        DebugRender::DrawSphere(editorPreviewPreviousWeaponMiddle, radius, previewColor, 0.0f, true);
+        DebugRender::DrawSphere(editorPreviewPreviousWeaponTip, radius, previewColor, 0.0f, true);
     }
 
     DebugRender::DrawSphere(root, radius, previewColor, 0.0f, true);
+    DebugRender::DrawSphere(middle, radius, previewColor, 0.0f, true);
+    DebugRender::DrawSphere(tip, radius, previewColor, 0.0f, true);
+    DebugRender::DrawLine(root, middle, previewColor, 0.0f, true);
+    DebugRender::DrawLine(middle, tip, previewColor, 0.0f, true);
 
     editorPreviewHasPreviousWeaponRoot = true;
     editorPreviewPreviousWeaponRoot = root;
+    editorPreviewPreviousWeaponMiddle = middle;
+    editorPreviewPreviousWeaponTip = tip;
     editorPreviewWeaponHitBoxState = &state;
     editorPreviewWeaponHitBoxTime = currentTime;
+}
+
+void SkeletonWarriorActor::DrawWeaponHitDebug() const
+{
+    if (!weaponHitDebug || !attackHitActive || !weaponRootPoint || !weaponMiddlePoint || !weaponTipPoint)
+        return;
+
+    constexpr DirectX::XMFLOAT4 hitColor{ 1.0f, 0.75f, 0.15f, 1.0f };
+    const DirectX::XMFLOAT3 root = GetWeaponHitPoint(weaponRootPoint, activeWeaponHitOffset);
+    const DirectX::XMFLOAT3 middle = GetWeaponHitPoint(weaponMiddlePoint, activeWeaponHitOffset);
+    const DirectX::XMFLOAT3 tip = GetWeaponHitPoint(weaponTipPoint, activeWeaponHitOffset);
+    DebugRender::DrawSphere(root, activeWeaponHitRadius, hitColor, 0.0f, true);
+    DebugRender::DrawSphere(middle, activeWeaponHitRadius, hitColor, 0.0f, true);
+    DebugRender::DrawSphere(tip, activeWeaponHitRadius, hitColor, 0.0f, true);
+    DebugRender::DrawLine(root, middle, hitColor, 0.0f, true);
+    DebugRender::DrawLine(middle, tip, hitColor, 0.0f, true);
+    if (hasPreviousWeaponRoot)
+    {
+        DebugRender::DrawLine(previousWeaponRoot, root, hitColor, 0.0f, true);
+        DebugRender::DrawLine(previousWeaponMiddle, middle, hitColor, 0.0f, true);
+        DebugRender::DrawLine(previousWeaponTip, tip, hitColor, 0.0f, true);
+    }
 }
 
 void SkeletonWarriorActor::ResetWeaponSweep()
