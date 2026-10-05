@@ -179,6 +179,9 @@ public:
     bool IsOperationGuideItemVisible(OperationGuideItem item) const;
     bool IsOperationGuideItemLearned(OperationGuideItem item) const;
     bool IsDodging() const { return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge"; }
+    void SetMinimumHp(int value);
+    void ClearMinimumHp();
+    void RestoreHpToMaxWithUiAnimation();
     void BeginGameplayHudFadeOut();
     void SetGameplayHudFadeAlpha(float alpha);
 
@@ -798,6 +801,11 @@ private:
     float delayedHpDelayTimer = 0.0f;
     float delayedHpDelayDuration = 0.25f;
     float delayedHpFollowSpeed = 25.0f;
+    int minimumHp = 0;
+    bool hpRecoveryUiActive = false;
+    float hpRecoveryUiStart = 0.0f;
+    float hpRecoveryUiElapsed = 0.0f;
+    float hpRecoveryUiDuration = 0.5f;
     CoreColor playerHpCurrentColor{ 0.302f, 0.565f, 0.644f, 1.0f };
     CoreColor playerHpDelayedColor{ 0.711f, 0.958f, 0.993f, 1.0f };
 

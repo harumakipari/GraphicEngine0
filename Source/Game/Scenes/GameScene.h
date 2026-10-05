@@ -112,7 +112,7 @@ public:
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
 
     // Called when the boss-room door movie begins, before the boss-introduction blend completes.
-    void EnterBossRoomLockOnScope();
+    void EnterBossRoomLockOnScope(bool fromTutorialDoorMovie = true);
 
     // Called when the existing boss-introduction camera blend has completed.
     void StartBossBattle();
@@ -528,6 +528,7 @@ private:
     Transform playerBattleStartTransform{};
     Transform bossBattleStartTransform{};
     bool battleStartTransformsSaved = false;
+    bool tutorialBossEntryPending = false;
     bool deathCameraStartRequested = false;
     float playerDeadElapsed = 0.0f;
     float battleElapsedTime = 0.0f;

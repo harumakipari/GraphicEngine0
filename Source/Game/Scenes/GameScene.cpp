@@ -963,6 +963,9 @@ void GameScene::Start()
 {
     battleFlowState = BattleFlowState::Intro;
     battleStartTransformsSaved = false;
+    tutorialBossEntryPending = false;
+    if (player)
+        player->SetMinimumHp(5);
     SetBattleTimerVisible(false);
     SetBattleHudVisible(false);
     // ゲームBGM
@@ -1594,6 +1597,12 @@ void GameScene::Update(float deltaTime)
     }
     UpdateTutorialCameraProfileTrigger();
 
+    const bool playerInputAvailable = InputSystem::IsInputEnabled() &&
+        !cameraManager->IsUseDebug() && !cameraManager->IsUseCinematic() &&
+        !cameraManager->IsUseMovie();
+    if (!player->IsBossBattle())
+        player->SetHpBarVisible(playerInputAvailable);
+
     // シネマカメラだったらまたはムービーカメラだったらプレイヤーを透明化しない
     if (cameraManager->IsUseCinematic() || cameraManager->IsUseMovie())
     {
@@ -1603,10 +1612,7 @@ void GameScene::Update(float deltaTime)
     else
     {
         player->SetIsPlayerTransparency(true);
-        const bool operationGuideInputAvailable = InputSystem::IsInputEnabled() &&
-            !cameraManager->IsUseDebug() && !cameraManager->IsUseCinematic() &&
-            !cameraManager->IsUseMovie();
-        player->SetOperationGuideHudVisible(operationGuideInputAvailable);
+        player->SetOperationGuideHudVisible(playerInputAvailable);
     }
 
 
@@ -1912,8 +1918,10 @@ void GameScene::DisableCinematicCameraDebugInput()
         camera->SetDebugInputEnabled(false);
 }
 
-void GameScene::EnterBossRoomLockOnScope()
+void GameScene::EnterBossRoomLockOnScope(const bool fromTutorialDoorMovie)
 {
+    if (fromTutorialDoorMovie)
+        tutorialBossEntryPending = true;
     if (bossRoomLockOnScopeActive)
         return;
 
@@ -1937,7 +1945,7 @@ void GameScene::EnterBossRoomLockOnScope()
 
 void GameScene::StartBossBattle()
 {
-    EnterBossRoomLockOnScope();
+    EnterBossRoomLockOnScope(false);
     ResetVictoryResultBackground();
     victoryResultPhase = VictoryResultPhase::None;
     victoryResultDelayElapsed = 0.0f;
@@ -1945,6 +1953,9 @@ void GameScene::StartBossBattle()
     DisableCinematicCameraDebugInput();
     if (!player || !gruxEnemyActor)
         return;
+
+    const bool isInitialTutorialBossEntry = tutorialBossEntryPending;
+    tutorialBossEntryPending = false;
 
     // StartBossBattle is also used as a battle reset entry point.  If a prior
     // Phase2 track survived to here, explicitly return audio ownership to Phase1.
@@ -1955,6 +1966,9 @@ void GameScene::StartBossBattle()
     ApplyBossPhaseHp(BossPhase::Phase1);
     CaptureContinueBossCheckpoint();
     player->EndEvent();
+    player->ClearMinimumHp();
+    if (isInitialTutorialBossEntry)
+        player->RestoreHpToMaxWithUiAnimation();
 
     if (player->GetRootComponent() && gruxEnemyActor->GetRootComponent())
     {

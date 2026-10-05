@@ -623,10 +623,27 @@ void Player::Update(float deltaTime)
 
     const bool gameplayInputEnabled = !IsInWinState();
 
-    // Player HP UI uses unscaled time so HitStop / Slow do not pause the delayed gauge.
+    // Player HP UI uses unscaled time so HitStop / Slow do not pause its animations.
     const float currentHp = static_cast<float>((std::max)(hp, 0));
     const float uiDeltaTime = Time::UnscaledDeltaTime();
-    if (delayedHp > currentHp)
+    float displayedHp = currentHp;
+    if (hpRecoveryUiActive)
+    {
+        hpRecoveryUiElapsed += uiDeltaTime;
+        const float t = hpRecoveryUiDuration > FLT_EPSILON
+            ? std::clamp(hpRecoveryUiElapsed / hpRecoveryUiDuration, 0.0f, 1.0f)
+            : 1.0f;
+        displayedHp = std::lerp(hpRecoveryUiStart, currentHp, t);
+        delayedHp = displayedHp;
+        delayedHpDelayTimer = 0.0f;
+        if (t >= 1.0f)
+        {
+            hpRecoveryUiActive = false;
+            displayedHp = currentHp;
+            delayedHp = currentHp;
+        }
+    }
+    else if (delayedHp > currentHp)
     {
         if (delayedHpDelayTimer > 0.0f)
         {
@@ -639,7 +656,7 @@ void Player::Update(float deltaTime)
     }
     else if (delayedHp < currentHp)
     {
-        // HP recovery is reflected immediately without a delayed decrease effect.
+        // Non-tutorial recovery is reflected immediately without a delayed decrease effect.
         delayedHp = currentHp;
         delayedHpDelayTimer = 0.0f;
     }
@@ -647,7 +664,7 @@ void Player::Update(float deltaTime)
     if (hpCurrentFillUiComponent && hpDelayedFillUiComponent)
     {
         const float maximumHp = static_cast<float>(maxHp);
-        hpCurrentFillUiComponent->SetValue(currentHp, maximumHp);
+        hpCurrentFillUiComponent->SetValue(displayedHp, maximumHp);
         hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
     }
 
@@ -1526,6 +1543,8 @@ void Player::DrawImGuiDetails()
             0.01f, 0.0f, 2.0f, "%.2f sec");
         ImGui::DragFloat("Delayed HP Follow Speed", &delayedHpFollowSpeed,
             0.1f, 0.0f, 100.0f, "%.2f HP/sec");
+        ImGui::DragFloat("HP Recovery UI Duration", &hpRecoveryUiDuration,
+            0.01f, 0.0f, 2.0f, "%.2f sec");
         if (ImGui::ColorEdit4("Current HP Color", &playerHpCurrentColor.r) && hpCurrentFillUiComponent)
             hpCurrentFillUiComponent->SetColor(playerHpCurrentColor);
         if (ImGui::ColorEdit4("Delayed HP Color", &playerHpDelayedColor.r) && hpDelayedFillUiComponent)
@@ -2587,6 +2606,35 @@ void Player::EndEvent()
     this->moviePerform = false;
 }
 
+void Player::SetMinimumHp(const int value)
+{
+    minimumHp = std::clamp(value, 0, maxHp);
+}
+
+void Player::ClearMinimumHp()
+{
+    minimumHp = 0;
+}
+
+void Player::RestoreHpToMaxWithUiAnimation()
+{
+    const float hpBeforeRecovery = static_cast<float>((std::max)(hp, 0));
+    hp = maxHp;
+    delayedHpDelayTimer = 0.0f;
+    hpRecoveryUiStart = hpBeforeRecovery;
+    hpRecoveryUiElapsed = 0.0f;
+    hpRecoveryUiActive = hpRecoveryUiDuration > FLT_EPSILON && hpBeforeRecovery < static_cast<float>(maxHp);
+    if (!hpRecoveryUiActive)
+    {
+        delayedHp = static_cast<float>(hp);
+        hpRecoveryUiStart = delayedHp;
+    }
+    else
+    {
+        delayedHp = hpRecoveryUiStart;
+    }
+}
+
 void Player::SetGameplayHudVisible(const bool visible)
 {
     gameplayHudFadeEntries.clear();
@@ -2947,6 +2995,8 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
     hp = maxHp;
     delayedHp = static_cast<float>(hp);
     delayedHpDelayTimer = 0.0f;
+    hpRecoveryUiActive = false;
+    hpRecoveryUiElapsed = 0.0f;
     if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
     if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
 
@@ -3798,7 +3848,8 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
 
     const int hpBeforeDamage = hp;
     const int appliedDamage = (std::max)(0, damage);
-    hp = (std::max)(0, hp - appliedDamage);
+    hpRecoveryUiActive = false;
+    hp = (std::max)(minimumHp, (std::max)(0, hp - appliedDamage));
     if (hp < hpBeforeDamage)
     {
         delayedHp = static_cast<float>(hpBeforeDamage);
