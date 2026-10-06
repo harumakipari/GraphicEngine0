@@ -110,6 +110,11 @@ public:
         rigidBody_->SetIntialVelocity(velocity);
     }
 
+    void SetInitialAngularVelocity(const DirectX::XMFLOAT3& angularVelocity)
+    {
+        rigidBody_->SetInitialAngularVelocity(angularVelocity);
+    }
+
     // “–‚½‚è”»’èƒŒƒCƒ„[‚ğ“r’†‚Å’Ç‰Á‚·‚é
     void AddCollisionFilter(const CollisionLayer otherLayer, const CollisionComponent::CollisionResponse response)
     {
@@ -153,6 +158,21 @@ public:
             aabb.max.y - aabb.min.y,
             aabb.max.z - aabb.min.z
         };
+    }
+
+    void SetLinearDamping(float damping)
+    {
+        if (rigidBody_) rigidBody_->SetLinearDamping(damping);
+    }
+
+    void SetAngularDamping(float damping)
+    {
+        if (rigidBody_) rigidBody_->SetAngularDamping(damping);
+    }
+
+    void SetSleepThreshold(float threshold)
+    {
+        if (rigidBody_) rigidBody_->SetSleepThreshold(threshold);
     }
 
     // “–‚½‚Á‚½‚ÉÕŒ‚‚ğ—^‚¦‚é

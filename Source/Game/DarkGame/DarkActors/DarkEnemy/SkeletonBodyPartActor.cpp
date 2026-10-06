@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "SkeletonBodyPartActor.h"
 
+#include "Components/CollisionShape/ShapeComponent.h"
 #include "Components/Render/MeshComponent.h"
 
 const char* SkeletonBodyPartActor::GetModelPath() const
@@ -25,11 +26,6 @@ const char* SkeletonBodyPartActor::GetModelPath() const
 void SkeletonBodyPartActor::Initialize(const Transform& transform)
 {
     Actor::Initialize(transform);
-
-    position = transform.GetLocation();
-    initialBoneRotation = transform.GetRotation();
-    velocity = spawnParams.initialVelocity;
-    angularVelocity = spawnParams.angularVelocity;
     remainingLifetime = spawnParams.lifeTime;
 
     meshComponent = AddComponent<SkeletalMeshComponent>("SkeletonBodyPartMesh");
@@ -39,55 +35,70 @@ void SkeletonBodyPartActor::Initialize(const Transform& transform)
     meshComponent->SetRelativeEulerRotationDirect(spawnParams.transformCorrection.rotationEuler);
     meshComponent->SetRelativeScaleDirect(spawnParams.transformCorrection.scale);
 
+    InitializeCollision();
 }
 
+void SkeletonBodyPartActor::InitializeCollision()
+{
+    if (!meshComponent)
+        return;
+
+    DirectX::XMFLOAT3 size = meshComponent->GetModelSize();
+    size = MathHelper::Multiply(size, 100.0f);
+    if (spawnParams.partType == PartType::Skull)
+    {
+        const float radius = (std::max)(0.01f, (std::max)(size.x, (std::max)(size.y, size.z)) * 0.5f);
+        auto sphere = AddComponent<SphereComponent>("SkeletonBodyPartCollision");
+        sphere->SetRadius(radius);
+        collisionComponent = sphere;
+    }
+    else
+    {
+        auto box = AddComponent<BoxComponent>("SkeletonBodyPartCollision");
+        box->SetBoxExtent({
+            (std::max)(size.x, 0.02f),
+            (std::max)(size.y, 0.02f),
+            (std::max)(size.z, 0.02f) });
+        collisionComponent = box;
+    }
+
+    collisionComponent->SetMass(1.0f);
+    collisionComponent->SetKinematic(false);
+    collisionComponent->SetGravity(true);
+    collisionComponent->SetLayer(CollisionLayer::BodyPart);
+    collisionComponent->SetResponseToLayer(
+        CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Block);
+    //collisionComponent->SetIsVisibleDebugBox(spawnParams.debugCollisionShape);
+    //collisionComponent->SetIsVisibleDebugShape(spawnParams.debugCollisionShape);
+    collisionComponent->SetCollisionOffsetY(size.y * 0.5f);
+    if (spawnParams.partType != PartType::Skull || spawnParams.partType != PartType::Ribs)  // “ªŠWœ‚©‚ ‚Î‚çœˆÈŠO‚¾‚Á‚½‚ç
+        collisionComponent->SetCollisionOffsetX(-size.x * 0.5f);
+    collisionComponent->Initialize();
+    SetPhysicsDamping(spawnParams.linearDamping, spawnParams.angularDamping, spawnParams.sleepThreshold);
+    collisionComponent->SetIntialVelocity(spawnParams.initialVelocity);
+
+    constexpr float degreesToRadians = DirectX::XM_PI / 180.0f;
+    collisionComponent->SetInitialAngularVelocity({
+        spawnParams.angularVelocity.x * degreesToRadians,
+        spawnParams.angularVelocity.y * degreesToRadians,
+        spawnParams.angularVelocity.z * degreesToRadians });
+}
+
+void SkeletonBodyPartActor::SetPhysicsDamping(float linearDamping, float angularDamping, float sleepThreshold)
+{
+    if (!collisionComponent)
+        return;
+
+    collisionComponent->SetLinearDamping(linearDamping);
+    collisionComponent->SetAngularDamping(angularDamping);
+    collisionComponent->SetSleepThreshold(sleepThreshold);
+}
 void SkeletonBodyPartActor::Update(float deltaTime)
 {
-    if (remainingLifetime <= 0.0f)
+    if (remainingLifetime > 0.0f)
     {
-        MarkPendingKill();
-        return;
+        remainingLifetime -= deltaTime;
+        if (remainingLifetime <= 0.0f)
+            MarkPendingKill();
     }
-
-    if (!hasLanded)
-    {
-        velocity.y -= spawnParams.gravity * deltaTime;
-        position.x += velocity.x * deltaTime;
-        position.y += velocity.y * deltaTime;
-        position.z += velocity.z * deltaTime;
-        accumulatedAngularRotation.x += angularVelocity.x * deltaTime;
-        accumulatedAngularRotation.y += angularVelocity.y * deltaTime;
-        accumulatedAngularRotation.z += angularVelocity.z * deltaTime;
-
-        const float groundContactY = spawnParams.groundY + spawnParams.groundOffset;
-        if (position.y <= groundContactY)
-        {
-            position.y = groundContactY;
-            velocity = {};
-            angularVelocity = {};
-            hasLanded = true;
-        }
-    }
-
-    ApplySimulatedTransform();
-    remainingLifetime -= deltaTime;
-    if (remainingLifetime <= 0.0f)
-        MarkPendingKill();
-}
-
-void SkeletonBodyPartActor::ApplySimulatedTransform()
-{
-    using namespace DirectX;
-
-    const XMVECTOR initial = XMLoadFloat4(&initialBoneRotation);
-    const XMVECTOR spin = XMQuaternionRotationRollPitchYaw(
-        XMConvertToRadians(accumulatedAngularRotation.x),
-        XMConvertToRadians(accumulatedAngularRotation.y),
-        XMConvertToRadians(accumulatedAngularRotation.z));
-    XMFLOAT4 rotation{};
-    XMStoreFloat4(&rotation, XMQuaternionNormalize(XMQuaternionMultiply(initial, spin)));
-
-    SetPosition(position);
-    SetQuaternionRotation(rotation);
-    UpdateAllComponentTransforms();
 }

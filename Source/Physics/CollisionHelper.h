@@ -19,6 +19,7 @@ enum class CollisionLayer :uint32_t
     EnemyWeapon,
     Floor,
     Wall, //
+    BodyPart, // Death-effect debris; simulation-only, never a gameplay hit target.
     Max,
 };
 constexpr uint32_t COLLISION_EVERYTHING = 0xFFFFFFFF;

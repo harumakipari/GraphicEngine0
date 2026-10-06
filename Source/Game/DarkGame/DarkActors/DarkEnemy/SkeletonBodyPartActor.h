@@ -3,8 +3,9 @@
 #include "Core/Actor.h"
 
 class SkeletalMeshComponent;
-// Short-lived visual debris used by the Skeleton death effect. Motion is
-// intentionally simulated by this actor, rather than registered with PhysX.
+class ShapeComponent;
+
+// Death-effect debris simulated as an isolated PhysX dynamic actor.
 class SkeletonBodyPartActor : public Actor
 {
 public:
@@ -29,11 +30,13 @@ public:
     {
         PartType partType = PartType::Skull;
         DirectX::XMFLOAT3 initialVelocity{};
-        DirectX::XMFLOAT3 angularVelocity{}; // degrees per second, local axes
-        float gravity = 9.8f;
-        float groundY = 0.0f;
-        float groundOffset = 0.0f;
-        float lifeTime = 30.0f;
+        DirectX::XMFLOAT3 angularVelocity{}; // degrees per second
+        // A value <= 0 keeps the visual debris until its owning scene is destroyed.
+        float lifeTime = 0.0f;
+        bool debugCollisionShape = false;
+        float linearDamping = 1.0f;
+        float angularDamping = 3.0f;
+        float sleepThreshold = 0.005f;
         TransformCorrection transformCorrection{};
     };
 
@@ -42,18 +45,14 @@ public:
 
     void Initialize(const Transform& transform) override;
     void Update(float deltaTime) override;
+    void SetPhysicsDamping(float linearDamping, float angularDamping, float sleepThreshold);
 
 private:
     const char* GetModelPath() const;
-    void ApplySimulatedTransform();
+    void InitializeCollision();
 
     SpawnParams spawnParams;
     std::shared_ptr<SkeletalMeshComponent> meshComponent;
-    DirectX::XMFLOAT3 position{};
-    DirectX::XMFLOAT3 velocity{};
-    DirectX::XMFLOAT3 angularVelocity{};
-    DirectX::XMFLOAT3 accumulatedAngularRotation{};
-    DirectX::XMFLOAT4 initialBoneRotation{};
+    std::shared_ptr<ShapeComponent> collisionComponent;
     float remainingLifetime = 0.0f;
-    bool hasLanded = false;
 };

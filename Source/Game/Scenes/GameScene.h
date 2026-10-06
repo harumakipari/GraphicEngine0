@@ -761,6 +761,7 @@ private:
     std::shared_ptr<SkeletonWarriorActor> tutorialDodgeSkeletonActor;
     bool tutorialDodgeSkeletonAttackRange = false;
     bool tutorialDodgeGuideActivated = false;
+    bool tutorialDodgeSkeletonJustDodged = false;
     std::weak_ptr<Enemy> lockOnSelectedEnemy;
     // ボスの部屋のラープのための変数
     std::unique_ptr<EasingRunner> bossLerpEasing;

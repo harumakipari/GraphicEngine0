@@ -152,17 +152,35 @@ public:
         }
     }
 
-    // 途中で質量を設定する関数
+    void SetInitialAngularVelocity(const DirectX::XMFLOAT3& angularVelocity)
+    {
+        if (pxActor_)
+            pxActor_->setAngularVelocity(physx::PxVec3(angularVelocity.x, angularVelocity.y, angularVelocity.z));
+    }
+
+    void SetLinearDamping(float damping)
+    {
+        if (pxActor_)
+            pxActor_->setLinearDamping((std::max)(0.0f, damping));
+    }
+
+    void SetAngularDamping(float damping)
+    {
+        if (pxActor_)
+            pxActor_->setAngularDamping((std::max)(0.0f, damping));
+    }
+
+    void SetSleepThreshold(float threshold)
+    {
+        if (pxActor_)
+            pxActor_->setSleepThreshold((std::max)(0.0f, threshold));
+    }
+
+    // Update the mass and inertia after the dynamic shape has been created.
     void SetMass(float newMass)
     {
-        //if (!isKinematic_)
-        //{// キネマティックじゃなかったら
-        //    return;
-        //}
         if (pxActor_)
-        {
             physx::PxRigidBodyExt::updateMassAndInertia(*pxActor_, newMass);
-        }
         mass_ = newMass;
     }
 

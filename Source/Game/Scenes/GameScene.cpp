@@ -1416,7 +1416,8 @@ void GameScene::UpdateTutorialSkeletonUI()
     if (tutorialDodgeSkeletonXPromptUI) tutorialDodgeSkeletonXPromptUI->SetVisible(false);
 
     const auto updatePrompt = [this](const std::shared_ptr<SkeletonWarriorActor>& skeleton,
-        const std::shared_ptr<UIImageComponent>& prompt, const bool shouldShow, bool& isVisible)
+        const std::shared_ptr<UIImageComponent>& prompt, const bool shouldShow, bool& isVisible,
+        const DirectX::XMFLOAT2& additionalOffset)
         {
             if (!shouldShow || !skeleton || skeleton->IsDead() || skeleton->IsPendingKill() || !prompt)
                 return;
@@ -1436,6 +1437,8 @@ void GameScene::UpdateTutorialSkeletonUI()
                 position.x += tutorialSkeletonOperationPromptOffset.x;
                 position.y += tutorialSkeletonOperationPromptOffset.y;
             }
+            position.x += additionalOffset.x;
+            position.y += additionalOffset.y;
             // This is intentionally independent of projection / distance.
             const DirectX::XMFLOAT2 scale = {
                 tutorialSkeletonOperationPromptScale, tutorialSkeletonOperationPromptScale };
@@ -1448,22 +1451,21 @@ void GameScene::UpdateTutorialSkeletonUI()
     const bool ltVisible = tutorialPassiveSkeletonLockOnCandidate &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT) &&
         !player->IsOperationGuideItemLearned(Player::OperationGuideItem::LT);
-    const auto selectedEnemy = lockOnSelectedEnemy.lock();
-    const bool passiveSkeletonSelected = selectedEnemy &&
-        selectedEnemy.get() == tutorialPassiveSkeletonActor.get();
-    const bool yVisible = !ltVisible && passiveSkeletonSelected &&
+    const bool passiveSkeletonAttackRange = tutorialPassiveSkeletonActor &&
+        !tutorialPassiveSkeletonActor->IsDead() &&
+        tutorialPassiveSkeletonActor->IsPlayerWithinAttackRange(*player);
+    const bool yVisible = passiveSkeletonAttackRange &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y) &&
         !player->IsOperationGuideItemLearned(Player::OperationGuideItem::Y);
-    const bool xVisible = tutorialDodgeSkeletonAttackRange &&
-        player->IsOperationGuideItemVisible(Player::OperationGuideItem::X) &&
-        !player->IsOperationGuideItemLearned(Player::OperationGuideItem::X);
+    const bool xVisible = tutorialDodgeGuideActivated && !tutorialDodgeSkeletonJustDodged &&
+        player->IsOperationGuideItemVisible(Player::OperationGuideItem::X);
 
     updatePrompt(tutorialPassiveSkeletonActor, tutorialPassiveSkeletonLtPromptUI, ltVisible,
-        tutorialPassiveSkeletonLtPromptVisible);
+        tutorialPassiveSkeletonLtPromptVisible, { 0.0f, 18.0f });
     updatePrompt(tutorialPassiveSkeletonActor, tutorialPassiveSkeletonYPromptUI, yVisible,
-        tutorialPassiveSkeletonYPromptVisible);
+        tutorialPassiveSkeletonYPromptVisible, { 0.0f, -60.0f });
     updatePrompt(tutorialDodgeSkeletonActor, tutorialDodgeSkeletonXPromptUI, xVisible,
-        tutorialDodgeSkeletonXPromptVisible);
+        tutorialDodgeSkeletonXPromptVisible, { 0.0f, 0.0f });
 }
 void GameScene::HideLockOnTargetUI()
 {
@@ -1790,6 +1792,13 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
     if (tutorialPassiveSkeletonLockOnCandidate)
         player->SetOperationGuideItemVisible(Player::OperationGuideItem::LT, true);
 
+    // Reuse the Skeleton combat range; no tutorial-only distance is introduced.
+    if (!tutorialPassiveSkeletonActor->IsDead() &&
+        tutorialPassiveSkeletonActor->IsPlayerWithinAttackRange(*player))
+    {
+        revealYAndCaptureTutorialSkeletonHp();
+    }
+
     const auto selectedEnemy = lockOnSelectedEnemy.lock();
     const bool selectedTutorialSkeleton = selectedEnemy &&
         (selectedEnemy.get() == tutorialPassiveSkeletonActor.get() ||
@@ -1836,6 +1845,14 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
         tutorialDodgeGuideActivated = true;
         revealYAndCaptureTutorialSkeletonHp();
         player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, true);
+    }
+
+    if (tutorialDodgeGuideActivated && !tutorialDodgeSkeletonJustDodged &&
+        player->IsJustDodgePresentationActive() &&
+        player->GetRushTarget().get() == tutorialDodgeSkeletonActor.get())
+    {
+        // Rush target is assigned only by Player::StartJustDodgeSuccess().
+        tutorialDodgeSkeletonJustDodged = true;
     }
 
     if (tutorialDodgeGuideActivated &&

@@ -1333,12 +1333,24 @@ physx::PxFilterFlags Physics::SimulationFilterShader(
     physx::PxPairFlags& pairFlags,
     const void* constantBlock, physx::PxU32 constantBlockSize)
 {
+    const uint32_t bodyPartLayer = CollisionHelper::ToBit(CollisionLayer::BodyPart);
+    const uint32_t worldStaticLayer = CollisionHelper::ToBit(CollisionLayer::WorldStatic);
+    const bool firstIsBodyPart = (filterData0.word0 & bodyPartLayer) != 0;
+    const bool secondIsBodyPart = (filterData1.word0 & bodyPartLayer) != 0;
+    if (firstIsBodyPart || secondIsBodyPart)
+    {
+        const uint32_t otherLayer = firstIsBodyPart ? filterData1.word0 : filterData0.word0;
+        if ((otherLayer & worldStaticLayer) == 0)
+            return physx::PxFilterFlag::eSUPPRESS;
+    }
+
 
     if (physx::PxFilterObjectIsTrigger(attributes0) || physx::PxFilterObjectIsTrigger(attributes1))
     {
         pairFlags = physx::PxPairFlag::eTRIGGER_DEFAULT;
         return physx::PxFilterFlag::eDEFAULT;
     }
+
     pairFlags = physx::PxPairFlag::eCONTACT_DEFAULT;
     pairFlags |= physx::PxPairFlag::eNOTIFY_TOUCH_FOUND | physx::PxPairFlag::eNOTIFY_TOUCH_LOST | physx::PxPairFlag::eNOTIFY_TOUCH_PERSISTS | physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
 

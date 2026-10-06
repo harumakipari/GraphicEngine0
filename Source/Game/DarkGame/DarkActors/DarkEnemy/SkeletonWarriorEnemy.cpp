@@ -175,22 +175,7 @@ bool SkeletonWarriorActor::SpawnDeathBodyParts()
                 awayFromPlayer.z * speed + MathHelper::RandomRange(-0.18f, 0.18f),
             };
         };
-    // The actor root is the Skeleton ground/foot reference. Passing it to
-    // every part keeps this first-pass simulation independent of World Y = 0.
-    const float groundY = GetPosition().y;
-    const auto getGroundOffset = [this](const SkeletonBodyPartActor::PartType partType)
-        {
-            switch (partType)
-            {
-            case SkeletonBodyPartActor::PartType::Skull: return skullGroundOffset;
-            case SkeletonBodyPartActor::PartType::Ribs:  return ribsGroundOffset;
-            case SkeletonBodyPartActor::PartType::Spine: return spineGroundOffset;
-            case SkeletonBodyPartActor::PartType::Arm:   return armGroundOffset;
-            case SkeletonBodyPartActor::PartType::Leg:   return legGroundOffset;
-            }
-            return 0.0f;
-        };
-    const auto spawnPart = [actorManager, this, groundY, &makeVelocity, &getGroundOffset](
+    const auto spawnPart = [actorManager, this, &makeVelocity](
         SkeletonBodyPartActor::PartType partType, const Transform& partTransform,
         const SkeletonBodyPartActor::TransformCorrection& transformCorrection)
         {
@@ -202,14 +187,16 @@ bool SkeletonWarriorActor::SpawnDeathBodyParts()
                 MathHelper::RandomRange(-180.0f, 180.0f),
                 MathHelper::RandomRange(-180.0f, 180.0f),
             };
-            params.gravity = 9.8f;
-            params.groundY = groundY;
-            params.groundOffset = getGroundOffset(partType);
             params.lifeTime = bodyPartsLifetime;
+            params.debugCollisionShape = bodyPartsDebug;
+            params.linearDamping = bodyPartsLinearDamping;
+            params.angularDamping = bodyPartsAngularDamping;
+            params.sleepThreshold = bodyPartsSleepThreshold;
             params.transformCorrection = transformCorrection;
             // Each part owns an independent identity correction for this validation pass.
-            actorManager->CreateAndRegisterActorWithTransform<SkeletonBodyPartActor>(
+            const auto bodyPart = actorManager->CreateAndRegisterActorWithTransform<SkeletonBodyPartActor>(
                 "SkeletonBodyPart", partTransform, params);
+            spawnedBodyParts.push_back(bodyPart);
         };
 
     struct DeathBodyPartSpec
@@ -232,6 +219,19 @@ bool SkeletonWarriorActor::SpawnDeathBodyParts()
     return true;
 }
 
+void SkeletonWarriorActor::SyncSpawnedBodyPartPhysicsSettings()
+{
+    std::erase_if(spawnedBodyParts, [this](const std::weak_ptr<SkeletonBodyPartActor>& weakBodyPart)
+        {
+            const auto bodyPart = weakBodyPart.lock();
+            if (!bodyPart || bodyPart->IsPendingKill())
+                return true;
+
+            bodyPart->SetPhysicsDamping(bodyPartsLinearDamping,
+                bodyPartsAngularDamping, bodyPartsSleepThreshold);
+            return false;
+        });
+}
 void SkeletonWarriorActor::DrawBodyPartBoneDebug() const
 {
     if (!bodyPartsDebug || !hasDeathBodyPartBonePositions)
@@ -244,6 +244,7 @@ void SkeletonWarriorActor::DrawBodyPartBoneDebug() const
 void SkeletonWarriorActor::Update(float elapsedTime)
 {
     Enemy::Update(elapsedTime);
+    SyncSpawnedBodyPartPhysicsSettings();
     DrawBodyPartBoneDebug();
 
     if (IsAnimationEditorPreviewActive())
@@ -677,12 +678,13 @@ void SkeletonWarriorActor::DrawImGuiDetails()
     ImGui::Checkbox("Skeleton BodyParts Debug", &bodyPartsDebug);
     ImGui::DragFloat("BodyParts Initial Speed", &bodyPartsInitialSpeed, 0.05f, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("BodyParts Upward Speed", &bodyPartsUpwardSpeed, 0.05f, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("BodyParts Lifetime", &bodyPartsLifetime, 0.05f, 0.1f, 15.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Skull Ground Offset", &skullGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Ribs Ground Offset", &ribsGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Spine Ground Offset", &spineGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Arm Ground Offset", &armGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Leg Ground Offset", &legGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("BodyParts Lifetime", &bodyPartsLifetime, 0.05f, 0.0f, 15.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    if (bodyPartsDebug)
+    {
+        ImGui::DragFloat("Linear Damping", &bodyPartsLinearDamping, 0.05f, 0.0f, 20.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Angular Damping", &bodyPartsAngularDamping, 0.05f, 0.0f, 20.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat("Sleep Threshold", &bodyPartsSleepThreshold, 0.0005f, 0.0f, 1.0f, "%.4f", ImGuiSliderFlags_AlwaysClamp);
+    }
     ImGui::TextDisabled("Bone markers: Head=blue, SpineHigh=green, Thigh_l=orange.");
 
     ImGui::SeparatorText("Tutorial Skeleton Danger Area");

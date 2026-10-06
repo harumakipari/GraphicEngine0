@@ -5,6 +5,7 @@
 #include "Game/Actors/Enemy/Enemy.h"
 
 class ParticleComponent;
+class SkeletonBodyPartActor;
 
 
 class SkeletonWarriorActor :public Enemy
@@ -51,6 +52,7 @@ private:
     void ApplyRimLight();
     bool SpawnDeathBodyParts();
     void DrawBodyPartBoneDebug() const;
+    void SyncSpawnedBodyPartPhysicsSettings();
     void ResetAnimationEditorPreviewWeaponSweep();
     DirectX::XMFLOAT3 GetWeaponHitPoint(const std::shared_ptr<SceneComponent>& point,
         const DirectX::XMFLOAT3& localOffset) const;
@@ -63,12 +65,11 @@ private:
     bool bodyPartsDebug = false;
     float bodyPartsInitialSpeed = 1.0f;
     float bodyPartsUpwardSpeed = 0.75f;
-    float bodyPartsLifetime = 3.0f;
-    float skullGroundOffset = 0.0f;
-    float ribsGroundOffset = 0.0f;
-    float spineGroundOffset = 0.0f;
-    float armGroundOffset = 0.0f;
-    float legGroundOffset = 0.0f;
+    float bodyPartsLifetime = 0.0f;
+    float bodyPartsLinearDamping = 1.0f;
+    float bodyPartsAngularDamping = 3.0f;
+    float bodyPartsSleepThreshold = 0.005f;
+    std::vector<std::weak_ptr<SkeletonBodyPartActor>> spawnedBodyParts;
     bool hasDeathBodyPartBonePositions = false;
     DirectX::XMFLOAT3 deathHeadBonePosition{};
     DirectX::XMFLOAT3 deathSpineHighBonePosition{};
