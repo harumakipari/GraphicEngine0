@@ -4944,11 +4944,6 @@ void GameScene::SetUpActors()
         "ModelDebrisEmitterActor", debrisTr);
 
 
-#if 0
-    auto pauseActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor");
-    pauseActor->SetRetrySceneName("SampleScene");
-#endif // 0
-
 
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
     gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
@@ -5017,8 +5012,7 @@ void GameScene::SetUpActors()
     }
 
     // ポーズアクターを生成
-    //auto pauseActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor");
-    //pauseActor->SetRetrySceneName("GameScene");
+    this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor");
 
 }
 

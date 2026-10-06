@@ -12,7 +12,7 @@ void Pause::Initialize(const Transform& transform)
 
     auto uiManager = scene->GetUIManager();
 
-    pauseBackImage = std::make_shared<UIImageComponent>("./Data/Textures/Pause/back.png", "back");
+    pauseBackImage = std::make_shared<UIImageComponent>("./Data/Textures/UI/Pause/back.png", "back");
     pauseBackImage->SetWorldPosition({ 1920 * 0.5f, 1080 * 0.5f });
     pauseBackImage->SetPivot({ 0.5f,0.5f });
     pauseBackImage->SetScale({ 1.0f,1.0f });
@@ -22,21 +22,22 @@ void Pause::Initialize(const Transform& transform)
     pauseBackImage->zOrder = 95; // 奥
     uiManager->Add(pauseBackImage);
 
-    pausePanel = std::make_shared<UIImageComponent>("./Data/Textures/Pause/pause_panel.png", "pause_panel");
+    pausePanel = std::make_shared<UIImageComponent>("./Data/Textures/UI/Pause/pause_panel.png", "pause_panel");
     pausePanel->SetWorldPosition({ 1920 * 0.5f, 1080 * 0.5f });
     pausePanel->SetPivot({ 0.5f,0.5f });
-    pausePanel->SetScale({ 1.0f,1.0f });
-    pausePanel->SetSize({ 1033, 860 });
+    pausePanel->SetScale({ 0.5f,0.5f });
+    pausePanel->SetSize({ 1233, 1424 });
     pausePanel->SetVisible(false);
     pausePanel->zOrder = 100; // 手前に描画する
     uiManager->Add(pausePanel);
 
     // メニューボタン
     {
-        menuButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/menu.png", "menu");
-        menuButton->SetWorldPosition({ 100, 85 });
+        menuButton = std::make_shared<UIButtonComponent>("./Data/Textures/UI/Pause/menu.png", "menu");
+        menuButton->SetWorldPosition({ 1828.0f, 1007.0f });
         menuButton->SetPivot({ 0.5f,0.5f });
         menuButton->SetSize({ 140, 140 });
+        menuButton->SetScale({ 0.8f,0.8f });
         menuButton->zOrder = 100; // 手前に描画する
         uiManager->Add(menuButton);
         menuButton->onClick = [&]()
@@ -45,22 +46,7 @@ void Pause::Initialize(const Transform& transform)
             };
     }
 
-    // ゲームへ戻る
-    closeButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/back_to_game.png", "back_to_game");
-    closeButton->SetWorldPosition({ 979, 463 });
-    closeButton->SetPivot({ 0.5f,0.5f });
-    closeButton->SetSize({ 391, 123 });
-    closeButton->SetVisible(false);
-    closeButton->SetEnable(false);
-    closeButton->zOrder = 105; // 手前に描画する
-
-    closeButton->onClick = [&]()
-        {
-            ClosePause();
-        };
-    uiManager->Add(closeButton);
-
-    returnTitleButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/back_to_title.png", "back_to_title");
+    returnTitleButton = std::make_shared<UIButtonComponent>("./Data/Textures/UI/Pause/back_to_title.png", "back_to_title");
     returnTitleButton->SetWorldPosition({ 980, 607 });
     returnTitleButton->SetPivot({ 0.5f,0.5f });
     returnTitleButton->SetSize({ 391, 123 });
@@ -75,7 +61,7 @@ void Pause::Initialize(const Transform& transform)
             }
 
 
-            CoreAudio::PlayOneShot(L"./Data/Sound/SE1/push_button.wav");
+            CoreAudio::PlayOneShot(L"./Data/Sound/SE/button_push.wav");
             Time::timeScale = 1.0f;
 
             const char* types[] = { "0", "1" };
@@ -85,7 +71,7 @@ void Pause::Initialize(const Transform& transform)
 
     GetOwnerScene()->GetUIManager()->Add(returnTitleButton);
 
-    restartBattleButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/restart_battle.png", "restart_battle");
+    restartBattleButton = std::make_shared<UIButtonComponent>("./Data/Textures/UI/Pause/restart_battle.png", "restart_battle");
     restartBattleButton->SetWorldPosition({ 978, 751 });
     restartBattleButton->SetPivot({ 0.5f,0.5f });
     restartBattleButton->SetSize({ 391, 123 });
@@ -103,7 +89,7 @@ void Pause::Initialize(const Transform& transform)
     for (int i = 0; i < 3; i++)
     {
         const int num = 3 - i; // 3,2,1
-        std::string filename = "./Data/Textures/ScissorsUI/CountDown_" + std::to_string(num) + ".png";
+        std::string filename = "./Data/Textures/UI/Pause/CountDown_" + std::to_string(num) + ".png";
 
         countDownImages[i] = std::make_shared<UIImageComponent>(filename, "countDown_" + std::to_string(num));
 
@@ -117,7 +103,6 @@ void Pause::Initialize(const Transform& transform)
         scene->GetUIManager()->Add(countDownImages[i]);
     }
 
-    uiManager->AddButton(closeButton);
     uiManager->AddButton(returnTitleButton);
     uiManager->AddButton(restartBattleButton);
 
@@ -177,7 +162,7 @@ void Pause::Update(float deltaTime)
 
         if (current != lastCountdownNumber)
         {
-            CoreAudio::PlayOneShot(L"./Data/Sound/SE1/pause_countDown_se.wav", 3.0f);
+            CoreAudio::PlayOneShot(L"./Data/Sound/SE/pause_menu.wav", 3.0f);
             lastCountdownNumber = current;
         }
     }
@@ -217,15 +202,12 @@ void Pause::HidePauseMenu()
 // ポーズ画面を開くときの処理
 void Pause::OpenPause()
 {
-    CoreAudio::PlayOneShot(L"./Data/Sound/SE1/escape_se.wav");
+    CoreAudio::PlayOneShot(L"./Data/Sound/SE/pause_menu.wav");
 
     pauseBackImage->SetVisible(true);
 
     pausePanel->SetVisible(true);
     pausePanel->SetEnable(true);
-
-    closeButton->SetVisible(true);
-    closeButton->SetEnable(true);
 
     returnTitleButton->SetVisible(true);
     returnTitleButton->SetEnable(true);
@@ -246,7 +228,7 @@ void Pause::OpenPause()
     GetOwnerScene()->SetPaused(true);
 
     // 初期選択　UI　ゲームパッドの時の最初に選択するUI
-    GetOwnerScene()->GetUIManager()->SetSelected(closeButton.get());
+    GetOwnerScene()->GetUIManager()->SetSelected(returnTitleButton.get());
 }
 
 // ポーズ画面を閉じる時の処理
@@ -263,8 +245,6 @@ void Pause::ClosePause()
     pauseBackImage->SetVisible(false);
     pausePanel->SetVisible(false);
     pausePanel->SetEnable(false);
-    closeButton->SetEnable(false);
-    closeButton->SetVisible(false);
     returnTitleButton->SetEnable(false);
     returnTitleButton->SetVisible(false);
     restartBattleButton->SetEnable(false);

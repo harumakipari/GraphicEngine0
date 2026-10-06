@@ -41,9 +41,6 @@ private:
     std::shared_ptr<UIButtonComponent> returnMainRoomButton;
     std::shared_ptr<UIButtonComponent> restartBattleButton;
 
-    std::shared_ptr<UIButtonComponent> closeButton;
-
-
 
     std::array<std::shared_ptr<UIImageComponent>, 3> countDownImages;
     PauseState state = PauseState::Playing;
