@@ -6,6 +6,7 @@
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Player/Player.h"
+#include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonBodyPartActor.h"
 #include "Physics/CollisionFunction.h"
 
 void SkeletonWarriorActor::Initialize(const Transform& transform)
@@ -121,10 +122,129 @@ void SkeletonWarriorActor::ApplyRimLight()
     }
 }
 
+bool SkeletonWarriorActor::SpawnDeathBodyParts()
+{
+    if (!skeletalMeshComponent || !skeletalMeshComponent->model)
+        return false;
+
+    auto* actorManager = GetOwnerScene()->GetActorManager();
+    if (!actorManager)
+        return false;
+
+    // modelNodes is the current animation pose. GetJointMatrix combines that
+    // pose with the mesh component world transform, preserving bone rotation.
+    const DirectX::XMFLOAT4X4 meshWorld =
+        skeletalMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+    const auto getBoneTransform = [this, &meshWorld](const char* boneName)
+        {
+            const DirectX::XMFLOAT4X4 matrix = skeletalMeshComponent->model->GetJointMatrix(
+                boneName, skeletalMeshComponent->GetNodes(), meshWorld);
+            return Transform(DirectX::XMLoadFloat4x4(&matrix));
+        };
+
+    const Transform headTransform = getBoneTransform("Head");
+    const Transform spineHighTransform = getBoneTransform("SpineHigh");
+    const Transform rootTransform = getBoneTransform("Root");
+    const Transform shoulderLeftTransform = getBoneTransform("Shoulder_l");
+    const Transform shoulderRightTransform = getBoneTransform("Shoulder_r");
+    const Transform thighLeftTransform = getBoneTransform("Thigh_l");
+    const Transform thighRightTransform = getBoneTransform("Thigh_r");
+
+    deathHeadBonePosition = headTransform.GetLocation();
+    deathSpineHighBonePosition = spineHighTransform.GetLocation();
+    deathThighLeftBonePosition = thighLeftTransform.GetLocation();
+    hasDeathBodyPartBonePositions = true;
+
+    DirectX::XMFLOAT3 awayFromPlayer = GetForward();
+    if (const auto player = actorManager->GetActorOfType<Player>())
+    {
+        awayFromPlayer = MathHelper::Subtract(GetPosition(), player->GetPosition());
+        awayFromPlayer.y = 0.0f;
+        if (MathHelper::Length(awayFromPlayer) > 0.0001f)
+            awayFromPlayer = MathHelper::Normalize(awayFromPlayer);
+        else
+            awayFromPlayer = GetForward();
+    }
+
+    const auto makeVelocity = [this, &awayFromPlayer]()
+        {
+            const float speed = bodyPartsInitialSpeed * MathHelper::RandomRange(0.85f, 1.15f);
+            return DirectX::XMFLOAT3{
+                awayFromPlayer.x * speed + MathHelper::RandomRange(-0.18f, 0.18f),
+                bodyPartsUpwardSpeed + MathHelper::RandomRange(-0.10f, 0.16f),
+                awayFromPlayer.z * speed + MathHelper::RandomRange(-0.18f, 0.18f),
+            };
+        };
+    // The actor root is the Skeleton ground/foot reference. Passing it to
+    // every part keeps this first-pass simulation independent of World Y = 0.
+    const float groundY = GetPosition().y;
+    const auto getGroundOffset = [this](const SkeletonBodyPartActor::PartType partType)
+        {
+            switch (partType)
+            {
+            case SkeletonBodyPartActor::PartType::Skull: return skullGroundOffset;
+            case SkeletonBodyPartActor::PartType::Ribs:  return ribsGroundOffset;
+            case SkeletonBodyPartActor::PartType::Spine: return spineGroundOffset;
+            case SkeletonBodyPartActor::PartType::Arm:   return armGroundOffset;
+            case SkeletonBodyPartActor::PartType::Leg:   return legGroundOffset;
+            }
+            return 0.0f;
+        };
+    const auto spawnPart = [actorManager, this, groundY, &makeVelocity, &getGroundOffset](
+        SkeletonBodyPartActor::PartType partType, const Transform& partTransform,
+        const SkeletonBodyPartActor::TransformCorrection& transformCorrection)
+        {
+            SkeletonBodyPartActor::SpawnParams params{};
+            params.partType = partType;
+            params.initialVelocity = makeVelocity();
+            params.angularVelocity = {
+                MathHelper::RandomRange(-180.0f, 180.0f),
+                MathHelper::RandomRange(-180.0f, 180.0f),
+                MathHelper::RandomRange(-180.0f, 180.0f),
+            };
+            params.gravity = 9.8f;
+            params.groundY = groundY;
+            params.groundOffset = getGroundOffset(partType);
+            params.lifeTime = bodyPartsLifetime;
+            params.transformCorrection = transformCorrection;
+            // Each part owns an independent identity correction for this validation pass.
+            actorManager->CreateAndRegisterActorWithTransform<SkeletonBodyPartActor>(
+                "SkeletonBodyPart", partTransform, params);
+        };
+
+    struct DeathBodyPartSpec
+    {
+        SkeletonBodyPartActor::PartType type;
+        const Transform* boneTransform;
+        SkeletonBodyPartActor::TransformCorrection transformCorrection{};
+    };
+    const DeathBodyPartSpec parts[] = {
+        { SkeletonBodyPartActor::PartType::Skull, &headTransform },
+        { SkeletonBodyPartActor::PartType::Ribs,  &spineHighTransform },
+        { SkeletonBodyPartActor::PartType::Spine, &rootTransform },
+        { SkeletonBodyPartActor::PartType::Arm,   &shoulderLeftTransform },
+        { SkeletonBodyPartActor::PartType::Arm,   &shoulderRightTransform },
+        { SkeletonBodyPartActor::PartType::Leg,   &thighLeftTransform },
+        { SkeletonBodyPartActor::PartType::Leg,   &thighRightTransform },
+    };
+    for (const DeathBodyPartSpec& part : parts)
+        spawnPart(part.type, *part.boneTransform, part.transformCorrection);
+    return true;
+}
+
+void SkeletonWarriorActor::DrawBodyPartBoneDebug() const
+{
+    if (!bodyPartsDebug || !hasDeathBodyPartBonePositions)
+        return;
+
+    DebugRender::DrawSphere(deathHeadBonePosition, 0.08f, { 0.2f, 0.8f, 1.0f, 1.0f }, 0.0f, true);
+    DebugRender::DrawSphere(deathSpineHighBonePosition, 0.08f, { 0.3f, 1.0f, 0.3f, 1.0f }, 0.0f, true);
+    DebugRender::DrawSphere(deathThighLeftBonePosition, 0.08f, { 1.0f, 0.75f, 0.2f, 1.0f }, 0.0f, true);
+}
 void SkeletonWarriorActor::Update(float elapsedTime)
 {
     Enemy::Update(elapsedTime);
-
+    DrawBodyPartBoneDebug();
 
     if (IsAnimationEditorPreviewActive())
         return;
@@ -220,12 +340,15 @@ bool SkeletonWarriorActor::TakeDamageFromPlayer(int damage)
     if (hp > 0)
         return true;
 
+    const bool spawnedBodyParts = SpawnDeathBodyParts();
+
     state = State::Dead;
     attackHitActive = false;
     isDangerWindow = false;
     activeDangerNotifyState = nullptr;
     ResetWeaponSweep();
-    PlayBodyAnimation("Death", false, true, 0.1f, true);
+    if (spawnedBodyParts && skeletalMeshComponent)
+        skeletalMeshComponent->SetIsVisible(false);
 
     if (sword) sword->SetIsVisible(false);
     if (shield) shield->SetIsVisible(false);
@@ -549,6 +672,18 @@ void SkeletonWarriorActor::DrawImGuiDetails()
         0.01f, 0.0f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     if (rimLightChanged)
         ApplyRimLight();
+
+    ImGui::SeparatorText("Skeleton BodyParts Debug");
+    ImGui::Checkbox("Skeleton BodyParts Debug", &bodyPartsDebug);
+    ImGui::DragFloat("BodyParts Initial Speed", &bodyPartsInitialSpeed, 0.05f, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("BodyParts Upward Speed", &bodyPartsUpwardSpeed, 0.05f, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("BodyParts Lifetime", &bodyPartsLifetime, 0.05f, 0.1f, 15.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Skull Ground Offset", &skullGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Ribs Ground Offset", &ribsGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Spine Ground Offset", &spineGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Arm Ground Offset", &armGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Leg Ground Offset", &legGroundOffset, 0.01f, -2.0f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::TextDisabled("Bone markers: Head=blue, SpineHigh=green, Thigh_l=orange.");
 
     ImGui::SeparatorText("Tutorial Skeleton Danger Area");
     ImGui::Checkbox("Danger Area Debug", &dangerAreaDebug);

@@ -250,6 +250,9 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp">
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonBodyPartActor.cpp">
+      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.cpp">
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
     </ClCompile>
@@ -757,6 +760,9 @@
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.h">
+      <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonBodyPartActor.h">
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.h">

@@ -4954,7 +4954,7 @@ void GameScene::SetUpActors()
 
     // Stage 2 deliberately uses the same class with its default, normal AI.
     Transform tutorialDodgeSkeletonTr(DirectX::XMFLOAT3{ -10.0f,-0.3f,10.75f },
-        DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
+        DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
     tutorialDodgeSkeletonActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
         "TutorialDodgeSkeleton", tutorialDodgeSkeletonTr);
     tutorialDodgeSkeletonActor->SetMaxHp(17);

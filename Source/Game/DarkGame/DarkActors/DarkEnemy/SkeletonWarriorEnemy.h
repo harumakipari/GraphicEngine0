@@ -49,6 +49,8 @@ private:
     void DrawWeaponHitDebug() const;
     void ResetWeaponSweep();
     void ApplyRimLight();
+    bool SpawnDeathBodyParts();
+    void DrawBodyPartBoneDebug() const;
     void ResetAnimationEditorPreviewWeaponSweep();
     DirectX::XMFLOAT3 GetWeaponHitPoint(const std::shared_ptr<SceneComponent>& point,
         const DirectX::XMFLOAT3& localOffset) const;
@@ -58,6 +60,19 @@ private:
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     DirectX::XMFLOAT3 rimLightColor{ 0.45f, 0.70f, 1.00f };
     float rimLightPower = 1.25f;
+    bool bodyPartsDebug = false;
+    float bodyPartsInitialSpeed = 1.0f;
+    float bodyPartsUpwardSpeed = 0.75f;
+    float bodyPartsLifetime = 3.0f;
+    float skullGroundOffset = 0.0f;
+    float ribsGroundOffset = 0.0f;
+    float spineGroundOffset = 0.0f;
+    float armGroundOffset = 0.0f;
+    float legGroundOffset = 0.0f;
+    bool hasDeathBodyPartBonePositions = false;
+    DirectX::XMFLOAT3 deathHeadBonePosition{};
+    DirectX::XMFLOAT3 deathSpineHighBonePosition{};
+    DirectX::XMFLOAT3 deathThighLeftBonePosition{};
     std::shared_ptr<SkeletalMeshComponent> sword;
     std::shared_ptr<SkeletalMeshComponent> shield;
     std::shared_ptr<RotationComponent> rotationComponent;
