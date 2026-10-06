@@ -38,7 +38,9 @@ private:
     std::shared_ptr<UIImageComponent> pausePanel;
     std::shared_ptr<UIButtonComponent> menuButton;
     std::shared_ptr<UIButtonComponent> returnTitleButton;
-    std::shared_ptr<UIButtonComponent> retryButton;
+    std::shared_ptr<UIButtonComponent> returnMainRoomButton;
+    std::shared_ptr<UIButtonComponent> restartBattleButton;
+
     std::shared_ptr<UIButtonComponent> closeButton;
 
 

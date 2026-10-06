@@ -438,7 +438,7 @@ private:
     float tutorialSkeletonHpNearScaleMultiplier = 1.0f;
     float tutorialSkeletonHpFarScaleMultiplier = 0.75f;
     // Applied to the Skeleton camera-target world position before UI projection.
-    DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset{ 0.0f, 0.70f, 0.0f };
+    DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset{ 0.0f, 1.1f, 0.4f };
     float tutorialSkeletonHpBarScale = 0.65f;
     DirectX::XMFLOAT2 tutorialSkeletonOperationPromptOffset{ -1.0f, -63.0f };
     float tutorialSkeletonOperationPromptScale = 0.36f;

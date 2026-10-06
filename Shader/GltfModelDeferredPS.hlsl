@@ -108,6 +108,12 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         N = normalize((normalFactor.x * T) + (normalFactor.y * B) + (normalFactor.z * N));
     }
 
+    // Per-material rim values use the component-owned runtime material override.
+    // Materials without an override keep their default zero power and are unchanged.
+    const float3 viewDirection = normalize(cameraPosition.xyz - pin.wPosition.xyz);
+    const float rimFactor = pow(saturate(1.0f - dot(N, viewDirection)), 3.0f);
+    emissiveFactor += m.rimColor * (m.rimPower * rimFactor);
+
     pout.gBuffer3Normal = float4(N.xyz, objectType); // world space
 
     float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);

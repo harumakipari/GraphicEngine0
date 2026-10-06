@@ -85,20 +85,20 @@ void Pause::Initialize(const Transform& transform)
 
     GetOwnerScene()->GetUIManager()->Add(returnTitleButton);
 
-    retryButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/restart_battle.png", "restart_battle");
-    retryButton->SetWorldPosition({ 978, 751 });
-    retryButton->SetPivot({ 0.5f,0.5f });
-    retryButton->SetSize({ 391, 123 });
-    retryButton->SetVisible(false);
-    retryButton->SetEnable(false);
-    retryButton->zOrder = 105; // Žè‘O‚É•`‰æ‚·‚é
-    retryButton->onClick = [&]()
+    restartBattleButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/restart_battle.png", "restart_battle");
+    restartBattleButton->SetWorldPosition({ 978, 751 });
+    restartBattleButton->SetPivot({ 0.5f,0.5f });
+    restartBattleButton->SetSize({ 391, 123 });
+    restartBattleButton->SetVisible(false);
+    restartBattleButton->SetEnable(false);
+    restartBattleButton->zOrder = 105; // Žè‘O‚É•`‰æ‚·‚é
+    restartBattleButton->onClick = [&]()
         {
             Time::timeScale = 1.0f;
 
         };
 
-    GetOwnerScene()->GetUIManager()->Add(retryButton);
+    GetOwnerScene()->GetUIManager()->Add(restartBattleButton);
 
     for (int i = 0; i < 3; i++)
     {
@@ -119,7 +119,7 @@ void Pause::Initialize(const Transform& transform)
 
     uiManager->AddButton(closeButton);
     uiManager->AddButton(returnTitleButton);
-    uiManager->AddButton(retryButton);
+    uiManager->AddButton(restartBattleButton);
 
     stopUpdate = false;
 
@@ -230,8 +230,8 @@ void Pause::OpenPause()
     returnTitleButton->SetVisible(true);
     returnTitleButton->SetEnable(true);
 
-    retryButton->SetVisible(true);
-    retryButton->SetEnable(true);
+    restartBattleButton->SetVisible(true);
+    restartBattleButton->SetEnable(true);
 
     menuButton->SetEnable(false);
     menuButton->SetVisible(false);
@@ -267,8 +267,8 @@ void Pause::ClosePause()
     closeButton->SetVisible(false);
     returnTitleButton->SetEnable(false);
     returnTitleButton->SetVisible(false);
-    retryButton->SetEnable(false);
-    retryButton->SetVisible(false);
+    restartBattleButton->SetEnable(false);
+    restartBattleButton->SetVisible(false);
     state = PauseState::ResumeCountdown;
     countdownTime = 3.0f;
 }

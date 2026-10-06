@@ -48,6 +48,7 @@ private:
     void DrawDangerAreaDebug() const;
     void DrawWeaponHitDebug() const;
     void ResetWeaponSweep();
+    void ApplyRimLight();
     void ResetAnimationEditorPreviewWeaponSweep();
     DirectX::XMFLOAT3 GetWeaponHitPoint(const std::shared_ptr<SceneComponent>& point,
         const DirectX::XMFLOAT3& localOffset) const;
@@ -55,6 +56,8 @@ private:
 private:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
+    DirectX::XMFLOAT3 rimLightColor{ 0.45f, 0.70f, 1.00f };
+    float rimLightPower = 1.25f;
     std::shared_ptr<SkeletalMeshComponent> sword;
     std::shared_ptr<SkeletalMeshComponent> shield;
     std::shared_ptr<RotationComponent> rotationComponent;

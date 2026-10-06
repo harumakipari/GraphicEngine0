@@ -14,6 +14,7 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     Enemy::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
     skeletalMeshComponent->SetModel("./Data/Models/Characters/Skeleton/Skeleton.gltf", false, true);
+    ApplyRimLight();
     skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Enemy;   // オブジェクトの種類を Enemy に設定
     skeletalMeshComponent->SetRelativeLocationDirect({ 0.0f,-0.f,0.0f });
 
@@ -109,6 +110,15 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     pointLightComponent->SetSharedLightName("PlayerPointLight");
 #endif // 0
+}
+
+void SkeletonWarriorActor::ApplyRimLight()
+{
+    if (skeletalMeshComponent)
+    {
+        skeletalMeshComponent->SetRuntimeMaterialRimLight(
+            "M_Skeleton_01", rimLightColor, rimLightPower);
+    }
 }
 
 void SkeletonWarriorActor::Update(float elapsedTime)
@@ -532,6 +542,13 @@ void SkeletonWarriorActor::DrawImGuiDetails()
     if (ImGui::Checkbox("Tutorial Passive", &passive))
         SetTutorialPassive(passive);
     ImGui::TextDisabled("Passive disables only this Skeleton's AI attack and facing behavior.");
+
+    ImGui::SeparatorText("Skeleton Rim Light");
+    bool rimLightChanged = ImGui::ColorEdit3("Rim Color", &rimLightColor.x);
+    rimLightChanged |= ImGui::DragFloat("Rim Power", &rimLightPower,
+        0.01f, 0.0f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    if (rimLightChanged)
+        ApplyRimLight();
 
     ImGui::SeparatorText("Tutorial Skeleton Danger Area");
     ImGui::Checkbox("Danger Area Debug", &dangerAreaDebug);
