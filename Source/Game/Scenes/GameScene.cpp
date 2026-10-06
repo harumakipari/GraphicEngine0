@@ -193,6 +193,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         //アクターをセット
         SetUpActors();
         CreateLockOnTargetUI();
+        CreateTutorialSkeletonUI();
         CreateBattleTimerUI();
         CreateDeathResultUI();
         LoadVictoryBestTime();
@@ -1191,6 +1192,279 @@ void GameScene::CreateLockOnTargetUI()
     lockOnTargetRightImageComponent = createImage("./Data/Textures/UI/LockOn/lock_on_right.png", "LockOnTargetRight");
 }
 
+void GameScene::CreateTutorialSkeletonUI()
+{
+    const auto uiManager = GetUIManager();
+    const auto createImage = [uiManager](const char* texturePath, const char* name,
+        const DirectX::XMFLOAT2& size, const int zOrder)
+        {
+            auto image = std::make_shared<UIImageComponent>(texturePath, name);
+            image->SetSize(size);
+            image->SetPivot({ 0.0f, 0.5f });
+            image->SetVisible(false);
+            image->zOrder = zOrder;
+            uiManager->Add(image);
+            return image;
+        };
+    const auto createHpBar = [&createImage, uiManager](TutorialSkeletonHpBarUI& hpBar,
+        const char* prefix)
+        {
+            hpBar.background = createImage("./Data/Textures/UI/HpBar/skeleton_hp_background.png",
+                (std::string(prefix) + "Background").c_str(), { 234.0f, 17.0f }, 40);
+            hpBar.delayedFill = std::make_shared<UIGaugeFillComponent>(
+                "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", std::string(prefix) + "DelayedFill");
+            hpBar.delayedFill->SetSize({ 233.0f, 16.0f });
+            hpBar.delayedFill->SetPivot({ 0.0f, 0.5f });
+            hpBar.delayedFill->SetColor(CoreColor{ 0.95f, 0.72f, 0.38f, 1.0f });
+            hpBar.delayedFill->SetVisible(false);
+            hpBar.delayedFill->zOrder = 41;
+            uiManager->Add(hpBar.delayedFill);
+            hpBar.currentFill = std::make_shared<UIGaugeFillComponent>(
+                "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", std::string(prefix) + "CurrentFill");
+            hpBar.currentFill->SetSize({ 233.0f, 16.0f });
+            hpBar.currentFill->SetPivot({ 0.0f, 0.5f });
+            hpBar.currentFill->SetColor(CoreColor{ 0.55f, 0.08f, 0.06f, 1.0f });
+            hpBar.currentFill->SetVisible(false);
+            hpBar.currentFill->zOrder = 42;
+            uiManager->Add(hpBar.currentFill);
+            hpBar.frame = createImage("./Data/Textures/UI/HpBar/skeleton_hp_frame.png",
+                (std::string(prefix) + "Frame").c_str(), { 239.0f, 21.0f }, 43);
+        };
+
+    createHpBar(tutorialPassiveSkeletonHpBarUI, "TutorialPassiveSkeletonHp");
+    createHpBar(tutorialDodgeSkeletonHpBarUI, "TutorialDodgeSkeletonHp");
+    tutorialPassiveSkeletonLtPromptUI = createImage("./Data/Textures/UI/operate_LT.png",
+        "TutorialPassiveSkeletonLtPrompt", { 345.0f, 270.0f }, 50);
+    tutorialPassiveSkeletonLtPromptUI->SetPivot({ 0.5f, 0.5f });
+    tutorialPassiveSkeletonYPromptUI = createImage("./Data/Textures/UI/operate_Y.png",
+        "TutorialPassiveSkeletonYPrompt", { 184.0f, 279.0f }, 50);
+    tutorialPassiveSkeletonYPromptUI->SetPivot({ 0.5f, 0.5f });
+    tutorialDodgeSkeletonXPromptUI = createImage("./Data/Textures/UI/operate_X.png",
+        "TutorialDodgeSkeletonXPrompt", { 184.0f, 279.0f }, 50);
+    tutorialDodgeSkeletonXPromptUI->SetPivot({ 0.5f, 0.5f });
+}
+
+void GameScene::HideTutorialSkeletonUI()
+{
+    const auto hideHpBar = [](TutorialSkeletonHpBarUI& hpBar)
+        {
+            if (hpBar.background) hpBar.background->SetVisible(false);
+            if (hpBar.delayedFill) hpBar.delayedFill->SetVisible(false);
+            if (hpBar.currentFill) hpBar.currentFill->SetVisible(false);
+            if (hpBar.frame) hpBar.frame->SetVisible(false);
+        };
+    hideHpBar(tutorialPassiveSkeletonHpBarUI);
+    hideHpBar(tutorialDodgeSkeletonHpBarUI);
+    if (tutorialPassiveSkeletonLtPromptUI) tutorialPassiveSkeletonLtPromptUI->SetVisible(false);
+    if (tutorialPassiveSkeletonYPromptUI) tutorialPassiveSkeletonYPromptUI->SetVisible(false);
+    if (tutorialDodgeSkeletonXPromptUI) tutorialDodgeSkeletonXPromptUI->SetVisible(false);
+    tutorialPassiveSkeletonLtPromptVisible = false;
+    tutorialPassiveSkeletonYPromptVisible = false;
+    tutorialDodgeSkeletonXPromptVisible = false;
+}
+
+void GameScene::UpdateTutorialSkeletonUI()
+{
+    const auto activeCameraManager = GetCameraManager();
+    const bool cameraRestricted = !activeCameraManager || activeCameraManager->IsUseDebug() ||
+        activeCameraManager->IsUseCinematic() || activeCameraManager->IsUseMovie();
+    const bool uiAllowed = player && player->GetHp() > 0 && !player->IsPendingKill() && darkCameraActor &&
+        InputSystem::IsInputEnabled() && !cameraRestricted;
+    if (!uiAllowed)
+    {
+        HideTutorialSkeletonUI();
+        return;
+    }
+
+    const auto getPlayerSkeletonDistanceXZ = [this](const std::shared_ptr<SkeletonWarriorActor>& skeleton)
+        {
+            const DirectX::XMFLOAT3 delta = MathHelper::Subtract(skeleton->GetPosition(), player->GetPosition());
+            return std::sqrt(delta.x * delta.x + delta.z * delta.z);
+        };
+    const auto isWithinHpDisplayDistance = [this, &getPlayerSkeletonDistanceXZ](const std::shared_ptr<SkeletonWarriorActor>& skeleton)
+        {
+            return getPlayerSkeletonDistanceXZ(skeleton) <=
+                (std::max)(tutorialSkeletonHpDisplayDistance, 0.0f);
+        };
+    const auto getHpDistanceScaleMultiplier = [this, &getPlayerSkeletonDistanceXZ](const std::shared_ptr<SkeletonWarriorActor>& skeleton)
+        {
+            const float nearDistance = (std::max)(tutorialSkeletonHpNearDistance, 0.0f);
+            const float farDistance = (std::max)(tutorialSkeletonHpFarDistance, nearDistance);
+            const float distanceRange = farDistance - nearDistance;
+            const float interpolation = distanceRange > FLT_EPSILON
+                ? std::clamp((getPlayerSkeletonDistanceXZ(skeleton) - nearDistance) / distanceRange, 0.0f, 1.0f)
+                : 1.0f;
+            return std::lerp(tutorialSkeletonHpNearScaleMultiplier,
+                tutorialSkeletonHpFarScaleMultiplier, interpolation);
+        };
+    const auto updateHpBar = [this, &isWithinHpDisplayDistance, &getHpDistanceScaleMultiplier](const std::shared_ptr<SkeletonWarriorActor>& skeleton,
+        TutorialSkeletonHpBarUI& hpBar)
+        {
+            const auto hide = [&hpBar]()
+                {
+                    if (hpBar.background) hpBar.background->SetVisible(false);
+                    if (hpBar.delayedFill) hpBar.delayedFill->SetVisible(false);
+                    if (hpBar.currentFill) hpBar.currentFill->SetVisible(false);
+                    if (hpBar.frame) hpBar.frame->SetVisible(false);
+                };
+            if (!skeleton || skeleton->IsDead() || skeleton->IsPendingKill() || !isWithinHpDisplayDistance(skeleton))
+            {
+                hide();
+                return;
+            }
+
+            const auto target = skeleton->GetCameraTargetComponent();
+            if (!target)
+            {
+                hide();
+                return;
+            }
+            // Keep the HP bar above the Skeleton in world space so its position
+            // remains correct as the camera angle and Skeleton distance change.
+            const DirectX::XMFLOAT3 skeletonWorldPosition = target->GetComponentLocation();
+            const DirectX::XMFLOAT3 hpBarWorldPosition = {
+                skeletonWorldPosition.x + tutorialSkeletonHpBarWorldOffset.x,
+                skeletonWorldPosition.y + tutorialSkeletonHpBarWorldOffset.y,
+                skeletonWorldPosition.z + tutorialSkeletonHpBarWorldOffset.z
+            };
+            const auto projection = darkCameraActor->ProjectWorldPositionForUI(hpBarWorldPosition);
+            if (!projection.valid || !projection.inFront || !projection.insideViewport)
+            {
+                hide();
+                return;
+            }
+
+            DirectX::XMFLOAT2 position = tutorialSkeletonUseFixedScreenPosition
+                ? tutorialSkeletonHpFixedScreenPosition
+                : ConvertScreenToUI(projection.screenPosition);
+            const float currentHp = static_cast<float>((std::max)(skeleton->GetHp(), 0));
+            const float maximumHp = static_cast<float>((std::max)(skeleton->GetMaxHp(), 1));
+            if (!hpBar.delayedHpInitialized)
+            {
+                hpBar.delayedHp = currentHp;
+                hpBar.observedHp = static_cast<int>(currentHp);
+                hpBar.delayedHpInitialized = true;
+            }
+            else if (currentHp < hpBar.observedHp)
+            {
+                // Keep the delayed fill monotonically decreasing during Rush hits.
+                hpBar.delayedHp = (std::min)(hpBar.delayedHp, static_cast<float>(hpBar.observedHp));
+                hpBar.delayedHpDelayTimer = 0.25f;
+            }
+            else if (currentHp > hpBar.observedHp)
+            {
+                // Match Grux: HP recovery synchronizes the delayed display immediately.
+                hpBar.delayedHp = currentHp;
+                hpBar.delayedHpDelayTimer = 0.0f;
+            }
+            hpBar.observedHp = static_cast<int>(currentHp);
+
+            if (hpBar.delayedHp > currentHp)
+            {
+                const float uiDeltaTime = Time::UnscaledDeltaTime();
+                if (hpBar.delayedHpDelayTimer > 0.0f)
+                {
+                    hpBar.delayedHpDelayTimer = (std::max)(0.0f,
+                        hpBar.delayedHpDelayTimer - uiDeltaTime);
+                }
+                else
+                {
+                    hpBar.delayedHp = (std::max)(currentHp,
+                        hpBar.delayedHp - 8.95f * uiDeltaTime);
+                }
+            }
+
+            const float distanceScaleMultiplier = getHpDistanceScaleMultiplier(skeleton);
+            const float finalScale = tutorialSkeletonHpBarScale * distanceScaleMultiplier;
+            const DirectX::XMFLOAT2 scale = { finalScale, finalScale };
+            if (hpBar.background)
+            {
+                hpBar.background->SetWorldPosition(position);
+                hpBar.background->SetScale(scale);
+                hpBar.background->SetVisible(true);
+            }
+            if (hpBar.delayedFill)
+            {
+                hpBar.delayedFill->SetWorldPosition(position);
+                hpBar.delayedFill->SetScale(scale);
+                hpBar.delayedFill->SetValue(hpBar.delayedHp, maximumHp);
+                hpBar.delayedFill->SetVisible(true);
+            }
+            if (hpBar.currentFill)
+            {
+                hpBar.currentFill->SetWorldPosition(position);
+                hpBar.currentFill->SetScale(scale);
+                hpBar.currentFill->SetValue(currentHp, maximumHp);
+                hpBar.currentFill->SetVisible(true);
+            }
+            if (hpBar.frame)
+            {
+                hpBar.frame->SetWorldPosition(position);
+                hpBar.frame->SetScale(scale);
+                hpBar.frame->SetVisible(true);
+            }
+        };
+
+    updateHpBar(tutorialPassiveSkeletonActor, tutorialPassiveSkeletonHpBarUI);
+    updateHpBar(tutorialDodgeSkeletonActor, tutorialDodgeSkeletonHpBarUI);
+
+    tutorialPassiveSkeletonLtPromptVisible = false;
+    tutorialPassiveSkeletonYPromptVisible = false;
+    tutorialDodgeSkeletonXPromptVisible = false;
+    if (tutorialPassiveSkeletonLtPromptUI) tutorialPassiveSkeletonLtPromptUI->SetVisible(false);
+    if (tutorialPassiveSkeletonYPromptUI) tutorialPassiveSkeletonYPromptUI->SetVisible(false);
+    if (tutorialDodgeSkeletonXPromptUI) tutorialDodgeSkeletonXPromptUI->SetVisible(false);
+
+    const auto updatePrompt = [this](const std::shared_ptr<SkeletonWarriorActor>& skeleton,
+        const std::shared_ptr<UIImageComponent>& prompt, const bool shouldShow, bool& isVisible)
+        {
+            if (!shouldShow || !skeleton || skeleton->IsDead() || skeleton->IsPendingKill() || !prompt)
+                return;
+
+            const auto target = skeleton->GetCameraTargetComponent();
+            if (!target)
+                return;
+            const auto projection = darkCameraActor->ProjectWorldPositionForUI(target->GetComponentLocation());
+            if (!projection.valid || !projection.inFront || !projection.insideViewport)
+                return;
+
+            DirectX::XMFLOAT2 position = tutorialSkeletonUseFixedScreenPosition
+                ? tutorialSkeletonOperationFixedScreenPosition
+                : ConvertScreenToUI(projection.screenPosition);
+            if (!tutorialSkeletonUseFixedScreenPosition)
+            {
+                position.x += tutorialSkeletonOperationPromptOffset.x;
+                position.y += tutorialSkeletonOperationPromptOffset.y;
+            }
+            // This is intentionally independent of projection / distance.
+            const DirectX::XMFLOAT2 scale = {
+                tutorialSkeletonOperationPromptScale, tutorialSkeletonOperationPromptScale };
+            prompt->SetWorldPosition(position);
+            prompt->SetScale(scale);
+            prompt->SetVisible(true);
+            isVisible = true;
+        };
+
+    const bool ltVisible = tutorialPassiveSkeletonLockOnCandidate &&
+        player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT) &&
+        !player->IsOperationGuideItemLearned(Player::OperationGuideItem::LT);
+    const auto selectedEnemy = lockOnSelectedEnemy.lock();
+    const bool passiveSkeletonSelected = selectedEnemy &&
+        selectedEnemy.get() == tutorialPassiveSkeletonActor.get();
+    const bool yVisible = !ltVisible && passiveSkeletonSelected &&
+        player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y) &&
+        !player->IsOperationGuideItemLearned(Player::OperationGuideItem::Y);
+    const bool xVisible = tutorialDodgeSkeletonAttackRange &&
+        player->IsOperationGuideItemVisible(Player::OperationGuideItem::X) &&
+        !player->IsOperationGuideItemLearned(Player::OperationGuideItem::X);
+
+    updatePrompt(tutorialPassiveSkeletonActor, tutorialPassiveSkeletonLtPromptUI, ltVisible,
+        tutorialPassiveSkeletonLtPromptVisible);
+    updatePrompt(tutorialPassiveSkeletonActor, tutorialPassiveSkeletonYPromptUI, yVisible,
+        tutorialPassiveSkeletonYPromptVisible);
+    updatePrompt(tutorialDodgeSkeletonActor, tutorialDodgeSkeletonXPromptUI, xVisible,
+        tutorialDodgeSkeletonXPromptVisible);
+}
 void GameScene::HideLockOnTargetUI()
 {
     const std::array<std::shared_ptr<UIImageComponent>, 5> images =
@@ -1650,6 +1924,7 @@ void GameScene::Update(float deltaTime)
     UpdateOperationGuideTutorial(lockOnSelectionResult);
 
     SceneBase::Update(deltaTime);
+    UpdateTutorialSkeletonUI();
     UpdateLockOnTargetUI(deltaTime);
     RecordPhase1FinalHitHitStopFrameSample();
 
@@ -4673,6 +4948,7 @@ void GameScene::SetUpActors()
         DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
     tutorialPassiveSkeletonActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
         "TutorialPassiveSkeleton", tutorialPassiveSkeletonTr);
+    tutorialPassiveSkeletonActor->SetMaxHp(2);
     tutorialPassiveSkeletonActor->SetTutorialPassive(true);
     tutorialPassiveSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Compact);
 
@@ -4681,6 +4957,7 @@ void GameScene::SetUpActors()
         DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
     tutorialDodgeSkeletonActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
         "TutorialDodgeSkeleton", tutorialDodgeSkeletonTr);
+    tutorialDodgeSkeletonActor->SetMaxHp(17);
     tutorialDodgeSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Standard);
 
     Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
@@ -4763,6 +5040,30 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Text("X Visible / Learned: %s / %s",
         player && player->IsOperationGuideItemVisible(Player::OperationGuideItem::X) ? "true" : "false",
         player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::X) ? "true" : "false");
+    ImGui::SeparatorText("Tutorial Skeleton UI");
+    ImGui::Text("Passive Skeleton HP / MaxHP: %d / %d",
+        tutorialPassiveSkeletonActor ? tutorialPassiveSkeletonActor->GetHp() : 0,
+        tutorialPassiveSkeletonActor ? tutorialPassiveSkeletonActor->GetMaxHp() : 0);
+    ImGui::Text("Dodge Skeleton HP / MaxHP: %d / %d",
+        tutorialDodgeSkeletonActor ? tutorialDodgeSkeletonActor->GetHp() : 0,
+        tutorialDodgeSkeletonActor ? tutorialDodgeSkeletonActor->GetMaxHp() : 0);
+    ImGui::Text("LT Prompt Visible: %s", tutorialPassiveSkeletonLtPromptVisible ? "true" : "false");
+    ImGui::Text("Y Prompt Visible: %s", tutorialPassiveSkeletonYPromptVisible ? "true" : "false");
+    ImGui::Text("X Prompt Visible: %s", tutorialDodgeSkeletonXPromptVisible ? "true" : "false");
+    ImGui::DragFloat("HP Display Distance", &tutorialSkeletonHpDisplayDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Near Distance", &tutorialSkeletonHpNearDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Far Distance", &tutorialSkeletonHpFarDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Near Scale Multiplier", &tutorialSkeletonHpNearScaleMultiplier, 0.01f, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Far Scale Multiplier", &tutorialSkeletonHpFarScaleMultiplier, 0.01f, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("HP World Offset X", &tutorialSkeletonHpBarWorldOffset.x, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("HP World Offset Y", &tutorialSkeletonHpBarWorldOffset.y, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("HP World Offset Z", &tutorialSkeletonHpBarWorldOffset.z, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("HP Bar Scale", &tutorialSkeletonHpBarScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat2("Operation Prompt Offset X / Y", &tutorialSkeletonOperationPromptOffset.x, 0.5f, -500.0f, 500.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Operation Prompt Scale", &tutorialSkeletonOperationPromptScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::Checkbox("Use Fixed Screen Position", &tutorialSkeletonUseFixedScreenPosition);
+    ImGui::DragFloat2("HP Fixed Screen Position X / Y", &tutorialSkeletonHpFixedScreenPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat2("Operation Fixed Screen Position X / Y", &tutorialSkeletonOperationFixedScreenPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragInt(U8("Phase1 MaxHP"), &phase1MaxHp, 1.0f, 1, 500);
     ImGui::DragInt(U8("Phase2 MaxHP"), &phase2MaxHp, 1.0f, 1, 500);
     ImGui::Text(U8("Transition Combat Stopped: %s"),

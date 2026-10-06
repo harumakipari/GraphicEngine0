@@ -17,7 +17,7 @@ void Pause::Initialize(const Transform& transform)
     pauseBackImage->SetPivot({ 0.5f,0.5f });
     pauseBackImage->SetScale({ 1.0f,1.0f });
     pauseBackImage->SetSize({ 1920, 1080 });
-    pauseBackImage->SetColor(DirectX::XMFLOAT4{ 0.2f,0.2f,0.2f,0.5f });
+    pauseBackImage->SetColor(DirectX::XMFLOAT4{ 0.0f,0.0f,0.0f,0.5f });
     pauseBackImage->SetVisible(false);
     pauseBackImage->zOrder = 95; // 奥
     uiManager->Add(pauseBackImage);
@@ -85,7 +85,7 @@ void Pause::Initialize(const Transform& transform)
 
     GetOwnerScene()->GetUIManager()->Add(returnTitleButton);
 
-    retryButton = std::make_shared<UIButtonComponent>("./Data/Textures/ScissorsUI/retry.png", "retry");
+    retryButton = std::make_shared<UIButtonComponent>("./Data/Textures/Pause/restart_battle.png", "restart_battle");
     retryButton->SetWorldPosition({ 978, 751 });
     retryButton->SetPivot({ 0.5f,0.5f });
     retryButton->SetSize({ 391, 123 });
@@ -94,19 +94,7 @@ void Pause::Initialize(const Transform& transform)
     retryButton->zOrder = 105; // 手前に描画する
     retryButton->onClick = [&]()
         {
-            if (state != PauseState::Paused)
-            {// カウントダウンが何回も起こるのを防ぐため
-                return;
-            }
-
-            CoreAudio::PlayOneShot(L"./Data/Sound/SE1/push_button.wav");
             Time::timeScale = 1.0f;
-
-            const char* types[] = { "0", "1" };
-
-            SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", retrySceneName), std::make_pair("type", types[rand() % 2]),  std::make_pair("fromScene","GameScene")  });
-
-            // Scene::_transition("LoadingScene", { std::make_pair("preload",retrySceneName), std::make_pair("type", types[rand() % 2]) });
 
         };
 
@@ -136,9 +124,6 @@ void Pause::Initialize(const Transform& transform)
     stopUpdate = false;
 
 
-    //pausePanel = std::make_shared<UIImageComponent>("./Data/Textures/UI/CountDown_1.png", "pause_panel");
-    //pausePanel->SetVisible(false);
-    //scene->GetUIManager()->Add(pausePanel);
 
 }
 

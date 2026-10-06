@@ -30,6 +30,7 @@ public:
         bool hasHitPosition, bool hasHitNormal) override;
     bool IsDead() const { return state == State::Dead; }
     int GetMaxHp() const { return maxHp; }
+    void SetMaxHp(int value);
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() const { return cameraTargetComponent; }
     void SetTutorialPassive(bool enabled);
     bool IsTutorialPassive() const { return tutorialPassive; }

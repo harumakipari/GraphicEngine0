@@ -182,6 +182,12 @@ void SkeletonWarriorActor::SetTutorialPassive(bool enabled)
         PlayBodyAnimation("Idle", true, true, 0.1f, true);
 }
 
+void SkeletonWarriorActor::SetMaxHp(const int value)
+{
+    maxHp = (std::max)(1, value);
+    hp = maxHp;
+}
+
 bool SkeletonWarriorActor::TakeDamageFromPlayer(int damage)
 {
     if (state == State::Dead || damage <= 0)

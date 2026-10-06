@@ -145,6 +145,9 @@ private:
     void CreateLockOnTargetUI();
     void UpdateLockOnTargetUI(float deltaTime);
     void HideLockOnTargetUI();
+    void CreateTutorialSkeletonUI();
+    void UpdateTutorialSkeletonUI();
+    void HideTutorialSkeletonUI();
     enum class Phase1FinalHitTimePhase : uint8_t
     {
         None,
@@ -413,6 +416,38 @@ private:
     std::shared_ptr<UIImageComponent> lockOnTargetLeftImageComponent;
     std::shared_ptr<UIImageComponent> lockOnTargetRightImageComponent;
     std::weak_ptr<SceneComponent> lockOnTargetComponent;
+    struct TutorialSkeletonHpBarUI
+    {
+        std::shared_ptr<UIImageComponent> background;
+        std::shared_ptr<UIGaugeFillComponent> delayedFill;
+        std::shared_ptr<UIGaugeFillComponent> currentFill;
+        std::shared_ptr<UIImageComponent> frame;
+        float delayedHp = 0.0f;
+        float delayedHpDelayTimer = 0.0f;
+        int observedHp = 0;
+        bool delayedHpInitialized = false;
+    };
+    TutorialSkeletonHpBarUI tutorialPassiveSkeletonHpBarUI;
+    TutorialSkeletonHpBarUI tutorialDodgeSkeletonHpBarUI;
+    std::shared_ptr<UIImageComponent> tutorialPassiveSkeletonLtPromptUI;
+    std::shared_ptr<UIImageComponent> tutorialPassiveSkeletonYPromptUI;
+    std::shared_ptr<UIImageComponent> tutorialDodgeSkeletonXPromptUI;
+    float tutorialSkeletonHpDisplayDistance = 10.0f;
+    float tutorialSkeletonHpNearDistance = 4.0f;
+    float tutorialSkeletonHpFarDistance = 10.0f;
+    float tutorialSkeletonHpNearScaleMultiplier = 1.0f;
+    float tutorialSkeletonHpFarScaleMultiplier = 0.75f;
+    // Applied to the Skeleton camera-target world position before UI projection.
+    DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset{ 0.0f, 0.70f, 0.0f };
+    float tutorialSkeletonHpBarScale = 0.65f;
+    DirectX::XMFLOAT2 tutorialSkeletonOperationPromptOffset{ -1.0f, -63.0f };
+    float tutorialSkeletonOperationPromptScale = 0.36f;
+    bool tutorialSkeletonUseFixedScreenPosition = false;
+    DirectX::XMFLOAT2 tutorialSkeletonHpFixedScreenPosition{ 960.0f, 300.0f };
+    DirectX::XMFLOAT2 tutorialSkeletonOperationFixedScreenPosition{ 960.0f, 500.0f };
+    bool tutorialPassiveSkeletonLtPromptVisible = false;
+    bool tutorialPassiveSkeletonYPromptVisible = false;
+    bool tutorialDodgeSkeletonXPromptVisible = false;
     LockOnTargetUIAnimationPhase lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Hidden;
     float lockOnTargetUIAnimationElapsed = 0.0f;
     float lockOnTargetUIRotationDegree = 0.0f;

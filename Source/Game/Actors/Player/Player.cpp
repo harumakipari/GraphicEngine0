@@ -1331,7 +1331,7 @@ void Player::InitializeOperationGuideUI()
     };
     constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> sizes =
     {
-        DirectX::XMFLOAT2{ 178.0f, 258.0f }, DirectX::XMFLOAT2{ 290.0f, 270.0f },
+        DirectX::XMFLOAT2{ 178.0f, 258.0f }, DirectX::XMFLOAT2{ 345.0f, 270.0f },
         DirectX::XMFLOAT2{ 184.0f, 279.0f }, DirectX::XMFLOAT2{ 182.0f, 271.0f },
         DirectX::XMFLOAT2{ 233.0f, 249.0f },
     };
