@@ -43,6 +43,7 @@ private:
     std::shared_ptr<UIButtonComponent> returnMainRoomButton;
     std::shared_ptr<UIButtonComponent> battleActionButton;
     std::shared_ptr<UIButtonComponent> backToRoomButton;
+    std::shared_ptr<UIButtonComponent> quitGameButton;
     std::shared_ptr<UIImageComponent> selectionLineLeft;
     std::shared_ptr<UIImageComponent> selectionLineRight;
     UIButtonComponent* lastSelectedButton = nullptr;

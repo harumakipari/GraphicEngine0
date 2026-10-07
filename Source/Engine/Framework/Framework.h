@@ -73,6 +73,9 @@ public:
     Framework(Framework&&) noexcept = delete;
     Framework& operator=(Framework&&) noexcept = delete;
 
+    // Starts the normal Win32 shutdown route; cleanup remains in run().
+    static void RequestExit();
+
     int run()
     {
         MSG msg{};
@@ -196,7 +199,7 @@ public:
         case WM_KEYDOWN:
             if (wparam == VK_ESCAPE)
             {
-                PostMessage(hwnd, WM_CLOSE, 0, 0);
+                RequestExit();
             }
             break;
         case WM_ENTERSIZEMOVE:

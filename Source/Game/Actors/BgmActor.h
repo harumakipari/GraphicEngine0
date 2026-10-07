@@ -23,9 +23,8 @@ public:
 
     void SetVolume(const float volume) const { audioComponent->SetVolume(volume); }
     float GetVolume() const { return audioComponent ? audioComponent->GetVolume() : 0.0f; }
-
     void Play() const { audioComponent->Play(); }
-
+    void RestartFromBeginning() const { if (audioComponent) audioComponent->RestartFromBeginning(); }
     void Stop(const bool playTails = true) const { if (audioComponent) audioComponent->Stop(playTails); }
 private:
     std::shared_ptr<AudioSourceComponent> audioComponent;

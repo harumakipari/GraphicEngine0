@@ -38,6 +38,11 @@ Framework::Framework(HWND hwnd, BOOL fullscreen) : hwnd(hwnd), fullscreenMode(fu
 
 }
 
+void Framework::RequestExit()
+{
+    PostMessage(Graphics::GetHwnd(), WM_CLOSE, 0, 0);
+}
+
 bool Framework::Initialize()
 {
     ////デバイス・デバイスコンテクスト・スワップチェーンの作成

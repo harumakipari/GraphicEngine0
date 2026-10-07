@@ -1,6 +1,14 @@
 {
     "animationClip": 1,
     "animationName": "Attack",
+    "events": [
+        {
+            "parameter": "skeleton_attack1",
+            "time": 0.5312501192092896,
+            "type": "PlaySE",
+            "value": 1.0
+        }
+    ],
     "loop": false,
     "nextCombo": "",
     "playRate": 1.0,

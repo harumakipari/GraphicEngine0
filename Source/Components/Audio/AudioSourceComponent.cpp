@@ -76,71 +76,81 @@ void AudioSourceComponent::Tick(float deltaTime)
 
 void AudioSourceComponent::Play()
 {
-    //バッファやソースボイスが設定されていなければ何もしない
     if (!audioBuffer || !sourceVoice)
-    {
         return;
-    }
 
-    HRESULT hr = S_OK;
-
-    XAUDIO2_VOICE_STATE voiceState = {};
+    XAUDIO2_VOICE_STATE voiceState{};
     sourceVoice->GetState(&voiceState);
-
-    // すでに再生中なら何もしない
     if (voiceState.BuffersQueued)
-    {
-        //Stop(false, 0);
         return;
-    }
 
-    // 再生停止(テイル無し)
     Stop(false);
-
-    // バッファをソースボイスにセット
     XAUDIO2_BUFFER* pBuffer = &audioBuffer->buffer;
     pBuffer->LoopCount = isLooping ? XAUDIO2_LOOP_INFINITE : 0;
-    hr = sourceVoice->SubmitSourceBuffer(pBuffer);
+    HRESULT hr = sourceVoice->SubmitSourceBuffer(pBuffer);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-    // 再生開始
     hr = sourceVoice->Start(0);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
+void AudioSourceComponent::RestartFromBeginning()
+{
+    if (!audioBuffer)
+        return;
+
+    const float volume = sourceVoice ? GetVolume() : 1.0f;
+    if (sourceVoice)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[AudioSource][RestartFromBeginning] DestroyVoice");
+        sourceVoice->DestroyVoice();
+        sourceVoice = nullptr;
+    }
+
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[AudioSource][RestartFromBeginning] CreateSourceVoice");
+    CoreAudio::CreateAudioSource(audioBuffer, &sourceVoice, soundType);
+    SetVolume(volume);
+    SetPitch(pitch);
+    if (hasPanOverride)
+        SetPan(pan);
+#ifdef X3DAUDIO
+    if (use3DAudio)
+        C3DAudio::Culculate3DAudio(this->gameObject);
+#endif
+    lastSamplesPlayed = 0.0f;
+
+    XAUDIO2_BUFFER* pBuffer = &audioBuffer->buffer;
+    pBuffer->LoopCount = isLooping ? XAUDIO2_LOOP_INFINITE : 0;
+    HRESULT hr = sourceVoice->SubmitSourceBuffer(pBuffer);
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[AudioSource][RestartFromBeginning] Submit");
+    hr = sourceVoice->Start(0);
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+    Logger::Log(Logger::LogCategory::Gameplay,
+        "[AudioSource][RestartFromBeginning] Start");
+}
+
 void AudioSourceComponent::Stop(bool playTails)
 {
-    //バッファやソースボイスが設定されていなければ何もしない
     if (!audioBuffer || !sourceVoice)
-    {
         return;
-    }
 
     XAUDIO2_VOICE_STATE voiceState{};
     sourceVoice->GetState(&voiceState);
-
-    // 再生中でなければ何もしない
     if (!voiceState.BuffersQueued)
-    {
         return;
-    }
 
-    HRESULT hr;
-    hr = sourceVoice->Stop(playTails ? XAUDIO2_PLAY_TAILS : 0);
+    HRESULT hr = sourceVoice->Stop(playTails ? XAUDIO2_PLAY_TAILS : 0);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
     hr = sourceVoice->FlushSourceBuffers();
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-    // SamplesPlayed リセット
     hr = sourceVoice->Discontinuity();
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
 }
-
 void AudioSourceComponent::Pause()
 {
-    //バッファやソースボイスが設定されていなければ何もしない
     if (!audioBuffer || !sourceVoice)
     {
         return;
@@ -151,7 +161,6 @@ void AudioSourceComponent::Pause()
 
 void AudioSourceComponent::Resume()
 {
-    //バッファやソースボイスが設定されていなければ何もしない
     if (!audioBuffer || !sourceVoice)
     {
         return;
@@ -195,6 +204,7 @@ bool AudioSourceComponent::IsPlaying() const
 void AudioSourceComponent::SetPan(float pan)
 {
     this->pan = std::clamp(pan, -1.0f, 1.0f);
+    hasPanOverride = true;
 
     // TODO:何故か完全に左に寄ってしまう
     float outputMatrix[8] = {};

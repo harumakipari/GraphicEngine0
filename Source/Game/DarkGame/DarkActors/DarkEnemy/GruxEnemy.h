@@ -2074,7 +2074,7 @@ private:
     NodeBase* activeNode = nullptr;
     bool behaviorTreeFastComboEnabled = true;
 
-    bool forceBehaviorTreeCharge = true;
+    bool forceBehaviorTreeCharge = false;
 
     CloseCombatSettings closeCombatSettings;
     bool showCloseCombatDebugRange = false;

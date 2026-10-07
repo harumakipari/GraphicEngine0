@@ -17,6 +17,7 @@ public:
 
     /// 再生開始
     void Play();
+    void RestartFromBeginning();
 
     /// 停止
     void Stop(bool playTails = true);
@@ -102,6 +103,7 @@ private:
 private:
     /// パン (-1.0 ~ 1.0)
     float pan = 0.0f;
+    bool hasPanOverride = false;
 
     /// ピッチ
     float pitch = 1.0f;

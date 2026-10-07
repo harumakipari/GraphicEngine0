@@ -966,6 +966,7 @@ void GameScene::Start()
     battleFlowState = BattleFlowState::Intro;
     battleStartTransformsSaved = false;
     tutorialBossEntryPending = false;
+    tutorialCompletedForBossBattle = false;
     if (player)
         player->SetMinimumHp(5);
     SetBattleTimerVisible(false);
@@ -1085,22 +1086,37 @@ void GameScene::ResetBossBattleBgm(const BossPhase phase, const bool play)
 {
     phase2BgmCrossFadeActive = false;
     phase2BgmFadeElapsed = 0.0f;
-    if (bossBgmActor)
-    {
-        bossBgmActor->Stop(false);
-        bossBgmActor->SetVolume(BossBgmVolume);
-    }
-    if (phase2BgmActor)
-    {
-        phase2BgmActor->Stop(false);
-        phase2BgmActor->SetVolume(BossBgmVolume);
-    }
-
     phase2BgmStarted = phase == BossPhase::Phase2;
     phase2BgmTriggerTime = -1.0f;
+
     const auto activeBgm = GetActiveBossBgmActor();
-    if (activeBgm && play)
-        activeBgm->Play();
+    const auto stopInactiveBgm = [activeBgm](const std::shared_ptr<BgmActor>& bgm)
+    {
+        if (bgm && bgm != activeBgm)
+        {
+            bgm->Stop(false);
+            bgm->SetVolume(BossBgmVolume);
+        }
+    };
+    stopInactiveBgm(bossBgmActor);
+    stopInactiveBgm(phase2BgmActor);
+
+    if (activeBgm)
+    {
+        activeBgm->SetVolume(BossBgmVolume);
+        if (play && phase == BossPhase::Phase1)
+        {
+            Logger::Log(Logger::LogCategory::Gameplay,
+                "[BossBGM][RestartFromBeginning] caller=GameScene::ResetBossBattleBgm");
+            activeBgm->RestartFromBeginning();
+        }
+        else if (play)
+            activeBgm->Play();
+        else
+            activeBgm->Stop(false);
+    }
+    if (gameBgmActor)
+        gameBgmActor->Stop();
 }
 
 void GameScene::BeginBossBattleBgmFadeOut()
@@ -1266,6 +1282,11 @@ void GameScene::HideTutorialSkeletonUI()
 
 void GameScene::UpdateTutorialSkeletonUI()
 {
+    if (tutorialCompletedForBossBattle)
+    {
+        HideTutorialSkeletonUI();
+        return;
+    }
     const auto activeCameraManager = GetCameraManager();
     const bool cameraRestricted = !activeCameraManager || activeCameraManager->IsUseDebug() ||
         activeCameraManager->IsUseCinematic() || activeCameraManager->IsUseMovie();
@@ -1764,9 +1785,47 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
     return LockOnTargetSelectionResult::NoCandidate;
 }
 
+void GameScene::CompleteTutorialForBossBattle()
+{
+    if (tutorialCompletedForBossBattle)
+        return;
+
+    tutorialCompletedForBossBattle = true;
+    HideTutorialSkeletonUI();
+    tutorialPassiveSkeletonLockOnCandidate = false;
+    tutorialPassiveSkeletonYHpBaseline = -1;
+    tutorialPassiveSkeletonYHpBaselineCaptured = false;
+    tutorialDodgeSkeletonYHpBaseline = -1;
+    tutorialDodgeSkeletonYHpBaselineCaptured = false;
+    tutorialDodgeSkeletonAttackRange = false;
+    tutorialDodgeGuideActivated = false;
+    tutorialDodgeSkeletonJustDodged = false;
+
+    if (!player)
+        return;
+
+    const auto completeOperationGuide = [this](const Player::OperationGuideItem item)
+    {
+        player->SetOperationGuideItemVisible(item, true);
+        player->SetOperationGuideItemLearned(item);
+    };
+    completeOperationGuide(Player::OperationGuideItem::L);
+    completeOperationGuide(Player::OperationGuideItem::LT);
+    completeOperationGuide(Player::OperationGuideItem::Y);
+    completeOperationGuide(Player::OperationGuideItem::X);
+    completeOperationGuide(Player::OperationGuideItem::R);
+    // Keep item completion state, but hide the tutorial HUD throughout the boss battle.
+    player->SetOperationGuideHudVisible(false);
+}
+
 void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult selectionResult)
 {
     tutorialPassiveSkeletonLockOnCandidate = false;
+    if (tutorialCompletedForBossBattle)
+    {
+        tutorialDodgeSkeletonAttackRange = false;
+        return;
+    }
     if (!player || !tutorialPassiveSkeletonActor)
         return;
 
@@ -1932,7 +1991,7 @@ void GameScene::Update(float deltaTime)
     else
     {
         player->SetIsPlayerTransparency(true);
-        player->SetOperationGuideHudVisible(playerInputAvailable);
+        player->SetOperationGuideHudVisible(playerInputAvailable && !tutorialCompletedForBossBattle);
     }
 
 
@@ -2337,19 +2396,10 @@ void GameScene::StartBossBattle()
     ApplyBossPhaseHp(BossPhase::Phase1);
     CaptureContinueBossCheckpoint();
     player->EndEvent();
-    player->SetMinimumHp(5);
+    player->ClearMinimumHp();
     if (isInitialTutorialBossEntry)
     {
-        const auto completeOperationGuide = [this](const Player::OperationGuideItem item)
-        {
-            player->SetOperationGuideItemVisible(item, true);
-            player->SetOperationGuideItemLearned(item);
-        };
-        completeOperationGuide(Player::OperationGuideItem::L);
-        completeOperationGuide(Player::OperationGuideItem::LT);
-        completeOperationGuide(Player::OperationGuideItem::Y);
-        completeOperationGuide(Player::OperationGuideItem::X);
-        completeOperationGuide(Player::OperationGuideItem::R);
+        CompleteTutorialForBossBattle();
         player->RestoreHpToMaxWithUiAnimation();
     }
 
@@ -3395,16 +3445,6 @@ void GameScene::RestartBossBattle()
     {
         huskParticles->particle_data.death_progress = 0.0f;
         huskParticles->particle_data.particle_count = 0;
-    }
-
-    for (const auto& bgmActor : GetActorManager()->GetActorsOfType<BgmActor>())
-    {
-        if (bgmActor->GetName() == "BossBgmActor")
-            bgmActor->Play();
-        else if (bgmActor->GetName() == "BossPhase2BgmActor")
-            bgmActor->Stop(false);
-        else if (bgmActor->GetName() == "GameBgmActor")
-            bgmActor->Stop();
     }
 
     StartBossBattle();

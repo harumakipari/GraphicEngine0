@@ -146,7 +146,7 @@ void TitleScene::Start()
 
     //// ゲーム終了ボタンの作成
     //{
-    //    gameEndButton = std::make_shared<UIButtonComponent>("./Data/Textures/UI/end.png", "end");
+    //    gameEndButton = std::make_shared<UIButtonComponent>("./Data/Textures/UI/Pause/quit_game.png", "end");
     //    gameEndButton->SetWorldPosition({ 1010, 900 });
     //    gameEndButton->SetSize({ 620, 352 });
     //    gameEndButton->SetPivot({ 0.5f,0.5f });
@@ -155,7 +155,7 @@ void TitleScene::Start()
     //    gameEndButton->onClick = [this]()
     //        {
     //            Logger::Log(u8"ゲーム終了");
-    //            CoreAudio::PlayOneShot(L"./Data/Sound/SE/push_button.wav");
+    //            CoreAudio::PlayOneShot(L"./Data/Sound/SE/button_push.wav");
     //            PostMessage(Graphics::GetHwnd(), WM_CLOSE, 0, 0);
     //        };
     //}

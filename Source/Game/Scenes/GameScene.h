@@ -147,6 +147,7 @@ private:
         std::shared_ptr<SceneComponent>& outTarget, float& outDistanceSq,
         float& outScreenDistanceSq) const;
     void UpdateOperationGuideTutorial(LockOnTargetSelectionResult selectionResult);
+    void CompleteTutorialForBossBattle();
     void CreateLockOnTargetUI();
     void UpdateLockOnTargetUI(float deltaTime);
     void HideLockOnTargetUI();
@@ -570,6 +571,7 @@ private:
     Transform bossBattleStartTransform{};
     bool battleStartTransformsSaved = false;
     bool tutorialBossEntryPending = false;
+    bool tutorialCompletedForBossBattle = false;
     bool deathCameraStartRequested = false;
     float playerDeadElapsed = 0.0f;
     float battleElapsedTime = 0.0f;
