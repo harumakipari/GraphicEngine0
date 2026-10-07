@@ -278,6 +278,8 @@ public:
     // or the current player state.
     void ClearTransientBattleActions();
     void ClearBattleVisualsForPhaseTransition();
+    // Safely leaves gameplay actions before a cinematic changes the Player transform.
+    void CancelGameplayActionsForCinematic();
     // Leaves the player in a deterministic, non-locomotion state before a cinematic.
     void NeutralizeForPhase2Cinematic();
     // Clears the player-owned sword trail history and sampling cache before a cinematic teleport.

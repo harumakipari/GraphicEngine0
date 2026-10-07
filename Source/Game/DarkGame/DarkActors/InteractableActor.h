@@ -13,38 +13,39 @@ public:
     void Update(float deltaTime) override;
 
     virtual void Interact() override;
+    void CompleteInteraction();
 
-    // ƒCƒ“ƒ^ƒ‰ƒNƒg‰Â”\‚È”ÍˆÍ‚ğæ“¾‚·‚é
+    // ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½Â”\ï¿½È”ÍˆÍ‚ï¿½æ“¾ï¿½ï¿½ï¿½ï¿½
     float GetInteractRange() const
     {
         return interactRange;
     }
 
-    // ƒCƒ“ƒ^ƒ‰ƒNƒg‰Â”\‚È”ÍˆÍ‚ğİ’è‚·‚é
+    // ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½Â”\ï¿½È”ÍˆÍ‚ï¿½İ’è‚·ï¿½ï¿½
     void SetInteractRange(const float newRange)
     {
         interactRange = newRange;
     }
 
-    // ƒCƒ“ƒ^ƒ‰ƒNƒg‰Â”\‚È”ÍˆÍ‚ÌƒIƒtƒZƒbƒg‚ğæ“¾‚·‚é
+    // ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½Â”\ï¿½È”ÍˆÍ‚ÌƒIï¿½tï¿½Zï¿½bï¿½gï¿½ï¿½æ“¾ï¿½ï¿½ï¿½ï¿½
     DirectX::XMFLOAT3 GetInteractOffset() const
     {
         return interactOffset;
     }
 
-    // ƒCƒ“ƒ^ƒ‰ƒNƒg‰Â”\‚È”ÍˆÍ‚ÌƒIƒtƒZƒbƒg‚ğİ’è‚·‚é
+    // ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½Â”\ï¿½È”ÍˆÍ‚ÌƒIï¿½tï¿½Zï¿½bï¿½gï¿½ï¿½İ’è‚·ï¿½ï¿½
     void SetInteractOffset(const DirectX::XMFLOAT3& newOffset)
     {
         interactOffset = newOffset;
     }
 
-    // ƒCƒ“ƒ^ƒ‰ƒNƒg‰Â”\‚ÈŠp“x(“x)‚ğİ’è‚·‚é
+    // ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½Â”\ï¿½ÈŠpï¿½x(ï¿½x)ï¿½ï¿½İ’è‚·ï¿½ï¿½
     void SetInteractDegree(const float degree)
     {
         interactDegree = degree;
     }
 
-    // ƒCƒ“ƒ^ƒ‰ƒNƒg‰Â”\‚ÈŠp“x(ƒ‰ƒWƒAƒ“)‚ğæ“¾‚·‚é
+    // ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½Â”\ï¿½ÈŠpï¿½x(ï¿½ï¿½ï¿½Wï¿½Aï¿½ï¿½)ï¿½ï¿½æ“¾ï¿½ï¿½ï¿½ï¿½
     float GetInteractRadian() const
     {
         return DirectX::XMConvertToRadians(interactDegree);
@@ -53,21 +54,21 @@ public:
     void DrawImGuiDetails() override
     {
 #ifdef USE_IMGUI
-        ImGui::DragFloat(U8("ƒCƒ“ƒ^ƒ‰ƒNƒg‚ª”½‰‚·‚é”ÍˆÍ"), &interactRange, 0.1f, 0.0f, 5.0f);
-        ImGui::DragFloat(U8("ƒCƒ“ƒ^ƒ‰ƒNƒg‚ª”½‰‚·‚éŠp“x"), &interactDegree, 1.0f, 0.0f, 180.0f);
-        ImGui::DragFloat3(U8("ƒCƒ“ƒ^ƒ‰ƒNƒg”ÍˆÍ‚ÌƒIƒtƒZƒbƒg"), &interactOffset.x, 0.1f);
-        ImGui::DragFloat2(U8("ƒCƒ“ƒ^ƒ‰ƒNƒg‚ÌUI‚ÌÀ•W"), &interactUiWorldPos.x, 1.0f);
+        ImGui::DragFloat(U8("ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íˆï¿½"), &interactRange, 0.1f, 0.0f, 5.0f);
+        ImGui::DragFloat(U8("ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½pï¿½x"), &interactDegree, 1.0f, 0.0f, 180.0f);
+        ImGui::DragFloat3(U8("ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½ÍˆÍ‚ÌƒIï¿½tï¿½Zï¿½bï¿½g"), &interactOffset.x, 0.1f);
+        ImGui::DragFloat2(U8("ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½ï¿½UIï¿½Ìï¿½ï¿½W"), &interactUiWorldPos.x, 1.0f);
 #endif
     }
 
 protected:
     float interactRange = 2.0f;
     float interactDegree = 0.0f;
-    DirectX::XMFLOAT3 interactOffset = { 0.0f, 0.0f, 0.0f }; // ƒCƒ“ƒ^ƒ‰ƒNƒg‰Â”\‚È”ÍˆÍ‚ÌƒIƒtƒZƒbƒg
+    DirectX::XMFLOAT3 interactOffset = { 0.0f, 0.0f, 0.0f }; // ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½Â”\ï¿½È”ÍˆÍ‚ÌƒIï¿½tï¿½Zï¿½bï¿½g
 
     DirectX::XMFLOAT2 interactUiWorldPos = { 0.0f,0.0f };
 
-    std::shared_ptr<UIImageComponent> interactUiComponent;  // ƒCƒ“ƒ^ƒ‰ƒNƒg‰Â”\‚È‚É•\¦‚·‚éUI
+    std::shared_ptr<UIImageComponent> interactUiComponent;  // ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½Â”\ï¿½Èï¿½ï¿½É•\ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UI
     std::shared_ptr<Sprite> controlButton;
     std::shared_ptr<Sprite> keyboardButton;
 

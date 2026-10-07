@@ -9,7 +9,6 @@ public:
     {
         Playing,
         Paused,
-        ResumeCountdown,
     };
 
 public:
@@ -19,33 +18,40 @@ public:
 
     void Update(float deltaTime)override;
 
-    // ƒŠƒgƒ‰ƒC‚·‚éƒV[ƒ“‚Ì–¼‘O‚ğİ’è‚·‚é
+    // ï¿½ï¿½ï¿½gï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½ï¿½Vï¿½[ï¿½ï¿½ï¿½Ì–ï¿½ï¿½Oï¿½ï¿½İ’è‚·ï¿½ï¿½
     void SetRetrySceneName(const std::string& sceneName) { retrySceneName = sceneName; }
 
-    // ƒ|[ƒY‰æ–Ê‚ğ‰B‚·
+    // ï¿½|ï¿½[ï¿½Yï¿½ï¿½Ê‚ï¿½Bï¿½ï¿½
     void HidePauseMenu();
 
 private:
-    // ƒ|[ƒY‰æ–Ê‚ğŠJ‚­‚Æ‚«‚Ìˆ—
+    // ï¿½|ï¿½[ï¿½Yï¿½ï¿½Ê‚ï¿½Jï¿½ï¿½ï¿½Æ‚ï¿½ï¿½Ìï¿½ï¿½ï¿½
     void OpenPause();
 
-    // ƒ|[ƒY‰æ–Ê‚ğ•Â‚¶‚é‚Ìˆ—
+    // ï¿½|ï¿½[ï¿½Yï¿½ï¿½Ê‚ï¿½Â‚ï¿½ï¿½éï¿½Ìï¿½ï¿½ï¿½
     void ClosePause();
+    bool CanOpenPause() const;
+    void UpdateSelectionLines();
+    void HideSelectionLines();
 
 
 private:
-    std::shared_ptr<UIImageComponent> pauseBackImage; //ƒ|[ƒY’†‚Ì”wŒi
+    std::shared_ptr<UIImageComponent> pauseBackImage; //ï¿½|ï¿½[ï¿½Yï¿½ï¿½ï¿½Ì”wï¿½i
     std::shared_ptr<UIImageComponent> pausePanel;
     std::shared_ptr<UIButtonComponent> menuButton;
     std::shared_ptr<UIButtonComponent> returnTitleButton;
     std::shared_ptr<UIButtonComponent> returnMainRoomButton;
-    std::shared_ptr<UIButtonComponent> restartBattleButton;
+    std::shared_ptr<UIButtonComponent> battleActionButton;
+    std::shared_ptr<UIButtonComponent> backToRoomButton;
+    std::shared_ptr<UIImageComponent> selectionLineLeft;
+    std::shared_ptr<UIImageComponent> selectionLineRight;
+    UIButtonComponent* lastSelectedButton = nullptr;
+    float selectionLineAnimationProgress = 0.0f;
+    DirectX::XMFLOAT2 selectionLineScale{ 0.12f, 0.4f };
+    float selectionLineGap = -39.0f;
+    float selectionLineAnimationDuration = 0.15f;
 
-
-    std::array<std::shared_ptr<UIImageComponent>, 3> countDownImages;
     PauseState state = PauseState::Playing;
-    float countdownTime = 3.0f;
-    int lastCountdownNumber = -1;
     bool stopUpdate = true;
 
     std::string retrySceneName = "MainScene";

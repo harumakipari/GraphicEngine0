@@ -188,35 +188,36 @@ void UIManager::HandleGamepadUI(float deltaTime)
     // =========================
     // D-Pad入力（優先・1回だけ）
     // =========================
-    if (InputSystem::GetInputState("UILeft", InputStateMask::Trigger))
+    if (InputSystem::GetInputState("UIUp", InputStateMask::Trigger) ||
+        InputSystem::GetInputState("UILeft", InputStateMask::Trigger))
     {
         MoveSelection(-1);
         stickDelay = 0.2f;
         moved = true;
     }
-    else if (InputSystem::GetInputState("UIRight", InputStateMask::Trigger))
+    else if (InputSystem::GetInputState("UIDown", InputStateMask::Trigger) ||
+             InputSystem::GetInputState("UIRight", InputStateMask::Trigger))
     {
         MoveSelection(1);
         stickDelay = 0.2f;
         moved = true;
     }
 
-
     // =========================
     // スティック入力（D-Pad優先）
     // =========================
     if (!moved && stickDelay <= 0.0f)
     {
-        auto stick = InputSystem::GetLeftStick();
+        const auto stick = InputSystem::GetLeftStick();
 
-        if (stick.x > 0.6f)
-        {
-            MoveSelection(1);
-            stickDelay = 0.2f;
-        }
-        else if (stick.x < -0.6f)
+        if (stick.y > 0.6f || stick.x < -0.6f)
         {
             MoveSelection(-1);
+            stickDelay = 0.2f;
+        }
+        else if (stick.y < -0.6f || stick.x > 0.6f)
+        {
+            MoveSelection(1);
             stickDelay = 0.2f;
         }
     }
@@ -236,27 +237,27 @@ void UIManager::HandleGamepadUI(float deltaTime)
 // 選択切り替え処理
 void UIManager::MoveSelection(int dir)
 {
-    if (buttons.empty()) return;
+    std::vector<UIButtonComponent*> activeButtons;
+    activeButtons.reserve(buttons.size());
+    for (const auto& button : buttons)
+    {
+        if (button && button->IsVisible() && button->IsEnabled())
+            activeButtons.push_back(button.get());
+    }
+
+    if (activeButtons.empty())
+        return;
 
     int index = 0;
-
-    // 現在選択中探す
-    for (int i = 0; i < buttons.size(); i++)
+    for (int i = 0; i < static_cast<int>(activeButtons.size()); ++i)
     {
-        if (buttons[i].get() == selectedButton)
+        if (activeButtons[i] == selectedButton)
         {
             index = i;
             break;
         }
     }
 
-    index += dir;
-
-    if (index < 0) // ループを禁止する
-        index = 0;
-
-    if (index >= buttons.size())
-        index = static_cast<int>(buttons.size()) - 1;
-
-    SetSelected(buttons[index].get());
+    index = std::clamp(index + dir, 0, static_cast<int>(activeButtons.size()) - 1);
+    SetSelected(activeButtons[index]);
 }

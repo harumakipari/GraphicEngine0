@@ -7,11 +7,11 @@
 void InteractableActor::Initialize(const Transform& transform)
 {
     auto uiManager = GetOwnerScene()->GetUIManager();
-    // ƒCƒ“ƒ^ƒ‰ƒNƒg‰Â”\‚ÈUI‚ð’Ç‰Á‚·‚é
+    // ï¿½Cï¿½ï¿½ï¿½^ï¿½ï¿½ï¿½Nï¿½gï¿½Â”\ï¿½ï¿½UIï¿½ï¿½Ç‰ï¿½ï¿½ï¿½ï¿½ï¿½
     interactUiComponent = std::make_unique<UIImageComponent>("./Data/Textures/UI/button_a.png", "interactUI");
     interactUiComponent->SetWorldPosition({ 0.0f, 0.0f });
     interactUiComponent->SetSize({ 140.0f, 140.0f });
-    interactUiComponent->SetPivot({ 0.5f, 0.5f }); // –îˆó‚ÌªŒ³‚ðƒvƒŒƒCƒ„[‚ÌˆÊ’u‚É‡‚í‚¹‚é
+    interactUiComponent->SetPivot({ 0.5f, 0.5f }); // ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ÌˆÊ’uï¿½Éï¿½ï¿½í‚¹ï¿½ï¿½
     interactUiComponent->SetVisible(false);
     interactUiComponent->SetScale({ 0.6f,0.6f });
     uiManager->Add(interactUiComponent);
@@ -24,7 +24,7 @@ void InteractableActor::Initialize(const Transform& transform)
 void InteractableActor::Update(float deltaTime)
 {
     if (InputSystem::IsGamepadConnected())
-    {//@ƒRƒ“ƒgƒ[ƒ‰[‘Î‰ž
+    {//ï¿½@ï¿½Rï¿½ï¿½ï¿½gï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½[ï¿½Î‰ï¿½
         interactUiComponent->SetTexture(controlButton);
         interactUiComponent->SetScale({ 0.6f,0.6f });
     }
@@ -40,4 +40,11 @@ void InteractableActor::Update(float deltaTime)
 void InteractableActor::Interact()
 {
     interacted = true;
+}
+
+void InteractableActor::CompleteInteraction()
+{
+    canInteract = false;
+    interacted = true;
+    if (interactUiComponent) interactUiComponent->SetVisible(false);
 }

@@ -230,21 +230,21 @@ void MovieCameraManagerActor::Update(float deltaTime)
         break;
     case DoorMovieState::DoorPreMovie:
         if (movieCamera->IsMovieFinish())
-        {// “®‰æ‚ªI—¹‚µ‚½‚çplayer‚ğƒAƒbƒv‚·‚é“®‰æÄ¶
+        {// ï¿½ï¿½ï¿½æ‚ªï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½playerï¿½ï¿½Aï¿½bï¿½vï¿½ï¿½ï¿½é“®ï¿½ï¿½Äï¿½
             PlayMovie(playerMovieFileName);
             doorMovieState = DoorMovieState::UpPlayerMovie;
             if (player)
             {
-                // ƒCƒxƒ“ƒgƒV[ƒ“‚ªŠJn‚µ‚½‚±‚Æ‚ğ’Ê’m‚·‚é
+                // ï¿½Cï¿½xï¿½ï¿½ï¿½gï¿½Vï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½Jï¿½nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½Ê’mï¿½ï¿½ï¿½ï¿½
                 player->StartEvent();
                 player->PlayBodyAnimation("Recall_0", false);
             }
-            // •”‰®‚ÌƒVƒƒƒ“ƒfƒŠƒA‚Ì‰Š‚ÌŒõ‚ğÁ‚·
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ÌƒVï¿½ï¿½ï¿½ï¿½ï¿½fï¿½ï¿½ï¿½Aï¿½Ì‰ï¿½ï¿½ÌŒï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             for (auto chandelier : chandelierActors)
             {
                 chandelier->SetFireScaleToZero();
             }
-            // •”‰®‚Ì˜XCƒXƒ^ƒ“ƒh‚Ì‰Š‚ÌŒõ‚ğÁ‚·
+            // ï¿½ï¿½ï¿½ï¿½ï¿½Ì˜Xï¿½Cï¿½Xï¿½^ï¿½ï¿½ï¿½hï¿½Ì‰ï¿½ï¿½ÌŒï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             for (auto candleStand : candleStandActors)
             {
                 candleStand->SetFireLightScale({ 0.0f,0.0f,0.0f });
@@ -254,25 +254,25 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::UpPlayerMovie:
     {
         if (movieCamera->IsMovieFinish())
-        {// ƒvƒŒƒCƒ„[‚ğƒAƒbƒv‚·‚é“®‰æ‚ªI‚í‚Á‚½‚çA
+        {// ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ï¿½Aï¿½bï¿½vï¿½ï¿½ï¿½é“®ï¿½æ‚ªï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½A
             if (player)
-            {// ƒvƒŒƒCƒ„[‚ÌƒAƒjƒ[ƒVƒ‡ƒ“‚ğ‘Ò‹@‚É•ÏX
+            {// ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ÌƒAï¿½jï¿½ï¿½ï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò‹@ï¿½É•ÏX
                 player->PlayBodyAnimation("Idle", true);
             }
             if (gameScene)
             {
-                // ƒ{ƒX‚Ì•”‰®‚ğˆÃ‚­‚·‚é
+                // ï¿½{ï¿½Xï¿½Ì•ï¿½ï¿½ï¿½ï¿½ï¿½Ã‚ï¿½ï¿½ï¿½ï¿½ï¿½
                 gameScene->SetBossRoomLerpFactor(0.0f);
-                // –Ú‚ÌBloom‚Ì‚İ‚ğƒIƒ“‚É‚·‚é
+                // ï¿½Ú‚ï¿½Bloomï¿½Ì‚İ‚ï¿½Iï¿½ï¿½ï¿½É‚ï¿½ï¿½ï¿½
             }
-            // ƒhƒA‚ªŠJ‚­ƒJƒƒ‰ƒ[ƒN
+            // ï¿½hï¿½Aï¿½ï¿½ï¿½Jï¿½ï¿½ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½N
             PlayMovie(doorOpenMovieFileName);
-            // ƒhƒA‚ªŠJ‚­ƒAƒjƒ[ƒVƒ‡ƒ“
+            // ï¿½hï¿½Aï¿½ï¿½ï¿½Jï¿½ï¿½ï¿½Aï¿½jï¿½ï¿½ï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½
             if (doorActor)
             {
                 doorActor->Open();
             }
-            // “G‚ÌƒAƒjƒ[ƒVƒ‡ƒ“‚ğ~‚ß‚é
+            // ï¿½Gï¿½ÌƒAï¿½jï¿½ï¿½ï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½~ï¿½ß‚ï¿½
             if (gruxEnemy)
             {
                 gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
@@ -285,9 +285,9 @@ void MovieCameraManagerActor::Update(float deltaTime)
     break;
     case DoorMovieState::DoorOpening:
         if (doorActor->IsOpenDoor())
-        {// ƒhƒA‚ªŠJ‚¢‚½‚çA
+        {// ï¿½hï¿½Aï¿½ï¿½ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½A
             CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_groan.wav", 0.2f);
-            // “G‚Ì–Ú‹Ê‚ªŒõ‚é
+            // ï¿½Gï¿½Ì–Ú‹Ê‚ï¿½ï¿½ï¿½ï¿½ï¿½
             doorMovieState = DoorMovieState::PreBossRoomLerp;
             if (player)
             {
@@ -323,8 +323,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     { 0.0f, 1.0f, 0.0f });
             }
         }
-        // ƒ{ƒX‚Ì–Ú‹Ê‚ğ‚È‚­‚·
-        // •”‰®‚ğ™X‚É–¾‚é‚­‚·‚é
+        // ï¿½{ï¿½Xï¿½Ì–Ú‹Ê‚ï¿½È‚ï¿½ï¿½ï¿½
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½É–ï¿½ï¿½é‚­ï¿½ï¿½ï¿½ï¿½
         if (gameScene)
         {
             gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&,gruxEnemy]()
@@ -339,7 +339,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     doorMovieState = DoorMovieState::UpPlayerCombat;
                 });
         }
-        // •”‰®‚ÌƒVƒƒƒ“ƒfƒŠƒA‚Ì‰Š‚ÌŒõ‚ğ™X‚É–ß‚·
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ÌƒVï¿½ï¿½ï¿½ï¿½ï¿½fï¿½ï¿½ï¿½Aï¿½Ì‰ï¿½ï¿½ÌŒï¿½ï¿½ï¿½ï¿½ï¿½Xï¿½É–ß‚ï¿½
         for (auto chandelier : chandelierActors)
         {
             chandelier->ResetFireLightScale(duration);
@@ -387,19 +387,19 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::UpPlayerCombat:
         movieCamera->SetOnMovieStart([&, doorActor, player, gruxEnemy]()
             {
-                // ƒhƒA‚ğ•Â‚ß‚½ó‘Ô‚É‚·‚é
+                // ï¿½hï¿½Aï¿½ï¿½Â‚ß‚ï¿½ï¿½ï¿½Ô‚É‚ï¿½ï¿½ï¿½
                 if (doorActor)
                 {
                     doorActor->Closed();
                 }
-                // ƒvƒŒƒCƒ„[‚ÌˆÊ’u‚ğƒhƒA‘O‚É‚·‚é
+                // ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ÌˆÊ’uï¿½ï¿½hï¿½Aï¿½Oï¿½É‚ï¿½ï¿½ï¿½
                 if (player)
                 {
                     player->SetPosition({ -4.827f,-0.098f,11.724f });
-                    // ƒvƒŒƒCƒ„[‚ÌƒAƒjƒ[ƒVƒ‡ƒ“‚ğÄ¶
+                    // ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ÌƒAï¿½jï¿½ï¿½ï¿½[ï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äï¿½
                     player->PlayBodyAnimation("Level_Start_Cut", false);
                 }
-                // “G‚ÌˆÊ’u‚ğ•”‰®‚Ì‰œ‚É‚·‚é
+                // ï¿½Gï¿½ÌˆÊ’uï¿½ğ•”‰ï¿½ï¿½Ì‰ï¿½ï¿½É‚ï¿½ï¿½ï¿½
                 if (gruxEnemy)
                 {
                     gruxEnemy->SetEulerRotation({ 0.0f,-90.0f,0.0f });
@@ -407,9 +407,9 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 doorMovieState = DoorMovieState::UpPlayerCombatMovie;
             });
 
-        // ƒvƒŒƒCƒ„[ƒAƒbƒvƒJƒƒ‰ƒ[ƒN
+        // ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½Aï¿½bï¿½vï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½N
         PlayMovie(playerCombatMovieFileName);
-        // •”‰®‚Ì˜XCƒXƒ^ƒ“ƒh‚Ì‰Š‚ÌŒõ‚ğ–ß‚·
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Ì˜Xï¿½Cï¿½Xï¿½^ï¿½ï¿½ï¿½hï¿½Ì‰ï¿½ï¿½ÌŒï¿½ï¿½ï¿½ß‚ï¿½
         for (auto candleStand : candleStandActors)
         {
             candleStand->ResetFireLightScale();
@@ -420,14 +420,14 @@ void MovieCameraManagerActor::Update(float deltaTime)
         break;
     case DoorMovieState::UpPlayerCombatMovie:
         if (movieCamera->IsMovieFinish())
-        {// ƒJƒƒ‰ƒ[ƒN‚ªI‚í‚Á‚½‚çA
+        {// ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½Nï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½A
             doorMovieState = DoorMovieState::EnemyMovie;
         }
         break;
     case DoorMovieState::EnemyMovie:
-        // ƒ{ƒXƒAƒbƒvƒJƒƒ‰ƒ[ƒN
+        // ï¿½{ï¿½Xï¿½Aï¿½bï¿½vï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½N
         PlayMovie(bossRoarMovieFileName);
-        // “G‚ª–i‚¦‚é
+        // ï¿½Gï¿½ï¿½ï¿½iï¿½ï¿½ï¿½ï¿½
         if (gruxEnemy)
         {
             gruxEnemy->PlayBodyAnimation("Ultimate_Roar_0", false);
@@ -437,7 +437,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::EnemyName:
         if (movieCamera->IsMovieFinish())
         {
-            // BGM‚ğÄ¶‚·‚é
+            // BGMï¿½ï¿½Äï¿½ï¿½ï¿½ï¿½ï¿½
             auto bgmActors = GetOwnerScene()->GetActorManager()->GetActorsOfType <BgmActor>();
             for (auto bgmActor : bgmActors)
             {
@@ -466,12 +466,12 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {
             if (player)
             {
-                // ƒJƒƒ‰‚ğƒ{ƒXí‚Ìó‘Ô‚É•ÏX‚·‚é
+                // ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½{ï¿½Xï¿½íï¿½Ìï¿½Ô‚É•ÏXï¿½ï¿½ï¿½ï¿½
                 player->SetIsBossBattle(true);
             }
-            //ƒJƒƒ‰‚ğOlÌ‚É–ß‚·
+            //ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Oï¿½lï¿½Ì‚É–ß‚ï¿½
             if (scene->GetCameraManager()->IsUseMovie())
-            {// ƒ€[ƒr[ƒJƒƒ‰‚ªg—p’†‚Ìê‡‚Ì‚İØ‚è‘Ö‚¦
+            {// ï¿½ï¿½ï¿½[ï¿½rï¿½[ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½gï¿½pï¿½ï¿½ï¿½Ìê‡ï¿½Ì‚İØ‚ï¿½Ö‚ï¿½
 #if 0
                 if (auto mainCamera = actorManager->GetActorOfType<MainCamera>())
                 {
@@ -493,11 +493,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
                         {
                             if (player)
                             {
-                                // ‰‰o‚ª‚ªI‚í‚Á‚½‚±‚Æ‚ğ’Ê’m‚·‚é
+                                // ï¿½ï¿½ï¿½oï¿½ï¿½ï¿½ï¿½ï¿½Iï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½Ê’mï¿½ï¿½ï¿½ï¿½
                                 player->EndEvent();
                             }
                             if (gruxEnemy)
-                            {// ‚±‚±‚Åƒ{ƒX‚Ì–¼‘O‚ÌUI‚ğÁ‚·
+                            {// ï¿½ï¿½ï¿½ï¿½ï¿½Åƒ{ï¿½Xï¿½Ì–ï¿½ï¿½Oï¿½ï¿½UIï¿½ï¿½ï¿½ï¿½ï¿½
                                 gruxEnemy->GetStateMachine()->ChangeState("EnemyIdleState");
                             }
                             if (gameScene)
@@ -513,7 +513,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
 
             }
             if (gruxEnemy)
-            {// ‚±‚±‚Åƒ{ƒX‚Ì–¼‘O‚ÌUI‚ğÁ‚·
+            {// ï¿½ï¿½ï¿½ï¿½ï¿½Åƒ{ï¿½Xï¿½Ì–ï¿½ï¿½Oï¿½ï¿½UIï¿½ï¿½ï¿½ï¿½ï¿½
                 gruxEnemy->StartGruxNamePerform(1.0f, 1.0f, 0.0f);
             }
             doorMovieState = DoorMovieState::Finished;
@@ -687,7 +687,7 @@ void MovieCameraManagerActor::PlayMovie(const std::string& file)
     if (auto cameraManager = GetOwnerScene()->GetCameraManager())
     {
         if (!cameraManager->IsUseMovie())
-        {// ‚·‚Å‚Éƒ€[ƒr[ƒJƒƒ‰‚ªg—p’†‚Å‚È‚¢ê‡‚Ì‚İØ‚è‘Ö‚¦
+        {// ï¿½ï¿½ï¿½Å‚Éƒï¿½ï¿½[ï¿½rï¿½[ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½gï¿½pï¿½ï¿½ï¿½Å‚È‚ï¿½ï¿½ê‡ï¿½Ì‚İØ‚ï¿½Ö‚ï¿½
             cameraManager->ToggleMovieCamera(GetOwnerConstScene());
         }
     }
@@ -842,30 +842,31 @@ void MovieCameraManagerActor::UpdateDeathWideAnchorPreview()
     deathWideDebugRotationValid = true;
 }
 
-// ƒhƒA‚ğŠJ‚­ƒ€[ƒr[‚ğÄ¶‚·‚é
+// ï¿½hï¿½Aï¿½ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½rï¿½[ï¿½ï¿½Äï¿½ï¿½ï¿½ï¿½ï¿½
 void MovieCameraManagerActor::PlayDoorMovie()
 {
     if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
     {
+        gameScene->PrepareTutorialForBossEntry();
         gameScene->EnterBossRoomLockOnScope();
     }
 
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
     {
-        // ‰‰o‚ªn‚Ü‚Á‚½‚±‚Æ‚ğ‚±‚Æ‚ğ’Ê’m‚·‚é
+        // ï¿½ï¿½ï¿½oï¿½ï¿½ï¿½nï¿½Ü‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½ï¿½Æ‚ï¿½Ê’mï¿½ï¿½ï¿½ï¿½
         player->StartEvent();
 
 
-        // ƒvƒŒƒCƒ„[‚ÌˆÊ’u‚ğŒÅ’è‚·‚é
+        // ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ÌˆÊ’uï¿½ï¿½Å’è‚·ï¿½ï¿½
         DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
-        player->SetPosition(fixedPosition); // ƒvƒŒƒCƒ„[‚ÌˆÊ’u‚ğŒÅ’è‚·‚éÀ•W‚Éİ’è
+        player->SetPosition(fixedPosition); // ï¿½vï¿½ï¿½ï¿½Cï¿½ï¿½ï¿½[ï¿½ÌˆÊ’uï¿½ï¿½Å’è‚·ï¿½ï¿½ï¿½ï¿½Wï¿½Éİ’ï¿½
         player->rotationComponent->SetDirection({ 1.0f,0.0f,0.0f });
     }
 
     if (auto cameraManager = GetOwnerScene()->GetCameraManager())
     {
         if (!cameraManager->IsUseMovie())
-        {// ‚·‚Å‚Éƒ€[ƒr[ƒJƒƒ‰‚ªg—p’†‚Å‚È‚¢ê‡‚Ì‚İØ‚è‘Ö‚¦
+        {// ï¿½ï¿½ï¿½Å‚Éƒï¿½ï¿½[ï¿½rï¿½[ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½gï¿½pï¿½ï¿½ï¿½Å‚È‚ï¿½ï¿½ê‡ï¿½Ì‚İØ‚ï¿½Ö‚ï¿½
             cameraManager->ToggleMovieCamera(GetOwnerConstScene());
         }
     }

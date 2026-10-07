@@ -86,7 +86,7 @@ public:
 
     void Update(float deltaTime) override;
 
-    // ’è”ƒoƒbƒtƒ@‚ÌXVˆ—‚ğƒV[ƒ“‚²‚Æ‚ÉƒJƒXƒ^ƒ}ƒCƒY‚Å‚«‚é‚æ‚¤‚É‚·‚é‚½‚ß‚Ì‰¼‘zŠÖ”
+    // ï¿½è”ï¿½oï¿½bï¿½tï¿½@ï¿½ÌXï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Vï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ÉƒJï¿½Xï¿½^ï¿½}ï¿½Cï¿½Yï¿½Å‚ï¿½ï¿½ï¿½æ‚¤ï¿½É‚ï¿½ï¿½é‚½ï¿½ß‚Ì‰ï¿½ï¿½zï¿½Öï¿½
     void UpdateConstants(ID3D11DeviceContext* immediateContext, float deltaTime)override;
 
     bool Uninitialize(ID3D11Device* device) override;
@@ -95,20 +95,20 @@ public:
 
     void SetUpActors()override;
 
-    //ƒV[ƒ“‚Ì©“®“o˜^
+    //ï¿½Vï¿½[ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½oï¿½^
     static inline Scene::Autoenrollment<GameScene> _autoenrollment;
 
-    // ƒ{ƒX‚Ì•”‰®‚ÌFƒ‰[ƒv’l‚ğİ’è‚·‚é
+    // ï¿½{ï¿½Xï¿½Ì•ï¿½ï¿½ï¿½ï¿½ÌFï¿½ï¿½ï¿½[ï¿½vï¿½lï¿½ï¿½İ’è‚·ï¿½ï¿½
     void SetBossRoomLerpFactor(float lerpFactor);
 
-    // ƒ{ƒX‚Ì•”‰®‚ÌF‚Ìƒ‰[ƒv‚ğŠJn‚·‚éŠÖ”
+    // ï¿½{ï¿½Xï¿½Ì•ï¿½ï¿½ï¿½ï¿½ÌFï¿½Ìƒï¿½ï¿½[ï¿½vï¿½ï¿½Jï¿½nï¿½ï¿½ï¿½ï¿½Öï¿½
     void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
 
-    // ƒ{ƒX‚Ì–Ú‚Ì‚İBloom‚ğ‚Â‚¯‚é
+    // ï¿½{ï¿½Xï¿½Ì–Ú‚Ì‚ï¿½Bloomï¿½ï¿½Â‚ï¿½ï¿½ï¿½
 
     void BeginGameBgmFadeOut();
 
-    // ƒJƒƒ‰‚Ìƒ‚[ƒh‚ğ•ÏX‚·‚é
+    // ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½Ìƒï¿½ï¿½[ï¿½hï¿½ï¿½ÏXï¿½ï¿½ï¿½ï¿½
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
 
     // Called when the boss-room door movie begins, before the boss-introduction blend completes.
@@ -116,6 +116,11 @@ public:
 
     // Called when the existing boss-introduction camera blend has completed.
     void StartBossBattle();
+
+    void PrepareTutorialForBossEntry();
+    bool RequestBossEntryFromPause();
+    bool RequestRestartBossBattleFromPause();
+    void RequestReturnToMainRoomStart();
 
     enum class LockOnTargetSelectionResult : uint8_t
     {
@@ -145,6 +150,7 @@ private:
     void CreateLockOnTargetUI();
     void UpdateLockOnTargetUI(float deltaTime);
     void HideLockOnTargetUI();
+    void SpawnTutorialSkeletons();
     void CreateTutorialSkeletonUI();
     void UpdateTutorialSkeletonUI();
     void HideTutorialSkeletonUI();
@@ -364,7 +370,7 @@ private:
     void CreateBattleTimerUI();
     void SetBattleTimerVisible(bool visible);
     void UpdateBattleTimerUI();
-    // €–S‚ÌƒŠƒUƒ‹ƒgUI‚ğì¬‚·‚é
+    // ï¿½ï¿½ï¿½Sï¿½ï¿½ï¿½Ìƒï¿½ï¿½Uï¿½ï¿½ï¿½gUIï¿½ï¿½ì¬ï¿½ï¿½ï¿½ï¿½
     void CreateDeathResultUI();
     void SetDeathResultVisible(bool visible);
     void SelectDeathResult(int index);
@@ -451,7 +457,7 @@ private:
     LockOnTargetUIAnimationPhase lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Hidden;
     float lockOnTargetUIAnimationElapsed = 0.0f;
     float lockOnTargetUIRotationDegree = 0.0f;
-    float lockOnTargetUIStartOffset = 200.0f;   // Å‰‚Ìl‚Â‚ÌUI‚Ì‰ŠúˆÊ’u
+    float lockOnTargetUIStartOffset = 200.0f;   // ï¿½Åï¿½ï¿½Ìlï¿½Â‚ï¿½UIï¿½Ìï¿½ï¿½ï¿½ï¿½Ê’u
     float lockOnTargetUIGatherDuration = 0.3f;
     float lockOnTargetUIHoldDuration = 0.08f;
     float lockOnTargetUIRotationSpeedDegree = 72.0f;
@@ -489,7 +495,7 @@ private:
     unsigned long long finalHitDebugStartMilliseconds = 0;
     double finalHitDebugElapsedSeconds = 0.0;
     bool finalHitPending = false;
-    float finalHitReactionCutTime = 0.365f; // ‚±‚±‚Åfade‚É‘JˆÚ‚·‚éƒ^ƒCƒ~ƒ“ƒO
+    float finalHitReactionCutTime = 0.365f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½fadeï¿½É‘Jï¿½Ú‚ï¿½ï¿½ï¿½^ï¿½Cï¿½~ï¿½ï¿½ï¿½O
     bool phase2FinalHitGateActive = false;
     bool phase2FinalHitReactionComplete = false;
     bool phase2FinalHitAttackWaitRequired = false;
@@ -508,7 +514,7 @@ private:
     int phase1MaxHp = 30;
     int phase2MaxHp = 55;
     float phase2TransitionElapsed = 0.0f;
-    float phase2TransitionWaitDuration = 3.0f;  // phase2‚És‚­transition
+    float phase2TransitionWaitDuration = 3.0f;  // phase2ï¿½Ésï¿½ï¿½transition
     bool phase1BreakPending = false;
     bool phase2TransitionRequested = false;
     bool phase2BossRoarHpBarStarted = false;
@@ -739,7 +745,7 @@ private:
 
     std::unique_ptr<ClothSimulate> clothSimulate;
 
-    // ƒJƒƒ‰
+    // ï¿½Jï¿½ï¿½ï¿½ï¿½
     TPSCameraComponent* mainCameraComponent = nullptr;
     std::shared_ptr<MainCamera> mainCameraActor;
     std::shared_ptr<CinemaCamera> cinemaCameraActor;
@@ -752,6 +758,7 @@ private:
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerSize{ 2.0f, 3.0f, 8.0f };
     bool tutorialCameraProfileTriggerFired = false;
     bool showTutorialCameraProfileTriggerDebug = false;
+    Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
     bool tutorialPassiveSkeletonLockOnCandidate = false;
     int tutorialPassiveSkeletonYHpBaseline = -1;
@@ -763,7 +770,7 @@ private:
     bool tutorialDodgeGuideActivated = false;
     bool tutorialDodgeSkeletonJustDodged = false;
     std::weak_ptr<Enemy> lockOnSelectedEnemy;
-    // ƒ{ƒX‚Ì•”‰®‚Ìƒ‰[ƒv‚Ì‚½‚ß‚Ì•Ï”
+    // ï¿½{ï¿½Xï¿½Ì•ï¿½ï¿½ï¿½ï¿½Ìƒï¿½ï¿½[ï¿½vï¿½Ì‚ï¿½ï¿½ß‚Ì•Ïï¿½
     std::unique_ptr<EasingRunner> bossLerpEasing;
     float bossLerpEasingFactor = 0.0f;
     bool startBossRoomLerp = false;
@@ -771,13 +778,13 @@ private:
     float startBossRoomLerpFactor = 0.0f;
     float endBossRoomLerpFactor = 1.0f;
 
-    // ƒQ[ƒ€BGMƒAƒNƒ^[
+    // ï¿½Qï¿½[ï¿½ï¿½BGMï¿½Aï¿½Nï¿½^ï¿½[
     std::shared_ptr<BgmActor> gameBgmActor;
     float gameBgmFadeDuration = 0.75f;
     float gameBgmFadeStartVolume = 0.0f;
     float gameBgmFadeElapsed = 0.0f;
     bool gameBgmFading = false;
-    // ƒ{ƒXBGMƒAƒNƒ^[
+    // ï¿½{ï¿½XBGMï¿½Aï¿½Nï¿½^ï¿½[
     std::shared_ptr<BgmActor> bossBgmActor;
     std::shared_ptr<BgmActor> phase2BgmActor;
     std::shared_ptr<BgmActor> bossDeathSecondBgmActor;
@@ -791,6 +798,6 @@ private:
     bool bossDeathSecondBgmPlayed = false;
     bool playerDeathBgmPlayed = false;
 
-    // •zƒAƒNƒ^[
+    // ï¿½zï¿½Aï¿½Nï¿½^ï¿½[
     std::shared_ptr<DarkClothActor> darkClothActor;
 };

@@ -67,17 +67,17 @@ public:
 
     XMFLOAT2 GetSize() const { return this->size; }
 
-    // ƒeƒLƒXƒg•`‰æƒRƒ“ƒ|[ƒlƒ“ƒg‚Ég—p‚µ‚Ä‚¢‚é@ƒeƒLƒXƒg‚ªXV‚³‚ê‚½‚ÉŒÄ‚Î‚ê‚é
+    // ï¿½eï¿½Lï¿½Xï¿½gï¿½`ï¿½ï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½Égï¿½pï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½@ï¿½eï¿½Lï¿½Xï¿½gï¿½ï¿½ï¿½Xï¿½Vï¿½ï¿½ï¿½ê‚½ï¿½ï¿½ï¿½ÉŒÄ‚Î‚ï¿½ï¿½
     bool IsDirty() const { return dirty; }
     void ClearDirty() { dirty = false; }
 
 public:
-    int zOrder = 0; // ’l‚ª‘å‚«‚¢‚Ù‚Çè‘O‚É•`‰æ‚³‚ê‚é
+    int zOrder = 0; // ï¿½lï¿½ï¿½ï¿½å‚«ï¿½ï¿½ï¿½Ù‚Çï¿½Oï¿½É•`ï¿½æ‚³ï¿½ï¿½ï¿½
 
-    bool dirty = true;// ƒeƒLƒXƒg•`‰æƒRƒ“ƒ|[ƒlƒ“ƒg‚Ég—p‚µ‚Ä‚¢‚é
+    bool dirty = true;// ï¿½eï¿½Lï¿½Xï¿½gï¿½`ï¿½ï¿½Rï¿½ï¿½ï¿½|ï¿½[ï¿½lï¿½ï¿½ï¿½gï¿½Égï¿½pï¿½ï¿½ï¿½Ä‚ï¿½ï¿½ï¿½
 
 protected:
-    // ƒXƒNƒŠ[ƒ“À•W
+    // ï¿½Xï¿½Nï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½W
     SpriteUV uv{ 0,0,100,100 };
     XMFLOAT2 scale = { 1.0f,1.0f };
     XMFLOAT2 worldPosition = { 0.0f,0.0f };
@@ -87,7 +87,7 @@ protected:
     bool enabled = true;
     float worldAngle = 0.0f;
 
-    // ƒ[ƒJƒ‹ieŠî€j
+    // ï¿½ï¿½ï¿½[ï¿½Jï¿½ï¿½ï¿½iï¿½eï¿½î€ï¿½j
     XMFLOAT2 localPosition = { 0.0f,0.0f };
     float localAngle = 0.0f;
 
@@ -97,7 +97,7 @@ protected:
     UICoreComponent* parent = nullptr;
     std::vector<UICoreComponent*> children;
 
-    // ƒAƒNƒ^[‚Ìíœ—\–ñ
+    // ï¿½Aï¿½Nï¿½^ï¿½[ï¿½Ìíœï¿½\ï¿½ï¿½
     bool isPendingKill = false;
 
 };
@@ -115,7 +115,7 @@ public:
 
     UIImageComponent(const std::string& name) :UICoreComponent(name)
     {
-        // ƒ_ƒ~[ƒeƒNƒXƒ`ƒƒ‚ğİ’è
+        // ï¿½_ï¿½~ï¿½[ï¿½eï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½ï¿½İ’ï¿½
         texture = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/square.png");
         uv.w = texture->GetTextureSize().x;
         uv.h = texture->GetTextureSize().y;
@@ -157,7 +157,7 @@ public:
         );
     }
 
-    // UVİ’è
+    // UVï¿½İ’ï¿½
     void SetUV(const SpriteUV& inUV) { uv = inUV; }
 
 protected:
@@ -204,7 +204,7 @@ public:
         //endSize = { 300.0f, 300.0f };
 
         SetSize(startSize);
-        SetPivot({ 0.5f, 0.5f }); // ’†SŠî€
+        SetPivot({ 0.5f, 0.5f }); // ï¿½ï¿½ï¿½Sï¿½î€
 
         this->endColor = endColor;
 
@@ -223,14 +223,14 @@ public:
             return;
         }
 
-        // ƒTƒCƒY•âŠÔ
+        // ï¿½Tï¿½Cï¿½Yï¿½ï¿½ï¿½
         XMFLOAT2 newSize;
         newSize.x = startSize.x + (endSize.x - startSize.x) * t;
         newSize.y = startSize.y + (endSize.y - startSize.y) * t;
         SetSize(newSize);
 
-        // “§–¾“x
-         // F•âŠÔi”’ ¨ ‰©Fj
+        // ï¿½ï¿½ï¿½ï¿½ï¿½x
+         // ï¿½Fï¿½ï¿½Ôiï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½Fï¿½j
         XMFLOAT4 startColor = { 1,1,1,1 };
 
 
@@ -280,13 +280,13 @@ public:
             return;
         }
 
-        // ƒTƒCƒYŠg‘å
+        // ï¿½Tï¿½Cï¿½Yï¿½gï¿½ï¿½
         XMFLOAT2 size;
         size.x = startSize.x + (endSize.x - startSize.x) * t;
         size.y = startSize.y + (endSize.y - startSize.y) * t;
         SetSize(size);
 
-        // –¾‚é‚³ ¨ Á‚¦‚é
+        // ï¿½ï¿½ï¿½é‚³ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         float alpha = 1.0f - t;
         SetColor(DirectX::XMFLOAT4{ 1.0f, 0.8f, 0.2f, alpha });
     }
@@ -311,22 +311,22 @@ public:
 
         pos = center;
 
-        // ƒ‰ƒ“ƒ_ƒ€•ûŒü
+        // ï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         float angle = MathHelper::RandomRange(0.0f, 360.0f);
         angle = DirectX::XMConvertToRadians(angle);
 
         float speed = MathHelper::RandomRange(200.0f, 500.0f);
         velocity = { cosf(angle) * speed, sinf(angle) * speed };
 
-        // ‰ŠúƒTƒCƒYƒ‰ƒ“ƒ_ƒ€
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Tï¿½Cï¿½Yï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½ï¿½
         float s = MathHelper::RandomRange(30.0f, 80.0f);
         startSize = { s, s };
-        endSize = { s * 0.2f, s * 0.2f }; // ¬‚³‚­‚È‚é
+        endSize = { s * 0.2f, s * 0.2f }; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½
 
         SetSize(startSize);
         SetPivot({ 0.5f, 0.5f });
 
-        // Fƒ‰ƒ“ƒ_ƒ€
+        // ï¿½Fï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½ï¿½
         baseColor = RandomStarColor();
         SetColor(baseColor);
     }
@@ -344,18 +344,18 @@ public:
 
 
         SetWorldAngleDegree(this->worldAngle + dt * 180.0f);
-        // ˆÚ“®
+        // ï¿½Ú“ï¿½
         pos.x += velocity.x * dt;
         pos.y += velocity.y * dt;
         SetWorldPosition(pos);
 
-        //  ƒTƒCƒYk¬
+        //  ï¿½Tï¿½Cï¿½Yï¿½kï¿½ï¿½
         XMFLOAT2 size;
         size.x = startSize.x + (endSize.x - startSize.x) * t;
         size.y = startSize.y + (endSize.y - startSize.y) * t;
         SetSize(size);
 
-        //  ƒtƒF[ƒh
+        //  ï¿½tï¿½Fï¿½[ï¿½h
         float alpha = 1.0f - t;
         SetColor(DirectX::XMFLOAT4{ baseColor.x, baseColor.y, baseColor.z, alpha });
     }
@@ -367,10 +367,10 @@ public:
 
         switch (r)
         {
-        case 0: return { 1.0f, 0.6f, 0.8f, 1.0f }; // ƒsƒ“ƒN
-        case 1: return { 1.0f, 1.0f, 0.3f, 1.0f }; // ‰©F
-        case 2: return { 0.7f, 0.5f, 1.0f, 1.0f }; // ‡
-        default:return { 0.5f, 1.0f, 1.0f, 1.0f }; // …F
+        case 0: return { 1.0f, 0.6f, 0.8f, 1.0f }; // ï¿½sï¿½ï¿½ï¿½N
+        case 1: return { 1.0f, 1.0f, 0.3f, 1.0f }; // ï¿½ï¿½ï¿½F
+        case 2: return { 0.7f, 0.5f, 1.0f, 1.0f }; // ï¿½ï¿½
+        default:return { 0.5f, 1.0f, 1.0f, 1.0f }; // ï¿½ï¿½ï¿½F
         }
     }
 private:
@@ -401,29 +401,29 @@ public:
 
         float t = elapsedTime / lifeTime;
 
-        // ===== ƒTƒCƒY•Ï‰» =====
+        // ===== ï¿½Tï¿½Cï¿½Yï¿½Ï‰ï¿½ =====
         float scaleValue = 1.0f;
 
         if (t < 0.4f)
         {
-            // ƒ|ƒ“ƒ|ƒ“‚·‚é
-            float pulse = sinf(t * 20.0f) * 0.2f; // ©‚±‚±’²®
+            // ï¿½|ï¿½ï¿½ï¿½|ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            float pulse = sinf(t * 20.0f) * 0.2f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
             scaleValue = 1.0f + pulse;
         }
         else
         {
-            // ÅŒã‚Ík¬
+            // ï¿½ÅŒï¿½Íkï¿½ï¿½
             float shrinkT = (t - 0.4f) / 0.6f;
             scaleValue = 1.0f - shrinkT;
         }
 
         scale = { scaleValue, scaleValue };
 
-        // ===== ”­Œõ‚Á‚Û‚¢ƒJƒ‰[ =====
-        float glow = 1.0f + (1.0f - t); // 2 ¨ 1 ‚É—‚¿‚é
+        // ===== ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Û‚ï¿½ï¿½Jï¿½ï¿½ï¿½[ =====
+        float glow = 1.0f + (1.0f - t); // 2 ï¿½ï¿½ 1 ï¿½É—ï¿½ï¿½ï¿½ï¿½ï¿½
         SetColor(XMFLOAT4{ glow, glow, glow, 1.0f });
 
-        // ===== Á–Å =====
+        // ===== ï¿½ï¿½ï¿½ï¿½ =====
         if (t >= 1.0f)
         {
             MarkPendingKill();
@@ -452,18 +452,18 @@ public:
         elapsedTime += dt;
         float t = elapsedTime / lifeTime;
 
-        // •úËˆÚ“®
+        // ï¿½ï¿½ï¿½ËˆÚ“ï¿½
         pos.x += velocity.x * dt;
         pos.y += velocity.y * dt;
         velocity.x *= 0.97f;
         velocity.y *= 0.97f;
         SetWorldPosition(pos);
 
-        // ƒTƒCƒYk¬
+        // ï¿½Tï¿½Cï¿½Yï¿½kï¿½ï¿½
         float scaleValue = 1.0f - (t * t);
         scale = { scaleValue, scaleValue };
 
-        // ƒtƒF[ƒh
+        // ï¿½tï¿½Fï¿½[ï¿½h
         SetColor(DirectX::XMFLOAT4{ 2.0f, 2.0f, 2.0f, 1.0f - t });
 
         if (t >= 1.0f)
@@ -494,15 +494,15 @@ public:
 
         pos = center;
 
-        // ‰ŠúƒTƒCƒYƒ‰ƒ“ƒ_ƒ€
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Tï¿½Cï¿½Yï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½ï¿½
         float s = MathHelper::RandomRange(80.0f, 80.0f);
         startSize = { s, s };
-        endSize = { s * 0.2f, s * 0.2f }; // ¬‚³‚­‚È‚é
+        endSize = { s * 0.2f, s * 0.2f }; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È‚ï¿½
 
         SetSize(startSize);
         SetPivot({ 0.5f, 0.5f });
 
-        baseColor = { 1.0f, 1.0f, 0.3f, 1.0f }; // ‰©F
+        baseColor = { 1.0f, 1.0f, 0.3f, 1.0f }; // ï¿½ï¿½ï¿½F
         SetColor(baseColor);
     }
 
@@ -519,18 +519,18 @@ public:
 
 
         SetWorldAngleDegree(this->worldAngle + dt * 180.0f);
-        // ˆÚ“®
+        // ï¿½Ú“ï¿½
         pos.x += velocity.x * dt;
         pos.y = followPos.y + velocity.y * dt * 0.2f;
         SetWorldPosition(pos);
 
-        //  ƒTƒCƒYk¬
+        //  ï¿½Tï¿½Cï¿½Yï¿½kï¿½ï¿½
         XMFLOAT2 size;
         size.x = startSize.x + (endSize.x - startSize.x) * t;
         size.y = startSize.y + (endSize.y - startSize.y) * t;
         SetSize(size);
 
-        //  ƒtƒF[ƒh
+        //  ï¿½tï¿½Fï¿½[ï¿½h
         float alpha = 1.0f - t;
         SetColor(DirectX::XMFLOAT4{ baseColor.x, baseColor.y, baseColor.z, alpha });
     }
@@ -551,10 +551,10 @@ public:
 
         switch (r)
         {
-        case 0: return { 1.0f, 0.6f, 0.8f, 1.0f }; // ƒsƒ“ƒN
-        case 1: return { 1.0f, 1.0f, 0.3f, 1.0f }; // ‰©F
-        case 2: return { 0.7f, 0.5f, 1.0f, 1.0f }; // ‡
-        default:return { 0.5f, 1.0f, 1.0f, 1.0f }; // …F
+        case 0: return { 1.0f, 0.6f, 0.8f, 1.0f }; // ï¿½sï¿½ï¿½ï¿½N
+        case 1: return { 1.0f, 1.0f, 0.3f, 1.0f }; // ï¿½ï¿½ï¿½F
+        case 2: return { 0.7f, 0.5f, 1.0f, 1.0f }; // ï¿½ï¿½
+        default:return { 0.5f, 1.0f, 1.0f, 1.0f }; // ï¿½ï¿½ï¿½F
         }
     }
 private:
@@ -588,14 +588,14 @@ public:
 
         float spread = MathHelper::RandomRange(-0.3f, 0.3f);
 
-        XMFLOAT2 side = { dir.y, dir.x }; // ‰¡•ûŒü
+        XMFLOAT2 side = { dir.y, dir.x }; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
         velocity = {
             dir.x * 300.0f + side.x * spread * 100.0f,
             dir.y * 300.0f + side.y * spread * 100.0f
         };
 
-        // ‰ŠúƒTƒCƒYƒ‰ƒ“ƒ_ƒ€
+        // ï¿½ï¿½ï¿½ï¿½ï¿½Tï¿½Cï¿½Yï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½ï¿½
         float s = MathHelper::RandomRange(30.0f, 80.0f);
         startSize = { s, s };
         endSize = { s * 0.7f, s * 0.7f };
@@ -603,7 +603,7 @@ public:
         SetSize(startSize);
         SetPivot({ 0.5f, 0.5f });
 
-        // Fƒ‰ƒ“ƒ_ƒ€
+        // ï¿½Fï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½ï¿½
         baseColor = { 0.6f, 0.9f, 1.0f, 1.0f };
         SetColor(baseColor);
     }
@@ -621,18 +621,18 @@ public:
 
 
         SetWorldAngleDegree(this->worldAngle + dt * 30.0f);
-        // ˆÚ“®
+        // ï¿½Ú“ï¿½
         pos.x += velocity.x * dt;
         pos.y += velocity.y * dt;
         SetWorldPosition(pos);
 
-        //  ƒTƒCƒYk¬
+        //  ï¿½Tï¿½Cï¿½Yï¿½kï¿½ï¿½
         XMFLOAT2 size;
         size.x = startSize.x + (endSize.x - startSize.x) * t;
         size.y = startSize.y + (endSize.y - startSize.y) * t;
         SetSize(size);
 
-        //  ƒtƒF[ƒh
+        //  ï¿½tï¿½Fï¿½[ï¿½h
         float alpha = powf(1.0f - t, 2.0f);
         SetColor(DirectX::XMFLOAT4{ baseColor.x, baseColor.y, baseColor.z, alpha });
     }
@@ -644,10 +644,10 @@ public:
 
         switch (r)
         {
-        case 0: return { 1.0f, 0.6f, 0.8f, 1.0f }; // ƒsƒ“ƒN
-        case 1: return { 1.0f, 1.0f, 0.3f, 1.0f }; // ‰©F
-        case 2: return { 0.7f, 0.5f, 1.0f, 1.0f }; // ‡
-        default:return { 0.5f, 1.0f, 1.0f, 1.0f }; // …F
+        case 0: return { 1.0f, 0.6f, 0.8f, 1.0f }; // ï¿½sï¿½ï¿½ï¿½N
+        case 1: return { 1.0f, 1.0f, 0.3f, 1.0f }; // ï¿½ï¿½ï¿½F
+        case 2: return { 0.7f, 0.5f, 1.0f, 1.0f }; // ï¿½ï¿½
+        default:return { 0.5f, 1.0f, 1.0f, 1.0f }; // ï¿½ï¿½ï¿½F
         }
     }
 private:
@@ -676,7 +676,7 @@ public:
         SetSize({ 250.0f, 250.0f });
         SetPivot({ 0.5f, 0.5f });
 
-        // ƒ‰ƒ“ƒ_ƒ€‰ñ“]
+        // ï¿½ï¿½ï¿½ï¿½ï¿½_ï¿½ï¿½ï¿½ï¿½]
         float angle = MathHelper::RandomRange(0.0f, 360.0f);
         SetWorldAngleDegree(angle);
     }
@@ -692,11 +692,11 @@ public:
             return;
         }
 
-        // ­‚µ‚¾‚¯Šg‘å
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½gï¿½ï¿½
         float scale = 1.0f + t * 0.5f;
         SetScale({ scale, scale });
 
-        // ‚·‚®Á‚¦‚é
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
         float alpha = 1.0f - t;
         SetColor(DirectX::XMFLOAT4{ 1.0f, 0.3f, 0.1f, alpha });
     }
@@ -735,13 +735,15 @@ public:
         if (onClick) onClick();
     }
 
-    // ‚©‚´‚µ‚½‚Æ‚«‚ÉƒXƒP[ƒ‹‚Å‘å‚«‚­‚·‚é‚©‚Ç‚¤‚©
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½ÉƒXï¿½Pï¿½[ï¿½ï¿½ï¿½Å‘å‚«ï¿½ï¿½ï¿½ï¿½ï¿½é‚©ï¿½Ç‚ï¿½ï¿½ï¿½
     void SetUseHoverScale(bool useHoverScale) { this->useHoverScale = useHoverScale; }
+
+    void SetVisualColors(const CoreColor& normal, const CoreColor& hovered, const CoreColor& pressed, const CoreColor& selected) { normalColor = normal; hoveredColor = hovered; pressedColor = pressed; selectedColor = selected; }
 
 private:
     bool IsInside(const DirectX::XMFLOAT2& p) const
     {
-        // pivot ‚ğl—¶‚µ‚½¶ãÀ•W
+        // pivot ï¿½ï¿½lï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½W
         float left = worldPosition.x - size.x * pivot.x;
         float top = worldPosition.y - size.y * pivot.y;
 
@@ -757,11 +759,11 @@ private:
         switch (state)
         {
         case UIButtonState::Normal:
-            color = CoreColor::White;
+            color = normalColor;
             targetScale = normalScale;
             break;
         case UIButtonState::Hovered:
-            color = CoreColor(0.8f, 0.8f, 0.8f, 1);
+            color = hoveredColor;
             targetScale = hoverScale;
             break;
         case UIButtonState::Pressed:
@@ -769,7 +771,7 @@ private:
             color = CoreColor(0.8f, 0.8f, 0.8f, 1);
             break;
         case UIButtonState::Selected:
-            color = CoreColor(0.8f, 0.8f, 0.8f, 1);
+            color = hoveredColor;
             targetScale = hoverScale;
             break;
         }
@@ -780,14 +782,18 @@ public:
     float normalScale = 1.0f;
     float hoverScale = 1.1f;
     float pressScale = 1.05f;
-    float scaleSpeed = 10.0f; // •âŠÔ‘¬“x
+    float scaleSpeed = 10.0f; // ï¿½ï¿½Ô‘ï¿½ï¿½x
 
 private:
     float currentScale = 1.0f;
     float targetScale = 1.0f;
-    bool useHoverScale = false; // ‚©‚´‚µ‚½‚Æ‚«‚ÉƒXƒP[ƒ‹‚Å‘å‚«‚­‚·‚é‚©‚Ç‚¤‚©
+    bool useHoverScale = false; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½ÉƒXï¿½Pï¿½[ï¿½ï¿½ï¿½Å‘å‚«ï¿½ï¿½ï¿½ï¿½ï¿½é‚©ï¿½Ç‚ï¿½ï¿½ï¿½
 
     bool isSelected = false;
+    CoreColor normalColor = CoreColor::White;
+    CoreColor hoveredColor = CoreColor(0.8f, 0.8f, 0.8f, 1);
+    CoreColor pressedColor = CoreColor(0.8f, 0.8f, 0.8f, 1);
+    CoreColor selectedColor = CoreColor(0.8f, 0.8f, 0.8f, 1);
 };
 
 
@@ -869,7 +875,7 @@ public:
         frameTexture = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/square.png");
     }
 
-    // ƒQ[ƒW‚Ì’†g‚ÌF‚ğİ’è‚·‚é
+    // ï¿½Qï¿½[ï¿½Wï¿½Ì’ï¿½ï¿½gï¿½ÌFï¿½ï¿½İ’è‚·ï¿½ï¿½
     void SetGaugeFillColor(const CoreColor color)
     {
         gaugeFillColor = color;
@@ -884,7 +890,7 @@ public:
         else
             drawSize.y *= value;
 
-        // ƒQ[ƒW‚Ì’†g
+        // ï¿½Qï¿½[ï¿½Wï¿½Ì’ï¿½ï¿½g
         SpriteRenderer::Draw(
             texture.get(),
             { worldPosition.x + gaugeOffset.x,worldPosition.y + gaugeOffset.y },
@@ -897,7 +903,7 @@ public:
         );
 
 
-        // ˜g‚Ì•`‰æ
+        // ï¿½gï¿½Ì•`ï¿½ï¿½
         SpriteRenderer::Draw(
             frameTexture.get(),
             worldPosition,
@@ -934,11 +940,11 @@ public:
 
 private:
     float value = 1.0f;  // 0.0f ~ 1.0f
-    std::shared_ptr<Sprite>  frameTexture;  //@˜g‚ÌƒeƒNƒXƒ`ƒƒ
-    XMFLOAT2 gaugeOffset = { 0.0f,0.0f }; // ƒQ[ƒW‚Ì’†g‚ÌƒIƒtƒZƒbƒg
-    CoreColor gaugeFrameColor = CoreColor::White; // ƒQ[ƒW‚ÌƒtƒŒ[ƒ€‚ÌF
+    std::shared_ptr<Sprite>  frameTexture;  //ï¿½@ï¿½gï¿½Ìƒeï¿½Nï¿½Xï¿½`ï¿½ï¿½
+    XMFLOAT2 gaugeOffset = { 0.0f,0.0f }; // ï¿½Qï¿½[ï¿½Wï¿½Ì’ï¿½ï¿½gï¿½ÌƒIï¿½tï¿½Zï¿½bï¿½g
+    CoreColor gaugeFrameColor = CoreColor::White; // ï¿½Qï¿½[ï¿½Wï¿½Ìƒtï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ÌF
     CoreColor gaugeFillColor = CoreColor::White;
-    XMFLOAT2 gaugeFillSize ={0.0f,0.0f};    // ƒQ[ƒW‚Ì’†g‚ÌƒTƒCƒY
+    XMFLOAT2 gaugeFillSize ={0.0f,0.0f};    // ï¿½Qï¿½[ï¿½Wï¿½Ì’ï¿½ï¿½gï¿½ÌƒTï¿½Cï¿½Y
 };
 
 class UISceneChangeComponent : public UICoreComponent
@@ -953,7 +959,7 @@ public:
 
     UISceneChangeComponent(const std::string& name) :UICoreComponent(name)
     {
-        // ƒ_ƒ~[ƒeƒNƒXƒ`ƒƒ‚ğİ’è
+        // ï¿½_ï¿½~ï¿½[ï¿½eï¿½Nï¿½Xï¿½`ï¿½ï¿½ï¿½ï¿½İ’ï¿½
         texture = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/square.png");
         uv.w = texture->GetTextureSize().x;
         uv.h = texture->GetTextureSize().y;
@@ -1053,14 +1059,14 @@ public:
         accessor.setter = [this](float v)
             {
                 float startPos = worldPosition.y;
-                // ˆÊ’u‚ğ“®‚©‚·
+                // ï¿½Ê’uï¿½ğ“®‚ï¿½ï¿½ï¿½
                 float endPos = worldPosition.y + 10.0f;
                 worldPosition.y = std::lerp(startPos, endPos, v);
 
-                // ƒtƒF[ƒhƒAƒEƒg
+                // ï¿½tï¿½Fï¿½[ï¿½hï¿½Aï¿½Eï¿½g
                 color.a = 1.0f - v;
 
-                // ƒXƒP[ƒ‹
+                // ï¿½Xï¿½Pï¿½[ï¿½ï¿½
                 scale.x = std::lerp(0.8f, 1.2f, v);
             };
 

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "GameScene.h"
+#include "UI/Game/SceneTransitionManager.h"
 #include <json.hpp>
 #include <fstream>
 #include <filesystem>
@@ -2263,6 +2264,56 @@ void GameScene::EnterBossRoomLockOnScope(const bool fromTutorialDoorMovie)
     }
 }
 
+void GameScene::SpawnTutorialSkeletons()
+{
+    Transform passiveTransform(DirectX::XMFLOAT3{ -39.42f,-0.08f,11.808f }, DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
+    tutorialPassiveSkeletonActor = GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("TutorialPassiveSkeleton", passiveTransform);
+    tutorialPassiveSkeletonActor->SetMaxHp(2);
+    tutorialPassiveSkeletonActor->SetTutorialPassive(true);
+    tutorialPassiveSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Compact);
+
+    Transform dodgeTransform(DirectX::XMFLOAT3{ -10.0f,-0.3f,10.75f }, DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
+    tutorialDodgeSkeletonActor = GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("TutorialDodgeSkeleton", dodgeTransform);
+    tutorialDodgeSkeletonActor->SetMaxHp(17);
+    tutorialDodgeSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Standard);
+}
+
+void GameScene::RequestReturnToMainRoomStart()
+{
+    SceneTransitionManager::Instance().RequestTransition(
+        "LoadingScene",
+        { std::make_pair("preload", "GameScene") },
+        TransitionStyle::Fade);
+}
+
+void GameScene::PrepareTutorialForBossEntry()
+{
+    if (player)
+        player->CancelGameplayActionsForCinematic();
+    if (tutorialPassiveSkeletonActor)
+        tutorialPassiveSkeletonActor->SetTutorialPassive(true);
+    if (tutorialDodgeSkeletonActor)
+        tutorialDodgeSkeletonActor->SetTutorialPassive(true);
+    HideTutorialSkeletonUI();
+    if (const auto doorActor = GetActorManager()->GetActorOfType<DoorLargeActor>())
+        doorActor->CompleteInteraction();
+}
+
+bool GameScene::RequestBossEntryFromPause()
+{
+    if (!player || player->IsBossBattle() || bossRoomLockOnScopeActive || !cameraManager || cameraManager->IsUseMovie() || cameraManager->IsUseCinematic()) return false;
+    const auto movieManager = GetActorManager()->GetActorOfType<MovieCameraManagerActor>();
+    if (!movieManager) return false;
+    movieManager->PlayDoorMovie();
+    return true;
+}
+
+bool GameScene::RequestRestartBossBattleFromPause()
+{
+    if (!player || !player->IsBossBattle() || !gruxEnemyActor || !battleStartTransformsSaved) return false;
+    RestartBossBattle();
+    return true;
+}
 void GameScene::StartBossBattle()
 {
     EnterBossRoomLockOnScope(false);
@@ -2286,7 +2337,7 @@ void GameScene::StartBossBattle()
     ApplyBossPhaseHp(BossPhase::Phase1);
     CaptureContinueBossCheckpoint();
     player->EndEvent();
-    player->ClearMinimumHp();
+    player->SetMinimumHp(5);
     if (isInitialTutorialBossEntry)
     {
         const auto completeOperationGuide = [this](const Player::OperationGuideItem item)
@@ -4913,7 +4964,7 @@ void GameScene::SetUpActors()
 {
     {
         PROFILE_SCOPE("Create Player");
-        Transform playerTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
+        Transform playerTr = mainRoomStartPlayerTransform;
         player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("Player", playerTr);
     }
 
@@ -4956,21 +5007,7 @@ void GameScene::SetUpActors()
         { OnPlayerFinalHit(boss, source); });
 
     // メインの部屋にチュートリアル用の骸骨を追加。
-    Transform tutorialPassiveSkeletonTr(DirectX::XMFLOAT3{ -39.42f,-0.08f,11.808f },
-        DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
-    tutorialPassiveSkeletonActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
-        "TutorialPassiveSkeleton", tutorialPassiveSkeletonTr);
-    tutorialPassiveSkeletonActor->SetMaxHp(2);
-    tutorialPassiveSkeletonActor->SetTutorialPassive(true);
-    tutorialPassiveSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Compact);
-
-    // Stage 2 deliberately uses the same class with its default, normal AI.
-    Transform tutorialDodgeSkeletonTr(DirectX::XMFLOAT3{ -10.0f,-0.3f,10.75f },
-        DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
-    tutorialDodgeSkeletonActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>(
-        "TutorialDodgeSkeleton", tutorialDodgeSkeletonTr);
-    tutorialDodgeSkeletonActor->SetMaxHp(17);
-    tutorialDodgeSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Standard);
+    SpawnTutorialSkeletons();
 
     Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     darkCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkCameraActor>("darkCameraActor", darkCameraTr);

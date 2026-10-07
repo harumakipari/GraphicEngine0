@@ -2926,7 +2926,7 @@ void Player::ClearBattleVisualsForPhaseTransition()
     // ghosts, motion warps, weapon visuals, hit boxes, and player-owned targets.
     // Stop only the ParticleComponent owned by this Player; movie effects stay intact.
 }
-void Player::NeutralizeForPhase2Cinematic()
+void Player::CancelGameplayActionsForCinematic()
 {
     ClearBattleVisualsForPhaseTransition();
     if (inputComponent)
@@ -2954,6 +2954,11 @@ void Player::NeutralizeForPhase2Cinematic()
         controller->PlayAnimationImmediate("Idle", true, true);
     }
 }
+void Player::NeutralizeForPhase2Cinematic()
+{
+    CancelGameplayActionsForCinematic();
+}
+
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 {
     finalHitWaiting = false;
