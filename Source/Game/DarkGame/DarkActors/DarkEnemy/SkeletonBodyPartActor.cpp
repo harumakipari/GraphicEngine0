@@ -36,6 +36,11 @@ void SkeletonBodyPartActor::Initialize(const Transform& transform)
     meshComponent->SetRelativeScaleDirect(spawnParams.transformCorrection.scale);
 
     InitializeCollision();
+
+    // Pooled resources remain inert until this Skeleton dies.
+    meshComponent->SetIsVisible(false);
+    collisionComponent->SetKinematic(true);
+    collisionComponent->DisableCollision();
 }
 
 void SkeletonBodyPartActor::InitializeCollision()
@@ -63,7 +68,7 @@ void SkeletonBodyPartActor::InitializeCollision()
     }
 
     collisionComponent->SetMass(1.0f);
-    collisionComponent->SetKinematic(false);
+    collisionComponent->SetKinematic(true);
     collisionComponent->SetGravity(true);
     collisionComponent->SetLayer(CollisionLayer::BodyPart);
     collisionComponent->SetResponseToLayer(
@@ -75,13 +80,6 @@ void SkeletonBodyPartActor::InitializeCollision()
         collisionComponent->SetCollisionOffsetX(-size.x * 0.5f);
     collisionComponent->Initialize();
     SetPhysicsDamping(spawnParams.linearDamping, spawnParams.angularDamping, spawnParams.sleepThreshold);
-    collisionComponent->SetIntialVelocity(spawnParams.initialVelocity);
-
-    constexpr float degreesToRadians = DirectX::XM_PI / 180.0f;
-    collisionComponent->SetInitialAngularVelocity({
-        spawnParams.angularVelocity.x * degreesToRadians,
-        spawnParams.angularVelocity.y * degreesToRadians,
-        spawnParams.angularVelocity.z * degreesToRadians });
 }
 
 void SkeletonBodyPartActor::SetPhysicsDamping(float linearDamping, float angularDamping, float sleepThreshold)
@@ -93,9 +91,33 @@ void SkeletonBodyPartActor::SetPhysicsDamping(float linearDamping, float angular
     collisionComponent->SetAngularDamping(angularDamping);
     collisionComponent->SetSleepThreshold(sleepThreshold);
 }
+void SkeletonBodyPartActor::ActivateFromDeathPose(const Transform& transform,
+    const DirectX::XMFLOAT3& initialVelocity, const DirectX::XMFLOAT3& angularVelocityDegrees)
+{
+    if (!meshComponent || !collisionComponent || isActiveDebris)
+        return;
+
+    // Transform -> PhysX pose -> visible -> collision -> dynamic -> velocities.
+    SetPosition(transform.GetLocation());
+    SetQuaternionRotation(transform.GetRotation());
+    SetScale(transform.GetScale());
+    UpdateAllComponentTransforms();
+    collisionComponent->SetPhysicsWorldTransform(collisionComponent->GetComponentWorldTransform());
+    meshComponent->SetIsVisible(true);
+    collisionComponent->EnableCollision();
+    collisionComponent->SetKinematic(false);
+    collisionComponent->SetIntialVelocity(initialVelocity);
+    constexpr float degreesToRadians = DirectX::XM_PI / 180.0f;
+    collisionComponent->SetInitialAngularVelocity({
+        angularVelocityDegrees.x * degreesToRadians,
+        angularVelocityDegrees.y * degreesToRadians,
+        angularVelocityDegrees.z * degreesToRadians });
+    isActiveDebris = true;
+}
+
 void SkeletonBodyPartActor::Update(float deltaTime)
 {
-    if (remainingLifetime > 0.0f)
+    if (isActiveDebris && remainingLifetime > 0.0f)
     {
         remainingLifetime -= deltaTime;
         if (remainingLifetime <= 0.0f)

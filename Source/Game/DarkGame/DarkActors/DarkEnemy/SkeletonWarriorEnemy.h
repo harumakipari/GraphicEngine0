@@ -3,6 +3,7 @@
 #include "Core/Actor.h"
 #include "Animation/DangerArea.h"
 #include "Game/Actors/Enemy/Enemy.h"
+#include "Engine/Audio/Audio.h"
 
 class ParticleComponent;
 class SkeletonBodyPartActor;
@@ -50,7 +51,8 @@ private:
     void DrawWeaponHitDebug() const;
     void ResetWeaponSweep();
     void ApplyRimLight();
-    bool SpawnDeathBodyParts();
+    bool PrecreateDeathBodyParts();
+    bool ActivateDeathBodyParts();
     void DrawBodyPartBoneDebug() const;
     void SyncSpawnedBodyPartPhysicsSettings();
     void ResetAnimationEditorPreviewWeaponSweep();
@@ -70,6 +72,8 @@ private:
     float bodyPartsAngularDamping = 3.0f;
     float bodyPartsSleepThreshold = 0.005f;
     std::vector<std::weak_ptr<SkeletonBodyPartActor>> spawnedBodyParts;
+    // Keeps the CoreAudio weak-cache entry alive through the death frame.
+    std::shared_ptr<CoreAudio::CoreAudioBuffer> deathSeAudioBuffer;
     bool hasDeathBodyPartBonePositions = false;
     DirectX::XMFLOAT3 deathHeadBonePosition{};
     DirectX::XMFLOAT3 deathSpineHighBonePosition{};

@@ -46,6 +46,9 @@ public:
     void Initialize(const Transform& transform) override;
     void Update(float deltaTime) override;
     void SetPhysicsDamping(float linearDamping, float angularDamping, float sleepThreshold);
+    void ActivateFromDeathPose(const Transform& transform,
+        const DirectX::XMFLOAT3& initialVelocity,
+        const DirectX::XMFLOAT3& angularVelocityDegrees);
 
 private:
     const char* GetModelPath() const;
@@ -55,4 +58,5 @@ private:
     std::shared_ptr<SkeletalMeshComponent> meshComponent;
     std::shared_ptr<ShapeComponent> collisionComponent;
     float remainingLifetime = 0.0f;
+    bool isActiveDebris = false;
 };

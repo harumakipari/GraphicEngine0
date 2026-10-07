@@ -8,6 +8,7 @@
 #include "Game/Actors/Player/Player.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonBodyPartActor.h"
 #include "Physics/CollisionFunction.h"
+#include <tracy/Tracy.hpp>
 
 void SkeletonWarriorActor::Initialize(const Transform& transform)
 {
@@ -104,6 +105,10 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f, 1.15f, 0.0f });
     hp = maxHp;
 
+    deathSeAudioBuffer = CoreAudio::CoreAudioBuffer::GetResource(
+        L"./Data/Sound/SE/skeleton_death.wav");
+    PrecreateDeathBodyParts();
+
 #if 1
     // ポイントライトコンポーネントを追加
     auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
@@ -122,103 +127,92 @@ void SkeletonWarriorActor::ApplyRimLight()
     }
 }
 
-bool SkeletonWarriorActor::SpawnDeathBodyParts()
+bool SkeletonWarriorActor::PrecreateDeathBodyParts()
 {
+    ZoneScopedN("Skeleton BodyParts Precreate");
     if (!skeletalMeshComponent || !skeletalMeshComponent->model)
         return false;
-
     auto* actorManager = GetOwnerScene()->GetActorManager();
     if (!actorManager)
         return false;
 
-    // modelNodes is the current animation pose. GetJointMatrix combines that
-    // pose with the mesh component world transform, preserving bone rotation.
-    const DirectX::XMFLOAT4X4 meshWorld =
-        skeletalMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+    const DirectX::XMFLOAT4X4 meshWorld = skeletalMeshComponent->GetComponentWorldTransform().ToWorldTransform();
     const auto getBoneTransform = [this, &meshWorld](const char* boneName)
         {
             const DirectX::XMFLOAT4X4 matrix = skeletalMeshComponent->model->GetJointMatrix(
                 boneName, skeletalMeshComponent->GetNodes(), meshWorld);
             return Transform(DirectX::XMLoadFloat4x4(&matrix));
         };
-
-    const Transform headTransform = getBoneTransform("Head");
-    const Transform spineHighTransform = getBoneTransform("SpineHigh");
-    const Transform rootTransform = getBoneTransform("Root");
-    const Transform shoulderLeftTransform = getBoneTransform("Shoulder_l");
-    const Transform shoulderRightTransform = getBoneTransform("Shoulder_r");
-    const Transform thighLeftTransform = getBoneTransform("Thigh_l");
-    const Transform thighRightTransform = getBoneTransform("Thigh_r");
-
-    deathHeadBonePosition = headTransform.GetLocation();
-    deathSpineHighBonePosition = spineHighTransform.GetLocation();
-    deathThighLeftBonePosition = thighLeftTransform.GetLocation();
-    hasDeathBodyPartBonePositions = true;
-
-    DirectX::XMFLOAT3 awayFromPlayer = GetForward();
-    if (const auto player = actorManager->GetActorOfType<Player>())
+    const Transform transforms[] = {
+        getBoneTransform("Head"), getBoneTransform("SpineHigh"), getBoneTransform("Root"),
+        getBoneTransform("Shoulder_l"), getBoneTransform("Shoulder_r"),
+        getBoneTransform("Thigh_l"), getBoneTransform("Thigh_r") };
+    const SkeletonBodyPartActor::PartType types[] = {
+        SkeletonBodyPartActor::PartType::Skull, SkeletonBodyPartActor::PartType::Ribs,
+        SkeletonBodyPartActor::PartType::Spine, SkeletonBodyPartActor::PartType::Arm,
+        SkeletonBodyPartActor::PartType::Arm, SkeletonBodyPartActor::PartType::Leg,
+        SkeletonBodyPartActor::PartType::Leg };
+    for (size_t i = 0; i < 7; ++i)
     {
-        awayFromPlayer = MathHelper::Subtract(GetPosition(), player->GetPosition());
-        awayFromPlayer.y = 0.0f;
-        if (MathHelper::Length(awayFromPlayer) > 0.0001f)
-            awayFromPlayer = MathHelper::Normalize(awayFromPlayer);
-        else
-            awayFromPlayer = GetForward();
+        SkeletonBodyPartActor::SpawnParams params{};
+        params.partType = types[i];
+        params.lifeTime = bodyPartsLifetime;
+        params.debugCollisionShape = bodyPartsDebug;
+        params.linearDamping = bodyPartsLinearDamping;
+        params.angularDamping = bodyPartsAngularDamping;
+        params.sleepThreshold = bodyPartsSleepThreshold;
+        const auto bodyPart = actorManager->CreateAndRegisterActorWithTransform<SkeletonBodyPartActor>(
+            "SkeletonBodyPart", transforms[i], params);
+        spawnedBodyParts.push_back(bodyPart);
     }
-
-    const auto makeVelocity = [this, &awayFromPlayer]()
-        {
-            const float speed = bodyPartsInitialSpeed * MathHelper::RandomRange(0.85f, 1.15f);
-            return DirectX::XMFLOAT3{
-                awayFromPlayer.x * speed + MathHelper::RandomRange(-0.18f, 0.18f),
-                bodyPartsUpwardSpeed + MathHelper::RandomRange(-0.10f, 0.16f),
-                awayFromPlayer.z * speed + MathHelper::RandomRange(-0.18f, 0.18f),
-            };
-        };
-    const auto spawnPart = [actorManager, this, &makeVelocity](
-        SkeletonBodyPartActor::PartType partType, const Transform& partTransform,
-        const SkeletonBodyPartActor::TransformCorrection& transformCorrection)
-        {
-            SkeletonBodyPartActor::SpawnParams params{};
-            params.partType = partType;
-            params.initialVelocity = makeVelocity();
-            params.angularVelocity = {
-                MathHelper::RandomRange(-180.0f, 180.0f),
-                MathHelper::RandomRange(-180.0f, 180.0f),
-                MathHelper::RandomRange(-180.0f, 180.0f),
-            };
-            params.lifeTime = bodyPartsLifetime;
-            params.debugCollisionShape = bodyPartsDebug;
-            params.linearDamping = bodyPartsLinearDamping;
-            params.angularDamping = bodyPartsAngularDamping;
-            params.sleepThreshold = bodyPartsSleepThreshold;
-            params.transformCorrection = transformCorrection;
-            // Each part owns an independent identity correction for this validation pass.
-            const auto bodyPart = actorManager->CreateAndRegisterActorWithTransform<SkeletonBodyPartActor>(
-                "SkeletonBodyPart", partTransform, params);
-            spawnedBodyParts.push_back(bodyPart);
-        };
-
-    struct DeathBodyPartSpec
-    {
-        SkeletonBodyPartActor::PartType type;
-        const Transform* boneTransform;
-        SkeletonBodyPartActor::TransformCorrection transformCorrection{};
-    };
-    const DeathBodyPartSpec parts[] = {
-        { SkeletonBodyPartActor::PartType::Skull, &headTransform },
-        { SkeletonBodyPartActor::PartType::Ribs,  &spineHighTransform },
-        { SkeletonBodyPartActor::PartType::Spine, &rootTransform },
-        { SkeletonBodyPartActor::PartType::Arm,   &shoulderLeftTransform },
-        { SkeletonBodyPartActor::PartType::Arm,   &shoulderRightTransform },
-        { SkeletonBodyPartActor::PartType::Leg,   &thighLeftTransform },
-        { SkeletonBodyPartActor::PartType::Leg,   &thighRightTransform },
-    };
-    for (const DeathBodyPartSpec& part : parts)
-        spawnPart(part.type, *part.boneTransform, part.transformCorrection);
     return true;
 }
 
+bool SkeletonWarriorActor::ActivateDeathBodyParts()
+{
+    ZoneScopedN("Skeleton BodyParts Activate");
+    if (!skeletalMeshComponent || !skeletalMeshComponent->model || spawnedBodyParts.size() != 7)
+        return false;
+
+    const DirectX::XMFLOAT4X4 meshWorld = skeletalMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+    const auto getBoneTransform = [this, &meshWorld](const char* boneName)
+        {
+            const DirectX::XMFLOAT4X4 matrix = skeletalMeshComponent->model->GetJointMatrix(
+                boneName, skeletalMeshComponent->GetNodes(), meshWorld);
+            return Transform(DirectX::XMLoadFloat4x4(&matrix));
+        };
+    const Transform transforms[] = {
+        getBoneTransform("Head"), getBoneTransform("SpineHigh"), getBoneTransform("Root"),
+        getBoneTransform("Shoulder_l"), getBoneTransform("Shoulder_r"),
+        getBoneTransform("Thigh_l"), getBoneTransform("Thigh_r") };
+    deathHeadBonePosition = transforms[0].GetLocation();
+    deathSpineHighBonePosition = transforms[1].GetLocation();
+    deathThighLeftBonePosition = transforms[5].GetLocation();
+    hasDeathBodyPartBonePositions = true;
+
+    DirectX::XMFLOAT3 awayFromPlayer = GetForward();
+    if (const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
+    {
+        awayFromPlayer = MathHelper::Subtract(GetPosition(), player->GetPosition());
+        awayFromPlayer.y = 0.0f;
+        awayFromPlayer = MathHelper::Length(awayFromPlayer) > 0.0001f
+            ? MathHelper::Normalize(awayFromPlayer) : GetForward();
+    }
+    for (size_t i = 0; i < spawnedBodyParts.size(); ++i)
+    {
+        const auto bodyPart = spawnedBodyParts[i].lock();
+        if (!bodyPart || bodyPart->IsPendingKill())
+            return false;
+        const float speed = bodyPartsInitialSpeed * MathHelper::RandomRange(0.85f, 1.15f);
+        bodyPart->ActivateFromDeathPose(transforms[i], {
+            awayFromPlayer.x * speed + MathHelper::RandomRange(-0.18f, 0.18f),
+            bodyPartsUpwardSpeed + MathHelper::RandomRange(-0.10f, 0.16f),
+            awayFromPlayer.z * speed + MathHelper::RandomRange(-0.18f, 0.18f) }, {
+            MathHelper::RandomRange(-180.0f, 180.0f), MathHelper::RandomRange(-180.0f, 180.0f),
+            MathHelper::RandomRange(-180.0f, 180.0f) });
+    }
+    return true;
+}
 void SkeletonWarriorActor::SyncSpawnedBodyPartPhysicsSettings()
 {
     std::erase_if(spawnedBodyParts, [this](const std::weak_ptr<SkeletonBodyPartActor>& weakBodyPart)
@@ -341,9 +335,10 @@ bool SkeletonWarriorActor::TakeDamageFromPlayer(int damage)
     if (hp > 0)
         return true;
 
-    const bool spawnedBodyParts = SpawnDeathBodyParts();
-
+    // Mark death before side effects so repeated damage cannot replay the SE.
     state = State::Dead;
+    CoreAudio::PlayOneShot("./Data/Sound/SE/skeleton_death.wav", 5.0f);
+    const bool spawnedBodyParts = ActivateDeathBodyParts();
     attackHitActive = false;
     isDangerWindow = false;
     activeDangerNotifyState = nullptr;

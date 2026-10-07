@@ -143,6 +143,24 @@ void TitleScene::Start()
     pressButtonUiComponent->SetSize({ 650, 200 });
     pressButtonUiComponent->SetScale({ 0.8f,0.8f });
     uiManager->Add(pressButtonUiComponent);
+
+    //// ゲーム終了ボタンの作成
+    //{
+    //    gameEndButton = std::make_shared<UIButtonComponent>("./Data/Textures/UI/end.png", "end");
+    //    gameEndButton->SetWorldPosition({ 1010, 900 });
+    //    gameEndButton->SetSize({ 620, 352 });
+    //    gameEndButton->SetPivot({ 0.5f,0.5f });
+    //    gameEndButton->SetUseHoverScale(true);
+    //    uiManager->Add(gameEndButton);
+    //    gameEndButton->onClick = [this]()
+    //        {
+    //            Logger::Log(u8"ゲーム終了");
+    //            CoreAudio::PlayOneShot(L"./Data/Sound/SE/push_button.wav");
+    //            PostMessage(Graphics::GetHwnd(), WM_CLOSE, 0, 0);
+    //        };
+    //}
+
+
     // シーンが切り替わった時に
     SceneTransitionManager::Instance().NotifySceneChanged();
 }

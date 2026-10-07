@@ -115,6 +115,13 @@ public:
         rigidBody_->SetInitialAngularVelocity(angularVelocity);
     }
 
+    // Immediately teleport an existing PhysX actor before enabling simulation.
+    void SetPhysicsWorldTransform(const Transform& worldTransform)
+    {
+        if (rigidBody_)
+            rigidBody_->SetTransform(worldTransform);
+    }
+
     // “–‚½‚è”»’èƒŒƒCƒ„[‚ğ“r’†‚Å’Ç‰Á‚·‚é
     void AddCollisionFilter(const CollisionLayer otherLayer, const CollisionComponent::CollisionResponse response)
     {
