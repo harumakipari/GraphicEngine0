@@ -255,7 +255,7 @@ private:
     void SetBattleHudVisible(bool visible);
     void DisableCinematicCameraDebugInput();
     void EnterPlayerDead();
-    void StageDeathActors();
+    void StageDeathActors(bool preserveGruxTransform);
     DeathStagingArea DetermineDeathStagingArea(const DirectX::XMFLOAT3& originalPlayerPosition) const;
     void OnPlayerDeathCameraStart();
     void ResetBattleForContinue();

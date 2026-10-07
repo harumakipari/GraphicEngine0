@@ -1318,6 +1318,11 @@ void GruxEnemy::NotifyPlayerRushEnded(Player* player)
     if (interruptedChargeRecoveryPending)
     {
         interruptedChargeRecoveryPending = false;
+        // Rush used Stun_Idle only as its exposed hold pose. Recovery keeps
+        // AI/BT suspended separately, so return to normal idle before its
+        // timer starts instead of carrying the looping stun through it.
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
+            "GruxEnemy::NotifyPlayerRushEnded");
         interruptedChargeRecoveryActive = true;
         interruptedChargeRecoveryTimer = 0.0f;
         LogInterruptedChargeRecoveryEvent("Started");

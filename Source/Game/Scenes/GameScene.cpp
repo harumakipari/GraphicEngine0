@@ -2447,11 +2447,12 @@ void GameScene::EnterPlayerDead()
         gruxEnemyActor->BeginHpBarFadeOut();
     FireDeathPresentationCue(DeathPresentationCue::GameplayHudFade, deathHudFadeCueFired);
 
+    const bool wasRoaringAtPlayerDeath = gruxEnemyActor && gruxEnemyActor->IsRoarBTActive();
     if (gruxEnemyActor)
         gruxEnemyActor->PauseBattleAI();
 
     // プレイヤーが死亡した時のプレイヤーとボスの位置を調整
-    StageDeathActors();
+    StageDeathActors(wasRoaringAtPlayerDeath);
 
     if (darkCameraActor && player)
     {
@@ -2490,7 +2491,7 @@ GameScene::DeathStagingArea GameScene::DetermineDeathStagingArea(
     return DeathStagingArea::Center;
 }
 
-void GameScene::StageDeathActors()
+void GameScene::StageDeathActors(const bool preserveGruxTransform)
 {
     if (!player || !gruxEnemyActor)
         return;
@@ -2547,6 +2548,11 @@ void GameScene::StageDeathActors()
     {
         player->SetPosition(safePlayerPosition);
     }
+
+    // Roar is interrupted before this point. Preserve the exact exposed boss
+    // transform it had when Player died, while still staging Player safely.
+    if (preserveGruxTransform)
+        return;
 
     DirectX::XMFLOAT3 playerToBoss = MathHelper::Subtract(
         stagedBossPosition, safePlayerPosition);

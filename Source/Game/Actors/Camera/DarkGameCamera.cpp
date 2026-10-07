@@ -602,11 +602,9 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
                 -deathCameraSettings.sideOffset);
             deathBlendMirroredValid = IsDeathPoseCollisionFree(mirroredPose);
             deathBlendMirroredTested = true;
-            selectedDeathPose = deathBlendMirroredValid ? mirroredPose : defaultPose;
-            deathBlendSideOffset = deathBlendMirroredValid
-                ? -deathCameraSettings.sideOffset
-                : deathCameraSettings.sideOffset;
-            deathBlendSelectedSide = deathBlendMirroredValid ? "Mirrored" : "Fallback";
+            selectedDeathPose = defaultPose;
+            deathBlendSideOffset = deathCameraSettings.sideOffset;
+            deathBlendSelectedSide = "Default";
         }
         hasSelectedDeathPose = true;
         const CameraPose& deathPose = selectedDeathPose;
@@ -2437,7 +2435,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
     if (cameraMode == CameraMode::Death)
     {
         return CalculateDeathPoseWithSideOffset(
-            playerPos, yaw, pitch, deathCameraSettings.sideOffset);
+            playerPos, yaw, pitch, deathBlendSideOffset);
     }
 
     const CameraCompositionSettings* settings = &GetActiveTpsSettings();
