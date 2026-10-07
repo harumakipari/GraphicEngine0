@@ -593,6 +593,20 @@ void Player::Update(float deltaTime)
 
     // Low HP feedback must observe death/recovery even while battle actions are suspended.
     UpdateLowHpEffects();
+
+    // Pause keeps the Player's existing presentation intact, but must not let any
+    // gameplay work below (including input sampling, movement, state updates, or
+    // animation) advance. Clear only sampled gameplay input so it cannot execute
+    // after resume; do not change the current gameplay state.
+    if (const auto scene = GetOwnerScene(); scene && scene->IsPaused())
+    {
+        if (bufferCommand.type != ActionType::None)
+            ClearActionRequest("scene_paused");
+        if (inputComponent)
+            inputComponent->ClearIntent();
+        return;
+    }
+
     UpdateOperationGuideUI();
     UpdateDamageFlash();
     UpdateLockOnGuideUI();

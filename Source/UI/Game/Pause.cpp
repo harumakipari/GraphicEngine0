@@ -40,6 +40,7 @@ void Pause::Initialize(const Transform& transform)
     returnTitleButton->SetWorldPosition({ 980,607 });
     returnTitleButton->SetPivot({ .5f,.5f });
     returnTitleButton->SetSize({ 733,78 });
+    returnTitleButton->SetScale({ 0.5f,0.5f });
     configureButton(returnTitleButton);
     returnTitleButton->onClick = [this]()
         {
@@ -56,6 +57,8 @@ void Pause::Initialize(const Transform& transform)
     battleActionButton->SetWorldPosition({ 978,751 });
     battleActionButton->SetPivot({ .5f,.5f });
     battleActionButton->SetSize({ 785,80 });
+    battleActionButton->SetScale({ 0.5f,0.5f });
+
     configureButton(battleActionButton);
     battleActionButton->onClick = [this]()
         {
@@ -74,6 +77,8 @@ void Pause::Initialize(const Transform& transform)
     backToRoomButton->SetWorldPosition({ 980, 751 });
     backToRoomButton->SetPivot({ .5f,.5f });
     backToRoomButton->SetSize({ 662,76 });
+    backToRoomButton->SetScale({ 0.5f,0.5f });
+
     configureButton(backToRoomButton);
     backToRoomButton->onClick = [this]()
         {
@@ -87,6 +92,8 @@ void Pause::Initialize(const Transform& transform)
     quitGameButton->SetWorldPosition({ 980, 850 });
     quitGameButton->SetPivot({ .5f,.5f });
     quitGameButton->SetSize({ 472,92 });
+    quitGameButton->SetScale({ 0.5f,0.5f });
+
     configureButton(quitGameButton);
     quitGameButton->onClick = [this]()
         {
