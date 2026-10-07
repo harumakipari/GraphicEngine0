@@ -21,6 +21,7 @@ public:
     void DrawImGuiDetails() override;
     void OnAnimationNotifyBegin(const AnimationNotifyState& state) override;
     void OnAnimationNotifyEnd(const AnimationNotifyState& state) override;
+    void OnAnimationNotifyEvent(const AnimationNotifyEvent& event) override;
     void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
 
     bool TakeDamageFromPlayer(int damage) override;

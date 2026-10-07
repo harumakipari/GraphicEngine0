@@ -652,6 +652,19 @@ void SkeletonWarriorActor::OnAnimationNotifyEnd(const AnimationNotifyState& noti
     }
 }
 
+void SkeletonWarriorActor::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
+{
+    HandleCommonAnimationNotifyEvent(event);
+
+    if (state == State::Dead || IsPendingKill() ||
+        event.type != AnimationNotifyEvent::Type::PlaySE || event.parameter.empty())
+    {
+        return;
+    }
+
+    const std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
+    CoreAudio::PlayOneShot(audioPath, event.value);
+}
 void SkeletonWarriorActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI

@@ -6,7 +6,7 @@
             "parameter": "skeleton_attack1",
             "time": 0.5312501192092896,
             "type": "PlaySE",
-            "value": 1.0
+            "value": 3.0
         }
     ],
     "loop": false,
