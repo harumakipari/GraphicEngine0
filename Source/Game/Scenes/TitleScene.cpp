@@ -7,7 +7,8 @@
 #endif
 
 #include "Components/Audio/AudioSourceComponent.h"
-#include "Graphics/Core/Graphics.h"
+#include "Engine/Audio/Audio.h"
+#include "Engine/Framework/Framework.h"
 #include "Graphics/Core/RenderState.h"
 #include "Engine/Input/InputSystem.h"
 #include "Core/ActorManager.h"
@@ -35,6 +36,7 @@
 #include "Physics/CollisionSystem.h"
 #include "UI/UIManager.h"
 #include "UI/Game/Pause.h"
+namespace { constexpr const char* Push="./Data/Sound/SE/button_push.wav"; constexpr const char* Move="./Data/Sound/SE/button_select_move.wav"; }
 
 bool TitleScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
@@ -132,35 +134,16 @@ void TitleScene::Start()
     title->SetSize({ 1300, 700 });
     uiManager->Add(title);
 
-    // Press A　の画像を作成
-    // コントローラー対応用
-    controlButton = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/UI/press_a.png");
-    // キーボード対応用
-    keyboardButton = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/UI/press_enter.png");
-
-    pressButtonUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/press_a.png", "press_a");
-    pressButtonUiComponent->SetWorldPosition({ 1400, 930 });
-    pressButtonUiComponent->SetSize({ 650, 200 });
-    pressButtonUiComponent->SetScale({ 0.8f,0.8f });
-    uiManager->Add(pressButtonUiComponent);
-
-    //// ゲーム終了ボタンの作成
-    //{
-    //    gameEndButton = std::make_shared<UIButtonComponent>("./Data/Textures/UI/Pause/quit_game.png", "end");
-    //    gameEndButton->SetWorldPosition({ 1010, 900 });
-    //    gameEndButton->SetSize({ 620, 352 });
-    //    gameEndButton->SetPivot({ 0.5f,0.5f });
-    //    gameEndButton->SetUseHoverScale(true);
-    //    uiManager->Add(gameEndButton);
-    //    gameEndButton->onClick = [this]()
-    //        {
-    //            Logger::Log(u8"ゲーム終了");
-    //            CoreAudio::PlayOneShot(L"./Data/Sound/SE/button_push.wav");
-    //            PostMessage(Graphics::GetHwnd(), WM_CLOSE, 0, 0);
-    //        };
-    //}
-
-
+    startGameButton=std::make_shared<UIButtonComponent>("./Data/Textures/UI/start_game.png","TitleStartGame");
+    startGameButton->SetWorldPosition(startGamePosition); startGameButton->SetSize({514,73}); startGameButton->SetScale({startGameBaseScale,startGameBaseScale}); startGameButton->SetPivot({.5f,.5f}); startGameButton->zOrder=10;
+    startGameButton->SetVisualColors(CoreColor(.8f,.8f,.8f,1), CoreColor::White, CoreColor::White, CoreColor::White);
+    startGameButton->onClick=[this](){CoreAudio::PlayOneShot(Push);SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene") }, TransitionStyle::Fade);}; uiManager->Add(startGameButton);uiManager->AddButton(startGameButton);
+    quitGameButton=std::make_shared<UIButtonComponent>("./Data/Textures/UI/Pause/quit_game.png","TitleQuitGame");
+    quitGameButton->SetWorldPosition(quitGamePosition); quitGameButton->SetSize({472,92}); quitGameButton->SetScale({quitGameBaseScale,quitGameBaseScale}); quitGameButton->SetPivot({.5f,.5f}); quitGameButton->zOrder=10;
+    quitGameButton->SetVisualColors(CoreColor(.8f,.8f,.8f,1), CoreColor::White, CoreColor::White, CoreColor::White);
+    quitGameButton->onClick=[](){CoreAudio::PlayOneShot(Push);Framework::RequestExit();};uiManager->Add(quitGameButton);uiManager->AddButton(quitGameButton);
+    selectionLineLeft=std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/select_button_line.png","TitleSelectLineLeft"); selectionLineRight=std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/select_button_line.png","TitleSelectLineRight");
+    for(const auto& l:{selectionLineLeft,selectionLineRight}){l->SetSize({113,5});l->SetEnable(false);l->zOrder=11;uiManager->Add(l);}selectionLineLeft->SetPivot({1.0f,.5f});selectionLineRight->SetPivot({0.0f,.5f});uiManager->SetNavigationEnabled(false);SetTitleMenuSelection(TitleMenuSelection::StartGame,false);
     // シーンが切り替わった時に
     SceneTransitionManager::Instance().NotifySceneChanged();
 }
@@ -175,31 +158,98 @@ void TitleScene::Update(float deltaTime)
         SetLightViewFocus(player->GetPosition());
     }
 
-    if (InputSystem::IsGamepadConnected())
-    {//　コントローラー対応
-        pressButtonUiComponent->SetTexture(controlButton);
-    }
-    else
-    {
-        pressButtonUiComponent->SetTexture(keyboardButton);
-    }
-
     SceneBase::Update(deltaTime);
 
     Physics::Instance().Update(Time::UnscaledDeltaTime());
     CollisionSystem::DetectAndResolveCollisions();
     CollisionSystem::ApplyPushAll();
 
-    //#ifdef _DEBUG
-    if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
-    {
-        const char* types[] = { "0", "1" };
-        SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene") }, TransitionStyle::Fade);
-    }
-
-    //#endif // !_DEBUG
+    HandleTitleMenuInput();
+    UpdateTitleMenuAnimations(deltaTime);
+    UpdateTitleSelectionLines();
 }
 
+void TitleScene::HandleTitleMenuInput()
+{
+    const bool up = InputSystem::GetInputState("UIUp", InputStateMask::Trigger);
+    const bool down = InputSystem::GetInputState("UIDown", InputStateMask::Trigger);
+    const float stickY = InputSystem::GetLeftStick().y;
+    if (std::abs(stickY) < .4f) titleMenuStickArmed = true;
+    if (up || down || (titleMenuStickArmed && (stickY > .6f || stickY < -.6f)))
+    {
+        if (!up && !down) titleMenuStickArmed = false;
+        SetTitleMenuSelection(titleMenuSelection == TitleMenuSelection::StartGame
+            ? TitleMenuSelection::QuitGame : TitleMenuSelection::StartGame, true);
+    }
+    if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
+    {
+        const auto& button = titleMenuSelection == TitleMenuSelection::StartGame ? startGameButton : quitGameButton;
+        if (button) button->OnClick();
+    }
+}
+
+void TitleScene::SetTitleMenuSelection(const TitleMenuSelection selection, const bool playSound)
+{
+    if (titleMenuSelection == selection && uiManager->GetSelectedButton()) return;
+
+    const bool initialSelection = uiManager->GetSelectedButton() == nullptr;
+    startGameScaleAnimationStart = startGameSelectionScale;
+    quitGameScaleAnimationStart = quitGameSelectionScale;
+    titleMenuSelection = selection;
+    const float startTarget = selection == TitleMenuSelection::StartGame ? selectedScale : unselectedScale;
+    const float quitTarget = selection == TitleMenuSelection::QuitGame ? selectedScale : unselectedScale;
+    if (initialSelection)
+    {
+        startGameSelectionScale = startTarget;
+        quitGameSelectionScale = quitTarget;
+        titleMenuScaleAnimationElapsed = scaleAnimationDuration;
+    }
+    else
+    {
+        titleMenuScaleAnimationElapsed = 0.0f;
+    }
+    titleMenuLineAnimationElapsed = 0.0f;
+    uiManager->SetSelected((selection == TitleMenuSelection::StartGame ? startGameButton : quitGameButton).get());
+    if (playSound) CoreAudio::PlayOneShot(Move);
+}
+
+void TitleScene::UpdateTitleMenuAnimations(const float deltaTime)
+{
+    const float scaleDuration = (std::max)(scaleAnimationDuration, FLT_EPSILON);
+    titleMenuScaleAnimationElapsed = (std::min)(scaleDuration, titleMenuScaleAnimationElapsed + (std::max)(0.0f, deltaTime));
+    const float scaleT = titleMenuScaleAnimationElapsed / scaleDuration;
+    const float scaleEase = 1.0f - std::pow(1.0f - scaleT, 3.0f);
+    const float startTarget = titleMenuSelection == TitleMenuSelection::StartGame ? selectedScale : unselectedScale;
+    const float quitTarget = titleMenuSelection == TitleMenuSelection::QuitGame ? selectedScale : unselectedScale;
+    startGameSelectionScale = std::lerp(startGameScaleAnimationStart, startTarget, scaleEase);
+    quitGameSelectionScale = std::lerp(quitGameScaleAnimationStart, quitTarget, scaleEase);
+
+    startGameButton->SetWorldPosition(startGamePosition);
+    quitGameButton->SetWorldPosition(quitGamePosition);
+    startGameButton->SetScale({ startGameBaseScale * startGameSelectionScale, startGameBaseScale * startGameSelectionScale });
+    quitGameButton->SetScale({ quitGameBaseScale * quitGameSelectionScale, quitGameBaseScale * quitGameSelectionScale });
+}
+
+void TitleScene::UpdateTitleSelectionLines()
+{
+    const auto& button = titleMenuSelection == TitleMenuSelection::StartGame ? startGameButton : quitGameButton;
+    const float buttonScale = titleMenuSelection == TitleMenuSelection::StartGame
+        ? startGameBaseScale * startGameSelectionScale : quitGameBaseScale * quitGameSelectionScale;
+    if (!button || !selectionLineLeft || !selectionLineRight) return;
+
+    const float lineDuration = (std::max)(lineAnimationDuration, FLT_EPSILON);
+    titleMenuLineAnimationElapsed = (std::min)(lineDuration, titleMenuLineAnimationElapsed + Time::UnscaledDeltaTime());
+    const float t = titleMenuLineAnimationElapsed / lineDuration;
+    const float ease = 1.0f - std::pow(1.0f - t, 3.0f);
+    const auto position = button->GetWorldPosition();
+    const float innerEdge = button->GetSize().x * buttonScale * .5f + lineOffset.x;
+    selectionLineLeft->SetWorldPosition({ position.x - innerEdge, position.y + lineOffset.y });
+    selectionLineRight->SetWorldPosition({ position.x + innerEdge, position.y + lineOffset.y });
+    selectionLineLeft->SetScale({ lineBaseScale.x * ease, lineBaseScale.y });
+    selectionLineRight->SetScale({ lineBaseScale.x * ease, lineBaseScale.y });
+    selectionLineLeft->SetVisible(true);
+    selectionLineRight->SetVisible(true);
+}
 void TitleScene::SetUpActors()
 {
     Transform mainCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
@@ -257,6 +307,7 @@ void TitleScene::SetUpActors()
 
 bool TitleScene::Uninitialize(ID3D11Device* device)
 {
+    uiManager->SetNavigationEnabled(true); uiManager->SetSelected(nullptr);
     SceneBase::Uninitialize(device);
     Physics::Instance().Finalize();
     return true;
@@ -265,4 +316,31 @@ bool TitleScene::Uninitialize(ID3D11Device* device)
 void TitleScene::DrawGui()
 {
     SceneBase::DrawGui();
+#ifdef USE_IMGUI
+#if 0
+    if (ImGui::Begin("Title Menu UI"))
+    {
+        ImGui::SeparatorText("START GAME");
+        ImGui::DragFloat("Position X##Start", &startGamePosition.x, 1.0f);
+        ImGui::DragFloat("Position Y##Start", &startGamePosition.y, 1.0f);
+        ImGui::DragFloat("Base Scale##Start", &startGameBaseScale, 0.01f, 0.1f, 3.0f);
+        ImGui::SeparatorText("QUIT GAME");
+        ImGui::DragFloat("Position X##Quit", &quitGamePosition.x, 1.0f);
+        ImGui::DragFloat("Position Y##Quit", &quitGamePosition.y, 1.0f);
+        ImGui::DragFloat("Base Scale##Quit", &quitGameBaseScale, 0.01f, 0.1f, 3.0f);
+        ImGui::SeparatorText("Selection Animation");
+        ImGui::DragFloat("Selected Scale", &selectedScale, 0.01f, 0.1f, 3.0f);
+        ImGui::DragFloat("Unselected Scale", &unselectedScale, 0.01f, 0.1f, 3.0f);
+        ImGui::DragFloat("Scale Animation Duration", &scaleAnimationDuration, 0.01f, 0.01f, 2.0f);
+        ImGui::DragFloat("Line Animation Duration", &lineAnimationDuration, 0.01f, 0.01f, 2.0f);
+        ImGui::SeparatorText("Selection Lines");
+        ImGui::DragFloat("Line Offset X", &lineOffset.x, 1.0f);
+        ImGui::DragFloat("Line Offset Y", &lineOffset.y, 1.0f);
+        ImGui::DragFloat("Line Base Scale X", &lineBaseScale.x, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("Line Base Scale Y", &lineBaseScale.y, 0.01f, 0.0f, 3.0f);
+    }
+    ImGui::End();
+
+#endif // 0
+#endif
 }

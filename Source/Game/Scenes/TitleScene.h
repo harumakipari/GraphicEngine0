@@ -15,6 +15,7 @@
 #include "Game/Actors/Camera/LoadingCamera.h"
 #include "Game/Actors/Player/TitlePlayer.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
+#include "UI/Widgets/Widget.h"
 
 
 
@@ -37,6 +38,8 @@ public:
     static inline Scene::Autoenrollment<TitleScene> _autoenrollment;
 
 private:
+    enum class TitleMenuSelection : uint8_t { StartGame, QuitGame };
+    void HandleTitleMenuInput(); void SetTitleMenuSelection(TitleMenuSelection, bool); void UpdateTitleMenuAnimations(float); void UpdateTitleSelectionLines();
     std::thread loadStageThread;
     std::thread loadStageAssetsThread;
 
@@ -58,8 +61,25 @@ private:
     // タイトル固定用カメラ
     std::shared_ptr<CinemaCamera> cinemaCameraActor;
 
-    // pressButtonのUIコンポーネント
-    std::shared_ptr<UIImageComponent> pressButtonUiComponent;
-    std::shared_ptr<Sprite> controlButton;
-    std::shared_ptr<Sprite> keyboardButton;
+    std::shared_ptr<UIButtonComponent> startGameButton, quitGameButton;
+    std::shared_ptr<UIImageComponent> selectionLineLeft, selectionLineRight;
+    TitleMenuSelection titleMenuSelection = TitleMenuSelection::StartGame; bool titleMenuStickArmed = true;
+
+    DirectX::XMFLOAT2 startGamePosition{ 1552.0f, 888.0f };
+    DirectX::XMFLOAT2 quitGamePosition{ 1552.0f, 967.0f };
+    float startGameBaseScale = 0.65f;
+    float quitGameBaseScale = 0.65f;
+    float selectedScale = 1.05f;
+    float unselectedScale = 0.90f;
+    float scaleAnimationDuration = 0.15f;
+    float lineAnimationDuration = 0.25f;
+    DirectX::XMFLOAT2 lineOffset{ 15.0f, 0.0f };
+    DirectX::XMFLOAT2 lineBaseScale{ 0.7f, 0.7f };
+
+    float startGameSelectionScale = 1.05f;
+    float quitGameSelectionScale = 0.90f;
+    float startGameScaleAnimationStart = 1.05f;
+    float quitGameScaleAnimationStart = 0.90f;
+    float titleMenuScaleAnimationElapsed = 0.15f;
+    float titleMenuLineAnimationElapsed = 0.20f;
 };

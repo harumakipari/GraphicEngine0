@@ -197,6 +197,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Jog_Fwd_Stop", 53);
         controller->AddAnimation("Result_Recall", 54);
         controller->AddAnimation("Emote_Phase2", 55);
+        controller->AddAnimation("Sitting", 56);
         controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
 
         // ブレンドスペースに追加
