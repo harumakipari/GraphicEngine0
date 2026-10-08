@@ -362,6 +362,17 @@ void RotationComponent::ForceDirectionImmediate(const DirectX::XMFLOAT3& dir)
     }
 }
 
+void RotationComponent::SyncCurrentRotation()
+{
+    if (const auto owner = owner_.lock())
+    {
+        const DirectX::XMFLOAT4 currentRotation = owner->GetQuaternionRotation();
+        startRotation_ = currentRotation;
+        targetRotation_ = currentRotation;
+        lerpTime_ = rotateTime_;
+    }
+}
+
 bool RotationComponent::RotateTowardsDirection(
     const DirectX::XMFLOAT3& direction,
     const float maxDegreesPerSecond,

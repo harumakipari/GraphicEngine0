@@ -324,6 +324,9 @@ public:
     void SetDirection(const DirectX::XMFLOAT3& dir);
     void SetDirectionImmediate(const DirectX::XMFLOAT3& dir);
     void ForceDirectionImmediate(const DirectX::XMFLOAT3& dir);
+    // Align interpolation state with the owner's existing rotation without
+    // changing the owner's transform.
+    void SyncCurrentRotation();
     bool RotateTowardsDirection(const DirectX::XMFLOAT3& direction,
         float maxDegreesPerSecond, float deltaTime);
 

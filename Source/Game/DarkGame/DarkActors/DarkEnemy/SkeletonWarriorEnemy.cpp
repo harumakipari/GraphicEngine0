@@ -100,6 +100,7 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
 
     // 回転用コンポーネントを追加
     rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
+    rotationComponent->SyncCurrentRotation();
     // Shared LockOn target name lets GameScene select this Enemy without a type branch.
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f, 1.15f, 0.0f });
