@@ -72,8 +72,24 @@ private:
         float gatherEase = 1.85f;
         float finalClusterRadius = 0.055f;
         float fadeOutAlpha = 1.0f;
+        float particleOrbitSpeed = 0.63f;
+        float particleOrbitCenterX = 0.0f;
+        float particleOrbitCenterY = 0.0f;
+        float particleOrbitRadiusX = 0.88f;
+        float particleOrbitRadiusY = 0.30f;
+        float particleFloatAmplitude = 0.014f;
+        float particleFloatSpeed = 2.05f;
+        float particleOrbitBlendTime = 0.75f;
     };
     std::unique_ptr<ConstantBuffer<LoadingParticleConstants>> loadingParticleCBuffer;
+
+    // ImGui targets are smoothed before they reach the shader so resizing the orbit keeps its motion continuous.
+    float particleOrbitCenterX = 0.0f;
+    float particleOrbitCenterY = 0.0f;
+    float particleOrbitRadiusX = 0.35f;
+    float particleOrbitRadiusY = 0.30f;
+    float particleOrbitRadiusXCurrent = 0.88f;
+    float particleOrbitRadiusYCurrent = 0.30f;
     bool loadingSoundPlayed = false;
 
     enum class FadeOutState

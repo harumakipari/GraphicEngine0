@@ -74,7 +74,7 @@ private:
     float scaleAnimationDuration = 0.15f;
     float lineAnimationDuration = 0.25f;
     DirectX::XMFLOAT2 lineOffset{ 15.0f, 0.0f };
-    DirectX::XMFLOAT2 lineBaseScale{ 0.7f, 0.7f };
+    DirectX::XMFLOAT2 lineBaseScale{ 0.5f, 0.5f };
 
     float startGameSelectionScale = 1.05f;
     float quitGameSelectionScale = 0.90f;

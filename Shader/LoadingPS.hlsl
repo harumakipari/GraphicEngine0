@@ -17,6 +17,14 @@ cbuffer LOADING_PARTICLE_CONSTANT_BUFFER : register(b12)
     float particleGatherEase;
     float particleFinalClusterRadius;
     float particleFadeOutAlpha;
+    float particleOrbitSpeed;
+    float particleOrbitCenterX;
+    float particleOrbitCenterY;
+    float particleOrbitRadiusX;
+    float particleOrbitRadiusY;
+    float particleFloatAmplitude;
+    float particleFloatSpeed;
+    float particleOrbitBlendTime;
 };
 
 float Hash11(float value)
@@ -83,7 +91,27 @@ float4 main(VS_OUT pin) : SV_Target
             / max(particleGatherDuration, 0.001f));
         // Each delayed particle enters quickly, then decelerates into the cluster.
         const float gather = 1.0f - pow(1.0f - localTime, max(particleGatherEase, 0.01f));
-        const float2 particlePosition = QuadraticBezier(p0, p1, p2, gather);
+        const float2 gatherPosition = QuadraticBezier(p0, p1, p2, gather);
+
+        // Once every particle has reached its existing cluster target, gently
+        // blend that target into a per-particle orbit.  The individual hash
+        // values avoid a uniform ring while keeping the original inflow intact.
+        const float orbitDirection = Hash11(id * 71.17f) < 0.5f ? -1.0f : 1.0f;
+        const float orbitSpeed = particleOrbitSpeed * lerp(0.72f, 1.28f, Hash11(id * 73.31f));
+        const float radiusVariation = lerp(0.82f, 1.18f, Hash11(id * 79.19f));
+        const float orbitRadiusX = particleOrbitRadiusX * radiusVariation;
+        const float orbitRadiusY = particleOrbitRadiusY * radiusVariation;
+        const float orbitAngle = targetAngle + elapsedTime * orbitSpeed * orbitDirection;
+        float2 orbitPosition = float2(particleOrbitCenterX + cos(orbitAngle) * orbitRadiusX,
+                                      particleOrbitCenterY + sin(orbitAngle) * orbitRadiusY);
+
+        const float floatPhase = Hash11(id * 83.47f) * 6.28318531f;
+        const float floatSpeed = particleFloatSpeed * lerp(0.80f, 1.20f, Hash11(id * 89.63f));
+        orbitPosition.y += sin(elapsedTime * floatSpeed + floatPhase) * particleFloatAmplitude;
+
+        const float orbitStart = particleGatherStart + particleGatherDuration + particleStartDelayRange;
+        const float orbitBlend = smoothstep(0.0f, max(particleOrbitBlendTime, 0.001f), elapsedTime - orbitStart);
+        const float2 particlePosition = lerp(gatherPosition, orbitPosition, orbitBlend);
 
         const float distanceToParticle = max(length(p - particlePosition), 0.012f);
         f += PARTICLE_GLOW / distanceToParticle;

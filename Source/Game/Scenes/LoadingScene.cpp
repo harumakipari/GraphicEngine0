@@ -261,6 +261,13 @@ void LoadingScene::Update(float deltaTime)
     }
 
     loadingParticleCBuffer->data.fadeOutAlpha = fadeOutAlpha;
+    const float orbitRadiusBlend = 1.0f - std::exp(-deltaTime / 0.20f);
+    particleOrbitRadiusXCurrent = std::lerp(particleOrbitRadiusXCurrent, particleOrbitRadiusX, orbitRadiusBlend);
+    particleOrbitRadiusYCurrent = std::lerp(particleOrbitRadiusYCurrent, particleOrbitRadiusY, orbitRadiusBlend);
+    loadingParticleCBuffer->data.particleOrbitCenterX = particleOrbitCenterX;
+    loadingParticleCBuffer->data.particleOrbitCenterY = particleOrbitCenterY;
+    loadingParticleCBuffer->data.particleOrbitRadiusX = particleOrbitRadiusXCurrent;
+    loadingParticleCBuffer->data.particleOrbitRadiusY = particleOrbitRadiusYCurrent;
 
     const float logoFade = std::clamp((sceneCBuffer->data.elapsedTime - LogoFadeStart)
         / (LogoFadeEnd - LogoFadeStart), 0.0f, 1.0f);
@@ -554,6 +561,16 @@ void LoadingScene::DrawGuiPlusAlpha()
     ImGui::DragFloat("Gather Duration", &loadingParticleCBuffer->data.gatherDuration, 0.01f, 0.05f, 6.0f, "%.3f");
     ImGui::DragFloat("Gather Ease", &loadingParticleCBuffer->data.gatherEase, 0.01f, 0.1f, 5.0f, "%.3f");
     ImGui::DragFloat("Final Cluster Radius", &loadingParticleCBuffer->data.finalClusterRadius, 0.002f, 0.0f, 0.5f, "%.3f");
+    ImGui::Separator();
+    ImGui::TextUnformatted("Particle Orbit");
+    ImGui::DragFloat("Particle Orbit Speed", &loadingParticleCBuffer->data.particleOrbitSpeed, 0.01f, 0.0f, 3.0f, "%.3f");
+    ImGui::DragFloat("Orbit Center X", &particleOrbitCenterX, 0.01f, -2.0f, 2.0f, "%.3f");
+    ImGui::DragFloat("Orbit Center Y", &particleOrbitCenterY, 0.01f, -1.5f, 1.5f, "%.3f");
+    ImGui::DragFloat("Orbit Radius X", &particleOrbitRadiusX, 0.01f, 0.0f, 3.0f, "%.3f");
+    ImGui::DragFloat("Orbit Radius Y", &particleOrbitRadiusY, 0.01f, 0.0f, 2.0f, "%.3f");
+    ImGui::DragFloat("Particle Float Amplitude", &loadingParticleCBuffer->data.particleFloatAmplitude, 0.001f, 0.0f, 0.2f, "%.3f");
+    ImGui::DragFloat("Particle Float Speed", &loadingParticleCBuffer->data.particleFloatSpeed, 0.01f, 0.0f, 10.0f, "%.3f");
+    ImGui::DragFloat("Particle Orbit Blend Time", &loadingParticleCBuffer->data.particleOrbitBlendTime, 0.01f, 0.05f, 3.0f, "%.3f");
     ImGui::Separator();
     ImGui::TextUnformatted("Fade Out");
     ImGui::DragFloat("Fade Out Hold Duration", &fadeOutHoldDuration, 0.01f, 0.0f, 5.0f, "%.3f");
