@@ -43,6 +43,7 @@ class GameScene : public SceneBase
     {
         float bossDistance = 4.5f;
     };
+
 public:
     // Boss health remains phase-local for future phase-specific UI.
     enum class BossPhase : uint8_t
@@ -86,7 +87,7 @@ public:
 
     void Update(float deltaTime) override;
 
-    // ï¿½è”ï¿½oï¿½bï¿½tï¿½@ï¿½ÌXï¿½Vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Vï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ÉƒJï¿½Xï¿½^ï¿½}ï¿½Cï¿½Yï¿½Å‚ï¿½ï¿½ï¿½æ‚¤ï¿½É‚ï¿½ï¿½é‚½ï¿½ß‚Ì‰ï¿½ï¿½zï¿½Öï¿½
+    // E½è”ï¿½oE½bE½tE½@E½ÌXE½VE½E½E½E½E½E½VE½[E½E½E½E½E½Æ‚ÉƒJE½XE½^E½}E½CE½YE½Å‚ï¿½E½E½æ‚¤E½É‚ï¿½E½é‚½E½ß‚Ì‰ï¿½E½zE½Öï¿½
     void UpdateConstants(ID3D11DeviceContext* immediateContext, float deltaTime)override;
 
     bool Uninitialize(ID3D11Device* device) override;
@@ -95,20 +96,20 @@ public:
 
     void SetUpActors()override;
 
-    //ï¿½Vï¿½[ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½oï¿½^
+    //E½VE½[E½E½E½Ìï¿½E½E½E½oE½^
     static inline Scene::Autoenrollment<GameScene> _autoenrollment;
 
-    // ï¿½{ï¿½Xï¿½Ì•ï¿½ï¿½ï¿½ï¿½ÌFï¿½ï¿½ï¿½[ï¿½vï¿½lï¿½ï¿½İ’è‚·ï¿½ï¿½
+    // E½{E½XE½Ì•ï¿½E½E½E½ÌFE½E½E½[E½vE½lE½E½İ’è‚·E½E½
     void SetBossRoomLerpFactor(float lerpFactor);
 
-    // ï¿½{ï¿½Xï¿½Ì•ï¿½ï¿½ï¿½ï¿½ÌFï¿½Ìƒï¿½ï¿½[ï¿½vï¿½ï¿½Jï¿½nï¿½ï¿½ï¿½ï¿½Öï¿½
+    // E½{E½XE½Ì•ï¿½E½E½E½ÌFE½ÌE¿½E½[E½vE½E½JE½nE½E½E½E½Öï¿½
     void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
 
-    // ï¿½{ï¿½Xï¿½Ì–Ú‚Ì‚ï¿½Bloomï¿½ï¿½Â‚ï¿½ï¿½ï¿½
+    // E½{E½XE½Ì–Ú‚Ì‚ï¿½BloomE½E½Â‚ï¿½E½E½
 
     void BeginGameBgmFadeOut();
 
-    // ï¿½Jï¿½ï¿½ï¿½ï¿½ï¿½Ìƒï¿½ï¿½[ï¿½hï¿½ï¿½ÏXï¿½ï¿½ï¿½ï¿½
+    // E½JE½E½E½E½E½ÌE¿½E½[E½hE½E½ÏXE½E½E½E½
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
 
     // Called when the boss-room door movie begins, before the boss-introduction blend completes.
@@ -255,7 +256,7 @@ private:
     void SetBattleHudVisible(bool visible);
     void DisableCinematicCameraDebugInput();
     void EnterPlayerDead();
-    void StageDeathActors(bool preserveGruxTransform);
+    void StageDeathActors();
     DeathStagingArea DetermineDeathStagingArea(const DirectX::XMFLOAT3& originalPlayerPosition) const;
     void OnPlayerDeathCameraStart();
     void ResetBattleForContinue();
@@ -371,7 +372,7 @@ private:
     void CreateBattleTimerUI();
     void SetBattleTimerVisible(bool visible);
     void UpdateBattleTimerUI();
-    // ï¿½ï¿½ï¿½Sï¿½ï¿½ï¿½Ìƒï¿½ï¿½Uï¿½ï¿½ï¿½gUIï¿½ï¿½ì¬ï¿½ï¿½ï¿½ï¿½
+    // E½E½E½SE½E½E½ÌE¿½E½UE½E½E½gUIE½E½E¬E½E½E½E½
     void CreateDeathResultUI();
     void SetDeathResultVisible(bool visible);
     void SelectDeathResult(int index);
@@ -458,7 +459,7 @@ private:
     LockOnTargetUIAnimationPhase lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Hidden;
     float lockOnTargetUIAnimationElapsed = 0.0f;
     float lockOnTargetUIRotationDegree = 0.0f;
-    float lockOnTargetUIStartOffset = 200.0f;   // ï¿½Åï¿½ï¿½Ìlï¿½Â‚ï¿½UIï¿½Ìï¿½ï¿½ï¿½ï¿½Ê’u
+    float lockOnTargetUIStartOffset = 200.0f;   // E½Åï¿½E½ÌlE½Â‚ï¿½UIE½Ìï¿½E½E½E½Ê’u
     float lockOnTargetUIGatherDuration = 0.3f;
     float lockOnTargetUIHoldDuration = 0.08f;
     float lockOnTargetUIRotationSpeedDegree = 72.0f;
@@ -496,7 +497,7 @@ private:
     unsigned long long finalHitDebugStartMilliseconds = 0;
     double finalHitDebugElapsedSeconds = 0.0;
     bool finalHitPending = false;
-    float finalHitReactionCutTime = 0.365f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½fadeï¿½É‘Jï¿½Ú‚ï¿½ï¿½ï¿½^ï¿½Cï¿½~ï¿½ï¿½ï¿½O
+    float finalHitReactionCutTime = 0.365f; // E½E½E½E½E½E½fadeE½É‘JE½Ú‚ï¿½E½E½^E½CE½~E½E½E½O
     bool phase2FinalHitGateActive = false;
     bool phase2FinalHitReactionComplete = false;
     bool phase2FinalHitAttackWaitRequired = false;
@@ -515,7 +516,7 @@ private:
     int phase1MaxHp = 30;
     int phase2MaxHp = 55;
     float phase2TransitionElapsed = 0.0f;
-    float phase2TransitionWaitDuration = 3.0f;  // phase2ï¿½Ésï¿½ï¿½transition
+    float phase2TransitionWaitDuration = 3.0f;  // phase2E½ÉsE½E½transition
     bool phase1BreakPending = false;
     bool phase2TransitionRequested = false;
     bool phase2BossRoarHpBarStarted = false;
@@ -740,14 +741,13 @@ private:
     float deathStagingMaxPlayerX = 17.425f;
     float deathStagingMinPlayerZ = 1.0f;
     float deathStagingMaxPlayerZ = 20.45f;
-    float deathStagingCornerInsetX = 0.8f;
-    float deathStagingCornerInsetZ = 0.8f;
-    float deathStagingRightInset = 0.8f;
+    float deathStagingWallInsetX = 0.8f;
+    float deathStagingWallInsetZ = 0.8f;
     std::array<DeathStagingAreaSettings, 9> deathStagingAreaSettings{};
 
     std::unique_ptr<ClothSimulate> clothSimulate;
 
-    // ï¿½Jï¿½ï¿½ï¿½ï¿½
+    // E½JE½E½E½E½
     TPSCameraComponent* mainCameraComponent = nullptr;
     std::shared_ptr<MainCamera> mainCameraActor;
     std::shared_ptr<CinemaCamera> cinemaCameraActor;
@@ -772,7 +772,7 @@ private:
     bool tutorialDodgeGuideActivated = false;
     bool tutorialDodgeSkeletonJustDodged = false;
     std::weak_ptr<Enemy> lockOnSelectedEnemy;
-    // ï¿½{ï¿½Xï¿½Ì•ï¿½ï¿½ï¿½ï¿½Ìƒï¿½ï¿½[ï¿½vï¿½Ì‚ï¿½ï¿½ß‚Ì•Ïï¿½
+    // E½{E½XE½Ì•ï¿½E½E½E½ÌE¿½E½[E½vE½Ì‚ï¿½E½ß‚Ì•Ïï¿½
     std::unique_ptr<EasingRunner> bossLerpEasing;
     float bossLerpEasingFactor = 0.0f;
     bool startBossRoomLerp = false;
@@ -780,13 +780,13 @@ private:
     float startBossRoomLerpFactor = 0.0f;
     float endBossRoomLerpFactor = 1.0f;
 
-    // ï¿½Qï¿½[ï¿½ï¿½BGMï¿½Aï¿½Nï¿½^ï¿½[
+    // E½QE½[E½E½BGME½AE½NE½^E½[
     std::shared_ptr<BgmActor> gameBgmActor;
     float gameBgmFadeDuration = 0.75f;
     float gameBgmFadeStartVolume = 0.0f;
     float gameBgmFadeElapsed = 0.0f;
     bool gameBgmFading = false;
-    // ï¿½{ï¿½XBGMï¿½Aï¿½Nï¿½^ï¿½[
+    // E½{E½XBGME½AE½NE½^E½[
     std::shared_ptr<BgmActor> bossBgmActor;
     std::shared_ptr<BgmActor> phase2BgmActor;
     std::shared_ptr<BgmActor> bossDeathSecondBgmActor;
@@ -800,6 +800,6 @@ private:
     bool bossDeathSecondBgmPlayed = false;
     bool playerDeathBgmPlayed = false;
 
-    // ï¿½zï¿½Aï¿½Nï¿½^ï¿½[
+    // E½zE½AE½NE½^E½[
     std::shared_ptr<DarkClothActor> darkClothActor;
 };

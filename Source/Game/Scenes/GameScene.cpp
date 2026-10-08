@@ -2447,12 +2447,10 @@ void GameScene::EnterPlayerDead()
         gruxEnemyActor->BeginHpBarFadeOut();
     FireDeathPresentationCue(DeathPresentationCue::GameplayHudFade, deathHudFadeCueFired);
 
-    const bool wasRoaringAtPlayerDeath = gruxEnemyActor && gruxEnemyActor->IsRoarBTActive();
     if (gruxEnemyActor)
         gruxEnemyActor->PauseBattleAI();
 
-    // プレイヤーが死亡した時のプレイヤーとボスの位置を調整
-    StageDeathActors(wasRoaringAtPlayerDeath);
+    StageDeathActors();
 
     if (darkCameraActor && player)
     {
@@ -2491,7 +2489,7 @@ GameScene::DeathStagingArea GameScene::DetermineDeathStagingArea(
     return DeathStagingArea::Center;
 }
 
-void GameScene::StageDeathActors(const bool preserveGruxTransform)
+void GameScene::StageDeathActors()
 {
     if (!player || !gruxEnemyActor)
         return;
@@ -2500,34 +2498,16 @@ void GameScene::StageDeathActors(const bool preserveGruxTransform)
     const DeathStagingArea stagingArea = DetermineDeathStagingArea(originalPlayerPosition);
     const float targetBossDistance = deathStagingAreaSettings[static_cast<size_t>(stagingArea)].bossDistance;
 
-    float safeMinX = deathStagingMinPlayerX;
-    float safeMaxX = deathStagingMaxPlayerX;
-    float safeMinZ = deathStagingMinPlayerZ;
-    float safeMaxZ = deathStagingMaxPlayerZ;
-    switch (stagingArea)
-    {
-    case DeathStagingArea::Right:
-        safeMinZ += deathStagingRightInset;
-        break;
-    case DeathStagingArea::FrontLeft:
-        safeMinX += deathStagingCornerInsetX;
-        safeMaxZ -= deathStagingCornerInsetZ;
-        break;
-    case DeathStagingArea::FrontRight:
-        safeMinX += deathStagingCornerInsetX;
-        safeMinZ += deathStagingCornerInsetZ;
-        break;
-    case DeathStagingArea::BackLeft:
-        safeMaxX -= deathStagingCornerInsetX;
-        safeMaxZ -= deathStagingCornerInsetZ;
-        break;
-    case DeathStagingArea::BackRight:
-        safeMaxX -= deathStagingCornerInsetX;
-        safeMinZ += deathStagingCornerInsetZ;
-        break;
-    default:
-        break;
-    }
+    const float stagingMinX = (std::min)(deathStagingMinPlayerX, deathStagingMaxPlayerX);
+    const float stagingMaxX = (std::max)(deathStagingMinPlayerX, deathStagingMaxPlayerX);
+    const float stagingMinZ = (std::min)(deathStagingMinPlayerZ, deathStagingMaxPlayerZ);
+    const float stagingMaxZ = (std::max)(deathStagingMinPlayerZ, deathStagingMaxPlayerZ);
+    const float wallInsetX = std::clamp(deathStagingWallInsetX, 0.0f, (stagingMaxX - stagingMinX) * 0.5f);
+    const float wallInsetZ = std::clamp(deathStagingWallInsetZ, 0.0f, (stagingMaxZ - stagingMinZ) * 0.5f);
+    const float safeMinX = stagingMinX + wallInsetX;
+    const float safeMaxX = stagingMaxX - wallInsetX;
+    const float safeMinZ = stagingMinZ + wallInsetZ;
+    const float safeMaxZ = stagingMaxZ - wallInsetZ;
 
     DirectX::XMFLOAT3 safePlayerPosition = originalPlayerPosition;
     safePlayerPosition.x = std::clamp(safePlayerPosition.x, safeMinX, safeMaxX);
@@ -2548,11 +2528,6 @@ void GameScene::StageDeathActors(const bool preserveGruxTransform)
     {
         player->SetPosition(safePlayerPosition);
     }
-
-    // Roar is interrupted before this point. Preserve the exact exposed boss
-    // transform it had when Player died, while still staging Player safely.
-    if (preserveGruxTransform)
-        return;
 
     DirectX::XMFLOAT3 playerToBoss = MathHelper::Subtract(
         stagedBossPosition, safePlayerPosition);
@@ -5894,9 +5869,8 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::DragFloat("Max Player X", &deathStagingMaxPlayerX, 0.01f);
         ImGui::DragFloat("Min Player Z", &deathStagingMinPlayerZ, 0.01f);
         ImGui::DragFloat("Max Player Z", &deathStagingMaxPlayerZ, 0.01f);
-        ImGui::DragFloat("Corner Inset X", &deathStagingCornerInsetX, 0.01f, 0.0f, 10.0f);
-        ImGui::DragFloat("Corner Inset Z", &deathStagingCornerInsetZ, 0.01f, 0.0f, 10.0f);
-        ImGui::DragFloat("Death Staging Right Inset", &deathStagingRightInset, 0.01f, 0.0f, 10.0f);
+        ImGui::DragFloat("Wall Inset X", &deathStagingWallInsetX, 0.01f, 0.0f, 3.0f);
+        ImGui::DragFloat("Wall Inset Z", &deathStagingWallInsetZ, 0.01f, 0.0f, 3.0f);
         static constexpr const char* areaNames[] =
         { "Center", "Front", "Back", "Left", "Right", "FrontLeft", "FrontRight", "BackLeft", "BackRight" };
         for (size_t i = 0; i < deathStagingAreaSettings.size(); ++i)
