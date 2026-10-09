@@ -828,17 +828,14 @@ public:
         if (!useMovieCamera)
             return;
 
-        // 手動操作
-        if (manualControl)
-        {
-            HandleKeyboardInput(deltaTime);
-            HandleMouseInput(deltaTime);
-        }
-
-        // ムービー再生
         if (playing)
         {
             UpdatePath(deltaTime);
+        }
+        else if (debugCameraMovementEnabled)
+        {
+            HandleKeyboardInput(deltaTime);
+            HandleMouseInput(deltaTime);
         }
     }
 
@@ -860,6 +857,34 @@ public:
 
     // ムービー再生中かどうかを取得する
     bool IsMovieFinish() const { return finished; }
+    bool IsPlaying() const { return playing; }
+
+    void Stop()
+    {
+        playing = false;
+        finished = false;
+        time = 0.0f;
+    }
+
+    void ResetToFirstKey()
+    {
+        Stop();
+        reversePlay = false;
+        currentIndex = 0;
+        if (!keys.empty())
+            ApplyWorldPose(keys.front().position, keys.front().rotation, keys.front().fov);
+    }
+
+    void JumpToKey(size_t keyIndex)
+    {
+        if (keyIndex >= keys.size())
+            return;
+
+        Stop();
+        reversePlay = false;
+        currentIndex = static_cast<int>(keyIndex);
+        ApplyWorldPose(keys[keyIndex].position, keys[keyIndex].rotation, keys[keyIndex].fov);
+    }
 
     // 最初のフレームを適応する
     void ApplyFirstFrame();
@@ -885,6 +910,8 @@ public:
         SceneComponent::DrawImGuiInspector();
 
         ImGui::Checkbox("Actor Relative Edit", &actorRelativeEditMode);
+        ImGui::Checkbox("Enable Debug Camera Movement", &debugCameraMovementEnabled);
+        ImGui::Text("Playback: %s", playing ? "Playing" : "Stopped");
         ImGui::Text("Actor Relative Basis: %s",
             actorRelativeBasis.valid ? "Valid" : "Not Set");
 
@@ -914,6 +941,16 @@ public:
         {
             Start(true);
         }
+        ImGui::SameLine();
+        if (ImGui::Button("Stop"))
+        {
+            Stop();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Reset"))
+        {
+            ResetToFirstKey();
+        }
         if (ImGui::Button("Save JSON"))
         {
             SaveToJson(basePath + currentFile);
@@ -933,6 +970,7 @@ public:
         if (ImGui::Button("New"))
         {
             keys.clear();
+            selectedKeyIndex = 0;
             currentFile = "new_movie.json";
         }
 
@@ -950,6 +988,13 @@ public:
             ImGui::PushID(i);
 
             auto& k = keys[i];
+            ImGui::RadioButton("Selected Key", &selectedKeyIndex, i);
+            ImGui::SameLine();
+            if (ImGui::Button("Jump To Key"))
+            {
+                selectedKeyIndex = i;
+                JumpToKey(static_cast<size_t>(selectedKeyIndex));
+            }
             // 名前を編集できる
             char nameBuf[64];
             strncpy_s(nameBuf, k.name.c_str(), sizeof(nameBuf));
@@ -957,6 +1002,23 @@ public:
             {
                 k.name = nameBuf; // 入力変更を反映
             }
+            ImGui::DragFloat3("Position", &k.position.x, 0.01f);
+
+            if (ImGui::DragFloat4("Rotation (Quaternion)", &k.rotation.x, 0.001f))
+            {
+                using namespace DirectX;
+                XMVECTOR rotation = XMLoadFloat4(&k.rotation);
+                if (XMVector4Equal(rotation, XMVectorZero()))
+                    rotation = XMQuaternionIdentity();
+                XMStoreFloat4(&k.rotation, XMQuaternionNormalize(rotation));
+            }
+
+            float fovDeg = DirectX::XMConvertToDegrees(k.fov);
+            if (ImGui::DragFloat("FOV (deg)", &fovDeg, 0.1f, 10.0f, 120.0f))
+            {
+                k.fov = DirectX::XMConvertToRadians(fovDeg);
+            }
+
             ImGui::DragFloat("Duration", &k.duration, 0.1f, 0.1f, 10.0f);
 
             const char* easeItems[] = { "Linear", "EaseIn", "EaseOut", "EaseInOut" };
@@ -969,7 +1031,12 @@ public:
             if (ImGui::Button("Set From Current"))
             {
                 k.position = GetComponentLocation();
-                k.rotation = GetComponentRotation();
+                using namespace DirectX;
+                const XMFLOAT4 currentRotation = GetComponentRotation();
+                XMVECTOR rotation = XMLoadFloat4(&currentRotation);
+                if (XMVector4Equal(rotation, XMVectorZero()))
+                    rotation = XMQuaternionIdentity();
+                XMStoreFloat4(&k.rotation, XMQuaternionNormalize(rotation));
                 k.fov = fovY;
             }
 
@@ -993,6 +1060,7 @@ public:
 
 private:
     void ConvertRelativeKeysToWorld();
+    void SyncYawPitchFromRotation(const DirectX::XMFLOAT4& rotation);
     void HandleKeyboardInput(float deltaTime);
     void HandleMouseInput(float deltaTime)
     {
@@ -1080,6 +1148,7 @@ private:
     std::vector<CameraKeyframe> keys;
 
     int currentIndex = 0;
+    int selectedKeyIndex = 0;
     float time = 0.f;
     bool playing = false;
 
@@ -1088,6 +1157,7 @@ private:
     void UpdatePath(float dt);
 
     bool useMovieCamera = false;
+    bool debugCameraMovementEnabled = false;
     float moveSpeed = 5.0f;
     float rotateSpeed = 0.001f;
     bool holdLastFrame = true;  // 最後のフレームを保持する

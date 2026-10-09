@@ -608,6 +608,7 @@ void MovieCameraComponent::LoadFromJson(const std::string& path)
     file >> j;
 
     keys.clear();
+    selectedKeyIndex = 0;
 
     if (!j.contains("keys")) return;
 
@@ -777,14 +778,39 @@ void MovieCameraComponent::ApplyWorldPose(
     if (!owner)
         return;
 
+    using namespace DirectX;
+    XMVECTOR quaternion = XMLoadFloat4(&rotation);
+    if (XMVector4Equal(quaternion, XMVectorZero()))
+        quaternion = XMQuaternionIdentity();
+    quaternion = XMQuaternionNormalize(quaternion);
+
+    XMFLOAT4 normalizedRotation{};
+    XMStoreFloat4(&normalizedRotation, quaternion);
+
     owner->SetPosition(position);
-    owner->SetQuaternionRotation(rotation);
+    owner->SetQuaternionRotation(normalizedRotation);
     // SetQuaternionRotationDirect updates the actor root only.  Refresh the
     // component hierarchy before GetComponentRotation()/GetForward()/GetView()
     // are queried in the same frame.
     owner->UpdateAllComponentTransforms();
     SetFov(fov);
     useLookTarget = false;
+    SyncYawPitchFromRotation(normalizedRotation);
+}
+
+void MovieCameraComponent::SyncYawPitchFromRotation(
+    const DirectX::XMFLOAT4& rotation)
+{
+    using namespace DirectX;
+    const XMVECTOR forward = XMVector3Rotate(
+        XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
+        XMQuaternionNormalize(XMLoadFloat4(&rotation)));
+    const float forwardX = XMVectorGetX(forward);
+    const float forwardY = XMVectorGetY(forward);
+    const float forwardZ = XMVectorGetZ(forward);
+    yaw = atan2f(forwardX, forwardZ);
+    pitch = atan2f(-forwardY,
+        sqrtf(forwardX * forwardX + forwardZ * forwardZ));
 }
 
 void MovieCameraComponent::Start(bool reverse)
