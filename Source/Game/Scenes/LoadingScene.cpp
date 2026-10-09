@@ -572,6 +572,10 @@ void LoadingScene::DrawGuiPlusAlpha()
     ImGui::DragFloat("Particle Float Speed", &loadingParticleCBuffer->data.particleFloatSpeed, 0.01f, 0.0f, 10.0f, "%.3f");
     ImGui::DragFloat("Particle Orbit Blend Time", &loadingParticleCBuffer->data.particleOrbitBlendTime, 0.01f, 0.05f, 3.0f, "%.3f");
     ImGui::Separator();
+    ImGui::TextUnformatted("Particle Appearance");
+    ImGui::DragFloat("Particle Brightness", &loadingParticleCBuffer->data.particleBrightness, 0.01f, 0.0f, 5.0f, "%.3f");
+    ImGui::DragFloat("Particle Glow Intensity", &loadingParticleCBuffer->data.particleGlowIntensity, 0.01f, 0.0f, 5.0f, "%.3f");
+    ImGui::Separator();
     ImGui::TextUnformatted("Fade Out");
     ImGui::DragFloat("Fade Out Hold Duration", &fadeOutHoldDuration, 0.01f, 0.0f, 5.0f, "%.3f");
     ImGui::DragFloat("Fade Out Duration", &fadeOutDuration, 0.01f, 0.01f, 5.0f, "%.3f");

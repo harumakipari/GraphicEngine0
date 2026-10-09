@@ -691,7 +691,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 {
                     DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
                     pos.z = 12.0f;
-                    Transform doorJailTr{ pos,point.worldRotation,point.worldScale };
+                    Transform doorJailTr{ pos,{0.0f,-180.0f,0.0f},point.worldScale };
                     auto doorJailActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DoorJailActor>("DoorJailActor", doorJailTr);
                     registerActorLights(doorJailActor);
 

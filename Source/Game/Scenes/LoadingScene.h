@@ -80,6 +80,9 @@ private:
         float particleFloatAmplitude = 0.014f;
         float particleFloatSpeed = 2.05f;
         float particleOrbitBlendTime = 0.75f;
+        float particleBrightness = 1.5f;
+        float particleGlowIntensity = 1.3f;
+        float particlePadding[2] = {};
     };
     std::unique_ptr<ConstantBuffer<LoadingParticleConstants>> loadingParticleCBuffer;
 

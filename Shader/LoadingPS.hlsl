@@ -25,6 +25,9 @@ cbuffer LOADING_PARTICLE_CONSTANT_BUFFER : register(b12)
     float particleFloatAmplitude;
     float particleFloatSpeed;
     float particleOrbitBlendTime;
+    float particleBrightness;
+    float particleGlowIntensity;
+    float2 particlePadding;
 };
 
 float Hash11(float value)
@@ -114,7 +117,7 @@ float4 main(VS_OUT pin) : SV_Target
         const float2 particlePosition = lerp(gatherPosition, orbitPosition, orbitBlend);
 
         const float distanceToParticle = max(length(p - particlePosition), 0.012f);
-        f += PARTICLE_GLOW / distanceToParticle;
+        f += PARTICLE_GLOW * particleGlowIntensity / distanceToParticle;
     }
 
     const float centerFadeStart = particleGatherStart + particleGatherDuration * 0.60f;
@@ -123,6 +126,6 @@ float4 main(VS_OUT pin) : SV_Target
     const float centerGlow = CENTER_GLOW * centerFade * exp(-dot(p, p) / (0.23f * 0.23f));
     const float light = 1.0f - exp(-(f + centerGlow));
     const float3 loadingColor = float3(0.001f, 0.003f, 0.008f) +
-        COLOR * light * 0.8f;
+        COLOR * light * 0.8f * particleBrightness;
     return float4(loadingColor * saturate(particleFadeOutAlpha), 1.0f);
 }
