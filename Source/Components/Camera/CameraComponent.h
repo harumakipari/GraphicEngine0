@@ -859,6 +859,53 @@ public:
     bool IsMovieFinish() const { return finished; }
     bool IsPlaying() const { return playing; }
 
+    // Elapsed time on the authored forward camera path.  This deliberately uses
+    // the same segment clock as UpdatePath so presentation cues stay synchronized
+    // with the rendered movie camera.
+    float GetPlaybackElapsedTime() const
+    {
+        if (reversePlay || keys.size() < 2)
+            return 0.0f;
+
+        size_t completedSegments = currentIndex > 0
+            ? static_cast<size_t>(currentIndex) : 0;
+        completedSegments = (std::min)(completedSegments, keys.size() - 1);
+
+        float elapsed = 0.0f;
+        for (size_t index = 0; index < completedSegments; ++index)
+            elapsed += (std::max)(keys[index].duration, 0.01f);
+
+        if (currentIndex >= 0 && static_cast<size_t>(currentIndex) < keys.size() - 1)
+            elapsed += time;
+        return elapsed;
+    }
+
+    bool TryGetKeyframeStartTime(const std::string& keyName, float& outStartTime) const
+    {
+        float elapsed = 0.0f;
+        for (const auto& key : keys)
+        {
+            if (key.name == keyName)
+            {
+                outStartTime = elapsed;
+                return true;
+            }
+            elapsed += (std::max)(key.duration, 0.01f);
+        }
+        return false;
+    }
+
+    bool TryGetKeyframeStartTime(const size_t keyIndex, float& outStartTime) const
+    {
+        if (keyIndex >= keys.size()) return false;
+        outStartTime = 0.0f;
+        for (size_t index = 0; index < keyIndex; ++index)
+            outStartTime += (std::max)(keys[index].duration, 0.01f);
+        return true;
+    }
+
+    size_t GetKeyframeCount() const { return keys.size(); }
+
     void Stop()
     {
         playing = false;

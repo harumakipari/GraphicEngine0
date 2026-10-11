@@ -58,7 +58,7 @@ private:
 public:
     explicit MovieCameraManagerActor(const std::string& actorName) :Actor(actorName) {}
 
-    void Initialize(const Transform& transform) override {}
+    void Initialize(const Transform& transform) override;
 
     void Update(float dt) override;
 
@@ -95,6 +95,13 @@ private:
     void UpdateDeathWideAnchorPreview();
     void HandlePrisonOpeningCameraPathCompleted();
     void UpdatePrisonOpeningPresentation(float deltaTime);
+    void UpdatePrisonOpeningEyeOpening();
+    void UpdatePrisonOpeningFaceCloseUpKeyTime();
+    bool ReplayPrisonOpeningMovie();
+    bool CanReplayPrisonOpeningMovie() const;
+    void LoadPrisonOpeningEyeSettings();
+    void SavePrisonOpeningEyeSettings() const;
+    void EndPrisonOpeningEyeOverride();
     void BeginPrisonOpeningPlayerStanding();
     void BeginPrisonOpeningBlendToTPS();
     void UpdatePrisonOpeningBlendToTPS(float deltaTime);
@@ -111,6 +118,21 @@ private:
     float prisonOpeningBlendStartFov = 0.0f;
     float prisonOpeningBlendElapsed = 0.0f;
     float prisonOpeningBlendDuration = 0.7f;
+    bool prisonOpeningEyeOpeningEnabled = true;
+    float prisonOpeningEyeOpenDelay = 0.0f;
+    float prisonOpeningEyeOpenDuration = 0.8f;
+    float prisonOpeningFaceCloseUpKeyTime = 0.0f;
+    bool prisonOpeningFaceCloseUpKeyTimeValid = false;
+    float prisonOpeningCurrentMovieTime = 0.0f;
+    float prisonOpeningCurrentEyeWeight = 0.0f;
+    bool prisonOpeningEyeOverrideActive = false;
+    bool prisonOpeningEyeOpeningPreview = false;
+    float prisonOpeningEyeOpeningPreviewTime = 0.0f;
+    static constexpr const char* PrisonOpeningEyeSettingsPath = "./Data/Saves/MovieCameras/prison_opening_eye_settings.json";
+    static constexpr const char* PrisonOpeningFaceCloseUpKeyName = "4";
+    static constexpr size_t PrisonOpeningFaceCloseUpKeyIndex = 3;
+    static constexpr const char* PrisonOpeningMoviePath = "./Data/Saves/MovieCameras/prison_opening.json";
+
     bool prisonOpeningTransitionDebugActive = false;
     int prisonOpeningTransitionDebugFrame = 0;
     int prisonOpeningTransitionDebugPostFinishFramesRemaining = 0;

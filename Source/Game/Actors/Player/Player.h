@@ -175,6 +175,11 @@ public:
     bool BeginPrisonOpeningSitting(const DirectX::XMFLOAT3& position, float yawDegrees);
     bool BeginPrisonOpeningStanding();
     void EndPrisonOpeningSitting();
+    bool BeginPrisonOpeningEyeClosed();
+    void SetPrisonOpeningEyeClosedWeight(float weight);
+    void EndPrisonOpeningEyeOverride();
+    bool IsPrisonOpeningEyeOverrideActive() const;
+
     bool IsPrisonOpeningSitting() const { return prisonOpeningSitting; }
     bool IsPrisonOpeningStandingFinished() const;
     void LogPrisonOpeningTransitionDebug(const char* phase, int frame) const;
@@ -742,8 +747,17 @@ private:
     float closedEyePoseTime = 4.045f;
     float closeEyeStartTime = 2.0f;
     float closeEyeDuration = 1.4f;
+    enum class EyeCloseOverrideOwner
+    {
+        None,
+        ManualPreview,
+        PrisonOpening,
+        Death,
+    };
+
     float closeEyeWeight = 0.0f;
     bool closeEyePreviewActive = false;
+    EyeCloseOverrideOwner eyeCloseOverrideOwner = EyeCloseOverrideOwner::None;
     bool deathEyeCloseActive = false;
     float deathEyeCloseDelay = 2.506f;
     float deathEyeCloseDuration = 1.4f;

@@ -1,8 +1,8 @@
 {
     "keys": [
         {
-            "duration": 5.0,
-            "ease": "EaseInOut",
+            "duration": 8.0,
+            "ease": "Linear",
             "fov": 0.6108652353286743,
             "name": "1",
             "pos": [

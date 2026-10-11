@@ -1493,7 +1493,7 @@ void Player::DrawImGuiDetails()
     }
     if (ImGui::CollapsingHeader(U8("目を閉じるデバック")))
     {
-        const bool manualControlsEnabled = !deathEyeCloseActive;
+        const bool manualControlsEnabled = !deathEyeCloseActive && eyeCloseOverrideOwner != EyeCloseOverrideOwner::PrisonOpening;
         if (!manualControlsEnabled)
             ImGui::BeginDisabled();
 
@@ -1502,7 +1502,10 @@ void Player::DrawImGuiDetails()
             closeEyePreviewActive = RebuildEyeClosePoseOverride();
             closeEyeWeight = closeEyePreviewActive ? 1.0f : 0.0f;
             if (closeEyePreviewActive)
+            {
+                eyeCloseOverrideOwner = EyeCloseOverrideOwner::ManualPreview;
                 GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
+            }
         }
         ImGui::SameLine();
         if (ImGui::Button("Open Eyes / Reset"))
@@ -1513,7 +1516,10 @@ void Player::DrawImGuiDetails()
             if (!closeEyePreviewActive)
                 closeEyePreviewActive = RebuildEyeClosePoseOverride();
             if (closeEyePreviewActive)
+            {
+                eyeCloseOverrideOwner = EyeCloseOverrideOwner::ManualPreview;
                 GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
+            }
         }
 
         if (!manualControlsEnabled)
@@ -1546,6 +1552,7 @@ void Player::DrawImGuiDetails()
         ImGui::Text("Weight            : %.3f", closeEyeWeight);
         ImGui::Text("Control           : %s",
             deathEyeCloseActive ? "Death Auto" :
+            eyeCloseOverrideOwner == EyeCloseOverrideOwner::PrisonOpening ? "Prison Opening" :
             closeEyePreviewActive ? "Manual Preview" : "Animation");
     }
 
@@ -2689,6 +2696,7 @@ bool Player::BeginPrisonOpeningStanding()
     if (!controller)
         return false;
 
+    EndPrisonOpeningEyeOverride();
     prisonOpeningSitting = false;
     prisonOpeningStanding = true;
     controller->ReleaseHeldAnimationPose();
@@ -2701,6 +2709,7 @@ bool Player::BeginPrisonOpeningStanding()
 void Player::EndPrisonOpeningSitting()
 
 {
+    EndPrisonOpeningEyeOverride();
     if (!prisonOpeningSitting && !prisonOpeningStanding)
         return;
 
@@ -2714,6 +2723,46 @@ void Player::EndPrisonOpeningSitting()
     }
     EndEvent();
     InputSystem::SetInputEnabled(prisonOpeningInputWasEnabled);
+}
+
+bool Player::BeginPrisonOpeningEyeClosed()
+{
+    if (deathEyeCloseActive)
+        return false;
+
+    ResetEyeCloseOverride();
+    closeEyeWeight = 1.0f;
+    if (!RebuildEyeClosePoseOverride())
+        return false;
+
+    eyeCloseOverrideOwner = EyeCloseOverrideOwner::PrisonOpening;
+    return true;
+}
+
+void Player::SetPrisonOpeningEyeClosedWeight(const float weight)
+{
+    if (eyeCloseOverrideOwner != EyeCloseOverrideOwner::PrisonOpening || deathEyeCloseActive)
+        return;
+
+    closeEyeWeight = std::clamp(weight, 0.0f, 1.0f);
+    if (const auto controller = GetBodyAnimationController())
+        controller->SetLocalPoseOverrideWeight(closeEyeWeight);
+}
+
+void Player::EndPrisonOpeningEyeOverride()
+{
+    if (eyeCloseOverrideOwner != EyeCloseOverrideOwner::PrisonOpening)
+        return;
+
+    if (const auto controller = GetBodyAnimationController())
+        controller->ClearLocalPoseOverride();
+    closeEyeWeight = 0.0f;
+    eyeCloseOverrideOwner = EyeCloseOverrideOwner::None;
+}
+
+bool Player::IsPrisonOpeningEyeOverrideActive() const
+{
+    return eyeCloseOverrideOwner == EyeCloseOverrideOwner::PrisonOpening && !deathEyeCloseActive;
 }
 
 void Player::LogPrisonOpeningTransitionDebug(const char* phase, int frame) const
@@ -3212,6 +3261,7 @@ void Player::ResetEyeCloseOverride()
 
     closeEyeWeight = 0.0f;
     closeEyePreviewActive = false;
+    eyeCloseOverrideOwner = EyeCloseOverrideOwner::None;
     deathEyeCloseActive = false;
     deathEyeCloseStarted = false;
     deathVisualFadeStarted = false;
@@ -3229,6 +3279,7 @@ void Player::BeginDeathEyeClose()
         skeletalMeshComponent->plusAlphaCBuffer->data.deathDeadEmissiveColor = deathDeadEmissiveColor;
     }
     deathEyeCloseActive = true;
+    eyeCloseOverrideOwner = EyeCloseOverrideOwner::Death;
     RebuildEyeClosePoseOverride();
 }
 

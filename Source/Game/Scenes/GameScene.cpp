@@ -206,6 +206,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         CreateLockOnTargetUI();
         CreateTutorialSkeletonUI();
         CreateJudgeDodgeOperationTutorialUI();
+        CreateTutorialDodgeGuideRing();
         CreateBattleTimerUI();
         CreateDeathResultUI();
         LoadVictoryBestTime();
@@ -1349,18 +1350,75 @@ void GameScene::StartJudgeDodgeOperationTutorial()
     SetPaused(true);
     Time::timeScale = 0.0f;
     UpdateJudgeDodgeOperationTutorialUI();
-    if (judgeDodgeOperationTutorialImage) judgeDodgeOperationTutorialImage->SetVisible(true);
+    if (judgeDodgeOperationTutorialImage)
+    {
+        judgeDodgeOperationTutorialImage->SetVisible(true);
+    }
     if (judgeDodgeOperationTutorialCloseImage) judgeDodgeOperationTutorialCloseImage->SetVisible(true);
 }
 
 void GameScene::CloseJudgeDodgeOperationTutorial()
 {
     if (judgeDodgeOperationTutorialState != JudgeDodgeOperationTutorialState::Showing) return;
-    CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav");
+    CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav",0.5f);
     if (judgeDodgeOperationTutorialImage) judgeDodgeOperationTutorialImage->SetVisible(false);
     if (judgeDodgeOperationTutorialCloseImage) judgeDodgeOperationTutorialCloseImage->SetVisible(false);
+    tutorialDodgeGuideRingFinished = false;
+    tutorialDodgeGuideRingElapsed = 0.0f;
+    const bool ringStartedInAttackRange = tutorialDodgeSkeletonActor && player &&
+        tutorialDodgeSkeletonActor->IsPlayerWithinAttackRange(*player);
+    tutorialDodgeGuideRingStartedInAttackRange = ringStartedInAttackRange;
+    tutorialDodgeGuideRingPreviousAttackRange = ringStartedInAttackRange;
+    tutorialDodgeGuideRingActive = true;
     judgeDodgeOperationTutorialState = JudgeDodgeOperationTutorialState::Completed;
     if (judgeDodgeOperationTutorialOwnsPause) { SetPaused(false); Time::timeScale = judgeDodgeOperationTutorialPreviousTimeScale; judgeDodgeOperationTutorialOwnsPause = false; }
+}
+
+void GameScene::CreateTutorialDodgeGuideRing()
+{
+    tutorialDodgeGuideRingActor = GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("TutorialDodgeGuideRing");
+    if (!tutorialDodgeGuideRingActor) return;
+    tutorialDodgeGuideRingMesh = tutorialDodgeGuideRingActor->AddComponent<StaticMeshComponent>("TutorialDodgeGuideRingMesh");
+    tutorialDodgeGuideRingMesh->SetModel("./Data/Models/EffectModel/JumpTeregraphPlane.glb");
+    if (tutorialDodgeGuideRingMesh->model) for (auto& material : tutorialDodgeGuideRingMesh->model->materials) material.data.alphaMode = 2;
+    tutorialDodgeGuideRingMesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
+    tutorialDodgeGuideRingMesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
+    tutorialDodgeGuideRingMesh->SetIsCastShadow(false);
+    tutorialDodgeGuideRingMesh->SetIsVisible(false);
+    tutorialDodgeGuideRingMesh->SetUsingAbsoluteLocation(true);
+    tutorialDodgeGuideRingMesh->SetUsingAbsoluteRotation(true);
+    tutorialDodgeGuideRingMesh->SetUsingAbsoluteScale(true);
+    tutorialDodgeGuideRingMesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+}
+
+void GameScene::UpdateTutorialDodgeGuideRing()
+{
+    if (!tutorialDodgeGuideRingActive || tutorialDodgeGuideRingFinished || !tutorialDodgeGuideRingMesh) return;
+    if (!tutorialDodgeSkeletonActor || tutorialDodgeSkeletonActor->IsDead() || tutorialDodgeSkeletonActor->IsPendingKill() || (player && player->IsBossBattle()))
+    {
+        tutorialDodgeGuideRingActive = false; tutorialDodgeGuideRingFinished = true; tutorialDodgeGuideRingMesh->SetIsVisible(false); return;
+    }
+    tutorialDodgeGuideRingElapsed += Time::UnscaledDeltaTime();
+    const bool attackRangeEnteredAfterRingShown = !tutorialDodgeGuideRingPreviousAttackRange && tutorialDodgeSkeletonAttackRange;
+    const bool startedInRangeGraceExpired = tutorialDodgeGuideRingStartedInAttackRange &&
+        tutorialDodgeGuideRingElapsed >= tutorialDodgeGuideRingRangeGraceDuration;
+    tutorialDodgeGuideRingPreviousAttackRange = tutorialDodgeSkeletonAttackRange;
+    if (attackRangeEnteredAfterRingShown || startedInRangeGraceExpired)
+    {
+        tutorialDodgeGuideRingActive = false;
+        tutorialDodgeGuideRingFinished = true;
+        tutorialDodgeGuideRingMesh->SetIsVisible(false);
+        return;
+    }
+    tutorialDodgeGuideRingPulseElapsed += Time::UnscaledDeltaTime();
+    const float wave = 0.5f + 0.5f * std::sin(tutorialDodgeGuideRingPulseElapsed * tutorialDodgeGuideRingPulseSpeed * DirectX::XM_2PI);
+    const float pulse = std::lerp(tutorialDodgeGuideRingPulseMin, tutorialDodgeGuideRingPulseMax, wave);
+    const auto p = tutorialDodgeSkeletonActor->GetPosition();
+    tutorialDodgeGuideRingMesh->SetRelativeLocationDirect({ p.x + tutorialDodgeGuideRingPositionOffset.x, p.y + tutorialDodgeGuideRingPositionOffset.y, p.z + tutorialDodgeGuideRingPositionOffset.z });
+    tutorialDodgeGuideRingMesh->SetRelativeScaleDirect(tutorialDodgeGuideRingScale);
+    tutorialDodgeGuideRingMesh->plusAlphaCBuffer->data.cpuColor = { tutorialDodgeGuideRingColor.x, tutorialDodgeGuideRingColor.y, tutorialDodgeGuideRingColor.z, 1.0f };
+    tutorialDodgeGuideRingMesh->plusAlphaCBuffer->data.emissionPower = tutorialDodgeGuideRingEmission * pulse;
+    tutorialDodgeGuideRingMesh->SetIsVisible(true);
 }
 
 void GameScene::HideTutorialSkeletonUI()
@@ -2114,6 +2172,7 @@ void GameScene::Update(float deltaTime)
 
     const auto lockOnSelectionResult = UpdateLockOnTargetSelection();
     UpdateOperationGuideTutorial(lockOnSelectionResult);
+    UpdateTutorialDodgeGuideRing();
 
     SceneBase::Update(deltaTime);
     UpdateTutorialSkeletonUI();
@@ -5214,6 +5273,18 @@ void GameScene::DrawGuiPlusAlpha()
 {
 #ifdef USE_IMGUI
     ImGui::Begin("GameScene");
+
+    ImGui::SeparatorText("Tutorial Guide Ring");
+    ImGui::DragFloat3("Tutorial Guide Ring Position Offset", &tutorialDodgeGuideRingPositionOffset.x, 0.01f);
+    ImGui::DragFloat3("Tutorial Guide Ring Scale", &tutorialDodgeGuideRingScale.x, 0.01f);
+    ImGui::ColorEdit3("Tutorial Guide Ring Color", &tutorialDodgeGuideRingColor.x);
+    ImGui::DragFloat("Tutorial Guide Ring Emission", &tutorialDodgeGuideRingEmission, 0.01f, 0.0f, 20.0f);
+    ImGui::DragFloat("Tutorial Guide Ring Pulse Speed", &tutorialDodgeGuideRingPulseSpeed, 0.01f, 0.0f, 10.0f);
+    ImGui::DragFloat("Tutorial Guide Ring Pulse Min", &tutorialDodgeGuideRingPulseMin, 0.01f, 0.0f, 1.0f);
+    ImGui::DragFloat("Tutorial Guide Ring Pulse Max", &tutorialDodgeGuideRingPulseMax, 0.01f, 0.0f, 1.0f);
+    ImGui::Text("Tutorial Guide Ring Visible: %s", tutorialDodgeGuideRingActive ? "true" : "false");
+
+
     ImGui::SeparatorText("Judge Dodge Operation Tutorial");
     ImGui::DragFloat2("Judge Dodge Message Position", &judgeDodgeOperationTutorialPosition.x, 1.0f);
     ImGui::DragFloat2("Judge Dodge Message Scale", &judgeDodgeOperationTutorialScale.x, 0.01f, 0.01f, 4.0f);

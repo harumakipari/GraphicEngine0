@@ -93,6 +93,7 @@ public:
     void Update(float deltaTime) override;
     void Interact() override;
     void SetOpenCompletedSilently();
+    void ResetToClosedForPrisonOpening();
     void DrawImGuiDetails() override;
 
     bool IsOpenDoor() const { return doorState == DoorState::Open; }

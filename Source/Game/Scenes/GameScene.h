@@ -29,6 +29,7 @@
 class GruxEnemy;
 class Enemy;
 class SkeletonWarriorActor;
+class StaticMeshComponent;
 class CoreStandaloneAudioSource;
 class SceneComponent;
 
@@ -159,6 +160,8 @@ private:
     void StartJudgeDodgeOperationTutorial();
     void CloseJudgeDodgeOperationTutorial();
     void UpdateJudgeDodgeOperationTutorialUI();
+    void CreateTutorialDodgeGuideRing();
+    void UpdateTutorialDodgeGuideRing();
     void SpawnTutorialSkeletons();
     void CreateTutorialSkeletonUI();
     void UpdateTutorialSkeletonUI();
@@ -780,9 +783,24 @@ private:
     std::shared_ptr<UIImageComponent> judgeDodgeOperationTutorialImage;
     std::shared_ptr<UIImageComponent> judgeDodgeOperationTutorialCloseImage;
     DirectX::XMFLOAT2 judgeDodgeOperationTutorialPosition{ 620.0f, 280.0f };
-    DirectX::XMFLOAT2 judgeDodgeOperationTutorialScale{ 0.40f, 0.0f };
+    DirectX::XMFLOAT2 judgeDodgeOperationTutorialScale{ 0.40f, 0.40f };
     DirectX::XMFLOAT2 judgeDodgeOperationTutorialClosePosition{ 973.0f, 325.0f };
     DirectX::XMFLOAT2 judgeDodgeOperationTutorialCloseScale{ 0.44f, 0.44f };
+    std::shared_ptr<Actor> tutorialDodgeGuideRingActor;
+    std::shared_ptr<StaticMeshComponent> tutorialDodgeGuideRingMesh;
+    bool tutorialDodgeGuideRingActive = false;
+    bool tutorialDodgeGuideRingFinished = false;
+    float tutorialDodgeGuideRingElapsed = 0.0f;
+    float tutorialDodgeGuideRingRangeGraceDuration = 0.25f;
+    bool tutorialDodgeGuideRingStartedInAttackRange = false;
+    bool tutorialDodgeGuideRingPreviousAttackRange = false;
+    float tutorialDodgeGuideRingPulseElapsed = 0.0f;
+    DirectX::XMFLOAT3 tutorialDodgeGuideRingPositionOffset{ 0.0f, 0.65f, 0.0f };
+    DirectX::XMFLOAT3 tutorialDodgeGuideRingScale{ 1.5f, 1.0f, 1.5f };
+    DirectX::XMFLOAT3 tutorialDodgeGuideRingColor{ 1.0f, 0.78f, 0.42f };
+    float tutorialDodgeGuideRingEmission = 1.5f;
+    float tutorialDodgeGuideRingPulseSpeed = 2.0f;
+    float tutorialDodgeGuideRingPulseMin = 0.70f, tutorialDodgeGuideRingPulseMax = 1.00f;
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
     bool tutorialPassiveSkeletonLockOnCandidate = false;
     int tutorialPassiveSkeletonYHpBaseline = -1;

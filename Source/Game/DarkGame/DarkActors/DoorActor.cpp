@@ -334,6 +334,19 @@ void DoorJailActor::SetOpenCompletedSilently()
     CompleteInteraction();
 }
 
+void DoorJailActor::ResetToClosedForPrisonOpening()
+{
+    openAlpha = 0.0f;
+    doorState = DoorState::Closed;
+    suppressInteractionAfterSilentOpen = false;
+    canInteract = true;
+    interacted = false;
+    hinge->SetRelativeEulerRotationDirect({ 0.0f, closedAngle, 0.0f });
+    UpdateAllComponentTransforms();
+    if (interactUiComponent)
+        interactUiComponent->SetVisible(false);
+}
+
 void DoorJailActor::Interact()
 {
     if (suppressInteractionAfterSilentOpen)

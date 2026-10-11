@@ -9,6 +9,8 @@
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Scenes/GameScene.h"
+#include <fstream>
+#include <json.hpp>
 #include "Physics/CollisionFunction.h"
 #include "Components/CollisionShape/ShapeComponent.h"
 
@@ -174,6 +176,11 @@ namespace
     }
 }
 
+void MovieCameraManagerActor::Initialize(const Transform& transform)
+{
+    LoadPrisonOpeningEyeSettings();
+}
+
 void MovieCameraManagerActor::Update(float deltaTime)
 {
     std::string playerMovieFileName = "player_up.json";
@@ -239,6 +246,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             }
             else if (prisonOpeningState == PrisonOpeningState::CameraPathPlaying)
             {
+                UpdatePrisonOpeningEyeOpening();
                 if (movieCamera->IsMovieFinish())
                     HandlePrisonOpeningCameraPathCompleted();
                 else if (!movieCamera->IsPlaying())
@@ -574,8 +582,41 @@ void MovieCameraManagerActor::DrawImGuiDetails()
     ImGui::Text("Playing: %s", prisonOpeningMoviePlaying ? "true" : "false");
     if (ImGui::Button("Play Prison Opening Movie (Runtime)"))
         PlayPrisonOpeningMovie();
+    const bool canReplayPrisonOpening = CanReplayPrisonOpeningMovie();
+    if (!canReplayPrisonOpening)
+        ImGui::BeginDisabled();
+    if (ImGui::Button("Replay Prison Opening"))
+        ReplayPrisonOpeningMovie();
+    if (!canReplayPrisonOpening)
+        ImGui::EndDisabled();
+    ImGui::SameLine();
+    ImGui::Text("Replay: %s", canReplayPrisonOpening ? "Ready" : "Unavailable");
     ImGui::DragFloat("TPS Blend Duration", &prisonOpeningBlendDuration,
         0.01f, 0.0f, 2.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::Checkbox("Eye Opening Enabled", &prisonOpeningEyeOpeningEnabled);
+    ImGui::Text("Face CloseUp Key Time: %s%.3f s",
+        prisonOpeningFaceCloseUpKeyTimeValid ? "" : "Unavailable ",
+        prisonOpeningFaceCloseUpKeyTime);
+    ImGui::DragFloat("Eye Open Delay", &prisonOpeningEyeOpenDelay,
+        0.01f, 0.0f, 30.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Eye Open Duration", &prisonOpeningEyeOpenDuration,
+        0.01f, 0.01f, 10.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+    const float calculatedEyeOpenStart = prisonOpeningFaceCloseUpKeyTime + prisonOpeningEyeOpenDelay;
+    ImGui::Text("Calculated Eye Open Start: %.3f s", calculatedEyeOpenStart);
+    ImGui::Text("Calculated Eye Open End: %.3f s",
+        calculatedEyeOpenStart + prisonOpeningEyeOpenDuration);
+    ImGui::Text("Current Movie Time: %.3f s", prisonOpeningCurrentMovieTime);
+    ImGui::Text("Current Eye Weight: %.3f", prisonOpeningCurrentEyeWeight);
+    ImGui::Checkbox("Eye Opening Preview", &prisonOpeningEyeOpeningPreview);
+    if (prisonOpeningEyeOpeningPreview)
+        ImGui::DragFloat("Eye Opening Preview Time", &prisonOpeningEyeOpeningPreviewTime,
+            0.01f, 0.0f, 30.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+    if (ImGui::Button("Save Prison Eye Settings"))
+        SavePrisonOpeningEyeSettings();
+    ImGui::SameLine();
+    if (ImGui::Button("Load Prison Eye Settings"))
+        LoadPrisonOpeningEyeSettings();
+
     ImGui::Checkbox("DeathWide Anchor Preview",
         &deathWideAnchorPreviewEnabled);
     ImGui::Text("Selected Anchor: %s",
@@ -742,6 +783,7 @@ bool MovieCameraManagerActor::PreparePrisonOpeningMovieFirstFrame()
 
     movieCamera->LoadFromJson(
         "./Data/Saves/MovieCameras/prison_opening.json");
+    UpdatePrisonOpeningFaceCloseUpKeyTime();
     if (!movieCamera->ApplyFirstFrameToOwner())
         return false;
 
@@ -795,6 +837,7 @@ bool MovieCameraManagerActor::PlayPrisonOpeningMovie()
 
         movieCamera->LoadFromJson(
             "./Data/Saves/MovieCameras/prison_opening.json");
+        UpdatePrisonOpeningFaceCloseUpKeyTime();
     }
     else if (!cameraManager->IsUseMovie())
     {
@@ -812,6 +855,14 @@ bool MovieCameraManagerActor::PlayPrisonOpeningMovie()
             cameraManager->ToggleMovieCamera(GetOwnerConstScene());
         return false;
     }
+    UpdatePrisonOpeningFaceCloseUpKeyTime();
+
+    const auto player = scene->GetActorManager()->GetActorOfType<Player>();
+    prisonOpeningEyeOverrideActive = player && player->BeginPrisonOpeningEyeClosed();
+    prisonOpeningCurrentMovieTime = 0.0f;
+    prisonOpeningCurrentEyeWeight = prisonOpeningEyeOverrideActive ? 1.0f : 0.0f;
+    if (!prisonOpeningEyeOverrideActive)
+        Logger::Warning("[PrisonOpeningMovie] Failed to begin Player eye-close override.");
 
     prisonOpeningMoviePrepared = false;
     prisonOpeningMoviePlaying = true;
@@ -1025,6 +1076,172 @@ void MovieCameraManagerActor::UpdatePrisonOpeningBlendToTPS(float deltaTime)
     }
 }
 
+void MovieCameraManagerActor::UpdatePrisonOpeningFaceCloseUpKeyTime()
+{
+    prisonOpeningFaceCloseUpKeyTime = 0.0f;
+    prisonOpeningFaceCloseUpKeyTimeValid = false;
+    const auto movieCamera = movieCameraWeakPtr.lock();
+    if (!movieCamera)
+        return;
+
+    prisonOpeningFaceCloseUpKeyTimeValid =
+        movieCamera->TryGetKeyframeStartTime(
+            PrisonOpeningFaceCloseUpKeyName, prisonOpeningFaceCloseUpKeyTime);
+    if (!prisonOpeningFaceCloseUpKeyTimeValid)
+    {
+        prisonOpeningFaceCloseUpKeyTimeValid =
+            movieCamera->TryGetKeyframeStartTime(
+                PrisonOpeningFaceCloseUpKeyIndex, prisonOpeningFaceCloseUpKeyTime);
+    }
+}
+
+bool MovieCameraManagerActor::CanReplayPrisonOpeningMovie() const
+{
+    const auto scene = GetOwnerScene();
+    const auto gameScene = dynamic_cast<GameScene*>(scene);
+    const auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
+    if (!scene || !gameScene || !cameraManager || scene->IsPaused() ||
+        prisonOpeningMoviePlaying || prisonOpeningMoviePrepared ||
+        cameraManager->IsUseMovie() || cameraManager->IsUseCinematic())
+    {
+        return false;
+    }
+
+    const auto player = scene->GetActorManager()->GetActorOfType<Player>();
+    const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>();
+    return player && jailDoor && !player->IsBossBattle() && player->GetHp() > 0;
+}
+
+bool MovieCameraManagerActor::ReplayPrisonOpeningMovie()
+{
+    if (!CanReplayPrisonOpeningMovie())
+        return false;
+
+    const auto scene = GetOwnerScene();
+    const auto movieCamera = movieCameraWeakPtr.lock();
+    const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>();
+    if (!movieCamera || !jailDoor)
+        return false;
+
+    movieCamera->LoadFromJson(PrisonOpeningMoviePath);
+    UpdatePrisonOpeningFaceCloseUpKeyTime();
+    if (movieCamera->GetKeyframeCount() < 2)
+        return false;
+
+    EndPrisonOpeningEyeOverride();
+    jailDoor->ResetToClosedForPrisonOpening();
+    doorMovieState = DoorMovieState::None;
+    prisonOpeningState = PrisonOpeningState::None;
+    prisonOpeningJailDoorInteractionRequested = false;
+    prisonOpeningMoviePrepared = false;
+    prisonOpeningTransitionDebugActive = false;
+    prisonOpeningTransitionDebugPostFinishFramesRemaining = 0;
+    return PlayPrisonOpeningMovie();
+}
+
+void MovieCameraManagerActor::LoadPrisonOpeningEyeSettings()
+{
+    std::ifstream file(PrisonOpeningEyeSettingsPath);
+    if (!file.is_open())
+        return;
+
+    try
+    {
+        nlohmann::json settings;
+        file >> settings;
+        prisonOpeningEyeOpeningEnabled = settings.value("eyeOpeningEnabled", prisonOpeningEyeOpeningEnabled);
+        prisonOpeningEyeOpenDelay = (std::max)(0.0f,
+            settings.value("eyeOpenDelay", prisonOpeningEyeOpenDelay));
+        prisonOpeningEyeOpenDuration = (std::max)(0.01f,
+            settings.value("eyeOpenDuration", prisonOpeningEyeOpenDuration));
+    }
+    catch (const std::exception& exception)
+    {
+        Logger::Warning(std::string("[PrisonOpeningMovie] Failed to load eye settings: ") + exception.what());
+    }
+}
+
+void MovieCameraManagerActor::SavePrisonOpeningEyeSettings() const
+{
+    std::ofstream file(PrisonOpeningEyeSettingsPath);
+    if (!file.is_open())
+    {
+        Logger::Warning("[PrisonOpeningMovie] Failed to save eye settings.");
+        return;
+    }
+
+    nlohmann::json settings;
+    settings["eyeOpeningEnabled"] = prisonOpeningEyeOpeningEnabled;
+    settings["eyeOpenDelay"] = prisonOpeningEyeOpenDelay;
+    settings["eyeOpenDuration"] = prisonOpeningEyeOpenDuration;
+    file << settings.dump(4);
+}
+
+void MovieCameraManagerActor::UpdatePrisonOpeningEyeOpening()
+{
+    const auto movieCamera = movieCameraWeakPtr.lock();
+    const auto scene = GetOwnerScene();
+    const auto player = scene
+        ? scene->GetActorManager()->GetActorOfType<Player>()
+        : nullptr;
+    if (!movieCamera || !player || !prisonOpeningEyeOverrideActive ||
+        !player->IsPrisonOpeningEyeOverrideActive())
+    {
+        prisonOpeningEyeOverrideActive = false;
+        prisonOpeningCurrentEyeWeight = 0.0f;
+        return;
+    }
+
+    prisonOpeningCurrentMovieTime = movieCamera->GetPlaybackElapsedTime();
+    if (!prisonOpeningEyeOpeningEnabled)
+    {
+        player->SetPrisonOpeningEyeClosedWeight(0.0f);
+        EndPrisonOpeningEyeOverride();
+        return;
+    }
+
+    if (!prisonOpeningFaceCloseUpKeyTimeValid)
+    {
+        prisonOpeningCurrentEyeWeight = 1.0f;
+        player->SetPrisonOpeningEyeClosedWeight(prisonOpeningCurrentEyeWeight);
+        return;
+    }
+
+    const float evaluationTime = prisonOpeningEyeOpeningPreview
+        ? prisonOpeningEyeOpeningPreviewTime
+        : prisonOpeningCurrentMovieTime;
+    const float duration = (std::max)(prisonOpeningEyeOpenDuration, FLT_EPSILON);
+    const float normalizedTime = std::clamp(
+        (evaluationTime - (prisonOpeningFaceCloseUpKeyTime +
+            prisonOpeningEyeOpenDelay)) / duration,
+        0.0f, 1.0f);
+    const float smoothStep = normalizedTime * normalizedTime *
+        (3.0f - 2.0f * normalizedTime);
+    prisonOpeningCurrentEyeWeight = 1.0f - smoothStep;
+    player->SetPrisonOpeningEyeClosedWeight(prisonOpeningCurrentEyeWeight);
+
+    // Preview is confined to an active prison movie and must not consume the
+    // override.  Normal playback clears only after it has reached the base pose.
+    if (!prisonOpeningEyeOpeningPreview && normalizedTime >= 1.0f)
+        EndPrisonOpeningEyeOverride();
+}
+
+void MovieCameraManagerActor::EndPrisonOpeningEyeOverride()
+{
+    if (!prisonOpeningEyeOverrideActive)
+        return;
+
+    const auto scene = GetOwnerScene();
+    if (const auto player = scene
+        ? scene->GetActorManager()->GetActorOfType<Player>()
+        : nullptr)
+    {
+        player->EndPrisonOpeningEyeOverride();
+    }
+    prisonOpeningEyeOverrideActive = false;
+    prisonOpeningCurrentEyeWeight = 0.0f;
+}
+
 void MovieCameraManagerActor::FinishPrisonOpeningMovie()
 {
     if (!prisonOpeningMoviePlaying)
@@ -1033,6 +1250,7 @@ void MovieCameraManagerActor::FinishPrisonOpeningMovie()
     if (prisonOpeningTransitionDebugActive)
         LogPrisonOpeningTransitionDebug("Finish_Pre");
 
+    EndPrisonOpeningEyeOverride();
     auto scene = GetOwnerScene();
     auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
     if (const auto gameScene = dynamic_cast<GameScene*>(scene))
