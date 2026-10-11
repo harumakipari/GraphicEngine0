@@ -2620,6 +2620,11 @@ void GameScene::StartBossBattle()
 
     const bool isInitialTutorialBossEntry = tutorialBossEntryPending;
     tutorialBossEntryPending = false;
+    if (tutorialPassiveSkeletonActor)
+        tutorialPassiveSkeletonActor->DestroySpawnedBodyParts();
+    if (tutorialDodgeSkeletonActor)
+        tutorialDodgeSkeletonActor->DestroySpawnedBodyParts();
+
 
     // StartBossBattle is also used as a battle reset entry point.  If a prior
     // Phase2 track survived to here, explicitly return audio ownership to Phase1.

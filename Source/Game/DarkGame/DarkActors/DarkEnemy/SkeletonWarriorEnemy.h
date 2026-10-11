@@ -39,6 +39,7 @@ public:
     bool IsTutorialPassive() const { return tutorialPassive; }
     void EnableTutorialPassiveStandIdle();
     bool IsPlayerWithinAttackRange(const class Player& player) const;
+    void DestroySpawnedBodyParts();
 private:
     void PlayTutorialPassiveStandIdle();
     void BeginAttack(const DirectX::XMFLOAT3& directionToPlayer);

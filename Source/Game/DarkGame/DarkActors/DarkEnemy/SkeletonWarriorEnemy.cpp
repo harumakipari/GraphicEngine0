@@ -216,6 +216,18 @@ bool SkeletonWarriorActor::ActivateDeathBodyParts()
     }
     return true;
 }
+void SkeletonWarriorActor::DestroySpawnedBodyParts()
+{
+    for (const auto& weakBodyPart : spawnedBodyParts)
+    {
+        if (const auto bodyPart = weakBodyPart.lock(); bodyPart && !bodyPart->IsPendingKill())
+            bodyPart->MarkPendingKill();
+    }
+
+    spawnedBodyParts.clear();
+}
+
+
 void SkeletonWarriorActor::SyncSpawnedBodyPartPhysicsSettings()
 {
     std::erase_if(spawnedBodyParts, [this](const std::weak_ptr<SkeletonBodyPartActor>& weakBodyPart)
