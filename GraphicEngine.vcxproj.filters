@@ -355,6 +355,9 @@
     <ClCompile Include="Source\Graphics\PostProcess\MotionBlurEffect.cpp">
       <Filter>Source\Graphics\PostProcess</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Graphics\PostProcess\RadialBlurEffect.cpp">
+      <Filter>Source\Graphics\PostProcess</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Graphics\PostProcess\SSAOEffect.cpp">
       <Filter>Source\Graphics\PostProcess</Filter>
     </ClCompile>
@@ -900,6 +903,9 @@
     <ClInclude Include="Source\Graphics\PostProcess\MotionBlurEffect.h">
       <Filter>Source\Graphics\PostProcess</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Graphics\PostProcess\RadialBlurEffect.h">
+      <Filter>Source\Graphics\PostProcess</Filter>
+    </ClInclude>
     <ClInclude Include="Source\Graphics\PostProcess\MultipleRenderTargets.h">
       <Filter>Source\Graphics\PostProcess</Filter>
     </ClInclude>
@@ -1149,6 +1155,9 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\MotionBlurPS.hlsl">
+      <Filter>Shader</Filter>
+    </FxCompile>
+    <FxCompile Include="Shader\RadialBlurPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\PlayerSwordGhostPS.hlsl">

@@ -21,6 +21,7 @@
 #include "Engine/Effects/HuskParticles.h"
 #include "Graphics/Core/TemporalAA.h"
 #include "Graphics/PostProcess/DepthOfFieldEffect.h"
+#include "Graphics/PostProcess/RadialBlurEffect.h"
 #include "Graphics/Shadow/ShadowMap.h"
 #include "UI/UIManager.h"
 
@@ -57,6 +58,8 @@ public:
     virtual bool OnSizeChanged(ID3D11Device* device, UINT64 width, UINT height) override;
     void DrawGui() override;
 
+    void StartJustDodgeRadialBlur() { if (radialBlurEffect) radialBlurEffect->SetJustDodgeActive(true); }
+    void StopJustDodgeRadialBlur() { if (radialBlurEffect) radialBlurEffect->SetJustDodgeActive(false); }
     bool HasHuskCaptureStarted() const { return huskCompletionTracking && gruxHuskCaptured; }
     double GetHuskPlaybackElapsed() const { return huskPlaybackElapsed; }
     double GetHuskCompletionDuration() const { return huskCompletionDuration; }
@@ -146,6 +149,7 @@ protected:
     std::unique_ptr<SceneRenderer> sceneRenderer_;
 
     std::unique_ptr<DepthOfFieldEffect> depthOfFieldEffect;
+    std::unique_ptr<RadialBlurEffect> radialBlurEffect;
 
     Microsoft::WRL::ComPtr<ID3D11PixelShader> postEffectPs;
     Microsoft::WRL::ComPtr<ID3D11PixelShader> finalPs;

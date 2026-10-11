@@ -21,6 +21,7 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Graphics/PostProcess/BloomEffect.h"
 #include "Graphics/PostProcess/DepthOfFieldEffect.h"
+#include "Graphics/PostProcess/RadialBlurEffect.h"
 #include "Graphics/PostProcess/FogEffect.h"
 #include "Graphics/PostProcess/SSAOEffect.h"
 #include "Graphics/PostProcess/SSREffect.h"
@@ -72,6 +73,8 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     frameBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     deferredLightingDebugBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     finalBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
+    radialBlurEffect = std::make_unique<RadialBlurEffect>();
+    radialBlurEffect->Initialize(device, static_cast<uint32_t>(width), height);
     imGuiGizmoBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
 
     // GBUFFER
@@ -351,6 +354,8 @@ bool SceneBase::OnSizeChanged(ID3D11Device* device, const UINT64 width, UINT hei
     deferredLightingDebugBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     finalBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
     imGuiGizmoBuffer = std::make_unique<FrameBuffer>(device, static_cast<uint32_t>(width), height, false);
+    radialBlurEffect = std::make_unique<RadialBlurEffect>();
+    radialBlurEffect->Initialize(device, static_cast<uint32_t>(width), height);
 
     return true;
 }
@@ -1002,6 +1007,15 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     }
 
 
+    ID3D11ShaderResourceView* finalColor = finalBuffer->shaderResourceViews[0].Get();
+    if (radialBlurEffect && radialBlurEffect->IsEnabled())
+    {
+        TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Radial Blur");
+        radialBlurEffect->Apply(immediateContext, finalColor);
+        finalColor = radialBlurEffect->GetOutputSRV();
+    }
+
+
     ID3D11ShaderResourceView* shader_resource_views[]
     {
         //temporalAa.history[temporalAa.previous].srv.Get(),
@@ -1017,6 +1031,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     };
     {
         TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Final Composite");
+    shader_resource_views[0] = finalColor;
         fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), finalPs.Get());
     }
     }
@@ -1046,6 +1061,7 @@ void SceneBase::Draw(ID3D11DeviceContext* immediateContext)
 
 bool SceneBase::Uninitialize(ID3D11Device* device)
 {
+    StopJustDodgeRadialBlur();
     uiManager->Clear();
     // エフェクトを全停止
     EffectManager::StopAll();
@@ -1118,6 +1134,7 @@ void SceneBase::DrawGui()
     cascadedShadowMaps->DrawImGui();
     DrawGuiPlusAlpha();
 #endif
+    if (radialBlurEffect) radialBlurEffect->DrawDebugUI();
 }
 
 void SceneBase::DrawDockSpace()

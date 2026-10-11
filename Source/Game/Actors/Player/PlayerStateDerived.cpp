@@ -6,6 +6,7 @@
 #include "Game/Actors/Player/Player.h"
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneBase.h"
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 
@@ -399,6 +400,9 @@ void PlayerDodgeState::Execute(float deltaTime)
 
 void PlayerDodgeState::Exit()
 {
+    if (auto* scene = dynamic_cast<SceneBase*>(player->GetOwnerScene()))
+        scene->StopJustDodgeRadialBlur();
+
     const bool enteringRush = rushRequested;
     player->SetRushInputAcceptance(false);
     player->SetRushInputDebugState(false, false);
@@ -573,6 +577,9 @@ void PlayerWinState::Exit()
 // ƒ‰ƒbƒVƒ…
 void PlayerRushState::Enter()
 {
+    if (auto* scene = dynamic_cast<SceneBase*>(player->GetOwnerScene()))
+        scene->StopJustDodgeRadialBlur();
+
     if (player->initialRushInputTraceActive)
     {
         player->LogInitialRushInputTrace("RushStateEntered");

@@ -362,6 +362,7 @@
     <ClCompile Include="Source\Graphics\PostProcess\FullScreenQuad.cpp" />
     <ClCompile Include="Source\Graphics\PostProcess\BloomEffect.cpp" />
     <ClCompile Include="Source\Graphics\PostProcess\MotionBlurEffect.cpp" />
+    <ClCompile Include="Source\Graphics\PostProcess\RadialBlurEffect.cpp" />
     <ClCompile Include="Source\Graphics\PostProcess\SSAOEffect.cpp" />
     <ClCompile Include="Source\Graphics\PostProcess\SSREffect.cpp" />
     <ClCompile Include="Source\Graphics\Renderer\PrimitiveRenderer.cpp" />
@@ -550,6 +551,7 @@
     <ClInclude Include="Source\Graphics\PostProcess\FullScreenQuad.h" />
     <ClInclude Include="Source\Graphics\PostProcess\GBuffer.h" />
     <ClInclude Include="Source\Graphics\PostProcess\MotionBlurEffect.h" />
+    <ClInclude Include="Source\Graphics\PostProcess\RadialBlurEffect.h" />
     <ClInclude Include="Source\Graphics\PostProcess\MultipleRenderTargets.h" />
     <ClInclude Include="Source\Graphics\PostProcess\PostEffectBase.h" />
     <ClInclude Include="Source\Graphics\PostProcess\PostEffectManager.h" />
@@ -824,6 +826,12 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shader\MotionBlurPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="Shader\RadialBlurPS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>

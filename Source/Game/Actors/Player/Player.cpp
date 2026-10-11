@@ -5130,6 +5130,9 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 
     // ジャスト回避成功フラグをオンにする
     justDodgeSuccess = true;
+    if (auto* scene = dynamic_cast<SceneBase*>(GetOwnerScene()))
+        scene->StartJustDodgeRadialBlur();
+
     rushInputEndNotifyReceivedDebug = false;
     rushInputEndReasonDebug = "None";
     CapturePlayerPoseGhost();
