@@ -143,6 +143,8 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         prisonOpeningMovieStartRequested = entryIt->second == "NewGame";
         backToRoomStartRequested = entryIt->second == "BackToRoom";
     }
+    judgeDodgeOperationTutorialState = backToRoomStartRequested ? JudgeDodgeOperationTutorialState::Completed : JudgeDodgeOperationTutorialState::Unseen;
+    judgeDodgeOperationTutorialOwnsPause = false;
 
     loadStageThread = std::thread([&]()
         {
@@ -203,6 +205,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         SetUpActors();
         CreateLockOnTargetUI();
         CreateTutorialSkeletonUI();
+        CreateJudgeDodgeOperationTutorialUI();
         CreateBattleTimerUI();
         CreateDeathResultUI();
         LoadVictoryBestTime();
@@ -1303,6 +1306,63 @@ void GameScene::CreateTutorialSkeletonUI()
     tutorialDodgeSkeletonXPromptUI->SetPivot({ 0.5f, 0.5f });
 }
 
+void GameScene::CreateJudgeDodgeOperationTutorialUI()
+{
+    const auto uiManager = GetUIManager();
+    judgeDodgeOperationTutorialImage = std::make_shared<UIImageComponent>("./Data/Textures/UI/judge_dodge_operation.png", "JudgeDodgeOperationTutorial");
+    judgeDodgeOperationTutorialImage->SetSize({ 2226.0f, 375.0f });
+    judgeDodgeOperationTutorialImage->SetPivot({ 0.5f, 0.5f });
+    judgeDodgeOperationTutorialImage->SetScale({ 0.25f, 0.25f });
+    judgeDodgeOperationTutorialImage->zOrder = 120;
+    judgeDodgeOperationTutorialImage->SetVisible(false);
+    uiManager->Add(judgeDodgeOperationTutorialImage);
+    judgeDodgeOperationTutorialCloseImage = std::make_shared<UIImageComponent>("./Data/Textures/UI/close_a.png", "JudgeDodgeOperationTutorialClose");
+    judgeDodgeOperationTutorialCloseImage->SetSize({ 294.0f, 90.0f });
+    judgeDodgeOperationTutorialCloseImage->SetPivot({ 0.5f, 0.5f });
+    judgeDodgeOperationTutorialCloseImage->SetScale({ 0.25f, 0.25f });
+    judgeDodgeOperationTutorialCloseImage->zOrder = 121;
+    judgeDodgeOperationTutorialCloseImage->SetVisible(false);
+    uiManager->Add(judgeDodgeOperationTutorialCloseImage);
+}
+
+void GameScene::UpdateJudgeDodgeOperationTutorialUI()
+{
+    if (judgeDodgeOperationTutorialImage)
+    {
+        judgeDodgeOperationTutorialImage->SetWorldPosition(judgeDodgeOperationTutorialPosition);
+        judgeDodgeOperationTutorialImage->SetScale(judgeDodgeOperationTutorialScale);
+    }
+    if (judgeDodgeOperationTutorialCloseImage)
+    {
+        judgeDodgeOperationTutorialCloseImage->SetWorldPosition(judgeDodgeOperationTutorialClosePosition);
+        judgeDodgeOperationTutorialCloseImage->SetScale(judgeDodgeOperationTutorialCloseScale);
+    }
+}
+
+void GameScene::StartJudgeDodgeOperationTutorial()
+{
+    if (judgeDodgeOperationTutorialState != JudgeDodgeOperationTutorialState::Unseen || IsPaused()) return;
+    judgeDodgeOperationTutorialState = JudgeDodgeOperationTutorialState::Showing;
+    CoreAudio::PlayOneShot("./Data/Sound/SE/new_mission_start.wav");
+    judgeDodgeOperationTutorialPreviousTimeScale = Time::timeScale;
+    judgeDodgeOperationTutorialOwnsPause = true;
+    SetPaused(true);
+    Time::timeScale = 0.0f;
+    UpdateJudgeDodgeOperationTutorialUI();
+    if (judgeDodgeOperationTutorialImage) judgeDodgeOperationTutorialImage->SetVisible(true);
+    if (judgeDodgeOperationTutorialCloseImage) judgeDodgeOperationTutorialCloseImage->SetVisible(true);
+}
+
+void GameScene::CloseJudgeDodgeOperationTutorial()
+{
+    if (judgeDodgeOperationTutorialState != JudgeDodgeOperationTutorialState::Showing) return;
+    CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav");
+    if (judgeDodgeOperationTutorialImage) judgeDodgeOperationTutorialImage->SetVisible(false);
+    if (judgeDodgeOperationTutorialCloseImage) judgeDodgeOperationTutorialCloseImage->SetVisible(false);
+    judgeDodgeOperationTutorialState = JudgeDodgeOperationTutorialState::Completed;
+    if (judgeDodgeOperationTutorialOwnsPause) { SetPaused(false); Time::timeScale = judgeDodgeOperationTutorialPreviousTimeScale; judgeDodgeOperationTutorialOwnsPause = false; }
+}
+
 void GameScene::HideTutorialSkeletonUI()
 {
     const auto hideHpBar = [](TutorialSkeletonHpBarUI& hpBar)
@@ -1993,6 +2053,19 @@ void GameScene::Update(float deltaTime)
     UpdateGameBgmFadeOut(Time::UnscaledDeltaTime());
     UpdateDeathBgmFade(Time::UnscaledDeltaTime());
     UpdatePhase2BgmCrossFade(Time::UnscaledDeltaTime());
+
+    if (judgeDodgeOperationTutorialState == JudgeDodgeOperationTutorialState::Showing)
+    {
+        UpdateJudgeDodgeOperationTutorialUI();
+        if (InputSystem::GetInputState("A", InputStateMask::Trigger) || InputSystem::GetInputState("Enter", InputStateMask::Trigger))
+            CloseJudgeDodgeOperationTutorial();
+        return;
+    }
+    if (judgeDodgeOperationTutorialState == JudgeDodgeOperationTutorialState::Unseen && player && player->GetPosition().x > -34.0f && !IsPaused() && InputSystem::IsInputEnabled() && !cameraManager->IsUseMovie() && !cameraManager->IsUseCinematic())
+    {
+        StartJudgeDodgeOperationTutorial();
+        return;
+    }
 
     UpdateBattleFlow();
     UpdateVictoryButtonLayout();
@@ -5141,6 +5214,13 @@ void GameScene::DrawGuiPlusAlpha()
 {
 #ifdef USE_IMGUI
     ImGui::Begin("GameScene");
+    ImGui::SeparatorText("Judge Dodge Operation Tutorial");
+    ImGui::DragFloat2("Judge Dodge Message Position", &judgeDodgeOperationTutorialPosition.x, 1.0f);
+    ImGui::DragFloat2("Judge Dodge Message Scale", &judgeDodgeOperationTutorialScale.x, 0.01f, 0.01f, 4.0f);
+    ImGui::DragFloat2("Judge Dodge Close Position", &judgeDodgeOperationTutorialClosePosition.x, 1.0f);
+    ImGui::DragFloat2("Judge Dodge Close Scale", &judgeDodgeOperationTutorialCloseScale.x, 0.01f, 0.01f, 4.0f);
+    ImGui::Text("State: %d", static_cast<int>(judgeDodgeOperationTutorialState));
+
     ImGui::Text(U8("Boss Phase: %s"), GetBossPhaseDebugName());
     ImGui::Text(U8("Boss HP: %d"), GetBossCurrentHp());
     ImGui::Text(U8("Boss MaxHP: %d"), GetBossMaxHp());

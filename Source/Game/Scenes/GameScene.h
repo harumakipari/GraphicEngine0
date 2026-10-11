@@ -155,6 +155,10 @@ private:
     void CreateLockOnTargetUI();
     void UpdateLockOnTargetUI(float deltaTime);
     void HideLockOnTargetUI();
+    void CreateJudgeDodgeOperationTutorialUI();
+    void StartJudgeDodgeOperationTutorial();
+    void CloseJudgeDodgeOperationTutorial();
+    void UpdateJudgeDodgeOperationTutorialUI();
     void SpawnTutorialSkeletons();
     void CreateTutorialSkeletonUI();
     void UpdateTutorialSkeletonUI();
@@ -769,6 +773,16 @@ private:
     Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
     bool prisonOpeningMovieStartRequested = false;
     bool backToRoomStartRequested = false;
+    enum class JudgeDodgeOperationTutorialState : uint8_t { Unseen, Showing, Completed };
+    JudgeDodgeOperationTutorialState judgeDodgeOperationTutorialState = JudgeDodgeOperationTutorialState::Unseen;
+    bool judgeDodgeOperationTutorialOwnsPause = false;
+    float judgeDodgeOperationTutorialPreviousTimeScale = 1.0f;
+    std::shared_ptr<UIImageComponent> judgeDodgeOperationTutorialImage;
+    std::shared_ptr<UIImageComponent> judgeDodgeOperationTutorialCloseImage;
+    DirectX::XMFLOAT2 judgeDodgeOperationTutorialPosition{ 620.0f, 280.0f };
+    DirectX::XMFLOAT2 judgeDodgeOperationTutorialScale{ 0.40f, 0.0f };
+    DirectX::XMFLOAT2 judgeDodgeOperationTutorialClosePosition{ 973.0f, 325.0f };
+    DirectX::XMFLOAT2 judgeDodgeOperationTutorialCloseScale{ 0.44f, 0.44f };
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
     bool tutorialPassiveSkeletonLockOnCandidate = false;
     int tutorialPassiveSkeletonYHpBaseline = -1;
