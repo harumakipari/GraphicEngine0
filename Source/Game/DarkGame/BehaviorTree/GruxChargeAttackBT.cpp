@@ -1472,6 +1472,8 @@ void GruxEnemy::DrawChargeAttackBTDebug()
         0.01f, 0.1f, 2.0f, "%.2f");
     ImGui::DragFloat(U8("第二形態時突進当たり判定"), &chargePlayerCastRadiusScalePhase2,
         0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::DragFloat("Charge Player Damage Forward Offset", &chargePlayerDamageForwardOffset,
+        0.01f, 0.0f, 5.0f, "%.2f m");
     ImGui::DragFloat(U8("第一形態時Charge Just Dodge判定"), &chargeJustDodgeCastRadiusScale,
         0.01f, 0.1f, 2.0f, "%.2f");
     ImGui::DragFloat(U8("第二形態時Charge Just Dodge判定"), &chargeJustDodgeCastRadiusScalePhase2,
@@ -1479,6 +1481,7 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::DragFloat("Charge Wall Cast Radius Scale", &chargeWallCastRadiusScale,
         0.01f, 0.1f, 2.0f, "%.2f");
     chargePlayerCastRadiusScalePhase2 = std::clamp(chargePlayerCastRadiusScalePhase2, 0.1f, 2.0f);
+    chargePlayerDamageForwardOffset = std::clamp(chargePlayerDamageForwardOffset, 0.0f, 5.0f);
     chargeJustDodgeCastRadiusScale = std::clamp(chargeJustDodgeCastRadiusScale, 0.1f, 2.0f);
     chargeJustDodgeCastRadiusScalePhase2 = std::clamp(chargeJustDodgeCastRadiusScalePhase2, 0.1f, 5.0f);
     ImGui::Checkbox("Show Charge Cast Debug", &showChargeCastDebug);

@@ -6914,9 +6914,14 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     DirectX::XMFLOAT3 castOrigin = GetPosition();
     castOrigin.y += (std::max)((std::max)(playerCastRadius, wallCastRadius) + 0.05f, height * 0.5f);
 
+    const DirectX::XMFLOAT3 playerDamageCastOrigin{
+        castOrigin.x + chargeDirection.x * chargePlayerDamageForwardOffset,
+        castOrigin.y,
+        castOrigin.z + chargeDirection.z * chargePlayerDamageForwardOffset };
+
     HitResultWithActor playerHit{};
     const bool playerCastHit = Physics::Instance().SphereCast(
-        castOrigin, chargeDirection, castDistance, playerCastRadius, playerHit,
+        playerDamageCastOrigin, chargeDirection, castDistance, playerCastRadius, playerHit,
         CollisionHelper::ToBit(CollisionLayer::Player));
     HitResultWithActor justDodgeHit{};
     const bool justDodgeCastHit = Physics::Instance().SphereCast(
@@ -6940,28 +6945,29 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         castOrigin, chargeDirection, castDistance, wallCastRadius, wallHit, wallMask);
     if (showChargeCastDebug && (showPlayerCastDebug || showWallCastDebug))
     {
-        const DirectX::XMFLOAT3 castEnd{
-            castOrigin.x + chargeDirection.x * castDistance,
-            castOrigin.y + chargeDirection.y * castDistance,
-            castOrigin.z + chargeDirection.z * castDistance };
-        const auto drawCast = [&](const float castRadius, const DirectX::XMFLOAT4& color, const bool enabled)
+        const auto drawCast = [&](const DirectX::XMFLOAT3& debugCastOrigin,
+                                  const float castRadius, const DirectX::XMFLOAT4& color, const bool enabled)
             {
+                const DirectX::XMFLOAT3 castEnd{
+                    debugCastOrigin.x + chargeDirection.x * castDistance,
+                    debugCastOrigin.y + chargeDirection.y * castDistance,
+                    debugCastOrigin.z + chargeDirection.z * castDistance };
                 if (!enabled) return;
                 constexpr int sampleCount = 4;
                 for (int i = 0; i <= sampleCount; ++i)
                 {
                     const float t = static_cast<float>(i) / static_cast<float>(sampleCount);
                     const DirectX::XMFLOAT3 point{
-                        castOrigin.x + (castEnd.x - castOrigin.x) * t,
-                        castOrigin.y + (castEnd.y - castOrigin.y) * t,
-                        castOrigin.z + (castEnd.z - castOrigin.z) * t };
+                        debugCastOrigin.x + (castEnd.x - debugCastOrigin.x) * t,
+                        debugCastOrigin.y + (castEnd.y - debugCastOrigin.y) * t,
+                        debugCastOrigin.z + (castEnd.z - debugCastOrigin.z) * t };
                     DebugRender::DrawSphere(point, castRadius, color, 0.0f, true);
                 }
-                DebugRender::DrawLine(castOrigin, castEnd, color, 0.0f, true);
+                DebugRender::DrawLine(debugCastOrigin, castEnd, color, 0.0f, true);
             };
-        drawCast(playerCastRadius, { 0.15f, 0.85f, 1.0f, 1.0f }, showPlayerCastDebug);
-        drawCast(justDodgeCastRadius, { 0.75f, 0.30f, 1.0f, 1.0f }, showJustDodgeCastDebug);
-        drawCast(wallCastRadius, { 1.0f, 0.35f, 0.10f, 1.0f }, showWallCastDebug);
+        drawCast(playerDamageCastOrigin, playerCastRadius, { 0.15f, 0.85f, 1.0f, 1.0f }, showPlayerCastDebug);
+        drawCast(castOrigin, justDodgeCastRadius, { 0.75f, 0.30f, 1.0f, 1.0f }, showJustDodgeCastDebug);
+        drawCast(castOrigin, wallCastRadius, { 1.0f, 0.35f, 0.10f, 1.0f }, showWallCastDebug);
     }
 
     bool wallCandidate = false;
@@ -6991,9 +6997,9 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         if (showPlayerCastDebug && playerCastHit)
         {
             const DirectX::XMFLOAT3 hitPosition = playerHit.hasPosition ? playerHit.hitPoint : DirectX::XMFLOAT3{
-                castOrigin.x + chargeDirection.x * playerHit.distance,
-                castOrigin.y + chargeDirection.y * playerHit.distance,
-                castOrigin.z + chargeDirection.z * playerHit.distance };
+                playerDamageCastOrigin.x + chargeDirection.x * playerHit.distance,
+                playerDamageCastOrigin.y + chargeDirection.y * playerHit.distance,
+                playerDamageCastOrigin.z + chargeDirection.z * playerHit.distance };
             DebugRender::DrawSphere(hitPosition, (std::max)(0.05f, playerCastRadius * 0.35f), { 0.1f, 1.0f, 0.95f, 1.0f }, 0.0f, true);
         }
         if (showWallCastDebug && wallCastHit)

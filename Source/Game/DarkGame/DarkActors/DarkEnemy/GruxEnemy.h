@@ -1874,6 +1874,7 @@ private:
     float chargeWallNormalYThreshold = 0.60f;
     float chargePlayerCastRadiusScale = 0.88f;
     float chargePlayerCastRadiusScalePhase2 = 1.5f;
+    float chargePlayerDamageForwardOffset = 0.5f;
     // ChargeUŒ‚‚ÌƒWƒƒƒXƒg‰ñ”ğ‚Ì”»’è
     float chargeJustDodgeCastRadiusScale = 1.8f;
     float chargeJustDodgeCastRadiusScalePhase2 = 2.8f;
