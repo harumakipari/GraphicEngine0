@@ -1398,6 +1398,13 @@ void GameScene::UpdateTutorialDodgeGuideRing()
         tutorialDodgeSkeletonActor->IsDead() ||
         tutorialDodgeSkeletonActor->IsPendingKill() ||
         (player && player->IsBossBattle());
+    if (bossRoomLockOnScopeActive || tutorialBossEntryPending || tutorialCompletedForBossBattle)
+    {
+        tutorialDodgeGuideRingActive = false;
+        tutorialDodgeGuideRingFinished = true;
+        tutorialDodgeGuideRingMesh->SetIsVisible(false);
+        return;
+    }
     if (tutorialDodgeGuideRingForceVisible)
     {
         if (invalidSkeleton)
@@ -2153,10 +2160,17 @@ void GameScene::Update(float deltaTime)
             CloseJudgeDodgeOperationTutorial();
         return;
     }
+    const bool mainRoomTutorialActive = !tutorialCompletedForBossBattle &&
+        !bossRoomLockOnScopeActive && !tutorialBossEntryPending &&
+        player && !player->IsBossBattle();
+    if (mainRoomTutorialActive)
+    {
+
     if (judgeDodgeOperationTutorialState == JudgeDodgeOperationTutorialState::Unseen && player && player->GetPosition().x > -34.0f && !IsPaused() && InputSystem::IsInputEnabled() && !cameraManager->IsUseMovie() && !cameraManager->IsUseCinematic())
     {
         StartJudgeDodgeOperationTutorial();
         return;
+    }
     }
 
     UpdateBattleFlow();
@@ -2198,7 +2212,7 @@ void GameScene::Update(float deltaTime)
     else
     {
         player->SetIsPlayerTransparency(true);
-        player->SetOperationGuideHudVisible(playerInputAvailable && !tutorialCompletedForBossBattle);
+        player->SetOperationGuideHudVisible(playerInputAvailable);
     }
 
 
