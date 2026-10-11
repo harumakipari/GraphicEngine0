@@ -55,6 +55,12 @@ private:
         BlendingToTPS,
     };
 public:
+    enum class PrisonOpeningSittingMotionMode : uint8_t
+    {
+        OriginalSitting,
+        StandingPingPong,
+    };
+
     explicit MovieCameraManagerActor(const std::string& actorName) :Actor(actorName) {}
 
     void Initialize(const Transform& transform) override;
@@ -116,10 +122,16 @@ private:
     DirectX::XMFLOAT4 prisonOpeningBlendStartRotation{};
     float prisonOpeningBlendStartFov = 0.0f;
     float prisonOpeningBlendElapsed = 0.0f;
-    float prisonOpeningBlendDuration = 0.7f;
+    float prisonOpeningBlendDuration = 1.4f;
+    PrisonOpeningSittingMotionMode prisonOpeningSittingMotionMode =
+        PrisonOpeningSittingMotionMode::StandingPingPong;
+    float prisonOpeningSittingPingPongStartTime = 0.0f;
+    float prisonOpeningSittingPingPongEndTime = 0.4f;
+    float prisonOpeningSittingPingPongSpeed = 0.15f;
+    float prisonOpeningSittingToStandingBlendTime = 0.15f;
     bool prisonOpeningEyeOpeningEnabled = true;
     float prisonOpeningEyeOpenDelay = 0.0f;
-    float prisonOpeningEyeOpenDuration = 0.8f;
+    float prisonOpeningEyeOpenDuration = 1.f;
     float prisonOpeningFaceCloseUpKeyTime = 0.0f;
     bool prisonOpeningFaceCloseUpKeyTimeValid = false;
     float prisonOpeningCurrentMovieTime = 0.0f;

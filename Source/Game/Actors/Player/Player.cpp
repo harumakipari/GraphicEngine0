@@ -630,12 +630,19 @@ void Player::Update(float deltaTime)
 
         if (const auto controller = GetBodyAnimationController())
         {
-            if (prisonOpeningSitting &&
+            if (prisonOpeningSitting && prisonOpeningUseStandingPingPong)
+            {
+                UpdatePrisonOpeningStandingPingPong(deltaTime);
+            }
+            else if (prisonOpeningSitting &&
                 (controller->GetCurrentAnimationName() != "Sitting" || !controller->IsPlayAnimation()))
             {
                 controller->PlayAnimationImmediate("Sitting", true, true);
             }
-            controller->OnUpdate(deltaTime);
+            else
+            {
+                controller->OnUpdate(deltaTime);
+            }
         }
 
         // The cinematic prison-opening path returns before the regular Dither update below.
@@ -2656,6 +2663,75 @@ void Player::EndEvent()
     this->moviePerform = false;
 }
 
+void Player::ConfigurePrisonOpeningSittingMotion(const bool useStandingPingPong,
+    const float startTime, const float endTime, const float speed,
+    const float standingBlendTime)
+{
+    const bool modeChanged = prisonOpeningUseStandingPingPong != useStandingPingPong;
+    prisonOpeningUseStandingPingPong = useStandingPingPong;
+    prisonOpeningSittingPingPongStartTime = (std::max)(0.0f, startTime);
+    prisonOpeningSittingPingPongEndTime = (std::max)(
+        prisonOpeningSittingPingPongStartTime + 0.001f, endTime);
+    prisonOpeningSittingPingPongSpeed = std::clamp(speed, 0.1f, 2.0f);
+    prisonOpeningSittingToStandingBlendTime = std::clamp(standingBlendTime, 0.0f, 0.5f);
+
+    if (!prisonOpeningSitting || !modeChanged)
+        return;
+
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return;
+
+    controller->ReleaseHeldAnimationPose(true);
+    controller->SetIgnoreRootMotion(true);
+    if (prisonOpeningUseStandingPingPong)
+    {
+        prisonOpeningSittingPingPongPhase = 0.0f;
+        prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
+        prisonOpeningSittingPingPongForward = true;
+        if (controller->PlayAnimationImmediate("Standing", true, true))
+            controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
+    }
+    else
+    {
+        controller->ResetRootMotion("Sitting", true, true, prisonOpeningSittingToStandingBlendTime);
+    }
+}
+
+void Player::UpdatePrisonOpeningStandingPingPong(const float deltaTime)
+{
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return;
+
+    const float clipLength = controller->GetAnimationLength("Standing");
+    const float startTime = std::clamp(prisonOpeningSittingPingPongStartTime, 0.0f, clipLength);
+    const float endTime = std::clamp(prisonOpeningSittingPingPongEndTime,
+        startTime + 0.001f, clipLength);
+    const float range = endTime - startTime;
+    if (range <= FLT_EPSILON)
+        return;
+
+    // A triangular wave preserves phase when the speed changes and reflects at
+    // both endpoints even if a low-FPS frame crosses more than one boundary.
+    prisonOpeningSittingPingPongPhase += (std::max)(deltaTime, 0.0f) *
+        prisonOpeningSittingPingPongSpeed;
+    const float period = range * 2.0f;
+    const float wrappedPhase = std::fmod(prisonOpeningSittingPingPongPhase, period);
+    if (wrappedPhase <= range)
+    {
+        prisonOpeningSittingSampleTime = startTime + wrappedPhase;
+        prisonOpeningSittingPingPongForward = true;
+    }
+    else
+    {
+        prisonOpeningSittingSampleTime = endTime - (wrappedPhase - range);
+        prisonOpeningSittingPingPongForward = false;
+    }
+
+    controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
+}
+
 bool Player::BeginPrisonOpeningSitting(
     const DirectX::XMFLOAT3& position, const float yawDegrees)
 {
@@ -2677,9 +2753,19 @@ bool Player::BeginPrisonOpeningSitting(
 
     controller->ReleaseHeldAnimationPose();
     controller->ResetAnimationRate();
-    if (!controller->PlayAnimationImmediate("Sitting", true, true))
+    controller->SetUseBlendSpace(false);
+    controller->SetIgnoreRootMotion(true);
+    prisonOpeningSittingPingPongPhase = 0.0f;
+    prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
+    prisonOpeningSittingPingPongForward = true;
+    const bool started = prisonOpeningUseStandingPingPong
+        ? controller->PlayAnimationImmediate("Standing", true, true) &&
+            controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime)
+        : controller->PlayAnimationImmediate("Sitting", true, true);
+    if (!started)
     {
         prisonOpeningSitting = false;
+        controller->ReleaseHeldAnimationPose();
         EndEvent();
         InputSystem::SetInputEnabled(prisonOpeningInputWasEnabled);
         return false;
@@ -2699,10 +2785,13 @@ bool Player::BeginPrisonOpeningStanding()
     EndPrisonOpeningEyeOverride();
     prisonOpeningSitting = false;
     prisonOpeningStanding = true;
-    controller->ReleaseHeldAnimationPose();
+    if (prisonOpeningUseStandingPingPong)
+        controller->ReleaseHeldAnimationPose(true);
+    else
+        controller->ReleaseHeldAnimationPose();
     controller->ResetAnimationRate();
     controller->SetUseBlendSpace(false);
-    controller->ResetRootMotion("Standing", false, true, 0.15f);
+    controller->ResetRootMotion("Standing", false, true, prisonOpeningSittingToStandingBlendTime);
     controller->SetIgnoreRootMotion(true);
     return controller->GetCurrentAnimationName() == "Standing";
 }
@@ -2715,12 +2804,14 @@ void Player::EndPrisonOpeningSitting()
 
     prisonOpeningSitting = false;
     prisonOpeningStanding = false;
-    if (stateMachine_)
-        stateMachine_->ChangeState("Idle");
     if (const auto controller = GetBodyAnimationController())
     {
+        if (prisonOpeningUseStandingPingPong)
+            controller->ReleaseHeldAnimationPose(true);
         controller->ResetAnimationRate();
     }
+    if (stateMachine_)
+        stateMachine_->ChangeState("Idle");
     EndEvent();
     InputSystem::SetInputEnabled(prisonOpeningInputWasEnabled);
 }

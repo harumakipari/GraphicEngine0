@@ -174,6 +174,12 @@ public:
     // Prison-opening movie only. This bypasses normal gameplay while retaining this Player actor.
     bool BeginPrisonOpeningSitting(const DirectX::XMFLOAT3& position, float yawDegrees);
     bool BeginPrisonOpeningStanding();
+    void ConfigurePrisonOpeningSittingMotion(bool useStandingPingPong, float startTime,
+        float endTime, float speed, float standingBlendTime);
+    float GetPrisonOpeningSittingSampleTime() const { return prisonOpeningSittingSampleTime; }
+    bool IsPrisonOpeningSittingPingPongForward() const { return prisonOpeningSittingPingPongForward; }
+    bool IsPrisonOpeningUsingStandingPingPong() const { return prisonOpeningUseStandingPingPong; }
+
     void EndPrisonOpeningSitting();
     bool BeginPrisonOpeningEyeClosed();
     void SetPrisonOpeningEyeClosedWeight(float weight);
@@ -900,6 +906,16 @@ private:
     bool moviePerform = false;
     bool prisonOpeningSitting = false;
     bool prisonOpeningStanding = false;
+    void UpdatePrisonOpeningStandingPingPong(float deltaTime);
+
+    bool prisonOpeningUseStandingPingPong = false;
+    float prisonOpeningSittingPingPongStartTime = 0.0f;
+    float prisonOpeningSittingPingPongEndTime = 0.5f;
+    float prisonOpeningSittingPingPongSpeed = 0.6f;
+    float prisonOpeningSittingToStandingBlendTime = 0.15f;
+    float prisonOpeningSittingPingPongPhase = 0.0f;
+    float prisonOpeningSittingSampleTime = 0.0f;
+    bool prisonOpeningSittingPingPongForward = true;
     bool prisonOpeningInputWasEnabled = true;
     DirectX::XMFLOAT3 prisonOpeningSittingPosition{};
     float prisonOpeningSittingYawDegrees = 0.0f;

@@ -591,8 +591,38 @@ void MovieCameraManagerActor::DrawImGuiDetails()
         ImGui::EndDisabled();
     ImGui::SameLine();
     ImGui::Text("Replay: %s", canReplayPrisonOpening ? "Ready" : "Unavailable");
-    ImGui::DragFloat("TPS Blend Duration", &prisonOpeningBlendDuration,
-        0.01f, 0.0f, 2.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::SeparatorText("Prison Opening Sitting Motion");
+    int sittingMotionMode = static_cast<int>(prisonOpeningSittingMotionMode);
+    if (ImGui::Combo("Sitting Motion Mode", &sittingMotionMode,
+        "Original Sitting\0Standing Ping-Pong\0\0"))
+    {
+        prisonOpeningSittingMotionMode =
+            static_cast<PrisonOpeningSittingMotionMode>(sittingMotionMode);
+    }
+    ImGui::DragFloat("Ping-Pong Start Time", &prisonOpeningSittingPingPongStartTime,
+        0.01f, 0.0f, 10.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Ping-Pong End Time", &prisonOpeningSittingPingPongEndTime,
+        0.01f, 0.001f, 10.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+    prisonOpeningSittingPingPongEndTime = (std::max)(
+        prisonOpeningSittingPingPongStartTime + 0.001f, prisonOpeningSittingPingPongEndTime);
+    ImGui::DragFloat("Ping-Pong Speed", &prisonOpeningSittingPingPongSpeed,
+        0.01f, 0.1f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Sitting to Standing Blend Time", &prisonOpeningSittingToStandingBlendTime,
+        0.01f, 0.0f, 0.5f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
+    const auto prisonPlayer = GetOwnerScene()
+        ? GetOwnerScene()->GetActorManager()->GetActorOfType<Player>() : nullptr;
+    if (prisonPlayer)
+    {
+        prisonPlayer->ConfigurePrisonOpeningSittingMotion(
+            prisonOpeningSittingMotionMode == PrisonOpeningSittingMotionMode::StandingPingPong,
+            prisonOpeningSittingPingPongStartTime, prisonOpeningSittingPingPongEndTime,
+            prisonOpeningSittingPingPongSpeed, prisonOpeningSittingToStandingBlendTime);
+        ImGui::Text("Current Sample Time: %.3f s", prisonPlayer->GetPrisonOpeningSittingSampleTime());
+        ImGui::Text("Ping-Pong Direction: %s", prisonPlayer->IsPrisonOpeningSittingPingPongForward()
+            ? "Forward" : "Backward");
+    }
+    ImGui::DragFloat("Prison Opening TPS Blend Time", &prisonOpeningBlendDuration,
+        0.01f, 0.1f, 3.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Checkbox("Eye Opening Enabled", &prisonOpeningEyeOpeningEnabled);
     ImGui::Text("Face CloseUp Key Time: %s%.3f s",
         prisonOpeningFaceCloseUpKeyTimeValid ? "" : "Unavailable ",
@@ -611,10 +641,10 @@ void MovieCameraManagerActor::DrawImGuiDetails()
     if (prisonOpeningEyeOpeningPreview)
         ImGui::DragFloat("Eye Opening Preview Time", &prisonOpeningEyeOpeningPreviewTime,
             0.01f, 0.0f, 30.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
-    if (ImGui::Button("Save Prison Eye Settings"))
+    if (ImGui::Button("Save Prison Opening Settings"))
         SavePrisonOpeningEyeSettings();
     ImGui::SameLine();
-    if (ImGui::Button("Load Prison Eye Settings"))
+    if (ImGui::Button("Load Prison Opening Settings"))
         LoadPrisonOpeningEyeSettings();
 
     ImGui::Checkbox("DeathWide Anchor Preview",
@@ -823,6 +853,14 @@ bool MovieCameraManagerActor::PlayPrisonOpeningMovie()
     // would otherwise hide this runtime movie and later continue to override TPS.
     if (cameraManager->IsUseCinematic())
         cameraManager->ToggleCinematicCamera(GetOwnerConstScene());
+    if (const auto player = scene->GetActorManager()->GetActorOfType<Player>())
+    {
+        player->ConfigurePrisonOpeningSittingMotion(
+            prisonOpeningSittingMotionMode == PrisonOpeningSittingMotionMode::StandingPingPong,
+            prisonOpeningSittingPingPongStartTime, prisonOpeningSittingPingPongEndTime,
+            prisonOpeningSittingPingPongSpeed, prisonOpeningSittingToStandingBlendTime);
+    }
+
 
     if (!gameScene->BeginPrisonOpeningMoviePlayerSitting())
     {
@@ -1154,6 +1192,15 @@ void MovieCameraManagerActor::LoadPrisonOpeningEyeSettings()
             settings.value("eyeOpenDelay", prisonOpeningEyeOpenDelay));
         prisonOpeningEyeOpenDuration = (std::max)(0.01f,
             settings.value("eyeOpenDuration", prisonOpeningEyeOpenDuration));
+        const int sittingMode = settings.value("sittingMotionMode",
+            static_cast<int>(prisonOpeningSittingMotionMode));
+        prisonOpeningSittingMotionMode = sittingMode == static_cast<int>(PrisonOpeningSittingMotionMode::OriginalSitting)
+            ? PrisonOpeningSittingMotionMode::OriginalSitting : PrisonOpeningSittingMotionMode::StandingPingPong;
+        prisonOpeningSittingPingPongStartTime = (std::max)(0.0f, settings.value("pingPongStartTime", prisonOpeningSittingPingPongStartTime));
+        prisonOpeningSittingPingPongEndTime = (std::max)(prisonOpeningSittingPingPongStartTime + 0.001f, settings.value("pingPongEndTime", prisonOpeningSittingPingPongEndTime));
+        prisonOpeningSittingPingPongSpeed = std::clamp(settings.value("pingPongSpeed", prisonOpeningSittingPingPongSpeed), 0.1f, 2.0f);
+        prisonOpeningSittingToStandingBlendTime = std::clamp(settings.value("sittingToStandingBlendTime", prisonOpeningSittingToStandingBlendTime), 0.0f, 0.5f);
+        prisonOpeningBlendDuration = std::clamp(settings.value("tpsBlendTime", prisonOpeningBlendDuration), 0.1f, 3.0f);
     }
     catch (const std::exception& exception)
     {
@@ -1172,6 +1219,12 @@ void MovieCameraManagerActor::SavePrisonOpeningEyeSettings() const
 
     nlohmann::json settings;
     settings["eyeOpeningEnabled"] = prisonOpeningEyeOpeningEnabled;
+    settings["sittingMotionMode"] = static_cast<int>(prisonOpeningSittingMotionMode);
+    settings["pingPongStartTime"] = prisonOpeningSittingPingPongStartTime;
+    settings["pingPongEndTime"] = prisonOpeningSittingPingPongEndTime;
+    settings["pingPongSpeed"] = prisonOpeningSittingPingPongSpeed;
+    settings["sittingToStandingBlendTime"] = prisonOpeningSittingToStandingBlendTime;
+    settings["tpsBlendTime"] = prisonOpeningBlendDuration;
     settings["eyeOpenDelay"] = prisonOpeningEyeOpenDelay;
     settings["eyeOpenDuration"] = prisonOpeningEyeOpenDuration;
     file << settings.dump(4);
