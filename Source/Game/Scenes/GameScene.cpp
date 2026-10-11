@@ -2010,7 +2010,12 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
         return;
     }
     if (!player || !tutorialPassiveSkeletonActor)
+    {
+        tutorialDodgeSkeletonAttackRange = false;
+        if (player)
+            player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, false);
         return;
+    }
 
     const auto revealYAndCaptureTutorialSkeletonHp = [this]()
     {
@@ -2081,14 +2086,20 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
         }
     }
 
-    tutorialDodgeSkeletonAttackRange = tutorialDodgeSkeletonActor &&
+    const bool tutorialDodgeSkeletonAvailable = tutorialDodgeSkeletonActor &&
+        tutorialDodgeSkeletonActor->IsAlive() &&
+        tutorialDodgeSkeletonActor->IsActive() &&
+        !tutorialDodgeSkeletonActor->IsDead() &&
+        !tutorialDodgeSkeletonActor->IsPendingKill();
+    tutorialDodgeSkeletonAttackRange = tutorialDodgeSkeletonAvailable &&
         tutorialDodgeSkeletonActor->IsPlayerWithinAttackRange(*player);
     if (tutorialDodgeSkeletonAttackRange && !tutorialDodgeGuideActivated)
     {
         tutorialDodgeGuideActivated = true;
         revealYAndCaptureTutorialSkeletonHp();
-        player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, true);
     }
+    // Visibility follows the current combat range; learned remains independent.
+    player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, tutorialDodgeSkeletonAttackRange);
 
     if (tutorialDodgeGuideActivated && !tutorialDodgeSkeletonJustDodged &&
         player->IsJustDodgePresentationActive() &&
