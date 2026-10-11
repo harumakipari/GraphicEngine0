@@ -29,7 +29,6 @@ public:
     };
 
 private:
-
     enum class DoorMovieState :uint8_t
     {
         None,

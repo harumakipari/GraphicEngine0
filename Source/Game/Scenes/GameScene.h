@@ -162,6 +162,7 @@ private:
     void UpdateJudgeDodgeOperationTutorialUI();
     void CreateTutorialDodgeGuideRing();
     void UpdateTutorialDodgeGuideRing();
+    void UpdateTutorialDodgeGuideRingVisual();
     void SpawnTutorialSkeletons();
     void CreateTutorialSkeletonUI();
     void UpdateTutorialSkeletonUI();
@@ -788,6 +789,7 @@ private:
     DirectX::XMFLOAT2 judgeDodgeOperationTutorialCloseScale{ 0.44f, 0.44f };
     std::shared_ptr<Actor> tutorialDodgeGuideRingActor;
     std::shared_ptr<StaticMeshComponent> tutorialDodgeGuideRingMesh;
+    bool tutorialDodgeGuideRingForceVisible = false;
     bool tutorialDodgeGuideRingActive = false;
     bool tutorialDodgeGuideRingFinished = false;
     float tutorialDodgeGuideRingElapsed = 0.0f;
@@ -795,12 +797,12 @@ private:
     bool tutorialDodgeGuideRingStartedInAttackRange = false;
     bool tutorialDodgeGuideRingPreviousAttackRange = false;
     float tutorialDodgeGuideRingPulseElapsed = 0.0f;
-    DirectX::XMFLOAT3 tutorialDodgeGuideRingPositionOffset{ 0.0f, 0.65f, 0.0f };
-    DirectX::XMFLOAT3 tutorialDodgeGuideRingScale{ 1.5f, 1.0f, 1.5f };
+    DirectX::XMFLOAT3 tutorialDodgeGuideRingPositionOffset{ 0.0f, 0.39f, 0.13f };
+    DirectX::XMFLOAT3 tutorialDodgeGuideRingScale{ 6.04f, 1.0f, 2.95f };
     DirectX::XMFLOAT3 tutorialDodgeGuideRingColor{ 1.0f, 0.78f, 0.42f };
-    float tutorialDodgeGuideRingEmission = 1.5f;
-    float tutorialDodgeGuideRingPulseSpeed = 2.0f;
-    float tutorialDodgeGuideRingPulseMin = 0.70f, tutorialDodgeGuideRingPulseMax = 1.00f;
+    float tutorialDodgeGuideRingEmission = 7.8f;
+    float tutorialDodgeGuideRingPulseSpeed = 0.8f;
+    float tutorialDodgeGuideRingPulseMin = 0.11f, tutorialDodgeGuideRingPulseMax = 1.00f;
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
     bool tutorialPassiveSkeletonLockOnCandidate = false;
     int tutorialPassiveSkeletonYHpBaseline = -1;

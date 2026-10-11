@@ -1393,8 +1393,22 @@ void GameScene::CreateTutorialDodgeGuideRing()
 
 void GameScene::UpdateTutorialDodgeGuideRing()
 {
-    if (!tutorialDodgeGuideRingActive || tutorialDodgeGuideRingFinished || !tutorialDodgeGuideRingMesh) return;
-    if (!tutorialDodgeSkeletonActor || tutorialDodgeSkeletonActor->IsDead() || tutorialDodgeSkeletonActor->IsPendingKill() || (player && player->IsBossBattle()))
+    if (!tutorialDodgeGuideRingMesh) return;
+    const bool invalidSkeleton = !tutorialDodgeSkeletonActor ||
+        tutorialDodgeSkeletonActor->IsDead() ||
+        tutorialDodgeSkeletonActor->IsPendingKill() ||
+        (player && player->IsBossBattle());
+    if (tutorialDodgeGuideRingForceVisible)
+    {
+        if (invalidSkeleton)
+            tutorialDodgeGuideRingMesh->SetIsVisible(false);
+        else
+            UpdateTutorialDodgeGuideRingVisual();
+        return;
+    }
+
+    if (!tutorialDodgeGuideRingActive || tutorialDodgeGuideRingFinished) return;
+    if (invalidSkeleton)
     {
         tutorialDodgeGuideRingActive = false; tutorialDodgeGuideRingFinished = true; tutorialDodgeGuideRingMesh->SetIsVisible(false); return;
     }
@@ -1410,12 +1424,21 @@ void GameScene::UpdateTutorialDodgeGuideRing()
         tutorialDodgeGuideRingMesh->SetIsVisible(false);
         return;
     }
+    UpdateTutorialDodgeGuideRingVisual();
+}
+
+void GameScene::UpdateTutorialDodgeGuideRingVisual()
+{
     tutorialDodgeGuideRingPulseElapsed += Time::UnscaledDeltaTime();
     const float wave = 0.5f + 0.5f * std::sin(tutorialDodgeGuideRingPulseElapsed * tutorialDodgeGuideRingPulseSpeed * DirectX::XM_2PI);
     const float pulse = std::lerp(tutorialDodgeGuideRingPulseMin, tutorialDodgeGuideRingPulseMax, wave);
     const auto p = tutorialDodgeSkeletonActor->GetPosition();
     tutorialDodgeGuideRingMesh->SetRelativeLocationDirect({ p.x + tutorialDodgeGuideRingPositionOffset.x, p.y + tutorialDodgeGuideRingPositionOffset.y, p.z + tutorialDodgeGuideRingPositionOffset.z });
     tutorialDodgeGuideRingMesh->SetRelativeScaleDirect(tutorialDodgeGuideRingScale);
+    // The ring uses absolute transforms, so this component is deliberately
+    // excluded from its root's child-transform propagation.  Commit the
+    // location and scale written above before the renderer consumes them.
+    tutorialDodgeGuideRingMesh->UpdateComponentToWorld();
     tutorialDodgeGuideRingMesh->plusAlphaCBuffer->data.cpuColor = { tutorialDodgeGuideRingColor.x, tutorialDodgeGuideRingColor.y, tutorialDodgeGuideRingColor.z, 1.0f };
     tutorialDodgeGuideRingMesh->plusAlphaCBuffer->data.emissionPower = tutorialDodgeGuideRingEmission * pulse;
     tutorialDodgeGuideRingMesh->SetIsVisible(true);
@@ -5275,6 +5298,7 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Begin("GameScene");
 
     ImGui::SeparatorText("Tutorial Guide Ring");
+    ImGui::Checkbox("Tutorial Guide Ring Force Visible", &tutorialDodgeGuideRingForceVisible);
     ImGui::DragFloat3("Tutorial Guide Ring Position Offset", &tutorialDodgeGuideRingPositionOffset.x, 0.01f);
     ImGui::DragFloat3("Tutorial Guide Ring Scale", &tutorialDodgeGuideRingScale.x, 0.01f);
     ImGui::ColorEdit3("Tutorial Guide Ring Color", &tutorialDodgeGuideRingColor.x);
@@ -5282,7 +5306,43 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat("Tutorial Guide Ring Pulse Speed", &tutorialDodgeGuideRingPulseSpeed, 0.01f, 0.0f, 10.0f);
     ImGui::DragFloat("Tutorial Guide Ring Pulse Min", &tutorialDodgeGuideRingPulseMin, 0.01f, 0.0f, 1.0f);
     ImGui::DragFloat("Tutorial Guide Ring Pulse Max", &tutorialDodgeGuideRingPulseMax, 0.01f, 0.0f, 1.0f);
-    ImGui::Text("Tutorial Guide Ring Visible: %s", tutorialDodgeGuideRingActive ? "true" : "false");
+    ImGui::Text("Ring Active: %s", tutorialDodgeGuideRingActive ? "true" : "false");
+    ImGui::Text("Ring Finished: %s", tutorialDodgeGuideRingFinished ? "true" : "false");
+    ImGui::Text("Mesh Visible: %s", tutorialDodgeGuideRingMesh && tutorialDodgeGuideRingMesh->IsVisible() ? "true" : "false");
+    ImGui::Text("Actor Active: %s", tutorialDodgeGuideRingActor && tutorialDodgeGuideRingActor->IsActive() ? "true" : "false");
+    if (tutorialDodgeGuideRingMesh)
+    {
+        const auto worldPosition = tutorialDodgeGuideRingMesh->GetComponentLocation();
+        const auto worldScale = tutorialDodgeGuideRingMesh->GetComponentScale();
+        ImGui::Text("Mesh World Position: (%.3f, %.3f, %.3f)", worldPosition.x, worldPosition.y, worldPosition.z);
+        ImGui::Text("Mesh World Scale: (%.3f, %.3f, %.3f)", worldScale.x, worldScale.y, worldScale.z);
+        if (tutorialDodgeGuideRingActor && tutorialDodgeGuideRingActor->GetRootComponent())
+        {
+            const auto actorWorldPosition = tutorialDodgeGuideRingActor->GetRootComponent()->GetComponentLocation();
+            const auto actorWorldScale = tutorialDodgeGuideRingActor->GetRootComponent()->GetComponentScale();
+            ImGui::Text("Ring Actor World Position: (%.3f, %.3f, %.3f)", actorWorldPosition.x, actorWorldPosition.y, actorWorldPosition.z);
+            ImGui::Text("Ring Actor World Scale: (%.3f, %.3f, %.3f)", actorWorldScale.x, actorWorldScale.y, actorWorldScale.z);
+        }
+        else
+        {
+            ImGui::TextUnformatted("Ring Actor World Position: Unavailable");
+            ImGui::TextUnformatted("Ring Actor World Scale: Unavailable");
+        }
+        if (tutorialDodgeSkeletonActor && tutorialDodgeSkeletonActor->GetRootComponent())
+        {
+            const auto skeletonWorldPosition = tutorialDodgeSkeletonActor->GetRootComponent()->GetComponentLocation();
+            ImGui::Text("Skeleton World Position: (%.3f, %.3f, %.3f)", skeletonWorldPosition.x, skeletonWorldPosition.y, skeletonWorldPosition.z);
+        }
+        else
+            ImGui::TextUnformatted("Skeleton World Position: Unavailable");
+        ImGui::Text("Mesh Render Call Count: %llu", static_cast<unsigned long long>(tutorialDodgeGuideRingMesh->GetDebugRenderCallCount()));
+    }
+    else
+    {
+        ImGui::TextUnformatted("Mesh World Position: Unavailable");
+        ImGui::TextUnformatted("Mesh World Scale: Unavailable");
+        ImGui::TextUnformatted("Mesh Render Call Count: Unavailable");
+    }
 
 
     ImGui::SeparatorText("Judge Dodge Operation Tutorial");
