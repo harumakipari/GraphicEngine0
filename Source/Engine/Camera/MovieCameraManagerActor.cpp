@@ -209,6 +209,47 @@ void MovieCameraManagerActor::Update(float deltaTime)
     auto gameScene = dynamic_cast<GameScene*>(scene);
 
     auto gruxEnemy = actorManager->GetActorOfType<GruxEnemy>();
+    if (!prisonOpeningMoviePlaying && prisonOpeningTransitionDebugActive &&
+        prisonOpeningTransitionDebugPostFinishFramesRemaining > 0)
+    {
+        LogPrisonOpeningTransitionDebug("TPSPostFinish");
+        ++prisonOpeningTransitionDebugFrame;
+        --prisonOpeningTransitionDebugPostFinishFramesRemaining;
+        if (prisonOpeningTransitionDebugPostFinishFramesRemaining == 0)
+            prisonOpeningTransitionDebugActive = false;
+    }
+    if (prisonOpeningMoviePlaying)
+    {
+        const auto cameraManager = scene->GetCameraManager();
+        if (!movieCamera || !gameScene || !cameraManager)
+        {
+            FinishPrisonOpeningMovie();
+        }
+        else
+        {
+            // CameraManager renders Cinematic before Movie, so preserve the movie
+            // presentation while the jail door opens and Aurora stands.
+            if (cameraManager->IsUseCinematic())
+                cameraManager->ToggleCinematicCamera(GetOwnerConstScene());
+
+            if (!cameraManager->IsUseMovie())
+            {
+                // Stop/toggle-off is an interruption, not a path completion.
+                FinishPrisonOpeningMovie();
+            }
+            else if (prisonOpeningState == PrisonOpeningState::CameraPathPlaying)
+            {
+                if (movieCamera->IsMovieFinish())
+                    HandlePrisonOpeningCameraPathCompleted();
+                else if (!movieCamera->IsPlaying())
+                    FinishPrisonOpeningMovie();
+            }
+            else
+            {
+                UpdatePrisonOpeningPresentation(deltaTime);
+            }
+        }
+    }
 
     if (movieCamera && player && gruxEnemy)
     {
@@ -230,21 +271,21 @@ void MovieCameraManagerActor::Update(float deltaTime)
         break;
     case DoorMovieState::DoorPreMovie:
         if (movieCamera->IsMovieFinish())
-        {// ÔøΩÔøΩÔøΩÊÇ™ÔøΩIÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩplayerÔøΩÔøΩAÔøΩbÔøΩvÔøΩÔøΩÔøΩÈìÆÔøΩÔøΩƒêÔøΩ
+        {// „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩË¨îÔΩ™„ÉªÅEΩI„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩplayer„ÉªÅEΩ„ÉªÅEΩA„ÉªÅEΩb„ÉªÅEΩv„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÈ´îÔΩÆ„ÉªÅEΩ„ÉªÅEΩÅEÅEí∞ÅEøÅEΩ
             PlayMovie(playerMovieFileName);
             doorMovieState = DoorMovieState::UpPlayerMovie;
             if (player)
             {
-                // ÔøΩCÔøΩxÔøΩÔøΩÔøΩgÔøΩVÔøΩ[ÔøΩÔøΩÔøΩÔøΩÔøΩJÔøΩnÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ∆ÇÔøΩ ímÔøΩÔøΩÔøΩÔøΩ
+                // „ÉªÅEΩC„ÉªÅEΩx„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩg„ÉªÅEΩV„ÉªÅEΩ[„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩJ„ÉªÅEΩn„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÇëÅEøÅEΩÅEäÁü•„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
                 player->StartEvent();
                 player->PlayBodyAnimation("Recall_0", false);
             }
-            // ÔøΩÔøΩÔøΩÔøΩÔøΩÃÉVÔøΩÔøΩÔøΩÔøΩÔøΩfÔøΩÔøΩÔøΩAÔøΩÃâÔøΩÔøΩÃåÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ
+            // „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEå„Ç∑„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩf„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩA„ÉªÅEΩÅEå‰ºöÔΩøÅEΩ„ÉªÅEΩÅEåÈØâÔΩøÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
             for (auto chandelier : chandelierActors)
             {
                 chandelier->SetFireScaleToZero();
             }
-            // ÔøΩÔøΩÔøΩÔøΩÔøΩÃòXÔøΩCÔøΩXÔøΩ^ÔøΩÔøΩÔøΩhÔøΩÃâÔøΩÔøΩÃåÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ
+            // „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEåËùã„ÉªÅEΩC„ÉªÅEΩX„ÉªÅEΩ^„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩh„ÉªÅEΩÅEå‰ºöÔΩøÅEΩ„ÉªÅEΩÅEåÈØâÔΩøÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
             for (auto candleStand : candleStandActors)
             {
                 candleStand->SetFireLightScale({ 0.0f,0.0f,0.0f });
@@ -254,25 +295,25 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::UpPlayerMovie:
     {
         if (movieCamera->IsMovieFinish())
-        {// ÔøΩvÔøΩÔøΩÔøΩCÔøΩÔøΩÔøΩ[ÔøΩÔøΩAÔøΩbÔøΩvÔøΩÔøΩÔøΩÈìÆÔøΩÊÇ™ÔøΩIÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩA
+        {// „ÉªÅEΩv„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩC„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩ„ÉªÅEΩA„ÉªÅEΩb„ÉªÅEΩv„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÈ´îÔΩÆ„ÉªÅEΩË¨îÔΩ™„ÉªÅEΩI„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩA
             if (player)
-            {// ÔøΩvÔøΩÔøΩÔøΩCÔøΩÔøΩÔøΩ[ÔøΩÃÉAÔøΩjÔøΩÔøΩÔøΩ[ÔøΩVÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ“ã@ÔøΩ…ïœçX
+            {// „ÉªÅEΩv„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩC„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩÅEå„Ç¢„ÉªÅEΩj„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩV„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEíÊ©ü„ÅEÅEΩÅEâÂ§âÊõ¥
                 player->PlayBodyAnimation("Idle", true);
             }
             if (gameScene)
             {
-                // ÔøΩ{ÔøΩXÔøΩÃïÔøΩÔøΩÔøΩÔøΩÔøΩ√ÇÔøΩÔøΩÔøΩÔøΩÔøΩ
+                // „ÉªÅEΩ{„ÉªÅEΩX„ÉªÅEΩÅEåÂåÖÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÇëÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
                 gameScene->SetBossRoomLerpFactor(0.0f);
-                // ÔøΩ⁄ÇÔøΩBloomÔøΩÃÇ›ÇÔøΩIÔøΩÔøΩÔøΩ…ÇÔøΩÔøΩÔøΩ
+                // „ÉªÅEΩÅEö„ÇëÅEøÅEΩBloom„ÉªÅEΩÅEå„Åø„ÇëÔΩøÅEΩI„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEâ„ÇëÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ
             }
-            // ÔøΩhÔøΩAÔøΩÔøΩÔøΩJÔøΩÔøΩÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ[ÔøΩN
+            // „ÉªÅEΩh„ÉªÅEΩA„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩN
             PlayMovie(doorOpenMovieFileName);
-            // ÔøΩhÔøΩAÔøΩÔøΩÔøΩJÔøΩÔøΩÔøΩAÔøΩjÔøΩÔøΩÔøΩ[ÔøΩVÔøΩÔøΩÔøΩÔøΩ
+            // „ÉªÅEΩh„ÉªÅEΩA„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩA„ÉªÅEΩj„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩV„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
             if (doorActor)
             {
                 doorActor->Open();
             }
-            // ÔøΩGÔøΩÃÉAÔøΩjÔøΩÔøΩÔøΩ[ÔøΩVÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ~ÔøΩﬂÇÔøΩ
+            // „ÉªÅEΩG„ÉªÅEΩÅEå„Ç¢„ÉªÅEΩj„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩV„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ~„ÉªÅEΩÅEü„ÇëÅEøÅEΩ
             if (gruxEnemy)
             {
                 gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
@@ -285,9 +326,9 @@ void MovieCameraManagerActor::Update(float deltaTime)
     break;
     case DoorMovieState::DoorOpening:
         if (doorActor->IsOpenDoor())
-        {// ÔøΩhÔøΩAÔøΩÔøΩÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩA
+        {// „ÉªÅEΩh„ÉªÅEΩA„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩA
             CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_groan.wav", 0.2f);
-            // ÔøΩGÔøΩÃñ⁄ã ÇÔøΩÔøΩÔøΩÔøΩÔøΩ
+            // „ÉªÅEΩG„ÉªÅEΩÅEåÁõÆÁéâ„ÇëÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
             doorMovieState = DoorMovieState::PreBossRoomLerp;
             if (player)
             {
@@ -323,8 +364,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     { 0.0f, 1.0f, 0.0f });
             }
         }
-        // ÔøΩ{ÔøΩXÔøΩÃñ⁄ã ÇÔøΩ»ÇÔøΩÔøΩÔøΩ
-        // ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩXÔøΩ…ñÔøΩÔøΩÈÇ≠ÔøΩÔøΩÔøΩÔøΩ
+        // „ÉªÅEΩ{„ÉªÅEΩX„ÉªÅEΩÅEåÁõÆÁéâ„ÇëÅEøÅEΩÅEà„ÇëÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ
+        // „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩX„ÉªÅEΩÅEâÂéÑÅEøÅEΩ„ÉªÅEΩÈ©çÔΩ≠„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
         if (gameScene)
         {
             gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&,gruxEnemy]()
@@ -339,7 +380,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     doorMovieState = DoorMovieState::UpPlayerCombat;
                 });
         }
-        // ÔøΩÔøΩÔøΩÔøΩÔøΩÃÉVÔøΩÔøΩÔøΩÔøΩÔøΩfÔøΩÔøΩÔøΩAÔøΩÃâÔøΩÔøΩÃåÔøΩÔøΩÔøΩÔøΩÔøΩXÔøΩ…ñﬂÇÔøΩ
+        // „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEå„Ç∑„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩf„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩA„ÉªÅEΩÅEå‰ºöÔΩøÅEΩ„ÉªÅEΩÅEåÈØâÔΩøÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩX„ÉªÅEΩÅEâÊàª„ÇëÔΩøÅEΩ
         for (auto chandelier : chandelierActors)
         {
             chandelier->ResetFireLightScale(duration);
@@ -387,19 +428,19 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::UpPlayerCombat:
         movieCamera->SetOnMovieStart([&, doorActor, player, gruxEnemy]()
             {
-                // ÔøΩhÔøΩAÔøΩÔøΩ¬ÇﬂÇÔøΩÔøΩÔøΩ‘Ç…ÇÔøΩÔøΩÔøΩ
+                // „ÉªÅEΩh„ÉªÅEΩA„ÉªÅEΩ„ÉªÅEΩÅEÇ„ÇÅ„ÇëÔΩøÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEî„Å´„ÇëÔΩøÅEΩ„ÉªÅEΩ„ÉªÅEΩ
                 if (doorActor)
                 {
                     doorActor->Closed();
                 }
-                // ÔøΩvÔøΩÔøΩÔøΩCÔøΩÔøΩÔøΩ[ÔøΩÃà íuÔøΩÔøΩhÔøΩAÔøΩOÔøΩ…ÇÔøΩÔøΩÔøΩ
+                // „ÉªÅEΩv„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩC„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩÅEå‰ΩçÁΩÆ„ÉªÅEΩ„ÉªÅEΩh„ÉªÅEΩA„ÉªÅEΩO„ÉªÅEΩÅEâ„ÇëÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ
                 if (player)
                 {
                     player->SetPosition({ -4.827f,-0.098f,11.724f });
-                    // ÔøΩvÔøΩÔøΩÔøΩCÔøΩÔøΩÔøΩ[ÔøΩÃÉAÔøΩjÔøΩÔøΩÔøΩ[ÔøΩVÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩƒêÔøΩ
+                    // „ÉªÅEΩv„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩC„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩÅEå„Ç¢„ÉªÅEΩj„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩV„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEí∞ÅEøÅEΩ
                     player->PlayBodyAnimation("Level_Start_Cut", false);
                 }
-                // ÔøΩGÔøΩÃà íuÔøΩïîâÔøΩÔøΩÃâÔøΩÔøΩ…ÇÔøΩÔøΩÔøΩ
+                // „ÉªÅEΩG„ÉªÅEΩÅEå‰ΩçÁΩÆ„ÉªÅEΩ˚ùîÁß§„ÉªÅEΩ„ÉªÅEΩÅEå‰ºöÔΩøÅEΩ„ÉªÅEΩÅEâ„ÇëÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ
                 if (gruxEnemy)
                 {
                     gruxEnemy->SetEulerRotation({ 0.0f,-90.0f,0.0f });
@@ -407,9 +448,9 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 doorMovieState = DoorMovieState::UpPlayerCombatMovie;
             });
 
-        // ÔøΩvÔøΩÔøΩÔøΩCÔøΩÔøΩÔøΩ[ÔøΩAÔøΩbÔøΩvÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ[ÔøΩN
+        // „ÉªÅEΩv„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩC„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩA„ÉªÅEΩb„ÉªÅEΩv„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩN
         PlayMovie(playerCombatMovieFileName);
-        // ÔøΩÔøΩÔøΩÔøΩÔøΩÃòXÔøΩCÔøΩXÔøΩ^ÔøΩÔøΩÔøΩhÔøΩÃâÔøΩÔøΩÃåÔøΩÔøΩÔøΩﬂÇÔøΩ
+        // „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEåËùã„ÉªÅEΩC„ÉªÅEΩX„ÉªÅEΩ^„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩh„ÉªÅEΩÅEå‰ºöÔΩøÅEΩ„ÉªÅEΩÅEåÈØâÔΩøÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEü„ÇëÅEøÅEΩ
         for (auto candleStand : candleStandActors)
         {
             candleStand->ResetFireLightScale();
@@ -420,14 +461,14 @@ void MovieCameraManagerActor::Update(float deltaTime)
         break;
     case DoorMovieState::UpPlayerCombatMovie:
         if (movieCamera->IsMovieFinish())
-        {// ÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ[ÔøΩNÔøΩÔøΩÔøΩIÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩA
+        {// „ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩN„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩI„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩA
             doorMovieState = DoorMovieState::EnemyMovie;
         }
         break;
     case DoorMovieState::EnemyMovie:
-        // ÔøΩ{ÔøΩXÔøΩAÔøΩbÔøΩvÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ[ÔøΩN
+        // „ÉªÅEΩ{„ÉªÅEΩX„ÉªÅEΩA„ÉªÅEΩb„ÉªÅEΩv„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩN
         PlayMovie(bossRoarMovieFileName);
-        // ÔøΩGÔøΩÔøΩÔøΩiÔøΩÔøΩÔøΩÔøΩ
+        // „ÉªÅEΩG„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩi„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
         if (gruxEnemy)
         {
             gruxEnemy->PlayBodyAnimation("Ultimate_Roar_0", false);
@@ -437,7 +478,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::EnemyName:
         if (movieCamera->IsMovieFinish())
         {
-            // BGMÔøΩÔøΩƒêÔøΩÔøΩÔøΩÔøΩÔøΩ
+            // BGM„ÉªÅEΩ„ÉªÅEΩÅEÅEí∞ÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
             auto bgmActors = GetOwnerScene()->GetActorManager()->GetActorsOfType <BgmActor>();
             for (auto bgmActor : bgmActors)
             {
@@ -466,12 +507,12 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {
             if (player)
             {
-                // ÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ{ÔøΩXÔøΩÌéûÔøΩÃèÔøΩ‘Ç…ïœçXÔøΩÔøΩÔøΩÔøΩ
+                // „ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ{„ÉªÅEΩX„ÉªÅEΩÂØ¨Ê©∏ÅEøÅEΩÅEåÊìæÅEøÅEΩÅEî„Å´Â§âÊõ¥„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
                 player->SetIsBossBattle(true);
             }
-            //ÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩOÔøΩlÔøΩÃÇ…ñﬂÇÔøΩ
+            //„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩO„ÉªÅEΩl„ÉªÅEΩÅEå„Å´Êàª„ÇëÔΩøÅEΩ
             if (scene->GetCameraManager()->IsUseMovie())
-            {// ÔøΩÔøΩÔøΩ[ÔøΩrÔøΩ[ÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩgÔøΩpÔøΩÔøΩÔøΩÃèÍçáÔøΩÃÇ›êÿÇÔøΩ÷ÇÔøΩ
+            {// „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩr„ÉªÅEΩ[„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩg„ÉªÅEΩp„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEåÂ†¥Âêà„ÅEÅEΩÅEå„ÅøÂàÅEÇëÅEøÅEΩÅEñ„ÇëÅEøÅEΩ
 #if 0
                 if (auto mainCamera = actorManager->GetActorOfType<MainCamera>())
                 {
@@ -493,11 +534,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
                         {
                             if (player)
                             {
-                                // ÔøΩÔøΩÔøΩoÔøΩÔøΩÔøΩÔøΩÔøΩIÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ∆ÇÔøΩ ímÔøΩÔøΩÔøΩÔøΩ
+                                // „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩo„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩI„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÇëÅEøÅEΩÅEäÁü•„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
                                 player->EndEvent();
                             }
                             if (gruxEnemy)
-                            {// ÔøΩÔøΩÔøΩÔøΩÔøΩ≈É{ÔøΩXÔøΩÃñÔøΩÔøΩOÔøΩÔøΩUIÔøΩÔøΩÔøΩÔøΩÔøΩ
+                            {// „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÅE„ÉªÅEΩX„ÉªÅEΩÅEåÂéÑÅEøÅEΩ„ÉªÅEΩO„ÉªÅEΩ„ÉªÅEΩUI„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
                                 gruxEnemy->GetStateMachine()->ChangeState("EnemyIdleState");
                             }
                             if (gameScene)
@@ -513,7 +554,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
 
             }
             if (gruxEnemy)
-            {// ÔøΩÔøΩÔøΩÔøΩÔøΩ≈É{ÔøΩXÔøΩÃñÔøΩÔøΩOÔøΩÔøΩUIÔøΩÔøΩÔøΩÔøΩÔøΩ
+            {// „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÅE„ÉªÅEΩX„ÉªÅEΩÅEåÂéÑÅEøÅEΩ„ÉªÅEΩO„ÉªÅEΩ„ÉªÅEΩUI„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
                 gruxEnemy->StartGruxNamePerform(1.0f, 1.0f, 0.0f);
             }
             doorMovieState = DoorMovieState::Finished;
@@ -529,6 +570,12 @@ void MovieCameraManagerActor::Update(float deltaTime)
 void MovieCameraManagerActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    ImGui::SeparatorText("Prison Opening (Runtime)");
+    ImGui::Text("Playing: %s", prisonOpeningMoviePlaying ? "true" : "false");
+    if (ImGui::Button("Play Prison Opening Movie (Runtime)"))
+        PlayPrisonOpeningMovie();
+    ImGui::DragFloat("TPS Blend Duration", &prisonOpeningBlendDuration,
+        0.01f, 0.0f, 2.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Checkbox("DeathWide Anchor Preview",
         &deathWideAnchorPreviewEnabled);
     ImGui::Text("Selected Anchor: %s",
@@ -682,12 +729,343 @@ void MovieCameraManagerActor::DrawImGuiDetails()
 #endif
 }
 
+bool MovieCameraManagerActor::PlayPrisonOpeningMovie()
+{
+    auto scene = GetOwnerScene();
+    auto gameScene = dynamic_cast<GameScene*>(scene);
+    auto movieCamera = movieCameraWeakPtr.lock();
+    auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
+    if (!gameScene || !movieCamera || !cameraManager || prisonOpeningMoviePlaying)
+        return false;
+
+    // CameraManager renders Cinematic before Movie.  A left-over cinematic mode
+    // would otherwise hide this runtime movie and later continue to override TPS.
+    if (cameraManager->IsUseCinematic())
+        cameraManager->ToggleCinematicCamera(GetOwnerConstScene());
+
+    if (!gameScene->BeginPrisonOpeningMoviePlayerSitting())
+        return false;
+
+    if (!cameraManager->IsUseMovie())
+        cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+
+    movieCamera->LoadFromJson(
+        "./Data/Saves/MovieCameras/prison_opening.json");
+    movieCamera->Start();
+    if (!movieCamera->IsPlaying())
+    {
+        gameScene->EndPrisonOpeningMoviePlayerSitting();
+        if (cameraManager->IsUseMovie())
+            cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+        return false;
+    }
+
+    prisonOpeningMoviePlaying = true;
+    prisonOpeningJailDoorInteractionRequested = false;
+    prisonOpeningState = PrisonOpeningState::CameraPathPlaying;
+    return true;
+}
+
+void MovieCameraManagerActor::HandlePrisonOpeningCameraPathCompleted()
+{
+    if (!prisonOpeningMoviePlaying ||
+        prisonOpeningState != PrisonOpeningState::CameraPathPlaying)
+        return;
+
+    const auto scene = GetOwnerScene();
+    const auto jailDoor = scene
+        ? scene->GetActorManager()->GetActorOfType<DoorJailActor>()
+        : nullptr;
+    if (!jailDoor)
+    {
+        Logger::Warning("[PrisonOpeningMovie] DoorJailActor was not found.");
+        FinishPrisonOpeningMovie();
+        return;
+    }
+
+    prisonOpeningState = PrisonOpeningState::WaitingForJailDoorOpen;
+    if (!prisonOpeningJailDoorInteractionRequested &&
+        !jailDoor->IsOpenDoor() && !jailDoor->IsOpeningDoor())
+    {
+        jailDoor->Interact();
+        prisonOpeningJailDoorInteractionRequested = true;
+    }
+}
+
+void MovieCameraManagerActor::UpdatePrisonOpeningPresentation(float deltaTime)
+{
+    const auto scene = GetOwnerScene();
+    if (!scene)
+    {
+        FinishPrisonOpeningMovie();
+        return;
+    }
+
+    switch (prisonOpeningState)
+    {
+    case PrisonOpeningState::WaitingForJailDoorOpen:
+    {
+        const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>();
+        if (!jailDoor)
+        {
+            Logger::Warning("[PrisonOpeningMovie] DoorJailActor was not found while waiting to open.");
+            FinishPrisonOpeningMovie();
+            return;
+        }
+
+        if (jailDoor->IsOpenDoor())
+            BeginPrisonOpeningPlayerStanding();
+        break;
+    }
+
+    case PrisonOpeningState::PlayerStanding:
+    {
+        const auto player = scene->GetActorManager()->GetActorOfType<Player>();
+        if (!player)
+        {
+            Logger::Warning("[PrisonOpeningMovie] Player was not found while waiting for Standing.");
+            FinishPrisonOpeningMovie();
+            return;
+        }
+
+        if (player->IsPrisonOpeningStandingFinished())
+            BeginPrisonOpeningBlendToTPS();
+        break;
+    }
+
+    case PrisonOpeningState::BlendingToTPS:
+    {
+        UpdatePrisonOpeningBlendToTPS(deltaTime);
+        break;
+    }
+
+    default:
+        break;
+    }
+}
+
+void MovieCameraManagerActor::BeginPrisonOpeningPlayerStanding()
+{
+    if (!prisonOpeningMoviePlaying ||
+        prisonOpeningState != PrisonOpeningState::WaitingForJailDoorOpen)
+    {
+        return;
+    }
+
+    const auto scene = GetOwnerScene();
+    const auto player = scene
+        ? scene->GetActorManager()->GetActorOfType<Player>()
+        : nullptr;
+    if (!player || !player->BeginPrisonOpeningStanding())
+    {
+        Logger::Warning("[PrisonOpeningMovie] Failed to start Player Standing animation.");
+        FinishPrisonOpeningMovie();
+        return;
+    }
+
+    prisonOpeningState = PrisonOpeningState::PlayerStanding;
+}
+
+void MovieCameraManagerActor::BeginPrisonOpeningBlendToTPS()
+{
+    if (!prisonOpeningMoviePlaying ||
+        prisonOpeningState != PrisonOpeningState::PlayerStanding)
+    {
+        return;
+    }
+
+    const auto movieCamera = movieCameraWeakPtr.lock();
+    const auto scene = GetOwnerScene();
+    const auto darkCamera = scene
+        ? scene->GetActorManager()->GetActorOfType<DarkCameraActor>()
+        : nullptr;
+    if (!movieCamera || !movieCamera->GetOwner() || !darkCamera)
+    {
+        Logger::Warning("[PrisonOpeningMovie] Failed to begin TPS camera blend.");
+        FinishPrisonOpeningMovie();
+        return;
+    }
+
+    DarkCameraActor::PrisonOpeningTpsPose target{};
+    if (!darkCamera->GetPrisonOpeningTpsPose(target))
+    {
+        Logger::Warning("[PrisonOpeningMovie] Failed to evaluate TPS camera blend target.");
+        FinishPrisonOpeningMovie();
+        return;
+    }
+
+    prisonOpeningBlendStartPosition = movieCamera->GetOwner()->GetPosition();
+    prisonOpeningBlendStartRotation = movieCamera->GetOwner()->GetQuaternionRotation();
+    prisonOpeningBlendStartFov = movieCamera->GetFov();
+    prisonOpeningBlendElapsed = 0.0f;
+    prisonOpeningTransitionDebugActive = true;
+    prisonOpeningTransitionDebugFrame = 0;
+    prisonOpeningTransitionDebugPostFinishFramesRemaining = 0;
+    LogPrisonOpeningTransitionDebug("StandingFinished_BlendBegin");
+
+    if (prisonOpeningBlendDuration <= 0.0f)
+    {
+        darkCamera->PreparePrisonOpeningTpsReturn(target);
+        FinishPrisonOpeningMovie();
+        return;
+    }
+
+    prisonOpeningState = PrisonOpeningState::BlendingToTPS;
+}
+
+void MovieCameraManagerActor::UpdatePrisonOpeningBlendToTPS(float deltaTime)
+{
+    const auto movieCamera = movieCameraWeakPtr.lock();
+    const auto scene = GetOwnerScene();
+    const auto darkCamera = scene
+        ? scene->GetActorManager()->GetActorOfType<DarkCameraActor>()
+        : nullptr;
+    if (!movieCamera || !darkCamera)
+    {
+        FinishPrisonOpeningMovie();
+        return;
+    }
+
+    DarkCameraActor::PrisonOpeningTpsPose target{};
+    if (!darkCamera->GetPrisonOpeningTpsPose(target))
+    {
+        FinishPrisonOpeningMovie();
+        return;
+    }
+
+    if (prisonOpeningBlendDuration <= 0.0f)
+    {
+        darkCamera->PreparePrisonOpeningTpsReturn(target);
+        FinishPrisonOpeningMovie();
+        return;
+    }
+
+    const float duration = prisonOpeningBlendDuration;
+    prisonOpeningBlendElapsed = (std::min)(
+        prisonOpeningBlendElapsed + (std::max)(deltaTime, 0.0f), duration);
+    const float linearT = prisonOpeningBlendElapsed / duration;
+    // SmoothStep: t * t * (3 - 2t).
+    const float t = linearT * linearT * (3.0f - 2.0f * linearT);
+
+    using namespace DirectX;
+    const XMFLOAT4 targetRotation = CreateDeathWideLookRotation(target.eye, target.target);
+    const XMVECTOR rotation = XMQuaternionSlerp(
+        XMLoadFloat4(&prisonOpeningBlendStartRotation),
+        XMLoadFloat4(&targetRotation),
+        t);
+    XMFLOAT4 blendedRotation{};
+    XMStoreFloat4(&blendedRotation, XMQuaternionNormalize(rotation));
+    movieCamera->ApplyWorldPose(
+        MathHelper::Lerp(prisonOpeningBlendStartPosition, target.eye, t),
+        blendedRotation,
+        std::lerp(prisonOpeningBlendStartFov, target.fov, t));
+    LogPrisonOpeningTransitionDebug("BlendingToTPS");
+    ++prisonOpeningTransitionDebugFrame;
+
+    if (linearT >= 1.0f)
+    {
+        // Use the same pose applied to MovieCamera on this frame so the
+        // CameraManager hand-off cannot introduce a final-frame jump.
+        darkCamera->PreparePrisonOpeningTpsReturn(target);
+        FinishPrisonOpeningMovie();
+    }
+}
+
+void MovieCameraManagerActor::FinishPrisonOpeningMovie()
+{
+    if (!prisonOpeningMoviePlaying)
+        return;
+
+    if (prisonOpeningTransitionDebugActive)
+        LogPrisonOpeningTransitionDebug("Finish_Pre");
+
+    auto scene = GetOwnerScene();
+    auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
+    if (const auto gameScene = dynamic_cast<GameScene*>(scene))
+        gameScene->EndPrisonOpeningMoviePlayerSitting();
+
+    if (cameraManager)
+    {
+        // Remove all non-gameplay render-camera overrides.  GetRenderCamera()
+        // then falls back to GameScene's DarkCameraActor (TPS).
+        if (cameraManager->IsUseMovie())
+            cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+        if (cameraManager->IsUseCinematic())
+            cameraManager->ToggleCinematicCamera(GetOwnerConstScene());
+    }
+    if (scene)
+    {
+        if (const auto darkCamera = scene->GetActorManager()->GetActorOfType<DarkCameraActor>())
+            darkCamera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+    }
+
+    prisonOpeningMoviePlaying = false;
+    prisonOpeningJailDoorInteractionRequested = false;
+    prisonOpeningState = PrisonOpeningState::None;
+    prisonOpeningBlendElapsed = 0.0f;
+    if (prisonOpeningTransitionDebugActive)
+    {
+        LogPrisonOpeningTransitionDebug("Finish_Post");
+        prisonOpeningTransitionDebugPostFinishFramesRemaining = 5;
+    }
+}
+
+void MovieCameraManagerActor::LogPrisonOpeningTransitionDebug(const char* phase)
+{
+    if (!prisonOpeningTransitionDebugActive)
+        return;
+
+    const auto scene = GetOwnerScene();
+    const auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
+    const auto movieCamera = movieCameraWeakPtr.lock();
+    const auto darkCamera = scene
+        ? scene->GetActorManager()->GetActorOfType<DarkCameraActor>()
+        : nullptr;
+    const auto player = scene
+        ? scene->GetActorManager()->GetActorOfType<Player>()
+        : nullptr;
+
+    DarkCameraActor::PrisonOpeningTpsPose target{};
+    const bool hasTarget = darkCamera && darkCamera->GetPrisonOpeningTpsPose(target);
+    const auto movieOwner = movieCamera ? movieCamera->GetOwner() : nullptr;
+    const DirectX::XMFLOAT3 moviePosition = movieOwner
+        ? movieOwner->GetPosition() : DirectX::XMFLOAT3{};
+    const DirectX::XMFLOAT4 movieRotation = movieOwner
+        ? movieOwner->GetQuaternionRotation() : DirectX::XMFLOAT4{};
+    const float movieFov = movieCamera ? movieCamera->GetFov() : 0.0f;
+    const float duration = (std::max)(prisonOpeningBlendDuration, 0.0f);
+    const float linearT = duration > FLT_EPSILON
+        ? std::clamp(prisonOpeningBlendElapsed / duration, 0.0f, 1.0f) : 1.0f;
+    const float smoothT = linearT * linearT * (3.0f - 2.0f * linearT);
+    const auto renderCamera = cameraManager ? cameraManager->GetRenderCamera(scene) : nullptr;
+
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[PrisonOpeningTrace][MovieManager] phase={} frame={} render={} movieEnabled={} "
+        "moviePos=({:.3f},{:.3f},{:.3f}) movieRot=({:.4f},{:.4f},{:.4f},{:.4f}) movieFov={:.4f} "
+        "targetValid={} t={:.3f} smooth={:.3f} elapsed={:.3f}/{:.3f} "
+        "tpsEye=({:.3f},{:.3f},{:.3f}) tpsTarget=({:.3f},{:.3f},{:.3f}) tpsFov={:.4f} tpsYaw={:.4f} tpsPitch={:.4f} tpsDesiredDistance={:.3f} tpsActualDistance={:.3f} tpsCollisionRatio={:.3f}",
+        phase, prisonOpeningTransitionDebugFrame,
+        renderCamera ? renderCamera->GetName() : "None",
+        cameraManager && cameraManager->IsUseMovie(),
+        moviePosition.x, moviePosition.y, moviePosition.z,
+        movieRotation.x, movieRotation.y, movieRotation.z, movieRotation.w, movieFov,
+        hasTarget, linearT, smoothT, prisonOpeningBlendElapsed, duration,
+        target.eye.x, target.eye.y, target.eye.z,
+        target.target.x, target.target.y, target.target.z, target.fov,
+        target.yaw, target.pitch, target.desiredDistance, target.actualDistance,
+        target.collisionRatio));
+
+    if (player)
+        player->LogPrisonOpeningTransitionDebug(phase, prisonOpeningTransitionDebugFrame);
+    if (darkCamera)
+        darkCamera->RequestPrisonOpeningTransitionDebug(phase, prisonOpeningTransitionDebugFrame);
+}
 void MovieCameraManagerActor::PlayMovie(const std::string& file)
 {
     if (auto cameraManager = GetOwnerScene()->GetCameraManager())
     {
         if (!cameraManager->IsUseMovie())
-        {// ÔøΩÔøΩÔøΩ≈Ç…ÉÔøΩÔøΩ[ÔøΩrÔøΩ[ÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩgÔøΩpÔøΩÔøΩÔøΩ≈Ç»ÇÔøΩÔøΩÍçáÔøΩÃÇ›êÿÇÔøΩ÷ÇÔøΩ
+        {// „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÅ´„ÉªÅEøÅEΩ„ÉªÅEΩ[„ÉªÅEΩr„ÉªÅEΩ[„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩg„ÉªÅEΩp„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÅ™„ÇëÔΩøÅEΩ„ÉªÅEΩÈºæ„ÉªÅEøÅEΩÅEå„ÅøÂàÅEÇëÅEøÅEΩÅEñ„ÇëÅEøÅEΩ
             cameraManager->ToggleMovieCamera(GetOwnerConstScene());
         }
     }
@@ -842,7 +1220,7 @@ void MovieCameraManagerActor::UpdateDeathWideAnchorPreview()
     deathWideDebugRotationValid = true;
 }
 
-// ÔøΩhÔøΩAÔøΩÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩ[ÔøΩrÔøΩ[ÔøΩÔøΩƒêÔøΩÔøΩÔøΩÔøΩÔøΩ
+// „ÉªÅEΩh„ÉªÅEΩA„ÉªÅEΩ„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩr„ÉªÅEΩ[„ÉªÅEΩ„ÉªÅEΩÅEÅEí∞ÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
 void MovieCameraManagerActor::PlayDoorMovie()
 {
     if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
@@ -853,20 +1231,20 @@ void MovieCameraManagerActor::PlayDoorMovie()
 
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
     {
-        // ÔøΩÔøΩÔøΩoÔøΩÔøΩÔøΩnÔøΩ‹ÇÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ∆ÇÔøΩÔøΩÔøΩ∆ÇÔøΩ ímÔøΩÔøΩÔøΩÔøΩ
+        // „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩo„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩn„ÉªÅEΩÅEú„ÇëÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÇëÅEøÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÇëÅEøÅEΩÅEäÁü•„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ
         player->StartEvent();
 
 
-        // ÔøΩvÔøΩÔøΩÔøΩCÔøΩÔøΩÔøΩ[ÔøΩÃà íuÔøΩÔøΩ≈íËÇ∑ÔøΩÔøΩ
+        // „ÉªÅEΩv„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩC„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩÅEå‰ΩçÁΩÆ„ÉªÅEΩ„ÉªÅEΩÅEÅEÆö„Åô„ÉªÅEΩ„ÉªÅEΩ
         DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
-        player->SetPosition(fixedPosition); // ÔøΩvÔøΩÔøΩÔøΩCÔøΩÔøΩÔøΩ[ÔøΩÃà íuÔøΩÔøΩ≈íËÇ∑ÔøΩÔøΩÔøΩÔøΩWÔøΩ…ê›íÔøΩ
+        player->SetPosition(fixedPosition); // „ÉªÅEΩv„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩC„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ[„ÉªÅEΩÅEå‰ΩçÁΩÆ„ÉªÅEΩ„ÉªÅEΩÅEÅEÆö„Åô„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩW„ÉªÅEΩÅEâË®≠ÊäµÅEøÅEΩ
         player->rotationComponent->SetDirection({ 1.0f,0.0f,0.0f });
     }
 
     if (auto cameraManager = GetOwnerScene()->GetCameraManager())
     {
         if (!cameraManager->IsUseMovie())
-        {// ÔøΩÔøΩÔøΩ≈Ç…ÉÔøΩÔøΩ[ÔøΩrÔøΩ[ÔøΩJÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩgÔøΩpÔøΩÔøΩÔøΩ≈Ç»ÇÔøΩÔøΩÍçáÔøΩÃÇ›êÿÇÔøΩ÷ÇÔøΩ
+        {// „ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÅ´„ÉªÅEøÅEΩ„ÉªÅEΩ[„ÉªÅEΩr„ÉªÅEΩ[„ÉªÅEΩJ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩg„ÉªÅEΩp„ÉªÅEΩ„ÉªÅEΩ„ÉªÅEΩÅEÅEÅ™„ÇëÔΩøÅEΩ„ÉªÅEΩÈºæ„ÉªÅEøÅEΩÅEå„ÅøÂàÅEÇëÅEøÅEΩÅEñ„ÇëÅEøÅEΩ
             cameraManager->ToggleMovieCamera(GetOwnerConstScene());
         }
     }

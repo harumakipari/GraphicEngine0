@@ -94,6 +94,9 @@ public:
     void Interact() override;
     void DrawImGuiDetails() override;
 
+    bool IsOpenDoor() const { return doorState == DoorState::Open; }
+    bool IsOpeningDoor() const { return doorState == DoorState::Opening; }
+
 private:
     std::shared_ptr<SceneComponent> root;
     std::shared_ptr<SceneComponent> hinge;

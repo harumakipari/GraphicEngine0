@@ -28,6 +28,8 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     controller->AddAnimation("Attack", 1);
     controller->AddAnimation("Idle", 2);
     controller->AddAnimation("Death", 3);
+    controller->AddAnimation("Lean_Wall", 4);
+    controller->AddAnimation("Stand_Idle", 5);
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
     // アニメーションコントローラーのオーナーの名前を設定する

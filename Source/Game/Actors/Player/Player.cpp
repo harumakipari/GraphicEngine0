@@ -198,6 +198,7 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Result_Recall", 54);
         controller->AddAnimation("Emote_Phase2", 55);
         controller->AddAnimation("Sitting", 56);
+        controller->AddAnimation("Standing", 57);
         controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
 
         // ブレンドスペースに追加
@@ -582,6 +583,15 @@ void Player::UpdateWeaponVisualPresentation(const float deltaTime)
     if (showTrail)
         trail.trailPoints.push_back({ swordTipPos, swordRootPos, trailRemainTime });
 }
+void Player::ApplyDitherTransparencyAlpha(float alpha)
+{
+    alpha = std::clamp(alpha, 0.0f, 1.0f);
+
+    skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
+    swordMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
+    swordSheathMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
+    currentDitherTransparencyAlpha = alpha;
+}
 void Player::Update(float deltaTime)
 {
     ++initialRushInputTraceFrame;
@@ -612,6 +622,36 @@ void Player::Update(float deltaTime)
     UpdateDamageFlash();
     UpdateLockOnGuideUI();
 
+    // The prison opening owns this Player's transform and pose for its whole duration.
+    // Do this before normal state-machine, locomotion, deferred movement, and Character::Update.
+    if (prisonOpeningSitting || prisonOpeningStanding)
+    {
+        if (inputComponent)
+            inputComponent->ClearIntent();
+        characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+        characterMovementComponent->SetInputMagnitude(0.0f);
+        characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
+        velocity = { 0.0f, 0.0f, 0.0f };
+
+        // Reapply every frame: deferred movement and physics may otherwise correct the transform.
+        SetPosition(prisonOpeningSittingPosition);
+        SetEulerRotation({ 0.0f, prisonOpeningSittingYawDegrees, 0.0f });
+        UpdateAllComponentTransforms();
+
+        if (const auto controller = GetBodyAnimationController())
+        {
+            if (prisonOpeningSitting &&
+                (controller->GetCurrentAnimationName() != "Sitting" || !controller->IsPlayAnimation()))
+            {
+                controller->PlayAnimationImmediate("Sitting", true, true);
+            }
+            controller->OnUpdate(deltaTime);
+        }
+
+        // The cinematic prison-opening path returns before the regular Dither update below.
+        ApplyDitherTransparencyAlpha(1.0f);
+        return;
+    }
     if (battleActionsSuspended)
     {
         const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
@@ -710,11 +750,7 @@ void Player::Update(float deltaTime)
     }
     if (forceDitherTransparencyDebug)
         ditherAlpha = ditherTransparencyDebugAlpha;
-    ditherAlpha = std::clamp(ditherAlpha, 0.0f, 1.0f);
-    skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = ditherAlpha;
-    swordMeshComponent->plusAlphaCBuffer->data.cpuColor.w = ditherAlpha;
-    swordSheathMeshComponent->plusAlphaCBuffer->data.cpuColor.w = ditherAlpha;
-    currentDitherTransparencyAlpha = ditherAlpha;
+    ApplyDitherTransparencyAlpha(ditherAlpha);
 
     // Player/BossのSlowは独立させ、どちらも実時間で更新する。
     if (playerSlowPhase == JustDodgeSlowPhase::Hold)
@@ -2625,7 +2661,116 @@ void Player::EndEvent()
     this->moviePerform = false;
 }
 
+bool Player::BeginPrisonOpeningSitting(
+    const DirectX::XMFLOAT3& position, const float yawDegrees)
+{
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return false;
+
+    prisonOpeningInputWasEnabled = InputSystem::IsInputEnabled();
+    CancelGameplayActionsForCinematic();
+    StartEvent();
+
+    prisonOpeningSittingPosition = position;
+    prisonOpeningSittingYawDegrees = yawDegrees;
+    prisonOpeningSitting = true;
+    prisonOpeningStanding = false;
+    SetPosition(prisonOpeningSittingPosition);
+    SetEulerRotation({ 0.0f, prisonOpeningSittingYawDegrees, 0.0f });
+    UpdateAllComponentTransforms();
+
+    controller->ReleaseHeldAnimationPose();
+    controller->ResetAnimationRate();
+    if (!controller->PlayAnimationImmediate("Sitting", true, true))
+    {
+        prisonOpeningSitting = false;
+        EndEvent();
+        InputSystem::SetInputEnabled(prisonOpeningInputWasEnabled);
+        return false;
+    }
+    return true;
+}
+
+bool Player::BeginPrisonOpeningStanding()
+{
+    if (!prisonOpeningSitting || prisonOpeningStanding)
+        return false;
+
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return false;
+
+    prisonOpeningSitting = false;
+    prisonOpeningStanding = true;
+    controller->ReleaseHeldAnimationPose();
+    controller->ResetAnimationRate();
+    controller->SetUseBlendSpace(false);
+    controller->ResetRootMotion("Standing", false, true, 0.15f);
+    controller->SetIgnoreRootMotion(true);
+    return controller->GetCurrentAnimationName() == "Standing";
+}
+void Player::EndPrisonOpeningSitting()
+
+{
+    if (!prisonOpeningSitting && !prisonOpeningStanding)
+        return;
+
+    prisonOpeningSitting = false;
+    prisonOpeningStanding = false;
+    if (stateMachine_)
+        stateMachine_->ChangeState("Idle");
+    if (const auto controller = GetBodyAnimationController())
+    {
+        controller->ResetAnimationRate();
+    }
+    EndEvent();
+    InputSystem::SetInputEnabled(prisonOpeningInputWasEnabled);
+}
+
+void Player::LogPrisonOpeningTransitionDebug(const char* phase, int frame) const
+{
+    const DirectX::XMFLOAT3 actorPosition = GetPosition();
+    const DirectX::XMFLOAT4 actorRotation = GetQuaternionRotation();
+    const DirectX::XMFLOAT3 movementPosition = characterMovementComponent
+        ? characterMovementComponent->GetComponentLocation() : DirectX::XMFLOAT3{};
+    const DirectX::XMFLOAT3 movementVelocity = characterMovementComponent
+        ? characterMovementComponent->GetVelocity() : DirectX::XMFLOAT3{};
+    const DirectX::XMFLOAT3 meshPosition = skeletalMeshComponent
+        ? skeletalMeshComponent->GetComponentLocation() : DirectX::XMFLOAT3{};
+    const auto animationController = GetBodyAnimationController();
+    const char* animationName = animationController
+        ? animationController->GetCurrentAnimationName().c_str() : "None";
+    const char* stateName = stateMachine_ ? stateMachine_->GetStateName() : "None";
+    const bool grounded = characterMovementComponent && characterMovementComponent->IsGround();
+
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[PrisonOpeningTrace][Player] phase={} frame={} actorPos=({:.3f},{:.3f},{:.3f}) "
+        "actorRot=({:.4f},{:.4f},{:.4f},{:.4f}) characterMovementPos=({:.3f},{:.3f},{:.3f}) "
+        "meshPos=({:.3f},{:.3f},{:.3f}) playerVelocity=({:.3f},{:.3f},{:.3f}) "
+        "movementVelocity=({:.3f},{:.3f},{:.3f}) grounded={} animation={} state={} "
+        "sitting={} standing={} inputEnabled={}",
+        phase, frame,
+        actorPosition.x, actorPosition.y, actorPosition.z,
+        actorRotation.x, actorRotation.y, actorRotation.z, actorRotation.w,
+        movementPosition.x, movementPosition.y, movementPosition.z,
+        meshPosition.x, meshPosition.y, meshPosition.z,
+        velocity.x, velocity.y, velocity.z,
+        movementVelocity.x, movementVelocity.y, movementVelocity.z,
+        grounded, animationName, stateName,
+        prisonOpeningSitting, prisonOpeningStanding, InputSystem::IsInputEnabled()));
+}
+bool Player::IsPrisonOpeningStandingFinished() const
+{
+    if (!prisonOpeningStanding)
+        return false;
+
+    const auto controller = GetBodyAnimationController();
+    return controller && controller->GetCurrentAnimationName() == "Standing" &&
+        !controller->IsPlayAnimation();
+}
 void Player::SetMinimumHp(const int value)
+
 {
     minimumHp = std::clamp(value, 0, maxHp);
 }

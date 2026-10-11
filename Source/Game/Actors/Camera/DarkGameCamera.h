@@ -26,6 +26,19 @@ public:
         float yaw;
         float pitch;
     };
+    struct PrisonOpeningTpsPose
+    {
+        DirectX::XMFLOAT3 eye;
+        DirectX::XMFLOAT3 target;
+        DirectX::XMFLOAT3 desiredEye;
+        float fov;
+        float yaw;
+        float pitch;
+        float desiredDistance;
+        float actualDistance;
+        float collisionRatio;
+        bool hitWall;
+    };
     // Zíçñ⁄ÇÃèÓïÒ
     struct CameraDirectionInfo
     {
@@ -205,6 +218,13 @@ public:
 
     // FocusèÛë‘ÇÃÉ|Å[ÉYÇçÏê¨Ç∑ÇÈ
     CameraPose CreateFocusPose();
+
+    // Veil of Aurora prison-opening return only.  This evaluates the current
+    // player-relative TPS pose with the same wall collision correction used
+    // by the regular camera update.
+    bool GetPrisonOpeningTpsPose(PrisonOpeningTpsPose& outPose);
+    void PreparePrisonOpeningTpsReturn(const PrisonOpeningTpsPose& pose);
+    void RequestPrisonOpeningTransitionDebug(const char* phase, int frame);
 
     void PlayCameraShake(float intensity, float duration, float frequency,float positionAmount, float targetAmount);
     void PlayCameraShakePreset(const std::string& presetName);
@@ -670,6 +690,10 @@ private:
     float smoothHitDistance = 0.0f;
     float cameraCollisionRatio = 1.0f;
     std::string cameraCollisionHitName = "None";
+
+    // Preserve the evaluated prison-opening TPS pose for the hand-off render frame.
+    bool holdPrisonOpeningTpsReturnPoseForOneUpdate = false;
+    float prisonOpeningReturnFov = 0.0f;
     bool showCameraCollisionDebug = false;
 
     CameraCompositionSettings initialCorridorTpsSettings{};
@@ -700,4 +724,7 @@ private:
 
     float startDistance = 5.0f;
     float targetDistance = 5.0f;
+
+    std::string prisonOpeningTransitionDebugPhase;
+    int prisonOpeningTransitionDebugFrame = -1;
 };

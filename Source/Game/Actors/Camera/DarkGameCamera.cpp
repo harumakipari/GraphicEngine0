@@ -69,14 +69,23 @@ void DarkCameraActor::Update(float deltaTime)
         return;
     }
     DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
+    const bool preservePrisonOpeningReturnPose =
+        holdPrisonOpeningTpsReturnPoseForOneUpdate;
+    holdPrisonOpeningTpsReturnPoseForOneUpdate = false;
 
-    if (!isExternalBlending && !isBlending && currentMode == CameraMode::LockOn)
+    if (!preservePrisonOpeningReturnPose &&
+        !isExternalBlending && !isBlending && currentMode == CameraMode::LockOn)
     {
         UpdateLockOnComposition(deltaTime);
     }
 
 
-    if (isExternalBlending)
+    if (preservePrisonOpeningReturnPose)
+    {
+        // PreparePrisonOpeningTpsReturn supplied a collision-resolved TPS pose.
+        // Keep it for the render frame in which MovieCamera is disabled.
+    }
+    else if (isExternalBlending)
     {
         UpdateExternalBlend(deltaTime);
     }
@@ -98,10 +107,17 @@ void DarkCameraActor::Update(float deltaTime)
         }
     }
 
-    UpdateCombatPresentation(deltaTime);
-    compositionLookTarget = currentPose.target;
+    if (!preservePrisonOpeningReturnPose)
+    {
+        UpdateCombatPresentation(deltaTime);
+        compositionLookTarget = currentPose.target;
+    }
 
-    if (!isExternalBlending)
+    if (preservePrisonOpeningReturnPose)
+    {
+        mainCameraComponent->SetFov(prisonOpeningReturnFov);
+    }
+    else if (!isExternalBlending)
     {
         const float fovDegree = isBlending
             ? std::lerp(blendStartFovDegree, blendTargetFovDegree,
@@ -123,32 +139,37 @@ void DarkCameraActor::Update(float deltaTime)
     }
 #endif // 0
 
-    // 当たり判定前後を保存し、実距離を診断できるようにする。
-    desiredEyePosition = currentPose.eye;
-    collisionPreEyePosition = currentPose.eye;
-    desiredCameraDistance = MathHelper::Distance(currentPose.target, collisionPreEyePosition);
+    if (!preservePrisonOpeningReturnPose)
+    {
+        // 当たり判定前後を保存し、実距離を診断できるようにする。
+        desiredEyePosition = currentPose.eye;
+        collisionPreEyePosition = currentPose.eye;
+        desiredCameraDistance = MathHelper::Distance(currentPose.target, collisionPreEyePosition);
 
-    // 当たり判定でカメラの位置を修正する
-    currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
-    collisionPostEyePosition = currentPose.eye;
-    normalCollisionPostEyePosition = currentPose.eye;
-    UpdateLockOnWallLateralEscape(deltaTime);
-    collisionPostEyePosition = currentPose.eye;
-    UpdateLockOnCompositionLookCorrection(deltaTime);
-    actualCameraDistance = MathHelper::Distance(currentPose.target, collisionPostEyePosition);
-    cameraCollisionRatio = desiredCameraDistance > FLT_EPSILON
-        ? actualCameraDistance / desiredCameraDistance
-        : 1.0f;
-    lockOnFramingDeficit = currentMode == CameraMode::LockOn
-        ? lockOnRequiredFramingDistance - actualCameraDistance
-        : 0.0f;
+        // 当たり判定でカメラの位置を修正する
+        currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
+        collisionPostEyePosition = currentPose.eye;
+        normalCollisionPostEyePosition = currentPose.eye;
+        UpdateLockOnWallLateralEscape(deltaTime);
+        collisionPostEyePosition = currentPose.eye;
+        UpdateLockOnCompositionLookCorrection(deltaTime);
+        actualCameraDistance = MathHelper::Distance(currentPose.target, collisionPostEyePosition);
+        cameraCollisionRatio = desiredCameraDistance > FLT_EPSILON
+            ? actualCameraDistance / desiredCameraDistance
+            : 1.0f;
+        lockOnFramingDeficit = currentMode == CameraMode::LockOn
+            ? lockOnRequiredFramingDistance - actualCameraDistance
+            : 0.0f;
+    }
 
     // Blend 中の FOV は既存処理を優先し、安定した LockOn 時だけ Collision Fallback を適用する。
-    if (!isExternalBlending && !isBlending && currentMode == CameraMode::LockOn)
+    if (!preservePrisonOpeningReturnPose &&
+        !isExternalBlending && !isBlending && currentMode == CameraMode::LockOn)
     {
         UpdateLockOnFovFallback(deltaTime);
     }
-    ApplyCombatPresentationFov();
+    if (!preservePrisonOpeningReturnPose)
+        ApplyCombatPresentationFov();
 
     if (showCameraCollisionDebug)
     {
@@ -162,9 +183,11 @@ void DarkCameraActor::Update(float deltaTime)
 
     UpdateLockOnTransitionDiagnostics();
 
-    float targetBlend = cameraHitWall ? 1.0f : 0.0f;
-
-    wallBlend = std::lerp(wallBlend, targetBlend, deltaTime * 8.0f);
+    if (!preservePrisonOpeningReturnPose)
+    {
+        float targetBlend = cameraHitWall ? 1.0f : 0.0f;
+        wallBlend = std::lerp(wallBlend, targetBlend, deltaTime * 8.0f);
+    }
 
     CameraPose renderPose = currentPose;
 
@@ -172,6 +195,32 @@ void DarkCameraActor::Update(float deltaTime)
     mainCameraComponent->lookTarget = renderPose.target;
     mainCameraComponent->useLookTarget = true;
     DrawDeathCameraDebug(renderPose);
+
+    if (prisonOpeningTransitionDebugFrame >= 0)
+    {
+        const DirectX::XMFLOAT3 actorPosition = GetPosition();
+        const DirectX::XMFLOAT4 actorRotation = GetQuaternionRotation();
+        const DirectX::XMFLOAT3 viewForward = mainCameraComponent->GetForward();
+        Logger::Log(Logger::LogCategory::Gameplay, std::format(
+            "[PrisonOpeningTrace][DarkCamera_PostUpdate] phase={} frame={} "
+            "actorPos=({:.3f},{:.3f},{:.3f}) actorRot=({:.4f},{:.4f},{:.4f},{:.4f}) fov={:.4f} "
+            "yaw={:.4f} desiredYaw={:.4f} pitch={:.4f} desiredPitch={:.4f} holdReturnPose={} "
+            "desiredDistance={:.3f} actualDistance={:.3f} collisionRatio={:.3f} "
+            "collisionPre=({:.3f},{:.3f},{:.3f}) collisionPost=({:.3f},{:.3f},{:.3f}) "
+            "lookTarget=({:.3f},{:.3f},{:.3f}) viewForward=({:.4f},{:.4f},{:.4f})",
+            prisonOpeningTransitionDebugPhase, prisonOpeningTransitionDebugFrame,
+            actorPosition.x, actorPosition.y, actorPosition.z,
+            actorRotation.x, actorRotation.y, actorRotation.z, actorRotation.w,
+            mainCameraComponent->GetFov(), currentYaw, desiredYaw, currentPitch, desiredPitch,
+            preservePrisonOpeningReturnPose,
+            desiredCameraDistance, actualCameraDistance, cameraCollisionRatio,
+            collisionPreEyePosition.x, collisionPreEyePosition.y, collisionPreEyePosition.z,
+            collisionPostEyePosition.x, collisionPostEyePosition.y, collisionPostEyePosition.z,
+            currentPose.target.x, currentPose.target.y, currentPose.target.z,
+            viewForward.x, viewForward.y, viewForward.z));
+        prisonOpeningTransitionDebugFrame = -1;
+        prisonOpeningTransitionDebugPhase.clear();
+    }
 }
 
 void DarkCameraActor::DrawDeathCameraDebug(const CameraPose& appliedPose) const
@@ -797,7 +846,81 @@ DarkCameraActor::CameraPose DarkCameraActor::CreateFocusPose()
     return pose;
 }
 
+bool DarkCameraActor::GetPrisonOpeningTpsPose(PrisonOpeningTpsPose& outPose)
+{
+    const auto playerHeadShared = playerHead.lock();
+    const auto playerActor = playerHeadShared ? playerHeadShared->GetOwner() : nullptr;
+    if (!playerHeadShared || !playerActor)
+        return false;
+
+    DirectX::XMFLOAT3 forward = playerActor->GetForward();
+    forward.y = 0.0f;
+    if (MathHelper::Length(forward) <= FLT_EPSILON)
+        forward = { sinf(currentYaw), 0.0f, cosf(currentYaw) };
+    else
+        forward = MathHelper::Normalize(forward);
+
+    const float yaw = atan2f(forward.x, forward.z);
+    CameraPose pose = CalculatePose(
+        CameraMode::TPS,
+        playerHeadShared->GetComponentLocation(),
+        yaw,
+        0.0f);
+    outPose.desiredEye = pose.eye;
+    outPose.yaw = pose.yaw;
+    outPose.pitch = pose.pitch;
+    outPose.desiredDistance = MathHelper::Distance(pose.target, pose.eye);
+    pose.eye = ResolveCameraCollision(pose.target, pose.eye);
+
+    outPose.eye = pose.eye;
+    outPose.target = pose.target;
+    outPose.fov = DirectX::XMConvertToRadians(GetFovDegreeForMode(CameraMode::TPS));
+    outPose.actualDistance = MathHelper::Distance(pose.target, pose.eye);
+    outPose.collisionRatio = outPose.desiredDistance > FLT_EPSILON
+        ? outPose.actualDistance / outPose.desiredDistance
+        : 1.0f;
+    outPose.hitWall = cameraHitWall;
+    return true;
+}
+
+void DarkCameraActor::PreparePrisonOpeningTpsReturn(const PrisonOpeningTpsPose& pose)
+{
+    const auto playerHeadShared = playerHead.lock();
+    const auto playerActor = playerHeadShared ? playerHeadShared->GetOwner() : nullptr;
+    if (!playerActor)
+        return;
+
+    SnapToTpsDirection(playerActor->GetForward());
+    currentYaw = pose.yaw;
+    desiredYaw = pose.yaw;
+    currentPitch = pose.pitch;
+    desiredPitch = pose.pitch;
+    currentPose = { pose.eye, pose.target, currentYaw, currentPitch };
+    compositionLookTarget = currentPose.target;
+    desiredEyePosition = pose.desiredEye;
+    collisionPreEyePosition = pose.desiredEye;
+    collisionPostEyePosition = pose.eye;
+    normalCollisionPostEyePosition = pose.eye;
+    desiredCameraDistance = pose.desiredDistance;
+    actualCameraDistance = pose.actualDistance;
+    cameraCollisionRatio = pose.collisionRatio;
+    cameraHitWall = pose.hitWall;
+    prisonOpeningReturnFov = pose.fov;
+    mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
+    mainCameraComponent->SetFov(pose.fov);
+    mainCameraComponent->lookTarget = pose.target;
+    mainCameraComponent->useLookTarget = true;
+    SetPosition(pose.eye);
+    holdPrisonOpeningTpsReturnPoseForOneUpdate = true;
+}
+
 // 外部のカメラアクターとのブレンド状態を更新する
+void DarkCameraActor::RequestPrisonOpeningTransitionDebug(const char* phase, int frame)
+{
+    prisonOpeningTransitionDebugPhase = phase ? phase : "Unknown";
+    prisonOpeningTransitionDebugFrame = frame;
+}
+
 void DarkCameraActor::UpdateExternalBlend(float deltaTime)
 {
     externalBlendTime += deltaTime;

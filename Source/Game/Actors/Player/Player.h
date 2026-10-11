@@ -171,6 +171,14 @@ public:
     // イベントシーン終了時に呼ぶ処理
     void EndEvent();
 
+    // Prison-opening movie only. This bypasses normal gameplay while retaining this Player actor.
+    bool BeginPrisonOpeningSitting(const DirectX::XMFLOAT3& position, float yawDegrees);
+    bool BeginPrisonOpeningStanding();
+    void EndPrisonOpeningSitting();
+    bool IsPrisonOpeningSitting() const { return prisonOpeningSitting; }
+    bool IsPrisonOpeningStandingFinished() const;
+    void LogPrisonOpeningTransitionDebug(const char* phase, int frame) const;
+
     // Battle HUD visibility is decided by GameScene; Player only owns its components.
     void SetHpBarVisible(bool visible);
     void SetGameplayHudVisible(bool visible);
@@ -791,6 +799,7 @@ private:
     bool playerPoseGhostSpawnSequenceActive = false;
 
     void UpdatePlayerPoseGhost();
+    void ApplyDitherTransparencyAlpha(float alpha);
     bool CapturePlayerPoseGhost(size_t ghostIndex);
 
     float weaponSphereRadius = 0.75f;    // 剣の球の当たり判定の半径
@@ -878,6 +887,11 @@ private:
 
     // 演出中かどうか
     bool moviePerform = false;
+    bool prisonOpeningSitting = false;
+    bool prisonOpeningStanding = false;
+    bool prisonOpeningInputWasEnabled = true;
+    DirectX::XMFLOAT3 prisonOpeningSittingPosition{};
+    float prisonOpeningSittingYawDegrees = 0.0f;
     bool deathCameraTransparencyDisabled = false;
     bool finalHitWaiting = false;
     std::function<void(GruxEnemy*, const DirectX::XMFLOAT3&)> finalHitCallback;

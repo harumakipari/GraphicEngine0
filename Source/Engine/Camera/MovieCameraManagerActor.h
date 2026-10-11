@@ -46,6 +46,15 @@ private:
         PreFinished,
         Finished
     };
+
+    enum class PrisonOpeningState : uint8_t
+    {
+        None,
+        CameraPathPlaying,
+        WaitingForJailDoorOpen,
+        PlayerStanding,
+        BlendingToTPS,
+    };
 public:
     explicit MovieCameraManagerActor(const std::string& actorName) :Actor(actorName) {}
 
@@ -62,6 +71,8 @@ public:
 
     // ドアを開くムービーを再生する
     void PlayDoorMovie();
+    // Runtime-only Veil of Aurora prison-opening entry. MovieCamera debug Play is separate.
+    bool PlayPrisonOpeningMovie();
 
     void PlayMovie(const std::string& file);
     void PlayDeathWideRelative(const DirectX::XMFLOAT3& playerPosition,
@@ -80,8 +91,26 @@ public:
 
 private:
     void UpdateDeathWideAnchorPreview();
+    void HandlePrisonOpeningCameraPathCompleted();
+    void UpdatePrisonOpeningPresentation(float deltaTime);
+    void BeginPrisonOpeningPlayerStanding();
+    void BeginPrisonOpeningBlendToTPS();
+    void UpdatePrisonOpeningBlendToTPS(float deltaTime);
+    void FinishPrisonOpeningMovie();
+    void LogPrisonOpeningTransitionDebug(const char* phase);
 
     DoorMovieState doorMovieState = DoorMovieState::None;
+    bool prisonOpeningMoviePlaying = false;
+    bool prisonOpeningJailDoorInteractionRequested = false;
+    PrisonOpeningState prisonOpeningState = PrisonOpeningState::None;
+    DirectX::XMFLOAT3 prisonOpeningBlendStartPosition{};
+    DirectX::XMFLOAT4 prisonOpeningBlendStartRotation{};
+    float prisonOpeningBlendStartFov = 0.0f;
+    float prisonOpeningBlendElapsed = 0.0f;
+    float prisonOpeningBlendDuration = 0.7f;
+    bool prisonOpeningTransitionDebugActive = false;
+    int prisonOpeningTransitionDebugFrame = 0;
+    int prisonOpeningTransitionDebugPostFinishFramesRemaining = 0;
     std::weak_ptr<MovieCameraComponent> movieCameraWeakPtr;
     std::weak_ptr<SceneComponent> deathWidePreviewAnchor;
     std::weak_ptr<SceneComponent> deathWidePreviewTarget;

@@ -122,6 +122,9 @@ public:
     bool RequestBossEntryFromPause();
     bool RequestRestartBossBattleFromPause();
     void RequestReturnToMainRoomStart();
+    // Runtime prison-opening entry only; MovieCameraComponent debug playback does not call these.
+    bool BeginPrisonOpeningMoviePlayerSitting();
+    void EndPrisonOpeningMoviePlayerSitting();
 
     enum class LockOnTargetSelectionResult : uint8_t
     {
@@ -760,6 +763,9 @@ private:
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerSize{ 2.0f, 3.0f, 8.0f };
     bool tutorialCameraProfileTriggerFired = false;
     bool showTutorialCameraProfileTriggerDebug = false;
+    DirectX::XMFLOAT3 prisonOpeningSittingPosition{ -66.919f, -0.078f, 11.892f };
+    // Authored from the common Player rotation in open_movie1/2/3/5/6/7 ScenePresets.
+    float prisonOpeningSittingYawDegrees = 107.031867f;
     Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
     bool tutorialPassiveSkeletonLockOnCandidate = false;

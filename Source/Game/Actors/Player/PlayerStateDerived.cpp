@@ -16,7 +16,7 @@ PlayerStateBase::PlayerStateBase(Player* actor) :State(actor), player(actor)
 void PlayerIdleState::Enter()
 {
     Logger::Log("Idle Enter");
-    owner->PlayBodyAnimation("Idle", true, true, 0.2f);
+    owner->PlayBodyAnimation("Idle", true, true, 0.3f);
 }
 
 void PlayerIdleState::Execute(float deltaTime)

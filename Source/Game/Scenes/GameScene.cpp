@@ -2358,6 +2358,17 @@ void GameScene::PrepareTutorialForBossEntry()
         doorActor->CompleteInteraction();
 }
 
+bool GameScene::BeginPrisonOpeningMoviePlayerSitting()
+{
+    return player && player->BeginPrisonOpeningSitting(
+        prisonOpeningSittingPosition, prisonOpeningSittingYawDegrees);
+}
+
+void GameScene::EndPrisonOpeningMoviePlayerSitting()
+{
+    if (player)
+        player->EndPrisonOpeningSitting();
+}
 bool GameScene::RequestBossEntryFromPause()
 {
     if (!player || player->IsBossBattle() || bossRoomLockOnScopeActive || !cameraManager || cameraManager->IsUseMovie() || cameraManager->IsUseCinematic()) return false;
@@ -5097,6 +5108,12 @@ void GameScene::DrawGuiPlusAlpha()
         0.05f, 0.05f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Checkbox("Show Corridor Exit Trigger", &showTutorialCameraProfileTriggerDebug);
     ImGui::Text("Corridor Exit Trigger Fired: %s", tutorialCameraProfileTriggerFired ? "true" : "false");
+    ImGui::SeparatorText("Prison Opening Sitting");
+    ImGui::DragFloat3("Sitting Position", &prisonOpeningSittingPosition.x,
+        0.01f, -100.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Sitting Rotation Yaw", &prisonOpeningSittingYawDegrees,
+        0.1f, -360.0f, 360.0f, "%.3f deg");
+    ImGui::Text("Sitting Active: %s", player && player->IsPrisonOpeningSitting() ? "true" : "false");
     ImGui::SeparatorText("Operation Guide Tutorial");
     ImGui::Text("L Learned: %s", player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::L) ? "true" : "false");
     ImGui::Text("R Learned: %s", player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::R) ? "true" : "false");
