@@ -306,8 +306,31 @@ void SkeletonWarriorActor::SetTutorialPassive(bool enabled)
     hasHitPlayerThisAttack = false;
     hasJustDodgedPlayerThisAttack = false;
     ResetWeaponSweep();
-    if (wasInCombatState)
+    if (tutorialPassiveUseStandIdle)
+        PlayTutorialPassiveStandIdle();
+    else if (wasInCombatState)
         PlayBodyAnimation("Idle", true, true, 0.1f, true);
+}
+
+void SkeletonWarriorActor::EnableTutorialPassiveStandIdle()
+{
+    tutorialPassiveUseStandIdle = true;
+    if (!tutorialPassive || state == State::Dead)
+        return;
+
+    PlayTutorialPassiveStandIdle();
+}
+
+void SkeletonWarriorActor::PlayTutorialPassiveStandIdle()
+{
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return;
+
+    // Stand_Idle contains a root translation track. Keep this passive actor's
+    // authored Actor Transform fixed while retaining the animation's body pose.
+    controller->SetRemoveRootTranslationFromPose("Stand_Idle", true);
+    PlayBodyAnimation("Stand_Idle", true, true, 0.1f, true);
 }
 
 void SkeletonWarriorActor::SetMaxHp(const int value)

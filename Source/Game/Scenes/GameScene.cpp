@@ -2325,10 +2325,11 @@ void GameScene::EnterBossRoomLockOnScope(const bool fromTutorialDoorMovie)
 
 void GameScene::SpawnTutorialSkeletons()
 {
-    Transform passiveTransform(DirectX::XMFLOAT3{ -39.42f,-0.08f,11.808f }, DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
+    Transform passiveTransform(DirectX::XMFLOAT3{ -39.5f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,-40.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
     tutorialPassiveSkeletonActor = GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("TutorialPassiveSkeleton", passiveTransform);
     tutorialPassiveSkeletonActor->SetMaxHp(2);
     tutorialPassiveSkeletonActor->SetTutorialPassive(true);
+    tutorialPassiveSkeletonActor->EnableTutorialPassiveStandIdle();
     tutorialPassiveSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Compact);
 
     Transform dodgeTransform(DirectX::XMFLOAT3{ -10.0f,-0.3f,10.75f }, DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });

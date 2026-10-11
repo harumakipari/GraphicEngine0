@@ -37,8 +37,10 @@ public:
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() const { return cameraTargetComponent; }
     void SetTutorialPassive(bool enabled);
     bool IsTutorialPassive() const { return tutorialPassive; }
+    void EnableTutorialPassiveStandIdle();
     bool IsPlayerWithinAttackRange(const class Player& player) const;
 private:
+    void PlayTutorialPassiveStandIdle();
     void BeginAttack(const DirectX::XMFLOAT3& directionToPlayer);
     void UpdateAttack(float elapsedTime, class Player& player);
     void UpdateRecovery(float elapsedTime);
@@ -120,6 +122,7 @@ private:
     // Per-actor tutorial switch. It suppresses only combat AI; animation,
     // damage, death, collision, and LockOn participation remain active.
     bool tutorialPassive = false;
+    bool tutorialPassiveUseStandIdle = false;
     // Tutorial tuning, isolated from Grux and Player combat settings.
     int maxHp = 8;
     float facePlayerDistance = 12.0f;
