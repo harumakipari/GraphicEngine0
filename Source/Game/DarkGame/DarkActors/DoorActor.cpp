@@ -322,8 +322,23 @@ void DoorJailActor::Update(float deltaTime)
     hinge->SetRelativeEulerRotationDirect({ 0,angle,0 });
 }
 
+void DoorJailActor::SetOpenCompletedSilently()
+{
+    openAlpha = 1.0f;
+    doorState = DoorState::Open;
+    suppressInteractionAfterSilentOpen = true;
+    hinge->SetRelativeEulerRotationDirect({ 0.0f, openedAngle, 0.0f });
+    UpdateAllComponentTransforms();
+
+    // This only suppresses the interaction prompt; no interaction/event is invoked.
+    CompleteInteraction();
+}
+
 void DoorJailActor::Interact()
 {
+    if (suppressInteractionAfterSilentOpen)
+        return;
+
     InteractableActor::Interact();
 
     if (doorState == DoorState::Closed || doorState == DoorState::Closing)

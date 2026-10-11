@@ -767,6 +767,8 @@ private:
     // Authored from the common Player rotation in open_movie1/2/3/5/6/7 ScenePresets.
     float prisonOpeningSittingYawDegrees = 107.031867f;
     Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
+    bool prisonOpeningMovieStartRequested = false;
+    bool backToRoomStartRequested = false;
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
     bool tutorialPassiveSkeletonLockOnCandidate = false;
     int tutorialPassiveSkeletonYHpBaseline = -1;

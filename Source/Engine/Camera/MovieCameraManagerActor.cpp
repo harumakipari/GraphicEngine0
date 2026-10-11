@@ -729,6 +729,45 @@ void MovieCameraManagerActor::DrawImGuiDetails()
 #endif
 }
 
+bool MovieCameraManagerActor::PreparePrisonOpeningMovieFirstFrame()
+{
+    auto scene = GetOwnerScene();
+    auto movieCamera = movieCameraWeakPtr.lock();
+    auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
+    if (!scene || !movieCamera || !cameraManager || prisonOpeningMoviePlaying)
+        return false;
+
+    if (prisonOpeningMoviePrepared)
+        return cameraManager->IsUseMovie();
+
+    movieCamera->LoadFromJson(
+        "./Data/Saves/MovieCameras/prison_opening.json");
+    if (!movieCamera->ApplyFirstFrameToOwner())
+        return false;
+
+    // Toggle copies the previous render-camera pose into MovieCamera. Reapply
+    // the authored first key so the Opening fade reveals the movie frame.
+    if (!cameraManager->IsUseMovie())
+        cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+    movieCamera->ApplyFirstFrameToOwner();
+
+    prisonOpeningMoviePrepared = true;
+    return true;
+}
+
+void MovieCameraManagerActor::CancelPreparedPrisonOpeningMovie()
+{
+    if (!prisonOpeningMoviePrepared || prisonOpeningMoviePlaying)
+        return;
+
+    auto scene = GetOwnerScene();
+    auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
+    if (cameraManager && cameraManager->IsUseMovie())
+        cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+
+    prisonOpeningMoviePrepared = false;
+}
+
 bool MovieCameraManagerActor::PlayPrisonOpeningMovie()
 {
     auto scene = GetOwnerScene();
@@ -744,22 +783,37 @@ bool MovieCameraManagerActor::PlayPrisonOpeningMovie()
         cameraManager->ToggleCinematicCamera(GetOwnerConstScene());
 
     if (!gameScene->BeginPrisonOpeningMoviePlayerSitting())
+    {
+        CancelPreparedPrisonOpeningMovie();
         return false;
+    }
 
-    if (!cameraManager->IsUseMovie())
-        cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+    if (!prisonOpeningMoviePrepared)
+    {
+        if (!cameraManager->IsUseMovie())
+            cameraManager->ToggleMovieCamera(GetOwnerConstScene());
 
-    movieCamera->LoadFromJson(
-        "./Data/Saves/MovieCameras/prison_opening.json");
+        movieCamera->LoadFromJson(
+            "./Data/Saves/MovieCameras/prison_opening.json");
+    }
+    else if (!cameraManager->IsUseMovie())
+    {
+        gameScene->EndPrisonOpeningMoviePlayerSitting();
+        CancelPreparedPrisonOpeningMovie();
+        return false;
+    }
     movieCamera->Start();
     if (!movieCamera->IsPlaying())
     {
         gameScene->EndPrisonOpeningMoviePlayerSitting();
-        if (cameraManager->IsUseMovie())
+        if (prisonOpeningMoviePrepared)
+            CancelPreparedPrisonOpeningMovie();
+        else if (cameraManager->IsUseMovie())
             cameraManager->ToggleMovieCamera(GetOwnerConstScene());
         return false;
     }
 
+    prisonOpeningMoviePrepared = false;
     prisonOpeningMoviePlaying = true;
     prisonOpeningJailDoorInteractionRequested = false;
     prisonOpeningState = PrisonOpeningState::CameraPathPlaying;

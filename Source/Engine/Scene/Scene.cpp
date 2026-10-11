@@ -83,7 +83,7 @@ bool Scene::_update(ID3D11DeviceContext* immediateContext, float deltaTime)
     return skipRendering;
 }
 
-bool Scene::_async_preload_scene(ID3D11Device* device, UINT64 width, UINT height, const std::string& name)
+bool Scene::_async_preload_scene(ID3D11Device* device, UINT64 width, UINT height, const std::string& name, const std::unordered_map<std::string, std::string>& props)
 {
     // 引数が適切かチェック（空の名前や無効なサイズはエラー）
     _ASSERT_EXPR(name.size() > 0 && width > 0 && height > 0, L"Invalid Argument");
@@ -106,12 +106,12 @@ bool Scene::_async_preload_scene(ID3D11Device* device, UINT64 width, UINT height
         // プリロード用シーンの状態が「待機中（awaiting）」なら非同期でロード開始
         if (_preload_scene->State() == SCENE_STATE::awaiting)
         {
-            _future = std::async(std::launch::async, [device, name, width, height]() {
+            _future = std::async(std::launch::async, [device, name, width, height, props]() {
                 // ActorManager の生成
                 _preload_scene->actorManager_ = std::make_unique<ActorManager>();
                 _preload_scene->actorManager_->SetOwnerScene(_preload_scene.get());
                 _preload_scene->State(SCENE_STATE::initializing);// 状態を「初期化中」に設定
-                bool success = _preload_scene->Initialize(device, width, height, {});
+                bool success = _preload_scene->Initialize(device, width, height, props);
                 _preload_scene->State(SCENE_STATE::initialized);// 状態を「初期化完了」に設定
                 return success;
                 });

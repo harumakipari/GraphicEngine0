@@ -348,15 +348,6 @@ void Player::Initialize(const Transform& transform)
     swordPointComp = AddComponent<CapsuleComponent>("SwordPointComponent", "Sword");
     swordPointComp->SetRelativeLocationDirect({ 0.0f,0.0f,0.6f });
 
-    // 剣を背中に背負ったとき用の剣のメッシュコンポーネント
-    int swordSheathSocketNode = skeletalMeshComponent->FindIndexByName("clavicle_armor_helper");
-    swordSheathMeshComponent = this->AddComponent<SkeletalMeshComponent>("Sword", parentName);
-    swordSheathMeshComponent->SetModel("./Data/Models/Weapons/PlayerSword/Sword.gltf", false, true);
-    swordSheathMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerDeferredPS";
-    swordSheathMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-    swordSheathMeshComponent->AttachToComponent(skeletalMeshComponent, swordSheathSocketNode); // "VB root_weapon"
-    swordSheathMeshComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-0.1f });
-    swordSheathMeshComponent->SetRelativeEulerRotationDirect({ 83.0f,-180.0f,-105.0f });
 
     // 剣の残像用の剣のメッシュコンポーネント
     for (auto& ghost : ghosts)
@@ -589,7 +580,6 @@ void Player::ApplyDitherTransparencyAlpha(float alpha)
 
     skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
     swordMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
-    swordSheathMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
     currentDitherTransparencyAlpha = alpha;
 }
 void Player::Update(float deltaTime)
@@ -1292,11 +1282,9 @@ void Player::Update(float deltaTime)
     switch (swordState)
     {
     case SwordState::Equipped:
-        swordSheathMeshComponent->SetIsVisible(false);
         swordMeshComponent->SetIsVisible(true);
         break;
     case SwordState::Sheathed:
-        swordSheathMeshComponent->SetIsVisible(true);
         swordMeshComponent->SetIsVisible(false);
         break;
     }

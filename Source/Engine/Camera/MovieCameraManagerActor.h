@@ -72,6 +72,8 @@ public:
     // ドアを開くムービーを再生する
     void PlayDoorMovie();
     // Runtime-only Veil of Aurora prison-opening entry. MovieCamera debug Play is separate.
+    bool PreparePrisonOpeningMovieFirstFrame();
+    void CancelPreparedPrisonOpeningMovie();
     bool PlayPrisonOpeningMovie();
 
     void PlayMovie(const std::string& file);
@@ -100,6 +102,7 @@ private:
     void LogPrisonOpeningTransitionDebug(const char* phase);
 
     DoorMovieState doorMovieState = DoorMovieState::None;
+    bool prisonOpeningMoviePrepared = false;
     bool prisonOpeningMoviePlaying = false;
     bool prisonOpeningJailDoorInteractionRequested = false;
     PrisonOpeningState prisonOpeningState = PrisonOpeningState::None;

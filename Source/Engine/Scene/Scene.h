@@ -259,7 +259,7 @@ public:
         return true;// シーン遷移が成功
     }
     // 非同期でシーンをプリロード
-    static bool _async_preload_scene(ID3D11Device* device, UINT64 width, UINT height, const std::string& name);
+    static bool _async_preload_scene(ID3D11Device* device, UINT64 width, UINT height, const std::string& name, const std::unordered_map<std::string, std::string>& props = {});
 
 
     static std::vector<std::string> GetRegisteredSceneNames()

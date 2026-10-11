@@ -763,9 +763,6 @@ private:
     DirectX::XMFLOAT3 prevSwordMidPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevSwordTipPos = { 0.0f,0.0f,0.0f };
 
-    // 剣をしまうときの描画用メッシュコンポーネント
-    std::shared_ptr<SkeletalMeshComponent> swordSheathMeshComponent;
-
     // 剣の残像の調整値
     float swordGhostElapsedTime = 0.0f;
     int swordGhostIndex = 0;

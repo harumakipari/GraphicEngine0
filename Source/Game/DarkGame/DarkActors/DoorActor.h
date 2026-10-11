@@ -92,6 +92,7 @@ public:
     void Initialize(const Transform& transform) override;
     void Update(float deltaTime) override;
     void Interact() override;
+    void SetOpenCompletedSilently();
     void DrawImGuiDetails() override;
 
     bool IsOpenDoor() const { return doorState == DoorState::Open; }
@@ -116,4 +117,5 @@ private:
         Closing
     };
     DoorState doorState = DoorState::Closed;
+    bool suppressInteractionAfterSilentOpen = false;
 };

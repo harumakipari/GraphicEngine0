@@ -136,6 +136,14 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 {
     PROFILE_FUNCTION();
 
+    prisonOpeningMovieStartRequested = false;
+    backToRoomStartRequested = false;
+    if (const auto entryIt = props.find("gameEntry"); entryIt != props.end())
+    {
+        prisonOpeningMovieStartRequested = entryIt->second == "NewGame";
+        backToRoomStartRequested = entryIt->second == "BackToRoom";
+    }
+
     loadStageThread = std::thread([&]()
         {
             PROFILE_SCOPE("Load StageModel");
@@ -1026,9 +1034,43 @@ void GameScene::Start()
     darkCameraActor->RotateToPlayerForward();
 
     player->SetEulerRotation({ 0.0f,90.0f,0.0f });
+    if (backToRoomStartRequested)
+    {
+        if (const auto jailDoor = GetActorManager()->GetActorOfType<DoorJailActor>())
+            jailDoor->SetOpenCompletedSilently();
+    }
+
+    if (prisonOpeningMovieStartRequested)
+    {
+        if (const auto movieManager = GetActorManager()->GetActorOfType<MovieCameraManagerActor>())
+            movieManager->PreparePrisonOpeningMovieFirstFrame();
+    }
+
 
     // ÉVÅ[ÉìÇ™êÿÇËë÷ÇÌÇ¡ÇΩéûÇ…
     SceneTransitionManager::Instance().NotifySceneChanged();
+    if (prisonOpeningMovieStartRequested)
+    {
+        SceneTransitionManager::Instance().SetOnOpeningFinished([]()
+            {
+                // Resolve the active scene at callback time so no destroyed GameScene is captured.
+                auto* gameScene = dynamic_cast<GameScene*>(Scene::GetCurrentScene());
+                if (!gameScene || !gameScene->prisonOpeningMovieStartRequested)
+                    return;
+
+                // This request is one-shot even if playback cannot begin.
+                gameScene->prisonOpeningMovieStartRequested = false;
+                if (!InputSystem::IsInputEnabled())
+                    return;
+
+                if (const auto movieManager = gameScene->GetActorManager()->GetActorOfType<MovieCameraManagerActor>())
+                {
+                    if (!movieManager->PlayPrisonOpeningMovie())
+                        movieManager->CancelPreparedPrisonOpeningMovie();
+                }
+            });
+    }
+
 
 }
 
@@ -2342,7 +2384,7 @@ void GameScene::RequestReturnToMainRoomStart()
 {
     SceneTransitionManager::Instance().RequestTransition(
         "LoadingScene",
-        { std::make_pair("preload", "GameScene") },
+        { std::make_pair("preload", "GameScene"), std::make_pair("gameEntry", "BackToRoom") },
         TransitionStyle::Fade);
 }
 

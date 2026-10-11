@@ -152,7 +152,7 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
 #endif // 0
 
     preload_scene = props.at("preload");
-    _async_preload_scene(device, width, height, preload_scene);
+    _async_preload_scene(device, width, height, preload_scene, props);
 
     
 

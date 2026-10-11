@@ -137,7 +137,7 @@ void TitleScene::Start()
     startGameButton=std::make_shared<UIButtonComponent>("./Data/Textures/UI/start_game.png","TitleStartGame");
     startGameButton->SetWorldPosition(startGamePosition); startGameButton->SetSize({514,73}); startGameButton->SetScale({startGameBaseScale,startGameBaseScale}); startGameButton->SetPivot({.5f,.5f}); startGameButton->zOrder=10;
     startGameButton->SetVisualColors(CoreColor(.8f,.8f,.8f,1), CoreColor::White, CoreColor::White, CoreColor::White);
-    startGameButton->onClick=[this](){CoreAudio::PlayOneShot(Push);SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene") }, TransitionStyle::Fade);}; uiManager->Add(startGameButton);uiManager->AddButton(startGameButton);
+    startGameButton->onClick=[this](){CoreAudio::PlayOneShot(Push);SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene"), std::make_pair("gameEntry", "NewGame") }, TransitionStyle::Fade);}; uiManager->Add(startGameButton);uiManager->AddButton(startGameButton);
     quitGameButton=std::make_shared<UIButtonComponent>("./Data/Textures/UI/Pause/quit_game.png","TitleQuitGame");
     quitGameButton->SetWorldPosition(quitGamePosition); quitGameButton->SetSize({472,92}); quitGameButton->SetScale({quitGameBaseScale,quitGameBaseScale}); quitGameButton->SetPivot({.5f,.5f}); quitGameButton->zOrder=10;
     quitGameButton->SetVisualColors(CoreColor(.8f,.8f,.8f,1), CoreColor::White, CoreColor::White, CoreColor::White);
