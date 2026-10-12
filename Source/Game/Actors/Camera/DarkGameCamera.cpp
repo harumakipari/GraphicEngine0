@@ -1748,7 +1748,7 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
         combatPresentationBlend = combatPresentationRushBlend = 0.0f;
         combatPresentationRushRotationBlend = combatPresentationRushFovBlend = 0.0f;
         combatPresentationRushStartPitch = 0.0f;
-        combatPresentationRushIntroElapsed = combatPresentationRushTravelBlend = 0.0f;
+        combatPresentationRushIntroElapsed = combatPresentationRushTravelBlend = combatPresentationRushAttackBlend = combatPresentationRushWindupPushBlend = 0.0f;
         combatPresentationRushStartedFromJustDodge = false;
         combatPresentationRushTarget.reset();
         combatPresentationJustDodgeSignalLastFrame = false;
@@ -1766,10 +1766,34 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
             combatPresentationRushStartPitch = currentPitch;
             combatPresentationRushIntroElapsed = 0.0f;
             combatPresentationRushTravelBlend = 0.0f;
+            combatPresentationRushAttackBlend = 0.0f;
+            combatPresentationRushWindupPushBlend = 0.0f;
+            combatPresentationRushAttackLastFrame = player->IsRushAttackActive();
             combatPresentationMode = CombatPresentationMode::Rush;
             combatPresentationPhase = CombatPresentationPhase::Enter;
             combatPresentationPhaseElapsed = 0.0f;
         }
+    }
+    if (combatPresentationMode == CombatPresentationMode::Rush)
+    {
+        // This scalar is the actual Push In amount, so an early Windup end releases
+        // smoothly from the partially reached distance without a second camera timer.
+        const bool windupActive = rush && player->IsRushWindupActive();
+        const float pushTime = windupActive ? rushPresentationWindupPushDuration : rushPresentationWindupPushReleaseDuration;
+        const float pushStep = pushTime > FLT_EPSILON ? dt / pushTime : 1.0f;
+        combatPresentationRushWindupPushBlend = std::clamp(combatPresentationRushWindupPushBlend +
+            (windupActive ? pushStep : -pushStep), 0.0f, 1.0f);
+    }
+    if (rush && combatPresentationMode == CombatPresentationMode::Rush)
+    {
+        const bool rushAttack = player->IsRushAttackActive();
+        if (rushAttack && !combatPresentationRushAttackLastFrame)
+        {
+            combatPresentationRushAttackBlend = 0.0f;
+            combatPresentationRushTravelBlend = 0.0f;
+            combatPresentationRushIntroElapsed = 0.0f;
+        }
+        combatPresentationRushAttackLastFrame = rushAttack;
     }
     else if (just && !combatPresentationJustDodgeSignalLastFrame && combatPresentationMode != CombatPresentationMode::Rush)
     {
@@ -1799,14 +1823,12 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
     };
     if (combatPresentationPhase == CombatPresentationPhase::Enter)
     {
-        const float time = combatPresentationMode == CombatPresentationMode::Rush ? rushPresentationEnterTime : justDodgePresentationEnterTime;
+        const float time = combatPresentationMode == CombatPresentationMode::Rush ? rushPresentationApproachEnterTime : justDodgePresentationEnterTime;
         blend(time, true);
         if (combatPresentationMode == CombatPresentationMode::Rush)
         {
             combatPresentationRushBlend = std::clamp(combatPresentationRushBlend + (time > FLT_EPSILON ? dt / time : 1.0f), 0.0f, 1.0f);
-            combatPresentationRushRotationBlend = combatPresentationRushBlend;
-            combatPresentationRushFovBlend = combatPresentationRushBlend;
-            combatPresentationRushIntroElapsed += dt;
+
         }
         if (combatPresentationBlend >= 1.0f && (combatPresentationMode != CombatPresentationMode::Rush || combatPresentationRushBlend >= 1.0f))
         {
@@ -1818,14 +1840,25 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
     {
         if (combatPresentationMode == CombatPresentationMode::Rush)
         {
-            combatPresentationRushIntroElapsed += dt;
-            const float travelTime = (std::max)(rushPresentationIntroToTravelBlendTime, 0.0f);
-            const float travelStart = (std::max)(rushPresentationIntroDuration, 0.0f);
-            combatPresentationRushTravelBlend = std::clamp(
-                travelTime > FLT_EPSILON
-                    ? (combatPresentationRushIntroElapsed - travelStart) / travelTime
-                    : (combatPresentationRushIntroElapsed >= travelStart ? 1.0f : 0.0f),
-                0.0f, 1.0f);
+            if (player->IsRushAttackActive())
+            {
+                const float attackEnterTime = (std::max)(rushPresentationEnterTime, 0.0f);
+                combatPresentationRushAttackBlend = std::clamp(combatPresentationRushAttackBlend +
+                    (attackEnterTime > FLT_EPSILON ? dt / attackEnterTime : 1.0f), 0.0f, 1.0f);
+                combatPresentationRushRotationBlend = combatPresentationRushAttackBlend;
+                combatPresentationRushFovBlend = combatPresentationRushAttackBlend;
+                if (combatPresentationRushAttackBlend >= 1.0f)
+                {
+                    combatPresentationRushIntroElapsed += dt;
+                    const float travelTime = (std::max)(rushPresentationIntroToTravelBlendTime, 0.0f);
+                    const float holdTime = (std::max)(rushPresentationIntroHoldTime, 0.0f);
+                    combatPresentationRushTravelBlend = std::clamp(
+                        travelTime > FLT_EPSILON
+                            ? (combatPresentationRushIntroElapsed - holdTime) / travelTime
+                            : (combatPresentationRushIntroElapsed >= holdTime ? 1.0f : 0.0f),
+                        0.0f, 1.0f);
+                }
+            }
         }
         else if (combatPresentationPhaseElapsed >= (std::max)(justDodgePresentationHoldTime, 0.0f))
         {
@@ -1859,7 +1892,7 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
             combatPresentationRushRotationBlend = 0.0f;
             combatPresentationRushFovBlend = 0.0f;
             combatPresentationRushStartPitch = 0.0f;
-            combatPresentationRushIntroElapsed = combatPresentationRushTravelBlend = 0.0f;
+            combatPresentationRushIntroElapsed = combatPresentationRushTravelBlend = combatPresentationRushAttackBlend = combatPresentationRushWindupPushBlend = 0.0f;
             combatPresentationRushStartedFromJustDodge = false;
             combatPresentationRushTarget.reset();
         }
@@ -1871,6 +1904,8 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
 void DarkCameraActor::ApplyCombatPresentationPose(const DirectX::XMFLOAT3& playerLookPosition, const std::shared_ptr<Enemy>& rushTarget)
 {
     const CameraPose base = currentPose;
+    const auto playerHeadComponent = playerHead.lock();
+    const auto* player = playerHeadComponent ? dynamic_cast<const Player*>(playerHeadComponent->GetOwner()) : nullptr;
     const auto smoothStep = [](float value)
     {
         value = std::clamp(value, 0.0f, 1.0f);
@@ -1903,6 +1938,25 @@ void DarkCameraActor::ApplyCombatPresentationPose(const DirectX::XMFLOAT3& playe
     if (MathHelper::Length(travelDirection) <= FLT_EPSILON) { travelDirection = GetForward(); travelDirection.y = 0.0f; }
     travelDirection = MathHelper::Normalize(travelDirection);
 
+    // Windup and Dash use a target-facing shot from directly behind the Player.
+    const float approachYaw = atan2f(travelDirection.x, travelDirection.z);
+    const float approachPitch = base.pitch;
+    const DirectX::XMFLOAT3 approachForward{ sinf(approachYaw) * cosf(approachPitch), sinf(approachPitch), cosf(approachYaw) * cosf(approachPitch) };
+    const DirectX::XMFLOAT3 approachRight{ cosf(approachYaw), 0.0f, -sinf(approachYaw) };
+    const DirectX::XMFLOAT3 approachTarget = MathHelper::Lerp(playerLookPosition, enemyLookPosition, rushPresentationIntroEnemyTargetWeight);
+    DirectX::XMFLOAT3 approachEye = MathHelper::Subtract(approachTarget, MathHelper::Multiply(approachForward,
+        (std::max)(0.1f, MathHelper::Distance(base.eye, base.target) + rushPresentationApproachDistanceOffset - rushPresentationWindupPushIn * smoothStep(combatPresentationRushWindupPushBlend))));
+    approachEye = MathHelper::Add(approachEye, MathHelper::Multiply(approachRight, rushPresentationApproachSideOffset));
+    approachEye.y += rushPresentationApproachHeightOffset;
+    const float approachBlend = smoothStep(combatPresentationRushBlend);
+    if (!player || !player->IsRushAttackActive())
+    {
+        const DirectX::XMFLOAT3 startEye = combatPresentationRushStartedFromJustDodge ? justEye() : base.eye;
+        currentPose.target = MathHelper::Lerp(base.target, approachTarget, approachBlend);
+        currentPose.eye = MathHelper::Lerp(startEye, approachEye, approachBlend);
+        return;
+    }
+
     const float travelBlend = smoothStep(combatPresentationRushTravelBlend);
     const float yawOffset = std::lerp(rushPresentationIntroYawOffsetDegree, rushPresentationTravelYawOffsetDegree, travelBlend);
     const float sideOffset = std::lerp(rushPresentationIntroSideOffset, rushPresentationTravelSideOffset, travelBlend);
@@ -1930,13 +1984,18 @@ void DarkCameraActor::ApplyCombatPresentationPose(const DirectX::XMFLOAT3& playe
     const DirectX::XMFLOAT3 startEye = combatPresentationRushStartedFromJustDodge ? justEye() : base.eye;
     const DirectX::XMFLOAT3 transitionedTarget = MathHelper::Lerp(base.target, target, introEnterBlend);
     const DirectX::XMFLOAT3 transitionedEye = MathHelper::Lerp(startEye, eye, introEnterBlend);
-    currentPose.target = MathHelper::Lerp(base.target, transitionedTarget, presentationBlend);
-    currentPose.eye = MathHelper::Lerp(base.eye, transitionedEye, presentationBlend);
-    currentPose.pitch = appliedPitch;
+    const float attackBlend = smoothStep(combatPresentationRushAttackBlend);
+    const DirectX::XMFLOAT3 specialTarget = MathHelper::Lerp(base.target, transitionedTarget, presentationBlend);
+    const DirectX::XMFLOAT3 specialEye = MathHelper::Lerp(base.eye, transitionedEye, presentationBlend);
+    currentPose.target = MathHelper::Lerp(approachTarget, specialTarget, attackBlend);
+    currentPose.eye = MathHelper::Lerp(approachEye, specialEye, attackBlend);
+    currentPose.pitch = std::lerp(approachPitch, appliedPitch, attackBlend);
 }
 
 void DarkCameraActor::ApplyCombatPresentationFov()
 {
+    const auto head = playerHead.lock();
+    const auto* player = head ? dynamic_cast<const Player*>(head->GetOwner()) : nullptr;
     const bool rushFovStillBlending = combatPresentationMode == CombatPresentationMode::Rush && combatPresentationRushFovBlend > FLT_EPSILON;
     if ((combatPresentationBlend <= FLT_EPSILON && !rushFovStillBlending) || isExternalBlending || currentMode == CameraMode::Death || requestMode == CameraMode::Death) return;
     const auto smoothStep = [](float value)
@@ -1950,9 +2009,11 @@ void DarkCameraActor::ApplyCombatPresentationFov()
         fov = base + justDodgePresentationFovOffsetDegree * smoothStep(combatPresentationBlend);
     else if (combatPresentationMode == CombatPresentationMode::Rush)
     {
-        const float start = combatPresentationRushStartedFromJustDodge ? base + justDodgePresentationFovOffsetDegree : base;
-        const float rushFov = std::lerp(rushPresentationIntroFovDegree, rushPresentationTravelFovDegree, smoothStep(combatPresentationRushTravelBlend));
-        fov = std::lerp(base, std::lerp(start, rushFov, smoothStep(combatPresentationRushBlend)), smoothStep(combatPresentationRushFovBlend));
+        if (player && player->IsRushAttackActive())
+        {
+            const float rushFov = std::lerp(rushPresentationIntroFovDegree, rushPresentationTravelFovDegree, smoothStep(combatPresentationRushTravelBlend));
+            fov = std::lerp(base, rushFov, smoothStep(combatPresentationRushAttackBlend));
+        }
     }
     if (currentMode == CameraMode::LockOn && lockOnFovFallbackActive) fov = (std::max)(fov, base);
     mainCameraComponent->SetFov(DirectX::XMConvertToRadians(std::clamp(fov, 10.0f, 120.0f)));
@@ -2813,6 +2874,17 @@ void DarkCameraActor::DrawImGuiDetails()
             ImGui::Text("Stage: %s  Travel Blend: %.2f",
                 combatPresentationRushTravelBlend > 0.0f ? "Travel" : "Intro",
                 combatPresentationRushTravelBlend);
+            if (ImGui::TreeNode("Behind (Windup / Dash)"))
+            {
+                ImGui::DragFloat("Side Offset##RushBehind", &rushPresentationApproachSideOffset, 0.01f, -10.0f, 10.0f);
+                ImGui::DragFloat("Height Offset##RushBehind", &rushPresentationApproachHeightOffset, 0.01f, -10.0f, 10.0f);
+                ImGui::DragFloat("Distance Offset##RushBehind", &rushPresentationApproachDistanceOffset, 0.01f, -10.0f, 10.0f);
+                ImGui::DragFloat("Behind Enter Blend", &rushPresentationApproachEnterTime, 0.01f, 0.0f, 0.5f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Windup Camera Push In", &rushPresentationWindupPushIn, 0.01f, 0.0f, 1.0f, "%.2f m", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Windup Camera Push Duration", &rushPresentationWindupPushDuration, 0.01f, 0.0f, 0.4f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Windup Camera Release Duration", &rushPresentationWindupPushReleaseDuration, 0.01f, 0.0f, 0.4f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::TreePop();
+            }
             if (ImGui::TreeNode("Intro"))
             {
                 ImGui::DragFloat("Yaw Offset##RushIntro", &rushPresentationIntroYawOffsetDegree, 0.5f, -180.0f, 180.0f, "%.1f deg");
@@ -2821,7 +2893,8 @@ void DarkCameraActor::DrawImGuiDetails()
                 ImGui::DragFloat("Distance Offset##RushIntro", &rushPresentationIntroDistanceOffset, 0.01f, -10.0f, 10.0f);
                 ImGui::SliderFloat("Enemy Target Weight##RushIntro", &rushPresentationIntroEnemyTargetWeight, 0.0f, 1.0f);
                 ImGui::DragFloat("FOV##RushIntro", &rushPresentationIntroFovDegree, 0.1f, 10.0f, 120.0f, "%.1f deg");
-                ImGui::DragFloat("Duration##RushIntro", &rushPresentationIntroDuration, 0.01f, 0.0f, 5.0f, "%.2f sec");
+                ImGui::DragFloat("Rush Intro Enter Blend", &rushPresentationEnterTime, 0.01f, 0.0f, 0.5f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
+                ImGui::DragFloat("Rush Intro Hold", &rushPresentationIntroHoldTime, 0.01f, 0.0f, 0.3f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
                 ImGui::TreePop();
             }
             if (ImGui::TreeNode("Travel"))
@@ -2836,7 +2909,6 @@ void DarkCameraActor::DrawImGuiDetails()
             }
             ImGui::DragFloat("Intro to Travel Blend Time", &rushPresentationIntroToTravelBlendTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
             ImGui::DragFloat("Rush Target Pitch Degree", &rushPresentationTargetPitchDegree, 0.5f, -89.0f, 89.0f, "%.1f deg");
-            ImGui::DragFloat("Enter Time##Rush", &rushPresentationEnterTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
             ImGui::DragFloat("Rotation Exit Time##Rush", &rushPresentationRotationExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
             ImGui::DragFloat("Position / Distance Exit Time##Rush", &rushPresentationPositionExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
             ImGui::DragFloat("FOV Exit Time##Rush", &rushPresentationFovExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");

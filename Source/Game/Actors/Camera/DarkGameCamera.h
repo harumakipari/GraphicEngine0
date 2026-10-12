@@ -591,6 +591,9 @@ private:
     float combatPresentationRushStartPitch = 0.0f;
     float combatPresentationRushIntroElapsed = 0.0f;
     float combatPresentationRushTravelBlend = 0.0f;
+    float combatPresentationRushAttackBlend = 0.0f;
+    float combatPresentationRushWindupPushBlend = 0.0f;
+    bool combatPresentationRushAttackLastFrame = false;
     bool combatPresentationRushStartedFromJustDodge = false;
     float combatPresentationPhaseElapsed = 0.0f;
     bool combatPresentationJustDodgeSignalLastFrame = false;
@@ -602,13 +605,21 @@ private:
     float justDodgePresentationExitTime = 0.45f;
     // Rush is deliberately split into a short face-focused intro and a
     // travel-focused shot. Do not keep the intro's large yaw during travel.
+    float rushPresentationApproachSideOffset = 0.0f;
+    float rushPresentationApproachHeightOffset = 0.35f;
+    float rushPresentationApproachDistanceOffset = 1.05f;
+    float rushPresentationApproachEnterTime = 0.15f;
+    float rushPresentationWindupPushIn = 0.30f;
+    float rushPresentationWindupPushDuration = 0.12f;
+    float rushPresentationWindupPushReleaseDuration = 0.12f;
+
     float rushPresentationIntroYawOffsetDegree = 140.0f;
     float rushPresentationIntroSideOffset = 1.85f;
     float rushPresentationIntroHeightOffset = 0.35f;
     float rushPresentationIntroDistanceOffset = 1.05f;
     float rushPresentationIntroFovDegree = 35.0f;
     float rushPresentationIntroEnemyTargetWeight = 0.3f;
-    float rushPresentationIntroDuration = 0.30f;
+    float rushPresentationIntroHoldTime = 0.05f;
 
     float rushPresentationTravelYawOffsetDegree = 140.0f;
     float rushPresentationTravelSideOffset = 1.85f;
@@ -625,7 +636,7 @@ private:
     float rushPresentationIntroToTravelBlendTime = 0.20f;
     // Absolute presentation pitch; negative raises the camera in this camera convention.
     float rushPresentationTargetPitchDegree = -8.0f;
-    float rushPresentationEnterTime = 0.10f;
+    float rushPresentationEnterTime = 0.15f;
     float rushPresentationRotationExitTime = 0.6f;
     float rushPresentationPositionExitTime = 0.8f;
     float rushPresentationFovExitTime = 1.0f;

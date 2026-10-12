@@ -236,6 +236,12 @@ public:
         return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush";
     }
     bool IsRushActive() const { return IsRushActiveForPhaseTransition(); }
+    // Read-only Rush presentation state for camera synchronization.
+    bool IsRushWindupActive() const { return rushWindupActive; }
+    bool IsRushAttackActive() const { return rushAttackActive; }
+    float GetRushWindupDuration() const { return rushWindupDuration; }
+    void SetRushWindupActive(bool active) { rushWindupActive = active; }
+    void SetRushAttackActive(bool active) { rushAttackActive = active; }
     bool IsJustDodgePresentationActive() const
     {
         return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge" && justDodgeSuccess;
@@ -551,6 +557,9 @@ public:
     float lastJustBossHitBoxElapsed = -1.0f;
     float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
     float rushApproachPoseBlendTime = 0.12f;
+    float rushWindupDuration = 0.20f;
+    bool rushWindupActive = false;
+    bool rushAttackActive = false;
 
     // 通常攻撃でどれくらい攻撃を補正するか
     float normalEnemyRushSurfaceMargin = 0.15f;

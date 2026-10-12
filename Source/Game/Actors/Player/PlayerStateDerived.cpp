@@ -614,6 +614,9 @@ void PlayerRushState::Enter()
     player->characterMovementComponent->SetFixedSpeed(0.0f);
 
     phase = RushPhase::DashToTarget;
+    windupElapsedTime = 0.0f;
+    player->SetRushWindupActive(false);
+    player->SetRushAttackActive(false);
 
     if (auto target = player->rushTarget.lock())
     {// 移動する
@@ -671,13 +674,24 @@ void PlayerRushState::Enter()
                 rushStopDistance, MathHelper::Length(targetDelta), usedCapsuleDistance));
         }
 
-        player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, rushStopDistance);
+        this->rushStopDistance = rushStopDistance;
         // ルートモーションを無視する
         if (const auto controller = player->GetBodyAnimationController())
         {
             constexpr float rushApproachPoseTime = 0.766f;
             controller->BlendToHeldAnimationPose(
                 "Jog_Fwd", rushApproachPoseTime, player->rushApproachPoseBlendTime);
+        }
+
+        // A zero-duration Windup preserves the previous immediate dash behavior.
+        if (player->GetRushWindupDuration() <= FLT_EPSILON)
+        {
+            player->characterMovementComponent->MoveToActor(target, player->moveToEnemyInterval, this->rushStopDistance);
+        }
+        else
+        {
+            phase = RushPhase::Windup;
+            player->SetRushWindupActive(true);
         }
     }
 
@@ -694,7 +708,6 @@ void PlayerRushState::Enter()
 
 void PlayerRushState::Execute(float deltaTime)
 {
-    (void)deltaTime;
     if (player->rushTarget.expired())
     {
         player->ForceResetBossSlow();
@@ -725,6 +738,22 @@ void PlayerRushState::Execute(float deltaTime)
 
     switch (phase)
     {
+    case RushPhase::Windup:
+    {
+        // Do not query completion until this one MoveToActor call starts the dash.
+        windupElapsedTime += (std::max)(deltaTime, 0.0f);
+        if (windupElapsedTime >= player->GetRushWindupDuration())
+        {
+            if (const auto target = player->rushTarget.lock())
+            {
+                player->characterMovementComponent->MoveToActor(
+                    target, player->moveToEnemyInterval, rushStopDistance);
+                phase = RushPhase::DashToTarget;
+                player->SetRushWindupActive(false);
+            }
+        }
+        break;
+    }
     case RushPhase::DashToTarget:
         if (player->characterMovementComponent->IsMoveToActorFinished())
         {// targetまで付いたら、
@@ -776,6 +805,7 @@ void PlayerRushState::Execute(float deltaTime)
                 controller->ReleaseRuntimeHeldAnimationPose(true);
             player->PlayBodyAnimation(currentAttackAnimation, false, true, 0.10f);
             phase = RushPhase::Attack;
+            player->SetRushAttackActive(true);
         }
         break;
     case RushPhase::Attack:
@@ -884,6 +914,8 @@ void PlayerRushState::Execute(float deltaTime)
 
 void PlayerRushState::Exit()
 {
+    player->SetRushWindupActive(false);
+    player->SetRushAttackActive(false);
     if (const auto controller = player->GetBodyAnimationController())
         controller->ReleaseRuntimeHeldAnimationPose();
     const uint64_t debugEventId = player->GetPhase2RushFinalHitDebugEventId();
@@ -914,6 +946,8 @@ void PlayerRushState::Exit()
         player->ConsumeActionRequest(Player::ActionType::Attack);
     }
     phase = RushPhase::DashToTarget;
+    windupElapsedTime = 0.0f;
+    rushStopDistance = 0.0f;
     currentAttackAnimation = "Rush_Attack_Fast_A";
     elapsedTime = 0.0f;
     Logger::Log(Logger::LogCategory::Gameplay, "[Rush][Exit] combo state reset");

@@ -542,10 +542,10 @@ bool GameScene::LoadPhase2CinematicShots()
             SceneState sceneState{};
             SceneEditor::LoadSceneState(Phase2CinematicPresetPaths[shotIndex], sceneState);
             const auto findActor = [&sceneState](const char* actorName)
-            {
-                return std::find_if(sceneState.actorStates.begin(), sceneState.actorStates.end(),
-                    [actorName](const ActorTransformState& actor) { return actor.name == actorName; });
-            };
+                {
+                    return std::find_if(sceneState.actorStates.begin(), sceneState.actorStates.end(),
+                        [actorName](const ActorTransformState& actor) { return actor.name == actorName; });
+                };
             const auto playerState = findActor("Player");
             const auto bossState = findActor("GruxEnemy");
             if (playerState == sceneState.actorStates.end() || bossState == sceneState.actorStates.end())
@@ -683,34 +683,34 @@ void GameScene::BeginPhase2TpsReturnBlend()
     phase2CurrentShot = "TPS Return Blend";
 
     auto finish = [this]()
-    {
-        phase2TpsReturnBlendActive = false;
-        phase2TransitionStep = Phase2TransitionStep::None;
-        phase2CurrentShot = "None";
-        bossPhase = BossPhase::Phase2;
-        if (player)
-            player->SetPhase2RushFinalHitDebugEnabled(true);
-        if (gruxEnemyActor)
-            gruxEnemyActor->CompletePhase2HpBarPresentation();
-        ApplyBossPhaseHp(BossPhase::Phase2); // Single, UI-hookable Phase2 HP handoff point.
-        CaptureContinueBossCheckpoint();
-        if (player)
         {
-            player->ResumeBattleActionsAfterEvent();
-            player->EndEvent();
-        }
-        if (gruxEnemyActor)
-        {
-            gruxEnemyActor->ResetTimeScale();
-            gruxEnemyActor->ResumeBattleAI();
-        }
-        SetBattleTimerVisible(true);
-        UpdateBattleTimerUI();
-        SetBattleHudVisible(true);
-        if (player)
-            player->SetGameplayHudVisible(true);
-        InputSystem::SetInputEnabled(true);
-    };
+            phase2TpsReturnBlendActive = false;
+            phase2TransitionStep = Phase2TransitionStep::None;
+            phase2CurrentShot = "None";
+            bossPhase = BossPhase::Phase2;
+            if (player)
+                player->SetPhase2RushFinalHitDebugEnabled(true);
+            if (gruxEnemyActor)
+                gruxEnemyActor->CompletePhase2HpBarPresentation();
+            ApplyBossPhaseHp(BossPhase::Phase2); // Single, UI-hookable Phase2 HP handoff point.
+            CaptureContinueBossCheckpoint();
+            if (player)
+            {
+                player->ResumeBattleActionsAfterEvent();
+                player->EndEvent();
+            }
+            if (gruxEnemyActor)
+            {
+                gruxEnemyActor->ResetTimeScale();
+                gruxEnemyActor->ResumeBattleAI();
+            }
+            SetBattleTimerVisible(true);
+            UpdateBattleTimerUI();
+            SetBattleHudVisible(true);
+            if (player)
+                player->SetGameplayHudVisible(true);
+            InputSystem::SetInputEnabled(true);
+        };
 
     if (!darkCameraActor || !cinemaCameraActor)
     {
@@ -1137,13 +1137,13 @@ void GameScene::ResetBossBattleBgm(const BossPhase phase, const bool play)
 
     const auto activeBgm = GetActiveBossBgmActor();
     const auto stopInactiveBgm = [activeBgm](const std::shared_ptr<BgmActor>& bgm)
-    {
-        if (bgm && bgm != activeBgm)
         {
-            bgm->Stop(false);
-            bgm->SetVolume(BossBgmVolume);
-        }
-    };
+            if (bgm && bgm != activeBgm)
+            {
+                bgm->Stop(false);
+                bgm->SetVolume(BossBgmVolume);
+            }
+        };
     stopInactiveBgm(bossBgmActor);
     stopInactiveBgm(phase2BgmActor);
 
@@ -1222,8 +1222,8 @@ void GameScene::UpdateDeathBgmFade(const float deltaTime)
     }
 }
 
-void GameScene::PlayBossDeathSecondBgm(){if(!bossDeathSecondBgmPlayed&&bossDeathSecondBgmActor){bossDeathSecondBgmPlayed=true;bossDeathSecondBgmActor->Play();}}
-void GameScene::PlayPlayerDeathBgm(){if(!playerDeathBgmPlayed&&playerDeathBgmActor){playerDeathBgmPlayed=true;playerDeathBgmActor->Play();}}
+void GameScene::PlayBossDeathSecondBgm() { if (!bossDeathSecondBgmPlayed && bossDeathSecondBgmActor) { bossDeathSecondBgmPlayed = true; bossDeathSecondBgmActor->Play(); } }
+void GameScene::PlayPlayerDeathBgm() { if (!playerDeathBgmPlayed && playerDeathBgmActor) { playerDeathBgmPlayed = true; playerDeathBgmActor->Play(); } }
 void GameScene::ResetDeathBgmState(const BossPhase restartPhase)
 {
     if (bossDeathSecondBgmActor) bossDeathSecondBgmActor->Stop(false);
@@ -1360,7 +1360,7 @@ void GameScene::StartJudgeDodgeOperationTutorial()
 void GameScene::CloseJudgeDodgeOperationTutorial()
 {
     if (judgeDodgeOperationTutorialState != JudgeDodgeOperationTutorialState::Showing) return;
-    CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav",0.5f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav", 0.5f);
     if (judgeDodgeOperationTutorialImage) judgeDodgeOperationTutorialImage->SetVisible(false);
     if (judgeDodgeOperationTutorialCloseImage) judgeDodgeOperationTutorialCloseImage->SetVisible(false);
     tutorialDodgeGuideRingFinished = false;
@@ -1995,10 +1995,10 @@ void GameScene::CompleteTutorialForBossBattle()
         return;
 
     const auto completeOperationGuide = [this](const Player::OperationGuideItem item)
-    {
-        player->SetOperationGuideItemVisible(item, true);
-        player->SetOperationGuideItemLearned(item);
-    };
+        {
+            player->SetOperationGuideItemVisible(item, true);
+            player->SetOperationGuideItemLearned(item);
+        };
     completeOperationGuide(Player::OperationGuideItem::L);
     completeOperationGuide(Player::OperationGuideItem::LT);
     completeOperationGuide(Player::OperationGuideItem::Y);
@@ -2025,19 +2025,19 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
     }
 
     const auto revealYAndCaptureTutorialSkeletonHp = [this]()
-    {
-        if (player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y))
-            return;
-
-        player->SetOperationGuideItemVisible(Player::OperationGuideItem::Y, true);
-        tutorialPassiveSkeletonYHpBaseline = tutorialPassiveSkeletonActor->GetHp();
-        tutorialPassiveSkeletonYHpBaselineCaptured = true;
-        if (tutorialDodgeSkeletonActor)
         {
-            tutorialDodgeSkeletonYHpBaseline = tutorialDodgeSkeletonActor->GetHp();
-            tutorialDodgeSkeletonYHpBaselineCaptured = true;
-        }
-    };
+            if (player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y))
+                return;
+
+            player->SetOperationGuideItemVisible(Player::OperationGuideItem::Y, true);
+            tutorialPassiveSkeletonYHpBaseline = tutorialPassiveSkeletonActor->GetHp();
+            tutorialPassiveSkeletonYHpBaselineCaptured = true;
+            if (tutorialDodgeSkeletonActor)
+            {
+                tutorialDodgeSkeletonYHpBaseline = tutorialDodgeSkeletonActor->GetHp();
+                tutorialDodgeSkeletonYHpBaselineCaptured = true;
+            }
+        };
 
     std::shared_ptr<SceneComponent> target;
     float distanceSq = FLT_MAX;
@@ -2057,7 +2057,7 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
     const auto selectedEnemy = lockOnSelectedEnemy.lock();
     const bool selectedTutorialSkeleton = selectedEnemy &&
         (selectedEnemy.get() == tutorialPassiveSkeletonActor.get() ||
-         (tutorialDodgeSkeletonActor && selectedEnemy.get() == tutorialDodgeSkeletonActor.get()));
+            (tutorialDodgeSkeletonActor && selectedEnemy.get() == tutorialDodgeSkeletonActor.get()));
     if (selectionResult == LockOnTargetSelectionResult::Selected && selectedTutorialSkeleton &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT))
     {
@@ -2070,22 +2070,22 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
     {
         const auto detectTutorialSkeletonHit = [](const std::shared_ptr<SkeletonWarriorActor>& skeleton,
             int& baselineHp, bool& baselineCaptured)
-        {
-            if (!skeleton)
-                return false;
-
-            const int currentHp = skeleton->GetHp();
-            if (!baselineCaptured)
             {
-                baselineHp = currentHp;
-                baselineCaptured = true;
-                return false;
-            }
-            return currentHp < baselineHp;
-        };
+                if (!skeleton)
+                    return false;
+
+                const int currentHp = skeleton->GetHp();
+                if (!baselineCaptured)
+                {
+                    baselineHp = currentHp;
+                    baselineCaptured = true;
+                    return false;
+                }
+                return currentHp < baselineHp;
+            };
 
         if (detectTutorialSkeletonHit(tutorialPassiveSkeletonActor,
-                tutorialPassiveSkeletonYHpBaseline, tutorialPassiveSkeletonYHpBaselineCaptured) ||
+            tutorialPassiveSkeletonYHpBaseline, tutorialPassiveSkeletonYHpBaselineCaptured) ||
             detectTutorialSkeletonHit(tutorialDodgeSkeletonActor,
                 tutorialDodgeSkeletonYHpBaseline, tutorialDodgeSkeletonYHpBaselineCaptured))
         {
@@ -2166,11 +2166,11 @@ void GameScene::Update(float deltaTime)
     if (mainRoomTutorialActive)
     {
 
-    if (judgeDodgeOperationTutorialState == JudgeDodgeOperationTutorialState::Unseen && player && player->GetPosition().x > -34.0f && !IsPaused() && InputSystem::IsInputEnabled() && !cameraManager->IsUseMovie() && !cameraManager->IsUseCinematic())
-    {
-        StartJudgeDodgeOperationTutorial();
-        return;
-    }
+        if (judgeDodgeOperationTutorialState == JudgeDodgeOperationTutorialState::Unseen && player && player->GetPosition().x > -34.0f && !IsPaused() && InputSystem::IsInputEnabled() && !cameraManager->IsUseMovie() && !cameraManager->IsUseCinematic())
+        {
+            StartJudgeDodgeOperationTutorial();
+            return;
+        }
     }
 
     UpdateBattleFlow();
@@ -4651,13 +4651,13 @@ void GameScene::CaptureVictoryResult()
 void GameScene::UpdateVictoryResultContents()
 {
     const auto apply = [this](const std::shared_ptr<UIImageComponent>& image, size_t layout, bool show)
-    {
-        if (!image) return;
-        image->SetWorldPosition(victoryUIPositions[layout]);
-        image->SetScale({ victoryUIScales[layout], victoryUIScales[layout] });
-        image->SetVisible(resultUITriggered && show);
-        image->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, resultBackgroundAlpha });
-    };
+        {
+            if (!image) return;
+            image->SetWorldPosition(victoryUIPositions[layout]);
+            image->SetScale({ victoryUIScales[layout], victoryUIScales[layout] });
+            image->SetVisible(resultUITriggered && show);
+            image->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, resultBackgroundAlpha });
+        };
     apply(victoryLabels[0], 0, true);
     apply(victoryLabels[1], 2, true);
     apply(victoryLabels[2], 4, victoryIsNewRecord);
@@ -4718,16 +4718,16 @@ void GameScene::CreateVictoryResultBackground()
     const char* labelPaths[] = { "clear_time.png", "best_time.png", "new_record.png" };
     const DirectX::XMFLOAT2 labelSizes[] = { { 587.0f, 174.0f }, { 495.0f, 174.0f }, { 535.0f, 111.0f } };
     auto create = [this](const std::string& path, const std::string& name, DirectX::XMFLOAT2 size)
-    {
-        auto image = std::make_shared<UIImageComponent>(path, name);
-        image->SetSize(size);
-        image->SetPivot({ 0.5f, 0.5f });
-        image->zOrder = 21;
-        image->SetVisible(false);
-        image->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, 0.0f });
-        GetUIManager()->Add(image);
-        return image;
-    };
+        {
+            auto image = std::make_shared<UIImageComponent>(path, name);
+            image->SetSize(size);
+            image->SetPivot({ 0.5f, 0.5f });
+            image->zOrder = 21;
+            image->SetVisible(false);
+            image->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, 0.0f });
+            GetUIManager()->Add(image);
+            return image;
+        };
     for (size_t i = 0; i < victoryLabels.size(); ++i)
         victoryLabels[i] = create(std::string("./Data/Textures/UI/Result/") + labelPaths[i],
             "VictoryLabel" + std::to_string(i), labelSizes[i]);
@@ -5254,6 +5254,30 @@ void GameScene::SetUpActors()
     this->GetActorManager()->CreateAndRegisterActorWithTransform<ModelDebrisEmitterActor>(
         "ModelDebrisEmitterActor", debrisTr);
 
+#if 0
+    {// ƒƒCƒ“‚Ì•”‰®‚ÌŠG‰æ‚ð¶¬‚·‚é
+        DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
+        Transform paintingTr{ pos,point.worldRotation,point.worldScale };
+        auto paintingActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("PaintingActor", paintingTr);
+    }
+#endif // 0
+    // ˜S‰®‚Ì•”‰®‚ÌŠG‰æ
+    {
+        Transform paintingTr{ DirectX::XMFLOAT3{-67.42f,4.2f,17.26f},DirectX::XMFLOAT3{0.0f,180.0f,0.0f},DirectX::XMFLOAT3{0.81f,1.0f,0.81f } };
+        auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("JailPaintingActor", paintingTr);
+    }
+
+    // ƒƒCƒ“‚Ì•”‚ÌŠG‰æ
+    {
+        Transform paintingMainRoomTr{ DirectX::XMFLOAT3{-18.1f,3.5f,17.0f},DirectX::XMFLOAT3{0.0f,180.0f,0.0f},DirectX::XMFLOAT3{1.0f,1.0f,1.0f } };
+        auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("MainPaintingActor", paintingMainRoomTr);
+    }
+
+    // ’Ê˜H‚ÌŠG‰æ
+    {
+        Transform paintingTr{ DirectX::XMFLOAT3{-28.f,4.262f,-2.796f},DirectX::XMFLOAT3{0.0f,0.0f,0.0f},DirectX::XMFLOAT3{0.69f,0.69f,0.69f } };
+        auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("HailPaintingActor", paintingTr);
+    }
 
 
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
@@ -5485,7 +5509,7 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Text(U8("Recall PreWait\u6B8B\u308A: %.3f"), recallPreWaitRemaining);
     const float recallAnimationTime = phase2BossController &&
         phase2BossController->GetCurrentAnimationName() == "PrimaryAttack_Recall"
-            ? phase2BossController->GetCurrentAnimationTime() : 0.0f;
+        ? phase2BossController->GetCurrentAnimationTime() : 0.0f;
     ImGui::Text(U8("Recall Animation Time: %.3f"), recallAnimationTime);
     float phase1BossScale = gruxEnemyActor ? gruxEnemyActor->GetPhase1BossScale() : 1.7f;
     float phase2BossScale = gruxEnemyActor ? gruxEnemyActor->GetPhase2BossScale() : 2.1f;
@@ -5575,7 +5599,7 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Text(U8("Player Emote Active: %s"), phase2PlayerEmoteActive ? "true" : "false");
     ImGui::Text(U8("Player Emote Time: %.3f"), phase2PlayerController &&
         phase2PlayerController->GetCurrentAnimationName() == "Emote_Phase2"
-            ? phase2PlayerController->GetCurrentAnimationTime() : 0.0f);
+        ? phase2PlayerController->GetCurrentAnimationTime() : 0.0f);
     ImGui::DragFloat(U8("Player Emote EndTime"), &phase2PlayerEmoteEndTime,
         0.001f, 0.001f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Phase2 Emote\u5F8CWait"), &phase2PlayerEmotePostWaitDuration,
@@ -5589,7 +5613,7 @@ void GameScene::DrawGuiPlusAlpha()
         player && player->IsSwordTrailActiveForPhaseTransition() ? "true" : "false");
     const bool playerLockOnActive = darkCameraActor &&
         (darkCameraActor->GetCameraMode() == DarkCameraActor::CameraMode::LockOn ||
-         darkCameraActor->GetMovementMode() == DarkCameraActor::CameraMode::LockOn);
+            darkCameraActor->GetMovementMode() == DarkCameraActor::CameraMode::LockOn);
     static constexpr const char* locomotionModeNames[] =
     { "None", "TPSWalk", "TPSRun", "LockOnBlendWalk", "LockOnBlendRun", "Idle", "Dash" };
     static constexpr const char* darkCameraModeNames[] =
@@ -5623,9 +5647,9 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Text(U8("Player State: %s"), playerStateName);
     const bool phase2BossIdleMaintained = phase2BossController &&
         (phase2TransitionStep == Phase2TransitionStep::PlayerEmotePreWait ||
-         phase2TransitionStep == Phase2TransitionStep::PlayerEmote ||
-         phase2TransitionStep == Phase2TransitionStep::PlayerEmotePostWait ||
-         phase2TransitionStep == Phase2TransitionStep::ReturnToTps) &&
+            phase2TransitionStep == Phase2TransitionStep::PlayerEmote ||
+            phase2TransitionStep == Phase2TransitionStep::PlayerEmotePostWait ||
+            phase2TransitionStep == Phase2TransitionStep::ReturnToTps) &&
         phase2BossController->GetCurrentAnimationName() == "TravelMode_Idle_0";
     ImGui::Text(U8("Phase2 Boss Idle\u7dad\u6301: %s"),
         phase2BossIdleMaintained ? "true" : "false");
@@ -5713,10 +5737,10 @@ void GameScene::DrawGuiPlusAlpha()
             "ContinueWait", "ResetForContinue", "BossDead", "Victory"
         };
         const auto flowName = [&](BattleFlowState state)
-        {
-            const size_t index = static_cast<size_t>(state);
-            return index < std::size(battleFlowDebugNames) ? battleFlowDebugNames[index] : "Unknown";
-        };
+            {
+                const size_t index = static_cast<size_t>(state);
+                return index < std::size(battleFlowDebugNames) ? battleFlowDebugNames[index] : "Unknown";
+            };
         const size_t phaseIndex = static_cast<size_t>(bossDeathPhase);
         const char* phaseName = phaseIndex < phaseNames.size() ? phaseNames[phaseIndex] : "Unknown";
         const auto bossController = gruxEnemyActor
@@ -5760,10 +5784,10 @@ void GameScene::DrawGuiPlusAlpha()
 
         std::string setupFailureReason;
         const auto addSetupFailure = [&](const char* reason)
-        {
-            if (!setupFailureReason.empty()) setupFailureReason += ", ";
-            setupFailureReason += reason;
-        };
+            {
+                if (!setupFailureReason.empty()) setupFailureReason += ", ";
+                setupFailureReason += reason;
+            };
         if (!bossDeathShotsLoaded) addSetupFailure("BossDeathPresetMissing");
         if (!player) addSetupFailure("PlayerMissing");
         if (!gruxEnemyActor) addSetupFailure("GruxMissing");
@@ -5884,31 +5908,31 @@ void GameScene::DrawGuiPlusAlpha()
             ? Time::DeltaTime() / Time::UnscaledDeltaTime() : 0.0f);
         ImGui::Text("Time slowTimer: %.6f s", Time::GetSlowTimer());
         const auto drawAnimationMeasurements = [](const char* label, const Character* actor)
-        {
-            if (!actor)
             {
-                ImGui::Text("%s: unavailable", label);
-                return;
-            }
-            ImGui::Text("%s Actor TimeScale: %.6f", label, actor->GetTimeScale());
-            const auto controller = actor->GetBodyAnimationController();
-            if (!controller)
-            {
-                ImGui::Text("%s Animation: unavailable", label);
-                return;
-            }
-            ImGui::Text("%s Animation: %s", label, controller->GetCurrentAnimationName().c_str());
-            ImGui::Text("%s Animation time: %.6f s", label, controller->GetCurrentAnimationTime());
-            const float rate = controller->GetLastEffectivePlaybackRateDebug();
-            ImGui::Text("%s Effective clip rate (last update): %.6f", label, rate);
-            ImGui::Text("%s Animation update dt: %.6f s", label, controller->GetLastUpdateDeltaTimeDebug());
-            ImGui::Text("%s Rate vs real time (last frame): %.6f", label,
-                Time::UnscaledDeltaTime() > 0.0f
-                ? rate * controller->GetLastUpdateDeltaTimeDebug() / Time::UnscaledDeltaTime() : 0.0f);
-            ImGui::Text("%s blendFactor: %.6f / Playing: %s / BlendSpace: %s / Preview: %s",
-                label, controller->GetBlendFactorDebug(), controller->IsPlayAnimation() ? "Yes" : "No",
-                controller->IsUsingBlendSpace() ? "Yes" : "No", controller->IsEditorPreviewActive() ? "Yes" : "No");
-        };
+                if (!actor)
+                {
+                    ImGui::Text("%s: unavailable", label);
+                    return;
+                }
+                ImGui::Text("%s Actor TimeScale: %.6f", label, actor->GetTimeScale());
+                const auto controller = actor->GetBodyAnimationController();
+                if (!controller)
+                {
+                    ImGui::Text("%s Animation: unavailable", label);
+                    return;
+                }
+                ImGui::Text("%s Animation: %s", label, controller->GetCurrentAnimationName().c_str());
+                ImGui::Text("%s Animation time: %.6f s", label, controller->GetCurrentAnimationTime());
+                const float rate = controller->GetLastEffectivePlaybackRateDebug();
+                ImGui::Text("%s Effective clip rate (last update): %.6f", label, rate);
+                ImGui::Text("%s Animation update dt: %.6f s", label, controller->GetLastUpdateDeltaTimeDebug());
+                ImGui::Text("%s Rate vs real time (last frame): %.6f", label,
+                    Time::UnscaledDeltaTime() > 0.0f
+                    ? rate * controller->GetLastUpdateDeltaTimeDebug() / Time::UnscaledDeltaTime() : 0.0f);
+                ImGui::Text("%s blendFactor: %.6f / Playing: %s / BlendSpace: %s / Preview: %s",
+                    label, controller->GetBlendFactorDebug(), controller->IsPlayAnimation() ? "Yes" : "No",
+                    controller->IsUsingBlendSpace() ? "Yes" : "No", controller->IsEditorPreviewActive() ? "Yes" : "No");
+            };
         drawAnimationMeasurements("Player", player.get());
         drawAnimationMeasurements("Boss", gruxEnemyActor.get());
         if (ImGui::TreeNode("Global Scale History (last 32 changes)"))
@@ -5951,7 +5975,7 @@ void GameScene::DrawGuiPlusAlpha()
             0.01f, 0.0f, 0.5f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
         ImGui::Text("Emote_Win Current Time: %.3f s", resultController &&
             resultController->GetCurrentAnimationName() == "Emote_Win"
-                ? resultController->GetCurrentAnimationTime() : 0.0f);
+            ? resultController->GetCurrentAnimationTime() : 0.0f);
         ImGui::DragFloat("Result UI Trigger Animation Time", &resultUITriggerAnimationTime,
             0.01f, 0.0f, victoryEmoteEndTime, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
         ImGui::Text("UI Triggered: %s", resultUITriggered ? "Yes" : "No");
@@ -6278,8 +6302,8 @@ void GameScene::DrawGuiPlusAlpha()
     {
         DebugRender::DrawBox(tutorialCameraProfileTriggerCenter, tutorialCameraProfileTriggerSize,
             tutorialCameraProfileTriggerFired
-                ? DirectX::XMFLOAT4{ 0.2f, 0.9f, 0.35f, 1.0f }
-                : DirectX::XMFLOAT4{ 1.0f, 0.75f, 0.15f, 1.0f },
+            ? DirectX::XMFLOAT4{ 0.2f, 0.9f, 0.35f, 1.0f }
+            : DirectX::XMFLOAT4{ 1.0f, 0.75f, 0.15f, 1.0f },
             0.0f, true);
     }
 }

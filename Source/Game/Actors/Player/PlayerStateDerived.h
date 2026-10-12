@@ -196,6 +196,7 @@ class PlayerRushState : public PlayerStateBase
 {
     enum class RushPhase :uint8_t
     {
+        Windup,         // Hold the approach pose before the dash begins
         DashToTarget,   // “G‚ÖÚ‹ß
         Attack,         // ƒ‰ƒbƒVƒ…UŒ‚
         Finished,
@@ -222,6 +223,7 @@ public:
     {
         switch (phase)
         {
+        case RushPhase::Windup: return "Windup";
         case RushPhase::DashToTarget: return "DashToTarget";
         case RushPhase::Attack: return "Attack";
         case RushPhase::Finished: return "Finished";
@@ -234,6 +236,8 @@ private:
     void ResetRushInputGrace();
 
     float elapsedTime = 0.0f;
+    float windupElapsedTime = 0.0f;
+    float rushStopDistance = 0.0f;
     bool rushComboAdvanced = false;
     int queuedAttackCount = 0;
     int comboIndex = 0; 
