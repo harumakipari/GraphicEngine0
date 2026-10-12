@@ -4731,7 +4731,8 @@ void Player::UpdateLockOnGuideUI()
         return;
     }
     if (!lockOnGuideArrowImageComponent || !lockOnGuideButtonImageComponent ||
-        !IsBossBattle() || GetHp() <= 0 || IsInWinState())
+        !IsBossBattle() || GetHp() <= 0 || IsInWinState() ||
+        IsRushActive() || IsJustDodgePresentationActive())
     {
         HideAndResetLockOnGuideUI();
         return;
