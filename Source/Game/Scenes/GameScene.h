@@ -105,6 +105,7 @@ public:
 
     // ・ｽ{・ｽX・ｽﾌ包ｿｽ・ｽ・ｽ・ｽﾌ色・ｽﾌ・ｿｽ・ｽ[・ｽv・ｽ・ｽJ・ｽn・ｽ・ｽ・ｽ・ｽﾖ撰ｿｽ
     void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
+    void CancelBossRoomLerp();
 
     // ・ｽ{・ｽX・ｽﾌ目のゑｿｽBloom・ｽ・ｽﾂゑｿｽ・ｽ・ｽ
 
@@ -278,6 +279,18 @@ private:
     void ResetBossDeathDebugPreview();
     void RestartBossBattle();
     bool LoadBossDeathShots();
+    enum class MovieSkipType : uint8_t
+    {
+        None,
+        PrisonOpening,
+        BossEntry,
+        BossDeath,
+    };
+    void CreateMovieSkipUI();
+    MovieSkipType GetActiveMovieSkipType();
+    void UpdateMovieSkipPresentation();
+    void ResetMovieSkipPresentation();
+    static const char* GetMovieSkipTypeLogName(MovieSkipType type);
     void CreateBossDeathFadeUI();
     void CreateBossDeathFinishUI();
     void SetBossDeathFadeAlpha(float alpha);
@@ -670,6 +683,16 @@ private:
     std::shared_ptr<UIImageComponent> bossDeathFinishGuideImage;
     std::shared_ptr<UIImageComponent> bossDeathFinishButtonImage;
     std::shared_ptr<UIImageComponent> bossDeathFinishWordImage;
+    MovieSkipType movieSkipType = MovieSkipType::None;
+    bool movieSkipPromptVisible = false;
+    bool movieSkipConfirmed = false;
+    float movieSkipPromptTimer = 0.0f;
+    float movieSkipPromptFade = 0.0f;
+    float movieSkipPromptTimeout = 3.0f;
+    float movieSkipPromptFadeDuration = 0.15f;
+    DirectX::XMFLOAT2 movieSkipPromptRightBottomOffset{ 56.0f, 48.0f };
+    float movieSkipPromptScale = 0.36f;
+    std::shared_ptr<UIImageComponent> movieSkipPromptImage;
     std::shared_ptr<CoreStandaloneAudioSource> bossDeathGroanAudio;
     std::shared_ptr<CoreStandaloneAudioSource> bossDeathVoiceAudio;
     std::shared_ptr<UIImageComponent> battleTimerHourglassFrame;

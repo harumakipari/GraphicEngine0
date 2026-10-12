@@ -201,32 +201,10 @@ void Player::Initialize(const Transform& transform)
         controller->AddAnimation("Standing", 57);
         controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
 
-        // ブレンドスペースに追加
-        //controller->AddBlendAnimation("Jog_Fwd", 0.0f, 1.0f);
-        //controller->AddBlendAnimation("Jog_Bwd", 0.0f, -1.0f);
-        //controller->AddBlendAnimation("Jog_BwdLeft", -1.0f, -1.0f);
-        //controller->AddBlendAnimation("Jog_FwdLeft", -1.0f, 1.0f);
-        //controller->AddBlendAnimation("Jog_FwdRight", 1.0f, 1.0f);
-        //controller->AddBlendAnimation("Jog_BwdRight", 1.0f, -1.0f);
-        
-#if 0
-        controller->AddForwardBlendAnimation("Jog_Fwd", 0.0f);
-        controller->AddForwardBlendAnimation("Jog_FwdLeft90", -90.0f);
-        controller->AddForwardBlendAnimation("Jog_FwdRight90", 90.0f);
-        controller->AddForwardBlendAnimation("Jog_FwdRight45", 45.0f);
-        controller->AddForwardBlendAnimation("Jog_FwdLeft45", -45.0f);
-
-        controller->AddBackwardBlendAnimation("Jog_Bwd", 0.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdLeft90", -90.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdRight90", 90.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdRight45", 45.0f);
-        controller->AddBackwardBlendAnimation("Jog_BwdLeft45", -45.0f);
-#else
         controller->AddLocomotionBlendAnimation("Jog_Fwd", 0.0f, 0.0f);
         controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.464f);
         controller->AddLocomotionBlendAnimation("Jog_Bwd", 180.0f, 0.0f);
         controller->AddLocomotionBlendAnimation("Jog_Left", -90.0f, 0.5f);
-#endif // 0
 
         std::string name = GetName();
         // アニメーションコントローラーのオーナーの名前を設定する

@@ -232,7 +232,33 @@ void DarkStagePaintingActor::Initialize(const Transform& transform)
 
     // モデルを追加
     meshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    meshComponent->SetModel("./Data/Models/DarkStageAssets/Painting/scene.gltf");
+
+    // ポイントライトコンポーネントを追加
+    auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
+    pointLightComponent->SetRelativeLocationDirect({ 0.0f, 0.0f, 0.0f });
+    // ライトの名前からライトマネージャーの共有ライトを取得して設定
+    pointLightComponent->SetSharedLightName("PaintingLight");
+
+    SetType(paintType);
+}
+
+
+void DarkStagePaintingActor::SetType(PaintType paintType)
+{
+    this->paintType = paintType;
+    std::string modelPath = "./Data/Models/DarkStageAssets/Painting/scene.gltf";
+
+    switch (paintType)
+    {
+    case PaintType::MainRoom:
+        break;
+    case PaintType::JailRoom:
+        break;
+    case PaintType::Hallway:
+        break;
+    }
+
+    meshComponent->SetModel(modelPath);
     meshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
 
 }

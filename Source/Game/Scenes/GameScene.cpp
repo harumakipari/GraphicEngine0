@@ -213,6 +213,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         CreateVictoryResultBackground();
         CreateBossDeathFadeUI();
         CreateBossDeathFinishUI();
+        CreateMovieSkipUI();
         bossDeathShotsLoaded = LoadBossDeathShots();
         phase2CinematicShotsLoaded = LoadPhase2CinematicShots();
     }
@@ -2223,6 +2224,7 @@ void GameScene::Update(float deltaTime)
     UpdateTutorialDodgeGuideRing();
 
     SceneBase::Update(deltaTime);
+    UpdateMovieSkipPresentation();
     UpdateTutorialSkeletonUI();
     UpdateLockOnTargetUI(deltaTime);
     RecordPhase1FinalHitHitStopFrameSample();
@@ -3731,6 +3733,149 @@ bool GameScene::LoadBossDeathShots()
     }
 
     return true;
+}
+
+void GameScene::CreateMovieSkipUI()
+{
+    movieSkipPromptImage = std::make_shared<UIImageComponent>(
+        "./Data/Textures/UI/skip_B.png", "MovieSkipPrompt");
+    movieSkipPromptImage->SetSize({ 624.0f, 225.0f });
+    movieSkipPromptImage->SetPivot({ 1.0f, 1.0f });
+    movieSkipPromptImage->SetScale({ movieSkipPromptScale, movieSkipPromptScale });
+    movieSkipPromptImage->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, 0.0f });
+    movieSkipPromptImage->SetVisible(false);
+    movieSkipPromptImage->SetEnable(false);
+    movieSkipPromptImage->zOrder = 1100;
+    GetUIManager()->Add(movieSkipPromptImage);
+}
+
+const char* GameScene::GetMovieSkipTypeLogName(const MovieSkipType type)
+{
+    switch (type)
+    {
+    case MovieSkipType::PrisonOpening: return "PrisonOpening";
+    case MovieSkipType::BossEntry: return "BossEntry";
+    case MovieSkipType::BossDeath: return "BossDeath";
+    default: return "None";
+    }
+}
+
+GameScene::MovieSkipType GameScene::GetActiveMovieSkipType()
+{
+    if (battleFlowState == BattleFlowState::BossDead &&
+        bossDeathPhase < BossDeathPhase::RecallPingPong)
+    {
+        return MovieSkipType::BossDeath;
+    }
+
+    const auto movieManager = GetActorManager()->GetActorOfType<MovieCameraManagerActor>();
+    if (!movieManager)
+        return MovieSkipType::None;
+    if (movieManager->IsPrisonOpeningMovieActive())
+        return MovieSkipType::PrisonOpening;
+    if (movieManager->IsBossEntryMovieActive())
+        return MovieSkipType::BossEntry;
+    return MovieSkipType::None;
+}
+
+void GameScene::ResetMovieSkipPresentation()
+{
+    movieSkipType = MovieSkipType::None;
+    movieSkipPromptVisible = false;
+    movieSkipConfirmed = false;
+    movieSkipPromptTimer = 0.0f;
+    movieSkipPromptFade = 0.0f;
+    if (movieSkipPromptImage)
+    {
+        movieSkipPromptImage->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, 0.0f });
+        movieSkipPromptImage->SetVisible(false);
+    }
+}
+
+void GameScene::UpdateMovieSkipPresentation()
+{
+    const MovieSkipType activeType = GetActiveMovieSkipType();
+    if (activeType != movieSkipType)
+    {
+        ResetMovieSkipPresentation();
+        movieSkipType = activeType;
+    }
+    if (activeType == MovieSkipType::None || !movieSkipPromptImage)
+        return;
+
+    const float deltaTime = Time::UnscaledDeltaTime();
+    const bool anyButtonTriggered = InputSystem::IsAnyGamepadButtonTriggeredRaw();
+    const bool bTriggered = InputSystem::IsGamepadButtonTriggeredRaw(XINPUT_GAMEPAD_B);
+
+    if (!movieSkipConfirmed)
+    {
+        if (!movieSkipPromptVisible)
+        {
+            // The opening button, including B, only arms the prompt.
+            if (anyButtonTriggered)
+            {
+                movieSkipPromptVisible = true;
+                movieSkipPromptTimer = 0.0f;
+            }
+        }
+        else if (bTriggered)
+        {
+            movieSkipConfirmed = true;
+            movieSkipPromptVisible = false;
+            movieSkipPromptTimer = 0.0f;
+            Logger::Log(Logger::LogCategory::Gameplay,
+                std::string("[MovieSkip] Confirmed type=") + GetMovieSkipTypeLogName(movieSkipType));
+
+            if (movieSkipType == MovieSkipType::PrisonOpening ||
+                movieSkipType == MovieSkipType::BossEntry)
+            {
+                if (const auto movieManager = GetActorManager()->GetActorOfType<MovieCameraManagerActor>())
+                {
+                    if (movieSkipType == MovieSkipType::PrisonOpening)
+                        movieManager->SkipPrisonOpeningToGameplay();
+                    else
+                        movieManager->SkipBossEntryToBattle();
+                }
+
+                // The same completion input must not arm another skip after
+                // Player input is restored by the movie completion path.
+                ResetMovieSkipPresentation();
+                return;
+            }
+        }
+        else if (anyButtonTriggered)
+        {
+            movieSkipPromptTimer = 0.0f;
+        }
+        else
+        {
+            movieSkipPromptTimer += deltaTime;
+            if (movieSkipPromptTimer >= movieSkipPromptTimeout)
+                movieSkipPromptVisible = false;
+        }
+    }
+
+    const float fadeTarget = movieSkipPromptVisible ? 1.0f : 0.0f;
+    if (movieSkipPromptFadeDuration <= FLT_EPSILON)
+    {
+        movieSkipPromptFade = fadeTarget;
+    }
+    else
+    {
+        const float fadeStep = deltaTime / movieSkipPromptFadeDuration;
+        movieSkipPromptFade = fadeTarget > movieSkipPromptFade
+            ? (std::min)(movieSkipPromptFade + fadeStep, fadeTarget)
+            : (std::max)(movieSkipPromptFade - fadeStep, fadeTarget);
+    }
+
+    const float screenWidth = Graphics::GetScreenWidth();
+    const float screenHeight = Graphics::GetScreenHeight();
+    movieSkipPromptImage->SetWorldPosition({
+        screenWidth - movieSkipPromptRightBottomOffset.x,
+        screenHeight - movieSkipPromptRightBottomOffset.y });
+    movieSkipPromptImage->SetScale({ movieSkipPromptScale, movieSkipPromptScale });
+    movieSkipPromptImage->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, movieSkipPromptFade });
+    movieSkipPromptImage->SetVisible(movieSkipPromptFade > FLT_EPSILON);
 }
 
 void GameScene::CreateBossDeathFadeUI()
@@ -5351,6 +5496,15 @@ void GameScene::DrawGuiPlusAlpha()
 #ifdef USE_IMGUI
     ImGui::Begin("GameScene");
 
+    ImGui::SeparatorText("Movie Skip (Step 1)");
+    ImGui::DragFloat2("Movie Skip Right Bottom Offset", &movieSkipPromptRightBottomOffset.x,
+        1.0f, 0.0f, 1000.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Movie Skip Scale", &movieSkipPromptScale,
+        0.01f, 0.10f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::Text("Movie Skip Type: %s", GetMovieSkipTypeLogName(movieSkipType));
+    ImGui::Text("Movie Skip Prompt: %s  Timer: %.2f  Fade: %.2f",
+        movieSkipPromptVisible ? "visible" : "hidden", movieSkipPromptTimer, movieSkipPromptFade);
+
     ImGui::SeparatorText("Tutorial Guide Ring");
     ImGui::Checkbox("Tutorial Guide Ring Force Visible", &tutorialDodgeGuideRingForceVisible);
     ImGui::DragFloat3("Tutorial Guide Ring Position Offset", &tutorialDodgeGuideRingPositionOffset.x, 0.01f);
@@ -6319,6 +6473,14 @@ void GameScene::SetBossRoomLerpFactor(float lerpFactor)
 // ボスの目のみBloomをオンにする
 
 // ボスの部屋の色のラープを開始する関数
+void GameScene::CancelBossRoomLerp()
+{
+    startBossRoomLerp = false;
+    onFinished = nullptr;
+    if (bossLerpEasing)
+        bossLerpEasing->Clear();
+}
+
 void GameScene::StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished)
 {
     startBossRoomLerpFactor = startFactor;

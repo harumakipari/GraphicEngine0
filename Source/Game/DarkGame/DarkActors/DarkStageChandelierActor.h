@@ -59,10 +59,19 @@ private:
 class DarkStagePaintingActor :public Actor
 {
 public:
+    enum class PaintType :uint8_t
+    {
+        MainRoom,
+        JailRoom,
+        Hallway,
+    };
+
     DarkStagePaintingActor(const std::string& actorName) :Actor(actorName) {}
     virtual ~DarkStagePaintingActor() = default;
     void Initialize(const Transform& transform)override;
+    void SetType(PaintType paintType);
 private:
     // ƒ‚ƒfƒ‹
     std::shared_ptr<SkeletalMeshComponent> meshComponent;
+    PaintType paintType = PaintType::MainRoom;
 };

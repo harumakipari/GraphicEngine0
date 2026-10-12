@@ -80,6 +80,16 @@ public:
     bool PreparePrisonOpeningMovieFirstFrame();
     void CancelPreparedPrisonOpeningMovie();
     bool PlayPrisonOpeningMovie();
+    void SkipPrisonOpeningToGameplay();
+    void SkipBossEntryToBattle();
+
+    // Read-only presentation state for shared movie UI.
+    bool IsPrisonOpeningMovieActive() const { return prisonOpeningMoviePlaying; }
+    bool IsBossEntryMovieActive() const
+    {
+        return (doorMovieState != DoorMovieState::None &&
+            doorMovieState != DoorMovieState::Finished) || bossEntryExternalBlendActive;
+    }
 
     void PlayMovie(const std::string& file);
     void PlayDeathWideRelative(const DirectX::XMFLOAT3& playerPosition,
@@ -111,9 +121,12 @@ private:
     void BeginPrisonOpeningBlendToTPS();
     void UpdatePrisonOpeningBlendToTPS(float deltaTime);
     void FinishPrisonOpeningMovie();
+    void FinishBossEntryToBattle();
     void LogPrisonOpeningTransitionDebug(const char* phase);
 
     DoorMovieState doorMovieState = DoorMovieState::None;
+    bool bossEntryExternalBlendActive = false;
+    bool bossEntryBattleStarted = false;
     bool prisonOpeningMoviePrepared = false;
     bool prisonOpeningMoviePlaying = false;
     bool prisonOpeningJailDoorInteractionRequested = false;

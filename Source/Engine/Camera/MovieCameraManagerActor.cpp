@@ -538,22 +538,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 {
                     DarkCameraActor::CameraPose start = darkCameraActor->CreatePoseFromMovie(movieCamera);
                     DarkCameraActor::CameraPose target = darkCameraActor->CreateFocusPose();
-                    darkCameraActor->StartExternalBlend(start, target, 2.0f, [player,gruxEnemy,gameScene]()
+                    bossEntryExternalBlendActive = true;
+                    darkCameraActor->StartExternalBlend(start, target, 2.0f, [this, player,gruxEnemy,gameScene]()
                         {
-                            if (player)
-                            {
-                                // 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽo繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽI繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・ｑ・ｿ・ｽ・顔衍繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
-                                player->EndEvent();
-                            }
-                            if (gruxEnemy)
-                            {// 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・・繝ｻ・ｽX繝ｻ・ｽ・悟私・ｿ・ｽ繝ｻ・ｽO繝ｻ・ｽ繝ｻ・ｽUI繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
-                                gruxEnemy->GetStateMachine()->ChangeState("EnemyIdleState");
-                            }
-                            if (gameScene)
-                            {
-                                gameScene->StartBossBattle();
-                            }
-
+                            bossEntryExternalBlendActive = false;
+                            FinishBossEntryToBattle();
                         }
                     );
                     scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
@@ -1335,6 +1324,109 @@ void MovieCameraManagerActor::FinishPrisonOpeningMovie()
     }
 }
 
+void MovieCameraManagerActor::FinishBossEntryToBattle()
+{
+    if (bossEntryBattleStarted)
+        return;
+
+    bossEntryBattleStarted = true;
+    bossEntryExternalBlendActive = false;
+    doorMovieState = DoorMovieState::Finished;
+
+    const auto scene = GetOwnerScene();
+    const auto gameScene = dynamic_cast<GameScene*>(scene);
+    const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
+    const auto gruxEnemy = scene ? scene->GetActorManager()->GetActorOfType<GruxEnemy>() : nullptr;
+    if (player)
+        player->EndEvent();
+    if (gruxEnemy)
+        gruxEnemy->GetStateMachine()->ChangeState("EnemyIdleState");
+    if (gameScene)
+        gameScene->StartBossBattle();
+}
+
+void MovieCameraManagerActor::SkipBossEntryToBattle()
+{
+    if (!IsBossEntryMovieActive() || bossEntryBattleStarted)
+        return;
+
+    const auto scene = GetOwnerScene();
+    if (!scene)
+        return;
+
+    const auto actorManager = scene->GetActorManager();
+    const auto gameScene = dynamic_cast<GameScene*>(scene);
+    const auto player = actorManager->GetActorOfType<Player>();
+    const auto gruxEnemy = actorManager->GetActorOfType<GruxEnemy>();
+    const auto darkCamera = actorManager->GetActorOfType<DarkCameraActor>();
+
+    // This is the boss-entry sequence's actual terminal door state: it is
+    // closed behind the Player before battle control is returned.
+    if (const auto doorActor = actorManager->GetActorOfType<DoorLargeActor>())
+    {
+        doorActor->Closed();
+        doorActor->CompleteInteraction();
+    }
+
+    if (gameScene)
+    {
+        gameScene->CancelBossRoomLerp();
+        gameScene->SetBossRoomLerpFactor(1.0f);
+    }
+
+    if (const auto movieCamera = movieCameraWeakPtr.lock())
+    {
+        movieCamera->SetOnMovieStart(nullptr);
+        movieCamera->Stop();
+    }
+    if (const auto cameraManager = scene->GetCameraManager(); cameraManager && cameraManager->IsUseMovie())
+        cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+
+    if (player)
+    {
+        player->SetPosition({ -1.3f, -0.1f, 11.24f });
+        player->SetEulerRotation({ 0.0f, 90.0f, 0.0f });
+        player->PlayBodyAnimation("Idle", true);
+    }
+    if (gruxEnemy)
+    {
+        gruxEnemy->SetEulerRotation({ 0.0f, -90.0f, 0.0f });
+        gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
+            "MovieCameraManager::SkipBossEntryToBattle");
+        if (const auto controller = gruxEnemy->GetBodyAnimationController())
+            controller->ResetAnimationRate();
+        gruxEnemy->StartGruxNamePerform(1.0f, 1.0f, 0.0f);
+    }
+
+    if (darkCamera)
+        darkCamera->SnapToExternalPose(darkCamera->CreateFocusPose());
+
+    FinishBossEntryToBattle();
+}
+void MovieCameraManagerActor::SkipPrisonOpeningToGameplay()
+{
+    if (!prisonOpeningMoviePlaying)
+        return;
+
+    const auto scene = GetOwnerScene();
+    if (scene)
+    {
+        if (const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>())
+            jailDoor->SetOpenCompletedSilently();
+
+        // Evaluate and install the collision-resolved TPS pose before disabling
+        // MovieCamera. FinishPrisonOpeningMovie then performs the established
+        // Player/event/input and render-camera cleanup path.
+        if (const auto darkCamera = scene->GetActorManager()->GetActorOfType<DarkCameraActor>())
+        {
+            DarkCameraActor::PrisonOpeningTpsPose target{};
+            if (darkCamera->GetPrisonOpeningTpsPose(target))
+                darkCamera->PreparePrisonOpeningTpsReturn(target);
+        }
+    }
+
+    FinishPrisonOpeningMovie();
+}
 void MovieCameraManagerActor::LogPrisonOpeningTransitionDebug(const char* phase)
 {
     if (!prisonOpeningTransitionDebugActive)
@@ -1548,6 +1640,8 @@ void MovieCameraManagerActor::UpdateDeathWideAnchorPreview()
 // 繝ｻ・ｽh繝ｻ・ｽA繝ｻ・ｽ繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽr繝ｻ・ｽ[繝ｻ・ｽ繝ｻ・ｽ・・腸・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
 void MovieCameraManagerActor::PlayDoorMovie()
 {
+    bossEntryBattleStarted = false;
+    bossEntryExternalBlendActive = false;
     if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
     {
         gameScene->PrepareTutorialForBossEntry();

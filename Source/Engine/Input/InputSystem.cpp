@@ -332,6 +332,16 @@ void InputSystem::Update(float deltaTime)
     DWORD xinputResult = XInputGetState(static_cast<DWORD>(slot), &state);
     isGamePadConnected = (xinputResult == ERROR_SUCCESS);
 
+    const WORD rawButtons = isGamePadConnected ? state.Gamepad.wButtons : 0;
+    rawGamepadButtonsTriggered = rawButtons & ~rawGamepadButtonsPrevious;
+    rawGamepadButtonsPrevious = rawButtons;
+    rawGamepadLeftTriggerPressedPrevious = rawGamepadLeftTriggerPressed;
+    rawGamepadRightTriggerPressedPrevious = rawGamepadRightTriggerPressed;
+    rawGamepadLeftTriggerPressed = isGamePadConnected &&
+        state.Gamepad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+    rawGamepadRightTriggerPressed = isGamePadConnected &&
+        state.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+
     //“ü—Íî•ñ‚ÌXV
     {
         if (isGamePadConnected)

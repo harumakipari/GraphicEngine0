@@ -803,6 +803,24 @@ void DarkCameraActor::CancelExternalBlend()
     externalBlendDuration = 0.0f;
     finishedExternalBlend = nullptr;
 }
+
+void DarkCameraActor::SnapToExternalPose(const CameraPose& pose)
+{
+    CancelExternalBlend();
+    currentPose = pose;
+    currentYaw = pose.yaw;
+    currentPitch = pose.pitch;
+    desiredYaw = pose.yaw;
+    desiredPitch = pose.pitch;
+    currentMode = CameraMode::TPS;
+    requestMode = CameraMode::TPS;
+    compositionLookTarget = pose.target;
+    mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
+    mainCameraComponent->SetFov(DirectX::XMConvertToRadians(GetFovDegreeForMode(CameraMode::TPS)));
+    mainCameraComponent->lookTarget = pose.target;
+    mainCameraComponent->useLookTarget = true;
+    SetPosition(pose.eye);
+}
 DarkCameraActor::CameraPose DarkCameraActor::CreatePoseFromMovie(const std::shared_ptr<MovieCameraComponent>& movieCamera)
 {
     using namespace DirectX;

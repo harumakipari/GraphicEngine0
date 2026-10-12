@@ -297,6 +297,19 @@ public:
     static void RequestRumble(float leftMotorStrength, float rightMotorStrength, float duration);
     static void StopRumble();
 
+    // Movie-only raw gamepad triggers. These are sampled by InputSystem::Update
+    // and intentionally ignore SetInputEnabled, without enabling gameplay input.
+    static bool IsAnyGamepadButtonTriggeredRaw()
+    {
+        return rawGamepadButtonsTriggered != 0 ||
+            (rawGamepadLeftTriggerPressed && !rawGamepadLeftTriggerPressedPrevious) ||
+            (rawGamepadRightTriggerPressed && !rawGamepadRightTriggerPressedPrevious);
+    }
+    static bool IsGamepadButtonTriggeredRaw(const WORD button)
+    {
+        return (rawGamepadButtonsTriggered & button) != 0;
+    }
+
     // ì¸óÕÇóLå¯âªÅEñ≥å¯âªÇ∑ÇÈ
     static void SetInputEnabled(bool enabled)
     {
@@ -349,6 +362,12 @@ private:
 
     static inline float mAxis[2][2];
     static inline XINPUT_STATE state;
+    static inline WORD rawGamepadButtonsTriggered = 0;
+    static inline WORD rawGamepadButtonsPrevious = 0;
+    static inline bool rawGamepadLeftTriggerPressed = false;
+    static inline bool rawGamepadLeftTriggerPressedPrevious = false;
+    static inline bool rawGamepadRightTriggerPressed = false;
+    static inline bool rawGamepadRightTriggerPressedPrevious = false;
     static inline DeadZoneMode deadZoneMode = DeadZoneMode::Circular;
     static inline int slot = 0;
 
