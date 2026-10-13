@@ -252,6 +252,7 @@ void DarkStagePaintingActor::SetType(PaintType paintType)
     case PaintType::MainRoom:
         break;
     case PaintType::JailRoom:
+        modelPath = "./Data/Models/DarkStageAssets/Painting/painting_jail.gltf";
         pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, -2.3f });
         break;
     case PaintType::Hallway:
@@ -260,5 +261,4 @@ void DarkStagePaintingActor::SetType(PaintType paintType)
 
     meshComponent->SetModel(modelPath);
     meshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
-
 }

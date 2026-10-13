@@ -87,6 +87,7 @@ public:
     // Stops combat immediately while preserving HP and the current death animation.
     void StopBattleActions();
     void AbortBehaviorTreeForDeath();
+    void StopBossDeathCinematicOneShots();
     void BeginPhase1LastHitReaction(const DirectX::XMFLOAT3& hitSourcePosition);
     void BeginFinalHitReaction(const std::string& animationName);
     void EndFinalHitReaction();
@@ -874,6 +875,7 @@ private:
     float bossTrailEmissiveStrength = 7.0f;
     float bossTrailLifetime = 0.8f;
 
+    std::vector<std::shared_ptr<CoreStandaloneAudioSource>> bossDeathCinematicOneShots;
     std::shared_ptr<ParticleComponent> hitSwordEffectComponent; // Existing normal hit effect
     std::shared_ptr<ParticleComponent> rushHitRingEffectComponent; // Rush World Ring effect
     std::shared_ptr<ParticleComponent> rushHitSparkEffectComponent; // Rush Spark effect

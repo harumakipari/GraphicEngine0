@@ -121,6 +121,17 @@ public:
 
     // Called when the existing boss-introduction camera blend has completed.
     void StartBossBattle();
+    void SkipBossDeathToFinishPrompt();
+    bool IsBossDeathFinishPromptActive() const
+    {
+        return battleFlowState == BattleFlowState::BossDead &&
+            bossDeathPhase >= BossDeathPhase::RecallPingPong;
+    }
+    bool IsBossDeathCinematicAudioActive() const
+    {
+        return battleFlowState == BattleFlowState::BossDead &&
+            bossDeathPhase < BossDeathPhase::RecallPingPong;
+    }
 
     void PrepareTutorialForBossEntry();
     bool RequestBossEntryFromPause();

@@ -968,6 +968,16 @@ void GruxEnemy::AbortBehaviorTreeForDeath()
     ResetBehaviorTreeRuntime();
 }
 
+void GruxEnemy::StopBossDeathCinematicOneShots()
+{
+    for (const auto& audio : bossDeathCinematicOneShots)
+    {
+        if (audio)
+            audio->Stop(false);
+    }
+    bossDeathCinematicOneShots.clear();
+}
+
 void GruxEnemy::ResetBehaviorTreeRuntime()
 {
     activeNode = nullptr;
@@ -5294,12 +5304,33 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     {
     case AnimationNotifyEvent::Type::PlaySE:
     {
+        const bool isBossDeathCinematicClip = controller &&
+            (controller->GetCurrentAnimationName() == "Ultimate_Roar_0" ||
+             controller->GetCurrentAnimationName() == "Result_Down_Start" ||
+             controller->GetCurrentAnimationName() == "Death_B_0");
+        const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+        if (isBossDeathCinematicClip && gameScene &&
+            gameScene->IsBossDeathFinishPromptActive())
+        {
+            return;
+        }
+        const bool isBossDeathCinematicOneShot = isBossDeathCinematicClip &&
+            gameScene && gameScene->IsBossDeathCinematicAudioActive();
         if (event.parameter != "")
         {
             std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
             auto audio = CoreAudio::PlayOneShot(audioPath, event.value);
             float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
             audio->SetPitch(pitch);
+            if (isBossDeathCinematicOneShot && audio)
+            {
+                std::erase_if(bossDeathCinematicOneShots,
+                    [](const std::shared_ptr<CoreStandaloneAudioSource>& source)
+                    {
+                        return !source || !source->IsPlaying();
+                    });
+                bossDeathCinematicOneShots.push_back(audio);
+            }
         }
     }
     break;

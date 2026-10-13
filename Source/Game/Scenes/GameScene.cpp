@@ -3852,6 +3852,11 @@ void GameScene::UpdateMovieSkipPresentation()
                 ResetMovieSkipPresentation();
                 return;
             }
+            if (movieSkipType == MovieSkipType::BossDeath)
+            {
+                SkipBossDeathToFinishPrompt();
+                return;
+            }
         }
         else if (anyButtonTriggered)
         {
@@ -4175,6 +4180,114 @@ void GameScene::CutToBossDeathShot(const size_t shotIndex)
     }
 }
 
+void GameScene::SkipBossDeathToFinishPrompt()
+{
+    if (battleFlowState != BattleFlowState::BossDead ||
+        bossDeathPhase >= BossDeathPhase::RecallPingPong)
+    {
+        return;
+    }
+
+    if (!bossDeathShotsLoaded || !player || !gruxEnemyActor || !cinemaCameraActor)
+    {
+        Logger::Warning(Logger::LogCategory::System,
+            "Boss death skip ignored because finish-prompt staging is unavailable");
+        return;
+    }
+
+    ClampBossDeathPreviewTuning();
+    DisableCinematicCameraDebugInput();
+    gruxEnemyActor->StopBossDeathCinematicOneShots();
+    if (bossDeathVoiceAudio)
+    {
+        bossDeathVoiceAudio->Stop(false);
+        bossDeathVoiceAudio.reset();
+    }
+    BeginBossBattleBgmFadeOut();
+    PlayBossDeathSecondBgm();
+    if (!bossDeathGroanAudio)
+        StartBossDeathGroanLoop();
+    SetBossDeathFadeAlpha(0.0f);
+
+    bossDeathPhaseElapsed = 0.0f;
+    bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
+    bossDeathRecallPromptDirection = 1.0f;
+    bossDeathFwdPromptTime = bossDeathFwdPromptMinTime;
+    bossDeathFwdPromptDirection = 1.0f;
+
+    if (const auto playerCapsule = std::dynamic_pointer_cast<ShapeComponent>(
+        player->FindComponentByName("capsuleComponent")))
+    {
+        playerCapsule->DisableCollision();
+    }
+    if (const auto bossCapsule = std::dynamic_pointer_cast<ShapeComponent>(
+        gruxEnemyActor->FindComponentByName("enemyCapsuleComponent")))
+    {
+        bossCapsule->DisableCollision();
+    }
+
+    const auto& finishPlayerPose = bossDeathShots[BossDeathFinish].player;
+    DirectX::XMFLOAT3 finishPlayerPosition = finishPlayerPose.position;
+    finishPlayerPosition.x += bossDeathFinishPlayerPositionOffset.x;
+    finishPlayerPosition.y += bossDeathFinishPlayerPositionOffset.y;
+    finishPlayerPosition.z += bossDeathFinishPlayerPositionOffset.z;
+    player->ClearTransientBattleActions();
+    player->SetPosition(finishPlayerPosition);
+    player->SetQuaternionRotation(finishPlayerPose.rotation);
+    player->UpdateAllComponentTransforms();
+    if (const auto controller = player->GetBodyAnimationController())
+    {
+        controller->ReleaseLatchedVisualPose();
+        controller->ReleaseHeldAnimationPose();
+        controller->ResetAnimationRate();
+        player->PlayBodyAnimation("Result_Recall", false, true, 0.0f, true);
+        if (!controller->SetPlaybackRange(0.0f, bossDeathRecallPromptMinTime) ||
+            !controller->HoldAnimationPose("Result_Recall", bossDeathRecallPromptTime))
+        {
+            Logger::Error(Logger::LogCategory::System,
+                "Failed to hold Result_Recall for boss death skip");
+        }
+    }
+
+    const auto& landingBossPose = bossDeathShots[BossDeathLanding].boss;
+    DirectX::XMFLOAT3 finishBossPosition = landingBossPose.position;
+    finishBossPosition.x += bossDeathFwdPositionOffset.x;
+    finishBossPosition.y += bossDeathFwdPositionOffset.y;
+    finishBossPosition.z += bossDeathFwdPositionOffset.z;
+    gruxEnemyActor->StopBattleActions();
+    gruxEnemyActor->AbortBehaviorTreeForDeath();
+    gruxEnemyActor->EndFinalHitReaction();
+    gruxEnemyActor->SetPosition(finishBossPosition);
+    gruxEnemyActor->SetQuaternionRotation(landingBossPose.rotation);
+    gruxEnemyActor->UpdateAllComponentTransforms();
+    if (const auto controller = gruxEnemyActor->GetBodyAnimationController())
+    {
+        controller->ReleaseHeldAnimationPose();
+        controller->ResetAnimationRate();
+        gruxEnemyActor->PlayBodyAnimation("Death_B_0", false, true, 0.0f, true,
+            "GameScene::SkipBossDeathToFinishPrompt");
+        if (!controller->SetPlaybackRange(bossDeathFwdStartTime, bossDeathFwdEndTime) ||
+            !controller->HoldAnimationPose("Death_B_0", bossDeathFwdPromptTime))
+        {
+            Logger::Error(Logger::LogCategory::System,
+                "Failed to hold Death_B_0 for boss death skip");
+        }
+    }
+
+    if (cameraManager->IsUseDebug())
+        cameraManager->ToggleCamera(this);
+    if (cameraManager->IsUseMovie())
+        cameraManager->ToggleMovieCamera(this);
+    if (!cameraManager->IsUseCinematic())
+        cameraManager->ToggleCinematicCamera(this);
+    CutToBossDeathShot(BossDeathFinish);
+    gruxEnemyActor->StopBossDeathCinematicOneShots();
+
+    bossDeathPhase = BossDeathPhase::RecallPingPong;
+    bossDeathFinishInputEnabled = true;
+    SetBossDeathFinishUIVisible(true);
+    ResetMovieSkipPresentation();
+}
 bool GameScene::SetupBossDeathCinematic()
 {
     if (!bossDeathShotsLoaded || !player || !gruxEnemyActor || !cinemaCameraActor)
@@ -5420,18 +5533,22 @@ void GameScene::SetUpActors()
     {
         Transform paintingTr{ DirectX::XMFLOAT3{-67.42f,4.2f,17.26f},DirectX::XMFLOAT3{0.0f,180.0f,0.0f},DirectX::XMFLOAT3{0.81f,1.0f,0.81f } };
         auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("JailPaintingActor", paintingTr);
+        paintingActor->SetType(DarkStagePaintingActor::PaintType::JailRoom);
     }
 
     // ƒƒCƒ“‚Ì•”‚ÌŠG‰æ
     {
-        Transform paintingMainRoomTr{ DirectX::XMFLOAT3{-18.1f,3.5f,17.0f},DirectX::XMFLOAT3{0.0f,180.0f,0.0f},DirectX::XMFLOAT3{1.0f,1.0f,1.0f } };
+        Transform paintingMainRoomTr{ DirectX::XMFLOAT3{-18.1f,3.5f,16.9f},DirectX::XMFLOAT3{0.0f,180.0f,0.0f},DirectX::XMFLOAT3{1.0f,1.0f,1.0f } };
         auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("MainPaintingActor", paintingMainRoomTr);
+        paintingActor->SetType(DarkStagePaintingActor::PaintType::MainRoom);
+
     }
 
     // ’Ê˜H‚ÌŠG‰æ
     {
         Transform paintingTr{ DirectX::XMFLOAT3{-28.f,4.262f,-2.796f},DirectX::XMFLOAT3{0.0f,0.0f,0.0f},DirectX::XMFLOAT3{0.69f,0.69f,0.69f } };
-        auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("HailPaintingActor", paintingTr);
+        auto paintingActor = GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("HallWayPaintingActor", paintingTr);
+        paintingActor->SetType(DarkStagePaintingActor::PaintType::Hallway);
     }
 
 
