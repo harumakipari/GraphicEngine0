@@ -234,10 +234,9 @@ void DarkStagePaintingActor::Initialize(const Transform& transform)
     meshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
 
     // ポイントライトコンポーネントを追加
-    auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
-    pointLightComponent->SetRelativeLocationDirect({ 0.0f, 0.0f, 0.0f });
+    pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
-    pointLightComponent->SetSharedLightName("PaintingLight");
+    pointLightComponent->SetSharedLightName("TopCandelabra");
 
     SetType(paintType);
 }
@@ -253,6 +252,7 @@ void DarkStagePaintingActor::SetType(PaintType paintType)
     case PaintType::MainRoom:
         break;
     case PaintType::JailRoom:
+        pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, -2.3f });
         break;
     case PaintType::Hallway:
         break;

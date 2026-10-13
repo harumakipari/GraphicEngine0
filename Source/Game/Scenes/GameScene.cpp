@@ -1183,6 +1183,12 @@ void GameScene::BeginGameBgmFadeOut()
     gameBgmFading = true;
 }
 
+void GameScene::PlayBossBattleBgm()
+{
+    if (bossBgmActor)
+        bossBgmActor->Play();
+}
+
 void GameScene::UpdateGameBgmFadeOut(const float deltaTime)
 {
     if (!gameBgmFading || !gameBgmActor) return;
@@ -2634,6 +2640,10 @@ void GameScene::StartBossBattle()
     ResetBossPhaseRuntime(BossPhase::Phase1);
     if (hadPhase2BgmRuntime)
         ResetBossBattleBgm(BossPhase::Phase1, true);
+    else
+        PlayBossBattleBgm();
+    if (!gameBgmFading && gameBgmActor)
+        gameBgmActor->Stop(false);
     ApplyBossPhaseHp(BossPhase::Phase1);
     CaptureContinueBossCheckpoint();
     player->EndEvent();

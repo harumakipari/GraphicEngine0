@@ -73,5 +73,7 @@ public:
 private:
     // モデル
     std::shared_ptr<SkeletalMeshComponent> meshComponent;
+    // ポイントライトコンポーネント
+    std::shared_ptr<PointLightComponent> pointLightComponent;
     PaintType paintType = PaintType::MainRoom;
 };

@@ -110,6 +110,8 @@ public:
     // ・ｽ{・ｽX・ｽﾌ目のゑｿｽBloom・ｽ・ｽﾂゑｿｽ・ｽ・ｽ
 
     void BeginGameBgmFadeOut();
+    // Safe to call from both the boss-introduction timing cue and battle handoff.
+    void PlayBossBattleBgm();
 
     // ・ｽJ・ｽ・ｽ・ｽ・ｽ・ｽﾌ・ｿｽ・ｽ[・ｽh・ｽ・ｽﾏ更・ｽ・ｽ・ｽ・ｽ
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);

@@ -487,14 +487,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
         if (movieCamera->IsMovieFinish())
         {
             // BGM繝ｻ・ｽ繝ｻ・ｽ・・腸・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
-            auto bgmActors = GetOwnerScene()->GetActorManager()->GetActorsOfType <BgmActor>();
-            for (auto bgmActor : bgmActors)
-            {
-                if (bgmActor->GetName() == "BossBgmActor")
-                {
-                    bgmActor->Play();
-                }
-            }
+            if (gameScene)
+                gameScene->PlayBossBattleBgm();
             PlayMovie(bossNameMovieFileName);
             if (gruxEnemy)
             {
