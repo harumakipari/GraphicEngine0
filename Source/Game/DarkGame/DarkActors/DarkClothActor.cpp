@@ -16,6 +16,9 @@ void DarkClothActor::Initialize(const Transform& transform)
     clothPoint = AddComponent<SceneComponent>("clothPoint", parentName);
     clothPoint->SetRelativeLocationDirect({ 0.0f,-1.8f,0.0f });
     clothPoint->SetRelativeEulerRotationDirect({ 90.0f,0.0f,0.0f });
+
+    //auto clothMeshComponent= AddComponent<SkeletalMeshComponent>(parentName);
+    //clothMeshComponent->SetModel("./Data/Models/Cloth/ClothModel.gltf", false, true);
 }
 
 void DarkClothActor::Update(float deltaTime)

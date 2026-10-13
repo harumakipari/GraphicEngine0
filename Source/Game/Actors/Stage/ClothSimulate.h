@@ -8,6 +8,8 @@
 #include <vector>
 #include <unordered_map>
 #include <optional>
+#include <string>
+#include <cstddef>
 
 //#define TINYGLTF_NO_EXTERNAL_IMAGE
 //#define TINYGLTF_NO_STB_IMAGE
@@ -34,6 +36,14 @@ class ClothSimulate
     static inline std::unordered_map<std::string, std::weak_ptr<tinygltf::Model>> cachedGltfModels;
     std::string filename;
 public:
+    enum class SimulationStage
+    {
+        InitialMesh = 0,
+        UpdateCSOnly,
+        UpdatePassThrough,
+        UpdateAndConstraint,
+    };
+
     //モデルの座標系
     enum class CoordinateSystem
     {
@@ -144,6 +154,10 @@ public:
     float windBase = 6.0f;
     DirectX::XMFLOAT3 windEmitPosition = {};
 
+    // Cloth-only render diagnostics. These never change physical parameters.
+    SimulationStage simulationStage = SimulationStage::UpdateAndConstraint;
+    bool disableCulling = false;
+
     void DrawImGui();
 
 private:
@@ -221,6 +235,9 @@ public:
                 );
             }
         };
+        static_assert(sizeof(Vertex) == 104, "Cloth Mesh::Vertex must match HLSL ClothVertex stride");
+        static_assert(offsetof(Vertex, position) == 0 && offsetof(Vertex, normal) == 12 && offsetof(Vertex, tangent) == 24 && offsetof(Vertex, texcoord) == 40, "ClothVertex prefix must match HLSL");
+        static_assert(offsetof(Vertex, velocity) == 48 && offsetof(Vertex, oldPosition) == 60 && offsetof(Vertex, oldVelocity) == 72 && offsetof(Vertex, rotation) == 84 && offsetof(Vertex, isPinned) == 100, "ClothVertex simulation fields must match HLSL");
 
         std::string name;
 
@@ -569,6 +586,34 @@ public:
     std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> textureResourceViews;
 
 private:
+    struct VertexDiagnostic
+    {
+        const char* label = "";
+        UINT index = 0;
+        DirectX::XMFLOAT3 position = {};
+        DirectX::XMFLOAT3 velocity = {};
+        float displacement = 0.0f;
+        bool finite = true;
+    };
+    void CaptureVertexDiagnostics(ID3D11DeviceContext* immediateContext);
+    void UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediateContext);
+    const char* GetSimulationStageName() const;
+    int lastUpdateInputBuffer = -1;
+    int lastUpdateOutputBuffer = -1;
+    int lastConstraintInputBuffer = -1;
+    int lastConstraintOutputBuffer = -1;
+    int lastCopySourceBuffer = -1;
+    UINT lastDispatchGroupCountX = 0;
+    UINT lastVertexCount = 0;
+    std::vector<VertexDiagnostic> lastVertexDiagnostics;
+    std::string lastVertexDiagnosticStatus = "Not captured";
+    Microsoft::WRL::ComPtr<ID3D11Buffer> pendingReadbackBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Query> pendingReadbackQuery;
+    const Mesh::Primitive* pendingReadbackPrimitive = nullptr;
+    UINT pendingReadbackSourceBuffer = 0;
+    UINT pendingReadbackPollCount = 0;
+    const Mesh::Primitive* lastSimulatedPrimitive = nullptr;
+
     void FetchNodes(const tinygltf::Model& gltf_model);
     void CumulateTransforms(std::vector<Node>& nodes);
     void FetchMeshes(ID3D11Device* device, const tinygltf::Model& gltf_model);
@@ -589,6 +634,7 @@ public:
     //Microsoft::WRL::ComPtr<ID3D11Buffer> clothIB;   // インデックスバッファ
     uint32_t clothVertexOffset;
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothUpdateCS;
+    Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothUpdatePassThroughCS;
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothConstraintCS;
 
     //Microsoft::WRL::ComPtr<ID3D11Buffer> clothEdgeBuffer;   // エッジ用のバッファ
@@ -608,16 +654,19 @@ public:
     struct PrimitiveConstants
     {
         DirectX::XMFLOAT4X4 world;
-        DirectX::XMFLOAT4X4 previousWorld;
-
         int material{ -1 };
         int hasTangent{ 0 };
         int skin{ -1 };
-        int pad;
-
-        //DirectX::XMFLOAT4X4 inverseTransposeWorld;  // 法線変換行列
+        int pad{ 0 };
         DirectX::XMFLOAT4X4 invWorld;
     };
+    static_assert(sizeof(PrimitiveConstants) == 144, "Cloth b0 must match PRIMITIVE_CONSTANT_BUFFER");
+    static_assert(offsetof(PrimitiveConstants, world) == 0, "Cloth b0 world offset mismatch");
+    static_assert(offsetof(PrimitiveConstants, material) == 64, "Cloth b0 material offset mismatch");
+    static_assert(offsetof(PrimitiveConstants, hasTangent) == 68, "Cloth b0 hasTangent offset mismatch");
+    static_assert(offsetof(PrimitiveConstants, skin) == 72, "Cloth b0 skin offset mismatch");
+    static_assert(offsetof(PrimitiveConstants, pad) == 76, "Cloth b0 padding offset mismatch");
+    static_assert(offsetof(PrimitiveConstants, invWorld) == 80, "Cloth b0 invWorld offset mismatch");
     Microsoft::WRL::ComPtr<ID3D11Buffer> primitiveCbuffer;
 
     void FetchMaterials(ID3D11Device* device, const tinygltf::Model& gltf_model);

@@ -701,7 +701,7 @@ private:
     bool movieSkipConfirmed = false;
     float movieSkipPromptTimer = 0.0f;
     float movieSkipPromptFade = 0.0f;
-    float movieSkipPromptTimeout = 3.0f;
+    float movieSkipPromptTimeout = 2.0f;
     float movieSkipPromptFadeDuration = 0.15f;
     DirectX::XMFLOAT2 movieSkipPromptRightBottomOffset{ 56.0f, 48.0f };
     float movieSkipPromptScale = 0.36f;

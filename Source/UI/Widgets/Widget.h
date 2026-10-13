@@ -67,17 +67,15 @@ public:
 
     XMFLOAT2 GetSize() const { return this->size; }
 
-    // �e�L�X�g�`��R���|�[�l���g�Ɏg�p���Ă���@�e�L�X�g���X�V���ꂽ���ɌĂ΂��
     bool IsDirty() const { return dirty; }
     void ClearDirty() { dirty = false; }
 
 public:
-    int zOrder = 0; // �l���傫���قǎ�O�ɕ`�悳���
+    int zOrder = 0; 
 
-    bool dirty = true;// �e�L�X�g�`��R���|�[�l���g�Ɏg�p���Ă���
+    bool dirty = true;
 
 protected:
-    // �X�N���[�����W
     SpriteUV uv{ 0,0,100,100 };
     XMFLOAT2 scale = { 1.0f,1.0f };
     XMFLOAT2 worldPosition = { 0.0f,0.0f };
@@ -87,7 +85,6 @@ protected:
     bool enabled = true;
     float worldAngle = 0.0f;
 
-    // ���[�J���i�e��j
     XMFLOAT2 localPosition = { 0.0f,0.0f };
     float localAngle = 0.0f;
 
@@ -97,7 +94,6 @@ protected:
     UICoreComponent* parent = nullptr;
     std::vector<UICoreComponent*> children;
 
-    // �A�N�^�[�̍폜�\��
     bool isPendingKill = false;
 
 };
@@ -115,7 +111,6 @@ public:
 
     UIImageComponent(const std::string& name) :UICoreComponent(name)
     {
-        // �_�~�[�e�N�X�`����ݒ�
         texture = std::make_shared<Sprite>(Graphics::GetDevice(), L"./Data/Textures/square.png");
         uv.w = texture->GetTextureSize().x;
         uv.h = texture->GetTextureSize().y;
@@ -157,7 +152,6 @@ public:
         );
     }
 
-    // UV�ݒ�
     void SetUV(const SpriteUV& inUV) { uv = inUV; }
 
 protected:
@@ -204,7 +198,7 @@ public:
         //endSize = { 300.0f, 300.0f };
 
         SetSize(startSize);
-        SetPivot({ 0.5f, 0.5f }); // ���S�
+        SetPivot({ 0.5f, 0.5f }); 
 
         this->endColor = endColor;
 
@@ -223,16 +217,11 @@ public:
             return;
         }
 
-        // �T�C�Y���
         XMFLOAT2 newSize;
         newSize.x = startSize.x + (endSize.x - startSize.x) * t;
         newSize.y = startSize.y + (endSize.y - startSize.y) * t;
         SetSize(newSize);
-
-        // �����x
-         // �F��ԁi�� �� ���F�j
         XMFLOAT4 startColor = { 1,1,1,1 };
-
 
         XMFLOAT4 color;
         color.x = startColor.x + (endColor.x - startColor.x) * t;
@@ -280,13 +269,11 @@ public:
             return;
         }
 
-        // �T�C�Y�g��
         XMFLOAT2 size;
         size.x = startSize.x + (endSize.x - startSize.x) * t;
         size.y = startSize.y + (endSize.y - startSize.y) * t;
         SetSize(size);
 
-        // ���邳 �� ������
         float alpha = 1.0f - t;
         SetColor(DirectX::XMFLOAT4{ 1.0f, 0.8f, 0.2f, alpha });
     }
@@ -311,22 +298,19 @@ public:
 
         pos = center;
 
-        // �����_������
         float angle = MathHelper::RandomRange(0.0f, 360.0f);
         angle = DirectX::XMConvertToRadians(angle);
 
         float speed = MathHelper::RandomRange(200.0f, 500.0f);
         velocity = { cosf(angle) * speed, sinf(angle) * speed };
 
-        // �����T�C�Y�����_��
         float s = MathHelper::RandomRange(30.0f, 80.0f);
         startSize = { s, s };
-        endSize = { s * 0.2f, s * 0.2f }; // �������Ȃ�
+        endSize = { s * 0.2f, s * 0.2f }; 
 
         SetSize(startSize);
         SetPivot({ 0.5f, 0.5f });
 
-        // �F�����_��
         baseColor = RandomStarColor();
         SetColor(baseColor);
     }
@@ -344,18 +328,15 @@ public:
 
 
         SetWorldAngleDegree(this->worldAngle + dt * 180.0f);
-        // �ړ�
         pos.x += velocity.x * dt;
         pos.y += velocity.y * dt;
         SetWorldPosition(pos);
 
-        //  �T�C�Y�k��
         XMFLOAT2 size;
         size.x = startSize.x + (endSize.x - startSize.x) * t;
         size.y = startSize.y + (endSize.y - startSize.y) * t;
         SetSize(size);
 
-        //  �t�F�[�h
         float alpha = 1.0f - t;
         SetColor(DirectX::XMFLOAT4{ baseColor.x, baseColor.y, baseColor.z, alpha });
     }

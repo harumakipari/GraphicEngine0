@@ -225,23 +225,10 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     // ここで布を描画する
     RegisterRenderHook(RenderPass::Mask, [&](ID3D11DeviceContext* immediateContext)
         {
-#if 0
-            for (int i = 0; i < 5; i++)
-            {
-                if (const auto cloth = GetActorManager()->GetActorByName("cloth"))
-                {
-                    if (clothSimulate)
-                    {
-                        clothSimulate->Render(immediateContext, cloth->GetWorldTransform());
-                    }
-                }
-            }
-#else
             if (darkClothActor)
             {
                 darkClothActor->RenderCloth(immediateContext);
             }
-#endif // 0
         });
 
     // ボスの部屋のラープのための初期化処理
@@ -5512,8 +5499,8 @@ void GameScene::SetUpActors()
     auto movieCameraManagerActor = GetActorManager()->CreateAndRegisterActorWithTransform<MovieCameraManagerActor>("movieCameraManager", movieCameraTr);
     movieCameraManagerActor->SetMovieCameraComponent(movieCameraActor->GetMovieCameraComponent());
 
-    //Transform clothTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    //darkClothActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
+    Transform clothTr(DirectX::XMFLOAT3{ 21.7f,6.8f,10.857f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    darkClothActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
 
     Transform iceTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto iceActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("IceFragmentEmitterActor", iceTr);
