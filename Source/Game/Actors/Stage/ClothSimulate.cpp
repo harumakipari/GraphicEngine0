@@ -6,6 +6,8 @@
 #include <fstream>
 #include <array>
 #include <cmath>
+#include <unordered_set>
+#include <algorithm>
 
 //#define TINYGLTF_IMPLEMENTATION
 #include "tiny_gltf.h"
@@ -128,6 +130,9 @@ ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) 
     }
     cbuffer = std::make_unique<ConstantBuffer<ClothSimulateCBuffer>>(device);
     planeCBuffer = std::make_unique<ConstantBuffer<ClothPlaneCBuffer>>(device);
+    clothTimeCBuffer = std::make_unique<ConstantBuffer<ClothTimeCBuffer>>(device);
+    clothDebugCBuffer = std::make_unique<ConstantBuffer<ClothDebugCBuffer>>(device);
+    clothAlphaTestCBuffer = std::make_unique<ConstantBuffer<ClothAlphaTestCBuffer>>(device);
 
     CreateAndUploadResources(device);
 }
@@ -489,10 +494,15 @@ void ClothSimulate::FetchTextures(ID3D11Device* device, const tinygltf::Model& g
 
 }
 
-void ClothSimulate::Update(float deltaTine)
+void ClothSimulate::Update(float deltaTime)
 {
+    lastExecutedSubsteps = 0;
+    if (!enableClothSimulation || simulationStage == SimulationStage::InitialMesh || !std::isfinite(deltaTime))
+        return;
 
-
+    const float maxAccumulatedTime = fixedDeltaTime * static_cast<float>(maxSubsteps);
+    const float clampedFrameTime = (std::clamp)(deltaTime, 0.0f, maxAccumulatedTime);
+    simulationAccumulator = (std::min)(simulationAccumulator + clampedFrameTime, maxAccumulatedTime);
 }
 
 void ClothSimulate::DrawImGui()
@@ -511,6 +521,25 @@ void ClothSimulate::DrawImGui()
         resetClothBuffers = true;
     }
     ImGui::Checkbox("Disable Culling", &disableCulling);
+    ImGui::Checkbox("Enable Cloth Rendering", &enableClothRendering);
+    ImGui::Checkbox("Enable Cloth Simulation", &enableClothSimulation);
+    int drawMode = static_cast<int>(debugDrawMode);
+    const char* drawModeNames[] = { "Default", "Unlit BaseColor", "World Normal", "No Normal Map", "No Shadow", "Diffuse Only", "Ambient Only", "Normal Dot Light", "Two-Sided Diffuse", "Abs Normal Dot Light", "Direct Diffuse Term", "Diffuse Ambient Term", "Point Light Diffuse Only", "Point Light Attenuation", "Point Light NoL", "Simulation Normal", "Geometric Normal", "Normal Difference" };
+    if (ImGui::Combo("Draw Mode", &drawMode, drawModeNames, _countof(drawModeNames)))
+        debugDrawMode = static_cast<ClothDebugDrawMode>(drawMode);
+    ImGui::Checkbox("Enable Alpha Test", &enableAlphaTest);
+    ImGui::SliderFloat("Alpha Threshold", &alphaThreshold, 0.0f, 1.0f, "%.2f");
+    if (!clothOpacityTextureLoaded)
+        ImGui::TextDisabled("Opacity texture unavailable: Alpha Test falls back to full cloth rendering.");
+    if (ImGui::DragFloat("Gravity Scale", &gravityScale, 0.01f, 0.0f, 2.0f, "%.2f"))
+        resetClothBuffers = true;
+    ImGui::SliderFloat("Bottom Wind Exponent", &bottomWindExponent, 1.0f, 8.0f, "%.2f");
+    if (ImGui::Checkbox("Enable Drive Force", &enableDriveForce))
+        resetClothBuffers = true;
+    if (ImGui::DragFloat("Fixed Delta Time", &fixedDeltaTime, 0.0001f, 1.0f / 1000.0f, 1.0f / 15.0f, "%.6f"))
+        fixedDeltaTime = (std::clamp)(fixedDeltaTime, 1.0f / 1000.0f, 1.0f / 15.0f);
+    ImGui::SliderInt("Max Substeps", &maxSubsteps, 1, 32);
+    ImGui::Text("Substeps=%u | Accumulator=%.6f | Simulated Time=%.3f", lastExecutedSubsteps, simulationAccumulator, simulationElapsedTime);
     if (resetClothBuffers)
     {
         RecreateClothBuffers(Graphics::GetDevice());
@@ -520,7 +549,7 @@ void ClothSimulate::DrawImGui()
     }
 
     ImGui::Separator();
-    ImGui::Text("CS: t0=vertices, t1=edges, u0=vertices, b0=primitive, b6=planes, b10=cloth");
+    ImGui::Text("CS: t0=vertices, t1=edges, u0=vertices, b0=primitive, b6=planes, b10=cloth, b11=cloth time");
     ImGui::Text("Thread group: 16 x 1 x 1 | vertices=%u | Dispatch=(%u, 1, 1)", lastVertexCount, lastDispatchGroupCountX);
     ImGui::Text("Update: input=%d output=%d | Constraint: input=%d output=%d", lastUpdateInputBuffer, lastUpdateOutputBuffer, lastConstraintInputBuffer, lastConstraintOutputBuffer);
     ImGui::Text("CopyResource: clothBuffer[%d] -> clothVB (latest draw source)", lastCopySourceBuffer);
@@ -533,7 +562,16 @@ void ClothSimulate::DrawImGui()
     {
         ImGui::Text("%s v%u  pos=(%.5f, %.5f, %.5f) vel=(%.5f, %.5f, %.5f) disp=%.5f %s", sample.label, sample.index, sample.position.x, sample.position.y, sample.position.z, sample.velocity.x, sample.velocity.y, sample.velocity.z, sample.displacement, sample.finite ? "finite" : "NaN/Inf");
     }
-
+    if (lastClothStretchDiagnostics.valid)
+    {
+        const ClothStretchDiagnostics& d = lastClothStretchDiagnostics;
+        ImGui::Separator();
+        ImGui::Text("Springs: directed=%u unique=%u | connections min/max/avg=%u/%u/%.2f", d.directedSpringCount, d.uniqueSpringCount, d.minConnections, d.maxConnections, d.averageConnections);
+        ImGui::Text("Rest length: min/max/avg=%.6f / %.6f / %.6f", d.restLengthMin, d.restLengthMax, d.restLengthAverage);
+        ImGui::Text("Cloth height: initial=%.6f current=%.6f", d.initialHeight, d.currentHeight);
+        ImGui::Text("Spring ratio: max=%.3f (%.1f%%) avg=%.3f (%.1f%%)", d.maxStretchRatio, (d.maxStretchRatio - 1.0f) * 100.0f, d.averageStretchRatio, (d.averageStretchRatio - 1.0f) * 100.0f);
+        ImGui::Text("Max vertex speed=%.6f | all vertices/edges %s", d.maxVertexSpeed, d.finite ? "finite" : "contain NaN/Inf");
+    }
     if (ImGui::Button("four fix"))
     {
         SetupPinVertices(0);
@@ -572,6 +610,10 @@ void ClothSimulate::RecreateClothBuffers(ID3D11Device* device)
     lastDispatchGroupCountX = 0;
     lastVertexCount = 0;
     lastVertexDiagnostics.clear();
+    lastClothStretchDiagnostics = {};
+    simulationAccumulator = 0.0f;
+    simulationElapsedTime = 0.0f;
+    lastExecutedSubsteps = 0;
     pendingReadbackBuffer.Reset();
     pendingReadbackQuery.Reset();
     pendingReadbackPrimitive = nullptr;
@@ -646,7 +688,7 @@ void ClothSimulate::SetupPinVertices(int curretPinMode)
                 //const float yThreshold = 0.1f;
                 for (auto& v : primitive.cachedVertices)
                 {
-                    if (fabs(v.position.y - min.y) < yThreshold)
+                    if (fabs(v.position.y - max.y) < yThreshold)
                     {
                         v.isPinned = 1;
                     }
@@ -781,6 +823,32 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
         }
     }
 
+    // This texture is deliberately outside the glTF material texture array.
+    // It is bound only while ClothSimulate draws, at PS t16.
+    const std::filesystem::path opacityTexturePath = "Data/Models/Cloth/M_Cloth_Opacity.png";
+    if (std::filesystem::exists(opacityTexturePath))
+    {
+        ID3D11ShaderResourceView* opacityTexture = nullptr;
+        hr = LoadTextureFromFile(device, opacityTexturePath.wstring().c_str(), &opacityTexture, nullptr);
+        if (SUCCEEDED(hr) && opacityTexture)
+        {
+            clothOpacityTextureSRV.Attach(opacityTexture);
+            clothOpacityTextureLoaded = true;
+            Logger::Log(Logger::LogCategory::System,
+                "[Cloth] Loaded opacity texture: Data/Models/Cloth/M_Cloth_Opacity.png");
+        }
+        else
+        {
+            Logger::Warning(Logger::LogCategory::System,
+                "[Cloth] Failed to load opacity texture; Alpha Test is disabled for Cloth.");
+        }
+    }
+    else
+    {
+        Logger::Warning(Logger::LogCategory::System,
+            "[Cloth] Opacity texture not found; Alpha Test is disabled for Cloth.");
+    }
+
     {
         D3D11_INPUT_ELEMENT_DESC inputElementDesc[] =
         {
@@ -810,15 +878,18 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
     hr = CreateCsFromCSO(device, "./Data/Shaders/ClothConstraintCS.cso", clothConstraintCS.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-    bufferDesc.ByteWidth = sizeof(PrimitiveConstants);
+    bufferDesc.ByteWidth = sizeof(ComputePrimitiveConstants);
     bufferDesc.Usage = D3D11_USAGE_DEFAULT;
     bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     bufferDesc.CPUAccessFlags = 0;
     bufferDesc.MiscFlags = 0;
     bufferDesc.StructureByteStride = 0;
-    hr = device->CreateBuffer(&bufferDesc, nullptr, primitiveCbuffer.ReleaseAndGetAddressOf());
+    hr = device->CreateBuffer(&bufferDesc, nullptr, computePrimitiveCbuffer.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
+    bufferDesc.ByteWidth = sizeof(GraphicsPrimitiveConstants);
+    hr = device->CreateBuffer(&bufferDesc, nullptr, graphicsPrimitiveCbuffer.ReleaseAndGetAddressOf());
+    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     bufferDesc.ByteWidth = sizeof(PrimitiveJointConstants);
     bufferDesc.Usage = D3D11_USAGE_DEFAULT;
     bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -1372,6 +1443,75 @@ void ClothSimulate::UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediat
                 std::isfinite(current.velocity.x) && std::isfinite(current.velocity.y) && std::isfinite(current.velocity.z);
             lastVertexDiagnostics.push_back({ sampleLabels[sample], index, current.position, current.velocity, std::sqrt(dx * dx + dy * dy + dz * dz), finite });
         }
+        ClothStretchDiagnostics diagnostics = {};
+        diagnostics.vertexCount = static_cast<UINT>(primitive.cachedVertices.size());
+        diagnostics.finite = true;
+        float initialMinY = FLT_MAX, initialMaxY = -FLT_MAX;
+        float currentMinY = FLT_MAX, currentMaxY = -FLT_MAX;
+        float maxSpeedSq = 0.0f;
+        for (UINT i = 0; i < diagnostics.vertexCount; ++i)
+        {
+            const Mesh::Vertex& initial = primitive.cachedVertices[i];
+            const Mesh::Vertex& current = vertices[i];
+            initialMinY = (std::min)(initialMinY, initial.position.y);
+            initialMaxY = (std::max)(initialMaxY, initial.position.y);
+            currentMinY = (std::min)(currentMinY, current.position.y);
+            currentMaxY = (std::max)(currentMaxY, current.position.y);
+            const float speedSq = current.velocity.x * current.velocity.x + current.velocity.y * current.velocity.y + current.velocity.z * current.velocity.z;
+            maxSpeedSq = (std::max)(maxSpeedSq, speedSq);
+            diagnostics.finite = diagnostics.finite && std::isfinite(current.position.x) && std::isfinite(current.position.y) && std::isfinite(current.position.z) &&
+                std::isfinite(current.velocity.x) && std::isfinite(current.velocity.y) && std::isfinite(current.velocity.z);
+        }
+        diagnostics.initialHeight = initialMaxY - initialMinY;
+        diagnostics.currentHeight = currentMaxY - currentMinY;
+        diagnostics.maxVertexSpeed = std::sqrt(maxSpeedSq);
+
+        std::vector<UINT> connectionCounts(diagnostics.vertexCount, 0);
+        std::unordered_set<uint64_t> uniqueSprings;
+        float restSum = 0.0f;
+        float stretchRatioSum = 0.0f;
+        diagnostics.restLengthMin = FLT_MAX;
+        for (UINT edgeIndex = 0; edgeIndex < primitive.finalEdges.size(); ++edgeIndex)
+        {
+            const ClothEdge& edge = primitive.finalEdges[edgeIndex];
+            const UINT vertexIndex = edgeIndex / 8;
+            if (vertexIndex >= diagnostics.vertexCount || edge.neighbor == UINT32_MAX || edge.neighbor >= diagnostics.vertexCount || edge.restLength <= 0.0f)
+                continue;
+
+            ++diagnostics.directedSpringCount;
+            ++connectionCounts[vertexIndex];
+            const UINT lower = (std::min)(vertexIndex, edge.neighbor);
+            const UINT upper = (std::max)(vertexIndex, edge.neighbor);
+            uniqueSprings.insert((static_cast<uint64_t>(lower) << 32) | upper);
+            const Mesh::Vertex& a = vertices[vertexIndex];
+            const Mesh::Vertex& b = vertices[edge.neighbor];
+            const float dx = b.position.x - a.position.x;
+            const float dy = b.position.y - a.position.y;
+            const float dz = b.position.z - a.position.z;
+            const float currentLength = std::sqrt(dx * dx + dy * dy + dz * dz);
+            const float stretchRatio = currentLength / edge.restLength;
+            diagnostics.restLengthMin = (std::min)(diagnostics.restLengthMin, edge.restLength);
+            diagnostics.restLengthMax = (std::max)(diagnostics.restLengthMax, edge.restLength);
+            diagnostics.maxStretchRatio = (std::max)(diagnostics.maxStretchRatio, stretchRatio);
+            restSum += edge.restLength;
+            stretchRatioSum += stretchRatio;
+            diagnostics.finite = diagnostics.finite && std::isfinite(edge.restLength) && std::isfinite(currentLength) && std::isfinite(stretchRatio);
+        }
+        diagnostics.uniqueSpringCount = static_cast<UINT>(uniqueSprings.size());
+        if (diagnostics.directedSpringCount > 0)
+        {
+            diagnostics.restLengthAverage = restSum / diagnostics.directedSpringCount;
+            diagnostics.averageStretchRatio = stretchRatioSum / diagnostics.directedSpringCount;
+            diagnostics.minConnections = *std::min_element(connectionCounts.begin(), connectionCounts.end());
+            diagnostics.maxConnections = *std::max_element(connectionCounts.begin(), connectionCounts.end());
+            diagnostics.averageConnections = static_cast<float>(diagnostics.directedSpringCount) / diagnostics.vertexCount;
+        }
+        else
+        {
+            diagnostics.restLengthMin = 0.0f;
+        }
+        diagnostics.valid = true;
+        lastClothStretchDiagnostics = diagnostics;
         immediateContext->Unmap(pendingReadbackBuffer.Get(), 0);
         lastVertexDiagnosticStatus = std::format("Captured draw-source clothBuffer[{}] after {}.", pendingReadbackSourceBuffer, GetSimulationStageName());
     }
@@ -1381,71 +1521,108 @@ void ClothSimulate::UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediat
 }
 void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
 {
-    if (simulationStage == SimulationStage::InitialMesh)
+    if (!enableClothSimulation || simulationStage == SimulationStage::InitialMesh)
+        return;
+
+    const UINT substepCount = (std::min)(static_cast<UINT>(simulationAccumulator / fixedDeltaTime), static_cast<UINT>(maxSubsteps));
+    lastExecutedSubsteps = substepCount;
+    if (substepCount == 0)
         return;
 
     ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
     ID3D11UnorderedAccessView* nullUAV = {};
-    cbuffer->Activate(immediateContext, 10);
+    ID3D11Buffer* nullBuffer = nullptr;
     ID3D11Buffer* planeBuffer = planeCBuffer->GetBuffer();
     immediateContext->UpdateSubresource(planeBuffer, 0, nullptr, &planeCBuffer->data, 0, 0);
+
+    for (UINT substep = 0; substep < substepCount; ++substep)
+    {
+        cbuffer->data.enableDriveForce = enableDriveForce ? 1u : 0u;
+        cbuffer->data.bottomWindExponent = bottomWindExponent;
+        ID3D11Buffer* simulationBuffer = cbuffer->GetBuffer();
+        immediateContext->UpdateSubresource(simulationBuffer, 0, nullptr, &cbuffer->data, 0, 0);
+        immediateContext->CSSetConstantBuffers(10, 1, &simulationBuffer);
+        clothTimeCBuffer->data.elapsedTime = simulationElapsedTime + fixedDeltaTime * static_cast<float>(substep);
+        clothTimeCBuffer->data.deltaTime = fixedDeltaTime;
+        clothTimeCBuffer->data.gravityScale = gravityScale;
+        ID3D11Buffer* timeBuffer = clothTimeCBuffer->GetBuffer();
+        immediateContext->UpdateSubresource(timeBuffer, 0, nullptr, &clothTimeCBuffer->data, 0, 0);
+        immediateContext->CSSetConstantBuffers(11, 1, &timeBuffer);
+
+        for (auto& mesh : meshes)
+        {
+            for (auto& primitive : mesh.primitives)
+            {
+                int& input = primitive.ping;
+                int& output = primitive.pong;
+                const UINT threadGroupCountX = Align(static_cast<UINT>(primitive.cachedVertices.size()), NUMTHREAD_X) / NUMTHREAD_X;
+                lastSimulatedPrimitive = &primitive;
+                lastVertexCount = static_cast<UINT>(primitive.cachedVertices.size());
+                lastDispatchGroupCountX = threadGroupCountX;
+                lastUpdateInputBuffer = input;
+                lastUpdateOutputBuffer = output;
+                lastConstraintInputBuffer = -1;
+                lastConstraintOutputBuffer = -1;
+                lastCopySourceBuffer = -1;
+
+immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].GetAddressOf(), nullptr);
+                immediateContext->CSSetShaderResources(0, 1, primitive.clothSRV[input].GetAddressOf());
+                immediateContext->CSSetShaderResources(1, 1, primitive.clothEdgeSRV.GetAddressOf());
+                immediateContext->CSSetShaderResources(2, 1, primitive.initialBottomWeightSRV.GetAddressOf());
+                immediateContext->CSSetShader(simulationStage == SimulationStage::UpdatePassThrough ? clothUpdatePassThroughCS.Get() : clothUpdateCS.Get(), nullptr, 0);
+                immediateContext->CSSetConstantBuffers(6, 1, &planeBuffer);
+                immediateContext->Dispatch(threadGroupCountX, 1, 1);
+                immediateContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+                immediateContext->CSSetShaderResources(0, 1, nullSRV);
+                immediateContext->CSSetShaderResources(1, 1, nullSRV);
+    immediateContext->CSSetShaderResources(2, 1, nullSRV);
+
+                std::swap(input, output);
+                if (simulationStage == SimulationStage::UpdateCSOnly || simulationStage == SimulationStage::UpdatePassThrough)
+                {
+                    lastCopySourceBuffer = input;
+                    continue;
+                }
+
+                lastConstraintInputBuffer = input;
+                lastConstraintOutputBuffer = output;
+                immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].GetAddressOf(), nullptr);
+                immediateContext->CSSetShaderResources(0, 1, primitive.clothSRV[input].GetAddressOf());
+                immediateContext->CSSetShaderResources(1, 1, primitive.clothEdgeSRV.GetAddressOf());
+                immediateContext->CSSetShader(clothConstraintCS.Get(), nullptr, 0);
+                immediateContext->Dispatch(threadGroupCountX, 1, 1);
+                immediateContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+                immediateContext->CSSetShaderResources(0, 1, nullSRV);
+                immediateContext->CSSetShaderResources(1, 1, nullSRV);
+
+                lastCopySourceBuffer = output;
+                std::swap(input, output);
+            }
+        }
+    }
+
+    // This simulation owns only these CS bindings. Do not leak them into later passes.
+    immediateContext->CSSetShaderResources(0, 1, nullSRV);
+    immediateContext->CSSetShaderResources(1, 1, nullSRV);
+    immediateContext->CSSetShaderResources(2, 1, nullSRV);
+    immediateContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
+    immediateContext->CSSetShader(nullptr, nullptr, 0);
+    immediateContext->CSSetConstantBuffers(0, 1, &nullBuffer);
+    immediateContext->CSSetConstantBuffers(6, 1, &nullBuffer);
+    immediateContext->CSSetConstantBuffers(10, 1, &nullBuffer);
+    immediateContext->CSSetConstantBuffers(11, 1, &nullBuffer);
 
     for (auto& mesh : meshes)
     {
         for (auto& primitive : mesh.primitives)
         {
-            int& input = primitive.ping;
-            int& output = primitive.pong;
-            const UINT threadGroupCountX = Align(static_cast<UINT>(primitive.cachedVertices.size()), NUMTHREAD_X) / NUMTHREAD_X;
-            lastSimulatedPrimitive = &primitive;
-            lastVertexCount = static_cast<UINT>(primitive.cachedVertices.size());
-            lastDispatchGroupCountX = threadGroupCountX;
-            lastUpdateInputBuffer = input;
-            lastUpdateOutputBuffer = output;
-            lastConstraintInputBuffer = -1;
-            lastConstraintOutputBuffer = -1;
-            lastCopySourceBuffer = -1;
-
-            immediateContext->VSSetShaderResources(0, 1, nullSRV);
-            immediateContext->PSSetShaderResources(0, 1, nullSRV);
-            immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].GetAddressOf(), nullptr);
-            immediateContext->CSSetShaderResources(0, 1, primitive.clothSRV[input].GetAddressOf());
-            immediateContext->CSSetShaderResources(1, 1, primitive.clothEdgeSRV.GetAddressOf());
-            immediateContext->CSSetShader(simulationStage == SimulationStage::UpdatePassThrough ? clothUpdatePassThroughCS.Get() : clothUpdateCS.Get(), nullptr, 0);
-            immediateContext->CSSetConstantBuffers(6, 1, &planeBuffer);
-            immediateContext->Dispatch(threadGroupCountX, 1, 1);
-            immediateContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
-            immediateContext->CSSetShaderResources(0, 1, nullSRV);
-            immediateContext->CSSetShaderResources(1, 1, nullSRV);
-
-            // Update's output is now the newest buffer. This is deliberately the
-            // draw source in Update CS Only mode.
-            std::swap(input, output);
-            if (simulationStage == SimulationStage::UpdateCSOnly || simulationStage == SimulationStage::UpdatePassThrough)
-            {
-                lastCopySourceBuffer = input;
-                immediateContext->CopyResource(primitive.clothVB.Get(), primitive.clothBuffer[input].Get());
-                continue;
-            }
-
-            lastConstraintInputBuffer = input;
-            lastConstraintOutputBuffer = output;
-            immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].GetAddressOf(), nullptr);
-            immediateContext->CSSetShaderResources(0, 1, primitive.clothSRV[input].GetAddressOf());
-            immediateContext->CSSetShaderResources(1, 1, primitive.clothEdgeSRV.GetAddressOf());
-            immediateContext->CSSetShader(clothConstraintCS.Get(), nullptr, 0);
-            immediateContext->Dispatch(threadGroupCountX, 1, 1);
-            immediateContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
-            immediateContext->CSSetShaderResources(0, 1, nullSRV);
-            immediateContext->CSSetShaderResources(1, 1, nullSRV);
-
-            lastCopySourceBuffer = output;
-            immediateContext->CopyResource(primitive.clothVB.Get(), primitive.clothBuffer[output].Get());
-            std::swap(input, output);
+            lastCopySourceBuffer = primitive.ping;
+            immediateContext->CopyResource(primitive.clothVB.Get(), primitive.clothBuffer[primitive.ping].Get());
         }
     }
-}
-void ClothSimulate::CreateClothPingPongBuffers(ID3D11Device* device, const std::vector<Mesh::Vertex>& vertices)
+    simulationAccumulator -= fixedDeltaTime * static_cast<float>(substepCount);
+    simulationElapsedTime += fixedDeltaTime * static_cast<float>(substepCount);
+}void ClothSimulate::CreateClothPingPongBuffers(ID3D11Device* device, const std::vector<Mesh::Vertex>& vertices)
 {
     HRESULT hr = S_OK; // バッファ記述 
     D3D11_BUFFER_DESC bufferDesc = {};
@@ -1542,6 +1719,8 @@ void ClothSimulate::CreateClothPingPongBuffers(ID3D11Device* device, const std::
 
 void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& world)
 {
+    if (!enableClothRendering)
+        return;
     //Simulate(immediateContext);
 
     //immediateContext->PSSetShaderResources(0, 1, materialResourceView.GetAddressOf());
@@ -1560,8 +1739,8 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
         const Node& node = nodes.at(nodeIndex);
         if (node.mesh > -1)
         {
-            const Mesh& mesh = meshes.at(node.mesh);
-            for (const Mesh::Primitive& primitive : mesh.primitives)
+            Mesh& mesh = meshes.at(node.mesh);
+            for (Mesh::Primitive& primitive : mesh.primitives)
             {
                 UINT stride = sizeof(Mesh::Vertex);
                 UINT offset = 0;
@@ -1571,10 +1750,10 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                 //immediateContext->IASetVertexBuffers(0, 1, clothVB.GetAddressOf(), &stride, &offset);
                 immediateContext->IASetVertexBuffers(0, 1, primitive.clothVB.GetAddressOf(), &stride, &offset);
 
-                PrimitiveConstants primitiveData = {};
-                primitiveData.material = primitive.material;
-                primitiveData.hasTangent = primitive.has("TANGENT");
-                primitiveData.skin = node.skin;
+                ComputePrimitiveConstants computePrimitiveData = {};
+                computePrimitiveData.material = primitive.material;
+                computePrimitiveData.hasTangent = primitive.has("TANGENT");
+                computePrimitiveData.skin = node.skin;
                 //座標系の変換を行う
                 const DirectX::XMFLOAT4X4 coordinateSystemTransforms[]
                 {
@@ -1616,16 +1795,39 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                 }
                 DirectX::XMMATRIX C{ DirectX::XMLoadFloat4x4(&coordinateSystemTransforms[static_cast<int>(modelCoordinateSystem)]) * DirectX::XMMatrixScaling(scaleFactor,scaleFactor,scaleFactor) };
 
-                DirectX::XMStoreFloat4x4(&primitiveData.world, DirectX::XMLoadFloat4x4(&node.globalTransform) * C * DirectX::XMLoadFloat4x4(&world));
-                DirectX::XMMATRIX WorldMatrix = DirectX::XMLoadFloat4x4(&primitiveData.world);
+                DirectX::XMStoreFloat4x4(&computePrimitiveData.world, DirectX::XMLoadFloat4x4(&node.globalTransform) * C * DirectX::XMLoadFloat4x4(&world));
+                DirectX::XMMATRIX WorldMatrix = DirectX::XMLoadFloat4x4(&computePrimitiveData.world);
                 DirectX::XMMATRIX InvWorldMatrix = DirectX::XMMatrixInverse(nullptr, WorldMatrix);
-                DirectX::XMStoreFloat4x4(&primitiveData.invWorld, InvWorldMatrix);
-                immediateContext->UpdateSubresource(primitiveCbuffer.Get(), 0, 0, &primitiveData, 0, 0);
-                immediateContext->CSSetConstantBuffers(0, 1, primitiveCbuffer.GetAddressOf());
+                DirectX::XMStoreFloat4x4(&computePrimitiveData.invWorld, InvWorldMatrix);
+                // Compute b0 is exclusively bound to CS and matches the 144-byte CS layout.
+                immediateContext->UpdateSubresource(computePrimitiveCbuffer.Get(), 0, 0, &computePrimitiveData, 0, 0);
+                immediateContext->CSSetConstantBuffers(0, 1, computePrimitiveCbuffer.GetAddressOf());
 
                 if (simulationStage != SimulationStage::InitialMesh)
                     Simulate(immediateContext);
 
+                // Graphics b0 is updated after compute and immediately before the cloth draw.
+                GraphicsPrimitiveConstants graphicsPrimitiveData = {};
+                graphicsPrimitiveData.world = computePrimitiveData.world;
+                graphicsPrimitiveData.previousWorld = primitive.hasPreviousGraphicsWorld ? primitive.previousGraphicsWorld : graphicsPrimitiveData.world;
+                graphicsPrimitiveData.material = primitive.material;
+                graphicsPrimitiveData.hasTangent = primitive.has("TANGENT");
+                graphicsPrimitiveData.skin = node.skin;
+                graphicsPrimitiveData.materialType = 99; // Reserved for Cloth-only diagnostics in GltfModelDeferredPS.
+                DirectX::XMStoreFloat4x4(&graphicsPrimitiveData.inverseTransposeWorld,
+                    DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, WorldMatrix)));
+                immediateContext->UpdateSubresource(graphicsPrimitiveCbuffer.Get(), 0, 0, &graphicsPrimitiveData, 0, 0);
+                clothDebugCBuffer->data.mode = static_cast<uint32_t>(debugDrawMode);
+                ID3D11Buffer* clothDebugBuffer = clothDebugCBuffer->GetBuffer();
+                immediateContext->UpdateSubresource(clothDebugBuffer, 0, nullptr, &clothDebugCBuffer->data, 0, 0);
+                immediateContext->PSSetConstantBuffers(12, 1, &clothDebugBuffer);
+                clothAlphaTestCBuffer->data.enableAlphaTest = (enableAlphaTest && clothOpacityTextureLoaded) ? 1u : 0u;
+                clothAlphaTestCBuffer->data.alphaThreshold = alphaThreshold;
+                ID3D11Buffer* clothAlphaTestBuffer = clothAlphaTestCBuffer->GetBuffer();
+                immediateContext->UpdateSubresource(clothAlphaTestBuffer, 0, nullptr, &clothAlphaTestCBuffer->data, 0, 0);
+                immediateContext->PSSetConstantBuffers(13, 1, &clothAlphaTestBuffer);
+                ID3D11ShaderResourceView* clothOpacitySRV = clothOpacityTextureLoaded ? clothOpacityTextureSRV.Get() : nullptr;
+                immediateContext->PSSetShaderResources(16, 1, &clothOpacitySRV);
                 immediateContext->PSSetShaderResources(0, 1, materialResourceView.GetAddressOf());
                 immediateContext->VSSetShader(vertexShader.Get(), nullptr, 0);
                 immediateContext->PSSetShader(pixelShader.Get(), nullptr, 0);
@@ -1633,8 +1835,8 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                 immediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 
-                immediateContext->VSSetConstantBuffers(0, 1, primitiveCbuffer.GetAddressOf());
-                immediateContext->PSSetConstantBuffers(0, 1, primitiveCbuffer.GetAddressOf());
+                immediateContext->VSSetConstantBuffers(0, 1, graphicsPrimitiveCbuffer.GetAddressOf());
+                immediateContext->PSSetConstantBuffers(0, 1, graphicsPrimitiveCbuffer.GetAddressOf());
                 //Simulate(immediateContext);
 
 
@@ -1649,10 +1851,10 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                         primitive.indexBufferView.format == DXGI_FORMAT_R16_UINT ? "R16_UINT" :
                         primitive.indexBufferView.format == DXGI_FORMAT_R32_UINT ? "R32_UINT" : "UNKNOWN",
                         stride, simulationStage != SimulationStage::InitialMesh, disableCulling,
-                        primitiveData.world._11, primitiveData.world._12, primitiveData.world._13, primitiveData.world._14,
-                        primitiveData.world._21, primitiveData.world._22, primitiveData.world._23, primitiveData.world._24,
-                        primitiveData.world._31, primitiveData.world._32, primitiveData.world._33, primitiveData.world._34,
-                        primitiveData.world._41, primitiveData.world._42, primitiveData.world._43, primitiveData.world._44));
+                        computePrimitiveData.world._11, computePrimitiveData.world._12, computePrimitiveData.world._13, computePrimitiveData.world._14,
+                        computePrimitiveData.world._21, computePrimitiveData.world._22, computePrimitiveData.world._23, computePrimitiveData.world._24,
+                        computePrimitiveData.world._31, computePrimitiveData.world._32, computePrimitiveData.world._33, computePrimitiveData.world._34,
+                        computePrimitiveData.world._41, computePrimitiveData.world._42, computePrimitiveData.world._43, computePrimitiveData.world._44));
                     loggedFirstDraw = true;
                 }
                 const int textureIndices[] =
@@ -1692,6 +1894,8 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                     immediateContext->Draw(primitive.vertexBufferView.sizeInBytes / primitive.vertexBufferView.strideInBytes, 0);
                 }
 
+                primitive.previousGraphicsWorld = graphicsPrimitiveData.world;
+                primitive.hasPreviousGraphicsWorld = true;
             }
         }
         for (std::vector<int>::value_type childIndex : node.children)
@@ -1704,6 +1908,12 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
         traverse(nodeIndex);
     }
 
+    ID3D11Buffer* nullClothDebugBuffer = nullptr;
+    immediateContext->PSSetConstantBuffers(12, 1, &nullClothDebugBuffer);
+    ID3D11Buffer* nullClothAlphaTestBuffer = nullptr;
+    immediateContext->PSSetConstantBuffers(13, 1, &nullClothAlphaTestBuffer);
+    ID3D11ShaderResourceView* nullClothOpacitySRV = nullptr;
+    immediateContext->PSSetShaderResources(16, 1, &nullClothOpacitySRV);
     if (disableCulling)
         immediateContext->RSSetState(previousRasterizerState.Get());
 }

@@ -11,6 +11,34 @@
 Texture2D<float4> materialTextures[5] : register(t1);
 
 Texture2D shadowMap : register(t15);
+Texture2D clothOpacityTexture : register(t16);
+
+cbuffer CLOTH_DEBUG_CONSTANT_BUFFER : register(b12)
+{
+    uint clothDebugMode;
+    float3 clothDebugPadding;
+}
+static const int MATERIAL_CLOTH_DEBUG = 99;
+
+cbuffer CLOTH_ALPHA_TEST_CONSTANT_BUFFER : register(b13)
+{
+    uint clothAlphaTestEnabled;
+    float clothAlphaThreshold;
+    float2 clothAlphaTestPadding;
+}
+// Cloth-only GBuffer material IDs. They preserve the selected mode through
+// full-screen passes, after the cloth-local b12 constant buffer is unbound.
+static const int MATERIAL_CLOTH_NO_SHADOW = MATERIAL_CLOTH_DEBUG + 4;
+static const int MATERIAL_CLOTH_DIFFUSE_ONLY = MATERIAL_CLOTH_DEBUG + 5;
+static const int MATERIAL_CLOTH_AMBIENT_ONLY = MATERIAL_CLOTH_DEBUG + 6;
+static const int MATERIAL_CLOTH_NORMAL_DOT_LIGHT = MATERIAL_CLOTH_DEBUG + 7;
+static const int MATERIAL_CLOTH_TWO_SIDED_DIFFUSE = MATERIAL_CLOTH_DEBUG + 8;
+static const int MATERIAL_CLOTH_ABS_NORMAL_DOT_LIGHT = MATERIAL_CLOTH_DEBUG + 9;
+static const int MATERIAL_CLOTH_DIRECT_DIFFUSE_TERM = MATERIAL_CLOTH_DEBUG + 10;
+static const int MATERIAL_CLOTH_DIFFUSE_AMBIENT_TERM = MATERIAL_CLOTH_DEBUG + 11;
+static const int MATERIAL_CLOTH_SIMULATION_NORMAL = MATERIAL_CLOTH_DEBUG + 15;
+static const int MATERIAL_CLOTH_GEOMETRIC_NORMAL = MATERIAL_CLOTH_DEBUG + 16;
+static const int MATERIAL_CLOTH_NORMAL_DIFFERENCE = MATERIAL_CLOTH_DEBUG + 17;
 
 GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 {
@@ -28,6 +56,14 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         sampled.rgb = pow(sampled.rgb, GAMMA);
         baseColorFactor *= sampled;
     }
+    // The opacity mask is bound only by ClothSimulate at t16.  Keep this
+    // branch material-type guarded so ordinary glTF draws never read t16.
+    if (materialType == MATERIAL_CLOTH_DEBUG && clothAlphaTestEnabled != 0u)
+    {
+        const float clothOpacity = clothOpacityTexture.Sample(samplerStates[LINEAR], pin.texcoord).r;
+        clip(clothOpacity - clothAlphaThreshold);
+    }
+
     if (m.alphaMode == 0 /*OPAQUE*/)
     {
         baseColorFactor.a = 1.0;
@@ -80,7 +116,18 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     }
     const float occlusionStrength = m.occlusionTexture.strength;
 
-    float3 N = normalize(pin.wNormal.xyz);
+    // This is the normal produced by ClothSimulateVS: source glTF normal,
+    // per-vertex constraint quaternion, then the cloth world matrix.
+    const float3 simulationFrameNormal = normalize(pin.wNormal.xyz);
+
+    // Position derivatives are constant within each rasterized triangle.  The
+    // SV_IsFrontFace correction retains the triangle winding sign so that a
+    // reversed winding can be distinguished from a merely tilted normal.
+    const float3 positionDx = ddx(pin.wPosition.xyz);
+    const float3 positionDy = ddy(pin.wPosition.xyz);
+    const float3 geometricNormal = normalize(cross(positionDy, positionDx)) * (isFrontFace ? 1.0f : -1.0f);
+
+    float3 N = simulationFrameNormal;
     float3 T = hasTangent ? normalize(pin.wTangent.xyz) : float3(1, 0, 0.0001);
     float sigma = hasTangent ? pin.wTangent.w : 1.0;
     T = normalize(T - N * dot(N, T));
@@ -99,7 +146,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     }
     
     const int normalTexture = m.normalTexture.index;
-    if (normalTexture > -1)
+    if (normalTexture > -1 && !(materialType == MATERIAL_CLOTH_DEBUG && clothDebugMode == 3u))
     {
         float4 sampled = materialTextures[NORMAL_TEXTURE].Sample(samplerStates[LINEAR], pin.texcoord);
         float3 normalFactor = sampled.xyz;
@@ -108,13 +155,49 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         N = normalize((normalFactor.x * T) + (normalFactor.y * B) + (normalFactor.z * N));
     }
 
+    // Cloth-only diagnostic pixels use the existing OBJECT_NO_LIGHTING path.
+    // This bypasses Deferred Lighting and FinalPS emissive addition without
+    // changing the render treatment of any other model.
+    if (materialType == MATERIAL_CLOTH_DEBUG && (clothDebugMode == 1u || clothDebugMode == 2u || clothDebugMode == 15u || clothDebugMode == 16u || clothDebugMode == 17u))
+    {
+        float3 debugColor = clothDebugMode == 1u ? baseColorFactor.rgb : (N * 0.5f + 0.5f);
+        if (clothDebugMode == 16u)
+        {
+            // Signed geometric normal from the simulated triangle positions.
+            debugColor = geometricNormal * 0.5f + 0.5f;
+        }
+        else if (clothDebugMode == 17u)
+        {
+            // Neutral gray is the unsigned angular error: 0 = parallel or
+            // anti-parallel, 1 = perpendicular.  Red means the two normals
+            // are anti-parallel, exposing a winding/sign mismatch separately.
+            const float normalDot = dot(simulationFrameNormal, geometricNormal);
+            const float unsignedAngle = acos(saturate(abs(normalDot))) * (2.0f / 3.14159265f);
+            debugColor = normalDot < 0.0f
+                ? float3(1.0f, unsignedAngle * 0.25f, unsignedAngle * 0.25f)
+                : float3(unsignedAngle, unsignedAngle, unsignedAngle);
+        }
+        pout.gBuffer3Normal = float4(N.xyz, OBJECT_NO_LIGHTING);
+        pout.velocity = float4(CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition), 0, 1);
+        pout.albedo = float4(debugColor, baseColorFactor.a);
+        pout.position = pin.wPosition;
+        pout.emissive = float4(0, 0, 0, GBUFFER_FLAG_NORMAL);
+        pout.material = float4(metallicFactor, roughnessFactor, occlusionFactor, materialType + clothDebugMode);
+        return pout;
+    }
     // Per-material rim values use the component-owned runtime material override.
     // Materials without an override keep their default zero power and are unchanged.
     const float3 viewDirection = normalize(cameraPosition.xyz - pin.wPosition.xyz);
     const float rimFactor = pow(saturate(1.0f - dot(N, viewDirection)), 3.0f);
     emissiveFactor += m.rimColor * (m.rimPower * rimFactor);
 
-    pout.gBuffer3Normal = float4(N.xyz, objectType); // world space
+    // Cloth uses its dedicated material type and does not bind the generic
+    // object-type constant buffer. Preserve materialType for Cloth diagnostics,
+    // while carrying the existing Furniture classification through the GBuffer.
+    const int gBufferObjectType = materialType == MATERIAL_CLOTH_DEBUG
+        ? OBJECT_FURNITURE
+        : objectType;
+    pout.gBuffer3Normal = float4(N.xyz, gBufferObjectType); // world space
 
     float2 velocity = CalculateUvSpaceVelocity(pin.currentClipPosition, pin.previousClipPosition);
     pout.velocity = float4(velocity, 0, 1);
@@ -155,7 +238,12 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // wの値 : スカイマップ１それ以外０    2: emissiveFlagとして使用
     }
 
-    pout.material = float4(metallicFactor, roughnessFactor, occlusionFactor, materialType /*マテリアルタイプ*/);
+    // Deferred Lighting and PostEffectPS are full-screen passes and cannot
+    // read b12, so retain the Cloth mode in the GBuffer material type.
+    const int gBufferMaterialType = materialType == MATERIAL_CLOTH_DEBUG
+        ? materialType + clothDebugMode
+        : materialType;
+    pout.material = float4(metallicFactor, roughnessFactor, occlusionFactor, gBufferMaterialType /*マテリアルタイプ*/);
     
     return pout;
 }

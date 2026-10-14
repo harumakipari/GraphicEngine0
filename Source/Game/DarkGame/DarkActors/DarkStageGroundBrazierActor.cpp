@@ -29,6 +29,17 @@ void DarkStageGroundBrazierActor::SetModel(const std::shared_ptr<StageAsset>& st
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     brazierMeshComponent->SetPipeLineState(pipeLineState);
 
+    // 当たり判定を追加
+    std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<BoxComponent>("BoxComponent", parentName);
+    DirectX::XMFLOAT3 size = brazierMeshComponent->GetModelSize();
+    boxComponent->SetBoxExtent(size);
+    boxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
+    boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
+    boxComponent->SetCollisionOffsetY(size.y * 0.5f);
+    boxComponent->SetIsVisibleDebugBox(false);
+    boxComponent->Initialize();
+
+
     // 炎のエフェクト
     auto frameEffect = this->AddComponent<ParticleComponent>("FireFrameEffect", parentName);
     frameEffect->Load("./Data/Effect/Files/DarkStageFrameEffect.json");

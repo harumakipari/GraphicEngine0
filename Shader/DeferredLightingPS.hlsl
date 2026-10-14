@@ -13,6 +13,17 @@ Texture2D colorMap : register(t2);
 Texture2D positionMap : register(t3);
 Texture2D emissiveMap : register(t4);
 
+static const int MATERIAL_CLOTH_DIFFUSE_ONLY = 104;
+static const int MATERIAL_CLOTH_AMBIENT_ONLY = 105;
+static const int MATERIAL_CLOTH_NORMAL_DOT_LIGHT = 106;
+static const int MATERIAL_CLOTH_TWO_SIDED_DIFFUSE = 107;
+static const int MATERIAL_CLOTH_ABS_NORMAL_DOT_LIGHT = 108;
+static const int MATERIAL_CLOTH_DIRECT_DIFFUSE_TERM = 109;
+static const int MATERIAL_CLOTH_DIFFUSE_AMBIENT_TERM = 110;
+static const int MATERIAL_CLOTH_POINT_LIGHT_DIFFUSE_ONLY = 111;
+static const int MATERIAL_CLOTH_POINT_LIGHT_ATTENUATION = 112;
+static const int MATERIAL_CLOTH_POINT_LIGHT_NOL = 113;
+
 float4 main(VS_OUT pin) : SV_TARGET
 {
     float4 sampled = normalMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
@@ -65,12 +76,117 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     const float3 N = normalize(normal);
     const float3 V = normalize(cameraPosition.xyz - position.xyz);
+
+    // Cloth-only lighting diagnostics. All modes below bypass the normal PBR
+    // BRDF (metallic, roughness, specular IBL and material AO).
+    const float3 diagnosticLightDirection = normalize(-lightDirection.xyz); // Same direction as the normal PBR path.
+    const float diagnosticNoL = saturate(dot(N, diagnosticLightDirection));
+    const float3 diagnosticDirectionalDiffuse = directionalLightEnable != 0
+        ? baseColor.rgb * diagnosticNoL * (colorLight.rgb * colorLight.w) * diffuseIntensity
+        : 0.0f;
+    const float3 diagnosticDiffuseAmbient = baseColor.rgb * (0.15f * iblIntensity);
+    const float3 fixedAmbient = baseColor.rgb * 0.5f;
+
+    // These two modes expose the exact addends used by Diffuse Only.
+    if (materialType == MATERIAL_CLOTH_DIRECT_DIFFUSE_TERM)
+        return float4(diagnosticDirectionalDiffuse, 1.0f);
+
+    if (materialType == MATERIAL_CLOTH_DIFFUSE_AMBIENT_TERM)
+        return float4(diagnosticDiffuseAmbient, 1.0f);
+
+    if (materialType == MATERIAL_CLOTH_AMBIENT_ONLY)
+        return float4(fixedAmbient, 1.0f);
+
+    if (materialType == MATERIAL_CLOTH_NORMAL_DOT_LIGHT)
+        return float4(diagnosticNoL.xxx, 1.0f);
+
+    // No BaseColor, ambient or light intensity: this isolates only whether
+    // the same normal/light pair faces either side of the thin cloth.
+    if (materialType == MATERIAL_CLOTH_ABS_NORMAL_DOT_LIGHT)
+        return float4(abs(dot(N, diagnosticLightDirection)).xxx, 1.0f);
+
+    if (materialType == MATERIAL_CLOTH_TWO_SIDED_DIFFUSE)
+    {
+        const float twoSidedNoL = abs(dot(N, diagnosticLightDirection));
+        const float3 twoSidedDirectional = directionalLightEnable != 0
+            ? baseColor.rgb * twoSidedNoL * (colorLight.rgb * colorLight.w) * diffuseIntensity
+            : 0.0f;
+        return float4(twoSidedDirectional + fixedAmbient, 1.0f);
+    }
+
+    // Cloth "Diffuse Only": retain the original one-sided Lambert test and
+    // use the scene IBL scalar as its environment term.
+    if (materialType == MATERIAL_CLOTH_DIFFUSE_ONLY)
+        return float4(diagnosticDirectionalDiffuse + diagnosticDiffuseAmbient, 1.0f);
     
     // 光源の数をカウント
     int lightCount = 0;
 
 
     // 点光源の処理
+    // Cloth-only point-light diagnostics. These retain the production loop's
+    // enable check, light count, attenuation preset, color/intensity, and cull.
+    // BaseColor, BRDF, AO, shadow and specular are intentionally excluded.
+    // Diffuse Only: unnormalised RGB direct irradiance with global diffuse scales.
+    // Attenuation: max-intensity-weighted mean in [0,1], so lights do not saturate.
+    // NoL: max-intensity-weighted mean max(dot(N,L),0); attenuation is used only
+    // for the same relevance cull and is not used in its display or weighting.
+    if (materialType >= MATERIAL_CLOTH_POINT_LIGHT_DIFFUSE_ONLY && materialType <= MATERIAL_CLOTH_POINT_LIGHT_NOL)
+    {
+    float3 diagnosticPointLightIrradiance = 0.0f;
+    float diagnosticAttenuationWeightedSum = 0.0f;
+    float diagnosticAttenuationWeight = 0.0f;
+    float diagnosticNoLWeightedSum = 0.0f;
+    float diagnosticNoLWeight = 0.0f;
+    if (pointLightEnable != 0)
+    {
+        for (int i = 0; i < pointLightCount; i++)
+        {
+            float3 diagnosticLP = pointLights[i].position.xyz - position.xyz;
+            float diagnosticLen = length(diagnosticLP);
+
+            float diagnosticKc = attenuationPresets[pointLights[i].attenuationType].kc;
+            float diagnosticKl = attenuationPresets[pointLights[i].attenuationType].kl;
+            float diagnosticKq = attenuationPresets[pointLights[i].attenuationType].kq;
+            float diagnosticAttenuation = saturate(1.0 / (diagnosticKc + diagnosticKl * diagnosticLen + diagnosticKq * (diagnosticLen * diagnosticLen)));
+
+            float3 diagnosticLi = pointLights[i].color.xyz * pointLights[i].color.w;
+            float diagnosticMaxIntensity = max(diagnosticLi.r, max(diagnosticLi.g, diagnosticLi.b));
+            float diagnosticContribution = diagnosticMaxIntensity * diagnosticAttenuation;
+            if (diagnosticContribution < 0.001f || diagnosticLen <= 0.0f)
+                continue;
+
+            float3 diagnosticL = diagnosticLP / diagnosticLen;
+            float diagnosticPointNoL = max(0.0f, dot(N, diagnosticL));
+
+            diagnosticPointLightIrradiance += diagnosticLi * diagnosticPointNoL * diagnosticAttenuation;
+            diagnosticAttenuationWeightedSum += diagnosticMaxIntensity * diagnosticAttenuation;
+            diagnosticAttenuationWeight += diagnosticMaxIntensity;
+            diagnosticNoLWeightedSum += diagnosticMaxIntensity * diagnosticPointNoL;
+            diagnosticNoLWeight += diagnosticMaxIntensity;
+        }
+    }
+
+    if (materialType == MATERIAL_CLOTH_POINT_LIGHT_DIFFUSE_ONLY)
+        return float4(diagnosticPointLightIrradiance * pointLightDiffuseIntensity * diffuseIntensity, 1.0f);
+
+    if (materialType == MATERIAL_CLOTH_POINT_LIGHT_ATTENUATION)
+    {
+        const float attenuationMean = diagnosticAttenuationWeight > 0.0f
+            ? diagnosticAttenuationWeightedSum / diagnosticAttenuationWeight
+            : 0.0f;
+        return float4(float3(attenuationMean, attenuationMean, attenuationMean), 1.0f);
+    }
+
+    if (materialType == MATERIAL_CLOTH_POINT_LIGHT_NOL)
+    {
+        const float pointNoLMean = diagnosticNoLWeight > 0.0f
+            ? diagnosticNoLWeightedSum / diagnosticNoLWeight
+            : 0.0f;
+        return float4(float3(pointNoLMean, pointNoLMean, pointNoLMean), 1.0f);
+    }
+    }
+
     float3 pointDiffuse = 0;
     float3 pointSpecular = 0;
     if (pointLightEnable != 0)
@@ -225,8 +341,6 @@ float4 main(VS_OUT pin) : SV_TARGET
 
 
 #endif
-    float3 ambient = baseColor.rgb * 0.05;
-
     const float3 directLight = directionalDiffuse + directionalSpecular;
     const float3 pointLight = pointLightDiffuse + pointLightSpecular;
     const float3 fullDeferredLighting = totalDiffuse + totalSpecular + emissive + rim /*+ ambient*/;

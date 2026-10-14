@@ -132,9 +132,37 @@ public:
         float windBase = 5.0f;
 
         DirectX::XMFLOAT3 windEmitPosition={0.0f,0.0f,0.0f};    // 風が発生している場所
+        uint32_t enableDriveForce = 1;
+        float bottomWindExponent = 3.0f;
+        float bottomWindPadding[3] = {};
     };
+    static_assert(sizeof(ClothSimulateCBuffer) == 48, "Cloth b10 layout must match HLSL");
+    static_assert(offsetof(ClothSimulateCBuffer, bottomWindExponent) == 32, "Cloth b10 bottom wind exponent offset must match HLSL");
     std::unique_ptr<ConstantBuffer<ClothSimulateCBuffer>> cbuffer;
 
+    // b11 is intentionally cloth-local: substeps must not overwrite SceneBase b1.
+    struct ClothTimeCBuffer
+    {
+        float elapsedTime = 0.0f;
+        float deltaTime = 1.0f / 120.0f;
+        float gravityScale = 0.25f;
+        float clothTimePadding = 0.0f;
+    };
+    static_assert(sizeof(ClothTimeCBuffer) == 16, "Cloth b11 layout must match HLSL");
+    static_assert(offsetof(ClothTimeCBuffer, gravityScale) == 8, "Cloth b11 gravity scale offset must match HLSL");
+    std::unique_ptr<ConstantBuffer<ClothTimeCBuffer>> clothTimeCBuffer;
+
+    enum class ClothDebugDrawMode : uint32_t { Default, UnlitBaseColor, WorldNormal, NoNormalMap, NoShadow, DiffuseOnly, AmbientOnly, NormalDotLight, TwoSidedDiffuse, AbsNormalDotLight, DirectDiffuseTerm, DiffuseAmbientTerm, PointLightDiffuseOnly, PointLightAttenuation, PointLightNoL, SimulationNormal, GeometricNormal, NormalDifference };
+    struct ClothDebugCBuffer { uint32_t mode = 0; float padding[3] = {}; };
+    struct ClothAlphaTestCBuffer { uint32_t enableAlphaTest = 1; float alphaThreshold = 0.5f; float padding[2] = {}; };
+    static_assert(sizeof(ClothDebugCBuffer) == 16, "Cloth debug b12 layout must be 16 bytes");
+    std::unique_ptr<ConstantBuffer<ClothDebugCBuffer>> clothDebugCBuffer;
+    static_assert(sizeof(ClothAlphaTestCBuffer) == 16, "Cloth alpha-test b13 layout must be 16 bytes");
+    std::unique_ptr<ConstantBuffer<ClothAlphaTestCBuffer>> clothAlphaTestCBuffer;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> clothOpacityTextureSRV;
+    bool clothOpacityTextureLoaded = false;
+    bool enableAlphaTest = true;
+    float alphaThreshold = 0.5f;
     // ClothUpdateCS uses b6 for collision planes. Keep this buffer owned by
     // the cloth simulation so it is independent of other slot-6 users.
     struct ClothPlane
@@ -150,10 +178,26 @@ public:
     static_assert(sizeof(ClothPlaneCBuffer) == 64, "ClothPlaneCBuffer must contain four 16-byte planes");
     std::unique_ptr<ConstantBuffer<ClothPlaneCBuffer>> planeCBuffer;
 
-    float windPhaseOffset = 5.0f;
-    float windBase = 6.0f;
+    float windPhaseOffset = 0.0f;
+    float windBase = 0.0f;
     DirectX::XMFLOAT3 windEmitPosition = {};
+    bool enableDriveForce = true;
+    // 1.0 preserves the prior ClothUpdateCS gravity; 0.0 disables it.
+    float gravityScale = 0.0f;
+    float bottomWindExponent = 3.0f;
+    ClothDebugDrawMode debugDrawMode = ClothDebugDrawMode::Default;
 
+    // Diagnostic gates. They do not alter cloth parameters.
+    bool enableClothRendering = true;
+    bool enableClothSimulation = true;
+
+    bool IsClothRenderingEnabled() const { return enableClothRendering; }
+
+    float fixedDeltaTime = 1.0f / 120.0f;
+    int maxSubsteps = 8;
+    float simulationAccumulator = 0.0f;
+    float simulationElapsedTime = 0.0f;
+    UINT lastExecutedSubsteps = 0;
     // Cloth-only render diagnostics. These never change physical parameters.
     SimulationStage simulationStage = SimulationStage::UpdateAndConstraint;
     bool disableCulling = false;
@@ -260,8 +304,11 @@ public:
             UINT startIndexLocation = 0;
             UINT indexCount = 0;
             std::vector<ClothEdge> finalEdges;
+            std::vector<float> initialBottomWeights;
             int ping = 0;
             int pong = 1;
+            DirectX::XMFLOAT4X4 previousGraphicsWorld{ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
+            bool hasPreviousGraphicsWorld = false;
 
 
             void CreateClothPingPongBuffers(ID3D11Device* device)
@@ -328,6 +375,43 @@ public:
                     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
                 }
 
+                // Initial local-Y bottom weight is immutable simulation input:
+                // top = 0, bottom = 1.  It is intentionally separate from ClothVertex.
+                initialBottomWeights.resize(cachedVertices.size());
+                if (!cachedVertices.empty())
+                {
+                    float minInitialY = cachedVertices.front().position.y;
+                    float maxInitialY = minInitialY;
+                    for (const Vertex& vertex : cachedVertices)
+                    {
+                        minInitialY = (std::min)(minInitialY, vertex.position.y);
+                        maxInitialY = (std::max)(maxInitialY, vertex.position.y);
+                    }
+                    const float inverseInitialHeight = 1.0f / (std::max)(maxInitialY - minInitialY, 1.0e-6f);
+                    for (size_t vertexIndex = 0; vertexIndex < cachedVertices.size(); ++vertexIndex)
+                    {
+                        initialBottomWeights[vertexIndex] = (std::clamp)((maxInitialY - cachedVertices[vertexIndex].position.y) * inverseInitialHeight, 0.0f, 1.0f);
+                    }
+
+                    bufferDesc.ByteWidth = static_cast<UINT>(sizeof(float) * initialBottomWeights.size());
+                    bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+                    bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+                    bufferDesc.CPUAccessFlags = 0;
+                    bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+                    bufferDesc.StructureByteStride = sizeof(float);
+                    subresourceData = {};
+                    subresourceData.pSysMem = initialBottomWeights.data();
+                    hr = device->CreateBuffer(&bufferDesc, &subresourceData, initialBottomWeightBuffer.GetAddressOf());
+                    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+
+                    D3D11_SHADER_RESOURCE_VIEW_DESC bottomWeightSrvDesc = {};
+                    bottomWeightSrvDesc.Format = DXGI_FORMAT_UNKNOWN;
+                    bottomWeightSrvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+                    bottomWeightSrvDesc.Buffer.FirstElement = 0;
+                    bottomWeightSrvDesc.Buffer.NumElements = static_cast<UINT>(initialBottomWeights.size());
+                    hr = device->CreateShaderResourceView(initialBottomWeightBuffer.Get(), &bottomWeightSrvDesc, initialBottomWeightSRV.GetAddressOf());
+                    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
+                }
                 // 描画用のIAVertexBufferを作成
                 bufferDesc.ByteWidth = static_cast<UINT>(sizeof(Mesh::Vertex) * cachedVertices.size());
                 bufferDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -357,6 +441,8 @@ public:
             Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> clothSRV[2];
             Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> clothUAV[2];
             Microsoft::WRL::ComPtr<ID3D11Buffer> clothBuffer[2];
+            Microsoft::WRL::ComPtr<ID3D11Buffer> initialBottomWeightBuffer;
+            Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> initialBottomWeightSRV;
             // 描画時に使用する
             Microsoft::WRL::ComPtr<ID3D11Buffer> clothVB;   // 頂点バッファ
             Microsoft::WRL::ComPtr<ID3D11Buffer> clothIB;   // インデックスバッファ
@@ -595,6 +681,27 @@ private:
         float displacement = 0.0f;
         bool finite = true;
     };
+
+    // Calculated only from the explicit GPU readback requested by the debug button.
+    struct ClothStretchDiagnostics
+    {
+        UINT vertexCount = 0;
+        UINT directedSpringCount = 0;
+        UINT uniqueSpringCount = 0;
+        UINT minConnections = 0;
+        UINT maxConnections = 0;
+        float averageConnections = 0.0f;
+        float restLengthMin = 0.0f;
+        float restLengthMax = 0.0f;
+        float restLengthAverage = 0.0f;
+        float initialHeight = 0.0f;
+        float currentHeight = 0.0f;
+        float maxStretchRatio = 0.0f;
+        float averageStretchRatio = 0.0f;
+        float maxVertexSpeed = 0.0f;
+        bool finite = true;
+        bool valid = false;
+    };
     void CaptureVertexDiagnostics(ID3D11DeviceContext* immediateContext);
     void UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediateContext);
     const char* GetSimulationStageName() const;
@@ -606,6 +713,7 @@ private:
     UINT lastDispatchGroupCountX = 0;
     UINT lastVertexCount = 0;
     std::vector<VertexDiagnostic> lastVertexDiagnostics;
+    ClothStretchDiagnostics lastClothStretchDiagnostics;
     std::string lastVertexDiagnosticStatus = "Not captured";
     Microsoft::WRL::ComPtr<ID3D11Buffer> pendingReadbackBuffer;
     Microsoft::WRL::ComPtr<ID3D11Query> pendingReadbackQuery;
@@ -651,7 +759,8 @@ public:
     //std::vector<ClothEdge> finalEdges;
 
 
-    struct PrimitiveConstants
+    // Compute Shader b0: matches ClothUpdateCS.hlsl and ClothConstraintCS.hlsl.
+    struct ComputePrimitiveConstants
     {
         DirectX::XMFLOAT4X4 world;
         int material{ -1 };
@@ -660,15 +769,36 @@ public:
         int pad{ 0 };
         DirectX::XMFLOAT4X4 invWorld;
     };
-    static_assert(sizeof(PrimitiveConstants) == 144, "Cloth b0 must match PRIMITIVE_CONSTANT_BUFFER");
-    static_assert(offsetof(PrimitiveConstants, world) == 0, "Cloth b0 world offset mismatch");
-    static_assert(offsetof(PrimitiveConstants, material) == 64, "Cloth b0 material offset mismatch");
-    static_assert(offsetof(PrimitiveConstants, hasTangent) == 68, "Cloth b0 hasTangent offset mismatch");
-    static_assert(offsetof(PrimitiveConstants, skin) == 72, "Cloth b0 skin offset mismatch");
-    static_assert(offsetof(PrimitiveConstants, pad) == 76, "Cloth b0 padding offset mismatch");
-    static_assert(offsetof(PrimitiveConstants, invWorld) == 80, "Cloth b0 invWorld offset mismatch");
-    Microsoft::WRL::ComPtr<ID3D11Buffer> primitiveCbuffer;
+    static_assert(sizeof(ComputePrimitiveConstants) == 144, "Cloth compute b0 size mismatch");
+    static_assert(offsetof(ComputePrimitiveConstants, world) == 0, "Cloth compute b0 world offset mismatch");
+    static_assert(offsetof(ComputePrimitiveConstants, material) == 64, "Cloth compute b0 material offset mismatch");
+    static_assert(offsetof(ComputePrimitiveConstants, hasTangent) == 68, "Cloth compute b0 hasTangent offset mismatch");
+    static_assert(offsetof(ComputePrimitiveConstants, skin) == 72, "Cloth compute b0 skin offset mismatch");
+    static_assert(offsetof(ComputePrimitiveConstants, pad) == 76, "Cloth compute b0 padding offset mismatch");
+    static_assert(offsetof(ComputePrimitiveConstants, invWorld) == 80, "Cloth compute b0 invWorld offset mismatch");
 
+    // Graphics b0: matches PRIMITIVE_CONSTANT_BUFFER in GltfModel.hlsli.
+    struct GraphicsPrimitiveConstants
+    {
+        DirectX::XMFLOAT4X4 world;
+        DirectX::XMFLOAT4X4 previousWorld;
+        int material{ -1 };
+        int hasTangent{ 0 };
+        int skin{ -1 };
+        int materialType{ 0 };
+        DirectX::XMFLOAT4X4 inverseTransposeWorld;
+    };
+    static_assert(sizeof(GraphicsPrimitiveConstants) == 208, "Cloth graphics b0 size mismatch");
+    static_assert(offsetof(GraphicsPrimitiveConstants, world) == 0, "Cloth graphics b0 world offset mismatch");
+    static_assert(offsetof(GraphicsPrimitiveConstants, previousWorld) == 64, "Cloth graphics b0 previousWorld offset mismatch");
+    static_assert(offsetof(GraphicsPrimitiveConstants, material) == 128, "Cloth graphics b0 material offset mismatch");
+    static_assert(offsetof(GraphicsPrimitiveConstants, hasTangent) == 132, "Cloth graphics b0 hasTangent offset mismatch");
+    static_assert(offsetof(GraphicsPrimitiveConstants, skin) == 136, "Cloth graphics b0 skin offset mismatch");
+    static_assert(offsetof(GraphicsPrimitiveConstants, materialType) == 140, "Cloth graphics b0 materialType offset mismatch");
+    static_assert(offsetof(GraphicsPrimitiveConstants, inverseTransposeWorld) == 144, "Cloth graphics b0 inverseTransposeWorld offset mismatch");
+
+    Microsoft::WRL::ComPtr<ID3D11Buffer> computePrimitiveCbuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> graphicsPrimitiveCbuffer;
     void FetchMaterials(ID3D11Device* device, const tinygltf::Model& gltf_model);
     void FetchTextures(ID3D11Device* device, const tinygltf::Model& gltf_model);
     //void FetchAnimations(const tinygltf::Model& gltf_model);

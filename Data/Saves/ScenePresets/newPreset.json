@@ -1536,12 +1536,12 @@
                 "range": 1.0
             },
             "TopCandelabra": {
-                "attenuationType": 2,
+                "attenuationType": 5,
                 "color": [
                     1.0,
                     0.577580451965332,
                     0.30946892499923706,
-                    3.5
+                    17.7
                 ],
                 "range": 3.5
             },

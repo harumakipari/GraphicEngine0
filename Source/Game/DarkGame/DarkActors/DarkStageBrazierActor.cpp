@@ -23,6 +23,17 @@ void DarkStageBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAss
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     brazierMeshComponent->SetPipeLineState(pipeLineState);
 
+    // 当たり判定を追加
+    std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<BoxComponent>("BoxComponent", parentName);
+    DirectX::XMFLOAT3 size = brazierMeshComponent->GetModelSize();
+    boxComponent->SetBoxExtent(size);
+    boxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
+    boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
+    boxComponent->SetCollisionOffsetY(size.y * 0.5f);
+    boxComponent->SetIsVisibleDebugBox(false);
+    boxComponent->Initialize();
+
+
     auto lightsData = brazierMeshComponent->model->GetPointLights();
     // ポイントライトコンポーネントを追加
     for (int i = 0; i < static_cast<int>(lightsData.size()); ++i)
@@ -120,6 +131,17 @@ void DarkStageStandingBrazierActor::SetModel(const std::shared_ptr<StageAsset>& 
     HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/GltfModelInstancedBatchingPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     standingBrazierMeshComponent->SetPipeLineState(pipeLineState);
+
+
+    // 当たり判定を追加
+    std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<BoxComponent>("BoxComponent", parentName);
+    DirectX::XMFLOAT3 size = standingBrazierMeshComponent->GetModelSize();
+    boxComponent->SetBoxExtent(size);
+    boxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
+    boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
+    boxComponent->SetCollisionOffsetY(size.y * 0.5f);
+    boxComponent->SetIsVisibleDebugBox(false);
+    boxComponent->Initialize();
 
 
     auto lightsData = standingBrazierMeshComponent->model->GetPointLights();

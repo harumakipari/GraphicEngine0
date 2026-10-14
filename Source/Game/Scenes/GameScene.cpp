@@ -168,22 +168,22 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         {
             PROFILE_SCOPE("Load StageAssetModel");
             //stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
-            stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
             stageCandelabraAsset->spawnPoints = stageCandelabraAsset->model->spawnPoints;
 
-            stageBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Brazier/Brazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Brazier/Brazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
             stageBrazierAsset->spawnPoints = stageBrazierAsset->model->spawnPoints;
 
-            stageGroundBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/GroundBrazier/groundBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageGroundBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/GroundBrazier/groundBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
             stageGroundBrazierAsset->spawnPoints = stageGroundBrazierAsset->model->spawnPoints;
 
-            stageMeltedWaxAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/MeltedWax/MeltedWax.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageMeltedWaxAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/MeltedWax/MeltedWax.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
             stageMeltedWaxAsset->spawnPoints = stageMeltedWaxAsset->model->spawnPoints;
 
-            stageStandingBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/StandingBrazier/StandingBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageStandingBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/StandingBrazier/StandingBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
             stageStandingBrazierAsset->spawnPoints = stageStandingBrazierAsset->model->spawnPoints;
 
-            stageCandleStandAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/CandleStand/CandleStand.gltf", ModelTypes::ModelMode::InstancedStaticMesh, false, true);
+            stageCandleStandAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/CandleStand/CandleStand.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
             stageCandleStandAsset->spawnPoints = stageCandleStandAsset->model->spawnPoints;
 
         });
@@ -225,9 +225,12 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     // ‚±‚±‚Å•z‚ð•`‰æ‚·‚é
     RegisterRenderHook(RenderPass::Mask, [&](ID3D11DeviceContext* immediateContext)
         {
-            if (darkClothActor)
+            for (auto darkClothActor : darkClothActors)
             {
-                darkClothActor->RenderCloth(immediateContext);
+                if (darkClothActor)
+                {
+                    darkClothActor->RenderCloth(immediateContext);
+                }
             }
         });
 
@@ -5499,8 +5502,12 @@ void GameScene::SetUpActors()
     auto movieCameraManagerActor = GetActorManager()->CreateAndRegisterActorWithTransform<MovieCameraManagerActor>("movieCameraManager", movieCameraTr);
     movieCameraManagerActor->SetMovieCameraComponent(movieCameraActor->GetMovieCameraComponent());
 
-    Transform clothTr(DirectX::XMFLOAT3{ 21.7f,6.8f,10.857f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    darkClothActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
+    Transform clothTr(DirectX::XMFLOAT3{ 21.7f,6.8f,18.757f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    darkClothActors[0] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
+
+    Transform clothTr1(DirectX::XMFLOAT3{ 21.7f,6.8f,2.957f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    darkClothActors[1] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr1);
+
 
     Transform iceTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto iceActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("IceFragmentEmitterActor", iceTr);
@@ -5516,6 +5523,7 @@ void GameScene::SetUpActors()
         auto paintingActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("PaintingActor", paintingTr);
     }
 #endif // 0
+#if 0
     // ˜S‰®‚Ì•”‰®‚ÌŠG‰æ
     {
         Transform paintingTr{ DirectX::XMFLOAT3{-67.42f,4.2f,17.26f},DirectX::XMFLOAT3{0.0f,180.0f,0.0f},DirectX::XMFLOAT3{0.81f,1.0f,0.81f } };
@@ -5538,6 +5546,7 @@ void GameScene::SetUpActors()
         paintingActor->SetType(DarkStagePaintingActor::PaintType::Hallway);
     }
 
+#endif // 0
 
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
     gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);

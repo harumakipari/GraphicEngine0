@@ -371,6 +371,46 @@ AABB InterleavedGltfModel::GetAABB()const
 {
     using namespace DirectX;
 
+    // batchMeshÇégópÇ∑ÇÈèÍçáÇÃèàóù
+    if (mode == ModelTypes::ModelMode::StaticMesh ||
+        mode == ModelTypes::ModelMode::InstancedStaticMesh)
+    {
+        XMVECTOR minVec = XMVectorSet(FLT_MAX, FLT_MAX, FLT_MAX, 0.0f);
+        XMVECTOR maxVec = XMVectorSet(-FLT_MAX, -FLT_MAX, -FLT_MAX, 0.0f);
+
+        bool hasVertices = false;
+
+        for (const auto& batchMesh : batchMeshes)
+        {
+            for (const auto& vertex : batchMesh.cachedVertices)
+            {
+                XMVECTOR position = XMLoadFloat3(&vertex.position);
+
+                minVec = XMVectorMin(minVec, position);
+                maxVec = XMVectorMax(maxVec, position);
+
+                hasVertices = true;
+            }
+        }
+
+        if (!hasVertices)
+        {
+            _ASSERT_EXPR(false, L"GetAABB: No batch vertices");
+
+            return AABB{
+                XMFLOAT3{0.0f, 0.0f, 0.0f},
+                XMFLOAT3{0.0f, 0.0f, 0.0f}
+            };
+        }
+
+        AABB result{};
+        XMStoreFloat3(&result.min, minVec);
+        XMStoreFloat3(&result.max, maxVec);
+
+        return result;
+    }
+
+
     XMVECTOR minVec = XMVectorSet(FLT_MAX, FLT_MAX, FLT_MAX, 0.0f);
     XMVECTOR maxVec = XMVectorSet(-FLT_MAX, -FLT_MAX, -FLT_MAX, 0.0f);
 

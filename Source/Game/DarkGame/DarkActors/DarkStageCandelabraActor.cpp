@@ -26,19 +26,15 @@ void DarkStageCandelabraActor::SetModel(const std::shared_ptr<StageAsset>& stage
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     candelabraMeshComponent->SetPipeLineState(pipeLineState);
 
-#if 0
-    // ƒTƒCƒY‚ðŽæ“¾
-    DirectX::XMFLOAT3 size = stageAsset->model->GetModelSize();
-    std::shared_ptr<BoxComponent> boxComponent = AddComponent<BoxComponent>("collision", parentName);
+    // “–‚½‚è”»’è‚ð’Ç‰Á
+    std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<BoxComponent>("BoxComponent", parentName);
+    DirectX::XMFLOAT3 size = candelabraMeshComponent->GetModelSize();
     boxComponent->SetBoxExtent(size);
+    boxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
+    boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
     boxComponent->SetCollisionOffsetY(size.y * 0.5f);
-    boxComponent->SetCollisionOffsetX(-size.x * 0.5f);
-    boxComponent->SetCollisionOffsetZ(-size.z * 0.5f);
-    boxComponent->SetStatic(true);
-    boxComponent->SetLayer(CollisionLayer::Interactable);
-    boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
+    boxComponent->SetIsVisibleDebugBox(false);
     boxComponent->Initialize();
-#endif // 0
 
 
     auto scene = dynamic_cast<SceneBase*>(Scene::GetCurrentScene());
@@ -175,6 +171,16 @@ void DarkStageCandleStandActor::SetModel(const std::shared_ptr<StageAsset>& stag
     HRESULT hr = CreatePsFromCSO(Graphics::GetDevice(), "./Data/Shaders/GltfModelInstancedBatchingPS.cso", pipeLineState.pixelShader.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     meshComponent->SetPipeLineState(pipeLineState);
+
+    // “–‚½‚è”»’è‚ð’Ç‰Á
+    std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<BoxComponent>("BoxComponent", parentName);
+    DirectX::XMFLOAT3 size = meshComponent->GetModelSize();
+    boxComponent->SetBoxExtent(size);
+    boxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
+    boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
+    boxComponent->SetCollisionOffsetY(size.y * 0.5f);
+    boxComponent->SetIsVisibleDebugBox(false);
+    boxComponent->Initialize();
 
 
     auto lightsData = meshComponent->model->GetPointLights();

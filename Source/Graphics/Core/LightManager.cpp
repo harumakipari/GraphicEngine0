@@ -441,6 +441,17 @@ void LightManager::DrawGui()
     ImGui::SliderInt(U8("ポイントライト数"), &light.pointLightCount, 0, PointLightMaxCount);
     ImGui::Text("Collected PointLight Count: %zu", scenePointLights.size());
     ImGui::Text("GPU pointLightCount: %d", constants.pointLightCount);
+
+    // Read-only snapshot of the exact LightConstants most recently uploaded
+    // to the Deferred Lighting pixel shader at b11.
+    const LightConstants& bound = lightCBuffer->data;
+    ImGui::SeparatorText("Deferred Lighting PS b11 (last bound, read-only)");
+    ImGui::Text("directionalLightEnable = %d", bound.directionalLightEnable);
+    ImGui::Text("colorLight = (%.6f, %.6f, %.6f), intensity = %.6f",
+        bound.lightColor.x, bound.lightColor.y, bound.lightColor.z, bound.lightColor.w);
+    ImGui::Text("diffuseIntensity = %.6f | iblIntensity = %.6f",
+        bound.diffuseIntensity, bound.iblIntensity);
+    ImGui::TextUnformatted("Bound by SceneBase::UpdateConstantBuffer via LightManager::Apply at PS slot b11.");
     ImGui::Checkbox(U8("ライト範囲表示"), &showLightRange);
 
     ImGui::SliderFloat("Kc", &light.kc, 0.0f, 2.0f);

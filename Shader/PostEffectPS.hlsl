@@ -18,6 +18,19 @@ Texture2D bokehTexture : register(t8);
 Texture2D sceneColorTexture : register(t9);
 Texture2D velocityTexture : register(t10); // w にshadowFactorが入っている
 Texture2DArray cascadedShadowMaps : register(t11);
+Texture2D materialTexture : register(t12); // w: GBuffer material type
+
+static const int MATERIAL_CLOTH_NO_SHADOW = 103;
+static const int MATERIAL_CLOTH_DIFFUSE_ONLY = 104;
+static const int MATERIAL_CLOTH_AMBIENT_ONLY = 105;
+static const int MATERIAL_CLOTH_NORMAL_DOT_LIGHT = 106;
+static const int MATERIAL_CLOTH_TWO_SIDED_DIFFUSE = 107;
+static const int MATERIAL_CLOTH_ABS_NORMAL_DOT_LIGHT = 108;
+static const int MATERIAL_CLOTH_DIRECT_DIFFUSE_TERM = 109;
+static const int MATERIAL_CLOTH_DIFFUSE_AMBIENT_TERM = 110;
+static const int MATERIAL_CLOTH_POINT_LIGHT_DIFFUSE_ONLY = 111;
+static const int MATERIAL_CLOTH_POINT_LIGHT_ATTENUATION = 112;
+static const int MATERIAL_CLOTH_POINT_LIGHT_NOL = 113;
 
 Texture3D noise3D : register(t20); // ノイズテクスチャ
 
@@ -215,6 +228,10 @@ float4 main(VS_OUT pin) : SV_TARGET
     // シーンから法線を取得
     float4 sceneNormal = normalTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
     int objectType = sceneNormal.w;
+    int materialType = materialTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).w;
+    const bool clothLightingDiagnostic = materialType >= MATERIAL_CLOTH_DIFFUSE_ONLY &&
+        materialType <= MATERIAL_CLOTH_POINT_LIGHT_NOL;
+    const bool clothShadowExcluded = materialType == MATERIAL_CLOTH_NO_SHADOW || clothLightingDiagnostic;
 
     // シーンから深度値を取得
     float depthNdc = depthTexture.Sample(samplerStates[POINT], pin.texcoord).x;
@@ -243,7 +260,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     const float aspect = (float) height / width;
 
-    if (enableCascadedShadowMaps && objectType != OBJECT_NO_LIGHTING)
+    if (enableCascadedShadowMaps && objectType != OBJECT_NO_LIGHTING && !clothShadowExcluded)
     {
         color.rgb = ApplyShadow(color.rgb, positionWorldSpace, (positionViewSpace.z), shadowMapDimensions, positionNdc.xyz, sceneNormal, lightDirection.xyz);
         float shadowFactor = velocityTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).w;
@@ -255,7 +272,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     //color.rgb = ApplyShadowMaps(color.rgb, positionWorldSpace);
 
-    if (enableFog && objectType != OBJECT_NO_LIGHTING)
+    if (enableFog && objectType != OBJECT_NO_LIGHTING && !clothLightingDiagnostic)
     {
         float linearDepth = positionViewSpace.z;
 
@@ -282,14 +299,14 @@ float4 main(VS_OUT pin) : SV_TARGET
     }
 
     // ブルーム処理
-    if (enableBloom && objectType != OBJECT_NO_LIGHTING)
+    if (enableBloom && objectType != OBJECT_NO_LIGHTING && !clothLightingDiagnostic)
     {
         float4 bloom = bloomTexture.Sample(samplerStates[POINT], pin.texcoord);
         color.rgb += bloom.rgb;
     }
 
     // SSRの処理
-    if (enableSSR && objectType != OBJECT_NO_LIGHTING)
+    if (enableSSR && objectType != OBJECT_NO_LIGHTING && !clothLightingDiagnostic)
     {
         //float3 reflectColor = reflectionTexture.Sample(samplerStates[LINEAR_CLAMP], pin.texcoord).rgb;
         //return float4(reflectColor.rgb, 1);
@@ -332,7 +349,7 @@ float4 main(VS_OUT pin) : SV_TARGET
             }
         }
         float occlusion = accumulatedOcclusion / weight;
-        if (objectType != OBJECT_PLAYER && objectType != OBJECT_NO_LIGHTING)
+        if (objectType != OBJECT_PLAYER && objectType != OBJECT_NO_LIGHTING && !clothLightingDiagnostic)
         { // プレイヤーはSSAOの影響を受けないようにする
             color *= occlusion;
         }

@@ -864,7 +864,6 @@ private:
     float gameBgmFadeStartVolume = 0.0f;
     float gameBgmFadeElapsed = 0.0f;
     bool gameBgmFading = false;
-    // ・ｽ{・ｽXBGM・ｽA・ｽN・ｽ^・ｽ[
     std::shared_ptr<BgmActor> bossBgmActor;
     std::shared_ptr<BgmActor> phase2BgmActor;
     std::shared_ptr<BgmActor> bossDeathSecondBgmActor;
@@ -878,6 +877,6 @@ private:
     bool bossDeathSecondBgmPlayed = false;
     bool playerDeathBgmPlayed = false;
 
-    // ・ｽz・ｽA・ｽN・ｽ^・ｽ[
-    std::shared_ptr<DarkClothActor> darkClothActor;
+    // 布アクター
+    std::array<std::shared_ptr<DarkClothActor>, 2> darkClothActors;
 };
