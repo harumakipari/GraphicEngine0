@@ -424,12 +424,6 @@ public:
     // カメラの注視点の位置
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 
-    const std::shared_ptr<SceneComponent>& GetDeathWideRightAnchor() const { return deathWideRightAnchor; }
-    const std::shared_ptr<SceneComponent>& GetDeathWideLeftAnchor() const { return deathWideLeftAnchor; }
-    const std::shared_ptr<SceneComponent>& GetDeathWideFrontAnchor() const { return deathWideFrontAnchor; }
-    const std::shared_ptr<SceneComponent>& GetDeathWideBackAnchor() const { return deathWideBackAnchor; }
-    const std::shared_ptr<SceneComponent>& GetDeathWideTarget() const { return deathWideTarget; }
-
     void AcquireAttackTarget();
     void UpdateAttackTargetRotation(float deltaTime);
     void StopAttackTargetRotation() { attackRotationTracking = false; }
@@ -832,17 +826,13 @@ private:
     std::shared_ptr<SceneComponent> cameraEyeComponent;
     // カメラの注視点の位置
     std::shared_ptr<SceneComponent> cameraTargetComponent;
-    std::shared_ptr<SceneComponent> deathWideRightAnchor;
-    std::shared_ptr<SceneComponent> deathWideLeftAnchor;
-    std::shared_ptr<SceneComponent> deathWideFrontAnchor;
-    std::shared_ptr<SceneComponent> deathWideBackAnchor;
-    std::shared_ptr<SceneComponent> deathWideTarget;
+ 
     // ボス戦時のオフセット
     float bossBattleCameraDistance = -3.0f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { -0.5f,2.0f,0.0f };
 
     // カメラの
-    DirectX::XMFLOAT3 focusDirection = {};//　カメラのFocus開始時のForwawrd
+    DirectX::XMFLOAT3 focusDirection = {};//　カメラのFocus開始時のForward
     bool isBossBattle = false;  // ボス戦状態かどうか
 
     // 回避方向

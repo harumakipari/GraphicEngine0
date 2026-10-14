@@ -229,9 +229,6 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->RegisterState(std::make_unique<PlayerDeathState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerWinState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerRushState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerJumpState>(this));
-        stateMachine_->RegisterState(std::make_unique<PlayerJumpAttackState>(this));
-        //stateMachine_->RegisterState(std::make_unique<PlayerInteractState>(this));
         stateMachine_->RegisterState(std::make_unique<PlayerDashState>(this));
 
         // 初期ステートを設定
@@ -359,20 +356,6 @@ void Player::Initialize(const Transform& transform)
     // プレイヤー死亡時のカメラの画角
     const std::string rootParentName = GetRootComponentName();
 
-    deathWideRightAnchor = AddComponent<SceneComponent>("DeathWideRightAnchor", rootParentName);
-    deathWideRightAnchor->SetRelativeLocationDirect({ -5.0f,1.4f,-4.5f });
-
-    deathWideLeftAnchor = AddComponent<SceneComponent>("DeathWideLeftAnchor", rootParentName);
-    deathWideLeftAnchor->SetRelativeLocationDirect({ 6.6f,1.4f,4.5f });
-
-    deathWideFrontAnchor = AddComponent<SceneComponent>("DeathWideFrontAnchor", rootParentName);
-    deathWideFrontAnchor->SetRelativeLocationDirect({ 0.0f,1.8f,5.5f });
-
-    deathWideBackAnchor = AddComponent<SceneComponent>("DeathWideBackAnchor", rootParentName);
-    deathWideBackAnchor->SetRelativeLocationDirect({ 0.0f,1.8f,-5.5f });
-
-    deathWideTarget = AddComponent<SceneComponent>("DeathWideTarget", rootParentName);
-    deathWideTarget->SetRelativeLocationDirect({ 0.0f, 1.7f, 0.0f });
 
 
     // 軌跡初期化
