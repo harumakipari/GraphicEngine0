@@ -534,8 +534,10 @@ void ClothSimulate::DrawImGui()
     if (ImGui::DragFloat("Gravity Scale", &gravityScale, 0.01f, 0.0f, 2.0f, "%.2f"))
         resetClothBuffers = true;
     ImGui::SliderFloat("Bottom Wind Exponent", &bottomWindExponent, 1.0f, 8.0f, "%.2f");
-    if (ImGui::Checkbox("Enable Drive Force", &enableDriveForce))
-        resetClothBuffers = true;
+    ImGui::Checkbox("Enable Drive Force", &enableDriveForce);
+    ImGui::SliderFloat("Drive Force Amplitude", &driveForceAmplitude, 0.0f, 10.0f, "%.2f");
+    ImGui::SliderFloat("Drive Force Frequency", &driveForceFrequency, 0.0f, 5.0f, "%.2f");
+    ImGui::SliderFloat("Drive Force Phase Gradient", &driveForcePhaseGradient, 0.0f, 5.0f, "%.2f");
     if (ImGui::DragFloat("Fixed Delta Time", &fixedDeltaTime, 0.0001f, 1.0f / 1000.0f, 1.0f / 15.0f, "%.6f"))
         fixedDeltaTime = (std::clamp)(fixedDeltaTime, 1.0f / 1000.0f, 1.0f / 15.0f);
     ImGui::SliderInt("Max Substeps", &maxSubsteps, 1, 32);
@@ -1539,6 +1541,9 @@ void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
     {
         cbuffer->data.enableDriveForce = enableDriveForce ? 1u : 0u;
         cbuffer->data.bottomWindExponent = bottomWindExponent;
+        cbuffer->data.driveForceAmplitude = driveForceAmplitude;
+        cbuffer->data.driveForceFrequency = driveForceFrequency;
+        cbuffer->data.driveForcePhaseGradient = driveForcePhaseGradient;
         ID3D11Buffer* simulationBuffer = cbuffer->GetBuffer();
         immediateContext->UpdateSubresource(simulationBuffer, 0, nullptr, &cbuffer->data, 0, 0);
         immediateContext->CSSetConstantBuffers(10, 1, &simulationBuffer);

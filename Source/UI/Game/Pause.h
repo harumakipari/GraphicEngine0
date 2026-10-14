@@ -19,17 +19,13 @@ public:
     void Update(float deltaTime)override;
     void DrawImGuiDetails() override;
 
-    // ���g���C����V�[���̖��O��ݒ肷��
     void SetRetrySceneName(const std::string& sceneName) { retrySceneName = sceneName; }
 
-    // �|�[�Y��ʂ�B��
     void HidePauseMenu();
 
 private:
-    // �|�[�Y��ʂ�J���Ƃ��̏���
     void OpenPause();
 
-    // �|�[�Y��ʂ���鎞�̏���
     void ClosePause();
     bool CanOpenPause() const;
     void UpdateSelectionLines();
@@ -42,7 +38,7 @@ private:
 
 
 private:
-    std::shared_ptr<UIImageComponent> pauseBackImage; //�|�[�Y���̔w�i
+    std::shared_ptr<UIImageComponent> pauseBackImage; 
     std::shared_ptr<UIImageComponent> pausePanel;
     std::shared_ptr<UIButtonComponent> menuButton;
     std::shared_ptr<UIButtonComponent> returnTitleButton;

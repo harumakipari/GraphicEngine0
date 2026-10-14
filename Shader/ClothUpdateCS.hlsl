@@ -79,7 +79,9 @@ cbuffer CLOTH_SIMULATE_CBUFFER : register(b10)
     float3 windEmitPosition;
     uint enableDriveForce;
     float bottomWindExponent;
-    float3 bottomWindPadding;
+    float driveForceAmplitude;
+    float driveForceFrequency;
+    float driveForcePhaseGradient;
 };
 
 cbuffer SPHERE_CBUFFER : register(b7)
@@ -274,10 +276,10 @@ void main(uint3 id : SV_DispatchThreadID)
         float3 windForce = dragCoef * relativeVel;
 
         // ・ｽ・ｽ・ｽ・ｽ・ｽI・ｽﾉ揺・ｽ轤ｷ・ｽO・ｽﾍ（・ｽ・ｽ・ｽx・ｽﾉ依托ｿｽ・ｽ・ｽ・ｽﾈゑｿｽ・ｽj
-        float wave = sin(elapsedTime * 2.5f - currentPos.y * 1.8f);
+        float wave = sin(elapsedTime * driveForceFrequency - currentPos.y * driveForcePhaseGradient);
 
         float3 driveForce =
-    float3(0.0f, 0.0f, wave) * 6.0f;
+    float3(0.0f, 0.0f, wave) * driveForceAmplitude;
 
         if (enableDriveForce != 0u)
         {

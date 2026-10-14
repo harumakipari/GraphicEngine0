@@ -134,10 +134,15 @@ public:
         DirectX::XMFLOAT3 windEmitPosition={0.0f,0.0f,0.0f};    // ïóÇ™î≠ê∂ÇµÇƒÇ¢ÇÈèÍèä
         uint32_t enableDriveForce = 1;
         float bottomWindExponent = 3.0f;
-        float bottomWindPadding[3] = {};
+        float driveForceAmplitude = 0.8f;
+        float driveForceFrequency = 1.5f;
+        float driveForcePhaseGradient = 1.8f;
     };
     static_assert(sizeof(ClothSimulateCBuffer) == 48, "Cloth b10 layout must match HLSL");
     static_assert(offsetof(ClothSimulateCBuffer, bottomWindExponent) == 32, "Cloth b10 bottom wind exponent offset must match HLSL");
+    static_assert(offsetof(ClothSimulateCBuffer, driveForceAmplitude) == 36, "Cloth b10 drive force amplitude offset must match HLSL");
+    static_assert(offsetof(ClothSimulateCBuffer, driveForceFrequency) == 40, "Cloth b10 drive force frequency offset must match HLSL");
+    static_assert(offsetof(ClothSimulateCBuffer, driveForcePhaseGradient) == 44, "Cloth b10 drive force phase gradient offset must match HLSL");
     std::unique_ptr<ConstantBuffer<ClothSimulateCBuffer>> cbuffer;
 
     // b11 is intentionally cloth-local: substeps must not overwrite SceneBase b1.
@@ -182,9 +187,12 @@ public:
     float windBase = 0.0f;
     DirectX::XMFLOAT3 windEmitPosition = {};
     bool enableDriveForce = true;
+    float driveForceAmplitude = 0.8f;
+    float driveForceFrequency = 1.5f;
+    float driveForcePhaseGradient = 1.8f;
     // 1.0 preserves the prior ClothUpdateCS gravity; 0.0 disables it.
     float gravityScale = 0.0f;
-    float bottomWindExponent = 3.0f;
+    float bottomWindExponent = 1.0f;
     ClothDebugDrawMode debugDrawMode = ClothDebugDrawMode::Default;
 
     // Diagnostic gates. They do not alter cloth parameters.
