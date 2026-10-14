@@ -39,13 +39,6 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
 
     PlayBodyAnimation("Idle");
 
-#if 0
-    // Š•
-    int neckSocketNode = skeletalMeshComponent->FindIndexByName("Neck");
-    auto helmet = AddComponent<SkeletalMeshComponent>("helmet", parentName);
-    helmet->SetModel("./Data/Models/Characters/Skeleton/Helmet/helmet.gltf");
-    helmet->AttachToComponent(skeletalMeshComponent, neckSocketNode); // "Neck"
-#endif // 0
 
     int handRightSocketNode = skeletalMeshComponent->FindIndexByName("Hand_r_end");
 
@@ -73,9 +66,6 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     rushHitRingEffectComponent->Load("./Data/Effect/Files/RushHitRingEffect.json");
     rushHitSparkEffectComponent = AddComponent<ParticleComponent>("SkeletonRushHitSpark", parentName);
     rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushCoreEffect.json");
-
-    // “ª‚ÌŠ•‚Ìƒ‚ƒfƒ‹‚ð’Ç‰Á
-
 
 
 #endif // 0

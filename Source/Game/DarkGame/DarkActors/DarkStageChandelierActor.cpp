@@ -185,7 +185,6 @@ void DarkStageTorchSconceActor::Initialize(const Transform& transform)
     {
         const auto& light = lightsData[i];
 
-#if 1
         std::string compName = "pointLightComponent_" + std::to_string(i);
         auto pointLightComponent =
             this->AddComponent<PointLightComponent>(compName, parentName);
@@ -194,19 +193,6 @@ void DarkStageTorchSconceActor::Initialize(const Transform& transform)
         pointLightComponent->SetSharedLightName(light.name);
         DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(light.worldPosition);
         pointLightComponent->SetRelativeLocationDirect(pos);
-#else
-        DirectX::XMFLOAT3 pos = convertRHtoLh(light.worldPosition);
-
-        Transform pointLightTr{
-            pos,
-            light.worldRotation,
-            light.worldScale
-        };
-        auto pointLightActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePointLightActor>("pointLight", pointLightTr);
-        pointLightActor->SetPointLightData(pos, light.color, light.intensity, light.range);
-#endif // 0
-
-
 
     }
     // 炎のエフェクト
