@@ -239,7 +239,7 @@ private:
     float windupElapsedTime = 0.0f;
     float rushStopDistance = 0.0f;
     bool rushComboAdvanced = false;
-    int queuedAttackCount = 0;
+    int queuedAttackCount = 0;// ラッシュの時のコンボカウント
     int comboIndex = 0; 
     bool rushTransitionWindowObserved = false;
 
@@ -249,26 +249,6 @@ private:
     RushPhase phase = RushPhase::DashToTarget;
     std::weak_ptr<GruxEnemy> rushHpDisplayTarget;
 };
-
-#if 0
-// インタラクトステートオブジェクト
-class PlayerInteractState : public PlayerStateBase
-{
-public:
-    // コンストラクタ
-    PlayerInteractState(Player* player) :PlayerStateBase(player) {}
-    // デストラクタ
-    ~PlayerInteractState() = default;
-    // ステートに入った時のメソッド
-    void Enter() override;
-    // ステートで実行するメソッド
-    void Execute(float deltaTime) override;
-    // ステートから出ていくときのメソッド
-    void Exit() override;
-    // ステート名を取得
-    const char* GetName() const override { return "Interact"; }
-};
-#endif // 0
 
 
 // ジャンプステートオブジェクト

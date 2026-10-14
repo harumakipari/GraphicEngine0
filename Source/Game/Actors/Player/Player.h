@@ -53,7 +53,6 @@ public:
         Interact,
     };
 
-    // Selects which Player invulnerability gates a damage source may ignore.
     enum class DamagePolicy :uint8_t
     {
         Normal,
@@ -75,9 +74,7 @@ public:
         Sheathed    // 剣を鞘に収めている状態
     };
 
-    // 回避方向
-    // Tutorial progression will later decide when these items are revealed or
-    // learned. Player owns only their HUD presentation.
+    // チュートリアルの操作UI
     enum class OperationGuideItem : uint8_t
     {
         L,
@@ -349,11 +346,6 @@ private:
 
     void HandleAnimationPlaySE(const AnimationNotifyEvent& event);
 
-    // 火花エフェクトの生成
-    void SpawnSpark(DirectX::XMFLOAT3 hitPosition);
-
-    // 剣の攻撃判定
-    void CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end);
     DirectX::XMFLOAT3 GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const;
 
     // 入力処理をまとめる
@@ -372,8 +364,6 @@ public:
     bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition,
         DamagePolicy policy = DamagePolicy::Normal);
 
-    // Damageとは独立した、外部攻撃からの強制移動開始口。
-    bool CanReceiveKnockBack() const;
     bool StartKnockBack(const DirectX::XMFLOAT3& direction);
 
     // True only while a Boss may begin a new attack against this Player.
@@ -414,9 +404,6 @@ public:
     void HoldBossSlowForRush();
     void ForceResetPlayerSlow();
     void ForceResetBossSlow();
-
-    // ラッシュ受付期間終了
-    void EndRushAttackInput();
 
     // Rush State owns the lifetime of this visual override.
     void SetRushWeaponVisual(bool enabled);
@@ -494,11 +481,6 @@ private:
 public:
     // ヒット中に当たった敵を記録する
     std::unordered_set<Actor*> hitActors;
-
-    //当たった相手を記録するためのセット 火花エフェクトの生成やダメージの適用を一度だけ行うために使用
-    std::unordered_set<Actor*> hitTargets;
-    bool hasPrevSwordTip = false; // 前フレームの剣先の位置が有効かどうか
-    bool hasSpawnedThisAttack = false; // 今攻撃でエフェクトを生成したかどうか
 
     std::string currentAttackAnimation = "Primary_Attack_Fast_A";
     std::string startAttackAnimation = "Primary_Attack_Fast_A";    // コンボ開始のアニメーション
@@ -643,23 +625,15 @@ public:
 public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
-    std::shared_ptr<ParticleComponent> sparkComponent; // 火花エフェクト用コンポーネント
     std::shared_ptr<InputComponent> inputComponent;
     std::shared_ptr<RotationComponent> rotationComponent;
     std::shared_ptr<CharacterMovementComponent> characterMovementComponent;
-    std::shared_ptr<CapsuleComponent> swordCollisionComp;
-
-    std::shared_ptr<SceneComponent> swordPointComp;
 
     std::shared_ptr<SceneComponent> swordRootComponent; // 剣の根元のコンポーネント
     std::shared_ptr<SceneComponent> swordMiddleComponent; // 剣の中間のコンポーネント
     std::shared_ptr<SceneComponent> swordTipComponent;  // 剣の先端のコンポーネント
 
-    std::shared_ptr<SceneComponent> swordSheathComponent; // 剣をしまうときのコンポーネント
 
-
-    float elapsedTime_ = 0.0f;
-    bool isGrounded_ = false;
 
     struct TrailPoint
     {
@@ -726,8 +700,7 @@ public:
     float lockOnGuideButtonOffset = 75.0f;
     float lockOnGuideEdgeMargin = 130.0f;
     float lockOnGuideArrowRotationOffset = 180.0f;
-    // ラッシュの時のコンボカウント（回避中にもラッシュをカウントするための変数）
-    int rushQueuedAttackCount = 0;
+    
 private:
     void UpdateLowHpEffects();
     void TriggerLowHpPulse();

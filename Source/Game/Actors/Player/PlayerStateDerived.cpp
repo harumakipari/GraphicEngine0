@@ -16,7 +16,6 @@ PlayerStateBase::PlayerStateBase(Player* actor) :State(actor), player(actor)
 
 void PlayerIdleState::Enter()
 {
-    Logger::Log("Idle Enter");
     owner->PlayBodyAnimation("Idle", true, true, 0.3f);
 }
 
@@ -44,19 +43,6 @@ void PlayerRunningState::Enter()
     player->RestartLocomotionAnimation();
 
     auto controller = player->GetBodyAnimationController();
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[LocomotionRecovery][RunningEnter] currentState=" +
-        std::string(player->GetStateMachine()->GetStateName()) +
-        " locomotionMode=" + std::to_string(static_cast<int>(player->GetLocomotionMode())) +
-        " useBlendSpace=" + (controller->IsUsingBlendSpace() ? "true" : "false") +
-        " currentAnimation=" + controller->GetCurrentAnimationName() +
-        " animationTime=" + std::to_string(controller->GetCurrentAnimationTime()) +
-        " inputMagnitude=" + std::to_string(player->characterMovementComponent->GetInputMagnitude()) +
-        " actualHorizontalSpeed=" + std::to_string(player->characterMovementComponent->GetActualHorizontalSpeed()));
-
-    // 走りSE再生
-    //if (player->runAudioComp)
-    //    player->runAudioComp->Play();
 }
 
 void PlayerRunningState::Execute(float deltaTime)
@@ -75,26 +61,16 @@ void PlayerRunningState::Execute(float deltaTime)
 
 void PlayerRunningState::Exit()
 {
-    // 走りSEをストップ
-    //if (player->runAudioComp)
-    //    player->runAudioComp->Stop();
     // ブレンドスペースを使うのをやめる
     owner->GetBodyAnimationController()->SetUseBlendSpace(false);
-
 }
 
 
 void PlayerDashState::Enter()
 {
-#if 0
-    owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f, false);
-    player->characterMovementComponent->SetFixedSpeed(0.0f);
-#else 
     owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f, true);
     // スピードを変更する
     player->characterMovementComponent->SetFixedSpeed(player->dashSpeed);
-#endif
-
 }
 
 void PlayerDashState::Execute(float deltaTime)
@@ -117,7 +93,6 @@ void PlayerDashState::Execute(float deltaTime)
         {
             player->GetStateMachine()->ChangeState("Idle");
         }
-        return;
     }
 }
 
@@ -140,10 +115,6 @@ void PlayerAttackState::Enter()
 
     player->AcquireAttackTarget();
 
-    // 火花エフェクトの生成フラグと当たった相手のセットをリセット
-    player->hitTargets.clear();
-    player->hasSpawnedThisAttack = false;
-    player->hasPrevSwordTip = false;
 
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetFixedSpeed(0.0f);
@@ -999,34 +970,6 @@ void PlayerRushState::ResetRushInputGrace()
     rushTransitionWindowObserved = false;
 }
 
-#if 0
-void PlayerInteractState::Enter()
-{
-    switch (player->swordState)
-    {
-    case Player::SwordState::Equipped:
-
-        break;
-    case Player::SwordState::Sheathed:
-        break;
-    }
-
-    owner->PlayBodyAnimation("anim_OpenDoor_L_0", false);
-}
-
-void PlayerInteractState::Execute(float deltaTime)
-{
-    if (!owner->GetBodyAnimationController()->IsPlayAnimation())
-    {
-        player->GetStateMachine()->ChangeState("Idle");
-    }
-}
-
-void PlayerInteractState::Exit()
-{
-
-}
-#endif // 0
 
 void PlayerJumpState::Enter()
 {

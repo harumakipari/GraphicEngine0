@@ -47,10 +47,6 @@ public:
     std::shared_ptr<SceneComponent> swordTipComponent;  // 剣の先端のコンポーネント
 
 
-
-    float elapsedTime_ = 0.0f;
-    bool isGrounded_ = false;
-
     struct TrailPoint
     {
         DirectX::XMFLOAT3 position;

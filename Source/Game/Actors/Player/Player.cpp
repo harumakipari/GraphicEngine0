@@ -323,10 +323,6 @@ void Player::Initialize(const Transform& transform)
     swordMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerWeaponForwardPS";
     swordMeshComponent->overrideForwardPipelineName = "GltfModelPlayerWeaponForwardPS";
 
-    swordPointComp = AddComponent<CapsuleComponent>("SwordPointComponent", "Sword");
-    swordPointComp->SetRelativeLocationDirect({ 0.0f,0.0f,0.6f });
-
-
     // 剣の残像用の剣のメッシュコンポーネント
     for (auto& ghost : ghosts)
     {
@@ -352,11 +348,6 @@ void Player::Initialize(const Transform& transform)
         ghost.renderConstantsComponent->overrideDeferredPipelineName = "PlayerSwordGhostPS";
     }
     ResetPlayerPoseGhost();
-
-    // 火花エフェクト用のコンポーネントを追加
-    sparkComponent = this->AddComponent<class ParticleComponent>("particleComponent", parentName);
-    sparkComponent->Load("./Data/Effect/Files/DarkStageSparkEffect.json");
-
 
     // カメラの目の位置のコンポーネントを追加
     cameraEyeComponent = AddComponent<SceneComponent>("cameraEyeComponent", parentName);
@@ -1257,10 +1248,6 @@ void Player::Update(float deltaTime)
     // Dodge State更新後の受付状態を、そのフレームのUIへ反映する。
     UpdateRushPromptUI();
 
-    // 剣のデバックの当たり判定を描画するかどうか
-    if (swordCollisionComp)
-        swordCollisionComp->SetIsVisibleDebugShape(hitBox);
-
     if (gameplayInputEnabled)
         FindInteractable();
 
@@ -1273,9 +1260,6 @@ void Player::Update(float deltaTime)
         swordMeshComponent->SetIsVisible(false);
         break;
     }
-
-    //skeletalMeshComponent->UpdateCloth(elapsedTime);
-    //skeletalMeshComponent->UpdateGlobalTransforms();
 
     if (gameplayInputEnabled)
     {
@@ -3185,8 +3169,6 @@ void Player::ClearBattleVisualsForPhaseTransition()
     ClearSwordTrailForPhaseTransition();
     swordGhostElapsedTime = 0.0f;
     swordGhostIndex = 0;
-    if (sparkComponent)
-        sparkComponent->Stop();
     damageFlashTimer = 0.0f;
     hitStopTimer = 0.0f;
     ApplyDamageFlash(0.0f);
@@ -3396,16 +3378,6 @@ void Player::EndDeathEyeClose()
     ResetEyeCloseOverride();
 }
 
-// 火花エフェクトの生成
-void Player::SpawnSpark(DirectX::XMFLOAT3 pos)
-{
-    if (sparkComponent)
-    {
-        sparkComponent->SetWorldLocationDirect(pos);
-        sparkComponent->Play();
-    }
-}
-
 // 剣の攻撃判定
 DirectX::XMFLOAT3 Player::GetHitBoxPoint(
     const std::shared_ptr<SceneComponent>& component,
@@ -3419,70 +3391,6 @@ DirectX::XMFLOAT3 Player::GetHitBoxPoint(
     DirectX::XMStoreFloat3(&worldOffset, offset);
     return { base.x + worldOffset.x, base.y + worldOffset.y, base.z + worldOffset.z };
 }
-void Player::CheckSwordLineHit(const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end)
-{
-    if (stateMachine_->GetStateName() != "Attack")
-        return;
-
-    // 1フレーム1回制御
-    if (hasSpawnedThisAttack)
-        return;
-
-    if (!isAttackActive)
-        return;
-
-    XMVECTOR s = XMLoadFloat3(&start);
-    XMVECTOR e = XMLoadFloat3(&end);
-
-    XMVECTOR diff = e - s;
-    float length = XMVectorGetX(XMVector3Length(diff));
-
-    int steps = std::max<int>(1, (int)(length / 0.05f));
-
-    for (int i = 0; i < steps; i++)
-    {
-        float t0 = (float)i / steps;
-        float t1 = (float)(i + 1) / steps;
-
-        XMVECTOR p0 = XMVectorLerp(s, e, t0);
-        XMVECTOR p1 = XMVectorLerp(s, e, t1);
-
-        XMFLOAT3 segStart, segEnd;
-        XMStoreFloat3(&segStart, p0);
-        XMStoreFloat3(&segEnd, p1);
-
-        HitResultWithActor hit;
-
-        if (CollisionFunction::SphereRayCast(
-            segStart,
-            segEnd,
-            hit,
-            0.1f,
-            CollisionHelper::ToBit(CollisionLayer::WorldStatic)))
-        {
-            // 床無視
-            if (hit.normal.y > 0.7f)
-                continue;
-
-            // 押し出し
-            XMVECTOR pos = XMLoadFloat3(&hit.hitPoint);
-            XMVECTOR normal = XMVector3Normalize(XMLoadFloat3(&hit.normal));
-            pos += normal * 0.03f;
-
-            XMFLOAT3 finalPos;
-            XMStoreFloat3(&finalPos, pos);
-
-            SpawnSpark(finalPos);
-
-            hasSpawnedThisAttack = true; // ←これが本質
-
-            return;
-        }
-    }
-
-    DebugRender::DrawLine(start, end, { 1,0,0,1 });
-}
-
 // 入力処理をまとめる
 void Player::CaptureActionRequest(float deltaTime)
 {
@@ -4347,15 +4255,6 @@ void Player::ApplyDamageFlash(float flashAmount)
     applyToMesh(skeletalMeshComponent);
 }
 
-// Non-damaging reactions use the same immunity gates as TryTakeDamage,
-// without damage state, sound, vibration or dodge-record side effects.
-bool Player::CanReceiveKnockBack() const
-{
-    if (!stateMachine_ || hp <= 0 || IsPendingKill() || finalHitWaiting || invincibleWindow || invincible)
-        return false;
-    const std::string state = stateMachine_->GetStateName();
-    return state != "Damage" && state != "DeathPending" && state != "Death";
-}
 
 bool Player::IsBossAttackTargetAvailable() const
 {
@@ -5350,18 +5249,6 @@ void Player::ForceResetBossSlow()
     activeBossSlowReturnDuration = justDodgeSlowReturnDuration;
 }
 
-// ラッシュ受付期間終了
-void Player::EndRushAttackInput()
-{
-    // UIを非表示にする
-    //rushButtonImageComponent->SetVisible(false);
-
-    // SEの再生を終了する
-
-    // playerのスロー再生を終了する
-
-
-}
 
 // インタラクト対象検索
 IInteractable* Player::FindInteractable()
