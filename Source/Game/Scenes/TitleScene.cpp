@@ -88,13 +88,6 @@ bool TitleScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, con
         SetUpActors();
     }
 
-    // ‚±‚±‚Å‹OÕ‚ð•`‰æ‚·‚é
-    RegisterRenderHook(RenderPass::ForwardBlend, [&](ID3D11DeviceContext* immediateContext)
-        {
-            RenderState::BindBlendState(immediateContext, BLEND_STATE::ADD);
-            player->RenderTrail(immediateContext);
-        });
-
     return true;
 }
 
