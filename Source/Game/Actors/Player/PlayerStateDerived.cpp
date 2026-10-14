@@ -4,11 +4,9 @@
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Actors/Player/Player.h"
-#include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Engine/Utility/Time.h"
-#include "Game/Actors/Camera/DarkGameCamera.h"
 
 PlayerStateBase::PlayerStateBase(Player* actor) :State(actor), player(actor)
 {
@@ -210,15 +208,6 @@ void PlayerAttackState::Execute(float deltaTime)
         auto controller = player->GetBodyAnimationController();
         const float inputMagnitude = MathHelper::Length(player->inputComponent->GetMoveInput());
         const char* targetState = inputMagnitude > 0.01f ? "Running" : "Idle";
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[LocomotionRecovery][AttackFinished] attackEndDetected=true previousState=Attack targetState=" +
-            std::string(targetState) +
-            " locomotionMode=" + std::to_string(static_cast<int>(player->GetLocomotionMode())) +
-            " useBlendSpace=" + (controller->IsUsingBlendSpace() ? "true" : "false") +
-            " currentAnimation=" + controller->GetCurrentAnimationName() +
-            " animationTime=" + std::to_string(controller->GetCurrentAnimationTime()) +
-            " inputMagnitude=" + std::to_string(inputMagnitude) +
-            " actualHorizontalSpeed=" + std::to_string(player->characterMovementComponent->GetActualHorizontalSpeed()));
 
         player->currentAttackAnimation = player->startAttackAnimation;
         player->comboQueued = false;
@@ -410,14 +399,6 @@ void PlayerDamageState::Enter()
     }
     player->PlayBodyAnimation(animationName, false, true, 0.1f, true);
 
-    //const DirectX::XMFLOAT3& direction = player->GetDamageKnockbackDirection();
-    //const float power = player->GetDamageKnockbackPower();
-    //player->characterMovementComponent->AddImpulse(
-    //    { direction.x * power, 0.0f, direction.z * power });
-
-    //Logger::Log(Logger::LogCategory::Gameplay,
-    //    "[PlayerDamage][Enter] animation=Hit_Combat_F knockback=" +
-    //    std::to_string(direction.x) + ",0," + std::to_string(direction.z));
 }
 
 void PlayerDamageState::Execute(float deltaTime)

@@ -50,7 +50,6 @@ public:
         Dodge,
         Dash,
         Jump,
-        Interact,
     };
 
     enum class DamagePolicy :uint8_t
@@ -275,14 +274,6 @@ public:
     {
         finalHitRushFollowUpStopRequested = false;
     }
-    bool IsPhase1LastHitRushFollowUpStopRequested() const
-    {
-        return IsFinalHitRushFollowUpStopRequested();
-    }
-    void ClearPhase1LastHitRushFollowUpStop()
-    {
-        ClearFinalHitRushFollowUpStop();
-    }
     bool IsFinalHitAttackDrainComplete() const;
     bool IsFinalHitAttackDrainActive() const { return finalHitAttackDrainActive; }
     bool IsFinalHitAttackDrainLatched() const { return finalHitAttackDrainCompleted; }
@@ -291,7 +282,7 @@ public:
         phase2RushFinalHitDebugEnabled = enabled;
         if (!enabled) phase2RushFinalHitDebugEventId = 0;
     }
-    bool IsPhase2RushFinalHitDebugEnabled() const { return phase2RushFinalHitDebugEnabled; }
+
     void SetPhase2RushFinalHitDebugEventId(uint64_t eventId) { phase2RushFinalHitDebugEventId = eventId; }
     uint64_t GetPhase2RushFinalHitDebugEventId() const { return phase2RushFinalHitDebugEventId; }
     void MarkFinalHitAttackDrainInterrupted();
@@ -372,11 +363,6 @@ public:
 
     void ClearActionRequest(const char* reason);
 
-    const DirectX::XMFLOAT3& GetDamageKnockbackDirection() const
-    {
-        return damageKnockbackDirection;
-    }
-    float GetDamageKnockbackPower() const { return damageKnockbackPower; }
     HitReactionDirection GetHitReactionDirection() const { return hitReactionDirection; }
 
     // çUåÇäJénéûÇÃèàóù
@@ -458,10 +444,6 @@ private:
 
 
 private:
-
-    DirectX::XMFLOAT3 damageKnockbackDirection{ 0.0f, 0.0f, 1.0f };
-    float damageKnockbackPower = 2.5f;
-
     DirectX::XMFLOAT3 knockBackDirection{ 0.0f, 0.0f, 1.0f };
     float knockBackInitialSpeed = 8.0f;
     float knockBackDuration = 0.45f;

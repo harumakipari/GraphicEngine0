@@ -421,10 +421,6 @@ void GameScene::StartPhase1FinalHitTimeSequence()
     phase1FinalHitDebugBossMaxDelta = 0.0f;
     // Replace the ordinary sword-hit stop with this phase-specific, unscaled sequence.
     Time::SetSlow(0.0f, 0.3f);
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[Phase1FinalHit][HitStopBegin] customDuration={:.3f} setSlowDuration={:.3f} timeScale={:.3f} initialDeltaTime={:.6f} slowTimer={:.3f}",
-        phase1FinalHitHitStopDuration, 0.3f, Time::timeScale, Time::DeltaTime(),
-        Time::GetSlowTimer()).c_str());
 }
 
 void GameScene::UpdatePhase1FinalHitTimeSequence()
@@ -447,9 +443,6 @@ void GameScene::UpdatePhase1FinalHitTimeSequence()
     phase1FinalHitTimePhase = Phase1FinalHitTimePhase::Slow;
     const float slowScale = std::clamp(phase1FinalHitSlowScale, 0.01f, 1.0f);
     Time::SetSlow(slowScale, 0.0f);
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[Phase1FinalHit][StrongSlowBegin] elapsed={:.3f} timeScale={:.3f} deltaTimeBeforeActorUpdate={:.6f}",
-        phase1FinalHitTimeElapsed, Time::timeScale, Time::DeltaTime()).c_str());
 }
 
 void GameScene::RecordPhase1FinalHitHitStopFrameSample()
@@ -490,17 +483,6 @@ void GameScene::FinishPhase1FinalHitDebugSummary(const char* reason)
         return;
 
     phase1FinalHitDebugSummaryLogged = true;
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[Phase1FinalHit][HitStopSummary] reason={} elapsed={:.3f} frames={} zeroGlobalDeltaFrames={} playerNonZeroFrames={} bossNonZeroFrames={} playerLastDelta={:.6f} bossLastDelta={:.6f} playerMaxDelta={:.6f} bossMaxDelta={:.6f}",
-        reason ? reason : "unknown", phase1FinalHitTimeElapsed,
-        phase1FinalHitDebugHitStopFrames,
-        phase1FinalHitDebugZeroGlobalDeltaFrames,
-        phase1FinalHitDebugPlayerNonZeroFrames,
-        phase1FinalHitDebugBossNonZeroFrames,
-        phase1FinalHitDebugPlayerLastDelta,
-        phase1FinalHitDebugBossLastDelta,
-        phase1FinalHitDebugPlayerMaxDelta,
-        phase1FinalHitDebugBossMaxDelta).c_str());
     phase1FinalHitDebugActive = false;
 }
 

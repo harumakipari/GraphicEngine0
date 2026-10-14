@@ -13,12 +13,9 @@
 #include "Components/Render/PointLightComponent.h"
 
 #include "PlayerStateDerived.h"
-#include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Engine/Utility/Time.h"
-#include "Game/Actors/Camera/Camera.h"
-#include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Game/Scenes/GameScene.h"
 #include "Game/DarkGame/Interactable.h"
@@ -67,7 +64,6 @@ namespace
         case Player::ActionType::Dodge:    return "Dodge";
         case Player::ActionType::Dash:     return "Dash";
         case Player::ActionType::Jump:     return "Jump";
-        case Player::ActionType::Interact: return "Interact";
         }
         return "Unknown";
     }
@@ -4014,7 +4010,6 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
         direction = GetForward();
         direction.y = 0.0f;
     }
-    damageKnockbackDirection = direction;
 
     const int hpBeforeDamage = hp;
     const int appliedDamage = (std::max)(0, damage);
@@ -4036,10 +4031,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     SetRushInputAcceptance(false, "Damage");
     ClearActionRequest("damage_applied");
     Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
-    //if (sparkComponent)
-    //{
-    //    sparkComponent->Play();
-    //}
+
 
     if (hp > 0)
     {
