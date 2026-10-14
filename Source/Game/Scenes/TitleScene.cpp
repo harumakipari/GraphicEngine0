@@ -36,6 +36,7 @@
 #include "Physics/CollisionSystem.h"
 #include "UI/UIManager.h"
 #include "UI/Game/Pause.h"
+
 namespace { constexpr const char* Push="./Data/Sound/SE/button_push.wav"; constexpr const char* Move="./Data/Sound/SE/button_select_move.wav"; }
 
 bool TitleScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
@@ -50,7 +51,6 @@ bool TitleScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, con
     loadStageAssetsThread = std::thread([&]()
         {
             PROFILE_SCOPE("Load StageAssetModel");
-            //stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
             stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
             stageCandelabraAsset->spawnPoints = stageCandelabraAsset->model->spawnPoints;
 
