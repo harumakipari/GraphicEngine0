@@ -48,10 +48,10 @@ public:
     void DrawImGuiDetails() override
     {
 #ifdef USE_IMGUI
-        ImGui::DragFloat(U8("�C���^���N�g����������͈�"), &interactRange, 0.1f, 0.0f, 5.0f);
-        ImGui::DragFloat(U8("�C���^���N�g����������p�x"), &interactDegree, 1.0f, 0.0f, 180.0f);
-        ImGui::DragFloat3(U8("�C���^���N�g�͈͂̃I�t�Z�b�g"), &interactOffset.x, 0.1f);
-        ImGui::DragFloat2(U8("�C���^���N�g��UI�̍��W"), &interactUiWorldPos.x, 1.0f);
+        ImGui::DragFloat(U8("interactRange"), &interactRange, 0.1f, 0.0f, 5.0f);
+        ImGui::DragFloat(U8("interactDegree"), &interactDegree, 1.0f, 0.0f, 180.0f);
+        ImGui::DragFloat3(U8("interactOffset"), &interactOffset.x, 0.1f);
+        ImGui::DragFloat2(U8("interactUiWorldPos"), &interactUiWorldPos.x, 1.0f);
 #endif
     }
 

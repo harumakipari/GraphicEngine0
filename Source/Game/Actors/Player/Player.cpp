@@ -63,7 +63,6 @@ namespace
         case Player::ActionType::Attack:   return "Attack";
         case Player::ActionType::Dodge:    return "Dodge";
         case Player::ActionType::Dash:     return "Dash";
-        case Player::ActionType::Jump:     return "Jump";
         }
         return "Unknown";
     }
@@ -869,29 +868,6 @@ void Player::Update(float deltaTime)
                 playerForward = MathHelper::Multiply(playerForward, 1.0f / forwardLength);
             const float facingDot = playerForward.x * targetDirection.x + playerForward.z * targetDirection.z;
 
-            Logger::Log(Logger::LogCategory::Physics, std::format(
-                "[RushFirstHit] frame={} animationTime={:.4f} playerPos=({:.3f},{:.3f},{:.3f}) "
-                "targetPos=({:.3f},{:.3f},{:.3f}) actorCenterXZ={:.3f} capsuleCenterXZ={:.3f} "
-                "capsuleSurface={:.3f} playerRadius={:.3f} targetRadius={:.3f} rushStopDistance={:.3f} "
-                "forward=({:.3f},{:.3f},{:.3f}) targetDirXZ=({:.3f},{:.3f},{:.3f}) facingDot={:.3f} "
-                "radius={:.3f} offset=({:.3f},{:.3f},{:.3f}) "
-                "root prev=({:.3f},{:.3f},{:.3f}) current=({:.3f},{:.3f},{:.3f}) length={:.3f} hit={} "
-                "mid prev=({:.3f},{:.3f},{:.3f}) current=({:.3f},{:.3f},{:.3f}) length={:.3f} hit={} "
-                "tip prev=({:.3f},{:.3f},{:.3f}) current=({:.3f},{:.3f},{:.3f}) length={:.3f} hit={}",
-                initialRushInputTraceFrame, animationControllerForDebug->GetCurrentAnimationTime(),
-                GetPosition().x, GetPosition().y, GetPosition().z,
-                targetPosition.x, targetPosition.y, targetPosition.z,
-                actorCenterDistanceXZ, capsuleCenterDistanceXZ, capsuleSurfaceDistance,
-                playerRadius, targetRadius, rushStopDistance,
-                playerForward.x, playerForward.y, playerForward.z,
-                targetDirection.x, targetDirection.y, targetDirection.z, facingDot,
-                activeHitBoxRadius, activeHitBoxOffset.x, activeHitBoxOffset.y, activeHitBoxOffset.z,
-                sweeps[0].start.x, sweeps[0].start.y, sweeps[0].start.z,
-                sweeps[0].end.x, sweeps[0].end.y, sweeps[0].end.z, sweeps[0].sweepLength, sweeps[0].hit,
-                sweeps[1].start.x, sweeps[1].start.y, sweeps[1].start.z,
-                sweeps[1].end.x, sweeps[1].end.y, sweeps[1].end.z, sweeps[1].sweepLength, sweeps[1].hit,
-                sweeps[2].start.x, sweeps[2].start.y, sweeps[2].start.z,
-                sweeps[2].end.x, sweeps[2].end.y, sweeps[2].end.z, sweeps[2].sweepLength, sweeps[2].hit));
 
             constexpr DirectX::XMFLOAT4 rootColor{ 0.25f, 1.0f, 0.45f, 1.0f };
             constexpr DirectX::XMFLOAT4 midColor{ 1.0f, 0.9f, 0.2f, 1.0f };
@@ -930,25 +906,6 @@ void Player::Update(float deltaTime)
             const std::string actorName = sweep.result.actor
                 ? sweep.result.actor->GetName()
                 : "null";
-            if (swordHitDebug && anySweepHit)
-            {
-                Logger::Log(Logger::LogCategory::Physics, std::format(
-                    "[SwordHit] source={} success={} actor={} hasPosition={} hasNormal={} initialOverlap={} distance={} penetrationDepth={} sweepLength={} toi={} hitPoint={} normal={} prevPos={} currentPos={}",
-                    sweep.source,
-                    sweep.hit,
-                    actorName,
-                    sweep.result.hasPosition,
-                    sweep.result.hasNormal,
-                    sweep.result.initialOverlap,
-                    sweep.result.distance,
-                    sweep.result.penetrationDepth,
-                    sweep.sweepLength,
-                    toi,
-                    MotionWarpPositionString(sweep.result.hitPoint),
-                    MotionWarpPositionString(sweep.result.normal),
-                    MotionWarpPositionString(sweep.start),
-                    MotionWarpPositionString(sweep.end)));
-            }
 
             if (!sweep.hit || !validSweepLength)
                 continue;
@@ -1012,12 +969,6 @@ void Player::Update(float deltaTime)
                     {
                         enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
                     }
-                    else if (!isRushHit)
-                    {
-                        if (swordHitDebug)
-                            Logger::Log(Logger::LogCategory::Physics,
-                                "[SwordHit] effect skipped: no valid hit position/normal");
-                    }
                     hitActors.emplace(enemy);
                     if (isRushHit)
                     {
@@ -1028,7 +979,7 @@ void Player::Update(float deltaTime)
                         isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
                     if (lethalHit && finalHitCallback)
                     {
-                        if (isRushHit && phase2RushFinalHitDebugEnabled)
+                        if (isRushHit)
                         {
                             const auto controller = GetBodyAnimationController();
                             const auto* rushState = stateMachine_
@@ -1038,20 +989,6 @@ void Player::Update(float deltaTime)
                             const bool animationPlaying = controller && controller->IsPlayAnimation();
                             const float animationTime = controller ? controller->GetCurrentAnimationTime() : 0.0f;
                             const float animationLength = controller ? controller->GetCurrentAnimationLength() : 0.0f;
-                            Logger::Log(Logger::LogCategory::Gameplay,
-                                "[Phase2RushFinalHit][LethalBeforeCallback] event=pending"
-                                " state=" + std::string(stateMachine_->GetStateName()) +
-                                " rushStep=" + std::to_string(rushState ? rushState->GetComboIndex() : -1) +
-                                " rushPhase=" + std::string(rushState ? rushState->GetPhaseNameForDebug() : "Unknown") +
-                                " animation=" + animationName +
-                                " rushAnimation=" + (rushState ? rushState->GetCurrentAttackAnimationForDebug() : "") +
-                                " playing=" + std::string(animationPlaying ? "true" : "false") +
-                                " time=" + std::to_string(animationTime) +
-                                " length=" + std::to_string(animationLength) +
-                                " ended=" + std::string(!animationPlaying ? "true" : "false") +
-                                " latchRequested=" + std::string(finalHitVisualPoseLatchRequested ? "true" : "false") +
-                                " latched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false") +
-                                " timeScale=" + std::to_string(GetTimeScale()));
                         }
                         finalHitCallback(enemy, GetPosition());
                     }
@@ -1069,15 +1006,8 @@ void Player::Update(float deltaTime)
                     {
                         enemy->SpawnPlayerRushHitEffect(hit.hitPoint, hit.normal, playerPos,
                             hit.hasPosition, hit.hasNormal);
-                        if (swordHitDebug)
-                        {
-                            Logger::Log(Logger::LogCategory::Physics, std::format(
-                                "[Rush][SwordHit] source={} target={} damageApplied=true hpAfter={} effectsRequested=RushHitRingEffect,RushCoreEffect",
-                                selectedHit->source, enemy->GetName(), enemy->GetHp()));
-                        }
                     }
-                    Time::SetSlow(0.0f,
-                        isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
+                    Time::SetSlow(0.0f, isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
                 }
             }
         }
@@ -1347,10 +1277,10 @@ void Player::UpdateOperationGuideUI()
     const float amplitude = std::clamp(operationGuidePulseAmplitude, 0.0f, 1.0f);
     const float speed = (std::max)(0.0f, operationGuidePulseSpeed);
     const auto stickWasUsed = [](const DirectX::XMFLOAT2& stick)
-    {
-        constexpr float threshold = 0.20f;
-        return stick.x * stick.x + stick.y * stick.y >= threshold * threshold;
-    };
+        {
+            constexpr float threshold = 0.20f;
+            return stick.x * stick.x + stick.y * stick.y >= threshold * threshold;
+        };
     if (operationGuideGameplayHudVisible && operationGuideEventVisible)
     {
         if (IsOperationGuideItemVisible(OperationGuideItem::L) &&
@@ -1635,15 +1565,8 @@ void Player::DrawImGuiDetails()
         ImGui::InvisibleButton("##DodgeTimeline", ImVec2(timelineWidth, timelineHeight));
         ImGui::TextDisabled("Blue: Invincible  Orange: Just  White: Current");
 
-        const float justRate = dodgeDebugAttempts > 0
-            ? 100.0f * static_cast<float>(dodgeDebugJustCount) / static_cast<float>(dodgeDebugAttempts)
-            : 0.0f;
-        ImGui::Text("Attempts: %d  Just: %d  Normal: %d  Damage: %d",
-            dodgeDebugAttempts, dodgeDebugJustCount, dodgeDebugNormalCount, dodgeDebugDamageCount);
-        ImGui::Text("Just / Attempt: %.1f%%", justRate);
         if (ImGui::Button("Reset Debug Stats"))
         {
-            dodgeDebugAttempts = dodgeDebugJustCount = dodgeDebugNormalCount = dodgeDebugDamageCount = 0;
             lastJustDodgeValid = false;
         }
         ImGui::SeparatorText("Last Just Dodge");
@@ -2077,30 +2000,12 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
             const DirectX::XMFLOAT3 mid = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
             const DirectX::XMFLOAT3 tip = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
             const float blendFactor = controllerForFirstHitDebug->GetBlendFactorDebug();
-            Logger::Log(Logger::LogCategory::Physics, std::format(
-                "[RushFirstHit][Begin] frame={} animationTime={:.4f} blendActive={} blendFactor={:.3f} "
-                "playerPos=({:.3f},{:.3f},{:.3f}) targetPos=({:.3f},{:.3f},{:.3f}) "
-                "actorCenterXZ={:.3f} capsuleSurface={:.3f} playerRadius={:.3f} targetRadius={:.3f} "
-                "forward=({:.3f},{:.3f},{:.3f}) targetDirXZ=({:.3f},{:.3f},{:.3f}) facingDot={:.3f} "
-                "root=({:.3f},{:.3f},{:.3f}) mid=({:.3f},{:.3f},{:.3f}) tip=({:.3f},{:.3f},{:.3f})",
-                initialRushInputTraceFrame, controllerForFirstHitDebug->GetCurrentAnimationTime(),
-                blendFactor < 0.999f, blendFactor,
-                GetPosition().x, GetPosition().y, GetPosition().z,
-                targetPosition.x, targetPosition.y, targetPosition.z,
-                actorCenterDistanceXZ, capsuleSurfaceDistance, playerRadius, targetRadius,
-                playerForward.x, playerForward.y, playerForward.z,
-                targetDirection.x, targetDirection.y, targetDirection.z, facingDot,
-                root.x, root.y, root.z, mid.x, mid.y, mid.z, tip.x, tip.y, tip.z));
         }
         if (swordHitDebug && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
         {
             rushSweepHitThisHitBoxDebug = false;
             const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
             const auto controller = GetBodyAnimationController();
-            Logger::Log(Logger::LogCategory::Physics, std::format(
-                "[Rush][HitBoxBegin] step={} animation={}",
-                rushState ? rushState->GetComboIndex() : -1,
-                controller ? controller->GetCurrentAnimationName() : ""));
         }
         if (stateMachine_->GetStateName() == "Attack")
             StopAttackTargetRotation();
@@ -2192,16 +2097,6 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         warp.actualWarpDistance = actualWarpDistance;
         warp.startPosition = GetPosition();
         animationMotionWarps.push_back(warp);
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[MotionWarp][Begin] notifyMoveDistance=" + std::to_string(state.moveDistance) +
-            " currentCenterDistance=" + std::to_string(currentCenterDistance) +
-            " playerRadius=" + std::to_string(playerRadius) +
-            " enemyRadius=" + std::to_string(enemyRadius) +
-            " desiredAttackSurfaceDistance=" + std::to_string(motionWarpDesiredAttackSurfaceDistance) +
-            " remainingApproachDistance=" + std::to_string(remainingApproachDistance) +
-            " actualWarpDistance=" + std::to_string(actualWarpDistance) +
-            " targetClampApplied=" + std::string(targetClampApplied ? "true" : "false") +
-            " positionBefore=" + MotionWarpPositionString(warp.startPosition));
     }
     break;
     }
@@ -2214,27 +2109,9 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     {
     case AnimationNotifyState::Type::HitBox:
         //Logger::Log(U8("当たり判定を終了しました"));
-        if (rushFirstHitDebugActive)
-        {
-            Logger::Log(Logger::LogCategory::Physics, std::format(
-                "[RushFirstHit][End] frame={} animationTime={:.4f} damageApplied={} rootHit={} midHit={} tipHit={} allMiss={}",
-                initialRushInputTraceFrame,
-                GetBodyAnimationController() ? GetBodyAnimationController()->GetCurrentAnimationTime() : -1.0f,
-                rushFirstHitDamageAppliedDebug, rushFirstHitRootHitDebug,
-                rushFirstHitMidHitDebug, rushFirstHitTipHitDebug,
-                !rushFirstHitRootHitDebug && !rushFirstHitMidHitDebug && !rushFirstHitTipHitDebug));
-            rushFirstHitDebugActive = false;
-        }
         hitBox = false;
         activeHitBoxRadius = weaponSphereRadius;
         activeHitBoxOffset = {};
-        if (swordHitDebug && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
-        {
-            const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
-            Logger::Log(Logger::LogCategory::Physics, std::format(
-                "[Rush][HitBoxEnd] step={} sweepHit={}",
-                rushState ? rushState->GetComboIndex() : -1, rushSweepHitThisHitBoxDebug));
-        }
         break;
     case AnimationNotifyState::Type::InputWindow:
         inputWindow = false;
@@ -2278,13 +2155,6 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
                 endCenterDistance = MathHelper::Length(delta);
             }
 
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[MotionWarp][End] notifyMoveDistance=" +
-                std::to_string(activeWarp->notifyMoveDistance) +
-                " actualWarpDistance=" + std::to_string(activeWarp->actualWarpDistance) +
-                " endCenterDistance=" + std::to_string(endCenterDistance) +
-                " positionBefore=" + MotionWarpPositionString(activeWarp->startPosition) +
-                " positionAfter=" + MotionWarpPositionString(GetPosition()));
         }
         animationMotionWarps.erase(
             std::remove_if(
@@ -2703,7 +2573,7 @@ bool Player::BeginPrisonOpeningSitting(
     prisonOpeningSittingPingPongForward = true;
     const bool started = prisonOpeningUseStandingPingPong
         ? controller->PlayAnimationImmediate("Standing", true, true) &&
-            controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime)
+        controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime)
         : controller->PlayAnimationImmediate("Sitting", true, true);
     if (!started)
     {
@@ -2892,11 +2762,11 @@ void Player::BeginGameplayHudFadeOut()
 {
     gameplayHudFadeEntries.clear();
     const auto capture = [this](const std::shared_ptr<UICoreComponent>& core)
-    {
-        auto image = std::dynamic_pointer_cast<UIImageComponent>(core);
-        if (image && image->IsVisible())
-            gameplayHudFadeEntries.push_back({ image, image->color });
-    };
+        {
+            auto image = std::dynamic_pointer_cast<UIImageComponent>(core);
+            if (image && image->IsVisible())
+                gameplayHudFadeEntries.push_back({ image, image->color });
+        };
     for (const auto& component : hpBarUiComponents) capture(component);
     capture(rushGuideImageComponent);
     capture(rushButtonImageComponent);
@@ -3414,10 +3284,6 @@ void Player::CaptureActionRequest(float deltaTime)
             std::string("[ActionRequest][Detected] action=Dash state=") + stateMachine_->GetStateName());
         StoreActionRequest(ActionType::Dash, 0.3f);
     }
-    //if (InputSystem::GetInputState("Interact", InputStateMask::Trigger))
-    //{
-    //    StoreActionRequest(ActionType::Interact, 0.3f);
-    //}
 }
 
 bool Player::StoreActionRequest(ActionType type, float remainTime)
@@ -3426,10 +3292,6 @@ bool Player::StoreActionRequest(ActionType type, float remainTime)
     const int currentPriority = GetActionPriority(bufferCommand.type);
     if (bufferCommand.type != ActionType::None && newPriority < currentPriority)
     {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[ActionRequest][Rejected] action=" + std::string(ToString(type)) +
-            " reason=lower_priority current=" + std::string(ToString(bufferCommand.type)) +
-            " state=" + stateMachine_->GetStateName());
         return false;
     }
 
@@ -3443,14 +3305,6 @@ bool Player::StoreActionRequest(ActionType type, float remainTime)
         bufferCommand.useDodgeWorldDirection = useDodgeWorldDirection;
     }
 
-    const char* reason = previous == ActionType::None ? "empty" :
-        (previous == type ? "refreshed" : "higher_priority");
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[ActionRequest][Stored] action=" + std::string(ToString(type)) +
-        " remainTime=" + std::to_string(remainTime) +
-        " reason=" + reason +
-        " previous=" + std::string(ToString(previous)) +
-        " state=" + stateMachine_->GetStateName());
     return true;
 }
 
@@ -3489,12 +3343,6 @@ bool Player::TryExecuteActionRequest()
         }
         SetLocomotionMode(LocomotionMode::Dash);
         targetState = "Dash";
-        break;
-    case ActionType::Jump:
-        targetState = "Jump";
-        break;
-        //case ActionType::Interact:
-        //    targetState = "Interact";
         break;
     }
 
@@ -3949,10 +3797,8 @@ void Player::ConsumeActionRequest(ActionType expectedType)
 
 void Player::BeginDodgeDebug()
 {
-    dodgeDebugElapsed = 0.0f;
     normalDodgeRecordedThisDodge = false;
     justDodgeRecordedThisDodge = false;
-    ++dodgeDebugAttempts;
 }
 
 void Player::UpdateDodgeDebug(float deltaTime)
@@ -3965,7 +3811,6 @@ void Player::RecordNormalDodgeDebug()
     if (!normalDodgeRecordedThisDodge)
     {
         normalDodgeRecordedThisDodge = true;
-        ++dodgeDebugNormalCount;
     }
 }
 
@@ -4023,8 +3868,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
     }
     if (hp <= 0)
         RefreshOperationGuideUIVisibility();
-    ++dodgeDebugDamageCount;
-    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav", 0.3f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav", 0.4f);
     CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav", 0.5f);
     // コントローラー振動
     InputSystem::SetVibration(0.8f, 0.15f);
@@ -4076,10 +3920,10 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
                 const float rightDot = toAttacker.x * right.x + toAttacker.z * right.z;
                 if (std::abs(forwardDot) >= std::abs(rightDot))
                     hitReactionDirection = forwardDot >= 0.0f
-                        ? HitReactionDirection::Front : HitReactionDirection::Back;
+                    ? HitReactionDirection::Front : HitReactionDirection::Back;
                 else
                     hitReactionDirection = rightDot >= 0.0f
-                        ? HitReactionDirection::Left : HitReactionDirection::Right;
+                    ? HitReactionDirection::Left : HitReactionDirection::Right;
             }
         }
     }
@@ -4877,7 +4721,7 @@ void Player::CaptureDodgeWorldDirectionSnapshot()
     dodgeWorldDirectionSnapshotValid = length > 0.0001f;
     dodgeWorldDirectionSnapshot = dodgeWorldDirectionSnapshotValid
         ? DirectX::XMFLOAT3{ direction.x / length, 0.0f, direction.z / length }
-        : DirectX::XMFLOAT3{};
+    : DirectX::XMFLOAT3{};
 }
 
 bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
@@ -4892,7 +4736,7 @@ bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
         toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
     directionToAttackerDebug = attackerLength > 0.0001f
         ? DirectX::XMFLOAT3{ toAttacker.x / attackerLength, 0.0f, toAttacker.z / attackerLength }
-        : DirectX::XMFLOAT3{};
+    : DirectX::XMFLOAT3{};
 
     if (!dodgeWorldDirectionSnapshotValid || attackerLength <= 0.0001f)
     {
@@ -4949,7 +4793,6 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     if (!justDodgeRecordedThisDodge)
     {
         justDodgeRecordedThisDodge = true;
-        ++dodgeDebugJustCount;
     }
     lastJustDodgeValid = true;
     lastJustDodgeTime = dodgeDebugElapsed;

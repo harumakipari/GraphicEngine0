@@ -49,7 +49,6 @@ public:
         Attack,
         Dodge,
         Dash,
-        Jump,
     };
 
     enum class DamagePolicy :uint8_t
@@ -279,7 +278,6 @@ public:
     bool IsFinalHitAttackDrainLatched() const { return finalHitAttackDrainCompleted; }
     void SetPhase2RushFinalHitDebugEnabled(bool enabled)
     {
-        phase2RushFinalHitDebugEnabled = enabled;
         if (!enabled) phase2RushFinalHitDebugEventId = 0;
     }
 
@@ -501,10 +499,6 @@ public:
     float dodgeDebugElapsed = 0.0f;
     bool normalDodgeRecordedThisDodge = false;
     bool justDodgeRecordedThisDodge = false;
-    int dodgeDebugAttempts = 0;
-    int dodgeDebugJustCount = 0;
-    int dodgeDebugNormalCount = 0;
-    int dodgeDebugDamageCount = 0;
     bool lastJustDodgeValid = false;
     std::string lastJustDodgeAttack = "None";
     float lastJustDodgeTime = 0.0f;
@@ -553,8 +547,6 @@ public:
     bool finalHitAttackDrainActive = false;
     bool finalHitAttackDrainCompleted = false;
     bool finalHitAttackDrainFailed = false;
-    // Temporary diagnostic state. It is written only by the Phase 2 Rush final-hit path.
-    bool phase2RushFinalHitDebugEnabled = false;
     uint64_t phase2RushFinalHitDebugEventId = 0;
     bool rushInputEndNotifyReceivedDebug = false;
     std::string rushInputEndReasonDebug = "None";
