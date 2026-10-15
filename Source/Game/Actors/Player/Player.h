@@ -85,12 +85,8 @@ public:
         None,
         TPSWalk,
         TPSRun,
-        LockOnBlendWalk,
         LockOnBlendRun,
-
-        // 一時的に残すが使用禁止
         Idle,
-        Dash,
     };
 public:
     explicit Player(const std::string& modelName) :Character(modelName)

@@ -2185,7 +2185,6 @@ void Player::UpdateTPSLocomotion()
         if (speed > 0.0f)
             SetLocomotionMode(LocomotionMode::TPSWalk);
         break;
-
     case LocomotionMode::TPSWalk:
         if (speed <= 0.0f)
             SetLocomotionMode(LocomotionMode::Idle);
@@ -2197,16 +2196,6 @@ void Player::UpdateTPSLocomotion()
         if (speed < 0.55f)
             SetLocomotionMode(LocomotionMode::TPSWalk);
         break;
-    case LocomotionMode::Dash:
-        if (speed >= 0.6f)
-            SetLocomotionMode(LocomotionMode::TPSRun);
-        else if (speed > 0.0f)
-            SetLocomotionMode(LocomotionMode::TPSWalk);
-        else
-            SetLocomotionMode(LocomotionMode::Idle);
-        break;
-        // Focus / LockOn から TPS に戻った時
-    case LocomotionMode::LockOnBlendWalk:
     case LocomotionMode::LockOnBlendRun:
         if (speed >= 0.6f)
         {
@@ -2232,43 +2221,21 @@ void Player::UpdateLockOnLocomotion()
     switch (locomotionMode)
     {
     case LocomotionMode::None:
-        if (speed >= 0.6f)
+        if (speed > 0.f)
             SetLocomotionMode(LocomotionMode::LockOnBlendRun);
-        else
-            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
         break;
     case LocomotionMode::Idle:
         if (speed > 0.0f)
-            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
-        break;
-
-    case LocomotionMode::LockOnBlendWalk:
-        if (speed <= 0.0f)
-            SetLocomotionMode(LocomotionMode::Idle);
-        else if (speed >= 0.6f)
             SetLocomotionMode(LocomotionMode::LockOnBlendRun);
         break;
     case LocomotionMode::LockOnBlendRun:
-        if (speed < 0.55f)
-            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
-        break;
-    case LocomotionMode::Dash:
-        if (speed >= 0.6f)
-            SetLocomotionMode(LocomotionMode::LockOnBlendRun);
-        else if (speed > 0.0f)
-            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
-        else
+        if (speed <= 0.0f)
             SetLocomotionMode(LocomotionMode::Idle);
         break;
-    case LocomotionMode::TPSWalk:
     case LocomotionMode::TPSRun:
         if (speed >= 0.6f)
         {
             SetLocomotionMode(LocomotionMode::LockOnBlendRun);
-        }
-        else if (speed > 0.0f)
-        {
-            SetLocomotionMode(LocomotionMode::LockOnBlendWalk);
         }
         else
         {
@@ -3222,7 +3189,6 @@ void Player::ClearAttackTarget()
 void Player::UpdateMovement()
 {
     const std::string currentState = GetStateMachine()->GetStateName();
-    bool isDash = currentState == "Dash";
     const bool suppressMovementInput =
         currentState == "Damage" || currentState == "KnockBack" ||
         currentState == "DeathPending" || currentState == "Death";
@@ -3242,40 +3208,29 @@ void Player::UpdateMovement()
 
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
     {
-#if 1
-        if (isDash)
+
+        GameScene::LockOnTargetSelectionResult selectionResult =
+            GameScene::LockOnTargetSelectionResult::NoCandidate;
+        if (focus)
+        {
+            if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
+                selectionResult = gameScene->UpdateLockOnTargetSelection();
+        }
+
+        if (!focus || selectionResult == GameScene::LockOnTargetSelectionResult::Invalidated)
         {
             camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-            if (InputSystem::GetInputState("LockOn", InputStateMask::Trigger))
-            {
-                camera->RotateToPlayerForward();
-            }
+        }
+        else if (selectionResult == GameScene::LockOnTargetSelectionResult::Selected)
+        {
+            camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
         }
         else
         {
-            GameScene::LockOnTargetSelectionResult selectionResult =
-                GameScene::LockOnTargetSelectionResult::NoCandidate;
-            if (focus)
-            {
-                if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
-                    selectionResult = gameScene->UpdateLockOnTargetSelection();
-            }
-
-            if (!focus || selectionResult == GameScene::LockOnTargetSelectionResult::Invalidated)
-            {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-            }
-            else if (selectionResult == GameScene::LockOnTargetSelectionResult::Selected)
-            {
-                camera->SetRequestMode(DarkCameraActor::CameraMode::LockOn);
-            }
-            else
-            {
-                // This input found no current target, so preserve ordinary Focus.
-                camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
-            }
+            // This input found no current target, so preserve ordinary Focus.
+            camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
         }
-#endif // 0
+
 
         // カメラモードに応じたプレイヤー移動処理
         // 左スティック入力
@@ -3422,32 +3377,14 @@ void Player::SetLocomotionMode(LocomotionMode mode)
         characterMovementComponent->ResetFixedSpeed();
         PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, true);
         break;
-
     case LocomotionMode::TPSRun:
         controller->SetUseBlendSpace(false);
         characterMovementComponent->ResetFixedSpeed();
         PlayBodyAnimation("Jog_Fwd", true, true, 0.2f, true);
         break;
-
-    case LocomotionMode::LockOnBlendWalk:
-    {
-
-        controller->SetUseBlendSpace(true);
-        characterMovementComponent->ResetFixedSpeed();
-    }
-
-    break;
-
     case LocomotionMode::LockOnBlendRun:
-    {
         characterMovementComponent->ResetFixedSpeed();
         controller->SetUseBlendSpace(true);
-    }
-    break;
-
-    case LocomotionMode::Dash:
-        controller->SetUseBlendSpace(false);
-        GetStateMachine()->ChangeState("Dash");
         break;
     case LocomotionMode::Idle:
         controller->SetUseBlendSpace(false);
@@ -3659,10 +3596,7 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
             }
         }
     }
-
     const char* targetState = hp > 0 ? "Damage" : "DeathPending";
-    Logger::Log(Logger::LogCategory::Gameplay, "[PlayerDamage][Applied] targetState=" + std::string(targetState) + " knockback=" + std::to_string(direction.x) + "," +
-        std::to_string(direction.y) + "," + std::to_string(direction.z));
     stateMachine_->ChangeState(targetState);
     return true;
 }
