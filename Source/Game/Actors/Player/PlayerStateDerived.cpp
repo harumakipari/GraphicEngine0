@@ -195,7 +195,6 @@ void PlayerAttackState::Exit()
     }
 
     // 攻撃を終了する処理
-    player->EndAttack();
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
     if (!continuingComboTransition)
         player->ClearAttackTarget();

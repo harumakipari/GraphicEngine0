@@ -1046,18 +1046,6 @@ void Player::Update(float deltaTime)
         return;
     }
 
-
-    if (hitStopTimer > 0.0f)
-    {
-        hitStopTimer -= Time::UnscaledDeltaTime();
-
-        if (hitStopTimer <= 0.0f)
-        {
-            Time::timeScale = 1.0f; // å≥Ç…ñﬂÇ∑
-        }
-    }
-
-
     if (gameplayInputEnabled)
     {
         // ì¸óÕèàóù
@@ -1900,7 +1888,6 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         float playerRadius = 0.0f;
         float enemyRadius = 0.0f;
         float remainingApproachDistance = 0.0f;
-        bool targetClampApplied = false;
 
         // Rotation and MotionWarp share the target fixed at Attack Enter.
         if (stateMachine_->GetStateName() == "Attack")
@@ -1924,7 +1911,6 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
                     currentCenterDistance - centerStopDistance, 0.0f);
                 actualWarpDistance = (std::min)(
                     state.moveDistance, remainingApproachDistance);
-                targetClampApplied = true;
             }
         }
 
@@ -1990,12 +1976,10 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
             });
         if (activeWarp != animationMotionWarps.end())
         {
-            float endCenterDistance = 0.0f;
             if (const auto target = attackTarget.lock())
             {
                 DirectX::XMFLOAT3 delta = MathHelper::Subtract(target->GetPosition(), GetPosition());
                 delta.y = 0.0f;
-                endCenterDistance = MathHelper::Length(delta);
             }
 
         }
@@ -2605,7 +2589,6 @@ bool Player::BeginFinalHitWait()
     finalHitWaiting = true;
     ForceResetPlayerSlow();
     ForceResetBossSlow();
-    hitStopTimer = 0.0f;
 
     finalHitAttackDrainActive = false;
     finalHitAttackDrainCompleted = false;
@@ -2731,7 +2714,6 @@ void Player::ClearTransientBattleActions()
     finalHitVisualPoseLatchRequested = false;
     finalHitRushFollowUpStopRequested = false;
     ClearAttackTarget();
-    EndAttack();
     SetRushInputAcceptance(false);
     SetRushInputDebugState(false, false);
     hitBox = false;
@@ -2799,11 +2781,7 @@ void Player::ClearBattleVisualsForPhaseTransition()
     swordGhostElapsedTime = 0.0f;
     swordGhostIndex = 0;
     damageFlashTimer = 0.0f;
-    hitStopTimer = 0.0f;
     ApplyDamageFlash(0.0f);
-    // ClearTransientBattleActions also clears sword trails, Rush/JustDodge
-    // ghosts, motion warps, weapon visuals, hit boxes, and player-owned targets.
-    // Stop only the ParticleComponent owned by this Player; movie effects stay intact.
 }
 void Player::CancelGameplayActionsForCinematic()
 {
@@ -2877,7 +2855,6 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
     rushPromptAnimationTimer = 0.0f;
     rushPromptWasVisible = false;
     damageFlashTimer = 0.0f;
-    hitStopTimer = 0.0f;
     ApplyDamageFlash(0.0f);
 
     hp = maxHp;
@@ -3813,15 +3790,9 @@ void Player::ClearActionRequest(const char* reason)
 // çUåÇäJénéûÇÃèàóù
 void Player::StartAttack()
 {
-    isAttackActive = true;
     hitActors.clear();
 }
 
-// çUåÇèIóπéûÇÃèàóù
-void Player::EndAttack()
-{
-    isAttackActive = false;
-}
 
 float Player::GetRushDamageMultiplier() const
 {

@@ -344,9 +344,6 @@ public:
     // 攻撃開始時の処理
     void StartAttack();
 
-    // 攻撃終了時の処理
-    void EndAttack();
-
     // ジャスト回避成功時の処理　ラッシュ受付期間開始
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
 
@@ -678,7 +675,6 @@ private:
     DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f };
     float playerAliveEmissionPower = 20.9f;
 
-    float hitStopTimer = 0.0f; // ヒットストップのタイマー
 
     DirectX::XMFLOAT3 prevSwordRootPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 prevSwordMidPos = { 0.0f,0.0f,0.0f };
@@ -692,7 +688,6 @@ private:
     DirectX::XMFLOAT3 swordGhostColor = { 0.5f,0.8f,1.6f }; // 残像の剣のベースカラー
     float swordGhostEmissive = 2.0f;    // 残像のemissiveColor
     bool battleActionsSuspended = false;
-    bool isAttackActive = false;    // プレイヤーが攻撃状態に入る
     DirectX::XMFLOAT3 ghostEdgeColor = { 0.0f,0.042f,0.253f };  // 残像の剣のベースカラー
     DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 残像の剣のベースカラー
     DirectX::XMFLOAT3 rushSwordColor = { 0.5f,0.8f,1.6f };
