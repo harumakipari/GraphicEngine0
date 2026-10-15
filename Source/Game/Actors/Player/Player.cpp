@@ -1087,10 +1087,7 @@ void Player::RenderTrail(ID3D11DeviceContext* immediateContext)
 
 void Player::SetRushWeaponVisual(const bool enabled)
 {
-    rushWeaponVisualEnabled = enabled;
-    const DirectX::XMFLOAT3 swordColor = enabled
-        ? rushSwordColor
-        : DirectX::XMFLOAT3{ 0.0f, 0.8f, 1.0f };
+    const DirectX::XMFLOAT3 swordColor = enabled ? rushSwordColor : DirectX::XMFLOAT3{ 0.0f, 0.8f, 1.0f };
 
     if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
     {
@@ -1233,115 +1230,53 @@ bool Player::IsOperationGuideItemLearned(const OperationGuideItem item) const
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
-    if (ImGui::CollapsingHeader("Operation Guide UI", ImGuiTreeNodeFlags_DefaultOpen))
+    if (ImGui::CollapsingHeader(U8("操作ガイドUI")))
     {
-        ImGui::DragFloat("Pulse Amplitude", &operationGuidePulseAmplitude, 0.005f, 0.0f, 0.50f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat("Pulse Speed (rad/sec)", &operationGuidePulseSpeed, 0.05f, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat(U8("点滅の強さ"), &operationGuidePulseAmplitude, 0.005f, 0.0f, 0.50f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat(U8(" 点滅速度（rad/秒）"), &operationGuidePulseSpeed, 0.05f, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
         constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> labels = { "L", "LT", "Y", "X", "R" };
         for (size_t index = 0; index < operationGuideItems.size(); ++index)
         {
             auto& item = operationGuideItems[index];
             ImGui::PushID(static_cast<int>(index));
             ImGui::SeparatorText(labels[index]);
-            ImGui::Checkbox("Visible", &item.visible);
-            ImGui::Checkbox("Learned", &item.learned);
-            ImGui::DragFloat2("Position", &item.position.x, 1.0f, 0.0f, 1920.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::DragFloat2("Base Scale", &item.baseScale.x, 0.005f, 0.01f, 2.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::Text("Animation Timer: %.2f", item.animationTimer);
+            ImGui::DragFloat2(U8("位置"), &item.position.x, 1.0f, 0.0f, 1920.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragFloat2(U8("基準スケール "), &item.baseScale.x, 0.005f, 0.01f, 2.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
             ImGui::PopID();
         }
     }
-    if (ImGui::CollapsingHeader(U8("目を閉じるデバック")))
+    if (ImGui::CollapsingHeader(U8("目を閉じる")))
     {
-        const bool manualControlsEnabled = !deathEyeCloseActive && eyeCloseOverrideOwner != EyeCloseOverrideOwner::PrisonOpening;
-        if (!manualControlsEnabled)
-            ImGui::BeginDisabled();
-
-        if (ImGui::Button("Close Eyes Preview"))
-        {
-            closeEyePreviewActive = RebuildEyeClosePoseOverride();
-            closeEyeWeight = closeEyePreviewActive ? 1.0f : 0.0f;
-            if (closeEyePreviewActive)
-            {
-                eyeCloseOverrideOwner = EyeCloseOverrideOwner::ManualPreview;
-                GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
-            }
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Open Eyes / Reset"))
-            ResetEyeCloseOverride();
-
-        if (ImGui::SliderFloat("Close Eye Weight", &closeEyeWeight, 0.0f, 1.0f))
-        {
-            if (!closeEyePreviewActive)
-                closeEyePreviewActive = RebuildEyeClosePoseOverride();
-            if (closeEyePreviewActive)
-            {
-                eyeCloseOverrideOwner = EyeCloseOverrideOwner::ManualPreview;
-                GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
-            }
-        }
-
-        if (!manualControlsEnabled)
-            ImGui::EndDisabled();
-
-        if (ImGui::SliderFloat("Closed Eye Pose Time", &closedEyePoseTime,
-            0.0f, 7.083f, "%.3f sec"))
-        {
-            if (closeEyePreviewActive || deathEyeCloseActive)
-                RebuildEyeClosePoseOverride();
-        }
-
         ImGui::SliderFloat(U8("死亡時：目を閉じるまでの時間"), &deathEyeCloseDelay, 0.0f, 10.0f, "%.3f sec");
         ImGui::SliderFloat(U8("死亡時：目を閉じる時間"), &deathEyeCloseDuration, 0.01f, 5.0f, "%.3f sec");
         ImGui::SliderFloat(U8("死亡時：青い光が消え始まるまでの時間"), &deathColorFadeDelay, 0.0f, 10.0f, "%.3f sec");
         ImGui::SliderFloat(U8("死亡時：青い光が消える時間"), &deathColorFadeDuration, 0.01f, 5.0f, "%.3f sec");
         ImGui::ColorEdit3(U8("死亡時：発光部の色"), &deathDeadEmissiveColor.x);
-        ImGui::SliderFloat("Death Stone Fade SE Volume", &deathStoneFadeSeVolume, 0.0f, 2.0f);
-        ImGui::Text("Death Eye Weight: %.3f", closeEyeWeight);
-        ImGui::Text("Death Visual Fade: %.3f", deathVisualFade);
-
         ImGui::Separator();
-        ImGui::Text("Closed Pose Time : %.3f", closedEyePoseTime);
-        ImGui::Text("Weight            : %.3f", closeEyeWeight);
-        ImGui::Text("Control           : %s",
-            deathEyeCloseActive ? "Death Auto" :
-            eyeCloseOverrideOwner == EyeCloseOverrideOwner::PrisonOpening ? "Prison Opening" :
-            closeEyePreviewActive ? "Manual Preview" : "Animation");
     }
-
     if (ImGui::CollapsingHeader(U8("ジャスト回避のプレイヤーの残像")))
     {
         ImGui::DragFloat(U8("プレイヤーの残像の初回の透明度"), &playerPoseGhostInitialAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
         ImGui::DragFloat(U8("プレイヤーの残像のライフタイム"), &playerPoseGhostLifetime, 0.01f, 0.0f, 5.0f, "%.2f sec");
-        ImGui::DragFloat("Player Ghost Spawn Interval", &playerGhostSpawnInterval,
-            0.001f, 0.0f, 1.0f, "%.3f sec");
-        ImGui::ColorEdit3("Player Ghost Color", &playerPoseGhostColor.x);
-        ImGui::DragFloat("Player Ghost Emissive", &playerPoseGhostEmissive,
-            0.1f, 0.0f, 50.0f);
-        ImGui::ColorEdit3("Player Ghost Edge Color", &playerPoseGhostEdgeColor.x);
-        ImGui::ColorEdit3("Player Ghost Inner Color", &playerPoseGhostInnerColor.x);
-        ImGui::DragFloat("Player Ghost Edge Width", &playerPoseGhostEdgeWidth,
-            0.01f, 0.0f, 10.0f);
+        ImGui::DragFloat(U8("残像生成間隔（秒）"), &playerGhostSpawnInterval, 0.001f, 0.0f, 1.0f, "%.3f sec");
+        ImGui::ColorEdit3(U8("残像色"), &playerPoseGhostColor.x);
+        ImGui::DragFloat(U8("残像発光強度"), &playerPoseGhostEmissive, 0.1f, 0.0f, 50.0f);
+        ImGui::ColorEdit3(U8("残像輪郭色"), &playerPoseGhostEdgeColor.x);
+        ImGui::ColorEdit3(U8("残像内部色"), &playerPoseGhostInnerColor.x);
+        ImGui::DragFloat(U8("残像輪郭幅 "), &playerPoseGhostEdgeWidth, 0.01f, 0.0f, 10.0f);
     }
-
-    if (ImGui::CollapsingHeader(U8("プレイヤー瀕死状態時の数値調整")))
+    if (ImGui::CollapsingHeader(U8("プレイヤー瀕死状態時")))
     {
         ImGui::DragInt(U8("瀕死判定HP"), &lowHpThreshold, 1, 0, 50);
-        ImGui::Checkbox(U8("瀕死演出有効"), &lowHpActive);
         ImGui::DragFloat(U8("心拍間隔"), &heartbeatInterval, 0.01f, 0.0f, 5.0f, "%.2f sec");
         ImGui::DragFloat(U8("脈動時間"), &lowHpPulseDuration, 0.01f, 0.0f, 5.0f, "%.2f sec");
         ImGui::DragFloat(U8("瀕死赤発光強度"), &lowHpPulseFlashAmount, 0.01f, 0.0f, 5.0f, "%.2f");
         ImGui::DragFloat(U8("瀕死ビネット濃度"), &lowHpVignetteBaseAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
         ImGui::DragFloat(U8("ビネット脈動最大濃度"), &lowHpVignettePulseAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
     }
-
-
-
     if (ImGui::CollapsingHeader("Player HP UI"))
     {
-        ImGui::DragFloat("Delayed HP Hold Duration", &delayedHpDelayDuration,
-            0.01f, 0.0f, 2.0f, "%.2f sec");
+        ImGui::DragFloat("Delayed HP Hold Duration", &delayedHpDelayDuration,0.01f, 0.0f, 2.0f, "%.2f sec");
         ImGui::DragFloat("Delayed HP Follow Speed", &delayedHpFollowSpeed,
             0.1f, 0.0f, 100.0f, "%.2f HP/sec");
         ImGui::DragFloat("HP Recovery UI Duration", &hpRecoveryUiDuration,
@@ -1350,7 +1285,6 @@ void Player::DrawImGuiDetails()
             hpCurrentFillUiComponent->SetColor(playerHpCurrentColor);
         if (ImGui::ColorEdit4("Delayed HP Color", &playerHpDelayedColor.r) && hpDelayedFillUiComponent)
             hpDelayedFillUiComponent->SetColor(playerHpDelayedColor);
-        // 被ダメージ時の赤くする
         ImGui::DragFloat("Damage Flash Duration", &damageFlashDuration,
             0.01f, 0.01f, 1.0f, "%.2f sec");
         ImGui::DragFloat("Damage Flash Body Tint Strength", &damageFlashBodyTintStrength,
@@ -1359,7 +1293,7 @@ void Player::DrawImGuiDetails()
             0.05f, 0.0f, 10.0f, "%.2f");
 
     }
-    if (ImGui::CollapsingHeader("Just Dodge Debug", ImGuiTreeNodeFlags_DefaultOpen))
+    if (ImGui::CollapsingHeader("Just Dodge Debug"))
     {
         ImGui::Checkbox("Enable World HitBox Debug", &justDodgeDebugEnabled);
         ImGui::DragFloat("Just Dodge Max Toward Attacker Dot",
@@ -1459,7 +1393,6 @@ void Player::DrawImGuiDetails()
         }
         else ImGui::TextDisabled("No Just Dodge recorded");
     }
-    ImGui::Checkbox(U8("ボス戦カメラ"), &isBossBattle);
     ImGui::DragFloat(U8("剣の球の当たり判定の半径"), &weaponSphereRadius, 0.05f);
     ImGui::Checkbox("Sword Hit Debug", &swordHitDebug);
     ImGui::DragFloat("Normal Enemy Rush Surface Margin", &normalEnemyRushSurfaceMargin,
@@ -1474,18 +1407,17 @@ void Player::DrawImGuiDetails()
     const bool normalGhostEdgeColorChanged =
         ImGui::ColorEdit3(U8("剣の残像のエッジの色"), &ghostEdgeColor.x);
     ImGui::ColorEdit3(U8("剣の残像の内部の色"), &ghostInnerColor.x);
-    if (!rushWeaponVisualEnabled && (normalGhostBaseColorChanged || normalGhostEdgeColorChanged))
+    if ((normalGhostBaseColorChanged || normalGhostEdgeColorChanged))
     {
         SetRushWeaponVisual(false);
     }
 
     if (ImGui::CollapsingHeader(U8("剣のラッシュ中の見た目"), ImGuiTreeNodeFlags_DefaultOpen))
     {
-        if (ImGui::ColorEdit3(U8("ラッシの色"), &rushSwordColor.x) && rushWeaponVisualEnabled)
+        if (ImGui::ColorEdit3(U8("ラッシの色"), &rushSwordColor.x))
         {
             SetRushWeaponVisual(true);
         }
-        ImGui::Checkbox("Rush Visual Active", &rushWeaponVisualEnabled);
     }
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
@@ -1570,16 +1502,6 @@ void Player::DrawImGuiDetails()
         case JustDodgeSlowPhase::Inactive: break;
         }
 
-        ImGui::Text("Just Dodge Success: %s", justDodgeSuccess ? "true" : "false");
-        ImGui::Text("Rush Input Accepting: %s", rushInputAccepting ? "true" : "false");
-        ImGui::Text(U8("Rush受付終了理由: %s"), rushInputEndReasonDebug.c_str());
-        ImGui::Text("rush_input_end Notify Received: %s",
-            rushInputEndNotifyReceivedDebug ? "true" : "false");
-        ImGui::TextColored(
-            acceptsInitialInput ? ImVec4(0.25f, 1.0f, 0.35f, 1.0f) : ImVec4(1.0f, 0.35f, 0.25f, 1.0f),
-            "Can Accept Initial Rush Input: %s",
-            acceptsInitialInput ? "ACCEPTING" : "NOT ACCEPTING");
-        ImGui::Text("Rush Requested: %s", rushRequestedDebug ? "true" : "false");
         ImGui::Text("Current Player State: %s", currentState.c_str());
         ImGui::Separator();
         ImGui::Text("Player Slow Phase: %s", playerSlowPhaseName);
@@ -1687,9 +1609,7 @@ void Player::DrawImGuiDetails()
         &attackRotationSpeedDegrees, 5.0f, 30.0f, 720.0f);
     if (ImGui::TreeNode("Attack Assist Debug"))
     {
-        ImGui::DragFloat("Assist Search Radius", &attackAssistMaxDistance,
-            0.05f, 0.0f, 20.0f, "%.2f m");
-        ImGui::Text("Assist Search Radius: %.2f m", attackAssistMaxDistance);
+        ImGui::DragFloat("Assist Search Radius", &attackAssistMaxDistance, 0.05f, 0.0f, 20.0f, "%.2f m");
         if (const auto target = attackTarget.lock(); target && !target->IsDefeated())
             ImGui::Text("Current attackTarget: %s", target->GetName().c_str());
         else
@@ -2940,7 +2860,8 @@ void Player::UpdateDeathVisualFade(const float deathElapsedTime)
     if (!deathVisualFadeStarted && deathElapsedTime >= deathColorFadeDelay)
     {
         deathVisualFadeStarted = true;
-        CoreAudio::PlayOneShot("./Data/Sound/SE/player_stone_fade_start.wav", deathStoneFadeSeVolume);
+        // 死亡時の意思が消える時のSE再生
+        CoreAudio::PlayOneShot("./Data/Sound/SE/player_stone_fade_start.wav", 2.0f);
     }
 
     deathVisualFade = std::clamp(

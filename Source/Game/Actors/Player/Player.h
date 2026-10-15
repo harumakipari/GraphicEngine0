@@ -626,7 +626,7 @@ private:
     void TriggerLowHpPulse();
     void ResetLowHpEffects();
 
-    int lowHpThreshold = 13;
+    int lowHpThreshold = 13;    // ïméÄîªíËHP
     bool lowHpActive = false;
     bool lowHpPresentationSuppressed = false;
     bool lowHpPresentationCinematicSuppressed = false;
@@ -668,7 +668,6 @@ private:
     float deathEyeCloseDuration = 1.4f;
     float deathColorFadeDelay = 4.018f;
     float deathColorFadeDuration = 2.05f;
-    float deathStoneFadeSeVolume = 2.0f;
     float deathVisualFade = 0.0f;
     bool deathEyeCloseStarted = false;
     bool deathVisualFadeStarted = false;
@@ -693,7 +692,6 @@ private:
     DirectX::XMFLOAT3 rushSwordColor = { 0.5f,0.8f,1.6f };
     DirectX::XMFLOAT3 activeGhostBaseColor{};
     DirectX::XMFLOAT3 activeGhostEdgeColor{};
-    bool rushWeaponVisualEnabled = false;
     float ghostEdgeWidth = 1.0f; // écëúÇÃó÷äs
     DirectX::XMFLOAT4X4 prevSwordWorld; // ëOâÒÇÃépê®
     bool isPrevSwordWorldValid = false;
