@@ -1012,6 +1012,15 @@ void Player::Update(float deltaTime)
 
 }
 
+void Player::Finalize()
+{
+    ResetLowHpEffects();
+    ResetPlayerPoseGhost();
+    ResetEyeCloseOverride();
+    ForceResetPlayerSlow();
+    ForceResetBossSlow();
+}
+
 // 軌跡を描画する処理
 void Player::RenderTrail(ID3D11DeviceContext* immediateContext)
 {
@@ -1163,6 +1172,56 @@ bool Player::IsOperationGuideItemLearned(const OperationGuideItem item) const
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
+    if (ImGui::CollapsingHeader(U8("ゲームプレイ調整")))
+    {
+        if (ImGui::TreeNode(U8("移動")))
+        {
+            ImGui::SliderFloat(U8("歩行速度"), &walkSpeed, 0.25f, 10.0f);
+            ImGui::SliderFloat(U8("走行速度"), &runSpeed, 0.25f, 15.0f);
+            ImGui::SliderFloat(U8("前方移動速度倍率"), &forwardSpeedScale, 0.25f, 1.5f);
+            ImGui::SliderFloat(U8("横移動速度倍率"), &sideSpeedScale, 0.25f, 1.5f);
+            ImGui::SliderFloat(U8("後方移動速度倍率"), &backwardSpeedScale, 0.25f, 1.5f);
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode(U8("通常攻撃")))
+        {
+            ImGui::DragFloat(U8("MotionWarp攻撃距離（m）"), &motionWarpDesiredAttackSurfaceDistance, 0.01f, 0.3f, 1.0f);
+            ImGui::DragFloat(U8("攻撃回頭最大補正角度（度）"), &attackRotationMaxCorrectionDegrees, 1.0f, 45.0f, 60.0f);
+            ImGui::DragFloat(U8("攻撃回頭速度（度/秒）"), &attackRotationSpeedDegrees, 5.0f, 30.0f, 720.0f);
+            ImGui::DragFloat(U8("攻撃補助探索半径（m）"), &attackAssistMaxDistance, 0.05f, 0.0f, 20.0f, "%.2f m");
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode(U8("ジャスト回避")))
+        {
+            ImGui::SliderFloat(U8("スロー時間倍率"), &justDodgeTimeScale, 0.10f, 1.00f);
+            ImGui::SliderFloat(U8("スロー維持時間（秒）"), &justDodgeSlowHoldDuration, 0.00f, 2.0f, "%.2f sec");
+            ImGui::SliderFloat(U8("スロー復帰時間（秒）"), &justDodgeSlowReturnDuration, 0.00f, 0.50f, "%.2f sec");
+            ImGui::SliderFloat(U8("Rush中ボス時間倍率"), &rushBossSlowScale, 0.10f, 1.00f);
+            ImGui::SliderFloat(U8("Rush中ボス復帰時間（秒）"), &rushBossReturnDuration, 0.00f, 0.50f, "%.2f sec");
+            float angleDegrees = DirectX::XMConvertToDegrees(std::acos(std::clamp(justDodgeMaxTowardAttackerDot, -1.0f, 1.0f)));
+            if (ImGui::SliderFloat(U8("ジャスト回避成功の最小角度"), &angleDegrees, 0.0f, 180.0f, "%.1f deg"))
+            {
+                justDodgeMaxTowardAttackerDot = std::cos(DirectX::XMConvertToRadians(angleDegrees));
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode(U8("ラッシュ攻撃")))
+        {
+            ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
+            ImGui::DragFloat(U8("Rush接近ポーズBlend時間（秒）"), &rushApproachPoseBlendTime, 0.005f, 0.0f, 0.5f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragFloat(U8("Rush予備動作時間（秒）"), &rushWindupDuration, 0.005f, 0.0f, 0.5f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::TreePop();
+        }
+        ImGui::DragFloat(U8("ヒットストップの時間"), &normalAttackHitStopDuration, 0.01f);
+        ImGui::DragFloat(U8("ラッシュ時のヒットストップの時間"), &rushHitStopDuration, 0.005f, 0.0f, 0.8f, "%.3f sec");
+        ImGui::DragFloat(U8("通常敵Rush停止余白（m）"), &normalEnemyRushSurfaceMargin, 0.01f, 0.0f, 1.0f, "%.3f m");
+        ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
+        ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
+        ImGui::DragFloat(U8("ノックバック時間（秒）"), &knockBackDuration, 0.01f, 0.01f, 3.0f, "%.2f sec");
+        ImGui::DragFloat(U8("ノックバック初速"), &knockBackInitialSpeed, 0.1f, 0.0f, 30.0f, "%.2f");
+    }
+
+
     if (ImGui::CollapsingHeader(U8("目を閉じる")))
     {
         ImGui::SliderFloat(U8("死亡時：目を閉じるまでの時間"), &deathEyeCloseDelay, 0.0f, 10.0f, "%.3f sec");
@@ -1276,51 +1335,6 @@ void Player::DrawImGuiDetails()
         if (ImGui::SliderFloat(U8("最大表示率"), &transparencyMaxAlpha, 0.0f, 1.0f))
             transparencyMaxAlpha = (std::max)(transparencyMaxAlpha, transparencyMinAlpha);
     }
-
-
-    // ここからゲームの調整値
-
-    ImGui::DragFloat(U8("通常敵Rush停止余白（m）"), &normalEnemyRushSurfaceMargin, 0.01f, 0.0f, 1.0f, "%.3f m");
-
-    ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
-    ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
-    ImGui::SliderFloat(U8("歩行速度"), &walkSpeed, 0.25f, 10.0f);
-    ImGui::SliderFloat(U8("走行速度"), &runSpeed, 0.25f, 15.0f);
-    ImGui::DragFloat(U8("ヒットストップの時間"), &normalAttackHitStopDuration, 0.01f);
-    ImGui::DragFloat(U8("ラッシュ時のヒットストップの時間"), &rushHitStopDuration, 0.005f, 0.0f, 0.8f, "%.3f sec");
-    ImGui::SliderFloat(U8("前方移動速度倍率"), &forwardSpeedScale, 0.25f, 1.5f);
-    ImGui::SliderFloat(U8("横移動速度倍率"), &sideSpeedScale, 0.25f, 1.5f);
-    ImGui::SliderFloat(U8("後方移動速度倍率"), &backwardSpeedScale, 0.25f, 1.5f);
-    if (ImGui::TreeNode(U8("ジャスト回避スローモーション")))
-    {
-        ImGui::SliderFloat(U8("時間倍率"), &justDodgeTimeScale, 0.10f, 1.00f);
-        ImGui::SliderFloat(U8("維持時間（秒）"), &justDodgeSlowHoldDuration, 0.00f, 2.0f, "%.2f sec");
-        ImGui::SliderFloat(U8("復帰時間（秒）"), &justDodgeSlowReturnDuration, 0.00f, 0.50f, "%.2f sec");
-        ImGui::SliderFloat(U8("Rush中ボス時間倍率"), &rushBossSlowScale, 0.10f, 1.00f);
-        ImGui::SliderFloat(U8("Rush中ボス復帰時間（秒）"), &rushBossReturnDuration, 0.00f, 0.50f, "%.2f sec");
-        ImGui::TreePop();
-    }
-
-
-    if (ImGui::CollapsingHeader(U8("ジャスト回避・方向判定")))
-    {
-        float angleDegrees = DirectX::XMConvertToDegrees(std::acos(std::clamp(justDodgeMaxTowardAttackerDot, -1.0f, 1.0f)));
-        if (ImGui::SliderFloat(U8("ジャスト回避成功の最小角度"), &angleDegrees, 0.0f, 180.0f, "%.1f deg"))
-        {
-            justDodgeMaxTowardAttackerDot = std::cos(DirectX::XMConvertToRadians(angleDegrees));
-        }
-    }
-
-    ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
-    ImGui::DragFloat(U8("Rush接近ポーズBlend時間（秒）"), &rushApproachPoseBlendTime, 0.005f, 0.0f, 0.5f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat(U8("Rush予備動作時間（秒）"), &rushWindupDuration, 0.005f, 0.0f, 0.5f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat(U8("MotionWarp攻撃距離（m）"), &motionWarpDesiredAttackSurfaceDistance, 0.01f, 0.3f, 1.0f);
-    ImGui::DragFloat(U8("攻撃回頭最大補正角度（度）"), &attackRotationMaxCorrectionDegrees, 1.0f, 45.0f, 60.0f);
-    ImGui::DragFloat(U8("攻撃回頭速度（度/秒）"), &attackRotationSpeedDegrees, 5.0f, 30.0f, 720.0f);
-    ImGui::DragFloat(U8("攻撃補助探索半径（m）"), &attackAssistMaxDistance, 0.05f, 0.0f, 20.0f, "%.2f m");
-
-    ImGui::DragFloat(U8("ノックバック時間（秒）"), &knockBackDuration, 0.01f, 0.01f, 3.0f, "%.2f sec");
-    ImGui::DragFloat(U8("ノックバック初速"), &knockBackInitialSpeed, 0.1f, 0.0f, 30.0f, "%.2f");
 
     Character::DrawImGuiDetails();
 #endif

@@ -47,7 +47,6 @@ public:
         IgnoreDodgeIFrames,
     };
 
-    // スロー
     enum class JustDodgeSlowPhase : uint8_t
     {
         Inactive,
@@ -107,17 +106,8 @@ public:
 
     void Update(float deltaTime)override;
 
-    void Finalize()override
-    {
-        ResetLowHpEffects();
-        ResetPlayerPoseGhost();
-        ResetEyeCloseOverride();
-        ForceResetPlayerSlow();
-        ForceResetBossSlow();
-    }
+    void Finalize()override;
 
-
-    // アニメーション・Notify
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
 
     void OnAnimationNotifyEnd(const AnimationNotifyState& state)override;
@@ -131,13 +121,19 @@ public:
     // NotifyEnd が省略されたアニメーション切替でも、前のNotify由来状態を解除する。
     void OnAnimationChanged() override;
 
+    // 入力・移動
+    LocomotionMode GetLocomotionMode() const { return locomotionMode; }
+
+    float GetPrisonOpeningSittingSampleTime() const { return prisonOpeningSittingSampleTime; }
+
+    bool IsPrisonOpeningSittingPingPongForward() const { return prisonOpeningSittingPingPongForward; }
+
+    bool IsPrisonOpeningUsingStandingPingPong() const { return prisonOpeningUseStandingPingPong; }
+
     // ブレンドスペースのアニメーションを使用するかの更新関数
     void UpdateLocomotionAnimation() override;
 
     void RestartLocomotionAnimation();
-
-    // 入力・移動
-    LocomotionMode GetLocomotionMode() const { return locomotionMode; }
 
     // TPSモードの移動時の更新処理
     void UpdateTPSLocomotion();
@@ -154,26 +150,31 @@ public:
 
     // Stops only the low-HP audiovisual presentation. HP is not modified.
     void StopLowHpPresentation();
-    void SetLowHpPresentationCinematicSuppressed(bool suppressed);
 
+
+    void SetLowHpPresentationCinematicSuppressed(bool suppressed);
 
     // Prison-opening movie only. This bypasses normal gameplay while retaining this Player actor.
     bool BeginPrisonOpeningSitting(const DirectX::XMFLOAT3& position, float yawDegrees);
+
     bool BeginPrisonOpeningStanding();
-    void ConfigurePrisonOpeningSittingMotion(bool useStandingPingPong, float startTime,
-        float endTime, float speed, float standingBlendTime);
-    float GetPrisonOpeningSittingSampleTime() const { return prisonOpeningSittingSampleTime; }
-    bool IsPrisonOpeningSittingPingPongForward() const { return prisonOpeningSittingPingPongForward; }
-    bool IsPrisonOpeningUsingStandingPingPong() const { return prisonOpeningUseStandingPingPong; }
+
+    void ConfigurePrisonOpeningSittingMotion(bool useStandingPingPong, float startTime,float endTime, float speed, float standingBlendTime);
 
     void EndPrisonOpeningSitting();
+
     bool BeginPrisonOpeningEyeClosed();
+
     void SetPrisonOpeningEyeClosedWeight(float weight);
+
     void EndPrisonOpeningEyeOverride();
+
     bool IsPrisonOpeningEyeOverrideActive() const;
 
     bool IsPrisonOpeningSitting() const { return prisonOpeningSitting; }
+
     bool IsPrisonOpeningStandingFinished() const;
+
     void LogPrisonOpeningTransitionDebug(const char* phase, int frame) const;
 
     // HUD・操作ガイド
