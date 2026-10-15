@@ -5873,8 +5873,6 @@ void GameScene::DrawGuiPlusAlpha()
     const bool playerLockOnActive = darkCameraActor &&
         (darkCameraActor->GetCameraMode() == DarkCameraActor::CameraMode::LockOn ||
             darkCameraActor->GetMovementMode() == DarkCameraActor::CameraMode::LockOn);
-    static constexpr const char* locomotionModeNames[] =
-    { "None", "TPSWalk", "TPSRun", "LockOnBlendWalk", "LockOnBlendRun", "Idle", "Dash" };
     static constexpr const char* darkCameraModeNames[] =
     { "TPS", "Focus", "LockOn", "Death" };
     const char* playerStateName = player && player->GetStateMachine()
@@ -5897,8 +5895,6 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat2("Bottom Final Offset X / Y", &lockOnTargetUIBottomFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat2("Left Final Offset X / Y", &lockOnTargetUILeftFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat2("Right Final Offset X / Y", &lockOnTargetUIRightFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Text(U8("Player Locomotion Mode: %s"), player
-        ? locomotionModeNames[static_cast<size_t>(player->GetLocomotionMode())] : "None");
     ImGui::Text(U8("Player BlendSpace Active: %s"), phase2PlayerController &&
         phase2PlayerController->IsUsingBlendSpace() ? "true" : "false");
     ImGui::Text(U8("DarkCamera RequestMode: %s"), darkCameraActor

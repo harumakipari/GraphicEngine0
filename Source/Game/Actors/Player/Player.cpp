@@ -25,8 +25,6 @@
 
 namespace
 {
-    bool forceDitherTransparencyDebug = false;
-    float ditherTransparencyDebugAlpha = 0.6f;
     float currentDitherTransparencyAlpha = 1.0f;
     float currentCameraCollisionRatio = 1.0f;
 
@@ -36,7 +34,7 @@ namespace
         {
         case Player::ActionType::Dodge:  return 3;
         case Player::ActionType::Attack: return 2;
-        default:                         return 0;
+        default:                         return 1;
         }
     }
 }
@@ -57,7 +55,6 @@ void Player::Initialize(const Transform& transform)
         skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
         skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
         skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = 1.0f;
-        playerAliveEmissionPower = 20.9f;
         skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = playerAliveEmissionPower;   // 自己発光の強さを設定
         // 服の色のための色相変更
         skeletalMeshComponent->plusAlphaCBuffer->data.hueShift = -1.0f;
@@ -80,8 +77,7 @@ void Player::Initialize(const Transform& transform)
             }
             else if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
                 material.name == "M_Aurora_Dress_FrozenHearth" ||
-                material.name == "M_Aurora_Body_Metals_FrozenHearth" ||
-                material.name == "M_Aurora_Fur_FrozenHearth")
+                material.name == "M_Aurora_Body_Metals_FrozenHearth")
             {// 服部分だったら、
                 material.materialType = MaterialType::Cloth;
             }
@@ -191,7 +187,6 @@ void Player::Initialize(const Transform& transform)
         stateMachine_->ChangeState("Idle");
     }
 
-#if 1
     {
         PROFILE_SCOPE("Create PlayerCollision");
 
@@ -215,10 +210,8 @@ void Player::Initialize(const Transform& transform)
         capsuleComponent->SetIsVisibleDebugBox(false);
         capsuleComponent->Initialize();
     }
-#endif // 1
 
 
-#if 1
     // ポイントライトコンポーネントを追加
     auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
     pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
@@ -232,7 +225,6 @@ void Player::Initialize(const Transform& transform)
     backPointLightComponent->SetSharedLightName("PlayerBackPointLight");
 
 
-#endif // 0
 
     {
         PROFILE_SCOPE("Create PlayerComponent");
@@ -648,8 +640,6 @@ void Player::Update(float deltaTime)
             }
         }
     }
-    if (forceDitherTransparencyDebug)
-        ditherAlpha = ditherTransparencyDebugAlpha;
     ApplyDitherTransparencyAlpha(ditherAlpha);
 
     // Player/BossのSlowは独立させ、どちらも実時間で更新する。
@@ -1511,8 +1501,6 @@ void Player::DrawImGuiDetails()
     ImGui::Checkbox("Sword Hit Debug", &swordHitDebug);
     ImGui::DragFloat("Normal Enemy Rush Surface Margin", &normalEnemyRushSurfaceMargin,
         0.01f, 0.0f, 1.0f, "%.3f m");
-    ImGui::DragFloat("dodgeSpeed", &dodgeSpeed, 0.1f);
-    ImGui::DragFloat("dodgeDuration", &dodgeDuration, 0.1f);
     ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);
     ImGui::DragFloat(U8("剣の残像が残る時間"), &ghostFadeTime, 0.1f);
     const bool normalGhostBaseColorChanged =
@@ -1549,7 +1537,6 @@ void Player::DrawImGuiDetails()
         "Side Speed Scale", &sideSpeedScale, 0.25f, 1.5f);
     ImGui::SliderFloat(
         "Backward Speed Scale", &backwardSpeedScale, 0.25f, 1.5f);
-    ImGui::DragFloat("dashSpeed", &dashSpeed, 0.05f);
     if (ImGui::TreeNode("Just Dodge Slow Motion"))
     {
         ImGui::SliderFloat("Time Scale", &justDodgeTimeScale, 0.10f, 1.00f);
@@ -1722,8 +1709,6 @@ void Player::DrawImGuiDetails()
             transparencyMaxAlpha = (std::max)(transparencyMaxAlpha, transparencyMinAlpha);
         ImGui::Text(U8("現在のカメラ衝突率: %.3f"), currentCameraCollisionRatio);
         ImGui::Text(U8("現在の表示率: %.2f"), currentDitherTransparencyAlpha);
-        ImGui::Checkbox("Force Dither Override", &forceDitherTransparencyDebug);
-        ImGui::SliderFloat("Override Alpha", &ditherTransparencyDebugAlpha, 0.0f, 1.0f);
         ImGui::TreePop();
     }
     ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);

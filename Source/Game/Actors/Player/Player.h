@@ -1,15 +1,12 @@
 #pragma once
-#include <stack>
 #include <memory>
 #include <array>
 #include "Game/Actors/Base/Character.h"
-#include "Engine/Input/GamePad.h"
 
 #include "Components/Controller/ControllerComponent.h"
 #include "Components/Render/MeshComponent.h"
 
 #include "Core/ActorManager.h"
-#include "Components/Effect/ParticleComponent.h"
 #include "Graphics/Renderer/TrailRenderer.h"
 #include "UI/Widgets/Widget.h"
 
@@ -467,8 +464,6 @@ public:
     bool invincibleWindow = false; // アニメーションによる無敵状態かどうか
     bool invincible = false; // 無敵状態かどうか
 
-    float dodgeSpeed = 3.0f; // 回避する時のスピード
-    float dodgeDuration = 0.5f; // 回避するときの時間
 
     bool justDodgeDebugEnabled = false;
     float justDodgeMaxTowardAttackerDot = 0.25f;
@@ -599,8 +594,6 @@ public:
     };
     std::array<PlayerPoseGhost, 6> playerPoseGhosts;
 
-    // ダッシュのスピード
-    float dashSpeed = 6.2f;
     // 歩きのスピード
     float walkSpeed = 1.0f;
     // 走りのスピード
@@ -685,7 +678,6 @@ private:
     DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f };
     float playerAliveEmissionPower = 20.9f;
 
-    DirectX::XMFLOAT3 prevSwordTip; // 前フレームの剣先の位置
     float hitStopTimer = 0.0f; // ヒットストップのタイマー
 
     DirectX::XMFLOAT3 prevSwordRootPos = { 0.0f,0.0f,0.0f };
