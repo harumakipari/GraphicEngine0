@@ -47,6 +47,15 @@ public:
         IgnoreDodgeIFrames,
     };
 
+    // スロー
+    enum class JustDodgeSlowPhase : uint8_t
+    {
+        Inactive,
+        Hold,
+        Return,
+        RushHold,
+    };
+
     struct ActionRequest
     {
         ActionType type = ActionType::None;
@@ -98,12 +107,6 @@ public:
 
     void Update(float deltaTime)override;
 
-    void DrawImGuiDetails()override;
-
-    // Stops only the low-HP audiovisual presentation. HP is not modified.
-    void StopLowHpPresentation();
-    void SetLowHpPresentationCinematicSuppressed(bool suppressed);
-
     void Finalize()override
     {
         ResetLowHpEffects();
@@ -113,6 +116,8 @@ public:
         ForceResetBossSlow();
     }
 
+
+    // アニメーション・Notify
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
 
     void OnAnimationNotifyEnd(const AnimationNotifyState& state)override;
@@ -123,6 +128,7 @@ public:
 
     void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
 
+    // NotifyEnd が省略されたアニメーション切替でも、前のNotify由来状態を解除する。
     void OnAnimationChanged() override;
 
     // ブレンドスペースのアニメーションを使用するかの更新関数
@@ -130,6 +136,7 @@ public:
 
     void RestartLocomotionAnimation();
 
+    // 入力・移動
     LocomotionMode GetLocomotionMode() const { return locomotionMode; }
 
     // TPSモードの移動時の更新処理
@@ -138,11 +145,17 @@ public:
     // ロックオンモードの移動時の更新処理
     void UpdateLockOnLocomotion();
 
+    // カメラ・演出・イベント
     // イベントシーン開始時に呼ぶ処理
     void StartEvent();
 
     // イベントシーン終了時に呼ぶ処理
     void EndEvent();
+
+    // Stops only the low-HP audiovisual presentation. HP is not modified.
+    void StopLowHpPresentation();
+    void SetLowHpPresentationCinematicSuppressed(bool suppressed);
+
 
     // Prison-opening movie only. This bypasses normal gameplay while retaining this Player actor.
     bool BeginPrisonOpeningSitting(const DirectX::XMFLOAT3& position, float yawDegrees);
@@ -163,6 +176,8 @@ public:
     bool IsPrisonOpeningStandingFinished() const;
     void LogPrisonOpeningTransitionDebug(const char* phase, int frame) const;
 
+    // HUD・操作ガイド
+    // Scene が表示方針を決定し、Player は所有するHUDへ反映する。
     // Battle HUD visibility is decided by GameScene; Player only owns its components.
     void SetHpBarVisible(bool visible);
     void SetGameplayHudVisible(bool visible);
@@ -178,6 +193,7 @@ public:
     void BeginGameplayHudFadeOut();
     void SetGameplayHudFadeAlpha(float alpha);
 
+    // 戦闘遷移・最終ヒット
     // Clears Player-owned transient combat state and restores full HP at the saved battle start.
     void ResetForBattleContinue(const Transform& battleStartTransform);
     void ForceDirectionImmediate(const DirectX::XMFLOAT3& direction);
@@ -283,12 +299,14 @@ public:
     void EnterWinState();
     bool IsInWinState() const;
 
+    // 描画・残像演出
     // 軌跡を描画する処理
     void RenderTrail(ID3D11DeviceContext* immediateContext);
 
     void CapturePlayerPoseGhost();
     void ResetPlayerPoseGhost();
 
+    // カメラ連携
     // Focus開始時のForwardを設定する
     void SetFocusDirection(const DirectX::XMFLOAT3& focusDir)
     {
@@ -307,7 +325,11 @@ public:
     // モード変更用関数
     void SetLocomotionMode(LocomotionMode mode);
 
+    // デバッグ・ImGui
+    void DrawImGuiDetails()override;
+
 private:
+    // 演出用の姿勢・Notify補助
     bool RebuildEyeClosePoseOverride();
     void ResetEyeCloseOverride();
 
@@ -315,18 +337,22 @@ private:
 
     DirectX::XMFLOAT3 GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const;
 
+    // 入力要求の内部処理
     // 入力処理をまとめる
     void CaptureActionRequest(float deltaTime);
 
     bool StoreActionRequest(ActionType type, float remainTime);
 
 public:
+    // 入力要求・移動
+    // 保存済みの入力要求を現在の状態で実行可能なState遷移へ変換し、成功時だけ消費する。
     // 入力コマンドによってステートが変わるかどうか
     bool TryExecuteActionRequest();
 
     // 入力を消費する処理
     void ConsumeActionRequest(ActionType expectedType);
 
+    // 戦闘・攻撃判定
     // 無敵判定を含め、成立した被弾だけを適用する
     bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition,
         DamagePolicy policy = DamagePolicy::Normal);
@@ -344,6 +370,7 @@ public:
     // 攻撃開始時の処理
     void StartAttack();
 
+    // ジャスト回避・Rush
     // ジャスト回避成功時の処理　ラッシュ受付期間開始
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
 
@@ -376,6 +403,7 @@ public:
     void BeginDodgeDebug();
     void UpdateDodgeDebug(float deltaTime);
     void RecordNormalDodgeDebug();
+    // カメラ・ボス戦連携
     // カメラの目の位置を取得する
     const std::shared_ptr<SceneComponent>& GetCameraEyeComponent() { return cameraEyeComponent; }
 
@@ -392,6 +420,7 @@ public:
     bool IsBossBattle() const { return isBossBattle; }
 
 private:
+    // ノックバック・移動更新
     void BeginKnockBackMovement();
     void UpdateKnockBackMovement(float deltaTime);
     void StopKnockBackForcedMove();
@@ -401,6 +430,7 @@ private:
     void UpdateMovement();
     void UpdateWeaponVisualPresentation(float deltaTime);
 
+    // HUD・操作ガイドの内部更新
     void UpdateRushPromptUI();
     void UpdateLockOnGuideUI();
     void HideAndResetLockOnGuideUI();
@@ -408,6 +438,7 @@ private:
     void UpdateOperationGuideUI();
     void RefreshOperationGuideUIVisibility();
 
+    // 戦闘計算・回避方向の補助
     float GetRushDamageMultiplier() const;
     int GetCurrentAttackDamage() const;
 
@@ -757,14 +788,6 @@ private:
     // 歩き走りダッシュのステート管理
     LocomotionMode locomotionMode = LocomotionMode::Idle;
 
-    // スロー
-    enum class JustDodgeSlowPhase : uint8_t
-    {
-        Inactive,
-        Hold,
-        Return,
-        RushHold,
-    };
 
     JustDodgeSlowPhase playerSlowPhase = JustDodgeSlowPhase::Inactive;
     JustDodgeSlowPhase bossSlowPhase = JustDodgeSlowPhase::Inactive;
