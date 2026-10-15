@@ -168,7 +168,6 @@ public:
     T* GetComponent()
     {
         // SceneComponent ‚©‚ç’T‚·
-        //for (const std::shared_ptr<SceneComponent>& compent : ownedSceneComponents_)
         for (const std::shared_ptr<Component>& compent : ownedComponents_)
         {
             T* casted = dynamic_cast<T*>(compent.get());
@@ -178,7 +177,6 @@ public:
             }
         }
 
-        //Logger::Warning(Logger::LogCategory::System,u8"Actor ‚Ì GetComponent ‚ª nullptr ‚ğ•Ô‚µ‚Ä‚¢‚Ü‚·B");
         _ASSERT(L"Actor ‚Ì GetComponent ‚ª nullptr ‚ğ•Ô‚µ‚Ä‚¢‚Ü‚·B");
         return nullptr;
     }

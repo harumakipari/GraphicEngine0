@@ -46,6 +46,12 @@ namespace MathHelper
         return angle;
     }
 
+    inline float NormalizeAngleDegrees(float angle)
+    {
+        while (angle > 180.0f) angle -= 360.0f;
+        while (angle < -180.0f) angle += 360.0f;
+        return angle;
+    }
 
     inline float ClampEulerAngle(float eulerAngle)
     {

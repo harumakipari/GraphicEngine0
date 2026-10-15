@@ -619,24 +619,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     const DirectX::XMFLOAT3 actorPositionAtEnd =
         owner->GetPosition();
 
-
-    //Logger::Log(std::format(
-    //    "[ActorMove] UseBS:{} BlendTransition:{} "
-    //    "Begin:({},{},{}) "
-    //    "End:({},{},{}) "
-    //    "Delta:({},{},{})",
-    //    useBlendSpace,
-    //    blendSpaceTransition,
-    //    actorPositionAtBegin.x,
-    //    actorPositionAtBegin.y,
-    //    actorPositionAtBegin.z,
-    //    actorPositionAtEnd.x,
-    //    actorPositionAtEnd.y,
-    //    actorPositionAtEnd.z,
-    //    actorPositionAtEnd.x - actorPositionAtBegin.x,
-    //    actorPositionAtEnd.y - actorPositionAtBegin.y,
-    //    actorPositionAtEnd.z - actorPositionAtBegin.z));
-
 }
 
 void AnimationController::CaptureEditorRuntimeSnapshot()
@@ -2938,22 +2920,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
                     clipRootMotionDelta.z *
                     clipRootMotionDelta.z);
 
-            //Logger::Log(std::format(
-            //    "[BlendRMClip] "
-            //    "Clip:{} Weight:{} "
-            //    "PrevPhase:{} CurrentPhase:{} "
-            //    "Delta:({},{},{}) "
-            //    "Length:{} "
-            //    "BlendTransition:{}",
-            //    clip,
-            //    weights[i].weight,
-            //    previousLocomotionPhase,
-            //    currentLocomotionPhase,
-            //    clipRootMotionDelta.x,
-            //    clipRootMotionDelta.y,
-            //    clipRootMotionDelta.z,
-            //    deltaLength,
-            //    blendSpaceTransition));
         }
 
         // 各クリップごとの重み付きのRootMotionを加算
@@ -3099,15 +3065,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     if (blendSpaceRootMotionValid)
     {
         const bool looped = previousLocomotionPhase > currentLocomotionPhase;
-        //Logger::Log(std::format(
-        //    "Root Motion Loop:{} Phase Prev:{:.4f} Current:{:.4f} "
-        //    "Delta:({:.5f}, {:.5f}, {:.5f})",
-        //    looped ? "true" : "false",
-        //    previousLocomotionPhase,
-        //    currentLocomotionPhase,
-        //    blendSpaceRootMotionDelta.x,
-        //    blendSpaceRootMotionDelta.y,
-        //    blendSpaceRootMotionDelta.z));
     }
 
 

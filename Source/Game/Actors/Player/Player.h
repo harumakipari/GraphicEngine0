@@ -21,12 +21,6 @@ class GruxEnemy;
 class Player :public Character
 {
 public:
-    struct ComboAttack
-    {
-        std::string animationName;
-        int nextComboIndex = -1;
-    };
-
     enum class DodgeDirection :uint8_t
     {
         Forward,
@@ -48,7 +42,6 @@ public:
         None,
         Attack,
         Dodge,
-        Dash,
     };
 
     enum class DamagePolicy :uint8_t
@@ -64,12 +57,6 @@ public:
         DodgeDirection dodgeDirection = DodgeDirection::Forward;
         DirectX::XMFLOAT3 dodgeWorldDirection{};
         bool useDodgeWorldDirection = false;
-    };
-
-    enum class SwordState :uint8_t
-    {
-        Equipped,   // 剣を装備している状態
-        Sheathed    // 剣を鞘に収めている状態
     };
 
     // チュートリアルの操作UI
@@ -92,6 +79,7 @@ public:
         bool learned = false;
         float animationTimer = 0.0f;
     };
+
     enum class LocomotionMode :uint8_t
     {
         None,
@@ -156,9 +144,6 @@ public:
 
     // ロックオンモードの移動時の更新処理
     void UpdateLockOnLocomotion();
-
-    // アニメーションステート関連のフラグをリセットする
-    void ResetAnimationStateFlag();
 
     // イベントシーン開始時に呼ぶ処理
     void StartEvent();
@@ -553,14 +538,6 @@ public:
     bool rushJudgeSuccessDebug = false;
     bool rushRequestedDebug = false;
     bool swordHitDebug = true;
-    bool rushSweepHitThisHitBoxDebug = false;
-    // Read-only diagnostics for Rush_Attack_Fast_A step 0. These never affect gameplay.
-    bool rushFirstHitDebugActive = false;
-    bool rushFirstHitDebugCapturedThisRush = false;
-    bool rushFirstHitRootHitDebug = false;
-    bool rushFirstHitMidHitDebug = false;
-    bool rushFirstHitTipHitDebug = false;
-    bool rushFirstHitDamageAppliedDebug = false;
     float rushPromptAlpha = 0.0f;
     float rushPromptFadeInDuration = 0.10f;
     RushPromptAnimationPhase rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
@@ -600,17 +577,6 @@ public:
     std::shared_ptr<SceneComponent> swordRootComponent; // 剣の根元のコンポーネント
     std::shared_ptr<SceneComponent> swordMiddleComponent; // 剣の中間のコンポーネント
     std::shared_ptr<SceneComponent> swordTipComponent;  // 剣の先端のコンポーネント
-
-
-
-    struct TrailPoint
-    {
-        XMFLOAT3 position;
-        float life;
-    };
-    std::vector<TrailPoint> trailPoints;
-
-    SwordState swordState = SwordState::Equipped; // 剣の状態
 
     // 剣の描画用メッシュコンポーネント
     std::shared_ptr<SkeletalMeshComponent> swordMeshComponent;
@@ -700,8 +666,6 @@ private:
 
     // 目を閉じる処理の変数
     float closedEyePoseTime = 4.045f;
-    float closeEyeStartTime = 2.0f;
-    float closeEyeDuration = 1.4f;
     enum class EyeCloseOverrideOwner
     {
         None,
@@ -868,8 +832,6 @@ private:
     bool finalHitWaiting = false;
     std::function<void(GruxEnemy*, const DirectX::XMFLOAT3&)> finalHitCallback;
     std::function<void()> deathCameraStartCallback;
-
-    AnimationController::MoveDirection currentMoveDir = AnimationController::MoveDirection::Idle;
 
     friend class PlayerStateBase;
     friend class PlayerKnockBackState;

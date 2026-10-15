@@ -64,43 +64,6 @@ void PlayerRunningState::Exit()
 }
 
 
-void PlayerDashState::Enter()
-{
-    owner->PlayBodyAnimation("Sprint_Fwd", true, true, 0.2f, true);
-    // スピードを変更する
-    player->characterMovementComponent->SetFixedSpeed(player->dashSpeed);
-}
-
-void PlayerDashState::Execute(float deltaTime)
-{
-    if (player->TryExecuteActionRequest())
-    {
-        return;
-    }
-
-    auto inputComp = player->inputComponent;
-    DirectX::XMFLOAT3 dir = inputComp->GetMoveInput();
-
-    if (!InputSystem::GetInputState("GamePadB", InputStateMask::Press))
-    {
-        if (MathHelper::Length(dir) > 0.01f)
-        {
-            player->GetStateMachine()->ChangeState("Running");
-        }
-        else
-        {
-            player->GetStateMachine()->ChangeState("Idle");
-        }
-    }
-}
-
-void PlayerDashState::Exit()
-{
-    // ブレンドスペースを使うのをやめる
-    owner->GetBodyAnimationController()->SetUseBlendSpace(false);
-    // 速度を元に戻す
-    player->characterMovementComponent->ResetFixedSpeed();
-}
 
 void PlayerAttackState::Enter()
 {
@@ -122,8 +85,6 @@ void PlayerAttackState::Enter()
     // 攻撃を開始する処理
     player->StartAttack();
 
-    player->ResetAnimationStateFlag();  // アニメーションのステート系のフラグをリセットする
-
     Logger::Log("Attack Enter :" + player->currentAttackAnimation);
 
     Logger::Log("AnimationTime=" + std::to_string(player->GetBodyAnimationController()->GetCurrentAnimationTime()));
@@ -132,11 +93,6 @@ void PlayerAttackState::Enter()
     dodgeQueued = false;
     player->comboQueued = false;
     continuingComboTransition = false;
-
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[NormalAttack][Enter] continuation=" +
-        std::string(isComboContinuation ? "true" : "false") +
-        " animation=" + player->currentAttackAnimation);
 }
 
 void PlayerAttackState::Execute(float deltaTime)
@@ -241,7 +197,6 @@ void PlayerAttackState::Exit()
     // 攻撃を終了する処理
     player->EndAttack();
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
-    player->ResetAnimationStateFlag();  // アニメーションのステート系のフラグをリセットする
     if (!continuingComboTransition)
         player->ClearAttackTarget();
 }
@@ -249,7 +204,6 @@ void PlayerAttackState::Exit()
 void PlayerDodgeState::Enter()
 {
     player->BeginDodgeDebug();
-    player->ResetAnimationStateFlag();
     player->SetRushInputAcceptance(false, "None");
     player->SetRushInputDebugState(false, false);
 
@@ -368,7 +322,6 @@ void PlayerDodgeState::Exit()
     player->SetRushInputDebugState(false, false);
     rushRequested = false;
     judgeSuccess = false;
-    player->ResetAnimationStateFlag();
     player->BeginPlayerSlowReturn();
     if (!enteringRush)
     {
@@ -379,7 +332,6 @@ void PlayerDodgeState::Exit()
 
 void PlayerDamageState::Enter()
 {
-    player->ResetAnimationStateFlag();
     player->characterMovementComponent->SetFixedSpeed(0.0f);
     const char* animationName = "Hit_Combat_F";
     switch (player->GetHitReactionDirection())
@@ -416,7 +368,6 @@ void PlayerDamageState::Execute(float deltaTime)
 void PlayerDamageState::Exit()
 {
     player->characterMovementComponent->ResetFixedSpeed();
-    player->ResetAnimationStateFlag();
 }
 
 void PlayerKnockBackState::Enter()
@@ -455,7 +406,6 @@ void PlayerDeathPendingState::Enter()
     player->ClearTransientBattleActions();
     player->SetRushInputAcceptance(false, "Death");
     player->SetDeathCameraTransparencyDisabled(true);
-    player->ResetAnimationStateFlag();
     player->characterMovementComponent->SetFixedSpeed(0.0f);
     player->characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
     player->characterMovementComponent->SetInputMagnitude(0.0f);
@@ -486,7 +436,6 @@ void PlayerDeathState::Enter()
 {
     elapsedTime = 0.0f;
     player->ClearActionRequest("death_enter");
-    player->ResetAnimationStateFlag();
     player->characterMovementComponent->SetFixedSpeed(0.0f);
     player->characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
     player->characterMovementComponent->SetInputMagnitude(0.0f);
