@@ -187,9 +187,9 @@ public:
     float windBase = 0.0f;
     DirectX::XMFLOAT3 windEmitPosition = {};
     bool enableDriveForce = true;
-    float driveForceAmplitude = 0.8f;
+    float driveForceAmplitude = 1.2f;
     float driveForceFrequency = 5.0f;
-    float driveForcePhaseGradient = 1.8f;
+    float driveForcePhaseGradient = 5.0f;
     // 1.0 preserves the prior ClothUpdateCS gravity; 0.0 disables it.
     float gravityScale = 0.0f;
     float bottomWindExponent = 1.0f;
