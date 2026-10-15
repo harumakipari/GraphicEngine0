@@ -1429,8 +1429,6 @@ void MovieCameraManagerActor::LogPrisonOpeningTransitionDebug(const char* phase)
         target.yaw, target.pitch, target.desiredDistance, target.actualDistance,
         target.collisionRatio));
 
-    if (player)
-        player->LogPrisonOpeningTransitionDebug(phase, prisonOpeningTransitionDebugFrame);
     if (darkCamera)
         darkCamera->RequestPrisonOpeningTransitionDebug(phase, prisonOpeningTransitionDebugFrame);
 }
@@ -1439,7 +1437,7 @@ void MovieCameraManagerActor::PlayMovie(const std::string& file)
     if (auto cameraManager = GetOwnerScene()->GetCameraManager())
     {
         if (!cameraManager->IsUseMovie())
-        {// 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・↓繝ｻ・ｿ・ｽ繝ｻ・ｽ[繝ｻ・ｽr繝ｻ・ｽ[繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽg繝ｻ・ｽp繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・↑繧托ｽｿ・ｽ繝ｻ・ｽ鮠ｾ繝ｻ・ｿ・ｽ・後∩蛻・ｑ・ｿ・ｽ・悶ｑ・ｿ・ｽ
+        {
             cameraManager->ToggleMovieCamera(GetOwnerConstScene());
         }
     }
