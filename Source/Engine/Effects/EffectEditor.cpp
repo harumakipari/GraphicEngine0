@@ -71,7 +71,6 @@ void EffectEditor::DrawGUI()
         {
             ImGui::Checkbox("Rush Particle Depth Test Disabled",
                 &EffectManager::debugRushParticleDepthTestDisabled);
-            ImGui::TextDisabled("Only RushCoreEffect.json and RushHitRingEffect.json are affected.");
         }
 
         // エフェクトデータリスト

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <mutex>
 #include <string>
+#include <thread>
 
 #include "Engine/Effects/CoreComputeParticleSystem.h"
 #include "Core/Vector.h"
@@ -175,6 +176,60 @@ struct EffectPlaybackState
     std::atomic<bool> stopped{ false };
 };
 
+enum class EffectLoadState : std::uint8_t
+{
+    Pending,
+    Ready,
+    Failed,
+    Cancelled,
+};
+
+class EffectLoadTicket
+{
+public:
+    EffectLoadState GetState() const
+    {
+        return state.load(std::memory_order_acquire);
+    }
+
+    EffectHandle GetEffectHandle() const
+    {
+        return GetState() == EffectLoadState::Ready
+            ? effectHandle.load(std::memory_order_acquire)
+            : -1;
+    }
+
+    void Cancel()
+    {
+        EffectLoadState expected = EffectLoadState::Pending;
+        state.compare_exchange_strong(expected, EffectLoadState::Cancelled,
+            std::memory_order_acq_rel, std::memory_order_acquire);
+    }
+
+private:
+    friend class EffectManager;
+
+    void MarkReady(EffectHandle handle)
+    {
+        effectHandle.store(handle, std::memory_order_relaxed);
+        EffectLoadState expected = EffectLoadState::Pending;
+        state.compare_exchange_strong(expected, EffectLoadState::Ready,
+            std::memory_order_release, std::memory_order_relaxed);
+    }
+
+    void MarkFailed()
+    {
+        EffectLoadState expected = EffectLoadState::Pending;
+        state.compare_exchange_strong(expected, EffectLoadState::Failed,
+            std::memory_order_acq_rel, std::memory_order_acquire);
+    }
+
+    std::atomic<EffectLoadState> state{ EffectLoadState::Pending };
+    std::atomic<EffectHandle> effectHandle{ -1 };
+};
+
+using EffectLoadTicketPtr = std::shared_ptr<EffectLoadTicket>;
+
 struct EffectAttachInfo
 {
     std::shared_ptr<EffectPlaybackState> playback;
@@ -208,6 +263,7 @@ public:
 
     // エフェクトデータ読み込み
     static EffectHandle LoadEffectData(const std::string& filePath);
+    static EffectLoadTicketPtr LoadEffectDataAsync(const std::string& filePath);
 
     // エフェクトデータ読み込み（ダイアログ表示）
     static EffectHandle LoadEffectDataWithDialog();
@@ -419,6 +475,26 @@ public:
     // Only Update's thread may access these live emitter containers.
     static inline std::vector<ActiveEmitter> activeEmitters;
 private:
+    // JSON から構築済みだが、共有データへは未登録のエフェクト。
+    // 次の段階でメインスレッド登録キューへ渡せるよう、構築結果をまとめて保持する。
+    struct EffectDataLoadResult
+    {
+        EffectData effect;
+        bool hasExplicitName = false;
+    };
+
+    static bool BuildEffectDataFromJson(const std::string& filePath, EffectDataLoadResult& outResult);
+    static EffectHandle RegisterEffectData(EffectDataLoadResult&& loadResult);
+
+    struct PendingEffectLoad
+    {
+        EffectDataLoadResult loadResult;
+        EffectLoadTicketPtr ticket;
+    };
+
+    static void ConsumePendingEffectLoads();
+    static void AssertMainThread();
+
     struct PendingPlayback
     {
         EffectHandle handle = -1;
@@ -447,6 +523,10 @@ private:
         EffectRuntimeId effectRuntimeId, EmitterRuntimeId emitterRuntimeId);
 
     // The mutex protects only requests and ID lookup, never GPU work.
+    static inline std::mutex effectLoadMutex;
+    static inline std::vector<PendingEffectLoad> pendingEffectLoads;
+    static inline std::thread::id mainThreadId;
+
     static inline std::mutex playbackMutex;
     static inline EffectPlaybackId nextPlaybackId = 1;
     static inline std::vector<PendingPlayback> pendingPlaybacks;

@@ -42,29 +42,11 @@ namespace
         "enemy_rush_damage3",
     };
 
-    std::string MotionWarpPositionString(const DirectX::XMFLOAT3& value)
-    {
-        return "(" + std::to_string(value.x) + "," +
-            std::to_string(value.y) + "," + std::to_string(value.z) + ")";
-    }
-
     float NormalizeAngleDegrees(float angle)
     {
         while (angle > 180.0f) angle -= 360.0f;
         while (angle < -180.0f) angle += 360.0f;
         return angle;
-    }
-
-    const char* ToString(Player::ActionType action)
-    {
-        switch (action)
-        {
-        case Player::ActionType::None:     return "None";
-        case Player::ActionType::Attack:   return "Attack";
-        case Player::ActionType::Dodge:    return "Dodge";
-        case Player::ActionType::Dash:     return "Dash";
-        }
-        return "Unknown";
     }
 
     int GetActionPriority(Player::ActionType action)
@@ -82,8 +64,10 @@ namespace
 
 void Player::Initialize(const Transform& transform)
 {
+
     delayedHp = static_cast<float>(hp);
     delayedHpDelayTimer = 0.0f;
+
     std::string parentName = "skeletalComponent";
     // 描画用コンポーネントを追加
     {
@@ -103,12 +87,10 @@ void Player::Initialize(const Transform& transform)
         skeletalMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerDeferredPS";
         skeletalMeshComponent->SetIsCastShadow(false);
         skeletalMeshComponent->SetIsShadowMap(true);
-        //skeletalMeshComponent->SetIsVisible(false);
         for (auto& material : skeletalMeshComponent->model->materials)
         {
             if (material.name == "M_Aurora_Hair_Blonde_FrozenHearth")
             {// 髪の毛だったら
-                //material.overridePipelineName = "characterFurAndHairSkeletalMesh";
                 material.materialType = MaterialType::Hair;
             }
             else if (material.name == "M_Aurora_Fur_FrozenHearth")
@@ -133,7 +115,7 @@ void Player::Initialize(const Transform& transform)
         int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
         // アニメーションコントローラーを作成
         auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
-        // Player movement is input-driven; never apply animation Root Motion.
+
         controller->SetEnableRootMotion(false);
         controller->SetIgnoreRootMotion(true);
         controller->AddAnimation("Idle", 0);
@@ -348,21 +330,17 @@ void Player::Initialize(const Transform& transform)
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f,1.0f,0.0f });
 
-    // プレイヤー死亡時のカメラの画角
-    const std::string rootParentName = GetRootComponentName();
-
-
-
     // 軌跡初期化
     trail.Initialize();
     SetRushWeaponVisual(false);
-    // ラッシュ時のUIを作成
+
+
+    // UIの生成
     auto uiManager = GetOwnerScene()->GetUIManager();
-    if (!lowHpVignetteTexturePath.empty() &&
-        std::filesystem::exists(lowHpVignetteTexturePath))
+
+    // 低HPの時に表示するビネットテクスチャ
     {
-        lowHpVignetteImageComponent = std::make_shared<UIImageComponent>(
-            lowHpVignetteTexturePath, "LowHpVignette");
+        lowHpVignetteImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/hp_low.png", "LowHpVignette");
         lowHpVignetteImageComponent->SetWorldPosition({ 960.0f, 540.0f });
         lowHpVignetteImageComponent->SetSize({ 1920.0f, 1080.0f });
         lowHpVignetteImageComponent->SetPivot({ 0.5f, 0.5f });
@@ -372,53 +350,52 @@ void Player::Initialize(const Transform& transform)
         uiManager->Add(lowHpVignetteImageComponent);
     }
 
-    rushGuideImageComponent = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_x_a_b1.png", "RushGuide");
-    rushGuideImageComponent->SetWorldPosition(rushGuidePosition);
-    rushGuideImageComponent->SetScale(rushGuideScale);
-    rushGuideImageComponent->SetSize(rushGuideSize);
-    rushGuideImageComponent->SetPivot({ 0.5f, 0.5f });
-    rushGuideImageComponent->SetVisible(false);
-    uiManager->Add(rushGuideImageComponent);
+    // ラッシュガイドUIの生成
+    {
+        rushGuideImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Rush/rush_x_a_b.png", "RushGuide");
+        rushGuideImageComponent->SetWorldPosition(rushGuidePosition);
+        rushGuideImageComponent->SetScale(rushGuideScale);
+        rushGuideImageComponent->SetSize(rushGuideSize);
+        rushGuideImageComponent->SetPivot({ 0.5f, 0.5f });
+        rushGuideImageComponent->SetVisible(false);
+        uiManager->Add(rushGuideImageComponent);
 
-    rushButtonImageComponent = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_y1.png", "RushY");
-    rushButtonImageComponent->SetWorldPosition(rushButtonPosition);
-    rushButtonImageComponent->SetScale({
-        rushButtonBaseScale.x * 0.8f,
-        rushButtonBaseScale.y * 0.8f });
-    rushButtonImageComponent->SetSize(rushButtonSize);
-    rushButtonImageComponent->SetPivot({ 0.5f, 0.5f });
-    rushButtonImageComponent->SetVisible(false);
-    uiManager->Add(rushButtonImageComponent);
+        rushButtonImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Rush/rush_y.png", "RushY");
+        rushButtonImageComponent->SetWorldPosition(rushButtonPosition);
+        rushButtonImageComponent->SetScale({ rushButtonBaseScale.x * 0.8f,rushButtonBaseScale.y * 0.8f });
+        rushButtonImageComponent->SetSize(rushButtonSize);
+        rushButtonImageComponent->SetPivot({ 0.5f, 0.5f });
+        rushButtonImageComponent->SetVisible(false);
+        uiManager->Add(rushButtonImageComponent);
 
-    rushWordImageComponent = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_word1.png", "RushWord");
-    rushWordImageComponent->SetWorldPosition(rushWordPosition);
-    rushWordImageComponent->SetScale(rushWordScale);
-    rushWordImageComponent->SetSize(rushWordSize);
-    rushWordImageComponent->SetPivot({ 0.5f, 0.5f });
-    rushWordImageComponent->SetVisible(false);
-    uiManager->Add(rushWordImageComponent);
+        rushWordImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Rush/rush_word.png", "RushWord");
+        rushWordImageComponent->SetWorldPosition(rushWordPosition);
+        rushWordImageComponent->SetScale(rushWordScale);
+        rushWordImageComponent->SetSize(rushWordSize);
+        rushWordImageComponent->SetPivot({ 0.5f, 0.5f });
+        rushWordImageComponent->SetVisible(false);
+        uiManager->Add(rushWordImageComponent);
+    }
 
-    lockOnGuideArrowImageComponent = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/LT_arrow.png", "LockOnGuideArrow");
-    lockOnGuideArrowImageComponent->SetSize(lockOnGuideArrowSize);
-    lockOnGuideArrowImageComponent->SetScale(lockOnGuideArrowBaseScale);
-    lockOnGuideArrowImageComponent->SetPivot({ 0.5f, 0.5f });
-    lockOnGuideArrowImageComponent->SetVisible(false);
-    lockOnGuideArrowImageComponent->zOrder = 20;
-    uiManager->Add(lockOnGuideArrowImageComponent);
+    // 敵がカメラ外に行ったときに表示するロックオン補助UI
+    {
+        lockOnGuideArrowImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/LT_arrow.png", "LockOnGuideArrow");
+        lockOnGuideArrowImageComponent->SetSize(lockOnGuideArrowSize);
+        lockOnGuideArrowImageComponent->SetScale(lockOnGuideArrowBaseScale);
+        lockOnGuideArrowImageComponent->SetPivot({ 0.5f, 0.5f });
+        lockOnGuideArrowImageComponent->SetVisible(false);
+        lockOnGuideArrowImageComponent->zOrder = 20;
+        uiManager->Add(lockOnGuideArrowImageComponent);
 
-    lockOnGuideButtonImageComponent = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/LT_button.png", "LockOnGuideButton");
-    lockOnGuideButtonImageComponent->SetSize(lockOnGuideButtonSize);
-    lockOnGuideButtonImageComponent->SetScale(lockOnGuideButtonBaseScale);
-    lockOnGuideButtonImageComponent->SetPivot({ 0.5f, 0.5f });
-    lockOnGuideButtonImageComponent->SetVisible(false);
-    lockOnGuideButtonImageComponent->zOrder = 21;
-    uiManager->Add(lockOnGuideButtonImageComponent);
-    SetEulerRotation({ 0.0f,90.0f,0.0f });
+        lockOnGuideButtonImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/LT_button.png", "LockOnGuideButton");
+        lockOnGuideButtonImageComponent->SetSize(lockOnGuideButtonSize);
+        lockOnGuideButtonImageComponent->SetScale(lockOnGuideButtonBaseScale);
+        lockOnGuideButtonImageComponent->SetPivot({ 0.5f, 0.5f });
+        lockOnGuideButtonImageComponent->SetVisible(false);
+        lockOnGuideButtonImageComponent->zOrder = 21;
+        uiManager->Add(lockOnGuideButtonImageComponent);
+    }
+
 
     // 操作説明UIを入れる
     InitializeOperationGuideUI();
@@ -1312,8 +1289,12 @@ void Player::UpdateOperationGuideUI()
 void Player::RefreshOperationGuideUIVisibility()
 {
     for (auto& item : operationGuideItems)
-        if (item.image) item.image->SetVisible(
-            operationGuideGameplayHudVisible && operationGuideEventVisible && hp > 0 && item.visible);
+    {
+        if (item.image)
+        {
+            item.image->SetVisible(operationGuideGameplayHudVisible && operationGuideEventVisible && hp > 0 && item.visible);
+        }
+    }
 }
 
 void Player::SetOperationGuideHudVisible(const bool visible)
@@ -1858,7 +1839,6 @@ void Player::DrawImGuiDetails()
     ImGui::Text("finalMoveSpeed: %.4f",
         characterMovementComponent->GetFinalMoveSpeed());
     ImGui::SeparatorText("Action Request");
-    ImGui::Text("ActionRequest: %s", ToString(bufferCommand.type));
     ImGui::Text("remainTime: %.3f", bufferCommand.remainTime);
     ImGui::Text("currentState: %s", stateMachine_->GetStateName());
     ImGui::SeparatorText("Damage");
@@ -3257,31 +3237,21 @@ void Player::CaptureActionRequest(float deltaTime)
         bufferCommand.remainTime -= deltaTime;
         if (bufferCommand.remainTime <= 0.0f)
         {
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[ActionRequest][Expired] action=" + std::string(ToString(bufferCommand.type)) +
-                " remainTime=" + std::to_string(bufferCommand.remainTime) +
-                " state=" + stateMachine_->GetStateName());
             bufferCommand = {};
         }
     }
 
     if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
     {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            std::string("[ActionRequest][Detected] action=Dodge state=") + stateMachine_->GetStateName());
         DecideLockOnDodgeDirection();
         StoreActionRequest(ActionType::Dodge, 0.3f);
     }
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            std::string("[ActionRequest][Detected] action=Attack state=") + stateMachine_->GetStateName());
         StoreActionRequest(ActionType::Attack, 0.5f);
     }
     if (InputSystem::GetInputState("GamePadB", InputStateMask::Trigger))
     {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            std::string("[ActionRequest][Detected] action=Dash state=") + stateMachine_->GetStateName());
         StoreActionRequest(ActionType::Dash, 0.3f);
     }
 }
@@ -3329,16 +3299,10 @@ bool Player::TryExecuteActionRequest()
     case ActionType::Dash:
         if (characterMovementComponent->GetInputMagnitude() <= 0.01f)
         {
-            Logger::Log(Logger::LogCategory::Gameplay,
-                std::string("[ActionRequest][Deferred] action=Dash reason=no_move_input state=") +
-                stateMachine_->GetStateName());
             return false;
         }
         if (!InputSystem::GetInputState("GamePadB", InputStateMask::Press))
         {
-            Logger::Log(Logger::LogCategory::Gameplay,
-                std::string("[ActionRequest][Deferred] action=Dash reason=button_released state=") +
-                stateMachine_->GetStateName());
             return false;
         }
         SetLocomotionMode(LocomotionMode::Dash);
@@ -3353,15 +3317,9 @@ bool Player::TryExecuteActionRequest()
 
     if (stateMachine_->GetStateName() != targetState)
     {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[ActionRequest][ExecutionFailed] action=" + std::string(ToString(requestedType)) +
-            " target=" + targetState + " state=" + stateMachine_->GetStateName());
         return false;
     }
 
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[ActionRequest][Executed] action=" + std::string(ToString(requestedType)) +
-        " state=" + targetState);
     ConsumeActionRequest(requestedType);
     return true;
 }
@@ -3776,10 +3734,6 @@ void Player::ConsumeActionRequest(ActionType expectedType)
 {
     if (bufferCommand.type != expectedType)
     {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[ActionRequest][ConsumeRejected] expected=" + std::string(ToString(expectedType)) +
-            " current=" + std::string(ToString(bufferCommand.type)) +
-            " state=" + stateMachine_->GetStateName());
         return;
     }
     if (expectedType == ActionType::Dodge)
@@ -3788,10 +3742,6 @@ void Player::ConsumeActionRequest(ActionType expectedType)
         dodgeWorldDirection = bufferCommand.dodgeWorldDirection;
         useDodgeWorldDirection = bufferCommand.useDodgeWorldDirection;
     }
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[ActionRequest][Consumed] action=" + std::string(ToString(bufferCommand.type)) +
-        " remainTime=" + std::to_string(bufferCommand.remainTime) +
-        " state=" + stateMachine_->GetStateName());
     bufferCommand = {};
 }
 
@@ -4156,10 +4106,6 @@ void Player::EndKnockBackMovement()
 }
 void Player::ClearActionRequest(const char* reason)
 {
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[ActionRequest][Cleared] action=" + std::string(ToString(bufferCommand.type)) +
-        " reason=" + (reason ? reason : "unknown") +
-        " state=" + stateMachine_->GetStateName());
     bufferCommand = {};
 }
 

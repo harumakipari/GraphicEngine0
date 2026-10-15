@@ -53,7 +53,10 @@ public:
     bool IsPlaying() const { return isPlaying; }
 
     // エフェクトハンドル取得
-    EffectHandle GetEffectHandle() const { return effectHandle; }
+    EffectHandle GetEffectHandle() const
+    {
+        return effectLoadTicket ? effectLoadTicket->GetEffectHandle() : effectHandle;
+    }
 
     // フレーム更新
     void Tick(float deltaTime) override;
@@ -65,8 +68,14 @@ public:
     void DrawImGuiInspector() override;
 private:
     void TrackPlayback(EffectPlaybackId id);
+    void BeginPlay();
+    void BeginPlayAttached();
+    void CancelPendingEffectLoad();
     std::vector<EffectPlaybackId> playbackIds;
-    EffectHandle effectHandle = -1; 	// エフェクトハンドル
+    EffectHandle effectHandle = -1; // エフェクトハンドル
+    EffectLoadTicketPtr effectLoadTicket;
+    bool pendingPlayRequest = false;
+    bool pendingPlayAttachedRequest = false;
     bool isPlaying = false;				// 再生中フラグ
     AddSettings settings; 				// 追加設定
     float elapsedDelayTime = 0.0f;		// 再生開始遅延時間の経過時間

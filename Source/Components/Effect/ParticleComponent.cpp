@@ -2,17 +2,20 @@
 #include "ParticleComponent.h"
 #include "Core/Vector.h"
 #include "Core/Actor.h"
+#include "Engine/Scene/Scene.h"
 
 //REGISTER_COMPONENT(ParticleComponent, "Effects");
 
 ParticleComponent::~ParticleComponent()
 {
     Stop();
+    CancelPendingEffectLoad();
 }
 
 void ParticleComponent::OnUnregister()
 {
     Stop();
+    CancelPendingEffectLoad();
     SceneComponent::OnUnregister();
 }
 
@@ -25,86 +28,145 @@ void ParticleComponent::TrackPlayback(EffectPlaybackId id)
 void ParticleComponent::Load(const std::string& filePath)
 {
     Stop();
+    CancelPendingEffectLoad();
+    effectHandle = -1;
+
+    if (Scene::IsAsyncPreloadThread())
+    {
+        effectLoadTicket = EffectManager::LoadEffectDataAsync(filePath);
+        Scene::RegisterPreloadEffectTicket(effectLoadTicket);
+        return;
+    }
+
     effectHandle = EffectManager::LoadEffectData(filePath);
+}
+
+void ParticleComponent::CancelPendingEffectLoad()
+{
+    if (effectLoadTicket)
+    {
+        effectLoadTicket->Cancel();
+        effectLoadTicket.reset();
+    }
 }
 
 void ParticleComponent::Play()
 {
     Stop();
-    // エフェクト再生
-    if (effectHandle != -1)
+    if (GetEffectHandle() == -1)
     {
-        // エフェクト発生前コールバック実行
-        if (settings.onPreEmit)
+        if (effectLoadTicket && effectLoadTicket->GetState() == EffectLoadState::Pending)
         {
-            settings.onPreEmit();
+            pendingPlayRequest = true;
+            pendingPlayAttachedRequest = false;
         }
-
-        // ゲームオブジェクトの位置と回転を取得
-        //XMFLOAT3 position = owner_.lock()->GetPosition();
-        //XMFLOAT3 rotation = owner_.lock()->GetEulerRotation();
-        UpdateComponentToWorld(); // これ入れないと最初に呼ばれる時に位置がずれる
-        XMFLOAT3 position = GetComponentLocation();
-        XMFLOAT3 rotation = GetComponentEulerRotation();
-        elapsedTimeSincePlay = 0.0f;
-        duration = CalculateDuration();
-        emitTimer = 0.0f;
-        isPlaying = true;
-        // 再生開始遅延経過時間リセット
-        elapsedDelayTime = 0.0f;
-        // ★最初の1発
-        TrackPlayback(EffectManager::Play(effectHandle, position, rotation));
-
+        return;
     }
+
+    BeginPlay();
 }
 
-// エフェクトをアタッチ先に再生
+void ParticleComponent::BeginPlay()
+{
+    const EffectHandle handle = GetEffectHandle();
+    if (handle == -1) return;
+
+    if (settings.onPreEmit)
+    {
+        settings.onPreEmit();
+    }
+
+    UpdateComponentToWorld();
+    XMFLOAT3 position = GetComponentLocation();
+    XMFLOAT3 rotation = GetComponentEulerRotation();
+    elapsedTimeSincePlay = 0.0f;
+    duration = CalculateDuration();
+    emitTimer = 0.0f;
+    isPlaying = true;
+    elapsedDelayTime = 0.0f;
+    TrackPlayback(EffectManager::Play(handle, position, rotation));
+}
 void ParticleComponent::PlayAttached()
 {
     Stop();
-    if (effectHandle == -1) return;
+    if (GetEffectHandle() == -1)
+    {
+        if (effectLoadTicket && effectLoadTicket->GetState() == EffectLoadState::Pending)
+        {
+            pendingPlayRequest = true;
+            pendingPlayAttachedRequest = true;
+        }
+        return;
+    }
 
-    TrackPlayback(EffectManager::PlayAttached(effectHandle, shared_from_this()));
-    isPlaying = true;
+    BeginPlayAttached();
 }
 
+void ParticleComponent::BeginPlayAttached()
+{
+    const EffectHandle handle = GetEffectHandle();
+    if (handle == -1) return;
+
+    TrackPlayback(EffectManager::PlayAttached(handle, shared_from_this()));
+    isPlaying = true;
+}
 void ParticleComponent::Stop()
 {
     for (auto id : playbackIds) EffectManager::Stop(id);
     playbackIds.clear();
-    // エフェクト停止
+    pendingPlayRequest = false;
+    pendingPlayAttachedRequest = false;
     isPlaying = false;
 }
 
 void ParticleComponent::Tick(float deltaTime)
 {
-    // ループ再生でない場合は何もしない
-    if (effectHandle == -1 || !IsPlaying() /*|| !settings.loop*/)
+    if (effectLoadTicket && pendingPlayRequest)
+    {
+        const EffectLoadState state = effectLoadTicket->GetState();
+        if (state == EffectLoadState::Pending)
+        {
+            return;
+        }
+
+        const bool playAttached = pendingPlayAttachedRequest;
+        pendingPlayRequest = false;
+        pendingPlayAttachedRequest = false;
+        if (state == EffectLoadState::Ready)
+        {
+            if (playAttached)
+            {
+                BeginPlayAttached();
+            }
+            else
+            {
+                BeginPlay();
+            }
+        }
+    }
+
+    const EffectHandle handle = GetEffectHandle();
+    if (handle == -1 || !IsPlaying())
     {
         return;
     }
 
-
-    // 再生開始遅延時間の処理
     if (elapsedDelayTime < settings.startDelay)
     {
         elapsedDelayTime += deltaTime;
         if (elapsedDelayTime < settings.startDelay)
         {
-            // まだ遅延時間内なので再生しない
             return;
         }
     }
 
-    // エフェクト発生前コールバック実行
     if (settings.onPreEmit)
     {
         settings.onPreEmit();
     }
-    XMFLOAT3 position = GetComponentLocation();;
+    XMFLOAT3 position = GetComponentLocation();
     XMFLOAT3 rotation = GetComponentEulerRotation();
 
-    // 再生してからの経過時間更新
     elapsedTimeSincePlay += deltaTime;
 
     if (!settings.loop && elapsedTimeSincePlay >= duration)
@@ -121,23 +183,24 @@ void ParticleComponent::Tick(float deltaTime)
         while (emitTimer >= safeInterval)
         {
             emitTimer -= safeInterval;
-            TrackPlayback(EffectManager::Play(effectHandle, position, rotation));
+            TrackPlayback(EffectManager::Play(handle, position, rotation));
         }
     }
-    else
+    else if (elapsedTimeSincePlay >= duration)
     {
-        if (elapsedTimeSincePlay >= duration)
-        {
-            isPlaying = false;
-        }
+        isPlaying = false;
     }
 }
-
 float ParticleComponent::CalculateDuration() const
 {
-    float maxDuration = 0.0f;
+    const EffectHandle handle = GetEffectHandle();
+    if (handle == -1)
+    {
+        return 0.0f;
+    }
 
-    auto& effect = EffectManager::GetEffectData(effectHandle);
+    float maxDuration = 0.0f;
+    auto& effect = EffectManager::GetEffectData(handle);
 
     for (auto& emitter : effect.emitters)
     {
@@ -151,7 +214,6 @@ float ParticleComponent::CalculateDuration() const
 
     return maxDuration;
 }
-
 void ParticleComponent::DrawImGuiInspector()
 {
 #ifdef USE_IMGUI
@@ -163,6 +225,7 @@ void ParticleComponent::DrawImGuiInspector()
     {
         // ダイアログを開いてエフェクトデータを読み込む
         Stop();
+        CancelPendingEffectLoad();
         effectHandle = EffectManager::LoadEffectDataWithDialog();
     }
     ImGui::SameLine();
@@ -171,9 +234,9 @@ void ParticleComponent::DrawImGuiInspector()
         Play();
     }
 
-    if (effectHandle != -1)
+    if (GetEffectHandle() != -1)
     {
-        ImGui::Text("Effect Handle: %d", effectHandle);
+        ImGui::Text("Effect Handle: %d", GetEffectHandle());
     }
     else
     {

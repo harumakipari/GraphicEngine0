@@ -178,143 +178,230 @@ EffectHandle EffectManager::CreateEffectData()
 
 EffectHandle EffectManager::LoadEffectData(const std::string& filePath)
 {
+    AssertMainThread();
 #if defined(_DEBUG)
     DebugLogMutation("LoadEffectData ENTRY", effectData.data(), effectData.size(), effectData.capacity());
 #endif
-    // エフェクトデータ読み込み
-    if (std::filesystem::exists(filePath))
+    // すでに同じデータが存在する場合はそれを返す
+    for (size_t i = 0; i < effectData.size(); ++i)
     {
-        // すでに同じデータが存在する場合はそれを返す
-        for (size_t i = 0; i < effectData.size(); ++i)
+        if (effectData[i].filePath == filePath)
         {
-            if (effectData[i].filePath == filePath)
-            {
-                return effectData[i].handle;
-            }
-        }
-
-        json j;
-        if (JsonFileHandler::LoadJsonFromFile(j, filePath))
-        {
-            // 新しいエフェクトデータ追加用のハンドル
-            EffectHandle handle = CreateEffectData();
-            effectData[handle].filePath = filePath;
-            effectData[handle].handle = handle;
-
-            // エフェクト名を反映
-            effectData[handle].name = j.value("name", "Effect" + std::to_string(handle));
-
-            // 読み込みデータをエミッターデータに反映
-            auto& emitterDataList = effectData[handle].emitters;
-            auto emitterJsonList = j.value("emitterDataList", json::array());
-            for (const auto& emitterJson : emitterJsonList)
-            {
-                ParticleEmitterData emitterData;
-                emitterData.runtimeId = AllocateEmitterRuntimeId();
-                emitterData.name = emitterJson.value("name", "Emitter");
-
-                // エミット設定
-                {
-                    emitterData.emitData.maxParticles = emitterJson.value("maxParticles", 1000);
-                    if (emitterJson.contains("emitCount"))
-                        emitterData.emitData.emitCount = emitterJson["emitCount"].get<Range<int>>();
-                    else
-                        emitterData.emitData.emitCount = { 10, 10 };
-                    if (emitterJson.contains("initialDelay"))
-                        emitterData.emitData.initialDelay = emitterJson["initialDelay"].get<Range<float>>();
-                    else
-                        emitterData.emitData.initialDelay = { 0.0f, 0.0f };
-                    if (emitterJson.contains("emitInterval"))
-                        emitterData.emitData.emitInterval = emitterJson["emitInterval"].get<Range<float>>();
-                    else
-                        emitterData.emitData.emitInterval = { 0.1f, 0.1f };
-                    if (emitterJson.contains("positionOffset"))
-                        emitterData.emitData.positionOffset = emitterJson["positionOffset"].get<Vector3>();
-                    if (emitterJson.contains("rotationEuler"))
-                        emitterData.emitData.rotationEuler = emitterJson["rotationEuler"].get<Range<Vector3>>();
-                    if (emitterJson.contains("emitRate"))
-                        emitterData.emitData.emitRate = emitterJson.value("emitRate", 10.0f);
-                    if (emitterJson.contains("loop"))
-                        emitterData.emitData.loop = emitterJson.value("loop", false);
-                    if (emitterJson.contains("emitterLifeTime"))
-                        emitterData.emitData.emitterLifeTime = emitterJson.value("emitterLifeTime", 0.5f);
-                    if (emitterJson.contains("isBurst"))
-                        emitterData.emitData.isBurst = emitterJson.value("isBurst", false);
-                    if (emitterJson.contains("burstCount"))
-                        emitterData.emitData.burstCount = emitterJson.value("burstCount", 10);
-                    if (emitterJson.contains("emissivePower"))
-                        emitterData.emitData.emissivePower = emitterJson.value("emissivePower", 1.0f);
-                    //emitterData.emitData.loop = emitterJson.value("loop", false);
-                }
-                // 形状設定
-                {
-                    emitterData.shapeData.shape = static_cast<ShapeType>(emitterJson.value("shapeType", 0));
-                    emitterData.shapeData.directionMode = static_cast<DirectionMode>(emitterJson.value("directionMode", 0));
-                    if (emitterJson.contains("directionAxis"))
-                        emitterData.shapeData.directionAxis = emitterJson["directionAxis"].get<Vector3>();
-                    emitterData.shapeData.speed = emitterJson.value("speed", Range<float>{ 1.0f, 1.0f });
-                    emitterData.shapeData.radius = emitterJson.value("radius", 1.0f);
-                    emitterData.shapeData.height = emitterJson.value("height", 1.0f);
-                }
-                // 動作設定
-                {
-                    if (emitterJson.contains("velocity"))
-                        emitterData.motionData.velocity = emitterJson["velocity"].get<Range<Vector3>>();
-                    if (emitterJson.contains("acceleration"))
-                        emitterData.motionData.acceleration = emitterJson["acceleration"].get<Range<Vector3>>();
-                    if (emitterJson.contains("lifeTime"))
-                        emitterData.motionData.lifeTime = emitterJson["lifeTime"].get<Range<float>>();
-                    emitterData.motionData.useGravity = emitterJson.value("useGravity", false);
-                }
-                // ビジュアル設定
-                {
-                    emitterData.visualData.renderingMode = static_cast<RenderingMode>(emitterJson.value("renderingMode", 0));
-                    emitterData.visualData.texturePath = emitterJson.value("texturePath", "");
-                    auto textureSplitCountArray = emitterJson.value("textureSplitCount", std::vector<uint32_t>{ 1, 1 });
-                    if (textureSplitCountArray.size() == 2) {
-                        emitterData.visualData.textureSplitCount = { textureSplitCountArray[0], textureSplitCountArray[1] };
-                    }
-                    emitterData.visualData.blendState = static_cast<BLEND_STATE>(emitterJson.value("blendState", 0));
-                    if (emitterJson.contains("startSize"))
-                        emitterData.visualData.startSize = emitterJson["startSize"].get<Range<Vector2>>();
-                    if (emitterJson.contains("endSize"))
-                        emitterData.visualData.endSize = emitterJson["endSize"].get<Range<Vector2>>();
-                    if (emitterJson.contains("startColor"))
-                        emitterData.visualData.startColor = emitterJson["startColor"].get<Range<CoreColor>>();
-                    if (emitterJson.contains("endColor"))
-                        emitterData.visualData.endColor = emitterJson["endColor"].get<Range<CoreColor>>();
-
-                    emitterData.visualData.sizeCurveMode = static_cast<SizeCurveMode>(
-                        emitterJson.value("sizeCurveMode", static_cast<uint8_t>(SizeCurveMode::StartEnd)));
-                    const float sizeCurveMax = emitterData.visualData.sizeCurveMode == SizeCurveMode::StartMultiplier ? 10.0f : 1.0f;
-                    emitterData.visualData.sizeCurve = LoadCurve(emitterJson, "sizeCurve", FloatCurve::Linear(), 0.0f, sizeCurveMax);
-                    emitterData.visualData.colorCurve = LoadCurve(emitterJson, "colorCurve", FloatCurve::Linear());
-                    emitterData.visualData.alphaCurve = LoadCurve(emitterJson, "alphaCurve", FloatCurve::ConstantOne());
-                    emitterData.visualData.emissiveCurve = LoadCurve(emitterJson, "emissiveCurve", FloatCurve::ConstantOne());
-                    emitterData.visualData.dirty = true;
-
-                }
-
-                // エミッタデータリストに追加
-#if defined(_DEBUG)
-                DebugLogMutation("LoadEffectData Emitter push_back BEFORE", effectData.data(), effectData.size(), effectData.capacity(), effectData[handle].runtimeId, emitterData.runtimeId);
-#endif
-                emitterDataList.push_back(emitterData);
-#if defined(_DEBUG)
-                DebugLogMutation("LoadEffectData Emitter push_back AFTER", effectData.data(), effectData.size(), effectData.capacity(), effectData[handle].runtimeId, emitterDataList.back().runtimeId);
-#endif
-            }
-
-            // 成功したのでハンドルを返す
-            return handle;
+            return effectData[i].handle;
         }
     }
-    // 読み込み失敗
-    Logger::Error("Failed to load effect data from file: " + filePath);
-    //_ASSERT_EXPR_A("Failed to load effect data from file: ");
-    return -1; // 無効なハンドルを返す
+
+    EffectDataLoadResult loadResult;
+    if (!BuildEffectDataFromJson(filePath, loadResult))
+    {
+        Logger::Error("Failed to load effect data from file: " + filePath);
+        return -1; // 無効なハンドルを返す
+    }
+
+    return RegisterEffectData(std::move(loadResult));
 }
 
+EffectLoadTicketPtr EffectManager::LoadEffectDataAsync(const std::string& filePath)
+{
+    auto ticket = std::make_shared<EffectLoadTicket>();
+    EffectDataLoadResult loadResult;
+    if (!BuildEffectDataFromJson(filePath, loadResult))
+    {
+        ticket->MarkFailed();
+        return ticket;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(effectLoadMutex);
+        pendingEffectLoads.push_back({ std::move(loadResult), ticket });
+    }
+    return ticket;
+}
+bool EffectManager::BuildEffectDataFromJson(const std::string& filePath, EffectDataLoadResult& outResult)
+{
+    if (!std::filesystem::exists(filePath))
+    {
+        return false;
+    }
+
+    json j;
+    if (!JsonFileHandler::LoadJsonFromFile(j, filePath))
+    {
+        return false;
+    }
+
+    EffectDataLoadResult loadedResult;
+    loadedResult.effect.filePath = filePath;
+    loadedResult.hasExplicitName = j.contains("name");
+    if (loadedResult.hasExplicitName)
+    {
+        loadedResult.effect.name = j.value("name", std::string{});
+    }
+
+    // 読み込みデータをローカルのエミッターデータに反映する。
+    auto emitterJsonList = j.value("emitterDataList", json::array());
+    for (const auto& emitterJson : emitterJsonList)
+    {
+        ParticleEmitterData emitterData;
+        emitterData.name = emitterJson.value("name", "Emitter");
+
+        // エミット設定
+        {
+            emitterData.emitData.maxParticles = emitterJson.value("maxParticles", 1000);
+            if (emitterJson.contains("emitCount"))
+                emitterData.emitData.emitCount = emitterJson["emitCount"].get<Range<int>>();
+            else
+                emitterData.emitData.emitCount = { 10, 10 };
+            if (emitterJson.contains("initialDelay"))
+                emitterData.emitData.initialDelay = emitterJson["initialDelay"].get<Range<float>>();
+            else
+                emitterData.emitData.initialDelay = { 0.0f, 0.0f };
+            if (emitterJson.contains("emitInterval"))
+                emitterData.emitData.emitInterval = emitterJson["emitInterval"].get<Range<float>>();
+            else
+                emitterData.emitData.emitInterval = { 0.1f, 0.1f };
+            if (emitterJson.contains("positionOffset"))
+                emitterData.emitData.positionOffset = emitterJson["positionOffset"].get<Vector3>();
+            if (emitterJson.contains("rotationEuler"))
+                emitterData.emitData.rotationEuler = emitterJson["rotationEuler"].get<Range<Vector3>>();
+            if (emitterJson.contains("emitRate"))
+                emitterData.emitData.emitRate = emitterJson.value("emitRate", 10.0f);
+            if (emitterJson.contains("loop"))
+                emitterData.emitData.loop = emitterJson.value("loop", false);
+            if (emitterJson.contains("emitterLifeTime"))
+                emitterData.emitData.emitterLifeTime = emitterJson.value("emitterLifeTime", 0.5f);
+            if (emitterJson.contains("isBurst"))
+                emitterData.emitData.isBurst = emitterJson.value("isBurst", false);
+            if (emitterJson.contains("burstCount"))
+                emitterData.emitData.burstCount = emitterJson.value("burstCount", 10);
+            if (emitterJson.contains("emissivePower"))
+                emitterData.emitData.emissivePower = emitterJson.value("emissivePower", 1.0f);
+            //emitterData.emitData.loop = emitterJson.value("loop", false);
+        }
+        // 形状設定
+        {
+            emitterData.shapeData.shape = static_cast<ShapeType>(emitterJson.value("shapeType", 0));
+            emitterData.shapeData.directionMode = static_cast<DirectionMode>(emitterJson.value("directionMode", 0));
+            if (emitterJson.contains("directionAxis"))
+                emitterData.shapeData.directionAxis = emitterJson["directionAxis"].get<Vector3>();
+            emitterData.shapeData.speed = emitterJson.value("speed", Range<float>{ 1.0f, 1.0f });
+            emitterData.shapeData.radius = emitterJson.value("radius", 1.0f);
+            emitterData.shapeData.height = emitterJson.value("height", 1.0f);
+        }
+        // 動作設定
+        {
+            if (emitterJson.contains("velocity"))
+                emitterData.motionData.velocity = emitterJson["velocity"].get<Range<Vector3>>();
+            if (emitterJson.contains("acceleration"))
+                emitterData.motionData.acceleration = emitterJson["acceleration"].get<Range<Vector3>>();
+            if (emitterJson.contains("lifeTime"))
+                emitterData.motionData.lifeTime = emitterJson["lifeTime"].get<Range<float>>();
+            emitterData.motionData.useGravity = emitterJson.value("useGravity", false);
+        }
+        // ビジュアル設定
+        {
+            emitterData.visualData.renderingMode = static_cast<RenderingMode>(emitterJson.value("renderingMode", 0));
+            emitterData.visualData.texturePath = emitterJson.value("texturePath", "");
+            auto textureSplitCountArray = emitterJson.value("textureSplitCount", std::vector<uint32_t>{ 1, 1 });
+            if (textureSplitCountArray.size() == 2) {
+                emitterData.visualData.textureSplitCount = { textureSplitCountArray[0], textureSplitCountArray[1] };
+            }
+            emitterData.visualData.blendState = static_cast<BLEND_STATE>(emitterJson.value("blendState", 0));
+            if (emitterJson.contains("startSize"))
+                emitterData.visualData.startSize = emitterJson["startSize"].get<Range<Vector2>>();
+            if (emitterJson.contains("endSize"))
+                emitterData.visualData.endSize = emitterJson["endSize"].get<Range<Vector2>>();
+            if (emitterJson.contains("startColor"))
+                emitterData.visualData.startColor = emitterJson["startColor"].get<Range<CoreColor>>();
+            if (emitterJson.contains("endColor"))
+                emitterData.visualData.endColor = emitterJson["endColor"].get<Range<CoreColor>>();
+
+            emitterData.visualData.sizeCurveMode = static_cast<SizeCurveMode>(
+                emitterJson.value("sizeCurveMode", static_cast<uint8_t>(SizeCurveMode::StartEnd)));
+            const float sizeCurveMax = emitterData.visualData.sizeCurveMode == SizeCurveMode::StartMultiplier ? 10.0f : 1.0f;
+            emitterData.visualData.sizeCurve = LoadCurve(emitterJson, "sizeCurve", FloatCurve::Linear(), 0.0f, sizeCurveMax);
+            emitterData.visualData.colorCurve = LoadCurve(emitterJson, "colorCurve", FloatCurve::Linear());
+            emitterData.visualData.alphaCurve = LoadCurve(emitterJson, "alphaCurve", FloatCurve::ConstantOne());
+            emitterData.visualData.emissiveCurve = LoadCurve(emitterJson, "emissiveCurve", FloatCurve::ConstantOne());
+            emitterData.visualData.dirty = true;
+        }
+
+        loadedResult.effect.emitters.emplace_back(std::move(emitterData));
+    }
+
+    outResult = std::move(loadedResult);
+    return true;
+}
+
+EffectHandle EffectManager::RegisterEffectData(EffectDataLoadResult&& loadResult)
+{
+    AssertMainThread();
+    // 登録キュー経由でも重複登録しないよう、登録直前にも確認する。
+    for (size_t i = 0; i < effectData.size(); ++i)
+    {
+        if (effectData[i].filePath == loadResult.effect.filePath)
+        {
+            return effectData[i].handle;
+        }
+    }
+
+    const EffectHandle handle = static_cast<EffectHandle>(effectData.size());
+    EffectData& registeredEffect = effectData.emplace_back(std::move(loadResult.effect));
+    registeredEffect.handle = handle;
+    registeredEffect.runtimeId = AllocateEffectRuntimeId();
+    if (!loadResult.hasExplicitName)
+    {
+        registeredEffect.name = "Effect" + std::to_string(handle);
+    }
+
+    for (auto& emitterData : registeredEffect.emitters)
+    {
+        emitterData.runtimeId = AllocateEmitterRuntimeId();
+    }
+
+#if defined(_DEBUG)
+    DebugLogMutation("RegisterEffectData EXIT", effectData.data(), effectData.size(), effectData.capacity(), registeredEffect.runtimeId);
+#endif
+    return handle;
+}
+
+void EffectManager::ConsumePendingEffectLoads()
+{
+    std::vector<PendingEffectLoad> pendingLoads;
+    {
+        std::lock_guard<std::mutex> lock(effectLoadMutex);
+        pendingLoads.swap(pendingEffectLoads);
+    }
+
+    for (auto& pendingLoad : pendingLoads)
+    {
+        if (!pendingLoad.ticket || pendingLoad.ticket->GetState() != EffectLoadState::Pending)
+        {
+            continue;
+        }
+
+        const EffectHandle handle = RegisterEffectData(std::move(pendingLoad.loadResult));
+        if (handle >= 0)
+        {
+            pendingLoad.ticket->MarkReady(handle);
+        }
+        else
+        {
+            pendingLoad.ticket->MarkFailed();
+        }
+    }
+}
+
+void EffectManager::AssertMainThread()
+{
+#if defined(_DEBUG)
+    if (mainThreadId != std::thread::id())
+    {
+        _ASSERT_EXPR(mainThreadId == std::this_thread::get_id(),
+            L"EffectManager shared effect data must be accessed from the main thread.");
+    }
+#endif
+}
 EffectHandle EffectManager::LoadEffectDataWithDialog()
 {
     // ファイルダイアログ表示
@@ -724,12 +811,15 @@ void EffectManager::StopAll()
 
 void EffectManager::Initialize()
 {
+    mainThreadId = std::this_thread::get_id();
     //パーティクルシステム初期化
     particleSystems.clear();
 }
 
 void EffectManager::Update(float deltaTime)
 {
+    AssertMainThread();
+    ConsumePendingEffectLoads();
     ConsumePendingPlaybacks();
     bool curveDirty = false;
 

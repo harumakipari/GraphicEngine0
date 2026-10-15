@@ -88,7 +88,6 @@ public:
 
     void Update(float deltaTime) override;
 
-    // ・ｽ關費ｿｽo・ｽb・ｽt・ｽ@・ｽﾌ更・ｽV・ｽ・ｽ・ｽ・ｽ・ｽ・ｽV・ｽ[・ｽ・ｽ・ｽ・ｽ・ｽﾆにカ・ｽX・ｽ^・ｽ}・ｽC・ｽY・ｽﾅゑｿｽ・ｽ・ｽ謔､・ｽﾉゑｿｽ・ｽ驍ｽ・ｽﾟの会ｿｽ・ｽz・ｽﾖ撰ｿｽ
     void UpdateConstants(ID3D11DeviceContext* immediateContext, float deltaTime)override;
 
     bool Uninitialize(ID3D11Device* device) override;
@@ -97,23 +96,17 @@ public:
 
     void SetUpActors()override;
 
-    //・ｽV・ｽ[・ｽ・ｽ・ｽﾌ趣ｿｽ・ｽ・ｽ・ｽo・ｽ^
     static inline Scene::Autoenrollment<GameScene> _autoenrollment;
 
-    // ・ｽ{・ｽX・ｽﾌ包ｿｽ・ｽ・ｽ・ｽﾌ色・ｽ・ｽ・ｽ[・ｽv・ｽl・ｽ・ｽﾝ定す・ｽ・ｽ
     void SetBossRoomLerpFactor(float lerpFactor);
 
-    // ・ｽ{・ｽX・ｽﾌ包ｿｽ・ｽ・ｽ・ｽﾌ色・ｽﾌ・ｿｽ・ｽ[・ｽv・ｽ・ｽJ・ｽn・ｽ・ｽ・ｽ・ｽﾖ撰ｿｽ
     void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
     void CancelBossRoomLerp();
 
-    // ・ｽ{・ｽX・ｽﾌ目のゑｿｽBloom・ｽ・ｽﾂゑｿｽ・ｽ・ｽ
 
     void BeginGameBgmFadeOut();
-    // Safe to call from both the boss-introduction timing cue and battle handoff.
     void PlayBossBattleBgm();
 
-    // ・ｽJ・ｽ・ｽ・ｽ・ｽ・ｽﾌ・ｿｽ・ｽ[・ｽh・ｽ・ｽﾏ更・ｽ・ｽ・ｽ・ｽ
     void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
 
     // Called when the boss-room door movie begins, before the boss-introduction blend completes.
@@ -409,7 +402,6 @@ private:
     void CreateBattleTimerUI();
     void SetBattleTimerVisible(bool visible);
     void UpdateBattleTimerUI();
-    // ・ｽ・ｽ・ｽS・ｽ・ｽ・ｽﾌ・ｿｽ・ｽU・ｽ・ｽ・ｽgUI・ｽ・ｽ・ｬ・ｽ・ｽ・ｽ・ｽ
     void CreateDeathResultUI();
     void SetDeathResultVisible(bool visible);
     void SelectDeathResult(int index);
@@ -534,7 +526,7 @@ private:
     unsigned long long finalHitDebugStartMilliseconds = 0;
     double finalHitDebugElapsedSeconds = 0.0;
     bool finalHitPending = false;
-    float finalHitReactionCutTime = 0.365f; // ・ｽ・ｽ・ｽ・ｽ・ｽ・ｽfade・ｽﾉ遷・ｽﾚゑｿｽ・ｽ・ｽ^・ｽC・ｽ~・ｽ・ｽ・ｽO
+    float finalHitReactionCutTime = 0.365f; 
     bool phase2FinalHitGateActive = false;
     bool phase2FinalHitReactionComplete = false;
     bool phase2FinalHitAttackWaitRequired = false;
@@ -794,7 +786,6 @@ private:
 
     std::unique_ptr<ClothSimulate> clothSimulate;
 
-    // ・ｽJ・ｽ・ｽ・ｽ・ｽ
     TPSCameraComponent* mainCameraComponent = nullptr;
     std::shared_ptr<MainCamera> mainCameraActor;
     std::shared_ptr<CinemaCamera> cinemaCameraActor;
@@ -850,7 +841,6 @@ private:
     bool tutorialDodgeGuideActivated = false;
     bool tutorialDodgeSkeletonJustDodged = false;
     std::weak_ptr<Enemy> lockOnSelectedEnemy;
-    // ・ｽ{・ｽX・ｽﾌ包ｿｽ・ｽ・ｽ・ｽﾌ・ｿｽ・ｽ[・ｽv・ｽﾌゑｿｽ・ｽﾟの変撰ｿｽ
     std::unique_ptr<EasingRunner> bossLerpEasing;
     float bossLerpEasingFactor = 0.0f;
     bool startBossRoomLerp = false;
@@ -858,7 +848,6 @@ private:
     float startBossRoomLerpFactor = 0.0f;
     float endBossRoomLerpFactor = 1.0f;
 
-    // ・ｽQ・ｽ[・ｽ・ｽBGM・ｽA・ｽN・ｽ^・ｽ[
     std::shared_ptr<BgmActor> gameBgmActor;
     float gameBgmFadeDuration = 0.75f;
     float gameBgmFadeStartVolume = 0.0f;

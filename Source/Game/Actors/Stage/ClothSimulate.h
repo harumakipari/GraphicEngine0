@@ -188,7 +188,7 @@ public:
     DirectX::XMFLOAT3 windEmitPosition = {};
     bool enableDriveForce = true;
     float driveForceAmplitude = 0.8f;
-    float driveForceFrequency = 1.5f;
+    float driveForceFrequency = 5.0f;
     float driveForcePhaseGradient = 1.8f;
     // 1.0 preserves the prior ClothUpdateCS gravity; 0.0 disables it.
     float gravityScale = 0.0f;

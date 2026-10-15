@@ -685,7 +685,6 @@ private:
     float lowHpPulseFlashAmount = 0.0f;
     float lowHpVignetteBaseAlpha = 0.12f;
     float lowHpVignettePulseAlpha = 0.32f;
-    std::string lowHpVignetteTexturePath = "./Data/Textures/UI/hp_low.png";
     std::string heartbeatSEPath = "./Data/Sound/SE/player_heartbeat.wav";
     std::shared_ptr<UIImageComponent> lowHpVignetteImageComponent;
 

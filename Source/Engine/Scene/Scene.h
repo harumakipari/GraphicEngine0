@@ -8,6 +8,11 @@
 #include <future>
 
 #include <functional>
+#include <memory>
+#include <mutex>
+#include <vector>
+#include <atomic>
+#include <cstdint>
 
 #include "SceneSetting.h"
 #include "Graphics/Resource/Texture.h"
@@ -17,6 +22,8 @@
 #include "Engine/Camera/CameraManager.h"
 #include "UI/UIManager.h"
 #include "UI/Game/SceneTransitionManager.h"
+
+class EffectLoadTicket;
 
 //シーンの状態を表す列挙型
 enum class SCENE_STATE
@@ -53,6 +60,13 @@ public:
     {
         return _current_scene.get();
     }
+
+    static bool IsAsyncPreloadThread()
+    {
+        return isAsyncPreloadThread;
+    }
+
+    static void RegisterPreloadEffectTicket(const std::shared_ptr<EffectLoadTicket>& ticket);
 
     // ActorManager の取得
     const ActorManager* GetActorManager() const { return actorManager_.get(); }
@@ -222,23 +236,28 @@ protected:
     // シーンのプリロードが完了しているか確認
     static bool _has_finished_preloading()
     {
-        // プリロード中のシーンがあり、かつ非同期処理（future）が有効ならチェック
-        if (_preload_scene && _future.valid())
+        if (!_preload_scene)
         {
-            // future の状態を非同期で確認（すぐに結果が得られるか）
-            if (_future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-            {
-                // プリロードシーンの状態が初期化完了していれば成功
-                if (_preload_scene->State() >= SCENE_STATE::initialized)
-                {
-                    bool success = _future.get();// future の結果を取得（取得しないと future は無効化できない）
-                    return true;
-                }
-            }
-            return false;
+            return true;
         }
-        // プリロードシーンがない、またはすでに準備完了なら true
-        return true;
+
+        if (_future.valid())
+        {
+            if (_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+            {
+                return false;
+            }
+
+            if (_preload_scene->State() < SCENE_STATE::initialized)
+            {
+                return false;
+            }
+
+            const bool success = _future.get();
+            (void)success;
+        }
+
+        return ArePreloadEffectTicketsComplete();
     }
 public:
     // シーンの遷移
@@ -246,6 +265,10 @@ public:
     {
         //非同期処理が完了しているか確認（未完了ならシーン遷移しない）
         if (!_async_wait())
+        {
+            return false;
+        }
+        if (_preload_scene && !_has_finished_preloading())
         {
             return false;
         }
@@ -280,6 +303,17 @@ public:
         return empty;
     }
 private:
+    struct PreloadEffectTicketBatch
+    {
+        std::uint64_t generation = 0;
+        std::mutex mutex;
+        std::vector<std::shared_ptr<EffectLoadTicket>> tickets;
+        bool hasFailedTicket = false;
+        bool hasCancelledTicket = false;
+    };
+
+    static bool ArePreloadEffectTicketsComplete();
+
     // 非同期処理の完了を待機
     static bool _async_wait()
     {
@@ -316,6 +350,11 @@ private:
     static inline std::unique_ptr<Scene> _preload_scene;//プリロード済みのシーン
     // 非同期でシーンをロードするための future
     static inline std::future<bool> _future;
+    static inline std::shared_ptr<PreloadEffectTicketBatch> preloadEffectTicketBatch;
+    static inline std::atomic<std::uint64_t> activePreloadGeneration = 0;
+    static inline std::uint64_t nextPreloadGeneration = 1;
+    static inline thread_local bool isAsyncPreloadThread = false;
+    static inline thread_local std::shared_ptr<PreloadEffectTicketBatch> currentPreloadEffectTicketBatch;
     // シーンに渡す追加情報（キーと値のマップ）
     static inline std::unordered_map<std::string, std::string> _payload;
 

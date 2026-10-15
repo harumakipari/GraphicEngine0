@@ -3881,7 +3881,7 @@ void GameScene::CreateBossDeathFadeUI()
 void GameScene::CreateBossDeathFinishUI()
 {
     bossDeathFinishGuideImage = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_x_a_b1.png", "BossDeathFinishGuide");
+        "./Data/Textures/UI/Rush/rush_x_a_b.png", "BossDeathFinishGuide");
     bossDeathFinishGuideImage->SetSize(bossDeathFinishGuideSize);
     bossDeathFinishGuideImage->SetScale(bossDeathFinishGuideScale);
     bossDeathFinishGuideImage->SetPivot({ 0.5f, 0.5f });
@@ -3889,7 +3889,7 @@ void GameScene::CreateBossDeathFinishUI()
     GetUIManager()->Add(bossDeathFinishGuideImage);
 
     bossDeathFinishButtonImage = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_y1.png", "BossDeathFinishY");
+        "./Data/Textures/UI/Rush/rush_y.png", "BossDeathFinishY");
     bossDeathFinishButtonImage->SetSize(bossDeathFinishButtonSize);
     bossDeathFinishButtonImage->SetScale({
         bossDeathFinishButtonBaseScale.x * 0.8f,

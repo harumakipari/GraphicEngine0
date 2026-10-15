@@ -7,6 +7,56 @@
 #include "Graphics/Resource/Texture.h"
 #include "UI/Game/SceneTransitionManager.h"
 
+void Scene::RegisterPreloadEffectTicket(const std::shared_ptr<EffectLoadTicket>& ticket)
+{
+    const auto batch = currentPreloadEffectTicketBatch;
+    if (!ticket || !batch || activePreloadGeneration.load(std::memory_order_acquire) != batch->generation)
+    {
+        return;
+    }
+
+    std::lock_guard<std::mutex> lock(batch->mutex);
+    if (activePreloadGeneration.load(std::memory_order_acquire) == batch->generation)
+    {
+        batch->tickets.push_back(ticket);
+    }
+}
+
+bool Scene::ArePreloadEffectTicketsComplete()
+{
+    const auto batch = preloadEffectTicketBatch;
+    if (!batch)
+    {
+        return true;
+    }
+
+    std::lock_guard<std::mutex> lock(batch->mutex);
+    batch->hasFailedTicket = false;
+    batch->hasCancelledTicket = false;
+    for (const auto& ticket : batch->tickets)
+    {
+        if (!ticket)
+        {
+            continue;
+        }
+
+        switch (ticket->GetState())
+        {
+        case EffectLoadState::Pending:
+            return false;
+        case EffectLoadState::Failed:
+            batch->hasFailedTicket = true;
+            break;
+        case EffectLoadState::Cancelled:
+            batch->hasCancelledTicket = true;
+            break;
+        case EffectLoadState::Ready:
+            break;
+        }
+    }
+
+    return true;
+}
 bool Scene::_update(ID3D11DeviceContext* immediateContext, float deltaTime)
 {
     if (_current_scene->uiManager)
@@ -50,6 +100,8 @@ bool Scene::_update(ID3D11DeviceContext* immediateContext, float deltaTime)
         {
             _next_scene = std::move(_preload_scene);
         }
+        preloadEffectTicketBatch.reset();
+        activePreloadGeneration.store(0, std::memory_order_release);
 
         // 次のシーンがまだ初期化されていない場合、初期化を行う
         if (_next_scene->State() < SCENE_STATE::initializing)
@@ -99,6 +151,9 @@ bool Scene::_async_preload_scene(ID3D11Device* device, UINT64 width, UINT height
 
     // 新しいプリロード用のシーンを作成
     _preload_scene = _reflections().at(name)();
+    preloadEffectTicketBatch = std::make_shared<PreloadEffectTicketBatch>();
+    preloadEffectTicketBatch->generation = nextPreloadGeneration++;
+    activePreloadGeneration.store(preloadEffectTicketBatch->generation, std::memory_order_release);
 
     // まだ非同期処理（future）が開始されていない場合
     if (!_future.valid())
@@ -106,14 +161,27 @@ bool Scene::_async_preload_scene(ID3D11Device* device, UINT64 width, UINT height
         // プリロード用シーンの状態が「待機中（awaiting）」なら非同期でロード開始
         if (_preload_scene->State() == SCENE_STATE::awaiting)
         {
-            _future = std::async(std::launch::async, [device, name, width, height, props]() {
+            _future = std::async(std::launch::async, [device, name, width, height, props, batch = preloadEffectTicketBatch]() {
+                isAsyncPreloadThread = true;
+                currentPreloadEffectTicketBatch = batch;
+                try
+                {
                 // ActorManager の生成
                 _preload_scene->actorManager_ = std::make_unique<ActorManager>();
                 _preload_scene->actorManager_->SetOwnerScene(_preload_scene.get());
                 _preload_scene->State(SCENE_STATE::initializing);// 状態を「初期化中」に設定
                 bool success = _preload_scene->Initialize(device, width, height, props);
                 _preload_scene->State(SCENE_STATE::initialized);// 状態を「初期化完了」に設定
+                currentPreloadEffectTicketBatch.reset();
+                isAsyncPreloadThread = false;
                 return success;
+                }
+                catch (...)
+                {
+                    currentPreloadEffectTicketBatch.reset();
+                    isAsyncPreloadThread = false;
+                    throw;
+                }
                 });
         }
     }
