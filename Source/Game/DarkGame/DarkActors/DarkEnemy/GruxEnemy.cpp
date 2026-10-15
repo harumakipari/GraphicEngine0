@@ -2110,18 +2110,6 @@ void GruxEnemy::Update(float deltaTime)
         {
             if (auto player = dynamic_cast<Player*>(hit.actor))
             {
-                /*                if (isDangerWindow && player->GetJustDodgeWindow())
-                                {
-                                    if (auto enemy = std::dynamic_pointer_cast<Enemy>(shared_from_this()))
-                                    {
-                                        player->StartJustDodgeSuccess(enemy);
-                                        Logger::Log(U8("ジャスト回避成功！"));
-                                    }
-                                }
-                                else*/
-                Logger::Log(Logger::LogCategory::Gameplay,
-                    "[BossAttack][SphereRayCastHit] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
-                    " side=right");
                 if (HasJustDodgedAttack(hit.actor))
                 {
                     Logger::Log(Logger::LogCategory::Gameplay,
@@ -2148,39 +2136,6 @@ void GruxEnemy::Update(float deltaTime)
         rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
     if (leftWeaponCollisionComp)
         leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
-    if (const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-        player && player->IsJustDodgeDebugEnabled())
-    {
-        const auto drawWeaponHitSpheres = [](const std::shared_ptr<SceneComponent>& root,
-            const std::shared_ptr<SceneComponent>& middle,
-            const std::shared_ptr<SceneComponent>& tip, float radius,
-            const DirectX::XMFLOAT4& color)
-            {
-                if (root) DebugRender::DrawSphere(root->GetComponentLocation(), radius, color, 0.0f, true);
-                if (middle) DebugRender::DrawSphere(middle->GetComponentLocation(), radius, color, 0.0f, true);
-                if (tip) DebugRender::DrawSphere(tip->GetComponentLocation(), radius, color, 0.0f, true);
-            };
-        if (leftHitBox)
-            drawWeaponHitSpheres(weaponLeftRootComponent, weaponLeftMiddleComponent,
-                weaponLeftTipComponent, activeLeftHitBoxRadius, { 0.2f, 1.0f, 0.35f, 1.0f });
-        if (rightHitBox)
-            drawWeaponHitSpheres(weaponRightRootComponent, weaponRightMiddleComponent,
-                weaponRightTipComponent, activeRightHitBoxRadius, { 1.0f, 0.25f, 0.8f, 1.0f });
-    }
-
-
-    //DebugRender::DrawBox(bossPos, { 3,3,3 }, { 1,1,1,1 });
-
-#if 0
-    if (InputSystem::GetInputState("0"))
-    {
-        stateMachine_->ChangeState("EnemyAttackState");
-    }
-#endif // 0
-
-#if 1
-
-#endif // 0
 }
 
 void GruxEnemy::RenderTrail(ID3D11DeviceContext* immediateContext)

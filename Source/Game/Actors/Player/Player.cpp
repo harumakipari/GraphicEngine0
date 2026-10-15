@@ -1278,109 +1278,9 @@ void Player::DrawImGuiDetails()
     }
 
 
-    ImGui::DragFloat("Normal Enemy Rush Surface Margin", &normalEnemyRushSurfaceMargin,
-        0.01f, 0.0f, 1.0f, "%.3f m");
+    // ここからゲームの調整値
 
-    if (ImGui::CollapsingHeader("Just Dodge Debug"))
-    {
-        ImGui::Checkbox("Enable World HitBox Debug", &justDodgeDebugEnabled);
-        ImGui::DragFloat("Just Dodge Max Toward Attacker Dot",
-            &justDodgeMaxTowardAttackerDot, 0.01f, -1.0f, 1.0f, "%.2f");
-        ImGui::Text("Current Dodge World Direction: (%.3f, %.3f, %.3f)%s",
-            dodgeWorldDirectionSnapshot.x, dodgeWorldDirectionSnapshot.y,
-            dodgeWorldDirectionSnapshot.z,
-            dodgeWorldDirectionSnapshotValid ? "" : " (invalid)");
-        ImGui::Text("Direction To Attacker: (%.3f, %.3f, %.3f)",
-            directionToAttackerDebug.x, directionToAttackerDebug.y,
-            directionToAttackerDebug.z);
-        ImGui::Text("Current Dot: %.3f  Threshold: %.3f",
-            justDodgeDirectionDotDebug, justDodgeMaxTowardAttackerDot);
-        ImGui::Text("Direction Result: %s",
-            justDodgeDirectionResultDebug ? "OK" : "NG");
-        const bool isDodging = stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge";
-        const auto controller = GetBodyAnimationController();
-        const float animationTime = controller ? controller->GetCurrentAnimationTime() : 0.0f;
-        const float dodgeDurationDebug = controller ? controller->GetAnimationLength("Ability_RWB_Fwd_0") : 0.0f;
-        const AnimationNotifyAsset* dodgeAsset = controller
-            ? controller->GetAnimationAsset(isDodging ? controller->GetCurrentAnimationName() : "Ability_RWB_Fwd_0")
-            : nullptr;
-        float invincibleStart = 0.0f, invincibleEnd = 0.0f;
-        float justStart = 0.0f, justEnd = 0.0f;
-        float dodgeStateEnd = dodgeDurationDebug;
-        if (dodgeAsset)
-        {
-            for (const auto& state : dodgeAsset->notifyTrack.states)
-            {
-                if (state.type == AnimationNotifyState::Type::Invincible)
-                {
-                    invincibleStart = state.startTime;
-                    invincibleEnd = state.endTime;
-                }
-                else if (state.type == AnimationNotifyState::Type::JustDodgeWindow)
-                {
-                    justStart = state.startTime;
-                    justEnd = state.endTime;
-                }
-                else if (state.type == AnimationNotifyState::Type::TransitionWindow)
-                {
-                    dodgeStateEnd = state.startTime;
-                }
-            }
-        }
-
-        ImGui::Text("Dodge Active: %s", isDodging ? "true" : "false");
-        ImGui::Text("Dodge Elapsed: %.3f sec", dodgeDebugElapsed);
-        ImGui::Text("Animation Time / Duration: %.3f / %.3f sec", animationTime, dodgeDurationDebug);
-        ImGui::Text("Dodge State End (Transition Start): %.3f sec", dodgeStateEnd);
-        ImGui::TextColored(invincibleWindow ? ImVec4(0.25f, 0.75f, 1.0f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
-            "Invincible Active: %s", invincibleWindow ? "true" : "false");
-        ImGui::TextColored(justDodgeWindow ? ImVec4(1.0f, 0.55f, 0.1f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
-            "Just Dodge Active: %s", justDodgeWindow ? "true" : "false");
-        ImGui::Text("Invincible: %.3f - %.3f sec", invincibleStart, invincibleEnd);
-        ImGui::Text("Just Dodge: %.3f - %.3f sec", justStart, justEnd);
-
-        const float timelineWidth = (std::max)(120.0f, ImGui::GetContentRegionAvail().x);
-        constexpr float timelineHeight = 34.0f;
-        const ImVec2 timelinePos = ImGui::GetCursorScreenPos();
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(timelinePos, ImVec2(timelinePos.x + timelineWidth, timelinePos.y + timelineHeight), IM_COL32(70, 70, 70, 255));
-        if (dodgeDurationDebug > FLT_EPSILON)
-        {
-            const auto timelineX = [&](float time)
-                {
-                    return timelinePos.x + timelineWidth * std::clamp(time / dodgeDurationDebug, 0.0f, 1.0f);
-                };
-            drawList->AddRectFilled(ImVec2(timelineX(invincibleStart), timelinePos.y + 5.0f),
-                ImVec2(timelineX(invincibleEnd), timelinePos.y + 19.0f), IM_COL32(45, 150, 235, 255));
-            drawList->AddRectFilled(ImVec2(timelineX(justStart), timelinePos.y + 19.0f),
-                ImVec2(timelineX(justEnd), timelinePos.y + 33.0f), IM_COL32(255, 135, 25, 255));
-            if (isDodging)
-            {
-                const float currentX = timelineX(animationTime);
-                drawList->AddLine(ImVec2(currentX, timelinePos.y), ImVec2(currentX, timelinePos.y + timelineHeight), IM_COL32(255, 255, 255, 255), 2.0f);
-            }
-        }
-        ImGui::InvisibleButton("##DodgeTimeline", ImVec2(timelineWidth, timelineHeight));
-        ImGui::TextDisabled("Blue: Invincible  Orange: Just  White: Current");
-
-        if (ImGui::Button("Reset Debug Stats"))
-        {
-            lastJustDodgeValid = false;
-        }
-        ImGui::SeparatorText("Last Just Dodge");
-        if (lastJustDodgeValid)
-        {
-            ImGui::Text("Attack: %s", lastJustDodgeAttack.c_str());
-            ImGui::Text("Dodge / Animation Time: %.3f / %.3f sec", lastJustDodgeTime, lastJustAnimationTime);
-            ImGui::Text("Just Window: %.3f - %.3f sec (Hit %.1f%%)",
-                lastJustWindowStart, lastJustWindowEnd, lastJustWindowRatio * 100.0f);
-            if (lastJustBossHitBoxElapsed >= 0.0f)
-                ImGui::Text("Boss HitBox Active Elapsed: %.3f sec", lastJustBossHitBoxElapsed);
-            else
-                ImGui::Text("Boss HitBox Active Elapsed: N/A (not active)");
-        }
-        else ImGui::TextDisabled("No Just Dodge recorded");
-    }
+    ImGui::DragFloat(U8("通常敵Rush停止余白（m）"), &normalEnemyRushSurfaceMargin, 0.01f, 0.0f, 1.0f, "%.3f m");
 
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
@@ -1406,110 +1306,17 @@ void Player::DrawImGuiDetails()
         ImGui::Text("Boss Phase: %d", static_cast<int>(bossSlowPhase));
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Initial Rush Debug"))
-    {
-        const auto controller = GetBodyAnimationController();
-        const std::string currentState = stateMachine_ ? stateMachine_->GetStateName() : "None";
-        const bool attackRequestActive = bufferCommand.type == ActionType::Attack;
-        const bool attackTriggeredThisFrame =
-            InputSystem::GetInputState("Attack", InputStateMask::Trigger);
-        const bool initialGuideVisible = CanShowInitialRushGuide();
-        const bool comboGuideVisible = CanShowRushComboGuide();
-        const bool uiVisible = initialGuideVisible || comboGuideVisible;
-        const bool acceptsInitialInput = CanAcceptInitialRushInput();
 
-        const char* playerSlowPhaseName = "Inactive";
-        switch (playerSlowPhase)
+
+    if (ImGui::CollapsingHeader(U8("ジャスト回避・方向判定")))
+    {
+        float angleDegrees = DirectX::XMConvertToDegrees(std::acos(std::clamp(justDodgeMaxTowardAttackerDot, -1.0f, 1.0f)));
+        if (ImGui::SliderFloat(U8("ジャスト回避成功の最小角度"), &angleDegrees, 0.0f, 180.0f, "%.1f deg"))
         {
-        case JustDodgeSlowPhase::Hold:     playerSlowPhaseName = "Hold"; break;
-        case JustDodgeSlowPhase::Return:   playerSlowPhaseName = "Return"; break;
-        case JustDodgeSlowPhase::RushHold: playerSlowPhaseName = "RushHold"; break;
-        case JustDodgeSlowPhase::Inactive: break;
+            justDodgeMaxTowardAttackerDot = std::cos(DirectX::XMConvertToRadians(angleDegrees));
         }
-
-        ImGui::Text("Current Player State: %s", currentState.c_str());
-        ImGui::Separator();
-        ImGui::Text("Player Slow Phase: %s", playerSlowPhaseName);
-        ImGui::Text("Player Time Scale: %.3f", GetTimeScale());
-        ImGui::Text("Slow Hold Timer: %.3f sec", playerSlowHoldTimer);
-        ImGui::Text("Slow Return Elapsed: %.3f sec", playerSlowReturnElapsed);
-        ImGui::Separator();
-        ImGui::Text("Dodge Animation Time: %.3f sec",
-            controller ? controller->GetCurrentAnimationTime() : 0.0f);
-        ImGui::Text("Dodge Animation Duration: %.3f sec",
-            controller ? controller->GetAnimationLength(controller->GetCurrentAnimationName()) : 0.0f);
-        ImGui::Text("Transition Window Active: %s", transitionWindow ? "true" : "false");
-        ImGui::Separator();
-        ImGui::TextColored(
-            attackRequestActive ? ImVec4(1.0f, 0.85f, 0.2f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
-            "Attack ActionRequest Active: %s", attackRequestActive ? "BUFFERED" : "false");
-        ImGui::Text("Attack ActionRequest Remaining Time: %.3f sec",
-            attackRequestActive ? bufferCommand.remainTime : 0.0f);
-        ImGui::Text("Attack Triggered This Frame: %s", attackTriggeredThisFrame ? "true" : "false");
-        ImGui::Separator();
-        ImGui::Text("Initial Rush Guide Visible: %s", initialGuideVisible ? "true" : "false");
-        ImGui::Text("Rush Combo Guide Visible: %s", comboGuideVisible ? "true" : "false");
-        ImGui::Text("UI Visible: %s", uiVisible ? "true" : "false");
-        ImGui::Text("Accepts Input: %s", acceptsInitialInput ? "true" : "false");
-        ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Rush Combo Debug"))
-    {
-        const auto controller = GetBodyAnimationController();
-        const auto* rushState = stateMachine_
-            ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState())
-            : nullptr;
-        const bool attackRequestActive = bufferCommand.type == ActionType::Attack;
-        const bool animationPlaying = controller && controller->IsPlayAnimation();
-        const bool transitionObserved =
-            rushState && rushState->WasTransitionWindowObservedForDebug();
-        const int queuedAttackCount =
-            rushState ? rushState->GetQueuedAttackCountForDebug() : 0;
-        const bool finalRushAttack = rushState &&
-            rushState->GetComboIndex() + 1 >= GetMaxRushAttackCount();
-        const bool lateInputGraceActive = transitionObserved && animationPlaying &&
-            queuedAttackCount == 0 && !finalRushAttack;
-        const bool acceptsRushInput = rushState && !finalRushAttack &&
-            (inputWindow || lateInputGraceActive);
-        const bool initialGuideVisible = CanShowInitialRushGuide();
-        const bool comboGuideVisible = CanShowRushComboGuide();
-        const bool uiVisible = initialGuideVisible || comboGuideVisible;
 
-        ImGui::Text("Combo Index: %d", rushState ? rushState->GetComboIndex() : -1);
-        ImGui::Text("Current Rush Animation: %s", rushState
-            ? rushState->GetCurrentAttackAnimationForDebug().c_str() : "None");
-        ImGui::Text("Input Window: %s", inputWindow ? "true" : "false");
-        ImGui::Text("Transition Window: %s", transitionWindow ? "true" : "false");
-        ImGui::Text("Rush Transition Window Observed: %s", transitionObserved ? "true" : "false");
-        ImGui::Text("Late Input Grace Active: %s", lateInputGraceActive ? "true" : "false");
-        ImGui::TextColored(
-            acceptsRushInput ? ImVec4(0.25f, 1.0f, 0.35f, 1.0f) : ImVec4(1.0f, 0.35f, 0.25f, 1.0f),
-            "Accepts Rush Input: %s", acceptsRushInput ? "ACCEPTING" : "NOT ACCEPTING");
-        ImGui::TextColored(
-            queuedAttackCount > 0 ? ImVec4(0.25f, 0.8f, 1.0f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
-            "Queued Attack Count: %d%s", queuedAttackCount,
-            queuedAttackCount > 0 ? " (QUEUED)" : "");
-        ImGui::Separator();
-        ImGui::TextColored(
-            attackRequestActive ? ImVec4(1.0f, 0.85f, 0.2f, 1.0f) : ImVec4(0.65f, 0.65f, 0.65f, 1.0f),
-            "Attack ActionRequest Active: %s", attackRequestActive ? "BUFFERED" : "false");
-        ImGui::Text("Attack ActionRequest Remaining Time: %.3f sec",
-            attackRequestActive ? bufferCommand.remainTime : 0.0f);
-        ImGui::Text("Attack Triggered This Frame: %s",
-            InputSystem::GetInputState("Attack", InputStateMask::Trigger) ? "true" : "false");
-        ImGui::Separator();
-        ImGui::Text("Animation Time: %.3f sec",
-            controller ? controller->GetCurrentAnimationTime() : 0.0f);
-        ImGui::Text("Animation Duration: %.3f sec", controller
-            ? controller->GetAnimationLength(controller->GetCurrentAnimationName()) : 0.0f);
-        ImGui::Text("Animation Finished: %s", animationPlaying ? "false" : "true");
-        ImGui::Separator();
-        ImGui::Text("Initial Rush Guide Visible: %s", initialGuideVisible ? "true" : "false");
-        ImGui::Text("Rush Combo Guide Visible: %s", comboGuideVisible ? "true" : "false");
-        ImGui::Text("UI Visible: %s", uiVisible ? "true" : "false");
-        ImGui::Text("Accepts Input: %s", acceptsRushInput ? "true" : "false");
-        ImGui::TreePop();
-    }
     ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
     ImGui::DragFloat("Rush Approach Pose Blend Time", &rushApproachPoseBlendTime,
         0.005f, 0.0f, 0.5f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
@@ -1521,101 +1328,20 @@ void Player::DrawImGuiDetails()
         &attackRotationMaxCorrectionDegrees, 1.0f, 45.0f, 60.0f);
     ImGui::DragFloat("Attack rotation speed (deg/sec)",
         &attackRotationSpeedDegrees, 5.0f, 30.0f, 720.0f);
-    if (ImGui::TreeNode("Attack Assist Debug"))
+    if (ImGui::CollapsingHeader("Attack Assist Debug"))
     {
         ImGui::DragFloat("Assist Search Radius", &attackAssistMaxDistance, 0.05f, 0.0f, 20.0f, "%.2f m");
-        if (const auto target = attackTarget.lock(); target && !target->IsDefeated())
-            ImGui::Text("Current attackTarget: %s", target->GetName().c_str());
-        else
-            ImGui::Text("Current attackTarget: None");
-        ImGui::TreePop();
     }
-    // コンボの始まりを設定する
-    if (ImGui::BeginCombo(U8("コンボの始まり"), startAttackAnimation.c_str()))
-    {
-        for (auto clip : GetBodyAnimationController()->animationAssetOrder)
-        {
-            auto& comboAsset = GetBodyAnimationController()->animationNotifyAssets[clip];
-
-            bool selected = comboAsset.animationName == startAttackAnimation;
-
-            if (ImGui::Selectable(comboAsset.animationName.c_str(), selected))
-            {
-                startAttackAnimation = comboAsset.animationName;
-            }
-
-            if (selected)
-                ImGui::SetItemDefaultFocus();
-        }
-        ImGui::EndCombo();
-    }
-
 
     Character::DrawImGuiDetails();
 
-    float speed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
-    auto move = characterMovementComponent->GetInputMagnitude();
-
-    ImGui::Text("characterMovementComponentSpeed: %.4f", speed);
-    ImGui::Text("CurrentInputSpeed: %.4f", move);
-    ImGui::Text("actualHorizontalSpeed: %.4f",
-        characterMovementComponent->GetActualHorizontalSpeed());
-    ImGui::Text("finalMoveSpeed: %.4f",
-        characterMovementComponent->GetFinalMoveSpeed());
-    ImGui::SeparatorText("Action Request");
-    ImGui::Text("remainTime: %.3f", bufferCommand.remainTime);
-    ImGui::Text("currentState: %s", stateMachine_->GetStateName());
-    ImGui::SeparatorText("Damage");
-    ImGui::Text("Player HP: %d / %d", hp, maxHp);
-    ImGui::Text("invincibleWindow: %s", invincibleWindow ? "true" : "false");
-    ImGui::Text("invincible: %s", invincible ? "true" : "false");
     ImGui::SeparatorText("KnockBack Debug");
-    const auto* knockBackState = stateMachine_
-        ? dynamic_cast<const PlayerKnockBackState*>(stateMachine_->GetCurrentState())
-        : nullptr;
-    const auto animationController = GetBodyAnimationController();
-    ImGui::Text(U8("Player Boss攻撃対象可能: %s"),
-        IsBossAttackTargetAvailable() ? "true" : "false");
-    ImGui::Text(U8("Player KnockBack中: %s"), knockBackState ? "true" : "false");
-    ImGui::Text("KnockBack Active: %s", knockBackActive ? "true" : "false");
-    ImGui::Text("KnockBack Phase: %s",
-        knockBackState ? knockBackState->GetPhaseName() : "None");
-    ImGui::Text("KnockBack Direction: %.3f, %.3f, %.3f",
-        knockBackDirection.x, knockBackDirection.y, knockBackDirection.z);
-    ImGui::Text("ForcedMove Active: %s",
-        knockBackForcedMoveActive ? "true" : "false");
-    ImGui::Text("KnockBack Elapsed: %.3f sec", knockBackElapsed);
+
     ImGui::DragFloat("KnockBack Duration", &knockBackDuration,
         0.01f, 0.01f, 3.0f, "%.2f sec");
     ImGui::DragFloat("KnockBack Initial Speed", &knockBackInitialSpeed,
         0.1f, 0.0f, 30.0f, "%.2f");
-    ImGui::Text("KnockBack Speed: %.3f",
-        knockBackForcedMoveActive ? knockBackInitialSpeed : 0.0f);
-    ImGui::Text("Current Player State: %s",
-        stateMachine_ ? stateMachine_->GetStateName() : "None");
-    ImGui::Text("Current Animation: %s", animationController
-        ? animationController->GetCurrentAnimationName().c_str() : "None");
-    ImGui::Text("Animation Time: %.3f sec", animationController
-        ? animationController->GetCurrentAnimationTime() : 0.0f);
-    ImGui::Text("Animation Duration: %.3f sec", animationController
-        ? animationController->GetAnimationLength(
-            animationController->GetCurrentAnimationName()) : 0.0f);
-    ImGui::Text("Animation Finished: %s",
-        animationController && animationController->IsPlayAnimation()
-        ? "false" : "true");
-    ImGui::Text("Remove Root Translation From Pose: %s",
-        animationController &&
-        animationController->IsRemovingRootTranslationFromPose()
-        ? "true" : "false");
-    if (animationController)
-    {
-        const auto& rawRoot = animationController->GetRawRootLocalTranslation();
-        const auto& appliedRoot = animationController->GetAppliedRootLocalTranslation();
-        ImGui::Text("Root Local Translation Raw: %.3f, %.3f, %.3f",
-            rawRoot.x, rawRoot.y, rawRoot.z);
-        ImGui::Text("Root Local Translation Applied: %.3f, %.3f, %.3f",
-            appliedRoot.x, appliedRoot.y, appliedRoot.z);
-    }
+
 
 #endif
 }
@@ -4176,8 +3902,7 @@ bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
     justDodgeDirectionDotDebug =
         dodgeWorldDirectionSnapshot.x * directionToAttackerDebug.x +
         dodgeWorldDirectionSnapshot.z * directionToAttackerDebug.z;
-    justDodgeDirectionResultDebug =
-        justDodgeDirectionDotDebug <= justDodgeMaxTowardAttackerDot;
+    justDodgeDirectionResultDebug = justDodgeDirectionDotDebug <= justDodgeMaxTowardAttackerDot;
     return justDodgeDirectionResultDebug;
 }
 // ジャスト回避成功時の処理

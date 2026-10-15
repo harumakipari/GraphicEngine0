@@ -376,7 +376,6 @@ public:
     void BeginDodgeDebug();
     void UpdateDodgeDebug(float deltaTime);
     void RecordNormalDodgeDebug();
-    bool IsJustDodgeDebugEnabled() const { return justDodgeDebugEnabled; }
     // ƒJƒƒ‰‚Ì–Ú‚ÌˆÊ’u‚ğæ“¾‚·‚é
     const std::shared_ptr<SceneComponent>& GetCameraEyeComponent() { return cameraEyeComponent; }
 
@@ -462,7 +461,6 @@ public:
     bool invincible = false; // –³“Gó‘Ô‚©‚Ç‚¤‚©
 
 
-    bool justDodgeDebugEnabled = false;
     float justDodgeMaxTowardAttackerDot = 0.25f;
     DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{};
     bool dodgeWorldDirectionSnapshotValid = false;

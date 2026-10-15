@@ -279,21 +279,18 @@ void MovieCameraManagerActor::Update(float deltaTime)
         break;
     case DoorMovieState::DoorPreMovie:
         if (movieCamera->IsMovieFinish())
-        {// 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ隰費ｽｪ繝ｻ・ｽI繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽplayer繝ｻ・ｽ繝ｻ・ｽA繝ｻ・ｽb繝ｻ・ｽv繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ鬮費ｽｮ繝ｻ・ｽ繝ｻ・ｽ・・腸・ｿ・ｽ
+        {
             PlayMovie(playerMovieFileName);
             doorMovieState = DoorMovieState::UpPlayerMovie;
             if (player)
             {
-                // 繝ｻ・ｽC繝ｻ・ｽx繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽg繝ｻ・ｽV繝ｻ・ｽ[繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽJ繝ｻ・ｽn繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・ｑ・ｿ・ｽ・顔衍繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
                 player->StartEvent();
                 player->PlayBodyAnimation("Recall_0", false);
             }
-            // 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・後す繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽf繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽA繝ｻ・ｽ・御ｼ夲ｽｿ・ｽ繝ｻ・ｽ・碁ｯ会ｽｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
             for (auto chandelier : chandelierActors)
             {
                 chandelier->SetFireScaleToZero();
             }
-            // 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・瑚搴繝ｻ・ｽC繝ｻ・ｽX繝ｻ・ｽ^繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽh繝ｻ・ｽ・御ｼ夲ｽｿ・ｽ繝ｻ・ｽ・碁ｯ会ｽｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
             for (auto candleStand : candleStandActors)
             {
                 candleStand->SetFireLightScale({ 0.0f,0.0f,0.0f });
@@ -303,25 +300,20 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::UpPlayerMovie:
     {
         if (movieCamera->IsMovieFinish())
-        {// 繝ｻ・ｽv繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽC繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽ繝ｻ・ｽA繝ｻ・ｽb繝ｻ・ｽv繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ鬮費ｽｮ繝ｻ・ｽ隰費ｽｪ繝ｻ・ｽI繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽA
+        {
             if (player)
-            {// 繝ｻ・ｽv繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽC繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽ・後い繝ｻ・ｽj繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽV繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・呈ｩ溘・・ｽ・牙､画峩
+            {
                 player->PlayBodyAnimation("Idle", true);
             }
             if (gameScene)
             {
-                // 繝ｻ・ｽ{繝ｻ・ｽX繝ｻ・ｽ・悟桁・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・ｑ・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
                 gameScene->SetBossRoomLerpFactor(0.0f);
-                // 繝ｻ・ｽ・壹ｑ・ｿ・ｽBloom繝ｻ・ｽ・後∩繧托ｽｿ・ｽI繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・峨ｑ・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ
             }
-            // 繝ｻ・ｽh繝ｻ・ｽA繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽN
             PlayMovie(doorOpenMovieFileName);
-            // 繝ｻ・ｽh繝ｻ・ｽA繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽA繝ｻ・ｽj繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽV繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
             if (doorActor)
             {
                 doorActor->Open();
             }
-            // 繝ｻ・ｽG繝ｻ・ｽ・後い繝ｻ・ｽj繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽV繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ~繝ｻ・ｽ・溘ｑ・ｿ・ｽ
             if (gruxEnemy)
             {
                 gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
@@ -334,9 +326,8 @@ void MovieCameraManagerActor::Update(float deltaTime)
     break;
     case DoorMovieState::DoorOpening:
         if (doorActor->IsOpenDoor())
-        {// 繝ｻ・ｽh繝ｻ・ｽA繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽA
+        {
             CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_groan.wav", 0.2f);
-            // 繝ｻ・ｽG繝ｻ・ｽ・檎岼邇峨ｑ・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
             doorMovieState = DoorMovieState::PreBossRoomLerp;
             if (player)
             {
@@ -372,8 +363,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     { 0.0f, 1.0f, 0.0f });
             }
         }
-        // 繝ｻ・ｽ{繝ｻ・ｽX繝ｻ・ｽ・檎岼邇峨ｑ・ｿ・ｽ・医ｑ・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ
-        // 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽX繝ｻ・ｽ・牙私・ｿ・ｽ繝ｻ・ｽ鬩搾ｽｭ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
         if (gameScene)
         {
             gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&,gruxEnemy]()
@@ -388,7 +377,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     doorMovieState = DoorMovieState::UpPlayerCombat;
                 });
         }
-        // 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・後す繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽf繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽA繝ｻ・ｽ・御ｼ夲ｽｿ・ｽ繝ｻ・ｽ・碁ｯ会ｽｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽX繝ｻ・ｽ・画綾繧托ｽｿ・ｽ
         for (auto chandelier : chandelierActors)
         {
             chandelier->ResetFireLightScale(duration);
@@ -436,19 +424,15 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::UpPlayerCombat:
         movieCamera->SetOnMovieStart([&, doorActor, player, gruxEnemy]()
             {
-                // 繝ｻ・ｽh繝ｻ・ｽA繝ｻ・ｽ繝ｻ・ｽ・ゅａ繧托ｽｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ・斐↓繧托ｽｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ
                 if (doorActor)
                 {
                     doorActor->Closed();
                 }
-                // 繝ｻ・ｽv繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽC繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽ・御ｽ咲ｽｮ繝ｻ・ｽ繝ｻ・ｽh繝ｻ・ｽA繝ｻ・ｽO繝ｻ・ｽ・峨ｑ・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ
                 if (player)
                 {
                     player->SetPosition({ -4.827f,-0.098f,11.724f });
-                    // 繝ｻ・ｽv繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽC繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽ・後い繝ｻ・ｽj繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽV繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・腸・ｿ・ｽ
                     player->PlayBodyAnimation("Level_Start_Cut", false);
                 }
-                // 繝ｻ・ｽG繝ｻ・ｽ・御ｽ咲ｽｮ繝ｻ・ｽ﨟皮ｧ､繝ｻ・ｽ繝ｻ・ｽ・御ｼ夲ｽｿ・ｽ繝ｻ・ｽ・峨ｑ・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ
                 if (gruxEnemy)
                 {
                     gruxEnemy->SetEulerRotation({ 0.0f,-90.0f,0.0f });
@@ -456,9 +440,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
                 doorMovieState = DoorMovieState::UpPlayerCombatMovie;
             });
 
-        // 繝ｻ・ｽv繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽC繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽA繝ｻ・ｽb繝ｻ・ｽv繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽN
         PlayMovie(playerCombatMovieFileName);
-        // 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・瑚搴繝ｻ・ｽC繝ｻ・ｽX繝ｻ・ｽ^繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽh繝ｻ・ｽ・御ｼ夲ｽｿ・ｽ繝ｻ・ｽ・碁ｯ会ｽｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ・溘ｑ・ｿ・ｽ
         for (auto candleStand : candleStandActors)
         {
             candleStand->ResetFireLightScale();
@@ -469,14 +451,12 @@ void MovieCameraManagerActor::Update(float deltaTime)
         break;
     case DoorMovieState::UpPlayerCombatMovie:
         if (movieCamera->IsMovieFinish())
-        {// 繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽN繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽI繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽA
+        {
             doorMovieState = DoorMovieState::EnemyMovie;
         }
         break;
     case DoorMovieState::EnemyMovie:
-        // 繝ｻ・ｽ{繝ｻ・ｽX繝ｻ・ｽA繝ｻ・ｽb繝ｻ・ｽv繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽN
         PlayMovie(bossRoarMovieFileName);
-        // 繝ｻ・ｽG繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽi繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
         if (gruxEnemy)
         {
             gruxEnemy->PlayBodyAnimation("Ultimate_Roar_0", false);
@@ -486,7 +466,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
     case DoorMovieState::EnemyName:
         if (movieCamera->IsMovieFinish())
         {
-            // BGM繝ｻ・ｽ繝ｻ・ｽ・・腸・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
             if (gameScene)
                 gameScene->PlayBossBattleBgm();
             PlayMovie(bossNameMovieFileName);
@@ -509,25 +488,11 @@ void MovieCameraManagerActor::Update(float deltaTime)
         {
             if (player)
             {
-                // 繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ{繝ｻ・ｽX繝ｻ・ｽ蟇ｬ讖ｸ・ｿ・ｽ・梧得・ｿ・ｽ・斐↓螟画峩繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
                 player->SetIsBossBattle(true);
             }
-            //繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽO繝ｻ・ｽl繝ｻ・ｽ・後↓謌ｻ繧托ｽｿ・ｽ
             if (scene->GetCameraManager()->IsUseMovie())
-            {// 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽr繝ｻ・ｽ[繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽg繝ｻ・ｽp繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・悟ｴ蜷医・・ｽ・後∩蛻・ｑ・ｿ・ｽ・悶ｑ・ｿ・ｽ
-#if 0
-                if (auto mainCamera = actorManager->GetActorOfType<MainCamera>())
-                {
-                    mainCamera->SetEye(player->GetCameraEyeComponent());
-                    mainCamera->SetLookTarget(gruxEnemy->GetCameraTargetComponent());
-                    //mainCamera->SetCameraMode(TPSCameraController::CameraMode::TPS);
-                    mainCamera->StartBlend(dynamic_cast<Camera*>(movieCamera->GetOwner()), 2.0f, [&, mainCamera]()
-                        {
-                            mainCamera->SetCameraMode(TPSCameraController::CameraMode::BossBattle);
-                        });
-                    scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
-                }
-#else
+            {
+
                 if (auto darkCameraActor = actorManager->GetActorOfType<DarkCameraActor>())
                 {
                     DarkCameraActor::CameraPose start = darkCameraActor->CreatePoseFromMovie(movieCamera);
@@ -541,17 +506,15 @@ void MovieCameraManagerActor::Update(float deltaTime)
                     );
                     scene->GetCameraManager()->ToggleMovieCamera(GetOwnerConstScene());
                 }
-#endif // 0
 
             }
             if (gruxEnemy)
-            {// 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・・繝ｻ・ｽX繝ｻ・ｽ・悟私・ｿ・ｽ繝ｻ・ｽO繝ｻ・ｽ繝ｻ・ｽUI繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
+            {
                 gruxEnemy->StartGruxNamePerform(1.0f, 1.0f, 0.0f);
             }
             doorMovieState = DoorMovieState::Finished;
         }
     case DoorMovieState::Finished:
-
 
 
         break;
@@ -1631,7 +1594,6 @@ void MovieCameraManagerActor::UpdateDeathWideAnchorPreview()
     deathWideDebugRotationValid = true;
 }
 
-// 繝ｻ・ｽh繝ｻ・ｽA繝ｻ・ｽ繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽr繝ｻ・ｽ[繝ｻ・ｽ繝ｻ・ｽ・・腸・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
 void MovieCameraManagerActor::PlayDoorMovie()
 {
     bossEntryBattleStarted = false;
@@ -1644,20 +1606,18 @@ void MovieCameraManagerActor::PlayDoorMovie()
 
     if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
     {
-        // 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽo繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽn繝ｻ・ｽ・懊ｑ・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・ｑ・ｿ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・ｑ・ｿ・ｽ・顔衍繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ
         player->StartEvent();
 
 
-        // 繝ｻ・ｽv繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽC繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽ・御ｽ咲ｽｮ繝ｻ・ｽ繝ｻ・ｽ・・ｮ壹☆繝ｻ・ｽ繝ｻ・ｽ
         DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
-        player->SetPosition(fixedPosition); // 繝ｻ・ｽv繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽC繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ[繝ｻ・ｽ・御ｽ咲ｽｮ繝ｻ・ｽ繝ｻ・ｽ・・ｮ壹☆繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽW繝ｻ・ｽ・芽ｨｭ謚ｵ・ｿ・ｽ
+        player->SetPosition(fixedPosition); 
         player->rotationComponent->SetDirection({ 1.0f,0.0f,0.0f });
     }
 
     if (auto cameraManager = GetOwnerScene()->GetCameraManager())
     {
         if (!cameraManager->IsUseMovie())
-        {// 繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・↓繝ｻ・ｿ・ｽ繝ｻ・ｽ[繝ｻ・ｽr繝ｻ・ｽ[繝ｻ・ｽJ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽg繝ｻ・ｽp繝ｻ・ｽ繝ｻ・ｽ繝ｻ・ｽ・・↑繧托ｽｿ・ｽ繝ｻ・ｽ鮠ｾ繝ｻ・ｿ・ｽ・後∩蛻・ｑ・ｿ・ｽ・悶ｑ・ｿ・ｽ
+        {
             cameraManager->ToggleMovieCamera(GetOwnerConstScene());
         }
     }
