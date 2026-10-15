@@ -525,7 +525,6 @@ public:
     std::string rushInputEndReasonDebug = "None";
     bool rushJudgeSuccessDebug = false;
     bool rushRequestedDebug = false;
-    bool swordHitDebug = true;
     float rushPromptAlpha = 0.0f;
     float rushPromptFadeInDuration = 0.10f;
     RushPromptAnimationPhase rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
@@ -684,10 +683,9 @@ private:
     int swordGhostIndex = 0;
     float ghostInterval = 0.015f; // 残像を出す間隔
     float ghostFadeTime = 0.6f; // 残像が残る時間
-    DirectX::XMFLOAT3 swordGhostColor = { 0.5f,0.8f,1.6f }; // 残像の剣のベースカラー
     float swordGhostEmissive = 2.0f;    // 残像のemissiveColor
     bool battleActionsSuspended = false;
-    DirectX::XMFLOAT3 ghostEdgeColor = { 0.0f,0.042f,0.253f };  // 残像の剣のベースカラー
+    DirectX::XMFLOAT3 swordGhostColor = { 0.0f,0.042f,0.253f };  // 残像の剣のベースカラー
     DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 残像の剣のベースカラー
     DirectX::XMFLOAT3 rushSwordColor = { 0.5f,0.8f,1.6f };
     DirectX::XMFLOAT3 activeGhostBaseColor{};

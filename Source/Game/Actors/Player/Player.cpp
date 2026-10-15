@@ -736,73 +736,6 @@ void Player::Update(float deltaTime)
         const auto* rushStateForDebug = stateMachine_
             ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
         const auto animationControllerForDebug = GetBodyAnimationController();
-        const bool isRushFirstHitDebug = swordHitDebug;
-        if (isRushFirstHitDebug)
-        {
-            DirectX::XMFLOAT3 targetPosition{};
-            DirectX::XMFLOAT3 targetDirection{};
-            float actorCenterDistanceXZ = 0.0f;
-            float capsuleCenterDistanceXZ = 0.0f;
-            float playerRadius = 0.0f;
-            float targetRadius = 0.0f;
-            float capsuleSurfaceDistance = 0.0f;
-            float rushStopDistance = 2.5f;
-            std::shared_ptr<CapsuleComponent> targetCapsule;
-            if (const auto target = rushTarget.lock())
-            {
-                targetPosition = target->GetPosition();
-                targetDirection = MathHelper::Subtract(targetPosition, GetPosition());
-                targetDirection.y = 0.0f;
-                actorCenterDistanceXZ = MathHelper::Length(targetDirection);
-                if (actorCenterDistanceXZ > FLT_EPSILON)
-                    targetDirection = MathHelper::Multiply(targetDirection, 1.0f / actorCenterDistanceXZ);
-
-                const auto playerCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
-                    FindComponentByName("capsuleComponent"));
-                targetCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
-                    target->FindComponentByName("capsuleComponent"));
-                if (playerCapsule && targetCapsule)
-                {
-                    playerRadius = playerCapsule->GetRadius();
-                    targetRadius = targetCapsule->GetRadius();
-                    DirectX::XMFLOAT3 capsuleDelta = MathHelper::Subtract(
-                        targetCapsule->GetComponentLocation(), playerCapsule->GetComponentLocation());
-                    capsuleDelta.y = 0.0f;
-                    capsuleCenterDistanceXZ = MathHelper::Length(capsuleDelta);
-                    capsuleSurfaceDistance = capsuleCenterDistanceXZ - playerRadius - targetRadius;
-                    if (!std::dynamic_pointer_cast<GruxEnemy>(target))
-                    {
-                        rushStopDistance = (std::max)(0.25f, playerRadius + targetRadius +
-                            std::clamp(normalEnemyRushSurfaceMargin, 0.0f, 1.0f));
-                    }
-                }
-            }
-
-            DirectX::XMFLOAT3 playerForward = GetForward();
-            playerForward.y = 0.0f;
-            const float forwardLength = MathHelper::Length(playerForward);
-            if (forwardLength > FLT_EPSILON)
-                playerForward = MathHelper::Multiply(playerForward, 1.0f / forwardLength);
-            const float facingDot = playerForward.x * targetDirection.x + playerForward.z * targetDirection.z;
-
-
-            constexpr DirectX::XMFLOAT4 rootColor{ 0.25f, 1.0f, 0.45f, 1.0f };
-            constexpr DirectX::XMFLOAT4 midColor{ 1.0f, 0.9f, 0.2f, 1.0f };
-            constexpr DirectX::XMFLOAT4 tipColor{ 1.0f, 0.35f, 0.85f, 1.0f };
-            const DirectX::XMFLOAT4 colors[] = { rootColor, midColor, tipColor };
-            for (size_t index = 0; index < std::size(sweeps); ++index)
-            {
-                DebugRender::DrawSphere(sweeps[index].end, activeHitBoxRadius, colors[index], 0.0f, true);
-                DebugRender::DrawSphere(sweeps[index].start, activeHitBoxRadius, colors[index], 0.0f, true);
-                DebugRender::DrawLine(sweeps[index].start, sweeps[index].end, colors[index], 0.0f, true);
-            }
-            if (targetCapsule)
-            {
-                const Capsule capsule = targetCapsule->ToCapsule();
-                DebugRender::DrawCapsule(capsule.a, capsule.b, capsule.r,
-                    { 0.2f, 0.85f, 1.0f, 1.0f }, 0.0f, true);
-            }
-        }
         constexpr float minSweepLength = 0.0001f;
         const SwordSweepResult* selectedNormalHit = nullptr;
         const SwordSweepResult* selectedOverlapHit = nullptr;
@@ -1099,7 +1032,7 @@ void Player::SetRushWeaponVisual(const bool enabled)
 
     trail.SetRushColorEnabled(enabled, rushSwordColor);
     activeGhostBaseColor = enabled ? rushSwordColor : swordGhostColor;
-    activeGhostEdgeColor = enabled ? rushSwordColor : ghostEdgeColor;
+    activeGhostEdgeColor = enabled ? rushSwordColor : swordGhostColor;
 }
 
 void Player::InitializeOperationGuideUI()
@@ -1230,21 +1163,6 @@ bool Player::IsOperationGuideItemLearned(const OperationGuideItem item) const
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
-    if (ImGui::CollapsingHeader(U8("操作ガイドUI")))
-    {
-        ImGui::DragFloat(U8("点滅の強さ"), &operationGuidePulseAmplitude, 0.005f, 0.0f, 0.50f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat(U8(" 点滅速度（rad/秒）"), &operationGuidePulseSpeed, 0.05f, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-        constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> labels = { "L", "LT", "Y", "X", "R" };
-        for (size_t index = 0; index < operationGuideItems.size(); ++index)
-        {
-            auto& item = operationGuideItems[index];
-            ImGui::PushID(static_cast<int>(index));
-            ImGui::SeparatorText(labels[index]);
-            ImGui::DragFloat2(U8("位置"), &item.position.x, 1.0f, 0.0f, 1920.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::DragFloat2(U8("基準スケール "), &item.baseScale.x, 0.005f, 0.01f, 2.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::PopID();
-        }
-    }
     if (ImGui::CollapsingHeader(U8("目を閉じる")))
     {
         ImGui::SliderFloat(U8("死亡時：目を閉じるまでの時間"), &deathEyeCloseDelay, 0.0f, 10.0f, "%.3f sec");
@@ -1274,25 +1192,95 @@ void Player::DrawImGuiDetails()
         ImGui::DragFloat(U8("瀕死ビネット濃度"), &lowHpVignetteBaseAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
         ImGui::DragFloat(U8("ビネット脈動最大濃度"), &lowHpVignettePulseAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
     }
-    if (ImGui::CollapsingHeader("Player HP UI"))
+    if (ImGui::CollapsingHeader(U8("プレイヤーHP UI")))
     {
-        ImGui::DragFloat("Delayed HP Hold Duration", &delayedHpDelayDuration,0.01f, 0.0f, 2.0f, "%.2f sec");
-        ImGui::DragFloat("Delayed HP Follow Speed", &delayedHpFollowSpeed,
-            0.1f, 0.0f, 100.0f, "%.2f HP/sec");
-        ImGui::DragFloat("HP Recovery UI Duration", &hpRecoveryUiDuration,
-            0.01f, 0.0f, 2.0f, "%.2f sec");
-        if (ImGui::ColorEdit4("Current HP Color", &playerHpCurrentColor.r) && hpCurrentFillUiComponent)
+        ImGui::DragFloat(U8("遅延HP保持時間（秒）"), &delayedHpDelayDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
+        ImGui::DragFloat(U8("遅延HP追従速度（HP/秒）"), &delayedHpFollowSpeed, 0.1f, 0.0f, 100.0f, "%.2f HP/sec");
+        ImGui::DragFloat(U8("HP回復UI表示時間（秒）"), &hpRecoveryUiDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
+        if (ImGui::ColorEdit4(U8("現在HPバー色"), &playerHpCurrentColor.r) && hpCurrentFillUiComponent)
             hpCurrentFillUiComponent->SetColor(playerHpCurrentColor);
-        if (ImGui::ColorEdit4("Delayed HP Color", &playerHpDelayedColor.r) && hpDelayedFillUiComponent)
+        if (ImGui::ColorEdit4(U8("遅延HPバー色"), &playerHpDelayedColor.r) && hpDelayedFillUiComponent)
             hpDelayedFillUiComponent->SetColor(playerHpDelayedColor);
-        ImGui::DragFloat("Damage Flash Duration", &damageFlashDuration,
-            0.01f, 0.01f, 1.0f, "%.2f sec");
-        ImGui::DragFloat("Damage Flash Body Tint Strength", &damageFlashBodyTintStrength,
-            0.01f, 0.0f, 1.0f, "%.2f");
-        ImGui::DragFloat("Damage Flash Rim Strength", &damageFlashRimStrength,
-            0.05f, 0.0f, 10.0f, "%.2f");
-
     }
+    if (ImGui::CollapsingHeader(U8("プレイヤー被ダメージ時")))
+    {
+        ImGui::DragFloat(U8("被ダメージ発光時間（秒）"), &damageFlashDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
+        ImGui::DragFloat(U8(" 被ダメージ本体色強度 "), &damageFlashBodyTintStrength, 0.01f, 0.0f, 1.0f, "%.2f");
+        ImGui::DragFloat(U8("被ダメージリム光強度"), &damageFlashRimStrength, 0.05f, 0.0f, 10.0f, "%.2f");
+        ImGui::ColorEdit4(U8("被ダメージ本体色"), &damageFlashColor.x);
+    }
+    if (ImGui::CollapsingHeader(U8("剣の軌跡と残像")))
+    {
+        ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);
+        ImGui::DragFloat(U8("剣の残像が残る時間"), &ghostFadeTime, 0.1f);
+        ImGui::DragFloat(U8("残像のemissive色"), &swordGhostEmissive, 0.1f);
+        ImGui::DragFloat(U8("残像を出す間隔"), &ghostInterval, 0.001f, 0.0f, 1.0f, "%.5f");
+        ImGui::DragFloat(U8("剣の残像の輪郭"), &ghostEdgeWidth);
+        const bool normalGhostEdgeColorChanged = ImGui::ColorEdit3(U8("剣の残像のエッジの色"), &swordGhostColor.x);
+        const bool rushGhostEdgeColorChanged = ImGui::ColorEdit3(U8("ラッシュ剣の残像のエッジの色"), &rushSwordColor.x);
+        if (normalGhostEdgeColorChanged)
+        {
+            SetRushWeaponVisual(false);
+        }
+        if (rushGhostEdgeColorChanged)
+        {
+            SetRushWeaponVisual(true);
+        }
+    }
+    if (ImGui::CollapsingHeader(U8("操作ガイドUI")))
+    {
+        ImGui::DragFloat(U8("点滅の強さ"), &operationGuidePulseAmplitude, 0.005f, 0.0f, 0.50f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+        ImGui::DragFloat(U8(" 点滅速度（rad/秒）"), &operationGuidePulseSpeed, 0.05f, 0.0f, 20.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> labels = { "L", "LT", "Y", "X", "R" };
+        for (size_t index = 0; index < operationGuideItems.size(); ++index)
+        {
+            auto& item = operationGuideItems[index];
+            ImGui::PushID(static_cast<int>(index));
+            ImGui::SeparatorText(labels[index]);
+            ImGui::DragFloat2(U8("位置"), &item.position.x, 1.0f, 0.0f, 1920.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::DragFloat2(U8("基準スケール "), &item.baseScale.x, 0.005f, 0.01f, 2.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::PopID();
+        }
+    }
+    if (ImGui::CollapsingHeader(U8("Rush入力UI")))
+    {
+        ImGui::DragFloat2(U8("ガイド位置"), &rushGuidePosition.x, 1.0f);
+        ImGui::DragFloat2(U8("ガイドサイズ"), &rushGuideSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2(U8("ガイドスケール"), &rushGuideScale.x, 0.01f, 0.01f, 4.0f);
+        ImGui::DragFloat2(U8("Yボタン位置"), &rushButtonPosition.x, 1.0f);
+        ImGui::DragFloat2(U8("Yボタンサイズ"), &rushButtonSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2(U8("Yボタンスケール"), &rushButtonBaseScale.x, 0.01f, 0.01f, 4.0f);
+        ImGui::DragFloat2(U8("テキスト位置"), &rushWordPosition.x, 1.0f);
+        ImGui::DragFloat2(U8("テキストサイズ"), &rushWordSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2(U8("テキストスケール"), &rushWordScale.x, 0.01f, 0.01f, 4.0f);
+        ImGui::DragFloat(U8("フェードイン時間（秒）"), &rushPromptFadeInDuration, 0.01f, 0.0f, 1.0f);
+    }
+    if (ImGui::CollapsingHeader(U8("ロックオンガイド")))
+    {
+        ImGui::DragFloat(U8("表示遅延（秒）"), &lockOnGuideDelay, 0.05f, 0.0f, 10.0f);
+        ImGui::DragFloat(U8("点滅周期（秒）"), &lockOnGuidePulsePeriod, 0.05f, 0.1f, 5.0f);
+        ImGui::DragFloat(U8("点滅時最小スケール"), &lockOnGuidePulseMinScale, 0.01f, 0.1f, 1.0f);
+        ImGui::DragFloat2(U8("矢印サイズ"), &lockOnGuideArrowSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2(U8("矢印基準スケール"), &lockOnGuideArrowBaseScale.x, 0.01f, 0.01f, 4.0f);
+        ImGui::DragFloat2(U8("ボタンサイズ"), &lockOnGuideButtonSize.x, 1.0f, 1.0f, 1024.0f);
+        ImGui::DragFloat2(U8("ボタン基準スケール"), &lockOnGuideButtonBaseScale.x, 0.01f, 0.01f, 4.0f);
+        ImGui::DragFloat(U8("ボタンオフセット"), &lockOnGuideButtonOffset, 1.0f, 0.0f, 500.0f);
+        ImGui::DragFloat(U8("画面端マージン "), &lockOnGuideEdgeMargin, 1.0f, 0.0f, 500.0f);
+        ImGui::DragFloat(U8("矢印回転オフセット（度）"), &lockOnGuideArrowRotationOffset, 1.0f, -360.0f, 360.0f);
+    }
+    if (ImGui::CollapsingHeader(U8("プレイヤーDither")))
+    {
+        ImGui::SliderFloat(U8("透過範囲"), &transparencyStartRatio, 0.0f, 1.0f);
+        if (ImGui::SliderFloat(U8("最小表示率"), &transparencyMinAlpha, 0.0f, 1.0f))
+            transparencyMinAlpha = (std::min)(transparencyMinAlpha, transparencyMaxAlpha);
+        if (ImGui::SliderFloat(U8("最大表示率"), &transparencyMaxAlpha, 0.0f, 1.0f))
+            transparencyMaxAlpha = (std::max)(transparencyMaxAlpha, transparencyMinAlpha);
+    }
+
+
+    ImGui::DragFloat("Normal Enemy Rush Surface Margin", &normalEnemyRushSurfaceMargin,
+        0.01f, 0.0f, 1.0f, "%.3f m");
+
     if (ImGui::CollapsingHeader("Just Dodge Debug"))
     {
         ImGui::Checkbox("Enable World HitBox Debug", &justDodgeDebugEnabled);
@@ -1393,32 +1381,7 @@ void Player::DrawImGuiDetails()
         }
         else ImGui::TextDisabled("No Just Dodge recorded");
     }
-    ImGui::DragFloat(U8("剣の球の当たり判定の半径"), &weaponSphereRadius, 0.05f);
-    ImGui::Checkbox("Sword Hit Debug", &swordHitDebug);
-    ImGui::DragFloat("Normal Enemy Rush Surface Margin", &normalEnemyRushSurfaceMargin,
-        0.01f, 0.0f, 1.0f, "%.3f m");
-    ImGui::DragFloat(U8("剣の軌跡が残る時間"), &trailRemainTime, 0.1f);
-    ImGui::DragFloat(U8("剣の残像が残る時間"), &ghostFadeTime, 0.1f);
-    const bool normalGhostBaseColorChanged =
-        ImGui::ColorEdit3(U8("剣の残像の色"), &swordGhostColor.x);
-    ImGui::DragFloat(U8("残像のemissiveColor"), &swordGhostEmissive, 0.1f);
-    ImGui::DragFloat(U8("残像を出す間隔"), &ghostInterval, 0.001f, 0.0f, 1.0f, "%.5f");
-    ImGui::DragFloat(U8("剣の残像の輪郭"), &ghostEdgeWidth);
-    const bool normalGhostEdgeColorChanged =
-        ImGui::ColorEdit3(U8("剣の残像のエッジの色"), &ghostEdgeColor.x);
-    ImGui::ColorEdit3(U8("剣の残像の内部の色"), &ghostInnerColor.x);
-    if ((normalGhostBaseColorChanged || normalGhostEdgeColorChanged))
-    {
-        SetRushWeaponVisual(false);
-    }
 
-    if (ImGui::CollapsingHeader(U8("剣のラッシュ中の見た目"), ImGuiTreeNodeFlags_DefaultOpen))
-    {
-        if (ImGui::ColorEdit3(U8("ラッシの色"), &rushSwordColor.x))
-        {
-            SetRushWeaponVisual(true);
-        }
-    }
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
     ImGui::SliderFloat("Walk Speed", &walkSpeed, 0.25f, 10.0f);
@@ -1441,44 +1404,6 @@ void Player::DrawImGuiDetails()
         ImGui::SliderFloat("Rush Boss Return Duration", &rushBossReturnDuration, 0.00f, 0.50f, "%.2f sec");
         ImGui::Text("Player Phase: %d / Scale: %.3f", static_cast<int>(playerSlowPhase), GetTimeScale());
         ImGui::Text("Boss Phase: %d", static_cast<int>(bossSlowPhase));
-        ImGui::TreePop();
-    }
-    if (ImGui::TreeNode("Rush Input Prompt"))
-    {
-        ImGui::DragFloat2("Guide Position", &rushGuidePosition.x, 1.0f);
-        ImGui::DragFloat2("Guide Size", &rushGuideSize.x, 1.0f, 1.0f, 1024.0f);
-        ImGui::DragFloat2("Guide Scale", &rushGuideScale.x, 0.01f, 0.01f, 4.0f);
-        ImGui::DragFloat2("Y Position", &rushButtonPosition.x, 1.0f);
-        ImGui::DragFloat2("Y Size", &rushButtonSize.x, 1.0f, 1.0f, 1024.0f);
-        ImGui::DragFloat2("Y Base Scale", &rushButtonBaseScale.x, 0.01f, 0.01f, 4.0f);
-        ImGui::DragFloat2("Word Position", &rushWordPosition.x, 1.0f);
-        ImGui::DragFloat2("Word Size", &rushWordSize.x, 1.0f, 1.0f, 1024.0f);
-        ImGui::DragFloat2("Word Scale", &rushWordScale.x, 0.01f, 0.01f, 4.0f);
-        ImGui::DragFloat("Fade In Duration", &rushPromptFadeInDuration, 0.01f, 0.0f, 1.0f);
-        ImGui::Separator();
-        ImGui::Text("CanAcceptInitialRushInput: %s", CanAcceptInitialRushInput() ? "true" : "false");
-        ImGui::Text("CanShowInitialRushGuide: %s", CanShowInitialRushGuide() ? "true" : "false");
-        ImGui::Text("CanShowRushComboGuide: %s", CanShowRushComboGuide() ? "true" : "false");
-        ImGui::Text("CanShowRushPrompt: %s", CanShowRushPrompt() ? "true" : "false");
-        ImGui::Text("judgeSuccess: %s", rushJudgeSuccessDebug ? "true" : "false");
-        ImGui::Text("rushRequested: %s", rushRequestedDebug ? "true" : "false");
-        ImGui::Text("rushTargetValid: %s", rushTarget.expired() ? "false" : "true");
-        ImGui::Text("UI Alpha: %.3f", rushPromptAlpha);
-        ImGui::TreePop();
-    }
-    if (ImGui::TreeNode("LockOn Guide"))
-    {
-        ImGui::DragFloat("Delay", &lockOnGuideDelay, 0.05f, 0.0f, 10.0f);
-        ImGui::DragFloat("Pulse Period", &lockOnGuidePulsePeriod, 0.05f, 0.1f, 5.0f);
-        ImGui::DragFloat("Pulse Min Scale", &lockOnGuidePulseMinScale, 0.01f, 0.1f, 1.0f);
-        ImGui::DragFloat2("Arrow Size", &lockOnGuideArrowSize.x, 1.0f, 1.0f, 1024.0f);
-        ImGui::DragFloat2("Arrow Base Scale", &lockOnGuideArrowBaseScale.x, 0.01f, 0.01f, 4.0f);
-        ImGui::DragFloat2("Button Size", &lockOnGuideButtonSize.x, 1.0f, 1.0f, 1024.0f);
-        ImGui::DragFloat2("Button Base Scale", &lockOnGuideButtonBaseScale.x, 0.01f, 0.01f, 4.0f);
-        ImGui::DragFloat("Button Offset", &lockOnGuideButtonOffset, 1.0f, 0.0f, 500.0f);
-        ImGui::DragFloat("Edge Margin", &lockOnGuideEdgeMargin, 1.0f, 0.0f, 500.0f);
-        ImGui::DragFloat("Arrow Rotation Offset", &lockOnGuideArrowRotationOffset, 1.0f, -360.0f, 360.0f);
-        ImGui::Text("Visible: %s / Offscreen: %.2f", lockOnGuideVisible ? "true" : "false", lockOnGuideOffscreenElapsed);
         ImGui::TreePop();
     }
     if (ImGui::TreeNode("Initial Rush Debug"))
@@ -1583,17 +1508,6 @@ void Player::DrawImGuiDetails()
         ImGui::Text("Rush Combo Guide Visible: %s", comboGuideVisible ? "true" : "false");
         ImGui::Text("UI Visible: %s", uiVisible ? "true" : "false");
         ImGui::Text("Accepts Input: %s", acceptsRushInput ? "true" : "false");
-        ImGui::TreePop();
-    }
-    if (ImGui::TreeNode("Player Dither"))
-    {
-        ImGui::SliderFloat(U8("透過範囲"), &transparencyStartRatio, 0.0f, 1.0f);
-        if (ImGui::SliderFloat(U8("最小表示率"), &transparencyMinAlpha, 0.0f, 1.0f))
-            transparencyMinAlpha = (std::min)(transparencyMinAlpha, transparencyMaxAlpha);
-        if (ImGui::SliderFloat(U8("最大表示率"), &transparencyMaxAlpha, 0.0f, 1.0f))
-            transparencyMaxAlpha = (std::max)(transparencyMaxAlpha, transparencyMinAlpha);
-        ImGui::Text(U8("現在のカメラ衝突率: %.3f"), currentCameraCollisionRatio);
-        ImGui::Text(U8("現在の表示率: %.2f"), currentDitherTransparencyAlpha);
         ImGui::TreePop();
     }
     ImGui::DragFloat(U8("ラッシュ後の敵までへのダッシュにかかる時間"), &moveToEnemyInterval, 0.05f);
@@ -1729,7 +1643,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
             ? rushStateForFirstHitDebug->GetCurrentAttackAnimationForDebug() : "";
         const bool controllerIsRushAttackA = controllerAnimationName == "Rush_Attack_Fast_A";
         const bool rushStateIsRushAttackA = rushAnimationName == "Rush_Attack_Fast_A";
-        if (swordHitDebug && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
+        if (stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
         {
             const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
             const auto controller = GetBodyAnimationController();

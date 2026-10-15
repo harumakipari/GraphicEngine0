@@ -562,17 +562,6 @@ void PlayerRushState::Enter()
             }
         }
 
-        if (player->swordHitDebug)
-        {
-            DirectX::XMFLOAT3 targetDelta = MathHelper::Subtract(target->GetPosition(), player->GetPosition());
-            targetDelta.y = 0.0f;
-            Logger::Log(Logger::LogCategory::Gameplay, std::format(
-                "[Rush][StopDistance] target={} type={} playerRadius={:.3f} targetRadius={:.3f} "
-                "surfaceMargin={:.3f} stopDistance={:.3f} startCenterDistance={:.3f} capsuleFormula={}",
-                target->GetName(), gruxTarget ? "GruxFixed" : "NormalEnemy",
-                playerRadius, targetRadius, player->normalEnemyRushSurfaceMargin,
-                rushStopDistance, MathHelper::Length(targetDelta), usedCapsuleDistance));
-        }
 
         this->rushStopDistance = rushStopDistance;
         // ルートモーションを無視する
@@ -658,47 +647,6 @@ void PlayerRushState::Execute(float deltaTime)
         if (player->characterMovementComponent->IsMoveToActorFinished())
         {// targetまで付いたら、
             Logger::Log(U8("Rush中のtargetまで移動完了"));
-            if (player->swordHitDebug)
-            {
-                if (const auto target = player->rushTarget.lock())
-                {
-                    DirectX::XMFLOAT3 targetDelta = MathHelper::Subtract(target->GetPosition(), player->GetPosition());
-                    targetDelta.y = 0.0f;
-                    const auto playerCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
-                        player->FindComponentByName("capsuleComponent"));
-                    const auto targetCapsule = std::dynamic_pointer_cast<CapsuleComponent>(
-                        target->FindComponentByName("capsuleComponent"));
-                    float capsuleCenterDistanceXZ = 0.0f;
-                    float capsuleCenterDistance3D = 0.0f;
-                    if (playerCapsule && targetCapsule)
-                    {
-                        DirectX::XMFLOAT3 capsuleDelta = MathHelper::Subtract(
-                            targetCapsule->GetComponentLocation(), playerCapsule->GetComponentLocation());
-                        capsuleCenterDistance3D = MathHelper::Length(capsuleDelta);
-                        capsuleDelta.y = 0.0f;
-                        capsuleCenterDistanceXZ = MathHelper::Length(capsuleDelta);
-                    }
-                    DirectX::XMFLOAT3 targetDirection = targetDelta;
-                    const float targetDistance = MathHelper::Length(targetDirection);
-                    if (targetDistance > FLT_EPSILON)
-                        targetDirection = MathHelper::Multiply(targetDirection, 1.0f / targetDistance);
-                    DirectX::XMFLOAT3 playerForward = player->GetForward();
-                    playerForward.y = 0.0f;
-                    const float forwardLength = MathHelper::Length(playerForward);
-                    if (forwardLength > FLT_EPSILON)
-                        playerForward = MathHelper::Multiply(playerForward, 1.0f / forwardLength);
-                    const float facingDot = playerForward.x * targetDirection.x +
-                        playerForward.z * targetDirection.z;
-                    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-                        "[Rush][AttackBegin] target={} actorCenterDistanceXZ={:.3f} "
-                        "capsuleCenterDistanceXZ={:.3f} capsuleCenterDistance3D={:.3f} "
-                        "forward=({:.3f},{:.3f},{:.3f}) targetDirXZ=({:.3f},{:.3f},{:.3f}) facingDot={:.3f}",
-                        target->GetName(), MathHelper::Length(targetDelta),
-                        capsuleCenterDistanceXZ, capsuleCenterDistance3D,
-                        playerForward.x, playerForward.y, playerForward.z,
-                        targetDirection.x, targetDirection.y, targetDirection.z, facingDot));
-                }
-            }
             // The held Jog_Fwd approach pose remains the source of the first Rush attack blend.
             // Later Rush combo transitions still use PlayBodyAnimation's 0.3 s default.
             if (const auto controller = player->GetBodyAnimationController())
