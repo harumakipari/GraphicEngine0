@@ -2968,6 +2968,7 @@ void Player::UpdateMovement()
     DirectX::XMFLOAT3 moveDir = { 0,0,0 };
     bool focus = InputSystem::GetInputState("LockOn", InputStateMask::Press);
 
+
     if (auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera()))
     {
 
@@ -2989,7 +2990,6 @@ void Player::UpdateMovement()
         }
         else
         {
-            // This input found no current target, so preserve ordinary Focus.
             camera->SetRequestMode(DarkCameraActor::CameraMode::Focus);
         }
 
@@ -3063,7 +3063,7 @@ void Player::UpdateMovement()
             // ‰ñ“]‚Í‚·‚®‚ÉŒü‚«‚ð•Ï‚¦‚Ä‚Ù‚µ‚¢‚½‚ß
             const std::string& state = GetStateMachine()->GetStateName();
             if (state != "Dodge" && state != "Attack" &&
-                state != "Damage" && state != "DeathPending" && state != "Death")
+                state != "Damage" && state != "DeathPending" && state != "Death" && state != "KnockBack")
             {// ‰ñ”ð‚Å‚Í‚È‚¢‚©‚ÂUŒ‚‚Å‚È‚¢‚Æ‚«‚Í
                 rotationComponent->SetDirection(moveDir);
             }
@@ -3086,7 +3086,7 @@ void Player::UpdateMovement()
             float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
             GetBodyAnimationController()->SetBlendInput(
                 moveStickX, moveStickZ, normalizeSpeed);
-            if (currentState != "Attack")
+            if (currentState != "Attack" && currentState != "KnockBack")
                 rotationComponent->SetDirection(forward);
             break;
         }
@@ -3109,7 +3109,7 @@ void Player::UpdateMovement()
                 float normalizeSpeed = characterMovementComponent->GetCurrentInputNormalizeSpeed();
                 GetBodyAnimationController()->SetBlendInput(
                     moveStickX, moveStickZ, normalizeSpeed);
-                if (currentState != "Attack")
+                if (currentState != "Attack" && currentState != "KnockBack")
                     rotationComponent->SetDirection(forward);
             }
             break;

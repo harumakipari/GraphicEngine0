@@ -336,12 +336,8 @@ namespace MathHelper
         return distanceSq;
     }
 
-
     // ãóó£åvéZÅiVector2Åj a - b
-    inline float DistanceFloat2(
-        const DirectX::XMFLOAT2& a,
-        const DirectX::XMFLOAT2& b
-    )
+    inline float DistanceFloat2(const DirectX::XMFLOAT2& a, const DirectX::XMFLOAT2& b)
     {
         DirectX::XMVECTOR vecA = DirectX::XMLoadFloat2(&a);
         DirectX::XMVECTOR vecB = DirectX::XMLoadFloat2(&b);
