@@ -872,6 +872,8 @@ private:
 
     // Player残像の生成、透明度、寿命を更新する。
     void UpdatePlayerPoseGhost();
+    // カメラ接近時のPlayer本体と剣の透明度を更新する。
+    void UpdateCameraOcclusionTransparency() const;
     // Player本体と剣へDither透明度を反映する。
     void ApplyDitherTransparencyAlpha(float alpha) const;
     // 指定した残像スロットへ現在のPlayer姿勢を複製する。

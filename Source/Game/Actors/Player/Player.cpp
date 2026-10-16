@@ -408,50 +408,6 @@ void Player::Initialize(const Transform& transform)
 
 }
 
-void Player::UpdateWeaponVisualPresentation(const float deltaTime)
-{
-    const auto controller = GetBodyAnimationController();
-    bool evaluatedShowTrail = false;
-    float evaluatedEmissivePower = 0.0f;
-    bool hasShowTrailState = false;
-    bool hasShowEmissiveState = false;
-    const bool hasWeaponVisualState = controller && controller->EvaluateWeaponVisualState(
-        evaluatedShowTrail, evaluatedEmissivePower, hasShowTrailState, hasShowEmissiveState);
-    (void)hasShowTrailState;
-    (void)hasShowEmissiveState;
-
-    showTrail = hasWeaponVisualState && evaluatedShowTrail;
-    swordEmissivePower = hasWeaponVisualState ? evaluatedEmissivePower : 0.0f;
-
-    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
-        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
-
-
-    if (!hasWeaponVisualState)
-    {
-        trail.Clear();
-        return;
-    }
-    if (!swordRootComponent || !swordTipComponent)
-        return;
-
-    const DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
-    const DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
-
-    trail.UpdateTrail(deltaTime);
-    if (showTrail)
-        trail.trailPoints.push_back({ swordTipPos, swordRootPos, trailRemainTime });
-}
-
-void Player::ApplyDitherTransparencyAlpha(float alpha) const
-{
-    alpha = std::clamp(alpha, 0.0f, 1.0f);
-
-    skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
-    swordMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
-    currentDitherTransparencyAlpha = alpha;
-}
-
 void Player::Update(float deltaTime)
 {
     ++initialRushInputTraceFrame;
@@ -545,30 +501,7 @@ void Player::Update(float deltaTime)
     UpdateHpBarUI();
 
     // プレイヤーの透明化処理
-    skeletalMeshComponent->SetIsVisible(true);
-    float ditherAlpha = 1.0f;
-    currentCameraCollisionRatio = 1.0f;
-
-    if (moviePerform || deathCameraTransparencyDisabled)
-    {// 演出中は壁の近くでも透明化しない
-        ditherAlpha = 1.0f;
-    }
-    else
-    {
-        if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
-        {
-            float ratio = camera->GetCameraCollisionRatio();
-            currentCameraCollisionRatio = ratio;
-            if (ratio < transparencyStartRatio)
-            {
-                float t = std::clamp(ratio / transparencyStartRatio, 0.0f, 1.0f);
-                t = t * t * (3.0f - 2.0f * t);
-
-                ditherAlpha = std::lerp(transparencyMinAlpha, transparencyMaxAlpha, t);
-            }
-        }
-    }
-    ApplyDitherTransparencyAlpha(ditherAlpha);
+    UpdateCameraOcclusionTransparency();
 
     // Player/BossのSlowは独立させ、どちらも実時間で更新する。
     if (playerSlowPhase == JustDodgeSlowPhase::Hold)
@@ -943,203 +876,6 @@ void Player::Finalize()
     ForceResetBossSlow();
 }
 
-// 軌跡を描画する処理
-void Player::RenderTrail(ID3D11DeviceContext* immediateContext)
-{
-    trail.Render(immediateContext);
-}
-
-void Player::SetRushWeaponVisual(const bool enabled)
-{
-    const DirectX::XMFLOAT3 swordColor = enabled ? rushSwordColor : DirectX::XMFLOAT3{ 0.0f, 0.8f, 1.0f };
-
-    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
-    {
-        auto& cpuColor = swordMeshComponent->plusAlphaCBuffer->data.cpuColor;
-        cpuColor.x = swordColor.x;
-        cpuColor.y = swordColor.y;
-        cpuColor.z = swordColor.z;
-    }
-
-    trail.SetRushColorEnabled(enabled, rushSwordColor);
-    activeGhostBaseColor = enabled ? rushSwordColor : swordGhostColor;
-    activeGhostEdgeColor = enabled ? rushSwordColor : swordGhostColor;
-}
-
-void Player::InitializeOperationGuideUI()
-{
-    const auto uiManager = GetOwnerScene()->GetUIManager();
-    constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> texturePaths =
-    {
-        "./Data/Textures/UI/operate_L.png", "./Data/Textures/UI/operate_LT.png",
-        "./Data/Textures/UI/operate_Y.png", "./Data/Textures/UI/operate_X.png",
-        "./Data/Textures/UI/operate_R.png",
-    };
-    constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> names =
-    {
-        "OperationGuideL", "OperationGuideLT", "OperationGuideY", "OperationGuideX", "OperationGuideR",
-    };
-    constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> positions =
-    {
-        DirectX::XMFLOAT2{ 844.7f, 1015.0f }, DirectX::XMFLOAT2{ 926.6f, 1013.0f },
-        DirectX::XMFLOAT2{ 999.5f, 1011.0f }, DirectX::XMFLOAT2{ 1068.6f, 1010.0f },
-        DirectX::XMFLOAT2{ 1143.2f, 1013.0f },
-    };
-    constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> sizes =
-    {
-        DirectX::XMFLOAT2{ 178.0f, 258.0f }, DirectX::XMFLOAT2{ 345.0f, 270.0f },
-        DirectX::XMFLOAT2{ 184.0f, 279.0f }, DirectX::XMFLOAT2{ 182.0f, 271.0f },
-        DirectX::XMFLOAT2{ 233.0f, 249.0f },
-    };
-    for (size_t index = 0; index < operationGuideItems.size(); ++index)
-    {
-        auto& item = operationGuideItems[index];
-        item.position = positions[index];
-        item.baseScale = { 0.35f, 0.35f };
-        item.visible = index == static_cast<size_t>(OperationGuideItem::L) || index == static_cast<size_t>(OperationGuideItem::R);
-        item.learned = false;
-        item.animationTimer = 0.0f;
-        item.image = std::make_shared<UIImageComponent>(texturePaths[index], names[index]);
-        item.image->SetWorldPosition(item.position);
-        item.image->SetSize(sizes[index]);
-        item.image->SetScale(item.baseScale);
-        item.image->SetPivot({ 0.5f, 0.5f });
-        item.image->SetVisible(false);
-        uiManager->Add(item.image);
-    }
-    RefreshOperationGuideUIVisibility();
-}
-
-void Player::UpdateOperationGuideUI()
-{
-    const float deltaTime = (std::max)(0.0f, Time::UnscaledDeltaTime());
-    const float amplitude = std::clamp(operationGuidePulseAmplitude, 0.0f, 1.0f);
-    const float speed = (std::max)(0.0f, operationGuidePulseSpeed);
-    const auto stickWasUsed = [](const DirectX::XMFLOAT2& stick)
-        {
-            constexpr float threshold = 0.20f;
-            return stick.x * stick.x + stick.y * stick.y >= threshold * threshold;
-        };
-    if (operationGuideGameplayHudVisible && operationGuideEventVisible)
-    {
-        if (IsOperationGuideItemVisible(OperationGuideItem::L) &&
-            stickWasUsed(InputSystem::GetLeftStick()))
-            SetOperationGuideItemLearned(OperationGuideItem::L);
-        if (IsOperationGuideItemVisible(OperationGuideItem::R) &&
-            stickWasUsed(InputSystem::GetRightStick()))
-            SetOperationGuideItemLearned(OperationGuideItem::R);
-    }
-    for (auto& item : operationGuideItems)
-    {
-        if (!item.image) continue;
-        item.image->SetWorldPosition(item.position);
-        float pulseScale = 1.0f;
-        if (item.visible && !item.learned)
-        {
-            item.animationTimer += deltaTime;
-            pulseScale += amplitude * 0.5f * (std::sin(item.animationTimer * speed) + 1.0f);
-        }
-        else
-        {
-            item.animationTimer = 0.0f;
-        }
-        item.image->SetScale({ item.baseScale.x * pulseScale, item.baseScale.y * pulseScale });
-    }
-    RefreshOperationGuideUIVisibility();
-}
-
-// Hpバーの更新
-void Player::UpdateHpBarUI()
-{
-    // Player HP UI uses unscaled time so HitStop / Slow do not pause its animations.
-    const float currentHp = static_cast<float>((std::max)(hp, 0));
-    const float uiDeltaTime = Time::UnscaledDeltaTime();
-    float displayedHp = currentHp;
-    if (hpRecoveryUiActive)
-    {
-        hpRecoveryUiElapsed += uiDeltaTime;
-        const float t = hpRecoveryUiDuration > FLT_EPSILON
-            ? std::clamp(hpRecoveryUiElapsed / hpRecoveryUiDuration, 0.0f, 1.0f)
-            : 1.0f;
-        displayedHp = std::lerp(hpRecoveryUiStart, currentHp, t);
-        delayedHp = displayedHp;
-        delayedHpDelayTimer = 0.0f;
-        if (t >= 1.0f)
-        {
-            hpRecoveryUiActive = false;
-            displayedHp = currentHp;
-            delayedHp = currentHp;
-        }
-    }
-    else if (delayedHp > currentHp)
-    {
-        if (delayedHpDelayTimer > 0.0f)
-        {
-            delayedHpDelayTimer = (std::max)(0.0f, delayedHpDelayTimer - uiDeltaTime);
-        }
-        else
-        {
-            delayedHp = (std::max)(currentHp, delayedHp - delayedHpFollowSpeed * uiDeltaTime);
-        }
-    }
-    else if (delayedHp < currentHp)
-    {
-        delayedHp = currentHp;
-        delayedHpDelayTimer = 0.0f;
-    }
-
-    if (hpCurrentFillUiComponent && hpDelayedFillUiComponent)
-    {
-        const float maximumHp = static_cast<float>(maxHp);
-        hpCurrentFillUiComponent->SetValue(displayedHp, maximumHp);
-        hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
-    }
-}
-
-
-void Player::RefreshOperationGuideUIVisibility() const
-{
-    for (auto& item : operationGuideItems)
-    {
-        if (item.image)
-        {
-            item.image->SetVisible(operationGuideGameplayHudVisible && operationGuideEventVisible && hp > 0 && item.visible);
-        }
-    }
-}
-
-void Player::SetOperationGuideHudVisible(const bool visible)
-{
-    operationGuideGameplayHudVisible = visible;
-    RefreshOperationGuideUIVisibility();
-}
-void Player::SetOperationGuideItemVisible(const OperationGuideItem item, const bool visible)
-{
-    auto& state = operationGuideItems[static_cast<size_t>(item)];
-    state.visible = visible;
-    if (!visible)
-        state.animationTimer = 0.0f;
-    RefreshOperationGuideUIVisibility();
-}
-
-void Player::SetOperationGuideItemLearned(const OperationGuideItem item, const bool learned)
-{
-    auto& state = operationGuideItems[static_cast<size_t>(item)];
-    state.learned = learned;
-    if (learned)
-        state.animationTimer = 0.0f;
-}
-
-bool Player::IsOperationGuideItemVisible(const OperationGuideItem item) const
-{
-    return operationGuideItems[static_cast<size_t>(item)].visible;
-}
-
-bool Player::IsOperationGuideItemLearned(const OperationGuideItem item) const
-{
-    return operationGuideItems[static_cast<size_t>(item)].learned;
-}
-
 void Player::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
@@ -1504,32 +1240,6 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     }
 }
 
-void Player::HandleAnimationPlaySE(const AnimationNotifyEvent& event) const
-{
-    if (event.parameter.empty())
-        return;
-
-    std::string soundName = event.parameter;
-    if (event.parameter == "RushSword")
-    {
-        if (std::string(stateMachine_->GetStateName()) != "Rush")
-            return;
-
-        const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
-        if (!rushState)
-            return;
-
-        const int comboIndex = rushState->GetComboIndex();
-        if (comboIndex < 0)
-            return;
-        // ラッシュ時のSE
-        soundName = "enemy_rush_damage3";
-    }
-
-    const std::string audioPath = "./Data/Sound/SE/" + soundName + ".wav";
-    CoreAudio::PlayOneShot(audioPath, event.value);
-}
-
 void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 {
     HandleCommonAnimationNotifyEvent(event);
@@ -1636,6 +1346,7 @@ void Player::UpdateLocomotionAnimation()
     }
 }
 
+
 void Player::RestartLocomotionAnimation()
 {
     locomotionMode = LocomotionMode::None;
@@ -1687,7 +1398,6 @@ void Player::UpdateTPSLocomotion()
     }
 
 }
-
 void Player::UpdateLockOnLocomotion()
 {
     float speed = characterMovementComponent->GetInputMagnitude();
@@ -1720,7 +1430,6 @@ void Player::UpdateLockOnLocomotion()
 
 }
 
-
 // イベントシーン開始時に呼ぶ処理
 void Player::StartEvent()
 {
@@ -1745,73 +1454,17 @@ void Player::EndEvent()
     this->moviePerform = false;
 }
 
-void Player::ConfigurePrisonOpeningSittingMotion(const bool useStandingPingPong,
-    const float startTime, const float endTime, const float speed,
-    const float standingBlendTime)
+void Player::StopLowHpPresentation()
 {
-    const bool modeChanged = prisonOpeningUseStandingPingPong != useStandingPingPong;
-    prisonOpeningUseStandingPingPong = useStandingPingPong;
-    prisonOpeningSittingPingPongStartTime = (std::max)(0.0f, startTime);
-    prisonOpeningSittingPingPongEndTime = (std::max)(
-        prisonOpeningSittingPingPongStartTime + 0.001f, endTime);
-    prisonOpeningSittingPingPongSpeed = std::clamp(speed, 0.1f, 2.0f);
-    prisonOpeningSittingToStandingBlendTime = std::clamp(standingBlendTime, 0.0f, 0.5f);
-
-    if (!prisonOpeningSitting || !modeChanged)
-        return;
-
-    const auto controller = GetBodyAnimationController();
-    if (!controller)
-        return;
-
-    controller->ReleaseHeldAnimationPose(true);
-    controller->SetIgnoreRootMotion(true);
-    if (prisonOpeningUseStandingPingPong)
-    {
-        prisonOpeningSittingPingPongPhase = 0.0f;
-        prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
-        prisonOpeningSittingPingPongForward = true;
-        if (controller->PlayAnimationImmediate("Standing", true, true))
-            controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
-    }
-    else
-    {
-        controller->ResetRootMotion("Sitting", true, true, prisonOpeningSittingToStandingBlendTime);
-    }
+    lowHpPresentationSuppressed = true;
+    ResetLowHpEffects();
 }
 
-void Player::UpdatePrisonOpeningStandingPingPong(const float deltaTime)
+void Player::SetLowHpPresentationCinematicSuppressed(const bool suppressed)
 {
-    const auto controller = GetBodyAnimationController();
-    if (!controller)
-        return;
-
-    const float clipLength = controller->GetAnimationLength("Standing");
-    const float startTime = std::clamp(prisonOpeningSittingPingPongStartTime, 0.0f, clipLength);
-    const float endTime = std::clamp(prisonOpeningSittingPingPongEndTime,
-        startTime + 0.001f, clipLength);
-    const float range = endTime - startTime;
-    if (range <= FLT_EPSILON)
-        return;
-
-    // A triangular wave preserves phase when the speed changes and reflects at
-    // both endpoints even if a low-FPS frame crosses more than one boundary.
-    prisonOpeningSittingPingPongPhase += (std::max)(deltaTime, 0.0f) *
-        prisonOpeningSittingPingPongSpeed;
-    const float period = range * 2.0f;
-    const float wrappedPhase = std::fmod(prisonOpeningSittingPingPongPhase, period);
-    if (wrappedPhase <= range)
-    {
-        prisonOpeningSittingSampleTime = startTime + wrappedPhase;
-        prisonOpeningSittingPingPongForward = true;
-    }
-    else
-    {
-        prisonOpeningSittingSampleTime = endTime - (wrappedPhase - range);
-        prisonOpeningSittingPingPongForward = false;
-    }
-
-    controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
+    lowHpPresentationCinematicSuppressed = suppressed;
+    if (suppressed)
+        ResetLowHpEffects();
 }
 
 bool Player::BeginPrisonOpeningSitting(
@@ -1877,6 +1530,42 @@ bool Player::BeginPrisonOpeningStanding()
     controller->SetIgnoreRootMotion(true);
     return controller->GetCurrentAnimationName() == "Standing";
 }
+
+void Player::ConfigurePrisonOpeningSittingMotion(const bool useStandingPingPong,
+    const float startTime, const float endTime, const float speed,
+    const float standingBlendTime)
+{
+    const bool modeChanged = prisonOpeningUseStandingPingPong != useStandingPingPong;
+    prisonOpeningUseStandingPingPong = useStandingPingPong;
+    prisonOpeningSittingPingPongStartTime = (std::max)(0.0f, startTime);
+    prisonOpeningSittingPingPongEndTime = (std::max)(
+        prisonOpeningSittingPingPongStartTime + 0.001f, endTime);
+    prisonOpeningSittingPingPongSpeed = std::clamp(speed, 0.1f, 2.0f);
+    prisonOpeningSittingToStandingBlendTime = std::clamp(standingBlendTime, 0.0f, 0.5f);
+
+    if (!prisonOpeningSitting || !modeChanged)
+        return;
+
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return;
+
+    controller->ReleaseHeldAnimationPose(true);
+    controller->SetIgnoreRootMotion(true);
+    if (prisonOpeningUseStandingPingPong)
+    {
+        prisonOpeningSittingPingPongPhase = 0.0f;
+        prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
+        prisonOpeningSittingPingPongForward = true;
+        if (controller->PlayAnimationImmediate("Standing", true, true))
+            controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
+    }
+    else
+    {
+        controller->ResetRootMotion("Sitting", true, true, prisonOpeningSittingToStandingBlendTime);
+    }
+}
+
 void Player::EndPrisonOpeningSitting()
 
 {
@@ -1947,12 +1636,75 @@ bool Player::IsPrisonOpeningStandingFinished() const
     return controller && controller->GetCurrentAnimationName() == "Standing" &&
         !controller->IsPlayAnimation();
 }
+
+void Player::SetHpBarVisible(const bool visible) const
+{
+    for (const auto& component : hpBarUiComponents)
+    {
+        if (!component)
+            continue;
+        component->SetVisible(visible);
+        component->SetEnable(visible);
+    }
+}
+
+void Player::SetGameplayHudVisible(const bool visible)
+{
+    gameplayHudFadeEntries.clear();
+    SetHpBarVisible(visible);
+    SetOperationGuideHudVisible(visible);
+    if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(visible);
+    if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(visible);
+    if (rushWordImageComponent) rushWordImageComponent->SetVisible(visible);
+    if (visible)
+        UpdateRushPromptUI();
+    else
+    {
+        SetOperationGuideHudVisible(false);
+        HideAndResetLockOnGuideUI();
+        if (lowHpVignetteImageComponent) lowHpVignetteImageComponent->SetVisible(false);
+    }
+}
+
+
+void Player::SetOperationGuideHudVisible(const bool visible)
+{
+    operationGuideGameplayHudVisible = visible;
+    RefreshOperationGuideUIVisibility();
+}
+
+void Player::SetOperationGuideItemVisible(const OperationGuideItem item, const bool visible)
+{
+    auto& state = operationGuideItems[static_cast<size_t>(item)];
+    state.visible = visible;
+    if (!visible)
+        state.animationTimer = 0.0f;
+    RefreshOperationGuideUIVisibility();
+}
+
+void Player::SetOperationGuideItemLearned(const OperationGuideItem item, const bool learned)
+{
+    auto& state = operationGuideItems[static_cast<size_t>(item)];
+    state.learned = learned;
+    if (learned)
+        state.animationTimer = 0.0f;
+}
+
+bool Player::IsOperationGuideItemVisible(const OperationGuideItem item) const
+{
+    return operationGuideItems[static_cast<size_t>(item)].visible;
+}
+
+bool Player::IsOperationGuideItemLearned(const OperationGuideItem item) const
+{
+    return operationGuideItems[static_cast<size_t>(item)].learned;
+}
+
 void Player::SetMinimumHp(const int value)
 
 {
     minimumHp = std::clamp(value, 0, maxHp);
 }
-
 void Player::ClearMinimumHp()
 {
     minimumHp = 0;
@@ -1974,24 +1726,6 @@ void Player::RestoreHpToMaxWithUiAnimation()
     else
     {
         delayedHp = hpRecoveryUiStart;
-    }
-}
-
-void Player::SetGameplayHudVisible(const bool visible)
-{
-    gameplayHudFadeEntries.clear();
-    SetHpBarVisible(visible);
-    SetOperationGuideHudVisible(visible);
-    if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(visible);
-    if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(visible);
-    if (rushWordImageComponent) rushWordImageComponent->SetVisible(visible);
-    if (visible)
-        UpdateRushPromptUI();
-    else
-    {
-        SetOperationGuideHudVisible(false);
-        HideAndResetLockOnGuideUI();
-        if (lowHpVignetteImageComponent) lowHpVignetteImageComponent->SetVisible(false);
     }
 }
 
@@ -2029,236 +1763,6 @@ void Player::SetGameplayHudFadeAlpha(const float alpha)
             entry.component->SetColor(entry.color);
         SetGameplayHudVisible(false);
     }
-}
-
-void Player::SetHpBarVisible(const bool visible) const
-{
-    for (const auto& component : hpBarUiComponents)
-    {
-        if (!component)
-            continue;
-        component->SetVisible(visible);
-        component->SetEnable(visible);
-    }
-}
-
-void Player::StopBattleActions()
-{
-    battleActionsSuspended = true;
-    SetTimeScale(0.0f);
-    ClearTransientBattleActions();
-}
-
-void Player::ResumeBattleActionsAfterEvent()
-{
-    battleActionsSuspended = false;
-    ResetTimeScale();
-    if (stateMachine_)
-        stateMachine_->ChangeState("Idle");
-}
-
-bool Player::BeginFinalHitWait()
-{
-    finalHitWaiting = true;
-    ForceResetPlayerSlow();
-    ForceResetBossSlow();
-
-    finalHitAttackDrainActive = false;
-    finalHitAttackDrainCompleted = false;
-    finalHitAttackDrainFailed = false;
-    const auto controller = GetBodyAnimationController();
-    const std::string stateName = stateMachine_ ? stateMachine_->GetStateName() : "";
-    const bool supportedAttackState = stateName == "Attack" || stateName == "Rush";
-    const std::string animationName = controller
-        ? controller->GetCurrentAnimationName() : std::string{};
-    const auto* rushState = stateMachine_ && stateName == "Rush"
-        ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
-    const std::string rushAttackAnimation = rushState
-        ? rushState->GetCurrentAttackAnimationForDebug() : std::string{};
-    const bool expectedAttackClip = stateName == "Attack"
-        ? animationName == currentAttackAnimation
-        : stateName == "Rush" && rushState && animationName == rushAttackAnimation;
-    const bool validCurrentAttack = supportedAttackState && controller &&
-        controller->IsPlayAnimation() && expectedAttackClip &&
-        controller->GetAnimationLength(animationName) > FLT_EPSILON;
-    const uint64_t debugEventId = phase2RushFinalHitDebugEventId;
-    const bool debugRushEvent = debugEventId != 0;
-
-    if (!validCurrentAttack)
-    {
-        if (debugRushEvent)
-        {
-            std::string rejectedBy;
-            if (!supportedAttackState) rejectedBy += "unsupportedState ";
-            if (!controller) rejectedBy += "noController ";
-            else
-            {
-                if (!controller->IsPlayAnimation()) rejectedBy += "notPlaying ";
-                if (!expectedAttackClip) rejectedBy += "unexpectedClip ";
-                if (controller->GetAnimationLength(animationName) <= FLT_EPSILON) rejectedBy += "zeroLength ";
-            }
-     
-        }
-        // An unexpected state/clip is not treated as a completed attack pose.
-        // Fall through to the existing safe cleanup without creating a wait.
-        finalHitAttackDrainFailed = true;
-        ClearTransientBattleActions();
-        return false;
-    }
-
-    finalHitAttackDrainActive = true;
-    RequestFinalHitVisualPoseLatch();
-    RequestFinalHitRushFollowUpStop();
-    ClearActionRequest("final_hit_attack_drain");
-    ClearAttackTarget();
-    SetRushInputAcceptance(false, "FinalHit");
-    SetRushInputDebugState(false, false);
-    hitBox = false;
-    inputWindow = false;
-    transitionWindow = false;
-    comboQueued = false;
-    invincible = false;
-    invincibleWindow = false;
-    justDodgeWindow = false;
-    justDodgeSuccess = false;
-    animationMotionWarps.clear();
-    hitActors.clear();
-    showTrail = false;
-    swordEmissivePower = 0.0f;
-    trail.Clear();
-    StopAttackTargetRotation();
-    StopKnockBackForcedMove();
-    knockBackActive = false;
-    knockBackElapsed = 0.0f;
-    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
-    characterMovementComponent->SetInputMagnitude(0.0f);
-    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
-    characterMovementComponent->MoveToActor(std::shared_ptr<Actor>{}, 0.0f, 0.0f);
-    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
-    characterMovementComponent->ResetFixedSpeed();
-    velocity = { 0.0f, 0.0f, 0.0f };
-    return true;
-}
-
-void Player::EnterWinState()
-{
-    finalHitWaiting = false;
-    battleActionsSuspended = false;
-    if (stateMachine_)
-        stateMachine_->ChangeState("Win");
-}
-
-bool Player::IsInWinState() const
-{
-    return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Win";
-}
-
-void Player::ClearTransientBattleActions()
-{
-    ClearActionRequest("battle_end");
-    finalHitVisualPoseLatchRequested = false;
-    finalHitRushFollowUpStopRequested = false;
-    ClearAttackTarget();
-    SetRushInputAcceptance(false);
-    SetRushInputDebugState(false, false);
-    hitBox = false;
-    inputWindow = false;
-    transitionWindow = false;
-    comboQueued = false;
-    invincible = false;
-    invincibleWindow = false;
-    justDodgeWindow = false;
-    justDodgeSuccess = false;
-    animationMotionWarps.clear();
-    hitActors.clear();
-    showTrail = false;
-    swordEmissivePower = 0.0f;
-    trail.Clear();
-    SetRushWeaponVisual(false);
-    if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(false);
-    if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(false);
-    if (rushWordImageComponent) rushWordImageComponent->SetVisible(false);
-    rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
-    rushPromptAnimationTimer = 0.0f;
-    rushPromptWasVisible = false;
-    if (rushButtonImageComponent)
-        rushButtonImageComponent->SetScale({
-            rushButtonBaseScale.x * 0.8f,
-            rushButtonBaseScale.y * 0.8f });
-    for (auto& ghost : ghosts)
-    {
-        ghost.isVisible = false;
-        if (ghost.swordMeshComp) ghost.swordMeshComp->SetIsVisible(false);
-    }
-    ResetPlayerPoseGhost();
-    StopAttackTargetRotation();
-    StopKnockBackForcedMove();
-    knockBackActive = false;
-    knockBackElapsed = 0.0f;
-    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
-    characterMovementComponent->SetInputMagnitude(0.0f);
-    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
-    characterMovementComponent->MoveToActor(std::shared_ptr<Actor>{}, 0.0f, 0.0f);
-    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
-    characterMovementComponent->ResetFixedSpeed();
-    velocity = { 0.0f, 0.0f, 0.0f };
-}
-
-void Player::ClearSwordTrailForPhaseTransition()
-{
-    // The trail is CPU-side history. Clear both its active notify result and
-    // cached sword transform so a cinematic teleport cannot bridge old/new poses.
-    showTrail = false;
-    trail.Clear();
-    isPrevSwordWorldValid = false;
-    prevSwordRootPos = { 0.0f, 0.0f, 0.0f };
-    prevSwordMidPos = { 0.0f, 0.0f, 0.0f };
-    prevSwordTipPos = { 0.0f, 0.0f, 0.0f };
-    swordEmissivePower = 0.0f;
-    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
-        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
-}
-
-void Player::ClearBattleVisualsForPhaseTransition()
-{
-    ClearTransientBattleActions();
-    ClearSwordTrailForPhaseTransition();
-    swordGhostElapsedTime = 0.0f;
-    swordGhostIndex = 0;
-    damageFlashTimer = 0.0f;
-    ApplyDamageFlash(0.0f);
-}
-void Player::CancelGameplayActionsForCinematic()
-{
-    ClearBattleVisualsForPhaseTransition();
-    if (inputComponent)
-        inputComponent->ClearIntent();
-
-    // StopBattleActions clears movement, but make the cinematic contract explicit.
-    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
-    characterMovementComponent->SetInputMagnitude(0.0f);
-    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
-    characterMovementComponent->MoveToActor(std::shared_ptr<Actor>{}, 0.0f, 0.0f);
-    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
-    characterMovementComponent->ResetFixedSpeed();
-    velocity = { 0.0f, 0.0f, 0.0f };
-
-    currentAttackAnimation = startAttackAnimation;
-    rushTarget.reset();
-    locomotionMode = LocomotionMode::Idle;
-    HideAndResetLockOnGuideUI();
-    if (stateMachine_)
-        stateMachine_->ChangeState("Idle");
-    if (const auto controller = GetBodyAnimationController())
-    {
-        controller->ReleaseHeldAnimationPose();
-        controller->SetUseBlendSpace(false);
-        controller->PlayAnimationImmediate("Idle", true, true);
-    }
-}
-void Player::NeutralizeForPhase2Cinematic()
-{
-    CancelGameplayActionsForCinematic();
 }
 
 void Player::ResetForBattleContinue(const Transform& battleStartTransform)
@@ -2331,6 +1835,1109 @@ void Player::ForceDirectionImmediate(const DirectX::XMFLOAT3& direction) const
     if (rotationComponent)
         rotationComponent->ForceDirectionImmediate(direction);
 }
+void Player::BeginDeathEyeClose()
+{
+    ResetEyeCloseOverride();
+    deathVisualFade = 0.0f;
+    deathEyeCloseStarted = false;
+    deathVisualFadeStarted = false;
+    if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = 0.0f;
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathDeadEmissiveColor = deathDeadEmissiveColor;
+    }
+    deathEyeCloseActive = true;
+    eyeCloseOverrideOwner = EyeCloseOverrideOwner::Death;
+    RebuildEyeClosePoseOverride();
+}
+
+void Player::UpdateDeathEyeClose(const float deathElapsedTime)
+{
+    if (!deathEyeCloseActive)
+        return;
+
+    if (!deathEyeCloseStarted && deathElapsedTime >= deathEyeCloseDelay)
+        deathEyeCloseStarted = true;
+
+    const float normalizedCloseEyeTime = std::clamp(
+        (deathElapsedTime - deathEyeCloseDelay) /
+        (std::max)(deathEyeCloseDuration, FLT_EPSILON),
+        0.0f,
+        1.0f);
+    closeEyeWeight = normalizedCloseEyeTime * normalizedCloseEyeTime *
+        (3.0f - 2.0f * normalizedCloseEyeTime);
+    GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
+}
+
+void Player::EndDeathEyeClose()
+{
+    ResetEyeCloseOverride();
+}
+
+void Player::UpdateDeathVisualFade(const float deathElapsedTime)
+{
+    if (!deathVisualFadeStarted && deathElapsedTime >= deathColorFadeDelay)
+    {
+        deathVisualFadeStarted = true;
+        // 死亡時の意思が消える時のSE再生
+        CoreAudio::PlayOneShot("./Data/Sound/SE/player_stone_fade_start.wav", 2.0f);
+    }
+
+    deathVisualFade = std::clamp(
+        (deathElapsedTime - deathColorFadeDelay) /
+        (std::max)(deathColorFadeDuration, FLT_EPSILON),
+        0.0f, 1.0f);
+    if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
+    {
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = deathVisualFade;
+        skeletalMeshComponent->plusAlphaCBuffer->data.deathDeadEmissiveColor = deathDeadEmissiveColor;
+    }
+}
+
+bool Player::BeginFinalHitWait()
+{
+    finalHitWaiting = true;
+    ForceResetPlayerSlow();
+    ForceResetBossSlow();
+
+    finalHitAttackDrainActive = false;
+    finalHitAttackDrainCompleted = false;
+    finalHitAttackDrainFailed = false;
+    const auto controller = GetBodyAnimationController();
+    const std::string stateName = stateMachine_ ? stateMachine_->GetStateName() : "";
+    const bool supportedAttackState = stateName == "Attack" || stateName == "Rush";
+    const std::string animationName = controller
+        ? controller->GetCurrentAnimationName() : std::string{};
+    const auto* rushState = stateMachine_ && stateName == "Rush"
+        ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
+    const std::string rushAttackAnimation = rushState
+        ? rushState->GetCurrentAttackAnimationForDebug() : std::string{};
+    const bool expectedAttackClip = stateName == "Attack"
+        ? animationName == currentAttackAnimation
+        : stateName == "Rush" && rushState && animationName == rushAttackAnimation;
+    const bool validCurrentAttack = supportedAttackState && controller &&
+        controller->IsPlayAnimation() && expectedAttackClip &&
+        controller->GetAnimationLength(animationName) > FLT_EPSILON;
+    const uint64_t debugEventId = phase2RushFinalHitDebugEventId;
+    const bool debugRushEvent = debugEventId != 0;
+
+    if (!validCurrentAttack)
+    {
+        if (debugRushEvent)
+        {
+            std::string rejectedBy;
+            if (!supportedAttackState) rejectedBy += "unsupportedState ";
+            if (!controller) rejectedBy += "noController ";
+            else
+            {
+                if (!controller->IsPlayAnimation()) rejectedBy += "notPlaying ";
+                if (!expectedAttackClip) rejectedBy += "unexpectedClip ";
+                if (controller->GetAnimationLength(animationName) <= FLT_EPSILON) rejectedBy += "zeroLength ";
+            }
+
+        }
+        // An unexpected state/clip is not treated as a completed attack pose.
+        // Fall through to the existing safe cleanup without creating a wait.
+        finalHitAttackDrainFailed = true;
+        ClearTransientBattleActions();
+        return false;
+    }
+
+    finalHitAttackDrainActive = true;
+    RequestFinalHitVisualPoseLatch();
+    RequestFinalHitRushFollowUpStop();
+    ClearActionRequest("final_hit_attack_drain");
+    ClearAttackTarget();
+    SetRushInputAcceptance(false, "FinalHit");
+    SetRushInputDebugState(false, false);
+    hitBox = false;
+    inputWindow = false;
+    transitionWindow = false;
+    comboQueued = false;
+    invincible = false;
+    invincibleWindow = false;
+    justDodgeWindow = false;
+    justDodgeSuccess = false;
+    animationMotionWarps.clear();
+    hitActors.clear();
+    showTrail = false;
+    swordEmissivePower = 0.0f;
+    trail.Clear();
+    StopAttackTargetRotation();
+    StopKnockBackForcedMove();
+    knockBackActive = false;
+    knockBackElapsed = 0.0f;
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->MoveToActor(std::shared_ptr<Actor>{}, 0.0f, 0.0f);
+    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    characterMovementComponent->ResetFixedSpeed();
+    velocity = { 0.0f, 0.0f, 0.0f };
+    return true;
+}
+
+void Player::StopBattleActions()
+{
+    battleActionsSuspended = true;
+    SetTimeScale(0.0f);
+    ClearTransientBattleActions();
+}
+
+void Player::ResumeBattleActionsAfterEvent()
+{
+    battleActionsSuspended = false;
+    ResetTimeScale();
+    if (stateMachine_)
+        stateMachine_->ChangeState("Idle");
+}
+
+bool Player::IsFinalHitAttackDrainComplete() const
+{
+    if (finalHitAttackDrainFailed || !finalHitAttackDrainActive)
+        return true;
+    if (!finalHitAttackDrainCompleted)
+        return false;
+    if (!stateMachine_)
+        return true;
+    const std::string stateName = stateMachine_->GetStateName();
+    return stateName != "Attack" && stateName != "Rush";
+}
+
+void Player::MarkFinalHitAttackDrainInterrupted()
+{
+    finalHitAttackDrainActive = false;
+    finalHitAttackDrainCompleted = false;
+    finalHitAttackDrainFailed = true;
+    finalHitVisualPoseLatchRequested = false;
+}
+
+void Player::ClearTransientBattleActions()
+{
+    ClearActionRequest("battle_end");
+    finalHitVisualPoseLatchRequested = false;
+    finalHitRushFollowUpStopRequested = false;
+    ClearAttackTarget();
+    SetRushInputAcceptance(false);
+    SetRushInputDebugState(false, false);
+    hitBox = false;
+    inputWindow = false;
+    transitionWindow = false;
+    comboQueued = false;
+    invincible = false;
+    invincibleWindow = false;
+    justDodgeWindow = false;
+    justDodgeSuccess = false;
+    animationMotionWarps.clear();
+    hitActors.clear();
+    showTrail = false;
+    swordEmissivePower = 0.0f;
+    trail.Clear();
+    SetRushWeaponVisual(false);
+    if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(false);
+    if (rushButtonImageComponent) rushButtonImageComponent->SetVisible(false);
+    if (rushWordImageComponent) rushWordImageComponent->SetVisible(false);
+    rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
+    rushPromptAnimationTimer = 0.0f;
+    rushPromptWasVisible = false;
+    if (rushButtonImageComponent)
+        rushButtonImageComponent->SetScale({
+            rushButtonBaseScale.x * 0.8f,
+            rushButtonBaseScale.y * 0.8f });
+    for (auto& ghost : ghosts)
+    {
+        ghost.isVisible = false;
+        if (ghost.swordMeshComp) ghost.swordMeshComp->SetIsVisible(false);
+    }
+    ResetPlayerPoseGhost();
+    StopAttackTargetRotation();
+    StopKnockBackForcedMove();
+    knockBackActive = false;
+    knockBackElapsed = 0.0f;
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->MoveToActor(std::shared_ptr<Actor>{}, 0.0f, 0.0f);
+    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    characterMovementComponent->ResetFixedSpeed();
+    velocity = { 0.0f, 0.0f, 0.0f };
+}
+
+void Player::ClearBattleVisualsForPhaseTransition()
+{
+    ClearTransientBattleActions();
+    ClearSwordTrailForPhaseTransition();
+    swordGhostElapsedTime = 0.0f;
+    swordGhostIndex = 0;
+    damageFlashTimer = 0.0f;
+    ApplyDamageFlash(0.0f);
+}
+
+void Player::CancelGameplayActionsForCinematic()
+{
+    ClearBattleVisualsForPhaseTransition();
+    if (inputComponent)
+        inputComponent->ClearIntent();
+
+    // StopBattleActions clears movement, but make the cinematic contract explicit.
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->MoveToActor(std::shared_ptr<Actor>{}, 0.0f, 0.0f);
+    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+    characterMovementComponent->ResetFixedSpeed();
+    velocity = { 0.0f, 0.0f, 0.0f };
+
+    currentAttackAnimation = startAttackAnimation;
+    rushTarget.reset();
+    locomotionMode = LocomotionMode::Idle;
+    HideAndResetLockOnGuideUI();
+    if (stateMachine_)
+        stateMachine_->ChangeState("Idle");
+    if (const auto controller = GetBodyAnimationController())
+    {
+        controller->ReleaseHeldAnimationPose();
+        controller->SetUseBlendSpace(false);
+        controller->PlayAnimationImmediate("Idle", true, true);
+    }
+}
+
+void Player::NeutralizeForPhase2Cinematic()
+{
+    CancelGameplayActionsForCinematic();
+}
+
+void Player::ClearSwordTrailForPhaseTransition()
+{
+    // The trail is CPU-side history. Clear both its active notify result and
+    // cached sword transform so a cinematic teleport cannot bridge old/new poses.
+    showTrail = false;
+    trail.Clear();
+    isPrevSwordWorldValid = false;
+    prevSwordRootPos = { 0.0f, 0.0f, 0.0f };
+    prevSwordMidPos = { 0.0f, 0.0f, 0.0f };
+    prevSwordTipPos = { 0.0f, 0.0f, 0.0f };
+    swordEmissivePower = 0.0f;
+    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
+        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
+}
+
+void Player::EnterWinState()
+{
+    finalHitWaiting = false;
+    battleActionsSuspended = false;
+    if (stateMachine_)
+        stateMachine_->ChangeState("Win");
+}
+bool Player::IsInWinState() const
+{
+    return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Win";
+}
+// 軌跡を描画する処理
+void Player::RenderTrail(ID3D11DeviceContext* immediateContext)
+{
+    trail.Render(immediateContext);
+}
+
+void Player::CapturePlayerPoseGhost()
+{
+    ResetPlayerPoseGhost();
+    playerPoseGhostSpawnSequenceActive = true;
+    playerPoseGhostSpawnTimer = 0.0f;
+    nextPlayerPoseGhostIndex = 0;
+
+    if (CapturePlayerPoseGhost(nextPlayerPoseGhostIndex))
+        ++nextPlayerPoseGhostIndex;
+    else
+        playerPoseGhostSpawnSequenceActive = false;
+}
+
+void Player::ResetPlayerPoseGhost()
+{
+    for (auto& ghost : playerPoseGhosts)
+    {
+        ghost.nodes.clear();
+        ghost.alpha = 0.0f;
+        ghost.elapsedTime = 0.0f;
+        ghost.isVisible = false;
+    }
+    playerPoseGhostSpawnTimer = 0.0f;
+    nextPlayerPoseGhostIndex = 0;
+    playerPoseGhostSpawnSequenceActive = false;
+}
+
+void Player::CaptureDodgeWorldDirectionSnapshot()
+{
+    DirectX::XMFLOAT3 direction{};
+    if (useDodgeWorldDirection)
+    {
+        direction = dodgeWorldDirection;
+    }
+    else
+    {
+        switch (dodgeDirection)
+        {
+        case DodgeDirection::Forward:  direction = { 0.0f, 0.0f, 1.0f }; break;
+        case DodgeDirection::Backward: direction = { 0.0f, 0.0f, -1.0f }; break;
+        case DodgeDirection::Left:     direction = { -1.0f, 0.0f, 0.0f }; break;
+        case DodgeDirection::Right:    direction = { 1.0f, 0.0f, 0.0f }; break;
+        }
+
+        const float yaw = DirectX::XMConvertToRadians(GetEulerRotation().y);
+        const float sinYaw = std::sinf(yaw);
+        const float cosYaw = std::cosf(yaw);
+        direction =
+        {
+            direction.x * cosYaw + direction.z * sinYaw,
+            0.0f,
+            -direction.x * sinYaw + direction.z * cosYaw
+        };
+    }
+
+    direction.y = 0.0f;
+    const float length = std::sqrt(direction.x * direction.x + direction.z * direction.z);
+    dodgeWorldDirectionSnapshotValid = length > 0.0001f;
+    dodgeWorldDirectionSnapshot = dodgeWorldDirectionSnapshotValid
+        ? DirectX::XMFLOAT3{ direction.x / length, 0.0f, direction.z / length }
+    : DirectX::XMFLOAT3{};
+}
+
+// モード変更用関数
+void Player::SetLocomotionMode(LocomotionMode mode)
+{
+    if (locomotionMode == mode)
+    {
+        return;
+    }
+
+    locomotionMode = mode;
+
+    auto controller = GetBodyAnimationController();
+
+    switch (mode)
+    {
+    case LocomotionMode::TPSWalk:
+        controller->SetUseBlendSpace(false);
+        characterMovementComponent->ResetFixedSpeed();
+        PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, true);
+        break;
+    case LocomotionMode::TPSRun:
+        controller->SetUseBlendSpace(false);
+        characterMovementComponent->ResetFixedSpeed();
+        PlayBodyAnimation("Jog_Fwd", true, true, 0.2f, true);
+        break;
+    case LocomotionMode::LockOnBlendRun:
+        characterMovementComponent->ResetFixedSpeed();
+        controller->SetUseBlendSpace(true);
+        break;
+    case LocomotionMode::Idle:
+        controller->SetUseBlendSpace(false);
+        GetStateMachine()->ChangeState("Idle");
+        break;
+    }
+
+}
+
+// 保存済み要求を現在のステートから実行する
+bool Player::TryExecuteActionRequest()
+{
+    const ActionType requestedType = bufferCommand.type;
+    std::string targetState;
+    switch (requestedType)
+    {
+    case ActionType::None:
+        return false;
+    case ActionType::Attack:
+        targetState = "Attack";
+        break;
+    case ActionType::Dodge:
+        dodgeDirection = bufferCommand.dodgeDirection;
+        dodgeWorldDirection = bufferCommand.dodgeWorldDirection;
+        useDodgeWorldDirection = bufferCommand.useDodgeWorldDirection;
+        targetState = "Dodge";
+        break;
+    }
+
+    // 要求されたアクションのStateへ遷移する
+    stateMachine_->ChangeState(targetState);
+
+    if (stateMachine_->GetStateName() != targetState)
+    {
+        return false;
+    }
+
+    ConsumeActionRequest(requestedType);
+    return true;
+}
+
+// 入力を消費する処理
+void Player::ConsumeActionRequest(ActionType expectedType)
+{
+    if (bufferCommand.type != expectedType)
+    {
+        return;
+    }
+    if (expectedType == ActionType::Dodge)
+    {
+        dodgeDirection = bufferCommand.dodgeDirection;
+        dodgeWorldDirection = bufferCommand.dodgeWorldDirection;
+        useDodgeWorldDirection = bufferCommand.useDodgeWorldDirection;
+    }
+    bufferCommand = {};
+}
+
+//当たった時の処理
+bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition,
+    const DamagePolicy policy)
+{
+    if (finalHitWaiting) return false;
+    const std::string currentState = stateMachine_->GetStateName();
+    const bool ignoreDodgeIFrames =
+        policy == DamagePolicy::IgnoreDodgeIFrames && currentState == "Dodge";
+    if (invincibleWindow && !ignoreDodgeIFrames)
+    {
+        if (currentState == "Dodge")
+            RecordNormalDodgeDebug();
+        return false;
+    }
+    if (invincible)
+    {
+        return false;
+    }
+
+    if (currentState == "Damage" || currentState == "DeathPending" || currentState == "Death")
+    {
+        return false;
+    }
+
+    DirectX::XMFLOAT3 direction = MathHelper::Subtract(GetPosition(), attackerPosition);
+    direction.y = 0.0f;
+    if (MathHelper::Length(direction) > 0.0001f)
+    {
+        direction = MathHelper::Normalize(direction);
+    }
+    else
+    {
+        direction = GetForward();
+        direction.y = 0.0f;
+    }
+
+    const int hpBeforeDamage = hp;
+    const int appliedDamage = (std::max)(0, damage);
+    hpRecoveryUiActive = false;
+    hp = (std::max)(minimumHp, (std::max)(0, hp - appliedDamage));
+    if (hp < hpBeforeDamage)
+    {
+        delayedHp = static_cast<float>(hpBeforeDamage);
+        delayedHpDelayTimer = delayedHpDelayDuration;
+        StartDamageFlash();
+    }
+    if (hp <= 0)
+        RefreshOperationGuideUIVisibility();
+    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav", 0.4f);
+    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav", 0.5f);
+    // コントローラー振動
+    InputSystem::SetVibration(0.8f, 0.15f);
+    SetRushInputAcceptance(false, "Damage");
+    ClearActionRequest("damage_applied");
+    Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
+
+
+    if (hp > 0)
+    {
+        DirectX::XMFLOAT3 toAttacker =
+        {
+            attackerPosition.x - GetPosition().x,
+            0.0f,
+            attackerPosition.z - GetPosition().z
+        };
+        const float attackerLength = std::sqrt(
+            toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
+        if (attackerLength <= 0.0001f)
+        {
+            hitReactionDirection = HitReactionDirection::Front;
+        }
+        else
+        {
+            toAttacker.x /= attackerLength;
+            toAttacker.z /= attackerLength;
+
+            DirectX::XMFLOAT3 forward = GetForward();
+            forward.y = 0.0f;
+            const float forwardLength = std::sqrt(
+                forward.x * forward.x + forward.z * forward.z);
+            DirectX::XMFLOAT3 right = GetRight();
+            right.y = 0.0f;
+            const float rightLength = std::sqrt(
+                right.x * right.x + right.z * right.z);
+
+            if (forwardLength <= 0.0001f || rightLength <= 0.0001f)
+            {
+                hitReactionDirection = HitReactionDirection::Front;
+            }
+            else
+            {
+                forward.x /= forwardLength;
+                forward.z /= forwardLength;
+                right.x /= rightLength;
+                right.z /= rightLength;
+
+                const float forwardDot = toAttacker.x * forward.x + toAttacker.z * forward.z;
+                const float rightDot = toAttacker.x * right.x + toAttacker.z * right.z;
+                if (std::abs(forwardDot) >= std::abs(rightDot))
+                    hitReactionDirection = forwardDot >= 0.0f
+                    ? HitReactionDirection::Front : HitReactionDirection::Back;
+                else
+                    hitReactionDirection = rightDot >= 0.0f
+                    ? HitReactionDirection::Left : HitReactionDirection::Right;
+            }
+        }
+    }
+    const char* targetState = hp > 0 ? "Damage" : "DeathPending";
+    stateMachine_->ChangeState(targetState);
+    return true;
+}
+
+bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)
+{
+    if (!stateMachine_ || hp <= 0 ||
+        std::string(stateMachine_->GetStateName()) == "DeathPending" ||
+        std::string(stateMachine_->GetStateName()) == "Death")
+    {
+        return false;
+    }
+
+    DirectX::XMFLOAT3 horizontalDirection = direction;
+    horizontalDirection.y = 0.0f;
+    if (MathHelper::Length(horizontalDirection) <= FLT_EPSILON)
+    {
+        horizontalDirection = GetForward();
+        horizontalDirection.y = 0.0f;
+    }
+    if (MathHelper::Length(horizontalDirection) <= FLT_EPSILON)
+        return false;
+
+    knockBackDirection = MathHelper::Normalize(horizontalDirection);
+    SetRushInputAcceptance(false, "KnockBack");
+    stateMachine_->ChangeState("KnockBack");
+    return true;
+}
+
+bool Player::IsBossAttackTargetAvailable() const
+{
+    if (!stateMachine_ || hp <= 0 || IsPendingKill())
+        return false;
+
+    const State* currentState = stateMachine_->GetCurrentState();
+    if (!currentState)
+        return false;
+
+    // PlayerKnockBackState owns both Hit_Large_KnockBack and Get_Up.
+    // Keep the Boss independent from Player state-name strings.
+    if (dynamic_cast<const PlayerKnockBackState*>(currentState))
+        return false;
+
+    return !dynamic_cast<const PlayerDeathPendingState*>(currentState) &&
+        !dynamic_cast<const PlayerDeathState*>(currentState);
+}
+void Player::ClearActionRequest(const char* reason)
+{
+    bufferCommand = {};
+}
+
+// 攻撃開始時の処理
+void Player::StartAttack()
+{
+    hitActors.clear();
+}
+
+// ジャスト回避成功時の処理
+void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
+{
+    int debugFrame = -1;
+#ifdef USE_IMGUI
+    if (ImGui::GetCurrentContext())
+        debugFrame = ImGui::GetFrameCount();
+#endif
+    const auto gruxEnemy = std::dynamic_pointer_cast<GruxEnemy>(enemy);
+    const uint64_t attackSequenceId = gruxEnemy
+        ? gruxEnemy->GetCurrentAttackSequenceId()
+        : 0;
+    const auto controller = GetBodyAnimationController();
+    const std::string animationName = controller
+        ? controller->GetCurrentAnimationName()
+        : "";
+    const float animationTime = controller
+        ? controller->GetCurrentAnimationTime()
+        : -1.0f;
+    float justWindowStart = 0.0f;
+    float justWindowEnd = 0.0f;
+    if (controller)
+    {
+        const auto assetIt = controller->animationNotifyAssets.find(
+            controller->GetAnimationClip());
+        if (assetIt != controller->animationNotifyAssets.end())
+        {
+            for (const auto& state : assetIt->second.notifyTrack.states)
+            {
+                if (state.type == AnimationNotifyState::Type::JustDodgeWindow)
+                {
+                    justWindowStart = state.startTime;
+                    justWindowEnd = state.endTime;
+                    break;
+                }
+            }
+        }
+    }
+    if (!justDodgeRecordedThisDodge)
+    {
+        justDodgeRecordedThisDodge = true;
+    }
+    lastJustDodgeValid = true;
+    lastJustDodgeTime = dodgeDebugElapsed;
+    lastJustAnimationTime = animationTime;
+    lastJustWindowStart = justWindowStart;
+    lastJustWindowEnd = justWindowEnd;
+    lastJustWindowRatio = justWindowEnd > justWindowStart
+        ? std::clamp((animationTime - justWindowStart) /
+            (justWindowEnd - justWindowStart), 0.0f, 1.0f)
+        : 0.0f;
+    lastJustDodgeAttack = gruxEnemy
+        ? gruxEnemy->GetCurrentAttackNameForDebug()
+        : "Unknown";
+    lastJustBossHitBoxElapsed = gruxEnemy
+        ? gruxEnemy->GetActiveHitBoxElapsedForDebug()
+        : -1.0f;
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[JustDodgeSuccess] frame={} this={} enemy={} attackSequenceId={} justDodgeSuccess={} state={} animation={} animationTime={}",
+        debugFrame,
+        static_cast<const void*>(this),
+        static_cast<const void*>(enemy.get()),
+        attackSequenceId,
+        justDodgeSuccess,
+        stateMachine_ ? stateMachine_->GetStateName() : "",
+        animationName,
+        animationTime));
+
+    // SEの再生
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[JustDodgeSE] frame={} sound=just_dodge3.wav", debugFrame));
+    CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge3.wav", 1.5f);
+    InputSystem::SetVibration(0.30f, 0.06f);
+
+    // ジャスト回避成功フラグをオンにする
+    justDodgeSuccess = true;
+    if (auto* scene = dynamic_cast<SceneBase*>(GetOwnerScene()))
+        scene->StartJustDodgeRadialBlur();
+
+    rushInputEndNotifyReceivedDebug = false;
+    rushInputEndReasonDebug = "None";
+    CapturePlayerPoseGhost();
+    // スローモーションにする
+    // rush時のtargetを保存する
+    rushTarget = enemy;
+
+    const float scale = std::clamp(justDodgeTimeScale, 0.10f, 1.0f);
+    enemy->SetTimeScale(scale);
+    SetTimeScale(scale);
+    playerSlowPhase = JustDodgeSlowPhase::Hold;
+    bossSlowPhase = JustDodgeSlowPhase::Hold;
+    playerSlowHoldTimer = std::max<float>(0.0f, justDodgeSlowHoldDuration);
+    bossSlowHoldTimer = playerSlowHoldTimer;
+    playerSlowReturnElapsed = 0.0f;
+    bossSlowReturnElapsed = 0.0f;
+    playerSlowReturnStartScale = scale;
+    bossSlowReturnStartScale = scale;
+    if (playerSlowHoldTimer <= FLT_EPSILON)
+    {
+        BeginPlayerSlowReturn();
+        BeginBossSlowReturn();
+    }
+
+    initialRushInputTraceActive = true;
+    initialRushInputTraceStartGameTime = initialRushInputTraceGameTime;
+    initialRushInputTraceStartUnscaledTime = initialRushInputTraceUnscaledTime;
+    LogInitialRushInputTrace("JustDodgeSuccess");
+
+    // 画面の色を変える
+
+    // UIを表示する
+    //rushButtonImageComponent->SetVisible(true);
+}
+
+bool Player::CanAcceptInitialRushInput() const
+{
+    return rushInputAccepting &&
+        justDodgeSuccess &&
+        stateMachine_ &&
+        std::string(stateMachine_->GetStateName()) == "Dodge" &&
+        !rushTarget.expired();
+}
+bool Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
+{
+    if (!finalHitVisualPoseLatchRequested)
+        return false;
+
+    finalHitVisualPoseLatchRequested = false;
+    const auto controller = GetBodyAnimationController();
+    const uint64_t debugEventId = phase2RushFinalHitDebugEventId;
+    if (debugEventId != 0)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][Latch][Before] event=" + std::to_string(debugEventId) +
+            " animation=" + (controller ? controller->GetCurrentAnimationName() : "") +
+            " playing=" + std::string(controller && controller->IsPlayAnimation() ? "true" : "false") +
+            " alreadyLatched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false"));
+    }
+    const bool latched = controller && controller->LatchCurrentVisualPose();
+    if (finalHitAttackDrainActive)
+    {
+        finalHitAttackDrainCompleted = latched;
+        finalHitAttackDrainFailed = !latched;
+        if (!latched)
+            finalHitAttackDrainActive = false;
+    }
+    if (debugEventId != 0)
+    {
+        Logger::Log(Logger::LogCategory::Gameplay,
+            "[Phase2RushFinalHit][Latch][After] event=" + std::to_string(debugEventId) +
+            " success=" + std::string(latched ? "true" : "false") +
+            " visualLatched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false") +
+            " drainActive=" + std::string(finalHitAttackDrainActive ? "true" : "false") +
+            " drainLatched=" + std::string(finalHitAttackDrainCompleted ? "true" : "false"));
+    }
+    return latched;
+}
+
+bool Player::CanShowInitialRushGuide() const
+{
+    if (CanAcceptInitialRushInput())
+        return true;
+
+    return stateMachine_ &&
+        std::string(stateMachine_->GetStateName()) == "Dodge" &&
+        justDodgeSuccess &&
+        rushRequestedDebug &&
+        !rushTarget.expired();
+}
+
+bool Player::CanShowRushComboGuide() const
+{
+    return stateMachine_ &&
+        std::string(stateMachine_->GetStateName()) == "Rush" &&
+        !rushTarget.expired();
+}
+
+bool Player::CanShowRushPrompt() const
+{
+    return CanShowInitialRushGuide() || CanShowRushComboGuide();
+}
+
+
+bool Player::IsRushOpportunityActive() const
+{
+    if (!stateMachine_ || rushTarget.expired())
+        return false;
+
+    const std::string stateName = stateMachine_->GetStateName();
+    return (stateName == "Dodge" && justDodgeSuccess) || stateName == "Rush";
+}
+
+void Player::SetRushInputAcceptance(bool accepting, const char* endReason)
+{
+    if (accepting)
+    {
+        rushInputEndReasonDebug = "None";
+    }
+    else if (endReason)
+    {
+        rushInputEndReasonDebug = endReason;
+    }
+
+    if (rushInputAccepting == accepting)
+    {
+        return;
+    }
+
+    rushInputAccepting = accepting;
+    if (initialRushInputTraceActive)
+        LogInitialRushInputTrace(accepting ? "InputAcceptanceOn" : "InputAcceptanceOff", endReason);
+    if (!accepting && endReason &&
+        (std::strcmp(endReason, "TransitionWithoutRush") == 0 ||
+            std::strcmp(endReason, "DodgeFinished") == 0 ||
+            std::strcmp(endReason, "RushTargetExpired") == 0 ||
+            std::strcmp(endReason, "Damage") == 0 ||
+            std::strcmp(endReason, "KnockBack") == 0 ||
+            std::strcmp(endReason, "Death") == 0))
+    {
+        initialRushInputTraceActive = false;
+    }
+    if (accepting)
+    {
+        rushPromptAlpha = 0.0f;
+    }
+    else
+    {
+        // 初回Rush入力済みなら、Dodge TransitionWindow待ちの間も
+        // 受付時の表示とAlphaをそのまま維持する。
+        if (CanShowInitialRushGuide())
+            return;
+
+        rushPromptAlpha = 0.0f;
+        rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
+        rushPromptAnimationTimer = 0.0f;
+        rushPromptWasVisible = false;
+        if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(false);
+        if (rushButtonImageComponent)
+        {
+            rushButtonImageComponent->SetVisible(false);
+            rushButtonImageComponent->SetScale({
+                rushButtonBaseScale.x * 0.8f,
+                rushButtonBaseScale.y * 0.8f });
+        }
+        if (rushWordImageComponent) rushWordImageComponent->SetVisible(false);
+    }
+}
+
+void Player::SetRushInputDebugState(bool judgeSuccess, bool rushRequested)
+{
+    rushJudgeSuccessDebug = judgeSuccess;
+    rushRequestedDebug = rushRequested;
+}
+
+void Player::LogInitialRushInputTrace(const char* event, const char* detail)
+{
+    const auto controller = GetBodyAnimationController();
+    const float animationTime = controller ? controller->GetCurrentAnimationTime() : -1.0f;
+    const float effectivePlaybackRate = controller ? controller->GetLastEffectivePlaybackRateDebug() : 0.0f;
+    float transitionStartTime = -1.0f;
+    if (controller)
+    {
+        if (const auto asset = controller->GetAnimationAsset(controller->GetCurrentAnimationName()))
+        {
+            for (const auto& state : asset->notifyTrack.states)
+            {
+                if (state.type == AnimationNotifyState::Type::TransitionWindow)
+                {
+                    transitionStartTime = state.startTime;
+                    break;
+                }
+            }
+        }
+    }
+    Logger::Log(Logger::LogCategory::Gameplay, std::format(
+        "[InitialRushInput] {} frame={} gameTime={:.6f} unscaledGameTime={:.6f} elapsedGame={:.6f} elapsedUnscaled={:.6f} animationTime={:.6f} effectivePlaybackRate={:.6f} actorTimeScale={:.6f} effectiveAnimationRate={:.6f} rushInputAccepting={} rushRequested={} justDodgeSuccess={} transitionWindowStart={:.6f} detail={}",
+        event ? event : "Unknown",
+        initialRushInputTraceFrame,
+        initialRushInputTraceGameTime,
+        initialRushInputTraceUnscaledTime,
+        initialRushInputTraceGameTime - initialRushInputTraceStartGameTime,
+        initialRushInputTraceUnscaledTime - initialRushInputTraceStartUnscaledTime,
+        animationTime,
+        effectivePlaybackRate,
+        GetTimeScale(),
+        effectivePlaybackRate * GetTimeScale(),
+        rushInputAccepting,
+        rushRequestedDebug,
+        justDodgeSuccess,
+        transitionStartTime,
+        detail ? detail : "None"));
+}
+
+void Player::BeginPlayerSlowReturn()
+{
+    if (playerSlowPhase == JustDodgeSlowPhase::Inactive || playerSlowPhase == JustDodgeSlowPhase::Return)
+    {
+        return;
+    }
+
+    playerSlowPhase = JustDodgeSlowPhase::Return;
+    playerSlowReturnElapsed = 0.0f;
+    playerSlowReturnStartScale = GetTimeScale();
+    if (justDodgeSlowReturnDuration <= FLT_EPSILON)
+    {
+        ForceResetPlayerSlow();
+    }
+}
+
+void Player::BeginBossSlowReturn(bool afterRush)
+{
+    if (bossSlowPhase == JustDodgeSlowPhase::Inactive ||
+        bossSlowPhase == JustDodgeSlowPhase::Return)
+    {
+        return;
+    }
+    if (auto target = rushTarget.lock())
+    {
+        bossSlowPhase = JustDodgeSlowPhase::Return;
+        bossSlowReturnElapsed = 0.0f;
+        bossSlowReturnStartScale = target->GetTimeScale();
+        activeBossSlowReturnDuration = std::max<float>(0.0f,
+            afterRush ? rushBossReturnDuration : justDodgeSlowReturnDuration);
+        if (activeBossSlowReturnDuration <= FLT_EPSILON) ForceResetBossSlow();
+    }
+    else bossSlowPhase = JustDodgeSlowPhase::Inactive;
+}
+
+void Player::HoldBossSlowForRush()
+{
+    if (auto target = rushTarget.lock())
+    {
+        const float scale = std::clamp(rushBossSlowScale, 0.10f, 1.0f);
+        target->SetTimeScale(scale);
+        bossSlowPhase = JustDodgeSlowPhase::RushHold;
+    }
+    else bossSlowPhase = JustDodgeSlowPhase::Inactive;
+}
+
+void Player::ForceResetPlayerSlow()
+{
+    ResetTimeScale();
+    playerSlowPhase = JustDodgeSlowPhase::Inactive;
+    playerSlowHoldTimer = 0.0f;
+    playerSlowReturnElapsed = 0.0f;
+    playerSlowReturnStartScale = 1.0f;
+}
+
+void Player::ForceResetBossSlow()
+{
+    if (auto target = rushTarget.lock()) target->ResetTimeScale();
+    bossSlowPhase = JustDodgeSlowPhase::Inactive;
+    bossSlowHoldTimer = 0.0f;
+    bossSlowReturnElapsed = 0.0f;
+    bossSlowReturnStartScale = 1.0f;
+    activeBossSlowReturnDuration = justDodgeSlowReturnDuration;
+}
+
+void Player::SetRushWeaponVisual(const bool enabled)
+{
+    const DirectX::XMFLOAT3 swordColor = enabled ? rushSwordColor : DirectX::XMFLOAT3{ 0.0f, 0.8f, 1.0f };
+
+    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
+    {
+        auto& cpuColor = swordMeshComponent->plusAlphaCBuffer->data.cpuColor;
+        cpuColor.x = swordColor.x;
+        cpuColor.y = swordColor.y;
+        cpuColor.z = swordColor.z;
+    }
+
+    trail.SetRushColorEnabled(enabled, rushSwordColor);
+    activeGhostBaseColor = enabled ? rushSwordColor : swordGhostColor;
+    activeGhostEdgeColor = enabled ? rushSwordColor : swordGhostColor;
+}
+
+bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
+{
+    DirectX::XMFLOAT3 toAttacker =
+    {
+        attackerPosition.x - GetPosition().x,
+        0.0f,
+        attackerPosition.z - GetPosition().z
+    };
+    const float attackerLength = std::sqrt(
+        toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
+    directionToAttackerDebug = attackerLength > 0.0001f
+        ? DirectX::XMFLOAT3{ toAttacker.x / attackerLength, 0.0f, toAttacker.z / attackerLength }
+    : DirectX::XMFLOAT3{};
+
+    if (!dodgeWorldDirectionSnapshotValid || attackerLength <= 0.0001f)
+    {
+        justDodgeDirectionDotDebug = 0.0f;
+        justDodgeDirectionResultDebug = false;
+        return false;
+    }
+
+    justDodgeDirectionDotDebug =
+        dodgeWorldDirectionSnapshot.x * directionToAttackerDebug.x +
+        dodgeWorldDirectionSnapshot.z * directionToAttackerDebug.z;
+    justDodgeDirectionResultDebug = justDodgeDirectionDotDebug <= justDodgeMaxTowardAttackerDot;
+    return justDodgeDirectionResultDebug;
+}
+
+void Player::BeginDodgeDebug()
+{
+    normalDodgeRecordedThisDodge = false;
+    justDodgeRecordedThisDodge = false;
+}
+
+void Player::UpdateDodgeDebug(float deltaTime)
+{
+    dodgeDebugElapsed += (std::max)(0.0f, deltaTime);
+}
+
+void Player::RecordNormalDodgeDebug()
+{
+    if (!normalDodgeRecordedThisDodge)
+    {
+        normalDodgeRecordedThisDodge = true;
+    }
+}
+
+
+void Player::AcquireAttackTarget()
+{
+    attackTarget.reset();
+    float nearestDistance = FLT_MAX;
+    const auto enemies = GetOwnerScene()->GetActorManager()->GetActorsOfType<Enemy>();
+    for (const auto& enemy : enemies)
+    {
+        if (!enemy || enemy->IsDefeated() || enemy->IsPendingKill())
+            continue;
+
+        DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), GetPosition());
+        delta.y = 0.0f;
+        const float distance = MathHelper::Length(delta);
+        if (distance > attackAssistMaxDistance)
+            continue;
+
+        if (distance < nearestDistance)
+        {
+            nearestDistance = distance;
+            attackTarget = enemy;
+        }
+    }
+
+    attackRotationStartYaw = GetEulerRotation().y;
+    attackRotationTracking = !attackTarget.expired();
+
+
+}
+
+void Player::UpdateAttackTargetRotation(float deltaTime)
+{
+    if (!attackRotationTracking || hitBox)
+        return;
+
+    const auto target = attackTarget.lock();
+    if (!target || target->IsDefeated())
+    {
+        attackRotationTracking = false;
+        return;
+    }
+
+    DirectX::XMFLOAT3 direction = MathHelper::Subtract(target->GetPosition(), GetPosition());
+    direction.y = 0.0f;
+    if (MathHelper::Length(direction) <= FLT_EPSILON)
+        return;
+
+    const float targetYaw = DirectX::XMConvertToDegrees(std::atan2f(direction.x, direction.z));
+    const float correctionFromStart = std::clamp(MathHelper::NormalizeAngleDegrees(targetYaw - attackRotationStartYaw),
+        -attackRotationMaxCorrectionDegrees,
+        attackRotationMaxCorrectionDegrees);
+    const float limitedTargetYaw = attackRotationStartYaw + correctionFromStart;
+
+    DirectX::XMFLOAT3 rotation = GetEulerRotation();
+    const float remainingYaw = MathHelper::NormalizeAngleDegrees(limitedTargetYaw - rotation.y);
+    const float maxStep = attackRotationSpeedDegrees * deltaTime;
+    rotation.y += std::clamp(remainingYaw, -maxStep, maxStep);
+    SetEulerRotation(rotation);
+}
+
+void Player::ClearAttackTarget()
+{
+    attackRotationTracking = false;
+    attackTarget.reset();
+}
 
 bool Player::RebuildEyeClosePoseOverride()
 {
@@ -2370,65 +2977,31 @@ void Player::ResetEyeCloseOverride()
     deathVisualFadeStarted = false;
 }
 
-void Player::BeginDeathEyeClose()
+void Player::HandleAnimationPlaySE(const AnimationNotifyEvent& event) const
 {
-    ResetEyeCloseOverride();
-    deathVisualFade = 0.0f;
-    deathEyeCloseStarted = false;
-    deathVisualFadeStarted = false;
-    if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
-    {
-        skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = 0.0f;
-        skeletalMeshComponent->plusAlphaCBuffer->data.deathDeadEmissiveColor = deathDeadEmissiveColor;
-    }
-    deathEyeCloseActive = true;
-    eyeCloseOverrideOwner = EyeCloseOverrideOwner::Death;
-    RebuildEyeClosePoseOverride();
-}
-
-void Player::UpdateDeathEyeClose(const float deathElapsedTime)
-{
-    if (!deathEyeCloseActive)
+    if (event.parameter.empty())
         return;
 
-    if (!deathEyeCloseStarted && deathElapsedTime >= deathEyeCloseDelay)
-        deathEyeCloseStarted = true;
-
-    const float normalizedCloseEyeTime = std::clamp(
-        (deathElapsedTime - deathEyeCloseDelay) /
-        (std::max)(deathEyeCloseDuration, FLT_EPSILON),
-        0.0f,
-        1.0f);
-    closeEyeWeight = normalizedCloseEyeTime * normalizedCloseEyeTime *
-        (3.0f - 2.0f * normalizedCloseEyeTime);
-    GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
-}
-
-void Player::UpdateDeathVisualFade(const float deathElapsedTime)
-{
-    if (!deathVisualFadeStarted && deathElapsedTime >= deathColorFadeDelay)
+    std::string soundName = event.parameter;
+    if (event.parameter == "RushSword")
     {
-        deathVisualFadeStarted = true;
-        // 死亡時の意思が消える時のSE再生
-        CoreAudio::PlayOneShot("./Data/Sound/SE/player_stone_fade_start.wav", 2.0f);
+        if (std::string(stateMachine_->GetStateName()) != "Rush")
+            return;
+
+        const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
+        if (!rushState)
+            return;
+
+        const int comboIndex = rushState->GetComboIndex();
+        if (comboIndex < 0)
+            return;
+        // ラッシュ時のSE
+        soundName = "enemy_rush_damage3";
     }
 
-    deathVisualFade = std::clamp(
-        (deathElapsedTime - deathColorFadeDelay) /
-        (std::max)(deathColorFadeDuration, FLT_EPSILON),
-        0.0f, 1.0f);
-    if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
-    {
-        skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = deathVisualFade;
-        skeletalMeshComponent->plusAlphaCBuffer->data.deathDeadEmissiveColor = deathDeadEmissiveColor;
-    }
+    const std::string audioPath = "./Data/Sound/SE/" + soundName + ".wav";
+    CoreAudio::PlayOneShot(audioPath, event.value);
 }
-
-void Player::EndDeathEyeClose()
-{
-    ResetEyeCloseOverride();
-}
-
 // 剣の攻撃判定
 DirectX::XMFLOAT3 Player::GetHitBoxPoint(
     const std::shared_ptr<SceneComponent>& component,
@@ -2442,6 +3015,7 @@ DirectX::XMFLOAT3 Player::GetHitBoxPoint(
     DirectX::XMStoreFloat3(&worldOffset, offset);
     return { base.x + worldOffset.x, base.y + worldOffset.y, base.z + worldOffset.z };
 }
+
 // 入力処理をまとめる
 void Player::CaptureActionRequest(float deltaTime)
 {
@@ -2474,6 +3048,7 @@ void Player::CaptureActionRequest(float deltaTime)
     }
 }
 
+
 bool Player::StoreActionRequest(ActionType type, float remainTime)
 {
     const int newPriority = GetActionPriority(type);
@@ -2496,100 +3071,41 @@ bool Player::StoreActionRequest(ActionType type, float remainTime)
     return true;
 }
 
-// 保存済み要求を現在のステートから実行する
-bool Player::TryExecuteActionRequest()
+void Player::BeginKnockBackMovement()
 {
-    const ActionType requestedType = bufferCommand.type;
-    std::string targetState;
-    switch (requestedType)
-    {
-    case ActionType::None:
-        return false;
-    case ActionType::Attack:
-        targetState = "Attack";
-        break;
-    case ActionType::Dodge:
-        dodgeDirection = bufferCommand.dodgeDirection;
-        dodgeWorldDirection = bufferCommand.dodgeWorldDirection;
-        useDodgeWorldDirection = bufferCommand.useDodgeWorldDirection;
-        targetState = "Dodge";
-        break;
-    }
-
-    // 要求されたアクションのStateへ遷移する
-    stateMachine_->ChangeState(targetState);
-
-    if (stateMachine_->GetStateName() != targetState)
-    {
-        return false;
-    }
-
-    ConsumeActionRequest(requestedType);
-    return true;
+    ClearActionRequest("knockback_enter");
+    knockBackInitialSpeed = (std::max)(0.0f, knockBackInitialSpeed);
+    knockBackDuration = (std::max)(0.01f, knockBackDuration);
+    knockBackElapsed = 0.0f;
+    knockBackActive = true;
+    knockBackForcedMoveActive = true;
+    characterMovementComponent->SetFixedSpeed(0.0f);
+    characterMovementComponent->SetInputMagnitude(0.0f);
+    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
+    characterMovementComponent->AddForcedMove(knockBackDirection, knockBackInitialSpeed, knockBackDuration);
+    DirectX::XMFLOAT3 rotation = MathHelper::Multiply(knockBackDirection, -1.0f);
+    rotationComponent->SetDirection(rotation);
 }
 
-void Player::AcquireAttackTarget()
+void Player::UpdateKnockBackMovement(float deltaTime)
 {
-    attackTarget.reset();
-    float nearestDistance = FLT_MAX;
-    const auto enemies = GetOwnerScene()->GetActorManager()->GetActorsOfType<Enemy>();
-    for (const auto& enemy : enemies)
-    {
-        if (!enemy || enemy->IsDefeated() || enemy->IsPendingKill())
-            continue;
-
-        DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), GetPosition());
-        delta.y = 0.0f;
-        const float distance = MathHelper::Length(delta);
-        if (distance > attackAssistMaxDistance)
-            continue;
-
-        if (distance < nearestDistance)
-        {
-            nearestDistance = distance;
-            attackTarget = enemy;
-        }
-    }
-
-    attackRotationStartYaw = GetEulerRotation().y;
-    attackRotationTracking = !attackTarget.expired();
-
-
-}
-void Player::UpdateAttackTargetRotation(float deltaTime)
-{
-    if (!attackRotationTracking || hitBox)
-        return;
-
-    const auto target = attackTarget.lock();
-    if (!target || target->IsDefeated())
-    {
-        attackRotationTracking = false;
-        return;
-    }
-
-    DirectX::XMFLOAT3 direction = MathHelper::Subtract(target->GetPosition(), GetPosition());
-    direction.y = 0.0f;
-    if (MathHelper::Length(direction) <= FLT_EPSILON)
-        return;
-
-    const float targetYaw = DirectX::XMConvertToDegrees(std::atan2f(direction.x, direction.z));
-    const float correctionFromStart = std::clamp(MathHelper::NormalizeAngleDegrees(targetYaw - attackRotationStartYaw),
-        -attackRotationMaxCorrectionDegrees,
-        attackRotationMaxCorrectionDegrees);
-    const float limitedTargetYaw = attackRotationStartYaw + correctionFromStart;
-
-    DirectX::XMFLOAT3 rotation = GetEulerRotation();
-    const float remainingYaw = MathHelper::NormalizeAngleDegrees(limitedTargetYaw - rotation.y);
-    const float maxStep = attackRotationSpeedDegrees * deltaTime;
-    rotation.y += std::clamp(remainingYaw, -maxStep, maxStep);
-    SetEulerRotation(rotation);
+    knockBackElapsed = (std::min)(
+        knockBackElapsed + (std::max)(0.0f, deltaTime), knockBackDuration);
+    if (knockBackForcedMoveActive && knockBackElapsed >= knockBackDuration)
+        StopKnockBackForcedMove();
 }
 
-void Player::ClearAttackTarget()
+void Player::StopKnockBackForcedMove()
 {
-    attackRotationTracking = false;
-    attackTarget.reset();
+    knockBackForcedMoveActive = false;
+    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
+}
+
+void Player::EndKnockBackMovement()
+{
+    knockBackActive = false;
+    StopKnockBackForcedMove();
+    characterMovementComponent->ResetFixedSpeed();
 }
 
 // 動作更新処理
@@ -2765,835 +3281,39 @@ void Player::UpdateMovement()
     }
 }
 
-// モード変更用関数
-void Player::SetLocomotionMode(LocomotionMode mode)
-{
-    if (locomotionMode == mode)
-    {
-        return;
-    }
-
-    locomotionMode = mode;
-
-    auto controller = GetBodyAnimationController();
-
-    switch (mode)
-    {
-    case LocomotionMode::TPSWalk:
-        controller->SetUseBlendSpace(false);
-        characterMovementComponent->ResetFixedSpeed();
-        PlayBodyAnimation("Walk_Fwd", true, true, 0.2f, true);
-        break;
-    case LocomotionMode::TPSRun:
-        controller->SetUseBlendSpace(false);
-        characterMovementComponent->ResetFixedSpeed();
-        PlayBodyAnimation("Jog_Fwd", true, true, 0.2f, true);
-        break;
-    case LocomotionMode::LockOnBlendRun:
-        characterMovementComponent->ResetFixedSpeed();
-        controller->SetUseBlendSpace(true);
-        break;
-    case LocomotionMode::Idle:
-        controller->SetUseBlendSpace(false);
-        GetStateMachine()->ChangeState("Idle");
-        break;
-    }
-
-}
-
-
-// 回避の方向を決定する処理
-void Player::DecideLockOnDodgeDirection()
-{
-    auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera());
-    if (!camera)
-        return;
-
-    auto intent = inputComponent->GetIntent();
-
-    float x = intent.leftMove.x;
-    float z = intent.leftMove.z;
-
-    dodgeWorldDirection = {};
-    useDodgeWorldDirection = false;
-
-    if (camera->GetMovementMode() == DarkCameraActor::CameraMode::TPS)
-    {
-        const float inputLength = sqrtf(x * x + z * z);
-        if (inputLength <= 0.1f)
-        {
-            // Explicitly preserve the previous no-input behavior.
-            dodgeDirection = DodgeDirection::Backward;
-            return;
-        }
-
-        x /= inputLength;
-        z /= inputLength;
-        const DirectX::XMFLOAT3 cameraForward = camera->CameraForwardXZ();
-        const DirectX::XMFLOAT3 cameraRight = camera->CameraRightXZ();
-        dodgeWorldDirection =
-        {
-            cameraForward.x * z + cameraRight.x * x,
-            0.0f,
-            cameraForward.z * z + cameraRight.z * x
-        };
-        dodgeWorldDirection = MathHelper::Normalize(dodgeWorldDirection);
-        dodgeDirection = DodgeDirection::Forward;
-        useDodgeWorldDirection = true;
-        return;
-    }
-
-    // 入力なしなら後ろ回避
-    if (fabs(x) < 0.1f && fabs(z) < 0.1f)
-    {
-        dodgeDirection = DodgeDirection::Backward;
-        return;
-    }
-
-    // 横入力の方が強い
-    if (fabs(x) > fabs(z))
-    {
-        dodgeDirection = (x > 0.0f) ? DodgeDirection::Right : DodgeDirection::Left;
-    }
-    else
-    {
-        dodgeDirection = (z > 0.0f) ? DodgeDirection::Forward : DodgeDirection::Backward;
-    }
-}
-
-// 入力を消費する処理
-void Player::ConsumeActionRequest(ActionType expectedType)
-{
-    if (bufferCommand.type != expectedType)
-    {
-        return;
-    }
-    if (expectedType == ActionType::Dodge)
-    {
-        dodgeDirection = bufferCommand.dodgeDirection;
-        dodgeWorldDirection = bufferCommand.dodgeWorldDirection;
-        useDodgeWorldDirection = bufferCommand.useDodgeWorldDirection;
-    }
-    bufferCommand = {};
-}
-
-void Player::BeginDodgeDebug()
-{
-    normalDodgeRecordedThisDodge = false;
-    justDodgeRecordedThisDodge = false;
-}
-
-void Player::UpdateDodgeDebug(float deltaTime)
-{
-    dodgeDebugElapsed += (std::max)(0.0f, deltaTime);
-}
-
-void Player::RecordNormalDodgeDebug()
-{
-    if (!normalDodgeRecordedThisDodge)
-    {
-        normalDodgeRecordedThisDodge = true;
-    }
-}
-
-//当たった時の処理
-bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition,
-    const DamagePolicy policy)
-{
-    if (finalHitWaiting) return false;
-    const std::string currentState = stateMachine_->GetStateName();
-    const bool ignoreDodgeIFrames =
-        policy == DamagePolicy::IgnoreDodgeIFrames && currentState == "Dodge";
-    if (invincibleWindow && !ignoreDodgeIFrames)
-    {
-        if (currentState == "Dodge")
-            RecordNormalDodgeDebug();
-        return false;
-    }
-    if (invincible)
-    {
-        return false;
-    }
-
-    if (currentState == "Damage" || currentState == "DeathPending" || currentState == "Death")
-    {
-        return false;
-    }
-
-    DirectX::XMFLOAT3 direction = MathHelper::Subtract(GetPosition(), attackerPosition);
-    direction.y = 0.0f;
-    if (MathHelper::Length(direction) > 0.0001f)
-    {
-        direction = MathHelper::Normalize(direction);
-    }
-    else
-    {
-        direction = GetForward();
-        direction.y = 0.0f;
-    }
-
-    const int hpBeforeDamage = hp;
-    const int appliedDamage = (std::max)(0, damage);
-    hpRecoveryUiActive = false;
-    hp = (std::max)(minimumHp, (std::max)(0, hp - appliedDamage));
-    if (hp < hpBeforeDamage)
-    {
-        delayedHp = static_cast<float>(hpBeforeDamage);
-        delayedHpDelayTimer = delayedHpDelayDuration;
-        StartDamageFlash();
-    }
-    if (hp <= 0)
-        RefreshOperationGuideUIVisibility();
-    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage_voice.wav", 0.4f);
-    CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav", 0.5f);
-    // コントローラー振動
-    InputSystem::SetVibration(0.8f, 0.15f);
-    SetRushInputAcceptance(false, "Damage");
-    ClearActionRequest("damage_applied");
-    Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
-
-
-    if (hp > 0)
-    {
-        DirectX::XMFLOAT3 toAttacker =
-        {
-            attackerPosition.x - GetPosition().x,
-            0.0f,
-            attackerPosition.z - GetPosition().z
-        };
-        const float attackerLength = std::sqrt(
-            toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
-        if (attackerLength <= 0.0001f)
-        {
-            hitReactionDirection = HitReactionDirection::Front;
-        }
-        else
-        {
-            toAttacker.x /= attackerLength;
-            toAttacker.z /= attackerLength;
-
-            DirectX::XMFLOAT3 forward = GetForward();
-            forward.y = 0.0f;
-            const float forwardLength = std::sqrt(
-                forward.x * forward.x + forward.z * forward.z);
-            DirectX::XMFLOAT3 right = GetRight();
-            right.y = 0.0f;
-            const float rightLength = std::sqrt(
-                right.x * right.x + right.z * right.z);
-
-            if (forwardLength <= 0.0001f || rightLength <= 0.0001f)
-            {
-                hitReactionDirection = HitReactionDirection::Front;
-            }
-            else
-            {
-                forward.x /= forwardLength;
-                forward.z /= forwardLength;
-                right.x /= rightLength;
-                right.z /= rightLength;
-
-                const float forwardDot = toAttacker.x * forward.x + toAttacker.z * forward.z;
-                const float rightDot = toAttacker.x * right.x + toAttacker.z * right.z;
-                if (std::abs(forwardDot) >= std::abs(rightDot))
-                    hitReactionDirection = forwardDot >= 0.0f
-                    ? HitReactionDirection::Front : HitReactionDirection::Back;
-                else
-                    hitReactionDirection = rightDot >= 0.0f
-                    ? HitReactionDirection::Left : HitReactionDirection::Right;
-            }
-        }
-    }
-    const char* targetState = hp > 0 ? "Damage" : "DeathPending";
-    stateMachine_->ChangeState(targetState);
-    return true;
-}
-
-void Player::StartDamageFlash()
-{
-    damageFlashTimer = (std::max)(0.0f, damageFlashDuration);
-    ApplyDamageFlash(damageFlashTimer > 0.0f ? 1.0f : 0.0f);
-}
-
-void Player::UpdateDamageFlash()
-{
-    if (damageFlashTimer > 0.0f)
-    {
-        damageFlashTimer = (std::max)(
-            0.0f, damageFlashTimer - Time::UnscaledDeltaTime());
-    }
-
-    const float damageFlashAmount = damageFlashDuration > FLT_EPSILON
-        ? std::clamp(damageFlashTimer / damageFlashDuration, 0.0f, 1.0f)
-        : 0.0f;
-    ApplyDamageFlash((std::max)(damageFlashAmount, lowHpPulseFlashAmount));
-}
-
-void Player::UpdateLowHpEffects()
-{
-    const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
-    const bool phase2Cinematic = gameScene && gameScene->IsBossPhaseTransitionActive();
-    if (lowHpPresentationSuppressed || lowHpPresentationCinematicSuppressed || phase2Cinematic)
-    {
-        if (lowHpActive || heartbeatTimer > 0.0f || lowHpPulseTimer > 0.0f ||
-            lowHpPulseFlashAmount > 0.0f ||
-            (lowHpVignetteImageComponent && lowHpVignetteImageComponent->IsVisible()))
-        {
-            ResetLowHpEffects();
-        }
-        return;
-    }
-
-    const bool shouldBeLowHp = hp > 0 && hp <= lowHpThreshold;
-    if (!shouldBeLowHp)
-    {
-        if (lowHpActive || heartbeatTimer > 0.0f || lowHpPulseTimer > 0.0f ||
-            lowHpPulseFlashAmount > 0.0f)
-        {
-            ResetLowHpEffects();
-        }
-        return;
-    }
-
-    if (!lowHpActive)
-    {
-        lowHpActive = true;
-        heartbeatTimer = 0.0f;
-        TriggerLowHpPulse();
-    }
-
-    if (!CoreAudio::GetSystemPaused())
-    {
-        const float unscaledDeltaTime = (std::max)(0.0f, Time::UnscaledDeltaTime());
-        heartbeatTimer += unscaledDeltaTime;
-        lowHpPulseTimer = (std::max)(0.0f, lowHpPulseTimer - unscaledDeltaTime);
-
-        if (heartbeatInterval > FLT_EPSILON && heartbeatTimer >= heartbeatInterval)
-        {
-            heartbeatTimer = std::fmod(heartbeatTimer, heartbeatInterval);
-            TriggerLowHpPulse();
-        }
-    }
-
-    const float pulseLinear = lowHpPulseDuration > FLT_EPSILON
-        ? std::clamp(lowHpPulseTimer / lowHpPulseDuration, 0.0f, 1.0f)
-        : 0.0f;
-    const float pulseAmount = pulseLinear * pulseLinear * (3.0f - 2.0f * pulseLinear);
-    lowHpPulseFlashAmount = pulseAmount;
-
-    if (lowHpVignetteImageComponent)
-    {
-        const float alpha = std::lerp(
-            lowHpVignetteBaseAlpha, lowHpVignettePulseAlpha, pulseAmount);
-        lowHpVignetteImageComponent->SetColor(CoreColor{ 1.0f, 0.12f, 0.08f, alpha });
-        lowHpVignetteImageComponent->SetVisible(true);
-    }
-}
-
-void Player::StopLowHpPresentation()
-{
-    lowHpPresentationSuppressed = true;
-    ResetLowHpEffects();
-}
-
-void Player::SetLowHpPresentationCinematicSuppressed(const bool suppressed)
-{
-    lowHpPresentationCinematicSuppressed = suppressed;
-    if (suppressed)
-        ResetLowHpEffects();
-}
-
-void Player::TriggerLowHpPulse()
-{
-    lowHpPulseTimer = (std::max)(0.0f, lowHpPulseDuration);
-    lowHpPulseFlashAmount = lowHpPulseTimer > 0.0f ? 1.0f : 0.0f;
-
-    if (!heartbeatSEPath.empty() && std::filesystem::exists(heartbeatSEPath))
-    {
-        CoreAudio::PlayOneShot(heartbeatSEPath, 0.3f);
-    }
-}
-
-void Player::ResetLowHpEffects()
-{
-    lowHpActive = false;
-    heartbeatTimer = 0.0f;
-    lowHpPulseTimer = 0.0f;
-    lowHpPulseFlashAmount = 0.0f;
-
-    if (lowHpVignetteImageComponent)
-    {
-        lowHpVignetteImageComponent->SetColor(CoreColor{ 1.0f, 0.12f, 0.08f, 0.0f });
-        lowHpVignetteImageComponent->SetVisible(false);
-    }
-}
-
-void Player::ApplyDamageFlash(float flashAmount) const
-{
-    const auto applyToMesh = [this, flashAmount](
-        const std::shared_ptr<SkeletalMeshComponent>& mesh)
-        {
-            if (!mesh)
-                return;
-
-            auto& constants = mesh->plusAlphaCBuffer->data;
-            constants.cpuColor.x = damageFlashColor.x;
-            constants.cpuColor.y = damageFlashColor.y;
-            constants.cpuColor.z = damageFlashColor.z;
-            constants.flashValue = flashAmount;
-            constants.effectParameters.edgeWidth = damageFlashBodyTintStrength;
-            constants.effectParameters.edgePower = damageFlashRimStrength;
-        };
-
-    applyToMesh(skeletalMeshComponent);
-}
-
-
-bool Player::IsBossAttackTargetAvailable() const
-{
-    if (!stateMachine_ || hp <= 0 || IsPendingKill())
-        return false;
-
-    const State* currentState = stateMachine_->GetCurrentState();
-    if (!currentState)
-        return false;
-
-    // PlayerKnockBackState owns both Hit_Large_KnockBack and Get_Up.
-    // Keep the Boss independent from Player state-name strings.
-    if (dynamic_cast<const PlayerKnockBackState*>(currentState))
-        return false;
-
-    return !dynamic_cast<const PlayerDeathPendingState*>(currentState) &&
-        !dynamic_cast<const PlayerDeathState*>(currentState);
-}
-
-bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)
-{
-    if (!stateMachine_ || hp <= 0 ||
-        std::string(stateMachine_->GetStateName()) == "DeathPending" ||
-        std::string(stateMachine_->GetStateName()) == "Death")
-    {
-        return false;
-    }
-
-    DirectX::XMFLOAT3 horizontalDirection = direction;
-    horizontalDirection.y = 0.0f;
-    if (MathHelper::Length(horizontalDirection) <= FLT_EPSILON)
-    {
-        horizontalDirection = GetForward();
-        horizontalDirection.y = 0.0f;
-    }
-    if (MathHelper::Length(horizontalDirection) <= FLT_EPSILON)
-        return false;
-
-    knockBackDirection = MathHelper::Normalize(horizontalDirection);
-    SetRushInputAcceptance(false, "KnockBack");
-    stateMachine_->ChangeState("KnockBack");
-    return true;
-}
-
-void Player::BeginKnockBackMovement()
-{
-    ClearActionRequest("knockback_enter");
-    knockBackInitialSpeed = (std::max)(0.0f, knockBackInitialSpeed);
-    knockBackDuration = (std::max)(0.01f, knockBackDuration);
-    knockBackElapsed = 0.0f;
-    knockBackActive = true;
-    knockBackForcedMoveActive = true;
-    characterMovementComponent->SetFixedSpeed(0.0f);
-    characterMovementComponent->SetInputMagnitude(0.0f);
-    characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
-    characterMovementComponent->AddForcedMove(knockBackDirection, knockBackInitialSpeed, knockBackDuration);
-    DirectX::XMFLOAT3 rotation = MathHelper::Multiply(knockBackDirection, -1.0f);
-    rotationComponent->SetDirection(rotation);
-}
-
-void Player::UpdateKnockBackMovement(float deltaTime)
-{
-    knockBackElapsed = (std::min)(
-        knockBackElapsed + (std::max)(0.0f, deltaTime), knockBackDuration);
-    if (knockBackForcedMoveActive && knockBackElapsed >= knockBackDuration)
-        StopKnockBackForcedMove();
-}
-
-void Player::StopKnockBackForcedMove()
-{
-    knockBackForcedMoveActive = false;
-    characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
-}
-
-void Player::EndKnockBackMovement()
-{
-    knockBackActive = false;
-    StopKnockBackForcedMove();
-    characterMovementComponent->ResetFixedSpeed();
-}
-void Player::ClearActionRequest(const char* reason)
-{
-    bufferCommand = {};
-}
-
-// 攻撃開始時の処理
-void Player::StartAttack()
-{
-    hitActors.clear();
-}
-
-
-float Player::GetRushDamageMultiplier() const
-{
-    if (!stateMachine_ || std::string(stateMachine_->GetStateName()) != "Rush")
-        return 1.0f;
-
-    const auto* rushState =
-        dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
-    if (!rushState)
-        return 1.0f;
-
-    const int attackNumber = rushState->GetComboIndex() + 1;
-    const int rushAttackCount = GetMaxRushAttackCount();
-    return attackNumber == rushAttackCount
-        ? (std::max)(0.0f, finalRushDamageMultiplier)
-        : (std::max)(0.0f, rushDamageMultiplier);
-}
-
-int Player::GetCurrentAttackDamage() const
-{
-    const int baseDamage = (std::max)(0, normalAttackDamage);
-    if (!stateMachine_ || std::string(stateMachine_->GetStateName()) != "Rush")
-        return baseDamage;
-
-    return static_cast<int>(std::lround(
-        static_cast<float>(baseDamage) * GetRushDamageMultiplier()));
-}
-
-bool Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
-{
-    if (!finalHitVisualPoseLatchRequested)
-        return false;
-
-    finalHitVisualPoseLatchRequested = false;
-    const auto controller = GetBodyAnimationController();
-    const uint64_t debugEventId = phase2RushFinalHitDebugEventId;
-    if (debugEventId != 0)
-    {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[Phase2RushFinalHit][Latch][Before] event=" + std::to_string(debugEventId) +
-            " animation=" + (controller ? controller->GetCurrentAnimationName() : "") +
-            " playing=" + std::string(controller && controller->IsPlayAnimation() ? "true" : "false") +
-            " alreadyLatched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false"));
-    }
-    const bool latched = controller && controller->LatchCurrentVisualPose();
-    if (finalHitAttackDrainActive)
-    {
-        finalHitAttackDrainCompleted = latched;
-        finalHitAttackDrainFailed = !latched;
-        if (!latched)
-            finalHitAttackDrainActive = false;
-    }
-    if (debugEventId != 0)
-    {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[Phase2RushFinalHit][Latch][After] event=" + std::to_string(debugEventId) +
-            " success=" + std::string(latched ? "true" : "false") +
-            " visualLatched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false") +
-            " drainActive=" + std::string(finalHitAttackDrainActive ? "true" : "false") +
-            " drainLatched=" + std::string(finalHitAttackDrainCompleted ? "true" : "false"));
-    }
-    return latched;
-}
-
-bool Player::IsFinalHitAttackDrainComplete() const
-{
-    if (finalHitAttackDrainFailed || !finalHitAttackDrainActive)
-        return true;
-    if (!finalHitAttackDrainCompleted)
-        return false;
-    if (!stateMachine_)
-        return true;
-    const std::string stateName = stateMachine_->GetStateName();
-    return stateName != "Attack" && stateName != "Rush";
-}
-
-void Player::MarkFinalHitAttackDrainInterrupted()
-{
-    finalHitAttackDrainActive = false;
-    finalHitAttackDrainCompleted = false;
-    finalHitAttackDrainFailed = true;
-    finalHitVisualPoseLatchRequested = false;
-}
-
-bool Player::CanAcceptInitialRushInput() const
-{
-    return rushInputAccepting &&
-        justDodgeSuccess &&
-        stateMachine_ &&
-        std::string(stateMachine_->GetStateName()) == "Dodge" &&
-        !rushTarget.expired();
-}
-
-bool Player::CanShowRushComboGuide() const
-{
-    return stateMachine_ &&
-        std::string(stateMachine_->GetStateName()) == "Rush" &&
-        !rushTarget.expired();
-}
-
-bool Player::CanShowInitialRushGuide() const
-{
-    if (CanAcceptInitialRushInput())
-        return true;
-
-    return stateMachine_ &&
-        std::string(stateMachine_->GetStateName()) == "Dodge" &&
-        justDodgeSuccess &&
-        rushRequestedDebug &&
-        !rushTarget.expired();
-}
-
-bool Player::CanShowRushPrompt() const
-{
-    return CanShowInitialRushGuide() || CanShowRushComboGuide();
-}
-
-bool Player::IsRushOpportunityActive() const
-{
-    if (!stateMachine_ || rushTarget.expired())
-        return false;
-
-    const std::string stateName = stateMachine_->GetStateName();
-    return (stateName == "Dodge" && justDodgeSuccess) || stateName == "Rush";
-}
-
-void Player::LogInitialRushInputTrace(const char* event, const char* detail)
+void Player::UpdateWeaponVisualPresentation(const float deltaTime)
 {
     const auto controller = GetBodyAnimationController();
-    const float animationTime = controller ? controller->GetCurrentAnimationTime() : -1.0f;
-    const float effectivePlaybackRate = controller ? controller->GetLastEffectivePlaybackRateDebug() : 0.0f;
-    float transitionStartTime = -1.0f;
-    if (controller)
-    {
-        if (const auto asset = controller->GetAnimationAsset(controller->GetCurrentAnimationName()))
-        {
-            for (const auto& state : asset->notifyTrack.states)
-            {
-                if (state.type == AnimationNotifyState::Type::TransitionWindow)
-                {
-                    transitionStartTime = state.startTime;
-                    break;
-                }
-            }
-        }
-    }
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[InitialRushInput] {} frame={} gameTime={:.6f} unscaledGameTime={:.6f} elapsedGame={:.6f} elapsedUnscaled={:.6f} animationTime={:.6f} effectivePlaybackRate={:.6f} actorTimeScale={:.6f} effectiveAnimationRate={:.6f} rushInputAccepting={} rushRequested={} justDodgeSuccess={} transitionWindowStart={:.6f} detail={}",
-        event ? event : "Unknown",
-        initialRushInputTraceFrame,
-        initialRushInputTraceGameTime,
-        initialRushInputTraceUnscaledTime,
-        initialRushInputTraceGameTime - initialRushInputTraceStartGameTime,
-        initialRushInputTraceUnscaledTime - initialRushInputTraceStartUnscaledTime,
-        animationTime,
-        effectivePlaybackRate,
-        GetTimeScale(),
-        effectivePlaybackRate * GetTimeScale(),
-        rushInputAccepting,
-        rushRequestedDebug,
-        justDodgeSuccess,
-        transitionStartTime,
-        detail ? detail : "None"));
-}
+    bool evaluatedShowTrail = false;
+    float evaluatedEmissivePower = 0.0f;
+    bool hasShowTrailState = false;
+    bool hasShowEmissiveState = false;
+    const bool hasWeaponVisualState = controller && controller->EvaluateWeaponVisualState(
+        evaluatedShowTrail, evaluatedEmissivePower, hasShowTrailState, hasShowEmissiveState);
+    (void)hasShowTrailState;
+    (void)hasShowEmissiveState;
 
-void Player::SetRushInputAcceptance(bool accepting, const char* endReason)
-{
-    if (accepting)
-    {
-        rushInputEndReasonDebug = "None";
-    }
-    else if (endReason)
-    {
-        rushInputEndReasonDebug = endReason;
-    }
+    showTrail = hasWeaponVisualState && evaluatedShowTrail;
+    swordEmissivePower = hasWeaponVisualState ? evaluatedEmissivePower : 0.0f;
 
-    if (rushInputAccepting == accepting)
+    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
+        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
+
+
+    if (!hasWeaponVisualState)
     {
+        trail.Clear();
         return;
     }
-
-    rushInputAccepting = accepting;
-    if (initialRushInputTraceActive)
-        LogInitialRushInputTrace(accepting ? "InputAcceptanceOn" : "InputAcceptanceOff", endReason);
-    if (!accepting && endReason &&
-        (std::strcmp(endReason, "TransitionWithoutRush") == 0 ||
-            std::strcmp(endReason, "DodgeFinished") == 0 ||
-            std::strcmp(endReason, "RushTargetExpired") == 0 ||
-            std::strcmp(endReason, "Damage") == 0 ||
-            std::strcmp(endReason, "KnockBack") == 0 ||
-            std::strcmp(endReason, "Death") == 0))
-    {
-        initialRushInputTraceActive = false;
-    }
-    if (accepting)
-    {
-        rushPromptAlpha = 0.0f;
-    }
-    else
-    {
-        // 初回Rush入力済みなら、Dodge TransitionWindow待ちの間も
-        // 受付時の表示とAlphaをそのまま維持する。
-        if (CanShowInitialRushGuide())
-            return;
-
-        rushPromptAlpha = 0.0f;
-        rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden;
-        rushPromptAnimationTimer = 0.0f;
-        rushPromptWasVisible = false;
-        if (rushGuideImageComponent) rushGuideImageComponent->SetVisible(false);
-        if (rushButtonImageComponent)
-        {
-            rushButtonImageComponent->SetVisible(false);
-            rushButtonImageComponent->SetScale({
-                rushButtonBaseScale.x * 0.8f,
-                rushButtonBaseScale.y * 0.8f });
-        }
-        if (rushWordImageComponent) rushWordImageComponent->SetVisible(false);
-    }
-}
-
-void Player::SetRushInputDebugState(bool judgeSuccess, bool rushRequested)
-{
-    rushJudgeSuccessDebug = judgeSuccess;
-    rushRequestedDebug = rushRequested;
-}
-
-void Player::HideAndResetLockOnGuideUI()
-{
-    lockOnGuideOffscreenElapsed = 0.0f;
-    lockOnGuidePulseElapsed = 0.0f;
-    lockOnGuideVisible = false;
-    if (lockOnGuideArrowImageComponent)
-    {
-        lockOnGuideArrowImageComponent->SetVisible(false);
-        lockOnGuideArrowImageComponent->SetScale(lockOnGuideArrowBaseScale);
-    }
-    if (lockOnGuideButtonImageComponent)
-    {
-        lockOnGuideButtonImageComponent->SetVisible(false);
-        lockOnGuideButtonImageComponent->SetScale(lockOnGuideButtonBaseScale);
-    }
-}
-
-void Player::UpdateLockOnGuideUI()
-{
-    using namespace DirectX;
-    if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
-        gameScene && gameScene->IsBossPhaseTransitionActive())
-    {
-        HideAndResetLockOnGuideUI();
-        return;
-    }
-    if (!lockOnGuideArrowImageComponent || !lockOnGuideButtonImageComponent ||
-        !IsBossBattle() || GetHp() <= 0 || IsInWinState() ||
-        IsRushActive() || IsJustDodgePresentationActive())
-    {
-        HideAndResetLockOnGuideUI();
-        return;
-    }
-
-    auto boss = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>();
-    auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera());
-    if (!boss || boss->IsDead() || !camera ||
-        camera->GetMovementMode() == DarkCameraActor::CameraMode::LockOn)
-    {
-        HideAndResetLockOnGuideUI();
-        return;
-    }
-
-    const auto target = boss->GetCameraTargetComponent();
-    if (!target)
-    {
-        HideAndResetLockOnGuideUI();
-        return;
-    }
-    const auto projection = camera->ProjectWorldPositionForUI(
-        target->GetComponentLocation());
-    float vx = 0.0f, vy = 0.0f, vw = 0.0f, vh = 0.0f;
-    Graphics::GetViewport(vx, vy, vw, vh);
-    if (!projection.valid || vw <= 1.0f || vh <= 1.0f || projection.insideViewport)
-    {
-        HideAndResetLockOnGuideUI();
-        return;
-    }
-
-    const float dt = Time::UnscaledDeltaTime();
-    lockOnGuideOffscreenElapsed += dt;
-    if (!lockOnGuideVisible && lockOnGuideOffscreenElapsed < lockOnGuideDelay)
+    if (!swordRootComponent || !swordTipComponent)
         return;
 
-    XMFLOAT2 center{ vx + vw * 0.5f, vy + vh * 0.5f };
-    XMFLOAT2 direction{
-        projection.screenPosition.x - center.x,
-        projection.screenPosition.y - center.y };
-    if (!projection.inFront)
-    {
-        direction.x = -direction.x;
-        direction.y = -direction.y;
-    }
-    const float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
-    if (length <= FLT_EPSILON)
-        direction = { 0.0f, 1.0f };
-    else
-    {
-        direction.x /= length;
-        direction.y /= length;
-    }
+    const DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
+    const DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
 
-    const float uiScale = (std::min)(vw / 1920.0f, vh / 1080.0f);
-    const float marginX = lockOnGuideEdgeMargin * uiScale;
-    const float marginY = lockOnGuideEdgeMargin * uiScale;
-    const float left = vx + marginX;
-    const float right = vx + vw - marginX;
-    const float top = vy + marginY;
-    const float bottom = vy + vh - marginY;
-    float t = FLT_MAX;
-    if (direction.x > FLT_EPSILON) t = (std::min)(t, (right - center.x) / direction.x);
-    if (direction.x < -FLT_EPSILON) t = (std::min)(t, (left - center.x) / direction.x);
-    if (direction.y > FLT_EPSILON) t = (std::min)(t, (bottom - center.y) / direction.y);
-    if (direction.y < -FLT_EPSILON) t = (std::min)(t, (top - center.y) / direction.y);
-    if (!std::isfinite(t) || t <= 0.0f)
-    {
-        HideAndResetLockOnGuideUI();
-        return;
-    }
-
-    const XMFLOAT2 arrowScreen{ center.x + direction.x * t, center.y + direction.y * t };
-    const XMFLOAT2 arrowUi = ConvertScreenToUI(arrowScreen);
-    const XMFLOAT2 buttonUi = ConvertScreenToUI({
-        arrowScreen.x - direction.x * lockOnGuideButtonOffset * uiScale,
-        arrowScreen.y - direction.y * lockOnGuideButtonOffset * uiScale });
-
-    lockOnGuideVisible = true;
-    lockOnGuidePulseElapsed = std::fmod(
-        lockOnGuidePulseElapsed + dt, (std::max)(lockOnGuidePulsePeriod, 0.01f));
-    const float half = (std::max)(lockOnGuidePulsePeriod * 0.5f, 0.01f);
-    const float phase = lockOnGuidePulseElapsed;
-    const float pulseScale = phase < half
-        ? Easing::InOutSine(phase, half, 1.0f, lockOnGuidePulseMinScale)
-        : Easing::InOutSine(phase - half, half, lockOnGuidePulseMinScale, 1.0f);
-
-    lockOnGuideArrowImageComponent->SetWorldPosition(arrowUi);
-    lockOnGuideArrowImageComponent->SetSize(lockOnGuideArrowSize);
-    lockOnGuideArrowImageComponent->SetScale(lockOnGuideArrowBaseScale);
-    lockOnGuideArrowImageComponent->SetWorldAngleDegree(
-        XMConvertToDegrees(std::atan2(direction.y, direction.x)) +
-        lockOnGuideArrowRotationOffset);
-    lockOnGuideArrowImageComponent->SetVisible(true);
-
-    lockOnGuideButtonImageComponent->SetWorldPosition(buttonUi);
-    lockOnGuideButtonImageComponent->SetSize(lockOnGuideButtonSize);
-    lockOnGuideButtonImageComponent->SetScale({
-        lockOnGuideButtonBaseScale.x * pulseScale,
-        lockOnGuideButtonBaseScale.y * pulseScale });
-    lockOnGuideButtonImageComponent->SetVisible(true);
+    trail.UpdateTrail(deltaTime);
+    if (showTrail)
+        trail.trailPoints.push_back({ swordTipPos, swordRootPos, trailRemainTime });
 }
 
 void Player::UpdateRushPromptUI()
@@ -3751,382 +3471,363 @@ void Player::UpdateRushPromptUI()
     rushWordImageComponent->SetColor(color);
     rushWordImageComponent->SetVisible(true);
 }
-void Player::CaptureDodgeWorldDirectionSnapshot()
+
+void Player::UpdateLockOnGuideUI()
 {
-    DirectX::XMFLOAT3 direction{};
-    if (useDodgeWorldDirection)
+    using namespace DirectX;
+    if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+        gameScene && gameScene->IsBossPhaseTransitionActive())
     {
-        direction = dodgeWorldDirection;
+        HideAndResetLockOnGuideUI();
+        return;
     }
+    if (!lockOnGuideArrowImageComponent || !lockOnGuideButtonImageComponent ||
+        !IsBossBattle() || GetHp() <= 0 || IsInWinState() ||
+        IsRushActive() || IsJustDodgePresentationActive())
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+
+    auto boss = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>();
+    auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera());
+    if (!boss || boss->IsDead() || !camera ||
+        camera->GetMovementMode() == DarkCameraActor::CameraMode::LockOn)
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+
+    const auto target = boss->GetCameraTargetComponent();
+    if (!target)
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+    const auto projection = camera->ProjectWorldPositionForUI(
+        target->GetComponentLocation());
+    float vx = 0.0f, vy = 0.0f, vw = 0.0f, vh = 0.0f;
+    Graphics::GetViewport(vx, vy, vw, vh);
+    if (!projection.valid || vw <= 1.0f || vh <= 1.0f || projection.insideViewport)
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+
+    const float dt = Time::UnscaledDeltaTime();
+    lockOnGuideOffscreenElapsed += dt;
+    if (!lockOnGuideVisible && lockOnGuideOffscreenElapsed < lockOnGuideDelay)
+        return;
+
+    XMFLOAT2 center{ vx + vw * 0.5f, vy + vh * 0.5f };
+    XMFLOAT2 direction{
+        projection.screenPosition.x - center.x,
+        projection.screenPosition.y - center.y };
+    if (!projection.inFront)
+    {
+        direction.x = -direction.x;
+        direction.y = -direction.y;
+    }
+    const float length = std::sqrt(direction.x * direction.x + direction.y * direction.y);
+    if (length <= FLT_EPSILON)
+        direction = { 0.0f, 1.0f };
     else
     {
-        switch (dodgeDirection)
-        {
-        case DodgeDirection::Forward:  direction = { 0.0f, 0.0f, 1.0f }; break;
-        case DodgeDirection::Backward: direction = { 0.0f, 0.0f, -1.0f }; break;
-        case DodgeDirection::Left:     direction = { -1.0f, 0.0f, 0.0f }; break;
-        case DodgeDirection::Right:    direction = { 1.0f, 0.0f, 0.0f }; break;
-        }
-
-        const float yaw = DirectX::XMConvertToRadians(GetEulerRotation().y);
-        const float sinYaw = std::sinf(yaw);
-        const float cosYaw = std::cosf(yaw);
-        direction =
-        {
-            direction.x * cosYaw + direction.z * sinYaw,
-            0.0f,
-            -direction.x * sinYaw + direction.z * cosYaw
-        };
+        direction.x /= length;
+        direction.y /= length;
     }
 
-    direction.y = 0.0f;
-    const float length = std::sqrt(direction.x * direction.x + direction.z * direction.z);
-    dodgeWorldDirectionSnapshotValid = length > 0.0001f;
-    dodgeWorldDirectionSnapshot = dodgeWorldDirectionSnapshotValid
-        ? DirectX::XMFLOAT3{ direction.x / length, 0.0f, direction.z / length }
-    : DirectX::XMFLOAT3{};
+    const float uiScale = (std::min)(vw / 1920.0f, vh / 1080.0f);
+    const float marginX = lockOnGuideEdgeMargin * uiScale;
+    const float marginY = lockOnGuideEdgeMargin * uiScale;
+    const float left = vx + marginX;
+    const float right = vx + vw - marginX;
+    const float top = vy + marginY;
+    const float bottom = vy + vh - marginY;
+    float t = FLT_MAX;
+    if (direction.x > FLT_EPSILON) t = (std::min)(t, (right - center.x) / direction.x);
+    if (direction.x < -FLT_EPSILON) t = (std::min)(t, (left - center.x) / direction.x);
+    if (direction.y > FLT_EPSILON) t = (std::min)(t, (bottom - center.y) / direction.y);
+    if (direction.y < -FLT_EPSILON) t = (std::min)(t, (top - center.y) / direction.y);
+    if (!std::isfinite(t) || t <= 0.0f)
+    {
+        HideAndResetLockOnGuideUI();
+        return;
+    }
+
+    const XMFLOAT2 arrowScreen{ center.x + direction.x * t, center.y + direction.y * t };
+    const XMFLOAT2 arrowUi = ConvertScreenToUI(arrowScreen);
+    const XMFLOAT2 buttonUi = ConvertScreenToUI({
+        arrowScreen.x - direction.x * lockOnGuideButtonOffset * uiScale,
+        arrowScreen.y - direction.y * lockOnGuideButtonOffset * uiScale });
+
+    lockOnGuideVisible = true;
+    lockOnGuidePulseElapsed = std::fmod(
+        lockOnGuidePulseElapsed + dt, (std::max)(lockOnGuidePulsePeriod, 0.01f));
+    const float half = (std::max)(lockOnGuidePulsePeriod * 0.5f, 0.01f);
+    const float phase = lockOnGuidePulseElapsed;
+    const float pulseScale = phase < half
+        ? Easing::InOutSine(phase, half, 1.0f, lockOnGuidePulseMinScale)
+        : Easing::InOutSine(phase - half, half, lockOnGuidePulseMinScale, 1.0f);
+
+    lockOnGuideArrowImageComponent->SetWorldPosition(arrowUi);
+    lockOnGuideArrowImageComponent->SetSize(lockOnGuideArrowSize);
+    lockOnGuideArrowImageComponent->SetScale(lockOnGuideArrowBaseScale);
+    lockOnGuideArrowImageComponent->SetWorldAngleDegree(
+        XMConvertToDegrees(std::atan2(direction.y, direction.x)) +
+        lockOnGuideArrowRotationOffset);
+    lockOnGuideArrowImageComponent->SetVisible(true);
+
+    lockOnGuideButtonImageComponent->SetWorldPosition(buttonUi);
+    lockOnGuideButtonImageComponent->SetSize(lockOnGuideButtonSize);
+    lockOnGuideButtonImageComponent->SetScale({
+        lockOnGuideButtonBaseScale.x * pulseScale,
+        lockOnGuideButtonBaseScale.y * pulseScale });
+    lockOnGuideButtonImageComponent->SetVisible(true);
 }
 
-bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
+void Player::HideAndResetLockOnGuideUI()
 {
-    DirectX::XMFLOAT3 toAttacker =
+    lockOnGuideOffscreenElapsed = 0.0f;
+    lockOnGuidePulseElapsed = 0.0f;
+    lockOnGuideVisible = false;
+    if (lockOnGuideArrowImageComponent)
     {
-        attackerPosition.x - GetPosition().x,
-        0.0f,
-        attackerPosition.z - GetPosition().z
+        lockOnGuideArrowImageComponent->SetVisible(false);
+        lockOnGuideArrowImageComponent->SetScale(lockOnGuideArrowBaseScale);
+    }
+    if (lockOnGuideButtonImageComponent)
+    {
+        lockOnGuideButtonImageComponent->SetVisible(false);
+        lockOnGuideButtonImageComponent->SetScale(lockOnGuideButtonBaseScale);
+    }
+}
+
+void Player::InitializeOperationGuideUI()
+{
+    const auto uiManager = GetOwnerScene()->GetUIManager();
+    constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> texturePaths =
+    {
+        "./Data/Textures/UI/operate_L.png", "./Data/Textures/UI/operate_LT.png",
+        "./Data/Textures/UI/operate_Y.png", "./Data/Textures/UI/operate_X.png",
+        "./Data/Textures/UI/operate_R.png",
     };
-    const float attackerLength = std::sqrt(
-        toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
-    directionToAttackerDebug = attackerLength > 0.0001f
-        ? DirectX::XMFLOAT3{ toAttacker.x / attackerLength, 0.0f, toAttacker.z / attackerLength }
-    : DirectX::XMFLOAT3{};
-
-    if (!dodgeWorldDirectionSnapshotValid || attackerLength <= 0.0001f)
+    constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> names =
     {
-        justDodgeDirectionDotDebug = 0.0f;
-        justDodgeDirectionResultDebug = false;
-        return false;
+        "OperationGuideL", "OperationGuideLT", "OperationGuideY", "OperationGuideX", "OperationGuideR",
+    };
+    constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> positions =
+    {
+        DirectX::XMFLOAT2{ 844.7f, 1015.0f }, DirectX::XMFLOAT2{ 926.6f, 1013.0f },
+        DirectX::XMFLOAT2{ 999.5f, 1011.0f }, DirectX::XMFLOAT2{ 1068.6f, 1010.0f },
+        DirectX::XMFLOAT2{ 1143.2f, 1013.0f },
+    };
+    constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> sizes =
+    {
+        DirectX::XMFLOAT2{ 178.0f, 258.0f }, DirectX::XMFLOAT2{ 345.0f, 270.0f },
+        DirectX::XMFLOAT2{ 184.0f, 279.0f }, DirectX::XMFLOAT2{ 182.0f, 271.0f },
+        DirectX::XMFLOAT2{ 233.0f, 249.0f },
+    };
+    for (size_t index = 0; index < operationGuideItems.size(); ++index)
+    {
+        auto& item = operationGuideItems[index];
+        item.position = positions[index];
+        item.baseScale = { 0.35f, 0.35f };
+        item.visible = index == static_cast<size_t>(OperationGuideItem::L) || index == static_cast<size_t>(OperationGuideItem::R);
+        item.learned = false;
+        item.animationTimer = 0.0f;
+        item.image = std::make_shared<UIImageComponent>(texturePaths[index], names[index]);
+        item.image->SetWorldPosition(item.position);
+        item.image->SetSize(sizes[index]);
+        item.image->SetScale(item.baseScale);
+        item.image->SetPivot({ 0.5f, 0.5f });
+        item.image->SetVisible(false);
+        uiManager->Add(item.image);
     }
-
-    justDodgeDirectionDotDebug =
-        dodgeWorldDirectionSnapshot.x * directionToAttackerDebug.x +
-        dodgeWorldDirectionSnapshot.z * directionToAttackerDebug.z;
-    justDodgeDirectionResultDebug = justDodgeDirectionDotDebug <= justDodgeMaxTowardAttackerDot;
-    return justDodgeDirectionResultDebug;
+    RefreshOperationGuideUIVisibility();
 }
-// ジャスト回避成功時の処理
-void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
+
+void Player::UpdateOperationGuideUI()
 {
-    int debugFrame = -1;
-#ifdef USE_IMGUI
-    if (ImGui::GetCurrentContext())
-        debugFrame = ImGui::GetFrameCount();
-#endif
-    const auto gruxEnemy = std::dynamic_pointer_cast<GruxEnemy>(enemy);
-    const uint64_t attackSequenceId = gruxEnemy
-        ? gruxEnemy->GetCurrentAttackSequenceId()
-        : 0;
-    const auto controller = GetBodyAnimationController();
-    const std::string animationName = controller
-        ? controller->GetCurrentAnimationName()
-        : "";
-    const float animationTime = controller
-        ? controller->GetCurrentAnimationTime()
-        : -1.0f;
-    float justWindowStart = 0.0f;
-    float justWindowEnd = 0.0f;
-    if (controller)
-    {
-        const auto assetIt = controller->animationNotifyAssets.find(
-            controller->GetAnimationClip());
-        if (assetIt != controller->animationNotifyAssets.end())
+    const float deltaTime = (std::max)(0.0f, Time::UnscaledDeltaTime());
+    const float amplitude = std::clamp(operationGuidePulseAmplitude, 0.0f, 1.0f);
+    const float speed = (std::max)(0.0f, operationGuidePulseSpeed);
+    const auto stickWasUsed = [](const DirectX::XMFLOAT2& stick)
         {
-            for (const auto& state : assetIt->second.notifyTrack.states)
-            {
-                if (state.type == AnimationNotifyState::Type::JustDodgeWindow)
-                {
-                    justWindowStart = state.startTime;
-                    justWindowEnd = state.endTime;
-                    break;
-                }
-            }
+            constexpr float threshold = 0.20f;
+            return stick.x * stick.x + stick.y * stick.y >= threshold * threshold;
+        };
+    if (operationGuideGameplayHudVisible && operationGuideEventVisible)
+    {
+        if (IsOperationGuideItemVisible(OperationGuideItem::L) &&
+            stickWasUsed(InputSystem::GetLeftStick()))
+            SetOperationGuideItemLearned(OperationGuideItem::L);
+        if (IsOperationGuideItemVisible(OperationGuideItem::R) &&
+            stickWasUsed(InputSystem::GetRightStick()))
+            SetOperationGuideItemLearned(OperationGuideItem::R);
+    }
+    for (auto& item : operationGuideItems)
+    {
+        if (!item.image) continue;
+        item.image->SetWorldPosition(item.position);
+        float pulseScale = 1.0f;
+        if (item.visible && !item.learned)
+        {
+            item.animationTimer += deltaTime;
+            pulseScale += amplitude * 0.5f * (std::sin(item.animationTimer * speed) + 1.0f);
+        }
+        else
+        {
+            item.animationTimer = 0.0f;
+        }
+        item.image->SetScale({ item.baseScale.x * pulseScale, item.baseScale.y * pulseScale });
+    }
+    RefreshOperationGuideUIVisibility();
+}
+
+// Hpバーの更新
+void Player::UpdateHpBarUI()
+{
+    // Player HP UI uses unscaled time so HitStop / Slow do not pause its animations.
+    const float currentHp = static_cast<float>((std::max)(hp, 0));
+    const float uiDeltaTime = Time::UnscaledDeltaTime();
+    float displayedHp = currentHp;
+    if (hpRecoveryUiActive)
+    {
+        hpRecoveryUiElapsed += uiDeltaTime;
+        const float t = hpRecoveryUiDuration > FLT_EPSILON
+            ? std::clamp(hpRecoveryUiElapsed / hpRecoveryUiDuration, 0.0f, 1.0f)
+            : 1.0f;
+        displayedHp = std::lerp(hpRecoveryUiStart, currentHp, t);
+        delayedHp = displayedHp;
+        delayedHpDelayTimer = 0.0f;
+        if (t >= 1.0f)
+        {
+            hpRecoveryUiActive = false;
+            displayedHp = currentHp;
+            delayedHp = currentHp;
         }
     }
-    if (!justDodgeRecordedThisDodge)
+    else if (delayedHp > currentHp)
     {
-        justDodgeRecordedThisDodge = true;
+        if (delayedHpDelayTimer > 0.0f)
+        {
+            delayedHpDelayTimer = (std::max)(0.0f, delayedHpDelayTimer - uiDeltaTime);
+        }
+        else
+        {
+            delayedHp = (std::max)(currentHp, delayedHp - delayedHpFollowSpeed * uiDeltaTime);
+        }
     }
-    lastJustDodgeValid = true;
-    lastJustDodgeTime = dodgeDebugElapsed;
-    lastJustAnimationTime = animationTime;
-    lastJustWindowStart = justWindowStart;
-    lastJustWindowEnd = justWindowEnd;
-    lastJustWindowRatio = justWindowEnd > justWindowStart
-        ? std::clamp((animationTime - justWindowStart) /
-            (justWindowEnd - justWindowStart), 0.0f, 1.0f)
-        : 0.0f;
-    lastJustDodgeAttack = gruxEnemy
-        ? gruxEnemy->GetCurrentAttackNameForDebug()
-        : "Unknown";
-    lastJustBossHitBoxElapsed = gruxEnemy
-        ? gruxEnemy->GetActiveHitBoxElapsedForDebug()
-        : -1.0f;
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[JustDodgeSuccess] frame={} this={} enemy={} attackSequenceId={} justDodgeSuccess={} state={} animation={} animationTime={}",
-        debugFrame,
-        static_cast<const void*>(this),
-        static_cast<const void*>(enemy.get()),
-        attackSequenceId,
-        justDodgeSuccess,
-        stateMachine_ ? stateMachine_->GetStateName() : "",
-        animationName,
-        animationTime));
-
-    // SEの再生
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[JustDodgeSE] frame={} sound=just_dodge3.wav", debugFrame));
-    CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge3.wav", 1.5f);
-    InputSystem::SetVibration(0.30f, 0.06f);
-
-    // ジャスト回避成功フラグをオンにする
-    justDodgeSuccess = true;
-    if (auto* scene = dynamic_cast<SceneBase*>(GetOwnerScene()))
-        scene->StartJustDodgeRadialBlur();
-
-    rushInputEndNotifyReceivedDebug = false;
-    rushInputEndReasonDebug = "None";
-    CapturePlayerPoseGhost();
-    // スローモーションにする
-    // rush時のtargetを保存する
-    rushTarget = enemy;
-
-    const float scale = std::clamp(justDodgeTimeScale, 0.10f, 1.0f);
-    enemy->SetTimeScale(scale);
-    SetTimeScale(scale);
-    playerSlowPhase = JustDodgeSlowPhase::Hold;
-    bossSlowPhase = JustDodgeSlowPhase::Hold;
-    playerSlowHoldTimer = std::max<float>(0.0f, justDodgeSlowHoldDuration);
-    bossSlowHoldTimer = playerSlowHoldTimer;
-    playerSlowReturnElapsed = 0.0f;
-    bossSlowReturnElapsed = 0.0f;
-    playerSlowReturnStartScale = scale;
-    bossSlowReturnStartScale = scale;
-    if (playerSlowHoldTimer <= FLT_EPSILON)
+    else if (delayedHp < currentHp)
     {
-        BeginPlayerSlowReturn();
-        BeginBossSlowReturn();
+        delayedHp = currentHp;
+        delayedHpDelayTimer = 0.0f;
     }
 
-    initialRushInputTraceActive = true;
-    initialRushInputTraceStartGameTime = initialRushInputTraceGameTime;
-    initialRushInputTraceStartUnscaledTime = initialRushInputTraceUnscaledTime;
-    LogInitialRushInputTrace("JustDodgeSuccess");
-
-    // 画面の色を変える
-
-    // UIを表示する
-    //rushButtonImageComponent->SetVisible(true);
+    if (hpCurrentFillUiComponent && hpDelayedFillUiComponent)
+    {
+        const float maximumHp = static_cast<float>(maxHp);
+        hpCurrentFillUiComponent->SetValue(displayedHp, maximumHp);
+        hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
+    }
 }
 
-void Player::CapturePlayerPoseGhost()
+void Player::RefreshOperationGuideUIVisibility() const
 {
-    ResetPlayerPoseGhost();
-    playerPoseGhostSpawnSequenceActive = true;
-    playerPoseGhostSpawnTimer = 0.0f;
-    nextPlayerPoseGhostIndex = 0;
+    for (auto& item : operationGuideItems)
+    {
+        if (item.image)
+        {
+            item.image->SetVisible(operationGuideGameplayHudVisible && operationGuideEventVisible && hp > 0 && item.visible);
+        }
+    }
+}
 
-    if (CapturePlayerPoseGhost(nextPlayerPoseGhostIndex))
-        ++nextPlayerPoseGhostIndex;
+float Player::GetRushDamageMultiplier() const
+{
+    if (!stateMachine_ || std::string(stateMachine_->GetStateName()) != "Rush")
+        return 1.0f;
+
+    const auto* rushState =
+        dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
+    if (!rushState)
+        return 1.0f;
+
+    const int attackNumber = rushState->GetComboIndex() + 1;
+    const int rushAttackCount = GetMaxRushAttackCount();
+    return attackNumber == rushAttackCount
+        ? (std::max)(0.0f, finalRushDamageMultiplier)
+        : (std::max)(0.0f, rushDamageMultiplier);
+}
+
+int Player::GetCurrentAttackDamage() const
+{
+    const int baseDamage = (std::max)(0, normalAttackDamage);
+    if (!stateMachine_ || std::string(stateMachine_->GetStateName()) != "Rush")
+        return baseDamage;
+
+    return static_cast<int>(std::lround(
+        static_cast<float>(baseDamage) * GetRushDamageMultiplier()));
+}
+// 回避の方向を決定する処理
+void Player::DecideLockOnDodgeDirection()
+{
+    auto camera = dynamic_cast<DarkCameraActor*>(GetOwnerScene()->GetActiveCamera());
+    if (!camera)
+        return;
+
+    auto intent = inputComponent->GetIntent();
+
+    float x = intent.leftMove.x;
+    float z = intent.leftMove.z;
+
+    dodgeWorldDirection = {};
+    useDodgeWorldDirection = false;
+
+    if (camera->GetMovementMode() == DarkCameraActor::CameraMode::TPS)
+    {
+        const float inputLength = sqrtf(x * x + z * z);
+        if (inputLength <= 0.1f)
+        {
+            // Explicitly preserve the previous no-input behavior.
+            dodgeDirection = DodgeDirection::Backward;
+            return;
+        }
+
+        x /= inputLength;
+        z /= inputLength;
+        const DirectX::XMFLOAT3 cameraForward = camera->CameraForwardXZ();
+        const DirectX::XMFLOAT3 cameraRight = camera->CameraRightXZ();
+        dodgeWorldDirection =
+        {
+            cameraForward.x * z + cameraRight.x * x,
+            0.0f,
+            cameraForward.z * z + cameraRight.z * x
+        };
+        dodgeWorldDirection = MathHelper::Normalize(dodgeWorldDirection);
+        dodgeDirection = DodgeDirection::Forward;
+        useDodgeWorldDirection = true;
+        return;
+    }
+
+    // 入力なしなら後ろ回避
+    if (fabs(x) < 0.1f && fabs(z) < 0.1f)
+    {
+        dodgeDirection = DodgeDirection::Backward;
+        return;
+    }
+
+    // 横入力の方が強い
+    if (fabs(x) > fabs(z))
+    {
+        dodgeDirection = (x > 0.0f) ? DodgeDirection::Right : DodgeDirection::Left;
+    }
     else
-        playerPoseGhostSpawnSequenceActive = false;
-}
-
-bool Player::CapturePlayerPoseGhost(const size_t ghostIndex)
-{
-    if (ghostIndex >= playerPoseGhosts.size() || !skeletalMeshComponent)
-        return false;
-
-    auto& ghost = playerPoseGhosts[ghostIndex];
-    if (!ghost.renderConstantsComponent)
-        return false;
-
-    const auto& currentNodes = skeletalMeshComponent->GetNodes();
-    if (currentNodes.empty())
-        return false;
-
-    ghost.nodes = currentNodes;
-    ghost.world = skeletalMeshComponent->GetComponentWorldTransform().ToWorldTransform();
-    ghost.elapsedTime = 0.0f;
-    ghost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f);
-    ghost.isVisible = ghost.alpha > 0.0f &&
-        playerPoseGhostLifetime > FLT_EPSILON;
-
-    auto& constants = ghost.renderConstantsComponent->plusAlphaCBuffer->data;
-    constants.emissionPower = playerPoseGhostEmissive;
-    constants.cpuColor = {
-        playerPoseGhostColor.x,
-        playerPoseGhostColor.y,
-        playerPoseGhostColor.z,
-        ghost.alpha };
-    constants.effectParameters.edgeColor = {
-        playerPoseGhostEdgeColor.x,
-        playerPoseGhostEdgeColor.y,
-        playerPoseGhostEdgeColor.z,
-        1.0f };
-    constants.effectParameters.innerColor = {
-        playerPoseGhostInnerColor.x,
-        playerPoseGhostInnerColor.y,
-        playerPoseGhostInnerColor.z,
-        1.0f };
-    constants.effectParameters.edgeWidth = playerPoseGhostEdgeWidth;
-    return true;
-}
-
-void Player::UpdatePlayerPoseGhost()
-{
-    const float unscaledDeltaTime = Time::UnscaledDeltaTime();
-    const float lifetime = (std::max)(playerPoseGhostLifetime, FLT_EPSILON);
-    for (auto& ghost : playerPoseGhosts)
     {
-        if (!ghost.isVisible)
-            continue;
-
-        ghost.elapsedTime += unscaledDeltaTime;
-        const float normalizedAge = std::clamp(
-            ghost.elapsedTime / lifetime, 0.0f, 1.0f);
-        ghost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f) *
-            (1.0f - normalizedAge);
-        if (ghost.renderConstantsComponent)
-        {
-            auto& constants = ghost.renderConstantsComponent->plusAlphaCBuffer->data;
-            constants.emissionPower = playerPoseGhostEmissive;
-            constants.cpuColor = {
-                playerPoseGhostColor.x,
-                playerPoseGhostColor.y,
-                playerPoseGhostColor.z,
-                ghost.alpha };
-            constants.effectParameters.edgeColor = {
-                playerPoseGhostEdgeColor.x,
-                playerPoseGhostEdgeColor.y,
-                playerPoseGhostEdgeColor.z,
-                1.0f };
-            constants.effectParameters.innerColor = {
-                playerPoseGhostInnerColor.x,
-                playerPoseGhostInnerColor.y,
-                playerPoseGhostInnerColor.z,
-                1.0f };
-            constants.effectParameters.edgeWidth = playerPoseGhostEdgeWidth;
-        }
-
-        if (normalizedAge >= 1.0f)
-        {
-            ghost.nodes.clear();
-            ghost.alpha = 0.0f;
-            ghost.elapsedTime = 0.0f;
-            ghost.isVisible = false;
-        }
-    }
-
-    if (!playerPoseGhostSpawnSequenceActive)
-        return;
-
-    const float spawnInterval = (std::max)(playerGhostSpawnInterval, 0.0f);
-    playerPoseGhostSpawnTimer += unscaledDeltaTime;
-    while (nextPlayerPoseGhostIndex < playerPoseGhosts.size() &&
-        (spawnInterval <= FLT_EPSILON || playerPoseGhostSpawnTimer >= spawnInterval))
-    {
-        if (spawnInterval > FLT_EPSILON)
-            playerPoseGhostSpawnTimer -= spawnInterval;
-        CapturePlayerPoseGhost(nextPlayerPoseGhostIndex);
-        ++nextPlayerPoseGhostIndex;
-    }
-
-    if (nextPlayerPoseGhostIndex >= playerPoseGhosts.size())
-    {
-        playerPoseGhostSpawnSequenceActive = false;
-        playerPoseGhostSpawnTimer = 0.0f;
+        dodgeDirection = (z > 0.0f) ? DodgeDirection::Forward : DodgeDirection::Backward;
     }
 }
-
-void Player::ResetPlayerPoseGhost()
-{
-    for (auto& ghost : playerPoseGhosts)
-    {
-        ghost.nodes.clear();
-        ghost.alpha = 0.0f;
-        ghost.elapsedTime = 0.0f;
-        ghost.isVisible = false;
-    }
-    playerPoseGhostSpawnTimer = 0.0f;
-    nextPlayerPoseGhostIndex = 0;
-    playerPoseGhostSpawnSequenceActive = false;
-}
-
-void Player::BeginPlayerSlowReturn()
-{
-    if (playerSlowPhase == JustDodgeSlowPhase::Inactive || playerSlowPhase == JustDodgeSlowPhase::Return)
-    {
-        return;
-    }
-
-    playerSlowPhase = JustDodgeSlowPhase::Return;
-    playerSlowReturnElapsed = 0.0f;
-    playerSlowReturnStartScale = GetTimeScale();
-    if (justDodgeSlowReturnDuration <= FLT_EPSILON)
-    {
-        ForceResetPlayerSlow();
-    }
-}
-
-void Player::BeginBossSlowReturn(bool afterRush)
-{
-    if (bossSlowPhase == JustDodgeSlowPhase::Inactive ||
-        bossSlowPhase == JustDodgeSlowPhase::Return)
-    {
-        return;
-    }
-    if (auto target = rushTarget.lock())
-    {
-        bossSlowPhase = JustDodgeSlowPhase::Return;
-        bossSlowReturnElapsed = 0.0f;
-        bossSlowReturnStartScale = target->GetTimeScale();
-        activeBossSlowReturnDuration = std::max<float>(0.0f,
-            afterRush ? rushBossReturnDuration : justDodgeSlowReturnDuration);
-        if (activeBossSlowReturnDuration <= FLT_EPSILON) ForceResetBossSlow();
-    }
-    else bossSlowPhase = JustDodgeSlowPhase::Inactive;
-}
-
-void Player::HoldBossSlowForRush()
-{
-    if (auto target = rushTarget.lock())
-    {
-        const float scale = std::clamp(rushBossSlowScale, 0.10f, 1.0f);
-        target->SetTimeScale(scale);
-        bossSlowPhase = JustDodgeSlowPhase::RushHold;
-    }
-    else bossSlowPhase = JustDodgeSlowPhase::Inactive;
-}
-
-void Player::ForceResetPlayerSlow()
-{
-    ResetTimeScale();
-    playerSlowPhase = JustDodgeSlowPhase::Inactive;
-    playerSlowHoldTimer = 0.0f;
-    playerSlowReturnElapsed = 0.0f;
-    playerSlowReturnStartScale = 1.0f;
-}
-
-void Player::ForceResetBossSlow()
-{
-    if (auto target = rushTarget.lock()) target->ResetTimeScale();
-    bossSlowPhase = JustDodgeSlowPhase::Inactive;
-    bossSlowHoldTimer = 0.0f;
-    bossSlowReturnElapsed = 0.0f;
-    bossSlowReturnStartScale = 1.0f;
-    activeBossSlowReturnDuration = justDodgeSlowReturnDuration;
-}
-
 
 // インタラクト対象検索
 IInteractable* Player::FindInteractable() const
@@ -4197,4 +3898,305 @@ IInteractable* Player::FindInteractable() const
 
     return best;
 
+}
+void Player::UpdateLowHpEffects()
+{
+    const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+    const bool phase2Cinematic = gameScene && gameScene->IsBossPhaseTransitionActive();
+    if (lowHpPresentationSuppressed || lowHpPresentationCinematicSuppressed || phase2Cinematic)
+    {
+        if (lowHpActive || heartbeatTimer > 0.0f || lowHpPulseTimer > 0.0f || lowHpPulseFlashAmount > 0.0f || (lowHpVignetteImageComponent && lowHpVignetteImageComponent->IsVisible()))
+        {
+            ResetLowHpEffects();
+        }
+        return;
+    }
+
+    const bool shouldBeLowHp = hp > 0 && hp <= lowHpThreshold;
+    if (!shouldBeLowHp)
+    {
+        if (lowHpActive || heartbeatTimer > 0.0f || lowHpPulseTimer > 0.0f || lowHpPulseFlashAmount > 0.0f)
+        {
+            ResetLowHpEffects();
+        }
+        return;
+    }
+
+    if (!lowHpActive)
+    {
+        lowHpActive = true;
+        heartbeatTimer = 0.0f;
+        TriggerLowHpPulse();
+    }
+
+    if (!CoreAudio::GetSystemPaused())
+    {
+        const float unscaledDeltaTime = (std::max)(0.0f, Time::UnscaledDeltaTime());
+        heartbeatTimer += unscaledDeltaTime;
+        lowHpPulseTimer = (std::max)(0.0f, lowHpPulseTimer - unscaledDeltaTime);
+
+        if (heartbeatInterval > FLT_EPSILON && heartbeatTimer >= heartbeatInterval)
+        {
+            heartbeatTimer = std::fmod(heartbeatTimer, heartbeatInterval);
+            TriggerLowHpPulse();
+        }
+    }
+
+    const float pulseLinear = lowHpPulseDuration > FLT_EPSILON
+        ? std::clamp(lowHpPulseTimer / lowHpPulseDuration, 0.0f, 1.0f)
+        : 0.0f;
+    const float pulseAmount = pulseLinear * pulseLinear * (3.0f - 2.0f * pulseLinear);
+    lowHpPulseFlashAmount = pulseAmount;
+
+    if (lowHpVignetteImageComponent)
+    {
+        const float alpha = std::lerp(
+            lowHpVignetteBaseAlpha, lowHpVignettePulseAlpha, pulseAmount);
+        lowHpVignetteImageComponent->SetColor(CoreColor{ 1.0f, 0.12f, 0.08f, alpha });
+        lowHpVignetteImageComponent->SetVisible(true);
+    }
+}
+
+void Player::TriggerLowHpPulse()
+{
+    lowHpPulseTimer = (std::max)(0.0f, lowHpPulseDuration);
+    lowHpPulseFlashAmount = lowHpPulseTimer > 0.0f ? 1.0f : 0.0f;
+
+    if (!heartbeatSEPath.empty() && std::filesystem::exists(heartbeatSEPath))
+    {
+        CoreAudio::PlayOneShot(heartbeatSEPath, 0.3f);
+    }
+}
+
+void Player::ResetLowHpEffects()
+{
+    lowHpActive = false;
+    heartbeatTimer = 0.0f;
+    lowHpPulseTimer = 0.0f;
+    lowHpPulseFlashAmount = 0.0f;
+
+    if (lowHpVignetteImageComponent)
+    {
+        lowHpVignetteImageComponent->SetColor(CoreColor{ 1.0f, 0.12f, 0.08f, 0.0f });
+        lowHpVignetteImageComponent->SetVisible(false);
+    }
+}
+
+void Player::StartDamageFlash()
+{
+    damageFlashTimer = (std::max)(0.0f, damageFlashDuration);
+    ApplyDamageFlash(damageFlashTimer > 0.0f ? 1.0f : 0.0f);
+}
+
+void Player::ApplyDamageFlash(float flashAmount) const
+{
+    const auto applyToMesh = [this, flashAmount](
+        const std::shared_ptr<SkeletalMeshComponent>& mesh)
+        {
+            if (!mesh)
+                return;
+
+            auto& constants = mesh->plusAlphaCBuffer->data;
+            constants.cpuColor.x = damageFlashColor.x;
+            constants.cpuColor.y = damageFlashColor.y;
+            constants.cpuColor.z = damageFlashColor.z;
+            constants.flashValue = flashAmount;
+            constants.effectParameters.edgeWidth = damageFlashBodyTintStrength;
+            constants.effectParameters.edgePower = damageFlashRimStrength;
+        };
+
+    applyToMesh(skeletalMeshComponent);
+}
+
+void Player::UpdateDamageFlash()
+{
+    if (damageFlashTimer > 0.0f)
+    {
+        damageFlashTimer = (std::max)(
+            0.0f, damageFlashTimer - Time::UnscaledDeltaTime());
+    }
+
+    const float damageFlashAmount = damageFlashDuration > FLT_EPSILON
+        ? std::clamp(damageFlashTimer / damageFlashDuration, 0.0f, 1.0f)
+        : 0.0f;
+    ApplyDamageFlash((std::max)(damageFlashAmount, lowHpPulseFlashAmount));
+}
+
+void Player::UpdatePlayerPoseGhost()
+{
+    const float unscaledDeltaTime = Time::UnscaledDeltaTime();
+    const float lifetime = (std::max)(playerPoseGhostLifetime, FLT_EPSILON);
+    for (auto& ghost : playerPoseGhosts)
+    {
+        if (!ghost.isVisible)
+            continue;
+
+        ghost.elapsedTime += unscaledDeltaTime;
+        const float normalizedAge = std::clamp(
+            ghost.elapsedTime / lifetime, 0.0f, 1.0f);
+        ghost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f) *
+            (1.0f - normalizedAge);
+        if (ghost.renderConstantsComponent)
+        {
+            auto& constants = ghost.renderConstantsComponent->plusAlphaCBuffer->data;
+            constants.emissionPower = playerPoseGhostEmissive;
+            constants.cpuColor = {
+                playerPoseGhostColor.x,
+                playerPoseGhostColor.y,
+                playerPoseGhostColor.z,
+                ghost.alpha };
+            constants.effectParameters.edgeColor = {
+                playerPoseGhostEdgeColor.x,
+                playerPoseGhostEdgeColor.y,
+                playerPoseGhostEdgeColor.z,
+                1.0f };
+            constants.effectParameters.innerColor = {
+                playerPoseGhostInnerColor.x,
+                playerPoseGhostInnerColor.y,
+                playerPoseGhostInnerColor.z,
+                1.0f };
+            constants.effectParameters.edgeWidth = playerPoseGhostEdgeWidth;
+        }
+
+        if (normalizedAge >= 1.0f)
+        {
+            ghost.nodes.clear();
+            ghost.alpha = 0.0f;
+            ghost.elapsedTime = 0.0f;
+            ghost.isVisible = false;
+        }
+    }
+
+    if (!playerPoseGhostSpawnSequenceActive)
+        return;
+
+    const float spawnInterval = (std::max)(playerGhostSpawnInterval, 0.0f);
+    playerPoseGhostSpawnTimer += unscaledDeltaTime;
+    while (nextPlayerPoseGhostIndex < playerPoseGhosts.size() &&
+        (spawnInterval <= FLT_EPSILON || playerPoseGhostSpawnTimer >= spawnInterval))
+    {
+        if (spawnInterval > FLT_EPSILON)
+            playerPoseGhostSpawnTimer -= spawnInterval;
+        CapturePlayerPoseGhost(nextPlayerPoseGhostIndex);
+        ++nextPlayerPoseGhostIndex;
+    }
+
+    if (nextPlayerPoseGhostIndex >= playerPoseGhosts.size())
+    {
+        playerPoseGhostSpawnSequenceActive = false;
+        playerPoseGhostSpawnTimer = 0.0f;
+    }
+}
+
+void Player::UpdateCameraOcclusionTransparency() const
+{
+    skeletalMeshComponent->SetIsVisible(true);
+    float ditherAlpha = 1.0f;
+    currentCameraCollisionRatio = 1.0f;
+
+    if (moviePerform || deathCameraTransparencyDisabled)
+    {// 演出中は壁の近くでも透明化しない
+        ditherAlpha = 1.0f;
+    }
+    else
+    {
+        if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
+        {
+            float ratio = camera->GetCameraCollisionRatio();
+            currentCameraCollisionRatio = ratio;
+            if (ratio < transparencyStartRatio)
+            {
+                float t = std::clamp(ratio / transparencyStartRatio, 0.0f, 1.0f);
+                t = t * t * (3.0f - 2.0f * t);
+
+                ditherAlpha = std::lerp(transparencyMinAlpha, transparencyMaxAlpha, t);
+            }
+        }
+    }
+    ApplyDitherTransparencyAlpha(ditherAlpha);
+}
+
+void Player::ApplyDitherTransparencyAlpha(float alpha) const
+{
+    alpha = std::clamp(alpha, 0.0f, 1.0f);
+
+    skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
+    swordMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
+    currentDitherTransparencyAlpha = alpha;
+}
+
+bool Player::CapturePlayerPoseGhost(const size_t ghostIndex)
+{
+    if (ghostIndex >= playerPoseGhosts.size() || !skeletalMeshComponent)
+        return false;
+
+    auto& ghost = playerPoseGhosts[ghostIndex];
+    if (!ghost.renderConstantsComponent)
+        return false;
+
+    const auto& currentNodes = skeletalMeshComponent->GetNodes();
+    if (currentNodes.empty())
+        return false;
+
+    ghost.nodes = currentNodes;
+    ghost.world = skeletalMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+    ghost.elapsedTime = 0.0f;
+    ghost.alpha = std::clamp(playerPoseGhostInitialAlpha, 0.0f, 1.0f);
+    ghost.isVisible = ghost.alpha > 0.0f &&
+        playerPoseGhostLifetime > FLT_EPSILON;
+
+    auto& constants = ghost.renderConstantsComponent->plusAlphaCBuffer->data;
+    constants.emissionPower = playerPoseGhostEmissive;
+    constants.cpuColor = {
+        playerPoseGhostColor.x,
+        playerPoseGhostColor.y,
+        playerPoseGhostColor.z,
+        ghost.alpha };
+    constants.effectParameters.edgeColor = {
+        playerPoseGhostEdgeColor.x,
+        playerPoseGhostEdgeColor.y,
+        playerPoseGhostEdgeColor.z,
+        1.0f };
+    constants.effectParameters.innerColor = {
+        playerPoseGhostInnerColor.x,
+        playerPoseGhostInnerColor.y,
+        playerPoseGhostInnerColor.z,
+        1.0f };
+    constants.effectParameters.edgeWidth = playerPoseGhostEdgeWidth;
+    return true;
+}
+
+
+void Player::UpdatePrisonOpeningStandingPingPong(const float deltaTime)
+{
+    const auto controller = GetBodyAnimationController();
+    if (!controller)
+        return;
+
+    const float clipLength = controller->GetAnimationLength("Standing");
+    const float startTime = std::clamp(prisonOpeningSittingPingPongStartTime, 0.0f, clipLength);
+    const float endTime = std::clamp(prisonOpeningSittingPingPongEndTime,
+        startTime + 0.001f, clipLength);
+    const float range = endTime - startTime;
+    if (range <= FLT_EPSILON)
+        return;
+
+    // A triangular wave preserves phase when the speed changes and reflects at
+    // both endpoints even if a low-FPS frame crosses more than one boundary.
+    prisonOpeningSittingPingPongPhase += (std::max)(deltaTime, 0.0f) *
+        prisonOpeningSittingPingPongSpeed;
+    const float period = range * 2.0f;
+    const float wrappedPhase = std::fmod(prisonOpeningSittingPingPongPhase, period);
+    if (wrappedPhase <= range)
+    {
+        prisonOpeningSittingSampleTime = startTime + wrappedPhase;
+        prisonOpeningSittingPingPongForward = true;
+    }
+    else
+    {
+        prisonOpeningSittingSampleTime = endTime - (wrappedPhase - range);
+        prisonOpeningSittingPingPongForward = false;
+    }
+
+    controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
 }
