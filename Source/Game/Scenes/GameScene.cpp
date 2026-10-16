@@ -310,8 +310,6 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
 {
     if (auto* manager = GetCameraManager()) manager->ClearCameraShake();
     bossPhase = phase;
-    if (player)
-        player->SetPhase2RushFinalHitDebugEnabled(phase == BossPhase::Phase2);
     phase2TransitionElapsed = 0.0f;
     phase1BreakPending = false;
     phase2TransitionRequested = false;
@@ -659,8 +657,6 @@ void GameScene::BeginPhase2TpsReturnBlend()
             phase2TransitionStep = Phase2TransitionStep::None;
             phase2CurrentShot = "None";
             bossPhase = BossPhase::Phase2;
-            if (player)
-                player->SetPhase2RushFinalHitDebugEnabled(true);
             if (gruxEnemyActor)
                 gruxEnemyActor->CompletePhase2HpBarPresentation();
             ApplyBossPhaseHp(BossPhase::Phase2); // Single, UI-hookable Phase2 HP handoff point.
@@ -3308,10 +3304,6 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
         phase2RushFinalHitDebugEventId = ++phase2RushFinalHitDebugNextEventId;
         phase2RushFinalHitDebugActive = true;
         phase2RushFinalHitDebugGateSnapshotValid = false;
-        player->SetPhase2RushFinalHitDebugEventId(phase2RushFinalHitDebugEventId);
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[Phase2RushFinalHit][Callback] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
-            " route=FinalHitCallback state=Rush");
     }
     phase2FinalHitGateActive = true;
     phase2FinalHitReactionComplete = false;

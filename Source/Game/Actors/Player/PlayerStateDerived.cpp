@@ -85,10 +85,6 @@ void PlayerAttackState::Enter()
     // 攻撃を開始する処理
     player->StartAttack();
 
-    Logger::Log("Attack Enter :" + player->currentAttackAnimation);
-
-    Logger::Log("AnimationTime=" + std::to_string(player->GetBodyAnimationController()->GetCurrentAnimationTime()));
-    Logger::Log("AnimationTime=" + std::to_string(player->GetBodyAnimationController()->GetCurrentAnimationTime()));
 
     dodgeQueued = false;
     player->comboQueued = false;
@@ -190,8 +186,6 @@ void PlayerAttackState::Exit()
         player->currentAttackAnimation = player->startAttackAnimation;
         player->comboQueued = false;
         dodgeQueued = false;
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[NormalAttack][Exit] combo state discarded");
     }
 
     // 攻撃を終了する処理
@@ -202,9 +196,7 @@ void PlayerAttackState::Exit()
 
 void PlayerDodgeState::Enter()
 {
-    player->BeginDodgeDebug();
     player->SetRushInputAcceptance(false, "None");
-    player->SetRushInputDebugState(false, false);
 
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetFixedSpeed(0.0f);
@@ -237,8 +229,6 @@ void PlayerDodgeState::Enter()
 
 void PlayerDodgeState::Execute(float deltaTime)
 {
-    player->UpdateDodgeDebug(deltaTime);
-
     if (player->justDodgeSuccess && !judgeSuccess)
     {// ジャスト回避成功したら、
         judgeSuccess = true;
@@ -249,15 +239,12 @@ void PlayerDodgeState::Execute(float deltaTime)
         player->SetRushInputAcceptance(false, "RushTargetExpired");
         rushRequested = false;
     }
-    player->SetRushInputDebugState(judgeSuccess, rushRequested);
     if (judgeSuccess)
     {
         if (player->CanAcceptInitialRushInput() &&
             player->bufferCommand.type == Player::ActionType::Attack)
         {
             rushRequested = true;
-            player->SetRushInputDebugState(judgeSuccess, rushRequested);
-            player->LogInitialRushInputTrace("AttackInputAccepted");
             player->SetRushInputAcceptance(false);
             player->BeginPlayerSlowReturn();
             player->HoldBossSlowForRush();
@@ -318,7 +305,6 @@ void PlayerDodgeState::Exit()
 
     const bool enteringRush = rushRequested;
     player->SetRushInputAcceptance(false);
-    player->SetRushInputDebugState(false, false);
     rushRequested = false;
     judgeSuccess = false;
     player->BeginPlayerSlowReturn();
@@ -359,8 +345,6 @@ void PlayerDamageState::Execute(float deltaTime)
 
     const DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
     const char* targetState = MathHelper::Length(move) > 0.01f ? "Running" : "Idle";
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[PlayerDamage][Finished] targetState=" + std::string(targetState));
     player->GetStateMachine()->ChangeState(targetState);
 }
 
@@ -389,7 +373,6 @@ void PlayerKnockBackState::Execute(float deltaTime)
         player->PlayBodyAnimation("Get_Up", false, true, 0.05f, true);
         return;
     }
-
     const DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
     const char* targetState = MathHelper::Length(move) > 0.01f ? "Running" : "Idle";
     player->GetStateMachine()->ChangeState(targetState);
@@ -408,7 +391,6 @@ void PlayerDeathPendingState::Enter()
     player->characterMovementComponent->SetFixedSpeed(0.0f);
     player->characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
     player->characterMovementComponent->SetInputMagnitude(0.0f);
-    Logger::Log(Logger::LogCategory::Gameplay, "[PlayerDeathPending][Enter] hp=0");
 
     // ボスとプレイヤーの構図のために回転させる
     if (auto gruxEnemy = player->GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
@@ -440,7 +422,6 @@ void PlayerDeathState::Enter()
     player->characterMovementComponent->SetInputMagnitude(0.0f);
     player->PlayBodyAnimation("Hit_Combat_Death", false, true, 0.1f, true);
     player->BeginDeathEyeClose();
-    Logger::Log(Logger::LogCategory::Gameplay, "[PlayerDeath][Enter] hp=0");
 }
 
 void PlayerDeathState::Execute(float deltaTime)
@@ -480,11 +461,6 @@ void PlayerRushState::Enter()
     if (auto* scene = dynamic_cast<SceneBase*>(player->GetOwnerScene()))
         scene->StopJustDodgeRadialBlur();
 
-    if (player->initialRushInputTraceActive)
-    {
-        player->LogInitialRushInputTrace("RushStateEntered");
-        player->initialRushInputTraceActive = false;
-    }
     rushHpDisplayTarget.reset();
     player->SetRushWeaponVisual(true);
     player->ForceResetPlayerSlow();
@@ -668,13 +644,6 @@ void PlayerRushState::Execute(float deltaTime)
                 player->ConsumeActionRequest(Player::ActionType::Attack);
             if (!animationPlaying)
             {
-                if (player->GetPhase2RushFinalHitDebugEventId() != 0)
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[Phase2RushFinalHit][Rush][NaturalEnd] event=" + std::to_string(player->GetPhase2RushFinalHitDebugEventId()) +
-                        " step=" + std::to_string(comboIndex) +
-                        " followUpSuppressed=true -> Finished");
-                }
                 phase = RushPhase::Finished;
             }
             break;
@@ -696,9 +665,6 @@ void PlayerRushState::Execute(float deltaTime)
             {
                 queuedAttackCount = 1;
                 player->ConsumeActionRequest(Player::ActionType::Attack);
-                Logger::Log(Logger::LogCategory::Gameplay,
-                    "[Rush][AttackQueued] comboIndex=" + std::to_string(comboIndex) +
-                    " lateInput=" + std::string(lateInputGraceActive ? "true" : "false"));
             }
             else if (IsFinalRushAttack())
             {
@@ -730,13 +696,6 @@ void PlayerRushState::Execute(float deltaTime)
             }
             else
             {
-                if (player->GetPhase2RushFinalHitDebugEventId() != 0)
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[Phase2RushFinalHit][Rush][NaturalEnd] event=" + std::to_string(player->GetPhase2RushFinalHitDebugEventId()) +
-                        " step=" + std::to_string(comboIndex) +
-                        " followUpSuppressed=false -> Finished");
-                }
                 phase = RushPhase::Finished;
             }
         }
@@ -748,12 +707,6 @@ void PlayerRushState::Execute(float deltaTime)
             // Rush reaches Idle only after Finished observes the clip end.
             // Latch here so the direct Idle path cannot capture an in-flight pose.
             player->LatchFinalHitVisualPoseAfterAnimationUpdate();
-            if (player->GetPhase2RushFinalHitDebugEventId() != 0)
-            {
-                Logger::Log(Logger::LogCategory::Gameplay,
-                    "[Phase2RushFinalHit][Rush][Idle] event=" + std::to_string(player->GetPhase2RushFinalHitDebugEventId()) +
-                    " visualLatched=" + std::string(player->GetBodyAnimationController()->IsVisualPoseLatched() ? "true" : "false"));
-            }
             player->GetStateMachine()->ChangeState("Idle");
         }
         break;
@@ -766,13 +719,6 @@ void PlayerRushState::Exit()
     player->SetRushAttackActive(false);
     if (const auto controller = player->GetBodyAnimationController())
         controller->ReleaseRuntimeHeldAnimationPose();
-    const uint64_t debugEventId = player->GetPhase2RushFinalHitDebugEventId();
-    if (debugEventId != 0)
-    {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[Phase2RushFinalHit][Rush][ExitBegin] event=" + std::to_string(debugEventId) +
-            " visualLatched=" + std::string(player->GetBodyAnimationController()->IsVisualPoseLatched() ? "true" : "false"));
-    }
     if (player->IsFinalHitAttackDrainActive() &&
         !player->IsFinalHitAttackDrainLatched())
     {
@@ -798,7 +744,6 @@ void PlayerRushState::Exit()
     rushStopDistance = 0.0f;
     currentAttackAnimation = "Rush_Attack_Fast_A";
     elapsedTime = 0.0f;
-    Logger::Log(Logger::LogCategory::Gameplay, "[Rush][Exit] combo state reset");
 
     player->ClearFinalHitRushFollowUpStop();
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
@@ -806,12 +751,6 @@ void PlayerRushState::Exit()
     player->ForceResetPlayerSlow();
     player->BeginBossSlowReturn(true);
     player->invincible = false;  // ラッシュ攻撃中は無敵状態解除
-    if (debugEventId != 0)
-    {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[Phase2RushFinalHit][Rush][ExitEnd] event=" + std::to_string(debugEventId) +
-            " visualLatched=" + std::string(player->GetBodyAnimationController()->IsVisualPoseLatched() ? "true" : "false"));
-    }
 }
 
 bool PlayerRushState::AdvanceRushCombo()

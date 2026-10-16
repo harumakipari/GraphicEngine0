@@ -410,9 +410,6 @@ void Player::Initialize(const Transform& transform)
 
 void Player::Update(float deltaTime)
 {
-    ++initialRushInputTraceFrame;
-    initialRushInputTraceGameTime += (std::max)(0.0f, deltaTime);
-    initialRushInputTraceUnscaledTime += (std::max)(0.0f, Time::UnscaledDeltaTime());
     using namespace DirectX;
 
     // Just Dodge SlowやHitStopの影響を受けない実時間Fade。
@@ -503,54 +500,8 @@ void Player::Update(float deltaTime)
     // プレイヤーの透明化処理
     UpdateCameraOcclusionTransparency();
 
-    // Player/BossのSlowは独立させ、どちらも実時間で更新する。
-    if (playerSlowPhase == JustDodgeSlowPhase::Hold)
-    {
-        playerSlowHoldTimer -= Time::UnscaledDeltaTime();
-        if (playerSlowHoldTimer <= 0.0f)
-        {
-            BeginPlayerSlowReturn();
-        }
-    }
-    else if (playerSlowPhase == JustDodgeSlowPhase::Return)
-    {
-        playerSlowReturnElapsed += Time::UnscaledDeltaTime();
-        const float t = justDodgeSlowReturnDuration > FLT_EPSILON
-            ? std::clamp(playerSlowReturnElapsed / justDodgeSlowReturnDuration, 0.0f, 1.0f)
-            : 1.0f;
-        const float smoothT = t * t * (3.0f - 2.0f * t);
-        SetTimeScale(std::lerp(playerSlowReturnStartScale, 1.0f, smoothT));
-        if (t >= 1.0f)
-        {
-            ForceResetPlayerSlow();
-        }
-    }
-
-    if (bossSlowPhase == JustDodgeSlowPhase::Hold)
-    {
-        bossSlowHoldTimer -= Time::UnscaledDeltaTime();
-        if (bossSlowHoldTimer <= 0.0f)
-        {
-            BeginBossSlowReturn();
-        }
-    }
-    else if (bossSlowPhase == JustDodgeSlowPhase::Return)
-    {
-        if (auto target = rushTarget.lock())
-        {
-            bossSlowReturnElapsed += Time::UnscaledDeltaTime();
-            const float duration = activeBossSlowReturnDuration;
-            const float t = duration > FLT_EPSILON
-                ? std::clamp(bossSlowReturnElapsed / duration, 0.0f, 1.0f) : 1.0f;
-            const float smoothT = t * t * (3.0f - 2.0f * t);
-            target->SetTimeScale(std::lerp(bossSlowReturnStartScale, 1.0f, smoothT));
-            if (t >= 1.0f) ForceResetBossSlow();
-        }
-        else
-        {
-            bossSlowPhase = JustDodgeSlowPhase::Inactive;
-        }
-    }
+    // ジャスト回避のタイムスケールを更新する。
+    UpdateJustDodgeTimeScales();
 
     if (characterMovementComponent)
     {
@@ -1108,8 +1059,6 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         break;
     case AnimationNotifyState::Type::TransitionWindow:
         transitionWindow = true;
-        if (initialRushInputTraceActive)
-            LogInitialRushInputTrace("TransitionWindowReached");
         Logger::Log(U8("遷移許可区間を開始しました"));
         break;
     case AnimationNotifyState::Type::JustDodgeWindow:
@@ -1918,24 +1867,9 @@ bool Player::BeginFinalHitWait()
     const bool validCurrentAttack = supportedAttackState && controller &&
         controller->IsPlayAnimation() && expectedAttackClip &&
         controller->GetAnimationLength(animationName) > FLT_EPSILON;
-    const uint64_t debugEventId = phase2RushFinalHitDebugEventId;
-    const bool debugRushEvent = debugEventId != 0;
 
     if (!validCurrentAttack)
     {
-        if (debugRushEvent)
-        {
-            std::string rejectedBy;
-            if (!supportedAttackState) rejectedBy += "unsupportedState ";
-            if (!controller) rejectedBy += "noController ";
-            else
-            {
-                if (!controller->IsPlayAnimation()) rejectedBy += "notPlaying ";
-                if (!expectedAttackClip) rejectedBy += "unexpectedClip ";
-                if (controller->GetAnimationLength(animationName) <= FLT_EPSILON) rejectedBy += "zeroLength ";
-            }
-
-        }
         // An unexpected state/clip is not treated as a completed attack pose.
         // Fall through to the existing safe cleanup without creating a wait.
         finalHitAttackDrainFailed = true;
@@ -1949,7 +1883,6 @@ bool Player::BeginFinalHitWait()
     ClearActionRequest("final_hit_attack_drain");
     ClearAttackTarget();
     SetRushInputAcceptance(false, "FinalHit");
-    SetRushInputDebugState(false, false);
     hitBox = false;
     inputWindow = false;
     transitionWindow = false;
@@ -2019,7 +1952,6 @@ void Player::ClearTransientBattleActions()
     finalHitRushFollowUpStopRequested = false;
     ClearAttackTarget();
     SetRushInputAcceptance(false);
-    SetRushInputDebugState(false, false);
     hitBox = false;
     inputWindow = false;
     transitionWindow = false;
@@ -2296,8 +2228,6 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
         policy == DamagePolicy::IgnoreDodgeIFrames && currentState == "Dodge";
     if (invincibleWindow && !ignoreDodgeIFrames)
     {
-        if (currentState == "Dodge")
-            RecordNormalDodgeDebug();
         return false;
     }
     if (invincible)
@@ -2454,11 +2384,6 @@ void Player::StartAttack()
 // ジャスト回避成功時の処理
 void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 {
-    int debugFrame = -1;
-#ifdef USE_IMGUI
-    if (ImGui::GetCurrentContext())
-        debugFrame = ImGui::GetFrameCount();
-#endif
     const auto gruxEnemy = std::dynamic_pointer_cast<GruxEnemy>(enemy);
     const uint64_t attackSequenceId = gruxEnemy
         ? gruxEnemy->GetCurrentAttackSequenceId()
@@ -2489,12 +2414,6 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
             }
         }
     }
-    if (!justDodgeRecordedThisDodge)
-    {
-        justDodgeRecordedThisDodge = true;
-    }
-    lastJustDodgeValid = true;
-    lastJustDodgeTime = dodgeDebugElapsed;
     lastJustAnimationTime = animationTime;
     lastJustWindowStart = justWindowStart;
     lastJustWindowEnd = justWindowEnd;
@@ -2508,21 +2427,10 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     lastJustBossHitBoxElapsed = gruxEnemy
         ? gruxEnemy->GetActiveHitBoxElapsedForDebug()
         : -1.0f;
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[JustDodgeSuccess] frame={} this={} enemy={} attackSequenceId={} justDodgeSuccess={} state={} animation={} animationTime={}",
-        debugFrame,
-        static_cast<const void*>(this),
-        static_cast<const void*>(enemy.get()),
-        attackSequenceId,
-        justDodgeSuccess,
-        stateMachine_ ? stateMachine_->GetStateName() : "",
-        animationName,
-        animationTime));
 
     // SEの再生
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[JustDodgeSE] frame={} sound=just_dodge3.wav", debugFrame));
     CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge3.wav", 1.5f);
+    // コントローラー振動
     InputSystem::SetVibration(0.30f, 0.06f);
 
     // ジャスト回避成功フラグをオンにする
@@ -2536,7 +2444,6 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     // スローモーションにする
     // rush時のtargetを保存する
     rushTarget = enemy;
-
     const float scale = std::clamp(justDodgeTimeScale, 0.10f, 1.0f);
     enemy->SetTimeScale(scale);
     SetTimeScale(scale);
@@ -2553,16 +2460,6 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
         BeginPlayerSlowReturn();
         BeginBossSlowReturn();
     }
-
-    initialRushInputTraceActive = true;
-    initialRushInputTraceStartGameTime = initialRushInputTraceGameTime;
-    initialRushInputTraceStartUnscaledTime = initialRushInputTraceUnscaledTime;
-    LogInitialRushInputTrace("JustDodgeSuccess");
-
-    // 画面の色を変える
-
-    // UIを表示する
-    //rushButtonImageComponent->SetVisible(true);
 }
 
 bool Player::CanAcceptInitialRushInput() const
@@ -2580,15 +2477,6 @@ bool Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
 
     finalHitVisualPoseLatchRequested = false;
     const auto controller = GetBodyAnimationController();
-    const uint64_t debugEventId = phase2RushFinalHitDebugEventId;
-    if (debugEventId != 0)
-    {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[Phase2RushFinalHit][Latch][Before] event=" + std::to_string(debugEventId) +
-            " animation=" + (controller ? controller->GetCurrentAnimationName() : "") +
-            " playing=" + std::string(controller && controller->IsPlayAnimation() ? "true" : "false") +
-            " alreadyLatched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false"));
-    }
     const bool latched = controller && controller->LatchCurrentVisualPose();
     if (finalHitAttackDrainActive)
     {
@@ -2596,15 +2484,6 @@ bool Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
         finalHitAttackDrainFailed = !latched;
         if (!latched)
             finalHitAttackDrainActive = false;
-    }
-    if (debugEventId != 0)
-    {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[Phase2RushFinalHit][Latch][After] event=" + std::to_string(debugEventId) +
-            " success=" + std::string(latched ? "true" : "false") +
-            " visualLatched=" + std::string(controller && controller->IsVisualPoseLatched() ? "true" : "false") +
-            " drainActive=" + std::string(finalHitAttackDrainActive ? "true" : "false") +
-            " drainLatched=" + std::string(finalHitAttackDrainCompleted ? "true" : "false"));
     }
     return latched;
 }
@@ -2617,7 +2496,6 @@ bool Player::CanShowInitialRushGuide() const
     return stateMachine_ &&
         std::string(stateMachine_->GetStateName()) == "Dodge" &&
         justDodgeSuccess &&
-        rushRequestedDebug &&
         !rushTarget.expired();
 }
 
@@ -2660,18 +2538,7 @@ void Player::SetRushInputAcceptance(bool accepting, const char* endReason)
     }
 
     rushInputAccepting = accepting;
-    if (initialRushInputTraceActive)
-        LogInitialRushInputTrace(accepting ? "InputAcceptanceOn" : "InputAcceptanceOff", endReason);
-    if (!accepting && endReason &&
-        (std::strcmp(endReason, "TransitionWithoutRush") == 0 ||
-            std::strcmp(endReason, "DodgeFinished") == 0 ||
-            std::strcmp(endReason, "RushTargetExpired") == 0 ||
-            std::strcmp(endReason, "Damage") == 0 ||
-            std::strcmp(endReason, "KnockBack") == 0 ||
-            std::strcmp(endReason, "Death") == 0))
-    {
-        initialRushInputTraceActive = false;
-    }
+
     if (accepting)
     {
         rushPromptAlpha = 0.0f;
@@ -2699,50 +2566,58 @@ void Player::SetRushInputAcceptance(bool accepting, const char* endReason)
     }
 }
 
-void Player::SetRushInputDebugState(bool judgeSuccess, bool rushRequested)
+// ジャスト回避のタイムスケールを更新する。
+void Player::UpdateJustDodgeTimeScales()
 {
-    rushJudgeSuccessDebug = judgeSuccess;
-    rushRequestedDebug = rushRequested;
-}
-
-void Player::LogInitialRushInputTrace(const char* event, const char* detail)
-{
-    const auto controller = GetBodyAnimationController();
-    const float animationTime = controller ? controller->GetCurrentAnimationTime() : -1.0f;
-    const float effectivePlaybackRate = controller ? controller->GetLastEffectivePlaybackRateDebug() : 0.0f;
-    float transitionStartTime = -1.0f;
-    if (controller)
+    // Player/BossのSlowは独立させ、どちらも実時間で更新する。
+    if (playerSlowPhase == JustDodgeSlowPhase::Hold)
     {
-        if (const auto asset = controller->GetAnimationAsset(controller->GetCurrentAnimationName()))
+        playerSlowHoldTimer -= Time::UnscaledDeltaTime();
+        if (playerSlowHoldTimer <= 0.0f)
         {
-            for (const auto& state : asset->notifyTrack.states)
-            {
-                if (state.type == AnimationNotifyState::Type::TransitionWindow)
-                {
-                    transitionStartTime = state.startTime;
-                    break;
-                }
-            }
+            BeginPlayerSlowReturn();
         }
     }
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[InitialRushInput] {} frame={} gameTime={:.6f} unscaledGameTime={:.6f} elapsedGame={:.6f} elapsedUnscaled={:.6f} animationTime={:.6f} effectivePlaybackRate={:.6f} actorTimeScale={:.6f} effectiveAnimationRate={:.6f} rushInputAccepting={} rushRequested={} justDodgeSuccess={} transitionWindowStart={:.6f} detail={}",
-        event ? event : "Unknown",
-        initialRushInputTraceFrame,
-        initialRushInputTraceGameTime,
-        initialRushInputTraceUnscaledTime,
-        initialRushInputTraceGameTime - initialRushInputTraceStartGameTime,
-        initialRushInputTraceUnscaledTime - initialRushInputTraceStartUnscaledTime,
-        animationTime,
-        effectivePlaybackRate,
-        GetTimeScale(),
-        effectivePlaybackRate * GetTimeScale(),
-        rushInputAccepting,
-        rushRequestedDebug,
-        justDodgeSuccess,
-        transitionStartTime,
-        detail ? detail : "None"));
+    else if (playerSlowPhase == JustDodgeSlowPhase::Return)
+    {
+        playerSlowReturnElapsed += Time::UnscaledDeltaTime();
+        const float t = justDodgeSlowReturnDuration > FLT_EPSILON
+            ? std::clamp(playerSlowReturnElapsed / justDodgeSlowReturnDuration, 0.0f, 1.0f)
+            : 1.0f;
+        const float smoothT = t * t * (3.0f - 2.0f * t);
+        SetTimeScale(std::lerp(playerSlowReturnStartScale, 1.0f, smoothT));
+        if (t >= 1.0f)
+        {
+            ForceResetPlayerSlow();
+        }
+    }
+    if (bossSlowPhase == JustDodgeSlowPhase::Hold)
+    {
+        bossSlowHoldTimer -= Time::UnscaledDeltaTime();
+        if (bossSlowHoldTimer <= 0.0f)
+        {
+            BeginBossSlowReturn();
+        }
+    }
+    else if (bossSlowPhase == JustDodgeSlowPhase::Return)
+    {
+        if (auto target = rushTarget.lock())
+        {
+            bossSlowReturnElapsed += Time::UnscaledDeltaTime();
+            const float duration = activeBossSlowReturnDuration;
+            const float t = duration > FLT_EPSILON
+                ? std::clamp(bossSlowReturnElapsed / duration, 0.0f, 1.0f) : 1.0f;
+            const float smoothT = t * t * (3.0f - 2.0f * t);
+            target->SetTimeScale(std::lerp(bossSlowReturnStartScale, 1.0f, smoothT));
+            if (t >= 1.0f) ForceResetBossSlow();
+        }
+        else
+        {
+            bossSlowPhase = JustDodgeSlowPhase::Inactive;
+        }
+    }
 }
+
 
 void Player::BeginPlayerSlowReturn()
 {
@@ -2854,24 +2729,7 @@ bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
     return justDodgeDirectionResultDebug;
 }
 
-void Player::BeginDodgeDebug()
-{
-    normalDodgeRecordedThisDodge = false;
-    justDodgeRecordedThisDodge = false;
-}
 
-void Player::UpdateDodgeDebug(float deltaTime)
-{
-    dodgeDebugElapsed += (std::max)(0.0f, deltaTime);
-}
-
-void Player::RecordNormalDodgeDebug()
-{
-    if (!normalDodgeRecordedThisDodge)
-    {
-        normalDodgeRecordedThisDodge = true;
-    }
-}
 
 
 void Player::AcquireAttackTarget()

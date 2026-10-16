@@ -47,6 +47,7 @@ public:
         IgnoreDodgeIFrames,
     };
 
+    // ジャスト回避のスロー状態
     enum class JustDodgeSlowPhase : uint8_t
     {
         Inactive,
@@ -75,14 +76,13 @@ public:
         Count,
     };
 
-    struct OperationGuideItemState
+    enum class RushPromptAnimationPhase : uint8_t
     {
-        std::shared_ptr<UIImageComponent> image; // 操作ガイドに表示する画像
-        DirectX::XMFLOAT2 position{}; // 画面上の表示位置
-        DirectX::XMFLOAT2 baseScale{ 0.35f, 0.35f }; // 表示時の基準スケール
-        bool visible = false; // 表示要求の有効状態
-        bool learned = false; // 操作を学習済みか
-        float animationTimer = 0.0f; // 点滅アニメーションの経過時間
+        Hidden,
+        AppearGrow,
+        AppearSettle,
+        PulseGrow,
+        PulseReturn,
     };
 
     enum class LocomotionMode :uint8_t
@@ -93,6 +93,18 @@ public:
         LockOnBlendRun,
         Idle,
     };
+
+    struct OperationGuideItemState
+    {
+        std::shared_ptr<UIImageComponent> image; // 操作ガイドに表示する画像
+        DirectX::XMFLOAT2 position{}; // 画面上の表示位置
+        DirectX::XMFLOAT2 baseScale{ 0.35f, 0.35f }; // 表示時の基準スケール
+        bool visible = false; // 表示要求の有効状態
+        bool learned = false; // 操作を学習済みか
+        float animationTimer = 0.0f; // 点滅アニメーションの経過時間
+    };
+
+
 public:
     // モデル名を指定してPlayerを生成する。
     explicit Player(const std::string& modelName) :Character(modelName)
@@ -230,7 +242,6 @@ public:
     void SetGameplayHudFadeAlpha(float alpha);
 
     // 戦闘遷移・最終ヒット
-
     // コンティニュー時のTransformと戦闘状態を初期状態へ戻す。
     void ResetForBattleContinue(const Transform& battleStartTransform);
     // 移動方向を補間せずに即時反映する。
@@ -332,16 +343,6 @@ public:
     bool IsFinalHitAttackDrainActive() const { return finalHitAttackDrainActive; }
     // 最終ヒット姿勢の固定に成功したかを返す。
     bool IsFinalHitAttackDrainLatched() const { return finalHitAttackDrainCompleted; }
-    // Phase2最終Rushの診断イベントIDを有効または無効にする。
-    void SetPhase2RushFinalHitDebugEnabled(bool enabled)
-    {
-        if (!enabled) phase2RushFinalHitDebugEventId = 0;
-    }
-
-    // Phase2最終Rushの診断イベントIDを設定する。
-    void SetPhase2RushFinalHitDebugEventId(uint64_t eventId) { phase2RushFinalHitDebugEventId = eventId; }
-    // Phase2最終Rushの診断イベントIDを返す。
-    uint64_t GetPhase2RushFinalHitDebugEventId() const { return phase2RushFinalHitDebugEventId; }
     // 最終ヒット後の攻撃アニメーション排出を中断として記録する。
     void MarkFinalHitAttackDrainInterrupted();
 
@@ -457,12 +458,10 @@ public:
     bool IsRushOpportunityActive() const;
     // 初回Rush入力の受付状態を切り替え、ガイド表示を同期する。
     void SetRushInputAcceptance(bool accepting, const char* endReason = nullptr);
-    // Rush判定と入力要求の診断状態を更新する。
-    void SetRushInputDebugState(bool judgeSuccess, bool rushRequested);
-    // 初回Rush入力受付の時刻と状態を診断ログへ出力する。
-    void LogInitialRushInputTrace(const char* event, const char* detail = nullptr);
 
     // Player/Bossの解除タイミングを独立して管理する。
+    // ジャスト回避のタイムスケールを更新する。
+    void UpdateJustDodgeTimeScales();
     // PlayerのJust Dodgeスローを通常速度へ戻し始める。
     void BeginPlayerSlowReturn();
     // BossのJust DodgeまたはRushスローを通常速度へ戻し始める。
@@ -481,15 +480,9 @@ public:
     // ジャスト回避を受け付けるかどうか
     // Just Dodgeの判定受付中かを返す。
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
-
     // 回避開始時の方向と攻撃者方向からJust Dodge成立可否を判定する。
     bool CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition);
-    // 回避判定の診断情報を初期化する。
-    void BeginDodgeDebug();
-    // 回避判定の診断経過時間を更新する。
-    void UpdateDodgeDebug(float deltaTime);
-    // 通常回避の診断結果を記録する。
-    void RecordNormalDodgeDebug();
+
     // カメラ・ボス戦連携
 
     // カメラの注視点の位置
@@ -585,6 +578,25 @@ private:
     // 瀕死演出のタイマー、発光、ビネット表示を初期化する。
     void ResetLowHpEffects();
 
+    // 被ダメージ発光のタイマーを開始する。
+    void StartDamageFlash();
+    // Player本体へ被ダメージ発光量を反映する。
+    void ApplyDamageFlash(float flashAmount) const;
+    // 被ダメージ発光の減衰と瀕死発光との合成を更新する。
+    void UpdateDamageFlash();
+
+    // Player残像の生成、透明度、寿命を更新する。
+    void UpdatePlayerPoseGhost();
+    // カメラ接近時のPlayer本体と剣の透明度を更新する。
+    void UpdateCameraOcclusionTransparency() const;
+    // Player本体と剣へDither透明度を反映する。
+    void ApplyDitherTransparencyAlpha(float alpha) const;
+    // 指定した残像スロットへ現在のPlayer姿勢を複製する。
+    bool CapturePlayerPoseGhost(size_t ghostIndex);
+
+    // 牢獄開始演出中の座り姿勢Ping-Pong再生を更新する。
+    void UpdatePrisonOpeningStandingPingPong(float deltaTime);
+
 public:
     // ヒット中に当たった敵を記録する
     std::unordered_set<Actor*> hitActors; // 現在の攻撃で既に命中したActor
@@ -625,12 +637,7 @@ public:
     DirectX::XMFLOAT3 directionToAttackerDebug{}; // 診断用に保存する攻撃者方向
     float justDodgeDirectionDotDebug = 0.0f; // 診断用の回避方向と攻撃者方向の内積
     bool justDodgeDirectionResultDebug = false; // 診断用のJust Dodge方向判定結果
-    float dodgeDebugElapsed = 0.0f; // 回避判定診断の経過時間
-    bool normalDodgeRecordedThisDodge = false; // 今回の回避を通常回避として記録済みか
-    bool justDodgeRecordedThisDodge = false; // 今回の回避をJust Dodgeとして記録済みか
-    bool lastJustDodgeValid = false; // 直近のJust Dodge判定が有効だったか
     std::string lastJustDodgeAttack = "None"; // 直近のJust Dodge対象攻撃名
-    float lastJustDodgeTime = 0.0f; // 直近のJust Dodge成立時刻
     float lastJustAnimationTime = 0.0f; // Just Dodge判定時のアニメーション時刻
     float lastJustWindowStart = 0.0f; // Just Dodge判定区間の開始時刻
     float lastJustWindowEnd = 0.0f; // Just Dodge判定区間の終了時刻
@@ -654,33 +661,15 @@ public:
 
     std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 
-    enum class RushPromptAnimationPhase : uint8_t
-    {
-        Hidden,
-        AppearGrow,
-        AppearSettle,
-        PulseGrow,
-        PulseReturn,
-    };
 
     bool rushInputAccepting = false; // 初回Rush入力を受け付ける状態
-    // Just Dodgeから初回Rush入力までを計測する診断用状態。
-    bool initialRushInputTraceActive = false; // 初回Rush入力受付を計測する診断ログの有効状態
-    uint64_t initialRushInputTraceFrame = 0; // 診断ログ用のフレーム番号
-    float initialRushInputTraceGameTime = 0.0f; // 診断ログ用のゲーム時間
-    float initialRushInputTraceUnscaledTime = 0.0f; // 診断ログ用の非スケール時間
-    float initialRushInputTraceStartGameTime = 0.0f; // 初回Rush入力受付開始時のゲーム時間
-    float initialRushInputTraceStartUnscaledTime = 0.0f; // 初回Rush入力受付開始時の非スケール時間
     bool finalHitRushFollowUpStopRequested = false; // 最終ヒット時にRush追撃を停止する要求
     bool finalHitVisualPoseLatchRequested = false; // 最終ヒット時に見た目姿勢を固定する要求
     bool finalHitAttackDrainActive = false; // 最終ヒット後の攻撃アニメーション排出中か
     bool finalHitAttackDrainCompleted = false; // 最終ヒット姿勢の固定に成功したか
     bool finalHitAttackDrainFailed = false; // 最終ヒット姿勢の固定または排出に失敗したか
-    uint64_t phase2RushFinalHitDebugEventId = 0; // Phase2最終Rushの診断イベントID
     bool rushInputEndNotifyReceivedDebug = false; // rush_input_end Notify受信の診断状態
     std::string rushInputEndReasonDebug = "None"; // Rush入力受付を終了した診断上の理由
-    bool rushJudgeSuccessDebug = false; // Rush判定成功の診断状態
-    bool rushRequestedDebug = false; // Rush入力要求の診断状態
     float rushPromptAlpha = 0.0f; // Rush入力ガイドに適用する透明度
     float rushPromptFadeInDuration = 0.10f; // Rush入力ガイドのフェードイン時間
     RushPromptAnimationPhase rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden; // Rush入力ガイドの表示アニメーション段階
@@ -799,12 +788,6 @@ private:
     std::string heartbeatSEPath = "./Data/Sound/SE/player_heartbeat.wav"; // 瀕死時に再生する心拍SEのパス
     std::shared_ptr<UIImageComponent> lowHpVignetteImageComponent; // 瀕死時に表示するビネットUI
 
-    // 被ダメージ発光のタイマーを開始する。
-    void StartDamageFlash();
-    // Player本体へ被ダメージ発光量を反映する。
-    void ApplyDamageFlash(float flashAmount) const;
-    // 被ダメージ発光の減衰と瀕死発光との合成を更新する。
-    void UpdateDamageFlash();
 
 
     float damageFlashTimer = 0.0f; // 被ダメージ発光の残り時間
@@ -869,15 +852,6 @@ private:
     float playerPoseGhostSpawnTimer = 0.0f; // 次のPlayer残像を生成するまでの経過時間
     size_t nextPlayerPoseGhostIndex = 0; // 次に再利用するPlayer残像の添字
     bool playerPoseGhostSpawnSequenceActive = false; // Player残像の連続生成中か
-
-    // Player残像の生成、透明度、寿命を更新する。
-    void UpdatePlayerPoseGhost();
-    // カメラ接近時のPlayer本体と剣の透明度を更新する。
-    void UpdateCameraOcclusionTransparency() const;
-    // Player本体と剣へDither透明度を反映する。
-    void ApplyDitherTransparencyAlpha(float alpha) const;
-    // 指定した残像スロットへ現在のPlayer姿勢を複製する。
-    bool CapturePlayerPoseGhost(size_t ghostIndex);
 
     float weaponSphereRadius = 0.75f;    // 剣の球の当たり判定の半径
 
@@ -950,8 +924,6 @@ private:
     bool moviePerform = false; // 演出中に壁際Ditherを抑制する状態
     bool prisonOpeningSitting = false; // 牢獄開始演出の座り状態が有効か
     bool prisonOpeningStanding = false; // 牢獄開始演出の立ち状態が有効か
-    // 牢獄開始演出中の座り姿勢Ping-Pong再生を更新する。
-    void UpdatePrisonOpeningStandingPingPong(float deltaTime);
 
     bool prisonOpeningUseStandingPingPong = false; // 立ち姿勢を使ったPing-Pong再生を使用するか
     float prisonOpeningSittingPingPongStartTime = 0.0f; // Ping-Pong再生区間の開始時刻
