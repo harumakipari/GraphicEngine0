@@ -444,7 +444,8 @@ void Player::UpdateWeaponVisualPresentation(const float deltaTime)
     if (showTrail)
         trail.trailPoints.push_back({ swordTipPos, swordRootPos, trailRemainTime });
 }
-void Player::ApplyDitherTransparencyAlpha(float alpha)
+
+void Player::ApplyDitherTransparencyAlpha(float alpha) const
 {
     alpha = std::clamp(alpha, 0.0f, 1.0f);
 
@@ -452,6 +453,7 @@ void Player::ApplyDitherTransparencyAlpha(float alpha)
     swordMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
     currentDitherTransparencyAlpha = alpha;
 }
+
 void Player::Update(float deltaTime)
 {
     ++initialRushInputTraceFrame;
@@ -462,13 +464,9 @@ void Player::Update(float deltaTime)
     // Just Dodge SlowやHitStopの影響を受けない実時間Fade。
     UpdatePlayerPoseGhost();
 
-    // Low HP feedback must observe death/recovery even while battle actions are suspended.
+    // 瀕死状態のUIの更新
     UpdateLowHpEffects();
 
-    // Pause keeps the Player's existing presentation intact, but must not let any
-    // gameplay work below (including input sampling, movement, state updates, or
-    // animation) advance. Clear only sampled gameplay input so it cannot execute
-    // after resume; do not change the current gameplay state.
     if (const auto scene = GetOwnerScene(); scene && scene->IsPaused())
     {
         if (bufferCommand.type != ActionType::None)
@@ -545,51 +543,8 @@ void Player::Update(float deltaTime)
 
     const bool gameplayInputEnabled = !IsInWinState();
 
-    // Player HP UI uses unscaled time so HitStop / Slow do not pause its animations.
-    const float currentHp = static_cast<float>((std::max)(hp, 0));
-    const float uiDeltaTime = Time::UnscaledDeltaTime();
-    float displayedHp = currentHp;
-    if (hpRecoveryUiActive)
-    {
-        hpRecoveryUiElapsed += uiDeltaTime;
-        const float t = hpRecoveryUiDuration > FLT_EPSILON
-            ? std::clamp(hpRecoveryUiElapsed / hpRecoveryUiDuration, 0.0f, 1.0f)
-            : 1.0f;
-        displayedHp = std::lerp(hpRecoveryUiStart, currentHp, t);
-        delayedHp = displayedHp;
-        delayedHpDelayTimer = 0.0f;
-        if (t >= 1.0f)
-        {
-            hpRecoveryUiActive = false;
-            displayedHp = currentHp;
-            delayedHp = currentHp;
-        }
-    }
-    else if (delayedHp > currentHp)
-    {
-        if (delayedHpDelayTimer > 0.0f)
-        {
-            delayedHpDelayTimer = (std::max)(0.0f, delayedHpDelayTimer - uiDeltaTime);
-        }
-        else
-        {
-            delayedHp = (std::max)(currentHp, delayedHp - delayedHpFollowSpeed * uiDeltaTime);
-        }
-    }
-    else if (delayedHp < currentHp)
-    {
-        // Non-tutorial recovery is reflected immediately without a delayed decrease effect.
-        delayedHp = currentHp;
-        delayedHpDelayTimer = 0.0f;
-    }
-
-    if (hpCurrentFillUiComponent && hpDelayedFillUiComponent)
-    {
-        const float maximumHp = static_cast<float>(maxHp);
-        hpCurrentFillUiComponent->SetValue(displayedHp, maximumHp);
-        hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
-    }
-
+    // Hpバーの更新
+    UpdateHpBarUI();
 
     // プレイヤーの透明化処理
     skeletalMeshComponent->SetIsVisible(true);
@@ -670,10 +625,7 @@ void Player::Update(float deltaTime)
     {
         characterMovementComponent->SetMoveSpeedSetting(walkSpeed, runSpeed);
     }
-    if (gameplayInputEnabled && InputSystem::GetInputState("1"))
-    {
-        stateMachine_->ChangeState("Rush");
-    }
+
     DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
     DirectX::XMFLOAT3 toEnemyDir = { 0.0f,0.0f,0.0f };
@@ -731,9 +683,6 @@ void Player::Update(float deltaTime)
         sweeps[2].hit = CollisionFunction::SphereRayCast(
             prevSwordTipPos, swordTipPos, sweeps[2].result, activeHitBoxRadius, enemyLayer, true);
 
-        const auto* rushStateForDebug = stateMachine_
-            ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
-        const auto animationControllerForDebug = GetBodyAnimationController();
         constexpr float minSweepLength = 0.0001f;
         const SwordSweepResult* selectedNormalHit = nullptr;
         const SwordSweepResult* selectedOverlapHit = nullptr;
@@ -741,7 +690,6 @@ void Player::Update(float deltaTime)
         float selectedNormalToi = FLT_MAX;
         float selectedOverlapDepth = FLT_MAX;
         float selectedDamageToi = FLT_MAX;
-        const bool anySweepHit = sweeps[0].hit || sweeps[1].hit || sweeps[2].hit;
 
         for (const SwordSweepResult& sweep : sweeps)
         {
@@ -749,9 +697,6 @@ void Player::Update(float deltaTime)
             const float toi = sweep.hit && validSweepLength
                 ? sweep.result.distance / sweep.sweepLength
                 : -1.0f;
-            const std::string actorName = sweep.result.actor
-                ? sweep.result.actor->GetName()
-                : "null";
 
             if (!sweep.hit || !validSweepLength)
                 continue;
@@ -1121,7 +1066,56 @@ void Player::UpdateOperationGuideUI()
     RefreshOperationGuideUIVisibility();
 }
 
-void Player::RefreshOperationGuideUIVisibility()
+// Hpバーの更新
+void Player::UpdateHpBarUI()
+{
+    // Player HP UI uses unscaled time so HitStop / Slow do not pause its animations.
+    const float currentHp = static_cast<float>((std::max)(hp, 0));
+    const float uiDeltaTime = Time::UnscaledDeltaTime();
+    float displayedHp = currentHp;
+    if (hpRecoveryUiActive)
+    {
+        hpRecoveryUiElapsed += uiDeltaTime;
+        const float t = hpRecoveryUiDuration > FLT_EPSILON
+            ? std::clamp(hpRecoveryUiElapsed / hpRecoveryUiDuration, 0.0f, 1.0f)
+            : 1.0f;
+        displayedHp = std::lerp(hpRecoveryUiStart, currentHp, t);
+        delayedHp = displayedHp;
+        delayedHpDelayTimer = 0.0f;
+        if (t >= 1.0f)
+        {
+            hpRecoveryUiActive = false;
+            displayedHp = currentHp;
+            delayedHp = currentHp;
+        }
+    }
+    else if (delayedHp > currentHp)
+    {
+        if (delayedHpDelayTimer > 0.0f)
+        {
+            delayedHpDelayTimer = (std::max)(0.0f, delayedHpDelayTimer - uiDeltaTime);
+        }
+        else
+        {
+            delayedHp = (std::max)(currentHp, delayedHp - delayedHpFollowSpeed * uiDeltaTime);
+        }
+    }
+    else if (delayedHp < currentHp)
+    {
+        delayedHp = currentHp;
+        delayedHpDelayTimer = 0.0f;
+    }
+
+    if (hpCurrentFillUiComponent && hpDelayedFillUiComponent)
+    {
+        const float maximumHp = static_cast<float>(maxHp);
+        hpCurrentFillUiComponent->SetValue(displayedHp, maximumHp);
+        hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
+    }
+}
+
+
+void Player::RefreshOperationGuideUIVisibility() const
 {
     for (auto& item : operationGuideItems)
     {
@@ -1381,8 +1375,6 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
             ? controllerForFirstHitDebug->GetCurrentAnimationName() : "";
         const std::string rushAnimationName = rushStateForFirstHitDebug
             ? rushStateForFirstHitDebug->GetCurrentAttackAnimationForDebug() : "";
-        const bool controllerIsRushAttackA = controllerAnimationName == "Rush_Attack_Fast_A";
-        const bool rushStateIsRushAttackA = rushAnimationName == "Rush_Attack_Fast_A";
         if (stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
         {
             const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
@@ -1520,15 +1512,6 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
             {
                 return warp.state == &state;
             });
-        if (activeWarp != animationMotionWarps.end())
-        {
-            if (const auto target = attackTarget.lock())
-            {
-                DirectX::XMFLOAT3 delta = MathHelper::Subtract(target->GetPosition(), GetPosition());
-                delta.y = 0.0f;
-            }
-
-        }
         animationMotionWarps.erase(
             std::remove_if(
                 animationMotionWarps.begin(),
@@ -1543,7 +1526,7 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     }
 }
 
-void Player::HandleAnimationPlaySE(const AnimationNotifyEvent& event)
+void Player::HandleAnimationPlaySE(const AnimationNotifyEvent& event) const
 {
     if (event.parameter.empty())
         return;
@@ -1594,8 +1577,6 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
         else if (event.parameter == "rush_input_end" && stateMachine_ &&
             std::string(stateMachine_->GetStateName()) == "Dodge")
         {
-            // Retain this notify for animation timing/debug only. Initial Rush
-            // acceptance remains open until Dodge resolves at TransitionWindow.
             rushInputEndNotifyReceivedDebug = true;
         }
         break;
@@ -2072,7 +2053,7 @@ void Player::SetGameplayHudFadeAlpha(const float alpha)
     }
 }
 
-void Player::SetHpBarVisible(const bool visible)
+void Player::SetHpBarVisible(const bool visible) const
 {
     for (const auto& component : hpBarUiComponents)
     {
@@ -2367,7 +2348,7 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
     }
 }
 
-void Player::ForceDirectionImmediate(const DirectX::XMFLOAT3& direction)
+void Player::ForceDirectionImmediate(const DirectX::XMFLOAT3& direction) const
 {
     if (rotationComponent)
         rotationComponent->ForceDirectionImmediate(direction);
@@ -3168,7 +3149,7 @@ void Player::ResetLowHpEffects()
     }
 }
 
-void Player::ApplyDamageFlash(float flashAmount)
+void Player::ApplyDamageFlash(float flashAmount) const
 {
     const auto applyToMesh = [this, flashAmount](
         const std::shared_ptr<SkeletalMeshComponent>& mesh)
@@ -4170,7 +4151,7 @@ void Player::ForceResetBossSlow()
 
 
 // インタラクト対象検索
-IInteractable* Player::FindInteractable()
+IInteractable* Player::FindInteractable() const
 {
     IInteractable* best = nullptr;
     float bestDist = FLT_MAX;

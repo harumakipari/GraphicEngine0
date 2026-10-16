@@ -99,18 +99,17 @@ public:
     {
         mass = 50.0f;
         maxHp = 50;
-        maxHp = 3;
+        //maxHp = 3;
         hp = maxHp;
     }
 
-    // Player固有のコンポーネント、アニメーション、HUDを初期化する。
     void Initialize(const Transform& transform)override;
 
-    // 入力、状態、演出を更新する。演出中は通常のゲームプレイ更新を停止する。
     void Update(float deltaTime)override;
 
-    // 残存する演出、姿勢オーバーライド、時間制御を解除する。
     void Finalize()override;
+
+    void DrawImGuiDetails()override;
 
     // 開始Notifyに応じて当たり判定、入力受付、無敵、MotionWarpを有効化する。
     void OnAnimationNotifyBegin(const AnimationNotifyState& state)override;
@@ -133,9 +132,6 @@ public:
     // 入力・移動
     // 現在の移動モードを返す。
     LocomotionMode GetLocomotionMode() const { return locomotionMode; }
-
-    // 牢獄開始演出で再生中の座り姿勢サンプル時刻を返す。
-    float GetPrisonOpeningSittingSampleTime() const { return prisonOpeningSittingSampleTime; }
 
     // 牢獄開始演出のPing-Pong再生方向を返す。
     bool IsPrisonOpeningSittingPingPongForward() const { return prisonOpeningSittingPingPongForward; }
@@ -167,14 +163,11 @@ public:
     // イベント終了に合わせて操作とHUD表示を復帰する。
     void EndEvent();
 
-
     // HPを変更せず、瀕死時の音と画面演出だけを停止する。
     void StopLowHpPresentation();
 
-
     // シネマティック中の瀕死演出の抑制状態を設定する。
     void SetLowHpPresentationCinematicSuppressed(bool suppressed);
-
 
     // 牢獄開始演出用の座り姿勢とTransform制御を開始する。
     bool BeginPrisonOpeningSitting(const DirectX::XMFLOAT3& position, float yawDegrees);
@@ -183,7 +176,7 @@ public:
     bool BeginPrisonOpeningStanding();
 
     // 牢獄開始演出の座り姿勢Ping-Pong再生条件を設定する。
-    void ConfigurePrisonOpeningSittingMotion(bool useStandingPingPong, float startTime,float endTime, float speed, float standingBlendTime);
+    void ConfigurePrisonOpeningSittingMotion(bool useStandingPingPong, float startTime, float endTime, float speed, float standingBlendTime);
 
     // 牢獄開始演出の姿勢制御を終了し、入力状態を復帰する。
     void EndPrisonOpeningSitting();
@@ -210,7 +203,7 @@ public:
     // Scene が表示方針を決定し、Player は所有するHUDへ反映する。
 
     // Sceneが決定したHPバーの表示状態を反映する。
-    void SetHpBarVisible(bool visible);
+    void SetHpBarVisible(bool visible) const;
     // Sceneが決定したゲームプレイHUD全体の表示状態を反映する。
     void SetGameplayHudVisible(bool visible);
     // HUD表示方針を操作ガイドへ反映する。学習状態は変更しない。
@@ -241,8 +234,7 @@ public:
     // コンティニュー時のTransformと戦闘状態を初期状態へ戻す。
     void ResetForBattleContinue(const Transform& battleStartTransform);
     // 移動方向を補間せずに即時反映する。
-    void ForceDirectionImmediate(const DirectX::XMFLOAT3& direction);
-
+    void ForceDirectionImmediate(const DirectX::XMFLOAT3& direction) const;
     // 死亡演出用の目閉じと発光消失を初期化する。
     void BeginDeathEyeClose();
     // 死亡経過時間に応じて目閉じ姿勢を更新する。
@@ -251,10 +243,11 @@ public:
     void EndDeathEyeClose();
     // 死亡経過時間に応じて発光消失演出を更新する。
     void UpdateDeathVisualFade(float deathElapsedTime);
-
     // 最終ヒット確定時に呼び出すコールバックを設定する。
     void SetFinalHitCallback(std::function<void(GruxEnemy*, const DirectX::XMFLOAT3&)> callback)
-    { finalHitCallback = std::move(callback); }
+    {
+        finalHitCallback = std::move(callback);
+    }
     // 最終ヒット後の攻撃アニメーション終了待機を開始する。
     bool BeginFinalHitWait();
 
@@ -269,10 +262,8 @@ public:
         deathCameraTransparencyDisabled = disabled;
     }
 
-
     // HPやTransformを維持したまま、入力と攻撃を停止する。
     void StopBattleActions();
-
     // フェーズ遷移イベント中に停止した戦闘操作を再開する。
     void ResumeBattleActionsAfterEvent();
     // フェーズ遷移で確認するRush State中かを返す。
@@ -282,7 +273,6 @@ public:
     }
     // Rush State中かを返す。
     bool IsRushActive() const { return IsRushActiveForPhaseTransition(); }
-
     // Rushの予備動作中かを返す。
     bool IsRushWindupActive() const { return rushWindupActive; }
     // Rush攻撃中かを返す。
@@ -300,7 +290,6 @@ public:
     }
     // 現在のRush対象を返す。
     std::shared_ptr<Enemy> GetRushTarget() const { return rushTarget.lock(); }
-
 
     // 最終ヒット時にRushの追撃停止を要求する。
     void RequestFinalHitRushFollowUpStop()
@@ -356,8 +345,6 @@ public:
     // 最終ヒット後の攻撃アニメーション排出を中断として記録する。
     void MarkFinalHitAttackDrainInterrupted();
 
-
-
     // HP、Transform、現在Stateを維持して一時的な戦闘状態を解除する。
     void ClearTransientBattleActions();
     // フェーズ遷移前に戦闘表示とRushガイドを解除する。
@@ -379,7 +366,6 @@ public:
     // ロックオンガイドが表示中かを返す。
     bool IsLockOnGuideVisible() const { return lockOnGuideVisible; }
 
-
     // ボス撃破後の勝利Stateへ遷移する。
     void EnterWinState();
     // 勝利State中かを返す。
@@ -389,12 +375,10 @@ public:
     // 軌跡を描画する処理
     // 剣の軌跡を描画する。
     void RenderTrail(ID3D11DeviceContext* immediateContext);
-
     // Just Dodge成功時のPlayer残像生成を開始する。
     void CapturePlayerPoseGhost();
     // Player残像の表示状態と生成状態をリセットする。
     void ResetPlayerPoseGhost();
-
     // カメラ連携
     // Focus開始時のForwardを設定する
     // Focus開始時に使用するPlayerの正面方向を保存する。
@@ -420,32 +404,6 @@ public:
     // 移動モードを切り替え、対応する移動アニメーションを更新する。
     void SetLocomotionMode(LocomotionMode mode);
 
-    // デバッグ・ImGui
-    // Player固有の調整項目をImGuiに表示する。
-    void DrawImGuiDetails()override;
-
-private:
-    // 演出用の姿勢・Notify補助
-    // 現在の目閉じ設定で姿勢オーバーライドを再構築する。
-    bool RebuildEyeClosePoseOverride();
-    // 目閉じ姿勢オーバーライドと関連状態を初期化する。
-    void ResetEyeCloseOverride();
-
-    // SE再生Notifyを解釈して対応する効果音を再生する。
-    void HandleAnimationPlaySE(const AnimationNotifyEvent& event);
-
-    // 武器コンポーネントのローカルオフセットを反映した攻撃判定位置を求める。
-    DirectX::XMFLOAT3 GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const;
-
-    // 入力要求の内部処理
-    // 入力処理をまとめる
-    // 入力を一定時間保持するアクション要求として記録する。
-    void CaptureActionRequest(float deltaTime);
-
-    // 優先度を比較して入力バッファへアクション要求を保存する。
-    bool StoreActionRequest(ActionType type, float remainTime);
-
-public:
     // 入力要求・移動
     // 保存済みの入力要求を現在の状態で実行可能なState遷移へ変換し、成功時だけ消費する。
     // 入力コマンドによってステートが変わるかどうか
@@ -515,11 +473,8 @@ public:
     void ForceResetPlayerSlow();
     // Bossのスロー状態を即時に通常速度へ戻す。
     void ForceResetBossSlow();
-
-
     // Rush状態に合わせて剣、軌跡、残像の色を更新する。
     void SetRushWeaponVisual(bool enabled);
-
     // 有効範囲に収めたRush最大攻撃回数を返す。
     int GetMaxRushAttackCount() const { return std::clamp(maxRushAttackCount, 1, 7); }
 
@@ -560,6 +515,26 @@ public:
     bool IsBossBattle() const { return isBossBattle; }
 
 private:
+    // 演出用の姿勢・Notify補助
+    // 現在の目閉じ設定で姿勢オーバーライドを再構築する。
+    bool RebuildEyeClosePoseOverride();
+    // 目閉じ姿勢オーバーライドと関連状態を初期化する。
+    void ResetEyeCloseOverride();
+
+    // SE再生Notifyを解釈して対応する効果音を再生する。
+    void HandleAnimationPlaySE(const AnimationNotifyEvent& event) const;
+
+    // 武器コンポーネントのローカルオフセットを反映した攻撃判定位置を求める。
+    DirectX::XMFLOAT3 GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const;
+
+    // 入力要求の内部処理
+    // 入力処理をまとめる
+    // 入力を一定時間保持するアクション要求として記録する。
+    void CaptureActionRequest(float deltaTime);
+
+    // 優先度を比較して入力バッファへアクション要求を保存する。
+    bool StoreActionRequest(ActionType type, float remainTime);
+
     // ノックバック・移動更新
     // ノックバック移動を開始する。
     void BeginKnockBackMovement();
@@ -587,8 +562,11 @@ private:
     void InitializeOperationGuideUI();
     // 操作ガイドUIの点滅と表示状態を更新する。
     void UpdateOperationGuideUI();
+    // Hpバーの更新
+    void UpdateHpBarUI();
+
     // HUD、イベント、HP、項目状態から操作ガイドの表示を反映する。
-    void RefreshOperationGuideUIVisibility();
+    void RefreshOperationGuideUIVisibility() const;
 
     // 戦闘計算・回避方向の補助
     // 現在のRush段階に応じたダメージ倍率を返す。
@@ -600,17 +578,15 @@ private:
     // ロックオン中の移動入力から回避方向を決定する。
     void DecideLockOnDodgeDirection();
 
-
-private:
-    DirectX::XMFLOAT3 knockBackDirection{ 0.0f, 0.0f, 1.0f }; // ノックバック移動の方向
-    float knockBackInitialSpeed = 8.0f; // ノックバック開始時の速度
-    float knockBackDuration = 0.45f; // ノックバック移動の継続時間
-    float knockBackElapsed = 0.0f; // ノックバック移動の経過時間
-    bool knockBackActive = false; // ノックバック状態が有効か
-    bool knockBackForcedMoveActive = false; // ノックバックの強制移動中か
-
     // インタラクト対象検索
-    IInteractable* FindInteractable();
+    IInteractable* FindInteractable() const;
+
+    // HP状態に応じて心拍、発光、ビネットを更新する。
+    void UpdateLowHpEffects();
+    // 瀕死時の心拍SEと脈動演出を開始する。
+    void TriggerLowHpPulse();
+    // 瀕死演出のタイマー、発光、ビネット表示を初期化する。
+    void ResetLowHpEffects();
 
 public:
     // ヒット中に当たった敵を記録する
@@ -737,7 +713,6 @@ public:
     float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
     float rushHitStopDuration = 0.03f; // Rush攻撃のヒットストップ時間
 
-public:
     // 描画用コンポーネントを追加
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent; // Player本体を描画するスケルタルメッシュ
     std::shared_ptr<InputComponent> inputComponent; // Playerの入力意図を保持するコンポーネント
@@ -802,14 +777,16 @@ public:
     float lockOnGuideButtonOffset = 75.0f; // 矢印からボタン画像までの距離
     float lockOnGuideEdgeMargin = 130.0f; // 画面端から矢印を離す余白
     float lockOnGuideArrowRotationOffset = 180.0f; // 矢印画像の回転補正角度
-    
+
+
 private:
-    // HP状態に応じて心拍、発光、ビネットを更新する。
-    void UpdateLowHpEffects();
-    // 瀕死時の心拍SEと脈動演出を開始する。
-    void TriggerLowHpPulse();
-    // 瀕死演出のタイマー、発光、ビネット表示を初期化する。
-    void ResetLowHpEffects();
+    DirectX::XMFLOAT3 knockBackDirection{ 0.0f, 0.0f, 1.0f }; // ノックバック移動の方向
+    float knockBackInitialSpeed = 8.0f; // ノックバック開始時の速度
+    float knockBackDuration = 0.45f; // ノックバック移動の継続時間
+    float knockBackElapsed = 0.0f; // ノックバック移動の経過時間
+    bool knockBackActive = false; // ノックバック状態が有効か
+    bool knockBackForcedMoveActive = false; // ノックバックの強制移動中か
+
 
     int lowHpThreshold = 13;    // 瀕死判定HP
     bool lowHpActive = false; // 瀕死演出が有効か
@@ -827,10 +804,11 @@ private:
 
     // 被ダメージ発光のタイマーを開始する。
     void StartDamageFlash();
+    // Player本体へ被ダメージ発光量を反映する。
+    void ApplyDamageFlash(float flashAmount) const;
     // 被ダメージ発光の減衰と瀕死発光との合成を更新する。
     void UpdateDamageFlash();
-    // Player本体へ被ダメージ発光量を反映する。
-    void ApplyDamageFlash(float flashAmount);
+
 
     float damageFlashTimer = 0.0f; // 被ダメージ発光の残り時間
     float damageFlashDuration = 0.25f; // 被ダメージ発光の継続時間
@@ -898,7 +876,7 @@ private:
     // Player残像の生成、透明度、寿命を更新する。
     void UpdatePlayerPoseGhost();
     // Player本体と剣へDither透明度を反映する。
-    void ApplyDitherTransparencyAlpha(float alpha);
+    void ApplyDitherTransparencyAlpha(float alpha) const;
     // 指定した残像スロットへ現在のPlayer姿勢を複製する。
     bool CapturePlayerPoseGhost(size_t ghostIndex);
 
@@ -933,7 +911,7 @@ private:
     std::shared_ptr<SceneComponent> cameraEyeComponent;
     // カメラの注視点の位置
     std::shared_ptr<SceneComponent> cameraTargetComponent;
- 
+
     // ボス戦時のオフセット
     float bossBattleCameraDistance = -3.0f;
     DirectX::XMFLOAT3 bossBattleCameraOffset = { -0.5f,2.0f,0.0f }; // ボス戦カメラに加える位置オフセット

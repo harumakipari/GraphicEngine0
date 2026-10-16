@@ -218,8 +218,6 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         phase2CinematicShotsLoaded = LoadPhase2CinematicShots();
     }
 
-    // クロスシミュレーション
-    clothSimulate = std::make_unique<ClothSimulate>(device, "./Data/Models/Cloth/ClothModel.gltf");
 
 
     // ここで布を描画する
@@ -2214,10 +2212,6 @@ void GameScene::Update(float deltaTime)
         ZoneScopedN("Collision Resolution");
         CollisionSystem::DetectAndResolveCollisions();
         CollisionSystem::ApplyPushAll();
-    }
-    if (clothSimulate)
-    {
-        clothSimulate->Update(deltaTime);
     }
 
     // CinematicCamera owns the view throughout the boss-death sequence.
@@ -5268,13 +5262,6 @@ void GameScene::UpdateBattleFlow()
             {
                 finalHitReactionCutReached = true;
                 phase2FinalHitReactionComplete = true;
-                if (phase2RushFinalHitDebugActive)
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[Phase2RushFinalHit][ReactionCut] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
-                        " time=" + std::to_string(finalHitReactionTimeDebug) +
-                        " cutTime=" + std::to_string(cutTime));
-                }
                 gruxEnemyActor->EndFinalHitReaction();
             }
         }
@@ -5291,12 +5278,6 @@ void GameScene::UpdateBattleFlow()
             latched != phase2RushFinalHitDebugLastLatched ||
             rushExited != phase2RushFinalHitDebugLastRushExited)
         {
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[Phase2RushFinalHit][GateState] event=" + std::to_string(phase2RushFinalHitDebugEventId) +
-                " attackComplete=" + std::string(attackComplete ? "true" : "false") +
-                " visualLatched=" + std::string(latched ? "true" : "false") +
-                " rushExited=" + std::string(rushExited ? "true" : "false") +
-                " reactionComplete=" + std::string(phase2FinalHitReactionComplete ? "true" : "false"));
             phase2RushFinalHitDebugGateSnapshotValid = true;
             phase2RushFinalHitDebugLastAttackComplete = attackComplete;
             phase2RushFinalHitDebugLastLatched = latched;
@@ -5484,11 +5465,20 @@ void GameScene::SetUpActors()
     auto movieCameraManagerActor = GetActorManager()->CreateAndRegisterActorWithTransform<MovieCameraManagerActor>("movieCameraManager", movieCameraTr);
     movieCameraManagerActor->SetMovieCameraComponent(movieCameraActor->GetMovieCameraComponent());
 
-    Transform clothTr(DirectX::XMFLOAT3{ 21.7f,6.8f,18.757f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    darkClothActors[0] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
+    // 布の生成
+    {
+        Transform clothTr(DirectX::XMFLOAT3{ 21.7f,6.8f,18.757f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        darkClothActors[0] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr);
 
-    Transform clothTr1(DirectX::XMFLOAT3{ 21.7f,6.8f,2.957f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    darkClothActors[1] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr1);
+        Transform clothTr1(DirectX::XMFLOAT3{ 21.7f,6.8f,2.957f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        darkClothActors[1] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr1);
+
+        Transform clothTr2(DirectX::XMFLOAT3{ -6.8f,5.7f,6.5f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        darkClothActors[2] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr2);
+
+        Transform clothTr3(DirectX::XMFLOAT3{ -6.8f,5.7f,15.3f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        darkClothActors[3] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr3);
+    }
 
 
     Transform iceTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });

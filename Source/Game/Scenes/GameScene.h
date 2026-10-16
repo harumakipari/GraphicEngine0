@@ -784,7 +784,6 @@ private:
     float deathStagingWallInsetZ = 0.8f;
     std::array<DeathStagingAreaSettings, 9> deathStagingAreaSettings{};
 
-    std::unique_ptr<ClothSimulate> clothSimulate;
 
     TPSCameraComponent* mainCameraComponent = nullptr;
     std::shared_ptr<MainCamera> mainCameraActor;
@@ -867,5 +866,5 @@ private:
     bool playerDeathBgmPlayed = false;
 
     // 布アクター
-    std::array<std::shared_ptr<DarkClothActor>, 2> darkClothActors;
+    std::array<std::shared_ptr<DarkClothActor>, 4> darkClothActors;
 };

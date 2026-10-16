@@ -563,9 +563,6 @@ void MovieCameraManagerActor::DrawImGuiDetails()
             prisonOpeningSittingMotionMode == PrisonOpeningSittingMotionMode::StandingPingPong,
             prisonOpeningSittingPingPongStartTime, prisonOpeningSittingPingPongEndTime,
             prisonOpeningSittingPingPongSpeed, prisonOpeningSittingToStandingBlendTime);
-        ImGui::Text("Current Sample Time: %.3f s", prisonPlayer->GetPrisonOpeningSittingSampleTime());
-        ImGui::Text("Ping-Pong Direction: %s", prisonPlayer->IsPrisonOpeningSittingPingPongForward()
-            ? "Forward" : "Backward");
     }
     ImGui::DragFloat("Prison Opening TPS Blend Time", &prisonOpeningBlendDuration,
         0.01f, 0.1f, 3.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
