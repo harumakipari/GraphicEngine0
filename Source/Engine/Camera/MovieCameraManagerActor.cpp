@@ -567,19 +567,10 @@ void MovieCameraManagerActor::DrawImGuiDetails()
     ImGui::DragFloat("Prison Opening TPS Blend Time", &prisonOpeningBlendDuration,
         0.01f, 0.1f, 3.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Checkbox("Eye Opening Enabled", &prisonOpeningEyeOpeningEnabled);
-    ImGui::Text("Face CloseUp Key Time: %s%.3f s",
-        prisonOpeningFaceCloseUpKeyTimeValid ? "" : "Unavailable ",
-        prisonOpeningFaceCloseUpKeyTime);
     ImGui::DragFloat("Eye Open Delay", &prisonOpeningEyeOpenDelay,
         0.01f, 0.0f, 30.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Eye Open Duration", &prisonOpeningEyeOpenDuration,
         0.01f, 0.01f, 10.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
-    const float calculatedEyeOpenStart = prisonOpeningFaceCloseUpKeyTime + prisonOpeningEyeOpenDelay;
-    ImGui::Text("Calculated Eye Open Start: %.3f s", calculatedEyeOpenStart);
-    ImGui::Text("Calculated Eye Open End: %.3f s",
-        calculatedEyeOpenStart + prisonOpeningEyeOpenDuration);
-    ImGui::Text("Current Movie Time: %.3f s", prisonOpeningCurrentMovieTime);
-    ImGui::Text("Current Eye Weight: %.3f", prisonOpeningCurrentEyeWeight);
     ImGui::Checkbox("Eye Opening Preview", &prisonOpeningEyeOpeningPreview);
     if (prisonOpeningEyeOpeningPreview)
         ImGui::DragFloat("Eye Opening Preview Time", &prisonOpeningEyeOpeningPreviewTime,
@@ -592,147 +583,6 @@ void MovieCameraManagerActor::DrawImGuiDetails()
 
     ImGui::Checkbox("DeathWide Anchor Preview",
         &deathWideAnchorPreviewEnabled);
-    ImGui::Text("Selected Anchor: %s",
-        deathWidePreviewAnchorName.c_str());
-
-    const auto previewAnchor = deathWidePreviewAnchor.lock();
-    const auto previewTarget = deathWidePreviewTarget.lock();
-    const auto movieCamera = movieCameraWeakPtr.lock();
-    const bool movieActive = GetOwnerScene() &&
-        GetOwnerScene()->GetCameraManager() &&
-        GetOwnerScene()->GetCameraManager()->IsUseMovie();
-    ImGui::Text("Preview Enabled: %s",
-        deathWideAnchorPreviewEnabled ? "true" : "false");
-    ImGui::Text("MovieCamera Active: %s",
-        movieActive ? "true" : "false");
-    ImGui::Text("Preview Anchor Valid: %s",
-        previewAnchor ? "true" : "false");
-    ImGui::Text("Preview Target Valid: %s",
-        previewTarget ? "true" : "false");
-    ImGui::Text("DeathWide Collision Mask: WorldStatic | Floor | WorldProps");
-
-    if (!deathWideValidationDebug.empty())
-    {
-        ImGui::Separator();
-        ImGui::Text("DeathWide Anchor Validation");
-        for (const auto& validation : deathWideValidationDebug)
-        {
-            ImGui::Text("Anchor: %s  Final Result: %s  Invalid Reason: %s",
-                validation.name.c_str(),
-                validation.valid ? "Valid" : "Invalid",
-                validation.reason.c_str());
-            ImGui::Text("  Anchor World Position: %.3f, %.3f, %.3f",
-                validation.anchorPosition.x, validation.anchorPosition.y,
-                validation.anchorPosition.z);
-            ImGui::Text("  Target World Position: %.3f, %.3f, %.3f",
-                validation.targetPosition.x, validation.targetPosition.y,
-                validation.targetPosition.z);
-            ImGui::Text("  Distance: %.3f", validation.distance);
-            ImGui::Text("  Target -> Anchor SphereCast: Hit=%s InitialOverlap=%s Distance=%.3f",
-                validation.targetPathHit ? "true" : "false",
-                validation.targetPathInitialOverlap ? "true" : "false",
-                validation.targetPathHitDistance);
-            ImGui::Text("    Hit Position: %.3f, %.3f, %.3f",
-                validation.targetPathHitPosition.x,
-                validation.targetPathHitPosition.y,
-                validation.targetPathHitPosition.z);
-            ImGui::Text("    Hit Normal: %.3f, %.3f, %.3f Layer=%s",
-                validation.targetPathHitNormal.x,
-                validation.targetPathHitNormal.y,
-                validation.targetPathHitNormal.z,
-                validation.targetPathLayer.c_str());
-            ImGui::Text("  Anchor Probe: Hit=%s InitialOverlap=%s",
-                validation.probeHit ? "true" : "false",
-                validation.probeInitialOverlap ? "true" : "false");
-            ImGui::Text("    Probe Start: %.3f, %.3f, %.3f",
-                validation.probeStart.x, validation.probeStart.y,
-                validation.probeStart.z);
-            ImGui::Text("    Probe End: %.3f, %.3f, %.3f Layer=%s",
-                validation.probeEnd.x, validation.probeEnd.y,
-                validation.probeEnd.z, validation.probeLayer.c_str());
-            ImGui::Text("    Anchor Space Probe Layer: %s",
-                validation.spaceProbeLayer.c_str());
-        }
-    }
-
-    if (previewAnchor && previewTarget && movieCamera && movieCamera->GetOwner())
-    {
-        const DirectX::XMFLOAT3 anchorPosition =
-            previewAnchor->GetComponentLocation();
-        const DirectX::XMFLOAT3 targetPosition =
-            previewTarget->GetComponentLocation();
-        const DirectX::XMFLOAT3 eyeToTargetVector =
-            MathHelper::Subtract(targetPosition, anchorPosition);
-        const float eyeToTargetLength = MathHelper::Length(eyeToTargetVector);
-        const DirectX::XMFLOAT3 eyeToTargetDirection =
-            eyeToTargetLength > FLT_EPSILON
-            ? MathHelper::Normalize(eyeToTargetVector)
-            : DirectX::XMFLOAT3{};
-        const DirectX::XMFLOAT3 moviePosition =
-            movieCamera->GetOwner()->GetPosition();
-        const DirectX::XMFLOAT3 movieForward = movieCamera->GetForward();
-        const float forwardDot = eyeToTargetLength > FLT_EPSILON
-            ? movieForward.x * eyeToTargetDirection.x +
-              movieForward.y * eyeToTargetDirection.y +
-              movieForward.z * eyeToTargetDirection.z
-            : 0.0f;
-
-        const DirectX::XMFLOAT3 targetRelativePosition =
-            previewTarget->GetRelativeLocation();
-        ImGui::Text("Anchor World Position: %.3f, %.3f, %.3f",
-            anchorPosition.x, anchorPosition.y, anchorPosition.z);
-        ImGui::Text("Target Relative Position: %.3f, %.3f, %.3f",
-            targetRelativePosition.x, targetRelativePosition.y,
-            targetRelativePosition.z);
-        ImGui::Text("Target World Position: %.3f, %.3f, %.3f",
-            targetPosition.x, targetPosition.y, targetPosition.z);
-        ImGui::Text("MovieCamera Position: %.3f, %.3f, %.3f",
-            moviePosition.x, moviePosition.y, moviePosition.z);
-        if (deathWideDebugRotationValid)
-        {
-            ImGui::Text("Generated Rotation: %.5f, %.5f, %.5f, %.5f",
-                deathWideDebugGeneratedRotation.x,
-                deathWideDebugGeneratedRotation.y,
-                deathWideDebugGeneratedRotation.z,
-                deathWideDebugGeneratedRotation.w);
-            ImGui::Text("MovieCamera Rotation BEFORE ApplyWorldPose: %.5f, %.5f, %.5f, %.5f",
-                deathWideDebugRotationBefore.x,
-                deathWideDebugRotationBefore.y,
-                deathWideDebugRotationBefore.z,
-                deathWideDebugRotationBefore.w);
-            ImGui::Text("MovieCamera Rotation AFTER ApplyWorldPose: %.5f, %.5f, %.5f, %.5f",
-                deathWideDebugRotationAfter.x,
-                deathWideDebugRotationAfter.y,
-                deathWideDebugRotationAfter.z,
-                deathWideDebugRotationAfter.w);
-            ImGui::Text("CameraComponent Rotation AFTER ApplyWorldPose: %.5f, %.5f, %.5f, %.5f",
-                deathWideDebugComponentRotationAfter.x,
-                deathWideDebugComponentRotationAfter.y,
-                deathWideDebugComponentRotationAfter.z,
-                deathWideDebugComponentRotationAfter.w);
-            ImGui::Text("Component Rotation Forward: %.3f, %.3f, %.3f",
-                deathWideDebugDirectForward.x,
-                deathWideDebugDirectForward.y,
-                deathWideDebugDirectForward.z);
-            ImGui::Text("Component Forward Dot TargetDirection: %.4f",
-                deathWideDebugDirectForwardDot);
-        }
-        ImGui::Text("MovieCamera Forward: %.3f, %.3f, %.3f",
-            movieForward.x, movieForward.y, movieForward.z);
-        if (deathWideDebugRotationValid)
-        {
-            ImGui::Text("MovieCamera Forward AFTER ApplyWorldPose: %.3f, %.3f, %.3f",
-                deathWideDebugMovieForward.x,
-                deathWideDebugMovieForward.y,
-                deathWideDebugMovieForward.z);
-            ImGui::Text("Forward Dot TargetDirection AFTER ApplyWorldPose: %.4f",
-                deathWideDebugForwardDot);
-        }
-        ImGui::Text("Eye -> Target Direction: %.3f, %.3f, %.3f",
-            eyeToTargetDirection.x, eyeToTargetDirection.y,
-            eyeToTargetDirection.z);
-        ImGui::Text("Forward Dot TargetDirection: %.4f", forwardDot);
-    }
 
     ImGui::DragFloat("Boss Room Zoom Duration", &bossRoomZoomDuration,
         0.05f, 0.01f, 10.0f, "%.2f sec");

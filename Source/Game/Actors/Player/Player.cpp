@@ -269,8 +269,6 @@ void Player::Initialize(const Transform& transform)
     }
     ResetPlayerPoseGhost();
 
-    // カメラの目の位置のコンポーネントを追加
-    cameraEyeComponent = AddComponent<SceneComponent>("cameraEyeComponent", parentName);
 
     // カメラの注視点の位置のコンポーネントを追加
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
@@ -626,23 +624,7 @@ void Player::Update(float deltaTime)
         characterMovementComponent->SetMoveSpeedSetting(walkSpeed, runSpeed);
     }
 
-    DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
-    DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
-    DirectX::XMFLOAT3 toEnemyDir = { 0.0f,0.0f,0.0f };
-
-    // ボス戦時のカメラのeyeの位置を更新する
-    if (auto gruxEnemy = GetOwnerScene()->GetActorManager()->GetActorOfType<GruxEnemy>())
-    {
-        bossPos = gruxEnemy->GetPosition();
-        playerPos = GetPosition();
-        toEnemyDir = MathHelper::Subtract(bossPos, playerPos);
-        toEnemyDir = MathHelper::Normalize(toEnemyDir);
-        DirectX::XMFLOAT3 eyePos = MathHelper::Add(
-            MathHelper::Add(playerPos,MathHelper::Multiply(toEnemyDir, bossBattleCameraDistance)),
-            bossBattleCameraOffset
-        );  // ここ意味ない気がするから後でチェックする
-        cameraEyeComponent->SetWorldLocationDirect(eyePos);
-    }
+    const DirectX::XMFLOAT3 playerPos = GetPosition();
 
     // 剣の真ん中、根本、先の座標を取得する
     DirectX::XMFLOAT3 swordRootPos = GetHitBoxPoint(swordRootComponent, activeHitBoxOffset);
@@ -1215,11 +1197,7 @@ void Player::DrawImGuiDetails()
             ImGui::TreePop();
         }
     }
-    if (ImGui::CollapsingHeader(U8("ボス戦カメラ調整")))
-    {
-        ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
-        ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
-    }
+
     if (ImGui::CollapsingHeader(U8("演出調整")))
     {
         if (ImGui::TreeNode(U8("死亡時")))

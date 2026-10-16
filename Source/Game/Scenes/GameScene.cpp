@@ -2214,21 +2214,6 @@ void GameScene::Update(float deltaTime)
         CollisionSystem::ApplyPushAll();
     }
 
-    // CinematicCamera owns the view throughout the boss-death sequence.
-    // Do not let held LockOn input mutate the gameplay-camera request mode.
-    if (battleFlowState != BattleFlowState::BossDead)
-    {
-        if (InputSystem::GetInputState("LockOn", InputStateMask::Press))
-        {// 押している間ロックオンする
-            ChangeCameraMode(TPSCameraController::CameraMode::BossBattle);
-        }
-        else
-        {
-            ChangeCameraMode(TPSCameraController::CameraMode::TPS);
-        }
-    }
-
-
 #ifdef USE_IMGUI
 
 
@@ -5596,10 +5581,6 @@ void GameScene::DrawGuiPlusAlpha()
         1.0f, 0.0f, 1000.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Movie Skip Scale", &movieSkipPromptScale,
         0.01f, 0.10f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Text("Movie Skip Type: %s", GetMovieSkipTypeLogName(movieSkipType));
-    ImGui::Text("Movie Skip Prompt: %s  Timer: %.2f  Fade: %.2f",
-        movieSkipPromptVisible ? "visible" : "hidden", movieSkipPromptTimer, movieSkipPromptFade);
-
     ImGui::SeparatorText("Tutorial Guide Ring");
     ImGui::Checkbox("Tutorial Guide Ring Force Visible", &tutorialDodgeGuideRingForceVisible);
     ImGui::DragFloat3("Tutorial Guide Ring Position Offset", &tutorialDodgeGuideRingPositionOffset.x, 0.01f);
@@ -5609,43 +5590,6 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat("Tutorial Guide Ring Pulse Speed", &tutorialDodgeGuideRingPulseSpeed, 0.01f, 0.0f, 10.0f);
     ImGui::DragFloat("Tutorial Guide Ring Pulse Min", &tutorialDodgeGuideRingPulseMin, 0.01f, 0.0f, 1.0f);
     ImGui::DragFloat("Tutorial Guide Ring Pulse Max", &tutorialDodgeGuideRingPulseMax, 0.01f, 0.0f, 1.0f);
-    ImGui::Text("Ring Active: %s", tutorialDodgeGuideRingActive ? "true" : "false");
-    ImGui::Text("Ring Finished: %s", tutorialDodgeGuideRingFinished ? "true" : "false");
-    ImGui::Text("Mesh Visible: %s", tutorialDodgeGuideRingMesh && tutorialDodgeGuideRingMesh->IsVisible() ? "true" : "false");
-    ImGui::Text("Actor Active: %s", tutorialDodgeGuideRingActor && tutorialDodgeGuideRingActor->IsActive() ? "true" : "false");
-    if (tutorialDodgeGuideRingMesh)
-    {
-        const auto worldPosition = tutorialDodgeGuideRingMesh->GetComponentLocation();
-        const auto worldScale = tutorialDodgeGuideRingMesh->GetComponentScale();
-        ImGui::Text("Mesh World Position: (%.3f, %.3f, %.3f)", worldPosition.x, worldPosition.y, worldPosition.z);
-        ImGui::Text("Mesh World Scale: (%.3f, %.3f, %.3f)", worldScale.x, worldScale.y, worldScale.z);
-        if (tutorialDodgeGuideRingActor && tutorialDodgeGuideRingActor->GetRootComponent())
-        {
-            const auto actorWorldPosition = tutorialDodgeGuideRingActor->GetRootComponent()->GetComponentLocation();
-            const auto actorWorldScale = tutorialDodgeGuideRingActor->GetRootComponent()->GetComponentScale();
-            ImGui::Text("Ring Actor World Position: (%.3f, %.3f, %.3f)", actorWorldPosition.x, actorWorldPosition.y, actorWorldPosition.z);
-            ImGui::Text("Ring Actor World Scale: (%.3f, %.3f, %.3f)", actorWorldScale.x, actorWorldScale.y, actorWorldScale.z);
-        }
-        else
-        {
-            ImGui::TextUnformatted("Ring Actor World Position: Unavailable");
-            ImGui::TextUnformatted("Ring Actor World Scale: Unavailable");
-        }
-        if (tutorialDodgeSkeletonActor && tutorialDodgeSkeletonActor->GetRootComponent())
-        {
-            const auto skeletonWorldPosition = tutorialDodgeSkeletonActor->GetRootComponent()->GetComponentLocation();
-            ImGui::Text("Skeleton World Position: (%.3f, %.3f, %.3f)", skeletonWorldPosition.x, skeletonWorldPosition.y, skeletonWorldPosition.z);
-        }
-        else
-            ImGui::TextUnformatted("Skeleton World Position: Unavailable");
-        ImGui::Text("Mesh Render Call Count: %llu", static_cast<unsigned long long>(tutorialDodgeGuideRingMesh->GetDebugRenderCallCount()));
-    }
-    else
-    {
-        ImGui::TextUnformatted("Mesh World Position: Unavailable");
-        ImGui::TextUnformatted("Mesh World Scale: Unavailable");
-        ImGui::TextUnformatted("Mesh Render Call Count: Unavailable");
-    }
 
 
     ImGui::SeparatorText("Judge Dodge Operation Tutorial");
@@ -5653,46 +5597,19 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat2("Judge Dodge Message Scale", &judgeDodgeOperationTutorialScale.x, 0.01f, 0.01f, 4.0f);
     ImGui::DragFloat2("Judge Dodge Close Position", &judgeDodgeOperationTutorialClosePosition.x, 1.0f);
     ImGui::DragFloat2("Judge Dodge Close Scale", &judgeDodgeOperationTutorialCloseScale.x, 0.01f, 0.01f, 4.0f);
-    ImGui::Text("State: %d", static_cast<int>(judgeDodgeOperationTutorialState));
 
-    ImGui::Text(U8("Boss Phase: %s"), GetBossPhaseDebugName());
-    ImGui::Text(U8("Boss HP: %d"), GetBossCurrentHp());
-    ImGui::Text(U8("Boss MaxHP: %d"), GetBossMaxHp());
     ImGui::SeparatorText("Tutorial Camera Profile Trigger");
     ImGui::DragFloat3("Corridor Exit Trigger Center", &tutorialCameraProfileTriggerCenter.x,
         0.05f, -100.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat3("Corridor Exit Trigger Size", &tutorialCameraProfileTriggerSize.x,
         0.05f, 0.05f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Checkbox("Show Corridor Exit Trigger", &showTutorialCameraProfileTriggerDebug);
-    ImGui::Text("Corridor Exit Trigger Fired: %s", tutorialCameraProfileTriggerFired ? "true" : "false");
     ImGui::SeparatorText("Prison Opening Sitting");
     ImGui::DragFloat3("Sitting Position", &prisonOpeningSittingPosition.x,
         0.01f, -100.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Sitting Rotation Yaw", &prisonOpeningSittingYawDegrees,
         0.1f, -360.0f, 360.0f, "%.3f deg");
-    ImGui::Text("Sitting Active: %s", player && player->IsPrisonOpeningSitting() ? "true" : "false");
-    ImGui::SeparatorText("Operation Guide Tutorial");
-    ImGui::Text("L Learned: %s", player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::L) ? "true" : "false");
-    ImGui::Text("R Learned: %s", player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::R) ? "true" : "false");
-    ImGui::Text("Tutorial Skeleton LockOn Candidate: %s", tutorialPassiveSkeletonLockOnCandidate ? "true" : "false");
-    ImGui::Text("LT Visible / Learned: %s / %s",
-        player && player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT) ? "true" : "false",
-        player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::LT) ? "true" : "false");
-    ImGui::Text("Y Visible: %s", player && player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y) ? "true" : "false");
-    ImGui::Text("Tutorial Dodge Skeleton AttackRange: %s", tutorialDodgeSkeletonAttackRange ? "true" : "false");
-    ImGui::Text("X Visible / Learned: %s / %s",
-        player && player->IsOperationGuideItemVisible(Player::OperationGuideItem::X) ? "true" : "false",
-        player && player->IsOperationGuideItemLearned(Player::OperationGuideItem::X) ? "true" : "false");
     ImGui::SeparatorText("Tutorial Skeleton UI");
-    ImGui::Text("Passive Skeleton HP / MaxHP: %d / %d",
-        tutorialPassiveSkeletonActor ? tutorialPassiveSkeletonActor->GetHp() : 0,
-        tutorialPassiveSkeletonActor ? tutorialPassiveSkeletonActor->GetMaxHp() : 0);
-    ImGui::Text("Dodge Skeleton HP / MaxHP: %d / %d",
-        tutorialDodgeSkeletonActor ? tutorialDodgeSkeletonActor->GetHp() : 0,
-        tutorialDodgeSkeletonActor ? tutorialDodgeSkeletonActor->GetMaxHp() : 0);
-    ImGui::Text("LT Prompt Visible: %s", tutorialPassiveSkeletonLtPromptVisible ? "true" : "false");
-    ImGui::Text("Y Prompt Visible: %s", tutorialPassiveSkeletonYPromptVisible ? "true" : "false");
-    ImGui::Text("X Prompt Visible: %s", tutorialDodgeSkeletonXPromptVisible ? "true" : "false");
     ImGui::DragFloat("HP Display Distance", &tutorialSkeletonHpDisplayDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Near Distance", &tutorialSkeletonHpNearDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Far Distance", &tutorialSkeletonHpFarDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
@@ -5709,32 +5626,6 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat2("Operation Fixed Screen Position X / Y", &tutorialSkeletonOperationFixedScreenPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragInt(U8("Phase1 MaxHP"), &phase1MaxHp, 1.0f, 1, 500);
     ImGui::DragInt(U8("Phase2 MaxHP"), &phase2MaxHp, 1.0f, 1, 500);
-    ImGui::Text(U8("Transition Combat Stopped: %s"),
-        gruxEnemyActor && gruxEnemyActor->IsPhaseTransitionCombatStopped() ? "true" : "false");
-    ImGui::Text(U8("Battle AI Active: %s"),
-        gruxEnemyActor && gruxEnemyActor->IsBattleAIActive() ? "true" : "false");
-    ImGui::Text(U8("Player Input Enabled: %s"),
-        InputSystem::IsInputEnabled() ? "true" : "false");
-    ImGui::Text(U8("Continue Saved Boss HP: %d / %d"),
-        continueCheckpointBossHp, continueCheckpointBossMaxHp);
-    const char* continuePhaseNames[] = { "Phase1", "TransitionToPhase2", "Phase2" };
-    ImGui::Text(U8("Continue Saved Boss Phase: %s"),
-        continuePhaseNames[static_cast<size_t>(continueCheckpointPhase)]);
-    ImGui::Text(U8("Phase2 Transition Active: %s"),
-        IsBossPhaseTransitionActive() ? "true" : "false");
-    const char* checkpointNames[] = { "Phase1", "TransitionToPhase2", "Phase2" };
-    ImGui::Text(U8("Continue Checkpoint Phase: %s"),
-        checkpointNames[static_cast<size_t>(continueCheckpointPhase)]);
-    ImGui::Text(U8("Phase2 Transition Elapsed: %.3f"), phase2TransitionElapsed);
-    ImGui::Text(U8("Phase1 Break Pending: %s"), phase1BreakPending ? "true" : "false");
-    ImGui::Text(U8("Phase2 Transition Requested: %s"), phase2TransitionRequested ? "true" : "false");
-    ImGui::Text(U8("Waiting For Rush End: %s"), phase1BreakWaitingForRush ? "true" : "false");
-    static constexpr const char* phase2StepNames[] = { "None", "RecallFadeOut", "RecallFadeIn", "RecallPreWait", "BossRecall", "PlayerEmotePreWait", "PlayerEmote", "PlayerEmotePostWait", "ReturnToTps" };
-    ImGui::Text(U8("Phase2 Transition Step: %s"),
-        phase2StepNames[static_cast<size_t>(phase2TransitionStep)]);
-    ImGui::Text(U8("Phase2 Fade Step: %s"),
-        phase2StepNames[static_cast<size_t>(phase2TransitionStep)]);
-    ImGui::Text(U8("Phase2 Fade Alpha: %.3f"), phase2RecallFadeAlpha);
     ImGui::DragFloat(U8("Phase2 FadeOut時間"), &phase2RecallFadeOutDuration,
         0.01f, 0.0f, 2.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Phase2 FadeIn時間"), &phase2RecallFadeInDuration,
@@ -5743,8 +5634,6 @@ void GameScene::DrawGuiPlusAlpha()
         ? (std::max)(0.0f, phase2RecallFadeOutDuration - phase2StepElapsed) : 0.0f;
     const float phase2FadeInRemaining = phase2TransitionStep == Phase2TransitionStep::RecallFadeIn
         ? (std::max)(0.0f, phase2RecallFadeInDuration - phase2StepElapsed) : 0.0f;
-    ImGui::Text(U8("Phase2 FadeOut Remaining: %.3f"), phase2FadeOutRemaining);
-    ImGui::Text(U8("Phase2 FadeIn Remaining: %.3f"), phase2FadeInRemaining);
     ImGui::DragFloat(U8("Phase2 Recall\u524DWait"), &phase2RecallPreWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     const float recallPreWaitElapsed = phase2TransitionStep == Phase2TransitionStep::RecallPreWait
@@ -5754,12 +5643,6 @@ void GameScene::DrawGuiPlusAlpha()
     const auto phase2BossController = gruxEnemyActor
         ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
     const auto phase2PlayerController = player ? player->GetBodyAnimationController() : nullptr;
-    ImGui::Text(U8("Recall PreWait\u7D4C\u904E: %.3f"), recallPreWaitElapsed);
-    ImGui::Text(U8("Recall PreWait\u6B8B\u308A: %.3f"), recallPreWaitRemaining);
-    const float recallAnimationTime = phase2BossController &&
-        phase2BossController->GetCurrentAnimationName() == "PrimaryAttack_Recall"
-        ? phase2BossController->GetCurrentAnimationTime() : 0.0f;
-    ImGui::Text(U8("Recall Animation Time: %.3f"), recallAnimationTime);
     float phase1BossScale = gruxEnemyActor ? gruxEnemyActor->GetPhase1BossScale() : 1.7f;
     float phase2BossScale = gruxEnemyActor ? gruxEnemyActor->GetPhase2BossScale() : 2.1f;
     const bool phase1ScaleChanged = ImGui::DragFloat(U8("Phase1 Boss Scale"), &phase1BossScale,
@@ -5768,8 +5651,6 @@ void GameScene::DrawGuiPlusAlpha()
         0.01f, 1.0f, 3.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
     if (gruxEnemyActor && (phase1ScaleChanged || phase2ScaleChanged))
         gruxEnemyActor->SetPhaseScaleRange(phase1BossScale, phase2BossScale);
-    ImGui::Text(U8("Current Boss Scale: %.3f"), gruxEnemyActor
-        ? gruxEnemyActor->GetCurrentPhaseScale() : 0.0f);
     ImGui::DragFloat(U8("Phase2 Transform Start Time"), &phase2TransformStartTime,
         0.01f, 0.0f, 15.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Phase2 Transform End Time"), &phase2TransformEndTime,
@@ -5796,23 +5677,11 @@ void GameScene::DrawGuiPlusAlpha()
         {
             gruxEnemyActor->SetPhase2MaskSoftness(phase2MaskSoftness);
         }
-        ImGui::Text(U8("Phase2 World MinY: %.3f"), gruxEnemyActor->GetPhase2WorldMinY());
-        ImGui::Text(U8("Phase2 World MaxY: %.3f"), gruxEnemyActor->GetPhase2WorldMaxY());
-        ImGui::Text(U8("Current Boss Scale: %.3f  Transform Progress: %.3f"),
-            gruxEnemyActor->GetCurrentPhaseScale(), phase2TransformProgress);
         if (const auto& skeletalMesh = gruxEnemyActor->GetSkeletalMeshComponent())
         {
             DirectX::XMFLOAT3 phase2HairTint = skeletalMesh->GetPhase2HairTint();
             if (ImGui::ColorEdit3("Phase2 Hair Tint RGB", &phase2HairTint.x))
                 skeletalMesh->SetPhase2HairTint(phase2HairTint);
-            ImGui::Text("Gear Phase2 Texture Loaded: %s",
-                skeletalMesh->IsPhase2BaseColorTextureLoaded("M_Grux_Qilin_Gear") ? "true" : "false");
-            ImGui::Text("Torso Phase2 Texture Loaded: %s",
-                skeletalMesh->IsPhase2BaseColorTextureLoaded("M_Grux_Qilin_Torso") ? "true" : "false");
-            ImGui::Text("Head Phase2 Texture Loaded: %s",
-                skeletalMesh->IsPhase2BaseColorTextureLoaded("M_Grux_Qilin_Head") ? "true" : "false");
-            ImGui::Text("LegsHands Phase2 Texture Loaded: %s",
-                skeletalMesh->IsPhase2BaseColorTextureLoaded("M_Grux_Qilin_LegsHands") ? "true" : "false");
         }
     }
 
@@ -5830,8 +5699,6 @@ void GameScene::DrawGuiPlusAlpha()
         if (skeletalMesh)
             skeletalMesh->SetPhase2TextureDebugMode(phase2TextureDebugMode);
     }
-    ImGui::Text(U8("Phase2 Transform Started: %s"), phase2TransformStarted ? "true" : "false");
-    ImGui::Text(U8("Phase2 Transform Completed: %s"), phase2TransformCompleted ? "true" : "false");
     ImGui::DragFloat("Phase2 BGM Fade Out Duration", &phase2BgmFadeOutDuration,
         0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Phase2 BGM Fade In Duration", &phase2BgmFadeInDuration,
@@ -5842,24 +5709,10 @@ void GameScene::DrawGuiPlusAlpha()
         ? phase2StepElapsed : 0.0f;
     ImGui::DragFloat(U8("Phase2 Emote\u524DWait"), &phase2PlayerEmotePreWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Text(U8("Phase2 Emote\u524DWait\u7D4C\u904E: %.3f"), emotePreWaitElapsed);
-    ImGui::Text(U8("Phase2 Emote\u524DWait\u6B8B\u308A: %.3f"), (std::max)(0.0f,
-        phase2PlayerEmotePreWaitDuration - emotePreWaitElapsed));
-    ImGui::Text(U8("Player Emote Active: %s"), phase2PlayerEmoteActive ? "true" : "false");
-    ImGui::Text(U8("Player Emote Time: %.3f"), phase2PlayerController &&
-        phase2PlayerController->GetCurrentAnimationName() == "Emote_Phase2"
-        ? phase2PlayerController->GetCurrentAnimationTime() : 0.0f);
     ImGui::DragFloat(U8("Player Emote EndTime"), &phase2PlayerEmoteEndTime,
         0.001f, 0.001f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Phase2 Emote\u5F8CWait"), &phase2PlayerEmotePostWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Text(U8("Phase2 Emote\u5F8CWait\u7D4C\u904E: %.3f"), emotePostWaitElapsed);
-    ImGui::Text(U8("Phase2 Emote\u5F8CWait\u6B8B\u308A: %.3f"), (std::max)(0.0f,
-        phase2PlayerEmotePostWaitDuration - emotePostWaitElapsed));
-    ImGui::Text(U8("Emote\u7D42\u7AEFPose\u4FDD\u6301: %s"),
-        phase2PlayerEmoteEndPoseHeld ? "true" : "false");
-    ImGui::Text(U8("Player Sword Trail Active: %s"),
-        player && player->IsSwordTrailActiveForPhaseTransition() ? "true" : "false");
     const bool playerLockOnActive = darkCameraActor &&
         (darkCameraActor->GetCameraMode() == DarkCameraActor::CameraMode::LockOn ||
             darkCameraActor->GetMovementMode() == DarkCameraActor::CameraMode::LockOn);
@@ -5867,9 +5720,6 @@ void GameScene::DrawGuiPlusAlpha()
     { "TPS", "Focus", "LockOn", "Death" };
     const char* playerStateName = player && player->GetStateMachine()
         ? player->GetStateMachine()->GetStateName() : "None";
-    ImGui::Text(U8("Player LockOn Active: %s"), playerLockOnActive ? "true" : "false");
-    ImGui::Text(U8("Player LockOn UI Visible: %s"),
-        player && player->IsLockOnGuideVisible() ? "true" : "false");
     ImGui::SeparatorText("LockOn Target UI");
     ImGui::DragFloat("LockOn Gather Start Offset", &lockOnTargetUIStartOffset, 0.5f, 0.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("LockOn Gather Duration", &lockOnTargetUIGatherDuration, 0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
@@ -5885,54 +5735,18 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat2("Bottom Final Offset X / Y", &lockOnTargetUIBottomFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat2("Left Final Offset X / Y", &lockOnTargetUILeftFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat2("Right Final Offset X / Y", &lockOnTargetUIRightFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Text(U8("Player BlendSpace Active: %s"), phase2PlayerController &&
-        phase2PlayerController->IsUsingBlendSpace() ? "true" : "false");
-    ImGui::Text(U8("DarkCamera RequestMode: %s"), darkCameraActor
-        ? darkCameraModeNames[static_cast<size_t>(darkCameraActor->GetMovementMode())] : "None");
-    ImGui::Text(U8("Player State: %s"), playerStateName);
     const bool phase2BossIdleMaintained = phase2BossController &&
         (phase2TransitionStep == Phase2TransitionStep::PlayerEmotePreWait ||
             phase2TransitionStep == Phase2TransitionStep::PlayerEmote ||
             phase2TransitionStep == Phase2TransitionStep::PlayerEmotePostWait ||
             phase2TransitionStep == Phase2TransitionStep::ReturnToTps) &&
         phase2BossController->GetCurrentAnimationName() == "TravelMode_Idle_0";
-    ImGui::Text(U8("Phase2 Boss Idle\u7dad\u6301: %s"),
-        phase2BossIdleMaintained ? "true" : "false");
-    ImGui::Text(U8("Boss Current Animation: %s"), phase2BossController
-        ? phase2BossController->GetCurrentAnimationName().c_str() : "None");
-    ImGui::Text(U8("Phase2 Boss Animation Ownership: %s"),
-        gruxEnemyActor && gruxEnemyActor->IsPhase2CinematicAnimationOwnedExternally() ? "true" : "false");
-    ImGui::Text(U8("Boss Last Animation Request: %s"),
-        gruxEnemyActor ? gruxEnemyActor->GetLastAnimationRequestDebug().c_str() : "None");
-    ImGui::Text(U8("Boss Animation Request Source: %s"),
-        gruxEnemyActor ? gruxEnemyActor->GetAnimationRequestSourceDebug().c_str() : "None");
-    ImGui::Text(U8("Phase2 Current Shot: %s"), phase2CurrentShot.c_str());
-    ImGui::Text(U8("boss_recall Actor Pose Applied: %s"),
-        phase2RecallActorPoseApplied ? "true" : "false");
-    ImGui::Text(U8("TPS Return Blend Active: %s"),
-        phase2TpsReturnBlendActive ? "true" : "false");
     ImGui::SeparatorText("Phase2 Boss HP Preview");
     if (gruxEnemyActor)
         gruxEnemyActor->DrawPhase2HpBarPreviewGui();
     ImGui::SeparatorText("BGM Debug");
-    ImGui::Text("Game BGM Fading: %s", gameBgmFading ? "true" : "false");
-    ImGui::Text("Game BGM Fade Elapsed: %.3f", gameBgmFadeElapsed);
-    ImGui::Text("Game BGM Volume: %.3f", gameBgmActor ? gameBgmActor->GetVolume() : 0.0f);
     ImGui::DragFloat("Game BGM Fade Duration", &gameBgmFadeDuration,
         0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Text("Boss BGM Fading: %s", bossBgmFading ? "true" : "false");
-    ImGui::Text("Player Fade Triggered: %s", playerBgmFading ? "true" : "false");
-    ImGui::Text("Boss BGM Fade Elapsed: %.3f", bossBgmFadeElapsed);
-    ImGui::Text("Boss BGM Fade Start Volume: %.3f", bossBgmFadeStartVolume);
-    ImGui::Text("Boss BGM Volume: %.3f", GetActiveBossBgmActor() ? GetActiveBossBgmActor()->GetVolume() : 0.0f);
-    ImGui::Text("Phase2 BGM Started: %s", phase2BgmStarted ? "true" : "false");
-    ImGui::Text("Current Boss BGM: %s", GetCurrentBossBgmDebugName());
-    ImGui::Text("Phase2 BGM Triggered At Recall Time: %.3f", phase2BgmTriggerTime);
-    ImGui::Text("Phase2 BGM CrossFade Active: %s", phase2BgmCrossFadeActive ? "true" : "false");
-    ImGui::Text("Boss Death Second Played: %s", bossDeathSecondBgmPlayed ? "true" : "false");
-    ImGui::Text("Player Death BGM Played: %s", playerDeathBgmPlayed ? "true" : "false");
-    ImGui::Text("Death Result Visible: %s", deathResultVisible ? "true" : "false");
-    ImGui::Text("Boss Death Phase: %d", static_cast<int>(bossDeathPhase));
     if (ImGui::Button(U8("ボスの部屋を明るくする")))
     {
         StartBossRoomLerp(0.0f, 1.0f, 3.0f);
@@ -5940,14 +5754,6 @@ void GameScene::DrawGuiPlusAlpha()
     if (ImGui::Button(U8("ボスの部屋を暗くする")))
     {
         StartBossRoomLerp(1.0f, 0.0f, 3.0f);
-    }
-    if (ImGui::Button(U8("Bossカメラ")))
-    {
-        ChangeCameraMode(TPSCameraController::CameraMode::BossBattle);
-    }
-    if (ImGui::Button(U8("TPSカメラ")))
-    {
-        ChangeCameraMode(TPSCameraController::CameraMode::TPS);
     }
     ImGui::Separator();
     ImGui::Text("Boss Battle Timer");
@@ -6058,56 +5864,6 @@ void GameScene::DrawGuiPlusAlpha()
         else if (bossDeathPhase == BossDeathPhase::DeathLanding && !animationCompletionMet) stopReason = "WaitingDeathLandingAnimation";
         else if (bossDeathPhase == BossDeathPhase::HuskPreview && !IsHuskComplete()) stopReason = "WaitingHusk";
 
-        ImGui::Text("BattleFlowState: %s", flowName(battleFlowState));
-        ImGui::Text("BossDeathPhase: %s", phaseName);
-        ImGui::Text("BossDeathPhaseElapsed: %.3f sec", bossDeathPhaseElapsed);
-        ImGui::Text("bossDeathShotsLoaded: %s", bossDeathShotsLoaded ? "true" : "false");
-        ImGui::Text("SetupCinematic Player valid: %s", player ? "true" : "false");
-        ImGui::Text("SetupCinematic Grux valid: %s", gruxEnemyActor ? "true" : "false");
-        ImGui::Text("SetupCinematic CinematicCamera valid: %s", cinemaCameraActor ? "true" : "false");
-        ImGui::Text("SetupCinematic BossDeathPreset valid: %s", bossDeathShotsLoaded ? "true" : "false");
-        ImGui::Text("SetupCinematic failure reason: %s", setupFailureReason.c_str());
-        ImGui::Text(U8("Boss Death Stop Reason: %s"), stopReason);
-        ImGui::SeparatorText("Grux Death Debug (read only)");
-        ImGui::Text("HP: %d", gruxEnemyActor ? gruxEnemyActor->GetHp() : 0);
-        ImGui::Text("isDeathPerform: %s", gruxEnemyActor && gruxEnemyActor->IsDeathPerformingForDebug() ? "true" : "false");
-        ImGui::Text("FinalHitReaction active: %s", gruxEnemyActor && gruxEnemyActor->IsFinalHitReactionActiveForDebug() ? "true" : "false");
-        ImGui::Text("FinalHitReaction held: %s", gruxEnemyActor && gruxEnemyActor->IsFinalHitReactionHeldForDebug() ? "true" : "false");
-        ImGui::Text("FourthHitReaction active: %s", gruxEnemyActor && gruxEnemyActor->IsFourthHitReactionActiveForDebug() ? "true" : "false");
-        const auto stateMachine = gruxEnemyActor ? gruxEnemyActor->GetStateMachine() : nullptr;
-        ImGui::Text("StateMachine State: %s", stateMachine ? stateMachine->GetStateName() : "None");
-        ImGui::Text("BT Current Node: %s", gruxEnemyActor ? gruxEnemyActor->GetBehaviorTreeCurrentNode().c_str() : "None");
-        ImGui::Text("Current Animation Name: %s", actualAnimation);
-        ImGui::Text("Animation Time: %.3f sec", bossController ? bossController->GetCurrentAnimationTime() : 0.0f);
-        ImGui::Text("Animation Playing: %s", bossController && bossController->IsPlayAnimation() ? "true" : "false");
-        ImGui::Text("Animation Held Pose: %s", bossController && bossController->IsHeldAnimationPoseDebug() ? "true" : "false");
-        ImGui::Text("Animation Rate: %.3f", bossController ? bossController->GetAnimationRateDebug() : 0.0f);
-        ImGui::Text("Playback Range End: %.3f (negative = full clip)", bossController ? bossController->GetPlaybackEndTimeDebug() : -1.0f);
-        ImGui::SeparatorText("Last Grux Animation Request (read only)");
-        ImGui::Text("Last Animation Request: %s", gruxEnemyActor ? gruxEnemyActor->GetLastAnimationRequestDebug().c_str() : "None");
-        ImGui::Text("Previous Animation: %s", gruxEnemyActor ? gruxEnemyActor->GetPreviousAnimationRequestDebug().c_str() : "None");
-        ImGui::Text("Animation Request Source: %s", gruxEnemyActor ? gruxEnemyActor->GetAnimationRequestSourceDebug().c_str() : "None");
-        ImGui::Text("Animation Request Frame: %llu", static_cast<unsigned long long>(
-            gruxEnemyActor ? gruxEnemyActor->GetAnimationRequestFrameDebug() : 0));
-        ImGui::Text("BattleFlowState at Request: %s", gruxEnemyActor ?
-            gruxEnemyActor->GetAnimationRequestBattleFlowDebug().c_str() : "None");
-        ImGui::Text("BossDeathPhase at Request: %s", gruxEnemyActor ?
-            gruxEnemyActor->GetAnimationRequestBossDeathPhaseDebug().c_str() : "None");
-        ImGui::SeparatorText("Death Phase Animation Check (read only)");
-        ImGui::Text("Expected Animation: %s", expectedAnimation);
-        ImGui::Text("Actual Animation: %s", actualAnimation);
-        ImGui::Text("Animation Match: %s", animationMatch ? "true" : "false");
-        ImGui::Text("Phase End Condition Met: %s", animationCompletionMet ? "true" : "false");
-        ImGui::SeparatorText("Husk Debug (read only)");
-        ImGui::Text("Husk Requested: %s", (gruxEnemyActor && gruxEnemyActor->IsBeginHuskParticleRequestedForDebug()) ||
-            gruxHuskCaptureRequested || gruxHuskPreviewCaptureRequested ? "true" : "false");
-        ImGui::Text("Husk Started: %s", HasHuskCaptureStarted() || gruxHuskPlaybackActive ? "true" : "false");
-        ImGui::Text("Husk Complete: %s", IsHuskComplete() ? "true" : "false");
-        ImGui::Text("Husk Wait Reason: %s", huskWaitReason.c_str());
-        ImGui::SeparatorText("EnterBossDead Debug (read only)");
-        ImGui::Text("EnterBossDead Call Count: %d", bossDeathEnterCallCount);
-        ImGui::Text("Last EnterBossDead BattleFlowState: %s", flowName(bossDeathLastEnterPreviousFlow));
-        ImGui::Text("HP0 Detection Route: %s", bossDeathLastHpZeroDetectionSource.c_str());
         ImGui::Separator();
         ImGui::DragFloat("Final Hit Slow Scale", &finalHitSlowScale, 0.01f, 0.01f, 1.0f);
         ImGui::DragFloat("Final Hit Slow Duration", &finalHitSlowDuration, 0.01f, 0.01f, 2.0f);
@@ -6124,83 +5880,6 @@ void GameScene::DrawGuiPlusAlpha()
                     0.001f, 0.0f, duration, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
             }
         }
-        ImGui::Text("Current Hit Reaction Animation Time: %.6f s", finalHitReactionTimeDebug);
-        ImGui::Text("Reaction Cut Time: %.6f s", finalHitReactionCutTime);
-        ImGui::Text("Cut Time Reached: %s", finalHitReactionCutReached ? "Yes" : "No");
-        ImGui::Text("Final Hit Direction: %s", finalHitDirection.c_str());
-        ImGui::Text("Final Hit Reaction: %s", finalHitReaction.empty() ? "None" : finalHitReaction.c_str());
-        ImGui::Text("Final Hit Wait: %s (%.3f sec)",
-            battleFlowState == BattleFlowState::FinalHitSlow ? "Slow" :
-            battleFlowState == BattleFlowState::FinalHitSlowRecovery ? "Recovery" :
-            battleFlowState == BattleFlowState::FinalHitAftermath ? "Aftermath" : "Inactive", finalHitTimer);
-        ImGui::SeparatorText("Final Hit Measurements (read only)");
-        static constexpr const char* battleFlowNames[] = {
-            "Intro", "Playing", "FinalHitSlow", "FinalHitSlowRecovery", "FinalHitAftermath", "PlayerDead",
-            "ContinueWait", "ResetForContinue", "BossDead", "Victory"
-        };
-        ImGui::Text("BattleFlow: %s", battleFlowNames[static_cast<size_t>(battleFlowState)]);
-        ImGui::Text("Final Hit wall elapsed (Slow + Recovery + Aftermath): %.3f s", finalHitDebugElapsedSeconds);
-        ImGui::Text("Final Hit Timer: %.6f s", finalHitTimer);
-        ImGui::Text("Final Hit Recovery Timer (elapsed / duration): %.6f / %.6f s",
-            finalHitRecoveryElapsed, finalHitRecoveryDurationActive);
-        ImGui::Text("Final Hit Recovery Progress: %.6f", finalHitRecoveryProgress);
-        ImGui::Text("Recovery Start Scale: %.6f", recoveryStartScale);
-        ImGui::Text("Current Recovery Scale: %.6f", currentRecoveryScale);
-        ImGui::Text("Global TimeScale: %.6f", Time::timeScale);
-        ImGui::Text("DeltaTime: %.6f / UnscaledDeltaTime: %.6f s",
-            Time::DeltaTime(), Time::UnscaledDeltaTime());
-        ImGui::Text("Frame Delta / Unscaled: %.6f", Time::UnscaledDeltaTime() > 0.0f
-            ? Time::DeltaTime() / Time::UnscaledDeltaTime() : 0.0f);
-        ImGui::Text("Time slowTimer: %.6f s", Time::GetSlowTimer());
-        const auto drawAnimationMeasurements = [](const char* label, const Character* actor)
-            {
-                if (!actor)
-                {
-                    ImGui::Text("%s: unavailable", label);
-                    return;
-                }
-                ImGui::Text("%s Actor TimeScale: %.6f", label, actor->GetTimeScale());
-                const auto controller = actor->GetBodyAnimationController();
-                if (!controller)
-                {
-                    ImGui::Text("%s Animation: unavailable", label);
-                    return;
-                }
-                ImGui::Text("%s Animation: %s", label, controller->GetCurrentAnimationName().c_str());
-                ImGui::Text("%s Animation time: %.6f s", label, controller->GetCurrentAnimationTime());
-                const float rate = controller->GetLastEffectivePlaybackRateDebug();
-                ImGui::Text("%s Effective clip rate (last update): %.6f", label, rate);
-                ImGui::Text("%s Animation update dt: %.6f s", label, controller->GetLastUpdateDeltaTimeDebug());
-                ImGui::Text("%s Rate vs real time (last frame): %.6f", label,
-                    Time::UnscaledDeltaTime() > 0.0f
-                    ? rate * controller->GetLastUpdateDeltaTimeDebug() / Time::UnscaledDeltaTime() : 0.0f);
-                ImGui::Text("%s blendFactor: %.6f / Playing: %s / BlendSpace: %s / Preview: %s",
-                    label, controller->GetBlendFactorDebug(), controller->IsPlayAnimation() ? "Yes" : "No",
-                    controller->IsUsingBlendSpace() ? "Yes" : "No", controller->IsEditorPreviewActive() ? "Yes" : "No");
-            };
-        drawAnimationMeasurements("Player", player.get());
-        drawAnimationMeasurements("Boss", gruxEnemyActor.get());
-        if (ImGui::TreeNode("Global Scale History (last 32 changes)"))
-        {
-            ImGui::TextWrapped("SetSlow records its caller; automatic expiry is labelled. "
-                "Direct assignments are detected at the next Tick/SetSlow with an unknown caller; "
-                "multiple direct writes between samples may not be visible.");
-            const auto& history = Time::GetScaleHistoryDebug();
-            for (size_t i = 0; i < Time::GetScaleHistoryCountDebug(); ++i)
-            {
-                const auto& change = history[i];
-                const double relativeSeconds = (static_cast<double>(change.milliseconds) -
-                    static_cast<double>(finalHitDebugStartMilliseconds)) / 1000.0;
-                ImGui::Text("t=%+.3f s: %.6f -> %.6f | %s", relativeSeconds,
-                    change.before, change.after, change.reason);
-                ImGui::TextWrapped("  %s", change.caller);
-            }
-            ImGui::TreePop();
-        }
-        ImGui::TextWrapped("Clip rate = controller rate * asset playRate * speedCurve, sampled before time advances. "
-            "Zero in BlendSpace/preview or when runtime evaluation is skipped. "
-            "Values describe the last update; a finished clip can clamp its time. "
-            "Global scale can change after the frame DeltaTime was computed.");
         ImGui::Separator();
         ImGui::SeparatorText("Victory Camera Intro");
         static constexpr const char* victoryPhaseNames[] = { "None", "CameraBlend", "WinEmote", "ResultDelay", "ShowButtons", "Interactive" };
@@ -6209,24 +5888,10 @@ void GameScene::DrawGuiPlusAlpha()
             0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
         const auto* resultCamera = cinemaCameraActor
             ? dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()) : nullptr;
-        ImGui::Text("IsBlending: %s", resultCamera && resultCamera->IsBlending() ? "Yes" : "No");
-        const auto resultController = player ? player->GetBodyAnimationController() : nullptr;
-        ImGui::Text("Player Current Animation: %s", resultController
-            ? resultController->GetCurrentAnimationName().c_str() : "None");
-        ImGui::Text("Player Animation Time: %.3f s", resultController
-            ? resultController->GetCurrentAnimationTime() : 0.0f);
-        ImGui::Text("Emote End Time: %.2f s", victoryEmoteEndTime);
         ImGui::DragFloat("Result Recall To Idle Blend Duration", &resultRecallToIdleBlendDuration,
             0.01f, 0.0f, 0.5f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::Text("Emote_Win Current Time: %.3f s", resultController &&
-            resultController->GetCurrentAnimationName() == "Emote_Win"
-            ? resultController->GetCurrentAnimationTime() : 0.0f);
         ImGui::DragFloat("Result UI Trigger Animation Time", &resultUITriggerAnimationTime,
             0.01f, 0.0f, victoryEmoteEndTime, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::Text("UI Triggered: %s", resultUITriggered ? "Yes" : "No");
-        ImGui::Text("New Record: %s", victoryIsNewRecord ? "Yes" : "No");
-        ImGui::Text("Saved Best: %.3f s (%s)", victoryBestTime, victoryBestTimeValid ? "Valid" : "None");
-        ImGui::Text("Result Rank: %s", std::array<const char*, 4>{ "S", "A", "B", "C" }[static_cast<size_t>(victoryRank)]);
         ImGui::DragFloat("Victory S Limit", &victoryRankSLimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
         ImGui::DragFloat("Victory A Limit", &victoryRankALimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
         ImGui::DragFloat("Victory B Limit", &victoryRankBLimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
@@ -6246,10 +5911,6 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::SeparatorText("Victory Result Buttons");
         ImGui::DragFloat("Victory Button Fade Duration", &victoryButtonFadeDuration,
             0.01f, 0.0f, 1.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::Text("Button Fade Timer: %.3f s", victoryButtonFadeTimer);
-        ImGui::Text("Selected Button Index: %d", victorySelectedButton);
-        ImGui::Text("Interactive: %s", victoryResultPhase == VictoryResultPhase::Interactive &&
-            victoryButtonInputEnabled ? "Yes" : "No");
         ImGui::DragFloat2("Restart Button Position", &victoryButtonPositions[0].x, 1.0f);
         ImGui::DragFloat("Restart Button Scale", &victoryButtonScales[0], 0.01f,
             0.01f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
@@ -6283,20 +5944,8 @@ void GameScene::DrawGuiPlusAlpha()
         UpdateVictoryResultContents();
         ImGui::DragFloat("Result Background Fade Duration", &resultBackgroundFadeDuration,
             0.01f, 0.0f, 1.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::Text("Result Background Fade Timer: %.3f s", resultBackgroundFadeElapsed);
-        ImGui::Text("Result Background Alpha: %.3f", resultBackgroundAlpha);
-        ImGui::Text("Emote_Win Clip Duration: %.3f s", resultController
-            ? resultController->GetAnimationLength("Emote_Win") : 0.0f);
-        ImGui::Text("Husk Capture Started: %s", HasHuskCaptureStarted() ? "Yes" : "No");
-        ImGui::Text("Husk Playback Elapsed: %.3f s", GetHuskPlaybackElapsed());
-        ImGui::Text("Husk Completion Duration: %.3f s", GetHuskCompletionDuration());
-        ImGui::Text("Husk Complete: %s", IsHuskComplete() ? "Yes" : "No");
-        ImGui::Text("Result Delay Timer: %.3f s", victoryResultDelayElapsed);
         ImGui::DragFloat("Result Delay", &victoryResultDelayDuration,
             0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::Text("Presets Loaded: %s", bossDeathShotsLoaded ? "Yes" : "No");
-        ImGui::Text("Phase: %s", phaseNames[static_cast<size_t>(bossDeathPhase)]);
-        ImGui::Text("Phase Elapsed: %.3f", bossDeathPhaseElapsed);
         ImGui::DragFloat(U8("暗転時間"), &bossDeathFadeOutDuration, 0.01f, 0.01f, 5.0f);
         ImGui::DragFloat(U8("暗転解除時間"), &bossDeathFadeInDuration, 0.01f, 0.01f, 5.0f);
 
@@ -6608,29 +6257,5 @@ void GameScene::StartBossRoomLerp(float startFactor, float endFactor, float dura
             };
 
         bossLerpEasing->StartHandler(handler, accessor);
-    }
-}
-
-// カメラのモードを変更する
-void GameScene::ChangeCameraMode(TPSCameraController::CameraMode cameraMode)
-{
-    switch (cameraMode)
-    {
-    case TPSCameraController::CameraMode::TPS:
-        if (mainCameraActor)
-        {
-            mainCameraActor->SetLookTarget(player->GetCameraTargetComponent());
-            mainCameraActor->SetCameraMode(TPSCameraController::CameraMode::TPS);
-        }
-        break;
-    case TPSCameraController::CameraMode::BossBattle:
-        // ボス戦
-        if (mainCameraActor)
-        {
-            mainCameraActor->SetEye(player->GetCameraEyeComponent());
-            mainCameraActor->SetLookTarget(gruxEnemyActor->GetCameraTargetComponent());
-            mainCameraActor->SetCameraMode(TPSCameraController::CameraMode::BossBattle);
-        }
-        break;
     }
 }

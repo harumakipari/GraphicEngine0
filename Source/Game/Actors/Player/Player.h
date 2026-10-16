@@ -491,9 +491,6 @@ public:
     // 通常回避の診断結果を記録する。
     void RecordNormalDodgeDebug();
     // カメラ・ボス戦連携
-    // カメラの目の位置を取得する
-    // カメラ視点用コンポーネントを返す。
-    const std::shared_ptr<SceneComponent>& GetCameraEyeComponent() { return cameraEyeComponent; }
 
     // カメラの注視点の位置
     // カメラ注視点用コンポーネントを返す。
@@ -907,14 +904,10 @@ private:
     CoreColor playerHpCurrentColor{ 0.302f, 0.565f, 0.644f, 1.0f }; // 現在HPバーの色
     CoreColor playerHpDelayedColor{ 0.711f, 0.958f, 0.993f, 1.0f }; // 遅延HPバーの色
 
-    // カメラの目の位置
-    std::shared_ptr<SceneComponent> cameraEyeComponent;
+
     // カメラの注視点の位置
     std::shared_ptr<SceneComponent> cameraTargetComponent;
 
-    // ボス戦時のオフセット
-    float bossBattleCameraDistance = -3.0f;
-    DirectX::XMFLOAT3 bossBattleCameraOffset = { -0.5f,2.0f,0.0f }; // ボス戦カメラに加える位置オフセット
 
     // カメラの
     DirectX::XMFLOAT3 focusDirection = {};//　カメラのFocus開始時のForward

@@ -107,8 +107,6 @@ public:
     void BeginGameBgmFadeOut();
     void PlayBossBattleBgm();
 
-    void ChangeCameraMode(TPSCameraController::CameraMode cameraMode);
-
     // Called when the boss-room door movie begins, before the boss-introduction blend completes.
     void EnterBossRoomLockOnScope(bool fromTutorialDoorMovie = true);
 
@@ -785,8 +783,6 @@ private:
     std::array<DeathStagingAreaSettings, 9> deathStagingAreaSettings{};
 
 
-    TPSCameraComponent* mainCameraComponent = nullptr;
-    std::shared_ptr<MainCamera> mainCameraActor;
     std::shared_ptr<CinemaCamera> cinemaCameraActor;
 
     std::shared_ptr<DarkCameraActor> darkCameraActor;
