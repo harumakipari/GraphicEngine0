@@ -862,5 +862,5 @@ private:
     bool playerDeathBgmPlayed = false;
 
     // 布アクター
-    std::array<std::shared_ptr<DarkClothActor>, 4> darkClothActors;
+    std::array<std::shared_ptr<DarkClothActor>, 6> darkClothActors;
 };

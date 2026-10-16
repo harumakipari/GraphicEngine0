@@ -1027,25 +1027,13 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         prevSwordMidPos = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
         prevSwordTipPos = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
         hitBox = true;
-        const auto* rushStateForFirstHitDebug = stateMachine_
-            ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
-        const auto controllerForFirstHitDebug = GetBodyAnimationController();
-        const std::string controllerAnimationName = controllerForFirstHitDebug
-            ? controllerForFirstHitDebug->GetCurrentAnimationName() : "";
-        const std::string rushAnimationName = rushStateForFirstHitDebug
-            ? rushStateForFirstHitDebug->GetCurrentAttackAnimationForDebug() : "";
-        if (stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush")
-        {
-            const auto* rushState = dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState());
-            const auto controller = GetBodyAnimationController();
-        }
         if (stateMachine_->GetStateName() == "Attack")
             StopAttackTargetRotation();
         break;
     }
     case AnimationNotifyState::Type::InputWindow:
+        // 入力受付を開始
         inputWindow = true;
-        Logger::Log(U8("入力受付を開始しました"));
         break;
     case AnimationNotifyState::Type::Invincible:
         invincibleWindow = true;
@@ -2442,7 +2430,7 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     enemy->SetTimeScale(scale);
     SetTimeScale(scale);
     // Playerとボスをスローにする
-    playerSlowPhase = JustDodgeSlowPhase::Hold; 
+    playerSlowPhase = JustDodgeSlowPhase::Hold;
     bossSlowPhase = JustDodgeSlowPhase::Hold;
     playerSlowHoldTimer = std::max<float>(0.0f, justDodgeSlowHoldDuration);
     bossSlowHoldTimer = playerSlowHoldTimer;
@@ -2576,10 +2564,8 @@ void Player::UpdateJustDodgeTimeScales()
     else if (playerSlowPhase == JustDodgeSlowPhase::Return)
     {
         playerSlowReturnElapsed += Time::UnscaledDeltaTime();
-        const float t = justDodgeSlowReturnDuration > FLT_EPSILON
-            ? std::clamp(playerSlowReturnElapsed / justDodgeSlowReturnDuration, 0.0f, 1.0f)
-            : 1.0f;
-        const float smoothT = t * t * (3.0f - 2.0f * t);
+        const float t = justDodgeSlowReturnDuration > FLT_EPSILON ? std::clamp(playerSlowReturnElapsed / justDodgeSlowReturnDuration, 0.0f, 1.0f) : 1.0f;
+        const float smoothT = MathHelper::SmoothStep01(t);
         SetTimeScale(std::lerp(playerSlowReturnStartScale, 1.0f, smoothT));
         if (t >= 1.0f)
         {
@@ -2632,7 +2618,7 @@ void Player::BeginPlayerSlowReturn()
 
 void Player::BeginBossSlowReturn(bool afterRush)
 {
-    if (bossSlowPhase == JustDodgeSlowPhase::Inactive ||bossSlowPhase == JustDodgeSlowPhase::Return)
+    if (bossSlowPhase == JustDodgeSlowPhase::Inactive || bossSlowPhase == JustDodgeSlowPhase::Return)
     {
         return;
     }

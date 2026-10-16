@@ -8,14 +8,6 @@
 #include "Engine/Scene/Scene.h"
 #include "Engine/Utility/Time.h"
 
-namespace
-{
-    float SmoothStep01(float value)
-    {
-        value = std::clamp(value, 0.0f, 1.0f);
-        return value * value * (3.0f - 2.0f * value);
-    }
-}
 
 bool DarkCameraActor::HasValidLockOnTarget() const
 {
@@ -128,16 +120,6 @@ void DarkCameraActor::Update(float deltaTime)
         mainCameraComponent->SetFov(DirectX::XMConvertToRadians(fovDegree));
     }
 
-#if 0
-    if (currentMode == CameraMode::LockOn)
-    {
-        mainCameraComponent->SetFov(DirectX::XMConvertToRadians(CalculateLockOnFov()));
-    }
-    else
-    {
-        mainCameraComponent->SetFov(DirectX::XMConvertToRadians(cameraFov));
-    }
-#endif // 0
 
     if (!preservePrisonOpeningReturnPose)
     {
@@ -177,7 +159,7 @@ void DarkCameraActor::Update(float deltaTime)
             { 0.2f, 0.8f, 1.0f, 1.0f }, 0.0f, true);
         DebugRender::DrawSphere(collisionPostEyePosition, 0.12f,
             cameraHitWall ? DirectX::XMFLOAT4{ 1.0f, 0.2f, 0.2f, 1.0f }
-                          : DirectX::XMFLOAT4{ 0.2f, 1.0f, 0.3f, 1.0f },
+            : DirectX::XMFLOAT4{ 0.2f, 1.0f, 0.3f, 1.0f },
             0.0f, true);
     }
 
@@ -248,7 +230,7 @@ void DarkCameraActor::DrawDeathCameraDebug(const CameraPose& appliedPose) const
     DebugRender::DrawLine(appliedPose.eye, appliedPose.target, cameraColor, 0.0f, true);
 }
 
-void DarkCameraActor::PlayCameraShake(const float intensity, const float duration,const float frequency, const float positionAmount, const float targetAmount)
+void DarkCameraActor::PlayCameraShake(const float intensity, const float duration, const float frequency, const float positionAmount, const float targetAmount)
 {
     if (auto* scene = GetOwnerScene()) if (auto* manager = scene->GetCameraManager()) { manager->PlayCameraShake(intensity, duration, frequency, positionAmount, targetAmount); return; }
     shakeIntensity = (std::max)(intensity, 0.0f);
@@ -493,10 +475,8 @@ void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
     // Pitch shares this assist's start/update/end lifecycle with yaw, but uses
     // an absolute target and its own SmoothStep duration.
     const float pitchBlendTime = (std::max)(offscreenAssistPitchBlendTime, 0.0f);
-    const float pitchProgress = pitchBlendTime > FLT_EPSILON
-        ? (offscreenAttackAssist.elapsed + deltaTime) / pitchBlendTime
-        : 1.0f;
-    offscreenAssistPitchBlend = SmoothStep01(pitchProgress);
+    const float pitchProgress = pitchBlendTime > FLT_EPSILON ? (offscreenAttackAssist.elapsed + deltaTime) / pitchBlendTime : 1.0f;
+    offscreenAssistPitchBlend = MathHelper::SmoothStep01(pitchProgress);
     const float targetPitch = DirectX::XMConvertToRadians(offscreenAssistTargetPitchDegree);
     currentPitch = desiredPitch = std::lerp(
         offscreenAssistPitchStart, targetPitch, offscreenAssistPitchBlend);
@@ -1244,14 +1224,14 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
         FLT_EPSILON);
     const float collisionInput =
         (lockOnCollisionStartRatio - lockOnCollisionRatioForAdaptive) / collisionRange;
-    const float targetCollisionStrength = SmoothStep01(collisionInput);
+    const float targetCollisionStrength = MathHelper::SmoothStep01(collisionInput);
 
     const float enemyRange = std::max<float>(
         lockOnDistanceFull - lockOnDistanceStart,
         FLT_EPSILON);
     const float enemyDistanceInput =
         (lockOnDistanceForZoom - lockOnDistanceStart) / enemyRange;
-    const float targetDistanceStrength = SmoothStep01(enemyDistanceInput);
+    const float targetDistanceStrength = MathHelper::SmoothStep01(enemyDistanceInput);
 
     const float lerpRate = std::clamp(
         deltaTime * lockOnCompositionLerpSpeed,
@@ -1369,19 +1349,19 @@ float DarkCameraActor::CalculateRequiredLockOnFramingDistance()
     }
 
     const auto evaluateSample = [&](const DirectX::XMFLOAT3& sample)
-    {
-        const DirectX::XMFLOAT3 relative = MathHelper::Subtract(
-            sample, framingTarget);
-        const float x = MathHelper::Dot(relative, cameraRight);
-        const float y = MathHelper::Dot(relative, cameraUp);
-        const float z = MathHelper::Dot(relative, cameraForward);
-        lockOnHorizontalExtent = (std::max)(lockOnHorizontalExtent, std::abs(x));
-        lockOnVerticalExtent = (std::max)(lockOnVerticalExtent, std::abs(y));
-        lockOnRequiredXDistance = (std::max)(lockOnRequiredXDistance,
-            std::abs(x) / horizontalDenominator - z);
-        lockOnRequiredYDistance = (std::max)(lockOnRequiredYDistance,
-            std::abs(y) / verticalDenominator - z);
-    };
+        {
+            const DirectX::XMFLOAT3 relative = MathHelper::Subtract(
+                sample, framingTarget);
+            const float x = MathHelper::Dot(relative, cameraRight);
+            const float y = MathHelper::Dot(relative, cameraUp);
+            const float z = MathHelper::Dot(relative, cameraForward);
+            lockOnHorizontalExtent = (std::max)(lockOnHorizontalExtent, std::abs(x));
+            lockOnVerticalExtent = (std::max)(lockOnVerticalExtent, std::abs(y));
+            lockOnRequiredXDistance = (std::max)(lockOnRequiredXDistance,
+                std::abs(x) / horizontalDenominator - z);
+            lockOnRequiredYDistance = (std::max)(lockOnRequiredYDistance,
+                std::abs(y) / verticalDenominator - z);
+        };
 
     evaluateSample(playerLookPosition);
     evaluateSample(enemyLookPosition);
@@ -1466,43 +1446,43 @@ float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
     const auto evaluateSample = [&](const DirectX::XMFLOAT3& sample,
         LockOnFovSampleDiagnostics& sampleDiagnostics,
         const char* sampleName)
-    {
-        const DirectX::XMFLOAT3 relative = MathHelper::Subtract(
-            sample, eye);
-        const float signedX = MathHelper::Dot(relative, cameraRight);
-        const float signedY = MathHelper::Dot(relative, cameraUp);
-        const float z = MathHelper::Dot(relative, cameraForward);
-        sampleDiagnostics.cameraSpace = { signedX, signedY, z };
-        constexpr float nearZ = 0.1f;
-        sampleDiagnostics.inFront = std::isfinite(z) && z > nearZ;
-        if (!std::isfinite(signedX) || !std::isfinite(signedY) ||
-            !std::isfinite(z) || !sampleDiagnostics.inFront)
         {
-            return false;
-        }
+            const DirectX::XMFLOAT3 relative = MathHelper::Subtract(
+                sample, eye);
+            const float signedX = MathHelper::Dot(relative, cameraRight);
+            const float signedY = MathHelper::Dot(relative, cameraUp);
+            const float z = MathHelper::Dot(relative, cameraForward);
+            sampleDiagnostics.cameraSpace = { signedX, signedY, z };
+            constexpr float nearZ = 0.1f;
+            sampleDiagnostics.inFront = std::isfinite(z) && z > nearZ;
+            if (!std::isfinite(signedX) || !std::isfinite(signedY) ||
+                !std::isfinite(z) || !sampleDiagnostics.inFront)
+            {
+                return false;
+            }
 
-        const float x = std::abs(signedX);
-        const float y = std::abs(signedY);
-        const float requiredTanVerticalFromY = y / (z * safeScaleY);
-        const float requiredTanHorizontal = x / (z * safeScaleX);
-        const float requiredTanVerticalFromX = requiredTanHorizontal / aspect;
-        sampleDiagnostics.requiredFovFromX = DirectX::XMConvertToDegrees(
-            2.0f * std::atan(requiredTanVerticalFromX));
-        sampleDiagnostics.requiredFovFromY = DirectX::XMConvertToDegrees(
-            2.0f * std::atan(requiredTanVerticalFromY));
+            const float x = std::abs(signedX);
+            const float y = std::abs(signedY);
+            const float requiredTanVerticalFromY = y / (z * safeScaleY);
+            const float requiredTanHorizontal = x / (z * safeScaleX);
+            const float requiredTanVerticalFromX = requiredTanHorizontal / aspect;
+            sampleDiagnostics.requiredFovFromX = DirectX::XMConvertToDegrees(
+                2.0f * std::atan(requiredTanVerticalFromX));
+            sampleDiagnostics.requiredFovFromY = DirectX::XMConvertToDegrees(
+                2.0f * std::atan(requiredTanVerticalFromY));
 
-        if (requiredTanVerticalFromX > requiredTanVertical)
-        {
-            requiredTanVertical = requiredTanVerticalFromX;
-            diagnostics.limiter = std::string(sampleName) + "-X";
-        }
-        if (requiredTanVerticalFromY > requiredTanVertical)
-        {
-            requiredTanVertical = requiredTanVerticalFromY;
-            diagnostics.limiter = std::string(sampleName) + "-Y";
-        }
-        return std::isfinite(requiredTanVertical);
-    };
+            if (requiredTanVerticalFromX > requiredTanVertical)
+            {
+                requiredTanVertical = requiredTanVerticalFromX;
+                diagnostics.limiter = std::string(sampleName) + "-X";
+            }
+            if (requiredTanVerticalFromY > requiredTanVertical)
+            {
+                requiredTanVertical = requiredTanVerticalFromY;
+                diagnostics.limiter = std::string(sampleName) + "-Y";
+            }
+            return std::isfinite(requiredTanVertical);
+        };
 
     const bool playerValid = evaluateSample(
         playerLookPosition, diagnostics.player, "Player");
@@ -1608,7 +1588,7 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
         (!currentValid || !currentDiagnostics.player.inFront ||
             !currentDiagnostics.boss.inFront ||
             lockOnWallEscapeCurrentRequiredFov >=
-                lockOnWallEscapeSevereFovThreshold);
+            lockOnWallEscapeSevereFovThreshold);
 
     Candidate leftNear{ "Left Near", -1,
         (std::max)(lockOnWallEscapeNearOffset, 0.0f) };
@@ -1620,23 +1600,23 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
         (std::max)(lockOnWallEscapeFarOffset, 0.0f) };
 
     const auto evaluateCandidate = [&](Candidate& candidate)
-    {
-        const DirectX::XMFLOAT3 rawEye = MathHelper::Add(baseEye,
-            MathHelper::Multiply(cameraRight,
-                candidate.distance * static_cast<float>(candidate.side)));
-        const bool collisionValid = ResolveWallLateralCandidateCollision(
-            currentPose.target, rawEye, candidate.resolvedEye,
-            candidate.collisionHit);
-        if (!collisionValid)
-            return;
+        {
+            const DirectX::XMFLOAT3 rawEye = MathHelper::Add(baseEye,
+                MathHelper::Multiply(cameraRight,
+                    candidate.distance * static_cast<float>(candidate.side)));
+            const bool collisionValid = ResolveWallLateralCandidateCollision(
+                currentPose.target, rawEye, candidate.resolvedEye,
+                candidate.collisionHit);
+            if (!collisionValid)
+                return;
 
-        bool compositionValid = false;
-        candidate.requiredFov = EvaluateRequiredLockOnFovFromEye(
-            candidate.resolvedEye, candidate.diagnostics, compositionValid);
-        candidate.valid = compositionValid &&
-            candidate.diagnostics.player.inFront &&
-            candidate.diagnostics.boss.inFront;
-    };
+            bool compositionValid = false;
+            candidate.requiredFov = EvaluateRequiredLockOnFovFromEye(
+                candidate.resolvedEye, candidate.diagnostics, compositionValid);
+            candidate.valid = compositionValid &&
+                candidate.diagnostics.player.inFront &&
+                candidate.diagnostics.boss.inFront;
+        };
 
     Candidate* selected = nullptr;
     if (lockOnWallEscapeSevereComposition)
@@ -1653,16 +1633,16 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
 
         const auto chooseDistance = [&](Candidate& nearCandidate,
             Candidate& farCandidate) -> Candidate*
-        {
-            if (!nearCandidate.valid)
-                return farCandidate.valid ? &farCandidate : nullptr;
-            if (!farCandidate.valid)
-                return &nearCandidate;
-            return nearCandidate.requiredFov - farCandidate.requiredFov >=
-                lockOnWallEscapeDistanceImprovementThreshold
-                ? &farCandidate
-                : &nearCandidate;
-        };
+            {
+                if (!nearCandidate.valid)
+                    return farCandidate.valid ? &farCandidate : nullptr;
+                if (!farCandidate.valid)
+                    return &nearCandidate;
+                return nearCandidate.requiredFov - farCandidate.requiredFov >=
+                    lockOnWallEscapeDistanceImprovementThreshold
+                    ? &farCandidate
+                    : &nearCandidate;
+            };
 
         Candidate* bestLeft = chooseDistance(leftNear, leftFar);
         Candidate* bestRight = chooseDistance(rightNear, rightFar);
@@ -1678,8 +1658,8 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
             selected = currentSideCandidate;
             if (oppositeCandidate &&
                 currentSideCandidate->requiredFov -
-                    oppositeCandidate->requiredFov >=
-                        lockOnWallEscapeSideSwitchImprovementThreshold)
+                oppositeCandidate->requiredFov >=
+                lockOnWallEscapeSideSwitchImprovementThreshold)
             {
                 selected = oppositeCandidate;
             }
@@ -1703,7 +1683,7 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
         {
             const bool clearlyImproved = !currentValid ||
                 lockOnWallEscapeCurrentRequiredFov - selected->requiredFov >=
-                    lockOnWallEscapeImprovementThreshold;
+                lockOnWallEscapeImprovementThreshold;
             if (!clearlyImproved)
                 selected = nullptr;
         }
@@ -1836,9 +1816,9 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
     if (combatPresentationPhase == CombatPresentationPhase::Inactive) return;
     combatPresentationPhaseElapsed += dt;
     const auto blend = [this, dt](const float time, const bool enter)
-    {
-        combatPresentationBlend = std::clamp(combatPresentationBlend + (enter ? 1.0f : -1.0f) * (time > FLT_EPSILON ? dt / time : 1.0f), 0.0f, 1.0f);
-    };
+        {
+            combatPresentationBlend = std::clamp(combatPresentationBlend + (enter ? 1.0f : -1.0f) * (time > FLT_EPSILON ? dt / time : 1.0f), 0.0f, 1.0f);
+        };
     if (combatPresentationPhase == CombatPresentationPhase::Enter)
     {
         const float time = combatPresentationMode == CombatPresentationMode::Rush ? rushPresentationApproachEnterTime : justDodgePresentationEnterTime;
@@ -1872,8 +1852,8 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
                     const float holdTime = (std::max)(rushPresentationIntroHoldTime, 0.0f);
                     combatPresentationRushTravelBlend = std::clamp(
                         travelTime > FLT_EPSILON
-                            ? (combatPresentationRushIntroElapsed - holdTime) / travelTime
-                            : (combatPresentationRushIntroElapsed >= holdTime ? 1.0f : 0.0f),
+                        ? (combatPresentationRushIntroElapsed - holdTime) / travelTime
+                        : (combatPresentationRushIntroElapsed >= holdTime ? 1.0f : 0.0f),
                         0.0f, 1.0f);
                 }
             }
@@ -1889,9 +1869,9 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
         if (combatPresentationMode == CombatPresentationMode::Rush)
         {
             const auto fadeOut = [dt](float& value, const float time)
-            {
-                value = std::clamp(value - (time > FLT_EPSILON ? dt / time : 1.0f), 0.0f, 1.0f);
-            };
+                {
+                    value = std::clamp(value - (time > FLT_EPSILON ? dt / time : 1.0f), 0.0f, 1.0f);
+                };
             fadeOut(combatPresentationBlend, rushPresentationPositionExitTime);
             fadeOut(combatPresentationRushRotationBlend, rushPresentationRotationExitTime);
             fadeOut(combatPresentationRushFovBlend, rushPresentationFovExitTime);
@@ -1925,15 +1905,15 @@ void DarkCameraActor::ApplyCombatPresentationPose(const DirectX::XMFLOAT3& playe
     const auto playerHeadComponent = playerHead.lock();
     const auto* player = playerHeadComponent ? dynamic_cast<const Player*>(playerHeadComponent->GetOwner()) : nullptr;
     const auto smoothStep = [](float value)
-    {
-        value = std::clamp(value, 0.0f, 1.0f);
-        return value * value * (3.0f - 2.0f * value);
-    };
+        {
+            value = std::clamp(value, 0.0f, 1.0f);
+            return value * value * (3.0f - 2.0f * value);
+        };
     const auto justEye = [&]()
-    {
-        const auto direction = MathHelper::Normalize(MathHelper::Subtract(base.eye, base.target));
-        return MathHelper::Add(base.target, MathHelper::Multiply(direction, (std::max)(0.1f, MathHelper::Distance(base.eye, base.target) + justDodgePresentationDistanceOffset)));
-    };
+        {
+            const auto direction = MathHelper::Normalize(MathHelper::Subtract(base.eye, base.target));
+            return MathHelper::Add(base.target, MathHelper::Multiply(direction, (std::max)(0.1f, MathHelper::Distance(base.eye, base.target) + justDodgePresentationDistanceOffset)));
+        };
     if (combatPresentationMode == CombatPresentationMode::JustDodge)
     {
         currentPose.eye = MathHelper::Lerp(base.eye, justEye(), smoothStep(combatPresentationBlend));
@@ -2017,10 +1997,10 @@ void DarkCameraActor::ApplyCombatPresentationFov()
     const bool rushFovStillBlending = combatPresentationMode == CombatPresentationMode::Rush && combatPresentationRushFovBlend > FLT_EPSILON;
     if ((combatPresentationBlend <= FLT_EPSILON && !rushFovStillBlending) || isExternalBlending || currentMode == CameraMode::Death || requestMode == CameraMode::Death) return;
     const auto smoothStep = [](float value)
-    {
-        value = std::clamp(value, 0.0f, 1.0f);
-        return value * value * (3.0f - 2.0f * value);
-    };
+        {
+            value = std::clamp(value, 0.0f, 1.0f);
+            return value * value * (3.0f - 2.0f * value);
+        };
     const float base = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
     float fov = base;
     if (combatPresentationMode == CombatPresentationMode::JustDodge)
@@ -2121,19 +2101,19 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
     compositionRequiredFovAfter = activeProfile.fovDegree;
 
     const auto moveCorrection = [&]()
-    {
-        const float maxDelta = DirectX::XMConvertToRadians(
-            (std::max)(compositionAngularSpeedDegree, 0.0f)) *
-            (std::max)(deltaTime, 0.0f);
-        currentCompositionYawCorrection += std::clamp(
-            targetCompositionYawCorrection - currentCompositionYawCorrection,
-            -maxDelta, maxDelta);
-        if (std::abs(currentCompositionYawCorrection) <
-            DirectX::XMConvertToRadians(0.01f))
         {
-            currentCompositionYawCorrection = 0.0f;
-        }
-    };
+            const float maxDelta = DirectX::XMConvertToRadians(
+                (std::max)(compositionAngularSpeedDegree, 0.0f)) *
+                (std::max)(deltaTime, 0.0f);
+            currentCompositionYawCorrection += std::clamp(
+                targetCompositionYawCorrection - currentCompositionYawCorrection,
+                -maxDelta, maxDelta);
+            if (std::abs(currentCompositionYawCorrection) <
+                DirectX::XMConvertToRadians(0.01f))
+            {
+                currentCompositionYawCorrection = 0.0f;
+            }
+        };
 
     bool beforeValid = false;
     LockOnFovDiagnostics beforeDiagnostics{};
@@ -2259,54 +2239,54 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
             DirectX::XMFLOAT3& outTarget,
             LockOnFovDiagnostics& outDiagnostics,
             float& outRequiredFov) -> bool
-    {
-        const auto player = playerHead.lock();
-        const auto boss = enemyHead.lock();
-        if (!player || !boss)
-            return false;
+        {
+            const auto player = playerHead.lock();
+            const auto boss = enemyHead.lock();
+            if (!player || !boss)
+                return false;
 
-        DirectX::XMFLOAT3 playerLook = player->GetComponentLocation();
-        DirectX::XMFLOAT3 bossLook = boss->GetComponentLocation();
-        playerLook.y += lockOnPlayerLookHeight;
-        bossLook.y += lockOnEnemyLookHeight;
-        DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(playerLook, eye);
-        DirectX::XMFLOAT3 toBoss = MathHelper::Subtract(bossLook, eye);
-        toPlayer.y = 0.0f;
-        toBoss.y = 0.0f;
-        const float playerLength = MathHelper::Length(toPlayer);
-        const float bossLength = MathHelper::Length(toBoss);
-        if (playerLength <= FLT_EPSILON || bossLength <= FLT_EPSILON)
-            return false;
-        toPlayer = MathHelper::Multiply(toPlayer, 1.0f / playerLength);
-        toBoss = MathHelper::Multiply(toBoss, 1.0f / bossLength);
-        const DirectX::XMFLOAT3 direction = MathHelper::Add(toPlayer, toBoss);
-        if (MathHelper::Length(direction) <= FLT_EPSILON)
-            return false;
+            DirectX::XMFLOAT3 playerLook = player->GetComponentLocation();
+            DirectX::XMFLOAT3 bossLook = boss->GetComponentLocation();
+            playerLook.y += lockOnPlayerLookHeight;
+            bossLook.y += lockOnEnemyLookHeight;
+            DirectX::XMFLOAT3 toPlayer = MathHelper::Subtract(playerLook, eye);
+            DirectX::XMFLOAT3 toBoss = MathHelper::Subtract(bossLook, eye);
+            toPlayer.y = 0.0f;
+            toBoss.y = 0.0f;
+            const float playerLength = MathHelper::Length(toPlayer);
+            const float bossLength = MathHelper::Length(toBoss);
+            if (playerLength <= FLT_EPSILON || bossLength <= FLT_EPSILON)
+                return false;
+            toPlayer = MathHelper::Multiply(toPlayer, 1.0f / playerLength);
+            toBoss = MathHelper::Multiply(toBoss, 1.0f / bossLength);
+            const DirectX::XMFLOAT3 direction = MathHelper::Add(toPlayer, toBoss);
+            if (MathHelper::Length(direction) <= FLT_EPSILON)
+                return false;
 
-        const float targetYaw = atan2f(direction.x, direction.z);
-        const DirectX::XMFLOAT3 baseDirection = MathHelper::Subtract(
-            currentPose.target, eye);
-        const float baseYaw = atan2f(baseDirection.x, baseDirection.z);
-        float correction = MathHelper::ClampAngle(targetYaw - baseYaw);
-        const float maxCorrection = DirectX::XMConvertToRadians(
-            (std::max)(compositionMaxCorrectionDegree, 0.0f));
-        correction = std::clamp(correction, -maxCorrection, maxCorrection);
-        const float c = std::cos(correction);
-        const float s = std::sin(correction);
-        const DirectX::XMFLOAT3 lookVector = MathHelper::Subtract(
-            currentPose.target, eye);
-        const DirectX::XMFLOAT3 rotatedLookVector{
-            c * lookVector.x + s * lookVector.z,
-            lookVector.y,
-            -s * lookVector.x + c * lookVector.z
+            const float targetYaw = atan2f(direction.x, direction.z);
+            const DirectX::XMFLOAT3 baseDirection = MathHelper::Subtract(
+                currentPose.target, eye);
+            const float baseYaw = atan2f(baseDirection.x, baseDirection.z);
+            float correction = MathHelper::ClampAngle(targetYaw - baseYaw);
+            const float maxCorrection = DirectX::XMConvertToRadians(
+                (std::max)(compositionMaxCorrectionDegree, 0.0f));
+            correction = std::clamp(correction, -maxCorrection, maxCorrection);
+            const float c = std::cos(correction);
+            const float s = std::sin(correction);
+            const DirectX::XMFLOAT3 lookVector = MathHelper::Subtract(
+                currentPose.target, eye);
+            const DirectX::XMFLOAT3 rotatedLookVector{
+                c * lookVector.x + s * lookVector.z,
+                lookVector.y,
+                -s * lookVector.x + c * lookVector.z
+            };
+            outTarget = MathHelper::Add(eye, rotatedLookVector);
+            bool valid = false;
+            outRequiredFov = EvaluateRequiredLockOnFovFromEye(
+                eye, outTarget, outDiagnostics, valid);
+            return valid && outDiagnostics.player.inFront &&
+                outDiagnostics.boss.inFront;
         };
-        outTarget = MathHelper::Add(eye, rotatedLookVector);
-        bool valid = false;
-        outRequiredFov = EvaluateRequiredLockOnFovFromEye(
-            eye, outTarget, outDiagnostics, valid);
-        return valid && outDiagnostics.player.inFront &&
-            outDiagnostics.boss.inFront;
-    };
 
     if (recoveryEligible)
     {
@@ -2333,7 +2313,7 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
                 calculateCompositionTarget(resolvedCandidateEye,
                     candidateLookTarget, candidateDiagnostics, candidateFov) &&
                 recoveryBaseRequiredFov - candidateFov >=
-                    recoveryFovImprovementThreshold;
+                recoveryFovImprovementThreshold;
             recoveryCandidateRequiredFov = candidateFov;
             if (recoveryCandidateValid)
                 targetRecoveryDistance = candidateDistance;
@@ -2429,7 +2409,7 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
         const auto enemy = target ? dynamic_cast<const Enemy*>(target->GetOwner()) : nullptr;
         const char* profileName = IsGruxLockOnTarget() ? "Grux"
             : enemy && enemy->GetLockOnCameraProfile() == EnemyLockOnCameraProfile::Standard
-                ? "Standard" : "Compact";
+            ? "Standard" : "Compact";
         Logger::Log(std::string("[LockOnTransition][Init] Profile=") + profileName +
             " TPSDistance=" + std::to_string(GetActiveTpsSettings().distance) +
             " BaseDistance=" + std::to_string(activeProfile.distance) +
@@ -2484,24 +2464,19 @@ void DarkCameraActor::InitializeLockOnTransitionDistanceSnapshot()
     if (!playerHeadShared || !enemyHeadShared)
         return;
 
-    lockOnEnemyDistance = MathHelper::Distance(
-        playerHeadShared->GetComponentLocation(), enemyHeadShared->GetComponentLocation());
-    lockOnDistanceForZoom = lockOnEnemyDistance;
-    const float enemyRange = (std::max)(
-        lockOnDistanceFull - lockOnDistanceStart, FLT_EPSILON);
-    const float enemyDistanceInput =
-        (lockOnDistanceForZoom - lockOnDistanceStart) / enemyRange;
-    lockOnDistanceStrength = SmoothStep01(enemyDistanceInput);
-    lockOnExistingAdaptiveDistance =
-        activeProfile.distance + activeProfile.maxDistanceAdd * lockOnDistanceStrength;
+    lockOnEnemyDistance = MathHelper::Distance(playerHeadShared->GetComponentLocation(), enemyHeadShared->GetComponentLocation()); lockOnDistanceForZoom = lockOnEnemyDistance;
+    const float enemyRange = (std::max)(lockOnDistanceFull - lockOnDistanceStart, FLT_EPSILON);
+    const float enemyDistanceInput = (lockOnDistanceForZoom - lockOnDistanceStart) / enemyRange;
+    lockOnDistanceStrength = MathHelper::SmoothStep01(enemyDistanceInput);
+    lockOnExistingAdaptiveDistance = activeProfile.distance + activeProfile.maxDistanceAdd * lockOnDistanceStrength;
     lockOnRequiredFramingDistance = CalculateRequiredLockOnFramingDistance();
 
-    lockOnTransitionSnapshotDistance = ClampEnemyLockOnDistanceToProfile(
-        (std::max)(lockOnExistingAdaptiveDistance, lockOnRequiredFramingDistance), activeProfile);
+    lockOnTransitionSnapshotDistance = ClampEnemyLockOnDistanceToProfile((std::max)(lockOnExistingAdaptiveDistance, lockOnRequiredFramingDistance), activeProfile);
     currentLockOnCameraDistance = lockOnTransitionSnapshotDistance;
     desiredLockOnCameraDistance = lockOnTransitionSnapshotDistance;
     adaptiveLockOnCameraDistance = lockOnTransitionSnapshotDistance;
 }
+
 void DarkCameraActor::BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to)
 {
     (void)from;
@@ -2549,7 +2524,7 @@ void DarkCameraActor::UpdateLockOnTransitionDiagnostics()
         const auto enemy = target ? dynamic_cast<const Enemy*>(target->GetOwner()) : nullptr;
         const char* profileName = IsGruxLockOnTarget() ? "Grux"
             : enemy && enemy->GetLockOnCameraProfile() == EnemyLockOnCameraProfile::Standard
-                ? "Standard" : "Compact";
+            ? "Standard" : "Compact";
         const float blendDurationForLog = blendDurationOverride > 0.0f
             ? blendDurationOverride : blendDuration;
         const float blendProgress = isBlending
@@ -2714,36 +2689,36 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculateDeathPoseWithSideOffset(
     float sideOffset) const
 {
     CameraPose pose{};
-        DirectX::XMFLOAT3 toBoss{};
-        if (auto enemy = enemyHead.lock())
-        {
-            toBoss = MathHelper::Subtract(enemy->GetComponentLocation(), playerPos);
-            toBoss.y = 0.0f;
-        }
-        if (MathHelper::Length(toBoss) <= FLT_EPSILON)
-            toBoss = { sinf(yaw), 0.0f, cosf(yaw) };
-        toBoss = MathHelper::Normalize(toBoss);
+    DirectX::XMFLOAT3 toBoss{};
+    if (auto enemy = enemyHead.lock())
+    {
+        toBoss = MathHelper::Subtract(enemy->GetComponentLocation(), playerPos);
+        toBoss.y = 0.0f;
+    }
+    if (MathHelper::Length(toBoss) <= FLT_EPSILON)
+        toBoss = { sinf(yaw), 0.0f, cosf(yaw) };
+    toBoss = MathHelper::Normalize(toBoss);
 
-        const DirectX::XMFLOAT3 worldUp{ 0.0f, 1.0f, 0.0f };
-        DirectX::XMFLOAT3 right = MathHelper::Cross(worldUp, toBoss);
-        if (MathHelper::Length(right) <= FLT_EPSILON)
-            right = { 1.0f, 0.0f, 0.0f };
-        right = MathHelper::Normalize(right);
+    const DirectX::XMFLOAT3 worldUp{ 0.0f, 1.0f, 0.0f };
+    DirectX::XMFLOAT3 right = MathHelper::Cross(worldUp, toBoss);
+    if (MathHelper::Length(right) <= FLT_EPSILON)
+        right = { 1.0f, 0.0f, 0.0f };
+    right = MathHelper::Normalize(right);
 
-        pose.target = MathHelper::Add(
-            MathHelper::Add(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.bossLookWeight)),
-            MathHelper::Multiply(worldUp, deathCameraSettings.lookHeight));
-        pose.eye = MathHelper::Add(
-            MathHelper::Add(
-                MathHelper::Subtract(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.foregroundDistance)),
-                MathHelper::Multiply(right, sideOffset)),
-            MathHelper::Multiply(worldUp, deathCameraSettings.cameraHeight));
+    pose.target = MathHelper::Add(
+        MathHelper::Add(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.bossLookWeight)),
+        MathHelper::Multiply(worldUp, deathCameraSettings.lookHeight));
+    pose.eye = MathHelper::Add(
+        MathHelper::Add(
+            MathHelper::Subtract(playerPos, MathHelper::Multiply(toBoss, deathCameraSettings.foregroundDistance)),
+            MathHelper::Multiply(right, sideOffset)),
+        MathHelper::Multiply(worldUp, deathCameraSettings.cameraHeight));
 
-        const DirectX::XMFLOAT3 viewDirection = MathHelper::Normalize(
-            MathHelper::Subtract(pose.target, pose.eye));
-        pose.yaw = atan2f(viewDirection.x, viewDirection.z);
-        pose.pitch = asinf(std::clamp(viewDirection.y, -1.0f, 1.0f));
-        return pose;
+    const DirectX::XMFLOAT3 viewDirection = MathHelper::Normalize(
+        MathHelper::Subtract(pose.target, pose.eye));
+    pose.yaw = atan2f(viewDirection.x, viewDirection.z);
+    pose.pitch = asinf(std::clamp(viewDirection.y, -1.0f, 1.0f));
+    return pose;
 }
 
 // ロックオンのカメラ距離を計算する関数
@@ -2967,20 +2942,20 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::SeparatorText("Camera Shake Presets");
         const auto drawShakePreset = [this](const char* displayName, const char* presetName,
             CameraShakePreset& preset)
-        {
-            if (!ImGui::TreeNode(displayName)) return;
+            {
+                if (!ImGui::TreeNode(displayName)) return;
 
-            ImGui::PushID(presetName);
-            ImGui::DragFloat("Intensity", &preset.intensity, 0.05f, 0.0f, 5.0f, "%.2f");
-            ImGui::DragFloat("Duration", &preset.duration, 0.01f, 0.01f, 2.0f, "%.2f sec");
-            ImGui::DragFloat("Frequency", &preset.frequency, 0.1f, 0.1f, 30.0f, "%.1f Hz");
-            ImGui::DragFloat("Position Amount", &preset.positionAmount, 0.005f, 0.0f, 0.5f, "%.3f");
-            ImGui::DragFloat("Target Amount", &preset.targetAmount, 0.01f, 0.0f, 1.0f, "%.3f");
-            const std::string testLabel = "Test " + std::string(displayName);
-            if (ImGui::Button(testLabel.c_str())) PlayCameraShakePreset(presetName);
-            ImGui::PopID();
-            ImGui::TreePop();
-        };
+                ImGui::PushID(presetName);
+                ImGui::DragFloat("Intensity", &preset.intensity, 0.05f, 0.0f, 5.0f, "%.2f");
+                ImGui::DragFloat("Duration", &preset.duration, 0.01f, 0.01f, 2.0f, "%.2f sec");
+                ImGui::DragFloat("Frequency", &preset.frequency, 0.1f, 0.1f, 30.0f, "%.1f Hz");
+                ImGui::DragFloat("Position Amount", &preset.positionAmount, 0.005f, 0.0f, 0.5f, "%.3f");
+                ImGui::DragFloat("Target Amount", &preset.targetAmount, 0.01f, 0.0f, 1.0f, "%.3f");
+                const std::string testLabel = "Test " + std::string(displayName);
+                if (ImGui::Button(testLabel.c_str())) PlayCameraShakePreset(presetName);
+                ImGui::PopID();
+                ImGui::TreePop();
+            };
 
         drawShakePreset("Boss Roar", BossRoarPresetName, bossRoarShake);
         drawShakePreset("Boss Wall Impact", BossWallImpactPresetName, bossWallImpactShake);
@@ -3064,8 +3039,8 @@ void DarkCameraActor::DrawImGuiDetails()
         const ImVec4 ratioColor = cameraCollisionRatio < 0.3f
             ? ImVec4(1.0f, 0.15f, 0.15f, 1.0f)
             : cameraCollisionRatio < 0.7f
-                ? ImVec4(1.0f, 0.75f, 0.15f, 1.0f)
-                : ImVec4(0.75f, 1.0f, 0.75f, 1.0f);
+            ? ImVec4(1.0f, 0.75f, 0.15f, 1.0f)
+            : ImVec4(0.75f, 1.0f, 0.75f, 1.0f);
         ImGui::TextColored(ratioColor, "Collision Ratio: %.3f", cameraCollisionRatio);
         ImGui::Text("SphereCast Hit: %s", cameraHitWall ? "true" : "false");
         ImGui::Text("Hit Object: %s", cameraCollisionHitName.c_str());

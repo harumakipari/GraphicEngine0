@@ -289,13 +289,11 @@ void PlayerDodgeState::Execute(float deltaTime)
             player->GetStateMachine()->ChangeState("Idle");
         }
     }
-#if 1
     if (!player->GetBodyAnimationController()->IsPlayAnimation())
     {// •ÛŒ¯
         player->SetRushInputAcceptance(false, "DodgeFinished");
         player->GetStateMachine()->ChangeState("Idle");
     }
-#endif // 0
 }
 
 void PlayerDodgeState::Exit()

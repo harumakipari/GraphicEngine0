@@ -1817,9 +1817,7 @@ void GameScene::UpdateLockOnTargetUI(float deltaTime)
         ring->SetVisible(true);
     }
 }
-bool GameScene::EvaluateLockOnCandidate(const std::shared_ptr<Enemy>& enemy,
-    std::shared_ptr<SceneComponent>& outTarget, float& outDistanceSq,
-    float& outScreenDistanceSq) const
+bool GameScene::EvaluateLockOnCandidate(const std::shared_ptr<Enemy>& enemy, std::shared_ptr<SceneComponent>& outTarget, float& outDistanceSq, float& outScreenDistanceSq) const
 {
     outTarget.reset();
     outDistanceSq = FLT_MAX;
@@ -1828,8 +1826,7 @@ bool GameScene::EvaluateLockOnCandidate(const std::shared_ptr<Enemy>& enemy,
         battleFlowState == BattleFlowState::BossDead || bossPhase == BossPhase::TransitionToPhase2)
         return false;
 
-    const auto target = std::dynamic_pointer_cast<SceneComponent>(
-        enemy->FindComponentByName("cameraTargetComponent"));
+    const auto target = std::dynamic_pointer_cast<SceneComponent>(enemy->FindComponentByName("cameraTargetComponent"));
     if (!target)
         return false;
 
@@ -1892,6 +1889,48 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
     {
         if (!lockOnTargetSelectedForHeldInput)
             return LockOnTargetSelectionResult::NoCandidate;
+
+        bool shouldRelease = !darkCameraActor->HasValidLockOnTarget();
+        if (!shouldRelease)
+        {
+            // 選択済みの敵を取得
+            const auto enemy = lockOnSelectedEnemy.lock();
+
+            if (!enemy)
+            {
+                shouldRelease = true;
+            }
+            else
+            {
+                // ボス戦中のGruxは距離制限を適用しない
+                const bool isGrux = std::dynamic_pointer_cast<GruxEnemy>(enemy) != nullptr;
+                const bool ignoreDistance = isGrux && player->IsBossBattle();
+                if (!ignoreDistance)
+                {
+                    // プレイヤーと敵のXZ平面距離を計算
+                    DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), player->GetPosition());
+                    delta.y = 0.0f;
+                    const float distanceSq = MathHelper::LengthSq(delta);
+                    constexpr float releaseDistance = 11.0f;
+                    if (distanceSq > releaseDistance * releaseDistance)
+                    {
+                        shouldRelease = true;
+                    }
+                }
+            }
+        }
+        if (shouldRelease)
+        {
+            darkCameraActor->ClearEnemyHead();
+            darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+
+            lockOnTargetSelectedForHeldInput = false;
+            lockOnSelectedEnemy.reset();
+
+            return LockOnTargetSelectionResult::Invalidated;
+        }
+
+
         if (!darkCameraActor->HasValidLockOnTarget())
         {
             darkCameraActor->ClearEnemyHead();
@@ -1918,10 +1957,8 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
         float screenDistanceSq = FLT_MAX;
         if (!EvaluateLockOnCandidate(enemy, target, distanceSq, screenDistanceSq))
             continue;
-
         const bool closer = distanceSq < selectedDistanceSq - distanceTieEpsilonSq;
-        const bool tiedButMoreCentral = std::abs(distanceSq - selectedDistanceSq) <=
-            distanceTieEpsilonSq && screenDistanceSq < selectedScreenDistanceSq;
+        const bool tiedButMoreCentral = std::abs(distanceSq - selectedDistanceSq) <= distanceTieEpsilonSq && screenDistanceSq < selectedScreenDistanceSq;
         if (closer || tiedButMoreCentral)
         {
             selectedEnemy = enemy;
@@ -5455,6 +5492,12 @@ void GameScene::SetUpActors()
 
         Transform clothTr3(DirectX::XMFLOAT3{ -6.8f,5.7f,15.3f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
         darkClothActors[3] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr3);
+
+        Transform clothTr4(DirectX::XMFLOAT3{ -22.0f,5.4f,9.5f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        darkClothActors[4] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr4);
+
+        Transform clothTr5(DirectX::XMFLOAT3{ -22.0f,5.4f,12.4f }, DirectX::XMFLOAT3{ 0.0f,-180.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        darkClothActors[5] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr5);
     }
 
 

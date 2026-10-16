@@ -40,17 +40,17 @@
             "value": 0.0
         },
         {
+            "parameter": "DropRightWeapon",
+            "time": 1.912087321281433,
+            "type": "SpawnEffect",
+            "value": 0.0
+        },
+        {
             "duration": 0.25,
             "leftMotorStrength": 1.0,
             "rightMotorStrength": 0.0,
             "time": 1.9120879173278809,
             "type": "ControllerRumble"
-        },
-        {
-            "parameter": "DropRightWeapon",
-            "time": 1.912087321281433,
-            "type": "SpawnEffect",
-            "value": 0.0
         },
         {
             "parameter": "boss_recall_voice",
@@ -59,9 +59,9 @@
             "value": 1.0
         },
         {
-            "duration": 2.450000047683716,
-            "leftMotorStrength": 0.8100000023841858,
-            "rightMotorStrength": 0.8100000023841858,
+            "duration": 2.4100000858306885,
+            "leftMotorStrength": 0.029999999329447746,
+            "rightMotorStrength": 0.029999999329447746,
             "time": 5.27472448348999,
             "type": "ControllerRumble"
         },

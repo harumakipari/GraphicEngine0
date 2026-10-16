@@ -80,17 +80,6 @@ public:
         float fovDegree = 22.6f;
     };
 
-    //struct DeathCameraSettings
-    //{
-    //    float foregroundDistance = 3.15f;
-    //    float sideOffset = -1.1f;
-    //    float cameraHeight = -0.3f;
-    //    float lookHeight = -0.85f;
-    //    float bossLookWeight = 0.15f;
-    //    float deathBlendTime = 1.0f;
-    //    float fovDegree = 55.0f;
-    //};
-
 public:
     //引数付きコンストラクタ
     explicit DarkCameraActor(const std::string& actorName) :Camera(actorName)

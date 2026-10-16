@@ -295,6 +295,13 @@ namespace MathHelper
         return ClampAngle(from + diff * t);
     }
 
+    inline float SmoothStep01(float value)
+    {
+        value = std::clamp(value, 0.0f, 1.0f);
+        return value * value * (3.0f - 2.0f * value);
+    }
+
+
     // 距離計算（Vector3）
     inline float Distance(
         const DirectX::XMFLOAT3& a,
@@ -342,10 +349,15 @@ namespace MathHelper
     }
 
     // 長さ計算（Vector3）
-    inline float Length(
-        const DirectX::XMFLOAT3& a)
+    inline float Length(const DirectX::XMFLOAT3& a)
     {
         return DirectX::XMVectorGetX(DirectX::XMVector3Length(DirectX::XMLoadFloat3(&a)));
+    }
+
+    // 長さ計算（Vector3）
+    inline float LengthSq(const DirectX::XMFLOAT3& a)
+    {
+        return DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(DirectX::XMLoadFloat3(&a)));
     }
 
     // 正規化（Vector3）

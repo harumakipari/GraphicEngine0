@@ -387,7 +387,6 @@ public:
     {
         this->focusDirection = focusDir;
     }
-
     // 回避方向を取得する
     // 現在の回避方向を返す。
     DodgeDirection GetDodgeDirection()const { return dodgeDirection; }
@@ -418,8 +417,7 @@ public:
     // 戦闘・攻撃判定
     // 無敵判定を含め、成立した被弾だけを適用する
     // 無敵状態を考慮して成立した被弾だけを適用する。
-    bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition,
-        DamagePolicy policy = DamagePolicy::Normal);
+    bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition, DamagePolicy policy = DamagePolicy::Normal);
 
     // ノックバック可能な状態かを確認し、ノックバックStateへ遷移する。
     bool StartKnockBack(const DirectX::XMFLOAT3& direction);
