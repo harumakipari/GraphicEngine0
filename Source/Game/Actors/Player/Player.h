@@ -47,13 +47,13 @@ public:
         IgnoreDodgeIFrames,
     };
 
-    // ジャスト回避のスロー状態
+    // ジャスト回避によるスロー演出の状態
     enum class JustDodgeSlowPhase : uint8_t
     {
-        Inactive,
-        Hold,
-        Return,
-        RushHold,
+        Inactive,  // スロー演出なし
+        Hold,      // ジャスト回避成功後のスロー維持
+        Return,    // 通常速度へ徐々に復帰
+        RushHold,  // Rush中の対象スロー維持
     };
 
     struct ActionRequest
@@ -466,11 +466,11 @@ public:
     void BeginPlayerSlowReturn();
     // BossのJust DodgeまたはRushスローを通常速度へ戻し始める。
     void BeginBossSlowReturn(bool afterRush = false);
-    // Rush開始までBossのスロー状態を維持する。
+    // Rush中、対象敵のスローを維持する。
     void HoldBossSlowForRush();
     // Playerのスロー状態を即時に通常速度へ戻す。
     void ForceResetPlayerSlow();
-    // Bossのスロー状態を即時に通常速度へ戻す。
+    // 対象敵のスロー状態を即時に通常速度へ戻す。
     void ForceResetBossSlow();
     // Rush状態に合わせて剣、軌跡、残像の色を更新する。
     void SetRushWeaponVisual(bool enabled);

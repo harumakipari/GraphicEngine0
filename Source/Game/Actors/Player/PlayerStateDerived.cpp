@@ -464,7 +464,7 @@ void PlayerRushState::Enter()
     rushHpDisplayTarget.reset();
     player->SetRushWeaponVisual(true);
     player->ForceResetPlayerSlow();
-    player->HoldBossSlowForRush();
+    player->HoldBossSlowForRush();  // ボスのスロー処理
     // ラッシュコンボのアニメーション名
     const std::array<const char*, 7> availableRushCombo =
     {

@@ -473,9 +473,6 @@ void Player::Update(float deltaTime)
         const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
         if (gameScene && gameScene->IsBossPhaseTransitionActive())
         {
-            // Phase2 cinematic advances its animation controller from GameScene while
-            // combat remains suspended. Apply the notify-derived weapon visuals here
-            // without resuming input, hit boxes, movement, or attack processing.
             UpdateWeaponVisualPresentation(deltaTime);
         }
         return;
@@ -740,8 +737,6 @@ void Player::Update(float deltaTime)
             ghost.isVisible = false;
         }
 
-        //ghost.swordMeshComp->SetIsVisible(ghost.isVisible);
-
         if (!ghost.isVisible)
             continue;
         if (ghost.swordMeshComp)
@@ -809,7 +804,6 @@ void Player::Update(float deltaTime)
             }
         }
     }
-
 
     // 剣の真ん中、根本、先の座標を保存する
     prevSwordRootPos = swordRootPos;
@@ -2447,7 +2441,8 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     const float scale = std::clamp(justDodgeTimeScale, 0.10f, 1.0f);
     enemy->SetTimeScale(scale);
     SetTimeScale(scale);
-    playerSlowPhase = JustDodgeSlowPhase::Hold;
+    // Playerとボスをスローにする
+    playerSlowPhase = JustDodgeSlowPhase::Hold; 
     bossSlowPhase = JustDodgeSlowPhase::Hold;
     playerSlowHoldTimer = std::max<float>(0.0f, justDodgeSlowHoldDuration);
     bossSlowHoldTimer = playerSlowHoldTimer;
@@ -2637,8 +2632,7 @@ void Player::BeginPlayerSlowReturn()
 
 void Player::BeginBossSlowReturn(bool afterRush)
 {
-    if (bossSlowPhase == JustDodgeSlowPhase::Inactive ||
-        bossSlowPhase == JustDodgeSlowPhase::Return)
+    if (bossSlowPhase == JustDodgeSlowPhase::Inactive ||bossSlowPhase == JustDodgeSlowPhase::Return)
     {
         return;
     }
@@ -2654,6 +2648,7 @@ void Player::BeginBossSlowReturn(bool afterRush)
     else bossSlowPhase = JustDodgeSlowPhase::Inactive;
 }
 
+// Rush中、対象のスローを維持する。
 void Player::HoldBossSlowForRush()
 {
     if (auto target = rushTarget.lock())
@@ -3138,6 +3133,7 @@ void Player::UpdateMovement()
         characterMovementComponent->SetMoveDirection(moveDir);
     }
 }
+
 
 void Player::UpdateWeaponVisualPresentation(const float deltaTime)
 {
