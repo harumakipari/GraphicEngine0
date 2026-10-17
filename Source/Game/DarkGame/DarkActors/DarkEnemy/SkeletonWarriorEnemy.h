@@ -28,6 +28,7 @@ public:
     void OnAnimationNotifyBegin(const AnimationNotifyState& state) override;
     void OnAnimationNotifyEnd(const AnimationNotifyState& state) override;
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event) override;
+    void OnAnimationChanged() override;
     void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
     bool TakeDamageFromPlayer(int damage) override;
     bool IsDefeated() const override { return state == State::Dead; }
@@ -39,6 +40,7 @@ public:
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() const { return cameraTargetComponent; }
     void SetTutorialPassive(bool enabled);
     bool IsTutorialPassive() const { return tutorialPassive; }
+    void SetTutorialAttackHighlightEnabled(bool enabled);
     void EnableTutorialPassiveStandIdle();
     bool IsPlayerWithinAttackRange(const class Player& player) const;
     void DestroySpawnedBodyParts();
@@ -60,6 +62,8 @@ private:
     void DrawWeaponHitDebug() const;
     void ResetWeaponSweep();
     void ApplyRimLight();
+    void ApplyTutorialAttackHighlight(float intensityMultiplier);
+    void ResetTutorialAttackHighlight();
     bool PrecreateDeathBodyParts();
     bool ActivateDeathBodyParts();
     void DrawBodyPartBoneDebug() const;
@@ -73,6 +77,13 @@ private:
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     DirectX::XMFLOAT3 rimLightColor{ 0.45f, 0.70f, 1.00f };
     float rimLightPower = 1.25f;
+    bool tutorialAttackHighlightEnabled = false;
+    bool tutorialAttackHighlightActive = false;
+    float tutorialAttackHighlightMultiplier = 1.0f;
+    DirectX::XMFLOAT3 tutorialAttackBodyRimColor{ 0.45f, 0.70f, 1.00f };
+    float tutorialAttackBodyRimIntensity = 3.0f;
+    DirectX::XMFLOAT3 tutorialAttackSwordRimColor{ 0.45f, 0.70f, 1.00f };
+    float tutorialAttackSwordRimIntensity = 12.0f;
     bool bodyPartsDebug = false;
     float bodyPartsInitialSpeed = 1.0f;
     float bodyPartsUpwardSpeed = 0.75f;

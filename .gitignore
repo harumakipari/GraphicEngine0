@@ -94,3 +94,4 @@ Data/Models/ParticleMesh/Fragment/
 .dotnet-cli/
 Data/Models/EffectDebri/
 Data/Saves/BossBestTime.json
+Data/Models/Cloth/m_cloth_BaseColor_blue.png

@@ -36,6 +36,35 @@
                 0.0,
                 0.0
             ],
+            "hitBoxRadius": 0.0,
+            "justDodgeAreaOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "justDodgeAreaSize": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDirection": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "moveDistance": 0.0,
+            "parameter": "",
+            "startTime": 0.27724558115005493,
+            "type": "ShowEmissive",
+            "value": 1.0
+        },
+        {
+            "endTime": 0.7670817375183105,
+            "hitBoxOffset": [
+                0.0,
+                0.0,
+                0.0
+            ],
             "hitBoxRadius": 0.800000011920929,
             "justDodgeAreaOffset": [
                 0.0,

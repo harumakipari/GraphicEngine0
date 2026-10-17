@@ -120,6 +120,34 @@ void SkeletonWarriorActor::ApplyRimLight()
     }
 }
 
+void SkeletonWarriorActor::ApplyTutorialAttackHighlight(const float intensityMultiplier)
+{
+    if (!tutorialAttackHighlightEnabled)
+        return;
+
+    tutorialAttackHighlightActive = true;
+    tutorialAttackHighlightMultiplier = (std::max)(0.0f, intensityMultiplier);
+    if (skeletalMeshComponent)
+    {
+        skeletalMeshComponent->SetRuntimeMaterialRimLight("M_Skeleton_01", tutorialAttackBodyRimColor, tutorialAttackBodyRimIntensity * tutorialAttackHighlightMultiplier);
+    }
+    if (sword)
+    {
+        sword->SetRuntimeMaterialRimLight("M_Sword_01", tutorialAttackSwordRimColor, tutorialAttackSwordRimIntensity * tutorialAttackHighlightMultiplier);
+    }
+}
+
+void SkeletonWarriorActor::ResetTutorialAttackHighlight()
+{
+    if (!tutorialAttackHighlightActive)
+        return;
+
+    tutorialAttackHighlightActive = false;
+    tutorialAttackHighlightMultiplier = 1.0f;
+    ApplyRimLight();
+    if (sword)
+        sword->ClearRuntimeMaterialRimLight("M_Sword_01");
+}
 bool SkeletonWarriorActor::PrecreateDeathBodyParts()
 {
     ZoneScopedN("Skeleton BodyParts Precreate");
@@ -305,6 +333,8 @@ void SkeletonWarriorActor::SetTutorialPassive(bool enabled)
     if (!tutorialPassive || state == State::Dead)
         return;
 
+    ResetTutorialAttackHighlight();
+
     // An editor toggle can occur during a swing. Clear only AI-owned combat
     // state so no pending attack notify leaves an active hit window behind.
     const bool wasInCombatState = state == State::Attacking || state == State::Recovery;
@@ -322,6 +352,15 @@ void SkeletonWarriorActor::SetTutorialPassive(bool enabled)
         PlayBodyAnimation("Idle", true, true, 0.1f, true);
 }
 
+void SkeletonWarriorActor::SetTutorialAttackHighlightEnabled(const bool enabled)
+{
+    if (tutorialAttackHighlightEnabled == enabled)
+        return;
+
+    tutorialAttackHighlightEnabled = enabled;
+    if (!tutorialAttackHighlightEnabled)
+        ResetTutorialAttackHighlight();
+}
 void SkeletonWarriorActor::EnableTutorialPassiveStandIdle()
 {
     tutorialPassiveUseStandIdle = true;
@@ -373,6 +412,7 @@ bool SkeletonWarriorActor::TakeDamageFromPlayer(int damage)
 
     // Mark death before side effects so repeated damage cannot replay the SE.
     state = State::Dead;
+    ResetTutorialAttackHighlight();
     CoreAudio::PlayOneShot("./Data/Sound/SE/skeleton_death.wav", 5.0f);
     const bool spawnedBodyParts = ActivateDeathBodyParts();
     attackHitActive = false;
@@ -494,6 +534,7 @@ void SkeletonWarriorActor::UpdateAttack(float /*elapsedTime*/, Player& player)
     const bool attackInterrupted = controller && !isAttackAnimation;
     if (naturalAttackEnd || attackInterrupted)
     {
+        ResetTutorialAttackHighlight();
         state = State::Recovery;
         stateElapsed = 0.0f;
         attackHitActive = false;
@@ -651,6 +692,9 @@ void SkeletonWarriorActor::OnAnimationNotifyBegin(const AnimationNotifyState& no
 
     switch (notify.type)
     {
+    case AnimationNotifyState::Type::ShowEmissive:
+        ApplyTutorialAttackHighlight(notify.value);
+        break;
     case AnimationNotifyState::Type::HitBox:
         activeWeaponHitRadius = (std::max)(0.01f, notify.hitBoxRadius);
         activeWeaponHitOffset = notify.hitBoxOffset;
@@ -672,6 +716,9 @@ void SkeletonWarriorActor::OnAnimationNotifyEnd(const AnimationNotifyState& noti
     Enemy::OnAnimationNotifyEnd(notify);
     switch (notify.type)
     {
+    case AnimationNotifyState::Type::ShowEmissive:
+        ResetTutorialAttackHighlight();
+        break;
     case AnimationNotifyState::Type::HitBox:
         attackHitActive = false;
         ResetWeaponSweep();
@@ -701,6 +748,10 @@ void SkeletonWarriorActor::OnAnimationNotifyEvent(const AnimationNotifyEvent& ev
     const std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
     CoreAudio::PlayOneShot(audioPath, event.value);
 }
+void SkeletonWarriorActor::OnAnimationChanged()
+{
+    ResetTutorialAttackHighlight();
+}
 void SkeletonWarriorActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
@@ -716,7 +767,25 @@ void SkeletonWarriorActor::DrawImGuiDetails()
     rimLightChanged |= ImGui::DragFloat("Rim Power", &rimLightPower,
         0.01f, 0.0f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     if (rimLightChanged)
-        ApplyRimLight();
+    {
+        if (tutorialAttackHighlightActive)
+            ApplyTutorialAttackHighlight(tutorialAttackHighlightMultiplier);
+        else
+            ApplyRimLight();
+    }
+
+    if (tutorialAttackHighlightEnabled)
+    {
+        ImGui::SeparatorText("Tutorial Attack Highlight");
+        bool tutorialHighlightChanged = ImGui::ColorEdit3("Body Rim Color", &tutorialAttackBodyRimColor.x);
+        tutorialHighlightChanged |= ImGui::DragFloat("Body Rim Intensity", &tutorialAttackBodyRimIntensity,
+            0.01f, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        tutorialHighlightChanged |= ImGui::ColorEdit3("Sword Rim Color", &tutorialAttackSwordRimColor.x);
+        tutorialHighlightChanged |= ImGui::DragFloat("Sword Rim Intensity", &tutorialAttackSwordRimIntensity,
+            0.01f, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+        if (tutorialHighlightChanged && tutorialAttackHighlightActive)
+            ApplyTutorialAttackHighlight(tutorialAttackHighlightMultiplier);
+    }
 
     ImGui::SeparatorText("Skeleton BodyParts Debug");
     ImGui::Checkbox("Skeleton BodyParts Debug", &bodyPartsDebug);

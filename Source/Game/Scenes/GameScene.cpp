@@ -2552,6 +2552,7 @@ void GameScene::SpawnTutorialSkeletons()
     Transform dodgeTransform(DirectX::XMFLOAT3{ -10.0f,-0.3f,10.75f }, DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
     tutorialDodgeSkeletonActor = GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("TutorialDodgeSkeleton", dodgeTransform);
     tutorialDodgeSkeletonActor->SetMaxHp(17);
+    tutorialDodgeSkeletonActor->SetTutorialAttackHighlightEnabled(true);
     tutorialDodgeSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Standard);
 }
 
