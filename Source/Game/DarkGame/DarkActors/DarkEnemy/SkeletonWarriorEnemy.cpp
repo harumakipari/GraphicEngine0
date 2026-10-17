@@ -217,6 +217,14 @@ void SkeletonWarriorActor::DestroySpawnedBodyParts()
     spawnedBodyParts.clear();
 }
 
+// Œ•‚ð•`‰æ‚·‚é‚©
+void SkeletonWarriorActor::SetSwordVisible(const bool visible) const
+{
+    if (sword)
+    {
+        sword->SetIsVisible(visible);
+    }
+}
 
 void SkeletonWarriorActor::SyncSpawnedBodyPartPhysicsSettings()
 {

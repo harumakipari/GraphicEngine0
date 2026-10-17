@@ -536,6 +536,9 @@ private:
     // 動作更新処理
     // 入力とStateに応じた通常移動を更新する。
     void UpdateMovement();
+    // モーションワープを考慮してプレイヤーの位置を更新する
+    void UpdatePlayerMovementWithMotionWarp(float deltaTime);
+
     // Notify由来の剣の軌跡、残像、発光を更新する。
     void UpdateWeaponVisualPresentation(float deltaTime);
 

@@ -12,7 +12,13 @@ class SkeletonBodyPartActor;
 class SkeletonWarriorActor :public Enemy
 {
 private:
-    enum class State : uint8_t { Idle, Attacking, Recovery, Dead };
+    enum class State : uint8_t
+    {
+        Idle,
+        Attacking,
+        Recovery,
+        Dead
+    };
 
 public:
     explicit SkeletonWarriorActor(const std::string& actorName) :Enemy(actorName) {}
@@ -23,14 +29,10 @@ public:
     void OnAnimationNotifyEnd(const AnimationNotifyState& state) override;
     void OnAnimationNotifyEvent(const AnimationNotifyEvent& event) override;
     void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
-
     bool TakeDamageFromPlayer(int damage) override;
     bool IsDefeated() const override { return state == State::Dead; }
-    void SpawnPlayerHitEffect(const DirectX::XMFLOAT3& hitPosition,
-        const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition) override;
-    void SpawnPlayerRushHitEffect(const DirectX::XMFLOAT3& hitPosition,
-        const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition,
-        bool hasHitPosition, bool hasHitNormal) override;
+    void SpawnPlayerHitEffect(const DirectX::XMFLOAT3& hitPosition, const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition) override;
+    void SpawnPlayerRushHitEffect(const DirectX::XMFLOAT3& hitPosition, const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition, bool hasHitPosition, bool hasHitNormal) override;
     bool IsDead() const { return state == State::Dead; }
     int GetMaxHp() const { return maxHp; }
     void SetMaxHp(int value);
@@ -40,6 +42,9 @@ public:
     void EnableTutorialPassiveStandIdle();
     bool IsPlayerWithinAttackRange(const class Player& player) const;
     void DestroySpawnedBodyParts();
+    // Œ•‚ð•`‰æ‚·‚é‚©
+    void SetSwordVisible(bool visible) const;
+
 private:
     void PlayTutorialPassiveStandIdle();
     void BeginAttack(const DirectX::XMFLOAT3& directionToPlayer);

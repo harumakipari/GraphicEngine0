@@ -767,22 +767,9 @@ void Player::Update(float deltaTime)
         UpdateMovement();
     }
 
-    // NotifyEnd is not guaranteed when an animation is interrupted or finishes
-    // before the notify range ends. Do not carry that animation's warp forward.
-    if (!GetBodyAnimationController()->IsPlayAnimation())
-    {
-        animationMotionWarps.clear();
-    }
+    // モーションワープを考慮してプレイヤーを更新する
+    UpdatePlayerMovementWithMotionWarp(deltaTime);
 
-    DirectX::XMFLOAT3 motionWarpVelocity = { 0.0f, 0.0f, 0.0f };
-    for (const auto& warp : animationMotionWarps)
-    {
-        motionWarpVelocity.x += warp.direction.x * warp.speed;
-        motionWarpVelocity.y += warp.direction.y * warp.speed;
-        motionWarpVelocity.z += warp.direction.z * warp.speed;
-    }
-    characterMovementComponent->SetFrameAdditionalVelocity(motionWarpVelocity);
-    characterMovementComponent->TickDeferredMovement(deltaTime);
 
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(deltaTime);
@@ -2951,9 +2938,7 @@ void Player::EndKnockBackMovement()
 void Player::UpdateMovement()
 {
     const std::string currentState = GetStateMachine()->GetStateName();
-    const bool suppressMovementInput =
-        currentState == "Damage" || currentState == "KnockBack" ||
-        currentState == "DeathPending" || currentState == "Death";
+    const bool suppressMovementInput = currentState == "Damage" || currentState == "KnockBack" || currentState == "DeathPending" || currentState == "Death";
 
     if (currentState == "DeathPending" || currentState == "Death")
     {
@@ -3118,6 +3103,26 @@ void Player::UpdateMovement()
         characterMovementComponent->SetMoveSpeedScale(directionSpeedScale);
         characterMovementComponent->SetMoveDirection(moveDir);
     }
+}
+
+// 有効なMotionWarpを追加速度として適用し、移動と衝突判定を更新する。
+void Player::UpdatePlayerMovementWithMotionWarp(float deltaTime)
+{
+    if (!GetBodyAnimationController()->IsPlayAnimation())
+    {
+        animationMotionWarps.clear();
+    }
+
+    DirectX::XMFLOAT3 motionWarpVelocity = { 0.0f, 0.0f, 0.0f };
+    for (const auto& warp : animationMotionWarps)
+    {
+        motionWarpVelocity.x += warp.direction.x * warp.speed;
+        motionWarpVelocity.y += warp.direction.y * warp.speed;
+        motionWarpVelocity.z += warp.direction.z * warp.speed;
+    }
+
+    characterMovementComponent->SetFrameAdditionalVelocity(motionWarpVelocity);
+    characterMovementComponent->TickDeferredMovement(deltaTime);
 }
 
 
