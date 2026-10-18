@@ -433,42 +433,6 @@ void GruxEnemy::DrawTripleJumpDebug()
     case TripleJumpPhase::Aborted: phaseName = "Aborted"; break;
     default: break;
     }
-    ImGui::SeparatorText("Triple Jump Runtime Debug");
-    ImGui::Text("Triple Jump Active: %s", tripleJumpActive ? "true" : "false");
-    ImGui::Text("Triple Jump Index: %d", tripleJumpIndex);
-    ImGui::Text("Triple Jump Phase: %s", phaseName);
-    ImGui::Text("Telegraph Visible: %s", jumpTelegraphMeshComponent &&
-        jumpTelegraphMeshComponent->IsVisible() ? "true" : "false");
-    const auto telegraphPosition = jumpTelegraphMeshComponent
-        ? jumpTelegraphMeshComponent->GetComponentLocation() : DirectX::XMFLOAT3{};
-    ImGui::Text("Telegraph Position: (%.3f, %.3f, %.3f)", telegraphPosition.x,
-        telegraphPosition.y, telegraphPosition.z);
-    ImGui::Text("Telegraph World Snapshot: (%.3f, %.3f, %.3f)",
-        jumpTelegraphWorldPosition.x, jumpTelegraphWorldPosition.y,
-        jumpTelegraphWorldPosition.z);
-    ImGui::Text("Jump Telegraph Progress: %.3f", jumpTelegraphProgress);
-    ImGui::Text("Scale Progress: %.3f", jumpTelegraphInnerScaleProgress);
-    ImGui::Text("Inner Scale Curve: %s", jumpTelegraphInnerScaleCurve == 1 ? "EaseIn" : "Linear");
-    ImGui::Text("Current Animation Time: %.6f sec", jumpTelegraphCurrentAnimationTime);
-    ImGui::Text("Landing Time: %.6f sec", jumpTelegraphLandingTime);
-    ImGui::Text("Outer Scale: %.3f", jumpTelegraphScale);
-    ImGui::Text("Current Inner Scale: %.3f", jumpTelegraphInnerCurrentScale);
-    ImGui::Text("Impact Flash Active: %s", jumpTelegraphImpactFlashActive ? "true" : "false");
-    ImGui::Text("Impact Flash Progress: %.3f", jumpTelegraphImpactFlashProgress);
-    ImGui::Text("Impact Flash Elapsed: %.3f sec", jumpTelegraphImpactFlashElapsed);
-    ImGui::Text("Outer Rotation: %.3f deg", jumpTelegraphOuterRotation);
-    ImGui::Text("Inner Rotation: %.3f deg", jumpTelegraphInnerRotation);
-    ImGui::Text("Inter Jump Transition Elapsed: %.3f sec", tripleJumpTransitionElapsed);
-    ImGui::Text("Player Position: (%.3f, %.3f, %.3f)", tripleJumpPlayerPosition.x,
-        tripleJumpPlayerPosition.y, tripleJumpPlayerPosition.z);
-    ImGui::Text("Jump Start Position: (%.3f, %.3f, %.3f)", tripleJumpStartPosition.x,
-        tripleJumpStartPosition.y, tripleJumpStartPosition.z);
-    ImGui::Text("Locked Direction: (%.3f, %.3f, %.3f)", tripleJumpLockedDirection.x,
-        tripleJumpLockedDirection.y, tripleJumpLockedDirection.z);
-    ImGui::Text("Planned Jump Distance: %.3f", tripleJumpPlannedDistance);
-    ImGui::Text("Planned Landing Position: (%.3f, %.3f, %.3f)",
-        tripleJumpPlannedLandingPosition.x, tripleJumpPlannedLandingPosition.y,
-        tripleJumpPlannedLandingPosition.z);
 #endif
 }
 

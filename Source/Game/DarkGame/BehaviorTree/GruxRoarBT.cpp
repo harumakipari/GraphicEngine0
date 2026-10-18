@@ -1651,15 +1651,7 @@ void GruxEnemy::DrawRoarBTDebug()
     const bool isPhase2 = phaseScene && phaseScene->IsBossInFinalPhase();
     const char* region = !context.valid ? "None" : context.region == PlayerRelativeRegion::Back ? "Back" :
         context.region == PlayerRelativeRegion::Side ? "Side" : "Front";
-    ImGui::Text(U8("咆哮BT状態: %s"), roarBTStatus.c_str());
-    ImGui::Text(U8("咆哮Stage: %d"), static_cast<int>(roarBT.stage));
-    ImGui::Text("Current Animation Name: %s", roarController ? roarController->GetCurrentAnimationName().c_str() : "None");
-    ImGui::Text("Current Animation Time: %.3f", roarController ? roarController->GetCurrentAnimationTime() : 0.0f);
-    ImGui::Text("Roar Telegraph Progress: %.3f", roarTelegraphProgress);
-    ImGui::Text("Visual Progress: %.3f", roarTelegraphVisualProgress);
     ImGui::ProgressBar(std::clamp(roarTelegraphProgress, 0.0f, 1.0f), ImVec2(-FLT_MIN, 0.0f));
-    ImGui::Text("Current Roar Radius: %.2f m", GetRoarAttackRadius());
-    ImGui::Text("Current Phase: %s", isPhase2 ? "Phase2" : "Phase1");
     ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::ColorEdit3("Roar Phase 1 Outer Tint", &roarTelegraphPhase1OuterTint.x);
     ImGui::ColorEdit3("Roar Phase 1 Fill Tint Min", &roarTelegraphPhase1FillTintMin.x);
@@ -1676,12 +1668,7 @@ void GruxEnemy::DrawRoarBTDebug()
     roarTelegraphFillGlowMax = (std::max)(roarTelegraphFillGlowMin, roarTelegraphFillGlowMax);
     roarTelegraphFillAlphaMin = std::clamp(roarTelegraphFillAlphaMin, 0.0f, 1.0f);
     roarTelegraphFillAlphaMax = std::clamp(roarTelegraphFillAlphaMax, roarTelegraphFillAlphaMin, 1.0f);
-    ImGui::Text("Current Fill Tint: (%.3f, %.3f, %.3f)",
-        roarTelegraphFillTintCurrent.x, roarTelegraphFillTintCurrent.y, roarTelegraphFillTintCurrent.z);
-    ImGui::Text("Current Fill Glow: %.3f", roarTelegraphFillGlowCurrent);
-    ImGui::Text("Current Fill Alpha: %.3f", roarTelegraphFillAlphaCurrent);
     ImGui::Checkbox("Floating Debris Enabled", &roarFloatingDebrisEnabled);
-    ImGui::Text("Floating Debris Count: %zu", roarFloatingDebris.size());
     ImGui::DragFloat("Roar Floating Debris Inner Ratio", &roarFloatingDebrisInnerRatio, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Roar Floating Debris Outer Ratio", &roarFloatingDebrisOuterRatio, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Roar Floating Debris Min Height", &roarFloatingDebrisMinHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
@@ -1742,79 +1729,7 @@ void GruxEnemy::DrawRoarBTDebug()
     for (const auto& debris : roarFloatingDebris)
         if (debris.meshComponent && debris.meshComponent->IsVisible())
             ++activeFloatingDebrisCount;
-    ImGui::Text("Active Debris Count: %d", activeFloatingDebrisCount);
-    int activeImpactDebrisCount = 0;
-    for (const auto& debris : roarImpactDebris)
-        if (debris.active)
-            ++activeImpactDebrisCount;
-    ImGui::Text("Impact Debris Active Count: %d", activeImpactDebrisCount);
-    ImGui::Text("Last Ground Burst Spawn Count: %d", roarGroundBurstLastSpawnCount);
-    const bool roarTelegraphVisible = roarTelegraphOuterMeshComponent &&
-        roarTelegraphFillMeshComponent && roarTelegraphOuterMeshComponent->IsVisible() &&
-        roarTelegraphFillMeshComponent->IsVisible();
-    ImGui::Text("Roar Telegraph Visible: %s", roarTelegraphVisible ? "true" : "false");
-    ImGui::Text("Roar Telegraph Radius: %.2f m", GetRoarAttackRadius());
-    ImGui::Text("Roar Telegraph Outer Position: (%.3f, %.3f, %.3f)",
-        roarTelegraphOuterWorldPosition.x, roarTelegraphOuterWorldPosition.y,
-        roarTelegraphOuterWorldPosition.z);
-    ImGui::Text("Roar Telegraph Fill Position: (%.3f, %.3f, %.3f)",
-        roarTelegraphFillWorldPosition.x, roarTelegraphFillWorldPosition.y,
-        roarTelegraphFillWorldPosition.z);
-    ImGui::Text(U8("咆哮衝撃波 発動済み: %s"), roarBT.shockwaveFired ? "true" : "false");
-    ImGui::Text(U8("Player距離: %.2f m"), context.xzDistance);
-    ImGui::Text(U8("Player位置Region: %s"), region);
-    ImGui::Text(U8("咆哮クールタイム残り: %.2f sec"), roarCooldownRemaining);
-    const bool currentResult = EvaluateRoarPlanForDebug();
-    ImGui::Text(U8("咆哮候補: %s"), currentResult ? "true" : "false");
-    const auto scene = GetOwnerScene();
-    const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
-    const std::string state = stateMachine_ ? stateMachine_->GetStateName() : "None";
-    const bool otherBTAction = IsOtherBTActionForRoar(activeNode);
-    const auto tf = [](bool value) { return value ? "true" : "false"; };
-    ImGui::SeparatorText(U8("Roar候補条件の詳細（現在値）"));
-    ImGui::Text(U8("Roar Player有効: %s"), tf(player && !player->IsPendingKill()));
-    ImGui::Text(U8("Roar Player生存: %s"), tf(player && player->GetHp() > 0));
-    ImGui::Text(U8("Roar Grux生存: %s"), tf(!IsDead()));
-    ImGui::Text(U8("Roar 戦闘AI有効: %s"), tf(battleAIActive));
-    ImGui::Text(U8("Battle AI Active: %s"), tf(battleAIActive));
-    ImGui::Text(U8("Roar Defensive開始可能: %s"), tf(IsRoarExecutionAllowed()));
-    ImGui::Text(U8("Roar TargetContext有効: %s"), tf(context.valid));
-    ImGui::Text(U8("Roar Player距離: %.2f"), context.xzDistance);
-    ImGui::Text(U8("Roar TooClose距離: %.2f"), defensiveTooCloseDistance);
-    ImGui::Text(U8("Roar 距離条件OK: %s"), tf(context.xzDistance <= defensiveTooCloseDistance));
-    ImGui::Text(U8("Roar Player Region: %s"), region);
-    ImGui::Text(U8("Defensive Back判定: %s"), tf(IsDefensiveBackForBehavior(context)));
-    ImGui::Text(U8("Player相対角度: %.2f deg"), context.absoluteAngleDegrees);
-    ImGui::Text(U8("Roar Back条件OK: %s"), tf(IsDefensiveBackForBehavior(context)));
-    ImGui::Text(U8("Roar Cooldown残り: %.2f"), roarCooldownRemaining);
-    ImGui::Text(U8("Roar Cooldown条件OK: %s"), tf(!(roarCooldownRemaining > 0.0f)));
-    ImGui::Text(U8("Roar 実行中: %s"), tf(IsRoarBTActive()));
-    ImGui::Text(U8("Roar Death/Stun中: %s"), tf(IsDead() || state == "EnemyDeathState" || state == "EnemyStunState"));
-    ImGui::Text(U8("Roar 他BT行動中: %s"), tf(otherBTAction));
-    ImGui::Text(U8("Roar Preview中: %s"), tf(IsAnimationEditorPreviewActive()));
-    ImGui::Text(U8("Roar 演出中: %s"), tf(isDeathPerform ||
-        finalHitReactionActive || finalHitReactionHeld));
-    ImGui::Text(U8("CanPlanRoar: %s"), tf(currentResult));
-    const bool retreatCandidate = CanPlanRetreat();
-    ImGui::Text(U8("CanPlanAnyDefensive: %s"), tf(currentResult || retreatCandidate));
-    ImGui::Text(U8("Roar候補外理由: %s"), GetRoarRejectReasonForDebug().c_str());
-    ImGui::Text(U8("Roar 現在BTノード: %s"), activeNode ? activeNode->GetName().c_str() : "None");
-    ImGui::Text(U8("Roar 旧State: %s"), state.c_str());
-    ImGui::Text(U8("Roar BT有効: %s"), tf(behaviorTreeFastComboEnabled));
-    ImGui::Text(U8("Roar Grux削除待ち: %s"), tf(IsPendingKill()));
-    ImGui::Text(U8("Roar 移動Component有効: %s"), tf(characterMovementComponent != nullptr));
-    ImGui::Text(U8("Roar AnimationController有効: %s"), tf(GetBodyAnimationController() != nullptr));
-    ImGui::Text(U8("Roar Scene有効: %s"), tf(scene != nullptr));
-    ImGui::Text(U8("Roar Charge BT実行中: %s"), tf(IsChargeAttackBTActive()));
-    ImGui::Text(U8("Roar Dash BT実行中: %s"), tf(IsDashAttackBTActive()));
-    ImGui::Text(U8("Roar Charge移動中: %s"), tf(chargeMovementActive));
-    ImGui::Text(U8("Roar Dash移動中: %s"), tf(dashAttackMovementActive));
-    ImGui::Text(U8("Roar Jump MotionWarp実行中: %s"), tf(jumpMotionWarpOverrideActive));
     ImGui::SeparatorText(U8("Roar候補の直近実判定（描画では更新しない）"));
-    ImGui::Text(U8("Roar 実判定済み: %s"), tf(roarPlanDebugEvaluated));
-    ImGui::Text(U8("Roar 直近実判定: %s"), roarPlanDebugEvaluated ? tf(roarPlanDebugLastResult) : U8("未判定"));
-    ImGui::Text(U8("Roar 直近候補外理由: %s"), roarPlanDebugEvaluated ? roarPlanDebugLastRejectReason.c_str() : U8("未判定"));
-    ImGui::Text(U8("Roar 実判定時BTノード: %s"), roarPlanDebugEvaluated ? roarPlanDebugLastNode.c_str() : U8("未判定"));
     ImGui::Checkbox(U8("AI距離をWorld表示"), &showBossAIDebug);
     ImGui::TextColored(ImVec4(0.1f, 0.8f, 1.0f, 1.0f), U8("水色: 防御行動 至近距離"));
     ImGui::TextColored(ImVec4(1.0f, 0.15f, 0.6f, 1.0f), U8("桃色: 咆哮 範囲"));
@@ -1830,201 +1745,7 @@ void GruxEnemy::DrawRoarBTDebug()
     retreatMoveSpeed = (std::max)(0.0f, retreatMoveSpeed);
     retreatRetryCooldownDuration = (std::max)(0.0f, retreatRetryCooldownDuration);
     ImGui::Checkbox(U8("Retreat World Debug"), &retreatWorldDebug);
-    ImGui::Text(U8("Retreat候補: %s"), tf(retreatCandidate));
-    ImGui::Text(U8("Retreat Target Valid: %s"), tf(retreatTarget.valid));
-    ImGui::Text(U8("Retreat Target Position: (%.2f, %.2f, %.2f)"), retreatDebugTargetPosition.x,
-        retreatDebugTargetPosition.y, retreatDebugTargetPosition.z);
-    ImGui::Text(U8("Retreat 開始位置: (%.2f, %.2f, %.2f)"), retreatRuntime.gruxSnapshot.x,
-        retreatRuntime.gruxSnapshot.y, retreatRuntime.gruxSnapshot.z);
-    ImGui::Text(U8("Playerとの現在距離: %.2f m"), context.xzDistance);
-    ImGui::Text(U8("Retreat後の予定距離: %.2f m"), retreatRuntime.plannedPlayerDistance);
-    ImGui::Text(U8("Retreat移動距離: %.2f m"), retreatRuntime.plannedMoveDistance);
-    ImGui::Text(U8("Retreat 予定移動距離: %.2f m"), retreatRuntime.plannedMoveDistance);
-    ImGui::Text(U8("Retreat 残り距離: %.2f m"), retreatRemainingDistance);
-    ImGui::Text(U8("Retreat 到達許容距離: %.2f m"), retreatTarget.valid
-        ? retreatTarget.arrivalTolerance : 0.3f);
-    const auto moveResultName = [](PositioningMoveResult result)
-        {
-            switch (result)
-            {
-            case PositioningMoveResult::None: return "None";
-            case PositioningMoveResult::Running: return "Running";
-            case PositioningMoveResult::Arrived: return "Arrived";
-            case PositioningMoveResult::Timeout: return "Timeout";
-            case PositioningMoveResult::Stuck: return "Stuck";
-            case PositioningMoveResult::InvalidTarget: return "InvalidTarget";
-            case PositioningMoveResult::MaxDistanceReached: return "MaxDistanceReached";
-            }
-            return "Unknown";
-        };
-    ImGui::Text(U8("Retreat Move Result: %s"), moveResultName(retreatLastMoveResult));
-    ImGui::Text(U8("Retreat Complete理由: %s"), retreatCompleteReason.c_str());
-    ImGui::Text(U8("Retreat候補数: %d"), retreatRuntime.candidateCount);
-    ImGui::Text(U8("Retreat 候補総数: %d"), retreatRuntime.candidateCount);
-    ImGui::Text(U8("Retreat Clamp失敗数: %d"), retreatRuntime.clampRejectCount);
-    ImGui::Text(U8("Retreat 距離増加失敗数: %d"), retreatRuntime.distanceIncreaseRejectCount);
-    ImGui::Text(U8("Retreat 最低移動距離失敗数: %d"), retreatRuntime.minimumMoveRejectCount);
-    ImGui::Text(U8("Retreat CapsuleCast失敗数: %d"), retreatRuntime.capsuleCastRejectCount);
-    ImGui::Text("Retreat BossRoom Probe Rejects: %d", retreatRuntime.bossRoomProbeRejectCount);
-    ImGui::Text(U8("Retreat その他失敗数: %d"), retreatRuntime.otherRejectCount);
-    ImGui::SeparatorText(U8("Retreat CapsuleCast Debug"));
-    ImGui::Text(U8("CapsuleCast Hit: %s"), tf(retreatRuntime.lastCapsuleCastHit));
-    ImGui::Text(U8("Hit Object / Actor名: %s"), U8("Physics::CapsuleCast APIでは取得不可"));
-    ImGui::Text(U8("Hit Collision Layer: WorldStatic=%s WorldProps=%s Convex=%s"),
-        tf(retreatRuntime.lastCapsuleCastWorldStatic),
-        tf(retreatRuntime.lastCapsuleCastWorldProps),
-        tf(retreatRuntime.lastCapsuleCastConvex));
-    ImGui::Text(U8("Hit Position: (%.2f, %.2f, %.2f)"), retreatRuntime.lastCapsuleHitPosition.x,
-        retreatRuntime.lastCapsuleHitPosition.y, retreatRuntime.lastCapsuleHitPosition.z);
-    ImGui::Text(U8("Hit Distance: %.3f m"), retreatRuntime.lastCapsuleHitDistance);
-    ImGui::SeparatorText(U8("Retreat Sweep Support Debug"));
-    ImGui::Text(U8("Retreat Sweep InitialOverlap: %s"), tf(retreatRuntime.retreatSweepInitialOverlap));
-    ImGui::Text(U8("Retreat Sweep Hit Normal: (%.3f, %.3f, %.3f)"),
-        retreatRuntime.retreatSweepHitNormal.x, retreatRuntime.retreatSweepHitNormal.y,
-        retreatRuntime.retreatSweepHitNormal.z);
-    ImGui::Text(U8("Retreat Sweep Normal Y: %.3f"), retreatRuntime.retreatSweepHitNormal.y);
-    ImGui::Text(U8("Retreat Sweep Penetration Depth: %.3f m"),
-        retreatRuntime.retreatSweepPenetrationDepth);
-    ImGui::Text(U8("Retreat Sweep Hit Actor: %s"), retreatRuntime.retreatSweepHitActor.c_str());
-    ImGui::Text(U8("Retreat Sweep Hit Component: %s"), retreatRuntime.retreatSweepHitComponent.c_str());
-    ImGui::Text(U8("Retreat Sweep 無視したSupport数: %d"),
-        retreatRuntime.retreatSweepIgnoredSupportContactCount);
-    ImGui::Text(U8("Retreat Sweep Path Blocked: %s"), tf(retreatRuntime.retreatSweepPathBlocked));
-    ImGui::Text(U8("Retreat Sweep 最終Block Normal: (%.3f, %.3f, %.3f)"),
-        retreatRuntime.retreatSweepBlockingNormal.x, retreatRuntime.retreatSweepBlockingNormal.y,
-        retreatRuntime.retreatSweepBlockingNormal.z);
-    ImGui::Text(U8("Retreat Sweep 最終Block Distance: %.3f m"),
-        retreatRuntime.retreatSweepBlockingDistance);
-    ImGui::Text(U8("Retreat Sweep 最終Block Actor: %s"),
-        retreatRuntime.retreatSweepBlockingActor.c_str());
-    ImGui::Text(U8("Retreat Sweep 最終Block Component: %s"),
-        retreatRuntime.retreatSweepBlockingComponent.c_str());
-    ImGui::Text(U8("Capsule Point1: (%.2f, %.2f, %.2f)"), retreatRuntime.capsulePoint1.x,
-        retreatRuntime.capsulePoint1.y, retreatRuntime.capsulePoint1.z);
-    ImGui::Text(U8("Capsule Point2: (%.2f, %.2f, %.2f)"), retreatRuntime.capsulePoint2.x,
-        retreatRuntime.capsulePoint2.y, retreatRuntime.capsulePoint2.z);
-    ImGui::Text(U8("Capsule Radius: %.3f / Segment Length: %.3f"),
-        retreatRuntime.capsuleRadius, retreatRuntime.capsuleSegmentLength);
-    ImGui::SeparatorText(U8("Retreat Capsule形状比較"));
-    ImGui::Text(U8("通常Collision 元 Radius / Height: %.3f / %.3f"),
-        retreatRuntime.collisionConfiguredRadius, retreatRuntime.collisionConfiguredHeight);
-    ImGui::Text(U8("通常Collision Component Position: (%.3f, %.3f, %.3f)"),
-        retreatRuntime.collisionComponentPosition.x, retreatRuntime.collisionComponentPosition.y,
-        retreatRuntime.collisionComponentPosition.z);
-    ImGui::Text(U8("通常Collision Component Scale: (%.3f, %.3f, %.3f)"),
-        retreatRuntime.collisionComponentScale.x, retreatRuntime.collisionComponentScale.y,
-        retreatRuntime.collisionComponentScale.z);
-    ImGui::Text(U8("通常Collision Offset Y / PhysX HalfHeight: %.3f / %.3f"),
-        retreatRuntime.collisionOffsetY, retreatRuntime.collisionPhysXHalfHeight);
-    ImGui::Text(U8("Retreat Sweep方式: %s"), retreatRuntime.retreatSweepUsesSphere ? "SphereCast" : "CapsuleCast");
-    ImGui::Text(U8("通常Collision SphereCenter Point1: (%.3f, %.3f, %.3f)"),
-        retreatRuntime.collisionPhysXPoint1.x, retreatRuntime.collisionPhysXPoint1.y,
-        retreatRuntime.collisionPhysXPoint1.z);
-    ImGui::Text(U8("通常Collision SphereCenter Point2: (%.3f, %.3f, %.3f)"),
-        retreatRuntime.collisionPhysXPoint2.x, retreatRuntime.collisionPhysXPoint2.y,
-        retreatRuntime.collisionPhysXPoint2.z);
-    ImGui::Text(U8("通常Collision World Y範囲: %.3f ～ %.3f"),
-        retreatRuntime.collisionPhysXMinY, retreatRuntime.collisionPhysXMaxY);
-    ImGui::Text(U8("Retreat Cast World Y範囲: %.3f ～ %.3f"),
-        retreatRuntime.retreatCastMinY, retreatRuntime.retreatCastMaxY);
-    ImGui::Text(U8("World Debug 緑: 通常Collision / 赤: Retreat Cast開始形状"));
-    ImGui::TextColored(ImVec4(1.0f, 0.2f, 0.9f, 1.0f), U8("World Debug 桃: Clamp失敗"));
-    ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.15f, 1.0f), U8("World Debug 黄: 距離増加失敗"));
-    ImGui::TextColored(ImVec4(0.2f, 0.7f, 1.0f, 1.0f), U8("World Debug 水: 最低移動距離失敗"));
-    ImGui::TextColored(ImVec4(1.0f, 0.15f, 0.15f, 1.0f), U8("World Debug 赤: CapsuleCast失敗"));
-    ImGui::Text(U8("Retreat再試行残り: %.2f sec"), retreatRetryCooldownRemaining);
-    ImGui::Text(U8("Retreat失敗理由: %s"), retreatRuntime.failureReason.c_str());
-    ImGui::SeparatorText(U8("Reposition BT"));
-    ImGui::Text(U8("連続Attack回数: %d"), consecutiveAttackCount);
-    const int chanceIndex = (std::min)(consecutiveAttackCount, 3);
-    ImGui::DragFloat(U8("Reposition選択確率"), &repositionChanceByAttackCount[chanceIndex], 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::Text(U8("Reposition抽選値: %.3f"), repositionDecisionRoll);
-    ImGui::Text(U8("Reposition抽選結果: %s"), repositionDecisionResult ? "当選" : "落選");
-    ImGui::Text(U8("現在のCombat Decision: %s"), lastCombatDecision.c_str());
-    ImGui::Text(U8("Root 推論番号: %llu"), combatDecisionDebugInferenceSerial);
-    ImGui::Text(U8("Root 推論開始activeNode: %s"), combatDecisionDebugActiveNodeAtStart.c_str());
-    ImGui::Text(U8("Root Defensive Judgment: %s"), combatDecisionDebugDefensiveResult.c_str());
-    ImGui::Text(U8("Root 最終選択Node: %s"), combatDecisionDebugRootSelectedNode.c_str());
-    const bool playerAvailableForBossPlans = CanPlanAttackAgainstCurrentPlayer();
-    ImGui::Text(U8("Boss Attack抑制中: %s"), playerAvailableForBossPlans ? "false" : "true");
-    ImGui::Text(U8("Boss Defensive抑制中: %s"), playerAvailableForBossPlans ? "false" : "true");
-    ImGui::Text(U8("CanPlanAnyCombatDecision: %s"), combatDecisionDebugCanPlanAny ? "true" : "false");
-    ImGui::Text(U8("CanPlanReposition: %s (%s)"), combatDecisionDebugCanPlanReposition ? "true" : "false", combatDecisionDebugRepositionReason.c_str());
-    ImGui::Text(U8("CanPlanAnyAttack: %s [Fast=%s Jump=%s Dash=%s Charge=%s]"),
-        combatDecisionDebugCanPlanAnyAttack ? "true" : "false", combatDecisionDebugFastCombo ? "true" : "false",
-        combatDecisionDebugJump ? "true" : "false", combatDecisionDebugDash ? "true" : "false", combatDecisionDebugCharge ? "true" : "false");
-    ImGui::Text(U8("Combat Decision失敗理由: %s"), combatDecisionDebugFailureReason.c_str());
-    ImGui::Text(U8("Repositionクールダウン残り: %.2f"), repositionCooldownRemaining);
-    ImGui::Text(U8("Reposition再試行待ち: %.2f"), repositionRetryCooldownRemaining);
-    ImGui::Text(U8("最後にCommitしたCombat Decision: %s"), lastCombatDecision.c_str());
-    ImGui::DragFloat(U8("Reposition距離 最小"), &repositionDistanceMin, 0.1f, 0.0f, 30.0f, "%.2f");
-    ImGui::DragFloat(U8("Reposition距離 最大"), &repositionDistanceMax, 0.1f, 0.0f, 30.0f, "%.2f");
-    ImGui::DragFloat(U8("Reposition 最低移動距離"), &repositionMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
-    ImGui::DragFloat(U8("Reposition Player最小距離"), &repositionMinimumPlayerDistance, 0.1f, 0.0f, 30.0f, "%.2f");
-    ImGui::DragFloat(U8("Reposition 到着後待機時間"), &repositionArrivalWaitDuration, 0.01f, 0.0f, 2.0f, "%.2f");
-    ImGui::Text(U8("Reposition Target: (%.2f, %.2f, %.2f)"), repositionTarget.targetPosition.x, repositionTarget.targetPosition.y, repositionTarget.targetPosition.z);
-    ImGui::Text(U8("Reposition予定移動距離: %.2f"), repositionRuntime.plannedMoveDistance);
-    ImGui::Text(U8("Reposition Target時Player距離: %.2f"), repositionRuntime.plannedPlayerDistance);
-    ImGui::Text(U8("Reposition残り距離: %.2f"), repositionRemainingDistance);
-    ImGui::Text(U8("Reposition候補数: %d"), repositionRuntime.candidateCount);
-    ImGui::Text(U8("Reposition Safe Candidate数: %d"), repositionRuntime.safeCandidateCount);
-    ImGui::Text(U8("Reposition 選択Candidate Index: %d"), repositionRuntime.selectedCandidateIndex);
-    ImGui::Text(U8("Reposition 選択角度: %.1f deg"), repositionRuntime.selectedCandidateAngleDegrees);
-    ImGui::Text(U8("Reposition 選択距離: %.2f m"), repositionRuntime.selectedCandidateDistance);
-    ImGui::Text(U8("Initial Reposition: %s"), repositionRuntime.selectedInitialReposition ? "true" : "false");
-    if (ImGui::TreeNode(U8("Reposition Candidate Debug")))
-    {
-        for (const auto& candidate : repositionRuntime.candidates)
-        {
-            const char* state = candidate.selected ? "Selected" : candidate.accepted ? "Safe" : "Reject";
-            ImGui::Text(U8("[%d] %s Angle %.1f Distance %.2f Position (%.2f, %.2f, %.2f)"),
-                candidate.candidateIndex, state, candidate.angleDegrees, candidate.candidateDistance,
-                candidate.position.x, candidate.position.y, candidate.position.z);
-        }
-        ImGui::TreePop();
-    }
-    ImGui::Text(U8("Reposition Clamp適用数: %d"), repositionRuntime.clampAppliedCount);
-    ImGui::Text(U8("Reposition Clamp後採用数: %d"), repositionRuntime.clampPostClampAcceptedCount);
-    ImGui::Text(U8("Reposition Clamp後不採用数: %d"), repositionRuntime.clampPostClampRejectCount);
-    ImGui::Text(U8("Reposition Clamp後Target: (%.2f, %.2f, %.2f)"), repositionRuntime.lastClampedTarget.x, repositionRuntime.lastClampedTarget.y, repositionRuntime.lastClampedTarget.z);
-    ImGui::Text(U8("Reposition Clamp距離: %.2f"), repositionRuntime.lastClampDistance);
-    ImGui::Text(U8("Reposition Player距離不足数: %d"), repositionRuntime.playerDistanceTooCloseRejectCount);
-    ImGui::Text(U8("Reposition 最低移動距離失敗数: %d"), repositionRuntime.minimumMoveRejectCount);
-    ImGui::Text(U8("Reposition Sweep失敗数: %d"), repositionRuntime.sweepRejectCount);
-    ImGui::Text(U8("Reposition失敗理由: %s"), repositionRuntime.failureReason.c_str());
-    if (!g_repositionSweepDiagnostics.empty())
-    {
-        auto top = [](const std::map<std::string, int>& counts)
-        {
-            std::vector<std::pair<std::string, int>> values(counts.begin(), counts.end());
-            std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
-            return values;
-        };
-        const auto actors = top(g_repositionSweepActorCounts);
-        const auto components = top(g_repositionSweepComponentCounts);
-        ImGui::SeparatorText(U8("Reposition Sweep Hit集計"));
-        for (size_t i = 0; i < (std::min)(size_t(3), actors.size()); ++i)
-            ImGui::Text(U8("Actor %d: %s (%d)"), static_cast<int>(i + 1), actors[i].first.c_str(), actors[i].second);
-        for (size_t i = 0; i < (std::min)(size_t(3), components.size()); ++i)
-            ImGui::Text(U8("Component %d: %s (%d)"), static_cast<int>(i + 1), components[i].first.c_str(), components[i].second);
-        const auto& last = g_repositionSweepDiagnostics.back();
-        ImGui::Text(U8("最多Hit Actor: %s"), actors.empty() ? "None" : actors.front().first.c_str());
-        ImGui::Text(U8("最多Hit Component: %s"), components.empty() ? "None" : components.front().first.c_str());
-        ImGui::Text(U8("最多Hit回数: %d"), actors.empty() ? 0 : actors.front().second);
-        ImGui::Text(U8("Sweep開始: (%.2f, %.2f, %.2f)"), last.start.x, last.start.y, last.start.z);
-        ImGui::Text(U8("Clamp後Target: (%.2f, %.2f, %.2f)"), last.target.x, last.target.y, last.target.z);
-        ImGui::Text(U8("Sweep方向: (%.3f, %.3f, %.3f) 距離 %.3f"), last.direction.x, last.direction.y, last.direction.z, last.distance);
-        ImGui::Text(U8("Shape Center: (%.2f, %.2f, %.2f) Radius %.3f HalfHeight %.3f"), last.center.x, last.center.y, last.center.z, last.radius, last.halfHeight);
-        ImGui::Text(U8("InitialOverlap: %s Distance: %.3f Penetration: %.3f"), tf(last.initialOverlap), last.blockingDistance, last.penetrationDepth);
-        ImGui::Text(U8("Normal: (%.3f, %.3f, %.3f)"), last.normal.x, last.normal.y, last.normal.z);
-        ImGui::Text(U8("Block位置: (%.2f, %.2f, %.2f) Normal: (%.3f, %.3f, %.3f)"),
-            last.blockingPosition.x, last.blockingPosition.y, last.blockingPosition.z,
-            last.blockingNormal.x, last.blockingNormal.y, last.blockingNormal.z);
-        ImGui::Text(U8("Hit Actor: %s Component: %s Layer: 0x%X"), last.blockingActorName.c_str(), last.blockingComponentName.c_str(), last.blockingLayer);
-        ImGui::Text(U8("Support無視数: %d PathBlocked: %s"), last.ignoredSupportContactCount, tf(last.pathBlocked));
-        ImGui::Text(U8("Support Contact: %s InitialOverlap: %s NormalY: %.3f Penetration: %.3f"),
-            tf(last.supportContactHit), tf(last.supportInitialOverlap), last.supportNormal.y, last.supportPenetrationDepth);
-    }
+
 #endif
 }
 

@@ -1553,7 +1553,7 @@ private:
     float desiredAttackDistance = 0.1f;
     float jumpDesiredStartDistance = 4.5f;
     float jumpSetupDistanceMin = 6.5f;
-    float jumpSetupDistanceMax = 10.f;
+    float jumpSetupDistanceMax = 20.f;
     float jumpSetupMinimumMoveDistance = 5.0f;  // JumpAttack?oO?????????
     float attackSetupCandidateAngleStep = 30.0f;
     float attackSetupClampTolerance = 0.75f;    //  JumpAttack???v???C???[?????c??????????
@@ -2117,54 +2117,6 @@ private:
     float fastComboApproachRetryCooldown = 2.0f;
     float fastComboApproachRetryRemaining = 0.0f;
     float behaviorIdleDuration = 1.0f;// ??@????
-
-};
-
-class KnightActor : public Character
-{
-public:
-    explicit KnightActor(const std::string& actorName) :Character(actorName) {}
-
-    void Initialize(const Transform& transform)override;
-
-    void Update(float elapsedTime)override;
-
-private:
-    // ?`??p?R???|?[?l???g????
-    std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
-    std::shared_ptr<RotationComponent> rotationComponent;
-
-};
-
-class SavarogEnemy :public Character
-{
-public:
-    explicit SavarogEnemy(const std::string& actorName) :Character(actorName) {}
-
-    void Initialize(const Transform& transform)override;
-
-    void Update(float elapsedTime)override;
-
-private:
-    // ?`??p?R???|?[?l???g????
-    std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
-    std::shared_ptr<RotationComponent> rotationComponent;
-
-};
-
-class GracialEnemy :public Character
-{
-public:
-    explicit GracialEnemy(const std::string& actorName) :Character(actorName) {}
-
-    void Initialize(const Transform& transform)override;
-
-    void Update(float elapsedTime)override;
-
-private:
-    // ?`??p?R???|?[?l???g????
-    std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
-    std::shared_ptr<RotationComponent> rotationComponent;
 
 };
 

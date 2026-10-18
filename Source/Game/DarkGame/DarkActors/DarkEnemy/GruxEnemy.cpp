@@ -66,86 +66,6 @@ public:
 private:
     mutable ConstantBuffer<Constants> constants_;
 };
-#ifdef USE_IMGUI
-namespace
-{
-    void DrawIntentWeightBar(const char* label, float& weight,
-        float totalWeight, const bool editable = true)
-    {
-        ImGui::PushID(label);
-        ImGui::TextUnformatted(label);
-
-        const float barWidth = (std::max)(180.0f,
-            (std::min)(420.0f, ImGui::GetContentRegionAvail().x - 105.0f));
-        constexpr float barHeight = 22.0f;
-        const float previousWeight = weight;
-        ImGui::InvisibleButton("##IntentWeightBar",
-            ImVec2(barWidth, barHeight));
-        if (editable && ImGui::IsItemActive())
-        {
-            constexpr float weightPerPixel = 1.0f;
-            weight = std::clamp(weight +
-                ImGui::GetIO().MouseDelta.x * weightPerPixel,
-                0.0f, 1000.0f);
-        }
-
-        totalWeight += weight - previousWeight;
-        const float probability = totalWeight > 0.0f
-            ? std::clamp(weight / totalWeight, 0.0f, 1.0f)
-            : 0.0f;
-        const ImVec2 barMin = ImGui::GetItemRectMin();
-        const ImVec2 barMax = ImGui::GetItemRectMax();
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        drawList->AddRectFilled(barMin, barMax,
-            ImGui::GetColorU32(ImGuiCol_FrameBg), 4.0f);
-        if (probability > 0.0f)
-        {
-            const ImVec2 fillMax{
-                barMin.x + (barMax.x - barMin.x) * probability,
-                barMax.y };
-            drawList->AddRectFilled(barMin, fillMax,
-                ImGui::GetColorU32(editable
-                    ? ImGuiCol_PlotHistogram
-                    : ImGuiCol_TextDisabled), 4.0f);
-        }
-        drawList->AddRect(barMin, barMax,
-            ImGui::GetColorU32(ImGuiCol_Border), 4.0f);
-
-        char probabilityText[32]{};
-        sprintf_s(probabilityText, "%.1f%%", probability * 100.0f);
-        const ImVec2 textSize = ImGui::CalcTextSize(probabilityText);
-        drawList->AddText(
-            ImVec2(barMin.x + (barWidth - textSize.x) * 0.5f,
-                barMin.y + (barHeight - textSize.y) * 0.5f),
-            ImGui::GetColorU32(ImGuiCol_Text), probabilityText);
-
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text("Base Weight: %.1f", weight);
-            ImGui::Text("Base Probability: %.1f%%", probability * 100.0f);
-            if (editable)
-                ImGui::TextDisabled("Drag left/right to change weight");
-            else
-                ImGui::TextDisabled("Disabled for Back region");
-            ImGui::EndTooltip();
-        }
-
-        if (editable)
-        {
-            ImGui::SetNextItemWidth(140.0f);
-            ImGui::DragFloat("Weight", &weight, 0.5f, 0.0f, 1000.0f, "%.1f");
-            weight = std::clamp(weight, 0.0f, 1000.0f);
-        }
-        else
-        {
-            ImGui::TextDisabled("Disabled / 0%%");
-        }
-        ImGui::Spacing();
-        ImGui::PopID();
-    }
-}
-#endif
 
 void GruxEnemy::Initialize(const Transform& transform)
 {
@@ -886,7 +806,7 @@ void GruxEnemy::DrawPhase2HpBarPreviewGui()
 #ifdef USE_IMGUI
     static constexpr const char* stateNames[] =
     { "Hidden", "Revealing Frame", "Waiting For Fill", "Filling", "Complete" };
-    ImGui::Text("Manual preview only; it does not change Boss HP, Phase, AI, or Movie state.");
+
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
     const bool canControlPreview = !gameScene || !gameScene->IsBossPhaseTransitionActive();
     if (!canControlPreview)
@@ -907,10 +827,6 @@ void GruxEnemy::DrawPhase2HpBarPreviewGui()
         ImGui::DragFloat("Fill Increase Duration", &phase2HpBarPreviewFillDuration, 0.01f, 0.001f, 10.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     if (changed && hpBarVisualProfile == HpBarVisualProfile::Phase2)
         UpdatePhase2HpBarPreviewLayout();
-    ImGui::Text("State: %s", stateNames[static_cast<size_t>(phase2HpBarPreviewState)]);
-    ImGui::Text("Frame Reveal Progress: %.3f", phase2HpBarPreviewFrameProgress);
-    ImGui::Text("Fill Progress: %.3f", phase2HpBarPreviewFillProgress);
-    ImGui::Text("Presentation HP: %.2f / %d", phase2HpBarPreviewPresentationHp, phase2HpBarPreviewPresentationMaxHp);
 #endif
 }
 void GruxEnemy::SetDirectionImmediate(const DirectX::XMFLOAT3& direction)
@@ -2683,23 +2599,6 @@ void GruxEnemy::DrawImGuiDetails()
             if (changed && selectedState == activeDangerNotifyState)
                 RefreshActiveDangerAreaFromNotify();
 
-            ImGui::Text("Danger Window: %.3f - %.3f sec", selectedState->startTime, selectedState->endTime);
-            const bool selectedDangerActive = isDangerWindow && selectedState == activeDangerNotifyState;
-            const DangerArea selectedArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(),
-                selectedState->justDodgeAreaOffset, selectedState->justDodgeAreaSize);
-            const bool playerInside = GetPlayerDangerOverlapForDebug(selectedArea);
-            const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-            const bool justActive = player && player->GetJustDodgeWindow();
-            const float activeTime = selectedDangerActive && controller
-                ? (std::max)(0.0f, controller->GetCurrentAnimationTime() - selectedState->startTime)
-                : 0.0f;
-            ImGui::Text("Danger Active: %s", selectedDangerActive ? "YES" : "NO");
-            ImGui::Text("Window Active Time: %.3f sec", activeTime);
-            ImGui::TextColored(playerInside ? ImVec4(1.0f, 0.25f, 0.2f, 1.0f) : ImVec4(0.7f, 0.85f, 1.0f, 1.0f),
-                "Player Inside: %s", playerInside ? "YES / PLAYER INSIDE" : "NO / OUTSIDE");
-            ImGui::Text("Just Window: %s", justActive ? "ACTIVE" : "INACTIVE");
-            ImGui::Text("Just Possible Now: %s",
-                selectedDangerActive && playerInside && justActive ? "YES" : "NO");
             ImGui::Checkbox("Danger OBB World Debug", &dangerObbWorldDebug);
 
             const uint64_t key = (static_cast<uint64_t>(dangerObbSelectedClip) << 32) |
@@ -2819,58 +2718,10 @@ void GruxEnemy::DrawImGuiDetails()
     for (int i = 0; i < 3; ++i) { ImGui::DragFloat((std::string("FastCombo ") + stepNames[i] + " 最大Step-In").c_str(), &fastComboMaxStepInDistance[i], 0.1f, 0.0f, 6.0f, "%.2f m"); fastComboMaxStepInDistance[i] = std::clamp(fastComboMaxStepInDistance[i], 0.0f, 6.0f); }
     ImGui::DragFloat(U8("FastCombo Step-In\u6700\u5927\u901f\u5ea6"), &fastComboStepInMaxSpeed, 0.5f, 1.0f, 60.0f, "%.2f m/s");
     fastComboStepInMaxSpeed = std::clamp(fastComboStepInMaxSpeed, 1.0f, 60.0f);
-    ImGui::Text(U8("FastCombo Step-In Stage: %d"), fastComboStepInStage);
-    ImGui::Text(U8("FastCombo Step-In距離: %.2f m"), fastComboStepInDistance);
-    ImGui::Text(U8("FastCombo Step-In残り距離: %.2f m"), fastComboStepInRemainingDistance);
-    ImGui::Text(U8("FastCombo Step-In方向: (%.2f, %.2f, %.2f)"), fastComboStepInDirection.x, fastComboStepInDirection.y, fastComboStepInDirection.z);
-    ImGui::Text(U8("FastCombo Step-In有効: %s"), fastComboStepInActive ? "true" : "false");
-    ImGui::Text(U8("FastCombo Step-In Notify\u958b\u59cb: %.3f sec"), fastComboStepInNotifyStartTime);
-    ImGui::Text(U8("FastCombo Step-In Notify\u7d42\u4e86: %.3f sec"), fastComboStepInNotifyEndTime);
-    ImGui::Text(U8("FastCombo Step-In Duration: %.3f sec"), fastComboStepInDuration);
-    ImGui::Text(U8("FastCombo Step-In\u8a08\u7b97\u901f\u5ea6: %.2f m/s"), fastComboStepInCalculatedSpeed);
-    ImGui::Text(U8("FastCombo Step-In\u9069\u7528\u901f\u5ea6: %.2f m/s"), fastComboStepInAppliedSpeed);
-    ImGui::Text(U8("FastCombo Step-In\u6700\u5927\u901f\u5ea6: %.2f m/s"), fastComboStepInMaxSpeed);
-    ImGui::Text(U8("FastCombo Player距離: %.2f m"), fastComboTargetContext.xzDistance);
     ImGui::DragFloat(U8("近距離正面 FastCombo確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat(U8("FastCombo Front最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     fastComboFrontMaxAngle = std::clamp(fastComboFrontMaxAngle, 0.0f, 180.0f);
     const BossTargetContext attackSelectorContext = BuildTargetContext();
-    ImGui::Text(U8("FastCombo Front判定: %s"), attackSelectorContext.valid && attackSelectorContext.absoluteAngleDegrees <= fastComboFrontMaxAngle ? "true" : "false");
-    ImGui::Text(U8("Player相対角度: %.2f deg"), attackSelectorContext.absoluteAngleDegrees);
-    nearFrontFastComboProbability = std::clamp(nearFrontFastComboProbability, 0.0f, 1.0f);
-    ImGui::Text(U8("Attack選択モード: %s"), attackSelectorDebugMode.c_str());
-    ImGui::Text(U8("Attack候補数: %d"), attackSelectorDebugCandidateCount);
-    ImGui::Text(U8("FastCombo選択確率: %.2f"), attackSelectorDebugProbability);
-    ImGui::Text(U8("Attack抽選値: %.3f"), attackSelectorDebugRoll);
-    ImGui::Text(U8("選択Attack: %s"), attackSelectorDebugSelected.c_str());
-    ImGui::SeparatorText("CombatAI v2 Positioning");
-    ImGui::Text("Current Distance: %.3f", targetContext.xzDistance);
-    ImGui::Text("Absolute Angle: %.3f", targetContext.absoluteAngleDegrees);
-    ImGui::Text("Signed Angle: %.3f", targetContext.signedAngleDegrees);
-    ImGui::Text("Forward Dot: %.3f", targetContext.forwardDot);
-
-    ImGui::Text("Relative Region: %s", targetContext.valid ? relativeRegions[static_cast<int>(targetContext.region)] : "Invalid");
-    ImGui::Text("Front Max Angle: %.1f deg", relativeFrontMaxAngle);
-    ImGui::Text("Back Min Angle: %.1f deg", relativeBackMinAngle);
-    ImGui::Text("Distance Region: %s", targetContext.valid ? distanceRegions[static_cast<int>(targetContext.distanceRegion)] : "Invalid");
-    ImGui::Text("Selected Action: %s", actionTypes[static_cast<int>(selectedActionType)]);
-    ImGui::Text(U8("直近Attack: %s"),
-        lastStartedCombatAttack
-        ? actionTypes[static_cast<int>(*lastStartedCombatAttack)] : "None");
-    ImGui::Text(U8("2回前Attack: %s"),
-        secondLastStartedCombatAttack
-        ? actionTypes[static_cast<int>(*secondLastStartedCombatAttack)] : "None");
-    ImGui::DragFloat(U8("Attack Repeat Penalty"), &repeatAttackPenalty,
-        0.01f, 0.05f, 1.0f, "%.2f");
-    repeatAttackPenalty = std::clamp(repeatAttackPenalty, 0.05f, 1.0f);
-    ImGui::Text(U8("Repeat Penalty対象: %s"), attackSelectorDebugRepeatPenaltyTarget.c_str());
-    ImGui::Text(U8("通常Weight: %.2f"), attackSelectorDebugBaseWeight);
-    ImGui::Text(U8("補正後Weight: %.2f"), attackSelectorDebugEffectiveWeight);
-    ImGui::Text(U8("FastCombo基本確率: %.3f"), attackSelectorDebugProbability);
-    ImGui::Text(U8("FastCombo補正後確率: %.3f"), attackSelectorDebugEffectiveProbability);
-    ImGui::Text(U8("最終選択Attack: %s"), attackSelectorDebugSelected.c_str());
-    ImGui::Text(U8("Repeat Penalty Applied: %s"),
-        attackSelectorDebugRepeatPenaltyApplied ? "true" : "false");
     const char* intentTypes[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan", "CombatReposition" };
     const char* intentStepNames[] =
     {
@@ -2977,40 +2828,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::TextWrapped("%s", lastAIDecisionReason.c_str());
 
     ImGui::SeparatorText("Last Weighted Random");
-    if (hasLastActionRandomRoll)
-    {
-        ImGui::Text("Roll: %.3f / Total: %.3f", lastActionRandomRoll, lastActionRandomTotalWeight);
-        for (size_t i = 0; i < combatActionData.size(); ++i)
-        {
-            if (lastActionRandomWeights[i] <= 0.0f)
-                continue;
-            ImGui::Text("%s  %.3f - %.3f  (Weight %.3f)",
-                actionTypes[i], lastActionRandomRangeBegin[i],
-                lastActionRandomRangeEnd[i], lastActionRandomWeights[i]);
-        }
-    }
-    else
-    {
-        ImGui::TextDisabled("No weighted Action roll recorded");
-    }
 
-    if (dashAttackMovementActive)
-    {
-        const DirectX::XMFLOAT3 currentPosition = GetPosition();
-        const float traveledX = currentPosition.x - dashAttackStartPosition.x;
-        const float traveledZ = currentPosition.z - dashAttackStartPosition.z;
-        const float targetX = dashTargetPosition.x - currentPosition.x;
-        const float targetZ = dashTargetPosition.z - currentPosition.z;
-        ImGui::SeparatorText("DashAttack Runtime");
-        ImGui::Text("Start: (%.2f, %.2f, %.2f)", dashAttackStartPosition.x, dashAttackStartPosition.y, dashAttackStartPosition.z);
-        ImGui::Text("Target: (%.2f, %.2f, %.2f)", dashTargetPosition.x, dashTargetPosition.y, dashTargetPosition.z);
-        ImGui::Text("Direction: (%.3f, %.3f, %.3f)", dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
-        ImGui::Text("Planned Distance: %.2f", calculatedDashAttackDistance);
-        ImGui::Text("Traveled Distance: %.2f", std::sqrt(traveledX * traveledX + traveledZ * traveledZ));
-        ImGui::Text("Remaining Distance: %.2f", std::sqrt(targetX * targetX + targetZ * targetZ));
-        ImGui::Text("Speed: %.2f", dashAttackSpeed);
-        ImGui::Text("Elapsed / Timeout: %.2f / %.2f", dashAttackElapsedTime, dashAttackTimeout);
-    }
 
 
     ImGui::SeparatorText(U8("ダッシュBT"));
@@ -3030,23 +2848,6 @@ void GruxEnemy::DrawImGuiDetails()
         dashBTPhase == DashBTPhase::Movement ? 1 :
         dashBTPhase == DashBTPhase::Knockup ? 2 : -1;
 
-    ImGui::Text(U8("ダッシュBT状態: %s"), dashPhaseNames[static_cast<int>(dashBTPhase)]);
-    ImGui::Text(U8("ダッシュ予兆中: %s"), dashBTPhase == DashBTPhase::Telegraph ? U8("はい") : U8("いいえ"));
-    ImGui::Text(U8("ダッシュStage: %d"), dashStage);
-    ImGui::Text(U8("ダッシュ固定方向: (%.3f, %.3f, %.3f)"), dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
-    ImGui::Text(U8("ダッシュ予定距離: %.2f m"), calculatedDashAttackDistance);
-    ImGui::Text(U8("ダッシュ移動距離: %.2f m"), dashBTTraveledDistance);
-    ImGui::Text(U8("ダッシュ残り時間: %.2f sec"), dashBTPhase == DashBTPhase::Movement ? (std::max)(0.0f, dashAttackTimeout - dashAttackElapsedTime) : 0.0f);
-    ImGui::SeparatorText("Triple Dash Runtime");
-    if (ImGui::Checkbox("Show Dash Telegraph", &showDashTelegraph) && !showDashTelegraph)
-        HideDashTelegraphVisual();
-    ImGui::Text("Telegraph Active: %s", dashTelegraphActive ? "true" : "false");
-    ImGui::Text("Telegraph Line Visible: %s", dashTelegraphLineMeshComponent && dashTelegraphLineMeshComponent->IsVisible() ? "true" : "false");
-    ImGui::Text("Telegraph Fan Visible: %s", dashTelegraphFanMeshComponent && dashTelegraphFanMeshComponent->IsVisible() ? "true" : "false");
-    ImGui::Text("FadeOut Event Received: %s", dashTelegraphFadeOutEventReceived ? "true" : "false");
-    ImGui::Text("FadeOut Active: %s", dashTelegraphFadeOutActive ? "true" : "false");
-    const char* dashTelegraphVisualStateNames[] = { "Hidden", "LineExpanding", "FanFadingIn", "Holding", "DashActive", "FanFlashing", "FanFadingOut" };
-    ImGui::Text("Visual State: %s", dashTelegraphVisualStateNames[static_cast<int>(dashTelegraphVisualState)]);
     ImGui::Checkbox("Dash Telegraph Emissive Enabled", &dashTelegraphEmissiveEnabled);
     ImGui::ColorEdit3("Dash Telegraph Phase 1 Emissive Color", &dashTelegraphPhase1EmissiveColor.x);
     ImGui::ColorEdit3("Dash Telegraph Phase 2 Emissive Color", &dashTelegraphPhase2EmissiveColor.x);
@@ -3054,21 +2855,8 @@ void GruxEnemy::DrawImGuiDetails()
         0.05f, 0.0f, 20.0f, "%.2f");
     dashTelegraphEmissiveIntensity = (std::max)(0.0f, dashTelegraphEmissiveIntensity);
     ImGui::DragFloat("Line Expand Duration", &dashTelegraphLineExpandDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-    ImGui::Text("Line Expand Progress: %.3f", dashTelegraphLineExpandProgress);
     ImGui::DragFloat("Line Fade Out Duration", &dashTelegraphLineFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-    ImGui::Text("Line Alpha: %.3f", dashTelegraphLineAlpha);
-    ImGui::Text("Line Dynamic Shrink Active: %s", dashTelegraphLineDynamicShrinkActive ? "true" : "false");
-    ImGui::Text("Dynamic Line Start: (%.3f, %.3f, %.3f)",
-        dashTelegraphDynamicLineStart.x, dashTelegraphDynamicLineStart.y, dashTelegraphDynamicLineStart.z);
-    ImGui::Text("Fixed Line End: (%.3f, %.3f, %.3f)",
-        dashTelegraphLineEnd.x, dashTelegraphLineEnd.y, dashTelegraphLineEnd.z);
-    ImGui::Text("Current / Original Line Length: %.3f / %.3f m",
-        dashTelegraphCurrentLineLength, dashTelegraphLineLength);
-    ImGui::Text("Dash Line Progress: %.3f", dashTelegraphLineShrinkProgress);
     ImGui::DragFloat("Fan Fade In Duration", &dashTelegraphFanFadeInDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-    ImGui::Text("Fan Fade In Progress: %.3f", dashTelegraphFanFadeInProgress);
-    ImGui::Text("Fan Alpha: %.3f", dashTelegraphFanAlpha);
-    ImGui::Text("Fan Flash Active: %s", dashTelegraphFanFlashActive ? "true" : "false");
     ImGui::DragFloat("Fan Flash Duration", &dashTelegraphFanFlashDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
     ImGui::DragFloat("Fan Flash Intensity", &dashTelegraphFanFlashIntensity, 0.05f, 0.0f, 8.0f, "%.2f");
     ImGui::DragFloat("Fan Fade Out Duration", &dashTelegraphFanFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
@@ -3079,300 +2867,12 @@ void GruxEnemy::DrawImGuiDetails()
         else if (dashBTPhase != DashBTPhase::Telegraph && dashBTPhase != DashBTPhase::InterDashTransition)
             HideDashTelegraphVisual();
     }
-    ImGui::Text("Telegraph Snapshot Valid: %s", dashTelegraphSnapshotValid ? "true" : "false");
-    ImGui::Text("Line Start: (%.3f, %.3f, %.3f)", dashTelegraphLineStart.x, dashTelegraphLineStart.y, dashTelegraphLineStart.z);
-    ImGui::Text("Line End: (%.3f, %.3f, %.3f)", dashTelegraphLineEnd.x, dashTelegraphLineEnd.y, dashTelegraphLineEnd.z);
-    ImGui::Text("Line Length: %.3f m", dashTelegraphLineLength);
     ImGui::DragFloat("Line Width", &dashTelegraphLineWidth, 0.01f, 0.01f, 8.0f, "%.3f m");
     dashTelegraphLineWidth = (std::max)(0.01f, dashTelegraphLineWidth);
-    ImGui::Text("Fan Position: (%.3f, %.3f, %.3f)", dashTelegraphFanPosition.x, dashTelegraphFanPosition.y, dashTelegraphFanPosition.z);
-    ImGui::Text("Fan Forward: (%.3f, %.3f, %.3f)", dashTelegraphFanForward.x, dashTelegraphFanForward.y, dashTelegraphFanForward.z);
     ImGui::DragFloat("Fan Radius", &dashTelegraphFanRadius, 0.05f, 0.01f, 20.0f, "%.2f m");
     dashTelegraphFanRadius = (std::max)(0.01f, dashTelegraphFanRadius);
     ImGui::DragFloat("Line Y Offset", &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
     ImGui::DragFloat("Fan Y Offset", &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
-    const auto drawDashTelegraphMeshDebug = [](const char* label, const std::shared_ptr<StaticMeshComponent>& mesh)
-        {
-            ImGui::SeparatorText(label);
-            if (!mesh)
-            {
-                ImGui::Text("Component: Not Created");
-                return;
-            }
-            const auto& world = mesh->GetComponentWorldTransform();
-            const auto pos = world.GetLocation();
-            const auto rotation = world.GetRotation();
-            const auto scale = world.GetScale();
-            const auto euler = world.GetEulerRotation();
-            const auto matrix = world.ToWorldTransform();
-            ImGui::Text("Visible: %s", mesh->IsVisible() ? "true" : "false");
-            ImGui::Text("Model Loaded: %s", mesh->model ? "true" : "false");
-            ImGui::Text("Pipeline: %s / %s", mesh->overrideDeferredPipelineName ? mesh->overrideDeferredPipelineName->c_str() : "None", mesh->overrideForwardPipelineName ? mesh->overrideForwardPipelineName->c_str() : "None");
-            ImGui::Text("Render Eligible: %s", (mesh->IsVisible() && mesh->model && mesh->overrideForwardPipelineName == "chargeTelegraphUnlitForward") ? "true" : "false");
-            ImGui::Text("Render Function Call Count: %llu", static_cast<unsigned long long>(mesh->GetDebugRenderCallCount()));
-            ImGui::Text("World Position: (%.3f, %.3f, %.3f)", pos.x, pos.y, pos.z);
-            ImGui::Text("World Rotation Q: (%.4f, %.4f, %.4f, %.4f)", rotation.x, rotation.y, rotation.z, rotation.w);
-            ImGui::Text("World Yaw: %.2f deg", DirectX::XMConvertToDegrees(euler.y));
-            ImGui::Text("World Scale: (%.3f, %.3f, %.3f)", scale.x, scale.y, scale.z);
-            ImGui::Text("World Matrix R0: %.3f %.3f %.3f %.3f", matrix._11, matrix._12, matrix._13, matrix._14);
-            ImGui::Text("World Matrix R1: %.3f %.3f %.3f %.3f", matrix._21, matrix._22, matrix._23, matrix._24);
-            ImGui::Text("World Matrix R2: %.3f %.3f %.3f %.3f", matrix._31, matrix._32, matrix._33, matrix._34);
-            ImGui::Text("World Matrix R3: %.3f %.3f %.3f %.3f", matrix._41, matrix._42, matrix._43, matrix._44);
-            ImGui::Text("World Local +Y (Plane Normal): (%.3f, %.3f, %.3f)", matrix._21, matrix._22, matrix._23);
-            ImGui::Text("World Local -Z (Forward): (%.3f, %.3f, %.3f)", -matrix._31, -matrix._32, -matrix._33);
-            if (!mesh->model)
-                return;
-            // StaticMesh geometry is stored in batchMeshes, not meshes. GetAABB()
-            // currently only handles meshes, so compute the diagnostic AABB from the
-            // retained batch vertices for the Dash Line without changing gameplay/render data.
-            AABB box = mesh->model->GetAABB();
-            if (mesh->model->mode == ModelTypes::ModelMode::StaticMesh)
-            {
-                DirectX::XMFLOAT3 minValue{ FLT_MAX, FLT_MAX, FLT_MAX };
-                DirectX::XMFLOAT3 maxValue{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
-                bool hasVertex = false;
-                for (const auto& batchMesh : mesh->model->batchMeshes)
-                    for (const auto& vertex : batchMesh.cachedVertices)
-                    {
-                        hasVertex = true;
-                        minValue.x = (std::min)(minValue.x, vertex.position.x);
-                        minValue.y = (std::min)(minValue.y, vertex.position.y);
-                        minValue.z = (std::min)(minValue.z, vertex.position.z);
-                        maxValue.x = (std::max)(maxValue.x, vertex.position.x);
-                        maxValue.y = (std::max)(maxValue.y, vertex.position.y);
-                        maxValue.z = (std::max)(maxValue.z, vertex.position.z);
-                    }
-                if (hasVertex)
-                    box = { minValue, maxValue };
-            }
-            const DirectX::XMFLOAT3 size{ box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z };
-            ImGui::Text("Model AABB Min: (%.3f, %.3f, %.3f)", box.min.x, box.min.y, box.min.z);
-            ImGui::Text("Model AABB Max: (%.3f, %.3f, %.3f)", box.max.x, box.max.y, box.max.z);
-            ImGui::Text("Model Size: (%.3f, %.3f, %.3f)", size.x, size.y, size.z);
-            DirectX::XMFLOAT3 worldMin{ FLT_MAX, FLT_MAX, FLT_MAX };
-            DirectX::XMFLOAT3 worldMax{ -FLT_MAX, -FLT_MAX, -FLT_MAX };
-            const auto worldMatrix = world.ToMatrix();
-            for (const float x : { box.min.x, box.max.x })
-                for (const float y : { box.min.y, box.max.y })
-                    for (const float z : { box.min.z, box.max.z })
-                    {
-                        DirectX::XMFLOAT3 point{};
-                        DirectX::XMStoreFloat3(&point, DirectX::XMVector3TransformCoord(
-                            DirectX::XMVectorSet(x, y, z, 1.0f), worldMatrix));
-                        worldMin.x = (std::min)(worldMin.x, point.x);
-                        worldMin.y = (std::min)(worldMin.y, point.y);
-                        worldMin.z = (std::min)(worldMin.z, point.z);
-                        worldMax.x = (std::max)(worldMax.x, point.x);
-                        worldMax.y = (std::max)(worldMax.y, point.y);
-                        worldMax.z = (std::max)(worldMax.z, point.z);
-                    }
-            ImGui::Text("Transformed World AABB Min: (%.3f, %.3f, %.3f)", worldMin.x, worldMin.y, worldMin.z);
-            ImGui::Text("Transformed World AABB Max: (%.3f, %.3f, %.3f)", worldMax.x, worldMax.y, worldMax.z);
-            ImGui::Text("Transformed World AABB Size: (%.3f, %.3f, %.3f)", worldMax.x - worldMin.x, worldMax.y - worldMin.y, worldMax.z - worldMin.z);
-            ImGui::Text("Materials / Textures / Images: %d / %d / %d", static_cast<int>(mesh->model->materials.size()), static_cast<int>(mesh->model->textures.size()), static_cast<int>(mesh->model->images.size()));
-            if (!mesh->model->materials.empty())
-            {
-                const int index = mesh->model->materials.front().data.pbrMetallicRoughness.basecolorTexture.index;
-                ImGui::Text("BaseColor Mask Texture Index: %d", index);
-                if (index >= 0 && index < static_cast<int>(mesh->model->textures.size()))
-                {
-                    const auto& texture = mesh->model->textures[index];
-                    ImGui::Text("Mask Texture: %s (Image %d)", texture.name.c_str(), texture.source);
-                    const bool srvReady = texture.source >= 0 && texture.source < static_cast<int>(mesh->model->textureResourceViews.size()) && mesh->model->textureResourceViews[texture.source].Get() != nullptr;
-                    ImGui::Text("Mask Texture SRV Ready: %s", srvReady ? "true" : "false");
-                }
-            }
-        };
-    drawDashTelegraphMeshDebug("Dash Telegraph Line Mesh", dashTelegraphLineMeshComponent);
-    if (dashTelegraphLineMeshComponent && dashTelegraphLineMeshComponent->model)
-    {
-        AABB lineBox{};
-        lineBox.min = { FLT_MAX, FLT_MAX, FLT_MAX };
-        lineBox.max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-        for (const auto& batchMesh : dashTelegraphLineMeshComponent->model->batchMeshes)
-            for (const auto& vertex : batchMesh.cachedVertices)
-            {
-                lineBox.min.x = (std::min)(lineBox.min.x, vertex.position.x);
-                lineBox.min.y = (std::min)(lineBox.min.y, vertex.position.y);
-                lineBox.min.z = (std::min)(lineBox.min.z, vertex.position.z);
-                lineBox.max.x = (std::max)(lineBox.max.x, vertex.position.x);
-                lineBox.max.y = (std::max)(lineBox.max.y, vertex.position.y);
-                lineBox.max.z = (std::max)(lineBox.max.z, vertex.position.z);
-            }
-        const auto lineWorld = dashTelegraphLineMeshComponent->GetComponentWorldTransform().ToMatrix();
-        DirectX::XMFLOAT3 meshStart{}, meshEnd{};
-        DirectX::XMStoreFloat3(&meshStart, DirectX::XMVector3TransformCoord(
-            DirectX::XMVectorSet(0.0f, 0.0f, lineBox.max.z, 1.0f), lineWorld));
-        DirectX::XMStoreFloat3(&meshEnd, DirectX::XMVector3TransformCoord(
-            DirectX::XMVectorSet(0.0f, 0.0f, lineBox.min.z, 1.0f), lineWorld));
-        const float meshLength = std::sqrt((meshEnd.x - meshStart.x) * (meshEnd.x - meshStart.x) +
-            (meshEnd.z - meshStart.z) * (meshEnd.z - meshStart.z));
-        ImGui::Text("Line Mesh Forward Start: (%.3f, %.3f, %.3f)", meshStart.x, meshStart.y, meshStart.z);
-        ImGui::Text("Line Mesh Forward End: (%.3f, %.3f, %.3f)", meshEnd.x, meshEnd.y, meshEnd.z);
-        ImGui::Text("Line Mesh Effective Length: %.3f m (Requested %.3f m)", meshLength, dashTelegraphLineLength);
-    }
-    drawDashTelegraphMeshDebug("Dash Telegraph Fan Mesh", dashTelegraphFanMeshComponent);
-    ImGui::Text("Triple Dash Active: %s", dashBTTripleDashActive ? "true" : "false");
-    ImGui::Text("Dash Index / Max Count: %d / %d", dashBTDashIndex + 1, dashBTDashMaxCount);
-    const char* dashRuntimePhase = dashBTPhase == DashBTPhase::Telegraph ? "Dash1 Windup" :
-        dashBTPhase == DashBTPhase::Movement ? "Dash Movement" :
-        dashBTPhase == DashBTPhase::Knockup ? "Dash Knockup" :
-        dashBTPhase == DashBTPhase::InterDashTransition ? "InterDashTransition" : "Inactive";
-    ImGui::Text("Dash Phase: %s", dashRuntimePhase);
-    const auto dashTelegraphController = GetBodyAnimationController();
-    const bool isPreStampede = dashTelegraphController &&
-        dashTelegraphController->GetCurrentAnimationName() == "Pre_Stampede_0";
-    ImGui::Text("Current Animation Name: %s", dashTelegraphController
-        ? dashTelegraphController->GetCurrentAnimationName().c_str() : "None");
-    ImGui::Text("Pre_Stampede Current Animation Time: %s%.3f sec",
-        isPreStampede ? "" : "N/A / ",
-        isPreStampede ? dashTelegraphController->GetCurrentAnimationTime() : 0.0f);
-    ImGui::Text("Direction Lock Event Received: %s", dashBTDirectionLockEventReceived ? "true" : "false");
-    ImGui::Text("Dash Start Event Received: %s", dashBTDashStartEventReceived ? "true" : "false");
-    ImGui::DragFloat("Inter Dash Tracking Duration", &dashBTInterDashTrackingDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
-    dashBTInterDashTrackingDuration = (std::max)(0.0f, dashBTInterDashTrackingDuration);
-    ImGui::DragFloat("Transition Duration", &dashBTTransitionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
-    dashBTTransitionDuration = (std::max)(0.0f, dashBTTransitionDuration);
-    ImGui::Text("Transition Elapsed: %.3f sec", dashBTTransitionElapsed);
-    ImGui::Text("Direction Locked: %s", dashBTDirectionLocked ? "true" : "false");
-    ImGui::Text("Telegraph Hold Duration: %.3f sec", dashBTTelegraphHoldDuration);
-    ImGui::Text("Dash 1 Start Gate: GameplayEvent");
-    ImGui::Text("Locked Direction: (%.3f, %.3f, %.3f)", dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
-    ImGui::Text("Locked Predicted Knockup Position: (%.3f, %.3f, %.3f)",
-        dashBTPredictedKnockupPosition.x, dashBTPredictedKnockupPosition.y,
-        dashBTPredictedKnockupPosition.z);
-    ImGui::Text("Current Dash Start Position: (%.3f, %.3f, %.3f)", dashAttackStartPosition.x, dashAttackStartPosition.y, dashAttackStartPosition.z);
-    ImGui::Text("Current Dash Direction: (%.3f, %.3f, %.3f)", dashAttackDirection.x, dashAttackDirection.y, dashAttackDirection.z);
-    ImGui::Text("Current Dash Target Position: (%.3f, %.3f, %.3f)", dashTargetPosition.x, dashTargetPosition.y, dashTargetPosition.z);
-    ImGui::Text("Current Dash Distance: %.3f", calculatedDashAttackDistance);
-    ImGui::Text("Predicted Knockup Position: (%.3f, %.3f, %.3f)",
-        dashBTPredictedKnockupPosition.x, dashBTPredictedKnockupPosition.y,
-        dashBTPredictedKnockupPosition.z);
-    ImGui::Text("Actual Knockup Start Position: (%.3f, %.3f, %.3f)",
-        dashBTActualKnockupStartPosition.x, dashBTActualKnockupStartPosition.y,
-        dashBTActualKnockupStartPosition.z);
-    ImGui::Text("Prediction Error: %s%.3f m", dashBTKnockupPositionCaptured ? "" : "Pending / ",
-        dashBTPredictionError);
-    const char* recoveryAttackName = "None";
-    for (const auto& attack : combatAttackData)
-    {
-        if (attack.type == selectedAttackType)
-        {
-            recoveryAttackName = attack.animationName.c_str();
-            break;
-        }
-    }
-    ImGui::Text(U8("現在の攻撃: %s"), recoveryAttackName);
-    ImGui::Text(U8("現在の後隙時間: %.2f sec"), GetSelectedAttackRecoveryDuration());
-
-    ImGui::Text("Active Intent: %s", activeIntentName);
-    ImGui::Text("Intent Goal: %s", activeIntentGoal);
-    ImGui::Text("Intent Step: %s", intentStepNames[static_cast<int>(activeIntentStep)]);
-    if (activeIntentData)
-    {
-        ImGui::Text("Preferred Range: %.2f - %.2f m",
-            activeIntentData->preferredMinDistance,
-            activeIntentData->preferredMaxDistance);
-    }
-    ImGui::Text("Range Status: %s", activeRangeStatusName);
-    ImGui::Text("Next Action: %s", activeIntentNextAction);
-    ImGui::Text("Positioning Attempted: %s", intentPositioningAttempted ? "Yes" : "No");
-    ImGui::Text("Positioning Completed: %s", intentPositioningCompleted ? "YES" : "NO");
-    ImGui::Text("Positioning Attempts: %d / %d",
-        intentPositioningAttemptCount, maxIntentPositioningAttempts);
-    if (hasAttackValidRange)
-    {
-        ImGui::Text("%s: %.2f - %.2f m",
-            activeIntentStep == BossIntentStep::AttackPending
-            ? "AttackPending Effective Valid Range"
-            : "Attack Valid Range",
-            effectiveAttackValidMin, attackValidMax);
-        ImGui::Text("Current Player Distance: %.2f m", targetContext.xzDistance);
-        ImGui::Text("Attack Valid: %s", attackValid ? "YES" : "NO");
-    }
-    else
-    {
-        ImGui::TextDisabled("Attack Valid Range: Not used for this Intent");
-    }
-    ImGui::Text("Reposition Reason: %s", intentRepositionReason.c_str());
-    ImGui::Text("Post Attack Reposition Boost Pending: %s",
-        postAttackCombatRepositionBoostPending ? "YES" : "NO");
-    ImGui::Text("Post Attack Reposition Weight: %.1f",
-        postAttackCombatRepositionWeight);
-    ImGui::Text("Post Attack Boost Applied: %s",
-        postAttackCombatRepositionBoostApplied ? "YES" : "NO");
-    ImGui::Text("Intent Lifecycle: %s", intentLifecycleState.c_str());
-    ImGui::Text("Lifecycle Reason: %s", intentLifecycleReason.c_str());
-    ImGui::TextWrapped("Lifecycle Trace: %s", intentLifecycleTrace.c_str());
-    if (ImGui::TreeNode("Intent Selection"))
-    {
-        const float totalIntentWeight = GetTotalIntentWeight();
-        for (size_t i = 0; i < combatIntentData.size(); ++i)
-        {
-            BossIntentData& data = combatIntentData[i];
-            const float probability = totalIntentWeight > 0.0f
-                ? combatIntentEffectiveWeights[i] / totalIntentWeight * 100.0f
-                : 0.0f;
-            ImGui::PushID(static_cast<int>(i));
-            ImGui::Text("%s", intentTypes[i]);
-            ImGui::DragFloat("Near Weight", &data.nearWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-            ImGui::DragFloat("Middle Weight", &data.middleWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-            ImGui::DragFloat("Far Weight", &data.farWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-            data.nearWeight = (std::max)(0.0f, data.nearWeight);
-            data.middleWeight = (std::max)(0.0f, data.middleWeight);
-            data.farWeight = (std::max)(0.0f, data.farWeight);
-            ImGui::Text("Effective Weight: %.2f", combatIntentEffectiveWeights[i]);
-            ImGui::Text("Selection Probability: %.2f%%", probability);
-            ImGui::Text("Candidate Status: %s",
-                combatIntentEffectiveWeights[i] > 0.0f ? "Candidate" : "ZeroWeight");
-            ImGui::PopID();
-        }
-        ImGui::Text("Total Intent Weight: %.2f", totalIntentWeight);
-        if (hasLastIntentRandomRoll)
-        {
-            ImGui::Text("Last Intent Roll: %.2f / %.2f",
-                lastIntentRandomRoll, lastIntentRandomTotalWeight);
-            for (size_t i = 0; i < combatIntentData.size(); ++i)
-            {
-                if (lastIntentRandomWeights[i] <= 0.0f)
-                    continue;
-                ImGui::Text("%s  %.2f - %.2f  (Weight %.2f)",
-                    intentTypes[i], lastIntentRandomRangeBegin[i],
-                    lastIntentRandomRangeEnd[i], lastIntentRandomWeights[i]);
-            }
-            ImGui::Text("Selected Intent: %s",
-                lastSelectedIntent ? intentTypes[static_cast<int>(*lastSelectedIntent)] : "None");
-        }
-        if (ImGui::Button("Select Intent Once"))
-            SelectIntentByWeight();
-        ImGui::SameLine();
-        if (ImGui::Button("Clear Active Intent"))
-            ClearActiveIntent();
-        if (ImGui::Button("Mark Positioning Attempted"))
-            MarkIntentPositioningAttempted();
-        ImGui::TreePop();
-    }
-    if (ImGui::TreeNode("Combat Action Candidates"))
-    {
-        ImGui::Text("Total Effective Weight: %.2f", GetTotalActionWeight());
-
-        for (size_t i = 0; i < combatActionData.size(); ++i)
-        {
-            ImGui::PushID(static_cast<int>(i));
-            BossActionData& actionData = combatActionData[i];
-            ImGui::Text("%s", actionTypes[i]);
-            ImGui::DragFloat("Cooldown Duration", &actionData.cooldownDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
-            ImGui::Text("Cooldown Remaining: %.2f sec", combatActionCooldownRemaining[i]);
-            ImGui::Text("Cooldown State: %s", combatActionCooldownRemaining[i] <= 0.0f ? "Ready" : "Cooldown");
-            ImGui::Text("Required By Intent: %s", IsActionForCurrentIntent(actionData.type, targetContext) ? "Yes" : "No");
-            ImGui::Text("Candidate Reason: %s", candidateReasonNames[static_cast<int>(combatActionCandidateReasons[i])]);
-            ImGui::Text("Candidate: %s", combatActionCandidateFlags[i] ? "Yes" : "No");
-            ImGui::Text("Effective Weight: %.2f", combatActionEffectiveWeights[i]);
-            ImGui::Separator();
-            ImGui::PopID();
-        }
-        ImGui::TreePop();
-    }
 
 
 
@@ -3410,83 +2910,7 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::TreePop();
     }
 
-    const char* positioningIntentNames[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan", "CombatReposition" };
-    const auto drawPosition = [](const char* label, const DirectX::XMFLOAT3& position)
-        {
-            ImGui::Text("%s: (%.2f, %.2f, %.2f)", label, position.x, position.y, position.z);
-        };
-    const auto drawPositioningSnapshot = [&](const PositioningDebugSnapshot& snapshot, bool active)
-        {
-            if (!snapshot.valid)
-            {
-                ImGui::TextDisabled("No positioning record");
-                return;
-            }
-            const char* intentName = snapshot.intent
-                ? positioningIntentNames[static_cast<int>(*snapshot.intent)]
-                : "None";
-            ImGui::Text("Intent: %s", intentName);
-            ImGui::Text("Action: %s", actionTypes[static_cast<int>(snapshot.data.actionType)]);
-            ImGui::Text("Preferred Range: %.2f - %.2f m", snapshot.preferredMin, snapshot.preferredMax);
-            ImGui::Text("Start Player Distance: %.3f m", snapshot.startPlayerDistance);
-            ImGui::Text("Current/End Player Distance: %.3f m", snapshot.currentPlayerDistance);
-            ImGui::Text("Target Distance: %.3f m", snapshot.data.targetDistance);
-            drawPosition("Start Boss Position", snapshot.startBossPosition);
-            drawPosition("Start Player Position", snapshot.startPlayerPosition);
-            drawPosition("Desired Target Before Clamp", snapshot.desiredTargetPosition);
-            drawPosition("Positioning Target After Clamp", snapshot.clampedTargetPosition);
-            ImGui::Text("Was Clamped: %s", snapshot.targetWasClamped ? "YES" : "NO");
-            ImGui::Text("Clamp Distance: %.3f m", snapshot.targetClampDistance);
-            ImGui::Text("Available Move Distance: %.3f m", snapshot.availableMoveDistance);
-            ImGui::TextColored(snapshot.availableMoveDistance < minimumPositioningMoveDistance
-                ? ImVec4(1.0f, 0.45f, 0.2f, 1.0f) : ImVec4(0.5f, 1.0f, 0.5f, 1.0f),
-                "Below Minimum Move Distance: %s (%.2f m)",
-                snapshot.availableMoveDistance < minimumPositioningMoveDistance ? "YES" : "NO",
-                minimumPositioningMoveDistance);
-            drawPosition(active ? "Current Position" : "End Position", snapshot.currentPosition);
-            ImGui::Text("Planned Move: %.3f m", snapshot.plannedMoveDistance);
-            ImGui::Text("Actual Move (Start -> Current): %.3f m", snapshot.actualMoveDistance);
-            ImGui::Text("Traveled Path: %.3f m", snapshot.traveledPathDistance);
-            ImGui::Text("Target Remaining: %.3f m", snapshot.remainingDistance);
-            ImGui::Text("Requested Move Direction: (%.3f, %.3f, %.3f)",
-                snapshot.requestedMoveDirection.x, snapshot.requestedMoveDirection.y,
-                snapshot.requestedMoveDirection.z);
-            ImGui::Text("Requested Speed: %.3f m/s", snapshot.data.moveSpeed);
-            ImGui::Text("Input Magnitude: %.3f", snapshot.inputMagnitude);
-            ImGui::Text("Actual Move This Frame: %.4f m", snapshot.frameMovement);
-            ImGui::Text("Actual Speed (Position Delta): %.3f m/s", snapshot.actualSpeed);
-            if (characterMovementComponent)
-                ImGui::Text("Movement Component Actual Speed: %.3f m/s",
-                    characterMovementComponent->GetActualHorizontalSpeed());
-            ImGui::Text("Positioning Time: %.3f / %.3f sec", snapshot.elapsedTime, snapshot.data.timeout);
-            ImGui::Text("Stuck: %.3f / %.3f sec (speed < %.3f m/s)",
-                snapshot.stuckTimer, snapshot.data.stuckTimeThreshold,
-                snapshot.data.stuckMovementThreshold);
-            ImGui::Text("Safe Bounds at Start: X %.2f - %.2f, Z %.2f - %.2f (Margin %.2f)",
-                snapshot.safeMinX, snapshot.safeMaxX, snapshot.safeMinZ, snapshot.safeMaxZ,
-                snapshot.safetyMargin);
-            ImGui::Text("Target In BossRoom Safe Bounds: YES (clamped before use)");
-            ImGui::TextDisabled("Wall Hit/Normal: Unavailable; movement RayCast result is not exposed");
-            ImGui::Text("Rotation: RotateTowardsPlayer(requested move direction), %.1f deg/s", turnSpeed);
-            const auto controller = GetBodyAnimationController();
-            if (active)
-            {
-                ImGui::SeparatorText("Positioning Animation");
-                ImGui::Text("Actual Speed: %.3f m/s", positioningAnimationActualSpeed);
-                ImGui::Text("Animation State: %s", positioningAnimationMoving ? "Moving" : "Idle");
-                ImGui::Text("Move Start Threshold: %.3f m/s", positioningMoveStartSpeedThreshold);
-                ImGui::Text("Move Stop Threshold: %.3f m/s", positioningMoveStopSpeedThreshold);
-                ImGui::Text("Move Stop Timer: %.3f / %.3f sec",
-                    positioningMoveStopTimer, positioningMoveStopDelay);
-                ImGui::Text("Current Animation: %s",
-                    controller ? controller->GetCurrentAnimationName().c_str() : "None");
-            }
-            ImGui::Text("End Reason: %s", snapshot.endReason.c_str());
-        };
-
     ImGui::SeparatorText("Boss Room Positioning");
-    ImGui::Text("BossRoom Bounds X: %.2f - %.2f", bossRoomMinX, bossRoomMaxX);
-    ImGui::Text("BossRoom Bounds Z: %.2f - %.2f", bossRoomMinZ, bossRoomMaxZ);
     constexpr float maximumBossRoomMargin =
         (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
             (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
@@ -3513,11 +2937,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Move Stop Delay", &positioningMoveStopDelay,
         0.01f, 0.0f, 2.0f, "%.2f sec");
     positioningMoveStopDelay = (std::max)(0.0f, positioningMoveStopDelay);
-    ImGui::Text("Safe X: %.2f - %.2f",
-        bossRoomMinX + bossRoomSafetyMargin, bossRoomMaxX - bossRoomSafetyMargin);
-    ImGui::Text("Safe Z: %.2f - %.2f",
-        bossRoomMinZ + bossRoomSafetyMargin, bossRoomMaxZ - bossRoomSafetyMargin);
-    ImGui::TextDisabled("Margin changes apply to the next Positioning target; active target stays fixed.");
     ImGui::SeparatorText("Boss Positioning Debug");
     ImGui::Checkbox("Positioning World Debug", &positioningWorldDebug);
     ImGui::SeparatorText("Combat Reposition Debug");
@@ -3525,63 +2944,7 @@ void GruxEnemy::DrawImGuiDetails()
         ? "BackTaken" : "Normal";
     const char* repositionDirectionName = selectedRepositionDirection == BossRepositionDirection::Left
         ? "Left" : (selectedRepositionDirection == BossRepositionDirection::Right ? "Right" : "None");
-    ImGui::Text("Reposition Intent Weight: %.2f",
-        combatIntentEffectiveWeights[static_cast<int>(BossIntentType::CombatReposition)]);
-    ImGui::Text("Reposition Reason: %s", repositionReasonName);
-    ImGui::Text("Reposition Direction: %s", repositionDirectionName);
-    ImGui::Text("Left Available Distance: %.3f m", repositionLeftAvailableDistance);
-    ImGui::Text("Right Available Distance: %.3f m", repositionRightAvailableDistance);
-    ImGui::Text("Desired Target: (%.2f, %.2f, %.2f)",
-        repositionDesiredTarget.x, repositionDesiredTarget.y, repositionDesiredTarget.z);
-    ImGui::Text("Clamped Target: (%.2f, %.2f, %.2f)",
-        repositionClampedTarget.x, repositionClampedTarget.y, repositionClampedTarget.z);
-    ImGui::Text("Completion / Failure Reason: %s", repositionCompletionReason.c_str());
-    ImGui::Text("No Safe Direction: %s", repositionNoSafeDirection ? "YES" : "NO");
-    if (IsCombatRepositionActive() && positioningDebugActive)
-    {
-        ImGui::SeparatorText("Active Combat Reposition");
-        if (combatRepositionSettling)
-        {
-            ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.15f, 1.0f),
-                "*** REPOSITION SETTLE ***");
-        }
-        else
-        {
-            ImGui::TextColored(ImVec4(1.0f, 0.72f, 0.15f, 1.0f),
-                "*** REPOSITIONING ***");
-        }
-        ImGui::Text("Reposition Phase: %s",
-            combatRepositionSettling ? "Settling" : "Moving");
-        ImGui::Text("Settle Duration: %.3f sec", combatRepositionSettleDuration);
-        ImGui::Text("Settle Remaining: %.3f sec", combatRepositionSettleRemaining);
-        ImGui::Text("Current Intent: CombatReposition");
-        ImGui::Text("Current Action: %s",
-            actionTypes[static_cast<int>(selectedActionType)]);
-        ImGui::Text("Reposition Distance: %.2f m",
-            combatRepositionMoveDistance);
-        ImGui::Text("Combat Reposition Move Speed: %.2f m/s",
-            combatRepositionMoveSpeed);
-        ImGui::Text("Max Move Distance Actually Used: %.2f m",
-            currentPositioningDebug.data.maxMoveDistance);
-        ImGui::Text("Traveled Distance: %.3f m",
-            currentPositioningDebug.traveledPathDistance);
-        drawPosition("Target Position",
-            currentPositioningDebug.clampedTargetPosition);
-        ImGui::Text("Remaining Distance: %.3f m",
-            currentPositioningDebug.remainingDistance);
-        ImGui::Text("Completion Reason: %s",
-            currentPositioningDebug.endReason.c_str());
-        ImGui::Text("Reposition Suppression: %s",
-            suppressCombatRepositionForNextIntentSelection ? "YES" : "NO");
-    }
     ImGui::SeparatorText("Current Positioning");
-    ImGui::Text("Active: %s", positioningDebugActive ? "YES" : "NO");
-    if (positioningDebugActive)
-        drawPositioningSnapshot(currentPositioningDebug, true);
-    else
-        ImGui::TextDisabled("No active positioning; see Last Positioning below.");
-    ImGui::SeparatorText("Last Positioning");
-    drawPositioningSnapshot(lastPositioningDebug, false);
 
     ImGui::DragFloat("Idle Duration", &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("FastCombo Prepare Duration", &fastComboPrepareDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
@@ -3609,14 +2972,10 @@ void GruxEnemy::DrawImGuiDetails()
     interStageMaxFacingAngle = std::clamp(interStageMaxFacingAngle, 0.0f, 180.0f);
     interStageFaceDelay = std::clamp(interStageFaceDelay, 0.0f, 0.5f);
     const auto facingDebugContext = BuildTargetContext();
-    ImGui::Text(U8("プレイヤーとの角度: %.1f deg"), facingDebugContext.absoluteAngleDegrees);
-    ImGui::Text(U8("攻撃可能角度内: %s"), IsPlayerInFastComboFacingRange(facingDebugContext) ? "true" : "false");
     ImGui::Checkbox(U8("近距離攻撃範囲を表示"), &showCloseCombatDebugRange);
     ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
     ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     ImGui::DragFloat(U8("旋回タイムアウト"), &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
-    ImGui::Text(U8("現在のAIステート: %s"), stateMachine_ ? stateMachine_->GetStateName() : "None");
-    ImGui::Text(U8("BehaviorTree 有効: %s"), behaviorTreeFastComboEnabled ? "true" : "false");
     ImGui::Text(U8("BT 現在ノード: %s"), behaviorTreeCurrentNode.c_str());
     ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
     ImGui::Text(U8("BT 前回実行結果: %s"), behaviorTreeLastResult.c_str());
@@ -3624,42 +2983,13 @@ void GruxEnemy::DrawImGuiDetails()
     if (ImGui::TreeNode(U8("FastCombo ターゲット情報")))
     {
         const char* runtimeStateName = fastComboRuntimeState == FastComboRuntimeState::Attack ? "Attack" : fastComboRuntimeState == FastComboRuntimeState::InterStageDelay ? "InterStageDelay" : "InterStageFacing";
-        ImGui::Text(U8("現在のコンボ段階: %d"), fastComboRuntimeStage);
-        ImGui::Text(U8("FastCombo 実行状態: %s"), runtimeStateName);
-        ImGui::Text(U8("ターゲットとの角度: %.2f deg"), fastComboTargetContext.absoluteAngleDegrees);
         ImGui::DragFloat(U8("段間旋回 完了角度:"), &interStageFaceCompleteAngle, 0.5f);
         ImGui::DragFloat(U8("段間旋回 最大許容角度:"), &interStageMaxFacingAngle, 0.5f);
         ImGui::DragFloat(U8("段間旋回 待機時間: "), &interStageFaceDelay, 0.1f);
-        ImGui::Text(U8("最後に取得したコンボ段階: %s"),
-            fastComboTargetStage >= 0 ? (fastComboTargetStage == 0 ? "A" : fastComboTargetStage == 1 ? "B" : "C") : "None");
         static constexpr const char* sampleLabels[] = { "A Start", "A -> B", "B -> C" };
-        for (int i = 0; i <= fastComboTargetStage; ++i)
-        {
-            const auto& context = fastComboStageTargetContexts[i];
-            ImGui::Text("%s: Target Context %s", sampleLabels[i], context.valid ? "Valid" : "Invalid");
-            if (!context.valid)
-                continue;
-            ImGui::Text(U8(" プレイヤーまでの距離: %.3f /プレイヤーとの角度: %.2f deg"),
-                context.xzDistance, context.absoluteAngleDegrees);
-            ImGui::Text("  Direction To Player: (%.3f, %.3f, %.3f)",
-                context.directionToPlayer.x, context.directionToPlayer.y, context.directionToPlayer.z);
-        }
         ImGui::TreePop();
     }
-    ImGui::Text("Last Decision Reason: %s", lastAIDecisionReason.c_str());
     ImGui::SeparatorText("Attack Setup Target Debug");
-    ImGui::Text("Attack Setup Target Valid: %s", attackSetupTarget.valid ? "true" : "false");
-    ImGui::Text("Attack Setup Target Position: (%.3f, %.3f, %.3f)", attackSetupTarget.targetPosition.x, attackSetupTarget.targetPosition.y, attackSetupTarget.targetPosition.z);
-    ImGui::Text("Remaining Distance: %.3f", attackSetupRemainingDistance);
-    ImGui::Text("Elapsed Time: %.3f", attackSetupElapsedTime);
-    ImGui::Text("Current Move Result: %s", attackSetupMovementActive ? "Running" : (attackSetupTarget.valid ? "Ready" : "None"));
-    ImGui::Text(
-        U8("実際の準備移動距離: %.3f"),
-        attackSetupPlannedMoveDistance);
-
-    ImGui::Text(
-        U8("ジャンプ準備 最低移動距離: %.3f"),
-        jumpSetupMinimumMoveDistance);
 
     float setupAngle = 0.0f;
     {
@@ -3673,14 +3003,6 @@ void GruxEnemy::DrawImGuiDetails()
                 DirectX::XMConvertToDegrees(std::atan2f(dx, dz));
         }
     }
-
-    ImGui::Text(
-        U8("ターゲット方向角度: %.2f deg"),
-        setupAngle);
-
-    ImGui::Text(
-        U8("ジャンプ準備距離: %.3f"),
-        GetJumpAttackDesiredStartDistance());
     ImGui::SeparatorText(U8("ジャンプ攻撃位置調整"));
     ImGui::DragFloat(
         U8("位置調整距離 最小"),
@@ -3697,28 +3019,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat(U8("ジャンプ最低移動距離"), &jumpSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
     jumpSetupMinimumMoveDistance = (std::max)(0.0f, jumpSetupMinimumMoveDistance);
 
-    ImGui::Text(
-        U8("目標位置は有効か: %s"),
-        attackSetupTarget.valid ? "true" : "false");
-
-    ImGui::Text(
-        U8("目標位置: (%.3f, %.3f, %.3f)"),
-        attackSetupTarget.targetPosition.x,
-        attackSetupTarget.targetPosition.y,
-        attackSetupTarget.targetPosition.z);
-
-    ImGui::Text(
-        U8("目標までの残り距離: %.3f"),
-        attackSetupRemainingDistance);
-
-    ImGui::Text(
-        U8("選択された移動距離: %.3f"),
-        attackSetupChosenDistance);
-
-    ImGui::Text(
-        U8("候補数: %d"),
-        attackSetupCandidateCount);
-    ImGui::SeparatorText(U8("ジャンプ攻撃デバッグ"));
 
     const auto jumpController = GetBodyAnimationController();
 
@@ -3726,26 +3026,6 @@ void GruxEnemy::DrawImGuiDetails()
         jumpController
         ? jumpController->GetCurrentAnimationName()
         : std::string{};
-
-    ImGui::Text(
-        U8("ジャンプBT状態: %s"),
-        behaviorTreeCurrentNode.c_str());
-
-    ImGui::Text(
-        U8("ジャンプ予兆再生中: %s"),
-        jumpAnimation == "Pre_Stampede_0" ? "true" : "false");
-
-    ImGui::Text(
-        U8("ジャンプStage: %d"),
-        jumpAnimation == "PrimaryAttack_JumpAttack"
-        ? 1
-        : jumpAnimation == "Pre_Stampede_0"
-        ? 0
-        : -1);
-
-    ImGui::Text(
-        U8("ジャンプMotionWarp有効: %s"),
-        jumpMotionWarpOverrideActive ? "true" : "false");
 
     ImGui::DragFloat(
         U8("最大ジャンプ距離"),
@@ -3763,34 +3043,8 @@ void GruxEnemy::DrawImGuiDetails()
         10.0f,
         "%.2f");
     currentJumpPlayerDistance = GetDistanceToPlayer();
-    ImGui::Text("Current Player Distance: %.3f", currentJumpPlayerDistance);
-    ImGui::Text("Calculated Jump Distance: %.3f", calculatedJumpDistance);
-    ImGui::Text("Jump Override: %s", jumpMotionWarpOverrideActive ? "Active" : "Inactive");
-    ImGui::Checkbox("Show Jump Landing Debug", &showJumpLandingDebug);
-    if (showJumpLandingDebug)
-    {
-        ImGui::SeparatorText("Jump Landing Measurements");
-        ImGui::Text("Player Distance: %.3f", currentJumpPlayerDistance);
-        ImGui::Text("Requested Jump Distance: %.3f", jumpLandingDebugRequestedDistance);
-        ImGui::Text("Clamped / Calculated Jump Distance: %.3f", jumpLandingDebugCalculatedDistance);
-        ImGui::Text("maxJumpDistance: %.3f", maxJumpDistance);
-        ImGui::Text("desiredAttackDistance: %.3f", desiredAttackDistance);
-        ImGui::Text("Planned Landing: (%.3f, %.3f, %.3f)", jumpLandingDebugPlannedLanding.x, jumpLandingDebugPlannedLanding.y, jumpLandingDebugPlannedLanding.z);
-        ImGui::Text("Telegraph World Position: (%.3f, %.3f, %.3f)", jumpLandingDebugTelegraphCenter.x, jumpLandingDebugTelegraphCenter.y, jumpLandingDebugTelegraphCenter.z);
-        ImGui::Text("MotionWarp End Boss Root: %s (%.3f, %.3f, %.3f)", jumpLandingDebugMotionWarpEndCaptured ? "Captured" : "Pending", jumpLandingDebugMotionWarpEndBossRoot.x, jumpLandingDebugMotionWarpEndBossRoot.y, jumpLandingDebugMotionWarpEndBossRoot.z);
-        ImGui::Text("GroundImpact Boss Root: %s (%.3f, %.3f, %.3f)", jumpLandingDebugGroundImpactCaptured ? "Captured" : "Pending", jumpLandingDebugGroundImpactBossRoot.x, jumpLandingDebugGroundImpactBossRoot.y, jumpLandingDebugGroundImpactBossRoot.z);
-        ImGui::Text("Target Error XZ: %.3f", jumpLandingDebugTargetErrorXZ);
-        ImGui::Text("Wall RayCast Hit: %s", jumpLandingDebugWallHit ? "YES" : "NO");
-        if (jumpLandingDebugWallHit)
-            ImGui::Text("Wall Collision Position: (%.3f, %.3f, %.3f)", jumpLandingDebugWallCollisionPosition.x, jumpLandingDebugWallCollisionPosition.y, jumpLandingDebugWallCollisionPosition.z);
-    }
-    ImGui::Text("Selected Attack: %s", attackTypes[static_cast<int>(selectedAttackType)]);
-    ImGui::Text("Current AI Mode: %s", aiModes[static_cast<int>(bossAIMode)]);
     ImGui::Checkbox("BehaviorTree FastCombo", &behaviorTreeFastComboEnabled);
-    ImGui::Text("Last Attack: %s",
-        hasLastAttack ? attackTypes[static_cast<int>(lastAttackType)] : "None");
     ImGui::DragFloat("Repeat Weight Scale", &repeatWeightScale, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::Text("Last Think Distance: %.3f", lastCombatSelectionDistance);
     if (ImGui::TreeNode("Combat Attack Candidates"))
     {
         for (size_t i = 0; i < combatAttackData.size(); ++i)
@@ -3805,8 +3059,6 @@ void GruxEnemy::DrawImGuiDetails()
             attack.weight = (std::max)(0.0f, attack.weight);
             ImGui::DragFloat("Recovery Duration", &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
             attack.recoveryDuration = (std::max)(0.0f, attack.recoveryDuration);
-            ImGui::Text("Effective Weight: %.3f", combatEffectiveWeights[i]);
-            ImGui::Text("Last Think: %s", combatCandidateFlags[i] ? "Candidate" : "OutOfRange");
             ImGui::PopID();
         }
         ImGui::TreePop();
@@ -3844,160 +3096,21 @@ void GruxEnemy::DrawImGuiDetails()
         0.01f, 0.0f, 2.0f, "%.2f sec");
     fourthHitReactionChance = std::clamp(fourthHitReactionChance, 0.0f, 1.0f);
     fourthHitReactionDuration = std::clamp(fourthHitReactionDuration, 0.0f, 2.0f);
-    ImGui::Text(U8("4段目 HitReaction Active: %s"),
-        fourthHitReactionActive ? "true" : "false");
-    ImGui::Text(U8("4段目 HitReaction残り: %.3f sec"), fourthHitReactionRemaining);
-    ImGui::Text(U8("4段目 Hit方向: %s"), fourthHitReactionDirection.c_str());
-    ImGui::Text(U8("4段目 Hit方向 Dot: %.3f"), fourthHitReactionLastDirectionDot);
-    ImGui::Text(U8("4段目 HitReact Animation: %s"), fourthHitReactionAnimation.c_str());
 
-    if (fourthHitReactionHasLastRoll)
-    {
-        ImGui::Text(U8("4段目 HitReaction抽選値: %.3f"), fourthHitReactionLastRoll);
-        ImGui::Text(U8("4段目 HitReaction当選: %s"),
-            fourthHitReactionLastWon ? "true" : "false");
-    }
-    else
-    {
-        ImGui::Text(U8("4段目 HitReaction抽選値: 未抽選"));
-        ImGui::Text(U8("4段目 HitReaction当選: 未抽選"));
-    }
     ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
     ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
     ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
-    ImGui::Text(U8("Current Phase Scale: %.3f"), enemyScale);
     ImGui::DragFloat(U8("hitEnemyEffectOffsetY"), &hitEnemyEffectOffsetY, 0.1f);
     ImGui::DragFloat(U8("hitPlayerEffectOffsetY"), &hitPlayerEffectOffsetY, 0.1f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
     ImGui::SeparatorText("PrimaryAttack_LA Hit Debug");
-    ImGui::Text("hitActors: %zu", hitActors.size());
-    ImGui::Text("attackHitCount: %d", currentAttackHitCount);
-    ImGui::Text("leftHitBox: %s", leftHitBox ? "true" : "false");
-    ImGui::Text("rightHitBox: %s", rightHitBox ? "true" : "false");    ImGui::Text("Active HitBox Radius L/R: %.3f / %.3f",
-        activeLeftHitBoxRadius, activeRightHitBoxRadius);
-    const float activeHitBoxElapsed = GetActiveHitBoxElapsedForDebug();
-    if (activeHitBoxElapsed >= 0.0f)
-        ImGui::Text("Active HitBox Elapsed: %.3f sec", activeHitBoxElapsed);
-    else
-        ImGui::Text("Active HitBox Elapsed: N/A");
 
 
     ImGui::Begin("Boss AI Debug");
     ImGui::Checkbox("Show AI World Debug", &showBossAIDebug);
     ImGui::SeparatorText("Boss Rotation Debug");
-    ImGui::Checkbox("Rotation Debug / World Lines", &showRotationDebug);
-    const char* rotationStateName = stateMachine_ ? stateMachine_->GetStateName() : "";
-    ImGui::Text("Current State: %s", rotationStateName[0] ? rotationStateName : "None");
-    ImGui::Text("Current Intent: %s", activeIntentName);
-    ImGui::Text("Intent Step: %s", intentStepNames[static_cast<int>(activeIntentStep)]);
-    ImGui::Text("Selected Attack: %s", attackTypes[static_cast<int>(selectedAttackType)]);
-    ImGui::Text("Facing Evaluation: %s", attackFacingEvaluationValid ? "Valid" : "None");
-    ImGui::Text("Facing Tolerance: %.1f deg", attackFacingEvaluationTolerance);
-    ImGui::Text("Angle To Player At Selection: %.3f deg", attackFacingEvaluationAngle);
-    ImGui::Text("CloseCombat Ready Facing Angle: %.1f deg",
-        closeCombatReadyFacingAngle);
-    ImGui::Text("Current Facing Angle Before Ready: %.3f deg",
-        currentFacingAngleBeforeReady);
-    ImGui::Text("Facing Required: %s", attackFacingEvaluationRequired ? "YES" : "NO");
-    ImGui::Text("Pending Facing Valid: %s", pendingAttackFacingValid ? "YES" : "NO");
-    const float pendingFacingYaw = pendingAttackFacingValid
-        ? DirectX::XMConvertToDegrees(std::atan2f(
-            pendingAttackFacingDirection.x, pendingAttackFacingDirection.z))
-        : 0.0f;
-    ImGui::Text("Pending Facing Yaw: %.3f deg", pendingFacingYaw);
-    ImGui::Text("Resume Attack: %s",
-        lastResumedAttackValid
-        ? attackTypes[static_cast<int>(lastResumedAttackType)]
-        : "None");
-    ImGui::Text("Attack Ready Active: %s", attackReadyActive ? "YES" : "NO");
-    ImGui::Text("Attack Ready Reason: %s",
-        attackReadyReason == AttackReadyReason::AfterTurn ? "AfterTurn" : "Front");
-    ImGui::Text("Attack Ready Duration: %.3f sec", GetAttackReadyDuration());
-    ImGui::Text("Attack Ready Timer: %.3f sec", attackReadyDebugTimer);
-    ImGui::Text("Ready Attack Type: %s",
-        attackTypes[static_cast<int>(attackReadyDebugType)]);
-    ImGui::Text("Facing Complete SE Fired: %s",
-        attackReadySEFired ? "YES" : "NO");
-
-    ImGui::Text("Current Yaw: %.3f deg", rotationDebugCurrentYaw);
-    ImGui::Text("Player Direction Yaw: %.3f deg", rotationDebugPlayerYaw);
-    ImGui::Text("Angle To Player: %.3f deg", targetContext.absoluteAngleDegrees);
-    ImGui::Text("Actual Yaw Delta This Frame: %.4f deg", rotationDebugActualYawDelta);
-    ImGui::Text("Requested Turn Speed: %.1f deg/s", rotationDebugRequestedTurnSpeed);
-    ImGui::Text("Rotation Sources This Frame: %d", rotationDebugSourceCount);
-    if (rotationDebugSourceCount == 0)
-        ImGui::TextDisabled("  None");
-    for (int i = 0; i < rotationDebugSourceCount; ++i)
-    {
-        const RotationSourceDebug& source = rotationDebugSources[i];
-        ImGui::Text("  %d. %s | Target Yaw %.2f | Speed %.1f",
-            i + 1, source.source.c_str(), source.targetYaw, source.requestedTurnSpeed);
-    }
-    ImGui::TextDisabled("World: Forward=Green, Player=Blue, Positioning=Yellow, Turn Target=Magenta");
-    ImGui::SeparatorText("Last Turn");
-    if (lastTurnDebug.valid)
-    {
-        ImGui::Text("From State: %s", lastTurnDebug.fromState.c_str());
-        ImGui::Text("Start Angle: %.3f deg", lastTurnDebug.startAngle);
-        ImGui::Text("Start Target Yaw: %.3f deg", lastTurnDebug.startTargetYaw);
-        ImGui::Text("End Angle: %.3f deg", lastTurnDebug.endAngle);
-        ImGui::Text("Duration: %.3f sec", lastTurnDebug.duration);
-        ImGui::Text("Turn Start / End Threshold: %.1f / %.1f deg",
-            attackFacingAngle, turnCompleteAngle);
-    }
-    else
-    {
-        ImGui::TextDisabled("No completed Turn recorded");
-    }
-
     const char* fullStateName = stateMachine_ ? stateMachine_->GetStateName() : "";
     const char* stateDisplayName = "None";
-    if (std::strcmp(fullStateName, "EnemyIdleState") == 0) stateDisplayName = "Idle";
-    else if (std::strcmp(fullStateName, "EnemyThinkState") == 0) stateDisplayName = "Think";
-    else if (std::strcmp(fullStateName, "EnemyTurnState") == 0) stateDisplayName = "Turn";
-    else if (std::strcmp(fullStateName, "EnemyPositioningState") == 0) stateDisplayName = "Positioning";
-    else if (std::strcmp(fullStateName, "EnemyAttackReadyState") == 0) stateDisplayName = "Attack Ready";
-    else if (std::strcmp(fullStateName, "EnemyAttackState") == 0) stateDisplayName = "Attack";
-    else if (std::strcmp(fullStateName, "EnemyChargeAttackState") == 0) stateDisplayName = "Charge Attack";
-    else if (std::strcmp(fullStateName, "EnemyRecoveryState") == 0) stateDisplayName = "Recovery";
-    else if (std::strcmp(fullStateName, "EnemyDeathState") == 0) stateDisplayName = "Death";
-
-    ImGui::Text("State: %s (%s)", stateDisplayName, fullStateName[0] ? fullStateName : "None");
-    ImGui::Text("Intent: %s", activeIntentName);
-    ImGui::Text("Intent Goal: %s", activeIntentGoal);
-    ImGui::Text("Intent Step: %s", intentStepNames[static_cast<int>(activeIntentStep)]);
-    if (activeIntentData)
-    {
-        ImGui::Text("Preferred Range: %.2f - %.2f m",
-            activeIntentData->preferredMinDistance,
-            activeIntentData->preferredMaxDistance);
-    }
-    ImGui::Text("Range Status: %s", activeRangeStatusName);
-    ImGui::Text("Next Action: %s", activeIntentNextAction);
-    ImGui::Separator();
-
-    if (targetContext.valid)
-    {
-        const int distanceRegionIndex = static_cast<int>(targetContext.distanceRegion);
-        ImGui::Text("Distance: %.2f", targetContext.xzDistance);
-        ImGui::Text("Angle to Player: %.2f deg", targetContext.absoluteAngleDegrees);
-        ImGui::Text("Relative Region: %s", relativeRegions[static_cast<int>(targetContext.region)]);
-        ImGui::Text("Front Max Angle: %.1f deg", relativeFrontMaxAngle);
-        ImGui::Text("Back Min Angle: %.1f deg", relativeBackMinAngle);
-        ImGui::Text("Distance Region:");
-        for (int i = 0; i < static_cast<int>(std::size(distanceRegions)); ++i)
-        {
-            if (i == distanceRegionIndex)
-                ImGui::TextColored(ImVec4(0.35f, 1.0f, 0.35f, 1.0f), "-> %s", distanceRegions[i]);
-            else
-                ImGui::TextDisabled("   %s", distanceRegions[i]);
-        }
-    }
-    else
-    {
-        ImGui::TextDisabled("Target Context: Invalid");
-    }
-
     if (ImGui::CollapsingHeader("Runtime Tuning", ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::SeparatorText("Boss Sword Trail");
@@ -4061,64 +3174,12 @@ void GruxEnemy::DrawImGuiDetails()
         BossIntentData& jumpIntent =
             getIntentData(BossIntentType::JumpAttackPlan);
 
-        const auto drawDistanceRegionWeights = [&](const char* regionName,
-            float BossIntentData::* weightMember)
-            {
-                if (!ImGui::TreeNodeEx(regionName, ImGuiTreeNodeFlags_DefaultOpen))
-                    return;
-                ImGui::PushID(regionName);
-                const auto totalBaseWeight = [&]()
-                    {
-                        return closeCombatIntent.*weightMember +
-                            repositionIntent.*weightMember +
-                            dashIntent.*weightMember +
-                            jumpIntent.*weightMember;
-                    };
-                DrawIntentWeightBar("Close Combat",
-                    closeCombatIntent.*weightMember, totalBaseWeight());
-                DrawIntentWeightBar("Combat Reposition",
-                    repositionIntent.*weightMember, totalBaseWeight());
-                DrawIntentWeightBar("Dash Attack",
-                    dashIntent.*weightMember, totalBaseWeight());
-                DrawIntentWeightBar("Jump Attack",
-                    jumpIntent.*weightMember, totalBaseWeight());
-                ImGui::PopID();
-                ImGui::TreePop();
-            };
-
-        drawDistanceRegionWeights("Near", &BossIntentData::nearWeight);
-        drawDistanceRegionWeights("Middle", &BossIntentData::middleWeight);
-        drawDistanceRegionWeights("Far", &BossIntentData::farWeight);
-
-        if (ImGui::TreeNodeEx("Back", ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            const auto totalBackWeight = [&]()
-                {
-                    return combatRepositionBackWeight +
-                        dashAttackPlanBackWeight + jumpAttackPlanBackWeight;
-                };
-            float disabledCloseCombatWeight = 0.0f;
-            DrawIntentWeightBar("Close Combat", disabledCloseCombatWeight,
-                totalBackWeight(), false);
-            DrawIntentWeightBar("Combat Reposition",
-                combatRepositionBackWeight, totalBackWeight());
-            DrawIntentWeightBar("Dash Attack",
-                dashAttackPlanBackWeight, totalBackWeight());
-            DrawIntentWeightBar("Jump Attack",
-                jumpAttackPlanBackWeight, totalBackWeight());
-            ImGui::TreePop();
-        }
 
         ImGui::SeparatorText("Post Attack Modifier");
         ImGui::DragFloat("Post Attack CombatReposition Weight",
             &postAttackCombatRepositionWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
         postAttackCombatRepositionWeight = std::clamp(
             postAttackCombatRepositionWeight, 0.0f, 1000.0f);
-        ImGui::Text("Boost Pending: %s",
-            postAttackCombatRepositionBoostPending ? "YES" : "NO");
-        ImGui::Text("Reposition Suppression: %s",
-            suppressCombatRepositionForNextIntentSelection ? "YES" : "NO");
-
         ImGui::SeparatorText("Combat Reposition");
         ImGui::DragFloat("Combat Reposition Distance", &combatRepositionMoveDistance,
             0.1f, 0.0f, 15.0f, "%.2f m");
@@ -4225,63 +3286,6 @@ void GruxEnemy::DrawImGuiDetails()
         case ChargeAttackEndReason::SafetyTimeout: chargeEndReasonName = "SafetyTimeout"; break;
         default: break;
         }
-        ImGui::Text("Charge Phase: %s", chargePhaseDebug.c_str());
-        ImGui::Text("Charge Start Position: %.3f, %.3f, %.3f",
-            chargeStartPositionDebug.x, chargeStartPositionDebug.y, chargeStartPositionDebug.z);
-        ImGui::Text("Charge Current Position: %.3f, %.3f, %.3f",
-            chargeCurrentPositionDebug.x, chargeCurrentPositionDebug.y, chargeCurrentPositionDebug.z);
-        ImGui::Text("Charge Traveled Distance: %.3f", chargeTraveledDistanceDebug);
-        ImGui::Text("Charge Start Validation: %s",
-            chargeStartValidationValidDebug ? "Valid" : "Invalid");
-        ImGui::Text("Charge Start Clearance: %.3f", chargeStartClearanceDebug);
-        ImGui::Text("Charge Damage Cast Radius: %.3f", chargePlayerCastRadiusDebug);
-        ImGui::Text("Charge Just Dodge Cast Radius: %.3f", chargeJustDodgeCastRadiusDebug);
-        ImGui::Text("Charge Wall Cast Radius: %.3f", chargeWallCastRadiusDebug);
-        ImGui::Text("Charge Start Failure Reason: %s",
-            chargeStartFailureReasonDebug.c_str());
-        ImGui::Text("Windup Animation Time: %.3f sec", chargeWindupAnimationTimeDebug);
-        ImGui::Text("Charge Direction: %.3f, %.3f, %.3f",
-            chargeDirection.x, chargeDirection.y, chargeDirection.z);
-        ImGui::Text("Charge Elapsed Time: %.3f sec", chargeElapsedTime);
-        const float activeChargeCastRadius = (std::max)(0.05f,
-            radius * GetActiveChargePlayerCastRadiusScale());
-        const float activeChargeJustDodgeCastRadius = (std::max)(0.05f, radius *
-            (chargeBT.phase2SettingsLatched ? chargeJustDodgeCastRadiusScalePhase2 : chargeJustDodgeCastRadiusScale));
-        ImGui::Text("Charge Speed (Active Setting): %.3f", GetActiveChargeSpeed());
-        ImGui::Text("Charge Damage Cast Radius / Width: %.3f / %.3f m",
-            activeChargeCastRadius, activeChargeCastRadius * 2.0f);
-        ImGui::Text("Charge Just Dodge Cast Radius / Width: %.3f / %.3f m",
-            activeChargeJustDodgeCastRadius, activeChargeJustDodgeCastRadius * 2.0f);
-        ImGui::Text("Charge Damage (Active Setting): %d", GetActiveChargeDamage());
-        ImGui::Text("DangerWindow Active: %s",
-            chargeDangerWindowActive ? "YES" : "NO");
-        ImGui::Text("Just Dodge Success: %s",
-            chargeJustDodgeSuccessDebug ? "YES" : "NO");
-        ImGui::Text("Charge Movement Active: %s",
-            chargeMovementActive ? "YES" : "NO");
-        ImGui::Text("Player Cast Hit: %s", chargePlayerCastHitDebug ? "YES" : "NO");
-        ImGui::Text("Player Hit Distance: %.3f", chargePlayerHitDistanceDebug);
-        ImGui::Text("Player Hit Actor: %s", chargePlayerHitActorDebug.c_str());
-        ImGui::Text("Selected Hit: %s", chargeSelectedHitDebug.c_str());
-        ImGui::Text("Charge Damage: %d", GetActiveChargeDamage());
-        ImGui::Text("Wall Cast Hit: %s", chargeWallCastHitDebug ? "YES" : "NO");
-        ImGui::Text("Wall Facing Amount: %.3f", chargeWallFacingAmountDebug);
-        ImGui::Text("Wall Hit Normal: %.3f, %.3f, %.3f",
-            chargeWallHitNormalDebug.x, chargeWallHitNormalDebug.y, chargeWallHitNormalDebug.z);
-        ImGui::Text("Wall Hit Distance: %.3f", chargeWallHitDistanceDebug);
-        ImGui::Text("Charge End Reason: %s", chargeEndReasonName);
-        ImGui::Text("Safety Timeout: %.2f sec (%s)", chargeSafetyTimeout,
-            chargeEndReasonDebug == ChargeAttackEndReason::SafetyTimeout
-            ? "TRIGGERED" : "Not Triggered");
-
-        ImGui::SeparatorText("Recovery Override");
-        ImGui::DragFloat("Post Stun Recovery Duration",
-            &postStunRecoveryDuration, 0.01f, 0.0f, 10.0f, "%.2f sec");
-        postStunRecoveryDuration = (std::max)(0.0f, postStunRecoveryDuration);
-        ImGui::Text("Current Recovery Duration: %.3f sec",
-            currentRecoveryDurationDebug);
-        ImGui::Text("Recovery Elapsed: %.3f sec", recoveryElapsedDebug);
-        ImGui::Text("Recovery Source: %s", recoverySourceDebug.c_str());
 
         ImGui::SeparatorText("Jump Attack Telegraph");
         const auto animationController = GetBodyAnimationController();
@@ -4316,8 +3320,6 @@ void GruxEnemy::DrawImGuiDetails()
                 actionData.weight = (std::max)(0.0f, actionData.weight);
                 ImGui::DragFloat("Base Cooldown", &actionData.cooldownDuration, 0.05f, 0.0f, 60.0f, "%.2f sec");
                 actionData.cooldownDuration = (std::max)(0.0f, actionData.cooldownDuration);
-                ImGui::Text("Cooldown Remaining: %s",
-                    combatActionCooldownRemaining[i] <= 0.0f ? "READY" : "Active");
 
                 if (actionData.attackType)
                 {
@@ -4340,7 +3342,6 @@ void GruxEnemy::DrawImGuiDetails()
                     : 0.0f;
                 char probabilityLabel[32]{};
                 sprintf_s(probabilityLabel, "%.1f%%", probability * 100.0f);
-                ImGui::Text("Status: %s", candidateReasonNames[static_cast<int>(combatActionCandidateReasons[i])]);
                 ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), probabilityLabel);
                 ImGui::TreePop();
             }
@@ -4377,91 +3378,13 @@ void GruxEnemy::DrawImGuiDetails()
             closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
             repeatAttackPenalty = initialRepeatAttackPenalty;
         }
-        ImGui::TextDisabled("Runtime only. Reset does not change active Cooldown Remaining.");
-        ImGui::TextDisabled("Recovery edits affect an active Recovery on its next update.");
     }
 
     ImGui::SeparatorText("Action Evaluation (Last AI Evaluation)");
     const float actionEvaluationTotalWeight = GetTotalActionWeight();
-    if (ImGui::BeginTable("BossAIActionTable", 6,
-        ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp))
-    {
-        ImGui::TableSetupColumn("Action");
-        ImGui::TableSetupColumn("Base");
-        ImGui::TableSetupColumn("Effective");
-        ImGui::TableSetupColumn("Cooldown");
-        ImGui::TableSetupColumn("Probability");
-        ImGui::TableSetupColumn("Status");
-        ImGui::TableHeadersRow();
 
-        for (size_t i = 0; i < combatActionData.size(); ++i)
-        {
-            const BossActionCandidateReason reason = combatActionCandidateReasons[i];
-            const bool candidate = reason == BossActionCandidateReason::Candidate;
-            const bool selected = hasSelectedActionDebug && combatActionData[i].type == selectedActionType;
-            const ImVec4 rowColor = selected
-                ? ImVec4(1.0f, 0.85f, 0.25f, 1.0f)
-                : (candidate ? ImVec4(0.35f, 1.0f, 0.35f, 1.0f) : ImVec4(0.55f, 0.55f, 0.55f, 1.0f));
-
-            ImGui::TableNextRow();
-            ImGui::TableSetColumnIndex(0);
-            ImGui::TextColored(rowColor, "%s%s", selected ? "-> " : "", actionTypes[i]);
-            ImGui::TableSetColumnIndex(1);
-            ImGui::Text("%.1f", combatActionData[i].weight);
-            ImGui::TableSetColumnIndex(2);
-            ImGui::Text("%.1f", combatActionEffectiveWeights[i]);
-            ImGui::TableSetColumnIndex(3);
-            if (combatActionCooldownRemaining[i] <= 0.0f)
-                ImGui::TextColored(ImVec4(0.35f, 1.0f, 0.35f, 1.0f), "READY");
-            else
-                ImGui::TextDisabled("%.2fs", combatActionCooldownRemaining[i]);
-            ImGui::TableSetColumnIndex(4);
-            const float probability = candidate && actionEvaluationTotalWeight > 0.0f
-                ? combatActionEffectiveWeights[i] / actionEvaluationTotalWeight
-                : 0.0f;
-            ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), "");
-            ImGui::SameLine();
-            ImGui::Text("%.1f%%", probability * 100.0f);
-            ImGui::TableSetColumnIndex(5);
-            ImGui::TextColored(rowColor, "%s", candidateReasonNames[static_cast<int>(reason)]);
-        }
-        ImGui::EndTable();
-    }
 
     ImGui::SeparatorText("Weighted Random Result (Last Selection)");
-    //if (hasLastActionRandomDebug)
-    {
-        ImGui::Text("Total Candidate Weight: %.2f", lastActionRandomTotalWeight);
-        ImGui::Text("Last Random Roll: %.2f / %.2f",
-            lastActionRandomRoll,
-            lastActionRandomTotalWeight);
-
-        float rangeStart = 0.0f;
-        for (size_t i = 0; i < lastActionRandomWeights.size(); ++i)
-        {
-            const float weight = lastActionRandomWeights[i];
-            if (weight <= 0.0f)
-                continue;
-
-            const float rangeEnd = rangeStart + weight;
-            const float probability = lastActionRandomTotalWeight > 0.0f
-                ? weight / lastActionRandomTotalWeight
-                : 0.0f;
-            ImGui::Text("%s  %.2f - %.2f  (%.1f%%)",
-                actionTypes[i],
-                rangeStart,
-                rangeEnd,
-                probability * 100.0f);
-            rangeStart = rangeEnd;
-        }
-        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.25f, 1.0f),
-            "Selected: %s",
-            hasSelectedActionDebug ? actionTypes[static_cast<int>(selectedActionType)] : "None");
-    }
-    //else
-    //{
-    //    ImGui::TextDisabled("No weighted-random selection recorded yet.");
-    //}
 
     ImGui::End();
 
@@ -8742,263 +7665,4 @@ bool GruxEnemy::SelectCombatAction()
     return true;
 }
 
-void KnightActor::Initialize(const Transform& transform)
-{
-    std::string parentName = "KnightActor";
-    Character::Initialize(transform);
-    skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
-    skeletalMeshComponent->SetModel("./Data/Models/Characters/Greystone/Greystone.gltf", false, true);
 
-    // アニメーションコントローラーを作成
-    int rootIndex = skeletalMeshComponent->FindIndexByName("root");
-    auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
-    controller->AddAnimation("Idle", 0);
-    controller->AddAnimation("Attack_A", 1);
-
-    // アニメーションコントローラーを character に追加
-    this->AddBodyAnimationController(controller);
-    PlayBodyAnimation("Idle");
-
-    // 当たり判定
-    {
-        std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
-        DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
-        height = size.y;
-        radius = size.x * 0.5f;
-        mass = 60.0f;
-        capsuleComponent->SetRadiusAndHeight(radius, height);
-        capsuleComponent->SetMass(mass);
-        capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
-        capsuleComponent->SetLayer(CollisionLayer::Enemy);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Convex, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetCollisionOffsetY(height * 0.5f);
-        capsuleComponent->SetIsVisibleDebugBox(false);
-        capsuleComponent->Initialize();
-    }
-
-    // 回転用コンポーネントを追加
-    rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
-
-    // ポイントライトコンポーネントを追加
-    auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
-    pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
-    // ライトの名前からライトマネージャーの共有ライトを取得して設定
-    pointLightComponent->SetSharedLightName("PlayerPointLight");
-
-    // ポイントライトコンポーネントを追加
-    auto backPointLightComponent = this->AddComponent<PointLightComponent>("PlayerBackPointLight", parentName);
-    backPointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f,-1.0f });
-    // ライトの名前からライトマネージャーの共有ライトを取得して設定
-    backPointLightComponent->SetSharedLightName("PlayerBackPointLight");
-
-}
-
-void KnightActor::Update(float elapsedTime)
-{
-    Character::Update(elapsedTime);
-
-}
-
-
-void SavarogEnemy::Initialize(const Transform& transform)
-{
-    std::string parentName = "SkeletonWarriorMeshComponent";
-    Character::Initialize(transform);
-    skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
-    skeletalMeshComponent->SetModel("./Data/Models/Characters/SevarogBloodred/animation.gltf", false, true);
-    skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Enemy;   // オブジェクトの種類を Enemy に設定
-    skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.6f;   // emissionPowerの値を大きくして、自己発光の強さを上げてみる
-    skeletalMeshComponent->overrideDeferredPipelineName = "deferredFightStage";
-    skeletalMeshComponent->plusAlphaCBuffer->data.brightness = 5.0f;
-    skeletalMeshComponent->plusAlphaCBuffer->data.saturation = 1.4f;
-    //skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.9f,0.08f,0.08f,1.0f };   // 目玉の色を赤にしてみる
-    //for (auto& material : skeletalMeshComponent->model->materials)
-    //{
-    //    if (material.name == "MI_Grux_Eye")
-    //    {// 目だったら、
-    //        material.materialType = MaterialType::Eye;
-    //    }
-    //}
-
-
-    // アニメーションコントローラーを作成
-    int rootIndex = skeletalMeshComponent->FindIndexByName("root");
-    auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
-    controller->AddAnimation("Idle", 0);
-    controller->AddAnimation("Emote_Pull", 1);
-    controller->AddAnimation("Swing1_Medium", 2);
-    controller->AddAnimation("Swing1_Return_Idle", 3);
-    controller->AddAnimation("Swing2_Medium", 4);
-    controller->AddAnimation("Swing2_Return_Idle", 5);
-    controller->AddAnimation("Swing3_Medium", 6);
-    controller->AddAnimation("Swing3_Return_Idle", 7);
-    controller->AddAnimation("Victory_Emote", 8);
-    controller->AddAnimation("Recall", 9);
-    controller->AddAnimation("LevelStart", 10);
-    controller->AddAnimation("Emote_Pointing", 11);
-
-    // アニメーションコントローラーを character に追加
-    this->AddBodyAnimationController(controller);
-    PlayBodyAnimation("Idle");
-
-    // 当たり判定
-    {
-        std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
-        DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
-        height = size.y;
-        radius = size.x * 0.5f;
-        mass = 60.0f;
-        capsuleComponent->SetRadiusAndHeight(radius, height);
-        capsuleComponent->SetMass(mass);
-        capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
-        capsuleComponent->SetLayer(CollisionLayer::Enemy);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Convex, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetCollisionOffsetY(height * 0.5f);
-        capsuleComponent->SetIsVisibleDebugBox(false);
-        capsuleComponent->Initialize();
-    }
-
-    // 回転用コンポーネントを追加
-    rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
-
-#if 1
-    // ポイントライトコンポーネントを追加
-    auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
-    pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
-    // ライトの名前からライトマネージャーの共有ライトを取得して設定
-    pointLightComponent->SetSharedLightName("EnemyPointLight");
-#endif // 0
-
-
-    // エミッションを発生させるためにモデルを追加
-    auto sphereMeshLeftComponent = this->AddComponent<SkeletalMeshComponent>("eye_left", parentName);
-    int socketNode = skeletalMeshComponent->model->FindNodeIndexByName("head_cloth_big_l_01");
-    sphereMeshLeftComponent->AttachToComponent(skeletalMeshComponent, socketNode); // ""
-    sphereMeshLeftComponent->SetModel("./Data/Models/Primitives/Sphere.glb");
-    sphereMeshLeftComponent->overrideDeferredPipelineName = "pointLightSkeletalMesh";
-    sphereMeshLeftComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-    sphereMeshLeftComponent->SetRelativeLocationDirect({ 0.0f, -0.04f, 0.0f });
-    sphereMeshLeftComponent->SetRelativeScaleDirect({ 0.01f,0.01f,0.01f });
-    sphereMeshLeftComponent->plusAlphaCBuffer->data.cpuColor = { 1.0f,0.0f,0.0f,1.0f };
-    sphereMeshLeftComponent->plusAlphaCBuffer->data.emissionPower = 1.07f;
-
-    // エミッションを発生させるためにモデルを追加
-    auto sphereMeshComponent = this->AddComponent<SkeletalMeshComponent>("eye_right", parentName);
-    socketNode = skeletalMeshComponent->model->FindNodeIndexByName("head_cloth_big_r_01");
-    sphereMeshComponent->AttachToComponent(skeletalMeshComponent, socketNode); // ""
-    sphereMeshComponent->SetModel("./Data/Models/Primitives/Sphere.glb");
-    sphereMeshComponent->overrideDeferredPipelineName = "pointLightSkeletalMesh";
-    sphereMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
-    sphereMeshComponent->SetRelativeLocationDirect({ 0.0f, 0.03f, -0.01f });
-    sphereMeshComponent->SetRelativeScaleDirect({ 0.01f,0.01f,0.01f });
-    sphereMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1.0f,0.0f,0.0f,1.0f };
-    sphereMeshComponent->plusAlphaCBuffer->data.emissionPower = 1.07f;
-
-}
-
-void SavarogEnemy::Update(float elapsedTime)
-{
-    Character::Update(elapsedTime);
-
-    if (InputSystem::GetInputState("K", InputStateMask::Trigger))
-    {
-        PlayBodyAnimation("Victory_Emote", false, true, 0.1f);
-    }
-    if (!GetBodyAnimationController()->IsPlayAnimation())
-    {
-        PlayBodyAnimation("Idle");
-    }
-}
-
-void GracialEnemy::Initialize(const Transform& transform)
-{
-    std::string parentName = "SkeletonWarriorMeshComponent";
-    Character::Initialize(transform);
-    skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
-    skeletalMeshComponent->SetModel("./Data/Models/Characters/Aurora_Gracial/animation.gltf", false, true);
-    skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Enemy;   // オブジェクトの種類を Enemy に設定
-    skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.6f;   // emissionPowerの値を大きくして、自己発光の強さを上げてみる
-    //skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.9f,0.08f,0.08f,1.0f };   // 目玉の色を赤にしてみる
-    //for (auto& material : skeletalMeshComponent->model->materials)
-    //{
-    //    if (material.name == "MI_Grux_Eye")
-    //    {// 目だったら、
-    //        material.materialType = MaterialType::Eye;
-    //    }
-    //}
-
-
-    // アニメーションコントローラーを作成
-    int rootIndex = skeletalMeshComponent->FindIndexByName("root");
-    auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
-    controller->AddAnimation("Idle", 0);
-    controller->AddAnimation("Ability_E", 1);
-    controller->AddAnimation("Ability_R", 2);
-    controller->AddAnimation("Primary_Attack_Fast_A", 3);
-    controller->AddAnimation("Primary_Attack_Fast_B", 4);
-    controller->AddAnimation("Primary_Attack_Fast_C", 5);
-    controller->AddAnimation("Primary_Attack_Fast_D", 6);
-    controller->AddAnimation("Jog_Fwd", 7);
-    controller->AddAnimation("Jog_Fwd_Start", 8);
-    controller->AddAnimation("Jog_Fwd_Stop", 9);
-    controller->AddAnimation("HitReact_Back", 10);
-    controller->AddAnimation("HitReact_Front", 11);
-    controller->AddAnimation("HitReact_Left", 12);
-    controller->AddAnimation("HitReact_Right", 13);
-    controller->AddAnimation("Emote_Ice_Sculpture", 14);
-    controller->AddAnimation("FrontEndPose", 15);
-    controller->AddAnimation("Idle_Noise_A", 16);
-    controller->AddAnimation("Idle_Noise_B", 17);
-    controller->AddAnimation("Recall", 18);
-    // アニメーションコントローラーを character に追加
-    this->AddBodyAnimationController(controller);
-    PlayBodyAnimation("Idle");
-
-    // 当たり判定
-    {
-        std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
-        DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
-        height = size.y;
-        radius = size.x * 0.5f;
-        mass = 60.0f;
-        capsuleComponent->SetRadiusAndHeight(radius, height);
-        capsuleComponent->SetMass(mass);
-        capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
-        capsuleComponent->SetLayer(CollisionLayer::Enemy);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Convex, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetCollisionOffsetY(height * 0.5f);
-        capsuleComponent->SetIsVisibleDebugBox(false);
-        capsuleComponent->Initialize();
-    }
-
-    // 回転用コンポーネントを追加
-    rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
-
-
-
-}
-
-void GracialEnemy::Update(float elapsedTime)
-{
-    Character::Update(elapsedTime);
-
-    if (InputSystem::GetInputState("K", InputStateMask::Trigger))
-    {
-        PlayBodyAnimation("Primary_Attack_Fast_D", false, true, 0.1f);
-    }
-    if (!GetBodyAnimationController()->IsPlayAnimation())
-    {
-        PlayBodyAnimation("Idle");
-    }
-
-
-}
