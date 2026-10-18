@@ -298,17 +298,16 @@ void PlayerDodgeState::Execute(float deltaTime)
 
 void PlayerDodgeState::Exit()
 {
-    if (auto* scene = dynamic_cast<SceneBase*>(player->GetOwnerScene()))
-        scene->StopJustDodgeRadialBlur();
-
     const bool enteringRush = rushRequested;
     player->SetRushInputAcceptance(false);
     rushRequested = false;
     judgeSuccess = false;
     player->BeginPlayerSlowReturn();
     if (!enteringRush)
-    {
+    {// ラッシュに入らないなら
         player->BeginBossSlowReturn();
+        if (auto* scene = dynamic_cast<SceneBase*>(player->GetOwnerScene()))
+            scene->StopJustDodgeRadialBlur();
     }
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
 }
@@ -456,8 +455,6 @@ void PlayerWinState::Exit()
 // ラッシュ
 void PlayerRushState::Enter()
 {
-    if (auto* scene = dynamic_cast<SceneBase*>(player->GetOwnerScene()))
-        scene->StopJustDodgeRadialBlur();
 
     rushHpDisplayTarget.reset();
     player->SetRushWeaponVisual(true);
@@ -713,6 +710,9 @@ void PlayerRushState::Execute(float deltaTime)
 
 void PlayerRushState::Exit()
 {
+    if (auto* scene = dynamic_cast<SceneBase*>(player->GetOwnerScene()))
+        scene->StopJustDodgeRadialBlur();
+
     player->SetRushWindupActive(false);
     player->SetRushAttackActive(false);
     if (const auto controller = player->GetBodyAnimationController())

@@ -58,8 +58,8 @@ public:
     virtual bool OnSizeChanged(ID3D11Device* device, UINT64 width, UINT height) override;
     void DrawGui() override;
 
-    void StartJustDodgeRadialBlur() { if (radialBlurEffect) radialBlurEffect->SetJustDodgeActive(true); }
-    void StopJustDodgeRadialBlur() { if (radialBlurEffect) radialBlurEffect->SetJustDodgeActive(false); }
+    void StartJustDodgeRadialBlur() { if (radialBlurEffect) radialBlurEffect->SetRadialActive(true); }
+    void StopJustDodgeRadialBlur() { if (radialBlurEffect) radialBlurEffect->SetRadialActive(false); }
     bool HasHuskCaptureStarted() const { return huskCompletionTracking && gruxHuskCaptured; }
     double GetHuskPlaybackElapsed() const { return huskPlaybackElapsed; }
     double GetHuskCompletionDuration() const { return huskCompletionDuration; }

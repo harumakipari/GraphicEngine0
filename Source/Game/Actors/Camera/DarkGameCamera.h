@@ -79,6 +79,16 @@ public:
         float deathBlendTime = 1.0f;
         float fovDegree = 22.6f;
     };
+    struct WorldScreenProjection
+    {
+        bool valid = false;
+        bool inFront = false;
+        bool insideViewport = false;
+        DirectX::XMFLOAT2 screenPosition{};
+        DirectX::XMFLOAT3 ndc{};
+        float clipW = 0.0f;
+    };
+
 
 public:
     //引数付きコンストラクタ
@@ -173,7 +183,7 @@ public:
         }
         if (mode == CameraMode::LockOn && requestMode != CameraMode::LockOn)
         {
-            CoreAudio::PlayOneShot("./Data/Sound/SE/lock_on3.wav",2.5f);
+            CoreAudio::PlayOneShot("./Data/Sound/SE/lock_on3.wav", 2.5f);
             ResetLockOnAdaptiveState();
         }
         if (isBlending)
@@ -199,7 +209,7 @@ public:
     void SnapToTpsDirection(const DirectX::XMFLOAT3& direction);
 
     // 外部のカメラアクターとのブレンド用の関数
-    void StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration,std::function<void()> finishExternalBlend);
+    void StartExternalBlend(const CameraPose& start, const CameraPose& target, float duration, std::function<void()> finishExternalBlend);
     void CancelExternalBlend();
     void SnapToExternalPose(const CameraPose& pose);
 
@@ -216,7 +226,7 @@ public:
     void PreparePrisonOpeningTpsReturn(const PrisonOpeningTpsPose& pose);
     void RequestPrisonOpeningTransitionDebug(const char* phase, int frame);
 
-    void PlayCameraShake(float intensity, float duration, float frequency,float positionAmount, float targetAmount);
+    void PlayCameraShake(float intensity, float duration, float frequency, float positionAmount, float targetAmount);
     void PlayCameraShakePreset(const std::string& presetName);
 
     void RequestOffscreenAttackAssist(
@@ -224,19 +234,16 @@ public:
         float strength,
         float duration);
     void CancelOffscreenAttackAssist();
-    struct WorldScreenProjection
-    {
-        bool valid = false;
-        bool inFront = false;
-        bool insideViewport = false;
-        DirectX::XMFLOAT2 screenPosition{};
-        DirectX::XMFLOAT3 ndc{};
-        float clipW = 0.0f;
-    };
     WorldScreenProjection ProjectWorldPositionForUI(
         const DirectX::XMFLOAT3& worldPosition) const;
-    bool IsNormalEnemyLockOnProjectionWithinScreenRadius(
-        const WorldScreenProjection& projection) const;
+    bool IsNormalEnemyLockOnProjectionWithinScreenRadius(const WorldScreenProjection& projection) const;
+
+    // Focusへの遷移中かどうか
+    bool IsBlendingToFocus() const
+    {
+        return isBlending && requestMode == CameraMode::Focus;
+    }
+
 private:
     struct ScreenProjectionResult
     {
@@ -411,6 +418,7 @@ private:
 
     float blendTime = 0.0f;
     float blendDuration = 0.30f;
+    float focusBlendDuration = 0.23f;   //Focusへの遷移時間
     float blendDurationOverride = 0.0f;
     float blendStartFovDegree = 35.0f;
     float blendTargetFovDegree = 35.0f;
@@ -436,7 +444,7 @@ private:
     inline static constexpr const char* BossWeaponDropPresetName = "BossWeaponDrop";
 
     // カメラシェイクのプリセット
-    CameraShakePreset bossRoarShake{0.5f,1.5f,12.0f,0.035f,0.4f};
+    CameraShakePreset bossRoarShake{ 0.5f,1.5f,12.0f,0.035f,0.4f };
     CameraShakePreset bossWallImpactShake{ 1.15f, 0.36f, 10.0f, 0.05f, 0.22f };
     CameraShakePreset rushFinalShake{ 0.9f, 0.16f, 18.0f, 0.02f, 0.14f };
     CameraShakePreset bossWeaponDropShake{ 0.5f, 0.36f, 10.0f, 0.035f, 0.22f };
@@ -725,6 +733,7 @@ private:
 
     float startDistance = 5.0f;
     float targetDistance = 5.0f;
+
 
     std::string prisonOpeningTransitionDebugPhase;
     int prisonOpeningTransitionDebugFrame = -1;

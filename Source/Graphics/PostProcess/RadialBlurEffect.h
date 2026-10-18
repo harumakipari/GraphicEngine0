@@ -14,7 +14,7 @@ public:
     struct RadialBlurConstantBuffer
     {
         DirectX::XMFLOAT2 blurCenter{ 0.5f, 0.5f };
-        float blurRadiusPixels = 35.0f;
+        float blurRadiusPixels = 45.0f;
         float maskRadiusPixels = 180.0f;
 
         float blurIntensity = 1.0f;
@@ -26,14 +26,14 @@ public:
     void Initialize(ID3D11Device* device, uint32_t width, uint32_t height);
     void Apply(ID3D11DeviceContext* immediateContext, ID3D11ShaderResourceView* sceneColor);
 
-    bool IsEnabled() const { return manualPreviewEnabled || justDodgeActive; }
-    void SetJustDodgeActive(bool active) { justDodgeActive = active; }
+    bool IsEnabled() const { return manualPreviewEnabled || radialActive; }
+    void SetRadialActive(bool active) { radialActive = active; }
     ID3D11ShaderResourceView* GetOutputSRV() const;
     void DrawDebugUI();
 
 private:
     bool manualPreviewEnabled = false;
-    bool justDodgeActive = false;
+    bool radialActive = false;
     uint32_t width = 0;
     uint32_t height = 0;
 

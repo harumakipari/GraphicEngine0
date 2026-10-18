@@ -82,7 +82,6 @@ void RadialBlurEffect::DrawDebugUI()
     RadialBlurConstantBuffer& constants = radialBlurCBuffer->data;
     ImGui::Begin("Radial Blur");
     ImGui::Checkbox("Enable (Manual Preview)", &manualPreviewEnabled);
-    ImGui::Text("Just Dodge Active: %s", justDodgeActive ? "true" : "false");
     ImGui::SliderFloat("Blur Radius", &constants.blurRadiusPixels, 0.0f, 150.0f);
     ImGui::SliderInt("Sampling Count", &constants.samplingCount, kMinimumSamplingCount, kMaximumSamplingCount);
     ImGui::SliderFloat2("Blur Center", &constants.blurCenter.x, 0.0f, 1.0f);

@@ -2967,7 +2967,10 @@ void Player::UpdateMovement()
 
         if (!focus || selectionResult == GameScene::LockOnTargetSelectionResult::Invalidated)
         {
-            camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+            if (!camera->IsBlendingToFocus())
+            { // Focus‚Ö‚Ì‰ñ“]’†‚ÍAƒ{ƒ^ƒ“‚ð—£‚µ‚Ä‚àŠ®—¹‚Ü‚Å‘Ò‚Â
+                camera->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+            }
         }
         else if (selectionResult == GameScene::LockOnTargetSelectionResult::Selected)
         {

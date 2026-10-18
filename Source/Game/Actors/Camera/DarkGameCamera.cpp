@@ -560,7 +560,7 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     CancelOffscreenAttackAssist();
     (void)from;
     blendTime = 0.0f;
-    blendDurationOverride = 0.0f;
+    blendDurationOverride = (to == CameraMode::Focus) ? focusBlendDuration : 0.0f;
     isBlending = true;
 
     // プレイヤーの位置を取得
