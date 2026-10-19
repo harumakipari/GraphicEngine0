@@ -2983,10 +2983,6 @@ void GruxEnemy::DrawImGuiDetails()
         ImGui::TreePop();
     }
     ImGui::DragFloat("pitchBaseValue", &pitchBaseValue, 0.05f);
-    if (ImGui::Button("Attack"))
-    {
-        stateMachine_->ChangeState("EnemyAttackState");
-    }
     if (ImGui::Button(U8("ボスの名前の演出")))
     {
         StartGruxNamePerform(2.0f);
@@ -4169,26 +4165,6 @@ std::optional<BossAttackType> GruxEnemy::GetAttackTypeForAction(BossActionType a
     return std::nullopt;
 }
 
-bool GruxEnemy::PrepareAttackForSelectedAction()
-{
-    const std::optional<BossAttackType> attackType = GetAttackTypeForAction(selectedActionType);
-    if (!attackType)
-        return false;
-
-    selectedAttackType = *attackType;
-    return true;
-}
-
-const BossPositioningData* GruxEnemy::GetPositioningDataForAction(BossActionType actionType) const
-{
-    for (const BossPositioningData& data : combatPositioningData)
-    {
-        if (data.actionType == actionType)
-            return &data;
-    }
-    return nullptr;
-}
-
 bool GruxEnemy::IsRepositionAction(const BossActionType actionType) const
 {
     return actionType == BossActionType::RepositionLeft ||
@@ -4270,160 +4246,6 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
         outEvaluation.availableDistance >= minimumPositioningMoveDistance;
 }
 
-void GruxEnemy::EvaluateRepositionTargets(const BossTargetContext& context)
-{
-    repositionTargetsEvaluated = false;
-    repositionNoSafeDirection = false;
-    leftRepositionTarget = {};
-    rightRepositionTarget = {};
-    if (!context.valid)
-    {
-        repositionNoSafeDirection = true;
-        repositionCompletionReason = "NoSafeDirection";
-        return;
-    }
-
-    const DirectX::XMFLOAT3 bossPosition = GetPosition();
-    const DirectX::XMFLOAT3 leftDirection =
-    { -context.directionToPlayer.z, 0.0f, context.directionToPlayer.x };
-    const DirectX::XMFLOAT3 rightDirection =
-    { context.directionToPlayer.z, 0.0f, -context.directionToPlayer.x };
-    const DirectX::XMFLOAT3 leftDesired =
-    { bossPosition.x + leftDirection.x * combatRepositionMoveDistance,
-      bossPosition.y,
-      bossPosition.z + leftDirection.z * combatRepositionMoveDistance };
-    const DirectX::XMFLOAT3 rightDesired =
-    { bossPosition.x + rightDirection.x * combatRepositionMoveDistance,
-      bossPosition.y,
-      bossPosition.z + rightDirection.z * combatRepositionMoveDistance };
-    EvaluateClampedPositioningTarget(
-        bossPosition, leftDesired, leftRepositionTarget);
-    EvaluateClampedPositioningTarget(
-        bossPosition, rightDesired, rightRepositionTarget);
-
-    if (leftRepositionTarget.sufficientlyMovable &&
-        rightRepositionTarget.sufficientlyMovable &&
-        leftRepositionTarget.wasClamped && rightRepositionTarget.wasClamped)
-    {
-        constexpr float distanceEpsilon = 0.001f;
-        if (leftRepositionTarget.availableDistance + distanceEpsilon <
-            rightRepositionTarget.availableDistance)
-            leftRepositionTarget.sufficientlyMovable = false;
-        else if (rightRepositionTarget.availableDistance + distanceEpsilon <
-            leftRepositionTarget.availableDistance)
-            rightRepositionTarget.sufficientlyMovable = false;
-    }
-
-    repositionTargetsEvaluated = true;
-    repositionLeftAvailableDistance = leftRepositionTarget.availableDistance;
-    repositionRightAvailableDistance = rightRepositionTarget.availableDistance;
-    repositionNoSafeDirection = !leftRepositionTarget.sufficientlyMovable &&
-        !rightRepositionTarget.sufficientlyMovable;
-    if (repositionNoSafeDirection)
-        repositionCompletionReason = GetRepositionFailureReason();
-}
-void GruxEnemy::BeginPositioning(const BossPositioningData& data)
-{
-    positioningAnimationMoving = false;
-    positioningMoveStopTimer = 0.0f;
-    positioningAnimationActualSpeed = 0.0f;
-    const auto controller = GetBodyAnimationController();
-    const bool isIdlePlaying = controller && controller->IsPlayAnimation() &&
-        controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
-    if (!isIdlePlaying)
-        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
-            "GruxEnemy::BeginPositioning");
-
-    positioningDebugActive = true;
-    activePositioningDebugData = data;
-    positioningDebugTraveledDistance = 0.0f;
-    positioningDebugElapsedTime = 0.0f;
-    positioningDebugStuckTimer = 0.0f;
-    positioningEndReason = "Running";
-
-    currentPositioningDebug = {};
-    currentPositioningDebug.valid = true;
-    currentPositioningDebug.data = data;
-    currentPositioningDebug.intent = activeIntent;
-    currentPositioningDebug.startBossPosition = GetPosition();
-    currentPositioningDebug.currentPosition = GetPosition();
-    currentPositioningDebug.endReason = "Running";
-    if (const BossIntentData* intentData = GetActiveIntentData())
-    {
-        currentPositioningDebug.preferredMin = intentData->preferredMinDistance;
-        currentPositioningDebug.preferredMax = intentData->preferredMaxDistance;
-    }
-
-    fixedPositioningTargetValid = false;
-    if (const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
-    {
-        currentPositioningDebug.startPlayerPosition = player->GetPosition();
-        const float toPlayerX = currentPositioningDebug.startPlayerPosition.x - currentPositioningDebug.startBossPosition.x;
-        const float toPlayerZ = currentPositioningDebug.startPlayerPosition.z - currentPositioningDebug.startBossPosition.z;
-        const float distance = std::sqrt(toPlayerX * toPlayerX + toPlayerZ * toPlayerZ);
-        currentPositioningDebug.startPlayerDistance = distance;
-        currentPositioningDebug.currentPlayerDistance = distance;
-
-        if (IsRepositionAction(data.actionType))
-        {
-            currentPositioningDebug.desiredTargetPosition = repositionDesiredTarget;
-        }
-        else
-        {
-            float directionX = distance > 0.0001f ? toPlayerX / distance : GetForward().x;
-            float directionZ = distance > 0.0001f ? toPlayerZ / distance : GetForward().z;
-            float moveDistance = 0.0f;
-            if (data.actionType == BossActionType::Retreat ||
-                data.direction == BossPositioningDirection::AwayFromPlayer)
-            {
-                directionX *= -1.0f;
-                directionZ *= -1.0f;
-                moveDistance = (std::max)(0.0f, data.targetDistance - distance);
-            }
-            else
-            {
-                moveDistance = (std::max)(0.0f, distance - data.targetDistance);
-            }
-            currentPositioningDebug.desiredTargetPosition = {
-                currentPositioningDebug.startBossPosition.x + directionX * moveDistance,
-                currentPositioningDebug.startBossPosition.y,
-                currentPositioningDebug.startBossPosition.z + directionZ * moveDistance };
-        }
-
-        RepositionTargetEvaluation targetEvaluation{};
-        EvaluateClampedPositioningTarget(currentPositioningDebug.startBossPosition,
-            currentPositioningDebug.desiredTargetPosition, targetEvaluation);
-        constexpr float maximumMargin =
-            (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
-                (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
-        const float margin = std::clamp(bossRoomSafetyMargin, 0.0f, maximumMargin);
-        currentPositioningDebug.safetyMargin = margin;
-        currentPositioningDebug.safeMinX = bossRoomMinX + margin;
-        currentPositioningDebug.safeMaxX = bossRoomMaxX - margin;
-        currentPositioningDebug.safeMinZ = bossRoomMinZ + margin;
-        currentPositioningDebug.safeMaxZ = bossRoomMaxZ - margin;
-        currentPositioningDebug.clampedTargetPosition = targetEvaluation.clampedTarget;
-        const float plannedX = currentPositioningDebug.desiredTargetPosition.x - currentPositioningDebug.startBossPosition.x;
-        const float plannedZ = currentPositioningDebug.desiredTargetPosition.z - currentPositioningDebug.startBossPosition.z;
-        currentPositioningDebug.plannedMoveDistance = std::sqrt(plannedX * plannedX + plannedZ * plannedZ);
-        currentPositioningDebug.targetClampDistance = targetEvaluation.clampDistance;
-        currentPositioningDebug.targetWasClamped = targetEvaluation.wasClamped;
-        currentPositioningDebug.availableMoveDistance = targetEvaluation.availableDistance;
-        currentPositioningDebug.remainingDistance = currentPositioningDebug.availableMoveDistance;
-
-        fixedPositioningTarget = currentPositioningDebug.clampedTargetPosition;
-        fixedPositioningTargetValid = IsRepositionAction(data.actionType)
-            ? targetEvaluation.sufficientlyMovable : true;
-    }
-
-    if (characterMovementComponent)
-    {
-        characterMovementComponent->SetFixedSpeed(data.moveSpeed);
-        characterMovementComponent->SetInputMagnitude(1.0f);
-        currentPositioningDebug.inputMagnitude = characterMovementComponent->GetInputMagnitude();
-    }
-}
-
 void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
 {
     positioningAnimationActualSpeed = (std::max)(0.0f, actualSpeed);
@@ -4482,65 +4304,6 @@ void GruxEnemy::EndPositioningAnimation()
     if (!idlePlaying)
         PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
             "GruxEnemy::EndPositioningAnimation");
-}
-
-void GruxEnemy::UpdatePositioningMovement(const DirectX::XMFLOAT3& moveDirection,
-    const DirectX::XMFLOAT3& facingDirection, float deltaTime)
-{
-    if (characterMovementComponent)
-        characterMovementComponent->SetMoveDirection(moveDirection);
-    RotateTowardsPlayer(facingDirection, GetTurnSpeed(), deltaTime, "PositioningMovement");
-}
-
-void GruxEnemy::UpdatePositioningDebug(float traveledDistance, float elapsedTime, float stuckTimer,
-    float frameMovement, float actualSpeed, const DirectX::XMFLOAT3& requestedDirection)
-{
-    positioningDebugTraveledDistance = traveledDistance;
-    positioningDebugElapsedTime = elapsedTime;
-    positioningDebugStuckTimer = stuckTimer;
-
-    if (!currentPositioningDebug.valid)
-        return;
-    currentPositioningDebug.currentPosition = GetPosition();
-    currentPositioningDebug.traveledPathDistance = traveledDistance;
-    currentPositioningDebug.elapsedTime = elapsedTime;
-    currentPositioningDebug.stuckTimer = stuckTimer;
-    currentPositioningDebug.frameMovement = frameMovement;
-    currentPositioningDebug.actualSpeed = actualSpeed;
-    currentPositioningDebug.requestedMoveDirection = requestedDirection;
-    if (characterMovementComponent)
-        currentPositioningDebug.inputMagnitude = characterMovementComponent->GetInputMagnitude();
-
-    const float actualX = currentPositioningDebug.currentPosition.x - currentPositioningDebug.startBossPosition.x;
-    const float actualZ = currentPositioningDebug.currentPosition.z - currentPositioningDebug.startBossPosition.z;
-    currentPositioningDebug.actualMoveDistance = std::sqrt(actualX * actualX + actualZ * actualZ);
-    const float remainingX = currentPositioningDebug.clampedTargetPosition.x - currentPositioningDebug.currentPosition.x;
-    const float remainingZ = currentPositioningDebug.clampedTargetPosition.z - currentPositioningDebug.currentPosition.z;
-    currentPositioningDebug.remainingDistance = std::sqrt(remainingX * remainingX + remainingZ * remainingZ);
-    const BossTargetContext context = BuildTargetContext();
-    if (context.valid)
-        currentPositioningDebug.currentPlayerDistance = context.xzDistance;
-}
-
-void GruxEnemy::FinishPositioningDebug(const std::string& reason)
-{
-    positioningDebugActive = false;
-    positioningEndReason = reason;
-    if (!currentPositioningDebug.valid)
-        return;
-
-    currentPositioningDebug.currentPosition = GetPosition();
-    currentPositioningDebug.endReason = reason;
-    const float actualX = currentPositioningDebug.currentPosition.x - currentPositioningDebug.startBossPosition.x;
-    const float actualZ = currentPositioningDebug.currentPosition.z - currentPositioningDebug.startBossPosition.z;
-    currentPositioningDebug.actualMoveDistance = std::sqrt(actualX * actualX + actualZ * actualZ);
-    const float remainingX = currentPositioningDebug.clampedTargetPosition.x - currentPositioningDebug.currentPosition.x;
-    const float remainingZ = currentPositioningDebug.clampedTargetPosition.z - currentPositioningDebug.currentPosition.z;
-    currentPositioningDebug.remainingDistance = std::sqrt(remainingX * remainingX + remainingZ * remainingZ);
-    const BossTargetContext context = BuildTargetContext();
-    if (context.valid)
-        currentPositioningDebug.currentPlayerDistance = context.xzDistance;
-    lastPositioningDebug = currentPositioningDebug;
 }
 
 bool GruxEnemy::IsCombatRepositionActive() const

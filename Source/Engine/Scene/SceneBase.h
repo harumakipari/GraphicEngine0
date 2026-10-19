@@ -24,9 +24,6 @@
 #include "Graphics/Shadow/ShadowMap.h"
 #include "UI/UIManager.h"
 
-
-
-
 /// @brief 全シーン共通の基底クラス。描画・定数バッファ・ライト・ポストエフェクトを統一管理する。
 class SceneBase : public Scene
 {

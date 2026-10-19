@@ -154,16 +154,8 @@ public:
 
 
     std::optional<BossAttackType> GetAttackTypeForAction(BossActionType actionType) const;
-    bool PrepareAttackForSelectedAction();
-    const BossPositioningData* GetPositioningDataForAction(BossActionType actionType) const;
-    void BeginPositioning(const BossPositioningData& data);
     void UpdatePositioningAnimation(float actualSpeed, float deltaTime);
     void EndPositioningAnimation();
-    void UpdatePositioningMovement(const DirectX::XMFLOAT3& moveDirection,
-        const DirectX::XMFLOAT3& facingDirection, float deltaTime);
-    void UpdatePositioningDebug(float traveledDistance, float elapsedTime, float stuckTimer,
-        float frameMovement, float actualSpeed, const DirectX::XMFLOAT3& requestedDirection);
-    void FinishPositioningDebug(const std::string& reason);
     void StartSelectedActionCooldown();
 
     bool PlayAttackStage(BossAttackType type, int stage);
@@ -586,7 +578,6 @@ private:
         bool sufficientlyMovable = false;
         bool bossRoomPathBlocked = false;
     };
-    void EvaluateRepositionTargets(const BossTargetContext& context);
     void EvaluateClampedPositioningTarget(const DirectX::XMFLOAT3& startPosition,
         const DirectX::XMFLOAT3& desiredTarget, RepositionTargetEvaluation& outEvaluation, float boundaryMarginOverride = -1.0f) const;
     bool IsRepositionAction(BossActionType actionType) const;

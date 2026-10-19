@@ -273,7 +273,6 @@
     <ClCompile Include="Source\Components\Controller\ControllerComponent.cpp" />
     <ClCompile Include="Source\Components\Easing\CoreEasingComponent.cpp" />
     <ClCompile Include="Source\Components\Effect\ParticleComponent.cpp" />
-    <ClCompile Include="Source\Components\Elastic\ElasticComponent.cpp" />
     <ClCompile Include="Source\Components\Game\LifeTimeComponent.cpp" />
     <ClCompile Include="Source\Components\Render\MeshComponent.cpp" />
     <ClCompile Include="Source\Components\Render\PointLightComponent.cpp" />
@@ -416,7 +415,6 @@
     <ClInclude Include="Source\Components\Controller\ControllerComponent.h" />
     <ClInclude Include="Source\Components\Easing\CoreEasingComponent.h" />
     <ClInclude Include="Source\Components\Effect\ParticleComponent.h" />
-    <ClInclude Include="Source\Components\Elastic\ElasticComponent.h" />
     <ClInclude Include="Source\Components\Game\LifeTimeComponent.h" />
     <ClInclude Include="Source\Components\Game\TimerActionComponent.h" />
     <ClInclude Include="Source\Components\Render\MeshComponent.h" />
@@ -480,6 +478,7 @@
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h" />
     <ClInclude Include="Source\Game\Actors\Stage\Props\ClothActor.h" />
+    <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionBase.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxFastComboBT.h" />

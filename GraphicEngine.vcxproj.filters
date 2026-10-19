@@ -55,9 +55,6 @@
     <ClCompile Include="Source\Components\Effect\ParticleComponent.cpp">
       <Filter>Source\Components\Effect</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Components\Elastic\ElasticComponent.cpp">
-      <Filter>Source\Components\Elastic</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Components\Render\MeshComponent.cpp">
       <Filter>Source\Components\Render</Filter>
     </ClCompile>
@@ -467,9 +464,6 @@
     </ClInclude>
     <ClInclude Include="Source\Components\Effect\ParticleComponent.h">
       <Filter>Source\Components\Effect</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Components\Elastic\ElasticComponent.h">
-      <Filter>Source\Components\Elastic</Filter>
     </ClInclude>
     <ClInclude Include="Source\Components\Render\MeshComponent.h">
       <Filter>Source\Components\Render</Filter>
@@ -972,6 +966,9 @@
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxJumpAttackBT.h">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h">
+      <Filter>Source\Game\Actors\UI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Shader\AccumulateHuskParticlePS.hlsl">
@@ -1404,9 +1401,6 @@
     <Filter Include="Source\Components\Effect">
       <UniqueIdentifier>{4483ad5f-cf5b-4113-8ecf-93bdf3390f13}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Components\Elastic">
-      <UniqueIdentifier>{0a3775b3-25d1-41e0-8103-b764598e08f6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Components\Render">
       <UniqueIdentifier>{0ebc0317-32d4-4f7c-90e2-d8e3b738078e}</UniqueIdentifier>
     </Filter>
@@ -1565,6 +1559,9 @@
     </Filter>
     <Filter Include="Source\Game\DarkGame\BehaviorTree">
       <UniqueIdentifier>{813377e3-7256-45fd-995e-929b20cbf819}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source\Game\Actors\UI">
+      <UniqueIdentifier>{efe9d789-fb3a-4d42-b922-e4b4f1e3fb82}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

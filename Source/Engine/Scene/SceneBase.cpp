@@ -475,7 +475,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     gBufferRenderTarget->Acticate(immediateContext);
 
     immediateContext->PSSetShaderResources(15, 1, shadowMap->shader_resource_view.GetAddressOf());
-#if 1
     const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
     XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
     XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&shadowLightDirection)) * light_view_distance };
@@ -486,41 +485,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     DirectX::XMStoreFloat4x4(&viewConstants.lightViewProjection, V * P);
     sceneRender.UpdateViewConstants(immediateContext, viewConstants);
 
-#else
-
-    // シャドウマップ
-    {
-        using namespace DirectX;
-
-        const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
-
-
-
-        XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
-        XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&lightManager->GetLightDirection())) * light_view_distance };
-        XMVECTOR U{ XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f) };
-        XMMATRIX V{ XMMatrixLookAtLH(E, F, U) };
-        XMMATRIX P{ XMMatrixOrthographicLH(light_view_size * aspect_ratio, light_view_size, light_view_near_z, light_view_far_z) };
-
-        ViewConstants data{};
-
-        DirectX::XMStoreFloat4x4(&data.viewProjection, V * P);
-        data.lightViewProjection = data.viewProjection;
-        viewConstants.lightViewProjection = data.lightViewProjection;
-        sceneRender.UpdateViewConstants(immediateContext, data);
-        shadowMap->clear(immediateContext, 1.0f);
-        shadowMap->activate(immediateContext);
-
-        sceneRender.currentRenderPath = RenderPath::Deferred; // ShadowMapだから普通の描画を使用する
-        sceneRender.CastShadowMapRender(immediateContext, queues.shadowMapCasters);
-
-        shadowMap->deactivate(immediateContext);
-    }
-    // カメラの定数バッファを更新し直す（影で違う値が入っているから）
-    sceneRender.UpdateViewConstants(immediateContext, viewConstants);
-
-
-#endif // 0
 
 #if 1
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
@@ -543,24 +507,10 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     DirectX::XMFLOAT4X4 cameraView;
     DirectX::XMFLOAT4X4 cameraProjection;
 
-#if 0
-    if (camera)
-    {
-        ViewConstants data = cameraManager->GetRenderViewConstants(this);
-        cameraView = data.view;
-        cameraProjection = data.projection;
-    }
-    else
-    {
-        Logger::Error(U8("カメラがない"));
-    }
-#else
     cameraView = viewConstants.view;
     cameraProjection = viewConstants.projection;
-#endif // 0
 
     // 影を作る処理
-#if 1
     {
     TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Shadow");
     auto& shadow = Scene::GetCurrentScene()->GetSceneSettings().cascadedShadowMapConstants;
@@ -603,18 +553,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
     }
 #endif // 1
 
-#else
-    cascaded_shadow_map->clear(immediateContext);
-    RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
-    RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
-    RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-    cascaded_shadow_map->make(immediateContext, cameraView, cameraProjection, lightManager->GetLightDirection(), criticalDepthValue, [&]()
-        {
-            sceneRender.currentRenderPath = RenderPath::Shadow;
-            sceneRender.CastShadowRender(immediateContext, queues.shadowCasters);
-        });
-
-#endif // 0
     // ライティングのパス
     {
         TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Deferred Lighting");
@@ -1064,34 +1002,6 @@ void SceneBase::DrawShortcutInfo()
 
     ImGui::End();
 
-    return;
-    ImVec2 padding(10.0f, 10.0f);
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImVec2 window_pos = ImVec2(viewport->WorkPos.x + padding.x,
-        viewport->WorkPos.y + viewport->WorkSize.y - 100.0f);
-
-    ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always);
-    ImGui::SetNextWindowBgAlpha(0.25f); // 透明度（0.0f ～ 1.0f）
-
-    ImGui::Begin(U8("ショートカット"), nullptr,
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_AlwaysAutoResize |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoSavedSettings |
-        ImGuiWindowFlags_NoFocusOnAppearing |
-        ImGuiWindowFlags_NoNav |
-        ImGuiWindowFlags_NoDecoration);
-
-    ImGui::Text(U8("ショートカットキー:"));
-    ImGui::BulletText("Alt + Enter  : fullscreen");
-    ImGui::BulletText("F8           : debugCamera");
-    ImGui::BulletText("F1           : imGui On/Off");
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-#if 0
-    ImGui::Text("Video memory usage %d MB", video_memory_usage());
-#endif
-    ImGui::End();
 }
 
 
@@ -1107,27 +1017,11 @@ void SceneBase::SetupImGuiStyle()
     style.Colors[ImGuiCol_FrameBg] = ImVec4(0.1f, 0.15f, 0.25f, 0.9f);
     style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.15f, 0.25f, 0.4f, 1.0f);
 
-    ImGuiIO& io = ImGui::GetIO();
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    const float screen_width = viewport->WorkSize.x;
-    const float screen_height = viewport->WorkSize.y;
-
-    const float left_panel_width = 300.0f;
-    const float right_panel_width = 400.0f;
-
-    //ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - 300.0f,
-    //    viewport->WorkPos.y + viewport->WorkSize.y - 100.0f));
-    //ImGui::SetNextWindowBgAlpha(0.3f); // 半透明
-
 }
 
 
 void SceneBase::DrawOutliner()
 {
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    const float left_panel_width = 300.0f;
-    //ImGui::SetNextWindowPos(ImVec2(viewport->WorkPos.x, viewport->WorkPos.y));
-    //ImGui::SetNextWindowSize(ImVec2(left_panel_width, viewport->WorkSize.y));
     ImGui::Begin(U8("Actor Outliner"), nullptr/*, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove*/);
 
     for (auto& actor : this->GetActorManager()->GetAllActors())
@@ -1571,7 +1465,6 @@ void SceneBase::DrawViewport()
         viewportImageSize.x,
         viewportImageSize.y
     );
-#else
 #endif
 
 }

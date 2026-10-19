@@ -18,12 +18,8 @@ void EnemyIdleState::Enter()
         "EnemyIdleState::Enter");
 }
 
-void EnemyIdleState::Execute(float deltaTime)
+void EnemyIdleState::Execute(float)
 {
-    if (!enemy->IsBattleAIActive())
-        return;
-
-    owner->GetStateMachine()->ChangeState("EnemyThinkState");
 }
 void EnemyIdleState::Exit()
 {
