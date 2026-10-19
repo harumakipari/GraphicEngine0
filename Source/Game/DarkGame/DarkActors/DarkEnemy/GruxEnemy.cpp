@@ -1061,7 +1061,6 @@ void GruxEnemy::StopBattleActions()
     ClearFastComboStepIn();
     ResetJustDodgeRecords("battle_stop");
 
-    pendingAttackActionValid = false;
     beginHuskParticleRequest = false;
     selectedActionType = BossActionType::AttackLA;
     selectedAttackType = BossAttackType::PrimaryAttackLA;
@@ -1087,8 +1086,6 @@ void GruxEnemy::StopBattleActions()
     nextRecoverySource = "Default";
     pendingChargeRecoveryResult = ChargeAttackEndReason::None;
     combatRepositionIntentPending = false;
-    attackReadyActive = false;
-    attackReadyDebugTimer = 0.0f;
     attackReadySEFired = false;
     stunElapsedDebug = 0.0f;
     recoveryElapsedDebug = 0.0f;
@@ -1136,7 +1133,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     combatActionCooldownRemaining.fill(0.0f);
     selectedAttackType = BossAttackType::PrimaryAttackLA;
     selectedActionType = BossActionType::AttackLA;
-    pendingAttackActionValid = false;
     roarBT = {};
     roarBTStatus = "Idle";
     roarCooldownRemaining = 0.0f;
@@ -4153,17 +4149,6 @@ void GruxEnemy::OnAnimationChanged()
     }
 }
 
-std::optional<BossAttackType> GruxEnemy::GetAttackTypeForAction(BossActionType actionType) const
-{
-    for (const BossActionData& data : combatActionData)
-    {
-        if (data.type == actionType)
-            return data.attackType;
-    }
-
-    return std::nullopt;
-}
-
 bool GruxEnemy::IsRepositionAction(const BossActionType actionType) const
 {
     return actionType == BossActionType::RepositionLeft ||
@@ -4395,8 +4380,7 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
         LogInterruptedChargeRecoveryEvent("NextAttackStarted", attack);
     }
 
-    if (bossAIMode == BossAIMode::CombatAI &&
-        IsRepeatPenaltyCombatAttack(selectedActionType))
+    if (IsRepeatPenaltyCombatAttack(selectedActionType))
     {
         secondLastStartedCombatAttack = lastStartedCombatAttack;
         lastStartedCombatAttack = selectedActionType;
@@ -4462,9 +4446,6 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
 
 void GruxEnemy::OnSelectedAttackCompletedSuccessfully()
 {
-    if (bossAIMode != BossAIMode::CombatAI)
-        return;
-
     postAttackCombatRepositionBoostPending = true;
     postAttackCombatRepositionBoostApplied = false;
 }
@@ -4473,7 +4454,7 @@ void GruxEnemy::OnSelectedAttackCompletedSuccessfully()
 
 void GruxEnemy::StartSelectedActionCooldown()
 {
-    if (bossAIMode != BossAIMode::CombatAI || forceBehaviorTreeCharge)
+    if (forceBehaviorTreeCharge)
         return;
 
     for (size_t i = 0; i < combatActionData.size(); ++i)
@@ -6190,13 +6171,6 @@ BossTargetContext GruxEnemy::BuildTargetContext() const
 
 
 
-bool GruxEnemy::IsCloseCombatAttackType(const BossAttackType attackType) const
-{
-    return attackType == BossAttackType::PrimaryAttackLA ||
-        attackType == BossAttackType::PrimaryAttackRA ||
-        attackType == BossAttackType::FastCombo;
-}
-
 bool GruxEnemy::PlayAttackReadySE()
 {
     attackReadySEFired = false;
@@ -6218,8 +6192,6 @@ bool GruxEnemy::PlayAttackReadySE()
 
 void GruxEnemy::ClearPendingAttackFacing()
 {
-    pendingAttackActionValid = false;
-    pendingAttackFacingValid = false;
     pendingAttackFacingCompleteAngle = turnCompleteAngle;
 }
 

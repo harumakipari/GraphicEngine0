@@ -153,7 +153,6 @@ public:
     bool IsCombatRepositionActive() const;
 
 
-    std::optional<BossAttackType> GetAttackTypeForAction(BossActionType actionType) const;
     void UpdatePositioningAnimation(float actualSpeed, float deltaTime);
     void EndPositioningAnimation();
     void StartSelectedActionCooldown();
@@ -406,7 +405,6 @@ public:
     TripleJumpPhase GetTripleJumpPhase() const { return tripleJumpPhase; }
     void DrawTripleJumpDebug();
     const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
-    bool IsCloseCombatAttackType(BossAttackType attackType) const;
     float GetAttackReadyDuration() const
     {
         return attackReadyReason == AttackReadyReason::AfterTurn
@@ -815,8 +813,6 @@ private:
     int currentAttackHitCount = 0;
 
     bool battleAIActive = true; // ?{?X?o?g??AI??g?p??????????@false???idle?^??
-    //BossAIMode bossAIMode = BossAIMode::CombatAI;         // ?{?X??AI???[?h
-    BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;   // ?{?X??AI???[?h?@?f?o?b?N?p
     BossAttackType debugFixedAttackType = BossAttackType::PrimaryAttackLA;
 
     std::optional<BossIntentType> activeIntent = std::nullopt;
@@ -849,9 +845,6 @@ private:
     float repeatAttackPenalty = initialRepeatAttackPenalty;
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;
     std::optional<BossPositioningData> selectedPositioningData = std::nullopt;
-    bool pendingAttackActionValid = false;
-    bool pendingAttackFacingValid = false;
-    DirectX::XMFLOAT3 pendingAttackFacingDirection{ 0.0f, 0.0f, 1.0f };
     float pendingAttackFacingCompleteAngle = 15.0f;
 
     bool hasLastAttack = false;
@@ -885,15 +878,6 @@ private:
         float targetYaw = 0.0f;
         float requestedTurnSpeed = 0.0f;
     };
-    struct LastTurnDebug
-    {
-        bool valid = false;
-        std::string fromState = "None";
-        float startAngle = 0.0f;
-        float startTargetYaw = 0.0f;
-        float endAngle = 0.0f;
-        float duration = 0.0f;
-    };
     bool showRotationDebug = false;
     bool rotationDebugYawInitialized = false;
     float rotationDebugPreviousYaw = 0.0f;
@@ -903,10 +887,6 @@ private:
     int rotationDebugSourceCount = 0;
     DirectX::XMFLOAT3 rotationDebugTurnTargetDirection{};
     bool rotationDebugTurnTargetValid = false;
-    LastTurnDebug lastTurnDebug{};
-    float activeTurnDebugStartAngle = 0.0f;
-    float activeTurnDebugTargetYaw = 0.0f;
-    std::string activeTurnDebugFromState = "None";
     BossTargetContext aiDebugTargetContext{};
     bool disableAttackBehaviorsForDebug = false;
     float defensiveTooCloseDistance = 4.5f;
@@ -1182,8 +1162,6 @@ private:
     float attackSetupChosenDistance = 0.0f;
     float attackSetupPlannedMoveDistance = 0.0f;
     int attackSetupCandidateCount = 0;
-    bool attackReadyActive = false;
-    float attackReadyDebugTimer = 0.0f;
     bool attackReadySEFired = false;
     AttackReadyReason attackReadyReason = AttackReadyReason::Front;
 

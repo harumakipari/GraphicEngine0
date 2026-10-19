@@ -477,7 +477,6 @@
     <ClInclude Include="Source\Game\Actors\Stage\Cloth.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h" />
-    <ClInclude Include="Source\Game\Actors\Stage\Props\ClothActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionBase.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.h" />

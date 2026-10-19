@@ -43,12 +43,6 @@ struct BossTargetContext
     PlayerRelativeRegion region = PlayerRelativeRegion::Front;
 };
 
-enum class BossAIMode : uint8_t
-{
-    CombatAI,
-    DebugFixedAttack,
-};
-
 enum class BossIntentType : uint8_t
 {
     CloseCombat,
