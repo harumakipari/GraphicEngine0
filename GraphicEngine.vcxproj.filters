@@ -187,12 +187,6 @@
     <ClCompile Include="Source\Game\Actors\Stage\ClothSimulate.cpp">
       <Filter>Source\Game\Actors\Stage</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Actors\Stage\TestSoftBody.cpp">
-      <Filter>Source\Game\Actors\Stage</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Actors\WaterSphere\MorphModel.cpp">
-      <Filter>Source\Game\Actors\WaterSphere</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Actors\Player\TitlePlayer.cpp">
       <Filter>Source\Game\Actors\Player</Filter>
     </ClCompile>
@@ -259,13 +253,7 @@
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Scenes\SampleScene.cpp">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\Scenes\TestScene.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\Scenes\TitleScene.cpp">
@@ -273,9 +261,6 @@
     </ClCompile>
     <ClCompile Include="Source\Game\State\StateMachine.cpp">
       <Filter>Source\Game\State</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\SofyBody\SoftBody.cpp">
-      <Filter>Source\Game\SofyBody</Filter>
     </ClCompile>
     <ClCompile Include="Source\Graphics\Core\Graphics.cpp">
       <Filter>Source\Graphics\Core</Filter>
@@ -367,9 +352,6 @@
     <ClCompile Include="Source\Graphics\Environment\SkyMap.cpp">
       <Filter>Source\Graphics\Environment</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Graphics\Cloud\VolumetricCloudscapes.cpp">
-      <Filter>Source\Graphics\Cloud</Filter>
-    </ClCompile>
     <ClCompile Include="Source\UI\Font.cpp">
       <Filter>Source\UI</Filter>
     </ClCompile>
@@ -402,9 +384,6 @@
     </ClCompile>
     <ClCompile Include="Source\Animation\BlendSpaceAnimation.cpp">
       <Filter>Source\Animation</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Test\SoftBody2d.cpp">
-      <Filter>Source\Test</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\JudgementDerived.cpp">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
@@ -690,17 +669,11 @@
     <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h">
       <Filter>Source\Game\Actors\Stage</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Stage\TestSoftBody.h">
-      <Filter>Source\Game\Actors\Stage</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Actors\Stage\Stage.h">
       <Filter>Source\Game\Actors\Stage</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\Stage\Props\ClothActor.h">
       <Filter>Source\Game\Actors\Stage\Props</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Actors\WaterSphere\MorphModel.h">
-      <Filter>Source\Game\Actors\WaterSphere</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\Player\Player.h">
       <Filter>Source\Game\Actors\Player</Filter>
@@ -774,16 +747,7 @@
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h">
       <Filter>Source\Game\Scenes</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Scenes\ModelScene.h">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Scenes\SampleScene.h">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Scenes\GameScene.h">
-      <Filter>Source\Game\Scenes</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Scenes\TestScene.h">
       <Filter>Source\Game\Scenes</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Scenes\TitleScene.h">
@@ -794,9 +758,6 @@
     </ClInclude>
     <ClInclude Include="Source\Game\State\StateBase.h">
       <Filter>Source\Game\State</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\SofyBody\SoftBody.h">
-      <Filter>Source\Game\SofyBody</Filter>
     </ClInclude>
     <ClInclude Include="Source\Graphics\Core\ConstantBuffer.h">
       <Filter>Source\Graphics\Core</Filter>
@@ -820,9 +781,6 @@
       <Filter>Source\Graphics\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Graphics\Core\RenderState.h">
-      <Filter>Source\Graphics\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Graphics\Core\SceneRenderContext.h">
       <Filter>Source\Graphics\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Graphics\Core\Shader.h">
@@ -909,12 +867,6 @@
     <ClInclude Include="Source\Graphics\PostProcess\MultipleRenderTargets.h">
       <Filter>Source\Graphics\PostProcess</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Graphics\PostProcess\PostEffectBase.h">
-      <Filter>Source\Graphics\PostProcess</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Graphics\PostProcess\PostEffectManager.h">
-      <Filter>Source\Graphics\PostProcess</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Graphics\PostProcess\SceneEffectBase.h">
       <Filter>Source\Graphics\PostProcess</Filter>
     </ClInclude>
@@ -929,18 +881,6 @@
     </ClInclude>
     <ClInclude Include="Source\Graphics\Environment\SkyMap.h">
       <Filter>Source\Graphics\Environment</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Graphics\Cloud\VolumetricCloudscapes.h">
-      <Filter>Source\Graphics\Cloud</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\PBD\PBDConstaraintData.h">
-      <Filter>Source\PBD</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\PBD\PBDParticleData.h">
-      <Filter>Source\PBD</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\PBD\PBDSystem.h">
-      <Filter>Source\PBD</Filter>
     </ClInclude>
     <ClInclude Include="Source\UI\Font.h">
       <Filter>Source\UI</Filter>
@@ -992,9 +932,6 @@
     </ClInclude>
     <ClInclude Include="Source\Animation\BlendSpaceAnimation.h">
       <Filter>Source\Animation</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Test\SoftBody2d.h">
-      <Filter>Source\Test</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\BehaviorTree.h">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
@@ -1325,9 +1262,6 @@
     <FxCompile Include="Shader\VelocityTileMaxPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\VolumetricCloudscapesPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\VolumetricFogPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
@@ -1560,9 +1494,6 @@
     <Filter Include="Source\Game\Actors\Stage\Props">
       <UniqueIdentifier>{5b2f7a49-f794-4284-beb5-94f2261373e1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Game\Actors\WaterSphere">
-      <UniqueIdentifier>{1b3c2b01-f29c-4fef-9dd7-29e63db0b291}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Game\Actors\Player">
       <UniqueIdentifier>{1c48fc39-9d4c-4972-a943-530d4d69c4de}</UniqueIdentifier>
     </Filter>
@@ -1583,9 +1514,6 @@
     </Filter>
     <Filter Include="Source\Game\State">
       <UniqueIdentifier>{d4bf53a6-9206-4320-a1b0-0495a5c6942a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Game\SofyBody">
-      <UniqueIdentifier>{922fffcb-e308-4e33-8262-e892964e4e2c}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\Graphics">
       <UniqueIdentifier>{f2c1f1be-0663-48c8-a728-d4217cc62fc7}</UniqueIdentifier>
@@ -1614,9 +1542,6 @@
     <Filter Include="Source\Graphics\Cloud">
       <UniqueIdentifier>{a601d8a5-f8ae-4532-aab8-1f51fbc02e84}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\PBD">
-      <UniqueIdentifier>{277ef990-d75d-4c82-921d-553528ff9fd5}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\UI">
       <UniqueIdentifier>{33d2a407-ef53-4b0e-9603-7951dbb9c029}</UniqueIdentifier>
     </Filter>
@@ -1634,9 +1559,6 @@
     </Filter>
     <Filter Include="Source\Animation">
       <UniqueIdentifier>{33c490ce-5d63-4fb1-92db-d6a726e9c98c}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Test">
-      <UniqueIdentifier>{837934e9-97eb-4b63-9094-be921581d855}</UniqueIdentifier>
     </Filter>
     <Filter Include="Shader">
       <UniqueIdentifier>{8f40bc09-f170-4103-abd0-fd67cf91bb37}</UniqueIdentifier>

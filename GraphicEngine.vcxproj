@@ -337,20 +337,14 @@
     <ClCompile Include="Source\Game\Actors\Player\Player.cpp" />
     <ClCompile Include="Source\Game\Actors\Player\PlayerStateDerived.cpp" />
     <ClCompile Include="Source\Game\Actors\Stage\ClothSimulate.cpp" />
-    <ClCompile Include="Source\Game\Actors\Stage\TestSoftBody.cpp" />
-    <ClCompile Include="Source\Game\Actors\WaterSphere\MorphModel.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\InteractableActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\LanternActor.cpp" />
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp" />
-    <ClCompile Include="Source\Game\Scenes\SampleScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp" />
-    <ClCompile Include="Source\Game\Scenes\TestScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\TitleScene.cpp" />
-    <ClCompile Include="Source\Game\SofyBody\SoftBody.cpp" />
     <ClCompile Include="Source\Game\State\StateMachine.cpp" />
-    <ClCompile Include="Source\Graphics\Cloud\VolumetricCloudscapes.cpp" />
     <ClCompile Include="Source\Graphics\Core\Graphics.cpp" />
     <ClCompile Include="Source\Graphics\Core\LightManager.cpp" />
     <ClCompile Include="Source\Graphics\Core\RenderState.cpp" />
@@ -388,7 +382,6 @@
     </ClCompile>
     <ClCompile Include="Source\Physics\Collider.cpp" />
     <ClCompile Include="Source\Physics\Physics.cpp" />
-    <ClCompile Include="Source\Test\SoftBody2d.cpp" />
     <ClCompile Include="Source\UI\Font.cpp" />
     <ClCompile Include="Source\UI\Game\Pause.cpp" />
     <ClCompile Include="Source\UI\Game\SceneTransitionManager.cpp" />
@@ -513,9 +506,7 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DoorActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStage.h" />
-    <ClInclude Include="Source\Game\Actors\Stage\TestSoftBody.h" />
     <ClInclude Include="Source\Game\Actors\Stage\Stage.h" />
-    <ClInclude Include="Source\Game\Actors\WaterSphere\MorphModel.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\InteractableActor.h" />
@@ -523,15 +514,10 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\LanternActor.h" />
     <ClInclude Include="Source\Game\DarkGame\Interactable.h" />
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h" />
-    <ClInclude Include="Source\Game\Scenes\ModelScene.h" />
-    <ClInclude Include="Source\Game\Scenes\SampleScene.h" />
     <ClInclude Include="Source\Game\Scenes\GameScene.h" />
-    <ClInclude Include="Source\Game\Scenes\TestScene.h" />
     <ClInclude Include="Source\Game\Scenes\TitleScene.h" />
-    <ClInclude Include="Source\Game\SofyBody\SoftBody.h" />
     <ClInclude Include="Source\Game\State\StateMachine.h" />
     <ClInclude Include="Source\Game\State\StateBase.h" />
-    <ClInclude Include="Source\Graphics\Cloud\VolumetricCloudscapes.h" />
     <ClInclude Include="Source\Graphics\Core\ConstantBuffer.h" />
     <ClInclude Include="Source\Graphics\Core\GltfDxgiHelper.h" />
     <ClInclude Include="Source\Graphics\Core\Graphics.h" />
@@ -540,7 +526,6 @@
     <ClInclude Include="Source\Graphics\Core\PipelineLibrary.h" />
     <ClInclude Include="Source\Graphics\Core\PrecomputedNoiseTexture3d.h" />
     <ClInclude Include="Source\Graphics\Core\RenderState.h" />
-    <ClInclude Include="Source\Graphics\Core\SceneRenderContext.h" />
     <ClInclude Include="Source\Graphics\Core\Shader.h" />
     <ClInclude Include="Source\Graphics\Core\TemporalAA.h" />
     <ClInclude Include="Source\Graphics\Environment\SkyMap.h" />
@@ -553,8 +538,6 @@
     <ClInclude Include="Source\Graphics\PostProcess\MotionBlurEffect.h" />
     <ClInclude Include="Source\Graphics\PostProcess\RadialBlurEffect.h" />
     <ClInclude Include="Source\Graphics\PostProcess\MultipleRenderTargets.h" />
-    <ClInclude Include="Source\Graphics\PostProcess\PostEffectBase.h" />
-    <ClInclude Include="Source\Graphics\PostProcess\PostEffectManager.h" />
     <ClInclude Include="Source\Graphics\PostProcess\SceneEffectBase.h" />
     <ClInclude Include="Source\Graphics\PostProcess\SceneEffectManager.h" />
     <ClInclude Include="Source\Graphics\PostProcess\SSAOEffect.h" />
@@ -577,9 +560,6 @@
     <ClInclude Include="Source\Graphics\Sprite\Sprite.h" />
     <ClInclude Include="Source\Graphics\Sprite\SpriteBatch.h" />
     <ClInclude Include="Source\Math\MathHelper.h" />
-    <ClInclude Include="Source\PBD\PBDConstaraintData.h" />
-    <ClInclude Include="Source\PBD\PBDParticleData.h" />
-    <ClInclude Include="Source\PBD\PBDSystem.h" />
     <ClInclude Include="Source\pch.h" />
     <ClInclude Include="Source\Physics\Collider.h" />
     <ClInclude Include="Source\Physics\CollisionHelper.h" />
@@ -587,7 +567,6 @@
     <ClInclude Include="Source\Physics\CollisionFunction.h" />
     <ClInclude Include="Source\Physics\Physics.h" />
     <ClInclude Include="Source\Physics\PhysicsHelper.h" />
-    <ClInclude Include="Source\Test\SoftBody2d.h" />
     <ClInclude Include="Source\UI\Font.h" />
     <ClInclude Include="Source\UI\FontManager.h" />
     <ClInclude Include="Source\UI\Game\Pause.h" />
@@ -1121,10 +1100,6 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
-    </FxCompile>
-    <FxCompile Include="Shader\VolumetricCloudscapesPS.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
     <FxCompile Include="Shader\VolumetricFogPS.hlsl">

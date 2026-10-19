@@ -3,7 +3,6 @@
 #include "Graphics/Core/ConstantBuffer.h"
 #include "Graphics/PostProcess/FullScreenQuad.h"
 #include "Graphics/Core/LightManager.h"
-#include "Graphics/PostProcess/PostEffectManager.h"
 #include "Graphics/PostProcess/SceneEffectManager.h"
 #include "Graphics/Renderer/SceneRenderer.h"
 #include "Graphics/Environment/SkyMap.h"
