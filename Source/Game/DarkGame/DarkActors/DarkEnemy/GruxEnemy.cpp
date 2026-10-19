@@ -1071,7 +1071,6 @@ void GruxEnemy::StopBattleActions()
     lastStartedCombatAttack.reset();
     secondLastStartedCombatAttack.reset();
     lastSelectedIntent.reset();
-    fixedPositioningTargetValid = false;
     combatRepositionSettling = false;
     combatRepositionSettleRemaining = 0.0f;
     positioningMoveStopTimer = 0.0f;
@@ -4178,12 +4177,6 @@ const GruxEnemy::RepositionTargetEvaluation& GruxEnemy::GetRepositionTargetEvalu
         ? rightRepositionTarget : leftRepositionTarget;
 }
 
-const char* GruxEnemy::GetRepositionFailureReason() const
-{
-    return leftRepositionTarget.wasClamped && rightRepositionTarget.wasClamped
-        ? "BoundsBlocked" : "NoSafeDirection";
-}
-
 bool GruxEnemy::ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPosition,
     const DirectX::XMFLOAT3& desiredTarget, DirectX::XMFLOAT3& outResolvedTarget,
     bool& outPathBlocked) const
@@ -4312,14 +4305,6 @@ bool GruxEnemy::IsCombatRepositionActive() const
 }
 
 
-
-float GruxEnemy::GetTotalIntentWeight() const
-{
-    float totalWeight = 0.0f;
-    for (float weight : combatIntentEffectiveWeights)
-        totalWeight += weight;
-    return totalWeight;
-}
 
 float GruxEnemy::GetIntentWeightForDistance(
     const BossIntentData& data, BossDistanceRegion region) const
@@ -6553,71 +6538,6 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
 }
 
 
-void GruxEnemy::UpdateActionCandidateFlags(const BossTargetContext& context)
-{
-    combatActionCandidateFlags.fill(false);
-
-    for (size_t i = 0; i < combatActionData.size(); ++i)
-    {
-        const BossActionData& actionData = combatActionData[i];
-
-        if (!activeIntent)
-        {
-            combatActionCandidateReasons[i] = BossActionCandidateReason::NoActiveIntent;
-            continue;
-        }
-
-        const bool isCloseCombatAttack =
-            actionData.type == BossActionType::AttackLA ||
-            actionData.type == BossActionType::AttackRA ||
-            actionData.type == BossActionType::FastCombo;
-        if (*activeIntent == BossIntentType::CloseCombat &&
-            context.region == PlayerRelativeRegion::Back && isCloseCombatAttack)
-        {
-            combatActionCandidateReasons[i] = BossActionCandidateReason::WrongRelativeRegion;
-            continue;
-        }
-
-        if (!IsActionForCurrentIntent(actionData.type, context))
-        {
-            combatActionCandidateReasons[i] = BossActionCandidateReason::NotForCurrentIntent;
-            continue;
-        }
-
-
-        if (*activeIntent == BossIntentType::CombatReposition &&
-            IsRepositionAction(actionData.type) &&
-            !GetRepositionTargetEvaluation(actionData.type).sufficientlyMovable)
-        {
-            combatActionCandidateReasons[i] = BossActionCandidateReason::NoSafeDirection;
-            continue;
-        }
-
-        if (!IsAttackPendingGoalAction(actionData.type, context) &&
-            !IsActionCandidateForCurrentDistance(actionData, context.distanceRegion))
-        {
-            combatActionCandidateReasons[i] = BossActionCandidateReason::WrongDistance;
-            continue;
-        }
-
-        if (combatActionCooldownRemaining[i] > 0.0f)
-        {
-            combatActionCandidateReasons[i] = BossActionCandidateReason::Cooldown;
-            continue;
-        }
-
-        if (actionData.weight <= 0.0f)
-        {
-            combatActionCandidateReasons[i] = BossActionCandidateReason::ZeroWeight;
-            continue;
-        }
-
-        // Future action-specific conditions are evaluated here.
-        combatActionCandidateFlags[i] = true;
-        combatActionCandidateReasons[i] = BossActionCandidateReason::Candidate;
-    }
-}
-
 // アクションが現在の距離(Region)で候補になるかを判定する関数
 bool GruxEnemy::IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const
 {
@@ -6711,74 +6631,6 @@ float GruxEnemy::GetIntentRecentAttackPenalty(BossIntentType intentType) const
     return hasDefinedAttack ? leastRestrictiveFallbackPenalty : 1.0f;
 }
 
-void GruxEnemy::UpdateActionEffectiveWeights()
-{
-    // 前回の計算結果をリセット
-    combatActionEffectiveWeights.fill(0.0f);
-
-    for (size_t i = 0; i < combatActionData.size(); ++i)
-    {
-        // 候補フラグが立っていない場合はスキップ
-        if (!combatActionCandidateFlags[i])
-            continue;
-
-        // 基本の重みを取得
-        const float baseWeight = combatActionData[i].weight;
-        if (baseWeight <= 0.0f)
-            continue;
-
-        float effectiveWeight = baseWeight;
-        if (combatActionData[i].attackType)
-            effectiveWeight *= GetRecentAttackPenalty(combatActionData[i].type);
-        combatActionEffectiveWeights[i] = (std::max)(0.0f, effectiveWeight);
-    }
-}
-
 // ActionのEffective Weight合計を求める関数
-float GruxEnemy::GetTotalActionWeight() const
-{
-    float totalWeight = 0.0f;
-    for (const float effectiveWeight : combatActionEffectiveWeights)
-    {
-        totalWeight += effectiveWeight;
-    }
-
-    return totalWeight;
-}
-
 // Weightに基づいて行動を選択する関数。候補がない場合はstd::nulloptを返す
-std::optional<BossActionType> GruxEnemy::SelectActionByWeight()
-{
-    const float totalWeight = GetTotalActionWeight();
-    if (totalWeight <= 0.0f)
-    {
-        return std::nullopt;
-    }
-
-    static std::mt19937 randomEngine{ std::random_device{}() };
-
-    std::uniform_real_distribution<float> distribution(
-        0.0f,
-        totalWeight);
-
-    const float selectionValue = distribution(randomEngine);
-
-    float accumulatedWeight = 0.0f;
-
-    for (size_t i = 0; i < combatActionData.size(); ++i)
-    {
-        const float effectiveWeight = combatActionEffectiveWeights[i];
-
-        if (effectiveWeight <= 0.0f)
-            continue;
-
-        accumulatedWeight += effectiveWeight;
-
-        if (selectionValue <= accumulatedWeight)
-            return combatActionData[i].type;
-    }
-
-    return std::nullopt;
-}
-
 

@@ -561,7 +561,6 @@ private:
     BossDistanceRegion GetDistanceRegion(float distance) const;
 
     // ????????????????aA??????s????I???????
-    void UpdateActionCandidateFlags(const BossTargetContext& context);
     bool IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const;
     const BossIntentData* GetActiveIntentData() const;
     BossIntentRangeStatus GetIntentRangeStatus(
@@ -582,13 +581,11 @@ private:
         const DirectX::XMFLOAT3& desiredTarget, RepositionTargetEvaluation& outEvaluation, float boundaryMarginOverride = -1.0f) const;
     bool IsRepositionAction(BossActionType actionType) const;
     const RepositionTargetEvaluation& GetRepositionTargetEvaluation(BossActionType actionType) const;
-    const char* GetRepositionFailureReason() const;
 
     // ?A?N?V??????????????(Region)?O?????????????
     bool IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const;
 
     // Action????Base Weight????Effective Weight??X?V????
-    void UpdateActionEffectiveWeights();
     bool IsRepeatPenaltyCombatAttack(BossActionType actionType) const;
     bool IsAttackActionForIntent(BossActionType actionType, BossIntentType intentType) const;
     float GetRecentAttackPenalty(BossActionType actionType) const;
@@ -596,13 +593,10 @@ private:
     void UpdateActionCooldowns(float deltaTime);
     void UpdateIntentEffectiveWeights(const BossTargetContext& context);
     float GetIntentWeightForDistance(const BossIntentData& data, BossDistanceRegion region) const;
-    float GetTotalIntentWeight() const;
 
     // Action??Effective Weight???v????????
-    float GetTotalActionWeight() const;
 
     // Weight??????cs????I????????B??????????std::nullopt????
-    std::optional<BossActionType> SelectActionByWeight();
 
     void ResetJustDodgeRecords(const char* reason);
     bool HasJustDodgedAttack(const Actor* actor) const;
@@ -1314,8 +1308,6 @@ private:
     float positioningMoveStopTimer = 0.0f;
     float positioningAnimationActualSpeed = 0.0f;
     bool positioningAnimationMoving = false;
-    DirectX::XMFLOAT3 fixedPositioningTarget{};
-    bool fixedPositioningTargetValid = false;
     float combatRepositionBackWeight = 80.0f;
     float dashAttackPlanBackWeight = 35.0f;
     float jumpAttackPlanBackWeight = 35.0f;
@@ -1337,22 +1329,11 @@ private:
     BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;
     RepositionTargetEvaluation leftRepositionTarget{};
     RepositionTargetEvaluation rightRepositionTarget{};
-    bool repositionTargetsEvaluated = false;
-    std::string repositionCompletionReason = "None";
-    DirectX::XMFLOAT3 repositionDesiredTarget{};
-    float repositionLeftAvailableDistance = 0.0f;
-    float repositionRightAvailableDistance = 0.0f;
-    bool repositionNoSafeDirection = false;
 
     bool positioningDebugActive = true;
     bool positioningWorldDebug = true;
     PositioningDebugSnapshot currentPositioningDebug{};
     PositioningDebugSnapshot lastPositioningDebug{};
-    BossPositioningData activePositioningDebugData{};
-    float positioningDebugTraveledDistance = 0.0f;
-    float positioningDebugElapsedTime = 0.0f;
-    float positioningDebugStuckTimer = 0.0f;
-    std::string positioningEndReason = "None";
 
     // FastCombo??A???U???p
     bool transitionWindow = false;      // Animation Notify??TransitionWindow??????L??????\???BFastCombo?O??~R???{?i?K??i???^?C?~???O??????g?p?B

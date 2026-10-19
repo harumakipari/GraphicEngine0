@@ -109,4 +109,3 @@ void EnemyStunState::Exit()
     enemy->DisableAttackHitBoxes();
     enemy->SetStunDebug("None", 0.0f);
 }
-
