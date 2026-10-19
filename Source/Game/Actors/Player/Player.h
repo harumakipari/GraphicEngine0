@@ -539,8 +539,13 @@ private:
     // モーションワープを考慮してプレイヤーの位置を更新する
     void UpdatePlayerMovementWithMotionWarp(float deltaTime);
 
-    // Notify由来の剣の軌跡、残像、発光を更新する。
-    void UpdateWeaponVisualPresentation(float deltaTime);
+    // 剣の残像を生成し、透明度と描画パラメータを更新する。
+    void UpdateSwordGhosts(float deltaTime);
+    // 現在の発光状態と指定座標を使って剣の軌跡を更新する。
+    void UpdateSwordVisuals(float deltaTime, const DirectX::XMFLOAT3* swordRootPos,
+        const DirectX::XMFLOAT3* swordTipPos, bool updateTrail);
+    // 特殊演出中の剣の表示状態をアニメーション時刻から再評価する。
+    void UpdateWeaponVisualPresentation(float deltaTime, bool updateTrail = true);
 
     // HUD・操作ガイドの内部更新
     // Rush入力受付状態に合わせてガイドUIを更新する。

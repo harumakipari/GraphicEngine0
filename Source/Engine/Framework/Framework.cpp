@@ -58,10 +58,7 @@ bool Framework::Initialize()
     SceneTransitionManager::Instance().Initialize();
 
     Scene::_boot(device, "TitleScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
-    //Scene::_boot(device, "ResultScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
-    //Scene::_boot(device, "TestScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
     //Scene::_boot(device, "GameScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
-    //Scene::_boot(device, "SampleScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
 
     //パーティクルシステム
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTexture;
@@ -193,14 +190,12 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
     if (skipRendering)
         return;
 
-    // SCENE_TRANSITION
     {
         {
             ZoneScopedN("Scene Render");
             ProfileScopedSection_2(0, "Render", ImGuiControl::Profiler::Red);
             Scene::_render(immediateContext, elapsed_time);//
         }
-        //gameManager->GenerateOutputAll();
     }
     {
 #ifdef USE_IMGUI

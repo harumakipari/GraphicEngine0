@@ -665,89 +665,15 @@ void Player::Update(float deltaTime)
         }
     }
 
-    // 剣のエミッシブを表示する
-    if (swordMeshComponent)
-    {// 剣にエミッシブを追加
-        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
-    }
-
-    // 軌跡の更新処理
-    trail.UpdateTrail(deltaTime);
-
-    // 軌跡と残像を表示する
-    if (showTrail)
+    // 最終ヒット待機とWinは、アニメーション更新後の特殊演出を優先する。
+    const bool deferSwordVisuals = finalHitWaiting || IsInWinState();
+    bool swordTrailUpdated = false;
+    if (!deferSwordVisuals)
     {
-        // 軌跡を追加
-        trail.trailPoints.push_back({ swordTipPos,swordRootPos, trailRemainTime });
-
-        XMFLOAT4X4 currentWorld = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
-
-        if (!isPrevSwordWorldValid)
-        {
-            prevSwordWorld = currentWorld;
-            isPrevSwordWorldValid = true;
-        }
-
-        XMFLOAT3 prevPos =
-        {
-            prevSwordWorld._41,
-            prevSwordWorld._42,
-            prevSwordWorld._43
-        };
-
-        XMFLOAT3 currentPos =
-        {
-            currentWorld._41,
-            currentWorld._42,
-            currentWorld._43
-        };
-
-        swordGhostElapsedTime += deltaTime;
-        while (swordGhostElapsedTime >= ghostInterval)
-        {
-            swordGhostElapsedTime -= ghostInterval;
-
-            float t = 1.0f - swordGhostElapsedTime / deltaTime;
-
-            XMFLOAT3 pos = MathHelper::Lerp(prevPos, currentPos, t);
-
-            XMFLOAT4X4 world = currentWorld;
-            world._41 = pos.x;
-            world._42 = pos.y;
-            world._43 = pos.z;
-
-            ghosts[swordGhostIndex].world = world;
-            ghosts[swordGhostIndex].alpha = 1.0f;
-            ghosts[swordGhostIndex].isVisible = true;
-
-            swordGhostIndex = (swordGhostIndex + 1) % ghosts.size();
-        }
-        // 前回の姿勢を保存する
-        prevSwordWorld = currentWorld;
+        UpdateSwordVisuals(deltaTime, &swordRootPos, &swordTipPos, true);
+        swordTrailUpdated = true;
     }
-
-    // 剣の残像用の剣のメッシュコンポーネント
-    for (auto& ghost : ghosts)
-    {
-        ghost.alpha -= deltaTime / ghostFadeTime;
-
-        if (ghost.alpha <= 0)
-        {
-            ghost.alpha = 0;
-            ghost.isVisible = false;
-        }
-
-        if (!ghost.isVisible)
-            continue;
-        if (ghost.swordMeshComp)
-        {
-            ghost.swordMeshComp->plusAlphaCBuffer->data.emissionPower = swordGhostEmissive;
-            ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { activeGhostBaseColor.x,activeGhostBaseColor.y,activeGhostBaseColor.z, ghost.alpha };
-            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeColor = { activeGhostEdgeColor.x,activeGhostEdgeColor.y,activeGhostEdgeColor.z,1.0f };
-            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.innerColor = { ghostInnerColor.x,ghostInnerColor.y,ghostInnerColor.z,1.0f };
-            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeWidth = ghostEdgeWidth;
-        }
-    }
+    UpdateSwordGhosts(deltaTime);
 
     // ヒットストップ処理
     if (finalHitWaiting)
@@ -774,10 +700,16 @@ void Player::Update(float deltaTime)
     // これは絶対入れる　アニメーションの更新をしているから
     Character::Update(deltaTime);
 
-    // Win-state presentation animations are sampled by local time after the
-    // AnimationController update. Combat/input processing remains unchanged.
     if (IsInWinState())
-        UpdateWeaponVisualPresentation(deltaTime);
+    {
+        // 更新途中にWinへ遷移した場合も、同じフレームで軌跡を二重更新しない。
+        UpdateWeaponVisualPresentation(deltaTime, !swordTrailUpdated);
+    }
+    else if (!swordTrailUpdated)
+    {
+        // 更新途中にWinを抜けた場合は、通常時に採取した座標で更新する。
+        UpdateSwordVisuals(deltaTime, &swordRootPos, &swordTipPos, true);
+    }
     // Dodge State更新後の受付状態を、そのフレームのUIへ反映する。
     UpdateRushPromptUI();
 
@@ -3129,39 +3061,130 @@ void Player::UpdatePlayerMovementWithMotionWarp(float deltaTime)
 }
 
 
-void Player::UpdateWeaponVisualPresentation(const float deltaTime)
+// 剣の残像を生成し、透明度と描画パラメータを更新する。
+void Player::UpdateSwordGhosts(const float deltaTime)
+{
+    using namespace DirectX;
+    if (showTrail)
+    {
+        XMFLOAT4X4 currentWorld = swordMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+
+        if (!isPrevSwordWorldValid)
+        {
+            prevSwordWorld = currentWorld;
+            isPrevSwordWorldValid = true;
+        }
+
+        XMFLOAT3 prevPos =
+        {
+            prevSwordWorld._41,
+            prevSwordWorld._42,
+            prevSwordWorld._43
+        };
+
+        XMFLOAT3 currentPos =
+        {
+            currentWorld._41,
+            currentWorld._42,
+            currentWorld._43
+        };
+
+        swordGhostElapsedTime += deltaTime;
+        while (swordGhostElapsedTime >= ghostInterval)
+        {
+            swordGhostElapsedTime -= ghostInterval;
+
+            float t = 1.0f - swordGhostElapsedTime / deltaTime;
+
+            XMFLOAT3 pos = MathHelper::Lerp(prevPos, currentPos, t);
+
+            XMFLOAT4X4 world = currentWorld;
+            world._41 = pos.x;
+            world._42 = pos.y;
+            world._43 = pos.z;
+
+            ghosts[swordGhostIndex].world = world;
+            ghosts[swordGhostIndex].alpha = 1.0f;
+            ghosts[swordGhostIndex].isVisible = true;
+
+            swordGhostIndex = (swordGhostIndex + 1) % ghosts.size();
+        }
+        // 前回の姿勢を保存する
+        prevSwordWorld = currentWorld;
+    }
+
+    // 剣の残像用の剣のメッシュコンポーネント
+    for (auto& ghost : ghosts)
+    {
+        ghost.alpha -= deltaTime / ghostFadeTime;
+
+        if (ghost.alpha <= 0)
+        {
+            ghost.alpha = 0;
+            ghost.isVisible = false;
+        }
+
+        if (!ghost.isVisible)
+            continue;
+        if (ghost.swordMeshComp)
+        {
+            ghost.swordMeshComp->plusAlphaCBuffer->data.emissionPower = swordGhostEmissive;
+            ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { activeGhostBaseColor.x,activeGhostBaseColor.y,activeGhostBaseColor.z, ghost.alpha };
+            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeColor = { activeGhostEdgeColor.x,activeGhostEdgeColor.y,activeGhostEdgeColor.z,1.0f };
+            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.innerColor = { ghostInnerColor.x,ghostInnerColor.y,ghostInnerColor.z,1.0f };
+            ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeWidth = ghostEdgeWidth;
+        }
+    }
+
+}
+
+// 現在の発光状態を反映し、指定された座標で軌跡を更新する。
+void Player::UpdateSwordVisuals(const float deltaTime, const DirectX::XMFLOAT3* swordRootPos, const DirectX::XMFLOAT3* swordTipPos, const bool updateTrail)
+{
+    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
+        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
+
+    if (!updateTrail || !swordRootPos || !swordTipPos)
+        return;
+
+    trail.UpdateTrail(deltaTime);
+    if (showTrail)
+        trail.trailPoints.push_back({ *swordTipPos, *swordRootPos, trailRemainTime });
+}
+
+// 特殊演出ではアニメーション時刻から剣の表示状態を再評価する。
+void Player::UpdateWeaponVisualPresentation(const float deltaTime, const bool updateTrail)
 {
     const auto controller = GetBodyAnimationController();
     bool evaluatedShowTrail = false;
     float evaluatedEmissivePower = 0.0f;
     bool hasShowTrailState = false;
     bool hasShowEmissiveState = false;
-    const bool hasWeaponVisualState = controller && controller->EvaluateWeaponVisualState(
-        evaluatedShowTrail, evaluatedEmissivePower, hasShowTrailState, hasShowEmissiveState);
-    (void)hasShowTrailState;
-    (void)hasShowEmissiveState;
+    bool hasWeaponVisualState = false;
+    if (controller != nullptr)
+    {
+        hasWeaponVisualState = controller->EvaluateWeaponVisualState(evaluatedShowTrail, evaluatedEmissivePower, hasShowTrailState, hasShowEmissiveState);
+    }
 
+    // 剣の演出へ反映するかどうか
     showTrail = hasWeaponVisualState && evaluatedShowTrail;
     swordEmissivePower = hasWeaponVisualState ? evaluatedEmissivePower : 0.0f;
 
-    if (swordMeshComponent && swordMeshComponent->plusAlphaCBuffer)
-        swordMeshComponent->plusAlphaCBuffer->data.emissionPower = swordEmissivePower;
-
-
     if (!hasWeaponVisualState)
     {
+        UpdateSwordVisuals(deltaTime, nullptr, nullptr, false);
         trail.Clear();
         return;
     }
     if (!swordRootComponent || !swordTipComponent)
+    {
+        UpdateSwordVisuals(deltaTime, nullptr, nullptr, false);
         return;
+    }
 
     const DirectX::XMFLOAT3 swordRootPos = swordRootComponent->GetComponentLocation();
     const DirectX::XMFLOAT3 swordTipPos = swordTipComponent->GetComponentLocation();
-
-    trail.UpdateTrail(deltaTime);
-    if (showTrail)
-        trail.trailPoints.push_back({ swordTipPos, swordRootPos, trailRemainTime });
+    UpdateSwordVisuals(deltaTime, &swordRootPos, &swordTipPos, updateTrail);
 }
 
 void Player::UpdateRushPromptUI()
