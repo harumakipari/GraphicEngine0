@@ -75,8 +75,6 @@ public:
             hook(immediateContext);
     }
 
-    // ライトマネージャーへのアクセス関数
-    //LightManager* GetLightManager() const { return lightManager.get(); }
     // 影描画用のライトビューの焦点を設定する関数
     void SetLightViewFocus(const DirectX::XMFLOAT3& focus) { light_view_focus = { focus.x,focus.y,focus.z,1.0f }; }
 
@@ -89,8 +87,6 @@ protected:
     // 追加のImGui
     virtual void DrawGuiPlusAlpha() {}
 private:
-    void ForwardRender(ID3D11DeviceContext* immediateContext);
-
     void DeferredRender(ID3D11DeviceContext* immediateContext, ViewConstants& viewConstants);
 
     void DrawOutliner();
@@ -160,7 +156,6 @@ protected:
     DirectX::XMFLOAT4 lightColor = { 1.0f, 1.0f, 1.0f, 20.1f };
     DirectX::XMFLOAT4 shadowLightDirection = { -0.75f, -0.581f, -0.4f, 0.0f };
 
-    bool useDeferredRendering = true;
     bool useDrawDebug = false;
 
     // HuskParticle用
