@@ -4170,13 +4170,6 @@ bool GruxEnemy::IsRepositionAction(const BossActionType actionType) const
         actionType == BossActionType::RepositionRight;
 }
 
-const GruxEnemy::RepositionTargetEvaluation& GruxEnemy::GetRepositionTargetEvaluation(
-    const BossActionType actionType) const
-{
-    return actionType == BossActionType::RepositionRight
-        ? rightRepositionTarget : leftRepositionTarget;
-}
-
 bool GruxEnemy::ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPosition,
     const DirectX::XMFLOAT3& desiredTarget, DirectX::XMFLOAT3& outResolvedTarget,
     bool& outPathBlocked) const
@@ -4235,8 +4228,6 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
     const float availableZ = outEvaluation.clampedTarget.z - startPosition.z;
     outEvaluation.availableDistance = std::sqrt(
         availableX * availableX + availableZ * availableZ);
-    outEvaluation.sufficientlyMovable =
-        outEvaluation.availableDistance >= minimumPositioningMoveDistance;
 }
 
 void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
@@ -6199,52 +6190,11 @@ BossTargetContext GruxEnemy::BuildTargetContext() const
 
 
 
-float GruxEnemy::GetPendingAttackFacingAngle() const
-{
-    if (!pendingAttackFacingValid)
-        return 0.0f;
-
-    DirectX::XMVECTOR forwardVector = DirectX::XMVector3Rotate(
-        DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
-        DirectX::XMLoadFloat4(&GetQuaternionRotation()));
-    DirectX::XMFLOAT3 forward{};
-    DirectX::XMStoreFloat3(&forward, forwardVector);
-    forward.y = 0.0f;
-    const float forwardLength = std::sqrt(forward.x * forward.x + forward.z * forward.z);
-    if (forwardLength <= FLT_EPSILON)
-        return 180.0f;
-    forward.x /= forwardLength;
-    forward.z /= forwardLength;
-
-    const float dot = std::clamp(
-        forward.x * pendingAttackFacingDirection.x +
-        forward.z * pendingAttackFacingDirection.z,
-        -1.0f, 1.0f);
-    return DirectX::XMConvertToDegrees(std::acos(dot));
-}
-
 bool GruxEnemy::IsCloseCombatAttackType(const BossAttackType attackType) const
 {
     return attackType == BossAttackType::PrimaryAttackLA ||
         attackType == BossAttackType::PrimaryAttackRA ||
         attackType == BossAttackType::FastCombo;
-}
-
-void GruxEnemy::BeginAttackReadyDebug()
-{
-    attackReadyActive = true;
-    attackReadyDebugTimer = 0.0f;
-    attackReadySEFired = false;
-}
-
-void GruxEnemy::UpdateAttackReadyDebug(const float elapsedTime)
-{
-    attackReadyDebugTimer = elapsedTime;
-}
-
-void GruxEnemy::EndAttackReadyDebug()
-{
-    attackReadyActive = false;
 }
 
 bool GruxEnemy::PlayAttackReadySE()
@@ -6263,35 +6213,6 @@ bool GruxEnemy::PlayAttackReadySE()
         pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
     audio->SetPitch(pitch);
     attackReadySEFired = true;
-    return true;
-}
-
-bool GruxEnemy::ResumeSelectedAttackAfterTurn()
-{
-    if (!pendingAttackActionValid || !pendingAttackFacingValid)
-        return false;
-
-    const std::optional<BossAttackType> mappedAttack =
-        GetAttackTypeForAction(selectedActionType);
-    if (!mappedAttack || *mappedAttack != selectedAttackType)
-    {
-        ClearPendingAttackFacing();
-        return false;
-    }
-
-    ClearPendingAttackFacing();
-    if (IsCloseCombatAttackType(selectedAttackType))
-    {
-        attackReadyReason = AttackReadyReason::AfterTurn;
-        stateMachine_->ChangeState("EnemyAttackReadyState");
-    }
-    else
-    {
-        stateMachine_->ChangeState(
-            selectedAttackType == BossAttackType::ChargeAttack
-            ? "EnemyChargeAttackState"
-            : "EnemyAttackState");
-    }
     return true;
 }
 
@@ -6352,28 +6273,6 @@ void GruxEnemy::RecordRotationDebugSource(const char* source,
         rotationDebugTurnTargetDirection = targetDirection;
         rotationDebugTurnTargetValid = directionLengthSq > FLT_EPSILON;
     }
-}
-
-void GruxEnemy::BeginTurnRotationDebug(const char* fromState)
-{
-    const BossTargetContext context = BuildTargetContext();
-    activeTurnDebugFromState = fromState ? fromState : "Unknown";
-    activeTurnDebugStartAngle = context.valid ? context.absoluteAngleDegrees : 0.0f;
-    activeTurnDebugTargetYaw = context.valid
-        ? DirectX::XMConvertToDegrees(std::atan2f(
-            context.directionToPlayer.x, context.directionToPlayer.z))
-        : GetEulerRotation().y;
-}
-
-void GruxEnemy::EndTurnRotationDebug(float duration)
-{
-    const BossTargetContext context = BuildTargetContext();
-    lastTurnDebug.valid = true;
-    lastTurnDebug.fromState = activeTurnDebugFromState;
-    lastTurnDebug.startAngle = activeTurnDebugStartAngle;
-    lastTurnDebug.startTargetYaw = activeTurnDebugTargetYaw;
-    lastTurnDebug.endAngle = context.valid ? context.absoluteAngleDegrees : 0.0f;
-    lastTurnDebug.duration = (std::max)(0.0f, duration);
 }
 
 bool GruxEnemy::RotateTowardsPlayer(
@@ -6462,93 +6361,8 @@ bool GruxEnemy::GetIntentAttackValidRange(float& outMinDistance, float& outMaxDi
     return false;
 }
 
-bool GruxEnemy::IsAttackPendingGoalAction(
-    BossActionType actionType, const BossTargetContext& context) const
-{
-    if (!activeIntent || activeIntentStep != BossIntentStep::AttackPending || !context.valid)
-        return false;
-
-    float validMin = 0.0f;
-    float validMax = 0.0f;
-    if (!GetIntentAttackValidRange(validMin, validMax) ||
-        context.xzDistance > validMax)
-        return false;
-
-    return (*activeIntent == BossIntentType::DashAttackPlan &&
-        (actionType == BossActionType::DashAttack ||
-            actionType == BossActionType::ChargeAttack)) ||
-        (*activeIntent == BossIntentType::JumpAttackPlan &&
-            actionType == BossActionType::JumpAttack);
-}
-
-bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const
-{
-    if (!activeIntent || !context.valid)
-        return false;
-
-    const BossIntentData* intentData = GetActiveIntentData();
-    if (!intentData)
-        return false;
-
-    if (activeIntentStep == BossIntentStep::AttackPending)
-    {
-        float validMin = 0.0f;
-        float validMax = 0.0f;
-        if (GetIntentAttackValidRange(validMin, validMax))
-        {
-            if (context.xzDistance > validMax)
-                return actionType == BossActionType::Approach;
-            return IsAttackPendingGoalAction(actionType, context);
-        }
-    }
-
-    const BossIntentRangeStatus rangeStatus =
-        GetIntentRangeStatus(*intentData, context.xzDistance);
-    switch (*activeIntent)
-    {
-    case BossIntentType::CloseCombat:
-        if (rangeStatus != BossIntentRangeStatus::TooFar)
-        {
-            return actionType == BossActionType::AttackLA ||
-                actionType == BossActionType::AttackRA ||
-                actionType == BossActionType::FastCombo;
-        }
-        return actionType == BossActionType::Approach;
-
-    case BossIntentType::DashAttackPlan:
-        if (rangeStatus == BossIntentRangeStatus::TooClose)
-            return actionType == BossActionType::Retreat;
-        if (rangeStatus == BossIntentRangeStatus::TooFar)
-            return actionType == BossActionType::Approach;
-        return actionType == BossActionType::DashAttack ||
-            actionType == BossActionType::ChargeAttack;
-
-    case BossIntentType::JumpAttackPlan:
-        if (rangeStatus == BossIntentRangeStatus::TooClose)
-            return actionType == BossActionType::Retreat;
-        if (rangeStatus == BossIntentRangeStatus::TooFar)
-            return actionType == BossActionType::Approach;
-        return actionType == BossActionType::JumpAttack;
-    case BossIntentType::CombatReposition:
-        return actionType == BossActionType::RepositionLeft ||
-            actionType == BossActionType::RepositionRight;
-    }
-
-    return false;
-}
-
 
 // アクションが現在の距離(Region)で候補になるかを判定する関数
-bool GruxEnemy::IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const
-{
-    if (actionData.minDistanceRegion <= currentRegion &&
-        currentRegion <= actionData.maxDistanceRegion)
-    {
-        return true;
-    }
-    return false;
-}
-
 //  Action候補とBase WeightからEffective Weightを更新する
 void GruxEnemy::UpdateActionCooldowns(float deltaTime)
 {

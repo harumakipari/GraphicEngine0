@@ -121,18 +121,6 @@ enum class ChargeAttackEndReason : uint8_t
 };
 
 
-enum class BossActionCandidateReason : uint8_t
-{
-    NoActiveIntent,
-    Candidate,
-    NotForCurrentIntent,
-    WrongDistance,
-    Cooldown,
-    ZeroWeight,
-    WrongRelativeRegion,
-    NoSafeDirection,
-};
-
 
 enum class BossRepositionReason : uint8_t
 {
@@ -157,10 +145,6 @@ struct BossActionData
 {
     BossActionType type = BossActionType::AttackLA;
     std::optional<BossAttackType> attackType = BossAttackType::PrimaryAttackLA;
-
-    // 各アクションがどのDistanceRegionで候補になるかを指定する。
-    BossDistanceRegion minDistanceRegion = BossDistanceRegion::Near;
-    BossDistanceRegion maxDistanceRegion = BossDistanceRegion::Far;
 
     float weight = 1.0f;
     float cooldownDuration = 0.0f;

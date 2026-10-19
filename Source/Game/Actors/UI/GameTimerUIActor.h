@@ -11,4 +11,5 @@ public:
 
     void Update(float elapsedTime)override{}
 
+private:
 };

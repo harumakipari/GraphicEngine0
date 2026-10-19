@@ -406,8 +406,6 @@ public:
     TripleJumpPhase GetTripleJumpPhase() const { return tripleJumpPhase; }
     void DrawTripleJumpDebug();
     const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
-    float GetPendingAttackFacingAngle() const;
-    bool ResumeSelectedAttackAfterTurn();
     bool IsCloseCombatAttackType(BossAttackType attackType) const;
     float GetAttackReadyDuration() const
     {
@@ -415,9 +413,6 @@ public:
             ? sideAttackReadyDuration
             : frontAttackReadyDuration;
     }
-    void BeginAttackReadyDebug();
-    void UpdateAttackReadyDebug(float elapsedTime);
-    void EndAttackReadyDebug();
     bool PlayAttackReadySE();
     void StartWeaponTelegraph(const std::string& animationName);
 
@@ -425,8 +420,6 @@ public:
     void StopAIMovement();
     bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
         float degreesPerSecond, float deltaTime, const char* debugSource);
-    void BeginTurnRotationDebug(const char* fromState);
-    void EndTurnRotationDebug(float duration);
     float GetTurnCompleteAngle() const { return turnCompleteAngle; }
     float GetTurnTimeout() const { return turnTimeout; }
     float GetTurnSpeed() const { return turnSpeed; }
@@ -561,12 +554,10 @@ private:
     BossDistanceRegion GetDistanceRegion(float distance) const;
 
     // ????????????????aA??????s????I???????
-    bool IsActionForCurrentIntent(BossActionType actionType, const BossTargetContext& context) const;
     const BossIntentData* GetActiveIntentData() const;
     BossIntentRangeStatus GetIntentRangeStatus(
         const BossIntentData& intentData, float distance) const;
     bool GetIntentAttackValidRange(float& outMinDistance, float& outMaxDistance) const;
-    bool IsAttackPendingGoalAction(BossActionType actionType, const BossTargetContext& context) const;
     struct RepositionTargetEvaluation
     {
         DirectX::XMFLOAT3 desiredTarget{};
@@ -574,16 +565,13 @@ private:
         float availableDistance = 0.0f;
         bool wasClamped = false;
         float clampDistance = 0.0f;
-        bool sufficientlyMovable = false;
         bool bossRoomPathBlocked = false;
     };
     void EvaluateClampedPositioningTarget(const DirectX::XMFLOAT3& startPosition,
         const DirectX::XMFLOAT3& desiredTarget, RepositionTargetEvaluation& outEvaluation, float boundaryMarginOverride = -1.0f) const;
     bool IsRepositionAction(BossActionType actionType) const;
-    const RepositionTargetEvaluation& GetRepositionTargetEvaluation(BossActionType actionType) const;
 
     // ?A?N?V??????????????(Region)?O?????????????
-    bool IsActionCandidateForCurrentDistance(const BossActionData& actionData, BossDistanceRegion currentRegion) const;
 
     // Action????Base Weight????Effective Weight??X?V????
     bool IsRepeatPenaltyCombatAttack(BossActionType actionType) const;
@@ -873,24 +861,21 @@ private:
     std::array<BossActionData, actionCount> combatActionData =
     {
         {
-        { BossActionType::AttackLA, BossAttackType::PrimaryAttackLA ,BossDistanceRegion::Near,BossDistanceRegion::Near,20.0f,1.0f},
-        { BossActionType::AttackRA, BossAttackType::PrimaryAttackRA,BossDistanceRegion::Near,BossDistanceRegion::Near,20.0f,1.0f},
-        { BossActionType::FastCombo, BossAttackType::FastCombo ,BossDistanceRegion::Near,BossDistanceRegion::Near,100.0f,2.0f},
-        { BossActionType::JumpAttack,BossAttackType::JumpAttack ,BossDistanceRegion::Middle,BossDistanceRegion::Middle,30.0f,3.0f},
-        { BossActionType::DashAttack,BossAttackType::DashAttack,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,4.0f},
-        { BossActionType::ChargeAttack,BossAttackType::ChargeAttack,BossDistanceRegion::Middle,BossDistanceRegion::Far,40.0f,4.0f},
-        { BossActionType::Approach, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,40.0f,0.5f},
-        { BossActionType::Retreat, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,40.0f,2.5f},
-        { BossActionType::RepositionLeft, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,50.0f,1.0f},
-        { BossActionType::RepositionRight, std::nullopt,BossDistanceRegion::Near,BossDistanceRegion::Far,50.0f,1.0f},
+        { BossActionType::AttackLA, BossAttackType::PrimaryAttackLA ,20.0f,1.0f},
+        { BossActionType::AttackRA, BossAttackType::PrimaryAttackRA,20.0f,1.0f},
+        { BossActionType::FastCombo, BossAttackType::FastCombo ,100.0f,2.0f},
+        { BossActionType::JumpAttack,BossAttackType::JumpAttack ,30.0f,3.0f},
+        { BossActionType::DashAttack,BossAttackType::DashAttack,40.0f,4.0f},
+        { BossActionType::ChargeAttack,BossAttackType::ChargeAttack,40.0f,4.0f},
+        { BossActionType::Approach, std::nullopt,40.0f,0.5f},
+        { BossActionType::Retreat, std::nullopt,40.0f,2.5f},
+        { BossActionType::RepositionLeft, std::nullopt,50.0f,1.0f},
+        { BossActionType::RepositionRight, std::nullopt,50.0f,1.0f},
     }
     };
 
     // ?e?s??????????????????A????~t???O
-    std::array<bool, actionCount> combatActionCandidateFlags{};
-    std::array<BossActionCandidateReason, actionCount> combatActionCandidateReasons{};
     // ?e?s????L????d??B?????????Repeat?????l???????L????d??
-    std::array<float, actionCount> combatActionEffectiveWeights{};
     std::array<float, actionCount> combatActionCooldownRemaining{};
 
     bool showBossAIDebug = false;
@@ -1327,8 +1312,6 @@ private:
     bool postAttackCombatRepositionBoostApplied = false;
     BossRepositionReason repositionReason = BossRepositionReason::Normal;
     BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;
-    RepositionTargetEvaluation leftRepositionTarget{};
-    RepositionTargetEvaluation rightRepositionTarget{};
 
     bool positioningDebugActive = true;
     bool positioningWorldDebug = true;

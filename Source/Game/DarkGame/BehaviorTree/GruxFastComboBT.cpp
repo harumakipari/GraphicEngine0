@@ -17,7 +17,6 @@ bool CanExecuteFastCombo::Judgment()
     return result;
 }
 
-// ???????????
 bool DeadJudgment::Judgment()
 {
     return owner->IsDead();
@@ -25,7 +24,6 @@ bool DeadJudgment::Judgment()
 
 ActionBase::State BTStartDeath::Run(float)
 {
-    //GruxEnemy???????????????DeathState??????
     started = true;
     return State::Complete;
 }
