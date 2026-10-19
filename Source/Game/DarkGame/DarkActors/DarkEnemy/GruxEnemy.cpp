@@ -2441,7 +2441,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Surface Offset", &rushHitEffectSurfaceOffset,
         0.005f, 0.0f, 0.20f, "%.3f m");
 
-    ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("Fallback Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
     if (ImGui::CollapsingHeader("Danger OBB Tuning"))
     {
@@ -2821,9 +2820,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Positioning Arrival Distance", &positioningArrivalDistance,
         0.01f, 0.01f, 2.0f, "%.2f m");
     positioningArrivalDistance = std::clamp(positioningArrivalDistance, 0.01f, 2.0f);
-    ImGui::DragFloat("Minimum Move Distance",
-        &minimumPositioningMoveDistance, 0.05f, 0.0f, 5.0f, "%.2f m");
-    minimumPositioningMoveDistance = (std::max)(0.0f, minimumPositioningMoveDistance);
     ImGui::SeparatorText("Positioning Animation Tuning");
     ImGui::DragFloat("Move Start Speed Threshold",
         &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
@@ -2944,7 +2940,6 @@ void GruxEnemy::DrawImGuiDetails()
         "%.2f");
     currentJumpPlayerDistance = GetDistanceToPlayer();
     ImGui::Checkbox("BehaviorTree FastCombo", &behaviorTreeFastComboEnabled);
-    ImGui::DragFloat("Repeat Weight Scale", &repeatWeightScale, 0.01f, 0.0f, 1.0f, "%.2f");
     if (ImGui::TreeNode("Combat Attack Candidates"))
     {
         for (size_t i = 0; i < combatAttackData.size(); ++i)
@@ -4195,10 +4190,6 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
     const float clampZ = outEvaluation.clampedTarget.z - desiredTarget.z;
     outEvaluation.clampDistance = std::sqrt(clampX * clampX + clampZ * clampZ);
     outEvaluation.wasClamped = outEvaluation.clampDistance > 0.0001f;
-    const float availableX = outEvaluation.clampedTarget.x - startPosition.x;
-    const float availableZ = outEvaluation.clampedTarget.z - startPosition.z;
-    outEvaluation.availableDistance = std::sqrt(
-        availableX * availableX + availableZ * availableZ);
 }
 
 void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
@@ -6178,7 +6169,6 @@ bool GruxEnemy::PlayAttackReadySE()
 
 void GruxEnemy::ClearPendingAttackFacing()
 {
-    pendingAttackFacingCompleteAngle = turnCompleteAngle;
 }
 
 void GruxEnemy::StopAIMovement()

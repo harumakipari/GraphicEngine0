@@ -1215,7 +1215,6 @@ private:
     {
         DirectX::XMFLOAT3 desiredTarget{};  // 境界補正前の目標位置。
         DirectX::XMFLOAT3 clampedTarget{};  // 境界補正後の目標位置。
-        float availableDistance = 0.0f;  // 移動可能な距離の評価値。
         bool wasClamped = false;  // 目標位置に境界補正を適用したか。
         float clampDistance = 0.0f;  // 目標位置の境界補正距離。
         bool bossRoomPathBlocked = false;  // ボス部屋の経路が遮られているか。
@@ -1560,7 +1559,6 @@ private:
     float repeatAttackPenalty = initialRepeatAttackPenalty;  // 直近2回と同じ攻撃候補に適用する倍率。
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;  // 現在選択されている攻撃種別。
     std::optional<BossPositioningData> selectedPositioningData = std::nullopt;  // 選択中の位置調整データ。
-    float pendingAttackFacingCompleteAngle = 15.0f;  // 攻撃前の向き合わせ完了角度の保持値。
 
     bool hasLastAttack = false;  // 直近の攻撃履歴があるか。
 
@@ -1911,9 +1909,6 @@ private:
         { BossAttackType::ChargeAttack, "Pre_FootSlide_0 > Stampede_0", 6.0f, 100.0f, 1.0f, 0.1f, 10 },
     } };
 
-    // ??????Attack?I??p
-    float repeatWeightScale = 0.25f;  // 旧攻撃選択用の調整値。現在はImGuiから編集する。
-
     std::array<BossPositioningData, 4> combatPositioningData =  // 位置調整の設定データ。
     { {
         { BossActionType::Approach, BossPositioningDirection::TowardPlayer, 20.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TargetDistance, 0.0f },
@@ -1922,7 +1917,6 @@ private:
         { BossActionType::RepositionRight, BossPositioningDirection::TowardPlayer, 3.0f, 6.0f, 3.0f, 0.5f, 0.1f, BossPositioningCompletionType::TravelDistance, 0.0f },
     } };
 
-    float attackInterval = 0.1f;  // 旧攻撃間隔の調整値。現在はImGuiから編集する。
     float recoveryDuration = 0.5f;  // 攻撃別Recovery時間を取得できない場合の代替時間。
 
     float nearFrontFastComboProbability = 0.7f;  // 近距離正面でFastComboを抽選する基本確率。
@@ -1997,7 +1991,6 @@ private:
     static constexpr float bossRoomMaxZ = 21.5f;  // ボス部屋のZ座標の上限。
     float bossRoomSafetyMargin = 0.5f;  // ボス部屋の境界から確保する余白距離。
     float positioningArrivalDistance = 0.3f;  // 位置調整先への到着と判定する距離。
-    float minimumPositioningMoveDistance = 0.75f;  // 位置調整に必要な最小移動距離の設定値。
     float positioningMoveStartSpeedThreshold = 0.30f;  // 移動アニメーションを開始する速度の閾値。
     float positioningMoveStopSpeedThreshold = 0.10f;  // 移動アニメーションを停止する速度の閾値。
     float positioningMoveStopDelay = 0.15f;  // 移動アニメーションを停止するまでの待ち時間。

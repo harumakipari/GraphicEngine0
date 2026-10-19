@@ -159,7 +159,6 @@ NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* l
         fastComboBaseProbability * fastComboPenalty, 0.0f, 1.0f);
     const float roll = static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
     NodeBase* selected = nullptr;
-    const char* mode = nearFront && fast ? "NearFrontWeighted" : "Uniform";
 
     if (nearFront && fast && (nonFast.empty() || roll < fastComboEffectiveProbability))
     {
@@ -203,7 +202,6 @@ NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* l
         }
     }
 
-    const float debugBaseWeight = selected ? 1.0f : 0.0f;
     return selected;
 }
 // シーケンス・シーケンシャルルーピングでノード選択
