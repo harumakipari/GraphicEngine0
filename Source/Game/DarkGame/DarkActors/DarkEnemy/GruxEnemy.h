@@ -60,14 +60,6 @@ public:
     void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true,
         float blendTime = 0.3f, bool ignoreRootMotion = false,
         const char* debugSource = "Unattributed") const;
-    const std::string& GetLastAnimationRequestDebug() const { return lastAnimationRequestDebug; }
-    const std::string& GetPreviousAnimationRequestDebug() const { return previousAnimationRequestDebug; }
-    const std::string& GetAnimationRequestSourceDebug() const { return animationRequestSourceDebug; }
-    const std::string& GetAnimationRequestBattleFlowDebug() const { return animationRequestBattleFlowDebug; }
-    const std::string& GetAnimationRequestBossDeathPhaseDebug() const { return animationRequestBossDeathPhaseDebug; }
-    uint64_t GetAnimationRequestFrameDebug() const { return animationRequestFrameDebug; }
-    //???????????????
-    void TakeDamage(int damage);
     // Player's sword hit path supplies semantic hit information without changing
     // the generic damage entry point used by existing callers.
     void TakeDamageFromPlayerAttack(int damage, bool isNormalFourthHit,
@@ -99,7 +91,6 @@ public:
     void SetDirectionImmediate(const DirectX::XMFLOAT3& direction);
     void ResumeBattleAI();
     bool IsBattleAIActive() const { return battleAIActive; }
-    bool IsPhaseTransitionCombatStopped() const { return phaseTransitionCombatStopped; }
     void SetPhase2CinematicAnimationOwnedExternally(bool owned)
     {
         phase2CinematicAnimationOwnedExternally = owned;
@@ -123,12 +114,9 @@ public:
     void SetPhase2MaskSoftness(float softness);
     float GetPhase1BossScale() const { return phase1BossScale; }
     float GetPhase2BossScale() const { return phase2BossScale; }
-    float GetCurrentPhaseScale() const { return enemyScale; }
     float GetPhase2MaskMinYOffset() const { return phase2MaskMinYOffset; }
     float GetPhase2MaskMaxYOffset() const { return phase2MaskMaxYOffset; }
     float GetPhase2MaskSoftness() const { return phase2MaskSoftness; }
-    float GetPhase2WorldMinY() const { return phase2WorldMinY; }
-    float GetPhase2WorldMaxY() const { return phase2WorldMaxY; }
     int GetMaxHp() const { return maxHp; }
     void AdvanceDelayedHpBarForPhaseTransition();
     bool IsDelayedHpSettled() const;
@@ -172,23 +160,10 @@ public:
     BossAIMode GetBossAIMode() const { return bossAIMode; }
     BossAttackType GetSelectedAttackType() const { return selectedAttackType; }
 
-    bool TryStartIntent(BossIntentType intentType);
-    bool SelectIntentByWeight();
-    void ClearActiveIntent();
-    void MarkIntentPositioningAttempted();
-    void MarkIntentPositioningCompleted();
-    void BeginIntentReevaluation();
-    void MarkIntentAttackSelected();
     void OnSelectedActionStartedSuccessfully();
     void RequestJumpAttackCameraAssist();
     void OnSelectedAttackCompletedSuccessfully();
-    void OnSelectedActionStartFailed();
-    void FailActiveIntent(const char* reason);
-    bool InvalidateCloseCombatIntentForBack(const BossTargetContext& context);
     bool IsCombatRepositionActive() const;
-    void CompleteCombatReposition();
-    const std::optional<BossIntentType>& GetActiveIntent() const { return activeIntent; }
-    bool WasIntentPositioningAttempted() const { return intentPositioningAttempted; }
 
     const std::optional<BossPositioningData>& GetSelectedPositioningData() const
     {
@@ -225,8 +200,6 @@ public:
     void FinishPositioningDebug(const std::string& reason);
     void StartSelectedActionCooldown();
 
-    bool SelectAttackForCurrentMode();
-    int GetAttackStageCount(BossAttackType type) const;
     bool PlayAttackStage(BossAttackType type, int stage);
     bool PlayAttackAnimationByName(const std::string& animationName);
     void BeginAdditionalAttackStage();
@@ -328,12 +301,7 @@ public:
     {
         return cinematicDeathAnimationOwnedExternally;
     }
-    // Read-only death-flow diagnostics for GameScene.
-    bool IsDeathPerformingForDebug() const { return isDeathPerform; }
-    bool IsFinalHitReactionActiveForDebug() const { return finalHitReactionActive; }
-    bool IsFinalHitReactionHeldForDebug() const { return finalHitReactionHeld; }
-    bool IsFourthHitReactionActiveForDebug() const { return fourthHitReactionActive; }
-    bool IsBeginHuskParticleRequestedForDebug() const { return beginHuskParticleRequest; }
+
     bool ConsumeBeginHuskParticleRequest()
     {
         const bool requested = beginHuskParticleRequest;
@@ -360,11 +328,6 @@ public:
     float GetAttackInterval() const { return attackInterval; }
     // Legacy EnemyAttackState compatibility; Dash BT no longer reads this gate.
     float GetDashWindupDuration() const { return dashWindupDuration; }
-    float GetJumpAttackTelegraphStartTime() const { return jumpAttackTelegraphStartTime; }
-    float GetJumpAttackTelegraphEndTime() const { return jumpAttackTelegraphEndTime; }
-    float GetJumpAttackDesiredStartDistance() const { return jumpDesiredStartDistance; }
-    float GetJumpSetupDistanceMin() const { return jumpSetupDistanceMin; }
-    float GetJumpSetupDistanceMax() const { return jumpSetupDistanceMax; }
     float GetRecoveryDurationForCurrentAttack() const;
     void SetNextRecoveryDuration(float duration, const char* source);
     float ConsumeNextRecoveryDuration();
@@ -435,10 +398,6 @@ public:
     bool IsDefensiveBackForBehavior(const BossTargetContext& context) const;
     float GetNearFrontFastComboProbability() const { return nearFrontFastComboProbability; }
     float GetAttackRepeatPenaltyForPlan(const std::string& planName) const;
-    void RecordAttackSelectorDebug(const char* mode, int count, float fastComboBaseProbability,
-        float fastComboEffectiveProbability, float roll, const char* selected,
-        const char* repeatPenaltyTarget, float baseWeight, float effectiveWeight,
-        bool repeatPenaltyApplied);
     void RefreshFastComboTargetContext(int stage);
     void BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime);
     bool UpdateFastComboStepIn(float deltaTime);
@@ -455,7 +414,6 @@ public:
     bool HasAttackSetupTarget() const { return attackSetupTarget.valid; }
     const AttackSetupTargetContext& GetAttackSetupTarget() const { return attackSetupTarget; }
     void ClearAttackSetupTarget();
-    void BeginAttackSetupMovement();
     AttackSetupMoveResult UpdateAttackSetupMovement(float deltaTime);
     void StopAttackSetupMovement();
     bool PrepareRetreatTarget();
@@ -502,10 +460,6 @@ public:
     TripleJumpPhase GetTripleJumpPhase() const { return tripleJumpPhase; }
     void DrawTripleJumpDebug();
     const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
-    bool ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const;
-    bool ShouldFailIntentForPositioningRetryLimit(const BossTargetContext& context) const;
-    bool IsFacingPlayerForAttack(const BossTargetContext& context) const;
-    bool PreparePendingAttackFacing(const BossTargetContext& context);
     bool HasPendingAttackFacing() const { return pendingAttackFacingValid; }
     const DirectX::XMFLOAT3& GetPendingAttackFacingDirection() const
     {
@@ -549,10 +503,6 @@ public:
     // ?{?X????O????o??J?n????
     void StartGruxNamePerform(float duration, float start = 0.0f, float end = 1.0f);
 
-    // ???I?????member??????????
-    bool SelectCombatAction();
-    // FastCombo?"??s??EE???????
-    // FastCombo??U????????dI??l???
     bool CanPlanFastCombo() const;
     void StartFastComboApproachRetryCooldown();
     bool IsFastComboApproachRetryCooldownActive() const;
@@ -729,7 +679,6 @@ private:
 
     // Action????Base Weight????Effective Weight??X?V????
     void UpdateActionEffectiveWeights();
-    bool IsCombatAttackAction(BossActionType actionType) const;
     bool IsRepeatPenaltyCombatAttack(BossActionType actionType) const;
     bool IsAttackActionForIntent(BossActionType actionType, BossIntentType intentType) const;
     float GetRecentAttackPenalty(BossActionType actionType) const;
@@ -973,7 +922,6 @@ private:
     uint64_t currentAttackSequenceId = 0;
     int currentAttackHitCount = 0;
 
-    bool phaseTransitionCombatStopped = false;
     bool battleAIActive = true; // ?{?X?o?g??AI??g?p??????????@false???idle?^??
     //BossAIMode bossAIMode = BossAIMode::CombatAI;         // ?{?X??AI???[?h
     BossAIMode bossAIMode = BossAIMode::DebugFixedAttack;   // ?{?X??AI???[?h?@?f?o?b?N?p
@@ -1002,16 +950,10 @@ private:
         { BossIntentType::CombatReposition, 3.0f, 12.0f, 10.0f, 0.0f, 100.0f, 0.0f },
     } };
     std::array<float, intentCount> combatIntentEffectiveWeights{};
-    bool hasLastIntentRandomRoll = false;
-    float lastIntentRandomRoll = 0.0f;
-    float lastIntentRandomTotalWeight = 0.0f;
-    std::array<float, intentCount> lastIntentRandomRangeBegin{};
     std::array<float, intentCount> lastIntentRandomRangeEnd{};
-    std::array<float, intentCount> lastIntentRandomWeights{};
     std::optional<BossIntentType> lastSelectedIntent = std::nullopt;
 
     BossActionType selectedActionType = BossActionType::AttackLA;
-    BossActionType lastActionType = BossActionType::AttackLA;
     std::optional<BossActionType> lastStartedCombatAttack = std::nullopt;
     std::optional<BossActionType> secondLastStartedCombatAttack = std::nullopt;
     static constexpr float initialRepeatAttackPenalty = 0.25f;
@@ -1071,8 +1013,6 @@ private:
     bool rotationDebugYawInitialized = false;
     float rotationDebugPreviousYaw = 0.0f;
     float rotationDebugCurrentYaw = 0.0f;
-    float rotationDebugPlayerYaw = 0.0f;
-    float rotationDebugActualYawDelta = 0.0f;
     float rotationDebugRequestedTurnSpeed = 0.0f;
     std::array<RotationSourceDebug, 8> rotationDebugSources{};
     int rotationDebugSourceCount = 0;
@@ -1202,7 +1142,6 @@ private:
         int minimumMoveRejectCount = 0;
         int capsuleCastRejectCount = 0;
         int bossRoomProbeRejectCount = 0;
-        int otherRejectCount = 0;
         bool lastCapsuleCastHit = false;
         bool lastCapsuleCastWorldStatic = false;
         bool lastCapsuleCastWorldProps = false;
@@ -1345,9 +1284,6 @@ private:
     float fastComboStepInRemainingDistance = 0.0f;
     float fastComboStepInElapsed = 0.0f;
     DirectX::XMFLOAT3 fastComboStepInDirection{};
-    float fastComboStepInNotifyStartTime = 0.0f;
-    float fastComboStepInNotifyEndTime = 0.0f;
-    float fastComboStepInDuration = 0.0f;
     float fastComboStepInCalculatedSpeed = 0.0f;
     float fastComboStepInAppliedSpeed = 0.0f;
     int fastComboRuntimeStage = -1;
@@ -1361,27 +1297,16 @@ private:
     float attackSetupChosenDistance = 0.0f;
     float attackSetupPlannedMoveDistance = 0.0f;
     int attackSetupCandidateCount = 0;
-    bool attackFacingEvaluationValid = false;
     float attackFacingEvaluationTolerance = 0.0f;
     float attackFacingEvaluationAngle = 0.0f;
     bool attackFacingEvaluationRequired = false;
-    bool lastResumedAttackValid = false;
-    BossAttackType lastResumedAttackType = BossAttackType::PrimaryAttackLA;
     bool attackReadyActive = false;
     float attackReadyDebugTimer = 0.0f;
-    BossAttackType attackReadyDebugType = BossAttackType::PrimaryAttackLA;
     bool attackReadySEFired = false;
     AttackReadyReason attackReadyReason = AttackReadyReason::Front;
 
     bool hasSelectedActionDebug = false;
-    bool hasLastActionRandomRoll = false;
-    float lastActionRandomRoll = 0.0f;
-    float lastActionRandomTotalWeight = 0.0f;
-    std::array<float, actionCount> lastActionRandomRangeBegin{};
-    std::array<float, actionCount> lastActionRandomRangeEnd{};
-    std::array<float, actionCount> lastActionRandomWeights{};
 
-    // ?U??????~f?[?^???`????z??B?A?j???[?V???????A????????A?d??A?U???????????B
     std::array<BossAttackData, 6> combatAttackData =
     { {
         { BossAttackType::PrimaryAttackLA, "PrimaryAttack_LA", 0.0f, 5.0f, 1.0f, 1.25f, 5 },
@@ -1396,7 +1321,6 @@ private:
     std::array<float, 5> combatEffectiveWeights{};  // ?????????Repeat?????l???????L????d??
     std::array<bool, 5> combatCandidateFlags{}; // ?e?U??????????????????A????~t???O?@???ImGui?Og?p?B
     float currentCombatPlayerDistance = 0.0f;   // Attack?I????_?~v???C???[???????B????????????????g?p?B
-    float lastCombatSelectionDistance = 0.0f;   //  ?O??Attack???I??s?????????????B?????ImGui?\???p????e???B
     float repeatWeightScale = 0.25f;    //  ???O?????Attack??Weight??|????{???B?????0.25??^LA?????U????Weight??25%????????B
 
     std::array<BossPositioningData, 4> combatPositioningData =
@@ -1410,21 +1334,10 @@ private:
     //  StateMachine?~^?C?~???O?????????
     float attackInterval = 0.1f;   // EnemyThinkState??????A???Attack?I???J?n?????l???????B
     float recoveryDuration = 0.5f;  //  ?U???I????AEnemyRecoveryState?????????B?????SAttack?????0.5?b?B
-    float attackFacingAngle = 45.0f;    // ????p?x?????U????\?????
 
     float nearFrontFastComboProbability = 0.7f;
     float fastComboFrontMaxAngle = 90.0f;
     float defensiveBackMinAngle = 120.0f;
-    std::string attackSelectorDebugMode = "Uniform";
-    int attackSelectorDebugCandidateCount = 0;
-    float attackSelectorDebugProbability = 0.0f;
-    float attackSelectorDebugEffectiveProbability = 0.0f;
-    float attackSelectorDebugRoll = 0.0f;
-    std::string attackSelectorDebugSelected = "None";
-    std::string attackSelectorDebugRepeatPenaltyTarget = "None";
-    float attackSelectorDebugBaseWeight = 1.0f;
-    float attackSelectorDebugEffectiveWeight = 1.0f;
-    bool attackSelectorDebugRepeatPenaltyApplied = false;
     float nearDistanceThreshold = 8.0f; // ?????????????????????
     float middleDistanceThreshold = 12.0f; // ??????????????????????
 
@@ -1452,7 +1365,6 @@ private:
     float frontAttackReadyDuration = initialFrontAttackReadyDuration;
     float sideAttackReadyDuration = initialSideAttackReadyDuration;
     float closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
-    float currentFacingAngleBeforeReady = 0.0f;
     std::string attackReadySEName = "enemy_attack_ready1";
     float attackReadySEVolume = 1.0f;
     struct PositioningDebugSnapshot
@@ -1604,9 +1516,6 @@ private:
     bool jumpLandingDebugMotionWarpEndCaptured = false;
     bool jumpLandingDebugGroundImpactCaptured = false;
     bool jumpLandingDebugWallHit = false;
-    float jumpLandingDebugPlayerDistance = 0.0f;
-    float jumpLandingDebugRequestedDistance = 0.0f;
-    float jumpLandingDebugCalculatedDistance = 0.0f;
     float jumpLandingDebugTargetErrorXZ = 0.0f;
     DirectX::XMFLOAT3 jumpLandingDebugPlayerSnapshot{};
     DirectX::XMFLOAT3 jumpLandingDebugPlannedLanding{};
@@ -1956,18 +1865,8 @@ private:
     bool beginHuskParticleRequest = false;
     // Animation request history used only to identify external death-cinematic overwrites.
     uint64_t animationDebugFrameCounter = 0;
-    mutable std::string lastAnimationRequestDebug = "None";
-    mutable std::string previousAnimationRequestDebug = "None";
-    mutable std::string animationRequestSourceDebug = "None";
-    mutable std::string animationRequestBattleFlowDebug = "None";
-    mutable std::string animationRequestBossDeathPhaseDebug = "None";
-    mutable uint64_t animationRequestFrameDebug = 0;
     float pitchBaseValue = 0.45f;
 
-    // ??????u?p?R???|?[?l???g?????@??lO?????\???p
-    std::shared_ptr<SceneComponent> leftEyeSceneComponent;
-    // ?E????u?p?R???|?[?l???g?????@??lO?????\???p
-    std::shared_ptr<SceneComponent> rightEyeSceneComponent;
 
     // ?J??????????_???u
     std::shared_ptr<SceneComponent> cameraTargetComponent;
@@ -2109,7 +2008,6 @@ private:
     std::string debugTelegraphEntryBTLastResult = "None";
     uint64_t debugTelegraphEntryUpdateBTCount = 0;
     uint64_t debugTelegraphEntryTripleUpdateCount = 0;
-    bool behaviorTreeRestartReady = false;
     BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;
     bool behaviorApproachActive = false;
     float fastComboPrepareDuration = 0.5f;

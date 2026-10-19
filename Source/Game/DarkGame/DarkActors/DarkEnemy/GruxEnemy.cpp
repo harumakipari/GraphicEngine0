@@ -193,19 +193,10 @@ void GruxEnemy::Initialize(const Transform& transform)
         stateMachine_ = std::make_shared<StateMachine>();
         stateMachine_->RegisterState(std::make_unique<EnemyIdleState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyDeathState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyThinkState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyTurnState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyAttackReadyState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyAttackState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyChargeAttackState>(this));
         stateMachine_->RegisterState(std::make_unique<EnemyStunState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyRecoveryState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyPositioningState>(this));
 
         // ステートマシンを character に追加
         this->SetStateMachine(stateMachine_);
-        // 初期ステートを設定
-        //stateMachine_->ChangeState("EnemyIdleState");
     }
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
@@ -299,20 +290,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     int socketBeltNode = skeletalMeshComponent->FindIndexByName("neck_03");
     beltComponent = AddComponent<SceneComponent>("beltComponent", parentName);
     beltComponent->AttachToComponent(skeletalMeshComponent, socketBeltNode); // "belt"
-
-
-    int leftEyeSocketNode = skeletalMeshComponent->FindIndexByName("L_eye");
-    int rightEyeSocketNode = skeletalMeshComponent->FindIndexByName("R_eye");
-
-    // 左目の位置用コンポーネントを追加　暗闇で光る目の表現用
-    leftEyeSceneComponent = this->AddComponent<SceneComponent>("leftEye", parentName);
-    leftEyeSceneComponent->AttachToComponent(skeletalMeshComponent, leftEyeSocketNode);
-    leftEyeSceneComponent->SetRelativeLocationDirect({ 0.0f,0.03f,-0.1f });
-
-    // 右目の位置用コンポーネントを追加　暗闇で光る目の表現用
-    rightEyeSceneComponent = this->AddComponent<SceneComponent>("rightEye", parentName);
-    rightEyeSceneComponent->AttachToComponent(skeletalMeshComponent, rightEyeSocketNode);
-    rightEyeSceneComponent->SetRelativeLocationDirect({ 0.0f,0.03f,-0.1f });
 
     // カメラの注視点の位置のコンポーネントを追加
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
@@ -857,7 +834,6 @@ void GruxEnemy::PauseBattleAI()
 void GruxEnemy::PauseBattleAIForPhaseTransition()
 {
     phase2CinematicAnimationOwnedExternally = true;
-    phaseTransitionCombatStopped = true;
     battleAIActive = false;
     ResetFourthHitReactionDebug();
     StopBattleActions();
@@ -871,7 +847,6 @@ void GruxEnemy::PauseBattleAIForPhaseTransition()
 void GruxEnemy::ResumeBattleAI()
 {
     phase2CinematicAnimationOwnedExternally = false;
-    phaseTransitionCombatStopped = false;
     battleAIActive = true;
 }
 
@@ -957,23 +932,8 @@ void GruxEnemy::BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePositio
 
 void GruxEnemy::ForcePhase2CinematicIdleImmediate(const char* debugSource)
 {
-    previousAnimationRequestDebug = lastAnimationRequestDebug;
     if (const auto controller = GetBodyAnimationController())
     {
-        previousAnimationRequestDebug = controller->GetCurrentAnimationName();
-        lastAnimationRequestDebug = "TravelMode_Idle_0";
-        animationRequestSourceDebug = debugSource ? debugSource : "GameScene::Phase2ImmediateIdle";
-        animationRequestFrameDebug = animationDebugFrameCounter;
-        if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
-        {
-            animationRequestBattleFlowDebug = gameScene->GetBattleFlowStateDebugName();
-            animationRequestBossDeathPhaseDebug = gameScene->GetBossDeathPhaseDebugName();
-        }
-        else
-        {
-            animationRequestBattleFlowDebug = "NonGameScene";
-            animationRequestBossDeathPhaseDebug = "None";
-        }
         controller->PlayAnimationImmediate("TravelMode_Idle_0", true, true);
     }
 }
@@ -985,22 +945,6 @@ void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,
         std::strncmp(debugSource, "GameScene::Phase2", sizeof("GameScene::Phase2") - 1) == 0;
     if (phase2CinematicAnimationOwnedExternally && !phase2GameSceneRequest)
         return;
-    previousAnimationRequestDebug = lastAnimationRequestDebug;
-    if (const auto controller = GetBodyAnimationController())
-        previousAnimationRequestDebug = controller->GetCurrentAnimationName();
-    lastAnimationRequestDebug = name;
-    animationRequestSourceDebug = debugSource ? debugSource : "Unattributed";
-    animationRequestFrameDebug = animationDebugFrameCounter;
-    if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
-    {
-        animationRequestBattleFlowDebug = gameScene->GetBattleFlowStateDebugName();
-        animationRequestBossDeathPhaseDebug = gameScene->GetBossDeathPhaseDebugName();
-    }
-    else
-    {
-        animationRequestBattleFlowDebug = "NonGameScene";
-        animationRequestBossDeathPhaseDebug = "None";
-    }
     Character::PlayBodyAnimation(name, loop, blend, blendTime, ignoreRootMotion);
 }
 void GruxEnemy::StartWeaponTelegraph(const std::string& animationName)
@@ -1112,7 +1056,6 @@ void GruxEnemy::StopBattleActions()
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
     retreatRuntime = {};
     repositionRuntime = {};
-    ClearActiveIntent();
     ClearPendingAttackFacing();
     ClearJumpAttackMotionWarpOverride();
     ClearFastComboStepIn();
@@ -1175,7 +1118,6 @@ void GruxEnemy::ResetBehaviorTreeForBattleRestart()
     repositionDecisionCached = false;
     repositionDecisionResult = false;
     repositionDecisionRoll = 0.0f;
-    behaviorTreeRestartReady = true;
 }
 
 void GruxEnemy::ResetCombatRuntimeForBattleRestart()
@@ -1511,7 +1453,7 @@ void GruxEnemy::Update(float deltaTime)
             controller->OnUpdate(deltaTime);
         return;
     }
-    if (phaseTransitionCombatStopped ||
+    if (
         (gameScene && gameScene->IsBossPhaseTransitionActive()))
     {
         ResetWeaponTelegraphRimLight();
@@ -1836,18 +1778,6 @@ void GruxEnemy::Update(float deltaTime)
     lockOnTargetMeshComponent->SetWorldLocationDirect({ lockOnPos });
     DirectX::XMFLOAT4 rotation = MathHelper::LookRotation(toPlayerDir, { 0,1,0 });
     lockOnTargetMeshComponent->SetRelativeRotationDirect(rotation);
-
-#endif // 0
-
-#if 0 // ジャスト回避のタイミングをわかりやすくするため
-    if (isDangerWindow)
-    {
-        skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 2.0f;
-    }
-    else
-    {
-        skeletalMeshComponent->plusAlphaCBuffer->data.chargePower = 0.0f;
-    }
 
 #endif // 0
 
@@ -2509,14 +2439,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::ColorEdit4("bossHpDelayedColor", &bossHpDelayedColor.r);
 
     ImGui::SeparatorText("Boss AI");
-    int aiModeIndex = static_cast<int>(bossAIMode);
-    const char* aiModes[] = { "CombatAI", "DebugFixedAttack" };
-    if (ImGui::Combo("AI Mode", &aiModeIndex, aiModes, static_cast<int>(std::size(aiModes))))
-    {
-        bossAIMode = static_cast<BossAIMode>(aiModeIndex);
-        if (bossAIMode == BossAIMode::DebugFixedAttack)
-            ClearActiveIntent();
-    }
 
     ImGui::Checkbox("Force BehaviorTree Charge", &forceBehaviorTreeCharge);
 
@@ -2874,8 +2796,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Line Y Offset", &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
     ImGui::DragFloat("Fan Y Offset", &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
 
-
-
     if (ImGui::TreeNode("Positioning Tuning"))
     {
         for (BossPositioningData& data : combatPositioningData)
@@ -2926,8 +2846,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::SeparatorText("Positioning Animation Tuning");
     ImGui::DragFloat("Move Start Speed Threshold",
         &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
-    positioningMoveStartSpeedThreshold =
-        std::clamp(positioningMoveStartSpeedThreshold, 0.01f, 10.0f);
+    positioningMoveStartSpeedThreshold =std::clamp(positioningMoveStartSpeedThreshold, 0.01f, 10.0f);
     ImGui::DragFloat("Move Stop Speed Threshold",
         &positioningMoveStopSpeedThreshold, 0.01f, 0.0f,
         positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
@@ -3207,7 +3126,6 @@ void GruxEnemy::DrawImGuiDetails()
             closeCombatReadyFacingAngle, 0.0f, 30.0f);
 
 
-        const float evaluationTotalWeight = GetTotalActionWeight();
         ImGui::SeparatorText("Positioning Plans");
         for (size_t i = 0; i < combatIntentData.size(); ++i)
         {
@@ -3335,14 +3253,6 @@ void GruxEnemy::DrawImGuiDetails()
                     }
                 }
 
-                const bool candidate =
-                    combatActionCandidateReasons[i] == BossActionCandidateReason::Candidate;
-                const float probability = candidate && evaluationTotalWeight > 0.0f
-                    ? combatActionEffectiveWeights[i] / evaluationTotalWeight
-                    : 0.0f;
-                char probabilityLabel[32]{};
-                sprintf_s(probabilityLabel, "%.1f%%", probability * 100.0f);
-                ImGui::ProgressBar(probability, ImVec2(-1.0f, 0.0f), probabilityLabel);
                 ImGui::TreePop();
             }
             ImGui::PopID();
@@ -3380,8 +3290,6 @@ void GruxEnemy::DrawImGuiDetails()
         }
     }
 
-    ImGui::SeparatorText("Action Evaluation (Last AI Evaluation)");
-    const float actionEvaluationTotalWeight = GetTotalActionWeight();
 
 
     ImGui::SeparatorText("Weighted Random Result (Last Selection)");
@@ -3456,10 +3364,6 @@ bool GruxEnemy::IsStunned() const
     return stateMachine_ && std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") == 0;
 }
 
-void GruxEnemy::TakeDamage(const int damage)
-{
-    TakeDamageFromPlayerAttack(damage, false, PlayerAttackHitType::Normal, {});
-}
 
 void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormalFourthHit,
     const PlayerAttackHitType hitType, const DirectX::XMFLOAT3& hitSourcePosition)
@@ -4639,65 +4543,13 @@ void GruxEnemy::FinishPositioningDebug(const std::string& reason)
     lastPositioningDebug = currentPositioningDebug;
 }
 
-bool GruxEnemy::InvalidateCloseCombatIntentForBack(const BossTargetContext& context)
-{
-    if (!activeIntent || *activeIntent != BossIntentType::CloseCombat ||
-        !context.valid || context.region != PlayerRelativeRegion::Back)
-    {
-        return false;
-    }
-
-    FailActiveIntent("WrongRelativeRegion");
-    return true;
-}
-
 bool GruxEnemy::IsCombatRepositionActive() const
 {
     return activeIntent && *activeIntent == BossIntentType::CombatReposition;
 }
 
-void GruxEnemy::CompleteCombatReposition()
-{
-    if (!IsCombatRepositionActive())
-        return;
 
-    activeIntent = std::nullopt;
-    suppressCombatRepositionForNextIntentSelection = true;
-    activeIntentStep = BossIntentStep::Completed;
-    intentPositioningAttempted = false;
-    intentPositioningCompleted = true;
-    intentRepositionReason = "None";
-    intentLifecycleState = "Intent Completed";
-    intentLifecycleTrace += " -> Reposition Completed";
-    intentLifecycleReason = "RepositionCompleted";
-    repositionCompletionReason = "RepositionCompleted";
-}
 
-bool GruxEnemy::TryStartIntent(BossIntentType intentType)
-{
-    if (activeIntent)
-        return false;
-
-    activeIntent = intentType;
-    activeIntentStep = BossIntentStep::Selecting;
-    intentPositioningAttempted = false;
-    intentPositioningCompleted = false;
-    intentPositioningAttemptCount = 0;
-    intentRepositionReason = "None";
-    intentLifecycleState = "Intent Started";
-    intentLifecycleTrace = "Intent Started";
-    intentLifecycleReason = "None";
-    if (intentType == BossIntentType::CombatReposition)
-    {
-        const BossTargetContext context = BuildTargetContext();
-        repositionReason = context.valid && context.region == PlayerRelativeRegion::Back
-            ? BossRepositionReason::BackTaken : BossRepositionReason::Normal;
-        repositionCompletionReason = "Running";
-        selectedRepositionDirection = BossRepositionDirection::None;
-    }
-    return true;
-
-}
 float GruxEnemy::GetTotalIntentWeight() const
 {
     float totalWeight = 0.0f;
@@ -4764,167 +4616,10 @@ void GruxEnemy::UpdateIntentEffectiveWeights(const BossTargetContext& context)
     }
 }
 
-bool GruxEnemy::SelectIntentByWeight()
-{
-    if (activeIntent)
-        return false;
 
-    if (combatRepositionIntentPending)
-    {
-        combatRepositionIntentPending = false;
-        postAttackCombatRepositionBoostPending = false;
-        postAttackCombatRepositionBoostApplied = false;
-        lastSelectedIntent = BossIntentType::CombatReposition;
-        return TryStartIntent(BossIntentType::CombatReposition);
-    }
 
-    const BossTargetContext context = BuildTargetContext();
-    const bool applyPostAttackBoost = postAttackCombatRepositionBoostPending;
-    UpdateIntentEffectiveWeights(context);
-    postAttackCombatRepositionBoostApplied = applyPostAttackBoost;
-    postAttackCombatRepositionBoostPending = false;
-    if (suppressCombatRepositionForNextIntentSelection)
-    {
-        for (size_t i = 0; i < combatIntentData.size(); ++i)
-        {
-            if (combatIntentData[i].type == BossIntentType::CombatReposition)
-            {
-                combatIntentEffectiveWeights[i] = 0.0f;
-                break;
-            }
-        }
-        suppressCombatRepositionForNextIntentSelection = false;
-    }
-    const float totalWeight = GetTotalIntentWeight();
-    lastIntentRandomTotalWeight = totalWeight;
-    lastIntentRandomRangeBegin.fill(0.0f);
-    lastIntentRandomRangeEnd.fill(0.0f);
-    lastIntentRandomWeights = combatIntentEffectiveWeights;
-    if (totalWeight <= 0.0f)
-    {
-        hasLastIntentRandomRoll = false;
-        return false;
-    }
 
-    static std::mt19937 randomEngine{ std::random_device{}() };
-    std::uniform_real_distribution<float> distribution(0.0f, totalWeight);
-    const float selectionValue = distribution(randomEngine);
-    lastIntentRandomRoll = selectionValue;
-    hasLastIntentRandomRoll = true;
 
-    float accumulatedWeight = 0.0f;
-    for (size_t i = 0; i < combatIntentData.size(); ++i)
-    {
-        const float effectiveWeight = combatIntentEffectiveWeights[i];
-        if (effectiveWeight <= 0.0f)
-            continue;
-
-        lastIntentRandomRangeBegin[i] = accumulatedWeight;
-        accumulatedWeight += effectiveWeight;
-        lastIntentRandomRangeEnd[i] = accumulatedWeight;
-    }
-
-    for (size_t i = 0; i < combatIntentData.size(); ++i)
-    {
-        if (combatIntentEffectiveWeights[i] <= 0.0f)
-            continue;
-        if (selectionValue <= lastIntentRandomRangeEnd[i])
-        {
-            lastSelectedIntent = combatIntentData[i].type;
-            return TryStartIntent(combatIntentData[i].type);
-        }
-    }
-
-    return false;
-}
-
-void GruxEnemy::ClearActiveIntent()
-{
-    activeIntent = std::nullopt;
-    activeIntentStep = BossIntentStep::Selecting;
-    intentPositioningAttempted = false;
-    intentPositioningCompleted = false;
-    intentPositioningAttemptCount = 0;
-    intentRepositionReason = "None";
-    intentLifecycleState = "None";
-    intentLifecycleTrace = "None";
-    intentLifecycleReason = "Cleared";
-}
-
-void GruxEnemy::MarkIntentPositioningAttempted()
-{
-    if (!activeIntent)
-        return;
-
-    const bool validPositioning =
-        (*activeIntent == BossIntentType::CloseCombat &&
-            selectedActionType == BossActionType::Approach) ||
-        (*activeIntent == BossIntentType::DashAttackPlan &&
-            (selectedActionType == BossActionType::Approach ||
-                selectedActionType == BossActionType::Retreat)) ||
-        (*activeIntent == BossIntentType::JumpAttackPlan &&
-            (selectedActionType == BossActionType::Approach ||
-                selectedActionType == BossActionType::Retreat)) ||
-        (*activeIntent == BossIntentType::CombatReposition &&
-            IsRepositionAction(selectedActionType));
-    if (!validPositioning)
-        return;
-
-    intentPositioningAttempted = true;
-    intentPositioningCompleted = false;
-    ++intentPositioningAttemptCount;
-    activeIntentStep = BossIntentStep::Positioning;
-    intentLifecycleState = "Positioning";
-    intentLifecycleTrace += " -> Positioning";
-}
-
-void GruxEnemy::MarkIntentPositioningCompleted()
-{
-    if (!activeIntent || activeIntentStep != BossIntentStep::Positioning)
-        return;
-
-    intentPositioningCompleted = true;
-    activeIntentStep = BossIntentStep::AttackPending;
-    intentRepositionReason = "None";
-    intentLifecycleState = "Attack Pending";
-    intentLifecycleTrace += " -> WorldTargetReached -> AttackPending";
-}
-
-void GruxEnemy::BeginIntentReevaluation()
-{
-    if (!activeIntent || !intentPositioningAttempted ||
-        activeIntentStep != BossIntentStep::Positioning)
-        return;
-
-    activeIntentStep = BossIntentStep::AttackPending;
-    intentLifecycleState = "Reevaluate";
-    intentLifecycleTrace += " -> Reevaluate";
-}
-
-void GruxEnemy::MarkIntentAttackSelected()
-{
-    if (!activeIntent)
-        return;
-
-    const bool isCloseCombatAttack =
-        *activeIntent == BossIntentType::CloseCombat &&
-        (selectedActionType == BossActionType::AttackLA ||
-            selectedActionType == BossActionType::AttackRA ||
-            selectedActionType == BossActionType::FastCombo);
-    const bool isDashAttackPlanAttack =
-        *activeIntent == BossIntentType::DashAttackPlan &&
-        (selectedActionType == BossActionType::DashAttack ||
-            selectedActionType == BossActionType::ChargeAttack);
-    const bool isJumpAttackPlanAttack =
-        *activeIntent == BossIntentType::JumpAttackPlan &&
-        selectedActionType == BossActionType::JumpAttack;
-    if (!isCloseCombatAttack && !isDashAttackPlanAttack && !isJumpAttackPlanAttack)
-        return;
-
-    activeIntentStep = BossIntentStep::AttackPending;
-    intentLifecycleState = "Attack Selected";
-    intentLifecycleTrace += " -> Attack Selected";
-}
 
 void GruxEnemy::RequestJumpAttackCameraAssist()
 {
@@ -5035,25 +4730,7 @@ void GruxEnemy::OnSelectedAttackCompletedSuccessfully()
     postAttackCombatRepositionBoostApplied = false;
 }
 
-void GruxEnemy::OnSelectedActionStartFailed()
-{
-    FailActiveIntent("AttackStartFailed");
-}
 
-void GruxEnemy::FailActiveIntent(const char* reason)
-{
-    if (!activeIntent)
-        return;
-
-    activeIntent = std::nullopt;
-    activeIntentStep = BossIntentStep::Failed;
-    intentPositioningAttempted = false;
-    intentPositioningCompleted = false;
-    intentRepositionReason = "None";
-    intentLifecycleState = "Intent Failed";
-    intentLifecycleTrace += " -> Intent Failed";
-    intentLifecycleReason = reason ? reason : "Unknown";
-}
 
 void GruxEnemy::StartSelectedActionCooldown()
 {
@@ -5071,97 +4748,6 @@ void GruxEnemy::StartSelectedActionCooldown()
     }
 }
 
-// 攻撃開始時に始める処理
-bool GruxEnemy::SelectAttackForCurrentMode()
-{
-    if (bossAIMode == BossAIMode::DebugFixedAttack)
-    {
-        selectedAttackType = debugFixedAttackType;
-        return true;
-    }
-    // プレイヤーまでの距離を取得する
-    currentCombatPlayerDistance = GetDistanceToPlayer();
-
-    // プレイヤーまでの距離から、候補のアクションフラグを更新する
-    const BossTargetContext context = BuildTargetContext();
-    UpdateActionCandidateFlags(context);
-
-    // 候補のアクションフラグから、候補の攻撃の確率の重みを更新する
-    UpdateActionEffectiveWeights();
-
-    lastCombatSelectionDistance = currentCombatPlayerDistance;
-    combatEffectiveWeights.fill(0.0f);
-    combatCandidateFlags.fill(false);
-
-    float totalWeight = 0.0f;
-    for (size_t i = 0; i < combatAttackData.size(); ++i)
-    {
-        const auto& attack = combatAttackData[i];
-        const bool inRange =
-            attack.minDistance <= currentCombatPlayerDistance &&
-            currentCombatPlayerDistance <= attack.maxDistance;
-        combatCandidateFlags[i] = inRange;
-        if (!inRange || attack.weight <= 0.0f)
-            continue;
-
-        float effectiveWeight = attack.weight;
-        if (hasLastAttack && attack.type == lastAttackType)
-            effectiveWeight *= repeatWeightScale;
-        combatEffectiveWeights[i] = effectiveWeight;
-        totalWeight += effectiveWeight;
-    }
-
-    if (totalWeight <= 0.0f)
-        return false;
-
-    static std::mt19937 randomEngine{ std::random_device{}() };
-    std::uniform_real_distribution<float> distribution(0.0f, totalWeight);
-    const float selectionValue = distribution(randomEngine);
-    float accumulatedWeight = 0.0f;
-    size_t selectedIndex = combatAttackData.size();
-    for (size_t i = 0; i < combatAttackData.size(); ++i)
-    {
-        if (combatEffectiveWeights[i] <= 0.0f)
-            continue;
-        accumulatedWeight += combatEffectiveWeights[i];
-        if (selectionValue <= accumulatedWeight)
-        {
-            selectedIndex = i;
-            break;
-        }
-    }
-
-    if (selectedIndex >= combatAttackData.size())
-    {
-        for (size_t i = combatAttackData.size(); i-- > 0;)
-        {
-            if (combatEffectiveWeights[i] > 0.0f)
-            {
-                selectedIndex = i;
-                break;
-            }
-        }
-    }
-    if (selectedIndex >= combatAttackData.size())
-        return false;
-
-    selectedAttackType = combatAttackData[selectedIndex].type;
-    lastAttackType = selectedAttackType;
-    hasLastAttack = true;
-    return true;
-}
-int GruxEnemy::GetAttackStageCount(BossAttackType type) const
-{
-    if (type == BossAttackType::FastCombo)
-        return 3;
-    if (type == BossAttackType::DashAttack)
-        return 3;
-    if (type == BossAttackType::JumpAttack)
-        return 2;
-    if (type == BossAttackType::LongRangeAttack)
-        return 0;
-    return 1;
-}
 
 bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
 {
@@ -6301,10 +5887,6 @@ void GruxEnemy::StartAttack()
 {
     ClearJumpAttackMotionWarpOverride();
     StopDashAttackMovement();
-#if 0
-    DirectX::XMFLOAT3 size = { 1.0f,4.0f,1.0f };
-    leftWeaponCollisionComp->ResizeCapsule(size.x, size.y);
-#endif // 0
     ++currentAttackSequenceId;
     ResetJustDodgeRecords("start_attack");
     Logger::Log(Logger::LogCategory::Gameplay,
@@ -6674,15 +6256,7 @@ void GruxEnemy::ClearAttackSetupTarget()
     attackSetupElapsedTime = attackSetupTraveledDistance = attackSetupRemainingDistance =
         attackSetupStuckTime = attackSetupPlannedMoveDistance = 0.0f;
 }
-void GruxEnemy::BeginAttackSetupMovement()
-{
-    attackSetupRuntime = {};
-    attackSetupRuntime.movementActive = attackSetupTarget.valid;
-    attackSetupRuntime.previousPosition = GetPosition();
-    attackSetupMovementActive = attackSetupRuntime.movementActive;
-    attackSetupPreviousPosition = attackSetupRuntime.previousPosition;
-    attackSetupElapsedTime = attackSetupTraveledDistance = attackSetupStuckTime = 0.0f;
-}
+
 void GruxEnemy::StopAttackSetupMovement()
 {
     attackSetupRuntime.movementActive = false;
@@ -6745,9 +6319,6 @@ void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float not
     const float stepDistance = std::clamp(distanceError * fastComboStepInRatio,
         0.0f, fastComboMaxStepInDistance[stage]);
     const float notifyDuration = notifyEndTime - notifyStartTime;
-    fastComboStepInNotifyStartTime = notifyStartTime;
-    fastComboStepInNotifyEndTime = notifyEndTime;
-    fastComboStepInDuration = notifyDuration;
     fastComboStepInCalculatedSpeed = notifyDuration > 0.001f ? stepDistance / notifyDuration : 0.0f;
     fastComboStepInAppliedSpeed = (std::min)(fastComboStepInCalculatedSpeed, fastComboStepInMaxSpeed);
     if (notifyDuration <= 0.001f || stepDistance <= 0.001f || fastComboStepInAppliedSpeed <= 0.001f)
@@ -6808,22 +6379,6 @@ float GruxEnemy::GetAttackRepeatPenaltyForPlan(const std::string& planName) cons
     return 1.0f;
 }
 
-void GruxEnemy::RecordAttackSelectorDebug(const char* mode, int count, float fastComboBaseProbability,
-    float fastComboEffectiveProbability, float roll, const char* selected,
-    const char* repeatPenaltyTarget, float baseWeight, float effectiveWeight,
-    bool repeatPenaltyApplied)
-{
-    attackSelectorDebugMode = mode ? mode : "Uniform";
-    attackSelectorDebugCandidateCount = count;
-    attackSelectorDebugProbability = fastComboBaseProbability;
-    attackSelectorDebugEffectiveProbability = fastComboEffectiveProbability;
-    attackSelectorDebugRoll = roll;
-    attackSelectorDebugSelected = selected ? selected : "None";
-    attackSelectorDebugRepeatPenaltyTarget = repeatPenaltyTarget ? repeatPenaltyTarget : "None";
-    attackSelectorDebugBaseWeight = baseWeight;
-    attackSelectorDebugEffectiveWeight = effectiveWeight;
-    attackSelectorDebugRepeatPenaltyApplied = repeatPenaltyApplied;
-}
 BossTargetContext GruxEnemy::BuildTargetContext() const
 {
     BossTargetContext context{};
@@ -6893,61 +6448,8 @@ BossTargetContext GruxEnemy::BuildTargetContext() const
     return context;
 }
 
-bool GruxEnemy::IsFacingPlayerForAttack(
-    const BossTargetContext& context) const
-{
-    return context.valid &&
-        context.absoluteAngleDegrees <= closeCombatSettings.facingLimitDegrees;
-}
 
-namespace
-{
-    float GetAttackFacingTolerance(const BossAttackType attackType)
-    {
-        switch (attackType)
-        {
-        case BossAttackType::PrimaryAttackLA:
-        case BossAttackType::PrimaryAttackRA:
-        case BossAttackType::FastCombo:
-            return 45.0f;
-        case BossAttackType::DashAttack:
-        case BossAttackType::ChargeAttack:
-        case BossAttackType::JumpAttack:
-            return 90.0f;
-        default:
-            return 0.0f;
-        }
-    }
-}
 
-bool GruxEnemy::PreparePendingAttackFacing(const BossTargetContext& context)
-{
-    ClearPendingAttackFacing();
-    attackFacingEvaluationValid = context.valid;
-    attackFacingEvaluationTolerance = GetAttackFacingTolerance(selectedAttackType);
-    attackFacingEvaluationAngle = context.valid ? context.absoluteAngleDegrees : 0.0f;
-    const bool attackFacingRequired = context.valid &&
-        attackFacingEvaluationTolerance > 0.0f &&
-        attackFacingEvaluationAngle > attackFacingEvaluationTolerance;
-    const bool isCloseCombat = IsCloseCombatAttackType(selectedAttackType);
-    currentFacingAngleBeforeReady = isCloseCombat
-        ? attackFacingEvaluationAngle
-        : 0.0f;
-    const bool readyFacingRequired = context.valid && isCloseCombat &&
-        attackFacingEvaluationAngle > closeCombatReadyFacingAngle;
-    attackFacingEvaluationRequired = attackFacingRequired || readyFacingRequired;
-
-    if (!attackFacingEvaluationRequired)
-        return false;
-
-    pendingAttackActionValid = true;
-    pendingAttackFacingValid = true;
-    pendingAttackFacingDirection = context.directionToPlayer;
-    pendingAttackFacingCompleteAngle = isCloseCombat
-        ? closeCombatReadyFacingAngle
-        : turnCompleteAngle;
-    return true;
-}
 
 float GruxEnemy::GetPendingAttackFacingAngle() const
 {
@@ -6984,7 +6486,6 @@ void GruxEnemy::BeginAttackReadyDebug()
 {
     attackReadyActive = true;
     attackReadyDebugTimer = 0.0f;
-    attackReadyDebugType = selectedAttackType;
     attackReadySEFired = false;
 }
 
@@ -7030,8 +6531,6 @@ bool GruxEnemy::ResumeSelectedAttackAfterTurn()
         return false;
     }
 
-    lastResumedAttackType = selectedAttackType;
-    lastResumedAttackValid = true;
     ClearPendingAttackFacing();
     if (IsCloseCombatAttackType(selectedAttackType))
     {
@@ -7079,14 +6578,9 @@ void GruxEnemy::FinishRotationDebugFrame()
         rotationDebugPreviousYaw = rotationDebugCurrentYaw;
         rotationDebugYawInitialized = true;
     }
-    rotationDebugActualYawDelta = std::remainder(
-        rotationDebugCurrentYaw - rotationDebugPreviousYaw, 360.0f);
     rotationDebugPreviousYaw = rotationDebugCurrentYaw;
 
     const BossTargetContext context = BuildTargetContext();
-    if (context.valid)
-        rotationDebugPlayerYaw = DirectX::XMConvertToDegrees(
-            std::atan2f(context.directionToPlayer.x, context.directionToPlayer.z));
 }
 
 void GruxEnemy::RecordRotationDebugSource(const char* source,
@@ -7295,39 +6789,6 @@ bool GruxEnemy::IsActionForCurrentIntent(BossActionType actionType, const BossTa
     return false;
 }
 
-bool GruxEnemy::ShouldWaitForActiveIntentCooldown(const BossTargetContext& context) const
-{
-    if (!activeIntent || !context.valid)
-        return false;
-
-    for (size_t i = 0; i < combatActionData.size(); ++i)
-    {
-        const BossActionData& actionData = combatActionData[i];
-        if (!IsActionForCurrentIntent(actionData.type, context))
-            continue;
-        if (!IsAttackPendingGoalAction(actionData.type, context) &&
-            !IsActionCandidateForCurrentDistance(actionData, context.distanceRegion))
-            continue;
-        if (actionData.weight <= 0.0f)
-            continue;
-        if (combatActionCooldownRemaining[i] > 0.0f)
-            return true;
-    }
-    return false;
-}
-
-bool GruxEnemy::ShouldFailIntentForPositioningRetryLimit(
-    const BossTargetContext& context) const
-{
-    if (!activeIntent || activeIntentStep != BossIntentStep::AttackPending || !context.valid ||
-        intentPositioningAttemptCount < maxIntentPositioningAttempts)
-        return false;
-
-    float validMin = 0.0f;
-    float validMax = 0.0f;
-    return GetIntentAttackValidRange(validMin, validMax) &&
-        context.xzDistance > validMax;
-}
 
 void GruxEnemy::UpdateActionCandidateFlags(const BossTargetContext& context)
 {
@@ -7413,15 +6874,6 @@ void GruxEnemy::UpdateActionCooldowns(float deltaTime)
         remaining = (std::max)(0.0f, remaining - safeDeltaTime);
 }
 
-bool GruxEnemy::IsCombatAttackAction(BossActionType actionType) const
-{
-    for (const BossActionData& actionData : combatActionData)
-    {
-        if (actionData.type == actionType)
-            return actionData.attackType.has_value();
-    }
-    return false;
-}
 
 bool GruxEnemy::IsRepeatPenaltyCombatAttack(BossActionType actionType) const
 {
@@ -7535,13 +6987,8 @@ float GruxEnemy::GetTotalActionWeight() const
 std::optional<BossActionType> GruxEnemy::SelectActionByWeight()
 {
     const float totalWeight = GetTotalActionWeight();
-    lastActionRandomTotalWeight = totalWeight;
-    lastActionRandomRangeBegin.fill(0.0f);
-    lastActionRandomRangeEnd.fill(0.0f);
-    lastActionRandomWeights = combatActionEffectiveWeights;
     if (totalWeight <= 0.0f)
     {
-        hasLastActionRandomRoll = false;
         return std::nullopt;
     }
 
@@ -7552,8 +6999,6 @@ std::optional<BossActionType> GruxEnemy::SelectActionByWeight()
         totalWeight);
 
     const float selectionValue = distribution(randomEngine);
-    lastActionRandomRoll = selectionValue;
-    hasLastActionRandomRoll = true;
 
     float accumulatedWeight = 0.0f;
 
@@ -7564,105 +7009,13 @@ std::optional<BossActionType> GruxEnemy::SelectActionByWeight()
         if (effectiveWeight <= 0.0f)
             continue;
 
-        lastActionRandomRangeBegin[i] = accumulatedWeight;
         accumulatedWeight += effectiveWeight;
-        lastActionRandomRangeEnd[i] = accumulatedWeight;
 
         if (selectionValue <= accumulatedWeight)
             return combatActionData[i].type;
     }
 
     return std::nullopt;
-}
-
-// 抽選結果をmemberへ保存する関数
-bool GruxEnemy::SelectCombatAction()
-{
-    // 現在の状況を取得する
-    const BossTargetContext context = BuildTargetContext();
-    currentCombatPlayerDistance = context.xzDistance;
-    lastCombatSelectionDistance = currentCombatPlayerDistance;
-
-    intentRepositionReason = "None";
-    if (activeIntent && activeIntentStep == BossIntentStep::AttackPending)
-    {
-        float validMin = 0.0f;
-        float validMax = 0.0f;
-        if (GetIntentAttackValidRange(validMin, validMax) &&
-            context.xzDistance > validMax)
-        {
-            intentRepositionReason = "Too Far For Attack";
-        }
-    }
-
-
-    // 現在の距離領域に基づいて、候補となる行動を更新する
-    if (IsCombatRepositionActive())
-        EvaluateRepositionTargets(context);
-
-    UpdateActionCandidateFlags(context);
-    // 候補となる行動の重みを更新する
-    UpdateActionEffectiveWeights();
-
-    // 重みに基づいて行動を選択する
-    const std::optional<BossActionType> action = SelectActionByWeight();
-
-    if (!action)
-        return false;
-
-    // 現在の選択結果を保存する
-    lastActionType = selectedActionType;
-    // 新しい選択結果を保存する
-    selectedActionType = *action;
-    hasSelectedActionDebug = true;
-
-    const BossPositioningData* positioningData = GetPositioningDataForAction(selectedActionType);
-    if (positioningData)
-    {
-        selectedPositioningData = *positioningData;
-        if (IsRepositionAction(selectedActionType))
-        {
-            selectedPositioningData->maxMoveDistance = combatRepositionMoveDistance;
-            selectedPositioningData->moveSpeed = combatRepositionMoveSpeed;
-            const RepositionTargetEvaluation& evaluation =
-                GetRepositionTargetEvaluation(selectedActionType);
-            fixedPositioningTarget = evaluation.clampedTarget;
-            fixedPositioningTargetValid = evaluation.sufficientlyMovable;
-            repositionDesiredTarget = evaluation.desiredTarget;
-            repositionClampedTarget = evaluation.clampedTarget;
-            repositionSelectedTargetWasClamped = evaluation.wasClamped;
-            selectedRepositionDirection =
-                selectedActionType == BossActionType::RepositionLeft
-                ? BossRepositionDirection::Left : BossRepositionDirection::Right;
-            repositionCompletionReason = evaluation.sufficientlyMovable
-                ? "Running" : GetRepositionFailureReason();
-        }
-
-        const BossIntentData* intentData = GetActiveIntentData();
-        if (intentData && !IsRepositionAction(selectedActionType))
-        {
-            const float rangeWidth = (std::max)(0.0f,
-                intentData->preferredMaxDistance - intentData->preferredMinDistance);
-            const float safeInset = (std::min)(
-                (std::max)(0.0f, intentData->positioningArrivalInset),
-                rangeWidth * 0.25f);
-            selectedPositioningData->completionType = BossPositioningCompletionType::TargetDistance;
-            if (selectedActionType == BossActionType::Approach)
-            {
-                selectedPositioningData->targetDistance =
-                    intentData->preferredMaxDistance - safeInset;
-            }
-            else if (selectedActionType == BossActionType::Retreat)
-            {
-                selectedPositioningData->targetDistance =
-                    intentData->preferredMinDistance + safeInset;
-            }
-        }
-    }
-    else
-        selectedPositioningData = std::nullopt;
-
-    return true;
 }
 
 

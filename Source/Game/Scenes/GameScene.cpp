@@ -5889,7 +5889,6 @@ void GameScene::DrawGuiPlusAlpha()
         else if (bossDeathPhase != BossDeathPhase::HuskDelay &&
             bossDeathPhase != BossDeathPhase::HuskPreview) huskWaitReason = "PhaseNotHusk";
         else if (bossDeathPhase == BossDeathPhase::HuskDelay) huskWaitReason = "HuskDelay";
-        else if (gruxEnemyActor && gruxEnemyActor->IsBeginHuskParticleRequestedForDebug()) huskWaitReason = "RequestPendingConsume";
         else if (gruxHuskCaptureRequested || gruxHuskPreviewCaptureRequested) huskWaitReason = "CapturePending";
         else if (!gruxHuskPlaybackActive) huskWaitReason = "PlaybackNotStarted";
         else if (!IsHuskComplete()) huskWaitReason = "WaitingCompletion";

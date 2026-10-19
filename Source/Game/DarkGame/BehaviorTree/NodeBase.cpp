@@ -138,10 +138,6 @@ NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* l
         {
             if (node->GetName() == "ChargeAttackPlan")
             {
-                owner->RecordAttackSelectorDebug(
-                    "ForceBehaviorTreeCharge", static_cast<int>(list->size()),
-                    0.0f, 0.0f, 0.0f, "ChargeAttackPlan", "None",
-                    1.0f, 1.0f, false);
                 return node.get();
             }
         }
@@ -208,18 +204,6 @@ NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* l
     }
 
     const float debugBaseWeight = selected ? 1.0f : 0.0f;
-    const float debugEffectiveWeight = repeatPenaltyTarget && owner
-        ? owner->GetAttackRepeatPenaltyForPlan(repeatPenaltyTarget->GetName())
-        : debugBaseWeight;
-    const bool repeatPenaltyApplied = repeatPenaltyTarget != nullptr;
-    if (owner)
-    {
-        owner->RecordAttackSelectorDebug(mode, static_cast<int>(list->size()),
-            fastComboBaseProbability, fastComboEffectiveProbability, roll,
-            selected ? selected->GetName().c_str() : "None",
-            repeatPenaltyTarget ? repeatPenaltyTarget->GetName().c_str() : "None",
-            debugBaseWeight, debugEffectiveWeight, repeatPenaltyApplied);
-    }
     return selected;
 }
 // シーケンス・シーケンシャルルーピングでノード選択

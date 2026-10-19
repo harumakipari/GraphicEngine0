@@ -83,9 +83,6 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
         jumpLandingDebugMotionWarpEndCaptured = false;
         jumpLandingDebugGroundImpactCaptured = false;
         jumpLandingDebugWallHit = false;
-        jumpLandingDebugPlayerDistance = currentJumpPlayerDistance;
-        jumpLandingDebugRequestedDistance = currentJumpPlayerDistance - desiredAttackDistance;
-        jumpLandingDebugCalculatedDistance = calculatedJumpDistance;
         jumpLandingDebugTargetErrorXZ = 0.0f;
         jumpLandingDebugPlayerSnapshot = tripleJumpActive
             ? tripleJumpPlayerPosition : jumpAttackStartPlayerPosition;
