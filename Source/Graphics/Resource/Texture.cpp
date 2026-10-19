@@ -7,18 +7,19 @@
 #include <WICTextureLoader.h>
 #include <wrl.h>
 #include <map>
+#include <mutex>
 #include <string>   
 
 #include "Engine/Utility/Win32Utils.h"
 #include "Graphics/Core/Graphics.h"
-using namespace DirectX;
-
-using namespace std;
 
 #include <wrl/client.h>
 using namespace Microsoft::WRL;
+using namespace DirectX;
+using namespace std;
 
 static map<wstring, ComPtr<ID3D11ShaderResourceView>> resources;
+static mutex resourcesMutex;
 
 
 HRESULT LoadTextureFromFile(
@@ -31,6 +32,7 @@ HRESULT LoadTextureFromFile(
 
     ComPtr<ID3D11Resource> resource;
 
+    unique_lock<mutex> lock(resourcesMutex);
     auto it = resources.find(filename);
 
     if (it != resources.end())
@@ -80,6 +82,8 @@ HRESULT LoadTextureFromFile(
         resources.insert(
             make_pair(filename, *shaderResourceView));
     }
+
+    lock.unlock();
 
     if (texture2dDesc)
     {
@@ -206,5 +210,6 @@ void Texture::Release()
 // キャッシュされたすべてのテクスチャを解放する関数
 void ReleaseAllTextures()
 {
+    lock_guard<mutex> lock(resourcesMutex);
     resources.clear();// テクスチャキャッシュをクリアする
 }

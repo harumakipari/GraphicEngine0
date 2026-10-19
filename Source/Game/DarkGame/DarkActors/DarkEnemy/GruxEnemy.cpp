@@ -2441,20 +2441,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Surface Offset", &rushHitEffectSurfaceOffset,
         0.005f, 0.0f, 0.20f, "%.3f m");
 
-    int attackIndex = static_cast<int>(debugFixedAttackType);
-    const char* attackTypes[] =
-    {
-        "PrimaryAttack_LA",
-        "PrimaryAttack_RA",
-        "FastCombo (A > B > C)",
-        "PrimaryAttack_JumpAttack",
-        "Stampede_0",
-        "Stampede_0 > Stampede_Knockup_0",
-        "ChargeAttack",
-        "LongRangeAttack (Not Implemented)",
-    };
-    if (ImGui::Combo("Debug Fixed Attack", &attackIndex, attackTypes, static_cast<int>(std::size(attackTypes))))
-        debugFixedAttackType = static_cast<BossAttackType>(attackIndex);
     ImGui::DragFloat("Attack Interval", &attackInterval, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("Fallback Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
     if (ImGui::CollapsingHeader("Danger OBB Tuning"))
