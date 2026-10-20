@@ -2777,6 +2777,9 @@ DirectX::XMFLOAT3 Player::GetHitBoxPoint(
 // “ü—Íˆ—‚ð‚Ü‚Æ‚ß‚é
 void Player::CaptureActionRequest(float deltaTime)
 {
+    constexpr float dodgeInputBufferSeconds = 0.3f;
+    constexpr float attackInputBufferSeconds = 0.5f;
+
     const std::string currentState = stateMachine_->GetStateName();
     if (currentState == "Damage" || currentState == "KnockBack" ||
         currentState == "DeathPending" || currentState == "Death")
@@ -2798,11 +2801,11 @@ void Player::CaptureActionRequest(float deltaTime)
     if (InputSystem::GetInputState("Jump", InputStateMask::Trigger))
     {
         DecideLockOnDodgeDirection();
-        StoreActionRequest(ActionType::Dodge, 0.3f);
+        StoreActionRequest(ActionType::Dodge, dodgeInputBufferSeconds);
     }
     if (InputSystem::GetInputState("Attack", InputStateMask::Trigger))
     {
-        StoreActionRequest(ActionType::Attack, 0.5f);
+        StoreActionRequest(ActionType::Attack, attackInputBufferSeconds);
     }
 }
 
@@ -2816,7 +2819,6 @@ bool Player::StoreActionRequest(ActionType type, float remainTime)
         return false;
     }
 
-    const ActionType previous = bufferCommand.type;
     bufferCommand.type = type;
     bufferCommand.remainTime = remainTime;
     if (type == ActionType::Dodge)
@@ -4052,8 +4054,6 @@ void Player::UpdatePrisonOpeningStandingPingPong(const float deltaTime)
     if (range <= FLT_EPSILON)
         return;
 
-    // A triangular wave preserves phase when the speed changes and reflects at
-    // both endpoints even if a low-FPS frame crosses more than one boundary.
     prisonOpeningSittingPingPongPhase += (std::max)(deltaTime, 0.0f) *
         prisonOpeningSittingPingPongSpeed;
     const float period = range * 2.0f;

@@ -151,27 +151,16 @@ public:
     // 牢獄開始演出で立ち姿勢のPing-Pong再生を使用中かを返す。
     bool IsPrisonOpeningUsingStandingPingPong() const { return prisonOpeningUseStandingPingPong; }
 
-    // ブレンドスペースのアニメーションを使用するかの更新関数
     // 移動モードに合わせてブレンドスペースアニメーションを更新する。
     void UpdateLocomotionAnimation() override;
 
     // 移動アニメーションを現在の移動モードで再開する。
     void RestartLocomotionAnimation();
 
-    // TPSモードの移動時の更新処理
-    // TPS操作時の移動入力と向きを更新する。
-    void UpdateTPSLocomotion();
-
-    // ロックオンモードの移動時の更新処理
-    // ロックオン中の移動入力と向きを更新する。
-    void UpdateLockOnLocomotion();
-
     // カメラ・演出・イベント
-    // イベントシーン開始時に呼ぶ処理
     // イベント開始に合わせて操作とHUD表示を切り替える。
     void StartEvent();
 
-    // イベントシーン終了時に呼ぶ処理
     // イベント終了に合わせて操作とHUD表示を復帰する。
     void EndEvent();
 
@@ -373,7 +362,6 @@ public:
     bool IsInWinState() const;
 
     // 描画・残像演出
-    // 軌跡を描画する処理
     // 剣の軌跡を描画する。
     void RenderTrail(ID3D11DeviceContext* immediateContext);
     // Just Dodge成功時のPlayer残像生成を開始する。
@@ -381,13 +369,11 @@ public:
     // Player残像の表示状態と生成状態をリセットする。
     void ResetPlayerPoseGhost();
     // カメラ連携
-    // Focus開始時のForwardを設定する
     // Focus開始時に使用するPlayerの正面方向を保存する。
     void SetFocusDirection(const DirectX::XMFLOAT3& focusDir)
     {
         this->focusDirection = focusDir;
     }
-    // 回避方向を取得する
     // 現在の回避方向を返す。
     DodgeDirection GetDodgeDirection()const { return dodgeDirection; }
     // ワールド座標で指定された回避方向を返す。
@@ -400,56 +386,43 @@ public:
     // 演出中のPlayer透明化抑制状態を設定する。
     void SetIsPlayerTransparency(const bool isTransparency) { moviePerform = !isTransparency; }
 
-    // モード変更用関数
     // 移動モードを切り替え、対応する移動アニメーションを更新する。
     void SetLocomotionMode(LocomotionMode mode);
 
     // 入力要求・移動
     // 保存済みの入力要求を現在の状態で実行可能なState遷移へ変換し、成功時だけ消費する。
-    // 入力コマンドによってステートが変わるかどうか
-    // 保存済み入力を現在のStateで実行可能な遷移へ変換し、成功時だけ消費する。
     bool TryExecuteActionRequest();
 
-    // 入力を消費する処理
     // 指定した種類の入力要求を消費する。
     void ConsumeActionRequest(ActionType expectedType);
 
     // 戦闘・攻撃判定
-    // 無敵判定を含め、成立した被弾だけを適用する
     // 無敵状態を考慮して成立した被弾だけを適用する。
     bool TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition, DamagePolicy policy = DamagePolicy::Normal);
 
     // ノックバック可能な状態かを確認し、ノックバックStateへ遷移する。
     bool StartKnockBack(const DirectX::XMFLOAT3& direction);
 
-    // Bossが新しい攻撃を開始できる状態かを返す。
-    // 起き上がり後の猶予時間もこの判定に含める。
-    // ボスが新たな攻撃対象として選べる状態かを返す。
+    // 生存中かつ破棄予定でなく、有効なStateを持ち、ノックバック・起き上がり・死亡中でないかを返す。
     bool IsBossAttackTargetAvailable() const;
 
-    // 保持中の入力要求を破棄し、破棄理由を記録する。
+    // 保持中の入力要求を破棄する。
     void ClearActionRequest(const char* reason);
 
     // 被弾リアクションの方向を返す。
     HitReactionDirection GetHitReactionDirection() const { return hitReactionDirection; }
 
-    // 攻撃開始時の処理
     // 攻撃開始時の共通状態を初期化する。
     void StartAttack();
 
     // ジャスト回避・Rush
-    // ジャスト回避成功時の処理　ラッシュ受付期間開始
-    // Just Dodge成功後のスロー演出とRush入力受付を開始する。
+    // Just Dodge成功フラグとスロー演出を開始する。Rush入力受付はDodge Stateで管理する。
     void StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy);
 
     // Just Dodge後の初回Rush入力を受け付けられるかを返す。
     bool CanAcceptInitialRushInput() const;
     // 最終ヒット時の現在姿勢を固定し、成否を記録する。
     bool LatchFinalHitVisualPoseAfterAnimationUpdate();
-    // Just Dodge後の初回Rush入力ガイドを表示できるかを返す。
-    bool CanShowInitialRushGuide() const;
-    // Rush中の追加入力ガイドを表示できるかを返す。
-    bool CanShowRushComboGuide() const;
     // 初回または追加入力のRushガイドを表示できるかを返す。
     bool CanShowRushPrompt() const;
     // Just Dodge成功後またはRush中の追撃機会が有効かを返す。
@@ -475,7 +448,6 @@ public:
     // 有効範囲に収めたRush最大攻撃回数を返す。
     int GetMaxRushAttackCount() const { return std::clamp(maxRushAttackCount, 1, 7); }
 
-    // ジャスト回避を受け付けるかどうか
     // Just Dodgeの判定受付中かを返す。
     bool GetJustDodgeWindow()const { return  justDodgeWindow; }
     // 回避開始時の方向と攻撃者方向からJust Dodge成立可否を判定する。
@@ -483,7 +455,6 @@ public:
 
     // カメラ・ボス戦連携
 
-    // カメラの注視点の位置
     // カメラ注視点用コンポーネントを返す。
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 
@@ -496,13 +467,22 @@ public:
     // 攻撃補助対象と向き補正状態を解除する。
     void ClearAttackTarget();
 
-    // ボス戦時かどうかを設定する
     // ボス戦中かを設定する。
     void SetIsBossBattle(const bool isBossBattle) { this->isBossBattle = isBossBattle; }
     // ボス戦中かを返す。
     bool IsBossBattle() const { return isBossBattle; }
 
 private:
+    // TPS操作時の移動入力と向きを更新する。
+    void UpdateTPSLocomotion();
+    // ロックオン中の移動入力と向きを更新する。
+    void UpdateLockOnLocomotion();
+
+    // Just Dodge後の初回Rush入力ガイドを表示できるかを返す。
+    bool CanShowInitialRushGuide() const;
+    // Rush中の追加入力ガイドを表示できるかを返す。
+    bool CanShowRushComboGuide() const;
+
     // 演出用の姿勢・Notify補助
     // 現在の目閉じ設定で姿勢オーバーライドを再構築する。
     bool RebuildEyeClosePoseOverride();
@@ -516,7 +496,10 @@ private:
     DirectX::XMFLOAT3 GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const;
 
     // 入力要求の内部処理
-    // 入力処理をまとめる
+    // 戦闘の流れ: 入力をCaptureActionRequestで保存し、Idle / Running Stateが
+    // TryExecuteActionRequestで実行を試みる。通常攻撃とコンボ・判定窓はAttack StateとNotifyが管理する。
+    // 敵の攻撃判定がJust Dodge成功を通知し、Dodge StateがRush入力受付と遷移を管理する。
+    // Rush StateはRushPhaseに応じて行動を進める。
     // 入力を一定時間保持するアクション要求として記録する。
     void CaptureActionRequest(float deltaTime);
 
@@ -533,7 +516,6 @@ private:
     // ノックバック移動の状態を解除する。
     void EndKnockBackMovement();
 
-    // 動作更新処理
     // 入力とStateに応じた通常移動を更新する。
     void UpdateMovement();
     // モーションワープを考慮してプレイヤーの位置を更新する
@@ -570,7 +552,6 @@ private:
     // 現在のStateに応じた攻撃ダメージを返す。
     int GetCurrentAttackDamage() const;
 
-    // 回避の方向を決定する処理
     // ロックオン中の移動入力から回避方向を決定する。
     void DecideLockOnDodgeDirection();
 
@@ -624,11 +605,6 @@ public:
     // アニメーション時にどれくらい移動するか
     std::vector<AnimationMotionWarp> animationMotionWarps; // 有効中のMotionWarp Notifyごとの移動情報
     // 操作UI
-    // HUD全体を非表示にしても、操作ガイドの学習状態を保持する。
-    std::array<OperationGuideItemState,
-        static_cast<size_t>(OperationGuideItem::Count)> operationGuideItems;
-    bool operationGuideGameplayHudVisible = true; // Gameplay HUD側が許可する操作ガイド表示状態
-    bool operationGuideEventVisible = true; // イベント側が許可する操作ガイド表示状態
     float operationGuidePulseAmplitude = 0.185f; // 操作ガイドの拡縮量
     float operationGuidePulseSpeed = 3.5f; // radians / second
 
@@ -661,9 +637,6 @@ public:
     float attackRotationMaxCorrectionDegrees = 55.0f; // 攻撃対象へ向く補正角度の上限
     float attackRotationSpeedDegrees = 240.0f; // 攻撃対象へ向く補正速度（度/秒）
     float attackAssistMaxDistance = 8.0f; // 攻撃補助対象を探す最大距離
-    std::weak_ptr<Enemy> attackTarget; // 攻撃補助で向きを補正する対象
-    float attackRotationStartYaw = 0.0f; // 攻撃開始時のYaw角
-    bool attackRotationTracking = false; // 攻撃対象への向き補正中か
 
     std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 
@@ -772,6 +745,16 @@ public:
 
 
 private:
+    // HUD全体を非表示にしても、操作ガイドの学習状態を保持する。
+    std::array<OperationGuideItemState,
+        static_cast<size_t>(OperationGuideItem::Count)> operationGuideItems;
+    bool operationGuideGameplayHudVisible = true; // Gameplay HUD側が許可する操作ガイド表示状態
+    bool operationGuideEventVisible = true; // イベント側が許可する操作ガイド表示状態
+
+    std::weak_ptr<Enemy> attackTarget; // 攻撃補助で向きを補正する対象
+    float attackRotationStartYaw = 0.0f; // 攻撃開始時のYaw角
+    bool attackRotationTracking = false; // 攻撃対象への向き補正中か
+
     DirectX::XMFLOAT3 knockBackDirection{ 0.0f, 0.0f, 1.0f }; // ノックバック移動の方向
     float knockBackInitialSpeed = 8.0f; // ノックバック開始時の速度
     float knockBackDuration = 0.45f; // ノックバック移動の継続時間

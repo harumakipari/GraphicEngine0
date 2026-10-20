@@ -5493,17 +5493,17 @@ void GameScene::SetUpActors()
         darkClothActors[1] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr1);
 
         // ボスの部屋　左の壁
-        Transform clothTr2(DirectX::XMFLOAT3{ -2.8f,5.7f,24.657f }, DirectX::XMFLOAT3{ 0.0f,-180.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        Transform clothTr2(DirectX::XMFLOAT3{ -2.8f,6.8f,24.657f }, DirectX::XMFLOAT3{ 0.0f,-180.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
         darkClothActors[2] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr2);
 
-        Transform clothTr3(DirectX::XMFLOAT3{ 18.9f,5.7f,24.657f }, DirectX::XMFLOAT3{ 0.0f,-180.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        Transform clothTr3(DirectX::XMFLOAT3{ 18.9f,6.8f,24.657f }, DirectX::XMFLOAT3{ 0.0f,-180.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
         darkClothActors[3] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr3);
 
         // ボスの部屋　右の壁
-        Transform clothTr4(DirectX::XMFLOAT3{ -2.8f,5.7f,-2.54f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        Transform clothTr4(DirectX::XMFLOAT3{ -2.8f,6.8f,-2.54f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
         darkClothActors[4] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr4);
 
-        Transform clothTr5(DirectX::XMFLOAT3{ 18.9f,5.7f,-2.54f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+        Transform clothTr5(DirectX::XMFLOAT3{ 18.9f,6.8f,-2.54f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
         darkClothActors[5] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr5);
 
         // メインの部屋　ドア横
