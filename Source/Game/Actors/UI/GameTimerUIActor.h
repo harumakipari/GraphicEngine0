@@ -9,9 +9,11 @@ public:
     explicit GameTimerUIActor(const std::string& actorName) : Actor(actorName) {}
 
     void Initialize(const Transform& transform) override;
+    void DrawImGuiDetails()override;
+
     void SetVisible(bool visible);
     void SetElapsedTime(float elapsedTime, float numberTexWidth, float numberTexHeight) const;
-    void DrawTimerSettings();
+    
 
 private:
 

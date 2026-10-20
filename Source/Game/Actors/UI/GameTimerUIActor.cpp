@@ -111,7 +111,7 @@ void GameTimerUIActor::SetElapsedTime(const float elapsedTime, const float numbe
     }
 }
 
-void GameTimerUIActor::DrawTimerSettings()
+void GameTimerUIActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
     ImGui::DragFloat2("Timer UI Position", &battleTimerUiPosition.x, 1.0f);

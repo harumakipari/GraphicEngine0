@@ -396,7 +396,7 @@ public:
                 }
             }
 
-            ImGui::DragFloat("TimeScale", &timeScale, 0.05f);
+            ImGui::DragFloat(U8("Actor‚ÌTimeScale"), &timeScale, 0.05f);
 
             DrawImGuiDetails();
 

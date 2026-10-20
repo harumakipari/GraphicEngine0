@@ -305,6 +305,12 @@ public:
             (rawGamepadLeftTriggerPressed && !rawGamepadLeftTriggerPressedPrevious) ||
             (rawGamepadRightTriggerPressed && !rawGamepadRightTriggerPressedPrevious);
     }
+
+    static bool IsAnyGamepadButtonPressedRaw()
+    {
+        return rawGamepadButtonsPrevious != 0 || rawGamepadLeftTriggerPressed || rawGamepadRightTriggerPressed;
+    }
+
     static bool IsGamepadButtonTriggeredRaw(const WORD button)
     {
         return (rawGamepadButtonsTriggered & button) != 0;
@@ -341,8 +347,6 @@ public:
             count = ShowCursor(visible);
         } while ((visible && count < 0) || (!visible && count >= 0));
     }
-
-private:
 
 
 public:

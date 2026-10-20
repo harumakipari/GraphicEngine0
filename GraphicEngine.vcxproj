@@ -304,6 +304,7 @@
     <ClCompile Include="Source\Engine\Utility\Dialog.cpp" />
     <ClCompile Include="Source\Engine\Utility\Time.cpp" />
     <ClCompile Include="Source\Game\Actors\Base\Character.cpp" />
+    <ClCompile Include="Source\Game\Actors\UI\GameMovieSkipUIActor.cpp" />
     <ClCompile Include="Source\Game\Actors\UI\GameTimerUIActor.cpp" />
     <ClCompile Include="Source\Game\Actors\BgmActor.cpp" />
     <ClCompile Include="Source\Game\Actors\Camera\Camera.cpp" />
@@ -478,6 +479,7 @@
     <ClInclude Include="Source\Game\Actors\Stage\Cloth.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h" />
+    <ClInclude Include="Source\Game\Actors\UI\GameMovieSkipUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionBase.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.h" />

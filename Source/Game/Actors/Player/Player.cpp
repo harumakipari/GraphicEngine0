@@ -715,9 +715,10 @@ void Player::Update(float deltaTime)
 
     if (gameplayInputEnabled)
     {
+        IInteractable* interactable = FindInteractable();
         if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
         {
-            if (IInteractable* interactable = FindInteractable())
+            if (interactable)
             {
                 interactable->Interact();
             }

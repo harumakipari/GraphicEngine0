@@ -12,6 +12,7 @@ void InteractableActor::Initialize(const Transform& transform)
     interactUiComponent->SetSize({ 140.0f, 140.0f });
     interactUiComponent->SetPivot({ 0.5f, 0.5f });
     interactUiComponent->SetVisible(false);
+    interactUiComponent->zOrder = 20;
     interactUiComponent->SetScale({ 0.6f,0.6f });
     uiManager->Add(interactUiComponent);
 
@@ -32,13 +33,18 @@ void InteractableActor::Update(float deltaTime)
         interactUiComponent->SetTexture(keyboardButton);
         interactUiComponent->SetScale({ 1.2f,1.2f });
     }
-    interactUiComponent->SetVisible(canInteract && !interacted);
+    const auto scene = GetOwnerScene();
+    const auto cameraManager = scene->GetCameraManager();
+    const bool gameplayVisible = !scene->IsPaused() && InputSystem::IsInputEnabled() &&
+        (!cameraManager || (!cameraManager->IsUseMovie() && !cameraManager->IsUseCinematic()));
+    interactUiComponent->SetVisible(gameplayVisible && canInteract && !interacted);
     interactUiComponent->SetWorldPosition(interactUiWorldPos);
 }
 
 void InteractableActor::Interact()
 {
     interacted = true;
+    if (interactUiComponent) interactUiComponent->SetVisible(false);
 }
 
 void InteractableActor::CompleteInteraction()

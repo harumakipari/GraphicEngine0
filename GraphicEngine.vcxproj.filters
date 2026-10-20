@@ -169,6 +169,9 @@
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp">
       <Filter>Source\Engine\Input</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\UI\GameMovieSkipUIActor.cpp">
+      <Filter>Source\Game\Actors\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Actors\UI\GameTimerUIActor.cpp">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClCompile>
@@ -968,6 +971,9 @@
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxJumpAttackBT.h">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\UI\GameMovieSkipUIActor.h">
+      <Filter>Source\Game\Actors\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h">
       <Filter>Source\Game\Actors\UI</Filter>
