@@ -169,6 +169,9 @@
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp">
       <Filter>Source\Engine\Input</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\UI\GameTimerUIActor.cpp">
+      <Filter>Source\Game\Actors\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Actors\BgmActor.cpp">
       <Filter>Source\Game\Actors</Filter>
     </ClCompile>
