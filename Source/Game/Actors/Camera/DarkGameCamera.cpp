@@ -211,13 +211,13 @@ void DarkCameraActor::DrawDeathCameraDebug(const CameraPose& appliedPose) const
         !(currentMode == CameraMode::Death || (isBlending && requestMode == CameraMode::Death)))
         return;
     const auto playerAnchor = playerHead.lock();
-    const auto bossAnchor = enemyHead.lock();
-    if (!playerAnchor || !bossAnchor || !playerAnchor->GetOwner() || !bossAnchor->GetOwner())
+    const auto boss = deathBoss.lock();
+    if (!playerAnchor || !playerAnchor->GetOwner() || !boss || boss->IsPendingKill())
         return;
 
     // Read the actors after GameScene's staging. Use actor origins, not head sockets.
     const auto playerPosition = playerAnchor->GetOwner()->GetPosition();
-    const auto bossPosition = bossAnchor->GetOwner()->GetPosition();
+    const auto bossPosition = boss->GetPosition();
     const DirectX::XMFLOAT4 playerColor{ 0.1f, 0.9f, 1.0f, 1.0f };
     const DirectX::XMFLOAT4 bossColor{ 1.0f, 0.25f, 0.25f, 1.0f };
     const DirectX::XMFLOAT4 cameraColor{ 1.0f, 0.8f, 0.1f, 1.0f };
@@ -533,10 +533,17 @@ void DarkCameraActor::UpdateCameraShake(const float deltaTime)
 }
 
 // ブレンドを開始する
-void DarkCameraActor::StartDeathMode(std::function<void()> onBlendFinished)
+void DarkCameraActor::StartDeathMode(const std::shared_ptr<GruxEnemy>& boss, std::function<void()> onBlendFinished)
 {
+    deathBoss = boss;
     deathBlendFinished = std::move(onBlendFinished);
     SetRequestMode(CameraMode::Death);
+}
+
+void DarkCameraActor::ClearDeathTarget()
+{
+    deathBoss.reset();
+    deathBlendFinished = nullptr;
 }
 
 void DarkCameraActor::SetTpsCameraProfile(const TpsCameraProfile profile)
@@ -2690,10 +2697,13 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculateDeathPoseWithSideOffset(
 {
     CameraPose pose{};
     DirectX::XMFLOAT3 toBoss{};
-    if (auto enemy = enemyHead.lock())
+    if (const auto boss = deathBoss.lock(); boss && !boss->IsPendingKill())
     {
-        toBoss = MathHelper::Subtract(enemy->GetComponentLocation(), playerPos);
-        toBoss.y = 0.0f;
+        if (const auto target = boss->GetCameraTargetComponent())
+        {
+            toBoss = MathHelper::Subtract(target->GetComponentLocation(), playerPos);
+            toBoss.y = 0.0f;
+        }
     }
     if (MathHelper::Length(toBoss) <= FLT_EPSILON)
         toBoss = { sinf(yaw), 0.0f, cosf(yaw) };

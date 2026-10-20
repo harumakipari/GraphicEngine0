@@ -483,6 +483,7 @@
     <ClInclude Include="Source\Game\Actors\UI\GameDefeatUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameMovieSkipUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h" />
+    <ClInclude Include="Source\Game\Actors\UI\GameVictoryUIActor.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionBase.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.h" />
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxFastComboBT.h" />

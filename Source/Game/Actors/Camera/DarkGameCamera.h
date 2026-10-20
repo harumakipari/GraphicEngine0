@@ -3,6 +3,7 @@
 #include "Components/Controller/ControllerComponent.h"
 
 class Enemy;
+class GruxEnemy;
 
 class DarkCameraActor :public Camera
 {
@@ -202,7 +203,8 @@ public:
     void StartBlend(CameraMode current, CameraMode request);
 
     // プレイヤーやボスに対する死亡時のカメラに変更
-    void StartDeathMode(std::function<void()> onBlendFinished);
+    void StartDeathMode(const std::shared_ptr<GruxEnemy>& boss, std::function<void()> onBlendFinished);
+    void ClearDeathTarget();
 
     // カメラをplayerのforward方向に向ける
     void RotateToPlayerForward();
@@ -370,6 +372,7 @@ private:
 
 
 private:
+    std::weak_ptr<GruxEnemy> deathBoss;
     std::weak_ptr<SceneComponent> enemyHead; // 敵の位置
     std::weak_ptr<SceneComponent> playerHead; // プレイヤーの位置
 

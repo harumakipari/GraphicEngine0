@@ -2890,7 +2890,7 @@ void GameScene::OnPlayerDeathCameraStart()
 
     deathCameraStartRequested = true;
     if (darkCameraActor)
-        darkCameraActor->StartDeathMode(nullptr);
+        darkCameraActor->StartDeathMode(gruxEnemyActor, nullptr);
 }
 
 void GameScene::ResetBattleFacingAndCamera()
@@ -2927,7 +2927,10 @@ void GameScene::ResetBattleForContinue()
     if (cameraManager->IsUseCinematic())
         cameraManager->ToggleCinematicCamera(this);
     if (darkCameraActor)
+    {
         darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
+        darkCameraActor->ClearDeathTarget();
+    }
 
     const BossPhase resumePhase = continueCheckpointPhase;
     ResetDeathBgmState(resumePhase);
@@ -3132,6 +3135,8 @@ void GameScene::ResetBossDeathDebugPreview()
 
 void GameScene::RestartBossBattle()
 {
+    if (darkCameraActor)
+        darkCameraActor->ClearDeathTarget();
     ResetDeathBgmState(BossPhase::Phase1);
     ResetVictoryResultBackground();
     victoryResultPhase = VictoryResultPhase::None;
