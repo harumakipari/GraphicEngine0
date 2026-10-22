@@ -370,13 +370,11 @@ private:
     float currentRecoveryScale = 1.0f;
     float finalHitTimer = 0.0f;
     bool finalHitPending = false;
-    float finalHitReactionCutTime = 0.365f; 
     bool phase2FinalHitGateActive = false;
     bool phase2FinalHitReactionComplete = false;
     bool phase2FinalHitAttackWaitRequired = false;
 
     bool finalHitReactionCutReached = false;
-    std::string finalHitDirection = "None";
     std::string finalHitReaction;
     BattleFlowState battleFlowState = BattleFlowState::Intro;
     BossPhase bossPhase = BossPhase::Phase1;
@@ -387,10 +385,7 @@ private:
     // Tuning values apply at battle reset and at the Phase1 -> Phase2 handoff.
     int phase1MaxHp = 30;
     int phase2MaxHp = 55;
-    float phase2TransitionElapsed = 0.0f;
-    float phase2TransitionWaitDuration = 3.0f; 
     bool phase1BreakPending = false;
-    bool phase2TransitionRequested = false;
     bool phase2BossRoarHpBarStarted = false;
     bool phase1BreakWaitingForRush = false;
     bool phase1FinalHitFadePending = false;
@@ -401,7 +396,6 @@ private:
     Phase2TransitionStep phase2TransitionStep = Phase2TransitionStep::None;
     std::array<Phase2CinematicShot, 2> phase2CinematicShots{};
     bool phase2CinematicShotsLoaded = false;
-    bool phase2RecallActorPoseApplied = false;
     bool phase2TpsReturnBlendActive = false;
     float phase2StepElapsed = 0.0f;
     float phase2RecallFadeOutDuration = 1.5f;
@@ -411,7 +405,6 @@ private:
     float phase2TransformStartTime = 5.3f;
     float phase2TransformEndTime = 8.0f;
     float phase2TransformProgress = 0.0f;
-    bool phase2TransformStarted = false;
     bool phase2TransformCompleted = false;
     // Transform completion persists after Recall, so this guard makes the BGM switch one-shot.
     bool phase2BgmStarted = false;
@@ -517,7 +510,6 @@ private:
     bool deathBattleTimeCueFired = false;
     bool deathButtonsCueFired = false;
     std::function<void(DeathPresentationCue)> deathPresentationCueCallback;
-    static constexpr float continueWaitDelay = 0.25f;
     float numberTexWidth = 198.f;
     float numberTexHeight = 300.f;
 

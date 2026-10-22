@@ -265,9 +265,7 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
 {
     if (auto* manager = GetCameraManager()) manager->ClearCameraShake();
     bossPhase = phase;
-    phase2TransitionElapsed = 0.0f;
     phase1BreakPending = false;
-    phase2TransitionRequested = false;
     phase2BossRoarHpBarStarted = false;
     phase1BreakWaitingForRush = false;
     phase1FinalHitFadePending = false;
@@ -283,13 +281,11 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     if (phase == BossPhase::Phase2)
     {
         phase2TransformProgress = 1.0f;
-        phase2TransformStarted = true;
         phase2TransformCompleted = true;
     }
     else
     {
         phase2TransformProgress = 0.0f;
-        phase2TransformStarted = false;
         phase2TransformCompleted = false;
     }
     if (phase != BossPhase::Phase2)
@@ -314,7 +310,6 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     phase2PlayerEmoteEndPoseHeld = false;
     if (player)
         player->ClearSwordTrailForPhaseTransition();
-    phase2RecallActorPoseApplied = false;
     phase2TpsReturnBlendActive = false;
     phase2CurrentShot = "None";
     if (darkCameraActor)
@@ -344,7 +339,6 @@ void GameScene::BeginPhase1BreakPending()
         return;
 
     phase1BreakPending = true;
-    phase2TransitionRequested = true;
     InputSystem::SetInputEnabled(false);
     phase1BreakWaitingForRush = player && player->IsRushActiveForPhaseTransition();
     // Existing Rush/reaction animation is allowed to finish, but it cannot deal
@@ -443,7 +437,6 @@ void GameScene::ApplyPhase2RecallActorPose()
     // both component hierarchies immediately so no stale rotation restores pose.
     gruxEnemyActor->UpdateAllComponentTransforms();
     player->UpdateAllComponentTransforms();
-    phase2RecallActorPoseApplied = true;
 }
 
 void GameScene::CutToPhase2Shot(const size_t shotIndex)
@@ -686,7 +679,6 @@ void GameScene::UpdatePhase2Cinematic()
                 if (recallAnimationTime >= phase2TransformStartTime)
                 {
                     phase2TransformProgress = 1.0f;
-                    phase2TransformStarted = true;
                     phase2TransformCompleted = true;
                 }
                 else
@@ -699,8 +691,6 @@ void GameScene::UpdatePhase2Cinematic()
                 phase2TransformProgress = std::clamp(
                     (recallAnimationTime - phase2TransformStartTime) / transformDuration,
                     0.0f, 1.0f);
-                if (recallAnimationTime >= phase2TransformStartTime)
-                    phase2TransformStarted = true;
                 if (recallAnimationTime >= phase2TransformEndTime)
                 {
                     phase2TransformProgress = 1.0f;
@@ -730,7 +720,6 @@ void GameScene::UpdatePhase2Cinematic()
 
         // A shortened Recall must never leave the eventual Phase2 presentation partial.
         phase2TransformProgress = 1.0f;
-        phase2TransformStarted = true;
         phase2TransformCompleted = true;
         if (!phase2BgmStarted)
             BeginPhase2BgmCrossFade(controller ? controller->GetCurrentAnimationTime() : phase2TransformEndTime);
@@ -2339,16 +2328,15 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
     phase2FinalHitGateActive = true;
     phase2FinalHitReactionComplete = false;
     phase2FinalHitAttackWaitRequired = false;
-    // Diagnostic only: retain the lethal-hit callback route until EnterBossDead.
     bossDeathLastHpZeroDetectionSource = "FinalHit callback";
     DisableCinematicCameraDebugInput();
     using namespace DirectX;
-    // +Z forward / +X right, matching Character::UpdateDirectionVectors and Grux AI.
     XMFLOAT3 direction{ source.x - boss->GetPosition().x, 0.0f,
         source.z - boss->GetPosition().z };
     XMFLOAT3 local{};
-    XMStoreFloat3(&local, XMVector3Rotate(XMLoadFloat3(&direction),
-        XMQuaternionInverse(XMLoadFloat4(&boss->GetQuaternionRotation()))));
+    XMStoreFloat3(&local, XMVector3Rotate(XMLoadFloat3(&direction), XMQuaternionInverse(XMLoadFloat4(&boss->GetQuaternionRotation()))));
+
+    std::string finalHitDirection = "Front";
     if (local.x * local.x + local.z * local.z < FLT_EPSILON)
         finalHitDirection = "Front";
     else if (std::abs(local.z) > std::abs(local.x))
@@ -2356,12 +2344,9 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
     else
         finalHitDirection = local.x >= 0.0f ? "Right" : "Left";
     finalHitReaction = "HitReact_" + finalHitDirection;
-    finalHitSlowScale = std::isfinite(finalHitSlowScale)
-        ? std::clamp(finalHitSlowScale, 0.01f, 1.0f) : 0.20f;
-    finalHitSlowDuration = std::isfinite(finalHitSlowDuration)
-        ? std::clamp(finalHitSlowDuration, 0.01f, 5.0f) : 0.30f;
-    finalHitAftermathDuration = std::isfinite(finalHitAftermathDuration)
-        ? std::clamp(finalHitAftermathDuration, 0.0f, 2.0f) : 0.15f;
+    finalHitSlowScale = std::isfinite(finalHitSlowScale) ? std::clamp(finalHitSlowScale, 0.01f, 1.0f) : 0.20f;
+    finalHitSlowDuration = std::isfinite(finalHitSlowDuration) ? std::clamp(finalHitSlowDuration, 0.01f, 5.0f) : 0.30f;
+    finalHitAftermathDuration = std::isfinite(finalHitAftermathDuration) ? std::clamp(finalHitAftermathDuration, 0.0f, 2.0f) : 0.15f;
     finalHitRecoveryElapsed = 0.0f;
     finalHitRecoveryDurationActive = 0.0f;
     finalHitRecoveryProgress = 0.0f;
@@ -2503,7 +2488,6 @@ void GameScene::RestartBossBattle()
     recoveryStartScale = 1.0f;
     currentRecoveryScale = 1.0f;
     finalHitReactionCutReached = false;
-    finalHitDirection = "None";
     finalHitReaction.clear();
     Time::SetSlow(1.0f, 0.0f);
     StopBossDeathGroanLoop();
@@ -2733,7 +2717,7 @@ void GameScene::UpdateBossDeathScreamHold(const float deltaTime)
         return;
     const auto mesh = gruxEnemyActor->GetSkeletalMeshComponent();
     if (!mesh || !mesh->IsVisible())
-        return; 
+        return;
 
     AdvanceBossDeathHold(bossDeathScreamHoldTime, bossDeathScreamHoldDirection,
         bossDeathScreamHoldMin, bossDeathScreamHoldMax,
@@ -4078,7 +4062,7 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::DragFloat("Final Hit Slow Recovery Duration", &finalHitSlowRecoveryDuration,
             0.01f, 0.0f, 1.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
         ImGui::DragFloat("Final Hit Aftermath Duration", &finalHitAftermathDuration, 0.01f, 0.0f, 2.0f);
-   
+
         ImGui::Separator();
         ImGui::SeparatorText("Victory Camera Intro");
         static constexpr const char* victoryPhaseNames[] = { "None", "CameraBlend", "WinEmote", "ResultDelay", "ShowButtons", "Interactive" };
