@@ -7,6 +7,22 @@
 
 class ParticleComponent;
 class SkeletonBodyPartActor;
+class DarkCameraActor;
+class UIManager;
+class SkeletonHpBarUI;
+
+struct SkeletonHpBarSettings
+{
+    float tutorialSkeletonHpDisplayDistance;
+    float tutorialSkeletonHpNearDistance;
+    float tutorialSkeletonHpFarDistance;
+    float tutorialSkeletonHpNearScaleMultiplier;
+    float tutorialSkeletonHpFarScaleMultiplier;
+    DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset;
+    float tutorialSkeletonHpBarScale;
+    bool tutorialSkeletonUseFixedScreenPosition;
+    DirectX::XMFLOAT2 tutorialSkeletonHpFixedScreenPosition;
+};
 
 
 class SkeletonWarriorActor :public Enemy
@@ -24,6 +40,7 @@ public:
     explicit SkeletonWarriorActor(const std::string& actorName) :Enemy(actorName) {}
     void Initialize(const Transform& transform)override;
     void Update(float elapsedTime)override;
+    void Finalize() override;
     void DrawImGuiDetails() override;
     void OnAnimationNotifyBegin(const AnimationNotifyState& state) override;
     void OnAnimationNotifyEnd(const AnimationNotifyState& state) override;
@@ -31,6 +48,11 @@ public:
     void OnAnimationChanged() override;
     void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) override;
     bool TakeDamageFromPlayer(int damage) override;
+
+
+    void CreateHpBarUI(UIManager* uiManager, const char* prefix);
+    void UpdateHpBar(const DarkCameraActor& camera, const DirectX::XMFLOAT3& playerPosition, const SkeletonHpBarSettings& settings);
+    void HideHpBar();
     bool IsDefeated() const override { return state == State::Dead; }
     void SpawnPlayerHitEffect(const DirectX::XMFLOAT3& hitPosition, const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition) override;
     void SpawnPlayerRushHitEffect(const DirectX::XMFLOAT3& hitPosition, const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition, bool hasHitPosition, bool hasHitNormal) override;
@@ -64,16 +86,16 @@ private:
     void ApplyRimLight();
     void ApplyTutorialAttackHighlight(float intensityMultiplier);
     void ResetTutorialAttackHighlight();
-    bool PrecreateDeathBodyParts();
+    bool PreCreateDeathBodyParts();
     bool ActivateDeathBodyParts();
     void DrawBodyPartBoneDebug() const;
     void SyncSpawnedBodyPartPhysicsSettings();
     void ResetAnimationEditorPreviewWeaponSweep();
-    DirectX::XMFLOAT3 GetWeaponHitPoint(const std::shared_ptr<SceneComponent>& point,
-        const DirectX::XMFLOAT3& localOffset) const;
+    DirectX::XMFLOAT3 GetWeaponHitPoint(const std::shared_ptr<SceneComponent>& point, const DirectX::XMFLOAT3& localOffset) const;
 
 private:
     // 描画用コンポーネントを追加
+    std::shared_ptr<SkeletonHpBarUI> hpBarUI;
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;
     DirectX::XMFLOAT3 rimLightColor{ 0.45f, 0.70f, 1.00f };
     float rimLightPower = 1.25f;
@@ -92,7 +114,6 @@ private:
     float bodyPartsAngularDamping = 3.0f;
     float bodyPartsSleepThreshold = 0.005f;
     std::vector<std::weak_ptr<SkeletonBodyPartActor>> spawnedBodyParts;
-    // Keeps the CoreAudio weak-cache entry alive through the death frame.
     std::shared_ptr<CoreAudio::CoreAudioBuffer> deathSeAudioBuffer;
     bool hasDeathBodyPartBonePositions = false;
     DirectX::XMFLOAT3 deathHeadBonePosition{};
@@ -136,11 +157,8 @@ private:
     bool weaponHitDebug = false;
     std::string dangerAreaSaveStatus;
 
-    // Per-actor tutorial switch. It suppresses only combat AI; animation,
-    // damage, death, collision, and LockOn participation remain active.
     bool tutorialPassive = false;
     bool tutorialPassiveUseStandIdle = false;
-    // Tutorial tuning, isolated from Grux and Player combat settings.
     int maxHp = 8;
     float facePlayerDistance = 12.0f;
     float attackRange = 7.0f;

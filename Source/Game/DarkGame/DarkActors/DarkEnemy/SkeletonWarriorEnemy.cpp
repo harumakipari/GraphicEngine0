@@ -4,11 +4,248 @@
 #include "Components/Render/PointLightComponent.h"
 #include "Engine/Debug/DebugRender.h"
 #include "Engine/Scene/SceneBase.h"
+#include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonBodyPartActor.h"
 #include "Physics/CollisionFunction.h"
 #include <tracy/Tracy.hpp>
+
+class SkeletonHpBarUI
+{
+public:
+    std::shared_ptr<UIImageComponent> background;
+    std::shared_ptr<UIGaugeFillComponent> delayedFill;
+    std::shared_ptr<UIGaugeFillComponent> currentFill;
+    std::shared_ptr<UIImageComponent> frame;
+    float delayedHp = 0.0f;
+    float delayedHpDelayTimer = 0.0f;
+    int observedHp = 0;
+    bool delayedHpInitialized = false;
+
+    void Create(UIManager* uiManager, const char* prefix);
+    void Update(const SkeletonWarriorActor& owner, const DarkCameraActor& camera,
+        const DirectX::XMFLOAT3& playerPosition, const SkeletonHpBarSettings& settings);
+    void Hide();
+    ~SkeletonHpBarUI();
+};
+
+void SkeletonHpBarUI::Create(UIManager* uiManager, const char* prefix)
+{
+    const auto createImage = [uiManager](const char* texturePath, const char* name,
+        const DirectX::XMFLOAT2& size, const int zOrder)
+        {
+            auto image = std::make_shared<UIImageComponent>(texturePath, name);
+            image->SetSize(size);
+            image->SetPivot({ 0.0f, 0.5f });
+            image->SetVisible(false);
+            image->zOrder = zOrder;
+            uiManager->Add(image);
+            return image;
+        };
+    const auto createHpBar = [&createImage, uiManager](SkeletonHpBarUI& hpBar,
+        const char* prefix)
+        {
+            hpBar.background = createImage("./Data/Textures/UI/HpBar/skeleton_hp_background.png",
+                (std::string(prefix) + "Background").c_str(), { 234.0f, 17.0f }, 40);
+            hpBar.delayedFill = std::make_shared<UIGaugeFillComponent>(
+                "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", std::string(prefix) + "DelayedFill");
+            hpBar.delayedFill->SetSize({ 233.0f, 16.0f });
+            hpBar.delayedFill->SetPivot({ 0.0f, 0.5f });
+            hpBar.delayedFill->SetColor(CoreColor{ 0.95f, 0.72f, 0.38f, 1.0f });
+            hpBar.delayedFill->SetVisible(false);
+            hpBar.delayedFill->zOrder = 41;
+            uiManager->Add(hpBar.delayedFill);
+            hpBar.currentFill = std::make_shared<UIGaugeFillComponent>(
+                "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", std::string(prefix) + "CurrentFill");
+            hpBar.currentFill->SetSize({ 233.0f, 16.0f });
+            hpBar.currentFill->SetPivot({ 0.0f, 0.5f });
+            hpBar.currentFill->SetColor(CoreColor{ 0.55f, 0.08f, 0.06f, 1.0f });
+            hpBar.currentFill->SetVisible(false);
+            hpBar.currentFill->zOrder = 42;
+            uiManager->Add(hpBar.currentFill);
+            hpBar.frame = createImage("./Data/Textures/UI/HpBar/skeleton_hp_frame.png",
+                (std::string(prefix) + "Frame").c_str(), { 239.0f, 21.0f }, 43);
+        };
+
+    createHpBar(*this, prefix);
+}
+
+void SkeletonHpBarUI::Hide()
+{
+    if (background) background->SetVisible(false);
+    if (delayedFill) delayedFill->SetVisible(false);
+    if (currentFill) currentFill->SetVisible(false);
+    if (frame) frame->SetVisible(false);
+}
+
+SkeletonHpBarUI::~SkeletonHpBarUI()
+{
+    Hide();
+    if (background) background->MarkPendingKill();
+    if (delayedFill) delayedFill->MarkPendingKill();
+    if (currentFill) currentFill->MarkPendingKill();
+    if (frame) frame->MarkPendingKill();
+}
+
+void SkeletonHpBarUI::Update(const SkeletonWarriorActor& owner, const DarkCameraActor& camera,
+    const DirectX::XMFLOAT3& playerPosition, const SkeletonHpBarSettings& settings)
+{
+    const auto getPlayerSkeletonDistanceXZ = [&](const SkeletonWarriorActor* skeleton)
+        {
+            const DirectX::XMFLOAT3 delta = MathHelper::Subtract(skeleton->GetPosition(), playerPosition);
+            return std::sqrt(delta.x * delta.x + delta.z * delta.z);
+        };
+    const auto isWithinHpDisplayDistance = [&](const SkeletonWarriorActor* skeleton)
+        {
+            return getPlayerSkeletonDistanceXZ(skeleton) <=
+                (std::max)(settings.tutorialSkeletonHpDisplayDistance, 0.0f);
+        };
+    const auto getHpDistanceScaleMultiplier = [&](const SkeletonWarriorActor* skeleton)
+        {
+            const float nearDistance = (std::max)(settings.tutorialSkeletonHpNearDistance, 0.0f);
+            const float farDistance = (std::max)(settings.tutorialSkeletonHpFarDistance, nearDistance);
+            const float distanceRange = farDistance - nearDistance;
+            const float interpolation = distanceRange > FLT_EPSILON
+                ? std::clamp((getPlayerSkeletonDistanceXZ(skeleton) - nearDistance) / distanceRange, 0.0f, 1.0f)
+                : 1.0f;
+            return std::lerp(settings.tutorialSkeletonHpNearScaleMultiplier,
+                settings.tutorialSkeletonHpFarScaleMultiplier, interpolation);
+        };
+    const auto updateHpBar = [&](const SkeletonWarriorActor* skeleton,
+        SkeletonHpBarUI& hpBar)
+        {
+            const auto hide = [&hpBar]()
+                {
+                    if (hpBar.background) hpBar.background->SetVisible(false);
+                    if (hpBar.delayedFill) hpBar.delayedFill->SetVisible(false);
+                    if (hpBar.currentFill) hpBar.currentFill->SetVisible(false);
+                    if (hpBar.frame) hpBar.frame->SetVisible(false);
+                };
+            if (!skeleton || skeleton->IsDead() || skeleton->IsPendingKill() || !isWithinHpDisplayDistance(skeleton))
+            {
+                hide();
+                return;
+            }
+
+            const auto target = skeleton->GetCameraTargetComponent();
+            if (!target)
+            {
+                hide();
+                return;
+            }
+            // Keep the HP bar above the Skeleton in world space so its position
+            // remains correct as the camera angle and Skeleton distance change.
+            const DirectX::XMFLOAT3 skeletonWorldPosition = target->GetComponentLocation();
+            const DirectX::XMFLOAT3 hpBarWorldPosition = {
+                skeletonWorldPosition.x + settings.tutorialSkeletonHpBarWorldOffset.x,
+                skeletonWorldPosition.y + settings.tutorialSkeletonHpBarWorldOffset.y,
+                skeletonWorldPosition.z + settings.tutorialSkeletonHpBarWorldOffset.z
+            };
+            const auto projection = camera.ProjectWorldPositionForUI(hpBarWorldPosition);
+            if (!projection.valid || !projection.inFront || !projection.insideViewport)
+            {
+                hide();
+                return;
+            }
+
+            DirectX::XMFLOAT2 position = settings.tutorialSkeletonUseFixedScreenPosition
+                ? settings.tutorialSkeletonHpFixedScreenPosition
+                : ConvertScreenToUI(projection.screenPosition);
+            const float currentHp = static_cast<float>((std::max)(skeleton->GetHp(), 0));
+            const float maximumHp = static_cast<float>((std::max)(skeleton->GetMaxHp(), 1));
+            if (!hpBar.delayedHpInitialized)
+            {
+                hpBar.delayedHp = currentHp;
+                hpBar.observedHp = static_cast<int>(currentHp);
+                hpBar.delayedHpInitialized = true;
+            }
+            else if (currentHp < hpBar.observedHp)
+            {
+                // Keep the delayed fill monotonically decreasing during Rush hits.
+                hpBar.delayedHp = (std::min)(hpBar.delayedHp, static_cast<float>(hpBar.observedHp));
+                hpBar.delayedHpDelayTimer = 0.25f;
+            }
+            else if (currentHp > hpBar.observedHp)
+            {
+                // Match Grux: HP recovery synchronizes the delayed display immediately.
+                hpBar.delayedHp = currentHp;
+                hpBar.delayedHpDelayTimer = 0.0f;
+            }
+            hpBar.observedHp = static_cast<int>(currentHp);
+
+            if (hpBar.delayedHp > currentHp)
+            {
+                const float uiDeltaTime = Time::UnscaledDeltaTime();
+                if (hpBar.delayedHpDelayTimer > 0.0f)
+                {
+                    hpBar.delayedHpDelayTimer = (std::max)(0.0f,
+                        hpBar.delayedHpDelayTimer - uiDeltaTime);
+                }
+                else
+                {
+                    hpBar.delayedHp = (std::max)(currentHp,
+                        hpBar.delayedHp - 8.95f * uiDeltaTime);
+                }
+            }
+
+            const float distanceScaleMultiplier = getHpDistanceScaleMultiplier(skeleton);
+            const float finalScale = settings.tutorialSkeletonHpBarScale * distanceScaleMultiplier;
+            const DirectX::XMFLOAT2 scale = { finalScale, finalScale };
+            if (hpBar.background)
+            {
+                hpBar.background->SetWorldPosition(position);
+                hpBar.background->SetScale(scale);
+                hpBar.background->SetVisible(true);
+            }
+            if (hpBar.delayedFill)
+            {
+                hpBar.delayedFill->SetWorldPosition(position);
+                hpBar.delayedFill->SetScale(scale);
+                hpBar.delayedFill->SetValue(hpBar.delayedHp, maximumHp);
+                hpBar.delayedFill->SetVisible(true);
+            }
+            if (hpBar.currentFill)
+            {
+                hpBar.currentFill->SetWorldPosition(position);
+                hpBar.currentFill->SetScale(scale);
+                hpBar.currentFill->SetValue(currentHp, maximumHp);
+                hpBar.currentFill->SetVisible(true);
+            }
+            if (hpBar.frame)
+            {
+                hpBar.frame->SetWorldPosition(position);
+                hpBar.frame->SetScale(scale);
+                hpBar.frame->SetVisible(true);
+            }
+        };
+
+    updateHpBar(&owner, *this);
+}
+
+void SkeletonWarriorActor::CreateHpBarUI(UIManager* uiManager, const char* prefix)
+{
+    if (!uiManager || hpBarUI) return;
+    hpBarUI = std::make_shared<SkeletonHpBarUI>();
+    hpBarUI->Create(uiManager, prefix);
+}
+
+void SkeletonWarriorActor::UpdateHpBar(const DarkCameraActor& camera,
+    const DirectX::XMFLOAT3& playerPosition, const SkeletonHpBarSettings& settings)
+{
+    if (hpBarUI) hpBarUI->Update(*this, camera, playerPosition, settings);
+}
+
+void SkeletonWarriorActor::HideHpBar()
+{
+    if (hpBarUI) hpBarUI->Hide();
+}
+
+void SkeletonWarriorActor::Finalize()
+{
+    hpBarUI.reset();
+    Enemy::Finalize();
+}
 
 void SkeletonWarriorActor::Initialize(const Transform& transform)
 {
@@ -100,7 +337,7 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
 
     deathSeAudioBuffer = CoreAudio::CoreAudioBuffer::GetResource(
         L"./Data/Sound/SE/skeleton_death.wav");
-    PrecreateDeathBodyParts();
+    PreCreateDeathBodyParts();
 
 #if 1
     // ポイントライトコンポーネントを追加
@@ -148,7 +385,7 @@ void SkeletonWarriorActor::ResetTutorialAttackHighlight()
     if (sword)
         sword->ClearRuntimeMaterialRimLight("M_Sword_01");
 }
-bool SkeletonWarriorActor::PrecreateDeathBodyParts()
+bool SkeletonWarriorActor::PreCreateDeathBodyParts()
 {
     ZoneScopedN("Skeleton BodyParts Precreate");
     if (!skeletalMeshComponent || !skeletalMeshComponent->model)

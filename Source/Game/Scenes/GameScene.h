@@ -370,19 +370,6 @@ private:
     std::shared_ptr<UIImageComponent> lockOnTargetLeftImageComponent;
     std::shared_ptr<UIImageComponent> lockOnTargetRightImageComponent;
     std::weak_ptr<SceneComponent> lockOnTargetComponent;
-    struct TutorialSkeletonHpBarUI
-    {
-        std::shared_ptr<UIImageComponent> background;
-        std::shared_ptr<UIGaugeFillComponent> delayedFill;
-        std::shared_ptr<UIGaugeFillComponent> currentFill;
-        std::shared_ptr<UIImageComponent> frame;
-        float delayedHp = 0.0f;
-        float delayedHpDelayTimer = 0.0f;
-        int observedHp = 0;
-        bool delayedHpInitialized = false;
-    };
-    TutorialSkeletonHpBarUI tutorialPassiveSkeletonHpBarUI;
-    TutorialSkeletonHpBarUI tutorialDodgeSkeletonHpBarUI;
     std::shared_ptr<UIImageComponent> tutorialPassiveSkeletonLtPromptUI;
     std::shared_ptr<UIImageComponent> tutorialPassiveSkeletonYPromptUI;
     std::shared_ptr<UIImageComponent> tutorialDodgeSkeletonXPromptUI;
