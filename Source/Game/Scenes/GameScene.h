@@ -275,6 +275,7 @@ private:
     bool IsPhase2FinalHitGateComplete() const;
     void RestartBossBattle();
     bool LoadBossDeathShots();
+    void UpdateMovieSkip();
     GameMovieSkipUIActor::MovieSkipType GetActiveMovieSkipType();
     void CreateBossDeathFadeUI();
     void SetBossDeathFadeAlpha(float alpha);

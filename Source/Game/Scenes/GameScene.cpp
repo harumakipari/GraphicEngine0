@@ -1488,27 +1488,7 @@ void GameScene::Update(float deltaTime)
     UpdateTutorialDodgeGuideRing();
 
     SceneBase::Update(deltaTime);
-    const GameMovieSkipUIActor::MovieSkipType activeMovieSkipType = GetActiveMovieSkipType();
-    movieSkipUIActor->SetActiveMovieType(activeMovieSkipType);
-    movieSkipUIActor->UpdatePresentation();
-    if (movieSkipUIActor->ConsumeSkipRequest())
-    {
-        if (activeMovieSkipType == GameMovieSkipUIActor::MovieSkipType::PrisonOpening || activeMovieSkipType == GameMovieSkipUIActor::MovieSkipType::BossEntry)
-        {
-            if (const auto movieManager = GetActorManager()->GetActorOfType<MovieCameraManagerActor>())
-            {
-                if (activeMovieSkipType == GameMovieSkipUIActor::MovieSkipType::PrisonOpening)
-                    movieManager->SkipPrisonOpeningToGameplay();
-                else
-                    movieManager->SkipBossEntryToBattle();
-            }
-            movieSkipUIActor->ResetPresentation();
-        }
-        else if (activeMovieSkipType == GameMovieSkipUIActor::MovieSkipType::BossDeath)
-        {
-            SkipBossDeathToFinishPrompt();
-        }
-    }
+    UpdateMovieSkip();
     UpdateTutorialSkeletonUI();
     UpdateLockOnTargetUI(deltaTime);
 
@@ -1572,138 +1552,6 @@ void GameScene::Update(float deltaTime)
 
     }
 
-
-    if (InputSystem::GetInputState("8", InputStateMask::Trigger))
-    {
-        // シーンプリセットを設定する
-        SceneEditor::LoadPresetList(); // 更新
-        std::string file = "bossRoom.json";
-        static SceneState savedState;
-        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
-        savedState.ApplyScenePreset(Scene::GetCurrentScene());
-
-        // BGMも元に戻す
-        auto bgmActors = GetActorManager()->GetActorsOfType <BgmActor>();
-        for (auto bgmActor : bgmActors)
-        {
-            if (bgmActor->GetName() == "BossBgmActor")
-            {
-                bgmActor->Stop();
-            }
-            if (bgmActor->GetName() == "GameBgmActor")
-            {
-                bgmActor->Play();
-            }
-        }
-
-        if (auto cameraManager = GetCameraManager())
-        {
-            if (cameraManager->IsUseCinematic())
-            {// すでにシネマカメラが使用だったら、
-                cameraManager->ToggleCinematicCamera(this);
-            }
-        }
-
-        if (gruxEnemyActor)
-        {
-            gruxEnemyActor->GetStateMachine()->ChangeState("EnemyThinkState");
-        }
-
-    }
-
-
-    if (InputSystem::GetInputState("9", InputStateMask::Trigger))
-    {
-        // シーンプリセットを設定する
-        SceneEditor::LoadPresetList(); // 更新
-        std::string file = "newPreset.json";
-        static SceneState savedState;
-        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
-        savedState.ApplyScenePreset(Scene::GetCurrentScene());
-
-        // BGMも元に戻す
-        auto bgmActors = GetActorManager()->GetActorsOfType <BgmActor>();
-        for (auto bgmActor : bgmActors)
-        {
-            if (bgmActor->GetName() == "BossBgmActor")
-            {
-                bgmActor->Stop();
-            }
-            if (bgmActor->GetName() == "GameBgmActor")
-            {
-                bgmActor->Play();
-            }
-        }
-
-        if (auto cameraManager = GetCameraManager())
-        {
-            if (cameraManager->IsUseCinematic())
-            {// すでにシネマカメラが使用だったら、
-                cameraManager->ToggleCinematicCamera(this);
-            }
-        }
-
-        if (gruxEnemyActor)
-        {
-            gruxEnemyActor->GetStateMachine()->ChangeState("EnemyThinkState");
-        }
-
-    }
-
-    if (InputSystem::GetInputState("F2", InputStateMask::Trigger))
-    {
-        if (!cameraManager->IsUseCinematic())
-        {// すでにシネマカメラが使用中でない場合のみ切り替え
-            cameraManager->ToggleCinematicCamera(this);
-        }
-
-        // シーンプリセットを設定する
-        SceneEditor::LoadPresetList(); // 更新
-        std::string file = "0.json";
-        static SceneState savedState;
-        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
-        savedState.Apply(Scene::GetCurrentScene());
-
-        // カメラを固定する
-        cinemaCameraActor->SetUseDebugMode(false);
-        cinemaCameraActor->SetEulerRotation({ 6.96f,-148.175f,11.522f });
-
-    }
-    // シーン変更
-    if (InputSystem::GetInputState("F3", InputStateMask::Trigger))
-    {
-        if (!cameraManager->IsUseCinematic())
-        {// すでにシネマカメラが使用中でない場合のみ切り替え
-            cameraManager->ToggleCinematicCamera(this);
-        }
-
-        // シーンプリセットを設定する
-        SceneEditor::LoadPresetList(); // 更新
-        std::string file = "HallwayPlayerUpScene.json";
-        static SceneState savedState;
-        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
-        savedState.Apply(Scene::GetCurrentScene());
-        // カメラを固定する
-        cinemaCameraActor->SetUseDebugMode(false);
-
-
-    }
-    if (InputSystem::GetInputState("F4", InputStateMask::Trigger))
-    {
-        if (!cameraManager->IsUseCinematic())
-        {// すでにシネマカメラが使用中でない場合のみ切り替え
-            cameraManager->ToggleCinematicCamera(this);
-        }
-
-        // シーンプリセットを設定する
-        SceneEditor::LoadPresetList(); // 更新
-        std::string file = "title2.json";
-        static SceneState savedState;
-        SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
-        savedState.Apply(Scene::GetCurrentScene());
-        // カメラを固定する
-        cinemaCameraActor->SetUseDebugMode(false);
-    }
 #endif // 0
 
 
@@ -1841,8 +1689,6 @@ void GameScene::StartBossBattle()
         tutorialDodgeSkeletonActor->DestroySpawnedBodyParts();
 
 
-    // StartBossBattle is also used as a battle reset entry point.  If a prior
-    // Phase2 track survived to here, explicitly return audio ownership to Phase1.
     const bool hadPhase2BgmRuntime = bgmDirector.HasPhase2BgmRuntime();
     ResetBossPhaseRuntime(BossPhase::Phase1);
     if (hadPhase2BgmRuntime)
@@ -1872,7 +1718,6 @@ void GameScene::StartBossBattle()
     finalBattleTime = 0.0f;
     finalBattleTimeSaved = false;
     battleFlowState = BattleFlowState::Playing;
-    // Resume is idempotent and also handles repeated StartBossBattle calls.
     gruxEnemyActor->ResumeBattleAI();
     battleTimerUIActor->SetVisible(true);
     battleTimerUIActor->SetElapsedTime(battleElapsedTime, numberTexWidth, numberTexHeight);
@@ -2159,7 +2004,6 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
             const bool rushWasActive = player->IsRushActiveForPhaseTransition();
             player->RequestFinalHitVisualPoseLatch();
             player->RequestFinalHitRushFollowUpStop();
-            // Release only the Rush-owned Boss slow; Rush::Exit keeps its existing cleanup.
             if (rushWasActive)
                 player->BeginBossSlowReturn(true);
         }
@@ -2198,15 +2042,13 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
     currentRecoveryScale = finalHitSlowScale;
     finalHitReactionCutReached = false;
     finalHitTimer = finalHitSlowDuration;
-    finalHitPending = true; // Do not consume time from before this frame's hit.
+    finalHitPending = true; 
     battleFlowState = BattleFlowState::FinalHitSlow;
     finalBattleTime = battleElapsedTime + Time::UnscaledDeltaTime();
     finalBattleTimeSaved = true;
     if (player)
         phase2FinalHitAttackWaitRequired = player->BeginFinalHitWait();
     boss->BeginFinalHitReaction(finalHitReaction);
-    // Replace the ordinary hit stop. GameScene owns the unscaled hold/recovery
-    // timers so Time::Tick cannot snap to 1 before recovery starts.
     Time::SetSlow(finalHitSlowScale, finalHitSlowDuration);
 }
 
@@ -2492,6 +2334,31 @@ bool GameScene::LoadBossDeathShots()
     return true;
 }
 
+
+void GameScene::UpdateMovieSkip()
+{
+    const GameMovieSkipUIActor::MovieSkipType activeMovieSkipType = GetActiveMovieSkipType();
+    movieSkipUIActor->SetActiveMovieType(activeMovieSkipType);
+    movieSkipUIActor->UpdatePresentation();
+    if (movieSkipUIActor->ConsumeSkipRequest())
+    {
+        if (activeMovieSkipType == GameMovieSkipUIActor::MovieSkipType::PrisonOpening || activeMovieSkipType == GameMovieSkipUIActor::MovieSkipType::BossEntry)
+        {
+            if (const auto movieManager = GetActorManager()->GetActorOfType<MovieCameraManagerActor>())
+            {
+                if (activeMovieSkipType == GameMovieSkipUIActor::MovieSkipType::PrisonOpening)
+                    movieManager->SkipPrisonOpeningToGameplay();
+                else
+                    movieManager->SkipBossEntryToBattle();
+            }
+            movieSkipUIActor->ResetPresentation();
+        }
+        else if (activeMovieSkipType == GameMovieSkipUIActor::MovieSkipType::BossDeath)
+        {
+            SkipBossDeathToFinishPrompt();
+        }
+    }
+}
 
 GameMovieSkipUIActor::MovieSkipType GameScene::GetActiveMovieSkipType()
 {
