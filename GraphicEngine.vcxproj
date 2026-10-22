@@ -305,6 +305,7 @@
     <ClCompile Include="Source\Engine\Utility\Time.cpp" />
     <ClCompile Include="Source\Game\Actors\Base\Character.cpp" />
     <ClCompile Include="Source\Game\Actors\UI\GameMovieSkipUIActor.cpp" />
+    <ClCompile Include="Source\Game\Actors\UI\GameVictoryUIActor.cpp" />
     <ClCompile Include="Source\Game\Actors\UI\GameDefeatUIActor.cpp" />
     <ClCompile Include="Source\Game\Actors\UI\GameTimerUIActor.cpp" />
     <ClCompile Include="Source\Game\Actors\BgmActor.cpp" />
@@ -480,6 +481,7 @@
     <ClInclude Include="Source\Game\Actors\Stage\Cloth.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h" />
+    <ClInclude Include="Source\Game\Actors\UI\GameVictoryUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameDefeatUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameMovieSkipUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h" />
@@ -510,7 +512,6 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkTitleStage.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DoorActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStage.h" />
-    <ClInclude Include="Source\Game\Actors\Stage\Stage.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\InteractableActor.h" />

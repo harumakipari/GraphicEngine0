@@ -172,6 +172,9 @@
     <ClCompile Include="Source\Game\Actors\UI\GameMovieSkipUIActor.cpp">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\UI\GameVictoryUIActor.cpp">
+      <Filter>Source\Game\Actors\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Actors\UI\GameDefeatUIActor.cpp">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClCompile>
@@ -976,6 +979,9 @@
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameMovieSkipUIActor.h">
+      <Filter>Source\Game\Actors\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\UI\GameVictoryUIActor.h">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameDefeatUIActor.h">

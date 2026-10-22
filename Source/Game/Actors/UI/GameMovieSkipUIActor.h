@@ -1,18 +1,20 @@
 #pragma once
 #include "Core/Actor.h"
 
-enum class MovieSkipType : uint8_t
-{
-    None,
-    PrisonOpening,
-    BossEntry,
-    BossDeath,
-};
 
 class UIImageComponent;
 
 class GameMovieSkipUIActor : public Actor
 {
+public:
+    enum class MovieSkipType : uint8_t
+    {
+        None,
+        PrisonOpening,
+        BossEntry,
+        BossDeath,
+    };
+
 public:
     explicit GameMovieSkipUIActor(const std::string& actorName) : Actor(actorName) {}
 

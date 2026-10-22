@@ -18,7 +18,10 @@
 #include "Game/Actors/Camera/LoadingCamera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Stage/ClothSimulate.h"
-#include "Game/Actors/Stage/Stage.h"
+#include "Game/Actors/UI/GameDefeatUIActor.h"
+#include "Game/Actors/UI/GameMovieSkipUIActor.h"
+#include "Game/Actors/UI/GameTimerUIActor.h"
+#include "Game/Actors/UI/GameVictoryUIActor.h"
 #include "Game/DarkGame/DarkActors/DarkClothActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
 
@@ -26,10 +29,6 @@
 
 #include "PBD/PBDSystem.h"
 
-class GameDefeatUIActor;
-class GameTimerUIActor;
-class GameMovieSkipUIActor;
-enum class MovieSkipType : uint8_t;
 class GruxEnemy;
 class Enemy;
 class SkeletonWarriorActor;
@@ -144,10 +143,7 @@ public:
     };
     LockOnTargetSelectionResult UpdateLockOnTargetSelection();
     // Read-only labels consumed by Grux animation-request diagnostics.
-    const char* GetBattleFlowStateDebugName() const;
-    const char* GetBossDeathPhaseDebugName() const;
     BossPhase GetBossPhase() const { return bossPhase; }
-    const char* GetBossPhaseDebugName() const;
     int GetBossCurrentHp() const;
     int GetBossMaxHp() const;
     int GetPhase2MaxHpForPresentation() const { return phase2MaxHp; }
@@ -264,8 +260,6 @@ private:
     void UpdatePhase1BreakPending();
     void StartPhase1FinalHitTimeSequence();
     void UpdatePhase1FinalHitTimeSequence();
-    void RecordPhase1FinalHitHitStopFrameSample();
-    void FinishPhase1FinalHitDebugSummary(const char* reason);
     bool LoadPhase2CinematicShots();
     void BeginPhase2Cinematic();
     void SetupPhase2RecallCinematic();
@@ -284,10 +278,9 @@ private:
     void EnterBossDead();
     void BeginPhase2FinalHitHpFallback();
     bool IsPhase2FinalHitGateComplete() const;
-    void ResetBossDeathDebugPreview();
     void RestartBossBattle();
     bool LoadBossDeathShots();
-    MovieSkipType GetActiveMovieSkipType();
+    GameMovieSkipUIActor::MovieSkipType GetActiveMovieSkipType();
     void CreateBossDeathFadeUI();
     void CreateBossDeathFinishUI();
     void SetBossDeathFadeAlpha(float alpha);
@@ -307,7 +300,6 @@ private:
     void UpdatePhase2BgmCrossFade(float deltaTime);
     void ResetBossBattleBgm(BossPhase phase, bool play);
     std::shared_ptr<BgmActor> GetActiveBossBgmActor() const;
-    const char* GetCurrentBossBgmDebugName() const;
     void PlayBossDeathSecondBgm();
     void PlayPlayerDeathBgm();
     bool SetupBossDeathCinematic();
@@ -315,76 +307,20 @@ private:
     void CutToBossDeathShot(size_t shotIndex);
     void ClampBossDeathPreviewTuning();
     enum class VictoryResultPhase { None, CameraBlend, WinEmote, ResultDelay, ShowButtons, Interactive };
-    void ResetVictoryButtons();
-    void UpdateVictoryButtonLayout();
-    void UpdateVictoryButtonInput();
-    void ExecuteVictoryResult();
-    std::array<std::shared_ptr<UIImageComponent>, 2> victoryButtons{};
-    std::array<std::shared_ptr<UIImageComponent>, 2> victorySelectLines{};
-    std::array<DirectX::XMFLOAT2, 2> victoryButtonPositions{ { { 355.0f, 840.0f }, { 820.0f, 840.0f } } };
-    std::array<float, 2> victoryButtonScales{ { 0.45f, 0.45f } };
-    DirectX::XMFLOAT2 victorySelectLineOffset{ 6.0f, 0.0f };
-    DirectX::XMFLOAT2 victorySelectLineScale{ 0.29f, 0.3f };
-    float victorySelectedButtonScale = 0.97f;
-    float victoryUnselectedButtonScale = 0.83f;
-    float victoryUnselectedButtonBrightness = 0.60f;
-    float victoryButtonFadeDuration = 0.25f;
-    float victoryButtonFadeTimer = 0.0f;
-    float victoryButtonAlpha = 0.0f;
-    float victoryButtonStickDelay = 0.0f;
-    int victorySelectedButton = 0;
-    bool victoryButtonsVisible = false;
-    bool victoryButtonInputEnabled = false;
-    bool victoryButtonInputArmed = false;
-    bool victoryButtonFeedbackEnabled = false;
+    void ExecuteVictoryResult(int selection);
+    std::shared_ptr<GameVictoryUIActor> victoryUIActor;
     void EnterVictoryResult();
     void UpdateVictoryResult();
-    void CreateVictoryResultBackground();
-    void ResetVictoryResultBackground();
-    void UpdateVictoryResultBackground();
-    std::shared_ptr<UIImageComponent> victoryResultBackground;
-    enum class VictoryRank { S, A, B, C };
     void LoadVictoryBestTime();
     void CaptureVictoryResult();
-    void UpdateVictoryResultContents();
     bool victoryBestTimeValid = false;
     double victoryBestTime = 0.0;
-    double victoryClearTime = 0.0;
-    double victoryDisplayedBestTime = 0.0;
-    bool victoryIsNewRecord = false;
-    VictoryRank victoryRank = VictoryRank::C;
     float victoryRankSLimit = 90.0f;
     float victoryRankALimit = 120.0f;
     float victoryRankBLimit = 180.0f;
-    std::array<std::shared_ptr<UIImageComponent>, 3> victoryLabels{};
-    std::array<std::shared_ptr<UIImageComponent>, 4> victoryRankImages{};
-    std::array<std::array<std::shared_ptr<UIImageComponent>, 8>, 2> victoryTimeDigits{};
-    // Clear label, clear digits, best label, best digits, new record, rank.
-    std::array<DirectX::XMFLOAT2, 6> victoryUIPositions
-    { {
-        { 420.0f, 620.0f }, { 737.0f, 609.0f }, { 416.0f, 701.0f },
-        { 737.0f, 693.0f }, { 997.0f, 610.0f }, { 586.0f, 360.0f }
-    }
-    };
-    std::array<float, 6> victoryUIScales{ { 0.37f, 0.33f, 0.39f, 0.33f, 0.46f, 0.45f } };
-    // victoryUIScales[1] is the shared digit scale; slot 3 is unused.
-    float resultTimeDigitSpacing = -3.4f;
-    float resultTimeMinuteColonSpacing = -10.2f;
-    float resultTimeColonSecondSpacing = -12.6f;
-    float resultTimeSecondDotSpacing = -17.9f;
-    float resultTimeDotMillisecondSpacing = -18.3f;
-    float resultTimeColonScale = 0.73f;
-    float resultTimeColonYOffset = 0.0f;
-    float resultTimeDotScale = 0.76f;
-    float resultTimeDotYOffset = 0.0f;
     float resultRecallToIdleBlendDuration = 0.26f;
     // Weapon bone drops rapidly between 1.13 and 1.20 seconds in Emote_Slice_0.
     float resultUITriggerAnimationTime = 1.17f;
-    float resultBackgroundFadeDuration = 0.25f;
-    float resultBackgroundFadeElapsed = 0.0f;
-    float resultBackgroundAlpha = 0.0f;
-    bool resultUITriggered = false;
-    bool resultBackgroundFadeStarted = false;
     VictoryResultPhase victoryResultPhase = VictoryResultPhase::None;
     float victoryResultDelayElapsed = 0.0f;
     float victoryResultDelayDuration = 0.70f;
@@ -504,15 +440,12 @@ private:
     float recoveryStartScale = 1.0f;
     float currentRecoveryScale = 1.0f;
     float finalHitTimer = 0.0f;
-    unsigned long long finalHitDebugStartMilliseconds = 0;
-    double finalHitDebugElapsedSeconds = 0.0;
     bool finalHitPending = false;
     float finalHitReactionCutTime = 0.365f; 
     bool phase2FinalHitGateActive = false;
     bool phase2FinalHitReactionComplete = false;
     bool phase2FinalHitAttackWaitRequired = false;
 
-    float finalHitReactionTimeDebug = 0.0f;
     bool finalHitReactionCutReached = false;
     std::string finalHitDirection = "None";
     std::string finalHitReaction;
@@ -536,17 +469,6 @@ private:
     float phase1FinalHitTimeElapsed = 0.0f;
     float phase1FinalHitHitStopDuration = 0.12f;
     float phase1FinalHitSlowScale = 0.15f;
-    bool phase1FinalHitDebugActive = false;
-    bool phase1FinalHitDebugSummaryLogged = false;
-    bool phase1FinalHitDebugSampleHitStopFrame = false;
-    int phase1FinalHitDebugHitStopFrames = 0;
-    int phase1FinalHitDebugZeroGlobalDeltaFrames = 0;
-    int phase1FinalHitDebugPlayerNonZeroFrames = 0;
-    int phase1FinalHitDebugBossNonZeroFrames = 0;
-    float phase1FinalHitDebugPlayerLastDelta = 0.0f;
-    float phase1FinalHitDebugBossLastDelta = 0.0f;
-    float phase1FinalHitDebugPlayerMaxDelta = 0.0f;
-    float phase1FinalHitDebugBossMaxDelta = 0.0f;
     Phase2TransitionStep phase2TransitionStep = Phase2TransitionStep::None;
     std::array<Phase2CinematicShot, 2> phase2CinematicShots{};
     bool phase2CinematicShotsLoaded = false;
