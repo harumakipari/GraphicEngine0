@@ -120,7 +120,7 @@ void GameTutorialUIActor::UpdateRing(const DirectX::XMFLOAT3& p, float deltaTime
     ringMesh->SetIsVisible(true);
 }
 
-void GameTutorialUIActor::DrawTutorialSettings()
+void GameTutorialUIActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
     ImGui::DragFloat3("Tutorial Guide Ring Position Offset", &ringPositionOffset.x, 0.01f);
@@ -135,14 +135,12 @@ void GameTutorialUIActor::DrawTutorialSettings()
     ImGui::DragFloat2("Judge Dodge Message Scale", &explanationScale.x, 0.01f, 0.01f, 4.0f);
     ImGui::DragFloat2("Judge Dodge Close Position", &closePosition.x, 1.0f);
     ImGui::DragFloat2("Judge Dodge Close Scale", &closeScale.x, 0.01f, 0.01f, 4.0f);
+
+    ImGui::DragFloat2(U8("ä[çúÇÃOperation Prompt Offset X / Y"), &promptOffset.x, 0.5f, -500.0f, 500.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat("Operation Prompt Scale", &promptScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat2("Operation Fixed Screen Position X / Y", &promptFixedPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+
+
 #endif
 }
 
-void GameTutorialUIActor::DrawPromptSettings()
-{
-#ifdef USE_IMGUI
-    ImGui::DragFloat2("Operation Prompt Offset X / Y", &promptOffset.x, 0.5f, -500.0f, 500.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Operation Prompt Scale", &promptScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat2("Operation Fixed Screen Position X / Y", &promptFixedPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-#endif
-}

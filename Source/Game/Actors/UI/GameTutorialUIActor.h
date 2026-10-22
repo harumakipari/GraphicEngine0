@@ -12,6 +12,9 @@ public:
     explicit GameTutorialUIActor(const std::string& name) : Actor(name) {}
     void Initialize(const Transform& transform) override;
     void Finalize() override;
+    void DrawImGuiDetails()override;
+
+
     void UpdateExplanationLayout();
     void SetExplanationVisible(bool visible);
     void HidePrompts();
@@ -19,8 +22,6 @@ public:
         const std::shared_ptr<SkeletonWarriorActor>& dodge, bool showLt, bool showY, bool showX, bool fixedPosition);
     void HideRing();
     void UpdateRing(const DirectX::XMFLOAT3& position, float deltaTime);
-    void DrawTutorialSettings();
-    void DrawPromptSettings();
 
 private:
     std::shared_ptr<UIImageComponent> ltPrompt, yPrompt, xPrompt;

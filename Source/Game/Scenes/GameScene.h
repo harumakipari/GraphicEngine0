@@ -21,6 +21,7 @@
 #include "Game/Actors/UI/GameDefeatUIActor.h"
 #include "Game/Actors/UI/GameMovieSkipUIActor.h"
 #include "Game/Actors/UI/GameTimerUIActor.h"
+#include "Game/Actors/UI/GameLockOnTargetUIActor.h"
 #include "Game/Actors/UI/GameTutorialUIActor.h"
 #include "Game/Actors/UI/GameVictoryUIActor.h"
 #include "Game/DarkGame/DarkActors/DarkClothActor.h"
@@ -159,9 +160,7 @@ private:
         float& outScreenDistanceSq) const;
     void UpdateOperationGuideTutorial(LockOnTargetSelectionResult selectionResult);
     void CompleteTutorialForBossBattle();
-    void CreateLockOnTargetUI();
     void UpdateLockOnTargetUI(float deltaTime);
-    void HideLockOnTargetUI();
     void StartJudgeDodgeOperationTutorial();
     void CloseJudgeDodgeOperationTutorial();
     void UpdateTutorialDodgeGuideRing();
@@ -350,23 +349,7 @@ private:
 
     std::shared_ptr<GruxEnemy> gruxEnemyActor;
 
-    // Shared LockOn marker state. The weak target reference lets a future
-    // multi-part marker react to acquisition, release, and target changes.
-    enum class LockOnTargetUIAnimationPhase : uint8_t
-    {
-        Hidden,
-        Gathering,
-        Hold,
-        Rotating,
-    };
-
-    // All five images share the projected target position and centered pivot.
-    std::shared_ptr<UIImageComponent> lockOnTargetCenterImageComponent;
-    std::shared_ptr<UIImageComponent> lockOnTargetTopImageComponent;
-    std::shared_ptr<UIImageComponent> lockOnTargetBottomImageComponent;
-    std::shared_ptr<UIImageComponent> lockOnTargetLeftImageComponent;
-    std::shared_ptr<UIImageComponent> lockOnTargetRightImageComponent;
-    std::weak_ptr<SceneComponent> lockOnTargetComponent;
+    std::shared_ptr<GameLockOnTargetUIActor> lockOnTargetUIActor;
     float tutorialSkeletonHpDisplayDistance = 10.0f;
     float tutorialSkeletonHpNearDistance = 4.0f;
     float tutorialSkeletonHpFarDistance = 10.0f;
@@ -377,23 +360,6 @@ private:
     float tutorialSkeletonHpBarScale = 0.65f;
     bool tutorialSkeletonUseFixedScreenPosition = false;
     DirectX::XMFLOAT2 tutorialSkeletonHpFixedScreenPosition{ 960.0f, 300.0f };
-    LockOnTargetUIAnimationPhase lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Hidden;
-    float lockOnTargetUIAnimationElapsed = 0.0f;
-    float lockOnTargetUIRotationDegree = 0.0f;
-    float lockOnTargetUIStartOffset = 200.0f;   // ・ｽﾅ擾ｿｽ・ｽﾌ四・ｽﾂゑｿｽUI・ｽﾌ擾ｿｽ・ｽ・ｽ・ｽﾊ置
-    float lockOnTargetUIGatherDuration = 0.3f;
-    float lockOnTargetUIHoldDuration = 0.08f;
-    float lockOnTargetUIRotationSpeedDegree = 72.0f;
-    float lockOnTargetUISize = 150.0f;
-    float skeletonLockOnTargetUIOverallScale = 0.15f;
-    DirectX::XMFLOAT2 skeletonLockOnTargetUIOverallOffset = { 0.0f, 0.0f };
-    float gruxLockOnTargetUIOverallScale = 0.15f;
-    DirectX::XMFLOAT2 gruxLockOnTargetUIOverallOffset = { 0.0f, 70.5f };
-    DirectX::XMFLOAT2 lockOnTargetUITopFinalOffset = { 0.0f, -97.0f };
-    DirectX::XMFLOAT2 lockOnTargetUIBottomFinalOffset = { 0.0f, 96.5f };
-    DirectX::XMFLOAT2 lockOnTargetUILeftFinalOffset = { -101.0f, 0.0f };
-    DirectX::XMFLOAT2 lockOnTargetUIRightFinalOffset = { 102.5f, 0.0f };
-
     // Selection happens once per held-input start; Rush keeps its own target.
     bool lockOnInputHeldLastFrame = false;
     bool lockOnTargetSelectedForHeldInput = false;

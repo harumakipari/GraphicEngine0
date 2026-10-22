@@ -187,7 +187,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         PROFILE_SCOPE("SetUpActors Init");
         //アクターをセット
         SetUpActors();
-        CreateLockOnTargetUI();
+        lockOnTargetUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameLockOnTargetUIActor>("LockOnTargetUI");
         CreateTutorialSkeletonUI();
         tutorialUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameTutorialUIActor>("TutorialUI");
         battleTimerUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameTimerUIActor>("BattleTimerUI");
@@ -1100,25 +1100,6 @@ void GameScene::ResetDeathBgmState(const BossPhase restartPhase)
     ResetBossBattleBgm(restartPhase, true);
 }
 
-void GameScene::CreateLockOnTargetUI()
-{
-    const auto createImage = [this](const char* texturePath, const char* name)
-        {
-            auto image = std::make_shared<UIImageComponent>(texturePath, name);
-            image->SetPivot({ 0.5f, 0.5f });
-            image->SetSize({ lockOnTargetUISize, lockOnTargetUISize });
-            image->SetVisible(false);
-            GetUIManager()->Add(image);
-            return image;
-        };
-
-    lockOnTargetCenterImageComponent = createImage("./Data/Textures/UI/LockOn/lock_on_center.png", "LockOnTargetCenter");
-    lockOnTargetTopImageComponent = createImage("./Data/Textures/UI/LockOn/lock_on_top.png", "LockOnTargetTop");
-    lockOnTargetBottomImageComponent = createImage("./Data/Textures/UI/LockOn/lock_on_bottom.png", "LockOnTargetBottom");
-    lockOnTargetLeftImageComponent = createImage("./Data/Textures/UI/LockOn/lock_on_left.png", "LockOnTargetLeft");
-    lockOnTargetRightImageComponent = createImage("./Data/Textures/UI/LockOn/lock_on_right.png", "LockOnTargetRight");
-}
-
 void GameScene::CreateTutorialSkeletonUI()
 {
     const auto uiManager = GetUIManager();
@@ -1247,170 +1228,23 @@ void GameScene::UpdateTutorialSkeletonUI()
     tutorialUIActor->UpdatePrompts(*darkCameraActor, tutorialPassiveSkeletonActor, tutorialDodgeSkeletonActor,
         ltVisible, yVisible, xVisible, tutorialSkeletonUseFixedScreenPosition);
 }
-void GameScene::HideLockOnTargetUI()
-{
-    const std::array<std::shared_ptr<UIImageComponent>, 5> images =
-    {
-        lockOnTargetCenterImageComponent, lockOnTargetTopImageComponent,
-        lockOnTargetBottomImageComponent, lockOnTargetLeftImageComponent,
-        lockOnTargetRightImageComponent
-    };
-    for (const auto& image : images)
-    {
-        if (image)
-            image->SetVisible(false);
-    }
-    lockOnTargetComponent.reset();
-    lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Hidden;
-    lockOnTargetUIAnimationElapsed = 0.0f;
-    lockOnTargetUIRotationDegree = 0.0f;
-}
-
 void GameScene::UpdateLockOnTargetUI(float deltaTime)
 {
-    if (!lockOnTargetCenterImageComponent)
-        return;
-
     if (!darkCameraActor ||
         darkCameraActor->GetMovementMode() != DarkCameraActor::CameraMode::LockOn ||
         !darkCameraActor->HasValidLockOnTarget())
     {
-        HideLockOnTargetUI();
+        lockOnTargetUIActor->HideMarker();
         return;
     }
-
     const auto target = darkCameraActor->GetEnemyHead();
     if (!target)
     {
-        HideLockOnTargetUI();
+        lockOnTargetUIActor->HideMarker();
         return;
     }
-
-    if (lockOnTargetComponent.lock() != target)
-    {
-        lockOnTargetComponent = target;
-        lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Gathering;
-        lockOnTargetUIAnimationElapsed = 0.0f;
-        lockOnTargetUIRotationDegree = 0.0f;
-    }
-
-    const float safeDeltaTime = (std::max)(deltaTime, 0.0f);
-    switch (lockOnTargetUIAnimationPhase)
-    {
-    case LockOnTargetUIAnimationPhase::Gathering:
-        lockOnTargetUIAnimationElapsed += safeDeltaTime;
-        if (lockOnTargetUIAnimationElapsed >= (std::max)(lockOnTargetUIGatherDuration, 0.0f))
-        {
-            lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Hold;
-            lockOnTargetUIAnimationElapsed = 0.0f;
-        }
-        break;
-    case LockOnTargetUIAnimationPhase::Hold:
-        lockOnTargetUIAnimationElapsed += safeDeltaTime;
-        if (lockOnTargetUIAnimationElapsed >= (std::max)(lockOnTargetUIHoldDuration, 0.0f))
-        {
-            lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Rotating;
-            lockOnTargetUIAnimationElapsed = 0.0f;
-        }
-        break;
-    case LockOnTargetUIAnimationPhase::Rotating:
-        lockOnTargetUIRotationDegree += lockOnTargetUIRotationSpeedDegree * safeDeltaTime;
-        if (lockOnTargetUIRotationDegree >= 360.0f || lockOnTargetUIRotationDegree <= -360.0f)
-            lockOnTargetUIRotationDegree = std::fmod(lockOnTargetUIRotationDegree, 360.0f);
-        break;
-    default:
-        break;
-    }
-
-    const auto projection = darkCameraActor->ProjectWorldPositionForUI(
-        target->GetComponentLocation());
-    if (!projection.valid || !projection.inFront || !projection.insideViewport)
-    {
-        const std::array<std::shared_ptr<UIImageComponent>, 5> images =
-        {
-            lockOnTargetCenterImageComponent, lockOnTargetTopImageComponent,
-            lockOnTargetBottomImageComponent, lockOnTargetLeftImageComponent,
-            lockOnTargetRightImageComponent
-        };
-        for (const auto& image : images)
-        {
-            if (image)
-                image->SetVisible(false);
-        }
-        return;
-    }
-
-    float targetOverallScale = skeletonLockOnTargetUIOverallScale;
-    DirectX::XMFLOAT2 targetOverallOffset = skeletonLockOnTargetUIOverallOffset;
-    if (dynamic_cast<GruxEnemy*>(target->GetOwner()))
-    {
-        targetOverallScale = gruxLockOnTargetUIOverallScale;
-        targetOverallOffset = gruxLockOnTargetUIOverallOffset;
-    }
-    const float overallScale = std::clamp(targetOverallScale, 0.01f, 2.0f);
-    const float scaledImageSize = lockOnTargetUISize * overallScale;
-    DirectX::XMFLOAT2 center = ConvertScreenToUI(projection.screenPosition);
-    center.x += targetOverallOffset.x;
-    center.y += targetOverallOffset.y;
-    float gatherRemaining = 0.0f;
-    if (lockOnTargetUIAnimationPhase == LockOnTargetUIAnimationPhase::Gathering)
-    {
-        const float duration = (std::max)(lockOnTargetUIGatherDuration, 0.0001f);
-        const float t = std::clamp(lockOnTargetUIAnimationElapsed / duration, 0.0f, 1.0f);
-        const float easeOutCubic = 1.0f - std::pow(1.0f - t, 3.0f);
-        gatherRemaining = lockOnTargetUIStartOffset * (1.0f - easeOutCubic);
-    }
-    const float ringAngle = lockOnTargetUIAnimationPhase == LockOnTargetUIAnimationPhase::Rotating
-        ? lockOnTargetUIRotationDegree : 0.0f;
-
-    lockOnTargetCenterImageComponent->SetSize({ scaledImageSize, scaledImageSize });
-    lockOnTargetCenterImageComponent->SetWorldPosition(center);
-    lockOnTargetCenterImageComponent->SetWorldAngleDegree(0.0f);
-    lockOnTargetCenterImageComponent->SetVisible(true);
-
-    const std::array<std::shared_ptr<UIImageComponent>, 4> rings =
-    {
-        lockOnTargetTopImageComponent, lockOnTargetBottomImageComponent,
-        lockOnTargetLeftImageComponent, lockOnTargetRightImageComponent
-    };
-    const std::array<DirectX::XMFLOAT2, 4> directions =
-    {
-        DirectX::XMFLOAT2{ 0.0f, -1.0f }, DirectX::XMFLOAT2{ 0.0f, 1.0f },
-        DirectX::XMFLOAT2{ -1.0f, 0.0f }, DirectX::XMFLOAT2{ 1.0f, 0.0f }
-    };
-    const std::array<DirectX::XMFLOAT2, 4> finalOffsets =
-    {
-        lockOnTargetUITopFinalOffset, lockOnTargetUIBottomFinalOffset,
-        lockOnTargetUILeftFinalOffset, lockOnTargetUIRightFinalOffset
-    };
-    const float radians = DirectX::XMConvertToRadians(ringAngle);
-    const float cosAngle = std::cos(radians);
-    const float sinAngle = std::sin(radians);
-    for (size_t i = 0; i < rings.size(); ++i)
-    {
-        const auto& ring = rings[i];
-        if (!ring)
-            continue;
-
-        ring->SetSize({ scaledImageSize, scaledImageSize });
-        DirectX::XMFLOAT2 offset =
-        {
-            (finalOffsets[i].x + directions[i].x * gatherRemaining) * overallScale,
-            (finalOffsets[i].y + directions[i].y * gatherRemaining) * overallScale
-        };
-        if (lockOnTargetUIAnimationPhase == LockOnTargetUIAnimationPhase::Rotating)
-        {
-            // UI Y grows downward, so positive degrees rotate clockwise visually.
-            offset =
-            {
-                offset.x * cosAngle - offset.y * sinAngle,
-                offset.x * sinAngle + offset.y * cosAngle
-            };
-        }
-        ring->SetWorldPosition({ center.x + offset.x, center.y + offset.y });
-        ring->SetWorldAngleDegree(ringAngle);
-        ring->SetVisible(true);
-    }
+    lockOnTargetUIActor->UpdateMarkerPresentation(*darkCameraActor, target, target->GetComponentLocation(),
+        dynamic_cast<GruxEnemy*>(target->GetOwner()) != nullptr, deltaTime);
 }
 bool GameScene::EvaluateLockOnCandidate(const std::shared_ptr<Enemy>& enemy, std::shared_ptr<SceneComponent>& outTarget, float& outDistanceSq, float& outScreenDistanceSq) const
 {
@@ -2095,7 +1929,7 @@ void GameScene::EnterBossRoomLockOnScope(const bool fromTutorialDoorMovie)
     {
         darkCameraActor->ClearEnemyHead();
         darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
-        HideLockOnTargetUI();
+        lockOnTargetUIActor->HideMarker();
     }
 }
 
@@ -4353,7 +4187,6 @@ void GameScene::DrawGuiPlusAlpha()
 
     ImGui::SeparatorText("Tutorial Guide Ring");
     ImGui::Checkbox("Tutorial Guide Ring Force Visible", &tutorialDodgeGuideRingForceVisible);
-    tutorialUIActor->DrawTutorialSettings();
 
     ImGui::SeparatorText("Tutorial Camera Profile Trigger");
     ImGui::DragFloat3("Corridor Exit Trigger Center", &tutorialCameraProfileTriggerCenter.x,
@@ -4376,7 +4209,6 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat("HP World Offset Y", &tutorialSkeletonHpBarWorldOffset.y, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("HP World Offset Z", &tutorialSkeletonHpBarWorldOffset.z, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("HP Bar Scale", &tutorialSkeletonHpBarScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    tutorialUIActor->DrawPromptSettings();
     ImGui::Checkbox("Use Fixed Screen Position", &tutorialSkeletonUseFixedScreenPosition);
     ImGui::DragFloat2("HP Fixed Screen Position X / Y", &tutorialSkeletonHpFixedScreenPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragInt(U8("Phase1 MaxHP"), &phase1MaxHp, 1.0f, 1, 500);
@@ -4444,10 +4276,6 @@ void GameScene::DrawGuiPlusAlpha()
         0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Phase2 BGM Fade In Duration", &phase2BgmFadeInDuration,
         0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    const float emotePreWaitElapsed = phase2TransitionStep == Phase2TransitionStep::PlayerEmotePreWait
-        ? phase2StepElapsed : 0.0f;
-    const float emotePostWaitElapsed = phase2TransitionStep == Phase2TransitionStep::PlayerEmotePostWait
-        ? phase2StepElapsed : 0.0f;
     ImGui::DragFloat(U8("Phase2 Emote\u524DWait"), &phase2PlayerEmotePreWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Player Emote EndTime"), &phase2PlayerEmoteEndTime,
@@ -4461,21 +4289,6 @@ void GameScene::DrawGuiPlusAlpha()
     { "TPS", "Focus", "LockOn", "Death" };
     const char* playerStateName = player && player->GetStateMachine()
         ? player->GetStateMachine()->GetStateName() : "None";
-    ImGui::SeparatorText("LockOn Target UI");
-    ImGui::DragFloat("LockOn Gather Start Offset", &lockOnTargetUIStartOffset, 0.5f, 0.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("LockOn Gather Duration", &lockOnTargetUIGatherDuration, 0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("LockOn Hold Duration", &lockOnTargetUIHoldDuration, 0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("LockOn Ring Rotation Speed", &lockOnTargetUIRotationSpeedDegree, 1.0f, -360.0f, 360.0f, "%.1f deg/sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::SeparatorText("LockOn Target Overall Transform");
-    ImGui::DragFloat("Skeleton LockOn Overall Scale", &skeletonLockOnTargetUIOverallScale, 0.01f, 0.01f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat2("Skeleton LockOn Overall Offset X / Y", &skeletonLockOnTargetUIOverallOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Grux LockOn Overall Scale", &gruxLockOnTargetUIOverallScale, 0.01f, 0.01f, 2.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat2("Grux LockOn Overall Offset X / Y", &gruxLockOnTargetUIOverallOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::TextDisabled("Final Offset: +Y is down in UI screen coordinates.");
-    ImGui::DragFloat2("Top Final Offset X / Y", &lockOnTargetUITopFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat2("Bottom Final Offset X / Y", &lockOnTargetUIBottomFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat2("Left Final Offset X / Y", &lockOnTargetUILeftFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat2("Right Final Offset X / Y", &lockOnTargetUIRightFinalOffset.x, 0.5f, -200.0f, 200.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     const bool phase2BossIdleMaintained = phase2BossController &&
         (phase2TransitionStep == Phase2TransitionStep::PlayerEmotePreWait ||
             phase2TransitionStep == Phase2TransitionStep::PlayerEmote ||
@@ -4559,8 +4372,6 @@ void GameScene::DrawGuiPlusAlpha()
             animationCompletionMet = true;
             break;
         }
-        const bool animationMatch = std::string(expectedAnimation) == "None" ||
-            (bossController && bossController->GetCurrentAnimationName() == expectedAnimation);
 
         std::string setupFailureReason;
         const auto addSetupFailure = [&](const char* reason)
