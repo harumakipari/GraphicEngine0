@@ -10,6 +10,7 @@
 #include "Core/ActorManager.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/BgmActor.h"
+#include "Game/DarkGame/GameBgmDirector.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 
 
@@ -282,17 +283,6 @@ private:
     void UpdateBossDeathPromptLoop(float deltaTime);
     void UpdateBossDeathScreamHold(float deltaTime);
     void UpdateBossDeathCinematic();
-    void UpdateGameBgmFadeOut(float deltaTime);
-    void UpdateDeathBgmFade(float deltaTime);
-    void BeginBossBattleBgmFadeOut();
-    void BeginPlayerDeathBgmFadeOut();
-    void ResetDeathBgmState(BossPhase restartPhase);
-    void BeginPhase2BgmCrossFade(float recallAnimationTime);
-    void UpdatePhase2BgmCrossFade(float deltaTime);
-    void ResetBossBattleBgm(BossPhase phase, bool play);
-    std::shared_ptr<BgmActor> GetActiveBossBgmActor() const;
-    void PlayBossDeathSecondBgm();
-    void PlayPlayerDeathBgm();
     bool SetupBossDeathCinematic();
     void ApplyBossDeathDof(const BossDeathDofState& dof);
     void CutToBossDeathShot(size_t shotIndex);
@@ -413,14 +403,6 @@ private:
     float phase2TransformEndTime = 8.0f;
     float phase2TransformProgress = 0.0f;
     bool phase2TransformCompleted = false;
-    // Transform completion persists after Recall, so this guard makes the BGM switch one-shot.
-    bool phase2BgmStarted = false;
-    bool phase2BgmCrossFadeActive = false;
-    float phase2BgmFadeElapsed = 0.0f;
-    float phase2BgmFadeOutDuration = 0.5f;
-    float phase2BgmFadeInDuration = 0.5f;
-    float phase2BgmPhase1StartVolume = 0.0f;
-    float phase2BgmTriggerTime = -1.0f;
     float phase2PlayerEmotePreWaitDuration = 0.5f;
     float phase2PlayerEmoteEndTime = 0.515f;
     float phase2PlayerEmotePostWaitDuration = 0.5f;
@@ -575,23 +557,12 @@ private:
     float startBossRoomLerpFactor = 0.0f;
     float endBossRoomLerpFactor = 1.0f;
 
+    GameBgmDirector bgmDirector;
     std::shared_ptr<BgmActor> gameBgmActor;
-    float gameBgmFadeDuration = 0.75f;
-    float gameBgmFadeStartVolume = 0.0f;
-    float gameBgmFadeElapsed = 0.0f;
-    bool gameBgmFading = false;
     std::shared_ptr<BgmActor> bossBgmActor;
     std::shared_ptr<BgmActor> phase2BgmActor;
     std::shared_ptr<BgmActor> bossDeathSecondBgmActor;
     std::shared_ptr<BgmActor> playerDeathBgmActor;
-    float bossDeathBgmFadeTime = 1.0f;
-    float playerDeathBgmFadeTime = 1.0f;
-    float bossBgmFadeStartVolume = 0.0f;
-    float bossBgmFadeElapsed = 0.0f;
-    bool bossBgmFading = false;
-    bool playerBgmFading = false;
-    bool bossDeathSecondBgmPlayed = false;
-    bool playerDeathBgmPlayed = false;
 
     // 布アクター
     std::array<std::shared_ptr<DarkClothActor>, 10> darkClothActors;

@@ -290,10 +290,7 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     }
     if (phase != BossPhase::Phase2)
     {
-        phase2BgmStarted = false;
-        phase2BgmCrossFadeActive = false;
-        phase2BgmFadeElapsed = 0.0f;
-        phase2BgmTriggerTime = -1.0f;
+        bgmDirector.ResetPhase2Runtime();
     }
     if (gruxEnemyActor)
     {
@@ -708,9 +705,9 @@ void GameScene::UpdatePhase2Cinematic()
         {
             gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
         }
-        if (isRecallAnimation && phase2TransformCompleted && !phase2BgmStarted)
+        if (isRecallAnimation && phase2TransformCompleted && !bgmDirector.IsPhase2Started())
         {
-            BeginPhase2BgmCrossFade(controller->GetCurrentAnimationTime());
+            bgmDirector.BeginPhase2CrossFade(controller->GetCurrentAnimationTime(), BossBgmVolume);
         }
 
         const bool recallFinished = !controller ||
@@ -721,8 +718,8 @@ void GameScene::UpdatePhase2Cinematic()
         // A shortened Recall must never leave the eventual Phase2 presentation partial.
         phase2TransformProgress = 1.0f;
         phase2TransformCompleted = true;
-        if (!phase2BgmStarted)
-            BeginPhase2BgmCrossFade(controller ? controller->GetCurrentAnimationTime() : phase2TransformEndTime);
+        if (!bgmDirector.IsPhase2Started())
+            bgmDirector.BeginPhase2CrossFade(controller ? controller->GetCurrentAnimationTime() : phase2TransformEndTime, BossBgmVolume);
         if (gruxEnemyActor)
             gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
         if (gruxEnemyActor)
@@ -838,7 +835,8 @@ void GameScene::Start()
     gameBgmActor->SetSource(L"./Data/Sound/BGM/game_bgm1.wav");
     gameBgmActor->SetLoop(true);
     gameBgmActor->SetBgm(true);
-    gameBgmActor->Play();
+    bgmDirector.SetGameActor(gameBgmActor);
+    bgmDirector.PlayGameBgm();
     gameBgmActor->SetVolume(0.3f);
 
     // ƒ{ƒXBGM
@@ -866,6 +864,7 @@ void GameScene::Start()
     playerDeathBgmActor->SetLoop(true);
     playerDeathBgmActor->SetBgm(true);
     playerDeathBgmActor->SetVolume(0.35f);
+    bgmDirector.SetActors(gameBgmActor, bossBgmActor, phase2BgmActor, bossDeathSecondBgmActor, playerDeathBgmActor);
 
 #if 0
     cameraManager->ToggleCinematicCamera(this);
@@ -928,162 +927,15 @@ void GameScene::Start()
 
 }
 
-std::shared_ptr<BgmActor> GameScene::GetActiveBossBgmActor() const
-{
-    return phase2BgmStarted && phase2BgmActor ? phase2BgmActor : bossBgmActor;
-}
-
-
-void GameScene::BeginPhase2BgmCrossFade(const float recallAnimationTime)
-{
-    if (phase2BgmStarted)
-        return;
-
-    phase2BgmStarted = true;
-    phase2BgmTriggerTime = recallAnimationTime;
-    phase2BgmFadeElapsed = 0.0f;
-    phase2BgmPhase1StartVolume = bossBgmActor ? bossBgmActor->GetVolume() : 0.0f;
-    phase2BgmCrossFadeActive = bossBgmActor && phase2BgmActor;
-    if (!phase2BgmActor)
-        return;
-
-    phase2BgmActor->Stop(false);
-    phase2BgmActor->SetVolume(0.0f);
-    phase2BgmActor->Play();
-    if (!phase2BgmCrossFadeActive)
-        phase2BgmActor->SetVolume(BossBgmVolume);
-}
-
-void GameScene::UpdatePhase2BgmCrossFade(const float deltaTime)
-{
-    if (!phase2BgmCrossFadeActive || !bossBgmActor || !phase2BgmActor)
-        return;
-
-    phase2BgmFadeElapsed += (std::max)(0.0f, deltaTime);
-    const float fadeOut = (std::max)(phase2BgmFadeOutDuration, 0.001f);
-    const float fadeIn = (std::max)(phase2BgmFadeInDuration, 0.001f);
-    const float outT = std::clamp(phase2BgmFadeElapsed / fadeOut, 0.0f, 1.0f);
-    const float inT = std::clamp(phase2BgmFadeElapsed / fadeIn, 0.0f, 1.0f);
-    bossBgmActor->SetVolume(std::lerp(phase2BgmPhase1StartVolume, 0.0f, outT));
-    phase2BgmActor->SetVolume(std::lerp(0.0f, BossBgmVolume, inT));
-    if (outT >= 1.0f)
-        bossBgmActor->Stop(false);
-    if (outT >= 1.0f && inT >= 1.0f)
-        phase2BgmCrossFadeActive = false;
-}
-
-void GameScene::ResetBossBattleBgm(const BossPhase phase, const bool play)
-{
-    phase2BgmCrossFadeActive = false;
-    phase2BgmFadeElapsed = 0.0f;
-    phase2BgmStarted = phase == BossPhase::Phase2;
-    phase2BgmTriggerTime = -1.0f;
-
-    const auto activeBgm = GetActiveBossBgmActor();
-    const auto stopInactiveBgm = [activeBgm](const std::shared_ptr<BgmActor>& bgm)
-        {
-            if (bgm && bgm != activeBgm)
-            {
-                bgm->Stop(false);
-                bgm->SetVolume(BossBgmVolume);
-            }
-        };
-    stopInactiveBgm(bossBgmActor);
-    stopInactiveBgm(phase2BgmActor);
-
-    if (activeBgm)
-    {
-        activeBgm->SetVolume(BossBgmVolume);
-        if (play && phase == BossPhase::Phase1)
-        {
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[BossBGM][RestartFromBeginning] caller=GameScene::ResetBossBattleBgm");
-            activeBgm->RestartFromBeginning();
-        }
-        else if (play)
-            activeBgm->Play();
-        else
-            activeBgm->Stop(false);
-    }
-    if (gameBgmActor)
-        gameBgmActor->Stop();
-}
-
-void GameScene::BeginBossBattleBgmFadeOut()
-{
-    const auto activeBgm = GetActiveBossBgmActor();
-    if (bossBgmFading || !activeBgm) return;
-    bossBgmFadeStartVolume = activeBgm->GetVolume();
-    bossBgmFadeElapsed = 0.0f;
-    bossBgmFading = true;
-}
-
 void GameScene::BeginGameBgmFadeOut()
 {
-    if (battleFlowState != BattleFlowState::Intro || gameBgmFading || !gameBgmActor) return;
-    gameBgmFadeStartVolume = gameBgmActor->GetVolume();
-    gameBgmFadeElapsed = 0.0f;
-    gameBgmFading = true;
+    if (battleFlowState != BattleFlowState::Intro) return;
+    bgmDirector.BeginGameFade();
 }
 
 void GameScene::PlayBossBattleBgm()
 {
-    if (bossBgmActor)
-        bossBgmActor->Play();
-}
-
-void GameScene::UpdateGameBgmFadeOut(const float deltaTime)
-{
-    if (!gameBgmFading || !gameBgmActor) return;
-    gameBgmFadeElapsed += (std::max)(0.0f, deltaTime);
-    const float duration = (std::max)(gameBgmFadeDuration, 0.001f);
-    const float t = std::clamp(gameBgmFadeElapsed / duration, 0.0f, 1.0f);
-    gameBgmActor->SetVolume(std::lerp(gameBgmFadeStartVolume, 0.0f, t));
-    if (t >= 1.0f)
-    {
-        gameBgmActor->Stop(false);
-        gameBgmFading = false;
-    }
-}
-
-void GameScene::BeginPlayerDeathBgmFadeOut()
-{
-    const auto activeBgm = GetActiveBossBgmActor();
-    if (playerBgmFading || !activeBgm) return;
-    phase2BgmCrossFadeActive = false;
-    bossBgmFadeStartVolume = activeBgm->GetVolume();
-    bossBgmFadeElapsed = 0.0f;
-    playerBgmFading = true;
-}
-
-void GameScene::UpdateDeathBgmFade(const float deltaTime)
-{
-    const auto activeBgm = GetActiveBossBgmActor();
-    if ((!bossBgmFading && !playerBgmFading) || !activeBgm) return;
-    const float duration = playerBgmFading ? playerDeathBgmFadeTime : bossDeathBgmFadeTime;
-    bossBgmFadeElapsed += deltaTime;
-    const float t = duration > 0.0f ? std::clamp(bossBgmFadeElapsed / duration, 0.0f, 1.0f) : 1.0f;
-    activeBgm->SetVolume(std::lerp(bossBgmFadeStartVolume, 0.0f, t));
-    if (t >= 1.0f)
-    {
-        activeBgm->Stop(false);
-        bossBgmFading = false;
-        playerBgmFading = false;
-    }
-}
-
-void GameScene::PlayBossDeathSecondBgm() { if (!bossDeathSecondBgmPlayed && bossDeathSecondBgmActor) { bossDeathSecondBgmPlayed = true; bossDeathSecondBgmActor->Play(); } }
-void GameScene::PlayPlayerDeathBgm() { if (!playerDeathBgmPlayed && playerDeathBgmActor) { playerDeathBgmPlayed = true; playerDeathBgmActor->Play(); } }
-void GameScene::ResetDeathBgmState(const BossPhase restartPhase)
-{
-    if (bossDeathSecondBgmActor) bossDeathSecondBgmActor->Stop(false);
-    if (playerDeathBgmActor) playerDeathBgmActor->Stop(false);
-    bossDeathSecondBgmPlayed = false;
-    playerDeathBgmPlayed = false;
-    bossBgmFading = false;
-    playerBgmFading = false;
-    bossBgmFadeElapsed = 0.0f;
-    ResetBossBattleBgm(restartPhase, true);
+    bgmDirector.PlayBossBattleBgm();
 }
 
 void GameScene::CreateTutorialSkeletonUI()
@@ -1568,9 +1420,9 @@ void GameScene::Update(float deltaTime)
     using namespace DirectX;
 
     ZoneScopedN("Game Update");
-    UpdateGameBgmFadeOut(Time::UnscaledDeltaTime());
-    UpdateDeathBgmFade(Time::UnscaledDeltaTime());
-    UpdatePhase2BgmCrossFade(Time::UnscaledDeltaTime());
+    bgmDirector.UpdateGameBgmFadeOut(Time::UnscaledDeltaTime());
+    bgmDirector.UpdateDeathBgmFade(Time::UnscaledDeltaTime());
+    bgmDirector.UpdatePhase2BgmCrossFade(Time::UnscaledDeltaTime(), BossBgmVolume);
 
     if (judgeDodgeOperationTutorialState == JudgeDodgeOperationTutorialState::Showing)
     {
@@ -2000,14 +1852,13 @@ void GameScene::StartBossBattle()
 
     // StartBossBattle is also used as a battle reset entry point.  If a prior
     // Phase2 track survived to here, explicitly return audio ownership to Phase1.
-    const bool hadPhase2BgmRuntime = phase2BgmStarted || phase2BgmCrossFadeActive;
+    const bool hadPhase2BgmRuntime = bgmDirector.HasPhase2BgmRuntime();
     ResetBossPhaseRuntime(BossPhase::Phase1);
     if (hadPhase2BgmRuntime)
-        ResetBossBattleBgm(BossPhase::Phase1, true);
+        bgmDirector.ResetBossBattleBgm(GameBgmDirector::BossBgmPhase::Phase1, true, BossBgmVolume);
     else
         PlayBossBattleBgm();
-    if (!gameBgmFading && gameBgmActor)
-        gameBgmActor->Stop(false);
+    bgmDirector.StopGameBgmIfNotFading();
     ApplyBossPhaseHp(BossPhase::Phase1);
     CaptureContinueBossCheckpoint();
     player->EndEvent();
@@ -2044,7 +1895,7 @@ void GameScene::EnterPlayerDead()
 {
     DisableCinematicCameraDebugInput();
     battleFlowState = BattleFlowState::PlayerDead;
-    BeginPlayerDeathBgmFadeOut();
+    bgmDirector.BeginPlayerDeathFade();
     battleTimerUIActor->SetVisible(false);
     playerDeadElapsed = 0.0f;
     deathPresentationElapsed = 0.0f;
@@ -2209,7 +2060,7 @@ void GameScene::UpdateDeathResultPresentation()
         numberTexWidth, numberTexHeight, deathResultMoveSeVolume);
     if (!defeatUIActor->IsVisible())
     {
-        PlayPlayerDeathBgm();
+        bgmDirector.PlayPlayerDeathBgm();
         DisableCinematicCameraDebugInput();
         defeatUIActor->SetVisible(true);
     }
@@ -2280,7 +2131,9 @@ void GameScene::ResetBattleForContinue()
     }
 
     const BossPhase resumePhase = continueCheckpointPhase;
-    ResetDeathBgmState(resumePhase);
+    const auto resumeBgmPhase = resumePhase == BossPhase::Phase2 ? GameBgmDirector::BossBgmPhase::Phase2 :
+        resumePhase == BossPhase::Phase1 ? GameBgmDirector::BossBgmPhase::Phase1 : GameBgmDirector::BossBgmPhase::Transition;
+    bgmDirector.ResetDeathBgmState(resumeBgmPhase, BossBgmVolume);
     ResetBossPhaseRuntime(resumePhase);
     player->ResetForBattleContinue(playerBattleStartTransform);
     player->EndEvent();
@@ -2469,7 +2322,7 @@ void GameScene::RestartBossBattle()
 {
     if (darkCameraActor)
         darkCameraActor->ClearDeathTarget();
-    ResetDeathBgmState(BossPhase::Phase1);
+    bgmDirector.ResetDeathBgmState(GameBgmDirector::BossBgmPhase::Phase1, BossBgmVolume);
     victoryUIActor->ResetPresentation();
     victoryResultPhase = VictoryResultPhase::None;
     victoryResultDelayElapsed = 0.0f;
@@ -2785,8 +2638,8 @@ void GameScene::SkipBossDeathToFinishPrompt()
         bossDeathVoiceAudio->Stop(false);
         bossDeathVoiceAudio.reset();
     }
-    BeginBossBattleBgmFadeOut();
-    PlayBossDeathSecondBgm();
+    bgmDirector.BeginBossDeathFade();
+    bgmDirector.PlayBossDeathSecondBgm();
     if (!bossDeathGroanAudio)
         StartBossDeathGroanLoop();
     SetBossDeathFadeAlpha(0.0f);
@@ -3103,7 +2956,7 @@ void GameScene::UpdateBossDeathCinematic()
         {
             SetBossDeathFadeAlpha(0.0f);
             bossDeathPhase = BossDeathPhase::DeathScream;
-            BeginBossBattleBgmFadeOut();
+            bgmDirector.BeginBossDeathFade();
             bossDeathPhaseElapsed = 0.0f;
         }
         break;
@@ -3189,7 +3042,7 @@ void GameScene::UpdateBossDeathCinematic()
             {
                 break;
             }
-            PlayBossDeathSecondBgm();
+            bgmDirector.PlayBossDeathSecondBgm();
             StartBossDeathGroanLoop();
             player->SetPosition(bossDeathApproachStartPosition);
             player->UpdateAllComponentTransforms();
@@ -3937,8 +3790,8 @@ void GameScene::SetUpActors()
 
 bool GameScene::Uninitialize(ID3D11Device* device)
 {
-    if (bossDeathSecondBgmActor) bossDeathSecondBgmActor->Stop(false);
-    if (playerDeathBgmActor) playerDeathBgmActor->Stop(false);
+    bgmDirector.StopDeathBgm();
+    bgmDirector.ClearActors();
     SceneBase::Uninitialize(device);
     Physics::Instance().Finalize();
     return true;
@@ -3979,8 +3832,6 @@ void GameScene::DrawTutorialDebugGui()
     ImGui::DragFloat("Near Scale Multiplier", &tutorialSkeletonHpNearScaleMultiplier, 0.01f, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Far Scale Multiplier", &tutorialSkeletonHpFarScaleMultiplier, 0.01f, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("HP Bar Scale", &tutorialSkeletonHpBarScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Checkbox("Use Fixed Screen Position", &tutorialSkeletonUseFixedScreenPosition);
-    ImGui::DragFloat2("HP Fixed Screen Position X / Y", &tutorialSkeletonHpFixedScreenPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
 }
 
 void GameScene::DrawPhase2DebugGui()
@@ -4036,10 +3887,7 @@ void GameScene::DrawPhase2DebugGui()
         }
     }
 
-    ImGui::DragFloat("Phase2 BGM Fade Out Duration", &phase2BgmFadeOutDuration,
-        0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Phase2 BGM Fade In Duration", &phase2BgmFadeInDuration,
-        0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+    bgmDirector.DrawPhase2DebugGui();
     ImGui::DragFloat(U8("Phase2 Emote\u524DWait"), &phase2PlayerEmotePreWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Player Emote EndTime"), &phase2PlayerEmoteEndTime,
@@ -4053,9 +3901,7 @@ void GameScene::DrawPhase2DebugGui()
 
 void GameScene::DrawBgmAndBattleTimerDebugGui()
 {
-    ImGui::SeparatorText("BGM Debug");
-    ImGui::DragFloat("Game BGM Fade Duration", &gameBgmFadeDuration,
-        0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+    bgmDirector.DrawGameBgmDebugGui();
     ImGui::Separator();
     ImGui::Text("Boss Battle Timer");
     ImGui::Text("Battle Time: %.3f", battleElapsedTime);

@@ -271,6 +271,9 @@
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\GameBgmDirector.cpp">
+      <Filter>Source\Game\Scenes</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
@@ -760,6 +763,9 @@
       <Filter>Source\Game\DarkGame\DarkActors\DarkEnemy</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h">
+      <Filter>Source\Game\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\GameBgmDirector.h">
       <Filter>Source\Game\Scenes</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Scenes\GameScene.h">
