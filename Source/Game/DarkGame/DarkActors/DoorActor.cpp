@@ -4,6 +4,8 @@
 #include "Engine/Audio/Audio.h"
 #include "Engine/Camera/MovieCameraManagerActor.h"
 #include "Engine/Scene/Scene.h"
+#include "Game/Actors/Camera/Camera.h"
+#include "Physics/CollisionFunction.h"
 
 void DoorLargeActor::Initialize(const Transform& transform)
 {
@@ -65,14 +67,50 @@ void DoorLargeActor::Initialize(const Transform& transform)
     // インタラクト角度を設定する
     interactDegree = 0.0f;
 
-    // インタラクトUIの座標を設定する
-    interactUiWorldPos = { 1200.0f,500.0f };
 }
 
 void DoorLargeActor::Update(float deltaTime)
 {
     // インタラクトの更新
     InteractableActor::Update(deltaTime);
+
+    // Preserve the interaction conditions and hide only invalid projections.
+    if (interactUiComponent && interactUiComponent->IsVisible())
+    {
+        const auto scene = GetOwnerScene();
+        const auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
+        const auto camera = cameraManager ? cameraManager->GetRenderCamera(scene) : nullptr;
+        if (!root || !camera)
+        {
+            interactUiComponent->SetVisible(false);
+        }
+        else
+        {
+            using namespace DirectX;
+            const XMVECTOR worldAnchor = XMVector3TransformCoord(
+                XMLoadFloat3(&interactPromptLocalOffset), root->GetComponentWorldTransform().ToMatrix());
+            XMFLOAT3 worldPosition;
+            XMStoreFloat3(&worldPosition, worldAnchor);
+            const ViewConstants view = camera->GetViewConstants();
+            const XMVECTOR clip = XMVector4Transform(XMVectorSetW(worldAnchor, 1.0f),
+                XMLoadFloat4x4(&view.view) * XMLoadFloat4x4(&view.projection));
+            XMFLOAT4 clipPosition;
+            XMStoreFloat4(&clipPosition, clip);
+            const bool valid = std::isfinite(clipPosition.x) && std::isfinite(clipPosition.y) &&
+                std::isfinite(clipPosition.z) && std::isfinite(clipPosition.w) &&
+                clipPosition.w > 0.0001f &&
+                std::abs(clipPosition.x) <= clipPosition.w &&
+                std::abs(clipPosition.y) <= clipPosition.w &&
+                clipPosition.z >= 0.0f && clipPosition.z <= clipPosition.w;
+            float viewportX, viewportY, viewportWidth, viewportHeight;
+            Graphics::GetViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+            if (!valid || viewportWidth <= 0.0f || viewportHeight <= 0.0f)
+                interactUiComponent->SetVisible(false);
+            else
+                interactUiComponent->SetWorldPosition(ConvertScreenToUI(
+                    CollisionFunction::GetScreenPositionFromWorldPosition(worldPosition)));
+        }
+    }
 
     switch (doorState)
     {
@@ -144,6 +182,7 @@ void DoorLargeActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
     InteractableActor::DrawImGuiDetails();
+    ImGui::DragFloat3("Door Prompt Local Offset", &interactPromptLocalOffset.x, 0.01f);
     ImGui::DragFloat(U8("ドアを開ける速度"), &openTime, 0.1f);
     ImGui::DragFloat(U8("ドアを閉める速度"), &closeTime, 0.1f);
     if (ImGui::Button(U8("ドア空ける")))

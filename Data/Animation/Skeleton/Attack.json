@@ -3,7 +3,7 @@
     "animationName": "Attack",
     "events": [
         {
-            "parameter": "skeleton_attack1",
+            "parameter": "skeleton_sword",
             "time": 0.5312501192092896,
             "type": "PlaySE",
             "value": 3.0

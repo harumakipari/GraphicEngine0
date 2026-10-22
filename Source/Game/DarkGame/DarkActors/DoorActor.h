@@ -35,6 +35,9 @@ public:
     void DrawImGuiDetails() override;
 
 private:
+    // ドアのAボタンのオフセット
+    DirectX::XMFLOAT3 interactPromptLocalOffset{ 0.0f, 2.0f, -1.4f };
+
     std::shared_ptr<SceneComponent> root;
 
     std::shared_ptr<SceneComponent> leftHinge;
