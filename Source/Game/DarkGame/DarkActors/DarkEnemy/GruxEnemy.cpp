@@ -13,7 +13,6 @@
 #include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Scenes/GameScene.h"
-#include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
 #include "Game/DarkGame/DarkActors/DarkStage.h"
 #include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
 #include "Physics/CollisionFunction.h"

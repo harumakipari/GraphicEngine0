@@ -1,6 +1,7 @@
 #pragma once
 #include "Camera.h"
 #include "Components/Controller/ControllerComponent.h"
+#include "Engine/Audio/Audio.h"
 
 class Enemy;
 class GruxEnemy;
@@ -133,7 +134,6 @@ public:
 
     void ClearEnemyHead() { enemyHead.reset(); }
     bool HasValidLockOnTarget() const;
-    bool IsNormalEnemyLockOnScreenRadiusDebugEnabled() const { return showNormalEnemyLockOnScreenRadiusDebug; }
     float GetLockOnTargetSelectionMaxDistance() const { return lockOnTargetSelectionMaxDistance; }
 
     float GetCameraCollisionRatio()const
@@ -682,7 +682,6 @@ private:
     // Candidate selection range; independent from the camera zoom cap above.
     float lockOnTargetSelectionMaxDistance = 11.0f;
     float normalEnemyLockOnScreenRadius = 1.45f;
-    bool showNormalEnemyLockOnScreenRadiusDebug = false;
     // Pitch
     float lockOnPitchDegree = -10.0f;
     // 当たり判定のスフィアキャストの球の大きさ

@@ -94,7 +94,6 @@ public:
 
     void Update(float deltaTime) override;
 
-    void UpdateConstants(ID3D11DeviceContext* immediateContext, float deltaTime)override;
 
     bool Uninitialize(ID3D11Device* device) override;
 
@@ -389,7 +388,7 @@ private:
     int phase1MaxHp = 30;
     int phase2MaxHp = 55;
     float phase2TransitionElapsed = 0.0f;
-    float phase2TransitionWaitDuration = 3.0f;  // phase2・ｽﾉ行・ｽ・ｽtransition
+    float phase2TransitionWaitDuration = 3.0f; 
     bool phase1BreakPending = false;
     bool phase2TransitionRequested = false;
     bool phase2BossRoarHpBarStarted = false;
@@ -542,7 +541,6 @@ private:
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerCenter{ -25.0f, 1.0f, 10.75f };
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerSize{ 2.0f, 3.0f, 8.0f };
     bool tutorialCameraProfileTriggerFired = false;
-    bool showTutorialCameraProfileTriggerDebug = false;
     DirectX::XMFLOAT3 prisonOpeningSittingPosition{ -66.919f, -0.078f, 11.892f };
     // Authored from the common Player rotation in open_movie1/2/3/5/6/7 ScenePresets.
     float prisonOpeningSittingYawDegrees = 107.031867f;
@@ -554,7 +552,6 @@ private:
     bool judgeDodgeOperationTutorialOwnsPause = false;
     float judgeDodgeOperationTutorialPreviousTimeScale = 1.0f;
     std::shared_ptr<GameTutorialUIActor> tutorialUIActor;
-    bool tutorialDodgeGuideRingForceVisible = false;
     bool tutorialDodgeGuideRingActive = false;
     bool tutorialDodgeGuideRingFinished = false;
     float tutorialDodgeGuideRingElapsed = 0.0f;

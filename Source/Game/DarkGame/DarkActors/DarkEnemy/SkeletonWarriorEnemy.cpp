@@ -5,11 +5,13 @@
 #include "Engine/Debug/DebugRender.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Engine/Utility/Time.h"
+#include "Engine/Effects/EffectManager.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonBodyPartActor.h"
 #include "Physics/CollisionFunction.h"
 #include <tracy/Tracy.hpp>
+
 
 class SkeletonHpBarUI
 {
@@ -43,9 +45,9 @@ void SkeletonHpBarUI::Create(UIManager* uiManager, const char* prefix)
             uiManager->Add(image);
             return image;
         };
-    const auto createHpBar = [&createImage, uiManager](SkeletonHpBarUI& hpBar,const char* prefix)
+    const auto createHpBar = [&createImage, uiManager](SkeletonHpBarUI& hpBar, const char* prefix)
         {
-            hpBar.background = createImage("./Data/Textures/UI/HpBar/skeleton_hp_background.png",(std::string(prefix) + "Background").c_str(), { 234.0f, 17.0f }, 40);
+            hpBar.background = createImage("./Data/Textures/UI/HpBar/skeleton_hp_background.png", (std::string(prefix) + "Background").c_str(), { 234.0f, 17.0f }, 40);
             hpBar.delayedFill = std::make_shared<UIGaugeFillComponent>(
                 "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", std::string(prefix) + "DelayedFill");
             hpBar.delayedFill->SetSize({ 233.0f, 16.0f });
@@ -293,8 +295,6 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     weaponTipPoint = AddComponent<SceneComponent>("SwordHitTip", "SwordHitRoot");
     weaponTipPoint->SetRelativeLocationDirect({ 0.0f, 1.2f, 0.0f });
 
-    // Reuse the established Player-vs-Grux impact assets, owned by this
-    // normal enemy so their positions follow the skeleton rather than the boss.
     hitSwordEffectComponent = AddComponent<ParticleComponent>("SkeletonHitEffect", parentName);
     hitSwordEffectComponent->Load("./Data/Effect/Files/NormalAttackHitEffect.json");
     rushHitRingEffectComponent = AddComponent<ParticleComponent>("SkeletonRushHitRing", parentName);
@@ -708,16 +708,13 @@ void SkeletonWarriorActor::SpawnPlayerRushHitEffect(const DirectX::XMFLOAT3& hit
     {
         rushHitSparkEffectComponent->SetWorldLocationDirect(effectPosition);
         rushHitSparkEffectComponent->UpdateComponentToWorld();
-        EffectManager::EmitParticle(rushHitSparkEffectComponent->GetEffectHandle(),
-            rushHitSparkEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
+        EffectManager::EmitParticle(rushHitSparkEffectComponent->GetEffectHandle(), rushHitSparkEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
     }
     if (rushHitRingEffectComponent)
     {
         rushHitRingEffectComponent->SetWorldLocationDirect(effectPosition);
         rushHitRingEffectComponent->UpdateComponentToWorld();
-        EffectManager::EmitParticle(rushHitRingEffectComponent->GetEffectHandle(),
-            rushHitRingEffectComponent->GetComponentLocation(),
-            rushHitRingEffectComponent->GetComponentEulerRotation());
+        EffectManager::EmitParticle(rushHitRingEffectComponent->GetEffectHandle(), rushHitRingEffectComponent->GetComponentLocation(), rushHitRingEffectComponent->GetComponentEulerRotation());
     }
 }
 

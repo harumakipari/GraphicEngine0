@@ -2,10 +2,11 @@
 #include "Components/Controller/ControllerComponent.h"
 #include "Core/Actor.h"
 #include "Animation/DangerArea.h"
+#include "Components/Effect/ParticleComponent.h"
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Engine/Audio/Audio.h"
 
-class ParticleComponent;
+
 class SkeletonBodyPartActor;
 class DarkCameraActor;
 class UIManager;

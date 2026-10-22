@@ -24,7 +24,7 @@ public:
 
     void StartBlend(const Camera* currentCamera,float duration,std::function<void()> finished);
 
-    void Update(float deltaTime);
+    void Update(float deltaTime){}
 
     void SetLockTarget(const std::shared_ptr<SceneComponent>& target)
     {

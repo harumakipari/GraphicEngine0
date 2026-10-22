@@ -9,35 +9,25 @@
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Audio/Audio.h"
 #include "Engine/Framework/Framework.h"
-#include "Graphics/Core/RenderState.h"
 #include "Engine/Input/InputSystem.h"
 #include "Core/ActorManager.h"
 #include "Engine/Debug/SceneEditor.h"
 #include "Engine/Utility/Time.h"
 
-#include "Game/Actors/Camera/LoadingCamera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Player/TitlePlayer.h"
-#include "Game/Actors/Stage/ElasticBuilding.h"
 #include "Game/Actors/Stage/Cloth.h"
 
 
 #include "Physics/Physics.h"
 #include "Game/DarkGame/DarkActors/DarkStage.h"
-#include "Game/DarkGame/DarkActors/DarkStageCandelabraActor.h"
-#include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
 #include "Game/DarkGame/DarkActors/DarkTitleStage.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/LanternActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 
-#include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
-
 #include "Physics/CollisionSystem.h"
 #include "UI/UIManager.h"
-#include "UI/Game/Pause.h"
-
-namespace { constexpr const char* Push="./Data/Sound/SE/button_push.wav"; constexpr const char* Move="./Data/Sound/SE/button_select_move.wav"; }
 
 bool TitleScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
@@ -74,19 +64,10 @@ bool TitleScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, con
     // ライトの方向と色を設定
     lightDirection = { 0.722f, -0.38f, -0.0211f, 0.9f };   // 上の窓からの光
     lightColor = { 1.0f, 0.8f, 1.0f, 2.6f };
-    {
-        //PROFILE_SCOPE("SceneBase Init");
-        SceneBase::Initialize(device, width, height, props);
-    }
-    {
-        //PROFILE_SCOPE("Physics Init");
-        Physics::Instance().Initialize();
-    }
-    {
-        PROFILE_SCOPE("SetUpActors Init");
-        //アクターをセット
-        SetUpActors();
-    }
+    SceneBase::Initialize(device, width, height, props);
+    Physics::Instance().Initialize();
+    //アクターをセット
+    SetUpActors();
 
     return true;
 }
@@ -102,7 +83,7 @@ void TitleScene::Start()
     gameBgmActor->SetVolume(0.25f);
 
     std::string parentName = gameBgmActor->GetRootComponentName();
-    auto seComponent=gameBgmActor->AddComponent<AudioSourceComponent>("bonfireSeComponent", parentName);
+    auto seComponent = gameBgmActor->AddComponent<AudioSourceComponent>("bonfireSeComponent", parentName);
     seComponent->SetSource(L"./Data/Sound/SE/bonfire_se.wav");
     seComponent->SetLoop(true);
     seComponent->SetBgm(true);
@@ -127,16 +108,49 @@ void TitleScene::Start()
     title->SetSize({ 1300, 700 });
     uiManager->Add(title);
 
-    startGameButton=std::make_shared<UIButtonComponent>("./Data/Textures/UI/start_game.png","TitleStartGame");
-    startGameButton->SetWorldPosition(startGamePosition); startGameButton->SetSize({514,73}); startGameButton->SetScale({startGameBaseScale,startGameBaseScale}); startGameButton->SetPivot({.5f,.5f}); startGameButton->zOrder=10;
-    startGameButton->SetVisualColors(CoreColor(.8f,.8f,.8f,1), CoreColor::White, CoreColor::White, CoreColor::White);
-    startGameButton->onClick=[this](){CoreAudio::PlayOneShot(Push);SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene"), std::make_pair("gameEntry", "NewGame") }, TransitionStyle::Fade);}; uiManager->Add(startGameButton);uiManager->AddButton(startGameButton);
-    quitGameButton=std::make_shared<UIButtonComponent>("./Data/Textures/UI/Pause/quit_game.png","TitleQuitGame");
-    quitGameButton->SetWorldPosition(quitGamePosition); quitGameButton->SetSize({472,92}); quitGameButton->SetScale({quitGameBaseScale,quitGameBaseScale}); quitGameButton->SetPivot({.5f,.5f}); quitGameButton->zOrder=10;
-    quitGameButton->SetVisualColors(CoreColor(.8f,.8f,.8f,1), CoreColor::White, CoreColor::White, CoreColor::White);
-    quitGameButton->onClick=[](){CoreAudio::PlayOneShot(Push);Framework::RequestExit();};uiManager->Add(quitGameButton);uiManager->AddButton(quitGameButton);
-    selectionLineLeft=std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/select_button_line.png","TitleSelectLineLeft"); selectionLineRight=std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/select_button_line.png","TitleSelectLineRight");
-    for(const auto& l:{selectionLineLeft,selectionLineRight}){l->SetSize({113,5});l->SetEnable(false);l->zOrder=11;uiManager->Add(l);}selectionLineLeft->SetPivot({1.0f,.5f});selectionLineRight->SetPivot({0.0f,.5f});uiManager->SetNavigationEnabled(false);SetTitleMenuSelection(TitleMenuSelection::StartGame,false);
+    startGameButton = std::make_shared<UIButtonComponent>("./Data/Textures/UI/start_game.png", "TitleStartGame");
+    startGameButton->SetWorldPosition(startGamePosition);
+    startGameButton->SetSize({ 514,73 });
+    startGameButton->SetScale({ startGameBaseScale,startGameBaseScale });
+    startGameButton->SetPivot({ .5f,.5f });
+    startGameButton->zOrder = 10;
+    startGameButton->SetVisualColors(CoreColor(.8f, .8f, .8f, 1), CoreColor::White, CoreColor::White, CoreColor::White);
+    startGameButton->onClick = [this]()
+        {
+            CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav");
+            SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "GameScene"), std::make_pair("gameEntry", "NewGame") }, TransitionStyle::Fade);
+        };
+    uiManager->Add(startGameButton);
+    uiManager->AddButton(startGameButton);
+
+    quitGameButton = std::make_shared<UIButtonComponent>("./Data/Textures/UI/Pause/quit_game.png", "TitleQuitGame");
+    quitGameButton->SetWorldPosition(quitGamePosition);
+    quitGameButton->SetSize({ 472,92 });
+    quitGameButton->SetScale({ quitGameBaseScale,quitGameBaseScale });
+    quitGameButton->SetPivot({ .5f,.5f });
+    quitGameButton->zOrder = 10;
+    quitGameButton->SetVisualColors(CoreColor(.8f, .8f, .8f, 1), CoreColor::White, CoreColor::White, CoreColor::White);
+    quitGameButton->onClick = []()
+        {
+            CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav"); Framework::RequestExit();
+        };
+    uiManager->Add(quitGameButton);
+    uiManager->AddButton(quitGameButton);
+
+    selectionLineLeft = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/select_button_line.png", "TitleSelectLineLeft");
+    selectionLineRight = std::make_shared<UIImageComponent>("./Data/Textures/UI/Result/select_button_line.png", "TitleSelectLineRight");
+
+    for (const auto& l : { selectionLineLeft,selectionLineRight })
+    {
+        l->SetSize({ 113,5 });
+        l->SetEnable(false); l->zOrder = 11;
+        uiManager->Add(l);
+    }
+    selectionLineLeft->SetPivot({ 1.0f,.5f });
+    selectionLineRight->SetPivot({ 0.0f,.5f });
+    uiManager->SetNavigationEnabled(false);
+    SetTitleMenuSelection(TitleMenuSelection::StartGame, false);
+
     // シーンが切り替わった時に
     SceneTransitionManager::Instance().NotifySceneChanged();
 }
@@ -203,7 +217,8 @@ void TitleScene::SetTitleMenuSelection(const TitleMenuSelection selection, const
     }
     titleMenuLineAnimationElapsed = 0.0f;
     uiManager->SetSelected((selection == TitleMenuSelection::StartGame ? startGameButton : quitGameButton).get());
-    if (playSound) CoreAudio::PlayOneShot(Move);
+    if (playSound)
+        CoreAudio::PlayOneShot("./Data/Sound/SE/button_select_move.wav");
 }
 
 void TitleScene::UpdateTitleMenuAnimations(const float deltaTime)

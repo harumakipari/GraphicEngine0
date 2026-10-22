@@ -14,21 +14,6 @@ void Camera::Initialize(const Transform& transform)
 
 void MainCamera::Update(float deltaTime)
 {
-#if 0
-    // プレイヤー移動方向
-    XMFLOAT3 moveDir = {};
-
-    if (auto target = tpsController.targetComponent.lock())
-    {
-        auto actor = target->GetOwner();
-
-        if (auto movement = actor->GetComponent<CharacterMovementComponent>())
-        {
-            moveDir = movement->GetVelocity();
-        }
-    }
-
-#endif // 0
 
     // 右スティック
     XMFLOAT2 rightStick = InputSystem::GetRightStick();

@@ -6,12 +6,9 @@
 
 #include "Components/Camera/CameraComponent.h"
 #include "Components/CollisionShape/ShapeComponent.h"
-#include "Physics/Physics.h"
 
 #include "Engine/Camera/CameraConstants.h"
 #include "Engine/Camera/TPSCameraController.h"
-#include "Game/Actors/Stage/ElasticBuilding.h"
-#include "Game/DarkGame/DarkActors/DarkStage.h"
 
 class Camera :public Actor
 {

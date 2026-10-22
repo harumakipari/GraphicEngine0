@@ -33,7 +33,6 @@
 #include "Game/DarkGame/DarkActors/DarkStage.h"
 #include "Game/DarkGame/DarkActors/DarkStageChandelierActor.h"
 #include "Game/DarkGame/DarkActors/DoorActor.h"
-#include "Game/DarkGame/DarkActors/IceFragmentEffectActor.h"
 #include "Game/DarkGame/DarkActors/ModelDebrisEmitterActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/SkeletonWarriorEnemy.h"
@@ -71,8 +70,6 @@ namespace
         "Data/Saves/ScenePresets/BossDeath_Result.json",
     };
 
-    // Move the held sample into the requested interval before reflecting.
-    // This is only a Death_B sample clock, not an animation blend.
     void AdvanceBossDeathHold(float& time, float& direction, float minTime,
         float maxTime, float rate, float entryRate, float deltaTime)
     {
@@ -1150,19 +1147,13 @@ void GameScene::UpdateTutorialDodgeGuideRing()
         tutorialUIActor->HideRing();
         return;
     }
-    if (tutorialDodgeGuideRingForceVisible)
-    {
-        if (invalidSkeleton)
-            tutorialUIActor->HideRing();
-        else
-            tutorialUIActor->UpdateRing(tutorialDodgeSkeletonActor->GetPosition(), Time::UnscaledDeltaTime());
-        return;
-    }
-
     if (!tutorialDodgeGuideRingActive || tutorialDodgeGuideRingFinished) return;
     if (invalidSkeleton)
     {
-        tutorialDodgeGuideRingActive = false; tutorialDodgeGuideRingFinished = true; tutorialUIActor->HideRing(); return;
+        tutorialDodgeGuideRingActive = false;
+        tutorialDodgeGuideRingFinished = true;
+        tutorialUIActor->HideRing();
+        return;
     }
     tutorialDodgeGuideRingElapsed += Time::UnscaledDeltaTime();
     const bool attackRangeEnteredAfterRingShown = !tutorialDodgeGuideRingPreviousAttackRange && tutorialDodgeSkeletonAttackRange;
@@ -2404,9 +2395,6 @@ void GameScene::BeginPhase2FinalHitHpFallback()
     if (phase2FinalHitGateActive)
         return;
 
-    // HP can reach zero through a route without the lethal-hit callback. In
-    // that case there is no owned boss reaction to await, but an active Player
-    // attack still receives the same natural-completion drain.
     phase2FinalHitGateActive = true;
     phase2FinalHitReactionComplete = true;
     phase2FinalHitAttackWaitRequired = player && player->BeginFinalHitWait();
@@ -2427,7 +2415,7 @@ void GameScene::EnterBossDead()
         phase2FinalHitReactionComplete = false;
         phase2FinalHitAttackWaitRequired = false;
     }
-    
+
     ++bossDeathEnterCallCount;
     bossDeathLastEnterPreviousFlow = battleFlowState;
     DisableCinematicCameraDebugInput();
@@ -2560,8 +2548,6 @@ void GameScene::RestartBossBattle()
     if (const auto bossMesh = gruxEnemyActor->GetSkeletalMeshComponent())
         bossMesh->SetIsVisible(true);
 
-    // Cut to the camera's current pose to cancel both arbitrary-pose blending
-    // and camera-path playback before returning render ownership to gameplay.
     if (cinemaCameraActor)
     {
         if (auto* camera = dynamic_cast<CinematicCameraComponent*>(
@@ -2666,9 +2652,6 @@ bool GameScene::LoadBossDeathShots()
             };
         }
 
-        // The editable approach start defaults to the staged Fall player pose.
-        //bossDeathApproachStartPosition =
-        //    bossDeathShots[BossDeathFall].player.position;
     }
     catch (const std::exception& exception)
     {
@@ -2684,7 +2667,7 @@ bool GameScene::LoadBossDeathShots()
 
 GameMovieSkipUIActor::MovieSkipType GameScene::GetActiveMovieSkipType()
 {
-    if (battleFlowState == BattleFlowState::BossDead &&bossDeathPhase < BossDeathPhase::RecallPingPong)
+    if (battleFlowState == BattleFlowState::BossDead && bossDeathPhase < BossDeathPhase::RecallPingPong)
     {
         return GameMovieSkipUIActor::MovieSkipType::BossDeath;
     }
@@ -2715,7 +2698,6 @@ void GameScene::CreateBossDeathFadeUI()
 void GameScene::StartBossDeathGroanLoop()
 {
     StopBossDeathGroanLoop();
-    //bossDeathGroanAudio = std::make_shared<CoreStandaloneAudioSource>(L"./Data/Sound/SE/boss_death_grown.wav");
     bossDeathGroanAudio = std::make_shared<CoreStandaloneAudioSource>(L"./Data/Sound/SE/enemy_groan.wav");
     bossDeathGroanAudio->SetVolume(0.05f);
     bossDeathGroanAudio->Play(true);
@@ -2751,7 +2733,7 @@ void GameScene::UpdateBossDeathScreamHold(const float deltaTime)
         return;
     const auto mesh = gruxEnemyActor->GetSkeletalMeshComponent();
     if (!mesh || !mesh->IsVisible())
-        return; // The captured particles no longer follow the animated mesh.
+        return; 
 
     AdvanceBossDeathHold(bossDeathScreamHoldTime, bossDeathScreamHoldDirection,
         bossDeathScreamHoldMin, bossDeathScreamHoldMax,
@@ -3528,7 +3510,7 @@ void GameScene::CaptureVictoryResult()
     const float s = std::isfinite(victoryRankSLimit) ? (std::max)(0.0f, victoryRankSLimit) : 60.0f;
     const float a = std::isfinite(victoryRankALimit) ? (std::max)(s, victoryRankALimit) : (std::max)(s, 90.0f);
     const float b = std::isfinite(victoryRankBLimit) ? (std::max)(a, victoryRankBLimit) : (std::max)(a, 120.0f);
-    const GameVictoryUIActor::VictoryRank victoryRank = victoryClearTime <= s ? GameVictoryUIActor::VictoryRank::S : victoryClearTime <= a ? GameVictoryUIActor::VictoryRank::A :victoryClearTime <= b ? GameVictoryUIActor::VictoryRank::B : GameVictoryUIActor::VictoryRank::C;
+    const GameVictoryUIActor::VictoryRank victoryRank = victoryClearTime <= s ? GameVictoryUIActor::VictoryRank::S : victoryClearTime <= a ? GameVictoryUIActor::VictoryRank::A : victoryClearTime <= b ? GameVictoryUIActor::VictoryRank::B : GameVictoryUIActor::VictoryRank::C;
     victoryUIActor->SetResultData(victoryClearTime, victoryDisplayedBestTime, victoryIsNewRecord, victoryRank);
 }
 
@@ -3818,9 +3800,6 @@ void GameScene::UpdateBattleFlow()
         break;
     }
 }
-void GameScene::UpdateConstants(ID3D11DeviceContext* immediateContext, float deltaTime)
-{
-}
 
 void GameScene::SetUpActors()
 {
@@ -3845,6 +3824,10 @@ void GameScene::SetUpActors()
     // MovieCameraManagerActor を作成し、MovieCameraComponent を設定
     auto movieCameraManagerActor = GetActorManager()->CreateAndRegisterActorWithTransform<MovieCameraManagerActor>("movieCameraManager", movieCameraTr);
     movieCameraManagerActor->SetMovieCameraComponent(movieCameraActor->GetMovieCameraComponent());
+
+    Transform debrisTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
+    this->GetActorManager()->CreateAndRegisterActorWithTransform<ModelDebrisEmitterActor>(
+        "ModelDebrisEmitterActor", debrisTr);
 
     // 布の生成
     {
@@ -3884,13 +3867,6 @@ void GameScene::SetUpActors()
         darkClothActors[9] = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkClothActor>("cloth", clothTr9);
     }
 
-
-    Transform iceTr(DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    auto iceActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<IceFragmentEmitterActor>("IceFragmentEmitterActor", iceTr);
-
-    Transform debrisTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    this->GetActorManager()->CreateAndRegisterActorWithTransform<ModelDebrisEmitterActor>(
-        "ModelDebrisEmitterActor", debrisTr);
 
 #if 0
     {// メインの部屋の絵画を生成する
@@ -3995,15 +3971,11 @@ void GameScene::DrawGuiPlusAlpha()
 #ifdef USE_IMGUI
     ImGui::Begin("GameScene");
 
-    ImGui::SeparatorText("Tutorial Guide Ring");
-    ImGui::Checkbox("Tutorial Guide Ring Force Visible", &tutorialDodgeGuideRingForceVisible);
-
     ImGui::SeparatorText("Tutorial Camera Profile Trigger");
     ImGui::DragFloat3("Corridor Exit Trigger Center", &tutorialCameraProfileTriggerCenter.x,
         0.05f, -100.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat3("Corridor Exit Trigger Size", &tutorialCameraProfileTriggerSize.x,
         0.05f, 0.05f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::Checkbox("Show Corridor Exit Trigger", &showTutorialCameraProfileTriggerDebug);
     ImGui::SeparatorText("Prison Opening Sitting");
     ImGui::DragFloat3("Sitting Position", &prisonOpeningSittingPosition.x,
         0.01f, -100.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
@@ -4015,9 +3987,6 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat("Far Distance", &tutorialSkeletonHpFarDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Near Scale Multiplier", &tutorialSkeletonHpNearScaleMultiplier, 0.01f, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Far Scale Multiplier", &tutorialSkeletonHpFarScaleMultiplier, 0.01f, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("HP World Offset X", &tutorialSkeletonHpBarWorldOffset.x, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("HP World Offset Y", &tutorialSkeletonHpBarWorldOffset.y, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("HP World Offset Z", &tutorialSkeletonHpBarWorldOffset.z, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("HP Bar Scale", &tutorialSkeletonHpBarScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Checkbox("Use Fixed Screen Position", &tutorialSkeletonUseFixedScreenPosition);
     ImGui::DragFloat2("HP Fixed Screen Position X / Y", &tutorialSkeletonHpFixedScreenPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
@@ -4027,10 +3996,6 @@ void GameScene::DrawGuiPlusAlpha()
         0.01f, 0.0f, 2.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Phase2 FadeIn時間"), &phase2RecallFadeInDuration,
         0.01f, 0.0f, 2.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    const float phase2FadeOutRemaining = phase2TransitionStep == Phase2TransitionStep::RecallFadeOut
-        ? (std::max)(0.0f, phase2RecallFadeOutDuration - phase2StepElapsed) : 0.0f;
-    const float phase2FadeInRemaining = phase2TransitionStep == Phase2TransitionStep::RecallFadeIn
-        ? (std::max)(0.0f, phase2RecallFadeInDuration - phase2StepElapsed) : 0.0f;
     ImGui::DragFloat(U8("Phase2 Recall\u524DWait"), &phase2RecallPreWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     const float recallPreWaitElapsed = phase2TransitionStep == Phase2TransitionStep::RecallPreWait
@@ -4092,17 +4057,6 @@ void GameScene::DrawGuiPlusAlpha()
         0.001f, 0.001f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Phase2 Emote\u5F8CWait"), &phase2PlayerEmotePostWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    const bool playerLockOnActive = darkCameraActor &&
-        (darkCameraActor->GetCameraMode() == DarkCameraActor::CameraMode::LockOn ||
-            darkCameraActor->GetMovementMode() == DarkCameraActor::CameraMode::LockOn);
-    const char* playerStateName = player && player->GetStateMachine()
-        ? player->GetStateMachine()->GetStateName() : "None";
-    const bool phase2BossIdleMaintained = phase2BossController &&
-        (phase2TransitionStep == Phase2TransitionStep::PlayerEmotePreWait ||
-            phase2TransitionStep == Phase2TransitionStep::PlayerEmote ||
-            phase2TransitionStep == Phase2TransitionStep::PlayerEmotePostWait ||
-            phase2TransitionStep == Phase2TransitionStep::ReturnToTps) &&
-        phase2BossController->GetCurrentAnimationName() == "TravelMode_Idle_0";
     ImGui::SeparatorText("Phase2 Boss HP Preview");
     if (gruxEnemyActor)
         gruxEnemyActor->DrawPhase2HpBarPreviewGui();
@@ -4118,115 +4072,19 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::Separator();
     if (ImGui::TreeNode("Boss Death Cinematic Preview"))
     {
-        static constexpr std::array<const char*, 13> phaseNames = {
-            "FadeOut", "SetupCinematic", "FadeInScream",
-            "DeathScream", "DeathFall", "DeathLanding",
-            "PlayerApproach", "PlayerWalkStop", "RecallLeadIn", "RecallPingPong",
-            "FinishTriggered", "HuskDelay", "HuskPreview"
-        };
-        ImGui::SeparatorText("Boss Death Flow Debug (read only)");
-        static constexpr const char* battleFlowDebugNames[] = {
-            "Intro", "Playing", "FinalHitSlow", "FinalHitSlowRecovery", "FinalHitAftermath", "PlayerDead",
-            "ContinueWait", "ResetForContinue", "BossDead", "Victory"
-        };
-        const auto flowName = [&](BattleFlowState state)
-            {
-                const size_t index = static_cast<size_t>(state);
-                return index < std::size(battleFlowDebugNames) ? battleFlowDebugNames[index] : "Unknown";
-            };
-        const size_t phaseIndex = static_cast<size_t>(bossDeathPhase);
-        const char* phaseName = phaseIndex < phaseNames.size() ? phaseNames[phaseIndex] : "Unknown";
-        const auto bossController = gruxEnemyActor
-            ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
-        const char* actualAnimation = bossController
-            ? bossController->GetCurrentAnimationName().c_str() : "None";
-        const char* expectedAnimation = "None";
-        bool animationCompletionMet = false;
-        switch (bossDeathPhase)
-        {
-        case BossDeathPhase::DeathScream:
-            expectedAnimation = "Ultimate_Roar_0";
-            animationCompletionMet = bossController &&
-                bossController->GetCurrentAnimationName() == expectedAnimation &&
-                !bossController->IsPlayAnimation();
-            break;
-        case BossDeathPhase::DeathFall:
-            expectedAnimation = "Result_Down_Start";
-            animationCompletionMet = bossController &&
-                bossController->GetCurrentAnimationName() == expectedAnimation &&
-                !bossController->IsPlayAnimation();
-            break;
-        case BossDeathPhase::DeathLanding:
-            expectedAnimation = "Death_B_0";
-            animationCompletionMet = bossController &&
-                bossController->GetCurrentAnimationName() == expectedAnimation &&
-                bossController->GetCurrentAnimationTime() >= bossDeathFwdEndTime;
-            break;
-        case BossDeathPhase::SetupCinematic:
-            animationCompletionMet = bossDeathShotsLoaded && player && gruxEnemyActor && cinemaCameraActor;
-            break;
-        case BossDeathPhase::HuskPreview:
-            animationCompletionMet = IsHuskComplete();
-            break;
-        default:
-            animationCompletionMet = true;
-            break;
-        }
-
-        std::string setupFailureReason;
-        const auto addSetupFailure = [&](const char* reason)
-            {
-                if (!setupFailureReason.empty()) setupFailureReason += ", ";
-                setupFailureReason += reason;
-            };
-        if (!bossDeathShotsLoaded) addSetupFailure("BossDeathPresetMissing");
-        if (!player) addSetupFailure("PlayerMissing");
-        if (!gruxEnemyActor) addSetupFailure("GruxMissing");
-        if (!cinemaCameraActor) addSetupFailure("CinematicCameraMissing");
-        if (setupFailureReason.empty()) setupFailureReason = "None";
-
-        std::string huskWaitReason;
-        if (!huskParticles) huskWaitReason = "HuskParticlesMissing";
-        else if (bossDeathPhase != BossDeathPhase::HuskDelay &&
-            bossDeathPhase != BossDeathPhase::HuskPreview) huskWaitReason = "PhaseNotHusk";
-        else if (bossDeathPhase == BossDeathPhase::HuskDelay) huskWaitReason = "HuskDelay";
-        else if (gruxHuskCaptureRequested || gruxHuskPreviewCaptureRequested) huskWaitReason = "CapturePending";
-        else if (!gruxHuskPlaybackActive) huskWaitReason = "PlaybackNotStarted";
-        else if (!IsHuskComplete()) huskWaitReason = "WaitingCompletion";
-        else huskWaitReason = "None";
-
-        const char* stopReason = "None";
-        if (battleFlowState != BattleFlowState::BossDead) stopReason = "NotInBossDead";
-        else if (bossDeathPhase == BossDeathPhase::SetupCinematic && setupFailureReason != "None") stopReason = "SetupCinematicWaiting";
-        else if (bossDeathPhase == BossDeathPhase::DeathScream && !animationCompletionMet) stopReason = "WaitingDeathScreamAnimation";
-        else if (bossDeathPhase == BossDeathPhase::DeathFall && !animationCompletionMet) stopReason = "WaitingDeathFallAnimation";
-        else if (bossDeathPhase == BossDeathPhase::DeathLanding && !animationCompletionMet) stopReason = "WaitingDeathLandingAnimation";
-        else if (bossDeathPhase == BossDeathPhase::HuskPreview && !IsHuskComplete()) stopReason = "WaitingHusk";
-
         ImGui::Separator();
         ImGui::DragFloat("Final Hit Slow Scale", &finalHitSlowScale, 0.01f, 0.01f, 1.0f);
         ImGui::DragFloat("Final Hit Slow Duration", &finalHitSlowDuration, 0.01f, 0.01f, 2.0f);
         ImGui::DragFloat("Final Hit Slow Recovery Duration", &finalHitSlowRecoveryDuration,
             0.01f, 0.0f, 1.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
         ImGui::DragFloat("Final Hit Aftermath Duration", &finalHitAftermathDuration, 0.01f, 0.0f, 2.0f);
-        if (gruxEnemyActor)
-        {
-            if (const auto controller = gruxEnemyActor->GetBodyAnimationController())
-            {
-                const std::string reactionName = finalHitReaction.empty() ? "HitReact_Front" : finalHitReaction;
-                const float duration = (std::max)(0.0f, controller->GetAnimationLength(reactionName));
-                ImGui::DragFloat("Final Hit Reaction Cut Time", &finalHitReactionCutTime,
-                    0.001f, 0.0f, duration, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-            }
-        }
+   
         ImGui::Separator();
         ImGui::SeparatorText("Victory Camera Intro");
         static constexpr const char* victoryPhaseNames[] = { "None", "CameraBlend", "WinEmote", "ResultDelay", "ShowButtons", "Interactive" };
         ImGui::Text("Victory Result Phase: %s", victoryPhaseNames[static_cast<size_t>(victoryResultPhase)]);
         ImGui::DragFloat("Result Camera Blend Duration", &victoryCameraBlendDuration,
             0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-        const auto* resultCamera = cinemaCameraActor
-            ? dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()) : nullptr;
         ImGui::DragFloat("Result Recall To Idle Blend Duration", &resultRecallToIdleBlendDuration,
             0.01f, 0.0f, 0.5f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
         ImGui::DragFloat("Result UI Trigger Animation Time", &resultUITriggerAnimationTime,
@@ -4351,105 +4209,10 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::TreePop();
         ImGui::Text("deathAttemptTime : %.3f", deathAttemptTime);
         ImGui::Text("battleElapsedTime : %.3f", battleElapsedTime);
-
-
     }
-
     ImGui::End();
-
-    if (darkCameraActor && darkCameraActor->IsNormalEnemyLockOnScreenRadiusDebugEnabled() && player)
-    {
-        float viewportX = 0.0f;
-        float viewportY = 0.0f;
-        float viewportWidth = 0.0f;
-        float viewportHeight = 0.0f;
-        Graphics::GetViewport(viewportX, viewportY, viewportWidth, viewportHeight);
-        ImDrawList* drawList = ImGui::GetForegroundDrawList();
-        drawList->PushClipRect(
-            ImVec2(viewportX, viewportY),
-            ImVec2(viewportX + viewportWidth, viewportY + viewportHeight), true);
-
-        const float maxDistance = darkCameraActor->GetLockOnTargetSelectionMaxDistance();
-        const float maxDistanceSq = maxDistance * maxDistance;
-        for (const auto& enemy : GetActorManager()->GetActorsOfType<Enemy>())
-        {
-            if (!enemy || std::dynamic_pointer_cast<GruxEnemy>(enemy))
-                continue;
-
-            const auto target = std::dynamic_pointer_cast<SceneComponent>(
-                enemy->FindComponentByName("cameraTargetComponent"));
-            if (!target)
-                continue;
-
-            DirectX::XMFLOAT3 delta = MathHelper::Subtract(enemy->GetPosition(), player->GetPosition());
-            delta.y = 0.0f;
-            const float distanceSq = delta.x * delta.x + delta.z * delta.z;
-            const auto projection = darkCameraActor->ProjectWorldPositionForUI(
-                target->GetComponentLocation());
-            const bool insideScreenRadius = projection.valid && projection.inFront &&
-                projection.insideViewport &&
-                darkCameraActor->IsNormalEnemyLockOnProjectionWithinScreenRadius(projection);
-            const bool candidate = !enemy->IsDefeated() && !enemy->IsPendingKill() &&
-                !bossRoomLockOnScopeActive && distanceSq <= maxDistanceSq && insideScreenRadius;
-            const ImU32 color = candidate
-                ? IM_COL32(80, 255, 110, 255)
-                : insideScreenRadius ? IM_COL32(255, 180, 50, 255)
-                : IM_COL32(255, 80, 80, 255);
-
-            if (projection.valid && projection.inFront)
-            {
-                const ImVec2 position{ projection.screenPosition.x, projection.screenPosition.y };
-                drawList->AddCircle(position, 7.0f, color, 16, 2.0f);
-                drawList->AddLine(
-                    ImVec2(position.x - 10.0f, position.y),
-                    ImVec2(position.x + 10.0f, position.y), color, 1.5f);
-                drawList->AddLine(
-                    ImVec2(position.x, position.y - 10.0f),
-                    ImVec2(position.x, position.y + 10.0f), color, 1.5f);
-                const char* status = candidate ? "Candidate"
-                    : insideScreenRadius ? "Other filter" : "Out of range";
-                const std::string label = enemy->GetName() + " [" + status + "]";
-                drawList->AddText(ImVec2(position.x + 12.0f, position.y - 8.0f), color, label.c_str());
-            }
-        }
-        drawList->PopClipRect();
-    }
 #endif
 
-    if (darkCameraActor && darkCameraActor->IsNormalEnemyLockOnScreenRadiusDebugEnabled() && player)
-    {
-        const DirectX::XMFLOAT3 playerPosition = player->GetPosition();
-        const float radius = darkCameraActor->GetLockOnTargetSelectionMaxDistance();
-        constexpr int segmentCount = 48;
-        constexpr float twoPi = DirectX::XM_2PI;
-        const DirectX::XMFLOAT4 rangeColor{ 0.25f, 0.85f, 1.0f, 1.0f };
-        for (int segment = 0; segment < segmentCount; ++segment)
-        {
-            const float firstAngle = twoPi * static_cast<float>(segment) / segmentCount;
-            const float secondAngle = twoPi * static_cast<float>(segment + 1) / segmentCount;
-            DirectX::XMFLOAT3 first{
-                playerPosition.x + std::cos(firstAngle) * radius,
-                playerPosition.y + 0.05f,
-                playerPosition.z + std::sin(firstAngle) * radius };
-            DirectX::XMFLOAT3 second{
-                playerPosition.x + std::cos(secondAngle) * radius,
-                playerPosition.y + 0.05f,
-                playerPosition.z + std::sin(secondAngle) * radius };
-            DebugRender::DrawLine(first, second, rangeColor, 0.0f, true);
-        }
-        DebugRender::DrawSphere(
-            { playerPosition.x, playerPosition.y + 0.05f, playerPosition.z },
-            0.12f, rangeColor, 0.0f, true);
-    }
-
-    if (showTutorialCameraProfileTriggerDebug)
-    {
-        DebugRender::DrawBox(tutorialCameraProfileTriggerCenter, tutorialCameraProfileTriggerSize,
-            tutorialCameraProfileTriggerFired
-            ? DirectX::XMFLOAT4{ 0.2f, 0.9f, 0.35f, 1.0f }
-            : DirectX::XMFLOAT4{ 1.0f, 0.75f, 0.15f, 1.0f },
-            0.0f, true);
-    }
 }
 
 
@@ -4460,7 +4223,6 @@ void GameScene::SetBossRoomLerpFactor(float lerpFactor)
     shader.bossRoomLerpFactor = lerpFactor;
 }
 
-// ボスの目のみBloomをオンにする
 
 // ボスの部屋の色のラープを開始する関数
 void GameScene::CancelBossRoomLerp()

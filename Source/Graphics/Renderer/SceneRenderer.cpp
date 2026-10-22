@@ -3,7 +3,6 @@
 
 #include "Engine/Scene/Scene.h"
 #include "Game/Actors/Stage/Cloth.h"
-#include "Components/Elastic/ElasticComponent.h"
 
 UINT SizeofComponent(DXGI_FORMAT format)
 {
