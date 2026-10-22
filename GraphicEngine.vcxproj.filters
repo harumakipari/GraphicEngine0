@@ -178,6 +178,9 @@
     <ClCompile Include="Source\Game\Actors\UI\GameDefeatUIActor.cpp">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\UI\GameTutorialUIActor.cpp">
+      <Filter>Source\Game\Actors\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Actors\UI\GameTimerUIActor.cpp">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClCompile>
@@ -985,6 +988,9 @@
       <Filter>Source\Game\Actors\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameDefeatUIActor.h">
+      <Filter>Source\Game\Actors\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\UI\GameTutorialUIActor.h">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameTimerUIActor.h">

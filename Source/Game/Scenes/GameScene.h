@@ -21,6 +21,7 @@
 #include "Game/Actors/UI/GameDefeatUIActor.h"
 #include "Game/Actors/UI/GameMovieSkipUIActor.h"
 #include "Game/Actors/UI/GameTimerUIActor.h"
+#include "Game/Actors/UI/GameTutorialUIActor.h"
 #include "Game/Actors/UI/GameVictoryUIActor.h"
 #include "Game/DarkGame/DarkActors/DarkClothActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
@@ -161,13 +162,9 @@ private:
     void CreateLockOnTargetUI();
     void UpdateLockOnTargetUI(float deltaTime);
     void HideLockOnTargetUI();
-    void CreateJudgeDodgeOperationTutorialUI();
     void StartJudgeDodgeOperationTutorial();
     void CloseJudgeDodgeOperationTutorial();
-    void UpdateJudgeDodgeOperationTutorialUI();
-    void CreateTutorialDodgeGuideRing();
     void UpdateTutorialDodgeGuideRing();
-    void UpdateTutorialDodgeGuideRingVisual();
     void SpawnTutorialSkeletons();
     void CreateTutorialSkeletonUI();
     void UpdateTutorialSkeletonUI();
@@ -370,9 +367,6 @@ private:
     std::shared_ptr<UIImageComponent> lockOnTargetLeftImageComponent;
     std::shared_ptr<UIImageComponent> lockOnTargetRightImageComponent;
     std::weak_ptr<SceneComponent> lockOnTargetComponent;
-    std::shared_ptr<UIImageComponent> tutorialPassiveSkeletonLtPromptUI;
-    std::shared_ptr<UIImageComponent> tutorialPassiveSkeletonYPromptUI;
-    std::shared_ptr<UIImageComponent> tutorialDodgeSkeletonXPromptUI;
     float tutorialSkeletonHpDisplayDistance = 10.0f;
     float tutorialSkeletonHpNearDistance = 4.0f;
     float tutorialSkeletonHpFarDistance = 10.0f;
@@ -381,14 +375,8 @@ private:
     // Applied to the Skeleton camera-target world position before UI projection.
     DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset{ 0.0f, 1.1f, 0.4f };
     float tutorialSkeletonHpBarScale = 0.65f;
-    DirectX::XMFLOAT2 tutorialSkeletonOperationPromptOffset{ -1.0f, -63.0f };
-    float tutorialSkeletonOperationPromptScale = 0.36f;
     bool tutorialSkeletonUseFixedScreenPosition = false;
     DirectX::XMFLOAT2 tutorialSkeletonHpFixedScreenPosition{ 960.0f, 300.0f };
-    DirectX::XMFLOAT2 tutorialSkeletonOperationFixedScreenPosition{ 960.0f, 500.0f };
-    bool tutorialPassiveSkeletonLtPromptVisible = false;
-    bool tutorialPassiveSkeletonYPromptVisible = false;
-    bool tutorialDodgeSkeletonXPromptVisible = false;
     LockOnTargetUIAnimationPhase lockOnTargetUIAnimationPhase = LockOnTargetUIAnimationPhase::Hidden;
     float lockOnTargetUIAnimationElapsed = 0.0f;
     float lockOnTargetUIRotationDegree = 0.0f;
@@ -626,14 +614,7 @@ private:
     JudgeDodgeOperationTutorialState judgeDodgeOperationTutorialState = JudgeDodgeOperationTutorialState::Unseen;
     bool judgeDodgeOperationTutorialOwnsPause = false;
     float judgeDodgeOperationTutorialPreviousTimeScale = 1.0f;
-    std::shared_ptr<UIImageComponent> judgeDodgeOperationTutorialImage;
-    std::shared_ptr<UIImageComponent> judgeDodgeOperationTutorialCloseImage;
-    DirectX::XMFLOAT2 judgeDodgeOperationTutorialPosition{ 620.0f, 280.0f };
-    DirectX::XMFLOAT2 judgeDodgeOperationTutorialScale{ 0.40f, 0.40f };
-    DirectX::XMFLOAT2 judgeDodgeOperationTutorialClosePosition{ 973.0f, 325.0f };
-    DirectX::XMFLOAT2 judgeDodgeOperationTutorialCloseScale{ 0.44f, 0.44f };
-    std::shared_ptr<Actor> tutorialDodgeGuideRingActor;
-    std::shared_ptr<StaticMeshComponent> tutorialDodgeGuideRingMesh;
+    std::shared_ptr<GameTutorialUIActor> tutorialUIActor;
     bool tutorialDodgeGuideRingForceVisible = false;
     bool tutorialDodgeGuideRingActive = false;
     bool tutorialDodgeGuideRingFinished = false;
@@ -641,13 +622,6 @@ private:
     float tutorialDodgeGuideRingRangeGraceDuration = 0.25f;
     bool tutorialDodgeGuideRingStartedInAttackRange = false;
     bool tutorialDodgeGuideRingPreviousAttackRange = false;
-    float tutorialDodgeGuideRingPulseElapsed = 0.0f;
-    DirectX::XMFLOAT3 tutorialDodgeGuideRingPositionOffset{ 0.0f, 0.39f, 0.13f };
-    DirectX::XMFLOAT3 tutorialDodgeGuideRingScale{ 6.04f, 1.0f, 2.95f };
-    DirectX::XMFLOAT3 tutorialDodgeGuideRingColor{ 1.0f, 0.78f, 0.42f };
-    float tutorialDodgeGuideRingEmission = 7.8f;
-    float tutorialDodgeGuideRingPulseSpeed = 0.8f;
-    float tutorialDodgeGuideRingPulseMin = 0.11f, tutorialDodgeGuideRingPulseMax = 1.00f;
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
     bool tutorialPassiveSkeletonLockOnCandidate = false;
     int tutorialPassiveSkeletonYHpBaseline = -1;

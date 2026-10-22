@@ -43,11 +43,9 @@ void SkeletonHpBarUI::Create(UIManager* uiManager, const char* prefix)
             uiManager->Add(image);
             return image;
         };
-    const auto createHpBar = [&createImage, uiManager](SkeletonHpBarUI& hpBar,
-        const char* prefix)
+    const auto createHpBar = [&createImage, uiManager](SkeletonHpBarUI& hpBar,const char* prefix)
         {
-            hpBar.background = createImage("./Data/Textures/UI/HpBar/skeleton_hp_background.png",
-                (std::string(prefix) + "Background").c_str(), { 234.0f, 17.0f }, 40);
+            hpBar.background = createImage("./Data/Textures/UI/HpBar/skeleton_hp_background.png",(std::string(prefix) + "Background").c_str(), { 234.0f, 17.0f }, 40);
             hpBar.delayedFill = std::make_shared<UIGaugeFillComponent>(
                 "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", std::string(prefix) + "DelayedFill");
             hpBar.delayedFill->SetSize({ 233.0f, 16.0f });

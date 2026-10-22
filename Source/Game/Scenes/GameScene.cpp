@@ -189,8 +189,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         SetUpActors();
         CreateLockOnTargetUI();
         CreateTutorialSkeletonUI();
-        CreateJudgeDodgeOperationTutorialUI();
-        CreateTutorialDodgeGuideRing();
+        tutorialUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameTutorialUIActor>("TutorialUI");
         battleTimerUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameTimerUIActor>("BattleTimerUI");
         defeatUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameDefeatUIActor>("DefeatUI");
         defeatUIActor->SetSelectionCallback([this](int index) { ExecuteDeathResult(index); });
@@ -1123,61 +1122,8 @@ void GameScene::CreateLockOnTargetUI()
 void GameScene::CreateTutorialSkeletonUI()
 {
     const auto uiManager = GetUIManager();
-    const auto createImage = [uiManager](const char* texturePath, const char* name,
-        const DirectX::XMFLOAT2& size, const int zOrder)
-        {
-            auto image = std::make_shared<UIImageComponent>(texturePath, name);
-            image->SetSize(size);
-            image->SetPivot({ 0.0f, 0.5f });
-            image->SetVisible(false);
-            image->zOrder = zOrder;
-            uiManager->Add(image);
-            return image;
-        };
     if (tutorialPassiveSkeletonActor) tutorialPassiveSkeletonActor->CreateHpBarUI(uiManager, "TutorialPassiveSkeletonHp");
     if (tutorialDodgeSkeletonActor) tutorialDodgeSkeletonActor->CreateHpBarUI(uiManager, "TutorialDodgeSkeletonHp");
-    tutorialPassiveSkeletonLtPromptUI = createImage("./Data/Textures/UI/operate_LT.png",
-        "TutorialPassiveSkeletonLtPrompt", { 345.0f, 270.0f }, 50);
-    tutorialPassiveSkeletonLtPromptUI->SetPivot({ 0.5f, 0.5f });
-    tutorialPassiveSkeletonYPromptUI = createImage("./Data/Textures/UI/operate_Y.png",
-        "TutorialPassiveSkeletonYPrompt", { 184.0f, 279.0f }, 50);
-    tutorialPassiveSkeletonYPromptUI->SetPivot({ 0.5f, 0.5f });
-    tutorialDodgeSkeletonXPromptUI = createImage("./Data/Textures/UI/operate_X.png",
-        "TutorialDodgeSkeletonXPrompt", { 184.0f, 279.0f }, 50);
-    tutorialDodgeSkeletonXPromptUI->SetPivot({ 0.5f, 0.5f });
-}
-
-void GameScene::CreateJudgeDodgeOperationTutorialUI()
-{
-    const auto uiManager = GetUIManager();
-    judgeDodgeOperationTutorialImage = std::make_shared<UIImageComponent>("./Data/Textures/UI/judge_dodge_operation.png", "JudgeDodgeOperationTutorial");
-    judgeDodgeOperationTutorialImage->SetSize({ 2226.0f, 375.0f });
-    judgeDodgeOperationTutorialImage->SetPivot({ 0.5f, 0.5f });
-    judgeDodgeOperationTutorialImage->SetScale({ 0.25f, 0.25f });
-    judgeDodgeOperationTutorialImage->zOrder = 120;
-    judgeDodgeOperationTutorialImage->SetVisible(false);
-    uiManager->Add(judgeDodgeOperationTutorialImage);
-    judgeDodgeOperationTutorialCloseImage = std::make_shared<UIImageComponent>("./Data/Textures/UI/close_a.png", "JudgeDodgeOperationTutorialClose");
-    judgeDodgeOperationTutorialCloseImage->SetSize({ 294.0f, 90.0f });
-    judgeDodgeOperationTutorialCloseImage->SetPivot({ 0.5f, 0.5f });
-    judgeDodgeOperationTutorialCloseImage->SetScale({ 0.25f, 0.25f });
-    judgeDodgeOperationTutorialCloseImage->zOrder = 121;
-    judgeDodgeOperationTutorialCloseImage->SetVisible(false);
-    uiManager->Add(judgeDodgeOperationTutorialCloseImage);
-}
-
-void GameScene::UpdateJudgeDodgeOperationTutorialUI()
-{
-    if (judgeDodgeOperationTutorialImage)
-    {
-        judgeDodgeOperationTutorialImage->SetWorldPosition(judgeDodgeOperationTutorialPosition);
-        judgeDodgeOperationTutorialImage->SetScale(judgeDodgeOperationTutorialScale);
-    }
-    if (judgeDodgeOperationTutorialCloseImage)
-    {
-        judgeDodgeOperationTutorialCloseImage->SetWorldPosition(judgeDodgeOperationTutorialClosePosition);
-        judgeDodgeOperationTutorialCloseImage->SetScale(judgeDodgeOperationTutorialCloseScale);
-    }
 }
 
 void GameScene::StartJudgeDodgeOperationTutorial()
@@ -1189,20 +1135,15 @@ void GameScene::StartJudgeDodgeOperationTutorial()
     judgeDodgeOperationTutorialOwnsPause = true;
     SetPaused(true);
     Time::timeScale = 0.0f;
-    UpdateJudgeDodgeOperationTutorialUI();
-    if (judgeDodgeOperationTutorialImage)
-    {
-        judgeDodgeOperationTutorialImage->SetVisible(true);
-    }
-    if (judgeDodgeOperationTutorialCloseImage) judgeDodgeOperationTutorialCloseImage->SetVisible(true);
+    tutorialUIActor->UpdateExplanationLayout();
+    tutorialUIActor->SetExplanationVisible(true);
 }
 
 void GameScene::CloseJudgeDodgeOperationTutorial()
 {
     if (judgeDodgeOperationTutorialState != JudgeDodgeOperationTutorialState::Showing) return;
     CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav", 0.5f);
-    if (judgeDodgeOperationTutorialImage) judgeDodgeOperationTutorialImage->SetVisible(false);
-    if (judgeDodgeOperationTutorialCloseImage) judgeDodgeOperationTutorialCloseImage->SetVisible(false);
+    tutorialUIActor->SetExplanationVisible(false);
     tutorialDodgeGuideRingFinished = false;
     tutorialDodgeGuideRingElapsed = 0.0f;
     const bool ringStartedInAttackRange = tutorialDodgeSkeletonActor && player &&
@@ -1214,26 +1155,9 @@ void GameScene::CloseJudgeDodgeOperationTutorial()
     if (judgeDodgeOperationTutorialOwnsPause) { SetPaused(false); Time::timeScale = judgeDodgeOperationTutorialPreviousTimeScale; judgeDodgeOperationTutorialOwnsPause = false; }
 }
 
-void GameScene::CreateTutorialDodgeGuideRing()
-{
-    tutorialDodgeGuideRingActor = GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("TutorialDodgeGuideRing");
-    if (!tutorialDodgeGuideRingActor) return;
-    tutorialDodgeGuideRingMesh = tutorialDodgeGuideRingActor->AddComponent<StaticMeshComponent>("TutorialDodgeGuideRingMesh");
-    tutorialDodgeGuideRingMesh->SetModel("./Data/Models/EffectModel/JumpTeregraphPlane.glb");
-    if (tutorialDodgeGuideRingMesh->model) for (auto& material : tutorialDodgeGuideRingMesh->model->materials) material.data.alphaMode = 2;
-    tutorialDodgeGuideRingMesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
-    tutorialDodgeGuideRingMesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
-    tutorialDodgeGuideRingMesh->SetIsCastShadow(false);
-    tutorialDodgeGuideRingMesh->SetIsVisible(false);
-    tutorialDodgeGuideRingMesh->SetUsingAbsoluteLocation(true);
-    tutorialDodgeGuideRingMesh->SetUsingAbsoluteRotation(true);
-    tutorialDodgeGuideRingMesh->SetUsingAbsoluteScale(true);
-    tutorialDodgeGuideRingMesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
-}
-
 void GameScene::UpdateTutorialDodgeGuideRing()
 {
-    if (!tutorialDodgeGuideRingMesh) return;
+    if (!tutorialUIActor) return;
     const bool invalidSkeleton = !tutorialDodgeSkeletonActor ||
         tutorialDodgeSkeletonActor->IsDead() ||
         tutorialDodgeSkeletonActor->IsPendingKill() ||
@@ -1242,22 +1166,22 @@ void GameScene::UpdateTutorialDodgeGuideRing()
     {
         tutorialDodgeGuideRingActive = false;
         tutorialDodgeGuideRingFinished = true;
-        tutorialDodgeGuideRingMesh->SetIsVisible(false);
+        tutorialUIActor->HideRing();
         return;
     }
     if (tutorialDodgeGuideRingForceVisible)
     {
         if (invalidSkeleton)
-            tutorialDodgeGuideRingMesh->SetIsVisible(false);
+            tutorialUIActor->HideRing();
         else
-            UpdateTutorialDodgeGuideRingVisual();
+            tutorialUIActor->UpdateRing(tutorialDodgeSkeletonActor->GetPosition(), Time::UnscaledDeltaTime());
         return;
     }
 
     if (!tutorialDodgeGuideRingActive || tutorialDodgeGuideRingFinished) return;
     if (invalidSkeleton)
     {
-        tutorialDodgeGuideRingActive = false; tutorialDodgeGuideRingFinished = true; tutorialDodgeGuideRingMesh->SetIsVisible(false); return;
+        tutorialDodgeGuideRingActive = false; tutorialDodgeGuideRingFinished = true; tutorialUIActor->HideRing(); return;
     }
     tutorialDodgeGuideRingElapsed += Time::UnscaledDeltaTime();
     const bool attackRangeEnteredAfterRingShown = !tutorialDodgeGuideRingPreviousAttackRange && tutorialDodgeSkeletonAttackRange;
@@ -1268,39 +1192,17 @@ void GameScene::UpdateTutorialDodgeGuideRing()
     {
         tutorialDodgeGuideRingActive = false;
         tutorialDodgeGuideRingFinished = true;
-        tutorialDodgeGuideRingMesh->SetIsVisible(false);
+        tutorialUIActor->HideRing();
         return;
     }
-    UpdateTutorialDodgeGuideRingVisual();
-}
-
-void GameScene::UpdateTutorialDodgeGuideRingVisual()
-{
-    tutorialDodgeGuideRingPulseElapsed += Time::UnscaledDeltaTime();
-    const float wave = 0.5f + 0.5f * std::sin(tutorialDodgeGuideRingPulseElapsed * tutorialDodgeGuideRingPulseSpeed * DirectX::XM_2PI);
-    const float pulse = std::lerp(tutorialDodgeGuideRingPulseMin, tutorialDodgeGuideRingPulseMax, wave);
-    const auto p = tutorialDodgeSkeletonActor->GetPosition();
-    tutorialDodgeGuideRingMesh->SetRelativeLocationDirect({ p.x + tutorialDodgeGuideRingPositionOffset.x, p.y + tutorialDodgeGuideRingPositionOffset.y, p.z + tutorialDodgeGuideRingPositionOffset.z });
-    tutorialDodgeGuideRingMesh->SetRelativeScaleDirect(tutorialDodgeGuideRingScale);
-    // The ring uses absolute transforms, so this component is deliberately
-    // excluded from its root's child-transform propagation.  Commit the
-    // location and scale written above before the renderer consumes them.
-    tutorialDodgeGuideRingMesh->UpdateComponentToWorld();
-    tutorialDodgeGuideRingMesh->plusAlphaCBuffer->data.cpuColor = { tutorialDodgeGuideRingColor.x, tutorialDodgeGuideRingColor.y, tutorialDodgeGuideRingColor.z, 1.0f };
-    tutorialDodgeGuideRingMesh->plusAlphaCBuffer->data.emissionPower = tutorialDodgeGuideRingEmission * pulse;
-    tutorialDodgeGuideRingMesh->SetIsVisible(true);
+    tutorialUIActor->UpdateRing(tutorialDodgeSkeletonActor->GetPosition(), Time::UnscaledDeltaTime());
 }
 
 void GameScene::HideTutorialSkeletonUI()
 {
     if (tutorialPassiveSkeletonActor) tutorialPassiveSkeletonActor->HideHpBar();
     if (tutorialDodgeSkeletonActor) tutorialDodgeSkeletonActor->HideHpBar();
-    if (tutorialPassiveSkeletonLtPromptUI) tutorialPassiveSkeletonLtPromptUI->SetVisible(false);
-    if (tutorialPassiveSkeletonYPromptUI) tutorialPassiveSkeletonYPromptUI->SetVisible(false);
-    if (tutorialDodgeSkeletonXPromptUI) tutorialDodgeSkeletonXPromptUI->SetVisible(false);
-    tutorialPassiveSkeletonLtPromptVisible = false;
-    tutorialPassiveSkeletonYPromptVisible = false;
-    tutorialDodgeSkeletonXPromptVisible = false;
+    if (tutorialUIActor) tutorialUIActor->HidePrompts();
 }
 
 void GameScene::UpdateTutorialSkeletonUI()
@@ -1330,46 +1232,6 @@ void GameScene::UpdateTutorialSkeletonUI()
         tutorialPassiveSkeletonActor->UpdateHpBar(*darkCameraActor, player->GetPosition(), hpSettings);
     if (tutorialDodgeSkeletonActor)
         tutorialDodgeSkeletonActor->UpdateHpBar(*darkCameraActor, player->GetPosition(), hpSettings);
-    tutorialPassiveSkeletonLtPromptVisible = false;
-    tutorialPassiveSkeletonYPromptVisible = false;
-    tutorialDodgeSkeletonXPromptVisible = false;
-    if (tutorialPassiveSkeletonLtPromptUI) tutorialPassiveSkeletonLtPromptUI->SetVisible(false);
-    if (tutorialPassiveSkeletonYPromptUI) tutorialPassiveSkeletonYPromptUI->SetVisible(false);
-    if (tutorialDodgeSkeletonXPromptUI) tutorialDodgeSkeletonXPromptUI->SetVisible(false);
-
-    const auto updatePrompt = [this](const std::shared_ptr<SkeletonWarriorActor>& skeleton,
-        const std::shared_ptr<UIImageComponent>& prompt, const bool shouldShow, bool& isVisible,
-        const DirectX::XMFLOAT2& additionalOffset)
-        {
-            if (!shouldShow || !skeleton || skeleton->IsDead() || skeleton->IsPendingKill() || !prompt)
-                return;
-
-            const auto target = skeleton->GetCameraTargetComponent();
-            if (!target)
-                return;
-            const auto projection = darkCameraActor->ProjectWorldPositionForUI(target->GetComponentLocation());
-            if (!projection.valid || !projection.inFront || !projection.insideViewport)
-                return;
-
-            DirectX::XMFLOAT2 position = tutorialSkeletonUseFixedScreenPosition
-                ? tutorialSkeletonOperationFixedScreenPosition
-                : ConvertScreenToUI(projection.screenPosition);
-            if (!tutorialSkeletonUseFixedScreenPosition)
-            {
-                position.x += tutorialSkeletonOperationPromptOffset.x;
-                position.y += tutorialSkeletonOperationPromptOffset.y;
-            }
-            position.x += additionalOffset.x;
-            position.y += additionalOffset.y;
-            // This is intentionally independent of projection / distance.
-            const DirectX::XMFLOAT2 scale = {
-                tutorialSkeletonOperationPromptScale, tutorialSkeletonOperationPromptScale };
-            prompt->SetWorldPosition(position);
-            prompt->SetScale(scale);
-            prompt->SetVisible(true);
-            isVisible = true;
-        };
-
     const bool ltVisible = tutorialPassiveSkeletonLockOnCandidate &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT) &&
         !player->IsOperationGuideItemLearned(Player::OperationGuideItem::LT);
@@ -1382,12 +1244,8 @@ void GameScene::UpdateTutorialSkeletonUI()
     const bool xVisible = tutorialDodgeGuideActivated && !tutorialDodgeSkeletonJustDodged &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::X);
 
-    updatePrompt(tutorialPassiveSkeletonActor, tutorialPassiveSkeletonLtPromptUI, ltVisible,
-        tutorialPassiveSkeletonLtPromptVisible, { 0.0f, 18.0f });
-    updatePrompt(tutorialPassiveSkeletonActor, tutorialPassiveSkeletonYPromptUI, yVisible,
-        tutorialPassiveSkeletonYPromptVisible, { 0.0f, -60.0f });
-    updatePrompt(tutorialDodgeSkeletonActor, tutorialDodgeSkeletonXPromptUI, xVisible,
-        tutorialDodgeSkeletonXPromptVisible, { 0.0f, 0.0f });
+    tutorialUIActor->UpdatePrompts(*darkCameraActor, tutorialPassiveSkeletonActor, tutorialDodgeSkeletonActor,
+        ltVisible, yVisible, xVisible, tutorialSkeletonUseFixedScreenPosition);
 }
 void GameScene::HideLockOnTargetUI()
 {
@@ -1902,7 +1760,7 @@ void GameScene::Update(float deltaTime)
 
     if (judgeDodgeOperationTutorialState == JudgeDodgeOperationTutorialState::Showing)
     {
-        UpdateJudgeDodgeOperationTutorialUI();
+        tutorialUIActor->UpdateExplanationLayout();
         if (InputSystem::GetInputState("A", InputStateMask::Trigger) || InputSystem::GetInputState("Enter", InputStateMask::Trigger))
             CloseJudgeDodgeOperationTutorial();
         return;
@@ -4495,20 +4353,7 @@ void GameScene::DrawGuiPlusAlpha()
 
     ImGui::SeparatorText("Tutorial Guide Ring");
     ImGui::Checkbox("Tutorial Guide Ring Force Visible", &tutorialDodgeGuideRingForceVisible);
-    ImGui::DragFloat3("Tutorial Guide Ring Position Offset", &tutorialDodgeGuideRingPositionOffset.x, 0.01f);
-    ImGui::DragFloat3("Tutorial Guide Ring Scale", &tutorialDodgeGuideRingScale.x, 0.01f);
-    ImGui::ColorEdit3("Tutorial Guide Ring Color", &tutorialDodgeGuideRingColor.x);
-    ImGui::DragFloat("Tutorial Guide Ring Emission", &tutorialDodgeGuideRingEmission, 0.01f, 0.0f, 20.0f);
-    ImGui::DragFloat("Tutorial Guide Ring Pulse Speed", &tutorialDodgeGuideRingPulseSpeed, 0.01f, 0.0f, 10.0f);
-    ImGui::DragFloat("Tutorial Guide Ring Pulse Min", &tutorialDodgeGuideRingPulseMin, 0.01f, 0.0f, 1.0f);
-    ImGui::DragFloat("Tutorial Guide Ring Pulse Max", &tutorialDodgeGuideRingPulseMax, 0.01f, 0.0f, 1.0f);
-
-
-    ImGui::SeparatorText("Judge Dodge Operation Tutorial");
-    ImGui::DragFloat2("Judge Dodge Message Position", &judgeDodgeOperationTutorialPosition.x, 1.0f);
-    ImGui::DragFloat2("Judge Dodge Message Scale", &judgeDodgeOperationTutorialScale.x, 0.01f, 0.01f, 4.0f);
-    ImGui::DragFloat2("Judge Dodge Close Position", &judgeDodgeOperationTutorialClosePosition.x, 1.0f);
-    ImGui::DragFloat2("Judge Dodge Close Scale", &judgeDodgeOperationTutorialCloseScale.x, 0.01f, 0.01f, 4.0f);
+    tutorialUIActor->DrawTutorialSettings();
 
     ImGui::SeparatorText("Tutorial Camera Profile Trigger");
     ImGui::DragFloat3("Corridor Exit Trigger Center", &tutorialCameraProfileTriggerCenter.x,
@@ -4531,11 +4376,9 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat("HP World Offset Y", &tutorialSkeletonHpBarWorldOffset.y, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("HP World Offset Z", &tutorialSkeletonHpBarWorldOffset.z, 0.01f, -10.0f, 10.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("HP Bar Scale", &tutorialSkeletonHpBarScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat2("Operation Prompt Offset X / Y", &tutorialSkeletonOperationPromptOffset.x, 0.5f, -500.0f, 500.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Operation Prompt Scale", &tutorialSkeletonOperationPromptScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+    tutorialUIActor->DrawPromptSettings();
     ImGui::Checkbox("Use Fixed Screen Position", &tutorialSkeletonUseFixedScreenPosition);
     ImGui::DragFloat2("HP Fixed Screen Position X / Y", &tutorialSkeletonHpFixedScreenPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat2("Operation Fixed Screen Position X / Y", &tutorialSkeletonOperationFixedScreenPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragInt(U8("Phase1 MaxHP"), &phase1MaxHp, 1.0f, 1, 500);
     ImGui::DragInt(U8("Phase2 MaxHP"), &phase2MaxHp, 1.0f, 1, 500);
     ImGui::DragFloat(U8("Phase2 FadeOutŽžŠÔ"), &phase2RecallFadeOutDuration,
