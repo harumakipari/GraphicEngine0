@@ -11,6 +11,7 @@
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/BgmActor.h"
 #include "Game/DarkGame/GameBgmDirector.h"
+#include "Game/DarkGame/GameTutorialController.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 
 
@@ -405,7 +406,6 @@ private:
     Transform bossBattleStartTransform{};
     bool battleStartTransformsSaved = false;
     bool tutorialBossEntryPending = false;
-    bool tutorialCompletedForBossBattle = false;
     bool deathCameraStartRequested = false;
     float playerDeadElapsed = 0.0f;
     float battleElapsedTime = 0.0f;
@@ -519,27 +519,12 @@ private:
     Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
     bool prisonOpeningMovieStartRequested = false;
     bool backToRoomStartRequested = false;
-    enum class JudgeDodgeOperationTutorialState : uint8_t { Unseen, Showing, Completed };
-    JudgeDodgeOperationTutorialState judgeDodgeOperationTutorialState = JudgeDodgeOperationTutorialState::Unseen;
+    GameTutorialController tutorialController;
     bool judgeDodgeOperationTutorialOwnsPause = false;
     float judgeDodgeOperationTutorialPreviousTimeScale = 1.0f;
     std::shared_ptr<GameTutorialUIActor> tutorialUIActor;
-    bool tutorialDodgeGuideRingActive = false;
-    bool tutorialDodgeGuideRingFinished = false;
-    float tutorialDodgeGuideRingElapsed = 0.0f;
-    float tutorialDodgeGuideRingRangeGraceDuration = 0.25f;
-    bool tutorialDodgeGuideRingStartedInAttackRange = false;
-    bool tutorialDodgeGuideRingPreviousAttackRange = false;
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
-    bool tutorialPassiveSkeletonLockOnCandidate = false;
-    int tutorialPassiveSkeletonYHpBaseline = -1;
-    bool tutorialPassiveSkeletonYHpBaselineCaptured = false;
-    int tutorialDodgeSkeletonYHpBaseline = -1;
-    bool tutorialDodgeSkeletonYHpBaselineCaptured = false;
     std::shared_ptr<SkeletonWarriorActor> tutorialDodgeSkeletonActor;
-    bool tutorialDodgeSkeletonAttackRange = false;
-    bool tutorialDodgeGuideActivated = false;
-    bool tutorialDodgeSkeletonJustDodged = false;
     std::weak_ptr<Enemy> lockOnSelectedEnemy;
     std::unique_ptr<EasingRunner> bossLerpEasing;
     float bossLerpEasingFactor = 0.0f;

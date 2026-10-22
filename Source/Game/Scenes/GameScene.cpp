@@ -124,7 +124,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         prisonOpeningMovieStartRequested = entryIt->second == "NewGame";
         backToRoomStartRequested = entryIt->second == "BackToRoom";
     }
-    judgeDodgeOperationTutorialState = backToRoomStartRequested ? JudgeDodgeOperationTutorialState::Completed : JudgeDodgeOperationTutorialState::Unseen;
+    tutorialController.Initialize(backToRoomStartRequested);
     judgeDodgeOperationTutorialOwnsPause = false;
 
     loadStageThread = std::thread([&]()
@@ -825,7 +825,7 @@ void GameScene::Start()
     battleFlowState = BattleFlowState::Intro;
     battleStartTransformsSaved = false;
     tutorialBossEntryPending = false;
-    tutorialCompletedForBossBattle = false;
+    tutorialController.ResetForSceneStart();
     if (player)
         player->SetMinimumHp(5);
     battleTimerUIActor->SetVisible(false);
@@ -947,8 +947,7 @@ void GameScene::CreateTutorialSkeletonUI()
 
 void GameScene::StartJudgeDodgeOperationTutorial()
 {
-    if (judgeDodgeOperationTutorialState != JudgeDodgeOperationTutorialState::Unseen || IsPaused()) return;
-    judgeDodgeOperationTutorialState = JudgeDodgeOperationTutorialState::Showing;
+    if (!tutorialController.BeginExplanation(IsPaused())) return;
     CoreAudio::PlayOneShot("./Data/Sound/SE/new_mission_start.wav");
     judgeDodgeOperationTutorialPreviousTimeScale = Time::timeScale;
     judgeDodgeOperationTutorialOwnsPause = true;
@@ -960,17 +959,12 @@ void GameScene::StartJudgeDodgeOperationTutorial()
 
 void GameScene::CloseJudgeDodgeOperationTutorial()
 {
-    if (judgeDodgeOperationTutorialState != JudgeDodgeOperationTutorialState::Showing) return;
+    if (tutorialController.GetExplanationState() != GameTutorialController::ExplanationState::Showing) return;
     CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav", 0.5f);
     tutorialUIActor->SetExplanationVisible(false);
-    tutorialDodgeGuideRingFinished = false;
-    tutorialDodgeGuideRingElapsed = 0.0f;
     const bool ringStartedInAttackRange = tutorialDodgeSkeletonActor && player &&
         tutorialDodgeSkeletonActor->IsPlayerWithinAttackRange(*player);
-    tutorialDodgeGuideRingStartedInAttackRange = ringStartedInAttackRange;
-    tutorialDodgeGuideRingPreviousAttackRange = ringStartedInAttackRange;
-    tutorialDodgeGuideRingActive = true;
-    judgeDodgeOperationTutorialState = JudgeDodgeOperationTutorialState::Completed;
+    tutorialController.CloseExplanation(ringStartedInAttackRange);
     if (judgeDodgeOperationTutorialOwnsPause) { SetPaused(false); Time::timeScale = judgeDodgeOperationTutorialPreviousTimeScale; judgeDodgeOperationTutorialOwnsPause = false; }
 }
 
@@ -981,34 +975,13 @@ void GameScene::UpdateTutorialDodgeGuideRing()
         tutorialDodgeSkeletonActor->IsDead() ||
         tutorialDodgeSkeletonActor->IsPendingKill() ||
         (player && player->IsBossBattle());
-    if (bossRoomLockOnScopeActive || tutorialBossEntryPending || tutorialCompletedForBossBattle)
-    {
-        tutorialDodgeGuideRingActive = false;
-        tutorialDodgeGuideRingFinished = true;
+    const auto action = tutorialController.UpdateRing(
+        bossRoomLockOnScopeActive || tutorialBossEntryPending || tutorialController.IsCompletedForBossBattle(),
+        invalidSkeleton, tutorialController.IsDodgeAttackRange(), Time::UnscaledDeltaTime());
+    if (action == GameTutorialController::RingAction::Hide)
         tutorialUIActor->HideRing();
-        return;
-    }
-    if (!tutorialDodgeGuideRingActive || tutorialDodgeGuideRingFinished) return;
-    if (invalidSkeleton)
-    {
-        tutorialDodgeGuideRingActive = false;
-        tutorialDodgeGuideRingFinished = true;
-        tutorialUIActor->HideRing();
-        return;
-    }
-    tutorialDodgeGuideRingElapsed += Time::UnscaledDeltaTime();
-    const bool attackRangeEnteredAfterRingShown = !tutorialDodgeGuideRingPreviousAttackRange && tutorialDodgeSkeletonAttackRange;
-    const bool startedInRangeGraceExpired = tutorialDodgeGuideRingStartedInAttackRange &&
-        tutorialDodgeGuideRingElapsed >= tutorialDodgeGuideRingRangeGraceDuration;
-    tutorialDodgeGuideRingPreviousAttackRange = tutorialDodgeSkeletonAttackRange;
-    if (attackRangeEnteredAfterRingShown || startedInRangeGraceExpired)
-    {
-        tutorialDodgeGuideRingActive = false;
-        tutorialDodgeGuideRingFinished = true;
-        tutorialUIActor->HideRing();
-        return;
-    }
-    tutorialUIActor->UpdateRing(tutorialDodgeSkeletonActor->GetPosition(), Time::UnscaledDeltaTime());
+    else if (action == GameTutorialController::RingAction::Update)
+        tutorialUIActor->UpdateRing(tutorialDodgeSkeletonActor->GetPosition(), Time::UnscaledDeltaTime());
 }
 
 void GameScene::HideTutorialSkeletonUI()
@@ -1020,7 +993,7 @@ void GameScene::HideTutorialSkeletonUI()
 
 void GameScene::UpdateTutorialSkeletonUI()
 {
-    if (tutorialCompletedForBossBattle)
+    if (tutorialController.IsCompletedForBossBattle())
     {
         HideTutorialSkeletonUI();
         return;
@@ -1040,7 +1013,7 @@ void GameScene::UpdateTutorialSkeletonUI()
         tutorialPassiveSkeletonActor->UpdateHpBar(*darkCameraActor, player->GetPosition());
     if (tutorialDodgeSkeletonActor)
         tutorialDodgeSkeletonActor->UpdateHpBar(*darkCameraActor, player->GetPosition());
-    const bool ltVisible = tutorialPassiveSkeletonLockOnCandidate &&
+    const bool ltVisible = tutorialController.IsPassiveLockOnCandidate() &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT) &&
         !player->IsOperationGuideItemLearned(Player::OperationGuideItem::LT);
     const bool passiveSkeletonAttackRange = tutorialPassiveSkeletonActor &&
@@ -1049,7 +1022,7 @@ void GameScene::UpdateTutorialSkeletonUI()
     const bool yVisible = passiveSkeletonAttackRange &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y) &&
         !player->IsOperationGuideItemLearned(Player::OperationGuideItem::Y);
-    const bool xVisible = tutorialDodgeGuideActivated && !tutorialDodgeSkeletonJustDodged &&
+    const bool xVisible = tutorialController.IsDodgeGuideActivated() && !tutorialController.HasDodgeSkeletonJustDodged() &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::X);
 
     tutorialUIActor->UpdatePrompts(*darkCameraActor, tutorialPassiveSkeletonActor, tutorialDodgeSkeletonActor,
@@ -1239,19 +1212,10 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
 
 void GameScene::CompleteTutorialForBossBattle()
 {
-    if (tutorialCompletedForBossBattle)
+    if (!tutorialController.CompleteForBossBattle())
         return;
-
-    tutorialCompletedForBossBattle = true;
     HideTutorialSkeletonUI();
-    tutorialPassiveSkeletonLockOnCandidate = false;
-    tutorialPassiveSkeletonYHpBaseline = -1;
-    tutorialPassiveSkeletonYHpBaselineCaptured = false;
-    tutorialDodgeSkeletonYHpBaseline = -1;
-    tutorialDodgeSkeletonYHpBaselineCaptured = false;
-    tutorialDodgeSkeletonAttackRange = false;
-    tutorialDodgeGuideActivated = false;
-    tutorialDodgeSkeletonJustDodged = false;
+    tutorialController.ResetGuideProgress();
 
     if (!player)
         return;
@@ -1272,41 +1236,31 @@ void GameScene::CompleteTutorialForBossBattle()
 
 void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult selectionResult)
 {
-    tutorialPassiveSkeletonLockOnCandidate = false;
-    if (tutorialCompletedForBossBattle)
-    {
-        tutorialDodgeSkeletonAttackRange = false;
+    const auto update = tutorialController.BeginGuideUpdate(
+        player != nullptr, tutorialPassiveSkeletonActor != nullptr);
+    if (update == GameTutorialController::GuideUpdate::HideX)
+        player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, false);
+    if (update != GameTutorialController::GuideUpdate::Proceed)
         return;
-    }
-    if (!player || !tutorialPassiveSkeletonActor)
-    {
-        tutorialDodgeSkeletonAttackRange = false;
-        if (player)
-            player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, false);
-        return;
-    }
 
     const auto revealYAndCaptureTutorialSkeletonHp = [this]()
         {
-            if (player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y))
+            if (!tutorialController.ShouldRevealY(
+                player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y)))
                 return;
 
             player->SetOperationGuideItemVisible(Player::OperationGuideItem::Y, true);
-            tutorialPassiveSkeletonYHpBaseline = tutorialPassiveSkeletonActor->GetHp();
-            tutorialPassiveSkeletonYHpBaselineCaptured = true;
+            tutorialController.CaptureYBaseline(false, tutorialPassiveSkeletonActor->GetHp());
             if (tutorialDodgeSkeletonActor)
-            {
-                tutorialDodgeSkeletonYHpBaseline = tutorialDodgeSkeletonActor->GetHp();
-                tutorialDodgeSkeletonYHpBaselineCaptured = true;
-            }
+                tutorialController.CaptureYBaseline(true, tutorialDodgeSkeletonActor->GetHp());
         };
 
     std::shared_ptr<SceneComponent> target;
     float distanceSq = FLT_MAX;
     float screenDistanceSq = FLT_MAX;
-    tutorialPassiveSkeletonLockOnCandidate = EvaluateLockOnCandidate(
+    const bool candidate = EvaluateLockOnCandidate(
         tutorialPassiveSkeletonActor, target, distanceSq, screenDistanceSq);
-    if (tutorialPassiveSkeletonLockOnCandidate)
+    if (tutorialController.SetPassiveLockOnCandidate(candidate))
         player->SetOperationGuideItemVisible(Player::OperationGuideItem::LT, true);
 
     // Reuse the Skeleton combat range; no tutorial-only distance is introduced.
@@ -1320,36 +1274,22 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
     const bool selectedTutorialSkeleton = selectedEnemy &&
         (selectedEnemy.get() == tutorialPassiveSkeletonActor.get() ||
             (tutorialDodgeSkeletonActor && selectedEnemy.get() == tutorialDodgeSkeletonActor.get()));
-    if (selectionResult == LockOnTargetSelectionResult::Selected && selectedTutorialSkeleton &&
-        player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT))
+    const bool selected = selectionResult == LockOnTargetSelectionResult::Selected;
+    const bool ltVisible = selected && selectedTutorialSkeleton &&
+        player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT);
+    if (tutorialController.ShouldLearnLT(selected, selectedTutorialSkeleton, ltVisible))
     {
         player->SetOperationGuideItemLearned(Player::OperationGuideItem::LT);
         revealYAndCaptureTutorialSkeletonHp();
     }
 
-    if (player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y) &&
-        !player->IsOperationGuideItemLearned(Player::OperationGuideItem::Y))
+    const bool yVisible = player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y);
+    const bool yLearned = yVisible && player->IsOperationGuideItemLearned(Player::OperationGuideItem::Y);
+    if (tutorialController.ShouldCheckYDamage(yVisible, yLearned))
     {
-        const auto detectTutorialSkeletonHit = [](const std::shared_ptr<SkeletonWarriorActor>& skeleton,
-            int& baselineHp, bool& baselineCaptured)
-            {
-                if (!skeleton)
-                    return false;
-
-                const int currentHp = skeleton->GetHp();
-                if (!baselineCaptured)
-                {
-                    baselineHp = currentHp;
-                    baselineCaptured = true;
-                    return false;
-                }
-                return currentHp < baselineHp;
-            };
-
-        if (detectTutorialSkeletonHit(tutorialPassiveSkeletonActor,
-            tutorialPassiveSkeletonYHpBaseline, tutorialPassiveSkeletonYHpBaselineCaptured) ||
-            detectTutorialSkeletonHit(tutorialDodgeSkeletonActor,
-                tutorialDodgeSkeletonYHpBaseline, tutorialDodgeSkeletonYHpBaselineCaptured))
+        if (tutorialController.DetectYDamage(false, tutorialPassiveSkeletonActor->GetHp()) ||
+            (tutorialDodgeSkeletonActor &&
+                tutorialController.DetectYDamage(true, tutorialDodgeSkeletonActor->GetHp())))
         {
             player->SetOperationGuideItemLearned(Player::OperationGuideItem::Y);
         }
@@ -1360,28 +1300,27 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
         tutorialDodgeSkeletonActor->IsActive() &&
         !tutorialDodgeSkeletonActor->IsDead() &&
         !tutorialDodgeSkeletonActor->IsPendingKill();
-    tutorialDodgeSkeletonAttackRange = tutorialDodgeSkeletonAvailable &&
+    const bool dodgeAttackRange = tutorialDodgeSkeletonAvailable &&
         tutorialDodgeSkeletonActor->IsPlayerWithinAttackRange(*player);
-    if (tutorialDodgeSkeletonAttackRange && !tutorialDodgeGuideActivated)
-    {
-        tutorialDodgeGuideActivated = true;
+    if (tutorialController.SetDodgeAttackRange(dodgeAttackRange))
         revealYAndCaptureTutorialSkeletonHp();
-    }
-    // Visibility follows the current combat range; learned remains independent.
-    player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, tutorialDodgeSkeletonAttackRange);
 
-    if (tutorialDodgeGuideActivated && !tutorialDodgeSkeletonJustDodged &&
+    // Visibility follows the current combat range; learned remains independent.
+    player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, tutorialController.IsDodgeAttackRange());
+
+    if (tutorialController.IsDodgeGuideActivated() && !tutorialController.HasDodgeSkeletonJustDodged() &&
         player->IsJustDodgePresentationActive() &&
         player->GetRushTarget().get() == tutorialDodgeSkeletonActor.get())
     {
         // Rush target is assigned only by Player::StartJustDodgeSuccess().
-        tutorialDodgeSkeletonJustDodged = true;
+        tutorialController.RecordJustDodge(true);
     }
 
-    if (tutorialDodgeGuideActivated &&
-        player->IsOperationGuideItemVisible(Player::OperationGuideItem::X) &&
-        !player->IsOperationGuideItemLearned(Player::OperationGuideItem::X) &&
-        player->IsDodging())
+    const bool xVisible = tutorialController.IsDodgeGuideActivated() &&
+        player->IsOperationGuideItemVisible(Player::OperationGuideItem::X);
+    const bool xLearned = xVisible && player->IsOperationGuideItemLearned(Player::OperationGuideItem::X);
+    const bool dodging = xVisible && !xLearned && player->IsDodging();
+    if (tutorialController.ShouldLearnX(xVisible, xLearned, dodging))
     {
         player->SetOperationGuideItemLearned(Player::OperationGuideItem::X);
     }
@@ -1415,20 +1354,20 @@ void GameScene::Update(float deltaTime)
     bgmDirector.UpdateDeathBgmFade(Time::UnscaledDeltaTime());
     bgmDirector.UpdatePhase2BgmCrossFade(Time::UnscaledDeltaTime(), BossBgmVolume);
 
-    if (judgeDodgeOperationTutorialState == JudgeDodgeOperationTutorialState::Showing)
+    if (tutorialController.GetExplanationState() == GameTutorialController::ExplanationState::Showing)
     {
         tutorialUIActor->UpdateExplanationLayout();
         if (InputSystem::GetInputState("A", InputStateMask::Trigger) || InputSystem::GetInputState("Enter", InputStateMask::Trigger))
             CloseJudgeDodgeOperationTutorial();
         return;
     }
-    const bool mainRoomTutorialActive = !tutorialCompletedForBossBattle &&
+    const bool mainRoomTutorialActive = !tutorialController.IsCompletedForBossBattle() &&
         !bossRoomLockOnScopeActive && !tutorialBossEntryPending &&
         player && !player->IsBossBattle();
     if (mainRoomTutorialActive)
     {
 
-        if (judgeDodgeOperationTutorialState == JudgeDodgeOperationTutorialState::Unseen && player && player->GetPosition().x > -34.0f && !IsPaused() && InputSystem::IsInputEnabled() && !cameraManager->IsUseMovie() && !cameraManager->IsUseCinematic())
+        if (tutorialController.GetExplanationState() == GameTutorialController::ExplanationState::Unseen && player && player->GetPosition().x > -34.0f && !IsPaused() && InputSystem::IsInputEnabled() && !cameraManager->IsUseMovie() && !cameraManager->IsUseCinematic())
         {
             StartJudgeDodgeOperationTutorial();
             return;
