@@ -335,16 +335,6 @@ private:
     std::shared_ptr<GruxEnemy> gruxEnemyActor;
 
     std::shared_ptr<GameLockOnTargetUIActor> lockOnTargetUIActor;
-    float tutorialSkeletonHpDisplayDistance = 10.0f;
-    float tutorialSkeletonHpNearDistance = 4.0f;
-    float tutorialSkeletonHpFarDistance = 10.0f;
-    float tutorialSkeletonHpNearScaleMultiplier = 1.0f;
-    float tutorialSkeletonHpFarScaleMultiplier = 0.75f;
-    // Applied to the Skeleton camera-target world position before UI projection.
-    DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset{ 0.0f, 1.1f, 0.4f };
-    float tutorialSkeletonHpBarScale = 0.65f;
-    bool tutorialSkeletonUseFixedScreenPosition = false;
-    DirectX::XMFLOAT2 tutorialSkeletonHpFixedScreenPosition{ 960.0f, 300.0f };
     // Selection happens once per held-input start; Rush keeps its own target.
     bool lockOnInputHeldLastFrame = false;
     bool lockOnTargetSelectedForHeldInput = false;

@@ -13,6 +13,10 @@
 #include <tracy/Tracy.hpp>
 
 
+namespace
+{
+}
+
 class SkeletonHpBarUI
 {
 public:
@@ -27,9 +31,19 @@ public:
 
     void Create(UIManager* uiManager, const char* prefix);
     void Update(const SkeletonWarriorActor& owner, const DarkCameraActor& camera,
-        const DirectX::XMFLOAT3& playerPosition, const SkeletonHpBarSettings& settings);
+        const DirectX::XMFLOAT3& playerPosition);
     void Hide();
     ~SkeletonHpBarUI();
+
+private:
+    float tutorialSkeletonHpDisplayDistance = 10.0f;
+    float tutorialSkeletonHpNearDistance = 4.0f;
+    float tutorialSkeletonHpFarDistance = 10.0f;
+    float tutorialSkeletonHpNearScaleMultiplier = 1.0f;
+    float tutorialSkeletonHpFarScaleMultiplier = 0.75f;
+    const DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset={ 0.0f, 1.1f, 0.4f };
+    float tutorialSkeletonHpBarScale = 0.65f;
+
 };
 
 void SkeletonHpBarUI::Create(UIManager* uiManager, const char* prefix)
@@ -89,7 +103,7 @@ SkeletonHpBarUI::~SkeletonHpBarUI()
 }
 
 void SkeletonHpBarUI::Update(const SkeletonWarriorActor& owner, const DarkCameraActor& camera,
-    const DirectX::XMFLOAT3& playerPosition, const SkeletonHpBarSettings& settings)
+    const DirectX::XMFLOAT3& playerPosition)
 {
     const auto getPlayerSkeletonDistanceXZ = [&](const SkeletonWarriorActor* skeleton)
         {
@@ -99,18 +113,18 @@ void SkeletonHpBarUI::Update(const SkeletonWarriorActor& owner, const DarkCamera
     const auto isWithinHpDisplayDistance = [&](const SkeletonWarriorActor* skeleton)
         {
             return getPlayerSkeletonDistanceXZ(skeleton) <=
-                (std::max)(settings.tutorialSkeletonHpDisplayDistance, 0.0f);
+                (std::max)(tutorialSkeletonHpDisplayDistance, 0.0f);
         };
     const auto getHpDistanceScaleMultiplier = [&](const SkeletonWarriorActor* skeleton)
         {
-            const float nearDistance = (std::max)(settings.tutorialSkeletonHpNearDistance, 0.0f);
-            const float farDistance = (std::max)(settings.tutorialSkeletonHpFarDistance, nearDistance);
+            const float nearDistance = (std::max)(tutorialSkeletonHpNearDistance, 0.0f);
+            const float farDistance = (std::max)(tutorialSkeletonHpFarDistance, nearDistance);
             const float distanceRange = farDistance - nearDistance;
             const float interpolation = distanceRange > FLT_EPSILON
                 ? std::clamp((getPlayerSkeletonDistanceXZ(skeleton) - nearDistance) / distanceRange, 0.0f, 1.0f)
                 : 1.0f;
-            return std::lerp(settings.tutorialSkeletonHpNearScaleMultiplier,
-                settings.tutorialSkeletonHpFarScaleMultiplier, interpolation);
+            return std::lerp(tutorialSkeletonHpNearScaleMultiplier,
+                tutorialSkeletonHpFarScaleMultiplier, interpolation);
         };
     const auto updateHpBar = [&](const SkeletonWarriorActor* skeleton,
         SkeletonHpBarUI& hpBar)
@@ -138,9 +152,9 @@ void SkeletonHpBarUI::Update(const SkeletonWarriorActor& owner, const DarkCamera
             // remains correct as the camera angle and Skeleton distance change.
             const DirectX::XMFLOAT3 skeletonWorldPosition = target->GetComponentLocation();
             const DirectX::XMFLOAT3 hpBarWorldPosition = {
-                skeletonWorldPosition.x + settings.tutorialSkeletonHpBarWorldOffset.x,
-                skeletonWorldPosition.y + settings.tutorialSkeletonHpBarWorldOffset.y,
-                skeletonWorldPosition.z + settings.tutorialSkeletonHpBarWorldOffset.z
+                skeletonWorldPosition.x + tutorialSkeletonHpBarWorldOffset.x,
+                skeletonWorldPosition.y + tutorialSkeletonHpBarWorldOffset.y,
+                skeletonWorldPosition.z + tutorialSkeletonHpBarWorldOffset.z
             };
             const auto projection = camera.ProjectWorldPositionForUI(hpBarWorldPosition);
             if (!projection.valid || !projection.inFront || !projection.insideViewport)
@@ -149,9 +163,7 @@ void SkeletonHpBarUI::Update(const SkeletonWarriorActor& owner, const DarkCamera
                 return;
             }
 
-            DirectX::XMFLOAT2 position = settings.tutorialSkeletonUseFixedScreenPosition
-                ? settings.tutorialSkeletonHpFixedScreenPosition
-                : ConvertScreenToUI(projection.screenPosition);
+            DirectX::XMFLOAT2 position = ConvertScreenToUI(projection.screenPosition);
             const float currentHp = static_cast<float>((std::max)(skeleton->GetHp(), 0));
             const float maximumHp = static_cast<float>((std::max)(skeleton->GetMaxHp(), 1));
             if (!hpBar.delayedHpInitialized)
@@ -190,7 +202,7 @@ void SkeletonHpBarUI::Update(const SkeletonWarriorActor& owner, const DarkCamera
             }
 
             const float distanceScaleMultiplier = getHpDistanceScaleMultiplier(skeleton);
-            const float finalScale = settings.tutorialSkeletonHpBarScale * distanceScaleMultiplier;
+            const float finalScale = tutorialSkeletonHpBarScale * distanceScaleMultiplier;
             const DirectX::XMFLOAT2 scale = { finalScale, finalScale };
             if (hpBar.background)
             {
@@ -231,9 +243,9 @@ void SkeletonWarriorActor::CreateHpBarUI(UIManager* uiManager, const char* prefi
 }
 
 void SkeletonWarriorActor::UpdateHpBar(const DarkCameraActor& camera,
-    const DirectX::XMFLOAT3& playerPosition, const SkeletonHpBarSettings& settings)
+    const DirectX::XMFLOAT3& playerPosition)
 {
-    if (hpBarUI) hpBarUI->Update(*this, camera, playerPosition, settings);
+    if (hpBarUI) hpBarUI->Update(*this, camera, playerPosition);
 }
 
 void SkeletonWarriorActor::HideHpBar()
@@ -258,7 +270,6 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     skeletalMeshComponent->SetRelativeLocationDirect({ 0.0f,-0.f,0.0f });
 
     // アニメーションコントローラーを作成
-#if 1
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
     auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootIndex);
     controller->AddAnimation("Walk", 0);
@@ -287,7 +298,6 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     sword->SetRelativeEulerRotationDirect({ 0.0f, 90.f, 0.0f });
     sword->SetRelativeScaleDirect({ 1.37f,1.37f,1.37f });
 
-    // Runtime attack detection samples the sword root, middle, and tip between frames.
     weaponRootPoint = AddComponent<SceneComponent>("SwordHitRoot", "SwordMesh");
     weaponRootPoint->SetRelativeLocationDirect(weaponRootOffset);
     weaponMiddlePoint = AddComponent<SceneComponent>("SwordHitMiddle", "SwordHitRoot");
@@ -302,8 +312,6 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     rushHitSparkEffectComponent = AddComponent<ParticleComponent>("SkeletonRushHitSpark", parentName);
     rushHitSparkEffectComponent->Load("./Data/Effect/Files/RushCoreEffect.json");
 
-
-#endif // 0
     // 当たり判定
     {
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("capsuleComponent", parentName);
@@ -328,7 +336,7 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     // 回転用コンポーネントを追加
     rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
     rotationComponent->SyncCurrentRotation();
-    // Shared LockOn target name lets GameScene select this Enemy without a type branch.
+
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f, 1.15f, 0.0f });
     hp = maxHp;
@@ -337,13 +345,11 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
         L"./Data/Sound/SE/skeleton_death.wav");
     PreCreateDeathBodyParts();
 
-#if 1
     // ポイントライトコンポーネントを追加
     auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
     pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     pointLightComponent->SetSharedLightName("PlayerPointLight");
-#endif // 0
 }
 
 void SkeletonWarriorActor::ApplyRimLight()
@@ -523,8 +529,6 @@ void SkeletonWarriorActor::Update(float elapsedTime)
     if (state == State::Dead)
         return;
 
-    // Enemy::Update above stays active. Only this actor's decision/update loop
-    // is suppressed, preserving LockOn, animation, damage, death, and transforms.
     if (!tutorialPassive)
     {
         auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
@@ -570,8 +574,6 @@ void SkeletonWarriorActor::SetTutorialPassive(bool enabled)
 
     ResetTutorialAttackHighlight();
 
-    // An editor toggle can occur during a swing. Clear only AI-owned combat
-    // state so no pending attack notify leaves an active hit window behind.
     const bool wasInCombatState = state == State::Attacking || state == State::Recovery;
     state = State::Idle;
     stateElapsed = 0.0f;
@@ -611,8 +613,6 @@ void SkeletonWarriorActor::PlayTutorialPassiveStandIdle()
     if (!controller)
         return;
 
-    // Stand_Idle contains a root translation track. Keep this passive actor's
-    // authored Actor Transform fixed while retaining the animation's body pose.
     controller->SetRemoveRootTranslationFromPose("Stand_Idle", true);
     PlayBodyAnimation("Stand_Idle", true, true, 0.1f, true);
 }
@@ -732,8 +732,6 @@ void SkeletonWarriorActor::BeginAttack(const DirectX::XMFLOAT3& directionToPlaye
     if (rotationComponent)
         rotationComponent->SetDirection(directionToPlayer);
 
-    // The just-dodge area must stay aligned with the committed swing, rather
-    // than rotating after a player who moves during the animation.
     lockedAttackForward = directionToPlayer;
     lockedAttackUp = { 0.0f, 1.0f, 0.0f };
     lockedAttackRight = { directionToPlayer.z, 0.0f, -directionToPlayer.x };
@@ -774,8 +772,6 @@ void SkeletonWarriorActor::UpdateAttack(float /*elapsedTime*/, Player& player)
         activeDangerNotifyState = nullptr;
         ResetWeaponSweep();
 
-        // A naturally completed Attack may return to Idle. Do not overwrite an
-        // externally requested animation (Death, hit reaction, etc.).
         if (naturalAttackEnd)
             PlayBodyAnimation("Idle", true, true, 0.1f, true);
     }

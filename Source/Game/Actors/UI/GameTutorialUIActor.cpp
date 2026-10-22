@@ -81,7 +81,7 @@ void GameTutorialUIActor::HidePrompts()
 
 void GameTutorialUIActor::UpdatePrompts(const DarkCameraActor& camera,
     const std::shared_ptr<SkeletonWarriorActor>& passive, const std::shared_ptr<SkeletonWarriorActor>& dodge,
-    bool showLt, bool showY, bool showX, bool fixedPosition)
+    bool showLt, bool showY, bool showX)
 {
     HidePrompts();
     const auto update = [&](const std::shared_ptr<SkeletonWarriorActor>& skeleton,
@@ -92,8 +92,8 @@ void GameTutorialUIActor::UpdatePrompts(const DarkCameraActor& camera,
         if (!target) return;
         const auto projection = camera.ProjectWorldPositionForUI(target->GetComponentLocation());
         if (!projection.valid || !projection.inFront || !projection.insideViewport) return;
-        auto position = fixedPosition ? promptFixedPosition : ConvertScreenToUI(projection.screenPosition);
-        if (!fixedPosition) { position.x += promptOffset.x; position.y += promptOffset.y; }
+        auto position = ConvertScreenToUI(projection.screenPosition);
+        position.x += promptOffset.x; position.y += promptOffset.y;
         position.x += extra.x; position.y += extra.y;
         image->SetWorldPosition(position);
         image->SetScale({ promptScale, promptScale });
@@ -138,7 +138,6 @@ void GameTutorialUIActor::DrawImGuiDetails()
 
     ImGui::DragFloat2(U8("ä[çúÇÃOperation Prompt Offset X / Y"), &promptOffset.x, 0.5f, -500.0f, 500.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Operation Prompt Scale", &promptScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat2("Operation Fixed Screen Position X / Y", &promptFixedPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
 
 
 #endif

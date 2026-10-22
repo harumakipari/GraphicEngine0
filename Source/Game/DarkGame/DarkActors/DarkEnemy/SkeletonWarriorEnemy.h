@@ -12,20 +12,6 @@ class DarkCameraActor;
 class UIManager;
 class SkeletonHpBarUI;
 
-struct SkeletonHpBarSettings
-{
-    float tutorialSkeletonHpDisplayDistance;
-    float tutorialSkeletonHpNearDistance;
-    float tutorialSkeletonHpFarDistance;
-    float tutorialSkeletonHpNearScaleMultiplier;
-    float tutorialSkeletonHpFarScaleMultiplier;
-    DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset;
-    float tutorialSkeletonHpBarScale;
-    bool tutorialSkeletonUseFixedScreenPosition;
-    DirectX::XMFLOAT2 tutorialSkeletonHpFixedScreenPosition;
-};
-
-
 class SkeletonWarriorActor :public Enemy
 {
 private:
@@ -52,7 +38,7 @@ public:
 
 
     void CreateHpBarUI(UIManager* uiManager, const char* prefix);
-    void UpdateHpBar(const DarkCameraActor& camera, const DirectX::XMFLOAT3& playerPosition, const SkeletonHpBarSettings& settings);
+    void UpdateHpBar(const DarkCameraActor& camera, const DirectX::XMFLOAT3& playerPosition);
     void HideHpBar();
     bool IsDefeated() const override { return state == State::Dead; }
     void SpawnPlayerHitEffect(const DirectX::XMFLOAT3& hitPosition, const DirectX::XMFLOAT3& hitNormal, const DirectX::XMFLOAT3& playerPosition) override;

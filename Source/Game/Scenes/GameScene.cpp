@@ -1036,15 +1036,10 @@ void GameScene::UpdateTutorialSkeletonUI()
         return;
     }
 
-    const SkeletonHpBarSettings hpSettings{
-        tutorialSkeletonHpDisplayDistance, tutorialSkeletonHpNearDistance, tutorialSkeletonHpFarDistance,
-        tutorialSkeletonHpNearScaleMultiplier, tutorialSkeletonHpFarScaleMultiplier,
-        tutorialSkeletonHpBarWorldOffset, tutorialSkeletonHpBarScale,
-        tutorialSkeletonUseFixedScreenPosition, tutorialSkeletonHpFixedScreenPosition };
     if (tutorialPassiveSkeletonActor)
-        tutorialPassiveSkeletonActor->UpdateHpBar(*darkCameraActor, player->GetPosition(), hpSettings);
+        tutorialPassiveSkeletonActor->UpdateHpBar(*darkCameraActor, player->GetPosition());
     if (tutorialDodgeSkeletonActor)
-        tutorialDodgeSkeletonActor->UpdateHpBar(*darkCameraActor, player->GetPosition(), hpSettings);
+        tutorialDodgeSkeletonActor->UpdateHpBar(*darkCameraActor, player->GetPosition());
     const bool ltVisible = tutorialPassiveSkeletonLockOnCandidate &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT) &&
         !player->IsOperationGuideItemLearned(Player::OperationGuideItem::LT);
@@ -1058,7 +1053,7 @@ void GameScene::UpdateTutorialSkeletonUI()
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::X);
 
     tutorialUIActor->UpdatePrompts(*darkCameraActor, tutorialPassiveSkeletonActor, tutorialDodgeSkeletonActor,
-        ltVisible, yVisible, xVisible, tutorialSkeletonUseFixedScreenPosition);
+        ltVisible, yVisible, xVisible);
 }
 void GameScene::UpdateLockOnTargetUI(float deltaTime)
 {
@@ -1234,15 +1229,11 @@ GameScene::LockOnTargetSelectionResult GameScene::UpdateLockOnTargetSelection()
         darkCameraActor->SetEnemyHead(selectedTarget);
         lockOnTargetSelectedForHeldInput = true;
         lockOnSelectedEnemy = selectedEnemy;
-        Logger::Log(Logger::LogCategory::Gameplay, std::format(
-            "[LockOn][Selected] target={} distanceXZ={:.3f}",
-            selectedEnemy->GetName(), std::sqrt(selectedDistanceSq)));
         return LockOnTargetSelectionResult::Selected;
     }
 
     darkCameraActor->ClearEnemyHead();
     lockOnSelectedEnemy.reset();
-    Logger::Log(Logger::LogCategory::Gameplay, "[LockOn][Selected] no valid target");
     return LockOnTargetSelectionResult::NoCandidate;
 }
 
@@ -3616,7 +3607,6 @@ void GameScene::UpdateBattleFlow()
         }
         break;
     case BattleFlowState::ContinueWait:
-        // Result UIButton callbacks own the selection and confirmation.
         deathPresentationElapsed += Time::UnscaledDeltaTime();
         UpdateDeathResultPresentation();
         break;
@@ -3825,13 +3815,6 @@ void GameScene::DrawTutorialDebugGui()
         0.01f, -100.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Sitting Rotation Yaw", &prisonOpeningSittingYawDegrees,
         0.1f, -360.0f, 360.0f, "%.3f deg");
-    ImGui::SeparatorText("Tutorial Skeleton UI");
-    ImGui::DragFloat("HP Display Distance", &tutorialSkeletonHpDisplayDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Near Distance", &tutorialSkeletonHpNearDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Far Distance", &tutorialSkeletonHpFarDistance, 0.1f, 0.0f, 100.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Near Scale Multiplier", &tutorialSkeletonHpNearScaleMultiplier, 0.01f, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Far Scale Multiplier", &tutorialSkeletonHpFarScaleMultiplier, 0.01f, 0.0f, 3.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("HP Bar Scale", &tutorialSkeletonHpBarScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
 }
 
 void GameScene::DrawPhase2DebugGui()

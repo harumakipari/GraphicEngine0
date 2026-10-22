@@ -19,7 +19,7 @@ public:
     void SetExplanationVisible(bool visible);
     void HidePrompts();
     void UpdatePrompts(const DarkCameraActor& camera, const std::shared_ptr<SkeletonWarriorActor>& passive,
-        const std::shared_ptr<SkeletonWarriorActor>& dodge, bool showLt, bool showY, bool showX, bool fixedPosition);
+        const std::shared_ptr<SkeletonWarriorActor>& dodge, bool showLt, bool showY, bool showX);
     void HideRing();
     void UpdateRing(const DirectX::XMFLOAT3& position, float deltaTime);
 
@@ -33,7 +33,6 @@ private:
     DirectX::XMFLOAT2 closeScale{ 0.44f, 0.44f };
     DirectX::XMFLOAT2 promptOffset{ -1.0f, -63.0f };
     float promptScale = 0.36f;
-    DirectX::XMFLOAT2 promptFixedPosition{ 960.0f, 500.0f };
     float ringPulseElapsed = 0.0f;
     DirectX::XMFLOAT3 ringPositionOffset{ 0.0f, 0.39f, 0.13f };
     DirectX::XMFLOAT3 ringScale{ 6.04f, 1.0f, 2.95f };
