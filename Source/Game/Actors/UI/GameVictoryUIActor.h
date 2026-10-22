@@ -14,7 +14,7 @@ public:
     explicit GameVictoryUIActor(const std::string& actorName) : Actor(actorName) {}
     void Initialize(const Transform& transform) override;
 
-    void DrawImGuiDetails();
+    void DrawImGuiDetails() override;
 
 
     void SetResultData(double clearTime, double bestTime, bool newRecord, VictoryRank rank);

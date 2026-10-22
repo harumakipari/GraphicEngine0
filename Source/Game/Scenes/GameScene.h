@@ -482,7 +482,6 @@ private:
     float phase2TransformStartTime = 5.3f;
     float phase2TransformEndTime = 8.0f;
     float phase2TransformProgress = 0.0f;
-    int phase2TextureDebugMode = 0;
     bool phase2TransformStarted = false;
     bool phase2TransformCompleted = false;
     // Transform completion persists after Recall, so this guard makes the BGM switch one-shot.

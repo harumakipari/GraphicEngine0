@@ -236,7 +236,7 @@ public:
         float worldMinY = 0.0f;
         float worldMaxY = 1.0f;
         float maskSoftness = 0.05f;
-        int debugMode = 0;
+        int padding = 0;
         DirectX::XMFLOAT3 hairTint = { 1.0f, 1.0f, 1.0f };
     };
     static_assert(sizeof(Phase2TextureBlendConstants) == 32,
@@ -266,10 +266,6 @@ public:
     void SetPhase2TextureBlendProgress(const float progress)
     {
         phase2TextureBlendCBuffer->data.progress = std::clamp(progress, 0.0f, 1.0f);
-    }
-    void SetPhase2TextureDebugMode(const int debugMode)
-    {
-        phase2TextureBlendCBuffer->data.debugMode = std::clamp(debugMode, 0, 3);
     }
     void SetPhase2HairTint(const DirectX::XMFLOAT3& tint)
     {

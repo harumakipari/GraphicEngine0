@@ -18,7 +18,6 @@
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/Camera.h"
 #include "Game/Actors/Enemy/Enemy.h"
-#include "Game/Actors/Stage/Stage.h"
 #include "Game/DarkGame/Interactable.h"
 #include "Game/DarkGame/DarkActors/InteractableActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"

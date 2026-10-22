@@ -4752,20 +4752,6 @@ void GameScene::DrawGuiPlusAlpha()
         }
     }
 
-    const char* phase2TextureDebugModeItems[] =
-    {
-        "Normal",
-        "Phase2 Texture Raw",
-        "Phase2 Linear Albedo",
-        "Final Blended Albedo",
-    };
-    if (ImGui::Combo(U8("Phase2 Torso Debug Mode"), &phase2TextureDebugMode,
-        phase2TextureDebugModeItems, IM_ARRAYSIZE(phase2TextureDebugModeItems)) && gruxEnemyActor)
-    {
-        const auto& skeletalMesh = gruxEnemyActor->GetSkeletalMeshComponent();
-        if (skeletalMesh)
-            skeletalMesh->SetPhase2TextureDebugMode(phase2TextureDebugMode);
-    }
     ImGui::DragFloat("Phase2 BGM Fade Out Duration", &phase2BgmFadeOutDuration,
         0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Phase2 BGM Fade In Duration", &phase2BgmFadeInDuration,

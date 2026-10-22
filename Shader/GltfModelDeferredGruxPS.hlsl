@@ -16,7 +16,7 @@ cbuffer PHASE2_TEXTURE_BLEND_CONSTANT_BUFFER : register(b6)
     float phase2WorldMinY;
     float phase2WorldMaxY;
     float phase2MaskSoftness;
-    int phase2TextureDebugMode;
+    int phase2TextureBlendPadding;
     float3 phase2HairTint;
 }
 
@@ -29,25 +29,18 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     const MaterialConstants m = materials[material];
 
     float4 baseColorFactor = m.pbrMetallicRoughness.baseColorFactor;
-    float3 phase2RawRgb = 0.0;
-    float3 phase2LinearRgb = 0.0;
-    float3 phase2LinearAlbedo = 0.0;
-    float3 blendedAlbedoBeforeFlash = baseColorFactor.rgb;
     const int baseColorTexture = m.pbrMetallicRoughness.basecolorTexture.index;
     if (baseColorTexture > -1)
     {
         float4 sampled = materialTextures[BASE_COLOR_TEXTURE].Sample(samplerStates[ANISOTROPIC], pin.texcoord);
         sampled.rgb = pow(sampled.rgb, GAMMA);
         float4 phase2Sampled = phase2BaseColorTexture.Sample(samplerStates[ANISOTROPIC], pin.texcoord);
-        phase2RawRgb = phase2Sampled.rgb;
         phase2Sampled.rgb = pow(phase2Sampled.rgb, GAMMA);
         if (materialType == MATERIAL_HAIR)
         {
             // Preserve the Hair texture detail while moving Phase2 toward warm charcoal.
             phase2Sampled.rgb *= phase2HairTint;
         }
-        phase2LinearRgb = phase2Sampled.rgb;
-        phase2LinearAlbedo = baseColorFactor.rgb * phase2Sampled.rgb;
         const float normalizedHeight = saturate(
             (pin.wPosition.y - phase2WorldMinY) /
             max(phase2WorldMaxY - phase2WorldMinY, 0.0001f));
@@ -60,7 +53,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
             boundary - softness, boundary + softness, normalizedHeight);
         sampled = lerp(sampled, phase2Sampled, phase2Weight);
         baseColorFactor *= sampled;
-        blendedAlbedoBeforeFlash = baseColorFactor.rgb;
     }
     if (m.alphaMode == 0 /*OPAQUE*/)
     {
@@ -152,25 +144,7 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     // 色調整・時間調整
     finalAlbedo = lerp(finalAlbedo, float3(1.0,0, 0), flash);
 
-    // Modes 1-3 intentionally bypass deferred lighting and scene post-lighting effects.
-    // Tone mapping remains active, so comparison with Mode 0 isolates the lighting path.
-    if (phase2TextureDebugMode != 0)
-    {
-        // Mode 1 is decoded here so the FinalPS display encode reproduces the raw sRGB texture.
-        float3 debugAlbedo = phase2LinearRgb;
-        if (phase2TextureDebugMode == 2)
-            debugAlbedo = phase2LinearAlbedo;
-        else if (phase2TextureDebugMode == 3)
-            debugAlbedo = blendedAlbedoBeforeFlash;
-
-        pout.albedo = float4(debugAlbedo, baseColorFactor.a);
-        pout.gBuffer3Normal.w = OBJECT_NO_LIGHTING;
-    }
-    else
-    {
-        pout.albedo = float4(finalAlbedo, baseColorFactor.a);
-    }
-
+    pout.albedo = float4(finalAlbedo, baseColorFactor.a);
     pout.position = pin.wPosition; // world space 
 
     pout.emissive = float4(emissiveFactor, GBUFFER_FLAG_NORMAL); // wの値 : スカイマップ１それ以外０    2: emissiveFlagとして使用
