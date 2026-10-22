@@ -18,6 +18,7 @@
 #include "Game/Actors/Camera/LoadingCamera.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Stage/ClothSimulate.h"
+#include "Game/Actors/UI/GameBossDeathUIActor.h"
 #include "Game/Actors/UI/GameDefeatUIActor.h"
 #include "Game/Actors/UI/GameMovieSkipUIActor.h"
 #include "Game/Actors/UI/GameTimerUIActor.h"
@@ -205,15 +206,6 @@ private:
         HuskPreview,
     };
 
-    enum class BossDeathFinishPromptAnimationPhase : uint8_t
-    {
-        Hidden,
-        AppearGrow,
-        AppearSettle,
-        PulseGrow,
-        PulseReturn,
-    };
-
     struct CinematicActorPose
     {
         DirectX::XMFLOAT3 position{};
@@ -278,10 +270,7 @@ private:
     bool LoadBossDeathShots();
     GameMovieSkipUIActor::MovieSkipType GetActiveMovieSkipType();
     void CreateBossDeathFadeUI();
-    void CreateBossDeathFinishUI();
     void SetBossDeathFadeAlpha(float alpha);
-    void SetBossDeathFinishUIVisible(bool visible);
-    void UpdateBossDeathFinishUI();
     void StartBossDeathGroanLoop();
     void StopBossDeathGroanLoop();
     void UpdateBossDeathPromptLoop(float deltaTime);
@@ -491,7 +480,6 @@ private:
     DirectX::XMFLOAT3 bossDeathApproachStartPosition{ 5.025f,-0.1f,11.723f };
     DirectX::XMFLOAT4 bossDeathApproachStartRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
     DirectX::XMFLOAT3 bossDeathFinishPlayerPositionOffset{ -0.9f,0.0f,0.0f };
-    DirectX::XMFLOAT2 bossDeathFinishUIPositionOffset{ 7.0f,-134.0f };
     float bossDeathRecallPromptMinTime = 1.155f;
     float bossDeathRecallPromptMaxTime = 1.225f;
     float bossDeathRecallPromptTime = 1.163f;
@@ -505,25 +493,10 @@ private:
     float bossDeathRecallFinishHitTime = 1.875f;
     float bossDeathHuskDelay = 1.4f;
     bool bossDeathFinishInputEnabled = false;
-    bool bossDeathFinishUIVisible = false;
-    float bossDeathFinishUIAlpha = 0.0f;
-    float bossDeathFinishUIFadeInDuration = 0.10f;
-    float bossDeathFinishUIPulseTimer = 0.0f;
-    BossDeathFinishPromptAnimationPhase bossDeathFinishUIPulsePhase = BossDeathFinishPromptAnimationPhase::Hidden;
-    DirectX::XMFLOAT2 bossDeathFinishGuidePosition{ 1200.0f, 674.0f };
-    DirectX::XMFLOAT2 bossDeathFinishButtonPosition{ 1200.0f, 600.0f };
-    DirectX::XMFLOAT2 bossDeathFinishWordPosition{ 1202.0f, 542.0f };
-    DirectX::XMFLOAT2 bossDeathFinishGuideSize{ 488.0f, 379.0f };
-    DirectX::XMFLOAT2 bossDeathFinishButtonSize{ 300.0f, 300.0f };
-    DirectX::XMFLOAT2 bossDeathFinishWordSize{ 124.5f, 68.0f };
-    DirectX::XMFLOAT2 bossDeathFinishGuideScale{ 0.32f, 0.32f };
-    DirectX::XMFLOAT2 bossDeathFinishButtonBaseScale{ 0.32f, 0.32f };
-    DirectX::XMFLOAT2 bossDeathFinishWordScale{ 1.05f, 0.78f };
-    std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;
-    std::shared_ptr<UIImageComponent> bossDeathFinishGuideImage;
-    std::shared_ptr<UIImageComponent> bossDeathFinishButtonImage;
-    std::shared_ptr<UIImageComponent> bossDeathFinishWordImage;
     std::shared_ptr<GameMovieSkipUIActor> movieSkipUIActor;
+    std::shared_ptr<GameBossDeathUIActor> bossDeathUIActor;
+    std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;
+
     std::shared_ptr<CoreStandaloneAudioSource> bossDeathGroanAudio;
     std::shared_ptr<CoreStandaloneAudioSource> bossDeathVoiceAudio;
     std::shared_ptr<GameTimerUIActor> battleTimerUIActor;

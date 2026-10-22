@@ -1347,10 +1347,15 @@ bool GruxEnemy::IsDelayedHpSettled() const
     return !rushHpDisplayActive && delayedHp <= 0.001f;
 }
 
-void GruxEnemy::ClearDamageVisualsForPhaseTransition()
+void GruxEnemy::ClearDamageFlash()
 {
     if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
         skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
+}
+
+void GruxEnemy::ClearDamageVisualsForPhaseTransition()
+{
+    ClearDamageFlash();
 }
 void GruxEnemy::HideLockOnVisualsForPhaseTransition()
 {

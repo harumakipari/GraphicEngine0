@@ -196,7 +196,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         LoadVictoryBestTime();
         victoryUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameVictoryUIActor>("VictoryUI");
         CreateBossDeathFadeUI();
-        CreateBossDeathFinishUI();
+        bossDeathUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameBossDeathUIActor>("BossDeathUI");
         movieSkipUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameMovieSkipUIActor>("MovieSkipUI");
         bossDeathShotsLoaded = LoadBossDeathShots();
         phase2CinematicShotsLoaded = LoadPhase2CinematicShots();
@@ -2470,7 +2470,7 @@ void GameScene::EnterBossDead()
         bossDeathVoiceAudio->Stop(false);
         bossDeathVoiceAudio.reset();
     }
-    SetBossDeathFinishUIVisible(false);
+    bossDeathUIActor->SetFinishGuideVisible(false);
     SetBossDeathFadeAlpha(0.0f);
 
     if (player)
@@ -2600,7 +2600,7 @@ void GameScene::RestartBossBattle()
     bossDeathScreamHoldDirection = 1.0f;
     bossDeathApproachStartRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
     bossDeathFinishInputEnabled = false;
-    SetBossDeathFinishUIVisible(false);
+    bossDeathUIActor->SetFinishGuideVisible(false);
     SetBossDeathFadeAlpha(0.0f);
 
     gruxHuskCaptured = false;
@@ -2712,198 +2712,6 @@ void GameScene::CreateBossDeathFadeUI()
     GetUIManager()->Add(bossDeathFadeOverlay);
 }
 
-void GameScene::CreateBossDeathFinishUI()
-{
-    bossDeathFinishGuideImage = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_x_a_b.png", "BossDeathFinishGuide");
-    bossDeathFinishGuideImage->SetSize(bossDeathFinishGuideSize);
-    bossDeathFinishGuideImage->SetScale(bossDeathFinishGuideScale);
-    bossDeathFinishGuideImage->SetPivot({ 0.5f, 0.5f });
-    bossDeathFinishGuideImage->SetVisible(false);
-    GetUIManager()->Add(bossDeathFinishGuideImage);
-
-    bossDeathFinishButtonImage = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/rush_y.png", "BossDeathFinishY");
-    bossDeathFinishButtonImage->SetSize(bossDeathFinishButtonSize);
-    bossDeathFinishButtonImage->SetScale({
-        bossDeathFinishButtonBaseScale.x * 0.8f,
-        bossDeathFinishButtonBaseScale.y * 0.8f });
-    bossDeathFinishButtonImage->SetPivot({ 0.5f, 0.5f });
-    bossDeathFinishButtonImage->SetVisible(false);
-    GetUIManager()->Add(bossDeathFinishButtonImage);
-
-    bossDeathFinishWordImage = std::make_shared<UIImageComponent>(
-        "./Data/Textures/UI/Rush/finish_word.png", "BossDeathFinishWord");
-    bossDeathFinishWordImage->SetSize(bossDeathFinishWordSize);
-    bossDeathFinishWordImage->SetScale(bossDeathFinishWordScale);
-    bossDeathFinishWordImage->SetPivot({ 0.5f, 0.5f });
-    bossDeathFinishWordImage->SetVisible(false);
-    GetUIManager()->Add(bossDeathFinishWordImage);
-}
-
-void GameScene::SetBossDeathFinishUIVisible(const bool visible)
-{
-    bossDeathFinishUIVisible = visible;
-    bossDeathFinishUIAlpha = 0.0f;
-    bossDeathFinishUIPulseTimer = 0.0f;
-    bossDeathFinishUIPulsePhase = visible
-        ? BossDeathFinishPromptAnimationPhase::AppearGrow
-        : BossDeathFinishPromptAnimationPhase::Hidden;
-
-    const auto offsetPosition = [this](const DirectX::XMFLOAT2& base)
-        {
-            return DirectX::XMFLOAT2{
-                base.x + bossDeathFinishUIPositionOffset.x,
-                base.y + bossDeathFinishUIPositionOffset.y };
-        };
-    const CoreColor transparent{ 1.0f, 1.0f, 1.0f, 0.0f };
-
-    if (bossDeathFinishGuideImage)
-    {
-        bossDeathFinishGuideImage->SetWorldPosition(
-            offsetPosition(bossDeathFinishGuidePosition));
-        bossDeathFinishGuideImage->SetScale(bossDeathFinishGuideScale);
-        bossDeathFinishGuideImage->SetColor(transparent);
-    }
-    if (bossDeathFinishButtonImage)
-    {
-        bossDeathFinishButtonImage->SetWorldPosition(
-            offsetPosition(bossDeathFinishButtonPosition));
-        bossDeathFinishButtonImage->SetScale({
-            bossDeathFinishButtonBaseScale.x * 0.8f,
-            bossDeathFinishButtonBaseScale.y * 0.8f });
-        bossDeathFinishButtonImage->SetColor(transparent);
-    }
-    if (bossDeathFinishWordImage)
-    {
-        bossDeathFinishWordImage->SetWorldPosition(
-            offsetPosition(bossDeathFinishWordPosition));
-        bossDeathFinishWordImage->SetScale({
-            bossDeathFinishWordScale.x * 0.9f,
-            bossDeathFinishWordScale.y * 0.9f });
-        bossDeathFinishWordImage->SetColor(transparent);
-    }
-
-    if (bossDeathFinishGuideImage)
-        bossDeathFinishGuideImage->SetVisible(visible);
-    if (bossDeathFinishButtonImage)
-        bossDeathFinishButtonImage->SetVisible(visible);
-    if (bossDeathFinishWordImage)
-        bossDeathFinishWordImage->SetVisible(visible);
-}
-
-void GameScene::UpdateBossDeathFinishUI()
-{
-    if (!bossDeathFinishUIVisible || !bossDeathFinishGuideImage ||
-        !bossDeathFinishButtonImage || !bossDeathFinishWordImage)
-    {
-        return;
-    }
-
-    const float deltaTime = Time::UnscaledDeltaTime();
-    bossDeathFinishUIAlpha = bossDeathFinishUIFadeInDuration <= FLT_EPSILON
-        ? 1.0f
-        : std::clamp(bossDeathFinishUIAlpha +
-            deltaTime / bossDeathFinishUIFadeInDuration, 0.0f, 1.0f);
-    bossDeathFinishUIPulseTimer += deltaTime;
-
-    float buttonScale = 1.0f;
-    float wordScale = 1.0f;
-    switch (bossDeathFinishUIPulsePhase)
-    {
-    case BossDeathFinishPromptAnimationPhase::Hidden:
-        break;
-    case BossDeathFinishPromptAnimationPhase::AppearGrow:
-    {
-        constexpr float duration = 0.10f;
-        const float time = std::clamp(bossDeathFinishUIPulseTimer, 0.0f, duration);
-        buttonScale = std::clamp(
-            Easing::OutBack(time, duration, 1.0f, 1.15f, 0.8f), 0.8f, 1.15f);
-        wordScale = std::clamp(
-            Easing::OutBack(time, duration, 1.0f, 1.08f, 0.9f), 0.9f, 1.08f);
-        if (bossDeathFinishUIPulseTimer >= duration)
-        {
-            bossDeathFinishUIPulsePhase =
-                BossDeathFinishPromptAnimationPhase::AppearSettle;
-            bossDeathFinishUIPulseTimer = 0.0f;
-        }
-        break;
-    }
-    case BossDeathFinishPromptAnimationPhase::AppearSettle:
-    {
-        constexpr float duration = 0.08f;
-        const float time = std::clamp(bossDeathFinishUIPulseTimer, 0.0f, duration);
-        buttonScale = Easing::OutQuad(time, duration, 1.0f, 1.15f);
-        wordScale = Easing::OutQuad(time, duration, 1.0f, 1.08f);
-        if (bossDeathFinishUIPulseTimer >= duration)
-        {
-            bossDeathFinishUIPulsePhase =
-                BossDeathFinishPromptAnimationPhase::PulseGrow;
-            bossDeathFinishUIPulseTimer = 0.0f;
-        }
-        break;
-    }
-    case BossDeathFinishPromptAnimationPhase::PulseGrow:
-    {
-        constexpr float duration = 0.25f;
-        const float time = std::clamp(bossDeathFinishUIPulseTimer, 0.0f, duration);
-        buttonScale = Easing::InOutSine(time, duration, 1.12f, 1.0f);
-        wordScale = Easing::InOutSine(time, duration, 1.05f, 1.0f);
-        if (bossDeathFinishUIPulseTimer >= duration)
-        {
-            bossDeathFinishUIPulsePhase =
-                BossDeathFinishPromptAnimationPhase::PulseReturn;
-            bossDeathFinishUIPulseTimer = 0.0f;
-        }
-        break;
-    }
-    case BossDeathFinishPromptAnimationPhase::PulseReturn:
-    {
-        constexpr float duration = 0.35f;
-        const float time = std::clamp(bossDeathFinishUIPulseTimer, 0.0f, duration);
-        buttonScale = Easing::OutQuad(time, duration, 1.0f, 1.12f);
-        wordScale = Easing::OutQuad(time, duration, 1.0f, 1.05f);
-        if (bossDeathFinishUIPulseTimer >= duration)
-        {
-            bossDeathFinishUIPulsePhase =
-                BossDeathFinishPromptAnimationPhase::PulseGrow;
-            bossDeathFinishUIPulseTimer = 0.0f;
-        }
-        break;
-    }
-    }
-
-    const auto offsetPosition = [this](const DirectX::XMFLOAT2& base)
-        {
-            return DirectX::XMFLOAT2{
-                base.x + bossDeathFinishUIPositionOffset.x,
-                base.y + bossDeathFinishUIPositionOffset.y };
-        };
-    const CoreColor color{ 1.0f, 1.0f, 1.0f, bossDeathFinishUIAlpha };
-
-    bossDeathFinishGuideImage->SetWorldPosition(
-        offsetPosition(bossDeathFinishGuidePosition));
-    bossDeathFinishGuideImage->SetSize(bossDeathFinishGuideSize);
-    bossDeathFinishGuideImage->SetScale(bossDeathFinishGuideScale);
-    bossDeathFinishGuideImage->SetColor(color);
-
-    bossDeathFinishButtonImage->SetWorldPosition(
-        offsetPosition(bossDeathFinishButtonPosition));
-    bossDeathFinishButtonImage->SetSize(bossDeathFinishButtonSize);
-    bossDeathFinishButtonImage->SetScale({
-        bossDeathFinishButtonBaseScale.x * buttonScale,
-        bossDeathFinishButtonBaseScale.y * buttonScale });
-    bossDeathFinishButtonImage->SetColor(color);
-
-    bossDeathFinishWordImage->SetWorldPosition(
-        offsetPosition(bossDeathFinishWordPosition));
-    bossDeathFinishWordImage->SetSize(bossDeathFinishWordSize);
-    bossDeathFinishWordImage->SetScale({
-        bossDeathFinishWordScale.x * wordScale,
-        bossDeathFinishWordScale.y * wordScale });
-    bossDeathFinishWordImage->SetColor(color);
-}
-
 void GameScene::StartBossDeathGroanLoop()
 {
     StopBossDeathGroanLoop();
@@ -3001,6 +2809,8 @@ void GameScene::SkipBossDeathToFinishPrompt()
         return;
     }
 
+    // Finish staging can bypass the remaining damage-flash decay.
+    gruxEnemyActor->ClearDamageFlash();
     ClampBossDeathPreviewTuning();
     DisableCinematicCameraDebugInput();
     gruxEnemyActor->StopBossDeathCinematicOneShots();
@@ -3091,7 +2901,7 @@ void GameScene::SkipBossDeathToFinishPrompt()
 
     bossDeathPhase = BossDeathPhase::RecallPingPong;
     bossDeathFinishInputEnabled = true;
-    SetBossDeathFinishUIVisible(true);
+    bossDeathUIActor->SetFinishGuideVisible(true);
     movieSkipUIActor->ResetPresentation();
 }
 bool GameScene::SetupBossDeathCinematic()
@@ -3544,7 +3354,7 @@ void GameScene::UpdateBossDeathCinematic()
                 bossDeathPhase = BossDeathPhase::RecallPingPong;
                 bossDeathPhaseElapsed = 0.0f;
                 bossDeathFinishInputEnabled = true;
-                SetBossDeathFinishUIVisible(true);
+                bossDeathUIActor->SetFinishGuideVisible(true);
             }
         }
         break;
@@ -3553,7 +3363,7 @@ void GameScene::UpdateBossDeathCinematic()
     case BossDeathPhase::RecallPingPong:
     {
         UpdateBossDeathPromptLoop(deltaTime);
-        UpdateBossDeathFinishUI();
+        bossDeathUIActor->UpdatePresentation();
         bossDeathRecallPromptTime +=
             bossDeathRecallPromptDirection *
             bossDeathRecallPromptPlaybackRate * deltaTime;
@@ -3591,7 +3401,7 @@ void GameScene::UpdateBossDeathCinematic()
         if (finishTriggered)
         {
             bossDeathFinishInputEnabled = false;
-            SetBossDeathFinishUIVisible(false);
+            bossDeathUIActor->SetFinishGuideVisible(false);
             if (const auto controller = player->GetBodyAnimationController())
             {
                 const float resumeTime = bossDeathRecallPromptTime;
@@ -4285,8 +4095,6 @@ void GameScene::DrawGuiPlusAlpha()
     const bool playerLockOnActive = darkCameraActor &&
         (darkCameraActor->GetCameraMode() == DarkCameraActor::CameraMode::LockOn ||
             darkCameraActor->GetMovementMode() == DarkCameraActor::CameraMode::LockOn);
-    static constexpr const char* darkCameraModeNames[] =
-    { "TPS", "Focus", "LockOn", "Death" };
     const char* playerStateName = player && player->GetStateMachine()
         ? player->GetStateMachine()->GetStateName() : "None";
     const bool phase2BossIdleMaintained = phase2BossController &&
@@ -4301,14 +4109,6 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::SeparatorText("BGM Debug");
     ImGui::DragFloat("Game BGM Fade Duration", &gameBgmFadeDuration,
         0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    if (ImGui::Button(U8("ボスの部屋を明るくする")))
-    {
-        StartBossRoomLerp(0.0f, 1.0f, 3.0f);
-    }
-    if (ImGui::Button(U8("ボスの部屋を暗くする")))
-    {
-        StartBossRoomLerp(1.0f, 0.0f, 3.0f);
-    }
     ImGui::Separator();
     ImGui::Text("Boss Battle Timer");
     ImGui::Text("Battle Time: %.3f", battleElapsedTime);
@@ -4492,21 +4292,6 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::DragFloat3("Finish Player Position Offset",
             &bossDeathFinishPlayerPositionOffset.x, 0.01f);
 
-        ImGui::SeparatorText("Finish UI");
-        ImGui::DragFloat2("Finish UI Position Offset",
-            &bossDeathFinishUIPositionOffset.x, 1.0f);
-        ImGui::DragFloat2("Finish Word Position",
-            &bossDeathFinishWordPosition.x, 1.0f);
-        ImGui::DragFloat2("Finish Guide Position",
-            &bossDeathFinishGuidePosition.x, 1.0f);
-        ImGui::DragFloat2("Finish Y Button Position",
-            &bossDeathFinishButtonPosition.x, 1.0f);
-        ImGui::DragFloat2("Finish Word Scale",
-            &bossDeathFinishWordScale.x, 0.01f);
-        ImGui::DragFloat2("Finish Guide Scale",
-            &bossDeathFinishGuideScale.x, 0.01f);
-        ImGui::DragFloat2("Finish Y Button Scale",
-            &bossDeathFinishButtonBaseScale.x, 0.01f);
         ImGui::DragFloat("Husk Start Delay",
             &bossDeathHuskDelay, 0.01f, 0.0f, 5.0f);
 

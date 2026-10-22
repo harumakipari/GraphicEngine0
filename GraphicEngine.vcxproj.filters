@@ -178,6 +178,9 @@
     <ClCompile Include="Source\Game\Actors\UI\GameDefeatUIActor.cpp">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\Actors\UI\GameBossDeathUIActor.cpp">
+      <Filter>Source\Game\Actors\UI</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\Actors\UI\GameLockOnTargetUIActor.cpp">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClCompile>
@@ -991,6 +994,9 @@
       <Filter>Source\Game\Actors\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameDefeatUIActor.h">
+      <Filter>Source\Game\Actors\UI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\Actors\UI\GameBossDeathUIActor.h">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameLockOnTargetUIActor.h">

@@ -189,6 +189,7 @@ public:
     bool IsDelayedHpSettled() const;
 
     // フェーズ遷移時に被弾表示を解除する。
+    void ClearDamageFlash();
     void ClearDamageVisualsForPhaseTransition();
 
     // フェーズ遷移時にロックオン表示を隠す。
