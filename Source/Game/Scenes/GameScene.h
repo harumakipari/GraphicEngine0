@@ -154,6 +154,13 @@ public:
     bool IsPhase1BreakPending() const { return phase1BreakPending; }
     bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
 private:
+#ifdef USE_IMGUI
+    void DrawTutorialDebugGui();
+    void DrawPhase2DebugGui();
+    void DrawBgmAndBattleTimerDebugGui();
+    void DrawBossDeathDebugGui();
+    void DrawPlayerDeathDebugGui();
+#endif
     void UpdateTutorialCameraProfileTrigger();
     bool EvaluateLockOnCandidate(const std::shared_ptr<Enemy>& enemy,
         std::shared_ptr<SceneComponent>& outTarget, float& outDistanceSq,

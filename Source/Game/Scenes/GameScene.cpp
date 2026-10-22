@@ -3438,7 +3438,6 @@ void GameScene::UpdateBossDeathCinematic()
 
 void GameScene::LoadVictoryBestTime()
 {
-    // Same JSON representation as scene saves; only the boss clear record is stored.
     const char* path = "Data/Saves/BossBestTime.json";
     try
     {
@@ -3479,7 +3478,6 @@ void GameScene::CaptureVictoryResult()
                 output << nlohmann::json{ { "bossBestTimeSeconds", victoryBestTime } }.dump(4);
                 output.close();
             }
-            // Keep the previous record intact until the complete new JSON is written.
             if (!MoveFileExA(temporaryPath, "Data/Saves/BossBestTime.json",
                 MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
                 throw std::runtime_error("Cannot replace boss best time save");
@@ -3618,7 +3616,6 @@ void GameScene::UpdateVictoryResult()
 
 void GameScene::UpdateBattleFlow()
 {
-    // Independent wall clock for diagnostics only; retain the final sample after the wait.
     if (battleFlowState == BattleFlowState::FinalHitSlow ||
         battleFlowState == BattleFlowState::FinalHitSlowRecovery ||
         battleFlowState == BattleFlowState::FinalHitAftermath)
@@ -3742,9 +3739,6 @@ void GameScene::UpdateBattleFlow()
         finalHitTimer -= Time::UnscaledDeltaTime();
         if (finalHitTimer <= 0.0f)
         {
-            // A valid reaction continues at normal time if its configured cut
-            // lies beyond the slow/recovery/aftermath window. Only a missing or
-            // replaced reaction takes the anomaly escape.
             const auto controller = gruxEnemyActor
                 ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
             if (!phase2FinalHitReactionComplete &&
@@ -3955,6 +3949,19 @@ void GameScene::DrawGuiPlusAlpha()
 #ifdef USE_IMGUI
     ImGui::Begin("GameScene");
 
+    DrawTutorialDebugGui();
+    DrawPhase2DebugGui();
+    DrawBgmAndBattleTimerDebugGui();
+    DrawBossDeathDebugGui();
+    DrawPlayerDeathDebugGui();
+
+    ImGui::End();
+#endif
+}
+
+#ifdef USE_IMGUI
+void GameScene::DrawTutorialDebugGui()
+{
     ImGui::SeparatorText("Tutorial Camera Profile Trigger");
     ImGui::DragFloat3("Corridor Exit Trigger Center", &tutorialCameraProfileTriggerCenter.x,
         0.05f, -100.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
@@ -3974,6 +3981,10 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::DragFloat("HP Bar Scale", &tutorialSkeletonHpBarScale, 0.01f, 0.05f, 5.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::Checkbox("Use Fixed Screen Position", &tutorialSkeletonUseFixedScreenPosition);
     ImGui::DragFloat2("HP Fixed Screen Position X / Y", &tutorialSkeletonHpFixedScreenPosition.x, 0.5f, -500.0f, 2420.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp);
+}
+
+void GameScene::DrawPhase2DebugGui()
+{
     ImGui::DragInt(U8("Phase1 MaxHP"), &phase1MaxHp, 1.0f, 1, 500);
     ImGui::DragInt(U8("Phase2 MaxHP"), &phase2MaxHp, 1.0f, 1, 500);
     ImGui::DragFloat(U8("Phase2 FadeOut時間"), &phase2RecallFadeOutDuration,
@@ -4023,12 +4034,6 @@ void GameScene::DrawGuiPlusAlpha()
         {
             gruxEnemyActor->SetPhase2MaskSoftness(phase2MaskSoftness);
         }
-        if (const auto& skeletalMesh = gruxEnemyActor->GetSkeletalMeshComponent())
-        {
-            DirectX::XMFLOAT3 phase2HairTint = skeletalMesh->GetPhase2HairTint();
-            if (ImGui::ColorEdit3("Phase2 Hair Tint RGB", &phase2HairTint.x))
-                skeletalMesh->SetPhase2HairTint(phase2HairTint);
-        }
     }
 
     ImGui::DragFloat("Phase2 BGM Fade Out Duration", &phase2BgmFadeOutDuration,
@@ -4044,6 +4049,10 @@ void GameScene::DrawGuiPlusAlpha()
     ImGui::SeparatorText("Phase2 Boss HP Preview");
     if (gruxEnemyActor)
         gruxEnemyActor->DrawPhase2HpBarPreviewGui();
+}
+
+void GameScene::DrawBgmAndBattleTimerDebugGui()
+{
     ImGui::SeparatorText("BGM Debug");
     ImGui::DragFloat("Game BGM Fade Duration", &gameBgmFadeDuration,
         0.01f, 0.0f, 5.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
@@ -4054,6 +4063,10 @@ void GameScene::DrawGuiPlusAlpha()
         finalBattleTimeSaved ? "" : " (not saved)");
     battleTimerUIActor->SetElapsedTime(battleElapsedTime, numberTexWidth, numberTexHeight);
     ImGui::Separator();
+}
+
+void GameScene::DrawBossDeathDebugGui()
+{
     if (ImGui::TreeNode("Boss Death Cinematic Preview"))
     {
         ImGui::Separator();
@@ -4065,8 +4078,6 @@ void GameScene::DrawGuiPlusAlpha()
 
         ImGui::Separator();
         ImGui::SeparatorText("Victory Camera Intro");
-        static constexpr const char* victoryPhaseNames[] = { "None", "CameraBlend", "WinEmote", "ResultDelay", "ShowButtons", "Interactive" };
-        ImGui::Text("Victory Result Phase: %s", victoryPhaseNames[static_cast<size_t>(victoryResultPhase)]);
         ImGui::DragFloat("Result Camera Blend Duration", &victoryCameraBlendDuration,
             0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
         ImGui::DragFloat("Result Recall To Idle Blend Duration", &resultRecallToIdleBlendDuration,
@@ -4078,7 +4089,6 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::DragFloat("Victory B Limit", &victoryRankBLimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
         victoryRankALimit = (std::max)(victoryRankSLimit, victoryRankALimit);
         victoryRankBLimit = (std::max)(victoryRankALimit, victoryRankBLimit);
-        ImGui::TextDisabled("Rank limits apply to the next Victory.");
         victoryUIActor->SetNumberTextureSize(numberTexWidth, numberTexHeight);
         ImGui::DragFloat("Result Delay", &victoryResultDelayDuration,
             0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
@@ -4156,6 +4166,10 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::Text("Recall Prompt Time: %.3f", bossDeathRecallPromptTime);
         ImGui::TreePop();
     }
+}
+
+void GameScene::DrawPlayerDeathDebugGui()
+{
     ImGui::Separator();
     ImGui::Text("Death Presentation");
     ImGui::DragFloat(U8("HUDフェードアウト時間"), &deathHudFadeDuration, 0.01f, 0.01f, 5.0f);
@@ -4194,10 +4208,9 @@ void GameScene::DrawGuiPlusAlpha()
         ImGui::Text("deathAttemptTime : %.3f", deathAttemptTime);
         ImGui::Text("battleElapsedTime : %.3f", battleElapsedTime);
     }
-    ImGui::End();
-#endif
-
 }
+
+#endif
 
 
 // ボスの部屋の色ラープ値を設定する
