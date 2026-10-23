@@ -345,6 +345,7 @@
     <ClCompile Include="Source\Game\Scenes\LoadingScene.cpp" />
     <ClCompile Include="Source\Game\DarkGame\GameBgmDirector.cpp" />
     <ClCompile Include="Source\Game\DarkGame\GameBossDeathController.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\GamePlayerDeathController.cpp" />
     <ClCompile Include="Source\Game\DarkGame\GameTutorialController.cpp" />
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\TitleScene.cpp" />
@@ -513,6 +514,7 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStagePointLightActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\LanternActor.h" />
     <ClInclude Include="Source\Game\DarkGame\GameBossDeathController.h" />
+    <ClInclude Include="Source\Game\DarkGame\GamePlayerDeathController.h" />
     <ClInclude Include="Source\Game\DarkGame\GameTutorialController.h" />
     <ClInclude Include="Source\Game\DarkGame\Interactable.h" />
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h" />

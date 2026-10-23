@@ -35,6 +35,7 @@
 
 #include "PBD/PBDSystem.h"
 
+class GamePlayerDeathController;
 class GruxEnemy;
 class Enemy;
 class SkeletonWarriorActor;
@@ -43,16 +44,6 @@ class SceneComponent;
 
 class GameScene : public SceneBase
 {
-    enum class DeathStagingArea : uint8_t
-    {
-        Center, Front, Back, Left, Right, FrontLeft, FrontRight, BackLeft, BackRight
-    };
-
-    struct DeathStagingAreaSettings
-    {
-        float bossDistance = 4.5f;
-    };
-
 public:
     // Boss health remains phase-local for future phase-specific UI.
     enum class BossPhase : uint8_t
@@ -71,10 +62,7 @@ public:
         ButtonsFade,
     };
 
-    void SetDeathPresentationCueCallback(std::function<void(DeathPresentationCue)> callback)
-    {
-        deathPresentationCueCallback = std::move(callback);
-    }
+    void SetDeathPresentationCueCallback(std::function<void(DeathPresentationCue)> callback);
 
     enum class BattleFlowState : uint8_t
     {
@@ -226,9 +214,6 @@ private:
     void SetBattleHudVisible(bool visible);
     void DisableCinematicCameraDebugInput();
     void EnterPlayerDead();
-    void StageDeathActors();
-    DeathStagingArea DetermineDeathStagingArea(const DirectX::XMFLOAT3& originalPlayerPosition) const;
-    void OnPlayerDeathCameraStart();
     void ResetBattleForContinue();
     void ResetBattleFacingAndCamera();
     void EnterBossDead();
@@ -260,9 +245,6 @@ private:
     float victoryCameraBlendDuration = 0.60f;
     static constexpr float victoryEmoteEndTime = 1.48f;
     void ExecuteDeathResult(int index);
-    void UpdateDeathResultPresentation();
-    void ResetDeathPresentationCues();
-    void FireDeathPresentationCue(DeathPresentationCue cue, bool& fired);
 
     std::shared_ptr<StageAsset> mainRoomAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> bossRoomAsset = std::make_shared<StageAsset>();
@@ -354,47 +336,22 @@ private:
     Transform bossBattleStartTransform{};
     bool battleStartTransformsSaved = false;
     bool tutorialBossEntryPending = false;
-    bool deathCameraStartRequested = false;
     float playerDeadElapsed = 0.0f;
     float battleElapsedTime = 0.0f;
     float finalBattleTime = 0.0f;
     bool finalBattleTimeSaved = false;
     std::unique_ptr<GameBossDeathController> bossDeathController;
+    std::unique_ptr<GamePlayerDeathController> playerDeathController;
     std::shared_ptr<GameMovieSkipUIActor> movieSkipUIActor;
     std::shared_ptr<GameBossDeathUIActor> bossDeathUIActor;
     std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;
 
     std::shared_ptr<GameTimerUIActor> battleTimerUIActor;
-    float deathAttemptTime = 0.0f;
-    float deathPresentationElapsed = 0.0f;
-    float deathHudFadeDuration = 0.60f;
-    float deathOverlayStartTime = 4.6f;
-    float deathDefeatedStartTime = 5.0f;
-    float deathBattleTimeStartTime = 5.1f;
-    float deathButtonsStartTime = 5.2f;
-    float deathSelectLineStartTime = 4.40f;
-    float deathResultInputEnableTime = 5.2f;
     std::shared_ptr<GameDefeatUIActor> defeatUIActor;
     float deathResultMoveSeVolume = 0.15f;
     float deathResultConfirmSeVolume = 0.1f;
-    bool deathHudFadeCueFired = false;
-    bool deathOverlayCueFired = false;
-    bool deathDefeatedCueFired = false;
-    bool deathBattleTimeCueFired = false;
-    bool deathButtonsCueFired = false;
-    std::function<void(DeathPresentationCue)> deathPresentationCueCallback;
     float numberTexWidth = 198.f;
     float numberTexHeight = 300.f;
-
-
-    // Death staging bounds in world XZ coordinates.
-    float deathStagingMinPlayerX = 0.0f;
-    float deathStagingMaxPlayerX = 17.425f;
-    float deathStagingMinPlayerZ = 1.0f;
-    float deathStagingMaxPlayerZ = 20.45f;
-    float deathStagingWallInsetX = 0.8f;
-    float deathStagingWallInsetZ = 0.8f;
-    std::array<DeathStagingAreaSettings, 9> deathStagingAreaSettings{};
 
 
     std::shared_ptr<CinemaCamera> cinemaCameraActor;
@@ -432,6 +389,7 @@ private:
     std::shared_ptr<BgmActor> phase2BgmActor;
     std::shared_ptr<BgmActor> bossDeathSecondBgmActor;
     std::shared_ptr<BgmActor> playerDeathBgmActor;
+    const float bossBgmVolume = 0.2f;
 
     // 布アクター
     std::array<std::shared_ptr<DarkClothActor>, 10> darkClothActors;

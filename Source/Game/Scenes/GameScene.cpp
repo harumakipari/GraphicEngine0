@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "GameScene.h"
 #include "Game/DarkGame/GameBossDeathController.h"
+#include "Game/DarkGame/GamePlayerDeathController.h"
 #include "UI/Game/SceneTransitionManager.h"
 #include <json.hpp>
 #include <fstream>
@@ -46,7 +47,6 @@
 
 namespace
 {
-    constexpr float BossBgmVolume = 0.2f;
 
     constexpr std::array<const char*, 2> Phase2CinematicPresetPaths = {
         "Data/Saves/ScenePresets/boss_recall.json",
@@ -55,8 +55,25 @@ namespace
 
 }
 
-GameScene::GameScene() = default;
-GameScene::~GameScene() = default;
+GameScene::GameScene() : playerDeathController(std::make_unique<GamePlayerDeathController>()) {}
+GameScene::~GameScene()
+{
+    if (player)
+        player->SetDeathCameraStartCallback(nullptr);
+    if (defeatUIActor)
+        defeatUIActor->SetSelectionCallback(nullptr);
+}
+
+void GameScene::SetDeathPresentationCueCallback(std::function<void(DeathPresentationCue)> callback)
+{
+    if (!callback)
+    {
+        playerDeathController->SetCueCallback({});
+        return;
+    }
+    playerDeathController->SetCueCallback([callback = std::move(callback)](GamePlayerDeathController::Cue cue)
+        { callback(static_cast<DeathPresentationCue>(cue)); });
+}
 
 bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
@@ -653,7 +670,7 @@ void GameScene::UpdatePhase2Cinematic()
         }
         if (isRecallAnimation && phase2TransformCompleted && !bgmDirector.IsPhase2Started())
         {
-            bgmDirector.BeginPhase2CrossFade(controller->GetCurrentAnimationTime(), BossBgmVolume);
+            bgmDirector.BeginPhase2CrossFade(controller->GetCurrentAnimationTime(), bossBgmVolume);
         }
 
         const bool recallFinished = !controller ||
@@ -661,11 +678,10 @@ void GameScene::UpdatePhase2Cinematic()
         if (!recallFinished)
             break;
 
-        // A shortened Recall must never leave the eventual Phase2 presentation partial.
         phase2TransformProgress = 1.0f;
         phase2TransformCompleted = true;
         if (!bgmDirector.IsPhase2Started())
-            bgmDirector.BeginPhase2CrossFade(controller ? controller->GetCurrentAnimationTime() : phase2TransformEndTime, BossBgmVolume);
+            bgmDirector.BeginPhase2CrossFade(controller ? controller->GetCurrentAnimationTime() : phase2TransformEndTime, bossBgmVolume);
         if (gruxEnemyActor)
             gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
         if (gruxEnemyActor)
@@ -791,7 +807,7 @@ void GameScene::Start()
     bossBgmActor->SetLoop(true);
     bossBgmActor->SetBgm(true);
     //bossBgmActor->Play();
-    bossBgmActor->SetVolume(BossBgmVolume);
+    bossBgmActor->SetVolume(bossBgmVolume);
 
     phase2BgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("BossPhase2BgmActor");
     phase2BgmActor->SetSource(L"./Data/Sound/BGM/boss_phase2_bgm1.wav");
@@ -1298,7 +1314,7 @@ void GameScene::Update(float deltaTime)
     ZoneScopedN("Game Update");
     bgmDirector.UpdateGameBgmFadeOut(Time::UnscaledDeltaTime());
     bgmDirector.UpdateDeathBgmFade(Time::UnscaledDeltaTime());
-    bgmDirector.UpdatePhase2BgmCrossFade(Time::UnscaledDeltaTime(), BossBgmVolume);
+    bgmDirector.UpdatePhase2BgmCrossFade(Time::UnscaledDeltaTime(), bossBgmVolume);
 
     if (tutorialController.GetExplanationState() == GameTutorialController::ExplanationState::Showing)
     {
@@ -1320,9 +1336,7 @@ void GameScene::Update(float deltaTime)
         }
     }
 
-    defeatUIActor->SetFrameData(deathPresentationElapsed, deathOverlayStartTime, deathDefeatedStartTime,
-        deathBattleTimeStartTime, deathButtonsStartTime, deathSelectLineStartTime,
-        numberTexWidth, numberTexHeight, deathResultMoveSeVolume);
+    playerDeathController->UpdateFrameData(*defeatUIActor, numberTexWidth, numberTexHeight, deathResultMoveSeVolume);
     UpdateBattleFlow();
     victoryUIActor->UpdateButtonLayout();
     defeatUIActor->UpdateLayout();
@@ -1577,7 +1591,7 @@ void GameScene::StartBossBattle()
     const bool hadPhase2BgmRuntime = bgmDirector.HasPhase2BgmRuntime();
     ResetBossPhaseRuntime(BossPhase::Phase1);
     if (hadPhase2BgmRuntime)
-        bgmDirector.ResetBossBattleBgm(GameBgmDirector::BossBgmPhase::Phase1, true, BossBgmVolume);
+        bgmDirector.ResetBossBattleBgm(GameBgmDirector::BossBgmPhase::Phase1, true, bossBgmVolume);
     else
         PlayBossBattleBgm();
     bgmDirector.StopGameBgmIfNotFading();
@@ -1619,199 +1633,31 @@ void GameScene::EnterPlayerDead()
     bgmDirector.BeginPlayerDeathFade();
     battleTimerUIActor->SetVisible(false);
     playerDeadElapsed = 0.0f;
-    deathPresentationElapsed = 0.0f;
-    deathAttemptTime = battleElapsedTime;
-    defeatUIActor->SetBattleTime(deathAttemptTime);
-    ResetDeathPresentationCues();
+    playerDeathController->StartPresentation(battleElapsedTime, *defeatUIActor);
     defeatUIActor->ResetPresentation();
     InputSystem::SetInputEnabled(false);
-    deathCameraStartRequested = false;
-    if (player)
-        player->BeginGameplayHudFadeOut();
-    if (gruxEnemyActor)
-        gruxEnemyActor->BeginHpBarFadeOut();
-    FireDeathPresentationCue(DeathPresentationCue::GameplayHudFade, deathHudFadeCueFired);
+    playerDeathController->ResetDeathCameraStart();
+    playerDeathController->BeginHudFade(player.get(), gruxEnemyActor.get());
 
     if (gruxEnemyActor)
         gruxEnemyActor->PauseBattleAI();
 
-    StageDeathActors();
+    playerDeathController->StageDeathActors(player.get(), gruxEnemyActor.get());
 
-    if (darkCameraActor && player)
-    {
-        player->SetDeathCameraTransparencyDisabled(true);
-        player->SetDeathCameraStartCallback([this]()
-            {
-                OnPlayerDeathCameraStart();
-            });
-        if (auto stateMachine = player->GetStateMachine())
-            stateMachine->ChangeState("Death");
-    }
-    else if (player && player->GetStateMachine())
-    {
-        //カメラがない場合は、プレーヤーの死亡ステートに遷移
-        player->SetDeathCameraTransparencyDisabled(true);
-        player->GetStateMachine()->ChangeState("Death");
-    }
-}
-
-GameScene::DeathStagingArea GameScene::DetermineDeathStagingArea(
-    const DirectX::XMFLOAT3& originalPlayerPosition) const
-{
-    const bool front = originalPlayerPosition.x < deathStagingMinPlayerX;
-    const bool back = originalPlayerPosition.x > deathStagingMaxPlayerX;
-    const bool right = originalPlayerPosition.z < deathStagingMinPlayerZ;
-    const bool left = originalPlayerPosition.z > deathStagingMaxPlayerZ;
-
-    if (front && left) return DeathStagingArea::FrontLeft;
-    if (front && right) return DeathStagingArea::FrontRight;
-    if (back && left) return DeathStagingArea::BackLeft;
-    if (back && right) return DeathStagingArea::BackRight;
-    if (front) return DeathStagingArea::Front;
-    if (back) return DeathStagingArea::Back;
-    if (left) return DeathStagingArea::Left;
-    if (right) return DeathStagingArea::Right;
-    return DeathStagingArea::Center;
-}
-
-void GameScene::StageDeathActors()
-{
-    if (!player || !gruxEnemyActor)
-        return;
-
-    const DirectX::XMFLOAT3 originalPlayerPosition = player->GetPosition();
-    const DeathStagingArea stagingArea = DetermineDeathStagingArea(originalPlayerPosition);
-    const float targetBossDistance = deathStagingAreaSettings[static_cast<size_t>(stagingArea)].bossDistance;
-
-    const float stagingMinX = (std::min)(deathStagingMinPlayerX, deathStagingMaxPlayerX);
-    const float stagingMaxX = (std::max)(deathStagingMinPlayerX, deathStagingMaxPlayerX);
-    const float stagingMinZ = (std::min)(deathStagingMinPlayerZ, deathStagingMaxPlayerZ);
-    const float stagingMaxZ = (std::max)(deathStagingMinPlayerZ, deathStagingMaxPlayerZ);
-    const float wallInsetX = std::clamp(deathStagingWallInsetX, 0.0f, (stagingMaxX - stagingMinX) * 0.5f);
-    const float wallInsetZ = std::clamp(deathStagingWallInsetZ, 0.0f, (stagingMaxZ - stagingMinZ) * 0.5f);
-    const float safeMinX = stagingMinX + wallInsetX;
-    const float safeMaxX = stagingMaxX - wallInsetX;
-    const float safeMinZ = stagingMinZ + wallInsetZ;
-    const float safeMaxZ = stagingMaxZ - wallInsetZ;
-
-    DirectX::XMFLOAT3 safePlayerPosition = originalPlayerPosition;
-    safePlayerPosition.x = std::clamp(safePlayerPosition.x, safeMinX, safeMaxX);
-    safePlayerPosition.z = std::clamp(safePlayerPosition.z, safeMinZ, safeMaxZ);
-
-    const DirectX::XMFLOAT3 stagingOffset{
-        safePlayerPosition.x - originalPlayerPosition.x,
-        0.0f,
-        safePlayerPosition.z - originalPlayerPosition.z };
-    const DirectX::XMFLOAT3 originalBossPosition = gruxEnemyActor->GetPosition();
-    DirectX::XMFLOAT3 stagedBossPosition{
-        originalBossPosition.x + stagingOffset.x,
-        originalBossPosition.y,
-        originalBossPosition.z + stagingOffset.z };
-
-    if (std::abs(stagingOffset.x) > FLT_EPSILON ||
-        std::abs(stagingOffset.z) > FLT_EPSILON)
-    {
-        player->SetPosition(safePlayerPosition);
-    }
-
-    DirectX::XMFLOAT3 playerToBoss = MathHelper::Subtract(
-        stagedBossPosition, safePlayerPosition);
-    playerToBoss.y = 0.0f;
-    DirectX::XMFLOAT3 direction = playerToBoss;
-    if (MathHelper::Length(direction) > FLT_EPSILON)
-    {
-        direction = MathHelper::Normalize(direction);
-    }
-    else
-    {
-        direction = player->GetForward();
-        direction.y = 0.0f;
-        if (MathHelper::Length(direction) <= FLT_EPSILON)
-            direction = { 0.0f, 0.0f, 1.0f };
-        else
-            direction = MathHelper::Normalize(direction);
-    }
-
-    stagedBossPosition.x = safePlayerPosition.x + direction.x * targetBossDistance;
-    stagedBossPosition.z = safePlayerPosition.z + direction.z * targetBossDistance;
-    if (std::abs(stagedBossPosition.x - originalBossPosition.x) > FLT_EPSILON ||
-        std::abs(stagedBossPosition.z - originalBossPosition.z) > FLT_EPSILON)
-    {
-        gruxEnemyActor->SetPosition(stagedBossPosition);
-    }
-
-    DirectX::XMFLOAT3 bossToPlayer = MathHelper::Subtract(
-        safePlayerPosition, stagedBossPosition);
-    bossToPlayer.y = 0.0f;
-    if (MathHelper::Length(bossToPlayer) <= FLT_EPSILON)
-    {
-        bossToPlayer = player->GetForward();
-        bossToPlayer.x *= -1.0f;
-        bossToPlayer.y = 0.0f;
-        bossToPlayer.z *= -1.0f;
-    }
-    gruxEnemyActor->SetDirectionImmediate(bossToPlayer);
-}
-
-void GameScene::ResetDeathPresentationCues()
-{
-    deathHudFadeCueFired = deathOverlayCueFired = deathDefeatedCueFired = false;
-    deathBattleTimeCueFired = deathButtonsCueFired = false;
-}
-
-void GameScene::FireDeathPresentationCue(const DeathPresentationCue cue, bool& fired)
-{
-    if (fired) return;
-    fired = true;
-    if (deathPresentationCueCallback) deathPresentationCueCallback(cue);
-}
-
-void GameScene::UpdateDeathResultPresentation()
-{
-    const auto fade = [this](const float start, const float duration)
+    playerDeathController->PrepareDeathActor(player.get(), darkCameraActor.get(), [this]()
         {
-            return std::clamp((deathPresentationElapsed - start) / (std::max)(0.001f, duration), 0.0f, 1.0f);
-        };
-    const float hudAlpha = 1.0f - fade(0.0f, deathHudFadeDuration);
-    if (player) player->SetGameplayHudFadeAlpha(hudAlpha);
-    if (gruxEnemyActor) gruxEnemyActor->SetHpBarFadeAlpha(hudAlpha);
-
-    defeatUIActor->SetFrameData(deathPresentationElapsed, deathOverlayStartTime, deathDefeatedStartTime,
-        deathBattleTimeStartTime, deathButtonsStartTime, deathSelectLineStartTime,
-        numberTexWidth, numberTexHeight, deathResultMoveSeVolume);
-    if (!defeatUIActor->IsVisible())
-    {
-        bgmDirector.PlayPlayerDeathBgm();
-        DisableCinematicCameraDebugInput();
-        defeatUIActor->SetVisible(true);
-    }
-    defeatUIActor->UpdatePresentation();
-
-    if (deathPresentationElapsed >= deathOverlayStartTime) FireDeathPresentationCue(DeathPresentationCue::OverlayFade, deathOverlayCueFired);
-    if (deathPresentationElapsed >= deathDefeatedStartTime) FireDeathPresentationCue(DeathPresentationCue::DefeatedFade, deathDefeatedCueFired);
-    if (deathPresentationElapsed >= deathBattleTimeStartTime) FireDeathPresentationCue(DeathPresentationCue::BattleTimeFade, deathBattleTimeCueFired);
-    if (deathPresentationElapsed >= deathButtonsStartTime) FireDeathPresentationCue(DeathPresentationCue::ButtonsFade, deathButtonsCueFired);
+            if (battleFlowState == BattleFlowState::PlayerDead)
+                playerDeathController->StartDeathCamera(darkCameraActor.get(), gruxEnemyActor);
+        });
 }
 
 void GameScene::ExecuteDeathResult(const int index)
 {
-    if (!defeatUIActor->IsInputEnabled()) return;
-    CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav", deathResultConfirmSeVolume);
-    defeatUIActor->ResetPresentation();
+    if (!playerDeathController->AcceptSelection(*defeatUIActor, deathResultConfirmSeVolume)) return;
     if (index == 0) ResetBattleForContinue();
     else if (index == 1) RestartBossBattle();
     else SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
 }
-void GameScene::OnPlayerDeathCameraStart()
-{
-    if (deathCameraStartRequested || battleFlowState != BattleFlowState::PlayerDead)
-        return;
-
-    deathCameraStartRequested = true;
-    if (darkCameraActor)
-        darkCameraActor->StartDeathMode(gruxEnemyActor, nullptr);
-}
-
 void GameScene::ResetBattleFacingAndCamera()
 {
     if (!player || !gruxEnemyActor)
@@ -1836,7 +1682,7 @@ void GameScene::ResetBattleForContinue()
     if (!battleStartTransformsSaved || !player || !gruxEnemyActor)
         return;
 
-    deathPresentationElapsed = 0.0f;
+    playerDeathController->ResetPresentationElapsed();
     defeatUIActor->ResetPresentation();
 
     Time::SetSlow(1.0f, 0.0f);
@@ -1854,7 +1700,7 @@ void GameScene::ResetBattleForContinue()
     const BossPhase resumePhase = continueCheckpointPhase;
     const auto resumeBgmPhase = resumePhase == BossPhase::Phase2 ? GameBgmDirector::BossBgmPhase::Phase2 :
         resumePhase == BossPhase::Phase1 ? GameBgmDirector::BossBgmPhase::Phase1 : GameBgmDirector::BossBgmPhase::Transition;
-    bgmDirector.ResetDeathBgmState(resumeBgmPhase, BossBgmVolume);
+    bgmDirector.ResetDeathBgmState(resumeBgmPhase, bossBgmVolume);
     ResetBossPhaseRuntime(resumePhase);
     player->ResetForBattleContinue(playerBattleStartTransform);
     player->EndEvent();
@@ -2006,13 +1852,13 @@ void GameScene::RestartBossBattle()
 {
     if (darkCameraActor)
         darkCameraActor->ClearDeathTarget();
-    bgmDirector.ResetDeathBgmState(GameBgmDirector::BossBgmPhase::Phase1, BossBgmVolume);
+    bgmDirector.ResetDeathBgmState(GameBgmDirector::BossBgmPhase::Phase1, bossBgmVolume);
     victoryUIActor->ResetPresentation();
     victoryResultPhase = VictoryResultPhase::None;
     victoryResultDelayElapsed = 0.0f;
     ResetHuskCompletionTracking();
     DisableCinematicCameraDebugInput();
-    deathPresentationElapsed = 0.0f;
+    playerDeathController->ResetPresentationElapsed();
     defeatUIActor->ResetPresentation();
     GetUIManager()->SetSelected(nullptr);
     player->SetDeathCameraStartCallback(nullptr);
@@ -2497,19 +2343,13 @@ void GameScene::UpdateBattleFlow()
         break;
     case BattleFlowState::PlayerDead:
         playerDeadElapsed += Time::UnscaledDeltaTime();
-        deathPresentationElapsed += Time::UnscaledDeltaTime();
-        UpdateDeathResultPresentation();
-        if (!defeatUIActor->IsInputEnabled() && deathPresentationElapsed >= deathResultInputEnableTime)
-        {
-            DisableCinematicCameraDebugInput();
-            defeatUIActor->EnableInput();
-            InputSystem::SetInputEnabled(true);
+        if (playerDeathController->Update(Time::UnscaledDeltaTime(), true, player.get(), gruxEnemyActor.get(),
+            *defeatUIActor, bgmDirector, cinemaCameraActor.get(), numberTexWidth, numberTexHeight, deathResultMoveSeVolume))
             battleFlowState = BattleFlowState::ContinueWait;
-        }
         break;
     case BattleFlowState::ContinueWait:
-        deathPresentationElapsed += Time::UnscaledDeltaTime();
-        UpdateDeathResultPresentation();
+        playerDeathController->Update(Time::UnscaledDeltaTime(), false, player.get(), gruxEnemyActor.get(),
+            *defeatUIActor, bgmDirector, cinemaCameraActor.get(), numberTexWidth, numberTexHeight, deathResultMoveSeVolume);
         break;
     case BattleFlowState::ResetForContinue:
         ResetBattleForContinue();
@@ -2684,6 +2524,10 @@ bool GameScene::Uninitialize(ID3D11Device* device)
 {
     bgmDirector.StopDeathBgm();
     bgmDirector.ClearActors();
+    if (player)
+        player->SetDeathCameraStartCallback(nullptr);
+    if (defeatUIActor)
+        defeatUIActor->SetSelectionCallback(nullptr);
     SceneBase::Uninitialize(device);
     Physics::Instance().Finalize();
     return true;
@@ -2832,42 +2676,8 @@ void GameScene::DrawPlayerDeathDebugGui()
 {
     ImGui::Separator();
     ImGui::Text("Death Presentation");
-    ImGui::DragFloat(U8("HUDフェードアウト時間"), &deathHudFadeDuration, 0.01f, 0.01f, 5.0f);
-    ImGui::DragFloat(U8("背景暗転 開始時間"), &deathOverlayStartTime, 0.01f, 0.0f, 30.0f);
-
-    ImGui::DragFloat(U8("DEFEATED 表示開始時間"), &deathDefeatedStartTime, 0.01f, 0.0f, 30.0f);
-
-    ImGui::DragFloat(U8("Battle Time 表示開始時間"), &deathBattleTimeStartTime, 0.01f, 0.0f, 30.0f);
-
-    ImGui::DragFloat(U8("ボタン 表示開始時間"), &deathButtonsStartTime, 0.01f, 0.0f, 30.0f);
-
-    ImGui::DragFloat(U8("選択ライン 表示開始時間"), &deathSelectLineStartTime, 0.01f, 0.0f, 30.0f);
-    ImGui::DragFloat(U8("操作受付 開始時間"), &deathResultInputEnableTime, 0.01f, 0.0f, 30.0f);
-    ImGui::SliderFloat("Result Move SE Volume", &deathResultMoveSeVolume, 0.0f, 2.0f);
-    ImGui::SliderFloat("Result Confirm SE Volume", &deathResultConfirmSeVolume, 0.0f, 2.0f);
-    ImGui::DragFloat("numberTexWidth", &numberTexWidth, 1.0f, 1.0f, 200.0f);
-    ImGui::DragFloat("numberTexHeight", &numberTexHeight, 1.0f, 1.0f, 300.0f);
-
-    if (ImGui::TreeNode("Death Staging"))
-    {
-        ImGui::DragFloat("Min Player X", &deathStagingMinPlayerX, 0.01f);
-        ImGui::DragFloat("Max Player X", &deathStagingMaxPlayerX, 0.01f);
-        ImGui::DragFloat("Min Player Z", &deathStagingMinPlayerZ, 0.01f);
-        ImGui::DragFloat("Max Player Z", &deathStagingMaxPlayerZ, 0.01f);
-        ImGui::DragFloat("Wall Inset X", &deathStagingWallInsetX, 0.01f, 0.0f, 3.0f);
-        ImGui::DragFloat("Wall Inset Z", &deathStagingWallInsetZ, 0.01f, 0.0f, 3.0f);
-        static constexpr const char* areaNames[] =
-        { "Center", "Front", "Back", "Left", "Right", "FrontLeft", "FrontRight", "BackLeft", "BackRight" };
-        for (size_t i = 0; i < deathStagingAreaSettings.size(); ++i)
-        {
-            ImGui::PushID(static_cast<int>(i));
-            ImGui::DragFloat(areaNames[i], &deathStagingAreaSettings[i].bossDistance, 0.01f, 0.0f, 20.0f);
-            ImGui::PopID();
-        }
-        ImGui::TreePop();
-        ImGui::Text("deathAttemptTime : %.3f", deathAttemptTime);
-        ImGui::Text("battleElapsedTime : %.3f", battleElapsedTime);
-    }
+    playerDeathController->DrawDebugGui(deathResultMoveSeVolume, deathResultConfirmSeVolume,
+        numberTexWidth, numberTexHeight, battleElapsedTime);
 }
 
 #endif
