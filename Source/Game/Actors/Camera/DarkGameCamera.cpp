@@ -163,8 +163,6 @@ void DarkCameraActor::Update(float deltaTime)
             0.0f, true);
     }
 
-    UpdateLockOnTransitionDiagnostics();
-
     if (!preservePrisonOpeningReturnPose)
     {
         float targetBlend = cameraHitWall ? 1.0f : 0.0f;
@@ -177,32 +175,6 @@ void DarkCameraActor::Update(float deltaTime)
     mainCameraComponent->lookTarget = renderPose.target;
     mainCameraComponent->useLookTarget = true;
     DrawDeathCameraDebug(renderPose);
-
-    if (prisonOpeningTransitionDebugFrame >= 0)
-    {
-        const DirectX::XMFLOAT3 actorPosition = GetPosition();
-        const DirectX::XMFLOAT4 actorRotation = GetQuaternionRotation();
-        const DirectX::XMFLOAT3 viewForward = mainCameraComponent->GetForward();
-        Logger::Log(Logger::LogCategory::Gameplay, std::format(
-            "[PrisonOpeningTrace][DarkCamera_PostUpdate] phase={} frame={} "
-            "actorPos=({:.3f},{:.3f},{:.3f}) actorRot=({:.4f},{:.4f},{:.4f},{:.4f}) fov={:.4f} "
-            "yaw={:.4f} desiredYaw={:.4f} pitch={:.4f} desiredPitch={:.4f} holdReturnPose={} "
-            "desiredDistance={:.3f} actualDistance={:.3f} collisionRatio={:.3f} "
-            "collisionPre=({:.3f},{:.3f},{:.3f}) collisionPost=({:.3f},{:.3f},{:.3f}) "
-            "lookTarget=({:.3f},{:.3f},{:.3f}) viewForward=({:.4f},{:.4f},{:.4f})",
-            prisonOpeningTransitionDebugPhase, prisonOpeningTransitionDebugFrame,
-            actorPosition.x, actorPosition.y, actorPosition.z,
-            actorRotation.x, actorRotation.y, actorRotation.z, actorRotation.w,
-            mainCameraComponent->GetFov(), currentYaw, desiredYaw, currentPitch, desiredPitch,
-            preservePrisonOpeningReturnPose,
-            desiredCameraDistance, actualCameraDistance, cameraCollisionRatio,
-            collisionPreEyePosition.x, collisionPreEyePosition.y, collisionPreEyePosition.z,
-            collisionPostEyePosition.x, collisionPostEyePosition.y, collisionPostEyePosition.z,
-            currentPose.target.x, currentPose.target.y, currentPose.target.z,
-            viewForward.x, viewForward.y, viewForward.z));
-        prisonOpeningTransitionDebugFrame = -1;
-        prisonOpeningTransitionDebugPhase.clear();
-    }
 }
 
 void DarkCameraActor::DrawDeathCameraDebug(const CameraPose& appliedPose) const
@@ -919,12 +891,6 @@ void DarkCameraActor::PreparePrisonOpeningTpsReturn(const PrisonOpeningTpsPose& 
     holdPrisonOpeningTpsReturnPoseForOneUpdate = true;
 }
 
-// 外部のカメラアクターとのブレンド状態を更新する
-void DarkCameraActor::RequestPrisonOpeningTransitionDebug(const char* phase, int frame)
-{
-    prisonOpeningTransitionDebugPhase = phase ? phase : "Unknown";
-    prisonOpeningTransitionDebugFrame = frame;
-}
 
 void DarkCameraActor::UpdateExternalBlend(float deltaTime)
 {
@@ -2410,24 +2376,6 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
     lockOnCurrentFovDegree = activeProfile.fovDegree;
     lockOnFovReturnDelayElapsed = 0.0f;
     lockOnFovFallbackActive = false;
-    if (lockOnTransitionDiagnosticsActive && lockOnTransitionTo == CameraMode::LockOn)
-    {
-        const auto target = enemyHead.lock();
-        const auto enemy = target ? dynamic_cast<const Enemy*>(target->GetOwner()) : nullptr;
-        const char* profileName = IsGruxLockOnTarget() ? "Grux"
-            : enemy && enemy->GetLockOnCameraProfile() == EnemyLockOnCameraProfile::Standard
-            ? "Standard" : "Compact";
-        Logger::Log(std::string("[LockOnTransition][Init] Profile=") + profileName +
-            " TPSDistance=" + std::to_string(GetActiveTpsSettings().distance) +
-            " BaseDistance=" + std::to_string(activeProfile.distance) +
-            " MaxDistanceAdd=" + std::to_string(activeProfile.maxDistanceAdd) +
-            " CurrentDistance=" + std::to_string(currentLockOnCameraDistance) +
-            " DesiredDistance=" + std::to_string(desiredLockOnCameraDistance) +
-            " AdaptiveDistance=" + std::to_string(adaptiveLockOnCameraDistance) +
-            " SnapshotDistance=" + std::to_string(lockOnTransitionSnapshotDistance) +
-            " SafeFrameRequired=" + std::to_string(lockOnRequiredFramingDistance) +
-            " BaseFOV=" + std::to_string(activeProfile.fovDegree));
-    }
     currentEscapeSide = 0;
     targetEscapeSide = 0;
     currentLateralEscapeOffset = 0.0f;
@@ -2445,9 +2393,6 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
 float DarkCameraActor::ClampEnemyLockOnDistanceToProfile(
     float distance, const LockOnProfile& profile) const
 {
-    // Preserve the Grux range and tuning exactly. Enemy profiles have an
-    // explicit base + add range, so both their snapshot and runtime target
-    // must stay inside it.
     if (IsGruxLockOnTarget())
         return distance;
 
@@ -2461,8 +2406,6 @@ void DarkCameraActor::InitializeLockOnTransitionDistanceSnapshot()
     const LockOnProfile activeProfile = GetActiveLockOnProfile();
     lockOnTransitionSnapshotDistance = activeProfile.distance;
 
-    // Grux already has a tuned transition and adaptive range. Retain the
-    // reset base-distance behavior for that path.
     if (IsGruxLockOnTarget())
         return;
 
@@ -2482,125 +2425,6 @@ void DarkCameraActor::InitializeLockOnTransitionDistanceSnapshot()
     currentLockOnCameraDistance = lockOnTransitionSnapshotDistance;
     desiredLockOnCameraDistance = lockOnTransitionSnapshotDistance;
     adaptiveLockOnCameraDistance = lockOnTransitionSnapshotDistance;
-}
-
-void DarkCameraActor::BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to)
-{
-    (void)from;
-    lockOnTransitionDiagnosticsActive = true;
-    lockOnTransitionDiagnosticsFrame = 0;
-    lockOnTransitionTo = to;
-    transitionStartDesiredEye = desiredEyePosition;
-    transitionStartCollisionPostEye = collisionPostEyePosition;
-    transitionStartCollisionRatio = cameraCollisionRatio;
-    transitionStartAdaptiveDistance = adaptiveLockOnCameraDistance;
-    transitionStartAdaptiveTargetWeight = adaptiveLockOnTargetWeight;
-    transitionMaxDesiredEyeDelta = 0.0f;
-    transitionMaxCollisionPostEyeDelta = 0.0f;
-    transitionMaxCollisionRatioDelta = 0.0f;
-    transitionMaxAdaptiveDistanceDelta = 0.0f;
-    transitionMaxAdaptiveTargetWeightDelta = 0.0f;
-}
-
-void DarkCameraActor::UpdateLockOnTransitionDiagnostics()
-{
-    if (!lockOnTransitionDiagnosticsActive)
-    {
-        return;
-    }
-
-    const float deltas[] =
-    {
-        MathHelper::Distance(desiredEyePosition, transitionStartDesiredEye),
-        MathHelper::Distance(collisionPostEyePosition, transitionStartCollisionPostEye),
-        std::abs(cameraCollisionRatio - transitionStartCollisionRatio),
-        std::abs(adaptiveLockOnCameraDistance - transitionStartAdaptiveDistance),
-        std::abs(adaptiveLockOnTargetWeight - transitionStartAdaptiveTargetWeight)
-    };
-    transitionMaxDesiredEyeDelta = std::max<float>(transitionMaxDesiredEyeDelta, deltas[0]);
-    transitionMaxCollisionPostEyeDelta = std::max<float>(transitionMaxCollisionPostEyeDelta, deltas[1]);
-    transitionMaxCollisionRatioDelta = std::max<float>(transitionMaxCollisionRatioDelta, deltas[2]);
-    transitionMaxAdaptiveDistanceDelta = std::max<float>(transitionMaxAdaptiveDistanceDelta, deltas[3]);
-    transitionMaxAdaptiveTargetWeightDelta = std::max<float>(transitionMaxAdaptiveTargetWeightDelta, deltas[4]);
-
-    const char* direction = lockOnTransitionTo == CameraMode::LockOn ? "TPS->LockOn" : "LockOn->TPS";
-    if (lockOnTransitionTo == CameraMode::LockOn)
-    {
-        const LockOnProfile activeProfile = GetActiveLockOnProfile();
-        const auto target = enemyHead.lock();
-        const auto enemy = target ? dynamic_cast<const Enemy*>(target->GetOwner()) : nullptr;
-        const char* profileName = IsGruxLockOnTarget() ? "Grux"
-            : enemy && enemy->GetLockOnCameraProfile() == EnemyLockOnCameraProfile::Standard
-            ? "Standard" : "Compact";
-        const float blendDurationForLog = blendDurationOverride > 0.0f
-            ? blendDurationOverride : blendDuration;
-        const float blendProgress = isBlending
-            ? std::clamp(blendTime / (std::max)(blendDurationForLog, FLT_EPSILON), 0.0f, 1.0f)
-            : 1.0f;
-        const float finalFovDegree = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
-        Logger::Log(std::string("[LockOnTransition][TPS->LockOn][frame=") +
-            std::to_string(lockOnTransitionDiagnosticsFrame) + "] Mode=" +
-            std::to_string(static_cast<int>(currentMode)) + " RequestMode=" +
-            std::to_string(static_cast<int>(requestMode)) + " Blending=" +
-            (isBlending ? "true" : "false") + " BlendProgress=" + std::to_string(blendProgress) +
-            " Profile=" + profileName +
-            " TPSDistance=" + std::to_string(GetActiveTpsSettings().distance) +
-            " BaseDistance=" + std::to_string(activeProfile.distance) +
-            " MaxDistanceAdd=" + std::to_string(activeProfile.maxDistanceAdd) +
-            " CurrentDistance=" + std::to_string(currentLockOnCameraDistance) +
-            " DesiredDistance=" + std::to_string(desiredLockOnCameraDistance) +
-            " AdaptiveDistance=" + std::to_string(adaptiveLockOnCameraDistance) +
-            " SnapshotDistance=" + std::to_string(lockOnTransitionSnapshotDistance) +
-            " SafeFrameRequired=" + std::to_string(lockOnRequiredFramingDistance) +
-            " ExistingAdaptiveDistance=" + std::to_string(lockOnExistingAdaptiveDistance) +
-            " PreEye=(" + std::to_string(collisionPreEyePosition.x) + "," +
-            std::to_string(collisionPreEyePosition.y) + "," + std::to_string(collisionPreEyePosition.z) +
-            ") PostEye=(" + std::to_string(collisionPostEyePosition.x) + "," +
-            std::to_string(collisionPostEyePosition.y) + "," + std::to_string(collisionPostEyePosition.z) +
-            ") FinalDistance=" + std::to_string(actualCameraDistance) +
-            " CollisionRatio=" + std::to_string(cameraCollisionRatio) +
-            " CameraHitWall=" + (cameraHitWall ? "true" : "false") +
-            " BaseFOV=" + std::to_string(activeProfile.fovDegree) +
-            " RequiredFOV=" + std::to_string(lockOnRequiredFovDegree) +
-            " FallbackTargetFOV=" + std::to_string(lockOnTargetFovDegree) +
-            " FallbackCurrentFOV=" + std::to_string(lockOnCurrentFovDegree) +
-            " FinalFOV=" + std::to_string(finalFovDegree));
-    }
-    else
-    {
-        Logger::Log(std::string("[LockOnTransition][") + direction + "][frame=" +
-            std::to_string(lockOnTransitionDiagnosticsFrame) + "] DesiredEye=(" +
-            std::to_string(desiredEyePosition.x) + "," + std::to_string(desiredEyePosition.y) + "," +
-            std::to_string(desiredEyePosition.z) + ") CollisionPostEye=(" +
-            std::to_string(collisionPostEyePosition.x) + "," + std::to_string(collisionPostEyePosition.y) + "," +
-            std::to_string(collisionPostEyePosition.z) + ") CollisionRatio=" + std::to_string(cameraCollisionRatio) +
-            " AdaptiveDistance=" + std::to_string(adaptiveLockOnCameraDistance) +
-            " SnapshotDistance=" + std::to_string(lockOnTransitionSnapshotDistance) +
-            " AdaptiveTargetWeight=" + std::to_string(adaptiveLockOnTargetWeight));
-    }
-
-    ++lockOnTransitionDiagnosticsFrame;
-    if (lockOnTransitionDiagnosticsFrame < 30)
-    {
-        return;
-    }
-
-    const float maxDeltas[] = { transitionMaxDesiredEyeDelta, transitionMaxCollisionPostEyeDelta,
-        transitionMaxCollisionRatioDelta, transitionMaxAdaptiveDistanceDelta,
-        transitionMaxAdaptiveTargetWeightDelta };
-    const char* names[] = { "Desired Eye", "Collision Post Eye", "Collision Ratio",
-        "Adaptive Distance", "Adaptive Target Weight" };
-    int largestIndex = 0;
-    for (int i = 1; i < 5; ++i)
-    {
-        if (maxDeltas[i] > maxDeltas[largestIndex]) largestIndex = i;
-    }
-    Logger::Log(std::string("[LockOnTransition][") + direction + "][summary] maxDelta: DesiredEye=" +
-        std::to_string(maxDeltas[0]) + " CollisionPostEye=" + std::to_string(maxDeltas[1]) +
-        " CollisionRatio=" + std::to_string(maxDeltas[2]) + " AdaptiveDistance=" +
-        std::to_string(maxDeltas[3]) + " AdaptiveTargetWeight=" + std::to_string(maxDeltas[4]) +
-        " Largest=" + names[largestIndex]);
-    lockOnTransitionDiagnosticsActive = false;
 }
 
 bool DarkCameraActor::IsDeathPoseCollisionFree(const CameraPose& pose) const

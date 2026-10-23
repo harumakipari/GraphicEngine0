@@ -77,24 +77,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     Character::Initialize(transform);
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
     skeletalMeshComponent->SetModel("./Data/Models/Characters/GruxQilin/boss.gltf", false, true);
-    const auto loadPhase2BaseColor = [this](const char* materialName, const std::wstring& filename)
-        {
-            const bool loaded = skeletalMeshComponent->LoadPhase2BaseColorTexture(materialName, filename);
-            if (!loaded)
-            {
-                Logger::Log(Logger::LogCategory::Gameplay,
-                    "[Phase2Texture] Missing " + std::string(materialName) +
-                    " Phase2 BaseColor; using the material Phase1 BaseColor fallback.");
-            }
-        };
-    loadPhase2BaseColor("M_Grux_Qilin_Torso",
-        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Torso_BaseColor_Phase2.DDS");
-    loadPhase2BaseColor("M_Grux_Qilin_Gear",
-        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Gear_BaseColor_Phase2.png");
-    loadPhase2BaseColor("M_Grux_Qilin_Head",
-        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Head_BaseColor_Phase2.DDS");
-    loadPhase2BaseColor("M_Grux_Qilin_LegsHands",
-        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_LegsHands_BaseColor_Phase2.DDS");
     const std::weak_ptr<GruxEnemy> roarPoseOwner = std::static_pointer_cast<GruxEnemy>(shared_from_this());
     skeletalMeshComponent->SetRenderLocalYOffsetProvider("pelvis", [roarPoseOwner]()
         {
@@ -135,6 +117,20 @@ void GruxEnemy::Initialize(const Transform& transform)
     }
     skeletalMeshComponent->SetIsShadowMap(true);
     skeletalMeshComponent->SetIsCastShadow(false);
+
+    // 第二形態のテクスチャをロードする
+    const auto loadPhase2BaseColor = [this](const char* materialName, const std::wstring& filename)
+        {
+            skeletalMeshComponent->LoadPhase2BaseColorTexture(materialName, filename);
+        };
+    loadPhase2BaseColor("M_Grux_Qilin_Torso",
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Torso_BaseColor_Phase2.DDS");
+    loadPhase2BaseColor("M_Grux_Qilin_Gear",
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Gear_BaseColor_Phase2.png");
+    loadPhase2BaseColor("M_Grux_Qilin_Head",
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Head_BaseColor_Phase2.DDS");
+    loadPhase2BaseColor("M_Grux_Qilin_LegsHands",
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_LegsHands_BaseColor_Phase2.DDS");
 
     // アニメーションコントローラーを作成
     int rootIndex = skeletalMeshComponent->FindIndexByName("root");
@@ -1018,8 +1014,6 @@ void GruxEnemy::StopBattleActions()
     interruptedChargeRecoveryActive = false;
     interruptedChargeRecoveryTimer = 0.0f;
     interruptedChargeRecoveryDuration = 0.0f;
-    interruptedChargeRecoveryRootResumeLogPending = false;
-    interruptedChargeRecoveryNextAttackLogPending = false;
     ResetWeaponTelegraphRimLight();
     HideDashTelegraphVisual();
     HideRoarTelegraph();
@@ -1197,8 +1191,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     interruptedChargeRecoveryActive = false;
     interruptedChargeRecoveryTimer = 0.0f;
     interruptedChargeRecoveryDuration = 0.0f;
-    interruptedChargeRecoveryRootResumeLogPending = false;
-    interruptedChargeRecoveryNextAttackLogPending = false;
     chargeBT = {};
     chargeMovementActive = false;
     chargeDangerWindowActive = false;
@@ -1417,28 +1409,8 @@ void GruxEnemy::EndFinalHitReaction()
     finalHitReactionActive = false;
 }
 
-void GruxEnemy::LogInterruptedChargeRecoveryEvent(const char* event, const char* attack)
-{
-    std::string message = std::string("[ChargeRecovery] ") + (event ? event : "Unknown") +
-        " frame=" + std::to_string(interruptedChargeRecoveryLogFrame) +
-        " gameTime=" + std::to_string(interruptedChargeRecoveryLogGameTime) +
-        " interruptedChargeRecoveryActive=" + (interruptedChargeRecoveryActive ? "true" : "false") +
-        " interruptedChargeRecoveryTimer=" + std::to_string(interruptedChargeRecoveryTimer) +
-        " chargeJustDodgeRecoveryDuration=" + std::to_string(GetChargeJustDodgeRecoveryDuration()) +
-        " rushCombatHoldActive=" + (rushCombatHoldActive ? "true" : "false");
-    if (event && std::strcmp(event, "Started") == 0)
-        message += " duration=" + std::to_string(interruptedChargeRecoveryDuration);
-    if (event && std::strcmp(event, "Finished") == 0)
-        message += " elapsed=" + std::to_string(interruptedChargeRecoveryTimer);
-    if (attack)
-        message += " attack=" + std::string(attack);
-    Logger::Log(Logger::LogCategory::Gameplay, message);
-}
-
 void GruxEnemy::Update(float deltaTime)
 {
-    ++interruptedChargeRecoveryLogFrame;
-    interruptedChargeRecoveryLogGameTime += (std::max)(0.0f, deltaTime);
     UpdateRoarImpactDebris(Time::DeltaTime());
     UpdatePhase2TextureBlendWorldYRange();
     ++animationDebugFrameCounter;
@@ -1456,12 +1428,9 @@ void GruxEnemy::Update(float deltaTime)
         (gameScene && gameScene->IsBossPhaseTransitionActive()))
     {
         ResetWeaponTelegraphRimLight();
-        // Freeze the interrupted combat animation rather than requesting Idle.
-        // This prevents its remaining notifies/root motion from restarting combat.
         return;
     }
     TickRoarLifecycle(deltaTime);
-    // Resolve boss death before advancing any active BT action.
     if (hp <= 0)
         EndFourthHitReaction();
     const bool phaseTransitionOwnsDefeat = gameScene && gameScene->IsBossPhaseTransitionActive();
@@ -1475,7 +1444,6 @@ void GruxEnemy::Update(float deltaTime)
             stateMachine_->ChangeState("EnemyDeathState");
     }
 
-    // Charge cleanup precedes cinematic/editor early returns and does not overwrite their animation.
     if (ShouldAbortChargeAttackBT())
     {
         CleanupChargeAttackBT();
@@ -1590,26 +1558,13 @@ void GruxEnemy::Update(float deltaTime)
         UpdateDashTelegraphVisual(deltaTime);
         if (interruptedChargeRecoveryTimer >= interruptedChargeRecoveryDuration)
         {
-            LogInterruptedChargeRecoveryEvent("Finished");
             interruptedChargeRecoveryActive = false;
             interruptedChargeRecoveryTimer = 0.0f;
             interruptedChargeRecoveryDuration = 0.0f;
-            interruptedChargeRecoveryRootResumeLogPending = true;
-            interruptedChargeRecoveryNextAttackLogPending = true;
         }
-        // Root inference starts next frame, never in the timer-completion frame.
         return;
     }
 
-    if (interruptedChargeRecoveryRootResumeLogPending)
-    {
-        interruptedChargeRecoveryRootResumeLogPending = false;
-        LogInterruptedChargeRecoveryEvent("BTRootResumed");
-    }
-
-    BeginRotationDebugFrame();
-
-    // Dash owns cleanup even when the BT is disabled or an external state interrupts it.
     if (IsDashAttackBTActive() &&
         (!behaviorTreeFastComboEnabled || !battleAIActive || IsDead() ||
             (stateMachine_ && (std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") == 0 ||
@@ -1691,14 +1646,8 @@ void GruxEnemy::Update(float deltaTime)
     if (jumpMotionWarpOverrideActive)
         UpdateJumpLandingDebugWallSnapshot();
     DrawJumpLandingDebugWorld();
-    FinishRotationDebugFrame();
 
 #ifdef USE_IMGUI
-    aiDebugTargetContext = BuildTargetContext();
-    if (showBossAIDebug || showCloseCombatDebugRange)
-        DrawBossAIDebugWorld(aiDebugTargetContext);
-    if (showRotationDebug)
-        DrawRotationDebugWorld(aiDebugTargetContext);
     if (positioningWorldDebug)
         DrawPositioningDebugWorld();
     if (retreatWorldDebug)
@@ -1843,13 +1792,7 @@ void GruxEnemy::Update(float deltaTime)
 
             if (inside && player->GetJustDodgeWindow())
             {
-                if (HasJustDodgedAttack(player.get()))
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[BossAttack][JustDodgeRejected] reason=duplicate attackSequenceId=" +
-                        std::to_string(currentAttackSequenceId));
-                }
-                else
+                if (!HasJustDodgedAttack(player.get()))
                 {
                     TryStartJustDodgeSuccess(player.get());
                 }
@@ -1898,25 +1841,13 @@ void GruxEnemy::Update(float deltaTime)
         {
             if (auto player = dynamic_cast<Player*>(hit.actor))
             {
-                Logger::Log(Logger::LogCategory::Gameplay,
-                    "[BossAttack][SphereRayCastHit] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
-                    " side=left");
-                if (HasJustDodgedAttack(hit.actor))
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[BossAttack][DamageRejected] reason=justDodged attackSequenceId=" +
-                        std::to_string(currentAttackSequenceId));
-                }
-                else if (!hitActors.contains(hit.actor))
+                if (!hitActors.contains(hit.actor) && !HasJustDodgedAttack(hit.actor))
                 {
                     Logger::Log(U8("剣にプレイヤーが当たった"));
                     if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
                     {
                         hitActors.emplace(player);
                         ++currentAttackHitCount;
-                        Logger::Log(Logger::LogCategory::Gameplay,
-                            "[BossAttack][DamageApplied] attackSequenceId=" +
-                            std::to_string(currentAttackSequenceId) + " source=sphereRayLeft");
                     }
                 }
             }
@@ -1955,22 +1886,13 @@ void GruxEnemy::Update(float deltaTime)
         {
             if (auto player = dynamic_cast<Player*>(hit.actor))
             {
-                if (HasJustDodgedAttack(hit.actor))
-                {
-                    Logger::Log(Logger::LogCategory::Gameplay,
-                        "[BossAttack][DamageRejected] reason=justDodged attackSequenceId=" +
-                        std::to_string(currentAttackSequenceId));
-                }
-                else if (!hitActors.contains(hit.actor))
+                if (!hitActors.contains(hit.actor) && !HasJustDodgedAttack(hit.actor))
                 {
                     Logger::Log(U8("剣にプレイヤーが当たった"));
                     if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
                     {
                         hitActors.emplace(player);
                         ++currentAttackHitCount;
-                        Logger::Log(Logger::LogCategory::Gameplay,
-                            "[BossAttack][DamageApplied] attackSequenceId=" +
-                            std::to_string(currentAttackSequenceId) + " source=sphereRayRight");
                     }
                 }
             }
@@ -2283,15 +2205,6 @@ void GruxEnemy::DrawRotationDebugWorld(const BossTargetContext& context) const
             { origin.x + move.x * 4.0f, y, origin.z + move.z * 4.0f },
             { 1.0f, 0.75f, 0.1f, 1.0f }, 0.0f, true);
     }
-    if (rotationDebugTurnTargetValid)
-    {
-        DebugRender::DrawLine(origin,
-            { origin.x + rotationDebugTurnTargetDirection.x * 4.5f, y,
-                origin.z + rotationDebugTurnTargetDirection.z * 4.5f },
-            { 1.0f, 0.2f, 0.8f, 1.0f }, 0.0f, true);
-    }
-#else
-    (void)context;
 #endif
 }
 
@@ -2600,9 +2513,6 @@ void GruxEnemy::DrawImGuiDetails()
             ImGui::TextDisabled("No DangerWindow notify data loaded.");
         }
     }
-    const BossTargetContext& targetContext = aiDebugTargetContext;
-    const char* relativeRegions[] = { "Front", "Side", "Back" };
-    const char* distanceRegions[] = { "Near", "Middle", "Far" };
     const char* actionTypes[] =
     {
         "AttackLA",
@@ -2627,102 +2537,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat(U8("近距離正面 FastCombo確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat(U8("FastCombo Front最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     fastComboFrontMaxAngle = std::clamp(fastComboFrontMaxAngle, 0.0f, 180.0f);
-    const BossTargetContext attackSelectorContext = BuildTargetContext();
     const char* intentTypes[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan", "CombatReposition" };
-    const char* intentStepNames[] =
-    {
-        "Selecting",
-        "Positioning",
-        "AttackPending",
-        "Completed",
-        "Failed",
-    };
-    UpdateIntentEffectiveWeights(targetContext);
-    const char* candidateReasonNames[] =
-    {
-        "NoActiveIntent",
-        "Candidate",
-        "NotForCurrentIntent",
-        "WrongDistance",
-        "Cooldown",
-        "ZeroWeight",
-        "WrongRelativeRegion",
-        "NoSafeDirection",
-    };
-    const char* activeIntentName = "None";
-    if (activeIntent)
-        activeIntentName = intentTypes[static_cast<int>(*activeIntent)];
-    const char* activeIntentGoal = "None";
-    if (activeIntent)
-    {
-        switch (*activeIntent)
-        {
-        case BossIntentType::CloseCombat:
-            activeIntentGoal = "CloseCombat Attack";
-            break;
-        case BossIntentType::DashAttackPlan:
-            activeIntentGoal = "DashAttack / ChargeAttack";
-            break;
-        case BossIntentType::JumpAttackPlan:
-            activeIntentGoal = "JumpAttack";
-            break;
-        case BossIntentType::CombatReposition:
-            activeIntentGoal = "Reposition";
-            break;
-        }
-    }
-    const BossIntentData* activeIntentData = GetActiveIntentData();
-    const char* activeRangeStatusName = "None";
-    const char* activeIntentNextAction = "None";
-    if (activeIntentData && targetContext.valid)
-    {
-        const BossIntentRangeStatus rangeStatus =
-            GetIntentRangeStatus(*activeIntentData, targetContext.xzDistance);
-        const char* rangeStatusNames[] = { "Too Close", "In Range", "Too Far" };
-        activeRangeStatusName = rangeStatusNames[static_cast<int>(rangeStatus)];
-        if (*activeIntent == BossIntentType::CloseCombat)
-        {
-            activeIntentNextAction = rangeStatus == BossIntentRangeStatus::TooFar
-                ? "Approach"
-                : "CloseCombat Attack";
-        }
-        else if (*activeIntent == BossIntentType::DashAttackPlan)
-        {
-            activeIntentNextAction = rangeStatus == BossIntentRangeStatus::TooClose
-                ? "Retreat"
-                : (rangeStatus == BossIntentRangeStatus::TooFar ? "Approach" : "DashAttack / ChargeAttack");
-        }
-        else if (*activeIntent == BossIntentType::JumpAttackPlan)
-        {
-            activeIntentNextAction = rangeStatus == BossIntentRangeStatus::TooClose
-                ? "Retreat"
-                : (rangeStatus == BossIntentRangeStatus::TooFar ? "Approach" : "JumpAttack");
-        }
-        else if (*activeIntent == BossIntentType::CombatReposition)
-        {
-            activeIntentNextAction = "Reposition Left / Right";
-        }
-    }
-
-
-
-    float attackValidMin = 0.0f;
-    float attackValidMax = 0.0f;
-    const bool hasAttackValidRange =
-        GetIntentAttackValidRange(attackValidMin, attackValidMax);
-    const float effectiveAttackValidMin =
-        activeIntentStep == BossIntentStep::AttackPending ? 0.0f : attackValidMin;
-    const bool attackValid = hasAttackValidRange && targetContext.valid &&
-        targetContext.xzDistance >= effectiveAttackValidMin &&
-        targetContext.xzDistance <= attackValidMax;
-    if (activeIntentStep == BossIntentStep::AttackPending && hasAttackValidRange)
-    {
-        if (targetContext.xzDistance > attackValidMax)
-            activeIntentNextAction = "Reposition: Too Far For Attack";
-        else
-            activeIntentNextAction = activeIntentGoal;
-    }
-
 
     ImGui::SeparatorText("Selected Action");
     if (hasSelectedActionDebug)
@@ -2827,7 +2642,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::SeparatorText("Positioning Animation Tuning");
     ImGui::DragFloat("Move Start Speed Threshold",
         &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
-    positioningMoveStartSpeedThreshold =std::clamp(positioningMoveStartSpeedThreshold, 0.01f, 10.0f);
+    positioningMoveStartSpeedThreshold = std::clamp(positioningMoveStartSpeedThreshold, 0.01f, 10.0f);
     ImGui::DragFloat("Move Stop Speed Threshold",
         &positioningMoveStopSpeedThreshold, 0.01f, 0.0f,
         positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
@@ -3002,7 +2817,6 @@ void GruxEnemy::DrawImGuiDetails()
 
 
     ImGui::Begin("Boss AI Debug");
-    ImGui::Checkbox("Show AI World Debug", &showBossAIDebug);
     ImGui::SeparatorText("Boss Rotation Debug");
     const char* fullStateName = stateMachine_ ? stateMachine_->GetStateName() : "";
     const char* stateDisplayName = "None";
@@ -3412,15 +3226,11 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
     }
     if (!rushHpDisplayActive && hp < hpBeforeDamage)
     {
-        // Restart from the HP immediately before each successful hit.
         delayedHp = static_cast<float>(hpBeforeDamage);
         delayedHpDelayTimer = delayedHpDelayDuration;
         useRushDelayedHpFollowSpeed = false;
     }
     Logger::Log(U8("エネミーにダメージ！ HP:") + std::to_string(hp));
-
-    // This function is reached only after Player's per-attack hitActors check,
-    // so each confirmed fourth-hit damage instance receives exactly one roll.
     if (isNormalFourthHit && hp > 0)
     {
         static thread_local std::mt19937 randomEngine{ std::random_device{}() };
@@ -3813,10 +3623,6 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
             leftHitBox = true;
         }
         RefreshActiveHitBoxesFromNotifyStates();
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[BossAttack][HitBoxBegin] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
-            " left=" + std::string(leftHitBox ? "true" : "false") +
-            " right=" + (rightHitBox ? "true" : "false"));
         break;
     case AnimationNotifyState::Type::InputWindow:
         Logger::Log(U8("コンボ受付を開始しました"));
@@ -3830,9 +3636,6 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::JustDodgeWindow:
         break;
     case AnimationNotifyState::Type::DangerWindow:
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[BossAttack][DangerWindowBegin] attackSequenceId=" +
-            std::to_string(currentAttackSequenceId));
         activeDangerNotifyState = &state;
         isDangerWindow = true;
         RefreshActiveDangerAreaFromNotify();
@@ -3914,11 +3717,6 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
             activeLeftHitBoxRadius = hitWeaponRadius;
         }
         RefreshActiveHitBoxesFromNotifyStates();
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[BossAttack][HitBoxEnd] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
-            " left=" + std::string(leftHitBox ? "true" : "false") +
-            " right=" + (rightHitBox ? "true" : "false") +
-            " hitCount=" + std::to_string(currentAttackHitCount));
         break;
     case AnimationNotifyState::Type::InputWindow:
         Logger::Log(U8("コンボ受付を終了しました"));
@@ -3932,9 +3730,6 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::JustDodgeWindow:
         break;
     case AnimationNotifyState::Type::DangerWindow:
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[BossAttack][DangerWindowEnd] attackSequenceId=" +
-            std::to_string(currentAttackSequenceId));
         isDangerWindow = false;
         activeDangerNotifyState = nullptr;
         ResetDangerArea();
@@ -4064,8 +3859,8 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     {
         const bool isBossDeathCinematicClip = controller &&
             (controller->GetCurrentAnimationName() == "Ultimate_Roar_0" ||
-             controller->GetCurrentAnimationName() == "Result_Down_Start" ||
-             controller->GetCurrentAnimationName() == "Death_B_0");
+                controller->GetCurrentAnimationName() == "Result_Down_Start" ||
+                controller->GetCurrentAnimationName() == "Death_B_0");
         const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
         if (isBossDeathCinematicClip && gameScene &&
             gameScene->IsBossDeathFinishPromptActive())
@@ -4341,26 +4136,6 @@ void GruxEnemy::RequestJumpAttackCameraAssist()
 
 void GruxEnemy::OnSelectedActionStartedSuccessfully()
 {
-    if (interruptedChargeRecoveryNextAttackLogPending)
-    {
-        interruptedChargeRecoveryNextAttackLogPending = false;
-        const char* attack = "Unknown";
-        switch (selectedActionType)
-        {
-        case BossActionType::AttackLA: attack = "AttackLA"; break;
-        case BossActionType::AttackRA: attack = "AttackRA"; break;
-        case BossActionType::FastCombo: attack = "FastCombo"; break;
-        case BossActionType::JumpAttack: attack = "JumpAttack"; break;
-        case BossActionType::DashAttack: attack = "DashAttack"; break;
-        case BossActionType::ChargeAttack: attack = "ChargeAttack"; break;
-        case BossActionType::Approach: attack = "Approach"; break;
-        case BossActionType::Retreat: attack = "Retreat"; break;
-        case BossActionType::RepositionLeft: attack = "RepositionLeft"; break;
-        case BossActionType::RepositionRight: attack = "RepositionRight"; break;
-        }
-        LogInterruptedChargeRecoveryEvent("NextAttackStarted", attack);
-    }
-
     if (IsRepeatPenaltyCombatAttack(selectedActionType))
     {
         secondLastStartedCombatAttack = lastStartedCombatAttack;
@@ -4539,7 +4314,7 @@ bool GruxEnemy::UpdateJumpAttackTelegraph(float deltaTime)
     const BossTargetContext context = BuildTargetContext();
     if (!context.valid)
         return false;
-    RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), deltaTime, "BT_JumpTelegraph");
+    RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), deltaTime);
     const auto controller = GetBodyAnimationController();
     return !controller || !controller->IsPlayAnimation();
 }
@@ -4681,8 +4456,6 @@ void GruxEnemy::PrepareJumpAttackMotionWarpOverride()
     {
         const float inverseDistance = 1.0f / currentJumpPlayerDistance;
         jumpMotionWarpDirection = { dx * inverseDistance, 0.0f, dz * inverseDistance };
-        if (rotationComponent)
-            RecordRotationDebugSource("JumpAttackDirectionLock", jumpMotionWarpDirection, 0.0f);
         rotationComponent->SetDirectionImmediate(jumpMotionWarpDirection);
     }
     else
@@ -4785,23 +4558,15 @@ bool GruxEnemy::PrepareDashAttackMovementSnapshot()
     dashBTKnockupPositionCaptured = false;
     dashBTMovementSnapshotPrepared = true;
 
-    // Direction is fixed at this same point. Hold time may follow, but neither
-    // the visual prediction nor the later movement may resample the player.
-    if (rotationComponent)
-        RecordRotationDebugSource("DashAttackDirectionLock", dashAttackDirection, 0.0f);
     rotationComponent->SetDirectionImmediate(dashAttackDirection);
     return true;
 }
 
 bool GruxEnemy::BeginDashAttackMovement()
 {
-    // Dash BT keeps the locked Telegraph snapshot through Stampede/Knockup.
-    // Legacy/direct callers retain their previous immediate cleanup behavior.
     if (!IsDashAttackBTActive())
         HideDashTelegraphVisual();
     StopDashAttackMovement();
-    // Legacy/direct callers retain the old immediate-snapshot behavior. Dash
-    // BT normally prepares this at Direction Lock before entering its hold.
     if (!dashBTMovementSnapshotPrepared && !PrepareDashAttackMovementSnapshot())
         return false;
 
@@ -4844,8 +4609,6 @@ bool GruxEnemy::UpdateDashAttackMovement(float deltaTime, bool keepLockedDirecti
         : DirectX::XMFLOAT3{ dx * inverseDistance, 0.0f, dz * inverseDistance };
     if (characterMovementComponent)
         characterMovementComponent->SetMoveDirection(directionToTarget);
-    if (rotationComponent)
-        RecordRotationDebugSource("DashMovementTarget", directionToTarget, 0.0f);
     rotationComponent->SetDirectionImmediate(directionToTarget);
     return false;
 }
@@ -4993,7 +4756,6 @@ bool GruxEnemy::BeginChargeAttackMovement()
     PlayBodyAnimation("Stampede_0", true, true, 0.1f, true);
     if (rotationComponent)
     {
-        RecordRotationDebugSource("ChargeDirectionLock", chargeDirection, 0.0f);
         rotationComponent->SetDirectionImmediate(chargeDirection);
     }
     if (characterMovementComponent)
@@ -5083,9 +4845,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
                 currentPosition.x, bossRoomProbeBlockEvent.hitPosition.y, currentPosition.z };
             SpawnWallImpactEffect(impactPosition, bossRoomProbeBlockEvent.hitNormal);
             Time::SetSlow(0.0f, 0.05f);
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[BossCharge][End] reason=BossRoomProbeWallHit lost=" +
-                std::to_string(bossRoomProbeBlockEvent.forwardMoveLost));
             StopChargeAttackMovement();
             return chargeEndReasonDebug;
         }
@@ -5142,7 +4901,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     if (showChargeCastDebug && (showPlayerCastDebug || showWallCastDebug))
     {
         const auto drawCast = [&](const DirectX::XMFLOAT3& debugCastOrigin,
-                                  const float castRadius, const DirectX::XMFLOAT4& color, const bool enabled)
+            const float castRadius, const DirectX::XMFLOAT4& color, const bool enabled)
             {
                 const DirectX::XMFLOAT3 castEnd{
                     debugCastOrigin.x + chargeDirection.x * castDistance,
@@ -5239,27 +4998,18 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     {
         tryStartJustDodgeCalled = true;
         tryStartJustDodgeResult = TryStartJustDodgeSuccess(justDodgePlayer);
-        // TryStartJustDodgeSuccess checks direction only after these two gates.
-        // Mirror that diagnostic value without changing its outcome.
         directionEvaluated = justDodgeWindow && !alreadyDodged;
         if (directionEvaluated)
             directionValid = tryStartJustDodgeResult || justDodgePlayer->CanJustDodgeAgainst(GetPosition());
         if (tryStartJustDodgeResult)
         {
-            // Charge alone stays committed after a Just Dodge. TryStartJustDodgeSuccess
-            // still starts the slow/Rush opportunity; only an actual Rush cancels Charge.
             chargeJustDodgeSuccessDebug = true;
             chargeSelectedHitDebug = "JustDodge";
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[BossCharge][JustDodge] continuing distance=" +
-                std::to_string(justDodgeHit.distance));
         }
     }
 
     if (playerIsFirst)
     {
-        // A Just Dodge consumes this Charge leg for the player. Keep moving, but
-        // never damage that player again until the next triple-charge leg resets it.
         if (!HasJustDodgedAttack(hitPlayer) &&
             hitPlayer->TryTakeDamage(GetActiveChargeDamage(), GetPosition()))
         {
@@ -5271,68 +5021,13 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             ++currentAttackHitCount;
             chargeSelectedHitDebug = "PlayerHit";
             chargeEndReasonDebug = ChargeAttackEndReason::PlayerHit;
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[BossCharge][End] reason=PlayerHit distance=" +
-                std::to_string(playerHit.distance) +
-                " damage=" + std::to_string(GetActiveChargeDamage()));
-            StopChargeAttackMovement();
+           StopChargeAttackMovement();
             return chargeEndReasonDebug;
         }
 
         chargeSelectedHitDebug = "PlayerDamageRejected";
     }
 
-    if (playerCastHit)
-    {
-        const int tripleLeg = chargeBT.tripleChargeActive
-            ? std::clamp(chargeBT.tripleChargeIndex, 0, 2) + 1 : 0;
-        const bool beginLegSucceeded = !chargeBT.tripleChargeActive ||
-            chargeBT.tripleBeginTripleChargeLegResult;
-        std::string result = "Rejected: Unknown";
-        if (!hitPlayer) result = "Rejected: HitActorNotPlayer";
-        else if (!playerCandidate) result = "Rejected: PlayerAlreadyHit";
-        else if (!playerIsFirst) result = "Rejected: WallFirst";
-        else if (!chargeDangerWindowActive) result = "Rejected: DangerWindowInactive";
-        else if (!justDodgeWindow) result = "Rejected: JustDodgeWindowInactive";
-        else if (alreadyDodged) result = "Rejected: AlreadyDodged";
-        else if (!directionValid) result = "Rejected: DirectionInvalid";
-        else if (tryStartJustDodgeResult) result = "Success";
-        else result = "Rejected: TryStartJustDodgeSuccess";
-
-        const std::string signature = std::to_string(tripleLeg) + "|" +
-            std::to_string(beginLegSucceeded) + "|" + std::to_string(wallCastHit) + "|" +
-            std::to_string(wallCandidate) + "|" + std::to_string(playerCandidate) + "|" +
-            std::to_string(playerIsFirst) + "|" + std::to_string(chargeDangerWindowActive) + "|" +
-            std::to_string(justDodgeWindow) + "|" + std::to_string(alreadyDodged) + "|" +
-            std::to_string(directionEvaluated) + "|" + std::to_string(directionValid) + "|" +
-            std::to_string(tryStartJustDodgeCalled) + "|" + std::to_string(tryStartJustDodgeResult) +
-            "|" + result;
-        static const GruxEnemy* lastOwner = nullptr;
-        static int lastLeg = -1;
-        static std::string lastSignature;
-        if (lastOwner != this || lastLeg != tripleLeg || lastSignature != signature)
-        {
-            lastOwner = this;
-            lastLeg = tripleLeg;
-            lastSignature = signature;
-            const std::string legName = tripleLeg > 0 ? "Leg" + std::to_string(tripleLeg) : "Single";
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[ChargeJD][" + legName + "] " +
-                "BeginLeg=" + (beginLegSucceeded ? "true" : "false") +
-                " PlayerHit=true PlayerDistance=" + std::to_string(playerHit.distance) +
-                " WallHit=" + (wallCastHit ? "true" : "false") +
-                " WallDistance=" + (wallCastHit ? std::to_string(wallHit.distance) : "N/A") +
-                " WallCandidate=" + (wallCandidate ? "true" : "false") +
-                " PlayerIsFirst=" + (playerIsFirst ? "true" : "false") +
-                " DangerWindow=" + (chargeDangerWindowActive ? "true" : "false") +
-                " JustDodgeWindow=" + (justDodgeWindow ? "true" : "false") +
-                " DirectionValid=" + (directionEvaluated ? (directionValid ? "true" : "false") : "N/A") +
-                " AlreadyDodged=" + (alreadyDodged ? "true" : "false") +
-                " TryStartCalled=" + (tryStartJustDodgeCalled ? "true" : "false") +
-                " TryStartResult=" + (tryStartJustDodgeCalled ? (tryStartJustDodgeResult ? "true" : "false") : "N/A") +
-                " Result=" + result);
-        }
-    }
 
     if (wallCandidate)
     {
@@ -5361,9 +5056,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
                 -chargeDirection.x, -chargeDirection.y, -chargeDirection.z };
         SpawnWallImpactEffect(impactPosition, impactNormal);
         Time::SetSlow(0.0f, 0.05f);
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[BossCharge][End] reason=WallHit distance=" +
-            std::to_string(wallHit.distance));
         StopChargeAttackMovement();
         return chargeEndReasonDebug;
     }
@@ -5590,9 +5282,6 @@ void GruxEnemy::StartAttack()
     StopDashAttackMovement();
     ++currentAttackSequenceId;
     ResetJustDodgeRecords("start_attack");
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[BossAttack][Start] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
-        " previousHitActors=" + std::to_string(hitActors.size()));
     hitActors.clear();
     currentAttackHitCount = 0;
     DisableAttackHitBoxes();
@@ -5611,18 +5300,10 @@ void GruxEnemy::DisableAttackHitBoxes()
     isDangerWindow = false;
     activeDangerNotifyState = nullptr;
     ResetDangerArea();
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[BossAttack][HitBoxesDisabled] attackSequenceId=" + std::to_string(currentAttackSequenceId) +
-        " hitCount=" + std::to_string(currentAttackHitCount));
 }
 
 void GruxEnemy::ResetJustDodgeRecords(const char* reason)
 {
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[BossAttack][JustDodgeReset] attackSequenceId=" +
-        std::to_string(currentAttackSequenceId) +
-        " count=" + std::to_string(justDodgedActors.size()) +
-        " reason=" + (reason ? reason : "unknown"));
     justDodgedActors.clear();
 }
 
@@ -5642,9 +5323,6 @@ bool GruxEnemy::TryStartJustDodgeSuccess(Player* player)
     justDodgedActors.insert(player);
     player->StartJustDodgeSuccess(
         std::dynamic_pointer_cast<Enemy>(shared_from_this()));
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[BossAttack][JustDodgeSuccess] attackSequenceId=" +
-        std::to_string(currentAttackSequenceId));
     return true;
 }
 
@@ -5907,8 +5585,8 @@ void GruxEnemy::ClearPositioningTarget(PositioningTargetContext& target, Positio
 }
 
 GruxEnemy::PositioningMoveResult GruxEnemy::UpdatePositioningTargetMovement(
-    PositioningTargetContext& target, PositioningTargetRuntime& runtime, float dt,
-    const char* debugSource)
+    PositioningTargetContext& target, PositioningTargetRuntime& runtime, float dt
+    )
 {
     if (!target.valid)
         return PositioningMoveResult::InvalidTarget;
@@ -5945,7 +5623,7 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdatePositioningTargetMovement(
     characterMovementComponent->SetFixedSpeed(target.moveSpeed);
     characterMovementComponent->SetInputMagnitude(1.0f);
     characterMovementComponent->SetMoveDirection(direction);
-    RotateTowardsPlayer(direction, GetTurnSpeed(), safeDt, debugSource);
+    RotateTowardsPlayer(direction, GetTurnSpeed(), safeDt);
     UpdatePositioningAnimation(safeDt > 0.0f ? frameMovement / safeDt : 0.0f, safeDt);
     return PositioningMoveResult::Running;
 }
@@ -5967,8 +5645,7 @@ void GruxEnemy::StopAttackSetupMovement()
 }
 GruxEnemy::AttackSetupMoveResult GruxEnemy::UpdateAttackSetupMovement(float dt)
 {
-    const auto result = UpdatePositioningTargetMovement(attackSetupTarget, attackSetupRuntime,
-        dt, "AttackSetupMovement");
+    const auto result = UpdatePositioningTargetMovement(attackSetupTarget, attackSetupRuntime,dt);
     attackSetupMovementActive = attackSetupRuntime.movementActive;
     attackSetupPreviousPosition = attackSetupRuntime.previousPosition;
     attackSetupElapsedTime = attackSetupRuntime.elapsed;
@@ -6184,58 +5861,13 @@ void GruxEnemy::StopAIMovement()
     characterMovementComponent->ResetFixedSpeed();
 }
 
-void GruxEnemy::BeginRotationDebugFrame()
-{
-    rotationDebugSourceCount = 0;
-    rotationDebugRequestedTurnSpeed = 0.0f;
-    rotationDebugTurnTargetValid = false;
-}
-
-void GruxEnemy::FinishRotationDebugFrame()
-{
-    rotationDebugCurrentYaw = GetEulerRotation().y;
-    if (!rotationDebugYawInitialized)
-    {
-        rotationDebugPreviousYaw = rotationDebugCurrentYaw;
-        rotationDebugYawInitialized = true;
-    }
-    rotationDebugPreviousYaw = rotationDebugCurrentYaw;
-
-    const BossTargetContext context = BuildTargetContext();
-}
-
-void GruxEnemy::RecordRotationDebugSource(const char* source,
-    const DirectX::XMFLOAT3& targetDirection, float requestedTurnSpeed)
-{
-    const float directionLengthSq = targetDirection.x * targetDirection.x +
-        targetDirection.z * targetDirection.z;
-    const float targetYaw = directionLengthSq > FLT_EPSILON
-        ? DirectX::XMConvertToDegrees(std::atan2f(targetDirection.x, targetDirection.z))
-        : rotationDebugCurrentYaw;
-    rotationDebugRequestedTurnSpeed = requestedTurnSpeed;
-    if (rotationDebugSourceCount < static_cast<int>(rotationDebugSources.size()))
-    {
-        RotationSourceDebug& entry = rotationDebugSources[rotationDebugSourceCount++];
-        entry.source = source ? source : "Unknown";
-        entry.targetYaw = targetYaw;
-        entry.requestedTurnSpeed = requestedTurnSpeed;
-    }
-    if (source && std::strcmp(source, "TurnState") == 0)
-    {
-        rotationDebugTurnTargetDirection = targetDirection;
-        rotationDebugTurnTargetValid = directionLengthSq > FLT_EPSILON;
-    }
-}
 
 bool GruxEnemy::RotateTowardsPlayer(
     const DirectX::XMFLOAT3& direction,
     const float degreesPerSecond,
-    const float deltaTime,
-    const char* debugSource)
+    const float deltaTime)
 {
-    RecordRotationDebugSource(debugSource, direction, degreesPerSecond);
-    return rotationComponent && rotationComponent->RotateTowardsDirection(
-        direction, degreesPerSecond, deltaTime);
+    return rotationComponent && rotationComponent->RotateTowardsDirection(direction, degreesPerSecond, deltaTime);
 }
 
 

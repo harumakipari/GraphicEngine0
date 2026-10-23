@@ -514,8 +514,7 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRetreatMovement(float deltaTim
             return PositioningMoveResult::Stuck;
         }
     }
-    const auto result = UpdatePositioningTargetMovement(retreatTarget, retreatMovementRuntime,
-        deltaTime, "RetreatMovement");
+    const auto result = UpdatePositioningTargetMovement(retreatTarget, retreatMovementRuntime,deltaTime);
     if (result != PositioningMoveResult::Running && result != PositioningMoveResult::Arrived &&
         retreatRuntime.failureReason == U8("なし"))
     {
@@ -876,7 +875,7 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRepositionMovement(float dt)
     const float dx = repositionTarget.targetPosition.x - position.x;
     const float dz = repositionTarget.targetPosition.z - position.z;
     repositionRemainingDistance = std::sqrt(dx * dx + dz * dz);
-    const auto result = UpdatePositioningTargetMovement(repositionTarget, repositionMovementRuntime, dt, "RepositionMovement");
+    const auto result = UpdatePositioningTargetMovement(repositionTarget, repositionMovementRuntime, dt);
     if (result != PositioningMoveResult::Running && result != PositioningMoveResult::Arrived &&
         repositionRuntime.failureReason == "None")
     {
@@ -1607,7 +1606,6 @@ void GruxEnemy::DrawRoarBTDebug()
 {
 #ifdef USE_IMGUI
     ImGui::SeparatorText(U8("咆哮BT"));
-    ImGui::Checkbox(U8("攻撃行動を無効化"), &disableAttackBehaviorsForDebug);
     ImGui::DragFloat(U8("咆哮 LevelStart 足元補正"), &roarLevelStartFootOffset, 0.01f, -2.0f, 2.0f, "%.3f m");
     ImGui::DragFloat(U8("咆哮 足元補正終了時間"), &roarLevelStartFootOffsetEndTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
     if (!std::isfinite(roarLevelStartFootOffset)) roarLevelStartFootOffset = 0.0f;
@@ -1730,7 +1728,6 @@ void GruxEnemy::DrawRoarBTDebug()
         if (debris.meshComponent && debris.meshComponent->IsVisible())
             ++activeFloatingDebrisCount;
     ImGui::SeparatorText(U8("Roar候補の直近実判定（描画では更新しない）"));
-    ImGui::Checkbox(U8("AI距離をWorld表示"), &showBossAIDebug);
     ImGui::TextColored(ImVec4(0.1f, 0.8f, 1.0f, 1.0f), U8("水色: 防御行動 至近距離"));
     ImGui::TextColored(ImVec4(1.0f, 0.15f, 0.6f, 1.0f), U8("桃色: 咆哮 範囲"));
     ImGui::SeparatorText(U8("Retreat"));

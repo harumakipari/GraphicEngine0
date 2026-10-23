@@ -825,8 +825,6 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
         }
     }
 
-    // This texture is deliberately outside the glTF material texture array.
-    // It is bound only while ClothSimulate draws, at PS t16.
     const std::filesystem::path opacityTexturePath = "Data/Models/Cloth/M_Cloth_Opacity.png";
     if (std::filesystem::exists(opacityTexturePath))
     {

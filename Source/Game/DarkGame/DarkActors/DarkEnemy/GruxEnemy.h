@@ -666,9 +666,6 @@ public:
         Shockwave  // 衝撃波の処理中。
     };
 
-    // 攻撃行動のデバッグ無効化が有効かを返す。
-    bool AreAttackBehaviorsDisabledForDebug() const { return disableAttackBehaviorsForDebug; }
-
     // 現在のPlayerを新しい攻撃・防御行動の対象にできるか判定する。
     bool CanPlanAttackAgainstCurrentPlayer() const;
 
@@ -1002,9 +999,9 @@ public:
     // AIによる移動入力と固定速度を解除する。
     void StopAIMovement();
 
-    // 指定方向へ回転し、回転処理のデバッグ情報を記録する。
+    // 指定方向へ回転する。
     bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
-        float degreesPerSecond, float deltaTime, const char* debugSource);
+        float degreesPerSecond, float deltaTime);
 
     // 攻撃前の向き合わせ完了角度を返す。
     float GetTurnCompleteAngle() const { return turnCompleteAngle; }
@@ -1142,9 +1139,6 @@ public:
     // FastComboの実行段階を設定する。
     void SetFastComboRuntimeStage(int stage) { fastComboRuntimeStage = stage; }
 
-    // BTの直近の判定結果をデバッグ用に記録する。
-    void SetBehaviorTreeLastJudgment(const std::string& value) { behaviorTreeLastJudgment = value; }
-
     // Charge実行ノードの更新回数を記録する。
     void RecordExecuteChargeAttackRunDebug();
 private:
@@ -1172,9 +1166,6 @@ private:
 
     // 行動ツリーの実行ノードとアクション状態をリセットする。
     void ResetBehaviorTreeRuntime();
-
-    // 中断されたCharge後のRecoveryに関するイベントを記録する。
-    void LogInterruptedChargeRecoveryEvent(const char* event, const char* attack = nullptr);
 
     // 通常攻撃の4段目による被弾リアクションを開始する。
     void BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePosition);
@@ -1306,19 +1297,10 @@ private:
 
     // 指定された位置調整目標への移動を更新する。
     PositioningMoveResult UpdatePositioningTargetMovement(PositioningTargetContext& target,
-        PositioningTargetRuntime& runtime, float deltaTime, const char* debugSource);
+        PositioningTargetRuntime& runtime, float deltaTime);
 
     // 位置調整の目標と実行状態を解除する。
     void ClearPositioningTarget(PositioningTargetContext& target, PositioningTargetRuntime& runtime);
-
-    // 回転処理のフレーム内診断情報を初期化する。
-    void BeginRotationDebugFrame();
-
-    // 回転処理のフレーム内診断情報を確定する。
-    void FinishRotationDebugFrame();
-
-    // 回転要求元と目標方向をデバッグ用に記録する。
-    void RecordRotationDebugSource(const char* source, const DirectX::XMFLOAT3& targetDirection, float requestedTurnSpeed);
 
     // 回転に関する診断情報をワールド上に描画する。
     void DrawRotationDebugWorld(const BossTargetContext& context) const;
@@ -1497,19 +1479,11 @@ private:
     };
     std::vector<HpBarFadeEntry> hpBarFadeEntries;  // HPバーのフェード対象と元の表示情報。
     bool rushHpDisplayActive = false;  // Rush中のHP表示が有効か。
-    // Holds only the Grux whose active Charge was cancelled by Player Rush.
     bool rushCombatHoldActive = false;  // Rush中の戦闘処理の保持が有効か。
-    // Charge was cancelled safely; after Rush ends, wait using the existing
-    // Charge Just Dodge recovery setting before allowing a new BT inference.
     bool interruptedChargeRecoveryPending = false;  // 中断されたChargeのRecoveryが保留中か。
     bool interruptedChargeRecoveryActive = false;  // 中断されたChargeのRecovery中か。
     float interruptedChargeRecoveryTimer = 0.0f;  // 中断されたChargeのRecovery経過時間。
     float interruptedChargeRecoveryDuration = 0.0f;  // 中断されたChargeのRecovery時間。
-    // Debug-only monotonic simulation stamp used by ChargeRecovery Gameplay logs.
-    uint64_t interruptedChargeRecoveryLogFrame = 0;  // 中断されたChargeのRecovery記録用フレーム番号。
-    float interruptedChargeRecoveryLogGameTime = 0.0f;  // 中断されたChargeのRecovery記録用ゲーム時刻。
-    bool interruptedChargeRecoveryRootResumeLogPending = false;  // Recovery後のルート再開ログが保留中か。
-    bool interruptedChargeRecoveryNextAttackLogPending = false;  // Recovery後の次の攻撃ログが保留中か。
     bool useRushDelayedHpFollowSpeed = false;  // Rush用の遅延HP追従速度を使用するか。
     float delayedHp = 0.0f;  // 遅延表示中のHP値。
     float delayedHpDelayTimer = 0.0f;  // HPの遅延表示が追従するまでの経過時間。
@@ -1524,7 +1498,6 @@ private:
     bool isDangerWindow = false;  // 危険判定期間が有効か。
 
     std::unordered_set<Actor*> hitActors;  // 現在の攻撃ですでにヒットしたアクター。
-    // Players that successfully just-dodged the current attack sequence.
     std::unordered_set<const Actor*> justDodgedActors;  // 現在の攻撃をジャスト回避したアクター。
     uint64_t currentAttackSequenceId = 0;  // 現在の攻撃シーケンスの識別番号。
     int currentAttackHitCount = 0;  // 現在の攻撃シーケンスのヒット数。
@@ -1582,24 +1555,6 @@ private:
 
     std::array<float, actionCount> combatActionCooldownRemaining{};  // 行動データと同じ順序で保持する残りクールダウン。
 
-    bool showBossAIDebug = false;  // ボスAIの診断情報を表示するか。
-    struct RotationSourceDebug
-    {
-        std::string source = "None";  // 回転要求元の名前。
-        float targetYaw = 0.0f;  // 要求された目標Yaw角。
-        float requestedTurnSpeed = 0.0f;  // 要求された回転速度。
-    };
-    bool showRotationDebug = false;  // 回転の診断情報を表示するか。
-    bool rotationDebugYawInitialized = false;  // 回転診断の前回Yawを初期化済みか。
-    float rotationDebugPreviousYaw = 0.0f;  // 回転診断の前回Yaw角。
-    float rotationDebugCurrentYaw = 0.0f;  // 回転診断の現在のYaw角。
-    float rotationDebugRequestedTurnSpeed = 0.0f;  // 回転診断に記録した要求回転速度。
-    std::array<RotationSourceDebug, 8> rotationDebugSources{};  // 回転を要求した処理の診断情報。
-    int rotationDebugSourceCount = 0;  // 回転要求元の診断情報の件数。
-    DirectX::XMFLOAT3 rotationDebugTurnTargetDirection{};  // 回転目標方向の診断値。
-    bool rotationDebugTurnTargetValid = false;  // 回転目標方向の診断値が有効か。
-    BossTargetContext aiDebugTargetContext{};  // AI診断に使用する対象情報。
-    bool disableAttackBehaviorsForDebug = false;  // 攻撃行動をデバッグ用に無効にする。
     float defensiveTooCloseDistance = 4.5f;  // 背後のPlayerに対する防御行動の距離上限。
     float roarRadiusPhase1 = 7.0f;  // 第1段階のRoarの判定半径。
     float roarRadiusPhase2 = 10.0f;  // 第2段階のRoarの判定半径。

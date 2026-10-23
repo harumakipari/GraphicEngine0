@@ -202,8 +202,6 @@ void GameBgmDirector::ResetBossBattleBgm(BossBgmPhase phase, bool play, float bo
         activeBgm->SetVolume(bossBgmVolume);
         if (play && phase == BossBgmPhase::Phase1)
         {
-            Logger::Log(Logger::LogCategory::Gameplay,
-                "[BossBGM][RestartFromBeginning] caller=GameScene::ResetBossBattleBgm");
             activeBgm->RestartFromBeginning();
         }
         else if (play)

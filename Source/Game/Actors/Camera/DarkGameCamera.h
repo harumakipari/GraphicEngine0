@@ -176,12 +176,6 @@ public:
         {
             return;
         }
-        const CameraMode previousRequestMode = requestMode;
-        if ((previousRequestMode == CameraMode::TPS && mode == CameraMode::LockOn) ||
-            (previousRequestMode == CameraMode::LockOn && mode == CameraMode::TPS))
-        {
-            BeginLockOnTransitionDiagnostics(previousRequestMode, mode);
-        }
         if (mode == CameraMode::LockOn && requestMode != CameraMode::LockOn)
         {
             CoreAudio::PlayOneShot("./Data/Sound/SE/lock_on3.wav", 2.5f);
@@ -226,7 +220,6 @@ public:
     // by the regular camera update.
     bool GetPrisonOpeningTpsPose(PrisonOpeningTpsPose& outPose);
     void PreparePrisonOpeningTpsReturn(const PrisonOpeningTpsPose& pose);
-    void RequestPrisonOpeningTransitionDebug(const char* phase, int frame);
 
     void PlayCameraShake(float intensity, float duration, float frequency, float positionAmount, float targetAmount);
     void PlayCameraShakePreset(const std::string& presetName);
@@ -350,10 +343,6 @@ private:
     void ResetLockOnAdaptiveState();
     void InitializeLockOnTransitionDistanceSnapshot();
     float ClampEnemyLockOnDistanceToProfile(float distance, const LockOnProfile& profile) const;
-
-    // TPS <-> LockOn切替時の壁際構図を追跡する
-    void BeginLockOnTransitionDiagnostics(CameraMode from, CameraMode to);
-    void UpdateLockOnTransitionDiagnostics();
 
     bool IsBossBattle() const;
     bool IsGruxLockOnTarget() const;
@@ -651,21 +640,6 @@ private:
     float actualCameraDistance = 0.0f;
     float lockOnEnemyDistance = 0.0f;
 
-    // TPS <-> LockOn診断（切替後30フレームを記録）
-    bool lockOnTransitionDiagnosticsActive = false;
-    int lockOnTransitionDiagnosticsFrame = 0;
-    CameraMode lockOnTransitionTo = CameraMode::TPS;
-    DirectX::XMFLOAT3 transitionStartDesiredEye{};
-    DirectX::XMFLOAT3 transitionStartCollisionPostEye{};
-    float transitionStartCollisionRatio = 1.0f;
-    float transitionStartAdaptiveDistance = 0.0f;
-    float transitionStartAdaptiveTargetWeight = 0.0f;
-    float transitionMaxDesiredEyeDelta = 0.0f;
-    float transitionMaxCollisionPostEyeDelta = 0.0f;
-    float transitionMaxCollisionRatioDelta = 0.0f;
-    float transitionMaxAdaptiveDistanceDelta = 0.0f;
-    float transitionMaxAdaptiveTargetWeightDelta = 0.0f;
-
     // ロックオンカメラの調整値
     // カメラを敵方向から何度横へ振るか
     float lockOnYawOffsetDegree = -0.0f;
@@ -735,8 +709,4 @@ private:
 
     float startDistance = 5.0f;
     float targetDistance = 5.0f;
-
-
-    std::string prisonOpeningTransitionDebugPhase;
-    int prisonOpeningTransitionDebugFrame = -1;
 };

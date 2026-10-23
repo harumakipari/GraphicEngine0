@@ -101,14 +101,10 @@ void AudioSourceComponent::RestartFromBeginning()
     const float volume = sourceVoice ? GetVolume() : 1.0f;
     if (sourceVoice)
     {
-        Logger::Log(Logger::LogCategory::Gameplay,
-            "[AudioSource][RestartFromBeginning] DestroyVoice");
         sourceVoice->DestroyVoice();
         sourceVoice = nullptr;
     }
 
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[AudioSource][RestartFromBeginning] CreateSourceVoice");
     CoreAudio::CreateAudioSource(audioBuffer, &sourceVoice, soundType);
     SetVolume(volume);
     SetPitch(pitch);
@@ -124,12 +120,8 @@ void AudioSourceComponent::RestartFromBeginning()
     pBuffer->LoopCount = isLooping ? XAUDIO2_LOOP_INFINITE : 0;
     HRESULT hr = sourceVoice->SubmitSourceBuffer(pBuffer);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[AudioSource][RestartFromBeginning] Submit");
     hr = sourceVoice->Start(0);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[AudioSource][RestartFromBeginning] Start");
 }
 
 void AudioSourceComponent::Stop(bool playTails)

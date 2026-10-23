@@ -273,8 +273,6 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     phase2PlayerEmoteEndPoseHeld = false;
     if (player)
         player->ClearSwordTrailForPhaseTransition();
-    phase2TpsReturnBlendActive = false;
-    phase2CurrentShot = "None";
     if (darkCameraActor)
     {
         darkCameraActor->CancelExternalBlend();
@@ -419,7 +417,6 @@ void GameScene::BeginPhase2Cinematic()
     phase2RecallFadeAlpha = 0.0f;
     phase2PlayerEmoteActive = false;
     phase2PlayerEmoteEndPoseHeld = false;
-    phase2CurrentShot = "Gameplay Fade Out";
     SetBossDeathFadeAlpha(0.0f);
 }
 
@@ -452,14 +449,12 @@ void GameScene::SetupPhase2RecallCinematic()
     if (player)
         player->PlayBodyAnimation("Idle", true, true, 0.0f, true);
 
-    phase2CurrentShot = "boss_recall";
 }
 void GameScene::BeginPhase2Transition()
 {
     if (bossPhase != BossPhase::Phase1 || !player || !gruxEnemyActor)
         return;
 
-    // Keep the completed Player/Boss presentation untouched while RecallFadeOut begins.
     phase1FinalHitFadePending = true;
     InputSystem::SetInputEnabled(false);
     Time::SetSlow(1.0f, 0.0f);
@@ -467,7 +462,6 @@ void GameScene::BeginPhase2Transition()
 }
 void GameScene::CompletePhase2TransitionAtBlack()
 {
-    // All stateful/visual cleanup is intentionally deferred until alpha reaches 1.
     ResetBossPhaseRuntime(BossPhase::TransitionToPhase2);
     if (gruxEnemyActor)
         gruxEnemyActor->BeginHpBarFadeOut();
@@ -498,14 +492,9 @@ void GameScene::BeginPhase2TpsReturnBlend()
 {
     InputSystem::SetInputEnabled(false);
     phase2TransitionStep = Phase2TransitionStep::ReturnToTps;
-    phase2TpsReturnBlendActive = true;
-    phase2CurrentShot = "TPS Return Blend";
-
     auto finish = [this]()
         {
-            phase2TpsReturnBlendActive = false;
             phase2TransitionStep = Phase2TransitionStep::None;
-            phase2CurrentShot = "None";
             bossPhase = BossPhase::Phase2;
             if (gruxEnemyActor)
                 gruxEnemyActor->CompletePhase2HpBarPresentation();
@@ -704,7 +693,6 @@ void GameScene::UpdatePhase2Cinematic()
         }
         phase2TransitionStep = Phase2TransitionStep::PlayerEmotePreWait;
         phase2StepElapsed = 0.0f;
-        phase2CurrentShot = "boss_recall_player";
         CutToPhase2Shot(1);
         phase2PlayerEmoteActive = false;
         phase2PlayerEmoteEndPoseHeld = false;
@@ -1433,25 +1421,19 @@ void GameScene::Update(float deltaTime)
     {
         auto& shader = Scene::GetCurrentScene()->GetSceneSettings().sceneShaderConstants;
         shader.enableDof = !shader.enableDof;
-
-        //lightManager->showLightRange = !lightManager->showLightRange;
-        //showDebugLight = !showDebugLight;
     }
     if (InputSystem::GetInputState("6", InputStateMask::Trigger))
     {
         enableSceneGui = !enableSceneGui;
     }
-
     if (InputSystem::GetInputState("7", InputStateMask::Trigger))
     {
-
         // シーンプリセットを設定する
         SceneEditor::LoadPresetList(); // 更新
         std::string file = "Unadjusted.json";
         static SceneState savedState;
         SceneEditor::LoadSceneState("Data/Saves/ScenePresets/" + file, savedState);
         savedState.ApplyScenePreset(Scene::GetCurrentScene());
-
     }
 
 #endif // 0
@@ -1634,7 +1616,6 @@ void GameScene::EnterPlayerDead()
     battleFlowState = BattleFlowState::PlayerDead;
     bgmDirector.BeginPlayerDeathFade();
     battleTimerUIActor->SetVisible(false);
-    playerDeadElapsed = 0.0f;
     playerDeathController->StartPresentation(battleElapsedTime, *defeatUIActor);
     defeatUIActor->ResetPresentation();
     InputSystem::SetInputEnabled(false);
@@ -2212,7 +2193,6 @@ void GameScene::UpdateBattleFlow()
         }
         break;
     case BattleFlowState::PlayerDead:
-        playerDeadElapsed += Time::UnscaledDeltaTime();
         if (playerDeathController->Update(Time::UnscaledDeltaTime(), true, player.get(), gruxEnemyActor.get(),
             *defeatUIActor, bgmDirector, cinemaCameraActor.get(), numberTexWidth, numberTexHeight, deathResultMoveSeVolume))
             battleFlowState = BattleFlowState::ContinueWait;

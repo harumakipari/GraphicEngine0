@@ -360,7 +360,6 @@ bool DashPlanAvailable::Judgment()
 ActionBase::State CanPlanDashAttack::Run(float)
 {
     const bool ready = owner->CanPlanDashAttack();
-    owner->SetBehaviorTreeLastJudgment(ready ? "CanPlanDashAttack: true" : "CanPlanDashAttack: false");
     return ready ? State::Complete : State::Failed;
 }
 
@@ -378,14 +377,13 @@ ActionBase::State FaceDashPlayerIfNeeded::Run(float deltaTime)
     // Same face-complete policy as Jump; no FastCombo range dependency.
     if (context.absoluteAngleDegrees <= owner->GetTurnCompleteAngle())
         return State::Complete;
-    owner->RotateTowardsPlayer(context.directionToPlayer, owner->GetTurnSpeed(), deltaTime, "BT_DashFacePlayer");
+    owner->RotateTowardsPlayer(context.directionToPlayer, owner->GetTurnSpeed(), deltaTime);
     return State::Run;
 }
 
 ActionBase::State CanExecuteDashAttack::Run(float)
 {
     const bool ready = owner->CanExecuteDashAttack();
-    owner->SetBehaviorTreeLastJudgment(ready ? "CanExecuteDashAttack: true" : "CanExecuteDashAttack: false");
     return ready ? State::Complete : State::Failed;
 }
 
@@ -522,7 +520,7 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         // makes tracking, lock, telegraph hold and Stampede start follow the
         // Animation Playhead after the Speed Curve has been applied.
         if (!dashBTDirectionLocked)
-            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_DashTelegraph");
+            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
 
         if (!dashBTDirectionLocked && dashBTDirectionLockRequested)
         {
@@ -626,8 +624,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         return DashBTResult::Complete;
     case DashBTPhase::InterDashTransition:
     {
-        // The beginning of each inter-dash transition tracks the player. Once
-        // locked, its remaining duration is a stable telegraph hold interval.
         StopDashAttackMovement();
         DisableAttackHitBoxes();
         const auto context = BuildTargetContext();
@@ -637,8 +633,7 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         const float trackingDuration = std::clamp(dashBTInterDashTrackingDuration,
             0.0f, transitionDuration);
         if (!dashBTDirectionLocked && dashBTTransitionElapsed < trackingDuration)
-            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt,
-                "BT_DashInterTransition");
+            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
         dashBTTransitionElapsed += dt;
         if (!dashBTDirectionLocked && dashBTTransitionElapsed >= trackingDuration)
         {
@@ -653,8 +648,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             return DashBTResult::Running;
 
         ++dashBTDashIndex;
-        // Per-stage reset: hitActors and Notify state are reset, while sequence
-        // outcome data (Just Dodge / cumulative hit count) remains intact.
         BeginAdditionalAttackStage();
         DisableAttackHitBoxes();
         if (!PlayAttackStage(BossAttackType::DashAttack, 1))

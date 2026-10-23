@@ -122,7 +122,6 @@ private:
     void UpdatePrisonOpeningBlendToTPS(float deltaTime);
     void FinishPrisonOpeningMovie();
     void FinishBossEntryToBattle();
-    void LogPrisonOpeningTransitionDebug(const char* phase);
 
     DoorMovieState doorMovieState = DoorMovieState::None;
     bool bossEntryExternalBlendActive = false;
@@ -157,9 +156,6 @@ private:
     static constexpr size_t PrisonOpeningFaceCloseUpKeyIndex = 3;
     static constexpr const char* PrisonOpeningMoviePath = "./Data/Saves/MovieCameras/prison_opening.json";
 
-    bool prisonOpeningTransitionDebugActive = false;
-    int prisonOpeningTransitionDebugFrame = 0;
-    int prisonOpeningTransitionDebugPostFinishFramesRemaining = 0;
     std::weak_ptr<MovieCameraComponent> movieCameraWeakPtr;
     std::weak_ptr<SceneComponent> deathWidePreviewAnchor;
     std::weak_ptr<SceneComponent> deathWidePreviewTarget;

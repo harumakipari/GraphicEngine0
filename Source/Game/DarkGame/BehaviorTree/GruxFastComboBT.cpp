@@ -6,14 +6,12 @@
 bool CanPlanFastCombo::Judgment()
 {
     const bool result = owner->CanPlanFastCombo();
-    owner->SetBehaviorTreeLastJudgment(result ? "CanPlanFastCombo: true" : "CanPlanFastCombo: false");
     return result;
 }
 
 bool CanExecuteFastCombo::Judgment()
 {
     const bool result = owner->CanExecuteFastCombo();
-    owner->SetBehaviorTreeLastJudgment(result ? "CanExecuteFastCombo: true" : "CanExecuteFastCombo: false");
     return result;
 }
 
@@ -95,7 +93,7 @@ ActionBase::State FacePlayerIfNeeded::Run(float dt)
         return State::Failed;
     if (owner->IsPlayerInFastComboFaceCompleteRange(c))
         return State::Complete;
-    owner->RotateTowardsPlayer(c.directionToPlayer, owner->GetTurnSpeed(), dt, "BT_FacePlayer");
+    owner->RotateTowardsPlayer(c.directionToPlayer, owner->GetTurnSpeed(), dt);
     return owner->IsPlayerInFastComboFaceCompleteRange(owner->BuildTargetContext()) ? State::Complete : State::Run;
 }
 
@@ -147,7 +145,10 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
             owner->DisableAttackHitBoxes(); finishAfterAnimation = true; runtimeState = GruxEnemy::FastComboRuntimeState::Attack; owner->SetFastComboRuntimeState(runtimeState); return State::Run;
         }
         if (context.absoluteAngleDegrees > owner->GetInterStageFaceCompleteAngle())
-        { owner->RotateTowardsPlayer(context.directionToPlayer, owner->GetTurnSpeed(), dt, "FastComboInterStageFacing"); return State::Run; }
+        {
+            owner->RotateTowardsPlayer(context.directionToPlayer, owner->GetTurnSpeed(), dt);
+            return State::Run;
+        }
         runtimeState = GruxEnemy::FastComboRuntimeState::Attack; owner->SetFastComboRuntimeState(runtimeState);
         stageHitCount = owner->GetCurrentAttackHitCount();
         auto controller = owner->GetBodyAnimationController();
@@ -308,7 +309,7 @@ bool GruxEnemy::UpdateFastComboApproach(float dt)
         characterMovementComponent->SetInputMagnitude(1.0f);
         characterMovementComponent->SetMoveDirection(c.directionToPlayer);
     }
-    RotateTowardsPlayer(c.directionToPlayer, GetTurnSpeed(), dt, "BT_Approach");
+    RotateTowardsPlayer(c.directionToPlayer, GetTurnSpeed(), dt);
     return false;
 }
 

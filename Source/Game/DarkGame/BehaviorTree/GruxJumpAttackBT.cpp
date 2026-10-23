@@ -351,8 +351,7 @@ bool GruxEnemy::UpdateTripleJumpTransition(float deltaTime)
         AbortTripleJumpRuntime();
         return true;
     }
-    RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), deltaTime,
-        "BT_TripleJumpInterTransition");
+    RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), deltaTime);
     tripleJumpTransitionElapsed += (std::max)(0.0f, deltaTime);
     if (tripleJumpTransitionElapsed < tripleJumpTransitionDuration)
         return false;
@@ -435,30 +434,16 @@ void GruxEnemy::DrawTripleJumpDebug()
 
 bool CanPlanJumpAttack::Judgment()
 {
-    const bool result = owner->CanPlanJumpAttack(); owner->SetBehaviorTreeLastJudgment(result ? "CanPlanJumpAttack: true" : "CanPlanJumpAttack: false");
+    const bool result = owner->CanPlanJumpAttack();
     return result;
 }
 
 bool CanPlanAnyAttack::Judgment()
 {
-    if (owner->AreAttackBehaviorsDisabledForDebug())
-    {
-        owner->SetBehaviorTreeLastJudgment("CanPlanAnyAttack: false (debug disabled)");
-        return false;
-    }
-    if (!owner->CanPlanAttackAgainstCurrentPlayer())
-    {
-        owner->SetBehaviorTreeLastJudgment("CanPlanAnyAttack: false (player unavailable)");
-        return false;
-    }
-    // In Force BehaviorTree Charge mode, keep the normal Attack gate but let
-    // the Charge plan be the sole plan selected by AttackRandom. The plan's
-    // internal nodes are still executed normally.
     const bool result = owner->IsForceBehaviorTreeChargeEnabled()
         ? owner->CanPlanChargeAttack()
         : owner->CanPlanFastCombo() || owner->CanPlanJumpAttack() ||
             DashPlanAvailable(owner).Judgment() || owner->CanPlanChargeAttack();
-    owner->SetBehaviorTreeLastJudgment(result ? "CanPlanAnyAttack: true" : "CanPlanAnyAttack: false");
     return result;
 }
 
@@ -494,7 +479,7 @@ ActionBase::State FaceJumpPlayerIfNeeded::Run(float dt)
         return State::Failed;
     if (context.absoluteAngleDegrees <= owner->GetTurnCompleteAngle())
         return State::Complete;
-    owner->RotateTowardsPlayer(context.directionToPlayer, owner->GetTurnSpeed(), dt, "BT_JumpFacePlayer");
+    owner->RotateTowardsPlayer(context.directionToPlayer, owner->GetTurnSpeed(), dt);
     return State::Run;
 }
 
@@ -502,7 +487,6 @@ bool CanExecuteJumpAttack::Judgment()
 {
     const auto context = owner->BuildTargetContext();
     const bool result = context.valid && !owner->IsDead();
-    owner->SetBehaviorTreeLastJudgment(result ? "CanExecuteJumpAttack: true" : "CanExecuteJumpAttack: false");
     return result;
 }
 
@@ -518,7 +502,6 @@ ActionBase::State StartJumpAttack::Run(float)
         }
         if (owner->IsTripleJumpPhase2())
             owner->BeginTripleJumpRuntime();
-        // Match the former EnemyAttackState path: notify at telegraph start.
         owner->RequestJumpAttackCameraAssist();
         started = true;
     }
@@ -654,8 +637,6 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
     {
         if (controller && controller->IsPlayAnimation())
             return State::Run;
-        // The jump animation and its MotionWarp have finished. Clear before
-        // this action completes so the following recovery/root cannot inherit it.
         owner->ClearJumpAttackMotionWarpOverride();
         owner->HideJumpTelegraph();
         owner->StartSelectedActionCooldown();
@@ -705,8 +686,6 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
     if (controller && controller->IsPlayAnimation())
         return State::Run;
 
-    // A controller disappearing or an animation interruption also reaches this
-    // terminal path; both must release the Jump-only override.
     owner->OnSelectedAttackCompletedSuccessfully();
     owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success);
     owner->ClearJumpAttackMotionWarpOverride();
@@ -718,8 +697,6 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
 
 void ExecuteJumpAttack::ResetRuntime()
 {
-    // BehaviorTree::ResetActionRuntimes is the BT abort path. This clear is
-    // idempotent, so resetting an inactive Jump action is harmless.
     owner->ClearJumpAttackMotionWarpOverride();
     owner->HideJumpTelegraph();
     if (owner->IsTripleJumpActive())

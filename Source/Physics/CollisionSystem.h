@@ -121,29 +121,8 @@ public:
                     aInfo.geometry.any(), aInfo.transform,
                     bInfo.geometry.any(), bInfo.transform);
 
-#if 0
-                if (aComponent->GetName() == "SwordCollision" && bComponent->GetName() == "enemyCapsuleComponent")
-                {
-                    auto swordPos = aShape->GetComponentLocation();
-                    auto enemyPos = bShape->GetComponentLocation();
-
-                    Logger::Log(std::format(
-                        "Sword({},{},{}) Enemy({},{},{}) hit={}",
-                        swordPos.x, swordPos.y, swordPos.z,
-                        enemyPos.x, enemyPos.y, enemyPos.z,
-                        hit
-                    ));
-                }
-
-#endif // 0
-
                 if (!hit || depth <= 0.0001f) // ”÷¬‚ÈÕ“Ë‚Í–³Ž‹
                     continue;
-
-#if 0
-                std::string hitName = "Hit : " + aComponent->GetName() + bComponent->GetName();
-                Logger::Log(hitName);
-#endif // 0
 
                 std::pair<CollisionComponent*, CollisionComponent*> hitPairA = { aComponent, bComponent };
                 std::pair<CollisionComponent*, CollisionComponent*> hitPairB = { bComponent, aComponent };

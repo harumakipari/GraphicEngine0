@@ -136,7 +136,6 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
         imageSize.x,
         imageSize.y
     );
-    Logger::Log(U8("UI Render viewport ") + std::to_string(imageMin.x) + std::to_string(imageMin.y) + std::to_string(imageSize.x) + std::to_string(imageSize.y));
 
     temporalAa.Initialize(device, static_cast<UINT>(screenWidth), static_cast<UINT>(screenHeight));
 
@@ -633,8 +632,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                 huskCapturedWorldXMax = huskParticles->particle_data.world_x_max;
 #endif
                 gruxHuskBackupValid = true;
-                Logger::Log("[HuskParticle] Grux captured particle_count=" +
-                    std::to_string(huskParticles->particle_data.particle_count));
             }
         }
 

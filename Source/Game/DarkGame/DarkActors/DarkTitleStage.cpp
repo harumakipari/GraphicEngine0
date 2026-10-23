@@ -100,9 +100,6 @@ void DarkTitleStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::share
             else if (point.name.rfind("Spawn_Chandelier", 0) == 0)
             {// 名前が "Spawn_Chandelier" で始まる場合、シャンデリアを配置
                 DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                static int count = 0;
-                Logger::Log("chandelier spawn count :" + std::to_string(count));
-                count++;
                 Transform chandelierTr{ pos,
                     point.worldRotation,
                     point.worldScale

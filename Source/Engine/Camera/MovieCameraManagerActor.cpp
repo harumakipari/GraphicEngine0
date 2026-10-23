@@ -216,15 +216,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
     auto gameScene = dynamic_cast<GameScene*>(scene);
 
     auto gruxEnemy = actorManager->GetActorOfType<GruxEnemy>();
-    if (!prisonOpeningMoviePlaying && prisonOpeningTransitionDebugActive &&
-        prisonOpeningTransitionDebugPostFinishFramesRemaining > 0)
-    {
-        LogPrisonOpeningTransitionDebug("TPSPostFinish");
-        ++prisonOpeningTransitionDebugFrame;
-        --prisonOpeningTransitionDebugPostFinishFramesRemaining;
-        if (prisonOpeningTransitionDebugPostFinishFramesRemaining == 0)
-            prisonOpeningTransitionDebugActive = false;
-    }
     if (prisonOpeningMoviePlaying)
     {
         const auto cameraManager = scene->GetCameraManager();
@@ -834,10 +825,6 @@ void MovieCameraManagerActor::BeginPrisonOpeningBlendToTPS()
     prisonOpeningBlendStartRotation = movieCamera->GetOwner()->GetQuaternionRotation();
     prisonOpeningBlendStartFov = movieCamera->GetFov();
     prisonOpeningBlendElapsed = 0.0f;
-    prisonOpeningTransitionDebugActive = true;
-    prisonOpeningTransitionDebugFrame = 0;
-    prisonOpeningTransitionDebugPostFinishFramesRemaining = 0;
-    LogPrisonOpeningTransitionDebug("StandingFinished_BlendBegin");
 
     if (prisonOpeningBlendDuration <= 0.0f)
     {
@@ -895,13 +882,9 @@ void MovieCameraManagerActor::UpdatePrisonOpeningBlendToTPS(float deltaTime)
         MathHelper::Lerp(prisonOpeningBlendStartPosition, target.eye, t),
         blendedRotation,
         std::lerp(prisonOpeningBlendStartFov, target.fov, t));
-    LogPrisonOpeningTransitionDebug("BlendingToTPS");
-    ++prisonOpeningTransitionDebugFrame;
 
     if (linearT >= 1.0f)
     {
-        // Use the same pose applied to MovieCamera on this frame so the
-        // CameraManager hand-off cannot introduce a final-frame jump.
         darkCamera->PreparePrisonOpeningTpsReturn(target);
         FinishPrisonOpeningMovie();
     }
@@ -965,8 +948,6 @@ bool MovieCameraManagerActor::ReplayPrisonOpeningMovie()
     prisonOpeningState = PrisonOpeningState::None;
     prisonOpeningJailDoorInteractionRequested = false;
     prisonOpeningMoviePrepared = false;
-    prisonOpeningTransitionDebugActive = false;
-    prisonOpeningTransitionDebugPostFinishFramesRemaining = 0;
     return PlayPrisonOpeningMovie();
 }
 
@@ -1093,8 +1074,6 @@ void MovieCameraManagerActor::FinishPrisonOpeningMovie()
     if (!prisonOpeningMoviePlaying)
         return;
 
-    if (prisonOpeningTransitionDebugActive)
-        LogPrisonOpeningTransitionDebug("Finish_Pre");
 
     EndPrisonOpeningEyeOverride();
     auto scene = GetOwnerScene();
@@ -1121,11 +1100,6 @@ void MovieCameraManagerActor::FinishPrisonOpeningMovie()
     prisonOpeningJailDoorInteractionRequested = false;
     prisonOpeningState = PrisonOpeningState::None;
     prisonOpeningBlendElapsed = 0.0f;
-    if (prisonOpeningTransitionDebugActive)
-    {
-        LogPrisonOpeningTransitionDebug("Finish_Post");
-        prisonOpeningTransitionDebugPostFinishFramesRemaining = 5;
-    }
 }
 
 void MovieCameraManagerActor::FinishBossEntryToBattle()
@@ -1164,8 +1138,6 @@ void MovieCameraManagerActor::SkipBossEntryToBattle()
     const auto gruxEnemy = actorManager->GetActorOfType<GruxEnemy>();
     const auto darkCamera = actorManager->GetActorOfType<DarkCameraActor>();
 
-    // This is the boss-entry sequence's actual terminal door state: it is
-    // closed behind the Player before battle control is returned.
     if (const auto doorActor = actorManager->GetActorOfType<DoorLargeActor>())
     {
         doorActor->Closed();
@@ -1218,9 +1190,6 @@ void MovieCameraManagerActor::SkipPrisonOpeningToGameplay()
         if (const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>())
             jailDoor->SetOpenCompletedSilently();
 
-        // Evaluate and install the collision-resolved TPS pose before disabling
-        // MovieCamera. FinishPrisonOpeningMovie then performs the established
-        // Player/event/input and render-camera cleanup path.
         if (const auto darkCamera = scene->GetActorManager()->GetActorOfType<DarkCameraActor>())
         {
             DarkCameraActor::PrisonOpeningTpsPose target{};
@@ -1231,54 +1200,7 @@ void MovieCameraManagerActor::SkipPrisonOpeningToGameplay()
 
     FinishPrisonOpeningMovie();
 }
-void MovieCameraManagerActor::LogPrisonOpeningTransitionDebug(const char* phase)
-{
-    if (!prisonOpeningTransitionDebugActive)
-        return;
 
-    const auto scene = GetOwnerScene();
-    const auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
-    const auto movieCamera = movieCameraWeakPtr.lock();
-    const auto darkCamera = scene
-        ? scene->GetActorManager()->GetActorOfType<DarkCameraActor>()
-        : nullptr;
-    const auto player = scene
-        ? scene->GetActorManager()->GetActorOfType<Player>()
-        : nullptr;
-
-    DarkCameraActor::PrisonOpeningTpsPose target{};
-    const bool hasTarget = darkCamera && darkCamera->GetPrisonOpeningTpsPose(target);
-    const auto movieOwner = movieCamera ? movieCamera->GetOwner() : nullptr;
-    const DirectX::XMFLOAT3 moviePosition = movieOwner
-        ? movieOwner->GetPosition() : DirectX::XMFLOAT3{};
-    const DirectX::XMFLOAT4 movieRotation = movieOwner
-        ? movieOwner->GetQuaternionRotation() : DirectX::XMFLOAT4{};
-    const float movieFov = movieCamera ? movieCamera->GetFov() : 0.0f;
-    const float duration = (std::max)(prisonOpeningBlendDuration, 0.0f);
-    const float linearT = duration > FLT_EPSILON
-        ? std::clamp(prisonOpeningBlendElapsed / duration, 0.0f, 1.0f) : 1.0f;
-    const float smoothT = linearT * linearT * (3.0f - 2.0f * linearT);
-    const auto renderCamera = cameraManager ? cameraManager->GetRenderCamera(scene) : nullptr;
-
-    Logger::Log(Logger::LogCategory::Gameplay, std::format(
-        "[PrisonOpeningTrace][MovieManager] phase={} frame={} render={} movieEnabled={} "
-        "moviePos=({:.3f},{:.3f},{:.3f}) movieRot=({:.4f},{:.4f},{:.4f},{:.4f}) movieFov={:.4f} "
-        "targetValid={} t={:.3f} smooth={:.3f} elapsed={:.3f}/{:.3f} "
-        "tpsEye=({:.3f},{:.3f},{:.3f}) tpsTarget=({:.3f},{:.3f},{:.3f}) tpsFov={:.4f} tpsYaw={:.4f} tpsPitch={:.4f} tpsDesiredDistance={:.3f} tpsActualDistance={:.3f} tpsCollisionRatio={:.3f}",
-        phase, prisonOpeningTransitionDebugFrame,
-        renderCamera ? renderCamera->GetName() : "None",
-        cameraManager && cameraManager->IsUseMovie(),
-        moviePosition.x, moviePosition.y, moviePosition.z,
-        movieRotation.x, movieRotation.y, movieRotation.z, movieRotation.w, movieFov,
-        hasTarget, linearT, smoothT, prisonOpeningBlendElapsed, duration,
-        target.eye.x, target.eye.y, target.eye.z,
-        target.target.x, target.target.y, target.target.z, target.fov,
-        target.yaw, target.pitch, target.desiredDistance, target.actualDistance,
-        target.collisionRatio));
-
-    if (darkCamera)
-        darkCamera->RequestPrisonOpeningTransitionDebug(phase, prisonOpeningTransitionDebugFrame);
-}
 void MovieCameraManagerActor::PlayMovie(const std::string& file)
 {
     if (auto cameraManager = GetOwnerScene()->GetCameraManager())

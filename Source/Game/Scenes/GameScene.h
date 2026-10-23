@@ -7,7 +7,6 @@
 #include <memory>
 #include <array>
 
-#include "Core/ActorManager.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/BgmActor.h"
 #include "Game/DarkGame/GameBgmDirector.h"
@@ -26,7 +25,6 @@
 #include "Game/Actors/UI/GameTutorialUIActor.h"
 #include "Game/Actors/UI/GameVictoryUIActor.h"
 #include "Game/DarkGame/GameBossDeathController.h"
-#include "Game/DarkGame/GamePlayerDeathController.h"
 #include "Game/DarkGame/GamePlayerDeathController.h"
 #include "Game/DarkGame/GameVictoryController.h"
 #include "Game/DarkGame/DarkActors/DarkClothActor.h"
@@ -51,7 +49,6 @@ public:
         TransitionToPhase2,
         Phase2,
     };
-
 
     enum class BattleFlowState : uint8_t
     {
@@ -86,7 +83,6 @@ public:
     static inline Scene::Autoenrollment<GameScene> _autoenrollment;
 
     void SetBossRoomLerpFactor(float lerpFactor);
-
     void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
     void CancelBossRoomLerp();
 
@@ -243,12 +239,9 @@ private:
     std::shared_ptr<GruxEnemy> gruxEnemyActor;
 
     std::shared_ptr<GameLockOnTargetUIActor> lockOnTargetUIActor;
-    // Selection happens once per held-input start; Rush keeps its own target.
     bool lockOnInputHeldLastFrame = false;
     bool lockOnTargetSelectedForHeldInput = false;
 
-    // The door movie marks the gameplay boundary between corridor enemies and Grux.
-    // An input held through that transition must not acquire Grux automatically.
     bool bossRoomLockOnScopeActive = false;
     bool lockOnRequiresReleaseAfterBossRoomEntry = false;
 
@@ -289,7 +282,6 @@ private:
     Phase2TransitionStep phase2TransitionStep = Phase2TransitionStep::None;
     std::array<Phase2CinematicShot, 2> phase2CinematicShots{};
     bool phase2CinematicShotsLoaded = false;
-    bool phase2TpsReturnBlendActive = false;
     float phase2StepElapsed = 0.0f;
     float phase2RecallFadeOutDuration = 1.5f;
     float phase2RecallFadeInDuration = 1.0f;
@@ -305,12 +297,10 @@ private:
     bool phase2PlayerEmoteActive = false;
     bool phase2PlayerEmoteEndPoseHeld = false;
     float phase2TpsReturnBlendDuration = 1.0f;
-    std::string phase2CurrentShot = "None";
     Transform playerBattleStartTransform{};
     Transform bossBattleStartTransform{};
     bool battleStartTransformsSaved = false;
     bool tutorialBossEntryPending = false;
-    float playerDeadElapsed = 0.0f;
     float battleElapsedTime = 0.0f;
     float finalBattleTime = 0.0f;
     bool finalBattleTimeSaved = false;

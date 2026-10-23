@@ -32,28 +32,6 @@ std::array<DirectX::XMFLOAT4, 8> ExtractFrustumCorners(const DirectX::XMFLOAT4X4
     return frustum_corners;
 
 
-    // NDC空間の8頂点
-    std::array<DirectX::XMFLOAT4, 8> frustumCorners =
-    {
-        DirectX::XMFLOAT4{-1.0f,-1.0f,-1.0f,1.0f},
-        DirectX::XMFLOAT4{-1.0f,-1.0f, 1.0f,1.0f},
-        DirectX::XMFLOAT4{-1.0f, 1.0f,-1.0f,1.0f},
-        DirectX::XMFLOAT4{-1.0f, 1.0f, 1.0f,1.0f},
-        DirectX::XMFLOAT4{ 1.0f,-1.0f,-1.0f,1.0f},
-        DirectX::XMFLOAT4{ 1.0f,-1.0f, 1.0f,1.0f},
-        DirectX::XMFLOAT4{ 1.0f, 1.0f,-1.0f,1.0f},
-        DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f,1.0f},
-    };
-
-    // ViewProjection の逆行列
-    const DirectX::XMMATRIX invViewProjection = DirectX::XMMatrixInverse(NULL, DirectX::XMLoadFloat4x4(&view) * DirectX::XMLoadFloat4x4(&projection));
-
-    // ワールド空間へ変換
-    for (std::array<DirectX::XMFLOAT4, 8>::reference frustumCorner : frustumCorners)
-    {
-        DirectX::XMStoreFloat4(&frustumCorner, DirectX::XMVector3TransformCoord(DirectX::XMLoadFloat4(&frustumCorner), invViewProjection));
-    }
-    return frustumCorners;
 }
 
 
@@ -182,10 +160,6 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
         float nearPlane = shadow.fitToCascade ? cascadedPlaneDistances.at(cascadeIndex) : zn;
         float farPlane = cascadedPlaneDistances.at(cascadeIndex + 1);
 
-#if 0
-        Logger::Log("nearPlane :" + std::to_string(nearPlane));
-        Logger::Log("farPlane :" + std::to_string(farPlane));
-#endif
         // カスケード用射影行列再構築
         DirectX::XMFLOAT4X4 cascadedProjection = cameraProjection;
         cascadedProjection._33 = farPlane / (farPlane - nearPlane);
@@ -206,15 +180,6 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
         center.y /= corners.size();
         center.z /= corners.size();
 
-#if 0
-        // ライトビュー行列作成
-        DirectX::XMMATRIX V;
-        V = DirectX::XMMatrixLookAtLH(
-            DirectX::XMVectorSet(center.x - lightDirection.x, center.y - lightDirection.y, center.z - lightDirection.z, 1.0f),
-            DirectX::XMVectorSet(center.x, center.y, center.z, 1.0f),
-            DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
-
-#else
 
         using namespace DirectX;
         DirectX::XMFLOAT4 lightDir = lightDirection;
@@ -225,13 +190,6 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
             XMVectorSet(center.x, center.y, center.z, 1.0f),
             XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
 
-        //XMVECTOR lightPos = XMVectorScale(lightDir, -1000.0f);
-
-        //XMMATRIX V = XMMatrixLookAtLH(
-        //    lightPos,
-        //    XMVectorZero(),
-        //    XMVectorSet(0, 1, 0, 0));
-#endif // 0
 
         // AABB計算（ライト空間）
         float minX = (std::numeric_limits<float>::max)();
@@ -243,13 +201,6 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
         for (DirectX::XMFLOAT4 corner : corners)
         {
             DirectX::XMStoreFloat4(&corner, DirectX::XMVector3TransformCoord(DirectX::XMLoadFloat4(&corner), V));
-#if 0
-            Logger::Log(
-                "lightspace = " +
-                std::to_string(corner.x) + "," +
-                std::to_string(corner.y) + "," +
-                std::to_string(corner.z));
-#endif
             minX = std::min<float>(minX, corner.x);
             maxX = std::max<float>(maxX, corner.x);
             minY = std::min<float>(minY, corner.y);
@@ -258,37 +209,6 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
             maxZ = std::max<float>(maxZ, corner.z);
         }
 
-
-
-#if 0
-        // ===== テクセルスナップ開始 =====
-
-        float shadowMapResolution = 4096.0f;
-
-        float cascadeWidth = maxX - minX;
-        float cascadeHeight = maxY - minY;
-
-        float texelSizeX = cascadeWidth / shadowMapResolution;
-        float texelSizeY = cascadeHeight / shadowMapResolution;
-
-        // ライト空間中心
-        float centerX = (minX + maxX) * 0.5f;
-        float centerY = (minY + maxY) * 0.5f;
-
-        // テクセル単位でスナップ
-        centerX = floor(centerX / texelSizeX) * texelSizeX;
-        centerY = floor(centerY / texelSizeY) * texelSizeY;
-
-        // min/max再計算
-        minX = centerX - cascadeWidth * 0.5f;
-        maxX = centerX + cascadeWidth * 0.5f;
-        minY = centerY - cascadeHeight * 0.5f;
-        maxY = centerY + cascadeHeight * 0.5f;
-
-        // ===== テクセルスナップ終了 =====
-
-#endif // 1
-#if 1
         // Z拡張（シャドウ欠け防止）
         shadow.zDepthScale = std::max<float>(1.0f, shadow.zDepthScale);
 
@@ -308,14 +228,6 @@ void CascadedShadowMaps::Activate(ID3D11DeviceContext* immediateContext, const D
         {
             maxZ *= shadow.zDepthScale;
         }
-
-#if 0
-        Logger::Log("min x :" + std::to_string(minX) + "min y :" + std::to_string(minY) + "min z :" + std::to_string(minZ));
-        Logger::Log("max x :" + std::to_string(maxX) + "max y :" + std::to_string(maxY) + "max z :" + std::to_string(maxZ));
-
-#endif // 0
-
-#endif
 
         // ライト射影行列
         DirectX::XMMATRIX P = DirectX::XMMatrixOrthographicOffCenterLH(minX, maxX, minY, maxY, minZ, maxZ);

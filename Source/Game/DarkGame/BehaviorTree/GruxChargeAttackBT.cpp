@@ -29,7 +29,6 @@ void GruxEnemy::RecordExecuteChargeAttackRunDebug()
 bool CanPlanChargeAttack::Judgment()
 {
     const bool ready = owner->CanPlanChargeAttack();
-    owner->SetBehaviorTreeLastJudgment(ready ? "CanPlanChargeAttack: true" : "CanPlanChargeAttack: false");
     return ready;
 }
 ActionBase::State PrepareChargeSetupTarget::Run(float)
@@ -43,10 +42,8 @@ ActionBase::State FaceChargePlayerIfNeeded::Run(float dt)
 ActionBase::State CanExecuteChargeAttack::Run(float)
 {
     const bool ready = owner->CanExecuteChargeAttack();
-    owner->SetBehaviorTreeLastJudgment(ready ? "CanExecuteChargeAttack: true" : "CanExecuteChargeAttack: false");
     if (!ready)
         owner->FailChargeAttackBT();
-    // A committed setup with a lost target/controller resolves through normal recovery.
     return owner->IsChargeAttackBTActive() ? State::Complete : State::Failed;
 }
 ActionBase::State StartChargeAttack::Run(float)
@@ -193,7 +190,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackFacingBT(float dt)
         FailChargeAttackBT();
         return ChargeBTStepResult::Complete;
     }
-    RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_ChargeFacePlayer");
+    RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
     return ChargeBTStepResult::Running;
 }
 
@@ -706,7 +703,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         const float animationTime = controller->GetCurrentAnimationTime();
         SetChargeWindupAnimationTimeDebug(animationTime);
         if (animationTime < chargeDirectionLockTime)
-            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_TripleChargeWindup");
+            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
         else if (!chargeDirectionLocked && !LockChargeDirectionToPlayer())
         {
             FailChargeAttackBT();
@@ -747,11 +744,8 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             return ChargeBTStepResult::Complete;
         }
         chargeBT.tripleChargeTransitionElapsed += (std::max)(0.0f, dt);
-        RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_TripleChargeTransition");
+        RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
 
-        // Before locking the next leg, ensure the current position has enough
-        // forward clearance.  This is deliberately limited to legs 2/3;
-        // the existing BeginChargeAttackMovement validation remains authoritative.
         const float directionLength = std::sqrt(
             context.directionToPlayer.x * context.directionToPlayer.x +
             context.directionToPlayer.z * context.directionToPlayer.z);
@@ -1096,7 +1090,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateSingleChargeBT(float dt)
         const float animationTime = controller->GetCurrentAnimationTime();
         SetChargeWindupAnimationTimeDebug(animationTime);
         if (animationTime < chargeDirectionLockTime)
-            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt, "BT_ChargeWindup");
+            RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
         else if (!chargeDirectionLocked)
         {
             if (!LockChargeDirectionToPlayer() || !BeginChargeTelegraphVisual())
@@ -1280,23 +1274,13 @@ void GruxEnemy::NotifyPlayerRushStarted(Player* player)
         return;
 
     rushCombatHoldActive = true;
-    // Capture the existing Charge Just Dodge recovery value before Cleanup
-    // discards the Charge BT runtime. The timer itself starts only after Rush.
     interruptedChargeRecoveryPending = true;
     interruptedChargeRecoveryActive = false;
     interruptedChargeRecoveryTimer = 0.0f;
     interruptedChargeRecoveryDuration = GetChargeJustDodgeRecoveryDuration();
-    interruptedChargeRecoveryRootResumeLogPending = false;
-    interruptedChargeRecoveryNextAttackLogPending = false;
     debugLastChargeAbortReason = "RushStarted";
-    Logger::Log(Logger::LogCategory::Gameplay,
-        "[BossCharge][Abort] reason=RushStarted");
 
-    // Cleanup owns Charge movement, danger/hit boxes, telegraph and triple-leg
-    // runtime. ResetBehaviorTreeRuntime is the existing formal route back to Root.
     CleanupChargeAttackBT();
-    // Rush is a visual hold, not a WallHit Stun: keep a dedicated exposed pose
-    // while the Rush hold detaches Grux AI/state updates.
     PlayBodyAnimation("Stun_Idle", true, true, 0.15f, true,
         "GruxEnemy::NotifyPlayerRushStarted");
     ResetBehaviorTreeRuntime();
@@ -1314,7 +1298,6 @@ void GruxEnemy::NotifyPlayerRushEnded(Player* player)
     // from Rush. Start Charge recovery on the next normal Grux update; Rush time
     // is deliberately not counted as recovery time.
     rushCombatHoldActive = false;
-    LogInterruptedChargeRecoveryEvent("RushEnded");
     if (interruptedChargeRecoveryPending)
     {
         interruptedChargeRecoveryPending = false;
@@ -1325,7 +1308,6 @@ void GruxEnemy::NotifyPlayerRushEnded(Player* player)
             "GruxEnemy::NotifyPlayerRushEnded");
         interruptedChargeRecoveryActive = true;
         interruptedChargeRecoveryTimer = 0.0f;
-        LogInterruptedChargeRecoveryEvent("Started");
     }
 }
 

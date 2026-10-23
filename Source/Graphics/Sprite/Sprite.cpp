@@ -298,18 +298,8 @@ void Sprite::Render(ID3D11DeviceContext* immediate_context,
     float pivotX, float pivotY)
 {
     //スクリーン（ビューポート）のサイズを取得する
-#if 0
-    D3D11_VIEWPORT viewport{};
-    UINT num_viewports{ 1 };
-    immediate_context->RSGetViewports(&num_viewports, &viewport);
-
-    float viewportWidth, viewportHeight;
-    viewportWidth = viewport.Width;
-    viewportHeight = viewport.Height;
-#else
     float viewX, viewY, viewportWidth, viewportHeight;
     Graphics::GetViewport(viewX, viewY, viewportWidth, viewportHeight);
- //   Logger::Log(U8("UI Render viewport ") + std::to_string(viewX) + std::to_string(viewY) + std::to_string(viewportWidth) + std::to_string(viewportHeight));
     if (viewportWidth <= 1.0f || viewportHeight <= 1.0f)
     {
         Logger::Log(U8("UI skipped: invalid viewport"));
@@ -334,10 +324,6 @@ void Sprite::Render(ID3D11DeviceContext* immediate_context,
     dy *= scale_ui;
     dw *= scale_ui;
     dh *= scale_ui;
-
-  //  Logger::Log(U8("scale_ui = %f  dx=%f dy=%f") + std::to_string(scale_ui) + std::to_string(dx) + std::to_string(dh));
-
-#endif // 0
 
     // 無効なスケーリングなら描画しない
     if (scaleX == 0.0f || scaleY == 0.0f) return;

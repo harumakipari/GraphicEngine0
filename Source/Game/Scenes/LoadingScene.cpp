@@ -135,7 +135,6 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
             imageSize.x,
             imageSize.y
         );
-        Logger::Log(U8("UI Render viewport ") + std::to_string(imageMin.x) + std::to_string(imageMin.y) + std::to_string(imageSize.x) + std::to_string(imageSize.y));
     }
 
 
