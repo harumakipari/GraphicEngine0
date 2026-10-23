@@ -27,6 +27,7 @@
 #include "Game/Actors/UI/GameLockOnTargetUIActor.h"
 #include "Game/Actors/UI/GameTutorialUIActor.h"
 #include "Game/Actors/UI/GameVictoryUIActor.h"
+#include "Game/DarkGame/GameBossDeathController.h"
 #include "Game/DarkGame/DarkActors/DarkClothActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
 
@@ -38,7 +39,6 @@ class GruxEnemy;
 class Enemy;
 class SkeletonWarriorActor;
 class StaticMeshComponent;
-class CoreStandaloneAudioSource;
 class SceneComponent;
 
 class GameScene : public SceneBase
@@ -90,6 +90,9 @@ public:
         Victory,
     };
 
+    GameScene();
+    ~GameScene() override;
+
     bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) override;
 
     void Start() override;
@@ -120,16 +123,8 @@ public:
     // Called when the existing boss-introduction camera blend has completed.
     void StartBossBattle();
     void SkipBossDeathToFinishPrompt();
-    bool IsBossDeathFinishPromptActive() const
-    {
-        return battleFlowState == BattleFlowState::BossDead &&
-            bossDeathPhase >= BossDeathPhase::RecallPingPong;
-    }
-    bool IsBossDeathCinematicAudioActive() const
-    {
-        return battleFlowState == BattleFlowState::BossDead &&
-            bossDeathPhase < BossDeathPhase::RecallPingPong;
-    }
+    bool IsBossDeathFinishPromptActive() const;
+    bool IsBossDeathCinematicAudioActive() const;
 
     void PrepareTutorialForBossEntry();
     bool RequestBossEntryFromPause();
@@ -197,23 +192,6 @@ private:
         ReturnToTps,
     };
 
-    enum class BossDeathPhase : uint8_t
-    {
-        FadeOut,
-        SetupCinematic,
-        FadeInScream,
-        DeathScream,
-        DeathFall,
-        DeathLanding,
-        PlayerApproach,
-        PlayerWalkStop,
-        RecallLeadIn,
-        RecallPingPong,
-        FinishTriggered,
-        HuskDelay,
-        HuskPreview,
-    };
-
     struct CinematicActorPose
     {
         DirectX::XMFLOAT3 position{};
@@ -225,24 +203,6 @@ private:
         CinematicCameraComponent::CameraPose camera{};
         CinematicActorPose player{};
         CinematicActorPose boss{};
-    };
-
-    struct BossDeathDofState
-    {
-        float focusDistance = 0.0f;
-        float nearRange = 0.0f;
-        float range = 0.0f;
-        float blurStrength = 0.0f;
-        int enableBlur = 0;
-        int enableDof = 0;
-    };
-
-    struct BossDeathShotState
-    {
-        CinematicCameraComponent::CameraPose camera{};
-        CinematicActorPose player{};
-        CinematicActorPose boss{};
-        BossDeathDofState dof{};
     };
 
     void UpdateBattleFlow();
@@ -275,20 +235,10 @@ private:
     void BeginPhase2FinalHitHpFallback();
     bool IsPhase2FinalHitGateComplete() const;
     void RestartBossBattle();
-    bool LoadBossDeathShots();
     void UpdateMovieSkip();
     GameMovieSkipUIActor::MovieSkipType GetActiveMovieSkipType();
     void CreateBossDeathFadeUI();
     void SetBossDeathFadeAlpha(float alpha);
-    void StartBossDeathGroanLoop();
-    void StopBossDeathGroanLoop();
-    void UpdateBossDeathPromptLoop(float deltaTime);
-    void UpdateBossDeathScreamHold(float deltaTime);
-    void UpdateBossDeathCinematic();
-    bool SetupBossDeathCinematic();
-    void ApplyBossDeathDof(const BossDeathDofState& dof);
-    void CutToBossDeathShot(size_t shotIndex);
-    void ClampBossDeathPreviewTuning();
     enum class VictoryResultPhase { None, CameraBlend, WinEmote, ResultDelay, ShowButtons, Interactive };
     void ExecuteVictoryResult(int selection);
     std::shared_ptr<GameVictoryUIActor> victoryUIActor;
@@ -411,66 +361,14 @@ private:
     float battleElapsedTime = 0.0f;
     float finalBattleTime = 0.0f;
     bool finalBattleTimeSaved = false;
-    std::array<BossDeathShotState, 5> bossDeathShots{};
-    bool bossDeathShotsLoaded = false;
-    BossDeathDofState bossDeathGameplayDof{};
-    bool bossDeathGameplayDofCaptured = false;
-    BossDeathPhase bossDeathPhase = BossDeathPhase::FadeOut;
-    float bossDeathPhaseElapsed = 0.0f;
-    // Diagnostic-only death-flow event history. It never drives game logic.
+    std::unique_ptr<GameBossDeathController> bossDeathController;
     int bossDeathEnterCallCount = 0;
     BattleFlowState bossDeathLastEnterPreviousFlow = BattleFlowState::Intro;
     std::string bossDeathLastHpZeroDetectionSource = "Other";
-    float bossDeathFadeOutDuration = 1.6f;
-    float bossDeathFadeInDuration = 1.6f;
-    float bossDeathRoarStartTime = 0.17f;
-    float bossDeathRoarEndTime = 1.176f;
-    float bossDeathRoarPlaybackRate = 0.71f;
-    float bossDeathStunPlaybackRate = 0.5f;
-    float bossDeathStunToDeathBlend = 0.25f;
-    float bossDeathFallToLandingBlendDuration = 1.0f;
-    float bossDeathFwdStartTime = 0.498f;
-    float bossDeathFwdEndTime = 2.233f;
-    float bossDeathFwdPlaybackRate = 0.44f;
-    float bossDeathFwdPromptMinTime = 1.38f;
-    float bossDeathFwdPromptMaxTime = 1.625f;
-    float bossDeathFwdPromptTime = 1.55f;
-    float bossDeathFwdPromptDirection = 1.0f;
-    float bossDeathFwdPromptPlaybackRate = 0.10f;
-    float bossDeathScreamHoldMin = 1.474f;
-    float bossDeathScreamHoldMax = 1.588f;
-    float bossDeathScreamHoldRate = 0.30f;
-    float bossDeathScreamHoldTime = 1.50f;
-    float bossDeathScreamHoldDirection = 1.0f;
-    DirectX::XMFLOAT3 bossDeathFwdPositionOffset{ 0.6f,0.0f,0.0f };
-    float bossDeathPlayerApproachDuration = 2.7f;
-    float bossDeathWalkStopStartDistance = 0.35f;
-    DirectX::XMFLOAT3 bossDeathWalkStopStartPosition{};
-    DirectX::XMFLOAT3 bossDeathWalkStopFinishPosition{};
-    DirectX::XMFLOAT4 bossDeathWalkStopStartRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    DirectX::XMFLOAT4 bossDeathWalkStopFinishRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    DirectX::XMFLOAT3 bossDeathApproachStartPosition{ 5.025f,-0.1f,11.723f };
-    DirectX::XMFLOAT4 bossDeathApproachStartRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    DirectX::XMFLOAT3 bossDeathFinishPlayerPositionOffset{ -0.9f,0.0f,0.0f };
-    float bossDeathRecallPromptMinTime = 1.155f;
-    float bossDeathRecallPromptMaxTime = 1.225f;
-    float bossDeathRecallPromptTime = 1.163f;
-    float bossDeathRecallPromptDirection = 1.0f;
-    float bossDeathRecallPromptPlaybackRate = 0.07f;
-    float bossDeathFinishHoldMinTime = 1.72f;
-    float bossDeathFinishHoldMaxTime = 1.875f;
-    float bossDeathFinishHoldPlaybackRate = 0.07f;
-    float bossDeathFinishHoldTime = 1.58f;
-    float bossDeathFinishHoldDirection = 1.0f;
-    float bossDeathRecallFinishHitTime = 1.875f;
-    float bossDeathHuskDelay = 1.4f;
-    bool bossDeathFinishInputEnabled = false;
     std::shared_ptr<GameMovieSkipUIActor> movieSkipUIActor;
     std::shared_ptr<GameBossDeathUIActor> bossDeathUIActor;
     std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;
 
-    std::shared_ptr<CoreStandaloneAudioSource> bossDeathGroanAudio;
-    std::shared_ptr<CoreStandaloneAudioSource> bossDeathVoiceAudio;
     std::shared_ptr<GameTimerUIActor> battleTimerUIActor;
     float deathAttemptTime = 0.0f;
     float deathPresentationElapsed = 0.0f;

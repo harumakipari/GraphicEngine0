@@ -274,6 +274,9 @@
     <ClCompile Include="Source\Game\DarkGame\GameBgmDirector.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\GameBossDeathController.cpp">
+      <Filter>Source\Game\Scenes</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\GameTutorialController.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
@@ -769,6 +772,9 @@
       <Filter>Source\Game\Scenes</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\GameBgmDirector.h">
+      <Filter>Source\Game\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\GameBossDeathController.h">
       <Filter>Source\Game\Scenes</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\GameTutorialController.h">
