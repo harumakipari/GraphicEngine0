@@ -15,9 +15,9 @@ public:
     {
         DirectX::XMFLOAT2 blurCenter{ 0.5f, 0.5f };
         float blurRadiusPixels = 45.0f;
-        float maskRadiusPixels = 180.0f;
+        float maskRadiusPixels = 300.0f;
 
-        float blurIntensity = 1.0f;
+        float blurIntensity = 0.8f;
         int samplingCount = 8;
         DirectX::XMFLOAT2 screenSize{};
     };

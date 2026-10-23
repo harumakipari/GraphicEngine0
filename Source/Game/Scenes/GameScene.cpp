@@ -3272,7 +3272,8 @@ void GameScene::UpdateBattleFlow()
     {
         const auto controller = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
         if (controller && !finalHitReaction.empty() &&
-            controller->GetCurrentAnimationName() == finalHitReaction)
+            controller->GetCurrentAnimationName() == finalHitReaction &&
+            !controller->IsPlayAnimation())
         {
             if (!finalHitReactionCutReached)
             {

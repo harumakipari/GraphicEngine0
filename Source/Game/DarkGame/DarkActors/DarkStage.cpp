@@ -611,6 +611,7 @@ void DarkStage::SetModel(std::shared_ptr<StageAsset> mainRoomAsset, std::shared_
                 else if (point.name.rfind("Spawn_Chandelier", 0) == 0)
                 {// 名前が "Spawn_Chandelier" で始まる場合、シャンデリアを配置
                     DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
+                    pos.x = -57.0f;
                     Transform chandelierTr{ pos,
                         point.worldRotation,
                         point.worldScale
