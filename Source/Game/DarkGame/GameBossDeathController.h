@@ -32,11 +32,11 @@ public:
         GameBgmDirector* bgm;
         SceneShaderConstants* shader;
     };
-    void Start(GameBossDeathUIActor& ui, UIImageComponent& fade);
+    void Start(GameBossDeathUIActor& ui, UIImageComponent* fade);
     bool Update(const Context& context, float deltaTime, bool huskComplete);
     bool SkipToFinishPrompt(const Context& context);
     void StopCinematicAudio();
-    void Reset(SceneShaderConstants& shader, GameBossDeathUIActor& ui, UIImageComponent& fade);
+    void Reset(SceneShaderConstants& shader, GameBossDeathUIActor& ui, UIImageComponent* fade);
     bool IsFinishPromptActive() const;
     bool IsCinematicAudioActive() const;
     bool CanSkip() const;
@@ -47,7 +47,6 @@ public:
     bool LoadBossDeathShots();
     bool AreShotsLoaded() const { return bossDeathShotsLoaded; }
     void CaptureGameplayDof(const SceneShaderConstants& shader);
-    void RestoreGameplayDof(SceneShaderConstants& shader);
     void BlendToResult(CinematicCameraComponent& camera, SceneShaderConstants& shader, float duration) const;
 
 private:
@@ -136,7 +135,8 @@ private:
     void UpdateBossDeathScreamHold(GruxEnemy* gruxEnemyActor, float deltaTime);
     bool SetupBossDeathCinematic(const Context& context);
     void ClampBossDeathPreviewTuning(Player* player, GruxEnemy* gruxEnemyActor);
-    static void SetFadeAlpha(UIImageComponent& fade, float alpha);
+    void RestoreGameplayDof(SceneShaderConstants& shader);
+    static void SetFadeAlpha(UIImageComponent* fade, float alpha);
     struct BossDeathDofState
     {
         float focusDistance = 0.0f;

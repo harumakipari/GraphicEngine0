@@ -175,11 +175,14 @@ void GameBossDeathController::BlendToResult(CinematicCameraComponent& camera, Sc
     ApplyBossDeathDof(shader, shot.dof);
 }
 
-void GameBossDeathController::SetFadeAlpha(UIImageComponent& fade, const float alpha)
+void GameBossDeathController::SetFadeAlpha(UIImageComponent* fade, const float alpha)
 {
+    if (!fade)
+        return;
+
     const float clampedAlpha = std::clamp(alpha, 0.0f, 1.0f);
-    fade.SetColor(CoreColor{ 0.0f, 0.0f, 0.0f, clampedAlpha });
-    fade.SetVisible(clampedAlpha > 0.0f);
+    fade->SetColor(CoreColor{ 0.0f, 0.0f, 0.0f, clampedAlpha });
+    fade->SetVisible(clampedAlpha > 0.0f);
 }
 
 void GameBossDeathController::StopCinematicAudio()
@@ -192,7 +195,7 @@ void GameBossDeathController::StopCinematicAudio()
     }
 }
 
-void GameBossDeathController::Start(GameBossDeathUIActor& ui, UIImageComponent& fade)
+void GameBossDeathController::Start(GameBossDeathUIActor& ui, UIImageComponent* fade)
 {
     bossDeathWalkStopStartPosition = {};
     bossDeathWalkStopFinishPosition = {};
@@ -215,7 +218,7 @@ void GameBossDeathController::Start(GameBossDeathUIActor& ui, UIImageComponent& 
 
 }
 
-void GameBossDeathController::Reset(SceneShaderConstants& shader, GameBossDeathUIActor& ui, UIImageComponent& fade)
+void GameBossDeathController::Reset(SceneShaderConstants& shader, GameBossDeathUIActor& ui, UIImageComponent* fade)
 {
     RestoreGameplayDof(shader);
 
@@ -337,7 +340,7 @@ bool GameBossDeathController::SkipToFinishPrompt(const Context& context)
     bgmDirector.PlayBossDeathSecondBgm();
     if (!bossDeathGroanAudio)
         StartBossDeathGroanLoop();
-    SetFadeAlpha(*context.fadeOverlay, 0.0f);
+    SetFadeAlpha(context.fadeOverlay, 0.0f);
 
     bossDeathPhaseElapsed = 0.0f;
     bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
@@ -641,10 +644,10 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
     case BossDeathPhase::FadeOut:
     {
         const float duration = (std::max)(bossDeathFadeOutDuration, FLT_EPSILON);
-        SetFadeAlpha(*context.fadeOverlay, bossDeathPhaseElapsed / duration);
+        SetFadeAlpha(context.fadeOverlay, bossDeathPhaseElapsed / duration);
         if (bossDeathPhaseElapsed >= duration)
         {
-            SetFadeAlpha(*context.fadeOverlay, 1.0f);
+            SetFadeAlpha(context.fadeOverlay, 1.0f);
             bossDeathPhase = BossDeathPhase::SetupCinematic;
             bossDeathPhaseElapsed = 0.0f;
         }
@@ -652,7 +655,7 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
     }
 
     case BossDeathPhase::SetupCinematic:
-        SetFadeAlpha(*context.fadeOverlay, 1.0f);
+        SetFadeAlpha(context.fadeOverlay, 1.0f);
         if (SetupBossDeathCinematic(context))
         {
             bossDeathPhase = BossDeathPhase::FadeInScream;
@@ -663,10 +666,10 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
     case BossDeathPhase::FadeInScream:
     {
         const float duration = (std::max)(bossDeathFadeInDuration, FLT_EPSILON);
-        SetFadeAlpha(*context.fadeOverlay, 1.0f - bossDeathPhaseElapsed / duration);
+        SetFadeAlpha(context.fadeOverlay, 1.0f - bossDeathPhaseElapsed / duration);
         if (bossDeathPhaseElapsed >= duration)
         {
-            SetFadeAlpha(*context.fadeOverlay, 0.0f);
+            SetFadeAlpha(context.fadeOverlay, 0.0f);
             bossDeathPhase = BossDeathPhase::DeathScream;
             bgmDirector.BeginBossDeathFade();
             bossDeathPhaseElapsed = 0.0f;

@@ -317,11 +317,9 @@ private:
     std::string finalHitReaction;
     BattleFlowState battleFlowState = BattleFlowState::Intro;
     BossPhase bossPhase = BossPhase::Phase1;
-    // Transition is not checkpointable; Continue uses only stable combat phases.
     BossPhase continueCheckpointPhase = BossPhase::Phase1;
     int continueCheckpointBossHp = 30;
     int continueCheckpointBossMaxHp = 30;
-    // Tuning values apply at battle reset and at the Phase1 -> Phase2 handoff.
     int phase1MaxHp = 30;
     int phase2MaxHp = 55;
     bool phase1BreakPending = false;
@@ -362,9 +360,6 @@ private:
     float finalBattleTime = 0.0f;
     bool finalBattleTimeSaved = false;
     std::unique_ptr<GameBossDeathController> bossDeathController;
-    int bossDeathEnterCallCount = 0;
-    BattleFlowState bossDeathLastEnterPreviousFlow = BattleFlowState::Intro;
-    std::string bossDeathLastHpZeroDetectionSource = "Other";
     std::shared_ptr<GameMovieSkipUIActor> movieSkipUIActor;
     std::shared_ptr<GameBossDeathUIActor> bossDeathUIActor;
     std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;

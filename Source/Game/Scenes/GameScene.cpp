@@ -1901,7 +1901,6 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
     phase2FinalHitGateActive = true;
     phase2FinalHitReactionComplete = false;
     phase2FinalHitAttackWaitRequired = false;
-    bossDeathLastHpZeroDetectionSource = "FinalHit callback";
     DisableCinematicCameraDebugInput();
     using namespace DirectX;
     XMFLOAT3 direction{ source.x - boss->GetPosition().x, 0.0f,
@@ -1972,8 +1971,6 @@ void GameScene::EnterBossDead()
         phase2FinalHitAttackWaitRequired = false;
     }
 
-    ++bossDeathEnterCallCount;
-    bossDeathLastEnterPreviousFlow = battleFlowState;
     DisableCinematicCameraDebugInput();
     Time::SetSlow(1.0f, 0.0f);
     finalHitPending = false;
@@ -1984,7 +1981,7 @@ void GameScene::EnterBossDead()
     battleFlowState = BattleFlowState::BossDead;
     battleTimerUIActor->SetVisible(false);
     SetBattleHudVisible(false);
-    bossDeathController->Start(*bossDeathUIActor, *bossDeathFadeOverlay);
+    bossDeathController->Start(*bossDeathUIActor, bossDeathFadeOverlay.get());
 
     if (player)
     {
@@ -2085,7 +2082,7 @@ void GameScene::RestartBossBattle()
         cameraManager->ToggleMovieCamera(this);
     if (cameraManager->IsUseDebug())
         cameraManager->ToggleCamera(this);
-    bossDeathController->Reset(GetSceneSettings().sceneShaderConstants, *bossDeathUIActor, *bossDeathFadeOverlay);
+    bossDeathController->Reset(GetSceneSettings().sceneShaderConstants, *bossDeathUIActor, bossDeathFadeOverlay.get());
 
     gruxHuskCaptured = false;
     gruxHuskCaptureRequested = false;
@@ -2426,8 +2423,6 @@ void GameScene::UpdateBattleFlow()
                 finalBattleTime = battleElapsedTime;
                 finalBattleTimeSaved = true;
             }
-            // Diagnostic only: this is the direct HP<=0 fallback route.
-            bossDeathLastHpZeroDetectionSource = "UpdateBattleFlow fallback";
             BeginPhase2FinalHitHpFallback();
         }
         else if (player && player->GetHp() <= 0)
