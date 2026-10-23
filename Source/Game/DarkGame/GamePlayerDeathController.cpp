@@ -289,13 +289,5 @@ void GamePlayerDeathController::DrawStagingDebugGui()
     ImGui::DragFloat("Max Player Z", &deathStagingMaxPlayerZ, 0.01f);
     ImGui::DragFloat("Wall Inset X", &deathStagingWallInsetX, 0.01f, 0.0f, 3.0f);
     ImGui::DragFloat("Wall Inset Z", &deathStagingWallInsetZ, 0.01f, 0.0f, 3.0f);
-    static constexpr const char* areaNames[] =
-    { "Center", "Front", "Back", "Left", "Right", "FrontLeft", "FrontRight", "BackLeft", "BackRight" };
-    for (size_t i = 0; i < deathStagingAreaSettings.size(); ++i)
-    {
-        ImGui::PushID(static_cast<int>(i));
-        ImGui::DragFloat(areaNames[i], &deathStagingAreaSettings[i].bossDistance, 0.01f, 0.0f, 20.0f);
-        ImGui::PopID();
-    }
 }
 #endif

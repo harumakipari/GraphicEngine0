@@ -15,11 +15,9 @@
 #include "Game/Actors/Camera/DarkGameCamera.h"
 
 
-#include "Graphics/Renderer/SceneRenderer.h"
 
 #include "Game/Actors/Camera/LoadingCamera.h"
 #include "Game/Actors/Player/Player.h"
-#include "Game/Actors/Stage/ClothSimulate.h"
 #include "Game/Actors/UI/GameBossDeathUIActor.h"
 #include "Game/Actors/UI/GameDefeatUIActor.h"
 #include "Game/Actors/UI/GameMovieSkipUIActor.h"
@@ -28,6 +26,9 @@
 #include "Game/Actors/UI/GameTutorialUIActor.h"
 #include "Game/Actors/UI/GameVictoryUIActor.h"
 #include "Game/DarkGame/GameBossDeathController.h"
+#include "Game/DarkGame/GamePlayerDeathController.h"
+#include "Game/DarkGame/GamePlayerDeathController.h"
+#include "Game/DarkGame/GameVictoryController.h"
 #include "Game/DarkGame/DarkActors/DarkClothActor.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
 
@@ -35,7 +36,6 @@
 
 #include "PBD/PBDSystem.h"
 
-class GamePlayerDeathController;
 class GruxEnemy;
 class Enemy;
 class SkeletonWarriorActor;
@@ -45,7 +45,6 @@ class SceneComponent;
 class GameScene : public SceneBase
 {
 public:
-    // Boss health remains phase-local for future phase-specific UI.
     enum class BossPhase : uint8_t
     {
         Phase1,
@@ -53,16 +52,6 @@ public:
         Phase2,
     };
 
-    enum class DeathPresentationCue : uint8_t
-    {
-        GameplayHudFade,
-        OverlayFade,
-        DefeatedFade,
-        BattleTimeFade,
-        ButtonsFade,
-    };
-
-    void SetDeathPresentationCueCallback(std::function<void(DeathPresentationCue)> callback);
 
     enum class BattleFlowState : uint8_t
     {
@@ -78,7 +67,8 @@ public:
         Victory,
     };
 
-    GameScene();
+public:
+    GameScene() {}
     ~GameScene() override;
 
     bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) override;
@@ -86,7 +76,6 @@ public:
     void Start() override;
 
     void Update(float deltaTime) override;
-
 
     bool Uninitialize(ID3D11Device* device) override;
 
@@ -101,6 +90,7 @@ public:
     void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
     void CancelBossRoomLerp();
 
+    void SetDeathPresentationCueCallback(std::function<void(GamePlayerDeathController::Cue)> callback);
 
     void BeginGameBgmFadeOut();
     void PlayBossBattleBgm();
@@ -224,26 +214,10 @@ private:
     GameMovieSkipUIActor::MovieSkipType GetActiveMovieSkipType();
     void CreateBossDeathFadeUI();
     void SetBossDeathFadeAlpha(float alpha);
-    enum class VictoryResultPhase { None, CameraBlend, WinEmote, ResultDelay, ShowButtons, Interactive };
     void ExecuteVictoryResult(int selection);
     std::shared_ptr<GameVictoryUIActor> victoryUIActor;
     void EnterVictoryResult();
     void UpdateVictoryResult();
-    void LoadVictoryBestTime();
-    void CaptureVictoryResult();
-    bool victoryBestTimeValid = false;
-    double victoryBestTime = 0.0;
-    float victoryRankSLimit = 90.0f;
-    float victoryRankALimit = 120.0f;
-    float victoryRankBLimit = 180.0f;
-    float resultRecallToIdleBlendDuration = 0.26f;
-    // Weapon bone drops rapidly between 1.13 and 1.20 seconds in Emote_Slice_0.
-    float resultUITriggerAnimationTime = 1.17f;
-    VictoryResultPhase victoryResultPhase = VictoryResultPhase::None;
-    float victoryResultDelayElapsed = 0.0f;
-    float victoryResultDelayDuration = 0.70f;
-    float victoryCameraBlendDuration = 0.60f;
-    static constexpr float victoryEmoteEndTime = 1.48f;
     void ExecuteDeathResult(int index);
 
     std::shared_ptr<StageAsset> mainRoomAsset = std::make_shared<StageAsset>();
@@ -342,6 +316,7 @@ private:
     bool finalBattleTimeSaved = false;
     std::unique_ptr<GameBossDeathController> bossDeathController;
     std::unique_ptr<GamePlayerDeathController> playerDeathController;
+    std::unique_ptr<GameVictoryController> victoryController;
     std::shared_ptr<GameMovieSkipUIActor> movieSkipUIActor;
     std::shared_ptr<GameBossDeathUIActor> bossDeathUIActor;
     std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;

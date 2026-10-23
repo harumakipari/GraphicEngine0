@@ -2,6 +2,7 @@
 #include "GameScene.h"
 #include "Game/DarkGame/GameBossDeathController.h"
 #include "Game/DarkGame/GamePlayerDeathController.h"
+#include "Game/DarkGame/GameVictoryController.h"
 #include "UI/Game/SceneTransitionManager.h"
 #include <json.hpp>
 #include <fstream>
@@ -55,7 +56,7 @@ namespace
 
 }
 
-GameScene::GameScene() : playerDeathController(std::make_unique<GamePlayerDeathController>()) {}
+
 GameScene::~GameScene()
 {
     if (player)
@@ -64,7 +65,7 @@ GameScene::~GameScene()
         defeatUIActor->SetSelectionCallback(nullptr);
 }
 
-void GameScene::SetDeathPresentationCueCallback(std::function<void(DeathPresentationCue)> callback)
+void GameScene::SetDeathPresentationCueCallback(std::function<void(GamePlayerDeathController::Cue)> callback)
 {
     if (!callback)
     {
@@ -72,7 +73,7 @@ void GameScene::SetDeathPresentationCueCallback(std::function<void(DeathPresenta
         return;
     }
     playerDeathController->SetCueCallback([callback = std::move(callback)](GamePlayerDeathController::Cue cue)
-        { callback(static_cast<DeathPresentationCue>(cue)); });
+        { callback(cue); });
 }
 
 bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
@@ -152,12 +153,14 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         battleTimerUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameTimerUIActor>("BattleTimerUI");
         defeatUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameDefeatUIActor>("DefeatUI");
         defeatUIActor->SetSelectionCallback([this](int index) { ExecuteDeathResult(index); });
-        LoadVictoryBestTime();
+        victoryController = std::make_unique<GameVictoryController>();
+        victoryController->LoadBestTime();
         victoryUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameVictoryUIActor>("VictoryUI");
         CreateBossDeathFadeUI();
         bossDeathUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameBossDeathUIActor>("BossDeathUI");
         movieSkipUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameMovieSkipUIActor>("MovieSkipUI");
         bossDeathController = std::make_unique<GameBossDeathController>();
+        playerDeathController = std::make_unique<GamePlayerDeathController>();
         bossDeathController->LoadBossDeathShots();
         phase2CinematicShotsLoaded = LoadPhase2CinematicShots();
     }
@@ -1573,8 +1576,7 @@ void GameScene::StartBossBattle()
 {
     EnterBossRoomLockOnScope(false);
     victoryUIActor->ResetPresentation();
-    victoryResultPhase = VictoryResultPhase::None;
-    victoryResultDelayElapsed = 0.0f;
+    victoryController->ResetPresentation();
     ResetHuskCompletionTracking();
     DisableCinematicCameraDebugInput();
     if (!player || !gruxEnemyActor)
@@ -1854,8 +1856,7 @@ void GameScene::RestartBossBattle()
         darkCameraActor->ClearDeathTarget();
     bgmDirector.ResetDeathBgmState(GameBgmDirector::BossBgmPhase::Phase1, bossBgmVolume);
     victoryUIActor->ResetPresentation();
-    victoryResultPhase = VictoryResultPhase::None;
-    victoryResultDelayElapsed = 0.0f;
+    victoryController->ResetPresentation();
     ResetHuskCompletionTracking();
     DisableCinematicCameraDebugInput();
     playerDeathController->ResetPresentationElapsed();
@@ -2029,72 +2030,11 @@ void GameScene::SetBossDeathFadeAlpha(const float alpha)
     bossDeathFadeOverlay->SetVisible(clampedAlpha > 0.0f);
 }
 
-void GameScene::LoadVictoryBestTime()
-{
-    const char* path = "Data/Saves/BossBestTime.json";
-    try
-    {
-        if (!std::filesystem::exists(path)) return;
-        std::ifstream input(path);
-        if (!input) throw std::runtime_error("Cannot open boss best time");
-        nlohmann::json data;
-        input >> data;
-        const double value = data.at("bossBestTimeSeconds").get<double>();
-        if (!std::isfinite(value) || value < 0.0)
-            throw std::runtime_error("Invalid boss best time");
-        victoryBestTime = value;
-        victoryBestTimeValid = true;
-    }
-    catch (const std::exception& error)
-    {
-        Logger::Warning(Logger::LogCategory::System,
-            (std::string("Boss best time load failed: ") + error.what()).c_str());
-    }
-}
-
-void GameScene::CaptureVictoryResult()
-{
-    const bool validClear = finalBattleTimeSaved && std::isfinite(finalBattleTime) && finalBattleTime >= 0.0f;
-    const double victoryClearTime = validClear ? static_cast<double>(finalBattleTime) : 0.0;
-    const bool victoryIsNewRecord = validClear && (!victoryBestTimeValid || victoryClearTime < victoryBestTime);
-    if (victoryIsNewRecord)
-    {
-        victoryBestTime = victoryClearTime;
-        victoryBestTimeValid = true;
-        try
-        {
-            std::filesystem::create_directories("Data/Saves");
-            const char* temporaryPath = "Data/Saves/BossBestTime.json.tmp";
-            {
-                std::ofstream output(temporaryPath, std::ios::trunc);
-                output.exceptions(std::ios::badbit | std::ios::failbit);
-                output << nlohmann::json{ { "bossBestTimeSeconds", victoryBestTime } }.dump(4);
-                output.close();
-            }
-            if (!MoveFileExA(temporaryPath, "Data/Saves/BossBestTime.json",
-                MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH))
-                throw std::runtime_error("Cannot replace boss best time save");
-        }
-        catch (const std::exception& error)
-        {
-            Logger::Warning(Logger::LogCategory::System,
-                (std::string("Boss best time save failed: ") + error.what()).c_str());
-        }
-    }
-    const double victoryDisplayedBestTime = victoryBestTimeValid ? victoryBestTime : 0.0;
-    const float s = std::isfinite(victoryRankSLimit) ? (std::max)(0.0f, victoryRankSLimit) : 60.0f;
-    const float a = std::isfinite(victoryRankALimit) ? (std::max)(s, victoryRankALimit) : (std::max)(s, 90.0f);
-    const float b = std::isfinite(victoryRankBLimit) ? (std::max)(a, victoryRankBLimit) : (std::max)(a, 120.0f);
-    const GameVictoryUIActor::VictoryRank victoryRank = victoryClearTime <= s ? GameVictoryUIActor::VictoryRank::S : victoryClearTime <= a ? GameVictoryUIActor::VictoryRank::A : victoryClearTime <= b ? GameVictoryUIActor::VictoryRank::B : GameVictoryUIActor::VictoryRank::C;
-    victoryUIActor->SetResultData(victoryClearTime, victoryDisplayedBestTime, victoryIsNewRecord, victoryRank);
-}
-
 void GameScene::ExecuteVictoryResult(const int selection)
 {
-    if (!victoryUIActor->IsInputEnabled() || victoryResultPhase != VictoryResultPhase::Interactive) return;
-    if (selection == 0 && (!battleStartTransformsSaved || !player || !gruxEnemyActor)) return;
-    victoryUIActor->DisableInput();
-    CoreAudio::PlayOneShot("./Data/Sound/SE/button_push.wav", deathResultConfirmSeVolume);
+    if (!victoryController->CanAcceptSelection(*victoryUIActor)) return;
+    const bool restartAllowed = selection != 0 || (battleStartTransformsSaved && player && gruxEnemyActor);
+    if (!victoryController->AcceptSelection(selection, restartAllowed, *victoryUIActor, deathResultConfirmSeVolume)) return;
     if (selection == 0)
         RestartBossBattle();
     else
@@ -2113,99 +2053,29 @@ void GameScene::EnterVictoryResult()
     GetUIManager()->SetNavigationEnabled(false);
     GetUIManager()->SetSelected(nullptr);
     defeatUIActor->ResetPresentation();
-    CaptureVictoryResult();
+    victoryController->CaptureResult(finalBattleTime, finalBattleTimeSaved, *victoryUIActor);
     DisableCinematicCameraDebugInput();
     Time::SetSlow(1.0f, 0.0f);
     if (cameraManager->IsUseDebug()) cameraManager->ToggleCamera(this);
     if (cameraManager->IsUseMovie()) cameraManager->ToggleMovieCamera(this);
     if (!cameraManager->IsUseCinematic()) cameraManager->ToggleCinematicCamera(this);
     auto* camera = dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent());
-    const float blendDuration = std::isfinite(victoryCameraBlendDuration)
-        ? std::clamp(victoryCameraBlendDuration, 0.0f, 2.0f) : 0.60f;
+    const float blendDuration = victoryController->PrepareCameraBlend();
     bossDeathController->BlendToResult(*camera, GetSceneSettings().sceneShaderConstants, blendDuration);
-    if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
-    {
-        controller->ReleaseHeldAnimationPose(true);
-        controller->ResetAnimationRate();
-        const float idleBlend = std::isfinite(resultRecallToIdleBlendDuration)
-            ? std::clamp(resultRecallToIdleBlendDuration, 0.0f, 0.5f) : 0.15f;
-        player->PlayBodyAnimation("Idle", true, idleBlend > 0.0f, idleBlend, true);
-    }
+    victoryController->PreparePlayer(player.get());
     battleFlowState = BattleFlowState::Victory;
-    victoryResultDelayElapsed = 0.0f;
-    victoryResultPhase = VictoryResultPhase::CameraBlend;
+    victoryController->BeginPresentation();
 }
 
 void GameScene::UpdateVictoryResult()
 {
     DisableCinematicCameraDebugInput();
-    const auto controller = player ? player->GetBodyAnimationController() : nullptr;
-    auto* camera = cinemaCameraActor
-        ? dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()) : nullptr;
-    switch (victoryResultPhase)
-    {
-    case VictoryResultPhase::CameraBlend:
-        if (camera && !camera->IsBlending() && controller)
-        {
-            controller->ResetAnimationRate();
-            player->PlayBodyAnimation("Emote_Win", false, true, 0.2f, true);
-            controller->SetPlaybackRange(0.0f, victoryEmoteEndTime);
-            victoryResultPhase = VictoryResultPhase::WinEmote;
-        }
-        break;
-    case VictoryResultPhase::WinEmote:
-        if (!victoryUIActor->IsBackgroundStarted() && controller &&
-            controller->GetCurrentAnimationName() == "Emote_Win")
-        {
-            const float triggerTime = std::isfinite(resultUITriggerAnimationTime)
-                ? std::clamp(resultUITriggerAnimationTime, 0.0f, victoryEmoteEndTime) : 1.17f;
-            if (controller->GetCurrentAnimationTime() >= triggerTime)
-            {
-                victoryUIActor->StartBackgroundFade();
-            }
-        }
-        if (controller && controller->GetCurrentAnimationName() == "Emote_Win" &&
-            controller->GetCurrentAnimationTime() >= victoryEmoteEndTime)
-        {
-            player->PlayBodyAnimation("Idle", true, true, 0.2f, true);
-            victoryResultDelayElapsed = 0.0f;
-            victoryResultPhase = VictoryResultPhase::ResultDelay;
-        }
-        break;
-    case VictoryResultPhase::ResultDelay:
-    {
-        const float duration = std::isfinite(victoryResultDelayDuration)
-            ? std::clamp(victoryResultDelayDuration, 0.0f, 2.0f) : 0.70f;
-        victoryResultDelayElapsed = (std::min)(duration,
-            victoryResultDelayElapsed + (std::max)(0.0f, Time::UnscaledDeltaTime()));
-        if (victoryResultDelayElapsed >= duration)
-        {
-            victoryUIActor->ShowButtons();
-            victoryResultPhase = VictoryResultPhase::ShowButtons;
-        }
-        break;
-    }
-    case VictoryResultPhase::ShowButtons:
-    {
-        if (victoryUIActor->AdvanceButtonFade())
-        {
-            victoryResultPhase = VictoryResultPhase::Interactive;
-            victoryUIActor->EnableInput();
-        }
-        break;
-    }
-    case VictoryResultPhase::Interactive:
-        if (const int selection = victoryUIActor->UpdateInput(deathResultMoveSeVolume); selection >= 0)
-            ExecuteVictoryResult(selection);
-        break;
-    default:
-        break;
-    }
-    victoryUIActor->SetNumberTextureSize(numberTexWidth, numberTexHeight);
-    victoryUIActor->UpdateBackground();
-    victoryUIActor->UpdateButtonLayout();
+    const int selection = victoryController->UpdateUntilSelection(player.get(), cinemaCameraActor.get(),
+        *victoryUIActor, deathResultMoveSeVolume);
+    if (selection >= 0)
+        ExecuteVictoryResult(selection);
+    victoryController->FinishUpdate(*victoryUIActor, numberTexWidth, numberTexHeight);
 }
-
 void GameScene::UpdateBattleFlow()
 {
     if (battleFlowState == BattleFlowState::FinalHitSlow ||
@@ -2653,20 +2523,11 @@ void GameScene::DrawBossDeathDebugGui()
 
         ImGui::Separator();
         ImGui::SeparatorText("Victory Camera Intro");
-        ImGui::DragFloat("Result Camera Blend Duration", &victoryCameraBlendDuration,
-            0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat("Result Recall To Idle Blend Duration", &resultRecallToIdleBlendDuration,
-            0.01f, 0.0f, 0.5f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat("Result UI Trigger Animation Time", &resultUITriggerAnimationTime,
-            0.01f, 0.0f, victoryEmoteEndTime, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat("Victory S Limit", &victoryRankSLimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat("Victory A Limit", &victoryRankALimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
-        ImGui::DragFloat("Victory B Limit", &victoryRankBLimit, 1.0f, 0.0f, 5999.0f, "%.2f s", ImGuiSliderFlags_AlwaysClamp);
-        victoryRankALimit = (std::max)(victoryRankSLimit, victoryRankALimit);
-        victoryRankBLimit = (std::max)(victoryRankALimit, victoryRankBLimit);
+        victoryController->DrawCameraIntroDebugGui();
+        victoryController->DrawAnimationDebugGui();
+        victoryController->DrawRankDebugGui();
         victoryUIActor->SetNumberTextureSize(numberTexWidth, numberTexHeight);
-        ImGui::DragFloat("Result Delay", &victoryResultDelayDuration,
-            0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+        victoryController->DrawDelayDebugGui();
         bossDeathController->DrawDebugGui(player.get(), gruxEnemyActor.get());
         ImGui::TreePop();
     }
