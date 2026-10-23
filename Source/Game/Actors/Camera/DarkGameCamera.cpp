@@ -1065,8 +1065,6 @@ DarkCameraActor::CameraDirectionInfo DarkCameraActor::CreateLockOnInfo()
     // í≤êÆíl
     info.yaw += XMConvertToRadians(lockOnYawOffsetDegree);
 
-    //float horizontalLength = sqrtf(info.direction.x * info.direction.x + info.direction.z * info.direction.z);
-    //info.pitch = atan2f(info.direction.y, horizontalLength);
     info.pitch = XMConvertToRadians(lockOnPitchDegree);
 
     return info;
@@ -1135,7 +1133,6 @@ void DarkCameraActor::UpdateDesireRotation(float deltaTime)
         }
         break;
     case CameraMode::Death:
-        // The death composition is derived from the actors, not camera input.
         break;
     }
 
@@ -1147,8 +1144,6 @@ void DarkCameraActor::UpdateDesireRotation(float deltaTime)
 // é¿ç€ÇÃï˚å¸ÇçXêVÇ∑ÇÈä÷êî
 void DarkCameraActor::UpdateRotation(float deltaTime)
 {
-    //currentYaw = desiredYaw;
-    //currentPitch = desiredPitch;
     float rotateRate = 20.0f;
     currentYaw = MathHelper::LerpAngle(currentYaw, desiredYaw, rotateRate * deltaTime);
     currentPitch = std::lerp(currentPitch, desiredPitch, rotateRate * deltaTime);
@@ -1774,9 +1769,6 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
     }
     else if (combatPresentationMode == CombatPresentationMode::Rush && combatPresentationPhase != CombatPresentationPhase::Exit)
     {
-        // Keep the presentation pitch as the normal camera pitch.  The next
-        // TPS/LockOn update therefore starts from this shot instead of the
-        // pre-Rush input pitch.
         const float t = std::clamp(combatPresentationRushBlend, 0.0f, 1.0f);
         const float easedT = t * t * (3.0f - 2.0f * t);
         const float rushTargetPitch = DirectX::XMConvertToRadians(rushPresentationTargetPitchDegree);

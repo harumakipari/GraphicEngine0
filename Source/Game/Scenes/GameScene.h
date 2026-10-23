@@ -232,7 +232,6 @@ private:
     std::unique_ptr<PBD::System> pbd;
 
 
-    std::shared_ptr<InterleavedGltfModel> model;
 
     std::shared_ptr<Player> player;
 

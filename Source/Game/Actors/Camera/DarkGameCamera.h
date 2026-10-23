@@ -215,9 +215,6 @@ public:
     // Focusó‘Ô‚Ìƒ|[ƒY‚ğì¬‚·‚é
     CameraPose CreateFocusPose();
 
-    // Veil of Aurora prison-opening return only.  This evaluates the current
-    // player-relative TPS pose with the same wall collision correction used
-    // by the regular camera update.
     bool GetPrisonOpeningTpsPose(PrisonOpeningTpsPose& outPose);
     void PreparePrisonOpeningTpsReturn(const PrisonOpeningTpsPose& pose);
 
