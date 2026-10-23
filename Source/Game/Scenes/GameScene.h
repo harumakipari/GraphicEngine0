@@ -25,6 +25,7 @@
 #include "Game/Actors/UI/GameTutorialUIActor.h"
 #include "Game/Actors/UI/GameVictoryUIActor.h"
 #include "Game/DarkGame/GameBossDeathController.h"
+#include "Game/DarkGame/GamePhase2TransitionController.h"
 #include "Game/DarkGame/GamePlayerDeathController.h"
 #include "Game/DarkGame/GameVictoryController.h"
 #include "Game/DarkGame/DarkActors/DarkClothActor.h"
@@ -65,7 +66,7 @@ public:
     };
 
 public:
-    GameScene() {}
+    GameScene();
     ~GameScene() override;
 
     bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) override;
@@ -91,10 +92,8 @@ public:
     void BeginGameBgmFadeOut();
     void PlayBossBattleBgm();
 
-    // Called when the boss-room door movie begins, before the boss-introduction blend completes.
     void EnterBossRoomLockOnScope(bool fromTutorialDoorMovie = true);
 
-    // Called when the existing boss-introduction camera blend has completed.
     void StartBossBattle();
     void SkipBossDeathToFinishPrompt();
     bool IsBossDeathFinishPromptActive() const;
@@ -104,7 +103,6 @@ public:
     bool RequestBossEntryFromPause();
     bool RequestRestartBossBattleFromPause();
     void RequestReturnToMainRoomStart();
-    // Runtime prison-opening entry only; MovieCameraComponent debug playback does not call these.
     bool BeginPrisonOpeningMoviePlayerSitting();
     void EndPrisonOpeningMoviePlayerSitting();
 
@@ -115,7 +113,6 @@ public:
         Invalidated,
     };
     LockOnTargetSelectionResult UpdateLockOnTargetSelection();
-    // Read-only labels consumed by Grux animation-request diagnostics.
     BossPhase GetBossPhase() const { return bossPhase; }
     int GetBossCurrentHp() const;
     int GetBossMaxHp() const;
@@ -166,19 +163,6 @@ private:
         ReturnToTps,
     };
 
-    struct CinematicActorPose
-    {
-        DirectX::XMFLOAT3 position{};
-        DirectX::XMFLOAT4 rotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    };
-
-    struct Phase2CinematicShot
-    {
-        CinematicCameraComponent::CameraPose camera{};
-        CinematicActorPose player{};
-        CinematicActorPose boss{};
-    };
-
     void UpdateBattleFlow();
     void BeginPhase2Transition();
     void CompletePhase2TransitionAtBlack();
@@ -190,12 +174,9 @@ private:
     void UpdatePhase1BreakPending();
     void StartPhase1FinalHitTimeSequence();
     void UpdatePhase1FinalHitTimeSequence();
-    bool LoadPhase2CinematicShots();
     void BeginPhase2Cinematic();
     void SetupPhase2RecallCinematic();
     void UpdatePhase2Cinematic();
-    void ApplyPhase2RecallActorPose();
-    void CutToPhase2Shot(size_t shotIndex);
     void BeginPhase2TpsReturnBlend();
     void SetBattleHudVisible(bool visible);
     void DisableCinematicCameraDebugInput();
@@ -228,9 +209,6 @@ private:
 
     std::thread loadStageThread;
     std::thread loadStageAssetsThread;
-
-    std::unique_ptr<PBD::System> pbd;
-
 
 
     std::shared_ptr<Player> player;
@@ -279,22 +257,13 @@ private:
     float phase1FinalHitHitStopDuration = 0.12f;
     float phase1FinalHitSlowScale = 0.15f;
     Phase2TransitionStep phase2TransitionStep = Phase2TransitionStep::None;
-    std::array<Phase2CinematicShot, 2> phase2CinematicShots{};
-    bool phase2CinematicShotsLoaded = false;
     float phase2StepElapsed = 0.0f;
     float phase2RecallFadeOutDuration = 1.5f;
     float phase2RecallFadeInDuration = 1.0f;
     float phase2RecallFadeAlpha = 0.0f;
     float phase2RecallPreWaitDuration = 0.01f;
-    float phase2TransformStartTime = 5.3f;
-    float phase2TransformEndTime = 8.0f;
-    float phase2TransformProgress = 0.0f;
-    bool phase2TransformCompleted = false;
     float phase2PlayerEmotePreWaitDuration = 0.5f;
-    float phase2PlayerEmoteEndTime = 0.515f;
     float phase2PlayerEmotePostWaitDuration = 0.5f;
-    bool phase2PlayerEmoteActive = false;
-    bool phase2PlayerEmoteEndPoseHeld = false;
     float phase2TpsReturnBlendDuration = 1.0f;
     Transform playerBattleStartTransform{};
     Transform bossBattleStartTransform{};
@@ -306,6 +275,7 @@ private:
     std::unique_ptr<GameBossDeathController> bossDeathController;
     std::unique_ptr<GamePlayerDeathController> playerDeathController;
     std::unique_ptr<GameVictoryController> victoryController;
+    std::unique_ptr<GamePhase2TransitionController> phase2TransitionController;
     std::shared_ptr<GameMovieSkipUIActor> movieSkipUIActor;
     std::shared_ptr<GameBossDeathUIActor> bossDeathUIActor;
     std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;
@@ -322,13 +292,10 @@ private:
 
     std::shared_ptr<DarkCameraActor> darkCameraActor;
 
-    // A scene-owned, non-physical volume: it has no collider and only changes
-    // the camera profile after the player crosses the tutorial corridor exit.
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerCenter{ -25.0f, 1.0f, 10.75f };
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerSize{ 2.0f, 3.0f, 8.0f };
     bool tutorialCameraProfileTriggerFired = false;
     DirectX::XMFLOAT3 prisonOpeningSittingPosition{ -66.919f, -0.078f, 11.892f };
-    // Authored from the common Player rotation in open_movie1/2/3/5/6/7 ScenePresets.
     float prisonOpeningSittingYawDegrees = 107.031867f;
     Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
     bool prisonOpeningMovieStartRequested = false;

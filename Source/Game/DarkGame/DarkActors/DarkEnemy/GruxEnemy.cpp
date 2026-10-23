@@ -48,7 +48,7 @@ public:
     }
 
     void SetWindConstants(const DirectX::XMFLOAT2& scrollSpeed, const float opacity,
-        const float radialSpeed, const float radialTiling, const int maskFlowMode)
+        const float radialSpeed, const float radialTiling, const int maskFlowMode) const
     {
         constants_.data.maskScrollSpeed = scrollSpeed;
         constants_.data.opacity = opacity;
@@ -801,7 +801,7 @@ void GruxEnemy::DrawPhase2HpBarPreviewGui()
         UpdatePhase2HpBarPreviewLayout();
 #endif
 }
-void GruxEnemy::SetDirectionImmediate(const DirectX::XMFLOAT3& direction)
+void GruxEnemy::SetDirectionImmediate(const DirectX::XMFLOAT3& direction) const
 {
     if (rotationComponent)
         rotationComponent->SetDirectionImmediate(direction);
@@ -925,7 +925,7 @@ void GruxEnemy::BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePositio
     PlayBodyAnimation(fourthHitReactionAnimation, false, true, 0.1f, true);
 }
 
-void GruxEnemy::ForcePhase2CinematicIdleImmediate(const char* debugSource)
+void GruxEnemy::ForcePhase2CinematicIdleImmediate() const
 {
     if (const auto controller = GetBodyAnimationController())
     {
@@ -1338,7 +1338,7 @@ bool GruxEnemy::IsDelayedHpSettled() const
     return !rushHpDisplayActive && delayedHp <= 0.001f;
 }
 
-void GruxEnemy::ClearDamageFlash()
+void GruxEnemy::ClearDamageFlash() const
 {
     if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
         skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
@@ -1348,7 +1348,7 @@ void GruxEnemy::ClearDamageVisualsForPhaseTransition()
 {
     ClearDamageFlash();
 }
-void GruxEnemy::HideLockOnVisualsForPhaseTransition()
+void GruxEnemy::HideLockOnVisualsForPhaseTransition() const
 {
     if (lockOnTargetMeshComponent)
         lockOnTargetMeshComponent->SetIsVisible(false);
@@ -3771,7 +3771,7 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     }
 }
 
-void GruxEnemy::PlayBossTelegraphSE(const char* fileName)
+void GruxEnemy::PlayBossTelegraphSE(const char* fileName) const
 {
     if (!fileName || !*fileName)
         return;
@@ -4121,7 +4121,7 @@ void GruxEnemy::UpdateIntentEffectiveWeights(const BossTargetContext& context)
 
 
 
-void GruxEnemy::RequestJumpAttackCameraAssist()
+void GruxEnemy::RequestJumpAttackCameraAssist() const
 {
     Camera* activeCamera = GetOwnerScene()->GetActiveCamera();
     if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
@@ -5191,7 +5191,7 @@ void GruxEnemy::StopChargeWindTrails()
     }
 }
 
-void GruxEnemy::SpawnChargeWindTrail(ChargeWindTrailRuntime& streak)
+void GruxEnemy::SpawnChargeWindTrail(ChargeWindTrailRuntime& streak) const
 {
     const float directionLength = std::sqrt(
         chargeDirection.x * chargeDirection.x + chargeDirection.z * chargeDirection.z);
@@ -5852,7 +5852,7 @@ void GruxEnemy::ClearPendingAttackFacing()
 {
 }
 
-void GruxEnemy::StopAIMovement()
+void GruxEnemy::StopAIMovement() const
 {
     if (!characterMovementComponent)
         return;
@@ -5865,14 +5865,14 @@ void GruxEnemy::StopAIMovement()
 bool GruxEnemy::RotateTowardsPlayer(
     const DirectX::XMFLOAT3& direction,
     const float degreesPerSecond,
-    const float deltaTime)
+    const float deltaTime) const
 {
     return rotationComponent && rotationComponent->RotateTowardsDirection(direction, degreesPerSecond, deltaTime);
 }
 
 
 // ƒvƒŒƒCƒ„[‚Æ‚Ì‹——£‚ðŽæ“¾‚·‚éŠÖ”
-float GruxEnemy::GetDistanceToPlayer()
+float GruxEnemy::GetDistanceToPlayer() const
 {
     auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     if (!player) return 9999.0f;

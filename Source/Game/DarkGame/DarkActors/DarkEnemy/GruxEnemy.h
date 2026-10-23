@@ -120,7 +120,7 @@ public:
     void PauseBattleAIForPhaseTransition();
 
     // 指定方向に向きを即時変更する。
-    void SetDirectionImmediate(const DirectX::XMFLOAT3& direction);
+    void SetDirectionImmediate(const DirectX::XMFLOAT3& direction) const;
 
     // 戦闘判断を再開する。
     void ResumeBattleAI();
@@ -135,7 +135,7 @@ public:
     }
 
     // フェーズ遷移演出用のIdleアニメーションを即時再生する。
-    void ForcePhase2CinematicIdleImmediate(const char* debugSource);
+    void ForcePhase2CinematicIdleImmediate() const;
 
     // HPを維持して戦闘位置と実行状態をリセットする。
     void ResetForBattleContinue(const Transform& battleStartTransform);
@@ -189,11 +189,11 @@ public:
     bool IsDelayedHpSettled() const;
 
     // フェーズ遷移時に被弾表示を解除する。
-    void ClearDamageFlash();
+    void ClearDamageFlash() const;
     void ClearDamageVisualsForPhaseTransition();
 
     // フェーズ遷移時にロックオン表示を隠す。
-    void HideLockOnVisualsForPhaseTransition();
+    void HideLockOnVisualsForPhaseTransition() const;
 
     // Rush中のHP表示を開始する。
     void BeginRushHpDisplay();
@@ -240,7 +240,7 @@ public:
     void OnSelectedActionStartedSuccessfully();
 
     // Jump攻撃時のカメラ補正を要求する。
-    void RequestJumpAttackCameraAssist();
+    void RequestJumpAttackCameraAssist() const;
 
     // 攻撃後の旧Intent用位置調整フラグを設定する。
     void OnSelectedAttackCompletedSuccessfully();
@@ -318,7 +318,7 @@ public:
     bool PrepareDashAttackMovementSnapshot();
 
     // 指定されたボス攻撃予兆のSEを再生する。
-    void PlayBossTelegraphSE(const char* fileName);
+    void PlayBossTelegraphSE(const char* fileName) const;
 
     // Dash予兆の描画用コンポーネントを用意する。
     void EnsureDashTelegraphVisual();
@@ -536,7 +536,7 @@ public:
     void StopChargeWindTrails();
 
     // Charge時の風の軌跡を生成する。
-    void SpawnChargeWindTrail(struct ChargeWindTrailRuntime& streak);
+    void SpawnChargeWindTrail(struct ChargeWindTrailRuntime& streak) const;
 
     // Chargeの移動と関連する状態を停止する。
     void StopChargeAttackMovement();
@@ -997,11 +997,11 @@ public:
     void ClearPendingAttackFacing();
 
     // AIによる移動入力と固定速度を解除する。
-    void StopAIMovement();
+    void StopAIMovement() const;
 
     // 指定方向へ回転する。
     bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
-        float degreesPerSecond, float deltaTime);
+        float degreesPerSecond, float deltaTime) const;
 
     // 攻撃前の向き合わせ完了角度を返す。
     float GetTurnCompleteAngle() const { return turnCompleteAngle; }
@@ -1189,7 +1189,7 @@ private:
     std::string fourthHitReactionAnimation = "None";  // 4段目の被弾リアクションのアニメーション名。
 
     // PlayerとのXZ平面上の距離を返す。
-    float GetDistanceToPlayer();
+    float GetDistanceToPlayer() const;
 
     // 距離を近距離・中距離・遠距離に分類する。
     BossDistanceRegion GetDistanceRegion(float distance) const;

@@ -900,9 +900,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         }
         if (chargeBT.tripleChargeTransitionElapsed < chargeBT.tripleChargeTransitionDuration)
             return ChargeBTStepResult::Running;
-        // Rebuild all target-dependent state after the final repositioned
-        // position has been applied. The old pre-reposition direction is
-        // never reused for the next leg.
         const auto finalContext = BuildTargetContext();
         if (!finalContext.valid)
         {
@@ -1129,7 +1126,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateSingleChargeBT(float dt)
         FailChargeAttackBT();
         return ChargeBTStepResult::Complete;
     }
-    // A single leg reports only its outcome. No Stun, recovery policy or cooldown here.
     chargeBT.result = UpdateChargeAttackMovement(dt);
     if (chargeBT.result == ChargeAttackEndReason::None) return ChargeBTStepResult::Running;
     DisableAttackHitBoxes();

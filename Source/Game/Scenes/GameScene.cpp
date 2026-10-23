@@ -3,6 +3,7 @@
 #include "Game/DarkGame/GameBossDeathController.h"
 #include "Game/DarkGame/GamePlayerDeathController.h"
 #include "Game/DarkGame/GameVictoryController.h"
+#include "Game/DarkGame/GamePhase2TransitionController.h"
 #include "UI/Game/SceneTransitionManager.h"
 #include <json.hpp>
 #include <fstream>
@@ -17,14 +18,12 @@
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Engine/Audio/Audio.h"
 #include "Engine/Input/InputSystem.h"
-#include "Engine/Audio/Audio.h"
-#include "Core/ActorManager.h"
 #include "Engine/Camera/MovieCameraManagerActor.h"
 #include "Engine/Debug/SceneEditor.h"
-#include "Engine/Debug/DebugRender.h"
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
 
+#include "Core/ActorManager.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/UI/GameTimerUIActor.h"
 #include "Game/Actors/UI/GameDefeatUIActor.h"
@@ -46,16 +45,7 @@
 #include "UI/UIManager.h"
 #include "UI/Game/Pause.h"
 
-namespace
-{
-
-    constexpr std::array<const char*, 2> Phase2CinematicPresetPaths = {
-        "Data/Saves/ScenePresets/boss_recall.json",
-        "Data/Saves/ScenePresets/boss_recall_player.json",
-    };
-
-}
-
+GameScene::GameScene() {}
 
 GameScene::~GameScene()
 {
@@ -111,7 +101,6 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     loadStageAssetsThread = std::thread([&]()
         {
             PROFILE_SCOPE("Load StageAssetModel");
-            //stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
             stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
             stageCandelabraAsset->spawnPoints = stageCandelabraAsset->model->spawnPoints;
 
@@ -136,11 +125,9 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
     lightDirection = { 0.722f, -0.38f, -0.0211f, 0.9f };   // è„ÇÃëãÇ©ÇÁÇÃåı
     lightColor = { 1.0f, 0.8f, 1.0f, 2.6f };
     {
-        //PROFILE_SCOPE("SceneBase Init");
         SceneBase::Initialize(device, width, height, props);
     }
     {
-        //PROFILE_SCOPE("Physics Init");
         Physics::Instance().Initialize();
     }
     {
@@ -162,9 +149,9 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
         bossDeathController = std::make_unique<GameBossDeathController>();
         playerDeathController = std::make_unique<GamePlayerDeathController>();
         bossDeathController->LoadBossDeathShots();
-        phase2CinematicShotsLoaded = LoadPhase2CinematicShots();
+        phase2TransitionController = std::make_unique<GamePhase2TransitionController>();
+        phase2TransitionController->LoadShots();
     }
-
 
 
     // Ç±Ç±Ç≈ïzÇï`âÊÇ∑ÇÈ
@@ -244,16 +231,7 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
     phase2StepElapsed = 0.0f;
     phase2RecallFadeAlpha = 0.0f;
     SetBossDeathFadeAlpha(0.0f);
-    if (phase == BossPhase::Phase2)
-    {
-        phase2TransformProgress = 1.0f;
-        phase2TransformCompleted = true;
-    }
-    else
-    {
-        phase2TransformProgress = 0.0f;
-        phase2TransformCompleted = false;
-    }
+    phase2TransitionController->ResetTransform(phase == BossPhase::Phase2);
     if (phase != BossPhase::Phase2)
     {
         bgmDirector.ResetPhase2Runtime();
@@ -264,13 +242,10 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
         gruxEnemyActor->SetHpBarFadeAlpha(1.0f);
         if (phase != BossPhase::TransitionToPhase2)
             gruxEnemyActor->SetHpBarVisualProfileForBattlePhase(phase == BossPhase::Phase2);
-        gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
+        phase2TransitionController->ApplyTransform(gruxEnemyActor.get());
         gruxEnemyActor->HideLockOnVisualsForPhaseTransition();
     }
-    if ((phase2PlayerEmoteActive || phase2PlayerEmoteEndPoseHeld) && player)
-        player->PlayBodyAnimation("Idle", true, true, 0.0f, true);
-    phase2PlayerEmoteActive = false;
-    phase2PlayerEmoteEndPoseHeld = false;
+    phase2TransitionController->ResetPlayerEmote(player.get());
     if (player)
         player->ClearSwordTrailForPhaseTransition();
     if (darkCameraActor)
@@ -279,7 +254,6 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
         darkCameraActor->CancelOffscreenAttackAssist();
         darkCameraActor->SetRequestMode(DarkCameraActor::CameraMode::TPS);
     }
-    // Future Phase2 movie/color/scale/attack/weapon-drop runtime resets belong here.
     if (phase == BossPhase::Phase1 || phase == BossPhase::Phase2)
         continueCheckpointPhase = phase;
 }
@@ -302,8 +276,6 @@ void GameScene::BeginPhase1BreakPending()
     phase1BreakPending = true;
     InputSystem::SetInputEnabled(false);
     phase1BreakWaitingForRush = player && player->IsRushActiveForPhaseTransition();
-    // Existing Rush/reaction animation is allowed to finish, but it cannot deal
-    // damage or open a new danger window while the phase break is pending.
     gruxEnemyActor->DisableAttackHitBoxes();
 }
 
@@ -351,72 +323,12 @@ void GameScene::UpdatePhase1BreakPending()
     BeginPhase2Transition();
 }
 
-bool GameScene::LoadPhase2CinematicShots()
-{
-    try
-    {
-        for (size_t shotIndex = 0; shotIndex < Phase2CinematicPresetPaths.size(); ++shotIndex)
-        {
-            SceneState sceneState{};
-            SceneEditor::LoadSceneState(Phase2CinematicPresetPaths[shotIndex], sceneState);
-            const auto findActor = [&sceneState](const char* actorName)
-                {
-                    return std::find_if(sceneState.actorStates.begin(), sceneState.actorStates.end(),
-                        [actorName](const ActorTransformState& actor) { return actor.name == actorName; });
-                };
-            const auto playerState = findActor("Player");
-            const auto bossState = findActor("GruxEnemy");
-            if (playerState == sceneState.actorStates.end() || bossState == sceneState.actorStates.end())
-                return false;
-
-            auto& shot = phase2CinematicShots[shotIndex];
-            shot.camera = { sceneState.camera.position, sceneState.camera.rotation, sceneState.camera.fov };
-            shot.player = { playerState->position, playerState->rotation };
-            shot.boss = { bossState->position, bossState->rotation };
-        }
-        return true;
-    }
-    catch (const std::exception& exception)
-    {
-        Logger::Error(Logger::LogCategory::System,
-            std::format("Failed to load Phase2 cinematic presets: {}", exception.what()).c_str());
-        return false;
-    }
-}
-
-void GameScene::ApplyPhase2RecallActorPose()
-{
-    if (!player || !gruxEnemyActor || !phase2CinematicShotsLoaded)
-        return;
-
-    const auto& shot = phase2CinematicShots[0];
-    gruxEnemyActor->SetPosition(shot.boss.position);
-    gruxEnemyActor->SetQuaternionRotation(shot.boss.rotation);
-    player->SetPosition(shot.player.position);
-    player->SetQuaternionRotation(shot.player.rotation);
-    // StopBattleActions has already cleared forced movement and velocity.  Sync
-    // both component hierarchies immediately so no stale rotation restores pose.
-    gruxEnemyActor->UpdateAllComponentTransforms();
-    player->UpdateAllComponentTransforms();
-}
-
-void GameScene::CutToPhase2Shot(const size_t shotIndex)
-{
-    if (shotIndex >= phase2CinematicShots.size() || !cinemaCameraActor)
-        return;
-    if (auto* camera = dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()))
-        camera->CutToPose(phase2CinematicShots[shotIndex].camera);
-}
-
 void GameScene::BeginPhase2Cinematic()
 {
-    // Keep gameplay visible during the fade-out.  The cinematic pose and camera
-    // are installed only after the screen has become completely black.
     phase2TransitionStep = Phase2TransitionStep::RecallFadeOut;
     phase2StepElapsed = 0.0f;
     phase2RecallFadeAlpha = 0.0f;
-    phase2PlayerEmoteActive = false;
-    phase2PlayerEmoteEndPoseHeld = false;
+    phase2TransitionController->ClearPlayerEmote();
     SetBossDeathFadeAlpha(0.0f);
 }
 
@@ -424,8 +336,6 @@ void GameScene::SetupPhase2RecallCinematic()
 {
     if (player)
     {
-        // A second visual cleanup under black prevents any one-frame residue
-        // between the initial combat abort and the actor teleport.
         if (const auto controller = player->GetBodyAnimationController())
             controller->ReleaseLatchedVisualPose();
         player->NeutralizeForPhase2Cinematic();
@@ -436,16 +346,15 @@ void GameScene::SetupPhase2RecallCinematic()
         gruxEnemyActor->HideLockOnVisualsForPhaseTransition();
     }
 
-    ApplyPhase2RecallActorPose();
+    phase2TransitionController->ApplyRecallActorPose(player.get(), gruxEnemyActor.get());
 
     if (cameraManager->IsUseDebug()) cameraManager->ToggleCamera(this);
     if (cameraManager->IsUseMovie()) cameraManager->ToggleMovieCamera(this);
     if (!cameraManager->IsUseCinematic()) cameraManager->ToggleCinematicCamera(this);
-    CutToPhase2Shot(0);
+    phase2TransitionController->CutToShot(0, cinemaCameraActor.get());
 
     if (gruxEnemyActor)
-        gruxEnemyActor->ForcePhase2CinematicIdleImmediate(
-            "GameScene::Phase2RecallFadeSetupImmediate");
+        gruxEnemyActor->ForcePhase2CinematicIdleImmediate();
     if (player)
         player->PlayBodyAnimation("Idle", true, true, 0.0f, true);
 
@@ -498,7 +407,7 @@ void GameScene::BeginPhase2TpsReturnBlend()
             bossPhase = BossPhase::Phase2;
             if (gruxEnemyActor)
                 gruxEnemyActor->CompletePhase2HpBarPresentation();
-            ApplyBossPhaseHp(BossPhase::Phase2); // Single, UI-hookable Phase2 HP handoff point.
+            ApplyBossPhaseHp(BossPhase::Phase2);
             CaptureContinueBossCheckpoint();
             if (player)
             {
@@ -552,11 +461,9 @@ void GameScene::UpdatePhase2Cinematic()
         const auto controller = gruxEnemyActor->GetBodyAnimationController();
         if (controller && controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
         {
-            gruxEnemyActor->ForcePhase2CinematicIdleImmediate(
-                "GameScene::Phase2PlayerShotIdleGuard");
+            gruxEnemyActor->ForcePhase2CinematicIdleImmediate();
         }
     }
-    // Transition ownership is exclusive until the TPS blend completion callback.
     InputSystem::SetInputEnabled(false);
 
     switch (phase2TransitionStep)
@@ -616,70 +523,10 @@ void GameScene::UpdatePhase2Cinematic()
 
     case Phase2TransitionStep::BossRecall:
     {
-        const auto controller = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
-        if (controller)
-            controller->OnUpdate(Time::UnscaledDeltaTime());
-
-        const bool isRecallAnimation = controller &&
-            controller->GetCurrentAnimationName() == "PrimaryAttack_Recall";
-        if (isRecallAnimation && !phase2TransformCompleted)
-        {
-            const float recallAnimationTime = controller->GetCurrentAnimationTime();
-            const float transformDuration = phase2TransformEndTime - phase2TransformStartTime;
-            if (transformDuration <= 0.001f)
-            {
-                if (recallAnimationTime >= phase2TransformStartTime)
-                {
-                    phase2TransformProgress = 1.0f;
-                    phase2TransformCompleted = true;
-                }
-                else
-                {
-                    phase2TransformProgress = 0.0f;
-                }
-            }
-            else
-            {
-                phase2TransformProgress = std::clamp(
-                    (recallAnimationTime - phase2TransformStartTime) / transformDuration,
-                    0.0f, 1.0f);
-                if (recallAnimationTime >= phase2TransformEndTime)
-                {
-                    phase2TransformProgress = 1.0f;
-                    phase2TransformCompleted = true;
-                }
-            }
-        }
-        else if (isRecallAnimation)
-        {
-            // Completion is one-shot; ImGui tuning must not regress it during this Recall.
-            phase2TransformProgress = 1.0f;
-        }
-
-        if (isRecallAnimation && gruxEnemyActor)
-        {
-            gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
-        }
-        if (isRecallAnimation && phase2TransformCompleted && !bgmDirector.IsPhase2Started())
-        {
-            bgmDirector.BeginPhase2CrossFade(controller->GetCurrentAnimationTime(), bossBgmVolume);
-        }
-
-        const bool recallFinished = !controller ||
-            (isRecallAnimation && !controller->IsPlayAnimation());
-        if (!recallFinished)
+        if (!phase2TransitionController->UpdateRecall(gruxEnemyActor.get(), bgmDirector, bossBgmVolume))
             break;
-
-        phase2TransformProgress = 1.0f;
-        phase2TransformCompleted = true;
-        if (!bgmDirector.IsPhase2Started())
-            bgmDirector.BeginPhase2CrossFade(controller ? controller->GetCurrentAnimationTime() : phase2TransformEndTime, bossBgmVolume);
         if (gruxEnemyActor)
-            gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
-        if (gruxEnemyActor)
-            gruxEnemyActor->ForcePhase2CinematicIdleImmediate(
-                "GameScene::Phase2BossRecallCompleteImmediate");
-
+            gruxEnemyActor->ForcePhase2CinematicIdleImmediate();
 
         if (player && gruxEnemyActor)
         {
@@ -693,9 +540,8 @@ void GameScene::UpdatePhase2Cinematic()
         }
         phase2TransitionStep = Phase2TransitionStep::PlayerEmotePreWait;
         phase2StepElapsed = 0.0f;
-        CutToPhase2Shot(1);
-        phase2PlayerEmoteActive = false;
-        phase2PlayerEmoteEndPoseHeld = false;
+        phase2TransitionController->CutToShot(1, cinemaCameraActor.get());
+        phase2TransitionController->ClearPlayerEmote();
         if (player)
             player->PlayBodyAnimation("Idle", true, true, 0.1f, true);
         break;
@@ -712,15 +558,7 @@ void GameScene::UpdatePhase2Cinematic()
         if (phase2StepElapsed < waitDuration)
             break;
 
-        phase2PlayerEmoteActive = false;
-        phase2PlayerEmoteEndPoseHeld = false;
-        if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
-        {
-            player->PlayBodyAnimation("Emote_Phase2", false, true, 0.2f, true);
-            phase2PlayerEmoteActive = controller->SetPlaybackRange(
-                0.0f, std::clamp(phase2PlayerEmoteEndTime, 0.0f,
-                    controller->GetAnimationLength("Emote_Phase2")));
-        }
+        phase2TransitionController->BeginPlayerEmote(player.get());
         phase2TransitionStep = Phase2TransitionStep::PlayerEmote;
         phase2StepElapsed = 0.0f;
         break;
@@ -728,19 +566,9 @@ void GameScene::UpdatePhase2Cinematic()
 
     case Phase2TransitionStep::PlayerEmote:
     {
-        const auto controller = player ? player->GetBodyAnimationController() : nullptr;
-        if (controller)
-            controller->OnUpdate(Time::UnscaledDeltaTime());
-
-        const bool emoteFinished = !controller || !phase2PlayerEmoteActive ||
-            (controller->GetCurrentAnimationName() == "Emote_Phase2" && !controller->IsPlayAnimation());
-        if (!emoteFinished)
+        if (!phase2TransitionController->UpdatePlayerEmote(player.get()))
             break;
 
-        // Do not request Idle here: the playback-range endpoint is the held pose.
-        phase2PlayerEmoteActive = false;
-        phase2PlayerEmoteEndPoseHeld = controller &&
-            controller->GetCurrentAnimationName() == "Emote_Phase2";
         phase2TransitionStep = Phase2TransitionStep::PlayerEmotePostWait;
         phase2StepElapsed = 0.0f;
         break;
@@ -756,9 +584,7 @@ void GameScene::UpdatePhase2Cinematic()
             break;
 
         // Starting Idle releases SetPlaybackRange only after the hold has completed.
-        if (player)
-            player->PlayBodyAnimation("Idle", true, true, 0.2f, true);
-        phase2PlayerEmoteEndPoseHeld = false;
+        phase2TransitionController->FinishPlayerEmote(player.get());
         BeginPhase2TpsReturnBlend();
         break;
     }
@@ -1690,7 +1516,7 @@ void GameScene::ResetBattleForContinue()
     player->SetDeathCameraStartCallback(nullptr);
     player->SetDeathCameraTransparencyDisabled(false);
     gruxEnemyActor->ResetForBattleContinue(bossBattleStartTransform);
-    gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
+    phase2TransitionController->ApplyTransform(gruxEnemyActor.get());
     gruxEnemyActor->SetBattleHp(continueCheckpointBossHp, continueCheckpointBossMaxHp);
     ResetBattleFacingAndCamera();
     gruxEnemyActor->ResumeBattleAI();
@@ -1873,7 +1699,7 @@ void GameScene::RestartBossBattle()
     player->ResetForBattleContinue(playerBattleStartTransform);
     player->EndEvent();
     gruxEnemyActor->ResetForBattleRestart(bossBattleStartTransform);
-    gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
+    phase2TransitionController->ApplyTransform(gruxEnemyActor.get());
     ApplyBossPhaseHp(BossPhase::Phase1);
     CaptureContinueBossCheckpoint();
     ResetBattleFacingAndCamera();
@@ -2423,13 +2249,6 @@ void GameScene::DrawPhase2DebugGui()
         0.01f, 0.0f, 2.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat(U8("Phase2 Recall\u524DWait"), &phase2RecallPreWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    const float recallPreWaitElapsed = phase2TransitionStep == Phase2TransitionStep::RecallPreWait
-        ? phase2StepElapsed : 0.0f;
-    const float recallPreWaitRemaining = (std::max)(0.0f,
-        phase2RecallPreWaitDuration - recallPreWaitElapsed);
-    const auto phase2BossController = gruxEnemyActor
-        ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
-    const auto phase2PlayerController = player ? player->GetBodyAnimationController() : nullptr;
     float phase1BossScale = gruxEnemyActor ? gruxEnemyActor->GetPhase1BossScale() : 1.7f;
     float phase2BossScale = gruxEnemyActor ? gruxEnemyActor->GetPhase2BossScale() : 2.1f;
     const bool phase1ScaleChanged = ImGui::DragFloat(U8("Phase1 Boss Scale"), &phase1BossScale,
@@ -2438,15 +2257,7 @@ void GameScene::DrawPhase2DebugGui()
         0.01f, 1.0f, 3.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
     if (gruxEnemyActor && (phase1ScaleChanged || phase2ScaleChanged))
         gruxEnemyActor->SetPhaseScaleRange(phase1BossScale, phase2BossScale);
-    ImGui::DragFloat(U8("Phase2 Transform Start Time"), &phase2TransformStartTime,
-        0.01f, 0.0f, 15.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat(U8("Phase2 Transform End Time"), &phase2TransformEndTime,
-        0.01f, 0.0f, 15.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    if (ImGui::DragFloat(U8("Phase2 Transform Progress"), &phase2TransformProgress,
-        0.01f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp) && gruxEnemyActor)
-    {
-        gruxEnemyActor->SetPhaseTransformProgress(phase2TransformProgress);
-    }
+    phase2TransitionController->DrawRecallDebugGui(gruxEnemyActor.get());
     if (gruxEnemyActor)
     {
         float phase2MaskMinYOffset = gruxEnemyActor->GetPhase2MaskMinYOffset();
@@ -2469,8 +2280,7 @@ void GameScene::DrawPhase2DebugGui()
     bgmDirector.DrawPhase2DebugGui();
     ImGui::DragFloat(U8("Phase2 Emote\u524DWait"), &phase2PlayerEmotePreWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat(U8("Player Emote EndTime"), &phase2PlayerEmoteEndTime,
-        0.001f, 0.001f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
+    phase2TransitionController->DrawPlayerEmoteDebugGui();
     ImGui::DragFloat(U8("Phase2 Emote\u5F8CWait"), &phase2PlayerEmotePostWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
     ImGui::SeparatorText("Phase2 Boss HP Preview");

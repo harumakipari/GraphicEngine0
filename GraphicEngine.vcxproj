@@ -347,6 +347,7 @@
     <ClCompile Include="Source\Game\DarkGame\GameBossDeathController.cpp" />
     <ClCompile Include="Source\Game\DarkGame\GamePlayerDeathController.cpp" />
     <ClCompile Include="Source\Game\DarkGame\GameVictoryController.cpp" />
+    <ClCompile Include="Source\Game\DarkGame\GamePhase2TransitionController.cpp" />
     <ClCompile Include="Source\Game\DarkGame\GameTutorialController.cpp" />
     <ClCompile Include="Source\Game\Scenes\GameScene.cpp" />
     <ClCompile Include="Source\Game\Scenes\TitleScene.cpp" />
@@ -517,6 +518,7 @@
     <ClInclude Include="Source\Game\DarkGame\GameBossDeathController.h" />
     <ClInclude Include="Source\Game\DarkGame\GamePlayerDeathController.h" />
     <ClInclude Include="Source\Game\DarkGame\GameVictoryController.h" />
+    <ClInclude Include="Source\Game\DarkGame\GamePhase2TransitionController.h" />
     <ClInclude Include="Source\Game\DarkGame\GameTutorialController.h" />
     <ClInclude Include="Source\Game\DarkGame\Interactable.h" />
     <ClInclude Include="Source\Game\Scenes\LoadingScene.h" />

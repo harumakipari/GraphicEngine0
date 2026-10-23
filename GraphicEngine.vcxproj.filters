@@ -283,6 +283,9 @@
     <ClCompile Include="Source\Game\DarkGame\GameVictoryController.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Game\DarkGame\GamePhase2TransitionController.cpp">
+      <Filter>Source\Game\Scenes</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\GameTutorialController.cpp">
       <Filter>Source\Game\Scenes</Filter>
     </ClCompile>
@@ -787,6 +790,9 @@
       <Filter>Source\Game\Scenes</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\GameVictoryController.h">
+      <Filter>Source\Game\Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Game\DarkGame\GamePhase2TransitionController.h">
       <Filter>Source\Game\Scenes</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\GameTutorialController.h">
