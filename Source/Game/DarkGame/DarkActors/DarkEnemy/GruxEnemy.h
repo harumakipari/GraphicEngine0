@@ -164,14 +164,14 @@ public:
 
     void DrawImGuiDetails() override;
 
-    void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true,float blendTime = 0.3f, bool ignoreRootMotion = false) const;
+    void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true, float blendTime = 0.3f, bool ignoreRootMotion = false) const;
 
     // Plays a body animation owned by the phase-two cinematic.
     void PlayPhase2CinematicBodyAnimation(const std::string& name, bool loop,
         bool blend, float blendTime, bool ignoreRootMotion) const;
 
     // Playerの攻撃種別と命中位置を受け取りダメージを処理する。
-    void TakeDamageFromPlayerAttack(int damage, bool isNormalFourthHit,PlayerAttackHitType hitType, const DirectX::XMFLOAT3& hitSourcePosition);
+    void TakeDamageFromPlayerAttack(int damage, bool isNormalFourthHit, PlayerAttackHitType hitType, const DirectX::XMFLOAT3& hitSourcePosition);
 
     // ボスのHPバーを表示または非表示にする。
     void SetHpBarVisible(bool visible);
@@ -725,7 +725,6 @@ public:
     bool EvaluateRoarPlanForDebug() const;
 
     // Roarを選択できない理由をデバッグ表示用に返す。
-    std::string GetRoarRejectReasonForDebug() const;
 
     // Roarの計画・実行を許可する共通条件を判定する。
     bool IsRoarExecutionAllowed() const;
@@ -1157,8 +1156,7 @@ private:
     // HPバーを作成する
     void CreateHpUI();
 
-    void PlayBodyAnimationInternal(const std::string& name, bool loop,
-        bool blend, float blendTime, bool ignoreRootMotion) const;
+    void PlayBodyAnimationInternal(const std::string& name, bool loop, bool blend, float blendTime, bool ignoreRootMotion) const;
 
     // 武器の攻撃予兆表示を更新する。
     void UpdateWeaponTelegraphRimLight(float deltaTime);
@@ -1306,7 +1304,6 @@ private:
     void RefreshActiveHitBoxesFromNotifyStates();
 
     // 距離や向きなどのAI情報をワールド上に描画する。
-    void DrawBossAIDebugWorld(const BossTargetContext& context) const;
 
     // 位置調整のデバッグ情報をワールド上に描画する。
     void DrawPositioningDebugWorld() const;
@@ -1322,7 +1319,6 @@ private:
     void ClearPositioningTarget(PositioningTargetContext& target, PositioningTargetRuntime& runtime);
 
     // 回転に関する診断情報をワールド上に描画する。
-    void DrawRotationDebugWorld(const BossTargetContext& context) const;
 
     // 地面への衝撃エフェクトを生成する。
     void SpawnGroundImpactEffect() const;
@@ -1835,10 +1831,6 @@ private:
         float endTime = 0.0f;  // Roarアニメーションの終了時刻。
     } roarBT;  // Roarの実行段階と衝撃波の状態。
     std::string roarBTStatus = "Idle";  // Roarの実行・終了状態を示す表示文字列。
-    mutable bool roarPlanDebugEvaluated = false;  // Roarの計画可否を評価済みか。
-    mutable bool roarPlanDebugLastResult = false;  // 直近のRoar計画可否の判定結果。
-    mutable std::string roarPlanDebugLastRejectReason;  // 直近のRoar計画を見送った理由。
-    mutable std::string roarPlanDebugLastNode;  // Roar計画可否を評価したノード名。
     BossTargetContext fastComboTargetContext{};  // FastComboの対象に関する距離と角度の情報。
     std::array<BossTargetContext, 3> fastComboStageTargetContexts{};  // FastComboの各段階で取得した対象情報。
     int fastComboTargetStage = -1;  // 対象情報を取得したFastComboの段階。
@@ -2048,7 +2040,6 @@ private:
     float tripleJumpPlannedDistance = 0.0f;  // 現在のJumpの予定移動距離。
     DirectX::XMFLOAT3 tripleJumpPlannedLandingPosition{};  // 現在のJumpの予定着地点。
     bool tripleJumpTargetLockActive = false;  // Jump開始時に固定した目標を適用中かを示す。
-    bool jumpAttackExecutionStartCalledDebug = false;  // Jump攻撃の開始処理が呼ばれたかの診断値。
     // Temporary Jump landing diagnostics. Values are reset once per jump telegraph.
     bool showJumpLandingDebug = true;  // Jump着地の診断描画を表示するか。
     bool jumpLandingDebugSnapshotValid = false;  // Jump着地の診断情報が有効か。
@@ -2468,8 +2459,8 @@ private:
     float phase2WorldMinY = 0.0f;  // テクスチャ切り替え範囲のワールド座標での下端。
     float phase2WorldMaxY = 1.0f;  // テクスチャ切り替え範囲のワールド座標での上端。
     float enemyScale = 1.7f;  // ボスのスケール。
-    float hitEnemyEffectOffsetY = 2.2f;  
-    float hitPlayerEffectOffsetY = 2.4f; 
+    float hitEnemyEffectOffsetY = 2.2f;
+    float hitPlayerEffectOffsetY = 2.4f;
 
     std::shared_ptr<UIImageComponent> gruxNameImageComponent;  // ボス名表示用の画像コンポーネント。
     std::unique_ptr<EasingRunner> easingRunner;  // 表示演出の補間処理。

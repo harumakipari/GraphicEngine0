@@ -2049,123 +2049,6 @@ void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& stat
             editorPreviewRightHitBoxState, editorPreviewRightHitBoxTime);
 }
 
-void GruxEnemy::DrawBossAIDebugWorld(const BossTargetContext& context) const
-{
-#ifdef USE_IMGUI
-    constexpr int segmentCount = 64;
-    constexpr float twoPi = DirectX::XM_2PI;
-    const DirectX::XMFLOAT3 bossPosition = GetPosition();
-    const float debugHeight = bossPosition.y + 1.0f;
-
-    const auto drawRing = [&](float radius, const DirectX::XMFLOAT4& color)
-        {
-            for (int i = 0; i < segmentCount; ++i)
-            {
-                const float angle0 = twoPi * static_cast<float>(i) / static_cast<float>(segmentCount);
-                const float angle1 = twoPi * static_cast<float>(i + 1) / static_cast<float>(segmentCount);
-                const DirectX::XMFLOAT3 start =
-                {
-                    bossPosition.x + std::cos(angle0) * radius,
-                    debugHeight,
-                    bossPosition.z + std::sin(angle0) * radius
-                };
-                const DirectX::XMFLOAT3 end =
-                {
-                    bossPosition.x + std::cos(angle1) * radius,
-                    debugHeight,
-                    bossPosition.z + std::sin(angle1) * radius
-                };
-                DebugRender::DrawLine(start, end, color, 0.0f, true);
-            }
-        };
-
-    drawRing(defensiveTooCloseDistance, { 0.1f, 0.8f, 1.0f, 1.0f });
-    drawRing(GetRoarAttackRadius(), { 1.0f, 0.15f, 0.6f, 1.0f });
-    drawRing(nearDistanceThreshold, { 0.2f, 1.0f, 0.2f, 1.0f });
-    drawRing(middleDistanceThreshold, { 1.0f, 0.7f, 0.1f, 1.0f });
-    if (showCloseCombatDebugRange) { drawRing(closeCombatSettings.minRange, { 0.2f, 0.8f, 1.0f, 1.0f }); drawRing(closeCombatSettings.executeMaxRange, { 0.2f, 1.0f, 0.2f, 1.0f }); drawRing(closeCombatSettings.planMaxRange, { 1.0f, 0.2f, 0.8f, 1.0f }); }
-    const float facingLength = closeCombatSettings.executeMaxRange;
-    const float forwardYaw = std::atan2(GetForward().x, GetForward().z);
-    for (const float side : { -1.0f, 1.0f }) { const float a = forwardYaw + side * DirectX::XMConvertToRadians(closeCombatSettings.facingLimitDegrees); const DirectX::XMFLOAT3 end{ bossPosition.x + std::sin(a) * facingLength, debugHeight, bossPosition.z + std::cos(a) * facingLength }; DebugRender::DrawLine({ bossPosition.x, debugHeight, bossPosition.z }, end, { 1.0f, 0.8f, 0.1f, 1.0f }, 0.0f, true); }
-
-    if (const BossIntentData* intentData = GetActiveIntentData())
-    {
-        drawRing(intentData->preferredMinDistance, { 0.15f, 0.85f, 1.0f, 1.0f });
-        drawRing(intentData->preferredMaxDistance, { 1.0f, 0.25f, 0.85f, 1.0f });
-    }
-
-    if (context.valid)
-    {
-        const DirectX::XMFLOAT3 playerXZPosition =
-        {
-            bossPosition.x + context.directionToPlayer.x * context.xzDistance,
-            debugHeight,
-            bossPosition.z + context.directionToPlayer.z * context.xzDistance
-        };
-        DirectX::XMFLOAT4 playerLineColor{ 0.2f, 0.8f, 1.0f, 1.0f };
-        if (context.distanceRegion == BossDistanceRegion::Near)
-            playerLineColor = { 0.2f, 1.0f, 0.2f, 1.0f };
-        else if (context.distanceRegion == BossDistanceRegion::Far)
-            playerLineColor = { 0.8f, 0.3f, 1.0f, 1.0f };
-        DebugRender::DrawLine(
-            { bossPosition.x, debugHeight, bossPosition.z },
-            playerXZPosition, playerLineColor, 0.0f, true);
-    }
-
-    if (dashAttackMovementActive)
-    {
-        const DirectX::XMFLOAT3 dashStart =
-        {
-            dashAttackStartPosition.x,
-            dashAttackStartPosition.y + 0.15f,
-            dashAttackStartPosition.z
-        };
-        const DirectX::XMFLOAT3 dashTarget =
-        {
-            dashTargetPosition.x,
-            dashTargetPosition.y + 0.15f,
-            dashTargetPosition.z
-        };
-        DebugRender::DrawLine(dashStart, dashTarget, { 1.0f, 0.15f, 0.15f, 1.0f }, 0.0f, true);
-        DebugRender::DrawSphere(dashTarget, 0.25f, { 1.0f, 0.15f, 0.15f, 1.0f }, 0.0f, true);
-    }
-#else
-    (void)context;
-#endif
-}
-
-void GruxEnemy::DrawRotationDebugWorld(const BossTargetContext& context) const
-{
-#ifdef USE_IMGUI
-    const DirectX::XMFLOAT3 position = GetPosition();
-    const float y = position.y + 0.35f;
-    const DirectX::XMFLOAT3 origin{ position.x, y, position.z };
-    DirectX::XMVECTOR forwardVector = DirectX::XMVector3Rotate(
-        DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
-        DirectX::XMLoadFloat4(&GetQuaternionRotation()));
-    DirectX::XMFLOAT3 forward{};
-    DirectX::XMStoreFloat3(&forward, forwardVector);
-    forward.y = 0.0f;
-    DebugRender::DrawLine(origin,
-        { origin.x + forward.x * 4.0f, y, origin.z + forward.z * 4.0f },
-        { 0.2f, 1.0f, 0.25f, 1.0f }, 0.0f, true);
-    if (context.valid)
-    {
-        DebugRender::DrawLine(origin,
-            { origin.x + context.directionToPlayer.x * 5.0f, y,
-                origin.z + context.directionToPlayer.z * 5.0f },
-            { 0.2f, 0.65f, 1.0f, 1.0f }, 0.0f, true);
-    }
-    if (positioningDebugActive)
-    {
-        const DirectX::XMFLOAT3& move = currentPositioningDebug.requestedMoveDirection;
-        DebugRender::DrawLine(origin,
-            { origin.x + move.x * 4.0f, y, origin.z + move.z * 4.0f },
-            { 1.0f, 0.75f, 0.1f, 1.0f }, 0.0f, true);
-    }
-#endif
-}
-
 
 void GruxEnemy::DrawDashTelegraphDebugWorld() const
 {
@@ -2644,7 +2527,6 @@ void GruxEnemy::DrawImGuiDetails()
     interStageFaceCompleteAngle = std::clamp(interStageFaceCompleteAngle, 0.0f, 90.0f);
     interStageMaxFacingAngle = std::clamp(interStageMaxFacingAngle, 0.0f, 180.0f);
     interStageFaceDelay = std::clamp(interStageFaceDelay, 0.0f, 0.5f);
-    const auto facingDebugContext = BuildTargetContext();
     ImGui::Checkbox(U8("ãﬂãóó£çUåÇîÕàÕÇï\é¶"), &showCloseCombatDebugRange);
     ImGui::DragFloat(U8("ê˘âÒë¨ìx"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
     ImGui::DragFloat(U8("ê˘âÒäÆóπäpìx"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
@@ -4255,7 +4137,6 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
 bool GruxEnemy::StartJumpAttackTelegraph()
 {
     StartAttack();
-    jumpAttackExecutionStartCalledDebug = false;
     StopAIMovement();
     return PlayAttackStage(BossAttackType::JumpAttack, 0);
 }
@@ -4272,7 +4153,6 @@ bool GruxEnemy::UpdateJumpAttackTelegraph(float deltaTime) const
 
 bool GruxEnemy::StartJumpAttackExecution()
 {
-    jumpAttackExecutionStartCalledDebug = true;
     if (!PlayAttackStage(BossAttackType::JumpAttack, 1))
         return false;
     OnSelectedActionStartedSuccessfully();

@@ -283,14 +283,7 @@ bool GruxEnemy::CanPlanAttackAgainstCurrentPlayer() const
 
 bool GruxEnemy::CanPlanRoar() const
 {
-    const bool result = EvaluateRoarPlanForDebug();
-    // Preserve the actual selection-time result; drawing ImGui must not replace it
-    // with the later Idle/ExecuteRoar-time evaluation.
-    roarPlanDebugEvaluated = true;
-    roarPlanDebugLastResult = result;
-    roarPlanDebugLastRejectReason = result ? U8("なし") : GetRoarRejectReasonForDebug();
-    roarPlanDebugLastNode = activeNode ? activeNode->GetName() : "None (Root inference)";
-    return result;
+    return EvaluateRoarPlanForDebug();
 }
 
 bool GruxEnemy::CanPlanRetreat() const
@@ -933,47 +926,6 @@ bool GruxEnemy::EvaluateRoarPlanForDebug() const
     const auto context = BuildTargetContext();
     return IsDefensiveBackForBehavior(context) &&
         context.xzDistance <= defensiveTooCloseDistance;
-}
-
-std::string GruxEnemy::GetRoarRejectReasonForDebug() const
-{
-    // Same first-failure order as IsRoarExecutionAllowed and CanPlanRoar.
-    // This function is diagnostic only; it never decides BT eligibility.
-    if (!behaviorTreeFastComboEnabled) return U8("BTが無効");
-    if (!battleAIActive) return U8("戦闘AIが無効");
-    if (IsDead()) return U8("Gruxが死亡");
-    if (IsPendingKill()) return U8("Gruxが削除待ち");
-    if (isDeathPerform) return U8("死亡演出中");
-    if (finalHitReactionActive) return U8("FinalHit演出中");
-    if (finalHitReactionHeld) return U8("FinalHitの姿勢保持中");
-    if (IsAnimationEditorPreviewActive()) return U8("Animation Preview中");
-    if (IsChargeAttackBTActive()) return U8("Charge BT実行中");
-    if (IsDashAttackBTActive()) return U8("Dash BT実行中");
-    if (chargeMovementActive) return U8("Charge移動中");
-    if (dashAttackMovementActive) return U8("Dash移動中");
-    if (jumpMotionWarpOverrideActive) return U8("Jump MotionWarp実行中");
-    if (!characterMovementComponent) return U8("移動Componentがない");
-    if (!GetBodyAnimationController()) return U8("AnimationControllerがない");
-    if (!GetOwnerScene()) return U8("Sceneがない");
-    if (stateMachine_)
-    {
-        const std::string state = stateMachine_->GetStateName();
-        if (state == "EnemyDeathState") return U8("旧Death State中");
-        if (state == "EnemyStunState") return U8("旧Stun State中");
-    }
-    const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-    if (!player) return U8("Playerが存在しない");
-    if (player->IsPendingKill()) return U8("Playerが削除待ち");
-    if (player->GetHp() <= 0) return U8("Playerが死亡");
-    if (IsRoarBTActive()) return U8("Roar実行中");
-    if (roarCooldownRemaining > 0.0f) return U8("Cooldown中");
-    if (IsOtherBTActionForRoar(activeNode))
-        return std::string(U8("他BT行動中: ")) + activeNode->GetName();
-    const auto context = BuildTargetContext();
-    if (!context.valid) return U8("TargetContextが無効");
-    if (!IsDefensiveBackForBehavior(context)) return U8("背後ではない");
-    if (!(context.xzDistance <= defensiveTooCloseDistance)) return U8("距離が遠い");
-    return U8("なし");
 }
 
 bool GruxEnemy::BeginRoarBT()
