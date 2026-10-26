@@ -21,11 +21,6 @@ namespace
     }
 }
 
-void GruxEnemy::RecordExecuteChargeAttackRunDebug()
-{
-    ++debugExecuteChargeAttackRunCount;
-}
-
 bool CanPlanChargeAttack::Judgment()
 {
     const bool ready = owner->CanPlanChargeAttack();
@@ -53,7 +48,6 @@ ActionBase::State StartChargeAttack::Run(float)
 }
 ActionBase::State ExecuteChargeAttack::Run(float dt)
 {
-    owner->RecordExecuteChargeAttackRunDebug();
     return ToActionState(owner->UpdateChargeAttackBT(dt));
 }
 ActionBase::State ResolveChargeResult::Run(float dt)
@@ -83,18 +77,13 @@ ActionBase::State ExecuteChargeRecovery::Run(float dt)
 
 bool GruxEnemy::IsChargeBTExecutionAllowed() const
 {
-    debugChargeExecutionNotAllowedReason = "None";
-    if (IsDead()) debugChargeExecutionNotAllowedReason = "Dead";
-    else if (!battleAIActive) debugChargeExecutionNotAllowedReason = "BattleAIInactive";
-    else if (finalHitReactionActive) debugChargeExecutionNotAllowedReason = "FinalHitReactionActive";
-    else if (finalHitReactionHeld) debugChargeExecutionNotAllowedReason = "FinalHitReactionHeld";
-    else if (IsAnimationEditorPreviewActive()) debugChargeExecutionNotAllowedReason = "AnimationEditorPreview";
-    else if (stateMachine_ && (!std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") ||
-        !std::strcmp(stateMachine_->GetStateName(), "EnemyStunState")))
-        debugChargeExecutionNotAllowedReason = stateMachine_->GetStateName();
-    return debugChargeExecutionNotAllowedReason == "None";
+    if (IsDead() || !battleAIActive || finalHitReactionActive || finalHitReactionHeld ||
+        IsAnimationEditorPreviewActive())
+        return false;
+    return !stateMachine_ ||
+        (std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") != 0 &&
+            std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") != 0);
 }
-
 bool GruxEnemy::CanPlanChargeAttack() const
 {
     if (!IsChargeBTExecutionAllowed() || !BuildTargetContext().valid ||
@@ -111,28 +100,6 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
 {
     if (!CanPlanChargeAttack())
         return false;
-    debugShouldAbortChargeBT = false;
-    debugAbortBehaviorTreeDisabled = false;
-    debugAbortExecutionNotAllowed = false;
-    debugAbortActiveNodeNull = false;
-    debugAbortStateMismatch = false;
-    debugChargeExecutionNotAllowedReason = "None";
-    debugChargeBTAbortDetected = false;
-    debugCleanupChargeAttackBTCalled = false;
-    debugFailChargeAttackBTCalled = false;
-    debugFinishChargeRecoveryBTCalled = false;
-    debugLastChargeAbortReason = "None";
-    debugUpdateBehaviorTreeCallCount = 0;
-    debugExecuteChargeAttackRunCount = 0;
-    debugUpdateTripleChargeBTCallCount = 0;
-    debugTelegraphHoldUpdateCount = 0;
-    debugTelegraphHoldLastDeltaTime = 0.0f;
-    debugTelegraphEntryActiveNode = "None";
-    debugTelegraphEntryInitialState = "None";
-    debugTelegraphEntryCurrentState = "None";
-    debugTelegraphEntryBTLastResult = "None";
-    debugTelegraphEntryUpdateBTCount = 0;
-    debugTelegraphEntryTripleUpdateCount = 0;
     chargeBT = {};
     chargeBT.phase = ChargeBTPhase::Setup;
     chargeBT.previousAction = selectedActionType;
@@ -206,8 +173,6 @@ bool GruxEnemy::CanExecuteChargeAttack() const
 void GruxEnemy::FailChargeAttackBT()
 {
     if (!IsChargeAttackBTActive()) return;
-    debugFailChargeAttackBTCalled = true;
-    debugLastChargeAbortReason = "FailChargeAttackBT";
     HideChargeTelegraphVisual();
     StopChargeAttackMovement();
     DisableAttackHitBoxes();
@@ -380,13 +345,6 @@ void GruxEnemy::HideChargeTelegraphVisual()
 bool GruxEnemy::BeginChargeTelegraphVisual()
 {
     ++chargeBT.tripleChargeTelegraphCallCount;
-
-    debugTelegraphEntryActiveNode = activeNode ? activeNode->GetName() : "None";
-    debugTelegraphEntryInitialState = chargeBT.initialStateName;
-    debugTelegraphEntryCurrentState = stateMachine_ ? stateMachine_->GetStateName() : "None";
-    debugTelegraphEntryBTLastResult = behaviorTreeLastResult;
-    debugTelegraphEntryUpdateBTCount = debugUpdateBehaviorTreeCallCount;
-    debugTelegraphEntryTripleUpdateCount = debugUpdateTripleChargeBTCallCount;
 
     const int index = std::clamp(chargeBT.tripleChargeIndex, 0, 2);
     const DirectX::XMFLOAT3 direction = chargeDirection;
@@ -671,7 +629,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackBT(float dt)
 
 GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
 {
-    ++debugUpdateTripleChargeBTCallCount;
     chargeBT.triplePhaseAtUpdateEntry = chargeBT.triplePhase;
     chargeBT.triplePhaseAtUpdateExit = chargeBT.triplePhase;
     if (!IsChargeAttackBTActive()) return ChargeBTStepResult::Failed;
@@ -945,8 +902,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
 
     if (chargeBT.triplePhase == TripleChargePhase::TelegraphHold)
     {
-        ++debugTelegraphHoldUpdateCount;
-        debugTelegraphHoldLastDeltaTime = dt;
         chargeBT.tripleChargeTelegraphElapsed += (std::max)(0.0f, dt);
         const float expandDuration = (std::max)(0.001f, tripleChargeTelegraphExpandDuration);
         const float expandProgress = std::clamp(
@@ -1223,7 +1178,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
 
 GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
 {
-    debugFinishChargeRecoveryBTCalled = true;
     if (chargeBT.phase != ChargeBTPhase::RecoveryPostconditions) return ChargeBTStepResult::Failed;
     if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::JustDodge)
     {
@@ -1249,14 +1203,11 @@ void GruxEnemy::NotifyPlayerRushStarted(Player* player)
     interruptedChargeRecoveryActive = false;
     interruptedChargeRecoveryTimer = 0.0f;
     interruptedChargeRecoveryDuration = GetChargeJustDodgeRecoveryDuration();
-    debugLastChargeAbortReason = "RushStarted";
 
     CleanupChargeAttackBT();
     PlayBodyAnimation("Stun_Idle", true, true, 0.15f, true);
     ResetBehaviorTreeRuntime();
-    behaviorTreeCurrentNode = "None";
     behaviorTreePreviousNode = "None";
-    behaviorTreeLastResult = "None";
 }
 
 void GruxEnemy::NotifyPlayerRushEnded(Player* player)
@@ -1276,28 +1227,15 @@ void GruxEnemy::NotifyPlayerRushEnded(Player* player)
 
 bool GruxEnemy::ShouldAbortChargeAttackBT()
 {
-    debugAbortBehaviorTreeDisabled = !behaviorTreeFastComboEnabled;
-    debugAbortExecutionNotAllowed = !IsChargeBTExecutionAllowed();
-    debugAbortActiveNodeNull = !activeNode;
-    debugAbortStateMismatch = stateMachine_ && stateMachine_->GetStateName() != chargeBT.initialStateName;
-    debugShouldAbortChargeBT = IsChargeAttackBTActive() &&
-        (debugAbortBehaviorTreeDisabled || debugAbortExecutionNotAllowed ||
-            debugAbortActiveNodeNull || debugAbortStateMismatch);
-    if (debugShouldAbortChargeBT)
-    {
-        debugChargeBTAbortDetected = true;
-        debugLastChargeAbortReason = debugAbortBehaviorTreeDisabled ? "BehaviorTreeDisabled" :
-            debugAbortExecutionNotAllowed ? "ExecutionNotAllowed" :
-            debugAbortActiveNodeNull ? "ActiveNodeNull" : "StateMismatch";
-    }
-    return debugShouldAbortChargeBT;
+    const bool behaviorTreeDisabled = !behaviorTreeFastComboEnabled;
+    const bool executionNotAllowed = !IsChargeBTExecutionAllowed();
+    const bool activeNodeNull = !activeNode;
+    const bool stateMismatch = stateMachine_ && stateMachine_->GetStateName() != chargeBT.initialStateName;
+    return IsChargeAttackBTActive() &&
+        (behaviorTreeDisabled || executionNotAllowed || activeNodeNull || stateMismatch);
 }
-
 void GruxEnemy::CleanupChargeAttackBT()
 {
-    debugCleanupChargeAttackBTCalled = true;
-    if (debugLastChargeAbortReason == "None")
-        debugLastChargeAbortReason = "CleanupChargeAttackBT";
     HideChargeTelegraphVisual();
     if (!IsChargeAttackBTActive()) return;
     FinishChargeAttackBT(); // Idempotent; no cooldown before StartAttack, none per leg.

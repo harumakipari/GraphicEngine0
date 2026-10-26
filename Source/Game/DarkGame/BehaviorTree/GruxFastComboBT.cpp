@@ -326,8 +326,6 @@ void GruxEnemy::RecordBehaviorAttackCompleted()
 
 void GruxEnemy::UpdateBehaviorTree(float dt)
 {
-    ++debugUpdateBehaviorTreeCallCount;
-    debugLastBehaviorTreeDeltaTime = dt;
     fastComboApproachRetryRemaining = (std::max)(0.0f, fastComboApproachRetryRemaining - dt);
     repositionCooldownRemaining = (std::max)(0.0f, repositionCooldownRemaining - (std::max)(0.0f, dt));
     repositionRetryCooldownRemaining = (std::max)(0.0f, repositionRetryCooldownRemaining - (std::max)(0.0f, dt));
@@ -335,24 +333,16 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
         return;
     if (!activeNode)
     {
-        BeginCombatDecisionDebugInference();
         BeginCombatDecisionInference();
         activeNode = aiTree->ActiveNodeInference(behaviorData.get());
-        behaviorTreeCurrentNode = activeNode ? activeNode->GetName() : "None";
-        CompleteCombatDecisionDebugInference(behaviorTreeCurrentNode.c_str());
     }
     if (!activeNode)
     {
-        debugCurrentActiveBTNode = "None";
         return;
     }
-    debugCurrentActiveBTNode = activeNode->GetName();
     behaviorTreePreviousNode = activeNode->GetName();
-    behaviorTreeCurrentNode = activeNode->GetName();
     activeNode = aiTree->Run(activeNode, behaviorData.get(), dt);
     const auto result = aiTree->GetLastRunResult();
-    behaviorTreeLastResult = result == ActionBase::State::Run ? "Run" : result == ActionBase::State::Complete ? "Complete" : "Failed";
-    debugCurrentActiveBTNode = activeNode ? activeNode->GetName() : "None";
 
     if (!activeNode)
     {
@@ -360,17 +350,6 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
             (behaviorTreePreviousNode == "ExecuteAttackRecovery" ||
                 behaviorTreePreviousNode == "ExecuteChargeRecovery"))
             RecordBehaviorAttackCompleted();
-        if (result == ActionBase::State::Failed)
-        behaviorTreeCurrentNode = "None";
         return;
-    }
-    if (result == ActionBase::State::Complete)
-    {
-        behaviorTreeCurrentNode = "None";
-    }
-    else if (activeNode->GetName() != behaviorTreePreviousNode)
-    {
-        behaviorTreeCurrentNode = activeNode->GetName();
-        behaviorTreeLastResult = "Complete";
     }
 }

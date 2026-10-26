@@ -869,11 +869,13 @@ public:
     // 戦闘判断の診断情報を初期化する。
     void BeginCombatDecisionDebugInference();
 
-    // 戦闘判断で選択されたノードを記録する。
+    void RecordCombatDecisionDebugDefensive(bool result);
+
     void CompleteCombatDecisionDebugInference(const char* selectedNode);
 
+    // 戦闘判断で選択されたノードを記録する。
+
     // 防御行動の判定結果を記録する。
-    void RecordCombatDecisionDebugDefensive(bool result);
 
     // 戦闘開始時の位置調整を計画できるかを返す。
     bool CanPlanInitialReposition() const { return initialRepositionPending && !initialRepositionFallbackIdlePending; }
@@ -1135,7 +1137,6 @@ public:
     void SetFastComboRuntimeStage(int stage) { fastComboRuntimeStage = stage; }
 
     // Charge実行ノードの更新回数を記録する。
-    void RecordExecuteChargeAttackRunDebug();
 private:
     // ビヘイビアツリーを作成する
     void CreateBossBehaviorTree();
@@ -2464,34 +2465,7 @@ private:
 
     CloseCombatSettings closeCombatSettings;  // FastComboの計画・実行距離と向きの条件。
     bool showCloseCombatDebugRange = false;  // 近接攻撃範囲のデバッグ表示を有効にする。
-    std::string behaviorTreeCurrentNode = "None";  // 現在のBTノードの表示名。
     std::string behaviorTreePreviousNode = "None";  // 直前に実行したBTノードの表示名。
-    std::string behaviorTreeLastResult = "None";  // 直近のBTアクション結果の表示名。
-    std::string behaviorTreeLastJudgment = "None";  // 直近の判定結果の表示文字列。
-    mutable bool debugShouldAbortChargeBT = false;  // Charge BTを中断すべきかの診断値。
-    mutable bool debugAbortBehaviorTreeDisabled = false;  // BT無効による中断かの診断値。
-    mutable bool debugAbortExecutionNotAllowed = false;  // 実行条件を満たさないことによる中断かの診断値。
-    mutable bool debugAbortActiveNodeNull = false;  // 実行中ノードがないことによる中断かの診断値。
-    mutable bool debugAbortStateMismatch = false;  // 状態の不一致による中断かの診断値。
-    mutable std::string debugChargeExecutionNotAllowedReason = "None";  // Chargeを実行できない理由。
-    bool debugChargeBTAbortDetected = false;  // Charge BTの中断を検出したか。
-    bool debugCleanupChargeAttackBTCalled = false;  // Charge BTの後処理が呼ばれたか。
-    bool debugFailChargeAttackBTCalled = false;  // Charge BTの失敗処理が呼ばれたか。
-    bool debugFinishChargeRecoveryBTCalled = false;  // Charge Recoveryの終了処理が呼ばれたか。
-    std::string debugLastChargeAbortReason = "None";  // 直近のCharge中断理由。
-    std::string debugCurrentActiveBTNode = "None";  // 現在実行中のBTノード名。
-    uint64_t debugUpdateBehaviorTreeCallCount = 0;  // BT更新処理の呼び出し回数。
-    uint64_t debugExecuteChargeAttackRunCount = 0;  // Charge攻撃実行ノードの実行回数。
-    uint64_t debugUpdateTripleChargeBTCallCount = 0;  // 複数回Charge BTの更新回数。
-    float debugLastBehaviorTreeDeltaTime = 0.0f;  // 直近のBT更新に渡された時間差。
-    uint64_t debugTelegraphHoldUpdateCount = 0;  // 予兆保持処理の更新回数。
-    float debugTelegraphHoldLastDeltaTime = 0.0f;  // 予兆保持処理の直近の時間差。
-    std::string debugTelegraphEntryActiveNode = "None";  // 予兆開始時の実行中ノード名。
-    std::string debugTelegraphEntryInitialState = "None";  // 予兆開始時に記録した初期状態名。
-    std::string debugTelegraphEntryCurrentState = "None";  // 予兆開始時の現在状態名。
-    std::string debugTelegraphEntryBTLastResult = "None";  // 予兆開始時の直近のBT結果。
-    uint64_t debugTelegraphEntryUpdateBTCount = 0;  // 予兆開始時のBT更新回数。
-    uint64_t debugTelegraphEntryTripleUpdateCount = 0;  // 予兆開始時の複数回Charge更新回数。
     BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;  // 攻撃結果の保持値。
     bool behaviorApproachActive = false;  // FastComboの接近処理が有効かを示す。
     float fastComboPrepareDuration = 0.5f;  // FastComboの準備待機時間。

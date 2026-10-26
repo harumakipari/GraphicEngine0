@@ -746,9 +746,7 @@ void GruxEnemy::PauseBattleAI()
     activeNode = nullptr;
     if (behaviorData) behaviorData->Init();
     if (aiTree) aiTree->ResetActionRuntimes();
-    behaviorTreeCurrentNode = "None";
     behaviorTreePreviousNode = "None";
-    behaviorTreeLastResult = "None";
 
     if (stateMachine_)
         stateMachine_->ChangeState("EnemyIdleState");
@@ -761,9 +759,7 @@ void GruxEnemy::PauseBattleAIForPhaseTransition()
     ResetFourthHitReactionDebug();
     StopBattleActions();
     ResetBehaviorTreeRuntime();
-    behaviorTreeCurrentNode = "None";
     behaviorTreePreviousNode = "None";
-    behaviorTreeLastResult = "None";
     // Do not request EnemyIdleState here: future transition animation owns this pose.
 }
 
@@ -1038,10 +1034,7 @@ void GruxEnemy::ResetBehaviorTreeForBattleRestart()
     activeNode = nullptr;
     if (behaviorData) behaviorData->Init();
     if (aiTree) aiTree->ResetActionRuntimes();
-    behaviorTreeCurrentNode = "None";
     behaviorTreePreviousNode = "None";
-    behaviorTreeLastResult = "None";
-    behaviorTreeLastJudgment = "None";
     consecutiveAttackCount = 0;
     repositionDecisionCached = false;
     repositionDecisionResult = false;
@@ -2435,10 +2428,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
     ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     ImGui::DragFloat(U8("旋回タイムアウト"), &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
-    ImGui::Text(U8("BT 現在ノード: %s"), behaviorTreeCurrentNode.c_str());
     ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
-    ImGui::Text(U8("BT 前回実行結果: %s"), behaviorTreeLastResult.c_str());
-    ImGui::Text(U8("BT 前回判定: %s"), behaviorTreeLastJudgment.c_str());
     if (ImGui::TreeNode(U8("FastCombo ターゲット情報")))
     {
         const char* runtimeStateName = fastComboRuntimeState == FastComboRuntimeState::Attack ? "Attack" : fastComboRuntimeState == FastComboRuntimeState::InterStageDelay ? "InterStageDelay" : "InterStageFacing";
@@ -2558,275 +2548,7 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::SeparatorText("PrimaryAttack_LA Hit Debug");
 
 
-    ImGui::Begin("Boss AI Debug");
-    ImGui::SeparatorText("Boss Rotation Debug");
-    const char* fullStateName = stateMachine_ ? stateMachine_->GetStateName() : "";
-    const char* stateDisplayName = "None";
-    if (ImGui::CollapsingHeader("Runtime Tuning", ImGuiTreeNodeFlags_DefaultOpen))
-    {
-        ImGui::SeparatorText("Boss Sword Trail");
-        ImGui::ColorEdit3("Trail Color", &bossTrailColor.x);
-        ImGui::DragFloat("Trail Emissive Strength", &bossTrailEmissiveStrength,
-            0.05f, 0.0f, 30.0f, "%.2f");
-        ImGui::DragFloat("Trail Lifetime", &bossTrailLifetime,
-            0.01f, 0.05f, 5.0f, "%.2f sec");
-        bossTrailEmissiveStrength = std::clamp(bossTrailEmissiveStrength, 0.0f, 30.0f);
-        bossTrailLifetime = std::clamp(bossTrailLifetime, 0.05f, 5.0f);
 
-        constexpr float minimumDistanceGap = 0.1f;
-        ImGui::SeparatorText("Distance");
-        if (ImGui::DragFloat("Near Distance", &nearDistanceThreshold, 0.1f, 0.0f, 100.0f, "%.2f"))
-        {
-            nearDistanceThreshold = (std::max)(0.0f, nearDistanceThreshold);
-            if (nearDistanceThreshold >= middleDistanceThreshold)
-                middleDistanceThreshold = nearDistanceThreshold + minimumDistanceGap;
-        }
-        if (ImGui::DragFloat("Middle Distance", &middleDistanceThreshold, 0.1f, 0.1f, 200.0f, "%.2f"))
-        {
-            middleDistanceThreshold = (std::max)(
-                nearDistanceThreshold + minimumDistanceGap,
-                middleDistanceThreshold);
-        }
-        constexpr float minimumRelativeSideAngleWidth = 5.0f;
-        ImGui::SeparatorText("Player Relative Region");
-        if (ImGui::DragFloat("Front Max Angle", &relativeFrontMaxAngle,
-            1.0f, 10.0f, 90.0f, "%.1f deg"))
-        {
-            relativeFrontMaxAngle = std::clamp(relativeFrontMaxAngle,
-                10.0f, relativeBackMinAngle - minimumRelativeSideAngleWidth);
-        }
-        if (ImGui::DragFloat("Back Min Angle", &relativeBackMinAngle,
-            1.0f, 90.0f, 170.0f, "%.1f deg"))
-        {
-            relativeBackMinAngle = std::clamp(relativeBackMinAngle,
-                relativeFrontMaxAngle + minimumRelativeSideAngleWidth, 170.0f);
-        }
-        relativeFrontMaxAngle = std::clamp(relativeFrontMaxAngle,
-            10.0f, relativeBackMinAngle - minimumRelativeSideAngleWidth);
-        relativeBackMinAngle = std::clamp(relativeBackMinAngle,
-            relativeFrontMaxAngle + minimumRelativeSideAngleWidth, 170.0f);
-
-        ImGui::SeparatorText("Combat Behavior");
-        const auto getIntentData = [&](const BossIntentType type) -> BossIntentData&
-            {
-                for (BossIntentData& data : combatIntentData)
-                {
-                    if (data.type == type)
-                        return data;
-                }
-                return combatIntentData.front();
-            };
-        BossIntentData& closeCombatIntent =
-            getIntentData(BossIntentType::CloseCombat);
-        BossIntentData& repositionIntent =
-            getIntentData(BossIntentType::CombatReposition);
-        BossIntentData& dashIntent =
-            getIntentData(BossIntentType::DashAttackPlan);
-        BossIntentData& jumpIntent =
-            getIntentData(BossIntentType::JumpAttackPlan);
-
-
-        ImGui::SeparatorText("Post Attack Modifier");
-        ImGui::DragFloat("Post Attack CombatReposition Weight",
-            &postAttackCombatRepositionWeight, 1.0f, 0.0f, 1000.0f, "%.1f");
-        postAttackCombatRepositionWeight = std::clamp(
-            postAttackCombatRepositionWeight, 0.0f, 1000.0f);
-        ImGui::SeparatorText("Combat Reposition");
-        ImGui::DragFloat("Combat Reposition Distance", &combatRepositionMoveDistance,
-            0.1f, 0.0f, 15.0f, "%.2f m");
-        combatRepositionMoveDistance = std::clamp(
-            combatRepositionMoveDistance, 0.0f, 15.0f);
-        ImGui::DragFloat("Combat Reposition Move Speed", &combatRepositionMoveSpeed,
-            0.1f, 0.5f, 10.0f, "%.2f m/s");
-        combatRepositionMoveSpeed = std::clamp(
-            combatRepositionMoveSpeed, 0.5f, 10.0f);
-        ImGui::DragFloat("Combat Reposition Settle Duration",
-            &combatRepositionSettleDuration, 0.01f, 0.0f, 10.0f, "%.2f sec");
-        combatRepositionSettleDuration = std::clamp(
-            combatRepositionSettleDuration, 0.0f, 10.0f);
-
-        ImGui::SeparatorText("Attack Ready");
-        ImGui::DragFloat("Front Attack Ready Duration", &frontAttackReadyDuration,
-            0.01f, 0.0f, 3.0f, "%.2f sec");
-        ImGui::DragFloat("Side Attack Ready Duration", &sideAttackReadyDuration,
-            0.01f, 0.0f, 3.0f, "%.2f sec");
-        ImGui::DragFloat("CloseCombat Ready Facing Angle",
-            &closeCombatReadyFacingAngle, 0.1f, 0.0f, 30.0f, "%.1f deg");
-        frontAttackReadyDuration = std::clamp(frontAttackReadyDuration, 0.0f, 3.0f);
-        sideAttackReadyDuration = std::clamp(sideAttackReadyDuration, 0.0f, 3.0f);
-        closeCombatReadyFacingAngle = std::clamp(
-            closeCombatReadyFacingAngle, 0.0f, 30.0f);
-
-
-        ImGui::SeparatorText("Positioning Plans");
-        for (size_t i = 0; i < combatIntentData.size(); ++i)
-        {
-            BossIntentData& intentData = combatIntentData[i];
-            ImGui::PushID(static_cast<int>(i));
-            if (ImGui::TreeNode(intentTypes[i]))
-            {
-                constexpr float minimumPreferredRangeWidth = 0.1f;
-                if (ImGui::DragFloat("Preferred Min", &intentData.preferredMinDistance,
-                    0.1f, 0.0f, 100.0f, "%.2f m"))
-                {
-                    intentData.preferredMinDistance =
-                        (std::max)(0.0f, intentData.preferredMinDistance);
-                    if (intentData.preferredMinDistance >= intentData.preferredMaxDistance)
-                    {
-                        intentData.preferredMaxDistance =
-                            intentData.preferredMinDistance + minimumPreferredRangeWidth;
-                    }
-                }
-                if (ImGui::DragFloat("Preferred Max", &intentData.preferredMaxDistance,
-                    0.1f, 0.1f, 100.0f, "%.2f m"))
-                {
-                    intentData.preferredMaxDistance = (std::max)(
-                        intentData.preferredMinDistance + minimumPreferredRangeWidth,
-                        intentData.preferredMaxDistance);
-                }
-                ImGui::DragFloat(U8("位置取り完了とみなす値"), &intentData.positioningArrivalInset,
-                    0.05f, 0.0f, 10.0f, "%.2f m");
-                intentData.positioningArrivalInset =
-                    (std::max)(0.0f, intentData.positioningArrivalInset);
-                ImGui::TreePop();
-            }
-            ImGui::PopID();
-        }
-        ImGui::SeparatorText("Charge Attack");
-
-        ImGui::DragFloat("Charge Windup End Time", &chargeWindupEndTime,
-            0.01f, 0.0f, 10.0f, "%.2f sec");
-        ImGui::DragFloat(U8("突進ロックオン方向時間"), &chargeDirectionLockTime,
-            0.01f, 0.0f, chargeWindupEndTime, "%.2f sec");
-        ImGui::DragFloat("Charge PlayerHit Recovery Duration",
-            &chargePlayerHitRecoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-        ImGui::DragFloat("Charge JustDodge Recovery Duration",
-            &chargeJustDodgeRecoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-        ImGui::DragFloat("Charge Safety Timeout", &chargeSafetyTimeout,
-            0.1f, 0.5f, 30.0f, "%.2f sec");
-        ImGui::DragFloat("Wall Cast Safety Margin", &chargeWallCastSafetyMargin,
-            0.01f, 0.0f, 2.0f, "%.2f m");
-        ImGui::DragFloat("Wall Facing Threshold", &chargeWallFacingThreshold,
-            0.01f, 0.0f, 1.0f, "%.2f");
-        ImGui::DragFloat("Wall Normal Y Threshold", &chargeWallNormalYThreshold,
-            0.01f, 0.0f, 1.0f, "%.2f");
-
-        chargeWindupEndTime = (std::max)(0.0f, chargeWindupEndTime);
-        chargeSpeed = (std::max)(0.1f, chargeSpeed);
-        chargeSpeedPhase2 = (std::max)(0.1f, chargeSpeedPhase2);
-        chargePlayerHitRecoveryDuration =
-            (std::max)(0.0f, chargePlayerHitRecoveryDuration);
-        chargeJustDodgeRecoveryDuration =
-            (std::max)(0.0f, chargeJustDodgeRecoveryDuration);
-        chargeSafetyTimeout = (std::max)(0.5f, chargeSafetyTimeout);
-        chargeWallCastSafetyMargin = (std::max)(0.0f, chargeWallCastSafetyMargin);
-        chargeWallFacingThreshold = std::clamp(chargeWallFacingThreshold, 0.0f, 1.0f);
-        chargeWallNormalYThreshold = std::clamp(chargeWallNormalYThreshold, 0.0f, 1.0f);
-        chargePlayerCastRadiusScale = std::clamp(chargePlayerCastRadiusScale, 0.1f, 2.0f);
-        chargeWallCastRadiusScale = std::clamp(chargeWallCastRadiusScale, 0.1f, 2.0f);
-        chargeStartValidationClearance = (std::max)(0.001f, chargeStartValidationClearance);
-
-        const char* chargeEndReasonName = "None";
-        switch (chargeEndReasonDebug)
-        {
-        case ChargeAttackEndReason::PlayerHit: chargeEndReasonName = "PlayerHit"; break;
-        case ChargeAttackEndReason::JustDodge: chargeEndReasonName = "JustDodge"; break;
-        case ChargeAttackEndReason::WallHit: chargeEndReasonName = "WallHit"; break;
-        case ChargeAttackEndReason::LegComplete: chargeEndReasonName = "LegComplete"; break;
-        case ChargeAttackEndReason::SafetyTimeout: chargeEndReasonName = "SafetyTimeout"; break;
-        default: break;
-        }
-
-        ImGui::SeparatorText("Jump Attack Telegraph");
-        const auto animationController = GetBodyAnimationController();
-        const float telegraphClipDuration = animationController
-            ? animationController->GetAnimationLength("Pre_Stampede_0")
-            : 7.5f;
-        constexpr float minimumTelegraphRange = 0.01f;
-        if (ImGui::DragFloat("Jump Telegraph Start", &jumpAttackTelegraphStartTime,
-            0.01f, 0.0f, telegraphClipDuration - minimumTelegraphRange, "%.2f sec"))
-        {
-            jumpAttackTelegraphStartTime = std::clamp(
-                jumpAttackTelegraphStartTime, 0.0f,
-                jumpAttackTelegraphEndTime - minimumTelegraphRange);
-        }
-        if (ImGui::DragFloat("Jump Telegraph End", &jumpAttackTelegraphEndTime,
-            0.01f, minimumTelegraphRange, telegraphClipDuration, "%.2f sec"))
-        {
-            jumpAttackTelegraphEndTime = std::clamp(
-                jumpAttackTelegraphEndTime,
-                jumpAttackTelegraphStartTime + minimumTelegraphRange,
-                telegraphClipDuration);
-        }
-
-        ImGui::SeparatorText("Action Tuning");
-        for (size_t i = 0; i < combatActionData.size(); ++i)
-        {
-            BossActionData& actionData = combatActionData[i];
-            ImGui::PushID(static_cast<int>(i));
-            if (ImGui::TreeNode(actionTypes[i]))
-            {
-                ImGui::DragFloat("Weight", &actionData.weight, 0.5f, 0.0f, 1000.0f, "%.1f");
-                actionData.weight = (std::max)(0.0f, actionData.weight);
-                ImGui::DragFloat("Base Cooldown", &actionData.cooldownDuration, 0.05f, 0.0f, 60.0f, "%.2f sec");
-                actionData.cooldownDuration = (std::max)(0.0f, actionData.cooldownDuration);
-
-                if (actionData.attackType)
-                {
-                    for (BossAttackData& attackData : combatAttackData)
-                    {
-                        if (attackData.type != *actionData.attackType)
-                            continue;
-                        ImGui::DragFloat("Recovery", &attackData.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
-                        attackData.recoveryDuration = (std::max)(0.0f, attackData.recoveryDuration);
-                        ImGui::DragInt("Damage / Hit", &attackData.damagePerHit, 1.0f, 0, 1000);
-                        attackData.damagePerHit = (std::max)(0, attackData.damagePerHit);
-                        break;
-                    }
-                }
-
-                ImGui::TreePop();
-            }
-            ImGui::PopID();
-        }
-
-        if (ImGui::Button("Reset AI Tuning"))
-        {
-            combatIntentData = initialCombatIntentData;
-            for (size_t i = 0; i < combatActionData.size(); ++i)
-            {
-                combatActionData[i].weight = initialCombatActionData[i].weight;
-                combatActionData[i].cooldownDuration = initialCombatActionData[i].cooldownDuration;
-            }
-            for (size_t i = 0; i < combatAttackData.size(); ++i)
-            {
-                combatAttackData[i].recoveryDuration = initialCombatAttackData[i].recoveryDuration;
-                combatAttackData[i].damagePerHit = initialCombatAttackData[i].damagePerHit;
-            }
-            nearDistanceThreshold = initialNearDistanceThreshold;
-            middleDistanceThreshold = initialMiddleDistanceThreshold;
-            relativeFrontMaxAngle = initialRelativeFrontMaxAngle;
-            relativeBackMinAngle = initialRelativeBackMinAngle;
-            combatRepositionMoveDistance = initialCombatRepositionMoveDistance;
-            combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;
-            combatRepositionSettleDuration = initialCombatRepositionSettleDuration;
-            combatRepositionBackWeight = initialCombatRepositionBackWeight;
-            dashAttackPlanBackWeight = initialDashAttackPlanBackWeight;
-            jumpAttackPlanBackWeight = initialJumpAttackPlanBackWeight;
-            postAttackCombatRepositionWeight =
-                initialPostAttackCombatRepositionWeight;
-            frontAttackReadyDuration = initialFrontAttackReadyDuration;
-            sideAttackReadyDuration = initialSideAttackReadyDuration;
-            closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;
-            repeatAttackPenalty = initialRepeatAttackPenalty;
-        }
-    }
-
-
-
-    ImGui::SeparatorText("Weighted Random Result (Last Selection)");
-
-    ImGui::End();
 
 
 #endif
