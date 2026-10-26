@@ -2,89 +2,140 @@
 #include "Audio.h"
 
 #include <imgui.h>
+#include <memory>
 
+
+namespace
+{
+    class ScopedFileHandle
+    {
+    public:
+        explicit ScopedFileHandle(HANDLE handle) noexcept : handle_(handle) {}
+
+        ~ScopedFileHandle()
+        {
+            if (handle_ != INVALID_HANDLE_VALUE && handle_ != nullptr)
+            {
+                CloseHandle(handle_);
+            }
+        }
+
+        ScopedFileHandle(const ScopedFileHandle&) = delete;
+        ScopedFileHandle& operator=(const ScopedFileHandle&) = delete;
+
+        HANDLE Get() const noexcept { return handle_; }
+
+    private:
+        HANDLE handle_ = INVALID_HANDLE_VALUE;
+    };
+
+    HRESULT GetLastErrorAsHRESULT_()
+    {
+        const DWORD error = GetLastError();
+        return HRESULT_FROM_WIN32(error == ERROR_SUCCESS ? ERROR_READ_FAULT : error);
+    }
+
+    HRESULT SetFilePointerChecked_(HANDLE hfile, LONG distance, DWORD moveMethod)
+    {
+        SetLastError(ERROR_SUCCESS);
+        const DWORD result = SetFilePointer(hfile, distance, nullptr, moveMethod);
+        if (result == INVALID_SET_FILE_POINTER && GetLastError() != ERROR_SUCCESS)
+        {
+            return GetLastErrorAsHRESULT_();
+        }
+        return S_OK;
+    }
+
+    HRESULT ReadFileExactly_(HANDLE hfile, void* buffer, DWORD size)
+    {
+        DWORD bytesRead = 0;
+        if (!ReadFile(hfile, buffer, size, &bytesRead, nullptr))
+        {
+            return GetLastErrorAsHRESULT_();
+        }
+        if (bytesRead != size)
+        {
+            return HRESULT_FROM_WIN32(ERROR_HANDLE_EOF);
+        }
+        return S_OK;
+    }
+}
 
 HRESULT FindChunk_(HANDLE hfile, DWORD fourcc, DWORD& chunkSize, DWORD& chunkDataPosition)
 {
-	HRESULT hr = S_OK;
+    HRESULT hr = SetFilePointerChecked_(hfile, 0, FILE_BEGIN);
+    if (FAILED(hr)) return hr;
 
-	if (INVALID_SET_FILE_POINTER == SetFilePointer(hfile, 0, NULL, FILE_BEGIN))
-	{
-		return HRESULT_FROM_WIN32(GetLastError());
-	}
+    DWORD bytesRead = 0;
+    DWORD riffEnd = 0;
+    bool insideRiff = false;
 
-	DWORD chunkType;
-	DWORD chunkDataSize;
-	DWORD riffDataSize = 0;
-	DWORD fileType;
-	DWORD bytesRead = 0;
-	DWORD offset = 0;
+    for (;;)
+    {
+        if (insideRiff && (bytesRead > riffEnd || riffEnd - bytesRead < sizeof(DWORD) * 2))
+            return HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
 
-	while (hr == S_OK)
-	{
-		DWORD numberOfBytesRead;
-		if (0 == ReadFile(hfile, &chunkType, sizeof(DWORD), &numberOfBytesRead, NULL))
-		{
-			hr = HRESULT_FROM_WIN32(GetLastError());
-		}
+        DWORD chunkType = 0;
+        DWORD chunkDataSize = 0;
+        hr = ReadFileExactly_(hfile, &chunkType, sizeof(chunkType));
+        if (FAILED(hr)) return hr;
+        bytesRead += sizeof(chunkType);
+        hr = ReadFileExactly_(hfile, &chunkDataSize, sizeof(chunkDataSize));
+        if (FAILED(hr)) return hr;
+        bytesRead += sizeof(chunkDataSize);
 
-		if (0 == ReadFile(hfile, &chunkDataSize, sizeof(DWORD), &numberOfBytesRead, NULL))
-		{
-			hr = HRESULT_FROM_WIN32(GetLastError());
-		}
+        const DWORD chunkDataPositionLocal = bytesRead;
+        if (chunkType == 'FFIR')
+        {
+            if (chunkDataSize < sizeof(DWORD) || chunkDataSize > MAXDWORD - sizeof(DWORD) * 2)
+                return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 
-		switch (chunkType)
-		{
-		case 'FFIR'://RIFF
-			riffDataSize = chunkDataSize;
-			chunkDataSize = 4;
-			if (0 == ReadFile(hfile, &fileType, sizeof(DWORD), &numberOfBytesRead, NULL))
-			{
-				hr = HRESULT_FROM_WIN32(GetLastError());
-			}
-			break;
-		default:
-			if (INVALID_SET_FILE_POINTER == SetFilePointer(hfile, chunkDataSize, NULL, FILE_CURRENT))
-			{
-				return HRESULT_FROM_WIN32(GetLastError());
-			}
-		}
+            if (chunkType == fourcc)
+            {
+                chunkSize = chunkDataSize;
+                chunkDataPosition = chunkDataPositionLocal;
+                return S_OK;
+            }
 
-		offset += sizeof(DWORD) * 2;
+            if (insideRiff)
+                return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 
-		if (chunkType == fourcc)
-		{
-			chunkSize = chunkDataSize;
-			chunkDataPosition = offset;
-			return S_OK;
-		}
+            DWORD formType = 0;
+            hr = ReadFileExactly_(hfile, &formType, sizeof(formType));
+            if (FAILED(hr)) return hr;
+            bytesRead += sizeof(formType);
+            riffEnd = sizeof(DWORD) * 2 + chunkDataSize;
+            insideRiff = true;
+            continue;
+        }
 
-		offset += chunkDataSize;
+        const ULONGLONG paddedChunkSize = static_cast<ULONGLONG>(chunkDataSize) + (chunkDataSize & 1u);
+        const ULONGLONG chunkEnd = static_cast<ULONGLONG>(bytesRead) + paddedChunkSize;
+        if (!insideRiff || chunkEnd > riffEnd || paddedChunkSize > MAXLONG)
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 
-		if (bytesRead >= riffDataSize)
-		{
-			return S_FALSE;
-		}
-	}
+        if (chunkType == fourcc)
+        {
+            chunkSize = chunkDataSize;
+            chunkDataPosition = chunkDataPositionLocal;
+            return S_OK;
+        }
 
-	return S_OK;
+        hr = SetFilePointerChecked_(hfile, static_cast<LONG>(paddedChunkSize), FILE_CURRENT);
+        if (FAILED(hr)) return hr;
+        bytesRead = static_cast<DWORD>(chunkEnd);
+    }
 }
 
 HRESULT ReadChunkData_(HANDLE hfile, LPVOID buffer, DWORD bufferSize, DWORD bufferOffset)
 {
-	HRESULT hr = S_OK;
-	if (INVALID_SET_FILE_POINTER == SetFilePointer(hfile, bufferOffset, NULL, FILE_BEGIN))
-	{
-		return HRESULT_FROM_WIN32(GetLastError());
-	}
-	DWORD numberOfBytesRead;
-	if (0 == ReadFile(hfile, buffer, bufferSize, &numberOfBytesRead, NULL))
-	{
-		hr = HRESULT_FROM_WIN32(GetLastError());
-	}
-	return hr;
-}
+    if (buffer == nullptr && bufferSize != 0)
+        return E_INVALIDARG;
 
+    const HRESULT hr = SetFilePointerChecked_(hfile, static_cast<LONG>(bufferOffset), FILE_BEGIN);
+    if (FAILED(hr)) return hr;
+    return ReadFileExactly_(hfile, buffer, bufferSize);
+}
 void CoreAudio::CreateAudioSource(std::shared_ptr<CoreAudioBuffer> buffer,
 	IXAudio2SourceVoice** sourceVoice, CoreSoundType type)
 {
@@ -138,56 +189,54 @@ float CoreAudio::CoreAudioBuffer::GetDuration() const
 
 std::shared_ptr<CoreAudio::CoreAudioBuffer> CoreAudio::CoreAudioBuffer::GetResource(const std::wstring& filePath)
 {
-	//すでに存在していたらリソースを返す
-	if (resources.contains(filePath) && !resources.at(filePath).expired())
-	{
-		return resources.at(filePath).lock();
-	}
+    //すでに存在していたらリソースを返す
+    if (resources.contains(filePath) && !resources.at(filePath).expired())
+    {
+        return resources.at(filePath).lock();
+    }
 
-	//存在していなければ新規でオーディオバッファを作成
-	{
-		HRESULT hr;
-		std::shared_ptr<CoreAudioBuffer> audioBuffer = std::make_shared<CoreAudioBuffer>();
+    const ScopedFileHandle file(CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr));
+    if (file.Get() == INVALID_HANDLE_VALUE)
+        return nullptr;
 
-		//ファイルオープン
-		HANDLE hfile = CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-		if (INVALID_HANDLE_VALUE == hfile)
-		{
-			hr = HRESULT_FROM_WIN32(GetLastError());
-			_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-		}
+    DWORD chunkSize = 0;
+    DWORD chunkPosition = 0;
+    HRESULT hr = FindChunk_(file.Get(), 'FFIR'/*RIFF*/, chunkSize, chunkPosition);
+    if (FAILED(hr) || chunkSize < sizeof(DWORD))
+        return nullptr;
 
-		if (INVALID_SET_FILE_POINTER == SetFilePointer(hfile, 0, NULL, FILE_BEGIN))
-		{
-			hr = HRESULT_FROM_WIN32(GetLastError());
-			_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-		}
+    DWORD fileType = 0;
+    hr = ReadChunkData_(file.Get(), &fileType, sizeof(fileType), chunkPosition);
+    if (FAILED(hr) || fileType != 'EVAW'/*WAVE*/)
+        return nullptr;
 
-		DWORD chunkSize;
-		DWORD chunkPosition;
-		//check the file type, should be 'WAVE' or 'XWMA'
-		FindChunk_(hfile, 'FFIR'/*RIFF*/, chunkSize, chunkPosition);
-		DWORD fileType = 0;
-		ReadChunkData_(hfile, &fileType, sizeof(DWORD), chunkPosition);
-		_ASSERT_EXPR(fileType == 'EVAW'/*WAVE*/, L"Only support 'WAVE'");
+    std::shared_ptr<CoreAudioBuffer> audioBuffer = std::make_shared<CoreAudioBuffer>();
+    hr = FindChunk_(file.Get(), ' tmf'/*FMT*/, chunkSize, chunkPosition);
+    constexpr DWORD minWaveFormatSize = sizeof(WAVEFORMATEX) - sizeof(WORD);
+    if (FAILED(hr) || chunkSize < minWaveFormatSize || chunkSize > sizeof(audioBuffer->wfx))
+        return nullptr;
 
-		FindChunk_(hfile, ' tmf'/*FMT*/, chunkSize, chunkPosition);
-		ReadChunkData_(hfile, &audioBuffer->wfx, chunkSize, chunkPosition);
+    hr = ReadChunkData_(file.Get(), &audioBuffer->wfx, chunkSize, chunkPosition);
+    if (FAILED(hr))
+        return nullptr;
 
-		//fill out the audio data buffer with the contents of the fourccDATA chunk
-		FindChunk_(hfile, 'atad'/*DATA*/, chunkSize, chunkPosition);
-		BYTE* data = new BYTE[chunkSize];
-		ReadChunkData_(hfile, data, chunkSize, chunkPosition);
+    // Keep PCM data locally until the complete read succeeds.
+    hr = FindChunk_(file.Get(), 'atad'/*DATA*/, chunkSize, chunkPosition);
+    if (FAILED(hr) || chunkSize == 0)
+        return nullptr;
 
-		audioBuffer->buffer.AudioBytes = chunkSize;  //size of the audio buffer in bytes
-		audioBuffer->buffer.pAudioData = data; //buffer containing audio data
-		audioBuffer->buffer.Flags = XAUDIO2_END_OF_STREAM; // tell the source voice not to expect any data after this buffer
+    auto data = std::make_unique<BYTE[]>(chunkSize);
+    hr = ReadChunkData_(file.Get(), data.get(), chunkSize, chunkPosition);
+    if (FAILED(hr))
+        return nullptr;
 
-		resources[filePath] = audioBuffer;
-		return audioBuffer;
-	}
+    audioBuffer->buffer.AudioBytes = chunkSize;  //size of the audio buffer in bytes
+    audioBuffer->buffer.pAudioData = data.release(); // CoreAudioBuffer owns this allocation.
+    audioBuffer->buffer.Flags = XAUDIO2_END_OF_STREAM; // tell the source voice not to expect any data after this buffer
+
+    resources[filePath] = audioBuffer;
+    return audioBuffer;
 }
-
 std::shared_ptr<CoreStandaloneAudioSource> CoreAudio::PlayOneShot(const wchar_t* filePath, float volume)
 {
 	std::shared_ptr<CoreStandaloneAudioSource> source = std::make_shared<CoreStandaloneAudioSource>(filePath);

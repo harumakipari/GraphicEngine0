@@ -1581,7 +1581,7 @@ void GameScene::OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& sourc
     currentRecoveryScale = finalHitSlowScale;
     finalHitReactionCutReached = false;
     finalHitTimer = finalHitSlowDuration;
-    finalHitPending = true; 
+    finalHitPending = true;
     battleFlowState = BattleFlowState::FinalHitSlow;
     finalBattleTime = battleElapsedTime + Time::UnscaledDeltaTime();
     finalBattleTimeSaved = true;
@@ -2042,11 +2042,8 @@ void GameScene::UpdateBattleFlow()
 
 void GameScene::SetUpActors()
 {
-    {
-        PROFILE_SCOPE("Create Player");
-        Transform playerTr = mainRoomStartPlayerTransform;
-        player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("Player", playerTr);
-    }
+    Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
+    player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("Player", mainRoomStartPlayerTransform);
 
     Transform debugCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto debugCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DebugCamera>("debugCam", debugCameraTr);
@@ -2064,9 +2061,9 @@ void GameScene::SetUpActors()
     auto movieCameraManagerActor = GetActorManager()->CreateAndRegisterActorWithTransform<MovieCameraManagerActor>("movieCameraManager", movieCameraTr);
     movieCameraManagerActor->SetMovieCameraComponent(movieCameraActor->GetMovieCameraComponent());
 
+    // 瓦礫アクター生成
     Transform debrisTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    this->GetActorManager()->CreateAndRegisterActorWithTransform<ModelDebrisEmitterActor>(
-        "ModelDebrisEmitterActor", debrisTr);
+    this->GetActorManager()->CreateAndRegisterActorWithTransform<ModelDebrisEmitterActor>("ModelDebrisEmitterActor", debrisTr);
 
     // 布の生成
     {
@@ -2113,8 +2110,6 @@ void GameScene::SetUpActors()
         Transform paintingTr{ pos,point.worldRotation,point.worldScale };
         auto paintingActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStagePaintingActor>("PaintingActor", paintingTr);
     }
-#endif // 0
-#if 0
     // 牢屋の部屋の絵画
     {
         Transform paintingTr{ DirectX::XMFLOAT3{-67.42f,4.2f,17.26f},DirectX::XMFLOAT3{0.0f,180.0f,0.0f},DirectX::XMFLOAT3{0.81f,1.0f,0.81f } };
@@ -2141,13 +2136,11 @@ void GameScene::SetUpActors()
 
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
     gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
-    // Battle AI remains paused throughout the pre-battle approach and intro movie.
     if (gruxEnemyActor)
         gruxEnemyActor->PauseBattleAI();
-    // Only this scene's boss-death flow owns the death animation sequence.
     gruxEnemyActor->SetCinematicDeathAnimationOwnedExternally(true);
-    player->SetFinalHitCallback([this](GruxEnemy* boss, const DirectX::XMFLOAT3& source)
-        { OnPlayerFinalHit(boss, source); });
+
+    player->SetFinalHitCallback([this](GruxEnemy* boss, const DirectX::XMFLOAT3& source) { OnPlayerFinalHit(boss, source); });
 
     // メインの部屋にチュートリアル用の骸骨を追加。
     SpawnTutorialSkeletons();
@@ -2163,7 +2156,6 @@ void GameScene::SetUpActors()
     darkCameraActor->InitSetYawAndPitch(DirectX::XMConvertToRadians(-20.0f), DirectX::XMConvertToRadians(0.0f));
     darkCameraActor->SetPlayerHead(player->GetCameraTargetComponent());
     darkCameraActor->SetEnemyHead(gruxEnemyActor->GetCameraTargetComponent());
-
 
 
     loadStageThread.join();

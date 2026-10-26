@@ -306,7 +306,6 @@ private:
     bool tutorialCameraProfileTriggerFired = false;
     DirectX::XMFLOAT3 prisonOpeningSittingPosition{ -66.919f, -0.078f, 11.892f };
     float prisonOpeningSittingYawDegrees = 107.031867f;
-    Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
     bool prisonOpeningMovieStartRequested = false;
     bool backToRoomStartRequested = false;
     GameTutorialController tutorialController;
