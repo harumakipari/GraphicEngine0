@@ -70,8 +70,31 @@ public:
         Invalidated,
     };
 
-    GameScene();
-    ~GameScene() override;
+private:
+    enum class Phase1FinalHitTimePhase : uint8_t
+    {
+        None,
+        HitStop,
+        Slow,
+    };
+
+    enum class Phase2TransitionStep : uint8_t
+    {
+        None,
+        RecallFadeOut,
+        RecallFadeIn,
+        RecallPreWait,
+        BossRecall,
+        PlayerEmotePreWait,
+        PlayerEmote,
+        PlayerEmotePostWait,
+        ReturnToTps,
+    };
+
+public:
+    GameScene() {}
+    ~GameScene()override {}
+
     bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) override;
     void Start() override;
     void Update(float deltaTime) override;
@@ -87,11 +110,10 @@ public:
     void CancelBossRoomLerp();
     void EnterBossRoomLockOnScope(bool fromTutorialDoorMovie = true);
     void PrepareTutorialForBossEntry();
-    bool BeginPrisonOpeningMoviePlayerSitting();
-    void EndPrisonOpeningMoviePlayerSitting();
+    bool BeginPrisonOpeningMoviePlayerSitting() const;
+    void EndPrisonOpeningMoviePlayerSitting() const;
 
     // 戦闘・BGM
-    void SetDeathPresentationCueCallback(std::function<void(GamePlayerDeathController::Cue)> callback);
     void BeginGameBgmFadeOut();
     void PlayBossBattleBgm();
     void StartBossBattle();
@@ -116,28 +138,11 @@ public:
     bool IsBossDeathCinematicAudioActive() const;
 
 private:
-    enum class Phase1FinalHitTimePhase : uint8_t
-    {
-        None,
-        HitStop,
-        Slow,
-    };
+    // コントローラー生成
+    void CreateController();
 
-    enum class Phase2TransitionStep : uint8_t
-    {
-        None,
-        RecallFadeOut,
-        RecallFadeIn,
-        RecallPreWait,
-        BossRecall,
-        PlayerEmotePreWait,
-        PlayerEmote,
-        PlayerEmotePostWait,
-        ReturnToTps,
-    };
-
-    // 初期化・Actor構築
-    void CreateBossDeathFadeUI();
+    // ゲームUIを生成
+    void CreateUI();
 
     // Tutorial・Lock-on
     void UpdateTutorialCameraProfileTrigger();
@@ -146,21 +151,19 @@ private:
         float& outScreenDistanceSq) const;
     void UpdateOperationGuideTutorial(LockOnTargetSelectionResult selectionResult);
     void CompleteTutorialForBossBattle();
-    void UpdateLockOnTargetUI(float deltaTime);
+    void UpdateLockOnTargetUI(float deltaTime) const;
     void StartJudgeDodgeOperationTutorial();
     void CloseJudgeDodgeOperationTutorial();
     void UpdateTutorialDodgeGuideRing();
-    void SpawnTutorialSkeletons();
-    void CreateTutorialSkeletonUI();
     void UpdateTutorialSkeletonUI();
-    void HideTutorialSkeletonUI();
+    void HideTutorialSkeletonUI() const;
 
     // 戦闘進行・最終ヒット
     void UpdateBattleFlow();
     void OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& source);
     void EnterPlayerDead();
     void EnterBossDead();
-    void SetBattleHudVisible(bool visible);
+    void SetBattleHudVisible(bool visible) const;
     void BeginPhase2FinalHitHpFallback();
     bool IsPhase2FinalHitGateComplete() const;
 
@@ -169,20 +172,20 @@ private:
     void CompletePhase2TransitionAtBlack();
     void UpdatePhase2Transition();
     void ResetBossPhaseRuntime(BossPhase phase);
-    void ApplyBossPhaseHp(BossPhase phase);
+    void ApplyBossPhaseHp(BossPhase phase) const;
     void BeginPhase1BreakPending();
     void UpdatePhase1BreakPending();
     void StartPhase1FinalHitTimeSequence();
     void UpdatePhase1FinalHitTimeSequence();
     void BeginPhase2Cinematic();
-    void SetupPhase2RecallCinematic();
+    void SetupPhase2RecallCinematic() const;
     void UpdatePhase2Cinematic();
     void BeginPhase2TpsReturnBlend();
 
     // Continue・Restart・Result
     void CaptureContinueBossCheckpoint();
     void ResetBattleForContinue();
-    void ResetBattleFacingAndCamera();
+    void ResetBattleFacingAndCamera() const;
     void RestartBossBattle();
     void ExecuteDeathResult(int index);
     void ExecuteVictoryResult(int selection);
@@ -190,10 +193,10 @@ private:
     void UpdateVictoryResult();
 
     // Movie Skip・Fade・Cinematic Camera
-    void DisableCinematicCameraDebugInput();
+    void DisableCinematicCameraDebugInput() const;
     void UpdateMovieSkip();
     GameMovieSkipUIActor::MovieSkipType GetActiveMovieSkipType();
-    void SetBossDeathFadeAlpha(float alpha);
+    void SetBossDeathFadeAlpha(float alpha) const;
 
     // Debug・ImGui
 #ifdef USE_IMGUI
@@ -301,17 +304,18 @@ private:
     std::shared_ptr<CinemaCamera> cinemaCameraActor;
     std::shared_ptr<DarkCameraActor> darkCameraActor;
 
+    bool tutorialCameraProfileTriggerFired = false;// チュートリアルカメラを使うか
+    bool prisonOpeningMovieStartRequested = false; //牢屋ムービーを再生するか
+
+
+
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerCenter{ -25.0f, 1.0f, 10.75f };
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerSize{ 2.0f, 3.0f, 8.0f };
-    bool tutorialCameraProfileTriggerFired = false;
-    DirectX::XMFLOAT3 prisonOpeningSittingPosition{ -66.919f, -0.078f, 11.892f };
-    float prisonOpeningSittingYawDegrees = 107.031867f;
-    bool prisonOpeningMovieStartRequested = false;
     bool backToRoomStartRequested = false;
-    GameTutorialController tutorialController;
     bool judgeDodgeOperationTutorialOwnsPause = false;
     float judgeDodgeOperationTutorialPreviousTimeScale = 1.0f;
     // Tutorial Actor・UI参照
+    GameTutorialController tutorialController;  // チュートリアルコントローラー
     std::shared_ptr<GameTutorialUIActor> tutorialUIActor;
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
     std::shared_ptr<SkeletonWarriorActor> tutorialDodgeSkeletonActor;

@@ -739,6 +739,7 @@ void Player::Finalize()
     ResetEyeCloseOverride();
     ForceResetPlayerSlow();
     ForceResetBossSlow();
+    SetDeathCameraStartCallback(nullptr);
 }
 
 void Player::DrawImGuiDetails()

@@ -29,7 +29,7 @@ public:
     int observedHp = 0;
     bool delayedHpInitialized = false;
 
-    void Create(UIManager* uiManager, const char* prefix);
+    void Create(UIManager* uiManager, const std::string& prefix);
     void Update(const SkeletonWarriorActor& owner, const DarkCameraActor& camera,
         const DirectX::XMFLOAT3& playerPosition);
     void Hide();
@@ -41,12 +41,12 @@ private:
     float tutorialSkeletonHpFarDistance = 10.0f;
     float tutorialSkeletonHpNearScaleMultiplier = 1.0f;
     float tutorialSkeletonHpFarScaleMultiplier = 0.75f;
-    const DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset={ 0.0f, 1.1f, 0.4f };
+    const DirectX::XMFLOAT3 tutorialSkeletonHpBarWorldOffset = { 0.0f, 1.1f, 0.4f };
     float tutorialSkeletonHpBarScale = 0.65f;
 
 };
 
-void SkeletonHpBarUI::Create(UIManager* uiManager, const char* prefix)
+void SkeletonHpBarUI::Create(UIManager* uiManager, const std::string& prefix)
 {
     const auto createImage = [uiManager](const char* texturePath, const char* name,
         const DirectX::XMFLOAT2& size, const int zOrder)
@@ -59,11 +59,12 @@ void SkeletonHpBarUI::Create(UIManager* uiManager, const char* prefix)
             uiManager->Add(image);
             return image;
         };
-    const auto createHpBar = [&createImage, uiManager](SkeletonHpBarUI& hpBar, const char* prefix)
+
+    const auto createHpBar = [&createImage, uiManager](SkeletonHpBarUI& hpBar, const std::string& prefix)
         {
             hpBar.background = createImage("./Data/Textures/UI/HpBar/skeleton_hp_background.png", (std::string(prefix) + "Background").c_str(), { 234.0f, 17.0f }, 40);
             hpBar.delayedFill = std::make_shared<UIGaugeFillComponent>(
-                "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", std::string(prefix) + "DelayedFill");
+                "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", (prefix)+"DelayedFill");
             hpBar.delayedFill->SetSize({ 233.0f, 16.0f });
             hpBar.delayedFill->SetPivot({ 0.0f, 0.5f });
             hpBar.delayedFill->SetColor(CoreColor{ 0.95f, 0.72f, 0.38f, 1.0f });
@@ -71,7 +72,7 @@ void SkeletonHpBarUI::Create(UIManager* uiManager, const char* prefix)
             hpBar.delayedFill->zOrder = 41;
             uiManager->Add(hpBar.delayedFill);
             hpBar.currentFill = std::make_shared<UIGaugeFillComponent>(
-                "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", std::string(prefix) + "CurrentFill");
+                "./Data/Textures/UI/HpBar/skeleton_hp_fill.png", (prefix)+"CurrentFill");
             hpBar.currentFill->SetSize({ 233.0f, 16.0f });
             hpBar.currentFill->SetPivot({ 0.0f, 0.5f });
             hpBar.currentFill->SetColor(CoreColor{ 0.55f, 0.08f, 0.06f, 1.0f });
@@ -235,7 +236,7 @@ void SkeletonHpBarUI::Update(const SkeletonWarriorActor& owner, const DarkCamera
     updateHpBar(&owner, *this);
 }
 
-void SkeletonWarriorActor::CreateHpBarUI(UIManager* uiManager, const char* prefix)
+void SkeletonWarriorActor::CreateHpBarUI(UIManager* uiManager, const std::string& prefix)
 {
     if (!uiManager || hpBarUI) return;
     hpBarUI = std::make_shared<SkeletonHpBarUI>();
@@ -350,6 +351,11 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     pointLightComponent->SetSharedLightName("PlayerPointLight");
+
+    // HPバーを生成
+    const auto uiManager = GetOwnerScene()->GetUIManager();
+    const std::string actorName = GetName();
+    CreateHpBarUI(uiManager, actorName);
 }
 
 void SkeletonWarriorActor::ApplyRimLight()

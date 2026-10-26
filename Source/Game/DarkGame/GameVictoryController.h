@@ -6,9 +6,23 @@ class CinemaCamera;
 
 class GameVictoryController
 {
+private:
+    enum class VictoryResultPhase :uint8_t
+    {
+        None,
+        CameraBlend,
+        WinEmote,
+        ResultDelay,
+        ShowButtons,
+        Interactive
+    };
+
 public:
+    // リセット処理
     void ResetPresentation();
-    float PrepareCameraBlend() const;
+    // リザルト表示までのカメラブレンドを取得
+    float GetVictoryCameraBlend() const { return victoryCameraBlendDuration; }
+
     void PreparePlayer(Player* player);
     void BeginPresentation();
     bool CanAcceptSelection(const GameVictoryUIActor& victoryUIActor) const;
@@ -26,13 +40,11 @@ public:
 #endif
 
 private:
-    enum class VictoryResultPhase { None, CameraBlend, WinEmote, ResultDelay, ShowButtons, Interactive };
     VictoryResultPhase victoryResultPhase = VictoryResultPhase::None;
     float victoryResultDelayElapsed = 0.0f;
     float victoryResultDelayDuration = 0.70f;
-    float victoryCameraBlendDuration = 0.60f;
+    float victoryCameraBlendDuration = 0.60f;   // リザルト表示までのカメラブレンド
     float resultRecallToIdleBlendDuration = 0.26f;
-    // Weapon bone drops rapidly between 1.13 and 1.20 seconds in Emote_Slice_0.
     float resultUITriggerAnimationTime = 1.17f;
     static constexpr float victoryEmoteEndTime = 1.48f;
     bool victoryBestTimeValid = false;

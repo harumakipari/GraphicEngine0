@@ -525,8 +525,6 @@ void DarkCameraActor::SetTpsCameraProfile(const TpsCameraProfile profile)
 
     tpsCameraProfile = profile;
 
-    // LockOn keeps its current composition. The selected profile is applied by
-    // the existing LockOn -> TPS blend when LockOn ends.
     if (!isExternalBlending && currentMode == CameraMode::TPS && requestMode == CameraMode::TPS)
     {
         StartBlend(CameraMode::TPS, CameraMode::TPS);

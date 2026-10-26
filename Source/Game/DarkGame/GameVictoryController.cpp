@@ -15,12 +15,6 @@ void GameVictoryController::ResetPresentation()
     victoryResultDelayElapsed = 0.0f;
 }
 
-float GameVictoryController::PrepareCameraBlend() const
-{
-    return std::isfinite(victoryCameraBlendDuration)
-        ? std::clamp(victoryCameraBlendDuration, 0.0f, 2.0f) : 0.60f;
-}
-
 void GameVictoryController::PreparePlayer(Player* player)
 {
     if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
@@ -189,8 +183,7 @@ void GameVictoryController::CaptureResult(float finalBattleTime, bool finalBattl
 #ifdef USE_IMGUI
 void GameVictoryController::DrawCameraIntroDebugGui()
 {
-    ImGui::DragFloat("Result Camera Blend Duration", &victoryCameraBlendDuration,
-        0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat(U8("リザルト表示までのカメラブレンド"), &victoryCameraBlendDuration,0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat("Result Recall To Idle Blend Duration", &resultRecallToIdleBlendDuration,
         0.01f, 0.0f, 0.5f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
 }

@@ -10,6 +10,7 @@ class GameDefeatUIActor : public Actor
 public:
     explicit GameDefeatUIActor(const std::string& actorName) : Actor(actorName) {}
     void Initialize(const Transform& transform) override;
+    void Finalize()override;
 
     void DrawImGuiDetails()override;
 

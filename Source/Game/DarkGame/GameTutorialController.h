@@ -3,9 +3,21 @@
 class GameTutorialController
 {
 public:
-    enum class ExplanationState { Unseen, Showing, Completed };
-    enum class RingAction { None, Hide, Update };
+    enum class ExplanationState :uint8_t
+    {
+        Unseen,
+        Showing,
+        Completed
+    };
 
+    enum class RingAction:uint8_t
+    {
+        None,
+        Hide,
+        Update
+    };
+
+    // èâä˙âª:ê‡ñæï\é¶ÇÇ∑Ç≈Ç…ÇµÇΩÇ©Ç«Ç§Ç©
     void Initialize(bool explanationAlreadySeen);
     ExplanationState GetExplanationState() const { return explanationState; }
     bool BeginExplanation(bool isPaused);

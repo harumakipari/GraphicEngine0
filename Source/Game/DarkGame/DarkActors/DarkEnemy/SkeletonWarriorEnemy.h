@@ -37,7 +37,6 @@ public:
     bool TakeDamageFromPlayer(int damage) override;
 
 
-    void CreateHpBarUI(UIManager* uiManager, const char* prefix);
     void UpdateHpBar(const DarkCameraActor& camera, const DirectX::XMFLOAT3& playerPosition);
     void HideHpBar();
     bool IsDefeated() const override { return state == State::Dead; }
@@ -57,6 +56,9 @@ public:
     void SetSwordVisible(bool visible) const;
 
 private:
+    // HPÉoÅ[Çê∂ê¨
+    void CreateHpBarUI(UIManager* uiManager, const std::string& prefix);
+
     void PlayTutorialPassiveStandIdle();
     void BeginAttack(const DirectX::XMFLOAT3& directionToPlayer);
     void UpdateAttack(float elapsedTime, class Player& player);

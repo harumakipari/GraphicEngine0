@@ -45,26 +45,7 @@
 #include "UI/UIManager.h"
 #include "UI/Game/Pause.h"
 
-GameScene::GameScene() {}
 
-GameScene::~GameScene()
-{
-    if (player)
-        player->SetDeathCameraStartCallback(nullptr);
-    if (defeatUIActor)
-        defeatUIActor->SetSelectionCallback(nullptr);
-}
-
-void GameScene::SetDeathPresentationCueCallback(std::function<void(GamePlayerDeathController::Cue)> callback)
-{
-    if (!callback)
-    {
-        playerDeathController->SetCueCallback({});
-        return;
-    }
-    playerDeathController->SetCueCallback([callback = std::move(callback)](GamePlayerDeathController::Cue cue)
-        { callback(cue); });
-}
 
 bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
@@ -72,13 +53,18 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
     prisonOpeningMovieStartRequested = false;
     backToRoomStartRequested = false;
+
+    // タイトルからかゲームシーンからかによってムービーを再生するかを決める
     if (const auto entryIt = props.find("gameEntry"); entryIt != props.end())
     {
         prisonOpeningMovieStartRequested = entryIt->second == "NewGame";
         backToRoomStartRequested = entryIt->second == "BackToRoom";
     }
+
+    // チュートリアル
     tutorialController.Initialize(backToRoomStartRequested);
     judgeDodgeOperationTutorialOwnsPause = false;
+
 
     loadStageThread = std::thread([&]()
         {
@@ -121,40 +107,23 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
         });
 
-    // ライトの方向と色を設定
-    lightDirection = { 0.722f, -0.38f, -0.0211f, 0.9f };   // 上の窓からの光
-    lightColor = { 1.0f, 0.8f, 1.0f, 2.6f };
-    {
-        SceneBase::Initialize(device, width, height, props);
-    }
-    {
-        Physics::Instance().Initialize();
-    }
+
+    SceneBase::Initialize(device, width, height, props);
+    Physics::Instance().Initialize();
+
     {
         PROFILE_SCOPE("SetUpActors Init");
         //アクターをセット
         SetUpActors();
-        lockOnTargetUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameLockOnTargetUIActor>("LockOnTargetUI");
-        CreateTutorialSkeletonUI();
-        tutorialUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameTutorialUIActor>("TutorialUI");
-        battleTimerUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameTimerUIActor>("BattleTimerUI");
-        defeatUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameDefeatUIActor>("DefeatUI");
-        defeatUIActor->SetSelectionCallback([this](int index) { ExecuteDeathResult(index); });
-        victoryController = std::make_unique<GameVictoryController>();
-        victoryController->LoadBestTime();
-        victoryUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameVictoryUIActor>("VictoryUI");
-        CreateBossDeathFadeUI();
-        bossDeathUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameBossDeathUIActor>("BossDeathUI");
-        movieSkipUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameMovieSkipUIActor>("MovieSkipUI");
-        bossDeathController = std::make_unique<GameBossDeathController>();
-        playerDeathController = std::make_unique<GamePlayerDeathController>();
-        bossDeathController->LoadBossDeathShots();
-        phase2TransitionController = std::make_unique<GamePhase2TransitionController>();
-        phase2TransitionController->LoadShots();
+        CreateController();
+        CreateUI();
     }
 
+    // ボスの部屋のラープのための初期化処理
+    bossLerpEasing = std::make_unique<EasingRunner>();
 
-    // ここで布を描画する
+
+    // ここで布を描画する処理を追加
     RegisterRenderHook(RenderPass::Mask, [&](ID3D11DeviceContext* immediateContext)
         {
             for (auto darkClothActor : darkClothActors)
@@ -166,8 +135,6 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
             }
         });
 
-    // ボスの部屋のラープのための初期化処理
-    bossLerpEasing = std::make_unique<EasingRunner>();
 
     // ここで軌跡を描画する
     RegisterRenderHook(RenderPass::ForwardBlend, [&](ID3D11DeviceContext* immediateContext)
@@ -177,6 +144,8 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
             if (gruxEnemyActor)
                 gruxEnemyActor->RenderTrail(immediateContext);
         });
+
+
 
 
     return true;
@@ -193,7 +162,7 @@ int GameScene::GetBossMaxHp() const
     return gruxEnemyActor ? gruxEnemyActor->GetMaxHp() : 0;
 }
 
-void GameScene::ApplyBossPhaseHp(const BossPhase phase)
+void GameScene::ApplyBossPhaseHp(const BossPhase phase) const
 {
     if (!gruxEnemyActor) return;
     switch (phase)
@@ -332,7 +301,7 @@ void GameScene::BeginPhase2Cinematic()
     SetBossDeathFadeAlpha(0.0f);
 }
 
-void GameScene::SetupPhase2RecallCinematic()
+void GameScene::SetupPhase2RecallCinematic() const
 {
     if (player)
     {
@@ -685,7 +654,6 @@ void GameScene::Start()
     {
         SceneTransitionManager::Instance().SetOnOpeningFinished([]()
             {
-                // Resolve the active scene at callback time so no destroyed GameScene is captured.
                 auto* gameScene = dynamic_cast<GameScene*>(Scene::GetCurrentScene());
                 if (!gameScene || !gameScene->prisonOpeningMovieStartRequested)
                     return;
@@ -717,13 +685,6 @@ void GameScene::PlayBossBattleBgm()
     bgmDirector.PlayBossBattleBgm();
 }
 
-void GameScene::CreateTutorialSkeletonUI()
-{
-    const auto uiManager = GetUIManager();
-    if (tutorialPassiveSkeletonActor) tutorialPassiveSkeletonActor->CreateHpBarUI(uiManager, "TutorialPassiveSkeletonHp");
-    if (tutorialDodgeSkeletonActor) tutorialDodgeSkeletonActor->CreateHpBarUI(uiManager, "TutorialDodgeSkeletonHp");
-}
-
 void GameScene::StartJudgeDodgeOperationTutorial()
 {
     if (!tutorialController.BeginExplanation(IsPaused())) return;
@@ -744,7 +705,12 @@ void GameScene::CloseJudgeDodgeOperationTutorial()
     const bool ringStartedInAttackRange = tutorialDodgeSkeletonActor && player &&
         tutorialDodgeSkeletonActor->IsPlayerWithinAttackRange(*player);
     tutorialController.CloseExplanation(ringStartedInAttackRange);
-    if (judgeDodgeOperationTutorialOwnsPause) { SetPaused(false); Time::timeScale = judgeDodgeOperationTutorialPreviousTimeScale; judgeDodgeOperationTutorialOwnsPause = false; }
+    if (judgeDodgeOperationTutorialOwnsPause)
+    {
+        SetPaused(false);
+        Time::timeScale = judgeDodgeOperationTutorialPreviousTimeScale;
+        judgeDodgeOperationTutorialOwnsPause = false;
+    }
 }
 
 void GameScene::UpdateTutorialDodgeGuideRing()
@@ -763,7 +729,7 @@ void GameScene::UpdateTutorialDodgeGuideRing()
         tutorialUIActor->UpdateRing(tutorialDodgeSkeletonActor->GetPosition(), Time::UnscaledDeltaTime());
 }
 
-void GameScene::HideTutorialSkeletonUI()
+void GameScene::HideTutorialSkeletonUI() const
 {
     if (tutorialPassiveSkeletonActor) tutorialPassiveSkeletonActor->HideHpBar();
     if (tutorialDodgeSkeletonActor) tutorialDodgeSkeletonActor->HideHpBar();
@@ -807,7 +773,7 @@ void GameScene::UpdateTutorialSkeletonUI()
     tutorialUIActor->UpdatePrompts(*darkCameraActor, tutorialPassiveSkeletonActor, tutorialDodgeSkeletonActor,
         ltVisible, yVisible, xVisible);
 }
-void GameScene::UpdateLockOnTargetUI(float deltaTime)
+void GameScene::UpdateLockOnTargetUI(float deltaTime) const
 {
     if (!darkCameraActor ||
         darkCameraActor->GetMovementMode() != DarkCameraActor::CameraMode::LockOn ||
@@ -1273,16 +1239,15 @@ void GameScene::Update(float deltaTime)
 }
 
 // 定数バッファの更新処理をシーンごとにカスタマイズできるようにするための仮想関数
-void GameScene::SetBattleHudVisible(const bool visible)
+void GameScene::SetBattleHudVisible(const bool visible) const
 {
-
     if (player)
         player->SetHpBarVisible(visible);
     if (gruxEnemyActor)
         gruxEnemyActor->SetHpBarVisible(visible);
 }
 
-void GameScene::DisableCinematicCameraDebugInput()
+void GameScene::DisableCinematicCameraDebugInput() const
 {
     if (!cinemaCameraActor) return;
     if (auto* camera = dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()))
@@ -1314,24 +1279,6 @@ void GameScene::EnterBossRoomLockOnScope(const bool fromTutorialDoorMovie)
     }
 }
 
-void GameScene::SpawnTutorialSkeletons()
-{
-    // 立っているままの骸骨
-    Transform passiveTransform(DirectX::XMFLOAT3{ -39.5f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,-40.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
-    tutorialPassiveSkeletonActor = GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("TutorialPassiveSkeleton", passiveTransform);
-    tutorialPassiveSkeletonActor->SetMaxHp(2);
-    tutorialPassiveSkeletonActor->SetTutorialPassive(true);
-    tutorialPassiveSkeletonActor->EnableTutorialPassiveStandIdle();
-    tutorialPassiveSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Compact);
-    tutorialPassiveSkeletonActor->SetSwordVisible(false);
-
-    // ジャスト回避の骸骨
-    Transform dodgeTransform(DirectX::XMFLOAT3{ -15.1f,-0.3f,10.75f }, DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
-    tutorialDodgeSkeletonActor = GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("TutorialDodgeSkeleton", dodgeTransform);
-    tutorialDodgeSkeletonActor->SetMaxHp(17);
-    tutorialDodgeSkeletonActor->SetTutorialAttackHighlightEnabled(true);
-    tutorialDodgeSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Standard);
-}
 
 void GameScene::RequestReturnToMainRoomStart()
 {
@@ -1354,13 +1301,18 @@ void GameScene::PrepareTutorialForBossEntry()
         doorActor->CompleteInteraction();
 }
 
-bool GameScene::BeginPrisonOpeningMoviePlayerSitting()
+bool GameScene::BeginPrisonOpeningMoviePlayerSitting() const
 {
-    return player && player->BeginPrisonOpeningSitting(
-        prisonOpeningSittingPosition, prisonOpeningSittingYawDegrees);
+    if (player)
+    {
+        constexpr DirectX::XMFLOAT3 prisonOpeningSittingPosition{ -66.919f, -0.078f, 11.892f };
+        constexpr float prisonOpeningSittingYawDegrees = 107.03f;
+        return player->BeginPrisonOpeningSitting(prisonOpeningSittingPosition, prisonOpeningSittingYawDegrees);
+    }
+    return false;
 }
 
-void GameScene::EndPrisonOpeningMoviePlayerSitting()
+void GameScene::EndPrisonOpeningMoviePlayerSitting() const
 {
     if (player)
         player->EndPrisonOpeningSitting();
@@ -1467,7 +1419,7 @@ void GameScene::ExecuteDeathResult(const int index)
     else if (index == 1) RestartBossBattle();
     else SceneTransitionManager::Instance().RequestTransition("LoadingScene", { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
 }
-void GameScene::ResetBattleFacingAndCamera()
+void GameScene::ResetBattleFacingAndCamera() const
 {
     if (!player || !gruxEnemyActor)
         return;
@@ -1814,8 +1766,27 @@ GameMovieSkipUIActor::MovieSkipType GameScene::GetActiveMovieSkipType()
     return GameMovieSkipUIActor::MovieSkipType::None;
 }
 
-void GameScene::CreateBossDeathFadeUI()
+
+// コントローラー生成
+void GameScene::CreateController()
 {
+    // 
+    victoryController = std::make_unique<GameVictoryController>();
+    victoryController->LoadBestTime();
+    victoryUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameVictoryUIActor>("VictoryUI");
+    bossDeathController = std::make_unique<GameBossDeathController>();
+    playerDeathController = std::make_unique<GamePlayerDeathController>();
+    bossDeathController->LoadBossDeathShots();
+    phase2TransitionController = std::make_unique<GamePhase2TransitionController>();
+    phase2TransitionController->LoadShots();
+}
+
+// ゲームUIを生成
+void GameScene::CreateUI()
+{
+    const auto uiManager = GetUIManager();
+
+    // ボス死亡時のフェード画像生成
     bossDeathFadeOverlay = std::make_shared<UIImageComponent>("BossDeathFadeOverlay");
     bossDeathFadeOverlay->SetSize({ 1920.0f, 1080.0f });
     bossDeathFadeOverlay->SetWorldPosition({ 0.0f, 0.0f });
@@ -1824,10 +1795,25 @@ void GameScene::CreateBossDeathFadeUI()
     bossDeathFadeOverlay->SetVisible(false);
     bossDeathFadeOverlay->SetEnable(false);
     bossDeathFadeOverlay->zOrder = 1000;
-    GetUIManager()->Add(bossDeathFadeOverlay);
+    uiManager->Add(bossDeathFadeOverlay);
+
+    // ロックオンUIを作成
+    lockOnTargetUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameLockOnTargetUIActor>("LockOnTargetUI");
+    // チュートリアルUIを作成
+    tutorialUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameTutorialUIActor>("TutorialUI");
+    // 制限時間UIを作成
+    battleTimerUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameTimerUIActor>("BattleTimerUI");
+    // Player死亡時のUIを作成
+    defeatUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameDefeatUIActor>("DefeatUI");
+    defeatUIActor->SetSelectionCallback([this](int index) { ExecuteDeathResult(index); });
+    // boss死亡時のUIを作成
+    bossDeathUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameBossDeathUIActor>("BossDeathUI");
+    // ムービースキップUIを作成
+    movieSkipUIActor = GetActorManager()->CreateAndRegisterActorWithTransform<GameMovieSkipUIActor>("MovieSkipUI");
+
 }
 
-void GameScene::SetBossDeathFadeAlpha(const float alpha)
+void GameScene::SetBossDeathFadeAlpha(const float alpha) const
 {
     if (!bossDeathFadeOverlay)
         return;
@@ -1867,7 +1853,7 @@ void GameScene::EnterVictoryResult()
     if (cameraManager->IsUseMovie()) cameraManager->ToggleMovieCamera(this);
     if (!cameraManager->IsUseCinematic()) cameraManager->ToggleCinematicCamera(this);
     auto* camera = dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent());
-    const float blendDuration = victoryController->PrepareCameraBlend();
+    const float blendDuration = victoryController->GetVictoryCameraBlend();
     bossDeathController->BlendToResult(*camera, GetSceneSettings().sceneShaderConstants, blendDuration);
     victoryController->PreparePlayer(player.get());
     battleFlowState = BattleFlowState::Victory;
@@ -2044,6 +2030,10 @@ void GameScene::SetUpActors()
 {
     Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
     player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("Player", mainRoomStartPlayerTransform);
+    player->SetFinalHitCallback([this](GruxEnemy* boss, const DirectX::XMFLOAT3& source)
+        {
+            OnPlayerFinalHit(boss, source);
+        });
 
     Transform debugCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto debugCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DebugCamera>("debugCam", debugCameraTr);
@@ -2061,7 +2051,7 @@ void GameScene::SetUpActors()
     auto movieCameraManagerActor = GetActorManager()->CreateAndRegisterActorWithTransform<MovieCameraManagerActor>("movieCameraManager", movieCameraTr);
     movieCameraManagerActor->SetMovieCameraComponent(movieCameraActor->GetMovieCameraComponent());
 
-    // 瓦礫アクター生成
+    // 瓦礫エフェクトアクター生成
     Transform debrisTr(DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     this->GetActorManager()->CreateAndRegisterActorWithTransform<ModelDebrisEmitterActor>("ModelDebrisEmitterActor", debrisTr);
 
@@ -2133,23 +2123,40 @@ void GameScene::SetUpActors()
     }
 
 #endif // 0
-
+    // ボス生成
     Transform GruxEnemyTr(DirectX::XMFLOAT3{ 7.69f,0.0f,11.0f }, DirectX::XMFLOAT3{ 0.0f,-90.0f,0.0f }, DirectX::XMFLOAT3{ 1.7f,1.7f,1.7f });
     gruxEnemyActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<GruxEnemy>("GruxEnemy", GruxEnemyTr);
     if (gruxEnemyActor)
         gruxEnemyActor->PauseBattleAI();
     gruxEnemyActor->SetCinematicDeathAnimationOwnedExternally(true);
-
-    player->SetFinalHitCallback([this](GruxEnemy* boss, const DirectX::XMFLOAT3& source) { OnPlayerFinalHit(boss, source); });
+    
 
     // メインの部屋にチュートリアル用の骸骨を追加。
-    SpawnTutorialSkeletons();
+    {
+        // 立っているままの骸骨
+        Transform passiveTransform(DirectX::XMFLOAT3{ -39.5f,0.0f,12.0f }, DirectX::XMFLOAT3{ 0.0f,-40.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f });
+        tutorialPassiveSkeletonActor = GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("TutorialPassiveSkeleton", passiveTransform);
+        tutorialPassiveSkeletonActor->SetMaxHp(2);
+        tutorialPassiveSkeletonActor->SetTutorialPassive(true);
+        tutorialPassiveSkeletonActor->EnableTutorialPassiveStandIdle();
+        tutorialPassiveSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Compact);
+        tutorialPassiveSkeletonActor->SetSwordVisible(false);
 
+        // ジャスト回避の骸骨
+        Transform dodgeTransform(DirectX::XMFLOAT3{ -15.1f,-0.3f,10.75f }, DirectX::XMFLOAT3{ 0.0f,-140.0f,0.0f }, DirectX::XMFLOAT3{ 1.3f,1.3f,1.3f });
+        tutorialDodgeSkeletonActor = GetActorManager()->CreateAndRegisterActorWithTransform<SkeletonWarriorActor>("TutorialDodgeSkeleton", dodgeTransform);
+        tutorialDodgeSkeletonActor->SetMaxHp(17);
+        tutorialDodgeSkeletonActor->SetTutorialAttackHighlightEnabled(true);
+        tutorialDodgeSkeletonActor->SetLockOnCameraProfile(EnemyLockOnCameraProfile::Standard);
+
+    }
+
+    // メインカメラを生成
     Transform darkCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     darkCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DarkCameraActor>("darkCameraActor", darkCameraTr);
     SetActiveCamera(darkCameraActor);
     float fovY = DirectX::XMConvertToRadians(35.0f);
-    float aspect = 1280.f / 720.f;
+    float aspect = 1920.f / 1080.f;
     float nearZ = 0.1f;
     float farZ = 1000.f;
     darkCameraActor->SetPerspective(fovY, aspect, nearZ, farZ);
@@ -2185,7 +2192,6 @@ void GameScene::SetUpActors()
 
     // ポーズアクターを生成
     this->GetActorManager()->CreateAndRegisterActorWithTransform<Pause>("pauseActor");
-
 }
 
 bool GameScene::Uninitialize(ID3D11Device* device)
@@ -2224,11 +2230,6 @@ void GameScene::DrawTutorialDebugGui()
         0.05f, -100.0f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
     ImGui::DragFloat3("Corridor Exit Trigger Size", &tutorialCameraProfileTriggerSize.x,
         0.05f, 0.05f, 100.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::SeparatorText("Prison Opening Sitting");
-    ImGui::DragFloat3("Sitting Position", &prisonOpeningSittingPosition.x,
-        0.01f, -100.0f, 100.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Sitting Rotation Yaw", &prisonOpeningSittingYawDegrees,
-        0.1f, -360.0f, 360.0f, "%.3f deg");
 }
 
 void GameScene::DrawPhase2DebugGui()
@@ -2334,15 +2335,6 @@ void GameScene::SetBossRoomLerpFactor(float lerpFactor)
 }
 
 
-// ボスの部屋の色のラープを開始する関数
-void GameScene::CancelBossRoomLerp()
-{
-    startBossRoomLerp = false;
-    onFinished = nullptr;
-    if (bossLerpEasing)
-        bossLerpEasing->Clear();
-}
-
 void GameScene::StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished)
 {
     startBossRoomLerpFactor = startFactor;
@@ -2380,4 +2372,13 @@ void GameScene::StartBossRoomLerp(float startFactor, float endFactor, float dura
 
         bossLerpEasing->StartHandler(handler, accessor);
     }
+}
+
+// ボスの部屋の色のラープを開始する関数
+void GameScene::CancelBossRoomLerp()
+{
+    startBossRoomLerp = false;
+    onFinished = nullptr;
+    if (bossLerpEasing)
+        bossLerpEasing->Clear();
 }

@@ -111,6 +111,12 @@ void GameDefeatUIActor::Initialize(const Transform& transform)
     SetVisible(false);
 }
 
+void GameDefeatUIActor::Finalize()
+{
+    SetSelectionCallback(nullptr);
+}
+
+
 void GameDefeatUIActor::SetVisible(const bool visible)
 {
     deathResultVisible = visible;

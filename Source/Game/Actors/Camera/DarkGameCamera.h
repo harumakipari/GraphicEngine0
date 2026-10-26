@@ -16,11 +16,13 @@ public:
         LockOn,
         Death,
     };
+
     enum class TpsCameraProfile : uint8_t
     {
         Corridor,
         Standard,
     };
+
     struct CameraPose
     {
         DirectX::XMFLOAT3 eye;
