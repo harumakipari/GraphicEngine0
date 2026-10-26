@@ -1050,10 +1050,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
     retreatRuntime = {};
     repositionRuntime = {};
-    retreatDebugTargetPosition = {};
-    retreatRemainingDistance = 0.0f;
-    retreatLastMoveResult = PositioningMoveResult::None;
-    retreatCompleteReason = "None";
 
     combatActionCooldownRemaining.fill(0.0f);
     selectedAttackType = BossAttackType::PrimaryAttackLA;
@@ -2392,13 +2388,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Move Stop Delay", &positioningMoveStopDelay,
         0.01f, 0.0f, 2.0f, "%.2f sec");
     positioningMoveStopDelay = (std::max)(0.0f, positioningMoveStopDelay);
-    ImGui::SeparatorText("Combat Reposition Debug");
-    const char* repositionReasonName = repositionReason == BossRepositionReason::BackTaken
-        ? "BackTaken" : "Normal";
-    const char* repositionDirectionName = selectedRepositionDirection == BossRepositionDirection::Left
-        ? "Left" : (selectedRepositionDirection == BossRepositionDirection::Right ? "Right" : "None");
-    ImGui::SeparatorText("Current Positioning");
-
     ImGui::DragFloat("Idle Duration", &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("FastCombo Prepare Duration", &fastComboPrepareDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
     ImGui::DragFloat("FastCombo Approach Max Duration", &fastComboApproachMaxDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
@@ -2545,12 +2534,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat(U8("hitEnemyEffectOffsetY"), &hitEnemyEffectOffsetY, 0.1f);
     ImGui::DragFloat(U8("hitPlayerEffectOffsetY"), &hitPlayerEffectOffsetY, 0.1f);
     ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
-    ImGui::SeparatorText("PrimaryAttack_LA Hit Debug");
-
-
-
-
-
 #endif
 }
 

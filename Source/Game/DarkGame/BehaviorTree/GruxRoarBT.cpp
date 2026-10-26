@@ -8,7 +8,6 @@
 #include "Engine/Scene/Scene.h"
 #include "Core/ActorManager.h"
 #include "Physics/CollisionFunction.h"
-#include <map>
 
 namespace
 {
@@ -33,56 +32,6 @@ namespace
         bool isSphere = false;
     };
 
-    struct RetreatSweepDebugHit
-    {
-        bool hit = false;
-        bool initialOverlap = false;
-        bool hasNormal = false;
-        DirectX::XMFLOAT3 normal{};
-        float penetrationDepth = 0.0f;
-        std::string actorName = "None";
-        std::string componentName = "None";
-        int ignoredSupportContactCount = 0;
-        bool pathBlocked = false;
-        DirectX::XMFLOAT3 blockingNormal{};
-        DirectX::XMFLOAT3 blockingPosition{};
-        float blockingDistance = 0.0f;
-        std::string blockingActorName = "None";
-        std::string blockingComponentName = "None";
-        DirectX::XMFLOAT3 start{};
-        DirectX::XMFLOAT3 direction{};
-        DirectX::XMFLOAT3 target{};
-        float distance = 0.0f;
-        float radius = 0.0f;
-        float halfHeight = 0.0f;
-        DirectX::XMFLOAT3 center{};
-        uint32_t blockingLayer = 0;
-        bool supportContactHit = false;
-        bool supportInitialOverlap = false;
-        float supportPenetrationDepth = 0.0f;
-        DirectX::XMFLOAT3 supportNormal{};
-    };
-
-    std::vector<RetreatSweepDebugHit> g_repositionSweepDiagnostics;
-    std::map<std::string, int> g_repositionSweepActorCounts;
-    std::map<std::string, int> g_repositionSweepComponentCounts;
-
-    void CopyPositioningPathSafetyDebugHit(const PositioningPathSafetyHit& source,
-        RetreatSweepDebugHit& destination)
-    {
-        if (!source.hit)
-            return;
-        destination.hit = true;
-        destination.initialOverlap = source.initialOverlap;
-        destination.hasNormal = source.hasNormal;
-        destination.normal = source.normal;
-        destination.penetrationDepth = source.penetrationDepth;
-        if (source.actor)
-            destination.actorName = source.actor->GetName();
-        if (source.component)
-            destination.componentName = source.component->GetName();
-    }
-
     RetreatSweepShape BuildRetreatSweepShape(const CapsuleComponent& component)
     {
         RetreatSweepShape shape{};
@@ -100,7 +49,7 @@ namespace
     }
 
     bool SweepRetreatPath(const RetreatSweepShape& shape, const DirectX::XMFLOAT3& direction,
-        float distance, HitResult& result, uint32_t obstacleMask, RetreatSweepDebugHit* debugHit = nullptr)
+        float distance, HitResult& result, uint32_t obstacleMask)
     {
         PositioningSweepShape queryShape{};
         queryShape.type = shape.isSphere ? PositioningSweepShape::Type::Sphere
@@ -124,39 +73,6 @@ namespace
             result.distance = pathResult.blockingHit.distance;
         }
 
-        if (debugHit)
-        {
-            debugHit->center = shape.center;
-            debugHit->radius = shape.capsule.r;
-            debugHit->halfHeight = shape.halfHeight;
-            debugHit->direction = direction;
-            debugHit->distance = distance;
-            debugHit->ignoredSupportContactCount = pathResult.ignoredSupportContactCount;
-            debugHit->pathBlocked = pathResult.pathBlocked;
-            if (pathResult.ignoredSupportContact.hit)
-            {
-                debugHit->supportContactHit = true;
-                debugHit->supportInitialOverlap = pathResult.ignoredSupportContact.initialOverlap;
-                debugHit->supportPenetrationDepth = pathResult.ignoredSupportContact.penetrationDepth;
-                debugHit->supportNormal = pathResult.ignoredSupportContact.normal;
-            }
-            CopyPositioningPathSafetyDebugHit(
-                pathResult.ignoredSupportContact.hit ? pathResult.ignoredSupportContact : pathResult.blockingHit,
-                *debugHit);
-            if (pathResult.blockingHit.hit)
-            {
-                debugHit->blockingNormal = pathResult.blockingHit.normal;
-                debugHit->blockingPosition = pathResult.blockingHit.position;
-                debugHit->blockingDistance = pathResult.blockingHit.distance;
-                if (pathResult.blockingHit.actor)
-                    debugHit->blockingActorName = pathResult.blockingHit.actor->GetName();
-                if (pathResult.blockingHit.component)
-                {
-                    debugHit->blockingComponentName = pathResult.blockingHit.component->GetName();
-                    debugHit->blockingLayer = pathResult.blockingHit.component->GetCollisionLayer();
-                }
-            }
-        }
         return pathBlocked;
     }
 }
@@ -227,7 +143,6 @@ ActionBase::State PrepareRetreatTarget::Run(float)
 ActionBase::State MoveToPositioningTarget::Run(float dt)
 {
     const auto result = owner->UpdateRetreatMovement(dt);
-    owner->RecordRetreatMoveResult(result);
     if (result == GruxEnemy::PositioningMoveResult::Running)
         return State::Run;
     const bool arrived = result == GruxEnemy::PositioningMoveResult::Arrived;
@@ -302,14 +217,8 @@ bool GruxEnemy::PrepareRetreatTarget()
 {
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
     retreatRuntime = {};
-    retreatDebugTargetPosition = {};
-    retreatRemainingDistance = 0.0f;
-    retreatLastMoveResult = PositioningMoveResult::None;
-    retreatCompleteReason = U8("Prepare実行中");
-    retreatRuntime.failureReason = U8("候補探索中");
     if (!CanPlanRetreat())
     {
-        retreatRuntime.failureReason = U8("開始条件不成立");
         retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
         return false;
     }
@@ -317,7 +226,6 @@ bool GruxEnemy::PrepareRetreatTarget()
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     if (!player)
     {
-        retreatRuntime.failureReason = U8("Player不在");
         retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
         return false;
     }
@@ -345,33 +253,6 @@ bool GruxEnemy::PrepareRetreatTarget()
         CollisionHelper::ToBit(CollisionLayer::WorldProps) |
         CollisionHelper::ToBit(CollisionLayer::Convex);
     const RetreatSweepShape retreatSweepShape = BuildRetreatSweepShape(*enemyCapsuleComponent);
-    const Capsule& capsule = retreatSweepShape.capsule;
-    retreatRuntime.capsulePoint1 = capsule.a;
-    retreatRuntime.capsulePoint2 = capsule.b;
-    retreatRuntime.capsuleRadius = capsule.r;
-    const float capsuleDx = retreatRuntime.capsulePoint2.x - retreatRuntime.capsulePoint1.x;
-    const float capsuleDy = retreatRuntime.capsulePoint2.y - retreatRuntime.capsulePoint1.y;
-    const float capsuleDz = retreatRuntime.capsulePoint2.z - retreatRuntime.capsulePoint1.z;
-    retreatRuntime.capsuleSegmentLength = std::sqrt(capsuleDx * capsuleDx +
-        capsuleDy * capsuleDy + capsuleDz * capsuleDz);
-
-    // These fields mirror the CollisionComponent -> PhysX shape construction and
-    // are diagnostic only. retreatSweepShape is created from the same center,
-    // radius, and halfHeight.
-    const Transform& collisionWorldTransform = enemyCapsuleComponent->GetComponentWorldTransform();
-    retreatRuntime.collisionComponentPosition = collisionWorldTransform.GetLocation();
-    retreatRuntime.collisionComponentScale = collisionWorldTransform.GetScale();
-    retreatRuntime.collisionConfiguredRadius = enemyCapsuleComponent->GetRadius();
-    retreatRuntime.collisionConfiguredHeight = enemyCapsuleComponent->GetHeight();
-    retreatRuntime.collisionOffsetY = enemyCapsuleComponent->GetCollisionOffsetY();
-    retreatRuntime.collisionPhysXHalfHeight = retreatSweepShape.halfHeight;
-    retreatRuntime.retreatSweepUsesSphere = retreatSweepShape.isSphere;
-    retreatRuntime.collisionPhysXPoint1 = retreatSweepShape.capsule.a;
-    retreatRuntime.collisionPhysXPoint2 = retreatSweepShape.capsule.b;
-    retreatRuntime.collisionPhysXMinY = retreatRuntime.collisionPhysXPoint2.y - retreatRuntime.collisionConfiguredRadius;
-    retreatRuntime.collisionPhysXMaxY = retreatRuntime.collisionPhysXPoint1.y + retreatRuntime.collisionConfiguredRadius;
-    retreatRuntime.retreatCastMinY = retreatRuntime.collisionPhysXMinY;
-    retreatRuntime.retreatCastMaxY = retreatRuntime.collisionPhysXMaxY;
     for (const float distance : distances)
     {
         for (int index = 0; index <= 12; ++index)
@@ -387,9 +268,6 @@ bool GruxEnemy::PrepareRetreatTarget()
                 retreatRuntime.gruxSnapshot.z + directionZ * distance };
             RepositionTargetEvaluation evaluation{};
             EvaluateClampedPositioningTarget(retreatRuntime.gruxSnapshot, desired, evaluation);
-            RetreatCandidateDebug debug{};
-            debug.position = evaluation.clampedTarget;
-            ++retreatRuntime.candidateCount;
             const float moveX = evaluation.clampedTarget.x - retreatRuntime.gruxSnapshot.x;
             const float moveZ = evaluation.clampedTarget.z - retreatRuntime.gruxSnapshot.z;
             const float moveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
@@ -397,70 +275,17 @@ bool GruxEnemy::PrepareRetreatTarget()
             const float playerZ = evaluation.clampedTarget.z - retreatRuntime.playerSnapshot.z;
             const float plannedPlayerDistance = std::sqrt(playerX * playerX + playerZ * playerZ);
             if (evaluation.clampDistance > attackSetupClampTolerance)
-            {
-                debug.rejectReason = RetreatCandidateRejectReason::Clamp;
-                ++retreatRuntime.clampRejectCount;
-                retreatRuntime.candidates.push_back(debug);
                 continue;
-            }
             if (plannedPlayerDistance <= retreatRuntime.startingPlayerDistance + 0.01f)
-            {
-                debug.rejectReason = RetreatCandidateRejectReason::DistanceIncrease;
-                ++retreatRuntime.distanceIncreaseRejectCount;
-                retreatRuntime.candidates.push_back(debug);
                 continue;
-            }
             if (moveDistance < retreatMinimumMoveDistance)
-            {
-                debug.rejectReason = RetreatCandidateRejectReason::MinimumMoveDistance;
-                ++retreatRuntime.minimumMoveRejectCount;
-                retreatRuntime.candidates.push_back(debug);
                 continue;
-            }
             if (evaluation.bossRoomPathBlocked)
-            {
-                debug.rejectReason = RetreatCandidateRejectReason::BossRoomProbe;
-                debug.pathBlocked = true;
-                ++retreatRuntime.bossRoomProbeRejectCount;
-                retreatRuntime.candidates.push_back(debug);
                 continue;
-            }
             const DirectX::XMFLOAT3 moveDirection{ moveX / moveDistance, 0.0f, moveZ / moveDistance };
             HitResult hit{};
-            RetreatSweepDebugHit sweepDebugHit{};
-            debug.pathBlocked = SweepRetreatPath(retreatSweepShape, moveDirection, moveDistance,
-                hit, obstacleMask, &sweepDebugHit);
-            retreatRuntime.retreatSweepInitialOverlap = sweepDebugHit.initialOverlap;
-            retreatRuntime.retreatSweepHasNormal = sweepDebugHit.hasNormal;
-            retreatRuntime.retreatSweepHitNormal = sweepDebugHit.normal;
-            retreatRuntime.retreatSweepPenetrationDepth = sweepDebugHit.penetrationDepth;
-            retreatRuntime.retreatSweepHitActor = sweepDebugHit.actorName;
-            retreatRuntime.retreatSweepHitComponent = sweepDebugHit.componentName;
-            retreatRuntime.retreatSweepIgnoredSupportContactCount = sweepDebugHit.ignoredSupportContactCount;
-            retreatRuntime.retreatSweepPathBlocked = sweepDebugHit.pathBlocked;
-            retreatRuntime.retreatSweepBlockingNormal = sweepDebugHit.blockingNormal;
-            retreatRuntime.retreatSweepBlockingDistance = sweepDebugHit.blockingDistance;
-            retreatRuntime.retreatSweepBlockingActor = sweepDebugHit.blockingActorName;
-            retreatRuntime.retreatSweepBlockingComponent = sweepDebugHit.blockingComponentName;
-            if (debug.pathBlocked)
-            {
-                debug.rejectReason = RetreatCandidateRejectReason::CapsuleCast;
-                ++retreatRuntime.capsuleCastRejectCount;
-                retreatRuntime.lastCapsuleCastHit = true;
-                retreatRuntime.lastCapsuleHitPosition = hit.position;
-                retreatRuntime.lastCapsuleHitDistance = hit.distance;
-                HitResult layerHit{};
-                retreatRuntime.lastCapsuleCastWorldStatic = SweepRetreatPath(retreatSweepShape,
-                    moveDirection, moveDistance, layerHit, CollisionHelper::ToBit(CollisionLayer::WorldStatic));
-                retreatRuntime.lastCapsuleCastWorldProps = SweepRetreatPath(retreatSweepShape,
-                    moveDirection, moveDistance, layerHit, CollisionHelper::ToBit(CollisionLayer::WorldProps));
-                retreatRuntime.lastCapsuleCastConvex = SweepRetreatPath(retreatSweepShape,
-                    moveDirection, moveDistance, layerHit, CollisionHelper::ToBit(CollisionLayer::Convex));
-                retreatRuntime.candidates.push_back(debug);
+            if (SweepRetreatPath(retreatSweepShape, moveDirection, moveDistance, hit, obstacleMask))
                 continue;
-            }
-            debug.accepted = true;
-            retreatRuntime.candidates.push_back(debug);
             retreatTarget = {};
             retreatTarget.valid = true;
             retreatTarget.targetPosition = evaluation.clampedTarget;
@@ -470,15 +295,9 @@ bool GruxEnemy::PrepareRetreatTarget()
             retreatTarget.moveSpeed = retreatMoveSpeed;
             retreatTarget.stuckMovementThreshold = 0.01f;
             retreatTarget.stuckTimeThreshold = 0.5f;
-            retreatDebugTargetPosition = retreatTarget.targetPosition;
-            retreatRuntime.plannedMoveDistance = moveDistance;
-            retreatRuntime.plannedPlayerDistance = plannedPlayerDistance;
-            retreatRuntime.failureReason = U8("なし");
-            retreatCompleteReason = U8("Move開始待ち");
             return true;
         }
     }
-    retreatRuntime.failureReason = U8("安全なTargetなし");
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
     retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
     return false;
@@ -492,7 +311,6 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRetreatMovement(float deltaTim
     const float dx = retreatTarget.targetPosition.x - position.x;
     const float dz = retreatTarget.targetPosition.z - position.z;
     const float remaining = std::sqrt(dx * dx + dz * dz);
-    retreatRemainingDistance = remaining;
     if (remaining > retreatTarget.arrivalTolerance)
     {
         const RetreatSweepShape retreatSweepShape = BuildRetreatSweepShape(*enemyCapsuleComponent);
@@ -503,19 +321,10 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRetreatMovement(float deltaTim
         HitResult hit{};
         if (SweepRetreatPath(retreatSweepShape, direction, remaining, hit, obstacleMask))
         {
-            retreatRuntime.failureReason = U8("経路異常");
             return PositioningMoveResult::Stuck;
         }
     }
     const auto result = UpdatePositioningTargetMovement(retreatTarget, retreatMovementRuntime,deltaTime);
-    if (result != PositioningMoveResult::Running && result != PositioningMoveResult::Arrived &&
-        retreatRuntime.failureReason == U8("なし"))
-    {
-        retreatRuntime.failureReason = result == PositioningMoveResult::Timeout ? U8("Timeout") :
-            result == PositioningMoveResult::Stuck ? U8("Stuck") :
-            result == PositioningMoveResult::MaxDistanceReached ? U8("MaxDistance") :
-            U8("Target Invalid");
-    }
     return result;
 }
 
@@ -523,20 +332,11 @@ void GruxEnemy::FinishRetreatMovement(bool arrived)
 {
     StopAIMovement();
     EndPositioningAnimation();
-    if (!arrived && retreatRuntime.failureReason == U8("なし"))
-        retreatRuntime.failureReason = U8("移動失敗");
-    retreatCompleteReason = arrived ? U8("Arrived: Remaining Distance <= Arrival Tolerance")
-        : retreatRuntime.failureReason;
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
     if (arrived)
         consecutiveAttackCount = 0;
     retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
 }
-void GruxEnemy::RecordRetreatMoveResult(PositioningMoveResult result)
-{
-    retreatLastMoveResult = result;
-}
-
 void GruxEnemy::BeginCombatDecisionDebugInference()
 {
     ++combatDecisionDebugInferenceSerial;
@@ -661,16 +461,10 @@ bool GruxEnemy::CanPlanReposition()
 
 bool GruxEnemy::PrepareRepositionTarget()
 {
-    g_repositionSweepDiagnostics.clear();
-    g_repositionSweepActorCounts.clear();
-    g_repositionSweepComponentCounts.clear();
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
     repositionRuntime = {};
-    repositionRemainingDistance = 0.0f;
-    repositionRuntime.failureReason = "Searching";
     if (!CanPlanReposition())
     {
-        repositionRuntime.failureReason = "StartConditionFailed";
         if (!IsInitialRepositionPending())
             repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
         return false;
@@ -679,7 +473,6 @@ bool GruxEnemy::PrepareRepositionTarget()
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     if (!player)
     {
-        repositionRuntime.failureReason = "PlayerMissing";
         if (!IsInitialRepositionPending())
             repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
         return false;
@@ -717,9 +510,6 @@ bool GruxEnemy::PrepareRepositionTarget()
         DirectX::XMFLOAT3 position{};
         float moveDistance = 0.0f;
         float plannedPlayerDistance = 0.0f;
-        int candidateIndex = -1;
-        float angleDegrees = 0.0f;
-        float candidateDistance = 0.0f;
     };
     std::vector<SafeRepositionCandidate> safeCandidates;
     safeCandidates.reserve(distances.size() * 13);
@@ -741,11 +531,6 @@ bool GruxEnemy::PrepareRepositionTarget()
 
             RepositionTargetEvaluation evaluation{};
             EvaluateClampedPositioningTarget(repositionRuntime.gruxSnapshot, desired, evaluation);
-            RepositionCandidateDebug debug{};
-            debug.position = evaluation.clampedTarget;
-            debug.candidateIndex = repositionRuntime.candidateCount++;
-            debug.angleDegrees = angleDegrees;
-            debug.candidateDistance = distance;
             const float moveX = evaluation.clampedTarget.x - repositionRuntime.gruxSnapshot.x;
             const float moveZ = evaluation.clampedTarget.z - repositionRuntime.gruxSnapshot.z;
             const float moveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
@@ -753,89 +538,25 @@ bool GruxEnemy::PrepareRepositionTarget()
             const float playerZ = evaluation.clampedTarget.z - repositionRuntime.playerSnapshot.z;
             const float plannedPlayerDistance = std::sqrt(playerX * playerX + playerZ * playerZ);
 
-            // Reposition accepts a Playable Area clamped target when that final
-            // target is otherwise valid. It intentionally does not use the
-            // Attack Setup / Retreat clamp-tolerance rejection policy.
-            const bool wasClamped = evaluation.wasClamped;
-            if (wasClamped)
-            {
-                ++repositionRuntime.clampAppliedCount;
-                repositionRuntime.lastClampedTarget = evaluation.clampedTarget;
-                repositionRuntime.lastClampDistance = evaluation.clampDistance;
-            }
-            const auto recordClampPostEvaluationReject = [&]()
-            {
-                if (wasClamped)
-                    ++repositionRuntime.clampPostClampRejectCount;
-            };
-
             if (plannedPlayerDistance < repositionMinimumPlayerDistance)
-            {
-                debug.rejectReason = RepositionCandidateRejectReason::PlayerDistanceTooClose;
-                ++repositionRuntime.playerDistanceTooCloseRejectCount;
-                recordClampPostEvaluationReject();
-                repositionRuntime.candidates.push_back(debug);
                 continue;
-            }
             if (moveDistance < repositionMinimumMoveDistance)
-            {
-                debug.rejectReason = RepositionCandidateRejectReason::MinimumMoveDistance;
-                ++repositionRuntime.minimumMoveRejectCount;
-                recordClampPostEvaluationReject();
-                repositionRuntime.candidates.push_back(debug);
                 continue;
-            }
-
             if (evaluation.bossRoomPathBlocked)
-            {
-                debug.rejectReason = RepositionCandidateRejectReason::Sweep;
-                ++repositionRuntime.sweepRejectCount;
-                recordClampPostEvaluationReject();
-                repositionRuntime.candidates.push_back(debug);
                 continue;
-            }
             const DirectX::XMFLOAT3 moveDirection{ moveX / moveDistance, 0.0f, moveZ / moveDistance };
             HitResult hit{};
-            RetreatSweepDebugHit sweepDebug{};
-            sweepDebug.start = repositionRuntime.gruxSnapshot;
-            sweepDebug.target = evaluation.clampedTarget;
-            debug.pathBlocked = SweepRetreatPath(sweepShape, moveDirection, moveDistance, hit, obstacleMask, &sweepDebug);
-            g_repositionSweepDiagnostics.push_back(sweepDebug);
-            if (debug.pathBlocked)
-            {
-                ++g_repositionSweepActorCounts[sweepDebug.blockingActorName];
-                ++g_repositionSweepComponentCounts[sweepDebug.blockingComponentName];
-            }
-            if (debug.pathBlocked)
-            {
-                debug.rejectReason = RepositionCandidateRejectReason::Sweep;
-                ++repositionRuntime.sweepRejectCount;
-                recordClampPostEvaluationReject();
-                repositionRuntime.candidates.push_back(debug);
+            if (SweepRetreatPath(sweepShape, moveDirection, moveDistance, hit, obstacleMask))
                 continue;
-            }
-
-            if (wasClamped)
-                ++repositionRuntime.clampPostClampAcceptedCount;
-            debug.accepted = true;
-            repositionRuntime.candidates.push_back(debug);
-            safeCandidates.push_back({ evaluation.clampedTarget, moveDistance, plannedPlayerDistance,
-                debug.candidateIndex, angleDegrees, distance });
+            safeCandidates.push_back({ evaluation.clampedTarget, moveDistance, plannedPlayerDistance });
         }
     }
 
-    repositionRuntime.safeCandidateCount = static_cast<int>(safeCandidates.size());
     if (!safeCandidates.empty())
     {
         static thread_local std::mt19937 randomEngine{ std::random_device{}() };
         std::uniform_int_distribution<size_t> distribution(0, safeCandidates.size() - 1);
         const auto& selected = safeCandidates[distribution(randomEngine)];
-        repositionRuntime.selectedCandidateIndex = selected.candidateIndex;
-        repositionRuntime.selectedCandidateAngleDegrees = selected.angleDegrees;
-        repositionRuntime.selectedCandidateDistance = selected.candidateDistance;
-        repositionRuntime.selectedInitialReposition = IsInitialRepositionPending();
-        repositionRuntime.candidates[static_cast<size_t>(selected.candidateIndex)].selected = true;
-
         repositionTarget = {};
         repositionTarget.valid = true;
         repositionTarget.targetPosition = selected.position;
@@ -845,15 +566,11 @@ bool GruxEnemy::PrepareRepositionTarget()
         repositionTarget.moveSpeed = repositionMoveSpeed;
         repositionTarget.stuckMovementThreshold = 0.01f;
         repositionTarget.stuckTimeThreshold = 0.5f;
-        repositionRuntime.plannedMoveDistance = selected.moveDistance;
-        repositionRuntime.plannedPlayerDistance = selected.plannedPlayerDistance;
-        repositionRuntime.failureReason = "None";
 
         lastCombatDecision = "Reposition";
         return true;
     }
 
-    repositionRuntime.failureReason = "NoSafeTarget";
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
     if (!IsInitialRepositionPending())
         repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
@@ -864,18 +581,7 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRepositionMovement(float dt)
 {
     if (!repositionTarget.valid)
         return PositioningMoveResult::InvalidTarget;
-    const auto position = GetPosition();
-    const float dx = repositionTarget.targetPosition.x - position.x;
-    const float dz = repositionTarget.targetPosition.z - position.z;
-    repositionRemainingDistance = std::sqrt(dx * dx + dz * dz);
     const auto result = UpdatePositioningTargetMovement(repositionTarget, repositionMovementRuntime, dt);
-    if (result != PositioningMoveResult::Running && result != PositioningMoveResult::Arrived &&
-        repositionRuntime.failureReason == "None")
-    {
-        repositionRuntime.failureReason = result == PositioningMoveResult::Timeout ? "Timeout" :
-            result == PositioningMoveResult::Stuck ? "Stuck" :
-            result == PositioningMoveResult::MaxDistanceReached ? "MaxDistance" : "TargetInvalid";
-    }
     return result;
 }
 void GruxEnemy::FinishRepositionMovement(bool arrived)

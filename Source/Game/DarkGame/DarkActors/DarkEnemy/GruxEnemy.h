@@ -851,9 +851,6 @@ public:
     // 退避移動を終了し、結果に応じた後処理を行う。
     void FinishRetreatMovement(bool arrived);
 
-    // 退避移動の結果を記録する。
-    void RecordRetreatMoveResult(PositioningMoveResult result);
-
     // 戦闘行動を計画できるか判定する。
     bool CanPlanAnyCombatDecision();
 
@@ -1650,126 +1647,22 @@ private:
     float retreatMoveSpeed = 6.0f;  // 退避時の移動速度。
     float retreatRetryCooldownDuration = 0.5f;  // 退避の再試行までの待ち時間。
     float retreatRetryCooldownRemaining = 0.0f;  // 退避の再試行までの残り時間。
-    enum class RetreatCandidateRejectReason
-    {
-        None,  // 未設定。
-        Clamp,  // 境界補正による除外。
-        DistanceIncrease,  // 対象との距離増加条件による除外。
-        MinimumMoveDistance,  // 最小移動距離による除外。
-        CapsuleCast,  // カプセル判定による除外。
-        BossRoomProbe,  // ボス部屋の経路判定による除外。
-        Other  // その他の理由による除外。
-    };
-    struct RetreatCandidateDebug
-    {
-        DirectX::XMFLOAT3 position{};  // 退避候補の位置。
-        RetreatCandidateRejectReason rejectReason = RetreatCandidateRejectReason::None;  // 候補を除外した理由。
-        bool pathBlocked = false;  // 候補までの経路が遮られたか。
-        bool accepted = false;  // 候補が採用可能と判定されたか。
-    };
     struct RetreatRuntime
     {
-        DirectX::XMFLOAT3 playerSnapshot{};  // 評価時に記録したプレイヤー位置。
-        DirectX::XMFLOAT3 gruxSnapshot{};  // 評価時に記録したボス位置。
-        float startingPlayerDistance = 0.0f;  // 評価開始時のプレイヤーとの距離。
-        float plannedPlayerDistance = 0.0f;  // 移動予定先とプレイヤーとの距離。
-        float plannedMoveDistance = 0.0f;  // 予定移動距離。
-        int candidateCount = 0;  // 評価した候補数。
-        int clampRejectCount = 0;  // 境界への補正により除外した候補数。
-        int distanceIncreaseRejectCount = 0;  // プレイヤーとの距離が増加せず除外した候補数。
-        int minimumMoveRejectCount = 0;  // 最小移動距離を満たさず除外した候補数。
-        int capsuleCastRejectCount = 0;  // カプセル判定により除外した候補数。
-        int bossRoomProbeRejectCount = 0;  // ボス部屋の経路判定により除外した候補数。
-        bool lastCapsuleCastHit = false;  // 直近のカプセル判定がヒットしたか。
-        bool lastCapsuleCastWorldStatic = false;  // 直近のカプセル判定が静的な地形にヒットしたか。
-        bool lastCapsuleCastWorldProps = false;  // 直近のカプセル判定が配置物にヒットしたか。
-        bool lastCapsuleCastConvex = false;  // 直近のカプセル判定がConvexにヒットしたか。
-        DirectX::XMFLOAT3 lastCapsuleHitPosition{};  // 直近のカプセル判定のヒット位置。
-        float lastCapsuleHitDistance = 0.0f;  // 直近のカプセル判定のヒット距離。
-        DirectX::XMFLOAT3 capsulePoint1{};  // カプセル判定の一方の端点。
-        DirectX::XMFLOAT3 capsulePoint2{};  // カプセル判定のもう一方の端点。
-        float capsuleRadius = 0.0f;  // カプセルの半径。
-        float capsuleSegmentLength = 0.0f;  // カプセルの両端点間の長さ。
-        DirectX::XMFLOAT3 collisionComponentPosition{};  // 衝突コンポーネントの位置。
-        DirectX::XMFLOAT3 collisionComponentScale{};  // 衝突コンポーネントのスケール。
-        float collisionConfiguredRadius = 0.0f;  // 衝突判定に設定された半径。
-        float collisionConfiguredHeight = 0.0f;  // 衝突判定に設定された高さ。
-        float collisionOffsetY = 0.0f;  // 衝突判定の高さオフセット。
-        float collisionPhysXHalfHeight = 0.0f;  // PhysX衝突形状の半高さ。
-        DirectX::XMFLOAT3 collisionPhysXPoint1{};  // PhysX衝突形状の一方の端点。
-        DirectX::XMFLOAT3 collisionPhysXPoint2{};  // PhysX衝突形状のもう一方の端点。
-        float collisionPhysXMinY = 0.0f;  // PhysX衝突形状のY座標の下限。
-        float collisionPhysXMaxY = 0.0f;  // PhysX衝突形状のY座標の上限。
-        float retreatCastMinY = 0.0f;  // 退避判定形状のY座標の下限。
-        float retreatCastMaxY = 0.0f;  // 退避判定形状のY座標の上限。
-        bool retreatSweepUsesSphere = false;  // 退避経路の判定に球を使用したか。
-        bool retreatSweepInitialOverlap = false;  // 退避経路の判定開始時に重なりがあったか。
-        bool retreatSweepHasNormal = false;  // 退避経路のヒット法線を取得できたか。
-        DirectX::XMFLOAT3 retreatSweepHitNormal{};  // 退避経路の判定でヒットした面の法線。
-        float retreatSweepPenetrationDepth = 0.0f;  // 退避経路の判定開始時のめり込み深さ。
-        std::string retreatSweepHitActor = "None";  // 退避経路の判定でヒットしたアクター名。
-        std::string retreatSweepHitComponent = "None";  // 退避経路の判定でヒットしたコンポーネント名。
-        int retreatSweepIgnoredSupportContactCount = 0;  // 退避経路判定で無視した支持面との接触数。
-        bool retreatSweepPathBlocked = false;  // 退避経路が障害物に遮られたか。
-        DirectX::XMFLOAT3 retreatSweepBlockingNormal{};  // 退避経路を遮った面の法線。
-        float retreatSweepBlockingDistance = 0.0f;  // 退避経路を遮った障害物までの距離。
-        std::string retreatSweepBlockingActor = "None";  // 退避経路を遮ったアクター名。
-        std::string retreatSweepBlockingComponent = "None";  // 退避経路を遮ったコンポーネント名。
-        std::string failureReason = "None";  // 探索失敗の理由。
-        std::vector<RetreatCandidateDebug> candidates;  // 評価した退避候補の診断情報。
-    } retreatRuntime;  // 退避候補の探索結果と診断情報。
+        DirectX::XMFLOAT3 playerSnapshot{};
+        DirectX::XMFLOAT3 gruxSnapshot{};
+        float startingPlayerDistance = 0.0f;
+    } retreatRuntime;
     PositioningTargetContext retreatTarget{};  // 退避先と移動条件。
     PositioningTargetRuntime retreatMovementRuntime{};  // 退避移動の経過時間や移動距離。
     PositioningTargetRuntime attackSetupRuntime{};  // 攻撃準備位置への移動状態。
-    DirectX::XMFLOAT3 retreatDebugTargetPosition{};  // 退避先のデバッグ描画位置。
-    float retreatRemainingDistance = 0.0f;  // 退避先までの残り距離。
-    PositioningMoveResult retreatLastMoveResult = PositioningMoveResult::None;  // 直近の退避移動結果。
-    std::string retreatCompleteReason = "None";  // 退避終了理由の表示文字列。
-    enum class RepositionCandidateRejectReason
-    {
-        None,  // 未設定。
-        Clamp,  // 境界補正による除外。
-        PlayerDistanceTooClose,  // プレイヤーとの距離不足による除外。
-        MinimumMoveDistance,  // 最小移動距離による除外。
-        Sweep  // 経路の衝突判定による除外。
-    };
-    struct RepositionCandidateDebug
-    {
-        DirectX::XMFLOAT3 position{};  // 位置調整候補の位置。
-        int candidateIndex = -1;  // 候補の番号。
-        float angleDegrees = 0.0f;  // 候補の角度。
-        float candidateDistance = 0.0f;  // 候補の距離。
-        RepositionCandidateRejectReason rejectReason = RepositionCandidateRejectReason::None;  // 位置調整候補を除外した理由。
-        bool accepted = false;  // 候補が採用可能と判定されたか。
-        bool selected = false;  // 候補が選択されたか。
-        bool pathBlocked = false;  // 候補までの経路が遮られたか。
-    };
     struct RepositionRuntime
     {
-        DirectX::XMFLOAT3 playerSnapshot{};  // 評価時に記録したプレイヤー位置。
-        DirectX::XMFLOAT3 gruxSnapshot{};  // 評価時に記録したボス位置。
-        float startingPlayerDistance = 0.0f;  // 評価開始時のプレイヤーとの距離。
-        float plannedPlayerDistance = 0.0f;  // 移動予定先とプレイヤーとの距離。
-        float plannedMoveDistance = 0.0f;  // 予定移動距離。
-        int candidateCount = 0;  // 評価した候補数。
-        int safeCandidateCount = 0;  // 安全と判定した位置調整候補数。
-        int selectedCandidateIndex = -1;  // 選択された位置調整候補の番号。
-        float selectedCandidateAngleDegrees = 0.0f;  // 選択された位置調整候補の角度。
-        float selectedCandidateDistance = 0.0f;  // 選択された位置調整候補の距離。
-        bool selectedInitialReposition = false;  // 初期位置調整の候補が選択されたか。
-        int clampAppliedCount = 0;  // 境界補正を適用した候補数。
-        int clampPostClampRejectCount = 0;  // 境界補正後に除外した候補数。
-        int clampPostClampAcceptedCount = 0;  // 境界補正後に採用可能と判定した候補数。
-        DirectX::XMFLOAT3 lastClampedTarget{};  // 直近に境界補正した目標位置。
-        float lastClampDistance = 0.0f;  // 直近の目標位置の境界補正距離。
-        int playerDistanceTooCloseRejectCount = 0;  // プレイヤーに近すぎるため除外した候補数。
-        int minimumMoveRejectCount = 0;  // 最小移動距離を満たさず除外した候補数。
-        int sweepRejectCount = 0;  // 経路の衝突判定により除外した候補数。
-        std::string failureReason = "None";  // 探索失敗の理由。
-        std::vector<RepositionCandidateDebug> candidates;  // 評価した位置調整候補の診断情報。
-    } repositionRuntime;  // 位置調整候補の探索結果と診断情報。
+        DirectX::XMFLOAT3 playerSnapshot{};
+        DirectX::XMFLOAT3 gruxSnapshot{};
+        float startingPlayerDistance = 0.0f;
+    } repositionRuntime;
     PositioningTargetContext repositionTarget{}; PositioningTargetRuntime repositionMovementRuntime{};  // 位置調整の移動目標と実行状態。
-    float repositionRemainingDistance = 0.0f;  // 位置調整先までの残り距離。
     float repositionDistanceMin = 6.0f, repositionDistanceMax = 13.0f;  // 位置調整候補と対象との距離の下限と上限。
     float repositionMinimumMoveDistance = 5.0f, repositionMinimumPlayerDistance = 4.0f, repositionMoveSpeed = 6.0f;  // 位置調整の最小移動距離、対象との最小距離、移動速度。
     float repositionArrivalWaitDuration = 0.5f;  // 位置調整の到着後に待機する時間。
@@ -1894,40 +1787,6 @@ private:
     float closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;  // 近接攻撃準備時の向き判定角度。
     std::string attackReadySEName = "enemy_attack_ready1";  // 攻撃準備時に再生するSE名。
     float attackReadySEVolume = 1.0f;  // 攻撃準備SEの音量。
-    struct PositioningDebugSnapshot
-    {
-        bool valid = false;  // 診断情報が有効か。
-        BossPositioningData data{};  // 診断対象の位置調整データ。
-        std::optional<BossIntentType> intent = std::nullopt;  // 位置調整に対応するIntent。
-        float preferredMin = 0.0f;  // 望ましい距離の下限。
-        float preferredMax = 0.0f;  // 望ましい距離の上限。
-        DirectX::XMFLOAT3 startBossPosition{};  // 位置調整開始時のボス位置。
-        DirectX::XMFLOAT3 startPlayerPosition{};  // 位置調整開始時のプレイヤー位置。
-        DirectX::XMFLOAT3 desiredTargetPosition{};  // 境界補正前の目標位置。
-        DirectX::XMFLOAT3 clampedTargetPosition{};  // 境界補正後の目標位置。
-        bool targetWasClamped = false;  // 目標位置に境界補正を適用したか。
-        float targetClampDistance = 0.0f;  // 目標位置の境界補正距離。
-        float availableMoveDistance = 0.0f;  // 移動可能な距離。
-        float safetyMargin = 0.0f;  // 境界から確保する余白距離。
-        float safeMinX = 0.0f;  // 安全範囲のX座標の下限。
-        float safeMaxX = 0.0f;  // 安全範囲のX座標の上限。
-        float safeMinZ = 0.0f;  // 安全範囲のZ座標の下限。
-        float safeMaxZ = 0.0f;  // 安全範囲のZ座標の上限。
-        DirectX::XMFLOAT3 currentPosition{};  // 位置調整中の現在位置。
-        DirectX::XMFLOAT3 requestedMoveDirection{};  // 要求された移動方向。
-        float startPlayerDistance = 0.0f;  // 開始時のプレイヤーとの距離。
-        float currentPlayerDistance = 0.0f;  // 現在のプレイヤーとの距離。
-        float plannedMoveDistance = 0.0f;  // 予定移動距離。
-        float actualMoveDistance = 0.0f;  // 実際に移動した距離。
-        float traveledPathDistance = 0.0f;  // 移動経路の累積距離。
-        float remainingDistance = 0.0f;  // 目標位置までの残り距離。
-        float frameMovement = 0.0f;  // 現在のフレームの移動量。
-        float actualSpeed = 0.0f;  // 実際の移動速度。
-        float elapsedTime = 0.0f;  // 位置調整の経過時間。
-        float stuckTimer = 0.0f;  // 移動中の停滞時間。
-        float inputMagnitude = 0.0f;  // 移動入力の大きさ。
-        std::string endReason = "None";  // 位置調整の終了理由。
-    };
     static constexpr float bossRoomMinX = -2.5f;  // ボス部屋のX座標の下限。
     static constexpr float bossRoomMaxX = 19.5f;  // ボス部屋のX座標の上限。
     static constexpr float bossRoomMinZ = 0.0f;  // ボス部屋のZ座標の下限。
@@ -1960,9 +1819,6 @@ private:
     BossRepositionReason repositionReason = BossRepositionReason::Normal;  // 位置調整を選択した理由。
     BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;  // 選択された位置調整の方向。
 
-    bool positioningDebugActive = true;  // 位置調整の診断情報を有効にするか。
-    PositioningDebugSnapshot currentPositioningDebug{};  // 実行中の位置調整の診断情報。
-    PositioningDebugSnapshot lastPositioningDebug{};  // 直近の位置調整の診断情報。
 
     // FastCombo??A???U???p
     bool transitionWindow = false;  // FastComboの次段階へ移行できるNotify期間か。
