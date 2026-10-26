@@ -82,9 +82,6 @@
     <ClCompile Include="Source\Components\Camera\CameraComponent.cpp">
       <Filter>Source\Components\Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Components\Game\LifeTimeComponent.cpp">
-      <Filter>Source\Components\Game</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Components\Audio\AudioSourceComponent.cpp">
       <Filter>Source\Components\Audio</Filter>
     </ClCompile>
@@ -107,9 +104,6 @@
       <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Camera\MovieCameraManagerActor.cpp">
-      <Filter>Source\Engine\Camera</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Camera\TPSCameraController.cpp">
       <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Debug\DebugRender.cpp">
@@ -245,9 +239,6 @@
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStage.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.cpp">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.cpp">
@@ -421,12 +412,6 @@
     <ClCompile Include="Source\Animation\BlendSpaceAnimation.cpp">
       <Filter>Source\Animation</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\JudgementDerived.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.cpp">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\BehaviorTree\GruxChargeAttackBT.cpp">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClCompile>
@@ -534,12 +519,6 @@
     <ClInclude Include="Source\Components\Camera\CameraComponent.h">
       <Filter>Source\Components\Camera</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Components\Game\LifeTimeComponent.h">
-      <Filter>Source\Components\Game</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Components\Game\TimerActionComponent.h">
-      <Filter>Source\Components\Game</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Components\Audio\AudioSourceComponent.h">
       <Filter>Source\Components\Audio</Filter>
     </ClInclude>
@@ -565,9 +544,6 @@
       <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera\MovieCameraManagerActor.h">
-      <Filter>Source\Engine\Camera</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\Camera\TPSCameraController.h">
       <Filter>Source\Engine\Camera</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Debug\DebugRender.h">
@@ -699,15 +675,6 @@
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h">
       <Filter>Source\Game\Actors\Stage</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Stage\ElasticBuilding.h">
-      <Filter>Source\Game\Actors\Stage</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Stage\Stage.h">
-      <Filter>Source\Game\Actors\Stage</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Stage\Props\ClothActor.h">
-      <Filter>Source\Game\Actors\Stage\Props</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Actors\Player\Player.h">
       <Filter>Source\Game\Actors\Player</Filter>
     </ClInclude>
@@ -751,9 +718,6 @@
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStage.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\IceFragmentEffectActor.h">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\ModelDebrisEmitterActor.h">
@@ -993,13 +957,7 @@
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\JudgementBase.h">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\JudgementDerived.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionBase.h">
-      <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\BehaviorTree\ActionDerived.h">
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\BehaviorTree\GruxChargeAttackBT.h">
@@ -1024,9 +982,6 @@
       <Filter>Source\Game\DarkGame\BehaviorTree</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameMovieSkipUIActor.h">
-      <Filter>Source\Game\Actors\UI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Actors\UI\GameVictoryUIActor.h">
       <Filter>Source\Game\Actors\UI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\UI\GameDefeatUIActor.h">
@@ -1121,12 +1076,6 @@
     <FxCompile Include="Shader\DepthOfFieldPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\ElasticBuildingCsmVS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\ElasticBuildsVS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\FinalPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
@@ -1155,9 +1104,6 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\HuskParticlesVS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\InstanceModelIceEffectPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\InstancePointLightModelPS.hlsl">
@@ -1251,12 +1197,6 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\GltfModelVS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\GltfMorphModelPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\GltfMorphModelVS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\HighFreqWorleyCS.hlsl">
@@ -1370,9 +1310,6 @@
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\Constants.hlsli">
-      <Filter>Shader</Filter>
-    </None>
-    <None Include="Shader\ElasticConstants.hlsli">
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\FilterFunctions.hlsli">

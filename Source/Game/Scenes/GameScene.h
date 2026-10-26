@@ -33,8 +33,6 @@
 
 #include "UI/Widgets/Widget.h"
 
-#include "PBD/PBDSystem.h"
-
 class GruxEnemy;
 class Enemy;
 class SkeletonWarriorActor;
@@ -65,84 +63,59 @@ public:
         Victory,
     };
 
-public:
-    GameScene();
-    ~GameScene() override;
-
-    bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) override;
-
-    void Start() override;
-
-    void Update(float deltaTime) override;
-
-    bool Uninitialize(ID3D11Device* device) override;
-
-    void DrawGuiPlusAlpha() override;
-
-    void SetUpActors()override;
-
-    static inline Scene::Autoenrollment<GameScene> _autoenrollment;
-
-    void SetBossRoomLerpFactor(float lerpFactor);
-    void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
-    void CancelBossRoomLerp();
-
-    void SetDeathPresentationCueCallback(std::function<void(GamePlayerDeathController::Cue)> callback);
-
-    void BeginGameBgmFadeOut();
-    void PlayBossBattleBgm();
-
-    void EnterBossRoomLockOnScope(bool fromTutorialDoorMovie = true);
-
-    void StartBossBattle();
-    void SkipBossDeathToFinishPrompt();
-    bool IsBossDeathFinishPromptActive() const;
-    bool IsBossDeathCinematicAudioActive() const;
-
-    void PrepareTutorialForBossEntry();
-    bool RequestBossEntryFromPause();
-    bool RequestRestartBossBattleFromPause();
-    void RequestReturnToMainRoomStart();
-    bool BeginPrisonOpeningMoviePlayerSitting();
-    void EndPrisonOpeningMoviePlayerSitting();
-
     enum class LockOnTargetSelectionResult : uint8_t
     {
         Selected,
         NoCandidate,
         Invalidated,
     };
+
+    GameScene();
+    ~GameScene() override;
+    bool Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props) override;
+    void Start() override;
+    void Update(float deltaTime) override;
+    bool Uninitialize(ID3D11Device* device) override;
+    void DrawGuiPlusAlpha() override;
+    void SetUpActors()override;
+
+    static inline Scene::Autoenrollment<GameScene> _autoenrollment;
+
+    // ムービー・カメラ
+    void SetBossRoomLerpFactor(float lerpFactor);
+    void StartBossRoomLerp(float startFactor, float endFactor, float duration, std::function<void()> finished = nullptr);
+    void CancelBossRoomLerp();
+    void EnterBossRoomLockOnScope(bool fromTutorialDoorMovie = true);
+    void PrepareTutorialForBossEntry();
+    bool BeginPrisonOpeningMoviePlayerSitting();
+    void EndPrisonOpeningMoviePlayerSitting();
+
+    // 戦闘・BGM
+    void SetDeathPresentationCueCallback(std::function<void(GamePlayerDeathController::Cue)> callback);
+    void BeginGameBgmFadeOut();
+    void PlayBossBattleBgm();
+    void StartBossBattle();
+    void SkipBossDeathToFinishPrompt();
+    void NotifyPhase2BossRoar();
+
+    // Pause・シーン遷移
+    bool RequestBossEntryFromPause();
+    bool RequestRestartBossBattleFromPause();
+    void RequestReturnToMainRoomStart();
+
+    // 戦闘状態
     LockOnTargetSelectionResult UpdateLockOnTargetSelection();
     BossPhase GetBossPhase() const { return bossPhase; }
     int GetBossCurrentHp() const;
     int GetBossMaxHp() const;
     int GetPhase2MaxHpForPresentation() const { return phase2MaxHp; }
-    void NotifyPhase2BossRoar();
     bool IsBossPhaseTransitionActive() const { return bossPhase == BossPhase::TransitionToPhase2; }
     bool IsPhase1BreakPending() const { return phase1BreakPending; }
     bool IsBossInFinalPhase() const { return bossPhase == BossPhase::Phase2; }
+    bool IsBossDeathFinishPromptActive() const;
+    bool IsBossDeathCinematicAudioActive() const;
+
 private:
-#ifdef USE_IMGUI
-    void DrawTutorialDebugGui();
-    void DrawPhase2DebugGui();
-    void DrawBgmAndBattleTimerDebugGui();
-    void DrawBossDeathDebugGui();
-    void DrawPlayerDeathDebugGui();
-#endif
-    void UpdateTutorialCameraProfileTrigger();
-    bool EvaluateLockOnCandidate(const std::shared_ptr<Enemy>& enemy,
-        std::shared_ptr<SceneComponent>& outTarget, float& outDistanceSq,
-        float& outScreenDistanceSq) const;
-    void UpdateOperationGuideTutorial(LockOnTargetSelectionResult selectionResult);
-    void CompleteTutorialForBossBattle();
-    void UpdateLockOnTargetUI(float deltaTime);
-    void StartJudgeDodgeOperationTutorial();
-    void CloseJudgeDodgeOperationTutorial();
-    void UpdateTutorialDodgeGuideRing();
-    void SpawnTutorialSkeletons();
-    void CreateTutorialSkeletonUI();
-    void UpdateTutorialSkeletonUI();
-    void HideTutorialSkeletonUI();
     enum class Phase1FinalHitTimePhase : uint8_t
     {
         None,
@@ -163,13 +136,40 @@ private:
         ReturnToTps,
     };
 
+    // 初期化・Actor構築
+    void CreateBossDeathFadeUI();
+
+    // Tutorial・Lock-on
+    void UpdateTutorialCameraProfileTrigger();
+    bool EvaluateLockOnCandidate(const std::shared_ptr<Enemy>& enemy,
+        std::shared_ptr<SceneComponent>& outTarget, float& outDistanceSq,
+        float& outScreenDistanceSq) const;
+    void UpdateOperationGuideTutorial(LockOnTargetSelectionResult selectionResult);
+    void CompleteTutorialForBossBattle();
+    void UpdateLockOnTargetUI(float deltaTime);
+    void StartJudgeDodgeOperationTutorial();
+    void CloseJudgeDodgeOperationTutorial();
+    void UpdateTutorialDodgeGuideRing();
+    void SpawnTutorialSkeletons();
+    void CreateTutorialSkeletonUI();
+    void UpdateTutorialSkeletonUI();
+    void HideTutorialSkeletonUI();
+
+    // 戦闘進行・最終ヒット
     void UpdateBattleFlow();
+    void OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& source);
+    void EnterPlayerDead();
+    void EnterBossDead();
+    void SetBattleHudVisible(bool visible);
+    void BeginPhase2FinalHitHpFallback();
+    bool IsPhase2FinalHitGateComplete() const;
+
+    // Phase1 / Phase2移行
     void BeginPhase2Transition();
     void CompletePhase2TransitionAtBlack();
     void UpdatePhase2Transition();
     void ResetBossPhaseRuntime(BossPhase phase);
     void ApplyBossPhaseHp(BossPhase phase);
-    void CaptureContinueBossCheckpoint();
     void BeginPhase1BreakPending();
     void UpdatePhase1BreakPending();
     void StartPhase1FinalHitTimeSequence();
@@ -178,24 +178,33 @@ private:
     void SetupPhase2RecallCinematic();
     void UpdatePhase2Cinematic();
     void BeginPhase2TpsReturnBlend();
-    void SetBattleHudVisible(bool visible);
-    void DisableCinematicCameraDebugInput();
-    void EnterPlayerDead();
+
+    // Continue・Restart・Result
+    void CaptureContinueBossCheckpoint();
     void ResetBattleForContinue();
     void ResetBattleFacingAndCamera();
-    void EnterBossDead();
-    void BeginPhase2FinalHitHpFallback();
-    bool IsPhase2FinalHitGateComplete() const;
     void RestartBossBattle();
-    void UpdateMovieSkip();
-    GameMovieSkipUIActor::MovieSkipType GetActiveMovieSkipType();
-    void CreateBossDeathFadeUI();
-    void SetBossDeathFadeAlpha(float alpha);
+    void ExecuteDeathResult(int index);
     void ExecuteVictoryResult(int selection);
-    std::shared_ptr<GameVictoryUIActor> victoryUIActor;
     void EnterVictoryResult();
     void UpdateVictoryResult();
-    void ExecuteDeathResult(int index);
+
+    // Movie Skip・Fade・Cinematic Camera
+    void DisableCinematicCameraDebugInput();
+    void UpdateMovieSkip();
+    GameMovieSkipUIActor::MovieSkipType GetActiveMovieSkipType();
+    void SetBossDeathFadeAlpha(float alpha);
+
+    // Debug・ImGui
+#ifdef USE_IMGUI
+    void DrawTutorialDebugGui();
+    void DrawPhase2DebugGui();
+    void DrawBgmAndBattleTimerDebugGui();
+    void DrawBossDeathDebugGui();
+    void DrawPlayerDeathDebugGui();
+#endif
+    // UI Actor（Victory Result）
+    std::shared_ptr<GameVictoryUIActor> victoryUIActor;
 
     std::shared_ptr<StageAsset> mainRoomAsset = std::make_shared<StageAsset>();
     std::shared_ptr<StageAsset> bossRoomAsset = std::make_shared<StageAsset>();
@@ -210,19 +219,17 @@ private:
     std::thread loadStageThread;
     std::thread loadStageAssetsThread;
 
-
+    // Actor参照（Player・Boss）    
     std::shared_ptr<Player> player;
-
     std::shared_ptr<GruxEnemy> gruxEnemyActor;
 
+    // UI Actor（Lock-on）   
     std::shared_ptr<GameLockOnTargetUIActor> lockOnTargetUIActor;
     bool lockOnInputHeldLastFrame = false;
     bool lockOnTargetSelectedForHeldInput = false;
 
     bool bossRoomLockOnScopeActive = false;
     bool lockOnRequiresReleaseAfterBossRoomEntry = false;
-
-    void OnPlayerFinalHit(GruxEnemy* boss, const DirectX::XMFLOAT3& source);
 
     float finalHitSlowScale = 0.05f;
     float finalHitSlowDuration = 2.0f;
@@ -272,10 +279,12 @@ private:
     float battleElapsedTime = 0.0f;
     float finalBattleTime = 0.0f;
     bool finalBattleTimeSaved = false;
+    // Controller・Manager（戦闘演出・リザルト）   
     std::unique_ptr<GameBossDeathController> bossDeathController;
     std::unique_ptr<GamePlayerDeathController> playerDeathController;
     std::unique_ptr<GameVictoryController> victoryController;
     std::unique_ptr<GamePhase2TransitionController> phase2TransitionController;
+    // UI Actor・UI部品（死亡・リザルト）
     std::shared_ptr<GameMovieSkipUIActor> movieSkipUIActor;
     std::shared_ptr<GameBossDeathUIActor> bossDeathUIActor;
     std::shared_ptr<UIImageComponent> bossDeathFadeOverlay;
@@ -288,8 +297,8 @@ private:
     float numberTexHeight = 300.f;
 
 
+    // Camera Actor参照
     std::shared_ptr<CinemaCamera> cinemaCameraActor;
-
     std::shared_ptr<DarkCameraActor> darkCameraActor;
 
     DirectX::XMFLOAT3 tutorialCameraProfileTriggerCenter{ -25.0f, 1.0f, 10.75f };
@@ -303,6 +312,7 @@ private:
     GameTutorialController tutorialController;
     bool judgeDodgeOperationTutorialOwnsPause = false;
     float judgeDodgeOperationTutorialPreviousTimeScale = 1.0f;
+    // Tutorial Actor・UI参照
     std::shared_ptr<GameTutorialUIActor> tutorialUIActor;
     std::shared_ptr<SkeletonWarriorActor> tutorialPassiveSkeletonActor;
     std::shared_ptr<SkeletonWarriorActor> tutorialDodgeSkeletonActor;

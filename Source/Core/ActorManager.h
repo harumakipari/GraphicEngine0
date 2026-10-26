@@ -29,55 +29,6 @@ public:
     std::vector<std::shared_ptr<Actor>> allActors_;
 
     // アクターを名前付きで作成・登録する（同名アクターが存在する場合は"_1","_2"とつけてユニークな名前にする） 二つ目の引数は初期化をautoでするかどうかを決定する
-#if 0
-    template <class T>
-    std::shared_ptr<T> CreateAndRegisterActor(const std::string& actorName, bool autoInitialize = true)
-    {
-#if 0 // 同名の時に警告する
-        auto findByName = [&actorName](const std::shared_ptr<Actor>& actor)
-            {
-                return actor->GetName() == actorName;
-            };
-        // 名前が一致するアクターを探す
-        std::vector<std::shared_ptr<Actor>>::iterator it = std::find_if(allActors_.begin(), allActors_.end(), findByName);
-
-        // 同名のアクターがすでに存在していたら警告
-        _ASSERT_EXPR(it == allActors_.end(), L"An actor with this name has already been registered.");
-        std::shared_ptr<T> newActor = std::make_shared<T>(actorName);
-
-#else // 同名の時にユニークな名前をつける
-        // 同名があれば "_1", "_2", ... をつけてユニークな名前にする
-        std::string finalName = actorName;
-        int suffix = 1;
-        auto nameExists = [&](const std::string& name)
-            {
-                return std::any_of(allActors_.begin(), allActors_.end(), [&](const std::shared_ptr<Actor>& actor)
-                    {
-                        return actor->GetName() == name;
-                    });
-            };
-
-        while (nameExists(finalName))
-        {
-            finalName = actorName + "_" + std::to_string(suffix++);
-        }
-        std::shared_ptr<T> newActor = std::make_shared<T>(finalName);
-        // Sceneを渡す
-        newActor->SetOwnerScene(ownerScene_);
-        allActors_.push_back(newActor);
-#endif
-        if (autoInitialize)
-        {
-            newActor->Initialize();
-            newActor->PostInitialize();
-        }
-        return newActor;
-    }
-#endif // 0
-
-
-
-    // アクターを名前付きで作成・登録する（同名アクターが存在する場合は"_1","_2"とつけてユニークな名前にする） 二つ目の引数は初期化をautoでするかどうかを決定する
     template <class T, class... Args>
     std::shared_ptr<T> CreateAndRegisterActorWithTransform(const std::string& actorName, const Transform& transform = { DirectX::XMFLOAT3 {0,0,0},DirectX::XMFLOAT4{1,1,1,0},DirectX::XMFLOAT3{1,1,1} }, Args&&... args)
     {
