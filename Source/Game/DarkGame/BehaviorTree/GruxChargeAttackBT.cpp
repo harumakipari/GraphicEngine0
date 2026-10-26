@@ -784,25 +784,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             chargeBT.tripleChargeSideWallComponent = sideComponent;
             chargeBT.tripleChargeForwardCorrectionDistance = chargeBT.tripleChargeRepositionShortage;
             chargeBT.tripleChargeSideCorrectionDistance = sideShortage;
-            if (showChargeCastDebug)
-            {
-                const DirectX::XMFLOAT4 repositionColor{ 0.75f, 0.20f, 1.0f, 1.0f };
-                DebugRender::DrawLine(chargeBT.tripleChargeRepositionStartPosition,
-                    chargeBT.tripleChargeRepositionTargetPosition, repositionColor, 0.0f, true);
-                DebugRender::DrawSphere(chargeBT.tripleChargeRepositionTargetPosition,
-                    0.10f, repositionColor, 0.0f, true);
-                if (sideWallHit)
-                {
-                    DebugRender::DrawSphere(sideHitPosition, 0.12f,
-                        { 1.0f, 0.05f, 0.80f, 1.0f }, 0.0f, true);
-                    DebugRender::DrawLine(sideHitPosition,
-                        { sideHitPosition.x + sideNormal.x,
-                            sideHitPosition.y + sideNormal.y,
-                            sideHitPosition.z + sideNormal.z },
-                        { 1.0f, 0.05f, 0.80f, 1.0f }, 0.0f, true);
-                }
-            }
-
             if (clearanceMeasured && !chargeBT.tripleChargeRepositionActive &&
                 (chargeBT.tripleChargeRepositionShortage > 0.0f || sideShortage > 0.0f))
             {
@@ -1448,13 +1429,6 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     chargePlayerDamageForwardOffset = std::clamp(chargePlayerDamageForwardOffset, 0.0f, 5.0f);
     chargeJustDodgeCastRadiusScale = std::clamp(chargeJustDodgeCastRadiusScale, 0.1f, 2.0f);
     chargeJustDodgeCastRadiusScalePhase2 = std::clamp(chargeJustDodgeCastRadiusScalePhase2, 0.1f, 5.0f);
-    ImGui::Checkbox("Show Charge Cast Debug", &showChargeCastDebug);
-    if (showChargeCastDebug)
-    {
-        ImGui::Checkbox("Show Player Cast", &showPlayerCastDebug);
-        ImGui::Checkbox("Show Just Dodge Cast", &showJustDodgeCastDebug);
-        ImGui::Checkbox("Show Wall Cast", &showWallCastDebug);
-    }
 
     // ★ 方向固定時刻を調整可能にする
     ImGui::DragFloat(

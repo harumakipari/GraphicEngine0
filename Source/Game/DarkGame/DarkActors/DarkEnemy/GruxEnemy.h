@@ -1280,13 +1280,11 @@ private:
     const AnimationNotifyState* GetSelectedDangerNotifyState() const;
 
     // デバッグ用にPlayerと危険範囲の重なりを判定する。
-    bool GetPlayerDangerOverlapForDebug(const DangerArea& area) const;
 
     // 有効なNotifyから危険範囲を更新する。
     void RefreshActiveDangerAreaFromNotify();
 
     // 危険範囲をワールド上にデバッグ描画する。
-    void DrawDangerObbWorldDebug();
 
     // Jump用のMotionWarp上書き情報を準備する。
     void PrepareJumpAttackMotionWarpOverride();
@@ -1306,10 +1304,8 @@ private:
     // 距離や向きなどのAI情報をワールド上に描画する。
 
     // 位置調整のデバッグ情報をワールド上に描画する。
-    void DrawPositioningDebugWorld() const;
 
     // 退避候補などのデバッグ情報をワールド上に描画する。
-    void DrawRetreatDebugWorld() const;
 
     // 指定された位置調整目標への移動を更新する。
     PositioningMoveResult UpdatePositioningTargetMovement(PositioningTargetContext& target,
@@ -1744,7 +1740,6 @@ private:
     PositioningTargetContext retreatTarget{};  // 退避先と移動条件。
     PositioningTargetRuntime retreatMovementRuntime{};  // 退避移動の経過時間や移動距離。
     PositioningTargetRuntime attackSetupRuntime{};  // 攻撃準備位置への移動状態。
-    bool retreatWorldDebug = true;  // 退避候補のワールド描画を有効にする。
     DirectX::XMFLOAT3 retreatDebugTargetPosition{};  // 退避先のデバッグ描画位置。
     float retreatRemainingDistance = 0.0f;  // 退避先までの残り距離。
     PositioningMoveResult retreatLastMoveResult = PositioningMoveResult::None;  // 直近の退避移動結果。
@@ -1985,7 +1980,6 @@ private:
     BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;  // 選択された位置調整の方向。
 
     bool positioningDebugActive = true;  // 位置調整の診断情報を有効にするか。
-    bool positioningWorldDebug = true;  // 位置調整のワールド上の診断描画を有効にするか。
     PositioningDebugSnapshot currentPositioningDebug{};  // 実行中の位置調整の診断情報。
     PositioningDebugSnapshot lastPositioningDebug{};  // 直近の位置調整の診断情報。
 
@@ -2377,10 +2371,6 @@ private:
     float chargePlayerCastRadiusDebug = 0.0f;  // Chargeのプレイヤー判定半径の診断値。
     float chargeJustDodgeCastRadiusDebug = 0.0f;  // Chargeのジャスト回避判定半径の診断値。
     float chargeWallCastRadiusDebug = 0.0f;  // Chargeの壁判定半径の診断値。
-    bool showChargeCastDebug = false;  // Charge判定の診断描画を表示するか。
-    bool showPlayerCastDebug = true;  // プレイヤー判定の診断描画を表示するか。
-    bool showJustDodgeCastDebug = true;  // ジャスト回避判定の診断描画を表示するか。
-    bool showWallCastDebug = true;  // 壁判定の診断描画を表示するか。
     std::string chargeStartFailureReasonDebug = "None";  // Charge開始失敗の理由。
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;  // Chargeの終了理由の診断値。
     ChargeAttackEndReason pendingChargeRecoveryResult = ChargeAttackEndReason::None;  // Recovery処理に引き継ぐChargeの終了理由。
@@ -2482,7 +2472,6 @@ private:
     size_t dangerObbSelectedClip = static_cast<size_t>(-1);  // 危険範囲編集で選択中のアニメーション。
     size_t dangerObbSelectedStateIndex = 0;  // 危険範囲編集で選択中のNotify Stateのインデックス。
     const AnimationNotifyState* activeDangerNotifyState = nullptr;  // 現在有効な危険範囲のNotify State。
-    bool dangerObbWorldDebug = false;  // 危険範囲OBBのワールド描画を有効にするか。
 
     float damageFlashDuration = 0.20f;  // 被弾時の発光演出の時間。
     float damageFlashStartValue = 0.60f;  // 被弾時の発光演出の開始値。

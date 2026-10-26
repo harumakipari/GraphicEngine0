@@ -1614,10 +1614,6 @@ void GruxEnemy::Update(float deltaTime)
     DrawJumpLandingDebugWorld();
 
 #ifdef USE_IMGUI
-    if (positioningWorldDebug)
-        DrawPositioningDebugWorld();
-    if (retreatWorldDebug)
-        DrawRetreatDebugWorld();
     UpdateDashTelegraphVisualDebug();
     if (dashTelegraphActive || forceShowDashTelegraph)
         DrawDashTelegraphDebugWorld();
@@ -1757,8 +1753,6 @@ void GruxEnemy::Update(float deltaTime)
             }
         }
     }
-
-    DrawDangerObbWorldDebug();
 
 
 
@@ -2065,56 +2059,6 @@ void GruxEnemy::DrawDashTelegraphDebugWorld() const
     DebugRender::DrawLine(start, end, color, 0.0f, true);
 }
 
-void GruxEnemy::DrawPositioningDebugWorld() const
-{
-#ifdef USE_IMGUI
-    const PositioningDebugSnapshot& snapshot = positioningDebugActive
-        ? currentPositioningDebug
-        : lastPositioningDebug;
-    const float debugY = snapshot.valid ? snapshot.startBossPosition.y + 0.12f : GetPosition().y + 0.12f;
-    const auto drawBounds = [debugY](float minX, float maxX, float minZ, float maxZ,
-        const DirectX::XMFLOAT4& color)
-        {
-            const DirectX::XMFLOAT3 a{ minX, debugY, minZ };
-            const DirectX::XMFLOAT3 b{ maxX, debugY, minZ };
-            const DirectX::XMFLOAT3 c{ maxX, debugY, maxZ };
-            const DirectX::XMFLOAT3 d{ minX, debugY, maxZ };
-            DebugRender::DrawLine(a, b, color, 0.0f, true);
-            DebugRender::DrawLine(b, c, color, 0.0f, true);
-            DebugRender::DrawLine(c, d, color, 0.0f, true);
-            DebugRender::DrawLine(d, a, color, 0.0f, true);
-        };
-
-    drawBounds(bossRoomMinX, bossRoomMaxX, bossRoomMinZ, bossRoomMaxZ,
-        { 0.45f, 0.45f, 0.5f, 1.0f });
-    constexpr float maximumMargin =
-        (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
-            (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
-    const float margin = std::clamp(bossRoomSafetyMargin, 0.0f, maximumMargin);
-    drawBounds(bossRoomMinX + margin, bossRoomMaxX - margin,
-        bossRoomMinZ + margin, bossRoomMaxZ - margin,
-        { 0.2f, 1.0f, 0.45f, 1.0f });
-
-    if (!snapshot.valid)
-        return;
-    DirectX::XMFLOAT3 start = snapshot.startBossPosition;
-    DirectX::XMFLOAT3 desired = snapshot.desiredTargetPosition;
-    DirectX::XMFLOAT3 target = snapshot.clampedTargetPosition;
-    DirectX::XMFLOAT3 current = positioningDebugActive ? GetPosition() : snapshot.currentPosition;
-    start.y = desired.y = target.y = current.y = debugY + 0.08f;
-    DebugRender::DrawSphere(start, 0.22f, { 0.2f, 0.8f, 1.0f, 1.0f }, 0.0f, true);
-    DebugRender::DrawSphere(desired, 0.22f, { 1.0f, 0.2f, 0.9f, 1.0f }, 0.0f, true);
-    DebugRender::DrawSphere(target, 0.28f, { 1.0f, 0.25f, 0.2f, 1.0f }, 0.0f, true);
-    DebugRender::DrawSphere(current, 0.18f, { 0.25f, 1.0f, 0.35f, 1.0f }, 0.0f, true);
-    DebugRender::DrawLine(start, desired, { 1.0f, 0.2f, 0.9f, 1.0f }, 0.0f, true);
-    DebugRender::DrawLine(desired, target, { 1.0f, 0.45f, 0.15f, 1.0f }, 0.0f, true);
-    DebugRender::DrawLine(start, target, { 0.2f, 0.8f, 1.0f, 1.0f }, 0.0f, true);
-    DebugRender::DrawLine(current, target, { 1.0f, 0.75f, 0.15f, 1.0f }, 0.0f, true);
-#else
-    (void)this;
-#endif
-}
-
 //@ƒ{ƒXAI‚ÌImGui•`‰æ
 void GruxEnemy::DrawImGuiDetails()
 {
@@ -2258,8 +2202,6 @@ void GruxEnemy::DrawImGuiDetails()
             selectedState->justDodgeAreaSize.z = (std::max)(0.0f, selectedState->justDodgeAreaSize.z);
             if (changed && selectedState == activeDangerNotifyState)
                 RefreshActiveDangerAreaFromNotify();
-
-            ImGui::Checkbox("Danger OBB World Debug", &dangerObbWorldDebug);
 
             const uint64_t key = (static_cast<uint64_t>(dangerObbSelectedClip) << 32) |
                 static_cast<uint64_t>(dangerObbSelectedStateIndex);
@@ -2493,8 +2435,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat("Move Stop Delay", &positioningMoveStopDelay,
         0.01f, 0.0f, 2.0f, "%.2f sec");
     positioningMoveStopDelay = (std::max)(0.0f, positioningMoveStopDelay);
-    ImGui::SeparatorText("Boss Positioning Debug");
-    ImGui::Checkbox("Positioning World Debug", &positioningWorldDebug);
     ImGui::SeparatorText("Combat Reposition Debug");
     const char* repositionReasonName = repositionReason == BossRepositionReason::BackTaken
         ? "BackTaken" : "Normal";
@@ -4729,33 +4669,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         });
     const bool wallCastHit = Physics::Instance().SphereCast(
         castOrigin, chargeDirection, castDistance, wallCastRadius, wallHit, wallMask);
-    if (showChargeCastDebug && (showPlayerCastDebug || showWallCastDebug))
-    {
-        const auto drawCast = [&](const DirectX::XMFLOAT3& debugCastOrigin,
-            const float castRadius, const DirectX::XMFLOAT4& color, const bool enabled)
-            {
-                const DirectX::XMFLOAT3 castEnd{
-                    debugCastOrigin.x + chargeDirection.x * castDistance,
-                    debugCastOrigin.y + chargeDirection.y * castDistance,
-                    debugCastOrigin.z + chargeDirection.z * castDistance };
-                if (!enabled) return;
-                constexpr int sampleCount = 4;
-                for (int i = 0; i <= sampleCount; ++i)
-                {
-                    const float t = static_cast<float>(i) / static_cast<float>(sampleCount);
-                    const DirectX::XMFLOAT3 point{
-                        debugCastOrigin.x + (castEnd.x - debugCastOrigin.x) * t,
-                        debugCastOrigin.y + (castEnd.y - debugCastOrigin.y) * t,
-                        debugCastOrigin.z + (castEnd.z - debugCastOrigin.z) * t };
-                    DebugRender::DrawSphere(point, castRadius, color, 0.0f, true);
-                }
-                DebugRender::DrawLine(debugCastOrigin, castEnd, color, 0.0f, true);
-            };
-        drawCast(playerDamageCastOrigin, playerCastRadius, { 0.15f, 0.85f, 1.0f, 1.0f }, showPlayerCastDebug);
-        drawCast(castOrigin, justDodgeCastRadius, { 0.75f, 0.30f, 1.0f, 1.0f }, showJustDodgeCastDebug);
-        drawCast(castOrigin, wallCastRadius, { 1.0f, 0.35f, 0.10f, 1.0f }, showWallCastDebug);
-    }
-
     bool wallCandidate = false;
     if (wallCastHit)
     {
@@ -4775,31 +4688,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         {
             chargeBT.tripleCurrentWallClearance = (std::max)(0.0f, wallHit.distance);
             chargeBT.tripleWallTurnCandidate = wallCandidate;
-        }
-    }
-
-    if (showChargeCastDebug)
-    {
-        if (showPlayerCastDebug && playerCastHit)
-        {
-            const DirectX::XMFLOAT3 hitPosition = playerHit.hasPosition ? playerHit.hitPoint : DirectX::XMFLOAT3{
-                playerDamageCastOrigin.x + chargeDirection.x * playerHit.distance,
-                playerDamageCastOrigin.y + chargeDirection.y * playerHit.distance,
-                playerDamageCastOrigin.z + chargeDirection.z * playerHit.distance };
-            DebugRender::DrawSphere(hitPosition, (std::max)(0.05f, playerCastRadius * 0.35f), { 0.1f, 1.0f, 0.95f, 1.0f }, 0.0f, true);
-        }
-        if (showWallCastDebug && wallCastHit)
-        {
-            const DirectX::XMFLOAT3 hitPosition = wallHit.hasPosition ? wallHit.hitPoint : DirectX::XMFLOAT3{
-                castOrigin.x + chargeDirection.x * wallHit.distance,
-                castOrigin.y + chargeDirection.y * wallHit.distance,
-                castOrigin.z + chargeDirection.z * wallHit.distance };
-            DebugRender::DrawSphere(hitPosition, (std::max)(0.05f, wallCastRadius * 0.35f), { 1.0f, 0.9f, 0.1f, 1.0f }, 0.0f, true);
-            const DirectX::XMFLOAT3 normalEnd{
-                hitPosition.x + wallHit.normal.x,
-                hitPosition.y + wallHit.normal.y,
-                hitPosition.z + wallHit.normal.z };
-            DebugRender::DrawLine(hitPosition, normalEnd, { 1.0f, 0.95f, 0.1f, 1.0f }, 0.0f, true);
         }
     }
 
@@ -5233,24 +5121,6 @@ const AnimationNotifyState* GruxEnemy::GetSelectedDangerNotifyState() const
     return const_cast<GruxEnemy*>(this)->GetSelectedDangerNotifyState();
 }
 
-bool GruxEnemy::GetPlayerDangerOverlapForDebug(const DangerArea& area) const
-{
-    const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-    if (!player)
-        return false;
-    DirectX::XMFLOAT3 center = player->GetPosition();
-    float radius = 0.0f;
-    float height = 0.0f;
-    if (const auto capsule = std::dynamic_pointer_cast<CapsuleComponent>(
-        player->FindComponentByName("capsuleComponent")))
-    {
-        center = capsule->GetComponentLocation();
-        radius = capsule->GetRadius();
-        height = capsule->GetHeight();
-    }
-    return area.IntersectsPlayerCapsule(center, radius, height).overlap;
-}
-
 void GruxEnemy::RefreshActiveDangerAreaFromNotify()
 {
     if (!isDangerWindow || !activeDangerNotifyState)
@@ -5262,23 +5132,6 @@ void GruxEnemy::RefreshActiveDangerAreaFromNotify()
     justDodgeAreaSize.z = (std::max)(0.0f, justDodgeAreaSize.z);
     dangerArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(),
         justDodgeAreaOffset, justDodgeAreaSize);
-}
-
-void GruxEnemy::DrawDangerObbWorldDebug()
-{
-    if (!dangerObbWorldDebug)
-        return;
-    const AnimationNotifyState* state = GetSelectedDangerNotifyState();
-    if (!state)
-        return;
-    const DangerArea selectedArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(),
-        state->justDodgeAreaOffset, state->justDodgeAreaSize);
-    const bool inside = GetPlayerDangerOverlapForDebug(selectedArea);
-    const DirectX::XMFLOAT4 color = inside
-        ? DirectX::XMFLOAT4{ 1.0f, 0.1f, 0.1f, 1.0f }
-    : DirectX::XMFLOAT4{ 1.0f, 0.8f, 0.15f, 1.0f };
-    DebugRender::DrawBox(selectedArea.WorldTransform(), selectedArea.size, color, 0.0f, true);
-    DebugRender::DrawSphere(selectedArea.center, 0.1f, color, 0.0f, true);
 }
 
 void GruxEnemy::ResetDangerArea()
