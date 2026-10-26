@@ -505,9 +505,9 @@ void GruxEnemy::SetHpBarVisible(const bool visible)
 
 void GruxEnemy::BeginHpBarFadeOut()
 {
-    // Restore a manual preview before the cinematic captures shared-bar fade entries.
-    if (IsPhase2HpBarPreviewActive())
-        ResetPhase2HpBarPreview();
+    // Cancel an active HP-bar presentation before the cinematic captures shared-bar fade entries.
+    if (IsPhase2HpBarPresentationActive())
+        ResetPhase2HpBarPresentation();
 
     hpBarFadeEntries.clear();
     for (const auto& core : hpBarUiComponents)
@@ -535,9 +535,9 @@ void GruxEnemy::SetHpBarFadeAlpha(const float alpha)
     }
 }
 
-bool GruxEnemy::IsPhase2HpBarPreviewActive() const
+bool GruxEnemy::IsPhase2HpBarPresentationActive() const
 {
-    return phase2HpBarPreviewState != Phase2HpBarPreviewState::Hidden;
+    return phase2HpBarPresentationState != Phase2HpBarPresentationState::Hidden;
 }
 
 void GruxEnemy::ApplyHpBarVisualProfile(const HpBarVisualProfile profile)
@@ -587,105 +587,100 @@ void GruxEnemy::ApplyHpBarVisualProfile(const HpBarVisualProfile profile)
         return;
     }
 
-    if (!IsPhase2HpBarPreviewActive())
+    if (!IsPhase2HpBarPresentationActive())
     {
-        phase2HpBarPreviewFrameProgress = 1.0f;
-        phase2HpBarPreviewFillProgress = 1.0f;
+        phase2HpBarPresentationFrameProgress = 1.0f;
+        phase2HpBarPresentationFillProgress = 1.0f;
     }
     if (hpBackgroundUiComponent) hpBackgroundUiComponent->SetTexture(hpPhase2BackgroundTexture);
     if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetTexture(hpPhase2FillTexture);
     if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetTexture(hpPhase2FillTexture);
     if (hpFrameUiComponent) hpFrameUiComponent->SetTexture(hpPhase2FrameTexture);
-    UpdatePhase2HpBarPreviewLayout();
-}
-
-void GruxEnemy::BeginPhase2HpBarPreview(const int presentationMaxHp)
-{
-    if (!IsPhase2HpBarPreviewActive())
-        phase2HpBarPreviewRestoreVisible = hpCurrentFillUiComponent && hpCurrentFillUiComponent->IsVisible();
-    phase2HpBarPreviewPresentationMaxHp = (std::max)(presentationMaxHp, 1);
-    phase2HpBarPreviewState = Phase2HpBarPreviewState::RevealingFrame;
-    phase2HpBarPreviewElapsed = 0.0f;
-    phase2HpBarPreviewFrameProgress = 0.0f;
-    phase2HpBarPreviewFillProgress = 0.0f;
-    phase2HpBarPreviewPresentationHp = 0.0f;
-    ApplyHpBarVisualProfile(HpBarVisualProfile::Phase2);
-    SetHpBarVisible(true);
-    UpdatePhase2HpBarPreviewLayout();
+    UpdatePhase2HpBarPresentationLayout();
 }
 
 void GruxEnemy::BeginPhase2HpBarPresentation(const int presentationMaxHp)
 {
-    BeginPhase2HpBarPreview(presentationMaxHp);
+    if (!IsPhase2HpBarPresentationActive())
+        phase2HpBarPresentationRestoreVisible = hpCurrentFillUiComponent && hpCurrentFillUiComponent->IsVisible();
+    phase2HpBarPresentationMaxHp = (std::max)(presentationMaxHp, 1);
+    phase2HpBarPresentationState = Phase2HpBarPresentationState::RevealingFrame;
+    phase2HpBarPresentationElapsed = 0.0f;
+    phase2HpBarPresentationFrameProgress = 0.0f;
+    phase2HpBarPresentationFillProgress = 0.0f;
+    phase2HpBarPresentationHp = 0.0f;
+    ApplyHpBarVisualProfile(HpBarVisualProfile::Phase2);
+    SetHpBarVisible(true);
+    UpdatePhase2HpBarPresentationLayout();
 }
 
 void GruxEnemy::CompletePhase2HpBarPresentation()
 {
-    phase2HpBarPreviewState = Phase2HpBarPreviewState::Hidden;
-    phase2HpBarPreviewElapsed = 0.0f;
-    phase2HpBarPreviewFrameProgress = 1.0f;
-    phase2HpBarPreviewFillProgress = 1.0f;
-    phase2HpBarPreviewPresentationHp = static_cast<float>(phase2HpBarPreviewPresentationMaxHp);
+    phase2HpBarPresentationState = Phase2HpBarPresentationState::Hidden;
+    phase2HpBarPresentationElapsed = 0.0f;
+    phase2HpBarPresentationFrameProgress = 1.0f;
+    phase2HpBarPresentationFillProgress = 1.0f;
+    phase2HpBarPresentationHp = static_cast<float>(phase2HpBarPresentationMaxHp);
     ApplyHpBarVisualProfile(HpBarVisualProfile::Phase2);
     SetHpBarVisible(true);
-    phase2HpBarPreviewRestoreVisible = false;
+    phase2HpBarPresentationRestoreVisible = false;
 }
 
 void GruxEnemy::SetHpBarVisualProfileForBattlePhase(const bool phase2)
 {
-    phase2HpBarPreviewState = Phase2HpBarPreviewState::Hidden;
-    phase2HpBarPreviewElapsed = 0.0f;
-    phase2HpBarPreviewFrameProgress = phase2 ? 1.0f : 0.0f;
-    phase2HpBarPreviewFillProgress = phase2 ? 1.0f : 0.0f;
-    phase2HpBarPreviewPresentationHp = 0.0f;
-    phase2HpBarPreviewRestoreVisible = false;
+    phase2HpBarPresentationState = Phase2HpBarPresentationState::Hidden;
+    phase2HpBarPresentationElapsed = 0.0f;
+    phase2HpBarPresentationFrameProgress = phase2 ? 1.0f : 0.0f;
+    phase2HpBarPresentationFillProgress = phase2 ? 1.0f : 0.0f;
+    phase2HpBarPresentationHp = 0.0f;
+    phase2HpBarPresentationRestoreVisible = false;
     ApplyHpBarVisualProfile(phase2 ? HpBarVisualProfile::Phase2 : HpBarVisualProfile::Phase1);
     const float maximumHp = static_cast<float>((std::max)(maxHp, 1));
     if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(static_cast<float>((std::max)(hp, 0)), maximumHp);
     if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
 }
-void GruxEnemy::ResetPhase2HpBarPreview()
+void GruxEnemy::ResetPhase2HpBarPresentation()
 {
-    phase2HpBarPreviewState = Phase2HpBarPreviewState::Hidden;
-    phase2HpBarPreviewElapsed = 0.0f;
-    phase2HpBarPreviewFrameProgress = 0.0f;
-    phase2HpBarPreviewFillProgress = 0.0f;
-    phase2HpBarPreviewPresentationHp = 0.0f;
+    phase2HpBarPresentationState = Phase2HpBarPresentationState::Hidden;
+    phase2HpBarPresentationElapsed = 0.0f;
+    phase2HpBarPresentationFrameProgress = 0.0f;
+    phase2HpBarPresentationFillProgress = 0.0f;
+    phase2HpBarPresentationHp = 0.0f;
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
     ApplyHpBarVisualProfile(gameScene && gameScene->IsBossInFinalPhase()
         ? HpBarVisualProfile::Phase2 : HpBarVisualProfile::Phase1);
     const float maximumHp = static_cast<float>((std::max)(maxHp, 1));
     if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(static_cast<float>((std::max)(hp, 0)), maximumHp);
     if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
-    SetHpBarVisible(phase2HpBarPreviewRestoreVisible);
-    phase2HpBarPreviewRestoreVisible = false;
+    SetHpBarVisible(phase2HpBarPresentationRestoreVisible);
+    phase2HpBarPresentationRestoreVisible = false;
 }
 
-void GruxEnemy::UpdatePhase2HpBarPreview()
+void GruxEnemy::UpdatePhase2HpBarPresentation()
 {
-    if (!IsPhase2HpBarPreviewActive())
+    if (!IsPhase2HpBarPresentationActive())
         return;
 
-    phase2HpBarPreviewElapsed += (std::max)(0.0f, Time::UnscaledDeltaTime());
-    const float frameDuration = (std::max)(0.001f, phase2HpBarPreviewFrameRevealDuration);
-    const float fillDuration = (std::max)(0.001f, phase2HpBarPreviewFillDuration);
-    phase2HpBarPreviewFrameProgress = std::clamp(phase2HpBarPreviewElapsed / frameDuration, 0.0f, 1.0f);
-    phase2HpBarPreviewFillProgress = std::clamp(
-        (phase2HpBarPreviewElapsed - phase2HpBarPreviewFillDelay) / fillDuration, 0.0f, 1.0f);
-    phase2HpBarPreviewPresentationHp = static_cast<float>(phase2HpBarPreviewPresentationMaxHp) *
-        phase2HpBarPreviewFillProgress;
-    if (phase2HpBarPreviewFrameProgress < 1.0f)
-        phase2HpBarPreviewState = Phase2HpBarPreviewState::RevealingFrame;
-    else if (phase2HpBarPreviewElapsed < phase2HpBarPreviewFillDelay)
-        phase2HpBarPreviewState = Phase2HpBarPreviewState::WaitingForFill;
-    else if (phase2HpBarPreviewFillProgress < 1.0f)
-        phase2HpBarPreviewState = Phase2HpBarPreviewState::Filling;
+    phase2HpBarPresentationElapsed += (std::max)(0.0f, Time::UnscaledDeltaTime());
+    const float frameDuration = (std::max)(0.001f, phase2HpBarPresentationFrameRevealDuration);
+    const float fillDuration = (std::max)(0.001f, phase2HpBarPresentationFillDuration);
+    phase2HpBarPresentationFrameProgress = std::clamp(phase2HpBarPresentationElapsed / frameDuration, 0.0f, 1.0f);
+    phase2HpBarPresentationFillProgress = std::clamp(
+        (phase2HpBarPresentationElapsed - phase2HpBarPresentationFillDelay) / fillDuration, 0.0f, 1.0f);
+    phase2HpBarPresentationHp = static_cast<float>(phase2HpBarPresentationMaxHp) *
+        phase2HpBarPresentationFillProgress;
+    if (phase2HpBarPresentationFrameProgress < 1.0f)
+        phase2HpBarPresentationState = Phase2HpBarPresentationState::RevealingFrame;
+    else if (phase2HpBarPresentationElapsed < phase2HpBarPresentationFillDelay)
+        phase2HpBarPresentationState = Phase2HpBarPresentationState::WaitingForFill;
+    else if (phase2HpBarPresentationFillProgress < 1.0f)
+        phase2HpBarPresentationState = Phase2HpBarPresentationState::Filling;
     else
-        phase2HpBarPreviewState = Phase2HpBarPreviewState::Complete;
-    UpdatePhase2HpBarPreviewLayout();
+        phase2HpBarPresentationState = Phase2HpBarPresentationState::Complete;
+    UpdatePhase2HpBarPresentationLayout();
 }
 
-void GruxEnemy::UpdatePhase2HpBarPreviewLayout()
+void GruxEnemy::UpdatePhase2HpBarPresentationLayout()
 {
     if (hpBarVisualProfile != HpBarVisualProfile::Phase2)
         return;
@@ -694,17 +689,17 @@ void GruxEnemy::UpdatePhase2HpBarPreviewLayout()
     constexpr float frameTextureHeight = 49.0f;
     constexpr float barTextureWidth = 2554.0f;
     constexpr float barTextureHeight = 45.0f;
-    const float frameProgress = std::clamp(phase2HpBarPreviewFrameProgress, 0.0f, 1.0f);
-    const float fillProgress = std::clamp(phase2HpBarPreviewFillProgress, 0.0f, 1.0f);
-    const float frameWidth = (std::max)(0.0f, phase2HpBarPreviewFrameSize.x);
-    const float frameHeight = (std::max)(0.0f, phase2HpBarPreviewFrameSize.y);
+    const float frameProgress = std::clamp(phase2HpBarPresentationFrameProgress, 0.0f, 1.0f);
+    const float fillProgress = std::clamp(phase2HpBarPresentationFillProgress, 0.0f, 1.0f);
+    const float frameWidth = (std::max)(0.0f, phase2HpBarPresentationFrameSize.x);
+    const float frameHeight = (std::max)(0.0f, phase2HpBarPresentationFrameSize.y);
     const DirectX::XMFLOAT2 barSize{ frameWidth * (barTextureWidth / frameTextureWidth),
         frameHeight * (barTextureHeight / frameTextureHeight) };
     constexpr DirectX::XMFLOAT2 pivot{ 0.0f, 0.5f };
 
     if (hpFrameUiComponent)
     {
-        hpFrameUiComponent->SetWorldPosition(phase2HpBarPreviewPosition);
+        hpFrameUiComponent->SetWorldPosition(phase2HpBarPresentationPosition);
         hpFrameUiComponent->SetPivot(pivot);
         hpFrameUiComponent->SetScale({ 1.0f, 1.0f });
         hpFrameUiComponent->SetSize({ frameWidth * frameProgress, frameHeight });
@@ -713,7 +708,7 @@ void GruxEnemy::UpdatePhase2HpBarPreviewLayout()
     }
     if (hpBackgroundUiComponent)
     {
-        hpBackgroundUiComponent->SetWorldPosition(phase2HpBarPreviewPosition);
+        hpBackgroundUiComponent->SetWorldPosition(phase2HpBarPresentationPosition);
         hpBackgroundUiComponent->SetPivot(pivot);
         hpBackgroundUiComponent->SetScale({ 1.0f, 1.0f });
         hpBackgroundUiComponent->SetSize({ barSize.x * frameProgress, barSize.y });
@@ -724,7 +719,7 @@ void GruxEnemy::UpdatePhase2HpBarPreviewLayout()
     for (const auto& fill : { hpDelayedFillUiComponent, hpCurrentFillUiComponent })
     {
         if (!fill) continue;
-        fill->SetWorldPosition(phase2HpBarPreviewPosition);
+        fill->SetWorldPosition(phase2HpBarPresentationPosition);
         fill->SetPivot(pivot);
         fill->SetScale({ 1.0f, 1.0f });
         fill->SetSize(barSize);
@@ -734,34 +729,6 @@ void GruxEnemy::UpdatePhase2HpBarPreviewLayout()
     if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetColor(bossHpCurrentColor);
 }
 
-void GruxEnemy::DrawPhase2HpBarPreviewGui()
-{
-#ifdef USE_IMGUI
-    static constexpr const char* stateNames[] =
-    { "Hidden", "Revealing Frame", "Waiting For Fill", "Filling", "Complete" };
-
-    const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
-    const bool canControlPreview = !gameScene || !gameScene->IsBossPhaseTransitionActive();
-    if (!canControlPreview)
-        ImGui::TextDisabled("Preview controls are unavailable during the Phase2 transition.");
-    if (canControlPreview && ImGui::Button("Play Phase2 Boss HP Preview"))
-    {
-        BeginPhase2HpBarPreview(gameScene ? gameScene->GetPhase2MaxHpForPresentation() : maxHp);
-    }
-    ImGui::SameLine();
-    if (canControlPreview && ImGui::Button("Reset Phase2 Boss HP Preview"))
-        ResetPhase2HpBarPreview();
-    const bool changed =
-        ImGui::DragFloat2("Phase2 HP Position", &phase2HpBarPreviewPosition.x, 1.0f) |
-        ImGui::DragFloat("Phase2 HP Width", &phase2HpBarPreviewFrameSize.x, 1.0f, 1.0f, 1920.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp) |
-        ImGui::DragFloat("Phase2 HP Height", &phase2HpBarPreviewFrameSize.y, 0.1f, 1.0f, 256.0f, "%.1f", ImGuiSliderFlags_AlwaysClamp) |
-        ImGui::DragFloat("Frame Reveal Duration", &phase2HpBarPreviewFrameRevealDuration, 0.01f, 0.001f, 10.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp) |
-        ImGui::DragFloat("Fill Start Delay", &phase2HpBarPreviewFillDelay, 0.01f, 0.0f, 10.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp) |
-        ImGui::DragFloat("Fill Increase Duration", &phase2HpBarPreviewFillDuration, 0.01f, 0.001f, 10.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    if (changed && hpBarVisualProfile == HpBarVisualProfile::Phase2)
-        UpdatePhase2HpBarPreviewLayout();
-#endif
-}
 void GruxEnemy::SetDirectionImmediate(const DirectX::XMFLOAT3& direction) const
 {
     if (rotationComponent)
@@ -1193,8 +1160,8 @@ void GruxEnemy::ResetForBattleRestart(const Transform& battleStartTransform)
 
 void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
 {
-    if (IsPhase2HpBarPreviewActive())
-        ResetPhase2HpBarPreview();
+    if (IsPhase2HpBarPresentationActive())
+        ResetPhase2HpBarPresentation();
     phase2CinematicAnimationOwnedExternally = false;
     EndFinalHitReaction();
     finalHitReactionHeld = false;
@@ -1266,7 +1233,7 @@ void GruxEnemy::UpdatePhase2TextureBlendWorldYRange()
 
 void GruxEnemy::SetBattleHp(const int currentHp, const int maximumHp)
 {
-    if (IsPhase2HpBarPreviewActive())
+    if (IsPhase2HpBarPresentationActive())
         CompletePhase2HpBarPresentation();
     maxHp = (std::max)(maximumHp, 1);
     hp = std::clamp(currentHp, 0, maxHp);
@@ -1295,7 +1262,7 @@ void GruxEnemy::AdvanceDelayedHpBarForPhaseTransition()
                 useRushDelayedHpFollowSpeed = false;
         }
     }
-    if (!IsPhase2HpBarPreviewActive())
+    if (!IsPhase2HpBarPresentationActive())
     {
         if (hpCurrentFillUiComponent)
             hpCurrentFillUiComponent->SetValue(currentHp, static_cast<float>(maxHp));
@@ -1381,7 +1348,7 @@ void GruxEnemy::Update(float deltaTime)
     UpdatePhase2TextureBlendWorldYRange();
     ++animationDebugFrameCounter;
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
-    UpdatePhase2HpBarPreview();
+    UpdatePhase2HpBarPresentation();
     if (gameScene && gameScene->IsPhase1BreakPending())
     {
         ResetWeaponTelegraphRimLight();
@@ -1443,7 +1410,7 @@ void GruxEnemy::Update(float deltaTime)
         useRushDelayedHpFollowSpeed = false;
     }
 
-    if (!IsPhase2HpBarPreviewActive() && hpCurrentFillUiComponent && hpDelayedFillUiComponent)
+    if (!IsPhase2HpBarPresentationActive() && hpCurrentFillUiComponent && hpDelayedFillUiComponent)
     {
         const float maximumHp = static_cast<float>(maxHp);
         hpCurrentFillUiComponent->SetValue(currentHp, maximumHp);
@@ -2977,7 +2944,7 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
         gameScene && gameScene->GetBossPhase() == GameScene::BossPhase::Phase1)
     {
         hp = (std::max)(hp, 0);
-        if (!IsPhase2HpBarPreviewActive() && hpCurrentFillUiComponent)
+        if (!IsPhase2HpBarPresentationActive() && hpCurrentFillUiComponent)
             hpCurrentFillUiComponent->SetValue(static_cast<float>(hp), static_cast<float>(maxHp));
     }
     if (hp > 0 && hitVoiceCooldownTimer <= 0.0f)

@@ -181,16 +181,6 @@ public:
 
     // HPバーのフェード係数を設定する。
     void SetHpBarFadeAlpha(float alpha);
-
-    // 第2段階のHPバー演出をプレビューする。
-    void BeginPhase2HpBarPreview(int presentationMaxHp);
-
-    // 第2段階のHPバープレビューを解除する。
-    void ResetPhase2HpBarPreview();
-
-    // 第2段階用HPバーのプレビュー調整項目を表示する。
-    void DrawPhase2HpBarPreviewGui();
-
     // 第2段階用HPバーの演出を開始する。
     void BeginPhase2HpBarPresentation(int presentationMaxHp);
 
@@ -1449,7 +1439,7 @@ private:
         Phase1,  // 第1段階用。
         Phase2  // 第2段階用。
     };
-    enum class Phase2HpBarPreviewState : uint8_t
+    enum class Phase2HpBarPresentationState : uint8_t
     {
         Hidden,  // 非表示。
         RevealingFrame,  // 枠を表示中。
@@ -1458,30 +1448,32 @@ private:
         Complete,  // 完了。
     };
     HpBarVisualProfile hpBarVisualProfile = HpBarVisualProfile::Phase1;  // 現在のHPバーの表示プロファイル。
-    Phase2HpBarPreviewState phase2HpBarPreviewState = Phase2HpBarPreviewState::Hidden;  // 第2段階のHPバープレビューの状態。
-    DirectX::XMFLOAT2 phase2HpBarPreviewPosition{ 650.0f, 115.0f };  // 第2段階のHPバープレビューの位置。
-    DirectX::XMFLOAT2 phase2HpBarPreviewFrameSize{ 895.65f, 17.15f };  // 第2段階のHPバープレビューの枠の大きさ。
-    float phase2HpBarPreviewFrameRevealDuration = 2.0f;  // 第2段階のHPバーの枠を表示する時間。
-    float phase2HpBarPreviewFillDelay = 0.3f;  // 第2段階のHPゲージ表示開始までの待機時間。
-    float phase2HpBarPreviewFillDuration = 2.3f;  // 第2段階のHPゲージを表示する時間。
-    float phase2HpBarPreviewElapsed = 0.0f;  // 第2段階のHPバー演出の経過時間。
-    float phase2HpBarPreviewFrameProgress = 0.0f;  // 第2段階のHPバーの枠の表示進行度。
-    float phase2HpBarPreviewFillProgress = 0.0f;  // 第2段階のHPゲージの表示進行度。
-    float phase2HpBarPreviewPresentationHp = 0.0f;  // 第2段階のHPバー演出で表示するHP。
-    int phase2HpBarPreviewPresentationMaxHp = 1;  // 第2段階のHPバー演出で使用する最大HP。
-    bool phase2HpBarPreviewRestoreVisible = false;  // HPバープレビュー解除時に表示を復元するか。
+    Phase2HpBarPresentationState phase2HpBarPresentationState = Phase2HpBarPresentationState::Hidden;  // 第2段階のHPバープレビューの状態。
+    DirectX::XMFLOAT2 phase2HpBarPresentationPosition{ 650.0f, 115.0f };  // 第2段階のHPバープレビューの位置。
+    DirectX::XMFLOAT2 phase2HpBarPresentationFrameSize{ 895.65f, 17.15f };  // 第2段階のHPバープレビューの枠の大きさ。
+    float phase2HpBarPresentationFrameRevealDuration = 2.0f;  // 第2段階のHPバーの枠を表示する時間。
+    float phase2HpBarPresentationFillDelay = 0.3f;  // 第2段階のHPゲージ表示開始までの待機時間。
+    float phase2HpBarPresentationFillDuration = 2.3f;  // 第2段階のHPゲージを表示する時間。
+    float phase2HpBarPresentationElapsed = 0.0f;  // 第2段階のHPバー演出の経過時間。
+    float phase2HpBarPresentationFrameProgress = 0.0f;  // 第2段階のHPバーの枠の表示進行度。
+    float phase2HpBarPresentationFillProgress = 0.0f;  // 第2段階のHPゲージの表示進行度。
+    float phase2HpBarPresentationHp = 0.0f;  // 第2段階のHPバー演出で表示するHP。
+    int phase2HpBarPresentationMaxHp = 1;  // 第2段階のHPバー演出で使用する最大HP。
+    bool phase2HpBarPresentationRestoreVisible = false;  // HPバープレビュー解除時に表示を復元するか。
 
     // HPバーに指定されたフェーズの表示設定を適用する。
     void ApplyHpBarVisualProfile(HpBarVisualProfile profile);
 
+    void ResetPhase2HpBarPresentation();
+
     // 第2段階HPバーのプレビューを更新する。
-    void UpdatePhase2HpBarPreview();
+    void UpdatePhase2HpBarPresentation();
 
     // 第2段階HPバーのプレビュー配置を更新する。
-    void UpdatePhase2HpBarPreviewLayout();
+    void UpdatePhase2HpBarPresentationLayout();
 
     // 第2段階HPバーのプレビューが有効かを返す。
-    bool IsPhase2HpBarPreviewActive() const;
+    bool IsPhase2HpBarPresentationActive() const;
     std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;  // HPバーを構成するUIコンポーネント。
     struct HpBarFadeEntry
     {

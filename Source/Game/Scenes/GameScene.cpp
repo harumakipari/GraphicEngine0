@@ -2262,9 +2262,6 @@ void GameScene::DrawPhase2DebugGui()
     phase2TransitionController->DrawPlayerEmoteDebugGui();
     ImGui::DragFloat(U8("Phase2 Emote\u5F8CWait"), &phase2PlayerEmotePostWaitDuration,
         0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::SeparatorText("Phase2 Boss HP Preview");
-    if (gruxEnemyActor)
-        gruxEnemyActor->DrawPhase2HpBarPreviewGui();
 }
 
 void GameScene::DrawBgmAndBattleTimerDebugGui()
