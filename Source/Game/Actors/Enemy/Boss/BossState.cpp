@@ -14,7 +14,7 @@ EnemyStateBase::EnemyStateBase(GruxEnemy* actor) :State(actor), enemy(actor)
 
 void EnemyIdleState::Enter()
 {
-    enemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false, "EnemyIdleState::Enter");
+    enemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false);
 }
 
 void EnemyIdleState::Execute(float)

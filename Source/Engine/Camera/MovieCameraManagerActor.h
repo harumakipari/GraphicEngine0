@@ -92,8 +92,6 @@ public:
     }
 
     void PlayMovie(const std::string& file);
-    void PlayDeathWideRelative(const DirectX::XMFLOAT3& playerPosition,
-        const DirectX::XMFLOAT3& bossPosition);
     bool PlayDeathWideFromAnchors(
         const std::vector<std::shared_ptr<SceneComponent>>& anchors,
         const std::shared_ptr<SceneComponent>& target,

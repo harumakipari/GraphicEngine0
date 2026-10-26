@@ -40,8 +40,7 @@ ActionBase::State BTIdle::Run(float deltaTime)
         owner->StopAIMovement();
         const auto controller = owner->GetBodyAnimationController();
         if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
-            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
-                "BTIdleOrPrepareFastCombo");
+            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
     }
     timer += deltaTime;
     if (timer < owner->GetBehaviorIdleDuration())
@@ -186,8 +185,7 @@ ActionBase::State PrepareFastCombo::Run(float deltaTime)
         owner->StopAIMovement();
         const auto controller = owner->GetBodyAnimationController();
         if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
-            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
-                "BTIdleOrPrepareFastCombo");
+            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
         owner->PlayAttackReadySE();
         owner->StartWeaponTelegraph("Attack_A_Fast_0");
     }
@@ -314,11 +312,9 @@ bool GruxEnemy::UpdateFastComboApproach(float dt)
 }
 
 
-// Recovery??????
 void GruxEnemy::BeginRecovery() const
 {
-    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true,
-        "GruxEnemy::BeginRecovery");
+    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true);
 }
 
 void GruxEnemy::RecordBehaviorAttackCompleted()
@@ -338,9 +334,7 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
     if (!aiTree || !behaviorData)
         return;
     if (!activeNode)
-    {// ?????????????????
-        // ???????????????
-
+    {
         BeginCombatDecisionDebugInference();
         BeginCombatDecisionInference();
         activeNode = aiTree->ActiveNodeInference(behaviorData.get());

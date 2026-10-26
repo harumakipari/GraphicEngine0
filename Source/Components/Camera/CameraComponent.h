@@ -743,20 +743,6 @@ private:
 class MovieCameraComponent : public CameraComponent
 {
 public:
-    struct ActorRelativeBasis
-    {
-        DirectX::XMFLOAT3 origin{};
-        DirectX::XMFLOAT3 forward{ 0.0f, 0.0f, 1.0f };
-        DirectX::XMFLOAT3 right{ 1.0f, 0.0f, 0.0f };
-        DirectX::XMFLOAT3 up{ 0.0f, 1.0f, 0.0f };
-        DirectX::XMFLOAT4 basisRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-        bool valid = false;
-    };
-
-    static ActorRelativeBasis CreateActorRelativeBasis(
-        const DirectX::XMFLOAT3& origin,
-        const DirectX::XMFLOAT3& forward);
-
     enum class EaseType
     {
         Linear,
@@ -941,14 +927,7 @@ public:
     void SaveToJson(const std::string& path);
 
     void LoadFromJson(const std::string& path);
-    void LoadFromJsonRelative(const std::string& path,
-        const DirectX::XMFLOAT3& origin,
-        const DirectX::XMFLOAT3& forward);
     void RefreshMovieFiles();
-
-    void SetActorRelativeBasis(const ActorRelativeBasis& basis);
-    void ClearActorRelativeBasis() { actorRelativeBasis.valid = false; }
-    bool IsActorRelativeBasisValid() const { return actorRelativeBasis.valid; }
 
     void DrawImGuiInspector()override
     {
@@ -956,11 +935,8 @@ public:
 
         SceneComponent::DrawImGuiInspector();
 
-        ImGui::Checkbox("Actor Relative Edit", &actorRelativeEditMode);
         ImGui::Checkbox("Enable Debug Camera Movement", &debugCameraMovementEnabled);
         ImGui::Text("Playback: %s", playing ? "Playing" : "Stopped");
-        ImGui::Text("Actor Relative Basis: %s",
-            actorRelativeBasis.valid ? "Valid" : "Not Set");
 
         if (ImGui::Button("Add Key"))
         {
@@ -1218,10 +1194,6 @@ private:
 
     std::weak_ptr<TitleCamera> targetCamera;
     std::function<void()> onMovieStart;
-    ActorRelativeBasis actorRelativeBasis{};
-    bool actorRelativeEditMode = false;
-    bool relativeKeysPendingConversion = false;
-    bool suppressRelativeLoadConversion = false;
 };
 
 #endif //CAMERA_COMPONENT_H

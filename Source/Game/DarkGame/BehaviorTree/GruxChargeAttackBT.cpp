@@ -323,13 +323,7 @@ bool GruxEnemy::BeginTripleChargeTransition()
     if (chargeBT.tripleChargeIndex > 2)
         return false;
     StopChargeAttackMovement();
-    PlayBodyAnimation(
-        "TravelMode_Idle_0",
-        true,
-        true,
-        0.15f,
-        true,
-        "GruxEnemy::BeginTripleChargeTransition");
+    PlayBodyAnimation("TravelMode_Idle_0",true,true,0.15f,true);
     chargeBT.triplePhase = TripleChargePhase::InterChargeTransition;
     chargeBT.tripleChargeTransitionElapsed = 0.0f;
     chargeBT.tripleChargeRepositionActive = false;
@@ -1277,8 +1271,7 @@ void GruxEnemy::NotifyPlayerRushStarted(Player* player)
     debugLastChargeAbortReason = "RushStarted";
 
     CleanupChargeAttackBT();
-    PlayBodyAnimation("Stun_Idle", true, true, 0.15f, true,
-        "GruxEnemy::NotifyPlayerRushStarted");
+    PlayBodyAnimation("Stun_Idle", true, true, 0.15f, true);
     ResetBehaviorTreeRuntime();
     behaviorTreeCurrentNode = "None";
     behaviorTreePreviousNode = "None";
@@ -1290,18 +1283,11 @@ void GruxEnemy::NotifyPlayerRushEnded(Player* player)
     if (!player)
         return;
 
-    // PlayerRushState::Exit is invoked for every StateMachine transition away
-    // from Rush. Start Charge recovery on the next normal Grux update; Rush time
-    // is deliberately not counted as recovery time.
     rushCombatHoldActive = false;
     if (interruptedChargeRecoveryPending)
     {
         interruptedChargeRecoveryPending = false;
-        // Rush used Stun_Idle only as its exposed hold pose. Recovery keeps
-        // AI/BT suspended separately, so return to normal idle before its
-        // timer starts instead of carrying the looping stun through it.
-        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
-            "GruxEnemy::NotifyPlayerRushEnded");
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
         interruptedChargeRecoveryActive = true;
         interruptedChargeRecoveryTimer = 0.0f;
     }

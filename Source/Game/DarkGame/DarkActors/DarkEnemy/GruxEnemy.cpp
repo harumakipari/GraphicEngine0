@@ -318,81 +318,20 @@ void GruxEnemy::Initialize(const Transform& transform)
         streak.trail.SetEmissiveStrength(chargeWindTrailEmissiveStrength);
     }
 
-    //  ボスHP UI：名前 -> 背景 → 遅延塗りつぶし → 現在の塗りつぶし → フレーム。
-    const DirectX::XMFLOAT2 hpNamePosition = { 980.0f, 85.0f };
-    const DirectX::XMFLOAT2 hpPosition = { 650.0f, 115.0f };
-    const DirectX::XMFLOAT2 hpPivot = { 0.0f, 0.5f };
-    const DirectX::XMFLOAT2 hpScale = { 0.35f, 0.35f };
-
-    hpNameUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_name.png", "BossHpName");
-    hpNameUiComponent->SetWorldPosition(hpNamePosition);
-    hpNameUiComponent->SetSize({ 102.0f, 35.0f });
-    hpNameUiComponent->SetPivot({ 0.5f,0.5f });
-    hpNameUiComponent->SetScale({ 0.95f,0.95f });
-    hpNameUiComponent->SetColor(CoreColor::White);
-    hpNameUiComponent->zOrder = 10;
-    uiManager->Add(hpNameUiComponent);
-
-
-    hpBackgroundUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_background.png", "BossHpBackground");
-    hpBackgroundUiComponent->SetWorldPosition(hpPosition);
-    hpBackgroundUiComponent->SetSize({ 1904.0f, 43.0f });
-    hpBackgroundUiComponent->SetPivot(hpPivot);
-    hpBackgroundUiComponent->SetScale(hpScale);
-    hpBackgroundUiComponent->SetColor(CoreColor::White);
-    hpBackgroundUiComponent->zOrder = 10;
-    uiManager->Add(hpBackgroundUiComponent);
-
-    hpDelayedFillUiComponent = std::make_shared<UIGaugeFillComponent>("./Data/Textures/UI/HpBar/boss_hp_fill.png", "BossHpDelayedFill");
-    hpDelayedFillUiComponent->SetWorldPosition(hpPosition);
-    hpDelayedFillUiComponent->SetSize({ 1897.0f, 36.0f });
-    hpDelayedFillUiComponent->SetPivot(hpPivot);
-    hpDelayedFillUiComponent->SetScale(hpScale);
-    hpDelayedFillUiComponent->SetColor(bossHpDelayedColor);
-    hpDelayedFillUiComponent->zOrder = 11;
-    uiManager->Add(hpDelayedFillUiComponent);
-
-    hpCurrentFillUiComponent = std::make_shared<UIGaugeFillComponent>("./Data/Textures/UI/HpBar/boss_hp_fill.png", "BossHpCurrentFill");
-    hpCurrentFillUiComponent->SetWorldPosition(hpPosition);
-    hpCurrentFillUiComponent->SetSize({ 1897.0f, 36.0f });
-    hpCurrentFillUiComponent->SetPivot(hpPivot);
-    hpCurrentFillUiComponent->SetScale(hpScale);
-    hpCurrentFillUiComponent->SetColor(bossHpCurrentColor);
-    hpCurrentFillUiComponent->zOrder = 12;
-    uiManager->Add(hpCurrentFillUiComponent);
-
-    hpFrameUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_frame.png", "BossHpFrame");
-    hpFrameUiComponent->SetWorldPosition(hpPosition);
-    hpFrameUiComponent->SetSize({ 1909.0f, 49.0f });
-    hpFrameUiComponent->SetPivot(hpPivot);
-    hpFrameUiComponent->SetScale(hpScale);
-    hpFrameUiComponent->SetColor(CoreColor::White);
-    hpFrameUiComponent->zOrder = 15;
-    uiManager->Add(hpFrameUiComponent);
-
-    hpPhase1BackgroundTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
-        L"./Data/Textures/UI/HpBar/boss_hp_background.png");
-    hpPhase1FillTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
-        L"./Data/Textures/UI/HpBar/boss_hp_fill.png");
-    hpPhase1FrameTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
-        L"./Data/Textures/UI/HpBar/boss_hp_frame.png");
-    hpPhase2BackgroundTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
-        L"./Data/Textures/UI/HpBar/boss_hp_background_phase2.png");
-    hpPhase2FillTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
-        L"./Data/Textures/UI/HpBar/boss_hp_fill_phase2.png");
-    hpPhase2FrameTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
-        L"./Data/Textures/UI/HpBar/boss_hp_frame_phase2.png");
-    hpBarUiComponents =
-    {
-        hpNameUiComponent,
-        hpBackgroundUiComponent,
-        hpDelayedFillUiComponent,
-        hpCurrentFillUiComponent,
-        hpFrameUiComponent,
-    };
+    // HPバーを作成する
+    CreateHpUI();
 
 
     // ビヘイビアツリー設定
+    CreateBossBehaviorTree();
+
+
+    EnsureRoarFloatingDebris();
+}
+
+// ビヘイビアツリーを作成する
+void GruxEnemy::CreateBossBehaviorTree()
+{
     behaviorData = std::make_unique<BehaviorData>();
     aiTree = std::make_unique<BehaviorTree>(this);
 
@@ -470,7 +409,86 @@ void GruxEnemy::Initialize(const Transform& transform)
     aiTree->AddNode("ChargeAttackPlan", "ResolveChargeResult", 6, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ResolveChargeResult>(this));
     aiTree->AddNode("ChargeAttackPlan", "ExecuteChargeRecovery", 7, BehaviorTree::SelectRule::Non, nullptr, std::make_unique<::ExecuteChargeRecovery>(this));
 
-    EnsureRoarFloatingDebris();
+
+}
+
+// HPバーを作成する
+void GruxEnemy::CreateHpUI()
+{
+    auto uiManager = GetOwnerScene()->GetUIManager();
+
+    const DirectX::XMFLOAT2 hpNamePosition = { 980.0f, 85.0f };
+    const DirectX::XMFLOAT2 hpPosition = { 650.0f, 115.0f };
+    const DirectX::XMFLOAT2 hpPivot = { 0.0f, 0.5f };
+    const DirectX::XMFLOAT2 hpScale = { 0.35f, 0.35f };
+
+    hpNameUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_name.png", "BossHpName");
+    hpNameUiComponent->SetWorldPosition(hpNamePosition);
+    hpNameUiComponent->SetSize({ 102.0f, 35.0f });
+    hpNameUiComponent->SetPivot({ 0.5f,0.5f });
+    hpNameUiComponent->SetScale({ 0.95f,0.95f });
+    hpNameUiComponent->SetColor(CoreColor::White);
+    hpNameUiComponent->zOrder = 10;
+    uiManager->Add(hpNameUiComponent);
+
+
+    hpBackgroundUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_background.png", "BossHpBackground");
+    hpBackgroundUiComponent->SetWorldPosition(hpPosition);
+    hpBackgroundUiComponent->SetSize({ 1904.0f, 43.0f });
+    hpBackgroundUiComponent->SetPivot(hpPivot);
+    hpBackgroundUiComponent->SetScale(hpScale);
+    hpBackgroundUiComponent->SetColor(CoreColor::White);
+    hpBackgroundUiComponent->zOrder = 10;
+    uiManager->Add(hpBackgroundUiComponent);
+
+    hpDelayedFillUiComponent = std::make_shared<UIGaugeFillComponent>("./Data/Textures/UI/HpBar/boss_hp_fill.png", "BossHpDelayedFill");
+    hpDelayedFillUiComponent->SetWorldPosition(hpPosition);
+    hpDelayedFillUiComponent->SetSize({ 1897.0f, 36.0f });
+    hpDelayedFillUiComponent->SetPivot(hpPivot);
+    hpDelayedFillUiComponent->SetScale(hpScale);
+    hpDelayedFillUiComponent->SetColor(bossHpDelayedColor);
+    hpDelayedFillUiComponent->zOrder = 11;
+    uiManager->Add(hpDelayedFillUiComponent);
+
+    hpCurrentFillUiComponent = std::make_shared<UIGaugeFillComponent>("./Data/Textures/UI/HpBar/boss_hp_fill.png", "BossHpCurrentFill");
+    hpCurrentFillUiComponent->SetWorldPosition(hpPosition);
+    hpCurrentFillUiComponent->SetSize({ 1897.0f, 36.0f });
+    hpCurrentFillUiComponent->SetPivot(hpPivot);
+    hpCurrentFillUiComponent->SetScale(hpScale);
+    hpCurrentFillUiComponent->SetColor(bossHpCurrentColor);
+    hpCurrentFillUiComponent->zOrder = 12;
+    uiManager->Add(hpCurrentFillUiComponent);
+
+    hpFrameUiComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/HpBar/boss_hp_frame.png", "BossHpFrame");
+    hpFrameUiComponent->SetWorldPosition(hpPosition);
+    hpFrameUiComponent->SetSize({ 1909.0f, 49.0f });
+    hpFrameUiComponent->SetPivot(hpPivot);
+    hpFrameUiComponent->SetScale(hpScale);
+    hpFrameUiComponent->SetColor(CoreColor::White);
+    hpFrameUiComponent->zOrder = 15;
+    uiManager->Add(hpFrameUiComponent);
+
+    hpPhase1BackgroundTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
+        L"./Data/Textures/UI/HpBar/boss_hp_background.png");
+    hpPhase1FillTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
+        L"./Data/Textures/UI/HpBar/boss_hp_fill.png");
+    hpPhase1FrameTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
+        L"./Data/Textures/UI/HpBar/boss_hp_frame.png");
+    hpPhase2BackgroundTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
+        L"./Data/Textures/UI/HpBar/boss_hp_background_phase2.png");
+    hpPhase2FillTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
+        L"./Data/Textures/UI/HpBar/boss_hp_fill_phase2.png");
+    hpPhase2FrameTexture = std::make_shared<Sprite>(Graphics::GetDevice(),
+        L"./Data/Textures/UI/HpBar/boss_hp_frame_phase2.png");
+    hpBarUiComponents =
+    {
+        hpNameUiComponent,
+        hpBackgroundUiComponent,
+        hpDelayedFillUiComponent,
+        hpCurrentFillUiComponent,
+        hpFrameUiComponent,
+    };
+
 }
 
 void GruxEnemy::SetHpBarVisible(const bool visible)
@@ -876,13 +894,24 @@ void GruxEnemy::ForcePhase2CinematicIdleImmediate() const
     }
 }
 void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,
-    const bool blend, const float blendTime, const bool ignoreRootMotion,
-    const char* debugSource) const
+    const bool blend, const float blendTime, const bool ignoreRootMotion) const
 {
-    const bool phase2GameSceneRequest = debugSource &&
-        std::strncmp(debugSource, "GameScene::Phase2", sizeof("GameScene::Phase2") - 1) == 0;
-    if (phase2CinematicAnimationOwnedExternally && !phase2GameSceneRequest)
+    if (phase2CinematicAnimationOwnedExternally)
         return;
+    PlayBodyAnimationInternal(name, loop, blend, blendTime, ignoreRootMotion);
+}
+
+void GruxEnemy::PlayPhase2CinematicBodyAnimation(const std::string& name,
+    const bool loop, const bool blend, const float blendTime,
+    const bool ignoreRootMotion) const
+{
+    PlayBodyAnimationInternal(name, loop, blend, blendTime, ignoreRootMotion);
+}
+
+void GruxEnemy::PlayBodyAnimationInternal(const std::string& name,
+    const bool loop, const bool blend, const float blendTime,
+    const bool ignoreRootMotion) const
+{
     Character::PlayBodyAnimation(name, loop, blend, blendTime, ignoreRootMotion);
 }
 void GruxEnemy::StartWeaponTelegraph(const std::string& animationName)
@@ -1175,8 +1204,7 @@ void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
     ResetCombatRuntimeForBattleRestart();
     if (stateMachine_)
         stateMachine_->ChangeState("EnemyIdleState");
-    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
-        "GruxEnemy::ResetForBattleContinue");
+    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
 
     isDeathPerform = false;
     rushHpDisplayActive = false;
@@ -3955,19 +3983,15 @@ void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
     const bool idlePlaying = controller && controller->IsPlayAnimation() &&
         controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
     if (!idlePlaying)
-        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
-            "GruxEnemy::UpdatePositioningAnimation");
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
 }
 
 void GruxEnemy::EndPositioningAnimation()
 {
-    // Runtime cleanup is always required, including a death/BT abort.
     positioningAnimationActualSpeed = 0.0f;
     positioningMoveStopTimer = 0.0f;
     positioningAnimationMoving = false;
 
-    // GameScene exclusively owns the boss clip during its death cinematic.
-    // Do not let a late Reposition/Retreat/AttackSetup cleanup replace it with Idle.
     if (isDeathPerform && cinematicDeathAnimationOwnedExternally)
         return;
 
@@ -3975,8 +3999,7 @@ void GruxEnemy::EndPositioningAnimation()
     const bool idlePlaying = controller && controller->IsPlayAnimation() &&
         controller->GetCurrentAnimationName() == "TravelMode_Idle_0";
     if (!idlePlaying)
-        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true,
-            "GruxEnemy::EndPositioningAnimation");
+        PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
 }
 
 bool GruxEnemy::IsCombatRepositionActive() const

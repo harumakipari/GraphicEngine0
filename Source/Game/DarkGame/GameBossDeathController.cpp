@@ -397,8 +397,7 @@ bool GameBossDeathController::SkipToFinishPrompt(const Context& context)
     {
         controller->ReleaseHeldAnimationPose();
         controller->ResetAnimationRate();
-        gruxEnemyActor->PlayBodyAnimation("Death_B_0", false, true, 0.0f, true,
-            "GameScene::SkipBossDeathToFinishPrompt");
+        gruxEnemyActor->PlayBodyAnimation("Death_B_0", false, true, 0.0f, true);
         if (!controller->SetPlaybackRange(bossDeathFwdStartTime, bossDeathFwdEndTime) ||
             !controller->HoldAnimationPose("Death_B_0", bossDeathFwdPromptTime))
         {
@@ -477,8 +476,7 @@ bool GameBossDeathController::SetupBossDeathCinematic(const Context& context)
     const auto controller = gruxEnemyActor->GetBodyAnimationController();
     if (controller)
         controller->SetAnimationRate(bossDeathRoarPlaybackRate);
-    gruxEnemyActor->PlayBodyAnimation("Ultimate_Roar_0", false, true, 0.1f, true,
-        "GameScene::SetupBossDeathCinematic");
+    gruxEnemyActor->PlayBodyAnimation("Ultimate_Roar_0", false, true, 0.1f, true);
     if (!controller || !controller->SetPlaybackRange(
         bossDeathRoarStartTime, bossDeathRoarEndTime))
     {

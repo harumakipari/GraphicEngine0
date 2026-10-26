@@ -29,6 +29,93 @@ public:
         RushFinal,  // Rush最終攻撃。
     };
 
+    enum class DashBTPhase : uint8_t
+    {
+        None,  // 未設定。
+        Setup,  // 準備中。
+        Facing,  // 向き合わせ中。
+        Telegraph,  // 予兆中。
+        Movement,  // 移動中。
+        Knockup,  // Knockup中。
+        InterDashTransition,  // Dash間の遷移中。
+        Recovery  // 硬直中。
+    };
+
+    enum class DashBTResult : uint8_t
+    {
+        Running,  // 実行中。
+        Complete,  // 完了。
+        Failed  // 失敗。
+    };
+
+    enum class ChargeBTPhase : uint8_t
+    {
+        None,  // 未設定。
+        Setup,  // 準備中。
+        Facing,  // 向き合わせ中。
+        Telegraph,  // 予兆中。
+        Charging,  // 突進中。
+        Result,  // 結果処理中。
+        Stun,  // スタン中。
+        RecoveryPending,  // 硬直開始待ち。
+        Recovery,  // 硬直中。
+        RecoveryPostconditions  // 硬直後の条件確認中。
+    };
+
+    enum class TripleChargePhase : uint8_t
+    {
+        None,  // 未設定。
+        InitialWindup,  // 初回の予備動作中。
+        Charging,  // 突進中。
+        InterChargeTransition,  // Charge間の遷移中。
+        TelegraphHold,  // 予兆の保持中。
+        Completed,  // 完了。
+        Aborted  // 中断。
+    };
+
+    enum class ChargeBTStunPhase : uint8_t
+    {
+        None,  // 未設定。
+        Start,  // 開始段階。
+        Loop,  // 継続段階。
+        End  // 終了段階。
+    };
+
+    enum class ChargeBTStepResult : uint8_t
+    {
+        Running,  // 実行中。
+        Complete,  // 完了。
+        Failed  // 失敗。
+    };
+
+    enum class RoarStage : uint8_t
+    {
+        None,  // 未設定。
+        Telegraph,  // 予兆中。
+        Shockwave  // 衝撃波の処理中。
+    };
+
+    enum class PositioningMoveResult : uint8_t
+    {
+        None,  // 未設定。
+        Running,  // 実行中。
+        Arrived,  // 目標に到着。
+        Timeout,  // 時間切れ。
+        Stuck,  // 移動が停滞。
+        InvalidTarget,  // 目標が無効。
+        MaxDistanceReached  // 最大移動距離に到達。
+    };
+
+    enum class TripleJumpPhase : uint8_t
+    {
+        None,  // 未設定。
+        InitialTelegraph,  // 初回の予兆中。
+        Jumping,  // Jump中。
+        InterJumpTransition,  // Jump間の遷移中。
+        Completed,  // 完了。
+        Aborted  // 中断。
+    };
+
     struct ChargeWindTrailRuntime
     {
         Trail trail;  // 風の軌跡の描画データ。
@@ -44,29 +131,47 @@ public:
         float randomPhase = 0.0f;  // 軌跡の揺れに使う位相。
     };
 
-    // アクター名を指定してボスを生成する。
+    struct PositioningTargetContext
+    {
+        bool valid = false;  // 目標が有効か。
+        DirectX::XMFLOAT3 targetPosition{};  // 移動目標位置。
+        float arrivalTolerance = 0.3f;  // 到着と判定する距離。
+        float timeout = 3.0f;  // 移動のタイムアウト時間。
+        float maxMoveDistance = 20.0f;  // 最大移動距離。
+        float moveSpeed = 6.0f;  // 移動速度。
+        float stuckMovementThreshold = 0.1f;  // 停滞判定に使う移動量の閾値。
+        float stuckTimeThreshold = 0.5f;  // 停滞と判定する時間。
+    };
+
+    struct PositioningTargetRuntime
+    {
+        DirectX::XMFLOAT3 previousPosition{};  // 前回の位置。
+        float elapsed = 0.0f;  // 移動の経過時間。
+        float traveledDistance = 0.0f;  // 移動済み距離。
+        float remainingDistance = 0.0f;  // 目標までの残り距離。
+        float stuckTime = 0.0f;  // 停滞した時間。
+        bool movementActive = false;  // 移動が有効か。
+    };
+
+public:
     explicit GruxEnemy(const std::string& actorName) :Enemy(actorName) {}
 
-    // コンポーネントと行動ツリーを初期化する。
     void Initialize(const Transform& transform)override;
 
-    // 戦闘状態、行動ツリー、演出を更新する。
     void Update(float deltaTime)override;
 
-    // 武器や風の軌跡を描画する。
     void RenderTrail(ID3D11DeviceContext* immediateContext);
 
-    // 攻撃、行動判断、演出の調整項目とデバッグ情報を表示する。
     void DrawImGuiDetails() override;
 
-    // 指定された身体アニメーションを再生する。
-    void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true,
-        float blendTime = 0.3f, bool ignoreRootMotion = false,
-        const char* debugSource = "Unattributed") const;
+    void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true,float blendTime = 0.3f, bool ignoreRootMotion = false) const;
+
+    // Plays a body animation owned by the phase-two cinematic.
+    void PlayPhase2CinematicBodyAnimation(const std::string& name, bool loop,
+        bool blend, float blendTime, bool ignoreRootMotion) const;
 
     // Playerの攻撃種別と命中位置を受け取りダメージを処理する。
-    void TakeDamageFromPlayerAttack(int damage, bool isNormalFourthHit,
-        PlayerAttackHitType hitType, const DirectX::XMFLOAT3& hitSourcePosition);
+    void TakeDamageFromPlayerAttack(int damage, bool isNormalFourthHit,PlayerAttackHitType hitType, const DirectX::XMFLOAT3& hitSourcePosition);
 
     // ボスのHPバーを表示または非表示にする。
     void SetHpBarVisible(bool visible);
@@ -278,23 +383,6 @@ public:
 
     // Dashの予兆と攻撃シーケンスを開始する。
     bool StartDashAttackTelegraph();
-    enum class DashBTPhase
-    {
-        None,  // 未設定。
-        Setup,  // 準備中。
-        Facing,  // 向き合わせ中。
-        Telegraph,  // 予兆中。
-        Movement,  // 移動中。
-        Knockup,  // Knockup中。
-        InterDashTransition,  // Dash間の遷移中。
-        Recovery  // 硬直中。
-    };
-    enum class DashBTResult
-    {
-        Running,  // 実行中。
-        Complete,  // 完了。
-        Failed  // 失敗。
-    };
 
     // Dashの予兆、移動、段階間遷移などを進める。
     DashBTResult UpdateDashAttackBT(float deltaTime);
@@ -358,42 +446,7 @@ public:
 
     // Dashの移動を停止する。
     void StopDashAttackMovement();
-    enum class ChargeBTPhase
-    {
-        None,  // 未設定。
-        Setup,  // 準備中。
-        Facing,  // 向き合わせ中。
-        Telegraph,  // 予兆中。
-        Charging,  // 突進中。
-        Result,  // 結果処理中。
-        Stun,  // スタン中。
-        RecoveryPending,  // 硬直開始待ち。
-        Recovery,  // 硬直中。
-        RecoveryPostconditions  // 硬直後の条件確認中。
-    };
-    enum class TripleChargePhase
-    {
-        None,  // 未設定。
-        InitialWindup,  // 初回の予備動作中。
-        Charging,  // 突進中。
-        InterChargeTransition,  // Charge間の遷移中。
-        TelegraphHold,  // 予兆の保持中。
-        Completed,  // 完了。
-        Aborted  // 中断。
-    };
-    enum class ChargeBTStunPhase
-    {
-        None,  // 未設定。
-        Start,  // 開始段階。
-        Loop,  // 継続段階。
-        End  // 終了段階。
-    };
-    enum class ChargeBTStepResult
-    {
-        Running,  // 実行中。
-        Complete,  // 完了。
-        Failed  // 失敗。
-    };
+
 
     // Chargeを攻撃候補に含められるか判定する。
     bool CanPlanChargeAttack() const;
@@ -656,12 +709,8 @@ public:
 
     // 現在の攻撃名をデバッグ用に返す。
     std::string GetCurrentAttackNameForDebug() const;
-    enum class RoarStage
-    {
-        None,  // 未設定。
-        Telegraph,  // 予兆中。
-        Shockwave  // 衝撃波の処理中。
-    };
+
+
 
     // 現在のPlayerを新しい攻撃・防御行動の対象にできるか判定する。
     bool CanPlanAttackAgainstCurrentPlayer() const;
@@ -779,36 +828,7 @@ public:
 
     // 指定されたNotifyがFastComboのMotionWarp対象かを判定する。
     bool IsFastComboMotionWarpNotify(const AnimationNotifyState& state) const;
-    struct PositioningTargetContext
-    {
-        bool valid = false;  // 目標が有効か。
-        DirectX::XMFLOAT3 targetPosition{};  // 移動目標位置。
-        float arrivalTolerance = 0.3f;  // 到着と判定する距離。
-        float timeout = 3.0f;  // 移動のタイムアウト時間。
-        float maxMoveDistance = 20.0f;  // 最大移動距離。
-        float moveSpeed = 6.0f;  // 移動速度。
-        float stuckMovementThreshold = 0.1f;  // 停滞判定に使う移動量の閾値。
-        float stuckTimeThreshold = 0.5f;  // 停滞と判定する時間。
-    };
-    struct PositioningTargetRuntime
-    {
-        DirectX::XMFLOAT3 previousPosition{};  // 前回の位置。
-        float elapsed = 0.0f;  // 移動の経過時間。
-        float traveledDistance = 0.0f;  // 移動済み距離。
-        float remainingDistance = 0.0f;  // 目標までの残り距離。
-        float stuckTime = 0.0f;  // 停滞した時間。
-        bool movementActive = false;  // 移動が有効か。
-    };
-    enum class PositioningMoveResult
-    {
-        None,  // 未設定。
-        Running,  // 実行中。
-        Arrived,  // 目標に到着。
-        Timeout,  // 時間切れ。
-        Stuck,  // 移動が停滞。
-        InvalidTarget,  // 目標が無効。
-        MaxDistanceReached  // 最大移動距離に到達。
-    };
+
     using AttackSetupTargetContext = PositioningTargetContext;
     using AttackSetupMoveResult = PositioningMoveResult;
 
@@ -930,15 +950,7 @@ public:
 
     // Jump予兆の進行度を更新する。
     void UpdateJumpTelegraphProgress();
-    enum class TripleJumpPhase
-    {
-        None,  // 未設定。
-        InitialTelegraph,  // 初回の予兆中。
-        Jumping,  // Jump中。
-        InterJumpTransition,  // Jump間の遷移中。
-        Completed,  // 完了。
-        Aborted  // 中断。
-    };
+
 
     // 第2段階の複数回Jumpを使うか判定する。
     bool IsTripleJumpPhase2() const;
@@ -1139,16 +1151,28 @@ public:
     // Charge実行ノードの更新回数を記録する。
     void RecordExecuteChargeAttackRunDebug();
 private:
-    bool weaponEmissiveEnabled = true;  // 武器の発光を有効にするか。
-    DirectX::XMFLOAT3 weaponEmissiveColor = { 0.0f, 0.0f, 0.0f };  // 武器の発光色。
-    float weaponEmissiveIntensity = 7.0f;  // 武器の発光強度。
-    DirectX::XMFLOAT3 weaponTelegraphRimColor = { 1.0f, 0.35f, 0.0f };  // 武器予兆の縁の色。
+    // ビヘイビアツリーを作成する
+    void CreateBossBehaviorTree();
+
+    // HPバーを作成する
+    void CreateHpUI();
+
+    void PlayBodyAnimationInternal(const std::string& name, bool loop,
+        bool blend, float blendTime, bool ignoreRootMotion) const;
 
     // 武器の攻撃予兆表示を更新する。
     void UpdateWeaponTelegraphRimLight(float deltaTime);
 
     // 武器の攻撃予兆表示を解除する。
     void ResetWeaponTelegraphRimLight();
+
+
+
+    bool weaponEmissiveEnabled = true;  // 武器の発光を有効にするか。
+    DirectX::XMFLOAT3 weaponEmissiveColor = { 0.0f, 0.0f, 0.0f };  // 武器の発光色。
+    float weaponEmissiveIntensity = 7.0f;  // 武器の発光強度。
+    DirectX::XMFLOAT3 weaponTelegraphRimColor = { 1.0f, 0.35f, 0.0f };  // 武器予兆の縁の色。
+
     bool weaponTelegraphActive = false;  // 武器予兆が有効か。
     bool weaponTelegraphFadingOut = false;  // 武器予兆がフェードアウト中か。
     std::string weaponTelegraphAnimationName;  // 武器予兆に対応するアニメーション名。

@@ -1793,8 +1793,7 @@ void GameScene::UpdatePhase2Cinematic()
                 break;
 
             if (gruxEnemyActor)
-                gruxEnemyActor->PlayBodyAnimation("PrimaryAttack_Recall", false, true, 0.1f, true,
-                                                  "GameScene::Phase2BossRecall");
+                gruxEnemyActor->PlayPhase2CinematicBodyAnimation("PrimaryAttack_Recall", false, true, 0.1f, true);
             phase2TransitionStep = Phase2TransitionStep::BossRecall;
             phase2StepElapsed = 0.0f;
             break;

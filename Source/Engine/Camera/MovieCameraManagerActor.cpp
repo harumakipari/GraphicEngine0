@@ -250,20 +250,6 @@ void MovieCameraManagerActor::Update(float deltaTime)
         }
     }
 
-    if (movieCamera && player && gruxEnemy)
-    {
-        const auto playerPosition = player->GetPosition();
-        const DirectX::XMFLOAT3 forward =
-        {
-            gruxEnemy->GetPosition().x - playerPosition.x,
-            0.0f,
-            gruxEnemy->GetPosition().z - playerPosition.z
-        };
-        const auto basis = MovieCameraComponent::CreateActorRelativeBasis(
-            playerPosition, forward);
-        movieCamera->SetActorRelativeBasis(basis);
-    }
-
     switch (doorMovieState)
     {
     case DoorMovieState::None:
@@ -307,8 +293,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             }
             if (gruxEnemy)
             {
-                gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
-                    "MovieCameraManager::UpPlayerMovie");
+                gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false);
                 gruxEnemy->SetBodyAnimationRate(0.0f);
             }
             doorMovieState = DoorMovieState::DoorOpening;
@@ -462,8 +447,7 @@ void MovieCameraManagerActor::Update(float deltaTime)
             PlayMovie(bossNameMovieFileName);
             if (gruxEnemy)
             {
-                gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
-                    "MovieCameraManager::EnemyName");
+                gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false);
                 gruxEnemy->StartGruxNamePerform(1.5f);
             }
             if (player)
@@ -1165,8 +1149,7 @@ void MovieCameraManagerActor::SkipBossEntryToBattle()
     if (gruxEnemy)
     {
         gruxEnemy->SetEulerRotation({ 0.0f, -90.0f, 0.0f });
-        gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false,
-            "MovieCameraManager::SkipBossEntryToBattle");
+        gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false);
         if (const auto controller = gruxEnemy->GetBodyAnimationController())
             controller->ResetAnimationRate();
         gruxEnemy->StartGruxNamePerform(1.0f, 1.0f, 0.0f);
@@ -1213,37 +1196,6 @@ void MovieCameraManagerActor::PlayMovie(const std::string& file)
     movieCamera->Start();
 }
 
-void MovieCameraManagerActor::PlayDeathWideRelative(
-    const DirectX::XMFLOAT3& playerPosition,
-    const DirectX::XMFLOAT3& bossPosition)
-{
-    auto scene = GetOwnerScene();
-    auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
-    auto movieCamera = movieCameraWeakPtr.lock();
-    if (!scene || !cameraManager || !movieCamera)
-        return;
-
-    DirectX::XMFLOAT3 forward =
-    {
-        bossPosition.x - playerPosition.x,
-        0.0f,
-        bossPosition.z - playerPosition.z
-    };
-    if (MathHelper::Length(forward) <= FLT_EPSILON)
-        forward = { 0.0f, 0.0f, 1.0f };
-
-    movieCamera->LoadFromJsonRelative(
-        "./Data/Saves/MovieCameras/DeathWide.json",
-        playerPosition,
-        forward);
-    if (!movieCamera->ApplyFirstFrameToOwner())
-        return;
-
-    if (!cameraManager->IsUseMovie())
-        cameraManager->ToggleMovieCamera(scene);
-    movieCamera->ApplyFirstFrameToOwner();
-    movieCamera->Start();
-}
 
 bool MovieCameraManagerActor::PlayDeathWideFromAnchors(
     const std::vector<std::shared_ptr<SceneComponent>>& anchors,
