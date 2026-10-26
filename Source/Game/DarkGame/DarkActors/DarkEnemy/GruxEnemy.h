@@ -1166,8 +1166,6 @@ private:
     // 武器の攻撃予兆表示を解除する。
     void ResetWeaponTelegraphRimLight();
 
-
-
     bool weaponEmissiveEnabled = true;  // 武器の発光を有効にするか。
     DirectX::XMFLOAT3 weaponEmissiveColor = { 0.0f, 0.0f, 0.0f };  // 武器の発光色。
     float weaponEmissiveIntensity = 7.0f;  // 武器の発光強度。

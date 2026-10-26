@@ -137,11 +137,18 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
         Graphics::StylizeWindow(!showEditor);
     }
 
+    if (showEditor && (GetAsyncKeyState(VK_F9) & 1))
+    {
+        editorDisplayMode = editorDisplayMode == EditorDisplayMode::MovieEditorOnly
+            ? EditorDisplayMode::Normal
+            : EditorDisplayMode::MovieEditorOnly;
+    }
+
     if (showEditor && (GetAsyncKeyState(VK_F10) & 1))
     {
-        editorDisplayMode = editorDisplayMode == EditorDisplayMode::Normal
-            ? EditorDisplayMode::AnimationEditorOnly
-            : EditorDisplayMode::Normal;
+        editorDisplayMode = editorDisplayMode == EditorDisplayMode::AnimationEditorOnly
+            ? EditorDisplayMode::Normal
+            : EditorDisplayMode::AnimationEditorOnly;
     }
 #endif
     //パーティクルシステム更新

@@ -233,6 +233,7 @@ public:
     {
         Normal,
         AnimationEditorOnly,
+        MovieEditorOnly,
     };
 
     static inline bool showEditor = false; // Editor visibility flag.

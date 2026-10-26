@@ -892,7 +892,7 @@ void SceneBase::DrawGui()
     DrawDockSpace();
     DrawViewport();
 
-    if (Framework::editorDisplayMode != Framework::EditorDisplayMode::AnimationEditorOnly && enableLightGui)
+    if (Framework::editorDisplayMode == Framework::EditorDisplayMode::Normal && enableLightGui)
     {
         if (lightManager)
         {
@@ -900,7 +900,7 @@ void SceneBase::DrawGui()
         }
     }
 
-    if (Framework::editorDisplayMode != Framework::EditorDisplayMode::AnimationEditorOnly && enableSceneGui)
+    if (Framework::editorDisplayMode == Framework::EditorDisplayMode::Normal && enableSceneGui)
     {
         SceneEditor::Draw();
     }
@@ -933,6 +933,12 @@ void SceneBase::DrawGui()
         return;
     }
 
+    if (Framework::editorDisplayMode == Framework::EditorDisplayMode::MovieEditorOnly)
+    {
+        DrawMovieEditorOnly();
+        return;
+    }
+
 
     DrawGizmo();//
     DrawOutliner();
@@ -952,6 +958,41 @@ void SceneBase::DrawGui()
     if (radialBlurEffect) radialBlurEffect->DrawDebugUI();
 }
 
+void SceneBase::DrawMovieEditorOnly()
+{
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    const float editorWidth = viewport->WorkSize.x * 0.42f;
+    ImGui::SetNextWindowPos(
+        ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - editorWidth, viewport->WorkPos.y),
+        ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(editorWidth, viewport->WorkSize.y), ImGuiCond_Appearing);
+
+    const ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoResize;
+    ImGui::Begin("Movie Editor", nullptr, flags);
+
+    if (const auto movieCamera = GetActorManager()->GetActorOfType<MovieCamera>())
+    {
+        if (const auto movieCameraComponent = movieCamera->GetMovieCameraComponent())
+        {
+            movieCameraComponent->DrawImGuiInspector();
+        }
+        else
+        {
+            ImGui::TextUnformatted("MovieCameraComponent is not available.");
+        }
+    }
+    else
+    {
+        ImGui::TextUnformatted("MovieCamera is not available in this scene.");
+    }
+
+    ImGui::Separator();
+    ImGui::TextUnformatted("Press F9 to return to Normal Editor mode.");
+    ImGui::End();
+}
 void SceneBase::DrawDockSpace()
 {
     ImGuiWindowFlags window_flags =
