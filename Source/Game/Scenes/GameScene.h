@@ -128,8 +128,6 @@ public:
     // 戦闘状態
     LockOnTargetSelectionResult UpdateLockOnTargetSelection();
     BossPhase GetBossPhase() const { return bossPhase; }
-    int GetBossCurrentHp() const;
-    int GetBossMaxHp() const;
     int GetPhase2MaxHpForPresentation() const { return phase2MaxHp; }
     bool IsBossPhaseTransitionActive() const { return bossPhase == BossPhase::TransitionToPhase2; }
     bool IsPhase1BreakPending() const { return phase1BreakPending; }
@@ -172,7 +170,7 @@ private:
     void CompletePhase2TransitionAtBlack();
     void UpdatePhase2Transition();
     void ResetBossPhaseRuntime(BossPhase phase);
-    void ApplyBossPhaseHp(BossPhase phase) const;
+    void ApplyBossPhaseHp(BossPhase phase) const;   // フェーズごとにボスのHPを設定する
     void BeginPhase1BreakPending();
     void UpdatePhase1BreakPending();
     void StartPhase1FinalHitTimeSequence();
@@ -189,7 +187,7 @@ private:
     void RestartBossBattle();
     void ExecuteDeathResult(int index);
     void ExecuteVictoryResult(int selection);
-    void EnterVictoryResult();
+    void EnterVictoryResult();  // Player勝利リザルトの処理を開始する
     void UpdateVictoryResult();
 
     // Movie Skip・Fade・Cinematic Camera
@@ -331,7 +329,7 @@ private:
     std::shared_ptr<BgmActor> gameBgmActor;
     std::shared_ptr<BgmActor> bossBgmActor;
     std::shared_ptr<BgmActor> phase2BgmActor;
-    std::shared_ptr<BgmActor> bossDeathSecondBgmActor;
+    std::shared_ptr<BgmActor> bossDeathBgmActor;
     std::shared_ptr<BgmActor> playerDeathBgmActor;
     const float bossBgmVolume = 0.2f;
 

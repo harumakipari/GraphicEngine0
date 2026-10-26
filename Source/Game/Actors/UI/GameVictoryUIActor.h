@@ -13,7 +13,6 @@ public:
 public:
     explicit GameVictoryUIActor(const std::string& actorName) : Actor(actorName) {}
     void Initialize(const Transform& transform) override;
-
     void DrawImGuiDetails() override;
 
 
@@ -68,7 +67,6 @@ private:
     std::array<std::shared_ptr<UIImageComponent>, 3> victoryLabels{};
     std::array<std::shared_ptr<UIImageComponent>, 4> victoryRankImages{};
     std::array<std::array<std::shared_ptr<UIImageComponent>, 8>, 2> victoryTimeDigits{};
-    // Clear label, clear digits, best label, best digits, new record, rank.
     std::array<DirectX::XMFLOAT2, 6> victoryUIPositions
     { {
         { 420.0f, 620.0f }, { 737.0f, 609.0f }, { 416.0f, 701.0f },
@@ -76,7 +74,6 @@ private:
     }
     };
     std::array<float, 6> victoryUIScales{ { 0.37f, 0.33f, 0.39f, 0.33f, 0.46f, 0.45f } };
-    // victoryUIScales[1] is the shared digit scale; slot 3 is unused.
     float resultTimeDigitSpacing = -3.4f;
     float resultTimeMinuteColonSpacing = -10.2f;
     float resultTimeColonSecondSpacing = -12.6f;

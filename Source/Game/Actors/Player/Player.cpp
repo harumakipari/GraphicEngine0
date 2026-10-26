@@ -1553,13 +1553,8 @@ bool Player::IsOperationGuideItemLearned(const OperationGuideItem item) const
 }
 
 void Player::SetMinimumHp(const int value)
-
 {
     minimumHp = std::clamp(value, 0, maxHp);
-}
-void Player::ClearMinimumHp()
-{
-    minimumHp = 0;
 }
 
 void Player::RestoreHpToMaxWithUiAnimation()

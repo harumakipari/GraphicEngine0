@@ -32,6 +32,52 @@ public:
         GameBgmDirector* bgm;
         SceneShaderConstants* shader;
     };
+
+private:
+    enum class Shot : size_t
+    {
+        Scream, Fall, Landing, Finish, Result, Count
+    };
+    struct ActorPose
+    {
+        DirectX::XMFLOAT3 position{};
+        DirectX::XMFLOAT4 rotation{ 0.0f, 0.0f, 0.0f, 1.0f };
+    };
+    enum class BossDeathPhase : uint8_t
+    {
+        FadeOut,
+        SetupCinematic,
+        FadeInScream,
+        DeathScream,
+        DeathFall,
+        DeathLanding,
+        PlayerApproach,
+        PlayerWalkStop,
+        RecallLeadIn,
+        RecallPingPong,
+        FinishTriggered,
+        HuskDelay,
+        HuskPreview,
+    };
+
+    struct BossDeathDofState
+    {
+        float focusDistance = 0.0f;
+        float nearRange = 0.0f;
+        float range = 0.0f;
+        float blurStrength = 0.0f;
+        int enableBlur = 0;
+        int enableDof = 0;
+    };
+    struct BossDeathShotState
+    {
+        CinematicCameraComponent::CameraPose camera{};
+        ActorPose player{};
+        ActorPose boss{};
+        BossDeathDofState dof{};
+    };
+
+public:
     void Start(GameBossDeathUIActor& ui, UIImageComponent* fade);
     bool Update(const Context& context, float deltaTime, bool huskComplete);
     bool SkipToFinishPrompt(const Context& context);
@@ -50,12 +96,6 @@ public:
     void BlendToResult(CinematicCameraComponent& camera, SceneShaderConstants& shader, float duration) const;
 
 private:
-    enum class Shot : size_t { Scream, Fall, Landing, Finish, Result, Count };
-    struct ActorPose
-    {
-        DirectX::XMFLOAT3 position{};
-        DirectX::XMFLOAT4 rotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    };
 
     void CutToShot(Shot shot, CinematicCameraComponent* camera, SceneShaderConstants& shader) const;
     void BlendToLanding(CinematicCameraComponent* camera, SceneShaderConstants& shader, float duration) const;
@@ -64,23 +104,8 @@ private:
     ActorPose GetLandingBossPose() const { return bossDeathShots[2].boss; }
     ActorPose GetFinishPlayerPose() const { return bossDeathShots[3].player; }
 
-    enum class BossDeathPhase : uint8_t
-    {
-        FadeOut,
-        SetupCinematic,
-        FadeInScream,
-        DeathScream,
-        DeathFall,
-        DeathLanding,
-        PlayerApproach,
-        PlayerWalkStop,
-        RecallLeadIn,
-        RecallPingPong,
-        FinishTriggered,
-        HuskDelay,
-        HuskPreview,
-    };
 
+private:
     BossDeathPhase bossDeathPhase = BossDeathPhase::FadeOut;
     float bossDeathPhaseElapsed = 0.0f;
     float bossDeathFadeOutDuration = 1.6f;
@@ -137,22 +162,7 @@ private:
     void ClampBossDeathPreviewTuning(Player* player, GruxEnemy* gruxEnemyActor);
     void RestoreGameplayDof(SceneShaderConstants& shader);
     static void SetFadeAlpha(UIImageComponent* fade, float alpha);
-    struct BossDeathDofState
-    {
-        float focusDistance = 0.0f;
-        float nearRange = 0.0f;
-        float range = 0.0f;
-        float blurStrength = 0.0f;
-        int enableBlur = 0;
-        int enableDof = 0;
-    };
-    struct BossDeathShotState
-    {
-        CinematicCameraComponent::CameraPose camera{};
-        ActorPose player{};
-        ActorPose boss{};
-        BossDeathDofState dof{};
-    };
+
     static void ApplyBossDeathDof(SceneShaderConstants& shader, const BossDeathDofState& dof);
     std::array<BossDeathShotState, static_cast<size_t>(Shot::Count)> bossDeathShots{};
     bool bossDeathShotsLoaded = false;

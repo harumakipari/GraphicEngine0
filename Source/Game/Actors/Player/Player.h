@@ -221,8 +221,6 @@ public:
     bool IsDodging() const { return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge"; }
     // 戦闘中に適用するHP下限値を設定する。
     void SetMinimumHp(int value);
-    // 戦闘中のHP下限値を解除する。
-    void ClearMinimumHp();
     // HPを最大値へ回復し、HPバー回復演出を開始する。
     void RestoreHpToMaxWithUiAnimation();
     // ゲームプレイHUDのフェードアウトを開始する。

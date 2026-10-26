@@ -48,7 +48,6 @@ void GameVictoryUIActor::UpdateContents()
     const double times[] = { victoryClearTime, victoryDisplayedBestTime };
     for (size_t row = 0; row < victoryTimeDigits.size(); ++row)
     {
-        // Match Defeat's atlas and rounded centiseconds, but always keep both minute digits.
         const int total = static_cast<int>(std::clamp(std::floor(times[row] * 100.0 + 0.5), 0.0, 599999.0));
         const int minutes = total / 6000, seconds = total / 100 % 60, fraction = total % 100;
         const int values[] = { minutes / 10, minutes % 10, -1, seconds / 10, seconds % 10, -2, fraction / 10, fraction % 10 };
@@ -224,8 +223,6 @@ void GameVictoryUIActor::UpdateButtonLayout()
 int GameVictoryUIActor::UpdateInput(float moveVolume)
 {
     if (!victoryButtonInputEnabled) return -1;
-    // Use the same actions and stick threshold as UIManager, scoped to these two images.
-    // Require neutral input after entering Interactive, then accept fresh triggers only.
     const float stickX = InputSystem::GetLeftStick().x;
     if (!victoryButtonInputArmed)
     {

@@ -23,11 +23,11 @@ public:
     // リザルト表示までのカメラブレンドを取得
     float GetVictoryCameraBlend() const { return victoryCameraBlendDuration; }
 
-    void PreparePlayer(Player* player);
+    void PreparePlayer(const Player* player) const;
     void BeginPresentation();
     bool CanAcceptSelection(const GameVictoryUIActor& victoryUIActor) const;
     bool AcceptSelection(int selection, bool restartAllowed, GameVictoryUIActor& victoryUIActor, float confirmVolume);
-    int UpdateUntilSelection(Player* player, CinemaCamera* cinemaCameraActor,
+    int UpdateUntilSelection(const Player* player, const CinemaCamera* cinemaCameraActor,
         GameVictoryUIActor& victoryUIActor, float deathResultMoveSeVolume);
     void FinishUpdate(GameVictoryUIActor& victoryUIActor, float numberTexWidth, float numberTexHeight);
     void LoadBestTime();
@@ -44,7 +44,7 @@ private:
     float victoryResultDelayElapsed = 0.0f;
     float victoryResultDelayDuration = 0.70f;
     float victoryCameraBlendDuration = 0.60f;   // リザルト表示までのカメラブレンド
-    float resultRecallToIdleBlendDuration = 0.26f;
+    float resultRecallToIdleBlendDuration = 0.26f;  // Recall->Idleのブレンド
     float resultUITriggerAnimationTime = 1.17f;
     static constexpr float victoryEmoteEndTime = 1.48f;
     bool victoryBestTimeValid = false;

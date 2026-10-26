@@ -15,15 +15,13 @@ void GameVictoryController::ResetPresentation()
     victoryResultDelayElapsed = 0.0f;
 }
 
-void GameVictoryController::PreparePlayer(Player* player)
+void GameVictoryController::PreparePlayer(const Player* player) const
 {
     if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
     {
         controller->ReleaseHeldAnimationPose(true);
         controller->ResetAnimationRate();
-        const float idleBlend = std::isfinite(resultRecallToIdleBlendDuration)
-            ? std::clamp(resultRecallToIdleBlendDuration, 0.0f, 0.5f) : 0.15f;
-        player->PlayBodyAnimation("Idle", true, idleBlend > 0.0f, idleBlend, true);
+        player->PlayBodyAnimation("Idle", true, true, resultRecallToIdleBlendDuration, true);
     }
 }
 
@@ -38,7 +36,7 @@ bool GameVictoryController::CanAcceptSelection(const GameVictoryUIActor& victory
     return victoryUIActor.IsInputEnabled() && victoryResultPhase == VictoryResultPhase::Interactive;
 }
 
-bool GameVictoryController::AcceptSelection(int selection, bool restartAllowed, GameVictoryUIActor& victoryUIActor, float confirmVolume)
+bool GameVictoryController::AcceptSelection(const int selection, const bool restartAllowed, GameVictoryUIActor& victoryUIActor, const float confirmVolume)
 {
     if (selection == 0 && !restartAllowed) return false;
     victoryUIActor.DisableInput();
@@ -46,8 +44,8 @@ bool GameVictoryController::AcceptSelection(int selection, bool restartAllowed, 
     return true;
 }
 
-int GameVictoryController::UpdateUntilSelection(Player* player, CinemaCamera* cinemaCameraActor,
-    GameVictoryUIActor& ui, float deathResultMoveSeVolume)
+int GameVictoryController::UpdateUntilSelection(const Player* player, const CinemaCamera* cinemaCameraActor,
+    GameVictoryUIActor& ui, const float deathResultMoveSeVolume)
 {
     auto* victoryUIActor = &ui;
     const auto controller = player ? player->GetBodyAnimationController() : nullptr;
@@ -113,7 +111,7 @@ int GameVictoryController::UpdateUntilSelection(Player* player, CinemaCamera* ci
     return -1;
 }
 
-void GameVictoryController::FinishUpdate(GameVictoryUIActor& victoryUIActor, float numberTexWidth, float numberTexHeight)
+void GameVictoryController::FinishUpdate(GameVictoryUIActor& victoryUIActor, const float numberTexWidth, const float numberTexHeight)
 {
     victoryUIActor.SetNumberTextureSize(numberTexWidth, numberTexHeight);
     victoryUIActor.UpdateBackground();
@@ -143,7 +141,7 @@ void GameVictoryController::LoadBestTime()
     }
 }
 
-void GameVictoryController::CaptureResult(float finalBattleTime, bool finalBattleTimeSaved, GameVictoryUIActor& victoryUIActor)
+void GameVictoryController::CaptureResult(const float finalBattleTime, const bool finalBattleTimeSaved, GameVictoryUIActor& victoryUIActor)
 {
     const bool validClear = finalBattleTimeSaved && std::isfinite(finalBattleTime) && finalBattleTime >= 0.0f;
     const double victoryClearTime = validClear ? static_cast<double>(finalBattleTime) : 0.0;
@@ -183,9 +181,8 @@ void GameVictoryController::CaptureResult(float finalBattleTime, bool finalBattl
 #ifdef USE_IMGUI
 void GameVictoryController::DrawCameraIntroDebugGui()
 {
-    ImGui::DragFloat(U8("リザルト表示までのカメラブレンド"), &victoryCameraBlendDuration,0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat("Result Recall To Idle Blend Duration", &resultRecallToIdleBlendDuration,
-        0.01f, 0.0f, 0.5f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat(U8("リザルト表示までのカメラブレンド"), &victoryCameraBlendDuration, 0.01f, 0.0f, 2.0f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
+    ImGui::DragFloat(U8(" Recall->Idleのブレンド時間"), &resultRecallToIdleBlendDuration, 0.01f, 0.0f, 0.5f, "%.3f s", ImGuiSliderFlags_AlwaysClamp);
 }
 
 void GameVictoryController::DrawAnimationDebugGui()

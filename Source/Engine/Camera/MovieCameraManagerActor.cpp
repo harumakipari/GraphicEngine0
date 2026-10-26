@@ -1083,8 +1083,6 @@ void MovieCameraManagerActor::FinishPrisonOpeningMovie()
 
     if (cameraManager)
     {
-        // Remove all non-gameplay render-camera overrides.  GetRenderCamera()
-        // then falls back to GameScene's DarkCameraActor (TPS).
         if (cameraManager->IsUseMovie())
             cameraManager->ToggleMovieCamera(GetOwnerConstScene());
         if (cameraManager->IsUseCinematic())
@@ -1241,8 +1239,6 @@ void MovieCameraManagerActor::PlayDeathWideRelative(
     if (!movieCamera->ApplyFirstFrameToOwner())
         return;
 
-    // Toggle is an intentional CUT. Reapply the first key after the toggle,
-    // because ToggleMovieCamera copies the previous render camera pose.
     if (!cameraManager->IsUseMovie())
         cameraManager->ToggleMovieCamera(scene);
     movieCamera->ApplyFirstFrameToOwner();
@@ -1285,7 +1281,6 @@ bool MovieCameraManagerActor::PlayDeathWideFromAnchors(
         return false;
     }
 
-    // Keep the authored DeathWide FOV, but replace its world pose with the anchor.
     movieCamera->LoadFromJson(
         "./Data/Saves/MovieCameras/DeathWide.json");
     const float fov = movieCamera->GetFirstKeyframeFov();
@@ -1294,7 +1289,6 @@ bool MovieCameraManagerActor::PlayDeathWideFromAnchors(
     deathWidePreviewAnchorName = selectedAnchor->GetName();
     deathWidePreviewFov = fov;
 
-    // ToggleMovieCamera copies the current render pose, so CUT afterwards.
     if (!cameraManager->IsUseMovie())
         cameraManager->ToggleMovieCamera(scene);
     const DirectX::XMFLOAT3 eye = selectedAnchor->GetComponentLocation();
