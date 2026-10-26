@@ -925,9 +925,6 @@ public:
     // 現在のJumpの着地点に予兆を表示する。
     void ShowJumpTelegraphForCurrentJump();
 
-    // Jump着地情報をワールド上にデバッグ描画する。
-    void DrawJumpLandingDebugWorld() const;
-
     // Jump予兆を非表示にする。
     void HideJumpTelegraph();
 
@@ -1278,15 +1275,6 @@ private:
 
     // Jump用のMotionWarp上書き情報を準備する。
     void PrepareJumpAttackMotionWarpOverride();
-
-    // JumpのMotionWarp終了時の着地診断情報を記録する。
-    void CaptureJumpLandingMotionWarpEndSnapshot();
-
-    // Jumpの地面衝撃時の着地診断情報を記録する。
-    void CaptureJumpLandingGroundImpactSnapshot();
-
-    // Jump着地時の壁衝突診断情報を更新する。
-    void UpdateJumpLandingDebugWallSnapshot();
 
     // 有効なNotify Stateから攻撃判定を更新する。
     void RefreshActiveHitBoxesFromNotifyStates();
@@ -2026,22 +2014,6 @@ private:
     float tripleJumpPlannedDistance = 0.0f;  // 現在のJumpの予定移動距離。
     DirectX::XMFLOAT3 tripleJumpPlannedLandingPosition{};  // 現在のJumpの予定着地点。
     bool tripleJumpTargetLockActive = false;  // Jump開始時に固定した目標を適用中かを示す。
-    // Temporary Jump landing diagnostics. Values are reset once per jump telegraph.
-    bool showJumpLandingDebug = true;  // Jump着地の診断描画を表示するか。
-    bool jumpLandingDebugSnapshotValid = false;  // Jump着地の診断情報が有効か。
-    bool jumpLandingDebugMotionWarpEndCaptured = false;  // MotionWarp終了時の位置を記録済みか。
-    bool jumpLandingDebugGroundImpactCaptured = false;  // 着地衝撃時の位置を記録済みか。
-    bool jumpLandingDebugWallHit = false;  // Jump中に壁へ衝突したかの診断値。
-    float jumpLandingDebugTargetErrorXZ = 0.0f;  // Jump着地点と目標位置の水平距離の誤差。
-    DirectX::XMFLOAT3 jumpLandingDebugPlayerSnapshot{};  // Jump着地診断に記録したプレイヤー位置。
-    DirectX::XMFLOAT3 jumpLandingDebugPlannedLanding{};  // Jump着地診断に記録した予定着地点。
-    DirectX::XMFLOAT3 jumpLandingDebugTelegraphCenter{};  // Jump予兆の中心位置の診断値。
-    DirectX::XMFLOAT3 jumpLandingDebugMotionWarpEndBossRoot{};  // MotionWarp終了時のボス位置。
-    DirectX::XMFLOAT3 jumpLandingDebugGroundImpactBossRoot{};  // 着地衝撃時のボス位置。
-    DirectX::XMFLOAT3 jumpLandingDebugGroundImpactWeaponRoot{};  // 着地衝撃時の武器の根元位置。
-    DirectX::XMFLOAT3 jumpLandingDebugGroundImpactWeaponMiddle{};  // 着地衝撃時の武器の中央位置。
-    DirectX::XMFLOAT3 jumpLandingDebugGroundImpactWeaponTip{};  // 着地衝撃時の武器の先端位置。
-    DirectX::XMFLOAT3 jumpLandingDebugWallCollisionPosition{};  // Jump中に壁へ衝突した位置。
     bool jumpMotionWarpOverrideActive = false;  // Jump用のMotionWarp上書きが有効か。
     DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  // Jump開始時のプレイヤー位置。
     DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  // Jump用MotionWarpの方向。
