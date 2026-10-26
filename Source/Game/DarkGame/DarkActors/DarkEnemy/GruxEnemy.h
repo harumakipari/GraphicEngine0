@@ -190,10 +190,7 @@ public:
 
     // フェーズ遷移時に被弾表示を解除する。
     void ClearDamageFlash() const;
-    void ClearDamageVisualsForPhaseTransition();
-
-    // フェーズ遷移時にロックオン表示を隠す。
-    void HideLockOnVisualsForPhaseTransition() const;
+    void ClearDamageVisualsForPhaseTransition() const;
 
     // Rush中のHP表示を開始する。
     void BeginRushHpDisplay();
@@ -908,7 +905,7 @@ public:
     bool StartJumpAttackTelegraph();
 
     // Jumpの予兆を更新し、アニメーション終了を判定する。
-    bool UpdateJumpAttackTelegraph(float deltaTime);
+    bool UpdateJumpAttackTelegraph(float deltaTime) const;
 
     // Jump攻撃のアニメーションを開始し、成功時に攻撃開始を記録する。
     bool StartJumpAttackExecution();
@@ -1349,7 +1346,7 @@ private:
     std::shared_ptr<SceneComponent> weaponRightMiddleComponent;  // 右武器の中央位置のコンポーネント。
     std::shared_ptr<SceneComponent> weaponRightTipComponent;  // 右武器の先端位置のコンポーネント。
 
-    std::shared_ptr<SceneComponent> beltComponent;  // ベルト位置のコンポーネント。
+    std::shared_ptr<SceneComponent> neckComponent;  // ベルト位置のコンポーネント。
 
     std::shared_ptr<SceneComponent> leftFootComponent;  // 左足位置のコンポーネント。
     std::shared_ptr<SceneComponent> rightFootComponent;  // 右足位置のコンポーネント。
@@ -2456,9 +2453,6 @@ private:
     std::unique_ptr<EasingRunner> easingRunner;  // 表示演出の補間処理。
     float easingFactorAlpha = 0.0f;  // 表示演出の不透明度の補間係数。
 
-    std::shared_ptr<SkeletalMeshComponent> lockOnTargetMeshComponent;  // ロックオン表示用メッシュ。
-    float lockOnOffset = 0.0f;  // ロックオン位置のオフセット。
-    float lockOnOffsetY = 1.65f;  // ロックオン表示位置の高さオフセット。
     DirectX::XMFLOAT3 justDodgeAreaSize = { 0.0f,2.0f,0.0f };  // ジャスト回避判定領域の大きさ。
     DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };  // ジャスト回避判定領域のオフセット。
     DangerArea dangerArea{};  // 危険範囲の判定情報。

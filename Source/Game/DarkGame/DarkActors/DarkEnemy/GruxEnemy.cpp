@@ -20,56 +20,17 @@
 #include "Game/DarkGame/BehaviorTree/BehaviorData.h"
 #include "Game/DarkGame/BehaviorTree/BehaviorTree.h"
 #include "Game/DarkGame/BehaviorTree/ActionBase.h"
-#include "Game/DarkGame/BehaviorTree/JudgementBase.h"
 #include "Game/DarkGame/BehaviorTree/GruxFastComboBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxJumpAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxDashAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxChargeAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxRoarBT.h"
-#include "Physics/CollisionFunction.h"
 #include "Game/DarkGame/BehaviorTree/AttackRecoveryBT.h"
 
-class MainChargeWindMeshComponent final : public StaticMeshComponent
-{
-public:
-    struct Constants
-    {
-        DirectX::XMFLOAT2 maskScrollSpeed{};
-        float opacity = 0.5f;
-        float radialSpeed = 1.0f;
-        float radialTiling = 2.0f;
-        int maskFlowMode = 0;
-        DirectX::XMFLOAT2 padding{};
-    };
-
-    MainChargeWindMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner)
-        : StaticMeshComponent(name, owner), constants_(Graphics::GetDevice())
-    {
-    }
-
-    void SetWindConstants(const DirectX::XMFLOAT2& scrollSpeed, const float opacity,
-        const float radialSpeed, const float radialTiling, const int maskFlowMode) const
-    {
-        constants_.data.maskScrollSpeed = scrollSpeed;
-        constants_.data.opacity = opacity;
-        constants_.data.radialSpeed = radialSpeed;
-        constants_.data.radialTiling = radialTiling;
-        constants_.data.maskFlowMode = maskFlowMode;
-    }
-
-    void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const override
-    {
-        constants_.Activate(immediateContext, 6);
-    }
-
-private:
-    mutable ConstantBuffer<Constants> constants_;
-};
 
 void GruxEnemy::Initialize(const Transform& transform)
 {
     maxHp = 50;
-    //maxHp = 75;
     hp = maxHp;
     delayedHp = static_cast<float>(hp);
 
@@ -97,10 +58,6 @@ void GruxEnemy::Initialize(const Transform& transform)
         else if (material.name == "M_Grux_Qilin_Eye")
         {// 目だったら、
             material.materialType = MaterialType::Eye;
-        }
-        else if (material.name == "M_Grux_Qilin_Gear")
-        {// 腕輪
-            //material.materialType = MaterialType::Metallic;
         }
         else if (material.name == "M_Grux_Qilin_Hore")
         {// つの
@@ -199,19 +156,14 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->SetOwnerName(GetName());
     PlayBodyAnimation("TravelMode_Idle_0");
 
-#if 1
     //　身体の当たり判定
     {
         std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("enemyCapsuleComponent", parentName);
         enemyCapsuleComponent = capsuleComponent;
-        //DirectX::XMFLOAT3 size = skeletalMeshComponent->GetModelSize();
-        //size = MathHelper::Multiply(size, GetScale().x);
-        //height = size.y;
-        //radius = size.x * 0.3f;
-        height = 2.7f * 1.3f;
-        radius = 1.5f * 1.3f;
-
+        height = 3.5f;
+        radius = 1.95f;
         mass = 300.0f;
+
         capsuleComponent->SetRadiusAndHeight(radius, height);
         capsuleComponent->SetMass(mass);
         capsuleComponent->SetStatic(true);
@@ -226,27 +178,25 @@ void GruxEnemy::Initialize(const Transform& transform)
         capsuleComponent->Initialize();
     }
 
-#endif // 0
-
     // 回転用コンポーネントを追加
     rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
     rotationComponent->SetDirection({ -1.0f,0.0f,0.0f });
     // キャラクタームーブコンポーネントを追加
     characterMovementComponent = this->AddComponent<CharacterMovementComponent>("movementComponent", parentName);
     characterMovementComponent->SetUseGravity(true);
+
     // ポイントライトコンポーネントを追加
     auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
     pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     pointLightComponent->SetSharedLightName("EnemyPointLight");
-
     // ポイントライトコンポーネントを追加
     auto backPointLightComponent = this->AddComponent<PointLightComponent>("backPointLight", parentName);
     backPointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f,-1.0f });
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     backPointLightComponent->SetSharedLightName("EnemyBackPointLight");
 
-    // 武器に当たり判定のコンポーネントを追加
+    // 武器に当たり判定
     int socketLeftNode = skeletalMeshComponent->FindIndexByName("weapon_l");
     // 左の武器の根本のコンポーネントを追加   
     weaponLeftRootComponent = AddComponent<SceneComponent>("weaponLeftRootComponent", parentName);
@@ -271,6 +221,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     weaponRightTipComponent = AddComponent<SceneComponent>("weaponRightTipComponent", "weaponRightRootComponent");
     weaponRightTipComponent->SetRelativeLocationDirect({ 0.0f,0.0f,-1.6f });
 
+    // エフェクト位置のため
     // 左足のコンポーネントを追加
     int socketLeftFootNode = skeletalMeshComponent->FindIndexByName("ik_foot_l");
     leftFootComponent = AddComponent<SceneComponent>("leftFootComponent", parentName);
@@ -281,10 +232,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     rightFootComponent = AddComponent<SceneComponent>("rightFootComponent", parentName);
     rightFootComponent->AttachToComponent(skeletalMeshComponent, socketRightFootNode); // "ik_foot_r"
 
-    //　ベルトのコンポーネントを追加
+    //　首のコンポーネントを追加
     int socketBeltNode = skeletalMeshComponent->FindIndexByName("neck_03");
-    beltComponent = AddComponent<SceneComponent>("beltComponent", parentName);
-    beltComponent->AttachToComponent(skeletalMeshComponent, socketBeltNode); // "belt"
+    neckComponent = AddComponent<SceneComponent>("beltComponent", parentName);
+    neckComponent->AttachToComponent(skeletalMeshComponent, socketBeltNode); // "belt"
 
     // カメラの注視点の位置のコンポーネントを追加
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
@@ -301,13 +252,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     uiManager->Add(gruxNameImageComponent);
     easingRunner = std::make_unique<EasingRunner>();
 
-    // ロックオンのモデル
-    lockOnTargetMeshComponent = AddComponent<SkeletalMeshComponent>("lockOn", parentName);
-    lockOnTargetMeshComponent->SetModel("./Data/Models/LockOnTarget/LockOnTargetModel1.gltf");
-    lockOnTargetMeshComponent->SetRelativeScaleDirect({ 0.68f,0.68f, 0.68f });
-    lockOnTargetMeshComponent->SetIsCastShadow(false);
-    lockOnTargetMeshComponent->SetIsVisible(false);
-    lockOnTargetMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
 
     tripleChargeTelegraphMeshComponent = AddComponent<StaticMeshComponent>("tripleChargeTelegraph", parentName);
     tripleChargeTelegraphMeshComponent->SetModel("./Data/Models/EffectModel/ChargeTelegraphPlane2.glb");
@@ -319,7 +263,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
     tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
 
-    // Temporary mesh: replace this path with GruxMainChargeWind.glb when the dedicated asset is ready.
     mainChargeWindMeshComponent = AddComponent<MainChargeWindMeshComponent>("mainChargeWind", parentName);
     mainChargeWindMeshComponent->SetModel("./Data/Models/EffectModel/ChargeWindModel1.glb");
     for (auto& material : mainChargeWindMeshComponent->model->materials)
@@ -1344,14 +1287,9 @@ void GruxEnemy::ClearDamageFlash() const
         skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
 }
 
-void GruxEnemy::ClearDamageVisualsForPhaseTransition()
+void GruxEnemy::ClearDamageVisualsForPhaseTransition() const
 {
     ClearDamageFlash();
-}
-void GruxEnemy::HideLockOnVisualsForPhaseTransition() const
-{
-    if (lockOnTargetMeshComponent)
-        lockOnTargetMeshComponent->SetIsVisible(false);
 }
 void GruxEnemy::BeginPhase1LastHitReaction(const DirectX::XMFLOAT3& hitSourcePosition)
 {
@@ -1716,16 +1654,8 @@ void GruxEnemy::Update(float deltaTime)
         targetPos = MathHelper::Add(
             targetPos,
             bossBattleCameraOffset);
-
-        //cameraTargetComponent->SetWorldLocationDirect(targetPos);
-        //DebugRender::DrawSphere(targetPos, 0.5f, { 1.0f,1.0f,0.0f,1.0f }, true);
     }
 
-    DirectX::XMFLOAT3 lockOnPos = MathHelper::Add(bossPos, MathHelper::Multiply(toPlayerDir, lockOnOffset));
-    lockOnPos.y = lockOnOffsetY;
-    lockOnTargetMeshComponent->SetWorldLocationDirect({ lockOnPos });
-    DirectX::XMFLOAT4 rotation = MathHelper::LookRotation(toPlayerDir, { 0,1,0 });
-    lockOnTargetMeshComponent->SetRelativeRotationDirect(rotation);
 
 #endif // 0
 
@@ -2782,8 +2712,6 @@ void GruxEnemy::DrawImGuiDetails()
     {
         StartGruxNamePerform(2.0f);
     }
-    ImGui::DragFloat(U8("lockOnOffsetY"), &lockOnOffsetY, 0.05f, 0.1f, 10.0f);
-    ImGui::DragFloat(U8("ロックオンプレイヤー側に押し出すオフセット"), &lockOnOffset, 0.05f, 0.1f, 10.0f);
     ImGui::DragFloat("Boss Damage Flash Duration", &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
     ImGui::SliderFloat("Boss Damage Flash Strength", &damageFlashStartValue, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Boss Hit Voice Cooldown", &hitVoiceCooldown, 0.01f, 0.0f, 2.0f, "%.2f sec");
@@ -3501,9 +3429,9 @@ void  GruxEnemy::SpawnRightFootScrapeEffect()const
 void GruxEnemy::SpawnGroundDownEffect()const
 {
     DirectX::XMFLOAT3 spawnPosition = GetPosition();
-    if (beltComponent)
+    if (neckComponent)
     {
-        const DirectX::XMFLOAT3 beltPosition = beltComponent->GetComponentLocation();
+        const DirectX::XMFLOAT3 beltPosition = neckComponent->GetComponentLocation();
         spawnPosition.x = beltPosition.x;
         spawnPosition.z = beltPosition.z;
     }
@@ -4309,7 +4237,7 @@ bool GruxEnemy::StartJumpAttackTelegraph()
     return PlayAttackStage(BossAttackType::JumpAttack, 0);
 }
 
-bool GruxEnemy::UpdateJumpAttackTelegraph(float deltaTime)
+bool GruxEnemy::UpdateJumpAttackTelegraph(float deltaTime) const
 {
     const BossTargetContext context = BuildTargetContext();
     if (!context.valid)

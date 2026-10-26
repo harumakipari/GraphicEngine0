@@ -1555,7 +1555,6 @@ void GameScene::CompletePhase2TransitionAtBlack()
     battleTimerUIActor->SetVisible(false);
     player->NeutralizeForPhase2Cinematic();
     gruxEnemyActor->PauseBattleAIForPhaseTransition();
-    gruxEnemyActor->HideLockOnVisualsForPhaseTransition();
     if (darkCameraActor)
     {
         darkCameraActor->CancelOffscreenAttackAssist();
@@ -1603,7 +1602,6 @@ void GameScene::ResetBossPhaseRuntime(const BossPhase phase)
         if (phase != BossPhase::TransitionToPhase2)
             gruxEnemyActor->SetHpBarVisualProfileForBattlePhase(phase == BossPhase::Phase2);
         phase2TransitionController->ApplyTransform(gruxEnemyActor.get());
-        gruxEnemyActor->HideLockOnVisualsForPhaseTransition();
     }
     phase2TransitionController->ResetPlayerEmote(player.get());
     if (player)
@@ -1709,7 +1707,6 @@ void GameScene::SetupPhase2RecallCinematic() const
     if (gruxEnemyActor)
     {
         gruxEnemyActor->ClearDamageVisualsForPhaseTransition();
-        gruxEnemyActor->HideLockOnVisualsForPhaseTransition();
     }
 
     phase2TransitionController->ApplyRecallActorPose(player.get(), gruxEnemyActor.get());

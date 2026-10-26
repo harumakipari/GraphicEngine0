@@ -450,3 +450,40 @@ public:
         model->CastShadow(immediateContext, world, modelNodes);
     }
 };
+
+class MainChargeWindMeshComponent final : public StaticMeshComponent
+{
+public:
+    struct Constants
+    {
+        DirectX::XMFLOAT2 maskScrollSpeed{};
+        float opacity = 0.5f;
+        float radialSpeed = 1.0f;
+        float radialTiling = 2.0f;
+        int maskFlowMode = 0;
+        DirectX::XMFLOAT2 padding{};
+    };
+
+    MainChargeWindMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner)
+        : StaticMeshComponent(name, owner), constants_(Graphics::GetDevice())
+    {
+    }
+
+    void SetWindConstants(const DirectX::XMFLOAT2& scrollSpeed, const float opacity,
+        const float radialSpeed, const float radialTiling, const int maskFlowMode) const
+    {
+        constants_.data.maskScrollSpeed = scrollSpeed;
+        constants_.data.opacity = opacity;
+        constants_.data.radialSpeed = radialSpeed;
+        constants_.data.radialTiling = radialTiling;
+        constants_.data.maskFlowMode = maskFlowMode;
+    }
+
+    void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const override
+    {
+        constants_.Activate(immediateContext, 6);
+    }
+
+private:
+    mutable ConstantBuffer<Constants> constants_;
+};
