@@ -223,6 +223,9 @@ public:
     // 戦闘AIが有効かを返す。
     bool IsBattleAIActive() const { return battleAIActive; }
 
+    // 死亡演出または最終被弾演出が行動を所有しているかを返す。
+    bool IsDeathPresentationActive() const { return isDeathPerform || finalHitReactionActive || finalHitReactionHeld; }
+
     // フェーズ遷移のアニメーションを外部が管理するか設定する。
     void SetPhase2CinematicAnimationOwnedExternally(bool owned)
     {
@@ -1941,7 +1944,6 @@ private:
         bool attackStarted = false;  // Chargeの攻撃シーケンスを開始済みか。
         bool cooldownStarted = false;  // Chargeのクールダウン開始処理を実施済みか。
         BossActionType previousAction = BossActionType::AttackLA;  // Charge開始前に選択されていた行動。
-        std::string initialStateName;  // Charge BT開始時の状態名。
         float facingElapsed = 0.0f;  // Chargeの向き合わせの経過時間。
         float animationElapsed = 0.0f;  // Chargeアニメーションの経過時間。
         float animationStalled = 0.0f;  // Chargeアニメーションの進行が停止した時間。
@@ -2114,7 +2116,7 @@ private:
 
     float chargePlayerHitRecoveryDuration = 0.8f;  // Chargeがプレイヤーにヒットした後のRecovery時間。
     float chargeJustDodgeRecoveryDuration = 0.7f;  // Chargeをジャスト回避された後のRecovery時間。
-    float postStunRecoveryDuration = 0.1f;  // スタン後のRecovery時間。
+    float postStunRecoveryDuration = 0.4f;  // スタン後のRecovery時間。
     std::optional<float> nextRecoveryDuration;  // 次のRecoveryに使用する時間の指定。
     std::string nextRecoverySource = "Default";  // 次のRecovery時間を指定した要因。
     float currentRecoveryDurationDebug = 0.0f;  // 現在のRecovery時間の診断値。

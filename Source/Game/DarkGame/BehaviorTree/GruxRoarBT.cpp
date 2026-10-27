@@ -4,7 +4,7 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Scenes/GameScene.h"
-#include "Game/State/StateMachine.h"
+
 #include "Engine/Scene/Scene.h"
 #include "Core/ActorManager.h"
 #include "Physics/CollisionFunction.h"
@@ -171,14 +171,8 @@ bool GruxEnemy::IsRoarExecutionAllowed() const
         dashAttackMovementActive || jumpMotionWarpOverrideActive || !characterMovementComponent ||
         !GetBodyAnimationController() || !GetOwnerScene())
         return false;
-    if (stateMachine_)
-    {
-        const std::string state = stateMachine_->GetStateName();
-        // BT mode suspends the legacy FSM; its last Attack state is not activity.
-        // Death/Stun still serve as external interruption guards.
-        if (state == "EnemyDeathState" || state == "EnemyStunState")
-            return false;
-    }
+    if (IsStunned())
+        return false;
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     return player && !player->IsPendingKill() && player->GetHp() > 0;
 }

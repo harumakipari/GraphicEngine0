@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "GruxDashAttackBT.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
-#include "Game/State/StateMachine.h"
 #include "Game/Scenes/GameScene.h"
 
 void GruxEnemy::EnsureDashTelegraphVisual()
@@ -351,9 +350,8 @@ void GruxEnemy::UpdateDashTelegraphVisualDebug()
 
 bool DashPlanAvailable::Judgment()
 {
-    const auto machine = owner->GetStateMachine();
     return owner->IsBattleAIActive() &&
-        (!machine || std::strcmp(machine->GetStateName(), "EnemyStunState") != 0) &&
+        !owner->IsStunned() &&
         owner->CanPlanDashAttack();
 }
 
@@ -404,8 +402,7 @@ ActionBase::State ExecuteDashAttack::Run(float deltaTime)
 
 bool GruxEnemy::CanPlanDashAttack() const
 {
-    if (IsDead() || !BuildTargetContext().valid ||
-        (stateMachine_ && std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") == 0))
+    if (IsDead() || !BuildTargetContext().valid || IsDeathPresentationActive())
         return false;
     // Cooldowns are indexed by Action, not by the independently ordered Attack table.
     for (size_t i = 0; i < combatActionData.size(); ++i)
@@ -680,10 +677,8 @@ void GruxEnemy::CleanupDashAttackBT()
     }
     StopDashAttackMovement();
     ClearAttackSetupTarget();
-    // Do not replace an externally started Death / Stun animation with positioning idle.
-    const bool externallyInterrupted = IsDead() || (stateMachine_ &&
-        (std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") == 0 ||
-            std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") == 0));
+    // Do not replace a death presentation or Charge Stun animation with positioning idle.
+    const bool externallyInterrupted = IsDead() || IsDeathPresentationActive() || IsStunned();
     if (!externallyInterrupted)
         EndPositioningAnimation();
     DisableAttackHitBoxes();

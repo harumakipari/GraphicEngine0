@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include <random>
-#include <cstring>
 
 #include "GruxEnemy.h"
 
@@ -455,9 +454,7 @@ void GruxEnemy::Update(float deltaTime)
     }
 
     if (IsDashAttackBTActive() &&
-        (!behaviorTreeFastComboEnabled || !battleAIActive || IsDead() ||
-            (stateMachine_ && (std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") == 0 ||
-                std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") == 0))))
+        (!behaviorTreeFastComboEnabled || !battleAIActive || IsDead() || IsDeathPresentationActive() || IsStunned()))
     {
         CleanupDashAttackBT();
         activeNode = nullptr;
@@ -2971,9 +2968,7 @@ bool GruxEnemy::EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPositi
 
 bool GruxEnemy::IsStunned() const
 {
-    if (chargeBT.phase == ChargeBTPhase::Stun)
-        return true;
-    return stateMachine_ && std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") == 0;
+    return chargeBT.phase == ChargeBTPhase::Stun;
 }
 
 bool GruxEnemy::BeginChargeAttackMovement()

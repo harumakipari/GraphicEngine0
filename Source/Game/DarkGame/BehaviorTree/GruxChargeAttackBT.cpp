@@ -3,7 +3,6 @@
 #include "NodeBase.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Actors/Player/Player.h"
-#include "Game/State/StateMachine.h"
 #include "Engine/Scene/Scene.h"
 #include "Core/ActorManager.h"
 #include "Game/Scenes/GameScene.h"
@@ -77,12 +76,10 @@ ActionBase::State ExecuteChargeRecovery::Run(float dt)
 
 bool GruxEnemy::IsChargeBTExecutionAllowed() const
 {
-    if (IsDead() || !battleAIActive || finalHitReactionActive || finalHitReactionHeld ||
+    if (IsDead() || !battleAIActive || IsDeathPresentationActive() ||
         IsAnimationEditorPreviewActive())
         return false;
-    return !stateMachine_ ||
-        (std::strcmp(stateMachine_->GetStateName(), "EnemyDeathState") != 0 &&
-            std::strcmp(stateMachine_->GetStateName(), "EnemyStunState") != 0);
+    return true;
 }
 bool GruxEnemy::CanPlanChargeAttack() const
 {
@@ -103,7 +100,6 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
     chargeBT = {};
     chargeBT.phase = ChargeBTPhase::Setup;
     chargeBT.previousAction = selectedActionType;
-    chargeBT.initialStateName = stateMachine_ ? stateMachine_->GetStateName() : "";
     selectedActionType = BossActionType::ChargeAttack;
     selectedAttackType = BossAttackType::ChargeAttack;
     SetBehaviorAttackResult(BehaviorAttackResult::None);
@@ -1227,9 +1223,8 @@ bool GruxEnemy::ShouldAbortChargeAttackBT()
     const bool behaviorTreeDisabled = !behaviorTreeFastComboEnabled;
     const bool executionNotAllowed = !IsChargeBTExecutionAllowed();
     const bool activeNodeNull = !activeNode;
-    const bool stateMismatch = stateMachine_ && stateMachine_->GetStateName() != chargeBT.initialStateName;
     return IsChargeAttackBTActive() &&
-        (behaviorTreeDisabled || executionNotAllowed || activeNodeNull || stateMismatch);
+        (behaviorTreeDisabled || executionNotAllowed || activeNodeNull);
 }
 void GruxEnemy::CleanupChargeAttackBT()
 {
@@ -1241,8 +1236,8 @@ void GruxEnemy::CleanupChargeAttackBT()
     const float tripleMaxDuration = chargeBT.tripleChargeLegMaxDuration;
     const float tripleTransitionDuration = chargeBT.tripleChargeTransitionDuration;
     const float tripleStunMultiplier = chargeBT.tripleWallStunDurationMultiplier;
-    const bool preserveAnimation = rushCombatHoldActive || IsDead() || finalHitReactionActive || finalHitReactionHeld ||
-        IsAnimationEditorPreviewActive() || (stateMachine_ && stateMachine_->GetStateName() != chargeBT.initialStateName);
+    const bool preserveAnimation = rushCombatHoldActive || IsDead() || IsDeathPresentationActive() || !battleAIActive ||
+        IsAnimationEditorPreviewActive();
     if (!preserveAnimation) EndPositioningAnimation();
     positioningAnimationMoving = false;
     positioningAnimationActualSpeed = positioningMoveStopTimer = 0.0f;
