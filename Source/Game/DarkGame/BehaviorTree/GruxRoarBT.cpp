@@ -81,16 +81,13 @@ bool CanPlanAnyDefensive::Judgment()
 {
     if (owner->IsInitialRepositionFallbackIdlePending())
     {
-        owner->RecordCombatDecisionDebugDefensive(false);
         return false;
     }
     if (!owner->CanPlanAttackAgainstCurrentPlayer())
     {
-        owner->RecordCombatDecisionDebugDefensive(false);
         return false;
     }
     const bool result = owner->CanPlanRoar() || owner->CanPlanRetreat();
-    owner->RecordCombatDecisionDebugDefensive(result);
     return result;
 }
 bool CanPlanRetreat::Judgment() { return owner->CanPlanRetreat(); }
@@ -337,41 +334,12 @@ void GruxEnemy::FinishRetreatMovement(bool arrived)
         consecutiveAttackCount = 0;
     retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
 }
-void GruxEnemy::BeginCombatDecisionDebugInference()
-{
-    ++combatDecisionDebugInferenceSerial;
-    combatDecisionDebugActiveNodeAtStart = activeNode ? activeNode->GetName() : "None";
-    combatDecisionDebugDefensiveResult = "NotEvaluated";
-    combatDecisionDebugRootSelectedNode = "None";
-    combatDecisionDebugFailureReason = "None";
-    combatDecisionDebugRepositionReason = "NotEvaluated";
-    combatDecisionDebugCanPlanAny = false;
-    combatDecisionDebugCanPlanReposition = false;
-    combatDecisionDebugCanPlanAnyAttack = false;
-    combatDecisionDebugFastCombo = false;
-    combatDecisionDebugJump = false;
-    combatDecisionDebugDash = false;
-    combatDecisionDebugCharge = false;
-}
-
-void GruxEnemy::CompleteCombatDecisionDebugInference(const char* selectedNode)
-{
-    combatDecisionDebugRootSelectedNode = selectedNode ? selectedNode : "None";
-    if (combatDecisionDebugRootSelectedNode == "Idle" && combatDecisionDebugFailureReason == "None")
-        combatDecisionDebugFailureReason = "RootSelectedIdle";
-}
-
-void GruxEnemy::RecordCombatDecisionDebugDefensive(bool result)
-{
-    combatDecisionDebugDefensiveResult = result ? "True" : "False";
-}
 
 void GruxEnemy::BeginCombatDecisionInference()
 {
     repositionDecisionCached = true;
     repositionDecisionResult = false;
     repositionDecisionRoll = 0.0f;
-    repositionCanPlanDebug = false;
     const bool defensiveAvailable = CanPlanAttackAgainstCurrentPlayer() &&
         (CanPlanRoar() || CanPlanRetreat());
     if (!IsRoarExecutionAllowed() || defensiveAvailable ||
@@ -387,15 +355,12 @@ void GruxEnemy::BeginCombatDecisionInference()
     static thread_local std::mt19937 engine{ std::random_device{}() };
     repositionDecisionRoll = std::uniform_real_distribution<float>(0.0f, 1.0f)(engine);
     repositionDecisionResult = repositionDecisionRoll < chance;
-    repositionCanPlanDebug = repositionDecisionResult;
 }
 
 bool GruxEnemy::CanPlanAnyCombatDecision()
 {
     if (initialRepositionFallbackIdlePending)
     {
-        combatDecisionDebugCanPlanAny = false;
-        combatDecisionDebugCanPlanAnyAttack = false;
         return false;
     }
     if (!repositionDecisionCached)
@@ -418,9 +383,7 @@ bool GruxEnemy::CanPlanAnyCombatDecision()
     const bool canPlanAttack = playerAvailableForAttack &&
         (combatDecisionDebugFastCombo || combatDecisionDebugJump ||
             combatDecisionDebugDash || combatDecisionDebugCharge);
-    combatDecisionDebugCanPlanAnyAttack = canPlanAttack;
     const bool canPlan = CanPlanReposition() || canPlanAttack;
-    combatDecisionDebugCanPlanAny = canPlan;
     return canPlan;
 }
 
@@ -444,18 +407,7 @@ bool GruxEnemy::CanPlanReposition()
     const bool normalRepositionReady = cooldownReady && retryReady && defensiveInactive && executionAllowed;
     const bool result = !initialRepositionFallbackIdlePending && decisionAllows && targetInactive && movementInactive &&
         nodeAllowed && componentsValid && (initialReposition || normalRepositionReady);
-    combatDecisionDebugCanPlanReposition = result;
-    if (result) combatDecisionDebugRepositionReason = "Ready";
-    else if (!decisionAllows) combatDecisionDebugRepositionReason = "ProbabilityRejected";
-    else if (!targetInactive) combatDecisionDebugRepositionReason = "TargetAlreadyActive";
-    else if (!movementInactive) combatDecisionDebugRepositionReason = "MovementAlreadyActive";
-    else if (!cooldownReady) combatDecisionDebugRepositionReason = "RepositionCooldown";
-    else if (!retryReady) combatDecisionDebugRepositionReason = "RetryCooldown";
-    else if (roarAvailable) combatDecisionDebugRepositionReason = "RoarAvailable";
-    else if (retreatAvailable) combatDecisionDebugRepositionReason = "RetreatAvailable";
-    else if (!nodeAllowed) combatDecisionDebugRepositionReason = std::string("ActiveNode=") + activeNode->GetName();
-    else if (!executionAllowed) combatDecisionDebugRepositionReason = "ExecutionUnavailable";
-    else combatDecisionDebugRepositionReason = "MissingComponent";
+
     return result;
 }
 
@@ -567,7 +519,6 @@ bool GruxEnemy::PrepareRepositionTarget()
         repositionTarget.stuckMovementThreshold = 0.01f;
         repositionTarget.stuckTimeThreshold = 0.5f;
 
-        lastCombatDecision = "Reposition";
         return true;
     }
 
@@ -614,7 +565,6 @@ void GruxEnemy::CompleteRepositionArrivalWait()
     const bool completedInitialReposition = initialRepositionPending;
     repositionCooldownRemaining = repositionCooldownDuration;
     consecutiveAttackCount = 0;
-    lastCombatDecision = "Reposition";
     if (completedInitialReposition)
     {
         initialRepositionPending = false;

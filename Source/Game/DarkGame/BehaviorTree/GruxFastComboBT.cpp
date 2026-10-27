@@ -320,7 +320,6 @@ void GruxEnemy::BeginRecovery() const
 void GruxEnemy::RecordBehaviorAttackCompleted()
 {
     ++consecutiveAttackCount;
-    lastCombatDecision = "Attack";
 }
 
 

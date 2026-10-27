@@ -1268,6 +1268,7 @@ void Player::UpdateLockOnLocomotion()
         if (speed <= 0.0f)
             SetLocomotionMode(LocomotionMode::Idle);
         break;
+    case LocomotionMode::TPSWalk:
     case LocomotionMode::TPSRun:
         if (speed >= 0.6f)
         {

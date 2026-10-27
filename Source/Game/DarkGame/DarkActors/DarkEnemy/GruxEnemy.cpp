@@ -316,7 +316,6 @@ void GruxEnemy::Update(float deltaTime)
 {
     UpdateRoarImpactDebris(Time::DeltaTime());
     UpdatePhase2TextureBlendWorldYRange();
-    ++animationDebugFrameCounter;
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
     UpdatePhase2HpBarPresentation();
     if (gameScene && gameScene->IsPhase1BreakPending())
@@ -1054,11 +1053,6 @@ void GruxEnemy::DrawImGuiDetails()
     fastComboFrontMaxAngle = std::clamp(fastComboFrontMaxAngle, 0.0f, 180.0f);
     const char* intentTypes[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan", "CombatReposition" };
 
-    ImGui::SeparatorText("Selected Action");
-    if (hasSelectedActionDebug)
-        ImGui::TextColored(ImVec4(1.0f, 0.85f, 0.25f, 1.0f), "-> %s", actionTypes[static_cast<int>(selectedActionType)]);
-    else
-        ImGui::TextDisabled("-> None");
 
     ImGui::SeparatorText("Last Decision");
     ImGui::TextWrapped("%s", lastAIDecisionReason.c_str());
@@ -1554,13 +1548,9 @@ void GruxEnemy::StopBattleActions()
     selectedActionType = BossActionType::AttackLA;
     selectedAttackType = BossAttackType::PrimaryAttackLA;
     selectedPositioningData.reset();
-    hasSelectedActionDebug = false;
     hasLastAttack = false;
     lastStartedCombatAttack.reset();
     secondLastStartedCombatAttack.reset();
-    lastSelectedIntent.reset();
-    combatRepositionSettling = false;
-    combatRepositionSettleRemaining = 0.0f;
     positioningMoveStopTimer = 0.0f;
     positioningAnimationActualSpeed = 0.0f;
     positioningAnimationMoving = false;
@@ -1774,7 +1764,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     repositionDecisionCached = false;
     repositionDecisionResult = false;
     repositionDecisionRoll = 0.0f;
-    lastCombatDecision = "None";
 
     fastComboTargetContext = {};
     fastComboStageTargetContexts = {};
@@ -2620,12 +2609,8 @@ void GruxEnemy::RequestJumpAttackCameraAssist() const
 void GruxEnemy::OnSelectedAttackCompletedSuccessfully()
 {
     postAttackCombatRepositionBoostPending = true;
-    postAttackCombatRepositionBoostApplied = false;
 }
-bool GruxEnemy::IsCombatRepositionActive() const
-{
-    return activeIntent && *activeIntent == BossIntentType::CombatReposition;
-}
+
 void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
 {
     positioningAnimationActualSpeed = (std::max)(0.0f, actualSpeed);
@@ -3620,7 +3605,6 @@ void GruxEnemy::RequestCombatRepositionIntent()
 {
     combatRepositionIntentPending = true;
     postAttackCombatRepositionBoostPending = false;
-    postAttackCombatRepositionBoostApplied = false;
 }
 
 int GruxEnemy::GetDamageForCurrentAttack() const

@@ -337,8 +337,6 @@ public:
     // 攻撃後の旧Intent用位置調整フラグを設定する。
     void OnSelectedAttackCompletedSuccessfully();
 
-    // 旧Intentの位置調整が選択中かを返す。
-    bool IsCombatRepositionActive() const;
 
 
     // 位置調整時の移動速度に応じてアニメーションを更新する。
@@ -700,8 +698,6 @@ public:
     // 現在の攻撃名をデバッグ用に返す。
     std::string GetCurrentAttackNameForDebug() const;
 
-
-
     // 現在のPlayerを新しい攻撃・防御行動の対象にできるか判定する。
     bool CanPlanAttackAgainstCurrentPlayer() const;
 
@@ -713,8 +709,6 @@ public:
 
     // Roarの計画条件を評価する。
     bool EvaluateRoarPlanForDebug() const;
-
-    // Roarを選択できない理由をデバッグ表示用に返す。
 
     // Roarの計画・実行を許可する共通条件を判定する。
     bool IsRoarExecutionAllowed() const;
@@ -863,16 +857,6 @@ public:
     // 攻撃の完了を記録する。
     void RecordBehaviorAttackCompleted();
 
-    // 戦闘判断の診断情報を初期化する。
-    void BeginCombatDecisionDebugInference();
-
-    void RecordCombatDecisionDebugDefensive(bool result);
-
-    void CompleteCombatDecisionDebugInference(const char* selectedNode);
-
-    // 戦闘判断で選択されたノードを記録する。
-
-    // 防御行動の判定結果を記録する。
 
     // 戦闘開始時の位置調整を計画できるかを返す。
     bool CanPlanInitialReposition() const { return initialRepositionPending && !initialRepositionFallbackIdlePending; }
@@ -1507,7 +1491,6 @@ private:
         { BossIntentType::CombatReposition, 3.0f, 12.0f, 10.0f, 0.0f, 100.0f, 0.0f },
     } };
     std::array<float, intentCount> combatIntentEffectiveWeights{};  // 旧Intent用に計算した候補ごとの重み。
-    std::optional<BossIntentType> lastSelectedIntent = std::nullopt;  // 直近に選択されたIntent。
 
     BossActionType selectedActionType = BossActionType::AttackLA;  // 現在選択されている行動種別。
     std::optional<BossActionType> lastStartedCombatAttack = std::nullopt;  // 最後に開始した連続ペナルティ対象の攻撃。
@@ -1668,20 +1651,10 @@ private:
     mutable bool repositionDecisionCached = false;  // 今回の推論で位置調整の抽選結果を保持しているか。
     mutable bool repositionDecisionResult = false;  // 今回の推論で保持した位置調整の抽選結果。
     mutable float repositionDecisionRoll = 0.0f;  // 位置調整の抽選に使った乱数値。
-    bool repositionCanPlanDebug = false;  // 位置調整の計画可否の診断結果。
-    unsigned long long combatDecisionDebugInferenceSerial = 0;  // 戦闘判断の推論回数。
-    std::string combatDecisionDebugActiveNodeAtStart = "None";  // 推論開始時の実行中ノード名。
-    std::string combatDecisionDebugDefensiveResult = "NotEvaluated";  // 防御行動の判定結果の表示文字列。
-    std::string combatDecisionDebugRootSelectedNode = "None";  // 戦闘判断で選択されたノード名。
-    std::string combatDecisionDebugFailureReason = "None";  // 戦闘判断の失敗理由。
-    std::string combatDecisionDebugRepositionReason = "NotEvaluated";  // 位置調整の判定理由。
-    bool combatDecisionDebugCanPlanAny = false;  // 戦闘行動を計画できるかの診断結果。
-    bool combatDecisionDebugCanPlanReposition = false;  // 位置調整を計画できるかの診断結果。
-    bool combatDecisionDebugCanPlanAnyAttack = false;  // 攻撃を計画できるかの診断結果。
+
     bool combatDecisionDebugFastCombo = false, combatDecisionDebugJump = false, combatDecisionDebugDash = false, combatDecisionDebugCharge = false;  // 各攻撃の計画可否の診断結果。
     float repositionCooldownDuration = 3.0f, repositionCooldownRemaining = 0.0f, repositionRetryCooldownDuration = 0.75f, repositionRetryCooldownRemaining = 0.0f;  // 位置調整と再試行のクールダウン時間および残り時間。
 
-    std::string lastCombatDecision = "None";  // 直近の戦闘判断の表示文字列。
 
     struct RoarRuntime
     {
@@ -1727,7 +1700,6 @@ private:
     bool attackReadySEFired = false;  // 攻撃準備SEを再生できたかの記録。
     AttackReadyReason attackReadyReason = AttackReadyReason::Front;  // 攻撃準備時間の選択に使う理由。
 
-    bool hasSelectedActionDebug = false;  // 選択行動の診断情報があるか。
 
     std::array<BossAttackData, 6> combatAttackData =  // 攻撃の設定データ。
     { {
@@ -1758,7 +1730,6 @@ private:
     float relativeFrontMaxAngle = 50.0f;  // 相対領域を正面と判定する角度上限。
     float relativeBackMinAngle = 110.0f;  // 相対領域を背後と判定する最小角度。
     const std::array<BossActionData, actionCount> initialCombatActionData = combatActionData;  // 行動設定を初期値に戻すためのデータ。
-    const std::array<BossIntentData, intentCount> initialCombatIntentData = combatIntentData;  // Intent設定を初期値に戻すためのデータ。
     const std::array<BossAttackData, 6> initialCombatAttackData = combatAttackData;  // 攻撃設定を初期値に戻すためのデータ。
     const float initialNearDistanceThreshold = nearDistanceThreshold;  // 近距離判定の初期距離。
     const float initialMiddleDistanceThreshold = middleDistanceThreshold;  // 中距離判定の初期距離。
@@ -1799,17 +1770,9 @@ private:
     float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;  // 戦闘位置調整の移動距離。
     float combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;  // 戦闘位置調整の移動速度。
     float combatRepositionSettleDuration = initialCombatRepositionSettleDuration;  // 戦闘位置調整後の初期待機時間。
-    bool combatRepositionSettling = false;  // 戦闘位置調整後の待機中か。
-    float combatRepositionSettleRemaining = 0.0f;  // 戦闘位置調整後の残り待機時間。
-    const float initialCombatRepositionBackWeight = combatRepositionBackWeight;  // 背後からの戦闘位置調整の重みの初期値。
-    const float initialDashAttackPlanBackWeight = dashAttackPlanBackWeight;  // 背後からのDash計画の重みの初期値。
-    const float initialJumpAttackPlanBackWeight = jumpAttackPlanBackWeight;  // 背後からのJump計画の重みの初期値。
     bool combatRepositionIntentPending = false;  // 戦闘位置調整のIntentが保留中か。
     float postAttackCombatRepositionWeight = 45.0f;  // 攻撃後の戦闘位置調整に使う重み。
-    const float initialPostAttackCombatRepositionWeight =  // 攻撃後の戦闘位置調整の重みの初期値。
-        postAttackCombatRepositionWeight;
     bool postAttackCombatRepositionBoostPending = false;  // 攻撃後の位置調整重みの補正が保留中か。
-    bool postAttackCombatRepositionBoostApplied = false;  // 攻撃後の位置調整重みの補正を適用済みか。
     BossRepositionReason repositionReason = BossRepositionReason::Normal;  // 位置調整を選択した理由。
     BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;  // 選択された位置調整の方向。
 
@@ -2208,7 +2171,6 @@ private:
 
     bool isDeathPerform = false;  // 死亡演出中か。
     bool beginHuskParticleRequest = false;  // 死亡時のHuskパーティクル開始要求があるか。
-    uint64_t animationDebugFrameCounter = 0;  // アニメーション要求の履歴に使うフレーム番号。
     float pitchBaseValue = 0.45f;  // 音声再生時のピッチ基準値。
 
 
