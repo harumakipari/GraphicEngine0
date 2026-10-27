@@ -204,6 +204,9 @@ public:
     // 最後の被弾リアクションを開始する。
     void BeginFinalHitReaction(const std::string& animationName);
 
+    // Starts the death presentation and aborts combat execution once.
+    void BeginDeathPresentation();
+
     // 最後の被弾リアクションを終了する。
     void EndFinalHitReaction();
 

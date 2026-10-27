@@ -337,11 +337,7 @@ void GruxEnemy::Update(float deltaTime)
     if (hp <= 0 && !isDeathPerform && !phaseTransitionOwnsDefeat &&
         !(gameScene && gameScene->IsPhase1BreakPending()))
     {
-        isDeathPerform = true;
-        StopBattleActions();
-        AbortBehaviorTreeForDeath();
-        if (stateMachine_)
-            stateMachine_->ChangeState("EnemyDeathState");
+        BeginDeathPresentation();
     }
 
     if (ShouldAbortChargeAttackBT())
@@ -1620,17 +1616,31 @@ void GruxEnemy::BeginPhase1LastHitReaction(const DirectX::XMFLOAT3& hitSourcePos
     PlayBodyAnimation(animationName, false, true, 0.1f, true);
 }
 
-void GruxEnemy::BeginFinalHitReaction(const std::string& animationName)
+void GruxEnemy::BeginDeathPresentation()
 {
-    // Release only the Rush HP hold; keep the player's final attack state intact.
-    EndRushHpDisplay();
-    // Enter the existing terminal AI state before taking animation ownership.
+    if (isDeathPerform)
+        return;
+
     isDeathPerform = true;
-    stateMachine_->ChangeState("EnemyDeathState");
-    finalHitReactionActive = true;
-    finalHitReactionHeld = false;
     StopBattleActions();
     AbortBehaviorTreeForDeath();
+    if (cinematicDeathAnimationOwnedExternally || finalHitReactionActive || finalHitReactionHeld)
+        return;
+
+    const bool ignoreRootMotion = deathAnimationName == "Knock_Down_Death";
+    PlayBodyAnimation(deathAnimationName, false, true, 0.1f, ignoreRootMotion);
+}
+
+void GruxEnemy::BeginFinalHitReaction(const std::string& animationName)
+{
+    if (isDeathPerform)
+        return;
+
+    // Release only the Rush HP hold; keep the player's final attack state intact.
+    EndRushHpDisplay();
+    finalHitReactionActive = true;
+    finalHitReactionHeld = false;
+    BeginDeathPresentation();
     ResetTimeScale();
     if (const auto controller = GetBodyAnimationController())
     {
