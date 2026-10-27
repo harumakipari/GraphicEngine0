@@ -42,12 +42,26 @@ void EffectEditor::Initialize()
 }
 
 
-void EffectEditor::DrawGUI()
+void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
 {
 #ifdef USE_IMGUI
-    if (isOpen)
+    if (isOpen || effectEditorOnlyMode)
     {
-        ImGui::Begin("Effect Editor", &isOpen);
+        if (effectEditorOnlyMode)
+        {
+            const ImGuiViewport* viewport = ImGui::GetMainViewport();
+            const float editorWidth = viewport->WorkSize.x * 0.42f;
+            ImGui::SetNextWindowPos(
+                ImVec2(viewport->WorkPos.x + viewport->WorkSize.x - editorWidth, viewport->WorkPos.y),
+                ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(editorWidth, viewport->WorkSize.y), ImGuiCond_Always);
+            ImGui::Begin("Effect Editor", nullptr,
+                ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
+        }
+        else
+        {
+            ImGui::Begin("Effect Editor", &isOpen);
+        }
 
         // ロード・セーブ・適用・クリアボタン
         {

@@ -939,6 +939,12 @@ void SceneBase::DrawGui()
         return;
     }
 
+    if (Framework::editorDisplayMode == Framework::EditorDisplayMode::EffectEditorOnly)
+    {
+        DrawEffectEditorOnly();
+        return;
+    }
+
 
     DrawGizmo();//
     DrawOutliner();
@@ -993,6 +999,11 @@ void SceneBase::DrawMovieEditorOnly()
     ImGui::TextUnformatted("Press F9 to return to Normal Editor mode.");
     ImGui::End();
 }
+void SceneBase::DrawEffectEditorOnly()
+{
+    EffectEditor::DrawGUI(true);
+}
+
 void SceneBase::DrawDockSpace()
 {
     ImGuiWindowFlags window_flags =

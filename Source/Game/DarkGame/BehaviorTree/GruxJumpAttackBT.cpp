@@ -348,16 +348,6 @@ void GruxEnemy::DrawTripleJumpDebug()
     if (!tripleJumpActive && tripleJumpPhase == TripleJumpPhase::None &&
         !(jumpTelegraphMeshComponent && jumpTelegraphMeshComponent->IsVisible()))
         return;
-    const char* phaseName = "None";
-    switch (tripleJumpPhase)
-    {
-    case TripleJumpPhase::InitialTelegraph: phaseName = "InitialTelegraph"; break;
-    case TripleJumpPhase::Jumping: phaseName = "Jumping"; break;
-    case TripleJumpPhase::InterJumpTransition: phaseName = "InterJumpTransition"; break;
-    case TripleJumpPhase::Completed: phaseName = "Completed"; break;
-    case TripleJumpPhase::Aborted: phaseName = "Aborted"; break;
-    default: break;
-    }
 #endif
 }
 

@@ -20,7 +20,7 @@ public:
 	static bool IsOpen();
 
 	//エディタGUI描画
-	static void DrawGUI();
+	static void DrawGUI(bool effectEditorOnlyMode = false);
 
 private:
 #ifdef USE_IMGUI

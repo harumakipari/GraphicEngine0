@@ -105,6 +105,7 @@ private:
     void DrawViewport();
 
     void DrawMovieEditorOnly();
+    void DrawEffectEditorOnly();
 
 protected:
 

@@ -150,6 +150,13 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
             ? EditorDisplayMode::Normal
             : EditorDisplayMode::AnimationEditorOnly;
     }
+
+    if (showEditor && (GetAsyncKeyState(VK_F11) & 1))
+    {
+        editorDisplayMode = editorDisplayMode == EditorDisplayMode::EffectEditorOnly
+            ? EditorDisplayMode::Normal
+            : EditorDisplayMode::EffectEditorOnly;
+    }
 #endif
     //パーティクルシステム更新
     {
