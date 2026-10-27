@@ -366,23 +366,26 @@ bool GruxEnemy::CanPlanAnyCombatDecision()
     if (!repositionDecisionCached)
         BeginCombatDecisionInference();
     const bool playerAvailableForAttack = CanPlanAttackAgainstCurrentPlayer();
+    bool canPlanFastCombo = false;
+    bool canPlanJump = false;
+    bool canPlanDash = false;
+    bool canPlanCharge = false;
     if (playerAvailableForAttack)
     {
-        combatDecisionDebugFastCombo = CanPlanFastCombo();
-        combatDecisionDebugJump = CanPlanJumpAttack();
-        combatDecisionDebugDash = CanPlanDashAttack();
-        combatDecisionDebugCharge = CanPlanChargeAttack();
+        canPlanFastCombo = CanPlanFastCombo();
+        canPlanJump = CanPlanJumpAttack();
+        canPlanDash = CanPlanDashAttack();
+        canPlanCharge = CanPlanChargeAttack();
     }
     else
     {
-        combatDecisionDebugFastCombo = false;
-        combatDecisionDebugJump = false;
-        combatDecisionDebugDash = false;
-        combatDecisionDebugCharge = false;
+        canPlanFastCombo = false;
+        canPlanJump = false;
+        canPlanDash = false;
+        canPlanCharge = false;
     }
     const bool canPlanAttack = playerAvailableForAttack &&
-        (combatDecisionDebugFastCombo || combatDecisionDebugJump ||
-            combatDecisionDebugDash || combatDecisionDebugCharge);
+        (canPlanFastCombo || canPlanJump || canPlanDash || canPlanCharge);
     const bool canPlan = CanPlanReposition() || canPlanAttack;
     return canPlan;
 }

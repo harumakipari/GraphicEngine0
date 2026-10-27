@@ -4389,54 +4389,6 @@ BossDistanceRegion GruxEnemy::GetDistanceRegion(float distance) const
     return BossDistanceRegion::Far;
 }
 
-const BossIntentData* GruxEnemy::GetActiveIntentData() const
-{
-    if (!activeIntent)
-        return nullptr;
-
-    for (const BossIntentData& data : combatIntentData)
-    {
-        if (data.type == *activeIntent)
-            return &data;
-    }
-    return nullptr;
-}
-
-BossIntentRangeStatus GruxEnemy::GetIntentRangeStatus(
-    const BossIntentData& intentData, float distance) const
-{
-    if (distance < intentData.preferredMinDistance)
-        return BossIntentRangeStatus::TooClose;
-    if (distance > intentData.preferredMaxDistance)
-        return BossIntentRangeStatus::TooFar;
-    return BossIntentRangeStatus::InRange;
-}
-// 現在の距離領域に基づいて、候補となる行動を選択する関数
-bool GruxEnemy::GetIntentAttackValidRange(float& outMinDistance, float& outMaxDistance) const
-{
-    if (!activeIntent)
-        return false;
-
-    if (*activeIntent == BossIntentType::DashAttackPlan)
-    {
-        outMinDistance = dashAttackValidMinDistance;
-        outMaxDistance = dashAttackValidMaxDistance;
-        return true;
-    }
-    if (*activeIntent == BossIntentType::JumpAttackPlan)
-    {
-        for (const BossAttackData& attackData : combatAttackData)
-        {
-            if (attackData.type != BossAttackType::JumpAttack)
-                continue;
-            outMinDistance = attackData.minDistance;
-            outMaxDistance = attackData.maxDistance;
-            return true;
-        }
-    }
-    return false;
-}
-
 void GruxEnemy::EvaluateClampedPositioningTarget(
     const DirectX::XMFLOAT3& startPosition,
     const DirectX::XMFLOAT3& desiredTarget,
@@ -4486,26 +4438,6 @@ bool GruxEnemy::IsRepeatPenaltyCombatAttack(BossActionType actionType) const
         actionType == BossActionType::ChargeAttack;
 }
 
-bool GruxEnemy::IsAttackActionForIntent(
-    BossActionType actionType, BossIntentType intentType) const
-{
-    switch (intentType)
-    {
-    case BossIntentType::CloseCombat:
-        return actionType == BossActionType::AttackLA ||
-            actionType == BossActionType::AttackRA ||
-            actionType == BossActionType::FastCombo;
-    case BossIntentType::DashAttackPlan:
-        return actionType == BossActionType::DashAttack ||
-            actionType == BossActionType::ChargeAttack;
-    case BossIntentType::JumpAttackPlan:
-        return actionType == BossActionType::JumpAttack;
-    case BossIntentType::CombatReposition:
-        return false;
-    }
-    return false;
-}
-
 float GruxEnemy::GetRecentAttackPenalty(BossActionType actionType) const
 {
     if (!IsRepeatPenaltyCombatAttack(actionType) ||
@@ -4519,38 +4451,6 @@ float GruxEnemy::GetRecentAttackPenalty(BossActionType actionType) const
     return std::clamp(repeatAttackPenalty, 0.05f, 1.0f);
 }
 
-float GruxEnemy::GetIntentRecentAttackPenalty(BossIntentType intentType) const
-{
-    float leastRestrictiveReadyPenalty = 0.0f;
-    float leastRestrictiveFallbackPenalty = 0.0f;
-    bool hasReadyAttack = false;
-    bool hasDefinedAttack = false;
-    for (size_t i = 0; i < combatActionData.size(); ++i)
-    {
-        const BossActionData& actionData = combatActionData[i];
-        if (!actionData.attackType || actionData.weight <= 0.0f ||
-            !IsAttackActionForIntent(actionData.type, intentType))
-        {
-            continue;
-        }
-
-        hasDefinedAttack = true;
-        const float penalty = GetRecentAttackPenalty(actionData.type);
-        leastRestrictiveFallbackPenalty = (std::max)(
-            leastRestrictiveFallbackPenalty, penalty);
-        if (combatActionCooldownRemaining[i] > 0.0f)
-            continue;
-
-        hasReadyAttack = true;
-        leastRestrictiveReadyPenalty = (std::max)(
-            leastRestrictiveReadyPenalty, penalty);
-    }
-
-    if (hasReadyAttack)
-        return leastRestrictiveReadyPenalty;
-    return hasDefinedAttack ? leastRestrictiveFallbackPenalty : 1.0f;
-}
-
 // アクションが現在の距離(Region)で候補になるかを判定する関数
 //  Action候補とBase WeightからEffective Weightを更新する
 void GruxEnemy::UpdateActionCooldowns(float deltaTime)
@@ -4558,63 +4458,6 @@ void GruxEnemy::UpdateActionCooldowns(float deltaTime)
     const float safeDeltaTime = (std::max)(0.0f, deltaTime);
     for (float& remaining : combatActionCooldownRemaining)
         remaining = (std::max)(0.0f, remaining - safeDeltaTime);
-}
-
-void GruxEnemy::UpdateIntentEffectiveWeights(const BossTargetContext& context)
-{
-    combatIntentEffectiveWeights.fill(0.0f);
-    if (!context.valid)
-        return;
-
-    for (size_t i = 0; i < combatIntentData.size(); ++i)
-    {
-        combatIntentEffectiveWeights[i] =
-            GetIntentWeightForDistance(combatIntentData[i], context.distanceRegion);
-        if (context.region == PlayerRelativeRegion::Back)
-        {
-            if (combatIntentData[i].type == BossIntentType::CloseCombat)
-                combatIntentEffectiveWeights[i] = 0.0f;
-            else if (combatIntentData[i].type == BossIntentType::CombatReposition)
-                combatIntentEffectiveWeights[i] =
-                    (std::max)(0.0f, combatRepositionBackWeight);
-            else if (combatIntentData[i].type == BossIntentType::DashAttackPlan)
-                combatIntentEffectiveWeights[i] =
-                    (std::max)(0.0f, dashAttackPlanBackWeight);
-            else if (combatIntentData[i].type == BossIntentType::JumpAttackPlan)
-                combatIntentEffectiveWeights[i] =
-                    (std::max)(0.0f, jumpAttackPlanBackWeight);
-        }
-
-        combatIntentEffectiveWeights[i] *=
-            GetIntentRecentAttackPenalty(combatIntentData[i].type);
-    }
-
-    if (postAttackCombatRepositionBoostPending)
-    {
-        for (size_t i = 0; i < combatIntentData.size(); ++i)
-        {
-            if (combatIntentData[i].type != BossIntentType::CombatReposition)
-                continue;
-            combatIntentEffectiveWeights[i] = (std::max)(
-                combatIntentEffectiveWeights[i],
-                (std::max)(0.0f, postAttackCombatRepositionWeight));
-            break;
-        }
-    }
-}
-float GruxEnemy::GetIntentWeightForDistance(
-    const BossIntentData& data, BossDistanceRegion region) const
-{
-    switch (region)
-    {
-    case BossDistanceRegion::Near:
-        return (std::max)(0.0f, data.nearWeight);
-    case BossDistanceRegion::Middle:
-        return (std::max)(0.0f, data.middleWeight);
-    case BossDistanceRegion::Far:
-        return (std::max)(0.0f, data.farWeight);
-    }
-    return 0.0f;
 }
 
 void GruxEnemy::ResetJustDodgeRecords(const char* reason)

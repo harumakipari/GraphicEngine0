@@ -1174,15 +1174,6 @@ private:
     // 距離を近距離・中距離・遠距離に分類する。
     BossDistanceRegion GetDistanceRegion(float distance) const;
 
-    // 選択中の旧Intentに対応するデータを返す。
-    const BossIntentData* GetActiveIntentData() const;
-
-    // 旧Intentの推奨距離に対する現在距離を判定する。
-    BossIntentRangeStatus GetIntentRangeStatus(
-        const BossIntentData& intentData, float distance) const;
-
-    // 旧Intentに対応する攻撃の距離範囲を取得する。
-    bool GetIntentAttackValidRange(float& outMinDistance, float& outMaxDistance) const;
     struct RepositionTargetEvaluation
     {
         DirectX::XMFLOAT3 desiredTarget{};  // 境界補正前の目標位置。
@@ -1202,24 +1193,11 @@ private:
     // 連続攻撃ペナルティの対象となる行動か判定する。
     bool IsRepeatPenaltyCombatAttack(BossActionType actionType) const;
 
-    // 攻撃行動が指定された旧Intentに対応するか判定する。
-    bool IsAttackActionForIntent(BossActionType actionType, BossIntentType intentType) const;
-
     // 直近2回の開始履歴に基づく候補の重み倍率を返す。
     float GetRecentAttackPenalty(BossActionType actionType) const;
 
-    // 旧Intentに対応する攻撃のペナルティ倍率を求める。
-    float GetIntentRecentAttackPenalty(BossIntentType intentType) const;
-
     // 各行動の残りクールダウンを経過時間分減らす。
     void UpdateActionCooldowns(float deltaTime);
-
-    // 旧Intent用の距離・向き・履歴に応じた重みを計算する。
-    void UpdateIntentEffectiveWeights(const BossTargetContext& context);
-
-    // 距離領域に対応する旧Intentの重みを返す。
-    float GetIntentWeightForDistance(const BossIntentData& data, BossDistanceRegion region) const;
-
 
     // 攻撃シーケンスのジャスト回避記録を消去する。
     void ResetJustDodgeRecords(const char* reason);
@@ -1482,15 +1460,6 @@ private:
     std::string intentLifecycleTrace = "None";  // Intentの処理履歴の表示文字列。
     std::string intentLifecycleReason = "None";  // Intentの処理理由の表示文字列。
 
-    static constexpr int intentCount = 4;  // Intentデータの要素数。
-    std::array<BossIntentData, intentCount> combatIntentData =  // Intentの設定データ。
-    { {
-        { BossIntentType::CloseCombat, 60.0f, 30.0f, 25.0f, 4.0f, 5.5f, 0.25f },
-        { BossIntentType::DashAttackPlan, 25.0f, 35.0f, 45.0f, 8.0f, 10.0f, 0.25f },
-        { BossIntentType::JumpAttackPlan, 15.0f, 35.0f, 30.0f, 7.0f, 9.0f, 0.25f },
-        { BossIntentType::CombatReposition, 3.0f, 12.0f, 10.0f, 0.0f, 100.0f, 0.0f },
-    } };
-    std::array<float, intentCount> combatIntentEffectiveWeights{};  // 旧Intent用に計算した候補ごとの重み。
 
     BossActionType selectedActionType = BossActionType::AttackLA;  // 現在選択されている行動種別。
     std::optional<BossActionType> lastStartedCombatAttack = std::nullopt;  // 最後に開始した連続ペナルティ対象の攻撃。
@@ -1652,7 +1621,6 @@ private:
     mutable bool repositionDecisionResult = false;  // 今回の推論で保持した位置調整の抽選結果。
     mutable float repositionDecisionRoll = 0.0f;  // 位置調整の抽選に使った乱数値。
 
-    bool combatDecisionDebugFastCombo = false, combatDecisionDebugJump = false, combatDecisionDebugDash = false, combatDecisionDebugCharge = false;  // 各攻撃の計画可否の診断結果。
     float repositionCooldownDuration = 3.0f, repositionCooldownRemaining = 0.0f, repositionRetryCooldownDuration = 0.75f, repositionRetryCooldownRemaining = 0.0f;  // 位置調整と再試行のクールダウン時間および残り時間。
 
 

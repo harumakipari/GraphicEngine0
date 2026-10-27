@@ -1158,7 +1158,6 @@ void Player::DrawAnimationEditorPreviewState(const AnimationNotifyState& state)
 
 void Player::OnAnimationChanged()
 {
-    // Reset active warps even when the previous animation's NotifyEnd was skipped.
     animationMotionWarps.clear();
     transitionWindow = false;  // ステート遷移してもいいかどうか
     comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
