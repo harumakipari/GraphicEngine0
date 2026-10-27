@@ -54,7 +54,8 @@ void EffectEditor::DrawGUI()
             // ロード・セーブボタン
             if (ImGui::Button("Load"))
             {
-                if (EffectHandle handle = EffectManager::LoadEffectDataWithDialog() > -1)
+                const EffectHandle handle = EffectManager::LoadEffectDataWithDialog();
+                if (handle > -1)
                 {
                     currentEffectHandle = handle;
                 }

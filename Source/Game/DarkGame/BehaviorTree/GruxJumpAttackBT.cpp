@@ -369,10 +369,7 @@ bool CanPlanJumpAttack::Judgment()
 
 bool CanPlanAnyAttack::Judgment()
 {
-    const bool result = owner->IsForceBehaviorTreeChargeEnabled()
-        ? owner->CanPlanChargeAttack()
-        : owner->CanPlanFastCombo() || owner->CanPlanJumpAttack() ||
-            DashPlanAvailable(owner).Judgment() || owner->CanPlanChargeAttack();
+    const bool result =owner->CanPlanFastCombo() || owner->CanPlanJumpAttack() ||DashPlanAvailable(owner).Judgment() || owner->CanPlanChargeAttack();
     return result;
 }
 

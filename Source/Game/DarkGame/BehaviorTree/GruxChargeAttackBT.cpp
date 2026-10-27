@@ -92,7 +92,7 @@ bool GruxEnemy::CanPlanChargeAttack() const
         return false;
     for (size_t i = 0; i < combatActionData.size(); ++i)
         if (combatActionData[i].type == BossActionType::ChargeAttack)
-            return forceBehaviorTreeCharge || combatActionCooldownRemaining[i] <= 0.0f;
+            return combatActionCooldownRemaining[i] <= 0.0f;
     return false;
 }
 

@@ -1097,12 +1097,6 @@ public:
     void UpdateBehaviorTree(float deltaTime);
 
 
-    // Chargeの強制選択設定が有効かを返す。
-    bool IsForceBehaviorTreeChargeEnabled() const
-    {
-        return forceBehaviorTreeCharge;
-    }
-
     struct CloseCombatSettings
     {
         float minRange = 0.0f;  // 近接攻撃の最小距離。
@@ -2316,8 +2310,6 @@ private:
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;  // Sequenceの進行状態を保持するデータ。
     NodeBase* activeNode = nullptr;  // 現在実行中のBTアクションノード。
     bool behaviorTreeFastComboEnabled = true;  // 行動ツリー全体の更新を有効にする。
-
-    bool forceBehaviorTreeCharge = false;  // Chargeを優先選択するデバッグ設定。
 
     CloseCombatSettings closeCombatSettings;  // FastComboの計画・実行距離と向きの条件。
     bool showCloseCombatDebugRange = false;  // 近接攻撃範囲のデバッグ表示を有効にする。

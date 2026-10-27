@@ -306,10 +306,8 @@ void GruxEnemy::Initialize(const Transform& transform)
     // HPバーを作成する
     CreateHpUI();
 
-
     // ビヘイビアツリー設定
     CreateBossBehaviorTree();
-
 
     EnsureRoarFloatingDebris();
 }
@@ -329,8 +327,7 @@ void GruxEnemy::Update(float deltaTime)
             controller->OnUpdate(deltaTime);
         return;
     }
-    if (
-        (gameScene && gameScene->IsBossPhaseTransitionActive()))
+    if (gameScene && gameScene->IsBossPhaseTransitionActive())
     {
         ResetWeaponTelegraphRimLight();
         return;
@@ -376,7 +373,6 @@ void GruxEnemy::Update(float deltaTime)
     }
     else if (!rushHpDisplayActive && delayedHp < currentHp)
     {
-        // HP recovery synchronizes the delayed display immediately.
         delayedHp = currentHp;
         delayedHpDelayTimer = 0.0f;
         useRushDelayedHpFollowSpeed = false;
@@ -389,8 +385,6 @@ void GruxEnemy::Update(float deltaTime)
         hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
     }
 
-    // Leave the last reaction pose still during fade; the existing cinematic
-    // animation request releases this hold without taking editor ownership.
     if (finalHitReactionHeld)
     {
         const auto controller = GetBodyAnimationController();
@@ -409,8 +403,6 @@ void GruxEnemy::Update(float deltaTime)
         return;
     }
 
-    // This is intentionally separate from FinalHitReaction and EnemyStunState.
-    // It owns only the short fourth-normal-hit interruption window.
     if (fourthHitReactionActive)
     {
         ResetWeaponTelegraphRimLight();
@@ -420,7 +412,6 @@ void GruxEnemy::Update(float deltaTime)
                                                 fourthHitReactionRemaining - (std::max)(0.0f, deltaTime));
         if (fourthHitReactionRemaining <= 0.0f)
             EndFourthHitReaction();
-        // Root inference resumes on the next frame after this early return.
         return;
     }
 
@@ -429,9 +420,6 @@ void GruxEnemy::Update(float deltaTime)
     if (!IsAnimationEditorPreviewActive())
         UpdateActionCooldowns(deltaTime);
 
-    // Rush cancels only Charge, then holds this Grux's AI until PlayerRushState::Exit.
-    // Keep the regular Character/animation update, but detach the StateMachine so
-    // neither it nor the Behavior Tree can start a new combat action during Rush.
     if (rushCombatHoldActive)
     {
         StopAIMovement();
@@ -445,9 +433,6 @@ void GruxEnemy::Update(float deltaTime)
         return;
     }
 
-    // The cancelled Charge has no live BT runtime to resume. Keep the Rush
-    // exposed pose and suppress all AI/BT work until its existing Just Dodge
-    // recovery duration has elapsed after Rush actually ended.
     if (interruptedChargeRecoveryActive)
     {
         StopAIMovement();
@@ -499,7 +484,6 @@ void GruxEnemy::Update(float deltaTime)
 
     UpdateWeaponTelegraphRimLight(deltaTime);
 
-    // Impact Flash is visual-only and follows the same scaled delta as Grux/Animation.
     UpdateJumpTelegraphImpactFlash(deltaTime);
     UpdateDashTelegraphVisual(deltaTime);
 
@@ -525,14 +509,10 @@ void GruxEnemy::Update(float deltaTime)
             bossTrailLifetime });
     }
 
-    // Animation Editor Preview中はこのBossだけGameplay/AI/攻撃判定を停止する。
-    // Character::Update内のPreview Pose更新は上で継続している。
     if (IsAnimationEditorPreviewActive())
         return;
 
 
-    // NotifyEnd is not guaranteed when an animation is interrupted or finishes
-    // before the notify range ends. Do not carry that animation's warp forward.
     if (!GetBodyAnimationController()->IsPlayAnimation())
     {
         animationMotionWarps.clear();
@@ -815,6 +795,8 @@ void GruxEnemy::RenderTrail(ID3D11DeviceContext* immediateContext)
 //　ボスAIのImGui描画
 void GruxEnemy::DrawImGuiDetails()
 {
+#ifdef USE_IMGUI
+
     if (ImGui::CollapsingHeader(U8("突進風エフェクト")))
     {
         ImGui::Checkbox("Enable", &chargeWindTrailEnabled);
@@ -860,7 +842,6 @@ void GruxEnemy::DrawImGuiDetails()
     }
     DrawChargeAttackBTDebug();
     DrawRoarBTDebug();
-#ifdef USE_IMGUI
     Character::DrawImGuiDetails();
 
 
@@ -889,8 +870,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::ColorEdit4("bossHpDelayedColor", &bossHpDelayedColor.r);
 
     ImGui::SeparatorText("Boss AI");
-
-    ImGui::Checkbox("Force BehaviorTree Charge", &forceBehaviorTreeCharge);
 
     ImGui::SeparatorText("Rush Hit Effect");
     ImGui::DragFloat("Surface Offset", &rushHitEffectSurfaceOffset,
@@ -2705,9 +2684,6 @@ void GruxEnemy::EndPositioningAnimation()
 
 void GruxEnemy::StartSelectedActionCooldown()
 {
-    if (forceBehaviorTreeCharge)
-        return;
-
     for (size_t i = 0; i < combatActionData.size(); ++i)
     {
         if (combatActionData[i].type != selectedActionType)
@@ -5314,7 +5290,4 @@ void GruxEnemy::UpdatePhase2TextureBlendWorldYRange()
         skeletalMeshComponent->SetPhase2TextureBlendWorldYRange(
             phase2WorldMinY, phase2WorldMaxY, phase2MaskSoftness);
 }
-
-// ActionのEffective Weight合計を求める関数
-// Weightに基づいて行動を選択する関数。候補がない場合はstd::nulloptを返す
 
