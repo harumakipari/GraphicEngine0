@@ -9,7 +9,6 @@
 #include "Engine/Scene/SceneBase.h"
 #include "Engine/Utility/Time.h"
 #include "Game/Actors/Camera/DarkGameCamera.h"
-#include "Game/Actors/Enemy/Boss/BossState.h"
 #include "Game/Actors/Player/Player.h"
 #include "Game/Scenes/GameScene.h"
 #include "Game/DarkGame/DarkActors/DarkStage.h"
@@ -124,16 +123,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     controller->LoadAllNotifyAssets(GetName());
     CaptureInitialDangerObbSettings();
 
-    // ステートマシンを作成
-    {
-        stateMachine_ = std::make_shared<StateMachine>();
-        stateMachine_->RegisterState(std::make_unique<EnemyIdleState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyDeathState>(this));
-        stateMachine_->RegisterState(std::make_unique<EnemyStunState>(this));
-
-        // ステートマシンを character に追加
-        this->SetStateMachine(stateMachine_);
-    }
     // アニメーションコントローラーを character に追加
     this->AddBodyAnimationController(controller);
     // アニメーションコントローラーのオーナーの名前を設定する
@@ -417,10 +406,7 @@ void GruxEnemy::Update(float deltaTime)
     if (rushCombatHoldActive)
     {
         StopAIMovement();
-        auto savedStateMachine = stateMachine_;
-        stateMachine_.reset();
         Character::Update(deltaTime);
-        stateMachine_ = savedStateMachine;
         UpdateWeaponTelegraphRimLight(deltaTime);
         UpdateJumpTelegraphImpactFlash(deltaTime);
         UpdateDashTelegraphVisual(deltaTime);
@@ -433,10 +419,7 @@ void GruxEnemy::Update(float deltaTime)
         interruptedChargeRecoveryTimer += (std::max)(0.0f, deltaTime);
         UpdateRecoveryDebug(interruptedChargeRecoveryTimer, interruptedChargeRecoveryDuration);
         recoverySourceDebug = "InterruptedCharge";
-        auto savedStateMachine = stateMachine_;
-        stateMachine_.reset();
         Character::Update(deltaTime);
-        stateMachine_ = savedStateMachine;
         UpdateWeaponTelegraphRimLight(deltaTime);
         UpdateJumpTelegraphImpactFlash(deltaTime);
         UpdateDashTelegraphVisual(deltaTime);
@@ -465,9 +448,7 @@ void GruxEnemy::Update(float deltaTime)
             CleanupChargeAttackBT();
         if (IsDashAttackBTActive() && (!activeNode || aiTree->GetLastRunResult() == ActionBase::State::Failed))
             CleanupDashAttackBT();
-        auto savedStateMachine = stateMachine_; stateMachine_.reset();
         Character::Update(deltaTime);
-        stateMachine_ = savedStateMachine;
     }
     else
     {
@@ -1661,7 +1642,6 @@ void GruxEnemy::PauseBattleAI()
 {
     battleAIActive = false;
     ResetFourthHitReactionDebug();
-    EnterBattleIdlePresentation();
     StopBattleActions();
 
     // Pausing a battle is an abort, not a battle restart. Discard BT execution
@@ -1670,6 +1650,7 @@ void GruxEnemy::PauseBattleAI()
     if (behaviorData) behaviorData->Init();
     if (aiTree) aiTree->ResetActionRuntimes();
     behaviorTreePreviousNode = "None";
+    EnterBattleIdlePresentation();
 
 }
 
@@ -1689,7 +1670,7 @@ void GruxEnemy::PauseBattleAIForPhaseTransition()
     StopBattleActions();
     ResetBehaviorTreeRuntime();
     behaviorTreePreviousNode = "None";
-    // Do not request EnemyIdleState here: future transition animation owns this pose.
+    // The future transition animation owns this pose.
 }
 
 void GruxEnemy::SetDirectionImmediate(const DirectX::XMFLOAT3& direction) const

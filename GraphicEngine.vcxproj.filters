@@ -193,9 +193,6 @@
     <ClCompile Include="Source\Game\Actors\Camera\DarkGameCamera.cpp">
       <Filter>Source\Game\Actors\Camera</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\Actors\Enemy\Boss\BossState.cpp">
-      <Filter>Source\Game\Actors\Enemy\Boss</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\Actors\Stage\ClothSimulate.cpp">
       <Filter>Source\Game\Actors\Stage</Filter>
     </ClCompile>
@@ -662,9 +659,6 @@
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\Enemy\Enemy.h">
       <Filter>Source\Game\Actors\Enemy</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossState.h">
-      <Filter>Source\Game\Actors\Enemy\Boss</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossAITypes.h">
       <Filter>Source\Game\Actors\Enemy\Boss</Filter>

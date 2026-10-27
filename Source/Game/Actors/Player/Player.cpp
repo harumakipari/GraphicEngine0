@@ -23,21 +23,6 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 
-namespace
-{
-    float currentDitherTransparencyAlpha = 1.0f;
-    float currentCameraCollisionRatio = 1.0f;
-
-    int GetActionPriority(Player::ActionType action)
-    {
-        switch (action)
-        {
-        case Player::ActionType::Dodge:  return 3;
-        case Player::ActionType::Attack: return 2;
-        default:                         return 1;
-        }
-    }
-}
 
 
 void Player::Initialize(const Transform& transform)
@@ -2809,13 +2794,6 @@ void Player::CaptureActionRequest(float deltaTime)
 
 bool Player::StoreActionRequest(ActionType type, float remainTime)
 {
-    const int newPriority = GetActionPriority(type);
-    const int currentPriority = GetActionPriority(bufferCommand.type);
-    if (bufferCommand.type != ActionType::None && newPriority < currentPriority)
-    {
-        return false;
-    }
-
     bufferCommand.type = type;
     bufferCommand.remainTime = remainTime;
     if (type == ActionType::Dodge)
@@ -3962,7 +3940,6 @@ void Player::UpdateCameraOcclusionTransparency() const
 {
     skeletalMeshComponent->SetIsVisible(true);
     float ditherAlpha = 1.0f;
-    currentCameraCollisionRatio = 1.0f;
 
     if (moviePerform || deathCameraTransparencyDisabled)
     {// ‰‰o’†‚Í•Ç‚Ì‹ß‚­‚Å‚à“§–¾‰»‚µ‚È‚¢
@@ -3973,7 +3950,6 @@ void Player::UpdateCameraOcclusionTransparency() const
         if (auto camera = GetOwnerScene()->GetActorManager()->GetActorOfType<DarkCameraActor>())
         {
             float ratio = camera->GetCameraCollisionRatio();
-            currentCameraCollisionRatio = ratio;
             if (ratio < transparencyStartRatio)
             {
                 float t = std::clamp(ratio / transparencyStartRatio, 0.0f, 1.0f);
@@ -3992,7 +3968,6 @@ void Player::ApplyDitherTransparencyAlpha(float alpha) const
 
     skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
     swordMeshComponent->plusAlphaCBuffer->data.cpuColor.w = alpha;
-    currentDitherTransparencyAlpha = alpha;
 }
 
 bool Player::CapturePlayerPoseGhost(const size_t ghostIndex)
