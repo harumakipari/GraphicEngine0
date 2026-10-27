@@ -43,40 +43,6 @@ struct BossTargetContext
     PlayerRelativeRegion region = PlayerRelativeRegion::Front;
 };
 
-enum class BossIntentType : uint8_t
-{
-    CloseCombat,
-    DashAttackPlan,
-    JumpAttackPlan,
-    CombatReposition,
-};
-
-enum class BossIntentStep : uint8_t
-{
-    Selecting,
-    Positioning,
-    AttackPending,
-    Completed,
-    Failed,
-};
-
-enum class BossIntentRangeStatus : uint8_t
-{
-    TooClose,
-    InRange,
-    TooFar,
-};
-
-struct BossIntentData
-{
-    BossIntentType type = BossIntentType::CloseCombat;
-    float nearWeight = 1.0f;
-    float middleWeight = 1.0f;
-    float farWeight = 1.0f;
-    float preferredMinDistance = 0.0f;
-    float preferredMaxDistance = 1.0f;
-    float positioningArrivalInset = 0.25f;
-};
 
 enum class BossActionType :uint8_t
 {

@@ -334,8 +334,6 @@ public:
     // Jump攻撃時のカメラ補正を要求する。
     void RequestJumpAttackCameraAssist() const;
 
-    // 攻撃後の旧Intent用位置調整フラグを設定する。
-    void OnSelectedAttackCompletedSuccessfully();
 
 
 
@@ -652,8 +650,6 @@ public:
     // 保持したCharge結果を取得して解除する。
     ChargeAttackEndReason ConsumePendingChargeRecoveryResult();
 
-    // 旧Intent用の位置調整要求を記録する。
-    void RequestCombatRepositionIntent();
 
     // Recoveryの経過時間と設定時間を記録する。
     void UpdateRecoveryDebug(float elapsed, float duration)
@@ -1449,17 +1445,8 @@ private:
 
     bool battleAIActive = true;  // 戦闘AIの更新を許可する状態。
 
-    std::optional<BossIntentType> activeIntent = std::nullopt;  // 旧Intent処理で保持する現在の目的。
-    BossIntentStep activeIntentStep = BossIntentStep::Selecting;  // 現在のIntentの処理段階。
-    bool intentPositioningAttempted = false;  // Intentの位置調整を試行済みか。
-    bool intentPositioningCompleted = false;  // Intentの位置調整が完了したか。
     float dashAttackValidMinDistance = 6.0f;  // Dash攻撃の有効な最小距離。
     float dashAttackValidMaxDistance = 14.0f;  // Dash攻撃の有効な最大距離。
-    std::string intentRepositionReason = "None";  // Intentの位置調整理由の表示文字列。
-    std::string intentLifecycleState = "None";  // Intentの処理状態の表示文字列。
-    std::string intentLifecycleTrace = "None";  // Intentの処理履歴の表示文字列。
-    std::string intentLifecycleReason = "None";  // Intentの処理理由の表示文字列。
-
 
     BossActionType selectedActionType = BossActionType::AttackLA;  // 現在選択されている行動種別。
     std::optional<BossActionType> lastStartedCombatAttack = std::nullopt;  // 最後に開始した連続ペナルティ対象の攻撃。
@@ -1738,9 +1725,6 @@ private:
     float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;  // 戦闘位置調整の移動距離。
     float combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;  // 戦闘位置調整の移動速度。
     float combatRepositionSettleDuration = initialCombatRepositionSettleDuration;  // 戦闘位置調整後の初期待機時間。
-    bool combatRepositionIntentPending = false;  // 戦闘位置調整のIntentが保留中か。
-    float postAttackCombatRepositionWeight = 45.0f;  // 攻撃後の戦闘位置調整に使う重み。
-    bool postAttackCombatRepositionBoostPending = false;  // 攻撃後の位置調整重みの補正が保留中か。
     BossRepositionReason repositionReason = BossRepositionReason::Normal;  // 位置調整を選択した理由。
     BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;  // 選択された位置調整の方向。
 

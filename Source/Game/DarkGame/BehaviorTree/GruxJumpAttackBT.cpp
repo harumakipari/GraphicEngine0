@@ -506,7 +506,6 @@ ActionBase::State ExecuteJumpAttack::RunTripleJump(float dt)
         owner->WasCurrentAttackSequenceJustDodged())
     {
         const bool dodged = owner->WasCurrentAttackSequenceJustDodged();
-        owner->OnSelectedAttackCompletedSuccessfully();
         owner->SetBehaviorAttackResult(dodged ? GruxEnemy::BehaviorAttackResult::JustDodged : GruxEnemy::BehaviorAttackResult::Success);
         owner->DisableAttackHitBoxes();
         owner->HideJumpTelegraph();
@@ -526,7 +525,6 @@ ActionBase::State ExecuteJumpAttack::RunTripleJump(float dt)
         executionStarted = false;
         return State::Run;
     }
-    owner->OnSelectedAttackCompletedSuccessfully();
     owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success);
     owner->ClearJumpAttackMotionWarpOverride();
     owner->HideJumpTelegraph();
@@ -565,7 +563,6 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
         if (owner->WasCurrentAttackSequenceJustDodged() || owner->GetCurrentAttackHitCount() > stageHitCount)
         {
             const bool dodged = owner->WasCurrentAttackSequenceJustDodged();
-            owner->OnSelectedAttackCompletedSuccessfully();
             owner->SetBehaviorAttackResult(dodged ? GruxEnemy::BehaviorAttackResult::JustDodged : GruxEnemy::BehaviorAttackResult::Success);
             owner->DisableAttackHitBoxes();
             owner->HideJumpTelegraph();
@@ -591,7 +588,6 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
     if (owner->GetCurrentAttackHitCount() > stageHitCount || owner->WasCurrentAttackSequenceJustDodged())
     {
         const bool dodged = owner->WasCurrentAttackSequenceJustDodged();
-        owner->OnSelectedAttackCompletedSuccessfully();
         owner->SetBehaviorAttackResult(dodged ? GruxEnemy::BehaviorAttackResult::JustDodged : GruxEnemy::BehaviorAttackResult::Success);
         owner->DisableAttackHitBoxes();
         owner->HideJumpTelegraph();
@@ -602,7 +598,6 @@ ActionBase::State ExecuteJumpAttack::Run(float dt)
     if (controller && controller->IsPlayAnimation())
         return State::Run;
 
-    owner->OnSelectedAttackCompletedSuccessfully();
     owner->SetBehaviorAttackResult(GruxEnemy::BehaviorAttackResult::Success);
     owner->ClearJumpAttackMotionWarpOverride();
     owner->HideJumpTelegraph();

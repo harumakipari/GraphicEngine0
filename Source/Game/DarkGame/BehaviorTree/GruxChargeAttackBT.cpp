@@ -1151,7 +1151,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
         // Phase1 policy. The single-charge executor does not know this mapping.
         if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::WallHit)
         {
-            OnSelectedAttackCompletedSuccessfully();
             if (BeginChargeStunBT()) return ChargeBTStepResult::Running;
             chargeBT.failed = true;
         }
@@ -1185,8 +1184,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
         const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
         if (player && player->IsRushOpportunityActive()) return ChargeBTStepResult::Running;
     }
-    if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::PlayerHit)
-        RequestCombatRepositionIntent();
     CleanupChargeAttackBT();
     return ChargeBTStepResult::Complete;
 }

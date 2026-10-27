@@ -1564,7 +1564,6 @@ void GruxEnemy::StopBattleActions()
     nextRecoveryDuration.reset();
     nextRecoverySource = "Default";
     pendingChargeRecoveryResult = ChargeAttackEndReason::None;
-    combatRepositionIntentPending = false;
     attackReadySEFired = false;
     stunElapsedDebug = 0.0f;
     recoveryElapsedDebug = 0.0f;
@@ -2565,32 +2564,6 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
         }
     }
 
-    if (!activeIntent)
-        return;
-
-    const bool closeCombatGoalReached =
-        *activeIntent == BossIntentType::CloseCombat &&
-        (selectedActionType == BossActionType::AttackLA ||
-            selectedActionType == BossActionType::AttackRA ||
-            selectedActionType == BossActionType::FastCombo);
-    const bool dashAttackGoalReached =
-        *activeIntent == BossIntentType::DashAttackPlan &&
-        (selectedActionType == BossActionType::DashAttack ||
-            selectedActionType == BossActionType::ChargeAttack);
-    const bool jumpAttackGoalReached =
-        *activeIntent == BossIntentType::JumpAttackPlan &&
-        selectedActionType == BossActionType::JumpAttack;
-    if (!closeCombatGoalReached && !dashAttackGoalReached && !jumpAttackGoalReached)
-        return;
-
-    activeIntent = std::nullopt;
-    activeIntentStep = BossIntentStep::Completed;
-    intentPositioningAttempted = false;
-    intentPositioningCompleted = true;
-    intentRepositionReason = "None";
-    intentLifecycleState = "Intent Completed";
-    intentLifecycleTrace += " -> Intent Completed";
-    intentLifecycleReason = "AttackStarted";
 }
 
 void GruxEnemy::RequestJumpAttackCameraAssist() const
@@ -2606,10 +2579,6 @@ void GruxEnemy::RequestJumpAttackCameraAssist() const
     }
 }
 
-void GruxEnemy::OnSelectedAttackCompletedSuccessfully()
-{
-    postAttackCombatRepositionBoostPending = true;
-}
 
 void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
 {
@@ -3599,12 +3568,6 @@ ChargeAttackEndReason GruxEnemy::ConsumePendingChargeRecoveryResult()
     const ChargeAttackEndReason result = pendingChargeRecoveryResult;
     pendingChargeRecoveryResult = ChargeAttackEndReason::None;
     return result;
-}
-
-void GruxEnemy::RequestCombatRepositionIntent()
-{
-    combatRepositionIntentPending = true;
-    postAttackCombatRepositionBoostPending = false;
 }
 
 int GruxEnemy::GetDamageForCurrentAttack() const

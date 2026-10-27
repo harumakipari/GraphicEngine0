@@ -619,7 +619,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         }
         SetBehaviorAttackResult(WasCurrentAttackSequenceJustDodged()
             ? BehaviorAttackResult::JustDodged : BehaviorAttackResult::Success);
-        OnSelectedAttackCompletedSuccessfully();
         FinishDashAttackBT();
         return DashBTResult::Complete;
     case DashBTPhase::InterDashTransition:
