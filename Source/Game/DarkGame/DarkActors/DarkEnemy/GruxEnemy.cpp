@@ -1651,6 +1651,7 @@ void GruxEnemy::PauseBattleAI()
 {
     battleAIActive = false;
     ResetFourthHitReactionDebug();
+    EnterBattleIdlePresentation();
     StopBattleActions();
 
     // Pausing a battle is an abort, not a battle restart. Discard BT execution
@@ -1660,8 +1661,14 @@ void GruxEnemy::PauseBattleAI()
     if (aiTree) aiTree->ResetActionRuntimes();
     behaviorTreePreviousNode = "None";
 
-    if (stateMachine_)
-        stateMachine_->ChangeState("EnemyIdleState");
+}
+
+void GruxEnemy::EnterBattleIdlePresentation()
+{
+    if (IsDeathPresentationActive() || phase2CinematicAnimationOwnedExternally ||
+        IsChargeAttackBTActive())
+        return;
+    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false);
 }
 
 void GruxEnemy::PauseBattleAIForPhaseTransition()
@@ -1706,9 +1713,6 @@ void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
     StopBattleActions();
     ResetBehaviorTreeForBattleRestart();
     ResetCombatRuntimeForBattleRestart();
-    if (stateMachine_)
-        stateMachine_->ChangeState("EnemyIdleState");
-    PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
 
     isDeathPerform = false;
     rushHpDisplayActive = false;
@@ -1717,6 +1721,7 @@ void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
     delayedHpDelayTimer = 0.0f;
     if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
     if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetValue(delayedHp, static_cast<float>(maxHp));
+    EnterBattleIdlePresentation();
 
     SetPosition(battleStartTransform.GetLocation());
     SetQuaternionRotation(battleStartTransform.GetRotation());

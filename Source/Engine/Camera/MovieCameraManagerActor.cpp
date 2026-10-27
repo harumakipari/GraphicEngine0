@@ -1100,7 +1100,7 @@ void MovieCameraManagerActor::FinishBossEntryToBattle()
     if (player)
         player->EndEvent();
     if (gruxEnemy)
-        gruxEnemy->GetStateMachine()->ChangeState("EnemyIdleState");
+        gruxEnemy->EnterBattleIdlePresentation();
     if (gameScene)
         gameScene->StartBossBattle();
 }

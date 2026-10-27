@@ -16,8 +16,8 @@
 class Player;
 class BehaviorTree;
 class NodeBase;
-
 class MainChargeWindMeshComponent;
+
 class GruxEnemy :public Enemy
 {
 public:
@@ -166,7 +166,6 @@ public:
 
     void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true, float blendTime = 0.3f, bool ignoreRootMotion = false) const;
 
-    // Plays a body animation owned by the phase-two cinematic.
     void PlayPhase2CinematicBodyAnimation(const std::string& name, bool loop,
         bool blend, float blendTime, bool ignoreRootMotion) const;
 
@@ -210,6 +209,9 @@ public:
 
     // 戦闘判断と進行中の行動を停止する。
     void PauseBattleAI();
+
+    // Starts the Idle presentation used by external battle events.
+    void EnterBattleIdlePresentation();
 
     // フェーズ遷移の演出にアニメーションを渡して戦闘判断を停止する。
     void PauseBattleAIForPhaseTransition();
@@ -330,14 +332,11 @@ public:
     // 現在の攻撃シーケンスIDを返す。
     uint64_t GetCurrentAttackSequenceId() const { return currentAttackSequenceId; }
 
-
     // 攻撃開始履歴を更新し、必要なログとカメラ補正を行う。
     void OnSelectedActionStartedSuccessfully();
 
     // Jump攻撃時のカメラ補正を要求する。
     void RequestJumpAttackCameraAssist() const;
-
-
 
 
     // 位置調整時の移動速度に応じてアニメーションを更新する。
@@ -652,7 +651,6 @@ public:
 
     // 保持したCharge結果を取得して解除する。
     ChargeAttackEndReason ConsumePendingChargeRecoveryResult();
-
 
     // Recoveryの経過時間と設定時間を記録する。
     void UpdateRecoveryDebug(float elapsed, float duration)
@@ -1219,24 +1217,14 @@ private:
     // 選択中の危険範囲Notify Stateを読み取り専用で返す。
     const AnimationNotifyState* GetSelectedDangerNotifyState() const;
 
-    // デバッグ用にPlayerと危険範囲の重なりを判定する。
-
     // 有効なNotifyから危険範囲を更新する。
     void RefreshActiveDangerAreaFromNotify();
-
-    // 危険範囲をワールド上にデバッグ描画する。
 
     // Jump用のMotionWarp上書き情報を準備する。
     void PrepareJumpAttackMotionWarpOverride();
 
     // 有効なNotify Stateから攻撃判定を更新する。
     void RefreshActiveHitBoxesFromNotifyStates();
-
-    // 距離や向きなどのAI情報をワールド上に描画する。
-
-    // 位置調整のデバッグ情報をワールド上に描画する。
-
-    // 退避候補などのデバッグ情報をワールド上に描画する。
 
     // 指定された位置調整目標への移動を更新する。
     PositioningMoveResult UpdatePositioningTargetMovement(PositioningTargetContext& target,
