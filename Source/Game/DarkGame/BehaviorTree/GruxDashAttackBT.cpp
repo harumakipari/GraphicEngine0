@@ -3,37 +3,6 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Scenes/GameScene.h"
 
-void GruxEnemy::EnsureDashTelegraphVisual()
-{
-    if (!dashTelegraphLineMeshComponent)
-        dashTelegraphLineMeshComponent = AddComponent<StaticMeshComponent>("dashTelegraphLine", "GruxEnemy");
-    if (!dashTelegraphFanMeshComponent)
-        dashTelegraphFanMeshComponent = AddComponent<StaticMeshComponent>("dashTelegraphFan", "GruxEnemy");
-
-    const auto configure = [](const std::shared_ptr<StaticMeshComponent>& mesh, const char* modelPath,
-        const bool retainVerticesForDebug)
-    {
-        if (!mesh->model)
-            mesh->SetModel(modelPath, retainVerticesForDebug);
-        if (mesh->model)
-            for (auto& material : mesh->model->materials)
-                material.data.alphaMode = 2; // BLEND: asset mask supplies alpha.
-        mesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
-        mesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
-        mesh->SetIsCastShadow(false);
-        mesh->SetIsVisible(false);
-        mesh->SetUsingAbsoluteLocation(true);
-        mesh->SetUsingAbsoluteRotation(true);
-        mesh->SetUsingAbsoluteScale(true);
-        mesh->plusAlphaCBuffer->data.cpuColor = { 1.0f, 0.16f, 0.03f, 1.0f };
-        mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
-        mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
-    };
-    // The on-disk asset name intentionally follows the supplied filename
-    configure(dashTelegraphLineMeshComponent, "./Data/Models/EffectModel/DashTelegraphPlane.glb", true);
-    configure(dashTelegraphFanMeshComponent, "./Data/Models/EffectModel/DashTelegraphFan.glb", false);
-}
-
 void GruxEnemy::BeginDashTelegraphVisual()
 {
     HideDashTelegraphVisual();
@@ -51,7 +20,6 @@ void GruxEnemy::BeginDashTelegraphVisual()
     if (!dashTelegraphSnapshotValid || (!showDashTelegraph && !forceShowDashTelegraph))
         return;
 
-    EnsureDashTelegraphVisual();
     ApplyDashTelegraphVisualSnapshot();
     dashTelegraphVisualState = DashTelegraphVisualState::LineExpanding;
     dashTelegraphVisualElapsed = 0.0f;
@@ -281,18 +249,13 @@ void GruxEnemy::ApplyDashTelegraphVisualSnapshot()
         return;
     }
 
-    EnsureDashTelegraphVisual();
     if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
         return;
 
-    // Both Dash assets are local -Z forward. The line model pivot is its start edge.
     const float yaw = std::atan2(-dashTelegraphFanForward.x, -dashTelegraphFanForward.z);
     DirectX::XMFLOAT4 rotation{};
     DirectX::XMStoreFloat4(&rotation,
         DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f));
-    // These components use absolute transforms. As in Jump Telegraph, their
-    // relative values are therefore the intended world values; SetWorld* would
-    // first apply Grux's inverse parent transform and place the mesh incorrectly.
     dashTelegraphLineMeshComponent->SetRelativeLocationDirect({
         dashTelegraphLineStart.x, dashTelegraphLineYOffset, dashTelegraphLineStart.z });
     dashTelegraphLineMeshComponent->SetRelativeRotationDirect(rotation);

@@ -693,49 +693,8 @@ float GruxEnemy::GetRoarAttackRadius() const
         : roarRadiusPhase1;
 }
 
-void GruxEnemy::EnsureRoarTelegraphMeshes()
-{
-    if (!roarTelegraphOuterMeshComponent)
-        roarTelegraphOuterMeshComponent = AddComponent<StaticMeshComponent>("roarTelegraphOuter", "GruxEnemy");
-    if (!roarTelegraphFillMeshComponent)
-        roarTelegraphFillMeshComponent = AddComponent<StaticMeshComponent>("roarTelegraphFill", "GruxEnemy");
-
-    const auto configureMesh = [](const std::shared_ptr<StaticMeshComponent>& mesh,
-        const char* modelPath, const DirectX::XMFLOAT4& color)
-    {
-        if (!mesh->model)
-            mesh->SetModel(modelPath);
-        if (mesh->model)
-            for (auto& material : mesh->model->materials)
-                material.data.alphaMode = 2; // BLEND
-        mesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
-        mesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
-        mesh->SetIsCastShadow(false);
-        mesh->SetIsVisible(false);
-        mesh->SetUsingAbsoluteLocation(true);
-        mesh->SetUsingAbsoluteRotation(true);
-        mesh->SetUsingAbsoluteScale(true);
-        mesh->plusAlphaCBuffer->data.cpuColor = color;
-        mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
-        mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
-    };
-
-    configureMesh(roarTelegraphOuterMeshComponent,
-        "./Data/Models/EffectModel/RoarTelegraphOuter1.glb", { 1.0f, 0.16f, 0.03f, 1.0f });
-    configureMesh(roarTelegraphFillMeshComponent,
-        "./Data/Models/EffectModel/RoarTelegraphFill.glb", { 1.0f, 0.08f, 0.03f, 1.0f });
-
-    // Roar owns both visual layers through its dedicated tint / glow shader.
-    // Charge / Jump / Dash remain on the shared Telegraph shader.
-    roarTelegraphOuterMeshComponent->overrideDeferredPipelineName = "roarTelegraphUnlitForward";
-    roarTelegraphOuterMeshComponent->overrideForwardPipelineName = "roarTelegraphUnlitForward";
-    roarTelegraphFillMeshComponent->overrideDeferredPipelineName = "roarTelegraphUnlitForward";
-    roarTelegraphFillMeshComponent->overrideForwardPipelineName = "roarTelegraphUnlitForward";
-}
-
 void GruxEnemy::ShowRoarTelegraph()
 {
-    EnsureRoarTelegraphMeshes();
     if (!roarTelegraphOuterMeshComponent || !roarTelegraphFillMeshComponent)
         return;
     UpdateRoarTelegraphTransform();
