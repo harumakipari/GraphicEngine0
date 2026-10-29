@@ -333,8 +333,8 @@ bool GruxEnemy::BeginTripleChargeTransition()
 
 void GruxEnemy::HideChargeTelegraphVisual()
 {
-    if (tripleChargeTelegraphMeshComponent)
-        tripleChargeTelegraphMeshComponent->SetIsVisible(false);
+    if (chargeTelegraphMeshComponent)
+        chargeTelegraphMeshComponent->SetIsVisible(false);
     chargeBT.tripleChargeTelegraphVisible = false;
 }
 
@@ -421,7 +421,7 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
     chargeBT.tripleChargeTelegraphLength = telegraphLength;
     chargeBT.tripleChargeTelegraphWidth = telegraphWidth;
     chargeBT.tripleChargeTelegraphVisible = showTripleChargeTelegraph &&
-        tripleChargeTelegraphMeshComponent != nullptr;
+        chargeTelegraphMeshComponent != nullptr;
 
     // Diagnostic snapshot only. Gameplay cast conditions and length calculation
     // remain unchanged; retain the last three generation results for comparison.
@@ -495,14 +495,14 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
         }
     }
 
-    if (tripleChargeTelegraphMeshComponent)
+    if (chargeTelegraphMeshComponent)
     {
         const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
         const DirectX::XMFLOAT3& phaseColor = scene && scene->IsBossInFinalPhase()
             ? tripleChargeTelegraphPhase2EmissiveColor : tripleChargeTelegraphPhase1EmissiveColor;
-        tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = {
+        chargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = {
             phaseColor.x, phaseColor.y, phaseColor.z, 1.0f };
-        tripleChargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower =
+        chargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower =
             tripleChargeTelegraphEmissiveEnabled
             ? (std::max)(0.0f, tripleChargeTelegraphEmissiveIntensity) : 0.0f;
         const DirectX::XMFLOAT3 endPosition{
@@ -513,7 +513,7 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
             (startPosition.x + endPosition.x) * 0.5f,
             startPosition.y,
             (startPosition.z + endPosition.z) * 0.5f };
-        tripleChargeTelegraphMeshComponent->SetWorldLocationDirect(startPosition);
+        chargeTelegraphMeshComponent->SetWorldLocationDirect(startPosition);
         const float yaw = std::atan2(-normalizedDirection.x, -normalizedDirection.z);
         const auto rotation = DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f);
         DirectX::XMFLOAT4 rotationFloat{};
@@ -523,20 +523,20 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
             telegraphWidth / (std::abs(rootScale.x) > 0.001f ? rootScale.x : 1.0f),
             1.0f,
             telegraphLength / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
-        tripleChargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
-        tripleChargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
+        chargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
+        chargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
 
         snapshot.requestedPosition = startPosition;
         snapshot.requestedRotation = rotationFloat;
         snapshot.requestedYaw = yaw;
         snapshot.requestedScale = requestedScale;
-        snapshot.relativePosition = tripleChargeTelegraphMeshComponent->GetRelativeLocation();
-        snapshot.relativeScale = tripleChargeTelegraphMeshComponent->GetRelativeScale();
-        snapshot.componentWorldPosition = tripleChargeTelegraphMeshComponent->GetComponentLocation();
-        snapshot.componentWorldScale = tripleChargeTelegraphMeshComponent->GetComponentScale();
+        snapshot.relativePosition = chargeTelegraphMeshComponent->GetRelativeLocation();
+        snapshot.relativeScale = chargeTelegraphMeshComponent->GetRelativeScale();
+        snapshot.componentWorldPosition = chargeTelegraphMeshComponent->GetComponentLocation();
+        snapshot.componentWorldScale = chargeTelegraphMeshComponent->GetComponentScale();
         snapshot.componentWorldMatrix =
-            tripleChargeTelegraphMeshComponent->GetComponentWorldTransform().ToWorldTransform();
-        const auto worldMatrix = tripleChargeTelegraphMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+            chargeTelegraphMeshComponent->GetComponentWorldTransform().ToWorldTransform();
+        const auto worldMatrix = chargeTelegraphMeshComponent->GetComponentWorldTransform().ToWorldTransform();
         const auto transformPoint = [&worldMatrix](const DirectX::XMFLOAT3& point)
         {
             DirectX::XMFLOAT3 result{};
@@ -555,7 +555,7 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
             DebugRender::DrawSphere(snapshot.actualMeshStart, 0.10f, meshColor, 0.0f, true);
             DebugRender::DrawSphere(snapshot.actualMeshEnd, 0.10f, meshColor, 0.0f, true);
         }
-        tripleChargeTelegraphMeshComponent->SetIsVisible(chargeBT.tripleChargeTelegraphVisible);
+        chargeTelegraphMeshComponent->SetIsVisible(chargeBT.tripleChargeTelegraphVisible);
         if (chargeBT.tripleChargeTelegraphVisible)
             PlayBossTelegraphSE("boss_charge_telegraph.wav");
         (void)centerPosition; // The asset pivot is the start edge, not the center.
@@ -567,7 +567,7 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
 
 void GruxEnemy::UpdateChargeTelegraphVisual(float lengthProgress)
 {
-    if (!tripleChargeTelegraphMeshComponent)
+    if (!chargeTelegraphMeshComponent)
         return;
     const float progress = std::clamp(lengthProgress, 0.0f, 1.0f);
     const DirectX::XMFLOAT3 direction = chargeBT.tripleChargeTelegraphDirection;
@@ -587,10 +587,10 @@ void GruxEnemy::UpdateChargeTelegraphVisual(float lengthProgress)
         length / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
     // ChargeTelegraphPlane2's local -Z axis starts at the local origin;
     // changing only Z scale therefore preserves the world-space start edge.
-    tripleChargeTelegraphMeshComponent->SetWorldLocationDirect(
+    chargeTelegraphMeshComponent->SetWorldLocationDirect(
         chargeBT.tripleChargeTelegraphStartPosition);
-    tripleChargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
-    tripleChargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
+    chargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
+    chargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
 }
 
 void GruxEnemy::DrawTripleChargeTelegraphDebug() const
@@ -1255,7 +1255,6 @@ void GruxEnemy::CleanupChargeAttackBT()
     nextRecoveryDuration.reset();
     nextRecoverySource = "Default";
     SetStunDebug("None", 0.0f);
-    ClearPendingAttackFacing();
     selectedActionType = chargeBT.previousAction;
     chargeBT = {};
     chargeBT.tripleChargeWallTurnClearance = tripleTurnClearance;

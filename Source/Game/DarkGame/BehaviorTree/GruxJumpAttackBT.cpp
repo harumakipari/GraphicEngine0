@@ -12,37 +12,8 @@ bool GruxEnemy::IsTripleJumpPhase2() const
     return scene && scene->IsBossInFinalPhase();
 }
 
-void GruxEnemy::EnsureJumpTelegraphMesh()
-{
-    if (!jumpTelegraphMeshComponent)
-        jumpTelegraphMeshComponent = AddComponent<StaticMeshComponent>("jumpTelegraphCircle", "GruxEnemy");
-    if (!jumpTelegraphInnerMeshComponent)
-        jumpTelegraphInnerMeshComponent = AddComponent<StaticMeshComponent>("jumpTelegraphInnerCircle", "GruxEnemy");
-    const auto configureMesh = [](const std::shared_ptr<StaticMeshComponent>& mesh)
-    {
-        if (!mesh->model)
-            mesh->SetModel("./Data/Models/EffectModel/JumpTeregraphPlane.glb");
-        if (mesh->model)
-            for (auto& material : mesh->model->materials)
-                material.data.alphaMode = 2; // BLEND (mask alpha)
-        mesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
-        mesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
-        mesh->SetIsCastShadow(false);
-        mesh->SetIsVisible(false);
-        mesh->SetUsingAbsoluteLocation(true);
-        mesh->SetUsingAbsoluteRotation(true);
-        mesh->SetUsingAbsoluteScale(true);
-        mesh->plusAlphaCBuffer->data.cpuColor = { 1.0f, 0.16f, 0.03f, 1.0f };
-        mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
-        mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
-    };
-    configureMesh(jumpTelegraphMeshComponent);
-    configureMesh(jumpTelegraphInnerMeshComponent);
-}
-
 void GruxEnemy::ShowJumpTelegraphForCurrentJump()
 {
-    EnsureJumpTelegraphMesh();
     if (!jumpTelegraphMeshComponent)
         return;
     const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());

@@ -396,9 +396,6 @@ public:
     // 指定されたボス攻撃予兆のSEを再生する。
     void PlayBossTelegraphSE(const char* fileName) const;
 
-    // Dash予兆の描画用コンポーネントを用意する。
-    void EnsureDashTelegraphVisual();
-
     // Dash予兆の表示を開始する。
     void BeginDashTelegraphVisual();
 
@@ -728,9 +725,6 @@ public:
     // 現在のフェーズに対応するRoarの攻撃半径を返す。
     float GetRoarAttackRadius() const;
 
-    // Roar予兆用のメッシュを用意する。
-    void EnsureRoarTelegraphMeshes();
-
     // Roar予兆を表示する。
     void ShowRoarTelegraph();
 
@@ -902,9 +896,6 @@ public:
     // Jump攻撃のアニメーションを開始し、成功時に攻撃開始を記録する。
     bool StartJumpAttackExecution();
 
-    // Jump予兆用のメッシュを用意する。
-    void EnsureJumpTelegraphMesh();
-
     // 現在のJumpの着地点に予兆を表示する。
     void ShowJumpTelegraphForCurrentJump();
 
@@ -970,9 +961,6 @@ public:
 
     // 指定アニメーション用の武器予兆を開始する。
     void StartWeaponTelegraph(const std::string& animationName);
-
-    // 攻撃前の向き合わせ関連の値をリセットする。
-    void ClearPendingAttackFacing();
 
     // AIによる移動入力と固定速度を解除する。
     void StopAIMovement() const;
@@ -1119,7 +1107,8 @@ private:
     // HPバーを作成する
     void CreateHpUI();
 
-    void PlayBodyAnimationInternal(const std::string& name, bool loop, bool blend, float blendTime, bool ignoreRootMotion) const;
+    // 予兆用のモデルを作成する
+    void CreateTelegraphMesh(const std::string& parentName);
 
     // 武器の攻撃予兆表示を更新する。
     void UpdateWeaponTelegraphRimLight(float deltaTime);
@@ -1127,22 +1116,6 @@ private:
     // 武器の攻撃予兆表示を解除する。
     void ResetWeaponTelegraphRimLight();
 
-    bool weaponEmissiveEnabled = true;  // 武器の発光を有効にするか。
-    DirectX::XMFLOAT3 weaponEmissiveColor = { 0.0f, 0.0f, 0.0f };  // 武器の発光色。
-    float weaponEmissiveIntensity = 7.0f;  // 武器の発光強度。
-    DirectX::XMFLOAT3 weaponTelegraphRimColor = { 1.0f, 0.35f, 0.0f };  // 武器予兆の縁の色。
-
-    bool weaponTelegraphActive = false;  // 武器予兆が有効か。
-    bool weaponTelegraphFadingOut = false;  // 武器予兆がフェードアウト中か。
-    std::string weaponTelegraphAnimationName;  // 武器予兆に対応するアニメーション名。
-    float weaponTelegraphLeadDuration = 0.0f;  // 武器予兆の先行表示時間。
-    float weaponTelegraphShowEmissiveEndTime = 0.0f;  // 武器予兆の発光表示終了時刻。
-    float weaponTelegraphMaximumPower = 0.0f;  // 武器予兆の最大発光強度。
-    float weaponTelegraphElapsed = 0.0f;  // 武器予兆の経過時間。
-    float weaponTelegraphCurrentPower = 0.0f;  // 武器予兆の現在の発光強度。
-    float weaponTelegraphFadeOutElapsed = 0.0f;  // 武器予兆のフェードアウト経過時間。
-    float weaponTelegraphFadeOutStartPower = 0.0f;  // 武器予兆のフェードアウト開始時の発光強度。
-    float weaponTelegraphFadeOutDuration = 0.15f;  // 武器予兆のフェードアウト時間。
 
     // 行動ツリーの実行ノードとアクション状態をリセットする。
     void ResetBehaviorTreeRuntime();
@@ -1155,18 +1128,6 @@ private:
 
     // 4段目の被弾リアクションの診断情報を初期化する。
     void ResetFourthHitReactionDebug();
-    bool finalHitReactionActive = false;  // 最後の被弾リアクション中か。
-    bool finalHitReactionHeld = false;  // 最後の被弾リアクションを保持中か。
-    bool fourthHitReactionActive = false;  // 4段目の被弾リアクション中か。
-    float fourthHitReactionRemaining = 0.0f;  // 4段目の被弾リアクションの残り時間。
-    float fourthHitReactionChance = 0.3f;  // 4段目の被弾リアクションを発生させる確率。
-    float fourthHitReactionDuration = 1.25f;  // 4段目の被弾リアクション時間。
-    float fourthHitReactionLastRoll = -1.0f;  // 4段目の被弾リアクションに使った直近の乱数値。
-    bool fourthHitReactionHasLastRoll = false;  // 4段目の被弾リアクションの抽選結果があるか。
-    bool fourthHitReactionLastWon = false;  // 直近の4段目の被弾リアクション抽選が成功したか。
-    float fourthHitReactionLastDirectionDot = 0.0f;  // 4段目の被弾方向の判定に使った内積。
-    std::string fourthHitReactionDirection = "None";  // 4段目の被弾方向の表示文字列。
-    std::string fourthHitReactionAnimation = "None";  // 4段目の被弾リアクションのアニメーション名。
 
     // PlayerとのXZ平面上の距離を返す。
     float GetDistanceToPlayer() const;
@@ -1292,6 +1253,34 @@ private:
     bool showLeftWeaponTrail = false;  // 左武器の軌跡を表示するか。
     bool showRightWeaponTrail = false;  // 右武器の軌跡を表示するか。
 
+    bool finalHitReactionActive = false;  // 最後の被弾リアクション中か。
+    bool finalHitReactionHeld = false;  // 最後の被弾リアクションを保持中か。
+    bool fourthHitReactionActive = false;  // 4段目の被弾リアクション中か。
+    float fourthHitReactionRemaining = 0.0f;  // 4段目の被弾リアクションの残り時間。
+    float fourthHitReactionChance = 0.3f;  // 4段目の被弾リアクションを発生させる確率。
+    float fourthHitReactionDuration = 1.25f;  // 4段目の被弾リアクション時間。
+    float fourthHitReactionLastRoll = -1.0f;  // 4段目の被弾リアクションに使った直近の乱数値。
+    bool fourthHitReactionHasLastRoll = false;  // 4段目の被弾リアクションの抽選結果があるか。
+    bool fourthHitReactionLastWon = false;  // 直近の4段目の被弾リアクション抽選が成功したか。
+    float fourthHitReactionLastDirectionDot = 0.0f;  // 4段目の被弾方向の判定に使った内積。
+    std::string fourthHitReactionDirection = "None";  // 4段目の被弾方向の表示文字列。
+    std::string fourthHitReactionAnimation = "None";  // 4段目の被弾リアクションのアニメーション名。
+    bool weaponEmissiveEnabled = true;  // 武器の発光を有効にするか。
+    DirectX::XMFLOAT3 weaponEmissiveColor = { 0.0f, 0.0f, 0.0f };  // 武器の発光色。
+    float weaponEmissiveIntensity = 7.0f;  // 武器の発光強度。
+    DirectX::XMFLOAT3 weaponTelegraphRimColor = { 1.0f, 0.35f, 0.0f };  // 武器予兆の縁の色。
+
+    bool weaponTelegraphActive = false;  // 武器予兆が有効か。
+    bool weaponTelegraphFadingOut = false;  // 武器予兆がフェードアウト中か。
+    std::string weaponTelegraphAnimationName;  // 武器予兆に対応するアニメーション名。
+    float weaponTelegraphLeadDuration = 0.0f;  // 武器予兆の先行表示時間。
+    float weaponTelegraphShowEmissiveEndTime = 0.0f;  // 武器予兆の発光表示終了時刻。
+    float weaponTelegraphMaximumPower = 0.0f;  // 武器予兆の最大発光強度。
+    float weaponTelegraphElapsed = 0.0f;  // 武器予兆の経過時間。
+    float weaponTelegraphCurrentPower = 0.0f;  // 武器予兆の現在の発光強度。
+    float weaponTelegraphFadeOutElapsed = 0.0f;  // 武器予兆のフェードアウト経過時間。
+    float weaponTelegraphFadeOutStartPower = 0.0f;  // 武器予兆のフェードアウト開始時の発光強度。
+    float weaponTelegraphFadeOutDuration = 0.15f;  // 武器予兆のフェードアウト時間。
 
     static constexpr size_t chargeWindTrailCount = 10;  // Chargeの風の軌跡の数。
     std::array<ChargeWindTrailRuntime, chargeWindTrailCount> chargeWindTrails{};  // Chargeの風の軌跡の実行状態。
@@ -1347,7 +1336,7 @@ private:
     std::shared_ptr<ParticleComponent> metalSparkEffectComponent;  // 金属の火花エフェクト。
     std::shared_ptr<ParticleComponent> footScrapeEffectComponent;  // 足の擦過エフェクト。
     std::shared_ptr<MainChargeWindMeshComponent> mainChargeWindMeshComponent;  // Chargeの風を描画するメッシュ。
-    std::shared_ptr<StaticMeshComponent> tripleChargeTelegraphMeshComponent;  // 複数回Chargeの予兆メッシュ。
+    std::shared_ptr<StaticMeshComponent> chargeTelegraphMeshComponent;  // 複数回Chargeの予兆メッシュ。
     std::shared_ptr<StaticMeshComponent> jumpTelegraphMeshComponent;  // Jump予兆の描画メッシュ。
     std::shared_ptr<StaticMeshComponent> jumpTelegraphInnerMeshComponent;  // Jump予兆の内側のメッシュ。
     std::shared_ptr<StaticMeshComponent> roarTelegraphOuterMeshComponent;  // Roar予兆の外側メッシュ。
