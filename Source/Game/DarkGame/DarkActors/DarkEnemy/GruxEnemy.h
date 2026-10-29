@@ -1099,13 +1099,12 @@ public:
     // FastComboの実行段階を設定する。
     void SetFastComboRuntimeStage(int stage) { fastComboRuntimeStage = stage; }
 
-    // Charge実行ノードの更新回数を記録する。
 private:
     // ビヘイビアツリーを作成する
     void CreateBossBehaviorTree();
 
-    // HPバーを作成する
-    void CreateHpUI();
+    // UIを作成する
+    void CreateUI();
 
     // 予兆用のモデルを作成する
     void CreateTelegraphMesh(const std::string& parentName);
@@ -1196,8 +1195,6 @@ private:
 
     // 位置調整の目標と実行状態を解除する。
     void ClearPositioningTarget(PositioningTargetContext& target, PositioningTargetRuntime& runtime);
-
-    // 回転に関する診断情報をワールド上に描画する。
 
     // 地面への衝撃エフェクトを生成する。
     void SpawnGroundImpactEffect() const;

@@ -213,18 +213,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     // カメラの注視点の位置のコンポーネントを追加
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f,1.5f,-0.0f });
-    // 登場シーンのボス名前のUIを追加
-    auto uiManager = GetOwnerScene()->GetUIManager();
-    gruxNameImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Grux_name.png", "Grux_name");
-    gruxNameImageComponent->SetWorldPosition({ 995, 900 });
-    gruxNameImageComponent->SetScale({ 0.8f,0.8f });
-    gruxNameImageComponent->SetSize({ 600, 200 });
-    gruxNameImageComponent->SetPivot({ 0.5f,0.5f });
-    gruxNameImageComponent->SetColor(DirectX::XMFLOAT4{ 1.0f,1.0f,1.0f,0.0f });
-    gruxNameImageComponent->SetVisible(true);
-    uiManager->Add(gruxNameImageComponent);
-    easingRunner = std::make_unique<EasingRunner>();
-
 
 
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);
@@ -240,7 +228,6 @@ void GruxEnemy::Initialize(const Transform& transform)
     groundDustEffectComponent->Load("./Data/Effect/Files/GroundDustEffect1.json");
     roarGroundBurstEffectComponent = this->AddComponent<class ParticleComponent>("roarGroundBurstEffectComponent", parentName);
     roarGroundBurstEffectComponent->Load("./Data/Effect/Files/RoarGroundBurstEffect.json");
-    EnsureRoarImpactDebris();
     // 壁に当たった時の砂埃
     wallImpactDustEffectComponent = this->AddComponent<class ParticleComponent>("wallImpactDustEffectComponent", parentName);
     wallImpactDustEffectComponent->Load("./Data/Effect/Files/WallImpactDustEffect1.json");
@@ -271,8 +258,8 @@ void GruxEnemy::Initialize(const Transform& transform)
         streak.trail.SetEmissiveStrength(chargeWindTrailEmissiveStrength);
     }
 
-    // HPバーを作成する
-    CreateHpUI();
+    // HPバーと名前UIを作成する
+    CreateUI();
 
     // ビヘイビアツリー設定
     CreateBossBehaviorTree();
@@ -280,6 +267,7 @@ void GruxEnemy::Initialize(const Transform& transform)
     // 予兆用のモデルを作成する
     CreateTelegraphMesh(parentName);
 
+    EnsureRoarImpactDebris();
     EnsureRoarFloatingDebris();
 }
 
@@ -4103,8 +4091,8 @@ void GruxEnemy::CreateBossBehaviorTree()
 
 }
 
-// HPバーを作成する
-void GruxEnemy::CreateHpUI()
+// UIを作成する
+void GruxEnemy::CreateUI()
 {
     auto uiManager = GetOwnerScene()->GetUIManager();
 
@@ -4175,35 +4163,22 @@ void GruxEnemy::CreateHpUI()
         hpFrameUiComponent,
     };
 
+
+    // 登場シーンのボス名前のUIを追加
+    gruxNameImageComponent = std::make_shared<UIImageComponent>("./Data/Textures/UI/Grux_name.png", "Grux_name");
+    gruxNameImageComponent->SetWorldPosition({ 995, 900 });
+    gruxNameImageComponent->SetScale({ 0.8f,0.8f });
+    gruxNameImageComponent->SetSize({ 600, 200 });
+    gruxNameImageComponent->SetPivot({ 0.5f,0.5f });
+    gruxNameImageComponent->SetColor(DirectX::XMFLOAT4{ 1.0f,1.0f,1.0f,0.0f });
+    gruxNameImageComponent->SetVisible(true);
+    uiManager->Add(gruxNameImageComponent);
+    easingRunner = std::make_unique<EasingRunner>();
 }
 
 // 予兆用のモデルを作成する
 void GruxEnemy::CreateTelegraphMesh(const std::string& parentName)
 {
-    // Chargeの予兆メッシュ。
-    chargeTelegraphMeshComponent = AddComponent<StaticMeshComponent>("tripleChargeTelegraph", parentName);
-    chargeTelegraphMeshComponent->SetModel("./Data/Models/EffectModel/ChargeTelegraphPlane2.glb");
-    chargeTelegraphMeshComponent->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
-    chargeTelegraphMeshComponent->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
-    chargeTelegraphMeshComponent->SetIsCastShadow(false);
-    chargeTelegraphMeshComponent->SetIsVisible(false);
-    chargeTelegraphMeshComponent->plusAlphaCBuffer->data.cpuColor = { 1.0f, 0.16f, 0.03f, 1.0f };
-    chargeTelegraphMeshComponent->plusAlphaCBuffer->data.emissionPower = 0.0f;
-    chargeTelegraphMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
-
-    // Chargeの風用のメッシュ
-    mainChargeWindMeshComponent = AddComponent<MainChargeWindMeshComponent>("mainChargeWind", parentName);
-    mainChargeWindMeshComponent->SetModel("./Data/Models/EffectModel/ChargeWindModel1.glb");
-    mainChargeWindMeshComponent->overrideDeferredPipelineName = "mainChargeWindForward";
-    mainChargeWindMeshComponent->overrideForwardPipelineName = "mainChargeWindForward";
-    mainChargeWindMeshComponent->SetIsCastShadow(false);
-    mainChargeWindMeshComponent->SetIsVisible(false);
-    mainChargeWindMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
-    //ApplyMainChargeWindSettings();
-
-    // ジャンプ用の予兆Mesh
-    jumpTelegraphMeshComponent = AddComponent<StaticMeshComponent>("jumpTelegraphCircle", parentName);
-    jumpTelegraphInnerMeshComponent = AddComponent<StaticMeshComponent>("jumpTelegraphInnerCircle", parentName);
     const auto configureMesh = [](const std::shared_ptr<StaticMeshComponent>& mesh,
         const char* modelPath, const DirectX::XMFLOAT4& color)
         {
@@ -4221,16 +4196,32 @@ void GruxEnemy::CreateTelegraphMesh(const std::string& parentName)
             mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
             mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
         };
+
+
+    // Chargeの予兆メッシュ。
+    chargeTelegraphMeshComponent = AddComponent<StaticMeshComponent>("tripleChargeTelegraph", parentName);
+    configureMesh(chargeTelegraphMeshComponent, "./Data/Models/EffectModel/ChargeTelegraphPlane2.glb", { 1.0f, 0.16f, 0.03f, 1.0f });
+
+    // Chargeの風用のメッシュ
+    mainChargeWindMeshComponent = AddComponent<MainChargeWindMeshComponent>("mainChargeWind", parentName);
+    mainChargeWindMeshComponent->SetModel("./Data/Models/EffectModel/ChargeWindModel1.glb");
+    mainChargeWindMeshComponent->overrideDeferredPipelineName = "mainChargeWindForward";
+    mainChargeWindMeshComponent->overrideForwardPipelineName = "mainChargeWindForward";
+    mainChargeWindMeshComponent->SetIsCastShadow(false);
+    mainChargeWindMeshComponent->SetIsVisible(false);
+    mainChargeWindMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+
+    // ジャンプ用の予兆Mesh
+    jumpTelegraphMeshComponent = AddComponent<StaticMeshComponent>("jumpTelegraphCircle", parentName);
+    jumpTelegraphInnerMeshComponent = AddComponent<StaticMeshComponent>("jumpTelegraphInnerCircle", parentName);
     configureMesh(jumpTelegraphMeshComponent, "./Data/Models/EffectModel/JumpTelegraphPlane.glb", { 1.0f, 0.16f, 0.03f, 1.0f });
     configureMesh(jumpTelegraphInnerMeshComponent, "./Data/Models/EffectModel/JumpTelegraphPlane.glb", { 1.0f, 0.16f, 0.03f, 1.0f });
 
     // Roar予兆の外側メッシュ。
     roarTelegraphOuterMeshComponent = AddComponent<StaticMeshComponent>("roarTelegraphOuter", parentName);
     roarTelegraphFillMeshComponent = AddComponent<StaticMeshComponent>("roarTelegraphFill", parentName);
-    configureMesh(roarTelegraphOuterMeshComponent,
-        "./Data/Models/EffectModel/RoarTelegraphOuter1.glb", { 1.0f, 0.16f, 0.03f, 1.0f });
-    configureMesh(roarTelegraphFillMeshComponent,
-        "./Data/Models/EffectModel/RoarTelegraphFill.glb", { 1.0f, 0.08f, 0.03f, 1.0f });
+    configureMesh(roarTelegraphOuterMeshComponent, "./Data/Models/EffectModel/RoarTelegraphOuter1.glb", { 1.0f, 0.16f, 0.03f, 1.0f });
+    configureMesh(roarTelegraphFillMeshComponent, "./Data/Models/EffectModel/RoarTelegraphFill.glb", { 1.0f, 0.08f, 0.03f, 1.0f });
 
     roarTelegraphOuterMeshComponent->overrideDeferredPipelineName = "roarTelegraphUnlitForward";
     roarTelegraphOuterMeshComponent->overrideForwardPipelineName = "roarTelegraphUnlitForward";
