@@ -1109,6 +1109,9 @@ private:
     // 左右武器のTrailを更新する。
     void UpdateWeaponTrails(float deltaTime);
 
+    // AnimationMotionWarpを更新する
+    void UpdateAnimationMotionWarp(float deltaTime);
+
     // 左右武器の攻撃判定とDebug表示を更新する。
     void UpdateWeaponHitDetection();
 
@@ -1785,14 +1788,11 @@ private:
     BossActionType dashBTPreviousAction = BossActionType::AttackLA;  // Dash開始前に選択されていた行動。
     float dashBTTelegraphElapsed = 0.0f;  // Dash予兆の経過時間。
     float dashBTTraveledDistance = 0.0f;  // Dashで移動した距離。
-    // Dash count is deliberately independent of DashAttack's three animation stages.
     bool dashBTTripleDashActive = false;  // 複数回Dashを実行する状態。
     int dashBTDashIndex = 0;  // 現在のDash回のインデックス。
     int dashBTDashMaxCount = 1;  // 今回の攻撃で実行するDashの回数。
     int dashBTCurrentDashHitStartCount = 0;  // 現在のDashで記録したヒット開始回数。
     bool dashBTAbortRemainingDashes = false;  // 残りのDashを中断する状態。
-    // Dash 1 consumes these on the BT update following the authored Pre_Stampede events.
-    // They deliberately do not participate in Dash 2/3's fixed inter-dash transition.
     bool dashBTDirectionLockRequested = false;  // Dashの方向固定が要求されているか。
     bool dashBTDashStartRequested = false;  // Dashの開始が要求されているか。
     bool dashBTDirectionLockEventReceived = false;  // Dashの方向固定イベントを受信したか。
@@ -1807,10 +1807,8 @@ private:
     DirectX::XMFLOAT3 dashBTActualKnockupStartPosition{};  // Dash後のKnockup実際の開始位置。
     float dashBTPredictionError = 0.0f;  // Knockup開始位置の予測誤差。
     bool dashBTKnockupPositionCaptured = false;  // Knockup開始位置を記録済みか。
-    // Visual-only Direction Lock snapshot; it never re-targets gameplay.
     bool showDashTelegraph = true;  // Dash予兆の表示を有効にする。
     bool dashTelegraphActive = false;  // Dash予兆が表示中か。
-    bool forceShowDashTelegraph = false;  // Dash予兆をデバッグ用に表示する。
     bool dashTelegraphSnapshotValid = false;  // Dash予兆の位置と方向の記録が有効か。
     enum class DashTelegraphVisualState
     {

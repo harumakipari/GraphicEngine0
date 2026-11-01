@@ -6,8 +6,6 @@
 void GruxEnemy::BeginDashTelegraphVisual()
 {
     HideDashTelegraphVisual();
-    // Copy the locked gameplay snapshot once. It remains valid after BT cleanup
-    // so Force Show can inspect this exact leg later.
     dashTelegraphLineStart = dashAttackStartPosition;
     dashTelegraphLineEnd = dashBTPredictedKnockupPosition;
     dashTelegraphFanPosition = { dashBTPredictedKnockupPosition.x,
@@ -17,7 +15,7 @@ void GruxEnemy::BeginDashTelegraphVisual()
     const float dz = dashTelegraphLineEnd.z - dashTelegraphLineStart.z;
     dashTelegraphLineLength = std::sqrt(dx * dx + dz * dz);
     dashTelegraphSnapshotValid = dashTelegraphLineLength > FLT_EPSILON;
-    if (!dashTelegraphSnapshotValid || (!showDashTelegraph && !forceShowDashTelegraph))
+    if (!dashTelegraphSnapshotValid || !showDashTelegraph )
         return;
 
     ApplyDashTelegraphVisualSnapshot();
@@ -28,7 +26,6 @@ void GruxEnemy::BeginDashTelegraphVisual()
     dashTelegraphDynamicLineStart = dashTelegraphLineStart;
     dashTelegraphCurrentLineLength = dashTelegraphLineLength;
     dashTelegraphLineShrinkProgress = 0.0f;
-    // No FadeOut is armed until the authored Knockup event arrives.
     dashTelegraphLineFadeOutElapsed = -1.0f;
     dashTelegraphLineAlpha = 1.0f;
     dashTelegraphFanFadeInProgress = 0.0f;
@@ -40,13 +37,12 @@ void GruxEnemy::BeginDashTelegraphVisual()
     dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.brightness = -1.0f;
     dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
     dashTelegraphFanMeshComponent->SetIsVisible(false);
-    // The line is now actually visible; this is a one-shot attack entry, not Update.
     PlayBossTelegraphSE("boss_dash_telegraph.wav");
 }
 
 void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
 {
-    if (forceShowDashTelegraph || dashTelegraphVisualState == DashTelegraphVisualState::Hidden)
+    if ( dashTelegraphVisualState == DashTelegraphVisualState::Hidden)
         return;
     if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
         return;
@@ -222,8 +218,7 @@ void GruxEnemy::UpdateDashTelegraphLineShrink()
 
 void GruxEnemy::BeginDashTelegraphFadeOut()
 {
-    if (dashTelegraphVisualState == DashTelegraphVisualState::Hidden ||
-        forceShowDashTelegraph || !dashTelegraphFanMeshComponent ||
+    if (dashTelegraphVisualState == DashTelegraphVisualState::Hidden ||!dashTelegraphFanMeshComponent ||
         !dashTelegraphFanMeshComponent->IsVisible())
         return;
 
@@ -242,8 +237,7 @@ void GruxEnemy::BeginDashTelegraphFadeOut()
 
 void GruxEnemy::ApplyDashTelegraphVisualSnapshot()
 {
-    if (!dashTelegraphSnapshotValid ||
-        (!showDashTelegraph && !forceShowDashTelegraph))
+    if (!dashTelegraphSnapshotValid ||!showDashTelegraph )
     {
         HideDashTelegraphVisual();
         return;
@@ -303,12 +297,6 @@ void GruxEnemy::HideDashTelegraphVisual()
         dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.brightness = 0.0f;
         dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
     }
-}
-
-void GruxEnemy::UpdateDashTelegraphVisualDebug()
-{
-    if (forceShowDashTelegraph)
-        ApplyDashTelegraphVisualSnapshot();
 }
 
 bool DashPlanAvailable::Judgment()

@@ -13,8 +13,6 @@ namespace
 {
     bool IsOtherBTActionForRoar(NodeBase* node)
     {
-        // Idle can advertise eligibility, but the scheduler still waits for its
-        // Complete before inferring Root. Active attacks/recovery remain blocked.
         return node && node->GetName() != "Idle" && node->GetName() != "StartRoar";
     }
 
@@ -392,7 +390,6 @@ bool GruxEnemy::CanPlanReposition()
     const bool movementInactive = !repositionMovementRuntime.movementActive;
     const bool cooldownReady = repositionCooldownRemaining <= 0.0f;
     const bool retryReady = repositionRetryCooldownRemaining <= 0.0f;
-    // When the Player cannot act, Defensive is suppressed but Reposition remains allowed.
     const bool playerAvailableForDefensive = CanPlanAttackAgainstCurrentPlayer();
     const bool roarAvailable = playerAvailableForDefensive && CanPlanRoar();
     const bool retreatAvailable = playerAvailableForDefensive && !roarAvailable && CanPlanRetreat();
@@ -427,8 +424,6 @@ bool GruxEnemy::PrepareRepositionTarget()
         return false;
     }
 
-    // Reposition intentionally shares Retreat's fixed-target candidate policy.
-    // Only its activation conditions and distance/cooldown values differ.
     repositionRuntime.playerSnapshot = player->GetPosition();
     repositionRuntime.gruxSnapshot = GetPosition();
     float awayX = repositionRuntime.gruxSnapshot.x - repositionRuntime.playerSnapshot.x;
@@ -534,8 +529,6 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRepositionMovement(float dt)
 }
 void GruxEnemy::FinishRepositionMovement(bool arrived)
 {
-    // Arrival must stop positioning immediately.  The success cooldown is
-    // deliberately deferred until WaitAfterReposition completes.
     StopAIMovement();
     EndPositioningAnimation();
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
@@ -632,7 +625,6 @@ int GruxEnemy::UpdateRoarBT(float dt)
     UpdateRoarTelegraphTransform();
     UpdateRoarFloatingDebris();
     if (controller->IsPlayAnimation()) return 0;
-    // A stopped clip is only a successful completion at its expected end.
     if (time + 0.02f < roarBT.endTime) return fail("Animation stopped early");
     if (roarBT.stage == RoarStage::Telegraph)
     {
@@ -654,7 +646,6 @@ void GruxEnemy::ApplyRoarShockwave()
     if (roarBT.stage != RoarStage::Shockwave || roarBT.shockwaveFired ||
         !IsRoarExecutionAllowed() || !controller || controller->GetCurrentAnimationName() != "LevelStart_0")
         return;
-    // Consume the event even on a miss: moving into the radius later must not hit.
     roarBT.shockwaveFired = true;
     roarTelegraphProgress = 1.0f;
     UpdateRoarTelegraphTransform();
@@ -760,9 +751,6 @@ void GruxEnemy::UpdateRoarTelegraphProgress()
     if (!controller || roarBT.stage == RoarStage::None)
         return;
 
-    // The two sections are weighted by their Animation Timeline spans, not
-    // world time.  Speed Curve therefore changes how quickly the playhead
-    // reaches each value, while preserving pose-aligned progress.
     constexpr float shockwaveEventTime = 0.30f;
     const float preDuration = (std::max)(0.0f, roarPreStampedeEndTime - roarPreStampedeStartTime);
     const float totalDuration = preDuration + shockwaveEventTime;
@@ -1123,7 +1111,6 @@ void GruxEnemy::CleanupRoarBT(const char* status)
         if (characterMovementComponent) characterMovementComponent->ResetFixedSpeed();
         DisableAttackHitBoxes();
         const auto controller = GetBodyAnimationController();
-        // Do not overwrite death, stun, preview or externally owned animation.
         if (IsRoarExecutionAllowed() && controller &&
             (controller->GetCurrentAnimationName() == "Pre_Stampede_0" ||
              controller->GetCurrentAnimationName() == "LevelStart_0"))
@@ -1131,7 +1118,6 @@ void GruxEnemy::CleanupRoarBT(const char* status)
     }
     roarBT = {};
     roarBTStatus = status;
-    // Cooldown belongs to Defensive, not to the lifetime of this execution.
 }
 
 void GruxEnemy::TickRoarLifecycle(float dt)
@@ -1153,8 +1139,6 @@ void GruxEnemy::TickRoarLifecycle(float dt)
 
 float GruxEnemy::GetRoarRenderFootOffset() const
 {
-    // Query at draw time so interruption, preview and animation changes cannot
-    // leave a stale offset between the animation update and a render pass.
     const auto controller = GetBodyAnimationController();
     if (roarBT.stage != RoarStage::Shockwave || !IsRoarExecutionAllowed() ||
         !activeNode || (activeNode->GetName() != "ExecuteRoar" && activeNode->GetName() != "FinishRoar") ||
@@ -1209,11 +1193,6 @@ void GruxEnemy::DrawRoarBTDebug()
     if (roarCooldownRemaining > 0.0f && roarCooldownDuration != previousCooldownDuration)
         roarCooldownRemaining = (std::max)(0.0f,
             roarCooldownRemaining + roarCooldownDuration - previousCooldownDuration);
-    const auto context = BuildTargetContext();
-    const auto phaseScene = dynamic_cast<GameScene*>(GetOwnerScene());
-    const bool isPhase2 = phaseScene && phaseScene->IsBossInFinalPhase();
-    const char* region = !context.valid ? "None" : context.region == PlayerRelativeRegion::Back ? "Back" :
-        context.region == PlayerRelativeRegion::Side ? "Side" : "Front";
     ImGui::ProgressBar(std::clamp(roarTelegraphProgress, 0.0f, 1.0f), ImVec2(-FLT_MIN, 0.0f));
     ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::ColorEdit3("Roar Phase 1 Outer Tint", &roarTelegraphPhase1OuterTint.x);
@@ -1226,11 +1205,6 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::DragFloat("Roar Fill Glow Max", &roarTelegraphFillGlowMax, 0.05f, 0.0f, 20.0f, "%.2f");
     ImGui::DragFloat("Roar Fill Alpha Min", &roarTelegraphFillAlphaMin, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Roar Fill Alpha Max", &roarTelegraphFillAlphaMax, 0.01f, 0.0f, 1.0f, "%.2f");
-    roarTelegraphOuterAlpha = std::clamp(roarTelegraphOuterAlpha, 0.0f, 1.0f);
-    roarTelegraphFillGlowMin = (std::max)(0.0f, roarTelegraphFillGlowMin);
-    roarTelegraphFillGlowMax = (std::max)(roarTelegraphFillGlowMin, roarTelegraphFillGlowMax);
-    roarTelegraphFillAlphaMin = std::clamp(roarTelegraphFillAlphaMin, 0.0f, 1.0f);
-    roarTelegraphFillAlphaMax = std::clamp(roarTelegraphFillAlphaMax, roarTelegraphFillAlphaMin, 1.0f);
     ImGui::Checkbox("Floating Debris Enabled", &roarFloatingDebrisEnabled);
     ImGui::DragFloat("Roar Floating Debris Inner Ratio", &roarFloatingDebrisInnerRatio, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Roar Floating Debris Outer Ratio", &roarFloatingDebrisOuterRatio, 0.01f, 0.0f, 1.0f, "%.2f");
@@ -1255,35 +1229,6 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::DragFloat("Roar Ground Burst Angle Jitter", &roarGroundBurstAngleJitterDegrees, 0.25f, 0.0f, 45.0f, "%.1f deg");
     ImGui::DragFloat("Roar Ground Burst Radius Jitter", &roarGroundBurstRadiusJitter, 0.005f, 0.0f, 0.25f, "%.3f");
     ImGui::DragFloat("Roar Ground Burst Y Offset", &roarGroundBurstYOffset, 0.01f, -1.0f, 1.0f, "%.2f m");
-    roarFloatingDebrisInnerRatio = std::clamp(roarFloatingDebrisInnerRatio, 0.0f, 1.0f);
-    roarFloatingDebrisOuterRatio = std::clamp(roarFloatingDebrisOuterRatio, roarFloatingDebrisInnerRatio, 1.0f);
-    roarFloatingDebrisMinHeight = (std::max)(0.0f, roarFloatingDebrisMinHeight);
-    roarFloatingDebrisMaxHeight = (std::max)(roarFloatingDebrisMinHeight, roarFloatingDebrisMaxHeight);
-    roarFloatingDebrisScaleMin = (std::max)(0.0f, roarFloatingDebrisScaleMin);
-    roarFloatingDebrisScaleMax = (std::max)(roarFloatingDebrisScaleMin, roarFloatingDebrisScaleMax);
-    roarImpactDebrisSpawnHeight = std::clamp(roarImpactDebrisSpawnHeight, 0.0f, 1.0f);
-    roarImpactDebrisGravity = (std::max)(0.0f, roarImpactDebrisGravity);
-    roarImpactDebrisSmallHorizontalSpeedMin = (std::max)(0.0f, roarImpactDebrisSmallHorizontalSpeedMin);
-    roarImpactDebrisSmallHorizontalSpeedMax = (std::max)(roarImpactDebrisSmallHorizontalSpeedMin, roarImpactDebrisSmallHorizontalSpeedMax);
-    roarImpactDebrisSmallVerticalSpeedMin = (std::max)(0.0f, roarImpactDebrisSmallVerticalSpeedMin);
-    roarImpactDebrisSmallVerticalSpeedMax = (std::max)(roarImpactDebrisSmallVerticalSpeedMin, roarImpactDebrisSmallVerticalSpeedMax);
-    roarImpactDebrisSmallLifetimeMin = (std::max)(0.0f, roarImpactDebrisSmallLifetimeMin);
-    roarImpactDebrisSmallLifetimeMax = (std::max)(roarImpactDebrisSmallLifetimeMin, roarImpactDebrisSmallLifetimeMax);
-    roarImpactDebrisBlockHorizontalSpeedMin = (std::max)(0.0f, roarImpactDebrisBlockHorizontalSpeedMin);
-    roarImpactDebrisBlockHorizontalSpeedMax = (std::max)(roarImpactDebrisBlockHorizontalSpeedMin, roarImpactDebrisBlockHorizontalSpeedMax);
-    roarImpactDebrisBlockVerticalSpeedMin = (std::max)(0.0f, roarImpactDebrisBlockVerticalSpeedMin);
-    roarImpactDebrisBlockVerticalSpeedMax = (std::max)(roarImpactDebrisBlockVerticalSpeedMin, roarImpactDebrisBlockVerticalSpeedMax);
-    roarImpactDebrisBlockLifetimeMin = (std::max)(0.0f, roarImpactDebrisBlockLifetimeMin);
-    roarImpactDebrisBlockLifetimeMax = (std::max)(roarImpactDebrisBlockLifetimeMin, roarImpactDebrisBlockLifetimeMax);
-    roarImpactDebrisSmallScaleMin = (std::max)(0.0f, roarImpactDebrisSmallScaleMin);
-    roarImpactDebrisSmallScaleMax = (std::max)(roarImpactDebrisSmallScaleMin, roarImpactDebrisSmallScaleMax);
-    roarImpactDebrisBlockScaleMin = (std::max)(0.0f, roarImpactDebrisBlockScaleMin);
-    roarImpactDebrisBlockScaleMax = (std::max)(roarImpactDebrisBlockScaleMin, roarImpactDebrisBlockScaleMax);
-    roarGroundBurstInnerRingRatio = std::clamp(roarGroundBurstInnerRingRatio, 0.0f, 1.0f);
-    roarGroundBurstOuterRingRatio = std::clamp(roarGroundBurstOuterRingRatio,
-        roarGroundBurstInnerRingRatio, 1.0f);
-    roarGroundBurstAngleJitterDegrees = (std::max)(0.0f, roarGroundBurstAngleJitterDegrees);
-    roarGroundBurstRadiusJitter = (std::max)(0.0f, roarGroundBurstRadiusJitter);
     if (!roarFloatingDebrisEnabled)
         HideRoarFloatingDebris();
     if (!roarImpactDebrisEnabled)
@@ -1301,11 +1246,5 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::DragFloat(U8("退避 最低移動距離"), &retreatMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
     ImGui::DragFloat(U8("退避 移動速度"), &retreatMoveSpeed, 0.1f, 0.0f, 30.0f, "%.2f m/s");
     ImGui::DragFloat(U8("退避 再試行待ち"), &retreatRetryCooldownDuration, 0.1f, 0.0f, 10.0f, "%.2f sec");
-    retreatDistanceMin = (std::max)(0.0f, retreatDistanceMin);
-    retreatDistanceMax = (std::max)(retreatDistanceMin, retreatDistanceMax);
-    retreatMinimumMoveDistance = (std::max)(0.0f, retreatMinimumMoveDistance);
-    retreatMoveSpeed = (std::max)(0.0f, retreatMoveSpeed);
-    retreatRetryCooldownDuration = (std::max)(0.0f, retreatRetryCooldownDuration);
-
 #endif
 }
