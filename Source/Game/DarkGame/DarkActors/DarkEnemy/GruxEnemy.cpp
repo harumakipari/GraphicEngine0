@@ -59,7 +59,10 @@ void GruxEnemy::Initialize(const Transform& transform)
     // 予兆用のモデルを作成する
     CreateTelegraphMesh(parentName);
 
+    // Roar衝撃時の破片を用意する。
     EnsureRoarImpactDebris();
+
+    // Roar予兆中の浮遊物を用意する。
     EnsureRoarFloatingDebris();
 }
 
@@ -966,16 +969,21 @@ void GruxEnemy::SetHpBarVisualProfileForBattlePhase(const bool phase2)
 
 void GruxEnemy::StopBattleActions()
 {
+    // 中断中の状態と復帰情報を解除する。
     rushCombatHoldActive = false;
     interruptedChargeRecoveryPending = false;
     interruptedChargeRecoveryActive = false;
     interruptedChargeRecoveryTimer = 0.0f;
     interruptedChargeRecoveryDuration = 0.0f;
+
+    // TelegraphとRoar演出を停止する。
     ResetWeaponTelegraphRimLight();
     HideDashTelegraphVisual();
     HideRoarTelegraph();
     HideRoarFloatingDebris();
     HideRoarImpactDebris();
+
+    // 実行中のBTアクションをCleanupする。
     if (IsRoarBTActive())
     {
         CleanupRoarBT("Interrupted");
@@ -994,14 +1002,15 @@ void GruxEnemy::StopBattleActions()
         activeNode = nullptr;
         if (behaviorData) behaviorData->Init();
     }
+
+    // 攻撃判定・移動・ターゲットを停止する。
     DisableAttackHitBoxes();
     StopDashAttackMovement();
     StopChargeAttackMovement();
     StopAIMovement();
     ClearAttackSetupTarget();
-    // Death/abort must also discard non-attack positioning targets. Otherwise a
-    // deferred Reposition/Retreat completion can request its idle animation
-    // after GameScene has taken cinematic animation ownership.
+
+    // 非攻撃のPositioning目標も破棄する。
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
     retreatRuntime = {};
@@ -1010,6 +1019,7 @@ void GruxEnemy::StopBattleActions()
     ClearFastComboStepIn();
     ResetJustDodgeRecords("battle_stop");
 
+    // 攻撃選択・履歴・演出状態を初期化する。
     beginHuskParticleRequest = false;
     selectedActionType = BossActionType::AttackLA;
     selectedAttackType = BossAttackType::PrimaryAttackLA;
@@ -1023,6 +1033,8 @@ void GruxEnemy::StopBattleActions()
     transitionWindow = false;
     hitActors.clear();
     currentAttackHitCount = 0;
+
+    // TrailとRecovery・計測値を初期化する。
     showLeftWeaponTrail = false;
     showRightWeaponTrail = false;
     leftWeaponTrail.Clear();
@@ -1036,6 +1048,7 @@ void GruxEnemy::StopBattleActions()
     dashAttackElapsedTime = 0.0f;
     animationMotionWarps.clear();
 
+    // MovementComponentへの入力と速度を停止する。
     characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
     characterMovementComponent->SetInputMagnitude(0.0f);
     characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
@@ -3454,7 +3467,6 @@ bool GruxEnemy::PlayAttackReadySE()
 
 void GruxEnemy::StartWeaponTelegraph(const std::string& animationName)
 {
-    // A missing ShowEmissive state must not leave a prior attack's telegraph alive.
     ResetWeaponTelegraphRimLight();
 
     const auto controller = GetBodyAnimationController();

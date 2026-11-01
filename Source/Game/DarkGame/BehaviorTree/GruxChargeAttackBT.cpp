@@ -62,7 +62,7 @@ ActionBase::State ExecuteChargeRecovery::Run(float dt)
     }
     if (owner->GetChargeBTPhase() == GruxEnemy::ChargeBTPhase::RecoveryPending)
     {
-        timerAction.Reset(); // Also resets an interrupted recovery before StartAttack was called.
+        timerAction.Reset(); 
         owner->BeginChargeRecoveryBT();
     }
     if (owner->GetChargeBTPhase() == GruxEnemy::ChargeBTPhase::Recovery)
@@ -120,11 +120,10 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
         CleanupChargeAttackBT();
         return false;
     }
-    // The only setup destination write for this plan. Shared movement never resamples it.
     attackSetupTarget = {};
     attackSetupTarget.valid = true;
     attackSetupTarget.targetPosition = target;
-    attackSetupTarget.stuckMovementThreshold = 0.01f; // Same per-frame tolerance as Dash's context.
+    attackSetupTarget.stuckMovementThreshold = 0.01f; 
     const auto position = GetPosition();
     const float dx = target.x - position.x, dz = target.z - position.z;
     attackSetupChosenDistance = chosenDistance;
@@ -173,7 +172,7 @@ void GruxEnemy::FailChargeAttackBT()
     DisableAttackHitBoxes();
     ClearAttackSetupTarget();
     chargeBT.failed = true;
-    chargeBT.result = ChargeAttackEndReason::None; // Keep failure distinct without changing the legacy enum.
+    chargeBT.result = ChargeAttackEndReason::None; 
     chargeBT.phase = ChargeBTPhase::Result;
     SetChargePhaseDebug("Failed");
 }
@@ -190,7 +189,7 @@ void GruxEnemy::StartChargeAttackBT()
     }
     StopAttackSetupMovement();
     ClearAttackSetupTarget();
-    StartAttack(); // Once per whole attack, never once per leg.
+    StartAttack(); 
     chargeBT.attackStarted = true;
     chargeBT.phase2SettingsLatched = IsPhase2ChargeActive();
     chargeBT.tripleChargeActive = chargeBT.phase2SettingsLatched;
@@ -220,7 +219,6 @@ void GruxEnemy::StartChargeAttackBT()
 
 bool GruxEnemy::BeginSingleChargeBT()
 {
-    // Existing entry owns the direction snapshot, timer, danger flag, animation and velocity.
     HideChargeTelegraphVisual();
     if (!BeginChargeAttackMovement()) return false;
     chargeBT.result = ChargeAttackEndReason::None;
@@ -240,8 +238,6 @@ bool GruxEnemy::BeginTripleChargeLeg()
     chargeBT.tripleBeginTripleChargeLegCalled = true;
     chargeBT.tripleBeginTripleChargeLegResult = false;
     chargeBT.tripleBeginChargeMovementResult = false;
-    // A triple Charge is one attack sequence, but each leg owns its own dodge and
-    // damage eligibility. Keep the sequence id while resetting per-leg records.
     ResetJustDodgeRecords("triple_charge_leg_start");
     hitActors.clear();
     HideChargeTelegraphVisual();
@@ -340,7 +336,6 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
 {
     ++chargeBT.tripleChargeTelegraphCallCount;
 
-    const int index = std::clamp(chargeBT.tripleChargeIndex, 0, 2);
     const DirectX::XMFLOAT3 direction = chargeDirection;
     const float directionLength = std::sqrt(direction.x * direction.x + direction.z * direction.z);
     if (directionLength <= FLT_EPSILON)
@@ -360,8 +355,6 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
     castOrigin.z = startPosition.z;
     castOrigin.y += (std::max)((std::max)(playerRadius, wallRadius) + 0.05f, height * 0.5f);
 
-    // Telegraph-only query. Gameplay Wall SphereCast remains in
-    // UpdateChargeAttackMovement() with its original mask and conditions.
     const uint32_t telegraphWallMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic);
     HitResultWithActor wallHit{};
     const bool rawWallHit = Physics::Instance().SphereCast(
@@ -418,80 +411,7 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
     chargeBT.tripleChargeTelegraphStartPosition = startPosition;
     chargeBT.tripleChargeTelegraphLength = telegraphLength;
     chargeBT.tripleChargeTelegraphWidth = telegraphWidth;
-    chargeBT.tripleChargeTelegraphVisible = showTripleChargeTelegraph &&
-        chargeTelegraphMeshComponent != nullptr;
-
-    // Diagnostic snapshot only. Gameplay cast conditions and length calculation
-    // remain unchanged; retain the last three generation results for comparison.
-    const size_t snapshotIndex = static_cast<size_t>(
-        chargeBT.tripleChargeTelegraphSnapshotWriteIndex % chargeBT.tripleChargeTelegraphSnapshots.size());
-    auto& snapshot = chargeBT.tripleChargeTelegraphSnapshots[snapshotIndex];
-    snapshot = {};
-    snapshot.generation = ++chargeBT.tripleChargeTelegraphSnapshotCount;
-    snapshot.chargeIndex = index;
-    snapshot.direction = normalizedDirection;
-    snapshot.directionLocked = chargeDirectionLocked;
-    snapshot.castOrigin = castOrigin;
-    snapshot.castEnd = {
-        castOrigin.x + normalizedDirection.x * castDistance,
-        castOrigin.y + normalizedDirection.y * castDistance,
-        castOrigin.z + normalizedDirection.z * castDistance };
-    snapshot.startPosition = startPosition;
-    snapshot.gruxPosition = GetPosition();
-    snapshot.gruxScale = GetScale();
-    snapshot.rawWallHit = rawWallHit;
-    snapshot.wallHit = rawWallHit;
-    // Preserve the raw query distance even when the existing Candidate filter
-    // rejects the surface; this is diagnostic data only.
-    snapshot.wallDistance = rawWallHit ? (std::max)(0.0f, wallHit.distance) : 0.0f;
-    snapshot.worldStaticDistance = worldStaticDistance;
-    snapshot.boundaryDistance = boundaryDistance;
-    snapshot.lengthSource = chargeBT.tripleChargeTelegraphLengthSource;
-    snapshot.length = telegraphLength;
-    snapshot.wallCastRadius = wallRadius;
-    snapshot.playerCastRadius = playerRadius;
-    snapshot.wallTurnClearance = chargeBT.tripleChargeWallTurnClearance;
-    snapshot.maxDistance = tripleChargeTelegraphMaxDistance;
-    snapshot.capsuleRadius = radius;
-    snapshot.phase2Scale = enemyScale;
-    snapshot.phase2TransformProgress = phaseTransformProgress;
-    snapshot.bossInFinalPhase = IsPhase2ChargeActive();
-    if (rawWallHit)
-    {
-        snapshot.hitPosition = wallHit.hitPoint;
-        snapshot.hitNormal = wallHit.normal;
-        if (wallHit.actor)
-            snapshot.wallHitActor = wallHit.actor->GetName();
-        if (wallHit.component)
-        {
-            snapshot.wallHitComponent = wallHit.component->GetName();
-            snapshot.wallHitLayer = wallHit.component->GetCollisionLayer();
-        }
-    }
-    ++chargeBT.tripleChargeTelegraphSnapshotWriteIndex;
-
-    if (showTripleChargeTelegraph)
-    {
-        const DirectX::XMFLOAT3 castEnd{
-            castOrigin.x + normalizedDirection.x * castDistance,
-            castOrigin.y + normalizedDirection.y * castDistance,
-            castOrigin.z + normalizedDirection.z * castDistance };
-        const DirectX::XMFLOAT4 castColor{ 1.0f, 0.75f, 0.10f, 1.0f };
-        DebugRender::DrawLine(castOrigin, castEnd, castColor, 0.0f, true);
-        DebugRender::DrawSphere(castOrigin, wallRadius, castColor, 0.0f, true);
-        DebugRender::DrawSphere(castEnd, wallRadius, castColor, 0.0f, true);
-        if (rawWallHit)
-        {
-            DebugRender::DrawSphere(wallHit.hitPoint, 0.12f,
-                { 1.0f, 0.15f, 0.05f, 1.0f }, 0.0f, true);
-            const DirectX::XMFLOAT3 normalEnd{
-                wallHit.hitPoint.x + wallHit.normal.x,
-                wallHit.hitPoint.y + wallHit.normal.y,
-                wallHit.hitPoint.z + wallHit.normal.z };
-            DebugRender::DrawLine(wallHit.hitPoint, normalEnd,
-                { 1.0f, 0.15f, 0.05f, 1.0f }, 0.0f, true);
-        }
-    }
+    chargeBT.tripleChargeTelegraphVisible =chargeTelegraphMeshComponent != nullptr;
 
     if (chargeTelegraphMeshComponent)
     {
@@ -525,16 +445,6 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
         chargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
         chargeTelegraphMeshComponent->UpdateComponentToWorld();
 
-        snapshot.requestedPosition = startPosition;
-        snapshot.requestedRotation = rotationFloat;
-        snapshot.requestedYaw = yaw;
-        snapshot.requestedScale = requestedScale;
-        snapshot.relativePosition = chargeTelegraphMeshComponent->GetRelativeLocation();
-        snapshot.relativeScale = chargeTelegraphMeshComponent->GetRelativeScale();
-        snapshot.componentWorldPosition = chargeTelegraphMeshComponent->GetComponentLocation();
-        snapshot.componentWorldScale = chargeTelegraphMeshComponent->GetComponentScale();
-        snapshot.componentWorldMatrix =
-            chargeTelegraphMeshComponent->GetComponentWorldTransform().ToWorldTransform();
         const auto worldMatrix = chargeTelegraphMeshComponent->GetComponentWorldTransform().ToWorldTransform();
         const auto transformPoint = [&worldMatrix](const DirectX::XMFLOAT3& point)
         {
@@ -544,22 +454,10 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
                     DirectX::XMLoadFloat4x4(&worldMatrix)));
             return result;
         };
-        snapshot.actualMeshStart = transformPoint({ 0.0f, 0.0f, 0.0f });
-        snapshot.actualMeshEnd = transformPoint({ 0.0f, 0.0f, -1.0f });
-        if (showTripleChargeTelegraph)
-        {
-            const DirectX::XMFLOAT4 meshColor{ 0.25f, 1.0f, 0.35f, 1.0f };
-            DebugRender::DrawLine(snapshot.actualMeshStart, snapshot.actualMeshEnd,
-                meshColor, 0.0f, true);
-            DebugRender::DrawSphere(snapshot.actualMeshStart, 0.10f, meshColor, 0.0f, true);
-            DebugRender::DrawSphere(snapshot.actualMeshEnd, 0.10f, meshColor, 0.0f, true);
-        }
         chargeTelegraphMeshComponent->SetIsVisible(chargeBT.tripleChargeTelegraphVisible);
         if (chargeBT.tripleChargeTelegraphVisible)
             PlayBossTelegraphSE("boss_charge_telegraph.wav");
-        (void)centerPosition; // The asset pivot is the start edge, not the center.
     }
-    // Keep the boss-side edge fixed and reveal the plane towards its end.
     UpdateChargeTelegraphVisual(0.0f);
     return true;
 }
@@ -584,8 +482,6 @@ void GruxEnemy::UpdateChargeTelegraphVisual(float lengthProgress)
         width / (std::abs(rootScale.x) > 0.001f ? rootScale.x : 1.0f),
         1.0f,
         length / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
-    // ChargeTelegraphPlane2's local -Z axis starts at the local origin;
-    // changing only Z scale therefore preserves the world-space start edge.
     chargeTelegraphMeshComponent->SetWorldLocationDirect(
         chargeBT.tripleChargeTelegraphStartPosition);
     chargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
@@ -1113,7 +1009,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeStunBT(float dt)
 
 void GruxEnemy::FinishChargeAttackBT()
 {
-    // Whole-attack boundary. Phase2 can defer this until its final leg/result is resolved.
     if (chargeBT.attackStarted && !chargeBT.cooldownStarted)
     {
         const auto savedAction = selectedActionType;
@@ -1144,7 +1039,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
     }
     else if (chargeBT.phase == ChargeBTPhase::Result)
     {
-        // Phase1 policy. The single-charge executor does not know this mapping.
         if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::WallHit)
         {
             if (BeginChargeStunBT()) return ChargeBTStepResult::Running;
@@ -1185,8 +1079,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
 
 void GruxEnemy::NotifyPlayerRushStarted(Player* player)
 {
-    // PlayerRushState::Enter calls this only after it locks Player's rushTarget
-    // to this Grux. Charge execution is the remaining cancellation guard.
     if (!player || !IsChargeAttackBTActive())
         return;
 
@@ -1231,7 +1123,7 @@ void GruxEnemy::CleanupChargeAttackBT()
     // Charge固有のRuntime、演出、当たり判定を後始末する。
     HideChargeTelegraphVisual();
     if (!IsChargeAttackBTActive()) return;
-    FinishChargeAttackBT(); // Idempotent; no cooldown before StartAttack, none per leg.
+    FinishChargeAttackBT(); 
     const float tripleTurnClearance = chargeBT.tripleChargeWallTurnClearance;
     const float tripleMaxDistance = chargeBT.tripleChargeLegMaxDistance;
     const float tripleMaxDuration = chargeBT.tripleChargeLegMaxDuration;
@@ -1298,7 +1190,6 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     ImGui::DragFloat("Triple Charge Reposition Safety Margin", &tripleChargeRepositionSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
     ImGui::DragFloat("Triple Charge Reposition Speed", &tripleChargeRepositionSpeed, 0.05f, 0.1f, 10.0f, "%.2f m/s");
     ImGui::DragFloat("Triple Charge Reposition Side Safety Margin", &tripleChargeRepositionSideSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
-    ImGui::Checkbox("Show Triple Charge Telegraph", &showTripleChargeTelegraph);
     ImGui::Checkbox("Triple Charge Telegraph Emissive Enabled", &tripleChargeTelegraphEmissiveEnabled);
     ImGui::ColorEdit3("Triple Charge Telegraph Phase 1 Emissive Color", &tripleChargeTelegraphPhase1EmissiveColor.x);
     ImGui::ColorEdit3("Triple Charge Telegraph Phase 2 Emissive Color", &tripleChargeTelegraphPhase2EmissiveColor.x);

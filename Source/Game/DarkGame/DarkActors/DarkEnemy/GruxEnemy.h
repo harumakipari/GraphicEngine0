@@ -1724,10 +1724,8 @@ private:
     BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;  // 選択された位置調整の方向。
 
 
-    // FastCombo??A???U???p
     bool transitionWindow = false;  // FastComboの次段階へ移行できるNotify期間か。
 
-    // JumpAttack??MotionWarp?p
     float maxJumpDistance = 21.5f;  // Jump攻撃の最大移動距離。
     float desiredAttackDistance = 0.1f;  // Jump攻撃で目指す対象との距離。
     float jumpSetupDistanceMin = 6.5f;  // Jumpの準備位置に必要な対象との最小距離。
@@ -1880,50 +1878,6 @@ private:
     bool UpdateChargeAnimationWatchdogBT(float animationTime, float deltaTime);
     struct ChargeBTRuntime
     {
-        struct TripleChargeTelegraphSnapshot
-        {
-            uint64_t generation = 0;  // 予兆の診断記録の世代番号。
-            int chargeIndex = 0;  // 診断記録に対応するChargeの番号。
-            DirectX::XMFLOAT3 direction{};  // 診断記録に対応するChargeの方向。
-            bool directionLocked = false;  // 予兆の方向が固定済みか。
-            DirectX::XMFLOAT3 castOrigin{};  // 予兆の判定開始位置。
-            DirectX::XMFLOAT3 castEnd{};  // 予兆の判定終了位置。
-            DirectX::XMFLOAT3 requestedPosition{};  // 予兆に要求された位置。
-            DirectX::XMFLOAT4 requestedRotation{};  // 予兆に要求された回転。
-            float requestedYaw = 0.0f;  // 予兆に要求されたYaw角。
-            DirectX::XMFLOAT3 requestedScale{};  // 予兆に要求されたスケール。
-            DirectX::XMFLOAT3 relativePosition{};  // 予兆コンポーネントの相対位置。
-            DirectX::XMFLOAT3 relativeScale{};  // 予兆コンポーネントの相対スケール。
-            DirectX::XMFLOAT3 componentWorldPosition{};  // 予兆コンポーネントのワールド位置。
-            DirectX::XMFLOAT3 componentWorldScale{};  // 予兆コンポーネントのワールドスケール。
-            DirectX::XMFLOAT4X4 componentWorldMatrix{};  // 予兆コンポーネントのワールド行列。
-            DirectX::XMFLOAT3 actualMeshStart{};  // 予兆メッシュの実際の開始位置。
-            DirectX::XMFLOAT3 actualMeshEnd{};  // 予兆メッシュの実際の終了位置。
-            DirectX::XMFLOAT3 startPosition{};  // 予兆の開始位置。
-            DirectX::XMFLOAT3 gruxPosition{};  // 診断記録時のボス位置。
-            DirectX::XMFLOAT3 gruxScale{ 1.0f, 1.0f, 1.0f };  // 診断記録時のボスのスケール。
-            bool rawWallHit = false;  // 壁判定の生のヒット結果。
-            bool wallHit = false;  // 壁にヒットしたか。
-            float wallDistance = 0.0f;  // 壁までの距離。
-            float worldStaticDistance = 0.0f;  // 静的地形までの距離。
-            float boundaryDistance = 0.0f;  // 境界までの距離。
-            std::string lengthSource = "MaxDistanceFallback";  // 予兆の長さを決めた要因。
-            DirectX::XMFLOAT3 hitPosition{};  // ヒット位置。
-            DirectX::XMFLOAT3 hitNormal{};  // ヒットした面の法線。
-            float length = 0.0f;  // 予兆の長さ。
-            float wallCastRadius = 0.0f;  // 壁判定の半径。
-            float playerCastRadius = 0.0f;  // プレイヤー判定の半径。
-            float wallTurnClearance = 0.0f;  // 壁際の方向転換に必要な余白距離。
-            float maxDistance = 0.0f;  // 予兆の最大距離。
-            float capsuleRadius = 0.0f;  // カプセルの半径。
-            float phase2Scale = 0.0f;  // 第2段階のスケール。
-            float phase2TransformProgress = 0.0f;  // 第2段階への変化の進行度。
-            bool bossInFinalPhase = false;  // ボスが最終段階にあるか。
-            std::string wallHitActor = "None";  // ヒットした壁のアクター名。
-            std::string wallHitComponent = "None";  // ヒットした壁のコンポーネント名。
-            uint32_t wallHitLayer = 0;  // ヒットした壁のレイヤー。
-        };
-
         ChargeBTPhase phase = ChargeBTPhase::None;  // Chargeの準備からRecoveryまでの実行段階。
         ChargeBTStunPhase stunPhase = ChargeBTStunPhase::None;  // Charge後のスタン処理の段階。
         ChargeAttackEndReason result = ChargeAttackEndReason::None;  // Chargeの終了理由。
@@ -1962,9 +1916,6 @@ private:
         float tripleChargeTelegraphWorldStaticDistance = 0.0f;  // 複数回Chargeの予兆の静的地形までの距離。
         float tripleChargeTelegraphBoundaryDistance = 0.0f;  // 複数回Chargeの予兆の境界までの距離。
         std::string tripleChargeTelegraphLengthSource = "MaxDistanceFallback";  // 複数回Chargeの予兆の長さを決めた要因。
-        std::array<TripleChargeTelegraphSnapshot, 3> tripleChargeTelegraphSnapshots{};  // 複数回Chargeの予兆表示の診断記録。
-        uint64_t tripleChargeTelegraphSnapshotCount = 0;  // 複数回Chargeの予兆の診断記録数。
-        uint64_t tripleChargeTelegraphSnapshotWriteIndex = 0;  // 複数回Chargeの予兆の診断記録の書き込み位置。
         bool tripleBeginTripleChargeLegCalled = false;  // 各Chargeの開始処理が呼ばれたか。
         bool tripleBeginTripleChargeLegResult = false;  // 各Chargeの開始処理の結果。
         bool tripleBeginChargeMovementResult = false;  // Charge移動開始処理の結果。
@@ -2065,7 +2016,6 @@ private:
     DirectX::XMFLOAT3 tripleChargeTelegraphPhase1EmissiveColor{ 0.05f, 0.75f, 1.0f };  // 第1段階の複数回Charge予兆の発光色。
     DirectX::XMFLOAT3 tripleChargeTelegraphPhase2EmissiveColor{ 1.0f, 0.16f, 0.03f };  // 第2段階の複数回Charge予兆の発光色。
     float tripleChargeTelegraphEmissiveIntensity = 15.0f;  // 複数回Charge予兆の発光強度。
-    bool showTripleChargeTelegraph = true;  // 複数回Chargeの予兆を表示するか。
     float chargeElapsedTime = 0.0f;  // Chargeの経過時間。
     bool chargeMovementActive = false;  // Chargeの移動処理が有効か。
     bool chargeDangerWindowActive = false;  // Chargeの危険判定期間が有効か。
