@@ -629,6 +629,7 @@ void GruxEnemy::FinishDashAttackBT()
 
 void GruxEnemy::CleanupDashAttackBT()
 {
+    // Dash固有のRuntime、演出、当たり判定を後始末する。
     HideDashTelegraphVisual();
     if (!IsDashAttackBTActive())
         return;

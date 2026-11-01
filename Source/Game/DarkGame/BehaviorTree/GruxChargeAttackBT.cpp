@@ -106,7 +106,6 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
     StopAttackSetupMovement();
     ClearAttackSetupTarget();
     nextRecoveryDuration.reset();
-    pendingChargeRecoveryResult = ChargeAttackEndReason::None;
     DirectX::XMFLOAT3 target{};
     float chosenDistance = 0.0f;
     int candidateCount = 0;
@@ -214,7 +213,6 @@ void GruxEnemy::StartChargeAttackBT()
     chargeBT.previousAnimationTime = 0.0f;
     chargeDirectionLocked = false;
     chargeDirection = {};
-    SetPendingChargeRecoveryResult(ChargeAttackEndReason::None);
     SetChargePhaseDebug("Windup");
     PlayBodyAnimation("Pre_FootSlide_0", false, true, 0.1f, true);
     OnSelectedActionStartedSuccessfully();
@@ -1162,7 +1160,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
             chargeBT.recoveryDuration = GetChargeJustDodgeRecoveryDuration();
             source = "ChargeJustDodge";
         }
-        SetPendingChargeRecoveryResult(chargeBT.failed ? ChargeAttackEndReason::None : chargeBT.result);
         SetNextRecoveryDuration(chargeBT.recoveryDuration, source);
     }
     else return ChargeBTStepResult::Failed;
@@ -1223,11 +1220,13 @@ bool GruxEnemy::ShouldAbortChargeAttackBT()
     const bool behaviorTreeDisabled = !behaviorTreeFastComboEnabled;
     const bool executionNotAllowed = !IsChargeBTExecutionAllowed();
     const bool activeNodeNull = !activeNode;
+    // Charge Stunは通常の自己Abort対象ではなく、ResolveChargeResultBTで完了させる。
     return IsChargeAttackBTActive() &&
         (behaviorTreeDisabled || executionNotAllowed || activeNodeNull);
 }
 void GruxEnemy::CleanupChargeAttackBT()
 {
+    // Charge固有のRuntime、演出、当たり判定を後始末する。
     HideChargeTelegraphVisual();
     if (!IsChargeAttackBTActive()) return;
     FinishChargeAttackBT(); // Idempotent; no cooldown before StartAttack, none per leg.
@@ -1251,7 +1250,6 @@ void GruxEnemy::CleanupChargeAttackBT()
     chargeWallHitNormalDebug = {};
     chargePlayerHitActorDebug = chargeSelectedHitDebug = "None";
     chargePhaseDebug = "None";
-    pendingChargeRecoveryResult = ChargeAttackEndReason::None;
     nextRecoveryDuration.reset();
     nextRecoverySource = "Default";
     SetStunDebug("None", 0.0f);

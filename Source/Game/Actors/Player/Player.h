@@ -201,8 +201,6 @@ public:
     bool IsPrisonOpeningStandingFinished() const;
 
     // HUD・操作ガイド
-    // Scene が表示方針を決定し、Player は所有するHUDへ反映する。
-
     // Sceneが決定したHPバーの表示状態を反映する。
     void SetHpBarVisible(bool visible) const;
     // Sceneが決定したゲームプレイHUD全体の表示状態を反映する。

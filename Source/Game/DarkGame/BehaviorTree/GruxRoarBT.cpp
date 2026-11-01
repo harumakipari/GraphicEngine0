@@ -1106,6 +1106,7 @@ void GruxEnemy::HideRoarFloatingDebris()
 
 void GruxEnemy::CleanupRoarBT(const char* status)
 {
+    // Roar固有のRuntime、演出、当たり判定を後始末する。
     HideRoarTelegraph();
     HideRoarFloatingDebris();
     HideRoarImpactDebris();

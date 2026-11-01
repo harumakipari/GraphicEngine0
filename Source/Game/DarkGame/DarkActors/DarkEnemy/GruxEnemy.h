@@ -595,12 +595,7 @@ public:
     }
 
     // 死亡演出のアニメーションを外部が管理しているか返す。
-    bool IsCinematicDeathAnimationOwnedExternally() const
-    {
-        return cinematicDeathAnimationOwnedExternally;
-    }
 
-    // 死亡時のパーティクル開始要求を取得して解除する。
     bool ConsumeBeginHuskParticleRequest()
     {
         const bool requested = beginHuskParticleRequest;
@@ -622,9 +617,7 @@ public:
     }
 
     // 死亡時のアニメーション名を返す。
-    const std::string& GetDeathAnimationName() const { return deathAnimationName; }
 
-    // スタン段階と経過時間のデバッグ表示値を設定する。
     void SetStunDebug(const char* phase, float elapsed)
     {
         stunPhaseDebug = phase ? phase : "None";
@@ -647,12 +640,7 @@ public:
     float ConsumeNextRecoveryDuration();
 
     // Charge後のRecoveryに渡す結果を保持する。
-    void SetPendingChargeRecoveryResult(ChargeAttackEndReason reason);
 
-    // 保持したCharge結果を取得して解除する。
-    ChargeAttackEndReason ConsumePendingChargeRecoveryResult();
-
-    // Recoveryの経過時間と設定時間を記録する。
     void UpdateRecoveryDebug(float elapsed, float duration)
     {
         recoveryElapsedDebug = elapsed;
@@ -1100,6 +1088,21 @@ public:
     void SetFastComboRuntimeStage(int stage) { fastComboRuntimeStage = stage; }
 
 private:
+    // モデルとアニメーション生成する
+    void InitializeSkeletalMeshAndAnimations(const std::string& parentName);
+
+    // 当たり判定、ポイントライト、回転コンポーネントを追加
+    void CreateCoreComponents(const std::string& parentName);
+
+    // 武器の位置コンポーネント追加
+    void CreateWeaponSocketComponents(const std::string& parentName);
+
+    // エフェクトコンポーネント追加
+    void CreateEffectComponents(const std::string& parentName);
+
+    // 軌跡コンポーネント追加
+    void InitializeTrailEffects();
+
     // ビヘイビアツリーを作成する
     void CreateBossBehaviorTree();
 
@@ -2082,7 +2085,6 @@ private:
     float chargeWallCastRadiusDebug = 0.0f;  // Chargeの壁判定半径の診断値。
     std::string chargeStartFailureReasonDebug = "None";  // Charge開始失敗の理由。
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;  // Chargeの終了理由の診断値。
-    ChargeAttackEndReason pendingChargeRecoveryResult = ChargeAttackEndReason::None;  // Recovery処理に引き継ぐChargeの終了理由。
 
     float stunDuration = 2.5f;  // スタン状態の継続時間。
     std::string stunPhaseDebug = "None";  // スタンの実行段階の診断表示。
