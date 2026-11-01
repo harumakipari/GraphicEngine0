@@ -157,8 +157,6 @@ void GruxEnemy::Update(float deltaTime)
     {
         StopAIMovement();
         interruptedChargeRecoveryTimer += (std::max)(0.0f, deltaTime);
-        UpdateRecoveryDebug(interruptedChargeRecoveryTimer, interruptedChargeRecoveryDuration);
-        recoverySourceDebug = "InterruptedCharge";
         Character::Update(deltaTime);
         UpdateWeaponTelegraphRimLight(deltaTime);
         UpdateJumpTelegraphImpactFlash(deltaTime);
@@ -1042,8 +1040,6 @@ void GruxEnemy::StopBattleActions()
     nextRecoveryDuration.reset();
     nextRecoverySource = "Default";
     attackReadySEFired = false;
-    stunElapsedDebug = 0.0f;
-    recoveryElapsedDebug = 0.0f;
     chargeElapsedTime = 0.0f;
     dashAttackElapsedTime = 0.0f;
     animationMotionWarps.clear();
@@ -2492,12 +2488,8 @@ bool GruxEnemy::BeginChargeAttackMovement()
     // Reject a charge that starts with its swept body already touching a wall.
     // This is a start-position failure, not a normal forward WallHit.
     chargeStartPositionDebug = GetPosition();
-    chargeCurrentPositionDebug = chargeStartPositionDebug;
-    chargeTraveledDistanceDebug = 0.0f;
     chargeStartValidationValidDebug = false;
     chargeStartClearanceDebug = 0.0f;
-    chargePlayerCastRadiusDebug = (std::max)(0.05f, radius * GetActiveChargePlayerCastRadiusScale());
-    chargeWallCastRadiusDebug = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
     chargeStartFailureReasonDebug = "None";
     float validationClearance = 0.0f;
     bool validationHitWall = false;
@@ -2508,25 +2500,16 @@ bool GruxEnemy::BeginChargeAttackMovement()
     if (!validationMeasured)
     {
         chargeStartFailureReasonDebug = "DirectionInvalid";
-        SetChargePhaseDebug("StartValidationFailed");
         return false;
     }
     if (validationClearance <= chargeStartValidationClearance)
     {
         chargeStartFailureReasonDebug = "InitialWallContact";
-        SetChargePhaseDebug("StartValidationFailed");
         return false;
     }
     chargeStartValidationValidDebug = true;
     chargeElapsedTime = 0.0f;
-    chargePlayerCastHitDebug = false;
-    chargePlayerHitDistanceDebug = 0.0f;
-    chargePlayerHitActorDebug = "None";
-    chargeSelectedHitDebug = "None";
-    chargeWallCastHitDebug = false;
     chargeWallFacingAmountDebug = 0.0f;
-    chargeWallHitNormalDebug = {};
-    chargeWallHitDistanceDebug = 0.0f;
     chargeEndReasonDebug = ChargeAttackEndReason::None;
     chargeMovementActive = true;
     ApplyMainChargeWindSettings();
@@ -2540,7 +2523,6 @@ bool GruxEnemy::BeginChargeAttackMovement()
         characterMovementComponent->SetBossRoomProbeChargeWallHitArmed(true);
     }
     chargeDangerWindowActive = true;
-    chargeJustDodgeSuccessDebug = false;
 
     PlayBodyAnimation("Stampede_0", true, true, 0.1f, true);
     if (rotationComponent)
@@ -2589,18 +2571,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 
     UpdateChargeWindTrails(deltaTime);
     chargeElapsedTime += (std::max)(0.0f, deltaTime);
-    chargeCurrentPositionDebug = GetPosition();
-    const float traveledX = chargeCurrentPositionDebug.x - chargeStartPositionDebug.x;
-    const float traveledZ = chargeCurrentPositionDebug.z - chargeStartPositionDebug.z;
-    chargeTraveledDistanceDebug = std::sqrt(traveledX * traveledX + traveledZ * traveledZ);
-    chargePlayerCastHitDebug = false;
-    chargePlayerHitDistanceDebug = 0.0f;
-    chargePlayerHitActorDebug = "None";
-    chargeSelectedHitDebug = "None";
-    chargeWallCastHitDebug = false;
     chargeWallFacingAmountDebug = 0.0f;
-    chargeWallHitNormalDebug = {};
-    chargeWallHitDistanceDebug = 0.0f;
     CharacterMovementComponent::BossRoomProbeMoveBlockEvent bossRoomProbeBlockEvent;
     if (characterMovementComponent &&
         characterMovementComponent->ConsumeBossRoomProbeChargeWallHitEvent(bossRoomProbeBlockEvent))
@@ -2621,13 +2592,11 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
                 chargeBT.tripleChargeIndex < 2)
             {
                 chargeBT.tripleWallTurnTriggered = true;
-                chargeSelectedHitDebug = "BossRoomProbeLegComplete";
                 chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
                 StopChargeAttackMovement();
                 return chargeEndReasonDebug;
             }
 
-            chargeSelectedHitDebug = "BossRoomProbeWallHit";
             chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
             const DirectX::XMFLOAT3 currentPosition = GetPosition();
             const DirectX::XMFLOAT3 impactPosition = {
@@ -2652,9 +2621,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         ? chargeJustDodgeCastRadiusScalePhase2 : chargeJustDodgeCastRadiusScale;
     const float justDodgeCastRadius = (std::max)(0.05f, radius * justDodgeCastScale);
     const float wallCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
-    chargePlayerCastRadiusDebug = playerCastRadius;
-    chargeJustDodgeCastRadiusDebug = justDodgeCastRadius;
-    chargeWallCastRadiusDebug = wallCastRadius;
     DirectX::XMFLOAT3 castOrigin = GetPosition();
     castOrigin.y += (std::max)((std::max)(playerCastRadius, wallCastRadius) + 0.05f, height * 0.5f);
 
@@ -2671,14 +2637,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     const bool justDodgeCastHit = Physics::Instance().SphereCast(
         castOrigin, chargeDirection, castDistance, justDodgeCastRadius, justDodgeHit,
         CollisionHelper::ToBit(CollisionLayer::Player));
-    chargePlayerCastHitDebug = playerCastHit;
-    if (playerCastHit)
-    {
-        chargePlayerHitDistanceDebug = playerHit.distance;
-        if (playerHit.actor)
-            chargePlayerHitActorDebug = playerHit.actor->GetName();
-    }
-
     HitResultWithActor wallHit{};
     const uint32_t wallMask = CollisionHelper::MakeMask({
         CollisionLayer::WorldStatic,
@@ -2690,9 +2648,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     bool wallCandidate = false;
     if (wallCastHit)
     {
-        chargeWallCastHitDebug = true;
-        chargeWallHitNormalDebug = wallHit.normal;
-        chargeWallHitDistanceDebug = wallHit.distance;
         chargeWallFacingAmountDebug = -(
             chargeDirection.x * wallHit.normal.x +
             chargeDirection.z * wallHit.normal.z);
@@ -2740,8 +2695,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             directionValid = tryStartJustDodgeResult || justDodgePlayer->CanJustDodgeAgainst(GetPosition());
         if (tryStartJustDodgeResult)
         {
-            chargeJustDodgeSuccessDebug = true;
-            chargeSelectedHitDebug = "JustDodge";
         }
     }
 
@@ -2756,13 +2709,11 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 
             hitActors.emplace(hitPlayer);
             ++currentAttackHitCount;
-            chargeSelectedHitDebug = "PlayerHit";
             chargeEndReasonDebug = ChargeAttackEndReason::PlayerHit;
             StopChargeAttackMovement();
             return chargeEndReasonDebug;
         }
 
-        chargeSelectedHitDebug = "PlayerDamageRejected";
     }
 
 
@@ -2773,12 +2724,10 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             wallHit.distance <= chargeBT.tripleChargeWallTurnClearance)
         {
             chargeBT.tripleWallTurnTriggered = true;
-            chargeSelectedHitDebug = "LegComplete";
             chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
             StopChargeAttackMovement();
             return chargeEndReasonDebug;
         }
-        chargeSelectedHitDebug = "WallHit";
         chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
         const float wallHitDistance = (std::max)(0.0f, wallHit.distance);
         const DirectX::XMFLOAT3 impactPosition = wallHit.hasPosition
@@ -2799,7 +2748,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 
     if (chargeElapsedTime >= chargeSafetyTimeout)
     {
-        chargeSelectedHitDebug = "SafetyTimeout";
         chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
         const std::string timeoutMessage =
             "[BossCharge][End] reason=SafetyTimeout elapsed=" +
@@ -3035,9 +2983,6 @@ float GruxEnemy::ConsumeNextRecoveryDuration()
     const float duration = hasOverride
         ? *nextRecoveryDuration
         : GetRecoveryDurationForCurrentAttack();
-    recoverySourceDebug = hasOverride ? nextRecoverySource : "Default";
-    currentRecoveryDurationDebug = duration;
-    recoveryElapsedDebug = 0.0f;
 
     nextRecoveryDuration.reset();
     nextRecoverySource = "Default";

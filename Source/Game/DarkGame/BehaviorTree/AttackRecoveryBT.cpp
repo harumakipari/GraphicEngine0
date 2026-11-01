@@ -4,7 +4,6 @@
 
 ActionBase::State ExecuteAttackRecovery::Run(float deltaTime)
 {
-    // A fresh sequence also resets a recovery that was interrupted.
     if (!started || sequenceId != owner->GetCurrentAttackSequenceId())
     {
         sequenceId = owner->GetCurrentAttackSequenceId();
@@ -15,7 +14,6 @@ ActionBase::State ExecuteAttackRecovery::Run(float deltaTime)
         started = true;
     }
     timer += (std::max)(0.0f, deltaTime);
-    owner->UpdateRecoveryDebug(timer, duration);
     if (timer < duration)
         return State::Run;
     started = false;

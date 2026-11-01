@@ -204,7 +204,7 @@ public:
     // 最後の被弾リアクションを開始する。
     void BeginFinalHitReaction(const std::string& animationName);
 
-    // Starts the death presentation and aborts combat execution once.
+    // 死亡時の処理を開始する
     void BeginDeathPresentation();
 
     // 最後の被弾リアクションを終了する。
@@ -501,8 +501,6 @@ public:
     // Chargeの予兆を非表示にする。
     void HideChargeTelegraphVisual();
 
-    // 複数回Chargeの予兆情報をデバッグ表示する。
-    void DrawTripleChargeTelegraphDebug() const;
 
     // Chargeの終了結果に応じてスタンやRecoveryへの移行を進める。
     ChargeBTStepResult ResolveChargeResultBT(float deltaTime);
@@ -616,20 +614,6 @@ public:
         return skeletalMeshComponent;  // ボス本体のスケルタルメッシュ。
     }
 
-    // 死亡時のアニメーション名を返す。
-
-    void SetStunDebug(const char* phase, float elapsed)
-    {
-        stunPhaseDebug = phase ? phase : "None";
-        stunElapsedDebug = elapsed;
-    }
-
-    // Chargeの段階のデバッグ表示値を設定する。
-    void SetChargePhaseDebug(const char* phase) { chargePhaseDebug = phase ? phase : "None"; }
-
-    // Charge予備動作のアニメーション時刻を記録する。
-    void SetChargeWindupAnimationTimeDebug(float time) { chargeWindupAnimationTimeDebug = time; }
-
     // 選択中の攻撃に対応するRecovery時間を返す。
     float GetRecoveryDurationForCurrentAttack() const;
 
@@ -638,14 +622,6 @@ public:
 
     // 次のRecovery時間を取得し、一時設定を解除する。
     float ConsumeNextRecoveryDuration();
-
-    // Charge後のRecoveryに渡す結果を保持する。
-
-    void UpdateRecoveryDebug(float elapsed, float duration)
-    {
-        recoveryElapsedDebug = elapsed;
-        currentRecoveryDurationDebug = duration;
-    }
 
     // ChargeのPlayer命中後に使うRecovery時間を返す。
     float GetChargePlayerHitRecoveryDuration() const
@@ -1901,21 +1877,11 @@ private:
         float tripleChargeLegElapsed = 0.0f;  // 現在のChargeの経過時間。
         float tripleChargeLegDistance = 0.0f;  // 現在のChargeの移動距離。
         float tripleChargeTelegraphElapsed = 0.0f;  // 複数回Chargeの予兆の経過時間。
-        uint64_t tripleChargeTelegraphCallCount = 0;  // 複数回Chargeの予兆処理の呼び出し回数。
-        uint64_t tripleChargeRuntimeInitializeCount = 0;  // 複数回Chargeの実行状態の初期化回数。
-        TripleChargePhase triplePhaseAtUpdateEntry = TripleChargePhase::None;  // 更新開始時の複数回Chargeの段階。
-        TripleChargePhase triplePhaseAtUpdateExit = TripleChargePhase::None;  // 更新終了時の複数回Chargeの段階。
-        uint64_t triplePhaseChangeCount = 0;  // 複数回Chargeの段階の変更回数。
         bool tripleChargeTelegraphVisible = false;  // 複数回Chargeの予兆が表示中か。
         DirectX::XMFLOAT3 tripleChargeTelegraphDirection{};  // 複数回Chargeの予兆の方向。
         DirectX::XMFLOAT3 tripleChargeTelegraphStartPosition{};  // 複数回Chargeの予兆の開始位置。
         float tripleChargeTelegraphLength = 0.0f;  // 複数回Chargeの予兆の長さ。
         float tripleChargeTelegraphWidth = 0.0f;  // 複数回Chargeの予兆の幅。
-        bool tripleChargeTelegraphWallHit = false;  // 複数回Chargeの予兆の壁判定がヒットしたか。
-        float tripleChargeTelegraphWallDistance = 0.0f;  // 複数回Chargeの予兆の壁までの距離。
-        float tripleChargeTelegraphWorldStaticDistance = 0.0f;  // 複数回Chargeの予兆の静的地形までの距離。
-        float tripleChargeTelegraphBoundaryDistance = 0.0f;  // 複数回Chargeの予兆の境界までの距離。
-        std::string tripleChargeTelegraphLengthSource = "MaxDistanceFallback";  // 複数回Chargeの予兆の長さを決めた要因。
         bool tripleBeginTripleChargeLegCalled = false;  // 各Chargeの開始処理が呼ばれたか。
         bool tripleBeginTripleChargeLegResult = false;  // 各Chargeの開始処理の結果。
         bool tripleBeginChargeMovementResult = false;  // Charge移動開始処理の結果。
@@ -2019,33 +1985,16 @@ private:
     float chargeElapsedTime = 0.0f;  // Chargeの経過時間。
     bool chargeMovementActive = false;  // Chargeの移動処理が有効か。
     bool chargeDangerWindowActive = false;  // Chargeの危険判定期間が有効か。
-    bool chargeJustDodgeSuccessDebug = false;  // Chargeのジャスト回避成功を記録した診断値。
     DirectX::XMFLOAT3 chargeDirection{ 0.0f, 0.0f, 1.0f };  // Chargeの移動方向。
     bool chargeDirectionLocked = false;  // Chargeの移動方向を固定済みか。
-    std::string chargePhaseDebug = "None";  // Chargeの実行段階の診断表示。
-    float chargeWindupAnimationTimeDebug = 0.0f;  // Charge予備動作のアニメーション時刻の診断値。
-    bool chargePlayerCastHitDebug = false;  // Chargeのプレイヤー判定がヒットしたかの診断値。
-    float chargePlayerHitDistanceDebug = 0.0f;  // Chargeのプレイヤー判定でのヒット距離。
-    std::string chargePlayerHitActorDebug = "None";  // Chargeのプレイヤー判定でヒットしたアクター名。
-    std::string chargeSelectedHitDebug = "None";  // Chargeで選択したヒット結果の診断表示。
-    bool chargeWallCastHitDebug = false;  // Chargeの壁判定がヒットしたかの診断値。
     float chargeWallFacingAmountDebug = 0.0f;  // Chargeの壁の向き判定に使った値。
-    DirectX::XMFLOAT3 chargeWallHitNormalDebug{};  // Chargeでヒットした壁の法線。
-    float chargeWallHitDistanceDebug = 0.0f;  // Chargeの壁判定でのヒット距離。
     DirectX::XMFLOAT3 chargeStartPositionDebug{};  // Charge開始位置の診断値。
-    DirectX::XMFLOAT3 chargeCurrentPositionDebug{};  // Charge現在位置の診断値。
-    float chargeTraveledDistanceDebug = 0.0f;  // Chargeの移動済み距離の診断値。
     bool chargeStartValidationValidDebug = false;  // Charge開始時の経路確認が有効かの診断値。
     float chargeStartClearanceDebug = 0.0f;  // Charge開始時の経路の余白距離の診断値。
-    float chargePlayerCastRadiusDebug = 0.0f;  // Chargeのプレイヤー判定半径の診断値。
-    float chargeJustDodgeCastRadiusDebug = 0.0f;  // Chargeのジャスト回避判定半径の診断値。
-    float chargeWallCastRadiusDebug = 0.0f;  // Chargeの壁判定半径の診断値。
     std::string chargeStartFailureReasonDebug = "None";  // Charge開始失敗の理由。
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;  // Chargeの終了理由の診断値。
 
     float stunDuration = 2.5f;  // スタン状態の継続時間。
-    std::string stunPhaseDebug = "None";  // スタンの実行段階の診断表示。
-    float stunElapsedDebug = 0.0f;  // スタンの経過時間の診断値。
     std::string deathAnimationName = "Death_A_0";  // 死亡時に再生するアニメーション名。
     bool cinematicDeathAnimationOwnedExternally = false;  // 死亡演出のアニメーションを外部が管理している状態。
     bool phase2CinematicAnimationOwnedExternally = false;  // 第2段階の演出アニメーションを外部が管理しているか。
@@ -2055,9 +2004,6 @@ private:
     float postStunRecoveryDuration = 0.4f;  // スタン後のRecovery時間。
     std::optional<float> nextRecoveryDuration;  // 次のRecoveryに使用する時間の指定。
     std::string nextRecoverySource = "Default";  // 次のRecovery時間を指定した要因。
-    float currentRecoveryDurationDebug = 0.0f;  // 現在のRecovery時間の診断値。
-    float recoveryElapsedDebug = 0.0f;  // Recoveryの経過時間の診断値。
-    std::string recoverySourceDebug = "Default";  // 現在のRecovery時間の設定元の診断表示。
 
     bool isDeathPerform = false;  // 死亡演出中か。
     bool beginHuskParticleRequest = false;  // 死亡時のHuskパーティクル開始要求があるか。
