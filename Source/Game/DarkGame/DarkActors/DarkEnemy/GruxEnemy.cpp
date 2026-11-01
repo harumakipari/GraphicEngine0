@@ -245,51 +245,6 @@ void GruxEnemy::Update(float deltaTime)
             skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - fadeSpeed * deltaTime);
     }
 
-    DirectX::XMFLOAT3 bossPos = { 0.0f,0.0f,0.0f };
-    DirectX::XMFLOAT3 playerPos = { 0.0f,0.0f,0.0f };
-    DirectX::XMFLOAT3 toPlayerDir = { 0.0f,0.0f,0.0f };
-#if 1
-    // ボス戦時のカメラの注視点の位置を更新する
-    if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
-    {
-        bossPos = GetPosition();
-        playerPos = player->GetPosition();
-        toPlayerDir = MathHelper::Subtract(playerPos, bossPos);
-        DirectX::XMFLOAT3 worldUp = { 0.0f,1.0f,0.0f };
-        toPlayerDir = MathHelper::Normalize(toPlayerDir);
-        DirectX::XMFLOAT3 rightDir = MathHelper::Cross(worldUp, toPlayerDir);
-        rightDir = MathHelper::Normalize(rightDir);
-        DirectX::XMFLOAT3 targetPos = bossPos;
-        // ターゲットの位置をプレイヤーとボスの中点にする
-        DirectX::XMFLOAT3 middlePos =
-        {
-            (bossPos.x + playerPos.x) * 0.5f,
-            (bossPos.y + playerPos.y) * 0.5f,
-            (bossPos.z + playerPos.z) * 0.5f
-        };
-
-        if (auto mainCamera = GetOwnerScene()->GetActorManager()->GetActorOfType<MainCamera>())
-        {
-            float blendLookTarget = mainCamera->tpsController.blendLookTarget;
-            targetPos = MathHelper::Lerp(middlePos, playerPos, blendLookTarget);
-        }
-
-        targetPos = MathHelper::Add(
-            targetPos,
-            MathHelper::Multiply(toPlayerDir, bossBattleCameraDistance));
-
-        targetPos = MathHelper::Add(
-            targetPos,
-            MathHelper::Multiply(rightDir, bossBattleCameraRightDistance));
-
-        targetPos = MathHelper::Add(
-            targetPos,
-            bossBattleCameraOffset);
-    }
-
-
-#endif // 0
-
 
     // 攻撃の危険な時に、
     if (isDangerWindow)
@@ -307,7 +262,6 @@ void GruxEnemy::Update(float deltaTime)
                 playerCapsuleRadius = capsule->GetRadius();
                 playerCapsuleHeight = capsule->GetHeight();
             }
-            const DangerArea::PointResult pointResult = dangerArea.ContainsPoint(playerTestPosition);
             const DangerArea::CapsuleResult capsuleResult = dangerArea.IntersectsPlayerCapsule(
                 playerCapsuleCenter, playerCapsuleRadius, playerCapsuleHeight);
             const bool inside = capsuleResult.overlap;
@@ -644,7 +598,6 @@ void GruxEnemy::DrawImGuiDetails()
     ImGui::DragFloat(U8("近距離正面 FastCombo確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat(U8("FastCombo Front最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     fastComboFrontMaxAngle = std::clamp(fastComboFrontMaxAngle, 0.0f, 180.0f);
-    const char* intentTypes[] = { "CloseCombat", "DashAttackPlan", "JumpAttackPlan", "CombatReposition" };
 
 
     ImGui::SeparatorText("Last Decision");
@@ -661,15 +614,6 @@ void GruxEnemy::DrawImGuiDetails()
     dashSetupDistanceMin = (std::max)(0.1f, dashSetupDistanceMin);
     dashSetupDistanceMax = (std::max)(dashSetupDistanceMin, dashSetupDistanceMax);
     dashSetupMinimumMoveDistance = (std::max)(0.0f, dashSetupMinimumMoveDistance);
-    const char* dashPhaseNames[] =
-    {
-        "None", "Setup", "Facing", "Windup", "Movement", "Knockup",
-        "InterDashTransition", "Recovery"
-    };
-    const int dashStage =
-        dashBTPhase == DashBTPhase::Telegraph ? 0 :
-            dashBTPhase == DashBTPhase::Movement ? 1 :
-            dashBTPhase == DashBTPhase::Knockup ? 2 : -1;
 
     ImGui::Checkbox("Dash Telegraph Emissive Enabled", &dashTelegraphEmissiveEnabled);
     ImGui::ColorEdit3("Dash Telegraph Phase 1 Emissive Color", &dashTelegraphPhase1EmissiveColor.x);
@@ -894,12 +838,9 @@ void GruxEnemy::DrawImGuiDetails()
     fourthHitReactionChance = std::clamp(fourthHitReactionChance, 0.0f, 1.0f);
     fourthHitReactionDuration = std::clamp(fourthHitReactionDuration, 0.0f, 2.0f);
 
-    ImGui::DragFloat(U8("ボス戦時のカメラ距離"), &bossBattleCameraDistance, 0.5f);
-    ImGui::DragFloat(U8("ボス戦時のカメラ右方向の距離"), &bossBattleCameraRightDistance, 0.5f);
     ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
     ImGui::DragFloat(U8("hitEnemyEffectOffsetY"), &hitEnemyEffectOffsetY, 0.1f);
     ImGui::DragFloat(U8("hitPlayerEffectOffsetY"), &hitPlayerEffectOffsetY, 0.1f);
-    ImGui::DragFloat3(U8("ボス戦時のオフセット"), &bossBattleCameraOffset.x, 0.5f);
 #endif
 }
 

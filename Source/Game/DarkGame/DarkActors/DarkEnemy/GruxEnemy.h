@@ -2117,10 +2117,6 @@ private:
 
 
     std::shared_ptr<SceneComponent> cameraTargetComponent;  // カメラが注視する位置のコンポーネント。
-    float bossBattleCameraDistance = 0.0f;  // ボス戦カメラの距離調整値。
-    //float bossBattleCameraRightDistance = 2.5f;
-    float bossBattleCameraRightDistance = 0.0f;  // ボス戦カメラの右方向の距離調整値。
-    DirectX::XMFLOAT3 bossBattleCameraOffset = { 0.0f,0.0f,0.0f };  // ボス戦カメラのオフセット。
 
     struct WeaponHitBoxPoints
     {
