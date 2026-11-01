@@ -65,6 +65,9 @@ void GruxEnemy::Initialize(const Transform& transform)
 
 void GruxEnemy::Update(float deltaTime)
 {
+    const float unscaledDeltaTime = Time::UnscaledDeltaTime();
+
+
     UpdateRoarImpactDebris(Time::DeltaTime());
     UpdatePhase2TextureBlendWorldYRange();
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
@@ -98,38 +101,9 @@ void GruxEnemy::Update(float deltaTime)
         activeNode = nullptr;
         if (behaviorData) behaviorData->Init();
     }
-    // HPバーの更新
-    const float currentHp = static_cast<float>((std::max)(hp, 0));
-    const float uiDeltaTime = Time::UnscaledDeltaTime();
-    if (!rushHpDisplayActive && delayedHp > currentHp)
-    {
-        if (delayedHpDelayTimer > 0.0f)
-        {
-            delayedHpDelayTimer = (std::max)(0.0f, delayedHpDelayTimer - uiDeltaTime);
-        }
-        else
-        {
-            const float followSpeed = useRushDelayedHpFollowSpeed
-                                          ? delayedHpRushFollowSpeed
-                                          : delayedHpFollowSpeed;
-            delayedHp = (std::max)(currentHp, delayedHp - followSpeed * uiDeltaTime);
-            if (delayedHp <= currentHp)
-                useRushDelayedHpFollowSpeed = false;
-        }
-    }
-    else if (!rushHpDisplayActive && delayedHp < currentHp)
-    {
-        delayedHp = currentHp;
-        delayedHpDelayTimer = 0.0f;
-        useRushDelayedHpFollowSpeed = false;
-    }
 
-    if (!IsPhase2HpBarPresentationActive() && hpCurrentFillUiComponent && hpDelayedFillUiComponent)
-    {
-        const float maximumHp = static_cast<float>(maxHp);
-        hpCurrentFillUiComponent->SetValue(currentHp, maximumHp);
-        hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
-    }
+    // 通常時のHPバー表示を更新する。
+    UpdateHpBar(unscaledDeltaTime);
 
     if (finalHitReactionHeld)
     {
@@ -161,7 +135,7 @@ void GruxEnemy::Update(float deltaTime)
         return;
     }
 
-    hitVoiceCooldownTimer = (std::max)(0.0f, hitVoiceCooldownTimer - uiDeltaTime);
+    hitVoiceCooldownTimer = (std::max)(0.0f, hitVoiceCooldownTimer - unscaledDeltaTime);
 
     if (!IsAnimationEditorPreviewActive())
         UpdateActionCooldowns(deltaTime);
@@ -223,27 +197,8 @@ void GruxEnemy::Update(float deltaTime)
     UpdateJumpTelegraphImpactFlash(deltaTime);
     UpdateDashTelegraphVisual(deltaTime);
 
-    leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
-    rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
-
-    // 軌跡の更新処理
-    leftWeaponTrail.UpdateTrail(deltaTime);
-    rightWeaponTrail.UpdateTrail(deltaTime);
-
-    if (showLeftWeaponTrail && weaponLeftRootComponent && weaponLeftTipComponent)
-    {
-        leftWeaponTrail.trailPoints.push_back({
-            weaponLeftTipComponent->GetComponentLocation(),
-            weaponLeftRootComponent->GetComponentLocation(),
-            bossTrailLifetime });
-    }
-    if (showRightWeaponTrail && weaponRightRootComponent && weaponRightTipComponent)
-    {
-        rightWeaponTrail.trailPoints.push_back({
-            weaponRightTipComponent->GetComponentLocation(),
-            weaponRightRootComponent->GetComponentLocation(),
-            bossTrailLifetime });
-    }
+    // 左右武器のTrailを更新する。
+    UpdateWeaponTrails(deltaTime);
 
     if (IsAnimationEditorPreviewActive())
         return;
@@ -365,7 +320,6 @@ void GruxEnemy::Update(float deltaTime)
             DebugRender::DrawSphere(playerTestPosition, 0.12f, { 1,1,0,1 }, 0.0f, true);
             DebugRender::DrawSphere(playerCapsuleCenter, 0.09f, { 0,1,1,1 }, 0.0f, true);
 
-            // CPU-computed logical OBB markers. Do not use WorldTransform here.
             for (int rightSign : { -1, 1 })
             {
                 for (int upSign : { -1, 1 })
@@ -406,107 +360,8 @@ void GruxEnemy::Update(float deltaTime)
         }
     }
 
-
-
-    // 当たり判定
-    HitResultWithActor hit;
-
-    // 左の武器の当たり判定
-    if (leftHitBox)
-    {
-        bool isLeftHit = false;
-
-        const WeaponHitBoxPoints weaponLeftPoints = BuildWeaponHitBoxPoints(
-            weaponLeftRootComponent, weaponLeftMiddleComponent, weaponLeftTipComponent,
-            activeLeftHitBoxOffset);
-        const DirectX::XMFLOAT3& weaponLeftRootPos = weaponLeftPoints.root;
-        const DirectX::XMFLOAT3& weaponLeftMidPos = weaponLeftPoints.middle;
-        const DirectX::XMFLOAT3& weaponLeftTipPos = weaponLeftPoints.tip;
-
-        HitResultWithActor leftRootHit;
-        HitResultWithActor leftMidHit;
-        HitResultWithActor leftTipHit;
-        const bool leftRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftRootPos, weaponLeftRootPos, leftRootHit, activeLeftHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        const bool leftMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftMidPos, weaponLeftMidPos, leftMidHit, activeLeftHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        const bool leftTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftTipPos, weaponLeftTipPos, leftTipHit, activeLeftHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        isLeftHit = leftRootSucceeded || leftMidSucceeded || leftTipSucceeded;
-        if (leftRootSucceeded)
-            hit = leftRootHit;
-        else if (leftMidSucceeded)
-            hit = leftMidHit;
-        else if (leftTipSucceeded)
-            hit = leftTipHit;
-
-        prevWeaponLeftRootPos = weaponLeftRootPos;
-        prevWeaponLeftMidPos = weaponLeftMidPos;
-        prevWeaponLeftTipPos = weaponLeftTipPos;
-
-        if (isLeftHit)
-        {
-            if (auto player = dynamic_cast<Player*>(hit.actor))
-            {
-                if (!hitActors.contains(hit.actor) && !HasJustDodgedAttack(hit.actor))
-                {
-                    Logger::Log(U8("剣にプレイヤーが当たった"));
-                    if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
-                    {
-                        hitActors.emplace(player);
-                        ++currentAttackHitCount;
-                    }
-                }
-            }
-        }
-    }
-    // 右の武器の当たり判定
-    if (rightHitBox)
-    {
-        bool isRightHit = false;
-
-        const WeaponHitBoxPoints weaponRightPoints = BuildWeaponHitBoxPoints(
-            weaponRightRootComponent, weaponRightMiddleComponent, weaponRightTipComponent,
-            activeRightHitBoxOffset);
-        const DirectX::XMFLOAT3& weaponRightRootPos = weaponRightPoints.root;
-        const DirectX::XMFLOAT3& weaponRightMidPos = weaponRightPoints.middle;
-        const DirectX::XMFLOAT3& weaponRightTipPos = weaponRightPoints.tip;
-
-        HitResultWithActor rightRootHit;
-        HitResultWithActor rightMidHit;
-        HitResultWithActor rightTipHit;
-        const bool rightRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightRootPos, weaponRightRootPos, rightRootHit, activeRightHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        const bool rightMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightMidPos, weaponRightMidPos, rightMidHit, activeRightHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        const bool rightTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightTipPos, weaponRightTipPos, rightTipHit, activeRightHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
-        isRightHit = rightRootSucceeded || rightMidSucceeded || rightTipSucceeded;
-        if (rightRootSucceeded)
-            hit = rightRootHit;
-        else if (rightMidSucceeded)
-            hit = rightMidHit;
-        else if (rightTipSucceeded)
-            hit = rightTipHit;
-
-        prevWeaponRightRootPos = weaponRightRootPos;
-        prevWeaponRightMidPos = weaponRightMidPos;
-        prevWeaponRightTipPos = weaponRightTipPos;
-        if (isRightHit)
-        {
-            if (auto player = dynamic_cast<Player*>(hit.actor))
-            {
-                if (!hitActors.contains(hit.actor) && !HasJustDodgedAttack(hit.actor))
-                {
-                    Logger::Log(U8("剣にプレイヤーが当たった"));
-                    if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
-                    {
-                        hitActors.emplace(player);
-                        ++currentAttackHitCount;
-                    }
-                }
-            }
-        }
-    }
-
-    if (rightWeaponCollisionComp)
-        rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
-    if (leftWeaponCollisionComp)
-        leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
+    // 左右武器の攻撃判定とDebug表示を更新する。
+    UpdateWeaponHitDetection();
 }
 
 void GruxEnemy::RenderTrail(ID3D11DeviceContext* immediateContext)
@@ -527,6 +382,7 @@ void GruxEnemy::RenderTrail(ID3D11DeviceContext* immediateContext)
         streak.trail.Render(immediateContext);
     }
 }
+
 
 //　ボスAIのImGui描画
 void GruxEnemy::DrawImGuiDetails()
@@ -1059,6 +915,7 @@ void GruxEnemy::PlayPhase2CinematicBodyAnimation(const std::string& name, const 
 {
     Character::PlayBodyAnimation(name, loop, blend, blendTime, ignoreRootMotion);
 }
+
 void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormalFourthHit,
                                            const PlayerAttackHitType hitType, const DirectX::XMFLOAT3& hitSourcePosition)
 {
@@ -1173,7 +1030,6 @@ void GruxEnemy::BeginHpBarFadeOut()
             hpBarFadeEntries.push_back({ image, image->color });
     }
 }
-
 void GruxEnemy::SetHpBarFadeAlpha(const float alpha)
 {
     const float clampedAlpha = std::clamp(alpha, 0.0f, 1.0f);
@@ -1327,6 +1183,7 @@ void GruxEnemy::StopBossDeathCinematicOneShots()
     }
     bossDeathCinematicOneShots.clear();
 }
+
 void GruxEnemy::BeginPhase1LastHitReaction(const DirectX::XMFLOAT3& hitSourcePosition)
 {
     using namespace DirectX;
@@ -1388,7 +1245,6 @@ void GruxEnemy::BeginDeathPresentation()
     const bool ignoreRootMotion = deathAnimationName == "Knock_Down_Death";
     PlayBodyAnimation(deathAnimationName, false, true, 0.1f, ignoreRootMotion);
 }
-
 void GruxEnemy::EndFinalHitReaction()
 {
     if (finalHitReactionActive)
@@ -1619,6 +1475,7 @@ void GruxEnemy::SetPhaseTransformProgress(const float progress)
         skeletalMeshComponent->SetPhase2TextureBlendProgress(phaseTransformProgress);
     UpdateAllComponentTransforms();
 }
+
 void GruxEnemy::SetPhaseScaleRange(const float phase1Scale, const float phase2Scale)
 {
     phase1BossScale = std::clamp(phase1Scale, 0.01f, 10.0f);
@@ -1886,7 +1743,6 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         break;
     }
 }
-
 void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 {
     if (const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
@@ -2330,6 +2186,7 @@ void GruxEnemy::RequestJumpAttackCameraAssist() const
             bossCameraPosition, 0.70f, 0.80f);
     }
 }
+
 void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
 {
     positioningAnimationActualSpeed = (std::max)(0.0f, actualSpeed);
@@ -2368,6 +2225,7 @@ void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
     if (!idlePlaying)
         PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
 }
+
 void GruxEnemy::EndPositioningAnimation()
 {
     positioningAnimationActualSpeed = 0.0f;
@@ -2396,7 +2254,6 @@ void GruxEnemy::StartSelectedActionCooldown()
         return;
     }
 }
-
 bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
 {
     const char* animationName = nullptr;
@@ -2472,7 +2329,6 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
     }
     return true;
 }
-
 bool GruxEnemy::PlayAttackAnimationByName(const std::string& animationName)
 {
     const auto controller = GetBodyAnimationController();
@@ -2484,13 +2340,11 @@ bool GruxEnemy::PlayAttackAnimationByName(const std::string& animationName)
     return true;
 }
 
-
 void GruxEnemy::BeginAdditionalAttackStage()
 {
     // A FastCombo is one attack sequence, but each stage may damage the player once.
     hitActors.clear();
 }
-
 
 void GruxEnemy::ClearJumpAttackMotionWarpOverride()
 {
@@ -2546,6 +2400,7 @@ bool GruxEnemy::PrepareDashAttackMovementSnapshot()
     return true;
 }
 
+
 void GruxEnemy::PlayBossTelegraphSE(const char* fileName) const
 {
     if (!fileName || !*fileName)
@@ -2558,6 +2413,7 @@ void GruxEnemy::PlayBossTelegraphSE(const char* fileName) const
         audio->SetPitch(pitch);
     }
 }
+
 
 void GruxEnemy::DrawDashTelegraphDebugWorld() const
 {
@@ -2633,7 +2489,6 @@ void GruxEnemy::StopDashAttackMovement()
     StopAIMovement();
 }
 
-
 float GruxEnemy::GetActiveChargeSpeed() const
 {
     return chargeBT.phase2SettingsLatched ? chargeSpeedPhase2 : chargeSpeed;
@@ -2657,6 +2512,7 @@ int GruxEnemy::GetActiveChargeDamage() const
     }
     return 1;
 }
+
 
 bool GruxEnemy::EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition,
                                              const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const
@@ -3255,6 +3111,7 @@ void GruxEnemy::SpawnChargeWindTrail(ChargeWindTrailRuntime& streak) const
         streak.trail.trailPoints.push_back({ tip, root, streak.lifetime });
     }
 }
+
 void GruxEnemy::StopChargeAttackMovement()
 {
     StopChargeWindTrails();
@@ -3283,7 +3140,6 @@ void GruxEnemy::SetNextRecoveryDuration(float duration, const char* source)
     nextRecoveryDuration = (std::max)(0.0f, duration);
     nextRecoverySource = source ? source : "Custom";
 }
-
 float GruxEnemy::ConsumeNextRecoveryDuration()
 {
     const bool hasOverride = nextRecoveryDuration.has_value();
@@ -3298,6 +3154,7 @@ float GruxEnemy::ConsumeNextRecoveryDuration()
     nextRecoverySource = "Default";
     return duration;
 }
+
 int GruxEnemy::GetDamageForCurrentAttack() const
 {
     for (const BossAttackData& attackData : combatAttackData)
@@ -3348,7 +3205,6 @@ std::string GruxEnemy::GetCurrentAttackNameForDebug() const
     }
     return std::string(attackName) + " / " + animationName;
 }
-
 BossTargetContext GruxEnemy::BuildTargetContext() const
 {
     BossTargetContext context{};
@@ -3418,8 +3274,6 @@ BossTargetContext GruxEnemy::BuildTargetContext() const
     return context;
 }
 
-
-
 bool GruxEnemy::IsNearFrontForAttackSelection() const
 {
     const BossTargetContext context = BuildTargetContext();
@@ -3427,19 +3281,10 @@ bool GruxEnemy::IsNearFrontForAttackSelection() const
         context.absoluteAngleDegrees <= fastComboFrontMaxAngle;
 }
 
-
-
-
-
-
-
-
 bool GruxEnemy::IsDefensiveBackForBehavior(const BossTargetContext& context) const
 {
     return context.valid && context.absoluteAngleDegrees >= defensiveBackMinAngle;
 }
-
-
 
 float GruxEnemy::GetAttackRepeatPenaltyForPlan(const std::string& planName) const
 {
@@ -3453,6 +3298,7 @@ float GruxEnemy::GetAttackRepeatPenaltyForPlan(const std::string& planName) cons
         return GetRecentAttackPenalty(BossActionType::ChargeAttack);
     return 1.0f;
 }
+
 
 
 void GruxEnemy::RefreshFastComboTargetContext(int stage)
@@ -3469,6 +3315,13 @@ void GruxEnemy::RefreshFastComboTargetContext(int stage)
     fastComboStageTargetContexts[stage] = fastComboTargetContext;
     fastComboTargetStage = stage;
 }
+
+
+
+
+
+
+
 
 void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime)
 {
@@ -3496,6 +3349,8 @@ void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float not
                                               notifyDuration);
 }
 
+
+
 bool GruxEnemy::UpdateFastComboStepIn(float deltaTime)
 {
     if (!fastComboStepInActive)
@@ -3506,6 +3361,7 @@ bool GruxEnemy::UpdateFastComboStepIn(float deltaTime)
                                                   fastComboStepInDistance - fastComboStepInElapsed * fastComboStepInAppliedSpeed);
     return fastComboStepInActive;
 }
+
 
 void GruxEnemy::ClearFastComboStepIn()
 {
@@ -3518,6 +3374,7 @@ void GruxEnemy::ClearFastComboStepIn()
     fastComboStepInElapsed = 0.0f;
     fastComboStepInDirection = {};
 }
+
 bool GruxEnemy::IsFastComboMotionWarpNotify(const AnimationNotifyState& state) const
 {
     if (selectedAttackType != BossAttackType::FastCombo ||
@@ -3572,7 +3429,6 @@ bool GruxEnemy::PrepareJumpAttackSetupTarget()
     attackSetupCandidateCount = candidateCount;
     return true;
 }
-
 bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount, float boundaryMarginOverride) const
 {
     outTarget = {};
@@ -3692,6 +3548,7 @@ bool GruxEnemy::UpdateJumpAttackTelegraph(float deltaTime) const
     const auto controller = GetBodyAnimationController();
     return !controller || !controller->IsPlayAnimation();
 }
+
 bool GruxEnemy::StartJumpAttackExecution()
 {
     if (!PlayAttackStage(BossAttackType::JumpAttack, 1))
@@ -3739,7 +3596,6 @@ void GruxEnemy::StartWeaponTelegraph(const std::string& animationName)
     weaponTelegraphElapsed = 0.0f;
     weaponTelegraphCurrentPower = 0.0f;
 }
-
 void GruxEnemy::StopAIMovement() const
 {
     if (!characterMovementComponent)
@@ -3787,6 +3643,7 @@ void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
         easingRunner->StartHandler(handler, accessor);
     }
 }
+
 void GruxEnemy::InitializeSkeletalMeshAndAnimations(const std::string& parentName)
 {
     skeletalMeshComponent = AddComponent<SkeletalMeshComponent>(parentName);
@@ -4021,6 +3878,174 @@ void GruxEnemy::InitializeTrailEffects()
     }
 }
 
+// 通常時のHPバー表示を更新する。
+void GruxEnemy::UpdateHpBar(const float uiDeltaTime)
+{
+    const float currentHp = static_cast<float>((std::max)(hp, 0));
+
+
+    if (!rushHpDisplayActive && delayedHp > currentHp)
+    {
+        if (delayedHpDelayTimer > 0.0f)
+        {
+            delayedHpDelayTimer = (std::max)(0.0f, delayedHpDelayTimer - uiDeltaTime);
+        }
+        else
+        {
+            const float followSpeed = useRushDelayedHpFollowSpeed
+                                          ? delayedHpRushFollowSpeed
+                                          : delayedHpFollowSpeed;
+            delayedHp = (std::max)(currentHp, delayedHp - followSpeed * uiDeltaTime);
+            if (delayedHp <= currentHp)
+                useRushDelayedHpFollowSpeed = false;
+        }
+    }
+    else if (!rushHpDisplayActive && delayedHp < currentHp)
+    {
+        delayedHp = currentHp;
+        delayedHpDelayTimer = 0.0f;
+        useRushDelayedHpFollowSpeed = false;
+    }
+
+    if (!IsPhase2HpBarPresentationActive() && hpCurrentFillUiComponent && hpDelayedFillUiComponent)
+    {
+        const float maximumHp = static_cast<float>(maxHp);
+        hpCurrentFillUiComponent->SetValue(currentHp, maximumHp);
+        hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);
+    }
+
+}
+// 左右武器のTrailを更新する。
+void GruxEnemy::UpdateWeaponTrails(float deltaTime)
+{
+    leftWeaponTrail.SetFadeLifetime(bossTrailLifetime);
+    rightWeaponTrail.SetFadeLifetime(bossTrailLifetime);
+
+    // 軌跡の更新処理
+    leftWeaponTrail.UpdateTrail(deltaTime);
+    rightWeaponTrail.UpdateTrail(deltaTime);
+
+    if (showLeftWeaponTrail && weaponLeftRootComponent && weaponLeftTipComponent)
+    {
+        leftWeaponTrail.trailPoints.push_back({
+            weaponLeftTipComponent->GetComponentLocation(),
+            weaponLeftRootComponent->GetComponentLocation(),
+            bossTrailLifetime });
+    }
+    if (showRightWeaponTrail && weaponRightRootComponent && weaponRightTipComponent)
+    {
+        rightWeaponTrail.trailPoints.push_back({
+            weaponRightTipComponent->GetComponentLocation(),
+            weaponRightRootComponent->GetComponentLocation(),
+            bossTrailLifetime });
+    }
+
+}
+
+// 左右武器の攻撃判定とDebug表示を更新する。
+void GruxEnemy::UpdateWeaponHitDetection()
+{
+    // 当たり判定
+    HitResultWithActor hit;
+
+    // 左の武器の当たり判定
+    if (leftHitBox)
+    {
+        bool isLeftHit = false;
+
+        const WeaponHitBoxPoints weaponLeftPoints = BuildWeaponHitBoxPoints(
+            weaponLeftRootComponent, weaponLeftMiddleComponent, weaponLeftTipComponent,
+            activeLeftHitBoxOffset);
+        const DirectX::XMFLOAT3& weaponLeftRootPos = weaponLeftPoints.root;
+        const DirectX::XMFLOAT3& weaponLeftMidPos = weaponLeftPoints.middle;
+        const DirectX::XMFLOAT3& weaponLeftTipPos = weaponLeftPoints.tip;
+
+        HitResultWithActor leftRootHit;
+        HitResultWithActor leftMidHit;
+        HitResultWithActor leftTipHit;
+        const bool leftRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftRootPos, weaponLeftRootPos, leftRootHit, activeLeftHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool leftMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftMidPos, weaponLeftMidPos, leftMidHit, activeLeftHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool leftTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponLeftTipPos, weaponLeftTipPos, leftTipHit, activeLeftHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        isLeftHit = leftRootSucceeded || leftMidSucceeded || leftTipSucceeded;
+        if (leftRootSucceeded)
+            hit = leftRootHit;
+        else if (leftMidSucceeded)
+            hit = leftMidHit;
+        else if (leftTipSucceeded)
+            hit = leftTipHit;
+
+        prevWeaponLeftRootPos = weaponLeftRootPos;
+        prevWeaponLeftMidPos = weaponLeftMidPos;
+        prevWeaponLeftTipPos = weaponLeftTipPos;
+
+        if (isLeftHit)
+        {
+            if (auto player = dynamic_cast<Player*>(hit.actor))
+            {
+                if (!hitActors.contains(hit.actor) && !HasJustDodgedAttack(hit.actor))
+                {
+                    Logger::Log(U8("剣にプレイヤーが当たった"));
+                    if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
+                    {
+                        hitActors.emplace(player);
+                        ++currentAttackHitCount;
+                    }
+                }
+            }
+        }
+    }
+    // 右の武器の当たり判定
+    if (rightHitBox)
+    {
+        bool isRightHit = false;
+
+        const WeaponHitBoxPoints weaponRightPoints = BuildWeaponHitBoxPoints(
+            weaponRightRootComponent, weaponRightMiddleComponent, weaponRightTipComponent,
+            activeRightHitBoxOffset);
+        const DirectX::XMFLOAT3& weaponRightRootPos = weaponRightPoints.root;
+        const DirectX::XMFLOAT3& weaponRightMidPos = weaponRightPoints.middle;
+        const DirectX::XMFLOAT3& weaponRightTipPos = weaponRightPoints.tip;
+
+        HitResultWithActor rightRootHit;
+        HitResultWithActor rightMidHit;
+        HitResultWithActor rightTipHit;
+        const bool rightRootSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightRootPos, weaponRightRootPos, rightRootHit, activeRightHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool rightMidSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightMidPos, weaponRightMidPos, rightMidHit, activeRightHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        const bool rightTipSucceeded = CollisionFunction::SphereRayCast(prevWeaponRightTipPos, weaponRightTipPos, rightTipHit, activeRightHitBoxRadius, CollisionHelper::ToBit(CollisionLayer::Player));
+        isRightHit = rightRootSucceeded || rightMidSucceeded || rightTipSucceeded;
+        if (rightRootSucceeded)
+            hit = rightRootHit;
+        else if (rightMidSucceeded)
+            hit = rightMidHit;
+        else if (rightTipSucceeded)
+            hit = rightTipHit;
+
+        prevWeaponRightRootPos = weaponRightRootPos;
+        prevWeaponRightMidPos = weaponRightMidPos;
+        prevWeaponRightTipPos = weaponRightTipPos;
+        if (isRightHit)
+        {
+            if (auto player = dynamic_cast<Player*>(hit.actor))
+            {
+                if (!hitActors.contains(hit.actor) && !HasJustDodgedAttack(hit.actor))
+                {
+                    Logger::Log(U8("剣にプレイヤーが当たった"));
+                    if (player->TryTakeDamage(GetDamageForCurrentAttack(), GetPosition()))
+                    {
+                        hitActors.emplace(player);
+                        ++currentAttackHitCount;
+                    }
+                }
+            }
+        }
+    }
+
+    if (rightWeaponCollisionComp)
+        rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
+    if (leftWeaponCollisionComp)
+        leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
+}
+
 // ビヘイビアツリーを作成する
 void GruxEnemy::CreateBossBehaviorTree()
 {
@@ -4193,7 +4218,8 @@ void GruxEnemy::CreateUI()
 void GruxEnemy::CreateTelegraphMesh(const std::string& parentName)
 {
     const auto configureMesh = [](const std::shared_ptr<StaticMeshComponent>& mesh,
-                                  const char* modelPath, const DirectX::XMFLOAT4& color)
+                                  const char* modelPath, const DirectX::XMFLOAT4& color,
+                                  const bool useAbsoluteTransform = true)
     {
         if (!mesh->model)
             mesh->SetModel(modelPath);
@@ -4202,9 +4228,9 @@ void GruxEnemy::CreateTelegraphMesh(const std::string& parentName)
         mesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
         mesh->SetIsCastShadow(false);
         mesh->SetIsVisible(false);
-        mesh->SetUsingAbsoluteLocation(true);
-        mesh->SetUsingAbsoluteRotation(true);
-        mesh->SetUsingAbsoluteScale(true);
+        mesh->SetUsingAbsoluteLocation(useAbsoluteTransform);
+        mesh->SetUsingAbsoluteRotation(useAbsoluteTransform);
+        mesh->SetUsingAbsoluteScale(useAbsoluteTransform);
         mesh->plusAlphaCBuffer->data.cpuColor = color;
         mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
         mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
@@ -4213,7 +4239,7 @@ void GruxEnemy::CreateTelegraphMesh(const std::string& parentName)
 
     // Chargeの予兆メッシュ。
     chargeTelegraphMeshComponent = AddComponent<StaticMeshComponent>("tripleChargeTelegraph", parentName);
-    configureMesh(chargeTelegraphMeshComponent, "./Data/Models/EffectModel/ChargeTelegraphPlane2.glb", { 1.0f, 0.16f, 0.03f, 1.0f });
+    configureMesh(chargeTelegraphMeshComponent, "./Data/Models/EffectModel/ChargeTelegraphPlane2.glb", { 1.0f, 0.16f, 0.03f, 1.0f }, false);
 
     // Chargeの風用のメッシュ
     mainChargeWindMeshComponent = AddComponent<MainChargeWindMeshComponent>("mainChargeWind", parentName);

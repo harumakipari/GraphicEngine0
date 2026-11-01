@@ -1103,6 +1103,15 @@ private:
     // 軌跡コンポーネント追加
     void InitializeTrailEffects();
 
+    // 通常時のHPバー表示を更新する。
+    void UpdateHpBar(float uiDeltaTime);
+
+    // 左右武器のTrailを更新する。
+    void UpdateWeaponTrails(float deltaTime);
+
+    // 左右武器の攻撃判定とDebug表示を更新する。
+    void UpdateWeaponHitDetection();
+
     // ビヘイビアツリーを作成する
     void CreateBossBehaviorTree();
 

@@ -523,6 +523,7 @@ bool GruxEnemy::BeginChargeTelegraphVisual()
             telegraphLength / (std::abs(rootScale.z) > 0.001f ? rootScale.z : 1.0f) };
         chargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
         chargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
+        chargeTelegraphMeshComponent->UpdateComponentToWorld();
 
         snapshot.requestedPosition = startPosition;
         snapshot.requestedRotation = rotationFloat;
@@ -589,6 +590,7 @@ void GruxEnemy::UpdateChargeTelegraphVisual(float lengthProgress)
         chargeBT.tripleChargeTelegraphStartPosition);
     chargeTelegraphMeshComponent->SetWorldRotationDirect(rotationFloat);
     chargeTelegraphMeshComponent->SetRelativeScaleDirect(requestedScale);
+    chargeTelegraphMeshComponent->UpdateComponentToWorld();
 }
 
 void GruxEnemy::DrawTripleChargeTelegraphDebug() const
