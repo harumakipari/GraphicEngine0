@@ -153,6 +153,20 @@ public:
         bool movementActive = false;  // 移動が有効か。
     };
 
+    enum class HpBarVisualProfile : uint8_t
+    {
+        Phase1,  // 第1段階用。
+        Phase2  // 第2段階用。
+    };
+    enum class Phase2HpBarPresentationState : uint8_t
+    {
+        Hidden,  // 非表示。
+        RevealingFrame,  // 枠を表示中。
+        WaitingForFill,  // ゲージ表示待ち。
+        Filling,  // ゲージを表示中。
+        Complete,  // 完了。
+    };
+
 public:
     explicit GruxEnemy(const std::string& actorName) :Enemy(actorName) {}
 
@@ -1100,7 +1114,6 @@ private:
     // 武器の攻撃予兆表示を解除する。
     void ResetWeaponTelegraphRimLight();
 
-
     // 行動ツリーの実行ノードとアクション状態をリセットする。
     void ResetBehaviorTreeRuntime();
 
@@ -1204,6 +1217,24 @@ private:
 
     // 右武器を落とすエフェクトを生成する。
     void SpawnDropRightWeaponEffect()const;
+
+    // HPバーに指定されたフェーズの表示設定を適用する。
+    void ApplyHpBarVisualProfile(HpBarVisualProfile profile);
+
+    void ResetPhase2HpBarPresentation();
+
+    // 第2段階HPバーのプレビューを更新する。
+    void UpdatePhase2HpBarPresentation();
+
+    // 第2段階HPバーのプレビュー配置を更新する。
+    void UpdatePhase2HpBarPresentationLayout();
+
+    // 第2段階HPバーのプレビューが有効かを返す。
+    bool IsPhase2HpBarPresentationActive() const;
+
+    // 第2段階のテクスチャ切り替え範囲をワールド座標で更新する。
+    void UpdatePhase2TextureBlendWorldYRange();
+
 
 private:
     std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent;  // ボス本体のスケルタルメッシュ。
@@ -1337,19 +1368,6 @@ private:
     std::shared_ptr<Sprite> hpPhase2BackgroundTexture;  // 第2段階のHPバー背景テクスチャ。
     std::shared_ptr<Sprite> hpPhase2FillTexture;  // 第2段階のHPゲージテクスチャ。
     std::shared_ptr<Sprite> hpPhase2FrameTexture;  // 第2段階のHPバー枠テクスチャ。
-    enum class HpBarVisualProfile : uint8_t
-    {
-        Phase1,  // 第1段階用。
-        Phase2  // 第2段階用。
-    };
-    enum class Phase2HpBarPresentationState : uint8_t
-    {
-        Hidden,  // 非表示。
-        RevealingFrame,  // 枠を表示中。
-        WaitingForFill,  // ゲージ表示待ち。
-        Filling,  // ゲージを表示中。
-        Complete,  // 完了。
-    };
     HpBarVisualProfile hpBarVisualProfile = HpBarVisualProfile::Phase1;  // 現在のHPバーの表示プロファイル。
     Phase2HpBarPresentationState phase2HpBarPresentationState = Phase2HpBarPresentationState::Hidden;  // 第2段階のHPバープレビューの状態。
     DirectX::XMFLOAT2 phase2HpBarPresentationPosition{ 650.0f, 115.0f };  // 第2段階のHPバープレビューの位置。
@@ -1364,19 +1382,7 @@ private:
     int phase2HpBarPresentationMaxHp = 1;  // 第2段階のHPバー演出で使用する最大HP。
     bool phase2HpBarPresentationRestoreVisible = false;  // HPバープレビュー解除時に表示を復元するか。
 
-    // HPバーに指定されたフェーズの表示設定を適用する。
-    void ApplyHpBarVisualProfile(HpBarVisualProfile profile);
 
-    void ResetPhase2HpBarPresentation();
-
-    // 第2段階HPバーのプレビューを更新する。
-    void UpdatePhase2HpBarPresentation();
-
-    // 第2段階HPバーのプレビュー配置を更新する。
-    void UpdatePhase2HpBarPresentationLayout();
-
-    // 第2段階HPバーのプレビューが有効かを返す。
-    bool IsPhase2HpBarPresentationActive() const;
     std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;  // HPバーを構成するUIコンポーネント。
     struct HpBarFadeEntry
     {
@@ -1925,11 +1931,9 @@ private:
     float tripleChargeRepositionSideSafetyMargin = 0.20f;  // 複数回Charge前の位置補正で横方向に確保する余白距離。
     float tripleChargeTelegraphHoldDuration = 0.65f;  // 複数回Chargeの予兆を保持する時間。
     float tripleChargeTelegraphExpandDuration = 0.18f;  // 複数回Chargeの予兆を伸ばす時間。
-    float tripleChargeTelegraphGroundOffset = 0.1f;  // 複数回Chargeの予兆の地面からのオフセット。
     float tripleChargeTelegraphFixedWorldY = 0.35f;  // 複数回Chargeの予兆に使うワールドY座標。
     float tripleChargeTelegraphForwardOffset = 0.30f;  // 複数回Chargeの予兆の前方オフセット。
     float tripleChargeTelegraphMaxDistance = 30.0f;  // 複数回Chargeの予兆の最大長さ。
-    float tripleChargeTelegraphWidthMultiplier = 1.0f;  // 複数回Chargeの予兆の幅の倍率。
     bool tripleChargeTelegraphEmissiveEnabled = true;  // 複数回Chargeの予兆の発光を有効にするか。
     DirectX::XMFLOAT3 tripleChargeTelegraphPhase1EmissiveColor{ 0.05f, 0.75f, 1.0f };  // 第1段階の複数回Charge予兆の発光色。
     DirectX::XMFLOAT3 tripleChargeTelegraphPhase2EmissiveColor{ 1.0f, 0.16f, 0.03f };  // 第2段階の複数回Charge予兆の発光色。
@@ -1941,9 +1945,6 @@ private:
     bool chargeDirectionLocked = false;  // Chargeの移動方向を固定済みか。
     float chargeWallFacingAmountDebug = 0.0f;  // Chargeの壁の向き判定に使った値。
     DirectX::XMFLOAT3 chargeStartPositionDebug{};  // Charge開始位置の診断値。
-    bool chargeStartValidationValidDebug = false;  // Charge開始時の経路確認が有効かの診断値。
-    float chargeStartClearanceDebug = 0.0f;  // Charge開始時の経路の余白距離の診断値。
-    std::string chargeStartFailureReasonDebug = "None";  // Charge開始失敗の理由。
     ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;  // Chargeの終了理由の診断値。
 
     float stunDuration = 2.5f;  // スタン状態の継続時間。
@@ -1999,8 +2000,6 @@ private:
     float editorPreviewLeftHitBoxTime = -1.0f;  // 左武器ヒットボックスのプレビュー時刻。
     float editorPreviewRightHitBoxTime = -1.0f;  // 右武器ヒットボックスのプレビュー時刻。
 
-    // 第2段階のテクスチャ切り替え範囲をワールド座標で更新する。
-    void UpdatePhase2TextureBlendWorldYRange();
     float phase1BossScale = 1.7f;  // 第1段階のボスのスケール。
     float phase2BossScale = 2.1f;  // 第2段階のボスのスケール。
     float phaseTransformProgress = 0.0f;  // フェーズ変化演出の進行度。

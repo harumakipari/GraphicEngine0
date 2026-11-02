@@ -291,7 +291,6 @@ private:
     CameraPose CalculateDeathPoseWithSideOffset(
         const DirectX::XMFLOAT3& playerPos,
         float yaw,
-        float pitch,
         float sideOffset) const;
     bool IsDeathPoseCollisionFree(const CameraPose& pose) const;
 

@@ -75,10 +75,6 @@ public:
         }
     }
 
-    virtual void LateUpdate(float elapsedTime) {};
-
-    virtual void Move(float elapsedTime) {}
-
     // ブレンドスペースのアニメーションを使用するかの更新関数
     virtual void UpdateLocomotionAnimation() {}
 
@@ -191,10 +187,8 @@ public:
 
     void HandleCommonAnimationNotifyEvent(const AnimationNotifyEvent& event);
 
-    // Editor-only visualization hook; it must not mutate gameplay state.
     virtual void DrawAnimationEditorPreviewState(const AnimationNotifyState& state) {}
 
-    // Editor Preview one-shot path. Runtime OnAnimationNotifyEvent is not used.
     virtual void OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event) {}
 
     // アニメーションが変わった時にステートなどを変更する関数

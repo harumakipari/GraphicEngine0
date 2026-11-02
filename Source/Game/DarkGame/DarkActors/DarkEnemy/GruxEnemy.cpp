@@ -2438,7 +2438,6 @@ bool GruxEnemy::BeginChargeAttackMovement()
     const BossTargetContext context = BuildTargetContext();
     if (!context.valid)
     {
-        chargeStartFailureReasonDebug = "InvalidTargetContext";
         chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
         Logger::Warning(Logger::LogCategory::Gameplay,
             "[BossCharge][StartFailed] reason=InvalidTarget");
@@ -2447,33 +2446,25 @@ bool GruxEnemy::BeginChargeAttackMovement()
 
     if (!chargeDirectionLocked && !LockChargeDirectionToPlayer())
     {
-        chargeStartFailureReasonDebug = "DirectionLockFailed";
         return false;
     }
 
     // Reject a charge that starts with its swept body already touching a wall.
     // This is a start-position failure, not a normal forward WallHit.
     chargeStartPositionDebug = GetPosition();
-    chargeStartValidationValidDebug = false;
-    chargeStartClearanceDebug = 0.0f;
-    chargeStartFailureReasonDebug = "None";
     float validationClearance = 0.0f;
     bool validationHitWall = false;
     const bool validationMeasured = EvaluateChargeStartClearance(
         chargeStartPositionDebug, chargeDirection, validationClearance, validationHitWall);
     (void)validationHitWall;
-    chargeStartClearanceDebug = validationClearance;
     if (!validationMeasured)
     {
-        chargeStartFailureReasonDebug = "DirectionInvalid";
         return false;
     }
     if (validationClearance <= chargeStartValidationClearance)
     {
-        chargeStartFailureReasonDebug = "InitialWallContact";
         return false;
     }
-    chargeStartValidationValidDebug = true;
     chargeElapsedTime = 0.0f;
     chargeWallFacingAmountDebug = 0.0f;
     chargeEndReasonDebug = ChargeAttackEndReason::None;
@@ -2510,7 +2501,6 @@ bool GruxEnemy::LockChargeDirectionToPlayer()
     const BossTargetContext context = BuildTargetContext();
     if (!context.valid)
     {
-        chargeStartFailureReasonDebug = "InvalidTargetContext";
         chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
         Logger::Warning(Logger::LogCategory::Gameplay, "[BossCharge][DirectionLockFailed] reason=InvalidTarget");
         return false;
@@ -2629,27 +2619,11 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         ? dynamic_cast<Player*>(justDodgeHit.actor)
         : nullptr;
     const bool justDodgeCandidate = justDodgePlayer && !hitActors.contains(justDodgePlayer);
-    // Use the Just Dodge cast's own contact distance against the same valid wall.
-    // This prevents the larger acceptance radius from reaching through a wall.
     const bool justDodgePlayerIsFirst = justDodgeCandidate &&
         (!wallCandidate || justDodgeHit.distance <= wallHit.distance);
-    const bool justDodgeWindow = justDodgePlayer && justDodgePlayer->GetJustDodgeWindow();
-    const bool alreadyDodged = justDodgePlayer && HasJustDodgedAttack(justDodgePlayer);
-    bool tryStartJustDodgeCalled = false;
-    bool tryStartJustDodgeResult = false;
-    bool directionEvaluated = false;
-    bool directionValid = false;
-
     if (justDodgePlayerIsFirst && chargeDangerWindowActive)
     {
-        tryStartJustDodgeCalled = true;
-        tryStartJustDodgeResult = TryStartJustDodgeSuccess(justDodgePlayer);
-        directionEvaluated = justDodgeWindow && !alreadyDodged;
-        if (directionEvaluated)
-            directionValid = tryStartJustDodgeResult || justDodgePlayer->CanJustDodgeAgainst(GetPosition());
-        if (tryStartJustDodgeResult)
-        {
-        }
+        TryStartJustDodgeSuccess(justDodgePlayer);
     }
 
     if (playerIsFirst)

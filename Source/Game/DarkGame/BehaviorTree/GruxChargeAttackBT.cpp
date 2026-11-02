@@ -993,11 +993,9 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     tripleChargeTelegraphEmissiveIntensity = (std::max)(0.0f, tripleChargeTelegraphEmissiveIntensity);
     ImGui::DragFloat("Triple Charge Telegraph Expand Duration", &tripleChargeTelegraphExpandDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
     ImGui::DragFloat("Triple Charge Telegraph Hold Duration", &tripleChargeTelegraphHoldDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
-    ImGui::DragFloat("Triple Charge Telegraph Ground Offset", &tripleChargeTelegraphGroundOffset, 0.005f, -0.1f, 0.5f, "%.3f m");
     ImGui::DragFloat("Triple Charge Telegraph Fixed World Y", &tripleChargeTelegraphFixedWorldY, 0.01f, -5.0f, 5.0f, "%.3f");
     ImGui::DragFloat("Triple Charge Telegraph Forward Offset", &tripleChargeTelegraphForwardOffset, 0.01f, -1.0f, 2.0f, "%.2f m");
     ImGui::DragFloat("Triple Charge Telegraph Max Distance", &tripleChargeTelegraphMaxDistance, 0.1f, 0.1f, 100.0f, "%.2f m");
-    tripleChargeTelegraphWidthMultiplier = 1.0f;
     chargeBT.tripleChargeWallTurnClearance = (std::max)(0.0f, chargeBT.tripleChargeWallTurnClearance);
     chargeBT.tripleChargeLegMaxDistance = (std::max)(0.1f, chargeBT.tripleChargeLegMaxDistance);
     chargeBT.tripleChargeLegMaxDuration = (std::max)(0.1f, chargeBT.tripleChargeLegMaxDuration);
@@ -1010,7 +1008,6 @@ void GruxEnemy::DrawChargeAttackBTDebug()
     tripleChargeTelegraphExpandDuration = std::clamp(tripleChargeTelegraphExpandDuration, 0.0f, 1.0f);
     tripleChargeTelegraphHoldDuration = std::clamp(tripleChargeTelegraphHoldDuration, 0.0f, 1.0f);
     tripleChargeTelegraphMaxDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
-    tripleChargeTelegraphWidthMultiplier = 1.0f;
 
     ImGui::DragFloat(U8("第一形態時のChargeの速さ"), &chargeSpeed,
         0.1f, 0.1f, 50.0f, "%.2f m/s");

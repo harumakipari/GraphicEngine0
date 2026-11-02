@@ -68,45 +68,43 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
 
     loadStageThread = std::thread([&]()
-    {
-        PROFILE_SCOPE("Load StageModel");
-        // メインの部屋のモデル
-        mainRoomAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/MainRoom.gltf",
-                                                                      ModelTypes::ModelMode::StaticMesh, false, true);
-        mainRoomAsset->spawnPoints = mainRoomAsset->model->spawnPoints;
+        {
+            PROFILE_SCOPE("Load StageModel");
+            // メインの部屋のモデル
+            mainRoomAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/MainRoom.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            mainRoomAsset->spawnPoints = mainRoomAsset->model->spawnPoints;
 
-        // ボスの部屋のモデル
-        bossRoomAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/BossRoom.gltf",
-                                                                      ModelTypes::ModelMode::StaticMesh, false, true);
-        bossRoomAsset->spawnPoints = bossRoomAsset->model->spawnPoints;
+            // ボスの部屋のモデル
+            bossRoomAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/BossRoom.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            bossRoomAsset->spawnPoints = bossRoomAsset->model->spawnPoints;
 
-        // ボスとメインの部屋の間モデル
-        transitionAreaAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/TransitionArea.gltf",
-                                                                            ModelTypes::ModelMode::StaticMesh, false, true);
-        transitionAreaAsset->spawnPoints = transitionAreaAsset->model->spawnPoints;
-    });
+            // ボスとメインの部屋の間モデル
+            transitionAreaAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStage0620/TransitionArea.gltf", ModelTypes::ModelMode::StaticMesh, false, true);
+            transitionAreaAsset->spawnPoints = transitionAreaAsset->model->spawnPoints;
+        });
+
     loadStageAssetsThread = std::thread([&]()
-    {
-        PROFILE_SCOPE("Load StageAssetModel");
-        stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
-        stageCandelabraAsset->spawnPoints = stageCandelabraAsset->model->spawnPoints;
+        {
+            PROFILE_SCOPE("Load StageAssetModel");
+            stageCandelabraAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Candelabra/Candelabra.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
+            stageCandelabraAsset->spawnPoints = stageCandelabraAsset->model->spawnPoints;
 
-        stageBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Brazier/Brazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
-        stageBrazierAsset->spawnPoints = stageBrazierAsset->model->spawnPoints;
+            stageBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/Brazier/Brazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
+            stageBrazierAsset->spawnPoints = stageBrazierAsset->model->spawnPoints;
 
-        stageGroundBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/GroundBrazier/groundBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
-        stageGroundBrazierAsset->spawnPoints = stageGroundBrazierAsset->model->spawnPoints;
+            stageGroundBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/GroundBrazier/groundBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
+            stageGroundBrazierAsset->spawnPoints = stageGroundBrazierAsset->model->spawnPoints;
 
-        stageMeltedWaxAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/MeltedWax/MeltedWax.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
-        stageMeltedWaxAsset->spawnPoints = stageMeltedWaxAsset->model->spawnPoints;
+            stageMeltedWaxAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/MeltedWax/MeltedWax.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
+            stageMeltedWaxAsset->spawnPoints = stageMeltedWaxAsset->model->spawnPoints;
 
-        stageStandingBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/StandingBrazier/StandingBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
-        stageStandingBrazierAsset->spawnPoints = stageStandingBrazierAsset->model->spawnPoints;
+            stageStandingBrazierAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/StandingBrazier/StandingBrazier.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
+            stageStandingBrazierAsset->spawnPoints = stageStandingBrazierAsset->model->spawnPoints;
 
-        stageCandleStandAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/CandleStand/CandleStand.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
-        stageCandleStandAsset->spawnPoints = stageCandleStandAsset->model->spawnPoints;
+            stageCandleStandAsset->model = std::make_shared<InterleavedGltfModel>(device, "./Data/Models/DarkStageAssets/CandleStand/CandleStand.gltf", ModelTypes::ModelMode::InstancedStaticMesh, true, true);
+            stageCandleStandAsset->spawnPoints = stageCandleStandAsset->model->spawnPoints;
 
-    });
+        });
 
 
     SceneBase::Initialize(device, width, height, props);
@@ -126,25 +124,26 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
     // ここで布を描画する処理を追加
     RegisterRenderHook(RenderPass::Mask, [&](ID3D11DeviceContext* immediateContext)
-    {
-        for (auto darkClothActor : darkClothActors)
         {
-            if (darkClothActor)
+            for (auto darkClothActor : darkClothActors)
             {
-                darkClothActor->RenderCloth(immediateContext);
+                if (darkClothActor)
+                {
+                    darkClothActor->RenderCloth(immediateContext);
+                }
             }
-        }
-    });
+        });
 
 
     // ここで軌跡を描画する
     RegisterRenderHook(RenderPass::ForwardBlend, [&](ID3D11DeviceContext* immediateContext)
-    {
-        RenderState::BindBlendState(immediateContext, BLEND_STATE::ADD);
-        player->RenderTrail(immediateContext);
-        if (gruxEnemyActor)
-            gruxEnemyActor->RenderTrail(immediateContext);
-    });
+        {
+            RenderState::BindBlendState(immediateContext, BLEND_STATE::ADD);
+            if (player)
+                player->RenderTrail(immediateContext);
+            if (gruxEnemyActor)
+                gruxEnemyActor->RenderTrail(immediateContext);
+        });
 
     return true;
 }
@@ -152,6 +151,7 @@ bool GameScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, cons
 
 void GameScene::Start()
 {
+
     battleFlowState = BattleFlowState::Intro;
     battleStartTransformsSaved = false;
     tutorialBossEntryPending = false;
@@ -192,7 +192,7 @@ void GameScene::Start()
     bossDeathBgmActor->SetBgm(true);
     bossDeathBgmActor->SetVolume(0.45f);
 
-    // プレイヤ＾死亡時のBGM
+    // プレイヤー死亡時のBGM
     playerDeathBgmActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<BgmActor>("PlayerDeathBgmActor");
     playerDeathBgmActor->SetSource(L"./Data/Sound/BGM/player_death_bgm_1.wav");
     playerDeathBgmActor->SetLoop(true);
@@ -212,7 +212,7 @@ void GameScene::Start()
     // カメラをplayerの前方向を向くように変更
     darkCameraActor->RotateToPlayerForward();
 
-    
+
     if (backToRoomStartRequested)
     {
         if (const auto jailDoor = GetActorManager()->GetActorOfType<DoorJailActor>())
@@ -231,21 +231,21 @@ void GameScene::Start()
     if (prisonOpeningMovieStartRequested)
     {
         SceneTransitionManager::Instance().SetOnOpeningFinished([]()
-        {
-            auto* gameScene = dynamic_cast<GameScene*>(Scene::GetCurrentScene());
-            if (!gameScene || !gameScene->prisonOpeningMovieStartRequested)
-                return;
-
-            gameScene->prisonOpeningMovieStartRequested = false;
-            if (!InputSystem::IsInputEnabled())
-                return;
-
-            if (const auto movieManager = gameScene->GetActorManager()->GetActorOfType<MovieCameraManagerActor>())
             {
-                if (!movieManager->PlayPrisonOpeningMovie())
-                    movieManager->CancelPreparedPrisonOpeningMovie();
-            }
-        });
+                auto* gameScene = dynamic_cast<GameScene*>(Scene::GetCurrentScene());
+                if (!gameScene || !gameScene->prisonOpeningMovieStartRequested)
+                    return;
+
+                gameScene->prisonOpeningMovieStartRequested = false;
+                if (!InputSystem::IsInputEnabled())
+                    return;
+
+                if (const auto movieManager = gameScene->GetActorManager()->GetActorOfType<MovieCameraManagerActor>())
+                {
+                    if (!movieManager->PlayPrisonOpeningMovie())
+                        movieManager->CancelPreparedPrisonOpeningMovie();
+                }
+            });
     }
 }
 
@@ -426,9 +426,9 @@ void GameScene::SetUpActors()
     Transform mainRoomStartPlayerTransform{ DirectX::XMFLOAT3{ -13.537f,0.0f,10.757f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.07f,1.07f,1.07f } };
     player = this->GetActorManager()->CreateAndRegisterActorWithTransform<Player>("Player", mainRoomStartPlayerTransform);
     player->SetFinalHitCallback([this](GruxEnemy* boss, const DirectX::XMFLOAT3& source)
-    {
-        OnPlayerFinalHit(boss, source);
-    });
+        {
+            OnPlayerFinalHit(boss, source);
+        });
 
     Transform debugCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto debugCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<DebugCamera>("debugCam", debugCameraTr);
@@ -1002,16 +1002,16 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
         return;
 
     const auto revealYAndCaptureTutorialSkeletonHp = [this]()
-    {
-        if (!tutorialController.ShouldRevealY(
-            player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y)))
-            return;
+        {
+            if (!tutorialController.ShouldRevealY(
+                player->IsOperationGuideItemVisible(Player::OperationGuideItem::Y)))
+                return;
 
-        player->SetOperationGuideItemVisible(Player::OperationGuideItem::Y, true);
-        tutorialController.CaptureYBaseline(false, tutorialPassiveSkeletonActor->GetHp());
-        if (tutorialDodgeSkeletonActor)
-            tutorialController.CaptureYBaseline(true, tutorialDodgeSkeletonActor->GetHp());
-    };
+            player->SetOperationGuideItemVisible(Player::OperationGuideItem::Y, true);
+            tutorialController.CaptureYBaseline(false, tutorialPassiveSkeletonActor->GetHp());
+            if (tutorialDodgeSkeletonActor)
+                tutorialController.CaptureYBaseline(true, tutorialDodgeSkeletonActor->GetHp());
+        };
 
     std::shared_ptr<SceneComponent> target;
     float distanceSq = FLT_MAX;
@@ -1021,7 +1021,6 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
     if (tutorialController.SetPassiveLockOnCandidate(candidate))
         player->SetOperationGuideItemVisible(Player::OperationGuideItem::LT, true);
 
-    // Reuse the Skeleton combat range; no tutorial-only distance is introduced.
     if (!tutorialPassiveSkeletonActor->IsDead() &&
         tutorialPassiveSkeletonActor->IsPlayerWithinAttackRange(*player))
     {
@@ -1030,8 +1029,8 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
 
     const auto selectedEnemy = lockOnSelectedEnemy.lock();
     const bool selectedTutorialSkeleton = selectedEnemy &&
-    (selectedEnemy.get() == tutorialPassiveSkeletonActor.get() ||
-        (tutorialDodgeSkeletonActor && selectedEnemy.get() == tutorialDodgeSkeletonActor.get()));
+        (selectedEnemy.get() == tutorialPassiveSkeletonActor.get() ||
+            (tutorialDodgeSkeletonActor && selectedEnemy.get() == tutorialDodgeSkeletonActor.get()));
     const bool selected = selectionResult == LockOnTargetSelectionResult::Selected;
     const bool ltVisible = selected && selectedTutorialSkeleton &&
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::LT);
@@ -1063,14 +1062,12 @@ void GameScene::UpdateOperationGuideTutorial(const LockOnTargetSelectionResult s
     if (tutorialController.SetDodgeAttackRange(dodgeAttackRange))
         revealYAndCaptureTutorialSkeletonHp();
 
-    // Visibility follows the current combat range; learned remains independent.
     player->SetOperationGuideItemVisible(Player::OperationGuideItem::X, tutorialController.IsDodgeAttackRange());
 
     if (tutorialController.IsDodgeGuideActivated() && !tutorialController.HasDodgeSkeletonJustDodged() &&
         player->IsJustDodgePresentationActive() &&
         player->GetRushTarget().get() == tutorialDodgeSkeletonActor.get())
     {
-        // Rush target is assigned only by Player::StartJustDodgeSuccess().
         tutorialController.RecordJustDodge(true);
     }
 
@@ -1095,16 +1092,15 @@ void GameScene::CompleteTutorialForBossBattle()
         return;
 
     const auto completeOperationGuide = [this](const Player::OperationGuideItem item)
-    {
-        player->SetOperationGuideItemVisible(item, true);
-        player->SetOperationGuideItemLearned(item);
-    };
+        {
+            player->SetOperationGuideItemVisible(item, true);
+            player->SetOperationGuideItemLearned(item);
+        };
     completeOperationGuide(Player::OperationGuideItem::L);
     completeOperationGuide(Player::OperationGuideItem::LT);
     completeOperationGuide(Player::OperationGuideItem::Y);
     completeOperationGuide(Player::OperationGuideItem::X);
     completeOperationGuide(Player::OperationGuideItem::R);
-    // Keep item completion state, but hide the tutorial HUD throughout the boss battle.
     player->SetOperationGuideHudVisible(false);
 }
 
@@ -1124,7 +1120,7 @@ void GameScene::UpdateLockOnTargetUI(float deltaTime) const
         return;
     }
     lockOnTargetUIActor->UpdateMarkerPresentation(*darkCameraActor, target, target->GetComponentLocation(),
-                                                  dynamic_cast<GruxEnemy*>(target->GetOwner()) != nullptr, deltaTime);
+        dynamic_cast<GruxEnemy*>(target->GetOwner()) != nullptr, deltaTime);
 }
 
 void GameScene::StartJudgeDodgeOperationTutorial()
@@ -1204,7 +1200,7 @@ void GameScene::UpdateTutorialSkeletonUI()
         player->IsOperationGuideItemVisible(Player::OperationGuideItem::X);
 
     tutorialUIActor->UpdatePrompts(*darkCameraActor, tutorialPassiveSkeletonActor, tutorialDodgeSkeletonActor,
-                                   ltVisible, yVisible, xVisible);
+        ltVisible, yVisible, xVisible);
 }
 
 void GameScene::HideTutorialSkeletonUI() const
@@ -1300,7 +1296,7 @@ void GameScene::UpdateBattleFlow()
             finalHitRecoveryElapsed = 0.0f;
             finalHitRecoveryProgress = 0.0f;
             finalHitRecoveryDurationActive = std::isfinite(finalHitSlowRecoveryDuration)
-                                                 ? std::clamp(finalHitSlowRecoveryDuration, 0.0f, 1.0f) : 0.30f;
+                ? std::clamp(finalHitSlowRecoveryDuration, 0.0f, 1.0f) : 0.30f;
             finalHitTimer = 0.0f;
             Time::SetSlow(recoveryStartScale, 0.0f);
             battleFlowState = BattleFlowState::FinalHitSlowRecovery;
@@ -1315,31 +1311,31 @@ void GameScene::UpdateBattleFlow()
         }
         break;
     case BattleFlowState::FinalHitSlowRecovery:
+    {
+        finalHitRecoveryElapsed = (std::min)(finalHitRecoveryDurationActive,
+            finalHitRecoveryElapsed + Time::UnscaledDeltaTime());
+        finalHitRecoveryProgress = finalHitRecoveryDurationActive > 0.0f
+            ? std::clamp(finalHitRecoveryElapsed / finalHitRecoveryDurationActive, 0.0f, 1.0f)
+            : 1.0f;
+        const float t = finalHitRecoveryProgress;
+        const float smoothT = t * t * (3.0f - 2.0f * t);
+        currentRecoveryScale = std::lerp(recoveryStartScale, 1.0f, smoothT);
+        Time::SetSlow(currentRecoveryScale, 0.0f);
+        if (finalHitRecoveryProgress >= 1.0f)
         {
-            finalHitRecoveryElapsed = (std::min)(finalHitRecoveryDurationActive,
-                                                 finalHitRecoveryElapsed + Time::UnscaledDeltaTime());
-            finalHitRecoveryProgress = finalHitRecoveryDurationActive > 0.0f
-                                           ? std::clamp(finalHitRecoveryElapsed / finalHitRecoveryDurationActive, 0.0f, 1.0f)
-                                           : 1.0f;
-            const float t = finalHitRecoveryProgress;
-            const float smoothT = t * t * (3.0f - 2.0f * t);
-            currentRecoveryScale = std::lerp(recoveryStartScale, 1.0f, smoothT);
-            Time::SetSlow(currentRecoveryScale, 0.0f);
-            if (finalHitRecoveryProgress >= 1.0f)
-            {
-                currentRecoveryScale = 1.0f;
-                Time::SetSlow(1.0f, 0.0f);
-                finalHitTimer = finalHitAftermathDuration;
-                battleFlowState = BattleFlowState::FinalHitAftermath;
-            }
-            break;
+            currentRecoveryScale = 1.0f;
+            Time::SetSlow(1.0f, 0.0f);
+            finalHitTimer = finalHitAftermathDuration;
+            battleFlowState = BattleFlowState::FinalHitAftermath;
         }
+        break;
+    }
     case BattleFlowState::FinalHitAftermath:
         finalHitTimer -= Time::UnscaledDeltaTime();
         if (finalHitTimer <= 0.0f)
         {
             const auto controller = gruxEnemyActor
-                                        ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
+                ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
             if (!phase2FinalHitReactionComplete &&
                 (!controller || finalHitReaction.empty() ||
                     controller->GetCurrentAnimationName() != finalHitReaction))
@@ -1351,12 +1347,12 @@ void GameScene::UpdateBattleFlow()
         break;
     case BattleFlowState::PlayerDead:
         if (playerDeathController->Update(Time::UnscaledDeltaTime(), true, player.get(), gruxEnemyActor.get(),
-                                          *defeatUIActor, bgmDirector, cinemaCameraActor.get(), numberTexWidth, numberTexHeight, deathResultMoveSeVolume))
+            *defeatUIActor, bgmDirector, cinemaCameraActor.get(), numberTexWidth, numberTexHeight, deathResultMoveSeVolume))
             battleFlowState = BattleFlowState::ContinueWait;
         break;
     case BattleFlowState::ContinueWait:
         playerDeathController->Update(Time::UnscaledDeltaTime(), false, player.get(), gruxEnemyActor.get(),
-                                      *defeatUIActor, bgmDirector, cinemaCameraActor.get(), numberTexWidth, numberTexHeight, deathResultMoveSeVolume);
+            *defeatUIActor, bgmDirector, cinemaCameraActor.get(), numberTexWidth, numberTexHeight, deathResultMoveSeVolume);
         break;
     case BattleFlowState::ResetForContinue:
         ResetBattleForContinue();
@@ -1451,10 +1447,10 @@ void GameScene::EnterPlayerDead()
     playerDeathController->StageDeathActors(player.get(), gruxEnemyActor.get());
 
     playerDeathController->PrepareDeathActor(player.get(), darkCameraActor.get(), [this]()
-    {
-        if (battleFlowState == BattleFlowState::PlayerDead)
-            playerDeathController->StartDeathCamera(darkCameraActor.get(), gruxEnemyActor);
-    });
+        {
+            if (battleFlowState == BattleFlowState::PlayerDead)
+                playerDeathController->StartDeathCamera(darkCameraActor.get(), gruxEnemyActor);
+        });
 }
 
 void GameScene::EnterBossDead()
@@ -1748,124 +1744,124 @@ void GameScene::UpdatePhase2Cinematic()
     switch (phase2TransitionStep)
     {
     case Phase2TransitionStep::RecallFadeOut:
-        {
-            const float duration = std::clamp(phase2RecallFadeOutDuration, 0.0f, 2.0f);
-            phase2StepElapsed = duration <= 0.001f ? duration :
-                                    (std::min)(duration, phase2StepElapsed + Time::UnscaledDeltaTime());
-            phase2RecallFadeAlpha = duration <= 0.001f ? 1.0f :
-                                        std::clamp(phase2StepElapsed / duration, 0.0f, 1.0f);
-            SetBossDeathFadeAlpha(phase2RecallFadeAlpha);
-            if (gruxEnemyActor)
-                gruxEnemyActor->SetHpBarFadeAlpha(1.0f - phase2RecallFadeAlpha);
-            if (phase2RecallFadeAlpha < 1.0f)
-                break;
-
-            CompletePhase2TransitionAtBlack();
+    {
+        const float duration = std::clamp(phase2RecallFadeOutDuration, 0.0f, 2.0f);
+        phase2StepElapsed = duration <= 0.001f ? duration :
+            (std::min)(duration, phase2StepElapsed + Time::UnscaledDeltaTime());
+        phase2RecallFadeAlpha = duration <= 0.001f ? 1.0f :
+            std::clamp(phase2StepElapsed / duration, 0.0f, 1.0f);
+        SetBossDeathFadeAlpha(phase2RecallFadeAlpha);
+        if (gruxEnemyActor)
+            gruxEnemyActor->SetHpBarFadeAlpha(1.0f - phase2RecallFadeAlpha);
+        if (phase2RecallFadeAlpha < 1.0f)
             break;
-        }
+
+        CompletePhase2TransitionAtBlack();
+        break;
+    }
 
     case Phase2TransitionStep::RecallFadeIn:
-        {
-            const float duration = std::clamp(phase2RecallFadeInDuration, 0.0f, 2.0f);
-            phase2StepElapsed = duration <= 0.001f ? duration :
-                                    (std::min)(duration, phase2StepElapsed + Time::UnscaledDeltaTime());
-            phase2RecallFadeAlpha = duration <= 0.001f ? 0.0f :
-                                        1.0f - std::clamp(phase2StepElapsed / duration, 0.0f, 1.0f);
-            SetBossDeathFadeAlpha(phase2RecallFadeAlpha);
-            if (phase2RecallFadeAlpha > 0.0f)
-                break;
-
-            phase2RecallFadeAlpha = 0.0f;
-            SetBossDeathFadeAlpha(0.0f);
-            phase2TransitionStep = Phase2TransitionStep::RecallPreWait;
-            phase2StepElapsed = 0.0f;
+    {
+        const float duration = std::clamp(phase2RecallFadeInDuration, 0.0f, 2.0f);
+        phase2StepElapsed = duration <= 0.001f ? duration :
+            (std::min)(duration, phase2StepElapsed + Time::UnscaledDeltaTime());
+        phase2RecallFadeAlpha = duration <= 0.001f ? 0.0f :
+            1.0f - std::clamp(phase2StepElapsed / duration, 0.0f, 1.0f);
+        SetBossDeathFadeAlpha(phase2RecallFadeAlpha);
+        if (phase2RecallFadeAlpha > 0.0f)
             break;
-        }
+
+        phase2RecallFadeAlpha = 0.0f;
+        SetBossDeathFadeAlpha(0.0f);
+        phase2TransitionStep = Phase2TransitionStep::RecallPreWait;
+        phase2StepElapsed = 0.0f;
+        break;
+    }
     case Phase2TransitionStep::RecallPreWait:
-        {
-            if (const auto controller = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController() : nullptr)
-                controller->OnUpdate(Time::UnscaledDeltaTime());
+    {
+        if (const auto controller = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController() : nullptr)
+            controller->OnUpdate(Time::UnscaledDeltaTime());
 
-            const float waitDuration = std::clamp(phase2RecallPreWaitDuration, 0.0f, 3.0f);
-            phase2StepElapsed = (std::min)(waitDuration,
-                                           phase2StepElapsed + Time::UnscaledDeltaTime());
-            if (phase2StepElapsed < waitDuration)
-                break;
-
-            if (gruxEnemyActor)
-                gruxEnemyActor->PlayPhase2CinematicBodyAnimation("PrimaryAttack_Recall", false, true, 0.1f, true);
-            phase2TransitionStep = Phase2TransitionStep::BossRecall;
-            phase2StepElapsed = 0.0f;
+        const float waitDuration = std::clamp(phase2RecallPreWaitDuration, 0.0f, 3.0f);
+        phase2StepElapsed = (std::min)(waitDuration,
+            phase2StepElapsed + Time::UnscaledDeltaTime());
+        if (phase2StepElapsed < waitDuration)
             break;
-        }
+
+        if (gruxEnemyActor)
+            gruxEnemyActor->PlayPhase2CinematicBodyAnimation("PrimaryAttack_Recall", false, true, 0.1f, true);
+        phase2TransitionStep = Phase2TransitionStep::BossRecall;
+        phase2StepElapsed = 0.0f;
+        break;
+    }
 
     case Phase2TransitionStep::BossRecall:
-        {
-            if (!phase2TransitionController->UpdateRecall(gruxEnemyActor.get(), bgmDirector, bossBgmVolume))
-                break;
-            if (gruxEnemyActor)
-                gruxEnemyActor->ForcePhase2CinematicIdleImmediate();
-
-            if (player && gruxEnemyActor)
-            {
-                DirectX::XMFLOAT3 toBoss = MathHelper::Subtract(gruxEnemyActor->GetPosition(), player->GetPosition());
-                toBoss.y = 0.0f;
-                if (MathHelper::Length(toBoss) > FLT_EPSILON)
-                {
-                    player->ForceDirectionImmediate(MathHelper::Normalize(toBoss));
-                    player->UpdateAllComponentTransforms();
-                }
-            }
-            phase2TransitionStep = Phase2TransitionStep::PlayerEmotePreWait;
-            phase2StepElapsed = 0.0f;
-            phase2TransitionController->CutToShot(1, cinemaCameraActor.get());
-            phase2TransitionController->ClearPlayerEmote();
-            if (player)
-                player->PlayBodyAnimation("Idle", true, true, 0.1f, true);
+    {
+        if (!phase2TransitionController->UpdateRecall(gruxEnemyActor.get(), bgmDirector, bossBgmVolume))
             break;
+        if (gruxEnemyActor)
+            gruxEnemyActor->ForcePhase2CinematicIdleImmediate();
+
+        if (player && gruxEnemyActor)
+        {
+            DirectX::XMFLOAT3 toBoss = MathHelper::Subtract(gruxEnemyActor->GetPosition(), player->GetPosition());
+            toBoss.y = 0.0f;
+            if (MathHelper::Length(toBoss) > FLT_EPSILON)
+            {
+                player->ForceDirectionImmediate(MathHelper::Normalize(toBoss));
+                player->UpdateAllComponentTransforms();
+            }
         }
+        phase2TransitionStep = Phase2TransitionStep::PlayerEmotePreWait;
+        phase2StepElapsed = 0.0f;
+        phase2TransitionController->CutToShot(1, cinemaCameraActor.get());
+        phase2TransitionController->ClearPlayerEmote();
+        if (player)
+            player->PlayBodyAnimation("Idle", true, true, 0.1f, true);
+        break;
+    }
 
     case Phase2TransitionStep::PlayerEmotePreWait:
-        {
-            if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
-                controller->OnUpdate(Time::UnscaledDeltaTime());
+    {
+        if (const auto controller = player ? player->GetBodyAnimationController() : nullptr)
+            controller->OnUpdate(Time::UnscaledDeltaTime());
 
-            const float waitDuration = std::clamp(phase2PlayerEmotePreWaitDuration, 0.0f, 3.0f);
-            phase2StepElapsed = (std::min)(waitDuration,
-                                           phase2StepElapsed + Time::UnscaledDeltaTime());
-            if (phase2StepElapsed < waitDuration)
-                break;
-
-            phase2TransitionController->BeginPlayerEmote(player.get());
-            phase2TransitionStep = Phase2TransitionStep::PlayerEmote;
-            phase2StepElapsed = 0.0f;
+        const float waitDuration = std::clamp(phase2PlayerEmotePreWaitDuration, 0.0f, 3.0f);
+        phase2StepElapsed = (std::min)(waitDuration,
+            phase2StepElapsed + Time::UnscaledDeltaTime());
+        if (phase2StepElapsed < waitDuration)
             break;
-        }
+
+        phase2TransitionController->BeginPlayerEmote(player.get());
+        phase2TransitionStep = Phase2TransitionStep::PlayerEmote;
+        phase2StepElapsed = 0.0f;
+        break;
+    }
 
     case Phase2TransitionStep::PlayerEmote:
-        {
-            if (!phase2TransitionController->UpdatePlayerEmote(player.get()))
-                break;
-
-            phase2TransitionStep = Phase2TransitionStep::PlayerEmotePostWait;
-            phase2StepElapsed = 0.0f;
+    {
+        if (!phase2TransitionController->UpdatePlayerEmote(player.get()))
             break;
-        }
+
+        phase2TransitionStep = Phase2TransitionStep::PlayerEmotePostWait;
+        phase2StepElapsed = 0.0f;
+        break;
+    }
 
     case Phase2TransitionStep::PlayerEmotePostWait:
-        {
-            // No controller update or animation request while the Emote_Win endpoint pose is held.
-            const float waitDuration = std::clamp(phase2PlayerEmotePostWaitDuration, 0.0f, 3.0f);
-            phase2StepElapsed = (std::min)(waitDuration,
-                                           phase2StepElapsed + Time::UnscaledDeltaTime());
-            if (phase2StepElapsed < waitDuration)
-                break;
-
-            // Starting Idle releases SetPlaybackRange only after the hold has completed.
-            phase2TransitionController->FinishPlayerEmote(player.get());
-            BeginPhase2TpsReturnBlend();
+    {
+        // No controller update or animation request while the Emote_Win endpoint pose is held.
+        const float waitDuration = std::clamp(phase2PlayerEmotePostWaitDuration, 0.0f, 3.0f);
+        phase2StepElapsed = (std::min)(waitDuration,
+            phase2StepElapsed + Time::UnscaledDeltaTime());
+        if (phase2StepElapsed < waitDuration)
             break;
-        }
+
+        // Starting Idle releases SetPlaybackRange only after the hold has completed.
+        phase2TransitionController->FinishPlayerEmote(player.get());
+        BeginPhase2TpsReturnBlend();
+        break;
+    }
 
     case Phase2TransitionStep::ReturnToTps:
     case Phase2TransitionStep::None:
@@ -1878,30 +1874,30 @@ void GameScene::BeginPhase2TpsReturnBlend()
     InputSystem::SetInputEnabled(false);
     phase2TransitionStep = Phase2TransitionStep::ReturnToTps;
     auto finish = [this]()
-    {
-        phase2TransitionStep = Phase2TransitionStep::None;
-        bossPhase = BossPhase::Phase2;
-        if (gruxEnemyActor)
-            gruxEnemyActor->CompletePhase2HpBarPresentation();
-        ApplyBossPhaseHp(BossPhase::Phase2);
-        CaptureContinueBossCheckpoint();
-        if (player)
         {
-            player->ResumeBattleActionsAfterEvent();
-            player->EndEvent();
-        }
-        if (gruxEnemyActor)
-        {
-            gruxEnemyActor->ResetTimeScale();
-            gruxEnemyActor->ResumeBattleAI();
-        }
-        battleTimerUIActor->SetVisible(true);
-        battleTimerUIActor->SetElapsedTime(battleElapsedTime, numberTexWidth, numberTexHeight);
-        SetBattleHudVisible(true);
-        if (player)
-            player->SetGameplayHudVisible(true);
-        InputSystem::SetInputEnabled(true);
-    };
+            phase2TransitionStep = Phase2TransitionStep::None;
+            bossPhase = BossPhase::Phase2;
+            if (gruxEnemyActor)
+                gruxEnemyActor->CompletePhase2HpBarPresentation();
+            ApplyBossPhaseHp(BossPhase::Phase2);
+            CaptureContinueBossCheckpoint();
+            if (player)
+            {
+                player->ResumeBattleActionsAfterEvent();
+                player->EndEvent();
+            }
+            if (gruxEnemyActor)
+            {
+                gruxEnemyActor->ResetTimeScale();
+                gruxEnemyActor->ResumeBattleAI();
+            }
+            battleTimerUIActor->SetVisible(true);
+            battleTimerUIActor->SetElapsedTime(battleElapsedTime, numberTexWidth, numberTexHeight);
+            SetBattleHudVisible(true);
+            if (player)
+                player->SetGameplayHudVisible(true);
+            InputSystem::SetInputEnabled(true);
+        };
 
     if (!darkCameraActor || !cinemaCameraActor)
     {
@@ -1954,7 +1950,7 @@ void GameScene::ResetBattleForContinue()
 
     const BossPhase resumePhase = continueCheckpointPhase;
     const auto resumeBgmPhase = resumePhase == BossPhase::Phase2 ? GameBgmDirector::BossBgmPhase::Phase2 :
-                                    resumePhase == BossPhase::Phase1 ? GameBgmDirector::BossBgmPhase::Phase1 : GameBgmDirector::BossBgmPhase::Transition;
+        resumePhase == BossPhase::Phase1 ? GameBgmDirector::BossBgmPhase::Phase1 : GameBgmDirector::BossBgmPhase::Transition;
     bgmDirector.ResetDeathBgmState(resumeBgmPhase, bossBgmVolume);
     ResetBossPhaseRuntime(resumePhase);
     player->ResetForBattleContinue(playerBattleStartTransform);
@@ -2108,7 +2104,7 @@ void GameScene::ExecuteVictoryResult(const int selection)
         RestartBossBattle();
     else
         SceneTransitionManager::Instance().RequestTransition("LoadingScene",
-                                                             { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
+            { std::make_pair("preload", "TitleScene") }, TransitionStyle::Fade);
 }
 
 void GameScene::EnterVictoryResult()
@@ -2143,7 +2139,7 @@ void GameScene::UpdateVictoryResult()
 {
     DisableCinematicCameraDebugInput();
     const int selection = victoryController->UpdateUntilSelection(player.get(), cinemaCameraActor.get(),
-                                                                  *victoryUIActor, deathResultMoveSeVolume);
+        *victoryUIActor, deathResultMoveSeVolume);
     if (selection >= 0)
         ExecuteVictoryResult(selection);
     victoryController->FinishUpdate(*victoryUIActor, numberTexWidth, numberTexHeight);

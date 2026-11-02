@@ -555,7 +555,7 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     case CameraMode::Death:
     {
         const CameraPose defaultPose = CalculateDeathPoseWithSideOffset(
-            playerPos, currentYaw, currentPitch, deathCameraSettings.sideOffset);
+            playerPos, currentYaw, deathCameraSettings.sideOffset);
         deathBlendDefaultValid = IsDeathPoseCollisionFree(defaultPose);
         if (deathBlendDefaultValid)
         {
@@ -566,8 +566,7 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
         else
         {
             const CameraPose mirroredPose = CalculateDeathPoseWithSideOffset(
-                playerPos, currentYaw, currentPitch,
-                deathCameraSettings.sideOffset);
+                playerPos, currentYaw, deathCameraSettings.sideOffset);
             deathBlendMirroredValid = IsDeathPoseCollisionFree(mirroredPose);
             deathBlendMirroredTested = true;
             selectedDeathPose = deathBlendMirroredValid ? mirroredPose : defaultPose;
@@ -909,7 +908,6 @@ void DarkCameraActor::UpdateBlend(float deltaTime)
             ? CalculateDeathPoseWithSideOffset(
                 currentPlayerPos,
                 blendTargetPose.yaw,
-                blendTargetPose.pitch,
                 deathBlendSideOffset)
             : CalculatePose(
                 requestMode,
@@ -1702,8 +1700,6 @@ void DarkCameraActor::UpdateCombatPresentation(float deltaTime)
     }
     if (combatPresentationMode == CombatPresentationMode::Rush)
     {
-        // This scalar is the actual Push In amount, so an early Windup end releases
-        // smoothly from the partially reached distance without a second camera timer.
         const bool windupActive = rush && player->IsRushWindupActive();
         const float pushTime = windupActive ? rushPresentationWindupPushDuration : rushPresentationWindupPushReleaseDuration;
         const float pushStep = pushTime > FLT_EPSILON ? dt / pushTime : 1.0f;
@@ -2397,7 +2393,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
     if (cameraMode == CameraMode::Death)
     {
         return CalculateDeathPoseWithSideOffset(
-            playerPos, yaw, pitch, deathBlendSideOffset);
+            playerPos, yaw, deathBlendSideOffset);
     }
 
     const CameraCompositionSettings* settings = &GetActiveTpsSettings();
@@ -2468,7 +2464,6 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
 DarkCameraActor::CameraPose DarkCameraActor::CalculateDeathPoseWithSideOffset(
     const DirectX::XMFLOAT3& playerPos,
     float yaw,
-    float pitch,
     float sideOffset) const
 {
     CameraPose pose{};
@@ -2693,12 +2688,6 @@ void DarkCameraActor::DrawImGuiDetails()
             10.0f, 120.0f, "%.1f deg");
         ImGui::DragFloat("Death Blend Time", &deathCameraSettings.deathBlendTime,
             0.01f, 0.01f, 5.0f, "%.2f sec");
-        ImGui::Text("Selected Death Side: %s", deathBlendSelectedSide);
-        ImGui::Text("Default Pose: %s",
-            deathBlendDefaultValid ? "Valid" : "Blocked");
-        ImGui::Text("Mirrored Pose: %s",
-            !deathBlendMirroredTested ? "Not Tested" :
-            (deathBlendMirroredValid ? "Valid" : "Blocked"));
 
         ImGui::SeparatorText("Camera Shake Presets");
         const auto drawShakePreset = [this](const char* displayName, const char* presetName,
@@ -2723,42 +2712,12 @@ void DarkCameraActor::DrawImGuiDetails()
         drawShakePreset("Rush Final", RushFinalPresetName, rushFinalShake);
 
         ImGui::SeparatorText("Active Camera Shake");
-        ImGui::Text("Active: %s", shakeActive ? "true" : "false");
-        ImGui::Text("Elapsed / Duration: %.3f / %.3f", shakeElapsedTime, shakeDuration);
-        ImGui::Text("Envelope: %.3f", currentShakeEnvelope);
-
         if (ImGui::Button("Reset Camera Tuning")) ResetCameraTuning();
     }
 
     if (ImGui::CollapsingHeader("TPS Offscreen Attack Assist",
         ImGuiTreeNodeFlags_DefaultOpen))
     {
-        ImGui::Text("Assist Active: %s",
-            offscreenAttackAssist.active ? "true" : "false");
-        ImGui::Text("Strength: %.3f", offscreenAttackAssist.strength);
-        ImGui::Text("Duration: %.3f", offscreenAttackAssist.duration);
-        ImGui::Text("Elapsed: %.3f", offscreenAttackAssist.elapsed);
-        ImGui::Text("Boss NDC: (%.3f, %.3f, %.3f)",
-            offscreenAssistProjection.ndc.x,
-            offscreenAssistProjection.ndc.y,
-            offscreenAssistProjection.ndc.z);
-        ImGui::Text("Boss In Front: %s",
-            offscreenAssistProjection.inFront ? "true" : "false");
-        ImGui::Text("Boss Inside Viewport: %s",
-            offscreenAssistProjection.insideViewport ? "true" : "false");
-        ImGui::Text("Boss Inside Safe Frame: %s",
-            offscreenAssistProjection.insideSafeFrame ? "true" : "false");
-        ImGui::Text("Current desiredYaw: %.3f deg",
-            DirectX::XMConvertToDegrees(desiredYaw));
-        ImGui::Text("Target Boss Yaw: %.3f deg",
-            DirectX::XMConvertToDegrees(offscreenAssistTargetYaw));
-        ImGui::Text("Yaw Delta: %.3f deg",
-            DirectX::XMConvertToDegrees(offscreenAssistYawDelta));
-        ImGui::Text("Applied Yaw Step: %.3f deg",
-            DirectX::XMConvertToDegrees(offscreenAssistAppliedYawStep));
-        ImGui::Text("Pitch Blend: %.3f", offscreenAssistPitchBlend);
-        ImGui::Text("Right Stick Magnitude: %.3f",
-            offscreenAssistRightStickMagnitude);
 
         ImGui::SeparatorText("Tuning");
         ImGui::DragFloat("Horizontal Safe Margin",
@@ -2776,21 +2735,6 @@ void DarkCameraActor::DrawImGuiDetails()
             &offscreenAssistRightStickCancelThreshold, 0.005f, 0.0f, 1.0f);
     }
 
-    if (ImGui::CollapsingHeader("FOV Switching Debug", ImGuiTreeNodeFlags_DefaultOpen))
-    {
-        const char* modeNames[] = { "TPS", "Focus", "LockOn", "Death" };
-        const float currentFov = DirectX::XMConvertToDegrees(mainCameraComponent->GetFov());
-        const float desiredFov = isBlending ? blendTargetFovDegree : GetFovDegreeForMode(currentMode);
-        ImGui::Text("Boss Battle: %s", IsBossBattle() ? "true" : "false");
-        ImGui::Text("Current Mode: %s", modeNames[static_cast<int>(currentMode)]);
-        ImGui::Text("Requested Mode: %s", modeNames[static_cast<int>(requestMode)]);
-        ImGui::Text("Current FOV: %.2f deg", currentFov);
-        ImGui::Text("Desired FOV: %.2f deg", desiredFov);
-        ImGui::Text("Corridor / Standard / Boss TPS / LockOn: %.2f / %.2f / %.2f / %.2f deg",
-            corridorTpsSettings.fovDegree, standardTpsSettings.fovDegree, bossTpsSettings.fovDegree, GetActiveLockOnProfile().fovDegree);
-        if (isBlending)
-            ImGui::Text("FOV Blend: %.2f -> %.2f deg", blendStartFovDegree, blendTargetFovDegree);
-    }
 
     if (ImGui::Button(U8("TPS")))
     {
@@ -2844,8 +2788,6 @@ void DarkCameraActor::DrawImGuiDetails()
     {
         ImGui::DragFloat("Collision Start Ratio", &lockOnCollisionStartRatio, 0.01f, 0.0f, 1.0f);
         ImGui::DragFloat("Collision Full Ratio", &lockOnCollisionFullRatio, 0.01f, 0.0f, 1.0f);
-        ImGui::Text("Wall Target Weight: %.3f (Base)", lockOnWallTargetWeight);
-        ImGui::Text("Wall Horizontal Scale: %.3f (fixed)", lockOnWallHorizontalScale);
         ImGui::SliderFloat("Wall Distance Scale", &lockOnWallDistanceScale, 0.1f, 1.0f);
         ImGui::DragFloat("Collision Ratio Hysteresis", &lockOnCollisionRatioHysteresis, 0.005f, 0.0f, 0.2f);
         ImGui::DragFloat("Distance Start", &lockOnDistanceStart, 0.05f, 0.0f, 30.0f);
@@ -2859,33 +2801,6 @@ void DarkCameraActor::DrawImGuiDetails()
             &lockOnSafeFrameHorizontalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
         ImGui::DragFloat("Safe Frame Vertical Margin",
             &lockOnSafeFrameVerticalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
-        lockOnSafeFrameHorizontalMargin = std::clamp(
-            lockOnSafeFrameHorizontalMargin, 0.0f, 0.49f);
-        lockOnSafeFrameVerticalMargin = std::clamp(
-            lockOnSafeFrameVerticalMargin, 0.0f, 0.49f);
-        ImGui::Separator();
-        ImGui::Text("Desired Eye: %.3f, %.3f, %.3f",
-            desiredEyePosition.x, desiredEyePosition.y, desiredEyePosition.z);
-        ImGui::Text("Collision Pre Eye: %.3f, %.3f, %.3f",
-            collisionPreEyePosition.x, collisionPreEyePosition.y, collisionPreEyePosition.z);
-        ImGui::Text("Collision Post Eye: %.3f, %.3f, %.3f",
-            collisionPostEyePosition.x, collisionPostEyePosition.y, collisionPostEyePosition.z);
-        ImGui::Text("Desired Camera Distance: %.3f", desiredCameraDistance);
-        ImGui::Text("Actual Camera Distance: %.3f", actualCameraDistance);
-        ImGui::Text("Collision Ratio: %.3f", cameraCollisionRatio);
-        ImGui::Text("Adaptive Collision Ratio: %.3f", lockOnCollisionRatioForAdaptive);
-        ImGui::SeparatorText("Collision Diagnostics");
-        ImGui::Text("Collision Hit: %s", cameraHitWall ? "true" : "false");
-        ImGui::Text("Initial Overlap: %s",
-            cameraCollisionInitialOverlap ? "true" : "false");
-        ImGui::Text("SphereCast Hit Point: %.3f, %.3f, %.3f",
-            cameraCollisionHitPoint.x, cameraCollisionHitPoint.y,
-            cameraCollisionHitPoint.z);
-        ImGui::Text("SphereCast Hit Normal: %.3f, %.3f, %.3f",
-            cameraCollisionHitNormal.x, cameraCollisionHitNormal.y,
-            cameraCollisionHitNormal.z);
-        ImGui::Text("SphereCast Hit Distance: %.3f",
-            cameraCollisionHitDistance);
         ImGui::SeparatorText("Wall Lateral Escape");
         ImGui::DragFloat("Near Lateral Offset", &lockOnWallEscapeNearOffset,
             0.05f, 0.0f, 5.0f, "%.2f m");
@@ -2907,118 +2822,7 @@ void DarkCameraActor::DrawImGuiDetails()
             0.25f, 0.0f, 20.0f, "%.2f m/s");
         ImGui::DragFloat("Escape Return Speed", &lockOnWallEscapeReturnSpeed,
             0.25f, 0.0f, 20.0f, "%.2f m/s");
-        lockOnWallEscapeNearOffset = (std::max)(
-            lockOnWallEscapeNearOffset, 0.0f);
-        lockOnWallEscapeFarOffset = (std::max)(
-            lockOnWallEscapeFarOffset, lockOnWallEscapeNearOffset);
-        lockOnWallEscapeSevereFovThreshold = (std::max)(
-            lockOnWallEscapeSevereFovThreshold, lockOnSettings.fovDegree);
-        lockOnWallEscapeImprovementThreshold = (std::max)(
-            lockOnWallEscapeImprovementThreshold, 0.0f);
-        lockOnWallEscapeSideSwitchImprovementThreshold = (std::max)(
-            lockOnWallEscapeSideSwitchImprovementThreshold, 0.0f);
-        lockOnWallEscapeDistanceImprovementThreshold = (std::max)(
-            lockOnWallEscapeDistanceImprovementThreshold, 0.0f);
-        lockOnWallEscapeMoveSpeed = (std::max)(lockOnWallEscapeMoveSpeed, 0.0f);
-        lockOnWallEscapeReturnSpeed = (std::max)(lockOnWallEscapeReturnSpeed, 0.0f);
-        const char* currentEscapeSideName = currentEscapeSide < 0
-            ? "Left"
-            : currentEscapeSide > 0 ? "Right" : "None";
-        const char* targetEscapeSideName = targetEscapeSide < 0
-            ? "Left"
-            : targetEscapeSide > 0 ? "Right" : "None";
-        ImGui::Text("Severe Composition: %s",
-            lockOnWallEscapeSevereComposition ? "true" : "false");
-        ImGui::Text("Escape Active: %s",
-            lockOnWallEscapeActive ? "true" : "false");
-        ImGui::Text("Current Escape Side: %s", currentEscapeSideName);
-        ImGui::Text("Target Escape Side: %s", targetEscapeSideName);
-        ImGui::Text("Current Lateral Offset: %.3f", currentLateralEscapeOffset);
-        ImGui::Text("Target Lateral Offset: %.3f", targetLateralEscapeOffset);
-        ImGui::Text("Current Required FOV: %.2f",
-            lockOnWallEscapeCurrentRequiredFov);
-        ImGui::Text("Left Near / Far Required FOV: %.2f / %.2f",
-            lockOnWallEscapeLeftNearRequiredFov,
-            lockOnWallEscapeLeftFarRequiredFov);
-        ImGui::Text("Right Near / Far Required FOV: %.2f / %.2f",
-            lockOnWallEscapeRightNearRequiredFov,
-            lockOnWallEscapeRightFarRequiredFov);
-        ImGui::Text("Selected Candidate: %s",
-            lockOnWallEscapeSelectedCandidate.c_str());
-        ImGui::Text("Selected Candidate Required FOV: %.2f",
-            lockOnWallEscapeSelectedRequiredFov);
-        ImGui::Text("Selected Player X / Y / Z: %.3f / %.3f / %.3f",
-            lockOnWallEscapeSelectedDiagnostics.player.cameraSpace.x,
-            lockOnWallEscapeSelectedDiagnostics.player.cameraSpace.y,
-            lockOnWallEscapeSelectedDiagnostics.player.cameraSpace.z);
-        ImGui::Text("Selected Player In Front: %s",
-            lockOnWallEscapeSelectedDiagnostics.player.inFront ? "true" : "false");
-        ImGui::Text("Selected Boss X / Y / Z: %.3f / %.3f / %.3f",
-            lockOnWallEscapeSelectedDiagnostics.boss.cameraSpace.x,
-            lockOnWallEscapeSelectedDiagnostics.boss.cameraSpace.y,
-            lockOnWallEscapeSelectedDiagnostics.boss.cameraSpace.z);
-        ImGui::Text("Selected Boss In Front: %s",
-            lockOnWallEscapeSelectedDiagnostics.boss.inFront ? "true" : "false");
-        ImGui::Text("Player-Boss Distance: %.3f", lockOnEnemyDistance);
-        ImGui::Text("Base Distance: %.3f", GetActiveLockOnProfile().distance);
-        ImGui::Text("Horizontal Extent: %.3f", lockOnHorizontalExtent);
-        ImGui::Text("Vertical Extent: %.3f", lockOnVerticalExtent);
-        ImGui::Text("Required X Distance: %.3f", lockOnRequiredXDistance);
-        ImGui::Text("Required Y Distance: %.3f", lockOnRequiredYDistance);
-        ImGui::Text("Required Framing Distance: %.3f",
-            lockOnRequiredFramingDistance);
-        ImGui::Text("Existing Adaptive Distance: %.3f",
-            lockOnExistingAdaptiveDistance);
-        ImGui::Text("Desired Distance: %.3f", desiredLockOnCameraDistance);
-        ImGui::Text("Current Adaptive Distance: %.3f", adaptiveLockOnCameraDistance);
-        ImGui::Text("Framing Deficit: %.3f", lockOnFramingDeficit);
-        ImGui::Text("Framing Active: %s", lockOnFramingActive ? "YES" : "NO");
-        ImGui::SeparatorText("Composition Correction");
-        ImGui::Text("Composition Active: %s",
-            compositionActive ? "true" : "false");
-        ImGui::Text("Player Inside Safe Frame: %s",
-            compositionPlayerInsideSafeFrame ? "true" : "false");
-        ImGui::Text("Boss Inside Safe Frame: %s",
-            compositionBossInsideSafeFrame ? "true" : "false");
-        ImGui::Text("Player In Front: %s",
-            compositionPlayerInFront ? "true" : "false");
-        ImGui::Text("Boss In Front: %s",
-            compositionBossInFront ? "true" : "false");
-        ImGui::Text("Base Yaw: %.3f deg",
-            DirectX::XMConvertToDegrees(compositionBaseYaw));
-        ImGui::Text("Composition Target Yaw: %.3f deg",
-            DirectX::XMConvertToDegrees(compositionTargetYaw));
-        ImGui::Text("Target Correction: %.3f deg",
-            DirectX::XMConvertToDegrees(targetCompositionYawCorrection));
-        ImGui::Text("Current Correction: %.3f deg",
-            DirectX::XMConvertToDegrees(currentCompositionYawCorrection));
-        ImGui::Text("Required FOV Before Composition: %.2f",
-            compositionRequiredFovBefore);
-        ImGui::Text("Required FOV After Composition: %.2f",
-            compositionRequiredFovAfter);
         ImGui::SeparatorText("Failure Distance Recovery");
-        ImGui::Text("Failure Recovery Active: %s",
-            recoveryActive ? "true" : "false");
-        ImGui::Text("Desired Eye Target Distance: %.3f",
-            recoveryDesiredTargetDistance);
-        ImGui::Text("Collision Post Target Distance: %.3f",
-            recoveryCollisionPostTargetDistance);
-        ImGui::Text("Wall Escape Final Target Distance: %.3f",
-            recoveryWallEscapeFinalTargetDistance);
-        ImGui::Text("Lost Distance: %.3f", recoveryLostDistance);
-        ImGui::Text("Recovered Distance: %.3f", recoveryRecoveredDistance);
-        ImGui::Text("Base Required FOV: %.2f", recoveryBaseRequiredFov);
-        ImGui::Text("Recovery Candidate Required FOV: %.2f",
-            recoveryCandidateRequiredFov);
-        ImGui::Text("Final Required FOV: %.2f", recoveryFinalRequiredFov);
-        ImGui::Text("Recovery Candidate Valid: %s",
-            recoveryCandidateValid ? "true" : "false");
-        ImGui::Text("Recovery Candidate Collision Hit: %s",
-            recoveryCandidateCollisionHit ? "true" : "false");
-        ImGui::Text("Current Recovery Distance: %.3f",
-            currentRecoveryDistance);
-        ImGui::Text("Target Recovery Distance: %.3f",
-            targetRecoveryDistance);
         ImGui::DragFloat("Max Recovery Distance", &recoveryMaxDistance,
             0.05f, 0.0f, 5.0f, "%.2f m");
         ImGui::DragFloat("Recovery Move Speed", &recoveryMoveSpeed,
@@ -3060,57 +2864,6 @@ void DarkCameraActor::DrawImGuiDetails()
             0.01f, 0.0f, 10.0f, "%.2f m");
         ImGui::DragFloat("FOV Return Delay", &lockOnFovFallbackReturnDelay,
             0.01f, 0.0f, 2.0f, "%.2f sec");
-        lockOnMaxFallbackFovDegree = (std::max)(
-            lockOnMaxFallbackFovDegree, lockOnSettings.fovDegree);
-        lockOnFovExpandSpeed = (std::max)(lockOnFovExpandSpeed, 0.0f);
-        lockOnFovReturnSpeed = (std::max)(lockOnFovReturnSpeed, 0.0f);
-        lockOnFovFallbackExitDeficit = (std::max)(
-            lockOnFovFallbackExitDeficit, 0.0f);
-        lockOnFovFallbackEnterDeficit = (std::max)(
-            lockOnFovFallbackEnterDeficit, lockOnFovFallbackExitDeficit);
-        lockOnFovFallbackReturnDelay = (std::max)(
-            lockOnFovFallbackReturnDelay, 0.0f);
-        ImGui::Text("Base LockOn FOV: %.2f", GetActiveLockOnProfile().fovDegree);
-        ImGui::Text("Required FOV: %.2f", lockOnRequiredFovDegree);
-        ImGui::Text("Collision Pre Required FOV: %.2f",
-            lockOnCollisionPreRequiredFovDegree);
-        ImGui::Text("Collision Post Required FOV: %.2f",
-            lockOnRequiredFovDegree);
-        ImGui::SeparatorText("Player Camera Space");
-        ImGui::Text("Player X / Y / Z: %.3f / %.3f / %.3f",
-            lockOnFovDiagnostics.player.cameraSpace.x,
-            lockOnFovDiagnostics.player.cameraSpace.y,
-            lockOnFovDiagnostics.player.cameraSpace.z);
-        ImGui::Text("Player In Front: %s",
-            lockOnFovDiagnostics.player.inFront ? "true" : "false");
-        ImGui::Text("Player Required FOV From X / Y: %.2f / %.2f",
-            lockOnFovDiagnostics.player.requiredFovFromX,
-            lockOnFovDiagnostics.player.requiredFovFromY);
-        ImGui::SeparatorText("Boss Camera Space");
-        ImGui::Text("Boss X / Y / Z: %.3f / %.3f / %.3f",
-            lockOnFovDiagnostics.boss.cameraSpace.x,
-            lockOnFovDiagnostics.boss.cameraSpace.y,
-            lockOnFovDiagnostics.boss.cameraSpace.z);
-        ImGui::Text("Boss In Front: %s",
-            lockOnFovDiagnostics.boss.inFront ? "true" : "false");
-        ImGui::Text("Boss Required FOV From X / Y: %.2f / %.2f",
-            lockOnFovDiagnostics.boss.requiredFovFromX,
-            lockOnFovDiagnostics.boss.requiredFovFromY);
-        ImGui::Text("Framing Limiter: %s", lockOnFovDiagnostics.limiter.c_str());
-        ImGui::Text("Target FOV: %.2f", lockOnTargetFovDegree);
-        ImGui::Text("Current FOV: %.2f", lockOnCurrentFovDegree);
-        ImGui::Text("Max Fallback FOV: %.2f", GetActiveLockOnProfile().maxFallbackFovDegree);
-        ImGui::Text("FOV Fallback Active: %s",
-            lockOnFovFallbackActive ? "YES" : "NO");
-        ImGui::Text("Framing Deficit: %.3f", lockOnFramingDeficit);
-        ImGui::Text("Camera Collision Ratio: %.3f", cameraCollisionRatio);
-        ImGui::Text("Distance Strength: %.3f", lockOnDistanceStrength);
-        ImGui::Text("Zoom Speed: %.3f", currentLockOnZoomSpeed);
-        ImGui::Text("Target Weight: %.3f", lockOnTargetWeight);
-        ImGui::Text("Adaptive Target Weight: %.3f", adaptiveLockOnTargetWeight);
-        ImGui::Text("Adaptive Horizontal Offset: %.3f", adaptiveLockOnHorizontalOffset);
-        ImGui::Text("Yaw Offset: %.3f deg", lockOnYawOffsetDegree);
-        ImGui::Text("Pitch: %.3f deg", lockOnPitchDegree);
         ImGui::TreePop();
     }
     ImGui::DragFloat(U8("ロックオンカメラの基本距離"), &lockOnCameraDistance, 0.1f, 0.01f, 10.0f);

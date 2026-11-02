@@ -416,8 +416,6 @@ void Player::Update(float deltaTime)
     UpdateDamageFlash();
     UpdateLockOnGuideUI();
 
-    // The prison opening owns this Player's transform and pose for its whole duration.
-    // Do this before normal state-machine, locomotion, deferred movement, and Character::Update.
     if (prisonOpeningSitting || prisonOpeningStanding)
     {
         if (inputComponent)
@@ -427,7 +425,6 @@ void Player::Update(float deltaTime)
         characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
         velocity = { 0.0f, 0.0f, 0.0f };
 
-        // Reapply every frame: deferred movement and physics may otherwise correct the transform.
         SetPosition(prisonOpeningSittingPosition);
         SetEulerRotation({ 0.0f, prisonOpeningSittingYawDegrees, 0.0f });
         UpdateAllComponentTransforms();
@@ -449,7 +446,6 @@ void Player::Update(float deltaTime)
             }
         }
 
-        // The cinematic prison-opening path returns before the regular Dither update below.
         ApplyDitherTransparencyAlpha(1.0f);
         return;
     }
@@ -618,17 +614,6 @@ void Player::Update(float deltaTime)
                         isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
                     if (lethalHit && finalHitCallback)
                     {
-                        if (isRushHit)
-                        {
-                            const auto controller = GetBodyAnimationController();
-                            const auto* rushState = stateMachine_
-                                ? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState())
-                                : nullptr;
-                            const std::string animationName = controller ? controller->GetCurrentAnimationName() : std::string{};
-                            const bool animationPlaying = controller && controller->IsPlayAnimation();
-                            const float animationTime = controller ? controller->GetCurrentAnimationTime() : 0.0f;
-                            const float animationLength = controller ? controller->GetCurrentAnimationLength() : 0.0f;
-                        }
                         finalHitCallback(enemy, GetPosition());
                     }
                 }
@@ -976,16 +961,16 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
         // ‹æŠÔ‚ÌŽžŠÔ‚ðŽæ‚é
         float duration = state.endTime - state.startTime;
         float actualWarpDistance = state.moveDistance;
-        float currentCenterDistance = 0.0f;
         float playerRadius = 0.0f;
         float enemyRadius = 0.0f;
-        float remainingApproachDistance = 0.0f;
 
         // Rotation and MotionWarp share the target fixed at Attack Enter.
         if (stateMachine_->GetStateName() == "Attack")
         {
             if (const auto target = attackTarget.lock())
             {
+                float remainingApproachDistance = 0.0f;
+                float currentCenterDistance = 0.0f;
                 DirectX::XMFLOAT3 targetDelta = MathHelper::Subtract(
                     target->GetPosition(), GetPosition());
                 targetDelta.y = 0.0f;
@@ -1099,8 +1084,7 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
                 callback();
             }
         }
-        else if (event.parameter == "rush_input_end" && stateMachine_ &&
-            std::string(stateMachine_->GetStateName()) == "Dodge")
+        else if (event.parameter == "rush_input_end" && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge")
         {
             rushInputEndNotifyReceivedDebug = true;
         }
@@ -1163,7 +1147,6 @@ void Player::UpdateLocomotionAnimation()
 {
     if (GetStateMachine()->GetStateName() != "Running")
     {
-        //locomotionMode = LocomotionMode::Idle;
         return;
     }
 
@@ -2593,22 +2576,20 @@ bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
     };
     const float attackerLength = std::sqrt(
         toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
-    directionToAttackerDebug = attackerLength > 0.0001f
+    const DirectX::XMFLOAT3 directionToAttacker = attackerLength > 0.0001f
         ? DirectX::XMFLOAT3{ toAttacker.x / attackerLength, 0.0f, toAttacker.z / attackerLength }
     : DirectX::XMFLOAT3{};
 
     if (!dodgeWorldDirectionSnapshotValid || attackerLength <= 0.0001f)
     {
-        justDodgeDirectionDotDebug = 0.0f;
-        justDodgeDirectionResultDebug = false;
         return false;
     }
 
-    justDodgeDirectionDotDebug =
-        dodgeWorldDirectionSnapshot.x * directionToAttackerDebug.x +
-        dodgeWorldDirectionSnapshot.z * directionToAttackerDebug.z;
-    justDodgeDirectionResultDebug = justDodgeDirectionDotDebug <= justDodgeMaxTowardAttackerDot;
-    return justDodgeDirectionResultDebug;
+    const float directionDot =
+        dodgeWorldDirectionSnapshot.x * directionToAttacker.x +
+        dodgeWorldDirectionSnapshot.z * directionToAttacker.z;
+    const bool directionValid = directionDot <= justDodgeMaxTowardAttackerDot;
+    return directionValid;
 }
 
 

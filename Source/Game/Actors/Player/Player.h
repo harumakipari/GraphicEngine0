@@ -449,8 +449,6 @@ public:
     // 回避開始時の方向と攻撃者方向からJust Dodge成立可否を判定する。
     bool CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition);
 
-    // カメラ・ボス戦連携
-
     // カメラ注視点用コンポーネントを返す。
     const std::shared_ptr<SceneComponent>& GetCameraTargetComponent() { return cameraTargetComponent; }
 
@@ -612,9 +610,6 @@ public:
     float justDodgeMaxTowardAttackerDot = 0.25f; // 回避方向と攻撃者方向の成立判定しきい値
     DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{}; // 回避開始時に固定したワールド方向
     bool dodgeWorldDirectionSnapshotValid = false; // 回避方向スナップショットが有効か
-    DirectX::XMFLOAT3 directionToAttackerDebug{}; // 診断用に保存する攻撃者方向
-    float justDodgeDirectionDotDebug = 0.0f; // 診断用の回避方向と攻撃者方向の内積
-    bool justDodgeDirectionResultDebug = false; // 診断用のJust Dodge方向判定結果
     std::string lastJustDodgeAttack = "None"; // 直近のJust Dodge対象攻撃名
     float lastJustAnimationTime = 0.0f; // Just Dodge判定時のアニメーション時刻
     float lastJustWindowStart = 0.0f; // Just Dodge判定区間の開始時刻
