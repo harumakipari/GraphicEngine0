@@ -253,22 +253,12 @@ bool GruxEnemy::BeginTripleChargeTransition()
     chargeBT.triplePhase = TripleChargePhase::InterChargeTransition;
     chargeBT.tripleChargeTransitionElapsed = 0.0f;
     chargeBT.tripleChargeRepositionActive = false;
-    chargeBT.tripleChargeRepositionRequired = false;
     chargeBT.tripleChargeRepositionStartPosition = GetPosition();
     chargeBT.tripleChargeRepositionTargetPosition = chargeBT.tripleChargeRepositionStartPosition;
-    chargeBT.tripleChargeRepositionCurrentPosition = chargeBT.tripleChargeRepositionStartPosition;
     chargeBT.tripleChargeRepositionDirection = {};
-    chargeBT.tripleChargeRepositionRequiredClearance = 0.0f;
     chargeBT.tripleChargeRepositionCurrentClearance = 0.0f;
     chargeBT.tripleChargeRepositionShortage = 0.0f;
-    chargeBT.tripleChargeRepositionPlannedDistance = 0.0f;
-    chargeBT.tripleChargeRepositionMovedDistance = 0.0f;
-    chargeBT.tripleChargeRepositionValidationBefore = false;
     chargeBT.tripleChargeRepositionValidationAfter = false;
-    chargeBT.tripleChargeRepositionPlayerPositionBefore = {};
-    chargeBT.tripleChargeRepositionPlayerPositionAfter = {};
-    chargeBT.tripleChargeRepositionDirectionBefore = {};
-    chargeBT.tripleChargeRepositionDirectionAfter = {};
     chargeBT.tripleChargeFinalLockedDirection = {};
     chargeBT.tripleChargeFinalValidationOrigin = {};
     chargeBT.tripleChargeFinalValidationDirection = {};
@@ -280,17 +270,7 @@ bool GruxEnemy::BeginTripleChargeTransition()
     chargeBT.tripleChargeSideWallHit = false;
     chargeBT.tripleChargeSideWallActor = "None";
     chargeBT.tripleChargeSideWallComponent = "None";
-    chargeBT.tripleChargeForwardCorrectionDistance = 0.0f;
-    chargeBT.tripleChargeSideCorrectionDistance = 0.0f;
     chargeBT.tripleChargeFinalPathSafe = false;
-    const auto transitionScene = GetOwnerScene();
-    const auto transitionPlayer = transitionScene
-        ? transitionScene->GetActorManager()->GetActorOfType<Player>() : nullptr;
-    if (transitionPlayer)
-        chargeBT.tripleChargeRepositionPlayerPositionBefore = transitionPlayer->GetPosition();
-    const auto transitionContext = BuildTargetContext();
-    if (transitionContext.valid)
-        chargeBT.tripleChargeRepositionDirectionBefore = transitionContext.directionToPlayer;
     return true;
 }
 
@@ -523,11 +503,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             EvaluateChargeSideClearance(currentPosition, nextDirection,
                 sideClearance, sideNormal, sideHitPosition, sideActor,
                 sideComponent, sideWallHit);
-            chargeBT.tripleChargeRepositionCurrentPosition = currentPosition;
             chargeBT.tripleChargeRepositionCurrentClearance = clearance;
-            chargeBT.tripleChargeRepositionRequiredClearance = requiredClearance;
-            chargeBT.tripleChargeRepositionValidationBefore = clearanceMeasured &&
-                clearance > chargeStartValidationClearance;
             chargeBT.tripleChargeRepositionShortage = wallHit
                 ? (std::max)(0.0f, requiredClearance - clearance) : 0.0f;
             const float requiredSideClearance = (std::max)(0.05f,
@@ -541,8 +517,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             chargeBT.tripleChargeSideWallHitNormal = sideNormal;
             chargeBT.tripleChargeSideWallActor = sideActor;
             chargeBT.tripleChargeSideWallComponent = sideComponent;
-            chargeBT.tripleChargeForwardCorrectionDistance = chargeBT.tripleChargeRepositionShortage;
-            chargeBT.tripleChargeSideCorrectionDistance = sideShortage;
             if (clearanceMeasured && !chargeBT.tripleChargeRepositionActive &&
                 (chargeBT.tripleChargeRepositionShortage > 0.0f || sideShortage > 0.0f))
             {
@@ -572,13 +546,11 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                 const float boundaryMargin = (std::max)(
                     bossRoomSafetyMargin,
                     wallRadius + chargeWallCastSafetyMargin);
-                chargeBT.tripleChargeRepositionRequired = true;
                 chargeBT.tripleChargeRepositionActive = plannedDistance > 0.0001f;
                 chargeBT.tripleChargeRepositionStartPosition = currentPosition;
                 chargeBT.tripleChargeRepositionDirection = correctionLength > 0.0001f
                     ? DirectX::XMFLOAT3{ correction.x / correctionLength, 0.0f, correction.z / correctionLength }
                     : DirectX::XMFLOAT3{};
-                chargeBT.tripleChargeRepositionPlannedDistance = plannedDistance;
                 chargeBT.tripleChargeRepositionTargetPosition = currentPosition;
                 chargeBT.tripleChargeRepositionTargetPosition.x +=
                     chargeBT.tripleChargeRepositionDirection.x * plannedDistance;
@@ -621,10 +593,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                         chargeBT.tripleChargeRepositionActive = false;
                 }
                 SetPosition(moved);
-                chargeBT.tripleChargeRepositionCurrentPosition = moved;
-                const float mdx = moved.x - chargeBT.tripleChargeRepositionStartPosition.x;
-                const float mdz = moved.z - chargeBT.tripleChargeRepositionStartPosition.z;
-                chargeBT.tripleChargeRepositionMovedDistance = std::sqrt(mdx * mdx + mdz * mdz);
                 bool ignoredWallHit = false;
                 EvaluateChargeStartClearance(moved, nextDirection,
                     chargeBT.tripleChargeRepositionCurrentClearance, ignoredWallHit);
@@ -641,13 +609,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             chargeBT.triplePhase = TripleChargePhase::Aborted;
             return ChargeBTStepResult::Complete;
         }
-        chargeBT.tripleChargeRepositionCurrentPosition = GetPosition();
-        chargeBT.tripleChargeRepositionDirectionAfter = finalContext.directionToPlayer;
-        const auto finalScene = GetOwnerScene();
-        const auto finalPlayer = finalScene
-            ? finalScene->GetActorManager()->GetActorOfType<Player>() : nullptr;
-        if (finalPlayer)
-            chargeBT.tripleChargeRepositionPlayerPositionAfter = finalPlayer->GetPosition();
         chargeDirectionLocked = false;
         chargeDirection = {};
         if (!LockChargeDirectionToPlayer())

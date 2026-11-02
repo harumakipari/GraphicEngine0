@@ -1880,33 +1880,23 @@ private:
 
         bool tripleChargeRepositionActive = false;  // 複数回Chargeの位置補正中か。
 
-        bool tripleChargeRepositionRequired = false;  // 複数回Chargeの位置補正が必要か。
 
         DirectX::XMFLOAT3 tripleChargeRepositionStartPosition{};  // 複数回Chargeの位置補正の開始位置。
 
         DirectX::XMFLOAT3 tripleChargeRepositionTargetPosition{};  // 複数回Chargeの位置補正の目標位置。
 
-        DirectX::XMFLOAT3 tripleChargeRepositionCurrentPosition{};  // 複数回Chargeの位置補正中の現在位置。
 
         DirectX::XMFLOAT3 tripleChargeRepositionDirection{};  // 複数回Chargeの位置補正の方向。
 
-        float tripleChargeRepositionRequiredClearance = 0.0f;  // 複数回Chargeの位置補正に必要な余白距離。
 
         float tripleChargeRepositionCurrentClearance = 0.0f;  // 複数回Chargeの位置補正時の現在の余白距離。
 
         float tripleChargeRepositionShortage = 0.0f;  // 複数回Chargeの位置補正時の不足距離。
 
-        float tripleChargeRepositionPlannedDistance = 0.0f;  // 複数回Chargeの位置補正の予定距離。
 
-        float tripleChargeRepositionMovedDistance = 0.0f;  // 複数回Chargeの位置補正の移動済み距離。
 
-        bool tripleChargeRepositionValidationBefore = false;  // 複数回Chargeの位置補正前の検証結果。
 
         bool tripleChargeRepositionValidationAfter = false;  // 複数回Chargeの位置補正後の検証結果。
-        DirectX::XMFLOAT3 tripleChargeRepositionPlayerPositionBefore{};  // 複数回Chargeの位置補正前のプレイヤー位置。
-        DirectX::XMFLOAT3 tripleChargeRepositionPlayerPositionAfter{};  // 複数回Chargeの位置補正後のプレイヤー位置。
-        DirectX::XMFLOAT3 tripleChargeRepositionDirectionBefore{};  // 複数回Chargeの位置補正前の方向。
-        DirectX::XMFLOAT3 tripleChargeRepositionDirectionAfter{};  // 複数回Chargeの位置補正後の方向。
         DirectX::XMFLOAT3 tripleChargeFinalLockedDirection{};  // 複数回Chargeの最終的に固定した方向。
         DirectX::XMFLOAT3 tripleChargeFinalValidationOrigin{};  // 複数回Chargeの最終経路検証の開始位置。
         DirectX::XMFLOAT3 tripleChargeFinalValidationDirection{};  // 複数回Chargeの最終経路検証の方向。
@@ -1918,8 +1908,6 @@ private:
         bool tripleChargeSideWallHit = false;  // 複数回Chargeの側方の壁判定がヒットしたか。
         std::string tripleChargeSideWallActor;  // 複数回Chargeの側方でヒットしたアクター名。
         std::string tripleChargeSideWallComponent;  // 複数回Chargeの側方でヒットしたコンポーネント名。
-        float tripleChargeForwardCorrectionDistance = 0.0f;  // 複数回Chargeの前方への補正距離。
-        float tripleChargeSideCorrectionDistance = 0.0f;  // 複数回Chargeの側方への補正距離。
         bool tripleChargeFinalPathSafe = false;  // 複数回Chargeの最終経路が安全か。
     } chargeBT;  // Chargeの実行状態と診断情報。
     float chargeSetupDistanceMin = 8.0f;  // Chargeの準備位置に必要な対象との最小距離。
