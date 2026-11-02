@@ -200,9 +200,6 @@ void GruxEnemy::StartChargeAttackBT()
     chargeBT.tripleChargeLegDistance = 0.0f;
     chargeBT.tripleFinalWallHit = false;
     chargeBT.tripleEarlyWallHit = false;
-    chargeBT.tripleCurrentWallClearance = 0.0f;
-    chargeBT.tripleWallTurnCandidate = false;
-    chargeBT.tripleWallTurnTriggered = false;
     chargeBT.activeStunDuration = GetStunDuration();
     chargeBT.phase = ChargeBTPhase::Telegraph;
     chargeBT.animationElapsed = 0.0f;
@@ -231,40 +228,19 @@ bool GruxEnemy::IsPhase2ChargeActive()
 
 bool GruxEnemy::BeginTripleChargeLeg()
 {
-    chargeBT.tripleBeginTripleChargeLegCalled = true;
-    chargeBT.tripleBeginTripleChargeLegResult = false;
-    chargeBT.tripleBeginChargeMovementResult = false;
     ResetJustDodgeRecords("triple_charge_leg_start");
     hitActors.clear();
     HideChargeTelegraphVisual();
     const bool movementStarted = BeginChargeAttackMovement();
-    chargeBT.tripleBeginChargeMovementResult = movementStarted;
-    chargeBT.tripleHoldEndChargeStartValidation = chargeStartValidationValidDebug;
-    chargeBT.tripleHoldEndChargeStartClearance = chargeStartClearanceDebug;
-    chargeBT.tripleHoldEndChargeStartFailureReason = chargeStartFailureReasonDebug;
-    if (!movementStarted &&
-        (chargeStartFailureReasonDebug == "InvalidTargetContext" ||
-            chargeStartFailureReasonDebug == "DirectionLockFailed"))
-    {
-        chargeBT.tripleHoldEndChargeStartValidation = false;
-        chargeBT.tripleHoldEndChargeStartClearance = 0.0f;
-    }
-    if (!movementStarted && chargeBT.tripleHoldEndChargeStartFailureReason == "None")
-        chargeBT.tripleHoldEndChargeStartFailureReason = "Other";
     if (!movementStarted)
         return false;
     chargeBT.result = ChargeAttackEndReason::None;
     const int index = std::clamp(chargeBT.tripleChargeIndex, 0, 2);
-    chargeBT.tripleChargeDirections[index] = chargeDirection;
     chargeBT.tripleChargeStartPositions[index] = GetPosition();
     chargeBT.tripleChargeLegElapsed = 0.0f;
     chargeBT.tripleChargeLegDistance = 0.0f;
-    chargeBT.tripleCurrentWallClearance = 0.0f;
-    chargeBT.tripleWallTurnCandidate = false;
-    chargeBT.tripleWallTurnTriggered = false;
     chargeBT.triplePhase = TripleChargePhase::Charging;
     chargeBT.phase = ChargeBTPhase::Charging;
-    chargeBT.tripleBeginTripleChargeLegResult = true;
     return true;
 }
 
@@ -315,7 +291,6 @@ bool GruxEnemy::BeginTripleChargeTransition()
     const auto transitionContext = BuildTargetContext();
     if (transitionContext.valid)
         chargeBT.tripleChargeRepositionDirectionBefore = transitionContext.directionToPlayer;
-    chargeBT.tripleWallTurnTriggered = false;
     return true;
 }
 
@@ -768,7 +743,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             chargeBT.tripleChargeLegElapsed >= chargeBT.tripleChargeLegMaxDuration))
         {
             chargeBT.result = ChargeAttackEndReason::LegComplete;
-            chargeBT.tripleWallTurnTriggered = false;
             StopChargeAttackMovement();
         }
         else

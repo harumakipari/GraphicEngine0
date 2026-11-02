@@ -208,10 +208,6 @@ void GruxEnemy::Update(float deltaTime)
     UpdateAnimationMotionWarp(deltaTime);
 
 
-#ifdef USE_IMGUI
-    if (dashTelegraphActive)
-        DrawDashTelegraphDebugWorld();
-#endif
 
     SetScale({ enemyScale,enemyScale,enemyScale });
 
@@ -540,8 +536,6 @@ void GruxEnemy::DrawImGuiDetails()
     fastComboFrontMaxAngle = std::clamp(fastComboFrontMaxAngle, 0.0f, 180.0f);
 
 
-    ImGui::SeparatorText("Last Decision");
-    ImGui::TextWrapped("%s", lastAIDecisionReason.c_str());
 
     ImGui::SeparatorText("Last Weighted Random");
 
@@ -659,7 +653,6 @@ void GruxEnemy::DrawImGuiDetails()
     interStageFaceCompleteAngle = std::clamp(interStageFaceCompleteAngle, 0.0f, 90.0f);
     interStageMaxFacingAngle = std::clamp(interStageMaxFacingAngle, 0.0f, 180.0f);
     interStageFaceDelay = std::clamp(interStageFaceDelay, 0.0f, 0.5f);
-    ImGui::Checkbox(U8("近距離攻撃範囲を表示"), &showCloseCombatDebugRange);
     ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
     ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
     ImGui::DragFloat(U8("旋回タイムアウト"), &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
@@ -984,7 +977,7 @@ void GruxEnemy::StopBattleActions()
     // 実行中のBTアクションをCleanupする。
     if (IsRoarBTActive())
     {
-        CleanupRoarBT("Interrupted");
+        CleanupRoarBT();
         activeNode = nullptr;
         if (behaviorData) behaviorData->Init();
     }
@@ -1245,7 +1238,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     selectedAttackType = BossAttackType::PrimaryAttackLA;
     selectedActionType = BossActionType::AttackLA;
     roarBT = {};
-    roarBTStatus = "Idle";
     roarCooldownRemaining = 0.0f;
     retreatRetryCooldownRemaining = 0.0f;
     repositionCooldownRemaining = 0.0f;
@@ -1283,7 +1275,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     dashBTAttackStarted = false;
     dashBTPreviousAction = BossActionType::AttackLA;
     dashBTTelegraphElapsed = 0.0f;
-    dashBTTraveledDistance = 0.0f;
     dashBTTripleDashActive = false;
     dashBTDashIndex = 0;
     dashBTDashMaxCount = 1;
@@ -1294,9 +1285,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     dashBTDirectionLocked = false;
     dashBTMovementSnapshotPrepared = false;
     dashBTPredictedKnockupPosition = {};
-    dashBTActualKnockupStartPosition = {};
-    dashBTPredictionError = 0.0f;
-    dashBTKnockupPositionCaptured = false;
     dashAttackDirection = {};
     dashAttackStartPosition = {};
     dashTargetPosition = {};
@@ -2276,9 +2264,6 @@ bool GruxEnemy::PrepareDashAttackMovementSnapshot()
         bossPosition.y,
         bossPosition.z + dashAttackDirection.z * nominalTravelDistance
     };
-    dashBTActualKnockupStartPosition = {};
-    dashBTPredictionError = 0.0f;
-    dashBTKnockupPositionCaptured = false;
     dashBTMovementSnapshotPrepared = true;
 
     rotationComponent->SetDirectionImmediate(dashAttackDirection);
@@ -2300,20 +2285,6 @@ void GruxEnemy::PlayBossTelegraphSE(const char* fileName) const
 }
 
 
-void GruxEnemy::DrawDashTelegraphDebugWorld() const
-{
-    if (!dashTelegraphSnapshotValid)
-        return;
-    DirectX::XMFLOAT3 start = dashTelegraphLineStart;
-    DirectX::XMFLOAT3 end = dashTelegraphLineEnd;
-    const float debugY = dashTelegraphLineYOffset + 0.02f;
-    start.y = debugY;
-    end.y = debugY;
-    const DirectX::XMFLOAT4 color{ 0.15f, 0.9f, 1.0f, 1.0f };
-    DebugRender::DrawSphere(start, 0.16f, color, 0.0f, true);
-    DebugRender::DrawSphere(end, 0.20f, { 1.0f, 0.25f, 0.9f, 1.0f }, 0.0f, true);
-    DebugRender::DrawLine(start, end, color, 0.0f, true);
-}
 
 bool GruxEnemy::BeginDashAttackMovement()
 {
@@ -2591,7 +2562,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             if (allowTripleWallTurn && chargeBT.tripleChargeActive &&
                 chargeBT.tripleChargeIndex < 2)
             {
-                chargeBT.tripleWallTurnTriggered = true;
                 chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
                 StopChargeAttackMovement();
                 return chargeEndReasonDebug;
@@ -2606,12 +2576,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             StopChargeAttackMovement();
             return chargeEndReasonDebug;
         }
-    }
-
-    if (chargeBT.tripleChargeActive)
-    {
-        chargeBT.tripleCurrentWallClearance = 0.0f;
-        chargeBT.tripleWallTurnCandidate = false;
     }
 
     const float frameMoveDistance = GetActiveChargeSpeed() * (std::max)(0.0f, deltaTime);
@@ -2657,11 +2621,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         const bool isNotFloor =
             std::abs(wallHit.normal.y) <= chargeWallNormalYThreshold;
         wallCandidate = facesCharge && isNotFloor;
-        if (chargeBT.tripleChargeActive)
-        {
-            chargeBT.tripleCurrentWallClearance = (std::max)(0.0f, wallHit.distance);
-            chargeBT.tripleWallTurnCandidate = wallCandidate;
-        }
     }
 
     Player* hitPlayer = playerCastHit
@@ -2723,7 +2682,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             chargeBT.tripleChargeActive &&
             wallHit.distance <= chargeBT.tripleChargeWallTurnClearance)
         {
-            chargeBT.tripleWallTurnTriggered = true;
             chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
             StopChargeAttackMovement();
             return chargeEndReasonDebug;

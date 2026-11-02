@@ -156,7 +156,7 @@ ActionBase::State ExecuteRoar::Run(float dt)
 ActionBase::State FinishRoar::Run(float)
 {
     const bool complete = owner->IsRoarBTActive();
-    owner->CleanupRoarBT(complete ? "Complete" : "Failed");
+    owner->CleanupRoarBT();
     return complete ? State::Complete : State::Failed;
 }
 
@@ -576,12 +576,12 @@ bool GruxEnemy::EvaluateRoarPlanForDebug() const
 
 bool GruxEnemy::BeginRoarBT()
 {
-    if (!CanPlanRoar()) { roarBTStatus = "Start rejected"; return false; }
+    if (!CanPlanRoar()) { return false; }
     const auto controller = GetBodyAnimationController();
     if (!std::isfinite(roarPreStampedeStartTime) || !std::isfinite(roarPreStampedeEndTime) ||
         roarPreStampedeStartTime < 0.0f || roarPreStampedeEndTime <= roarPreStampedeStartTime ||
         controller->GetAnimationLength("Pre_Stampede_0") < roarPreStampedeEndTime)
-    { roarBTStatus = "Invalid playback range"; return false; }
+    { return false; }
     StopAIMovement();
     DisableAttackHitBoxes();
     HideRoarFloatingDebris();
@@ -592,7 +592,7 @@ bool GruxEnemy::BeginRoarBT()
     if (!controller->SetPlaybackRange(roarPreStampedeStartTime, roarPreStampedeEndTime))
     {
         roarBT.stage = RoarStage::Telegraph;
-        CleanupRoarBT("Invalid playback range");
+        CleanupRoarBT();
         return false;
     }
     roarBT.stage = RoarStage::Telegraph;
@@ -601,7 +601,6 @@ bool GruxEnemy::BeginRoarBT()
     ShowRoarTelegraph();
     InitializeRoarFloatingDebris();
     UpdateRoarFloatingDebris();
-    roarBTStatus = "Running";
     roarCooldownRemaining = roarCooldownDuration;
     return true;
 }
@@ -609,23 +608,23 @@ bool GruxEnemy::BeginRoarBT()
 // 0 = Running, 1 = Complete, -1 = Failed. Only this action advances stages.
 int GruxEnemy::UpdateRoarBT(float dt)
 {
-    auto fail = [this](const char* reason) { CleanupRoarBT(reason); return -1; };
-    if (!IsRoarBTActive() || !IsRoarExecutionAllowed()) return fail("Interrupted");
+    auto fail = [this]() { CleanupRoarBT(); return -1; };
+    if (!IsRoarBTActive() || !IsRoarExecutionAllowed()) return fail();
     const auto controller = GetBodyAnimationController();
     const char* expected = roarBT.stage == RoarStage::Telegraph ? "Pre_Stampede_0" : "LevelStart_0";
-    if (controller->GetCurrentAnimationName() != expected) return fail("Animation replaced");
+    if (controller->GetCurrentAnimationName() != expected) return fail();
     const float time = controller->GetCurrentAnimationTime();
     const float safeDt = (std::max)(0.0f, dt);
     roarBT.elapsed += safeDt;
     roarBT.stalled = time > roarBT.previousTime + 0.00001f ? 0.0f : roarBT.stalled + safeDt;
     roarBT.previousTime = time;
-    if (roarBT.stalled > 2.0f || roarBT.elapsed > 60.0f) return fail("Playback timeout");
+    if (roarBT.stalled > 2.0f || roarBT.elapsed > 60.0f) return fail();
     StopAIMovement();
     UpdateRoarTelegraphProgress();
     UpdateRoarTelegraphTransform();
     UpdateRoarFloatingDebris();
     if (controller->IsPlayAnimation()) return 0;
-    if (time + 0.02f < roarBT.endTime) return fail("Animation stopped early");
+    if (time + 0.02f < roarBT.endTime) return fail();
     if (roarBT.stage == RoarStage::Telegraph)
     {
         PlayBodyAnimation("LevelStart_0", false, true, 0.15f, true);
@@ -633,10 +632,10 @@ int GruxEnemy::UpdateRoarBT(float dt)
         roarBT.previousTime = 0.0f;
         roarBT.stalled = 0.0f;
         roarBT.endTime = controller->GetAnimationLength("LevelStart_0");
-        if (roarBT.endTime < 0.30f) return fail("Invalid shockwave clip");
+        if (roarBT.endTime < 0.30f) return fail();
         return 0;
     }
-    if (!roarBT.shockwaveFired) return fail("Missing RoarShockwave notify");
+    if (!roarBT.shockwaveFired) return fail();
     return 1;
 }
 
@@ -785,7 +784,6 @@ void GruxEnemy::HideRoarTelegraph()
 
 void GruxEnemy::SpawnRoarGroundBurst()
 {
-    roarGroundBurstLastSpawnCount = 0;
     if (!roarGroundBurstEnabled || !roarGroundBurstEffectComponent)
         return;
 
@@ -821,7 +819,6 @@ void GruxEnemy::SpawnRoarGroundBurst()
                 center.y + roarGroundBurstYOffset,
                 center.z + cosf(angle) * distance };
             EffectManager::EmitParticle(effectHandle, spawnPosition, { 0.0f, 0.0f, 0.0f });
-            ++roarGroundBurstLastSpawnCount;
         }
     };
 
@@ -1092,7 +1089,7 @@ void GruxEnemy::HideRoarFloatingDebris()
     }
 }
 
-void GruxEnemy::CleanupRoarBT(const char* status)
+void GruxEnemy::CleanupRoarBT()
 {
     // Roar固有のRuntime、演出、当たり判定を後始末する。
     HideRoarTelegraph();
@@ -1117,7 +1114,6 @@ void GruxEnemy::CleanupRoarBT(const char* status)
             PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
     }
     roarBT = {};
-    roarBTStatus = status;
 }
 
 void GruxEnemy::TickRoarLifecycle(float dt)
@@ -1131,7 +1127,7 @@ void GruxEnemy::TickRoarLifecycle(float dt)
     if (IsRoarBTActive() && (!IsRoarExecutionAllowed() || !activeNode ||
         (activeNode->GetName() != "ExecuteRoar" && activeNode->GetName() != "FinishRoar")))
     {
-        CleanupRoarBT("Interrupted");
+        CleanupRoarBT();
         activeNode = nullptr;
         if (behaviorData) behaviorData->Init();
     }

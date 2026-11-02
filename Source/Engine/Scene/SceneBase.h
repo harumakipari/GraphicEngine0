@@ -73,7 +73,7 @@ public:
     }
 
     // 影描画用のライトビューの焦点を設定する関数
-    void SetLightViewFocus(const DirectX::XMFLOAT3& focus) { light_view_focus = { focus.x,focus.y,focus.z,1.0f }; }
+    void SetLightViewFocus(const DirectX::XMFLOAT3& focus) { lightViewFocus = { focus.x,focus.y,focus.z,1.0f }; }
 
 protected:
     // UI描画
@@ -139,7 +139,6 @@ protected:
     std::unique_ptr<GBuffer> gBufferRenderTarget;
     std::unique_ptr<SkyMap> skyMap;
     std::unique_ptr<LightManager> lightManager;
-    //std::unique_ptr<PostEffectManager> postEffectManager;
     std::unique_ptr<SceneEffectManager> sceneEffectManager;
     std::unique_ptr<SceneRenderer> sceneRenderer_;
 
@@ -159,7 +158,6 @@ protected:
     bool useDrawDebug = false;
 
     // HuskParticle用
-    bool integrateParticles = false;
     std::unique_ptr<husk_particles> huskParticles;
     std::unique_ptr<InterleavedGltfModel> particleMeshModel;
     std::unique_ptr<InterleavedGltfModel> swordGhostMeshModel;
@@ -193,9 +191,7 @@ protected:
 
     SceneRenderer sceneRender;
 
-    //==============================
     // メンバー関数
-    //==============================
     virtual void DrawSceneGui() {}///< 各シーン固有のImGui描画フック
 
     std::unordered_map<RenderPass, std::vector<RenderHook>> renderHooks;
@@ -204,13 +200,13 @@ protected:
     bool useTAA = true;
 
     std::shared_ptr<shadow_map> shadowMap;
-    const uint32_t shadowmap_width = 2048;
-    const uint32_t shadowmap_height = 2048;
-    DirectX::XMFLOAT4 light_view_focus{ 0, 0, 0, 1 };
-    float light_view_distance{ 10.0f };
-    float light_view_size{ 20.0f };
-    float light_view_near_z{ 1.0f };
-    float light_view_far_z{ 100.0f };
+    const uint32_t shadowmapWidth = 2048;
+    const uint32_t shadowmapHeight = 2048;
+    DirectX::XMFLOAT4 lightViewFocus{ 0, 0, 0, 1 };
+    float lightViewDistance{ 10.0f };
+    float lightViewSize{ 20.0f };
+    float lightViewNearZ{ 1.0f };
+    float lightViewFarZ{ 100.0f };
 
     ImVec2 viewportImageMin;
     ImVec2 viewportImageSize;

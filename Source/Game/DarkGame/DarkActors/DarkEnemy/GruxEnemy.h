@@ -166,8 +166,7 @@ public:
 
     void PlayBodyAnimation(const std::string& name, bool loop = true, bool blend = true, float blendTime = 0.3f, bool ignoreRootMotion = false) const;
 
-    void PlayPhase2CinematicBodyAnimation(const std::string& name, bool loop,
-        bool blend, float blendTime, bool ignoreRootMotion) const;
+    void PlayPhase2CinematicBodyAnimation(const std::string& name, bool loop, bool blend, float blendTime, bool ignoreRootMotion) const;
 
     // Playerの攻撃種別と命中位置を受け取りダメージを処理する。
     void TakeDamageFromPlayerAttack(int damage, bool isNormalFourthHit, PlayerAttackHitType hitType, const DirectX::XMFLOAT3& hitSourcePosition);
@@ -420,11 +419,7 @@ public:
     // Dash予兆を非表示にする。
     void HideDashTelegraphVisual();
 
-    // Dash予兆のデバッグ表示を更新する。
-    void UpdateDashTelegraphVisualDebug();
 
-    // Dash予兆のデバッグ情報をワールド上に描画する。
-    void DrawDashTelegraphDebugWorld() const;
 
     // Dashの移動を開始する。
     bool BeginDashAttackMovement();
@@ -729,7 +724,7 @@ public:
     void SpawnRoarGroundBurst();
 
     // Roarの実行状態と演出を終了時または中断時に整理する。
-    void CleanupRoarBT(const char* status);
+    void CleanupRoarBT();
 
     // Roarなどのクールダウンを更新し、Roarの中断を処理する。
     void TickRoarLifecycle(float dt);
@@ -1535,7 +1530,6 @@ private:
     float roarGroundBurstAngleJitterDegrees = 8.0f;  // Roarの地面噴出の角度の揺らぎ。
     float roarGroundBurstRadiusJitter = 0.04f;  // Roarの地面噴出の半径方向の揺らぎ。
     float roarGroundBurstYOffset = 0.0f;  // Roarの地面噴出の高さオフセット。
-    int roarGroundBurstLastSpawnCount = 0;  // 直近のRoarで生成した地面噴出エフェクト数。
     DirectX::XMFLOAT3 roarTelegraphOuterWorldPosition{};  // Roar予兆の外側のワールド位置。
     DirectX::XMFLOAT3 roarTelegraphFillWorldPosition{};  // Roar予兆の塗りつぶしのワールド位置。
     float roarHeightTolerance = 2.0f;  // Roarの判定に使う高さの許容差。
@@ -1592,7 +1586,6 @@ private:
         float previousTime = 0.0f;  // 前回のRoarアニメーション時刻。
         float endTime = 0.0f;  // Roarアニメーションの終了時刻。
     } roarBT;  // Roarの実行段階と衝撃波の状態。
-    std::string roarBTStatus = "Idle";  // Roarの実行・終了状態を示す表示文字列。
     BossTargetContext fastComboTargetContext{};  // FastComboの対象に関する距離と角度の情報。
     std::array<BossTargetContext, 3> fastComboStageTargetContexts{};  // FastComboの各段階で取得した対象情報。
     int fastComboTargetStage = -1;  // 対象情報を取得したFastComboの段階。
@@ -1672,7 +1665,6 @@ private:
     float turnSpeed = 480.0f;  // 攻撃前などの向き合わせに使う回転速度。
     float turnCompleteAngle = 15.0f;  // 攻撃前の向き合わせを完了とみなす角度。
     float turnTimeout = 1.5f;  // Chargeの向き合わせに使うタイムアウト時間。
-    std::string lastAIDecisionReason = "None";  // 直近のAI判断理由の表示文字列。
     float frontAttackReadyDuration = initialFrontAttackReadyDuration;  // 正面での攻撃準備時間。
     float sideAttackReadyDuration = initialSideAttackReadyDuration;  // 側面からの攻撃準備時間。
     float closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;  // 近接攻撃準備時の向き判定角度。
@@ -1761,7 +1753,6 @@ private:
     bool dashBTAttackStarted = false;  // Dashの攻撃シーケンスが開始済みかを示す。
     BossActionType dashBTPreviousAction = BossActionType::AttackLA;  // Dash開始前に選択されていた行動。
     float dashBTTelegraphElapsed = 0.0f;  // Dash予兆の経過時間。
-    float dashBTTraveledDistance = 0.0f;  // Dashで移動した距離。
     bool dashBTTripleDashActive = false;  // 複数回Dashを実行する状態。
     int dashBTDashIndex = 0;  // 現在のDash回のインデックス。
     int dashBTDashMaxCount = 1;  // 今回の攻撃で実行するDashの回数。
@@ -1778,9 +1769,6 @@ private:
     bool dashBTDirectionLocked = false;  // Dashの移動方向が固定済みかを示す。
     bool dashBTMovementSnapshotPrepared = false;  // Dash移動に使う情報が準備済みかを示す。
     DirectX::XMFLOAT3 dashBTPredictedKnockupPosition{};  // Dash後のKnockup開始予測位置。
-    DirectX::XMFLOAT3 dashBTActualKnockupStartPosition{};  // Dash後のKnockup実際の開始位置。
-    float dashBTPredictionError = 0.0f;  // Knockup開始位置の予測誤差。
-    bool dashBTKnockupPositionCaptured = false;  // Knockup開始位置を記録済みか。
     bool showDashTelegraph = true;  // Dash予兆の表示を有効にする。
     bool dashTelegraphActive = false;  // Dash予兆が表示中か。
     bool dashTelegraphSnapshotValid = false;  // Dash予兆の位置と方向の記録が有効か。
@@ -1882,13 +1870,6 @@ private:
         DirectX::XMFLOAT3 tripleChargeTelegraphStartPosition{};  // 複数回Chargeの予兆の開始位置。
         float tripleChargeTelegraphLength = 0.0f;  // 複数回Chargeの予兆の長さ。
         float tripleChargeTelegraphWidth = 0.0f;  // 複数回Chargeの予兆の幅。
-        bool tripleBeginTripleChargeLegCalled = false;  // 各Chargeの開始処理が呼ばれたか。
-        bool tripleBeginTripleChargeLegResult = false;  // 各Chargeの開始処理の結果。
-        bool tripleBeginChargeMovementResult = false;  // Charge移動開始処理の結果。
-        bool tripleHoldEndChargeStartValidation = false;  // 予兆保持終了時のCharge開始可否の検証結果。
-        float tripleHoldEndChargeStartClearance = 0.0f;  // 予兆保持終了時のCharge開始経路の余白距離。
-        std::string tripleHoldEndChargeStartFailureReason = "None";  // 予兆保持終了時にCharge開始が失敗した理由。
-        DirectX::XMFLOAT3 tripleChargeDirections[3]{};  // 各Chargeの方向。
         DirectX::XMFLOAT3 tripleChargeStartPositions[3]{};  // 各Chargeの開始位置。
         bool tripleFinalWallHit = false;  // 複数回Chargeの最後に壁へ衝突したか。
         bool tripleEarlyWallHit = false;  // 複数回Chargeの途中で壁へ衝突したか。
@@ -1896,9 +1877,6 @@ private:
         float tripleChargeWallTurnClearance = 15.0f;  // 複数回Chargeで壁際の方向転換に必要な余白距離。
         float tripleChargeLegMaxDistance = 50.0f;  // 複数回Chargeの各移動の最大距離。
         float tripleChargeLegMaxDuration = 50.0f;  // 複数回Chargeの各移動の最大時間。
-        float tripleCurrentWallClearance = 0.0f;  // 現在の壁までの余白距離。
-        bool tripleWallTurnCandidate = false;  // 壁際での方向転換の候補か。
-        bool tripleWallTurnTriggered = false;  // 壁際での方向転換が発生したか。
 
         bool tripleChargeRepositionActive = false;  // 複数回Chargeの位置補正中か。
 
@@ -2106,7 +2084,6 @@ private:
     bool behaviorTreeFastComboEnabled = true;  // 行動ツリー全体の更新を有効にする。
 
     CloseCombatSettings closeCombatSettings;  // FastComboの計画・実行距離と向きの条件。
-    bool showCloseCombatDebugRange = false;  // 近接攻撃範囲のデバッグ表示を有効にする。
     std::string behaviorTreePreviousNode = "None";  // 直前に実行したBTノードの表示名。
     BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;  // 攻撃結果の保持値。
     bool behaviorApproachActive = false;  // FastComboの接近処理が有効かを示す。

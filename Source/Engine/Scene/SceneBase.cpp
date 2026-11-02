@@ -139,7 +139,7 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
 
     temporalAa.Initialize(device, static_cast<UINT>(screenWidth), static_cast<UINT>(screenHeight));
 
-    shadowMap = std::make_unique<shadow_map>(device, shadowmap_width, shadowmap_height);
+    shadowMap = std::make_unique<shadow_map>(device, shadowmapWidth, shadowmapHeight);
 
     huskParticles = std::make_unique<husk_particles>(device);
     particleMeshModel = std::make_unique<InterleavedGltfModel>(device, "./Data/Models/Weapons/PlayerSword/Sword.gltf", ModelTypes::ModelMode::SkeletalMesh, false, true);
@@ -250,30 +250,6 @@ void SceneBase::Update(float deltaTime)
 #endif // !USE_IMGUI
 
 
-    if (InputSystem::GetInputState("K", InputStateMask::Trigger))
-    {
-        // Invalidate the previous capture so the next deferred render captures
-        // the current animated pose and transform.
-        gruxHuskCaptured = false;
-        gruxHuskBackupValid = false;
-        gruxHuskPlaybackActive = false;
-        ResetHuskCompletionTracking();
-        gruxHuskDeathProgress = 0.0f;
-        huskParticles->particle_data.death_progress = 0.0f;
-        huskParticles->particle_data.particle_count = 0;
-        if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
-        {
-            if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)
-                mesh->SetIsVisible(true);
-        }
-        gruxHuskPreviewCaptureRequested = true;
-    }
-
-
-    if (InputSystem::GetInputState("P", InputStateMask::Trigger))
-    {
-        integrateParticles = !integrateParticles;
-    }
     auto grux = GetActorManager()->GetActorOfType<GruxEnemy>();
     if (!grux)
     {
@@ -294,7 +270,6 @@ void SceneBase::Update(float deltaTime)
         if (grux->ConsumeBeginHuskParticleRequest())
         {
             gruxHuskCaptureRequested = true;
-            // A real death event supersedes any previous debug preview capture.
             gruxHuskCaptured = false;
             gruxHuskPlaybackActive = false;
             ResetHuskCompletionTracking();
@@ -475,11 +450,11 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 
     immediateContext->PSSetShaderResources(15, 1, shadowMap->shader_resource_view.GetAddressOf());
     const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
-    XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
-    XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&shadowLightDirection)) * light_view_distance };
+    XMVECTOR F{ XMLoadFloat4(&lightViewFocus) };
+    XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&shadowLightDirection)) * lightViewDistance };
     XMVECTOR U{ XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f) };
     XMMATRIX V{ XMMatrixLookAtLH(E, F, U) };
-    XMMATRIX P{ XMMatrixOrthographicLH(light_view_size * aspect_ratio, light_view_size, light_view_near_z, light_view_far_z) };
+    XMMATRIX P{ XMMatrixOrthographicLH(lightViewSize * aspect_ratio, lightViewSize, lightViewNearZ, lightViewFarZ) };
 
     DirectX::XMStoreFloat4x4(&viewConstants.lightViewProjection, V * P);
     sceneRender.UpdateViewConstants(immediateContext, viewConstants);
@@ -529,11 +504,11 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         using namespace DirectX;
         const float aspect_ratio = shadowMap->viewport.Width / shadowMap->viewport.Height;
 
-        XMVECTOR F{ XMLoadFloat4(&light_view_focus) };
-        XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&shadowLightDirection)) * light_view_distance };
+        XMVECTOR F{ XMLoadFloat4(&lightViewFocus) };
+        XMVECTOR E{ F - XMVector3Normalize(XMLoadFloat4(&shadowLightDirection)) * lightViewDistance };
         XMVECTOR U{ XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f) };
         XMMATRIX V{ XMMatrixLookAtLH(E, F, U) };
-        XMMATRIX P{ XMMatrixOrthographicLH(light_view_size * aspect_ratio, light_view_size, light_view_near_z, light_view_far_z) };
+        XMMATRIX P{ XMMatrixOrthographicLH(lightViewSize * aspect_ratio, lightViewSize, lightViewNearZ, lightViewFarZ) };
 
         ViewConstants data{};
         DirectX::XMStoreFloat4x4(&data.viewProjection, V * P);
@@ -1071,7 +1046,7 @@ void SceneBase::SetupImGuiStyle()
 
 void SceneBase::DrawOutliner()
 {
-    ImGui::Begin(U8("Actor Outliner"), nullptr/*, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove*/);
+    ImGui::Begin(U8("Actor Outliner"), nullptr);
 
     for (auto& actor : this->GetActorManager()->GetAllActors())
     {
@@ -1087,9 +1062,7 @@ void SceneBase::DrawOutliner()
 
 void SceneBase::DrawSceneSettingsTab()
 {
-    // -------------------------
     // Light Settings
-    // -------------------------
     if (ImGui::CollapsingHeader(U8("Light Settings"), ImGuiTreeNodeFlags_DefaultOpen))
     {
         ImGui::Checkbox("useDrawDebug", &useDrawDebug);
@@ -1102,8 +1075,6 @@ void SceneBase::DrawSceneSettingsTab()
     {
         if (ImGui::Button("Capture & Play"))
         {
-            // Invalidate the previous capture so the next deferred render captures
-            // the current animated pose and transform.
             gruxHuskCaptured = false;
             gruxHuskBackupValid = false;
             gruxHuskPlaybackActive = false;
@@ -1151,7 +1122,6 @@ void SceneBase::DrawSceneSettingsTab()
         }
         ImGui::Text("Preview Capture Requested: %s", gruxHuskPreviewCaptureRequested ? "Yes" : "No");
         ImGui::Text("Particle Backup: %s", gruxHuskBackupValid ? "Valid" : "None");
-        ImGui::Checkbox("integrateParticles", &integrateParticles);
         ImGui::Text("accumulated husk particle count %d", huskParticles->particle_data.particle_count);
         ImGui::DragFloat("Husk World X Min", &huskParticles->particle_data.world_x_min, 0.01f);
         ImGui::DragFloat("Husk World X Max", &huskParticles->particle_data.world_x_max, 0.01f);
@@ -1187,17 +1157,6 @@ void SceneBase::DrawSceneSettingsTab()
         ImGui::TextColored(ImVec4(0, 1, 0, 1), "0.5 = Green");
         ImGui::SameLine();
         ImGui::TextColored(ImVec4(0, 0.4f, 1, 1), "1.0 = Blue");
-        if (gruxHuskBackupValid)
-        {
-            ImGui::Text("Capture Settings World X Min / Max: %.4f / %.4f",
-                huskCapturedWorldXMin, huskCapturedWorldXMax);
-            const float boundaryX = huskCapturedWorldXMin +
-                huskParticles->particle_data.death_progress *
-                (std::max)(huskCapturedWorldXMax - huskCapturedWorldXMin, 0.0001f);
-            ImGui::Text("Threshold World X: %.4f (captured range)", boundaryX);
-        }
-        else
-            ImGui::TextUnformatted("Capture Settings World X Min / Max: No capture");
         const auto& capturedX = huskParticles->captured_x;
         if (capturedX.valid)
         {
@@ -1395,13 +1354,13 @@ void SceneBase::DrawPostEffectTab()
     }
 
     ImGui::Begin("shadowMap");
-    ImGui::SliderFloat("light_view_distance", &light_view_distance, 1.0f, +100.0f);
-    ImGui::SliderFloat("light_view_size", &light_view_size, 1.0f, +100.0f);
-    ImGui::SliderFloat("light_view_near_z", &light_view_near_z, 1.0f, light_view_far_z - 1.0f);
-    ImGui::SliderFloat("light_view_far_z", &light_view_far_z, light_view_near_z + 1.0f, +100.0f);
+    ImGui::SliderFloat("light_view_distance", &lightViewDistance, 1.0f, +100.0f);
+    ImGui::SliderFloat("light_view_size", &lightViewSize, 1.0f, +100.0f);
+    ImGui::SliderFloat("light_view_near_z", &lightViewNearZ, 1.0f, lightViewFarZ - 1.0f);
+    ImGui::SliderFloat("light_view_far_z", &lightViewFarZ, lightViewNearZ + 1.0f, +100.0f);
     if (shadowMap)
     {
-        ImGui::Image(reinterpret_cast<void*>(shadowMap->shader_resource_view.Get()), ImVec2(shadowmap_width / 5.0f, shadowmap_height / 5.0f));
+        ImGui::Image(reinterpret_cast<void*>(shadowMap->shader_resource_view.Get()), ImVec2(shadowmapWidth / 5.0f, shadowmapHeight / 5.0f));
     }
     ImGui::End();
 }

@@ -508,9 +508,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             // dash's required animation stages have completed.
             dashBTAbortRemainingDashes = true;
         }
-        const auto position = GetPosition();
-        dashBTTraveledDistance = (position.x - dashAttackStartPosition.x) * dashAttackDirection.x +
-            (position.z - dashAttackStartPosition.z) * dashAttackDirection.z;
         const bool finished = UpdateDashAttackMovement(dt, true);
         if (!finished && controller->IsPlayAnimation())
             return DashBTResult::Running;
@@ -525,16 +522,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         BeginAdditionalAttackStage();
         dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
         // This is the exact actor position at the Stage1 -> Knockup handoff.
-        // Compare it with the nominal arrival/timeout prediction captured when
-        // this dash leg began; do not alter movement to make them agree.
-        dashBTActualKnockupStartPosition = GetPosition();
-        const float predictionDx = dashBTActualKnockupStartPosition.x -
-            dashBTPredictedKnockupPosition.x;
-        const float predictionDz = dashBTActualKnockupStartPosition.z -
-            dashBTPredictedKnockupPosition.z;
-        dashBTPredictionError = std::sqrt(predictionDx * predictionDx +
-            predictionDz * predictionDz);
-        dashBTKnockupPositionCaptured = true;
         if (!PlayAttackStage(BossAttackType::DashAttack, 2))
             return DashBTResult::Failed;
         dashBTPhase = DashBTPhase::Knockup;
@@ -636,7 +623,6 @@ void GruxEnemy::CleanupDashAttackBT()
     DisableAttackHitBoxes();
     dashBTPhase = DashBTPhase::None;
     dashBTTelegraphElapsed = 0.0f;
-    dashBTTraveledDistance = 0.0f;
     dashBTTripleDashActive = false;
     dashBTDashIndex = 0;
     dashBTDashMaxCount = 1;
@@ -651,9 +637,6 @@ void GruxEnemy::CleanupDashAttackBT()
     dashBTDirectionLockEventReceived = false;
     dashBTDashStartEventReceived = false;
     dashBTPredictedKnockupPosition = {};
-    dashBTActualKnockupStartPosition = {};
-    dashBTPredictionError = 0.0f;
-    dashBTKnockupPositionCaptured = false;
     dashAttackDirection = {};
     dashAttackStartPosition = {};
     dashTargetPosition = {};
