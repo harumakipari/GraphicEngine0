@@ -26,12 +26,6 @@ void DarkCameraActor::Initialize(const Transform& transform)
     // 0 = Player
     // 1 = Enemy
     lockOnTargetWeight = 0.5f;
-    // 基本距離
-    lockOnCameraDistance = 5.0f;
-    // 敵との距離による増加量
-    lockOnDistanceScale = 0.75f;
-    // 最大距離
-    lockOnMaxDistance = 8.0f;
     // Pitch
     lockOnPitchDegree = -10.0f;
 
@@ -52,39 +46,47 @@ void DarkCameraActor::Initialize(const Transform& transform)
 
 void DarkCameraActor::Update(float deltaTime)
 {
-    // プレイヤーの位置を取得
     auto playerHeadShared = playerHead.lock();
     if (!playerHeadShared)
     {
         CancelOffscreenAttackAssist();
         return;
     }
-    DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
+
+    const DirectX::XMFLOAT3 playerPos =
+        playerHeadShared->GetComponentLocation();
     const bool preservePrisonOpeningReturnPose =
         holdPrisonOpeningTpsReturnPoseForOneUpdate;
     holdPrisonOpeningTpsReturnPoseForOneUpdate = false;
 
+    UpdateCameraPose(deltaTime, playerPos, preservePrisonOpeningReturnPose);
+    ApplyCameraFov(preservePrisonOpeningReturnPose);
+    ResolvePostPoseCollision(deltaTime, preservePrisonOpeningReturnPose);
+    ApplyPostCollisionFov(deltaTime, preservePrisonOpeningReturnPose);
+    CommitCameraPose();
+}
+
+void DarkCameraActor::UpdateCameraPose(float deltaTime,
+    const DirectX::XMFLOAT3& playerPos,
+    const bool preservePrisonOpeningReturnPose)
+{
     if (!preservePrisonOpeningReturnPose &&
         !isExternalBlending && !isBlending && currentMode == CameraMode::LockOn)
     {
         UpdateLockOnComposition(deltaTime);
     }
 
-
-    if (preservePrisonOpeningReturnPose)
+    if (!preservePrisonOpeningReturnPose)
     {
-    }
-    else if (isExternalBlending)
-    {
-        UpdateExternalBlend(deltaTime);
-    }
-    else if (isBlending)
-    {
-        UpdateBlend(deltaTime);
-    }
-    else
-    {
-        if (requestMode != currentMode)
+        if (isExternalBlending)
+        {
+            UpdateExternalBlend(deltaTime);
+        }
+        else if (isBlending)
+        {
+            UpdateBlend(deltaTime);
+        }
+        else if (requestMode != currentMode)
         {
             StartBlend(currentMode, requestMode);
         }
@@ -101,36 +103,53 @@ void DarkCameraActor::Update(float deltaTime)
         UpdateCombatPresentation(deltaTime);
         compositionLookTarget = currentPose.target;
     }
+}
 
+void DarkCameraActor::ApplyCameraFov(const bool preservePrisonOpeningReturnPose)
+{
     if (preservePrisonOpeningReturnPose)
     {
         mainCameraComponent->SetFov(prisonOpeningReturnFov);
     }
     else if (!isExternalBlending)
     {
-        const float fovDegree = isBlending
-            ? std::lerp(blendStartFovDegree, blendTargetFovDegree,
-                std::clamp(blendTime / (requestMode == CameraMode::Death
-                    ? (std::max)(deathCameraSettings.deathBlendTime, 0.01f)
-                    : (blendDurationOverride > 0.0f ? blendDurationOverride : blendDuration)), 0.0f, 1.0f))
-            : GetFovDegreeForMode(currentMode);
+        float fovDegree = 0.0f;
+        if (isBlending)
+        {
+            const float effectiveBlendDuration = requestMode == CameraMode::Death
+                ? (std::max)(deathCameraSettings.deathBlendTime, 0.01f)
+                : (blendDurationOverride > 0.0f
+                    ? blendDurationOverride
+                    : blendDuration);
+            const float blendT = std::clamp(
+                blendTime / effectiveBlendDuration, 0.0f, 1.0f);
+            fovDegree = std::lerp(
+                blendStartFovDegree, blendTargetFovDegree, blendT);
+        }
+        else
+        {
+            fovDegree = GetFovDegreeForMode(currentMode);
+        }
         mainCameraComponent->SetFov(DirectX::XMConvertToRadians(fovDegree));
     }
+}
 
-
+void DarkCameraActor::ResolvePostPoseCollision(const float deltaTime,
+    const bool preservePrisonOpeningReturnPose)
+{
     if (!preservePrisonOpeningReturnPose)
     {
         collisionPreEyePosition = currentPose.eye;
-        desiredCameraDistance = MathHelper::Distance(currentPose.target, collisionPreEyePosition);
+        desiredCameraDistance = MathHelper::Distance(
+            currentPose.target, collisionPreEyePosition);
 
-        // 当たり判定でカメラの位置を修正する
         currentPose.eye = ResolveCameraCollision(currentPose.target, currentPose.eye);
         collisionPostEyePosition = currentPose.eye;
-        normalCollisionPostEyePosition = currentPose.eye;
         UpdateLockOnWallLateralEscape(deltaTime);
         collisionPostEyePosition = currentPose.eye;
         UpdateLockOnCompositionLookCorrection(deltaTime);
-        actualCameraDistance = MathHelper::Distance(currentPose.target, collisionPostEyePosition);
+        actualCameraDistance = MathHelper::Distance(
+            currentPose.target, collisionPostEyePosition);
         cameraCollisionRatio = desiredCameraDistance > FLT_EPSILON
             ? actualCameraDistance / desiredCameraDistance
             : 1.0f;
@@ -138,8 +157,11 @@ void DarkCameraActor::Update(float deltaTime)
             ? lockOnRequiredFramingDistance - actualCameraDistance
             : 0.0f;
     }
+}
 
-    // Blend 中の FOV は既存処理を優先し、安定した LockOn 時だけ Collision Fallback を適用する。
+void DarkCameraActor::ApplyPostCollisionFov(const float deltaTime,
+    const bool preservePrisonOpeningReturnPose)
+{
     if (!preservePrisonOpeningReturnPose &&
         !isExternalBlending && !isBlending && currentMode == CameraMode::LockOn)
     {
@@ -147,54 +169,27 @@ void DarkCameraActor::Update(float deltaTime)
     }
     if (!preservePrisonOpeningReturnPose)
         ApplyCombatPresentationFov();
+}
 
-
-    CameraPose renderPose = currentPose;
-
+void DarkCameraActor::CommitCameraPose()
+{
+    const CameraPose renderPose = currentPose;
     SetPosition(renderPose.eye);
     mainCameraComponent->lookTarget = renderPose.target;
     mainCameraComponent->useLookTarget = true;
 }
-
-
 void DarkCameraActor::PlayCameraShake(const float intensity, const float duration, const float frequency, const float positionAmount, const float targetAmount)
 {
-    if (auto* scene = GetOwnerScene()) if (auto* manager = scene->GetCameraManager()) { manager->PlayCameraShake(intensity, duration, frequency, positionAmount, targetAmount); return; }
-    shakeIntensity = (std::max)(intensity, 0.0f);
-    shakeDuration = (std::max)(duration, 0.0f);
-    shakeFrequency = (std::max)(frequency, 0.0f);
-    shakePositionAmount = (std::max)(positionAmount, 0.0f);
-    shakeTargetAmount = (std::max)(targetAmount, 0.0f);
-    shakeElapsedTime = 0.0f;
-    currentShakeEnvelope = 0.0f;
-    shakePositionOffset = {};
-    shakeTargetOffset = {};
-    shakeActive = shakeIntensity > 0.0f && shakeDuration > FLT_EPSILON;
+    if (auto* scene = GetOwnerScene())
+        if (auto* manager = scene->GetCameraManager())
+            manager->PlayCameraShake(intensity, duration, frequency, positionAmount, targetAmount);
 }
 
 void DarkCameraActor::PlayCameraShakePreset(const std::string& presetName)
 {
-    if (auto* scene = GetOwnerScene()) if (auto* manager = scene->GetCameraManager()) { manager->PlayCameraShakePreset(presetName); return; }
-    const CameraShakePreset* preset = FindCameraShakePreset(presetName);
-    if (!preset)
-    {
-        const std::string message = "[CameraShake] Unknown preset: " + presetName;
-        Logger::Warning(Logger::LogCategory::Gameplay, message.c_str());
-        return;
-    }
-
-    PlayCameraShake(preset->intensity, preset->duration, preset->frequency,
-        preset->positionAmount, preset->targetAmount);
-}
-
-const DarkCameraActor::CameraShakePreset* DarkCameraActor::FindCameraShakePreset(
-    const std::string& presetName) const
-{
-    if (presetName == BossRoarPresetName) return &bossRoarShake;
-    if (presetName == BossWallImpactPresetName) return &bossWallImpactShake;
-    if (presetName == RushFinalPresetName) return &rushFinalShake;
-    if (presetName == BossWeaponDropPresetName) return &bossWeaponDropShake;
-    return nullptr;
+    if (auto* scene = GetOwnerScene())
+        if (auto* manager = scene->GetCameraManager())
+            manager->PlayCameraShakePreset(presetName);
 }
 
 void DarkCameraActor::RequestOffscreenAttackAssist(
@@ -411,52 +406,6 @@ void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
     offscreenAttackAssist.elapsed += deltaTime;
     if (offscreenAttackAssist.elapsed >= offscreenAttackAssist.duration)
         CancelOffscreenAttackAssist();
-}
-
-void DarkCameraActor::UpdateCameraShake(const float deltaTime)
-{
-    shakePositionOffset = {};
-    shakeTargetOffset = {};
-    currentShakeEnvelope = 0.0f;
-
-    if (!shakeActive)
-        return;
-
-    if (shakeElapsedTime >= shakeDuration)
-    {
-        shakeActive = false;
-        shakeElapsedTime = shakeDuration;
-        return;
-    }
-
-    const float normalizedTime = std::clamp(shakeElapsedTime / shakeDuration, 0.0f, 1.0f);
-    const float remaining = 1.0f - normalizedTime;
-    currentShakeEnvelope = remaining * remaining;
-
-    const float phase = shakeElapsedTime * shakeFrequency * DirectX::XM_2PI;
-    const float verticalWave =
-        (sinf(phase) + 0.35f * sinf(phase * 2.17f + 1.1f)) / 1.35f;
-    const float sideWave =
-        (cosf(phase * 1.37f + 0.4f) + 0.25f * sinf(phase * 0.73f + 2.0f)) / 1.25f;
-    const float pitchWave =
-        (sinf(phase * 0.73f + 1.7f) + 0.4f * cosf(phase * 1.91f)) / 1.4f;
-    const float yawWave =
-        (cosf(phase * 1.13f + 0.8f) + 0.3f * sinf(phase * 2.31f)) / 1.3f;
-
-    const DirectX::XMFLOAT3 forward = MathHelper::Normalize(
-        MathHelper::Subtract(currentPose.target, currentPose.eye));
-    const DirectX::XMFLOAT3 up{ 0.0f, 1.0f, 0.0f };
-    const DirectX::XMFLOAT3 right = MathHelper::Normalize(MathHelper::Cross(up, forward));
-    const float strength = shakeIntensity * currentShakeEnvelope;
-
-    shakePositionOffset = MathHelper::Add(
-        MathHelper::Multiply(up, verticalWave * shakePositionAmount * strength),
-        MathHelper::Multiply(right, sideWave * shakePositionAmount * strength * 0.35f));
-    shakeTargetOffset = MathHelper::Add(
-        MathHelper::Multiply(up, pitchWave * shakeTargetAmount * strength),
-        MathHelper::Multiply(right, yawWave * shakeTargetAmount * strength * 0.45f));
-
-    shakeElapsedTime = (std::min)(shakeElapsedTime + (std::max)(deltaTime, 0.0f), shakeDuration);
 }
 
 // ブレンドを開始する
@@ -822,7 +771,6 @@ void DarkCameraActor::PreparePrisonOpeningTpsReturn(const PrisonOpeningTpsPose& 
     compositionLookTarget = currentPose.target;
     collisionPreEyePosition = pose.desiredEye;
     collisionPostEyePosition = pose.eye;
-    normalCollisionPostEyePosition = pose.eye;
     desiredCameraDistance = pose.desiredDistance;
     actualCameraDistance = pose.actualDistance;
     cameraCollisionRatio = pose.collisionRatio;
@@ -2448,40 +2396,6 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculateDeathPoseWithSideOffset(
     return pose;
 }
 
-// ロックオンのカメラ距離を計算する関数
-float DarkCameraActor::CalculateLockOnDistance() const
-{
-    auto playerHeadShared = playerHead.lock();
-    auto enemyHeadShared = enemyHead.lock();
-
-    if (!playerHeadShared || !enemyHeadShared)
-    {
-        return lockOnCameraDistance;
-    }
-
-    auto player = playerHeadShared->GetOwner();
-    auto enemy = enemyHeadShared->GetOwner();
-
-    if (!player || !enemy)
-    {
-        return lockOnCameraDistance;
-    }
-
-    DirectX::XMFLOAT3 playerPos = player->GetPosition();
-    DirectX::XMFLOAT3 enemyPos = enemy->GetPosition();
-
-    float enemyDistance = MathHelper::Distance(playerPos, enemyPos);
-
-    float distance =
-        lockOnCameraDistance +
-        enemyDistance * lockOnDistanceScale;
-
-    distance = std::min<float>(distance, lockOnMaxDistance);
-
-    return distance;
-}
-
-
 // 当たり判定を考慮する関数
 DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 target, DirectX::XMFLOAT3 eye)
 {
@@ -2795,9 +2709,6 @@ void DarkCameraActor::DrawImGuiDetails()
             0.01f, 0.0f, 2.0f, "%.2f sec");
         ImGui::TreePop();
     }
-    ImGui::DragFloat(U8("ロックオンカメラの基本距離"), &lockOnCameraDistance, 0.1f, 0.01f, 10.0f);
-    ImGui::DragFloat(U8("敵との距離による増加量"), &lockOnDistanceScale, 0.05f, 0.01f, 0.999f);
-    ImGui::DragFloat(U8("最大距離"), &lockOnMaxDistance, 0.1f, 0.0f, 10.0f);
     ImGui::DragFloat(U8("ロックオンピッチ度数"), &lockOnPitchDegree, 0.1f, -90.0f, 90.0f);
     ImGui::DragFloat(U8("ロックオンyaw度数"), &lockOnYawOffsetDegree, 0.1f, -90.0f, 90.0f);
 

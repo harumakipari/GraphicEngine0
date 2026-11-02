@@ -176,7 +176,6 @@ void GruxEnemy::UpdateDashTelegraphLineShrink()
         return;
     }
 
-    // Use Grux's locked-path progress, never the player's current position.
     const DirectX::XMFLOAT3 gruxPosition = GetPosition();
     const float forwardX = originalDx / originalLength;
     const float forwardZ = originalDz / originalLength;
@@ -200,8 +199,6 @@ void GruxEnemy::UpdateDashTelegraphLineShrink()
         return;
     }
 
-    // The mesh pivot is its local start edge; place that edge at the moving
-    // start and scale only the recomputed remaining segment toward the fixed end.
     const float yaw = std::atan2(-remainingDx, -remainingDz);
     DirectX::XMFLOAT4 rotation{};
     DirectX::XMStoreFloat4(&rotation,
@@ -320,7 +317,6 @@ ActionBase::State FaceDashPlayerIfNeeded::Run(float deltaTime)
     if (!context.valid || owner->IsDead())
         return State::Failed;
     owner->SetDashBTFacing();
-    // Same face-complete policy as Jump; no FastCombo range dependency.
     if (context.absoluteAngleDegrees <= owner->GetTurnCompleteAngle())
         return State::Complete;
     owner->RotateTowardsPlayer(context.directionToPlayer, owner->GetTurnSpeed(), deltaTime);
@@ -352,7 +348,6 @@ bool GruxEnemy::CanPlanDashAttack() const
 {
     if (IsDead() || !BuildTargetContext().valid || IsDeathPresentationActive())
         return false;
-    // Cooldowns are indexed by Action, not by the independently ordered Attack table.
     for (size_t i = 0; i < combatActionData.size(); ++i)
     {
         if (combatActionData[i].type == BossActionType::DashAttack)
@@ -383,12 +378,9 @@ bool GruxEnemy::PrepareDashAttackSetupTarget()
         CleanupDashAttackBT();
         return false;
     }
-    // The only write of the setup destination for this plan. Movement never resamples it.
     attackSetupTarget = {};
     attackSetupTarget.valid = true;
     attackSetupTarget.targetPosition = target;
-    // The shared mover compares per-frame displacement; avoid false stalls at high FPS.
-    // This context value is Dash-only and does not change Jump's movement settings.
     attackSetupTarget.stuckMovementThreshold = 0.01f;
     const auto position = GetPosition();
     const float dx = target.x - position.x;
@@ -423,8 +415,6 @@ bool GruxEnemy::StartDashAttackTelegraph()
     ClearAttackSetupTarget();
     StartAttack(); // Exactly once for the entire three-stage attack.
     dashBTAttackStarted = true;
-    // Reuse the exact final-phase predicate already used by Triple Jump; Dash's
-    // animation stages remain 0=Pre, 1=Stampede, 2=Knockup in either phase.
     dashBTTripleDashActive = IsTripleJumpPhase2();
     dashBTDashIndex = 0;
     dashBTDashMaxCount = dashBTTripleDashActive ? 3 : 1;
@@ -461,9 +451,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             return DashBTResult::Failed;
         StopAIMovement();
 
-        // Dash 1 stays on Pre_Stampede until its authored events arrive. This
-        // makes tracking, lock, telegraph hold and Stampede start follow the
-        // Animation Playhead after the Speed Curve has been applied.
         if (!dashBTDirectionLocked)
             RotateTowardsPlayer(context.directionToPlayer, GetTurnSpeed(), dt);
 
@@ -481,16 +468,12 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         {
             dashBTDashStartRequested = false;
             BeginAdditionalAttackStage();
-            // Stage 1 starts movement from the Direction Lock snapshot only.
             if (!PlayAttackStage(BossAttackType::DashAttack, 1))
                 return DashBTResult::Failed;
             BeginDashTelegraphLineShrink();
             dashBTPhase = DashBTPhase::Movement;
             return DashBTResult::Running;
         }
-
-        // A malformed/missing event must fail through the existing cleanup path
-        // rather than leave a Telegraph visible forever.
         if (controller->GetCurrentAnimationName() != "Pre_Stampede_0" ||
             !controller->IsPlayAnimation())
             return DashBTResult::Failed;
@@ -501,15 +484,11 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
             WasCurrentAttackSequenceJustDodged())
         {
-            // Do not cut Stampede/Knockup: only prevent another dash once this
-            // dash's required animation stages have completed.
             dashBTAbortRemainingDashes = true;
         }
         const bool finished = UpdateDashAttackMovement(dt, true);
         if (!finished && controller->IsPlayAnimation())
             return DashBTResult::Running;
-        // Movement and hit notifications may be updated in the same frame.
-        // Sample once more before resetting the per-animation-stage hit list.
         if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
             WasCurrentAttackSequenceJustDodged())
         {
@@ -518,14 +497,12 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
         StopDashAttackMovement();
         BeginAdditionalAttackStage();
         dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
-        // This is the exact actor position at the Stage1 -> Knockup handoff.
         if (!PlayAttackStage(BossAttackType::DashAttack, 2))
             return DashBTResult::Failed;
         dashBTPhase = DashBTPhase::Knockup;
         return DashBTResult::Running;
     }
     case DashBTPhase::Knockup:
-        // Hit / Just Dodge never short-circuits the final attack animation.
         if (GetCurrentAttackHitCount() > dashBTCurrentDashHitStartCount ||
             WasCurrentAttackSequenceJustDodged())
         {
@@ -542,7 +519,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             dashBTTelegraphHoldDuration = 0.0f;
             dashBTDirectionLocked = false;
             dashBTMovementSnapshotPrepared = false;
-            // Dash 2/3 use InterDashTransition, not Pre_Stampede events.
             dashBTDirectionLockRequested = false;
             dashBTDashStartRequested = false;
             dashBTDirectionLockEventReceived = false;
@@ -607,13 +583,11 @@ void GruxEnemy::CleanupDashAttackBT()
         return;
     if (dashBTAttackStarted)
     {
-        // Match EnemyAttackState::Exit timing, including interruption after StartAttack.
         StartSelectedActionCooldown();
         dashBTAttackStarted = false;
     }
     StopDashAttackMovement();
     ClearAttackSetupTarget();
-    // Do not replace a death presentation or Charge Stun animation with positioning idle.
     const bool externallyInterrupted = IsDead() || IsDeathPresentationActive() || IsStunned();
     if (!externallyInterrupted)
         EndPositioningAnimation();

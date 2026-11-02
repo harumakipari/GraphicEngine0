@@ -238,6 +238,15 @@ public:
         return isBlending && requestMode == CameraMode::Focus;
     }
 
+    void UpdateCameraPose(float deltaTime, const DirectX::XMFLOAT3& playerPos,
+        bool preservePrisonOpeningReturnPose);
+    void ApplyCameraFov(bool preservePrisonOpeningReturnPose);
+    void ResolvePostPoseCollision(float deltaTime,
+        bool preservePrisonOpeningReturnPose);
+    void ApplyPostCollisionFov(float deltaTime,
+        bool preservePrisonOpeningReturnPose);
+    void CommitCameraPose();
+
 private:
     struct ScreenProjectionResult
     {

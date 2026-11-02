@@ -2367,11 +2367,6 @@ bool Player::CanShowRushComboGuide() const
         !rushTarget.expired();
 }
 
-bool Player::CanShowRushPrompt() const
-{
-    return CanShowInitialRushGuide() || CanShowRushComboGuide();
-}
-
 
 bool Player::IsRushOpportunityActive() const
 {

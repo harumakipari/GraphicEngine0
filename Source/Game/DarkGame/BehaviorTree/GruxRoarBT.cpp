@@ -162,7 +162,7 @@ ActionBase::State FinishRoar::Run(float)
 
 bool GruxEnemy::IsRoarExecutionAllowed() const
 {
-    if ( !battleAIActive || IsDead() || IsPendingKill() ||
+    if (!battleAIActive || IsDead() || IsPendingKill() ||
         isDeathPerform ||
         finalHitReactionActive || finalHitReactionHeld || IsAnimationEditorPreviewActive() ||
         IsChargeAttackBTActive() || IsDashAttackBTActive() || chargeMovementActive ||
@@ -313,7 +313,7 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRetreatMovement(float deltaTim
             return PositioningMoveResult::Stuck;
         }
     }
-    const auto result = UpdatePositioningTargetMovement(retreatTarget, retreatMovementRuntime,deltaTime);
+    const auto result = UpdatePositioningTargetMovement(retreatTarget, retreatMovementRuntime, deltaTime);
     return result;
 }
 
@@ -581,7 +581,9 @@ bool GruxEnemy::BeginRoarBT()
     if (!std::isfinite(roarPreStampedeStartTime) || !std::isfinite(roarPreStampedeEndTime) ||
         roarPreStampedeStartTime < 0.0f || roarPreStampedeEndTime <= roarPreStampedeStartTime ||
         controller->GetAnimationLength("Pre_Stampede_0") < roarPreStampedeEndTime)
-    { return false; }
+    {
+        return false;
+    }
     StopAIMovement();
     DisableAttackHitBoxes();
     HideRoarFloatingDebris();
@@ -714,9 +716,9 @@ void GruxEnemy::UpdateRoarTelegraphTransform()
     const float t = std::clamp(roarTelegraphProgress, 0.0f, 1.0f);
     roarTelegraphVisualProgress = t * t * (3.0f - 2.0f * t);
     const auto lerp = [this](float minimum, float maximum)
-    {
-        return minimum + (maximum - minimum) * roarTelegraphVisualProgress;
-    };
+        {
+            return minimum + (maximum - minimum) * roarTelegraphVisualProgress;
+        };
     roarTelegraphFillTintCurrent = {
         lerp(fillTintMin.x, fillTintMax.x),
         lerp(fillTintMin.y, fillTintMax.y),
@@ -804,23 +806,23 @@ void GruxEnemy::SpawnRoarGroundBurst()
     const EffectHandle effectHandle = roarGroundBurstEffectComponent->GetEffectHandle();
 
     const auto emitRing = [&](const int count, const float ringRatio, const float phaseOffset)
-    {
-        for (int index = 0; index < count; ++index)
         {
-            const float baseAngle = DirectX::XM_2PI *
-                (static_cast<float>(index) / static_cast<float>(count)) + phaseOffset;
-            const float angle = baseAngle + MathHelper::RandomRange(
-                -angleJitterRadians, angleJitterRadians);
-            const float ratio = std::clamp(ringRatio + MathHelper::RandomRange(
-                -radiusJitter, radiusJitter), 0.0f, 1.0f);
-            const float distance = attackRadius * ratio;
-            const DirectX::XMFLOAT3 spawnPosition{
-                center.x + sinf(angle) * distance,
-                center.y + roarGroundBurstYOffset,
-                center.z + cosf(angle) * distance };
-            EffectManager::EmitParticle(effectHandle, spawnPosition, { 0.0f, 0.0f, 0.0f });
-        }
-    };
+            for (int index = 0; index < count; ++index)
+            {
+                const float baseAngle = DirectX::XM_2PI *
+                    (static_cast<float>(index) / static_cast<float>(count)) + phaseOffset;
+                const float angle = baseAngle + MathHelper::RandomRange(
+                    -angleJitterRadians, angleJitterRadians);
+                const float ratio = std::clamp(ringRatio + MathHelper::RandomRange(
+                    -radiusJitter, radiusJitter), 0.0f, 1.0f);
+                const float distance = attackRadius * ratio;
+                const DirectX::XMFLOAT3 spawnPosition{
+                    center.x + sinf(angle) * distance,
+                    center.y + roarGroundBurstYOffset,
+                    center.z + cosf(angle) * distance };
+                EffectManager::EmitParticle(effectHandle, spawnPosition, { 0.0f, 0.0f, 0.0f });
+            }
+        };
 
     emitRing(innerCount, innerRatio, 0.0f);
     emitRing(outerCount, outerRatio, DirectX::XM_PI / static_cast<float>(outerCount));
@@ -882,42 +884,42 @@ void GruxEnemy::SpawnRoarImpactDebris()
     const float spawnHeight = std::clamp(roarImpactDebrisSpawnHeight, 0.0f, 1.0f);
     int emittedIndex = 0;
     const auto emitRing = [&](const int count, const float ringRatio, const float phaseOffset)
-    {
-        for (int index = 0; index < count; ++index)
         {
-            const bool isBlock = emittedIndex >= smallCount;
-            const size_t poolIndex = isBlock
-                ? 12 + static_cast<size_t>(emittedIndex - smallCount)
-                : static_cast<size_t>(emittedIndex);
-            auto& debris = roarImpactDebris[poolIndex];
-            const float baseAngle = DirectX::XM_2PI * (static_cast<float>(index) / static_cast<float>(count)) + phaseOffset;
-            const float angle = baseAngle + MathHelper::RandomRange(-angleJitterRadians, angleJitterRadians);
-            const float distance = attackRadius * std::clamp(ringRatio + MathHelper::RandomRange(-radiusJitter, radiusJitter), 0.0f, 1.0f);
-            const DirectX::XMFLOAT3 outward{ sinf(angle), 0.0f, cosf(angle) };
-            const float horizontalSpeed = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockHorizontalSpeedMin, roarImpactDebrisBlockHorizontalSpeedMax) : MathHelper::RandomRange(roarImpactDebrisSmallHorizontalSpeedMin, roarImpactDebrisSmallHorizontalSpeedMax);
-            const float verticalSpeed = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockVerticalSpeedMin, roarImpactDebrisBlockVerticalSpeedMax) : MathHelper::RandomRange(roarImpactDebrisSmallVerticalSpeedMin, roarImpactDebrisSmallVerticalSpeedMax);
-            const float angularMin = isBlock ? 150.0f : 240.0f;
-            const float angularMax = isBlock ? 330.0f : 540.0f;
-            const auto randomAngularVelocity = [angularMin, angularMax]()
+            for (int index = 0; index < count; ++index)
             {
-                return (MathHelper::RandomRange(0.0f, 1.0f) < 0.5f ? -1.0f : 1.0f) * MathHelper::RandomRange(angularMin, angularMax);
-            };
-            debris.active = true;
-            debris.position = { center.x + outward.x * distance, center.y + spawnHeight, center.z + outward.z * distance };
-            debris.velocity = MathHelper::Multiply(outward, horizontalSpeed);
-            debris.velocity.y = verticalSpeed;
-            debris.rotation = { MathHelper::RandomRange(0.0f, 360.0f), MathHelper::RandomRange(0.0f, 360.0f), MathHelper::RandomRange(0.0f, 360.0f) };
-            debris.angularVelocity = { randomAngularVelocity(), randomAngularVelocity(), randomAngularVelocity() };
-            debris.lifetime = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockLifetimeMin, roarImpactDebrisBlockLifetimeMax) : MathHelper::RandomRange(roarImpactDebrisSmallLifetimeMin, roarImpactDebrisSmallLifetimeMax);
-            debris.elapsedTime = 0.0f;
-            debris.scale = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockScaleMin, roarImpactDebrisBlockScaleMax) : MathHelper::RandomRange(roarImpactDebrisSmallScaleMin, roarImpactDebrisSmallScaleMax);
-            debris.meshComponent->SetRelativeLocationDirect(debris.position);
-            debris.meshComponent->SetRelativeEulerRotationDirect(debris.rotation);
-            debris.meshComponent->SetRelativeScaleDirect({ debris.scale, debris.scale, debris.scale });
-            debris.meshComponent->SetIsVisible(true);
-            ++emittedIndex;
-        }
-    };
+                const bool isBlock = emittedIndex >= smallCount;
+                const size_t poolIndex = isBlock
+                    ? 12 + static_cast<size_t>(emittedIndex - smallCount)
+                    : static_cast<size_t>(emittedIndex);
+                auto& debris = roarImpactDebris[poolIndex];
+                const float baseAngle = DirectX::XM_2PI * (static_cast<float>(index) / static_cast<float>(count)) + phaseOffset;
+                const float angle = baseAngle + MathHelper::RandomRange(-angleJitterRadians, angleJitterRadians);
+                const float distance = attackRadius * std::clamp(ringRatio + MathHelper::RandomRange(-radiusJitter, radiusJitter), 0.0f, 1.0f);
+                const DirectX::XMFLOAT3 outward{ sinf(angle), 0.0f, cosf(angle) };
+                const float horizontalSpeed = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockHorizontalSpeedMin, roarImpactDebrisBlockHorizontalSpeedMax) : MathHelper::RandomRange(roarImpactDebrisSmallHorizontalSpeedMin, roarImpactDebrisSmallHorizontalSpeedMax);
+                const float verticalSpeed = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockVerticalSpeedMin, roarImpactDebrisBlockVerticalSpeedMax) : MathHelper::RandomRange(roarImpactDebrisSmallVerticalSpeedMin, roarImpactDebrisSmallVerticalSpeedMax);
+                const float angularMin = isBlock ? 150.0f : 240.0f;
+                const float angularMax = isBlock ? 330.0f : 540.0f;
+                const auto randomAngularVelocity = [angularMin, angularMax]()
+                    {
+                        return (MathHelper::RandomRange(0.0f, 1.0f) < 0.5f ? -1.0f : 1.0f) * MathHelper::RandomRange(angularMin, angularMax);
+                    };
+                debris.active = true;
+                debris.position = { center.x + outward.x * distance, center.y + spawnHeight, center.z + outward.z * distance };
+                debris.velocity = MathHelper::Multiply(outward, horizontalSpeed);
+                debris.velocity.y = verticalSpeed;
+                debris.rotation = { MathHelper::RandomRange(0.0f, 360.0f), MathHelper::RandomRange(0.0f, 360.0f), MathHelper::RandomRange(0.0f, 360.0f) };
+                debris.angularVelocity = { randomAngularVelocity(), randomAngularVelocity(), randomAngularVelocity() };
+                debris.lifetime = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockLifetimeMin, roarImpactDebrisBlockLifetimeMax) : MathHelper::RandomRange(roarImpactDebrisSmallLifetimeMin, roarImpactDebrisSmallLifetimeMax);
+                debris.elapsedTime = 0.0f;
+                debris.scale = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockScaleMin, roarImpactDebrisBlockScaleMax) : MathHelper::RandomRange(roarImpactDebrisSmallScaleMin, roarImpactDebrisSmallScaleMax);
+                debris.meshComponent->SetRelativeLocationDirect(debris.position);
+                debris.meshComponent->SetRelativeEulerRotationDirect(debris.rotation);
+                debris.meshComponent->SetRelativeScaleDirect({ debris.scale, debris.scale, debris.scale });
+                debris.meshComponent->SetIsVisible(true);
+                ++emittedIndex;
+            }
+        };
     emitRing(innerCount, innerRatio, 0.0f);
     emitRing(outerCount, outerRatio, DirectX::XM_PI / static_cast<float>(outerCount));
 }
@@ -1019,20 +1021,21 @@ void GruxEnemy::InitializeRoarFloatingDebris()
         const float angle = MathHelper::RandomRange(0.0f, DirectX::XM_2PI);
         debris.normalizedDirection = { std::sin(angle), 0.0f, std::cos(angle) };
         debris.normalizedRingDistance = MathHelper::RandomRange(innerRatio, outerRatio);
-        debris.spawnThreshold = std::clamp(
-            thresholdStart + thresholdStep * static_cast<float>(index) +
-            MathHelper::RandomRange(-0.025f, 0.025f),
-            0.20f, 0.90f);
+        debris.spawnThreshold = std::clamp(thresholdStart + thresholdStep * static_cast<float>(index) +MathHelper::RandomRange(-0.025f, 0.025f),0.20f, 0.90f);
         debris.baseScale = MathHelper::RandomRange(minScale, maxScale);
         debris.maxFloatHeight = MathHelper::RandomRange(minHeight, maxHeight);
-        debris.baseRotation = {
+        debris.baseRotation =
+        {
             MathHelper::RandomRange(0.0f, 360.0f),
             MathHelper::RandomRange(0.0f, 360.0f),
-            MathHelper::RandomRange(0.0f, 360.0f) };
-        debris.rotationAmount = {
+            MathHelper::RandomRange(0.0f, 360.0f)
+        };
+        debris.rotationAmount =
+        {
             MathHelper::RandomRange(-25.0f, 25.0f),
             MathHelper::RandomRange(-40.0f, 40.0f),
-            MathHelper::RandomRange(-25.0f, 25.0f) };
+            MathHelper::RandomRange(-25.0f, 25.0f)
+        };
         debris.meshComponent->SetIsVisible(false);
     }
 }
@@ -1110,7 +1113,7 @@ void GruxEnemy::CleanupRoarBT()
         const auto controller = GetBodyAnimationController();
         if (IsRoarExecutionAllowed() && controller &&
             (controller->GetCurrentAnimationName() == "Pre_Stampede_0" ||
-             controller->GetCurrentAnimationName() == "LevelStart_0"))
+                controller->GetCurrentAnimationName() == "LevelStart_0"))
             PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
     }
     roarBT = {};
@@ -1121,8 +1124,7 @@ void GruxEnemy::TickRoarLifecycle(float dt)
     if (!IsAnimationEditorPreviewActive())
     {
         roarCooldownRemaining = (std::max)(0.0f, roarCooldownRemaining - (std::max)(0.0f, dt));
-        retreatRetryCooldownRemaining = (std::max)(0.0f,
-            retreatRetryCooldownRemaining - (std::max)(0.0f, dt));
+        retreatRetryCooldownRemaining = (std::max)(0.0f, retreatRetryCooldownRemaining - (std::max)(0.0f, dt));
     }
     if (IsRoarBTActive() && (!IsRoarExecutionAllowed() || !activeNode ||
         (activeNode->GetName() != "ExecuteRoar" && activeNode->GetName() != "FinishRoar")))

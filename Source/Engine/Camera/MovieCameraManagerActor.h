@@ -69,22 +69,21 @@ public:
 
     void DrawImGuiDetails() override;
 
-    void SetMovieCameraComponent(std::shared_ptr<MovieCameraComponent> movieCameraComponent)
+    void SetMovieCameraComponent(const std::shared_ptr<MovieCameraComponent>& movieCameraComponent)
     {
         movieCameraWeakPtr = movieCameraComponent;
     }
 
     // ドアを開くムービーを再生する
     void PlayDoorMovie();
-    // Runtime-only Veil of Aurora prison-opening entry. MovieCamera debug Play is separate.
     bool PreparePrisonOpeningMovieFirstFrame();
     void CancelPreparedPrisonOpeningMovie();
     bool PlayPrisonOpeningMovie();
     void SkipPrisonOpeningToGameplay();
     void SkipBossEntryToBattle();
 
-    // Read-only presentation state for shared movie UI.
     bool IsPrisonOpeningMovieActive() const { return prisonOpeningMoviePlaying; }
+
     bool IsBossEntryMovieActive() const
     {
         return (doorMovieState != DoorMovieState::None &&
@@ -133,8 +132,7 @@ private:
     float prisonOpeningBlendStartFov = 0.0f;
     float prisonOpeningBlendElapsed = 0.0f;
     float prisonOpeningBlendDuration = 1.4f;
-    PrisonOpeningSittingMotionMode prisonOpeningSittingMotionMode =
-        PrisonOpeningSittingMotionMode::StandingPingPong;
+    PrisonOpeningSittingMotionMode prisonOpeningSittingMotionMode = PrisonOpeningSittingMotionMode::StandingPingPong;
     float prisonOpeningSittingPingPongStartTime = 0.0f;
     float prisonOpeningSittingPingPongEndTime = 0.4f;
     float prisonOpeningSittingPingPongSpeed = 0.15f;
@@ -174,7 +172,7 @@ private:
     float elapsedTimer = 0.0f;
     float bossRoomZoomDuration = 3.0f;
     float bossRoomZoomTargetFovDegree = 20.0f;
-    float bossRoomCameraMoveDistance =5.0f;
+    float bossRoomCameraMoveDistance = 5.0f;
     float bossRoomZoomStartFov = DirectX::XMConvertToRadians(35.0f);
     float bossRoomZoomElapsed = 0.0f;
     DirectX::XMFLOAT3 bossRoomZoomStartPosition{};

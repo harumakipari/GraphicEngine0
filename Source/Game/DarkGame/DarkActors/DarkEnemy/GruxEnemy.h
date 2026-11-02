@@ -1108,6 +1108,9 @@ private:
     // 予兆用のモデルを作成する
     void CreateTelegraphMesh(const std::string& parentName);
 
+    // 攻撃予兆の表示を更新する。
+    void UpdateAttackTelegraphVisuals(float deltaTime);
+
     // 武器の攻撃予兆表示を更新する。
     void UpdateWeaponTelegraphRimLight(float deltaTime);
 
@@ -1882,25 +1885,12 @@ private:
         float tripleChargeWallTurnClearance = 15.0f;  // 複数回Chargeで壁際の方向転換に必要な余白距離。
         float tripleChargeLegMaxDistance = 50.0f;  // 複数回Chargeの各移動の最大距離。
         float tripleChargeLegMaxDuration = 50.0f;  // 複数回Chargeの各移動の最大時間。
-
         bool tripleChargeRepositionActive = false;  // 複数回Chargeの位置補正中か。
-
-
         DirectX::XMFLOAT3 tripleChargeRepositionStartPosition{};  // 複数回Chargeの位置補正の開始位置。
-
         DirectX::XMFLOAT3 tripleChargeRepositionTargetPosition{};  // 複数回Chargeの位置補正の目標位置。
-
-
         DirectX::XMFLOAT3 tripleChargeRepositionDirection{};  // 複数回Chargeの位置補正の方向。
-
-
         float tripleChargeRepositionCurrentClearance = 0.0f;  // 複数回Chargeの位置補正時の現在の余白距離。
-
         float tripleChargeRepositionShortage = 0.0f;  // 複数回Chargeの位置補正時の不足距離。
-
-
-
-
     } chargeBT;  // Chargeの実行状態と診断情報。
     float chargeSetupDistanceMin = 8.0f;  // Chargeの準備位置に必要な対象との最小距離。
     float chargeSetupDistanceMax = 10.0f;  // Chargeの準備位置に必要な対象との最大距離。

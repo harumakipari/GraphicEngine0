@@ -70,9 +70,13 @@ void GruxEnemy::Update(float deltaTime)
 {
     const float unscaledDeltaTime = Time::UnscaledDeltaTime();
 
-
+    // Roar衝撃時の破片の移動や寿命を更新する。
     UpdateRoarImpactDebris(Time::DeltaTime());
+
+    // 第2段階のテクスチャ切り替え範囲をワールド座標で更新する。
     UpdatePhase2TextureBlendWorldYRange();
+
+
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
     UpdatePhase2HpBarPresentation();
     if (gameScene && gameScene->IsPhase1BreakPending())
@@ -147,9 +151,8 @@ void GruxEnemy::Update(float deltaTime)
     {
         StopAIMovement();
         Character::Update(deltaTime);
-        UpdateWeaponTelegraphRimLight(deltaTime);
-        UpdateJumpTelegraphImpactFlash(deltaTime);
-        UpdateDashTelegraphVisual(deltaTime);
+        // 攻撃予兆の表示を更新する。
+        UpdateAttackTelegraphVisuals(deltaTime);
         return;
     }
 
@@ -158,9 +161,8 @@ void GruxEnemy::Update(float deltaTime)
         StopAIMovement();
         interruptedChargeRecoveryTimer += (std::max)(0.0f, deltaTime);
         Character::Update(deltaTime);
-        UpdateWeaponTelegraphRimLight(deltaTime);
-        UpdateJumpTelegraphImpactFlash(deltaTime);
-        UpdateDashTelegraphVisual(deltaTime);
+        // 攻撃予兆の表示を更新する。
+        UpdateAttackTelegraphVisuals(deltaTime);
         if (interruptedChargeRecoveryTimer >= interruptedChargeRecoveryDuration)
         {
             interruptedChargeRecoveryActive = false;
@@ -188,14 +190,8 @@ void GruxEnemy::Update(float deltaTime)
 
     Character::Update(deltaTime);
 
-    // 武器の攻撃予兆表示を更新する。
-    UpdateWeaponTelegraphRimLight(deltaTime);
-
-    // Jump着地時の予兆の発光を更新する。
-    UpdateJumpTelegraphImpactFlash(deltaTime);
-
-    // Dash予兆の表示状態を更新する。
-    UpdateDashTelegraphVisual(deltaTime);
+    // 攻撃予兆の表示を更新する。
+    UpdateAttackTelegraphVisuals(deltaTime);
 
     // 左右武器のTrailを更新する。
     UpdateWeaponTrails(deltaTime);
@@ -4056,6 +4052,14 @@ void GruxEnemy::CreateTelegraphMesh(const std::string& parentName)
 
 }
 
+// 攻撃予兆の表示を更新する。
+void GruxEnemy::UpdateAttackTelegraphVisuals(float deltaTime)
+{
+    UpdateWeaponTelegraphRimLight(deltaTime);
+    UpdateJumpTelegraphImpactFlash(deltaTime);
+    UpdateDashTelegraphVisual(deltaTime);
+}
+
 // 武器の攻撃予兆表示を更新する。
 void GruxEnemy::UpdateWeaponTelegraphRimLight(float deltaTime)
 {
@@ -4801,7 +4805,7 @@ void GruxEnemy::ResetPhase2HpBarPresentation()
     phase2HpBarPresentationRestoreVisible = false;
 }
 
-
+// 第2段階HPバーのプレビューを更新する。
 void GruxEnemy::UpdatePhase2HpBarPresentation()
 {
     if (!IsPhase2HpBarPresentationActive())
@@ -4905,6 +4909,7 @@ GruxEnemy::WeaponHitBoxPoints GruxEnemy::BuildWeaponHitBoxPoints(
     return { offsetPoint(root), offsetPoint(middle), offsetPoint(tip) };
 }
 
+// 第2段階のテクスチャ切り替え範囲をワールド座標で更新する。
 void GruxEnemy::UpdatePhase2TextureBlendWorldYRange()
 {
     const float currentBossScale = (std::max)(GetScale().y, 0.0001f);
