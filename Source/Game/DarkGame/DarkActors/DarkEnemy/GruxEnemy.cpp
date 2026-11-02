@@ -170,7 +170,7 @@ void GruxEnemy::Update(float deltaTime)
         return;
     }
 
-    if (IsDashAttackBTActive() &&(!battleAIActive || IsDead() || IsDeathPresentationActive() || IsStunned()))
+    if (IsDashAttackBTActive() && (!battleAIActive || IsDead() || IsDeathPresentationActive() || IsStunned()))
     {
         CleanupDashAttackBT();
         activeNode = nullptr;
@@ -3505,26 +3505,24 @@ void GruxEnemy::InitializeSkeletalMeshAndAnimations(const std::string& parentNam
 
 void GruxEnemy::CreateCoreComponents(const std::string& parentName)
 {
-    {
-        std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("enemyCapsuleComponent", parentName);
-        enemyCapsuleComponent = capsuleComponent;
-        height = 3.5f;
-        radius = 1.95f;
-        mass = 300.0f;
+    std::shared_ptr<CapsuleComponent> capsuleComponent = this->AddComponent<class CapsuleComponent>("enemyCapsuleComponent", parentName);
+    enemyCapsuleComponent = capsuleComponent;
+    height = 3.5f;
+    radius = 1.95f;
+    mass = 300.0f;
 
-        capsuleComponent->SetRadiusAndHeight(radius, height);
-        capsuleComponent->SetMass(mass);
-        capsuleComponent->SetStatic(true);
-        capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
-        capsuleComponent->SetLayer(CollisionLayer::Enemy);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetResponseToLayer(CollisionLayer::Convex, CollisionComponent::CollisionResponse::Block);
-        capsuleComponent->SetCollisionOffsetY(height * 0.5f);
-        capsuleComponent->SetIsVisibleDebugBox(false);
-        capsuleComponent->Initialize();
-    }
+    capsuleComponent->SetRadiusAndHeight(radius, height);
+    capsuleComponent->SetMass(mass);
+    capsuleComponent->SetStatic(true);
+    capsuleComponent->SetCapsuleAxis(ShapeComponent::CapsuleAxis::y);
+    capsuleComponent->SetLayer(CollisionLayer::Enemy);
+    capsuleComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
+    capsuleComponent->SetResponseToLayer(CollisionLayer::WorldStatic, CollisionComponent::CollisionResponse::Block);
+    capsuleComponent->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Block);
+    capsuleComponent->SetResponseToLayer(CollisionLayer::Convex, CollisionComponent::CollisionResponse::Block);
+    capsuleComponent->SetCollisionOffsetY(height * 0.5f);
+    capsuleComponent->SetIsVisibleDebugBox(false);
+    capsuleComponent->Initialize();
 
     rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);
     rotationComponent->SetDirection({ -1.0f,0.0f,0.0f });
@@ -3590,6 +3588,8 @@ void GruxEnemy::CreateWeaponSocketComponents(const std::string& parentName)
     cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f,1.5f,-0.0f });
 }
+
+// エフェクトコンポーネント追加
 void GruxEnemy::CreateEffectComponents(const std::string& parentName)
 {
     hitSwordEffectComponent = this->AddComponent<class ParticleComponent>("hitSwordEffectComponent", parentName);

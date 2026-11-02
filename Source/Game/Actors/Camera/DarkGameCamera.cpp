@@ -120,8 +120,6 @@ void DarkCameraActor::Update(float deltaTime)
 
     if (!preservePrisonOpeningReturnPose)
     {
-        // 当たり判定前後を保存し、実距離を診断できるようにする。
-        desiredEyePosition = currentPose.eye;
         collisionPreEyePosition = currentPose.eye;
         desiredCameraDistance = MathHelper::Distance(currentPose.target, collisionPreEyePosition);
 
@@ -150,11 +148,6 @@ void DarkCameraActor::Update(float deltaTime)
     if (!preservePrisonOpeningReturnPose)
         ApplyCombatPresentationFov();
 
-    if (!preservePrisonOpeningReturnPose)
-    {
-        float targetBlend = cameraHitWall ? 1.0f : 0.0f;
-        wallBlend = std::lerp(wallBlend, targetBlend, deltaTime * 8.0f);
-    }
 
     CameraPose renderPose = currentPose;
 
@@ -523,10 +516,8 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
     float targetPitch = currentPitch;
     CameraPose selectedDeathPose{};
     bool hasSelectedDeathPose = false;
-    deathBlendSelectedSide = "Fallback";
     deathBlendDefaultValid = true;
     deathBlendMirroredValid = false;
-    deathBlendMirroredTested = false;
     switch (to)
     {
     case CameraMode::TPS:
@@ -549,7 +540,6 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
         CameraDirectionInfo info = CreateLockOnInfo();
         targetYaw = info.yaw;
         targetPitch = info.pitch;
-        targetDistance = CalculateLockOnDistance();
         break;
 
     case CameraMode::Death:
@@ -561,19 +551,16 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
         {
             selectedDeathPose = defaultPose;
             deathBlendSideOffset = deathCameraSettings.sideOffset;
-            deathBlendSelectedSide = "Default";
         }
         else
         {
             const CameraPose mirroredPose = CalculateDeathPoseWithSideOffset(
                 playerPos, currentYaw, deathCameraSettings.sideOffset);
             deathBlendMirroredValid = IsDeathPoseCollisionFree(mirroredPose);
-            deathBlendMirroredTested = true;
             selectedDeathPose = deathBlendMirroredValid ? mirroredPose : defaultPose;
             deathBlendSideOffset = deathBlendMirroredValid
                 ? deathCameraSettings.sideOffset
                 : deathCameraSettings.sideOffset;
-            deathBlendSelectedSide = deathBlendMirroredValid ? "Mirrored" : "Fallback";
         }
         hasSelectedDeathPose = true;
         const CameraPose& deathPose = selectedDeathPose;
@@ -833,7 +820,6 @@ void DarkCameraActor::PreparePrisonOpeningTpsReturn(const PrisonOpeningTpsPose& 
     desiredPitch = pose.pitch;
     currentPose = { pose.eye, pose.target, currentYaw, currentPitch };
     compositionLookTarget = currentPose.target;
-    desiredEyePosition = pose.desiredEye;
     collisionPreEyePosition = pose.desiredEye;
     collisionPostEyePosition = pose.eye;
     normalCollisionPostEyePosition = pose.eye;
@@ -1299,17 +1285,6 @@ float DarkCameraActor::CalculateRequiredLockOnFramingDistance()
         lockOnRequiredYDistance });
 }
 
-float DarkCameraActor::CalculateRequiredLockOnFov(bool& outValid)
-{
-    LockOnFovDiagnostics collisionPreDiagnostics{};
-    bool collisionPreValid = false;
-    lockOnCollisionPreRequiredFovDegree = EvaluateRequiredLockOnFovFromEye(
-        collisionPreEyePosition, collisionPreDiagnostics, collisionPreValid);
-
-    return EvaluateRequiredLockOnFovFromEye(
-        collisionPostEyePosition, lockOnFovDiagnostics, outValid);
-}
-
 float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(
     const DirectX::XMFLOAT3& eye,
     LockOnFovDiagnostics& diagnostics,
@@ -1473,7 +1448,6 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
     };
 
     lockOnWallEscapeSevereComposition = false;
-    lockOnWallEscapeSelectedCandidate = "None";
     const float baseFovDegree = GetActiveLockOnProfile().fovDegree;
     lockOnWallEscapeSelectedRequiredFov = baseFovDegree;
     lockOnWallEscapeCurrentRequiredFov = baseFovDegree;
@@ -1481,7 +1455,6 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
     lockOnWallEscapeLeftFarRequiredFov = baseFovDegree;
     lockOnWallEscapeRightNearRequiredFov = baseFovDegree;
     lockOnWallEscapeRightFarRequiredFov = baseFovDegree;
-    lockOnWallEscapeSelectedDiagnostics = {};
     targetEscapeSide = 0;
     targetLateralEscapeOffset = 0.0f;
 
@@ -1621,9 +1594,7 @@ void DarkCameraActor::UpdateLockOnWallLateralEscape(float deltaTime)
         targetLateralEscapeOffset = selected->distance *
             static_cast<float>(selected->side);
         currentEscapeSide = selected->side;
-        lockOnWallEscapeSelectedCandidate = selected->name;
         lockOnWallEscapeSelectedRequiredFov = selected->requiredFov;
-        lockOnWallEscapeSelectedDiagnostics = selected->diagnostics;
     }
 
     const float speed = std::abs(targetLateralEscapeOffset) > FLT_EPSILON
@@ -1944,15 +1915,11 @@ void DarkCameraActor::UpdateLockOnFovFallback(float deltaTime)
     const float baseFovDegree = activeProfile.fovDegree;
     const float maxFallbackFovDegree = (std::max)(
         baseFovDegree, activeProfile.maxFallbackFovDegree);
-    LockOnFovDiagnostics collisionPreDiagnostics{};
-    bool collisionPreValid = false;
-    lockOnCollisionPreRequiredFovDegree = EvaluateRequiredLockOnFovFromEye(
-        collisionPreEyePosition, currentPose.target,
-        collisionPreDiagnostics, collisionPreValid);
+    LockOnFovDiagnostics requiredFovDiagnostics{};
     bool requiredFovValid = false;
     lockOnRequiredFovDegree = EvaluateRequiredLockOnFovFromEye(
         collisionPostEyePosition, compositionLookTarget,
-        lockOnFovDiagnostics, requiredFovValid);
+        requiredFovDiagnostics, requiredFovValid);
 
     const bool canEnterFallback = requiredFovValid && cameraHitWall &&
         lockOnFramingDeficit > lockOnFovFallbackEnterDeficit &&
@@ -2018,7 +1985,6 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
     compositionPlayerInFront = false;
     compositionBossInFront = false;
     targetCompositionYawCorrection = 0.0f;
-    compositionRequiredFovBefore = activeProfile.fovDegree;
     compositionRequiredFovAfter = activeProfile.fovDegree;
 
     const auto moveCorrection = [&]()
@@ -2038,7 +2004,7 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
 
     bool beforeValid = false;
     LockOnFovDiagnostics beforeDiagnostics{};
-    compositionRequiredFovBefore = EvaluateRequiredLockOnFovFromEye(
+    EvaluateRequiredLockOnFovFromEye(
         currentPose.eye, currentPose.target, beforeDiagnostics, beforeValid);
     if (beforeValid)
     {
@@ -2130,23 +2096,10 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
     bool afterValid = false;
     compositionRequiredFovAfter = EvaluateRequiredLockOnFovFromEye(
         currentPose.eye, compositionLookTarget, afterDiagnostics, afterValid);
-    if (afterValid)
-        lockOnFovDiagnostics = afterDiagnostics;
 
     recoveryActive = false;
     recoveryCandidateValid = false;
-    recoveryCandidateCollisionHit = false;
-    recoveryDesiredTargetDistance = MathHelper::Distance(
-        currentPose.target, collisionPreEyePosition);
-    recoveryCollisionPostTargetDistance = MathHelper::Distance(
-        currentPose.target, normalCollisionPostEyePosition);
-    recoveryWallEscapeFinalTargetDistance = MathHelper::Distance(
-        currentPose.target, currentPose.eye);
-    recoveryLostDistance = (std::max)(
-        recoveryDesiredTargetDistance - recoveryCollisionPostTargetDistance, 0.0f);
-    recoveryRecoveredDistance = 0.0f;
     recoveryBaseRequiredFov = compositionRequiredFovAfter;
-    recoveryCandidateRequiredFov = compositionRequiredFovAfter;
     recoveryFinalRequiredFov = compositionRequiredFovAfter;
 
     const bool recoveryEligible = currentMode == CameraMode::LockOn &&
@@ -2225,8 +2178,6 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
             bool candidateHit = false;
             const bool collisionValid = ResolveWallLateralCandidateCollision(
                 currentPose.target, candidateEye, resolvedCandidateEye, candidateHit);
-            recoveryCandidateCollisionHit = candidateHit;
-            recoveryCandidateEye = resolvedCandidateEye;
             DirectX::XMFLOAT3 candidateLookTarget{};
             LockOnFovDiagnostics candidateDiagnostics{};
             float candidateFov = compositionRequiredFovAfter;
@@ -2235,7 +2186,6 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
                     candidateLookTarget, candidateDiagnostics, candidateFov) &&
                 recoveryBaseRequiredFov - candidateFov >=
                 recoveryFovImprovementThreshold;
-            recoveryCandidateRequiredFov = candidateFov;
             if (recoveryCandidateValid)
                 targetRecoveryDistance = candidateDistance;
             else
@@ -2279,16 +2229,12 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
                 currentPose.eye = resolvedEye;
                 collisionPostEyePosition = resolvedEye;
                 recoveryActive = true;
-                recoveryRecoveredDistance = MathHelper::Distance(
-                    baseEye, resolvedEye);
-
                 DirectX::XMFLOAT3 finalLookTarget{};
                 LockOnFovDiagnostics finalDiagnostics{};
                 if (calculateCompositionTarget(resolvedEye, finalLookTarget,
                     finalDiagnostics, recoveryFinalRequiredFov))
                 {
                     compositionLookTarget = finalLookTarget;
-                    lockOnFovDiagnostics = finalDiagnostics;
                     compositionRequiredFovAfter = recoveryFinalRequiredFov;
                 }
             }
@@ -2548,31 +2494,14 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
         CollisionHelper::ToBit(CollisionLayer::WorldProps);
 
     cameraHitWall = CollisionFunction::SphereRayCast(target, eye, hit, sphereCastRadius, mask);
-    cameraCollisionHitName = "None";
-    cameraCollisionInitialOverlap = false;
-    cameraCollisionHitPoint = {};
-    cameraCollisionHitNormal = {};
-    cameraCollisionHitDistance = 0.0f;
     if (cameraHitWall)
     {
-        cameraCollisionInitialOverlap = hit.initialOverlap;
-        cameraCollisionHitPoint = hit.hitPoint;
-        cameraCollisionHitNormal = hit.normal;
-        cameraCollisionHitDistance = hit.distance;
         float collisionOffset = sphereCastRadius + 0.05f;
         // 少し手前に出す
         idealEye = MathHelper::Add(hit.hitPoint,
             MathHelper::Multiply(hit.normal, collisionOffset));
 
         cameraHitDistance = hit.distance;
-        if (hit.actor)
-        {
-            cameraCollisionHitName = hit.actor->GetName();
-        }
-        else if (hit.component)
-        {
-            cameraCollisionHitName = hit.component->GetName();
-        }
 
     }
 
@@ -2872,9 +2801,6 @@ void DarkCameraActor::DrawImGuiDetails()
     ImGui::DragFloat(U8("ロックオンピッチ度数"), &lockOnPitchDegree, 0.1f, -90.0f, 90.0f);
     ImGui::DragFloat(U8("ロックオンyaw度数"), &lockOnYawOffsetDegree, 0.1f, -90.0f, 90.0f);
 
-    ImGui::DragFloat(U8("lockOnTargetNearWall"), &lockOnTargetNearWall, 0.1f, 0.01f, 10.0f);
-    ImGui::DragFloat(U8("lockOnTargetNormal"), &lockOnTargetNormal, 0.1f, 0.01f, 10.0f);
-    ImGui::DragFloat(U8("wallDistance"), &wallDistance, 0.1f, 0.01f, 10.0f);
     ImGui::Text("cameraHitDistance: %.4f", cameraHitDistance);
     ImGui::Text("cameraCollisionRatio: %.4f", cameraCollisionRatio);
     ImGui::Text("cameraHitWall: %s", cameraHitWall ? "true" : "false");

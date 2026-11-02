@@ -315,7 +315,6 @@ private:
         std::string limiter = "Invalid";
     };
 
-    float CalculateRequiredLockOnFov(bool& outValid);
     float EvaluateRequiredLockOnFovFromEye(
         const DirectX::XMFLOAT3& eye,
         LockOnFovDiagnostics& diagnostics,
@@ -395,10 +394,8 @@ private:
     CameraPose blendStartPose;
     CameraPose blendTargetPose;
     float deathBlendSideOffset = 0.0f;
-    const char* deathBlendSelectedSide = "Fallback";
     bool deathBlendDefaultValid = true;
     bool deathBlendMirroredValid = false;
-    bool deathBlendMirroredTested = false;
 
     float blendTime = 0.0f;
     float blendDuration = 0.30f;
@@ -417,8 +414,6 @@ private:
     float rotateSpeed = 2.0f;
     float minPitchDegree = -50.0f; // pitchの最小角度
     float maxPitchDegree = 40.0f;  // pitchの最大角度
-    float cameraDistance = 5.0f;
-    float cameraHeight = 0.0f;
     float focusDistance = 0.0f;
 
     // カメラシェイクのプリセット名
@@ -500,8 +495,6 @@ private:
     float lockOnFramingDeficit = 0.0f;
     bool lockOnFramingActive = false;
     float lockOnRequiredFovDegree = 45.0f;
-    float lockOnCollisionPreRequiredFovDegree = 45.0f;
-    LockOnFovDiagnostics lockOnFovDiagnostics{};
     float lockOnWallEscapeNearOffset = 1.0f;
     float lockOnWallEscapeFarOffset = 3.0f;
     float lockOnWallEscapeSevereFovThreshold = 60.0f;
@@ -515,7 +508,6 @@ private:
     float targetCompositionYawCorrection = 0.0f;
     float compositionBaseYaw = 0.0f;
     float compositionTargetYaw = 0.0f;
-    float compositionRequiredFovBefore = 0.0f;
     float compositionRequiredFovAfter = 0.0f;
     float currentRecoveryDistance = 0.0f;
     float targetRecoveryDistance = 0.0f;
@@ -525,16 +517,8 @@ private:
     float recoveryFovImprovementThreshold = 5.0f;
     bool recoveryActive = false;
     bool recoveryCandidateValid = false;
-    bool recoveryCandidateCollisionHit = false;
-    float recoveryDesiredTargetDistance = 0.0f;
-    float recoveryCollisionPostTargetDistance = 0.0f;
-    float recoveryWallEscapeFinalTargetDistance = 0.0f;
-    float recoveryLostDistance = 0.0f;
-    float recoveryRecoveredDistance = 0.0f;
     float recoveryBaseRequiredFov = 0.0f;
-    float recoveryCandidateRequiredFov = 0.0f;
     float recoveryFinalRequiredFov = 0.0f;
-    DirectX::XMFLOAT3 recoveryCandidateEye{};
     bool compositionActive = false;
     bool compositionPlayerInsideSafeFrame = false;
     bool compositionBossInsideSafeFrame = false;
@@ -554,8 +538,6 @@ private:
     bool lockOnWallEscapeActive = false;
     int currentEscapeSide = 0;
     int targetEscapeSide = 0;
-    std::string lockOnWallEscapeSelectedCandidate = "None";
-    LockOnFovDiagnostics lockOnWallEscapeSelectedDiagnostics{};
     float lockOnTargetFovDegree = 45.0f;
     float lockOnCurrentFovDegree = 45.0f;
     float lockOnFovReturnDelayElapsed = 0.0f;
@@ -613,7 +595,6 @@ private:
     float rushPresentationFovExitTime = 1.0f;
 
     // ランタイム調査値
-    DirectX::XMFLOAT3 desiredEyePosition{};
     DirectX::XMFLOAT3 collisionPreEyePosition{};
     DirectX::XMFLOAT3 collisionPostEyePosition{};
     DirectX::XMFLOAT3 normalCollisionPostEyePosition{};
@@ -641,20 +622,9 @@ private:
     // 当たり判定のスフィアキャストの球の大きさ
     float sphereCastRadius = 0.01f;
 
-    float lockOnTargetNearWall = 0.005f;
-    float lockOnTargetNormal = 0.11f;
-    float wallDistance = 7.1f;
     float cameraHitDistance = 0.0f; // カメラと壁の距離
     bool cameraHitWall = false;   // カメラが壁に当たったかどうか
-    bool cameraCollisionInitialOverlap = false;
-    DirectX::XMFLOAT3 cameraCollisionHitPoint{};
-    DirectX::XMFLOAT3 cameraCollisionHitNormal{};
-    float cameraCollisionHitDistance = 0.0f;
-    float cameraFov = 35.0f;
-    float wallBlend = 0.0f;
-    float smoothHitDistance = 0.0f;
     float cameraCollisionRatio = 1.0f;
-    std::string cameraCollisionHitName = "None";
 
     bool holdPrisonOpeningTpsReturnPoseForOneUpdate = false;
     float prisonOpeningReturnFov = 0.0f;
@@ -670,7 +640,6 @@ private:
     float initialLockOnZoomInSpeed = 0.0f;
     float initialLockOnZoomOutSpeed = 0.0f;
 
-    int unstableFrameCount = 0; // 
 
     // 外部のカメラとのBlend用の変数
     CameraPose externalStartPose;
@@ -682,6 +651,4 @@ private:
     bool isExternalBlending = false;
     std::function<void()> finishedExternalBlend;
 
-    float startDistance = 5.0f;
-    float targetDistance = 5.0f;
 };

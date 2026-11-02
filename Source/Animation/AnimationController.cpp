@@ -148,7 +148,6 @@ void AnimationController::OnUpdate(const float deltaTime)
         return;
     }
 
-    // Editor preview has its own clock and never enters runtime Notify or Root Motion.
     if (editorPreviewActive)
     {
         UpdateEditorPreview(deltaTime);
@@ -199,7 +198,6 @@ void AnimationController::OnUpdate(const float deltaTime)
     // 通常アニメーション遷移でのみ使用する
     float normalPlayRate = 1.0f;
 
-#if 1
     if (useBlendSpace)
     {
         // Focus中は通常アニメーション時間を進めない
@@ -293,66 +291,6 @@ void AnimationController::OnUpdate(const float deltaTime)
         }
     }
 
-#else
-    prevAnimationTime = animationTime;
-
-
-    const size_t rateClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
-
-    const auto& asset = animationNotifyAssets[rateClip];
-    float curveRate = 1.0f;
-
-    switch (transitionState)
-    {
-    case AnimationTransitionState::Inprogress:
-    case AnimationTransitionState::NotStarted:
-    case AnimationTransitionState::Completed:
-        curveRate = asset.speedCurve.Evaluate(animationTime);
-        break;
-    }
-
-    float playRate = animationRate * asset.playRate * curveRate;
-    animationTime += deltaTime * playRate;
-    unwrappedAnimationTime = animationTime;
-    locomotionTime += deltaTime * locomotionPlayRate; // ブレンドスペースのためのタイム
-
-
-
-    // 通常アニメーションのループ判定
-    if (transitionState == AnimationTransitionState::Completed && !useBlendSpace)
-    {
-        normalAnimationDuration = target_->model->animations.at(animationClip).duration;
-
-        if (normalAnimationDuration > 0.0f && animationTime >= normalAnimationDuration)
-        {
-            if (requestStopLoop)
-            {
-                animationTime = normalAnimationDuration;
-                isAnimationLoop = false;
-                requestStopLoop = false;
-                isAnimationFinished = true;
-            }
-            else if (isAnimationLoop)
-            {
-                normalAnimationLoopedThisFrame = true;
-
-                animationTime =
-                    std::fmod(
-                        animationTime,
-                        normalAnimationDuration);
-            }
-            else
-            {
-                animationTime = normalAnimationDuration;
-                isAnimationFinished = true;
-            }
-        }
-    }
-#endif // 0
-
-
-
-    // BlendSpace has its own locomotion-phase Notify path in UpdateBlendSpace().
     if (!useBlendSpace)
     {
         // NotifyTrack のイベント処理
@@ -681,7 +619,6 @@ void AnimationController::EndEditorPreview()
     suppressNormalRootMotionUntilTransitionCompleted = editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted;
     suppressNormalRootMotionObservedTransition = editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition;
 
-    // Restore the runtime pose immediately on the button frame.
     target_->SetModelNodes(finalNodes);
     target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
     for (auto* extraTarget : extraTargets_)
@@ -690,8 +627,6 @@ void AnimationController::EndEditorPreview()
         extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
     }
 
-    // The actor did not consume root motion during preview. Rebase once so the
-    // first runtime frame cannot interpret the preview gap as movement.
     if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(finalNodes.size()))
     {
         const auto& root = finalNodes[rootNodeIndex];
@@ -833,7 +768,6 @@ void AnimationController::ReleaseHeldAnimationPose(bool preserveBlendSource)
     {
         const auto heldNodes = finalNodes;
         EndEditorPreview();
-        // ResetRootMotion uses finalNodes as the next blend's source pose.
         finalNodes = heldNodes;
         target_->SetModelNodes(finalNodes);
         target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
@@ -1222,14 +1156,6 @@ bool AnimationController::PlayAnimationImmediate(
 
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
 {
-#if 0
-    notifyAnimationClip = animationNameToIndex_[animationName];
-
-    animationTime = 0.0f;
-    prevAnimationTime = 0.0f;
-
-    this->animationNextClip = animationNameToIndex_[animationName];
-#else
 
     const auto animationIt = animationNameToIndex_.find(animationName);
     if (animationIt == animationNameToIndex_.end())
@@ -1298,7 +1224,6 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
 
     animationNextClip = requestedClip;
 
-#endif // 0
     this->isAnimationFinished = false;
     currentAnimationName = animationName;
     InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);

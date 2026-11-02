@@ -1084,10 +1084,6 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
                 callback();
             }
         }
-        else if (event.parameter == "rush_input_end" && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge")
-        {
-            rushInputEndNotifyReceivedDebug = true;
-        }
         break;
     }
 }
@@ -2304,8 +2300,6 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
     if (auto* scene = dynamic_cast<SceneBase*>(GetOwnerScene()))
         scene->StartJustDodgeRadialBlur();
 
-    rushInputEndNotifyReceivedDebug = false;
-    rushInputEndReasonDebug = "None";
     CapturePlayerPoseGhost();
     // スローモーションにする
     // rush時のtargetを保存する
@@ -2390,14 +2384,6 @@ bool Player::IsRushOpportunityActive() const
 
 void Player::SetRushInputAcceptance(bool accepting, const char* endReason)
 {
-    if (accepting)
-    {
-        rushInputEndReasonDebug = "None";
-    }
-    else if (endReason)
-    {
-        rushInputEndReasonDebug = endReason;
-    }
 
     if (rushInputAccepting == accepting)
     {

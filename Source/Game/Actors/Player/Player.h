@@ -638,8 +638,6 @@ public:
     bool finalHitAttackDrainActive = false; // 最終ヒット後の攻撃アニメーション排出中か
     bool finalHitAttackDrainCompleted = false; // 最終ヒット姿勢の固定に成功したか
     bool finalHitAttackDrainFailed = false; // 最終ヒット姿勢の固定または排出に失敗したか
-    bool rushInputEndNotifyReceivedDebug = false; // rush_input_end Notify受信の診断状態
-    std::string rushInputEndReasonDebug = "None"; // Rush入力受付を終了した診断上の理由
     float rushPromptAlpha = 0.0f; // Rush入力ガイドに適用する透明度
     float rushPromptFadeInDuration = 0.10f; // Rush入力ガイドのフェードイン時間
     RushPromptAnimationPhase rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden; // Rush入力ガイドの表示アニメーション段階
