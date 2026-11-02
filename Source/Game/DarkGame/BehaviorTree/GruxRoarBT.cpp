@@ -162,7 +162,7 @@ ActionBase::State FinishRoar::Run(float)
 
 bool GruxEnemy::IsRoarExecutionAllowed() const
 {
-    if (!behaviorTreeFastComboEnabled || !battleAIActive || IsDead() || IsPendingKill() ||
+    if ( !battleAIActive || IsDead() || IsPendingKill() ||
         isDeathPerform ||
         finalHitReactionActive || finalHitReactionHeld || IsAnimationEditorPreviewActive() ||
         IsChargeAttackBTActive() || IsDashAttackBTActive() || chargeMovementActive ||

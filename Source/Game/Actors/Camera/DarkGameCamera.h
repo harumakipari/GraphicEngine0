@@ -356,9 +356,6 @@ private:
     // 当たり判定を考慮する関数
     DirectX::XMFLOAT3 ResolveCameraCollision(DirectX::XMFLOAT3 target, DirectX::XMFLOAT3 eye);
 
-    // 適応する
-
-
 private:
     std::weak_ptr<GruxEnemy> deathBoss;
     std::weak_ptr<SceneComponent> enemyHead; // 敵の位置
@@ -369,9 +366,6 @@ private:
     CameraMode currentMode = CameraMode::TPS;   // 現在有効なモード
     CameraMode requestMode = CameraMode::TPS;   // 入力が要求しているモード
 
-
-    void DrawDeathCameraDebug(const CameraPose& appliedPose) const;
-    bool showDeathCameraDebug = false;
     CameraPose currentPose;
     DirectX::XMFLOAT3 compositionLookTarget{};
 
@@ -440,7 +434,6 @@ private:
     CameraShakePreset rushFinalShake{ 0.9f, 0.16f, 18.0f, 0.02f, 0.14f };
     CameraShakePreset bossWeaponDropShake{ 0.5f, 0.36f, 10.0f, 0.035f, 0.22f };
 
-    // Active shake state. Preset values are copied here when a shake starts.
     bool shakeActive = false;
     float shakeElapsedTime = 0.0f;
     float shakeDuration = 0.0f;
@@ -452,12 +445,11 @@ private:
     DirectX::XMFLOAT3 shakePositionOffset{};
     DirectX::XMFLOAT3 shakeTargetOffset{};
 
-    // モード別の構図調整値（初期値は従来値相当）
+    // モード別の構図調整値
     CameraCompositionSettings corridorTpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
     CameraCompositionSettings standardTpsSettings = { 7.15f, 0.05f, 0.75f, 35.0f, 0.0f };
     CameraCompositionSettings bossTpsSettings = { 6.45f, 0.05f, 0.75f, 44.0f, 0.0f };
     CameraCompositionSettings focusSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
-    // Existing LockOn settings are the Grux profile and must remain unchanged.
     CameraCompositionSettings lockOnSettings = { 10.0f, 0.4f, -0.3f, 45.0f, 0.0f };
     LockOnProfile compactEnemyLockOnProfile = { 35.0f, 38.0f, 6.45f, 1.0f };
     LockOnProfile standardEnemyLockOnProfile = { 40.0f, 43.0f, 7.15f, 1.0f };
@@ -592,8 +584,6 @@ private:
     float justDodgePresentationEnterTime = 0.06f;
     float justDodgePresentationHoldTime = 0.35f;
     float justDodgePresentationExitTime = 0.45f;
-    // Rush is deliberately split into a short face-focused intro and a
-    // travel-focused shot. Do not keep the intro's large yaw during travel.
     float rushPresentationApproachSideOffset = 0.0f;
     float rushPresentationApproachHeightOffset = 0.35f;
     float rushPresentationApproachDistanceOffset = 1.05f;
@@ -616,14 +606,7 @@ private:
     float rushPresentationTravelDistanceOffset = -1.05f;
     float rushPresentationTravelFovDegree = 25.0f;
     float rushPresentationTravelEnemyTargetWeight = 0.3f;
-    //float rushPresentationTravelYawOffsetDegree = 8.0f;
-    //float rushPresentationTravelSideOffset = 0.55f;
-    //float rushPresentationTravelHeightOffset = 0.15f;
-    //float rushPresentationTravelDistanceOffset = -0.20f;
-    //float rushPresentationTravelFovDegree = 45.0f;
-    //float rushPresentationTravelEnemyTargetWeight = 0.65f;
     float rushPresentationIntroToTravelBlendTime = 0.20f;
-    // Absolute presentation pitch; negative raises the camera in this camera convention.
     float rushPresentationTargetPitchDegree = -8.0f;
     float rushPresentationEnterTime = 0.15f;
     float rushPresentationRotationExitTime = 0.6f;
@@ -652,7 +635,6 @@ private:
     float lockOnDistanceScale = 0.25f;
     // 最大距離
     float lockOnMaxDistance = 8.0f;
-    // Candidate selection range; independent from the camera zoom cap above.
     float lockOnTargetSelectionMaxDistance = 11.0f;
     float normalEnemyLockOnScreenRadius = 1.45f;
     // Pitch
@@ -675,10 +657,8 @@ private:
     float cameraCollisionRatio = 1.0f;
     std::string cameraCollisionHitName = "None";
 
-    // Preserve the evaluated prison-opening TPS pose for the hand-off render frame.
     bool holdPrisonOpeningTpsReturnPoseForOneUpdate = false;
     float prisonOpeningReturnFov = 0.0f;
-    bool showCameraCollisionDebug = false;
 
     CameraCompositionSettings initialCorridorTpsSettings{};
     CameraCompositionSettings initialStandardTpsSettings{};
@@ -692,9 +672,6 @@ private:
     float initialLockOnZoomOutSpeed = 0.0f;
 
     int unstableFrameCount = 0; // 
-
-    // フォーカス時の
-    // float focus
 
     // 外部のカメラとのBlend用の変数
     CameraPose externalStartPose;

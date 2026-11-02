@@ -75,14 +75,6 @@ public:
         }
     }
 
-    void PlayAnimation(const std::string& controllerName, const std::string& name, bool loop = true, bool blend = true, float blendTime = 0.3f) const
-    {
-        if (auto controller = GetAnimationController(controllerName))
-        {
-            controller->ResetRootMotion(name, loop, blend, blendTime);
-        }
-    }
-
     virtual void LateUpdate(float elapsedTime) {};
 
     virtual void Move(float elapsedTime) {}

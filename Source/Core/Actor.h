@@ -107,8 +107,7 @@ public:
 #endif // 0
 
         std::shared_ptr<T> newComponent = std::make_shared<T>(finalName, sharedThis);
-        _ASSERT_EXPR(newComponent != nullptr, "Failed to create new SceneComponent!");
-        //std::shared_ptr<T> newComponent = std::make_shared<T>(name, this);
+        _ASSERT_EXPR(newComponent != nullptr, "Failed to create new SceneComponent!");//std::shared_ptr<T> newComponent = std::make_shared<T>(name, this);
 
         if constexpr ((std::is_base_of<SceneComponent, T>::value))
         {
@@ -134,21 +133,10 @@ public:
 
         _ASSERT_EXPR(reinterpret_cast<void*>(&ownedComponents_) != nullptr, "ownedSceneComponents_ is nullptr!");
 
-        //_ASSERT_EXPR(newComponent.use_count() >= 2, "newComponent use_count is invalid!"); 
-
-        //OutputDebugStringA(("Before push_back size: " + std::to_string(ownedComponents_.size()) + "\n").c_str());
-        //OutputDebugStringA(("Before push_back capacity: " + std::to_string(ownedComponents_.capacity()) + "\n").c_str());
-
-        //ownedSceneComponents_.push_back(newComponent);
         ownedComponents_.push_back(std::static_pointer_cast<Component>(newComponent));
 
 
-        // push_backŒã‚à“¯—l‚ÉŠm”F
-        //OutputDebugStringA(("After push_back size: " + std::to_string(ownedComponents_.size()) + "\n").c_str());
-        //OutputDebugStringA(("After push_back capacity: " + std::to_string(ownedComponents_.capacity()) + "\n").c_str());
-
         // ‰Šú‰»‚·‚é
-        //newComponent->Initialize();
         newComponent->OnRegister();
 
         return newComponent;

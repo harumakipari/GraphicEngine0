@@ -3,7 +3,6 @@
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
-#include "Engine/Debug/DebugRender.h"
 #include "Physics/CollisionFunction.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Utility/Time.h"
@@ -74,8 +73,6 @@ void DarkCameraActor::Update(float deltaTime)
 
     if (preservePrisonOpeningReturnPose)
     {
-        // PreparePrisonOpeningTpsReturn supplied a collision-resolved TPS pose.
-        // Keep it for the render frame in which MovieCamera is disabled.
     }
     else if (isExternalBlending)
     {
@@ -153,16 +150,6 @@ void DarkCameraActor::Update(float deltaTime)
     if (!preservePrisonOpeningReturnPose)
         ApplyCombatPresentationFov();
 
-    if (showCameraCollisionDebug)
-    {
-        DebugRender::DrawLine(currentPose.target, collisionPreEyePosition,
-            { 0.2f, 0.8f, 1.0f, 1.0f }, 0.0f, true);
-        DebugRender::DrawSphere(collisionPostEyePosition, 0.12f,
-            cameraHitWall ? DirectX::XMFLOAT4{ 1.0f, 0.2f, 0.2f, 1.0f }
-            : DirectX::XMFLOAT4{ 0.2f, 1.0f, 0.3f, 1.0f },
-            0.0f, true);
-    }
-
     if (!preservePrisonOpeningReturnPose)
     {
         float targetBlend = cameraHitWall ? 1.0f : 0.0f;
@@ -174,33 +161,8 @@ void DarkCameraActor::Update(float deltaTime)
     SetPosition(renderPose.eye);
     mainCameraComponent->lookTarget = renderPose.target;
     mainCameraComponent->useLookTarget = true;
-    DrawDeathCameraDebug(renderPose);
 }
 
-void DarkCameraActor::DrawDeathCameraDebug(const CameraPose& appliedPose) const
-{
-    if (!showDeathCameraDebug || isExternalBlending ||
-        !(currentMode == CameraMode::Death || (isBlending && requestMode == CameraMode::Death)))
-        return;
-    const auto playerAnchor = playerHead.lock();
-    const auto boss = deathBoss.lock();
-    if (!playerAnchor || !playerAnchor->GetOwner() || !boss || boss->IsPendingKill())
-        return;
-
-    // Read the actors after GameScene's staging. Use actor origins, not head sockets.
-    const auto playerPosition = playerAnchor->GetOwner()->GetPosition();
-    const auto bossPosition = boss->GetPosition();
-    const DirectX::XMFLOAT4 playerColor{ 0.1f, 0.9f, 1.0f, 1.0f };
-    const DirectX::XMFLOAT4 bossColor{ 1.0f, 0.25f, 0.25f, 1.0f };
-    const DirectX::XMFLOAT4 cameraColor{ 1.0f, 0.8f, 0.1f, 1.0f };
-    const DirectX::XMFLOAT4 targetColor{ 0.3f, 1.0f, 0.3f, 1.0f };
-    DebugRender::DrawSphere(playerPosition, 0.25f, playerColor, 0.0f, true);
-    DebugRender::DrawSphere(bossPosition, 0.35f, bossColor, 0.0f, true);
-    DebugRender::DrawSphere(appliedPose.eye, 0.50f, cameraColor, 0.0f, true);
-    DebugRender::DrawSphere(appliedPose.target, 0.15f, targetColor, 0.0f, true);
-    DebugRender::DrawLine(playerPosition, bossPosition, playerColor, 0.0f, true);
-    DebugRender::DrawLine(appliedPose.eye, appliedPose.target, cameraColor, 0.0f, true);
-}
 
 void DarkCameraActor::PlayCameraShake(const float intensity, const float duration, const float frequency, const float positionAmount, const float targetAmount)
 {
@@ -2717,15 +2679,6 @@ void DarkCameraActor::DrawImGuiDetails()
         }
 
         ImGui::SeparatorText("Death Camera");
-        ImGui::Checkbox("Show Death Camera Debug", &showDeathCameraDebug);
-        if (showDeathCameraDebug)
-        {
-            ImGui::TextColored(ImVec4(0.1f, 0.9f, 1.0f, 1.0f), "Cyan: Player / Player -> Boss");
-            ImGui::TextColored(ImVec4(1.0f, 0.25f, 0.25f, 1.0f), "Red: Boss");
-            ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.1f, 1.0f), "Yellow: Applied Camera / Camera -> Look Target");
-            ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "Green: Look Target");
-            ImGui::TextUnformatted("Death mode only. During transition, shows the applied blended pose.");
-        }
         ImGui::DragFloat("Foreground Distance", &deathCameraSettings.foregroundDistance,
             0.05f, 0.1f, 15.0f);
         ImGui::DragFloat("Side Offset", &deathCameraSettings.sideOffset,
@@ -2837,22 +2790,6 @@ void DarkCameraActor::DrawImGuiDetails()
             corridorTpsSettings.fovDegree, standardTpsSettings.fovDegree, bossTpsSettings.fovDegree, GetActiveLockOnProfile().fovDegree);
         if (isBlending)
             ImGui::Text("FOV Blend: %.2f -> %.2f deg", blendStartFovDegree, blendTargetFovDegree);
-    }
-
-    if (ImGui::CollapsingHeader("Camera Collision Debug", ImGuiTreeNodeFlags_DefaultOpen))
-    {
-        ImGui::Checkbox("World Collision Debug", &showCameraCollisionDebug);
-        ImGui::Text("Ideal / Desired Distance: %.3f", desiredCameraDistance);
-        ImGui::Text("Actual Distance: %.3f", actualCameraDistance);
-        const ImVec4 ratioColor = cameraCollisionRatio < 0.3f
-            ? ImVec4(1.0f, 0.15f, 0.15f, 1.0f)
-            : cameraCollisionRatio < 0.7f
-            ? ImVec4(1.0f, 0.75f, 0.15f, 1.0f)
-            : ImVec4(0.75f, 1.0f, 0.75f, 1.0f);
-        ImGui::TextColored(ratioColor, "Collision Ratio: %.3f", cameraCollisionRatio);
-        ImGui::Text("SphereCast Hit: %s", cameraHitWall ? "true" : "false");
-        ImGui::Text("Hit Object: %s", cameraCollisionHitName.c_str());
-        ImGui::Text("Player transparency threshold: ratio < 0.300");
     }
 
     if (ImGui::Button(U8("TPS")))

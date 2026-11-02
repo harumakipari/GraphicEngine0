@@ -170,32 +170,31 @@ void GruxEnemy::Update(float deltaTime)
         return;
     }
 
-    if (IsDashAttackBTActive() &&
-        (!behaviorTreeFastComboEnabled || !battleAIActive || IsDead() || IsDeathPresentationActive() || IsStunned()))
+    if (IsDashAttackBTActive() &&(!battleAIActive || IsDead() || IsDeathPresentationActive() || IsStunned()))
     {
         CleanupDashAttackBT();
         activeNode = nullptr;
         if (behaviorData) behaviorData->Init();
     }
 
-    // Behavior
-    if (behaviorTreeFastComboEnabled && battleAIActive)
+    if (battleAIActive)
     {
         UpdateBehaviorTree(deltaTime);
         if (IsChargeAttackBTActive() && (!activeNode || aiTree->GetLastRunResult() == ActionBase::State::Failed))
             CleanupChargeAttackBT();
         if (IsDashAttackBTActive() && (!activeNode || aiTree->GetLastRunResult() == ActionBase::State::Failed))
             CleanupDashAttackBT();
-        Character::Update(deltaTime);
-    }
-    else
-    {
-        Character::Update(deltaTime);
     }
 
+    Character::Update(deltaTime);
+
+    // 武器の攻撃予兆表示を更新する。
     UpdateWeaponTelegraphRimLight(deltaTime);
 
+    // Jump着地時の予兆の発光を更新する。
     UpdateJumpTelegraphImpactFlash(deltaTime);
+
+    // Dash予兆の表示状態を更新する。
     UpdateDashTelegraphVisual(deltaTime);
 
     // 左右武器のTrailを更新する。
@@ -206,8 +205,6 @@ void GruxEnemy::Update(float deltaTime)
 
     // AnimationMotionWarpを更新する
     UpdateAnimationMotionWarp(deltaTime);
-
-
 
     SetScale({ enemyScale,enemyScale,enemyScale });
 
@@ -386,8 +383,7 @@ void GruxEnemy::DrawImGuiDetails()
                         const bool selected = clip == dangerObbSelectedClip &&
                             stateIndex == dangerObbSelectedStateIndex;
                         std::string label = asset->animationName;
-                        if (dangerCount > 1)
-                            label += " [Danger " + std::to_string(stateIndex) + "]";
+                        if (dangerCount > 1)label += " [Danger " + std::to_string(stateIndex) + "]";
                         if (ImGui::Selectable(label.c_str(), selected))
                         {
                             dangerObbSelectedClip = clip;
@@ -720,7 +716,6 @@ void GruxEnemy::DrawImGuiDetails()
         10.0f,
         "%.2f");
     currentJumpPlayerDistance = GetDistanceToPlayer();
-    ImGui::Checkbox("BehaviorTree FastCombo", &behaviorTreeFastComboEnabled);
     if (ImGui::TreeNode("Combat Attack Candidates"))
     {
         for (size_t i = 0; i < combatAttackData.size(); ++i)
@@ -4087,7 +4082,7 @@ void GruxEnemy::CreateTelegraphMesh(const std::string& parentName)
 
 }
 
-
+// 武器の攻撃予兆表示を更新する。
 void GruxEnemy::UpdateWeaponTelegraphRimLight(float deltaTime)
 {
     if (!weaponTelegraphActive && !weaponTelegraphFadingOut) return;

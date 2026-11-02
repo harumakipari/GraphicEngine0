@@ -258,19 +258,6 @@ bool GruxEnemy::BeginTripleChargeTransition()
     chargeBT.tripleChargeRepositionDirection = {};
     chargeBT.tripleChargeRepositionCurrentClearance = 0.0f;
     chargeBT.tripleChargeRepositionShortage = 0.0f;
-    chargeBT.tripleChargeRepositionValidationAfter = false;
-    chargeBT.tripleChargeFinalLockedDirection = {};
-    chargeBT.tripleChargeFinalValidationOrigin = {};
-    chargeBT.tripleChargeFinalValidationDirection = {};
-    chargeBT.tripleChargeFinalValidationClearance = 0.0f;
-    chargeBT.tripleChargeFinalValidationResult = false;
-    chargeBT.tripleChargeSideWallHitPosition = {};
-    chargeBT.tripleChargeSideWallHitNormal = {};
-    chargeBT.tripleChargeSideClearance = 0.0f;
-    chargeBT.tripleChargeSideWallHit = false;
-    chargeBT.tripleChargeSideWallActor = "None";
-    chargeBT.tripleChargeSideWallComponent = "None";
-    chargeBT.tripleChargeFinalPathSafe = false;
     return true;
 }
 
@@ -511,12 +498,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                 tripleChargeRepositionSideSafetyMargin;
             const float sideShortage = sideWallHit
                 ? (std::max)(0.0f, requiredSideClearance - sideClearance) : 0.0f;
-            chargeBT.tripleChargeSideClearance = sideClearance;
-            chargeBT.tripleChargeSideWallHit = sideWallHit;
-            chargeBT.tripleChargeSideWallHitPosition = sideHitPosition;
-            chargeBT.tripleChargeSideWallHitNormal = sideNormal;
-            chargeBT.tripleChargeSideWallActor = sideActor;
-            chargeBT.tripleChargeSideWallComponent = sideComponent;
             if (clearanceMeasured && !chargeBT.tripleChargeRepositionActive &&
                 (chargeBT.tripleChargeRepositionShortage > 0.0f || sideShortage > 0.0f))
             {
@@ -593,11 +574,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                         chargeBT.tripleChargeRepositionActive = false;
                 }
                 SetPosition(moved);
-                bool ignoredWallHit = false;
-                EvaluateChargeStartClearance(moved, nextDirection,
-                    chargeBT.tripleChargeRepositionCurrentClearance, ignoredWallHit);
-                chargeBT.tripleChargeRepositionValidationAfter =
-                    chargeBT.tripleChargeRepositionCurrentClearance > chargeStartValidationClearance;
             }
         }
         if (chargeBT.tripleChargeTransitionElapsed < chargeBT.tripleChargeTransitionDuration)
@@ -617,38 +593,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             chargeBT.triplePhase = TripleChargePhase::Aborted;
             return ChargeBTStepResult::Complete;
         }
-        chargeBT.tripleChargeFinalLockedDirection = chargeDirection;
-        chargeBT.tripleChargeFinalValidationOrigin = GetPosition();
-        chargeBT.tripleChargeFinalValidationDirection = chargeDirection;
-        bool finalValidationHit = false;
-        const bool finalValidationMeasured = EvaluateChargeStartClearance(
-            chargeBT.tripleChargeFinalValidationOrigin,
-            chargeBT.tripleChargeFinalValidationDirection,
-            chargeBT.tripleChargeFinalValidationClearance,
-            finalValidationHit);
-        chargeBT.tripleChargeFinalValidationResult = finalValidationMeasured &&
-            (!finalValidationHit || chargeBT.tripleChargeFinalValidationClearance > chargeStartValidationClearance);
-        float finalSideClearance = 0.0f;
-        DirectX::XMFLOAT3 finalSideNormal{};
-        DirectX::XMFLOAT3 finalSideHitPosition{};
-        std::string finalSideActor;
-        std::string finalSideComponent;
-        bool finalSideHit = false;
-        EvaluateChargeSideClearance(chargeBT.tripleChargeFinalValidationOrigin,
-            chargeBT.tripleChargeFinalValidationDirection, finalSideClearance,
-            finalSideNormal, finalSideHitPosition, finalSideActor,
-            finalSideComponent, finalSideHit);
-        chargeBT.tripleChargeSideClearance = finalSideClearance;
-        chargeBT.tripleChargeSideWallHit = finalSideHit;
-        chargeBT.tripleChargeSideWallHitPosition = finalSideHitPosition;
-        chargeBT.tripleChargeSideWallHitNormal = finalSideNormal;
-        chargeBT.tripleChargeSideWallActor = finalSideActor;
-        chargeBT.tripleChargeSideWallComponent = finalSideComponent;
-        const float finalRequiredSideClearance = (std::max)(0.05f,
-            radius * chargeWallCastRadiusScale) + chargeWallCastSafetyMargin +
-            tripleChargeRepositionSideSafetyMargin;
-        chargeBT.tripleChargeFinalPathSafe = chargeBT.tripleChargeFinalValidationResult &&
-            (!finalSideHit || finalSideClearance > finalRequiredSideClearance);
         if (!BeginChargeTelegraphVisual())
         {
             FailChargeAttackBT();
@@ -969,12 +913,11 @@ void GruxEnemy::NotifyPlayerRushEnded(Player* player)
 
 bool GruxEnemy::ShouldAbortChargeAttackBT()
 {
-    const bool behaviorTreeDisabled = !behaviorTreeFastComboEnabled;
     const bool executionNotAllowed = !IsChargeBTExecutionAllowed();
     const bool activeNodeNull = !activeNode;
     // Charge Stunは通常の自己Abort対象ではなく、ResolveChargeResultBTで完了させる。
     return IsChargeAttackBTActive() &&
-        (behaviorTreeDisabled || executionNotAllowed || activeNodeNull);
+        (executionNotAllowed || activeNodeNull);
 }
 void GruxEnemy::CleanupChargeAttackBT()
 {

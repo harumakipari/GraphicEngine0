@@ -25,7 +25,6 @@
 #include "Graphics/PostProcess/FogEffect.h"
 #include "Graphics/PostProcess/SSAOEffect.h"
 #include "Graphics/PostProcess/SSREffect.h"
-#include "UI/FontManager.h"
 
 bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {

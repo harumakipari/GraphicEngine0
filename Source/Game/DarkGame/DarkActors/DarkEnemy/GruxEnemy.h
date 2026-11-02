@@ -870,7 +870,6 @@ public:
     // Jump予兆の進行度を更新する。
     void UpdateJumpTelegraphProgress();
 
-
     // 第2段階の複数回Jumpを使うか判定する。
     bool IsTripleJumpPhase2() const;
 
@@ -1896,19 +1895,6 @@ private:
 
 
 
-        bool tripleChargeRepositionValidationAfter = false;  // 複数回Chargeの位置補正後の検証結果。
-        DirectX::XMFLOAT3 tripleChargeFinalLockedDirection{};  // 複数回Chargeの最終的に固定した方向。
-        DirectX::XMFLOAT3 tripleChargeFinalValidationOrigin{};  // 複数回Chargeの最終経路検証の開始位置。
-        DirectX::XMFLOAT3 tripleChargeFinalValidationDirection{};  // 複数回Chargeの最終経路検証の方向。
-        float tripleChargeFinalValidationClearance = 0.0f;  // 複数回Chargeの最終経路検証の余白距離。
-        bool tripleChargeFinalValidationResult = false;  // 複数回Chargeの最終経路検証の結果。
-        DirectX::XMFLOAT3 tripleChargeSideWallHitPosition{};  // 複数回Chargeの側方の壁のヒット位置。
-        DirectX::XMFLOAT3 tripleChargeSideWallHitNormal{};  // 複数回Chargeの側方の壁のヒット法線。
-        float tripleChargeSideClearance = 0.0f;  // 複数回Chargeの側方の余白距離。
-        bool tripleChargeSideWallHit = false;  // 複数回Chargeの側方の壁判定がヒットしたか。
-        std::string tripleChargeSideWallActor;  // 複数回Chargeの側方でヒットしたアクター名。
-        std::string tripleChargeSideWallComponent;  // 複数回Chargeの側方でヒットしたコンポーネント名。
-        bool tripleChargeFinalPathSafe = false;  // 複数回Chargeの最終経路が安全か。
     } chargeBT;  // Chargeの実行状態と診断情報。
     float chargeSetupDistanceMin = 8.0f;  // Chargeの準備位置に必要な対象との最小距離。
     float chargeSetupDistanceMax = 10.0f;  // Chargeの準備位置に必要な対象との最大距離。
@@ -2069,7 +2055,6 @@ private:
     std::unique_ptr<BehaviorTree>	aiTree = nullptr;  // Gruxの行動判断とアクションを構成するツリー。
     std::unique_ptr<BehaviorData>	behaviorData = nullptr;  // Sequenceの進行状態を保持するデータ。
     NodeBase* activeNode = nullptr;  // 現在実行中のBTアクションノード。
-    bool behaviorTreeFastComboEnabled = true;  // 行動ツリー全体の更新を有効にする。
 
     CloseCombatSettings closeCombatSettings;  // FastComboの計画・実行距離と向きの条件。
     std::string behaviorTreePreviousNode = "None";  // 直前に実行したBTノードの表示名。

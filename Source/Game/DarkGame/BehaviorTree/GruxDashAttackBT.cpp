@@ -100,7 +100,6 @@ void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
         break;
     }
     case DashTelegraphVisualState::DashActive:
-        // Dash start and Flash completion retain the locked Line/Fan snapshot.
         break;
     case DashTelegraphVisualState::FanFlashing:
     {
@@ -110,8 +109,6 @@ void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
             dashTelegraphFanFlashIntensity * (1.0f - progress);
         if (progress >= 1.0f)
         {
-            // Flash is a Timeline event, but it must not implicitly hide the fan.
-            // The authored FadeOut event owns that later transition.
             dashTelegraphVisualState = DashTelegraphVisualState::DashActive;
             dashTelegraphVisualElapsed = 0.0f;
             dashTelegraphFanFlashActive = false;
