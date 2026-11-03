@@ -1273,7 +1273,6 @@ private:
     float fourthHitReactionChance = 0.3f;  // 4段目の被弾リアクションを発生させる確率。
     float fourthHitReactionDuration = 1.25f;  // 4段目の被弾リアクション時間。
     float fourthHitReactionLastRoll = -1.0f;  // 4段目の被弾リアクションに使った直近の乱数値。
-    bool fourthHitReactionHasLastRoll = false;  // 4段目の被弾リアクションの抽選結果があるか。
     bool fourthHitReactionLastWon = false;  // 直近の4段目の被弾リアクション抽選が成功したか。
     float fourthHitReactionLastDirectionDot = 0.0f;  // 4段目の被弾方向の判定に使った内積。
     std::string fourthHitReactionDirection = "None";  // 4段目の被弾方向の表示文字列。
@@ -1614,10 +1613,7 @@ private:
     float attackSetupRemainingDistance = 0.0f;  // 攻撃準備位置までの残り距離。
     float attackSetupStuckTime = 0.0f;  // 攻撃準備移動で停滞した時間。
     bool attackSetupMovementActive = false;  // 攻撃準備位置へ移動中かを示す。
-    float attackSetupChosenDistance = 0.0f;  // 選択した攻撃準備位置と対象との距離。
     float attackSetupPlannedMoveDistance = 0.0f;  // 攻撃準備位置までの予定移動距離。
-    int attackSetupCandidateCount = 0;  // 攻撃準備位置の候補数。
-    bool attackReadySEFired = false;  // 攻撃準備SEを再生できたかの記録。
     AttackReadyReason attackReadyReason = AttackReadyReason::Front;  // 攻撃準備時間の選択に使う理由。
 
 
@@ -1740,7 +1736,6 @@ private:
     DirectX::XMFLOAT3 tripleJumpLockedDirection{};  // 現在のJumpで固定した方向。
     float tripleJumpPlannedDistance = 0.0f;  // 現在のJumpの予定移動距離。
     DirectX::XMFLOAT3 tripleJumpPlannedLandingPosition{};  // 現在のJumpの予定着地点。
-    bool tripleJumpTargetLockActive = false;  // Jump開始時に固定した目標を適用中かを示す。
     bool jumpMotionWarpOverrideActive = false;  // Jump用のMotionWarp上書きが有効か。
     DirectX::XMFLOAT3 jumpAttackStartPlayerPosition{};  // Jump開始時のプレイヤー位置。
     DirectX::XMFLOAT3 jumpMotionWarpDirection{ 0.0f, 0.0f, 1.0f };  // Jump用MotionWarpの方向。
@@ -1761,7 +1756,6 @@ private:
     float dashBTInterDashTrackingDuration = 0.10f;  // Dash間に対象を追跡する時間。
     float dashBTTransitionDuration = 0.40f;  // Dash間の遷移時間。
     float dashBTTransitionElapsed = 0.0f;  // Dash間の遷移経過時間。
-    float dashBTTelegraphHoldDuration = 0.0f;  // Dash予兆を保持する時間。
     bool dashBTDirectionLocked = false;  // Dashの移動方向が固定済みかを示す。
     bool dashBTMovementSnapshotPrepared = false;  // Dash移動に使う情報が準備済みかを示す。
     DirectX::XMFLOAT3 dashBTPredictedKnockupPosition{};  // Dash後のKnockup開始予測位置。

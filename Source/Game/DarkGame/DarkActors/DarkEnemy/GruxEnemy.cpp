@@ -858,7 +858,6 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
         static thread_local std::mt19937 randomEngine{ std::random_device{}() };
         std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
         fourthHitReactionLastRoll = distribution(randomEngine);
-        fourthHitReactionHasLastRoll = true;
         fourthHitReactionLastWon = fourthHitReactionLastRoll <
             std::clamp(fourthHitReactionChance, 0.0f, 1.0f);
         if (fourthHitReactionLastWon && !IsStunned())
@@ -1021,7 +1020,6 @@ void GruxEnemy::StopBattleActions()
     rightWeaponTrail.Clear();
     nextRecoveryDuration.reset();
     nextRecoverySource = "Default";
-    attackReadySEFired = false;
     chargeElapsedTime = 0.0f;
     dashAttackElapsedTime = 0.0f;
     animationMotionWarps.clear();
@@ -1268,7 +1266,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     dashBTCurrentDashHitStartCount = 0;
     dashBTAbortRemainingDashes = false;
     dashBTTransitionElapsed = 0.0f;
-    dashBTTelegraphHoldDuration = 0.0f;
     dashBTDirectionLocked = false;
     dashBTMovementSnapshotPrepared = false;
     dashBTPredictedKnockupPosition = {};
@@ -3163,7 +3160,6 @@ bool GruxEnemy::PrepareJumpAttackSetupTarget()
         target, setupDistance, candidateCount))
     {
         ClearAttackSetupTarget();
-        attackSetupCandidateCount = candidateCount;
         return false;
     }
     attackSetupTarget = {};
@@ -3172,11 +3168,9 @@ bool GruxEnemy::PrepareJumpAttackSetupTarget()
     attackSetupRemainingDistance = std::sqrt(
         (target.x - GetPosition().x) * (target.x - GetPosition().x) +
         (target.z - GetPosition().z) * (target.z - GetPosition().z));
-    attackSetupChosenDistance = setupDistance;
     const float moveX = target.x - GetPosition().x;
     const float moveZ = target.z - GetPosition().z;
     attackSetupPlannedMoveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
-    attackSetupCandidateCount = candidateCount;
     return true;
 }
 bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount, float boundaryMarginOverride) const
@@ -3309,20 +3303,16 @@ bool GruxEnemy::StartJumpAttackExecution()
 
 bool GruxEnemy::PlayAttackReadySE()
 {
-    attackReadySEFired = false;
     if (attackReadySEName.empty())
         return false;
 
-    const std::string audioPath =
-        "./Data/Sound/SE/" + attackReadySEName + ".wav";
+    const std::string audioPath ="./Data/Sound/SE/" + attackReadySEName + ".wav";
     auto audio = CoreAudio::PlayOneShot(audioPath, attackReadySEVolume);
     if (!audio)
         return false;
 
-    const float pitch =
-        pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
+    const float pitch =pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
     audio->SetPitch(pitch);
-    attackReadySEFired = true;
     return true;
 }
 
@@ -4153,7 +4143,6 @@ void GruxEnemy::ResetFourthHitReactionDebug()
     fourthHitReactionActive = false;
     fourthHitReactionRemaining = 0.0f;
     fourthHitReactionLastRoll = -1.0f;
-    fourthHitReactionHasLastRoll = false;
     fourthHitReactionLastWon = false;
     fourthHitReactionLastDirectionDot = 0.0f;
     fourthHitReactionDirection = "None";

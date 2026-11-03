@@ -366,8 +366,6 @@ bool GruxEnemy::PrepareDashAttackSetupTarget()
     const auto position = GetPosition();
     const float dx = target.x - position.x;
     const float dz = target.z - position.z;
-    attackSetupChosenDistance = chosenDistance;
-    attackSetupCandidateCount = candidateCount;
     attackSetupPlannedMoveDistance = std::sqrt(dx * dx + dz * dz);
     attackSetupRemainingDistance = attackSetupPlannedMoveDistance;
     return true;
@@ -394,7 +392,7 @@ bool GruxEnemy::StartDashAttackTelegraph()
     }
     StopAttackSetupMovement();
     ClearAttackSetupTarget();
-    StartAttack(); // Exactly once for the entire three-stage attack.
+    StartAttack();
     dashBTAttackStarted = true;
     const bool isTripleDash = IsTripleJumpPhase2();
     dashBTDashIndex = 0;
@@ -402,7 +400,6 @@ bool GruxEnemy::StartDashAttackTelegraph()
     dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
     dashBTAbortRemainingDashes = false;
     dashBTTransitionElapsed = 0.0f;
-    dashBTTelegraphHoldDuration = 0.0f;
     dashBTDirectionLocked = false;
     dashBTMovementSnapshotPrepared = false;
     dashBTDirectionLockRequested = false;
@@ -438,7 +435,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             if (!PrepareDashAttackMovementSnapshot())
                 return DashBTResult::Failed;
             dashBTDirectionLocked = true;
-            dashBTTelegraphHoldDuration = 0.0f;
             BeginDashTelegraphVisual();
         }
 
@@ -494,7 +490,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             DisableAttackHitBoxes();
             dashBTPhase = DashBTPhase::InterDashTransition;
             dashBTTransitionElapsed = 0.0f;
-            dashBTTelegraphHoldDuration = 0.0f;
             dashBTDirectionLocked = false;
             dashBTMovementSnapshotPrepared = false;
             dashBTDirectionLockRequested = false;
@@ -523,8 +518,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             if (!PrepareDashAttackMovementSnapshot())
                 return DashBTResult::Failed;
             dashBTDirectionLocked = true;
-            dashBTTelegraphHoldDuration = (std::max)(0.0f,
-                transitionDuration - trackingDuration);
             BeginDashTelegraphVisual();
         }
         if (dashBTTransitionElapsed < transitionDuration)
@@ -574,7 +567,6 @@ void GruxEnemy::CleanupDashAttackBT()
     dashBTCurrentDashHitStartCount = 0;
     dashBTAbortRemainingDashes = false;
     dashBTTransitionElapsed = 0.0f;
-    dashBTTelegraphHoldDuration = 0.0f;
     dashBTDirectionLocked = false;
     dashBTMovementSnapshotPrepared = false;
     dashBTDirectionLockRequested = false;

@@ -126,8 +126,6 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
     attackSetupTarget.stuckMovementThreshold = 0.01f; 
     const auto position = GetPosition();
     const float dx = target.x - position.x, dz = target.z - position.z;
-    attackSetupChosenDistance = chosenDistance;
-    attackSetupCandidateCount = candidateCount;
     attackSetupPlannedMoveDistance = std::sqrt(dx * dx + dz * dz);
     attackSetupRemainingDistance = attackSetupPlannedMoveDistance;
     return true;

@@ -180,7 +180,6 @@ void GruxEnemy::BeginTripleJumpRuntime()
     tripleJumpIndex = 0;
     tripleJumpPhase = TripleJumpPhase::InitialTelegraph;
     tripleJumpTransitionElapsed = 0.0f;
-    tripleJumpTargetLockActive = false;
     tripleJumpPlayerPosition = {};
     tripleJumpStartPosition = {};
     tripleJumpLockedDirection = {};
@@ -216,13 +215,11 @@ bool GruxEnemy::StartTripleJumpJump()
     tripleJumpPlannedLandingPosition.x += tripleJumpLockedDirection.x * tripleJumpPlannedDistance;
     tripleJumpPlannedLandingPosition.z += tripleJumpLockedDirection.z * tripleJumpPlannedDistance;
     ShowJumpTelegraphForCurrentJump();
-    tripleJumpTargetLockActive = true;
     tripleJumpPhase = TripleJumpPhase::Jumping;
     if (tripleJumpIndex > 0)
         BeginAdditionalAttackStage();
     if (!PlayAttackStage(BossAttackType::JumpAttack, 1))
     {
-        tripleJumpTargetLockActive = false;
         return false;
     }
     jumpAttackStartPlayerPosition = tripleJumpPlayerPosition;
@@ -231,7 +228,6 @@ bool GruxEnemy::StartTripleJumpJump()
     jumpMotionWarpDirection = tripleJumpLockedDirection;
     if (rotationComponent)
         rotationComponent->SetDirectionImmediate(tripleJumpLockedDirection);
-    tripleJumpTargetLockActive = false;
     if (tripleJumpIndex == 0)
         OnSelectedActionStartedSuccessfully();
     return true;
@@ -267,13 +263,11 @@ void GruxEnemy::BeginTripleJumpTransition()
 void GruxEnemy::CompleteTripleJumpRuntime()
 {
     tripleJumpPhase = TripleJumpPhase::Completed;
-    tripleJumpTargetLockActive = false;
 }
 
 void GruxEnemy::AbortTripleJumpRuntime()
 {
     tripleJumpPhase = TripleJumpPhase::Aborted;
-    tripleJumpTargetLockActive = false;
     tripleJumpTransitionElapsed = 0.0f;
 }
 
