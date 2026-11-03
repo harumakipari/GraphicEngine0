@@ -1005,8 +1005,6 @@ void GruxEnemy::StopBattleActions()
     beginHuskParticleRequest = false;
     selectedActionType = BossActionType::AttackLA;
     selectedAttackType = BossAttackType::PrimaryAttackLA;
-    selectedPositioningData.reset();
-    hasLastAttack = false;
     lastStartedCombatAttack.reset();
     secondLastStartedCombatAttack.reset();
     positioningMoveStopTimer = 0.0f;

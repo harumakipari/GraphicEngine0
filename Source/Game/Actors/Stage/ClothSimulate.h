@@ -430,7 +430,6 @@ public:
                 subresourceData.pSysMem = cachedVertices.data();
                 subresourceData.SysMemPitch = 0;
                 subresourceData.SysMemSlicePitch = 0;
-                //hr = device->CreateBuffer(&bufferDesc, &subresourceData, clothVB[i].GetAddressOf());
                 hr = device->CreateBuffer(&bufferDesc, &subresourceData, clothVB.GetAddressOf());
                 _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
@@ -532,9 +531,9 @@ public:
 
     struct OcclusionTextureInfo
     {
-        int index = -1;   // required
-        int texcoord = 0;     // The set index of texture's TEXCOORD attribute used for texture coordinate mapping.
-        float strength = 1;  // A scalar parameter controlling the amount of occlusion applied. A value of `0.0` means no occlusion. A value of `1.0` means full occlusion. This value affects the final occlusion value as: `1.0 + strength * (<sampled occlusion texture value> - 1.0)`.
+        int index = -1;  
+        int texcoord = 0;
+        float strength = 1;
 
         template<class T>
         void serialize(T& archive)

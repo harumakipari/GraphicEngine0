@@ -65,14 +65,6 @@ public:
         float distance = 8.4f;
         float maxDistanceAdd = 2.0f;
     };
-    struct CameraShakePreset
-    {
-        float intensity = 1.0f;
-        float duration = 0.28f;
-        float frequency = 12.0f;
-        float positionAmount = 0.035f;
-        float targetAmount = 0.18f;
-    };
     struct DeathCameraSettings
     {
         float foregroundDistance = 3.75f;
@@ -286,14 +278,11 @@ private:
     CameraDirectionInfo CreateLockOnInfo();
 
     // 目標の方向を更新する関数
-    void UpdateDesireRotation(float deltaTime);
+    void UpdateDesiredRotation(float deltaTime);
 
     // 実際の方向を更新する関数
     void UpdateRotation(float deltaTime);
 
-    void UpdateCameraShake(float deltaTime);
-
-    const CameraShakePreset* FindCameraShakePreset(const std::string& presetName) const;
 
     // Eyeを計算する関数
     CameraPose CalculatePose(CameraMode mode, const DirectX::XMFLOAT3& playerPos, float yaw, float pitch) const;
@@ -357,8 +346,6 @@ private:
     float GetFovDegreeForMode(CameraMode mode) const;
     void ResetCameraTuning();
 
-    // ロックオンのカメラ距離を計算する関数
-    float CalculateLockOnDistance() const;
 
     // 当たり判定を考慮する関数
     DirectX::XMFLOAT3 ResolveCameraCollision(DirectX::XMFLOAT3 target, DirectX::XMFLOAT3 eye);
@@ -425,28 +412,6 @@ private:
     float maxPitchDegree = 40.0f;  // pitchの最大角度
     float focusDistance = 0.0f;
 
-    // カメラシェイクのプリセット名
-    inline static constexpr const char* BossRoarPresetName = "BossRoar";
-    inline static constexpr const char* BossWallImpactPresetName = "BossWallImpact";
-    inline static constexpr const char* RushFinalPresetName = "RushFinal";
-    inline static constexpr const char* BossWeaponDropPresetName = "BossWeaponDrop";
-
-    // カメラシェイクのプリセット
-    CameraShakePreset bossRoarShake{ 0.5f,1.5f,12.0f,0.035f,0.4f };
-    CameraShakePreset bossWallImpactShake{ 1.15f, 0.36f, 10.0f, 0.05f, 0.22f };
-    CameraShakePreset rushFinalShake{ 0.9f, 0.16f, 18.0f, 0.02f, 0.14f };
-    CameraShakePreset bossWeaponDropShake{ 0.5f, 0.36f, 10.0f, 0.035f, 0.22f };
-
-    bool shakeActive = false;
-    float shakeElapsedTime = 0.0f;
-    float shakeDuration = 0.0f;
-    float shakeIntensity = 0.0f;
-    float shakeFrequency = 0.0f;
-    float shakePositionAmount = 0.0f;
-    float shakeTargetAmount = 0.0f;
-    float currentShakeEnvelope = 0.0f;
-    DirectX::XMFLOAT3 shakePositionOffset{};
-    DirectX::XMFLOAT3 shakeTargetOffset{};
 
     // モード別の構図調整値
     CameraCompositionSettings corridorTpsSettings = { 6.45f, 0.05f, 0.75f, 35.0f, 0.0f };
@@ -618,12 +583,6 @@ private:
     // 0 = Player
     // 1 = Enemy
     float lockOnTargetWeight = 0.3f;
-    // 基本距離
-    float lockOnCameraDistance = 5.0f;
-    // 敵との距離による増加量
-    float lockOnDistanceScale = 0.25f;
-    // 最大距離
-    float lockOnMaxDistance = 8.0f;
     float lockOnTargetSelectionMaxDistance = 11.0f;
     float normalEnemyLockOnScreenRadius = 1.45f;
     // Pitch

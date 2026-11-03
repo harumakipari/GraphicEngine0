@@ -332,7 +332,7 @@ public:
     void MarkFinalHitAttackDrainInterrupted();
 
     // HP、Transform、現在Stateを維持して一時的な戦闘状態を解除する。
-    void ClearTransientBattleActions();
+    void ClearTransientBattleActions(); 
     // フェーズ遷移前に戦闘表示とRushガイドを解除する。
     void ClearBattleVisualsForPhaseTransition();
 
@@ -344,11 +344,7 @@ public:
 
     // シネマティック移動前に剣軌跡の履歴を消去する。
     void ClearSwordTrailForPhaseTransition();
-    // フェーズ遷移前に剣軌跡を消去すべき状態かを返す。
-    bool IsSwordTrailActiveForPhaseTransition() const
-    {
-        return showTrail || !trail.trailPoints.empty();
-    }
+
     // ロックオンガイドが表示中かを返す。
     bool IsLockOnGuideVisible() const { return lockOnGuideVisible; }
 
@@ -513,7 +509,7 @@ private:
     // 入力とStateに応じた通常移動を更新する。
     void UpdateMovement();
     // モーションワープを考慮してプレイヤーの位置を更新する
-    void UpdatePlayerMovementWithMotionWarp(float deltaTime);
+    void UpdateMovementWithMotionWarp(float deltaTime);
 
     // 剣の残像を生成し、透明度と描画パラメータを更新する。
     void UpdateSwordGhosts(float deltaTime);

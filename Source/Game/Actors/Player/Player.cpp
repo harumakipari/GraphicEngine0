@@ -664,7 +664,7 @@ void Player::Update(float deltaTime)
     }
 
     // モーションワープを考慮してプレイヤーを更新する
-    UpdatePlayerMovementWithMotionWarp(deltaTime);
+    UpdateMovementWithMotionWarp(deltaTime);
 
 
     // これは絶対入れる　アニメーションの更新をしているから
@@ -2980,7 +2980,7 @@ void Player::UpdateMovement()
 }
 
 // 有効なMotionWarpを追加速度として適用し、移動と衝突判定を更新する。
-void Player::UpdatePlayerMovementWithMotionWarp(float deltaTime)
+void Player::UpdateMovementWithMotionWarp(float deltaTime)
 {
     if (!GetBodyAnimationController()->IsPlayAnimation())
     {

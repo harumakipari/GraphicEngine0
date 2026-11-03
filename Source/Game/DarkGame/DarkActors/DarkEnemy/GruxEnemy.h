@@ -1419,8 +1419,6 @@ private:
 
     bool battleAIActive = true;  // 戦闘AIの更新を許可する状態。
 
-    float dashAttackValidMinDistance = 6.0f;  // Dash攻撃の有効な最小距離。
-    float dashAttackValidMaxDistance = 14.0f;  // Dash攻撃の有効な最大距離。
 
     BossActionType selectedActionType = BossActionType::AttackLA;  // 現在選択されている行動種別。
     std::optional<BossActionType> lastStartedCombatAttack = std::nullopt;  // 最後に開始した連続ペナルティ対象の攻撃。
@@ -1428,9 +1426,7 @@ private:
     static constexpr float initialRepeatAttackPenalty = 0.25f;  // 連続攻撃ペナルティの初期倍率。
     float repeatAttackPenalty = initialRepeatAttackPenalty;  // 直近2回と同じ攻撃候補に適用する倍率。
     BossAttackType selectedAttackType = BossAttackType::PrimaryAttackLA;  // 現在選択されている攻撃種別。
-    std::optional<BossPositioningData> selectedPositioningData = std::nullopt;  // 選択中の位置調整データ。
 
-    bool hasLastAttack = false;  // 直近の攻撃履歴があるか。
 
     static constexpr int actionCount = 10;  // 行動データの要素数。
     std::array<BossActionData, actionCount> combatActionData =  // 行動の設定データ。

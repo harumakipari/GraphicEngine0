@@ -92,7 +92,7 @@ void DarkCameraActor::UpdateCameraPose(float deltaTime,
         }
         else
         {
-            UpdateDesireRotation(deltaTime);
+            UpdateDesiredRotation(deltaTime);
             UpdateRotation(deltaTime);
             currentPose = CalculatePose(currentMode, playerPos, currentYaw, currentPitch);
         }
@@ -963,7 +963,7 @@ DarkCameraActor::CameraDirectionInfo DarkCameraActor::CreateLockOnInfo()
 }
 
 // 目標の方向を更新する関数
-void DarkCameraActor::UpdateDesireRotation(float deltaTime)
+void DarkCameraActor::UpdateDesiredRotation(float deltaTime)
 {
     auto intent = inputComponent->GetIntent();
     // 右スティックの入力値
@@ -2532,29 +2532,6 @@ void DarkCameraActor::DrawImGuiDetails()
         ImGui::DragFloat("Death Blend Time", &deathCameraSettings.deathBlendTime,
             0.01f, 0.01f, 5.0f, "%.2f sec");
 
-        ImGui::SeparatorText("Camera Shake Presets");
-        const auto drawShakePreset = [this](const char* displayName, const char* presetName,
-            CameraShakePreset& preset)
-            {
-                if (!ImGui::TreeNode(displayName)) return;
-
-                ImGui::PushID(presetName);
-                ImGui::DragFloat("Intensity", &preset.intensity, 0.05f, 0.0f, 5.0f, "%.2f");
-                ImGui::DragFloat("Duration", &preset.duration, 0.01f, 0.01f, 2.0f, "%.2f sec");
-                ImGui::DragFloat("Frequency", &preset.frequency, 0.1f, 0.1f, 30.0f, "%.1f Hz");
-                ImGui::DragFloat("Position Amount", &preset.positionAmount, 0.005f, 0.0f, 0.5f, "%.3f");
-                ImGui::DragFloat("Target Amount", &preset.targetAmount, 0.01f, 0.0f, 1.0f, "%.3f");
-                const std::string testLabel = "Test " + std::string(displayName);
-                if (ImGui::Button(testLabel.c_str())) PlayCameraShakePreset(presetName);
-                ImGui::PopID();
-                ImGui::TreePop();
-            };
-
-        drawShakePreset("Boss Roar", BossRoarPresetName, bossRoarShake);
-        drawShakePreset("Boss Wall Impact", BossWallImpactPresetName, bossWallImpactShake);
-        drawShakePreset("Rush Final", RushFinalPresetName, rushFinalShake);
-
-        ImGui::SeparatorText("Active Camera Shake");
         if (ImGui::Button("Reset Camera Tuning")) ResetCameraTuning();
     }
 
