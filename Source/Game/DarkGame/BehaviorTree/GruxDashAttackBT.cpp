@@ -78,7 +78,6 @@ void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
         mesh->plusAlphaCBuffer->data.cpuColor = emissiveColor;
         mesh->plusAlphaCBuffer->data.emissionPower = emissiveIntensity;
     }
-    const float dt = (std::max)(0.0f, deltaTime);
     const auto setLineAlpha = [&](float alpha)
     {
         dashTelegraphLineAlpha = std::clamp(alpha, 0.0f, 1.0f);
@@ -93,7 +92,7 @@ void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
     if (dashTelegraphLineDynamicShrinkActive)
         UpdateDashTelegraphLineShrink();
 
-    dashTelegraphVisualElapsed += dt;
+    dashTelegraphVisualElapsed += deltaTime;
     switch (dashTelegraphVisualState)
     {
     case DashTelegraphVisualState::LineExpanding:

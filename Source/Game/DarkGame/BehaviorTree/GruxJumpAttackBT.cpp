@@ -30,13 +30,13 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
             mesh->plusAlphaCBuffer->data.emissionPower = emissiveIntensity;
         }
     }
-    const DirectX::XMFLOAT3 landing = tripleJumpActive
+    const DirectX::XMFLOAT3 landing = IsTripleJumpActive()
         ? tripleJumpPlannedLandingPosition
         : DirectX::XMFLOAT3{
             GetPosition().x + jumpMotionWarpDirection.x * calculatedJumpDistance,
             GetPosition().y,
             GetPosition().z + jumpMotionWarpDirection.z * calculatedJumpDistance };
-    if (!tripleJumpActive)
+    if (!IsTripleJumpActive())
     {
         tripleJumpPlayerPosition = jumpAttackStartPlayerPosition;
         tripleJumpStartPosition = GetPosition();
@@ -177,7 +177,6 @@ void GruxEnemy::HideJumpTelegraph()
 
 void GruxEnemy::BeginTripleJumpRuntime()
 {
-    tripleJumpActive = true;
     tripleJumpIndex = 0;
     tripleJumpPhase = TripleJumpPhase::InitialTelegraph;
     tripleJumpTransitionElapsed = 0.0f;
@@ -191,7 +190,7 @@ void GruxEnemy::BeginTripleJumpRuntime()
 
 bool GruxEnemy::StartTripleJumpJump()
 {
-    if (!tripleJumpActive || tripleJumpIndex < 0 || tripleJumpIndex >= 3)
+    if (!IsTripleJumpActive() || tripleJumpIndex < 0 || tripleJumpIndex >= 3)
         return false;
     const auto context = BuildTargetContext();
     if (!context.valid)
@@ -240,7 +239,7 @@ bool GruxEnemy::StartTripleJumpJump()
 
 bool GruxEnemy::UpdateTripleJumpTransition(float deltaTime)
 {
-    if (!tripleJumpActive || tripleJumpPhase != TripleJumpPhase::InterJumpTransition)
+    if (!IsTripleJumpActive() || tripleJumpPhase != TripleJumpPhase::InterJumpTransition)
         return false;
     StopAIMovement();
     const auto context = BuildTargetContext();
@@ -259,7 +258,7 @@ bool GruxEnemy::UpdateTripleJumpTransition(float deltaTime)
 
 void GruxEnemy::BeginTripleJumpTransition()
 {
-    if (!tripleJumpActive)
+    if (!IsTripleJumpActive())
         return;
     tripleJumpPhase = TripleJumpPhase::InterJumpTransition;
     tripleJumpTransitionElapsed = 0.0f;
@@ -267,14 +266,12 @@ void GruxEnemy::BeginTripleJumpTransition()
 
 void GruxEnemy::CompleteTripleJumpRuntime()
 {
-    tripleJumpActive = false;
     tripleJumpPhase = TripleJumpPhase::Completed;
     tripleJumpTargetLockActive = false;
 }
 
 void GruxEnemy::AbortTripleJumpRuntime()
 {
-    tripleJumpActive = false;
     tripleJumpPhase = TripleJumpPhase::Aborted;
     tripleJumpTargetLockActive = false;
     tripleJumpTransitionElapsed = 0.0f;
@@ -314,7 +311,7 @@ void GruxEnemy::DrawTripleJumpDebug()
     ImGui::DragFloat("Inter Jump Transition Duration", &tripleJumpTransitionDuration,
         0.01f, 0.0f, 1.0f, "%.2f sec");
     tripleJumpTransitionDuration = (std::max)(0.0f, tripleJumpTransitionDuration);
-    if (!tripleJumpActive && tripleJumpPhase == TripleJumpPhase::None &&
+    if (tripleJumpPhase == TripleJumpPhase::None &&
         !(jumpTelegraphMeshComponent && jumpTelegraphMeshComponent->IsVisible()))
         return;
 #endif

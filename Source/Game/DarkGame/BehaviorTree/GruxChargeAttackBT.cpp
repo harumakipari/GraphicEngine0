@@ -191,8 +191,7 @@ void GruxEnemy::StartChargeAttackBT()
     StartAttack(); 
     chargeBT.attackStarted = true;
     chargeBT.phase2SettingsLatched = IsPhase2ChargeActive();
-    chargeBT.tripleChargeActive = chargeBT.phase2SettingsLatched;
-    chargeBT.triplePhase = chargeBT.tripleChargeActive
+    chargeBT.triplePhase = chargeBT.phase2SettingsLatched
         ? TripleChargePhase::InitialWindup : TripleChargePhase::None;
     chargeBT.tripleChargeIndex = 0;
     chargeBT.tripleChargeTransitionElapsed = 0.0f;
@@ -399,7 +398,7 @@ void GruxEnemy::UpdateChargeTelegraphVisual(float lengthProgress)
 
 GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackBT(float dt)
 {
-    return chargeBT.tripleChargeActive ? UpdateTripleChargeBT(dt) : UpdateSingleChargeBT(dt);
+    return chargeBT.phase2SettingsLatched ? UpdateTripleChargeBT(dt) : UpdateSingleChargeBT(dt);
 }
 
 GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)

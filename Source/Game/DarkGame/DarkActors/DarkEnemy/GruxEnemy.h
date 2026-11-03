@@ -904,7 +904,12 @@ public:
     void AbortTripleJumpRuntime();
 
     // 複数回Jumpの実行中かを返す。
-    bool IsTripleJumpActive() const { return tripleJumpActive; }
+    bool IsTripleJumpActive() const
+    {
+        return tripleJumpPhase == TripleJumpPhase::InitialTelegraph ||
+            tripleJumpPhase == TripleJumpPhase::Jumping ||
+            tripleJumpPhase == TripleJumpPhase::InterJumpTransition;
+    }
 
     // 現在のJump回のインデックスを返す。
     int GetTripleJumpIndex() const { return tripleJumpIndex; }
@@ -1701,7 +1706,6 @@ private:
     float jumpAttackTelegraphEndTime = 2.6f;  // Jump予兆の終了アニメーション時刻。
     float currentJumpPlayerDistance = 0.0f;  // Jump開始時のプレイヤーとの距離。
     float calculatedJumpDistance = 0.0f;  // Jump攻撃で計算された移動距離。
-    bool tripleJumpActive = false;  // 複数回Jumpの実行中かを示す。
     int tripleJumpIndex = 0;  // 現在のJump回のインデックス。
     TripleJumpPhase tripleJumpPhase = TripleJumpPhase::None;  // 複数回Jumpの実行段階。
     float tripleJumpTransitionElapsed = 0.0f;  // Jump間の遷移経過時間。
@@ -1843,7 +1847,6 @@ private:
         float recoveryDuration = 0.0f;  // Charge後のRecovery時間。
         float activeStunDuration = 0.0f;  // 現在適用するスタン時間。
         TripleChargePhase triplePhase = TripleChargePhase::None;  // 複数回Chargeの実行段階。
-        bool tripleChargeActive = false;  // 複数回Chargeを実行する状態。
         bool phase2SettingsLatched = false;  // 第2段階の設定を確定済みか。
         int tripleChargeIndex = 0;  // 現在のCharge回のインデックス。
         float tripleChargeTransitionElapsed = 0.0f;  // Charge間の遷移経過時間。

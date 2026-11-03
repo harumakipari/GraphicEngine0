@@ -2533,7 +2533,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             (bossRoomProbeBlockEvent.hitLayer & bossRoomWallLayer) != 0 &&
             requestedAlongCharge > 0.95f && bossRoomProbeBlockEvent.forwardMoveLost > 0.01f)
         {
-            if (allowTripleWallTurn && chargeBT.tripleChargeActive &&
+            if (allowTripleWallTurn && chargeBT.phase2SettingsLatched &&
                 chargeBT.tripleChargeIndex < 2)
             {
                 chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
@@ -2637,7 +2637,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     if (wallCandidate)
     {
         if (allowTripleWallTurn && chargeBT.tripleChargeIndex < 2 &&
-            chargeBT.tripleChargeActive &&
+            chargeBT.phase2SettingsLatched &&
             wallHit.distance <= chargeBT.tripleChargeWallTurnClearance)
         {
             chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
