@@ -197,16 +197,15 @@ void DarkCameraActor::RequestOffscreenAttackAssist(
     const float strength,
     const float duration)
 {
-    offscreenAssistProjection =
+    const ScreenProjectionResult projection =
         ProjectWorldPositionForOffscreenAssist(worldPosition);
-    offscreenAssistAppliedYawStep = 0.0f;
 
     const auto playerHeadShared = playerHead.lock();
     const auto* player = playerHeadShared ? dynamic_cast<const Player*>(playerHeadShared->GetOwner()) : nullptr;
     if (currentMode != CameraMode::TPS || requestMode != CameraMode::TPS ||
         isBlending || isExternalBlending || combatPresentationMode == CombatPresentationMode::Rush ||
         (player && player->IsRushActive()) || strength <= 0.0f || duration <= 0.0f ||
-        !offscreenAssistProjection.valid || offscreenAssistProjection.insideSafeFrame)
+        !projection.valid || projection.insideSafeFrame)
     {
         return;
     }
@@ -225,21 +224,19 @@ void DarkCameraActor::RequestOffscreenAttackAssist(
     offscreenAssistPitchStart = currentPitch;
     offscreenAssistPitchBlend = 0.0f;
 
-    offscreenAssistTargetYaw = atan2f(toBoss.x, toBoss.z);
-    offscreenAssistYawDelta =
-        MathHelper::ClampAngle(offscreenAssistTargetYaw - desiredYaw);
+    const float targetYaw = atan2f(toBoss.x, toBoss.z);
+    float yawDelta = MathHelper::ClampAngle(targetYaw - desiredYaw);
     const float bossOnCameraRight =
         toBoss.x * cosf(currentYaw) - toBoss.z * sinf(currentYaw);
     if (std::abs(bossOnCameraRight) > FLT_EPSILON)
         offscreenAttackAssist.turnSign = bossOnCameraRight > 0.0f ? 1.0f : -1.0f;
     else
-        offscreenAttackAssist.turnSign = offscreenAssistYawDelta < 0.0f ? -1.0f : 1.0f;
+        offscreenAttackAssist.turnSign = yawDelta < 0.0f ? -1.0f : 1.0f;
 }
 
 void DarkCameraActor::CancelOffscreenAttackAssist()
 {
     offscreenAttackAssist.active = false;
-    offscreenAssistAppliedYawStep = 0.0f;
 }
 
 DarkCameraActor::ScreenProjectionResult
@@ -340,7 +337,6 @@ bool DarkCameraActor::IsNormalEnemyLockOnProjectionWithinScreenRadius(
 }
 void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
 {
-    offscreenAssistAppliedYawStep = 0.0f;
     if (!offscreenAttackAssist.active)
         return;
 
@@ -355,10 +351,10 @@ void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
         return;
     }
 
-    offscreenAssistProjection = ProjectWorldPositionForOffscreenAssist(
+    const ScreenProjectionResult projection = ProjectWorldPositionForOffscreenAssist(
         offscreenAttackAssist.worldPosition);
-    if (!offscreenAssistProjection.valid ||
-        offscreenAssistProjection.insideSafeFrame ||
+    if (!projection.valid ||
+        projection.insideSafeFrame ||
         offscreenAttackAssist.elapsed >= offscreenAttackAssist.duration)
     {
         CancelOffscreenAttackAssist();
@@ -374,25 +370,23 @@ void DarkCameraActor::UpdateOffscreenAttackAssist(const float deltaTime)
         return;
     }
 
-    offscreenAssistTargetYaw = atan2f(toBoss.x, toBoss.z);
-    offscreenAssistYawDelta =
-        MathHelper::ClampAngle(offscreenAssistTargetYaw - desiredYaw);
+    const float targetYaw = atan2f(toBoss.x, toBoss.z);
+    float yawDelta = MathHelper::ClampAngle(targetYaw - desiredYaw);
     constexpr float behindStabilizationRange =
         DirectX::XM_PI / 180.0f * 2.0f;
-    if (std::abs(std::abs(offscreenAssistYawDelta) - DirectX::XM_PI) <=
+    if (std::abs(std::abs(yawDelta) - DirectX::XM_PI) <=
         behindStabilizationRange)
     {
-        offscreenAssistYawDelta = std::copysign(
-            std::abs(offscreenAssistYawDelta), offscreenAttackAssist.turnSign);
+        yawDelta = std::copysign(
+            std::abs(yawDelta), offscreenAttackAssist.turnSign);
     }
 
     const float maxStep = DirectX::XMConvertToRadians(
         offscreenAssistMaxAngularSpeedDegree) *
         offscreenAttackAssist.strength * deltaTime;
-    offscreenAssistAppliedYawStep = std::clamp(
-        offscreenAssistYawDelta, -maxStep, maxStep);
+    const float appliedYawStep = std::clamp(yawDelta, -maxStep, maxStep);
     desiredYaw = MathHelper::ClampAngle(
-        desiredYaw + offscreenAssistAppliedYawStep);
+        desiredYaw + appliedYawStep);
 
     // Pitch shares this assist's start/update/end lifecycle with yaw, but uses
     // an absolute target and its own SmoothStep duration.

@@ -26,11 +26,9 @@ void GruxEnemy::BeginDashTelegraphVisual()
     dashTelegraphDynamicLineStart = dashTelegraphLineStart;
     dashTelegraphCurrentLineLength = dashTelegraphLineLength;
     dashTelegraphLineShrinkProgress = 0.0f;
-    dashTelegraphLineFadeOutElapsed = -1.0f;
     dashTelegraphLineAlpha = 1.0f;
     dashTelegraphFanFadeInProgress = 0.0f;
     dashTelegraphFanAlpha = 0.0f;
-    dashTelegraphFanFlashActive = false;
     dashTelegraphLineMeshComponent->SetRelativeScaleDirect({ dashTelegraphLineWidth, 1.0f, 0.0f });
     dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.brightness = 0.0f;
     dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
@@ -111,7 +109,6 @@ void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
         {
             dashTelegraphVisualState = DashTelegraphVisualState::DashActive;
             dashTelegraphVisualElapsed = 0.0f;
-            dashTelegraphFanFlashActive = false;
             dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
         }
         break;
@@ -143,7 +140,6 @@ void GruxEnemy::BeginDashTelegraphFanFlash()
         return;
     dashTelegraphVisualState = DashTelegraphVisualState::FanFlashing;
     dashTelegraphVisualElapsed = 0.0f;
-    dashTelegraphFanFlashActive = true;
 }
 
 void GruxEnemy::BeginDashTelegraphLineShrink()
@@ -216,15 +212,12 @@ void GruxEnemy::BeginDashTelegraphFadeOut()
         !dashTelegraphFanMeshComponent->IsVisible())
         return;
 
-    dashTelegraphFadeOutEventReceived = true;
-    dashTelegraphFadeOutActive = true;
     dashTelegraphVisualState = DashTelegraphVisualState::FanFadingOut;
     dashTelegraphVisualElapsed = 0.0f;
     dashTelegraphLineDynamicShrinkActive = false;
     dashTelegraphLineFadeOutStartAlpha = dashTelegraphLineMeshComponent &&
         dashTelegraphLineMeshComponent->IsVisible() ? dashTelegraphLineAlpha : 0.0f;
     dashTelegraphFanFadeOutStartAlpha = dashTelegraphFanAlpha;
-    dashTelegraphFanFlashActive = false;
     dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
     dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
 }
@@ -255,7 +248,6 @@ void GruxEnemy::ApplyDashTelegraphVisualSnapshot()
         dashTelegraphFanRadius, 1.0f, dashTelegraphFanRadius });
     dashTelegraphLineMeshComponent->SetIsVisible(true);
     dashTelegraphFanMeshComponent->SetIsVisible(true);
-    dashTelegraphActive = true;
 }
 
 void GruxEnemy::HideDashTelegraphVisual()
@@ -264,7 +256,6 @@ void GruxEnemy::HideDashTelegraphVisual()
         dashTelegraphLineMeshComponent->SetIsVisible(false);
     if (dashTelegraphFanMeshComponent)
         dashTelegraphFanMeshComponent->SetIsVisible(false);
-    dashTelegraphActive = false;
     dashTelegraphVisualState = DashTelegraphVisualState::Hidden;
     dashTelegraphVisualElapsed = 0.0f;
     dashTelegraphLineExpandProgress = 0.0f;
@@ -272,13 +263,9 @@ void GruxEnemy::HideDashTelegraphVisual()
     dashTelegraphDynamicLineStart = {};
     dashTelegraphCurrentLineLength = 0.0f;
     dashTelegraphLineShrinkProgress = 0.0f;
-    dashTelegraphLineFadeOutElapsed = 0.0f;
     dashTelegraphLineAlpha = 0.0f;
     dashTelegraphFanFadeInProgress = 0.0f;
     dashTelegraphFanAlpha = 0.0f;
-    dashTelegraphFanFlashActive = false;
-    dashTelegraphFadeOutEventReceived = false;
-    dashTelegraphFadeOutActive = false;
     dashTelegraphLineFadeOutStartAlpha = 0.0f;
     dashTelegraphFanFadeOutStartAlpha = 0.0f;
     if (dashTelegraphLineMeshComponent)

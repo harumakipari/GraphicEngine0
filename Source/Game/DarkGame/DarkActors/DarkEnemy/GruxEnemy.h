@@ -1160,17 +1160,11 @@ private:
     // 各行動の残りクールダウンを経過時間分減らす。
     void UpdateActionCooldowns(float deltaTime);
 
-    // 攻撃シーケンスのジャスト回避記録を消去する。
-    void ResetJustDodgeRecords(const char* reason);
-
     // 指定アクターが現在の攻撃をジャスト回避したか判定する。
     bool HasJustDodgedAttack(const Actor* actor) const;
 
     // Playerのジャスト回避成功処理を試みる。
     bool TryStartJustDodgeSuccess(Player* player);
-
-    // 攻撃の危険範囲を初期化する。
-    void ResetDangerArea();
 
     // 危険範囲の初期設定を記録する。
     void CaptureInitialDangerObbSettings();
@@ -1774,7 +1768,6 @@ private:
     bool dashBTMovementSnapshotPrepared = false;  // Dash移動に使う情報が準備済みかを示す。
     DirectX::XMFLOAT3 dashBTPredictedKnockupPosition{};  // Dash後のKnockup開始予測位置。
     bool showDashTelegraph = true;  // Dash予兆の表示を有効にする。
-    bool dashTelegraphActive = false;  // Dash予兆が表示中か。
     bool dashTelegraphSnapshotValid = false;  // Dash予兆の位置と方向の記録が有効か。
     enum class DashTelegraphVisualState
     {
@@ -1796,19 +1789,15 @@ private:
     float dashTelegraphLineShrinkProgress = 0.0f;  // Dash予兆の線の縮小進行度。
     float dashTelegraphLineMinimumVisibleLength = 0.05f;  // Dash予兆の線が表示される最小長さ。
     float dashTelegraphLineFadeOutDuration = 0.12f;  // Dash予兆の線のフェードアウト時間。
-    float dashTelegraphLineFadeOutElapsed = 0.0f;  // Dash予兆の線のフェードアウト経過時間。
     float dashTelegraphLineAlpha = 0.0f;  // Dash予兆の線の不透明度。
     float dashTelegraphFanFadeInDuration = 0.12f;  // Dash予兆の扇形のフェードイン時間。
     float dashTelegraphFanFadeInProgress = 0.0f;  // Dash予兆の扇形のフェードイン進行度。
     float dashTelegraphFanAlpha = 0.0f;  // Dash予兆の扇形の不透明度。
-    bool dashTelegraphFanFlashActive = false;  // Dash予兆の扇形が発光中か。
     float dashTelegraphFanFlashDuration = 0.05f;  // Dash予兆の扇形の発光時間。
     float dashTelegraphFanFlashIntensity = 2.0f;  // Dash予兆の扇形の発光強度。
     float dashTelegraphFanFadeOutDuration = 0.10f;  // Dash予兆の扇形のフェードアウト時間。
     float dashTelegraphLineFadeOutStartAlpha = 0.0f;  // Dash予兆の線のフェードアウト開始時の不透明度。
     float dashTelegraphFanFadeOutStartAlpha = 0.0f;  // Dash予兆の扇形のフェードアウト開始時の不透明度。
-    bool dashTelegraphFadeOutEventReceived = false;  // Dash予兆のフェードアウトイベントを受信したか。
-    bool dashTelegraphFadeOutActive = false;  // Dash予兆のフェードアウト中か。
     float dashTelegraphLineWidth = 4.f;  // Dash予兆の線の幅。
     bool dashTelegraphEmissiveEnabled = true;  // Dash予兆の発光を有効にするか。
     DirectX::XMFLOAT3 dashTelegraphPhase1EmissiveColor{ 0.05f, 0.75f, 1.0f };  // 第1段階のDash予兆の発光色。

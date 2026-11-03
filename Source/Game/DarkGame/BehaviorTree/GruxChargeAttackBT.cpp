@@ -228,7 +228,7 @@ bool GruxEnemy::IsPhase2ChargeActive()
 
 bool GruxEnemy::BeginTripleChargeLeg()
 {
-    ResetJustDodgeRecords("triple_charge_leg_start");
+    justDodgedActors.clear();
     hitActors.clear();
     HideChargeTelegraphVisual();
     const bool movementStarted = BeginChargeAttackMovement();

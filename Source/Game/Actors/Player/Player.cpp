@@ -1760,7 +1760,6 @@ bool Player::BeginFinalHitWait()
     trail.Clear();
     StopAttackTargetRotation();
     StopKnockBackForcedMove();
-    knockBackActive = false;
     knockBackElapsed = 0.0f;
     characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
     characterMovementComponent->SetInputMagnitude(0.0f);
@@ -1846,7 +1845,6 @@ void Player::ClearTransientBattleActions()
     ResetPlayerPoseGhost();
     StopAttackTargetRotation();
     StopKnockBackForcedMove();
-    knockBackActive = false;
     knockBackElapsed = 0.0f;
     characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
     characterMovementComponent->SetInputMagnitude(0.0f);
@@ -2774,7 +2772,6 @@ void Player::BeginKnockBackMovement()
     knockBackInitialSpeed = (std::max)(0.0f, knockBackInitialSpeed);
     knockBackDuration = (std::max)(0.01f, knockBackDuration);
     knockBackElapsed = 0.0f;
-    knockBackActive = true;
     knockBackForcedMoveActive = true;
     characterMovementComponent->SetFixedSpeed(0.0f);
     characterMovementComponent->SetInputMagnitude(0.0f);
@@ -2800,7 +2797,6 @@ void Player::StopKnockBackForcedMove()
 
 void Player::EndKnockBackMovement()
 {
-    knockBackActive = false;
     StopKnockBackForcedMove();
     characterMovementComponent->ResetFixedSpeed();
 }

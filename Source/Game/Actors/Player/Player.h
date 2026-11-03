@@ -744,7 +744,6 @@ private:
     float knockBackInitialSpeed = 8.0f; // ノックバック開始時の速度
     float knockBackDuration = 0.45f; // ノックバック移動の継続時間
     float knockBackElapsed = 0.0f; // ノックバック移動の経過時間
-    bool knockBackActive = false; // ノックバック状態が有効か
     bool knockBackForcedMoveActive = false; // ノックバックの強制移動中か
 
 

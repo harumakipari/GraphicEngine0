@@ -372,15 +372,11 @@ private:
 
     // TPSカメラの時にボスからカメラ外から攻撃された時の調整値
     OffscreenAttackAssistState offscreenAttackAssist{};
-    ScreenProjectionResult offscreenAssistProjection{};
     float offscreenAssistHorizontalSafeMargin = 0.12f;
     float offscreenAssistVerticalSafeMargin = 0.12f;
     float offscreenAssistMaxAngularSpeedDegree = 350.0f;
     float offscreenAssistRightStickCancelThreshold = 0.22f;
     float offscreenAssistRightStickMagnitude = 0.0f;
-    float offscreenAssistTargetYaw = 0.0f;
-    float offscreenAssistYawDelta = 0.0f;
-    float offscreenAssistAppliedYawStep = 0.0f;
     float offscreenAssistPitchStart = 0.0f;
     float offscreenAssistPitchBlend = 0.0f;
     float offscreenAssistTargetPitchDegree = -5.0f;

@@ -999,7 +999,7 @@ void GruxEnemy::StopBattleActions()
     repositionRuntime = {};
     ClearJumpAttackMotionWarpOverride();
     ClearFastComboStepIn();
-    ResetJustDodgeRecords("battle_stop");
+    justDodgedActors.clear();
 
     // 攻撃選択・履歴・演出状態を初期化する。
     beginHuskParticleRequest = false;
@@ -1250,7 +1250,7 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     currentAttackSequenceId = 0;
     currentAttackHitCount = 0;
     hitActors.clear();
-    ResetJustDodgeRecords("battle_restart");
+    justDodgedActors.clear();
     DisableAttackHitBoxes();
     animationMotionWarps.clear();
     jumpMotionWarpOverrideActive = false;
@@ -1643,7 +1643,7 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::DangerWindow:
         isDangerWindow = false;
         activeDangerNotifyState = nullptr;
-        ResetDangerArea();
+        dangerArea = {};
         break;
     case AnimationNotifyState::Type::ShowTrail:
         if (state.parameter == leftWeapon || state.parameter == bothWeapon)
@@ -1975,7 +1975,7 @@ void GruxEnemy::StartAttack()
     ClearJumpAttackMotionWarpOverride();
     StopDashAttackMovement();
     ++currentAttackSequenceId;
-    ResetJustDodgeRecords("start_attack");
+    justDodgedActors.clear();
     hitActors.clear();
     currentAttackHitCount = 0;
     DisableAttackHitBoxes();
@@ -1993,7 +1993,7 @@ void GruxEnemy::DisableAttackHitBoxes()
     transitionWindow = false;
     isDangerWindow = false;
     activeDangerNotifyState = nullptr;
-    ResetDangerArea();
+    dangerArea = {};
 }
 
 void GruxEnemy::OnSelectedActionStartedSuccessfully()
@@ -2204,7 +2204,6 @@ bool GruxEnemy::PlayAttackAnimationByName(const std::string& animationName)
 
 void GruxEnemy::BeginAdditionalAttackStage()
 {
-    // A FastCombo is one attack sequence, but each stage may damage the player once.
     hitActors.clear();
 }
 
@@ -4261,11 +4260,6 @@ void GruxEnemy::UpdateActionCooldowns(float deltaTime)
         remaining = (std::max)(0.0f, remaining - safeDeltaTime);
 }
 
-void GruxEnemy::ResetJustDodgeRecords(const char* reason)
-{
-    justDodgedActors.clear();
-}
-
 bool GruxEnemy::HasJustDodgedAttack(const Actor* actor) const
 {
     return actor && justDodgedActors.contains(actor);
@@ -4283,10 +4277,6 @@ bool GruxEnemy::TryStartJustDodgeSuccess(Player* player)
     player->StartJustDodgeSuccess(
         std::dynamic_pointer_cast<Enemy>(shared_from_this()));
     return true;
-}
-void GruxEnemy::ResetDangerArea()
-{
-    dangerArea = {};
 }
 
 void GruxEnemy::CaptureInitialDangerObbSettings()
@@ -4912,9 +4902,10 @@ void GruxEnemy::UpdatePhase2TextureBlendWorldYRange()
 {
     const float currentBossScale = (std::max)(GetScale().y, 0.0001f);
     const float bossWorldY = GetPosition().y;
-    phase2WorldMinY = bossWorldY + phase2MaskMinYOffset * currentBossScale;
-    phase2WorldMaxY = bossWorldY + phase2MaskMaxYOffset * currentBossScale;
-    phase2WorldMaxY = (std::max)(phase2WorldMaxY, phase2WorldMinY + 0.0001f);
+    const float phase2WorldMinY = bossWorldY + phase2MaskMinYOffset * currentBossScale;
+    const float phase2WorldMaxY = (std::max)(
+        bossWorldY + phase2MaskMaxYOffset * currentBossScale,
+        phase2WorldMinY + 0.0001f);
     if (skeletalMeshComponent)
         skeletalMeshComponent->SetPhase2TextureBlendWorldYRange(
             phase2WorldMinY, phase2WorldMaxY, phase2MaskSoftness);

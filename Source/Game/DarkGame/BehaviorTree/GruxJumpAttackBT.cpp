@@ -226,8 +226,6 @@ bool GruxEnemy::StartTripleJumpJump()
         tripleJumpTargetLockActive = false;
         return false;
     }
-    // PlayAttackStage prepares the normal single-jump warp; replace only its
-    // sampled values with this stage's locked target before Notify MotionWarp.
     jumpAttackStartPlayerPosition = tripleJumpPlayerPosition;
     currentJumpPlayerDistance = context.xzDistance;
     calculatedJumpDistance = tripleJumpPlannedDistance;
