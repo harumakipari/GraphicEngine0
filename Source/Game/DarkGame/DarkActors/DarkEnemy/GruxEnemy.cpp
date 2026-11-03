@@ -1263,8 +1263,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     dashBTPhase = DashBTPhase::None;
     dashBTAttackStarted = false;
     dashBTPreviousAction = BossActionType::AttackLA;
-    dashBTTelegraphElapsed = 0.0f;
-    dashBTTripleDashActive = false;
     dashBTDashIndex = 0;
     dashBTDashMaxCount = 1;
     dashBTCurrentDashHitStartCount = 0;
@@ -1693,7 +1691,6 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     {
         // The BT consumes this next update, where it safely snapshots the target.
         dashBTDirectionLockRequested = true;
-        dashBTDirectionLockEventReceived = true;
         return;
     }
 
@@ -1702,7 +1699,6 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     {
         // Do not transition animation/movement from a Notify callback.
         dashBTDashStartRequested = true;
-        dashBTDashStartEventReceived = true;
         return;
     }
 

@@ -962,12 +962,12 @@ void DarkCameraActor::UpdateDesiredRotation(float deltaTime)
     auto intent = inputComponent->GetIntent();
     // 右スティックの入力値
     DirectX::XMFLOAT2 rightStick = intent.rightMove;
-    offscreenAssistRightStickMagnitude = std::sqrt(
+    const float rightStickMagnitude = std::sqrt(
         rightStick.x * rightStick.x + rightStick.y * rightStick.y);
     switch (currentMode)
     {
     case CameraMode::TPS:
-        if (offscreenAssistRightStickMagnitude >
+        if (rightStickMagnitude >
             offscreenAssistRightStickCancelThreshold)
         {
             CancelOffscreenAttackAssist();

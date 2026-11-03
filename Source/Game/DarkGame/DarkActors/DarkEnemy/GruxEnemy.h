@@ -412,8 +412,6 @@ public:
     // Dash予兆の表示を開始する。
     void BeginDashTelegraphVisual();
 
-    // 保持したDash予兆の表示情報を適用する。
-    void ApplyDashTelegraphVisualSnapshot();
 
     // Dash予兆の表示状態を更新する。
     void UpdateDashTelegraphVisual(float deltaTime);
@@ -1750,16 +1748,12 @@ private:
     DashBTPhase dashBTPhase = DashBTPhase::None;  // Dashの準備からRecoveryまでの実行段階。
     bool dashBTAttackStarted = false;  // Dashの攻撃シーケンスが開始済みかを示す。
     BossActionType dashBTPreviousAction = BossActionType::AttackLA;  // Dash開始前に選択されていた行動。
-    float dashBTTelegraphElapsed = 0.0f;  // Dash予兆の経過時間。
-    bool dashBTTripleDashActive = false;  // 複数回Dashを実行する状態。
     int dashBTDashIndex = 0;  // 現在のDash回のインデックス。
     int dashBTDashMaxCount = 1;  // 今回の攻撃で実行するDashの回数。
     int dashBTCurrentDashHitStartCount = 0;  // 現在のDashで記録したヒット開始回数。
     bool dashBTAbortRemainingDashes = false;  // 残りのDashを中断する状態。
     bool dashBTDirectionLockRequested = false;  // Dashの方向固定が要求されているか。
     bool dashBTDashStartRequested = false;  // Dashの開始が要求されているか。
-    bool dashBTDirectionLockEventReceived = false;  // Dashの方向固定イベントを受信したか。
-    bool dashBTDashStartEventReceived = false;  // Dash開始イベントを受信したか。
     float dashBTInterDashTrackingDuration = 0.10f;  // Dash間に対象を追跡する時間。
     float dashBTTransitionDuration = 0.40f;  // Dash間の遷移時間。
     float dashBTTransitionElapsed = 0.0f;  // Dash間の遷移経過時間。
@@ -1812,7 +1806,6 @@ private:
     DirectX::XMFLOAT3 dashTelegraphFanPosition{};  // Dash予兆の扇形の位置。
     DirectX::XMFLOAT3 dashTelegraphFanForward{};  // Dash予兆の扇形の向き。
     // Used only by the legacy EnemyAttackState path, not Dash BT's Timeline gate.
-    float dashWindupDuration = 1.40f;  // 旧Dash攻撃の予備動作時間。
     float dashAttackSpeed = 12.0f;  // Dash攻撃の移動速度。
     float minDashAttackDistance = 4.0f;  // Dash攻撃の最小移動距離。
     float maxDashAttackDistance = 16.0f;  // Dash攻撃の最大移動距離。
@@ -1981,8 +1974,6 @@ private:
     float phase2MaskMinYOffset = 0.0f;  // 第2段階のテクスチャ切り替え範囲の下端オフセット。
     float phase2MaskMaxYOffset = 2.6f;  // 第2段階のテクスチャ切り替え範囲の上端オフセット。
     float phase2MaskSoftness = 0.05f;  // テクスチャ切り替え境界の柔らかさ。
-    float phase2WorldMinY = 0.0f;  // テクスチャ切り替え範囲のワールド座標での下端。
-    float phase2WorldMaxY = 1.0f;  // テクスチャ切り替え範囲のワールド座標での上端。
     float enemyScale = 1.7f;  // ボスのスケール。
     float hitEnemyEffectOffsetY = 2.2f;
     float hitPlayerEffectOffsetY = 2.4f;

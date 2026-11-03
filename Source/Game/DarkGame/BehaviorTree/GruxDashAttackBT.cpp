@@ -18,7 +18,30 @@ void GruxEnemy::BeginDashTelegraphVisual()
     if (!dashTelegraphSnapshotValid || !showDashTelegraph )
         return;
 
-    ApplyDashTelegraphVisualSnapshot();
+    if (!dashTelegraphSnapshotValid || !showDashTelegraph)
+    {
+        HideDashTelegraphVisual();
+        return;
+    }
+
+    if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
+        return;
+
+    const float yaw = std::atan2(-dashTelegraphFanForward.x, -dashTelegraphFanForward.z);
+    DirectX::XMFLOAT4 rotation{};
+    DirectX::XMStoreFloat4(&rotation,
+        DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f));
+    dashTelegraphLineMeshComponent->SetRelativeLocationDirect({
+        dashTelegraphLineStart.x, dashTelegraphLineYOffset, dashTelegraphLineStart.z });
+    dashTelegraphLineMeshComponent->SetRelativeRotationDirect(rotation);
+    dashTelegraphLineMeshComponent->SetRelativeScaleDirect({
+        dashTelegraphLineWidth, 1.0f, dashTelegraphLineLength });
+    dashTelegraphFanMeshComponent->SetRelativeLocationDirect(dashTelegraphFanPosition);
+    dashTelegraphFanMeshComponent->SetRelativeRotationDirect(rotation);
+    dashTelegraphFanMeshComponent->SetRelativeScaleDirect({
+        dashTelegraphFanRadius, 1.0f, dashTelegraphFanRadius });
+    dashTelegraphLineMeshComponent->SetIsVisible(true);
+    dashTelegraphFanMeshComponent->SetIsVisible(true);
     dashTelegraphVisualState = DashTelegraphVisualState::LineExpanding;
     dashTelegraphVisualElapsed = 0.0f;
     dashTelegraphLineExpandProgress = 0.0f;
@@ -222,34 +245,6 @@ void GruxEnemy::BeginDashTelegraphFadeOut()
     dashTelegraphFanMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;
 }
 
-void GruxEnemy::ApplyDashTelegraphVisualSnapshot()
-{
-    if (!dashTelegraphSnapshotValid ||!showDashTelegraph )
-    {
-        HideDashTelegraphVisual();
-        return;
-    }
-
-    if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
-        return;
-
-    const float yaw = std::atan2(-dashTelegraphFanForward.x, -dashTelegraphFanForward.z);
-    DirectX::XMFLOAT4 rotation{};
-    DirectX::XMStoreFloat4(&rotation,
-        DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f));
-    dashTelegraphLineMeshComponent->SetRelativeLocationDirect({
-        dashTelegraphLineStart.x, dashTelegraphLineYOffset, dashTelegraphLineStart.z });
-    dashTelegraphLineMeshComponent->SetRelativeRotationDirect(rotation);
-    dashTelegraphLineMeshComponent->SetRelativeScaleDirect({
-        dashTelegraphLineWidth, 1.0f, dashTelegraphLineLength });
-    dashTelegraphFanMeshComponent->SetRelativeLocationDirect(dashTelegraphFanPosition);
-    dashTelegraphFanMeshComponent->SetRelativeRotationDirect(rotation);
-    dashTelegraphFanMeshComponent->SetRelativeScaleDirect({
-        dashTelegraphFanRadius, 1.0f, dashTelegraphFanRadius });
-    dashTelegraphLineMeshComponent->SetIsVisible(true);
-    dashTelegraphFanMeshComponent->SetIsVisible(true);
-}
-
 void GruxEnemy::HideDashTelegraphVisual()
 {
     if (dashTelegraphLineMeshComponent)
@@ -402,20 +397,17 @@ bool GruxEnemy::StartDashAttackTelegraph()
     ClearAttackSetupTarget();
     StartAttack(); // Exactly once for the entire three-stage attack.
     dashBTAttackStarted = true;
-    dashBTTripleDashActive = IsTripleJumpPhase2();
+    const bool isTripleDash = IsTripleJumpPhase2();
     dashBTDashIndex = 0;
-    dashBTDashMaxCount = dashBTTripleDashActive ? 3 : 1;
+    dashBTDashMaxCount = isTripleDash ? 3 : 1;
     dashBTCurrentDashHitStartCount = GetCurrentAttackHitCount();
     dashBTAbortRemainingDashes = false;
     dashBTTransitionElapsed = 0.0f;
-    dashBTTelegraphElapsed = 0.0f;
     dashBTTelegraphHoldDuration = 0.0f;
     dashBTDirectionLocked = false;
     dashBTMovementSnapshotPrepared = false;
     dashBTDirectionLockRequested = false;
     dashBTDashStartRequested = false;
-    dashBTDirectionLockEventReceived = false;
-    dashBTDashStartEventReceived = false;
     dashBTPhase = DashBTPhase::Telegraph;
     if (!PlayAttackStage(BossAttackType::DashAttack, 0))
         return false;
@@ -508,8 +500,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             dashBTMovementSnapshotPrepared = false;
             dashBTDirectionLockRequested = false;
             dashBTDashStartRequested = false;
-            dashBTDirectionLockEventReceived = false;
-            dashBTDashStartEventReceived = false;
             return DashBTResult::Running;
         }
         SetBehaviorAttackResult(WasCurrentAttackSequenceJustDodged()
@@ -580,8 +570,6 @@ void GruxEnemy::CleanupDashAttackBT()
         EndPositioningAnimation();
     DisableAttackHitBoxes();
     dashBTPhase = DashBTPhase::None;
-    dashBTTelegraphElapsed = 0.0f;
-    dashBTTripleDashActive = false;
     dashBTDashIndex = 0;
     dashBTDashMaxCount = 1;
     dashBTCurrentDashHitStartCount = 0;
@@ -592,8 +580,6 @@ void GruxEnemy::CleanupDashAttackBT()
     dashBTMovementSnapshotPrepared = false;
     dashBTDirectionLockRequested = false;
     dashBTDashStartRequested = false;
-    dashBTDirectionLockEventReceived = false;
-    dashBTDashStartEventReceived = false;
     dashBTPredictedKnockupPosition = {};
     dashAttackDirection = {};
     dashAttackStartPosition = {};
