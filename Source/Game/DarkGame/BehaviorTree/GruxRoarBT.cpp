@@ -187,7 +187,12 @@ bool GruxEnemy::CanPlanAttackAgainstCurrentPlayer() const
 
 bool GruxEnemy::CanPlanRoar() const
 {
-    return EvaluateRoarPlanForDebug();
+    if (!IsRoarExecutionAllowed() || IsRoarBTActive() || roarCooldownRemaining > 0.0f ||
+        IsOtherBTActionForRoar(activeNode))
+        return false;
+    const auto context = BuildTargetContext();
+    return IsDefensiveBackForBehavior(context) &&
+        context.xzDistance <= defensiveTooCloseDistance;
 }
 
 bool GruxEnemy::CanPlanRetreat() const
@@ -562,16 +567,6 @@ void GruxEnemy::CompleteRepositionArrivalWait()
         repositionDecisionResult = false;
         repositionDecisionRoll = 0.0f;
     }
-}
-
-bool GruxEnemy::EvaluateRoarPlanForDebug() const
-{
-    if (!IsRoarExecutionAllowed() || IsRoarBTActive() || roarCooldownRemaining > 0.0f ||
-        IsOtherBTActionForRoar(activeNode))
-        return false;
-    const auto context = BuildTargetContext();
-    return IsDefensiveBackForBehavior(context) &&
-        context.xzDistance <= defensiveTooCloseDistance;
 }
 
 bool GruxEnemy::BeginRoarBT()

@@ -1237,7 +1237,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
 
     fastComboTargetContext = {};
     fastComboStageTargetContexts = {};
-    fastComboTargetStage = -1;
     fastComboRuntimeState = FastComboRuntimeState::Attack;
     fastComboRuntimeStage = -1;
     ClearFastComboStepIn();
@@ -2372,14 +2371,10 @@ bool GruxEnemy::EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosit
 
 bool GruxEnemy::EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPosition,
     const DirectX::XMFLOAT3& direction, float& outClearance,
-    DirectX::XMFLOAT3& outNormal, DirectX::XMFLOAT3& outHitPosition,
-    std::string& outActorName, std::string& outComponentName, bool& outHit) const
+    DirectX::XMFLOAT3& outNormal, bool& outHit) const
 {
     outClearance = 0.0f;
     outNormal = {};
-    outHitPosition = {};
-    outActorName = "None";
-    outComponentName = "None";
     outHit = false;
     const float length = std::sqrt(direction.x * direction.x + direction.z * direction.z);
     if (length <= 0.0001f) return false;
@@ -2403,9 +2398,6 @@ bool GruxEnemy::EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPositi
         outHit = true;
         outClearance = (std::max)(0.0f, hit.distance);
         outNormal = hit.normal;
-        outHitPosition = hit.hitPoint;
-        if (hit.actor) outActorName = hit.actor->GetName();
-        if (hit.component) outComponentName = hit.component->GetName();
     }
     return true;
 }
@@ -3058,7 +3050,6 @@ void GruxEnemy::RefreshFastComboTargetContext(int stage)
     // Replace invalid contexts too, so a missing player cannot leave a stale target.
     fastComboTargetContext = BuildTargetContext();
     fastComboStageTargetContexts[stage] = fastComboTargetContext;
-    fastComboTargetStage = stage;
 }
 
 
@@ -3080,30 +3071,21 @@ void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float not
     const float stepDistance = std::clamp(distanceError * fastComboStepInRatio,
         0.0f, fastComboMaxStepInDistance[stage]);
     const float notifyDuration = notifyEndTime - notifyStartTime;
-    fastComboStepInCalculatedSpeed = notifyDuration > 0.001f ? stepDistance / notifyDuration : 0.0f;
-    fastComboStepInAppliedSpeed = (std::min)(fastComboStepInCalculatedSpeed, fastComboStepInMaxSpeed);
-    if (notifyDuration <= 0.001f || stepDistance <= 0.001f || fastComboStepInAppliedSpeed <= 0.001f)
+    const float calculatedSpeed = notifyDuration > 0.001f ? stepDistance / notifyDuration : 0.0f;
+    const float appliedSpeed = (std::min)(calculatedSpeed, fastComboStepInMaxSpeed);
+    if (notifyDuration <= 0.001f || stepDistance <= 0.001f || appliedSpeed <= 0.001f)
         return;
     fastComboStepInActive = true;
-    fastComboStepInStage = stage;
-    fastComboStepInDistance = stepDistance;
-    fastComboStepInRemainingDistance = stepDistance;
-    fastComboStepInElapsed = 0.0f;
-    fastComboStepInDirection = context.directionToPlayer;
-    characterMovementComponent->AddForcedMove(fastComboStepInDirection, fastComboStepInAppliedSpeed,
+    characterMovementComponent->AddForcedMove(context.directionToPlayer, appliedSpeed,
         notifyDuration);
 }
 
 
 
-bool GruxEnemy::UpdateFastComboStepIn(float deltaTime)
+bool GruxEnemy::UpdateFastComboStepIn()
 {
     if (!fastComboStepInActive)
         return false;
-    const float dt = (std::max)(0.0f, deltaTime);
-    fastComboStepInElapsed += dt;
-    fastComboStepInRemainingDistance = (std::max)(0.0f,
-        fastComboStepInDistance - fastComboStepInElapsed * fastComboStepInAppliedSpeed);
     return fastComboStepInActive;
 }
 
@@ -3113,11 +3095,6 @@ void GruxEnemy::ClearFastComboStepIn()
     if (characterMovementComponent)
         characterMovementComponent->AddForcedMove({ 0.0f, 0.0f, 0.0f }, 0.0f, 0.0f);
     fastComboStepInActive = false;
-    fastComboStepInStage = -1;
-    fastComboStepInDistance = 0.0f;
-    fastComboStepInRemainingDistance = 0.0f;
-    fastComboStepInElapsed = 0.0f;
-    fastComboStepInDirection = {};
 }
 
 bool GruxEnemy::IsFastComboMotionWarpNotify(const AnimationNotifyState& state) const
@@ -4125,22 +4102,6 @@ void GruxEnemy::ResetFourthHitReactionDebug()
     fourthHitReactionAnimation = "None";
 }
 
-// プレイヤーとの距離を取得する関数
-float GruxEnemy::GetDistanceToPlayer() const
-{
-    auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-    if (!player) return 9999.0f;
-
-    auto p = player->GetPosition();
-    auto b = GetPosition();
-
-    float dx = p.x - b.x;
-    float dz = p.z - b.z;
-
-    return sqrtf(dx * dx + dz * dz);
-}
-
-// プレイヤーとの距離に応じた距離領域を取得する関数
 BossDistanceRegion GruxEnemy::GetDistanceRegion(float distance) const
 {
     if (distance <= nearDistanceThreshold)

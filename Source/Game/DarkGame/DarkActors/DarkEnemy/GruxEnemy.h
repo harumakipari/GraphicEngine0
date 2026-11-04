@@ -502,8 +502,7 @@ public:
     // Chargeの側方の障害物までの距離と接触情報を調べる。
     bool EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPosition,
         const DirectX::XMFLOAT3& direction, float& outClearance,
-        DirectX::XMFLOAT3& outNormal, DirectX::XMFLOAT3& outHitPosition,
-        std::string& outActorName, std::string& outComponentName, bool& outHit) const;
+        DirectX::XMFLOAT3& outNormal, bool& outHit) const;
 
     // Chargeの予兆を非表示にする。
     void HideChargeTelegraphVisual();
@@ -675,8 +674,6 @@ public:
     // 背後のPlayerから退避する条件を満たすか判定する。
     bool CanPlanRetreat() const;
 
-    // Roarの計画条件を評価する。
-    bool EvaluateRoarPlanForDebug() const;
 
     // Roarの計画・実行を許可する共通条件を判定する。
     bool IsRoarExecutionAllowed() const;
@@ -769,7 +766,7 @@ public:
     void BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime);
 
     // FastComboの踏み込みを更新する。
-    bool UpdateFastComboStepIn(float deltaTime);
+    bool UpdateFastComboStepIn();
 
     // FastComboの踏み込み状態を解除する。
     void ClearFastComboStepIn();
@@ -1120,8 +1117,6 @@ private:
     // 4段目の被弾リアクションの診断情報を初期化する。
     void ResetFourthHitReactionDebug();
 
-    // PlayerとのXZ平面上の距離を返す。
-    float GetDistanceToPlayer() const;
 
     // 距離を近距離・中距離・遠距離に分類する。
     BossDistanceRegion GetDistanceRegion(float distance) const;
@@ -1575,7 +1570,6 @@ private:
     } roarBT;  // Roarの実行段階と衝撃波の状態。
     BossTargetContext fastComboTargetContext{};  // FastComboの対象に関する距離と角度の情報。
     std::array<BossTargetContext, 3> fastComboStageTargetContexts{};  // FastComboの各段階で取得した対象情報。
-    int fastComboTargetStage = -1;  // 対象情報を取得したFastComboの段階。
     float interStageFaceCompleteAngle = 10.0f;  // FastComboの段間の向き合わせを完了とする角度。
     float fastComboDesiredAttackDistance = 3.0f;  // FastComboの踏み込みで目指す攻撃距離。
     float fastComboStepInRatio = 1.0f;  // FastComboの踏み込み距離に適用する倍率。
@@ -1585,13 +1579,6 @@ private:
     float interStageFaceDelay = 0.5f;  // FastComboの段間で向き合わせを始めるまでの時間。
     FastComboRuntimeState fastComboRuntimeState = FastComboRuntimeState::Attack;  // FastComboの攻撃中・段間待機・向き合わせの状態。
     bool fastComboStepInActive = false;  // FastComboの踏み込み移動中かを示す。
-    int fastComboStepInStage = -1;  // 踏み込み中のFastCombo段階。
-    float fastComboStepInDistance = 0.0f;  // FastComboの踏み込み予定距離。
-    float fastComboStepInRemainingDistance = 0.0f;  // 踏み込みの残り移動距離。
-    float fastComboStepInElapsed = 0.0f;  // FastComboの踏み込み経過時間。
-    DirectX::XMFLOAT3 fastComboStepInDirection{};  // 踏み込みの移動方向。
-    float fastComboStepInCalculatedSpeed = 0.0f;  // FastComboの踏み込み計算速度。
-    float fastComboStepInAppliedSpeed = 0.0f;  // FastComboの踏み込みに適用した速度。
     int fastComboRuntimeStage = -1;  // 実行中のFastCombo段階。
     AttackSetupTargetContext attackSetupTarget{};  // 攻撃準備位置への移動目標と条件。
     AttackReadyReason attackReadyReason = AttackReadyReason::Front;  // 攻撃準備時間の選択に使う理由。

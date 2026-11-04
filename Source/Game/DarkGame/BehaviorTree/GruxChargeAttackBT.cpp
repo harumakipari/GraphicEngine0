@@ -472,13 +472,9 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                 tripleChargeRepositionSafetyMargin;
             float sideClearance = 0.0f;
             DirectX::XMFLOAT3 sideNormal{};
-            DirectX::XMFLOAT3 sideHitPosition{};
-            std::string sideActor;
-            std::string sideComponent;
             bool sideWallHit = false;
             EvaluateChargeSideClearance(currentPosition, nextDirection,
-                sideClearance, sideNormal, sideHitPosition, sideActor,
-                sideComponent, sideWallHit);
+                sideClearance, sideNormal, sideWallHit);
             chargeBT.tripleChargeRepositionShortage = wallHit
                 ? (std::max)(0.0f, requiredClearance - clearance) : 0.0f;
             const float requiredSideClearance = (std::max)(0.05f,
