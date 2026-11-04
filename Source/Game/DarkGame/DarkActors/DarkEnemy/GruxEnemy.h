@@ -1594,13 +1594,6 @@ private:
     float fastComboStepInAppliedSpeed = 0.0f;  // FastComboの踏み込みに適用した速度。
     int fastComboRuntimeStage = -1;  // 実行中のFastCombo段階。
     AttackSetupTargetContext attackSetupTarget{};  // 攻撃準備位置への移動目標と条件。
-    DirectX::XMFLOAT3 attackSetupPreviousPosition{};  // 攻撃準備移動の前回位置。
-    float attackSetupElapsedTime = 0.0f;  // 攻撃準備移動の経過時間。
-    float attackSetupTraveledDistance = 0.0f;  // 攻撃準備移動の移動済み距離。
-    float attackSetupRemainingDistance = 0.0f;  // 攻撃準備位置までの残り距離。
-    float attackSetupStuckTime = 0.0f;  // 攻撃準備移動で停滞した時間。
-    bool attackSetupMovementActive = false;  // 攻撃準備位置へ移動中かを示す。
-    float attackSetupPlannedMoveDistance = 0.0f;  // 攻撃準備位置までの予定移動距離。
     AttackReadyReason attackReadyReason = AttackReadyReason::Front;  // 攻撃準備時間の選択に使う理由。
 
 

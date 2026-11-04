@@ -123,10 +123,6 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
     attackSetupTarget.valid = true;
     attackSetupTarget.targetPosition = target;
     attackSetupTarget.stuckMovementThreshold = 0.01f; 
-    const auto position = GetPosition();
-    const float dx = target.x - position.x, dz = target.z - position.z;
-    attackSetupPlannedMoveDistance = std::sqrt(dx * dx + dz * dz);
-    attackSetupRemainingDistance = attackSetupPlannedMoveDistance;
     return true;
 }
 
@@ -156,7 +152,7 @@ bool GruxEnemy::CanExecuteChargeAttack() const
 {
     return IsChargeBTExecutionAllowed() && BuildTargetContext().valid &&
         chargeBT.phase == ChargeBTPhase::Facing && !chargeBT.attackStarted &&
-        attackSetupTarget.valid && !attackSetupMovementActive && !chargeMovementActive &&
+        attackSetupTarget.valid && !attackSetupRuntime.movementActive && !chargeMovementActive &&
         selectedAttackType == BossAttackType::ChargeAttack &&
         characterMovementComponent && rotationComponent && GetBodyAnimationController();
 }

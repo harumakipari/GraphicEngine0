@@ -3163,12 +3163,6 @@ bool GruxEnemy::PrepareJumpAttackSetupTarget()
     attackSetupTarget = {};
     attackSetupTarget.targetPosition = target;
     attackSetupTarget.valid = true;
-    attackSetupRemainingDistance = std::sqrt(
-        (target.x - GetPosition().x) * (target.x - GetPosition().x) +
-        (target.z - GetPosition().z) * (target.z - GetPosition().z));
-    const float moveX = target.x - GetPosition().x;
-    const float moveZ = target.z - GetPosition().z;
-    attackSetupPlannedMoveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
     return true;
 }
 bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount, float boundaryMarginOverride) const
@@ -3227,27 +3221,17 @@ bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, floa
 void GruxEnemy::ClearAttackSetupTarget()
 {
     ClearPositioningTarget(attackSetupTarget, attackSetupRuntime);
-    attackSetupMovementActive = false;
-    attackSetupElapsedTime = attackSetupTraveledDistance = attackSetupRemainingDistance =
-        attackSetupStuckTime = attackSetupPlannedMoveDistance = 0.0f;
 }
 
 GruxEnemy::AttackSetupMoveResult GruxEnemy::UpdateAttackSetupMovement(float dt)
 {
     const auto result = UpdatePositioningTargetMovement(attackSetupTarget, attackSetupRuntime, dt);
-    attackSetupMovementActive = attackSetupRuntime.movementActive;
-    attackSetupPreviousPosition = attackSetupRuntime.previousPosition;
-    attackSetupElapsedTime = attackSetupRuntime.elapsed;
-    attackSetupTraveledDistance = attackSetupRuntime.traveledDistance;
-    attackSetupRemainingDistance = attackSetupRuntime.remainingDistance;
-    attackSetupStuckTime = attackSetupRuntime.stuckTime;
     return result;
 }
 
 void GruxEnemy::StopAttackSetupMovement()
 {
     attackSetupRuntime.movementActive = false;
-    attackSetupMovementActive = false;
     StopAIMovement();
     EndPositioningAnimation();
 }

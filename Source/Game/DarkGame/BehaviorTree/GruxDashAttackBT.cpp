@@ -362,11 +362,6 @@ bool GruxEnemy::PrepareDashAttackSetupTarget()
     attackSetupTarget.valid = true;
     attackSetupTarget.targetPosition = target;
     attackSetupTarget.stuckMovementThreshold = 0.01f;
-    const auto position = GetPosition();
-    const float dx = target.x - position.x;
-    const float dz = target.z - position.z;
-    attackSetupPlannedMoveDistance = std::sqrt(dx * dx + dz * dz);
-    attackSetupRemainingDistance = attackSetupPlannedMoveDistance;
     return true;
 }
 
@@ -375,7 +370,7 @@ bool GruxEnemy::CanExecuteDashAttack() const
     return !IsDead() && BuildTargetContext().valid &&
         dashBTPhase == DashBTPhase::Facing && !dashBTAttackStarted &&
         selectedAttackType == BossAttackType::DashAttack && attackSetupTarget.valid &&
-        !attackSetupMovementActive && !dashAttackMovementActive &&
+        !attackSetupRuntime.movementActive && !dashAttackMovementActive &&
         characterMovementComponent && rotationComponent && GetBodyAnimationController();
 }
 
