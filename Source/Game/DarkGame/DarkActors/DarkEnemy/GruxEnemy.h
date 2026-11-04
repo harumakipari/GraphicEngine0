@@ -1700,7 +1700,6 @@ private:
     float attackSetupClampTolerance = 0.75f;  // 攻撃準備位置の境界補正の許容距離。
     float jumpAttackTelegraphStartTime = 1.4f;  // Jump予兆の開始アニメーション時刻。
     float jumpAttackTelegraphEndTime = 2.6f;  // Jump予兆の終了アニメーション時刻。
-    float currentJumpPlayerDistance = 0.0f;  // Jump開始時のプレイヤーとの距離。
     float calculatedJumpDistance = 0.0f;  // Jump攻撃で計算された移動距離。
     int tripleJumpIndex = 0;  // 現在のJump回のインデックス。
     TripleJumpPhase tripleJumpPhase = TripleJumpPhase::None;  // 複数回Jumpの実行段階。
@@ -1810,7 +1809,6 @@ private:
     float desiredDashAttackDistance = 2.0f;  // Dash攻撃で目指す対象との距離。
     float dashArrivalDistance = 0.35f;  // Dash攻撃の到着判定距離。
     float dashAttackTimeout = 1.10f;  // Dash攻撃の移動タイムアウト時間。
-    float currentDashAttackPlayerDistance = 0.0f;  // Dash攻撃時のプレイヤーとの距離。
     float calculatedDashAttackDistance = 0.0f;  // Dash攻撃で計算された移動距離。
     float dashAttackElapsedTime = 0.0f;  // Dash攻撃の経過時間。
     bool dashAttackMovementActive = false;  // Dashの移動処理が有効かを示す。

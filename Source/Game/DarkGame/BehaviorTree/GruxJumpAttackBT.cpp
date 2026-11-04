@@ -223,7 +223,6 @@ bool GruxEnemy::StartTripleJumpJump()
         return false;
     }
     jumpAttackStartPlayerPosition = tripleJumpPlayerPosition;
-    currentJumpPlayerDistance = context.xzDistance;
     calculatedJumpDistance = tripleJumpPlannedDistance;
     jumpMotionWarpDirection = tripleJumpLockedDirection;
     if (rotationComponent)

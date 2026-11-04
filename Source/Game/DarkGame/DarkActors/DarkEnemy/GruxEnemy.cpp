@@ -711,7 +711,6 @@ void GruxEnemy::DrawImGuiDetails()
         0.0f,
         10.0f,
         "%.2f");
-    currentJumpPlayerDistance = GetDistanceToPlayer();
     if (ImGui::TreeNode("Combat Attack Candidates"))
     {
         for (size_t i = 0; i < combatAttackData.size(); ++i)
@@ -2217,14 +2216,14 @@ bool GruxEnemy::PrepareDashAttackMovementSnapshot()
     const DirectX::XMFLOAT3 playerPosition = player->GetPosition();
     const float dx = playerPosition.x - bossPosition.x;
     const float dz = playerPosition.z - bossPosition.z;
-    currentDashAttackPlayerDistance = std::sqrt(dx * dx + dz * dz);
-    if (currentDashAttackPlayerDistance <= FLT_EPSILON)
+    const float playerDistance = std::sqrt(dx * dx + dz * dz);
+    if (playerDistance <= FLT_EPSILON)
         return false;
 
-    const float inverseDistance = 1.0f / currentDashAttackPlayerDistance;
+    const float inverseDistance = 1.0f / playerDistance;
     dashAttackDirection = { dx * inverseDistance, 0.0f, dz * inverseDistance };
     calculatedDashAttackDistance = std::clamp(
-        currentDashAttackPlayerDistance - desiredDashAttackDistance,
+        playerDistance - desiredDashAttackDistance,
         minDashAttackDistance, maxDashAttackDistance);
     dashAttackStartPosition = bossPosition;
     dashTargetPosition =
@@ -4331,7 +4330,6 @@ void GruxEnemy::PrepareJumpAttackMotionWarpOverride()
     const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
     if (!player)
     {
-        currentJumpPlayerDistance = 0.0f;
         calculatedJumpDistance = 0.0f;
         jumpMotionWarpDirection = { 0.0f, 0.0f, 0.0f };
         jumpMotionWarpOverrideActive = true;
@@ -4342,14 +4340,14 @@ void GruxEnemy::PrepareJumpAttackMotionWarpOverride()
     jumpAttackStartPlayerPosition = player->GetPosition();
     const float dx = jumpAttackStartPlayerPosition.x - bossPosition.x;
     const float dz = jumpAttackStartPlayerPosition.z - bossPosition.z;
-    currentJumpPlayerDistance = std::sqrt(dx * dx + dz * dz);
+    const float playerDistance = std::sqrt(dx * dx + dz * dz);
 
-    const float desiredMoveDistance = currentJumpPlayerDistance - desiredAttackDistance;
+    const float desiredMoveDistance = playerDistance - desiredAttackDistance;
     calculatedJumpDistance = std::clamp(desiredMoveDistance, 0.0f, maxJumpDistance);
 
-    if (currentJumpPlayerDistance > FLT_EPSILON)
+    if (playerDistance > FLT_EPSILON)
     {
-        const float inverseDistance = 1.0f / currentJumpPlayerDistance;
+        const float inverseDistance = 1.0f / playerDistance;
         jumpMotionWarpDirection = { dx * inverseDistance, 0.0f, dz * inverseDistance };
         rotationComponent->SetDirectionImmediate(jumpMotionWarpDirection);
     }

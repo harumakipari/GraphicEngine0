@@ -575,7 +575,6 @@ void GruxEnemy::CleanupDashAttackBT()
     dashAttackDirection = {};
     dashAttackStartPosition = {};
     dashTargetPosition = {};
-    currentDashAttackPlayerDistance = 0.0f;
     calculatedDashAttackDistance = 0.0f;
     selectedActionType = dashBTPreviousAction;
 }
