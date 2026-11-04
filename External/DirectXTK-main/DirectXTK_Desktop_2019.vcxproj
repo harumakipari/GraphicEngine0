@@ -168,7 +168,7 @@
     </None>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{E0B52AE7-E160-4D32-BF3F-910B785E5A8E}</ProjectGuid>
+    <ProjectGuid>{D0949583-C934-41D2-8367-1B1D44C1783C}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>DirectXTK</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
