@@ -345,7 +345,6 @@ bool GruxEnemy::PrepareDashAttackSetupTarget()
     dashBTPreviousAction = selectedActionType;
     selectedAttackType = BossAttackType::DashAttack;
     selectedActionType = BossActionType::DashAttack;
-    SetBehaviorAttackResult(BehaviorAttackResult::None);
     StopAttackSetupMovement();
     ClearAttackSetupTarget();
 
@@ -496,8 +495,6 @@ GruxEnemy::DashBTResult GruxEnemy::UpdateDashAttackBT(float deltaTime)
             dashBTDashStartRequested = false;
             return DashBTResult::Running;
         }
-        SetBehaviorAttackResult(WasCurrentAttackSequenceJustDodged()
-            ? BehaviorAttackResult::JustDodged : BehaviorAttackResult::Success);
         FinishDashAttackBT();
         return DashBTResult::Complete;
     case DashBTPhase::InterDashTransition:

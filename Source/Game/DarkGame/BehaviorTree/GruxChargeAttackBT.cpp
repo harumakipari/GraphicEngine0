@@ -102,7 +102,6 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
     chargeBT.previousAction = selectedActionType;
     selectedActionType = BossActionType::ChargeAttack;
     selectedAttackType = BossAttackType::ChargeAttack;
-    SetBehaviorAttackResult(BehaviorAttackResult::None);
     StopAttackSetupMovement();
     ClearAttackSetupTarget();
     nextRecoveryDuration.reset();
@@ -253,7 +252,6 @@ bool GruxEnemy::BeginTripleChargeTransition()
     chargeBT.tripleChargeRepositionStartPosition = GetPosition();
     chargeBT.tripleChargeRepositionTargetPosition = chargeBT.tripleChargeRepositionStartPosition;
     chargeBT.tripleChargeRepositionDirection = {};
-    chargeBT.tripleChargeRepositionCurrentClearance = 0.0f;
     chargeBT.tripleChargeRepositionShortage = 0.0f;
     return true;
 }
@@ -487,7 +485,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             EvaluateChargeSideClearance(currentPosition, nextDirection,
                 sideClearance, sideNormal, sideHitPosition, sideActor,
                 sideComponent, sideWallHit);
-            chargeBT.tripleChargeRepositionCurrentClearance = clearance;
             chargeBT.tripleChargeRepositionShortage = wallHit
                 ? (std::max)(0.0f, requiredClearance - clearance) : 0.0f;
             const float requiredSideClearance = (std::max)(0.05f,

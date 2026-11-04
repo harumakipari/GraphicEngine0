@@ -1243,7 +1243,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     ClearFastComboStepIn();
     fastComboApproachRetryRemaining = 0.0f;
     behaviorApproachActive = false;
-    behaviorAttackResult = BehaviorAttackResult::None;
     currentAttackSequenceId = 0;
     currentAttackHitCount = 0;
     hitActors.clear();
@@ -4205,7 +4204,6 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
     const float clampX = outEvaluation.clampedTarget.x - desiredTarget.x;
     const float clampZ = outEvaluation.clampedTarget.z - desiredTarget.z;
     outEvaluation.clampDistance = std::sqrt(clampX * clampX + clampZ * clampZ);
-    outEvaluation.wasClamped = outEvaluation.clampDistance > 0.0001f;
 }
 
 bool GruxEnemy::IsRepositionAction(const BossActionType actionType) const

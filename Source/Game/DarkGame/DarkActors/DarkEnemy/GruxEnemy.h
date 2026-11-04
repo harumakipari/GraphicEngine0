@@ -1009,18 +1009,6 @@ public:
         }
     }
 
-    enum class BehaviorAttackResult
-    {
-        None,        // 結果なし。
-        Success,     // 攻撃が成功。
-        JustDodged   // Playerがジャスト回避
-    };
-
-    // 攻撃結果を保持する。
-    void SetBehaviorAttackResult(BehaviorAttackResult result)
-    {
-        behaviorAttackResult = result;
-    }
 
     // 攻撃後の待機アニメーションを再生する。
     void BeginRecovery() const;
@@ -1142,7 +1130,6 @@ private:
     {
         DirectX::XMFLOAT3 desiredTarget{};  // 境界補正前の目標位置。
         DirectX::XMFLOAT3 clampedTarget{};  // 境界補正後の目標位置。
-        bool wasClamped = false;  // 目標位置に境界補正を適用したか。
         float clampDistance = 0.0f;  // 目標位置の境界補正距離。
         bool bossRoomPathBlocked = false;  // ボス部屋の経路が遮られているか。
     };
@@ -1645,15 +1632,6 @@ private:
 
     float relativeFrontMaxAngle = 50.0f;  // 相対領域を正面と判定する角度上限。
     float relativeBackMinAngle = 110.0f;  // 相対領域を背後と判定する最小角度。
-    const std::array<BossActionData, actionCount> initialCombatActionData = combatActionData;  // 行動設定を初期値に戻すためのデータ。
-    const std::array<BossAttackData, 6> initialCombatAttackData = combatAttackData;  // 攻撃設定を初期値に戻すためのデータ。
-    const float initialNearDistanceThreshold = nearDistanceThreshold;  // 近距離判定の初期距離。
-    const float initialMiddleDistanceThreshold = middleDistanceThreshold;  // 中距離判定の初期距離。
-    const float initialRelativeFrontMaxAngle = relativeFrontMaxAngle;  // 正面判定の初期角度。
-    const float initialRelativeBackMinAngle = relativeBackMinAngle;  // 背後判定の初期角度。
-    static constexpr float initialCombatRepositionMoveDistance = 10.0f;  // 戦闘位置調整の初期移動距離。
-    static constexpr float initialCombatRepositionMoveSpeed = 6.0f;  // 戦闘位置調整の初期移動速度。
-    static constexpr float initialCombatRepositionSettleDuration = 1.5f;  // 戦闘位置調整後の初期待機時間。
 
     static constexpr float initialFrontAttackReadyDuration = 1.0f;  // 正面での攻撃準備時間の初期値。
     static constexpr float initialSideAttackReadyDuration = 1.5f;  // 側面での攻撃準備時間の初期値。
@@ -1679,14 +1657,6 @@ private:
     float positioningMoveStopTimer = 0.0f;  // 移動停止判定の経過時間。
     float positioningAnimationActualSpeed = 0.0f;  // 位置調整アニメーションに使用する実速度。
     bool positioningAnimationMoving = false;  // 位置調整の移動アニメーション中か。
-    float combatRepositionBackWeight = 80.0f;  // 背後からの戦闘位置調整に使う重み。
-    float dashAttackPlanBackWeight = 35.0f;  // 背後におけるDash計画の重み。
-    float jumpAttackPlanBackWeight = 35.0f;  // 背後におけるJump計画の重み。
-    float combatRepositionMoveDistance = initialCombatRepositionMoveDistance;  // 戦闘位置調整の移動距離。
-    float combatRepositionMoveSpeed = initialCombatRepositionMoveSpeed;  // 戦闘位置調整の移動速度。
-    float combatRepositionSettleDuration = initialCombatRepositionSettleDuration;  // 戦闘位置調整後の初期待機時間。
-    BossRepositionReason repositionReason = BossRepositionReason::Normal;  // 位置調整を選択した理由。
-    BossRepositionDirection selectedRepositionDirection = BossRepositionDirection::None;  // 選択された位置調整の方向。
 
 
     bool transitionWindow = false;  // FastComboの次段階へ移行できるNotify期間か。
@@ -1728,7 +1698,6 @@ private:
     bool jumpTelegraphImpactFlashActive = false;  // Jump着地時の発光演出中か。
     float jumpTelegraphImpactFlashElapsed = 0.0f;  // Jump着地時の発光演出の経過時間。
     float jumpTelegraphImpactFlashProgress = 0.0f;  // Jump着地時の発光演出の進行度。
-    float jumpTelegraphOffset = 0.05f;// ジャンプ予兆モデルのオフセット
     DirectX::XMFLOAT3 jumpTelegraphWorldPosition{}; // ジャンプ攻撃の間
     DirectX::XMFLOAT3 tripleJumpPlayerPosition{};  // 現在のJumpで固定したPlayer位置。
     DirectX::XMFLOAT3 tripleJumpStartPosition{};  // 現在のJump開始位置。
@@ -1862,7 +1831,6 @@ private:
         DirectX::XMFLOAT3 tripleChargeRepositionStartPosition{};  // 複数回Chargeの位置補正の開始位置。
         DirectX::XMFLOAT3 tripleChargeRepositionTargetPosition{};  // 複数回Chargeの位置補正の目標位置。
         DirectX::XMFLOAT3 tripleChargeRepositionDirection{};  // 複数回Chargeの位置補正の方向。
-        float tripleChargeRepositionCurrentClearance = 0.0f;  // 複数回Chargeの位置補正時の現在の余白距離。
         float tripleChargeRepositionShortage = 0.0f;  // 複数回Chargeの位置補正時の不足距離。
     } chargeBT;  // Chargeの実行状態と診断情報。
     float chargeSetupDistanceMin = 8.0f;  // Chargeの準備位置に必要な対象との最小距離。
@@ -2018,7 +1986,6 @@ private:
 
     CloseCombatSettings closeCombatSettings;  // FastComboの計画・実行距離と向きの条件。
     std::string behaviorTreePreviousNode = "None";  // 直前に実行したBTノードの表示名。
-    BehaviorAttackResult behaviorAttackResult = BehaviorAttackResult::None;  // 攻撃結果の保持値。
     bool behaviorApproachActive = false;  // FastComboの接近処理が有効かを示す。
     float fastComboPrepareDuration = 0.5f;  // FastComboの準備待機時間。
     float fastComboApproachMaxDuration = 5.0f;  // FastCombo接近の制限時間。
