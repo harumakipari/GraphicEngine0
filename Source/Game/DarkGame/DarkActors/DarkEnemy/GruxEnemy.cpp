@@ -1241,7 +1241,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
     fastComboRuntimeStage = -1;
     ClearFastComboStepIn();
     fastComboApproachRetryRemaining = 0.0f;
-    behaviorApproachActive = false;
     currentAttackSequenceId = 0;
     currentAttackHitCount = 0;
     hitActors.clear();
@@ -1652,12 +1651,6 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
             ClearFastComboStepIn();
             break;
         }
-        const auto activeWarp = std::find_if(
-            animationMotionWarps.begin(), animationMotionWarps.end(),
-            [&](const AnimationMotionWarp& warp)
-            {
-                return warp.state == &state;
-            });
         animationMotionWarps.erase(
             std::remove_if(
                 animationMotionWarps.begin(),

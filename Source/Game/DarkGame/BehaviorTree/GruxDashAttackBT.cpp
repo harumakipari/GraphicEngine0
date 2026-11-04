@@ -14,15 +14,10 @@ void GruxEnemy::BeginDashTelegraphVisual()
     const float dx = dashTelegraphLineEnd.x - dashTelegraphLineStart.x;
     const float dz = dashTelegraphLineEnd.z - dashTelegraphLineStart.z;
     dashTelegraphLineLength = std::sqrt(dx * dx + dz * dz);
-    dashTelegraphSnapshotValid = dashTelegraphLineLength > FLT_EPSILON;
+    const bool dashTelegraphSnapshotValid = dashTelegraphLineLength > FLT_EPSILON;
     if (!dashTelegraphSnapshotValid || !showDashTelegraph )
         return;
 
-    if (!dashTelegraphSnapshotValid || !showDashTelegraph)
-    {
-        HideDashTelegraphVisual();
-        return;
-    }
 
     if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
         return;

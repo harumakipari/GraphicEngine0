@@ -95,12 +95,6 @@ enum class BossRepositionDirection : uint8_t
     Right,
 };
 
-enum class AttackReadyReason : uint8_t
-{
-    Front,
-    AfterTurn,
-};
-
 struct BossActionData
 {
     BossActionType type = BossActionType::AttackLA;

@@ -920,12 +920,9 @@ public:
     // FastCombo用の対象情報を返す。
     const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
 
-    // 攻撃準備の理由に対応する予兆時間を返す。
     float GetAttackReadyDuration() const
     {
-        return attackReadyReason == AttackReadyReason::AfterTurn
-            ? sideAttackReadyDuration
-            : frontAttackReadyDuration;
+        return frontAttackReadyDuration;
     }
 
     // 攻撃準備のSEを再生する。
@@ -1581,7 +1578,6 @@ private:
     bool fastComboStepInActive = false;  // FastComboの踏み込み移動中かを示す。
     int fastComboRuntimeStage = -1;  // 実行中のFastCombo段階。
     AttackSetupTargetContext attackSetupTarget{};  // 攻撃準備位置への移動目標と条件。
-    AttackReadyReason attackReadyReason = AttackReadyReason::Front;  // 攻撃準備時間の選択に使う理由。
 
 
     std::array<BossAttackData, 6> combatAttackData =  // 攻撃の設定データ。
@@ -1614,15 +1610,11 @@ private:
     float relativeBackMinAngle = 110.0f;  // 相対領域を背後と判定する最小角度。
 
     static constexpr float initialFrontAttackReadyDuration = 1.0f;  // 正面での攻撃準備時間の初期値。
-    static constexpr float initialSideAttackReadyDuration = 1.5f;  // 側面での攻撃準備時間の初期値。
-    static constexpr float initialCloseCombatReadyFacingAngle = 7.5f;  // 近接攻撃準備時の向き判定角度の初期値。
 
     float turnSpeed = 480.0f;  // 攻撃前などの向き合わせに使う回転速度。
     float turnCompleteAngle = 15.0f;  // 攻撃前の向き合わせを完了とみなす角度。
     float turnTimeout = 1.5f;  // Chargeの向き合わせに使うタイムアウト時間。
     float frontAttackReadyDuration = initialFrontAttackReadyDuration;  // 正面での攻撃準備時間。
-    float sideAttackReadyDuration = initialSideAttackReadyDuration;  // 側面からの攻撃準備時間。
-    float closeCombatReadyFacingAngle = initialCloseCombatReadyFacingAngle;  // 近接攻撃準備時の向き判定角度。
     std::string attackReadySEName = "enemy_attack_ready1";  // 攻撃準備時に再生するSE名。
     float attackReadySEVolume = 1.0f;  // 攻撃準備SEの音量。
     static constexpr float bossRoomMinX = -2.5f;  // ボス部屋のX座標の下限。
@@ -1700,7 +1692,6 @@ private:
     bool dashBTMovementSnapshotPrepared = false;  // Dash移動に使う情報が準備済みかを示す。
     DirectX::XMFLOAT3 dashBTPredictedKnockupPosition{};  // Dash後のKnockup開始予測位置。
     bool showDashTelegraph = true;  // Dash予兆の表示を有効にする。
-    bool dashTelegraphSnapshotValid = false;  // Dash予兆の位置と方向の記録が有効か。
     enum class DashTelegraphVisualState
     {
         Hidden,  // 非表示。
@@ -1958,7 +1949,6 @@ private:
 
     CloseCombatSettings closeCombatSettings;  // FastComboの計画・実行距離と向きの条件。
     std::string behaviorTreePreviousNode = "None";  // 直前に実行したBTノードの表示名。
-    bool behaviorApproachActive = false;  // FastComboの接近処理が有効かを示す。
     float fastComboPrepareDuration = 0.5f;  // FastComboの準備待機時間。
     float fastComboApproachMaxDuration = 5.0f;  // FastCombo接近の制限時間。
     float fastComboApproachRetryCooldown = 2.0f;  // 接近失敗後の再試行待ち時間。

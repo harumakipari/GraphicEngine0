@@ -205,13 +205,6 @@ bool GruxEnemy::CanPlanFastCombo() const
         return false;
     }
     float maxRange = closeCombatSettings.planMaxRange;
-    for (const auto& a : combatAttackData)
-    {
-        if (a.type == BossAttackType::FastCombo)
-        {// ???????????????
-            break;
-        }
-    }
     for (size_t i = 0; i < combatActionData.size(); ++i)
     {
         if (combatActionData[i].type == BossActionType::FastCombo && (combatActionData[i].weight <= 0.0f ||
@@ -240,13 +233,6 @@ bool GruxEnemy::CanExecuteFastCombo() const
     if (!c.valid || !IsPlayerInFastComboFacingRange(c))
         return false;
     float minRange = closeCombatSettings.minRange, maxRange = closeCombatSettings.executeMaxRange;
-    for (const auto& a : combatAttackData)
-    {
-        if (a.type == BossAttackType::FastCombo)
-        {
-            break;
-        }
-    }
 
     if (c.xzDistance < minRange || c.xzDistance > maxRange)
         return false;
@@ -280,7 +266,6 @@ void GruxEnemy::BeginFastComboApproach()
     const auto controller = GetBodyAnimationController();
     if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Fwd_0")
         PlayBodyAnimation("TravelMode_Fwd_0", true, true, 0.15f, true);
-    behaviorApproachActive = true;
 }
 
 bool GruxEnemy::UpdateFastComboApproach(float dt)
