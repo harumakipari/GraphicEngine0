@@ -106,15 +106,13 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
     ClearAttackSetupTarget();
     nextRecoveryDuration.reset();
     DirectX::XMFLOAT3 target{};
-    float chosenDistance = 0.0f;
-    int candidateCount = 0;
     const float chargeCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
     constexpr float chargeSetupExtraClearance = 0.05f;
     const float chargeSetupBoundaryMargin = (std::max)(
         bossRoomSafetyMargin, chargeCastRadius + chargeWallCastSafetyMargin + chargeSetupExtraClearance);
     if (!FindAttackSetupTarget(chargeSetupDistanceMin, chargeSetupDistanceMax,
         attackSetupCandidateAngleStep, attackSetupClampTolerance, chargeSetupMinimumMoveDistance,
-        target, chosenDistance, candidateCount, chargeSetupBoundaryMargin))
+        target, chargeSetupBoundaryMargin))
     {
         CleanupChargeAttackBT();
         return false;

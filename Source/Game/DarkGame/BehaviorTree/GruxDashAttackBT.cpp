@@ -349,11 +349,9 @@ bool GruxEnemy::PrepareDashAttackSetupTarget()
     ClearAttackSetupTarget();
 
     DirectX::XMFLOAT3 target{};
-    float chosenDistance = 0.0f;
-    int candidateCount = 0;
     if (!FindAttackSetupTarget(dashSetupDistanceMin, dashSetupDistanceMax,
         attackSetupCandidateAngleStep, attackSetupClampTolerance, dashSetupMinimumMoveDistance,
-        target, chosenDistance, candidateCount))
+        target))
     {
         CleanupDashAttackBT();
         return false;

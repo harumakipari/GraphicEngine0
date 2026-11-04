@@ -787,7 +787,7 @@ public:
     bool PrepareJumpAttackSetupTarget();
 
     // 指定距離や障害物条件を満たす攻撃準備位置を探索する。
-    bool FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount, float boundaryMarginOverride = -1.0f) const;
+    bool FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float boundaryMarginOverride = -1.0f) const;
 
     // 攻撃準備位置の目標が有効かを返す。
     bool HasAttackSetupTarget() const { return attackSetupTarget.valid; }
@@ -1675,23 +1675,15 @@ private:
     float jumpTelegraphEmissiveIntensity = 15.0f;  // Jump予兆の発光強度。
     float jumpTelegraphInnerStartScale = 0.01f;  // Jump予兆の内側モデルの開始スケール。
     float jumpTelegraphLandingTime = 0.869391f;  // Jump予兆の着地時刻。
-    float jumpTelegraphProgress = 0.0f;  // Jump予兆の進行度。
-    float jumpTelegraphCurrentAnimationTime = 0.0f;  // Jump予兆に使用する現在のアニメーション時刻。
-    float jumpTelegraphInnerCurrentScale = 0.75f;  // Jump予兆の内側モデルの現在のスケール。
     int jumpTelegraphInnerScaleCurve = 0;  // Jump予兆の内側モデルの拡縮曲線の選択。
     bool jumpTelegraphEnableRotation = true;  // Jump予兆の回転を有効にするか。
     float jumpTelegraphOuterRotationSpeed = 360.0f;  // Jump予兆の外側モデルの回転速度。
     float jumpTelegraphInnerRotationSpeed = -360.0f;  // Jump予兆の内側モデルの回転速度。
-    float jumpTelegraphInnerScaleProgress = 0.0f;  // Jump予兆の内側モデルの拡縮進行度。
-    float jumpTelegraphOuterRotation = 0.0f;  // Jump予兆の外側モデルの回転角度。
-    float jumpTelegraphInnerRotation = 0.0f;  // Jump予兆の内側モデルの回転角度。
     bool jumpTelegraphEnableImpactFlash = true;  // Jump着地時の発光演出を有効にするか。
     float jumpTelegraphImpactFlashDuration = 0.10f;  // Jump着地時の発光演出の時間。
     float jumpTelegraphImpactFlashIntensity = 5.f;  // Jump着地時の発光演出の強度。
     bool jumpTelegraphImpactFlashActive = false;  // Jump着地時の発光演出中か。
     float jumpTelegraphImpactFlashElapsed = 0.0f;  // Jump着地時の発光演出の経過時間。
-    float jumpTelegraphImpactFlashProgress = 0.0f;  // Jump着地時の発光演出の進行度。
-    DirectX::XMFLOAT3 jumpTelegraphWorldPosition{}; // ジャンプ攻撃の間
     DirectX::XMFLOAT3 tripleJumpPlayerPosition{};  // 現在のJumpで固定したPlayer位置。
     DirectX::XMFLOAT3 tripleJumpStartPosition{};  // 現在のJump開始位置。
     DirectX::XMFLOAT3 tripleJumpLockedDirection{};  // 現在のJumpで固定した方向。

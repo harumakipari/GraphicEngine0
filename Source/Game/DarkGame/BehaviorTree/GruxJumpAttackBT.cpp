@@ -47,25 +47,19 @@ void GruxEnemy::ShowJumpTelegraphForCurrentJump()
     // Keep one world-space landing target per jump. With absolute location enabled,
     // relativeLocation_ is interpreted as world space and is deliberately not
     // recomputed while MotionWarp moves Grux.
-    jumpTelegraphWorldPosition = { landing.x, 0.350f, landing.z };
-    jumpTelegraphMeshComponent->SetRelativeLocationDirect(jumpTelegraphWorldPosition);
+    const DirectX::XMFLOAT3 telegraphWorldPosition{ landing.x, 0.350f, landing.z };
+    jumpTelegraphMeshComponent->SetRelativeLocationDirect(telegraphWorldPosition);
     jumpTelegraphMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     jumpTelegraphMeshComponent->SetRelativeScaleDirect({
         jumpTelegraphScale, jumpTelegraphScale, jumpTelegraphScale });
     jumpTelegraphMeshComponent->SetIsVisible(true);
 
-    jumpTelegraphProgress = 0.0f;
-    jumpTelegraphCurrentAnimationTime = 0.0f;
-    jumpTelegraphInnerCurrentScale = jumpTelegraphInnerStartScale;
     jumpTelegraphInnerMeshComponent->SetRelativeLocationDirect(
-        { jumpTelegraphWorldPosition.x, 0.355f, jumpTelegraphWorldPosition.z });
+        { telegraphWorldPosition.x, 0.355f, telegraphWorldPosition.z });
     jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     jumpTelegraphInnerMeshComponent->SetRelativeScaleDirect({
-        jumpTelegraphInnerCurrentScale, jumpTelegraphInnerCurrentScale,
-        jumpTelegraphInnerCurrentScale });
-    jumpTelegraphOuterRotation = 0.0f;
-    jumpTelegraphInnerRotation = 0.0f;
-    jumpTelegraphInnerScaleProgress = 0.0f;
+        jumpTelegraphInnerStartScale, jumpTelegraphInnerStartScale,
+        jumpTelegraphInnerStartScale });
     jumpTelegraphMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     jumpTelegraphInnerMeshComponent->SetIsVisible(true);
@@ -80,41 +74,39 @@ void GruxEnemy::UpdateJumpTelegraphProgress()
     const auto controller = GetBodyAnimationController();
     if (!controller)
         return;
-    jumpTelegraphCurrentAnimationTime = controller->GetCurrentAnimationTime();
-    jumpTelegraphProgress = std::clamp(
-        jumpTelegraphCurrentAnimationTime / jumpTelegraphLandingTime, 0.0f, 1.0f);
-    jumpTelegraphInnerScaleProgress = jumpTelegraphInnerScaleCurve == 1
-        ? jumpTelegraphProgress * jumpTelegraphProgress
-        : jumpTelegraphProgress;
-    jumpTelegraphInnerCurrentScale = std::lerp(
-        jumpTelegraphInnerStartScale, jumpTelegraphScale, jumpTelegraphInnerScaleProgress);
+    const float currentAnimationTime = controller->GetCurrentAnimationTime();
+    const float telegraphProgress = std::clamp(
+        currentAnimationTime / jumpTelegraphLandingTime, 0.0f, 1.0f);
+    const float innerScaleProgress = jumpTelegraphInnerScaleCurve == 1
+        ? telegraphProgress * telegraphProgress
+        : telegraphProgress;
+    const float innerCurrentScale = std::lerp(
+        jumpTelegraphInnerStartScale, jumpTelegraphScale, innerScaleProgress);
     if (jumpTelegraphEnableRotation)
     {
-        jumpTelegraphOuterRotation = jumpTelegraphCurrentAnimationTime * jumpTelegraphOuterRotationSpeed;
-        jumpTelegraphInnerRotation = jumpTelegraphCurrentAnimationTime * jumpTelegraphInnerRotationSpeed;
+        const float outerRotationDegrees = currentAnimationTime * jumpTelegraphOuterRotationSpeed;
+        const float innerRotationDegrees = currentAnimationTime * jumpTelegraphInnerRotationSpeed;
         const auto toRotation = [](float degrees)
         {
             return DirectX::XMQuaternionRotationRollPitchYaw(
                 0.0f, DirectX::XMConvertToRadians(degrees), 0.0f);
         };
         DirectX::XMFLOAT4 outerRotation{}, innerRotation{};
-        DirectX::XMStoreFloat4(&outerRotation, toRotation(jumpTelegraphOuterRotation));
-        DirectX::XMStoreFloat4(&innerRotation, toRotation(jumpTelegraphInnerRotation));
+        DirectX::XMStoreFloat4(&outerRotation, toRotation(outerRotationDegrees));
+        DirectX::XMStoreFloat4(&innerRotation, toRotation(innerRotationDegrees));
         jumpTelegraphMeshComponent->SetRelativeRotationDirect(outerRotation);
         jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect(innerRotation);
     }
     else
     {
-        jumpTelegraphOuterRotation = 0.0f;
-        jumpTelegraphInnerRotation = 0.0f;
         jumpTelegraphMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
         jumpTelegraphInnerMeshComponent->SetRelativeRotationDirect({ 0.0f, 0.0f, 0.0f, 1.0f });
     }
     jumpTelegraphMeshComponent->SetRelativeScaleDirect({
         jumpTelegraphScale, jumpTelegraphScale, jumpTelegraphScale });
     jumpTelegraphInnerMeshComponent->SetRelativeScaleDirect({
-        jumpTelegraphInnerCurrentScale, jumpTelegraphInnerCurrentScale,
-        jumpTelegraphInnerCurrentScale });
+        innerCurrentScale, innerCurrentScale,
+        innerCurrentScale });
 }
 
 void GruxEnemy::BeginJumpTelegraphImpactFlash()
@@ -124,9 +116,6 @@ void GruxEnemy::BeginJumpTelegraphImpactFlash()
         return;
     jumpTelegraphImpactFlashActive = true;
     jumpTelegraphImpactFlashElapsed = 0.0f;
-    jumpTelegraphImpactFlashProgress = 0.0f;
-    jumpTelegraphInnerCurrentScale = jumpTelegraphScale;
-    jumpTelegraphInnerScaleProgress = 1.0f;
     jumpTelegraphInnerMeshComponent->SetRelativeScaleDirect({
         jumpTelegraphScale, jumpTelegraphScale, jumpTelegraphScale });
 }
@@ -137,9 +126,9 @@ void GruxEnemy::UpdateJumpTelegraphImpactFlash(float deltaTime)
         return;
     const float duration = (std::max)(0.001f, jumpTelegraphImpactFlashDuration);
     jumpTelegraphImpactFlashElapsed += (std::max)(0.0f, deltaTime);
-    jumpTelegraphImpactFlashProgress = std::clamp(
+    const float impactFlashProgress = std::clamp(
         jumpTelegraphImpactFlashElapsed / duration, 0.0f, 1.0f);
-    const float remaining = 1.0f - jumpTelegraphImpactFlashProgress;
+    const float remaining = 1.0f - impactFlashProgress;
     const float flash = jumpTelegraphEnableImpactFlash
         ? jumpTelegraphImpactFlashIntensity * remaining : 0.0f;
     const float alphaFade = remaining;
@@ -152,7 +141,7 @@ void GruxEnemy::UpdateJumpTelegraphImpactFlash(float deltaTime)
         // alpha multiplier; Charge Telegraph never writes this value.
         mesh->plusAlphaCBuffer->data.brightness = alphaFade - 1.0f;
     }
-    if (jumpTelegraphImpactFlashProgress >= 1.0f)
+    if (impactFlashProgress >= 1.0f)
         HideJumpTelegraph();
 }
 
@@ -160,7 +149,6 @@ void GruxEnemy::HideJumpTelegraph()
 {
     jumpTelegraphImpactFlashActive = false;
     jumpTelegraphImpactFlashElapsed = 0.0f;
-    jumpTelegraphImpactFlashProgress = 0.0f;
     if (jumpTelegraphMeshComponent)
     {
         jumpTelegraphMeshComponent->plusAlphaCBuffer->data.flashValue = 0.0f;

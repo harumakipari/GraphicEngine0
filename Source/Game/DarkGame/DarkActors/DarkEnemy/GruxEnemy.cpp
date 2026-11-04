@@ -3151,11 +3151,9 @@ bool GruxEnemy::CanPlanJumpAttack() const
 bool GruxEnemy::PrepareJumpAttackSetupTarget()
 {
     DirectX::XMFLOAT3 target{};
-    float setupDistance = 0.0f;
-    int candidateCount = 0;
     if (!FindAttackSetupTarget(jumpSetupDistanceMin, jumpSetupDistanceMax,
         attackSetupCandidateAngleStep, attackSetupClampTolerance, jumpSetupMinimumMoveDistance,
-        target, setupDistance, candidateCount))
+        target))
     {
         ClearAttackSetupTarget();
         return false;
@@ -3165,11 +3163,9 @@ bool GruxEnemy::PrepareJumpAttackSetupTarget()
     attackSetupTarget.valid = true;
     return true;
 }
-bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float& outDistance, int& outCandidateCount, float boundaryMarginOverride) const
+bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float boundaryMarginOverride) const
 {
     outTarget = {};
-    outDistance = 0.0f;
-    outCandidateCount = 0;
     const auto scene = GetOwnerScene();
     const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
     if (!player || player->IsPendingKill())
@@ -3201,7 +3197,6 @@ bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, floa
             playerPosition.z + rotatedZ * setupDistance };
         RepositionTargetEvaluation evaluation{};
         EvaluateClampedPositioningTarget(bossPosition, originalCandidate, evaluation, boundaryMarginOverride);
-        ++outCandidateCount;
         const float clampDeltaX = evaluation.clampedTarget.x - originalCandidate.x;
         const float clampDeltaZ = evaluation.clampedTarget.z - originalCandidate.z;
         const float clampDistance = std::sqrt(clampDeltaX * clampDeltaX + clampDeltaZ * clampDeltaZ);
@@ -3212,7 +3207,6 @@ bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, floa
         if (std::sqrt(moveX * moveX + moveZ * moveZ) < (std::max)(0.0f, minimumMoveDistance))
             continue;
         outTarget = evaluation.clampedTarget;
-        outDistance = setupDistance;
         return true;
     }
     return false;
