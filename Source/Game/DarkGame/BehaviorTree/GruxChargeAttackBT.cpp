@@ -821,7 +821,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
         chargeBT.stunPhase = ChargeBTStunPhase::None;
         chargeBT.recoveryDuration = status == ChargeBTStepResult::Complete
             ? GetPostStunRecoveryDuration() : GetSelectedAttackRecoveryDuration();
-        SetNextRecoveryDuration(chargeBT.recoveryDuration, status == ChargeBTStepResult::Complete ? "PostStun" : "ChargeFailed");
+        SetNextRecoveryDuration(chargeBT.recoveryDuration);
     }
     else if (chargeBT.phase == ChargeBTPhase::Result)
     {
@@ -831,18 +831,15 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
             chargeBT.failed = true;
         }
         chargeBT.recoveryDuration = GetSelectedAttackRecoveryDuration();
-        const char* source = chargeBT.failed ? "ChargeFailed" : "Default";
         if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::PlayerHit)
         {
             chargeBT.recoveryDuration = GetChargePlayerHitRecoveryDuration();
-            source = "ChargePlayerHit";
         }
         else if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::JustDodge)
         {
             chargeBT.recoveryDuration = GetChargeJustDodgeRecoveryDuration();
-            source = "ChargeJustDodge";
         }
-        SetNextRecoveryDuration(chargeBT.recoveryDuration, source);
+        SetNextRecoveryDuration(chargeBT.recoveryDuration);
     }
     else return ChargeBTStepResult::Failed;
     FinishChargeAttackBT();
@@ -925,7 +922,6 @@ void GruxEnemy::CleanupChargeAttackBT()
     chargeEndReasonDebug = ChargeAttackEndReason::None;
     chargeWallFacingAmountDebug = 0.0f;
     nextRecoveryDuration.reset();
-    nextRecoverySource = "Default";
     selectedActionType = chargeBT.previousAction;
     chargeBT = {};
     chargeBT.tripleChargeWallTurnClearance = tripleTurnClearance;

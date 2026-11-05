@@ -623,8 +623,8 @@ public:
     // 選択中の攻撃に対応するRecovery時間を返す。
     float GetRecoveryDurationForCurrentAttack() const;
 
-    // 次のRecoveryに使う時間と設定元を記録する。
-    void SetNextRecoveryDuration(float duration, const char* source);
+    // Sets the duration override for the next Recovery.
+    void SetNextRecoveryDuration(float duration);
 
     // 次のRecovery時間を取得し、一時設定を解除する。
     float ConsumeNextRecoveryDuration();
@@ -1850,7 +1850,6 @@ private:
     float chargeJustDodgeRecoveryDuration = 0.7f;  // Chargeをジャスト回避された後のRecovery時間。
     float postStunRecoveryDuration = 0.4f;  // スタン後のRecovery時間。
     std::optional<float> nextRecoveryDuration;  // 次のRecoveryに使用する時間の指定。
-    std::string nextRecoverySource = "Default";  // 次のRecovery時間を指定した要因。
 
     bool isDeathPerform = false;  // 死亡演出中か。
     bool beginHuskParticleRequest = false;  // 死亡時のHuskパーティクル開始要求があるか。

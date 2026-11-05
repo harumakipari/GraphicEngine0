@@ -16,6 +16,7 @@ public:
 		Complete,	// Às¬Œ÷
 	};
 
+	virtual ~ActionBase() = default;
 	// Àsˆ—(ƒˆ‰¼‘zŠÖ”)
 	virtual ActionBase::State Run(float elapsedTime) = 0;
 	virtual void ResetRuntime() {}

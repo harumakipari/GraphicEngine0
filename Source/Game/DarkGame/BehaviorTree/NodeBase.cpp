@@ -179,19 +179,6 @@ NodeBase* NodeBase::SelectAttackRandom(std::vector<std::shared_ptr<NodeBase>>* l
         selected = fast;
     }
 
-    const NodeBase* repeatPenaltyTarget = nullptr;
-    if (owner)
-    {
-        for (const auto& node : *list)
-        {
-            if (owner->GetAttackRepeatPenaltyForPlan(node->GetName()) < 1.0f)
-            {
-                repeatPenaltyTarget = node.get();
-                break;
-            }
-        }
-    }
-
     return selected;
 }
 // シーケンス・シーケンシャルルーピングでノード選択
