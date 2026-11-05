@@ -606,12 +606,10 @@ public:
     float justDodgeMaxTowardAttackerDot = 0.25f; // 回避方向と攻撃者方向の成立判定しきい値
     DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{}; // 回避開始時に固定したワールド方向
     bool dodgeWorldDirectionSnapshotValid = false; // 回避方向スナップショットが有効か
-    std::string lastJustDodgeAttack = "None"; // 直近のJust Dodge対象攻撃名
     float lastJustAnimationTime = 0.0f; // Just Dodge判定時のアニメーション時刻
     float lastJustWindowStart = 0.0f; // Just Dodge判定区間の開始時刻
     float lastJustWindowEnd = 0.0f; // Just Dodge判定区間の終了時刻
     float lastJustWindowRatio = 0.0f; // Just Dodge成立位置の判定区間内比率
-    float lastJustBossHitBoxElapsed = -1.0f; // 直近のBoss攻撃判定開始からの経過時間
     float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
     float rushApproachPoseBlendTime = 0.12f; // Rush接近姿勢へ切り替えるブレンド時間
     float rushWindupDuration = 0.20f; // Rush接近前の予備動作時間

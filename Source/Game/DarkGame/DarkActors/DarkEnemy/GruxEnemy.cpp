@@ -1112,7 +1112,7 @@ void GruxEnemy::EndFinalHitReaction()
 void GruxEnemy::PauseBattleAI()
 {
 	battleAIActive = false;
-	ResetFourthHitReactionDebug();
+	ResetFourthHitReaction();
 	StopBattleActions();
 
 	activeNode = nullptr;
@@ -1135,7 +1135,7 @@ void GruxEnemy::PauseBattleAIForPhaseTransition()
 {
 	phase2CinematicAnimationOwnedExternally = true;
 	battleAIActive = false;
-	ResetFourthHitReactionDebug();
+	ResetFourthHitReaction();
 	StopBattleActions();
 	ResetBehaviorTreeRuntime();
 	behaviorTreePreviousNode = "None";
@@ -1203,7 +1203,7 @@ void GruxEnemy::ResetBehaviorTreeForBattleRestart()
 void GruxEnemy::ResetCombatRuntimeForBattleRestart()
 {
 	HideDashTelegraphVisual();
-	ResetFourthHitReactionDebug();
+	ResetFourthHitReaction();
 	ClearAttackSetupTarget();
 	ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
 	ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
@@ -2383,7 +2383,7 @@ bool GruxEnemy::BeginChargeAttackMovement()
 	const BossTargetContext context = BuildTargetContext();
 	if (!context.valid)
 	{
-		chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
+		chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
 		Logger::Warning(Logger::LogCategory::Gameplay,
 			"[BossCharge][StartFailed] reason=InvalidTarget");
 		return false;
@@ -2394,11 +2394,11 @@ bool GruxEnemy::BeginChargeAttackMovement()
 		return false;
 	}
 
-	chargeStartPositionDebug = GetPosition();
+	chargeStartPosition = GetPosition();
 	float validationClearance = 0.0f;
 	bool validationHitWall = false;
 	const bool validationMeasured = EvaluateChargeStartClearance(
-		chargeStartPositionDebug, chargeDirection, validationClearance, validationHitWall);
+		chargeStartPosition, chargeDirection, validationClearance, validationHitWall);
 	(void)validationHitWall;
 	if (!validationMeasured)
 	{
@@ -2409,8 +2409,8 @@ bool GruxEnemy::BeginChargeAttackMovement()
 		return false;
 	}
 	chargeElapsedTime = 0.0f;
-	chargeWallFacingAmountDebug = 0.0f;
-	chargeEndReasonDebug = ChargeAttackEndReason::None;
+	chargeWallFacingAmount = 0.0f;
+	chargeEndReason = ChargeAttackEndReason::None;
 	chargeMovementActive = true;
 	ApplyMainChargeWindSettings();
 	if (mainChargeWindMeshComponent)
@@ -2444,7 +2444,7 @@ bool GruxEnemy::LockChargeDirectionToPlayer()
 	const BossTargetContext context = BuildTargetContext();
 	if (!context.valid)
 	{
-		chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
+		chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
 		Logger::Warning(Logger::LogCategory::Gameplay, "[BossCharge][DirectionLockFailed] reason=InvalidTarget");
 		return false;
 	}
@@ -2453,7 +2453,7 @@ bool GruxEnemy::LockChargeDirectionToPlayer()
 	const float directionLength = std::sqrt(chargeDirection.x * chargeDirection.x + chargeDirection.z * chargeDirection.z);
 	if (directionLength <= FLT_EPSILON)
 	{
-		chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
+		chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
 		Logger::Warning(Logger::LogCategory::Gameplay, "[BossCharge][DirectionLockFailed] reason=ZeroDirection");
 		return false;
 	}
@@ -2466,11 +2466,11 @@ bool GruxEnemy::LockChargeDirectionToPlayer()
 ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, bool allowTripleWallTurn)
 {
 	if (!chargeMovementActive)
-		return chargeEndReasonDebug;
+		return chargeEndReason;
 
 	UpdateChargeWindTrails(deltaTime);
 	chargeElapsedTime += (std::max)(0.0f, deltaTime);
-	chargeWallFacingAmountDebug = 0.0f;
+	chargeWallFacingAmount = 0.0f;
 	CharacterMovementComponent::BossRoomProbeMoveBlockEvent bossRoomProbeBlockEvent;
 	if (characterMovementComponent &&
 		characterMovementComponent->ConsumeBossRoomProbeChargeWallHitEvent(bossRoomProbeBlockEvent))
@@ -2490,19 +2490,19 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 			if (allowTripleWallTurn && chargeBT.phase2SettingsLatched &&
 				chargeBT.tripleChargeIndex < 2)
 			{
-				chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
+				chargeEndReason = ChargeAttackEndReason::LegComplete;
 				StopChargeAttackMovement();
-				return chargeEndReasonDebug;
+				return chargeEndReason;
 			}
 
-			chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
+			chargeEndReason = ChargeAttackEndReason::WallHit;
 			const DirectX::XMFLOAT3 currentPosition = GetPosition();
 			const DirectX::XMFLOAT3 impactPosition = {
 				currentPosition.x, bossRoomProbeBlockEvent.hitPosition.y, currentPosition.z };
 			SpawnWallImpactEffect(impactPosition, bossRoomProbeBlockEvent.hitNormal);
 			Time::SetSlow(0.0f, 0.05f);
 			StopChargeAttackMovement();
-			return chargeEndReasonDebug;
+			return chargeEndReason;
 		}
 	}
 
@@ -2540,12 +2540,12 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 	bool wallCandidate = false;
 	if (wallCastHit)
 	{
-		chargeWallFacingAmountDebug = -(
+		chargeWallFacingAmount = -(
 			chargeDirection.x * wallHit.normal.x +
 			chargeDirection.z * wallHit.normal.z);
 
 		const bool facesCharge =
-			chargeWallFacingAmountDebug >= chargeWallFacingThreshold;
+			chargeWallFacingAmount >= chargeWallFacingThreshold;
 		const bool isNotFloor =
 			std::abs(wallHit.normal.y) <= chargeWallNormalYThreshold;
 		wallCandidate = facesCharge && isNotFloor;
@@ -2580,9 +2580,9 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 
 			hitActors.emplace(hitPlayer);
 			++currentAttackHitCount;
-			chargeEndReasonDebug = ChargeAttackEndReason::PlayerHit;
+			chargeEndReason = ChargeAttackEndReason::PlayerHit;
 			StopChargeAttackMovement();
-			return chargeEndReasonDebug;
+			return chargeEndReason;
 		}
 
 	}
@@ -2594,11 +2594,11 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 			chargeBT.phase2SettingsLatched &&
 			wallHit.distance <= chargeBT.tripleChargeWallTurnClearance)
 		{
-			chargeEndReasonDebug = ChargeAttackEndReason::LegComplete;
+			chargeEndReason = ChargeAttackEndReason::LegComplete;
 			StopChargeAttackMovement();
-			return chargeEndReasonDebug;
+			return chargeEndReason;
 		}
-		chargeEndReasonDebug = ChargeAttackEndReason::WallHit;
+		chargeEndReason = ChargeAttackEndReason::WallHit;
 		const float wallHitDistance = (std::max)(0.0f, wallHit.distance);
 		const DirectX::XMFLOAT3 impactPosition = wallHit.hasPosition
 			? wallHit.hitPoint
@@ -2613,18 +2613,18 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 		SpawnWallImpactEffect(impactPosition, impactNormal);
 		Time::SetSlow(0.0f, 0.05f);
 		StopChargeAttackMovement();
-		return chargeEndReasonDebug;
+		return chargeEndReason;
 	}
 
 	if (chargeElapsedTime >= chargeSafetyTimeout)
 	{
-		chargeEndReasonDebug = ChargeAttackEndReason::SafetyTimeout;
+		chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
 		const std::string timeoutMessage =
 			"[BossCharge][End] reason=SafetyTimeout elapsed=" +
 			std::to_string(chargeElapsedTime);
 		Logger::Warning(Logger::LogCategory::Gameplay, timeoutMessage.c_str());
 		StopChargeAttackMovement();
-		return chargeEndReasonDebug;
+		return chargeEndReason;
 	}
 
 	if (characterMovementComponent)
@@ -2868,45 +2868,6 @@ int GruxEnemy::GetDamageForCurrentAttack() const
 	return 1;
 }
 
-//“–‚½‚Á‚½Žž‚Ìˆ—
-float GruxEnemy::GetActiveHitBoxElapsedForDebug() const
-{
-	if (activeHitBoxNotifyStates.empty())
-		return -1.0f;
-	const auto controller = GetBodyAnimationController();
-	if (!controller)
-		return -1.0f;
-	float startTime = FLT_MAX;
-	for (const auto* state : activeHitBoxNotifyStates)
-	{
-		if (state)
-			startTime = (std::min)(startTime, state->startTime);
-	}
-	return startTime < FLT_MAX
-		? (std::max)(0.0f, controller->GetCurrentAnimationTime() - startTime)
-		: -1.0f;
-}
-
-std::string GruxEnemy::GetCurrentAttackNameForDebug() const
-{
-	const auto controller = GetBodyAnimationController();
-	const std::string animationName = controller
-		? controller->GetCurrentAnimationName()
-		: "UnknownAnimation";
-	const char* attackName = "UnknownAttack";
-	switch (selectedAttackType)
-	{
-	case BossAttackType::PrimaryAttackLA: attackName = "PrimaryAttackLA"; break;
-	case BossAttackType::PrimaryAttackRA: attackName = "PrimaryAttackRA"; break;
-	case BossAttackType::FastCombo: attackName = "FastCombo"; break;
-	case BossAttackType::JumpAttack: attackName = "JumpAttack"; break;
-	case BossAttackType::Dash: attackName = "Dash"; break;
-	case BossAttackType::DashAttack: attackName = "DashAttack"; break;
-	case BossAttackType::ChargeAttack: attackName = "ChargeAttack"; break;
-	case BossAttackType::LongRangeAttack: attackName = "LongRangeAttack"; break;
-	}
-	return std::string(attackName) + " / " + animationName;
-}
 BossTargetContext GruxEnemy::BuildTargetContext() const
 {
 	BossTargetContext context{};
@@ -4056,7 +4017,7 @@ void GruxEnemy::EndFourthHitReaction()
 	fourthHitReactionRemaining = 0.0f;
 }
 
-void GruxEnemy::ResetFourthHitReactionDebug()
+void GruxEnemy::ResetFourthHitReaction()
 {
 	fourthHitReactionActive = false;
 	fourthHitReactionRemaining = 0.0f;

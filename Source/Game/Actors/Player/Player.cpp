@@ -2281,12 +2281,6 @@ void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 		? std::clamp((animationTime - justWindowStart) /
 			(justWindowEnd - justWindowStart), 0.0f, 1.0f)
 		: 0.0f;
-	lastJustDodgeAttack = gruxEnemy
-		? gruxEnemy->GetCurrentAttackNameForDebug()
-		: "Unknown";
-	lastJustBossHitBoxElapsed = gruxEnemy
-		? gruxEnemy->GetActiveHitBoxElapsedForDebug()
-		: -1.0f;
 
 	// SEÇÃçƒê∂
 	CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge3.wav", 1.5f);

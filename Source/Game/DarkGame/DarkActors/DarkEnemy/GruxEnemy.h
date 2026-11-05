@@ -659,12 +659,6 @@ public:
     // 現在の攻撃がジャスト回避されたかを返す。
     bool WasCurrentAttackSequenceJustDodged() const { return !justDodgedActors.empty(); }
 
-    // 有効な攻撃判定の経過時間をデバッグ用に返す。
-    float GetActiveHitBoxElapsedForDebug() const;
-
-    // 現在の攻撃名をデバッグ用に返す。
-    std::string GetCurrentAttackNameForDebug() const;
-
     // 現在のPlayerを新しい攻撃・防御行動の対象にできるか判定する。
     bool CanPlanAttackAgainstCurrentPlayer() const;
 
@@ -1112,7 +1106,7 @@ private:
     void EndFourthHitReaction();
 
     // 4段目の被弾リアクションの診断情報を初期化する。
-    void ResetFourthHitReactionDebug();
+    void ResetFourthHitReaction();
 
 
     // 距離を近距離・中距離・遠距離に分類する。
@@ -1837,9 +1831,9 @@ private:
     bool chargeDangerWindowActive = false;  // Chargeの危険判定期間が有効か。
     DirectX::XMFLOAT3 chargeDirection{ 0.0f, 0.0f, 1.0f };  // Chargeの移動方向。
     bool chargeDirectionLocked = false;  // Chargeの移動方向を固定済みか。
-    float chargeWallFacingAmountDebug = 0.0f;  // Chargeの壁の向き判定に使った値。
-    DirectX::XMFLOAT3 chargeStartPositionDebug{};  // Charge開始位置の診断値。
-    ChargeAttackEndReason chargeEndReasonDebug = ChargeAttackEndReason::None;  // Chargeの終了理由の診断値。
+    float chargeWallFacingAmount = 0.0f;  // Chargeの壁の向き判定に使った値。
+    DirectX::XMFLOAT3 chargeStartPosition{};  // Charge開始位置の診断値。
+    ChargeAttackEndReason chargeEndReason = ChargeAttackEndReason::None;  // Chargeの終了理由の診断値。
 
     float stunDuration = 2.5f;  // スタン状態の継続時間。
     std::string deathAnimationName = "Death_A_0";  // 死亡時に再生するアニメーション名。
