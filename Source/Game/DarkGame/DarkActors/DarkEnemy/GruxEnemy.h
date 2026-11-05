@@ -194,7 +194,7 @@ public:
     // HPバーのフェード係数を設定する。
     void SetHpBarFadeAlpha(float alpha);
     // 第2段階用HPバーの演出を開始する。
-    void BeginPhase2HpBarPresentation(int presentationMaxHp);
+    void BeginPhase2HpBarPresentation();
 
     // 第2段階用HPバーの演出を完了する。
     void CompletePhase2HpBarPresentation();
@@ -1114,7 +1114,6 @@ private:
 
     struct RepositionTargetEvaluation
     {
-        DirectX::XMFLOAT3 desiredTarget{};  // 境界補正前の目標位置。
         DirectX::XMFLOAT3 clampedTarget{};  // 境界補正後の目標位置。
         float clampDistance = 0.0f;  // 目標位置の境界補正距離。
         bool bossRoomPathBlocked = false;  // ボス部屋の経路が遮られているか。
@@ -1248,7 +1247,6 @@ private:
     float fourthHitReactionLastRoll = -1.0f;  // 4段目の被弾リアクションに使った直近の乱数値。
     bool fourthHitReactionLastWon = false;  // 直近の4段目の被弾リアクション抽選が成功したか。
     float fourthHitReactionLastDirectionDot = 0.0f;  // 4段目の被弾方向の判定に使った内積。
-    std::string fourthHitReactionDirection = "None";  // 4段目の被弾方向の表示文字列。
     std::string fourthHitReactionAnimation = "None";  // 4段目の被弾リアクションのアニメーション名。
     bool weaponEmissiveEnabled = true;  // 武器の発光を有効にするか。
     DirectX::XMFLOAT3 weaponEmissiveColor = { 0.0f, 0.0f, 0.0f };  // 武器の発光色。
@@ -1350,8 +1348,6 @@ private:
     float phase2HpBarPresentationElapsed = 0.0f;  // 第2段階のHPバー演出の経過時間。
     float phase2HpBarPresentationFrameProgress = 0.0f;  // 第2段階のHPバーの枠の表示進行度。
     float phase2HpBarPresentationFillProgress = 0.0f;  // 第2段階のHPゲージの表示進行度。
-    float phase2HpBarPresentationHp = 0.0f;  // 第2段階のHPバー演出で表示するHP。
-    int phase2HpBarPresentationMaxHp = 1;  // 第2段階のHPバー演出で使用する最大HP。
     bool phase2HpBarPresentationRestoreVisible = false;  // HPバープレビュー解除時に表示を復元するか。
 
 
@@ -1443,7 +1439,6 @@ private:
     struct RoarFloatingDebris
     {
         std::shared_ptr<SkeletalMeshComponent> meshComponent;  // 浮遊する破片のメッシュ。
-        bool active = false;  // 破片が有効か。
         DirectX::XMFLOAT3 normalizedDirection{};  // 浮遊する破片の正規化された方向。
         float normalizedRingDistance = 0.0f;  // 浮遊する破片のリング内の距離比率。
         float spawnThreshold = 1.0f;  // 浮遊する破片の出現閾値。
@@ -1703,7 +1698,6 @@ private:
     bool dashTelegraphLineDynamicShrinkActive = false;  // Dash予兆の線が移動に合わせて縮小中か。
     DirectX::XMFLOAT3 dashTelegraphDynamicLineStart{};  // Dash予兆の縮小する線の開始位置。
     float dashTelegraphCurrentLineLength = 0.0f;  // Dash予兆の線の現在の長さ。
-    float dashTelegraphLineShrinkProgress = 0.0f;  // Dash予兆の線の縮小進行度。
     float dashTelegraphLineMinimumVisibleLength = 0.05f;  // Dash予兆の線が表示される最小長さ。
     float dashTelegraphLineFadeOutDuration = 0.12f;  // Dash予兆の線のフェードアウト時間。
     float dashTelegraphLineAlpha = 0.0f;  // Dash予兆の線の不透明度。
@@ -1779,7 +1773,6 @@ private:
         float tripleChargeTelegraphWidth = 0.0f;  // 複数回Chargeの予兆の幅。
         DirectX::XMFLOAT3 tripleChargeStartPositions[3]{};  // 各Chargeの開始位置。
         bool tripleFinalWallHit = false;  // 複数回Chargeの最後に壁へ衝突したか。
-        bool tripleEarlyWallHit = false;  // 複数回Chargeの途中で壁へ衝突したか。
         float tripleWallStunDurationMultiplier = 1.3f;  // 複数回Chargeで壁へ衝突した際のスタン時間倍率。
         float tripleChargeWallTurnClearance = 15.0f;  // 複数回Chargeで壁際の方向転換に必要な余白距離。
         float tripleChargeLegMaxDistance = 50.0f;  // 複数回Chargeの各移動の最大距離。

@@ -904,16 +904,14 @@ void GruxEnemy::SetHpBarFadeAlpha(const float alpha)
 	}
 }
 
-void GruxEnemy::BeginPhase2HpBarPresentation(const int presentationMaxHp)
+void GruxEnemy::BeginPhase2HpBarPresentation()
 {
 	if (!IsPhase2HpBarPresentationActive())
 		phase2HpBarPresentationRestoreVisible = hpCurrentFillUiComponent && hpCurrentFillUiComponent->IsVisible();
-	phase2HpBarPresentationMaxHp = (std::max)(presentationMaxHp, 1);
 	phase2HpBarPresentationState = Phase2HpBarPresentationState::RevealingFrame;
 	phase2HpBarPresentationElapsed = 0.0f;
 	phase2HpBarPresentationFrameProgress = 0.0f;
 	phase2HpBarPresentationFillProgress = 0.0f;
-	phase2HpBarPresentationHp = 0.0f;
 	ApplyHpBarVisualProfile(HpBarVisualProfile::Phase2);
 	SetHpBarVisible(true);
 	UpdatePhase2HpBarPresentationLayout();
@@ -925,7 +923,6 @@ void GruxEnemy::CompletePhase2HpBarPresentation()
 	phase2HpBarPresentationElapsed = 0.0f;
 	phase2HpBarPresentationFrameProgress = 1.0f;
 	phase2HpBarPresentationFillProgress = 1.0f;
-	phase2HpBarPresentationHp = static_cast<float>(phase2HpBarPresentationMaxHp);
 	ApplyHpBarVisualProfile(HpBarVisualProfile::Phase2);
 	SetHpBarVisible(true);
 	phase2HpBarPresentationRestoreVisible = false;
@@ -937,7 +934,6 @@ void GruxEnemy::SetHpBarVisualProfileForBattlePhase(const bool phase2)
 	phase2HpBarPresentationElapsed = 0.0f;
 	phase2HpBarPresentationFrameProgress = phase2 ? 1.0f : 0.0f;
 	phase2HpBarPresentationFillProgress = phase2 ? 1.0f : 0.0f;
-	phase2HpBarPresentationHp = 0.0f;
 	phase2HpBarPresentationRestoreVisible = false;
 	ApplyHpBarVisualProfile(phase2 ? HpBarVisualProfile::Phase2 : HpBarVisualProfile::Phase1);
 	const float maximumHp = static_cast<float>((std::max)(maxHp, 1));
@@ -4001,7 +3997,6 @@ void GruxEnemy::BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePositio
 		: 0.0f;
 
 	const bool frontHit = fourthHitReactionLastDirectionDot >= 0.0f;
-	fourthHitReactionDirection = frontHit ? "Front" : "Back";
 	fourthHitReactionAnimation = frontHit ? "HitReact_Front" : "HitReact_Back";
 	fourthHitReactionRemaining = std::clamp(fourthHitReactionDuration, 0.0f, 2.0f);
 	fourthHitReactionActive = fourthHitReactionRemaining > 0.0f;
@@ -4024,7 +4019,6 @@ void GruxEnemy::ResetFourthHitReaction()
 	fourthHitReactionLastRoll = -1.0f;
 	fourthHitReactionLastWon = false;
 	fourthHitReactionLastDirectionDot = 0.0f;
-	fourthHitReactionDirection = "None";
 	fourthHitReactionAnimation = "None";
 }
 
@@ -4044,7 +4038,6 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
 	float boundaryMarginOverride) const
 {
 	outEvaluation = {};
-	outEvaluation.desiredTarget = desiredTarget;
 	outEvaluation.clampedTarget = desiredTarget;
 	DirectX::XMFLOAT3 bossRoomTarget{};
 	if (ResolveBossRoomPositioningMove(startPosition, desiredTarget, bossRoomTarget,
@@ -4628,7 +4621,6 @@ void GruxEnemy::ResetPhase2HpBarPresentation()
 	phase2HpBarPresentationElapsed = 0.0f;
 	phase2HpBarPresentationFrameProgress = 0.0f;
 	phase2HpBarPresentationFillProgress = 0.0f;
-	phase2HpBarPresentationHp = 0.0f;
 	const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
 	ApplyHpBarVisualProfile(gameScene && gameScene->IsBossInFinalPhase()
 		? HpBarVisualProfile::Phase2 : HpBarVisualProfile::Phase1);
@@ -4651,8 +4643,6 @@ void GruxEnemy::UpdatePhase2HpBarPresentation()
 	phase2HpBarPresentationFrameProgress = std::clamp(phase2HpBarPresentationElapsed / frameDuration, 0.0f, 1.0f);
 	phase2HpBarPresentationFillProgress = std::clamp(
 		(phase2HpBarPresentationElapsed - phase2HpBarPresentationFillDelay) / fillDuration, 0.0f, 1.0f);
-	phase2HpBarPresentationHp = static_cast<float>(phase2HpBarPresentationMaxHp) *
-		phase2HpBarPresentationFillProgress;
 	if (phase2HpBarPresentationFrameProgress < 1.0f)
 		phase2HpBarPresentationState = Phase2HpBarPresentationState::RevealingFrame;
 	else if (phase2HpBarPresentationElapsed < phase2HpBarPresentationFillDelay)

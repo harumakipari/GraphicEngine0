@@ -983,7 +983,6 @@ void GruxEnemy::EnsureRoarFloatingDebris()
             debris.meshComponent->SetUsingAbsoluteRotation(true);
             debris.meshComponent->SetUsingAbsoluteScale(true);
         }
-        debris.active = false;
         debris.meshComponent->SetIsVisible(false);
     }
 }
@@ -1012,7 +1011,6 @@ void GruxEnemy::InitializeRoarFloatingDebris()
     for (size_t index = 0; index < roarFloatingDebris.size(); ++index)
     {
         auto& debris = roarFloatingDebris[index];
-        debris.active = false;
         const float angle = MathHelper::RandomRange(0.0f, DirectX::XM_2PI);
         debris.normalizedDirection = { std::sin(angle), 0.0f, std::cos(angle) };
         debris.normalizedRingDistance = MathHelper::RandomRange(innerRatio, outerRatio);
@@ -1049,7 +1047,6 @@ void GruxEnemy::UpdateRoarFloatingDebris()
     {
         if (!debris.meshComponent || roarTelegraphProgress < debris.spawnThreshold)
         {
-            debris.active = false;
             if (debris.meshComponent) debris.meshComponent->SetIsVisible(false);
             continue;
         }
@@ -1073,7 +1070,6 @@ void GruxEnemy::UpdateRoarFloatingDebris()
         debris.meshComponent->SetRelativeScaleDirect(
             { debris.baseScale, debris.baseScale, debris.baseScale });
         debris.meshComponent->SetIsVisible(true);
-        debris.active = true;
     }
 }
 
@@ -1081,7 +1077,6 @@ void GruxEnemy::HideRoarFloatingDebris()
 {
     for (auto& debris : roarFloatingDebris)
     {
-        debris.active = false;
         if (debris.meshComponent)
             debris.meshComponent->SetIsVisible(false);
     }

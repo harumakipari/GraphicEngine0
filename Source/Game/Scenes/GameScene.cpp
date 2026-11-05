@@ -724,7 +724,7 @@ void GameScene::NotifyPhase2BossRoar()
         return;
 
     phase2BossRoarHpBarStarted = true;
-    gruxEnemyActor->BeginPhase2HpBarPresentation(phase2MaxHp);
+    gruxEnemyActor->BeginPhase2HpBarPresentation();
 }
 bool GameScene::RequestBossEntryFromPause()
 {

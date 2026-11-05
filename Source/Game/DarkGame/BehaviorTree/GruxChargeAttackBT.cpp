@@ -189,7 +189,6 @@ void GruxEnemy::StartChargeAttackBT()
     chargeBT.tripleChargeLegElapsed = 0.0f;
     chargeBT.tripleChargeLegDistance = 0.0f;
     chargeBT.tripleFinalWallHit = false;
-    chargeBT.tripleEarlyWallHit = false;
     chargeBT.activeStunDuration = GetStunDuration();
     chargeBT.phase = ChargeBTPhase::Telegraph;
     chargeBT.animationElapsed = 0.0f;
@@ -655,7 +654,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
     DisableAttackHitBoxes();
     if (chargeBT.tripleChargeIndex < 2 && chargeBT.result == ChargeAttackEndReason::WallHit)
     {
-        chargeBT.tripleEarlyWallHit = true;
         chargeBT.triplePhase = TripleChargePhase::Aborted;
     }
     else if (chargeBT.tripleChargeIndex >= 2 && chargeBT.result == ChargeAttackEndReason::WallHit)

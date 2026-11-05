@@ -43,7 +43,6 @@ void GruxEnemy::BeginDashTelegraphVisual()
     dashTelegraphLineDynamicShrinkActive = false;
     dashTelegraphDynamicLineStart = dashTelegraphLineStart;
     dashTelegraphCurrentLineLength = dashTelegraphLineLength;
-    dashTelegraphLineShrinkProgress = 0.0f;
     dashTelegraphLineAlpha = 1.0f;
     dashTelegraphFanFadeInProgress = 0.0f;
     dashTelegraphFanAlpha = 0.0f;
@@ -169,7 +168,6 @@ void GruxEnemy::BeginDashTelegraphLineShrink()
     dashTelegraphLineDynamicShrinkActive = true;
     dashTelegraphDynamicLineStart = dashTelegraphLineStart;
     dashTelegraphCurrentLineLength = dashTelegraphLineLength;
-    dashTelegraphLineShrinkProgress = 0.0f;
 }
 
 void GruxEnemy::UpdateDashTelegraphLineShrink()
@@ -185,7 +183,6 @@ void GruxEnemy::UpdateDashTelegraphLineShrink()
         dashTelegraphLineMeshComponent->SetIsVisible(false);
         dashTelegraphLineDynamicShrinkActive = false;
         dashTelegraphCurrentLineLength = 0.0f;
-        dashTelegraphLineShrinkProgress = 1.0f;
         return;
     }
 
@@ -203,7 +200,6 @@ void GruxEnemy::UpdateDashTelegraphLineShrink()
     const float remainingDx = dashTelegraphLineEnd.x - dashTelegraphDynamicLineStart.x;
     const float remainingDz = dashTelegraphLineEnd.z - dashTelegraphDynamicLineStart.z;
     dashTelegraphCurrentLineLength = std::sqrt(remainingDx * remainingDx + remainingDz * remainingDz);
-    dashTelegraphLineShrinkProgress = std::clamp(projectedDistance / originalLength, 0.0f, 1.0f);
 
     if (dashTelegraphCurrentLineLength <= dashTelegraphLineMinimumVisibleLength)
     {
@@ -251,7 +247,6 @@ void GruxEnemy::HideDashTelegraphVisual()
     dashTelegraphLineDynamicShrinkActive = false;
     dashTelegraphDynamicLineStart = {};
     dashTelegraphCurrentLineLength = 0.0f;
-    dashTelegraphLineShrinkProgress = 0.0f;
     dashTelegraphLineAlpha = 0.0f;
     dashTelegraphFanFadeInProgress = 0.0f;
     dashTelegraphFanAlpha = 0.0f;
