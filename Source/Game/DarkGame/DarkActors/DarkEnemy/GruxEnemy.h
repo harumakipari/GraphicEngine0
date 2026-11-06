@@ -1659,7 +1659,6 @@ private:
 	float jumpTelegraphEmissiveIntensity = 15.0f;  // Jump予兆の発光強度。
 	float jumpTelegraphInnerStartScale = 0.01f;  // Jump予兆の内側モデルの開始スケール。
 	float jumpTelegraphLandingTime = 0.869391f;  // Jump予兆の着地時刻。
-	int jumpTelegraphInnerScaleCurve = 0;  // Jump予兆の内側モデルの拡縮曲線の選択。
 	bool jumpTelegraphEnableRotation = true;  // Jump予兆の回転を有効にするか。
 	float jumpTelegraphOuterRotationSpeed = 360.0f;  // Jump予兆の外側モデルの回転速度。
 	float jumpTelegraphInnerRotationSpeed = -360.0f;  // Jump予兆の内側モデルの回転速度。

@@ -943,113 +943,47 @@ void GruxEnemy::CleanupChargeAttackBT()
 void GruxEnemy::DrawChargeAttackBTDebug()
 {
 #ifdef USE_IMGUI
-    DrawTripleJumpDebug();
     ImGui::SeparatorText(U8("突進BT"));
-
-    ImGui::DragFloat(
-        U8("突進準備距離 最小"),
-        &chargeSetupDistanceMin,
-        0.1f, 0.1f, 30.0f, "%.2f m");
-
-    ImGui::DragFloat(
-        U8("突進準備距離 最大"),
-        &chargeSetupDistanceMax,
-        0.1f, 0.1f, 30.0f, "%.2f m");
-
-    ImGui::DragFloat(
-        U8("突進準備 最低移動距離"),
-        &chargeSetupMinimumMoveDistance,
-        0.1f, 0.0f, 30.0f, "%.2f m");
-
-    chargeSetupDistanceMin = (std::max)(0.1f, chargeSetupDistanceMin);
-    chargeSetupDistanceMax = (std::max)(chargeSetupDistanceMin, chargeSetupDistanceMax);
-    chargeSetupMinimumMoveDistance = (std::max)(0.0f, chargeSetupMinimumMoveDistance);
-
+    ImGui::DragFloat(U8("突進準備距離 最小"), &chargeSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
+    ImGui::DragFloat(U8("突進準備距離 最大"), &chargeSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
+    ImGui::DragFloat(U8("突進準備 最低移動距離"), &chargeSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
     ImGui::DragFloat(U8("三連突進 壁前切り返し距離"), &chargeBT.tripleChargeWallTurnClearance, 0.05f, 0.0f, 10.0f, "%.2f m");
     ImGui::DragFloat(U8("三連突進 1・2段目 最大突進距離"), &chargeBT.tripleChargeLegMaxDistance, 0.1f, 0.1f, 50.0f, "%.2f m");
     ImGui::DragFloat(U8("三連突進 1・2段目 最大突進時間"), &chargeBT.tripleChargeLegMaxDuration, 0.05f, 0.1f, 10.0f, "%.2f sec");
     ImGui::DragFloat(U8("三連突進 段間切り返し時間"), &chargeBT.tripleChargeTransitionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
     ImGui::DragFloat(U8("三連突進 最終壁スタン倍率"), &chargeBT.tripleWallStunDurationMultiplier, 0.05f, 1.0f, 5.0f, "%.2fx");
-    ImGui::DragFloat("Triple Charge Reposition Max Distance", &tripleChargeRepositionMaxDistance, 0.05f, 0.0f, 2.0f, "%.2f m");
-    ImGui::DragFloat("Triple Charge Reposition Safety Margin", &tripleChargeRepositionSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
-    ImGui::DragFloat("Triple Charge Reposition Speed", &tripleChargeRepositionSpeed, 0.05f, 0.1f, 10.0f, "%.2f m/s");
-    ImGui::DragFloat("Triple Charge Reposition Side Safety Margin", &tripleChargeRepositionSideSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
-    ImGui::Checkbox("Triple Charge Telegraph Emissive Enabled", &tripleChargeTelegraphEmissiveEnabled);
-    ImGui::ColorEdit3("Triple Charge Telegraph Phase 1 Emissive Color", &tripleChargeTelegraphPhase1EmissiveColor.x);
-    ImGui::ColorEdit3("Triple Charge Telegraph Phase 2 Emissive Color", &tripleChargeTelegraphPhase2EmissiveColor.x);
-    ImGui::DragFloat("Triple Charge Telegraph Emissive Intensity", &tripleChargeTelegraphEmissiveIntensity,
-        0.05f, 0.0f, 20.0f, "%.2f");
-    tripleChargeTelegraphEmissiveIntensity = (std::max)(0.0f, tripleChargeTelegraphEmissiveIntensity);
-    ImGui::DragFloat("Triple Charge Telegraph Expand Duration", &tripleChargeTelegraphExpandDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
-    ImGui::DragFloat("Triple Charge Telegraph Hold Duration", &tripleChargeTelegraphHoldDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
-    ImGui::DragFloat("Triple Charge Telegraph Fixed World Y", &tripleChargeTelegraphFixedWorldY, 0.01f, -5.0f, 5.0f, "%.3f");
-    ImGui::DragFloat("Triple Charge Telegraph Forward Offset", &tripleChargeTelegraphForwardOffset, 0.01f, -1.0f, 2.0f, "%.2f m");
-    ImGui::DragFloat("Triple Charge Telegraph Max Distance", &tripleChargeTelegraphMaxDistance, 0.1f, 0.1f, 100.0f, "%.2f m");
-    chargeBT.tripleChargeWallTurnClearance = (std::max)(0.0f, chargeBT.tripleChargeWallTurnClearance);
-    chargeBT.tripleChargeLegMaxDistance = (std::max)(0.1f, chargeBT.tripleChargeLegMaxDistance);
-    chargeBT.tripleChargeLegMaxDuration = (std::max)(0.1f, chargeBT.tripleChargeLegMaxDuration);
-    chargeBT.tripleChargeTransitionDuration = (std::max)(0.0f, chargeBT.tripleChargeTransitionDuration);
-    chargeBT.tripleWallStunDurationMultiplier = (std::max)(1.0f, chargeBT.tripleWallStunDurationMultiplier);
-    tripleChargeRepositionMaxDistance = (std::max)(0.0f, tripleChargeRepositionMaxDistance);
-    tripleChargeRepositionSafetyMargin = (std::max)(0.0f, tripleChargeRepositionSafetyMargin);
-    tripleChargeRepositionSpeed = (std::max)(0.1f, tripleChargeRepositionSpeed);
-    tripleChargeRepositionSideSafetyMargin = (std::max)(0.0f, tripleChargeRepositionSideSafetyMargin);
-    tripleChargeTelegraphExpandDuration = std::clamp(tripleChargeTelegraphExpandDuration, 0.0f, 1.0f);
-    tripleChargeTelegraphHoldDuration = std::clamp(tripleChargeTelegraphHoldDuration, 0.0f, 1.0f);
-    tripleChargeTelegraphMaxDistance = (std::max)(0.1f, tripleChargeTelegraphMaxDistance);
-
-    ImGui::DragFloat(U8("第一形態時のChargeの速さ"), &chargeSpeed,
-        0.1f, 0.1f, 50.0f, "%.2f m/s");
-    ImGui::DragFloat(U8("第二形態時のChargeの速さ"), &chargeSpeedPhase2,
-        0.1f, 0.1f, 50.0f, "%.2f m/s");
+    ImGui::DragFloat(U8("三連突進 位置補正 最大距離"), &tripleChargeRepositionMaxDistance, 0.05f, 0.0f, 2.0f, "%.2f m");
+    ImGui::DragFloat(U8("三連突進 位置補正 安全余裕"), &tripleChargeRepositionSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
+    ImGui::DragFloat(U8("三連突進 位置補正速度"), &tripleChargeRepositionSpeed, 0.05f, 0.1f, 10.0f, "%.2f m/s");
+    ImGui::DragFloat(U8("三連突進 位置補正 横方向の安全余裕"), &tripleChargeRepositionSideSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
+    ImGui::Checkbox(U8("三連突進 予兆の発光を有効化"), &tripleChargeTelegraphEmissiveEnabled);
+    ImGui::ColorEdit3(U8("三連突進 予兆の第一形態発光色"), &tripleChargeTelegraphPhase1EmissiveColor.x);
+    ImGui::ColorEdit3(U8("三連突進 予兆の第二形態発光色"), &tripleChargeTelegraphPhase2EmissiveColor.x);
+    ImGui::DragFloat(U8("三連突進 予兆の発光強度"), &tripleChargeTelegraphEmissiveIntensity, 0.05f, 0.0f, 20.0f, "%.2f");
+    ImGui::DragFloat(U8("三連突進 予兆の拡大時間"), &tripleChargeTelegraphExpandDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
+    ImGui::DragFloat(U8("三連突進 予兆の維持時間"), &tripleChargeTelegraphHoldDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
+    ImGui::DragFloat(U8("三連突進 予兆のワールドY座標"), &tripleChargeTelegraphFixedWorldY, 0.01f, -5.0f, 5.0f, "%.3f");
+    ImGui::DragFloat(U8("三連突進 予兆の前方オフセット"), &tripleChargeTelegraphForwardOffset, 0.01f, -1.0f, 2.0f, "%.2f m");
+    ImGui::DragFloat(U8("三連突進 予兆の最大距離"), &tripleChargeTelegraphMaxDistance, 0.1f, 0.1f, 100.0f, "%.2f m");
+    ImGui::DragFloat(U8("第一形態 突進速度"), &chargeSpeed, 0.1f, 0.1f, 50.0f, "%.2f m/s");
+    ImGui::DragFloat(U8("第二形態 突進速度"), &chargeSpeedPhase2, 0.1f, 0.1f, 50.0f, "%.2f m/s");
 
     for (BossAttackData& attackData : combatAttackData)
     {
         if (attackData.type != BossAttackType::ChargeAttack)
             continue;
-        ImGui::DragInt("Charge Damage (Phase 1)", &attackData.damagePerHit, 1.0f, 0, 1000);
-        attackData.damagePerHit = (std::max)(0, attackData.damagePerHit);
+
+        ImGui::DragInt(U8("第一形態 突進ダメージ"), &attackData.damagePerHit, 1.0f, 0, 1000);
         break;
     }
-    ImGui::DragInt("Charge Damage (Phase 2)", &chargeDamagePhase2, 1.0f, 0, 1000);
-    chargeDamagePhase2 = (std::max)(0, chargeDamagePhase2);
 
-    ImGui::DragFloat(U8("第一形態時突進当たり判定"), &chargePlayerCastRadiusScale,
-        0.01f, 0.1f, 2.0f, "%.2f");
-    ImGui::DragFloat(U8("第二形態時突進当たり判定"), &chargePlayerCastRadiusScalePhase2,
-        0.01f, 0.1f, 2.0f, "%.2f");
-    ImGui::DragFloat("Charge Player Damage Forward Offset", &chargePlayerDamageForwardOffset,
-        0.01f, 0.0f, 5.0f, "%.2f m");
-    ImGui::DragFloat(U8("第一形態時Charge Just Dodge判定"), &chargeJustDodgeCastRadiusScale,
-        0.01f, 0.1f, 2.0f, "%.2f");
-    ImGui::DragFloat(U8("第二形態時Charge Just Dodge判定"), &chargeJustDodgeCastRadiusScalePhase2,
-        0.01f, 0.1f, 5.0f, "%.2f");
-    ImGui::DragFloat("Charge Wall Cast Radius Scale", &chargeWallCastRadiusScale,
-        0.01f, 0.1f, 2.0f, "%.2f");
-    chargePlayerCastRadiusScalePhase2 = std::clamp(chargePlayerCastRadiusScalePhase2, 0.1f, 2.0f);
-    chargePlayerDamageForwardOffset = std::clamp(chargePlayerDamageForwardOffset, 0.0f, 5.0f);
-    chargeJustDodgeCastRadiusScale = std::clamp(chargeJustDodgeCastRadiusScale, 0.1f, 2.0f);
-    chargeJustDodgeCastRadiusScalePhase2 = std::clamp(chargeJustDodgeCastRadiusScalePhase2, 0.1f, 5.0f);
-
-    // ★ 方向固定時刻を調整可能にする
-    ImGui::DragFloat(
-        U8("突進 方向固定時刻"),
-        &chargeDirectionLockTime,
-        0.01f,
-        0.0f,
-        GetChargeWindupEndTime(),
-        "%.2f sec");
-
-    chargeDirectionLockTime =
-        std::clamp(
-            chargeDirectionLockTime,
-            0.0f,
-            GetChargeWindupEndTime());
-
-
-
-
-    ImGui::Text("Current Recovery Duration: %.2f sec", chargeBT.recoveryDuration);
-
+    ImGui::DragInt(U8("第二形態 突進ダメージ"), &chargeDamagePhase2, 1.0f, 0, 1000);
+    ImGui::DragFloat(U8("第一形態 突進の当たり判定倍率"), &chargePlayerCastRadiusScale, 0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::DragFloat(U8("第二形態 突進の当たり判定倍率"), &chargePlayerCastRadiusScalePhase2, 0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::DragFloat(U8("突進ダメージ判定 前方オフセット"), &chargePlayerDamageForwardOffset, 0.01f, 0.0f, 5.0f, "%.2f m");
+    ImGui::DragFloat(U8("第一形態 突進ジャスト回避判定倍率"), &chargeJustDodgeCastRadiusScale, 0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::DragFloat(U8("第二形態 突進ジャスト回避判定倍率"), &chargeJustDodgeCastRadiusScalePhase2, 0.01f, 0.1f, 5.0f, "%.2f");
+    ImGui::DragFloat(U8("突進 壁判定の半径倍率"), &chargeWallCastRadiusScale, 0.01f, 0.1f, 2.0f, "%.2f");
+    ImGui::DragFloat(U8("突進 方向固定時刻"), &chargeDirectionLockTime, 0.01f, 0.0f, GetChargeWindupEndTime(), "%.2f sec");
 #endif
 }

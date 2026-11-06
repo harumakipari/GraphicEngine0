@@ -39,8 +39,6 @@ void PlayerIdleState::Exit()
 void PlayerRunningState::Enter()
 {
     player->RestartLocomotionAnimation();
-
-    auto controller = player->GetBodyAnimationController();
 }
 
 void PlayerRunningState::Execute(float deltaTime)
@@ -157,7 +155,6 @@ void PlayerAttackState::Execute(float deltaTime)
 
     if (!owner->GetBodyAnimationController()->IsPlayAnimation())
     {
-        auto controller = player->GetBodyAnimationController();
         const float inputMagnitude = MathHelper::Length(player->inputComponent->GetMoveInput());
         const char* targetState = inputMagnitude > 0.01f ? "Running" : "Idle";
 
@@ -503,7 +500,6 @@ void PlayerRushState::Enter()
         float rushStopDistance = gruxRushStopDistance;
         float playerRadius = 0.0f;
         float targetRadius = 0.0f;
-        bool usedCapsuleDistance = false;
 
         // MoveToActor compares Actor positions in XZ, while both character
         // capsules are only offset vertically. The horizontal center distance
@@ -527,7 +523,6 @@ void PlayerRushState::Enter()
                     surfaceMargin = std::clamp(surfaceMargin, 0.0f, 1.0f);
                     rushStopDistance = (std::max)(minimumNormalEnemyRushStopDistance,
                         playerRadius + targetRadius + surfaceMargin);
-                    usedCapsuleDistance = true;
                 }
             }
         }
