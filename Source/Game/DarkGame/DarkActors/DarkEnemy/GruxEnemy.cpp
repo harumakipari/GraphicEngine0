@@ -987,8 +987,6 @@ void GruxEnemy::StopBattleActions()
 	// îÒçUåÇÇÃPositioningñ⁄ïWÇ‡îjä¸Ç∑ÇÈÅB
 	ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
 	ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
-	retreatRuntime = {};
-	repositionRuntime = {};
 	ClearJumpAttackMotionWarpOverride();
 	ClearFastComboStepIn();
 	justDodgedActors.clear();
@@ -1203,8 +1201,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
 	ClearAttackSetupTarget();
 	ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
 	ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
-	retreatRuntime = {};
-	repositionRuntime = {};
 
 	combatActionCooldownRemaining.fill(0.0f);
 	selectedAttackType = BossAttackType::PrimaryAttackLA;
@@ -2185,9 +2181,7 @@ bool GruxEnemy::PrepareDashAttackMovementSnapshot()
 
 	const float inverseDistance = 1.0f / playerDistance;
 	dashAttackDirection = { dx * inverseDistance, 0.0f, dz * inverseDistance };
-	calculatedDashAttackDistance = std::clamp(
-		playerDistance - desiredDashAttackDistance,
-		minDashAttackDistance, maxDashAttackDistance);
+	calculatedDashAttackDistance = std::clamp(playerDistance - desiredDashAttackDistance, minDashAttackDistance, maxDashAttackDistance);
 	dashAttackStartPosition = bossPosition;
 	dashTargetPosition =
 	{
@@ -2195,12 +2189,7 @@ bool GruxEnemy::PrepareDashAttackMovementSnapshot()
 		bossPosition.y,
 		bossPosition.z + dashAttackDirection.z * calculatedDashAttackDistance
 	};
-	// Stampede's nominal endpoint is governed by the same arrival/timeout
-	// limits as UpdateDashAttackMovement. It remains a prediction only.
-	const float nominalTravelDistance = std::clamp(
-		(std::min)(calculatedDashAttackDistance - dashArrivalDistance,
-			dashAttackSpeed * dashAttackTimeout),
-		0.0f, calculatedDashAttackDistance);
+	const float nominalTravelDistance = std::clamp((std::min)(calculatedDashAttackDistance - dashArrivalDistance, dashAttackSpeed * dashAttackTimeout), 0.0f, calculatedDashAttackDistance);
 	dashBTPredictedKnockupPosition =
 	{
 		bossPosition.x + dashAttackDirection.x * nominalTravelDistance,
@@ -2393,8 +2382,7 @@ bool GruxEnemy::BeginChargeAttackMovement()
 	chargeStartPosition = GetPosition();
 	float validationClearance = 0.0f;
 	bool validationHitWall = false;
-	const bool validationMeasured = EvaluateChargeStartClearance(
-		chargeStartPosition, chargeDirection, validationClearance, validationHitWall);
+	const bool validationMeasured = EvaluateChargeStartClearance(chargeStartPosition, chargeDirection, validationClearance, validationHitWall);
 	(void)validationHitWall;
 	if (!validationMeasured)
 	{
@@ -3982,8 +3970,6 @@ void GruxEnemy::BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePositio
 	ResetBehaviorTreeRuntime();
 	ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
 	ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
-	retreatRuntime = {};
-	repositionRuntime = {};
 
 	DirectX::XMFLOAT3 forward = GetForward();
 	forward.y = 0.0f;

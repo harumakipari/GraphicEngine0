@@ -6,7 +6,6 @@
 #include "Game/Actors/Enemy/Enemy.h"
 #include "Engine/Audio/Audio.h"
 
-
 class SkeletonBodyPartActor;
 class DarkCameraActor;
 class UIManager;

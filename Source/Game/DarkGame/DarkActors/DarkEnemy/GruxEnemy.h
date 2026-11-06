@@ -1513,21 +1513,9 @@ private:
     float retreatMoveSpeed = 6.0f;  // 退避時の移動速度。
     float retreatRetryCooldownDuration = 0.5f;  // 退避の再試行までの待ち時間。
     float retreatRetryCooldownRemaining = 0.0f;  // 退避の再試行までの残り時間。
-    struct RetreatRuntime
-    {
-        DirectX::XMFLOAT3 playerSnapshot{};
-        DirectX::XMFLOAT3 gruxSnapshot{};
-        float startingPlayerDistance = 0.0f;
-    } retreatRuntime;
     PositioningTargetContext retreatTarget{};  // 退避先と移動条件。
     PositioningTargetRuntime retreatMovementRuntime{};  // 退避移動の経過時間や移動距離。
     PositioningTargetRuntime attackSetupRuntime{};  // 攻撃準備位置への移動状態。
-    struct RepositionRuntime
-    {
-        DirectX::XMFLOAT3 playerSnapshot{};
-        DirectX::XMFLOAT3 gruxSnapshot{};
-        float startingPlayerDistance = 0.0f;
-    } repositionRuntime;
     PositioningTargetContext repositionTarget{}; PositioningTargetRuntime repositionMovementRuntime{};  // 位置調整の移動目標と実行状態。
     float repositionDistanceMin = 6.0f, repositionDistanceMax = 13.0f;  // 位置調整候補と対象との距離の下限と上限。
     float repositionMinimumMoveDistance = 5.0f, repositionMinimumPlayerDistance = 4.0f, repositionMoveSpeed = 6.0f;  // 位置調整の最小移動距離、対象との最小距離、移動速度。

@@ -210,7 +210,6 @@ bool GruxEnemy::CanPlanRetreat() const
 bool GruxEnemy::PrepareRetreatTarget()
 {
     ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
-    retreatRuntime = {};
     if (!CanPlanRetreat())
     {
         retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
@@ -223,15 +222,15 @@ bool GruxEnemy::PrepareRetreatTarget()
         retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
         return false;
     }
-    retreatRuntime.playerSnapshot = player->GetPosition();
-    retreatRuntime.gruxSnapshot = GetPosition();
-    float awayX = retreatRuntime.gruxSnapshot.x - retreatRuntime.playerSnapshot.x;
-    float awayZ = retreatRuntime.gruxSnapshot.z - retreatRuntime.playerSnapshot.z;
-    retreatRuntime.startingPlayerDistance = std::sqrt(awayX * awayX + awayZ * awayZ);
-    if (retreatRuntime.startingPlayerDistance > FLT_EPSILON)
+    const DirectX::XMFLOAT3 playerSnapshot = player->GetPosition();
+    const DirectX::XMFLOAT3 gruxSnapshot = GetPosition();
+    float awayX = gruxSnapshot.x - playerSnapshot.x;
+    float awayZ = gruxSnapshot.z - playerSnapshot.z;
+    const float startingPlayerDistance = std::sqrt(awayX * awayX + awayZ * awayZ);
+    if (startingPlayerDistance > FLT_EPSILON)
     {
-        awayX /= retreatRuntime.startingPlayerDistance;
-        awayZ /= retreatRuntime.startingPlayerDistance;
+        awayX /= startingPlayerDistance;
+        awayZ /= startingPlayerDistance;
     }
     else
     {
@@ -257,20 +256,20 @@ bool GruxEnemy::PrepareRetreatTarget()
             const float directionX = awayX * std::cos(angle) - awayZ * std::sin(angle);
             const float directionZ = awayX * std::sin(angle) + awayZ * std::cos(angle);
             const DirectX::XMFLOAT3 desired{
-                retreatRuntime.gruxSnapshot.x + directionX * distance,
-                retreatRuntime.gruxSnapshot.y,
-                retreatRuntime.gruxSnapshot.z + directionZ * distance };
+                gruxSnapshot.x + directionX * distance,
+                gruxSnapshot.y,
+                gruxSnapshot.z + directionZ * distance };
             RepositionTargetEvaluation evaluation{};
-            EvaluateClampedPositioningTarget(retreatRuntime.gruxSnapshot, desired, evaluation);
-            const float moveX = evaluation.clampedTarget.x - retreatRuntime.gruxSnapshot.x;
-            const float moveZ = evaluation.clampedTarget.z - retreatRuntime.gruxSnapshot.z;
+            EvaluateClampedPositioningTarget(gruxSnapshot, desired, evaluation);
+            const float moveX = evaluation.clampedTarget.x - gruxSnapshot.x;
+            const float moveZ = evaluation.clampedTarget.z - gruxSnapshot.z;
             const float moveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
-            const float playerX = evaluation.clampedTarget.x - retreatRuntime.playerSnapshot.x;
-            const float playerZ = evaluation.clampedTarget.z - retreatRuntime.playerSnapshot.z;
+            const float playerX = evaluation.clampedTarget.x - playerSnapshot.x;
+            const float playerZ = evaluation.clampedTarget.z - playerSnapshot.z;
             const float plannedPlayerDistance = std::sqrt(playerX * playerX + playerZ * playerZ);
             if (evaluation.clampDistance > attackSetupClampTolerance)
                 continue;
-            if (plannedPlayerDistance <= retreatRuntime.startingPlayerDistance + 0.01f)
+            if (plannedPlayerDistance <= startingPlayerDistance + 0.01f)
                 continue;
             if (moveDistance < retreatMinimumMoveDistance)
                 continue;
@@ -413,7 +412,6 @@ bool GruxEnemy::CanPlanReposition()
 bool GruxEnemy::PrepareRepositionTarget()
 {
     ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
-    repositionRuntime = {};
     if (!CanPlanReposition())
     {
         if (!IsInitialRepositionPending())
@@ -429,15 +427,15 @@ bool GruxEnemy::PrepareRepositionTarget()
         return false;
     }
 
-    repositionRuntime.playerSnapshot = player->GetPosition();
-    repositionRuntime.gruxSnapshot = GetPosition();
-    float awayX = repositionRuntime.gruxSnapshot.x - repositionRuntime.playerSnapshot.x;
-    float awayZ = repositionRuntime.gruxSnapshot.z - repositionRuntime.playerSnapshot.z;
-    repositionRuntime.startingPlayerDistance = std::sqrt(awayX * awayX + awayZ * awayZ);
-    if (repositionRuntime.startingPlayerDistance > FLT_EPSILON)
+    const DirectX::XMFLOAT3 playerSnapshot = player->GetPosition();
+    const DirectX::XMFLOAT3 gruxSnapshot = GetPosition();
+    float awayX = gruxSnapshot.x - playerSnapshot.x;
+    float awayZ = gruxSnapshot.z - playerSnapshot.z;
+    const float startingPlayerDistance = std::sqrt(awayX * awayX + awayZ * awayZ);
+    if (startingPlayerDistance > FLT_EPSILON)
     {
-        awayX /= repositionRuntime.startingPlayerDistance;
-        awayZ /= repositionRuntime.startingPlayerDistance;
+        awayX /= startingPlayerDistance;
+        awayZ /= startingPlayerDistance;
     }
     else
     {
@@ -474,17 +472,17 @@ bool GruxEnemy::PrepareRepositionTarget()
             const float directionX = awayX * std::cos(angle) - awayZ * std::sin(angle);
             const float directionZ = awayX * std::sin(angle) + awayZ * std::cos(angle);
             const DirectX::XMFLOAT3 desired{
-                repositionRuntime.gruxSnapshot.x + directionX * distance,
-                repositionRuntime.gruxSnapshot.y,
-                repositionRuntime.gruxSnapshot.z + directionZ * distance };
+                gruxSnapshot.x + directionX * distance,
+                gruxSnapshot.y,
+                gruxSnapshot.z + directionZ * distance };
 
             RepositionTargetEvaluation evaluation{};
-            EvaluateClampedPositioningTarget(repositionRuntime.gruxSnapshot, desired, evaluation);
-            const float moveX = evaluation.clampedTarget.x - repositionRuntime.gruxSnapshot.x;
-            const float moveZ = evaluation.clampedTarget.z - repositionRuntime.gruxSnapshot.z;
+            EvaluateClampedPositioningTarget(gruxSnapshot, desired, evaluation);
+            const float moveX = evaluation.clampedTarget.x - gruxSnapshot.x;
+            const float moveZ = evaluation.clampedTarget.z - gruxSnapshot.z;
             const float moveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
-            const float playerX = evaluation.clampedTarget.x - repositionRuntime.playerSnapshot.x;
-            const float playerZ = evaluation.clampedTarget.z - repositionRuntime.playerSnapshot.z;
+            const float playerX = evaluation.clampedTarget.x - playerSnapshot.x;
+            const float playerZ = evaluation.clampedTarget.z - playerSnapshot.z;
             const float plannedPlayerDistance = std::sqrt(playerX * playerX + playerZ * playerZ);
 
             if (plannedPlayerDistance < repositionMinimumPlayerDistance)
