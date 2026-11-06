@@ -8,9 +8,9 @@ void GruxEnemy::BeginDashTelegraphVisual()
     HideDashTelegraphVisual();
     dashTelegraphLineStart = dashAttackStartPosition;
     dashTelegraphLineEnd = dashBTPredictedKnockupPosition;
-    dashTelegraphFanPosition = { dashBTPredictedKnockupPosition.x,
+    const DirectX::XMFLOAT3 fanPosition = { dashBTPredictedKnockupPosition.x,
         dashTelegraphFanYOffset, dashBTPredictedKnockupPosition.z };
-    dashTelegraphFanForward = dashAttackDirection;
+    const DirectX::XMFLOAT3 fanForward = dashAttackDirection;
     const float dx = dashTelegraphLineEnd.x - dashTelegraphLineStart.x;
     const float dz = dashTelegraphLineEnd.z - dashTelegraphLineStart.z;
     dashTelegraphLineLength = std::sqrt(dx * dx + dz * dz);
@@ -22,7 +22,7 @@ void GruxEnemy::BeginDashTelegraphVisual()
     if (!dashTelegraphLineMeshComponent || !dashTelegraphFanMeshComponent)
         return;
 
-    const float yaw = std::atan2(-dashTelegraphFanForward.x, -dashTelegraphFanForward.z);
+    const float yaw = std::atan2(-fanForward.x, -fanForward.z);
     DirectX::XMFLOAT4 rotation{};
     DirectX::XMStoreFloat4(&rotation,
         DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f));
@@ -31,7 +31,7 @@ void GruxEnemy::BeginDashTelegraphVisual()
     dashTelegraphLineMeshComponent->SetRelativeRotationDirect(rotation);
     dashTelegraphLineMeshComponent->SetRelativeScaleDirect({
         dashTelegraphLineWidth, 1.0f, dashTelegraphLineLength });
-    dashTelegraphFanMeshComponent->SetRelativeLocationDirect(dashTelegraphFanPosition);
+    dashTelegraphFanMeshComponent->SetRelativeLocationDirect(fanPosition);
     dashTelegraphFanMeshComponent->SetRelativeRotationDirect(rotation);
     dashTelegraphFanMeshComponent->SetRelativeScaleDirect({
         dashTelegraphFanRadius, 1.0f, dashTelegraphFanRadius });
@@ -39,12 +39,8 @@ void GruxEnemy::BeginDashTelegraphVisual()
     dashTelegraphFanMeshComponent->SetIsVisible(true);
     dashTelegraphVisualState = DashTelegraphVisualState::LineExpanding;
     dashTelegraphVisualElapsed = 0.0f;
-    dashTelegraphLineExpandProgress = 0.0f;
     dashTelegraphLineDynamicShrinkActive = false;
-    dashTelegraphDynamicLineStart = dashTelegraphLineStart;
-    dashTelegraphCurrentLineLength = dashTelegraphLineLength;
     dashTelegraphLineAlpha = 1.0f;
-    dashTelegraphFanFadeInProgress = 0.0f;
     dashTelegraphFanAlpha = 0.0f;
     dashTelegraphLineMeshComponent->SetRelativeScaleDirect({ dashTelegraphLineWidth, 1.0f, 0.0f });
     dashTelegraphLineMeshComponent->plusAlphaCBuffer->data.brightness = 0.0f;
@@ -93,9 +89,9 @@ void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
     {
         const float duration = (std::max)(0.001f, dashTelegraphLineExpandDuration);
         const float linear = std::clamp(dashTelegraphVisualElapsed / duration, 0.0f, 1.0f);
-        dashTelegraphLineExpandProgress = 1.0f - (1.0f - linear) * (1.0f - linear);
+        const float lineExpandProgress = 1.0f - (1.0f - linear) * (1.0f - linear);
         dashTelegraphLineMeshComponent->SetRelativeScaleDirect({
-            dashTelegraphLineWidth, 1.0f, dashTelegraphLineLength * dashTelegraphLineExpandProgress });
+            dashTelegraphLineWidth, 1.0f, dashTelegraphLineLength * lineExpandProgress });
         if (linear >= 1.0f)
         {
             dashTelegraphVisualState = DashTelegraphVisualState::FanFadingIn;
@@ -107,9 +103,9 @@ void GruxEnemy::UpdateDashTelegraphVisual(float deltaTime)
     case DashTelegraphVisualState::FanFadingIn:
     {
         const float duration = (std::max)(0.001f, dashTelegraphFanFadeInDuration);
-        dashTelegraphFanFadeInProgress = std::clamp(dashTelegraphVisualElapsed / duration, 0.0f, 1.0f);
-        setFanAlpha(dashTelegraphFanFadeInProgress);
-        if (dashTelegraphFanFadeInProgress >= 1.0f)
+        const float fanFadeInProgress = std::clamp(dashTelegraphVisualElapsed / duration, 0.0f, 1.0f);
+        setFanAlpha(fanFadeInProgress);
+        if (fanFadeInProgress >= 1.0f)
             dashTelegraphVisualState = DashTelegraphVisualState::Holding;
         break;
     }
@@ -166,8 +162,6 @@ void GruxEnemy::BeginDashTelegraphLineShrink()
         return;
 
     dashTelegraphLineDynamicShrinkActive = true;
-    dashTelegraphDynamicLineStart = dashTelegraphLineStart;
-    dashTelegraphCurrentLineLength = dashTelegraphLineLength;
 }
 
 void GruxEnemy::UpdateDashTelegraphLineShrink()
@@ -182,7 +176,6 @@ void GruxEnemy::UpdateDashTelegraphLineShrink()
     {
         dashTelegraphLineMeshComponent->SetIsVisible(false);
         dashTelegraphLineDynamicShrinkActive = false;
-        dashTelegraphCurrentLineLength = 0.0f;
         return;
     }
 
@@ -193,15 +186,15 @@ void GruxEnemy::UpdateDashTelegraphLineShrink()
         (gruxPosition.x - dashTelegraphLineStart.x) * forwardX +
         (gruxPosition.z - dashTelegraphLineStart.z) * forwardZ,
         0.0f, originalLength);
-    dashTelegraphDynamicLineStart = {
+    const DirectX::XMFLOAT3 dynamicLineStart = {
         dashTelegraphLineStart.x + forwardX * projectedDistance,
         dashTelegraphLineStart.y,
         dashTelegraphLineStart.z + forwardZ * projectedDistance };
-    const float remainingDx = dashTelegraphLineEnd.x - dashTelegraphDynamicLineStart.x;
-    const float remainingDz = dashTelegraphLineEnd.z - dashTelegraphDynamicLineStart.z;
-    dashTelegraphCurrentLineLength = std::sqrt(remainingDx * remainingDx + remainingDz * remainingDz);
+    const float remainingDx = dashTelegraphLineEnd.x - dynamicLineStart.x;
+    const float remainingDz = dashTelegraphLineEnd.z - dynamicLineStart.z;
+    const float currentLineLength = std::sqrt(remainingDx * remainingDx + remainingDz * remainingDz);
 
-    if (dashTelegraphCurrentLineLength <= dashTelegraphLineMinimumVisibleLength)
+    if (currentLineLength <= dashTelegraphLineMinimumVisibleLength)
     {
         dashTelegraphLineMeshComponent->SetIsVisible(false);
         dashTelegraphLineDynamicShrinkActive = false;
@@ -213,10 +206,10 @@ void GruxEnemy::UpdateDashTelegraphLineShrink()
     DirectX::XMStoreFloat4(&rotation,
         DirectX::XMQuaternionRotationRollPitchYaw(0.0f, yaw, 0.0f));
     dashTelegraphLineMeshComponent->SetRelativeLocationDirect({
-        dashTelegraphDynamicLineStart.x, dashTelegraphLineYOffset, dashTelegraphDynamicLineStart.z });
+        dynamicLineStart.x, dashTelegraphLineYOffset, dynamicLineStart.z });
     dashTelegraphLineMeshComponent->SetRelativeRotationDirect(rotation);
     dashTelegraphLineMeshComponent->SetRelativeScaleDirect({
-        dashTelegraphLineWidth, 1.0f, dashTelegraphCurrentLineLength });
+        dashTelegraphLineWidth, 1.0f, currentLineLength });
 }
 
 void GruxEnemy::BeginDashTelegraphFadeOut()
@@ -243,12 +236,8 @@ void GruxEnemy::HideDashTelegraphVisual()
         dashTelegraphFanMeshComponent->SetIsVisible(false);
     dashTelegraphVisualState = DashTelegraphVisualState::Hidden;
     dashTelegraphVisualElapsed = 0.0f;
-    dashTelegraphLineExpandProgress = 0.0f;
     dashTelegraphLineDynamicShrinkActive = false;
-    dashTelegraphDynamicLineStart = {};
-    dashTelegraphCurrentLineLength = 0.0f;
     dashTelegraphLineAlpha = 0.0f;
-    dashTelegraphFanFadeInProgress = 0.0f;
     dashTelegraphFanAlpha = 0.0f;
     dashTelegraphLineFadeOutStartAlpha = 0.0f;
     dashTelegraphFanFadeOutStartAlpha = 0.0f;

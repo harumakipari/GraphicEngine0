@@ -86,7 +86,9 @@ void GruxEnemy::Update(float deltaTime)
 		ResetWeaponTelegraphRimLight();
 		AdvanceDelayedHpBarForPhaseTransition();
 		if (const auto controller = GetBodyAnimationController())
+		{
 			controller->OnUpdate(deltaTime);
+		}
 		return;
 	}
 	if (gameScene && gameScene->IsBossPhaseTransitionActive())
@@ -215,12 +217,8 @@ void GruxEnemy::Update(float deltaTime)
 
 	// 被弾時のフラッシュ
 	{
-		const float fadeSpeed = damageFlashDuration > 0.0f
-			? damageFlashStartValue / damageFlashDuration
-			: damageFlashStartValue;
-		skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = (std::max)(
-			0.0f,
-			skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - fadeSpeed * deltaTime);
+		const float fadeSpeed = damageFlashDuration > 0.0f ? damageFlashStartValue / damageFlashDuration : damageFlashStartValue;
+		skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = (std::max)(0.0f, skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - fadeSpeed * deltaTime);
 	}
 
 
@@ -1310,26 +1308,7 @@ void GruxEnemy::SetPhaseTransformProgress(const float progress)
 	UpdateAllComponentTransforms();
 }
 
-void GruxEnemy::SetPhaseScaleRange(const float phase1Scale, const float phase2Scale)
-{
-	phase1BossScale = std::clamp(phase1Scale, 0.01f, 10.0f);
-	phase2BossScale = std::clamp(phase2Scale, 0.01f, 10.0f);
-	SetPhaseTransformProgress(phaseTransformProgress);
-}
-
-void GruxEnemy::SetPhase2MaskOffsets(const float minYOffset, const float maxYOffset)
-{
-	phase2MaskMinYOffset = std::clamp(minYOffset, -2.0f, 5.0f);
-	phase2MaskMaxYOffset = (std::max)(std::clamp(maxYOffset, -2.0f, 5.0f),
-		phase2MaskMinYOffset + 0.0001f);
-	UpdatePhase2TextureBlendWorldYRange();
-}
-
-void GruxEnemy::SetPhase2MaskSoftness(const float softness)
-{
-	phase2MaskSoftness = std::clamp(softness, 0.0f, 0.3f);
-	UpdatePhase2TextureBlendWorldYRange();
-}
+// フェーズ遷移時の遅延HP表示を進める。
 void GruxEnemy::AdvanceDelayedHpBarForPhaseTransition()
 {
 	const float currentHp = static_cast<float>((std::max)(hp, 0));
@@ -2379,7 +2358,7 @@ bool GruxEnemy::BeginChargeAttackMovement()
 		return false;
 	}
 
-	chargeStartPosition = GetPosition();
+	const DirectX::XMFLOAT3 chargeStartPosition = GetPosition();
 	float validationClearance = 0.0f;
 	bool validationHitWall = false;
 	const bool validationMeasured = EvaluateChargeStartClearance(chargeStartPosition, chargeDirection, validationClearance, validationHitWall);
@@ -2393,7 +2372,6 @@ bool GruxEnemy::BeginChargeAttackMovement()
 		return false;
 	}
 	chargeElapsedTime = 0.0f;
-	chargeWallFacingAmount = 0.0f;
 	chargeEndReason = ChargeAttackEndReason::None;
 	chargeMovementActive = true;
 	ApplyMainChargeWindSettings();
@@ -2454,7 +2432,6 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 
 	UpdateChargeWindTrails(deltaTime);
 	chargeElapsedTime += (std::max)(0.0f, deltaTime);
-	chargeWallFacingAmount = 0.0f;
 	CharacterMovementComponent::BossRoomProbeMoveBlockEvent bossRoomProbeBlockEvent;
 	if (characterMovementComponent &&
 		characterMovementComponent->ConsumeBossRoomProbeChargeWallHitEvent(bossRoomProbeBlockEvent))
@@ -2524,7 +2501,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
 	bool wallCandidate = false;
 	if (wallCastHit)
 	{
-		chargeWallFacingAmount = -(
+		const float chargeWallFacingAmount = -(
 			chargeDirection.x * wallHit.normal.x +
 			chargeDirection.z * wallHit.normal.z);
 

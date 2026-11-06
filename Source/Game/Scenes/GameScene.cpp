@@ -2218,39 +2218,7 @@ void GameScene::DrawPhase2DebugGui()
 {
     ImGui::DragInt(U8("Phase1 MaxHP"), &phase1MaxHp, 1.0f, 1, 500);
     ImGui::DragInt(U8("Phase2 MaxHP"), &phase2MaxHp, 1.0f, 1, 500);
-    ImGui::DragFloat(U8("Phase2 FadeOutŽžŠÔ"), &phase2RecallFadeOutDuration,
-        0.01f, 0.0f, 2.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat(U8("Phase2 FadeInŽžŠÔ"), &phase2RecallFadeInDuration,
-        0.01f, 0.0f, 2.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    ImGui::DragFloat(U8("Phase2 Recall\u524DWait"), &phase2RecallPreWaitDuration,
-        0.01f, 0.0f, 3.0f, "%.3f sec", ImGuiSliderFlags_AlwaysClamp);
-    float phase1BossScale = gruxEnemyActor ? gruxEnemyActor->GetPhase1BossScale() : 1.7f;
-    float phase2BossScale = gruxEnemyActor ? gruxEnemyActor->GetPhase2BossScale() : 2.1f;
-    const bool phase1ScaleChanged = ImGui::DragFloat(U8("Phase1 Boss Scale"), &phase1BossScale,
-        0.01f, 1.0f, 3.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-    const bool phase2ScaleChanged = ImGui::DragFloat(U8("Phase2 Boss Scale"), &phase2BossScale,
-        0.01f, 1.0f, 3.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-    if (gruxEnemyActor && (phase1ScaleChanged || phase2ScaleChanged))
-        gruxEnemyActor->SetPhaseScaleRange(phase1BossScale, phase2BossScale);
     phase2TransitionController->DrawRecallDebugGui(gruxEnemyActor.get());
-    if (gruxEnemyActor)
-    {
-        float phase2MaskMinYOffset = gruxEnemyActor->GetPhase2MaskMinYOffset();
-        float phase2MaskMaxYOffset = gruxEnemyActor->GetPhase2MaskMaxYOffset();
-        float phase2MaskSoftness = gruxEnemyActor->GetPhase2MaskSoftness();
-        const bool phase2MaskOffsetChanged =
-            ImGui::DragFloat(U8("Phase2 Mask MinY Offset"), &phase2MaskMinYOffset,
-                0.01f, -2.0f, 5.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp) |
-            ImGui::DragFloat(U8("Phase2 Mask MaxY Offset"), &phase2MaskMaxYOffset,
-                0.01f, -2.0f, 5.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-        if (phase2MaskOffsetChanged)
-            gruxEnemyActor->SetPhase2MaskOffsets(phase2MaskMinYOffset, phase2MaskMaxYOffset);
-        if (ImGui::DragFloat(U8("Phase2 Mask Softness"), &phase2MaskSoftness,
-            0.005f, 0.0f, 0.3f, "%.3f", ImGuiSliderFlags_AlwaysClamp))
-        {
-            gruxEnemyActor->SetPhase2MaskSoftness(phase2MaskSoftness);
-        }
-    }
 
     bgmDirector.DrawPhase2DebugGui();
     ImGui::DragFloat(U8("Phase2 Emote\u524DWait"), &phase2PlayerEmotePreWaitDuration,

@@ -918,7 +918,6 @@ void GruxEnemy::CleanupChargeAttackBT()
     chargeDirectionLocked = false;
     chargeElapsedTime = 0.0f;
     chargeEndReason = ChargeAttackEndReason::None;
-    chargeWallFacingAmount = 0.0f;
     nextRecoveryDuration.reset();
     selectedActionType = chargeBT.previousAction;
     chargeBT = {};

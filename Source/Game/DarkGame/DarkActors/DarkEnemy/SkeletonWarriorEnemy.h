@@ -154,7 +154,3 @@ private:
     int attackDamage = 4;
     DirectX::XMFLOAT3 weaponRootOffset{ 0.0f, -0.5f, 0.0f };
 };
-
-
-
-

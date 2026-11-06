@@ -694,8 +694,8 @@ void GruxEnemy::UpdateRoarTelegraphTransform()
 
     const DirectX::XMFLOAT3 position = GetPosition();
     const float radius = GetRoarAttackRadius();
-    roarTelegraphOuterWorldPosition = { position.x, roarTelegraphOuterYOffset, position.z };
-    roarTelegraphFillWorldPosition = { position.x, roarTelegraphFillYOffset, position.z };
+    const DirectX::XMFLOAT3 outerWorldPosition = { position.x, roarTelegraphOuterYOffset, position.z };
+    const DirectX::XMFLOAT3 fillWorldPosition = { position.x, roarTelegraphFillYOffset, position.z };
     const DirectX::XMFLOAT4 identityRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
     const DirectX::XMFLOAT3 scale{ radius, 1.0f, radius };
     const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
@@ -707,19 +707,19 @@ void GruxEnemy::UpdateRoarTelegraphTransform()
     const DirectX::XMFLOAT3& fillTintMax = isPhase2
         ? roarTelegraphPhase2FillTintMax : roarTelegraphPhase1FillTintMax;
     const float t = std::clamp(roarTelegraphProgress, 0.0f, 1.0f);
-    roarTelegraphVisualProgress = t * t * (3.0f - 2.0f * t);
-    const auto lerp = [this](float minimum, float maximum)
+    const float visualProgress = t * t * (3.0f - 2.0f * t);
+    const auto lerp = [visualProgress](float minimum, float maximum)
         {
-            return minimum + (maximum - minimum) * roarTelegraphVisualProgress;
+            return minimum + (maximum - minimum) * visualProgress;
         };
-    roarTelegraphFillTintCurrent = {
+    const DirectX::XMFLOAT3 fillTint = {
         lerp(fillTintMin.x, fillTintMax.x),
         lerp(fillTintMin.y, fillTintMax.y),
         lerp(fillTintMin.z, fillTintMax.z) };
-    roarTelegraphFillGlowCurrent = lerp(roarTelegraphFillGlowMin, roarTelegraphFillGlowMax);
-    roarTelegraphFillAlphaCurrent = lerp(roarTelegraphFillAlphaMin, roarTelegraphFillAlphaMax);
+    const float fillGlow = lerp(roarTelegraphFillGlowMin, roarTelegraphFillGlowMax);
+    const float fillAlpha = lerp(roarTelegraphFillAlphaMin, roarTelegraphFillAlphaMax);
 
-    roarTelegraphOuterMeshComponent->SetRelativeLocationDirect(roarTelegraphOuterWorldPosition);
+    roarTelegraphOuterMeshComponent->SetRelativeLocationDirect(outerWorldPosition);
     roarTelegraphOuterMeshComponent->SetRelativeRotationDirect(identityRotation);
     roarTelegraphOuterMeshComponent->SetRelativeScaleDirect(scale);
     roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.brightness =
@@ -728,15 +728,15 @@ void GruxEnemy::UpdateRoarTelegraphTransform()
         outerTint.x, outerTint.y, outerTint.z, 1.0f };
     roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.emissionPower = 1.0f;
 
-    roarTelegraphFillMeshComponent->SetRelativeLocationDirect(roarTelegraphFillWorldPosition);
+    roarTelegraphFillMeshComponent->SetRelativeLocationDirect(fillWorldPosition);
     roarTelegraphFillMeshComponent->SetRelativeRotationDirect(identityRotation);
     roarTelegraphFillMeshComponent->SetRelativeScaleDirect(scale);
     roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.brightness =
-        std::clamp(roarTelegraphFillAlphaCurrent, 0.0f, 1.0f) - 1.0f;
+        std::clamp(fillAlpha, 0.0f, 1.0f) - 1.0f;
     roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.cpuColor = {
-        roarTelegraphFillTintCurrent.x, roarTelegraphFillTintCurrent.y, roarTelegraphFillTintCurrent.z, 1.0f };
+        fillTint.x, fillTint.y, fillTint.z, 1.0f };
     roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.emissionPower =
-        (std::max)(0.0f, roarTelegraphFillGlowCurrent);
+        (std::max)(0.0f, fillGlow);
 }
 
 void GruxEnemy::UpdateRoarTelegraphProgress()
@@ -1087,12 +1087,6 @@ void GruxEnemy::CleanupRoarBT()
     HideRoarFloatingDebris();
     HideRoarImpactDebris();
     roarTelegraphProgress = 0.0f;
-    roarTelegraphVisualProgress = 0.0f;
-    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
-    roarTelegraphFillTintCurrent = scene && scene->IsBossInFinalPhase()
-        ? roarTelegraphPhase2FillTintMin : roarTelegraphPhase1FillTintMin;
-    roarTelegraphFillGlowCurrent = roarTelegraphFillGlowMin;
-    roarTelegraphFillAlphaCurrent = roarTelegraphFillAlphaMin;
     if (IsRoarBTActive())
     {
         StopAIMovement();
