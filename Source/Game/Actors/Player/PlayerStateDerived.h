@@ -196,7 +196,7 @@ public:
     int GetComboIndex() const { return comboIndex; }
     const std::string& GetCurrentAttackAnimationForDebug() const { return currentAttackAnimation; }
 private:
-    bool AdvanceRushCombo();
+    void AdvanceRushCombo();
     bool IsFinalRushAttack() const;
     void ResetRushInputGrace();
 

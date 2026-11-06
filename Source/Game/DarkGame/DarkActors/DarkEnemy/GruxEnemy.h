@@ -888,11 +888,6 @@ public:
 	// FastCombo用の対象情報を返す。
 	const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
 
-	float GetAttackReadyDuration() const
-	{
-		return frontAttackReadyDuration;
-	}
-
 	// 攻撃準備のSEを再生する。
 	bool PlayAttackReadySE();
 
@@ -1610,7 +1605,6 @@ private:
 	float turnSpeed = 480.0f;  // 攻撃前などの向き合わせに使う回転速度。
 	float turnCompleteAngle = 15.0f;  // 攻撃前の向き合わせを完了とみなす角度。
 	float turnTimeout = 1.5f;  // Chargeの向き合わせに使うタイムアウト時間。
-	float frontAttackReadyDuration = initialFrontAttackReadyDuration;  // 正面での攻撃準備時間。
 	std::string attackReadySEName = "enemy_attack_ready1";  // 攻撃準備時に再生するSE名。
 	float attackReadySEVolume = 1.0f;  // 攻撃準備SEの音量。
 

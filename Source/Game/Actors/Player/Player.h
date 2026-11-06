@@ -395,7 +395,7 @@ public:
 	// Just Dodge後の初回Rush入力を受け付けられるかを返す。
 	bool CanAcceptInitialRushInput() const;
 	// 最終ヒット時の現在姿勢を固定し、成否を記録する。
-	bool LatchFinalHitVisualPoseAfterAnimationUpdate();
+	void LatchFinalHitVisualPoseAfterAnimationUpdate();
 	// Just Dodge成功後またはRush中の追撃機会が有効かを返す。
 	bool IsRushOpportunityActive() const;
 	// 初回Rush入力の受付状態を切り替え、ガイド表示を同期する。
@@ -469,7 +469,7 @@ private:
 	void CaptureActionRequest(float deltaTime);
 
 	// 優先度を比較して入力バッファへアクション要求を保存する。
-	bool StoreActionRequest(ActionType type, float remainTime);
+	void StoreActionRequest(ActionType type, float remainTime);
 
 	// ノックバック・移動更新
 	// ノックバック移動を開始する。
@@ -751,7 +751,6 @@ private:
 	float deathEyeCloseDuration = 1.4f; // 目閉じ姿勢を適用する時間
 	float deathColorFadeDelay = 4.018f; // 死亡後に発光消失を開始するまでの時間
 	float deathColorFadeDuration = 2.05f; // 死亡時の発光消失時間
-	float deathVisualFade = 0.0f; // 死亡時の発光消失率
 	bool deathEyeCloseStarted = false; // 死亡演出で目閉じを開始済みか
 	bool deathVisualFadeStarted = false; // 死亡演出で発光消失SEを再生済みか
 	DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f }; // 死亡時に残す発光色

@@ -691,8 +691,6 @@ void PlayerRushState::Execute(float deltaTime)
     case RushPhase::Finished:
         if (!player->GetBodyAnimationController()->IsPlayAnimation())
         {
-            // Rush reaches Idle only after Finished observes the clip end.
-            // Latch here so the direct Idle path cannot capture an in-flight pose.
             player->LatchFinalHitVisualPoseAfterAnimationUpdate();
             player->GetStateMachine()->ChangeState("Idle");
         }
@@ -742,26 +740,24 @@ void PlayerRushState::Exit()
     player->invincible = false;  // ƒ‰ƒbƒVƒ…UŒ‚’†‚Í–³“Gó‘Ô‰ğœ
 }
 
-bool PlayerRushState::AdvanceRushCombo()
+void PlayerRushState::AdvanceRushCombo()
 {
     if (queuedAttackCount <= 0 || IsFinalRushAttack())
-        return false;
+        return ;
 
     queuedAttackCount--;
     comboIndex++;
     if (comboIndex >= static_cast<int>(rushCombo.size()))
     {
         phase = RushPhase::Finished;
-        return false;
+        return ;
     }
 
     currentAttackAnimation = rushCombo[comboIndex];
     rushComboAdvanced = true;
     ResetRushInputGrace();
     player->PlayBodyAnimation(currentAttackAnimation, false);
-    // PlayBodyAnimation switches to a fresh animation and resets its Notify flags.
     rushComboAdvanced = false;
-    return true;
 }
 
 bool PlayerRushState::IsFinalRushAttack() const

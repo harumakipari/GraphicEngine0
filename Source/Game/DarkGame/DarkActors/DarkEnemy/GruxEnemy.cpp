@@ -68,19 +68,20 @@ void GruxEnemy::Initialize(const Transform& transform)
 
 void GruxEnemy::Update(float deltaTime)
 {
+	// 非スケール時間
 	const float unscaledDeltaTime = Time::UnscaledDeltaTime();
 
-	// Roar衝撃時の破片の移動や寿命を更新する。
+	// Roar衝撃破片は、Actor固有TimeScaleを含まないグローバル時間で移動・寿命を更新する。
 	UpdateRoarImpactDebris(Time::DeltaTime());
 
 	// 第2段階のテクスチャ切り替え範囲をワールド座標で更新する。
 	UpdatePhase2TextureBlendWorldYRange();
 
-
 	const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
-	// 第2段階HPバーのプレビューを更新する。
+	// 第2段階HPバーの演出を更新する。
 	UpdatePhase2HpBarPresentation();
 
+	// Phase1終了待ちは遅延HPとBody Animationを進め、後続の通常更新を省略する。
 	if (gameScene && gameScene->IsPhase1BreakPending())
 	{
 		ResetWeaponTelegraphRimLight();
@@ -91,17 +92,23 @@ void GruxEnemy::Update(float deltaTime)
 		}
 		return;
 	}
+
+	// Phase2移行中のAnimationはGamePhase2TransitionController側で進める。
+	// GruxEnemy側の通常Animation更新を含め、後続の通常更新は行わない。
 	if (gameScene && gameScene->IsBossPhaseTransitionActive())
 	{
 		ResetWeaponTelegraphRimLight();
 		return;
 	}
+
+	// Roar・死亡・Chargeの中断整理。
 	TickRoarLifecycle(deltaTime);
 	if (hp <= 0)
+	{
 		EndFourthHitReaction();
+	}
 	const bool phaseTransitionOwnsDefeat = gameScene && gameScene->IsBossPhaseTransitionActive();
-	if (hp <= 0 && !isDeathPerform && !phaseTransitionOwnsDefeat &&
-		!(gameScene && gameScene->IsPhase1BreakPending()))
+	if (hp <= 0 && !isDeathPerform && !phaseTransitionOwnsDefeat && !(gameScene && gameScene->IsPhase1BreakPending()))
 	{
 		BeginDeathPresentation();
 	}
@@ -110,22 +117,29 @@ void GruxEnemy::Update(float deltaTime)
 	{
 		CleanupChargeAttackBT();
 		activeNode = nullptr;
-		if (behaviorData) behaviorData->Init();
+		if (behaviorData)
+		{
+			behaviorData->Init();
+		}
 	}
 
 	// 通常時のHPバー表示を更新する。
 	UpdateHpBar(unscaledDeltaTime);
 
+	// 被弾リアクション。以下の早期returnでは、後続のクールダウン・BT・表示・攻撃判定を省略する。
 	if (finalHitReactionHeld)
 	{
 		const auto controller = GetBodyAnimationController();
 		if (controller && controller->GetCurrentAnimationName().starts_with("HitReact_"))
 		{
+			// HitReact_のポーズ保持中は、Animationも進めない。
 			ResetWeaponTelegraphRimLight();
 			return;
 		}
 		finalHitReactionHeld = false;
 	}
+
+	// 最終被弾リアクションはBody Animationだけを進める。
 	if (finalHitReactionActive)
 	{
 		ResetWeaponTelegraphRimLight();
@@ -134,23 +148,29 @@ void GruxEnemy::Update(float deltaTime)
 		return;
 	}
 
+	// 通常攻撃4段目の被弾中は、Body Animationとリアクション残り時間を進める。
 	if (fourthHitReactionActive)
 	{
 		ResetWeaponTelegraphRimLight();
 		if (const auto controller = GetBodyAnimationController())
+		{
 			controller->OnUpdate(deltaTime);
-		fourthHitReactionRemaining = (std::max)(0.0f,
-			fourthHitReactionRemaining - (std::max)(0.0f, deltaTime));
+		}
+		fourthHitReactionRemaining = (std::max)(0.0f, fourthHitReactionRemaining - (std::max)(0.0f, deltaTime));
 		if (fourthHitReactionRemaining <= 0.0f)
+		{
 			EndFourthHitReaction();
+		}
 		return;
 	}
 
+	// ボイス・行動クールダウン。
 	hitVoiceCooldownTimer = (std::max)(0.0f, hitVoiceCooldownTimer - unscaledDeltaTime);
 
 	if (!IsAnimationEditorPreviewActive())
 		UpdateActionCooldowns(deltaTime);
 
+	// Rush中はAI移動入力を止め、Characterと予兆を更新する。後続のBT・Trail・攻撃判定は省略する。
 	if (rushCombatHoldActive)
 	{
 		StopAIMovement();
@@ -160,6 +180,7 @@ void GruxEnemy::Update(float deltaTime)
 		return;
 	}
 
+	// Charge復帰待ちも同じ更新範囲とし、待ち時間を進める。解除したフレームも後続へ進まない。
 	if (interruptedChargeRecoveryActive)
 	{
 		StopAIMovement();
@@ -176,22 +197,32 @@ void GruxEnemy::Update(float deltaTime)
 		return;
 	}
 
+	// Dashの中断監視。
 	if (IsDashAttackBTActive() && (!battleAIActive || IsDead() || IsDeathPresentationActive() || IsStunned()))
 	{
 		CleanupDashAttackBT();
 		activeNode = nullptr;
-		if (behaviorData) behaviorData->Init();
+		if (behaviorData)
+		{
+			behaviorData->Init();
+		}
 	}
 
+	// BehaviorTree更新と、その結果に応じたCharge・Dashの後始末。
 	if (battleAIActive)
 	{
 		UpdateBehaviorTree(deltaTime);
 		if (IsChargeAttackBTActive() && (!activeNode || aiTree->GetLastRunResult() == ActionBase::State::Failed))
+		{
 			CleanupChargeAttackBT();
+		}
 		if (IsDashAttackBTActive() && (!activeNode || aiTree->GetLastRunResult() == ActionBase::State::Failed))
+		{
 			CleanupDashAttackBT();
+		}
 	}
 
+	// Character内でAnimation・Notifyを更新してから、予兆・Trailに反映する。
 	Character::Update(deltaTime);
 
 	// 攻撃予兆の表示を更新する。
@@ -200,10 +231,12 @@ void GruxEnemy::Update(float deltaTime)
 	// 左右武器のTrailを更新する。
 	UpdateWeaponTrails(deltaTime);
 
+	// Previewはここまで更新し、後続のMotionWarp・表示更新・ゲームプレイ判定を省略する。
 	if (IsAnimationEditorPreviewActive())
 		return;
 
-	// AnimationMotionWarpを更新する
+	// MotionWarp・表示更新。Gruxは遅延移動を有効化していないため、
+	// ここで設定する追加速度は次フレームのComponent Tickで消費される。
 	UpdateAnimationMotionWarp(deltaTime);
 
 	SetScale({ enemyScale,enemyScale,enemyScale });
@@ -221,8 +254,7 @@ void GruxEnemy::Update(float deltaTime)
 		skeletalMeshComponent->plusAlphaCBuffer->data.flashValue = (std::max)(0.0f, skeletalMeshComponent->plusAlphaCBuffer->data.flashValue - fadeSpeed * deltaTime);
 	}
 
-
-	// 攻撃の危険な時に、
+	// DangerAreaによるJustDodge判定は、成功済み対象を除外する後続の武器命中判定より先に行う。
 	if (isDangerWindow)
 	{
 		if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>())
@@ -2926,7 +2958,7 @@ void GruxEnemy::StartWeaponTelegraph(const std::string& animationName)
 
 	weaponTelegraphActive = true;
 	weaponTelegraphAnimationName = animationName;
-	weaponTelegraphLeadDuration = GetAttackReadyDuration();
+	weaponTelegraphLeadDuration = initialFrontAttackReadyDuration;
 	weaponTelegraphShowEmissiveEndTime = state->endTime;
 	weaponTelegraphMaximumPower = (std::max)(0.0f, state->value);
 	weaponTelegraphElapsed = 0.0f;
