@@ -751,7 +751,6 @@ private:
 	float deathEyeCloseDuration = 1.4f; // 目閉じ姿勢を適用する時間
 	float deathColorFadeDelay = 4.018f; // 死亡後に発光消失を開始するまでの時間
 	float deathColorFadeDuration = 2.05f; // 死亡時の発光消失時間
-	bool deathEyeCloseStarted = false; // 死亡演出で目閉じを開始済みか
 	bool deathVisualFadeStarted = false; // 死亡演出で発光消失SEを再生済みか
 	DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f }; // 死亡時に残す発光色
 	float playerAliveEmissionPower = 20.9f; // 生存時のPlayer本体発光強度
@@ -868,7 +867,6 @@ private:
 	float prisonOpeningSittingPingPongSpeed = 0.6f; // Ping-Pong再生速度
 	float prisonOpeningSittingToStandingBlendTime = 0.15f; // 座り姿勢から立ち姿勢へのブレンド時間
 	float prisonOpeningSittingPingPongPhase = 0.0f; // Ping-Pong再生の現在位相
-	float prisonOpeningSittingSampleTime = 0.0f; // 座り姿勢から取得する現在サンプル時刻
 	bool prisonOpeningInputWasEnabled = true; // 牢獄開始演出前の入力有効状態
 	DirectX::XMFLOAT3 prisonOpeningSittingPosition{}; // 牢獄開始演出中に維持するPlayer位置
 	float prisonOpeningSittingYawDegrees = 0.0f; // 牢獄開始演出中に維持するYaw角

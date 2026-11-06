@@ -108,8 +108,10 @@ ActionBase::State PrepareFastCombo::Run(float deltaTime)
         owner->StopAIMovement();
         const auto controller = owner->GetBodyAnimationController();
         if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
+        {
             owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
-        owner->PlayAttackReadySE();
+        }
+        CoreAudio::PlayOneShot("./Data/Sound/SE/enemy_attack_ready1.wav", 1.0f);
         owner->StartWeaponTelegraph("Attack_A_Fast_0");
     }
     timer += deltaTime;
@@ -189,12 +191,26 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
         {
             ++stage; owner->ClearFastComboStepIn(); owner->SetFastComboRuntimeStage(stage);
             if (!owner->GetFastComboTargetContext().valid || owner->GetFastComboTargetContext().absoluteAngleDegrees > owner->GetInterStageMaxFacingAngle())
-            { owner->DisableAttackHitBoxes(); finishAfterAnimation = true; return State::Run; }
-            timer = 0.0f; runtimeState = GruxEnemy::FastComboRuntimeState::InterStageDelay; owner->SetFastComboRuntimeState(runtimeState); owner->StopAIMovement(); return State::Run;
+            {
+                owner->DisableAttackHitBoxes();
+                finishAfterAnimation = true;
+                return State::Run; 
+            }
+            timer = 0.0f;
+            runtimeState = GruxEnemy::FastComboRuntimeState::InterStageDelay; 
+            owner->SetFastComboRuntimeState(runtimeState); 
+            owner->StopAIMovement(); 
+            return State::Run;
         }
     }
-    if (owner->GetBodyAnimationController()->IsPlayAnimation()) return State::Run;
-    owner->ClearFastComboStepIn(); owner->StartSelectedActionCooldown(); started = false; return State::Complete;
+    if (owner->GetBodyAnimationController()->IsPlayAnimation())
+    {
+        return State::Run;
+    }
+    owner->ClearFastComboStepIn(); 
+    owner->StartSelectedActionCooldown(); 
+    started = false; 
+    return State::Complete;
 }
 
 // FastCombo planning and approach

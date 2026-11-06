@@ -1297,11 +1297,7 @@ bool Player::BeginPrisonOpeningSitting(
 	controller->SetUseBlendSpace(false);
 	controller->SetIgnoreRootMotion(true);
 	prisonOpeningSittingPingPongPhase = 0.0f;
-	prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
-	const bool started = prisonOpeningUseStandingPingPong
-		? controller->PlayAnimationImmediate("Standing", true, true) &&
-		controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime)
-		: controller->PlayAnimationImmediate("Sitting", true, true);
+	const bool started = prisonOpeningUseStandingPingPong ? controller->PlayAnimationImmediate("Standing", true, true) && controller->HoldAnimationPose("Standing", prisonOpeningSittingPingPongStartTime) : controller->PlayAnimationImmediate("Sitting", true, true);
 	if (!started)
 	{
 		prisonOpeningSitting = false;
@@ -1358,9 +1354,10 @@ void Player::ConfigurePrisonOpeningSittingMotion(const bool useStandingPingPong,
 	if (prisonOpeningUseStandingPingPong)
 	{
 		prisonOpeningSittingPingPongPhase = 0.0f;
-		prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
 		if (controller->PlayAnimationImmediate("Standing", true, true))
-			controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
+		{
+			controller->HoldAnimationPose("Standing", prisonOpeningSittingPingPongStartTime);
+		}
 	}
 	else
 	{
@@ -1575,7 +1572,6 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 	lowHpPresentationSuppressed = false;
 	ResetLowHpEffects();
 	ResetEyeCloseOverride();
-	deathEyeCloseStarted = false;
 	deathVisualFadeStarted = false;
 	if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
 	{
@@ -1634,7 +1630,6 @@ void Player::ForceDirectionImmediate(const DirectX::XMFLOAT3& direction) const
 void Player::BeginDeathEyeClose()
 {
 	ResetEyeCloseOverride();
-	deathEyeCloseStarted = false;
 	deathVisualFadeStarted = false;
 	if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
 	{
@@ -1650,17 +1645,8 @@ void Player::UpdateDeathEyeClose(const float deathElapsedTime)
 {
 	if (!deathEyeCloseActive)
 		return;
-
-	if (!deathEyeCloseStarted && deathElapsedTime >= deathEyeCloseDelay)
-		deathEyeCloseStarted = true;
-
-	const float normalizedCloseEyeTime = std::clamp(
-		(deathElapsedTime - deathEyeCloseDelay) /
-		(std::max)(deathEyeCloseDuration, FLT_EPSILON),
-		0.0f,
-		1.0f);
-	closeEyeWeight = normalizedCloseEyeTime * normalizedCloseEyeTime *
-		(3.0f - 2.0f * normalizedCloseEyeTime);
+	const float normalizedCloseEyeTime = std::clamp((deathElapsedTime - deathEyeCloseDelay) / deathEyeCloseDuration, 0.0f, 1.0f);
+	closeEyeWeight = normalizedCloseEyeTime * normalizedCloseEyeTime * (3.0f - 2.0f * normalizedCloseEyeTime);
 	GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
 }
 
@@ -2266,7 +2252,7 @@ bool Player::CanShowInitialRushGuide() const
 
 bool Player::CanShowRushComboGuide() const
 {
-	return stateMachine_ &&std::string(stateMachine_->GetStateName()) == "Rush" &&!rushTarget.expired();
+	return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush" && !rushTarget.expired();
 }
 
 
@@ -2307,7 +2293,7 @@ void Player::SetRushInputAcceptance(bool accepting)
 		if (rushButtonImageComponent)
 		{
 			rushButtonImageComponent->SetVisible(false);
-			rushButtonImageComponent->SetScale({rushButtonBaseScale.x * 0.8f,rushButtonBaseScale.y * 0.8f });
+			rushButtonImageComponent->SetScale({ rushButtonBaseScale.x * 0.8f,rushButtonBaseScale.y * 0.8f });
 		}
 		if (rushWordImageComponent) rushWordImageComponent->SetVisible(false);
 	}
@@ -2561,7 +2547,6 @@ void Player::ResetEyeCloseOverride()
 	closeEyeWeight = 0.0f;
 	eyeCloseOverrideOwner = EyeCloseOverrideOwner::None;
 	deathEyeCloseActive = false;
-	deathEyeCloseStarted = false;
 	deathVisualFadeStarted = false;
 }
 
@@ -3017,12 +3002,8 @@ void Player::UpdateRushPromptUI()
 		rushGuideImageComponent->SetVisible(false);
 		rushButtonImageComponent->SetVisible(false);
 		rushWordImageComponent->SetVisible(false);
-		rushButtonImageComponent->SetScale({
-			rushButtonBaseScale.x * 0.8f,
-			rushButtonBaseScale.y * 0.8f });
-		rushWordImageComponent->SetScale({
-			rushWordScale.x * 0.9f,
-			rushWordScale.y * 0.9f });
+		rushButtonImageComponent->SetScale({ rushButtonBaseScale.x * 0.8f,rushButtonBaseScale.y * 0.8f });
+		rushWordImageComponent->SetScale({ rushWordScale.x * 0.9f,rushWordScale.y * 0.9f });
 		return;
 	}
 
@@ -3042,8 +3023,7 @@ void Player::UpdateRushPromptUI()
 	}
 	else
 	{
-		rushPromptAlpha = std::clamp(
-			rushPromptAlpha + uiDeltaTime / rushPromptFadeInDuration,
+		rushPromptAlpha = std::clamp(rushPromptAlpha + uiDeltaTime / rushPromptFadeInDuration,
 			0.0f, 1.0f);
 	}
 
@@ -3861,6 +3841,7 @@ void Player::UpdatePrisonOpeningStandingPingPong(const float deltaTime)
 	prisonOpeningSittingPingPongPhase += (std::max)(deltaTime, 0.0f) * prisonOpeningSittingPingPongSpeed;
 	const float period = range * 2.0f;
 	const float wrappedPhase = std::fmod(prisonOpeningSittingPingPongPhase, period);
+	float prisonOpeningSittingSampleTime = 0.0f;
 	if (wrappedPhase <= range)
 	{
 		prisonOpeningSittingSampleTime = startTime + wrappedPhase;

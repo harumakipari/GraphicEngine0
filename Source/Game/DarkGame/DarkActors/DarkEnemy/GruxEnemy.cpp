@@ -470,7 +470,6 @@ void GruxEnemy::DrawImGuiDetails()
 	ImGui::DragFloat(U8("攻撃段間の旋回待機時間"), &interStageFaceDelay, 0.01f, 0.0f, 0.5f, "%.2f sec");
 	ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
 	ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
-	ImGui::DragFloat(U8("旋回タイムアウト"), &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
 	ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
 
 	ImGui::SeparatorText(U8("ジャンプ攻撃位置調整"));
@@ -2930,20 +2929,6 @@ bool GruxEnemy::StartJumpAttackExecution()
 	return true;
 }
 
-bool GruxEnemy::PlayAttackReadySE()
-{
-	if (attackReadySEName.empty())
-		return false;
-
-	const std::string audioPath = "./Data/Sound/SE/" + attackReadySEName + ".wav";
-	auto audio = CoreAudio::PlayOneShot(audioPath, attackReadySEVolume);
-	if (!audio)
-		return false;
-
-	const float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
-	audio->SetPitch(pitch);
-	return true;
-}
 
 void GruxEnemy::StartWeaponTelegraph(const std::string& animationName)
 {
@@ -2973,12 +2958,12 @@ void GruxEnemy::StopAIMovement() const
 	characterMovementComponent->ResetFixedSpeed();
 }
 
-bool GruxEnemy::RotateTowardsPlayer(
-	const DirectX::XMFLOAT3& direction,
-	const float degreesPerSecond,
-	const float deltaTime) const
+void GruxEnemy::RotateTowardsPlayer(const DirectX::XMFLOAT3& direction, const float degreesPerSecond, const float deltaTime) const
 {
-	return rotationComponent && rotationComponent->RotateTowardsDirection(direction, degreesPerSecond, deltaTime);
+	if (rotationComponent)
+	{
+		rotationComponent->RotateTowardsDirection(direction, degreesPerSecond, deltaTime);
+	}
 }
 
 // ボスの名前の演出を開始する

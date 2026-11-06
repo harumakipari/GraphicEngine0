@@ -128,6 +128,8 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
 
 GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackFacingBT(float dt)
 {
+    float turnTimeout = 1.5f;  // Chargeの向き合わせに使うタイムアウト時間。
+
     if (!IsChargeAttackBTActive()) return ChargeBTStepResult::Failed;
     chargeBT.phase = ChargeBTPhase::Facing;
     const auto context = BuildTargetContext();
@@ -138,8 +140,8 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackFacingBT(float dt)
     }
     if (context.absoluteAngleDegrees <= GetTurnCompleteAngle())
         return ChargeBTStepResult::Complete;
-    chargeBT.facingElapsed += (std::max)(0.0f, dt);
-    if (chargeBT.facingElapsed >= (std::max)(0.1f, GetTurnTimeout()))
+    chargeBT.facingElapsed +=  dt;
+    if (chargeBT.facingElapsed >= turnTimeout)
     {
         FailChargeAttackBT();
         return ChargeBTStepResult::Complete;
@@ -828,7 +830,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
         if (status == ChargeBTStepResult::Failed) chargeBT.failed = true;
         chargeBT.stunPhase = ChargeBTStunPhase::None;
         chargeBT.recoveryDuration = status == ChargeBTStepResult::Complete
-            ? GetPostStunRecoveryDuration() : GetSelectedAttackRecoveryDuration();
+            ? GetPostStunRecoveryDuration() : GetRecoveryDurationForCurrentAttack();
         SetNextRecoveryDuration(chargeBT.recoveryDuration);
     }
     else if (chargeBT.phase == ChargeBTPhase::Result)
@@ -838,7 +840,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
             if (BeginChargeStunBT()) return ChargeBTStepResult::Running;
             chargeBT.failed = true;
         }
-        chargeBT.recoveryDuration = GetSelectedAttackRecoveryDuration();
+        chargeBT.recoveryDuration = GetRecoveryDurationForCurrentAttack();
         if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::PlayerHit)
         {
             chargeBT.recoveryDuration = GetChargePlayerHitRecoveryDuration();
