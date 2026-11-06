@@ -477,7 +477,6 @@
     <ClInclude Include="Source\Game\Actors\Player\TitlePlayer.h">
       <DeploymentContent>false</DeploymentContent>
     </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Stage\Cloth.h" />
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameDefeatUIActor.h" />
     <ClInclude Include="Source\Game\Actors\UI\GameMovieSkipUIActor.h" />

@@ -6,12 +6,14 @@
 #include "Game/Scenes/GameScene.h"
 #include "Game/Actors/Player/Player.h"
 
+// Shared phase query
 bool GruxEnemy::IsBossInFinalPhase() const
 {
     const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
     return scene && scene->IsBossInFinalPhase();
 }
 
+// Jump telegraph visuals
 void GruxEnemy::ShowJumpTelegraphForCurrentJump()
 {
     if (!jumpTelegraphMeshComponent)
@@ -163,6 +165,7 @@ void GruxEnemy::HideJumpTelegraph()
     }
 }
 
+// Triple Jump lifecycle
 void GruxEnemy::BeginTripleJumpRuntime()
 {
     tripleJumpIndex = 0;
@@ -258,6 +261,7 @@ void GruxEnemy::AbortTripleJumpRuntime()
     tripleJumpTransitionElapsed = 0.0f;
 }
 
+// ImGui
 void GruxEnemy::DrawTripleJumpDebug()
 {
 #ifdef USE_IMGUI
@@ -297,6 +301,7 @@ void GruxEnemy::DrawTripleJumpDebug()
 #endif
 }
 
+// Jump and attack setup BT nodes
 bool CanPlanJumpAttack::Judgment()
 {
     const bool result = owner->CanPlanJumpAttack();
@@ -371,6 +376,7 @@ ActionBase::State StartJumpAttack::Run(float)
     return State::Complete;
 }
 
+// Triple Jump execution
 ActionBase::State ExecuteJumpAttack::RunTripleJump(float dt)
 {
     if (!started)
@@ -477,6 +483,7 @@ ActionBase::State ExecuteJumpAttack::RunTripleJump(float dt)
     return State::Complete;
 }
 
+// Single / Triple Jump dispatch and reset
 ActionBase::State ExecuteJumpAttack::Run(float dt)
 {
     if (owner->IsBossInFinalPhase())

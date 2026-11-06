@@ -627,16 +627,6 @@ public:
     float rushPromptAnimationTimer = 0.0f; // Rush入力ガイドのアニメーション経過時間
     bool rushPromptWasVisible = false; // 前フレームでRush入力ガイドを表示していたか
 
-    // ラッシュのUIの数値
-    DirectX::XMFLOAT2 rushGuidePosition = { 1200.0f, 680.0f }; // Rushガイド画像の表示位置
-    DirectX::XMFLOAT2 rushButtonPosition = { 1200.0f, 600.0f }; // Rushボタン画像の表示位置
-    DirectX::XMFLOAT2 rushWordPosition = { 1197.0f, 532.0f }; // Rushテキスト画像の表示位置
-    DirectX::XMFLOAT2 rushGuideSize = { 488.0f, 379.f }; // Rushガイド画像の基準サイズ
-    DirectX::XMFLOAT2 rushButtonSize = { 300.0f, 300.0f }; // Rushボタン画像の基準サイズ
-    DirectX::XMFLOAT2 rushWordSize = { 124.5f, 68.0f }; // Rushテキスト画像の基準サイズ
-    DirectX::XMFLOAT2 rushGuideScale = { 0.32f, 0.32f }; // Rushガイド画像の表示スケール
-    DirectX::XMFLOAT2 rushButtonBaseScale = { 0.32f, 0.32f }; // Rushボタン画像の基準スケール
-    DirectX::XMFLOAT2 rushWordScale = { 1.0f, 1.0f }; // Rushテキスト画像の表示スケール
 
     // 入力受付のコマンド
     ActionRequest bufferCommand{}; // 入力コマンド
@@ -717,6 +707,18 @@ public:
 
 
 private:
+    // ラッシュのUIの数値
+    DirectX::XMFLOAT2 rushGuidePosition = { 1200.0f, 680.0f }; // Rushガイド画像の表示位置
+    DirectX::XMFLOAT2 rushButtonPosition = { 1200.0f, 600.0f }; // Rushボタン画像の表示位置
+    DirectX::XMFLOAT2 rushWordPosition = { 1197.0f, 532.0f }; // Rushテキスト画像の表示位置
+    DirectX::XMFLOAT2 rushGuideSize = { 488.0f, 379.f }; // Rushガイド画像の基準サイズ
+    DirectX::XMFLOAT2 rushButtonSize = { 300.0f, 300.0f }; // Rushボタン画像の基準サイズ
+    DirectX::XMFLOAT2 rushWordSize = { 124.5f, 68.0f }; // Rushテキスト画像の基準サイズ
+    DirectX::XMFLOAT2 rushGuideScale = { 0.32f, 0.32f }; // Rushガイド画像の表示スケール
+    DirectX::XMFLOAT2 rushButtonBaseScale = { 0.32f, 0.32f }; // Rushボタン画像の基準スケール
+    DirectX::XMFLOAT2 rushWordScale = { 1.0f, 1.0f }; // Rushテキスト画像の表示スケール
+
+
     // HUD全体を非表示にしても、操作ガイドの学習状態を保持する。
     std::array<OperationGuideItemState,
         static_cast<size_t>(OperationGuideItem::Count)> operationGuideItems;

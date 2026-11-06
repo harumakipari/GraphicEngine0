@@ -152,14 +152,6 @@ void CameraManager::ToggleCamera(const Scene* scene)
 					dbgComp->SetYawAndPitch(yaw, pitch);
 
 				}
-				//dbg->SetQuaternionRotation({0.0f,0.0f,0.0f,1.0f});
-				//CameraState caneraState=
-				//{
-				//   cam->GetPosition(),
-				//    {0.0f,0.0f,0.0f},
-				//     DirectX::XMConvertToRadians(30.0f)
-				//};
-				//dbg->GetCameraComponent()->SetState(caneraState);
 			}
 		}
 	}

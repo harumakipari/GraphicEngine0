@@ -2,7 +2,6 @@
 #include "SceneRenderer.h"
 
 #include "Engine/Scene/Scene.h"
-#include "Game/Actors/Stage/Cloth.h"
 
 UINT SizeofComponent(DXGI_FORMAT format)
 {

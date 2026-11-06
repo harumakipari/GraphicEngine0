@@ -3,6 +3,7 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Scenes/GameScene.h"
 
+// Dash telegraph visuals
 void GruxEnemy::BeginDashTelegraphVisual()
 {
 	HideDashTelegraphVisual();
@@ -249,6 +250,7 @@ void GruxEnemy::HideDashTelegraphVisual()
 	}
 }
 
+// Dash BT nodes
 bool DashPlanAvailable::Judgment()
 {
 	return owner->IsBattleAIActive() &&
@@ -295,6 +297,7 @@ ActionBase::State ExecuteDashAttack::Run(float deltaTime)
 	}
 }
 
+// Dash planning and preparation
 bool GruxEnemy::CanPlanDashAttack() const
 {
 	if (IsDead() || !BuildTargetContext().valid || IsDeathPresentationActive())
@@ -342,6 +345,7 @@ bool GruxEnemy::CanExecuteDashAttack() const
 		characterMovementComponent && rotationComponent && GetBodyAnimationController();
 }
 
+// Dash execution and cleanup
 bool GruxEnemy::StartDashAttackTelegraph()
 {
 	if (!CanExecuteDashAttack())

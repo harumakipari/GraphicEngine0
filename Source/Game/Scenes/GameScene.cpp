@@ -29,7 +29,6 @@
 #include "Game/Actors/UI/GameDefeatUIActor.h"
 #include "Game/Actors/UI/GameVictoryUIActor.h"
 #include "Game/Actors/UI/GameMovieSkipUIActor.h"
-#include "Game/Actors/Stage/Cloth.h"
 
 
 #include "Game/DarkGame/DarkActors/DarkStage.h"

@@ -663,9 +663,6 @@
     <ClInclude Include="Source\Game\Actors\Enemy\Boss\BossAITypes.h">
       <Filter>Source\Game\Actors\Enemy\Boss</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Game\Actors\Stage\Cloth.h">
-      <Filter>Source\Game\Actors\Stage</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Game\Actors\Stage\ClothSimulate.h">
       <Filter>Source\Game\Actors\Stage</Filter>
     </ClInclude>

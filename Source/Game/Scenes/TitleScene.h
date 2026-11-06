@@ -9,9 +9,6 @@
 #include "Core/ActorManager.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Game/Actors/BgmActor.h"
-
-
-
 #include "Game/Actors/Camera/LoadingCamera.h"
 #include "Game/Actors/Player/TitlePlayer.h"
 #include "Game/DarkGame/DarkActors/DarkStageAsset.h"
@@ -30,16 +27,21 @@ public:
 
     bool Uninitialize(ID3D11Device* device) override;
 
-    void DrawGui() override;
-
     void SetUpActors()override;
 
     //ÉVÅ[ÉìÇÃé©ìÆìoò^
     static inline Scene::Autoenrollment<TitleScene> _autoenrollment;
 
 private:
-    enum class TitleMenuSelection : uint8_t { StartGame, QuitGame };
-    void HandleTitleMenuInput(); void SetTitleMenuSelection(TitleMenuSelection, bool); void UpdateTitleMenuAnimations(float); void UpdateTitleSelectionLines();
+    enum class TitleMenuSelection : uint8_t 
+    {
+        StartGame,
+        QuitGame
+    };
+    void HandleTitleMenuInput(); 
+    void SetTitleMenuSelection(const TitleMenuSelection selection, const bool playSound);
+    void UpdateTitleMenuAnimations(const float deltaTime);
+    void UpdateTitleSelectionLines();
     std::thread loadStageThread;
     std::thread loadStageAssetsThread;
 

@@ -9,6 +9,7 @@
 #include "Core/ActorManager.h"
 #include "Physics/CollisionFunction.h"
 
+// Retreat・Roarの内部判定
 namespace
 {
 	bool IsOtherBTActionForRoar(NodeBase* node)
@@ -74,6 +75,8 @@ namespace
 		return pathBlocked;
 	}
 }
+
+// 防御・Positioning・RoarのBTノード
 bool CanPlanRoar::Judgment() { return owner->CanPlanRoar(); }
 bool CanPlanAnyDefensive::Judgment()
 {
@@ -160,6 +163,7 @@ ActionBase::State FinishRoar::Run(float)
 	return complete ? State::Complete : State::Failed;
 }
 
+// 攻撃・Roar実行条件
 bool GruxEnemy::IsRoarExecutionAllowed() const
 {
 	if (!battleAIActive || IsDead() || IsPendingKill() ||
@@ -195,6 +199,7 @@ bool GruxEnemy::CanPlanRoar() const
 		context.xzDistance <= defensiveTooCloseDistance;
 }
 
+// Retreat
 bool GruxEnemy::CanPlanRetreat() const
 {
 	if (!IsRoarExecutionAllowed() || IsRoarBTActive() || roarCooldownRemaining <= 0.0f ||
@@ -331,6 +336,7 @@ void GruxEnemy::FinishRetreatMovement(bool arrived)
 	retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
 }
 
+// 防御行動選択
 void GruxEnemy::BeginCombatDecisionInference()
 {
 	repositionDecisionCached = true;
@@ -386,6 +392,7 @@ bool GruxEnemy::CanPlanAnyCombatDecision()
 	return canPlan;
 }
 
+// Reposition
 bool GruxEnemy::CanPlanReposition()
 {
 	const bool initialReposition = CanPlanInitialReposition();
@@ -567,6 +574,7 @@ void GruxEnemy::CompleteRepositionArrivalWait()
 	}
 }
 
+// Roar攻撃
 bool GruxEnemy::BeginRoarBT()
 {
 	if (!CanPlanRoar()) { return false; }
@@ -674,6 +682,7 @@ float GruxEnemy::GetRoarAttackRadius() const
 	return scene && scene->IsBossInFinalPhase() ? roarRadiusPhase2 : roarRadiusPhase1;
 }
 
+// Roar予兆描画
 void GruxEnemy::ShowRoarTelegraph()
 {
 	if (!roarTelegraphOuterMeshComponent || !roarTelegraphFillMeshComponent)
@@ -773,6 +782,7 @@ void GruxEnemy::HideRoarTelegraph()
 		roarTelegraphFillMeshComponent->SetIsVisible(false);
 }
 
+// Roar地面演出・衝撃破片
 void GruxEnemy::SpawnRoarGroundBurst()
 {
 	if (!roarGroundBurstEnabled || !roarGroundBurstEffectComponent)
@@ -956,6 +966,8 @@ void GruxEnemy::HideRoarImpactDebris()
 			debris.meshComponent->SetIsVisible(false);
 	}
 }
+
+// Roar浮遊破片
 void GruxEnemy::EnsureRoarFloatingDebris()
 {
 	constexpr const char* debrisModels[] = {
@@ -1076,6 +1088,7 @@ void GruxEnemy::HideRoarFloatingDebris()
 	}
 }
 
+// Roar Cleanup・ライフサイクル
 void GruxEnemy::CleanupRoarBT()
 {
 	// Roar固有のRuntime、演出、当たり判定を後始末する。
@@ -1127,6 +1140,7 @@ float GruxEnemy::GetRoarRenderFootOffset() const
 	return roarLevelStartFootOffset * (1.0f - std::clamp(time / roarLevelStartFootOffsetEndTime, 0.0f, 1.0f));
 }
 
+// ImGui
 void GruxEnemy::DrawRoarBTDebug()
 {
 #ifdef USE_IMGUI

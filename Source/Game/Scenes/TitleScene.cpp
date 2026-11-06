@@ -16,7 +16,6 @@
 
 #include "Game/Actors/Player/Player.h"
 #include "Game/Actors/Player/TitlePlayer.h"
-#include "Game/Actors/Stage/Cloth.h"
 
 
 #include "Physics/Physics.h"
@@ -103,7 +102,6 @@ void TitleScene::Start()
     // É^ÉCÉgÉãÇÃâÊëúÇçÏê¨
     std::shared_ptr<UIImageComponent> title = std::make_shared<UIImageComponent>("./Data/Textures/UI/title_logo1.png", "title");
     title->SetWorldPosition({ 790, 120 });
-    //title->SetWorldPosition({ 835, 180 });
     title->SetScale({ 0.8f,0.8f });
     title->SetSize({ 1300, 700 });
     uiManager->Add(title);
@@ -321,34 +319,3 @@ bool TitleScene::Uninitialize(ID3D11Device* device)
     return true;
 }
 
-void TitleScene::DrawGui()
-{
-    SceneBase::DrawGui();
-#ifdef USE_IMGUI
-#if 0
-    if (ImGui::Begin("Title Menu UI"))
-    {
-        ImGui::SeparatorText("START GAME");
-        ImGui::DragFloat("Position X##Start", &startGamePosition.x, 1.0f);
-        ImGui::DragFloat("Position Y##Start", &startGamePosition.y, 1.0f);
-        ImGui::DragFloat("Base Scale##Start", &startGameBaseScale, 0.01f, 0.1f, 3.0f);
-        ImGui::SeparatorText("QUIT GAME");
-        ImGui::DragFloat("Position X##Quit", &quitGamePosition.x, 1.0f);
-        ImGui::DragFloat("Position Y##Quit", &quitGamePosition.y, 1.0f);
-        ImGui::DragFloat("Base Scale##Quit", &quitGameBaseScale, 0.01f, 0.1f, 3.0f);
-        ImGui::SeparatorText("Selection Animation");
-        ImGui::DragFloat("Selected Scale", &selectedScale, 0.01f, 0.1f, 3.0f);
-        ImGui::DragFloat("Unselected Scale", &unselectedScale, 0.01f, 0.1f, 3.0f);
-        ImGui::DragFloat("Scale Animation Duration", &scaleAnimationDuration, 0.01f, 0.01f, 2.0f);
-        ImGui::DragFloat("Line Animation Duration", &lineAnimationDuration, 0.01f, 0.01f, 2.0f);
-        ImGui::SeparatorText("Selection Lines");
-        ImGui::DragFloat("Line Offset X", &lineOffset.x, 1.0f);
-        ImGui::DragFloat("Line Offset Y", &lineOffset.y, 1.0f);
-        ImGui::DragFloat("Line Base Scale X", &lineBaseScale.x, 0.01f, 0.0f, 3.0f);
-        ImGui::DragFloat("Line Base Scale Y", &lineBaseScale.y, 0.01f, 0.0f, 3.0f);
-    }
-    ImGui::End();
-
-#endif // 0
-#endif
-}

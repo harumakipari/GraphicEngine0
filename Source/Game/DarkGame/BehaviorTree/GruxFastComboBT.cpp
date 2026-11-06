@@ -3,6 +3,7 @@
 #include "NodeBase.h"
 
 
+// FastCombo conditions
 bool CanPlanFastCombo::Judgment()
 {
     const bool result = owner->CanPlanFastCombo();
@@ -15,6 +16,7 @@ bool CanExecuteFastCombo::Judgment()
     return result;
 }
 
+// Common BT: death and idle
 bool DeadJudgment::Judgment()
 {
     return owner->IsDead();
@@ -53,6 +55,7 @@ ActionBase::State BTIdle::Run(float deltaTime)
     return State::Complete;
 }
 
+// FastCombo action nodes
 ActionBase::State ApproachIfNeeded::Run(float dt)
 {
     if (owner->IsFastComboInRange())
@@ -192,6 +195,7 @@ ActionBase::State PrepareFastCombo::Run(float deltaTime)
     return State::Complete;
 }
 
+// FastCombo planning and approach
 // ????????????????
 bool GruxEnemy::CanPlanFastCombo() const
 {
@@ -293,11 +297,13 @@ bool GruxEnemy::UpdateFastComboApproach(float dt)
 }
 
 
+// Common recovery
 void GruxEnemy::BeginRecovery() const
 {
     PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true);
 }
 
+// Common BT: completion and update
 void GruxEnemy::RecordBehaviorAttackCompleted()
 {
     ++consecutiveAttackCount;

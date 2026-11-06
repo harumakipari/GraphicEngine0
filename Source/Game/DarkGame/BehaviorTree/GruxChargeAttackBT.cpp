@@ -20,6 +20,7 @@ namespace
     }
 }
 
+// Charge BTノード
 bool CanPlanChargeAttack::Judgment()
 {
     const bool ready = owner->CanPlanChargeAttack();
@@ -74,6 +75,7 @@ ActionBase::State ExecuteChargeRecovery::Run(float dt)
     return ToActionState(owner->FinishChargeRecoveryBT());
 }
 
+// Charge実行条件・準備
 bool GruxEnemy::IsChargeBTExecutionAllowed() const
 {
     if (IsDead() || !battleAIActive || IsDeathPresentationActive() ||
@@ -155,6 +157,7 @@ bool GruxEnemy::CanExecuteChargeAttack() const
         characterMovementComponent && rotationComponent && GetBodyAnimationController();
 }
 
+// Charge開始・失敗処理
 void GruxEnemy::FailChargeAttackBT()
 {
     if (!IsChargeAttackBTActive()) return;
@@ -200,6 +203,7 @@ void GruxEnemy::StartChargeAttackBT()
     OnSelectedActionStartedSuccessfully();
 }
 
+// Single Charge開始
 bool GruxEnemy::BeginSingleChargeBT()
 {
     HideChargeTelegraphVisual();
@@ -209,6 +213,7 @@ bool GruxEnemy::BeginSingleChargeBT()
     return true;
 }
 
+// Triple Charge判定・開始
 bool GruxEnemy::IsPhase2ChargeActive()
 {
     const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
@@ -249,6 +254,7 @@ bool GruxEnemy::BeginTripleChargeTransition()
     return true;
 }
 
+// Charge予兆描画
 void GruxEnemy::HideChargeTelegraphVisual()
 {
     if (chargeTelegraphMeshComponent)
@@ -385,6 +391,7 @@ void GruxEnemy::UpdateChargeTelegraphVisual(float lengthProgress)
 }
 
 
+// Charge更新・Triple Charge
 GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackBT(float dt)
 {
     return chargeBT.phase2SettingsLatched ? UpdateTripleChargeBT(dt) : UpdateSingleChargeBT(dt);
@@ -667,6 +674,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
     return ChargeBTStepResult::Complete;
 }
 
+// アニメーション監視・Single Charge更新
 bool GruxEnemy::UpdateChargeAnimationWatchdogBT(float animationTime, float dt)
 {
     const float safeDt = (std::max)(0.0f, dt);
@@ -744,6 +752,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateSingleChargeBT(float dt)
     return ChargeBTStepResult::Complete;
 }
 
+// Charge Stun
 bool GruxEnemy::BeginChargeStunBT()
 {
     const auto controller = GetBodyAnimationController();
@@ -792,6 +801,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeStunBT(float dt)
     return ChargeBTStepResult::Running;
 }
 
+// Charge終了結果・Recovery
 void GruxEnemy::FinishChargeAttackBT()
 {
     if (chargeBT.attackStarted && !chargeBT.cooldownStarted)
@@ -858,6 +868,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
     return ChargeBTStepResult::Complete;
 }
 
+// Rush中断・Cleanup
 void GruxEnemy::NotifyPlayerRushStarted(Player* player)
 {
     if (!player || !IsChargeAttackBTActive())
@@ -928,6 +939,7 @@ void GruxEnemy::CleanupChargeAttackBT()
     chargeBT.tripleWallStunDurationMultiplier = tripleStunMultiplier;
 }
 
+// ImGui
 void GruxEnemy::DrawChargeAttackBTDebug()
 {
 #ifdef USE_IMGUI

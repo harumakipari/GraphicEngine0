@@ -1346,9 +1346,7 @@ bool Player::BeginPrisonOpeningStanding()
 	return controller->GetCurrentAnimationName() == "Standing";
 }
 
-void Player::ConfigurePrisonOpeningSittingMotion(const bool useStandingPingPong,
-	const float startTime, const float endTime, const float speed,
-	const float standingBlendTime)
+void Player::ConfigurePrisonOpeningSittingMotion(const bool useStandingPingPong, const float startTime, const float endTime, const float speed, const float standingBlendTime)
 {
 	const bool modeChanged = prisonOpeningUseStandingPingPong != useStandingPingPong;
 	prisonOpeningUseStandingPingPong = useStandingPingPong;
@@ -3935,14 +3933,12 @@ void Player::UpdatePrisonOpeningStandingPingPong(const float deltaTime)
 
 	const float clipLength = controller->GetAnimationLength("Standing");
 	const float startTime = std::clamp(prisonOpeningSittingPingPongStartTime, 0.0f, clipLength);
-	const float endTime = std::clamp(prisonOpeningSittingPingPongEndTime,
-		startTime + 0.001f, clipLength);
+	const float endTime = std::clamp(prisonOpeningSittingPingPongEndTime, startTime + 0.001f, clipLength);
 	const float range = endTime - startTime;
 	if (range <= FLT_EPSILON)
 		return;
 
-	prisonOpeningSittingPingPongPhase += (std::max)(deltaTime, 0.0f) *
-		prisonOpeningSittingPingPongSpeed;
+	prisonOpeningSittingPingPongPhase += (std::max)(deltaTime, 0.0f) * prisonOpeningSittingPingPongSpeed;
 	const float period = range * 2.0f;
 	const float wrappedPhase = std::fmod(prisonOpeningSittingPingPongPhase, period);
 	if (wrappedPhase <= range)
