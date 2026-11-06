@@ -78,8 +78,5 @@ private:
     bool stopUpdate = true;
     const float pauseButtonBaseScale = 0.5f;
 
-    
-
-
     std::string retrySceneName = "MainScene";
 };

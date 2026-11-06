@@ -11,82 +11,82 @@
 
 namespace
 {
-    bool IsOtherBTActionForRoar(NodeBase* node)
-    {
-        return node && node->GetName() != "Idle" && node->GetName() != "StartRoar";
-    }
+	bool IsOtherBTActionForRoar(NodeBase* node)
+	{
+		return node && node->GetName() != "Idle" && node->GetName() != "StartRoar";
+	}
 
-    bool IsOtherBTActionForRetreat(NodeBase* node)
-    {
-        return node && node->GetName() != "Idle" &&
-            node->GetName() != "PrepareRetreatTarget";
-    }
+	bool IsOtherBTActionForRetreat(NodeBase* node)
+	{
+		return node && node->GetName() != "Idle" &&
+			node->GetName() != "PrepareRetreatTarget";
+	}
 
-    struct RetreatSweepShape
-    {
-        Capsule capsule{};
-        DirectX::XMFLOAT3 center{};
-        float halfHeight = 0.0f;
-        bool isSphere = false;
-    };
+	struct RetreatSweepShape
+	{
+		Capsule capsule{};
+		DirectX::XMFLOAT3 center{};
+		float halfHeight = 0.0f;
+		bool isSphere = false;
+	};
 
-    RetreatSweepShape BuildRetreatSweepShape(const CapsuleComponent& component)
-    {
-        RetreatSweepShape shape{};
-        const auto componentPosition = component.GetComponentWorldTransform().GetLocation();
-        shape.center = componentPosition;
-        shape.center.y += component.GetCollisionOffsetY();
-        shape.capsule.r = component.GetRadius();
-        shape.halfHeight = (std::max)(component.GetHeight() * 0.5f - shape.capsule.r, 0.0f);
-        shape.isSphere = shape.halfHeight <= FLT_EPSILON;
-        shape.capsule.a = shape.center;
-        shape.capsule.b = shape.center;
-        shape.capsule.a.y += shape.halfHeight;
-        shape.capsule.b.y -= shape.halfHeight;
-        return shape;
-    }
+	RetreatSweepShape BuildRetreatSweepShape(const CapsuleComponent& component)
+	{
+		RetreatSweepShape shape{};
+		const auto componentPosition = component.GetComponentWorldTransform().GetLocation();
+		shape.center = componentPosition;
+		shape.center.y += component.GetCollisionOffsetY();
+		shape.capsule.r = component.GetRadius();
+		shape.halfHeight = (std::max)(component.GetHeight() * 0.5f - shape.capsule.r, 0.0f);
+		shape.isSphere = shape.halfHeight <= FLT_EPSILON;
+		shape.capsule.a = shape.center;
+		shape.capsule.b = shape.center;
+		shape.capsule.a.y += shape.halfHeight;
+		shape.capsule.b.y -= shape.halfHeight;
+		return shape;
+	}
 
-    bool SweepRetreatPath(const RetreatSweepShape& shape, const DirectX::XMFLOAT3& direction,
-        float distance, HitResult& result, uint32_t obstacleMask)
-    {
-        PositioningSweepShape queryShape{};
-        queryShape.type = shape.isSphere ? PositioningSweepShape::Type::Sphere
-            : PositioningSweepShape::Type::Capsule;
-        queryShape.center = shape.center;
-        queryShape.point1 = shape.capsule.a;
-        queryShape.point2 = shape.capsule.b;
-        queryShape.radius = shape.capsule.r;
+	bool SweepRetreatPath(const RetreatSweepShape& shape, const DirectX::XMFLOAT3& direction,
+		float distance, HitResult& result, uint32_t obstacleMask)
+	{
+		PositioningSweepShape queryShape{};
+		queryShape.type = shape.isSphere ? PositioningSweepShape::Type::Sphere
+			: PositioningSweepShape::Type::Capsule;
+		queryShape.center = shape.center;
+		queryShape.point1 = shape.capsule.a;
+		queryShape.point2 = shape.capsule.b;
+		queryShape.radius = shape.capsule.r;
 
-        PositioningPathSafetyPolicy policy{};
-        policy.floorNormalThreshold = 0.7f;
-        policy.supportPenetrationTolerance = 0.30f;
-        PositioningPathSafetyResult pathResult{};
-        const bool pathBlocked = Physics::Instance().SweepPositioningPath(queryShape, direction,
-            distance, obstacleMask, policy, pathResult);
+		PositioningPathSafetyPolicy policy{};
+		policy.floorNormalThreshold = 0.7f;
+		policy.supportPenetrationTolerance = 0.30f;
+		PositioningPathSafetyResult pathResult{};
+		const bool pathBlocked = Physics::Instance().SweepPositioningPath(queryShape, direction,
+			distance, obstacleMask, policy, pathResult);
 
-        if (pathResult.blockingHit.hit)
-        {
-            result.position = pathResult.blockingHit.position;
-            result.normal = pathResult.blockingHit.normal;
-            result.distance = pathResult.blockingHit.distance;
-        }
+		if (pathResult.blockingHit.hit)
+		{
+			result.position = pathResult.blockingHit.position;
+			result.normal = pathResult.blockingHit.normal;
+			result.distance = pathResult.blockingHit.distance;
+		}
 
-        return pathBlocked;
-    }
+		return pathBlocked;
+	}
 }
 bool CanPlanRoar::Judgment() { return owner->CanPlanRoar(); }
 bool CanPlanAnyDefensive::Judgment()
 {
-    if (owner->IsInitialRepositionFallbackIdlePending())
-    {
-        return false;
-    }
-    if (!owner->CanPlanAttackAgainstCurrentPlayer())
-    {
-        return false;
-    }
-    const bool result = owner->CanPlanRoar() || owner->CanPlanRetreat();
-    return result;
+	if (owner->IsInitialRepositionFallbackIdlePending())
+	{
+		return false;
+	}
+	if (!owner->CanPlanAttackAgainstCurrentPlayer())
+	{
+		return false;
+	}
+	const bool result = owner->CanPlanRoar() || owner->CanPlanRetreat();
+	return result;
 }
 bool CanPlanRetreat::Judgment() { return owner->CanPlanRetreat(); }
 bool CanPlanAnyCombatDecision::Judgment() { return owner->CanPlanAnyCombatDecision(); }
@@ -94,1132 +94,1105 @@ bool CanPlanInitialReposition::Judgment() { return owner->CanPlanInitialRepositi
 bool CanPlanReposition::Judgment() { return owner->CanPlanReposition(); }
 ActionBase::State PrepareInitialRepositionTarget::Run(float)
 {
-    if (owner->PrepareRepositionTarget())
-        return State::Complete;
-    owner->BeginInitialRepositionFallback();
-    return State::Failed;
+	if (owner->PrepareRepositionTarget())
+		return State::Complete;
+	owner->BeginInitialRepositionFallback();
+	return State::Failed;
 }
 ActionBase::State PrepareRepositionTarget::Run(float)
 {
-    return owner->PrepareRepositionTarget() ? State::Complete : State::Failed;
+	return owner->PrepareRepositionTarget() ? State::Complete : State::Failed;
 }
 ActionBase::State MoveToRepositionTarget::Run(float dt)
 {
-    const auto result = owner->UpdateRepositionMovement(dt);
-    if (result == GruxEnemy::PositioningMoveResult::Running)
-        return State::Run;
-    const bool arrived = result == GruxEnemy::PositioningMoveResult::Arrived;
-    owner->FinishRepositionMovement(arrived);
-    if (!arrived && owner->IsInitialRepositionPending())
-        owner->BeginInitialRepositionFallback();
-    return arrived ? State::Complete : State::Failed;
+	const auto result = owner->UpdateRepositionMovement(dt);
+	if (result == GruxEnemy::PositioningMoveResult::Running)
+		return State::Run;
+	const bool arrived = result == GruxEnemy::PositioningMoveResult::Arrived;
+	owner->FinishRepositionMovement(arrived);
+	if (!arrived && owner->IsInitialRepositionPending())
+		owner->BeginInitialRepositionFallback();
+	return arrived ? State::Complete : State::Failed;
 }
 ActionBase::State WaitBeforeInitialReposition::Run(float dt)
 {
-    elapsed += (std::max)(0.0f, dt);
-    if (elapsed < 1.5f) // 1.5秒待機してからボス戦を始める
-        return State::Run;
-    elapsed = 0.0f;
-    return State::Complete;
+	elapsed += (std::max)(0.0f, dt);
+	if (elapsed < 1.5f) // 1.5秒待機してからボス戦を始める
+		return State::Run;
+	elapsed = 0.0f;
+	return State::Complete;
 }
 ActionBase::State WaitAfterReposition::Run(float dt)
 {
-    elapsed += (std::max)(0.0f, dt);
-    if (elapsed < owner->GetRepositionArrivalWaitDuration())
-        return State::Run;
-    elapsed = 0.0f;
-    owner->CompleteRepositionArrivalWait();
-    return State::Complete;
+	elapsed += (std::max)(0.0f, dt);
+	if (elapsed < owner->GetRepositionArrivalWaitDuration())
+		return State::Run;
+	elapsed = 0.0f;
+	owner->CompleteRepositionArrivalWait();
+	return State::Complete;
 }
 ActionBase::State PrepareRetreatTarget::Run(float)
 {
-    return owner->PrepareRetreatTarget() ? State::Complete : State::Failed;
+	return owner->PrepareRetreatTarget() ? State::Complete : State::Failed;
 }
 ActionBase::State MoveToPositioningTarget::Run(float dt)
 {
-    const auto result = owner->UpdateRetreatMovement(dt);
-    if (result == GruxEnemy::PositioningMoveResult::Running)
-        return State::Run;
-    const bool arrived = result == GruxEnemy::PositioningMoveResult::Arrived;
-    owner->FinishRetreatMovement(arrived);
-    return arrived ? State::Complete : State::Failed;
+	const auto result = owner->UpdateRetreatMovement(dt);
+	if (result == GruxEnemy::PositioningMoveResult::Running)
+		return State::Run;
+	const bool arrived = result == GruxEnemy::PositioningMoveResult::Arrived;
+	owner->FinishRetreatMovement(arrived);
+	return arrived ? State::Complete : State::Failed;
 }
 ActionBase::State StartRoar::Run(float)
 {
-    return owner->BeginRoarBT() ? State::Complete : State::Failed;
+	return owner->BeginRoarBT() ? State::Complete : State::Failed;
 }
 ActionBase::State ExecuteRoar::Run(float dt)
 {
-    const int result = owner->UpdateRoarBT(dt);
-    return result < 0 ? State::Failed : result > 0 ? State::Complete : State::Run;
+	const int result = owner->UpdateRoarBT(dt);
+	return result < 0 ? State::Failed : result > 0 ? State::Complete : State::Run;
 }
 ActionBase::State FinishRoar::Run(float)
 {
-    const bool complete = owner->IsRoarBTActive();
-    owner->CleanupRoarBT();
-    return complete ? State::Complete : State::Failed;
+	const bool complete = owner->IsRoarBTActive();
+	owner->CleanupRoarBT();
+	return complete ? State::Complete : State::Failed;
 }
 
 bool GruxEnemy::IsRoarExecutionAllowed() const
 {
-    if (!battleAIActive || IsDead() || IsPendingKill() ||
-        isDeathPerform ||
-        finalHitReactionActive || finalHitReactionHeld || IsAnimationEditorPreviewActive() ||
-        IsChargeAttackBTActive() || IsDashAttackBTActive() || chargeMovementActive ||
-        dashAttackMovementActive || jumpMotionWarpOverrideActive || !characterMovementComponent ||
-        !GetBodyAnimationController() || !GetOwnerScene())
-        return false;
-    if (IsStunned())
-        return false;
-    const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-    return player && !player->IsPendingKill() && player->GetHp() > 0;
+	if (!battleAIActive || IsDead() || IsPendingKill() ||
+		isDeathPerform ||
+		finalHitReactionActive || finalHitReactionHeld || IsAnimationEditorPreviewActive() ||
+		IsChargeAttackBTActive() || IsDashAttackBTActive() || chargeMovementActive ||
+		dashAttackMovementActive || jumpMotionWarpOverrideActive || !characterMovementComponent ||
+		!GetBodyAnimationController() || !GetOwnerScene())
+		return false;
+	if (IsStunned())
+		return false;
+	const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+	return player && !player->IsPendingKill() && player->GetHp() > 0;
 }
 
 bool GruxEnemy::CanPlanAttackAgainstCurrentPlayer() const
 {
-    const auto scene = GetOwnerScene();
-    if (!scene)
-        return false;
+	const auto scene = GetOwnerScene();
+	if (!scene)
+		return false;
 
-    const auto player = scene->GetActorManager()->GetActorOfType<Player>();
-    return player && !player->IsPendingKill() && player->IsBossAttackTargetAvailable();
+	const auto player = scene->GetActorManager()->GetActorOfType<Player>();
+	return player && !player->IsPendingKill() && player->IsBossAttackTargetAvailable();
 }
 
 bool GruxEnemy::CanPlanRoar() const
 {
-    if (!IsRoarExecutionAllowed() || IsRoarBTActive() || roarCooldownRemaining > 0.0f ||
-        IsOtherBTActionForRoar(activeNode))
-        return false;
-    const auto context = BuildTargetContext();
-    return IsDefensiveBackForBehavior(context) &&
-        context.xzDistance <= defensiveTooCloseDistance;
+	if (!IsRoarExecutionAllowed() || IsRoarBTActive() || roarCooldownRemaining > 0.0f ||
+		IsOtherBTActionForRoar(activeNode))
+		return false;
+	const auto context = BuildTargetContext();
+	return IsDefensiveBackForBehavior(context) &&
+		context.xzDistance <= defensiveTooCloseDistance;
 }
 
 bool GruxEnemy::CanPlanRetreat() const
 {
-    if (!IsRoarExecutionAllowed() || IsRoarBTActive() || roarCooldownRemaining <= 0.0f ||
-        retreatRetryCooldownRemaining > 0.0f || retreatTarget.valid ||
-        retreatMovementRuntime.movementActive || IsOtherBTActionForRetreat(activeNode) ||
-        !rotationComponent || !enemyCapsuleComponent)
-        return false;
-    const auto context = BuildTargetContext();
-    return IsDefensiveBackForBehavior(context) &&
-        context.xzDistance <= defensiveTooCloseDistance;
+	if (!IsRoarExecutionAllowed() || IsRoarBTActive() || roarCooldownRemaining <= 0.0f ||
+		retreatRetryCooldownRemaining > 0.0f || retreatTarget.valid ||
+		retreatMovementRuntime.movementActive || IsOtherBTActionForRetreat(activeNode) ||
+		!rotationComponent || !enemyCapsuleComponent)
+		return false;
+	const auto context = BuildTargetContext();
+	return IsDefensiveBackForBehavior(context) &&
+		context.xzDistance <= defensiveTooCloseDistance;
 }
 
 bool GruxEnemy::PrepareRetreatTarget()
 {
-    ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
-    if (!CanPlanRetreat())
-    {
-        retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
-        return false;
-    }
+	ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
+	if (!CanPlanRetreat())
+	{
+		retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
+		return false;
+	}
 
-    const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-    if (!player)
-    {
-        retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
-        return false;
-    }
-    const DirectX::XMFLOAT3 playerSnapshot = player->GetPosition();
-    const DirectX::XMFLOAT3 gruxSnapshot = GetPosition();
-    float awayX = gruxSnapshot.x - playerSnapshot.x;
-    float awayZ = gruxSnapshot.z - playerSnapshot.z;
-    const float startingPlayerDistance = std::sqrt(awayX * awayX + awayZ * awayZ);
-    if (startingPlayerDistance > FLT_EPSILON)
-    {
-        awayX /= startingPlayerDistance;
-        awayZ /= startingPlayerDistance;
-    }
-    else
-    {
-        const auto forward = GetForward();
-        awayX = forward.x;
-        awayZ = forward.z;
-    }
+	const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+	if (!player)
+	{
+		retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
+		return false;
+	}
+	const DirectX::XMFLOAT3 playerSnapshot = player->GetPosition();
+	const DirectX::XMFLOAT3 gruxSnapshot = GetPosition();
+	float awayX = gruxSnapshot.x - playerSnapshot.x;
+	float awayZ = gruxSnapshot.z - playerSnapshot.z;
+	const float startingPlayerDistance = std::sqrt(awayX * awayX + awayZ * awayZ);
+	if (startingPlayerDistance > FLT_EPSILON)
+	{
+		awayX /= startingPlayerDistance;
+		awayZ /= startingPlayerDistance;
+	}
+	else
+	{
+		const auto forward = GetForward();
+		awayX = forward.x;
+		awayZ = forward.z;
+	}
 
-    const float minDistance = (std::max)(0.0f, retreatDistanceMin);
-    const float maxDistance = (std::max)(minDistance, retreatDistanceMax);
-    const std::array<float, 3> distances{ maxDistance, (minDistance + maxDistance) * 0.5f, minDistance };
-    const uint32_t obstacleMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
-        CollisionHelper::ToBit(CollisionLayer::WorldProps) |
-        CollisionHelper::ToBit(CollisionLayer::Convex);
-    const RetreatSweepShape retreatSweepShape = BuildRetreatSweepShape(*enemyCapsuleComponent);
-    for (const float distance : distances)
-    {
-        for (int index = 0; index <= 12; ++index)
-        {
-            const float magnitude = static_cast<float>((index + 1) / 2);
-            const float signedStep = index == 0 ? 0.0f : (index % 2 == 1 ? magnitude : -magnitude);
-            const float angle = DirectX::XMConvertToRadians(signedStep * 30.0f);
-            const float directionX = awayX * std::cos(angle) - awayZ * std::sin(angle);
-            const float directionZ = awayX * std::sin(angle) + awayZ * std::cos(angle);
-            const DirectX::XMFLOAT3 desired{
-                gruxSnapshot.x + directionX * distance,
-                gruxSnapshot.y,
-                gruxSnapshot.z + directionZ * distance };
-            RepositionTargetEvaluation evaluation{};
-            EvaluateClampedPositioningTarget(gruxSnapshot, desired, evaluation);
-            const float moveX = evaluation.clampedTarget.x - gruxSnapshot.x;
-            const float moveZ = evaluation.clampedTarget.z - gruxSnapshot.z;
-            const float moveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
-            const float playerX = evaluation.clampedTarget.x - playerSnapshot.x;
-            const float playerZ = evaluation.clampedTarget.z - playerSnapshot.z;
-            const float plannedPlayerDistance = std::sqrt(playerX * playerX + playerZ * playerZ);
-            if (evaluation.clampDistance > attackSetupClampTolerance)
-                continue;
-            if (plannedPlayerDistance <= startingPlayerDistance + 0.01f)
-                continue;
-            if (moveDistance < retreatMinimumMoveDistance)
-                continue;
-            if (evaluation.bossRoomPathBlocked)
-                continue;
-            const DirectX::XMFLOAT3 moveDirection{ moveX / moveDistance, 0.0f, moveZ / moveDistance };
-            HitResult hit{};
-            if (SweepRetreatPath(retreatSweepShape, moveDirection, moveDistance, hit, obstacleMask))
-                continue;
-            retreatTarget = {};
-            retreatTarget.valid = true;
-            retreatTarget.targetPosition = evaluation.clampedTarget;
-            retreatTarget.arrivalTolerance = 0.3f;
-            retreatTarget.timeout = 3.0f;
-            retreatTarget.maxMoveDistance = moveDistance + 1.0f;
-            retreatTarget.moveSpeed = retreatMoveSpeed;
-            retreatTarget.stuckMovementThreshold = 0.01f;
-            retreatTarget.stuckTimeThreshold = 0.5f;
-            return true;
-        }
-    }
-    ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
-    retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
-    return false;
+	const float minDistance = (std::max)(0.0f, retreatDistanceMin);
+	const float maxDistance = (std::max)(minDistance, retreatDistanceMax);
+	const std::array<float, 3> distances{ maxDistance, (minDistance + maxDistance) * 0.5f, minDistance };
+	const uint32_t obstacleMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
+		CollisionHelper::ToBit(CollisionLayer::WorldProps) |
+		CollisionHelper::ToBit(CollisionLayer::Convex);
+	const RetreatSweepShape retreatSweepShape = BuildRetreatSweepShape(*enemyCapsuleComponent);
+	for (const float distance : distances)
+	{
+		for (int index = 0; index <= 12; ++index)
+		{
+			const float magnitude = static_cast<float>((index + 1) / 2);
+			const float signedStep = index == 0 ? 0.0f : (index % 2 == 1 ? magnitude : -magnitude);
+			const float angle = DirectX::XMConvertToRadians(signedStep * 30.0f);
+			const float directionX = awayX * std::cos(angle) - awayZ * std::sin(angle);
+			const float directionZ = awayX * std::sin(angle) + awayZ * std::cos(angle);
+			const DirectX::XMFLOAT3 desired{
+				gruxSnapshot.x + directionX * distance,
+				gruxSnapshot.y,
+				gruxSnapshot.z + directionZ * distance };
+			RepositionTargetEvaluation evaluation{};
+			EvaluateClampedPositioningTarget(gruxSnapshot, desired, evaluation);
+			const float moveX = evaluation.clampedTarget.x - gruxSnapshot.x;
+			const float moveZ = evaluation.clampedTarget.z - gruxSnapshot.z;
+			const float moveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
+			const float playerX = evaluation.clampedTarget.x - playerSnapshot.x;
+			const float playerZ = evaluation.clampedTarget.z - playerSnapshot.z;
+			const float plannedPlayerDistance = std::sqrt(playerX * playerX + playerZ * playerZ);
+			if (evaluation.clampDistance > attackSetupClampTolerance)
+				continue;
+			if (plannedPlayerDistance <= startingPlayerDistance + 0.01f)
+				continue;
+			if (moveDistance < retreatMinimumMoveDistance)
+				continue;
+			if (evaluation.bossRoomPathBlocked)
+				continue;
+			const DirectX::XMFLOAT3 moveDirection{ moveX / moveDistance, 0.0f, moveZ / moveDistance };
+			HitResult hit{};
+			if (SweepRetreatPath(retreatSweepShape, moveDirection, moveDistance, hit, obstacleMask))
+				continue;
+			retreatTarget = {};
+			retreatTarget.valid = true;
+			retreatTarget.targetPosition = evaluation.clampedTarget;
+			retreatTarget.arrivalTolerance = 0.3f;
+			retreatTarget.timeout = 3.0f;
+			retreatTarget.maxMoveDistance = moveDistance + 1.0f;
+			retreatTarget.moveSpeed = retreatMoveSpeed;
+			retreatTarget.stuckMovementThreshold = 0.01f;
+			retreatTarget.stuckTimeThreshold = 0.5f;
+			return true;
+		}
+	}
+	ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
+	retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
+	return false;
 }
 
 GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRetreatMovement(float deltaTime)
 {
-    if (!IsRoarExecutionAllowed() || !retreatTarget.valid || !enemyCapsuleComponent)
-        return PositioningMoveResult::InvalidTarget;
-    const auto position = GetPosition();
-    const float dx = retreatTarget.targetPosition.x - position.x;
-    const float dz = retreatTarget.targetPosition.z - position.z;
-    const float remaining = std::sqrt(dx * dx + dz * dz);
-    if (remaining > retreatTarget.arrivalTolerance)
-    {
-        const RetreatSweepShape retreatSweepShape = BuildRetreatSweepShape(*enemyCapsuleComponent);
-        const DirectX::XMFLOAT3 direction{ dx / remaining, 0.0f, dz / remaining };
-        const uint32_t obstacleMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
-            CollisionHelper::ToBit(CollisionLayer::WorldProps) |
-            CollisionHelper::ToBit(CollisionLayer::Convex);
-        HitResult hit{};
-        if (SweepRetreatPath(retreatSweepShape, direction, remaining, hit, obstacleMask))
-        {
-            return PositioningMoveResult::Stuck;
-        }
-    }
-    const auto result = UpdatePositioningTargetMovement(retreatTarget, retreatMovementRuntime, deltaTime);
-    return result;
+	if (!IsRoarExecutionAllowed() || !retreatTarget.valid || !enemyCapsuleComponent)
+		return PositioningMoveResult::InvalidTarget;
+	const auto position = GetPosition();
+	const float dx = retreatTarget.targetPosition.x - position.x;
+	const float dz = retreatTarget.targetPosition.z - position.z;
+	const float remaining = std::sqrt(dx * dx + dz * dz);
+	if (remaining > retreatTarget.arrivalTolerance)
+	{
+		const RetreatSweepShape retreatSweepShape = BuildRetreatSweepShape(*enemyCapsuleComponent);
+		const DirectX::XMFLOAT3 direction{ dx / remaining, 0.0f, dz / remaining };
+		const uint32_t obstacleMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
+			CollisionHelper::ToBit(CollisionLayer::WorldProps) |
+			CollisionHelper::ToBit(CollisionLayer::Convex);
+		HitResult hit{};
+		if (SweepRetreatPath(retreatSweepShape, direction, remaining, hit, obstacleMask))
+		{
+			return PositioningMoveResult::Stuck;
+		}
+	}
+	const auto result = UpdatePositioningTargetMovement(retreatTarget, retreatMovementRuntime, deltaTime);
+	return result;
 }
 
 void GruxEnemy::FinishRetreatMovement(bool arrived)
 {
-    StopAIMovement();
-    EndPositioningAnimation();
-    ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
-    if (arrived)
-        consecutiveAttackCount = 0;
-    retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
+	StopAIMovement();
+	EndPositioningAnimation();
+	ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
+	if (arrived)
+		consecutiveAttackCount = 0;
+	retreatRetryCooldownRemaining = retreatRetryCooldownDuration;
 }
 
 void GruxEnemy::BeginCombatDecisionInference()
 {
-    repositionDecisionCached = true;
-    repositionDecisionResult = false;
-    repositionDecisionRoll = 0.0f;
-    const bool defensiveAvailable = CanPlanAttackAgainstCurrentPlayer() &&
-        (CanPlanRoar() || CanPlanRetreat());
-    if (!IsRoarExecutionAllowed() || defensiveAvailable ||
-        repositionCooldownRemaining > 0.0f || repositionRetryCooldownRemaining > 0.0f ||
-        repositionTarget.valid || repositionMovementRuntime.movementActive || !rotationComponent ||
-        !characterMovementComponent || !enemyCapsuleComponent)
-        return;
-    const auto context = BuildTargetContext();
-    if (!context.valid || context.distanceRegion == BossDistanceRegion::Far)
-        return;
-    const int index = (std::min)(consecutiveAttackCount, 3);
-    const float chance = std::clamp(repositionChanceByAttackCount[index], 0.0f, 1.0f);
-    static thread_local std::mt19937 engine{ std::random_device{}() };
-    repositionDecisionRoll = std::uniform_real_distribution<float>(0.0f, 1.0f)(engine);
-    repositionDecisionResult = repositionDecisionRoll < chance;
+	repositionDecisionCached = true;
+	repositionDecisionResult = false;
+	repositionDecisionRoll = 0.0f;
+	const bool defensiveAvailable = CanPlanAttackAgainstCurrentPlayer() &&
+		(CanPlanRoar() || CanPlanRetreat());
+	if (!IsRoarExecutionAllowed() || defensiveAvailable ||
+		repositionCooldownRemaining > 0.0f || repositionRetryCooldownRemaining > 0.0f ||
+		repositionTarget.valid || repositionMovementRuntime.movementActive || !rotationComponent ||
+		!characterMovementComponent || !enemyCapsuleComponent)
+		return;
+	const auto context = BuildTargetContext();
+	if (!context.valid || context.distanceRegion == BossDistanceRegion::Far)
+		return;
+	const int index = (std::min)(consecutiveAttackCount, 3);
+	const float chance = std::clamp(repositionChanceByAttackCount[index], 0.0f, 1.0f);
+	static thread_local std::mt19937 engine{ std::random_device{}() };
+	repositionDecisionRoll = std::uniform_real_distribution<float>(0.0f, 1.0f)(engine);
+	repositionDecisionResult = repositionDecisionRoll < chance;
 }
 
 bool GruxEnemy::CanPlanAnyCombatDecision()
 {
-    if (initialRepositionFallbackIdlePending)
-    {
-        return false;
-    }
-    if (!repositionDecisionCached)
-        BeginCombatDecisionInference();
-    const bool playerAvailableForAttack = CanPlanAttackAgainstCurrentPlayer();
-    bool canPlanFastCombo = false;
-    bool canPlanJump = false;
-    bool canPlanDash = false;
-    bool canPlanCharge = false;
-    if (playerAvailableForAttack)
-    {
-        canPlanFastCombo = CanPlanFastCombo();
-        canPlanJump = CanPlanJumpAttack();
-        canPlanDash = CanPlanDashAttack();
-        canPlanCharge = CanPlanChargeAttack();
-    }
-    else
-    {
-        canPlanFastCombo = false;
-        canPlanJump = false;
-        canPlanDash = false;
-        canPlanCharge = false;
-    }
-    const bool canPlanAttack = playerAvailableForAttack &&
-        (canPlanFastCombo || canPlanJump || canPlanDash || canPlanCharge);
-    const bool canPlan = CanPlanReposition() || canPlanAttack;
-    return canPlan;
+	if (initialRepositionFallbackIdlePending)
+	{
+		return false;
+	}
+	if (!repositionDecisionCached)
+		BeginCombatDecisionInference();
+	const bool playerAvailableForAttack = CanPlanAttackAgainstCurrentPlayer();
+	bool canPlanFastCombo = false;
+	bool canPlanJump = false;
+	bool canPlanDash = false;
+	bool canPlanCharge = false;
+	if (playerAvailableForAttack)
+	{
+		canPlanFastCombo = CanPlanFastCombo();
+		canPlanJump = CanPlanJumpAttack();
+		canPlanDash = CanPlanDashAttack();
+		canPlanCharge = CanPlanChargeAttack();
+	}
+	else
+	{
+		canPlanFastCombo = false;
+		canPlanJump = false;
+		canPlanDash = false;
+		canPlanCharge = false;
+	}
+	const bool canPlanAttack = playerAvailableForAttack &&
+		(canPlanFastCombo || canPlanJump || canPlanDash || canPlanCharge);
+	const bool canPlan = CanPlanReposition() || canPlanAttack;
+	return canPlan;
 }
 
 bool GruxEnemy::CanPlanReposition()
 {
-    const bool initialReposition = CanPlanInitialReposition();
-    const bool decisionAllows = initialReposition || (repositionDecisionCached && repositionDecisionResult);
-    const bool targetInactive = !repositionTarget.valid;
-    const bool movementInactive = !repositionMovementRuntime.movementActive;
-    const bool cooldownReady = repositionCooldownRemaining <= 0.0f;
-    const bool retryReady = repositionRetryCooldownRemaining <= 0.0f;
-    const bool playerAvailableForDefensive = CanPlanAttackAgainstCurrentPlayer();
-    const bool roarAvailable = playerAvailableForDefensive && CanPlanRoar();
-    const bool retreatAvailable = playerAvailableForDefensive && !roarAvailable && CanPlanRetreat();
-    const bool defensiveInactive = !roarAvailable && !retreatAvailable;
-    const bool nodeAllowed = !activeNode || activeNode->GetName() == "PrepareRepositionTarget" ||
-        activeNode->GetName() == "PrepareInitialRepositionTarget";
-    const bool executionAllowed = IsRoarExecutionAllowed();
-    const bool componentsValid = rotationComponent && characterMovementComponent && enemyCapsuleComponent;
-    const bool normalRepositionReady = cooldownReady && retryReady && defensiveInactive && executionAllowed;
-    const bool result = !initialRepositionFallbackIdlePending && decisionAllows && targetInactive && movementInactive &&
-        nodeAllowed && componentsValid && (initialReposition || normalRepositionReady);
+	const bool initialReposition = CanPlanInitialReposition();
+	const bool decisionAllows = initialReposition || (repositionDecisionCached && repositionDecisionResult);
+	const bool targetInactive = !repositionTarget.valid;
+	const bool movementInactive = !repositionMovementRuntime.movementActive;
+	const bool cooldownReady = repositionCooldownRemaining <= 0.0f;
+	const bool retryReady = repositionRetryCooldownRemaining <= 0.0f;
+	const bool playerAvailableForDefensive = CanPlanAttackAgainstCurrentPlayer();
+	const bool roarAvailable = playerAvailableForDefensive && CanPlanRoar();
+	const bool retreatAvailable = playerAvailableForDefensive && !roarAvailable && CanPlanRetreat();
+	const bool defensiveInactive = !roarAvailable && !retreatAvailable;
+	const bool nodeAllowed = !activeNode || activeNode->GetName() == "PrepareRepositionTarget" ||
+		activeNode->GetName() == "PrepareInitialRepositionTarget";
+	const bool executionAllowed = IsRoarExecutionAllowed();
+	const bool componentsValid = rotationComponent && characterMovementComponent && enemyCapsuleComponent;
+	const bool normalRepositionReady = cooldownReady && retryReady && defensiveInactive && executionAllowed;
+	const bool result = !initialRepositionFallbackIdlePending && decisionAllows && targetInactive && movementInactive &&
+		nodeAllowed && componentsValid && (initialReposition || normalRepositionReady);
 
-    return result;
+	return result;
 }
 
 bool GruxEnemy::PrepareRepositionTarget()
 {
-    ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
-    if (!CanPlanReposition())
-    {
-        if (!IsInitialRepositionPending())
-            repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
-        return false;
-    }
+	ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
+	if (!CanPlanReposition())
+	{
+		if (!IsInitialRepositionPending())
+			repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
+		return false;
+	}
 
-    const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-    if (!player)
-    {
-        if (!IsInitialRepositionPending())
-            repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
-        return false;
-    }
+	const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+	if (!player)
+	{
+		if (!IsInitialRepositionPending())
+			repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
+		return false;
+	}
 
-    const DirectX::XMFLOAT3 playerSnapshot = player->GetPosition();
-    const DirectX::XMFLOAT3 gruxSnapshot = GetPosition();
-    float awayX = gruxSnapshot.x - playerSnapshot.x;
-    float awayZ = gruxSnapshot.z - playerSnapshot.z;
-    const float startingPlayerDistance = std::sqrt(awayX * awayX + awayZ * awayZ);
-    if (startingPlayerDistance > FLT_EPSILON)
-    {
-        awayX /= startingPlayerDistance;
-        awayZ /= startingPlayerDistance;
-    }
-    else
-    {
-        const auto forward = GetForward();
-        awayX = forward.x;
-        awayZ = forward.z;
-    }
+	const DirectX::XMFLOAT3 playerSnapshot = player->GetPosition();
+	const DirectX::XMFLOAT3 gruxSnapshot = GetPosition();
+	float awayX = gruxSnapshot.x - playerSnapshot.x;
+	float awayZ = gruxSnapshot.z - playerSnapshot.z;
+	const float startingPlayerDistance = std::sqrt(awayX * awayX + awayZ * awayZ);
+	if (startingPlayerDistance > FLT_EPSILON)
+	{
+		awayX /= startingPlayerDistance;
+		awayZ /= startingPlayerDistance;
+	}
+	else
+	{
+		const auto forward = GetForward();
+		awayX = forward.x;
+		awayZ = forward.z;
+	}
 
-    const float minDistance = (std::max)(0.0f, repositionDistanceMin);
-    const float maxDistance = (std::max)(minDistance, repositionDistanceMax);
-    const std::array<float, 3> distances{ maxDistance, (minDistance + maxDistance) * 0.5f, minDistance };
-    const uint32_t obstacleMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
-        CollisionHelper::ToBit(CollisionLayer::WorldProps) |
-        CollisionHelper::ToBit(CollisionLayer::Convex);
-    const RetreatSweepShape sweepShape = BuildRetreatSweepShape(*enemyCapsuleComponent);
+	const float minDistance = (std::max)(0.0f, repositionDistanceMin);
+	const float maxDistance = (std::max)(minDistance, repositionDistanceMax);
+	const std::array<float, 3> distances{ maxDistance, (minDistance + maxDistance) * 0.5f, minDistance };
+	const uint32_t obstacleMask = CollisionHelper::ToBit(CollisionLayer::WorldStatic) |
+		CollisionHelper::ToBit(CollisionLayer::WorldProps) |
+		CollisionHelper::ToBit(CollisionLayer::Convex);
+	const RetreatSweepShape sweepShape = BuildRetreatSweepShape(*enemyCapsuleComponent);
 
-    struct SafeRepositionCandidate
-    {
-        DirectX::XMFLOAT3 position{};
-        float moveDistance = 0.0f;
-        float plannedPlayerDistance = 0.0f;
-    };
-    std::vector<SafeRepositionCandidate> safeCandidates;
-    safeCandidates.reserve(distances.size() * 13);
+	struct SafeRepositionCandidate
+	{
+		DirectX::XMFLOAT3 position{};
+		float moveDistance = 0.0f;
+		float plannedPlayerDistance = 0.0f;
+	};
+	std::vector<SafeRepositionCandidate> safeCandidates;
+	safeCandidates.reserve(distances.size() * 13);
 
-    for (const float distance : distances)
-    {
-        for (int index = 0; index <= 12; ++index)
-        {
-            const float magnitude = static_cast<float>((index + 1) / 2);
-            const float signedStep = index == 0 ? 0.0f : (index % 2 == 1 ? magnitude : -magnitude);
-            const float angleDegrees = signedStep * 30.0f;
-            const float angle = DirectX::XMConvertToRadians(angleDegrees);
-            const float directionX = awayX * std::cos(angle) - awayZ * std::sin(angle);
-            const float directionZ = awayX * std::sin(angle) + awayZ * std::cos(angle);
-            const DirectX::XMFLOAT3 desired{
-                gruxSnapshot.x + directionX * distance,
-                gruxSnapshot.y,
-                gruxSnapshot.z + directionZ * distance };
+	for (const float distance : distances)
+	{
+		for (int index = 0; index <= 12; ++index)
+		{
+			const float magnitude = static_cast<float>((index + 1) / 2);
+			const float signedStep = index == 0 ? 0.0f : (index % 2 == 1 ? magnitude : -magnitude);
+			const float angleDegrees = signedStep * 30.0f;
+			const float angle = DirectX::XMConvertToRadians(angleDegrees);
+			const float directionX = awayX * std::cos(angle) - awayZ * std::sin(angle);
+			const float directionZ = awayX * std::sin(angle) + awayZ * std::cos(angle);
+			const DirectX::XMFLOAT3 desired{
+				gruxSnapshot.x + directionX * distance,
+				gruxSnapshot.y,
+				gruxSnapshot.z + directionZ * distance };
 
-            RepositionTargetEvaluation evaluation{};
-            EvaluateClampedPositioningTarget(gruxSnapshot, desired, evaluation);
-            const float moveX = evaluation.clampedTarget.x - gruxSnapshot.x;
-            const float moveZ = evaluation.clampedTarget.z - gruxSnapshot.z;
-            const float moveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
-            const float playerX = evaluation.clampedTarget.x - playerSnapshot.x;
-            const float playerZ = evaluation.clampedTarget.z - playerSnapshot.z;
-            const float plannedPlayerDistance = std::sqrt(playerX * playerX + playerZ * playerZ);
+			RepositionTargetEvaluation evaluation{};
+			EvaluateClampedPositioningTarget(gruxSnapshot, desired, evaluation);
+			const float moveX = evaluation.clampedTarget.x - gruxSnapshot.x;
+			const float moveZ = evaluation.clampedTarget.z - gruxSnapshot.z;
+			const float moveDistance = std::sqrt(moveX * moveX + moveZ * moveZ);
+			const float playerX = evaluation.clampedTarget.x - playerSnapshot.x;
+			const float playerZ = evaluation.clampedTarget.z - playerSnapshot.z;
+			const float plannedPlayerDistance = std::sqrt(playerX * playerX + playerZ * playerZ);
 
-            if (plannedPlayerDistance < repositionMinimumPlayerDistance)
-                continue;
-            if (moveDistance < repositionMinimumMoveDistance)
-                continue;
-            if (evaluation.bossRoomPathBlocked)
-                continue;
-            const DirectX::XMFLOAT3 moveDirection{ moveX / moveDistance, 0.0f, moveZ / moveDistance };
-            HitResult hit{};
-            if (SweepRetreatPath(sweepShape, moveDirection, moveDistance, hit, obstacleMask))
-                continue;
-            safeCandidates.push_back({ evaluation.clampedTarget, moveDistance, plannedPlayerDistance });
-        }
-    }
+			if (plannedPlayerDistance < repositionMinimumPlayerDistance)
+				continue;
+			if (moveDistance < repositionMinimumMoveDistance)
+				continue;
+			if (evaluation.bossRoomPathBlocked)
+				continue;
+			const DirectX::XMFLOAT3 moveDirection{ moveX / moveDistance, 0.0f, moveZ / moveDistance };
+			HitResult hit{};
+			if (SweepRetreatPath(sweepShape, moveDirection, moveDistance, hit, obstacleMask))
+				continue;
+			safeCandidates.push_back({ evaluation.clampedTarget, moveDistance, plannedPlayerDistance });
+		}
+	}
 
-    if (!safeCandidates.empty())
-    {
-        static thread_local std::mt19937 randomEngine{ std::random_device{}() };
-        std::uniform_int_distribution<size_t> distribution(0, safeCandidates.size() - 1);
-        const auto& selected = safeCandidates[distribution(randomEngine)];
-        repositionTarget = {};
-        repositionTarget.valid = true;
-        repositionTarget.targetPosition = selected.position;
-        repositionTarget.arrivalTolerance = 0.3f;
-        repositionTarget.timeout = 3.0f;
-        repositionTarget.maxMoveDistance = selected.moveDistance + 1.0f;
-        repositionTarget.moveSpeed = repositionMoveSpeed;
-        repositionTarget.stuckMovementThreshold = 0.01f;
-        repositionTarget.stuckTimeThreshold = 0.5f;
+	if (!safeCandidates.empty())
+	{
+		static thread_local std::mt19937 randomEngine{ std::random_device{}() };
+		std::uniform_int_distribution<size_t> distribution(0, safeCandidates.size() - 1);
+		const auto& selected = safeCandidates[distribution(randomEngine)];
+		repositionTarget = {};
+		repositionTarget.valid = true;
+		repositionTarget.targetPosition = selected.position;
+		repositionTarget.arrivalTolerance = 0.3f;
+		repositionTarget.timeout = 3.0f;
+		repositionTarget.maxMoveDistance = selected.moveDistance + 1.0f;
+		repositionTarget.moveSpeed = repositionMoveSpeed;
+		repositionTarget.stuckMovementThreshold = 0.01f;
+		repositionTarget.stuckTimeThreshold = 0.5f;
 
-        return true;
-    }
+		return true;
+	}
 
-    ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
-    if (!IsInitialRepositionPending())
-        repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
+	ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
+	if (!IsInitialRepositionPending())
+		repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
 
-    return false;
+	return false;
 }
 GruxEnemy::PositioningMoveResult GruxEnemy::UpdateRepositionMovement(float dt)
 {
-    if (!repositionTarget.valid)
-        return PositioningMoveResult::InvalidTarget;
-    const auto result = UpdatePositioningTargetMovement(repositionTarget, repositionMovementRuntime, dt);
-    return result;
+	if (!repositionTarget.valid)
+		return PositioningMoveResult::InvalidTarget;
+	const auto result = UpdatePositioningTargetMovement(repositionTarget, repositionMovementRuntime, dt);
+	return result;
 }
 void GruxEnemy::FinishRepositionMovement(bool arrived)
 {
-    StopAIMovement();
-    EndPositioningAnimation();
-    ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
-    if (!arrived && !IsInitialRepositionPending())
-        repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
+	StopAIMovement();
+	EndPositioningAnimation();
+	ClearPositioningTarget(repositionTarget, repositionMovementRuntime);
+	if (!arrived && !IsInitialRepositionPending())
+		repositionRetryCooldownRemaining = repositionRetryCooldownDuration;
 }
 void GruxEnemy::BeginInitialRepositionFallback()
 {
-    initialRepositionPending = false;
-    initialRepositionFallbackIdlePending = true;
-    repositionDecisionCached = false;
-    repositionDecisionResult = false;
-    repositionDecisionRoll = 0.0f;
+	initialRepositionPending = false;
+	initialRepositionFallbackIdlePending = true;
+	repositionDecisionCached = false;
+	repositionDecisionResult = false;
+	repositionDecisionRoll = 0.0f;
 }
 void GruxEnemy::CompleteInitialRepositionFallbackIdle()
 {
-    initialRepositionFallbackIdlePending = false;
-    repositionDecisionCached = false;
-    repositionDecisionResult = false;
-    repositionDecisionRoll = 0.0f;
+	initialRepositionFallbackIdlePending = false;
+	repositionDecisionCached = false;
+	repositionDecisionResult = false;
+	repositionDecisionRoll = 0.0f;
 }
 void GruxEnemy::CompleteRepositionArrivalWait()
 {
-    const bool completedInitialReposition = initialRepositionPending;
-    repositionCooldownRemaining = repositionCooldownDuration;
-    consecutiveAttackCount = 0;
-    if (completedInitialReposition)
-    {
-        initialRepositionPending = false;
-        repositionDecisionCached = false;
-        repositionDecisionResult = false;
-        repositionDecisionRoll = 0.0f;
-    }
+	const bool completedInitialReposition = initialRepositionPending;
+	repositionCooldownRemaining = repositionCooldownDuration;
+	consecutiveAttackCount = 0;
+	if (completedInitialReposition)
+	{
+		initialRepositionPending = false;
+		repositionDecisionCached = false;
+		repositionDecisionResult = false;
+		repositionDecisionRoll = 0.0f;
+	}
 }
 
 bool GruxEnemy::BeginRoarBT()
 {
-    if (!CanPlanRoar()) { return false; }
-    const auto controller = GetBodyAnimationController();
-    if (!std::isfinite(roarPreStampedeStartTime) || !std::isfinite(roarPreStampedeEndTime) ||
-        roarPreStampedeStartTime < 0.0f || roarPreStampedeEndTime <= roarPreStampedeStartTime ||
-        controller->GetAnimationLength("Pre_Stampede_0") < roarPreStampedeEndTime)
-    {
-        return false;
-    }
-    StopAIMovement();
-    DisableAttackHitBoxes();
-    HideRoarFloatingDebris();
-    HideRoarImpactDebris();
-    roarBT = {};
-    roarTelegraphProgress = 0.0f;
-    PlayBodyAnimation("Pre_Stampede_0", false, true, 0.05f, true);
-    if (!controller->SetPlaybackRange(roarPreStampedeStartTime, roarPreStampedeEndTime))
-    {
-        roarBT.stage = RoarStage::Telegraph;
-        CleanupRoarBT();
-        return false;
-    }
-    roarBT.stage = RoarStage::Telegraph;
-    roarBT.previousTime = roarPreStampedeStartTime;
-    roarBT.endTime = roarPreStampedeEndTime;
-    ShowRoarTelegraph();
-    InitializeRoarFloatingDebris();
-    UpdateRoarFloatingDebris();
-    roarCooldownRemaining = roarCooldownDuration;
-    return true;
+	if (!CanPlanRoar()) { return false; }
+	const auto controller = GetBodyAnimationController();
+	if (!std::isfinite(roarPreStampedeStartTime) || !std::isfinite(roarPreStampedeEndTime) ||
+		roarPreStampedeStartTime < 0.0f || roarPreStampedeEndTime <= roarPreStampedeStartTime ||
+		controller->GetAnimationLength("Pre_Stampede_0") < roarPreStampedeEndTime)
+	{
+		return false;
+	}
+	StopAIMovement();
+	DisableAttackHitBoxes();
+	HideRoarFloatingDebris();
+	HideRoarImpactDebris();
+	roarBT = {};
+	roarTelegraphProgress = 0.0f;
+	PlayBodyAnimation("Pre_Stampede_0", false, true, 0.05f, true);
+	if (!controller->SetPlaybackRange(roarPreStampedeStartTime, roarPreStampedeEndTime))
+	{
+		roarBT.stage = RoarStage::Telegraph;
+		CleanupRoarBT();
+		return false;
+	}
+	roarBT.stage = RoarStage::Telegraph;
+	roarBT.previousTime = roarPreStampedeStartTime;
+	roarBT.endTime = roarPreStampedeEndTime;
+	ShowRoarTelegraph();
+	InitializeRoarFloatingDebris();
+	UpdateRoarFloatingDebris();
+	roarCooldownRemaining = roarCooldownDuration;
+	return true;
 }
 
-// 0 = Running, 1 = Complete, -1 = Failed. Only this action advances stages.
 int GruxEnemy::UpdateRoarBT(float dt)
 {
-    auto fail = [this]() { CleanupRoarBT(); return -1; };
-    if (!IsRoarBTActive() || !IsRoarExecutionAllowed()) return fail();
-    const auto controller = GetBodyAnimationController();
-    const char* expected = roarBT.stage == RoarStage::Telegraph ? "Pre_Stampede_0" : "LevelStart_0";
-    if (controller->GetCurrentAnimationName() != expected) return fail();
-    const float time = controller->GetCurrentAnimationTime();
-    const float safeDt = (std::max)(0.0f, dt);
-    roarBT.elapsed += safeDt;
-    roarBT.stalled = time > roarBT.previousTime + 0.00001f ? 0.0f : roarBT.stalled + safeDt;
-    roarBT.previousTime = time;
-    if (roarBT.stalled > 2.0f || roarBT.elapsed > 60.0f) return fail();
-    StopAIMovement();
-    UpdateRoarTelegraphProgress();
-    UpdateRoarTelegraphTransform();
-    UpdateRoarFloatingDebris();
-    if (controller->IsPlayAnimation()) return 0;
-    if (time + 0.02f < roarBT.endTime) return fail();
-    if (roarBT.stage == RoarStage::Telegraph)
-    {
-        PlayBodyAnimation("LevelStart_0", false, true, 0.15f, true);
-        roarBT.stage = RoarStage::Shockwave;
-        roarBT.previousTime = 0.0f;
-        roarBT.stalled = 0.0f;
-        roarBT.endTime = controller->GetAnimationLength("LevelStart_0");
-        if (roarBT.endTime < 0.30f) return fail();
-        return 0;
-    }
-    if (!roarBT.shockwaveFired) return fail();
-    return 1;
+	auto fail = [this]() { CleanupRoarBT(); return -1; };
+	if (!IsRoarBTActive() || !IsRoarExecutionAllowed()) return fail();
+	const auto controller = GetBodyAnimationController();
+	const char* expected = roarBT.stage == RoarStage::Telegraph ? "Pre_Stampede_0" : "LevelStart_0";
+	if (controller->GetCurrentAnimationName() != expected) return fail();
+	const float time = controller->GetCurrentAnimationTime();
+	const float safeDt = (std::max)(0.0f, dt);
+	roarBT.elapsed += safeDt;
+	roarBT.stalled = time > roarBT.previousTime + 0.00001f ? 0.0f : roarBT.stalled + safeDt;
+	roarBT.previousTime = time;
+	if (roarBT.stalled > 2.0f || roarBT.elapsed > 60.0f) return fail();
+	StopAIMovement();
+	UpdateRoarTelegraphProgress();
+	UpdateRoarTelegraphTransform();
+	UpdateRoarFloatingDebris();
+	if (controller->IsPlayAnimation()) return 0;
+	if (time + 0.02f < roarBT.endTime) return fail();
+	if (roarBT.stage == RoarStage::Telegraph)
+	{
+		PlayBodyAnimation("LevelStart_0", false, true, 0.15f, true);
+		roarBT.stage = RoarStage::Shockwave;
+		roarBT.previousTime = 0.0f;
+		roarBT.stalled = 0.0f;
+		roarBT.endTime = controller->GetAnimationLength("LevelStart_0");
+		if (roarBT.endTime < 0.30f) return fail();
+		return 0;
+	}
+	if (!roarBT.shockwaveFired) return fail();
+	return 1;
 }
 
 void GruxEnemy::ApplyRoarShockwave()
 {
-    const auto controller = GetBodyAnimationController();
-    if (roarBT.stage != RoarStage::Shockwave || roarBT.shockwaveFired ||
-        !IsRoarExecutionAllowed() || !controller || controller->GetCurrentAnimationName() != "LevelStart_0")
-        return;
-    roarBT.shockwaveFired = true;
-    roarTelegraphProgress = 1.0f;
-    UpdateRoarTelegraphTransform();
-    UpdateRoarFloatingDebris();
-    HideRoarTelegraph();
-    HideRoarFloatingDebris();
-    SpawnRoarImpactDebris();
-    SpawnRoarGroundBurst();
-    SpawnGroundImpactEffect();
-    const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-    if (!player || roarBT.hitPlayer) return;
-    auto direction = MathHelper::Subtract(player->GetPosition(), GetPosition());
-    if (std::abs(direction.y) > roarHeightTolerance) return;
-    direction.y = 0.0f;
-    const float roarRadius = GetRoarAttackRadius();
-    if (direction.x * direction.x + direction.z * direction.z > roarRadius * roarRadius) return;
-    if (MathHelper::Length(direction) < 0.0001f)
-    {
-        direction = GetForward();
-        direction.y = 0.0f;
-    }
-    if (!player->TryTakeDamage(
-        roarDamage, GetPosition(), Player::DamagePolicy::IgnoreDodgeIFrames))
-    {
-        return;
-    }
+	const auto controller = GetBodyAnimationController();
+	if (roarBT.stage != RoarStage::Shockwave || roarBT.shockwaveFired ||
+		!IsRoarExecutionAllowed() || !controller || controller->GetCurrentAnimationName() != "LevelStart_0")
+		return;
+	roarBT.shockwaveFired = true;
+	roarTelegraphProgress = 1.0f;
+	UpdateRoarTelegraphTransform();
+	UpdateRoarFloatingDebris();
+	HideRoarTelegraph();
+	HideRoarFloatingDebris();
+	SpawnRoarImpactDebris();
+	SpawnRoarGroundBurst();
+	SpawnGroundImpactEffect();
+	const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
+	if (!player || roarBT.hitPlayer) return;
+	auto direction = MathHelper::Subtract(player->GetPosition(), GetPosition());
+	if (std::abs(direction.y) > roarHeightTolerance) return;
+	direction.y = 0.0f;
+	const float roarRadius = GetRoarAttackRadius();
+	if (direction.x * direction.x + direction.z * direction.z > roarRadius * roarRadius) return;
+	if (MathHelper::Length(direction) < 0.0001f)
+	{
+		direction = GetForward();
+		direction.y = 0.0f;
+	}
+	if (!player->TryTakeDamage(roarDamage, GetPosition(), Player::DamagePolicy::IgnoreDodgeIFrames))
+	{
+		return;
+	}
 
-    roarBT.hitPlayer = player->StartKnockBack(direction);
+	roarBT.hitPlayer = player->StartKnockBack(direction);
 }
 
 float GruxEnemy::GetRoarAttackRadius() const
 {
-    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
-    return scene && scene->IsBossInFinalPhase()
-        ? roarRadiusPhase2
-        : roarRadiusPhase1;
+	const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+	return scene && scene->IsBossInFinalPhase() ? roarRadiusPhase2 : roarRadiusPhase1;
 }
 
 void GruxEnemy::ShowRoarTelegraph()
 {
-    if (!roarTelegraphOuterMeshComponent || !roarTelegraphFillMeshComponent)
-        return;
-    UpdateRoarTelegraphTransform();
-    roarTelegraphOuterMeshComponent->SetIsVisible(true);
-    roarTelegraphFillMeshComponent->SetIsVisible(true);
+	if (!roarTelegraphOuterMeshComponent || !roarTelegraphFillMeshComponent)
+		return;
+	UpdateRoarTelegraphTransform();
+	roarTelegraphOuterMeshComponent->SetIsVisible(true);
+	roarTelegraphFillMeshComponent->SetIsVisible(true);
 }
 
 void GruxEnemy::UpdateRoarTelegraphTransform()
 {
-    if (!roarTelegraphOuterMeshComponent || !roarTelegraphFillMeshComponent)
-        return;
+	if (!roarTelegraphOuterMeshComponent || !roarTelegraphFillMeshComponent)
+		return;
 
-    const DirectX::XMFLOAT3 position = GetPosition();
-    const float radius = GetRoarAttackRadius();
-    const DirectX::XMFLOAT3 outerWorldPosition = { position.x, roarTelegraphOuterYOffset, position.z };
-    const DirectX::XMFLOAT3 fillWorldPosition = { position.x, roarTelegraphFillYOffset, position.z };
-    const DirectX::XMFLOAT4 identityRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
-    const DirectX::XMFLOAT3 scale{ radius, 1.0f, radius };
-    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
-    const bool isPhase2 = scene && scene->IsBossInFinalPhase();
-    const DirectX::XMFLOAT3& outerTint = isPhase2
-        ? roarTelegraphPhase2OuterTint : roarTelegraphPhase1OuterTint;
-    const DirectX::XMFLOAT3& fillTintMin = isPhase2
-        ? roarTelegraphPhase2FillTintMin : roarTelegraphPhase1FillTintMin;
-    const DirectX::XMFLOAT3& fillTintMax = isPhase2
-        ? roarTelegraphPhase2FillTintMax : roarTelegraphPhase1FillTintMax;
-    const float t = std::clamp(roarTelegraphProgress, 0.0f, 1.0f);
-    const float visualProgress = t * t * (3.0f - 2.0f * t);
-    const auto lerp = [visualProgress](float minimum, float maximum)
-        {
-            return minimum + (maximum - minimum) * visualProgress;
-        };
-    const DirectX::XMFLOAT3 fillTint = {
-        lerp(fillTintMin.x, fillTintMax.x),
-        lerp(fillTintMin.y, fillTintMax.y),
-        lerp(fillTintMin.z, fillTintMax.z) };
-    const float fillGlow = lerp(roarTelegraphFillGlowMin, roarTelegraphFillGlowMax);
-    const float fillAlpha = lerp(roarTelegraphFillAlphaMin, roarTelegraphFillAlphaMax);
+	const DirectX::XMFLOAT3 position = GetPosition();
+	const float radius = GetRoarAttackRadius();
+	const DirectX::XMFLOAT3 outerWorldPosition = { position.x, roarTelegraphOuterYOffset, position.z };
+	const DirectX::XMFLOAT3 fillWorldPosition = { position.x, roarTelegraphFillYOffset, position.z };
+	const DirectX::XMFLOAT4 identityRotation{ 0.0f, 0.0f, 0.0f, 1.0f };
+	const DirectX::XMFLOAT3 scale{ radius, 1.0f, radius };
+	const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+	const bool isPhase2 = scene && scene->IsBossInFinalPhase();
+	const DirectX::XMFLOAT3& outerTint = isPhase2
+		? roarTelegraphPhase2OuterTint : roarTelegraphPhase1OuterTint;
+	const DirectX::XMFLOAT3& fillTintMin = isPhase2
+		? roarTelegraphPhase2FillTintMin : roarTelegraphPhase1FillTintMin;
+	const DirectX::XMFLOAT3& fillTintMax = isPhase2
+		? roarTelegraphPhase2FillTintMax : roarTelegraphPhase1FillTintMax;
+	const float t = std::clamp(roarTelegraphProgress, 0.0f, 1.0f);
+	const float visualProgress = t * t * (3.0f - 2.0f * t);
+	const auto lerp = [visualProgress](float minimum, float maximum)
+		{
+			return minimum + (maximum - minimum) * visualProgress;
+		};
+	const DirectX::XMFLOAT3 fillTint = {
+		lerp(fillTintMin.x, fillTintMax.x),
+		lerp(fillTintMin.y, fillTintMax.y),
+		lerp(fillTintMin.z, fillTintMax.z) };
+	const float fillGlow = lerp(roarTelegraphFillGlowMin, roarTelegraphFillGlowMax);
+	const float fillAlpha = lerp(roarTelegraphFillAlphaMin, roarTelegraphFillAlphaMax);
 
-    roarTelegraphOuterMeshComponent->SetRelativeLocationDirect(outerWorldPosition);
-    roarTelegraphOuterMeshComponent->SetRelativeRotationDirect(identityRotation);
-    roarTelegraphOuterMeshComponent->SetRelativeScaleDirect(scale);
-    roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.brightness =
-        std::clamp(roarTelegraphOuterAlpha, 0.0f, 1.0f) - 1.0f;
-    roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.cpuColor = {
-        outerTint.x, outerTint.y, outerTint.z, 1.0f };
-    roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.emissionPower = 1.0f;
+	roarTelegraphOuterMeshComponent->SetRelativeLocationDirect(outerWorldPosition);
+	roarTelegraphOuterMeshComponent->SetRelativeRotationDirect(identityRotation);
+	roarTelegraphOuterMeshComponent->SetRelativeScaleDirect(scale);
+	roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.brightness =
+		std::clamp(roarTelegraphOuterAlpha, 0.0f, 1.0f) - 1.0f;
+	roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.cpuColor = {
+		outerTint.x, outerTint.y, outerTint.z, 1.0f };
+	roarTelegraphOuterMeshComponent->plusAlphaCBuffer->data.emissionPower = 1.0f;
 
-    roarTelegraphFillMeshComponent->SetRelativeLocationDirect(fillWorldPosition);
-    roarTelegraphFillMeshComponent->SetRelativeRotationDirect(identityRotation);
-    roarTelegraphFillMeshComponent->SetRelativeScaleDirect(scale);
-    roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.brightness =
-        std::clamp(fillAlpha, 0.0f, 1.0f) - 1.0f;
-    roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.cpuColor = {
-        fillTint.x, fillTint.y, fillTint.z, 1.0f };
-    roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.emissionPower =
-        (std::max)(0.0f, fillGlow);
+	roarTelegraphFillMeshComponent->SetRelativeLocationDirect(fillWorldPosition);
+	roarTelegraphFillMeshComponent->SetRelativeRotationDirect(identityRotation);
+	roarTelegraphFillMeshComponent->SetRelativeScaleDirect(scale);
+	roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.brightness =
+		std::clamp(fillAlpha, 0.0f, 1.0f) - 1.0f;
+	roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.cpuColor = {
+		fillTint.x, fillTint.y, fillTint.z, 1.0f };
+	roarTelegraphFillMeshComponent->plusAlphaCBuffer->data.emissionPower =
+		(std::max)(0.0f, fillGlow);
 }
 
 void GruxEnemy::UpdateRoarTelegraphProgress()
 {
-    const auto controller = GetBodyAnimationController();
-    if (!controller || roarBT.stage == RoarStage::None)
-        return;
+	const auto controller = GetBodyAnimationController();
+	if (!controller || roarBT.stage == RoarStage::None)
+		return;
 
-    constexpr float shockwaveEventTime = 0.30f;
-    const float preDuration = (std::max)(0.0f, roarPreStampedeEndTime - roarPreStampedeStartTime);
-    const float totalDuration = preDuration + shockwaveEventTime;
-    if (totalDuration <= 0.0f)
-    {
-        roarTelegraphProgress = 0.0f;
-        return;
-    }
+	constexpr float shockwaveEventTime = 0.30f;
+	const float preDuration = (std::max)(0.0f, roarPreStampedeEndTime - roarPreStampedeStartTime);
+	const float totalDuration = preDuration + shockwaveEventTime;
+	if (totalDuration <= 0.0f)
+	{
+		roarTelegraphProgress = 0.0f;
+		return;
+	}
 
-    const float preWeight = preDuration / totalDuration;
-    const float time = controller->GetCurrentAnimationTime();
-    if (roarBT.stage == RoarStage::Telegraph)
-    {
-        const float preProgress = preDuration > 0.0f
-            ? std::clamp((time - roarPreStampedeStartTime) / preDuration, 0.0f, 1.0f)
-            : 1.0f;
-        roarTelegraphProgress = preProgress * preWeight;
-        return;
-    }
+	const float preWeight = preDuration / totalDuration;
+	const float time = controller->GetCurrentAnimationTime();
+	if (roarBT.stage == RoarStage::Telegraph)
+	{
+		const float preProgress = preDuration > 0.0f
+			? std::clamp((time - roarPreStampedeStartTime) / preDuration, 0.0f, 1.0f)
+			: 1.0f;
+		roarTelegraphProgress = preProgress * preWeight;
+		return;
+	}
 
-    const float shockwaveProgress = std::clamp(time / shockwaveEventTime, 0.0f, 1.0f);
-    roarTelegraphProgress = preWeight + (1.0f - preWeight) * shockwaveProgress;
+	const float shockwaveProgress = std::clamp(time / shockwaveEventTime, 0.0f, 1.0f);
+	roarTelegraphProgress = preWeight + (1.0f - preWeight) * shockwaveProgress;
 }
 
 void GruxEnemy::HideRoarTelegraph()
 {
-    if (roarTelegraphOuterMeshComponent)
-        roarTelegraphOuterMeshComponent->SetIsVisible(false);
-    if (roarTelegraphFillMeshComponent)
-        roarTelegraphFillMeshComponent->SetIsVisible(false);
+	if (roarTelegraphOuterMeshComponent)
+		roarTelegraphOuterMeshComponent->SetIsVisible(false);
+	if (roarTelegraphFillMeshComponent)
+		roarTelegraphFillMeshComponent->SetIsVisible(false);
 }
 
 void GruxEnemy::SpawnRoarGroundBurst()
 {
-    if (!roarGroundBurstEnabled || !roarGroundBurstEffectComponent)
-        return;
+	if (!roarGroundBurstEnabled || !roarGroundBurstEffectComponent)
+		return;
 
-    const DirectX::XMFLOAT3 center = GetPosition();
-    const float attackRadius = GetRoarAttackRadius();
-    if (attackRadius <= FLT_EPSILON)
-        return;
+	const DirectX::XMFLOAT3 center = GetPosition();
+	const float attackRadius = GetRoarAttackRadius();
+	if (attackRadius <= FLT_EPSILON)
+		return;
 
-    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
-    const bool isPhase2 = scene && scene->IsBossInFinalPhase();
-    const int innerCount = isPhase2 ? 4 : 3;
-    const int outerCount = isPhase2 ? 8 : 6;
-    const float innerRatio = std::clamp(roarGroundBurstInnerRingRatio, 0.0f, 1.0f);
-    const float outerRatio = std::clamp(roarGroundBurstOuterRingRatio, innerRatio, 1.0f);
-    const float angleJitterRadians = DirectX::XMConvertToRadians(
-        (std::max)(0.0f, roarGroundBurstAngleJitterDegrees));
-    const float radiusJitter = (std::max)(0.0f, roarGroundBurstRadiusJitter);
-    const EffectHandle effectHandle = roarGroundBurstEffectComponent->GetEffectHandle();
+	const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+	const bool isPhase2 = scene && scene->IsBossInFinalPhase();
+	const int innerCount = isPhase2 ? 4 : 3;
+	const int outerCount = isPhase2 ? 8 : 6;
+	const float innerRatio = std::clamp(roarGroundBurstInnerRingRatio, 0.0f, 1.0f);
+	const float outerRatio = std::clamp(roarGroundBurstOuterRingRatio, innerRatio, 1.0f);
+	const float angleJitterRadians = DirectX::XMConvertToRadians(
+		(std::max)(0.0f, roarGroundBurstAngleJitterDegrees));
+	const float radiusJitter = (std::max)(0.0f, roarGroundBurstRadiusJitter);
+	const EffectHandle effectHandle = roarGroundBurstEffectComponent->GetEffectHandle();
 
-    const auto emitRing = [&](const int count, const float ringRatio, const float phaseOffset)
-        {
-            for (int index = 0; index < count; ++index)
-            {
-                const float baseAngle = DirectX::XM_2PI *
-                    (static_cast<float>(index) / static_cast<float>(count)) + phaseOffset;
-                const float angle = baseAngle + MathHelper::RandomRange(
-                    -angleJitterRadians, angleJitterRadians);
-                const float ratio = std::clamp(ringRatio + MathHelper::RandomRange(
-                    -radiusJitter, radiusJitter), 0.0f, 1.0f);
-                const float distance = attackRadius * ratio;
-                const DirectX::XMFLOAT3 spawnPosition{
-                    center.x + sinf(angle) * distance,
-                    center.y + roarGroundBurstYOffset,
-                    center.z + cosf(angle) * distance };
-                EffectManager::EmitParticle(effectHandle, spawnPosition, { 0.0f, 0.0f, 0.0f });
-            }
-        };
+	const auto emitRing = [&](const int count, const float ringRatio, const float phaseOffset)
+		{
+			for (int index = 0; index < count; ++index)
+			{
+				const float baseAngle = DirectX::XM_2PI *
+					(static_cast<float>(index) / static_cast<float>(count)) + phaseOffset;
+				const float angle = baseAngle + MathHelper::RandomRange(
+					-angleJitterRadians, angleJitterRadians);
+				const float ratio = std::clamp(ringRatio + MathHelper::RandomRange(
+					-radiusJitter, radiusJitter), 0.0f, 1.0f);
+				const float distance = attackRadius * ratio;
+				const DirectX::XMFLOAT3 spawnPosition{
+					center.x + sinf(angle) * distance,
+					center.y + roarGroundBurstYOffset,
+					center.z + cosf(angle) * distance };
+				EffectManager::EmitParticle(effectHandle, spawnPosition, { 0.0f, 0.0f, 0.0f });
+			}
+		};
 
-    emitRing(innerCount, innerRatio, 0.0f);
-    emitRing(outerCount, outerRatio, DirectX::XM_PI / static_cast<float>(outerCount));
+	emitRing(innerCount, innerRatio, 0.0f);
+	emitRing(outerCount, outerRatio, DirectX::XM_PI / static_cast<float>(outerCount));
 }
 
 void GruxEnemy::EnsureRoarImpactDebris()
 {
-    constexpr const char* smallModelPaths[] = {
-        "./Data/Models/EffectDebri/SmallDebri/debri.gltf",
-        "./Data/Models/EffectDebri/SmallDebri/debri1.gltf",
-        "./Data/Models/EffectDebri/SmallDebri/debri2.gltf",
-    };
-    constexpr const char* blockModelPaths[] = {
-        "./Data/Models/EffectDebri/Block/block1.gltf",
-        "./Data/Models/EffectDebri/Block/block2.gltf",
-        "./Data/Models/EffectDebri/Block/block3.gltf",
-        "./Data/Models/EffectDebri/Block/block4.gltf",
-    };
-    for (size_t index = 0; index < roarImpactDebris.size(); ++index)
-    {
-        auto& debris = roarImpactDebris[index];
-        debris.isBlock = index >= 12;
-        if (!debris.meshComponent)
-        {
-            const char* modelPath = debris.isBlock
-                ? blockModelPaths[(index - 12) % std::size(blockModelPaths)]
-                : smallModelPaths[index % std::size(smallModelPaths)];
-            debris.meshComponent = AddComponent<SkeletalMeshComponent>(
-                "RoarImpactDebris_" + std::to_string(index), "GruxEnemy");
-            debris.meshComponent->SetModel(modelPath);
-            debris.meshComponent->SetIsCastShadow(false);
-            debris.meshComponent->SetUsingAbsoluteLocation(true);
-            debris.meshComponent->SetUsingAbsoluteRotation(true);
-            debris.meshComponent->SetUsingAbsoluteScale(true);
-        }
-        debris.active = false;
-        debris.meshComponent->SetIsVisible(false);
-    }
+	constexpr const char* smallModelPaths[] = {
+		"./Data/Models/EffectDebri/SmallDebri/debri.gltf",
+		"./Data/Models/EffectDebri/SmallDebri/debri1.gltf",
+		"./Data/Models/EffectDebri/SmallDebri/debri2.gltf",
+	};
+	constexpr const char* blockModelPaths[] = {
+		"./Data/Models/EffectDebri/Block/block1.gltf",
+		"./Data/Models/EffectDebri/Block/block2.gltf",
+		"./Data/Models/EffectDebri/Block/block3.gltf",
+		"./Data/Models/EffectDebri/Block/block4.gltf",
+	};
+	for (size_t index = 0; index < roarImpactDebris.size(); ++index)
+	{
+		auto& debris = roarImpactDebris[index];
+		debris.isBlock = index >= 12;
+		if (!debris.meshComponent)
+		{
+			const char* modelPath = debris.isBlock
+				? blockModelPaths[(index - 12) % std::size(blockModelPaths)]
+				: smallModelPaths[index % std::size(smallModelPaths)];
+			debris.meshComponent = AddComponent<SkeletalMeshComponent>(
+				"RoarImpactDebris_" + std::to_string(index), "GruxEnemy");
+			debris.meshComponent->SetModel(modelPath);
+			debris.meshComponent->SetIsCastShadow(false);
+			debris.meshComponent->SetUsingAbsoluteLocation(true);
+			debris.meshComponent->SetUsingAbsoluteRotation(true);
+			debris.meshComponent->SetUsingAbsoluteScale(true);
+		}
+		debris.active = false;
+		debris.meshComponent->SetIsVisible(false);
+	}
 }
 
 void GruxEnemy::SpawnRoarImpactDebris()
 {
-    EnsureRoarImpactDebris();
-    HideRoarImpactDebris();
-    if (!roarImpactDebrisEnabled)
-        return;
+	EnsureRoarImpactDebris();
+	HideRoarImpactDebris();
+	if (!roarImpactDebrisEnabled)
+		return;
 
-    const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
-    const bool isPhase2 = scene && scene->IsBossInFinalPhase();
-    const int innerCount = isPhase2 ? 5 : 4;
-    const int outerCount = isPhase2 ? 11 : 8;
-    const int smallCount = isPhase2 ? 12 : 10;
-    const DirectX::XMFLOAT3 center = GetPosition();
-    const float attackRadius = GetRoarAttackRadius();
-    const float innerRatio = std::clamp(roarGroundBurstInnerRingRatio, 0.0f, 1.0f);
-    const float outerRatio = std::clamp(roarGroundBurstOuterRingRatio, innerRatio, 1.0f);
-    const float angleJitterRadians = DirectX::XMConvertToRadians((std::max)(0.0f, roarImpactDebrisAngleJitterDegrees));
-    const float radiusJitter = (std::max)(0.0f, roarImpactDebrisRadiusJitter);
-    const float spawnHeight = std::clamp(roarImpactDebrisSpawnHeight, 0.0f, 1.0f);
-    int emittedIndex = 0;
-    const auto emitRing = [&](const int count, const float ringRatio, const float phaseOffset)
-        {
-            for (int index = 0; index < count; ++index)
-            {
-                const bool isBlock = emittedIndex >= smallCount;
-                const size_t poolIndex = isBlock
-                    ? 12 + static_cast<size_t>(emittedIndex - smallCount)
-                    : static_cast<size_t>(emittedIndex);
-                auto& debris = roarImpactDebris[poolIndex];
-                const float baseAngle = DirectX::XM_2PI * (static_cast<float>(index) / static_cast<float>(count)) + phaseOffset;
-                const float angle = baseAngle + MathHelper::RandomRange(-angleJitterRadians, angleJitterRadians);
-                const float distance = attackRadius * std::clamp(ringRatio + MathHelper::RandomRange(-radiusJitter, radiusJitter), 0.0f, 1.0f);
-                const DirectX::XMFLOAT3 outward{ sinf(angle), 0.0f, cosf(angle) };
-                const float horizontalSpeed = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockHorizontalSpeedMin, roarImpactDebrisBlockHorizontalSpeedMax) : MathHelper::RandomRange(roarImpactDebrisSmallHorizontalSpeedMin, roarImpactDebrisSmallHorizontalSpeedMax);
-                const float verticalSpeed = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockVerticalSpeedMin, roarImpactDebrisBlockVerticalSpeedMax) : MathHelper::RandomRange(roarImpactDebrisSmallVerticalSpeedMin, roarImpactDebrisSmallVerticalSpeedMax);
-                const float angularMin = isBlock ? 150.0f : 240.0f;
-                const float angularMax = isBlock ? 330.0f : 540.0f;
-                const auto randomAngularVelocity = [angularMin, angularMax]()
-                    {
-                        return (MathHelper::RandomRange(0.0f, 1.0f) < 0.5f ? -1.0f : 1.0f) * MathHelper::RandomRange(angularMin, angularMax);
-                    };
-                debris.active = true;
-                debris.position = { center.x + outward.x * distance, center.y + spawnHeight, center.z + outward.z * distance };
-                debris.velocity = MathHelper::Multiply(outward, horizontalSpeed);
-                debris.velocity.y = verticalSpeed;
-                debris.rotation = { MathHelper::RandomRange(0.0f, 360.0f), MathHelper::RandomRange(0.0f, 360.0f), MathHelper::RandomRange(0.0f, 360.0f) };
-                debris.angularVelocity = { randomAngularVelocity(), randomAngularVelocity(), randomAngularVelocity() };
-                debris.lifetime = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockLifetimeMin, roarImpactDebrisBlockLifetimeMax) : MathHelper::RandomRange(roarImpactDebrisSmallLifetimeMin, roarImpactDebrisSmallLifetimeMax);
-                debris.elapsedTime = 0.0f;
-                debris.scale = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockScaleMin, roarImpactDebrisBlockScaleMax) : MathHelper::RandomRange(roarImpactDebrisSmallScaleMin, roarImpactDebrisSmallScaleMax);
-                debris.meshComponent->SetRelativeLocationDirect(debris.position);
-                debris.meshComponent->SetRelativeEulerRotationDirect(debris.rotation);
-                debris.meshComponent->SetRelativeScaleDirect({ debris.scale, debris.scale, debris.scale });
-                debris.meshComponent->SetIsVisible(true);
-                ++emittedIndex;
-            }
-        };
-    emitRing(innerCount, innerRatio, 0.0f);
-    emitRing(outerCount, outerRatio, DirectX::XM_PI / static_cast<float>(outerCount));
+	const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
+	const bool isPhase2 = scene && scene->IsBossInFinalPhase();
+	const int innerCount = isPhase2 ? 5 : 4;
+	const int outerCount = isPhase2 ? 11 : 8;
+	const int smallCount = isPhase2 ? 12 : 10;
+	const DirectX::XMFLOAT3 center = GetPosition();
+	const float attackRadius = GetRoarAttackRadius();
+	const float innerRatio = std::clamp(roarGroundBurstInnerRingRatio, 0.0f, 1.0f);
+	const float outerRatio = std::clamp(roarGroundBurstOuterRingRatio, innerRatio, 1.0f);
+	const float angleJitterRadians = DirectX::XMConvertToRadians((std::max)(0.0f, roarImpactDebrisAngleJitterDegrees));
+	const float radiusJitter = (std::max)(0.0f, roarImpactDebrisRadiusJitter);
+	const float spawnHeight = std::clamp(roarImpactDebrisSpawnHeight, 0.0f, 1.0f);
+	int emittedIndex = 0;
+	const auto emitRing = [&](const int count, const float ringRatio, const float phaseOffset)
+		{
+			for (int index = 0; index < count; ++index)
+			{
+				const bool isBlock = emittedIndex >= smallCount;
+				const size_t poolIndex = isBlock
+					? 12 + static_cast<size_t>(emittedIndex - smallCount)
+					: static_cast<size_t>(emittedIndex);
+				auto& debris = roarImpactDebris[poolIndex];
+				const float baseAngle = DirectX::XM_2PI * (static_cast<float>(index) / static_cast<float>(count)) + phaseOffset;
+				const float angle = baseAngle + MathHelper::RandomRange(-angleJitterRadians, angleJitterRadians);
+				const float distance = attackRadius * std::clamp(ringRatio + MathHelper::RandomRange(-radiusJitter, radiusJitter), 0.0f, 1.0f);
+				const DirectX::XMFLOAT3 outward{ sinf(angle), 0.0f, cosf(angle) };
+				const float horizontalSpeed = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockHorizontalSpeedMin, roarImpactDebrisBlockHorizontalSpeedMax) : MathHelper::RandomRange(roarImpactDebrisSmallHorizontalSpeedMin, roarImpactDebrisSmallHorizontalSpeedMax);
+				const float verticalSpeed = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockVerticalSpeedMin, roarImpactDebrisBlockVerticalSpeedMax) : MathHelper::RandomRange(roarImpactDebrisSmallVerticalSpeedMin, roarImpactDebrisSmallVerticalSpeedMax);
+				const float angularMin = isBlock ? 150.0f : 240.0f;
+				const float angularMax = isBlock ? 330.0f : 540.0f;
+				const auto randomAngularVelocity = [angularMin, angularMax]()
+					{
+						return (MathHelper::RandomRange(0.0f, 1.0f) < 0.5f ? -1.0f : 1.0f) * MathHelper::RandomRange(angularMin, angularMax);
+					};
+				debris.active = true;
+				debris.position = { center.x + outward.x * distance, center.y + spawnHeight, center.z + outward.z * distance };
+				debris.velocity = MathHelper::Multiply(outward, horizontalSpeed);
+				debris.velocity.y = verticalSpeed;
+				debris.rotation = { MathHelper::RandomRange(0.0f, 360.0f), MathHelper::RandomRange(0.0f, 360.0f), MathHelper::RandomRange(0.0f, 360.0f) };
+				debris.angularVelocity = { randomAngularVelocity(), randomAngularVelocity(), randomAngularVelocity() };
+				debris.lifetime = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockLifetimeMin, roarImpactDebrisBlockLifetimeMax) : MathHelper::RandomRange(roarImpactDebrisSmallLifetimeMin, roarImpactDebrisSmallLifetimeMax);
+				debris.elapsedTime = 0.0f;
+				debris.scale = isBlock ? MathHelper::RandomRange(roarImpactDebrisBlockScaleMin, roarImpactDebrisBlockScaleMax) : MathHelper::RandomRange(roarImpactDebrisSmallScaleMin, roarImpactDebrisSmallScaleMax);
+				debris.meshComponent->SetRelativeLocationDirect(debris.position);
+				debris.meshComponent->SetRelativeEulerRotationDirect(debris.rotation);
+				debris.meshComponent->SetRelativeScaleDirect({ debris.scale, debris.scale, debris.scale });
+				debris.meshComponent->SetIsVisible(true);
+				++emittedIndex;
+			}
+		};
+	emitRing(innerCount, innerRatio, 0.0f);
+	emitRing(outerCount, outerRatio, DirectX::XM_PI / static_cast<float>(outerCount));
 }
 
 void GruxEnemy::UpdateRoarImpactDebris(float scaledDeltaTime)
 {
-    if (!roarImpactDebrisEnabled)
-    {
-        HideRoarImpactDebris();
-        return;
-    }
-    const float dt = (std::max)(0.0f, scaledDeltaTime);
-    const float gravity = (std::max)(0.0f, roarImpactDebrisGravity);
-    for (auto& debris : roarImpactDebris)
-    {
-        if (!debris.active || !debris.meshComponent)
-            continue;
-        debris.velocity.y -= gravity * dt;
-        debris.position.x += debris.velocity.x * dt;
-        debris.position.y += debris.velocity.y * dt;
-        debris.position.z += debris.velocity.z * dt;
-        debris.rotation.x += debris.angularVelocity.x * dt;
-        debris.rotation.y += debris.angularVelocity.y * dt;
-        debris.rotation.z += debris.angularVelocity.z * dt;
-        debris.elapsedTime += dt;
-        if (debris.elapsedTime >= debris.lifetime)
-        {
-            debris.active = false;
-            debris.meshComponent->SetIsVisible(false);
-            continue;
-        }
-        debris.meshComponent->SetRelativeLocationDirect(debris.position);
-        debris.meshComponent->SetRelativeEulerRotationDirect(debris.rotation);
-    }
+	if (!roarImpactDebrisEnabled)
+	{
+		HideRoarImpactDebris();
+		return;
+	}
+	const float dt = (std::max)(0.0f, scaledDeltaTime);
+	const float gravity = (std::max)(0.0f, roarImpactDebrisGravity);
+	for (auto& debris : roarImpactDebris)
+	{
+		if (!debris.active || !debris.meshComponent)
+			continue;
+		debris.velocity.y -= gravity * dt;
+		debris.position.x += debris.velocity.x * dt;
+		debris.position.y += debris.velocity.y * dt;
+		debris.position.z += debris.velocity.z * dt;
+		debris.rotation.x += debris.angularVelocity.x * dt;
+		debris.rotation.y += debris.angularVelocity.y * dt;
+		debris.rotation.z += debris.angularVelocity.z * dt;
+		debris.elapsedTime += dt;
+		if (debris.elapsedTime >= debris.lifetime)
+		{
+			debris.active = false;
+			debris.meshComponent->SetIsVisible(false);
+			continue;
+		}
+		debris.meshComponent->SetRelativeLocationDirect(debris.position);
+		debris.meshComponent->SetRelativeEulerRotationDirect(debris.rotation);
+	}
 }
 
 void GruxEnemy::HideRoarImpactDebris()
 {
-    for (auto& debris : roarImpactDebris)
-    {
-        debris.active = false;
-        debris.elapsedTime = 0.0f;
-        debris.lifetime = 0.0f;
-        if (debris.meshComponent)
-            debris.meshComponent->SetIsVisible(false);
-    }
+	for (auto& debris : roarImpactDebris)
+	{
+		debris.active = false;
+		debris.elapsedTime = 0.0f;
+		debris.lifetime = 0.0f;
+		if (debris.meshComponent)
+			debris.meshComponent->SetIsVisible(false);
+	}
 }
 void GruxEnemy::EnsureRoarFloatingDebris()
 {
-    constexpr const char* debrisModels[] = {
-        "./Data/Models/EffectDebri/SmallDebri/debri.gltf",
-        "./Data/Models/EffectDebri/SmallDebri/debri1.gltf",
-        "./Data/Models/EffectDebri/SmallDebri/debri2.gltf",
-    };
+	constexpr const char* debrisModels[] = {
+		"./Data/Models/EffectDebri/SmallDebri/debri.gltf",
+		"./Data/Models/EffectDebri/SmallDebri/debri1.gltf",
+		"./Data/Models/EffectDebri/SmallDebri/debri2.gltf",
+	};
 
-    for (size_t index = 0; index < roarFloatingDebris.size(); ++index)
-    {
-        auto& debris = roarFloatingDebris[index];
-        if (!debris.meshComponent)
-        {
-            debris.meshComponent = AddComponent<SkeletalMeshComponent>(
-                "RoarFloatingDebris_" + std::to_string(index), "GruxEnemy");
-            debris.meshComponent->SetModel(debrisModels[index % std::size(debrisModels)]);
-            debris.meshComponent->SetIsCastShadow(false);
-            debris.meshComponent->SetUsingAbsoluteLocation(true);
-            debris.meshComponent->SetUsingAbsoluteRotation(true);
-            debris.meshComponent->SetUsingAbsoluteScale(true);
-        }
-        debris.meshComponent->SetIsVisible(false);
-    }
+	for (size_t index = 0; index < roarFloatingDebris.size(); ++index)
+	{
+		auto& debris = roarFloatingDebris[index];
+		if (!debris.meshComponent)
+		{
+			debris.meshComponent = AddComponent<SkeletalMeshComponent>(
+				"RoarFloatingDebris_" + std::to_string(index), "GruxEnemy");
+			debris.meshComponent->SetModel(debrisModels[index % std::size(debrisModels)]);
+			debris.meshComponent->SetIsCastShadow(false);
+			debris.meshComponent->SetUsingAbsoluteLocation(true);
+			debris.meshComponent->SetUsingAbsoluteRotation(true);
+			debris.meshComponent->SetUsingAbsoluteScale(true);
+		}
+		debris.meshComponent->SetIsVisible(false);
+	}
 }
 
 void GruxEnemy::InitializeRoarFloatingDebris()
 {
-    EnsureRoarFloatingDebris();
-    if (!roarFloatingDebrisEnabled)
-    {
-        HideRoarFloatingDebris();
-        return;
-    }
+	EnsureRoarFloatingDebris();
+	if (!roarFloatingDebrisEnabled)
+	{
+		HideRoarFloatingDebris();
+		return;
+	}
 
-    const float innerRatio = std::clamp(roarFloatingDebrisInnerRatio, 0.0f, 1.0f);
-    const float outerRatio = std::clamp(roarFloatingDebrisOuterRatio, innerRatio, 1.0f);
-    const float minHeight = (std::max)(0.0f, roarFloatingDebrisMinHeight);
-    const float maxHeight = (std::max)(minHeight, roarFloatingDebrisMaxHeight);
-    const float minScale = (std::max)(0.0f, roarFloatingDebrisScaleMin);
-    const float maxScale = (std::max)(minScale, roarFloatingDebrisScaleMax);
-    const float thresholdStart = 0.22f;
-    const float thresholdEnd = 0.84f;
-    const float thresholdStep = roarFloatingDebris.size() > 1
-        ? (thresholdEnd - thresholdStart) / static_cast<float>(roarFloatingDebris.size() - 1)
-        : 0.0f;
+	const float innerRatio = std::clamp(roarFloatingDebrisInnerRatio, 0.0f, 1.0f);
+	const float outerRatio = std::clamp(roarFloatingDebrisOuterRatio, innerRatio, 1.0f);
+	const float minHeight = (std::max)(0.0f, roarFloatingDebrisMinHeight);
+	const float maxHeight = (std::max)(minHeight, roarFloatingDebrisMaxHeight);
+	const float minScale = (std::max)(0.0f, roarFloatingDebrisScaleMin);
+	const float maxScale = (std::max)(minScale, roarFloatingDebrisScaleMax);
+	const float thresholdStart = 0.22f;
+	const float thresholdEnd = 0.84f;
+	const float thresholdStep = roarFloatingDebris.size() > 1
+		? (thresholdEnd - thresholdStart) / static_cast<float>(roarFloatingDebris.size() - 1)
+		: 0.0f;
 
-    for (size_t index = 0; index < roarFloatingDebris.size(); ++index)
-    {
-        auto& debris = roarFloatingDebris[index];
-        const float angle = MathHelper::RandomRange(0.0f, DirectX::XM_2PI);
-        debris.normalizedDirection = { std::sin(angle), 0.0f, std::cos(angle) };
-        debris.normalizedRingDistance = MathHelper::RandomRange(innerRatio, outerRatio);
-        debris.spawnThreshold = std::clamp(thresholdStart + thresholdStep * static_cast<float>(index) +MathHelper::RandomRange(-0.025f, 0.025f),0.20f, 0.90f);
-        debris.baseScale = MathHelper::RandomRange(minScale, maxScale);
-        debris.maxFloatHeight = MathHelper::RandomRange(minHeight, maxHeight);
-        debris.baseRotation =
-        {
-            MathHelper::RandomRange(0.0f, 360.0f),
-            MathHelper::RandomRange(0.0f, 360.0f),
-            MathHelper::RandomRange(0.0f, 360.0f)
-        };
-        debris.rotationAmount =
-        {
-            MathHelper::RandomRange(-25.0f, 25.0f),
-            MathHelper::RandomRange(-40.0f, 40.0f),
-            MathHelper::RandomRange(-25.0f, 25.0f)
-        };
-        debris.meshComponent->SetIsVisible(false);
-    }
+	for (size_t index = 0; index < roarFloatingDebris.size(); ++index)
+	{
+		auto& debris = roarFloatingDebris[index];
+		const float angle = MathHelper::RandomRange(0.0f, DirectX::XM_2PI);
+		debris.normalizedDirection = { std::sin(angle), 0.0f, std::cos(angle) };
+		debris.normalizedRingDistance = MathHelper::RandomRange(innerRatio, outerRatio);
+		debris.spawnThreshold = std::clamp(thresholdStart + thresholdStep * static_cast<float>(index) + MathHelper::RandomRange(-0.025f, 0.025f), 0.20f, 0.90f);
+		debris.baseScale = MathHelper::RandomRange(minScale, maxScale);
+		debris.maxFloatHeight = MathHelper::RandomRange(minHeight, maxHeight);
+		debris.baseRotation =
+		{
+			MathHelper::RandomRange(0.0f, 360.0f),
+			MathHelper::RandomRange(0.0f, 360.0f),
+			MathHelper::RandomRange(0.0f, 360.0f)
+		};
+		debris.rotationAmount =
+		{
+			MathHelper::RandomRange(-25.0f, 25.0f),
+			MathHelper::RandomRange(-40.0f, 40.0f),
+			MathHelper::RandomRange(-25.0f, 25.0f)
+		};
+		debris.meshComponent->SetIsVisible(false);
+	}
 }
 
 void GruxEnemy::UpdateRoarFloatingDebris()
 {
-    if (!roarFloatingDebrisEnabled || !IsRoarBTActive() || roarBT.shockwaveFired)
-    {
-        HideRoarFloatingDebris();
-        return;
-    }
+	if (!roarFloatingDebrisEnabled || !IsRoarBTActive() || roarBT.shockwaveFired)
+	{
+		HideRoarFloatingDebris();
+		return;
+	}
 
-    const DirectX::XMFLOAT3 center = GetPosition();
-    const float radius = GetRoarAttackRadius();
-    for (auto& debris : roarFloatingDebris)
-    {
-        if (!debris.meshComponent || roarTelegraphProgress < debris.spawnThreshold)
-        {
-            if (debris.meshComponent) debris.meshComponent->SetIsVisible(false);
-            continue;
-        }
+	const DirectX::XMFLOAT3 center = GetPosition();
+	const float radius = GetRoarAttackRadius();
+	for (auto& debris : roarFloatingDebris)
+	{
+		if (!debris.meshComponent || roarTelegraphProgress < debris.spawnThreshold)
+		{
+			if (debris.meshComponent) debris.meshComponent->SetIsVisible(false);
+			continue;
+		}
 
-        const float localProgress = std::clamp(
-            (roarTelegraphProgress - debris.spawnThreshold) /
-            (1.0f - debris.spawnThreshold), 0.0f, 1.0f);
-        const float easedProgress = localProgress * localProgress * (3.0f - 2.0f * localProgress);
-        const float ringDistance = radius * debris.normalizedRingDistance;
-        const DirectX::XMFLOAT3 position{
-            center.x + debris.normalizedDirection.x * ringDistance,
-            center.y + 0.05f + debris.maxFloatHeight * easedProgress,
-            center.z + debris.normalizedDirection.z * ringDistance };
-        const DirectX::XMFLOAT3 rotation{
-            debris.baseRotation.x + debris.rotationAmount.x * easedProgress,
-            debris.baseRotation.y + debris.rotationAmount.y * easedProgress,
-            debris.baseRotation.z + debris.rotationAmount.z * easedProgress };
+		const float localProgress = std::clamp(
+			(roarTelegraphProgress - debris.spawnThreshold) /
+			(1.0f - debris.spawnThreshold), 0.0f, 1.0f);
+		const float easedProgress = localProgress * localProgress * (3.0f - 2.0f * localProgress);
+		const float ringDistance = radius * debris.normalizedRingDistance;
+		const DirectX::XMFLOAT3 position{
+			center.x + debris.normalizedDirection.x * ringDistance,
+			center.y + 0.05f + debris.maxFloatHeight * easedProgress,
+			center.z + debris.normalizedDirection.z * ringDistance };
+		const DirectX::XMFLOAT3 rotation{
+			debris.baseRotation.x + debris.rotationAmount.x * easedProgress,
+			debris.baseRotation.y + debris.rotationAmount.y * easedProgress,
+			debris.baseRotation.z + debris.rotationAmount.z * easedProgress };
 
-        debris.meshComponent->SetRelativeLocationDirect(position);
-        debris.meshComponent->SetRelativeEulerRotationDirect(rotation);
-        debris.meshComponent->SetRelativeScaleDirect(
-            { debris.baseScale, debris.baseScale, debris.baseScale });
-        debris.meshComponent->SetIsVisible(true);
-    }
+		debris.meshComponent->SetRelativeLocationDirect(position);
+		debris.meshComponent->SetRelativeEulerRotationDirect(rotation);
+		debris.meshComponent->SetRelativeScaleDirect(
+			{ debris.baseScale, debris.baseScale, debris.baseScale });
+		debris.meshComponent->SetIsVisible(true);
+	}
 }
 
 void GruxEnemy::HideRoarFloatingDebris()
 {
-    for (auto& debris : roarFloatingDebris)
-    {
-        if (debris.meshComponent)
-            debris.meshComponent->SetIsVisible(false);
-    }
+	for (auto& debris : roarFloatingDebris)
+	{
+		if (debris.meshComponent)
+			debris.meshComponent->SetIsVisible(false);
+	}
 }
 
 void GruxEnemy::CleanupRoarBT()
 {
-    // Roar固有のRuntime、演出、当たり判定を後始末する。
-    HideRoarTelegraph();
-    HideRoarFloatingDebris();
-    HideRoarImpactDebris();
-    roarTelegraphProgress = 0.0f;
-    if (IsRoarBTActive())
-    {
-        StopAIMovement();
-        if (characterMovementComponent) characterMovementComponent->ResetFixedSpeed();
-        DisableAttackHitBoxes();
-        const auto controller = GetBodyAnimationController();
-        if (IsRoarExecutionAllowed() && controller &&
-            (controller->GetCurrentAnimationName() == "Pre_Stampede_0" ||
-                controller->GetCurrentAnimationName() == "LevelStart_0"))
-            PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
-    }
-    roarBT = {};
+	// Roar固有のRuntime、演出、当たり判定を後始末する。
+	HideRoarTelegraph();
+	HideRoarFloatingDebris();
+	HideRoarImpactDebris();
+	roarTelegraphProgress = 0.0f;
+	if (IsRoarBTActive())
+	{
+		StopAIMovement();
+		if (characterMovementComponent) characterMovementComponent->ResetFixedSpeed();
+		DisableAttackHitBoxes();
+		const auto controller = GetBodyAnimationController();
+		if (IsRoarExecutionAllowed() && controller &&
+			(controller->GetCurrentAnimationName() == "Pre_Stampede_0" ||
+				controller->GetCurrentAnimationName() == "LevelStart_0"))
+			PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+	}
+	roarBT = {};
 }
 
 void GruxEnemy::TickRoarLifecycle(float dt)
 {
-    if (!IsAnimationEditorPreviewActive())
-    {
-        roarCooldownRemaining = (std::max)(0.0f, roarCooldownRemaining - (std::max)(0.0f, dt));
-        retreatRetryCooldownRemaining = (std::max)(0.0f, retreatRetryCooldownRemaining - (std::max)(0.0f, dt));
-    }
-    if (IsRoarBTActive() && (!IsRoarExecutionAllowed() || !activeNode ||
-        (activeNode->GetName() != "ExecuteRoar" && activeNode->GetName() != "FinishRoar")))
-    {
-        CleanupRoarBT();
-        activeNode = nullptr;
-        if (behaviorData) behaviorData->Init();
-    }
+	if (!IsAnimationEditorPreviewActive())
+	{
+		roarCooldownRemaining = (std::max)(0.0f, roarCooldownRemaining - (std::max)(0.0f, dt));
+		retreatRetryCooldownRemaining = (std::max)(0.0f, retreatRetryCooldownRemaining - (std::max)(0.0f, dt));
+	}
+	if (IsRoarBTActive() && (!IsRoarExecutionAllowed() || !activeNode ||
+		(activeNode->GetName() != "ExecuteRoar" && activeNode->GetName() != "FinishRoar")))
+	{
+		CleanupRoarBT();
+		activeNode = nullptr;
+		if (behaviorData) behaviorData->Init();
+	}
 }
 
 float GruxEnemy::GetRoarRenderFootOffset() const
 {
-    const auto controller = GetBodyAnimationController();
-    if (roarBT.stage != RoarStage::Shockwave || !IsRoarExecutionAllowed() ||
-        !activeNode || (activeNode->GetName() != "ExecuteRoar" && activeNode->GetName() != "FinishRoar") ||
-        !controller || !controller->IsPlayAnimation() || controller->GetCurrentAnimationName() != "LevelStart_0" ||
-        !std::isfinite(roarLevelStartFootOffset) || !std::isfinite(roarLevelStartFootOffsetEndTime) ||
-        roarLevelStartFootOffsetEndTime <= 0.0f)
-        return 0.0f;
-    const float time = controller->GetCurrentAnimationTime();
-    if (!std::isfinite(time)) return 0.0f;
-    return roarLevelStartFootOffset * (1.0f - std::clamp(time / roarLevelStartFootOffsetEndTime, 0.0f, 1.0f));
+	const auto controller = GetBodyAnimationController();
+	if (roarBT.stage != RoarStage::Shockwave || !IsRoarExecutionAllowed() ||
+		!activeNode || (activeNode->GetName() != "ExecuteRoar" && activeNode->GetName() != "FinishRoar") ||
+		!controller || !controller->IsPlayAnimation() || controller->GetCurrentAnimationName() != "LevelStart_0" ||
+		!std::isfinite(roarLevelStartFootOffset) || !std::isfinite(roarLevelStartFootOffsetEndTime) ||
+		roarLevelStartFootOffsetEndTime <= 0.0f)
+		return 0.0f;
+	const float time = controller->GetCurrentAnimationTime();
+	if (!std::isfinite(time)) return 0.0f;
+	return roarLevelStartFootOffset * (1.0f - std::clamp(time / roarLevelStartFootOffsetEndTime, 0.0f, 1.0f));
 }
 
 void GruxEnemy::DrawRoarBTDebug()
 {
 #ifdef USE_IMGUI
-    ImGui::SeparatorText(U8("咆哮BT"));
-    ImGui::DragFloat(U8("咆哮 LevelStart 足元補正"), &roarLevelStartFootOffset, 0.01f, -2.0f, 2.0f, "%.3f m");
-    ImGui::DragFloat(U8("咆哮 足元補正終了時間"), &roarLevelStartFootOffsetEndTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
-    if (!std::isfinite(roarLevelStartFootOffset)) roarLevelStartFootOffset = 0.0f;
-    roarLevelStartFootOffsetEndTime = std::isfinite(roarLevelStartFootOffsetEndTime)
-        ? (std::max)(0.0f, roarLevelStartFootOffsetEndTime) : 0.0f;
-    ImGui::Text(U8("咆哮 足元補正 現在値: %.3f"), GetRoarRenderFootOffset());
-    const auto footController = GetBodyAnimationController();
-    ImGui::Text(U8("LevelStart 再生時間: %.3f"),
-        footController && footController->GetCurrentAnimationName() == "LevelStart_0"
-        ? footController->GetCurrentAnimationTime() : 0.0f);
-    const auto roarController = GetBodyAnimationController();
-    const float clipDuration = roarController ? roarController->GetAnimationLength("Pre_Stampede_0") : 60.0f;
-    const float rangeLimit = std::isfinite(clipDuration) ? (std::max)(0.05f, clipDuration) : 60.0f;
-    ImGui::DragFloat(U8("咆哮 開始時間"), &roarPreStampedeStartTime, 0.05f, 0.0f, rangeLimit - 0.05f, "%.2f sec");
-    roarPreStampedeStartTime = std::isfinite(roarPreStampedeStartTime)
-        ? std::clamp(roarPreStampedeStartTime, 0.0f, rangeLimit - 0.05f) : 0.0f;
-    ImGui::DragFloat(U8("咆哮 終了時間"), &roarPreStampedeEndTime, 0.05f,
-        roarPreStampedeStartTime + 0.05f, rangeLimit, "%.2f sec");
-    roarPreStampedeEndTime = std::isfinite(roarPreStampedeEndTime)
-        ? std::clamp(roarPreStampedeEndTime, roarPreStampedeStartTime + 0.05f, rangeLimit) : rangeLimit;
-    ImGui::DragFloat(U8("防御行動 至近距離"), &defensiveTooCloseDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
-    ImGui::DragFloat(U8("防御行動 Back最小角度"), &defensiveBackMinAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
-    defensiveBackMinAngle = std::clamp(defensiveBackMinAngle, 0.0f, 180.0f);
-    ImGui::DragFloat("Roar Radius Phase1", &roarRadiusPhase1, 0.1f, 0.0f, 30.0f, "%.2f m");
-    ImGui::DragFloat("Roar Radius Phase2", &roarRadiusPhase2, 0.1f, 0.0f, 30.0f, "%.2f m");
-    ImGui::DragInt("Roar Damage", &roarDamage, 1.0f, 0, 1000);
-    ImGui::DragFloat(U8("咆哮 高低差許容"), &roarHeightTolerance, 0.1f, 0.0f, 30.0f, "%.2f m");
-    const float previousCooldownDuration = roarCooldownDuration;
-    ImGui::DragFloat(U8("咆哮クールタイム"), &roarCooldownDuration, 0.1f, 0.0f, 120.0f, "%.2f sec");
-    defensiveTooCloseDistance = (std::max)(0.0f, defensiveTooCloseDistance);
-    roarRadiusPhase1 = (std::max)(0.0f, roarRadiusPhase1);
-    roarRadiusPhase2 = (std::max)(0.0f, roarRadiusPhase2);
-    roarDamage = (std::max)(0, roarDamage);
-    roarHeightTolerance = (std::max)(0.0f, roarHeightTolerance);
-    roarCooldownDuration = (std::max)(0.0f, roarCooldownDuration);
-    if (roarCooldownRemaining > 0.0f && roarCooldownDuration != previousCooldownDuration)
-        roarCooldownRemaining = (std::max)(0.0f,
-            roarCooldownRemaining + roarCooldownDuration - previousCooldownDuration);
-    ImGui::ProgressBar(std::clamp(roarTelegraphProgress, 0.0f, 1.0f), ImVec2(-FLT_MIN, 0.0f));
-    ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::ColorEdit3("Roar Phase 1 Outer Tint", &roarTelegraphPhase1OuterTint.x);
-    ImGui::ColorEdit3("Roar Phase 1 Fill Tint Min", &roarTelegraphPhase1FillTintMin.x);
-    ImGui::ColorEdit3("Roar Phase 1 Fill Tint Max", &roarTelegraphPhase1FillTintMax.x);
-    ImGui::ColorEdit3("Roar Phase 2 Outer Tint", &roarTelegraphPhase2OuterTint.x);
-    ImGui::ColorEdit3("Roar Phase 2 Fill Tint Min", &roarTelegraphPhase2FillTintMin.x);
-    ImGui::ColorEdit3("Roar Phase 2 Fill Tint Max", &roarTelegraphPhase2FillTintMax.x);
-    ImGui::DragFloat("Roar Fill Glow Min", &roarTelegraphFillGlowMin, 0.05f, 0.0f, 20.0f, "%.2f");
-    ImGui::DragFloat("Roar Fill Glow Max", &roarTelegraphFillGlowMax, 0.05f, 0.0f, 20.0f, "%.2f");
-    ImGui::DragFloat("Roar Fill Alpha Min", &roarTelegraphFillAlphaMin, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::DragFloat("Roar Fill Alpha Max", &roarTelegraphFillAlphaMax, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::Checkbox("Floating Debris Enabled", &roarFloatingDebrisEnabled);
-    ImGui::TextDisabled("Floating debris ring, height and scale apply when debris is generated.");
-    ImGui::DragFloat("Roar Floating Debris Inner Ratio", &roarFloatingDebrisInnerRatio, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::DragFloat("Roar Floating Debris Outer Ratio", &roarFloatingDebrisOuterRatio, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::DragFloat("Roar Floating Debris Min Height", &roarFloatingDebrisMinHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
-    ImGui::DragFloat("Roar Floating Debris Max Height", &roarFloatingDebrisMaxHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
-    ImGui::DragFloat("Roar Floating Debris Scale Min", &roarFloatingDebrisScaleMin, 0.01f, 0.0f, 5.0f, "%.2f");
-    ImGui::DragFloat("Roar Floating Debris Scale Max", &roarFloatingDebrisScaleMax, 0.01f, 0.0f, 5.0f, "%.2f");
-    ImGui::Checkbox("Impact Debris Enabled", &roarImpactDebrisEnabled);
-    ImGui::TextDisabled("Impact debris speed, scale and lifetime apply to newly spawned debris.");
-    ImGui::DragFloat("Impact Debris Spawn Height", &roarImpactDebrisSpawnHeight, 0.01f, 0.0f, 1.0f, "%.2f m");
-    ImGui::DragFloat("Impact Debris Gravity", &roarImpactDebrisGravity, 0.1f, 0.0f, 30.0f, "%.2f m/s2");
-    ImGui::DragFloatRange2("Impact Small Horizontal Speed", &roarImpactDebrisSmallHorizontalSpeedMin, &roarImpactDebrisSmallHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
-    ImGui::DragFloatRange2("Impact Small Vertical Speed", &roarImpactDebrisSmallVerticalSpeedMin, &roarImpactDebrisSmallVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
-    ImGui::DragFloatRange2("Impact Small Lifetime", &roarImpactDebrisSmallLifetimeMin, &roarImpactDebrisSmallLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
-    ImGui::DragFloatRange2("Impact Block Horizontal Speed", &roarImpactDebrisBlockHorizontalSpeedMin, &roarImpactDebrisBlockHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
-    ImGui::DragFloatRange2("Impact Block Vertical Speed", &roarImpactDebrisBlockVerticalSpeedMin, &roarImpactDebrisBlockVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
-    ImGui::DragFloatRange2("Impact Block Lifetime", &roarImpactDebrisBlockLifetimeMin, &roarImpactDebrisBlockLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
-    ImGui::DragFloatRange2("Small Debris Scale", &roarImpactDebrisSmallScaleMin, &roarImpactDebrisSmallScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
-    ImGui::DragFloatRange2("Block Debris Scale", &roarImpactDebrisBlockScaleMin, &roarImpactDebrisBlockScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
-    ImGui::Checkbox("Roar Ground Burst Enabled", &roarGroundBurstEnabled);
-    ImGui::DragFloat("Roar Ground Burst Inner Ring Ratio", &roarGroundBurstInnerRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::DragFloat("Roar Ground Burst Outer Ring Ratio", &roarGroundBurstOuterRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
-    ImGui::DragFloat("Roar Ground Burst Angle Jitter", &roarGroundBurstAngleJitterDegrees, 0.25f, 0.0f, 45.0f, "%.1f deg");
-    ImGui::DragFloat("Roar Ground Burst Radius Jitter", &roarGroundBurstRadiusJitter, 0.005f, 0.0f, 0.25f, "%.3f");
-    ImGui::DragFloat("Roar Ground Burst Y Offset", &roarGroundBurstYOffset, 0.01f, -1.0f, 1.0f, "%.2f m");
-    if (!roarFloatingDebrisEnabled)
-        HideRoarFloatingDebris();
-    if (!roarImpactDebrisEnabled)
-        HideRoarImpactDebris();
-    ImGui::SeparatorText(U8("Retreat"));
-    ImGui::DragFloat(U8("退避距離 最小"), &retreatDistanceMin, 0.1f, 0.0f, 30.0f, "%.2f m");
-    ImGui::DragFloat(U8("退避距離 最大"), &retreatDistanceMax, 0.1f, 0.0f, 30.0f, "%.2f m");
-    ImGui::DragFloat(U8("退避 最低移動距離"), &retreatMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
-    ImGui::DragFloat(U8("退避 移動速度"), &retreatMoveSpeed, 0.1f, 0.0f, 30.0f, "%.2f m/s");
-    ImGui::DragFloat(U8("退避 再試行待ち"), &retreatRetryCooldownDuration, 0.1f, 0.0f, 10.0f, "%.2f sec");
+	ImGui::SeparatorText(U8("咆哮BT"));
+	ImGui::DragFloat(U8("咆哮 LevelStart 足元補正"), &roarLevelStartFootOffset, 0.01f, -2.0f, 2.0f, "%.3f m");
+	ImGui::DragFloat(U8("咆哮 足元補正終了時間"), &roarLevelStartFootOffsetEndTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
+	if (!std::isfinite(roarLevelStartFootOffset)) roarLevelStartFootOffset = 0.0f;
+	const auto roarController = GetBodyAnimationController();
+	const float clipDuration = roarController ? roarController->GetAnimationLength("Pre_Stampede_0") : 60.0f;
+	const float rangeLimit = std::isfinite(clipDuration) ? (std::max)(0.05f, clipDuration) : 60.0f;
+	ImGui::DragFloat(U8("咆哮 開始時間"), &roarPreStampedeStartTime, 0.05f, 0.0f, rangeLimit - 0.05f, "%.2f sec");
+	ImGui::DragFloat(U8("咆哮 終了時間"), &roarPreStampedeEndTime, 0.05f, roarPreStampedeStartTime + 0.05f, rangeLimit, "%.2f sec");
+	ImGui::DragFloat(U8("防御行動 至近距離"), &defensiveTooCloseDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+	ImGui::DragFloat(U8("防御行動 Back最小角度"), &defensiveBackMinAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+	defensiveBackMinAngle = std::clamp(defensiveBackMinAngle, 0.0f, 180.0f);
+	ImGui::DragFloat("Roar Radius Phase1", &roarRadiusPhase1, 0.1f, 0.0f, 30.0f, "%.2f m");
+	ImGui::DragFloat("Roar Radius Phase2", &roarRadiusPhase2, 0.1f, 0.0f, 30.0f, "%.2f m");
+	ImGui::DragInt("Roar Damage", &roarDamage, 1.0f, 0, 1000);
+	ImGui::DragFloat(U8("咆哮 高低差許容"), &roarHeightTolerance, 0.1f, 0.0f, 30.0f, "%.2f m");
+	ImGui::DragFloat(U8("咆哮クールタイム"), &roarCooldownDuration, 0.1f, 0.0f, 120.0f, "%.2f sec");
+	ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
+	ImGui::ColorEdit3("Roar Phase 1 Outer Tint", &roarTelegraphPhase1OuterTint.x);
+	ImGui::ColorEdit3("Roar Phase 1 Fill Tint Min", &roarTelegraphPhase1FillTintMin.x);
+	ImGui::ColorEdit3("Roar Phase 1 Fill Tint Max", &roarTelegraphPhase1FillTintMax.x);
+	ImGui::ColorEdit3("Roar Phase 2 Outer Tint", &roarTelegraphPhase2OuterTint.x);
+	ImGui::ColorEdit3("Roar Phase 2 Fill Tint Min", &roarTelegraphPhase2FillTintMin.x);
+	ImGui::ColorEdit3("Roar Phase 2 Fill Tint Max", &roarTelegraphPhase2FillTintMax.x);
+	ImGui::DragFloat("Roar Fill Glow Min", &roarTelegraphFillGlowMin, 0.05f, 0.0f, 20.0f, "%.2f");
+	ImGui::DragFloat("Roar Fill Glow Max", &roarTelegraphFillGlowMax, 0.05f, 0.0f, 20.0f, "%.2f");
+	ImGui::DragFloat("Roar Fill Alpha Min", &roarTelegraphFillAlphaMin, 0.01f, 0.0f, 1.0f, "%.2f");
+	ImGui::DragFloat("Roar Fill Alpha Max", &roarTelegraphFillAlphaMax, 0.01f, 0.0f, 1.0f, "%.2f");
+	ImGui::Checkbox("Floating Debris Enabled", &roarFloatingDebrisEnabled);
+	ImGui::TextDisabled("Floating debris ring, height and scale apply when debris is generated.");
+	ImGui::DragFloat("Roar Floating Debris Inner Ratio", &roarFloatingDebrisInnerRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+	ImGui::DragFloat("Roar Floating Debris Outer Ratio", &roarFloatingDebrisOuterRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+	ImGui::DragFloat("Roar Floating Debris Min Height", &roarFloatingDebrisMinHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
+	ImGui::DragFloat("Roar Floating Debris Max Height", &roarFloatingDebrisMaxHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
+	ImGui::DragFloat("Roar Floating Debris Scale Min", &roarFloatingDebrisScaleMin, 0.01f, 0.0f, 5.0f, "%.2f");
+	ImGui::DragFloat("Roar Floating Debris Scale Max", &roarFloatingDebrisScaleMax, 0.01f, 0.0f, 5.0f, "%.2f");
+	ImGui::Checkbox("Impact Debris Enabled", &roarImpactDebrisEnabled);
+	ImGui::TextDisabled("Impact debris speed, scale and lifetime apply to newly spawned debris.");
+	ImGui::DragFloat("Impact Debris Spawn Height", &roarImpactDebrisSpawnHeight, 0.01f, 0.0f, 1.0f, "%.2f m");
+	ImGui::DragFloat("Impact Debris Gravity", &roarImpactDebrisGravity, 0.1f, 0.0f, 30.0f, "%.2f m/s2");
+	ImGui::DragFloatRange2("Impact Small Horizontal Speed", &roarImpactDebrisSmallHorizontalSpeedMin, &roarImpactDebrisSmallHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+	ImGui::DragFloatRange2("Impact Small Vertical Speed", &roarImpactDebrisSmallVerticalSpeedMin, &roarImpactDebrisSmallVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+	ImGui::DragFloatRange2("Impact Small Lifetime", &roarImpactDebrisSmallLifetimeMin, &roarImpactDebrisSmallLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
+	ImGui::DragFloatRange2("Impact Block Horizontal Speed", &roarImpactDebrisBlockHorizontalSpeedMin, &roarImpactDebrisBlockHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+	ImGui::DragFloatRange2("Impact Block Vertical Speed", &roarImpactDebrisBlockVerticalSpeedMin, &roarImpactDebrisBlockVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+	ImGui::DragFloatRange2("Impact Block Lifetime", &roarImpactDebrisBlockLifetimeMin, &roarImpactDebrisBlockLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
+	ImGui::DragFloatRange2("Small Debris Scale", &roarImpactDebrisSmallScaleMin, &roarImpactDebrisSmallScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
+	ImGui::DragFloatRange2("Block Debris Scale", &roarImpactDebrisBlockScaleMin, &roarImpactDebrisBlockScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
+	ImGui::Checkbox("Roar Ground Burst Enabled", &roarGroundBurstEnabled);
+	ImGui::DragFloat("Roar Ground Burst Inner Ring Ratio", &roarGroundBurstInnerRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+	ImGui::DragFloat("Roar Ground Burst Outer Ring Ratio", &roarGroundBurstOuterRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+	ImGui::DragFloat("Roar Ground Burst Angle Jitter", &roarGroundBurstAngleJitterDegrees, 0.25f, 0.0f, 45.0f, "%.1f deg");
+	ImGui::DragFloat("Roar Ground Burst Radius Jitter", &roarGroundBurstRadiusJitter, 0.005f, 0.0f, 0.25f, "%.3f");
+	ImGui::DragFloat("Roar Ground Burst Y Offset", &roarGroundBurstYOffset, 0.01f, -1.0f, 1.0f, "%.2f m");
+	if (!roarFloatingDebrisEnabled)
+		HideRoarFloatingDebris();
+	if (!roarImpactDebrisEnabled)
+		HideRoarImpactDebris();
+	ImGui::SeparatorText(U8("Retreat"));
+	ImGui::DragFloat(U8("退避距離 最小"), &retreatDistanceMin, 0.1f, 0.0f, 30.0f, "%.2f m");
+	ImGui::DragFloat(U8("退避距離 最大"), &retreatDistanceMax, 0.1f, 0.0f, 30.0f, "%.2f m");
+	ImGui::DragFloat(U8("退避 最低移動距離"), &retreatMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+	ImGui::DragFloat(U8("退避 移動速度"), &retreatMoveSpeed, 0.1f, 0.0f, 30.0f, "%.2f m/s");
+	ImGui::DragFloat(U8("退避 再試行待ち"), &retreatRetryCooldownDuration, 0.1f, 0.0f, 10.0f, "%.2f sec");
 #endif
 }

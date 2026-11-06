@@ -658,7 +658,6 @@ void Player::Update(float deltaTime)
 	{
 		// 入力処理
 		CaptureActionRequest(deltaTime);
-
 		// 現在フレームの入力から移動方向を確定し、その直後に一度だけ位置を更新する。
 		UpdateMovement();
 	}
@@ -1732,8 +1731,6 @@ bool Player::BeginFinalHitWait()
 
 	if (!validCurrentAttack)
 	{
-		// An unexpected state/clip is not treated as a completed attack pose.
-		// Fall through to the existing safe cleanup without creating a wait.
 		finalHitAttackDrainFailed = true;
 		ClearTransientBattleActions();
 		return false;
@@ -2071,13 +2068,11 @@ void Player::ConsumeActionRequest(ActionType expectedType)
 }
 
 //当たった時の処理
-bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition,
-	const DamagePolicy policy)
+bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition, const DamagePolicy policy)
 {
 	if (finalHitWaiting) return false;
 	const std::string currentState = stateMachine_->GetStateName();
-	const bool ignoreDodgeIFrames =
-		policy == DamagePolicy::IgnoreDodgeIFrames && currentState == "Dodge";
+	const bool ignoreDodgeIFrames = policy == DamagePolicy::IgnoreDodgeIFrames && currentState == "Dodge";
 	if (invincibleWindow && !ignoreDodgeIFrames)
 	{
 		return false;
@@ -2672,10 +2667,9 @@ void Player::HandleAnimationPlaySE(const AnimationNotifyEvent& event) const
 	const std::string audioPath = "./Data/Sound/SE/" + soundName + ".wav";
 	CoreAudio::PlayOneShot(audioPath, event.value);
 }
+
 // 剣の攻撃判定
-DirectX::XMFLOAT3 Player::GetHitBoxPoint(
-	const std::shared_ptr<SceneComponent>& component,
-	const DirectX::XMFLOAT3& localOffset) const
+DirectX::XMFLOAT3 Player::GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const
 {
 	const DirectX::XMFLOAT3 base = component->GetComponentLocation();
 	DirectX::XMVECTOR offset = DirectX::XMLoadFloat3(&localOffset);
@@ -2753,10 +2747,11 @@ void Player::BeginKnockBackMovement()
 
 void Player::UpdateKnockBackMovement(float deltaTime)
 {
-	knockBackElapsed = (std::min)(
-		knockBackElapsed + (std::max)(0.0f, deltaTime), knockBackDuration);
+	knockBackElapsed = (std::min)(knockBackElapsed + (std::max)(0.0f, deltaTime), knockBackDuration);
 	if (knockBackForcedMoveActive && knockBackElapsed >= knockBackDuration)
+	{
 		StopKnockBackForcedMove();
+	}
 }
 
 void Player::StopKnockBackForcedMove()
@@ -2776,7 +2771,6 @@ void Player::UpdateMovement()
 {
 	const std::string currentState = GetStateMachine()->GetStateName();
 	const bool suppressMovementInput = currentState == "Damage" || currentState == "KnockBack" || currentState == "DeathPending" || currentState == "Death";
-
 	if (currentState == "DeathPending" || currentState == "Death")
 	{
 		characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
@@ -2864,10 +2858,7 @@ void Player::UpdateMovement()
 					return 1.0f;
 
 				return
-					(forwardWeight * forwardSpeedScale +
-						sideWeight * sideSpeedScale +
-						backwardWeight * backwardSpeedScale) /
-					totalWeight;
+					(forwardWeight * forwardSpeedScale + sideWeight * sideSpeedScale + backwardWeight * backwardSpeedScale) / totalWeight;
 			};
 
 		float directionSpeedScale = 1.0f;

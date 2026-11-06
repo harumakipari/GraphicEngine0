@@ -412,8 +412,6 @@ public:
     bool CanAcceptInitialRushInput() const;
     // 最終ヒット時の現在姿勢を固定し、成否を記録する。
     bool LatchFinalHitVisualPoseAfterAnimationUpdate();
-    // 初回または追加入力のRushガイドを表示できるかを返す。
-    bool CanShowRushPrompt() const;
     // Just Dodge成功後またはRush中の追撃機会が有効かを返す。
     bool IsRushOpportunityActive() const;
     // 初回Rush入力の受付状態を切り替え、ガイド表示を同期する。
@@ -483,10 +481,6 @@ private:
     DirectX::XMFLOAT3 GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const;
 
     // 入力要求の内部処理
-    // 戦闘の流れ: 入力をCaptureActionRequestで保存し、Idle / Running Stateが
-    // TryExecuteActionRequestで実行を試みる。通常攻撃とコンボ・判定窓はAttack StateとNotifyが管理する。
-    // 敵の攻撃判定がJust Dodge成功を通知し、Dodge StateがRush入力受付と遷移を管理する。
-    // Rush StateはRushPhaseに応じて行動を進める。
     // 入力を一定時間保持するアクション要求として記録する。
     void CaptureActionRequest(float deltaTime);
 
