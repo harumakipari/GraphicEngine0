@@ -200,7 +200,6 @@ private:
     bool IsFinalRushAttack() const;
     void ResetRushInputGrace();
 
-    float elapsedTime = 0.0f;
     float windupElapsedTime = 0.0f;
     float rushStopDistance = 0.0f;
     bool rushComboAdvanced = false;

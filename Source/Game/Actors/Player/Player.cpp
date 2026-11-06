@@ -406,7 +406,7 @@ void Player::Update(float deltaTime)
 	if (const auto scene = GetOwnerScene(); scene && scene->IsPaused())
 	{
 		if (bufferCommand.type != ActionType::None)
-			ClearActionRequest("scene_paused");
+			ClearActionRequest();
 		if (inputComponent)
 			inputComponent->ClearIntent();
 		return;
@@ -1298,7 +1298,6 @@ bool Player::BeginPrisonOpeningSitting(
 	controller->SetIgnoreRootMotion(true);
 	prisonOpeningSittingPingPongPhase = 0.0f;
 	prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
-	prisonOpeningSittingPingPongForward = true;
 	const bool started = prisonOpeningUseStandingPingPong
 		? controller->PlayAnimationImmediate("Standing", true, true) &&
 		controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime)
@@ -1360,7 +1359,6 @@ void Player::ConfigurePrisonOpeningSittingMotion(const bool useStandingPingPong,
 	{
 		prisonOpeningSittingPingPongPhase = 0.0f;
 		prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
-		prisonOpeningSittingPingPongForward = true;
 		if (controller->PlayAnimationImmediate("Standing", true, true))
 			controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
 	}
@@ -1728,9 +1726,9 @@ bool Player::BeginFinalHitWait()
 	finalHitAttackDrainActive = true;
 	RequestFinalHitVisualPoseLatch();
 	RequestFinalHitRushFollowUpStop();
-	ClearActionRequest("final_hit_attack_drain");
+	ClearActionRequest();
 	ClearAttackTarget();
-	SetRushInputAcceptance(false, "FinalHit");
+	SetRushInputAcceptance(false);
 	hitBox = false;
 	inputWindow = false;
 	transitionWindow = false;
@@ -1794,7 +1792,7 @@ void Player::MarkFinalHitAttackDrainInterrupted()
 
 void Player::ClearTransientBattleActions()
 {
-	ClearActionRequest("battle_end");
+	ClearActionRequest();
 	finalHitVisualPoseLatchRequested = false;
 	finalHitRushFollowUpStopRequested = false;
 	ClearAttackTarget();
@@ -2092,8 +2090,8 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
 	CoreAudio::PlayOneShot("./Data/Sound/SE/player_damage.wav", 0.5f);
 	// コントローラー振動
 	InputSystem::SetVibration(0.8f, 0.15f);
-	SetRushInputAcceptance(false, "Damage");
-	ClearActionRequest("damage_applied");
+	SetRushInputAcceptance(false);
+	ClearActionRequest();
 	Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
 
 
@@ -2172,7 +2170,7 @@ bool Player::StartKnockBack(const DirectX::XMFLOAT3& direction)
 		return false;
 
 	knockBackDirection = MathHelper::Normalize(horizontalDirection);
-	SetRushInputAcceptance(false, "KnockBack");
+	SetRushInputAcceptance(false);
 	stateMachine_->ChangeState("KnockBack");
 	return true;
 }
@@ -2186,15 +2184,13 @@ bool Player::IsBossAttackTargetAvailable() const
 	if (!currentState)
 		return false;
 
-	// PlayerKnockBackState owns both Hit_Large_KnockBack and Get_Up.
-	// Keep the Boss independent from Player state-name strings.
 	if (dynamic_cast<const PlayerKnockBackState*>(currentState))
 		return false;
 
 	return !dynamic_cast<const PlayerDeathPendingState*>(currentState) &&
 		!dynamic_cast<const PlayerDeathState*>(currentState);
 }
-void Player::ClearActionRequest(const char* reason)
+void Player::ClearActionRequest()
 {
 	bufferCommand = {};
 }
@@ -2208,37 +2204,6 @@ void Player::StartAttack()
 // ジャスト回避成功時の処理
 void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 {
-	const auto controller = GetBodyAnimationController();
-	const float animationTime = controller
-		? controller->GetCurrentAnimationTime()
-		: -1.0f;
-	float justWindowStart = 0.0f;
-	float justWindowEnd = 0.0f;
-	if (controller)
-	{
-		const auto assetIt = controller->animationNotifyAssets.find(
-			controller->GetAnimationClip());
-		if (assetIt != controller->animationNotifyAssets.end())
-		{
-			for (const auto& state : assetIt->second.notifyTrack.states)
-			{
-				if (state.type == AnimationNotifyState::Type::JustDodgeWindow)
-				{
-					justWindowStart = state.startTime;
-					justWindowEnd = state.endTime;
-					break;
-				}
-			}
-		}
-	}
-	lastJustAnimationTime = animationTime;
-	lastJustWindowStart = justWindowStart;
-	lastJustWindowEnd = justWindowEnd;
-	lastJustWindowRatio = justWindowEnd > justWindowStart
-		? std::clamp((animationTime - justWindowStart) /
-			(justWindowEnd - justWindowStart), 0.0f, 1.0f)
-		: 0.0f;
-
 	// SEの再生
 	CoreAudio::PlayOneShot("./Data/Sound/SE/just_dodge3.wav", 1.5f);
 	// コントローラー振動
@@ -2323,7 +2288,7 @@ bool Player::IsRushOpportunityActive() const
 	return (stateName == "Dodge" && justDodgeSuccess) || stateName == "Rush";
 }
 
-void Player::SetRushInputAcceptance(bool accepting, const char* endReason)
+void Player::SetRushInputAcceptance(bool accepting)
 {
 
 	if (rushInputAccepting == accepting)
@@ -2661,7 +2626,7 @@ void Player::CaptureActionRequest(float deltaTime)
 		currentState == "DeathPending" || currentState == "Death")
 	{
 		if (bufferCommand.type != ActionType::None)
-			ClearActionRequest("damage_or_death_state");
+			ClearActionRequest();
 		return;
 	}
 
@@ -2702,7 +2667,7 @@ bool Player::StoreActionRequest(ActionType type, float remainTime)
 
 void Player::BeginKnockBackMovement()
 {
-	ClearActionRequest("knockback_enter");
+	ClearActionRequest();
 	knockBackInitialSpeed = (std::max)(0.0f, knockBackInitialSpeed);
 	knockBackDuration = (std::max)(0.01f, knockBackDuration);
 	knockBackElapsed = 0.0f;
@@ -3913,12 +3878,10 @@ void Player::UpdatePrisonOpeningStandingPingPong(const float deltaTime)
 	if (wrappedPhase <= range)
 	{
 		prisonOpeningSittingSampleTime = startTime + wrappedPhase;
-		prisonOpeningSittingPingPongForward = true;
 	}
 	else
 	{
 		prisonOpeningSittingSampleTime = endTime - (wrappedPhase - range);
-		prisonOpeningSittingPingPongForward = false;
 	}
 
 	controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
