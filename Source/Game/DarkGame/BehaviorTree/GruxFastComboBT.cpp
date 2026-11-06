@@ -196,16 +196,15 @@ ActionBase::State PrepareFastCombo::Run(float deltaTime)
 }
 
 // FastCombo planning and approach
-// ????????????????
 bool GruxEnemy::CanPlanFastCombo() const
 {
     if (IsFastComboApproachRetryCooldownActive())
-    {// ??????????????????????
+    {
         return false;
     }
     const auto c = BuildTargetContext();
     if (!c.valid || c.region == PlayerRelativeRegion::Back)
-    {// player???????
+    {
         return false;
     }
     float maxRange = closeCombatSettings.planMaxRange;
@@ -230,7 +229,6 @@ bool GruxEnemy::IsFastComboApproachRetryCooldownActive() const
     return fastComboApproachRetryRemaining > 0.0f;
 }
 
-// ??????????????
 bool GruxEnemy::CanExecuteFastCombo() const
 {
     const auto c = BuildTargetContext();
@@ -303,39 +301,5 @@ void GruxEnemy::BeginRecovery() const
     PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.5f, true);
 }
 
-// Common BT: completion and update
-void GruxEnemy::RecordBehaviorAttackCompleted()
-{
-    ++consecutiveAttackCount;
-}
 
 
-void GruxEnemy::UpdateBehaviorTree(float dt)
-{
-    fastComboApproachRetryRemaining = (std::max)(0.0f, fastComboApproachRetryRemaining - dt);
-    repositionCooldownRemaining = (std::max)(0.0f, repositionCooldownRemaining - (std::max)(0.0f, dt));
-    repositionRetryCooldownRemaining = (std::max)(0.0f, repositionRetryCooldownRemaining - (std::max)(0.0f, dt));
-    if (!aiTree || !behaviorData)
-        return;
-    if (!activeNode)
-    {
-        BeginCombatDecisionInference();
-        activeNode = aiTree->ActiveNodeInference(behaviorData.get());
-    }
-    if (!activeNode)
-    {
-        return;
-    }
-    behaviorTreePreviousNode = activeNode->GetName();
-    activeNode = aiTree->Run(activeNode, behaviorData.get(), dt);
-    const auto result = aiTree->GetLastRunResult();
-
-    if (!activeNode)
-    {
-        if (result == ActionBase::State::Complete &&
-            (behaviorTreePreviousNode == "ExecuteAttackRecovery" ||
-                behaviorTreePreviousNode == "ExecuteChargeRecovery"))
-            RecordBehaviorAttackCompleted();
-        return;
-    }
-}

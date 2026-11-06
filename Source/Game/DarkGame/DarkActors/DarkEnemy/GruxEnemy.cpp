@@ -24,7 +24,7 @@
 #include "Game/DarkGame/BehaviorTree/GruxChargeAttackBT.h"
 #include "Game/DarkGame/BehaviorTree/GruxRoarBT.h"
 #include "Game/DarkGame/BehaviorTree/AttackRecoveryBT.h"
-
+#include "Game/DarkGame/BehaviorTree/NodeBase.h"
 
 void GruxEnemy::Initialize(const Transform& transform)
 {
@@ -2889,13 +2889,40 @@ void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float not
 		notifyDuration);
 }
 
+void GruxEnemy::UpdateBehaviorTree(float dt)
+{
+	fastComboApproachRetryRemaining = (std::max)(0.0f, fastComboApproachRetryRemaining - dt);
+	repositionCooldownRemaining = (std::max)(0.0f, repositionCooldownRemaining - (std::max)(0.0f, dt));
+	repositionRetryCooldownRemaining = (std::max)(0.0f, repositionRetryCooldownRemaining - (std::max)(0.0f, dt));
+	if (!aiTree || !behaviorData)
+		return;
+	if (!activeNode)
+	{
+		BeginCombatDecisionInference();
+		activeNode = aiTree->ActiveNodeInference(behaviorData.get());
+	}
+	if (!activeNode)
+	{
+		return;
+	}
+	behaviorTreePreviousNode = activeNode->GetName();
+	activeNode = aiTree->Run(activeNode, behaviorData.get(), dt);
+	const auto result = aiTree->GetLastRunResult();
 
+	if (!activeNode)
+	{
+		if (result == ActionBase::State::Complete && (behaviorTreePreviousNode == "ExecuteAttackRecovery" || behaviorTreePreviousNode == "ExecuteChargeRecovery"))
+		{// UŒ‚‚ÌŠ®—¹‚ğ‹L˜^‚·‚éB
+			++consecutiveAttackCount;
+		}
+		return;
+	}
+}
 
 bool GruxEnemy::IsFastComboStepInComplete()
 {
 	return fastComboStepInActive;
 }
-
 
 void GruxEnemy::ClearFastComboStepIn()
 {
