@@ -132,11 +132,6 @@ public:
     void Execute(float deltaTime) override;
     void Exit() override;
     const char* GetName() const override { return "KnockBack"; }
-    const char* GetPhaseName() const
-    {
-        return phase == Phase::KnockBack ? "KnockBack" : "GetUp";
-    }
-
 private:
     Phase phase = Phase::KnockBack;
 };
@@ -200,19 +195,6 @@ public:
     // 0-based Rush step. comboIndex remains the single source of truth.
     int GetComboIndex() const { return comboIndex; }
     const std::string& GetCurrentAttackAnimationForDebug() const { return currentAttackAnimation; }
-    int GetQueuedAttackCountForDebug() const { return queuedAttackCount; }
-    bool WasTransitionWindowObservedForDebug() const { return rushTransitionWindowObserved; }
-    const char* GetPhaseNameForDebug() const
-    {
-        switch (phase)
-        {
-        case RushPhase::Windup: return "Windup";
-        case RushPhase::DashToTarget: return "DashToTarget";
-        case RushPhase::Attack: return "Attack";
-        case RushPhase::Finished: return "Finished";
-        default: return "Unknown";
-        }
-    }
 private:
     bool AdvanceRushCombo();
     bool IsFinalRushAttack() const;
