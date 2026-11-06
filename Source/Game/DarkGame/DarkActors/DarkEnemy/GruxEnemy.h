@@ -785,8 +785,6 @@ public:
 	// 戦闘判断の推論を開始する。
 	void BeginCombatDecisionInference();
 
-	// 攻撃の完了を記録する。
-	void RecordBehaviorAttackCompleted();
 
 
 	// 戦闘開始時の位置調整を計画できるかを返す。
@@ -1117,7 +1115,28 @@ private:
 	// Playerのジャスト回避成功処理を試みる。
 	bool TryStartJustDodgeSuccess(Player* player);
 
+	// Charge BT
+	// Charge BTの実行を許可する状態か判定する。
+	bool IsChargeBTExecutionAllowed() const;
+
+	// Chargeアニメーションの進行停止を監視する。
+	bool UpdateChargeAnimationWatchdogBT(float animationTime, float deltaTime);
+
 	// HitBox・DangerArea・移動の内部処理
+	struct WeaponHitBoxPoints
+	{
+		DirectX::XMFLOAT3 root{};  // 武器の根元位置。
+		DirectX::XMFLOAT3 middle{};  // 武器の中央位置。
+		DirectX::XMFLOAT3 tip{};  // 武器の先端位置。
+	};
+
+	// 武器の攻撃判定に使う位置を計算する。
+	WeaponHitBoxPoints BuildWeaponHitBoxPoints(
+		const std::shared_ptr<SceneComponent>& root,
+		const std::shared_ptr<SceneComponent>& middle,
+		const std::shared_ptr<SceneComponent>& tip,
+		const DirectX::XMFLOAT3& localOffset) const;
+
 	// 危険範囲の初期設定を記録する。
 	void CaptureInitialDangerObbSettings();
 
@@ -1730,12 +1749,6 @@ private:
 	DirectX::XMFLOAT3 dashTargetPosition{};  // Dash攻撃の目標位置。
 
 	// ChargeAttack
-	// Charge BTの実行を許可する状態か判定する。
-	bool IsChargeBTExecutionAllowed() const;
-
-	// Chargeアニメーションの進行停止を監視する。
-	bool UpdateChargeAnimationWatchdogBT(float animationTime, float deltaTime);
-
 	// Charge Runtime・保持する調整値
 	struct ChargeBTRuntime
 	{
@@ -1845,20 +1858,6 @@ private:
 	std::shared_ptr<SceneComponent> cameraTargetComponent;  // カメラが注視する位置のコンポーネント。
 
 	// 武器HitBoxの計算・実行状態
-	struct WeaponHitBoxPoints
-	{
-		DirectX::XMFLOAT3 root{};  // 武器の根元位置。
-		DirectX::XMFLOAT3 middle{};  // 武器の中央位置。
-		DirectX::XMFLOAT3 tip{};  // 武器の先端位置。
-	};
-
-	// 武器の攻撃判定に使う位置を計算する。
-	WeaponHitBoxPoints BuildWeaponHitBoxPoints(
-		const std::shared_ptr<SceneComponent>& root,
-		const std::shared_ptr<SceneComponent>& middle,
-		const std::shared_ptr<SceneComponent>& tip,
-		const DirectX::XMFLOAT3& localOffset) const;
-
 	DirectX::XMFLOAT3 prevWeaponLeftRootPos = { 0.0f,0.0f,0.0f };  // 前フレームの左武器の根元位置。
 	DirectX::XMFLOAT3 prevWeaponLeftMidPos = { 0.0f,0.0f,0.0f };  // 前フレームの左武器の中央位置。
 	DirectX::XMFLOAT3 prevWeaponLeftTipPos = { 0.0f,0.0f,0.0f };  // 前フレームの左武器の先端位置。
