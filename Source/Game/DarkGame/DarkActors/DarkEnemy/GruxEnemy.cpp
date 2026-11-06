@@ -313,6 +313,7 @@ void GruxEnemy::DrawImGuiDetails()
 		if (mainChargeWindMeshComponent && chargeMovementActive)
 			mainChargeWindMeshComponent->SetIsVisible(mainChargeWindEnabled);
 	}
+	DrawTripleJumpDebug();
 	DrawChargeAttackBTDebug();
 	DrawRoarBTDebug();
 	Character::DrawImGuiDetails();

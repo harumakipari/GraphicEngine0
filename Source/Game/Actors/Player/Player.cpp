@@ -498,11 +498,8 @@ void Player::Update(float deltaTime)
 	{
 		struct SwordSweepResult
 		{
-			const char* source;
 			bool hit;
 			float sweepLength;
-			DirectX::XMFLOAT3 start;
-			DirectX::XMFLOAT3 end;
 			HitResultWithActor result;
 		};
 
@@ -513,9 +510,9 @@ void Player::Update(float deltaTime)
 
 		SwordSweepResult sweeps[] =
 		{
-			{ "Root", false, sweepLength(prevSwordRootPos, swordRootPos), prevSwordRootPos, swordRootPos, {} },
-			{ "Mid",  false, sweepLength(prevSwordMidPos, swordMidPos),   prevSwordMidPos,  swordMidPos,  {} },
-			{ "Tip",  false, sweepLength(prevSwordTipPos, swordTipPos),   prevSwordTipPos,  swordTipPos,  {} },
+			{ false, sweepLength(prevSwordRootPos, swordRootPos), {} },
+			{ false, sweepLength(prevSwordMidPos, swordMidPos), {} },
+			{ false, sweepLength(prevSwordTipPos, swordTipPos), {} },
 		};
 
 
@@ -1041,12 +1038,6 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 		break;
 	case AnimationNotifyState::Type::MotionWarp:
 	{
-		const auto activeWarp = std::find_if(
-			animationMotionWarps.begin(), animationMotionWarps.end(),
-			[&](const AnimationMotionWarp& warp)
-			{
-				return warp.state == &state;
-			});
 		animationMotionWarps.erase(
 			std::remove_if(
 				animationMotionWarps.begin(),
@@ -2085,18 +2076,6 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
 		return false;
 	}
 
-	DirectX::XMFLOAT3 direction = MathHelper::Subtract(GetPosition(), attackerPosition);
-	direction.y = 0.0f;
-	if (MathHelper::Length(direction) > 0.0001f)
-	{
-		direction = MathHelper::Normalize(direction);
-	}
-	else
-	{
-		direction = GetForward();
-		direction.y = 0.0f;
-	}
-
 	const int hpBeforeDamage = hp;
 	const int appliedDamage = (std::max)(0, damage);
 	hpRecoveryUiActive = false;
@@ -2229,14 +2208,7 @@ void Player::StartAttack()
 // ジャスト回避成功時の処理
 void Player::StartJustDodgeSuccess(const std::shared_ptr<Enemy>& enemy)
 {
-	const auto gruxEnemy = std::dynamic_pointer_cast<GruxEnemy>(enemy);
-	const uint64_t attackSequenceId = gruxEnemy
-		? gruxEnemy->GetCurrentAttackSequenceId()
-		: 0;
 	const auto controller = GetBodyAnimationController();
-	const std::string animationName = controller
-		? controller->GetCurrentAnimationName()
-		: "";
 	const float animationTime = controller
 		? controller->GetCurrentAnimationTime()
 		: -1.0f;
@@ -2816,9 +2788,6 @@ void Player::UpdateMovement()
 		float rawStickX = intent.leftMove.x;
 		float rawStickZ = intent.leftMove.z;
 		GetBodyAnimationController()->SetBlendDebugRawInput(rawStickX, rawStickZ);
-		// Rotation用
-		float stickX = rawStickX;
-		float stickZ = rawStickZ;
 		// Movement用
 		float moveStickX = rawStickX;
 		float moveStickZ = rawStickZ;

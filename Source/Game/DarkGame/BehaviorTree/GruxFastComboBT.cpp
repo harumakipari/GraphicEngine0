@@ -99,6 +99,27 @@ ActionBase::State FacePlayerIfNeeded::Run(float dt)
     return owner->IsPlayerInFastComboFaceCompleteRange(owner->BuildTargetContext()) ? State::Complete : State::Run;
 }
 
+ActionBase::State PrepareFastCombo::Run(float deltaTime)
+{
+    if (!started)
+    {
+        timer = 0.0f;
+        started = true;
+        owner->StopAIMovement();
+        const auto controller = owner->GetBodyAnimationController();
+        if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
+            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
+        owner->PlayAttackReadySE();
+        owner->StartWeaponTelegraph("Attack_A_Fast_0");
+    }
+    timer += deltaTime;
+    if (timer < owner->GetBehaviorPrepareDuration())
+        return State::Run;
+    started = false;
+    return State::Complete;
+}
+
+
 ActionBase::State StartFastCombo::Run(float)
 {
     owner->SetSelectedAttackForBehaviorTree(BossAttackType::FastCombo);
@@ -174,25 +195,6 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
     }
     if (owner->GetBodyAnimationController()->IsPlayAnimation()) return State::Run;
     owner->ClearFastComboStepIn(); owner->StartSelectedActionCooldown(); started = false; return State::Complete;
-}
-ActionBase::State PrepareFastCombo::Run(float deltaTime)
-{
-    if (!started)
-    {
-        timer = 0.0f;
-        started = true;
-        owner->StopAIMovement();
-        const auto controller = owner->GetBodyAnimationController();
-        if (!controller || controller->GetCurrentAnimationName() != "TravelMode_Idle_0")
-            owner->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.15f, true);
-        owner->PlayAttackReadySE();
-        owner->StartWeaponTelegraph("Attack_A_Fast_0");
-    }
-    timer += deltaTime;
-    if (timer < owner->GetBehaviorPrepareDuration())
-        return State::Run;
-    started = false;
-    return State::Complete;
 }
 
 // FastCombo planning and approach
