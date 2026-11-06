@@ -214,7 +214,7 @@ public:
         }
     }
 private:
-    bool AdvanceRushCombo();
+    void AdvanceRushCombo();
     bool IsFinalRushAttack() const;
     void ResetRushInputGrace();
 

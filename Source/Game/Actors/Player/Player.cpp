@@ -1575,7 +1575,6 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 	lowHpPresentationSuppressed = false;
 	ResetLowHpEffects();
 	ResetEyeCloseOverride();
-	deathVisualFade = 0.0f;
 	deathEyeCloseStarted = false;
 	deathVisualFadeStarted = false;
 	if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
@@ -1635,7 +1634,6 @@ void Player::ForceDirectionImmediate(const DirectX::XMFLOAT3& direction) const
 void Player::BeginDeathEyeClose()
 {
 	ResetEyeCloseOverride();
-	deathVisualFade = 0.0f;
 	deathEyeCloseStarted = false;
 	deathVisualFadeStarted = false;
 	if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
@@ -1680,7 +1678,7 @@ void Player::UpdateDeathVisualFade(const float deathElapsedTime)
 		CoreAudio::PlayOneShot("./Data/Sound/SE/player_stone_fade_start.wav", 2.0f);
 	}
 
-	deathVisualFade = std::clamp(
+	const float deathVisualFade = std::clamp(
 		(deathElapsedTime - deathColorFadeDelay) /
 		(std::max)(deathColorFadeDuration, FLT_EPSILON),
 		0.0f, 1.0f);
@@ -2094,7 +2092,6 @@ bool Player::TryTakeDamage(int damage, const DirectX::XMFLOAT3& attackerPosition
 	ClearActionRequest();
 	Logger::Log(U8("プレイヤーにダメージ！ HP:") + std::to_string(hp));
 
-
 	if (hp > 0)
 	{
 		DirectX::XMFLOAT3 toAttacker =
@@ -2242,10 +2239,10 @@ bool Player::CanAcceptInitialRushInput() const
 	return rushInputAccepting && justDodgeSuccess && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge" && !rushTarget.expired();
 }
 
-bool Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
+void Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
 {
 	if (!finalHitVisualPoseLatchRequested)
-		return false;
+		return;
 
 	finalHitVisualPoseLatchRequested = false;
 	const auto controller = GetBodyAnimationController();
@@ -2257,7 +2254,6 @@ bool Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
 		if (!latched)
 			finalHitAttackDrainActive = false;
 	}
-	return latched;
 }
 
 bool Player::CanShowInitialRushGuide() const
@@ -2265,17 +2261,12 @@ bool Player::CanShowInitialRushGuide() const
 	if (CanAcceptInitialRushInput())
 		return true;
 
-	return stateMachine_ &&
-		std::string(stateMachine_->GetStateName()) == "Dodge" &&
-		justDodgeSuccess &&
-		!rushTarget.expired();
+	return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge" && justDodgeSuccess && !rushTarget.expired();
 }
 
 bool Player::CanShowRushComboGuide() const
 {
-	return stateMachine_ &&
-		std::string(stateMachine_->GetStateName()) == "Rush" &&
-		!rushTarget.expired();
+	return stateMachine_ &&std::string(stateMachine_->GetStateName()) == "Rush" &&!rushTarget.expired();
 }
 
 
@@ -2290,7 +2281,6 @@ bool Player::IsRushOpportunityActive() const
 
 void Player::SetRushInputAcceptance(bool accepting)
 {
-
 	if (rushInputAccepting == accepting)
 	{
 		return;
@@ -2317,9 +2307,7 @@ void Player::SetRushInputAcceptance(bool accepting)
 		if (rushButtonImageComponent)
 		{
 			rushButtonImageComponent->SetVisible(false);
-			rushButtonImageComponent->SetScale({
-				rushButtonBaseScale.x * 0.8f,
-				rushButtonBaseScale.y * 0.8f });
+			rushButtonImageComponent->SetScale({rushButtonBaseScale.x * 0.8f,rushButtonBaseScale.y * 0.8f });
 		}
 		if (rushWordImageComponent) rushWordImageComponent->SetVisible(false);
 	}
@@ -2651,7 +2639,7 @@ void Player::CaptureActionRequest(float deltaTime)
 }
 
 
-bool Player::StoreActionRequest(ActionType type, float remainTime)
+void Player::StoreActionRequest(ActionType type, float remainTime)
 {
 	bufferCommand.type = type;
 	bufferCommand.remainTime = remainTime;
@@ -2661,8 +2649,6 @@ bool Player::StoreActionRequest(ActionType type, float remainTime)
 		bufferCommand.dodgeWorldDirection = dodgeWorldDirection;
 		bufferCommand.useDodgeWorldDirection = useDodgeWorldDirection;
 	}
-
-	return true;
 }
 
 void Player::BeginKnockBackMovement()
