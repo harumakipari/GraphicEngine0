@@ -1891,11 +1891,8 @@ void Player::CancelGameplayActionsForCinematic()
 		controller->SetUseBlendSpace(false);
 		controller->PlayAnimationImmediate("Idle", true, true);
 	}
-}
+	ApplyDitherTransparencyAlpha(1.0f);
 
-void Player::NeutralizeForPhase2Cinematic()
-{
-	CancelGameplayActionsForCinematic();
 }
 
 void Player::ClearSwordTrailForPhaseTransition()

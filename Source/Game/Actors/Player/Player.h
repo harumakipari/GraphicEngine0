@@ -339,9 +339,6 @@ public:
     // シネマティックでTransformを変更する前にゲームプレイ操作を終了する。
     void CancelGameplayActionsForCinematic();
 
-    // Phase2演出開始前にPlayerを非移動状態へ整える。
-    void NeutralizeForPhase2Cinematic();
-
     // シネマティック移動前に剣軌跡の履歴を消去する。
     void ClearSwordTrailForPhaseTransition();
 
@@ -598,10 +595,8 @@ public:
     float operationGuidePulseAmplitude = 0.185f; // 操作ガイドの拡縮量
     float operationGuidePulseSpeed = 3.5f; // radians / second
 
-
     bool invincibleWindow = false; // アニメーションによる無敵状態かどうか
     bool invincible = false; // 無敵状態かどうか
-
 
     float justDodgeMaxTowardAttackerDot = 0.25f; // 回避方向と攻撃者方向の成立判定しきい値
     DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{}; // 回避開始時に固定したワールド方向

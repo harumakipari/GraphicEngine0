@@ -1549,7 +1549,7 @@ void GameScene::CompletePhase2TransitionAtBlack()
     player->StopBattleActions();
     player->SetGameplayHudVisible(false);
     battleTimerUIActor->SetVisible(false);
-    player->NeutralizeForPhase2Cinematic();
+    player->CancelGameplayActionsForCinematic();
     gruxEnemyActor->PauseBattleAIForPhaseTransition();
     if (darkCameraActor)
     {
@@ -1698,7 +1698,7 @@ void GameScene::SetupPhase2RecallCinematic() const
     {
         if (const auto controller = player->GetBodyAnimationController())
             controller->ReleaseLatchedVisualPose();
-        player->NeutralizeForPhase2Cinematic();
+        player->CancelGameplayActionsForCinematic();
     }
     if (gruxEnemyActor)
     {
