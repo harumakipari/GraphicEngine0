@@ -176,7 +176,6 @@ void PlayerAttackState::Exit()
         const bool naturalAnimationEnd = controller && !controller->IsPlayAnimation();
         if (naturalAnimationEnd)
         {
-            // Latch only the completed attack pose before Idle/locomotion replaces the clip.
             player->LatchFinalHitVisualPoseAfterAnimationUpdate();
         }
         else if (player->IsFinalHitAttackDrainActive())

@@ -1037,9 +1037,7 @@ void GruxEnemy::DrawChargeAttackBTDebug()
 
 
 
-    ImGui::DragFloat(
-        U8("今回の後隙時間: %.2f sec"),
-        &chargeBT.recoveryDuration,0.05f);
+    ImGui::Text("Current Recovery Duration: %.2f sec", chargeBT.recoveryDuration);
 
 #endif
 }

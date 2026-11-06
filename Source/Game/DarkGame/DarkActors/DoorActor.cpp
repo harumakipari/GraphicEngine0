@@ -328,12 +328,6 @@ void DoorJailActor::Update(float deltaTime)
     // インタラクトの更新
     InteractableActor::Update(deltaTime);
 
-    //if (InputSystem::GetInputState("2", InputStateMask::Trigger))
-    //{
-    //    CoreAudio::PlayOneShot("./Data/Sound/SE/jail_door_open.wav");
-    //    doorState = DoorState::Opening;
-    //}
-
     switch (doorState)
     {
     case DoorState::Opening:
@@ -368,8 +362,6 @@ void DoorJailActor::SetOpenCompletedSilently()
     suppressInteractionAfterSilentOpen = true;
     hinge->SetRelativeEulerRotationDirect({ 0.0f, openedAngle, 0.0f });
     UpdateAllComponentTransforms();
-
-    // This only suppresses the interaction prompt; no interaction/event is invoked.
     CompleteInteraction();
 }
 

@@ -115,7 +115,7 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
         owner->RefreshFastComboTargetContext(stage);
         if (!owner->PlayAttackStage(BossAttackType::FastCombo, stage)) { owner->ClearFastComboStepIn(); started = false; return State::Failed; }
     }
-    if (owner->UpdateFastComboStepIn()) return State::Run;
+    if (owner->IsFastComboStepInComplete()) return State::Run;
     if (finishAfterAnimation)
     {
         auto controller = owner->GetBodyAnimationController();

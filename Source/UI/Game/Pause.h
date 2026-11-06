@@ -36,6 +36,12 @@ private:
     float GetPauseButtonDisplayScale(const UIButtonComponent* button) const;
     void SetPauseButtonAction(const std::shared_ptr<UIButtonComponent>& button, std::function<void()> action);
 
+    float MoveTowards(const float current, const float target, const float maxDelta)
+    {
+        if (current < target)
+            return (std::min)(current + maxDelta, target);
+        return (std::max)(current - maxDelta, target);
+    }
 
 private:
     std::shared_ptr<UIImageComponent> pauseBackImage; 
@@ -70,6 +76,10 @@ private:
 
     PauseState state = PauseState::Playing;
     bool stopUpdate = true;
+    const float pauseButtonBaseScale = 0.5f;
+
+    
+
 
     std::string retrySceneName = "MainScene";
 };

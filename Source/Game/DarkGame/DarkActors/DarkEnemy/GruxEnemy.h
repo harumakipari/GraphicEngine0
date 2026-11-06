@@ -386,7 +386,6 @@ public:
 	// Dash予兆の表示を開始する。
 	void BeginDashTelegraphVisual();
 
-
 	// Dash予兆の表示状態を更新する。
 	void UpdateDashTelegraphVisual(float deltaTime);
 
@@ -466,18 +465,13 @@ public:
 	void UpdateChargeTelegraphVisual(float lengthProgress);
 
 	// Charge開始方向の障害物までの距離を調べる。
-	bool EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition,
-
-		const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const;
+	bool EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition, const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const;
 
 	// Chargeの側方の障害物までの距離と接触情報を調べる。
-	bool EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPosition,
-		const DirectX::XMFLOAT3& direction, float& outClearance,
-		DirectX::XMFLOAT3& outNormal, bool& outHit) const;
+	bool EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPosition, const DirectX::XMFLOAT3& direction, float& outClearance, DirectX::XMFLOAT3& outNormal, bool& outHit) const;
 
 	// Chargeの予兆を非表示にする。
 	void HideChargeTelegraphVisual();
-
 
 	// Chargeの終了結果に応じてスタンやRecoveryへの移行を進める。
 	ChargeBTStepResult ResolveChargeResultBT(float deltaTime);
@@ -730,8 +724,8 @@ public:
 	// Notifyの期間に対応するFastComboの踏み込みを開始する。
 	void BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime);
 
-	// FastComboの踏み込みを更新する。
-	bool UpdateFastComboStepIn();
+	// FastComboの踏み込みかどうか
+	bool IsFastComboStepInComplete();
 
 	// FastComboの踏み込み状態を解除する。
 	void ClearFastComboStepIn();
@@ -844,8 +838,8 @@ public:
 	// Jump予兆の進行度を更新する。
 	void UpdateJumpTelegraphProgress();
 
-	// 第2段階の複数回Jumpを使うか判定する。
-	bool IsTripleJumpPhase2() const;
+	// 第2形態か判定する。
+	bool IsBossInFinalPhase() const;
 
 	// 複数回Jumpの実行状態を初期化する。
 	void BeginTripleJumpRuntime();
@@ -1094,9 +1088,6 @@ private:
 	void EvaluateClampedPositioningTarget(const DirectX::XMFLOAT3& startPosition,
 		const DirectX::XMFLOAT3& desiredTarget, RepositionTargetEvaluation& outEvaluation, float boundaryMarginOverride = -1.0f) const;
 
-	// 指定行動が左右への位置調整かを判定する。
-	bool IsRepositionAction(BossActionType actionType) const;
-
 	// 連続攻撃ペナルティの対象となる行動か判定する。
 	bool IsRepeatPenaltyCombatAttack(BossActionType actionType) const;
 
@@ -1117,9 +1108,6 @@ private:
 
 	// 選択中の危険範囲Notify Stateを返す。
 	AnimationNotifyState* GetSelectedDangerNotifyState();
-
-	// 選択中の危険範囲Notify Stateを読み取り専用で返す。
-	const AnimationNotifyState* GetSelectedDangerNotifyState() const;
 
 	// 有効なNotifyから危険範囲を更新する。
 	void RefreshActiveDangerAreaFromNotify();
@@ -1564,7 +1552,6 @@ private:
 	static constexpr float bossRoomMinZ = 0.0f;  // ボス部屋のZ座標の下限。
 	static constexpr float bossRoomMaxZ = 21.5f;  // ボス部屋のZ座標の上限。
 	float bossRoomSafetyMargin = 0.5f;  // ボス部屋の境界から確保する余白距離。
-	float positioningArrivalDistance = 0.3f;  // 位置調整先への到着と判定する距離。
 	float positioningMoveStartSpeedThreshold = 0.30f;  // 移動アニメーションを開始する速度の閾値。
 	float positioningMoveStopSpeedThreshold = 0.10f;  // 移動アニメーションを停止する速度の閾値。
 	float positioningMoveStopDelay = 0.15f;  // 移動アニメーションを停止するまでの待ち時間。

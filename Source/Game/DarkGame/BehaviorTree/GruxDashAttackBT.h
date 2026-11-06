@@ -9,13 +9,6 @@ public:
     bool Judgment() override;
 };
 
-// Conditions are actions here so Sequence inference cannot skip a failed gate.
-class CanPlanDashAttack : public ActionBase
-{
-public:
-    using ActionBase::ActionBase;
-    State Run(float) override;
-};
 class PrepareDashSetupTarget : public ActionBase
 {
 public:

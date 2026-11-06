@@ -891,7 +891,6 @@ void SceneBase::DrawGui()
         return;
     }
 
-
     DrawGizmo();
     DrawOutliner();
     Logger::DrawImGui();
@@ -901,7 +900,6 @@ void SceneBase::DrawGui()
     ProfileDrawUI();
     uiManager->DrawImGUi();
     EffectEditor::DrawGUI();
-    if (cameraManager) cameraManager->DrawImGuiDetails(this);
     DrawShortcutInfo();
     skyMap->DrawImGui();
     cascadedShadowMaps->DrawImGui();

@@ -756,10 +756,7 @@ private:
     float lowHpPulseFlashAmount = 0.0f; // 瀕死脈動による発光強度
     float lowHpVignetteBaseAlpha = 0.12f; // 瀕死ビネットの通常透明度
     float lowHpVignettePulseAlpha = 0.32f; // 瀕死脈動時のビネット最大透明度
-    std::string heartbeatSEPath = "./Data/Sound/SE/player_heartbeat.wav"; // 瀕死時に再生する心拍SEのパス
     std::shared_ptr<UIImageComponent> lowHpVignetteImageComponent; // 瀕死時に表示するビネットUI
-
-
 
     float damageFlashTimer = 0.0f; // 被ダメージ発光の残り時間
     float damageFlashDuration = 0.25f; // 被ダメージ発光の継続時間

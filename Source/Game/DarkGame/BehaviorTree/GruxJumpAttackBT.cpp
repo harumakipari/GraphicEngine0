@@ -6,7 +6,7 @@
 #include "Game/Scenes/GameScene.h"
 #include "Game/Actors/Player/Player.h"
 
-bool GruxEnemy::IsTripleJumpPhase2() const
+bool GruxEnemy::IsBossInFinalPhase() const
 {
     const auto scene = dynamic_cast<GameScene*>(GetOwnerScene());
     return scene && scene->IsBossInFinalPhase();
@@ -362,7 +362,7 @@ ActionBase::State StartJumpAttack::Run(float)
             started = false;
             return State::Failed;
         }
-        if (owner->IsTripleJumpPhase2())
+        if (owner->IsBossInFinalPhase())
             owner->BeginTripleJumpRuntime();
         owner->RequestJumpAttackCameraAssist();
         started = true;
@@ -479,7 +479,7 @@ ActionBase::State ExecuteJumpAttack::RunTripleJump(float dt)
 
 ActionBase::State ExecuteJumpAttack::Run(float dt)
 {
-    if (owner->IsTripleJumpPhase2())
+    if (owner->IsBossInFinalPhase())
         return RunTripleJump(dt);
     if (!started)
     {

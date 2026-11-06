@@ -1871,7 +1871,6 @@ void Player::CancelGameplayActionsForCinematic()
 	if (inputComponent)
 		inputComponent->ClearIntent();
 
-	// StopBattleActions clears movement, but make the cinematic contract explicit.
 	characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
 	characterMovementComponent->SetInputMagnitude(0.0f);
 	characterMovementComponent->SetFrameAdditionalVelocity({ 0.0f, 0.0f, 0.0f });
@@ -1901,8 +1900,6 @@ void Player::NeutralizeForPhase2Cinematic()
 
 void Player::ClearSwordTrailForPhaseTransition()
 {
-	// The trail is CPU-side history. Clear both its active notify result and
-	// cached sword transform so a cinematic teleport cannot bridge old/new poses.
 	showTrail = false;
 	trail.Clear();
 	isPrevSwordWorldValid = false;
@@ -1989,9 +1986,7 @@ void Player::CaptureDodgeWorldDirectionSnapshot()
 	direction.y = 0.0f;
 	const float length = std::sqrt(direction.x * direction.x + direction.z * direction.z);
 	dodgeWorldDirectionSnapshotValid = length > 0.0001f;
-	dodgeWorldDirectionSnapshot = dodgeWorldDirectionSnapshotValid
-		? DirectX::XMFLOAT3{ direction.x / length, 0.0f, direction.z / length }
-	: DirectX::XMFLOAT3{};
+	dodgeWorldDirectionSnapshot = dodgeWorldDirectionSnapshotValid ? DirectX::XMFLOAT3{ direction.x / length, 0.0f, direction.z / length } : DirectX::XMFLOAT3{};
 }
 
 // モード変更用関数
@@ -2544,26 +2539,18 @@ bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
 		0.0f,
 		attackerPosition.z - GetPosition().z
 	};
-	const float attackerLength = std::sqrt(
-		toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
-	const DirectX::XMFLOAT3 directionToAttacker = attackerLength > 0.0001f
-		? DirectX::XMFLOAT3{ toAttacker.x / attackerLength, 0.0f, toAttacker.z / attackerLength }
-	: DirectX::XMFLOAT3{};
+	const float attackerLength = std::sqrt(toAttacker.x * toAttacker.x + toAttacker.z * toAttacker.z);
+	const DirectX::XMFLOAT3 directionToAttacker = attackerLength > 0.0001f ? DirectX::XMFLOAT3{ toAttacker.x / attackerLength, 0.0f, toAttacker.z / attackerLength } : DirectX::XMFLOAT3{};
 
 	if (!dodgeWorldDirectionSnapshotValid || attackerLength <= 0.0001f)
 	{
 		return false;
 	}
 
-	const float directionDot =
-		dodgeWorldDirectionSnapshot.x * directionToAttacker.x +
-		dodgeWorldDirectionSnapshot.z * directionToAttacker.z;
+	const float directionDot = dodgeWorldDirectionSnapshot.x * directionToAttacker.x + dodgeWorldDirectionSnapshot.z * directionToAttacker.z;
 	const bool directionValid = directionDot <= justDodgeMaxTowardAttackerDot;
 	return directionValid;
 }
-
-
-
 
 void Player::AcquireAttackTarget()
 {
@@ -2590,8 +2577,6 @@ void Player::AcquireAttackTarget()
 
 	attackRotationStartYaw = GetEulerRotation().y;
 	attackRotationTracking = !attackTarget.expired();
-
-
 }
 
 void Player::UpdateAttackTargetRotation(float deltaTime)
@@ -2612,9 +2597,7 @@ void Player::UpdateAttackTargetRotation(float deltaTime)
 		return;
 
 	const float targetYaw = DirectX::XMConvertToDegrees(std::atan2f(direction.x, direction.z));
-	const float correctionFromStart = std::clamp(MathHelper::NormalizeAngleDegrees(targetYaw - attackRotationStartYaw),
-		-attackRotationMaxCorrectionDegrees,
-		attackRotationMaxCorrectionDegrees);
+	const float correctionFromStart = std::clamp(MathHelper::NormalizeAngleDegrees(targetYaw - attackRotationStartYaw), -attackRotationMaxCorrectionDegrees, attackRotationMaxCorrectionDegrees);
 	const float limitedTargetYaw = attackRotationStartYaw + correctionFromStart;
 
 	DirectX::XMFLOAT3 rotation = GetEulerRotation();
@@ -2645,8 +2628,7 @@ bool Player::RebuildEyeClosePoseOverride()
 		return false;
 
 	const float preservedWeight = closeEyeWeight;
-	if (!controller->ConfigureLocalPoseOverride(
-		"Idle", closedEyePoseTime, eyelidBoneNames))
+	if (!controller->ConfigureLocalPoseOverride("Idle", closedEyePoseTime, eyelidBoneNames))
 	{
 		closeEyeWeight = 0.0f;
 		return false;
@@ -3752,17 +3734,15 @@ void Player::UpdateLowHpEffects()
 	}
 }
 
+// 瀕死時の心拍SEと脈動演出を開始する。
 void Player::TriggerLowHpPulse()
 {
 	lowHpPulseTimer = (std::max)(0.0f, lowHpPulseDuration);
 	lowHpPulseFlashAmount = lowHpPulseTimer > 0.0f ? 1.0f : 0.0f;
-
-	if (!heartbeatSEPath.empty() && std::filesystem::exists(heartbeatSEPath))
-	{
-		CoreAudio::PlayOneShot(heartbeatSEPath, 0.3f);
-	}
+	CoreAudio::PlayOneShot("./Data/Sound/SE/player_heartbeat.wav", 0.3f);
 }
 
+// 瀕死演出のタイマー、発光、ビネット表示を初期化する。
 void Player::ResetLowHpEffects()
 {
 	lowHpActive = false;

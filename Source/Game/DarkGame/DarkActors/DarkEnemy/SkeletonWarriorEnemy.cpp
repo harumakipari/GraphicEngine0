@@ -342,8 +342,7 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
     cameraTargetComponent->SetRelativeLocationDirect({ 0.0f, 1.15f, 0.0f });
     hp = maxHp;
 
-    deathSeAudioBuffer = CoreAudio::CoreAudioBuffer::GetResource(
-        L"./Data/Sound/SE/skeleton_death.wav");
+    deathSeAudioBuffer = CoreAudio::CoreAudioBuffer::GetResource(L"./Data/Sound/SE/skeleton_death.wav");
     PreCreateDeathBodyParts();
 
     // ポイントライトコンポーネントを追加

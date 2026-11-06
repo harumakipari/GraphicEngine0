@@ -3,8 +3,6 @@
 #include <string>
 #include "Engine/Camera/CameraConstants.h"
 
-//#include "Engine/Scene/SceneBase.h"
-
 class Camera;
 class Scene;
 
@@ -23,13 +21,9 @@ public:
     void PlayCameraShakePreset(const std::string& presetName);
     void ClearCameraShake();
     ViewConstants GetRenderViewConstants(const Scene* scene);
-#ifdef USE_IMGUI
-    void DrawImGuiDetails(const Scene* scene) const;
-#endif
 
     void Clear()
     {
-        //gameCamera.reset();
         debugCamera.reset();
         useDebugCamera = false;
         cinematicCamera.reset();

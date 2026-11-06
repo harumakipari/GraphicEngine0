@@ -1186,6 +1186,7 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::DragFloat("Roar Fill Alpha Min", &roarTelegraphFillAlphaMin, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Roar Fill Alpha Max", &roarTelegraphFillAlphaMax, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::Checkbox("Floating Debris Enabled", &roarFloatingDebrisEnabled);
+    ImGui::TextDisabled("Floating debris ring, height and scale apply when debris is generated.");
     ImGui::DragFloat("Roar Floating Debris Inner Ratio", &roarFloatingDebrisInnerRatio, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Roar Floating Debris Outer Ratio", &roarFloatingDebrisOuterRatio, 0.01f, 0.0f, 1.0f, "%.2f");
     ImGui::DragFloat("Roar Floating Debris Min Height", &roarFloatingDebrisMinHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
@@ -1193,6 +1194,7 @@ void GruxEnemy::DrawRoarBTDebug()
     ImGui::DragFloat("Roar Floating Debris Scale Min", &roarFloatingDebrisScaleMin, 0.01f, 0.0f, 5.0f, "%.2f");
     ImGui::DragFloat("Roar Floating Debris Scale Max", &roarFloatingDebrisScaleMax, 0.01f, 0.0f, 5.0f, "%.2f");
     ImGui::Checkbox("Impact Debris Enabled", &roarImpactDebrisEnabled);
+    ImGui::TextDisabled("Impact debris speed, scale and lifetime apply to newly spawned debris.");
     ImGui::DragFloat("Impact Debris Spawn Height", &roarImpactDebrisSpawnHeight, 0.01f, 0.0f, 1.0f, "%.2f m");
     ImGui::DragFloat("Impact Debris Gravity", &roarImpactDebrisGravity, 0.1f, 0.0f, 30.0f, "%.2f m/s2");
     ImGui::DragFloatRange2("Impact Small Horizontal Speed", &roarImpactDebrisSmallHorizontalSpeedMin, &roarImpactDebrisSmallHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
@@ -1213,13 +1215,6 @@ void GruxEnemy::DrawRoarBTDebug()
         HideRoarFloatingDebris();
     if (!roarImpactDebrisEnabled)
         HideRoarImpactDebris();
-    int activeFloatingDebrisCount = 0;
-    for (const auto& debris : roarFloatingDebris)
-        if (debris.meshComponent && debris.meshComponent->IsVisible())
-            ++activeFloatingDebrisCount;
-    ImGui::SeparatorText(U8("Roar候補の直近実判定（描画では更新しない）"));
-    ImGui::TextColored(ImVec4(0.1f, 0.8f, 1.0f, 1.0f), U8("水色: 防御行動 至近距離"));
-    ImGui::TextColored(ImVec4(1.0f, 0.15f, 0.6f, 1.0f), U8("桃色: 咆哮 範囲"));
     ImGui::SeparatorText(U8("Retreat"));
     ImGui::DragFloat(U8("退避距離 最小"), &retreatDistanceMin, 0.1f, 0.0f, 30.0f, "%.2f m");
     ImGui::DragFloat(U8("退避距離 最大"), &retreatDistanceMax, 0.1f, 0.0f, 30.0f, "%.2f m");

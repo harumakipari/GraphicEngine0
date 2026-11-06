@@ -317,8 +317,6 @@ void GruxEnemy::DrawImGuiDetails()
 	DrawRoarBTDebug();
 	Character::DrawImGuiDetails();
 
-
-
 	ImGui::SeparatorText("Weapon Emissive (Runtime Override)");
 	bool weaponEmissiveChanged = false;
 	weaponEmissiveChanged |= ImGui::Checkbox("Weapon Emissive Enabled", &weaponEmissiveEnabled);
@@ -500,19 +498,6 @@ void GruxEnemy::DrawImGuiDetails()
 			ImGui::TextDisabled("No DangerWindow notify data loaded.");
 		}
 	}
-	const char* actionTypes[] =
-	{
-		"AttackLA",
-		"AttackRA",
-		"FastCombo",
-		"JumpAttack",
-		"DashAttack",
-		"ChargeAttack",
-		"Approach",
-		"Retreat",
-		"RepositionLeft",
-		"RepositionRight",
-	};
 
 	ImGui::SeparatorText("FastCombo Step-In");
 	ImGui::DragFloat(U8("FastCombo 理想攻撃距離"), &fastComboDesiredAttackDistance, 0.1f, 0.0f, 20.0f, "%.2f m");
@@ -524,12 +509,6 @@ void GruxEnemy::DrawImGuiDetails()
 	ImGui::DragFloat(U8("近距離正面 FastCombo確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
 	ImGui::DragFloat(U8("FastCombo Front最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
 	fastComboFrontMaxAngle = std::clamp(fastComboFrontMaxAngle, 0.0f, 180.0f);
-
-
-
-	ImGui::SeparatorText("Last Weighted Random");
-
-
 
 	ImGui::SeparatorText(U8("ダッシュBT"));
 	ImGui::DragFloat(U8("ダッシュ準備距離 最小"), &dashSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
@@ -556,6 +535,7 @@ void GruxEnemy::DrawImGuiDetails()
 
 	ImGui::DragFloat("Line Width", &dashTelegraphLineWidth, 0.01f, 0.01f, 8.0f, "%.3f m");
 	dashTelegraphLineWidth = (std::max)(0.01f, dashTelegraphLineWidth);
+	ImGui::TextDisabled("Fan radius and Fan Y Offset apply at dash telegraph start.");
 	ImGui::DragFloat("Fan Radius", &dashTelegraphFanRadius, 0.05f, 0.01f, 20.0f, "%.2f m");
 	dashTelegraphFanRadius = (std::max)(0.01f, dashTelegraphFanRadius);
 	ImGui::DragFloat("Line Y Offset", &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
@@ -565,30 +545,11 @@ void GruxEnemy::DrawImGuiDetails()
 	{
 		for (BossPositioningData& data : combatPositioningData)
 		{
-			const char* actionName = actionTypes[static_cast<int>(data.actionType)];
-			if (ImGui::TreeNode(actionName))
+			if (data.actionType != BossActionType::Approach)
+				continue;
+			if (ImGui::TreeNode("Approach"))
 			{
-				for (BossActionData& actionData : combatActionData)
-				{
-					if (actionData.type == data.actionType)
-					{
-						ImGui::DragFloat("Weight", &actionData.weight, 0.5f, 0.0f, 100.0f, "%.2f");
-						break;
-					}
-				}
-				if (IsRepositionAction(data.actionType))
-				{
-					ImGui::TextDisabled("Max Move Distance: Combat Reposition Distance");
-					ImGui::TextDisabled("Move Speed: Combat Reposition Move Speed");
-				}
-				else
-				{
-					ImGui::DragFloat("Max Move Distance", &data.maxMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
-					ImGui::DragFloat("Move Speed", &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
-				}
-				ImGui::DragFloat("Timeout", &data.timeout, 0.05f, 0.01f, 20.0f, "%.2f sec");
-				ImGui::DragFloat("Stuck Time Threshold", &data.stuckTimeThreshold, 0.05f, 0.0f, 10.0f, "%.2f sec");
-				ImGui::DragFloat("Stuck Movement Threshold", &data.stuckMovementThreshold, 0.01f, 0.0f, 10.0f, "%.2f m/sec");
+				ImGui::DragFloat("Move Speed", &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
 				ImGui::TreePop();
 			}
 		}
@@ -602,9 +563,6 @@ void GruxEnemy::DrawImGuiDetails()
 	if (ImGui::DragFloat("Safety Margin", &bossRoomSafetyMargin, 0.05f,
 		0.0f, maximumBossRoomMargin, "%.2f m"))
 		bossRoomSafetyMargin = std::clamp(bossRoomSafetyMargin, 0.0f, maximumBossRoomMargin);
-	ImGui::DragFloat("Positioning Arrival Distance", &positioningArrivalDistance,
-		0.01f, 0.01f, 2.0f, "%.2f m");
-	positioningArrivalDistance = std::clamp(positioningArrivalDistance, 0.01f, 2.0f);
 	ImGui::SeparatorText("Positioning Animation Tuning");
 	ImGui::DragFloat("Move Start Speed Threshold",
 		&positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
@@ -647,29 +605,7 @@ void GruxEnemy::DrawImGuiDetails()
 	ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
 	ImGui::DragFloat(U8("旋回タイムアウト"), &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
 	ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
-	if (ImGui::TreeNode(U8("FastCombo ターゲット情報")))
-	{
-		const char* runtimeStateName = fastComboRuntimeState == FastComboRuntimeState::Attack ? "Attack" : fastComboRuntimeState == FastComboRuntimeState::InterStageDelay ? "InterStageDelay" : "InterStageFacing";
-		ImGui::DragFloat(U8("段間旋回 完了角度:"), &interStageFaceCompleteAngle, 0.5f);
-		ImGui::DragFloat(U8("段間旋回 最大許容角度:"), &interStageMaxFacingAngle, 0.5f);
-		ImGui::DragFloat(U8("段間旋回 待機時間: "), &interStageFaceDelay, 0.1f);
-		static constexpr const char* sampleLabels[] = { "A Start", "A -> B", "B -> C" };
-		ImGui::TreePop();
-	}
-	ImGui::SeparatorText("Attack Setup Target Debug");
 
-	float setupAngle = 0.0f;
-	{
-		const auto p = GetPosition();
-		const float dx = attackSetupTarget.targetPosition.x - p.x;
-		const float dz = attackSetupTarget.targetPosition.z - p.z;
-
-		if (std::abs(dx) + std::abs(dz) > FLT_EPSILON)
-		{
-			setupAngle =
-				DirectX::XMConvertToDegrees(std::atan2f(dx, dz));
-		}
-	}
 	ImGui::SeparatorText(U8("ジャンプ攻撃位置調整"));
 	ImGui::DragFloat(
 		U8("位置調整距離 最小"),
@@ -685,14 +621,6 @@ void GruxEnemy::DrawImGuiDetails()
 	jumpSetupDistanceMax = (std::max)(jumpSetupDistanceMin, jumpSetupDistanceMax);
 	ImGui::DragFloat(U8("ジャンプ最低移動距離"), &jumpSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
 	jumpSetupMinimumMoveDistance = (std::max)(0.0f, jumpSetupMinimumMoveDistance);
-
-
-	const auto jumpController = GetBodyAnimationController();
-
-	const std::string jumpAnimation =
-		jumpController
-		? jumpController->GetCurrentAnimationName()
-		: std::string{};
 
 	ImGui::DragFloat(
 		U8("最大ジャンプ距離"),
@@ -716,11 +644,6 @@ void GruxEnemy::DrawImGuiDetails()
 			auto& attack = combatAttackData[i];
 			ImGui::PushID(static_cast<int>(i));
 			ImGui::SeparatorText(attack.animationName.c_str());
-			ImGui::DragFloat("Min Distance", &attack.minDistance, 0.1f, 0.0f, 100.0f, "%.2f");
-			ImGui::DragFloat("Max Distance", &attack.maxDistance, 0.1f, 0.0f, 100.0f, "%.2f");
-			attack.minDistance = (std::max)(0.0f, attack.minDistance);
-			attack.maxDistance = (std::max)(attack.minDistance, attack.maxDistance);
-			attack.weight = (std::max)(0.0f, attack.weight);
 			ImGui::DragFloat("Recovery Duration", &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
 			attack.recoveryDuration = (std::max)(0.0f, attack.recoveryDuration);
 			ImGui::PopID();
@@ -756,6 +679,7 @@ void GruxEnemy::DrawImGuiDetails()
 	fourthHitReactionDuration = std::clamp(fourthHitReactionDuration, 0.0f, 2.0f);
 
 	ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
+	ImGui::TextDisabled("Default weapon radius. Notify HitBox radius takes priority while active.");
 	ImGui::DragFloat(U8("hitEnemyEffectOffsetY"), &hitEnemyEffectOffsetY, 0.1f);
 	ImGui::DragFloat(U8("hitPlayerEffectOffsetY"), &hitPlayerEffectOffsetY, 0.1f);
 #endif
@@ -1182,9 +1106,7 @@ void GruxEnemy::ResetForBattleContinue(const Transform& battleStartTransform)
 
 void GruxEnemy::ResetBehaviorTreeForBattleRestart()
 {
-	activeNode = nullptr;
-	if (behaviorData) behaviorData->Init();
-	if (aiTree) aiTree->ResetActionRuntimes();
+	ResetBehaviorTreeRuntime();
 	behaviorTreePreviousNode = "None";
 	consecutiveAttackCount = 0;
 	repositionDecisionCached = false;
@@ -2969,10 +2891,8 @@ void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float not
 
 
 
-bool GruxEnemy::UpdateFastComboStepIn()
+bool GruxEnemy::IsFastComboStepInComplete()
 {
-	if (!fastComboStepInActive)
-		return false;
 	return fastComboStepInActive;
 }
 
@@ -4027,12 +3947,6 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
 	outEvaluation.clampDistance = std::sqrt(clampX * clampX + clampZ * clampZ);
 }
 
-bool GruxEnemy::IsRepositionAction(const BossActionType actionType) const
-{
-	return actionType == BossActionType::RepositionLeft ||
-		actionType == BossActionType::RepositionRight;
-}
-
 bool GruxEnemy::IsRepeatPenaltyCombatAttack(BossActionType actionType) const
 {
 	return actionType == BossActionType::FastCombo ||
@@ -4123,11 +4037,6 @@ AnimationNotifyState* GruxEnemy::GetSelectedDangerNotifyState()
 		return nullptr;
 	AnimationNotifyState& state = asset->notifyTrack.states[dangerObbSelectedStateIndex];
 	return state.type == AnimationNotifyState::Type::DangerWindow ? &state : nullptr;
-}
-
-const AnimationNotifyState* GruxEnemy::GetSelectedDangerNotifyState() const
-{
-	return const_cast<GruxEnemy*>(this)->GetSelectedDangerNotifyState();
 }
 
 void GruxEnemy::RefreshActiveDangerAreaFromNotify()
