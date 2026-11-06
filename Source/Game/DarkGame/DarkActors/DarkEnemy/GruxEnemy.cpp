@@ -273,416 +273,225 @@ void GruxEnemy::RenderTrail(ID3D11DeviceContext* immediateContext)
 }
 
 
-//　ボスAIのImGui描画
+// ボスAIのImGui描画
 void GruxEnemy::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
 
 	if (ImGui::CollapsingHeader(U8("突進風エフェクト")))
 	{
-		ImGui::Checkbox("Enable", &chargeWindTrailEnabled);
-		ImGui::DragInt("Trail Count", &chargeWindTrailActiveCount, 1.0f, 1, static_cast<int>(chargeWindTrailCount));
-		ImGui::DragFloat("Lifetime Min", &chargeWindTrailLifetimeMin, 0.01f, 0.01f, 5.0f, "%.2f sec"); ImGui::DragFloat("Lifetime Max", &chargeWindTrailLifetimeMax, 0.01f, 0.01f, 5.0f, "%.2f sec");
-		ImGui::DragFloat("Backward Speed Min", &chargeWindTrailSpeedMin, 0.1f, 0.0f, 100.0f); ImGui::DragFloat("Backward Speed Max", &chargeWindTrailSpeedMax, 0.1f, 0.0f, 100.0f);
-		ImGui::DragFloat("Width Min", &chargeWindTrailWidthMin, 0.005f, 0.001f, 5.0f); ImGui::DragFloat("Width Max", &chargeWindTrailWidthMax, 0.005f, 0.001f, 5.0f);
-		ImGui::DragFloat("Head Width Scale", &chargeWindTrailHeadWidthScale, 0.01f, 0.0f, 3.0f); ImGui::DragFloat("Tail Width Scale", &chargeWindTrailTailWidthScale, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat("Lateral Range", &chargeWindTrailLateralSpawnRange, 0.01f, 0.0f, 10.0f); ImGui::DragFloat("Height Min", &chargeWindTrailHeightMin, 0.01f, -5.0f, 10.0f); ImGui::DragFloat("Height Max", &chargeWindTrailHeightMax, 0.01f, -5.0f, 10.0f);
-		ImGui::DragFloat("Forward Min", &chargeWindTrailForwardMin, 0.01f, -10.0f, 10.0f); ImGui::DragFloat("Forward Max", &chargeWindTrailForwardMax, 0.01f, -10.0f, 10.0f);
-		ImGui::DragFloat("Lateral Wobble Min", &chargeWindTrailLateralWobbleMin, 0.005f, 0.0f, 5.0f); ImGui::DragFloat("Lateral Wobble Max", &chargeWindTrailLateralWobbleMax, 0.005f, 0.0f, 5.0f);
-		ImGui::DragFloat("Vertical Wobble Min", &chargeWindTrailVerticalWobbleMin, 0.005f, 0.0f, 5.0f); ImGui::DragFloat("Vertical Wobble Max", &chargeWindTrailVerticalWobbleMax, 0.005f, 0.0f, 5.0f);
-		ImGui::DragFloat("Frequency Min", &chargeWindTrailWobbleFrequencyMin, 0.1f, 0.0f, 50.0f); ImGui::DragFloat("Frequency Max", &chargeWindTrailWobbleFrequencyMax, 0.1f, 0.0f, 50.0f);
-		ImGui::ColorEdit3("Color", &chargeWindTrailColor.x);
-		ImGui::DragFloat("Emissive", &chargeWindTrailEmissiveStrength, 0.05f, 0.0f, 30.0f);
+		ImGui::Checkbox(U8("有効化"), &chargeWindTrailEnabled);
+		ImGui::DragInt(U8("風エフェクトの数"), &chargeWindTrailActiveCount, 1.0f, 1, static_cast<int>(chargeWindTrailCount));
+		ImGui::DragFloat(U8("寿命 最小"), &chargeWindTrailLifetimeMin, 0.01f, 0.01f, 5.0f, "%.2f sec");
+		ImGui::DragFloat(U8("寿命 最大"), &chargeWindTrailLifetimeMax, 0.01f, 0.01f, 5.0f, "%.2f sec");
+		ImGui::DragFloat(U8("後方移動速度 最小"), &chargeWindTrailSpeedMin, 0.1f, 0.0f, 100.0f);
+		ImGui::DragFloat(U8("後方移動速度 最大"), &chargeWindTrailSpeedMax, 0.1f, 0.0f, 100.0f);
+		ImGui::DragFloat(U8("幅 最小"), &chargeWindTrailWidthMin, 0.005f, 0.001f, 5.0f);
+		ImGui::DragFloat(U8("幅 最大"), &chargeWindTrailWidthMax, 0.005f, 0.001f, 5.0f);
+		ImGui::DragFloat(U8("先端の幅倍率"), &chargeWindTrailHeadWidthScale, 0.01f, 0.0f, 3.0f);
+		ImGui::DragFloat(U8("末端の幅倍率"), &chargeWindTrailTailWidthScale, 0.01f, 0.0f, 3.0f);
+		ImGui::DragFloat(U8("横方向の生成範囲"), &chargeWindTrailLateralSpawnRange, 0.01f, 0.0f, 10.0f);
+		ImGui::DragFloat(U8("生成高さ 最小"), &chargeWindTrailHeightMin, 0.01f, -5.0f, 10.0f);
+		ImGui::DragFloat(U8("生成高さ 最大"), &chargeWindTrailHeightMax, 0.01f, -5.0f, 10.0f);
+		ImGui::DragFloat(U8("前方生成位置 最小"), &chargeWindTrailForwardMin, 0.01f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("前方生成位置 最大"), &chargeWindTrailForwardMax, 0.01f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("横揺れ幅 最小"), &chargeWindTrailLateralWobbleMin, 0.005f, 0.0f, 5.0f);
+		ImGui::DragFloat(U8("横揺れ幅 最大"), &chargeWindTrailLateralWobbleMax, 0.005f, 0.0f, 5.0f);
+		ImGui::DragFloat(U8("縦揺れ幅 最小"), &chargeWindTrailVerticalWobbleMin, 0.005f, 0.0f, 5.0f);
+		ImGui::DragFloat(U8("縦揺れ幅 最大"), &chargeWindTrailVerticalWobbleMax, 0.005f, 0.0f, 5.0f);
+		ImGui::DragFloat(U8("揺れ周波数 最小"), &chargeWindTrailWobbleFrequencyMin, 0.1f, 0.0f, 50.0f);
+		ImGui::DragFloat(U8("揺れ周波数 最大"), &chargeWindTrailWobbleFrequencyMax, 0.1f, 0.0f, 50.0f);
+		ImGui::ColorEdit3(U8("エフェクトの色"), &chargeWindTrailColor.x);
+		ImGui::DragFloat(U8("発光強度"), &chargeWindTrailEmissiveStrength, 0.05f, 0.0f, 30.0f);
+
 		if (!chargeWindTrailEnabled) StopChargeWindTrails();
 	}
 
 	if (ImGui::CollapsingHeader(U8("突進風モデル")))
 	{
-		ImGui::Checkbox("Enable##MainChargeWind", &mainChargeWindEnabled);
-		ImGui::DragFloat3("Local Position##MainChargeWind", &mainChargeWindLocalPosition.x, 0.05f);
-		ImGui::DragFloat3("Local Rotation##MainChargeWind", &mainChargeWindLocalRotation.x, 1.0f);
-		ImGui::DragFloat3("Local Scale##MainChargeWind", &mainChargeWindLocalScale.x, 0.05f, 0.01f, 50.0f);
-		ImGui::Combo("Mask Flow##MainChargeWind", &mainChargeWindMaskFlowMode, "Linear\0Radial\0");
-		ImGui::DragFloat2("Scroll Speed##MainChargeWind", &mainChargeWindScrollSpeed.x, 0.01f, -10.0f, 10.0f);
-		ImGui::DragFloat("Radial Speed##MainChargeWind", &mainChargeWindRadialSpeed, 0.01f, -10.0f, 10.0f);
-		ImGui::DragFloat("Radial Tiling##MainChargeWind", &mainChargeWindRadialTiling, 0.01f, 0.01f, 32.0f);
-		ImGui::ColorEdit3("Color##MainChargeWind", &mainChargeWindColor.x);
-		ImGui::DragFloat("Emission Power##MainChargeWind", &mainChargeWindEmissionPower, 0.05f, 0.0f, 30.0f);
-		ImGui::DragFloat("Opacity##MainChargeWind", &mainChargeWindOpacity, 0.01f, 0.0f, 1.0f);
+		ImGui::Checkbox(U8("有効化##MainChargeWind"), &mainChargeWindEnabled);
+		ImGui::DragFloat3(U8("ローカル位置##MainChargeWind"), &mainChargeWindLocalPosition.x, 0.05f);
+		ImGui::DragFloat3(U8("ローカル回転##MainChargeWind"), &mainChargeWindLocalRotation.x, 1.0f);
+		ImGui::DragFloat3(U8("ローカルスケール##MainChargeWind"), &mainChargeWindLocalScale.x, 0.05f, 0.01f, 50.0f);
+		ImGui::Combo(U8("マスクの流れ方##MainChargeWind"), &mainChargeWindMaskFlowMode, U8("直線\0放射状\0"));
+		ImGui::DragFloat2(U8("スクロール速度##MainChargeWind"), &mainChargeWindScrollSpeed.x, 0.01f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("放射状の流動速度##MainChargeWind"), &mainChargeWindRadialSpeed, 0.01f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("放射状の繰り返し数##MainChargeWind"), &mainChargeWindRadialTiling, 0.01f, 0.01f, 32.0f);
+		ImGui::ColorEdit3(U8("モデルの色##MainChargeWind"), &mainChargeWindColor.x);
+		ImGui::DragFloat(U8("発光強度##MainChargeWind"), &mainChargeWindEmissionPower, 0.05f, 0.0f, 30.0f);
+		ImGui::DragFloat(U8("不透明度##MainChargeWind"), &mainChargeWindOpacity, 0.01f, 0.0f, 1.0f);
+
 		ApplyMainChargeWindSettings();
 		if (mainChargeWindMeshComponent && chargeMovementActive)
 			mainChargeWindMeshComponent->SetIsVisible(mainChargeWindEnabled);
 	}
+
 	DrawTripleJumpDebug();
 	DrawChargeAttackBTDebug();
 	DrawRoarBTDebug();
 	Character::DrawImGuiDetails();
 
-	ImGui::SeparatorText("Weapon Emissive (Runtime Override)");
+	ImGui::SeparatorText(U8("武器の発光設定（実行時上書き）"));
 	bool weaponEmissiveChanged = false;
-	weaponEmissiveChanged |= ImGui::Checkbox("Weapon Emissive Enabled", &weaponEmissiveEnabled);
-	weaponEmissiveChanged |= ImGui::ColorEdit3("Weapon Emissive Color", &weaponEmissiveColor.x);
-	weaponEmissiveChanged |= ImGui::DragFloat("Weapon Emissive Intensity", &weaponEmissiveIntensity,
-		0.05f, 0.0f, 50.0f, "%.2f");
-	weaponEmissiveIntensity = (std::max)(0.0f, weaponEmissiveIntensity);
+	weaponEmissiveChanged |= ImGui::Checkbox(U8("武器の発光を有効化"), &weaponEmissiveEnabled);
+	weaponEmissiveChanged |= ImGui::ColorEdit3(U8("武器の発光色"), &weaponEmissiveColor.x);
+	weaponEmissiveChanged |= ImGui::DragFloat(U8("武器の発光強度"), &weaponEmissiveIntensity, 0.05f, 0.0f, 50.0f, "%.2f");
+
 	if (weaponEmissiveChanged && skeletalMeshComponent)
 	{
-		skeletalMeshComponent->SetRuntimeMaterialEmissive("M_Grux_Qilin_Weapon",
-			weaponEmissiveEnabled, weaponEmissiveColor, weaponEmissiveIntensity);
+		skeletalMeshComponent->SetRuntimeMaterialEmissive("M_Grux_Qilin_Weapon", weaponEmissiveEnabled, weaponEmissiveColor, weaponEmissiveIntensity);
 	}
 
-	ImGui::ColorEdit3("Weapon Telegraph Rim Color", &weaponTelegraphRimColor.x);
-	ImGui::DragFloat("Weapon Telegraph Fade Out", &weaponTelegraphFadeOutDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
+	ImGui::ColorEdit3(U8("武器攻撃予兆のリム色"), &weaponTelegraphRimColor.x);
+	ImGui::DragFloat(U8("武器攻撃予兆のフェードアウト時間"), &weaponTelegraphFadeOutDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
 
 	ImGui::SeparatorText(U8("HPのUI"));
-	ImGui::DragFloat("delayedHpDelayDuration", &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-	ImGui::DragFloat("delayedHpFollowSpeed", &delayedHpFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
-	ImGui::DragFloat("delayedHpRushFollowSpeed", &delayedHpRushFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
-	ImGui::ColorEdit4("bossHpCurrentColor", &bossHpCurrentColor.r);
-	ImGui::ColorEdit4("bossHpDelayedColor", &bossHpDelayedColor.r);
+	ImGui::DragFloat(U8("遅延HPの追従開始までの時間"), &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+	ImGui::DragFloat(U8("遅延HPの追従速度"), &delayedHpFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
+	ImGui::DragFloat(U8("Rush時の遅延HP追従速度"), &delayedHpRushFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
+	ImGui::ColorEdit4(U8("現在HPの色"), &bossHpCurrentColor.r);
+	ImGui::ColorEdit4(U8("遅延HPの色"), &bossHpDelayedColor.r);
 
-	ImGui::SeparatorText("Boss AI");
+	ImGui::SeparatorText(U8("ボスAI"));
 
-	ImGui::SeparatorText("Rush Hit Effect");
-	ImGui::DragFloat("Surface Offset", &rushHitEffectSurfaceOffset,
-		0.005f, 0.0f, 0.20f, "%.3f m");
+	ImGui::SeparatorText(U8("Rushヒットエフェクト"));
+	ImGui::DragFloat(U8("表面からのオフセット"), &rushHitEffectSurfaceOffset, 0.005f, 0.0f, 0.20f, "%.3f m");
+	ImGui::DragFloat(U8("代替リカバリー時間"), &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
 
-	ImGui::DragFloat("Fallback Recovery Duration", &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-	if (ImGui::CollapsingHeader("Danger OBB Tuning"))
+	ImGui::SeparatorText(U8("高速連続攻撃の踏み込み"));
+	ImGui::DragFloat(U8("高速連続攻撃 理想攻撃距離"), &fastComboDesiredAttackDistance, 0.1f, 0.0f, 20.0f, "%.2f m");
+	ImGui::DragFloat(U8("高速連続攻撃 踏み込み倍率"), &fastComboStepInRatio, 0.05f, 0.0f, 2.0f, "%.2f");
+
+	const char* stepNames[] = { "A", "B", "C" };
+	for (int i = 0; i < 3; ++i)
 	{
-		auto controller = GetBodyAnimationController();
-		AnimationNotifyState* selectedState = GetSelectedDangerNotifyState();
-		std::string selectedName = "None";
-		if (controller)
-		{
-			if (const auto* asset = controller->GetNotifyAssetForRuntimeTuning(dangerObbSelectedClip))
-				selectedName = asset->animationName;
-
-			if (ImGui::BeginCombo("Attack Animation", selectedName.c_str()))
-			{
-				for (const size_t clip : controller->GetAnimationAssetOrderForRuntimeTuning())
-				{
-					auto* asset = controller->GetNotifyAssetForRuntimeTuning(clip);
-					if (!asset)
-						continue;
-					auto& states = asset->notifyTrack.states;
-					const size_t dangerCount = std::count_if(states.begin(), states.end(),
-						[](const AnimationNotifyState& state)
-						{ return state.type == AnimationNotifyState::Type::DangerWindow; });
-					for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
-					{
-						if (states[stateIndex].type != AnimationNotifyState::Type::DangerWindow)
-							continue;
-						const bool selected = clip == dangerObbSelectedClip &&
-							stateIndex == dangerObbSelectedStateIndex;
-						std::string label = asset->animationName;
-						if (dangerCount > 1)label += " [Danger " + std::to_string(stateIndex) + "]";
-						if (ImGui::Selectable(label.c_str(), selected))
-						{
-							dangerObbSelectedClip = clip;
-							dangerObbSelectedStateIndex = stateIndex;
-						}
-						if (selected)
-							ImGui::SetItemDefaultFocus();
-					}
-				}
-				ImGui::EndCombo();
-			}
-		}
-
-		selectedState = GetSelectedDangerNotifyState();
-		if (selectedState)
-		{
-			bool changed = false;
-			ImGui::TextDisabled("Center Offset (Local: X=Right, Y=Up, Z=Forward)");
-			changed |= ImGui::DragFloat3("Center Offset##DangerOBB", &selectedState->justDodgeAreaOffset.x,
-				0.05f, -20.0f, 20.0f, "%.2f");
-			ImGui::TextDisabled("Full Size (not Half Extent)");
-			changed |= ImGui::DragFloat3("Full Size##DangerOBB", &selectedState->justDodgeAreaSize.x,
-				0.05f, 0.0f, 40.0f, "%.2f");
-			selectedState->justDodgeAreaSize.x = (std::max)(0.0f, selectedState->justDodgeAreaSize.x);
-			selectedState->justDodgeAreaSize.y = (std::max)(0.0f, selectedState->justDodgeAreaSize.y);
-			selectedState->justDodgeAreaSize.z = (std::max)(0.0f, selectedState->justDodgeAreaSize.z);
-			if (changed && selectedState == activeDangerNotifyState)
-				RefreshActiveDangerAreaFromNotify();
-
-			const uint64_t key = (static_cast<uint64_t>(dangerObbSelectedClip) << 32) |
-				static_cast<uint64_t>(dangerObbSelectedStateIndex);
-			const auto savedIt = savedDangerObbSettings.find(key);
-			const bool modified = savedIt == savedDangerObbSettings.end() ||
-				savedIt->second.centerOffset.x != selectedState->justDodgeAreaOffset.x ||
-				savedIt->second.centerOffset.y != selectedState->justDodgeAreaOffset.y ||
-				savedIt->second.centerOffset.z != selectedState->justDodgeAreaOffset.z ||
-				savedIt->second.fullSize.x != selectedState->justDodgeAreaSize.x ||
-				savedIt->second.fullSize.y != selectedState->justDodgeAreaSize.y ||
-				savedIt->second.fullSize.z != selectedState->justDodgeAreaSize.z;
-			ImGui::TextColored(modified
-				? ImVec4(1.0f, 0.75f, 0.2f, 1.0f)
-				: ImVec4(0.35f, 1.0f, 0.45f, 1.0f),
-				"Status: %s", modified ? "Modified / Unsaved" : "Saved");
-
-			if (ImGui::Button("Save Selected Danger OBB") && controller)
-			{
-				const auto result = controller->SaveDangerObbForRuntimeTuning(
-					dangerObbSelectedClip, dangerObbSelectedStateIndex,
-					*selectedState, dangerObbSavePath);
-				dangerObbLastSaveSucceeded = result ==
-					AnimationController::RuntimeDangerObbSaveResult::Saved;
-				switch (result)
-				{
-				case AnimationController::RuntimeDangerObbSaveResult::Saved:
-					dangerObbSaveStatus = "Saved";
-					savedDangerObbSettings[key] = {
-						selectedState->justDodgeAreaOffset, selectedState->justDodgeAreaSize };
-					break;
-				case AnimationController::RuntimeDangerObbSaveResult::FileNotFound:
-					dangerObbSaveStatus = "Save Failed: File not found";
-					break;
-				case AnimationController::RuntimeDangerObbSaveResult::DangerWindowNotFound:
-					dangerObbSaveStatus = "Save Failed: DangerWindow not found or does not match";
-					break;
-				case AnimationController::RuntimeDangerObbSaveResult::JsonParseFailed:
-					dangerObbSaveStatus = "Save Failed: JSON parse failed";
-					break;
-				case AnimationController::RuntimeDangerObbSaveResult::JsonWriteFailed:
-					dangerObbSaveStatus = "Save Failed: JSON write failed";
-					break;
-				}
-			}
-			ImGui::TextColored(dangerObbLastSaveSucceeded
-				? ImVec4(0.35f, 1.0f, 0.45f, 1.0f)
-				: ImVec4(1.0f, 0.45f, 0.3f, 1.0f),
-				"Save Status: %s", dangerObbSaveStatus.c_str());
-			if (!dangerObbSavePath.empty())
-				ImGui::TextWrapped("File: %s", dangerObbSavePath.c_str());
-			if (ImGui::Button("Reset Selected Danger OBB"))
-			{
-				if (const auto initialIt = initialDangerObbSettings.find(key);
-					initialIt != initialDangerObbSettings.end())
-				{
-					selectedState->justDodgeAreaOffset = initialIt->second.centerOffset;
-					selectedState->justDodgeAreaSize = initialIt->second.fullSize;
-					if (selectedState == activeDangerNotifyState)
-						RefreshActiveDangerAreaFromNotify();
-				}
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Reset All Danger OBB") && controller)
-			{
-				for (const size_t clip : controller->GetAnimationAssetOrderForRuntimeTuning())
-				{
-					auto* asset = controller->GetNotifyAssetForRuntimeTuning(clip);
-					if (!asset)
-						continue;
-					auto& states = asset->notifyTrack.states;
-					for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
-					{
-						if (states[stateIndex].type != AnimationNotifyState::Type::DangerWindow)
-							continue;
-						const uint64_t stateKey = (static_cast<uint64_t>(clip) << 32) |
-							static_cast<uint64_t>(stateIndex);
-						if (const auto initialIt = initialDangerObbSettings.find(stateKey);
-							initialIt != initialDangerObbSettings.end())
-						{
-							states[stateIndex].justDodgeAreaOffset = initialIt->second.centerOffset;
-							states[stateIndex].justDodgeAreaSize = initialIt->second.fullSize;
-						}
-					}
-				}
-				RefreshActiveDangerAreaFromNotify();
-			}
-			ImGui::TextDisabled("Reset changes Runtime only. JSON changes only when Save Selected is pressed: %s.json",
-				selectedName.c_str());
-		}
-		else
-		{
-			ImGui::TextDisabled("No DangerWindow notify data loaded.");
-		}
+		ImGui::DragFloat((std::string("FastCombo ") + stepNames[i] + " 最大Step-In").c_str(), &fastComboMaxStepInDistance[i], 0.1f, 0.0f, 6.0f, "%.2f m");
 	}
 
-	ImGui::SeparatorText("FastCombo Step-In");
-	ImGui::DragFloat(U8("FastCombo 理想攻撃距離"), &fastComboDesiredAttackDistance, 0.1f, 0.0f, 20.0f, "%.2f m");
-	ImGui::DragFloat(U8("FastCombo Step-In Ratio"), &fastComboStepInRatio, 0.05f, 0.0f, 2.0f, "%.2f");
-	const char* stepNames[] = { "A", "B", "C" };
-	for (int i = 0; i < 3; ++i) { ImGui::DragFloat((std::string("FastCombo ") + stepNames[i] + " 最大Step-In").c_str(), &fastComboMaxStepInDistance[i], 0.1f, 0.0f, 6.0f, "%.2f m"); fastComboMaxStepInDistance[i] = std::clamp(fastComboMaxStepInDistance[i], 0.0f, 6.0f); }
-	ImGui::DragFloat(U8("FastCombo Step-In\u6700\u5927\u901f\u5ea6"), &fastComboStepInMaxSpeed, 0.5f, 1.0f, 60.0f, "%.2f m/s");
-	fastComboStepInMaxSpeed = std::clamp(fastComboStepInMaxSpeed, 1.0f, 60.0f);
-	ImGui::DragFloat(U8("近距離正面 FastCombo確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
-	ImGui::DragFloat(U8("FastCombo Front最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
-	fastComboFrontMaxAngle = std::clamp(fastComboFrontMaxAngle, 0.0f, 180.0f);
+	ImGui::DragFloat(U8("高速連続攻撃 踏み込み最大速度"), &fastComboStepInMaxSpeed, 0.5f, 1.0f, 60.0f, "%.2f m/s");
+	ImGui::DragFloat(U8("近距離正面 高速連続攻撃の選択確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
+	ImGui::DragFloat(U8("高速連続攻撃 正面判定の最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
 
 	ImGui::SeparatorText(U8("ダッシュBT"));
 	ImGui::DragFloat(U8("ダッシュ準備距離 最小"), &dashSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
 	ImGui::DragFloat(U8("ダッシュ準備距離 最大"), &dashSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
 	ImGui::DragFloat(U8("ダッシュ準備 最低移動距離"), &dashSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
-	dashSetupDistanceMin = (std::max)(0.1f, dashSetupDistanceMin);
-	dashSetupDistanceMax = (std::max)(dashSetupDistanceMin, dashSetupDistanceMax);
-	dashSetupMinimumMoveDistance = (std::max)(0.0f, dashSetupMinimumMoveDistance);
 
-	ImGui::Checkbox("Dash Telegraph Emissive Enabled", &dashTelegraphEmissiveEnabled);
-	ImGui::ColorEdit3("Dash Telegraph Phase 1 Emissive Color", &dashTelegraphPhase1EmissiveColor.x);
-	ImGui::ColorEdit3("Dash Telegraph Phase 2 Emissive Color", &dashTelegraphPhase2EmissiveColor.x);
-	ImGui::DragFloat("Dash Telegraph Emissive Intensity", &dashTelegraphEmissiveIntensity,
-		0.05f, 0.0f, 20.0f, "%.2f");
-	dashTelegraphEmissiveIntensity = (std::max)(0.0f, dashTelegraphEmissiveIntensity);
-	ImGui::DragFloat("Line Expand Duration", &dashTelegraphLineExpandDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-	ImGui::DragFloat("Line Fade Out Duration", &dashTelegraphLineFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-	ImGui::DragFloat("Fan Fade In Duration", &dashTelegraphFanFadeInDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-	ImGui::DragFloat("Fan Flash Duration", &dashTelegraphFanFlashDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-	ImGui::DragFloat("Fan Flash Intensity", &dashTelegraphFanFlashIntensity, 0.05f, 0.0f, 8.0f, "%.2f");
-	ImGui::DragFloat("Fan Fade Out Duration", &dashTelegraphFanFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+	ImGui::Checkbox(U8("ダッシュ予兆の発光を有効化"), &dashTelegraphEmissiveEnabled);
+	ImGui::ColorEdit3(U8("ダッシュ予兆 第一形態の発光色"), &dashTelegraphPhase1EmissiveColor.x);
+	ImGui::ColorEdit3(U8("ダッシュ予兆 第二形態の発光色"), &dashTelegraphPhase2EmissiveColor.x);
+	ImGui::DragFloat(U8("ダッシュ予兆の発光強度"), &dashTelegraphEmissiveIntensity, 0.05f, 0.0f, 20.0f, "%.2f");
+
+	ImGui::DragFloat(U8("ライン予兆の拡大時間"), &dashTelegraphLineExpandDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+	ImGui::DragFloat(U8("ライン予兆のフェードアウト時間"), &dashTelegraphLineFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+	ImGui::DragFloat(U8("扇形予兆のフェードイン時間"), &dashTelegraphFanFadeInDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+	ImGui::DragFloat(U8("扇形予兆のフラッシュ時間"), &dashTelegraphFanFlashDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+	ImGui::DragFloat(U8("扇形予兆のフラッシュ強度"), &dashTelegraphFanFlashIntensity, 0.05f, 0.0f, 8.0f, "%.2f");
+	ImGui::DragFloat(U8("扇形予兆のフェードアウト時間"), &dashTelegraphFanFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+
 	if (dashBTPhase != DashBTPhase::Telegraph && dashBTPhase != DashBTPhase::InterDashTransition)
 		HideDashTelegraphVisual();
 
-	ImGui::DragFloat("Line Width", &dashTelegraphLineWidth, 0.01f, 0.01f, 8.0f, "%.3f m");
-	dashTelegraphLineWidth = (std::max)(0.01f, dashTelegraphLineWidth);
-	ImGui::TextDisabled("Fan radius and Fan Y Offset apply at dash telegraph start.");
-	ImGui::DragFloat("Fan Radius", &dashTelegraphFanRadius, 0.05f, 0.01f, 20.0f, "%.2f m");
-	dashTelegraphFanRadius = (std::max)(0.01f, dashTelegraphFanRadius);
-	ImGui::DragFloat("Line Y Offset", &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
-	ImGui::DragFloat("Fan Y Offset", &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
+	ImGui::DragFloat(U8("ライン予兆の幅"), &dashTelegraphLineWidth, 0.01f, 0.01f, 8.0f, "%.3f m");
+	ImGui::TextDisabled(U8("扇形の半径とYオフセットはダッシュ予兆開始時に反映されます。"));
+	ImGui::DragFloat(U8("扇形予兆の半径"), &dashTelegraphFanRadius, 0.05f, 0.01f, 20.0f, "%.2f m");
+	ImGui::DragFloat(U8("ライン予兆のYオフセット"), &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
+	ImGui::DragFloat(U8("扇形予兆のYオフセット"), &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
 
-	if (ImGui::TreeNode("Positioning Tuning"))
+	if (ImGui::TreeNode(U8("位置調整パラメータ")))
 	{
 		for (BossPositioningData& data : combatPositioningData)
 		{
 			if (data.actionType != BossActionType::Approach)
 				continue;
-			if (ImGui::TreeNode("Approach"))
+
+			if (ImGui::TreeNode(U8("接近")))
 			{
-				ImGui::DragFloat("Move Speed", &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
+				ImGui::DragFloat(U8("移動速度"), &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
 				ImGui::TreePop();
 			}
 		}
 		ImGui::TreePop();
 	}
 
-	ImGui::SeparatorText("Boss Room Positioning");
-	constexpr float maximumBossRoomMargin =
-		(std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
-			(bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
-	if (ImGui::DragFloat("Safety Margin", &bossRoomSafetyMargin, 0.05f,
-		0.0f, maximumBossRoomMargin, "%.2f m"))
-		bossRoomSafetyMargin = std::clamp(bossRoomSafetyMargin, 0.0f, maximumBossRoomMargin);
-	ImGui::SeparatorText("Positioning Animation Tuning");
-	ImGui::DragFloat("Move Start Speed Threshold",
-		&positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
-	positioningMoveStartSpeedThreshold = std::clamp(positioningMoveStartSpeedThreshold, 0.01f, 10.0f);
-	ImGui::DragFloat("Move Stop Speed Threshold",
-		&positioningMoveStopSpeedThreshold, 0.01f, 0.0f,
-		positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
-	positioningMoveStopSpeedThreshold = std::clamp(
-		positioningMoveStopSpeedThreshold, 0.0f,
-		positioningMoveStartSpeedThreshold - 0.01f);
-	ImGui::DragFloat("Move Stop Delay", &positioningMoveStopDelay,
-		0.01f, 0.0f, 2.0f, "%.2f sec");
-	positioningMoveStopDelay = (std::max)(0.0f, positioningMoveStopDelay);
-	ImGui::DragFloat("Idle Duration", &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-	ImGui::DragFloat("FastCombo Prepare Duration", &fastComboPrepareDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-	ImGui::DragFloat("FastCombo Approach Max Duration", &fastComboApproachMaxDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
-	behaviorIdleDuration = (std::max)(0.0f, behaviorIdleDuration);
-	fastComboPrepareDuration = (std::max)(0.0f, fastComboPrepareDuration);
-	fastComboApproachMaxDuration = (std::max)(0.0f, fastComboApproachMaxDuration);
-	ImGui::DragFloat("FastCombo Approach Retry Cooldown", &fastComboApproachRetryCooldown, 0.05f, 0.0f, 30.0f, "%.2f sec");
-	fastComboApproachRetryCooldown = (std::max)(0.0f, fastComboApproachRetryCooldown);
-	ImGui::SeparatorText("Close Combat Settings");
-	ImGui::DragFloat("Close Min Range", &closeCombatSettings.minRange, 0.1f, 0.0f, 100.0f, "%.2f");
-	ImGui::DragFloat("Close Execute Max Range", &closeCombatSettings.executeMaxRange, 0.1f, closeCombatSettings.minRange, 100.0f, "%.2f");
-	ImGui::DragFloat("Close Plan Max Range", &closeCombatSettings.planMaxRange, 0.1f, closeCombatSettings.executeMaxRange, 100.0f, "%.2f");
-	ImGui::DragFloat("Close Attack Facing Limit", &closeCombatSettings.facingLimitDegrees, 1.0f, 0.0f, 180.0f, "%.1f deg");
-	ImGui::DragFloat("Face Complete Angle", &closeCombatSettings.faceCompleteAngleDegrees, 0.5f, 0.0f, 90.0f, "%.1f deg");
-	ImGui::DragFloat("Inter Stage Face Complete Angle", &interStageFaceCompleteAngle, 0.5f, 0.0f, 90.0f, "%.1f deg");
-	ImGui::DragFloat("Inter Stage Max Facing Angle", &interStageMaxFacingAngle, 0.5f, 0.0f, 180.0f, "%.1f deg");
-	ImGui::DragFloat("Inter Stage Face Delay", &interStageFaceDelay, 0.01f, 0.0f, 0.5f, "%.2f sec");
-	closeCombatSettings.minRange = (std::max)(0.0f, closeCombatSettings.minRange);
-	closeCombatSettings.executeMaxRange = (std::max)(closeCombatSettings.minRange, closeCombatSettings.executeMaxRange);
-	closeCombatSettings.planMaxRange = (std::max)(closeCombatSettings.executeMaxRange, closeCombatSettings.planMaxRange);
-	closeCombatSettings.facingLimitDegrees = std::clamp(closeCombatSettings.facingLimitDegrees, 0.0f, 180.0f);
-	closeCombatSettings.faceCompleteAngleDegrees = std::clamp(closeCombatSettings.faceCompleteAngleDegrees, 0.0f, 90.0f);
-	interStageFaceCompleteAngle = std::clamp(interStageFaceCompleteAngle, 0.0f, 90.0f);
-	interStageMaxFacingAngle = std::clamp(interStageMaxFacingAngle, 0.0f, 180.0f);
-	interStageFaceDelay = std::clamp(interStageFaceDelay, 0.0f, 0.5f);
+	ImGui::SeparatorText(U8("ボス部屋の位置調整"));
+	constexpr float maximumBossRoomMargin = (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f, (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
+	ImGui::DragFloat(U8("壁からの安全余裕"), &bossRoomSafetyMargin, 0.05f, 0.0f, maximumBossRoomMargin, "%.2f m");
+
+	ImGui::SeparatorText(U8("移動アニメーション調整"));
+	ImGui::DragFloat(U8("移動開始速度の閾値"), &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
+	ImGui::DragFloat(U8("移動停止速度の閾値"), &positioningMoveStopSpeedThreshold, 0.01f, 0.0f, positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
+	ImGui::DragFloat(U8("移動停止までの遅延時間"), &positioningMoveStopDelay, 0.01f, 0.0f, 2.0f, "%.2f sec");
+	ImGui::DragFloat(U8("待機時間"), &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+	ImGui::DragFloat(U8("高速連続攻撃の準備時間"), &fastComboPrepareDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+	ImGui::DragFloat(U8("高速連続攻撃 接近最大時間"), &fastComboApproachMaxDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
+	ImGui::DragFloat(U8("高速連続攻撃 接近再試行の待機時間"), &fastComboApproachRetryCooldown, 0.05f, 0.0f, 30.0f, "%.2f sec");
+
+	ImGui::SeparatorText(U8("近距離戦闘設定"));
+	ImGui::DragFloat(U8("近距離戦闘 最小距離"), &closeCombatSettings.minRange, 0.1f, 0.0f, 100.0f, "%.2f");
+	ImGui::DragFloat(U8("近距離戦闘 実行可能な最大距離"), &closeCombatSettings.executeMaxRange, 0.1f, closeCombatSettings.minRange, 100.0f, "%.2f");
+	ImGui::DragFloat(U8("近距離戦闘 計画可能な最大距離"), &closeCombatSettings.planMaxRange, 0.1f, closeCombatSettings.executeMaxRange, 100.0f, "%.2f");
+	ImGui::DragFloat(U8("近距離攻撃 正面角度制限"), &closeCombatSettings.facingLimitDegrees, 1.0f, 0.0f, 180.0f, "%.1f deg");
+	ImGui::DragFloat(U8("正面向き完了角度"), &closeCombatSettings.faceCompleteAngleDegrees, 0.5f, 0.0f, 90.0f, "%.1f deg");
+	ImGui::DragFloat(U8("攻撃段間の正面向き完了角度"), &interStageFaceCompleteAngle, 0.5f, 0.0f, 90.0f, "%.1f deg");
+	ImGui::DragFloat(U8("攻撃段間の最大旋回角度"), &interStageMaxFacingAngle, 0.5f, 0.0f, 180.0f, "%.1f deg");
+	ImGui::DragFloat(U8("攻撃段間の旋回待機時間"), &interStageFaceDelay, 0.01f, 0.0f, 0.5f, "%.2f sec");
 	ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
 	ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
 	ImGui::DragFloat(U8("旋回タイムアウト"), &turnTimeout, 0.05f, 0.0f, 10.0f, "%.2f sec");
 	ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
 
 	ImGui::SeparatorText(U8("ジャンプ攻撃位置調整"));
-	ImGui::DragFloat(
-		U8("位置調整距離 最小"),
-		&jumpSetupDistanceMin,
-		0.1f, 0.1f, 30.0f, "%.2f");
-
-	ImGui::DragFloat(
-		U8("位置調整距離 最大"),
-		&jumpSetupDistanceMax,
-		0.1f, 0.1f, 30.0f, "%.2f");
-
-	jumpSetupDistanceMin = (std::max)(0.1f, jumpSetupDistanceMin);
-	jumpSetupDistanceMax = (std::max)(jumpSetupDistanceMin, jumpSetupDistanceMax);
+	ImGui::DragFloat(U8("位置調整距離 最小"), &jumpSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f");
+	ImGui::DragFloat(U8("位置調整距離 最大"), &jumpSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f");
 	ImGui::DragFloat(U8("ジャンプ最低移動距離"), &jumpSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
-	jumpSetupMinimumMoveDistance = (std::max)(0.0f, jumpSetupMinimumMoveDistance);
+	ImGui::DragFloat(U8("最大ジャンプ距離"), &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
+	ImGui::DragFloat(U8("攻撃時の理想距離"), &desiredAttackDistance, 0.05f, 0.0f, 10.0f, "%.2f");
 
-	ImGui::DragFloat(
-		U8("最大ジャンプ距離"),
-		&maxJumpDistance,
-		0.05f,
-		0.0f,
-		30.0f,
-		"%.2f");
-
-	ImGui::DragFloat(
-		U8("攻撃時の理想距離"),
-		&desiredAttackDistance,
-		0.05f,
-		0.0f,
-		10.0f,
-		"%.2f");
-	if (ImGui::TreeNode("Combat Attack Candidates"))
+	if (ImGui::TreeNode(U8("戦闘攻撃候補")))
 	{
 		for (size_t i = 0; i < combatAttackData.size(); ++i)
 		{
 			auto& attack = combatAttackData[i];
 			ImGui::PushID(static_cast<int>(i));
 			ImGui::SeparatorText(attack.animationName.c_str());
-			ImGui::DragFloat("Recovery Duration", &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
+			ImGui::DragFloat(U8("攻撃後の硬直時間"), &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
 			attack.recoveryDuration = (std::max)(0.0f, attack.recoveryDuration);
 			ImGui::PopID();
 		}
 		ImGui::TreePop();
 	}
-	ImGui::DragFloat("pitchBaseValue", &pitchBaseValue, 0.05f);
+
+	ImGui::DragFloat(U8("ピッチ基準値"), &pitchBaseValue, 0.05f);
+
 	if (ImGui::Button(U8("ボスの名前の演出")))
 	{
 		StartGruxNamePerform(2.0f);
 	}
-	ImGui::DragFloat("Boss Damage Flash Duration", &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
-	ImGui::SliderFloat("Boss Damage Flash Strength", &damageFlashStartValue, 0.0f, 1.0f, "%.2f");
-	ImGui::DragFloat("Boss Hit Voice Cooldown", &hitVoiceCooldown, 0.01f, 0.0f, 2.0f, "%.2f sec");
+
+	ImGui::DragFloat(U8("ボス被ダメージ時のフラッシュ時間"), &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
+	ImGui::SliderFloat(U8("ボス被ダメージ時のフラッシュ強度"), &damageFlashStartValue, 0.0f, 1.0f, "%.2f");
+	ImGui::DragFloat(U8("ボス被弾ボイスのクールダウン"), &hitVoiceCooldown, 0.01f, 0.0f, 2.0f, "%.2f sec");
+
 	if (ImGui::TreeNode(U8("プレイヤーに攻撃された時のコントローラー振動")))
 	{
-		ImGui::DragFloat("Normal Strength", &normalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat("Normal Duration", &normalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-		ImGui::DragFloat("Combo Final Strength", &comboFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat("Combo Final Duration", &comboFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-		ImGui::DragFloat("Rush Strength", &rushHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat("Rush Duration", &rushHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-		ImGui::DragFloat("Rush Final Strength", &rushFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat("Rush Final Duration", &rushFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+		ImGui::DragFloat(U8("通常攻撃 振動強度"), &normalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+		ImGui::DragFloat(U8("通常攻撃 振動時間"), &normalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+		ImGui::DragFloat(U8("コンボ最終段 振動強度"), &comboFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+		ImGui::DragFloat(U8("コンボ最終段 振動時間"), &comboFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+		ImGui::DragFloat(U8("Rush攻撃 振動強度"), &rushHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+		ImGui::DragFloat(U8("Rush攻撃 振動時間"), &rushHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+		ImGui::DragFloat(U8("Rush最終段 振動強度"), &rushFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+		ImGui::DragFloat(U8("Rush最終段 振動時間"), &rushFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
 		ImGui::TreePop();
 	}
-	ImGui::SeparatorText(U8("4段目 HitReaction"));
-	ImGui::DragFloat(U8("4段目 HitReaction確率"), &fourthHitReactionChance,
-		0.01f, 0.0f, 1.0f, "%.2f");
-	ImGui::DragFloat(U8("4段目 HitReaction時間"), &fourthHitReactionDuration,
-		0.01f, 0.0f, 2.0f, "%.2f sec");
-	fourthHitReactionChance = std::clamp(fourthHitReactionChance, 0.0f, 1.0f);
-	fourthHitReactionDuration = std::clamp(fourthHitReactionDuration, 0.0f, 2.0f);
 
+	ImGui::SeparatorText(U8("4段目 被弾リアクション"));
+	ImGui::DragFloat(U8("4段目 被弾リアクション発生確率"), &fourthHitReactionChance, 0.01f, 0.0f, 1.0f, "%.2f");
+	ImGui::DragFloat(U8("4段目 被弾リアクション時間"), &fourthHitReactionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
 	ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
-	ImGui::TextDisabled("Default weapon radius. Notify HitBox radius takes priority while active.");
-	ImGui::DragFloat(U8("hitEnemyEffectOffsetY"), &hitEnemyEffectOffsetY, 0.1f);
-	ImGui::DragFloat(U8("hitPlayerEffectOffsetY"), &hitPlayerEffectOffsetY, 0.1f);
+	ImGui::DragFloat(U8("敵へのヒットエフェクト Yオフセット"), &hitEnemyEffectOffsetY, 0.1f);
+	ImGui::DragFloat(U8("プレイヤーへのヒットエフェクト Yオフセット"), &hitPlayerEffectOffsetY, 0.1f);
 #endif
 }
 

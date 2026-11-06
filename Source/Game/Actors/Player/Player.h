@@ -380,7 +380,7 @@ public:
 	bool IsBossAttackTargetAvailable() const;
 
 	// 保持中の入力要求を破棄する。
-	void ClearActionRequest(const char* reason);
+	void ClearActionRequest();
 
 	// 被弾リアクションの方向を返す。
 	HitReactionDirection GetHitReactionDirection() const { return hitReactionDirection; }
@@ -399,7 +399,7 @@ public:
 	// Just Dodge成功後またはRush中の追撃機会が有効かを返す。
 	bool IsRushOpportunityActive() const;
 	// 初回Rush入力の受付状態を切り替え、ガイド表示を同期する。
-	void SetRushInputAcceptance(bool accepting, const char* endReason = nullptr);
+	void SetRushInputAcceptance(bool accepting);
 
 	// Player/Bossの解除タイミングを独立して管理する。
 	// ジャスト回避のタイムスケールを更新する。
@@ -579,10 +579,6 @@ public:
 	float justDodgeMaxTowardAttackerDot = 0.25f; // 回避方向と攻撃者方向の成立判定しきい値
 	DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{}; // 回避開始時に固定したワールド方向
 	bool dodgeWorldDirectionSnapshotValid = false; // 回避方向スナップショットが有効か
-	float lastJustAnimationTime = 0.0f; // Just Dodge判定時のアニメーション時刻
-	float lastJustWindowStart = 0.0f; // Just Dodge判定区間の開始時刻
-	float lastJustWindowEnd = 0.0f; // Just Dodge判定区間の終了時刻
-	float lastJustWindowRatio = 0.0f; // Just Dodge成立位置の判定区間内比率
 	float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
 	float rushApproachPoseBlendTime = 0.12f; // Rush接近姿勢へ切り替えるブレンド時間
 	float rushWindupDuration = 0.20f; // Rush接近前の予備動作時間
@@ -874,7 +870,6 @@ private:
 	float prisonOpeningSittingToStandingBlendTime = 0.15f; // 座り姿勢から立ち姿勢へのブレンド時間
 	float prisonOpeningSittingPingPongPhase = 0.0f; // Ping-Pong再生の現在位相
 	float prisonOpeningSittingSampleTime = 0.0f; // 座り姿勢から取得する現在サンプル時刻
-	bool prisonOpeningSittingPingPongForward = true; // Ping-Pong再生が順方向か
 	bool prisonOpeningInputWasEnabled = true; // 牢獄開始演出前の入力有効状態
 	DirectX::XMFLOAT3 prisonOpeningSittingPosition{}; // 牢獄開始演出中に維持するPlayer位置
 	float prisonOpeningSittingYawDegrees = 0.0f; // 牢獄開始演出中に維持するYaw角

@@ -98,7 +98,7 @@ void PlayerAttackState::Execute(float deltaTime)
         player->comboQueued = false;
         dodgeQueued = false;
         if (player->bufferCommand.type != Player::ActionType::None)
-            player->ClearActionRequest("phase1_final_hit");
+            player->ClearActionRequest();
     }
 
     if (player->inputWindow && !player->IsFinalHitVisualPoseLatchRequested())
@@ -192,7 +192,7 @@ void PlayerAttackState::Exit()
 
 void PlayerDodgeState::Enter()
 {
-    player->SetRushInputAcceptance(false, "None");
+    player->SetRushInputAcceptance(false);
 
     // 攻撃中は移動速度を0にする
     player->characterMovementComponent->SetFixedSpeed(0.0f);
@@ -232,7 +232,7 @@ void PlayerDodgeState::Execute(float deltaTime)
     }
     if (player->rushTarget.expired())
     {
-        player->SetRushInputAcceptance(false, "RushTargetExpired");
+        player->SetRushInputAcceptance(false);
         rushRequested = false;
     }
     if (judgeSuccess)
@@ -251,12 +251,12 @@ void PlayerDodgeState::Execute(float deltaTime)
             if (rushRequested)
             {
                 Logger::Log(U8("ラッシュへ"));
-                player->SetRushInputAcceptance(false, "RushStarted");
+                player->SetRushInputAcceptance(false);
                 player->GetStateMachine()->ChangeState("Rush");
             }
             else
             {
-                player->SetRushInputAcceptance(false, "TransitionWithoutRush");
+                player->SetRushInputAcceptance(false);
                 DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
                 if (MathHelper::Length(move) > 0.1f)
                 {
@@ -272,7 +272,7 @@ void PlayerDodgeState::Execute(float deltaTime)
     }
     else if (player->transitionWindow)
     {
-        player->SetRushInputAcceptance(false, "TransitionWithoutRush");
+        player->SetRushInputAcceptance(false);
 
         DirectX::XMFLOAT3 move = player->inputComponent->GetMoveInput();
 
@@ -287,7 +287,7 @@ void PlayerDodgeState::Execute(float deltaTime)
     }
     if (!player->GetBodyAnimationController()->IsPlayAnimation())
     {// 保険
-        player->SetRushInputAcceptance(false, "DodgeFinished");
+        player->SetRushInputAcceptance(false);
         player->GetStateMachine()->ChangeState("Idle");
     }
 }
@@ -379,7 +379,7 @@ void PlayerDeathPendingState::Enter()
 {
     // アクターやアニメーションの更新を維持しつつ、死のカメラ演出中に継続する可能性のあるアクションを削除する。
     player->ClearTransientBattleActions();
-    player->SetRushInputAcceptance(false, "Death");
+    player->SetRushInputAcceptance(false);
     player->SetDeathCameraTransparencyDisabled(true);
     player->characterMovementComponent->SetFixedSpeed(0.0f);
     player->characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
@@ -409,7 +409,7 @@ void PlayerDeathPendingState::Exit()
 void PlayerDeathState::Enter()
 {
     elapsedTime = 0.0f;
-    player->ClearActionRequest("death_enter");
+    player->ClearActionRequest();
     player->characterMovementComponent->SetFixedSpeed(0.0f);
     player->characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
     player->characterMovementComponent->SetInputMagnitude(0.0f);
@@ -551,8 +551,6 @@ void PlayerRushState::Enter()
 
     rushComboAdvanced = false;
 
-    elapsedTime = 0.0f;
-    // The Attack request that started Rush was already consumed in Dodge.
     queuedAttackCount = 0;
     ResetRushInputGrace();
     player->invincible = true;  // ラッシュ攻撃中は無敵状態にする
@@ -735,7 +733,6 @@ void PlayerRushState::Exit()
     windupElapsedTime = 0.0f;
     rushStopDistance = 0.0f;
     currentAttackAnimation = "Rush_Attack_Fast_A";
-    elapsedTime = 0.0f;
 
     player->ClearFinalHitRushFollowUpStop();
     player->characterMovementComponent->ResetFixedSpeed(); // 攻撃が終わったら移動速度をリセットする
