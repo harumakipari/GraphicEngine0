@@ -552,8 +552,6 @@ private:
 	void UpdatePrisonOpeningStandingPingPong(float deltaTime);
 
 public:
-	// ヒット中に当たった敵を記録する
-	std::unordered_set<Actor*> hitActors; // 現在の攻撃で既に命中したActor
 
 	// 攻撃アニメーションとコンボ・Notify関連の状態
 	std::string currentAttackAnimation = "Primary_Attack_Fast_A"; // 再生中または次に再生する攻撃アニメーション名
@@ -561,27 +559,15 @@ public:
 
 	bool comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
 	bool inputWindow = false;   // コンボ受付をするかどうか
-	bool hitBox = false;   // 武器の当たり判定をつける
-	float activeHitBoxRadius = 0.75f; // Notifyで有効化中の武器判定半径
-	DirectX::XMFLOAT3 activeHitBoxOffset{ 0.0f, 0.0f, 0.0f }; // 武器判定に加えるローカルオフセット
 	bool transitionWindow = false;  // ステート遷移してもいいかどうか
-	bool justDodgeWindow = false;  // ジャスト回避受付時間
 	bool justDodgeSuccess = false; // ジャスト回避成功フラグ
-	bool showTrail = false;     // 軌跡を出現させるかどうか
-	float swordEmissivePower = 0.0f;    // 剣のエミッシブの力
 
-	// MotionWarp Notifyの移動状態
-	std::vector<AnimationMotionWarp> animationMotionWarps; // 有効中のMotionWarp Notifyごとの移動情報
 	// 操作UI
 	float operationGuidePulseAmplitude = 0.185f; // 操作ガイドの拡縮量
 	float operationGuidePulseSpeed = 3.5f; // radians / second
 
-	bool invincibleWindow = false; // アニメーションによる無敵状態かどうか
 	bool invincible = false; // 無敵状態かどうか
 
-	float justDodgeMaxTowardAttackerDot = 0.25f; // 回避方向と攻撃者方向の成立判定しきい値
-	DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{}; // 回避開始時に固定したワールド方向
-	bool dodgeWorldDirectionSnapshotValid = false; // 回避方向スナップショットが有効か
 	// Rush接近・予備動作の調整値
 	float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
 	float rushApproachPoseBlendTime = 0.12f; // Rush接近姿勢へ切り替えるブレンド時間
@@ -592,10 +578,6 @@ public:
 
 	// Rush停止距離・MotionWarp・攻撃補助の調整値
 	float normalEnemyRushSurfaceMargin = 0.15f; // 通常敵へのRush停止距離に加える余白
-	float motionWarpDesiredAttackSurfaceDistance = 0.5f; // MotionWarp攻撃時に保つ敵表面までの距離
-	float attackRotationMaxCorrectionDegrees = 55.0f; // 攻撃対象へ向く補正角度の上限
-	float attackRotationSpeedDegrees = 240.0f; // 攻撃対象へ向く補正速度（度/秒）
-	float attackAssistMaxDistance = 8.0f; // 攻撃補助対象を探す最大距離
 
 	// Rush対象と初回入力の受付状態
 	std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
@@ -619,14 +601,6 @@ public:
 	// 入力受付のコマンド
 	ActionRequest bufferCommand{}; // 入力コマンド
 
-	// 通常攻撃・Rushのダメージとヒットストップの調整値
-	int normalAttackDamage = 2; // 通常攻撃の基本ダメージ
-	float rushDamageMultiplier = 1.f; // Rush攻撃に適用するダメージ倍率
-	float finalRushDamageMultiplier = 2.5f; // 最終Rush攻撃に適用するダメージ倍率
-	int maxRushAttackCount = 7; // Rush連撃の最大攻撃回数
-
-	float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
-	float rushHitStopDuration = 0.03f; // Rush攻撃のヒットストップ時間
 
 	// Player本体の描画・操作コンポーネント
 	std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent; // Player本体を描画するスケルタルメッシュ
@@ -716,6 +690,20 @@ private:
 	bool operationGuideGameplayHudVisible = true; // Gameplay HUD側が許可する操作ガイド表示状態
 	bool operationGuideEventVisible = true; // イベント側が許可する操作ガイド表示状態
 
+	float motionWarpDesiredAttackSurfaceDistance = 0.5f; // MotionWarp攻撃時に保つ敵表面までの距離
+	float attackRotationMaxCorrectionDegrees = 55.0f; // 攻撃対象へ向く補正角度の上限
+	float attackRotationSpeedDegrees = 240.0f; // 攻撃対象へ向く補正速度（度/秒）
+	float attackAssistMaxDistance = 8.0f; // 攻撃補助対象を探す最大距離
+
+	// 通常攻撃・Rushのダメージとヒットストップの調整値
+	int normalAttackDamage = 2; // 通常攻撃の基本ダメージ
+	float rushDamageMultiplier = 1.f; // Rush攻撃に適用するダメージ倍率
+	float finalRushDamageMultiplier = 2.5f; // 最終Rush攻撃に適用するダメージ倍率
+	int maxRushAttackCount = 7; // Rush連撃の最大攻撃回数
+
+	float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
+	float rushHitStopDuration = 0.03f; // Rush攻撃のヒットストップ時間
+
 	std::weak_ptr<Enemy> attackTarget; // 攻撃補助で向きを補正する対象
 	float attackRotationStartYaw = 0.0f; // 攻撃開始時のYaw角
 	bool attackRotationTracking = false; // 攻撃対象への向き補正中か
@@ -770,6 +758,25 @@ private:
 	DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f }; // 死亡時に残す発光色
 	float playerAliveEmissionPower = 20.9f; // 生存時のPlayer本体発光強度
 
+
+	// ヒット中に当たった敵を記録する
+	std::unordered_set<Actor*> hitActors; // 現在の攻撃で既に命中したActor
+
+	bool hitBox = false;   // 武器の当たり判定をつける
+	float activeHitBoxRadius = 0.75f; // Notifyで有効化中の武器判定半径
+	DirectX::XMFLOAT3 activeHitBoxOffset{ 0.0f, 0.0f, 0.0f }; // 武器判定に加えるローカルオフセット
+	bool justDodgeWindow = false;  // ジャスト回避受付時間
+	bool showTrail = false;     // 軌跡を出現させるかどうか
+	float swordEmissivePower = 0.0f;    // 剣のエミッシブの力
+
+	// MotionWarp Notifyの移動状態
+	std::vector<AnimationMotionWarp> animationMotionWarps; // 有効中のMotionWarp Notifyごとの移動情報
+
+	bool invincibleWindow = false; // アニメーションによる無敵状態かどうか
+
+	float justDodgeMaxTowardAttackerDot = 0.25f; // 回避方向と攻撃者方向の成立判定しきい値
+	DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{}; // 回避開始時に固定したワールド方向
+	bool dodgeWorldDirectionSnapshotValid = false; // 回避方向スナップショットが有効か
 
 	// 武器の連続判定に使う前フレームの参照点
 	DirectX::XMFLOAT3 prevSwordRootPos = { 0.0f,0.0f,0.0f }; // 前フレームの剣根元位置

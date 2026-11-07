@@ -869,9 +869,7 @@ public:
 	// 複数回Jumpの実行中かを返す。
 	bool IsTripleJumpActive() const
 	{
-		return tripleJumpPhase == TripleJumpPhase::InitialTelegraph ||
-			tripleJumpPhase == TripleJumpPhase::Jumping ||
-			tripleJumpPhase == TripleJumpPhase::InterJumpTransition;
+		return tripleJumpPhase == TripleJumpPhase::InitialTelegraph || tripleJumpPhase == TripleJumpPhase::Jumping || tripleJumpPhase == TripleJumpPhase::InterJumpTransition;
 	}
 
 	// 現在のJump回のインデックスを返す。
@@ -893,7 +891,7 @@ public:
 	void StopAIMovement() const;
 
 	// 指定方向へ回転する。
-	void RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,float degreesPerSecond, float deltaTime) const;
+	void RotateTowardsPlayer(const DirectX::XMFLOAT3& direction, float degreesPerSecond, float deltaTime) const;
 
 	// 攻撃前の向き合わせ完了角度を返す。
 	float GetTurnCompleteAngle() const { return turnCompleteAngle; }
