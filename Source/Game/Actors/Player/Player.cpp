@@ -263,7 +263,13 @@ void Player::Initialize(const Transform& transform)
 	trail.Initialize();
 	SetRushWeaponVisual(false);
 
+	// UIを生成する
+	CreateUI();
 
+}
+
+void Player::CreateUI()
+{
 	// UIの生成
 	auto uiManager = GetOwnerScene()->GetUIManager();
 
@@ -325,9 +331,49 @@ void Player::Initialize(const Transform& transform)
 		uiManager->Add(lockOnGuideButtonImageComponent);
 	}
 
-
 	// 操作説明UIを入れる
-	InitializeOperationGuideUI();
+	{
+		const auto uiManager = GetOwnerScene()->GetUIManager();
+		constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> texturePaths =
+		{
+			"./Data/Textures/UI/operate_L.png", "./Data/Textures/UI/operate_LT.png",
+			"./Data/Textures/UI/operate_Y.png", "./Data/Textures/UI/operate_X.png",
+			"./Data/Textures/UI/operate_R.png",
+		};
+		constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> names =
+		{
+			"OperationGuideL", "OperationGuideLT", "OperationGuideY", "OperationGuideX", "OperationGuideR",
+		};
+		constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> positions =
+		{
+			DirectX::XMFLOAT2{ 844.7f, 1015.0f }, DirectX::XMFLOAT2{ 926.6f, 1013.0f },
+			DirectX::XMFLOAT2{ 999.5f, 1011.0f }, DirectX::XMFLOAT2{ 1068.6f, 1010.0f },
+			DirectX::XMFLOAT2{ 1143.2f, 1013.0f },
+		};
+		constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> sizes =
+		{
+			DirectX::XMFLOAT2{ 178.0f, 258.0f }, DirectX::XMFLOAT2{ 345.0f, 270.0f },
+			DirectX::XMFLOAT2{ 184.0f, 279.0f }, DirectX::XMFLOAT2{ 182.0f, 271.0f },
+			DirectX::XMFLOAT2{ 233.0f, 249.0f },
+		};
+		for (size_t index = 0; index < operationGuideItems.size(); ++index)
+		{
+			auto& item = operationGuideItems[index];
+			item.position = positions[index];
+			item.baseScale = { 0.35f, 0.35f };
+			item.visible = index == static_cast<size_t>(OperationGuideItem::L) || index == static_cast<size_t>(OperationGuideItem::R);
+			item.learned = false;
+			item.animationTimer = 0.0f;
+			item.image = std::make_shared<UIImageComponent>(texturePaths[index], names[index]);
+			item.image->SetWorldPosition(item.position);
+			item.image->SetSize(sizes[index]);
+			item.image->SetScale(item.baseScale);
+			item.image->SetPivot({ 0.5f, 0.5f });
+			item.image->SetVisible(false);
+			uiManager->Add(item.image);
+		}
+		RefreshOperationGuideUIVisibility();
+	}
 
 	// Hpバー後ろ
 	const DirectX::XMFLOAT2 hpBarPosition = { 110.0f, 88.0f };
@@ -390,19 +436,19 @@ void Player::Initialize(const Transform& transform)
 		hpFrameUiComponent,
 		hpIconUiComponent,
 	};
-
 }
 
 void Player::Update(float deltaTime)
 {
 	using namespace DirectX;
 
-	// Just Dodge SlowやHitStopの影響を受けない実時間Fade。
+	// Pause判定前に残像・瀕死演出を更新する。残像は実時間で進める。
 	UpdatePlayerPoseGhost();
 
 	// 瀕死状態のUIの更新
 	UpdateLowHpEffects();
 
+	// Pause中は入力を解除し、以降の更新を停止する。
 	if (const auto scene = GetOwnerScene(); scene && scene->IsPaused())
 	{
 		if (bufferCommand.type != ActionType::None)
@@ -416,6 +462,7 @@ void Player::Update(float deltaTime)
 	UpdateDamageFlash();
 	UpdateLockOnGuideUI();
 
+	// 牢獄演出中は位置・向きと専用姿勢を維持し、通常更新を行わない。
 	if (prisonOpeningSitting || prisonOpeningStanding)
 	{
 		if (inputComponent)
@@ -449,6 +496,7 @@ void Player::Update(float deltaTime)
 		ApplyDitherTransparencyAlpha(1.0f);
 		return;
 	}
+	// 戦闘操作停止中は、ボスフェーズ遷移時の武器表示だけを更新する。
 	if (battleActionsSuspended)
 	{
 		const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
@@ -459,6 +507,7 @@ void Player::Update(float deltaTime)
 		return;
 	}
 
+	// フレーム開始時からFinalHit待機中なら、攻撃終了処理・姿勢・武器表示を更新する。
 	if (finalHitWaiting)
 	{
 		if (finalHitAttackDrainActive && stateMachine_)
@@ -472,7 +521,7 @@ void Player::Update(float deltaTime)
 
 	const bool gameplayInputEnabled = !IsInWinState();
 
-	// Hpバーの更新
+	// 通常経路のHPバー・透明化・スロー演出を更新する。
 	UpdateHpBarUI();
 
 	// プレイヤーの透明化処理
@@ -488,149 +537,13 @@ void Player::Update(float deltaTime)
 
 	const DirectX::XMFLOAT3 playerPos = GetPosition();
 
-	// 剣の真ん中、根本、先の座標を取得する
+	// 当フレームのMovement・StateMachine・Animation更新前の剣位置と判定状態を使う。
 	DirectX::XMFLOAT3 swordRootPos = GetHitBoxPoint(swordRootComponent, activeHitBoxOffset);
 	DirectX::XMFLOAT3 swordMidPos = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
 	DirectX::XMFLOAT3 swordTipPos = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
 
 	// 当たり判定が有効な時にスフィアキャストをする
-	if (hitBox)
-	{
-		struct SwordSweepResult
-		{
-			bool hit;
-			float sweepLength;
-			HitResultWithActor result;
-		};
-
-		const auto sweepLength = [](const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end)
-			{
-				return MathHelper::Length(MathHelper::Subtract(end, start));
-			};
-
-		SwordSweepResult sweeps[] =
-		{
-			{ false, sweepLength(prevSwordRootPos, swordRootPos), {} },
-			{ false, sweepLength(prevSwordMidPos, swordMidPos), {} },
-			{ false, sweepLength(prevSwordTipPos, swordTipPos), {} },
-		};
-
-
-		const uint32_t enemyLayer = CollisionHelper::ToBit(CollisionLayer::Enemy);
-		sweeps[0].hit = CollisionFunction::SphereRayCast(
-			prevSwordRootPos, swordRootPos, sweeps[0].result, activeHitBoxRadius, enemyLayer, true);
-		sweeps[1].hit = CollisionFunction::SphereRayCast(
-			prevSwordMidPos, swordMidPos, sweeps[1].result, activeHitBoxRadius, enemyLayer, true);
-		sweeps[2].hit = CollisionFunction::SphereRayCast(
-			prevSwordTipPos, swordTipPos, sweeps[2].result, activeHitBoxRadius, enemyLayer, true);
-
-		constexpr float minSweepLength = 0.0001f;
-		const SwordSweepResult* selectedNormalHit = nullptr;
-		const SwordSweepResult* selectedOverlapHit = nullptr;
-		const SwordSweepResult* selectedDamageHit = nullptr;
-		float selectedNormalToi = FLT_MAX;
-		float selectedOverlapDepth = FLT_MAX;
-		float selectedDamageToi = FLT_MAX;
-
-		for (const SwordSweepResult& sweep : sweeps)
-		{
-			const bool validSweepLength = sweep.sweepLength > minSweepLength;
-			const float toi = sweep.hit && validSweepLength
-				? sweep.result.distance / sweep.sweepLength
-				: -1.0f;
-
-			if (!sweep.hit || !validSweepLength)
-				continue;
-
-			const float damageOrder = sweep.result.initialOverlap ? 0.0f : toi;
-			if (damageOrder < selectedDamageToi)
-			{
-				selectedDamageToi = damageOrder;
-				selectedDamageHit = &sweep;
-			}
-			if (!sweep.result.initialOverlap && sweep.result.hasPosition &&
-				sweep.result.hasNormal && toi < selectedNormalToi)
-			{
-				selectedNormalToi = toi;
-				selectedNormalHit = &sweep;
-			}
-			else if (sweep.result.initialOverlap && sweep.result.hasPosition &&
-				sweep.result.hasNormal && sweep.result.penetrationDepth < selectedOverlapDepth)
-			{
-				selectedOverlapDepth = sweep.result.penetrationDepth;
-				selectedOverlapHit = &sweep;
-			}
-		}
-
-		// 有効Positionがあれば、そのHitのActorをDamage対象にも優先する。
-		const SwordSweepResult* selectedEffectHit = selectedNormalHit
-			? selectedNormalHit
-			: selectedOverlapHit;
-		const SwordSweepResult* selectedHit = selectedEffectHit
-			? selectedEffectHit
-			: selectedDamageHit;
-		if (selectedHit)
-		{
-			const HitResultWithActor& hit = selectedHit->result;
-			if (!hitActors.contains(hit.actor))
-			{
-				const bool isRushHit = stateMachine_ &&
-					std::string(stateMachine_->GetStateName()) == "Rush";
-				if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
-				{
-					Logger::Log(U8("剣に敵が当たった"));
-					const int previousHP = enemy->GetHp();
-					const bool isNormalFourthHit = !isRushHit &&
-						currentAttackAnimation == "Primary_Attack_Fast_D1_1";
-					GruxEnemy::PlayerAttackHitType hitType =
-						isNormalFourthHit ? GruxEnemy::PlayerAttackHitType::ComboFinal
-						: GruxEnemy::PlayerAttackHitType::Normal;
-					if (isRushHit)
-					{
-						const auto* rushState = dynamic_cast<const PlayerRushState*>(
-							stateMachine_->GetCurrentState());
-						hitType = rushState &&
-							rushState->GetComboIndex() + 1 >= GetMaxRushAttackCount()
-							? GruxEnemy::PlayerAttackHitType::RushFinal
-							: GruxEnemy::PlayerAttackHitType::Rush;
-					}
-					enemy->TakeDamageFromPlayerAttack(GetCurrentAttackDamage(),
-						isNormalFourthHit, hitType, playerPos);
-					const bool lethalHit = previousHP > 0 && enemy->GetHp() <= 0;
-					if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
-					{
-						enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
-					}
-					hitActors.emplace(enemy);
-					if (isRushHit)
-					{
-						enemy->SpawnRushHitRing(hit.hitPoint, hit.normal, playerPos,
-							hit.hasPosition, hit.hasNormal);
-					}
-					Time::SetSlow(0.0f,
-						isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
-					if (lethalHit && finalHitCallback)
-					{
-						finalHitCallback(enemy, GetPosition());
-					}
-				}
-				else if (auto enemy = dynamic_cast<Enemy*>(hit.actor);
-					enemy && !enemy->IsDefeated() &&
-					enemy->TakeDamageFromPlayer(GetCurrentAttackDamage()))
-				{
-					if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
-						enemy->SpawnPlayerHitEffect(hit.hitPoint, hit.normal, playerPos);
-					hitActors.emplace(enemy);
-					if (isRushHit)
-					{
-						enemy->SpawnPlayerRushHitEffect(hit.hitPoint, hit.normal, playerPos,
-							hit.hasPosition, hit.hasNormal);
-					}
-					Time::SetSlow(0.0f, isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
-				}
-			}
-		}
-	}
+	UpdateSwordHitDetection(playerPos, swordRootPos, swordMidPos, swordTipPos);
 
 	// 最終ヒット待機とWinは、アニメーション更新後の特殊演出を優先する。
 	const bool deferSwordVisuals = finalHitWaiting || IsInWinState();
@@ -642,7 +555,7 @@ void Player::Update(float deltaTime)
 	}
 	UpdateSwordGhosts(deltaTime);
 
-	// ヒットストップ処理
+	// 今回の剣命中でFinalHit待機へ移行した場合は、入力・移動・通常State更新へ進まない。
 	if (finalHitWaiting)
 	{
 		if (const auto controller = GetBodyAnimationController())
@@ -653,19 +566,20 @@ void Player::Update(float deltaTime)
 
 	if (gameplayInputEnabled)
 	{
-		// 入力処理
+		// 当フレームの入力要求をバッファへ取り込む。
 		CaptureActionRequest(deltaTime);
 		// 現在フレームの入力から移動方向を確定し、その直後に一度だけ位置を更新する。
 		UpdateMovement();
 	}
 
-	// モーションワープを考慮してプレイヤーを更新する
+	// 確定した移動入力にMotionWarp速度を加え、Movementを実行する。
 	UpdateMovementWithMotionWarp(deltaTime);
 
 
-	// これは絶対入れる　アニメーションの更新をしているから
+	// StateMachine、移動Animation要求、AnimationController（Notifyを含む）の順に更新する。
 	Character::Update(deltaTime);
 
+	// 更新後のStateに合わせて武器表示を補完する。
 	if (IsInWinState())
 	{
 		// 更新途中にWinへ遷移した場合も、同じフレームで軌跡を二重更新しない。
@@ -681,6 +595,7 @@ void Player::Update(float deltaTime)
 
 	if (gameplayInputEnabled)
 	{
+		// 移動・State・Animation更新後にインタラクトを処理する。
 		IInteractable* interactable = FindInteractable();
 		if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
 		{
@@ -691,7 +606,7 @@ void Player::Update(float deltaTime)
 		}
 	}
 
-	// 剣の真ん中、根本、先の座標を保存する
+	// 更新前に採取した剣判定位置を、次回の連続判定用に保存する。
 	prevSwordRootPos = swordRootPos;
 	prevSwordMidPos = swordMidPos;
 	prevSwordTipPos = swordTipPos;
@@ -1009,7 +924,6 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 	{
 	case AnimationNotifyState::Type::HitBox:
 		hitBox = false;
-		activeHitBoxRadius = weaponSphereRadius;
 		activeHitBoxOffset = {};
 		break;
 	case AnimationNotifyState::Type::InputWindow:
@@ -1118,7 +1032,6 @@ void Player::OnAnimationChanged()
 	comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
 	inputWindow = false;   // コンボ受付をするかどうか
 	hitBox = false;     // 当たり判定
-	activeHitBoxRadius = weaponSphereRadius;
 	activeHitBoxOffset = {};
 	justDodgeWindow = false;    // ジャスト回避を受け付けるかどうか
 	invincibleWindow = false;   // 無敵状態かどうか
@@ -1297,11 +1210,7 @@ bool Player::BeginPrisonOpeningSitting(
 	controller->SetUseBlendSpace(false);
 	controller->SetIgnoreRootMotion(true);
 	prisonOpeningSittingPingPongPhase = 0.0f;
-	prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
-	const bool started = prisonOpeningUseStandingPingPong
-		? controller->PlayAnimationImmediate("Standing", true, true) &&
-		controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime)
-		: controller->PlayAnimationImmediate("Sitting", true, true);
+	const bool started = prisonOpeningUseStandingPingPong ? controller->PlayAnimationImmediate("Standing", true, true) && controller->HoldAnimationPose("Standing", prisonOpeningSittingPingPongStartTime) : controller->PlayAnimationImmediate("Sitting", true, true);
 	if (!started)
 	{
 		prisonOpeningSitting = false;
@@ -1358,9 +1267,10 @@ void Player::ConfigurePrisonOpeningSittingMotion(const bool useStandingPingPong,
 	if (prisonOpeningUseStandingPingPong)
 	{
 		prisonOpeningSittingPingPongPhase = 0.0f;
-		prisonOpeningSittingSampleTime = prisonOpeningSittingPingPongStartTime;
 		if (controller->PlayAnimationImmediate("Standing", true, true))
-			controller->HoldAnimationPose("Standing", prisonOpeningSittingSampleTime);
+		{
+			controller->HoldAnimationPose("Standing", prisonOpeningSittingPingPongStartTime);
+		}
 	}
 	else
 	{
@@ -1575,7 +1485,6 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 	lowHpPresentationSuppressed = false;
 	ResetLowHpEffects();
 	ResetEyeCloseOverride();
-	deathEyeCloseStarted = false;
 	deathVisualFadeStarted = false;
 	if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
 	{
@@ -1634,7 +1543,6 @@ void Player::ForceDirectionImmediate(const DirectX::XMFLOAT3& direction) const
 void Player::BeginDeathEyeClose()
 {
 	ResetEyeCloseOverride();
-	deathEyeCloseStarted = false;
 	deathVisualFadeStarted = false;
 	if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
 	{
@@ -1650,17 +1558,8 @@ void Player::UpdateDeathEyeClose(const float deathElapsedTime)
 {
 	if (!deathEyeCloseActive)
 		return;
-
-	if (!deathEyeCloseStarted && deathElapsedTime >= deathEyeCloseDelay)
-		deathEyeCloseStarted = true;
-
-	const float normalizedCloseEyeTime = std::clamp(
-		(deathElapsedTime - deathEyeCloseDelay) /
-		(std::max)(deathEyeCloseDuration, FLT_EPSILON),
-		0.0f,
-		1.0f);
-	closeEyeWeight = normalizedCloseEyeTime * normalizedCloseEyeTime *
-		(3.0f - 2.0f * normalizedCloseEyeTime);
+	const float normalizedCloseEyeTime = std::clamp((deathElapsedTime - deathEyeCloseDelay) / deathEyeCloseDuration, 0.0f, 1.0f);
+	closeEyeWeight = normalizedCloseEyeTime * normalizedCloseEyeTime * (3.0f - 2.0f * normalizedCloseEyeTime);
 	GetBodyAnimationController()->SetLocalPoseOverrideWeight(closeEyeWeight);
 }
 
@@ -2266,7 +2165,7 @@ bool Player::CanShowInitialRushGuide() const
 
 bool Player::CanShowRushComboGuide() const
 {
-	return stateMachine_ &&std::string(stateMachine_->GetStateName()) == "Rush" &&!rushTarget.expired();
+	return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush" && !rushTarget.expired();
 }
 
 
@@ -2307,7 +2206,7 @@ void Player::SetRushInputAcceptance(bool accepting)
 		if (rushButtonImageComponent)
 		{
 			rushButtonImageComponent->SetVisible(false);
-			rushButtonImageComponent->SetScale({rushButtonBaseScale.x * 0.8f,rushButtonBaseScale.y * 0.8f });
+			rushButtonImageComponent->SetScale({ rushButtonBaseScale.x * 0.8f,rushButtonBaseScale.y * 0.8f });
 		}
 		if (rushWordImageComponent) rushWordImageComponent->SetVisible(false);
 	}
@@ -2561,7 +2460,6 @@ void Player::ResetEyeCloseOverride()
 	closeEyeWeight = 0.0f;
 	eyeCloseOverrideOwner = EyeCloseOverrideOwner::None;
 	deathEyeCloseActive = false;
-	deathEyeCloseStarted = false;
 	deathVisualFadeStarted = false;
 }
 
@@ -2601,6 +2499,147 @@ DirectX::XMFLOAT3 Player::GetHitBoxPoint(const std::shared_ptr<SceneComponent>& 
 	DirectX::XMFLOAT3 worldOffset{};
 	DirectX::XMStoreFloat3(&worldOffset, offset);
 	return { base.x + worldOffset.x, base.y + worldOffset.y, base.z + worldOffset.z };
+}
+
+void Player::UpdateSwordHitDetection(const DirectX::XMFLOAT3& playerPos, const DirectX::XMFLOAT3& swordRootPos, const DirectX::XMFLOAT3& swordMidPos, const DirectX::XMFLOAT3& swordTipPos)
+{
+	if (hitBox)
+	{
+		struct SwordSweepResult
+		{
+			bool hit;
+			float sweepLength;
+			HitResultWithActor result;
+		};
+
+		const auto sweepLength = [](const DirectX::XMFLOAT3& start, const DirectX::XMFLOAT3& end)
+			{
+				return MathHelper::Length(MathHelper::Subtract(end, start));
+			};
+
+		SwordSweepResult sweeps[] =
+		{
+			{ false, sweepLength(prevSwordRootPos, swordRootPos), {} },
+			{ false, sweepLength(prevSwordMidPos, swordMidPos), {} },
+			{ false, sweepLength(prevSwordTipPos, swordTipPos), {} },
+		};
+
+
+		const uint32_t enemyLayer = CollisionHelper::ToBit(CollisionLayer::Enemy);
+		sweeps[0].hit = CollisionFunction::SphereRayCast(
+			prevSwordRootPos, swordRootPos, sweeps[0].result, activeHitBoxRadius, enemyLayer, true);
+		sweeps[1].hit = CollisionFunction::SphereRayCast(
+			prevSwordMidPos, swordMidPos, sweeps[1].result, activeHitBoxRadius, enemyLayer, true);
+		sweeps[2].hit = CollisionFunction::SphereRayCast(
+			prevSwordTipPos, swordTipPos, sweeps[2].result, activeHitBoxRadius, enemyLayer, true);
+
+		constexpr float minSweepLength = 0.0001f;
+		const SwordSweepResult* selectedNormalHit = nullptr;
+		const SwordSweepResult* selectedOverlapHit = nullptr;
+		const SwordSweepResult* selectedDamageHit = nullptr;
+		float selectedNormalToi = FLT_MAX;
+		float selectedOverlapDepth = FLT_MAX;
+		float selectedDamageToi = FLT_MAX;
+
+		for (const SwordSweepResult& sweep : sweeps)
+		{
+			const bool validSweepLength = sweep.sweepLength > minSweepLength;
+			const float toi = sweep.hit && validSweepLength
+				? sweep.result.distance / sweep.sweepLength
+				: -1.0f;
+
+			if (!sweep.hit || !validSweepLength)
+				continue;
+
+			const float damageOrder = sweep.result.initialOverlap ? 0.0f : toi;
+			if (damageOrder < selectedDamageToi)
+			{
+				selectedDamageToi = damageOrder;
+				selectedDamageHit = &sweep;
+			}
+			if (!sweep.result.initialOverlap && sweep.result.hasPosition &&
+				sweep.result.hasNormal && toi < selectedNormalToi)
+			{
+				selectedNormalToi = toi;
+				selectedNormalHit = &sweep;
+			}
+			else if (sweep.result.initialOverlap && sweep.result.hasPosition &&
+				sweep.result.hasNormal && sweep.result.penetrationDepth < selectedOverlapDepth)
+			{
+				selectedOverlapDepth = sweep.result.penetrationDepth;
+				selectedOverlapHit = &sweep;
+			}
+		}
+
+		// 有効Positionがあれば、そのHitのActorをDamage対象にも優先する。
+		const SwordSweepResult* selectedEffectHit = selectedNormalHit
+			? selectedNormalHit
+			: selectedOverlapHit;
+		const SwordSweepResult* selectedHit = selectedEffectHit
+			? selectedEffectHit
+			: selectedDamageHit;
+		if (selectedHit)
+		{
+			const HitResultWithActor& hit = selectedHit->result;
+			if (!hitActors.contains(hit.actor))
+			{
+				const bool isRushHit = stateMachine_ &&
+					std::string(stateMachine_->GetStateName()) == "Rush";
+				if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
+				{
+					Logger::Log(U8("剣に敵が当たった"));
+					const int previousHP = enemy->GetHp();
+					const bool isNormalFourthHit = !isRushHit &&
+						currentAttackAnimation == "Primary_Attack_Fast_D1_1";
+					GruxEnemy::PlayerAttackHitType hitType =
+						isNormalFourthHit ? GruxEnemy::PlayerAttackHitType::ComboFinal
+						: GruxEnemy::PlayerAttackHitType::Normal;
+					if (isRushHit)
+					{
+						const auto* rushState = dynamic_cast<const PlayerRushState*>(
+							stateMachine_->GetCurrentState());
+						hitType = rushState &&
+							rushState->GetComboIndex() + 1 >= GetMaxRushAttackCount()
+							? GruxEnemy::PlayerAttackHitType::RushFinal
+							: GruxEnemy::PlayerAttackHitType::Rush;
+					}
+					enemy->TakeDamageFromPlayerAttack(GetCurrentAttackDamage(),
+						isNormalFourthHit, hitType, playerPos);
+					const bool lethalHit = previousHP > 0 && enemy->GetHp() <= 0;
+					if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
+					{
+						enemy->SpawnHitEffect(hit.hitPoint, hit.normal, playerPos);
+					}
+					hitActors.emplace(enemy);
+					if (isRushHit)
+					{
+						enemy->SpawnRushHitRing(hit.hitPoint, hit.normal, playerPos,
+							hit.hasPosition, hit.hasNormal);
+					}
+					Time::SetSlow(0.0f,
+						isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
+					if (lethalHit && finalHitCallback)
+					{
+						finalHitCallback(enemy, GetPosition());
+					}
+				}
+				else if (auto enemy = dynamic_cast<Enemy*>(hit.actor);
+					enemy && !enemy->IsDefeated() &&
+					enemy->TakeDamageFromPlayer(GetCurrentAttackDamage()))
+				{
+					if (!isRushHit && selectedEffectHit && hit.hasPosition && hit.hasNormal)
+						enemy->SpawnPlayerHitEffect(hit.hitPoint, hit.normal, playerPos);
+					hitActors.emplace(enemy);
+					if (isRushHit)
+					{
+						enemy->SpawnPlayerRushHitEffect(hit.hitPoint, hit.normal, playerPos,
+							hit.hasPosition, hit.hasNormal);
+					}
+					Time::SetSlow(0.0f, isRushHit ? rushHitStopDuration : normalAttackHitStopDuration);
+				}
+			}
+		}
+	}
 }
 
 // 入力処理をまとめる
@@ -3017,12 +3056,8 @@ void Player::UpdateRushPromptUI()
 		rushGuideImageComponent->SetVisible(false);
 		rushButtonImageComponent->SetVisible(false);
 		rushWordImageComponent->SetVisible(false);
-		rushButtonImageComponent->SetScale({
-			rushButtonBaseScale.x * 0.8f,
-			rushButtonBaseScale.y * 0.8f });
-		rushWordImageComponent->SetScale({
-			rushWordScale.x * 0.9f,
-			rushWordScale.y * 0.9f });
+		rushButtonImageComponent->SetScale({ rushButtonBaseScale.x * 0.8f,rushButtonBaseScale.y * 0.8f });
+		rushWordImageComponent->SetScale({ rushWordScale.x * 0.9f,rushWordScale.y * 0.9f });
 		return;
 	}
 
@@ -3042,8 +3077,7 @@ void Player::UpdateRushPromptUI()
 	}
 	else
 	{
-		rushPromptAlpha = std::clamp(
-			rushPromptAlpha + uiDeltaTime / rushPromptFadeInDuration,
+		rushPromptAlpha = std::clamp(rushPromptAlpha + uiDeltaTime / rushPromptFadeInDuration,
 			0.0f, 1.0f);
 	}
 
@@ -3284,50 +3318,6 @@ void Player::HideAndResetLockOnGuideUI()
 		lockOnGuideButtonImageComponent->SetVisible(false);
 		lockOnGuideButtonImageComponent->SetScale(lockOnGuideButtonBaseScale);
 	}
-}
-
-void Player::InitializeOperationGuideUI()
-{
-	const auto uiManager = GetOwnerScene()->GetUIManager();
-	constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> texturePaths =
-	{
-		"./Data/Textures/UI/operate_L.png", "./Data/Textures/UI/operate_LT.png",
-		"./Data/Textures/UI/operate_Y.png", "./Data/Textures/UI/operate_X.png",
-		"./Data/Textures/UI/operate_R.png",
-	};
-	constexpr std::array<const char*, static_cast<size_t>(OperationGuideItem::Count)> names =
-	{
-		"OperationGuideL", "OperationGuideLT", "OperationGuideY", "OperationGuideX", "OperationGuideR",
-	};
-	constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> positions =
-	{
-		DirectX::XMFLOAT2{ 844.7f, 1015.0f }, DirectX::XMFLOAT2{ 926.6f, 1013.0f },
-		DirectX::XMFLOAT2{ 999.5f, 1011.0f }, DirectX::XMFLOAT2{ 1068.6f, 1010.0f },
-		DirectX::XMFLOAT2{ 1143.2f, 1013.0f },
-	};
-	constexpr std::array<DirectX::XMFLOAT2, static_cast<size_t>(OperationGuideItem::Count)> sizes =
-	{
-		DirectX::XMFLOAT2{ 178.0f, 258.0f }, DirectX::XMFLOAT2{ 345.0f, 270.0f },
-		DirectX::XMFLOAT2{ 184.0f, 279.0f }, DirectX::XMFLOAT2{ 182.0f, 271.0f },
-		DirectX::XMFLOAT2{ 233.0f, 249.0f },
-	};
-	for (size_t index = 0; index < operationGuideItems.size(); ++index)
-	{
-		auto& item = operationGuideItems[index];
-		item.position = positions[index];
-		item.baseScale = { 0.35f, 0.35f };
-		item.visible = index == static_cast<size_t>(OperationGuideItem::L) || index == static_cast<size_t>(OperationGuideItem::R);
-		item.learned = false;
-		item.animationTimer = 0.0f;
-		item.image = std::make_shared<UIImageComponent>(texturePaths[index], names[index]);
-		item.image->SetWorldPosition(item.position);
-		item.image->SetSize(sizes[index]);
-		item.image->SetScale(item.baseScale);
-		item.image->SetPivot({ 0.5f, 0.5f });
-		item.image->SetVisible(false);
-		uiManager->Add(item.image);
-	}
-	RefreshOperationGuideUIVisibility();
 }
 
 void Player::UpdateOperationGuideUI()
@@ -3861,6 +3851,7 @@ void Player::UpdatePrisonOpeningStandingPingPong(const float deltaTime)
 	prisonOpeningSittingPingPongPhase += (std::max)(deltaTime, 0.0f) * prisonOpeningSittingPingPongSpeed;
 	const float period = range * 2.0f;
 	const float wrappedPhase = std::fmod(prisonOpeningSittingPingPongPhase, period);
+	float prisonOpeningSittingSampleTime = 0.0f;
 	if (wrappedPhase <= range)
 	{
 		prisonOpeningSittingSampleTime = startTime + wrappedPhase;

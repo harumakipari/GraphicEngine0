@@ -785,8 +785,6 @@ public:
 	// 戦闘判断の推論を開始する。
 	void BeginCombatDecisionInference();
 
-
-
 	// 戦闘開始時の位置調整を計画できるかを返す。
 	bool CanPlanInitialReposition() const { return initialRepositionPending && !initialRepositionFallbackIdlePending; }
 
@@ -888,9 +886,6 @@ public:
 	// FastCombo用の対象情報を返す。
 	const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
 
-	// 攻撃準備のSEを再生する。
-	bool PlayAttackReadySE();
-
 	// 指定アニメーション用の武器予兆を開始する。
 	void StartWeaponTelegraph(const std::string& animationName);
 
@@ -898,14 +893,10 @@ public:
 	void StopAIMovement() const;
 
 	// 指定方向へ回転する。
-	bool RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,
-		float degreesPerSecond, float deltaTime) const;
+	void RotateTowardsPlayer(const DirectX::XMFLOAT3& direction,float degreesPerSecond, float deltaTime) const;
 
 	// 攻撃前の向き合わせ完了角度を返す。
 	float GetTurnCompleteAngle() const { return turnCompleteAngle; }
-
-	// Chargeの向き合わせの制限時間を返す。
-	float GetTurnTimeout() const { return turnTimeout; }
 
 	// 向き合わせの回転速度を返す。
 	float GetTurnSpeed() const { return turnSpeed; }
@@ -967,12 +958,8 @@ public:
 		}
 	}
 
-
 	// 攻撃後の待機アニメーションを再生する。
 	void BeginRecovery() const;
-
-	// 選択中の攻撃に対応するRecovery時間を返す。
-	float GetSelectedAttackRecoveryDuration() const { return GetRecoveryDurationForCurrentAttack(); }
 
 	// FastComboの準備待機時間を返す。
 	float GetBehaviorPrepareDuration() const { return fastComboPrepareDuration; }
@@ -1079,7 +1066,6 @@ private:
 
 	// 4段目の被弾リアクションの診断情報を初期化する。
 	void ResetFourthHitReaction();
-
 
 	// 距離を近距離・中距離・遠距離に分類する。
 	BossDistanceRegion GetDistanceRegion(float distance) const;
@@ -1604,10 +1590,6 @@ private:
 
 	float turnSpeed = 480.0f;  // 攻撃前などの向き合わせに使う回転速度。
 	float turnCompleteAngle = 15.0f;  // 攻撃前の向き合わせを完了とみなす角度。
-	float turnTimeout = 1.5f;  // Chargeの向き合わせに使うタイムアウト時間。
-	std::string attackReadySEName = "enemy_attack_ready1";  // 攻撃準備時に再生するSE名。
-	float attackReadySEVolume = 1.0f;  // 攻撃準備SEの音量。
-
 	// Positioningの境界・アニメーション
 	static constexpr float bossRoomMinX = -2.5f;  // ボス部屋のX座標の下限。
 	static constexpr float bossRoomMaxX = 19.5f;  // ボス部屋のX座標の上限。
@@ -1765,7 +1747,6 @@ private:
 		float tripleChargeTransitionElapsed = 0.0f;  // Charge間の遷移経過時間。
 		float tripleChargeTransitionDuration = 0.3f;  // Charge間の遷移時間。
 		float tripleChargeLegElapsed = 0.0f;  // 現在のChargeの経過時間。
-		float tripleChargeLegDistance = 0.0f;  // 現在のChargeの移動距離。
 		float tripleChargeTelegraphElapsed = 0.0f;  // 複数回Chargeの予兆の経過時間。
 		bool tripleChargeTelegraphVisible = false;  // 複数回Chargeの予兆が表示中か。
 		DirectX::XMFLOAT3 tripleChargeTelegraphDirection{};  // 複数回Chargeの予兆の方向。
@@ -1779,10 +1760,7 @@ private:
 		float tripleChargeLegMaxDistance = 50.0f;  // 複数回Chargeの各移動の最大距離。
 		float tripleChargeLegMaxDuration = 50.0f;  // 複数回Chargeの各移動の最大時間。
 		bool tripleChargeRepositionActive = false;  // 複数回Chargeの位置補正中か。
-		DirectX::XMFLOAT3 tripleChargeRepositionStartPosition{};  // 複数回Chargeの位置補正の開始位置。
 		DirectX::XMFLOAT3 tripleChargeRepositionTargetPosition{};  // 複数回Chargeの位置補正の目標位置。
-		DirectX::XMFLOAT3 tripleChargeRepositionDirection{};  // 複数回Chargeの位置補正の方向。
-		float tripleChargeRepositionShortage = 0.0f;  // 複数回Chargeの位置補正時の不足距離。
 	} chargeBT;  // Chargeの実行状態とCleanup後も保持する調整値。
 
 	// Charge準備・移動・判定設定
