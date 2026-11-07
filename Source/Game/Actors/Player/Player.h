@@ -197,7 +197,7 @@ public:
 	// 指定した操作ガイド項目の表示要求を設定する。
 	void SetOperationGuideItemVisible(OperationGuideItem item, bool visible);
 	// 指定した操作ガイド項目の学習状態を設定する。
-	void SetOperationGuideItemLearned(OperationGuideItem item, bool learned = true);
+	void SetOperationGuideItemLearned(OperationGuideItem item);
 	// 指定した操作ガイド項目の表示要求を返す。
 	bool IsOperationGuideItemVisible(OperationGuideItem item) const;
 	// 指定した操作ガイド項目が学習済みかを返す。
@@ -320,8 +320,6 @@ public:
 
 	// HP、Transform、現在Stateを維持して一時的な戦闘状態を解除する。
 	void ClearTransientBattleActions();
-	// フェーズ遷移前に戦闘表示とRushガイドを解除する。
-	void ClearBattleVisualsForPhaseTransition();
 
 	// シネマティックでTransformを変更する前にゲームプレイ操作を終了する。
 	void CancelGameplayActionsForCinematic();
@@ -337,10 +335,6 @@ public:
 	// 描画・残像演出
 	// 剣の軌跡を描画する。
 	void RenderTrail(ID3D11DeviceContext* immediateContext);
-	// Just Dodge成功時のPlayer残像生成を開始する。
-	void CapturePlayerPoseGhost();
-	// Player残像の表示状態と生成状態をリセットする。
-	void ResetPlayerPoseGhost();
 	// カメラ連携
 	// Focus開始時に使用するPlayerの正面方向を保存する。
 	void SetFocusDirection(const DirectX::XMFLOAT3& focusDir)
@@ -359,8 +353,6 @@ public:
 	// 演出中のPlayer透明化抑制状態を設定する。
 	void SetIsPlayerTransparency(const bool isTransparency) { moviePerform = !isTransparency; }
 
-	// 移動モードを切り替え、対応する移動アニメーションを更新する。
-	void SetLocomotionMode(LocomotionMode mode);
 
 	// 入力要求・移動
 	// 保存済みの入力要求を現在の状態で実行可能なState遷移へ変換し、成功時だけ消費する。
@@ -402,8 +394,6 @@ public:
 	void SetRushInputAcceptance(bool accepting);
 
 	// Player/Bossの解除タイミングを独立して管理する。
-	// ジャスト回避のタイムスケールを更新する。
-	void UpdateJustDodgeTimeScales();
 	// PlayerのJust Dodgeスローを通常速度へ戻し始める。
 	void BeginPlayerSlowReturn();
 	// BossのJust DodgeまたはRushスローを通常速度へ戻し始める。
@@ -431,8 +421,6 @@ public:
 	void AcquireAttackTarget();
 	// 攻撃対象へ角度制限付きで向きを補正する。
 	void UpdateAttackTargetRotation(float deltaTime);
-	// 攻撃対象への向き補正を停止する。
-	void StopAttackTargetRotation() { attackRotationTracking = false; }
 	// 攻撃補助対象と向き補正状態を解除する。
 	void ClearAttackTarget();
 
@@ -442,6 +430,13 @@ public:
 	bool IsBossBattle() const { return isBossBattle; }
 
 private:
+	// 移動モードを切り替え、対応する移動アニメーションを更新する。
+	void SetLocomotionMode(LocomotionMode mode);
+	// ジャスト回避のタイムスケールを更新する。
+	void UpdateJustDodgeTimeScales();
+	// Just Dodge成功時のPlayer残像生成を開始する。
+	void CapturePlayerPoseGhost();
+
 	// TPS操作時の移動入力と向きを更新する。
 	void UpdateTPSLocomotion();
 	// ロックオン中の移動入力と向きを更新する。
@@ -457,6 +452,8 @@ private:
 	bool RebuildEyeClosePoseOverride();
 	// 目閉じ姿勢オーバーライドと関連状態を初期化する。
 	void ResetEyeCloseOverride();
+	// Player残像の表示状態と生成状態をリセットする。
+	void ResetPlayerPoseGhost();
 
 	// SE再生Notifyを解釈して対応する効果音を再生する。
 	void HandleAnimationPlaySE(const AnimationNotifyEvent& event) const;
@@ -496,6 +493,8 @@ private:
 		const DirectX::XMFLOAT3* swordTipPos, bool updateTrail);
 	// 特殊演出中の剣の表示状態をアニメーション時刻から再評価する。
 	void UpdateWeaponVisualPresentation(float deltaTime, bool updateTrail = true);
+	void InitializeAnimations();
+
 	// UIを生成する。
 	void CreateUI();
 
