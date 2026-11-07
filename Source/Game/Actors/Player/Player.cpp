@@ -397,12 +397,13 @@ void Player::Update(float deltaTime)
 {
 	using namespace DirectX;
 
-	// Just Dodge SlowやHitStopの影響を受けない実時間Fade。
+	// Pause判定前に残像・瀕死演出を更新する。残像は実時間で進める。
 	UpdatePlayerPoseGhost();
 
 	// 瀕死状態のUIの更新
 	UpdateLowHpEffects();
 
+	// Pause中は入力を解除し、以降の更新を停止する。
 	if (const auto scene = GetOwnerScene(); scene && scene->IsPaused())
 	{
 		if (bufferCommand.type != ActionType::None)
@@ -416,6 +417,7 @@ void Player::Update(float deltaTime)
 	UpdateDamageFlash();
 	UpdateLockOnGuideUI();
 
+	// 牢獄演出中は位置・向きと専用姿勢を維持し、通常更新を行わない。
 	if (prisonOpeningSitting || prisonOpeningStanding)
 	{
 		if (inputComponent)
@@ -449,6 +451,7 @@ void Player::Update(float deltaTime)
 		ApplyDitherTransparencyAlpha(1.0f);
 		return;
 	}
+	// 戦闘操作停止中は、ボスフェーズ遷移時の武器表示だけを更新する。
 	if (battleActionsSuspended)
 	{
 		const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
@@ -459,6 +462,7 @@ void Player::Update(float deltaTime)
 		return;
 	}
 
+	// フレーム開始時からFinalHit待機中なら、攻撃終了処理・姿勢・武器表示を更新する。
 	if (finalHitWaiting)
 	{
 		if (finalHitAttackDrainActive && stateMachine_)
@@ -472,7 +476,7 @@ void Player::Update(float deltaTime)
 
 	const bool gameplayInputEnabled = !IsInWinState();
 
-	// Hpバーの更新
+	// 通常経路のHPバー・透明化・スロー演出を更新する。
 	UpdateHpBarUI();
 
 	// プレイヤーの透明化処理
@@ -488,7 +492,7 @@ void Player::Update(float deltaTime)
 
 	const DirectX::XMFLOAT3 playerPos = GetPosition();
 
-	// 剣の真ん中、根本、先の座標を取得する
+	// 当フレームのMovement・StateMachine・Animation更新前の剣位置と判定状態を使う。
 	DirectX::XMFLOAT3 swordRootPos = GetHitBoxPoint(swordRootComponent, activeHitBoxOffset);
 	DirectX::XMFLOAT3 swordMidPos = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
 	DirectX::XMFLOAT3 swordTipPos = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
@@ -642,7 +646,7 @@ void Player::Update(float deltaTime)
 	}
 	UpdateSwordGhosts(deltaTime);
 
-	// ヒットストップ処理
+	// 今回の剣命中でFinalHit待機へ移行した場合は、入力・移動・通常State更新へ進まない。
 	if (finalHitWaiting)
 	{
 		if (const auto controller = GetBodyAnimationController())
@@ -653,19 +657,20 @@ void Player::Update(float deltaTime)
 
 	if (gameplayInputEnabled)
 	{
-		// 入力処理
+		// 当フレームの入力要求をバッファへ取り込む。
 		CaptureActionRequest(deltaTime);
 		// 現在フレームの入力から移動方向を確定し、その直後に一度だけ位置を更新する。
 		UpdateMovement();
 	}
 
-	// モーションワープを考慮してプレイヤーを更新する
+	// 確定した移動入力にMotionWarp速度を加え、Movementを実行する。
 	UpdateMovementWithMotionWarp(deltaTime);
 
 
-	// これは絶対入れる　アニメーションの更新をしているから
+	// StateMachine、移動Animation要求、AnimationController（Notifyを含む）の順に更新する。
 	Character::Update(deltaTime);
 
+	// 更新後のStateに合わせて武器表示を補完する。
 	if (IsInWinState())
 	{
 		// 更新途中にWinへ遷移した場合も、同じフレームで軌跡を二重更新しない。
@@ -681,6 +686,7 @@ void Player::Update(float deltaTime)
 
 	if (gameplayInputEnabled)
 	{
+		// 移動・State・Animation更新後にインタラクトを処理する。
 		IInteractable* interactable = FindInteractable();
 		if (InputSystem::GetInputState("GamePadA", InputStateMask::Trigger))
 		{
@@ -691,7 +697,7 @@ void Player::Update(float deltaTime)
 		}
 	}
 
-	// 剣の真ん中、根本、先の座標を保存する
+	// 更新前に採取した剣判定位置を、次回の連続判定用に保存する。
 	prevSwordRootPos = swordRootPos;
 	prevSwordMidPos = swordMidPos;
 	prevSwordTipPos = swordTipPos;

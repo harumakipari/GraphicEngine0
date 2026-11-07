@@ -192,7 +192,6 @@ void GruxEnemy::StartChargeAttackBT()
     chargeBT.tripleChargeIndex = 0;
     chargeBT.tripleChargeTransitionElapsed = 0.0f;
     chargeBT.tripleChargeLegElapsed = 0.0f;
-    chargeBT.tripleChargeLegDistance = 0.0f;
     chargeBT.tripleFinalWallHit = false;
     chargeBT.activeStunDuration = GetStunDuration();
     chargeBT.phase = ChargeBTPhase::Telegraph;
@@ -234,7 +233,6 @@ bool GruxEnemy::BeginTripleChargeLeg()
     const int index = std::clamp(chargeBT.tripleChargeIndex, 0, 2);
     chargeBT.tripleChargeStartPositions[index] = GetPosition();
     chargeBT.tripleChargeLegElapsed = 0.0f;
-    chargeBT.tripleChargeLegDistance = 0.0f;
     chargeBT.triplePhase = TripleChargePhase::Charging;
     chargeBT.phase = ChargeBTPhase::Charging;
     return true;
@@ -249,10 +247,7 @@ bool GruxEnemy::BeginTripleChargeTransition()
     chargeBT.triplePhase = TripleChargePhase::InterChargeTransition;
     chargeBT.tripleChargeTransitionElapsed = 0.0f;
     chargeBT.tripleChargeRepositionActive = false;
-    chargeBT.tripleChargeRepositionStartPosition = GetPosition();
-    chargeBT.tripleChargeRepositionTargetPosition = chargeBT.tripleChargeRepositionStartPosition;
-    chargeBT.tripleChargeRepositionDirection = {};
-    chargeBT.tripleChargeRepositionShortage = 0.0f;
+    chargeBT.tripleChargeRepositionTargetPosition = GetPosition();
     return true;
 }
 
@@ -401,6 +396,9 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateChargeAttackBT(float dt)
 
 GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
 {
+    // ChargeBTPhaseは攻撃全体、TripleChargePhaseは各段と段間の進行を管理する。
+    // CompleteはこのBTステップの終了を表し、攻撃成功とは限らない。
+    // Completed・Abortedは三連突進の終端状態、resultは終了理由、failedはBTの失敗状態。
     if (!IsChargeAttackBTActive()) return ChargeBTStepResult::Failed;
     if (chargeBT.phase == ChargeBTPhase::Result) return ChargeBTStepResult::Complete;
     const auto controller = GetBodyAnimationController();
@@ -411,6 +409,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         return ChargeBTStepResult::Complete;
     }
 
+    // 初回だけ予備動作中に方向を固定し、予兆表示へ進む。
     if (chargeBT.phase == ChargeBTPhase::Telegraph &&
         chargeBT.triplePhase == TripleChargePhase::InitialWindup)
     {
@@ -451,6 +450,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         return ChargeBTStepResult::Running;
     }
 
+    // 段間は向きを合わせながら、次段に必要な余白を確保する。
     if (chargeBT.triplePhase == TripleChargePhase::InterChargeTransition)
     {
         const auto context = BuildTargetContext();
@@ -471,6 +471,8 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             const DirectX::XMFLOAT3 nextDirection{
                 context.directionToPlayer.x / directionLength, 0.0f,
                 context.directionToPlayer.z / directionLength };
+
+            // 次段の前方・側方の余白と不足距離を測る。
             float clearance = 0.0f;
             bool wallHit = false;
             const DirectX::XMFLOAT3 currentPosition = GetPosition();
@@ -483,15 +485,17 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             bool sideWallHit = false;
             EvaluateChargeSideClearance(currentPosition, nextDirection,
                 sideClearance, sideNormal, sideWallHit);
-            chargeBT.tripleChargeRepositionShortage = wallHit
+            const float repositionShortage = wallHit
                 ? (std::max)(0.0f, requiredClearance - clearance) : 0.0f;
             const float requiredSideClearance = (std::max)(0.05f,
                 radius * chargeWallCastRadiusScale) + chargeWallCastSafetyMargin +
                 tripleChargeRepositionSideSafetyMargin;
             const float sideShortage = sideWallHit
                 ? (std::max)(0.0f, requiredSideClearance - sideClearance) : 0.0f;
+
+            // 補正中でなければ、不足分から補正先を計画する。
             if (clearanceMeasured && !chargeBT.tripleChargeRepositionActive &&
-                (chargeBT.tripleChargeRepositionShortage > 0.0f || sideShortage > 0.0f))
+                (repositionShortage > 0.0f || sideShortage > 0.0f))
             {
                 DirectX::XMFLOAT3 inwardNormal = sideNormal;
                 const DirectX::XMFLOAT3 roomCenter{
@@ -505,10 +509,10 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                     inwardNormal.z = -inwardNormal.z;
                 }
                 DirectX::XMFLOAT3 correction{
-                    -nextDirection.x * chargeBT.tripleChargeRepositionShortage +
+                    -nextDirection.x * repositionShortage +
                         inwardNormal.x * sideShortage,
                     0.0f,
-                    -nextDirection.z * chargeBT.tripleChargeRepositionShortage +
+                    -nextDirection.z * repositionShortage +
                         inwardNormal.z * sideShortage };
                 const float correctionLength = std::sqrt(
                     correction.x * correction.x + correction.z * correction.z);
@@ -520,15 +524,14 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                     bossRoomSafetyMargin,
                     wallRadius + chargeWallCastSafetyMargin);
                 chargeBT.tripleChargeRepositionActive = plannedDistance > 0.0001f;
-                chargeBT.tripleChargeRepositionStartPosition = currentPosition;
-                chargeBT.tripleChargeRepositionDirection = correctionLength > 0.0001f
+                const DirectX::XMFLOAT3 repositionDirection = correctionLength > 0.0001f
                     ? DirectX::XMFLOAT3{ correction.x / correctionLength, 0.0f, correction.z / correctionLength }
                     : DirectX::XMFLOAT3{};
                 chargeBT.tripleChargeRepositionTargetPosition = currentPosition;
                 chargeBT.tripleChargeRepositionTargetPosition.x +=
-                    chargeBT.tripleChargeRepositionDirection.x * plannedDistance;
+                    repositionDirection.x * plannedDistance;
                 chargeBT.tripleChargeRepositionTargetPosition.z +=
-                    chargeBT.tripleChargeRepositionDirection.z * plannedDistance;
+                    repositionDirection.z * plannedDistance;
                 chargeBT.tripleChargeRepositionTargetPosition.x = std::clamp(
                     chargeBT.tripleChargeRepositionTargetPosition.x,
                     bossRoomMinX + boundaryMargin, bossRoomMaxX - boundaryMargin);
@@ -537,6 +540,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                     bossRoomMinZ + boundaryMargin, bossRoomMaxZ - boundaryMargin);
             }
 
+            // 保存した補正先へ移動し、到着または経路遮断で補正を止める。
             if (chargeBT.tripleChargeRepositionActive)
             {
                 const DirectX::XMFLOAT3 beforeMove = GetPosition();
@@ -568,6 +572,8 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
                 SetPosition(moved);
             }
         }
+
+        // 補正完了を待たず、段間の経過時間で次段の方向固定・予兆準備へ進む。
         if (chargeBT.tripleChargeTransitionElapsed < chargeBT.tripleChargeTransitionDuration)
             return ChargeBTStepResult::Running;
         const auto finalContext = BuildTargetContext();
@@ -596,13 +602,14 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         return ChargeBTStepResult::Running;
     }
 
+    // 各段の予兆を拡大・保持してから突進を開始する。
     if (chargeBT.triplePhase == TripleChargePhase::TelegraphHold)
     {
         chargeBT.tripleChargeTelegraphElapsed += (std::max)(0.0f, dt);
         const float expandDuration = (std::max)(0.001f, tripleChargeTelegraphExpandDuration);
         const float expandProgress = std::clamp(
             chargeBT.tripleChargeTelegraphElapsed / expandDuration, 0.0f, 1.0f);
-        // Ease-out cubic: quick initial extension, gentle settle at full length.
+        // 最初は速く伸ばし、終端で緩やかに止める。
         const float easedProgress = 1.0f - std::pow(1.0f - expandProgress, 3.0f);
         UpdateChargeTelegraphVisual(easedProgress);
         if (chargeBT.tripleChargeTelegraphElapsed < expandDuration +
@@ -617,6 +624,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         return ChargeBTStepResult::Running;
     }
 
+    // 各段の突進。距離は今回の移動更新前の位置から算出する。
     if (chargeBT.phase != ChargeBTPhase::Charging || chargeBT.triplePhase != TripleChargePhase::Charging)
         return ChargeBTStepResult::Failed;
     if (controller->GetCurrentAnimationName() != "Stampede_0")
@@ -631,12 +639,13 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
     const auto startPosition = chargeBT.tripleChargeStartPositions[std::clamp(chargeBT.tripleChargeIndex, 0, 2)];
     const float dx = currentPosition.x - startPosition.x;
     const float dz = currentPosition.z - startPosition.z;
-    chargeBT.tripleChargeLegDistance = std::sqrt(dx * dx + dz * dz);
+    const float legDistance = std::sqrt(dx * dx + dz * dz);
     const bool finalLeg = chargeBT.tripleChargeIndex >= 2;
+    // 1・2段目は壁際でLegCompleteに切り替え、最終段は壁衝突を終了理由にする。
     chargeBT.result = UpdateChargeAttackMovement(dt, !finalLeg);
     if (chargeBT.result == ChargeAttackEndReason::None)
     {
-        if (!finalLeg && (chargeBT.tripleChargeLegDistance >= chargeBT.tripleChargeLegMaxDistance ||
+        if (!finalLeg && (legDistance >= chargeBT.tripleChargeLegMaxDistance ||
             chargeBT.tripleChargeLegElapsed >= chargeBT.tripleChargeLegMaxDuration))
         {
             chargeBT.result = ChargeAttackEndReason::LegComplete;
@@ -646,6 +655,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
             return ChargeBTStepResult::Running;
     }
 
+    // 段の終了後はインデックスを進め、段間へ移る。
     if (chargeBT.result == ChargeAttackEndReason::LegComplete)
     {
         ++chargeBT.tripleChargeIndex;
@@ -660,6 +670,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
         return ChargeBTStepResult::Running;
     }
 
+    // WallHitで終了した場合、1・2段目はAborted、最終段はCompletedとして壁スタンへ渡す。
     DisableAttackHitBoxes();
     if (chargeBT.tripleChargeIndex < 2 && chargeBT.result == ChargeAttackEndReason::WallHit)
     {

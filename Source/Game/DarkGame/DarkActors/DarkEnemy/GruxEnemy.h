@@ -1749,7 +1749,6 @@ private:
 		float tripleChargeTransitionElapsed = 0.0f;  // Charge間の遷移経過時間。
 		float tripleChargeTransitionDuration = 0.3f;  // Charge間の遷移時間。
 		float tripleChargeLegElapsed = 0.0f;  // 現在のChargeの経過時間。
-		float tripleChargeLegDistance = 0.0f;  // 現在のChargeの移動距離。
 		float tripleChargeTelegraphElapsed = 0.0f;  // 複数回Chargeの予兆の経過時間。
 		bool tripleChargeTelegraphVisible = false;  // 複数回Chargeの予兆が表示中か。
 		DirectX::XMFLOAT3 tripleChargeTelegraphDirection{};  // 複数回Chargeの予兆の方向。
@@ -1763,10 +1762,7 @@ private:
 		float tripleChargeLegMaxDistance = 50.0f;  // 複数回Chargeの各移動の最大距離。
 		float tripleChargeLegMaxDuration = 50.0f;  // 複数回Chargeの各移動の最大時間。
 		bool tripleChargeRepositionActive = false;  // 複数回Chargeの位置補正中か。
-		DirectX::XMFLOAT3 tripleChargeRepositionStartPosition{};  // 複数回Chargeの位置補正の開始位置。
 		DirectX::XMFLOAT3 tripleChargeRepositionTargetPosition{};  // 複数回Chargeの位置補正の目標位置。
-		DirectX::XMFLOAT3 tripleChargeRepositionDirection{};  // 複数回Chargeの位置補正の方向。
-		float tripleChargeRepositionShortage = 0.0f;  // 複数回Chargeの位置補正時の不足距離。
 	} chargeBT;  // Chargeの実行状態とCleanup後も保持する調整値。
 
 	// Charge準備・移動・判定設定
