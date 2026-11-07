@@ -785,8 +785,6 @@ public:
 	// 戦闘判断の推論を開始する。
 	void BeginCombatDecisionInference();
 
-
-
 	// 戦闘開始時の位置調整を計画できるかを返す。
 	bool CanPlanInitialReposition() const { return initialRepositionPending && !initialRepositionFallbackIdlePending; }
 

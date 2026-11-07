@@ -464,6 +464,9 @@ private:
 	// 武器コンポーネントのローカルオフセットを反映した攻撃判定位置を求める。
 	DirectX::XMFLOAT3 GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const;
 
+	// 武器の当たり判定
+	void UpdateSwordHitDetection(const DirectX::XMFLOAT3& playerPos,const DirectX::XMFLOAT3& swordRootPos,const DirectX::XMFLOAT3& swordMidPos,const DirectX::XMFLOAT3& swordTipPos);
+
 	// 入力要求の内部処理
 	// 入力を一定時間保持するアクション要求として記録する。
 	void CaptureActionRequest(float deltaTime);
@@ -493,6 +496,8 @@ private:
 		const DirectX::XMFLOAT3* swordTipPos, bool updateTrail);
 	// 特殊演出中の剣の表示状態をアニメーション時刻から再評価する。
 	void UpdateWeaponVisualPresentation(float deltaTime, bool updateTrail = true);
+	// UIを生成する。
+	void CreateUI();
 
 	// HUD・操作ガイドの内部更新
 	// Rush入力受付状態に合わせてガイドUIを更新する。
@@ -501,8 +506,6 @@ private:
 	void UpdateLockOnGuideUI();
 	// ロックオンガイドUIを非表示にして表示状態を初期化する。
 	void HideAndResetLockOnGuideUI();
-	// 操作ガイドUIの画像と初期配置を生成する。
-	void InitializeOperationGuideUI();
 	// 操作ガイドUIの点滅と表示状態を更新する。
 	void UpdateOperationGuideUI();
 	// Hpバーの更新
@@ -803,8 +806,6 @@ private:
 	float playerPoseGhostSpawnTimer = 0.0f; // 次のPlayer残像を生成するまでの経過時間
 	size_t nextPlayerPoseGhostIndex = 0; // 次に再利用するPlayer残像の添字
 	bool playerPoseGhostSpawnSequenceActive = false; // Player残像の連続生成中か
-
-	float weaponSphereRadius = 0.75f;    // 剣の球の当たり判定の半径
 
 	// 剣の軌跡
 	Trail trail;

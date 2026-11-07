@@ -650,7 +650,6 @@ bool SkeletonWarriorActor::TakeDamageFromPlayer(int damage)
     if (hp > 0)
         return true;
 
-    // Mark death before side effects so repeated damage cannot replay the SE.
     state = State::Dead;
     ResetTutorialAttackHighlight();
     CoreAudio::PlayOneShot("./Data/Sound/SE/skeleton_death.wav", 5.0f);

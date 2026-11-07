@@ -2696,17 +2696,9 @@ void GruxEnemy::RefreshFastComboTargetContext(int stage)
 	if (stage == 0)
 		fastComboStageTargetContexts = {};
 
-	// Snapshot only: do not rotate, move, or change MotionWarp here.
-	// Replace invalid contexts too, so a missing player cannot leave a stale target.
 	fastComboTargetContext = BuildTargetContext();
 	fastComboStageTargetContexts[stage] = fastComboTargetContext;
 }
-
-
-
-
-
-
 
 
 void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime)
