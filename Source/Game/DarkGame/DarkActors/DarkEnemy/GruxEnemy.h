@@ -193,7 +193,6 @@ public:
 	{
 		RoarStage stage = RoarStage::None;  // Roarの実行段階。
 		bool shockwaveFired = false;  // Roarの衝撃波を発生済みか。
-		bool hitPlayer = false;  // Roarがプレイヤーにヒットしたか。
 		float elapsed = 0.0f;  // Roarの経過時間。
 		float stalled = 0.0f;  // Roarアニメーションの進行が停止した時間。
 		float previousTime = 0.0f;  // 前回のRoarアニメーション時刻。
@@ -796,9 +795,6 @@ public:
 	// FastCombo段間の向き合わせ開始までの待機時間を返す。
 	float GetInterStageFaceDelay() const { return interStageFaceDelay; }
 
-	// FastComboの実行状態を設定する。
-	void SetFastComboRuntimeState(FastComboRuntimeState state) { fastComboRuntimeState = state; }
-
 	// FastComboの実行段階を設定する。
 	void SetFastComboRuntimeStage(int stage) { fastComboRuntimeStage = stage; }
 
@@ -1234,8 +1230,6 @@ private:
 	std::shared_ptr<CharacterMovementComponent> characterMovementComponent;  // ボスの移動を制御するコンポーネント。
 
 	std::shared_ptr<CapsuleComponent> enemyCapsuleComponent;  // ボス本体の衝突カプセル。
-	std::shared_ptr<CapsuleComponent> leftWeaponCollisionComp;  // 左武器の衝突カプセル。
-	std::shared_ptr<CapsuleComponent> rightWeaponCollisionComp;  // 右武器の衝突カプセル。
 	std::string leftWeapon = "leftWeapon";  // 左武器の識別名。
 	std::string rightWeapon = "rightWeapon";  // 右武器の識別名。
 	std::string bothWeapon = "bothWeapon";  // 両武器の識別名。
@@ -1550,7 +1544,6 @@ private:
 	float fastComboStepInMaxSpeed = 30.0f;  // FastComboの最大踏み込み速度。
 	float interStageMaxFacingAngle = 70.0f;  // FastComboの段間で向き合わせを行う角度の上限。
 	float interStageFaceDelay = 0.5f;  // FastComboの段間で向き合わせを始めるまでの時間。
-	FastComboRuntimeState fastComboRuntimeState = FastComboRuntimeState::Attack;  // FastComboの攻撃中・段間待機・向き合わせの状態。
 	bool fastComboStepInActive = false;  // FastComboの踏み込み移動中かを示す。
 	int fastComboRuntimeStage = -1;  // 実行中のFastCombo段階。
 
@@ -1603,7 +1596,6 @@ private:
 	float positioningMoveStopSpeedThreshold = 0.10f;  // 移動アニメーションを停止する速度の閾値。
 	float positioningMoveStopDelay = 0.15f;  // 移動アニメーションを停止するまでの待ち時間。
 	float positioningMoveStopTimer = 0.0f;  // 移動停止判定の経過時間。
-	float positioningAnimationActualSpeed = 0.0f;  // 位置調整アニメーションに使用する実速度。
 	bool positioningAnimationMoving = false;  // 位置調整の移動アニメーション中か。
 
 
@@ -1731,7 +1723,6 @@ private:
 		float animationStalled = 0.0f;  // Chargeアニメーションの進行が停止した時間。
 		float previousAnimationTime = 0.0f;  // 前回のChargeアニメーション時刻。
 		float stunElapsed = 0.0f;  // Charge後のスタンの経過時間。
-		float recoveryDuration = 0.0f;  // Charge後のRecovery時間。
 		float activeStunDuration = 0.0f;  // 現在適用するスタン時間。
 		TripleChargePhase triplePhase = TripleChargePhase::None;  // 複数回Chargeの実行段階。
 		bool phase2SettingsLatched = false;  // 第2段階の設定を確定済みか。

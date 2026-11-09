@@ -850,9 +850,9 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
         if (status == ChargeBTStepResult::Running) return status;
         if (status == ChargeBTStepResult::Failed) chargeBT.failed = true;
         chargeBT.stunPhase = ChargeBTStunPhase::None;
-        chargeBT.recoveryDuration = status == ChargeBTStepResult::Complete
+        const float recoveryDuration = status == ChargeBTStepResult::Complete
             ? GetPostStunRecoveryDuration() : GetRecoveryDurationForCurrentAttack();
-        SetNextRecoveryDuration(chargeBT.recoveryDuration);
+        SetNextRecoveryDuration(recoveryDuration);
     }
     else if (chargeBT.phase == ChargeBTPhase::Result)
     {
@@ -861,12 +861,12 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
             if (BeginChargeStunBT()) return ChargeBTStepResult::Running;
             chargeBT.failed = true;
         }
-        chargeBT.recoveryDuration = GetRecoveryDurationForCurrentAttack();
+        float recoveryDuration = GetRecoveryDurationForCurrentAttack();
         if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::PlayerHit)
         {
-            chargeBT.recoveryDuration = GetChargePlayerHitRecoveryDuration();
+            recoveryDuration = GetChargePlayerHitRecoveryDuration();
         }
-        SetNextRecoveryDuration(chargeBT.recoveryDuration);
+        SetNextRecoveryDuration(recoveryDuration);
     }
     else return ChargeBTStepResult::Failed;
     FinishChargeAttackBT();
@@ -937,7 +937,7 @@ void GruxEnemy::CleanupChargeAttackBT()
         IsAnimationEditorPreviewActive();
     if (!preserveAnimation) EndPositioningAnimation();
     positioningAnimationMoving = false;
-    positioningAnimationActualSpeed = positioningMoveStopTimer = 0.0f;
+    positioningMoveStopTimer = 0.0f;
     chargeDirection = {};
     chargeDirectionLocked = false;
     chargeElapsedTime = 0.0f;

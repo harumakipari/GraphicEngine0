@@ -658,7 +658,7 @@ void GruxEnemy::ApplyRoarShockwave()
 	SpawnRoarGroundBurst();
 	SpawnGroundImpactEffect();
 	const auto player = GetOwnerScene()->GetActorManager()->GetActorOfType<Player>();
-	if (!player || roarBT.hitPlayer) return;
+	if (!player) return;
 	auto direction = MathHelper::Subtract(player->GetPosition(), GetPosition());
 	if (std::abs(direction.y) > roarHeightTolerance) return;
 	direction.y = 0.0f;
@@ -674,7 +674,7 @@ void GruxEnemy::ApplyRoarShockwave()
 		return;
 	}
 
-	roarBT.hitPlayer = player->StartKnockBack(direction);
+	player->StartKnockBack(direction);
 }
 
 float GruxEnemy::GetRoarAttackRadius() const

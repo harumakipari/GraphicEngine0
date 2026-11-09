@@ -136,7 +136,7 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
         stage = 0; stageHitCount = owner->GetCurrentAttackHitCount(); started = true;
         finishAfterAnimation = false; timer = 0.0f;
         runtimeState = GruxEnemy::FastComboRuntimeState::Attack;
-        owner->SetFastComboRuntimeStage(stage); owner->SetFastComboRuntimeState(runtimeState);
+        owner->SetFastComboRuntimeStage(stage);
         owner->RefreshFastComboTargetContext(stage);
         if (!owner->PlayAttackStage(BossAttackType::FastCombo, stage)) { owner->ClearFastComboStepIn(); started = false; return State::Failed; }
     }
@@ -155,21 +155,21 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
     {
         timer += dt;
         if (timer < owner->GetInterStageFaceDelay()) return State::Run;
-        runtimeState = GruxEnemy::FastComboRuntimeState::InterStageFacing; owner->SetFastComboRuntimeState(runtimeState);
+        runtimeState = GruxEnemy::FastComboRuntimeState::InterStageFacing;
     }
     if (runtimeState == GruxEnemy::FastComboRuntimeState::InterStageFacing)
     {
         const BossTargetContext context = owner->BuildTargetContext();
         if (!context.valid || context.absoluteAngleDegrees > owner->GetInterStageMaxFacingAngle())
         {
-            owner->DisableAttackHitBoxes(); finishAfterAnimation = true; runtimeState = GruxEnemy::FastComboRuntimeState::Attack; owner->SetFastComboRuntimeState(runtimeState); return State::Run;
+            owner->DisableAttackHitBoxes(); finishAfterAnimation = true; runtimeState = GruxEnemy::FastComboRuntimeState::Attack; return State::Run;
         }
         if (context.absoluteAngleDegrees > owner->GetInterStageFaceCompleteAngle())
         {
             owner->RotateTowardsPlayer(context.directionToPlayer, owner->GetTurnSpeed(), dt);
             return State::Run;
         }
-        runtimeState = GruxEnemy::FastComboRuntimeState::Attack; owner->SetFastComboRuntimeState(runtimeState);
+        runtimeState = GruxEnemy::FastComboRuntimeState::Attack;
         stageHitCount = owner->GetCurrentAttackHitCount();
         auto controller = owner->GetBodyAnimationController();
         auto animation = controller ? controller->GetAnimationAsset(controller->GetCurrentAnimationName()) : nullptr;
@@ -197,7 +197,6 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
             }
             timer = 0.0f;
             runtimeState = GruxEnemy::FastComboRuntimeState::InterStageDelay; 
-            owner->SetFastComboRuntimeState(runtimeState); 
             owner->StopAIMovement(); 
             return State::Run;
         }

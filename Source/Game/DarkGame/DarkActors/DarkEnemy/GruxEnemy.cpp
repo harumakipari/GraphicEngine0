@@ -761,7 +761,6 @@ void GruxEnemy::StopBattleActions()
 	lastStartedCombatAttack.reset();
 	secondLastStartedCombatAttack.reset();
 	positioningMoveStopTimer = 0.0f;
-	positioningAnimationActualSpeed = 0.0f;
 	positioningAnimationMoving = false;
 	transitionWindow = false;
 	hitActors.clear();
@@ -980,7 +979,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
 
 	fastComboTargetContext = {};
 	fastComboStageTargetContexts = {};
-	fastComboRuntimeState = FastComboRuntimeState::Attack;
 	fastComboRuntimeStage = -1;
 	ClearFastComboStepIn();
 	fastComboApproachRetryRemaining = 0.0f;
@@ -1744,7 +1742,7 @@ void GruxEnemy::RequestJumpAttackCameraAssist() const
 
 void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
 {
-	positioningAnimationActualSpeed = (std::max)(0.0f, actualSpeed);
+	const float positioningAnimationActualSpeed = (std::max)(0.0f, actualSpeed);
 	const float safeDeltaTime = (std::max)(0.0f, deltaTime);
 
 	if (!positioningAnimationMoving)
@@ -1783,7 +1781,6 @@ void GruxEnemy::UpdatePositioningAnimation(float actualSpeed, float deltaTime)
 
 void GruxEnemy::EndPositioningAnimation()
 {
-	positioningAnimationActualSpeed = 0.0f;
 	positioningMoveStopTimer = 0.0f;
 	positioningAnimationMoving = false;
 
@@ -3404,10 +3401,6 @@ void GruxEnemy::UpdateWeaponHitDetection()
 		}
 	}
 
-	if (rightWeaponCollisionComp)
-		rightWeaponCollisionComp->SetIsVisibleDebugShape(rightHitBox);
-	if (leftWeaponCollisionComp)
-		leftWeaponCollisionComp->SetIsVisibleDebugShape(leftHitBox);
 }
 
 // ビヘイビアツリーを作成する
