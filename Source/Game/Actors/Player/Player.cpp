@@ -2342,7 +2342,6 @@ void Player::SetRushWeaponVisual(const bool enabled)
 
 	trail.SetRushColorEnabled(enabled, rushSwordColor);
 	activeGhostBaseColor = enabled ? rushSwordColor : swordGhostColor;
-	activeGhostEdgeColor = enabled ? rushSwordColor : swordGhostColor;
 }
 
 bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
@@ -2981,7 +2980,7 @@ void Player::UpdateSwordGhosts(const float deltaTime)
 		{
 			ghost.swordMeshComp->plusAlphaCBuffer->data.emissionPower = swordGhostEmissive;
 			ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { activeGhostBaseColor.x,activeGhostBaseColor.y,activeGhostBaseColor.z, ghost.alpha };
-			ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeColor = { activeGhostEdgeColor.x,activeGhostEdgeColor.y,activeGhostEdgeColor.z,1.0f };
+			ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeColor = { activeGhostBaseColor.x,activeGhostBaseColor.y,activeGhostBaseColor.z,1.0f };
 			ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.innerColor = { ghostInnerColor.x,ghostInnerColor.y,ghostInnerColor.z,1.0f };
 			ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeWidth = ghostEdgeWidth;
 		}

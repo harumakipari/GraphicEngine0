@@ -592,7 +592,6 @@ void PlayerRushState::Execute(float deltaTime)
     {
     case RushPhase::Windup:
     {
-        // Do not query completion until this one MoveToActor call starts the dash.
         windupElapsedTime += (std::max)(deltaTime, 0.0f);
         if (windupElapsedTime >= player->GetRushWindupDuration())
         {
@@ -610,8 +609,6 @@ void PlayerRushState::Execute(float deltaTime)
         if (player->characterMovementComponent->IsMoveToActorFinished())
         {// target‚Ü‚Å•t‚¢‚½‚çA
             Logger::Log(U8("Rush’†‚Ìtarget‚Ü‚ÅˆÚ“®Š®—¹"));
-            // The held Jog_Fwd approach pose remains the source of the first Rush attack blend.
-            // Later Rush combo transitions still use PlayBodyAnimation's 0.3 s default.
             if (const auto controller = player->GetBodyAnimationController())
                 controller->ReleaseRuntimeHeldAnimationPose(true);
             player->PlayBodyAnimation(currentAttackAnimation, false, true, 0.10f);
@@ -655,7 +652,6 @@ void PlayerRushState::Execute(float deltaTime)
             }
             else if (IsFinalRushAttack())
             {
-                // The final Rush cannot reserve an eighth attack.
                 player->ConsumeActionRequest(Player::ActionType::Attack);
             }
         }
