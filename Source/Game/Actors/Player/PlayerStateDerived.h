@@ -196,7 +196,7 @@ public:
     // ステート名を取得
     const char* GetName() const override { return "Rush"; }
     int GetComboIndex() const { return comboIndex; }
-    const std::string& GetCurrentAttackAnimationForDebug() const { return currentAttackAnimation; }
+    const std::string& GetCurrentAttackAnimation() const { return currentAttackAnimation; }
 private:
     void AdvanceRushCombo();
     bool IsFinalRushAttack() const;
@@ -204,7 +204,6 @@ private:
 
     float windupElapsedTime = 0.0f;
     float rushStopDistance = 0.0f;
-    bool rushComboAdvanced = false;
     int queuedAttackCount = 0;// ラッシュの時のコンボカウント
     int comboIndex = 0; 
     bool rushTransitionWindowObserved = false;

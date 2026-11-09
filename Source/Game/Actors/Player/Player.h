@@ -111,7 +111,6 @@ public:
 	{
 		mass = 50.0f;
 		maxHp = 50;
-		//maxHp = 3;
 		hp = maxHp;
 	}
 
@@ -444,8 +443,6 @@ private:
 
 	// Just Dodge後の初回Rush入力ガイドを表示できるかを返す。
 	bool CanShowInitialRushGuide() const;
-	// Rush中の追加入力ガイドを表示できるかを返す。
-	bool CanShowRushComboGuide() const;
 
 	// 演出用の姿勢・Notify補助
 	// 現在の目閉じ設定で姿勢オーバーライドを再構築する。
@@ -468,7 +465,7 @@ private:
 	// 入力を一定時間保持するアクション要求として記録する。
 	void CaptureActionRequest(float deltaTime);
 
-	// 優先度を比較して入力バッファへアクション要求を保存する。
+	// 入力バッファへアクション要求と保持時間を保存する。
 	void StoreActionRequest(ActionType type, float remainTime);
 
 	// ノックバック・移動更新
@@ -595,7 +592,7 @@ public:
 	{
 		std::shared_ptr<SkeletalMeshComponent> swordMeshComp; // 剣残像を描画するスケルタルメッシュ
 		DirectX::XMFLOAT4X4 world = { }; // 残像を描画するワールド行列
-		float alpha; // 残像の透明度
+		float alpha = 0.0f; // 残像の透明度
 		bool isVisible = false; // 残像を描画するか
 	};
 	std::array<SwordGhost, 8> ghosts; // 循環利用する剣残像
@@ -904,7 +901,6 @@ private:
 	bool finalHitVisualPoseLatchRequested = false; // 最終ヒット時に見た目姿勢を固定する要求
 	bool finalHitAttackDrainActive = false; // 最終ヒット後の攻撃アニメーション排出中か
 	bool finalHitAttackDrainCompleted = false; // 最終ヒット姿勢の固定に成功したか
-	bool finalHitAttackDrainFailed = false; // 最終ヒット姿勢の固定または排出に失敗したか
 
 	// FinalHitの待機状態と通知先
 	bool finalHitWaiting = false; // 最終ヒット後に通常更新を抑止する状態

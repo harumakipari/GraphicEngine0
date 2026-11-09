@@ -835,7 +835,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 		prevSwordMidPos = GetHitBoxPoint(swordMiddleComponent, activeHitBoxOffset);
 		prevSwordTipPos = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
 		hitBox = true;
-		if (stateMachine_->GetStateName() == "Attack")
+		if (std::string(stateMachine_->GetStateName()) == "Attack")
 			attackRotationTracking = false;
 		break;
 	}
@@ -882,7 +882,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 		float enemyRadius = 0.0f;
 
 		// Rotation and MotionWarp share the target fixed at Attack Enter.
-		if (stateMachine_->GetStateName() == "Attack")
+		if (std::string(stateMachine_->GetStateName()) == "Attack")
 		{
 			if (const auto target = attackTarget.lock())
 			{
@@ -1050,7 +1050,7 @@ void Player::OnAnimationChanged()
 // ブレンドスペースのアニメーションを使用するかの更新関数
 void Player::UpdateLocomotionAnimation()
 {
-	if (GetStateMachine()->GetStateName() != "Running")
+	if (std::string(GetStateMachine()->GetStateName()) != "Running")
 	{
 		return;
 	}
@@ -1378,7 +1378,6 @@ void Player::SetGameplayHudVisible(const bool visible)
 		UpdateRushPromptUI();
 	else
 	{
-		SetOperationGuideHudVisible(false);
 		HideAndResetLockOnGuideUI();
 		if (lowHpVignetteImageComponent) lowHpVignetteImageComponent->SetVisible(false);
 	}
@@ -1484,7 +1483,6 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 	finalHitRushFollowUpStopRequested = false;
 	finalHitAttackDrainActive = false;
 	finalHitAttackDrainCompleted = false;
-	finalHitAttackDrainFailed = false;
 	if (const auto controller = GetBodyAnimationController())
 		controller->ReleaseLatchedVisualPose();
 	lowHpPresentationSuppressed = false;
@@ -1598,7 +1596,6 @@ bool Player::BeginFinalHitWait()
 
 	finalHitAttackDrainActive = false;
 	finalHitAttackDrainCompleted = false;
-	finalHitAttackDrainFailed = false;
 	const auto controller = GetBodyAnimationController();
 	const std::string stateName = stateMachine_ ? stateMachine_->GetStateName() : "";
 	const bool supportedAttackState = stateName == "Attack" || stateName == "Rush";
@@ -1607,7 +1604,7 @@ bool Player::BeginFinalHitWait()
 	const auto* rushState = stateMachine_ && stateName == "Rush"
 		? dynamic_cast<const PlayerRushState*>(stateMachine_->GetCurrentState()) : nullptr;
 	const std::string rushAttackAnimation = rushState
-		? rushState->GetCurrentAttackAnimationForDebug() : std::string{};
+		? rushState->GetCurrentAttackAnimation() : std::string{};
 	const bool expectedAttackClip = stateName == "Attack"
 		? animationName == currentAttackAnimation
 		: stateName == "Rush" && rushState && animationName == rushAttackAnimation;
@@ -1617,7 +1614,6 @@ bool Player::BeginFinalHitWait()
 
 	if (!validCurrentAttack)
 	{
-		finalHitAttackDrainFailed = true;
 		ClearTransientBattleActions();
 		return false;
 	}
@@ -1641,7 +1637,6 @@ bool Player::BeginFinalHitWait()
 	showTrail = false;
 	swordEmissivePower = 0.0f;
 	trail.Clear();
-	attackRotationTracking = false;
 	StopKnockBackForcedMove();
 	knockBackElapsed = 0.0f;
 	characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
@@ -1671,7 +1666,7 @@ void Player::ResumeBattleActionsAfterEvent()
 
 bool Player::IsFinalHitAttackDrainComplete() const
 {
-	if (finalHitAttackDrainFailed || !finalHitAttackDrainActive)
+	if (!finalHitAttackDrainActive)
 		return true;
 	if (!finalHitAttackDrainCompleted)
 		return false;
@@ -1685,7 +1680,6 @@ void Player::MarkFinalHitAttackDrainInterrupted()
 {
 	finalHitAttackDrainActive = false;
 	finalHitAttackDrainCompleted = false;
-	finalHitAttackDrainFailed = true;
 	finalHitVisualPoseLatchRequested = false;
 }
 
@@ -1726,7 +1720,6 @@ void Player::ClearTransientBattleActions()
 		if (ghost.swordMeshComp) ghost.swordMeshComp->SetIsVisible(false);
 	}
 	ResetPlayerPoseGhost();
-	attackRotationTracking = false;
 	StopKnockBackForcedMove();
 	knockBackElapsed = 0.0f;
 	characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
@@ -1810,8 +1803,6 @@ void Player::CapturePlayerPoseGhost()
 {
 	ResetPlayerPoseGhost();
 	playerPoseGhostSpawnSequenceActive = true;
-	playerPoseGhostSpawnTimer = 0.0f;
-	nextPlayerPoseGhostIndex = 0;
 
 	if (CapturePlayerPoseGhost(nextPlayerPoseGhostIndex))
 		++nextPlayerPoseGhostIndex;
@@ -2149,7 +2140,6 @@ void Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
 	if (finalHitAttackDrainActive)
 	{
 		finalHitAttackDrainCompleted = latched;
-		finalHitAttackDrainFailed = !latched;
 		if (!latched)
 			finalHitAttackDrainActive = false;
 	}
@@ -2157,15 +2147,7 @@ void Player::LatchFinalHitVisualPoseAfterAnimationUpdate()
 
 bool Player::CanShowInitialRushGuide() const
 {
-	if (CanAcceptInitialRushInput())
-		return true;
-
 	return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Dodge" && justDodgeSuccess && !rushTarget.expired();
-}
-
-bool Player::CanShowRushComboGuide() const
-{
-	return stateMachine_ && std::string(stateMachine_->GetStateName()) == "Rush" && !rushTarget.expired();
 }
 
 
@@ -3045,7 +3027,7 @@ void Player::UpdateRushPromptUI()
 		return;
 	}
 
-	const bool visible = CanShowInitialRushGuide() || CanShowRushComboGuide();
+	const bool visible = IsRushOpportunityActive();
 	if (!visible)
 	{
 		rushPromptAlpha = 0.0f;
