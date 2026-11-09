@@ -549,7 +549,6 @@ void PlayerRushState::Enter()
         }
     }
 
-    rushComboAdvanced = false;
 
     queuedAttackCount = 0;
     ResetRushInputGrace();
@@ -656,11 +655,10 @@ void PlayerRushState::Execute(float deltaTime)
             }
         }
 
-        if (player->transitionWindow && !rushComboAdvanced)
+        if (player->transitionWindow)
         {
             if (IsFinalRushAttack())
             {
-                rushComboAdvanced = true;
                 phase = RushPhase::Finished;
             }
             else if (queuedAttackCount > 0)
@@ -717,7 +715,6 @@ void PlayerRushState::Exit()
     player->SetRushWeaponVisual(false);
     comboIndex = 0;
     queuedAttackCount = 0;
-    rushComboAdvanced = false;
     ResetRushInputGrace();
     if (player->bufferCommand.type == Player::ActionType::Attack)
     {
@@ -750,10 +747,8 @@ void PlayerRushState::AdvanceRushCombo()
     }
 
     currentAttackAnimation = rushCombo[comboIndex];
-    rushComboAdvanced = true;
     ResetRushInputGrace();
     player->PlayBodyAnimation(currentAttackAnimation, false);
-    rushComboAdvanced = false;
 }
 
 bool PlayerRushState::IsFinalRushAttack() const

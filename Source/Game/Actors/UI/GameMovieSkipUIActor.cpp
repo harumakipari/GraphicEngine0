@@ -107,9 +107,10 @@ void GameMovieSkipUIActor::UpdatePresentation()
         const float fadeStep = deltaTime / movieSkipPromptFadeDuration;
         movieSkipPromptFade = fadeTarget > movieSkipPromptFade ? (std::min)(movieSkipPromptFade + fadeStep, fadeTarget) : (std::max)(movieSkipPromptFade - fadeStep, fadeTarget);
     }
-
-    const float screenWidth = Graphics::GetScreenWidth();
-    const float screenHeight = Graphics::GetScreenHeight();
+    float screenWidth, screenHeight;
+	Graphics::GetScreenSize(screenWidth, screenHeight); 
+    screenHeight = 1080.0f;
+    screenWidth = 1920.0f;
     movieSkipPromptImage->SetWorldPosition({ screenWidth - movieSkipPromptRightBottomOffset.x,screenHeight - movieSkipPromptRightBottomOffset.y });
     movieSkipPromptImage->SetScale({ movieSkipPromptScale, movieSkipPromptScale });
     movieSkipPromptImage->SetColor(CoreColor{ 1.0f, 1.0f, 1.0f, movieSkipPromptFade });
