@@ -433,16 +433,6 @@ public:
                 hr = device->CreateBuffer(&bufferDesc, &subresourceData, clothVB.GetAddressOf());
                 _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-                // 描画用のIAIndexBufferを作成
-                {
-                    D3D11_BUFFER_DESC indexBufferDesc = {};
-                    indexBufferDesc.ByteWidth = static_cast<UINT>(sizeof(uint32_t) * cachedVertices.size());
-                    indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-                    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-                    D3D11_SUBRESOURCE_DATA subResource = {};
-                    subResource.pSysMem = cachedIndices.data();
-                    device->CreateBuffer(&indexBufferDesc, &subResource, clothIB.GetAddressOf());
-                }
             }
 
             Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> clothSRV[2];
@@ -452,7 +442,6 @@ public:
             Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> initialBottomWeightSRV;
             // 描画時に使用する
             Microsoft::WRL::ComPtr<ID3D11Buffer> clothVB;   // 頂点バッファ
-            Microsoft::WRL::ComPtr<ID3D11Buffer> clothIB;   // インデックスバッファ
             Microsoft::WRL::ComPtr<ID3D11Buffer> clothEdgeBuffer;   // エッジ用のバッファ
             Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> clothEdgeSRV;
 
@@ -746,7 +735,6 @@ public:
     //Microsoft::WRL::ComPtr<ID3D11Buffer> clothBuffer[2];
     //// 描画時に使用する
     //Microsoft::WRL::ComPtr<ID3D11Buffer> clothVB;   // 頂点バッファ
-    //Microsoft::WRL::ComPtr<ID3D11Buffer> clothIB;   // インデックスバッファ
     uint32_t clothVertexOffset;
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothUpdateCS;
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothUpdatePassThroughCS;

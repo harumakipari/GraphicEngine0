@@ -2285,25 +2285,17 @@ void DarkCameraActor::DrawImGuiDetails()
 		ImGui::DragFloat("Compact LockOn FOV Fallback Max", &compactEnemyLockOnProfile.maxFallbackFovDegree, 0.1f, compactEnemyLockOnProfile.fovDegree, 90.0f);
 		ImGui::DragFloat("Compact LockOn Base Distance", &compactEnemyLockOnProfile.distance, 0.05f, 0.1f, 30.0f);
 		ImGui::DragFloat("Compact LockOn Max Distance Add", &compactEnemyLockOnProfile.maxDistanceAdd, 0.05f, 0.0f, 10.0f);
-		compactEnemyLockOnProfile.maxFallbackFovDegree = (std::max)(
-			compactEnemyLockOnProfile.maxFallbackFovDegree, compactEnemyLockOnProfile.fovDegree);
 		ImGui::SeparatorText("Standard Enemy LockOn Profile");
 		ImGui::DragFloat("Standard LockOn FOV", &standardEnemyLockOnProfile.fovDegree, 0.1f, 10.0f, 120.0f);
 		ImGui::DragFloat("Standard LockOn FOV Fallback Max", &standardEnemyLockOnProfile.maxFallbackFovDegree, 0.1f, standardEnemyLockOnProfile.fovDegree, 90.0f);
 		ImGui::DragFloat("Standard LockOn Base Distance", &standardEnemyLockOnProfile.distance, 0.05f, 0.1f, 30.0f);
 		ImGui::DragFloat("Standard LockOn Max Distance Add", &standardEnemyLockOnProfile.maxDistanceAdd, 0.05f, 0.0f, 10.0f);
-		standardEnemyLockOnProfile.maxFallbackFovDegree = (std::max)(
-			standardEnemyLockOnProfile.maxFallbackFovDegree, standardEnemyLockOnProfile.fovDegree);
 		ImGui::DragFloat("LockOn Enemy Look Height", &lockOnEnemyLookHeight, 0.05f, -10.0f, 10.0f);
 		ImGui::SliderFloat("LockOn LookAt Bias (0=Player, 1=Boss)", &lockOnTargetWeight, 0.0f, 1.0f);
-		lockOnTargetWeight = std::clamp(lockOnTargetWeight, 0.0f, 1.0f);
 		ImGui::DragFloat("LockOn Zoom In Speed", &lockOnZoomInSpeed, 0.01f, 0.0f, 30.0f);
 		ImGui::DragFloat("LockOn Zoom Out Speed", &lockOnZoomOutSpeed, 0.01f, 0.0f, 30.0f);
 
 		ImGui::SeparatorText("Combat Presentation");
-		const char* presentationModes[] = { "None", "Just Dodge", "Rush" };
-		const char* presentationPhases[] = { "Inactive", "Enter", "Hold", "Exit" };
-		ImGui::Text("%s / %s / Blend %.2f", presentationModes[static_cast<int>(combatPresentationMode)], presentationPhases[static_cast<int>(combatPresentationPhase)], combatPresentationBlend);
 		if (ImGui::TreeNode("Just Dodge Presentation"))
 		{
 			ImGui::DragFloat("FOV Offset", &justDodgePresentationFovOffsetDegree, 0.1f, -45.0f, 45.0f, "%.1f deg");
@@ -2315,9 +2307,6 @@ void DarkCameraActor::DrawImGuiDetails()
 		}
 		if (ImGui::TreeNode("Rush Presentation"))
 		{
-			ImGui::Text("Stage: %s  Travel Blend: %.2f",
-				combatPresentationRushTravelBlend > 0.0f ? "Travel" : "Intro",
-				combatPresentationRushTravelBlend);
 			if (ImGui::TreeNode("Behind (Windup / Dash)"))
 			{
 				ImGui::DragFloat("Side Offset##RushBehind", &rushPresentationApproachSideOffset, 0.01f, -10.0f, 10.0f);
@@ -2495,11 +2484,6 @@ void DarkCameraActor::DrawImGuiDetails()
 		ImGui::DragFloat("Recovery FOV Improvement Threshold",
 			&recoveryFovImprovementThreshold, 0.25f, 0.0f, 30.0f,
 			"%.1f deg");
-		recoveryMaxDistance = (std::max)(recoveryMaxDistance, 0.0f);
-		recoveryMoveSpeed = (std::max)(recoveryMoveSpeed, 0.0f);
-		recoveryReturnSpeed = (std::max)(recoveryReturnSpeed, 0.0f);
-		recoveryFovImprovementThreshold = (std::max)(
-			recoveryFovImprovementThreshold, 0.0f);
 		ImGui::DragFloat("Max Composition Correction",
 			&compositionMaxCorrectionDegree, 0.25f, 0.0f, 15.0f,
 			"%.1f deg");
@@ -2509,12 +2493,7 @@ void DarkCameraActor::DrawImGuiDetails()
 		ImGui::DragFloat("Composition Dead Zone",
 			&compositionDeadZoneDegree, 0.1f, 0.0f, 10.0f,
 			"%.1f deg");
-		compositionMaxCorrectionDegree = std::clamp(
-			compositionMaxCorrectionDegree, 0.0f, 15.0f);
-		compositionAngularSpeedDegree = (std::max)(
-			compositionAngularSpeedDegree, 0.0f);
-		compositionDeadZoneDegree = (std::max)(compositionDeadZoneDegree, 0.0f);
-		ImGui::SeparatorText("Collision FOV Fallback");
+	ImGui::SeparatorText("Collision FOV Fallback");
 		ImGui::DragFloat("Grux Max Fallback FOV", &lockOnMaxFallbackFovDegree,
 			0.1f, lockOnSettings.fovDegree, 90.0f, "%.1f deg");
 		ImGui::DragFloat("FOV Expand Speed", &lockOnFovExpandSpeed,
@@ -2531,14 +2510,5 @@ void DarkCameraActor::DrawImGuiDetails()
 	}
 	ImGui::DragFloat(U8("ロックオンピッチ度数"), &lockOnPitchDegree, 0.1f, -90.0f, 90.0f);
 	ImGui::DragFloat(U8("ロックオンyaw度数"), &lockOnYawOffsetDegree, 0.1f, -90.0f, 90.0f);
-
-	ImGui::Text("cameraHitDistance: %.4f", cameraHitDistance);
-	ImGui::Text("cameraCollisionRatio: %.4f", cameraCollisionRatio);
-	ImGui::Text("cameraHitWall: %s", cameraHitWall ? "true" : "false");
-
-	ImGui::Text("Current : %d", (int)currentMode);
-	ImGui::Text("Request : %d", (int)requestMode);
-	ImGui::Text("Blend : %d", isBlending);
-
 #endif
 }
