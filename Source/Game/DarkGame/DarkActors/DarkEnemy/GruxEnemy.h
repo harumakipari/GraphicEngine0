@@ -116,6 +116,99 @@ public:
 		Aborted  // 中断。
 	};
 
+	enum class HpBarVisualProfile : uint8_t
+	{
+		Phase1,  // 第1段階用。
+		Phase2  // 第2段階用。
+	};
+
+	enum class Phase2HpBarPresentationState : uint8_t
+	{
+		Hidden,  // 非表示。
+		RevealingFrame,  // 枠を表示中。
+		WaitingForFill,  // ゲージ表示待ち。
+		Filling,  // ゲージを表示中。
+		Complete,  // 完了。
+	};
+
+	enum class FastComboRuntimeState :uint8_t
+	{
+		Attack,  // 攻撃中。
+		InterStageDelay,  // 段間の待機中。
+		InterStageFacing  // 段間の向き合わせ中。
+	};
+
+	enum class DashTelegraphVisualState :uint8_t
+	{
+		Hidden,  // 非表示。
+		LineExpanding,  // 線を伸ばしている状態。
+		FanFadingIn,  // 扇形をフェードインしている状態。
+		Holding,  // 予兆を保持している状態。
+		DashActive,  // Dash中。
+		FanFlashing,  // 扇形が発光中。
+		FanFadingOut  // 扇形をフェードアウトしている状態。
+	};
+
+	struct RepositionTargetEvaluation
+	{
+		DirectX::XMFLOAT3 clampedTarget{};  // 境界補正後の目標位置。
+		float clampDistance = 0.0f;  // 目標位置の境界補正距離。
+		bool bossRoomPathBlocked = false;  // ボス部屋の経路が遮られているか。
+	};
+	
+	struct HpBarFadeEntry
+	{
+		std::shared_ptr<UIImageComponent> component;  // フェード対象の画像コンポーネント。
+		CoreColor color;  // フェード対象の元の色。
+	};
+
+	// Roar浮遊破片のリソース・設定
+	struct RoarFloatingDebris
+	{
+		std::shared_ptr<SkeletalMeshComponent> meshComponent;  // 浮遊する破片のメッシュ。
+		DirectX::XMFLOAT3 normalizedDirection{};  // 浮遊する破片の正規化された方向。
+		float normalizedRingDistance = 0.0f;  // 浮遊する破片のリング内の距離比率。
+		float spawnThreshold = 1.0f;  // 浮遊する破片の出現閾値。
+		float baseScale = 1.0f;  // 浮遊する破片の基準スケール。
+		float maxFloatHeight = 0.0f;  // 浮遊する破片の最大高さ。
+		DirectX::XMFLOAT3 baseRotation{};  // 浮遊する破片の基準回転。
+		DirectX::XMFLOAT3 rotationAmount{};  // 浮遊する破片の回転量。
+	};
+
+	// Roar衝撃破片のリソース・設定
+	struct RoarImpactDebris
+	{
+		std::shared_ptr<SkeletalMeshComponent> meshComponent;  // 衝撃時の破片のメッシュ。
+		bool active = false;  // 破片が有効か。
+		bool isBlock = false;  // 破片がブロック状か。
+		DirectX::XMFLOAT3 position{};  // 破片の位置。
+		DirectX::XMFLOAT3 velocity{};  // 破片の速度。
+		DirectX::XMFLOAT3 rotation{};  // 破片の回転。
+		DirectX::XMFLOAT3 angularVelocity{};  // 破片の角速度。
+		float lifetime = 0.0f;  // 破片の存続時間。
+		float elapsedTime = 0.0f;  // 破片の経過時間。
+		float scale = 1.0f;  // 破片のスケール。
+	};
+	struct RoarRuntime
+	{
+		RoarStage stage = RoarStage::None;  // Roarの実行段階。
+		bool shockwaveFired = false;  // Roarの衝撃波を発生済みか。
+		bool hitPlayer = false;  // Roarがプレイヤーにヒットしたか。
+		float elapsed = 0.0f;  // Roarの経過時間。
+		float stalled = 0.0f;  // Roarアニメーションの進行が停止した時間。
+		float previousTime = 0.0f;  // 前回のRoarアニメーション時刻。
+		float endTime = 0.0f;  // Roarアニメーションの終了時刻。
+	};
+
+	struct CloseCombatSettings
+	{
+		float minRange = 0.0f;  // 近接攻撃の最小距離。
+		float executeMaxRange = 6.0f;  // 近接攻撃を実行できる最大距離。
+		float planMaxRange = 10.0f;  // 近接攻撃を計画できる最大距離。
+		float facingLimitDegrees = 35.0f;  // 実行時の向きの許容角度。
+		float faceCompleteAngleDegrees = 7.0f;  // 向き合わせ完了と判定する角度。
+	};
+
 	struct ChargeWindTrailRuntime
 	{
 		Trail trail;  // 風の軌跡の描画データ。
@@ -153,18 +246,11 @@ public:
 		bool movementActive = false;  // 移動が有効か。
 	};
 
-	enum class HpBarVisualProfile : uint8_t
+	struct WeaponHitBoxPoints
 	{
-		Phase1,  // 第1段階用。
-		Phase2  // 第2段階用。
-	};
-	enum class Phase2HpBarPresentationState : uint8_t
-	{
-		Hidden,  // 非表示。
-		RevealingFrame,  // 枠を表示中。
-		WaitingForFill,  // ゲージ表示待ち。
-		Filling,  // ゲージを表示中。
-		Complete,  // 完了。
+		DirectX::XMFLOAT3 root{};  // 武器の根元位置。
+		DirectX::XMFLOAT3 middle{};  // 武器の中央位置。
+		DirectX::XMFLOAT3 tip{};  // 武器の先端位置。
 	};
 
 public:
@@ -220,16 +306,13 @@ public:
 	// 最後の被弾リアクションを開始する。
 	void BeginFinalHitReaction(const std::string& animationName);
 
-	// 死亡時の処理を開始する
-	void BeginDeathPresentation();
-
 	// 最後の被弾リアクションを終了する。
 	void EndFinalHitReaction();
 
 	// 戦闘判断と進行中の行動を停止する。
 	void PauseBattleAI();
 
-	// Starts the Idle presentation used by external battle events.
+	// 戦闘判断を停止し、Idle演出に移行する。
 	void EnterBattleIdlePresentation();
 
 	// フェーズ遷移の演出にアニメーションを渡して戦闘判断を停止する。
@@ -244,9 +327,6 @@ public:
 	// 戦闘AIが有効かを返す。
 	bool IsBattleAIActive() const { return battleAIActive; }
 
-	// 死亡演出または最終被弾演出が行動を所有しているかを返す。
-	bool IsDeathPresentationActive() const { return isDeathPerform || finalHitReactionActive || finalHitReactionHeld; }
-
 	// フェーズ遷移のアニメーションを外部が管理するか設定する。
 	void SetPhase2CinematicAnimationOwnedExternally(bool owned)
 	{
@@ -258,12 +338,6 @@ public:
 
 	// HPを維持して戦闘位置と実行状態をリセットする。
 	void ResetForBattleContinue(const Transform& battleStartTransform);
-
-	// 行動ツリーのノードと実行状態を初期化する。
-	void ResetBehaviorTreeForBattleRestart();
-
-	// 攻撃や位置調整の戦闘時状態を初期化する。
-	void ResetCombatRuntimeForBattleRestart();
 
 	// 戦闘状態とHPを再戦用にリセットする。
 	void ResetForBattleRestart(const Transform& battleStartTransform);
@@ -277,14 +351,13 @@ public:
 	// 最大HPを返す。
 	int GetMaxHp() const { return maxHp; }
 
-	// フェーズ遷移時の遅延HP表示を進める。
-	void AdvanceDelayedHpBarForPhaseTransition();
-
 	// 遅延HP表示が目標値に到達したかを返す。
 	bool IsDelayedHpSettled() const;
 
 	// フェーズ遷移時に被弾表示を解除する。
 	void ClearDamageFlash() const;
+
+	// フェーズ遷移時に被弾表示を解除する。
 	void ClearDamageVisualsForPhaseTransition() const;
 
 	// Rush中のHP表示を開始する。
@@ -334,12 +407,6 @@ public:
 	// Jump攻撃時のカメラ補正を要求する。
 	void RequestJumpAttackCameraAssist() const;
 
-	// 位置調整時の移動速度に応じてアニメーションを更新する。
-	void UpdatePositioningAnimation(float actualSpeed, float deltaTime);
-
-	// 位置調整用の移動アニメーションを終了する。
-	void EndPositioningAnimation();
-
 	// 選択中の行動にクールダウンを設定する。Charge強制時は設定しない。
 	void StartSelectedActionCooldown();
 
@@ -348,9 +415,6 @@ public:
 
 	// 指定名の攻撃アニメーションを再生する。
 	bool PlayAttackAnimationByName(const std::string& animationName);
-
-	// 連続攻撃の次段階に向けて攻撃状態を更新する。
-	void BeginAdditionalAttackStage();
 
 	// Jump専用のMotionWarp上書きを解除する。
 	void ClearJumpAttackMotionWarpOverride();
@@ -374,50 +438,11 @@ public:
 	// Dashの移動、攻撃判定、予兆などを終了時または中断時に整理する。
 	void CleanupDashAttackBT();
 
-	// Dashの実行を終了してRecoveryへ移る。
-	void FinishDashAttackBT();
-
 	// DashのBT実行状態が有効かを返す。
 	bool IsDashAttackBTActive() const { return dashBTPhase != DashBTPhase::None; }
 
 	// Dashの実行段階を向き合わせに設定する。
 	void SetDashBTFacing() { dashBTPhase = DashBTPhase::Facing; }
-
-	// Dash移動に使う位置や方向を準備する。
-	bool PrepareDashAttackMovementSnapshot();
-
-	// 指定されたボス攻撃予兆のSEを再生する。
-	void PlayBossTelegraphSE(const char* fileName) const;
-
-	// Dash予兆の表示を開始する。
-	void BeginDashTelegraphVisual();
-
-	// Dash予兆の表示状態を更新する。
-	void UpdateDashTelegraphVisual(float deltaTime);
-
-	// Dash予兆の扇形の点滅を開始する。
-	void BeginDashTelegraphFanFlash();
-
-	// Dash予兆の線の短縮を開始する。
-	void BeginDashTelegraphLineShrink();
-
-	// Dash予兆の線の短縮を更新する。
-	void UpdateDashTelegraphLineShrink();
-
-	// Dash予兆のフェードアウトを開始する。
-	void BeginDashTelegraphFadeOut();
-
-	// Dash予兆を非表示にする。
-	void HideDashTelegraphVisual();
-
-	// Dashの移動を開始する。
-	bool BeginDashAttackMovement();
-
-	// Dashの移動を更新し、移動結果を返す。
-	bool UpdateDashAttackMovement(float deltaTime, bool keepLockedDirection = false);
-
-	// Dashの移動を停止する。
-	void StopDashAttackMovement();
 
 	// Charge
 	// Chargeを攻撃候補に含められるか判定する。
@@ -435,62 +460,11 @@ public:
 	// Chargeの攻撃状態と予兆を開始する。
 	void StartChargeAttackBT();
 
-	// 単発Chargeの移動を開始する。
-	bool BeginSingleChargeBT();
-
-	// 単発Chargeの進行を更新する。
-	ChargeBTStepResult UpdateSingleChargeBT(float deltaTime);
-
 	// 単発または複数回のChargeを更新する。
 	ChargeBTStepResult UpdateChargeAttackBT(float deltaTime);
 
-	// 複数回Chargeの進行と段階間遷移を更新する。
-	ChargeBTStepResult UpdateTripleChargeBT(float deltaTime);
-
-	// 第2段階のCharge設定を使うか判定する。
-	bool IsPhase2ChargeActive();
-
-	// 現在のフェーズに対応するCharge速度を返す。
-	float GetActiveChargeSpeed() const;
-
-	// 現在のChargeのPlayer判定半径倍率を返す。
-	float GetActiveChargePlayerCastRadiusScale() const;
-
-	// 現在のChargeのダメージを返す。
-	int GetActiveChargeDamage() const;
-
-	// 複数回Chargeの現在の突進を開始する。
-	bool BeginTripleChargeLeg();
-
-	// 複数回Chargeの段間遷移を開始する。
-	bool BeginTripleChargeTransition();
-
-	// Chargeの予兆表示を開始する。
-	bool BeginChargeTelegraphVisual();
-
-	// 進行度に応じてChargeの予兆表示を更新する。
-	void UpdateChargeTelegraphVisual(float lengthProgress);
-
-	// Charge開始方向の障害物までの距離を調べる。
-	bool EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition, const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const;
-
-	// Chargeの側方の障害物までの距離と接触情報を調べる。
-	bool EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPosition, const DirectX::XMFLOAT3& direction, float& outClearance, DirectX::XMFLOAT3& outNormal, bool& outHit) const;
-
-	// Chargeの予兆を非表示にする。
-	void HideChargeTelegraphVisual();
-
 	// Chargeの終了結果に応じてスタンやRecoveryへの移行を進める。
 	ChargeBTStepResult ResolveChargeResultBT(float deltaTime);
-
-	// Charge後のスタン処理を開始する。
-	bool BeginChargeStunBT();
-
-	// Charge後のスタンアニメーションと経過時間を更新する。
-	ChargeBTStepResult UpdateChargeStunBT(float deltaTime);
-
-	// Chargeの攻撃区間を終了し、移動や攻撃判定を停止する。
-	void FinishChargeAttackBT();
 
 	// Chargeの失敗を記録して終了処理へ進める。
 	void FailChargeAttackBT();
@@ -518,48 +492,6 @@ public:
 
 	// 対象PlayerのRush終了を受けて戦闘再開処理を行う。
 	void NotifyPlayerRushEnded(Player* player);
-
-	// Chargeを中断すべき状態か判定する。
-	bool ShouldAbortChargeAttackBT();
-
-	// Chargeの中断または終了に伴う状態と演出を整理する。
-	void CleanupChargeAttackBT();
-
-	// Chargeの実行状態と調整項目をデバッグ表示する。
-	void DrawChargeAttackBTDebug();
-
-	// Chargeの移動を開始する。
-	bool BeginChargeAttackMovement();
-
-	// Playerに向けてChargeの移動方向を固定する。
-	bool LockChargeDirectionToPlayer();
-
-	// Chargeの移動と衝突を更新し、終了理由を返す。
-	ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime, bool allowTripleWallTurn = false);
-
-	// Charge時の風の軌跡を開始する。
-	void StartChargeWindTrails();
-
-	// Chargeの風演出に設定値を適用する。
-	void ApplyMainChargeWindSettings();
-
-	// Charge時の風の軌跡を更新する。
-	void UpdateChargeWindTrails(float deltaTime);
-
-	// Charge時の風の軌跡を停止する。
-	void StopChargeWindTrails();
-
-	// Charge時の風の軌跡を生成する。
-	void SpawnChargeWindTrail(struct ChargeWindTrailRuntime& streak) const;
-
-	// Chargeの移動と関連する状態を停止する。
-	void StopChargeAttackMovement();
-
-	// Charge予備動作の終了時刻を返す。
-	float GetChargeWindupEndTime() const { return chargeWindupEndTime; }
-
-	// スタンの継続時間を返す。
-	float GetStunDuration() const { return stunDuration; }
 
 	// HPがゼロ以下かを返す。
 	bool IsDead() const { return hp <= 0; }
@@ -595,32 +527,8 @@ public:
 	// 選択中の攻撃に対応するRecovery時間を返す。
 	float GetRecoveryDurationForCurrentAttack() const;
 
-	// Sets the duration override for the next Recovery.
-	void SetNextRecoveryDuration(float duration);
-
 	// 次のRecovery時間を取得し、一時設定を解除する。
 	float ConsumeNextRecoveryDuration();
-
-	// ChargeのPlayer命中後に使うRecovery時間を返す。
-	float GetChargePlayerHitRecoveryDuration() const
-	{
-		return chargePlayerHitRecoveryDuration;
-	}
-
-	// Chargeのジャスト回避後に使うRecovery時間を返す。
-	float GetChargeJustDodgeRecoveryDuration() const
-	{
-		return chargeJustDodgeRecoveryDuration;
-	}
-
-	// スタン後に使うRecovery時間を返す。
-	float GetPostStunRecoveryDuration() const
-	{
-		return postStunRecoveryDuration;
-	}
-
-	// 選択中の攻撃に対応するダメージを返す。
-	int GetDamageForCurrentAttack() const;
 
 	// 連続攻撃の遷移受付期間中かを返す。
 	bool IsTransitionWindowActive() const { return transitionWindow; }
@@ -642,9 +550,6 @@ public:
 	bool CanPlanRetreat() const;
 
 
-	// Roarの計画・実行を許可する共通条件を判定する。
-	bool IsRoarExecutionAllowed() const;
-
 	// RoarのBT実行状態が有効かを返す。
 	bool IsRoarBTActive() const { return roarBT.stage != RoarStage::None; }
 
@@ -654,62 +559,8 @@ public:
 	// Roarの予兆から衝撃波までの進行を更新する。
 	int UpdateRoarBT(float dt);
 
-	// Roarの衝撃波による判定を適用する。
-	void ApplyRoarShockwave();
-
-	// 現在のフェーズに対応するRoarの攻撃半径を返す。
-	float GetRoarAttackRadius() const;
-
-	// Roar予兆を表示する。
-	void ShowRoarTelegraph();
-
-	// Roar予兆の位置と大きさを更新する。
-	void UpdateRoarTelegraphTransform();
-
-	// Roar予兆の進行度を更新する。
-	void UpdateRoarTelegraphProgress();
-
-	// Roar予兆を非表示にする。
-	void HideRoarTelegraph();
-
-	// Roar予兆中の浮遊物を用意する。
-	void EnsureRoarFloatingDebris();
-
-	// Roar予兆中の浮遊物を初期化する。
-	void InitializeRoarFloatingDebris();
-
-	// Roar予兆中の浮遊物を更新する。
-	void UpdateRoarFloatingDebris();
-
-	// Roar予兆中の浮遊物を非表示にする。
-	void HideRoarFloatingDebris();
-
-	// Roar衝撃時の破片を用意する。
-	void EnsureRoarImpactDebris();
-
-	// Roar衝撃時の破片を生成する。
-	void SpawnRoarImpactDebris();
-
-	// Roar衝撃時の破片の移動や寿命を更新する。
-	void UpdateRoarImpactDebris(float scaledDeltaTime);
-
-	// Roar衝撃時の破片を非表示にする。
-	void HideRoarImpactDebris();
-
-	// Roar衝撃時の地面エフェクトを生成する。
-	void SpawnRoarGroundBurst();
-
 	// Roarの実行状態と演出を終了時または中断時に整理する。
 	void CleanupRoarBT();
-
-	// Roarなどのクールダウンを更新し、Roarの中断を処理する。
-	void TickRoarLifecycle(float dt);
-
-	// Roarと防御行動の状態・調整項目を表示する。
-	void DrawRoarBTDebug();
-
-	// Roar演出時の描画用足元オフセットを返す。
-	float GetRoarRenderFootOffset() const;
 
 	// 対象情報・FastComboの踏み込み
 	// PlayerとのXZ距離、方向、角度と相対領域を計算する。
@@ -717,9 +568,6 @@ public:
 
 	// 攻撃抽選用の近距離・正面条件を判定する。
 	bool IsNearFrontForAttackSelection() const;
-
-	// 防御行動用の背後角度条件を判定する。
-	bool IsDefensiveBackForBehavior(const BossTargetContext& context) const;
 
 	// 近距離正面でのFastCombo基本選択確率を返す。
 	float GetNearFrontFastComboProbability() const { return nearFrontFastComboProbability; }
@@ -730,17 +578,11 @@ public:
 	// FastComboの指定段階における対象情報を更新する。
 	void RefreshFastComboTargetContext(int stage);
 
-	// Notifyの期間に対応するFastComboの踏み込みを開始する。
-	void BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime);
-
 	// FastComboの踏み込みかどうか
-	bool IsFastComboStepInComplete();
+	bool IsFastComboStepInActive();
 
 	// FastComboの踏み込み状態を解除する。
 	void ClearFastComboStepIn();
-
-	// 指定されたNotifyがFastComboのMotionWarp対象かを判定する。
-	bool IsFastComboMotionWarpNotify(const AnimationNotifyState& state) const;
 
 	using AttackSetupTargetContext = PositioningTargetContext;
 	using AttackSetupMoveResult = PositioningMoveResult;
@@ -751,9 +593,6 @@ public:
 
 	// Jump開始前の目標位置を探索して準備する。
 	bool PrepareJumpAttackSetupTarget();
-
-	// 指定距離や障害物条件を満たす攻撃準備位置を探索する。
-	bool FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float boundaryMarginOverride = -1.0f) const;
 
 	// 攻撃準備位置の目標が有効かを返す。
 	bool HasAttackSetupTarget() const { return attackSetupTarget.valid; }
@@ -782,9 +621,6 @@ public:
 	// 位置調整を計画できるか判定する。
 	bool CanPlanReposition();
 
-	// 戦闘判断の推論を開始する。
-	void BeginCombatDecisionInference();
-
 	// 戦闘開始時の位置調整を計画できるかを返す。
 	bool CanPlanInitialReposition() const { return initialRepositionPending && !initialRepositionFallbackIdlePending; }
 
@@ -799,11 +635,6 @@ public:
 
 	// 初期位置調整失敗後の待機を完了する。
 	void CompleteInitialRepositionFallbackIdle();
-
-	// ボス部屋の壁を考慮して移動先と経路を評価する。
-	bool ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPosition,
-		const DirectX::XMFLOAT3& desiredTarget, DirectX::XMFLOAT3& outResolvedTarget,
-		bool& outPathBlocked) const;
 
 	// 位置調整先を探索し、移動目標として設定する。
 	bool PrepareRepositionTarget();
@@ -835,12 +666,6 @@ public:
 
 	// Jump予兆を非表示にする。
 	void HideJumpTelegraph();
-
-	// Jump着地時の予兆の発光を開始する。
-	void BeginJumpTelegraphImpactFlash();
-
-	// Jump着地時の予兆の発光を更新する。
-	void UpdateJumpTelegraphImpactFlash(float deltaTime);
 
 	// Jump予兆の進行度を更新する。
 	void UpdateJumpTelegraphProgress();
@@ -878,9 +703,6 @@ public:
 	// 複数回Jumpの実行段階を返す。
 	TripleJumpPhase GetTripleJumpPhase() const { return tripleJumpPhase; }
 
-	// 複数回Jumpの実行状態をデバッグ表示する。
-	void DrawTripleJumpDebug();
-
 	// FastCombo用の対象情報を返す。
 	const BossTargetContext& GetFastComboTargetContext() const { return fastComboTargetContext; }
 
@@ -912,17 +734,11 @@ public:
 	// 接近失敗後のFastCombo再試行待ちを開始する。
 	void StartFastComboApproachRetryCooldown();
 
-	// FastCombo接近の再試行待ち中かを返す。
-	bool IsFastComboApproachRetryCooldownActive() const;
-
 	// 現在の距離、向き、クールダウンでFastComboを実行できるか判定する。
 	bool CanExecuteFastCombo() const;
 
 	// PlayerがFastComboの攻撃距離内かを判定する。
 	bool IsFastComboInRange() const;
-
-	// PlayerがFastComboの実行可能角度内か判定する。
-	bool IsPlayerInFastComboFacingRange(const BossTargetContext& context) const;
 
 	// PlayerがFastComboの向き合わせ完了角度内か判定する。
 	bool IsPlayerInFastComboFaceCompleteRange(const BossTargetContext& context) const;
@@ -971,19 +787,6 @@ public:
 		return initialRepositionFallbackIdlePending ? initialRepositionFallbackIdleDuration : behaviorIdleDuration;
 	}
 
-	// 実行ノードがなければ推論し、現在のアクションを更新する。
-	void UpdateBehaviorTree(float deltaTime);
-
-
-	struct CloseCombatSettings
-	{
-		float minRange = 0.0f;  // 近接攻撃の最小距離。
-		float executeMaxRange = 6.0f;  // 近接攻撃を実行できる最大距離。
-		float planMaxRange = 10.0f;  // 近接攻撃を計画できる最大距離。
-		float facingLimitDegrees = 35.0f;  // 実行時の向きの許容角度。
-		float faceCompleteAngleDegrees = 7.0f;  // 向き合わせ完了と判定する角度。
-	};
-
 	// FastCombo段間の向き合わせ完了角度を返す。
 	float GetInterStageFaceCompleteAngle() const { return interStageFaceCompleteAngle; }
 
@@ -992,12 +795,6 @@ public:
 
 	// FastCombo段間の向き合わせ開始までの待機時間を返す。
 	float GetInterStageFaceDelay() const { return interStageFaceDelay; }
-	enum class FastComboRuntimeState
-	{
-		Attack,  // 攻撃中。
-		InterStageDelay,  // 段間の待機中。
-		InterStageFacing  // 段間の向き合わせ中。
-	};
 
 	// FastComboの実行状態を設定する。
 	void SetFastComboRuntimeState(FastComboRuntimeState state) { fastComboRuntimeState = state; }
@@ -1006,6 +803,279 @@ public:
 	void SetFastComboRuntimeStage(int stage) { fastComboRuntimeStage = stage; }
 
 private:
+
+	// 死亡時の処理を開始する
+	void BeginDeathPresentation();
+
+	// 死亡演出または最終被弾演出が行動を所有しているかを返す。
+	bool IsDeathPresentationActive() const { return isDeathPerform || finalHitReactionActive || finalHitReactionHeld; }
+
+	// 行動ツリーのノードと実行状態を初期化する。
+	void ResetBehaviorTreeForBattleRestart();
+
+	// 攻撃や位置調整の戦闘時状態を初期化する。
+	void ResetCombatRuntimeForBattleRestart();
+
+	// フェーズ遷移時の遅延HP表示を進める。
+	void AdvanceDelayedHpBarForPhaseTransition();
+
+	// 位置調整時の移動速度に応じてアニメーションを更新する。
+	void UpdatePositioningAnimation(float actualSpeed, float deltaTime);
+
+	// 位置調整用の移動アニメーションを終了する。
+	void EndPositioningAnimation();
+
+	// 連続攻撃の次段階に向けて攻撃状態を更新する。
+	void BeginAdditionalAttackStage();
+
+	// 実行ノードがなければ推論し、現在のアクションを更新する。
+	void UpdateBehaviorTree(float deltaTime);
+
+	// Dashの実行を終了してRecoveryへ移る。
+	void FinishDashAttackBT();
+
+	// Dash移動に使う位置や方向を準備する。
+	bool PrepareDashAttackMovementSnapshot();
+
+	// 指定されたボス攻撃予兆のSEを再生する。
+	void PlayBossTelegraphSE(const char* fileName) const;
+
+	// Dash予兆の表示を開始する。
+	void BeginDashTelegraphVisual();
+
+	// Dash予兆の表示状態を更新する。
+	void UpdateDashTelegraphVisual(float deltaTime);
+
+	// Dash予兆の扇形の点滅を開始する。
+	void BeginDashTelegraphFanFlash();
+
+	// Dash予兆の線の短縮を開始する。
+	void BeginDashTelegraphLineShrink();
+
+	// Dash予兆の線の短縮を更新する。
+	void UpdateDashTelegraphLineShrink();
+
+	// Dash予兆のフェードアウトを開始する。
+	void BeginDashTelegraphFadeOut();
+
+	// Dash予兆を非表示にする。
+	void HideDashTelegraphVisual();
+
+	// Dashの移動を開始する。
+	bool BeginDashAttackMovement();
+
+	// Dashの移動を更新し、移動結果を返す。
+	bool UpdateDashAttackMovement(float deltaTime, bool keepLockedDirection = false);
+
+	// Dashの移動を停止する。
+	void StopDashAttackMovement();
+
+	// 単発Chargeの移動を開始する。
+	bool BeginSingleChargeBT();
+
+	// 単発Chargeの進行を更新する。
+	ChargeBTStepResult UpdateSingleChargeBT(float deltaTime);
+
+	// 複数回Chargeの進行と段階間遷移を更新する。
+	ChargeBTStepResult UpdateTripleChargeBT(float deltaTime);
+
+	// 第2段階のCharge設定を使うか判定する。
+	bool IsPhase2ChargeActive();
+
+	// 現在のフェーズに対応するCharge速度を返す。
+	float GetActiveChargeSpeed() const;
+
+	// 現在のChargeのPlayer判定半径倍率を返す。
+	float GetActiveChargePlayerCastRadiusScale() const;
+
+	// 現在のChargeのダメージを返す。
+	int GetActiveChargeDamage() const;
+
+	// 複数回Chargeの現在の突進を開始する。
+	bool BeginTripleChargeLeg();
+
+	// 複数回Chargeの段間遷移を開始する。
+	bool BeginTripleChargeTransition();
+
+	// Chargeの予兆表示を開始する。
+	bool BeginChargeTelegraphVisual();
+
+	// 進行度に応じてChargeの予兆表示を更新する。
+	void UpdateChargeTelegraphVisual(float lengthProgress);
+
+	// Charge開始方向の障害物までの距離を調べる。
+	bool EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition, const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const;
+
+	// Chargeの側方の障害物までの距離と接触情報を調べる。
+	bool EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPosition, const DirectX::XMFLOAT3& direction, float& outClearance, DirectX::XMFLOAT3& outNormal, bool& outHit) const;
+
+	// Chargeの予兆を非表示にする。
+	void HideChargeTelegraphVisual();
+
+	// Charge後のスタン処理を開始する。
+	bool BeginChargeStunBT();
+
+	// Charge後のスタンアニメーションと経過時間を更新する。
+	ChargeBTStepResult UpdateChargeStunBT(float deltaTime);
+
+	// Chargeの攻撃区間を終了し、移動や攻撃判定を停止する。
+	void FinishChargeAttackBT();
+
+	// Chargeを中断すべき状態か判定する。
+	bool ShouldAbortChargeAttackBT();
+
+	// Chargeの中断または終了に伴う状態と演出を整理する。
+	void CleanupChargeAttackBT();
+
+	// Chargeの実行状態と調整項目をデバッグ表示する。
+	void DrawChargeAttackBTDebug();
+
+	// Chargeの移動を開始する。
+	bool BeginChargeAttackMovement();
+
+	// Playerに向けてChargeの移動方向を固定する。
+	bool LockChargeDirectionToPlayer();
+
+	// Chargeの移動と衝突を更新し、終了理由を返す。
+	ChargeAttackEndReason UpdateChargeAttackMovement(float deltaTime, bool allowTripleWallTurn = false);
+
+	// Charge時の風の軌跡を開始する。
+	void StartChargeWindTrails();
+
+	// Chargeの風演出に設定値を適用する。
+	void ApplyMainChargeWindSettings();
+
+	// Charge時の風の軌跡を更新する。
+	void UpdateChargeWindTrails(float deltaTime);
+
+	// Charge時の風の軌跡を停止する。
+	void StopChargeWindTrails();
+
+	// Charge時の風の軌跡を生成する。
+	void SpawnChargeWindTrail(struct ChargeWindTrailRuntime& streak) const;
+
+	// Chargeの移動と関連する状態を停止する。
+	void StopChargeAttackMovement();
+
+	// Charge予備動作の終了時刻を返す。
+	float GetChargeWindupEndTime() const { return chargeWindupEndTime; }
+
+	// スタンの継続時間を返す。
+	float GetStunDuration() const { return stunDuration; }
+
+	// Sets the duration override for the next Recovery.
+	void SetNextRecoveryDuration(float duration);
+
+	// ChargeのPlayer命中後に使うRecovery時間を返す。
+	float GetChargePlayerHitRecoveryDuration() const
+	{
+		return chargePlayerHitRecoveryDuration;
+	}
+
+	// Chargeのジャスト回避後に使うRecovery時間を返す。
+	float GetChargeJustDodgeRecoveryDuration() const
+	{
+		return chargeJustDodgeRecoveryDuration;
+	}
+
+	// スタン後に使うRecovery時間を返す。
+	float GetPostStunRecoveryDuration() const
+	{
+		return postStunRecoveryDuration;
+	}
+
+	// 選択中の攻撃に対応するダメージを返す。
+	int GetDamageForCurrentAttack() const;
+
+	// Roarの計画・実行を許可する共通条件を判定する。
+	bool IsRoarExecutionAllowed() const;
+
+	// Roarの衝撃波による判定を適用する。
+	void ApplyRoarShockwave();
+
+	// 現在のフェーズに対応するRoarの攻撃半径を返す。
+	float GetRoarAttackRadius() const;
+
+	// Roar予兆を表示する。
+	void ShowRoarTelegraph();
+
+	// Roar予兆の位置と大きさを更新する。
+	void UpdateRoarTelegraphTransform();
+
+	// Roar予兆の進行度を更新する。
+	void UpdateRoarTelegraphProgress();
+
+	// Roar予兆を非表示にする。
+	void HideRoarTelegraph();
+
+	// Roar予兆中の浮遊物を用意する。
+	void EnsureRoarFloatingDebris();
+
+	// Roar予兆中の浮遊物を初期化する。
+	void InitializeRoarFloatingDebris();
+
+	// Roar予兆中の浮遊物を更新する。
+	void UpdateRoarFloatingDebris();
+
+	// Roar予兆中の浮遊物を非表示にする。
+	void HideRoarFloatingDebris();
+
+	// Roar衝撃時の破片を用意する。
+	void EnsureRoarImpactDebris();
+
+	// Roar衝撃時の破片を生成する。
+	void SpawnRoarImpactDebris();
+
+	// Roar衝撃時の破片の移動や寿命を更新する。
+	void UpdateRoarImpactDebris(float scaledDeltaTime);
+
+	// Roar衝撃時の破片を非表示にする。
+	void HideRoarImpactDebris();
+
+	// Roar衝撃時の地面エフェクトを生成する。
+	void SpawnRoarGroundBurst();
+
+	// Roarなどのクールダウンを更新し、Roarの中断を処理する。
+	void TickRoarLifecycle(float dt);
+
+	// Roarと防御行動の状態・調整項目を表示する。
+	void DrawRoarBTDebug();
+
+	// Roar演出時の描画用足元オフセットを返す。
+	float GetRoarRenderFootOffset() const;
+
+	// 防御行動用の背後角度条件を判定する。
+	bool IsDefensiveBackForBehavior(const BossTargetContext& context) const;
+
+	// Notifyの期間に対応するFastComboの踏み込みを開始する。
+	void BeginFastComboStepIn(int stage, float notifyStartTime, float notifyEndTime);
+
+	// 指定されたNotifyがFastComboのMotionWarp対象かを判定する。
+	bool IsFastComboMotionWarpNotify(const AnimationNotifyState& state) const;
+
+	// 指定距離や障害物条件を満たす攻撃準備位置を探索する。
+	bool FindAttackSetupTarget(float minDistance, float maxDistance, float angleStep, float clampTolerance, float minimumMoveDistance, DirectX::XMFLOAT3& outTarget, float boundaryMarginOverride = -1.0f) const;
+
+	// 戦闘判断の推論を開始する。
+	void BeginCombatDecisionInference();
+
+	// ボス部屋の壁を考慮して移動先と経路を評価する。
+	bool ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPosition,const DirectX::XMFLOAT3& desiredTarget, DirectX::XMFLOAT3& outResolvedTarget,bool& outPathBlocked) const;
+
+	// Jump着地時の予兆の発光を開始する。
+	void BeginJumpTelegraphImpactFlash();
+
+	// Jump着地時の予兆の発光を更新する。
+	void UpdateJumpTelegraphImpactFlash(float deltaTime);
+
+	// 複数回Jumpの実行状態をデバッグ表示する。
+	void DrawTripleJumpDebug();
+
+	// FastCombo接近の再試行待ち中かを返す。
+	bool IsFastComboApproachRetryCooldownActive() const;
+
+	// PlayerがFastComboの実行可能角度内か判定する。
+	bool IsPlayerInFastComboFacingRange(const BossTargetContext& context) const;
 
 	// 初期化・更新の内部処理
 	// モデルとアニメーション生成する
@@ -1068,16 +1138,8 @@ private:
 	// 距離を近距離・中距離・遠距離に分類する。
 	BossDistanceRegion GetDistanceRegion(float distance) const;
 
-	struct RepositionTargetEvaluation
-	{
-		DirectX::XMFLOAT3 clampedTarget{};  // 境界補正後の目標位置。
-		float clampDistance = 0.0f;  // 目標位置の境界補正距離。
-		bool bossRoomPathBlocked = false;  // ボス部屋の経路が遮られているか。
-	};
-
 	// 位置調整候補をボス部屋の範囲に収めて評価する。
-	void EvaluateClampedPositioningTarget(const DirectX::XMFLOAT3& startPosition,
-		const DirectX::XMFLOAT3& desiredTarget, RepositionTargetEvaluation& outEvaluation, float boundaryMarginOverride = -1.0f) const;
+	void EvaluateClampedPositioningTarget(const DirectX::XMFLOAT3& startPosition,const DirectX::XMFLOAT3& desiredTarget, RepositionTargetEvaluation& outEvaluation, float boundaryMarginOverride = -1.0f) const;
 
 	// 連続攻撃ペナルティの対象となる行動か判定する。
 	bool IsRepeatPenaltyCombatAttack(BossActionType actionType) const;
@@ -1102,25 +1164,8 @@ private:
 	bool UpdateChargeAnimationWatchdogBT(float animationTime, float deltaTime);
 
 	// HitBox・DangerArea・移動の内部処理
-	struct WeaponHitBoxPoints
-	{
-		DirectX::XMFLOAT3 root{};  // 武器の根元位置。
-		DirectX::XMFLOAT3 middle{};  // 武器の中央位置。
-		DirectX::XMFLOAT3 tip{};  // 武器の先端位置。
-	};
-
 	// 武器の攻撃判定に使う位置を計算する。
-	WeaponHitBoxPoints BuildWeaponHitBoxPoints(
-		const std::shared_ptr<SceneComponent>& root,
-		const std::shared_ptr<SceneComponent>& middle,
-		const std::shared_ptr<SceneComponent>& tip,
-		const DirectX::XMFLOAT3& localOffset) const;
-
-	// 危険範囲の初期設定を記録する。
-	void CaptureInitialDangerObbSettings();
-
-	// 選択中の危険範囲Notify Stateを返す。
-	AnimationNotifyState* GetSelectedDangerNotifyState();
+	WeaponHitBoxPoints BuildWeaponHitBoxPoints(const std::shared_ptr<SceneComponent>& root,const std::shared_ptr<SceneComponent>& middle,const std::shared_ptr<SceneComponent>& tip,const DirectX::XMFLOAT3& localOffset) const;
 
 	// 有効なNotifyから危険範囲を更新する。
 	void RefreshActiveDangerAreaFromNotify();
@@ -1132,8 +1177,7 @@ private:
 	void RefreshActiveHitBoxesFromNotifyStates();
 
 	// 指定された位置調整目標への移動を更新する。
-	PositioningMoveResult UpdatePositioningTargetMovement(PositioningTargetContext& target,
-		PositioningTargetRuntime& runtime, float deltaTime);
+	PositioningMoveResult UpdatePositioningTargetMovement(PositioningTargetContext& target,PositioningTargetRuntime& runtime, float deltaTime);
 
 	// 位置調整の目標と実行状態を解除する。
 	void ClearPositioningTarget(PositioningTargetContext& target, PositioningTargetRuntime& runtime);
@@ -1166,6 +1210,7 @@ private:
 	// HPバーに指定されたフェーズの表示設定を適用する。
 	void ApplyHpBarVisualProfile(HpBarVisualProfile profile);
 
+	// 第2段階HPバーの演出をリセットする。
 	void ResetPhase2HpBarPresentation();
 
 	// 第2段階HPバーの演出を更新する。
@@ -1334,11 +1379,8 @@ private:
 
 
 	std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents;  // HPバーを構成するUIコンポーネント。
-	struct HpBarFadeEntry
-	{
-		std::shared_ptr<UIImageComponent> component;  // フェード対象の画像コンポーネント。
-		CoreColor color;  // フェード対象の元の色。
-	};
+
+
 	std::vector<HpBarFadeEntry> hpBarFadeEntries;  // HPバーのフェード対象と元の表示情報。
 	bool rushHpDisplayActive = false;  // Rush中のHP表示が有効か。
 	bool rushCombatHoldActive = false;  // Rush中の戦闘処理の保持が有効か。
@@ -1418,18 +1460,6 @@ private:
 	float roarTelegraphOuterYOffset = 0.07f;  // Roar予兆の外側の高さオフセット。
 	float roarTelegraphFillYOffset = 0.07f;  // Roar予兆の塗りつぶしの高さオフセット。
 
-	// Roar浮遊破片のリソース・設定
-	struct RoarFloatingDebris
-	{
-		std::shared_ptr<SkeletalMeshComponent> meshComponent;  // 浮遊する破片のメッシュ。
-		DirectX::XMFLOAT3 normalizedDirection{};  // 浮遊する破片の正規化された方向。
-		float normalizedRingDistance = 0.0f;  // 浮遊する破片のリング内の距離比率。
-		float spawnThreshold = 1.0f;  // 浮遊する破片の出現閾値。
-		float baseScale = 1.0f;  // 浮遊する破片の基準スケール。
-		float maxFloatHeight = 0.0f;  // 浮遊する破片の最大高さ。
-		DirectX::XMFLOAT3 baseRotation{};  // 浮遊する破片の基準回転。
-		DirectX::XMFLOAT3 rotationAmount{};  // 浮遊する破片の回転量。
-	};
 	static constexpr size_t RoarFloatingDebrisCount = 15;  // Roarの浮遊する破片の数。
 	std::array<RoarFloatingDebris, RoarFloatingDebrisCount> roarFloatingDebris{};  // Roarの浮遊する破片の実行状態。
 	bool roarFloatingDebrisEnabled = true;  // Roarの浮遊する破片を有効にするか。
@@ -1440,20 +1470,7 @@ private:
 	float roarFloatingDebrisScaleMin = 0.75f;  // Roarの浮遊する破片のスケールの下限。
 	float roarFloatingDebrisScaleMax = 2.5f;  // Roarの浮遊する破片のスケールの上限。
 
-	// Roar衝撃破片のリソース・設定
-	struct RoarImpactDebris
-	{
-		std::shared_ptr<SkeletalMeshComponent> meshComponent;  // 衝撃時の破片のメッシュ。
-		bool active = false;  // 破片が有効か。
-		bool isBlock = false;  // 破片がブロック状か。
-		DirectX::XMFLOAT3 position{};  // 破片の位置。
-		DirectX::XMFLOAT3 velocity{};  // 破片の速度。
-		DirectX::XMFLOAT3 rotation{};  // 破片の回転。
-		DirectX::XMFLOAT3 angularVelocity{};  // 破片の角速度。
-		float lifetime = 0.0f;  // 破片の存続時間。
-		float elapsedTime = 0.0f;  // 破片の経過時間。
-		float scale = 1.0f;  // 破片のスケール。
-	};
+
 	static constexpr size_t RoarImpactDebrisPoolCount = 16;  // Roarの衝撃時の破片プールの数。
 	std::array<RoarImpactDebris, RoarImpactDebrisPoolCount> roarImpactDebris{};  // Roarの衝撃時の破片の実行状態。
 	bool roarImpactDebrisEnabled = true;  // Roarの衝撃時の破片を有効にするか。
@@ -1522,19 +1539,7 @@ private:
 
 	float repositionCooldownDuration = 3.0f, repositionCooldownRemaining = 0.0f, repositionRetryCooldownDuration = 0.75f, repositionRetryCooldownRemaining = 0.0f;  // 位置調整と再試行のクールダウン時間および残り時間。
 
-
-	// Roar Runtime
-	struct RoarRuntime
-	{
-		RoarStage stage = RoarStage::None;  // Roarの実行段階。
-		bool shockwaveFired = false;  // Roarの衝撃波を発生済みか。
-		bool hitPlayer = false;  // Roarがプレイヤーにヒットしたか。
-		float elapsed = 0.0f;  // Roarの経過時間。
-		float stalled = 0.0f;  // Roarアニメーションの進行が停止した時間。
-		float previousTime = 0.0f;  // 前回のRoarアニメーション時刻。
-		float endTime = 0.0f;  // Roarアニメーションの終了時刻。
-	} roarBT;  // Roarの実行段階と衝撃波の状態。
-
+	RoarRuntime roarBT = {};  // Roarの実行段階と衝撃波の状態。
 	// FastCombo対象・段間設定・実行状態
 	BossTargetContext fastComboTargetContext{};  // FastComboの対象に関する距離と角度の情報。
 	std::array<BossTargetContext, 3> fastComboStageTargetContexts{};  // FastComboの各段階で取得した対象情報。
@@ -1672,16 +1677,6 @@ private:
 	bool dashBTMovementSnapshotPrepared = false;  // Dash移動に使う情報が準備済みかを示す。
 	DirectX::XMFLOAT3 dashBTPredictedKnockupPosition{};  // Dash後のKnockup開始予測位置。
 	bool showDashTelegraph = true;  // Dash予兆の表示を有効にする。
-	enum class DashTelegraphVisualState
-	{
-		Hidden,  // 非表示。
-		LineExpanding,  // 線を伸ばしている状態。
-		FanFadingIn,  // 扇形をフェードインしている状態。
-		Holding,  // 予兆を保持している状態。
-		DashActive,  // Dash中。
-		FanFlashing,  // 扇形が発光中。
-		FanFadingOut  // 扇形をフェードアウトしている状態。
-	};
 	DashTelegraphVisualState dashTelegraphVisualState = DashTelegraphVisualState::Hidden;  // Dash予兆の表示アニメーション段階。
 	float dashTelegraphVisualElapsed = 0.0f;  // Dash予兆の表示段階の経過時間。
 	float dashTelegraphLineExpandDuration = 0.15f;  // Dash予兆の線を伸ばす時間。
@@ -1707,7 +1702,6 @@ private:
 	DirectX::XMFLOAT3 dashTelegraphLineStart{};  // Dash予兆の線の開始位置。
 	DirectX::XMFLOAT3 dashTelegraphLineEnd{};  // Dash予兆の線の終了位置。
 	float dashTelegraphLineLength = 0.0f;  // Dash予兆の線の長さ。
-	// Used only by the legacy EnemyAttackState path, not Dash BT's Timeline gate.
 	float dashAttackSpeed = 12.0f;  // Dash攻撃の移動速度。
 	float minDashAttackDistance = 4.0f;  // Dash攻撃の最小移動距離。
 	float maxDashAttackDistance = 16.0f;  // Dash攻撃の最大移動距離。
@@ -1871,19 +1865,6 @@ private:
 	DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };  // ジャスト回避判定領域のオフセット。
 	DangerArea dangerArea{};  // 危険範囲の判定情報。
 
-	// DangerArea OBB Editor
-	struct DangerObbInitialValue
-	{
-		DirectX::XMFLOAT3 centerOffset{};  // 危険範囲OBBの中心オフセット。
-		DirectX::XMFLOAT3 fullSize{};  // 危険範囲OBBの全体サイズ。
-	};
-	std::unordered_map<uint64_t, DangerObbInitialValue> initialDangerObbSettings;  // 危険範囲OBB設定の初期値。
-	std::unordered_map<uint64_t, DangerObbInitialValue> savedDangerObbSettings;  // 保存済みの危険範囲OBB設定。
-	std::string dangerObbSaveStatus = "Not saved this session";  // 危険範囲OBB設定の保存状態の表示文字列。
-	std::string dangerObbSavePath;  // 危険範囲OBB設定の保存先。
-	bool dangerObbLastSaveSucceeded = false;  // 直近の危険範囲OBB設定の保存が成功したか。
-	size_t dangerObbSelectedClip = static_cast<size_t>(-1);  // 危険範囲編集で選択中のアニメーション。
-	size_t dangerObbSelectedStateIndex = 0;  // 危険範囲編集で選択中のNotify Stateのインデックス。
 
 	// DangerArea Notify状態
 	const AnimationNotifyState* activeDangerNotifyState = nullptr;  // 現在有効な危険範囲のNotify State。
@@ -1903,10 +1884,8 @@ private:
 	float rushFinalHitRumbleStrength = 1.5f;  // Rush最終攻撃の被弾時の振動強度。
 	float rushFinalHitRumbleDuration = 0.185f;  // Rush最終攻撃の被弾時の振動時間。
 
-
 	// Animation MotionWarp
 	std::vector<AnimationMotionWarp> animationMotionWarps;  // アニメーションに設定されたMotionWarp情報。
-
 
 	// BehaviorTree共通Runtime
 	std::unique_ptr<BehaviorTree>	aiTree = nullptr;  // Gruxの行動判断とアクションを構成するツリー。

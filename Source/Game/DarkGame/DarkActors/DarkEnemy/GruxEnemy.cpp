@@ -2752,7 +2752,7 @@ void GruxEnemy::UpdateBehaviorTree(float dt)
 	}
 }
 
-bool GruxEnemy::IsFastComboStepInComplete()
+bool GruxEnemy::IsFastComboStepInActive()
 {
 	return fastComboStepInActive;
 }
@@ -3079,7 +3079,6 @@ void GruxEnemy::InitializeSkeletalMeshAndAnimations(const std::string& parentNam
 
 	// 全てのNotifyAssetsをロードする
 	controller->LoadAllNotifyAssets(GetName());
-	CaptureInitialDangerObbSettings();
 
 	// アニメーションコントローラーを character に追加
 	this->AddBodyAnimationController(controller);
@@ -3840,49 +3839,6 @@ bool GruxEnemy::TryStartJustDodgeSuccess(Player* player)
 	player->StartJustDodgeSuccess(
 		std::dynamic_pointer_cast<Enemy>(shared_from_this()));
 	return true;
-}
-
-void GruxEnemy::CaptureInitialDangerObbSettings()
-{
-	initialDangerObbSettings.clear();
-	savedDangerObbSettings.clear();
-	const auto controller = GetBodyAnimationController();
-	if (!controller)
-		return;
-	for (const size_t clip : controller->GetAnimationAssetOrderForRuntimeTuning())
-	{
-		const auto* asset = controller->GetNotifyAssetForRuntimeTuning(clip);
-		if (!asset)
-			continue;
-		const auto& states = asset->notifyTrack.states;
-		for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
-		{
-			const auto& state = states[stateIndex];
-			if (state.type != AnimationNotifyState::Type::DangerWindow)
-				continue;
-			const uint64_t key = (static_cast<uint64_t>(clip) << 32) |
-				static_cast<uint64_t>(stateIndex);
-			initialDangerObbSettings[key] = { state.justDodgeAreaOffset, state.justDodgeAreaSize };
-			savedDangerObbSettings[key] = initialDangerObbSettings[key];
-			if (dangerObbSelectedClip == static_cast<size_t>(-1))
-			{
-				dangerObbSelectedClip = clip;
-				dangerObbSelectedStateIndex = stateIndex;
-			}
-		}
-	}
-}
-
-AnimationNotifyState* GruxEnemy::GetSelectedDangerNotifyState()
-{
-	const auto controller = GetBodyAnimationController();
-	if (!controller)
-		return nullptr;
-	auto* asset = controller->GetNotifyAssetForRuntimeTuning(dangerObbSelectedClip);
-	if (!asset || dangerObbSelectedStateIndex >= asset->notifyTrack.states.size())
-		return nullptr;
-	AnimationNotifyState& state = asset->notifyTrack.states[dangerObbSelectedStateIndex];
-	return state.type == AnimationNotifyState::Type::DangerWindow ? &state : nullptr;
 }
 
 void GruxEnemy::RefreshActiveDangerAreaFromNotify()

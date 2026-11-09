@@ -24,7 +24,6 @@ bool DeadJudgment::Judgment()
 
 ActionBase::State BTStartDeath::Run(float)
 {
-    started = true;
     return State::Complete;
 }
 
@@ -141,7 +140,7 @@ ActionBase::State ExecuteFastCombo::Run(float dt)
         owner->RefreshFastComboTargetContext(stage);
         if (!owner->PlayAttackStage(BossAttackType::FastCombo, stage)) { owner->ClearFastComboStepIn(); started = false; return State::Failed; }
     }
-    if (owner->IsFastComboStepInComplete()) return State::Run;
+    if (owner->IsFastComboStepInActive()) return State::Run;
     if (finishAfterAnimation)
     {
         auto controller = owner->GetBodyAnimationController();

@@ -99,7 +99,17 @@ bool GruxEnemy::PrepareChargeAttackSetupTarget()
 {
     if (!CanPlanChargeAttack())
         return false;
+    const float tripleTurnClearance = chargeBT.tripleChargeWallTurnClearance;
+    const float tripleMaxDistance = chargeBT.tripleChargeLegMaxDistance;
+    const float tripleMaxDuration = chargeBT.tripleChargeLegMaxDuration;
+    const float tripleTransitionDuration = chargeBT.tripleChargeTransitionDuration;
+    const float tripleStunMultiplier = chargeBT.tripleWallStunDurationMultiplier;
     chargeBT = {};
+    chargeBT.tripleChargeWallTurnClearance = tripleTurnClearance;
+    chargeBT.tripleChargeLegMaxDistance = tripleMaxDistance;
+    chargeBT.tripleChargeLegMaxDuration = tripleMaxDuration;
+    chargeBT.tripleChargeTransitionDuration = tripleTransitionDuration;
+    chargeBT.tripleWallStunDurationMultiplier = tripleStunMultiplier;
     chargeBT.phase = ChargeBTPhase::Setup;
     chargeBT.previousAction = selectedActionType;
     selectedActionType = BossActionType::ChargeAttack;
@@ -856,10 +866,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
         {
             chargeBT.recoveryDuration = GetChargePlayerHitRecoveryDuration();
         }
-        else if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::JustDodge)
-        {
-            chargeBT.recoveryDuration = GetChargeJustDodgeRecoveryDuration();
-        }
         SetNextRecoveryDuration(chargeBT.recoveryDuration);
     }
     else return ChargeBTStepResult::Failed;
@@ -871,12 +877,6 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::ResolveChargeResultBT(float dt)
 GruxEnemy::ChargeBTStepResult GruxEnemy::FinishChargeRecoveryBT()
 {
     if (chargeBT.phase != ChargeBTPhase::RecoveryPostconditions) return ChargeBTStepResult::Failed;
-    if (!chargeBT.failed && chargeBT.result == ChargeAttackEndReason::JustDodge)
-    {
-        const auto scene = GetOwnerScene();
-        const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
-        if (player && player->IsRushOpportunityActive()) return ChargeBTStepResult::Running;
-    }
     CleanupChargeAttackBT();
     return ChargeBTStepResult::Complete;
 }
