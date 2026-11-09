@@ -40,7 +40,6 @@ public:
     {
         InitialMesh = 0,
         UpdateCSOnly,
-        UpdatePassThrough,
         UpdateAndConstraint,
     };
 
@@ -138,14 +137,8 @@ public:
         float driveForceFrequency = 1.5f;
         float driveForcePhaseGradient = 1.8f;
     };
-    static_assert(sizeof(ClothSimulateCBuffer) == 48, "Cloth b10 layout must match HLSL");
-    static_assert(offsetof(ClothSimulateCBuffer, bottomWindExponent) == 32, "Cloth b10 bottom wind exponent offset must match HLSL");
-    static_assert(offsetof(ClothSimulateCBuffer, driveForceAmplitude) == 36, "Cloth b10 drive force amplitude offset must match HLSL");
-    static_assert(offsetof(ClothSimulateCBuffer, driveForceFrequency) == 40, "Cloth b10 drive force frequency offset must match HLSL");
-    static_assert(offsetof(ClothSimulateCBuffer, driveForcePhaseGradient) == 44, "Cloth b10 drive force phase gradient offset must match HLSL");
     std::unique_ptr<ConstantBuffer<ClothSimulateCBuffer>> cbuffer;
 
-    // b11 is intentionally cloth-local: substeps must not overwrite SceneBase b1.
     struct ClothTimeCBuffer
     {
         float elapsedTime = 0.0f;
@@ -157,7 +150,10 @@ public:
     static_assert(offsetof(ClothTimeCBuffer, gravityScale) == 8, "Cloth b11 gravity scale offset must match HLSL");
     std::unique_ptr<ConstantBuffer<ClothTimeCBuffer>> clothTimeCBuffer;
 
-    enum class ClothDebugDrawMode : uint32_t { Default, UnlitBaseColor, WorldNormal, NoNormalMap, NoShadow, DiffuseOnly, AmbientOnly, NormalDotLight, TwoSidedDiffuse, AbsNormalDotLight, DirectDiffuseTerm, DiffuseAmbientTerm, PointLightDiffuseOnly, PointLightAttenuation, PointLightNoL, SimulationNormal, GeometricNormal, NormalDifference };
+    enum class ClothDebugDrawMode : uint32_t 
+    {
+        Default,
+        UnlitBaseColor, WorldNormal, NoNormalMap, NoShadow, DiffuseOnly, AmbientOnly, NormalDotLight, TwoSidedDiffuse, AbsNormalDotLight, DirectDiffuseTerm, DiffuseAmbientTerm, PointLightDiffuseOnly, PointLightAttenuation, PointLightNoL, SimulationNormal, GeometricNormal, NormalDifference };
     struct ClothDebugCBuffer { uint32_t mode = 0; float padding[3] = {}; };
     struct ClothAlphaTestCBuffer { uint32_t enableAlphaTest = 1; float alphaThreshold = 0.5f; float padding[2] = {}; };
     static_assert(sizeof(ClothDebugCBuffer) == 16, "Cloth debug b12 layout must be 16 bytes");
@@ -168,8 +164,6 @@ public:
     bool clothOpacityTextureLoaded = false;
     bool enableAlphaTest = true;
     float alphaThreshold = 0.5f;
-    // ClothUpdateCS uses b6 for collision planes. Keep this buffer owned by
-    // the cloth simulation so it is independent of other slot-6 users.
     struct ClothPlane
     {
         DirectX::XMFLOAT3 normal = { 0.0f, 1.0f, 0.0f };
@@ -190,12 +184,10 @@ public:
     float driveForceAmplitude = 1.2f;
     float driveForceFrequency = 5.0f;
     float driveForcePhaseGradient = 5.0f;
-    // 1.0 preserves the prior ClothUpdateCS gravity; 0.0 disables it.
     float gravityScale = 0.0f;
     float bottomWindExponent = 1.0f;
     ClothDebugDrawMode debugDrawMode = ClothDebugDrawMode::Default;
 
-    // Diagnostic gates. They do not alter cloth parameters.
     bool enableClothRendering = true;
     bool enableClothSimulation = true;
 
@@ -206,7 +198,6 @@ public:
     float simulationAccumulator = 0.0f;
     float simulationElapsedTime = 0.0f;
     UINT lastExecutedSubsteps = 0;
-    // Cloth-only render diagnostics. These never change physical parameters.
     SimulationStage simulationStage = SimulationStage::UpdateAndConstraint;
     bool disableCulling = false;
 
@@ -312,7 +303,6 @@ public:
             UINT startIndexLocation = 0;
             UINT indexCount = 0;
             std::vector<ClothEdge> finalEdges;
-            std::vector<float> initialBottomWeights;
             int ping = 0;
             int pong = 1;
             DirectX::XMFLOAT4X4 previousGraphicsWorld{ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
@@ -385,7 +375,7 @@ public:
 
                 // Initial local-Y bottom weight is immutable simulation input:
                 // top = 0, bottom = 1.  It is intentionally separate from ClothVertex.
-                initialBottomWeights.resize(cachedVertices.size());
+                std::vector<float> initialBottomWeights(cachedVertices.size());
                 if (!cachedVertices.empty())
                 {
                     float minInitialY = cachedVertices.front().position.y;
@@ -482,8 +472,6 @@ public:
     // INTERLEAVED_GLTF_MODEL
     std::vector<Microsoft::WRL::ComPtr<ID3D11Buffer>> buffers;
 
-    void CreateClothPingPongBuffers(ID3D11Device* device, const std::vector<Mesh::Vertex>& vertices);
-
     void Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& world);
 
     struct TextureInfo
@@ -560,10 +548,6 @@ public:
     {
         std::string name;
 
-        Microsoft::WRL::ComPtr<ID3D11PixelShader> replacedPixelShader{ nullptr };// カスタムシェーダー
-        // nullptr なら通常のパスから自動的に決定される
-        // 指定があればこの文字列のパイプラインステートを使用する
-        std::optional<std::string> overridePipelineName;
 
         struct Cbuffer
         {
@@ -722,10 +706,6 @@ private:
     void CumulateTransforms(std::vector<Node>& nodes);
     void FetchMeshes(ID3D11Device* device, const tinygltf::Model& gltf_model);
 public:
-    // CascadedShadowMaps
-    Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShaderCSM;
-    Microsoft::WRL::ComPtr<ID3D11GeometryShader> geometryShaderCSM;
-
     Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
     Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
@@ -735,9 +715,7 @@ public:
     //Microsoft::WRL::ComPtr<ID3D11Buffer> clothBuffer[2];
     //// 描画時に使用する
     //Microsoft::WRL::ComPtr<ID3D11Buffer> clothVB;   // 頂点バッファ
-    uint32_t clothVertexOffset;
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothUpdateCS;
-    Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothUpdatePassThroughCS;
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothConstraintCS;
 
     //Microsoft::WRL::ComPtr<ID3D11Buffer> clothEdgeBuffer;   // エッジ用のバッファ
@@ -803,7 +781,6 @@ public:
     {
         DirectX::XMFLOAT4X4 matrices[PRIMITIVE_MAX_JOINTS];
     };
-    Microsoft::WRL::ComPtr<ID3D11Buffer> primitiveJointCbuffer;
 
     void CreateAndUploadResources(ID3D11Device* device);
 
@@ -814,7 +791,5 @@ public:
     }
 
 public:
-    // 名前とワールドのnode座標をキャッシュしておく
-    std::unordered_map<std::string, DirectX::XMFLOAT3> nameToNodeWorldPosition_;
 
 };

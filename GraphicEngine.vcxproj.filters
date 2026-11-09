@@ -1007,9 +1007,6 @@
     <FxCompile Include="Shader\ClothUpdateCS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\ClothUpdatePassThroughCS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\ComputeParticleBeginFrameCS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
