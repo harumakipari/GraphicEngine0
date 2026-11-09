@@ -104,9 +104,13 @@ public:
     }
 
     // Yaw と Pitch を最初に更新する
-    void InitSetYawAndPitch(const float yaw, const float pitch)const
+    void InitSetYawAndPitch(const float yaw, const float pitch)
     {
-        mainCameraComponent->SetYawAndPitch(yaw, pitch);
+        currentYaw = desiredYaw = MathHelper::ClampAngle(yaw);
+        currentPitch = desiredPitch = std::clamp(pitch,
+            DirectX::XMConvertToRadians(minPitchDegree),
+            DirectX::XMConvertToRadians(maxPitchDegree));
+        mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
     }
 
     // 敵のコンポーネントを設定
@@ -151,9 +155,6 @@ public:
         return MathHelper::Normalize(right);
     }
 
-    // カメラモードを取得する
-    CameraMode GetCameraMode()const { return currentMode; }
-
     // カメラモードで
     CameraMode GetMovementMode()const { return requestMode; }
 
@@ -185,10 +186,6 @@ public:
     }
 
     void SetTpsCameraProfile(TpsCameraProfile profile);
-    TpsCameraProfile GetTpsCameraProfile() const { return tpsCameraProfile; }
-
-    // ブレンドを開始する
-    void StartBlend(CameraMode current, CameraMode request);
 
     // プレイヤーやボスに対する死亡時のカメラに変更
     void StartDeathMode(const std::shared_ptr<GruxEnemy>& boss, std::function<void()> onBlendFinished);
@@ -212,7 +209,6 @@ public:
     bool GetPrisonOpeningTpsPose(PrisonOpeningTpsPose& outPose);
     void PreparePrisonOpeningTpsReturn(const PrisonOpeningTpsPose& pose);
 
-    void PlayCameraShake(float intensity, float duration, float frequency, float positionAmount, float targetAmount);
     void PlayCameraShakePreset(const std::string& presetName);
 
     void RequestOffscreenAttackAssist(
@@ -230,6 +226,10 @@ public:
         return isBlending && requestMode == CameraMode::Focus;
     }
 
+private:
+    // ブレンドを開始する
+    void StartBlend(CameraMode current, CameraMode request);
+
     void UpdateCameraPose(float deltaTime, const DirectX::XMFLOAT3& playerPos,
         bool preservePrisonOpeningReturnPose);
     void ApplyCameraFov(bool preservePrisonOpeningReturnPose);
@@ -239,7 +239,6 @@ public:
         bool preservePrisonOpeningReturnPose);
     void CommitCameraPose();
 
-private:
     struct ScreenProjectionResult
     {
         bool valid = false;
@@ -290,7 +289,6 @@ private:
         const DirectX::XMFLOAT3& playerPos,
         float yaw,
         float sideOffset) const;
-    bool IsDeathPoseCollisionFree(const CameraPose& pose) const;
 
     // LockOn構図の適応値を更新する
     void UpdateLockOnComposition(float deltaTime);
@@ -360,7 +358,7 @@ private:
     CameraMode currentMode = CameraMode::TPS;   // 現在有効なモード
     CameraMode requestMode = CameraMode::TPS;   // 入力が要求しているモード
 
-    CameraPose currentPose;
+    CameraPose currentPose{};
     DirectX::XMFLOAT3 compositionLookTarget{};
 
     float currentYaw = 0.0f;
@@ -377,7 +375,6 @@ private:
     float offscreenAssistMaxAngularSpeedDegree = 350.0f;
     float offscreenAssistRightStickCancelThreshold = 0.22f;
     float offscreenAssistPitchStart = 0.0f;
-    float offscreenAssistPitchBlend = 0.0f;
     float offscreenAssistTargetPitchDegree = -5.0f;
     float offscreenAssistPitchBlendTime = 0.20f;
 
@@ -385,8 +382,6 @@ private:
     CameraPose blendStartPose;
     CameraPose blendTargetPose;
     float deathBlendSideOffset = 0.0f;
-    bool deathBlendDefaultValid = true;
-    bool deathBlendMirroredValid = false;
 
     float blendTime = 0.0f;
     float blendDuration = 0.30f;
@@ -424,8 +419,6 @@ private:
     // LockOn適応構図。広い場所では基準値を変更しない。
     float lockOnCollisionStartRatio = 0.9f;
     float lockOnCollisionFullRatio = 0.45f;
-    float lockOnWallTargetWeight = 0.72f;
-    float lockOnWallHorizontalScale = 1.0f;
     float lockOnWallDistanceScale = 0.85f;
     float lockOnCollisionRatioHysteresis = 0.02f;
     float lockOnDistanceStart = 4.0f;
@@ -450,19 +443,14 @@ private:
     float lockOnDistanceForZoom = 0.0f;
     float desiredLockOnCameraDistance = 6.55f;
     float currentLockOnCameraDistance = 6.55f;
-    float currentLockOnZoomSpeed = 0.0f;
     float adaptiveLockOnTargetWeight = 0.72f;
     float adaptiveLockOnHorizontalOffset = 0.0f;
     float adaptiveLockOnCameraDistance = 6.55f;
-    float lockOnHorizontalExtent = 0.0f;
-    float lockOnVerticalExtent = 0.0f;
     float lockOnRequiredXDistance = 0.0f;
     float lockOnRequiredYDistance = 0.0f;
     float lockOnRequiredFramingDistance = 0.0f;
     float lockOnExistingAdaptiveDistance = 0.0f;
-    float lockOnTransitionSnapshotDistance = 0.0f;
     float lockOnFramingDeficit = 0.0f;
-    bool lockOnFramingActive = false;
     float lockOnRequiredFovDegree = 45.0f;
     float lockOnWallEscapeNearOffset = 1.0f;
     float lockOnWallEscapeFarOffset = 3.0f;
@@ -475,8 +463,6 @@ private:
     float currentLateralEscapeOffset = 0.0f;
     float currentCompositionYawCorrection = 0.0f;
     float targetCompositionYawCorrection = 0.0f;
-    float compositionBaseYaw = 0.0f;
-    float compositionTargetYaw = 0.0f;
     float compositionRequiredFovAfter = 0.0f;
     float currentRecoveryDistance = 0.0f;
     float targetRecoveryDistance = 0.0f;
@@ -484,11 +470,9 @@ private:
     float recoveryMoveSpeed = 3.0f;
     float recoveryReturnSpeed = 2.0f;
     float recoveryFovImprovementThreshold = 5.0f;
-    bool recoveryActive = false;
     bool recoveryCandidateValid = false;
     float recoveryBaseRequiredFov = 0.0f;
     float recoveryFinalRequiredFov = 0.0f;
-    bool compositionActive = false;
     bool compositionPlayerInsideSafeFrame = false;
     bool compositionBossInsideSafeFrame = false;
     bool compositionPlayerInFront = false;
@@ -498,15 +482,9 @@ private:
     float compositionDeadZoneDegree = 1.5f;
     float targetLateralEscapeOffset = 0.0f;
     float lockOnWallEscapeCurrentRequiredFov = 45.0f;
-    float lockOnWallEscapeLeftNearRequiredFov = 45.0f;
-    float lockOnWallEscapeLeftFarRequiredFov = 45.0f;
-    float lockOnWallEscapeRightNearRequiredFov = 45.0f;
-    float lockOnWallEscapeRightFarRequiredFov = 45.0f;
-    float lockOnWallEscapeSelectedRequiredFov = 45.0f;
     bool lockOnWallEscapeSevereComposition = false;
     bool lockOnWallEscapeActive = false;
     int currentEscapeSide = 0;
-    int targetEscapeSide = 0;
     float lockOnTargetFovDegree = 45.0f;
     float lockOnCurrentFovDegree = 45.0f;
     float lockOnFovReturnDelayElapsed = 0.0f;
@@ -566,7 +544,6 @@ private:
     // ランタイム調査値
     DirectX::XMFLOAT3 collisionPreEyePosition{};
     DirectX::XMFLOAT3 collisionPostEyePosition{};
-    DirectX::XMFLOAT3 normalCollisionPostEyePosition{};
     float desiredCameraDistance = 0.0f;
     float actualCameraDistance = 0.0f;
     float lockOnEnemyDistance = 0.0f;
