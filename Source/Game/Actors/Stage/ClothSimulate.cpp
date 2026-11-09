@@ -564,7 +564,7 @@ void ClothSimulate::DrawImGui()
     ImGui::Begin(windowName.c_str());
     bool resetClothBuffers = false;
     int stage = static_cast<int>(simulationStage);
-    const char* stageNames[] = { "Initial Mesh", "Update CS Only", "Update Pass Through", "Update + Constraint" };
+    const char* stageNames[] = { "Initial Mesh", "Update CS Only", "Update + Constraint" };
     if (ImGui::Combo("Execution Stage", &stage, stageNames, _countof(stageNames)))
     {
         simulationStage = static_cast<SimulationStage>(stage);
@@ -788,7 +788,7 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
     D3D11_BUFFER_DESC bufferDesc = {};
     D3D11_SUBRESOURCE_DATA subresourceData = {};
 
-    // Create and upload vertex and index buffers on GPU
+    // Create and upload index buffers on GPU
     {
         for (Mesh& mesh : meshes)
         {
@@ -810,23 +810,6 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
                     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
                 }
 
-                if (primitive.vertexBufferView.sizeInBytes > 0)
-                {
-                    primitive.vertexBufferView.buffer = static_cast<int>(buffers.size());
-
-                    bufferDesc.ByteWidth = primitive.vertexBufferView.sizeInBytes;
-                    bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-                    bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-                    //bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER | D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-                    bufferDesc.CPUAccessFlags = 0;
-                    bufferDesc.MiscFlags = 0;
-                    bufferDesc.StructureByteStride = 0;
-                    subresourceData.pSysMem = primitive.cachedVertices.data();
-                    subresourceData.SysMemPitch = 0;
-                    subresourceData.SysMemSlicePitch = 0;
-                    hr = device->CreateBuffer(&bufferDesc, &subresourceData, buffers.emplace_back().GetAddressOf());
-                    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-                }
             }
         }
     }
@@ -922,13 +905,9 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
 
         hr = CreateVsFromCSO(device, "./Data/Shaders/ClothSimulateVS.cso", vertexShader.ReleaseAndGetAddressOf(), inputLayout.ReleaseAndGetAddressOf(), inputElementDesc, _countof(inputElementDesc));
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        hr = CreateVsFromCSO(device, "./Data/Shaders/GltfModelCsmVS.cso", vertexShaderCSM.ReleaseAndGetAddressOf(), NULL, NULL, 0);
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
     }
     hr = CreatePsFromCSO(device, "./Data/Shaders/GltfModelDeferredPS.cso", pixelShader.ReleaseAndGetAddressOf());
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    hr = CreateGsFromCSO(device, "./Data/Shaders/GltfModelCsmGS.cso", geometryShaderCSM.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     hr = CreateCsFromCSO(device, "./Data/Shaders/ClothUpdateCS.cso", clothUpdateCS.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
@@ -946,14 +925,6 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
 
     bufferDesc.ByteWidth = sizeof(GraphicsPrimitiveConstants);
     hr = device->CreateBuffer(&bufferDesc, nullptr, graphicsPrimitiveCbuffer.ReleaseAndGetAddressOf());
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    bufferDesc.ByteWidth = sizeof(PrimitiveJointConstants);
-    bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    bufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    bufferDesc.CPUAccessFlags = 0;
-    bufferDesc.MiscFlags = 0;
-    bufferDesc.StructureByteStride = 0;
-    hr = device->CreateBuffer(&bufferDesc, NULL, primitiveJointCbuffer.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
 
@@ -1325,7 +1296,6 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
                 sizeof(Mesh::Vertex), primitive.finalEdges.size()));
         }
     }
-    CreateClothPingPongBuffers(device, allVertices);
 }
 
 const char* ClothSimulate::GetSimulationStageName() const
@@ -1334,7 +1304,6 @@ const char* ClothSimulate::GetSimulationStageName() const
     {
     case SimulationStage::InitialMesh: return "Initial Mesh";
     case SimulationStage::UpdateCSOnly: return "Update CS Only";
-    case SimulationStage::UpdatePassThrough: return "Update Pass Through";
     case SimulationStage::UpdateAndConstraint: return "Update + Constraint";
     }
     return "Unknown";
@@ -1633,7 +1602,7 @@ immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].Get
                 immediateContext->CSSetShaderResources(0, 1, primitive.clothSRV[input].GetAddressOf());
                 immediateContext->CSSetShaderResources(1, 1, primitive.clothEdgeSRV.GetAddressOf());
                 immediateContext->CSSetShaderResources(2, 1, primitive.initialBottomWeightSRV.GetAddressOf());
-                immediateContext->CSSetShader(simulationStage == SimulationStage::UpdatePassThrough ? clothUpdatePassThroughCS.Get() : clothUpdateCS.Get(), nullptr, 0);
+                immediateContext->CSSetShader(clothUpdateCS.Get(), nullptr, 0);
                 immediateContext->CSSetConstantBuffers(6, 1, &planeBuffer);
                 immediateContext->Dispatch(threadGroupCountX, 1, 1);
                 immediateContext->CSSetUnorderedAccessViews(0, 1, &nullUAV, nullptr);
@@ -1642,7 +1611,7 @@ immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].Get
     immediateContext->CSSetShaderResources(2, 1, nullSRV);
 
                 std::swap(input, output);
-                if (simulationStage == SimulationStage::UpdateCSOnly || simulationStage == SimulationStage::UpdatePassThrough)
+                if (simulationStage == SimulationStage::UpdateCSOnly)
                 {
                     lastCopySourceBuffer = input;
                     continue;
@@ -1686,89 +1655,6 @@ immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].Get
     }
     simulationAccumulator -= fixedDeltaTime * static_cast<float>(substepCount);
     simulationElapsedTime += fixedDeltaTime * static_cast<float>(substepCount);
-}void ClothSimulate::CreateClothPingPongBuffers(ID3D11Device* device, const std::vector<Mesh::Vertex>& vertices)
-{
-    HRESULT hr = S_OK; // バッファ記述 
-    D3D11_BUFFER_DESC bufferDesc = {};
-    bufferDesc.ByteWidth = static_cast<UINT>(sizeof(Mesh::Vertex) * vertices.size());
-    bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
-    bufferDesc.CPUAccessFlags = 0; // 構造化バッファとして扱う 
-    bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-    bufferDesc.StructureByteStride = sizeof(Mesh::Vertex);
-    D3D11_SUBRESOURCE_DATA subresourceData = {};
-    subresourceData.pSysMem = vertices.data(); // 2 個作る（ピンポン用） 
-    subresourceData.SysMemPitch = 0;
-    subresourceData.SysMemSlicePitch = 0;
-#if 0
-    for (int i = 0; i < 2; ++i)
-    {
-        hr = device->CreateBuffer(&bufferDesc, &subresourceData, clothBuffer[i].GetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        // SRV 作成 
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Format = DXGI_FORMAT_UNKNOWN; // 構造化バッファは UNKNOWN 
-        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-        srvDesc.Buffer.FirstElement = 0;
-        srvDesc.Buffer.NumElements = static_cast<UINT>(vertices.size());
-        hr = device->CreateShaderResourceView(clothBuffer[i].Get(), &srvDesc, clothSRV[i].GetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        // UAV 作成 
-        D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
-        uavDesc.Format = DXGI_FORMAT_UNKNOWN;
-        uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
-        uavDesc.Buffer.FirstElement = 0;
-        uavDesc.Buffer.NumElements = static_cast<UINT>(vertices.size());
-        uavDesc.Buffer.Flags = 0; hr = device->CreateUnorderedAccessView(clothBuffer[i].Get(), &uavDesc, clothUAV[i].GetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    }
-
-
-    // エッジ用のSRVを作成
-    {
-        bufferDesc.ByteWidth = static_cast<UINT>(sizeof(ClothEdge) * finalEdges.size());
-        bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-        bufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-        bufferDesc.CPUAccessFlags = 0; // 構造化バッファとして扱う 
-        bufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
-        bufferDesc.StructureByteStride = sizeof(ClothEdge);
-        subresourceData = {};
-        subresourceData.pSysMem = finalEdges.data();
-        subresourceData.SysMemPitch = 0;
-        subresourceData.SysMemSlicePitch = 0;
-
-        hr = device->CreateBuffer(&bufferDesc, &subresourceData, clothEdgeBuffer.GetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        // SRV 作成 
-        D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-        srvDesc.Format = DXGI_FORMAT_UNKNOWN; // 構造化バッファは UNKNOWN 
-        srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
-        srvDesc.Buffer.FirstElement = 0;
-        srvDesc.Buffer.NumElements = static_cast<UINT>(finalEdges.size());
-        hr = device->CreateShaderResourceView(clothEdgeBuffer.Get(), &srvDesc, clothEdgeSRV.GetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    }
-#endif // 0
-
-#if 0
-    // 描画用のIAVertexBufferを作成
-    bufferDesc.ByteWidth = static_cast<UINT>(sizeof(Mesh::Vertex) * vertices.size());
-    bufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    bufferDesc.CPUAccessFlags = 0;
-    bufferDesc.MiscFlags = 0;
-    bufferDesc.StructureByteStride = 0;
-    subresourceData.pSysMem = vertices.data();
-    subresourceData.SysMemPitch = 0;
-    subresourceData.SysMemSlicePitch = 0;
-    //hr = device->CreateBuffer(&bufferDesc, &subresourceData, clothVB[i].GetAddressOf());
-    hr = device->CreateBuffer(&bufferDesc, &subresourceData, clothVB.GetAddressOf());
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-#endif
 }
 
 void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& world)
@@ -1799,7 +1685,6 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                 UINT stride = sizeof(Mesh::Vertex);
                 UINT offset = 0;
 
-                //immediateContext->IASetVertexBuffers(0, 1, buffers.at(primitive.vertexBufferView.buffer).GetAddressOf(), &stride, &offset);
                 //immediateContext->IASetVertexBuffers(0, 1, clothVB[b].GetAddressOf(), &stride, &offset);
                 //immediateContext->IASetVertexBuffers(0, 1, clothVB.GetAddressOf(), &stride, &offset);
                 immediateContext->IASetVertexBuffers(0, 1, primitive.clothVB.GetAddressOf(), &stride, &offset);

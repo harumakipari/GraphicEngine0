@@ -2195,10 +2195,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
 	return pose;
 }
 
-DarkCameraActor::CameraPose DarkCameraActor::CalculateDeathPoseWithSideOffset(
-	const DirectX::XMFLOAT3& playerPos,
-	float yaw,
-	float sideOffset) const
+DarkCameraActor::CameraPose DarkCameraActor::CalculateDeathPoseWithSideOffset(const DirectX::XMFLOAT3& playerPos,float yaw,float sideOffset) const
 {
 	CameraPose pose{};
 	DirectX::XMFLOAT3 toBoss{};
@@ -2266,127 +2263,120 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
 }
 
 
+
 void DarkCameraActor::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
-	if (ImGui::CollapsingHeader("Runtime Camera Tuning", ImGuiTreeNodeFlags_DefaultOpen))
+	if (ImGui::CollapsingHeader(U8("実行時カメラ調整"), ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::DragFloat("Standard TPS FOV", &standardTpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
-		ImGui::DragFloat("Standard TPS Distance", &standardTpsSettings.distance, 0.05f, 0.1f, 30.0f);
-		ImGui::DragFloat("Normal Enemy LockOn Screen Radius", &normalEnemyLockOnScreenRadius,
-			0.01f, 0.0f, 1.5f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::DragFloat("Normal Enemy LockOn Max Distance", &lockOnTargetSelectionMaxDistance,
-			0.1f, 3.0f, 20.0f, "%.1f m", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::DragFloat(U8("通常TPS FOV"), &standardTpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+		ImGui::DragFloat(U8("通常TPS 距離"), &standardTpsSettings.distance, 0.05f, 0.1f, 30.0f);
+		ImGui::DragFloat(U8("通常敵 ロックオン画面内判定半径"), &normalEnemyLockOnScreenRadius,0.01f, 0.0f, 1.5f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::DragFloat(U8("通常敵 ロックオン最大選択距離"), &lockOnTargetSelectionMaxDistance,0.1f, 3.0f, 20.0f, "%.1f m", ImGuiSliderFlags_AlwaysClamp);
+
 		ImGui::Separator();
-		ImGui::DragFloat("Grux LockOn FOV", &lockOnSettings.fovDegree, 0.1f, 10.0f, 120.0f);
-		ImGui::DragFloat("Grux LockOn Base Distance", &lockOnSettings.distance, 0.05f, 0.1f, 30.0f);
-		ImGui::SeparatorText("Compact Enemy LockOn Profile");
-		ImGui::DragFloat("Compact LockOn FOV", &compactEnemyLockOnProfile.fovDegree, 0.1f, 10.0f, 120.0f);
-		ImGui::DragFloat("Compact LockOn FOV Fallback Max", &compactEnemyLockOnProfile.maxFallbackFovDegree, 0.1f, compactEnemyLockOnProfile.fovDegree, 90.0f);
-		ImGui::DragFloat("Compact LockOn Base Distance", &compactEnemyLockOnProfile.distance, 0.05f, 0.1f, 30.0f);
-		ImGui::DragFloat("Compact LockOn Max Distance Add", &compactEnemyLockOnProfile.maxDistanceAdd, 0.05f, 0.0f, 10.0f);
-		ImGui::SeparatorText("Standard Enemy LockOn Profile");
-		ImGui::DragFloat("Standard LockOn FOV", &standardEnemyLockOnProfile.fovDegree, 0.1f, 10.0f, 120.0f);
-		ImGui::DragFloat("Standard LockOn FOV Fallback Max", &standardEnemyLockOnProfile.maxFallbackFovDegree, 0.1f, standardEnemyLockOnProfile.fovDegree, 90.0f);
-		ImGui::DragFloat("Standard LockOn Base Distance", &standardEnemyLockOnProfile.distance, 0.05f, 0.1f, 30.0f);
-		ImGui::DragFloat("Standard LockOn Max Distance Add", &standardEnemyLockOnProfile.maxDistanceAdd, 0.05f, 0.0f, 10.0f);
-		ImGui::DragFloat("LockOn Enemy Look Height", &lockOnEnemyLookHeight, 0.05f, -10.0f, 10.0f);
-		ImGui::SliderFloat("LockOn LookAt Bias (0=Player, 1=Boss)", &lockOnTargetWeight, 0.0f, 1.0f);
-		ImGui::DragFloat("LockOn Zoom In Speed", &lockOnZoomInSpeed, 0.01f, 0.0f, 30.0f);
-		ImGui::DragFloat("LockOn Zoom Out Speed", &lockOnZoomOutSpeed, 0.01f, 0.0f, 30.0f);
 
-		ImGui::SeparatorText("Combat Presentation");
-		if (ImGui::TreeNode("Just Dodge Presentation"))
+		ImGui::DragFloat(U8("Grux ロックオンFOV"), &lockOnSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+		ImGui::DragFloat(U8("Grux ロックオン基本距離"), &lockOnSettings.distance, 0.05f, 0.1f, 30.0f);
+
+		ImGui::SeparatorText(U8("小型敵 ロックオン設定"));
+		ImGui::DragFloat(U8("小型敵 ロックオンFOV"), &compactEnemyLockOnProfile.fovDegree, 0.1f, 10.0f, 120.0f);
+		ImGui::DragFloat(U8("小型敵 FOV補正の最大値"), &compactEnemyLockOnProfile.maxFallbackFovDegree, 0.1f, compactEnemyLockOnProfile.fovDegree, 90.0f);
+		ImGui::DragFloat(U8("小型敵 ロックオン基本距離"), &compactEnemyLockOnProfile.distance, 0.05f, 0.1f, 30.0f);
+		ImGui::DragFloat(U8("小型敵 ロックオン最大追加距離"), &compactEnemyLockOnProfile.maxDistanceAdd, 0.05f, 0.0f, 10.0f);
+
+		ImGui::SeparatorText(U8("通常敵 ロックオン設定"));
+		ImGui::DragFloat(U8("通常敵 ロックオンFOV"), &standardEnemyLockOnProfile.fovDegree, 0.1f, 10.0f, 120.0f);
+		ImGui::DragFloat(U8("通常敵 FOV補正の最大値"), &standardEnemyLockOnProfile.maxFallbackFovDegree, 0.1f, standardEnemyLockOnProfile.fovDegree, 90.0f);
+		ImGui::DragFloat(U8("通常敵 ロックオン基本距離"), &standardEnemyLockOnProfile.distance, 0.05f, 0.1f, 30.0f);
+		ImGui::DragFloat(U8("通常敵 ロックオン最大追加距離"), &standardEnemyLockOnProfile.maxDistanceAdd, 0.05f, 0.0f, 10.0f);
+
+		ImGui::DragFloat(U8("ロックオン敵注視高さ"), &lockOnEnemyLookHeight, 0.05f, -10.0f, 10.0f);
+		ImGui::SliderFloat(U8("ロックオン注視比率（0=プレイヤー、1=ボス）"), &lockOnTargetWeight, 0.0f, 1.0f);
+		ImGui::DragFloat(U8("ロックオン ズームイン速度"), &lockOnZoomInSpeed, 0.01f, 0.0f, 30.0f);
+		ImGui::DragFloat(U8("ロックオン ズームアウト速度"), &lockOnZoomOutSpeed, 0.01f, 0.0f, 30.0f);
+
+		ImGui::SeparatorText(U8("戦闘カメラ演出"));
+
+		if (ImGui::TreeNode(U8("ジャスト回避カメラ演出")))
 		{
-			ImGui::DragFloat("FOV Offset", &justDodgePresentationFovOffsetDegree, 0.1f, -45.0f, 45.0f, "%.1f deg");
-			ImGui::DragFloat("Distance Offset", &justDodgePresentationDistanceOffset, 0.01f, -5.0f, 5.0f);
-			ImGui::DragFloat("Enter Time", &justDodgePresentationEnterTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
-			ImGui::DragFloat("Hold Time", &justDodgePresentationHoldTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
-			ImGui::DragFloat("Exit Time", &justDodgePresentationExitTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
-			ImGui::TreePop();
-		}
-		if (ImGui::TreeNode("Rush Presentation"))
-		{
-			if (ImGui::TreeNode("Behind (Windup / Dash)"))
-			{
-				ImGui::DragFloat("Side Offset##RushBehind", &rushPresentationApproachSideOffset, 0.01f, -10.0f, 10.0f);
-				ImGui::DragFloat("Height Offset##RushBehind", &rushPresentationApproachHeightOffset, 0.01f, -10.0f, 10.0f);
-				ImGui::DragFloat("Distance Offset##RushBehind", &rushPresentationApproachDistanceOffset, 0.01f, -10.0f, 10.0f);
-				ImGui::DragFloat("Behind Enter Blend", &rushPresentationApproachEnterTime, 0.01f, 0.0f, 0.5f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("Windup Camera Push In", &rushPresentationWindupPushIn, 0.01f, 0.0f, 1.0f, "%.2f m", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("Windup Camera Push Duration", &rushPresentationWindupPushDuration, 0.01f, 0.0f, 0.4f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("Windup Camera Release Duration", &rushPresentationWindupPushReleaseDuration, 0.01f, 0.0f, 0.4f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::TreePop();
-			}
-			if (ImGui::TreeNode("Intro"))
-			{
-				ImGui::DragFloat("Yaw Offset##RushIntro", &rushPresentationIntroYawOffsetDegree, 0.5f, -180.0f, 180.0f, "%.1f deg");
-				ImGui::DragFloat("Side Offset##RushIntro", &rushPresentationIntroSideOffset, 0.01f, -10.0f, 10.0f);
-				ImGui::DragFloat("Height Offset##RushIntro", &rushPresentationIntroHeightOffset, 0.01f, -10.0f, 10.0f);
-				ImGui::DragFloat("Distance Offset##RushIntro", &rushPresentationIntroDistanceOffset, 0.01f, -10.0f, 10.0f);
-				ImGui::SliderFloat("Enemy Target Weight##RushIntro", &rushPresentationIntroEnemyTargetWeight, 0.0f, 1.0f);
-				ImGui::DragFloat("FOV##RushIntro", &rushPresentationIntroFovDegree, 0.1f, 10.0f, 120.0f, "%.1f deg");
-				ImGui::DragFloat("Rush Intro Enter Blend", &rushPresentationEnterTime, 0.01f, 0.0f, 0.5f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::DragFloat("Rush Intro Hold", &rushPresentationIntroHoldTime, 0.01f, 0.0f, 0.3f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
-				ImGui::TreePop();
-			}
-			if (ImGui::TreeNode("Travel"))
-			{
-				ImGui::DragFloat("Yaw Offset##RushTravel", &rushPresentationTravelYawOffsetDegree, 0.5f, -180.0f, 180.0f, "%.1f deg");
-				ImGui::DragFloat("Side Offset##RushTravel", &rushPresentationTravelSideOffset, 0.01f, -10.0f, 10.0f);
-				ImGui::DragFloat("Height Offset##RushTravel", &rushPresentationTravelHeightOffset, 0.01f, -10.0f, 10.0f);
-				ImGui::DragFloat("Distance Offset##RushTravel", &rushPresentationTravelDistanceOffset, 0.01f, -10.0f, 10.0f);
-				ImGui::SliderFloat("Enemy Target Weight##RushTravel", &rushPresentationTravelEnemyTargetWeight, 0.0f, 1.0f);
-				ImGui::DragFloat("FOV##RushTravel", &rushPresentationTravelFovDegree, 0.1f, 10.0f, 120.0f, "%.1f deg");
-				ImGui::TreePop();
-			}
-			ImGui::DragFloat("Intro to Travel Blend Time", &rushPresentationIntroToTravelBlendTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
-			ImGui::DragFloat("Rush Target Pitch Degree", &rushPresentationTargetPitchDegree, 0.5f, -89.0f, 89.0f, "%.1f deg");
-			ImGui::DragFloat("Rotation Exit Time##Rush", &rushPresentationRotationExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
-			ImGui::DragFloat("Position / Distance Exit Time##Rush", &rushPresentationPositionExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
-			ImGui::DragFloat("FOV Exit Time##Rush", &rushPresentationFovExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
+			ImGui::DragFloat(U8("FOVオフセット"), &justDodgePresentationFovOffsetDegree, 0.1f, -45.0f, 45.0f, "%.1f deg");
+			ImGui::DragFloat(U8("距離オフセット"), &justDodgePresentationDistanceOffset, 0.01f, -5.0f, 5.0f);
+			ImGui::DragFloat(U8("演出開始時間"), &justDodgePresentationEnterTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+			ImGui::DragFloat(U8("演出維持時間"), &justDodgePresentationHoldTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
+			ImGui::DragFloat(U8("演出終了時間"), &justDodgePresentationExitTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
 			ImGui::TreePop();
 		}
 
-		ImGui::SeparatorText("Death Camera");
-		ImGui::DragFloat("Foreground Distance", &deathCameraSettings.foregroundDistance,
-			0.05f, 0.1f, 15.0f);
-		ImGui::DragFloat("Side Offset", &deathCameraSettings.sideOffset,
-			0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat("Camera Height", &deathCameraSettings.cameraHeight,
-			0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat("Look Height", &deathCameraSettings.lookHeight,
-			0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat("Boss Look Weight", &deathCameraSettings.bossLookWeight,
-			0.05f, -5.0f, 10.0f);
-		ImGui::SliderFloat("Death FOV", &deathCameraSettings.fovDegree,
-			10.0f, 120.0f, "%.1f deg");
-		ImGui::DragFloat("Death Blend Time", &deathCameraSettings.deathBlendTime,
-			0.01f, 0.01f, 5.0f, "%.2f sec");
+		if (ImGui::TreeNode(U8("Rushカメラ演出")))
+		{
+			if (ImGui::TreeNode(U8("背後カメラ（予備動作・ダッシュ）")))
+			{
+				ImGui::DragFloat(U8("横方向オフセット##RushBehind"), &rushPresentationApproachSideOffset, 0.01f, -10.0f, 10.0f);
+				ImGui::DragFloat(U8("高さオフセット##RushBehind"), &rushPresentationApproachHeightOffset, 0.01f, -10.0f, 10.0f);
+				ImGui::DragFloat(U8("距離オフセット##RushBehind"), &rushPresentationApproachDistanceOffset, 0.01f, -10.0f, 10.0f);
+				ImGui::DragFloat(U8("背後カメラへの切替時間"), &rushPresentationApproachEnterTime, 0.01f, 0.0f, 0.5f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat(U8("予備動作中のカメラ押し込み距離"), &rushPresentationWindupPushIn, 0.01f, 0.0f, 1.0f, "%.2f m", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat(U8("カメラ押し込み時間"), &rushPresentationWindupPushDuration, 0.01f, 0.0f, 0.4f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat(U8("カメラ押し込み解除時間"), &rushPresentationWindupPushReleaseDuration, 0.01f, 0.0f, 0.4f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::TreePop();
+			}
 
-		if (ImGui::Button("Reset Camera Tuning")) ResetCameraTuning();
+			if (ImGui::TreeNode(U8("Rush開始演出")))
+			{
+				ImGui::DragFloat(U8("Yawオフセット##RushIntro"), &rushPresentationIntroYawOffsetDegree, 0.5f, -180.0f, 180.0f, "%.1f deg");
+				ImGui::DragFloat(U8("横方向オフセット##RushIntro"), &rushPresentationIntroSideOffset, 0.01f, -10.0f, 10.0f);
+				ImGui::DragFloat(U8("高さオフセット##RushIntro"), &rushPresentationIntroHeightOffset, 0.01f, -10.0f, 10.0f);
+				ImGui::DragFloat(U8("距離オフセット##RushIntro"), &rushPresentationIntroDistanceOffset, 0.01f, -10.0f, 10.0f);
+				ImGui::SliderFloat(U8("敵への注視比率##RushIntro"), &rushPresentationIntroEnemyTargetWeight, 0.0f, 1.0f);
+				ImGui::DragFloat(U8("FOV##RushIntro"), &rushPresentationIntroFovDegree, 0.1f, 10.0f, 120.0f, "%.1f deg");
+				ImGui::DragFloat(U8("Rush開始演出への切替時間"), &rushPresentationEnterTime, 0.01f, 0.0f, 0.5f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::DragFloat(U8("Rush開始演出の維持時間"), &rushPresentationIntroHoldTime, 0.01f, 0.0f, 0.3f, "%.2f sec", ImGuiSliderFlags_AlwaysClamp);
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode(U8("Rush移動中の演出")))
+			{
+				ImGui::DragFloat(U8("Yawオフセット##RushTravel"), &rushPresentationTravelYawOffsetDegree, 0.5f, -180.0f, 180.0f, "%.1f deg");
+				ImGui::DragFloat(U8("横方向オフセット##RushTravel"), &rushPresentationTravelSideOffset, 0.01f, -10.0f, 10.0f);
+				ImGui::DragFloat(U8("高さオフセット##RushTravel"), &rushPresentationTravelHeightOffset, 0.01f, -10.0f, 10.0f);
+				ImGui::DragFloat(U8("距離オフセット##RushTravel"), &rushPresentationTravelDistanceOffset, 0.01f, -10.0f, 10.0f);
+				ImGui::SliderFloat(U8("敵への注視比率##RushTravel"), &rushPresentationTravelEnemyTargetWeight, 0.0f, 1.0f);
+				ImGui::DragFloat(U8("FOV##RushTravel"), &rushPresentationTravelFovDegree, 0.1f, 10.0f, 120.0f, "%.1f deg");
+				ImGui::TreePop();
+			}
+
+			ImGui::DragFloat(U8("開始演出から移動演出への切替時間"), &rushPresentationIntroToTravelBlendTime, 0.01f, 0.0f, 2.0f, "%.2f sec");
+			ImGui::DragFloat(U8("Rush注視対象のピッチ角度"), &rushPresentationTargetPitchDegree, 0.5f, -89.0f, 89.0f, "%.1f deg");
+			ImGui::DragFloat(U8("回転の復帰時間##Rush"), &rushPresentationRotationExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
+			ImGui::DragFloat(U8("位置・距離の復帰時間##Rush"), &rushPresentationPositionExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
+			ImGui::DragFloat(U8("FOVの復帰時間##Rush"), &rushPresentationFovExitTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
+			ImGui::TreePop();
+		}
+
+		ImGui::SeparatorText(U8("死亡時カメラ"));
+		ImGui::DragFloat(U8("前景までの距離"), &deathCameraSettings.foregroundDistance,0.05f, 0.1f, 15.0f);
+		ImGui::DragFloat(U8("横方向オフセット"), &deathCameraSettings.sideOffset,0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("カメラの高さ"), &deathCameraSettings.cameraHeight,0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("注視点の高さ"), &deathCameraSettings.lookHeight,0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("ボスへの注視比率"), &deathCameraSettings.bossLookWeight,0.05f, -5.0f, 10.0f);
+		ImGui::SliderFloat(U8("死亡時FOV"), &deathCameraSettings.fovDegree,10.0f, 120.0f, "%.1f deg");
+		ImGui::DragFloat(U8("死亡時カメラの切替時間"), &deathCameraSettings.deathBlendTime,0.01f, 0.01f, 5.0f, "%.2f sec");
+
+		if (ImGui::Button(U8("カメラ設定をリセット"))) ResetCameraTuning();
 	}
 
-	if (ImGui::CollapsingHeader("TPS Offscreen Attack Assist",
+	if (ImGui::CollapsingHeader(U8("TPS画面外攻撃アシスト"),
 		ImGuiTreeNodeFlags_DefaultOpen))
 	{
-
-		ImGui::SeparatorText("Tuning");
-		ImGui::DragFloat("Horizontal Safe Margin",
-			&offscreenAssistHorizontalSafeMargin, 0.005f, 0.0f, 0.49f);
-		ImGui::DragFloat("Vertical Safe Margin",
-			&offscreenAssistVerticalSafeMargin, 0.005f, 0.0f, 0.49f);
-		ImGui::DragFloat("Max Assist Angular Speed",
-			&offscreenAssistMaxAngularSpeedDegree, 1.0f, 0.0f, 720.0f,
-			"%.1f deg/sec");
-		ImGui::DragFloat("Offscreen Attack Target Pitch Degree",
-			&offscreenAssistTargetPitchDegree, 0.5f, -89.0f, 89.0f, "%.1f deg");
-		ImGui::DragFloat("Pitch Blend Time",
-			&offscreenAssistPitchBlendTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
-		ImGui::DragFloat("Right Stick Cancel Threshold",
-			&offscreenAssistRightStickCancelThreshold, 0.005f, 0.0f, 1.0f);
+		ImGui::SeparatorText(U8("アシスト調整"));
+		ImGui::DragFloat(U8("水平方向の安全余白"),&offscreenAssistHorizontalSafeMargin, 0.005f, 0.0f, 0.49f);
+		ImGui::DragFloat(U8("垂直方向の安全余白"),&offscreenAssistVerticalSafeMargin, 0.005f, 0.0f, 0.49f);
+		ImGui::DragFloat(U8("アシスト最大回転速度"),&offscreenAssistMaxAngularSpeedDegree, 1.0f, 0.0f, 720.0f,"%.1f deg/sec");
+		ImGui::DragFloat(U8("画面外攻撃時の目標ピッチ角度"),&offscreenAssistTargetPitchDegree, 0.5f, -89.0f, 89.0f, "%.1f deg");
+		ImGui::DragFloat(U8("ピッチ角度の補間時間"),&offscreenAssistPitchBlendTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
+		ImGui::DragFloat(U8("右スティック操作による解除閾値"),&offscreenAssistRightStickCancelThreshold, 0.005f, 0.0f, 1.0f);
 	}
-
 
 	if (ImGui::Button(U8("TPS")))
 	{
@@ -2400,115 +2390,92 @@ void DarkCameraActor::DrawImGuiDetails()
 	{
 		SetRequestMode(CameraMode::LockOn);
 	}
-	ImGui::DragFloat(U8("右スティックの回転のスピード"), &rotateSpeed, 0.1f, 0.0f, 10.0f);
-	ImGui::DragFloat(U8("フォーカス距離"), &focusDistance, 0.1f, 0.0f, 10.0f);
-	ImGui::DragFloat(U8("最小ピッチ度数"), &minPitchDegree, 0.1f, -90.0f, 90.0f);
-	ImGui::DragFloat(U8("最大ピッチ度数"), &maxPitchDegree, 0.1f, -90.0f, 90.0f);
 
-	ImGui::DragFloat(U8("sphereCastRadius"), &sphereCastRadius, 0.01f, 0.01f, 1.0f);
-	ImGui::DragFloat(U8("blendDuration"), &blendDuration, 0.01f, 0.01f, 1.0f);
-	if (ImGui::TreeNode("TPS Composition"))
+	ImGui::DragFloat(U8("右スティックの回転速度"), &rotateSpeed, 0.1f, 0.0f, 10.0f);
+	ImGui::DragFloat(U8("フォーカス距離"), &focusDistance, 0.1f, 0.0f, 10.0f);
+	ImGui::DragFloat(U8("最小ピッチ角度"), &minPitchDegree, 0.1f, -90.0f, 90.0f);
+	ImGui::DragFloat(U8("最大ピッチ角度"), &maxPitchDegree, 0.1f, -90.0f, 90.0f);
+	ImGui::DragFloat(U8("カメラ衝突判定の半径"), &sphereCastRadius, 0.01f, 0.01f, 1.0f);
+	ImGui::DragFloat(U8("カメラ切替の補間時間"), &blendDuration, 0.01f, 0.01f, 1.0f);
+
+	if (ImGui::TreeNode(U8("TPSカメラ構図")))
 	{
-		ImGui::DragFloat("Distance##TPS", &standardTpsSettings.distance, 0.05f, 0.1f, 30.0f);
-		ImGui::DragFloat("Height##TPS", &standardTpsSettings.height, 0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat("LookTarget Height##TPS", &standardTpsSettings.lookTargetHeight, 0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat("FOV##TPS", &standardTpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
-		ImGui::DragFloat("Shoulder Offset##TPS", &standardTpsSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("距離##TPS"), &standardTpsSettings.distance, 0.05f, 0.1f, 30.0f);
+		ImGui::DragFloat(U8("高さ##TPS"), &standardTpsSettings.height, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("注視点の高さ##TPS"), &standardTpsSettings.lookTargetHeight, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("FOV##TPS"), &standardTpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+		ImGui::DragFloat(U8("肩越しオフセット##TPS"), &standardTpsSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("Focus Composition"))
+
+	if (ImGui::TreeNode(U8("フォーカスカメラ構図")))
 	{
-		ImGui::DragFloat("Distance##Focus", &focusSettings.distance, 0.05f, 0.1f, 30.0f);
-		ImGui::DragFloat("Height##Focus", &focusSettings.height, 0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat("LookTarget Height##Focus", &focusSettings.lookTargetHeight, 0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat("FOV##Focus", &focusSettings.fovDegree, 0.1f, 10.0f, 120.0f);
-		ImGui::DragFloat("Horizontal Offset##Focus", &focusSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("距離##Focus"), &focusSettings.distance, 0.05f, 0.1f, 30.0f);
+		ImGui::DragFloat(U8("高さ##Focus"), &focusSettings.height, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("注視点の高さ##Focus"), &focusSettings.lookTargetHeight, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("FOV##Focus"), &focusSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+		ImGui::DragFloat(U8("水平方向オフセット##Focus"), &focusSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("LockOn Composition"))
+
+	if (ImGui::TreeNode(U8("ロックオンカメラ構図")))
 	{
-		ImGui::DragFloat("Distance##LockOn", &lockOnSettings.distance, 0.05f, 0.1f, 30.0f);
-		ImGui::DragFloat("Height##LockOn", &lockOnSettings.height, 0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat("FOV##LockOn", &lockOnSettings.fovDegree, 0.1f, 10.0f, 120.0f);
-		ImGui::DragFloat("Player Look Height", &lockOnPlayerLookHeight, 0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat("Enemy Look Height", &lockOnEnemyLookHeight, 0.05f, -10.0f, 10.0f);
-		ImGui::SliderFloat("Player/Enemy Target Weight", &lockOnTargetWeight, 0.0f, 1.0f);
-		ImGui::DragFloat("Horizontal Offset##LockOn", &lockOnSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("距離##LockOn"), &lockOnSettings.distance, 0.05f, 0.1f, 30.0f);
+		ImGui::DragFloat(U8("高さ##LockOn"), &lockOnSettings.height, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("FOV##LockOn"), &lockOnSettings.fovDegree, 0.1f, 10.0f, 120.0f);
+		ImGui::DragFloat(U8("プレイヤー注視高さ"), &lockOnPlayerLookHeight, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("敵の注視高さ"), &lockOnEnemyLookHeight, 0.05f, -10.0f, 10.0f);
+		ImGui::SliderFloat(U8("プレイヤー・敵の注視比率"), &lockOnTargetWeight, 0.0f, 1.0f);
+		ImGui::DragFloat(U8("水平方向オフセット##LockOn"), &lockOnSettings.horizontalOffset, 0.05f, -10.0f, 10.0f);
 		ImGui::TreePop();
 	}
-	if (ImGui::TreeNode("LockOn Adaptive Composition"))
+
+	if (ImGui::TreeNode(U8("ロックオン構図の自動補正")))
 	{
-		ImGui::DragFloat("Collision Start Ratio", &lockOnCollisionStartRatio, 0.01f, 0.0f, 1.0f);
-		ImGui::DragFloat("Collision Full Ratio", &lockOnCollisionFullRatio, 0.01f, 0.0f, 1.0f);
-		ImGui::SliderFloat("Wall Distance Scale", &lockOnWallDistanceScale, 0.1f, 1.0f);
-		ImGui::DragFloat("Collision Ratio Hysteresis", &lockOnCollisionRatioHysteresis, 0.005f, 0.0f, 0.2f);
-		ImGui::DragFloat("Distance Start", &lockOnDistanceStart, 0.05f, 0.0f, 30.0f);
-		ImGui::DragFloat("Distance Full", &lockOnDistanceFull, 0.05f, 0.0f, 30.0f);
-		ImGui::DragFloat("Grux Max Distance Add", &lockOnMaxDistanceAdd, 0.05f, 0.0f, 10.0f);
-		ImGui::DragFloat("Zoom Out Speed", &lockOnZoomOutSpeed, 0.1f, 0.01f, 30.0f);
-		ImGui::DragFloat("Zoom In Speed", &lockOnZoomInSpeed, 0.1f, 0.01f, 30.0f);
-		ImGui::DragFloat("Distance Dead Zone", &lockOnDistanceDeadZone, 0.01f, 0.0f, 5.0f);
-		ImGui::DragFloat("Composition Lerp Speed", &lockOnCompositionLerpSpeed, 0.1f, 0.1f, 30.0f);
-		ImGui::DragFloat("Safe Frame Horizontal Margin",
-			&lockOnSafeFrameHorizontalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
-		ImGui::DragFloat("Safe Frame Vertical Margin",
-			&lockOnSafeFrameVerticalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
-		ImGui::SeparatorText("Wall Lateral Escape");
-		ImGui::DragFloat("Near Lateral Offset", &lockOnWallEscapeNearOffset,
-			0.05f, 0.0f, 5.0f, "%.2f m");
-		ImGui::DragFloat("Far Lateral Offset", &lockOnWallEscapeFarOffset,
-			0.05f, 0.0f, 5.0f, "%.2f m");
-		ImGui::DragFloat("Severe FOV Threshold",
-			&lockOnWallEscapeSevereFovThreshold,
-			0.5f, lockOnSettings.fovDegree, 120.0f, "%.1f deg");
-		ImGui::DragFloat("Required FOV Improvement Threshold",
-			&lockOnWallEscapeImprovementThreshold,
-			0.25f, 0.0f, 30.0f, "%.1f deg");
-		ImGui::DragFloat("Side Switch Improvement Threshold",
-			&lockOnWallEscapeSideSwitchImprovementThreshold,
-			0.25f, 0.0f, 30.0f, "%.1f deg");
-		ImGui::DragFloat("Distance Improvement Threshold",
-			&lockOnWallEscapeDistanceImprovementThreshold,
-			0.25f, 0.0f, 30.0f, "%.1f deg");
-		ImGui::DragFloat("Escape Move Speed", &lockOnWallEscapeMoveSpeed,
-			0.25f, 0.0f, 20.0f, "%.2f m/s");
-		ImGui::DragFloat("Escape Return Speed", &lockOnWallEscapeReturnSpeed,
-			0.25f, 0.0f, 20.0f, "%.2f m/s");
-		ImGui::SeparatorText("Failure Distance Recovery");
-		ImGui::DragFloat("Max Recovery Distance", &recoveryMaxDistance,
-			0.05f, 0.0f, 5.0f, "%.2f m");
-		ImGui::DragFloat("Recovery Move Speed", &recoveryMoveSpeed,
-			0.05f, 0.0f, 10.0f, "%.2f m/s");
-		ImGui::DragFloat("Recovery Return Speed", &recoveryReturnSpeed,
-			0.05f, 0.0f, 10.0f, "%.2f m/s");
-		ImGui::DragFloat("Recovery FOV Improvement Threshold",
-			&recoveryFovImprovementThreshold, 0.25f, 0.0f, 30.0f,
-			"%.1f deg");
-		ImGui::DragFloat("Max Composition Correction",
-			&compositionMaxCorrectionDegree, 0.25f, 0.0f, 15.0f,
-			"%.1f deg");
-		ImGui::DragFloat("Composition Angular Speed",
-			&compositionAngularSpeedDegree, 1.0f, 0.0f, 180.0f,
-			"%.1f deg/sec");
-		ImGui::DragFloat("Composition Dead Zone",
-			&compositionDeadZoneDegree, 0.1f, 0.0f, 10.0f,
-			"%.1f deg");
-	ImGui::SeparatorText("Collision FOV Fallback");
-		ImGui::DragFloat("Grux Max Fallback FOV", &lockOnMaxFallbackFovDegree,
-			0.1f, lockOnSettings.fovDegree, 90.0f, "%.1f deg");
-		ImGui::DragFloat("FOV Expand Speed", &lockOnFovExpandSpeed,
-			0.5f, 0.0f, 180.0f, "%.1f deg/s");
-		ImGui::DragFloat("FOV Return Speed", &lockOnFovReturnSpeed,
-			0.5f, 0.0f, 180.0f, "%.1f deg/s");
-		ImGui::DragFloat("Fallback Enter Deficit", &lockOnFovFallbackEnterDeficit,
-			0.01f, 0.0f, 10.0f, "%.2f m");
-		ImGui::DragFloat("Fallback Exit Deficit", &lockOnFovFallbackExitDeficit,
-			0.01f, 0.0f, 10.0f, "%.2f m");
-		ImGui::DragFloat("FOV Return Delay", &lockOnFovFallbackReturnDelay,
-			0.01f, 0.0f, 2.0f, "%.2f sec");
+		ImGui::DragFloat(U8("衝突補正開始比率"), &lockOnCollisionStartRatio, 0.01f, 0.0f, 1.0f);
+		ImGui::DragFloat(U8("衝突補正最大比率"), &lockOnCollisionFullRatio, 0.01f, 0.0f, 1.0f);
+		ImGui::SliderFloat(U8("壁までの距離倍率"), &lockOnWallDistanceScale, 0.1f, 1.0f);
+		ImGui::DragFloat(U8("衝突比率のヒステリシス"), &lockOnCollisionRatioHysteresis, 0.005f, 0.0f, 0.2f);
+		ImGui::DragFloat(U8("距離補正開始位置"), &lockOnDistanceStart, 0.05f, 0.0f, 30.0f);
+		ImGui::DragFloat(U8("距離補正最大位置"), &lockOnDistanceFull, 0.05f, 0.0f, 30.0f);
+		ImGui::DragFloat(U8("Grux ロックオン最大追加距離"), &lockOnMaxDistanceAdd, 0.05f, 0.0f, 10.0f);
+		ImGui::DragFloat(U8("ズームアウト速度"), &lockOnZoomOutSpeed, 0.1f, 0.01f, 30.0f);
+		ImGui::DragFloat(U8("ズームイン速度"), &lockOnZoomInSpeed, 0.1f, 0.01f, 30.0f);
+		ImGui::DragFloat(U8("距離補正のデッドゾーン"), &lockOnDistanceDeadZone, 0.01f, 0.0f, 5.0f);
+		ImGui::DragFloat(U8("構図の補間速度"), &lockOnCompositionLerpSpeed, 0.1f, 0.1f, 30.0f);
+		ImGui::DragFloat(U8("安全フレーム 水平余白"),&lockOnSafeFrameHorizontalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
+		ImGui::DragFloat(U8("安全フレーム 垂直余白"),&lockOnSafeFrameVerticalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
+
+		ImGui::SeparatorText(U8("壁際の横方向回避"));
+		ImGui::DragFloat(U8("近距離時の横方向オフセット"), &lockOnWallEscapeNearOffset,0.05f, 0.0f, 5.0f, "%.2f m");
+		ImGui::DragFloat(U8("遠距離時の横方向オフセット"), &lockOnWallEscapeFarOffset,0.05f, 0.0f, 5.0f, "%.2f m");
+		ImGui::DragFloat(U8("構図悪化判定のFOV閾値"),&lockOnWallEscapeSevereFovThreshold,0.5f, lockOnSettings.fovDegree, 120.0f, "%.1f deg");
+		ImGui::DragFloat(U8("必要なFOV改善量"),&lockOnWallEscapeImprovementThreshold,0.25f, 0.0f, 30.0f, "%.1f deg");
+		ImGui::DragFloat(U8("回避方向切替に必要な改善量"),&lockOnWallEscapeSideSwitchImprovementThreshold,0.25f, 0.0f, 30.0f, "%.1f deg");
+		ImGui::DragFloat(U8("距離補正に必要な改善量"),&lockOnWallEscapeDistanceImprovementThreshold,0.25f, 0.0f, 30.0f, "%.1f deg");
+		ImGui::DragFloat(U8("壁回避の移動速度"), &lockOnWallEscapeMoveSpeed,0.25f, 0.0f, 20.0f, "%.2f m/s");
+		ImGui::DragFloat(U8("壁回避の復帰速度"), &lockOnWallEscapeReturnSpeed,0.25f, 0.0f, 20.0f, "%.2f m/s");
+
+		ImGui::SeparatorText(U8("補正失敗時の距離復帰"));
+		ImGui::DragFloat(U8("最大復帰距離"), &recoveryMaxDistance,0.05f, 0.0f, 5.0f, "%.2f m");
+		ImGui::DragFloat(U8("復帰時の移動速度"), &recoveryMoveSpeed,0.05f, 0.0f, 10.0f, "%.2f m/s");
+		ImGui::DragFloat(U8("復帰後の戻り速度"), &recoveryReturnSpeed,0.05f, 0.0f, 10.0f, "%.2f m/s");
+		ImGui::DragFloat(U8("復帰に必要なFOV改善量"),&recoveryFovImprovementThreshold, 0.25f, 0.0f, 30.0f,"%.1f deg");
+		ImGui::DragFloat(U8("構図補正の最大角度"),&compositionMaxCorrectionDegree, 0.25f, 0.0f, 15.0f,"%.1f deg");
+		ImGui::DragFloat(U8("構図補正の回転速度"),&compositionAngularSpeedDegree, 1.0f, 0.0f, 180.0f,"%.1f deg/sec");
+		ImGui::DragFloat(U8("構図補正のデッドゾーン"),&compositionDeadZoneDegree, 0.1f, 0.0f, 10.0f,"%.1f deg");
+
+		ImGui::SeparatorText(U8("衝突時のFOV補正"));
+		ImGui::DragFloat(U8("Grux FOV補正の最大値"), &lockOnMaxFallbackFovDegree,0.1f, lockOnSettings.fovDegree, 90.0f, "%.1f deg");
+		ImGui::DragFloat(U8("FOV拡大速度"), &lockOnFovExpandSpeed,0.5f, 0.0f, 180.0f, "%.1f deg/s");
+		ImGui::DragFloat(U8("FOV復帰速度"), &lockOnFovReturnSpeed,0.5f, 0.0f, 180.0f, "%.1f deg/s");
+		ImGui::DragFloat(U8("FOV補正開始時の不足距離"), &lockOnFovFallbackEnterDeficit,0.01f, 0.0f, 10.0f, "%.2f m");
+		ImGui::DragFloat(U8("FOV補正終了時の不足距離"), &lockOnFovFallbackExitDeficit,0.01f, 0.0f, 10.0f, "%.2f m");
+		ImGui::DragFloat(U8("FOV復帰までの遅延時間"), &lockOnFovFallbackReturnDelay,0.01f, 0.0f, 2.0f, "%.2f sec");
 		ImGui::TreePop();
 	}
-	ImGui::DragFloat(U8("ロックオンピッチ度数"), &lockOnPitchDegree, 0.1f, -90.0f, 90.0f);
-	ImGui::DragFloat(U8("ロックオンyaw度数"), &lockOnYawOffsetDegree, 0.1f, -90.0f, 90.0f);
+
+	ImGui::DragFloat(U8("ロックオン ピッチ角度"), &lockOnPitchDegree, 0.1f, -90.0f, 90.0f);
+	ImGui::DragFloat(U8("ロックオン Yaw角度"), &lockOnYawOffsetDegree, 0.1f, -90.0f, 90.0f);
 #endif
 }
