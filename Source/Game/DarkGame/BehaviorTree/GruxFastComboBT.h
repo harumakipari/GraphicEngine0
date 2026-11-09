@@ -9,9 +9,7 @@ class BTStartDeath : public ActionBase
 public:
     using ActionBase::ActionBase;
     State Run(float) override;
-    void ResetRuntime() override { started = false; }
-private:
-    bool started = false;
+    void ResetRuntime() override {}
 };
 
 // €–Sˆ—‚ğXV‚·‚é
