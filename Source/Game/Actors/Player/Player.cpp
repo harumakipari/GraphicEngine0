@@ -69,64 +69,8 @@ void Player::Initialize(const Transform& transform)
 		}
 	}
 
-	{
-		PROFILE_SCOPE("Create PlayerAnimationController");
 
-		// ルートノードを設定する
-		int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
-		// アニメーションコントローラーを作成
-		auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
-
-		controller->SetEnableRootMotion(false);
-		controller->SetIgnoreRootMotion(true);
-		controller->AddAnimation("Idle", 0);
-		controller->AddAnimation("Jog_Fwd", 1);
-		controller->AddAnimation("Primary_Attack_Fast_A", 2);
-		controller->AddAnimation("Primary_Attack_Fast_B", 3);
-		controller->AddAnimation("Primary_Attack_Fast_C", 4);
-		controller->AddAnimation("Primary_Attack_Fast_D1_1", 5);
-		controller->AddAnimation("Ability_RMB_Bwd_0", 6);
-		controller->AddAnimation("Ability_RMB_Left_0", 7);
-		controller->AddAnimation("Ability_RMB_Right_0", 8);
-		controller->AddAnimation("Ability_RWB_Fwd_0", 9);
-		controller->AddAnimation("Hit_Combat_B", 10);
-		controller->AddAnimation("Hit_Combat_Death", 11);
-		controller->AddAnimation("Hit_Combat_F", 12);
-		controller->AddAnimation("Hit_Combat_L", 13);
-		controller->AddAnimation("Hit_Combat_R", 14);
-		controller->AddAnimation("Recall_0", 15);
-		controller->AddAnimation("Level_Start_Cut", 16);
-		controller->AddAnimation("Jog_Bwd", 17);
-		controller->AddAnimation("Jog_Left", 18);
-		controller->AddAnimation("Jog_Right", 19);
-		controller->AddAnimation("Rush_Attack_Fast_A", 20);
-		controller->AddAnimation("Rush_Attack_Fast_B", 21);
-		controller->AddAnimation("Rush_Attack_Fast_C", 22);
-		controller->AddAnimation("Rush_Attack_Fast_End", 23);
-		controller->AddAnimation("Rush_Attack_Fast_D", 24);
-		controller->AddAnimation("Walk_Fwd", 25);
-		controller->AddAnimation("Get_Up", 26);
-		controller->AddAnimation("Hit_Large_KnockBack", 27);
-		controller->AddAnimation("Emote_Win", 28);
-		controller->AddAnimation("Walk_Fwd_Stop_Fast", 29);
-		controller->AddAnimation("Result_Recall", 30);
-		controller->AddAnimation("Emote_Phase2", 31);
-		controller->AddAnimation("Standing", 32);
-		controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
-
-		controller->AddLocomotionBlendAnimation("Jog_Fwd", 0.0f, 0.0f);
-		controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.464f);
-		controller->AddLocomotionBlendAnimation("Jog_Bwd", 180.0f, 0.0f);
-		controller->AddLocomotionBlendAnimation("Jog_Left", -90.0f, 0.5f);
-
-		std::string name = GetName();
-		// アニメーションコントローラーのオーナーの名前を設定する
-		controller->SetOwnerName(name);
-		// 全てのNotifyAssetsをロードする
-		controller->LoadAllNotifyAssets(name);
-		// アニメーションコントローラーを character に追加
-		this->AddBodyAnimationController(controller);
-	}
+	InitializeAnimations();
 
 	{
 		PROFILE_SCOPE("Create PlayerStateMachine");
@@ -266,6 +210,68 @@ void Player::Initialize(const Transform& transform)
 	// UIを生成する
 	CreateUI();
 
+}
+
+void Player::InitializeAnimations()
+{
+	{
+		PROFILE_SCOPE("Create PlayerAnimationController");
+
+		// ルートノードを設定する
+		int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
+		// アニメーションコントローラーを作成
+		auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
+
+		controller->SetEnableRootMotion(false);
+		controller->SetIgnoreRootMotion(true);
+		controller->AddAnimation("Idle", 0);
+		controller->AddAnimation("Jog_Fwd", 1);
+		controller->AddAnimation("Primary_Attack_Fast_A", 2);
+		controller->AddAnimation("Primary_Attack_Fast_B", 3);
+		controller->AddAnimation("Primary_Attack_Fast_C", 4);
+		controller->AddAnimation("Primary_Attack_Fast_D1_1", 5);
+		controller->AddAnimation("Ability_RMB_Bwd_0", 6);
+		controller->AddAnimation("Ability_RMB_Left_0", 7);
+		controller->AddAnimation("Ability_RMB_Right_0", 8);
+		controller->AddAnimation("Ability_RWB_Fwd_0", 9);
+		controller->AddAnimation("Hit_Combat_B", 10);
+		controller->AddAnimation("Hit_Combat_Death", 11);
+		controller->AddAnimation("Hit_Combat_F", 12);
+		controller->AddAnimation("Hit_Combat_L", 13);
+		controller->AddAnimation("Hit_Combat_R", 14);
+		controller->AddAnimation("Recall_0", 15);
+		controller->AddAnimation("Level_Start_Cut", 16);
+		controller->AddAnimation("Jog_Bwd", 17);
+		controller->AddAnimation("Jog_Left", 18);
+		controller->AddAnimation("Jog_Right", 19);
+		controller->AddAnimation("Rush_Attack_Fast_A", 20);
+		controller->AddAnimation("Rush_Attack_Fast_B", 21);
+		controller->AddAnimation("Rush_Attack_Fast_C", 22);
+		controller->AddAnimation("Rush_Attack_Fast_End", 23);
+		controller->AddAnimation("Rush_Attack_Fast_D", 24);
+		controller->AddAnimation("Walk_Fwd", 25);
+		controller->AddAnimation("Get_Up", 26);
+		controller->AddAnimation("Hit_Large_KnockBack", 27);
+		controller->AddAnimation("Emote_Win", 28);
+		controller->AddAnimation("Walk_Fwd_Stop_Fast", 29);
+		controller->AddAnimation("Result_Recall", 30);
+		controller->AddAnimation("Emote_Phase2", 31);
+		controller->AddAnimation("Standing", 32);
+		controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
+
+		controller->AddLocomotionBlendAnimation("Jog_Fwd", 0.0f, 0.0f);
+		controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.464f);
+		controller->AddLocomotionBlendAnimation("Jog_Bwd", 180.0f, 0.0f);
+		controller->AddLocomotionBlendAnimation("Jog_Left", -90.0f, 0.5f);
+
+		std::string name = GetName();
+		// アニメーションコントローラーのオーナーの名前を設定する
+		controller->SetOwnerName(name);
+		// 全てのNotifyAssetsをロードする
+		controller->LoadAllNotifyAssets(name);
+		// アニメーションコントローラーを character に追加
+		this->AddBodyAnimationController(controller);
+	}
 }
 
 void Player::CreateUI()
@@ -830,7 +836,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 		prevSwordTipPos = GetHitBoxPoint(swordTipComponent, activeHitBoxOffset);
 		hitBox = true;
 		if (stateMachine_->GetStateName() == "Attack")
-			StopAttackTargetRotation();
+			attackRotationTracking = false;
 		break;
 	}
 	case AnimationNotifyState::Type::InputWindow:
@@ -1394,12 +1400,11 @@ void Player::SetOperationGuideItemVisible(const OperationGuideItem item, const b
 	RefreshOperationGuideUIVisibility();
 }
 
-void Player::SetOperationGuideItemLearned(const OperationGuideItem item, const bool learned)
+void Player::SetOperationGuideItemLearned(const OperationGuideItem item)
 {
 	auto& state = operationGuideItems[static_cast<size_t>(item)];
-	state.learned = learned;
-	if (learned)
-		state.animationTimer = 0.0f;
+	state.learned = true;
+	state.animationTimer = 0.0f;
 }
 
 bool Player::IsOperationGuideItemVisible(const OperationGuideItem item) const
@@ -1485,7 +1490,6 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 	lowHpPresentationSuppressed = false;
 	ResetLowHpEffects();
 	ResetEyeCloseOverride();
-	deathVisualFadeStarted = false;
 	if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
 	{
 		skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = 0.0f;
@@ -1493,7 +1497,6 @@ void Player::ResetForBattleContinue(const Transform& battleStartTransform)
 		skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = playerAliveEmissionPower;
 	}
 
-	battleActionsSuspended = false;
 	StopBattleActions();
 	battleActionsSuspended = false;
 
@@ -1543,7 +1546,6 @@ void Player::ForceDirectionImmediate(const DirectX::XMFLOAT3& direction) const
 void Player::BeginDeathEyeClose()
 {
 	ResetEyeCloseOverride();
-	deathVisualFadeStarted = false;
 	if (skeletalMeshComponent && skeletalMeshComponent->plusAlphaCBuffer)
 	{
 		skeletalMeshComponent->plusAlphaCBuffer->data.deathVisualFade = 0.0f;
@@ -1639,7 +1641,7 @@ bool Player::BeginFinalHitWait()
 	showTrail = false;
 	swordEmissivePower = 0.0f;
 	trail.Clear();
-	StopAttackTargetRotation();
+	attackRotationTracking = false;
 	StopKnockBackForcedMove();
 	knockBackElapsed = 0.0f;
 	characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
@@ -1724,7 +1726,7 @@ void Player::ClearTransientBattleActions()
 		if (ghost.swordMeshComp) ghost.swordMeshComp->SetIsVisible(false);
 	}
 	ResetPlayerPoseGhost();
-	StopAttackTargetRotation();
+	attackRotationTracking = false;
 	StopKnockBackForcedMove();
 	knockBackElapsed = 0.0f;
 	characterMovementComponent->SetMoveDirection({ 0.0f, 0.0f, 0.0f });
@@ -1736,19 +1738,17 @@ void Player::ClearTransientBattleActions()
 	velocity = { 0.0f, 0.0f, 0.0f };
 }
 
-void Player::ClearBattleVisualsForPhaseTransition()
+
+void Player::CancelGameplayActionsForCinematic()
 {
+	// フェーズ遷移前に戦闘表示とRushガイドを解除する。
 	ClearTransientBattleActions();
 	ClearSwordTrailForPhaseTransition();
 	swordGhostElapsedTime = 0.0f;
 	swordGhostIndex = 0;
 	damageFlashTimer = 0.0f;
 	ApplyDamageFlash(0.0f);
-}
 
-void Player::CancelGameplayActionsForCinematic()
-{
-	ClearBattleVisualsForPhaseTransition();
 	if (inputComponent)
 		inputComponent->ClearIntent();
 
@@ -2342,7 +2342,6 @@ void Player::SetRushWeaponVisual(const bool enabled)
 
 	trail.SetRushColorEnabled(enabled, rushSwordColor);
 	activeGhostBaseColor = enabled ? rushSwordColor : swordGhostColor;
-	activeGhostEdgeColor = enabled ? rushSwordColor : swordGhostColor;
 }
 
 bool Player::CanJustDodgeAgainst(const DirectX::XMFLOAT3& attackerPosition)
@@ -2981,7 +2980,7 @@ void Player::UpdateSwordGhosts(const float deltaTime)
 		{
 			ghost.swordMeshComp->plusAlphaCBuffer->data.emissionPower = swordGhostEmissive;
 			ghost.swordMeshComp->plusAlphaCBuffer->data.cpuColor = { activeGhostBaseColor.x,activeGhostBaseColor.y,activeGhostBaseColor.z, ghost.alpha };
-			ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeColor = { activeGhostEdgeColor.x,activeGhostEdgeColor.y,activeGhostEdgeColor.z,1.0f };
+			ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeColor = { activeGhostBaseColor.x,activeGhostBaseColor.y,activeGhostBaseColor.z,1.0f };
 			ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.innerColor = { ghostInnerColor.x,ghostInnerColor.y,ghostInnerColor.z,1.0f };
 			ghost.swordMeshComp->plusAlphaCBuffer->data.effectParameters.edgeWidth = ghostEdgeWidth;
 		}

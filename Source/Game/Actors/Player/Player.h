@@ -197,7 +197,7 @@ public:
 	// 指定した操作ガイド項目の表示要求を設定する。
 	void SetOperationGuideItemVisible(OperationGuideItem item, bool visible);
 	// 指定した操作ガイド項目の学習状態を設定する。
-	void SetOperationGuideItemLearned(OperationGuideItem item, bool learned = true);
+	void SetOperationGuideItemLearned(OperationGuideItem item);
 	// 指定した操作ガイド項目の表示要求を返す。
 	bool IsOperationGuideItemVisible(OperationGuideItem item) const;
 	// 指定した操作ガイド項目が学習済みかを返す。
@@ -320,8 +320,6 @@ public:
 
 	// HP、Transform、現在Stateを維持して一時的な戦闘状態を解除する。
 	void ClearTransientBattleActions();
-	// フェーズ遷移前に戦闘表示とRushガイドを解除する。
-	void ClearBattleVisualsForPhaseTransition();
 
 	// シネマティックでTransformを変更する前にゲームプレイ操作を終了する。
 	void CancelGameplayActionsForCinematic();
@@ -337,10 +335,6 @@ public:
 	// 描画・残像演出
 	// 剣の軌跡を描画する。
 	void RenderTrail(ID3D11DeviceContext* immediateContext);
-	// Just Dodge成功時のPlayer残像生成を開始する。
-	void CapturePlayerPoseGhost();
-	// Player残像の表示状態と生成状態をリセットする。
-	void ResetPlayerPoseGhost();
 	// カメラ連携
 	// Focus開始時に使用するPlayerの正面方向を保存する。
 	void SetFocusDirection(const DirectX::XMFLOAT3& focusDir)
@@ -359,8 +353,6 @@ public:
 	// 演出中のPlayer透明化抑制状態を設定する。
 	void SetIsPlayerTransparency(const bool isTransparency) { moviePerform = !isTransparency; }
 
-	// 移動モードを切り替え、対応する移動アニメーションを更新する。
-	void SetLocomotionMode(LocomotionMode mode);
 
 	// 入力要求・移動
 	// 保存済みの入力要求を現在の状態で実行可能なState遷移へ変換し、成功時だけ消費する。
@@ -402,8 +394,6 @@ public:
 	void SetRushInputAcceptance(bool accepting);
 
 	// Player/Bossの解除タイミングを独立して管理する。
-	// ジャスト回避のタイムスケールを更新する。
-	void UpdateJustDodgeTimeScales();
 	// PlayerのJust Dodgeスローを通常速度へ戻し始める。
 	void BeginPlayerSlowReturn();
 	// BossのJust DodgeまたはRushスローを通常速度へ戻し始める。
@@ -431,8 +421,6 @@ public:
 	void AcquireAttackTarget();
 	// 攻撃対象へ角度制限付きで向きを補正する。
 	void UpdateAttackTargetRotation(float deltaTime);
-	// 攻撃対象への向き補正を停止する。
-	void StopAttackTargetRotation() { attackRotationTracking = false; }
 	// 攻撃補助対象と向き補正状態を解除する。
 	void ClearAttackTarget();
 
@@ -442,6 +430,13 @@ public:
 	bool IsBossBattle() const { return isBossBattle; }
 
 private:
+	// 移動モードを切り替え、対応する移動アニメーションを更新する。
+	void SetLocomotionMode(LocomotionMode mode);
+	// ジャスト回避のタイムスケールを更新する。
+	void UpdateJustDodgeTimeScales();
+	// Just Dodge成功時のPlayer残像生成を開始する。
+	void CapturePlayerPoseGhost();
+
 	// TPS操作時の移動入力と向きを更新する。
 	void UpdateTPSLocomotion();
 	// ロックオン中の移動入力と向きを更新する。
@@ -457,6 +452,8 @@ private:
 	bool RebuildEyeClosePoseOverride();
 	// 目閉じ姿勢オーバーライドと関連状態を初期化する。
 	void ResetEyeCloseOverride();
+	// Player残像の表示状態と生成状態をリセットする。
+	void ResetPlayerPoseGhost();
 
 	// SE再生Notifyを解釈して対応する効果音を再生する。
 	void HandleAnimationPlaySE(const AnimationNotifyEvent& event) const;
@@ -496,6 +493,8 @@ private:
 		const DirectX::XMFLOAT3* swordTipPos, bool updateTrail);
 	// 特殊演出中の剣の表示状態をアニメーション時刻から再評価する。
 	void UpdateWeaponVisualPresentation(float deltaTime, bool updateTrail = true);
+	void InitializeAnimations();
+
 	// UIを生成する。
 	void CreateUI();
 
@@ -553,8 +552,6 @@ private:
 	void UpdatePrisonOpeningStandingPingPong(float deltaTime);
 
 public:
-	// ヒット中に当たった敵を記録する
-	std::unordered_set<Actor*> hitActors; // 現在の攻撃で既に命中したActor
 
 	// 攻撃アニメーションとコンボ・Notify関連の状態
 	std::string currentAttackAnimation = "Primary_Attack_Fast_A"; // 再生中または次に再生する攻撃アニメーション名
@@ -562,86 +559,36 @@ public:
 
 	bool comboQueued = false;   // コンボ攻撃がキューに入っているかどうか
 	bool inputWindow = false;   // コンボ受付をするかどうか
-	bool hitBox = false;   // 武器の当たり判定をつける
-	float activeHitBoxRadius = 0.75f; // Notifyで有効化中の武器判定半径
-	DirectX::XMFLOAT3 activeHitBoxOffset{ 0.0f, 0.0f, 0.0f }; // 武器判定に加えるローカルオフセット
 	bool transitionWindow = false;  // ステート遷移してもいいかどうか
-	bool justDodgeWindow = false;  // ジャスト回避受付時間
 	bool justDodgeSuccess = false; // ジャスト回避成功フラグ
-	bool showTrail = false;     // 軌跡を出現させるかどうか
-	float swordEmissivePower = 0.0f;    // 剣のエミッシブの力
 
-	// MotionWarp Notifyの移動状態
-	std::vector<AnimationMotionWarp> animationMotionWarps; // 有効中のMotionWarp Notifyごとの移動情報
-	// 操作UI
-	float operationGuidePulseAmplitude = 0.185f; // 操作ガイドの拡縮量
-	float operationGuidePulseSpeed = 3.5f; // radians / second
 
-	bool invincibleWindow = false; // アニメーションによる無敵状態かどうか
+
 	bool invincible = false; // 無敵状態かどうか
 
-	float justDodgeMaxTowardAttackerDot = 0.25f; // 回避方向と攻撃者方向の成立判定しきい値
-	DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{}; // 回避開始時に固定したワールド方向
-	bool dodgeWorldDirectionSnapshotValid = false; // 回避方向スナップショットが有効か
 	// Rush接近・予備動作の調整値
 	float moveToEnemyInterval = 0.2f;  // ラッシュ後の敵までへのダッシュにかかる時間
 	float rushApproachPoseBlendTime = 0.12f; // Rush接近姿勢へ切り替えるブレンド時間
-	float rushWindupDuration = 0.20f; // Rush接近前の予備動作時間
-	// Rush戦闘の進行状態
-	bool rushWindupActive = false; // Rush予備動作中か
-	bool rushAttackActive = false; // Rush攻撃中か
 
 	// Rush停止距離・MotionWarp・攻撃補助の調整値
 	float normalEnemyRushSurfaceMargin = 0.15f; // 通常敵へのRush停止距離に加える余白
-	float motionWarpDesiredAttackSurfaceDistance = 0.5f; // MotionWarp攻撃時に保つ敵表面までの距離
-	float attackRotationMaxCorrectionDegrees = 55.0f; // 攻撃対象へ向く補正角度の上限
-	float attackRotationSpeedDegrees = 240.0f; // 攻撃対象へ向く補正速度（度/秒）
-	float attackAssistMaxDistance = 8.0f; // 攻撃補助対象を探す最大距離
 
 	// Rush対象と初回入力の受付状態
 	std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 
 
-	bool rushInputAccepting = false; // 初回Rush入力を受け付ける状態
-	// FinalHitの追撃停止・姿勢固定要求と攻撃終了の進行状態
-	bool finalHitRushFollowUpStopRequested = false; // 最終ヒット時にRush追撃を停止する要求
-	bool finalHitVisualPoseLatchRequested = false; // 最終ヒット時に見た目姿勢を固定する要求
-	bool finalHitAttackDrainActive = false; // 最終ヒット後の攻撃アニメーション排出中か
-	bool finalHitAttackDrainCompleted = false; // 最終ヒット姿勢の固定に成功したか
-	bool finalHitAttackDrainFailed = false; // 最終ヒット姿勢の固定または排出に失敗したか
-	// Rushガイドの表示状態とフェード設定
-	float rushPromptAlpha = 0.0f; // Rush入力ガイドに適用する透明度
-	float rushPromptFadeInDuration = 0.10f; // Rush入力ガイドのフェードイン時間
-	RushPromptAnimationPhase rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden; // Rush入力ガイドの表示アニメーション段階
-	float rushPromptAnimationTimer = 0.0f; // Rush入力ガイドのアニメーション経過時間
-	bool rushPromptWasVisible = false; // 前フレームでRush入力ガイドを表示していたか
+
 
 
 	// 入力受付のコマンド
 	ActionRequest bufferCommand{}; // 入力コマンド
 
-	// 通常攻撃・Rushのダメージとヒットストップの調整値
-	int normalAttackDamage = 2; // 通常攻撃の基本ダメージ
-	float rushDamageMultiplier = 1.f; // Rush攻撃に適用するダメージ倍率
-	float finalRushDamageMultiplier = 2.5f; // 最終Rush攻撃に適用するダメージ倍率
-	int maxRushAttackCount = 7; // Rush連撃の最大攻撃回数
-
-	float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
-	float rushHitStopDuration = 0.03f; // Rush攻撃のヒットストップ時間
 
 	// Player本体の描画・操作コンポーネント
 	std::shared_ptr<SkeletalMeshComponent> skeletalMeshComponent; // Player本体を描画するスケルタルメッシュ
 	std::shared_ptr<InputComponent> inputComponent; // Playerの入力意図を保持するコンポーネント
 	std::shared_ptr<RotationComponent> rotationComponent; // Playerの向きを制御するコンポーネント
 	std::shared_ptr<CharacterMovementComponent> characterMovementComponent; // Playerの移動を制御するコンポーネント
-
-	// 武器判定・軌跡に使う剣の参照点
-	std::shared_ptr<SceneComponent> swordRootComponent; // 剣の根元のコンポーネント
-	std::shared_ptr<SceneComponent> swordMiddleComponent; // 剣の中間のコンポーネント
-	std::shared_ptr<SceneComponent> swordTipComponent;  // 剣の先端のコンポーネント
-
-	// 剣の描画用メッシュコンポーネント
-	std::shared_ptr<SkeletalMeshComponent> swordMeshComponent; // 剣を描画するスケルタルメッシュ
 
 	// 剣の残像用
 	struct SwordGhost
@@ -665,13 +612,21 @@ public:
 	};
 	std::array<PlayerPoseGhost, 6> playerPoseGhosts; // 循環利用するPlayer残像
 
-	// 歩きのスピード
-	float walkSpeed = 1.0f;
-	// 走りのスピード
-	float runSpeed = 5.15f;
-	float forwardSpeedScale = 1.0f; // 前方移動に適用する速度倍率
-	float sideSpeedScale = 0.95f; // 横移動に適用する速度倍率
-	float backwardSpeedScale = 1.0f; // 後方移動に適用する速度倍率
+
+
+
+
+private:
+	// 操作UI
+	float operationGuidePulseAmplitude = 0.185f; // 操作ガイドの拡縮量
+	float operationGuidePulseSpeed = 3.5f; // radians / second
+
+	// Rushガイドの表示状態とフェード設定
+	float rushPromptAlpha = 0.0f; // Rush入力ガイドに適用する透明度
+	float rushPromptFadeInDuration = 0.10f; // Rush入力ガイドのフェードイン時間
+	RushPromptAnimationPhase rushPromptAnimationPhase = RushPromptAnimationPhase::Hidden; // Rush入力ガイドの表示アニメーション段階
+	float rushPromptAnimationTimer = 0.0f; // Rush入力ガイドのアニメーション経過時間
+	bool rushPromptWasVisible = false; // 前フレームでRush入力ガイドを表示していたか
 
 	// RushガイドのUI画像
 	std::shared_ptr<UIImageComponent> rushGuideImageComponent; // Rush入力を案内する画像
@@ -697,8 +652,6 @@ public:
 	float lockOnGuideEdgeMargin = 130.0f; // 画面端から矢印を離す余白
 	float lockOnGuideArrowRotationOffset = 180.0f; // 矢印画像の回転補正角度
 
-
-private:
 	// Rushガイドの配置・サイズ設定
 	DirectX::XMFLOAT2 rushGuidePosition = { 1200.0f, 680.0f }; // Rushガイド画像の表示位置
 	DirectX::XMFLOAT2 rushButtonPosition = { 1200.0f, 600.0f }; // Rushボタン画像の表示位置
@@ -716,6 +669,20 @@ private:
 		static_cast<size_t>(OperationGuideItem::Count)> operationGuideItems;
 	bool operationGuideGameplayHudVisible = true; // Gameplay HUD側が許可する操作ガイド表示状態
 	bool operationGuideEventVisible = true; // イベント側が許可する操作ガイド表示状態
+
+	float motionWarpDesiredAttackSurfaceDistance = 0.5f; // MotionWarp攻撃時に保つ敵表面までの距離
+	float attackRotationMaxCorrectionDegrees = 55.0f; // 攻撃対象へ向く補正角度の上限
+	float attackRotationSpeedDegrees = 240.0f; // 攻撃対象へ向く補正速度（度/秒）
+	float attackAssistMaxDistance = 8.0f; // 攻撃補助対象を探す最大距離
+
+	// 通常攻撃・Rushのダメージとヒットストップの調整値
+	int normalAttackDamage = 2; // 通常攻撃の基本ダメージ
+	float rushDamageMultiplier = 1.f; // Rush攻撃に適用するダメージ倍率
+	float finalRushDamageMultiplier = 2.5f; // 最終Rush攻撃に適用するダメージ倍率
+	int maxRushAttackCount = 7; // Rush連撃の最大攻撃回数
+
+	float normalAttackHitStopDuration = 0.05f; // ヒットストップの秒数
+	float rushHitStopDuration = 0.03f; // Rush攻撃のヒットストップ時間
 
 	std::weak_ptr<Enemy> attackTarget; // 攻撃補助で向きを補正する対象
 	float attackRotationStartYaw = 0.0f; // 攻撃開始時のYaw角
@@ -772,6 +739,33 @@ private:
 	float playerAliveEmissionPower = 20.9f; // 生存時のPlayer本体発光強度
 
 
+	// ヒット中に当たった敵を記録する
+	std::unordered_set<Actor*> hitActors; // 現在の攻撃で既に命中したActor
+
+	// 武器判定・軌跡に使う剣の参照点
+	std::shared_ptr<SceneComponent> swordRootComponent; // 剣の根元のコンポーネント
+	std::shared_ptr<SceneComponent> swordMiddleComponent; // 剣の中間のコンポーネント
+	std::shared_ptr<SceneComponent> swordTipComponent;  // 剣の先端のコンポーネント
+
+	// 剣の描画用メッシュコンポーネント
+	std::shared_ptr<SkeletalMeshComponent> swordMeshComponent; // 剣を描画するスケルタルメッシュ
+
+	bool hitBox = false;   // 武器の当たり判定をつける
+	float activeHitBoxRadius = 0.75f; // Notifyで有効化中の武器判定半径
+	DirectX::XMFLOAT3 activeHitBoxOffset{ 0.0f, 0.0f, 0.0f }; // 武器判定に加えるローカルオフセット
+	bool justDodgeWindow = false;  // ジャスト回避受付時間
+	bool showTrail = false;     // 軌跡を出現させるかどうか
+	float swordEmissivePower = 0.0f;    // 剣のエミッシブの力
+
+	// MotionWarp Notifyの移動状態
+	std::vector<AnimationMotionWarp> animationMotionWarps; // 有効中のMotionWarp Notifyごとの移動情報
+
+	bool invincibleWindow = false; // アニメーションによる無敵状態かどうか
+
+	float justDodgeMaxTowardAttackerDot = 0.25f; // 回避方向と攻撃者方向の成立判定しきい値
+	DirectX::XMFLOAT3 dodgeWorldDirectionSnapshot{}; // 回避開始時に固定したワールド方向
+	bool dodgeWorldDirectionSnapshotValid = false; // 回避方向スナップショットが有効か
+
 	// 武器の連続判定に使う前フレームの参照点
 	DirectX::XMFLOAT3 prevSwordRootPos = { 0.0f,0.0f,0.0f }; // 前フレームの剣根元位置
 	DirectX::XMFLOAT3 prevSwordMidPos = { 0.0f,0.0f,0.0f }; // 前フレームの剣中央位置
@@ -788,7 +782,6 @@ private:
 	DirectX::XMFLOAT3 ghostInnerColor = { 1.0f,1.0f,1.0f }; // 剣残像の内側色
 	DirectX::XMFLOAT3 rushSwordColor = { 0.5f,0.8f,1.6f }; // Rush中の剣、軌跡、残像に使用する色
 	DirectX::XMFLOAT3 activeGhostBaseColor{}; // 通常またはRush状態を反映した剣残像の現在色
-	DirectX::XMFLOAT3 activeGhostEdgeColor{}; // 通常またはRush状態を反映した剣残像輪郭の現在色
 	float ghostEdgeWidth = 1.0f; // 残像の輪郭
 	DirectX::XMFLOAT4X4 prevSwordWorld; // 前回の姿勢
 	bool isPrevSwordWorldValid = false; // 前フレームの剣行列が有効か
@@ -846,9 +839,23 @@ private:
 	DirectX::XMFLOAT3 dodgeWorldDirection{}; // ワールド座標で指定する回避方向
 	bool useDodgeWorldDirection = false; // ワールド座標の回避方向を使用するか
 	HitReactionDirection hitReactionDirection = HitReactionDirection::Front; // 被弾リアクションに使用する攻撃方向
+	// 歩きのスピード
+	float walkSpeed = 1.0f;
+	// 走りのスピード
+	float runSpeed = 5.15f;
+	float forwardSpeedScale = 1.0f; // 前方移動に適用する速度倍率
+	float sideSpeedScale = 0.95f; // 横移動に適用する速度倍率
+	float backwardSpeedScale = 1.0f; // 後方移動に適用する速度倍率
+
 	// 歩き走りダッシュのステート管理
 	LocomotionMode locomotionMode = LocomotionMode::Idle; // 現在の移動モード
 
+
+	float rushWindupDuration = 0.20f; // Rush接近前の予備動作時間
+	// Rush戦闘の進行状態
+	bool rushWindupActive = false; // Rush予備動作中か
+	bool rushAttackActive = false; // Rush攻撃中か
+	bool rushInputAccepting = false; // 初回Rush入力を受け付ける状態
 
 	// ジャスト回避・Rushスローの進行状態
 	JustDodgeSlowPhase playerSlowPhase = JustDodgeSlowPhase::Inactive; // Player側Just Dodgeスローの段階
@@ -892,6 +899,13 @@ private:
 	DirectX::XMFLOAT3 prisonOpeningSittingPosition{}; // 牢獄開始演出中に維持するPlayer位置
 	float prisonOpeningSittingYawDegrees = 0.0f; // 牢獄開始演出中に維持するYaw角
 	bool deathCameraTransparencyDisabled = false; // 死亡カメラ中にDitherを無効化する状態
+	// FinalHitの追撃停止・姿勢固定要求と攻撃終了の進行状態
+	bool finalHitRushFollowUpStopRequested = false; // 最終ヒット時にRush追撃を停止する要求
+	bool finalHitVisualPoseLatchRequested = false; // 最終ヒット時に見た目姿勢を固定する要求
+	bool finalHitAttackDrainActive = false; // 最終ヒット後の攻撃アニメーション排出中か
+	bool finalHitAttackDrainCompleted = false; // 最終ヒット姿勢の固定に成功したか
+	bool finalHitAttackDrainFailed = false; // 最終ヒット姿勢の固定または排出に失敗したか
+
 	// FinalHitの待機状態と通知先
 	bool finalHitWaiting = false; // 最終ヒット後に通常更新を抑止する状態
 	std::function<void(GruxEnemy*, const DirectX::XMFLOAT3&)> finalHitCallback; // 最終ヒット確定時に呼び出すコールバック

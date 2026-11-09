@@ -82,7 +82,6 @@ public:
 
 private:
     bool dodgeQueued = false;
-    // True only while the synchronous Attack -> Attack combo transition runs.
     bool continuingComboTransition = false;
 };
 
@@ -132,6 +131,10 @@ public:
     void Execute(float deltaTime) override;
     void Exit() override;
     const char* GetName() const override { return "KnockBack"; }
+<<<<<<< HEAD
+=======
+
+>>>>>>> nakashima
 private:
     Phase phase = Phase::KnockBack;
 };
@@ -174,7 +177,7 @@ class PlayerRushState : public PlayerStateBase
 {
     enum class RushPhase :uint8_t
     {
-        Windup,         // Hold the approach pose before the dash begins
+        Windup,         
         DashToTarget,   // 敵へ接近
         Attack,         // ラッシュ攻撃
         Finished,
@@ -192,7 +195,6 @@ public:
     void Exit() override;
     // ステート名を取得
     const char* GetName() const override { return "Rush"; }
-    // 0-based Rush step. comboIndex remains the single source of truth.
     int GetComboIndex() const { return comboIndex; }
     const std::string& GetCurrentAttackAnimationForDebug() const { return currentAttackAnimation; }
 private:
