@@ -104,9 +104,13 @@ public:
     }
 
     // Yaw と Pitch を最初に更新する
-    void InitSetYawAndPitch(const float yaw, const float pitch)const
+    void InitSetYawAndPitch(const float yaw, const float pitch)
     {
-        mainCameraComponent->SetYawAndPitch(yaw, pitch);
+        currentYaw = desiredYaw = MathHelper::ClampAngle(yaw);
+        currentPitch = desiredPitch = std::clamp(pitch,
+            DirectX::XMConvertToRadians(minPitchDegree),
+            DirectX::XMConvertToRadians(maxPitchDegree));
+        mainCameraComponent->SetYawAndPitch(currentYaw, currentPitch);
     }
 
     // 敵のコンポーネントを設定
@@ -360,7 +364,7 @@ private:
     CameraMode currentMode = CameraMode::TPS;   // 現在有効なモード
     CameraMode requestMode = CameraMode::TPS;   // 入力が要求しているモード
 
-    CameraPose currentPose;
+    CameraPose currentPose{};
     DirectX::XMFLOAT3 compositionLookTarget{};
 
     float currentYaw = 0.0f;

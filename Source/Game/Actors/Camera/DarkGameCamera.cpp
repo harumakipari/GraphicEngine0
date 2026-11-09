@@ -93,8 +93,15 @@ void DarkCameraActor::UpdateCameraPose(float deltaTime,
         else
         {
             UpdateDesiredRotation(deltaTime);
-            UpdateRotation(deltaTime);
-            currentPose = CalculatePose(currentMode, playerPos, currentYaw, currentPitch);
+            if (requestMode != currentMode)
+            {
+                StartBlend(currentMode, requestMode);
+            }
+            else
+            {
+                UpdateRotation(deltaTime);
+                currentPose = CalculatePose(currentMode, playerPos, currentYaw, currentPitch);
+            }
         }
     }
 
@@ -156,6 +163,12 @@ void DarkCameraActor::ResolvePostPoseCollision(const float deltaTime,
         lockOnFramingDeficit = currentMode == CameraMode::LockOn
             ? lockOnRequiredFramingDistance - actualCameraDistance
             : 0.0f;
+
+        if (currentMode == CameraMode::LockOn && requestMode == CameraMode::LockOn &&
+            !isBlending && !isExternalBlending)
+        {
+            currentPose.target = compositionLookTarget;
+        }
     }
 }
 
@@ -434,9 +447,6 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
 {
     CancelOffscreenAttackAssist();
     (void)from;
-    blendTime = 0.0f;
-    blendDurationOverride = (to == CameraMode::Focus) ? focusBlendDuration : 0.0f;
-    isBlending = true;
 
     // プレイヤーの位置を取得
     auto playerHeadShared = playerHead.lock();
@@ -445,6 +455,14 @@ void DarkCameraActor::StartBlend(CameraMode from, CameraMode to)
         return;
     }
     DirectX::XMFLOAT3 playerPos = playerHeadShared->GetComponentLocation();
+    blendTime = 0.0f;
+    blendDurationOverride = (to == CameraMode::Focus) ? focusBlendDuration : 0.0f;
+    isBlending = true;
+
+    if (MathHelper::Distance(currentPose.eye, currentPose.target) <= FLT_EPSILON)
+    {
+        currentPose = CalculatePose(currentMode, playerPos, currentYaw, currentPitch);
+    }
 
     // Collision補正を含め、直前まで実際に表示していたPoseから開始する。
     blendStartPose = currentPose;
@@ -991,12 +1009,19 @@ void DarkCameraActor::UpdateDesiredRotation(float deltaTime)
         }
         break;
     case CameraMode::LockOn:
+    {
+        const auto enemyHeadShared = enemyHead.lock();
+        if (!enemyHeadShared)
+        {
+            SetRequestMode(CameraMode::TPS);
+            break;
+        }
         // 敵とプレイヤーが向いている方向
         if (auto playerHeadShared = playerHead.lock())
         {
             if (auto player = playerHeadShared->GetOwner())
             {
-                if (auto enemy = enemyHead.lock()->GetOwner())
+                if (auto enemy = enemyHeadShared->GetOwner())
                 {
                     DirectX::XMFLOAT3 playerPos = player->GetPosition();
                     DirectX::XMFLOAT3 enemyPos = enemy->GetPosition();
@@ -1018,6 +1043,7 @@ void DarkCameraActor::UpdateDesiredRotation(float deltaTime)
             }
         }
         break;
+    }
     case CameraMode::Death:
         break;
     }
@@ -1846,6 +1872,12 @@ void DarkCameraActor::ApplyCombatPresentationFov()
             const float rushFov = std::lerp(rushPresentationIntroFovDegree, rushPresentationTravelFovDegree, smoothStep(combatPresentationRushTravelBlend));
             fov = std::lerp(base, rushFov, smoothStep(combatPresentationRushAttackBlend));
         }
+        else if (combatPresentationPhase == CombatPresentationPhase::Exit &&
+            combatPresentationRushFovBlend > FLT_EPSILON)
+        {
+            const float rushFov = std::lerp(rushPresentationIntroFovDegree, rushPresentationTravelFovDegree, smoothStep(combatPresentationRushTravelBlend));
+            fov = std::lerp(base, rushFov, smoothStep(combatPresentationRushFovBlend));
+        }
     }
     if (currentMode == CameraMode::LockOn && lockOnFovFallbackActive) fov = (std::max)(fov, base);
     mainCameraComponent->SetFov(DirectX::XMConvertToRadians(std::clamp(fov, 10.0f, 120.0f)));
@@ -2404,6 +2436,9 @@ DirectX::XMFLOAT3 DarkCameraActor::ResolveCameraCollision(DirectX::XMFLOAT3 targ
     cameraHitWall = CollisionFunction::SphereRayCast(target, eye, hit, sphereCastRadius, mask);
     if (cameraHitWall)
     {
+        if (hit.initialOverlap || !hit.hasPosition || !hit.hasNormal)
+            return eye;
+
         float collisionOffset = sphereCastRadius + 0.05f;
         // 少し手前に出す
         idealEye = MathHelper::Add(hit.hitPoint,
