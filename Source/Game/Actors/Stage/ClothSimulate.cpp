@@ -104,6 +104,15 @@ ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) 
             cachedGltfModels[filename] = gltfModel;
         }
 
+        if (gltfModel->meshes.size() != 1 || gltfModel->meshes.front().primitives.size() != 1)
+        {
+            Logger::Warning(Logger::LogCategory::System,
+                "[Cloth] Unsupported model: exactly one mesh with one primitive is required.");
+            enableClothRendering = false;
+            enableClothSimulation = false;
+            return;
+        }
+
         for (const tinygltf::Scene& gltfScene : gltfModel->scenes)
         {
             Scene& scene = scenes.emplace_back();
@@ -128,6 +137,45 @@ ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) 
         serialization(cereal::make_nvp("meshes", meshes));
         serialization(cereal::make_nvp("textures", textures), cereal::make_nvp("images", images));
     }
+    if (meshes.size() != 1 || meshes.front().primitives.size() != 1 ||
+        meshes.front().primitives.front().cachedVertices.empty())
+    {
+        Logger::Warning(Logger::LogCategory::System,
+            "[Cloth] Unsupported model/cache: exactly one non-empty primitive in one mesh is required.");
+        enableClothRendering = false;
+        enableClothSimulation = false;
+        return;
+    }
+
+    Mesh::Primitive& primitive = meshes.front().primitives.front();
+    const IndexBufferView& indexView = primitive.indexBufferView;
+    if (indexView.format == DXGI_FORMAT_R8_UINT ||
+        (indexView.sizeInBytes > 0 && indexView.format != DXGI_FORMAT_R16_UINT &&
+            indexView.format != DXGI_FORMAT_R32_UINT))
+    {
+        Logger::Warning(Logger::LogCategory::System,
+            "[Cloth] Unsupported index format: R8_UINT is unsupported; use R16_UINT or R32_UINT.");
+        enableClothRendering = false;
+        enableClothSimulation = false;
+        return;
+    }
+    if (indexView.sizeInBytes > 0)
+    {
+        const UINT indexSize = sizeofComponent(indexView.format);
+        if (indexView.sizeInBytes % indexSize != 0 ||
+            primitive.cachedIndices.size() != indexView.sizeInBytes)
+        {
+            Logger::Warning(Logger::LogCategory::System, "[Cloth] Invalid index buffer size.");
+            enableClothRendering = false;
+            enableClothSimulation = false;
+            return;
+        }
+    }
+    else
+    {
+        primitive.indexBufferView.buffer = -1;
+    }
+
     cbuffer = std::make_unique<ConstantBuffer<ClothSimulateCBuffer>>(device);
     planeCBuffer = std::make_unique<ConstantBuffer<ClothPlaneCBuffer>>(device);
     clothTimeCBuffer = std::make_unique<ConstantBuffer<ClothTimeCBuffer>>(device);
@@ -497,7 +545,7 @@ void ClothSimulate::FetchTextures(ID3D11Device* device, const tinygltf::Model& g
 void ClothSimulate::Update(float deltaTime)
 {
     lastExecutedSubsteps = 0;
-    if (!enableClothSimulation || simulationStage == SimulationStage::InitialMesh || !std::isfinite(deltaTime))
+    if (!cbuffer || !enableClothSimulation || simulationStage == SimulationStage::InitialMesh || !std::isfinite(deltaTime))
         return;
 
     const float maxAccumulatedTime = fixedDeltaTime * static_cast<float>(maxSubsteps);
@@ -507,6 +555,8 @@ void ClothSimulate::Update(float deltaTime)
 
 void ClothSimulate::DrawImGui()
 {
+    if (!cbuffer)
+        return;
 #ifdef USE_IMGUI
     std::string windowName =
         "Cloth Debug##" + std::to_string(reinterpret_cast<uintptr_t>(this));
@@ -604,6 +654,9 @@ void ClothSimulate::DrawImGui()
 
 void ClothSimulate::RecreateClothBuffers(ID3D11Device* device)
 {
+    if (!cbuffer)
+        return;
+
     lastUpdateInputBuffer = -1;
     lastUpdateOutputBuffer = -1;
     lastConstraintInputBuffer = -1;
@@ -625,10 +678,11 @@ void ClothSimulate::RecreateClothBuffers(ID3D11Device* device)
     {
         for (auto& primitive : mesh.primitives)
         {
+            primitive.initialBottomWeightSRV.Reset();
+            primitive.initialBottomWeightBuffer.Reset();
             primitive.clothEdgeBuffer.Reset();
             primitive.clothEdgeSRV.Reset();
             primitive.clothVB.Reset();
-            primitive.clothIB.Reset();
             for (int i = 0; i < 2; i++)
             {
                 primitive.clothSRV[i].Reset();
@@ -727,6 +781,9 @@ void ClothSimulate::SetupPinVertices(int curretPinMode)
 }
 void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
 {
+    if (!cbuffer)
+        return;
+
     HRESULT hr;
     D3D11_BUFFER_DESC bufferDesc = {};
     D3D11_SUBRESOURCE_DATA subresourceData = {};
@@ -1025,7 +1082,7 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
                     globalIndices.push_back(static_cast<uint32_t>(src[i]) + prim.clothVertexOffset);
                 }
             }
-            else // DXGI_FORMAT_R32_UINT 
+            else if (prim.indexBufferView.format == DXGI_FORMAT_R32_UINT)
             {
                 const uint32_t* src = reinterpret_cast<const uint32_t*>(prim.cachedIndices.data());
                 for (UINT i = 0; i < indexCount; ++i)
@@ -1225,6 +1282,10 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
                     edge.delta = candidates[k].delta;
                     edge.restLength = candidates[k].distance;
                     vertexEdges[i].push_back(edge);
+                }
+                while (vertexEdges[i].size() < MAX_EDGES)
+                {
+                    vertexEdges[i].push_back({ UINT32_MAX, { 0.0f, 0.0f, 0.0f }, 0.0f });
                 }
             }
             for (size_t v = 0; v < vertexEdges.size(); ++v)
@@ -1521,7 +1582,7 @@ void ClothSimulate::UpdateVertexDiagnosticsCapture(ID3D11DeviceContext* immediat
 }
 void ClothSimulate::Simulate(ID3D11DeviceContext* immediateContext)
 {
-    if (!enableClothSimulation || simulationStage == SimulationStage::InitialMesh)
+    if (!cbuffer || !enableClothSimulation || simulationStage == SimulationStage::InitialMesh)
         return;
 
     const UINT substepCount = (std::min)(static_cast<UINT>(simulationAccumulator / fixedDeltaTime), static_cast<UINT>(maxSubsteps));
@@ -1707,22 +1768,12 @@ immediateContext->CSSetUnorderedAccessViews(0, 1, primitive.clothUAV[output].Get
     hr = device->CreateBuffer(&bufferDesc, &subresourceData, clothVB.GetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-    // ï`âÊópÇÃIAIndexBufferÇçÏê¨
-    {
-        D3D11_BUFFER_DESC indexBufferDesc = {};
-        indexBufferDesc.ByteWidth = static_cast<UINT>(sizeof(uint32_t) * globalIndices.size());
-        indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-        indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-        D3D11_SUBRESOURCE_DATA subResource = {};
-        subResource.pSysMem = globalIndices.data();
-        device->CreateBuffer(&indexBufferDesc, &subResource, clothIB.GetAddressOf());
-    }
 #endif
 }
 
 void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& world)
 {
-    if (!enableClothRendering)
+    if (!cbuffer || !enableClothRendering)
         return;
     //Simulate(immediateContext);
 
@@ -1889,12 +1940,11 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                         loggedFirstDrawIndexed = true;
                     }
                     immediateContext->DrawIndexed(primitive.indexBufferView.sizeInBytes / sizeofComponent(primitive.indexBufferView.format), 0, 0);
-                    //immediateContext->IASetIndexBuffer(clothIB.Get(), primitive.indexBufferView.format, 0);
                     //immediateContext->DrawIndexed(primitive.indexCount, primitive.startIndexLocation, 0);
                 }
                 else
                 {
-                    immediateContext->Draw(primitive.vertexBufferView.sizeInBytes / primitive.vertexBufferView.strideInBytes, 0);
+                    immediateContext->Draw(static_cast<UINT>(primitive.cachedVertices.size()), 0);
                 }
 
                 primitive.previousGraphicsWorld = graphicsPrimitiveData.world;
