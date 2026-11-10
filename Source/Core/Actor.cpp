@@ -1,19 +1,48 @@
 #include "pch.h"
 #include "Actor.h"
 
+#include <unordered_set>
+
 void Actor::DestroyActor()
 {
     // ヒットコールバックをクリア
     RemoveAllHitCallBacks();
 
     // 全コンポーネントの破棄
-    for (auto& comp : ownedComponents_)
+    std::vector<std::shared_ptr<Component>> destroyTargets;
+    std::unordered_set<const Component*> covered;
+    std::vector<std::shared_ptr<SceneComponent>> work;
+
+    // Select every direct target before Destroy() changes attachment relationships.
+    for (const auto& comp : ownedComponents_)
     {
-        if (comp)
+        if (!comp || !covered.insert(comp.get()).second)
         {
-            comp->Destroy();          // PhysXからの除去など内部的なクリーンアップ
-            comp->OnUnregister();     // Sceneなどからの登録解除
+            continue;
         }
+
+        destroyTargets.push_back(comp);
+        if (auto sceneComponent = std::dynamic_pointer_cast<SceneComponent>(comp))
+        {
+            work.push_back(sceneComponent);
+            while (!work.empty())
+            {
+                auto current = work.back();
+                work.pop_back();
+                for (const auto& child : current->GetAttachChildren())
+                {
+                    if (child && covered.insert(child.get()).second)
+                    {
+                        work.push_back(child);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto& comp : destroyTargets)
+    {
+        comp->Destroy();
     }
 
     Finalize();

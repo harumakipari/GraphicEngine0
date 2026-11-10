@@ -7,7 +7,7 @@ class DarkStageGroundBrazierActor :public Actor
 public:
     DarkStageGroundBrazierActor(const std::string& actorName) :Actor(actorName) {}
     virtual ~DarkStageGroundBrazierActor() = default;
-    void Initialize(const Transform& transform)override;
+    void Initialize(const Transform& transform)override{}
     void SetModel(const std::shared_ptr<StageAsset>& stageAsset);
 
 private:

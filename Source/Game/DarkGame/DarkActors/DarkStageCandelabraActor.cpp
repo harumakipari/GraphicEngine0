@@ -12,11 +12,6 @@ void DarkStageCandelabraActor::SetModel(const std::shared_ptr<StageAsset>& stage
 {
     std::string parentName = "candelabraMesh";
 
-    // C‘ä‚Ìƒ‚ƒfƒ‹‚ð’Ç‰Á
-    //candelabraMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    //candelabraMeshComponent->model = stageAsset->model;
-    //candelabraMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
-
     candelabraMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
     candelabraMeshComponent->model = stageAsset->model;
     candelabraMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
@@ -157,11 +152,6 @@ void DarkStageCandelabraActor::DrawImGuiDetails()
 void DarkStageCandleStandActor::SetModel(const std::shared_ptr<StageAsset>& stageAsset)
 {
     std::string parentName = "candleStand";
-
-    //meshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    //meshComponent->model = stageAsset->model;
-    //meshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
-    //meshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
 
     meshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
     meshComponent->model = stageAsset->model;

@@ -437,6 +437,7 @@ public:
     const std::string& GetRootComponentName()const { return rootComponentName; }
 protected:
     Scene* ownerScene_ = nullptr;   // 自分が属しているScene
+    std::vector<std::string> tags_;
 
 private:
     //==================================================
@@ -470,8 +471,6 @@ private:
 
     // アクターごとのタイムスケール
     float timeScale = 1.0f;
-protected:
-    std::vector<std::string> tags_;
 };
 
 static inline bool operator==(const std::shared_ptr<Actor>& actor, const std::string& name)

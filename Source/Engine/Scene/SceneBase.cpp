@@ -427,8 +427,6 @@ void SceneBase::Render(ID3D11DeviceContext* immediateContext, float deltaTime)
 
 void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConstants& viewConstants)
 {
-    //auto camera = cameraManager->GetRenderCamera(this);
-
     // ディファードレンダリング
     auto queues = sceneRender.BuildRenderQueues();
 
@@ -448,8 +446,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         DirectX::XMStoreFloat4x4(&viewConstants.lightViewProjection, V * P);
         sceneRender.UpdateViewConstants(immediateContext, viewConstants);
 
-
-#if 1
         RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
         sceneRender.currentRenderPath = RenderPath::Deferred;
@@ -458,7 +454,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 
         sceneRender.RenderMask(immediateContext, queues.meshes);
         ExecuteHooks(RenderPass::Mask, immediateContext);
-#endif
 
         sceneRender.RenderInstanced(immediateContext, queues.instanceBatches);
         RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
@@ -485,7 +480,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         sceneRender.CastShadowRender(immediateContext, queues.shadowCasters);
         cascadedShadowMaps->Deactivate(immediateContext);
 
-#if 1
         // シャドウマップ
         {
             using namespace DirectX;
@@ -512,7 +506,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         sceneRender.UpdateViewConstants(immediateContext, viewConstants);
 
     }
-#endif // 1
 
     // ライティングのパス
     {
@@ -607,7 +600,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
         sceneRender.RenderBlend(immediateContext, queues.meshes); // ここで警告出る
         ExecuteHooks(RenderPass::ForwardBlend, immediateContext);
 
-#if 1
         // playerの剣の残像
         if (auto player = GetActorManager()->GetActorOfType<Player>())
         {
@@ -647,9 +639,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
             }
         }
 
-#endif // 1
-
-#if 1
         // パーティクル
         {
             ProfileScopedSection_2(0, "Particles", ImGuiControl::Profiler::Green);
@@ -662,20 +651,16 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
             //定数バッファ更新
 
             // HuskParticle
-#if 1
             RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON, 0);
             RenderState::BindBlendState(immediateContext, BLEND_STATE::ALPHA);
             RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
 
             huskParticles->render(immediateContext);
-#endif // 1
             // パーティクル描画
             EffectManager::Render(immediateContext);
 
             ExecuteHooks(RenderPass::Particle, immediateContext);
         }
-
-#endif // 0
 
         // デバック描画
 #if USE_IMGUI
@@ -708,7 +693,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
             TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Temporal AA");
             temporalAa.Apply(immediateContext, frameBuffer->shaderResourceViews[0].Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)]);
         }
-#if 1
         if (useTAA)
         {
             sceneEffectManager->ApplyAll(immediateContext, temporalAa.history[temporalAa.previous].srv.Get(), gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],
@@ -722,7 +706,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 
         ID3D11ShaderResourceView* nullSRVs[16] = {};
         immediateContext->PSSetShaderResources(0, 16, nullSRVs);
-#endif
 
         {
             TracyD3D11Zone(Graphics::GetTracyD3D11Context(), "Intermediate Composite");
@@ -737,8 +720,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 
                 ID3D11ShaderResourceView* shader_resource_views[]
                 {
-                    //temporalAa.history[temporalAa.previous].srv.Get(),//colorMap   こっちライティング済み
-                     frameBuffer->shaderResourceViews[0].Get(),//colorMap   こっちライティング済み
+                     frameBuffer->shaderResourceViews[0].Get(),//colorMap  ライティング済み
                      gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::POSITION)],   // positionMap
                      gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],   // normalMap
                      gBufferRenderTarget->depthStencilShaderResourceView,      //depthMap
@@ -751,8 +733,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                      gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)],   // velocityMap
                      cascadedShadowMaps->depthMap().Get(),   //cascadedShadowMaps
                 };
-                //immediateContext->PSSetShaderResources(8, 1, cascadedShadowMaps->depthMap().GetAddressOf());
-
                 // メインフレームバッファとブルームエフェクトを組み合わせて描画
                 fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), postEffectPs.Get());
 
@@ -778,8 +758,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
 
         ID3D11ShaderResourceView* shader_resource_views[]
         {
-            //temporalAa.history[temporalAa.previous].srv.Get(),
-            finalBuffer->shaderResourceViews[0].Get(),//colorMap   こっちポストエフェクト済み
+            finalBuffer->shaderResourceViews[0].Get(),//colorMap   ポストエフェクト済み
             depthOfFieldEffect->GetOutputSRV(),
             gBufferRenderTarget->depthStencilShaderResourceView,//depthMap
             gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::NORMAL)],   // normalMap w: objectType
@@ -850,11 +829,8 @@ void SceneBase::DrawGui()
         SceneEditor::Draw();
     }
 
-
-
     if (!Framework::showEditor)
     {
-        //useDrawDebug = false;
         return;
     }
 
@@ -890,7 +866,6 @@ void SceneBase::DrawGui()
         return;
     }
 
-    DrawGizmo();
     DrawOutliner();
     Logger::DrawImGui();
     Time::DrawImGui();
@@ -1301,44 +1276,6 @@ void SceneBase::DrawPostEffectTab()
 }
 
 
-void SceneBase::DrawGizmo()
-{
-    DirectX::XMMATRIX CameraView;
-    DirectX::XMMATRIX CameraProjection;
-
-    //if (auto camera = CameraManager::GetRenderCamera(this))
-    if (auto camera = cameraManager->GetRenderCamera(this))
-    {
-        ViewConstants data = cameraManager->GetRenderViewConstants(this);
-        CameraView = XMLoadFloat4x4(&data.view);
-        CameraProjection = XMLoadFloat4x4(&data.projection);
-    }
-
-    if (InputSystem::GetInputState("W"))
-        EditorGizmo::SetOperation(ImGuizmo::TRANSLATE);
-    if (InputSystem::GetInputState("E"))
-        EditorGizmo::SetOperation(ImGuizmo::ROTATE);
-    if (InputSystem::GetInputState("R"))
-        EditorGizmo::SetOperation(ImGuizmo::SCALE);
-
-    if (selectedActor_)
-    {
-        auto root = selectedActor_->GetRootComponent();
-        if (root)
-        {
-            EditorGizmo::Draw(
-                root,
-                CameraView,
-                CameraProjection,
-                viewportImageMin,
-                viewportImageSize
-            );
-        }
-    }
-
-
-
-}
 
 
 void SceneBase::DrawViewport()

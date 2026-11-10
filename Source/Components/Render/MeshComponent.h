@@ -34,7 +34,7 @@ class Actor;
 class MeshComponent :public SceneComponent
 {
 public:
-    PipeLineStateDesc pipeLineState_;   // これ使ってないから後で消す
+    PipeLineStateDesc pipeLineState_;   
     std::optional<std::string> overrideDeferredPipelineName;
     std::optional<std::string> overrideForwardPipelineName;
     std::optional<std::string> overrideCascadeShadowPipelineName;
@@ -55,15 +55,9 @@ public:
 
     void Tick(float deltaTime)override {}
 
-    DirectX::XMFLOAT3 GetModelSize() const
-    {
-        AABB aabb = model->GetAABB();
-        return{ aabb.max.x - aabb.min.x,aabb.max.y - aabb.min.y,aabb.max.z - aabb.min.z };
-    }
+    DirectX::XMFLOAT3 GetModelSize() const;
 
     virtual void SetModel(const std::string& fileName, bool isSaveVerticesData = false, bool convertToLHS = false) = 0;
-
-    virtual void Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world, InterleavedGltfModel::RenderPass pass) const = 0;
 
     virtual void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const = 0;
 
@@ -87,42 +81,7 @@ public:
 
     void SetModelNodes(const std::vector<InterleavedGltfModel::Node>& nodes) { modelNodes = nodes; }
 
-    virtual void DrawImGuiInspector() override
-    {
-#ifdef USE_IMGUI
-        SceneComponent::DrawImGuiInspector();
-        if (ImGui::TreeNode((name_ + "  model").c_str()))
-        {
-            ImGui::Checkbox("isVisible", &isVisible_);
-            ImGui::Checkbox("isMotionBlur", &isMotionBlur);
-            ImGui::SliderFloat(U8("色相調整"), &plusAlphaCBuffer->data.hueShift, -1.0f, +1.0);
-            ImGui::SliderFloat(U8("彩度調整"), &plusAlphaCBuffer->data.saturation, -1.0f, +1.0);
-            ImGui::SliderFloat(U8("明度調整"), &plusAlphaCBuffer->data.brightness, -1.0f, +1.0);
-            ImGui::SliderFloat(U8("コントラスト調整"), &plusAlphaCBuffer->data.contrast, -1.0f, +1.0);
-            ImGui::SliderFloat("dissolve", &plusAlphaCBuffer->data.dissolve, 0.0f, 1.0f);
-            ImGui::ColorEdit4("cpuColor", &plusAlphaCBuffer->data.cpuColor.x);
-            ImGui::SliderFloat("emissionPower", &plusAlphaCBuffer->data.emissionPower, 0.0f, 50.0f);
-            ImGui::SliderFloat4("morphWeight", &plusAlphaCBuffer->data.morphWeights.x, 0.0f, 1.0f);
-            ImGui::SliderFloat("value", &plusAlphaCBuffer->data.flashValue, 0.0f, 20.0f);
-            const char* objectTypes[] =
-            {
-                "Default",
-                "Player",
-                "Enemy",
-                "Stage",
-            };
-
-            int type = static_cast<int>(plusAlphaCBuffer->data.objectType);
-
-            if (ImGui::Combo("Render Step", &type, objectTypes, IM_ARRAYSIZE(objectTypes)))
-            {
-                plusAlphaCBuffer->data.objectType = static_cast<ObjectType>(type);
-            }
-
-            ImGui::TreePop();
-        }
-#endif
-    }
+    virtual void DrawImGuiInspector() override;
 
     void SetPipeLineState(const PipeLineStateDesc& pipelinesState) { this->pipeLineState_ = pipelinesState; }
 
@@ -185,8 +144,6 @@ public:
         DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f };   // 敵の角などを光らせるのに使用する処理
     };
     std::unique_ptr<ConstantBuffer<PlusAlphaConstants>> plusAlphaCBuffer;
-
-
 protected:
     //描画するかどうか
     bool isVisible_ = true;
@@ -201,26 +158,19 @@ protected:
     int priority = 0;
     // モデルのノード情報
     std::vector<InterleavedGltfModel::Node> modelNodes = {};
-
-    // モーションブラーを有効にするかどうか
-    bool isMotionBlur = true;
-
 };
 
 class SkeletalMeshComponent :public MeshComponent
 {
 public:
-    void SetRuntimeMaterialEmissive(const std::string& materialName, bool enabled,
-        const DirectX::XMFLOAT3& color, float intensity);
+    void SetRuntimeMaterialEmissive(const std::string& materialName, bool enabled,const DirectX::XMFLOAT3& color, float intensity);
     void ClearRuntimeMaterialEmissive(const std::string& materialName);
-    void SetRuntimeMaterialRimLight(const std::string& materialName,
-        const DirectX::XMFLOAT3& color, float power);
+    void SetRuntimeMaterialRimLight(const std::string& materialName,const DirectX::XMFLOAT3& color, float power);
     void ClearRuntimeMaterialRimLight(const std::string& materialName);
     ID3D11ShaderResourceView* GetRuntimeMaterialResourceView() const
     {
         return runtimeMaterialResourceView.Get();
     }
-    // Called by SceneRenderer immediately before this component is drawn.
     void UpdateRuntimeMaterialOverrides(ID3D11DeviceContext* immediateContext) const;
 
     struct Phase2TextureBlendConstants
@@ -301,7 +251,7 @@ public:
     void SetModel(const std::string& filename, bool isSaveVerticesData = false, bool convertToLHS = false)override
     {
         ID3D11Device* device = Graphics::GetDevice();
-        //model = std::make_shared<InterleavedGltfModel>(device, filename, ModelTypes::ModelMode::SkeletalMesh, isSaveVerticesData);
+
         model = AssetManager::Get().LoadModel(device, filename, ModelTypes::ModelMode::SkeletalMesh, isSaveVerticesData, convertToLHS);
         modelNodes = model->GetNodes();
         runtimeMaterialData.clear();
@@ -314,7 +264,6 @@ public:
 
     Transform GetSocketTransform(int socketNode) const override;
 
-    // Evaluated at draw time. Shared animation/socket nodes are never modified.
     void SetRenderLocalYOffsetProvider(const std::string& nodeName, std::function<float()> provider)
     {
         renderOffsetNodeName = nodeName;
@@ -323,14 +272,7 @@ public:
 
     void AppendAnimations(const std::vector<std::string>& filenames) const
     {
-        //model->AddAnimations(filenames);
         model->AppendAnimations(filenames);
-    }
-
-    void Tick(float deltaTime)override
-    {
-#ifdef _DEBUG
-#endif
     }
 
     int FindIndexByName(const std::string& name) const
@@ -349,11 +291,6 @@ public:
                 _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
             }
         }
-    }
-
-    void Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world, InterleavedGltfModel::RenderPass pass) const override
-    {
-        model->Render(immediateContext, world, GetRenderPoseNodes(), pass, pipeLineState_);
     }
 
     void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const override
@@ -407,15 +344,8 @@ public:
         modelNodes = model->GetNodes();
     }
 
-
-    void Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world, InterleavedGltfModel::RenderPass pass) const override
-    {
-        model->Render(immediateContext, world, modelNodes, pass, pipeLineState_);
-    }
-
     void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const override
     {
-        //const DirectX::XMFLOAT4X4 world = CreateWorldMatrix();
         model->CastShadow(immediateContext, world, modelNodes);
     }
 };
@@ -432,11 +362,6 @@ public:
         ID3D11Device* device = Graphics::GetDevice();
         model = AssetManager::Get().LoadModel(device, filename, ModelTypes::ModelMode::InstancedStaticMesh, isSaveVerticesData, convertToLHS);
         modelNodes = model->GetNodes();
-    }
-
-    void Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world, InterleavedGltfModel::RenderPass pass) const override
-    {
-        model->Render(immediateContext, world, modelNodes, pass, pipeLineState_);
     }
 
     void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const override

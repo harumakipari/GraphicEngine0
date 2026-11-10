@@ -9,11 +9,6 @@ void DarkStageBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAss
 {
     std::string parentName = "candelabraMesh";
 
-    // ‰Î”«‚Ìƒ‚ƒfƒ‹‚ð’Ç‰Á
-    //brazierMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    //brazierMeshComponent->SetModel("./Data/Models/DarkStageAssets/Brazier/Brazier.gltf");
-    //brazierMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
-
     brazierMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
     brazierMeshComponent->model = stageAsset->model;
     brazierMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
@@ -79,12 +74,6 @@ void DarkStageMeltedWaxActor::SetModel(const std::shared_ptr<StageAsset>& stageA
 {
     std::string parentName = "metedWaxMesh";
 
-    // —n‚¯‚½˜X‚Ìƒ‚ƒfƒ‹‚ð’Ç‰Á
-    //metedWaxMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    //metedWaxMeshComponent->SetModel("./Data/Models/DarkStageAssets/MeltedWax/MeltedWax.gltf");
-    //metedWaxMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
-    //metedWaxMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
-
     metedWaxMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
     metedWaxMeshComponent->model = stageAsset->model;
     metedWaxMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
@@ -117,11 +106,6 @@ void DarkStageMeltedWaxActor::SetModel(const std::shared_ptr<StageAsset>& stageA
 void DarkStageStandingBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAsset)
 {
     std::string parentName = "standingBrazierMesh";
-
-    // ƒXƒ^ƒ“ƒhŽ®‰Î”«‚Ìƒ‚ƒfƒ‹‚ð’Ç‰Á
-    //standingBrazierMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    //standingBrazierMeshComponent->SetModel("./Data/Models/DarkStageAssets/StandingBrazier/StandingBrazier.gltf");
-    //standingBrazierMeshComponent->SetIsCastShadow(false);    // ‰e‚ð—Ž‚Æ‚³‚È‚¢‚æ‚¤‚É‚·‚é
 
     standingBrazierMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
     standingBrazierMeshComponent->model = stageAsset->model;

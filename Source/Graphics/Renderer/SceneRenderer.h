@@ -88,8 +88,6 @@ private:
 
     void CastShadowMap(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes, InterleavedGltfModel::RenderPass pass);
 
-    void CastShadowMapWithStaticBatching(ID3D11DeviceContext* immediateContext, const MeshComponent* meshComponent, const DirectX::XMFLOAT4X4& world, const std::vector<InterleavedGltfModel::Node>& animatedNodes) const;
-
 private:
     // カメラの定数バッファ
     std::unique_ptr<ConstantBuffer<ViewConstants>> viewBuffer;
@@ -102,7 +100,6 @@ private:
     struct PrimitiveJointConstants
     {
         DirectX::XMFLOAT4X4 matrices[PRIMITIVE_MAX_JOINTS];
-        //DirectX::XMFLOAT4X4 previousMatrices[PRIMITIVE_MAX_JOINTS];
     };
     std::unique_ptr<ConstantBuffer<PrimitiveJointConstants>> primitiveJointCBuffer;
 
@@ -127,7 +124,5 @@ public:
 private:
 
     std::vector<InterleavedGltfModel::InstanceData> instanceData;
-
-
 };
 

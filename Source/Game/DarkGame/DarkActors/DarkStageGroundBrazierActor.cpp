@@ -5,20 +5,10 @@
 #include "Components/Render/PointLightComponent.h"
 #include "Engine/Scene/SceneBase.h"
 
-void DarkStageGroundBrazierActor::Initialize(const Transform& transform)
-{
-
-}
-
 
 void DarkStageGroundBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAsset)
 {
     std::string parentName = "candelabraMesh";
-
-    // 火鉢のモデルを追加
-    //brazierMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-    //brazierMeshComponent->SetModel("./Data/Models/DarkStageAssets/GroundBrazier/groundBrazier.gltf", false, true);
-    //brazierMeshComponent->SetIsCastShadow(false);    // 影を落とさないようにする
 
     brazierMeshComponent = this->AddComponent<InstanceMeshComponent>(parentName);
     brazierMeshComponent->model = stageAsset->model;
@@ -45,26 +35,6 @@ void DarkStageGroundBrazierActor::SetModel(const std::shared_ptr<StageAsset>& st
     frameEffect->Load("./Data/Effect/Files/DarkStageFrameEffect.json");
     frameEffect->SetRelativeLocationDirect({ 0.0f,0.8f,0.0f });
     frameEffect->Play();
-
-#if 0
-    // 炎の後の煙エフェクト
-    auto afterFireEffect = this->AddComponent<ParticleComponent>("AfterFireFrameEffect", parentName);
-    afterFireEffect->Load("./Data/Effect/Files/DarkStageAfterFrameEffect.json");
-    afterFireEffect->SetRelativeLocationDirect({ 0.0f,1.0f,0.0f });
-    // ループ再生設定
-    float delay = 0.3f;
-    ParticleComponent::AddSettings settings0
-    {
-        .loop = true, // ループ再生
-        .startDelay = delay, // 再生開始遅延時間
-    };
-    afterFireEffect->SetAddSettings(settings0);
-    afterFireEffect->Play();
-
-#endif // 0
-
-
-
 
     auto lightsData = brazierMeshComponent->model->GetPointLights();
     // ポイントライトコンポーネントを追加

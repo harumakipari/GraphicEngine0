@@ -190,7 +190,8 @@ void SceneComponent::DetachFromParent()
 void SceneComponent::Destroy()
 {
     // 子から先に削除
-    for (auto& child : attachChildren_)
+    const auto children = attachChildren_;
+    for (const auto& child : children)
     {
         if (child)
         {
@@ -208,25 +209,14 @@ void SceneComponent::Destroy()
 
 void SceneComponent::AddWorldOffset(const DirectX::XMFLOAT3& offset)
 {
-    // 現在のワールド座標を取得
-    //DirectX::XMMATRIX worldMat = componentToWorld_.ToMatrix();
-    //DirectX::XMVECTOR currentPos = DirectX::XMVector3TransformCoord(DirectX::XMVectorZero(), worldMat);
-
     // offset を加算
     DirectX::XMFLOAT3 worldPos = GetComponentLocation();
-    //DirectX::XMStoreFloat3(&worldPos, currentPos);
 
     worldPos.x += offset.x;
     worldPos.y += offset.y;
     worldPos.z += offset.z;
 
     GetOwner()->SetPosition(worldPos);
-
-    //SetWorldLocationDirect(worldPos);
-#if 0
-    SetWorldPosition(worldPos);
-    UpdateWorldMatrix();
-#endif
 }
 
 void SceneComponent::AddLocalRotation(const DirectX::XMFLOAT3& offset)

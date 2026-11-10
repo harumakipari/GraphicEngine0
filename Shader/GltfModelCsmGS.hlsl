@@ -11,9 +11,7 @@ struct GS_OUTPUT_CSM
     uint renderTargetArrayIndex : SV_RENDERTARGETARRAYINDEX;
 };
 [maxvertexcount(3)]
-void main(
-	triangle VS_OUT_CSM input[3] ,
-	inout TriangleStream<GS_OUTPUT_CSM> output)
+void main(triangle VS_OUT_CSM input[3] ,inout TriangleStream<GS_OUTPUT_CSM> output)
 {
     GS_OUTPUT_CSM element;
     element.renderTargetArrayIndex = input[0].instanceId;
