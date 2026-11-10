@@ -1034,7 +1034,6 @@ private:
 	void TickRoarLifecycle(float dt);
 
 	// Roarと防御行動の状態・調整項目を表示する。
-	void DrawRoarBTDebug();
 
 	// Roar演出時の描画用足元オフセットを返す。
 	float GetRoarRenderFootOffset() const;

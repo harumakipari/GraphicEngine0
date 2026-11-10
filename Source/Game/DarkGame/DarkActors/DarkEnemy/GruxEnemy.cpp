@@ -358,11 +358,24 @@ void GruxEnemy::DrawImGuiDetails()
 			mainChargeWindMeshComponent->SetIsVisible(mainChargeWindEnabled);
 	}
 
-	DrawRoarBTDebug();
-	Character::DrawImGuiDetails();
 
 	if (ImGui::CollapsingHeader(U8("ゲームプレイ調整")))
 	{
+		if (ImGui::TreeNode(U8("咆哮攻撃")))
+		{
+			const auto roarController = GetBodyAnimationController();
+			const float clipDuration = roarController ? roarController->GetAnimationLength("Pre_Stampede_0") : 60.0f;
+			const float rangeLimit = std::isfinite(clipDuration) ? (std::max)(0.05f, clipDuration) : 60.0f;
+			ImGui::DragFloat(U8("咆哮 開始時間"), &roarPreStampedeStartTime, 0.05f, 0.0f, rangeLimit - 0.05f, "%.2f sec");
+			ImGui::DragFloat(U8("咆哮 終了時間"), &roarPreStampedeEndTime, 0.05f, roarPreStampedeStartTime + 0.05f, rangeLimit, "%.2f sec");
+			ImGui::DragFloat("Roar Radius Phase1", &roarRadiusPhase1, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat("Roar Radius Phase2", &roarRadiusPhase2, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragInt("Roar Damage", &roarDamage, 1.0f, 0, 1000);
+			ImGui::DragFloat(U8("咆哮 高低差許容"), &roarHeightTolerance, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("咆哮クールタイム"), &roarCooldownDuration, 0.1f, 0.0f, 120.0f, "%.2f sec");
+			ImGui::TreePop();
+		}
+
 		if (ImGui::TreeNode(U8("突進攻撃")))
 		{
 			ImGui::DragFloat(U8("三連突進 壁前切り返し距離"), &chargeBT.tripleChargeWallTurnClearance, 0.05f, 0.0f, 10.0f, "%.2f m");
@@ -448,6 +461,8 @@ void GruxEnemy::DrawImGuiDetails()
 		ImGui::SeparatorText(U8("ボスAI"));
 		if (ImGui::TreeNode(U8("戦闘距離・行動選択")))
 		{
+			ImGui::DragFloat(U8("防御行動 至近距離"), &defensiveTooCloseDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("防御行動 Back最小角度"), &defensiveBackMinAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
 			ImGui::DragFloat(U8("近距離正面 高速連続攻撃の選択確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
 			ImGui::DragFloat(U8("高速連続攻撃 正面判定の最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
 			ImGui::DragFloat(U8("待機時間"), &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
@@ -462,6 +477,12 @@ void GruxEnemy::DrawImGuiDetails()
 
 		if (ImGui::TreeNode(U8("接近・退避・部屋制約")))
 		{
+			ImGui::SeparatorText(U8("Retreat"));
+			ImGui::DragFloat(U8("退避距離 最小"), &retreatDistanceMin, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("退避距離 最大"), &retreatDistanceMax, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("退避 最低移動距離"), &retreatMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("退避 移動速度"), &retreatMoveSpeed, 0.1f, 0.0f, 30.0f, "%.2f m/s");
+			ImGui::DragFloat(U8("退避 再試行待ち"), &retreatRetryCooldownDuration, 0.1f, 0.0f, 10.0f, "%.2f sec");
 			if (ImGui::TreeNode(U8("位置調整パラメータ")))
 			{
 				for (BossPositioningData& data : combatPositioningData)
@@ -522,6 +543,63 @@ void GruxEnemy::DrawImGuiDetails()
 
 	if (ImGui::CollapsingHeader(U8("演出調整")))
 	{
+		if (ImGui::TreeNode(U8("咆哮予兆")))
+		{
+			ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::ColorEdit3("Roar Phase 1 Outer Tint", &roarTelegraphPhase1OuterTint.x);
+			ImGui::ColorEdit3("Roar Phase 1 Fill Tint Min", &roarTelegraphPhase1FillTintMin.x);
+			ImGui::ColorEdit3("Roar Phase 1 Fill Tint Max", &roarTelegraphPhase1FillTintMax.x);
+			ImGui::ColorEdit3("Roar Phase 2 Outer Tint", &roarTelegraphPhase2OuterTint.x);
+			ImGui::ColorEdit3("Roar Phase 2 Fill Tint Min", &roarTelegraphPhase2FillTintMin.x);
+			ImGui::ColorEdit3("Roar Phase 2 Fill Tint Max", &roarTelegraphPhase2FillTintMax.x);
+			ImGui::DragFloat("Roar Fill Glow Min", &roarTelegraphFillGlowMin, 0.05f, 0.0f, 20.0f, "%.2f");
+			ImGui::DragFloat("Roar Fill Glow Max", &roarTelegraphFillGlowMax, 0.05f, 0.0f, 20.0f, "%.2f");
+			ImGui::DragFloat("Roar Fill Alpha Min", &roarTelegraphFillAlphaMin, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat("Roar Fill Alpha Max", &roarTelegraphFillAlphaMax, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("咆哮の浮遊破片")))
+		{
+			ImGui::Checkbox("Floating Debris Enabled", &roarFloatingDebrisEnabled);
+			ImGui::TextDisabled("Floating debris ring, height and scale apply when debris is generated.");
+			ImGui::DragFloat("Roar Floating Debris Inner Ratio", &roarFloatingDebrisInnerRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat("Roar Floating Debris Outer Ratio", &roarFloatingDebrisOuterRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat("Roar Floating Debris Min Height", &roarFloatingDebrisMinHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
+			ImGui::DragFloat("Roar Floating Debris Max Height", &roarFloatingDebrisMaxHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
+			ImGui::DragFloat("Roar Floating Debris Scale Min", &roarFloatingDebrisScaleMin, 0.01f, 0.0f, 5.0f, "%.2f");
+			ImGui::DragFloat("Roar Floating Debris Scale Max", &roarFloatingDebrisScaleMax, 0.01f, 0.0f, 5.0f, "%.2f");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("咆哮の衝撃破片")))
+		{
+			ImGui::Checkbox("Impact Debris Enabled", &roarImpactDebrisEnabled);
+			ImGui::TextDisabled("Impact debris speed, scale and lifetime apply to newly spawned debris.");
+			ImGui::DragFloat("Impact Debris Spawn Height", &roarImpactDebrisSpawnHeight, 0.01f, 0.0f, 1.0f, "%.2f m");
+			ImGui::DragFloat("Impact Debris Gravity", &roarImpactDebrisGravity, 0.1f, 0.0f, 30.0f, "%.2f m/s2");
+			ImGui::DragFloatRange2("Impact Small Horizontal Speed", &roarImpactDebrisSmallHorizontalSpeedMin, &roarImpactDebrisSmallHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2("Impact Small Vertical Speed", &roarImpactDebrisSmallVerticalSpeedMin, &roarImpactDebrisSmallVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2("Impact Small Lifetime", &roarImpactDebrisSmallLifetimeMin, &roarImpactDebrisSmallLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2("Impact Block Horizontal Speed", &roarImpactDebrisBlockHorizontalSpeedMin, &roarImpactDebrisBlockHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2("Impact Block Vertical Speed", &roarImpactDebrisBlockVerticalSpeedMin, &roarImpactDebrisBlockVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2("Impact Block Lifetime", &roarImpactDebrisBlockLifetimeMin, &roarImpactDebrisBlockLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2("Small Debris Scale", &roarImpactDebrisSmallScaleMin, &roarImpactDebrisSmallScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2("Block Debris Scale", &roarImpactDebrisBlockScaleMin, &roarImpactDebrisBlockScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("咆哮の地面噴出")))
+		{
+			ImGui::Checkbox("Roar Ground Burst Enabled", &roarGroundBurstEnabled);
+			ImGui::DragFloat("Roar Ground Burst Inner Ring Ratio", &roarGroundBurstInnerRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat("Roar Ground Burst Outer Ring Ratio", &roarGroundBurstOuterRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat("Roar Ground Burst Angle Jitter", &roarGroundBurstAngleJitterDegrees, 0.25f, 0.0f, 45.0f, "%.1f deg");
+			ImGui::DragFloat("Roar Ground Burst Radius Jitter", &roarGroundBurstRadiusJitter, 0.005f, 0.0f, 0.25f, "%.3f");
+			ImGui::DragFloat("Roar Ground Burst Y Offset", &roarGroundBurstYOffset, 0.01f, -1.0f, 1.0f, "%.2f m");
+			ImGui::TreePop();
+		}
+
 		if (ImGui::TreeNode(U8("突進予兆")))
 		{
 			ImGui::Checkbox(U8("三連突進 予兆の発光を有効化"), &tripleChargeTelegraphEmissiveEnabled);
@@ -594,6 +672,8 @@ void GruxEnemy::DrawImGuiDetails()
 
 		if (ImGui::TreeNode(U8("移動アニメーション")))
 		{
+			ImGui::DragFloat(U8("咆哮 LevelStart 足元補正"), &roarLevelStartFootOffset, 0.01f, -2.0f, 2.0f, "%.3f m");
+			ImGui::DragFloat(U8("咆哮 足元補正終了時間"), &roarLevelStartFootOffsetEndTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
 			ImGui::SeparatorText(U8("移動アニメーション調整"));
 			ImGui::DragFloat(U8("移動開始速度の閾値"), &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
 			ImGui::DragFloat(U8("移動停止速度の閾値"), &positioningMoveStopSpeedThreshold, 0.01f, 0.0f, positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
@@ -655,6 +735,15 @@ void GruxEnemy::DrawImGuiDetails()
 			ImGui::TreePop();
 		}
 	}
+	// Roar の補正・非表示化はカテゴリの開閉によらず、Character より前に実行する。
+	if (!std::isfinite(roarLevelStartFootOffset)) roarLevelStartFootOffset = 0.0f;
+	defensiveBackMinAngle = std::clamp(defensiveBackMinAngle, 0.0f, 180.0f);
+	if (!roarFloatingDebrisEnabled)
+		HideRoarFloatingDebris();
+	if (!roarImpactDebrisEnabled)
+		HideRoarImpactDebris();
+	Character::DrawImGuiDetails();
+
 	ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
 
 #endif
