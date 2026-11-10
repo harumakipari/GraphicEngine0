@@ -1,5 +1,4 @@
 #include "pch.h"
-// INTERLEAVED_GLTF_MODEL
 #include "ClothSimulate.h"
 #include <functional>
 #include <filesystem>
@@ -8,8 +7,6 @@
 #include <cmath>
 #include <unordered_set>
 #include <algorithm>
-
-//#define TINYGLTF_IMPLEMENTATION
 #include "tiny_gltf.h"
 
 #ifdef USE_IMGUI

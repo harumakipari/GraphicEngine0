@@ -1,12 +1,8 @@
 #include "pch.h"
-// INTERLEAVED_GLTF_MODEL
 #include "InterleavedGltfModel.h"
 #include <functional>
 #include <filesystem>
 #include <fstream>
-
-//#define TINYGLTF_IMPLEMENTATION 
-
 #include <stack>
 #include <functional>
 #include "DDSTextureLoader.h"

@@ -1,4 +1,3 @@
-// CASCADED_SHADOW_MAPS
 #include "GltfModel.hlsli"
 
 struct CsmConstants
@@ -12,7 +11,6 @@ cbuffer csmConstants : register(b3)
     CsmConstants csmData;
 }
 
-// CASCADED_SHADOW_MAPS
 struct VS_OUT_CSM
 {
     float4 position : SV_POSITION;

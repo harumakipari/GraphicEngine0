@@ -471,8 +471,6 @@ public:
     };
 private:
     std::vector<Mesh> meshes;
-
-    // INTERLEAVED_GLTF_MODEL
     std::vector<Microsoft::WRL::ComPtr<ID3D11Buffer>> buffers;
 
 public:

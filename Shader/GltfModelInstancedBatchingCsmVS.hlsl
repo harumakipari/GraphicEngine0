@@ -12,7 +12,6 @@ cbuffer csmConstants : register(b3)
     CsmConstants csmData;
 }
 
-// CASCADED_SHADOW_MAPS
 struct VS_OUT_CSM
 {
     float4 position : SV_POSITION;

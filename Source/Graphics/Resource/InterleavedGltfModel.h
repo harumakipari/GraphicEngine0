@@ -656,7 +656,6 @@ public:
 private:
     void FetchNodes(const tinygltf::Model& gltf_model);
     void FetchMeshes(ID3D11Device* device, const tinygltf::Model& gltf_model);
-    // INTERLEAVED_GLTF_MODEL
     void FetchAndBatchMeshes(ID3D11Device* device, const tinygltf::Model& gltf_model);
 
     // ƒ‰ƒCƒg‚Ìî•ñ‚ğæ‚é

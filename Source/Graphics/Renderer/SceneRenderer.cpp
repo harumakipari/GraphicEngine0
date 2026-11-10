@@ -291,7 +291,6 @@ void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshCompon
                 const InterleavedGltfModel::Mesh& mesh = model->meshes.at(node.mesh);
                 for (const InterleavedGltfModel::Mesh::Primitive& primitive : mesh.primitives)
                 {
-                    // INTERLEAVED_GLTF_MODEL
                     UINT stride = sizeof(InterleavedGltfModel::Mesh::Vertex);
                     UINT offset = 0;
 
@@ -407,8 +406,6 @@ void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshCompon
                         const auto skeletalMesh = dynamic_cast<const SkeletalMeshComponent*>(meshComponent);
                         if (skeletalMesh)
                         {
-                            // Only the named Grux materials receive an alternate Phase2 texture.
-                            // A missing texture deliberately keeps this material's Phase1 BaseColor SRV.
                             if (ID3D11ShaderResourceView* phase2Srv =
                                 skeletalMesh->GetPhase2BaseColorTextureSRV(material.name))
                             {
@@ -419,13 +416,11 @@ void SceneRenderer::Draw(ID3D11DeviceContext* immediateContext, const MeshCompon
                     }
                     if (primitive.indexBufferView.buffer > -1)
                     {
-                        // INTERLEAVED_GLTF_MODEL
                         immediateContext->IASetIndexBuffer(model->buffers.at(primitive.indexBufferView.buffer).Get(), primitive.indexBufferView.format, 0);
                         immediateContext->DrawIndexed(primitive.indexBufferView.sizeInBytes / SizeofComponent(primitive.indexBufferView.format), 0, 0);
                     }
                     else
                     {
-                        // INTERLEAVED_GLTF_MODEL
                         immediateContext->Draw(primitive.vertexBufferView.sizeInBytes / primitive.vertexBufferView.strideInBytes, 0);
                     }
 
