@@ -682,11 +682,7 @@ GruxEnemy::ChargeBTStepResult GruxEnemy::UpdateTripleChargeBT(float dt)
 
     // WallHitで終了した場合、1・2段目はAborted、最終段はCompletedとして壁スタンへ渡す。
     DisableAttackHitBoxes();
-    if (chargeBT.tripleChargeIndex < 2 && chargeBT.result == ChargeAttackEndReason::WallHit)
-    {
-        chargeBT.triplePhase = TripleChargePhase::Aborted;
-    }
-    else if (chargeBT.tripleChargeIndex >= 2 && chargeBT.result == ChargeAttackEndReason::WallHit)
+    if (chargeBT.tripleChargeIndex >= 2 && chargeBT.result == ChargeAttackEndReason::WallHit)
     {
         chargeBT.tripleFinalWallHit = true;
         chargeBT.triplePhase = TripleChargePhase::Completed;

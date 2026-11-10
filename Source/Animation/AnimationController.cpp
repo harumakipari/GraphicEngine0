@@ -16,33 +16,33 @@
 
 AnimationController::AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex)
 {
-    owner = character;
-    target_ = target;
-    // アニメーションブレンドに使用するノード
-    animationNodes[AnimNode::Origin] = target_->model->GetNodes();
-    animationNodes[AnimNode::Next] = target_->model->GetNodes();
-    // BlendSpaceの完成結果に使用するノード
-    blendSpaceNodes = target_->model->GetNodes();
-    // 前回時刻の RootMotion 取得用 Pose
-    previousBlendSpaceRootMotionNodes = target_->model->GetNodes();
-    // ルートモーションの最初を記録する　Pose
-    blendSpaceRootMotionStartNodes = target_->model->GetNodes();
-    // ルートモーションの最後を記録する　Pose
-    blendSpaceRootMotionEndNodes = target_->model->GetNodes();
-    // ルートモーションの最初を記録する　Pose
-    normalRootMotionStartNodes = target_->model->GetNodes();
-    // ルートモーションの最後を記録する　Pose
-    normalRootMotionEndNodes = target_->model->GetNodes();
+	owner = character;
+	target_ = target;
+	// アニメーションブレンドに使用するノード
+	animationNodes[AnimNode::Origin] = target_->model->GetNodes();
+	animationNodes[AnimNode::Next] = target_->model->GetNodes();
+	// BlendSpaceの完成結果に使用するノード
+	blendSpaceNodes = target_->model->GetNodes();
+	// 前回時刻の RootMotion 取得用 Pose
+	previousBlendSpaceRootMotionNodes = target_->model->GetNodes();
+	// ルートモーションの最初を記録する　Pose
+	blendSpaceRootMotionStartNodes = target_->model->GetNodes();
+	// ルートモーションの最後を記録する　Pose
+	blendSpaceRootMotionEndNodes = target_->model->GetNodes();
+	// ルートモーションの最初を記録する　Pose
+	normalRootMotionStartNodes = target_->model->GetNodes();
+	// ルートモーションの最後を記録する　Pose
+	normalRootMotionEndNodes = target_->model->GetNodes();
 
 
-    for (auto& pose : blendSpacePoses)
-    {
-        pose = target_->model->GetNodes();
-    }
-    // 描画に使用するノード
-    finalNodes = target_->model->GetNodes();
+	for (auto& pose : blendSpacePoses)
+	{
+		pose = target_->model->GetNodes();
+	}
+	// 描画に使用するノード
+	finalNodes = target_->model->GetNodes();
 
-    this->rootNodeIndex = rootNodeIndex < 0 ? 0 : rootNodeIndex;
+	this->rootNodeIndex = rootNodeIndex < 0 ? 0 : rootNodeIndex;
 
 
 
@@ -50,1811 +50,1811 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 }
 
 bool AnimationController::ConfigureLocalPoseOverride(
-    const std::string& sourceAnimationName,
-    const float sourceTime,
-    const std::vector<std::string>& boneNames)
+	const std::string& sourceAnimationName,
+	const float sourceTime,
+	const std::vector<std::string>& boneNames)
 {
-    ClearLocalPoseOverride();
+	ClearLocalPoseOverride();
 
-    if (!target_ || !target_->model)
-        return false;
+	if (!target_ || !target_->model)
+		return false;
 
-    const auto animationIt = animationNameToIndex_.find(sourceAnimationName);
-    if (animationIt == animationNameToIndex_.end() ||
-        animationIt->second >= target_->model->animations.size())
-    {
-        return false;
-    }
+	const auto animationIt = animationNameToIndex_.find(sourceAnimationName);
+	if (animationIt == animationNameToIndex_.end() ||
+		animationIt->second >= target_->model->animations.size())
+	{
+		return false;
+	}
 
-    std::vector<InterleavedGltfModel::Node> sampledNodes =
-        target_->model->GetNodes();
-    target_->model->Animate(animationIt->second, sourceTime, sampledNodes);
+	std::vector<InterleavedGltfModel::Node> sampledNodes =
+		target_->model->GetNodes();
+	target_->model->Animate(animationIt->second, sourceTime, sampledNodes);
 
-    localPoseOverrideBones.reserve(boneNames.size());
-    for (const std::string& boneName : boneNames)
-    {
-        const int nodeIndex = target_->FindIndexByName(boneName);
-        if (nodeIndex < 0 || static_cast<size_t>(nodeIndex) >= sampledNodes.size())
-        {
-            ClearLocalPoseOverride();
-            return false;
-        }
+	localPoseOverrideBones.reserve(boneNames.size());
+	for (const std::string& boneName : boneNames)
+	{
+		const int nodeIndex = target_->FindIndexByName(boneName);
+		if (nodeIndex < 0 || static_cast<size_t>(nodeIndex) >= sampledNodes.size())
+		{
+			ClearLocalPoseOverride();
+			return false;
+		}
 
-        const auto& sampledNode = sampledNodes[static_cast<size_t>(nodeIndex)];
-        localPoseOverrideBones.push_back({
-            static_cast<size_t>(nodeIndex),
-            sampledNode.translation,
-            sampledNode.rotation });
-    }
+		const auto& sampledNode = sampledNodes[static_cast<size_t>(nodeIndex)];
+		localPoseOverrideBones.push_back({
+			static_cast<size_t>(nodeIndex),
+			sampledNode.translation,
+			sampledNode.rotation });
+	}
 
-    localPoseOverrideActive = !localPoseOverrideBones.empty();
-    return localPoseOverrideActive;
+	localPoseOverrideActive = !localPoseOverrideBones.empty();
+	return localPoseOverrideActive;
 }
 
 void AnimationController::SetLocalPoseOverrideWeight(const float weight)
 {
-    localPoseOverrideWeight = std::clamp(weight, 0.0f, 1.0f);
+	localPoseOverrideWeight = std::clamp(weight, 0.0f, 1.0f);
 }
 
 void AnimationController::ClearLocalPoseOverride()
 {
-    localPoseOverrideBones.clear();
-    localPoseOverrideWeight = 0.0f;
-    localPoseOverrideActive = false;
+	localPoseOverrideBones.clear();
+	localPoseOverrideWeight = 0.0f;
+	localPoseOverrideActive = false;
 }
 
 void AnimationController::ApplyLocalPoseOverride()
 {
-    if (!localPoseOverrideActive || localPoseOverrideWeight <= 0.0f)
-        return;
+	if (!localPoseOverrideActive || localPoseOverrideWeight <= 0.0f)
+		return;
 
-    for (const auto& overrideBone : localPoseOverrideBones)
-    {
-        auto& node = finalNodes.at(overrideBone.nodeIndex);
-        DirectX::XMStoreFloat3(
-            &node.translation,
-            DirectX::XMVectorLerp(
-                DirectX::XMLoadFloat3(&node.translation),
-                DirectX::XMLoadFloat3(&overrideBone.translation),
-                localPoseOverrideWeight));
-        DirectX::XMStoreFloat4(
-            &node.rotation,
-            DirectX::XMQuaternionNormalize(DirectX::XMQuaternionSlerp(
-                DirectX::XMLoadFloat4(&node.rotation),
-                DirectX::XMLoadFloat4(&overrideBone.rotation),
-                localPoseOverrideWeight)));
-    }
+	for (const auto& overrideBone : localPoseOverrideBones)
+	{
+		auto& node = finalNodes.at(overrideBone.nodeIndex);
+		DirectX::XMStoreFloat3(
+			&node.translation,
+			DirectX::XMVectorLerp(
+				DirectX::XMLoadFloat3(&node.translation),
+				DirectX::XMLoadFloat3(&overrideBone.translation),
+				localPoseOverrideWeight));
+		DirectX::XMStoreFloat4(
+			&node.rotation,
+			DirectX::XMQuaternionNormalize(DirectX::XMQuaternionSlerp(
+				DirectX::XMLoadFloat4(&node.rotation),
+				DirectX::XMLoadFloat4(&overrideBone.rotation),
+				localPoseOverrideWeight)));
+	}
 
-    target_->model->CumulateTransforms(finalNodes);
+	target_->model->CumulateTransforms(finalNodes);
 }
 
 
 void AnimationController::OnUpdate(const float deltaTime)
 {
-    ZoneScopedN("Animation Update");
-    // 最初にモデルとアニメーションを確認する
-    if (!target_ || !target_->model || target_->model->animations.empty())
-    {
-        return;
-    }
+	ZoneScopedN("Animation Update");
+	// 最初にモデルとアニメーションを確認する
+	if (!target_ || !target_->model || target_->model->animations.empty())
+	{
+		return;
+	}
 
-    if (editorPreviewActive)
-    {
-        UpdateEditorPreview(deltaTime);
-        return;
-    }
+	if (editorPreviewActive)
+	{
+		UpdateEditorPreview(deltaTime);
+		return;
+	}
 
-    if (runtimeHeldPoseTransitionActive)
-    {
-        blendElapsedTime += (std::max)(0.0f, deltaTime);
-        blendFactor = transitionTime > FLT_EPSILON
-            ? std::clamp(blendElapsedTime / transitionTime, 0.0f, 1.0f)
-            : 1.0f;
-        target_->model->BlendAnimations(
-            animationNodes[Origin], runtimeHeldPoseNodes, blendFactor, finalNodes);
-        target_->SetModelNodes(finalNodes);
-        target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-        for (auto* extraTarget : extraTargets_)
-        {
-            extraTarget->SetModelNodes(finalNodes);
-            extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-        }
+	if (runtimeHeldPoseTransitionActive)
+	{
+		blendElapsedTime += (std::max)(0.0f, deltaTime);
+		blendFactor = transitionTime > FLT_EPSILON
+			? std::clamp(blendElapsedTime / transitionTime, 0.0f, 1.0f)
+			: 1.0f;
+		target_->model->BlendAnimations(
+			animationNodes[Origin], runtimeHeldPoseNodes, blendFactor, finalNodes);
+		target_->SetModelNodes(finalNodes);
+		target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		for (auto* extraTarget : extraTargets_)
+		{
+			extraTarget->SetModelNodes(finalNodes);
+			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		}
 
-        if (blendFactor >= 1.0f)
-        {
-            finalNodes = runtimeHeldPoseNodes;
-            runtimeHeldPoseTransitionActive = false;
-            runtimeHeldPoseActive = true;
-        }
-        return;
-    }
+		if (blendFactor >= 1.0f)
+		{
+			finalNodes = runtimeHeldPoseNodes;
+			runtimeHeldPoseTransitionActive = false;
+			runtimeHeldPoseActive = true;
+		}
+		return;
+	}
 
-    if (runtimeHeldPoseActive)
-    {
-        finalNodes = runtimeHeldPoseNodes;
-        target_->SetModelNodes(finalNodes);
-        target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-        for (auto* extraTarget : extraTargets_)
-        {
-            extraTarget->SetModelNodes(finalNodes);
-            extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-        }
-        return;
-    }
-    bool normalAnimationLoopedThisFrame = false;
-    float unwrappedAnimationTime = animationTime;
-    float normalAnimationDuration = 0.0f;
+	if (runtimeHeldPoseActive)
+	{
+		finalNodes = runtimeHeldPoseNodes;
+		target_->SetModelNodes(finalNodes);
+		target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		for (auto* extraTarget : extraTargets_)
+		{
+			extraTarget->SetModelNodes(finalNodes);
+			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		}
+		return;
+	}
+	bool normalAnimationLoopedThisFrame = false;
+	float unwrappedAnimationTime = animationTime;
+	float normalAnimationDuration = 0.0f;
 
-    // 通常アニメーション遷移でのみ使用する
-    float normalPlayRate = 1.0f;
+	// 通常アニメーション遷移でのみ使用する
+	float normalPlayRate = 1.0f;
 
-    if (useBlendSpace)
-    {
-        // Focus中は通常アニメーション時間を進めない
-        // 通常クリップのSpeed Curveも評価しない
-        locomotionTime += deltaTime * locomotionPlayRate;
-    }
-    else
-    {
-        // 通常NotifyやRoot Motionで使用する前回時刻
-        prevAnimationTime = animationTime;
+	if (useBlendSpace)
+	{
+		// Focus中は通常アニメーション時間を進めない
+		// 通常クリップのSpeed Curveも評価しない
+		locomotionTime += deltaTime * locomotionPlayRate;
+	}
+	else
+	{
+		// 通常NotifyやRoot Motionで使用する前回時刻
+		prevAnimationTime = animationTime;
 
-        const size_t rateClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
+		const size_t rateClip = transitionState == AnimationTransitionState::Completed ? animationClip : animationNextClip;
 
-        // 配列範囲を確認
-        if (rateClip >=
-            target_->model->animations.size())
-        {
-            return;
-        }
+		// 配列範囲を確認
+		if (rateClip >=
+			target_->model->animations.size())
+		{
+			return;
+		}
 
-        if (rateClip >=
-            animationNotifyAssets.size())
-        {
-            return;
-        }
+		if (rateClip >=
+			animationNotifyAssets.size())
+		{
+			return;
+		}
 
-        const auto& asset =
-            animationNotifyAssets.at(rateClip);
+		const auto& asset =
+			animationNotifyAssets.at(rateClip);
 
-        const float curveRate =
-            asset.speedCurve.Evaluate(
-                animationTime);
+		const float curveRate =
+			asset.speedCurve.Evaluate(
+				animationTime);
 
-        normalPlayRate =
-            animationRate *
-            asset.playRate *
-            curveRate;
+		normalPlayRate =
+			animationRate *
+			asset.playRate *
+			curveRate;
 
-        animationTime +=
-            deltaTime * normalPlayRate;
+		animationTime +=
+			deltaTime * normalPlayRate;
 
-        unwrappedAnimationTime =
-            animationTime;
+		unwrappedAnimationTime =
+			animationTime;
 
-        // 通常アニメーションのループ判定
-        if (transitionState ==
-            AnimationTransitionState::Completed)
-        {
-            normalAnimationDuration =
-                target_->model
-                ->animations
-                .at(animationClip)
-                .duration;
+		// 通常アニメーションのループ判定
+		if (transitionState ==
+			AnimationTransitionState::Completed)
+		{
+			normalAnimationDuration =
+				target_->model
+				->animations
+				.at(animationClip)
+				.duration;
 
-            if (playbackEndTime >= 0.0f)
-                normalAnimationDuration = (std::min)(normalAnimationDuration, playbackEndTime);
+			if (playbackEndTime >= 0.0f)
+				normalAnimationDuration = (std::min)(normalAnimationDuration, playbackEndTime);
 
-            if (normalAnimationDuration >
-                FLT_EPSILON &&
-                animationTime >=
-                normalAnimationDuration)
-            {
-                if (requestStopLoop)
-                {
-                    animationTime =
-                        normalAnimationDuration;
+			if (normalAnimationDuration >
+				FLT_EPSILON &&
+				animationTime >=
+				normalAnimationDuration)
+			{
+				if (requestStopLoop)
+				{
+					animationTime =
+						normalAnimationDuration;
 
-                    isAnimationLoop = false;
-                    requestStopLoop = false;
-                    isAnimationFinished = true;
-                }
-                else if (isAnimationLoop)
-                {
-                    normalAnimationLoopedThisFrame =
-                        true;
+					isAnimationLoop = false;
+					requestStopLoop = false;
+					isAnimationFinished = true;
+				}
+				else if (isAnimationLoop)
+				{
+					normalAnimationLoopedThisFrame =
+						true;
 
-                    animationTime =
-                        std::fmod(
-                            animationTime,
-                            normalAnimationDuration);
-                }
-                else
-                {
-                    animationTime =
-                        normalAnimationDuration;
+					animationTime =
+						std::fmod(
+							animationTime,
+							normalAnimationDuration);
+				}
+				else
+				{
+					animationTime =
+						normalAnimationDuration;
 
-                    isAnimationFinished = true;
-                }
-            }
-        }
-    }
+					isAnimationFinished = true;
+				}
+			}
+		}
+	}
 
-    if (!useBlendSpace)
-    {
-        // NotifyTrack のイベント処理
-        const auto& notifyAsset = animationNotifyAssets[notifyAnimationClip];
+	if (!useBlendSpace)
+	{
+		// NotifyTrack のイベント処理
+		const auto& notifyAsset = animationNotifyAssets[notifyAnimationClip];
 
-        auto& notifyTrack = notifyAsset.notifyTrack;
-        for (auto& state : notifyTrack.states)
-        {
-            if (prevAnimationTime < state.startTime &&
-                animationTime >= state.startTime)
-            {
-                OnNotifyBegin(state);
-            }
-            if (prevAnimationTime < state.endTime &&
-                animationTime >= state.endTime)
-            {
-                OnNotifyEnd(state);
-            }
-        }
+		auto& notifyTrack = notifyAsset.notifyTrack;
+		for (auto& state : notifyTrack.states)
+		{
+			if (prevAnimationTime < state.startTime &&
+				animationTime >= state.startTime)
+			{
+				OnNotifyBegin(state);
+			}
+			if (prevAnimationTime < state.endTime &&
+				animationTime >= state.endTime)
+			{
+				OnNotifyEnd(state);
+			}
+		}
 
-        for (auto& event : notifyTrack.events)
-        {
-            if (prevAnimationTime < event.time && animationTime >= event.time)
-            {
-                OnNotifyEvent(event);
-            }
-        }
-    }
+		for (auto& event : notifyTrack.events)
+		{
+			if (prevAnimationTime < event.time && animationTime >= event.time)
+			{
+				OnNotifyEvent(event);
+			}
+		}
+	}
 
-    // BlendSpace解除後、新しい通常遷移が実際に開始されたことを記録
-    if (!useBlendSpace && suppressNormalRootMotionUntilTransitionCompleted && transitionState != AnimationTransitionState::Completed)
-    {
-        suppressNormalRootMotionObservedTransition = true;
-    }
+	// BlendSpace解除後、新しい通常遷移が実際に開始されたことを記録
+	if (!useBlendSpace && suppressNormalRootMotionUntilTransitionCompleted && transitionState != AnimationTransitionState::Completed)
+	{
+		suppressNormalRootMotionObservedTransition = true;
+	}
 
-    if (useBlendSpace)
-    {
-        UpdateBlendSpace(deltaTime);
+	if (useBlendSpace)
+	{
+		UpdateBlendSpace(deltaTime);
 
-    }
-    else
-    {
+	}
+	else
+	{
 
-        // アニメーション遷移の準備
-        switch (transitionState)
-        {
-        case AnimationTransitionState::NotStarted:
-            target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
-            blendElapsedTime = 0.0f;
-            blendFactor = 0.0f;
+		// アニメーション遷移の準備
+		switch (transitionState)
+		{
+		case AnimationTransitionState::NotStarted:
+			target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
+			blendElapsedTime = 0.0f;
+			blendFactor = 0.0f;
 
-            transitionState = AnimationTransitionState::Inprogress;
-            break;
-        case AnimationTransitionState::Inprogress:
-            blendElapsedTime += deltaTime * normalPlayRate;
-            if (transitionTime > 0.0f)
-            {
-                blendFactor = blendElapsedTime / transitionTime;     //ゼロ除算を防ぐため
-            }
-            else
-            {
-                blendFactor = 1.0f;
-            }
-            blendFactor = std::clamp(blendFactor, 0.0f, 1.0f);
-            target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
+			transitionState = AnimationTransitionState::Inprogress;
+			break;
+		case AnimationTransitionState::Inprogress:
+			blendElapsedTime += deltaTime * normalPlayRate;
+			if (transitionTime > 0.0f)
+			{
+				blendFactor = blendElapsedTime / transitionTime;     //ゼロ除算を防ぐため
+			}
+			else
+			{
+				blendFactor = 1.0f;
+			}
+			blendFactor = std::clamp(blendFactor, 0.0f, 1.0f);
+			target_->model->Animate(this->animationNextClip, animationTime, animationNodes[Next]);
 
-            // blend
-            target_->model->BlendAnimations(animationNodes[Origin], animationNodes[Next], blendFactor, finalNodes);
+			// blend
+			target_->model->BlendAnimations(animationNodes[Origin], animationNodes[Next], blendFactor, finalNodes);
 
-            if (blendFactor >= 1.0f)
-            {
-                // 遷移終了
-                transitionState = AnimationTransitionState::Completed;
-                // 現在のアニメーションクリップを次のアニメーションクリップに変更する
-                this->animationClip = this->animationNextClip;
-            }
-            break;
-        case AnimationTransitionState::Completed:
-        {
-            target_->model->Animate(this->animationClip, animationTime, finalNodes);
+			if (blendFactor >= 1.0f)
+			{
+				// 遷移終了
+				transitionState = AnimationTransitionState::Completed;
+				// 現在のアニメーションクリップを次のアニメーションクリップに変更する
+				this->animationClip = this->animationNextClip;
+			}
+			break;
+		case AnimationTransitionState::Completed:
+		{
+			target_->model->Animate(this->animationClip, animationTime, finalNodes);
 
-            const float duration = target_->model->animations.at(animationClip).duration;
-            const float effectiveDuration = playbackEndTime >= 0.0f
-                ? (std::min)(duration, playbackEndTime)
-                : duration;
-            if (requestStopLoop && normalAnimationLoopedThisFrame)
-            {
-                isAnimationLoop = false;
-                requestStopLoop = false;
-                isAnimationFinished = true;
-            }
-            else if (!isAnimationLoop && animationTime >= effectiveDuration)
-            {
-                animationTime = effectiveDuration;
-                isAnimationFinished = true;
-            }
-        }
-        break;
-        default:
-            break;
-        }
-    }
-
-
-    bool releaseNormalRootMotionSuppression = false;
-
-    InterleavedGltfModel::Node& rootNode = finalNodes.at(rootNodeIndex);
-    const bool removeRootTranslationFromPose =
-        enableRootMotion ||
-        currentAnimationRemovesRootTranslation ||
-        removeRootTranslationDuringTransition;
-
-    if (enableRootMotion)
-    {
-
-        if (!ignoreRootMotion)
-        {
-            DirectX::XMFLOAT3 rootMotionDelta = {};
-            bool hasRootMotionDelta = false;
-            DirectX::XMFLOAT4X4 worldTransform = owner->GetWorldTransform();
-
-            if (useBlendSpace)
-            {
-                hasRootMotionDelta = ConsumeBlendSpaceRootMotion(rootMotionDelta);
-            }
-            else
-            {
-                // グローバル空間
-                DirectX::XMFLOAT3 position =
-                {
-                    rootNode.globalTransform._41,
-                    rootNode.globalTransform._42,
-                    rootNode.globalTransform._43
-                };
-
-                if (resetRootMotionDelta)
-                {
-                    // Root Motion基準位置を現在Poseへ同期する
-                    previousPosition = position;
-                    resetRootMotionDelta = false;
-
-                    // 同期フレームでは移動しない
-                    hasRootMotionDelta = false;
-                }
-                else if (suppressNormalRootMotionUntilTransitionCompleted)
-                {
-                    // BlendSpace終了後の通常アニメーション遷移中は、
-                    // ブレンド済みrootの絶対位置差をActorへ適用しない。
-                    previousPosition = position;
-                    hasRootMotionDelta = false;
-
-                    // 新しい遷移を一度以上観測してからCompletedになった場合だけ解除予約
-                    if (suppressNormalRootMotionObservedTransition &&
-                        transitionState == AnimationTransitionState::Completed)
-                    {
-                        releaseNormalRootMotionSuppression = true;
-                    }
-                }
-                else
-                {
-                    if (normalAnimationLoopedThisFrame)
-                    {
-                        target_->model->Animate(animationClip, 0.0f, normalRootMotionStartNodes);
-
-                        target_->model->Animate(animationClip, normalAnimationDuration, normalRootMotionEndNodes);
-
-                        const auto& startNode = normalRootMotionStartNodes.at(rootNodeIndex);
-
-                        const auto& endNode = normalRootMotionEndNodes.at(rootNodeIndex);
-
-                        const DirectX::XMFLOAT3 rootPositionAtStart =
-                        {
-                            startNode.globalTransform._41,
-                            startNode.globalTransform._42,
-                            startNode.globalTransform._43
-                        };
-
-                        const DirectX::XMFLOAT3 rootPositionAtEnd =
-                        {
-                            endNode.globalTransform._41,
-                            endNode.globalTransform._42,
-                            endNode.globalTransform._43
-                        };
-
-                        rootMotionDelta =
-                        {
-                            (rootPositionAtEnd.x - previousPosition.x)
-                                + (position.x - rootPositionAtStart.x),
-
-                            (rootPositionAtEnd.y - previousPosition.y)
-                                + (position.y - rootPositionAtStart.y),
-
-                            (rootPositionAtEnd.z - previousPosition.z)
-                                + (position.z - rootPositionAtStart.z)
-                        };
-                    }
-                    else
-                    {
-                        rootMotionDelta =
-                        {
-                            position.x - previousPosition.x,
-                            position.y - previousPosition.y,
-                            position.z - previousPosition.z
-                        };
-                    }
-
-                    hasRootMotionDelta = true;
-                    previousPosition = position;
-                }
-
-            }
+			const float duration = target_->model->animations.at(animationClip).duration;
+			const float effectiveDuration = playbackEndTime >= 0.0f
+				? (std::min)(duration, playbackEndTime)
+				: duration;
+			if (requestStopLoop && normalAnimationLoopedThisFrame)
+			{
+				isAnimationLoop = false;
+				requestStopLoop = false;
+				isAnimationFinished = true;
+			}
+			else if (!isAnimationLoop && animationTime >= effectiveDuration)
+			{
+				animationTime = effectiveDuration;
+				isAnimationFinished = true;
+			}
+		}
+		break;
+		default:
+			break;
+		}
+	}
 
 
-            if (hasRootMotionDelta)
-            {
-                DirectX::XMStoreFloat3(&rootMotionDelta, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&rootMotionDelta), DirectX::XMLoadFloat4x4(&worldTransform))); // ワールド空間
+	bool releaseNormalRootMotionSuppression = false;
 
-                DirectX::XMFLOAT3 translation = owner->GetPosition();
+	InterleavedGltfModel::Node& rootNode = finalNodes.at(rootNodeIndex);
+	const bool removeRootTranslationFromPose =
+		enableRootMotion ||
+		currentAnimationRemovesRootTranslation ||
+		removeRootTranslationDuringTransition;
 
-                translation.x += rootMotionDelta.x;
-                //translation.y += rootMotionDelta.y;
-                translation.z += rootMotionDelta.z;
+	if (enableRootMotion)
+	{
 
-                owner->SetPosition(translation);
-            }
-        }
-    }
+		if (!ignoreRootMotion)
+		{
+			DirectX::XMFLOAT3 rootMotionDelta = {};
+			bool hasRootMotionDelta = false;
+			DirectX::XMFLOAT4X4 worldTransform = owner->GetWorldTransform();
 
-    if (removeRootTranslationFromPose)
-    {
-        // ActorへのRoot Motion適用とは独立して、Poseを既存基準へ戻す。
-        rootNode.translation = zeroTranslation;
-        target_->model->CumulateTransforms(finalNodes);
-    }
+			if (useBlendSpace)
+			{
+				hasRootMotionDelta = ConsumeBlendSpaceRootMotion(rootMotionDelta);
+			}
+			else
+			{
+				// グローバル空間
+				DirectX::XMFLOAT3 position =
+				{
+					rootNode.globalTransform._41,
+					rootNode.globalTransform._42,
+					rootNode.globalTransform._43
+				};
 
-    ApplyLocalPoseOverride();
+				if (resetRootMotionDelta)
+				{
+					// Root Motion基準位置を現在Poseへ同期する
+					previousPosition = position;
+					resetRootMotionDelta = false;
 
-    ApplyRuntimeVisualPose();
+					// 同期フレームでは移動しない
+					hasRootMotionDelta = false;
+				}
+				else if (suppressNormalRootMotionUntilTransitionCompleted)
+				{
+					// BlendSpace終了後の通常アニメーション遷移中は、
+					// ブレンド済みrootの絶対位置差をActorへ適用しない。
+					previousPosition = position;
+					hasRootMotionDelta = false;
 
-    if (transitionState == AnimationTransitionState::Completed)
-        removeRootTranslationDuringTransition = false;
+					// 新しい遷移を一度以上観測してからCompletedになった場合だけ解除予約
+					if (suppressNormalRootMotionObservedTransition &&
+						transitionState == AnimationTransitionState::Completed)
+					{
+						releaseNormalRootMotionSuppression = true;
+					}
+				}
+				else
+				{
+					if (normalAnimationLoopedThisFrame)
+					{
+						target_->model->Animate(animationClip, 0.0f, normalRootMotionStartNodes);
 
-    // 遷移完了フレームはRoot Motionを適用せず、
-    // previousPositionの同期だけで終了する。
-    // 次のOnUpdateから通常Root Motionを再開する。
-    if (releaseNormalRootMotionSuppression)
-    {
-        suppressNormalRootMotionUntilTransitionCompleted = false;
-        suppressNormalRootMotionObservedTransition = false;
-    }
+						target_->model->Animate(animationClip, normalAnimationDuration, normalRootMotionEndNodes);
+
+						const auto& startNode = normalRootMotionStartNodes.at(rootNodeIndex);
+
+						const auto& endNode = normalRootMotionEndNodes.at(rootNodeIndex);
+
+						const DirectX::XMFLOAT3 rootPositionAtStart =
+						{
+							startNode.globalTransform._41,
+							startNode.globalTransform._42,
+							startNode.globalTransform._43
+						};
+
+						const DirectX::XMFLOAT3 rootPositionAtEnd =
+						{
+							endNode.globalTransform._41,
+							endNode.globalTransform._42,
+							endNode.globalTransform._43
+						};
+
+						rootMotionDelta =
+						{
+							(rootPositionAtEnd.x - previousPosition.x)
+								+ (position.x - rootPositionAtStart.x),
+
+							(rootPositionAtEnd.y - previousPosition.y)
+								+ (position.y - rootPositionAtStart.y),
+
+							(rootPositionAtEnd.z - previousPosition.z)
+								+ (position.z - rootPositionAtStart.z)
+						};
+					}
+					else
+					{
+						rootMotionDelta =
+						{
+							position.x - previousPosition.x,
+							position.y - previousPosition.y,
+							position.z - previousPosition.z
+						};
+					}
+
+					hasRootMotionDelta = true;
+					previousPosition = position;
+				}
+
+			}
+
+
+			if (hasRootMotionDelta)
+			{
+				DirectX::XMStoreFloat3(&rootMotionDelta, DirectX::XMVector3TransformNormal(DirectX::XMLoadFloat3(&rootMotionDelta), DirectX::XMLoadFloat4x4(&worldTransform))); // ワールド空間
+
+				DirectX::XMFLOAT3 translation = owner->GetPosition();
+
+				translation.x += rootMotionDelta.x;
+				//translation.y += rootMotionDelta.y;
+				translation.z += rootMotionDelta.z;
+
+				owner->SetPosition(translation);
+			}
+		}
+	}
+
+	if (removeRootTranslationFromPose)
+	{
+		// ActorへのRoot Motion適用とは独立して、Poseを既存基準へ戻す。
+		rootNode.translation = zeroTranslation;
+		target_->model->CumulateTransforms(finalNodes);
+	}
+
+	ApplyLocalPoseOverride();
+
+	ApplyRuntimeVisualPose();
+
+	if (transitionState == AnimationTransitionState::Completed)
+		removeRootTranslationDuringTransition = false;
+
+	// 遷移完了フレームはRoot Motionを適用せず、
+	// previousPositionの同期だけで終了する。
+	// 次のOnUpdateから通常Root Motionを再開する。
+	if (releaseNormalRootMotionSuppression)
+	{
+		suppressNormalRootMotionUntilTransitionCompleted = false;
+		suppressNormalRootMotionObservedTransition = false;
+	}
 }
 
 void AnimationController::CaptureEditorRuntimeSnapshot()
 {
-    editorRuntimeSnapshot.valid = true;
-    editorRuntimeSnapshot.animationTime = animationTime;
-    editorRuntimeSnapshot.playbackEndTime = playbackEndTime;
-    editorRuntimeSnapshot.prevAnimationTime = prevAnimationTime;
-    editorRuntimeSnapshot.animationClip = animationClip;
-    editorRuntimeSnapshot.animationNextClip = animationNextClip;
-    editorRuntimeSnapshot.notifyAnimationClip = notifyAnimationClip;
-    editorRuntimeSnapshot.transitionState = transitionState;
-    editorRuntimeSnapshot.blendFactor = blendFactor;
-    editorRuntimeSnapshot.blendElapsedTime = blendElapsedTime;
-    editorRuntimeSnapshot.transitionTime = transitionTime;
-    editorRuntimeSnapshot.isBlendingAnimation = isBlendingAnimation;
-    editorRuntimeSnapshot.isAnimationFinished = isAnimationFinished;
-    editorRuntimeSnapshot.isAnimationLoop = isAnimationLoop;
-    editorRuntimeSnapshot.requestStopLoop = requestStopLoop;
-    editorRuntimeSnapshot.currentAnimationName = currentAnimationName;
-    editorRuntimeSnapshot.animationOriginNodes = animationNodes[Origin];
-    editorRuntimeSnapshot.animationNextNodes = animationNodes[Next];
-    editorRuntimeSnapshot.finalNodes = finalNodes;
-    editorRuntimeSnapshot.previousPosition = previousPosition;
-    editorRuntimeSnapshot.zeroTranslation = zeroTranslation;
-    editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted = suppressNormalRootMotionUntilTransitionCompleted;
-    editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition = suppressNormalRootMotionObservedTransition;
+	editorRuntimeSnapshot.valid = true;
+	editorRuntimeSnapshot.animationTime = animationTime;
+	editorRuntimeSnapshot.playbackEndTime = playbackEndTime;
+	editorRuntimeSnapshot.prevAnimationTime = prevAnimationTime;
+	editorRuntimeSnapshot.animationClip = animationClip;
+	editorRuntimeSnapshot.animationNextClip = animationNextClip;
+	editorRuntimeSnapshot.notifyAnimationClip = notifyAnimationClip;
+	editorRuntimeSnapshot.transitionState = transitionState;
+	editorRuntimeSnapshot.blendFactor = blendFactor;
+	editorRuntimeSnapshot.blendElapsedTime = blendElapsedTime;
+	editorRuntimeSnapshot.transitionTime = transitionTime;
+	editorRuntimeSnapshot.isBlendingAnimation = isBlendingAnimation;
+	editorRuntimeSnapshot.isAnimationFinished = isAnimationFinished;
+	editorRuntimeSnapshot.isAnimationLoop = isAnimationLoop;
+	editorRuntimeSnapshot.requestStopLoop = requestStopLoop;
+	editorRuntimeSnapshot.currentAnimationName = currentAnimationName;
+	editorRuntimeSnapshot.animationOriginNodes = animationNodes[Origin];
+	editorRuntimeSnapshot.animationNextNodes = animationNodes[Next];
+	editorRuntimeSnapshot.finalNodes = finalNodes;
+	editorRuntimeSnapshot.previousPosition = previousPosition;
+	editorRuntimeSnapshot.zeroTranslation = zeroTranslation;
+	editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted = suppressNormalRootMotionUntilTransitionCompleted;
+	editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition = suppressNormalRootMotionObservedTransition;
 }
 
 void AnimationController::EndEditorPreview()
 {
-    InputSystem::StopRumble();
-    EndAllEditorPreviewStates();
-    editorPreviewPlaying = false;
-    editorPreviewActive = false;
+	InputSystem::StopRumble();
+	EndAllEditorPreviewStates();
+	editorPreviewPlaying = false;
+	editorPreviewActive = false;
 
-    if (!editorRuntimeSnapshot.valid)
-        return;
+	if (!editorRuntimeSnapshot.valid)
+		return;
 
-    animationTime = editorRuntimeSnapshot.animationTime;
-    playbackEndTime = editorRuntimeSnapshot.playbackEndTime;
-    prevAnimationTime = editorRuntimeSnapshot.prevAnimationTime;
-    animationClip = editorRuntimeSnapshot.animationClip;
-    animationNextClip = editorRuntimeSnapshot.animationNextClip;
-    notifyAnimationClip = editorRuntimeSnapshot.notifyAnimationClip;
-    transitionState = editorRuntimeSnapshot.transitionState;
-    blendFactor = editorRuntimeSnapshot.blendFactor;
-    blendElapsedTime = editorRuntimeSnapshot.blendElapsedTime;
-    transitionTime = editorRuntimeSnapshot.transitionTime;
-    isBlendingAnimation = editorRuntimeSnapshot.isBlendingAnimation;
-    isAnimationFinished = editorRuntimeSnapshot.isAnimationFinished;
-    isAnimationLoop = editorRuntimeSnapshot.isAnimationLoop;
-    requestStopLoop = editorRuntimeSnapshot.requestStopLoop;
-    currentAnimationName = editorRuntimeSnapshot.currentAnimationName;
-    animationNodes[Origin] = editorRuntimeSnapshot.animationOriginNodes;
-    animationNodes[Next] = editorRuntimeSnapshot.animationNextNodes;
-    finalNodes = editorRuntimeSnapshot.finalNodes;
-    zeroTranslation = editorRuntimeSnapshot.zeroTranslation;
-    suppressNormalRootMotionUntilTransitionCompleted = editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted;
-    suppressNormalRootMotionObservedTransition = editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition;
+	animationTime = editorRuntimeSnapshot.animationTime;
+	playbackEndTime = editorRuntimeSnapshot.playbackEndTime;
+	prevAnimationTime = editorRuntimeSnapshot.prevAnimationTime;
+	animationClip = editorRuntimeSnapshot.animationClip;
+	animationNextClip = editorRuntimeSnapshot.animationNextClip;
+	notifyAnimationClip = editorRuntimeSnapshot.notifyAnimationClip;
+	transitionState = editorRuntimeSnapshot.transitionState;
+	blendFactor = editorRuntimeSnapshot.blendFactor;
+	blendElapsedTime = editorRuntimeSnapshot.blendElapsedTime;
+	transitionTime = editorRuntimeSnapshot.transitionTime;
+	isBlendingAnimation = editorRuntimeSnapshot.isBlendingAnimation;
+	isAnimationFinished = editorRuntimeSnapshot.isAnimationFinished;
+	isAnimationLoop = editorRuntimeSnapshot.isAnimationLoop;
+	requestStopLoop = editorRuntimeSnapshot.requestStopLoop;
+	currentAnimationName = editorRuntimeSnapshot.currentAnimationName;
+	animationNodes[Origin] = editorRuntimeSnapshot.animationOriginNodes;
+	animationNodes[Next] = editorRuntimeSnapshot.animationNextNodes;
+	finalNodes = editorRuntimeSnapshot.finalNodes;
+	zeroTranslation = editorRuntimeSnapshot.zeroTranslation;
+	suppressNormalRootMotionUntilTransitionCompleted = editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted;
+	suppressNormalRootMotionObservedTransition = editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition;
 
-    target_->SetModelNodes(finalNodes);
-    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-    for (auto* extraTarget : extraTargets_)
-    {
-        extraTarget->SetModelNodes(finalNodes);
-        extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-    }
+	target_->SetModelNodes(finalNodes);
+	target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+	for (auto* extraTarget : extraTargets_)
+	{
+		extraTarget->SetModelNodes(finalNodes);
+		extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+	}
 
-    if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(finalNodes.size()))
-    {
-        const auto& root = finalNodes[rootNodeIndex];
-        previousPosition = { root.globalTransform._41, root.globalTransform._42, root.globalTransform._43 };
-    }
-    else
-    {
-        previousPosition = editorRuntimeSnapshot.previousPosition;
-    }
-    resetRootMotionDelta = true;
-    editorRuntimeSnapshot.valid = false;
+	if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(finalNodes.size()))
+	{
+		const auto& root = finalNodes[rootNodeIndex];
+		previousPosition = { root.globalTransform._41, root.globalTransform._42, root.globalTransform._43 };
+	}
+	else
+	{
+		previousPosition = editorRuntimeSnapshot.previousPosition;
+	}
+	resetRootMotionDelta = true;
+	editorRuntimeSnapshot.valid = false;
 }
 void AnimationController::BeginEditorPreview(const bool playing, const bool resetTime)
 {
-    ReleaseLatchedVisualPose();
+	ReleaseLatchedVisualPose();
 
-    if (!editorPreviewActive)
-        CaptureEditorRuntimeSnapshot();
+	if (!editorPreviewActive)
+		CaptureEditorRuntimeSnapshot();
 
-    editorPreviewActive = true;
-    editorPreviewPlaying = playing;
-    if (resetTime)
-    {
-        InputSystem::StopRumble();
-        EndAllEditorPreviewStates();
-        editorPreviewTime = 0.0f;
-    }
-    previousEditorPreviewTime = editorPreviewTime;
-    if (playing)
-        SyncEditorPreviewStates(editorPreviewTime);
-    ApplyEditorPreviewPose();
+	editorPreviewActive = true;
+	editorPreviewPlaying = playing;
+	if (resetTime)
+	{
+		InputSystem::StopRumble();
+		EndAllEditorPreviewStates();
+		editorPreviewTime = 0.0f;
+	}
+	previousEditorPreviewTime = editorPreviewTime;
+	if (playing)
+		SyncEditorPreviewStates(editorPreviewTime);
+	ApplyEditorPreviewPose();
 }
 
 void AnimationController::SetEditorPreviewTime(const float time)
 {
-    ReleaseLatchedVisualPose();
+	ReleaseLatchedVisualPose();
 
-    if (!target_ || !target_->model || selectedTimelineClip >= target_->model->animations.size())
-        return;
+	if (!target_ || !target_->model || selectedTimelineClip >= target_->model->animations.size())
+		return;
 
-    editorPreviewActive = true;
-    editorPreviewPlaying = false;
-    const float duration = target_->model->animations[selectedTimelineClip].duration;
-    editorPreviewTime = std::clamp(time, 0.0f, duration);
-    SyncEditorPreviewStates(editorPreviewTime);
-    previousEditorPreviewTime = editorPreviewTime;
-    ApplyEditorPreviewPose();
+	editorPreviewActive = true;
+	editorPreviewPlaying = false;
+	const float duration = target_->model->animations[selectedTimelineClip].duration;
+	editorPreviewTime = std::clamp(time, 0.0f, duration);
+	SyncEditorPreviewStates(editorPreviewTime);
+	previousEditorPreviewTime = editorPreviewTime;
+	ApplyEditorPreviewPose();
 }
 
 bool AnimationController::HoldAnimationPose(
-    const std::string& animationName, const float time)
+	const std::string& animationName, const float time)
 {
-    if (!target_ || !target_->model)
-        return false;
+	if (!target_ || !target_->model)
+		return false;
 
-    const auto animationIt = animationNameToIndex_.find(animationName);
-    if (animationIt == animationNameToIndex_.end() ||
-        animationIt->second >= target_->model->animations.size())
-    {
-        return false;
-    }
+	const auto animationIt = animationNameToIndex_.find(animationName);
+	if (animationIt == animationNameToIndex_.end() ||
+		animationIt->second >= target_->model->animations.size())
+	{
+		return false;
+	}
 
-    if (!editorPreviewActive)
-        CaptureEditorRuntimeSnapshot();
+	if (!editorPreviewActive)
+		CaptureEditorRuntimeSnapshot();
 
-    ReleaseLatchedVisualPose();
+	ReleaseLatchedVisualPose();
 
-    EndAllEditorPreviewStates();
-    selectedTimelineClip = animationIt->second;
-    editorPreviewActive = true;
-    editorPreviewPlaying = false;
-    const float duration = target_->model->animations[selectedTimelineClip].duration;
-    editorPreviewTime = std::clamp(time, 0.0f, duration);
-    previousEditorPreviewTime = editorPreviewTime;
-    ApplyEditorPreviewPose();
-    return true;
+	EndAllEditorPreviewStates();
+	selectedTimelineClip = animationIt->second;
+	editorPreviewActive = true;
+	editorPreviewPlaying = false;
+	const float duration = target_->model->animations[selectedTimelineClip].duration;
+	editorPreviewTime = std::clamp(time, 0.0f, duration);
+	previousEditorPreviewTime = editorPreviewTime;
+	ApplyEditorPreviewPose();
+	return true;
 }
 
 bool AnimationController::BlendToHeldAnimationPose(
-    const std::string& animationName, const float time, const float blendTime)
+	const std::string& animationName, const float time, const float blendTime)
 {
-    if (!target_ || !target_->model)
-        return false;
+	if (!target_ || !target_->model)
+		return false;
 
-    const auto animationIt = animationNameToIndex_.find(animationName);
-    if (animationIt == animationNameToIndex_.end() ||
-        animationIt->second >= target_->model->animations.size())
-    {
-        return false;
-    }
+	const auto animationIt = animationNameToIndex_.find(animationName);
+	if (animationIt == animationNameToIndex_.end() ||
+		animationIt->second >= target_->model->animations.size())
+	{
+		return false;
+	}
 
-    EndEditorPreview();
-    ReleaseLatchedVisualPose();
+	EndEditorPreview();
+	ReleaseLatchedVisualPose();
 
-    const size_t clip = animationIt->second;
-    const float duration = target_->model->animations[clip].duration;
-    runtimeHeldPoseNodes = target_->model->GetNodes();
-    target_->model->Animate(clip, std::clamp(time, 0.0f, duration), runtimeHeldPoseNodes);
-    if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(runtimeHeldPoseNodes.size()))
-    {
-        runtimeHeldPoseNodes[rootNodeIndex].translation = zeroTranslation;
-        target_->model->CumulateTransforms(runtimeHeldPoseNodes);
-    }
+	const size_t clip = animationIt->second;
+	const float duration = target_->model->animations[clip].duration;
+	runtimeHeldPoseNodes = target_->model->GetNodes();
+	target_->model->Animate(clip, std::clamp(time, 0.0f, duration), runtimeHeldPoseNodes);
+	if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(runtimeHeldPoseNodes.size()))
+	{
+		runtimeHeldPoseNodes[rootNodeIndex].translation = zeroTranslation;
+		target_->model->CumulateTransforms(runtimeHeldPoseNodes);
+	}
 
-    animationNodes[Origin] = finalNodes;
-    runtimeHeldPoseActive = false;
-    runtimeHeldPoseTransitionActive = true;
-    blendElapsedTime = 0.0f;
-    transitionTime = (std::max)(0.0f, blendTime);
-    blendFactor = 0.0f;
-    isAnimationFinished = false;
-    return true;
+	animationNodes[Origin] = finalNodes;
+	runtimeHeldPoseActive = false;
+	runtimeHeldPoseTransitionActive = true;
+	blendElapsedTime = 0.0f;
+	transitionTime = (std::max)(0.0f, blendTime);
+	blendFactor = 0.0f;
+	isAnimationFinished = false;
+	return true;
 }
 
 void AnimationController::ReleaseRuntimeHeldAnimationPose(const bool preserveBlendSource)
 {
-    if (!runtimeHeldPoseActive && !runtimeHeldPoseTransitionActive)
-        return;
+	if (!runtimeHeldPoseActive && !runtimeHeldPoseTransitionActive)
+		return;
 
-    if (preserveBlendSource && !runtimeHeldPoseNodes.empty())
-    {
-        finalNodes = runtimeHeldPoseNodes;
-        target_->SetModelNodes(finalNodes);
-        target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-        for (auto* extraTarget : extraTargets_)
-        {
-            extraTarget->SetModelNodes(finalNodes);
-            extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-        }
-    }
+	if (preserveBlendSource && !runtimeHeldPoseNodes.empty())
+	{
+		finalNodes = runtimeHeldPoseNodes;
+		target_->SetModelNodes(finalNodes);
+		target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		for (auto* extraTarget : extraTargets_)
+		{
+			extraTarget->SetModelNodes(finalNodes);
+			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		}
+	}
 
-    runtimeHeldPoseActive = false;
-    runtimeHeldPoseTransitionActive = false;
-    runtimeHeldPoseNodes.clear();
+	runtimeHeldPoseActive = false;
+	runtimeHeldPoseTransitionActive = false;
+	runtimeHeldPoseNodes.clear();
 }
 void AnimationController::ReleaseHeldAnimationPose(bool preserveBlendSource)
 {
-    if (preserveBlendSource && editorPreviewActive)
-    {
-        const auto heldNodes = finalNodes;
-        EndEditorPreview();
-        finalNodes = heldNodes;
-        target_->SetModelNodes(finalNodes);
-        target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-        for (auto* extraTarget : extraTargets_)
-        {
-            extraTarget->SetModelNodes(finalNodes);
-            extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-        }
-        return;
-    }
-    EndEditorPreview();
+	if (preserveBlendSource && editorPreviewActive)
+	{
+		const auto heldNodes = finalNodes;
+		EndEditorPreview();
+		finalNodes = heldNodes;
+		target_->SetModelNodes(finalNodes);
+		target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		for (auto* extraTarget : extraTargets_)
+		{
+			extraTarget->SetModelNodes(finalNodes);
+			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		}
+		return;
+	}
+	EndEditorPreview();
 }
 
 bool AnimationController::LatchCurrentVisualPose()
 {
-    if (editorPreviewActive || !target_ || !target_->model || finalNodes.size() != target_->model->GetNodes().size())
-        return false;
-    if (visualPoseLatchActive)
-    {
-        if (IsVisualPoseLatchValid()) return true;
-        ReleaseLatchedVisualPose();
-    }
-    visualPoseLatchNodes = finalNodes;
-    visualPoseLatchTargets.clear();
-    visualPoseLatchTargets.push_back({ target_, target_->model.get(), visualPoseLatchNodes.size() });
-    for (auto* extraTarget : extraTargets_)
-    {
-        if (!extraTarget || !extraTarget->model || extraTarget->model->GetNodes().size() != visualPoseLatchNodes.size())
-        {
-            visualPoseLatchNodes.clear(); visualPoseLatchTargets.clear(); return false;
-        }
-        visualPoseLatchTargets.push_back({ extraTarget, extraTarget->model.get(), visualPoseLatchNodes.size() });
-    }
-    visualPoseLatchActive = true;
-    ApplyRuntimeVisualPose();
-    return true;
+	if (editorPreviewActive || !target_ || !target_->model || finalNodes.size() != target_->model->GetNodes().size())
+		return false;
+	if (visualPoseLatchActive)
+	{
+		if (IsVisualPoseLatchValid()) return true;
+		ReleaseLatchedVisualPose();
+	}
+	visualPoseLatchNodes = finalNodes;
+	visualPoseLatchTargets.clear();
+	visualPoseLatchTargets.push_back({ target_, target_->model.get(), visualPoseLatchNodes.size() });
+	for (auto* extraTarget : extraTargets_)
+	{
+		if (!extraTarget || !extraTarget->model || extraTarget->model->GetNodes().size() != visualPoseLatchNodes.size())
+		{
+			visualPoseLatchNodes.clear(); visualPoseLatchTargets.clear(); return false;
+		}
+		visualPoseLatchTargets.push_back({ extraTarget, extraTarget->model.get(), visualPoseLatchNodes.size() });
+	}
+	visualPoseLatchActive = true;
+	ApplyRuntimeVisualPose();
+	return true;
 }
 
 void AnimationController::ReleaseLatchedVisualPose()
 {
-    const bool wasLatched = visualPoseLatchActive;
-    visualPoseLatchActive = false;
-    visualPoseLatchNodes.clear();
-    visualPoseLatchTargets.clear();
-    if (wasLatched && !editorPreviewActive) ApplyRuntimeVisualPose();
+	const bool wasLatched = visualPoseLatchActive;
+	visualPoseLatchActive = false;
+	visualPoseLatchNodes.clear();
+	visualPoseLatchTargets.clear();
+	if (wasLatched && !editorPreviewActive) ApplyRuntimeVisualPose();
 }
 
 bool AnimationController::IsVisualPoseLatchValid() const
 {
-    if (!visualPoseLatchActive || visualPoseLatchNodes.empty() || visualPoseLatchTargets.size() != extraTargets_.size() + 1) return false;
-    const auto isTargetValid = [this](const VisualPoseLatchTarget& latchTarget, SkeletalMeshComponent* expectedTarget)
-        { return expectedTarget && expectedTarget->model && latchTarget.target == expectedTarget && latchTarget.model == expectedTarget->model.get() && latchTarget.nodeCount == visualPoseLatchNodes.size() && expectedTarget->model->GetNodes().size() == latchTarget.nodeCount; };
-    if (!isTargetValid(visualPoseLatchTargets.front(), target_)) return false;
-    for (size_t index = 0; index < extraTargets_.size(); ++index) if (!isTargetValid(visualPoseLatchTargets[index + 1], extraTargets_[index])) return false;
-    return true;
+	if (!visualPoseLatchActive || visualPoseLatchNodes.empty() || visualPoseLatchTargets.size() != extraTargets_.size() + 1) return false;
+	const auto isTargetValid = [this](const VisualPoseLatchTarget& latchTarget, SkeletalMeshComponent* expectedTarget)
+		{ return expectedTarget && expectedTarget->model && latchTarget.target == expectedTarget && latchTarget.model == expectedTarget->model.get() && latchTarget.nodeCount == visualPoseLatchNodes.size() && expectedTarget->model->GetNodes().size() == latchTarget.nodeCount; };
+	if (!isTargetValid(visualPoseLatchTargets.front(), target_)) return false;
+	for (size_t index = 0; index < extraTargets_.size(); ++index) if (!isTargetValid(visualPoseLatchTargets[index + 1], extraTargets_[index])) return false;
+	return true;
 }
 
 const std::vector<InterleavedGltfModel::Node>& AnimationController::GetRuntimeVisualPoseNodes()
 {
-    if (visualPoseLatchActive && !IsVisualPoseLatchValid()) { visualPoseLatchActive = false; visualPoseLatchNodes.clear(); visualPoseLatchTargets.clear(); }
-    return visualPoseLatchActive ? visualPoseLatchNodes : finalNodes;
+	if (visualPoseLatchActive && !IsVisualPoseLatchValid()) { visualPoseLatchActive = false; visualPoseLatchNodes.clear(); visualPoseLatchTargets.clear(); }
+	return visualPoseLatchActive ? visualPoseLatchNodes : finalNodes;
 }
 
 void AnimationController::ApplyRuntimeVisualPose()
 {
-    if (!target_) return;
-    const auto& visualPoseNodes = GetRuntimeVisualPoseNodes();
-    target_->SetModelNodes(visualPoseNodes);
-    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-    for (auto* extraTarget : extraTargets_) { extraTarget->SetModelNodes(visualPoseNodes); extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None); }
+	if (!target_) return;
+	const auto& visualPoseNodes = GetRuntimeVisualPoseNodes();
+	target_->SetModelNodes(visualPoseNodes);
+	target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+	for (auto* extraTarget : extraTargets_) { extraTarget->SetModelNodes(visualPoseNodes); extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None); }
 }
 void AnimationController::UpdateEditorPreview(const float deltaTime)
 {
-    if (selectedTimelineClip >= target_->model->animations.size())
-        return;
+	if (selectedTimelineClip >= target_->model->animations.size())
+		return;
 
-    const float duration = target_->model->animations[selectedTimelineClip].duration;
-    if (editorPreviewPlaying && duration > FLT_EPSILON)
-    {
-        const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
-        const float curveRate = assetIt != animationNotifyAssets.end()
-            ? assetIt->second.speedCurve.Evaluate(editorPreviewTime) : 1.0f;
-        const float playRate = assetIt != animationNotifyAssets.end()
-            ? assetIt->second.playRate : 1.0f;
+	const float duration = target_->model->animations[selectedTimelineClip].duration;
+	if (editorPreviewPlaying && duration > FLT_EPSILON)
+	{
+		const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+		const float curveRate = assetIt != animationNotifyAssets.end()
+			? assetIt->second.speedCurve.Evaluate(editorPreviewTime) : 1.0f;
+		const float playRate = assetIt != animationNotifyAssets.end()
+			? assetIt->second.playRate : 1.0f;
 
-        previousEditorPreviewTime = editorPreviewTime;
-        const float advancedTime = editorPreviewTime + deltaTime * animationRate * playRate * curveRate;
-        bool wrapped = false;
-        editorPreviewTime = advancedTime;
+		previousEditorPreviewTime = editorPreviewTime;
+		const float advancedTime = editorPreviewTime + deltaTime * animationRate * playRate * curveRate;
+		bool wrapped = false;
+		editorPreviewTime = advancedTime;
 
-        if (editorPreviewTime >= duration)
-        {
-            if (isAnimationLoop)
-            {
-                editorPreviewTime = std::fmod(editorPreviewTime, duration);
-                wrapped = true;
-            }
-            else
-            {
-                editorPreviewTime = duration;
-                editorPreviewPlaying = false;
-                InputSystem::StopRumble();
-            }
-        }
+		if (editorPreviewTime >= duration)
+		{
+			if (isAnimationLoop)
+			{
+				editorPreviewTime = std::fmod(editorPreviewTime, duration);
+				wrapped = true;
+			}
+			else
+			{
+				editorPreviewTime = duration;
+				editorPreviewPlaying = false;
+				InputSystem::StopRumble();
+			}
+		}
 
-        if (wrapped)
-        {
-            ProcessEditorPreviewStatesForward(previousEditorPreviewTime, duration);
-            EndAllEditorPreviewStates();
-            SyncEditorPreviewStates(0.0f);
-            ProcessEditorPreviewStatesForward(0.0f, editorPreviewTime);
-        }
-        else
-        {
-            ProcessEditorPreviewStatesForward(previousEditorPreviewTime, editorPreviewTime);
-        }
-        SyncEditorPreviewStates(editorPreviewTime);
+		if (wrapped)
+		{
+			ProcessEditorPreviewStatesForward(previousEditorPreviewTime, duration);
+			EndAllEditorPreviewStates();
+			SyncEditorPreviewStates(0.0f);
+			ProcessEditorPreviewStatesForward(0.0f, editorPreviewTime);
+		}
+		else
+		{
+			ProcessEditorPreviewStatesForward(previousEditorPreviewTime, editorPreviewTime);
+		}
+		SyncEditorPreviewStates(editorPreviewTime);
 
-        if (wrapped || editorPreviewTime > previousEditorPreviewTime)
-        {
-            ProcessEditorPreviewEvents(
-                previousEditorPreviewTime, editorPreviewTime, duration, wrapped);
-        }
-    }
+		if (wrapped || editorPreviewTime > previousEditorPreviewTime)
+		{
+			ProcessEditorPreviewEvents(
+				previousEditorPreviewTime, editorPreviewTime, duration, wrapped);
+		}
+	}
 
-    ApplyEditorPreviewPose();
+	ApplyEditorPreviewPose();
 }
 bool AnimationController::IsEditorPreviewStateDispatchable(const AnimationNotifyState& state) const
 {
-    return state.type != AnimationNotifyState::Type::MotionWarp;
+	return state.type != AnimationNotifyState::Type::MotionWarp;
 }
 void AnimationController::BeginEditorPreviewState(const size_t stateIndex)
 {
-    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
-    if (assetIt == animationNotifyAssets.end() || stateIndex >= assetIt->second.notifyTrack.states.size())
-        return;
+	const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+	if (assetIt == animationNotifyAssets.end() || stateIndex >= assetIt->second.notifyTrack.states.size())
+		return;
 
-    const AnimationNotifyState& state = assetIt->second.notifyTrack.states[stateIndex];
-    if (!IsEditorPreviewStateDispatchable(state))
-        return;
-    if (activeEditorPreviewStates.emplace(stateIndex, state).second)
-        OnNotifyBegin(state);
+	const AnimationNotifyState& state = assetIt->second.notifyTrack.states[stateIndex];
+	if (!IsEditorPreviewStateDispatchable(state))
+		return;
+	if (activeEditorPreviewStates.emplace(stateIndex, state).second)
+		OnNotifyBegin(state);
 }
 void AnimationController::EndEditorPreviewState(const size_t stateIndex)
 {
-    const auto activeIt = activeEditorPreviewStates.find(stateIndex);
-    if (activeIt == activeEditorPreviewStates.end())
-        return;
+	const auto activeIt = activeEditorPreviewStates.find(stateIndex);
+	if (activeIt == activeEditorPreviewStates.end())
+		return;
 
-    OnNotifyEnd(activeIt->second);
-    activeEditorPreviewStates.erase(activeIt);
+	OnNotifyEnd(activeIt->second);
+	activeEditorPreviewStates.erase(activeIt);
 }
 void AnimationController::EndAllEditorPreviewStates()
 {
-    std::vector<size_t> activeIndices;
-    activeIndices.reserve(activeEditorPreviewStates.size());
-    for (const auto& [stateIndex, state] : activeEditorPreviewStates)
-        activeIndices.push_back(stateIndex);
-    for (const size_t stateIndex : activeIndices)
-        EndEditorPreviewState(stateIndex);
-    activeEditorPreviewStates.clear();
+	std::vector<size_t> activeIndices;
+	activeIndices.reserve(activeEditorPreviewStates.size());
+	for (const auto& [stateIndex, state] : activeEditorPreviewStates)
+		activeIndices.push_back(stateIndex);
+	for (const size_t stateIndex : activeIndices)
+		EndEditorPreviewState(stateIndex);
+	activeEditorPreviewStates.clear();
 }
 void AnimationController::SyncEditorPreviewStates(const float time)
 {
-    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
-    if (assetIt == animationNotifyAssets.end())
-    {
-        EndAllEditorPreviewStates();
-        return;
-    }
+	const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+	if (assetIt == animationNotifyAssets.end())
+	{
+		EndAllEditorPreviewStates();
+		return;
+	}
 
-    const auto& states = assetIt->second.notifyTrack.states;
-    std::vector<size_t> activeIndices;
-    activeIndices.reserve(activeEditorPreviewStates.size());
-    for (const auto& [stateIndex, state] : activeEditorPreviewStates)
-        activeIndices.push_back(stateIndex);
-    for (const size_t stateIndex : activeIndices)
-    {
-        const bool shouldRemainActive = stateIndex < states.size() &&
-            IsEditorPreviewStateDispatchable(states[stateIndex]) &&
-            time >= states[stateIndex].startTime && time < states[stateIndex].endTime;
-        if (!shouldRemainActive)
-            EndEditorPreviewState(stateIndex);
-    }
+	const auto& states = assetIt->second.notifyTrack.states;
+	std::vector<size_t> activeIndices;
+	activeIndices.reserve(activeEditorPreviewStates.size());
+	for (const auto& [stateIndex, state] : activeEditorPreviewStates)
+		activeIndices.push_back(stateIndex);
+	for (const size_t stateIndex : activeIndices)
+	{
+		const bool shouldRemainActive = stateIndex < states.size() &&
+			IsEditorPreviewStateDispatchable(states[stateIndex]) &&
+			time >= states[stateIndex].startTime && time < states[stateIndex].endTime;
+		if (!shouldRemainActive)
+			EndEditorPreviewState(stateIndex);
+	}
 
-    for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
-    {
-        const AnimationNotifyState& state = states[stateIndex];
-        if (IsEditorPreviewStateDispatchable(state) &&
-            time >= state.startTime && time < state.endTime)
-        {
-            BeginEditorPreviewState(stateIndex);
-        }
-    }
+	for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
+	{
+		const AnimationNotifyState& state = states[stateIndex];
+		if (IsEditorPreviewStateDispatchable(state) &&
+			time >= state.startTime && time < state.endTime)
+		{
+			BeginEditorPreviewState(stateIndex);
+		}
+	}
 }
 void AnimationController::ProcessEditorPreviewStatesForward(
-    const float previousTime, const float currentTime)
+	const float previousTime, const float currentTime)
 {
-    if (currentTime < previousTime)
-        return;
+	if (currentTime < previousTime)
+		return;
 
-    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
-    if (assetIt == animationNotifyAssets.end())
-        return;
+	const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+	if (assetIt == animationNotifyAssets.end())
+		return;
 
-    const auto& states = assetIt->second.notifyTrack.states;
-    for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
-    {
-        const AnimationNotifyState& state = states[stateIndex];
-        if (!IsEditorPreviewStateDispatchable(state))
-            continue;
+	const auto& states = assetIt->second.notifyTrack.states;
+	for (size_t stateIndex = 0; stateIndex < states.size(); ++stateIndex)
+	{
+		const AnimationNotifyState& state = states[stateIndex];
+		if (!IsEditorPreviewStateDispatchable(state))
+			continue;
 
-        if (!activeEditorPreviewStates.contains(stateIndex) &&
-            previousTime < state.startTime && currentTime >= state.startTime)
-        {
-            BeginEditorPreviewState(stateIndex);
-        }
-        if (activeEditorPreviewStates.contains(stateIndex) &&
-            previousTime < state.endTime && currentTime >= state.endTime)
-        {
-            EndEditorPreviewState(stateIndex);
-        }
-    }
+		if (!activeEditorPreviewStates.contains(stateIndex) &&
+			previousTime < state.startTime && currentTime >= state.startTime)
+		{
+			BeginEditorPreviewState(stateIndex);
+		}
+		if (activeEditorPreviewStates.contains(stateIndex) &&
+			previousTime < state.endTime && currentTime >= state.endTime)
+		{
+			EndEditorPreviewState(stateIndex);
+		}
+	}
 }
 void AnimationController::ProcessEditorPreviewEvents(
-    const float previousTime, const float currentTime,
-    const float duration, const bool wrapped)
+	const float previousTime, const float currentTime,
+	const float duration, const bool wrapped)
 {
-    if (!editorPreviewActive || !owner)
-        return;
+	if (!editorPreviewActive || !owner)
+		return;
 
-    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
-    if (assetIt == animationNotifyAssets.end())
-        return;
+	const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+	if (assetIt == animationNotifyAssets.end())
+		return;
 
-    for (const auto& event : assetIt->second.notifyTrack.events)
-    {
-        if (event.type != AnimationNotifyEvent::Type::PlaySE &&
-            event.type != AnimationNotifyEvent::Type::CameraShake &&
-            event.type != AnimationNotifyEvent::Type::SpawnEffect &&
-            event.type != AnimationNotifyEvent::Type::ControllerRumble)
-        {
-            continue;
-        }
+	for (const auto& event : assetIt->second.notifyTrack.events)
+	{
+		if (event.type != AnimationNotifyEvent::Type::PlaySE &&
+			event.type != AnimationNotifyEvent::Type::CameraShake &&
+			event.type != AnimationNotifyEvent::Type::SpawnEffect &&
+			event.type != AnimationNotifyEvent::Type::ControllerRumble)
+		{
+			continue;
+		}
 
-        const bool crossed = wrapped
-            ? ((previousTime < event.time && event.time <= duration) ||
-                (0.0f < event.time && event.time <= currentTime))
-            : (previousTime < event.time && currentTime >= event.time);
-        if (crossed)
-        {
-            owner->HandleCommonAnimationNotifyEvent(event);
-            owner->OnAnimationEditorPreviewEvent(event);
-        }
-    }
+		const bool crossed = wrapped
+			? ((previousTime < event.time && event.time <= duration) ||
+				(0.0f < event.time && event.time <= currentTime))
+			: (previousTime < event.time && currentTime >= event.time);
+		if (crossed)
+		{
+			owner->HandleCommonAnimationNotifyEvent(event);
+			owner->OnAnimationEditorPreviewEvent(event);
+		}
+	}
 }
 void AnimationController::ApplyEditorPreviewPose()
 {
-    if (!target_ || !target_->model || selectedTimelineClip >= target_->model->animations.size())
-        return;
+	if (!target_ || !target_->model || selectedTimelineClip >= target_->model->animations.size())
+		return;
 
-    target_->model->Animate(selectedTimelineClip, editorPreviewTime, finalNodes);
-    if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(finalNodes.size()))
-    {
-        finalNodes[rootNodeIndex].translation = zeroTranslation;
-        target_->model->CumulateTransforms(finalNodes);
-    }
+	target_->model->Animate(selectedTimelineClip, editorPreviewTime, finalNodes);
+	if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(finalNodes.size()))
+	{
+		finalNodes[rootNodeIndex].translation = zeroTranslation;
+		target_->model->CumulateTransforms(finalNodes);
+	}
 
-    ApplyLocalPoseOverride();
+	ApplyLocalPoseOverride();
 
-    target_->SetModelNodes(finalNodes);
-    target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-    for (auto* extraTarget : extraTargets_)
-    {
-        extraTarget->SetModelNodes(finalNodes);
-        extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-    }
-    DrawEditorPreviewStates();
+	target_->SetModelNodes(finalNodes);
+	target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+	for (auto* extraTarget : extraTargets_)
+	{
+		extraTarget->SetModelNodes(finalNodes);
+		extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+	}
+	DrawEditorPreviewStates();
 }
 
 void AnimationController::DrawEditorPreviewStates()
 {
-    if (!editorPreviewActive || !owner)
-        return;
+	if (!editorPreviewActive || !owner)
+		return;
 
-    const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
-    if (assetIt == animationNotifyAssets.end())
-        return;
+	const auto assetIt = animationNotifyAssets.find(selectedTimelineClip);
+	if (assetIt == animationNotifyAssets.end())
+		return;
 
-    for (const auto& state : assetIt->second.notifyTrack.states)
-    {
-        // Current-time sampling keeps Play, Pause and bidirectional Scrub identical.
-        if (editorPreviewTime < state.startTime || editorPreviewTime >= state.endTime)
-            continue;
+	for (const auto& state : assetIt->second.notifyTrack.states)
+	{
+		// Current-time sampling keeps Play, Pause and bidirectional Scrub identical.
+		if (editorPreviewTime < state.startTime || editorPreviewTime >= state.endTime)
+			continue;
 
-        const bool shouldDraw =
-            (state.type == AnimationNotifyState::Type::DangerWindow && editorPreviewShowDangerWindow) ||
-            (state.type == AnimationNotifyState::Type::HitBox && editorPreviewShowHitBox);
-        if (shouldDraw)
-            owner->DrawAnimationEditorPreviewState(state);
-    }
+		const bool shouldDraw =
+			(state.type == AnimationNotifyState::Type::DangerWindow && editorPreviewShowDangerWindow) ||
+			(state.type == AnimationNotifyState::Type::HitBox && editorPreviewShowHitBox);
+		if (shouldDraw)
+			owner->DrawAnimationEditorPreviewState(state);
+	}
 }
 void AnimationController::SetRemoveRootTranslationFromPose(
-    const std::string& animationName, bool remove)
+	const std::string& animationName, bool remove)
 {
-    const auto animationIt = animationNameToIndex_.find(animationName);
-    if (animationIt == animationNameToIndex_.end())
-    {
-        Logger::Warning(std::format(
-            "Animation not found for in-place setting: {}", animationName));
-        return;
-    }
+	const auto animationIt = animationNameToIndex_.find(animationName);
+	if (animationIt == animationNameToIndex_.end())
+	{
+		Logger::Warning(std::format(
+			"Animation not found for in-place setting: {}", animationName));
+		return;
+	}
 
-    if (remove)
-        removeRootTranslationFromPoseClips.emplace(animationIt->second);
-    else
-        removeRootTranslationFromPoseClips.erase(animationIt->second);
+	if (remove)
+		removeRootTranslationFromPoseClips.emplace(animationIt->second);
+	else
+		removeRootTranslationFromPoseClips.erase(animationIt->second);
 }
 bool AnimationController::PlayAnimationImmediate(
-    const std::string& animationName, const bool loop, const bool ignoreRootMotion)
+	const std::string& animationName, const bool loop, const bool ignoreRootMotion)
 {
-    if (!target_ || !target_->model)
-        return false;
+	if (!target_ || !target_->model)
+		return false;
 
-    const auto animationIt = animationNameToIndex_.find(animationName);
-    if (animationIt == animationNameToIndex_.end() ||
-        animationIt->second >= target_->model->animations.size())
-    {
-        Logger::Warning(std::format(
-            "Animation not found for immediate playback: {}", animationName));
-        return false;
-    }
+	const auto animationIt = animationNameToIndex_.find(animationName);
+	if (animationIt == animationNameToIndex_.end() ||
+		animationIt->second >= target_->model->animations.size())
+	{
+		Logger::Warning(std::format(
+			"Animation not found for immediate playback: {}", animationName));
+		return false;
+	}
 
-    EndEditorPreview();
+	EndEditorPreview();
 
-    const size_t requestedClip = animationIt->second;
-    currentAnimationRemovesRootTranslation =
-        removeRootTranslationFromPoseClips.contains(requestedClip);
-    removeRootTranslationDuringTransition = false;
-    suppressNormalRootMotionUntilTransitionCompleted = false;
-    suppressNormalRootMotionObservedTransition = false;
-    pendingLocomotionPhaseTransfer = false;
+	const size_t requestedClip = animationIt->second;
+	currentAnimationRemovesRootTranslation =
+		removeRootTranslationFromPoseClips.contains(requestedClip);
+	removeRootTranslationDuringTransition = false;
+	suppressNormalRootMotionUntilTransitionCompleted = false;
+	suppressNormalRootMotionObservedTransition = false;
+	pendingLocomotionPhaseTransfer = false;
 
-    useBlendSpace = false;
-    blendSpaceTransition = false;
-    blendSpaceElapsed = 0.0f;
+	useBlendSpace = false;
+	blendSpaceTransition = false;
+	blendSpaceElapsed = 0.0f;
 
-    animationClip = requestedClip;
-    animationNextClip = requestedClip;
-    notifyAnimationClip = requestedClip;
-    currentAnimationName = animationName;
-    animationTime = 0.0f;
-    prevAnimationTime = 0.0f;
-    playbackEndTime = -1.0f;
-    isAnimationLoop = loop;
-    isAnimationFinished = false;
-    requestStopLoop = false;
-    this->ignoreRootMotion = ignoreRootMotion;
-    resetRootMotionDelta = true;
+	animationClip = requestedClip;
+	animationNextClip = requestedClip;
+	notifyAnimationClip = requestedClip;
+	currentAnimationName = animationName;
+	animationTime = 0.0f;
+	prevAnimationTime = 0.0f;
+	playbackEndTime = -1.0f;
+	isAnimationLoop = loop;
+	isAnimationFinished = false;
+	requestStopLoop = false;
+	this->ignoreRootMotion = ignoreRootMotion;
+	resetRootMotionDelta = true;
 
-    transitionState = AnimationTransitionState::Completed;
-    isBlendingAnimation = false;
-    transitionTime = 0.0f;
-    blendElapsedTime = 0.0f;
-    blendFactor = 0.0f;
+	transitionState = AnimationTransitionState::Completed;
+	isBlendingAnimation = false;
+	transitionTime = 0.0f;
+	blendElapsedTime = 0.0f;
+	blendFactor = 0.0f;
 
-    target_->model->Animate(requestedClip, 0.0f, finalNodes);
-    animationNodes[Origin] = finalNodes;
-    animationNodes[Next] = finalNodes;
-    const InterleavedGltfModel::Node& rootNode = finalNodes.at(rootNodeIndex);
-    previousPosition = {
-        rootNode.globalTransform._41,
-        rootNode.globalTransform._42,
-        rootNode.globalTransform._43
-    };
-    zeroTranslation = rootNode.translation;
+	target_->model->Animate(requestedClip, 0.0f, finalNodes);
+	animationNodes[Origin] = finalNodes;
+	animationNodes[Next] = finalNodes;
+	const InterleavedGltfModel::Node& rootNode = finalNodes.at(rootNodeIndex);
+	previousPosition = {
+		rootNode.globalTransform._41,
+		rootNode.globalTransform._42,
+		rootNode.globalTransform._43
+	};
+	zeroTranslation = rootNode.translation;
 
-    ApplyRuntimeVisualPose();
+	ApplyRuntimeVisualPose();
 
-    owner->OnAnimationChanged();
-    return true;
+	owner->OnAnimationChanged();
+	return true;
 }
 
 void AnimationController::ResetRootMotion(const std::string& animationName, const bool loop, const bool isBlend, const float blendTime)
 {
 
-    const auto animationIt = animationNameToIndex_.find(animationName);
-    if (animationIt == animationNameToIndex_.end())
-    {
-        Logger::Warning(std::format(
-            "Animation not found: {}", animationName));
-        return;
-    }
+	const auto animationIt = animationNameToIndex_.find(animationName);
+	if (animationIt == animationNameToIndex_.end())
+	{
+		Logger::Warning(std::format(
+			"Animation not found: {}", animationName));
+		return;
+	}
 
-    const size_t requestedClip = animationIt->second;
-    const bool requestedRemoveRootTranslation =
-        removeRootTranslationFromPoseClips.contains(requestedClip);
-    const bool outgoingPoseRemovesRootTranslation =
-        currentAnimationRemovesRootTranslation ||
-        removeRootTranslationDuringTransition;
-    removeRootTranslationDuringTransition =
-        isBlend && (outgoingPoseRemovesRootTranslation ||
-            requestedRemoveRootTranslation);
-    currentAnimationRemovesRootTranslation =
-        requestedRemoveRootTranslation;
+	const size_t requestedClip = animationIt->second;
+	const bool requestedRemoveRootTranslation =
+		removeRootTranslationFromPoseClips.contains(requestedClip);
+	const bool outgoingPoseRemovesRootTranslation =
+		currentAnimationRemovesRootTranslation ||
+		removeRootTranslationDuringTransition;
+	removeRootTranslationDuringTransition =
+		isBlend && (outgoingPoseRemovesRootTranslation ||
+			requestedRemoveRootTranslation);
+	currentAnimationRemovesRootTranslation =
+		requestedRemoveRootTranslation;
 
-    this->ignoreRootMotion = ignoreRootMotion;
+	this->ignoreRootMotion = ignoreRootMotion;
 
-    // 同じ遷移先を遷移中に再要求しても、
-    // blendElapsedTime / blendFactor を先頭へ戻さない
-    if (transitionState != AnimationTransitionState::Completed &&
-        animationNextClip == requestedClip)
-    {
-        return;
-    }
+	// 同じ遷移先を遷移中に再要求しても、
+	// blendElapsedTime / blendFactor を先頭へ戻さない
+	if (transitionState != AnimationTransitionState::Completed &&
+		animationNextClip == requestedClip)
+	{
+		return;
+	}
 
-    notifyAnimationClip = requestedClip;
+	notifyAnimationClip = requestedClip;
 
-    float requestedAnimationTime = 0.0f;
+	float requestedAnimationTime = 0.0f;
 
 
-    const bool isLocomotionAnimation =
-        animationName == "Walk_Fwd" ||
-        animationName == "Jog_Fwd";
+	const bool isLocomotionAnimation =
+		animationName == "Walk_Fwd" ||
+		animationName == "Jog_Fwd";
 
-    const bool preserveLocomotionPhase =
-        pendingLocomotionPhaseTransfer &&
-        isLocomotionAnimation;
+	const bool preserveLocomotionPhase =
+		pendingLocomotionPhaseTransfer &&
+		isLocomotionAnimation;
 
-    const float requestedDuration =
-        target_->model->animations
-        .at(requestedClip).duration;
+	const float requestedDuration =
+		target_->model->animations
+		.at(requestedClip).duration;
 
-    if (preserveLocomotionPhase &&
-        requestedDuration > FLT_EPSILON)
-    {
-        requestedAnimationTime =
-            pendingLocomotionPhase *
-            requestedDuration;
-    }
+	if (preserveLocomotionPhase &&
+		requestedDuration > FLT_EPSILON)
+	{
+		requestedAnimationTime =
+			pendingLocomotionPhase *
+			requestedDuration;
+	}
 
-    // 次のアニメーション要求だけが対象
-    // Walk/Jog以外が来た場合も古い位相を残さない
-    pendingLocomotionPhaseTransfer = false;
+	// 次のアニメーション要求だけが対象
+	// Walk/Jog以外が来た場合も古い位相を残さない
+	pendingLocomotionPhaseTransfer = false;
 
-    animationTime = requestedAnimationTime;
-    prevAnimationTime = requestedAnimationTime;
-    playbackEndTime = -1.0f;
+	animationTime = requestedAnimationTime;
+	prevAnimationTime = requestedAnimationTime;
+	playbackEndTime = -1.0f;
 
-    animationNextClip = requestedClip;
+	animationNextClip = requestedClip;
 
-    this->isAnimationFinished = false;
-    currentAnimationName = animationName;
-    InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
-    resetRootMotionDelta = true;
-    zeroTranslation = node.translation;
-    isAnimationLoop = loop;
-    // アニメーションが変わった時にステートなどを変更する
-    owner->OnAnimationChanged();
+	this->isAnimationFinished = false;
+	currentAnimationName = animationName;
+	InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
+	resetRootMotionDelta = true;
+	zeroTranslation = node.translation;
+	isAnimationLoop = loop;
+	// アニメーションが変わった時にステートなどを変更する
+	owner->OnAnimationChanged();
 
-    if (isBlend)
-    {
-        isBlendingAnimation = true;
-        transitionTime = blendTime;
-        animationNodes[Origin] = finalNodes;
-        transitionState = AnimationController::AnimationTransitionState::NotStarted;
-    }
-    else
-    { // ブレンドしないなら現在のアニメーションを次のアニメーションに変更する
-        this->animationClip = requestedClip;
-        transitionState = AnimationController::AnimationTransitionState::Completed;
-    }
+	if (isBlend)
+	{
+		isBlendingAnimation = true;
+		transitionTime = blendTime;
+		animationNodes[Origin] = finalNodes;
+		transitionState = AnimationController::AnimationTransitionState::NotStarted;
+	}
+	else
+	{ // ブレンドしないなら現在のアニメーションを次のアニメーションに変更する
+		this->animationClip = requestedClip;
+		transitionState = AnimationController::AnimationTransitionState::Completed;
+	}
 }
 
 // ルートモーションをリセットする
 bool AnimationController::SetPlaybackRange(float startTime, float endTime)
 {
-    if (!target_ || !target_->model || isAnimationLoop)
-        return false;
+	if (!target_ || !target_->model || isAnimationLoop)
+		return false;
 
-    const size_t clip = transitionState == AnimationTransitionState::Completed
-        ? animationClip
-        : animationNextClip;
-    if (clip >= target_->model->animations.size())
-        return false;
+	const size_t clip = transitionState == AnimationTransitionState::Completed
+		? animationClip
+		: animationNextClip;
+	if (clip >= target_->model->animations.size())
+		return false;
 
-    const float duration = target_->model->animations.at(clip).duration;
-    const float clampedStart = std::clamp(startTime, 0.0f, duration);
-    const float clampedEnd = std::clamp(endTime, 0.0f, duration);
-    if (clampedEnd <= clampedStart)
-        return false;
+	const float duration = target_->model->animations.at(clip).duration;
+	const float clampedStart = std::clamp(startTime, 0.0f, duration);
+	const float clampedEnd = std::clamp(endTime, 0.0f, duration);
+	if (clampedEnd <= clampedStart)
+		return false;
 
-    animationTime = clampedStart;
-    prevAnimationTime = clampedStart;
-    playbackEndTime = clampedEnd;
-    resetRootMotionDelta = true;
-    return true;
+	animationTime = clampedStart;
+	prevAnimationTime = clampedStart;
+	playbackEndTime = clampedEnd;
+	resetRootMotionDelta = true;
+	return true;
 }
 
 
 void AnimationController::DrawImGui()
 {
 #ifdef USE_IMGUI
-    DrawTimeline();
+	DrawTimeline();
 #endif
 }
 
 void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, float duration)
 {
-    ImGui::Text("Timeline");
-    ImGui::Separator();
+	ImGui::Text("Timeline");
+	ImGui::Separator();
 
-    const float currentPreviewTime = editorPreviewActive ? editorPreviewTime : animationTime;
-    ImGui::Text(
-        "Time : %.3f / %.3f",
-        currentPreviewTime,
-        duration);
+	const float currentPreviewTime = editorPreviewActive ? editorPreviewTime : animationTime;
+	ImGui::Text(
+		"Time : %.3f / %.3f",
+		currentPreviewTime,
+		duration);
 
-    float scrubTime = currentPreviewTime;
-    if (ImGui::SliderFloat(
-        "##AnimationTime",
-        &scrubTime,
-        0.0f,
-        duration))
-    {
-        SetEditorPreviewTime(scrubTime);
-    }
-    std::string filename = "./Data/Animation/" + ownerName + "/" + asset.animationName + ".json";
+	float scrubTime = currentPreviewTime;
+	if (ImGui::SliderFloat(
+		"##AnimationTime",
+		&scrubTime,
+		0.0f,
+		duration))
+	{
+		SetEditorPreviewTime(scrubTime);
+	}
+	std::string filename = "./Data/Animation/" + ownerName + "/" + asset.animationName + ".json";
 
-    if (ImGui::Button("Save"))
-    {
-        SaveNotifyAsset(filename, asset);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Load"))
-    {
-        EndAllEditorPreviewStates();
-        LoadNotifyAsset(filename, asset);
-    }
+	if (ImGui::Button("Save"))
+	{
+		SaveNotifyAsset(filename, asset);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Load"))
+	{
+		EndAllEditorPreviewStates();
+		LoadNotifyAsset(filename, asset);
+	}
 
 
-    if (ImGui::Button("Play"))
-    {
-        BeginEditorPreview(true, false);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Pause"))
-    {
-        BeginEditorPreview(false, false);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Stop"))
-    {
-        BeginEditorPreview(false, true);
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Return to Runtime"))
-    {
-        EndEditorPreview();
-    }
-    ImGui::Text("Preview: %s", !editorPreviewActive ? "Runtime" : (editorPreviewPlaying ? "Playing" : "Paused"));
+	if (ImGui::Button("Play"))
+	{
+		BeginEditorPreview(true, false);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Pause"))
+	{
+		BeginEditorPreview(false, false);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Stop"))
+	{
+		BeginEditorPreview(false, true);
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Return to Runtime"))
+	{
+		EndEditorPreview();
+	}
+	ImGui::Text("Preview: %s", !editorPreviewActive ? "Runtime" : (editorPreviewPlaying ? "Playing" : "Paused"));
 
-    if (ImGui::CollapsingHeader("Preview Debug", ImGuiTreeNodeFlags_DefaultOpen))
-    {
-        ImGui::Checkbox("DangerWindow", &editorPreviewShowDangerWindow);
-        ImGui::Checkbox("HitBox", &editorPreviewShowHitBox);
-        ImGui::Checkbox(U8("HitBox Sweep\u8868\u793a"), &editorPreviewShowHitBoxSweep);
-    }
+	if (ImGui::CollapsingHeader("Preview Debug", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		ImGui::Checkbox("DangerWindow", &editorPreviewShowDangerWindow);
+		ImGui::Checkbox("HitBox", &editorPreviewShowHitBox);
+		ImGui::Checkbox(U8("HitBox Sweep\u8868\u793a"), &editorPreviewShowHitBoxSweep);
+	}
 
-    ImGui::Separator();
-    ImGui::Text("Animation Settings");
-    ImGui::Checkbox("Loop", &isAnimationLoop);
-    //ImGui::Checkbox("Loop", &asset.loop);
-    ImGui::SameLine();
-    ImGui::DragFloat("Play Rate", &asset.playRate, 0.01f, 0.1f, 3.0f);
-    // 次のコンボを設定する
-    if (ImGui::BeginCombo("Next Combo", asset.nextCombo.c_str()))
-    {
-        for (auto clip : animationAssetOrder)
-        {
-            auto& comboAsset = animationNotifyAssets[clip];
+	ImGui::Separator();
+	ImGui::Text("Animation Settings");
+	ImGui::Checkbox("Loop", &isAnimationLoop);
+	//ImGui::Checkbox("Loop", &asset.loop);
+	ImGui::SameLine();
+	ImGui::DragFloat("Play Rate", &asset.playRate, 0.01f, 0.1f, 3.0f);
+	// 次のコンボを設定する
+	if (ImGui::BeginCombo("Next Combo", asset.nextCombo.c_str()))
+	{
+		for (auto clip : animationAssetOrder)
+		{
+			auto& comboAsset = animationNotifyAssets[clip];
 
-            bool selected = comboAsset.animationName == asset.nextCombo;
+			bool selected = comboAsset.animationName == asset.nextCombo;
 
-            if (ImGui::Selectable(comboAsset.animationName.c_str(), selected))
-            {
-                asset.nextCombo = comboAsset.animationName;
-            }
+			if (ImGui::Selectable(comboAsset.animationName.c_str(), selected))
+			{
+				asset.nextCombo = comboAsset.animationName;
+			}
 
-            if (selected)
-                ImGui::SetItemDefaultFocus();
-        }
+			if (selected)
+				ImGui::SetItemDefaultFocus();
+		}
 
-        ImGui::EndCombo();
-    }
+		ImGui::EndCombo();
+	}
 }
 
 // タイムラインステート設定のImGui描画
 void AnimationController::DrawStateTimeline(AnimationNotifyAsset& asset, float duration, float width, float height, float labelWidth, float trackHeight, float handleSize, ImDrawList* drawList, ImVec2 timelinePos)
 {
-    ImGui::InvisibleButton("TimelineSeek", ImVec2(width, height));
+	ImGui::InvisibleButton("TimelineSeek", ImVec2(width, height));
 
-    if (ImGui::IsItemActive())
-    {
-        float mouseX = ImGui::GetIO().MousePos.x;
-        float normalized = (mouseX - timelinePos.x) / width;
-        normalized = std::clamp(normalized, 0.0f, 1.0f);
-        SetEditorPreviewTime(normalized * duration);
-    }
+	if (ImGui::IsItemActive())
+	{
+		float mouseX = ImGui::GetIO().MousePos.x;
+		float normalized = (mouseX - timelinePos.x) / width;
+		normalized = std::clamp(normalized, 0.0f, 1.0f);
+		SetEditorPreviewTime(normalized * duration);
+	}
 
-    drawList->AddRectFilled(
-        timelinePos,
-        ImVec2(
-            timelinePos.x + width,
-            timelinePos.y + height),
-        IM_COL32(60, 60, 60, 255));
+	drawList->AddRectFilled(
+		timelinePos,
+		ImVec2(
+			timelinePos.x + width,
+			timelinePos.y + height),
+		IM_COL32(60, 60, 60, 255));
 
-    for (int stateIndex = 0; stateIndex < asset.notifyTrack.states.size(); stateIndex++)
-    {
-        ImU32 color = (selectedStateIndex == stateIndex) ? IM_COL32(0, 255, 100, 255) : IM_COL32(0, 180, 0, 255);
-        auto& state = asset.notifyTrack.states[stateIndex];
-        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2);
-        ImGui::Text("%s", magic_enum::enum_name(state.type).data());
-        ImGui::SameLine(labelWidth);
-        ImVec2 rowPos = ImGui::GetCursorScreenPos();
-        drawList->AddRectFilled(rowPos, ImVec2(rowPos.x + width, rowPos.y + trackHeight), IM_COL32(40, 40, 40, 255));
+	for (int stateIndex = 0; stateIndex < asset.notifyTrack.states.size(); stateIndex++)
+	{
+		ImU32 color = (selectedStateIndex == stateIndex) ? IM_COL32(0, 255, 100, 255) : IM_COL32(0, 180, 0, 255);
+		auto& state = asset.notifyTrack.states[stateIndex];
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2);
+		ImGui::Text("%s", magic_enum::enum_name(state.type).data());
+		ImGui::SameLine(labelWidth);
+		ImVec2 rowPos = ImGui::GetCursorScreenPos();
+		drawList->AddRectFilled(rowPos, ImVec2(rowPos.x + width, rowPos.y + trackHeight), IM_COL32(40, 40, 40, 255));
 
-        float x0 = rowPos.x + (state.startTime / duration) * width;
-        float x1 = rowPos.x + (state.endTime / duration) * width;
-        float barWidth = x1 - x0;
+		float x0 = rowPos.x + (state.startTime / duration) * width;
+		float x1 = rowPos.x + (state.endTime / duration) * width;
+		float barWidth = x1 - x0;
 
-        //---------------------------------
-        // Move
-        //---------------------------------
+		//---------------------------------
+		// Move
+		//---------------------------------
 
-        {
-            char id[64];
-            sprintf_s(id, "Move_%d", stateIndex);
+		{
+			char id[64];
+			sprintf_s(id, "Move_%d", stateIndex);
 
-            ImGui::SetCursorScreenPos(ImVec2(x0, rowPos.y));
+			ImGui::SetCursorScreenPos(ImVec2(x0, rowPos.y));
 
-            ImGui::InvisibleButton(id, ImVec2(barWidth, trackHeight));
+			ImGui::InvisibleButton(id, ImVec2(barWidth, trackHeight));
 
-            if (ImGui::IsItemClicked())
-            {
-                selectedStateIndex = stateIndex;
-                selectedEventIndex = -1;
-                selectedCurveKey = -1;
-            }
+			if (ImGui::IsItemClicked())
+			{
+				selectedStateIndex = stateIndex;
+				selectedEventIndex = -1;
+				selectedCurveKey = -1;
+			}
 
-            if (ImGui::IsItemActive())
-            {
-                float deltaTime =
-                    (ImGui::GetIO().MouseDelta.x
-                        / width)
-                    * duration;
+			if (ImGui::IsItemActive())
+			{
+				float deltaTime =
+					(ImGui::GetIO().MouseDelta.x
+						/ width)
+					* duration;
 
-                state.startTime += deltaTime;
-                state.endTime += deltaTime;
+				state.startTime += deltaTime;
+				state.endTime += deltaTime;
 
-                float length =
-                    state.endTime
-                    - state.startTime;
+				float length =
+					state.endTime
+					- state.startTime;
 
-                state.startTime =
-                    std::clamp(
-                        state.startTime,
-                        0.0f,
-                        duration - length);
+				state.startTime =
+					std::clamp(
+						state.startTime,
+						0.0f,
+						duration - length);
 
-                state.endTime =
-                    state.startTime
-                    + length;
-            }
-        }
+				state.endTime =
+					state.startTime
+					+ length;
+			}
+		}
 
-        //---------------------------------
-        // Left Handle
-        //---------------------------------
+		//---------------------------------
+		// Left Handle
+		//---------------------------------
 
-        {
-            char id[64];
-            sprintf_s(id,
-                "Left_%d",
-                stateIndex);
+		{
+			char id[64];
+			sprintf_s(id,
+				"Left_%d",
+				stateIndex);
 
-            ImGui::SetCursorScreenPos(
-                ImVec2(
-                    x0 - handleSize,
-                    rowPos.y));
+			ImGui::SetCursorScreenPos(
+				ImVec2(
+					x0 - handleSize,
+					rowPos.y));
 
-            ImGui::InvisibleButton(
-                id,
-                ImVec2(
-                    handleSize * 2.0f,
-                    trackHeight));
+			ImGui::InvisibleButton(
+				id,
+				ImVec2(
+					handleSize * 2.0f,
+					trackHeight));
 
-            if (ImGui::IsItemActive())
-            {
-                float deltaTime =
-                    (ImGui::GetIO().MouseDelta.x
-                        / width)
-                    * duration;
+			if (ImGui::IsItemActive())
+			{
+				float deltaTime =
+					(ImGui::GetIO().MouseDelta.x
+						/ width)
+					* duration;
 
-                state.startTime += deltaTime;
+				state.startTime += deltaTime;
 
-                state.startTime =
-                    std::clamp(
-                        state.startTime,
-                        0.0f,
-                        state.endTime - 0.01f);
-            }
-        }
+				state.startTime =
+					std::clamp(
+						state.startTime,
+						0.0f,
+						state.endTime - 0.01f);
+			}
+		}
 
-        //---------------------------------
-        // Right Handle
-        //---------------------------------
+		//---------------------------------
+		// Right Handle
+		//---------------------------------
 
-        {
-            char id[64];
-            sprintf_s(id,
-                "Right_%d",
-                stateIndex);
+		{
+			char id[64];
+			sprintf_s(id,
+				"Right_%d",
+				stateIndex);
 
-            ImGui::SetCursorScreenPos(
-                ImVec2(
-                    x1 - handleSize,
-                    rowPos.y));
+			ImGui::SetCursorScreenPos(
+				ImVec2(
+					x1 - handleSize,
+					rowPos.y));
 
-            ImGui::InvisibleButton(
-                id,
-                ImVec2(
-                    handleSize * 2.0f,
-                    trackHeight));
+			ImGui::InvisibleButton(
+				id,
+				ImVec2(
+					handleSize * 2.0f,
+					trackHeight));
 
-            if (ImGui::IsItemActive())
-            {
-                float deltaTime =
-                    (ImGui::GetIO().MouseDelta.x
-                        / width)
-                    * duration;
+			if (ImGui::IsItemActive())
+			{
+				float deltaTime =
+					(ImGui::GetIO().MouseDelta.x
+						/ width)
+					* duration;
 
-                state.endTime += deltaTime;
+				state.endTime += deltaTime;
 
-                state.endTime =
-                    std::clamp(
-                        state.endTime,
-                        state.startTime + 0.01f,
-                        duration);
-            }
-        }
+				state.endTime =
+					std::clamp(
+						state.endTime,
+						state.startTime + 0.01f,
+						duration);
+			}
+		}
 
-        //---------------------------------
-        // Draw State
-        //---------------------------------
+		//---------------------------------
+		// Draw State
+		//---------------------------------
 
-        drawList->AddRectFilled(
-            ImVec2(x0, rowPos.y),
-            ImVec2(x1, rowPos.y + trackHeight),
-            color);
+		drawList->AddRectFilled(
+			ImVec2(x0, rowPos.y),
+			ImVec2(x1, rowPos.y + trackHeight),
+			color);
 
-        char stateText[64];
+		char stateText[64];
 
-        sprintf_s(
-            stateText,
-            "%.2f - %.2f",
-            state.startTime,
-            state.endTime);
+		sprintf_s(
+			stateText,
+			"%.2f - %.2f",
+			state.startTime,
+			state.endTime);
 
-        ImVec2 textSize =
-            ImGui::CalcTextSize(stateText);
+		ImVec2 textSize =
+			ImGui::CalcTextSize(stateText);
 
-        drawList->AddText(
-            ImVec2(
-                (x0 + x1) * 0.5f - textSize.x * 0.5f,
-                rowPos.y + 4),
-            IM_COL32(255, 255, 255, 255),
-            stateText);
+		drawList->AddText(
+			ImVec2(
+				(x0 + x1) * 0.5f - textSize.x * 0.5f,
+				rowPos.y + 4),
+			IM_COL32(255, 255, 255, 255),
+			stateText);
 
-        drawList->AddRectFilled(
-            ImVec2(
-                x0 - 3,
-                rowPos.y),
-            ImVec2(
-                x0 + 3,
-                rowPos.y + trackHeight),
-            IM_COL32(
-                255,
-                255,
-                255,
-                255));
+		drawList->AddRectFilled(
+			ImVec2(
+				x0 - 3,
+				rowPos.y),
+			ImVec2(
+				x0 + 3,
+				rowPos.y + trackHeight),
+			IM_COL32(
+				255,
+				255,
+				255,
+				255));
 
-        drawList->AddRectFilled(
-            ImVec2(
-                x1 - 3,
-                rowPos.y),
-            ImVec2(
-                x1 + 3,
-                rowPos.y + trackHeight),
-            IM_COL32(
-                255,
-                255,
-                255,
-                255));
-    }
+		drawList->AddRectFilled(
+			ImVec2(
+				x1 - 3,
+				rowPos.y),
+			ImVec2(
+				x1 + 3,
+				rowPos.y + trackHeight),
+			IM_COL32(
+				255,
+				255,
+				255,
+				255));
+	}
 }
 
 // タイムラインイベント設定のImGui描画
 void AnimationController::DrawEventTimeline(AnimationNotifyAsset& asset, float duration, float width, float labelWidth, float trackHeight, ImDrawList* drawList)
 {
-    ImGui::Text("Events");
-    ImGui::SameLine(labelWidth);
+	ImGui::Text("Events");
+	ImGui::SameLine(labelWidth);
 
-    ImVec2 eventRow = ImGui::GetCursorScreenPos();
-    float eventAreaHeight = std::max<float>(trackHeight, trackHeight * (float)asset.notifyTrack.events.size());
-    drawList->AddRectFilled(eventRow, ImVec2(eventRow.x + width, eventRow.y + eventAreaHeight), IM_COL32(40, 40, 40, 255));
-    for (int eventIndex = 0; eventIndex < asset.notifyTrack.events.size(); eventIndex++)
-    {
-        auto& event = asset.notifyTrack.events[eventIndex];
+	ImVec2 eventRow = ImGui::GetCursorScreenPos();
+	float eventAreaHeight = std::max<float>(trackHeight, trackHeight * (float)asset.notifyTrack.events.size());
+	drawList->AddRectFilled(eventRow, ImVec2(eventRow.x + width, eventRow.y + eventAreaHeight), IM_COL32(40, 40, 40, 255));
+	for (int eventIndex = 0; eventIndex < asset.notifyTrack.events.size(); eventIndex++)
+	{
+		auto& event = asset.notifyTrack.events[eventIndex];
 
-        float x = eventRow.x + (event.time / duration) * width;
-        float y = eventRow.y + eventIndex * trackHeight;
-        char id[64];
-        sprintf_s(id, "Event_%d", eventIndex);
+		float x = eventRow.x + (event.time / duration) * width;
+		float y = eventRow.y + eventIndex * trackHeight;
+		char id[64];
+		sprintf_s(id, "Event_%d", eventIndex);
 
-        ImGui::SetCursorScreenPos(ImVec2(x - 6, y));
-        ImGui::InvisibleButton(id, ImVec2(12, trackHeight));
+		ImGui::SetCursorScreenPos(ImVec2(x - 6, y));
+		ImGui::InvisibleButton(id, ImVec2(12, trackHeight));
 
-        if (ImGui::IsItemClicked())
-        {
-            selectedEventIndex = eventIndex;
-            selectedStateIndex = -1;
-            selectedCurveKey = -1;
-        }
+		if (ImGui::IsItemClicked())
+		{
+			selectedEventIndex = eventIndex;
+			selectedStateIndex = -1;
+			selectedCurveKey = -1;
+		}
 
-        if (ImGui::IsItemActive())
-        {
-            float deltaTime = (ImGui::GetIO().MouseDelta.x / width) * duration;
+		if (ImGui::IsItemActive())
+		{
+			float deltaTime = (ImGui::GetIO().MouseDelta.x / width) * duration;
 
-            event.time += deltaTime;
+			event.time += deltaTime;
 
-            event.time = std::clamp(event.time, 0.0f, duration);
-        }
+			event.time = std::clamp(event.time, 0.0f, duration);
+		}
 
-        drawList->AddLine(ImVec2(x, y), ImVec2(x, y + trackHeight), IM_COL32(255, 255, 0, 255), 3.0f);
+		drawList->AddLine(ImVec2(x, y), ImVec2(x, y + trackHeight), IM_COL32(255, 255, 0, 255), 3.0f);
 
-        char eventText[32];
+		char eventText[32];
 
-        sprintf_s(eventText, "%.2f", event.time);
+		sprintf_s(eventText, "%.2f", event.time);
 
-        drawList->AddText(ImVec2(x + 5, y), IM_COL32(255, 255, 0, 255), eventText);
-    }
-    ImGui::Dummy(ImVec2(width, trackHeight * asset.notifyTrack.events.size()));
+		drawList->AddText(ImVec2(x + 5, y), IM_COL32(255, 255, 0, 255), eventText);
+	}
+	ImGui::Dummy(ImVec2(width, trackHeight * asset.notifyTrack.events.size()));
 
 
-    ImVec2 popupPos = eventRow;
-    ImGui::SetCursorScreenPos(popupPos);
-    ImGui::Dummy(ImVec2(width, eventAreaHeight));
+	ImVec2 popupPos = eventRow;
+	ImGui::SetCursorScreenPos(popupPos);
+	ImGui::Dummy(ImVec2(width, eventAreaHeight));
 
-    ImGui::InvisibleButton("EventTrackArea", ImVec2(width, eventAreaHeight));
+	ImGui::InvisibleButton("EventTrackArea", ImVec2(width, eventAreaHeight));
 
-    if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-    {
-        float mouseX = ImGui::GetIO().MousePos.x;
-        popupCreateTime = ((mouseX - eventRow.x) / width) * duration;
-        popupCreateTime = std::clamp(popupCreateTime, 0.0f, duration);
-        ImGui::OpenPopup("EventPopup");
-    }
-    if (ImGui::BeginPopup("EventPopup"))
-    {
-        if (ImGui::BeginMenu("Add Event"))
-        {
-            for (auto type : magic_enum::enum_values<AnimationNotifyEvent::Type>())
-            {
-                if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
-                {
-                    AddEvent(asset.notifyTrack, type, popupCreateTime);
-                }
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Add State"))
-        {
-            for (auto type : magic_enum::enum_values<AnimationNotifyState::Type>())
-            {
-                if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
-                {
-                    AddState(asset.notifyTrack, type, popupCreateTime);
-                }
-            }
-            ImGui::EndMenu();
-        }
-        ImGui::EndPopup();
-    }
+	if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+	{
+		float mouseX = ImGui::GetIO().MousePos.x;
+		popupCreateTime = ((mouseX - eventRow.x) / width) * duration;
+		popupCreateTime = std::clamp(popupCreateTime, 0.0f, duration);
+		ImGui::OpenPopup("EventPopup");
+	}
+	if (ImGui::BeginPopup("EventPopup"))
+	{
+		if (ImGui::BeginMenu("Add Event"))
+		{
+			for (auto type : magic_enum::enum_values<AnimationNotifyEvent::Type>())
+			{
+				if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
+				{
+					AddEvent(asset.notifyTrack, type, popupCreateTime);
+				}
+			}
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Add State"))
+		{
+			for (auto type : magic_enum::enum_values<AnimationNotifyState::Type>())
+			{
+				if (ImGui::MenuItem(magic_enum::enum_name(type).data()))
+				{
+					AddState(asset.notifyTrack, type, popupCreateTime);
+				}
+			}
+			ImGui::EndMenu();
+		}
+		ImGui::EndPopup();
+	}
 
 }
 
 // カーブエディタのImGui描画
 void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float duration, float width, float height, ImDrawList* drawList, ImVec2 timelinePos)
 {
-    float curveHeight = 150.0f;
-    ImVec2 curvePos = ImGui::GetCursorScreenPos();
-    curvePos.y += 50.0f;
-    // 背景
-    drawList->AddRectFilled(curvePos, ImVec2(curvePos.x + width, curvePos.y + curveHeight), IM_COL32(35, 35, 35, 255));
+	float curveHeight = 150.0f;
+	ImVec2 curvePos = ImGui::GetCursorScreenPos();
+	curvePos.y += 50.0f;
+	// 背景
+	drawList->AddRectFilled(curvePos, ImVec2(curvePos.x + width, curvePos.y + curveHeight), IM_COL32(35, 35, 35, 255));
 
-    // 縦線
-    for (int i = 0; i <= 10; i++)
-    {
-        float x = curvePos.x + width * i / 10.0f;
+	// 縦線
+	for (int i = 0; i <= 10; i++)
+	{
+		float x = curvePos.x + width * i / 10.0f;
 
-        drawList->AddLine(ImVec2(x, curvePos.y), ImVec2(x, curvePos.y + curveHeight), IM_COL32(70, 70, 70, 255));
-    }
+		drawList->AddLine(ImVec2(x, curvePos.y), ImVec2(x, curvePos.y + curveHeight), IM_COL32(70, 70, 70, 255));
+	}
 
-    // 横線
-    for (int i = 0; i <= 4; i++)
-    {
-        float y = curvePos.y + curveHeight * i / 4.0f;
+	// 横線
+	for (int i = 0; i <= 4; i++)
+	{
+		float y = curvePos.y + curveHeight * i / 4.0f;
 
-        drawList->AddLine(ImVec2(curvePos.x, y), ImVec2(curvePos.x + width, y), IM_COL32(70, 70, 70, 255));
-    }
+		drawList->AddLine(ImVec2(curvePos.x, y), ImVec2(curvePos.x + width, y), IM_COL32(70, 70, 70, 255));
+	}
 
-    float maxSpeed = 3.0f;
+	float maxSpeed = 3.0f;
 
-    for (int i = 0; i < asset.speedCurve.keys.size(); ++i)
-    {
-        auto& key = asset.speedCurve.keys[i];
-        float x = curvePos.x + (key.time / duration) * width;
-        float y = curvePos.y + (1.0f - key.value / maxSpeed) * curveHeight;
+	for (int i = 0; i < asset.speedCurve.keys.size(); ++i)
+	{
+		auto& key = asset.speedCurve.keys[i];
+		float x = curvePos.x + (key.time / duration) * width;
+		float y = curvePos.y + (1.0f - key.value / maxSpeed) * curveHeight;
 
-        // 当たり判定を追加
-        char id[32];
-        sprintf_s(id, "CurveKey_%d", i);
-        ImGui::SetCursorScreenPos(ImVec2(x - 6, y - 6));
-        ImGui::InvisibleButton(id, ImVec2(20, 20));
+		// 当たり判定を追加
+		char id[32];
+		sprintf_s(id, "CurveKey_%d", i);
+		ImGui::SetCursorScreenPos(ImVec2(x - 6, y - 6));
+		ImGui::InvisibleButton(id, ImVec2(20, 20));
 
-        if (ImGui::IsItemClicked())
-        {
-            selectedCurveKey = i;
-            selectedStateIndex = -1;
-            selectedEventIndex = -1;
-        }
+		if (ImGui::IsItemClicked())
+		{
+			selectedCurveKey = i;
+			selectedStateIndex = -1;
+			selectedEventIndex = -1;
+		}
 
-        if (ImGui::IsItemActive())
-        {
-            float delta = (ImGui::GetIO().MouseDelta.x / width) * duration;
-            key.time += delta;
-            float deltaValue = -ImGui::GetIO().MouseDelta.y / curveHeight * maxSpeed;
-            key.value += deltaValue;
+		if (ImGui::IsItemActive())
+		{
+			float delta = (ImGui::GetIO().MouseDelta.x / width) * duration;
+			key.time += delta;
+			float deltaValue = -ImGui::GetIO().MouseDelta.y / curveHeight * maxSpeed;
+			key.value += deltaValue;
 
-            key.time = std::clamp(key.time, 0.0f, duration);
-            key.value = std::clamp(key.value, 0.0f, maxSpeed);
-        }
+			key.time = std::clamp(key.time, 0.0f, duration);
+			key.value = std::clamp(key.value, 0.0f, maxSpeed);
+		}
 
-        if (ImGui::IsItemDeactivated())
-        {
-            float selectedTime = key.time;
-            float selectedValue = key.value;
+		if (ImGui::IsItemDeactivated())
+		{
+			float selectedTime = key.time;
+			float selectedValue = key.value;
 
-            std::sort(
-                asset.speedCurve.keys.begin(),
-                asset.speedCurve.keys.end(),
-                [](const CurveKey& a, const CurveKey& b)
-                {
-                    return a.time < b.time;
-                });
+			std::sort(
+				asset.speedCurve.keys.begin(),
+				asset.speedCurve.keys.end(),
+				[](const CurveKey& a, const CurveKey& b)
+				{
+					return a.time < b.time;
+				});
 
-            for (int j = 0; j < asset.speedCurve.keys.size(); j++)
-            {
-                if (asset.speedCurve.keys[j].time == selectedTime &&
-                    asset.speedCurve.keys[j].value == selectedValue)
-                {
-                    selectedCurveKey = j;
-                    break;
-                }
-            }
-        }
-
-
-        ImU32 color = selectedCurveKey == i ? IM_COL32(255, 255, 0, 255) : IM_COL32(255, 100, 0, 255);
-        drawList->AddCircleFilled(ImVec2(x, y), 5, color);
-
-    }
-
-    ImGui::Text("Selected = %d", selectedCurveKey);
-    if (selectedCurveKey >= 0 && selectedCurveKey < asset.speedCurve.keys.size())
-    {
-        auto& selectedKey = asset.speedCurve.keys[selectedCurveKey];
-        ImGui::Text("Selected Key");
-        ImGui::Text("Time  = %.3f", selectedKey.time);
-        ImGui::Text("Speed = %.3f", selectedKey.value);
-    }
-    else
-    {
-        ImGui::Text("No Key Selected");
-    }
-
-    ImGui::SetCursorScreenPos(curvePos);
-    for (size_t i = 0; i + 1 < asset.speedCurve.keys.size(); i++)
-    {
-        auto& a = asset.speedCurve.keys[i];
-        float ax = curvePos.x + (a.time / duration) * width;
-        float ay = curvePos.y + (1.0f - a.value / maxSpeed) * curveHeight;
-
-        auto& b = asset.speedCurve.keys[i + 1];
-        float bx = curvePos.x + (b.time / duration) * width;
-        float by = curvePos.y + (1.0f - b.value / maxSpeed) * curveHeight;
-
-        drawList->AddLine(ImVec2(ax, ay), ImVec2(bx, by), IM_COL32(0, 255, 255, 255), 2.0f);
-    }
-
-    if (ImGui::IsKeyPressed(ImGuiKey_Delete))
-    {
-        if (selectedCurveKey >= 0)
-        {
-            asset.speedCurve.keys.erase(asset.speedCurve.keys.begin() + selectedCurveKey);
-            selectedCurveKey = -1;
-        }
-    }
-
-    ImVec2 mousePos = ImGui::GetIO().MousePos;
-    bool inside = mousePos.x >= curvePos.x && mousePos.x <= curvePos.x + width && mousePos.y >= curvePos.y && mousePos.y <= curvePos.y + curveHeight;
-    if (ImGui::IsMouseReleased(ImGuiMouseButton_Right) && inside)
-    {// カーブエディタ内なら
-        float time = (mousePos.x - curvePos.x) / width;
-        time = std::clamp(time, 0.0f, 1.0f);
-        time *= duration;
-        float value = 1.0f - (mousePos.y - curvePos.y) / curveHeight;
-        value *= maxSpeed;
-        value = std::clamp(value, 0.0f, maxSpeed);
-
-        curveCreateTime = time;
-        curveCreateValue = value;
-        ImGui::OpenPopup("CurvePopup");
-
-    }
+			for (int j = 0; j < asset.speedCurve.keys.size(); j++)
+			{
+				if (asset.speedCurve.keys[j].time == selectedTime &&
+					asset.speedCurve.keys[j].value == selectedValue)
+				{
+					selectedCurveKey = j;
+					break;
+				}
+			}
+		}
 
 
+		ImU32 color = selectedCurveKey == i ? IM_COL32(255, 255, 0, 255) : IM_COL32(255, 100, 0, 255);
+		drawList->AddCircleFilled(ImVec2(x, y), 5, color);
 
+	}
 
-    if (ImGui::BeginPopup("CurvePopup"))
-    {
-        if (ImGui::MenuItem("Add Key"))
-        {
-            CurveKey key;
+	ImGui::Text("Selected = %d", selectedCurveKey);
+	if (selectedCurveKey >= 0 && selectedCurveKey < asset.speedCurve.keys.size())
+	{
+		auto& selectedKey = asset.speedCurve.keys[selectedCurveKey];
+		ImGui::Text("Selected Key");
+		ImGui::Text("Time  = %.3f", selectedKey.time);
+		ImGui::Text("Speed = %.3f", selectedKey.value);
+	}
+	else
+	{
+		ImGui::Text("No Key Selected");
+	}
 
-            key.time = curveCreateTime;
-            key.value = curveCreateValue;
+	ImGui::SetCursorScreenPos(curvePos);
+	for (size_t i = 0; i + 1 < asset.speedCurve.keys.size(); i++)
+	{
+		auto& a = asset.speedCurve.keys[i];
+		float ax = curvePos.x + (a.time / duration) * width;
+		float ay = curvePos.y + (1.0f - a.value / maxSpeed) * curveHeight;
 
-            asset.speedCurve.keys.push_back(key);
+		auto& b = asset.speedCurve.keys[i + 1];
+		float bx = curvePos.x + (b.time / duration) * width;
+		float by = curvePos.y + (1.0f - b.value / maxSpeed) * curveHeight;
 
-            std::sort(
-                asset.speedCurve.keys.begin(),
-                asset.speedCurve.keys.end(),
-                [](const CurveKey& a, const CurveKey& b)
-                {
-                    return a.time < b.time;
-                });
+		drawList->AddLine(ImVec2(ax, ay), ImVec2(bx, by), IM_COL32(0, 255, 255, 255), 2.0f);
+	}
 
-            for (int i = 0; i < asset.speedCurve.keys.size(); i++)
-            {// 追加したキーを自動で選択する
-                if (asset.speedCurve.keys[i].time == curveCreateTime &&
-                    asset.speedCurve.keys[i].value == curveCreateValue)
-                {
-                    selectedCurveKey = i;
-                    break;
-                }
-            }
-        }
-        ImGui::EndPopup();
-    }
+	if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+	{
+		if (selectedCurveKey >= 0)
+		{
+			asset.speedCurve.keys.erase(asset.speedCurve.keys.begin() + selectedCurveKey);
+			selectedCurveKey = -1;
+		}
+	}
+
+	ImVec2 mousePos = ImGui::GetIO().MousePos;
+	bool inside = mousePos.x >= curvePos.x && mousePos.x <= curvePos.x + width && mousePos.y >= curvePos.y && mousePos.y <= curvePos.y + curveHeight;
+	if (ImGui::IsMouseReleased(ImGuiMouseButton_Right) && inside)
+	{// カーブエディタ内なら
+		float time = (mousePos.x - curvePos.x) / width;
+		time = std::clamp(time, 0.0f, 1.0f);
+		time *= duration;
+		float value = 1.0f - (mousePos.y - curvePos.y) / curveHeight;
+		value *= maxSpeed;
+		value = std::clamp(value, 0.0f, maxSpeed);
+
+		curveCreateTime = time;
+		curveCreateValue = value;
+		ImGui::OpenPopup("CurvePopup");
+
+	}
 
 
 
-    if (asset.animationClip == animationClip)
-    {
-        float currentX =
-            timelinePos.x +
-            ((editorPreviewActive ? editorPreviewTime : animationTime) / duration)
-            * width;
 
-        drawList->AddLine(
-            ImVec2(currentX, curvePos.y),
-            ImVec2(currentX, curvePos.y + height),
-            IM_COL32(255, 0, 0, 255),
-            3.0f);
+	if (ImGui::BeginPopup("CurvePopup"))
+	{
+		if (ImGui::MenuItem("Add Key"))
+		{
+			CurveKey key;
 
-        char currentText[32];
+			key.time = curveCreateTime;
+			key.value = curveCreateValue;
 
-        sprintf_s(
-            currentText,
-            "%.3f",
-            editorPreviewActive ? editorPreviewTime : animationTime);
+			asset.speedCurve.keys.push_back(key);
 
-        drawList->AddText(
-            ImVec2(
-                currentX - 15,
-                curvePos.y - 18),
-            IM_COL32(
-                255,
-                0,
-                0,
-                255),
-            currentText);
-    }
+			std::sort(
+				asset.speedCurve.keys.begin(),
+				asset.speedCurve.keys.end(),
+				[](const CurveKey& a, const CurveKey& b)
+				{
+					return a.time < b.time;
+				});
 
-    const float displayedTime = editorPreviewActive ? editorPreviewTime : animationTime;
-    // 現在時間表示
-    float currentX = curvePos.x + ((editorPreviewActive ? editorPreviewTime : animationTime) / duration) * width;
-    drawList->AddLine(ImVec2(currentX, curvePos.y), ImVec2(currentX, curvePos.y + curveHeight), IM_COL32(255, 0, 0, 255), 2.0f);
-    // 速度表示
-    float speed = asset.speedCurve.Evaluate(displayedTime);
-    char text[64];
-    sprintf_s(text, "%.2f", speed);
-    drawList->AddText(ImVec2(currentX + 5, curvePos.y), IM_COL32(255, 255, 0, 255), text);
+			for (int i = 0; i < asset.speedCurve.keys.size(); i++)
+			{// 追加したキーを自動で選択する
+				if (asset.speedCurve.keys[i].time == curveCreateTime &&
+					asset.speedCurve.keys[i].value == curveCreateValue)
+				{
+					selectedCurveKey = i;
+					break;
+				}
+			}
+		}
+		ImGui::EndPopup();
+	}
+
+
+
+	if (asset.animationClip == animationClip)
+	{
+		float currentX =
+			timelinePos.x +
+			((editorPreviewActive ? editorPreviewTime : animationTime) / duration)
+			* width;
+
+		drawList->AddLine(
+			ImVec2(currentX, curvePos.y),
+			ImVec2(currentX, curvePos.y + height),
+			IM_COL32(255, 0, 0, 255),
+			3.0f);
+
+		char currentText[32];
+
+		sprintf_s(
+			currentText,
+			"%.3f",
+			editorPreviewActive ? editorPreviewTime : animationTime);
+
+		drawList->AddText(
+			ImVec2(
+				currentX - 15,
+				curvePos.y - 18),
+			IM_COL32(
+				255,
+				0,
+				0,
+				255),
+			currentText);
+	}
+
+	const float displayedTime = editorPreviewActive ? editorPreviewTime : animationTime;
+	// 現在時間表示
+	float currentX = curvePos.x + ((editorPreviewActive ? editorPreviewTime : animationTime) / duration) * width;
+	drawList->AddLine(ImVec2(currentX, curvePos.y), ImVec2(currentX, curvePos.y + curveHeight), IM_COL32(255, 0, 0, 255), 2.0f);
+	// 速度表示
+	float speed = asset.speedCurve.Evaluate(displayedTime);
+	char text[64];
+	sprintf_s(text, "%.2f", speed);
+	drawList->AddText(ImVec2(currentX + 5, curvePos.y), IM_COL32(255, 255, 0, 255), text);
 
 
 }
@@ -1862,1143 +1862,1134 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
 // Notifyの詳細設定のImGui描画
 void AnimationController::DrawNotifyInspector(AnimationNotifyAsset& asset)
 {
-    ImGui::Separator();
-    ImGui::Text("Notify Inspector");
-    // ステートが選択されている時
-    if (selectedStateIndex != -1)
-    {
-        auto& state = asset.notifyTrack.states[selectedStateIndex];
+	ImGui::Separator();
+	ImGui::Text("Notify Inspector");
+	// ステートが選択されている時
+	if (selectedStateIndex != -1)
+	{
+		auto& state = asset.notifyTrack.states[selectedStateIndex];
 
-        ImGui::Text("Type");
-        ImGui::Text("%s", magic_enum::enum_name(state.type).data());
-        ImGui::DragFloat("Start", &state.startTime, 0.01f, 0.0f, 10.0f);
-        ImGui::DragFloat("End", &state.endTime, 0.01f, 0.0f, 10.0f);
+		ImGui::Text("Type");
+		ImGui::Text("%s", magic_enum::enum_name(state.type).data());
+		ImGui::DragFloat("Start", &state.startTime, 0.01f, 0.0f, 10.0f);
+		ImGui::DragFloat("End", &state.endTime, 0.01f, 0.0f, 10.0f);
 
-        switch (state.type)
-        {
-        case AnimationNotifyState::Type::HitBox:
-        {
-            char buffer[128];
-            strcpy_s(buffer, state.parameter.c_str());
-            if (ImGui::InputText("Weapon", buffer, sizeof(buffer)))
-            {
-                state.parameter = buffer;
-            }
-            if (ImGui::DragFloat("HitBox Radius", &state.hitBoxRadius, 0.01f, 0.01f, 5.0f))
-                state.hitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
-            ImGui::DragFloat3(U8("HitBox Offset"), &state.hitBoxOffset.x, 0.01f, -5.0f, 5.0f);
-            break;
-        }
-        case AnimationNotifyState::Type::InputWindow:
-            break;
-        case AnimationNotifyState::Type::Invincible:
-            break;
-        case AnimationNotifyState::Type::TransitionWindow:
-            break;
-        case AnimationNotifyState::Type::JustDodgeWindow:
-            break;
-        case AnimationNotifyState::Type::DangerWindow:
-            ImGui::DragFloat3(U8("ジャスト回避の矩形のサイズ (Width / Height / Depth)"), &state.justDodgeAreaSize.x, 0.1f, 0, 20);
-            ImGui::DragFloat3(U8("ジャスト回避の矩形のオフセット"), &state.justDodgeAreaOffset.x, 0.1f, -10, 20);
-            if (owner)
-            {
-                const DangerArea previewArea = BuildDangerArea(owner->GetPosition(),
-                    owner->GetRight(), owner->GetUp(), owner->GetForward(),
-                    state.justDodgeAreaOffset, state.justDodgeAreaSize);
-                DebugRender::DrawBox(previewArea.WorldTransform(), previewArea.size,
-                    { 1,1,1,1 }, 0.0f, true);
-            }
-            break;
-        case AnimationNotifyState::Type::ShowTrail:
-            char buffer[128];
-            strcpy_s(buffer, state.parameter.c_str());
-            if (ImGui::InputText(U8("軌跡をつける武器"), buffer, sizeof(buffer)))
-            {
-                state.parameter = buffer;
-            }
-            break;
-        case AnimationNotifyState::Type::ShowEmissive:
-            ImGui::DragFloat("Power", &state.value, 0.1f, 0, 20);
-            break;
-        case AnimationNotifyState::Type::MotionWarp:
-            ImGui::DragFloat3("moveDirection", &state.moveDirection.x, 0.1f, -1.0f, 1.0f);
-            ImGui::DragFloat("distance", &state.moveDistance, 0.1f, 0, 20);
-            break;
-        }
-    }
-    // イベントが選択されている時
-    if (selectedEventIndex != -1)
-    {
-        auto& event = asset.notifyTrack.events[selectedEventIndex];
-        ImGui::Text("Type");
-        ImGui::Text("%s", magic_enum::enum_name(event.type).data());
-        ImGui::DragFloat("Time", &event.time, 0.01f, 0, 10);
-        switch (event.type)
-        {
-        case AnimationNotifyEvent::Type::PlaySE:
-        {
-            char buffer[128];
-            strcpy_s(buffer, event.parameter.c_str());
-            if (ImGui::InputText("Sound", buffer, sizeof(buffer)))
-            {
-                event.parameter = buffer;
-            }
-            ImGui::DragFloat("Volume", &event.value, 0.01f, 0, 1);
-            break;
-        }
-        case AnimationNotifyEvent::Type::SpawnEffect:
-        {
-            char buffer[128];
-            strcpy_s(buffer, event.parameter.c_str());
-            if (ImGui::InputText("EffectName", buffer, sizeof(buffer)))
-            {
-                event.parameter = buffer;
-            }
-            break;
-        }
-        case AnimationNotifyEvent::Type::CameraShake:
-        {
-            char buffer[128];
-            strcpy_s(buffer, event.parameter.c_str());
-            if (ImGui::InputText("Preset", buffer, sizeof(buffer)))
-            {
-                event.parameter = buffer;
-            }
-            break;
-        }
-        case AnimationNotifyEvent::Type::ControllerRumble:
-        {
-            ImGui::DragFloat("Left Motor Strength", &event.leftMotorStrength, 0.01f, 0.0f, 1.0f);
-            ImGui::DragFloat("Right Motor Strength", &event.rightMotorStrength, 0.01f, 0.0f, 1.0f);
-            ImGui::DragFloat("Duration", &event.duration, 0.01f, 0.0f);
-            break;
-        }
-        case AnimationNotifyEvent::Type::GameplayEvent:
-        {
-            char buffer[128];
-            strcpy_s(buffer, event.parameter.c_str());
-            if (ImGui::InputText("Parameter", buffer, sizeof(buffer)))
-            {
-                event.parameter = buffer;
-            }
-            break;
-        }
-        }
-    }
+		switch (state.type)
+		{
+		case AnimationNotifyState::Type::HitBox:
+		{
+			char buffer[128];
+			strcpy_s(buffer, state.parameter.c_str());
+			if (ImGui::InputText("Weapon", buffer, sizeof(buffer)))
+			{
+				state.parameter = buffer;
+			}
+			if (ImGui::DragFloat("HitBox Radius", &state.hitBoxRadius, 0.01f, 0.01f, 5.0f))
+				state.hitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
+			ImGui::DragFloat3(U8("HitBox Offset"), &state.hitBoxOffset.x, 0.01f, -5.0f, 5.0f);
+			break;
+		}
+		case AnimationNotifyState::Type::InputWindow:
+			break;
+		case AnimationNotifyState::Type::Invincible:
+			break;
+		case AnimationNotifyState::Type::TransitionWindow:
+			break;
+		case AnimationNotifyState::Type::JustDodgeWindow:
+			break;
+		case AnimationNotifyState::Type::DangerWindow:
+			ImGui::DragFloat3(U8("ジャスト回避の矩形のサイズ (Width / Height / Depth)"), &state.justDodgeAreaSize.x, 0.1f, 0, 20);
+			ImGui::DragFloat3(U8("ジャスト回避の矩形のオフセット"), &state.justDodgeAreaOffset.x, 0.1f, -10, 20);
+			if (owner)
+			{
+				const DangerArea previewArea = BuildDangerArea(owner->GetPosition(),
+					owner->GetRight(), owner->GetUp(), owner->GetForward(),
+					state.justDodgeAreaOffset, state.justDodgeAreaSize);
+				DebugRender::DrawBox(previewArea.WorldTransform(), previewArea.size,
+					{ 1,1,1,1 }, 0.0f, true);
+			}
+			break;
+		case AnimationNotifyState::Type::ShowTrail:
+			char buffer[128];
+			strcpy_s(buffer, state.parameter.c_str());
+			if (ImGui::InputText(U8("軌跡をつける武器"), buffer, sizeof(buffer)))
+			{
+				state.parameter = buffer;
+			}
+			break;
+		case AnimationNotifyState::Type::ShowEmissive:
+			ImGui::DragFloat("Power", &state.value, 0.1f, 0, 20);
+			break;
+		case AnimationNotifyState::Type::MotionWarp:
+			ImGui::DragFloat3("moveDirection", &state.moveDirection.x, 0.1f, -1.0f, 1.0f);
+			ImGui::DragFloat("distance", &state.moveDistance, 0.1f, 0, 20);
+			break;
+		}
+	}
+	// イベントが選択されている時
+	if (selectedEventIndex != -1)
+	{
+		auto& event = asset.notifyTrack.events[selectedEventIndex];
+		ImGui::Text("Type");
+		ImGui::Text("%s", magic_enum::enum_name(event.type).data());
+		ImGui::DragFloat("Time", &event.time, 0.01f, 0, 10);
+		switch (event.type)
+		{
+		case AnimationNotifyEvent::Type::PlaySE:
+		{
+			char buffer[128];
+			strcpy_s(buffer, event.parameter.c_str());
+			if (ImGui::InputText("Sound", buffer, sizeof(buffer)))
+			{
+				event.parameter = buffer;
+			}
+			ImGui::DragFloat("Volume", &event.value, 0.01f, 0, 1);
+			break;
+		}
+		case AnimationNotifyEvent::Type::SpawnEffect:
+		{
+			char buffer[128];
+			strcpy_s(buffer, event.parameter.c_str());
+			if (ImGui::InputText("EffectName", buffer, sizeof(buffer)))
+			{
+				event.parameter = buffer;
+			}
+			break;
+		}
+		case AnimationNotifyEvent::Type::CameraShake:
+		{
+			char buffer[128];
+			strcpy_s(buffer, event.parameter.c_str());
+			if (ImGui::InputText("Preset", buffer, sizeof(buffer)))
+			{
+				event.parameter = buffer;
+			}
+			break;
+		}
+		case AnimationNotifyEvent::Type::ControllerRumble:
+		{
+			ImGui::DragFloat("Left Motor Strength", &event.leftMotorStrength, 0.01f, 0.0f, 1.0f);
+			ImGui::DragFloat("Right Motor Strength", &event.rightMotorStrength, 0.01f, 0.0f, 1.0f);
+			ImGui::DragFloat("Duration", &event.duration, 0.01f, 0.0f);
+			break;
+		}
+		case AnimationNotifyEvent::Type::GameplayEvent:
+		{
+			char buffer[128];
+			strcpy_s(buffer, event.parameter.c_str());
+			if (ImGui::InputText("Parameter", buffer, sizeof(buffer)))
+			{
+				event.parameter = buffer;
+			}
+			break;
+		}
+		}
+	}
 
-    if (selectedCurveKey >= 0 && selectedCurveKey < static_cast<int>(asset.speedCurve.keys.size()))
-    {
-        ImGui::Separator();
-        ImGui::Text("Speed Curve Key");
-        CurveKey editedKey = asset.speedCurve.keys[selectedCurveKey];
-        const float duration = target_->model->animations[asset.animationClip].duration;
-        bool changed = ImGui::DragFloat("Time##CurveKey", &editedKey.time, 0.001f, 0.0f, duration, "%.3f");
-        changed |= ImGui::DragFloat("Value##CurveKey", &editedKey.value, 0.01f, 0.0f, 3.0f, "%.3f");
-        if (changed)
-        {
-            editedKey.time = std::clamp(editedKey.time, 0.0f, duration);
-            editedKey.value = std::clamp(editedKey.value, 0.0f, 3.0f);
-            asset.speedCurve.keys[selectedCurveKey] = editedKey;
-            std::sort(asset.speedCurve.keys.begin(), asset.speedCurve.keys.end(),
-                [](const CurveKey& a, const CurveKey& b) { return a.time < b.time; });
-            for (int i = 0; i < static_cast<int>(asset.speedCurve.keys.size()); ++i)
-            {
-                if (asset.speedCurve.keys[i].time == editedKey.time &&
-                    asset.speedCurve.keys[i].value == editedKey.value)
-                {
-                    selectedCurveKey = i;
-                    break;
-                }
-            }
-        }
-    }
+	if (selectedCurveKey >= 0 && selectedCurveKey < static_cast<int>(asset.speedCurve.keys.size()))
+	{
+		ImGui::Separator();
+		ImGui::Text("Speed Curve Key");
+		CurveKey editedKey = asset.speedCurve.keys[selectedCurveKey];
+		const float duration = target_->model->animations[asset.animationClip].duration;
+		bool changed = ImGui::DragFloat("Time##CurveKey", &editedKey.time, 0.001f, 0.0f, duration, "%.3f");
+		changed |= ImGui::DragFloat("Value##CurveKey", &editedKey.value, 0.01f, 0.0f, 3.0f, "%.3f");
+		if (changed)
+		{
+			editedKey.time = std::clamp(editedKey.time, 0.0f, duration);
+			editedKey.value = std::clamp(editedKey.value, 0.0f, 3.0f);
+			asset.speedCurve.keys[selectedCurveKey] = editedKey;
+			std::sort(asset.speedCurve.keys.begin(), asset.speedCurve.keys.end(),
+				[](const CurveKey& a, const CurveKey& b) { return a.time < b.time; });
+			for (int i = 0; i < static_cast<int>(asset.speedCurve.keys.size()); ++i)
+			{
+				if (asset.speedCurve.keys[i].time == editedKey.time &&
+					asset.speedCurve.keys[i].value == editedKey.value)
+				{
+					selectedCurveKey = i;
+					break;
+				}
+			}
+		}
+	}
 }
 
 void AnimationController::DrawTimeline()
 {
 #ifdef USE_IMGUI
-    ImGui::Begin("Animation Sequence");
+	ImGui::Begin("Animation Sequence");
 
-    const float availableWidth = ImGui::GetContentRegionAvail().x;
-    const float listWidth = std::clamp(availableWidth * 0.16f, 180.0f, 260.0f);
-    const float inspectorWidth = std::clamp(availableWidth * 0.21f, 220.0f, 320.0f);
-    const float editorWidth = (std::max)(320.0f, availableWidth - listWidth - inspectorWidth);
+	const float availableWidth = ImGui::GetContentRegionAvail().x;
+	const float listWidth = std::clamp(availableWidth * 0.16f, 180.0f, 260.0f);
+	const float inspectorWidth = std::clamp(availableWidth * 0.21f, 220.0f, 320.0f);
+	const float editorWidth = (std::max)(320.0f, availableWidth - listWidth - inspectorWidth);
 
-    ImGui::Columns(3);
-    ImGui::SetColumnWidth(0, listWidth);
-    ImGui::SetColumnWidth(1, editorWidth);
+	ImGui::Columns(3);
+	ImGui::SetColumnWidth(0, listWidth);
+	ImGui::SetColumnWidth(1, editorWidth);
 
-    const float animationListHeight = ImGui::GetContentRegionAvail().y;
-    ImGui::BeginChild(U8("アニメーションリスト"), ImVec2(0, animationListHeight), true);
+	const float animationListHeight = ImGui::GetContentRegionAvail().y;
+	ImGui::BeginChild(U8("アニメーションリスト"), ImVec2(0, animationListHeight), true);
 
-    for (auto clip : animationAssetOrder)
-    {
-        auto& listedAsset = animationNotifyAssets[clip];
-        const bool selected = selectedTimelineClip == clip;
-        if (ImGui::Selectable(listedAsset.animationName.c_str(), selected))
-        {
-            EndAllEditorPreviewStates();
-            selectedTimelineClip = clip;
-            const std::string filename = "./Data/Animation/" + ownerName + "/" + listedAsset.animationName + ".json";
-            LoadNotifyAsset(filename, listedAsset);
-            editorPreviewTime = 0.0f;
-            BeginEditorPreview(false, true);
-            selectedStateIndex = -1;
-            selectedEventIndex = -1;
-            popupCreateTime = 0.0f;
-            selectedCurveKey = -1;
-            curveCreateTime = 0.0f;
-            curveCreateValue = 1.0f;
-        }
-    }
-    ImGui::EndChild();
+	for (auto clip : animationAssetOrder)
+	{
+		auto& listedAsset = animationNotifyAssets[clip];
+		const bool selected = selectedTimelineClip == clip;
+		if (ImGui::Selectable(listedAsset.animationName.c_str(), selected))
+		{
+			EndAllEditorPreviewStates();
+			selectedTimelineClip = clip;
+			const std::string filename = "./Data/Animation/" + ownerName + "/" + listedAsset.animationName + ".json";
+			LoadNotifyAsset(filename, listedAsset);
+			editorPreviewTime = 0.0f;
+			BeginEditorPreview(false, true);
+			selectedStateIndex = -1;
+			selectedEventIndex = -1;
+			popupCreateTime = 0.0f;
+			selectedCurveKey = -1;
+			curveCreateTime = 0.0f;
+			curveCreateValue = 1.0f;
+		}
+	}
+	ImGui::EndChild();
 
-    ImGui::NextColumn();
-    auto it = animationNotifyAssets.find(selectedTimelineClip);
-    if (it == animationNotifyAssets.end())
-    {
-        ImGui::Columns(1);
-        ImGui::End();
-        return;
-    }
+	ImGui::NextColumn();
+	auto it = animationNotifyAssets.find(selectedTimelineClip);
+	if (it == animationNotifyAssets.end())
+	{
+		ImGui::Columns(1);
+		ImGui::End();
+		return;
+	}
 
-    auto& asset = it->second;
-    const float duration = target_->model->animations[asset.animationClip].duration;
-    const float trackHeight = 20.0f;
-    const float labelWidth = 100.0f;
-    const float handleSize = 40.0f;
-    const float height = 30.0f;
+	auto& asset = it->second;
+	const float duration = target_->model->animations[asset.animationClip].duration;
+	const float trackHeight = 20.0f;
+	const float labelWidth = 100.0f;
+	const float handleSize = 40.0f;
+	const float height = 30.0f;
 
-    DrawAnimationSettings(asset, duration);
+	DrawAnimationSettings(asset, duration);
 
-    float width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - labelWidth - 10.0f);
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
-    ImVec2 timelinePos = ImGui::GetCursorScreenPos();
-    DrawStateTimeline(asset, duration, width, height, labelWidth, trackHeight, handleSize, drawList, timelinePos);
-    ImGui::Dummy(ImVec2(0, 6.0f));
-    DrawEventTimeline(asset, duration, width, labelWidth, trackHeight, drawList);
+	float width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - labelWidth - 10.0f);
+	ImDrawList* drawList = ImGui::GetWindowDrawList();
+	ImVec2 timelinePos = ImGui::GetCursorScreenPos();
+	DrawStateTimeline(asset, duration, width, height, labelWidth, trackHeight, handleSize, drawList, timelinePos);
+	ImGui::Dummy(ImVec2(0, 6.0f));
+	DrawEventTimeline(asset, duration, width, labelWidth, trackHeight, drawList);
 
-    if (ImGui::IsKeyPressed(ImGuiKey_Delete))
-    {
-        if (selectedStateIndex >= 0)
-        {
-            if (selectedStateIndex < static_cast<int>(asset.notifyTrack.states.size()))
-            {
-                EndAllEditorPreviewStates();
-                asset.notifyTrack.states.erase(asset.notifyTrack.states.begin() + selectedStateIndex);
-            }
-            selectedStateIndex = -1;
-        }
+	if (ImGui::IsKeyPressed(ImGuiKey_Delete))
+	{
+		if (selectedStateIndex >= 0)
+		{
+			if (selectedStateIndex < static_cast<int>(asset.notifyTrack.states.size()))
+			{
+				EndAllEditorPreviewStates();
+				asset.notifyTrack.states.erase(asset.notifyTrack.states.begin() + selectedStateIndex);
+			}
+			selectedStateIndex = -1;
+		}
 
-        if (selectedEventIndex >= 0)
-        {
-            if (selectedEventIndex < static_cast<int>(asset.notifyTrack.events.size()))
-                asset.notifyTrack.events.erase(asset.notifyTrack.events.begin() + selectedEventIndex);
-            selectedEventIndex = -1;
-        }
-    }
+		if (selectedEventIndex >= 0)
+		{
+			if (selectedEventIndex < static_cast<int>(asset.notifyTrack.events.size()))
+				asset.notifyTrack.events.erase(asset.notifyTrack.events.begin() + selectedEventIndex);
+			selectedEventIndex = -1;
+		}
+	}
 
-    const std::string curveHeader = "Animation Curve [" + std::to_string(asset.speedCurve.keys.size()) + " Keys]###SpeedCurveHeader";
-    ImGui::SetNextItemOpen(false, ImGuiCond_Once);
-    if (ImGui::CollapsingHeader(curveHeader.c_str()))
-    {
-        width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - 10.0f);
-        ImDrawList* curveDrawList = ImGui::GetWindowDrawList();
-        const ImVec2 curvePos = ImGui::GetCursorScreenPos();
-        DrawCurveEditor(asset, duration, width, height, curveDrawList, curvePos);
-        ImGui::Dummy(ImVec2(width, 210.0f));
-    }
+	const std::string curveHeader = "Animation Curve [" + std::to_string(asset.speedCurve.keys.size()) + " Keys]###SpeedCurveHeader";
+	ImGui::SetNextItemOpen(false, ImGuiCond_Once);
+	if (ImGui::CollapsingHeader(curveHeader.c_str()))
+	{
+		width = (std::max)(100.0f, ImGui::GetContentRegionAvail().x - 10.0f);
+		ImDrawList* curveDrawList = ImGui::GetWindowDrawList();
+		const ImVec2 curvePos = ImGui::GetCursorScreenPos();
+		DrawCurveEditor(asset, duration, width, height, curveDrawList, curvePos);
+		ImGui::Dummy(ImVec2(width, 210.0f));
+	}
 
-    ImGui::NextColumn();
-    ImGui::BeginChild("NotifyInspector", ImVec2(0, 0), true);
-    DrawNotifyInspector(asset);
-    ImGui::EndChild();
+	ImGui::NextColumn();
+	ImGui::BeginChild("NotifyInspector", ImVec2(0, 0), true);
+	DrawNotifyInspector(asset);
+	ImGui::EndChild();
 
-    ImGui::Columns(1);
-    ImGui::End();
+	ImGui::Columns(1);
+	ImGui::End();
 #endif
 }
 
 
-bool AnimationController::EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower,bool& outHasShowTrail, bool& outHasShowEmissive) const
+bool AnimationController::EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower, bool& outHasShowTrail, bool& outHasShowEmissive) const
 {
-    outShowTrail = false;
-    outEmissivePower = 0.0f;
-    outHasShowTrail = false;
-    outHasShowEmissive = false;
+	outShowTrail = false;
+	outEmissivePower = 0.0f;
+	outHasShowTrail = false;
+	outHasShowEmissive = false;
 
-    const size_t clip = editorPreviewActive ? selectedTimelineClip : animationClip;
-    const float time = editorPreviewActive ? editorPreviewTime : animationTime;
-    const auto assetIt = animationNotifyAssets.find(clip);
-    if (assetIt == animationNotifyAssets.end())
-        return false;
+	const size_t clip = editorPreviewActive ? selectedTimelineClip : animationClip;
+	const float time = editorPreviewActive ? editorPreviewTime : animationTime;
+	const auto assetIt = animationNotifyAssets.find(clip);
+	if (assetIt == animationNotifyAssets.end())
+		return false;
 
-    bool hasWeaponVisualState = false;
-    for (const auto& state : assetIt->second.notifyTrack.states)
-    {
-        const bool active = time >= state.startTime && time < state.endTime;
-        switch (state.type)
-        {
-        case AnimationNotifyState::Type::ShowTrail:
-            hasWeaponVisualState = true;
-            outHasShowTrail = true;
-            outShowTrail = outShowTrail || active;
-            break;
-        case AnimationNotifyState::Type::ShowEmissive:
-            hasWeaponVisualState = true;
-            outHasShowEmissive = true;
-            if (active)
-                outEmissivePower = state.value;
-            break;
-        default:
-            break;
-        }
-    }
-    return hasWeaponVisualState;
+	bool hasWeaponVisualState = false;
+	for (const auto& state : assetIt->second.notifyTrack.states)
+	{
+		const bool active = time >= state.startTime && time < state.endTime;
+		switch (state.type)
+		{
+		case AnimationNotifyState::Type::ShowTrail:
+			hasWeaponVisualState = true;
+			outHasShowTrail = true;
+			outShowTrail = outShowTrail || active;
+			break;
+		case AnimationNotifyState::Type::ShowEmissive:
+			hasWeaponVisualState = true;
+			outHasShowEmissive = true;
+			if (active)
+				outEmissivePower = state.value;
+			break;
+		default:
+			break;
+		}
+	}
+	return hasWeaponVisualState;
 }
 void AnimationController::OnNotifyBegin(const AnimationNotifyState& state)
 {
-    if (!owner)
-    {
-        Logger::Warning(U8("アニメーションコントローラーでownerがnullptrです！"));
-        return;
-    }
-    if (owner)
-    {
-        owner->OnAnimationNotifyBegin(state);
-    }
+	if (!owner)
+	{
+		Logger::Warning(U8("アニメーションコントローラーでownerがnullptrです！"));
+		return;
+	}
+	if (owner)
+	{
+		owner->OnAnimationNotifyBegin(state);
+	}
 }
 
 void AnimationController::OnNotifyEnd(const AnimationNotifyState& state)
 {
-    if (!owner)
-    {
-        Logger::Warning(U8("アニメーションコントローラーでownerがnullptrです！"));
-        return;
-    }
+	if (!owner)
+	{
+		Logger::Warning(U8("アニメーションコントローラーでownerがnullptrです！"));
+		return;
+	}
 
-    if (owner)
-    {
-        owner->OnAnimationNotifyEnd(state);
-    }
+	if (owner)
+	{
+		owner->OnAnimationNotifyEnd(state);
+	}
 }
 
 void AnimationController::OnNotifyEvent(const AnimationNotifyEvent& event)
 {
-    if (!owner)
-    {
-        Logger::Warning(U8("アニメーションコントローラーでownerがnullptrです！"));
-        return;
-    }
+	if (!owner)
+	{
+		Logger::Warning(U8("アニメーションコントローラーでownerがnullptrです！"));
+		return;
+	}
 
-    if (owner)
-    {
-        owner->OnAnimationNotifyEvent(event);
-    }
+	if (owner)
+	{
+		owner->OnAnimationNotifyEvent(event);
+	}
 }
 
 // 全てのNotifyAssetsをロードする
 void AnimationController::LoadAllNotifyAssets(const std::string& ownerName)
 {
-    std::string directory = "./Data/Animation/" + ownerName;
-    for (auto& file : std::filesystem::directory_iterator(directory))
-    {
-        if (file.path().extension() != ".json")
-            continue;
-        AnimationNotifyAsset asset;
-        LoadNotifyAsset(file.path().string(), asset);
+	std::string directory = "./Data/Animation/" + ownerName;
+	for (auto& file : std::filesystem::directory_iterator(directory))
+	{
+		if (file.path().extension() != ".json")
+			continue;
+		AnimationNotifyAsset asset;
+		LoadNotifyAsset(file.path().string(), asset);
 
-        // JsonのanimationClipはモデル更新などで古くなるため、
-        // 実行時のclip番号は現在の名前->clip登録から解決する
-        const auto animationIt = animationNameToIndex_.find(asset.animationName);
-        if (animationIt == animationNameToIndex_.end())
-        {
-            Logger::Warning("animation asset is not registered");
-            continue;
-        }
+		// JsonのanimationClipはモデル更新などで古くなるため、
+		// 実行時のclip番号は現在の名前->clip登録から解決する
+		const auto animationIt = animationNameToIndex_.find(asset.animationName);
+		if (animationIt == animationNameToIndex_.end())
+		{
+			Logger::Warning("animation asset is not registered");
+			continue;
+		}
 
-        const size_t registeredClip = animationIt->second;
+		const size_t registeredClip = animationIt->second;
 
-        if (asset.animationClip != registeredClip)
-        {
-            Logger::Warning("Remap animation asset");
-        }
+		if (asset.animationClip != registeredClip)
+		{
+			Logger::Warning("Remap animation asset");
+		}
 
-        asset.animationClip = registeredClip;
+		asset.animationClip = registeredClip;
 
 
-        if (owner)
-        {
-            owner->OnAnimationChanged();
-        }
-        //animationNotifyAssets[asset.animationClip] = asset;
-        animationNotifyAssets[registeredClip] = asset;
-    }
+		if (owner)
+		{
+			owner->OnAnimationChanged();
+		}
+		animationNotifyAssets[registeredClip] = asset;
+	}
 }
 
 // それぞれのアニメーション再生時間を取る
-float AnimationController::GetLocomotionDuration(const BlendGroup group)
+float AnimationController::GetLocomotionDuration()
 {
-    if (group == BlendGroup::Forward)
-    {
-        return target_->model->animations[animationNameToIndex_["Jog_Fwd"]].duration;
-    }
-    else
-    {
-        return target_->model->animations[
-            animationNameToIndex_["Jog_Bwd"]].duration;
-    }
+	return target_->model->animations[animationNameToIndex_["Jog_Fwd"]].duration;
 }
 
 // ブレンドスペースを更新する
 void AnimationController::UpdateBlendSpace(float deltaTime)
 {
-    // デバッグ固定方向はPose評価だけに使用し、Playerの移動入力は変更しない。
-    DirectX::XMFLOAT2 evaluationInput = blendInput;
+	// デバッグ固定方向はPose評価だけに使用し、Playerの移動入力は変更しない。
+	DirectX::XMFLOAT2 evaluationInput = blendInput;
 
-    locomotionDebugEvaluationAngle = DirectX::XMConvertToDegrees(
-        atan2f(evaluationInput.x, evaluationInput.y));
+	locomotionDebugEvaluationAngle = DirectX::XMConvertToDegrees(
+		atan2f(evaluationInput.x, evaluationInput.y));
 
-    // 旧Forward/Backwardグループは保持するが、Locomotion更新では使用しない。
-    std::vector<BlendSpace::BlendResult> weights =
-        locomotionBlendSpace.CalculateWeights(evaluationInput);
+	// 旧Forward/Backwardグループは保持するが、Locomotion更新では使用しない。
+	std::vector<BlendSpace::BlendResult> weights =
+		locomotionBlendSpace.CalculateWeights(evaluationInput);
 
-    // 90度ではSide 100%、180度ではBackward 100%を維持する。
-    // 90度直後の短い遷移帯で連続的にSide上限へ収束させる。
-    const float absoluteEvaluationAngle =
-        std::fabs(locomotionDebugEvaluationAngle);
-    if (absoluteEvaluationAngle >= 90.0f &&
-        absoluteEvaluationAngle <= 180.0f &&
-        weights.size() == 2)
-    {
-        const auto backwardIt = animationNameToIndex_.find("Jog_Bwd");
-        if (backwardIt != animationNameToIndex_.end())
-        {
-            size_t backwardWeightIndex = weights.size();
-            for (size_t i = 0; i < weights.size(); ++i)
-            {
-                if (weights[i].clip == backwardIt->second)
-                {
-                    backwardWeightIndex = i;
-                    break;
-                }
-            }
+	// 90度ではSide 100%、180度ではBackward 100%を維持する。
+	// 90度直後の短い遷移帯で連続的にSide上限へ収束させる。
+	const float absoluteEvaluationAngle =
+		std::fabs(locomotionDebugEvaluationAngle);
+	if (absoluteEvaluationAngle >= 90.0f &&
+		absoluteEvaluationAngle <= 180.0f &&
+		weights.size() == 2)
+	{
+		const auto backwardIt = animationNameToIndex_.find("Jog_Bwd");
+		if (backwardIt != animationNameToIndex_.end())
+		{
+			size_t backwardWeightIndex = weights.size();
+			for (size_t i = 0; i < weights.size(); ++i)
+			{
+				if (weights[i].clip == backwardIt->second)
+				{
+					backwardWeightIndex = i;
+					break;
+				}
+			}
 
-            if (backwardWeightIndex < weights.size())
-            {
-                const size_t sideWeightIndex = 1 - backwardWeightIndex;
-                const float sideMaxWeight = std::clamp(
-                    locomotionBackwardSideMaxWeight, 0.0f, 0.5f);
-                const float originalSideWeight =
-                    weights[sideWeightIndex].weight;
-                const float cappedSideWeight =
-                    originalSideWeight < sideMaxWeight
-                    ? originalSideWeight
-                    : sideMaxWeight;
+			if (backwardWeightIndex < weights.size())
+			{
+				const size_t sideWeightIndex = 1 - backwardWeightIndex;
+				const float sideMaxWeight = std::clamp(
+					locomotionBackwardSideMaxWeight, 0.0f, 0.5f);
+				const float originalSideWeight =
+					weights[sideWeightIndex].weight;
+				const float cappedSideWeight =
+					originalSideWeight < sideMaxWeight
+					? originalSideWeight
+					: sideMaxWeight;
 
-                constexpr float TransitionAngle = 22.5f;
-                float transition = std::clamp(
-                    (absoluteEvaluationAngle - 90.0f) / TransitionAngle,
-                    0.0f,
-                    1.0f);
-                transition = transition * transition * (3.0f - 2.0f * transition);
+				constexpr float TransitionAngle = 22.5f;
+				float transition = std::clamp(
+					(absoluteEvaluationAngle - 90.0f) / TransitionAngle,
+					0.0f,
+					1.0f);
+				transition = transition * transition * (3.0f - 2.0f * transition);
 
-                const float adjustedSideWeight = std::lerp(
-                    originalSideWeight,
-                    cappedSideWeight,
-                    transition);
-                weights[sideWeightIndex].weight = adjustedSideWeight;
-                weights[backwardWeightIndex].weight = 1.0f - adjustedSideWeight;
-            }
-        }
-    }
+				const float adjustedSideWeight = std::lerp(
+					originalSideWeight,
+					cappedSideWeight,
+					transition);
+				weights[sideWeightIndex].weight = adjustedSideWeight;
+				weights[backwardWeightIndex].weight = 1.0f - adjustedSideWeight;
+			}
+		}
+	}
 
-    if (weights.size() == 2)
-    {
-        const auto bwdIt = animationNameToIndex_.find("Jog_Bwd");
-        if (bwdIt != animationNameToIndex_.end())
-        {
-            for (size_t i = 0; i < weights.size(); ++i)
-            {
-                if (weights[i].clip == bwdIt->second)
-                {
-                    const float bwdWeight = std::clamp(
-                        locomotionDebugBwdWeight, 0.0f, 1.0f);
-                    weights[i].weight = bwdWeight;
-                    weights[1 - i].weight = 1.0f - bwdWeight;
-                    break;
-                }
-            }
-        }
-    }
-    if (weights.empty())
-    {
-        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
-        blendSpaceRootMotionValid = false;
-        resetLocomotionRootMotion = true;
-        return;
-    }
+	if (weights.size() == 2)
+	{
+		const auto bwdIt = animationNameToIndex_.find("Jog_Bwd");
+		if (bwdIt != animationNameToIndex_.end())
+		{
+			for (size_t i = 0; i < weights.size(); ++i)
+			{
+				if (weights[i].clip == bwdIt->second)
+				{
+					const float bwdWeight = std::clamp(
+						locomotionDebugBwdWeight, 0.0f, 1.0f);
+					weights[i].weight = bwdWeight;
+					weights[1 - i].weight = 1.0f - bwdWeight;
+					break;
+				}
+			}
+		}
+	}
+	if (weights.empty())
+	{
+		blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+		blendSpaceRootMotionValid = false;
+		resetLocomotionRootMotion = true;
+		return;
+	}
 
-    if (weights.size() > blendSpacePoses.size())
-    {
-        Logger::Error("BlendSpace weights exceeded pose capacity.");
-        blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
-        blendSpaceRootMotionValid = false;
-        resetLocomotionRootMotion = true;
-        return;
-    }
+	if (weights.size() > blendSpacePoses.size())
+	{
+		Logger::Error("BlendSpace weights exceeded pose capacity.");
+		blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+		blendSpaceRootMotionValid = false;
+		resetLocomotionRootMotion = true;
+		return;
+	}
 
-    // Jog_Fwdを共通Locomotion cycleの基準durationとして使用する。
-    const float cycleDuration = GetLocomotionDuration(BlendGroup::Forward);
-    // 前回phaseと今回phaseを確定する
-    float currentLocomotionPhase = 0.0f;
-    if (std::isfinite(locomotionTime) &&
-        std::isfinite(cycleDuration) &&
-        cycleDuration > FLT_EPSILON)
-    {
-        currentLocomotionPhase = locomotionTime / cycleDuration;
-        currentLocomotionPhase = BlendSpace::WrapPhase(currentLocomotionPhase);
-    }
+	// Jog_Fwdを共通Locomotion cycleの基準durationとして使用する。
+	const float cycleDuration = GetLocomotionDuration();
+	// 前回phaseと今回phaseを確定する
+	float currentLocomotionPhase = 0.0f;
+	if (std::isfinite(locomotionTime) &&
+		std::isfinite(cycleDuration) &&
+		cycleDuration > FLT_EPSILON)
+	{
+		currentLocomotionPhase = locomotionTime / cycleDuration;
+		currentLocomotionPhase = BlendSpace::WrapPhase(currentLocomotionPhase);
+	}
 
-    bool canExtractRootMotion = enableRootMotion && !ignoreRootMotion;
+	bool canExtractRootMotion = enableRootMotion && !ignoreRootMotion;
 
-    if (resetLocomotionRootMotion)
-    {
-        previousLocomotionPhase = currentLocomotionPhase;
-        resetLocomotionRootMotion = false;
-        blendSpaceRootMotionValid = false;
-        blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
+	if (resetLocomotionRootMotion)
+	{
+		previousLocomotionPhase = currentLocomotionPhase;
+		resetLocomotionRootMotion = false;
+		blendSpaceRootMotionValid = false;
+		blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
 
-        canExtractRootMotion = false;
-    }
+		canExtractRootMotion = false;
+	}
 
-    const auto notifyClipIt = animationNameToIndex_.find("Jog_Fwd");
-    if (notifyClipIt != animationNameToIndex_.end())
-    {
-        const auto notifyAssetIt = animationNotifyAssets.find(notifyClipIt->second);
-        if (notifyAssetIt != animationNotifyAssets.end())
-        {
-            const float previousNotifyTime = previousLocomotionPhase * cycleDuration;
-            const float currentNotifyTime = currentLocomotionPhase * cycleDuration;
-            const bool wrapped = previousLocomotionPhase > currentLocomotionPhase;
+	const auto notifyClipIt = animationNameToIndex_.find("Jog_Fwd");
+	if (notifyClipIt != animationNameToIndex_.end())
+	{
+		const auto notifyAssetIt = animationNotifyAssets.find(notifyClipIt->second);
+		if (notifyAssetIt != animationNotifyAssets.end())
+		{
+			const float previousNotifyTime = previousLocomotionPhase * cycleDuration;
+			const float currentNotifyTime = currentLocomotionPhase * cycleDuration;
+			const bool wrapped = previousLocomotionPhase > currentLocomotionPhase;
 
-            for (const AnimationNotifyEvent& event : notifyAssetIt->second.notifyTrack.events)
-            {
-                const bool crossed = wrapped
-                    ? ((previousNotifyTime < event.time && event.time <= cycleDuration) ||
-                        (0.0f < event.time && event.time <= currentNotifyTime))
-                    : (previousNotifyTime < event.time && event.time <= currentNotifyTime);
+			for (const AnimationNotifyEvent& event : notifyAssetIt->second.notifyTrack.events)
+			{
+				const bool crossed = wrapped
+					? ((previousNotifyTime < event.time && event.time <= cycleDuration) ||
+						(0.0f < event.time && event.time <= currentNotifyTime))
+					: (previousNotifyTime < event.time && event.time <= currentNotifyTime);
 
-                if (crossed)
-                {
-                    OnNotifyEvent(event);
-                }
-            }
-        }
-    }
+				if (crossed)
+				{
+					OnNotifyEvent(event);
+				}
+			}
+		}
+	}
 
-    blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
-    blendSpaceRootMotionValid = false;
+	blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
+	blendSpaceRootMotionValid = false;
 
-    // ルートモーションの重み用の変数
-    float rootMotionTotalWeight = 0.0f;
+	// ルートモーションの重み用の変数
+	float rootMotionTotalWeight = 0.0f;
 
-    for (size_t i = 0; i < weights.size(); i++)
-    {
-        size_t clip = weights[i].clip;
+	for (size_t i = 0; i < weights.size(); i++)
+	{
+		size_t clip = weights[i].clip;
 
-        // clip ごとの delta をローカル変数へ入れる
-        DirectX::XMFLOAT3 clipRootMotionDelta =
-        {
-            0.0f, 0.0f, 0.0f
-        };
-        bool clipRootMotionValid = false;
+		// clip ごとの delta をローカル変数へ入れる
+		DirectX::XMFLOAT3 clipRootMotionDelta =
+		{
+			0.0f, 0.0f, 0.0f
+		};
+		bool clipRootMotionValid = false;
 
-        if (cycleDuration <= FLT_EPSILON ||
-            clip >= target_->model->animations.size())
-        {
-            return;
-        }
+		if (cycleDuration <= FLT_EPSILON ||
+			clip >= target_->model->animations.size())
+		{
+			return;
+		}
 
-        const float clipDuration = target_->model->animations[clip].duration;
-        if (!std::isfinite(clipDuration) || clipDuration <= FLT_EPSILON)
-        {
-            return;
-        }
+		const float clipDuration = target_->model->animations[clip].duration;
+		if (!std::isfinite(clipDuration) || clipDuration <= FLT_EPSILON)
+		{
+			return;
+		}
 
-        const float phaseOffset = BlendSpace::WrapPhase(weights[i].phaseOffset);
-        const float previousSamplePhase =
-            BlendSpace::WrapPhase(previousLocomotionPhase + phaseOffset);
-        const float samplePhase =
-            BlendSpace::WrapPhase(currentLocomotionPhase + phaseOffset);
-        const float previousTime = previousSamplePhase * clipDuration;
-        const float sampleTime = samplePhase * clipDuration;
+		const float phaseOffset = BlendSpace::WrapPhase(weights[i].phaseOffset);
+		const float previousSamplePhase =
+			BlendSpace::WrapPhase(previousLocomotionPhase + phaseOffset);
+		const float samplePhase =
+			BlendSpace::WrapPhase(currentLocomotionPhase + phaseOffset);
+		const float previousTime = previousSamplePhase * clipDuration;
+		const float sampleTime = samplePhase * clipDuration;
 
-        target_->model->Animate(clip, sampleTime, blendSpacePoses[i]);
-
-
-        if (!canExtractRootMotion)
-        {
-            continue;
-        }
-
-        // 前回時刻のRootMotion 取得用Pose
-        target_->model->Animate(clip, previousTime, previousBlendSpaceRootMotionNodes);
-
-        // 前回と今回のroot位置を取得する
-        const auto& previousRootNode = previousBlendSpaceRootMotionNodes[rootNodeIndex];
-        const auto& currentRootNode = blendSpacePoses[i][rootNodeIndex];
-        // 位置を取り出す
-        DirectX::XMFLOAT3 previousRootPosition =
-        {
-            previousRootNode.globalTransform._41,
-            previousRootNode.globalTransform._42,
-            previousRootNode.globalTransform._43
-        };
-
-        DirectX::XMFLOAT3 currentRootPosition =
-        {
-            currentRootNode.globalTransform._41,
-            currentRootNode.globalTransform._42,
-            currentRootNode.globalTransform._43
-        };
-
-        // ループしていないフレームのみ
-        if (previousSamplePhase <= samplePhase)
-        {
-            clipRootMotionDelta =
-            {
-                currentRootPosition.x - previousRootPosition.x,
-                currentRootPosition.y - previousRootPosition.y,
-                currentRootPosition.z - previousRootPosition.z
-            };
-            clipRootMotionValid = true;
-        }
-        // 1.0 → 0.0をまたいだループフレーム
-        else
-        {
-            // clip先頭のPoseを評価
-            target_->model->Animate(clip, 0.0f, blendSpaceRootMotionStartNodes);
-
-            // clip末尾のPoseを評価
-            target_->model->Animate(clip, clipDuration, blendSpaceRootMotionEndNodes);
-
-            const auto& startRootNode = blendSpaceRootMotionStartNodes[rootNodeIndex];
-            const auto& endRootNode = blendSpaceRootMotionEndNodes[rootNodeIndex];
-
-            DirectX::XMFLOAT3 startRootPosition =
-            {
-                startRootNode.globalTransform._41,
-                startRootNode.globalTransform._42,
-                startRootNode.globalTransform._43
-            };
-
-            DirectX::XMFLOAT3 endRootPosition =
-            {
-                endRootNode.globalTransform._41,
-                endRootNode.globalTransform._42,
-                endRootNode.globalTransform._43
-            };
-
-            // previous位置からclip末尾まで
-            DirectX::XMFLOAT3 deltaToEnd =
-            {
-                endRootPosition.x - previousRootPosition.x,
-                endRootPosition.y - previousRootPosition.y,
-                endRootPosition.z - previousRootPosition.z
-            };
-
-            // clip先頭からcurrent位置まで
-            DirectX::XMFLOAT3 deltaFromStart =
-            {
-                currentRootPosition.x - startRootPosition.x,
-                currentRootPosition.y - startRootPosition.y,
-                currentRootPosition.z - startRootPosition.z
-            };
-
-            clipRootMotionDelta =
-            {
-                deltaToEnd.x + deltaFromStart.x,
-                deltaToEnd.y + deltaFromStart.y,
-                deltaToEnd.z + deltaFromStart.z
-            };
-
-            clipRootMotionValid = true;
-
-        }
-
-        // 各クリップごとの重み付きのRootMotionを加算
-        if (clipRootMotionValid)
-        {
-            const float weight = weights[i].weight;
-            blendSpaceRootMotionDelta.x += clipRootMotionDelta.x * weight;
-            blendSpaceRootMotionDelta.y += clipRootMotionDelta.y * weight;
-            blendSpaceRootMotionDelta.z += clipRootMotionDelta.z * weight;
-            rootMotionTotalWeight += weight;
-        }
-
-    }
-
-    if (rootMotionTotalWeight > FLT_EPSILON)
-    {
-        const float inverseWeight = 1.0f / rootMotionTotalWeight;
-
-        blendSpaceRootMotionDelta.x *= inverseWeight;
-        blendSpaceRootMotionDelta.y *= inverseWeight;
-        blendSpaceRootMotionDelta.z *= inverseWeight;
-
-        blendSpaceRootMotionValid = true;
-    }
+		target_->model->Animate(clip, sampleTime, blendSpacePoses[i]);
 
 
+		if (!canExtractRootMotion)
+		{
+			continue;
+		}
 
-    BlendResult blend;
-    blend.count = 0;
+		// 前回時刻のRootMotion 取得用Pose
+		target_->model->Animate(clip, previousTime, previousBlendSpaceRootMotionNodes);
 
-    for (auto& w : weights)
-    {
-        blend.samples[blend.count].clip = w.clip;
-        blend.samples[blend.count].weight = w.weight;
-        blend.count++;
-    }
+		// 前回と今回のroot位置を取得する
+		const auto& previousRootNode = previousBlendSpaceRootMotionNodes[rootNodeIndex];
+		const auto& currentRootNode = blendSpacePoses[i][rootNodeIndex];
+		// 位置を取り出す
+		DirectX::XMFLOAT3 previousRootPosition =
+		{
+			previousRootNode.globalTransform._41,
+			previousRootNode.globalTransform._42,
+			previousRootNode.globalTransform._43
+		};
+
+		DirectX::XMFLOAT3 currentRootPosition =
+		{
+			currentRootNode.globalTransform._41,
+			currentRootNode.globalTransform._42,
+			currentRootNode.globalTransform._43
+		};
+
+		// ループしていないフレームのみ
+		if (previousSamplePhase <= samplePhase)
+		{
+			clipRootMotionDelta =
+			{
+				currentRootPosition.x - previousRootPosition.x,
+				currentRootPosition.y - previousRootPosition.y,
+				currentRootPosition.z - previousRootPosition.z
+			};
+			clipRootMotionValid = true;
+		}
+		// 1.0 → 0.0をまたいだループフレーム
+		else
+		{
+			// clip先頭のPoseを評価
+			target_->model->Animate(clip, 0.0f, blendSpaceRootMotionStartNodes);
+
+			// clip末尾のPoseを評価
+			target_->model->Animate(clip, clipDuration, blendSpaceRootMotionEndNodes);
+
+			const auto& startRootNode = blendSpaceRootMotionStartNodes[rootNodeIndex];
+			const auto& endRootNode = blendSpaceRootMotionEndNodes[rootNodeIndex];
+
+			DirectX::XMFLOAT3 startRootPosition =
+			{
+				startRootNode.globalTransform._41,
+				startRootNode.globalTransform._42,
+				startRootNode.globalTransform._43
+			};
+
+			DirectX::XMFLOAT3 endRootPosition =
+			{
+				endRootNode.globalTransform._41,
+				endRootNode.globalTransform._42,
+				endRootNode.globalTransform._43
+			};
+
+			// previous位置からclip末尾まで
+			DirectX::XMFLOAT3 deltaToEnd =
+			{
+				endRootPosition.x - previousRootPosition.x,
+				endRootPosition.y - previousRootPosition.y,
+				endRootPosition.z - previousRootPosition.z
+			};
+
+			// clip先頭からcurrent位置まで
+			DirectX::XMFLOAT3 deltaFromStart =
+			{
+				currentRootPosition.x - startRootPosition.x,
+				currentRootPosition.y - startRootPosition.y,
+				currentRootPosition.z - startRootPosition.z
+			};
+
+			clipRootMotionDelta =
+			{
+				deltaToEnd.x + deltaFromStart.x,
+				deltaToEnd.y + deltaFromStart.y,
+				deltaToEnd.z + deltaFromStart.z
+			};
+
+			clipRootMotionValid = true;
+
+		}
+
+		// 各クリップごとの重み付きのRootMotionを加算
+		if (clipRootMotionValid)
+		{
+			const float weight = weights[i].weight;
+			blendSpaceRootMotionDelta.x += clipRootMotionDelta.x * weight;
+			blendSpaceRootMotionDelta.y += clipRootMotionDelta.y * weight;
+			blendSpaceRootMotionDelta.z += clipRootMotionDelta.z * weight;
+			rootMotionTotalWeight += weight;
+		}
+
+	}
+
+	if (rootMotionTotalWeight > FLT_EPSILON)
+	{
+		const float inverseWeight = 1.0f / rootMotionTotalWeight;
+
+		blendSpaceRootMotionDelta.x *= inverseWeight;
+		blendSpaceRootMotionDelta.y *= inverseWeight;
+		blendSpaceRootMotionDelta.z *= inverseWeight;
+
+		blendSpaceRootMotionValid = true;
+	}
 
 
-    target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
 
-    if (blend.count > 0)
-    {
-        target_->model->CumulateTransforms(blendSpaceNodes);
-    }
+	BlendResult blend;
+	blend.count = 0;
 
-    // BlendSpaceへの遷移
-    if (blendSpaceTransition)
-    {
-        blendSpaceElapsed += deltaTime;
+	for (auto& w : weights)
+	{
+		blend.samples[blend.count].clip = w.clip;
+		blend.samples[blend.count].weight = w.weight;
+		blend.count++;
+	}
 
-        float t = std::clamp(blendSpaceElapsed / blendSpaceTransitionTime,
-            0.0f,
-            1.0f);
 
-        target_->model->BlendAnimations(
-            animationNodes[Origin],
-            blendSpaceNodes,
-            t,
-            finalNodes);
+	target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
 
-        if (t >= 1.0f)
-        {
-            blendSpaceTransition = false;
-        }
-    }
-    else
-    {
-        finalNodes = blendSpaceNodes;
-    }
+	if (blend.count > 0)
+	{
+		target_->model->CumulateTransforms(blendSpaceNodes);
+	}
 
-    // 今回Phaseを次フレームの前回phaseにする
-    previousLocomotionPhase = currentLocomotionPhase;
-    if (std::isfinite(cycleDuration) && cycleDuration > FLT_EPSILON)
-    {
-        locomotionTime = currentLocomotionPhase * cycleDuration;
-    }
-    else
-    {
-        locomotionTime = 0.0f;
-    }
+	// BlendSpaceへの遷移
+	if (blendSpaceTransition)
+	{
+		blendSpaceElapsed += deltaTime;
+
+		float t = std::clamp(blendSpaceElapsed / blendSpaceTransitionTime,
+			0.0f,
+			1.0f);
+
+		target_->model->BlendAnimations(
+			animationNodes[Origin],
+			blendSpaceNodes,
+			t,
+			finalNodes);
+
+		if (t >= 1.0f)
+		{
+			blendSpaceTransition = false;
+		}
+	}
+	else
+	{
+		finalNodes = blendSpaceNodes;
+	}
+
+	// 今回Phaseを次フレームの前回phaseにする
+	previousLocomotionPhase = currentLocomotionPhase;
+	if (std::isfinite(cycleDuration) && cycleDuration > FLT_EPSILON)
+	{
+		locomotionTime = currentLocomotionPhase * cycleDuration;
+	}
+	else
+	{
+		locomotionTime = 0.0f;
+	}
 }
 
 // BlendSpaceから抽出したRoot Motionを取得して消費する
 bool AnimationController::ConsumeBlendSpaceRootMotion(DirectX::XMFLOAT3& outDelta)
 {
-    if (!blendSpaceRootMotionValid)
-    {
-        outDelta = { 0.0f,0.0f,0.0f };
-        return false;
-    }
-    outDelta = blendSpaceRootMotionDelta;
+	if (!blendSpaceRootMotionValid)
+	{
+		outDelta = { 0.0f,0.0f,0.0f };
+		return false;
+	}
+	outDelta = blendSpaceRootMotionDelta;
 
-    // 同じDeltaを複数回適用しないように消費後は無効化
-    blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
-    blendSpaceRootMotionValid = false;
+	// 同じDeltaを複数回適用しないように消費後は無効化
+	blendSpaceRootMotionDelta = { 0.0f,0.0f,0.0f };
+	blendSpaceRootMotionValid = false;
 
-    return true;
+	return true;
 }
 
 
 AnimationController::RuntimeDangerObbSaveResult AnimationController::SaveDangerObbForRuntimeTuning(
-    size_t clip, size_t stateIndex, const AnimationNotifyState& state,
-    std::string& outFilePath)
+	size_t clip, size_t stateIndex, const AnimationNotifyState& state,
+	std::string& outFilePath)
 {
-    namespace fs = std::filesystem;
-    using json = nlohmann::json;
+	namespace fs = std::filesystem;
+	using json = nlohmann::json;
 
-    const AnimationNotifyAsset* asset = GetNotifyAssetForRuntimeTuning(clip);
-    if (!asset)
-    {
-        outFilePath.clear();
-        return RuntimeDangerObbSaveResult::DangerWindowNotFound;
-    }
+	const AnimationNotifyAsset* asset = GetNotifyAssetForRuntimeTuning(clip);
+	if (!asset)
+	{
+		outFilePath.clear();
+		return RuntimeDangerObbSaveResult::DangerWindowNotFound;
+	}
 
-    outFilePath = "./Data/Animation/" + ownerName + "/" + asset->animationName + ".json";
-    if (!fs::exists(outFilePath))
-        return RuntimeDangerObbSaveResult::FileNotFound;
+	outFilePath = "./Data/Animation/" + ownerName + "/" + asset->animationName + ".json";
+	if (!fs::exists(outFilePath))
+		return RuntimeDangerObbSaveResult::FileNotFound;
 
-    std::ifstream ifs(outFilePath, std::ios::binary);
-    if (!ifs.is_open())
-        return RuntimeDangerObbSaveResult::FileNotFound;
-    const std::string original((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
-    ifs.close();
+	std::ifstream ifs(outFilePath, std::ios::binary);
+	if (!ifs.is_open())
+		return RuntimeDangerObbSaveResult::FileNotFound;
+	const std::string original((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
+	ifs.close();
 
-    const bool hasUtf8Bom = original.size() >= 3 &&
-        static_cast<unsigned char>(original[0]) == 0xEF &&
-        static_cast<unsigned char>(original[1]) == 0xBB &&
-        static_cast<unsigned char>(original[2]) == 0xBF;
-    const bool usesCrLf = original.find("\r\n") != std::string::npos;
-    const bool hasFinalNewline = !original.empty() && original.back() == '\n';
+	const bool hasUtf8Bom = original.size() >= 3 &&
+		static_cast<unsigned char>(original[0]) == 0xEF &&
+		static_cast<unsigned char>(original[1]) == 0xBB &&
+		static_cast<unsigned char>(original[2]) == 0xBF;
+	const bool usesCrLf = original.find("\r\n") != std::string::npos;
+	const bool hasFinalNewline = !original.empty() && original.back() == '\n';
 
-    json root;
-    try
-    {
-        root = json::parse(original.begin() + (hasUtf8Bom ? 3 : 0), original.end());
-    }
-    catch (const json::parse_error&)
-    {
-        return RuntimeDangerObbSaveResult::JsonParseFailed;
-    }
+	json root;
+	try
+	{
+		root = json::parse(original.begin() + (hasUtf8Bom ? 3 : 0), original.end());
+	}
+	catch (const json::parse_error&)
+	{
+		return RuntimeDangerObbSaveResult::JsonParseFailed;
+	}
 
-    if (!root.contains("states") || !root["states"].is_array())
-        return RuntimeDangerObbSaveResult::DangerWindowNotFound;
+	if (!root.contains("states") || !root["states"].is_array())
+		return RuntimeDangerObbSaveResult::DangerWindowNotFound;
 
-    auto matchesSelectedDanger = [&state](const json& jsonState)
-    {
-        if (!jsonState.is_object() || jsonState.value("type", std::string{}) != "DangerWindow")
-            return false;
-        constexpr float timeTolerance = 0.0001f;
-        const float start = jsonState.value("startTime", -FLT_MAX);
-        const float end = jsonState.value("endTime", -FLT_MAX);
-        return std::abs(start - state.startTime) <= timeTolerance &&
-            std::abs(end - state.endTime) <= timeTolerance;
-    };
+	auto matchesSelectedDanger = [&state](const json& jsonState)
+		{
+			if (!jsonState.is_object() || jsonState.value("type", std::string{}) != "DangerWindow")
+				return false;
+			constexpr float timeTolerance = 0.0001f;
+			const float start = jsonState.value("startTime", -FLT_MAX);
+			const float end = jsonState.value("endTime", -FLT_MAX);
+			return std::abs(start - state.startTime) <= timeTolerance &&
+				std::abs(end - state.endTime) <= timeTolerance;
+		};
 
-    size_t jsonStateIndex = static_cast<size_t>(-1);
-    if (stateIndex < root["states"].size() && matchesSelectedDanger(root["states"][stateIndex]))
-    {
-        jsonStateIndex = stateIndex;
-    }
-    else
-    {
-        size_t matchCount = 0;
-        for (size_t index = 0; index < root["states"].size(); ++index)
-        {
-            if (!matchesSelectedDanger(root["states"][index]))
-                continue;
-            jsonStateIndex = index;
-            ++matchCount;
-        }
-        if (matchCount != 1)
-            return RuntimeDangerObbSaveResult::DangerWindowNotFound;
-    }
+	size_t jsonStateIndex = static_cast<size_t>(-1);
+	if (stateIndex < root["states"].size() && matchesSelectedDanger(root["states"][stateIndex]))
+	{
+		jsonStateIndex = stateIndex;
+	}
+	else
+	{
+		size_t matchCount = 0;
+		for (size_t index = 0; index < root["states"].size(); ++index)
+		{
+			if (!matchesSelectedDanger(root["states"][index]))
+				continue;
+			jsonStateIndex = index;
+			++matchCount;
+		}
+		if (matchCount != 1)
+			return RuntimeDangerObbSaveResult::DangerWindowNotFound;
+	}
 
-    json& targetState = root["states"][jsonStateIndex];
-    targetState["justDodgeAreaOffset"] = json::array({
-        state.justDodgeAreaOffset.x, state.justDodgeAreaOffset.y, state.justDodgeAreaOffset.z });
-    targetState["justDodgeAreaSize"] = json::array({
-        state.justDodgeAreaSize.x, state.justDodgeAreaSize.y, state.justDodgeAreaSize.z });
+	json& targetState = root["states"][jsonStateIndex];
+	targetState["justDodgeAreaOffset"] = json::array({
+		state.justDodgeAreaOffset.x, state.justDodgeAreaOffset.y, state.justDodgeAreaOffset.z });
+	targetState["justDodgeAreaSize"] = json::array({
+		state.justDodgeAreaSize.x, state.justDodgeAreaSize.y, state.justDodgeAreaSize.z });
 
-    std::string output = root.dump(4);
-    if (usesCrLf)
-    {
-        std::string crlfOutput;
-        crlfOutput.reserve(output.size() + output.size() / 20);
-        for (const char character : output)
-        {
-            if (character == '\n')
-                crlfOutput.push_back('\r');
-            crlfOutput.push_back(character);
-        }
-        output = std::move(crlfOutput);
-    }
-    if (hasFinalNewline)
-        output += usesCrLf ? "\r\n" : "\n";
-    if (hasUtf8Bom)
-        output.insert(0, "\xEF\xBB\xBF", 3);
+	std::string output = root.dump(4);
+	if (usesCrLf)
+	{
+		std::string crlfOutput;
+		crlfOutput.reserve(output.size() + output.size() / 20);
+		for (const char character : output)
+		{
+			if (character == '\n')
+				crlfOutput.push_back('\r');
+			crlfOutput.push_back(character);
+		}
+		output = std::move(crlfOutput);
+	}
+	if (hasFinalNewline)
+		output += usesCrLf ? "\r\n" : "\n";
+	if (hasUtf8Bom)
+		output.insert(0, "\xEF\xBB\xBF", 3);
 
-    const fs::path temporaryPath = fs::path(outFilePath).concat(".dangerobb.tmp");
-    {
-        std::ofstream ofs(temporaryPath, std::ios::binary | std::ios::trunc);
-        if (!ofs.is_open())
-            return RuntimeDangerObbSaveResult::JsonWriteFailed;
-        ofs.write(output.data(), static_cast<std::streamsize>(output.size()));
-        ofs.flush();
-        if (!ofs.good())
-        {
-            ofs.close();
-            std::error_code cleanupError;
-            fs::remove(temporaryPath, cleanupError);
-            return RuntimeDangerObbSaveResult::JsonWriteFailed;
-        }
-    }
+	const fs::path temporaryPath = fs::path(outFilePath).concat(".dangerobb.tmp");
+	{
+		std::ofstream ofs(temporaryPath, std::ios::binary | std::ios::trunc);
+		if (!ofs.is_open())
+			return RuntimeDangerObbSaveResult::JsonWriteFailed;
+		ofs.write(output.data(), static_cast<std::streamsize>(output.size()));
+		ofs.flush();
+		if (!ofs.good())
+		{
+			ofs.close();
+			std::error_code cleanupError;
+			fs::remove(temporaryPath, cleanupError);
+			return RuntimeDangerObbSaveResult::JsonWriteFailed;
+		}
+	}
 
-    std::error_code writeError;
-    fs::copy_file(temporaryPath, outFilePath, fs::copy_options::overwrite_existing, writeError);
-    std::error_code cleanupError;
-    fs::remove(temporaryPath, cleanupError);
-    return writeError
-        ? RuntimeDangerObbSaveResult::JsonWriteFailed
-        : RuntimeDangerObbSaveResult::Saved;
+	std::error_code writeError;
+	fs::copy_file(temporaryPath, outFilePath, fs::copy_options::overwrite_existing, writeError);
+	std::error_code cleanupError;
+	fs::remove(temporaryPath, cleanupError);
+	return writeError
+		? RuntimeDangerObbSaveResult::JsonWriteFailed
+		: RuntimeDangerObbSaveResult::Saved;
 }
 // NotifyAssetを保存する
 void AnimationController::SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset)
 {
-    using json = nlohmann::json;
+	using json = nlohmann::json;
 
-    json root;
-    // アニメーション情報だけ保存
-    root["animationName"] = asset.animationName;
-    root["animationClip"] = asset.animationClip;
-    root["nextCombo"] = asset.nextCombo;
+	json root;
+	// アニメーション情報だけ保存
+	root["animationName"] = asset.animationName;
+	root["animationClip"] = asset.animationClip;
+	root["nextCombo"] = asset.nextCombo;
 
-    root["loop"] = asset.loop;
-    root["playRate"] = asset.playRate;
+	root["loop"] = asset.loop;
+	root["playRate"] = asset.playRate;
 
-    // SpeedCurveを保存
-    for (const auto& key : asset.speedCurve.keys)
-    {
-        json curve;
+	// SpeedCurveを保存
+	for (const auto& key : asset.speedCurve.keys)
+	{
+		json curve;
 
-        curve["time"] = key.time;
-        curve["value"] = key.value;
+		curve["time"] = key.time;
+		curve["value"] = key.value;
 
-        root["speedCurve"]["keys"].push_back(curve);
-    }
+		root["speedCurve"]["keys"].push_back(curve);
+	}
 
-    // NotifyState保存
-    for (const auto& state : asset.notifyTrack.states)
-    {
-        json j;
-        j["startTime"] = state.startTime;
-        j["endTime"] = state.endTime;
-        j["type"] = std::string(magic_enum::enum_name(state.type));
-        j["parameter"] = state.parameter;
-        j["hitBoxRadius"] = state.hitBoxRadius;
-        j["hitBoxOffset"] = state.hitBoxOffset;
-        j["value"] = state.value;
-        j["moveDistance"] = state.moveDistance;
-        j["moveDirection"] = state.moveDirection;
-        j["justDodgeAreaSize"] = state.justDodgeAreaSize;
-        j["justDodgeAreaOffset"] = state.justDodgeAreaOffset;
-        root["states"].push_back(j);
-    }
+	// NotifyState保存
+	for (const auto& state : asset.notifyTrack.states)
+	{
+		json j;
+		j["startTime"] = state.startTime;
+		j["endTime"] = state.endTime;
+		j["type"] = std::string(magic_enum::enum_name(state.type));
+		j["parameter"] = state.parameter;
+		j["hitBoxRadius"] = state.hitBoxRadius;
+		j["hitBoxOffset"] = state.hitBoxOffset;
+		j["value"] = state.value;
+		j["moveDistance"] = state.moveDistance;
+		j["moveDirection"] = state.moveDirection;
+		j["justDodgeAreaSize"] = state.justDodgeAreaSize;
+		j["justDodgeAreaOffset"] = state.justDodgeAreaOffset;
+		root["states"].push_back(j);
+	}
 
-    // Event 保存
-    for (const auto& event : asset.notifyTrack.events)
-    {
-        json j;
+	// Event 保存
+	for (const auto& event : asset.notifyTrack.events)
+	{
+		json j;
 
-        j["time"] = event.time;
+		j["time"] = event.time;
 
-        j["type"] =
-            std::string(
-                magic_enum::enum_name(event.type));
+		j["type"] =
+			std::string(
+				magic_enum::enum_name(event.type));
 
-        if (event.type == AnimationNotifyEvent::Type::ControllerRumble)
-        {
-            j["leftMotorStrength"] = event.leftMotorStrength;
-            j["rightMotorStrength"] = event.rightMotorStrength;
-            j["duration"] = event.duration;
-        }
-        else
-        {
-            j["parameter"] = event.parameter;
-            j["value"] = event.value;
-        }
+		if (event.type == AnimationNotifyEvent::Type::ControllerRumble)
+		{
+			j["leftMotorStrength"] = event.leftMotorStrength;
+			j["rightMotorStrength"] = event.rightMotorStrength;
+			j["duration"] = event.duration;
+		}
+		else
+		{
+			j["parameter"] = event.parameter;
+			j["value"] = event.value;
+		}
 
-        root["events"].push_back(j);
-    }
+		root["events"].push_back(j);
+	}
 
-    std::ofstream ofs(filename);
+	std::ofstream ofs(filename);
 
-    if (!ofs.is_open())
-        return;
+	if (!ofs.is_open())
+		return;
 
-    ofs << root.dump(4);
+	ofs << root.dump(4);
 }
 
 // NotifyAssetをロードする
 void AnimationController::LoadNotifyAsset(const std::string& filename, AnimationNotifyAsset& asset)
 {
-    using json = nlohmann::json;
-    // jsonファイルを開く
-    std::ifstream ifs(filename);
+	using json = nlohmann::json;
+	// jsonファイルを開く
+	std::ifstream ifs(filename);
 
-    if (!ifs.is_open())
-        return;
+	if (!ifs.is_open())
+		return;
 
-    json root;
-    ifs >> root;
+	json root;
+	ifs >> root;
 
-    // アニメーション情報を読み込む
-    asset.animationName = root.value("animationName", "");
-    asset.animationClip = root.value("animationClip", 0);
-    asset.nextCombo = root.value("nextCombo", "");
+	// アニメーション情報を読み込む
+	asset.animationName = root.value("animationName", "");
+	asset.animationClip = root.value("animationClip", 0);
+	asset.nextCombo = root.value("nextCombo", "");
 
-    asset.loop = root.value("loop", false);
-    asset.playRate = root.value("playRate", 1.0f);
+	asset.loop = root.value("loop", false);
+	asset.playRate = root.value("playRate", 1.0f);
 
-    // SpeedCurveをロードする
-    asset.speedCurve.keys.clear();
-    if (root.contains("speedCurve"))
-    {
-        for (auto& j : root["speedCurve"]["keys"])
-        {
-            CurveKey key;
+	// SpeedCurveをロードする
+	asset.speedCurve.keys.clear();
+	if (root.contains("speedCurve"))
+	{
+		for (auto& j : root["speedCurve"]["keys"])
+		{
+			CurveKey key;
 
-            key.time = j.value("time", 0.0f);
-            key.value = j.value("value", 1.0f);
+			key.time = j.value("time", 0.0f);
+			key.value = j.value("value", 1.0f);
 
-            asset.speedCurve.keys.push_back(key);
-        }
-    }
+			asset.speedCurve.keys.push_back(key);
+		}
+	}
 
-    // Stateをロードする
-    asset.notifyTrack.states.clear();
-    if (root.contains("states"))
-    {
-        for (auto& j : root["states"])
-        {
-            AnimationNotifyState state;
+	// Stateをロードする
+	asset.notifyTrack.states.clear();
+	if (root.contains("states"))
+	{
+		for (auto& j : root["states"])
+		{
+			AnimationNotifyState state;
 
-            state.startTime = j.value("startTime", 0.0f);
+			state.startTime = j.value("startTime", 0.0f);
 
-            state.endTime = j.value("endTime", 0.0f);
+			state.endTime = j.value("endTime", 0.0f);
 
-            auto typeName = j.value("type", "HitBox");
-            auto type = magic_enum::enum_cast<AnimationNotifyState::Type>(typeName);
+			auto typeName = j.value("type", "HitBox");
+			auto type = magic_enum::enum_cast<AnimationNotifyState::Type>(typeName);
 
-            if (type.has_value())
-                state.type = type.value();
+			if (type.has_value())
+				state.type = type.value();
 
-            state.parameter = j.value("parameter", "");
-            state.hitBoxRadius = ([&] { const float radius = j.value("hitBoxRadius", 0.8f); return radius < 0.01f ? 0.01f : radius; }());
-            if (j.contains("hitBoxOffset"))
-                j["hitBoxOffset"].get_to(state.hitBoxOffset);
-            state.value = j.value("value", 1.0f);
-            if (j.contains("moveDirection"))
-            {
-                j["moveDirection"].get_to(state.moveDirection);
-            }
-            state.moveDistance = j.value("moveDistance", 0.0f);
-            if (j.contains("justDodgeAreaSize"))
-            {
-                const auto& size = j["justDodgeAreaSize"];
-                if (size.is_array() && size.size() >= 3)
-                    state.justDodgeAreaSize = { size[0].get<float>(), size[1].get<float>(), size[2].get<float>() };
-                else if (size.is_array() && size.size() == 2)
-                    state.justDodgeAreaSize = { size[0].get<float>(), 2.0f, size[1].get<float>() };
-            }
-            if (j.contains("justDodgeAreaOffset"))
-            {
-                j["justDodgeAreaOffset"].get_to(state.justDodgeAreaOffset);
-            }
-            asset.notifyTrack.states.push_back(state);
-        }
-    }
+			state.parameter = j.value("parameter", "");
+			state.hitBoxRadius = ([&] { const float radius = j.value("hitBoxRadius", 0.8f); return radius < 0.01f ? 0.01f : radius; }());
+			if (j.contains("hitBoxOffset"))
+				j["hitBoxOffset"].get_to(state.hitBoxOffset);
+			state.value = j.value("value", 1.0f);
+			if (j.contains("moveDirection"))
+			{
+				j["moveDirection"].get_to(state.moveDirection);
+			}
+			state.moveDistance = j.value("moveDistance", 0.0f);
+			if (j.contains("justDodgeAreaSize"))
+			{
+				const auto& size = j["justDodgeAreaSize"];
+				if (size.is_array() && size.size() >= 3)
+					state.justDodgeAreaSize = { size[0].get<float>(), size[1].get<float>(), size[2].get<float>() };
+				else if (size.is_array() && size.size() == 2)
+					state.justDodgeAreaSize = { size[0].get<float>(), 2.0f, size[1].get<float>() };
+			}
+			if (j.contains("justDodgeAreaOffset"))
+			{
+				j["justDodgeAreaOffset"].get_to(state.justDodgeAreaOffset);
+			}
+			asset.notifyTrack.states.push_back(state);
+		}
+	}
 
-    // Eventをロードする
-    asset.notifyTrack.events.clear();
-    if (root.contains("events"))
-    {
-        for (auto& j : root["events"])
-        {
-            AnimationNotifyEvent event;
+	// Eventをロードする
+	asset.notifyTrack.events.clear();
+	if (root.contains("events"))
+	{
+		for (auto& j : root["events"])
+		{
+			AnimationNotifyEvent event;
 
-            event.time =
-                j.value("time", 0.0f);
+			event.time =
+				j.value("time", 0.0f);
 
-            auto typeName =
-                j.value("type", "PlaySE");
+			auto typeName =
+				j.value("type", "PlaySE");
 
-            auto type =
-                magic_enum::enum_cast<AnimationNotifyEvent::Type>(typeName);
+			auto type =
+				magic_enum::enum_cast<AnimationNotifyEvent::Type>(typeName);
 
-            if (type.has_value())
-                event.type = type.value();
+			if (type.has_value())
+				event.type = type.value();
 
-            event.parameter =
-                j.value("parameter", "");
+			event.parameter =
+				j.value("parameter", "");
 
-            event.value =
-                j.value("value", 0.0f);
-            event.leftMotorStrength =
-                j.value("leftMotorStrength", 0.0f);
-            event.rightMotorStrength =
-                j.value("rightMotorStrength", 0.0f);
-            event.duration =
-                j.value("duration", 0.0f);
+			event.value =
+				j.value("value", 0.0f);
+			event.leftMotorStrength =
+				j.value("leftMotorStrength", 0.0f);
+			event.rightMotorStrength =
+				j.value("rightMotorStrength", 0.0f);
+			event.duration =
+				j.value("duration", 0.0f);
 
-            asset.notifyTrack.events.push_back(event);
-        }
-    }
+			asset.notifyTrack.events.push_back(event);
+		}
+	}
 
-    // 最後にソートする
-    std::sort(
-        asset.notifyTrack.events.begin(),
-        asset.notifyTrack.events.end(),
-        [](const AnimationNotifyEvent& a, const AnimationNotifyEvent& b)
-        {
-            return a.time < b.time;
-        });
+	// 最後にソートする
+	std::sort(
+		asset.notifyTrack.events.begin(),
+		asset.notifyTrack.events.end(),
+		[](const AnimationNotifyEvent& a, const AnimationNotifyEvent& b)
+		{
+			return a.time < b.time;
+		});
 
-    std::sort(
-        asset.notifyTrack.states.begin(),
-        asset.notifyTrack.states.end(),
-        [](const AnimationNotifyState& a, const AnimationNotifyState& b)
-        {
-            return a.startTime < b.startTime;
-        });
+	std::sort(
+		asset.notifyTrack.states.begin(),
+		asset.notifyTrack.states.end(),
+		[](const AnimationNotifyState& a, const AnimationNotifyState& b)
+		{
+			return a.startTime < b.startTime;
+		});
 
-    std::sort(
-        asset.speedCurve.keys.begin(),
-        asset.speedCurve.keys.end(),
-        [](const CurveKey& a, const CurveKey& b)
-        {
-            return a.time < b.time;
-        });
+	std::sort(
+		asset.speedCurve.keys.begin(),
+		asset.speedCurve.keys.end(),
+		[](const CurveKey& a, const CurveKey& b)
+		{
+			return a.time < b.time;
+		});
 }
 
 // イベントを追加する
 void AnimationController::AddEvent(AnimationNotifyTrack& track, AnimationNotifyEvent::Type type, float time)
 {
-    AnimationNotifyEvent event;
-    event.time = popupCreateTime;
-    event.type = type;
-    track.events.push_back(event);
-    std::sort(
-        track.events.begin(),
-        track.events.end(),
-        [](const AnimationNotifyEvent& a, const AnimationNotifyEvent& b)
-        {
-            return a.time < b.time;
-        });
+	AnimationNotifyEvent event;
+	event.time = popupCreateTime;
+	event.type = type;
+	track.events.push_back(event);
+	std::sort(
+		track.events.begin(),
+		track.events.end(),
+		[](const AnimationNotifyEvent& a, const AnimationNotifyEvent& b)
+		{
+			return a.time < b.time;
+		});
 
 }
 
 // ステートを追加する
 void AnimationController::AddState(AnimationNotifyTrack& track, AnimationNotifyState::Type type, float startTime)
 {
-    AnimationNotifyState state;
+	AnimationNotifyState state;
 
-    state.startTime = popupCreateTime;
-    state.endTime = popupCreateTime + 0.2f;
-    state.type = type;
+	state.startTime = popupCreateTime;
+	state.endTime = popupCreateTime + 0.2f;
+	state.type = type;
 
-    track.states.push_back(state);
+	track.states.push_back(state);
 
-    std::sort(
-        track.states.begin(),
-        track.states.end(),
-        [](const AnimationNotifyState& a, const AnimationNotifyState& b)
-        {
-            return a.startTime < b.startTime;
-        });
+	std::sort(
+		track.states.begin(),
+		track.states.end(),
+		[](const AnimationNotifyState& a, const AnimationNotifyState& b)
+		{
+			return a.startTime < b.startTime;
+		});
 }

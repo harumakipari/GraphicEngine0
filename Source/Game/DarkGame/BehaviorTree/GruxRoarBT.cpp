@@ -341,7 +341,7 @@ void GruxEnemy::BeginCombatDecisionInference()
 {
 	repositionDecisionCached = true;
 	repositionDecisionResult = false;
-	repositionDecisionRoll = 0.0f;
+	float repositionDecisionRoll = 0.0f;
 	const bool defensiveAvailable = CanPlanAttackAgainstCurrentPlayer() &&
 		(CanPlanRoar() || CanPlanRetreat());
 	if (!IsRoarExecutionAllowed() || defensiveAvailable ||
@@ -552,14 +552,12 @@ void GruxEnemy::BeginInitialRepositionFallback()
 	initialRepositionFallbackIdlePending = true;
 	repositionDecisionCached = false;
 	repositionDecisionResult = false;
-	repositionDecisionRoll = 0.0f;
 }
 void GruxEnemy::CompleteInitialRepositionFallbackIdle()
 {
 	initialRepositionFallbackIdlePending = false;
 	repositionDecisionCached = false;
 	repositionDecisionResult = false;
-	repositionDecisionRoll = 0.0f;
 }
 void GruxEnemy::CompleteRepositionArrivalWait()
 {
@@ -571,18 +569,18 @@ void GruxEnemy::CompleteRepositionArrivalWait()
 		initialRepositionPending = false;
 		repositionDecisionCached = false;
 		repositionDecisionResult = false;
-		repositionDecisionRoll = 0.0f;
 	}
 }
 
 // Roar攻撃
 bool GruxEnemy::BeginRoarBT()
 {
-	if (!CanPlanRoar()) { return false; }
+	if (!CanPlanRoar()) 
+	{
+		return false;
+	}
 	const auto controller = GetBodyAnimationController();
-	if (!std::isfinite(roarPreStampedeStartTime) || !std::isfinite(roarPreStampedeEndTime) ||
-		roarPreStampedeStartTime < 0.0f || roarPreStampedeEndTime <= roarPreStampedeStartTime ||
-		controller->GetAnimationLength("Pre_Stampede_0") < roarPreStampedeEndTime)
+	if (!std::isfinite(roarPreStampedeStartTime) || !std::isfinite(roarPreStampedeEndTime) || roarPreStampedeStartTime < 0.0f || roarPreStampedeEndTime <= roarPreStampedeStartTime || controller->GetAnimationLength("Pre_Stampede_0") < roarPreStampedeEndTime)
 	{
 		return false;
 	}

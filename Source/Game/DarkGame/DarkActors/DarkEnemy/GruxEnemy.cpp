@@ -1052,7 +1052,6 @@ void GruxEnemy::ResetBehaviorTreeForBattleRestart()
 	consecutiveAttackCount = 0;
 	repositionDecisionCached = false;
 	repositionDecisionResult = false;
-	repositionDecisionRoll = 0.0f;
 }
 
 void GruxEnemy::ResetCombatRuntimeForBattleRestart()
@@ -1076,8 +1075,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
 	consecutiveAttackCount = 0;
 	repositionDecisionCached = false;
 	repositionDecisionResult = false;
-	repositionDecisionRoll = 0.0f;
-
 	fastComboTargetContext = {};
 	fastComboStageTargetContexts = {};
 	fastComboRuntimeStage = -1;
