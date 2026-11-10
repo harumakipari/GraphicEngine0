@@ -1,6 +1,4 @@
-// CASCADED_SHADOW_MAPS
 #include "GltfModel.hlsli"
-// CASCADED_SHADOW_MAPS
 struct VS_OUT_CSM
 {
     float4 position : SV_POSITION;

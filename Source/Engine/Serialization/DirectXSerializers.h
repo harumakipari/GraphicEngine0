@@ -6,14 +6,9 @@
 #include <cereal/types/set.hpp>
 #include <cereal/types/unordered_map.hpp>
 
-
-
-
-// INTERLEAVED_GLTF_MODEL
 #include <directxmath.h>
 namespace DirectX
 {
-	// INTERLEAVED_GLTF_MODEL
 	template<class T>
 	void serialize(T& archive, DirectX::XMUINT4& v)
 	{

@@ -206,17 +206,6 @@ void SceneComponent::Destroy()
     SetActive(false);
 }
 
-// 初期化時に困るから即時 Transform 更新処理
-void SceneComponent::UpdateTransformImmediate()
-{
-    UpdateComponentToWorld();
-    for (auto& child : attachChildren_)
-    {
-        child->UpdateTransformImmediate();
-    }
-}
-
-
 void SceneComponent::AddWorldOffset(const DirectX::XMFLOAT3& offset)
 {
     // 現在のワールド座標を取得

@@ -81,7 +81,6 @@ public:
         _ASSERT_EXPR(sharedThis != nullptr, "shared_from_this() returned nullptr!");
 
 
-#if 1
         //------------------------------------------------------
         // á@ ÉÜÉjÅ[ÉNñºê∂ê¨
         //------------------------------------------------------
@@ -104,7 +103,6 @@ public:
             finalName = name + "_" + std::to_string(suffix++);
         }
 
-#endif // 0
 
         std::shared_ptr<T> newComponent = std::make_shared<T>(finalName, sharedThis);
         _ASSERT_EXPR(newComponent != nullptr, "Failed to create new SceneComponent!");//std::shared_ptr<T> newComponent = std::make_shared<T>(name, this);
@@ -131,7 +129,6 @@ public:
             }
         }
 
-        _ASSERT_EXPR(reinterpret_cast<void*>(&ownedComponents_) != nullptr, "ownedSceneComponents_ is nullptr!");
 
         ownedComponents_.push_back(std::static_pointer_cast<Component>(newComponent));
 

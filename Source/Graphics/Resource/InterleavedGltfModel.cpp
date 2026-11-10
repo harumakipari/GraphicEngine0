@@ -1,12 +1,8 @@
 #include "pch.h"
-// INTERLEAVED_GLTF_MODEL
 #include "InterleavedGltfModel.h"
 #include <functional>
 #include <filesystem>
 #include <fstream>
-
-//#define TINYGLTF_IMPLEMENTATION 
-
 #include <stack>
 #include <functional>
 #include "DDSTextureLoader.h"
@@ -40,7 +36,6 @@ InterleavedGltfModel::InterleavedGltfModel(ID3D11Device* device, const std::stri
 	{
 		modelCoordinateSystem = CoordinateSystem::LH_Y_UP;
 	}
-#if 1
 	if (std::filesystem::exists(cerealFilename.c_str()))
 	{
 		std::ifstream ifs(cerealFilename.c_str(), std::ios::binary);
@@ -60,24 +55,17 @@ InterleavedGltfModel::InterleavedGltfModel(ID3D11Device* device, const std::stri
 		deserialization(cereal::make_nvp("skins", skins), cereal::make_nvp("animations", animations));
 	}
 	else
-#endif
 	{
 		tinygltf::TinyGLTF tinyGltf;
 		tinyGltf.SetImageLoader(NullLoadImage, nullptr);
-
-		//gltfModel = std::make_shared<tinygltf::Model>();
-		//tinygltf::Model gltfModel;
 		std::string error, warning;
 		bool succeeded = false;
-
-#if 1
 		if (cachedGltfModels.find(filename) != cachedGltfModels.end() && !cachedGltfModels.at(filename).expired())
 		{
 			//キャッシュされたデータからモデルデータ取得
 			gltfModel = cachedGltfModels.at(filename).lock();
 		}
 		else
-#endif // 0
 		{
 			gltfModel = std::make_shared<tinygltf::Model>();
 
@@ -119,35 +107,6 @@ InterleavedGltfModel::InterleavedGltfModel(ID3D11Device* device, const std::stri
 		{
 			FetchAndBatchMeshes(device, *gltfModel);
 		}
-#if 0
-		else
-		{
-			FetchMeshes(device, *gltfModel);
-			if (convertToLHS)
-			{
-				for (auto& mesh : meshes)
-				{
-					ConvertMeshAxisSystem(mesh);
-				}
-				modelCoordinateSystem = CoordinateSystem::LH_Y_UP;
-			}
-			ExtractAnimations(*gltfModel);
-			if (convertToLHS)
-			{
-				for (auto& skin : skins)
-				{
-					ConvertSkinAxisSystem(skin);
-
-				}
-				for (auto& anim : animations)
-				{
-					ConvertAnimationAxisSystem(anim);
-				}
-			}
-			//FetchAnimations(*gltfModel, animations); // 一個目のモデルはアニメーションをそのまま追加
-			//FetchAnimations(*gltfModel);
-		}
-#else
 		else
 		{
 			FetchMeshes(device, *gltfModel);
@@ -158,10 +117,6 @@ InterleavedGltfModel::InterleavedGltfModel(ID3D11Device* device, const std::stri
 		{
 			ConvertHandedness();
 		}
-
-#endif // 0
-
-
 		std::ofstream ofs(cerealFilename.c_str(), std::ios::binary);
 		cereal::BinaryOutputArchive serialization(ofs);
 		serialization(
@@ -178,12 +133,9 @@ InterleavedGltfModel::InterleavedGltfModel(ID3D11Device* device, const std::stri
 		serialization(cereal::make_nvp("textures", textures), cereal::make_nvp("images", images));
 		serialization(cereal::make_nvp("skins", skins), cereal::make_nvp("animations", animations));
 	}
-	//if (!staticBatching)
-	//{// staticBatching じゃなければ
-	//    //CompouteBoundingBox();
-	//}
 	CreateAndUploadResources(device);
 }
+
 void InterleavedGltfModel::FetchNodes(const tinygltf::Model& gltfModel)
 {
 	for (const tinygltf::Node& gltfNode : gltfModel.nodes)
@@ -236,13 +188,6 @@ void InterleavedGltfModel::FetchNodes(const tinygltf::Model& gltfModel)
 
 		}
 	}
-#if 0
-	for (Node& node : nodes)
-	{
-		ConvertNodeAxisSystem(node, mode);
-	}
-#endif // 0
-
 	// globalTransform生成（LHSで作られる）
 	CumulateTransforms(nodes);
 
@@ -479,73 +424,8 @@ void InterleavedGltfModel::CumulateTransforms(std::vector<Node>& nodes) const
 		traverse(-1, nodeIndex);
 	}
 }
-DXGI_FORMAT _DxgiFormat(const tinygltf::Accessor& accessor)
-{
-	switch (accessor.type)
-	{
-	case TINYGLTF_TYPE_SCALAR:
-		switch (accessor.componentType)
-		{
-		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-			return DXGI_FORMAT_R8_UINT;
-		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-			return DXGI_FORMAT_R16_UINT;
-		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-			return DXGI_FORMAT_R32_UINT;
-		default:
-			_ASSERT_EXPR(FALSE, L"This accessor component type is not supported.");
-			return DXGI_FORMAT_UNKNOWN;
-		}
-	case TINYGLTF_TYPE_VEC2:
-		switch (accessor.componentType)
-		{
-		case TINYGLTF_COMPONENT_TYPE_FLOAT:
-			return DXGI_FORMAT_R32G32_FLOAT;
-		default:
-			_ASSERT_EXPR(FALSE, L"This accessor component type is not supported.");
-			return DXGI_FORMAT_UNKNOWN;
-		}
-	case TINYGLTF_TYPE_VEC3:
-		switch (accessor.componentType)
-		{
-		case TINYGLTF_COMPONENT_TYPE_FLOAT:
-			return DXGI_FORMAT_R32G32B32_FLOAT;
-		default:
-			_ASSERT_EXPR(FALSE, L"This accessor component type is not supported.");
-			return DXGI_FORMAT_UNKNOWN;
-		}
-	case TINYGLTF_TYPE_VEC4:
-		switch (accessor.componentType)
-		{
-		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-			return DXGI_FORMAT_R8G8B8A8_UINT;
-		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-			return DXGI_FORMAT_R16G16B16A16_UINT;
-		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-			return DXGI_FORMAT_R32G32B32A32_UINT;
-		case TINYGLTF_COMPONENT_TYPE_FLOAT:
-			return DXGI_FORMAT_R32G32B32A32_FLOAT;
-		default:
-			_ASSERT_EXPR(FALSE, L"This accessor component type is not supported.");
-			return DXGI_FORMAT_UNKNOWN;
-		}
-		break;
-	default:
-		_ASSERT_EXPR(FALSE, L"This accessor type is not supported.");
-		return DXGI_FORMAT_UNKNOWN;
-	}
-}
 
-template<class T>
-static void _Copy(unsigned char* dData, const size_t dStride, const unsigned char* sData, const size_t sStride, size_t count)
-{
-	while (count-- > 0)
-	{
-		*reinterpret_cast<T*>(dData) = *reinterpret_cast<const T*>(sData);
-		sData += sStride;
-		dData += dStride;
-	}
-};
+
 void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Model& gltfModel)
 {
 	for (const tinygltf::Mesh& gltfMesh : gltfModel.meshes)
@@ -563,7 +443,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 				const tinygltf::Accessor& gltfAccessor = gltfModel.accessors.at(gltfPrimitive.indices);
 				const tinygltf::BufferView& gltfBufferView = gltfModel.bufferViews.at(gltfAccessor.bufferView);
 
-				primitive.indexBufferView.format = _DxgiFormat(gltfAccessor);
+				primitive.indexBufferView.format = ToDxgiFormat(gltfAccessor);
 				primitive.indexBufferView.sizeInBytes = static_cast<UINT>(gltfAccessor.count) * GetFormatByteSize(primitive.indexBufferView.format);
 				primitive.cachedIndices.resize(primitive.indexBufferView.sizeInBytes);
 				const unsigned char* data = gltfModel.buffers.at(gltfBufferView.buffer).data.data() + gltfBufferView.byteOffset + gltfAccessor.byteOffset;
@@ -594,7 +474,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 					_ASSERT_EXPR(count == primitive.cachedVertices.size(), L"The number of components on all vertices comprising the mesh must be the same.");
 
 					unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->position);
-					_Copy<DirectX::XMFLOAT3>(dData, dStride, sData, sStride, count);
+					CopyStride<DirectX::XMFLOAT3>(dData, dStride, sData, sStride, count);
 				}
 				else if (gltfAttribute.first == "NORMAL")
 				{
@@ -602,7 +482,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 					_ASSERT_EXPR(count == primitive.cachedVertices.size(), L"The number of components on all vertices comprising the mesh must be the same.");
 
 					unsigned char* d_data = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->normal);
-					_Copy<DirectX::XMFLOAT3>(d_data, dStride, sData, sStride, count);
+					CopyStride<DirectX::XMFLOAT3>(d_data, dStride, sData, sStride, count);
 				}
 				else if (gltfAttribute.first == "TANGENT")
 				{
@@ -610,7 +490,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 					_ASSERT_EXPR(count == primitive.cachedVertices.size(), L"The number of components on all vertices comprising the mesh must be the same.");
 
 					unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->tangent);
-					_Copy<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
+					CopyStride<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
 				}
 				else if (gltfAttribute.first == "TEXCOORD_0")
 				{
@@ -618,7 +498,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 					_ASSERT_EXPR(count == primitive.cachedVertices.size(), L"The number of components on all vertices comprising the mesh must be the same.");
 
 					unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->texcoord);
-					_Copy<DirectX::XMFLOAT2>(dData, dStride, sData, sStride, count);
+					CopyStride<DirectX::XMFLOAT2>(dData, dStride, sData, sStride, count);
 				}
 				else if (gltfAttribute.first == "JOINTS_0")
 				{
@@ -628,7 +508,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 					if (gltfAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
 					{
 						unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->joints0);
-						_Copy<DirectX::XMINT4>(dData, dStride, sData, sStride, count);
+						CopyStride<DirectX::XMINT4>(dData, dStride, sData, sStride, count);
 					}
 					else if (gltfAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
 					{
@@ -665,7 +545,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 					if (gltfAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT)
 					{
 						unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->joints1);
-						_Copy<DirectX::XMINT4>(dData, dStride, sData, sStride, count);
+						CopyStride<DirectX::XMINT4>(dData, dStride, sData, sStride, count);
 					}
 					else if (gltfAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
 					{
@@ -702,7 +582,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 					if (gltfAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
 					{
 						unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->weights0);
-						_Copy<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
+						CopyStride<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
 					}
 					else if (gltfAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
 					{
@@ -741,7 +621,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 					if (gltfAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT)
 					{
 						unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->weights1);
-						_Copy<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
+						CopyStride<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
 					}
 					else if (gltfAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT)
 					{
@@ -776,7 +656,7 @@ void InterleavedGltfModel::FetchMeshes(ID3D11Device* device, const tinygltf::Mod
 				{
 					//_ASSERT_EXPR(FALSE, L"This attribute is unsupported.");
 				}
-				primitive.attributes.emplace(gltfAttribute.first, _DxgiFormat(gltfAccessor));
+				primitive.attributes.emplace(gltfAttribute.first, ToDxgiFormat(gltfAccessor));
 			}
 			primitive.vertexBufferView.sizeInBytes = static_cast<UINT>(primitive.cachedVertices.size() * sizeof(Mesh::Vertex));
 
@@ -909,33 +789,33 @@ void InterleavedGltfModel::FetchAndBatchMeshes(ID3D11Device* device, const tinyg
 					if (gltfAttribute.first == "POSITION")
 					{
 						unsigned char* dData = reinterpret_cast<unsigned char*>(&cachedVertices.data()->position);
-						_Copy<DirectX::XMFLOAT3>(dData, dStride, sData, sStride, count);
+						CopyStride<DirectX::XMFLOAT3>(dData, dStride, sData, sStride, count);
 					}
 					else if (gltfAttribute.first == "NORMAL")
 					{
 						unsigned char* dData = reinterpret_cast<unsigned char*>(&cachedVertices.data()->normal);
-						_Copy<DirectX::XMFLOAT3>(dData, dStride, sData, sStride, count);
+						CopyStride<DirectX::XMFLOAT3>(dData, dStride, sData, sStride, count);
 					}
 					else if (gltfAttribute.first == "TANGENT")
 					{
 						unsigned char* dData = reinterpret_cast<unsigned char*>(&cachedVertices.data()->tangent);
-						_Copy<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
+						CopyStride<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
 					}
 					else if (gltfAttribute.first == "TEXCOORD_0")
 					{
 						unsigned char* dData = reinterpret_cast<unsigned char*>(&cachedVertices.data()->texcoord);
-						_Copy<DirectX::XMFLOAT2>(dData, dStride, sData, sStride, count);
+						CopyStride<DirectX::XMFLOAT2>(dData, dStride, sData, sStride, count);
 					}
 					else if (gltfAttribute.first == "TEXCOORD_1")
 					{
 						unsigned char* dData = reinterpret_cast<unsigned char*>(&cachedVertices.data()->texcoord1);
-						_Copy<DirectX::XMFLOAT2>(dData, dStride, sData, sStride, count);
+						CopyStride<DirectX::XMFLOAT2>(dData, dStride, sData, sStride, count);
 					}
 					else
 					{
 						Logger::Error(gltfAttribute.first + " is an unsupported attribute.");
 					}
-					batchMesh.attributes.emplace(gltfAttribute.first, _DxgiFormat(gltfAccessor));
+					batchMesh.attributes.emplace(gltfAttribute.first, ToDxgiFormat(gltfAccessor));
 				}
 
 				for (BatchMesh::Vertex& cachedVertex : cachedVertices)

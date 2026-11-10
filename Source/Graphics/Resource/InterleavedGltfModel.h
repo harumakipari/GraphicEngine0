@@ -483,8 +483,6 @@ public:
             NormalTextureInfo normalTexture;
             OcclusionTextureInfo occlusionTexture;
             TextureInfo emissiveTexture;
-
-            // Per-material rim light. Runtime components may override these values.
             DirectX::XMFLOAT3 rimColor = { 0.0f, 0.0f, 0.0f };
             float rimPower = 0.0f;
 
@@ -538,17 +536,10 @@ public:
         int width = -1;
         int height = -1;
         int component = -1;
-        int bits = -1;			// bit depth per channel. 8(byte), 16 or 32.
-        int pixelType = -1;	// pixel type(TINYGLTF_COMPONENT_TYPE_***). usually UBYTE(bits = 8) or USHORT(bits = 16)
-        std::string mimeType;	// (required if no uri) ["image/jpeg", "image/png", "image/bmp", "image/gif"]
-        std::string uri;		// (required if no mimeType) uri is not decoded(e.g. whitespace may be represented as %20)
-
-        // When this flag is true, data is stored to `image` in as-is format(e.g. jpeg
-        // compressed for "image/jpeg" mime) This feature is good if you use custom
-        // image loader function. (e.g. delayed decoding of images for faster glTF
-        // parsing) Default parser for Image does not provide as-is loading feature at
-        // the moment. (You can manipulate this by providing your own LoadImageData
-        // function)
+        int bits = -1;			
+        int pixelType = -1; 	
+        std::string mimeType;	
+        std::string uri;		
         bool asIs = false;
 
         std::vector<unsigned char> cacheData;
@@ -656,7 +647,6 @@ public:
 private:
     void FetchNodes(const tinygltf::Model& gltf_model);
     void FetchMeshes(ID3D11Device* device, const tinygltf::Model& gltf_model);
-    // INTERLEAVED_GLTF_MODEL
     void FetchAndBatchMeshes(ID3D11Device* device, const tinygltf::Model& gltf_model);
 
     // ライトの情報を取る
@@ -751,14 +741,6 @@ public:
 
     void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& world, const std::vector<Node>& animatedNodes);
 
-    //// インスタンスを追加
-    //int AddInstance(const Transform& transform)
-    //{
-    //    DirectX::XMFLOAT4X4 instanceMatrix;
-    //    DirectX::XMStoreFloat4x4(&instanceMatrix, transform.ToMatrix());
-    //    instanceMatrices_.push_back(instanceMatrix);
-    //    return static_cast<int>(instanceMatrices_.size()) - 1;
-    //}
 private:
     void ComputeAABBFromMesh(const InterleavedGltfModel::Node& node, const InterleavedGltfModel& model, DirectX::XMFLOAT3& outMin, DirectX::XMFLOAT3& outMax);
 
