@@ -74,10 +74,6 @@ public:
 
     virtual bool IsVisible() const { return isVisible_; }
 
-    uint64_t GetDebugRenderCallCount() const { return debugRenderCallCount_; }
-    void ResetDebugRenderCallCount() const { debugRenderCallCount_ = 0; }
-    void RecordDebugRenderCall() const { ++debugRenderCallCount_; }
-
     // 他のメッシュコンポーネントに必要な外部からの定数バッファ更新するためのフック関数
     virtual void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const {}
 
@@ -194,7 +190,6 @@ public:
 protected:
     //描画するかどうか
     bool isVisible_ = true;
-    mutable uint64_t debugRenderCallCount_ = 0;
     // 影をつけるかどうか
     bool isCastShadow_ = true;
     // シャドウマップで影をつけるかどうか
@@ -215,7 +210,6 @@ protected:
 class SkeletalMeshComponent :public MeshComponent
 {
 public:
-    // Component-owned material data prevents shared model resources from being modified.
     void SetRuntimeMaterialEmissive(const std::string& materialName, bool enabled,
         const DirectX::XMFLOAT3& color, float intensity);
     void ClearRuntimeMaterialEmissive(const std::string& materialName);

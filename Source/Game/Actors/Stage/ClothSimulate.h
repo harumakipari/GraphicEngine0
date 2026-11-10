@@ -11,9 +11,6 @@
 #include <string>
 #include <cstddef>
 
-//#define TINYGLTF_NO_EXTERNAL_IMAGE
-//#define TINYGLTF_NO_STB_IMAGE
-//#define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
 
 #include <cereal/archives/binary.hpp>
@@ -22,7 +19,6 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/set.hpp>
 #include <cereal/types/unordered_map.hpp>
-
 
 #include "Physics/Collider.h"
 #include "Graphics/Core/PipelineState.h"

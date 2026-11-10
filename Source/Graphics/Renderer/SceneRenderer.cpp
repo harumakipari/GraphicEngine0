@@ -565,7 +565,6 @@ void SceneRenderer::DrawWithStaticBatching(ID3D11DeviceContext* immediateContext
         case InterleavedGltfModel::RenderPass::Blend:
             if (material.data.alphaMode == 2/*BLEND*/)
             {
-                //RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
                 RenderState::BindBlendState(immediateContext, BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA);
                 passed = true;
             }
@@ -587,8 +586,6 @@ void SceneRenderer::DrawWithStaticBatching(ID3D11DeviceContext* immediateContext
             material.data.emissiveTexture.index,
             material.data.occlusionTexture.index,
         };
-        //RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-        //RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
 
         ID3D11ShaderResourceView* nullShaderResourceView{};
         std::vector<ID3D11ShaderResourceView*> shaderResourceViews(_countof(textureIndices));
@@ -598,8 +595,6 @@ void SceneRenderer::DrawWithStaticBatching(ID3D11DeviceContext* immediateContext
         }
         immediateContext->PSSetShaderResources(1, static_cast<UINT>(shaderResourceViews.size()), shaderResourceViews.data());
 
-        // The next branch issues either DrawIndexed or Draw for this exact component.
-        meshComponent->RecordDebugRenderCall();
         if (batchMesh.indexBufferView.buffer > -1)
         {
             immediateContext->IASetIndexBuffer(model->buffers.at(batchMesh.indexBufferView.buffer).Get(), batchMesh.indexBufferView.format, 0);

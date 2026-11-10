@@ -812,8 +812,7 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 	switch (state.type)
 	{
 	case AnimationNotifyState::Type::HitBox:
-	{
-		Logger::Log(U8("当たり判定を開始しました"));
+	{// 当たり判定開始
 		activeHitBoxRadius = (state.hitBoxRadius < 0.01f ? 0.01f : state.hitBoxRadius);
 		activeHitBoxOffset = state.hitBoxOffset;
 		prevSwordRootPos = GetHitBoxPoint(swordRootComponent, activeHitBoxOffset);
@@ -829,15 +828,15 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 		inputWindow = true;
 		break;
 	case AnimationNotifyState::Type::Invincible:
+		// 無敵状態を開始
 		invincibleWindow = true;
-		Logger::Log(U8("無敵状態を開始しました"));
 		break;
 	case AnimationNotifyState::Type::TransitionWindow:
+		// 遷移許可区間を開始
 		transitionWindow = true;
-		Logger::Log(U8("遷移許可区間を開始しました"));
 		break;
 	case AnimationNotifyState::Type::JustDodgeWindow:
-		Logger::Log(U8("ジャスト回避許可区間を開始しました"));
+		// ジャスト回避許可区間を開始
 		justDodgeWindow = true;
 		break;
 	case AnimationNotifyState::Type::DangerWindow:
@@ -866,7 +865,6 @@ void Player::OnAnimationNotifyBegin(const AnimationNotifyState& state)
 		float playerRadius = 0.0f;
 		float enemyRadius = 0.0f;
 
-		// Rotation and MotionWarp share the target fixed at Attack Enter.
 		if (std::string(stateMachine_->GetStateName()) == "Attack")
 		{
 			if (const auto target = attackTarget.lock())
@@ -918,19 +916,19 @@ void Player::OnAnimationNotifyEnd(const AnimationNotifyState& state)
 		activeHitBoxOffset = {};
 		break;
 	case AnimationNotifyState::Type::InputWindow:
+		// 入力受付を終了
 		inputWindow = false;
-		Logger::Log(U8("入力受付を終了しました"));
 		break;
 	case AnimationNotifyState::Type::Invincible:
+		// 無敵状態を終了
 		invincibleWindow = false;
-		Logger::Log(U8("無敵状態を終了しました"));
 		break;
 	case AnimationNotifyState::Type::TransitionWindow:
+		// 遷移許可区間を終了
 		transitionWindow = false;
-		Logger::Log(U8("遷移許可区間を終了しました"));
 		break;
 	case AnimationNotifyState::Type::JustDodgeWindow:
-		Logger::Log(U8("ジャスト回避許可区間を終了しました"));
+		// ジャスト回避許可区間を終了
 		justDodgeWindow = false;
 		break;
 	case AnimationNotifyState::Type::DangerWindow:
@@ -970,8 +968,7 @@ void Player::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 	case AnimationNotifyEvent::Type::SpawnEffect:
 		break;
 	case AnimationNotifyEvent::Type::GameplayEvent:
-		if (event.parameter == "DeathCameraStart" && stateMachine_ &&
-			std::string(stateMachine_->GetStateName()) == "Death")
+		if (event.parameter == "DeathCameraStart" && stateMachine_ && std::string(stateMachine_->GetStateName()) == "Death")
 		{
 			if (deathCameraStartCallback)
 			{
@@ -2553,7 +2550,6 @@ void Player::UpdateSwordHitDetection(const DirectX::XMFLOAT3& playerPos, const D
 					std::string(stateMachine_->GetStateName()) == "Rush";
 				if (auto enemy = dynamic_cast<GruxEnemy*>(hit.actor))
 				{
-					Logger::Log(U8("剣に敵が当たった"));
 					const int previousHP = enemy->GetHp();
 					const bool isNormalFourthHit = !isRushHit &&
 						currentAttackAnimation == "Primary_Attack_Fast_D1_1";
