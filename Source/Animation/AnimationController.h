@@ -17,13 +17,6 @@ class Character;
 class AnimationController
 {
 public:
-    enum class LocomotionGroup :uint8_t
-    {
-        Forward,
-        Backward,
-    };
-
-
     enum class MoveDirection :uint8_t
     {
         Idle,
@@ -35,48 +28,11 @@ public:
         BackLeft,
     };
 
-    enum class MoveSpeed :uint8_t
-    {
-        Idle,
-        Walk,
-        Run
-    };
-
     enum class BlendGroup :uint8_t
     {
         Forward,
         Backward
     };
-
-    struct SpeedWeight
-    {
-        float idle = 0.0f;
-        float walk = 0.0f;
-        float run = 0.0f;
-    };
-
-    struct BlendSpaceAnimation
-    {
-        size_t clip;
-        // Blendする位置
-        // x = 横方向
-        // y = 前後方向
-        DirectX::XMFLOAT2 position;
-    };
-
-    struct BlendPair
-    {
-        MoveDirection directionA = MoveDirection::Idle;
-        MoveDirection directionB = MoveDirection::Idle;
-
-        // clipA → clipB の割合
-        // 0.0 : clipA 100%
-        // 1.0 : clipB 100%
-        float weight = 0.0f;
-
-        bool isForwardGroup = true;
-    };
-
 public:
     AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex);
 
@@ -389,9 +345,6 @@ public:
         }
     }
 
-    // 方向とスピードからアニメーションを取得する 
-    size_t GetBlendSpaceAnimationClip(MoveDirection direction, MoveSpeed speed);
-
     // BlendSpaceから抽出したRoot Motionを取得して消費する
     bool ConsumeBlendSpaceRootMotion(DirectX::XMFLOAT3& outDelta);
 
@@ -412,15 +365,6 @@ private:
 
     // ブレンドスペースを更新する
     void UpdateBlendSpace(float deltaTime);
-
-    // 入力方向から２つのアニメーションクリップとブレンドの重さを決定する関数
-    BlendPair CalculateBlendPair(const DirectX::XMFLOAT2& input);
-
-    // スピードから待機歩き走りの重みを計算する
-    SpeedWeight CalculateSpeedWeight(float speed) const;
-
-    // 方向とスピードからアニメーションと重みを計算する
-    BlendResult CalculateBlendSpace(DirectX::XMFLOAT2 direction, float speed);
 
     // NotifyAssetを保存する
     void SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset);
@@ -467,11 +411,6 @@ private:
     bool IsVisualPoseLatchValid() const;
     const std::vector<InterleavedGltfModel::Node>& GetRuntimeVisualPoseNodes();
     void ApplyRuntimeVisualPose();
-
-public:
-    // ブレンドスペース
-    BlendSpace forwardBlendSpace;
-    BlendSpace backwardBlendSpace;
 
 private:
     std::vector<SkeletalMeshComponent*> extraTargets_;
@@ -680,17 +619,10 @@ private:
     float pendingLocomotionPhase = 0.0f;
 
     float locomotionBackwardSideMaxWeight = 0.15f;
-    int locomotionDebugBodyBlendMode = 0;
-    bool locomotionDebugExcludePelvisTranslation = false;
-    bool locomotionDebugExcludePelvisRotation = false;
-    bool locomotionDebugExcludeRootTranslation = false;
-    bool locomotionDebugExcludeRootRotation = false;
-    bool locomotionDebugManualBwdWeight = false;
     float locomotionDebugBwdWeight = 0.5f;
     float locomotionDebugRawStickX = 0.0f;
     float locomotionDebugRawStickZ = 0.0f;
     float locomotionDebugEvaluationAngle = 0.0f;
-    bool locomotionDebugFreezeCommonPhase = false;
     float locomotionDebugFrozenCommonPhase = 0.0f;
     // ブレンドスペースではない
     // ルートモーションの最初を記録する　Pose

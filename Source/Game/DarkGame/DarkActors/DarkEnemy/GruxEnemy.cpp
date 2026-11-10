@@ -310,57 +310,22 @@ void GruxEnemy::DrawImGuiDetails()
 {
 #ifdef USE_IMGUI
 
-	if (ImGui::CollapsingHeader(U8("突進風エフェクト")))
-	{
-		ImGui::Checkbox(U8("有効化"), &chargeWindTrailEnabled);
-		ImGui::DragInt(U8("風エフェクトの数"), &chargeWindTrailActiveCount, 1.0f, 1, static_cast<int>(chargeWindTrailCount));
-		ImGui::DragFloat(U8("寿命 最小"), &chargeWindTrailLifetimeMin, 0.01f, 0.01f, 5.0f, "%.2f sec");
-		ImGui::DragFloat(U8("寿命 最大"), &chargeWindTrailLifetimeMax, 0.01f, 0.01f, 5.0f, "%.2f sec");
-		ImGui::DragFloat(U8("後方移動速度 最小"), &chargeWindTrailSpeedMin, 0.1f, 0.0f, 100.0f);
-		ImGui::DragFloat(U8("後方移動速度 最大"), &chargeWindTrailSpeedMax, 0.1f, 0.0f, 100.0f);
-		ImGui::DragFloat(U8("幅 最小"), &chargeWindTrailWidthMin, 0.005f, 0.001f, 5.0f);
-		ImGui::DragFloat(U8("幅 最大"), &chargeWindTrailWidthMax, 0.005f, 0.001f, 5.0f);
-		ImGui::DragFloat(U8("先端の幅倍率"), &chargeWindTrailHeadWidthScale, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat(U8("末端の幅倍率"), &chargeWindTrailTailWidthScale, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat(U8("横方向の生成範囲"), &chargeWindTrailLateralSpawnRange, 0.01f, 0.0f, 10.0f);
-		ImGui::DragFloat(U8("生成高さ 最小"), &chargeWindTrailHeightMin, 0.01f, -5.0f, 10.0f);
-		ImGui::DragFloat(U8("生成高さ 最大"), &chargeWindTrailHeightMax, 0.01f, -5.0f, 10.0f);
-		ImGui::DragFloat(U8("前方生成位置 最小"), &chargeWindTrailForwardMin, 0.01f, -10.0f, 10.0f);
-		ImGui::DragFloat(U8("前方生成位置 最大"), &chargeWindTrailForwardMax, 0.01f, -10.0f, 10.0f);
-		ImGui::DragFloat(U8("横揺れ幅 最小"), &chargeWindTrailLateralWobbleMin, 0.005f, 0.0f, 5.0f);
-		ImGui::DragFloat(U8("横揺れ幅 最大"), &chargeWindTrailLateralWobbleMax, 0.005f, 0.0f, 5.0f);
-		ImGui::DragFloat(U8("縦揺れ幅 最小"), &chargeWindTrailVerticalWobbleMin, 0.005f, 0.0f, 5.0f);
-		ImGui::DragFloat(U8("縦揺れ幅 最大"), &chargeWindTrailVerticalWobbleMax, 0.005f, 0.0f, 5.0f);
-		ImGui::DragFloat(U8("揺れ周波数 最小"), &chargeWindTrailWobbleFrequencyMin, 0.1f, 0.0f, 50.0f);
-		ImGui::DragFloat(U8("揺れ周波数 最大"), &chargeWindTrailWobbleFrequencyMax, 0.1f, 0.0f, 50.0f);
-		ImGui::ColorEdit3(U8("エフェクトの色"), &chargeWindTrailColor.x);
-		ImGui::DragFloat(U8("発光強度"), &chargeWindTrailEmissiveStrength, 0.05f, 0.0f, 30.0f);
-
-		if (!chargeWindTrailEnabled) StopChargeWindTrails();
-	}
-
-	if (ImGui::CollapsingHeader(U8("突進風モデル")))
-	{
-		ImGui::Checkbox(U8("有効化##MainChargeWind"), &mainChargeWindEnabled);
-		ImGui::DragFloat3(U8("ローカル位置##MainChargeWind"), &mainChargeWindLocalPosition.x, 0.05f);
-		ImGui::DragFloat3(U8("ローカル回転##MainChargeWind"), &mainChargeWindLocalRotation.x, 1.0f);
-		ImGui::DragFloat3(U8("ローカルスケール##MainChargeWind"), &mainChargeWindLocalScale.x, 0.05f, 0.01f, 50.0f);
-		ImGui::Combo(U8("マスクの流れ方##MainChargeWind"), &mainChargeWindMaskFlowMode, U8("直線\0放射状\0"));
-		ImGui::DragFloat2(U8("スクロール速度##MainChargeWind"), &mainChargeWindScrollSpeed.x, 0.01f, -10.0f, 10.0f);
-		ImGui::DragFloat(U8("放射状の流動速度##MainChargeWind"), &mainChargeWindRadialSpeed, 0.01f, -10.0f, 10.0f);
-		ImGui::DragFloat(U8("放射状の繰り返し数##MainChargeWind"), &mainChargeWindRadialTiling, 0.01f, 0.01f, 32.0f);
-		ImGui::ColorEdit3(U8("モデルの色##MainChargeWind"), &mainChargeWindColor.x);
-		ImGui::DragFloat(U8("発光強度##MainChargeWind"), &mainChargeWindEmissionPower, 0.05f, 0.0f, 30.0f);
-		ImGui::DragFloat(U8("不透明度##MainChargeWind"), &mainChargeWindOpacity, 0.01f, 0.0f, 1.0f);
-
-		ApplyMainChargeWindSettings();
-		if (mainChargeWindMeshComponent && chargeMovementActive)
-			mainChargeWindMeshComponent->SetIsVisible(mainChargeWindEnabled);
-	}
-
-
 	if (ImGui::CollapsingHeader(U8("ゲームプレイ調整")))
 	{
+		if (ImGui::TreeNode(U8("戦闘攻撃候補")))
+		{
+			for (size_t i = 0; i < combatAttackData.size(); ++i)
+			{
+				auto& attack = combatAttackData[i];
+				ImGui::PushID(static_cast<int>(i));
+				ImGui::SeparatorText(attack.animationName.c_str());
+				ImGui::DragFloat(U8("攻撃後の硬直時間"), &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
+				attack.recoveryDuration = (std::max)(0.0f, attack.recoveryDuration);
+				ImGui::PopID();
+			}
+			ImGui::TreePop();
+		}
+
 		if (ImGui::TreeNode(U8("咆哮攻撃")))
 		{
 			const auto roarController = GetBodyAnimationController();
@@ -439,21 +404,6 @@ void GruxEnemy::DrawImGuiDetails()
 			ImGui::TreePop();
 		}
 
-	}
-
-	// Tree の開閉が硬直時間の補正条件のため、カテゴリ外に維持する。
-	if (ImGui::TreeNode(U8("戦闘攻撃候補")))
-	{
-		for (size_t i = 0; i < combatAttackData.size(); ++i)
-		{
-			auto& attack = combatAttackData[i];
-			ImGui::PushID(static_cast<int>(i));
-			ImGui::SeparatorText(attack.animationName.c_str());
-			ImGui::DragFloat(U8("攻撃後の硬直時間"), &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
-			attack.recoveryDuration = (std::max)(0.0f, attack.recoveryDuration);
-			ImGui::PopID();
-		}
-		ImGui::TreePop();
 	}
 
 	if (ImGui::CollapsingHeader(U8("AI調整")))
@@ -543,6 +493,54 @@ void GruxEnemy::DrawImGuiDetails()
 
 	if (ImGui::CollapsingHeader(U8("演出調整")))
 	{
+		if (ImGui::CollapsingHeader(U8("突進風エフェクト")))
+		{
+			ImGui::Checkbox(U8("有効化"), &chargeWindTrailEnabled);
+			ImGui::DragInt(U8("風エフェクトの数"), &chargeWindTrailActiveCount, 1.0f, 1, static_cast<int>(chargeWindTrailCount));
+			ImGui::DragFloat(U8("寿命 最小"), &chargeWindTrailLifetimeMin, 0.01f, 0.01f, 5.0f, "%.2f sec");
+			ImGui::DragFloat(U8("寿命 最大"), &chargeWindTrailLifetimeMax, 0.01f, 0.01f, 5.0f, "%.2f sec");
+			ImGui::DragFloat(U8("後方移動速度 最小"), &chargeWindTrailSpeedMin, 0.1f, 0.0f, 100.0f);
+			ImGui::DragFloat(U8("後方移動速度 最大"), &chargeWindTrailSpeedMax, 0.1f, 0.0f, 100.0f);
+			ImGui::DragFloat(U8("幅 最小"), &chargeWindTrailWidthMin, 0.005f, 0.001f, 5.0f);
+			ImGui::DragFloat(U8("幅 最大"), &chargeWindTrailWidthMax, 0.005f, 0.001f, 5.0f);
+			ImGui::DragFloat(U8("先端の幅倍率"), &chargeWindTrailHeadWidthScale, 0.01f, 0.0f, 3.0f);
+			ImGui::DragFloat(U8("末端の幅倍率"), &chargeWindTrailTailWidthScale, 0.01f, 0.0f, 3.0f);
+			ImGui::DragFloat(U8("横方向の生成範囲"), &chargeWindTrailLateralSpawnRange, 0.01f, 0.0f, 10.0f);
+			ImGui::DragFloat(U8("生成高さ 最小"), &chargeWindTrailHeightMin, 0.01f, -5.0f, 10.0f);
+			ImGui::DragFloat(U8("生成高さ 最大"), &chargeWindTrailHeightMax, 0.01f, -5.0f, 10.0f);
+			ImGui::DragFloat(U8("前方生成位置 最小"), &chargeWindTrailForwardMin, 0.01f, -10.0f, 10.0f);
+			ImGui::DragFloat(U8("前方生成位置 最大"), &chargeWindTrailForwardMax, 0.01f, -10.0f, 10.0f);
+			ImGui::DragFloat(U8("横揺れ幅 最小"), &chargeWindTrailLateralWobbleMin, 0.005f, 0.0f, 5.0f);
+			ImGui::DragFloat(U8("横揺れ幅 最大"), &chargeWindTrailLateralWobbleMax, 0.005f, 0.0f, 5.0f);
+			ImGui::DragFloat(U8("縦揺れ幅 最小"), &chargeWindTrailVerticalWobbleMin, 0.005f, 0.0f, 5.0f);
+			ImGui::DragFloat(U8("縦揺れ幅 最大"), &chargeWindTrailVerticalWobbleMax, 0.005f, 0.0f, 5.0f);
+			ImGui::DragFloat(U8("揺れ周波数 最小"), &chargeWindTrailWobbleFrequencyMin, 0.1f, 0.0f, 50.0f);
+			ImGui::DragFloat(U8("揺れ周波数 最大"), &chargeWindTrailWobbleFrequencyMax, 0.1f, 0.0f, 50.0f);
+			ImGui::ColorEdit3(U8("エフェクトの色"), &chargeWindTrailColor.x);
+			ImGui::DragFloat(U8("発光強度"), &chargeWindTrailEmissiveStrength, 0.05f, 0.0f, 30.0f);
+
+			if (!chargeWindTrailEnabled) StopChargeWindTrails();
+		}
+
+		if (ImGui::CollapsingHeader(U8("突進風モデル")))
+		{
+			ImGui::Checkbox(U8("有効化##MainChargeWind"), &mainChargeWindEnabled);
+			ImGui::DragFloat3(U8("ローカル位置##MainChargeWind"), &mainChargeWindLocalPosition.x, 0.05f);
+			ImGui::DragFloat3(U8("ローカル回転##MainChargeWind"), &mainChargeWindLocalRotation.x, 1.0f);
+			ImGui::DragFloat3(U8("ローカルスケール##MainChargeWind"), &mainChargeWindLocalScale.x, 0.05f, 0.01f, 50.0f);
+			ImGui::Combo(U8("マスクの流れ方##MainChargeWind"), &mainChargeWindMaskFlowMode, U8("直線\0放射状\0"));
+			ImGui::DragFloat2(U8("スクロール速度##MainChargeWind"), &mainChargeWindScrollSpeed.x, 0.01f, -10.0f, 10.0f);
+			ImGui::DragFloat(U8("放射状の流動速度##MainChargeWind"), &mainChargeWindRadialSpeed, 0.01f, -10.0f, 10.0f);
+			ImGui::DragFloat(U8("放射状の繰り返し数##MainChargeWind"), &mainChargeWindRadialTiling, 0.01f, 0.01f, 32.0f);
+			ImGui::ColorEdit3(U8("モデルの色##MainChargeWind"), &mainChargeWindColor.x);
+			ImGui::DragFloat(U8("発光強度##MainChargeWind"), &mainChargeWindEmissionPower, 0.05f, 0.0f, 30.0f);
+			ImGui::DragFloat(U8("不透明度##MainChargeWind"), &mainChargeWindOpacity, 0.01f, 0.0f, 1.0f);
+
+			ApplyMainChargeWindSettings();
+			if (mainChargeWindMeshComponent && chargeMovementActive)
+				mainChargeWindMeshComponent->SetIsVisible(mainChargeWindEnabled);
+		}
+
 		if (ImGui::TreeNode(U8("咆哮予兆")))
 		{
 			ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
