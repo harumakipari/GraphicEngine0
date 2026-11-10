@@ -97,9 +97,6 @@
     <ClCompile Include="Source\Core\Vector.cpp">
       <Filter>Source\Core</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Core\World.cpp">
-      <Filter>Source\Core</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Camera\CameraManager.cpp">
       <Filter>Source\Engine\Camera</Filter>
     </ClCompile>
@@ -529,9 +526,6 @@
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Core\Vector.h">
-      <Filter>Source\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Core\World.h">
       <Filter>Source\Core</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera\CameraConstants.h">
