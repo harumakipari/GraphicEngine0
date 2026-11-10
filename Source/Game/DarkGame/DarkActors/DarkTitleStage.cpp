@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "DarkTitleStage.h"
 
-#include "DarkStageBarrelActor.h"
 #include "DarkStageBrazierActor.h"
 #include "DarkStageCandelabraActor.h"
 #include "DarkStageChandelierActor.h"
@@ -27,7 +26,6 @@ void DarkTitleStage::Initialize(const Transform& transform)
 
         std::shared_ptr<TriangleMeshCollisionComponent> triangleMeshComponent = this->AddComponent<class TriangleMeshCollisionComponent>("triangleMeshComponent", "floorCollisionModel");
         triangleMeshComponent->CreateConvexMeshFromModel(floorCollisionModel.get());
-#if 1
         // 床の当たり判定用のボックスコリジョンコンポーネント
         std::shared_ptr<BoxComponent> boxComponent = this->AddComponent<class BoxComponent>("boxComponent", parentName);
         boxComponent->SetHalfBoxExtent(DirectX::XMFLOAT3(80.0f, 0.2f, 80.0f));
@@ -38,7 +36,6 @@ void DarkTitleStage::Initialize(const Transform& transform)
         boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Block);
         boxComponent->SetResponseToLayer(CollisionLayer::Enemy, CollisionComponent::CollisionResponse::Block);
         boxComponent->Initialize();
-#endif // 0
     }
 }
 
@@ -167,15 +164,6 @@ void DarkTitleStage::SetModel(std::shared_ptr<StageAsset> stageAsset, std::share
                 auto doorJailActor = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DoorJailActor>("DoorJailActor", doorJailTr);
 
             }
-#if 0
-            else if (point.name.rfind("Spawn_Barrel", 0) == 0)
-            {
-                DirectX::XMFLOAT3 pos = MathHelper::ConvertRHtoLh(point.worldPosition);
-                Transform barrelTr{ pos,point.worldRotation,point.worldScale };
-                auto barrel = scene->GetActorManager()->CreateAndRegisterActorWithTransform<DarkStageBarrelActor>("barrel", barrelTr);
-            }
-
-#endif // 0
             else if (point.name.rfind("Spawn_TorchLight", 0) == 0)
             {// ボスの部屋のTorchLightを生成する
                 static int i = 0;

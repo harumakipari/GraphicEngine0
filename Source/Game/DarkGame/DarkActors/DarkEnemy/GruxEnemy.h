@@ -1761,7 +1761,6 @@ private:
 	// Charge攻撃時のジャスト回避の判定
 	float chargeJustDodgeCastRadiusScale = 1.8f;  // Chargeのジャスト回避判定半径の倍率。
 	float chargeJustDodgeCastRadiusScalePhase2 = 2.8f;  // 第2段階のChargeジャスト回避判定半径の倍率。
-	int chargeDamagePhase2 = 10;  // 第2段階のChargeによるダメージ量。
 	float chargeWallCastRadiusScale = 0.3f;  // Chargeの壁判定半径の倍率。
 	float chargeStartValidationClearance = 0.05f;  // Charge開始時の経路確認に使う余白距離。
 
@@ -1860,7 +1859,6 @@ private:
 	// 被弾演出・音声・振動
 	float damageFlashDuration = 0.20f;  // 被弾時の発光演出の時間。
 	float damageFlashStartValue = 0.60f;  // 被弾時の発光演出の開始値。
-	float hitVoiceCooldown = 0.50f;  // 被弾ボイスの再生間隔。
 	float hitVoiceCooldownTimer = 0.0f;  // 被弾ボイスのクールダウン時間。
 	int lastHitVoiceIndex = -1;  // 直近に再生した被弾ボイスのインデックス。
 	float normalHitRumbleStrength = 1.2f;  // 通常攻撃被弾時の振動強度。

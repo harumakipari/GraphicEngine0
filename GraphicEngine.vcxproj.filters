@@ -208,9 +208,6 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkClothActor.cpp">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBarrelActor.cpp">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.cpp">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClCompile>
@@ -679,9 +676,6 @@
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageAsset.h">
-      <Filter>Source\Game\DarkGame\DarkActors</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageBarrelActor.h">
       <Filter>Source\Game\DarkGame\DarkActors</Filter>
     </ClInclude>
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.h">
