@@ -504,24 +504,3 @@ void ExecuteJumpAttack::ResetRuntime()
 	finishAfterAnimation = false;
 	stageHitCount = 0;
 }
-
-// ImGui
-void GruxEnemy::DrawTripleJumpDebug()
-{
-#ifdef USE_IMGUI
-	ImGui::SeparatorText(U8("三連ジャンプ設定"));
-	ImGui::DragFloat(U8("ジャンプ予兆のスケール"), &jumpTelegraphScale, 0.01f, 0.01f, 10.0f, "%.2f");
-	ImGui::Checkbox(U8("ジャンプ予兆の発光を有効化"), &jumpTelegraphEmissiveEnabled);
-	ImGui::ColorEdit3(U8("フェーズ1の予兆発光色"), &jumpTelegraphPhase1EmissiveColor.x);
-	ImGui::ColorEdit3(U8("フェーズ2の予兆発光色"), &jumpTelegraphPhase2EmissiveColor.x);
-	ImGui::DragFloat(U8("予兆の発光強度"), &jumpTelegraphEmissiveIntensity, 0.05f, 0.0f, 20.0f, "%.2f");
-	ImGui::DragFloat(U8("内側予兆の開始スケール"), &jumpTelegraphInnerStartScale, 0.01f, 0.01f, 10.0f, "%.2f");
-	ImGui::Checkbox(U8("予兆の回転を有効化"), &jumpTelegraphEnableRotation);
-	ImGui::DragFloat(U8("外側予兆の回転速度"), &jumpTelegraphOuterRotationSpeed, 1.0f, -360.0f, 360.0f, "%.1f deg/sec");
-	ImGui::DragFloat(U8("内側予兆の回転速度"), &jumpTelegraphInnerRotationSpeed, 1.0f, -360.0f, 360.0f, "%.1f deg/sec");
-	ImGui::Checkbox(U8("着地時のフラッシュを有効化"), &jumpTelegraphEnableImpactFlash);
-	ImGui::DragFloat(U8("着地フラッシュの持続時間"), &jumpTelegraphImpactFlashDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
-	ImGui::DragFloat(U8("着地フラッシュの強度"), &jumpTelegraphImpactFlashIntensity, 0.05f, 0.0f, 2.0f, "%.2f");
-	ImGui::DragFloat(U8("ジャンプ間の遷移時間"), &tripleJumpTransitionDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
-#endif
-}

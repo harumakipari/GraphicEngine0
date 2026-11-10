@@ -1065,7 +1065,6 @@ private:
 	void UpdateJumpTelegraphImpactFlash(float deltaTime);
 
 	// 複数回Jumpの実行状態をデバッグ表示する。
-	void DrawTripleJumpDebug();
 
 	// FastCombo接近の再試行待ち中かを返す。
 	bool IsFastComboApproachRetryCooldownActive() const;

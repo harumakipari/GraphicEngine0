@@ -120,12 +120,7 @@ public:
 
 public:
 	// モデル名を指定してPlayerを生成する。
-	explicit Player(const std::string& modelName) :Character(modelName)
-	{
-		mass = 50.0f;
-		maxHp = 50;
-		hp = maxHp;
-	}
+	explicit Player(const std::string& modelName) :Character(modelName) {}
 
 	void Initialize(const Transform& transform)override;
 
@@ -472,7 +467,7 @@ private:
 	DirectX::XMFLOAT3 GetHitBoxPoint(const std::shared_ptr<SceneComponent>& component, const DirectX::XMFLOAT3& localOffset) const;
 
 	// 武器の当たり判定
-	void UpdateSwordHitDetection(const DirectX::XMFLOAT3& playerPos,const DirectX::XMFLOAT3& swordRootPos,const DirectX::XMFLOAT3& swordMidPos,const DirectX::XMFLOAT3& swordTipPos);
+	void UpdateSwordHitDetection(const DirectX::XMFLOAT3& playerPos, const DirectX::XMFLOAT3& swordRootPos, const DirectX::XMFLOAT3& swordMidPos, const DirectX::XMFLOAT3& swordTipPos);
 
 	// 入力要求の内部処理
 	// 入力を一定時間保持するアクション要求として記録する。
@@ -503,7 +498,7 @@ private:
 		const DirectX::XMFLOAT3* swordTipPos, bool updateTrail);
 	// 特殊演出中の剣の表示状態をアニメーション時刻から再評価する。
 	void UpdateWeaponVisualPresentation(float deltaTime, bool updateTrail = true);
-	
+
 	// モデルとアニメーション生成する
 	void InitializeSkeletalMeshAndAnimations(const std::string& parentName);
 
