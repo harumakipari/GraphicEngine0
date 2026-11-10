@@ -2,6 +2,48 @@
 #include "MeshComponent.h"
 #include "Core/Actor.h"
 
+DirectX::XMFLOAT3 MeshComponent::GetModelSize() const
+{
+    AABB aabb = model->GetAABB();
+    return{ aabb.max.x - aabb.min.x,aabb.max.y - aabb.min.y,aabb.max.z - aabb.min.z };
+}
+
+void MeshComponent::DrawImGuiInspector() 
+{
+#ifdef USE_IMGUI
+    SceneComponent::DrawImGuiInspector();
+    if (ImGui::TreeNode((name_ + "  model").c_str()))
+    {
+        ImGui::Checkbox("isVisible", &isVisible_);
+        ImGui::SliderFloat(U8("色相調整"), &plusAlphaCBuffer->data.hueShift, -1.0f, +1.0);
+        ImGui::SliderFloat(U8("彩度調整"), &plusAlphaCBuffer->data.saturation, -1.0f, +1.0);
+        ImGui::SliderFloat(U8("明度調整"), &plusAlphaCBuffer->data.brightness, -1.0f, +1.0);
+        ImGui::SliderFloat(U8("コントラスト調整"), &plusAlphaCBuffer->data.contrast, -1.0f, +1.0);
+        ImGui::SliderFloat("dissolve", &plusAlphaCBuffer->data.dissolve, 0.0f, 1.0f);
+        ImGui::ColorEdit4("cpuColor", &plusAlphaCBuffer->data.cpuColor.x);
+        ImGui::SliderFloat("emissionPower", &plusAlphaCBuffer->data.emissionPower, 0.0f, 50.0f);
+        ImGui::SliderFloat4("morphWeight", &plusAlphaCBuffer->data.morphWeights.x, 0.0f, 1.0f);
+        ImGui::SliderFloat("value", &plusAlphaCBuffer->data.flashValue, 0.0f, 20.0f);
+        const char* objectTypes[] =
+        {
+            "Default",
+            "Player",
+            "Enemy",
+            "Stage",
+        };
+
+        int type = static_cast<int>(plusAlphaCBuffer->data.objectType);
+
+        if (ImGui::Combo("Render Step", &type, objectTypes, IM_ARRAYSIZE(objectTypes)))
+        {
+            plusAlphaCBuffer->data.objectType = static_cast<ObjectType>(type);
+        }
+
+        ImGui::TreePop();
+    }
+#endif
+}
+
 void SkeletalMeshComponent::CreateRuntimeMaterialOverrideBuffer(ID3D11Device* device)
 {
     if (runtimeMaterialResourceView || !model || model->materials.empty())

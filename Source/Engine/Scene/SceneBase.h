@@ -100,8 +100,6 @@ private:
 
     void SetupImGuiStyle();
 
-    void DrawGizmo();
-
     void DrawViewport();
 
     void DrawMovieEditorOnly();
@@ -109,9 +107,7 @@ private:
 
 protected:
 
-    //==============================
     // 定数バッファ構造体
-    //==============================
     struct FrameConstants
     {
         float elapsedTime = 0.0f;
@@ -121,9 +117,7 @@ protected:
         float gravity = -9.8f;
     };
 
-    //==============================
     // メンバー変数（描画関連）
-    //==============================
     std::unique_ptr<ConstantBuffer<FrameConstants>>  sceneCBuffer;
     std::unique_ptr<ConstantBuffer<SceneShaderConstants>> shaderCBuffer;
     std::unique_ptr<FullScreenQuad> fullscreenQuad;
@@ -181,7 +175,6 @@ protected:
     bool huskDebugProgressOverride = false;
     float huskDebugProgress = 0.0f;
 #endif
-
 
     SIZE framebufferDimensions = {};
 
