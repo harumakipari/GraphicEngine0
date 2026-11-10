@@ -16,7 +16,7 @@ void GruxEnemy::BeginDashTelegraphVisual()
 	const float dz = dashTelegraphLineEnd.z - dashTelegraphLineStart.z;
 	dashTelegraphLineLength = std::sqrt(dx * dx + dz * dz);
 	const bool dashTelegraphSnapshotValid = dashTelegraphLineLength > FLT_EPSILON;
-	if (!dashTelegraphSnapshotValid || !showDashTelegraph)
+	if (!dashTelegraphSnapshotValid)
 		return;
 
 

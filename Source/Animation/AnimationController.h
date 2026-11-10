@@ -27,12 +27,6 @@ public:
         Backward,
         BackLeft,
     };
-
-    enum class BlendGroup :uint8_t
-    {
-        Forward,
-        Backward
-    };
 public:
     AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex);
 
@@ -67,12 +61,6 @@ public:
     {
         isAnimationFinished = true;
         transitionState = AnimationTransitionState::NotStarted;
-    }
-
-    // アニメーションのループを切りよく終了させるフラグ
-    void RequestStopLoop()
-    {
-        requestStopLoop = true;
     }
 
     float GetCurrentAnimationTime() const
@@ -237,7 +225,7 @@ public:
             Logger::Log("Disable BlendSpace");
 
             // 位相転送はRootMotion抑制とは別に管理する
-            const float blendDuration = GetLocomotionDuration(currentGroup);
+            const float blendDuration = GetLocomotionDuration();
 
             pendingLocomotionPhase = 0.0f;
 
@@ -278,9 +266,7 @@ public:
                 ? animationClip
                 : animationNextClip;
 
-            const float blendSpaceDuration =
-                GetLocomotionDuration(
-                    currentGroup);
+            const float blendSpaceDuration =GetLocomotionDuration();
 
             if (target_ &&
                 target_->model &&
@@ -361,7 +347,7 @@ private:
 
 
     // それぞれのアニメーション再生時間を取る
-    float GetLocomotionDuration(BlendGroup group);
+    float GetLocomotionDuration();
 
     // ブレンドスペースを更新する
     void UpdateBlendSpace(float deltaTime);
@@ -393,7 +379,6 @@ private:
     // Notifyの詳細設定のImGui描画
     void DrawNotifyInspector(AnimationNotifyAsset& asset);
 
-    // Runtime playback is left untouched while the editor owns the preview pose.
     void UpdateEditorPreview(float deltaTime);
     void ApplyEditorPreviewPose();
     void DrawEditorPreviewStates();
@@ -574,7 +559,6 @@ private:
 
     // ブレンドスペース
     BlendSpace locomotionBlendSpace;
-    BlendGroup currentGroup = BlendGroup::Forward;
 
     // ブレンドスペースで使用する入力値
     DirectX::XMFLOAT2 blendInput;

@@ -1526,7 +1526,6 @@ private:
 	std::array<float, 4> repositionChanceByAttackCount{ 0.10f, 0.25f, 0.60f, 1.0f };  // 攻撃完了数に応じた位置調整の選択確率。
 	mutable bool repositionDecisionCached = false;  // 今回の推論で位置調整の抽選結果を保持しているか。
 	mutable bool repositionDecisionResult = false;  // 今回の推論で保持した位置調整の抽選結果。
-	mutable float repositionDecisionRoll = 0.0f;  // 位置調整の抽選に使った乱数値。
 
 	float repositionCooldownDuration = 3.0f, repositionCooldownRemaining = 0.0f, repositionRetryCooldownDuration = 0.75f, repositionRetryCooldownRemaining = 0.0f;  // 位置調整と再試行のクールダウン時間および残り時間。
 
@@ -1665,7 +1664,6 @@ private:
 	bool dashBTDirectionLocked = false;  // Dashの移動方向が固定済みかを示す。
 	bool dashBTMovementSnapshotPrepared = false;  // Dash移動に使う情報が準備済みかを示す。
 	DirectX::XMFLOAT3 dashBTPredictedKnockupPosition{};  // Dash後のKnockup開始予測位置。
-	bool showDashTelegraph = true;  // Dash予兆の表示を有効にする。
 	DashTelegraphVisualState dashTelegraphVisualState = DashTelegraphVisualState::Hidden;  // Dash予兆の表示アニメーション段階。
 	float dashTelegraphVisualElapsed = 0.0f;  // Dash予兆の表示段階の経過時間。
 	float dashTelegraphLineExpandDuration = 0.15f;  // Dash予兆の線を伸ばす時間。
