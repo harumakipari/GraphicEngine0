@@ -32,45 +32,9 @@ void Player::Initialize(const Transform& transform)
 	delayedHpDelayTimer = 0.0f;
 
 	std::string parentName = "skeletalComponent";
-	// 描画用コンポーネントを追加
-	{
-		PROFILE_SCOPE("Create PlayerModel");
 
-		skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
-		skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
-		skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
-		skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = 1.0f;
-		skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = playerAliveEmissionPower;   // 自己発光の強さを設定
-		// 服の色のための色相変更
-		skeletalMeshComponent->plusAlphaCBuffer->data.hueShift = -1.0f;
-		skeletalMeshComponent->plusAlphaCBuffer->data.saturation = 0.442f;
-		skeletalMeshComponent->plusAlphaCBuffer->data.brightness = 0.352f;
-		skeletalMeshComponent->plusAlphaCBuffer->data.contrast = 0.8f;
-		skeletalMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerDeferredPS";
-		skeletalMeshComponent->SetIsCastShadow(false);
-		skeletalMeshComponent->SetIsShadowMap(true);
-		for (auto& material : skeletalMeshComponent->model->materials)
-		{
-			if (material.name == "M_Aurora_Hair_Blonde_FrozenHearth")
-			{// 髪の毛だったら
-				material.materialType = MaterialType::Hair;
-			}
-			else if (material.name == "M_Aurora_Fur_FrozenHearth")
-			{// Fur部分だったら
-				material.overridePipelineName = "characterFurAndHairSkeletalMesh";
-				material.materialType = MaterialType::Fur;
-			}
-			else if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
-				material.name == "M_Aurora_Dress_FrozenHearth" ||
-				material.name == "M_Aurora_Body_Metals_FrozenHearth")
-			{// 服部分だったら、
-				material.materialType = MaterialType::Cloth;
-			}
-		}
-	}
-
-
-	InitializeAnimations();
+	// モデルとアニメーション生成する
+	InitializeSkeletalMeshAndAnimations(parentName);
 
 	{
 		PROFILE_SCOPE("Create PlayerStateMachine");
@@ -212,66 +176,95 @@ void Player::Initialize(const Transform& transform)
 
 }
 
-void Player::InitializeAnimations()
+void Player::InitializeSkeletalMeshAndAnimations(const std::string& parentName)
 {
+	// 描画用コンポーネントを追加
+	skeletalMeshComponent = this->AddComponent<SkeletalMeshComponent>(parentName);
+	skeletalMeshComponent->SetModel("./Data/Models/Characters/PlayerNoWeapon/player.gltf", false, true);
+	skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Player;   // オブジェクトの種類を Player に設定
+	skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor.w = 1.0f;
+	skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = playerAliveEmissionPower;   // 自己発光の強さを設定
+	// 服の色のための色相変更
+	skeletalMeshComponent->plusAlphaCBuffer->data.hueShift = -1.0f;
+	skeletalMeshComponent->plusAlphaCBuffer->data.saturation = 0.442f;
+	skeletalMeshComponent->plusAlphaCBuffer->data.brightness = 0.352f;
+	skeletalMeshComponent->plusAlphaCBuffer->data.contrast = 0.8f;
+	skeletalMeshComponent->overrideDeferredPipelineName = "GltfModelPlayerDeferredPS";
+	skeletalMeshComponent->SetIsCastShadow(false);
+	skeletalMeshComponent->SetIsShadowMap(true);
+	for (auto& material : skeletalMeshComponent->model->materials)
 	{
-		PROFILE_SCOPE("Create PlayerAnimationController");
-
-		// ルートノードを設定する
-		int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
-		// アニメーションコントローラーを作成
-		auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
-
-		controller->SetEnableRootMotion(false);
-		controller->SetIgnoreRootMotion(true);
-		controller->AddAnimation("Idle", 0);
-		controller->AddAnimation("Jog_Fwd", 1);
-		controller->AddAnimation("Primary_Attack_Fast_A", 2);
-		controller->AddAnimation("Primary_Attack_Fast_B", 3);
-		controller->AddAnimation("Primary_Attack_Fast_C", 4);
-		controller->AddAnimation("Primary_Attack_Fast_D1_1", 5);
-		controller->AddAnimation("Ability_RMB_Bwd_0", 6);
-		controller->AddAnimation("Ability_RMB_Left_0", 7);
-		controller->AddAnimation("Ability_RMB_Right_0", 8);
-		controller->AddAnimation("Ability_RWB_Fwd_0", 9);
-		controller->AddAnimation("Hit_Combat_B", 10);
-		controller->AddAnimation("Hit_Combat_Death", 11);
-		controller->AddAnimation("Hit_Combat_F", 12);
-		controller->AddAnimation("Hit_Combat_L", 13);
-		controller->AddAnimation("Hit_Combat_R", 14);
-		controller->AddAnimation("Recall_0", 15);
-		controller->AddAnimation("Level_Start_Cut", 16);
-		controller->AddAnimation("Jog_Bwd", 17);
-		controller->AddAnimation("Jog_Left", 18);
-		controller->AddAnimation("Jog_Right", 19);
-		controller->AddAnimation("Rush_Attack_Fast_A", 20);
-		controller->AddAnimation("Rush_Attack_Fast_B", 21);
-		controller->AddAnimation("Rush_Attack_Fast_C", 22);
-		controller->AddAnimation("Rush_Attack_Fast_End", 23);
-		controller->AddAnimation("Rush_Attack_Fast_D", 24);
-		controller->AddAnimation("Walk_Fwd", 25);
-		controller->AddAnimation("Get_Up", 26);
-		controller->AddAnimation("Hit_Large_KnockBack", 27);
-		controller->AddAnimation("Emote_Win", 28);
-		controller->AddAnimation("Walk_Fwd_Stop_Fast", 29);
-		controller->AddAnimation("Result_Recall", 30);
-		controller->AddAnimation("Emote_Phase2", 31);
-		controller->AddAnimation("Standing", 32);
-		controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
-
-		controller->AddLocomotionBlendAnimation("Jog_Fwd", 0.0f, 0.0f);
-		controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.464f);
-		controller->AddLocomotionBlendAnimation("Jog_Bwd", 180.0f, 0.0f);
-		controller->AddLocomotionBlendAnimation("Jog_Left", -90.0f, 0.5f);
-
-		std::string name = GetName();
-		// アニメーションコントローラーのオーナーの名前を設定する
-		controller->SetOwnerName(name);
-		// 全てのNotifyAssetsをロードする
-		controller->LoadAllNotifyAssets(name);
-		// アニメーションコントローラーを character に追加
-		this->AddBodyAnimationController(controller);
+		if (material.name == "M_Aurora_Hair_Blonde_FrozenHearth")
+		{// 髪の毛だったら
+			material.materialType = MaterialType::Hair;
+		}
+		else if (material.name == "M_Aurora_Fur_FrozenHearth")
+		{// Fur部分だったら
+			material.overridePipelineName = "characterFurAndHairSkeletalMesh";
+			material.materialType = MaterialType::Fur;
+		}
+		else if (material.name == "M_Aurora_Dress_Skirt_FrozenHearth" ||
+			material.name == "M_Aurora_Dress_FrozenHearth" ||
+			material.name == "M_Aurora_Body_Metals_FrozenHearth")
+		{// 服部分だったら、
+			material.materialType = MaterialType::Cloth;
+		}
 	}
+
+	// ルートノードを設定する
+	int rootNodeIndex = skeletalMeshComponent->FindIndexByName("root");
+	// アニメーションコントローラーを作成
+	auto controller = std::make_shared<AnimationController>(this, skeletalMeshComponent.get(), rootNodeIndex);
+
+	controller->SetEnableRootMotion(false);
+	controller->SetIgnoreRootMotion(true);
+	controller->AddAnimation("Idle", 0);
+	controller->AddAnimation("Jog_Fwd", 1);
+	controller->AddAnimation("Primary_Attack_Fast_A", 2);
+	controller->AddAnimation("Primary_Attack_Fast_B", 3);
+	controller->AddAnimation("Primary_Attack_Fast_C", 4);
+	controller->AddAnimation("Primary_Attack_Fast_D1_1", 5);
+	controller->AddAnimation("Ability_RMB_Bwd_0", 6);
+	controller->AddAnimation("Ability_RMB_Left_0", 7);
+	controller->AddAnimation("Ability_RMB_Right_0", 8);
+	controller->AddAnimation("Ability_RWB_Fwd_0", 9);
+	controller->AddAnimation("Hit_Combat_B", 10);
+	controller->AddAnimation("Hit_Combat_Death", 11);
+	controller->AddAnimation("Hit_Combat_F", 12);
+	controller->AddAnimation("Hit_Combat_L", 13);
+	controller->AddAnimation("Hit_Combat_R", 14);
+	controller->AddAnimation("Recall_0", 15);
+	controller->AddAnimation("Level_Start_Cut", 16);
+	controller->AddAnimation("Jog_Bwd", 17);
+	controller->AddAnimation("Jog_Left", 18);
+	controller->AddAnimation("Jog_Right", 19);
+	controller->AddAnimation("Rush_Attack_Fast_A", 20);
+	controller->AddAnimation("Rush_Attack_Fast_B", 21);
+	controller->AddAnimation("Rush_Attack_Fast_C", 22);
+	controller->AddAnimation("Rush_Attack_Fast_End", 23);
+	controller->AddAnimation("Rush_Attack_Fast_D", 24);
+	controller->AddAnimation("Walk_Fwd", 25);
+	controller->AddAnimation("Get_Up", 26);
+	controller->AddAnimation("Hit_Large_KnockBack", 27);
+	controller->AddAnimation("Emote_Win", 28);
+	controller->AddAnimation("Walk_Fwd_Stop_Fast", 29);
+	controller->AddAnimation("Result_Recall", 30);
+	controller->AddAnimation("Emote_Phase2", 31);
+	controller->AddAnimation("Standing", 32);
+	controller->SetRemoveRootTranslationFromPose("Hit_Large_KnockBack", true);
+
+	controller->AddLocomotionBlendAnimation("Jog_Fwd", 0.0f, 0.0f);
+	controller->AddLocomotionBlendAnimation("Jog_Right", 90.0f, 0.464f);
+	controller->AddLocomotionBlendAnimation("Jog_Bwd", 180.0f, 0.0f);
+	controller->AddLocomotionBlendAnimation("Jog_Left", -90.0f, 0.5f);
+
+	std::string name = GetName();
+	// アニメーションコントローラーのオーナーの名前を設定する
+	controller->SetOwnerName(name);
+	// 全てのNotifyAssetsをロードする
+	controller->LoadAllNotifyAssets(name);
+	// アニメーションコントローラーを character に追加
+	this->AddBodyAnimationController(controller);
 }
 
 void Player::CreateUI()

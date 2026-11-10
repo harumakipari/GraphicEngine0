@@ -15,7 +15,6 @@ void DarkClothActor::Initialize(const Transform& transform)
     meshComponent->SetModel("./Data/Models/Cloth/ClothPoleModel.gltf", false, true);
     meshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Furniture;
 
-
     // 布の位置コンポーネントを追加する
     clothPoint = AddComponent<SceneComponent>("clothPoint", parentName);
     clothPoint->SetRelativeLocationDirect({ 0.0f,-1.8f,0.0f });
@@ -25,9 +24,6 @@ void DarkClothActor::Initialize(const Transform& transform)
     pointLightComponent->SetRelativeLocationDirect({ 0.8f,1.6f,-3.0f });
     // ライトの名前からライトマネージャーの共有ライトを取得して設定
     pointLightComponent->SetSharedLightName("TopCandelabra");
-
-    //auto clothMeshComponent= AddComponent<SkeletalMeshComponent>(parentName);
-    //clothMeshComponent->SetModel("./Data/Models/Cloth/ClothModel.gltf", false, true);
 }
 
 void DarkClothActor::Update(float deltaTime)

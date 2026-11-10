@@ -1288,128 +1288,6 @@ void AnimationController::DrawImGui()
 {
 #ifdef USE_IMGUI
     DrawTimeline();
-
-    if (!ImGui::CollapsingHeader("Animation Debug"))
-        return;
-
-    ImGui::DragFloat2("blendInput", &blendInput.x, 0.1f, -1.0f, 1.0f);
-    ImGui::Checkbox("useBlendSpace", &useBlendSpace);
-
-    ImGui::Text("Current: %s", currentAnimationName.c_str());
-    ImGui::Text("Playing: %s", isAnimationFinished ? "No" : "Yes");
-
-    ImGui::Checkbox("Loop", &isAnimationLoop);
-    ImGui::Checkbox("Blend", &isBlendingAnimation);
-    ImGui::SliderFloat("Blend Time", &transitionTime, 0.0f, 1.0f);
-    ImGui::SliderFloat("Rate", &animationRate, 0.0f, 3.0f);
-
-    ImGui::Checkbox("enableRootMotion", &enableRootMotion);
-    ImGui::Checkbox("ignoreRootMotion", &ignoreRootMotion);
-
-    ImGui::Separator();
-    ImGui::Text("Locomotion Runtime Debug");
-    ImGui::Text("Controller: %s @ %p", ownerName.c_str(),
-        static_cast<void*>(this));
-    ImGui::Text("rawStick: (%.4f, %.4f)",
-        locomotionDebugRawStickX, locomotionDebugRawStickZ);
-    ImGui::Text("blendInput: (%.4f, %.4f)", blendInput.x, blendInput.y);
-    ImGui::Text("evaluationAngle: %.3f deg", locomotionDebugEvaluationAngle);
-    ImGui::SliderFloat(
-        "Locomotion Play Rate", &locomotionPlayRate, 0.5f, 2.0f);
-    ImGui::Text("locomotionTime: %.4f", locomotionTime);
-    ImGui::Text("commonPhase: %.4f", locomotionCommonPhase);
-    ImGui::Checkbox("Freeze commonPhase",
-        &locomotionDebugFreezeCommonPhase);
-    if (locomotionDebugFreezeCommonPhase)
-    {
-        ImGui::SliderFloat("Frozen commonPhase",
-            &locomotionDebugFrozenCommonPhase, 0.0f, 1.0f);
-    }
-    ImGui::Text("Force pair: %s (%d)  Force single: %s (%d)",
-        locomotionDebugForcedPair != 0 ? "ON" : "OFF",
-        locomotionDebugForcedPair,
-        locomotionDebugForcedSingle != 0 ? "ON" : "OFF",
-        locomotionDebugForcedSingle);
-
-    bool phaseOffsetChanged = false;
-    phaseOffsetChanged |= ImGui::SliderFloat(
-        "Backward phaseOffset", &locomotionBackwardPhaseOffset, 0.0f, 1.0f);
-    phaseOffsetChanged |= ImGui::SliderFloat(
-        "Right phaseOffset", &locomotionRightPhaseOffset, 0.0f, 1.0f);
-    phaseOffsetChanged |= ImGui::SliderFloat(
-        "Left phaseOffset", &locomotionLeftPhaseOffset, 0.0f, 1.0f);
-    if (phaseOffsetChanged)
-    {
-        SetLocomotionPhaseOffset("Jog_Bwd", locomotionBackwardPhaseOffset);
-        SetLocomotionPhaseOffset("Jog_Right", locomotionRightPhaseOffset);
-        SetLocomotionPhaseOffset("Jog_Left", locomotionLeftPhaseOffset);
-    }
-    ImGui::SliderFloat(
-        "Backward Side Max Weight",
-        &locomotionBackwardSideMaxWeight,
-        0.0f,
-        0.5f);
-
-    const char* forcedPairs =
-        "Off\0Forward + Right\0Right + Backward\0"
-        "Backward + Left\0Left + Forward\0";
-    if (ImGui::Combo(
-        "Force 50/50 Pair", &locomotionDebugForcedPair, forcedPairs) &&
-        locomotionDebugForcedPair != 0)
-    {
-        locomotionDebugForcedSingle = 0;
-    }
-
-    const char* forcedSingles =
-        "Off\0Jog_Fwd\0Jog_Right\0Jog_Bwd\0Jog_Left\0";
-    if (ImGui::Combo(
-        "Force Clip Weight 1", &locomotionDebugForcedSingle, forcedSingles) &&
-        locomotionDebugForcedSingle != 0)
-    {
-        locomotionDebugForcedPair = 0;
-    }
-
-    const char* bodyBlendModes =
-        "Full Body\0Lower Body Only\0Upper Body Only\0";
-    ImGui::Combo(
-        "Bone Blend Isolation", &locomotionDebugBodyBlendMode, bodyBlendModes);
-    ImGui::Checkbox("Do not blend Pelvis Translation",
-        &locomotionDebugExcludePelvisTranslation);
-    ImGui::Checkbox("Do not blend Pelvis Rotation",
-        &locomotionDebugExcludePelvisRotation);
-    ImGui::Checkbox("Do not blend Root Translation",
-        &locomotionDebugExcludeRootTranslation);
-    ImGui::Checkbox("Do not blend Root Rotation",
-        &locomotionDebugExcludeRootRotation);
-    ImGui::Checkbox("Manual Jog_Bwd Weight",
-        &locomotionDebugManualBwdWeight);
-    if (locomotionDebugManualBwdWeight)
-    {
-        ImGui::SliderFloat("Jog_Bwd Weight",
-            &locomotionDebugBwdWeight, 0.0f, 1.0f);
-    }
-
-    if (ImGui::Button("Capture Current Blend Reference"))
-    {
-        locomotionDebugReferenceAngle = locomotionDebugEvaluationAngle;
-        locomotionDebugReferenceSampleCount = locomotionDebugSampleCount;
-        locomotionDebugHasReference = true;
-    }
-    ImGui::SameLine();
-    if (ImGui::Button("Clear Blend Reference"))
-    {
-        locomotionDebugHasReference = false;
-    }
-
-    ImGui::Separator();
-
-    for (const auto& name : animationImGUiOrder)
-    {
-        if (ImGui::Button(name.c_str()))
-        {
-            ResetRootMotion(name, isAnimationLoop, isBlendingAnimation, transitionTime);
-        }
-    }
 #endif
 }
 
@@ -2286,9 +2164,7 @@ void AnimationController::DrawTimeline()
 }
 
 
-bool AnimationController::EvaluateWeaponVisualState(
-    bool& outShowTrail, float& outEmissivePower,
-    bool& outHasShowTrail, bool& outHasShowEmissive) const
+bool AnimationController::EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower,bool& outHasShowTrail, bool& outHasShowEmissive) const
 {
     outShowTrail = false;
     outEmissivePower = 0.0f;
@@ -2459,28 +2335,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 {
     // デバッグ固定方向はPose評価だけに使用し、Playerの移動入力は変更しない。
     DirectX::XMFLOAT2 evaluationInput = blendInput;
-    if (locomotionDebugForcedSingle != 0)
-    {
-        switch (locomotionDebugForcedSingle)
-        {
-        case 1: evaluationInput = { 0.0f, 1.0f }; break;
-        case 2: evaluationInput = { 1.0f, 0.0f }; break;
-        case 3: evaluationInput = { 0.0f, -1.0f }; break;
-        case 4: evaluationInput = { -1.0f, 0.0f }; break;
-        default: break;
-        }
-    }
-    else
-    {
-        switch (locomotionDebugForcedPair)
-        {
-        case 1: evaluationInput = { 1.0f, 1.0f }; break;
-        case 2: evaluationInput = { 1.0f, -1.0f }; break;
-        case 3: evaluationInput = { -1.0f, -1.0f }; break;
-        case 4: evaluationInput = { -1.0f, 1.0f }; break;
-        default: break;
-        }
-    }
 
     locomotionDebugEvaluationAngle = DirectX::XMConvertToDegrees(
         atan2f(evaluationInput.x, evaluationInput.y));
@@ -2594,8 +2448,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     }
 
     locomotionCommonPhase = currentLocomotionPhase;
-    locomotionDebugSampleCount = 0;
-
     bool canExtractRootMotion = enableRootMotion && !ignoreRootMotion;
 
     if (resetLocomotionRootMotion)
@@ -2644,7 +2496,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
     // ルートモーションの重み用の変数
     float rootMotionTotalWeight = 0.0f;
-
 
     for (size_t i = 0; i < weights.size(); i++)
     {
@@ -2821,7 +2672,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
     target_->model->BlendAnimations(blendSpacePoses, blend, blendSpaceNodes);
 
-    // Bone/transform isolation is debug-only and uses the first selected clip as reference.
     if (blend.count > 0)
     {
         const std::vector<InterleavedGltfModel::Node>& referencePose =
