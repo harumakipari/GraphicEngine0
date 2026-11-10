@@ -126,7 +126,6 @@ public:
     // 全アクターのUpdate処理を呼び出す（RootComponentとOwnedComponent）
     void Update(float deltaTime);
 
-    void DrawImGuiAllActors() const;
 
 };
 

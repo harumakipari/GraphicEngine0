@@ -243,7 +243,7 @@ public:
 private:
     bool Initialize();
     bool Update(float elapsed_time/*Elapsed seconds from last frame*/);
-    void Render(float elapsed_time/*Elapsed seconds from last frame*/, bool renderable);
+    void Render(float elapsed_time/*Elapsed seconds from last frame*/, bool renderable) const;
     bool Uninitialize();
 private:
     Time tictoc;
