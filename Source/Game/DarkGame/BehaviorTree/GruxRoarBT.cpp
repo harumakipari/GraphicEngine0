@@ -575,7 +575,7 @@ void GruxEnemy::CompleteRepositionArrivalWait()
 // Roar攻撃
 bool GruxEnemy::BeginRoarBT()
 {
-	if (!CanPlanRoar()) 
+	if (!CanPlanRoar())
 	{
 		return false;
 	}
@@ -828,12 +828,14 @@ void GruxEnemy::SpawnRoarGroundBurst()
 
 void GruxEnemy::EnsureRoarImpactDebris()
 {
-	constexpr const char* smallModelPaths[] = {
+	constexpr const char* smallModelPaths[] = 
+	{
 		"./Data/Models/EffectDebri/SmallDebri/debri.gltf",
 		"./Data/Models/EffectDebri/SmallDebri/debri1.gltf",
 		"./Data/Models/EffectDebri/SmallDebri/debri2.gltf",
 	};
-	constexpr const char* blockModelPaths[] = {
+	constexpr const char* blockModelPaths[] =
+	{
 		"./Data/Models/EffectDebri/Block/block1.gltf",
 		"./Data/Models/EffectDebri/Block/block2.gltf",
 		"./Data/Models/EffectDebri/Block/block3.gltf",
@@ -842,14 +844,11 @@ void GruxEnemy::EnsureRoarImpactDebris()
 	for (size_t index = 0; index < roarImpactDebris.size(); ++index)
 	{
 		auto& debris = roarImpactDebris[index];
-		debris.isBlock = index >= 12;
+		bool isBlock = index >= 12;
 		if (!debris.meshComponent)
 		{
-			const char* modelPath = debris.isBlock
-				? blockModelPaths[(index - 12) % std::size(blockModelPaths)]
-				: smallModelPaths[index % std::size(smallModelPaths)];
-			debris.meshComponent = AddComponent<SkeletalMeshComponent>(
-				"RoarImpactDebris_" + std::to_string(index), "GruxEnemy");
+			const char* modelPath = isBlock ? blockModelPaths[(index - 12) % std::size(blockModelPaths)] : smallModelPaths[index % std::size(smallModelPaths)];
+			debris.meshComponent = AddComponent<SkeletalMeshComponent>("RoarImpactDebris_" + std::to_string(index), "GruxEnemy");
 			debris.meshComponent->SetModel(modelPath);
 			debris.meshComponent->SetIsCastShadow(false);
 			debris.meshComponent->SetUsingAbsoluteLocation(true);

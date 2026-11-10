@@ -719,8 +719,8 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
 	{
 		static thread_local std::mt19937 randomEngine{ std::random_device{}() };
 		std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
-		fourthHitReactionLastRoll = distribution(randomEngine);
-		fourthHitReactionLastWon = fourthHitReactionLastRoll < std::clamp(fourthHitReactionChance, 0.0f, 1.0f);
+		float fourthHitReactionLastRoll = distribution(randomEngine);
+		bool fourthHitReactionLastWon = fourthHitReactionLastRoll < std::clamp(fourthHitReactionChance, 0.0f, 1.0f);
 		if (fourthHitReactionLastWon && !IsStunned())
 			BeginFourthHitReaction(hitSourcePosition);
 	}
@@ -1072,9 +1072,6 @@ void GruxEnemy::ResetCombatRuntimeForBattleRestart()
 	repositionRetryCooldownRemaining = 0.0f;
 	initialRepositionPending = true;
 	initialRepositionFallbackIdlePending = false;
-	consecutiveAttackCount = 0;
-	repositionDecisionCached = false;
-	repositionDecisionResult = false;
 	fastComboTargetContext = {};
 	fastComboStageTargetContexts = {};
 	fastComboRuntimeStage = -1;
@@ -3793,8 +3790,6 @@ void GruxEnemy::BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePositio
 	if (hp <= 0 || isDeathPerform || finalHitReactionActive || finalHitReactionHeld)
 		return;
 
-	// Stop all combat-owned movement, hit boxes, and warps before taking
-	// temporary ownership of the body animation.
 	StopBattleActions();
 	ResetBehaviorTreeRuntime();
 	ClearPositioningTarget(retreatTarget, retreatMovementRuntime);
@@ -3806,13 +3801,9 @@ void GruxEnemy::BeginFourthHitReaction(const DirectX::XMFLOAT3& hitSourcePositio
 	toPlayer.y = 0.0f;
 	const float forwardLength = std::sqrt(forward.x * forward.x + forward.z * forward.z);
 	const float toPlayerLength = std::sqrt(toPlayer.x * toPlayer.x + toPlayer.z * toPlayer.z);
-	fourthHitReactionLastDirectionDot =
-		forwardLength > FLT_EPSILON && toPlayerLength > FLT_EPSILON
-		? (forward.x * toPlayer.x + forward.z * toPlayer.z) / (forwardLength * toPlayerLength)
-		: 0.0f;
-
+	float fourthHitReactionLastDirectionDot = forwardLength > FLT_EPSILON && toPlayerLength > FLT_EPSILON ? (forward.x * toPlayer.x + forward.z * toPlayer.z) / (forwardLength * toPlayerLength) : 0.0f;
 	const bool frontHit = fourthHitReactionLastDirectionDot >= 0.0f;
-	fourthHitReactionAnimation = frontHit ? "HitReact_Front" : "HitReact_Back";
+	std::string fourthHitReactionAnimation = frontHit ? "HitReact_Front" : "HitReact_Back";
 	fourthHitReactionRemaining = std::clamp(fourthHitReactionDuration, 0.0f, 2.0f);
 	fourthHitReactionActive = fourthHitReactionRemaining > 0.0f;
 
@@ -3831,10 +3822,6 @@ void GruxEnemy::ResetFourthHitReaction()
 {
 	fourthHitReactionActive = false;
 	fourthHitReactionRemaining = 0.0f;
-	fourthHitReactionLastRoll = -1.0f;
-	fourthHitReactionLastWon = false;
-	fourthHitReactionLastDirectionDot = 0.0f;
-	fourthHitReactionAnimation = "None";
 }
 
 BossDistanceRegion GruxEnemy::GetDistanceRegion(float distance) const
@@ -3932,13 +3919,12 @@ void GruxEnemy::RefreshActiveDangerAreaFromNotify()
 {
 	if (!isDangerWindow || !activeDangerNotifyState)
 		return;
-	justDodgeAreaOffset = activeDangerNotifyState->justDodgeAreaOffset;
-	justDodgeAreaSize = activeDangerNotifyState->justDodgeAreaSize;
+	DirectX::XMFLOAT3 justDodgeAreaOffset = activeDangerNotifyState->justDodgeAreaOffset;
+	DirectX::XMFLOAT3 justDodgeAreaSize = activeDangerNotifyState->justDodgeAreaSize;
 	justDodgeAreaSize.x = (std::max)(0.0f, justDodgeAreaSize.x);
 	justDodgeAreaSize.y = (std::max)(0.0f, justDodgeAreaSize.y);
 	justDodgeAreaSize.z = (std::max)(0.0f, justDodgeAreaSize.z);
-	dangerArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(),
-		justDodgeAreaOffset, justDodgeAreaSize);
+	dangerArea = BuildDangerArea(GetPosition(), GetRight(), GetUp(), GetForward(), justDodgeAreaOffset, justDodgeAreaSize);
 }
 void GruxEnemy::PrepareJumpAttackMotionWarpOverride()
 {
@@ -4003,9 +3989,7 @@ void GruxEnemy::RefreshActiveHitBoxesFromNotifyStates()
 	}
 }
 
-GruxEnemy::PositioningMoveResult GruxEnemy::UpdatePositioningTargetMovement(
-	PositioningTargetContext& target, PositioningTargetRuntime& runtime, float dt
-)
+GruxEnemy::PositioningMoveResult GruxEnemy::UpdatePositioningTargetMovement(PositioningTargetContext& target, PositioningTargetRuntime& runtime, float dt)
 {
 	if (!target.valid)
 		return PositioningMoveResult::InvalidTarget;
@@ -4019,8 +4003,8 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdatePositioningTargetMovement(
 	const auto position = GetPosition();
 	const float dx = target.targetPosition.x - position.x;
 	const float dz = target.targetPosition.z - position.z;
-	runtime.remainingDistance = std::sqrt(dx * dx + dz * dz);
-	if (runtime.remainingDistance <= target.arrivalTolerance)
+	float remainingDistance = std::sqrt(dx * dx + dz * dz);
+	if (remainingDistance <= target.arrivalTolerance)
 		return PositioningMoveResult::Arrived;
 	if (runtime.elapsed >= target.timeout)
 		return PositioningMoveResult::Timeout;
@@ -4037,8 +4021,7 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdatePositioningTargetMovement(
 		return PositioningMoveResult::Stuck;
 	if (!characterMovementComponent || !rotationComponent)
 		return PositioningMoveResult::InvalidTarget;
-	const DirectX::XMFLOAT3 direction{ dx / runtime.remainingDistance, 0.0f,
-		dz / runtime.remainingDistance };
+	const DirectX::XMFLOAT3 direction{ dx / remainingDistance, 0.0f,dz / remainingDistance };
 	characterMovementComponent->SetFixedSpeed(target.moveSpeed);
 	characterMovementComponent->SetInputMagnitude(1.0f);
 	characterMovementComponent->SetMoveDirection(direction);
@@ -4215,10 +4198,7 @@ void  GruxEnemy::SpawnRightFootScrapeEffect()const
 	{
 		footScrapeEffectComponent->SetWorldLocationDirect(spawnPosition);
 		footScrapeEffectComponent->UpdateComponentToWorld();
-		EffectManager::EmitParticle(
-			footScrapeEffectComponent->GetEffectHandle(),
-			footScrapeEffectComponent->GetComponentLocation(),
-			{ 0.0f, 0.0f, 0.0f });
+		EffectManager::EmitParticle(footScrapeEffectComponent->GetEffectHandle(), footScrapeEffectComponent->GetComponentLocation(), { 0.0f, 0.0f, 0.0f });
 	}
 }
 

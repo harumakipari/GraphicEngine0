@@ -250,16 +250,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 				animationTime >=
 				normalAnimationDuration)
 			{
-				if (requestStopLoop)
-				{
-					animationTime =
-						normalAnimationDuration;
-
-					isAnimationLoop = false;
-					requestStopLoop = false;
-					isAnimationFinished = true;
-				}
-				else if (isAnimationLoop)
+				if (isAnimationLoop)
 				{
 					normalAnimationLoopedThisFrame =
 						true;
@@ -365,13 +356,7 @@ void AnimationController::OnUpdate(const float deltaTime)
 			const float effectiveDuration = playbackEndTime >= 0.0f
 				? (std::min)(duration, playbackEndTime)
 				: duration;
-			if (requestStopLoop && normalAnimationLoopedThisFrame)
-			{
-				isAnimationLoop = false;
-				requestStopLoop = false;
-				isAnimationFinished = true;
-			}
-			else if (!isAnimationLoop && animationTime >= effectiveDuration)
+			if (!isAnimationLoop && animationTime >= effectiveDuration)
 			{
 				animationTime = effectiveDuration;
 				isAnimationFinished = true;
@@ -548,7 +533,6 @@ void AnimationController::CaptureEditorRuntimeSnapshot()
 	editorRuntimeSnapshot.isBlendingAnimation = isBlendingAnimation;
 	editorRuntimeSnapshot.isAnimationFinished = isAnimationFinished;
 	editorRuntimeSnapshot.isAnimationLoop = isAnimationLoop;
-	editorRuntimeSnapshot.requestStopLoop = requestStopLoop;
 	editorRuntimeSnapshot.currentAnimationName = currentAnimationName;
 	editorRuntimeSnapshot.animationOriginNodes = animationNodes[Origin];
 	editorRuntimeSnapshot.animationNextNodes = animationNodes[Next];
@@ -582,7 +566,6 @@ void AnimationController::EndEditorPreview()
 	isBlendingAnimation = editorRuntimeSnapshot.isBlendingAnimation;
 	isAnimationFinished = editorRuntimeSnapshot.isAnimationFinished;
 	isAnimationLoop = editorRuntimeSnapshot.isAnimationLoop;
-	requestStopLoop = editorRuntimeSnapshot.requestStopLoop;
 	currentAnimationName = editorRuntimeSnapshot.currentAnimationName;
 	animationNodes[Origin] = editorRuntimeSnapshot.animationOriginNodes;
 	animationNodes[Next] = editorRuntimeSnapshot.animationNextNodes;
@@ -1096,7 +1079,6 @@ bool AnimationController::PlayAnimationImmediate(
 	playbackEndTime = -1.0f;
 	isAnimationLoop = loop;
 	isAnimationFinished = false;
-	requestStopLoop = false;
 	this->ignoreRootMotion = ignoreRootMotion;
 	resetRootMotionDelta = true;
 
