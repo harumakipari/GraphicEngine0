@@ -24,8 +24,6 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 
     // BlendSpaceの完成結果に使用するノード
     blendSpaceNodes = target_->model->GetNodes();
-    blendSpaceClipA = target_->model->GetNodes();
-    blendSpaceClipB = target_->model->GetNodes();
     groupTransitionStartNodes = target_->model->GetNodes();
     groupTransitionNodes = target_->model->GetNodes();
     // 前回時刻の RootMotion 取得用 Pose
@@ -137,9 +135,6 @@ void AnimationController::ApplyLocalPoseOverride()
 void AnimationController::OnUpdate(const float deltaTime)
 {
     ZoneScopedN("Animation Update");
-
-    const DirectX::XMFLOAT3 actorPositionAtBegin =owner->GetPosition();
-
     // 最初にモデルとアニメーションを確認する
     if (!target_ || !target_->model || target_->model->animations.empty())
     {
@@ -296,14 +291,6 @@ void AnimationController::OnUpdate(const float deltaTime)
         auto& notifyTrack = notifyAsset.notifyTrack;
         for (auto& state : notifyTrack.states)
         {
-            bool wasInside =
-                prevAnimationTime >= state.startTime &&
-                prevAnimationTime < state.endTime;
-
-            bool isInside =
-                animationTime >= state.startTime &&
-                animationTime < state.endTime;
-
             if (prevAnimationTime < state.startTime &&
                 animationTime >= state.startTime)
             {
@@ -546,10 +533,6 @@ void AnimationController::OnUpdate(const float deltaTime)
         suppressNormalRootMotionUntilTransitionCompleted = false;
         suppressNormalRootMotionObservedTransition = false;
     }
-
-    const DirectX::XMFLOAT3 actorPositionAtEnd =
-        owner->GetPosition();
-
 }
 
 void AnimationController::CaptureEditorRuntimeSnapshot()
@@ -575,7 +558,6 @@ void AnimationController::CaptureEditorRuntimeSnapshot()
     editorRuntimeSnapshot.finalNodes = finalNodes;
     editorRuntimeSnapshot.previousPosition = previousPosition;
     editorRuntimeSnapshot.zeroTranslation = zeroTranslation;
-    editorRuntimeSnapshot.resetRootMotionDelta = resetRootMotionDelta;
     editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted = suppressNormalRootMotionUntilTransitionCompleted;
     editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition = suppressNormalRootMotionObservedTransition;
 }
@@ -1094,7 +1076,6 @@ bool AnimationController::PlayAnimationImmediate(
         return false;
     }
 
-    // A held preview restores its saved runtime before this method overwrites it.
     EndEditorPreview();
 
     const size_t requestedClip = animationIt->second;
@@ -1170,8 +1151,6 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
     currentAnimationRemovesRootTranslation =
         requestedRemoveRootTranslation;
 
-    // Apply the per-animation Root Motion setting.
-    // enableRootMotion=false always takes precedence over this flag.
     this->ignoreRootMotion = ignoreRootMotion;
 
     // 同じ遷移先を遷移中に再要求しても、
@@ -1236,7 +1215,6 @@ void AnimationController::ResetRootMotion(const std::string& animationName, cons
     else
     { // ブレンドしないなら現在のアニメーションを次のアニメーションに変更する
         this->animationClip = requestedClip;
-        //this->animationClip = animationNameToIndex_[animationName];
         transitionState = AnimationController::AnimationTransitionState::Completed;
     }
 }
@@ -1266,23 +1244,6 @@ bool AnimationController::SetPlaybackRange(float startTime, float endTime)
     return true;
 }
 
-void AnimationController::ResetRootMotion(int animationClip)
-{
-    currentAnimationRemovesRootTranslation =
-        removeRootTranslationFromPoseClips.contains(animationClip);
-    removeRootTranslationDuringTransition = false;
-    this->isAnimationFinished = false;
-    transitionState = AnimationController::AnimationTransitionState::Completed;
-    this->animationClip = animationClip;
-    prevAnimationTime = 0.0f;
-    animationTime = 0;
-    playbackEndTime = -1.0f;
-    target_->model->Animate(animationClip, 0, finalNodes);
-    InterleavedGltfModel::Node& node = finalNodes.at(rootNodeIndex);
-    previousPosition = { node.globalTransform._41, node.globalTransform._42, node.globalTransform._43 }; // グローバル空間
-    resetRootMotionDelta = true;
-    zeroTranslation = node.translation;
-}
 
 void AnimationController::DrawImGui()
 {
@@ -2200,42 +2161,6 @@ bool AnimationController::EvaluateWeaponVisualState(bool& outShowTrail, float& o
     }
     return hasWeaponVisualState;
 }
-bool AnimationController::EvaluateShowEmissiveState(float& outPower, float& outProgress) const
-{
-    outPower = 0.0f;
-    outProgress = 0.0f;
-
-    const size_t clip = editorPreviewActive ? selectedTimelineClip : animationClip;
-    const float time = editorPreviewActive ? editorPreviewTime : animationTime;
-    const auto assetIt = animationNotifyAssets.find(clip);
-    if (assetIt == animationNotifyAssets.end())
-        return false;
-
-    bool activeStateFound = false;
-    float strongestCurrentPower = 0.0f;
-    for (const auto& state : assetIt->second.notifyTrack.states)
-    {
-        if (state.type != AnimationNotifyState::Type::ShowEmissive ||
-            time < state.startTime || time >= state.endTime)
-        {
-            continue;
-        }
-
-        const float duration = state.endTime - state.startTime;
-        const float progress = duration > 0.0f
-            ? std::clamp((time - state.startTime) / duration, 0.0f, 1.0f)
-            : 1.0f;
-        const float currentPower = (std::max)(0.0f, state.value) * progress;
-        if (!activeStateFound || currentPower > strongestCurrentPower)
-        {
-            activeStateFound = true;
-            strongestCurrentPower = currentPower;
-            outPower = (std::max)(0.0f, state.value);
-            outProgress = progress;
-        }
-    }
-    return activeStateFound;
-}
 void AnimationController::OnNotifyBegin(const AnimationNotifyState& state)
 {
     if (!owner)
@@ -2447,7 +2372,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             BlendSpace::WrapPhase(locomotionDebugFrozenCommonPhase);
     }
 
-    locomotionCommonPhase = currentLocomotionPhase;
     bool canExtractRootMotion = enableRootMotion && !ignoreRootMotion;
 
     if (resetLocomotionRootMotion)
@@ -2460,7 +2384,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         canExtractRootMotion = false;
     }
 
-    // BlendSpace uses Jog_Fwd as its single locomotion Notify source.
     const auto notifyClipIt = animationNameToIndex_.find("Jog_Fwd");
     if (notifyClipIt != animationNameToIndex_.end())
     {
@@ -2621,19 +2544,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
 
         }
 
-        if (clipRootMotionValid)
-        {
-            const float deltaLength =
-                std::sqrt(
-                    clipRootMotionDelta.x *
-                    clipRootMotionDelta.x +
-                    clipRootMotionDelta.y *
-                    clipRootMotionDelta.y +
-                    clipRootMotionDelta.z *
-                    clipRootMotionDelta.z);
-
-        }
-
         // 各クリップごとの重み付きのRootMotionを加算
         if (clipRootMotionValid)
         {
@@ -2772,13 +2682,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         finalNodes = blendSpaceNodes;
     }
 
-
-    if (blendSpaceRootMotionValid)
-    {
-        const bool looped = previousLocomotionPhase > currentLocomotionPhase;
-    }
-
-
     // 今回Phaseを次フレームの前回phaseにする
     previousLocomotionPhase = currentLocomotionPhase;
     if (std::isfinite(cycleDuration) && cycleDuration > FLT_EPSILON)
@@ -2789,8 +2692,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
     {
         locomotionTime = 0.0f;
     }
-
-
 }
 
 // 入力方向から２つのアニメーションクリップとブレンドの重さを決定する関数
@@ -3060,58 +2961,6 @@ bool AnimationController::ConsumeBlendSpaceRootMotion(DirectX::XMFLOAT3& outDelt
 
     return true;
 }
-
-// 方向とスピードからアニメーションを取得する
-const std::string AnimationController::GetBlendSpaceAnimationName(MoveDirection direction, MoveSpeed speed)
-{
-    switch (speed)
-    {
-    case MoveSpeed::Walk:
-
-        switch (direction)
-        {
-        case MoveDirection::Forward:
-            return "Walk_Fwd";
-        case MoveDirection::Backward:
-            return "Walk_Bwd";
-        case MoveDirection::BackLeft:
-            return "Walk_BwdLeft";
-        case MoveDirection::BackRight:
-            return "Walk_BwdRight";
-        case MoveDirection::ForwardLeft:
-            return "Walk_FwdLeft";
-        case MoveDirection::ForwardRight:
-            return "Walk_FwdRight";
-        default:
-            return "Idle";
-        }
-
-    case MoveSpeed::Run:
-        switch (direction)
-        {
-        case MoveDirection::Forward:
-            return "Jog_Fwd";
-        case MoveDirection::Backward:
-            return "Jog_Bwd";
-        case MoveDirection::BackLeft:
-            return "Jog_BwdLeft";
-        case MoveDirection::BackRight:
-            return "Jog_BwdRight";
-        case MoveDirection::ForwardLeft:
-            return "Jog_FwdLeft";
-        case MoveDirection::ForwardRight:
-            return "Jog_FwdRight";
-
-        default:
-            return "Idle";
-        }
-    default:
-        return "Idle";
-    }
-    return "Idle";
-}
-
-
 
 
 AnimationController::RuntimeDangerObbSaveResult AnimationController::SaveDangerObbForRuntimeTuning(

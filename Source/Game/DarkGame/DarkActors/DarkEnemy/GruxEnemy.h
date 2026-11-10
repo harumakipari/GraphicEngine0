@@ -924,7 +924,6 @@ private:
 	void CleanupChargeAttackBT();
 
 	// Chargeの実行状態と調整項目をデバッグ表示する。
-	void DrawChargeAttackBTDebug();
 
 	// Chargeの移動を開始する。
 	bool BeginChargeAttackMovement();
@@ -1035,7 +1034,6 @@ private:
 	void TickRoarLifecycle(float dt);
 
 	// Roarと防御行動の状態・調整項目を表示する。
-	void DrawRoarBTDebug();
 
 	// Roar演出時の描画用足元オフセットを返す。
 	float GetRoarRenderFootOffset() const;
@@ -1065,7 +1063,6 @@ private:
 	void UpdateJumpTelegraphImpactFlash(float deltaTime);
 
 	// 複数回Jumpの実行状態をデバッグ表示する。
-	void DrawTripleJumpDebug();
 
 	// FastCombo接近の再試行待ち中かを返す。
 	bool IsFastComboApproachRetryCooldownActive() const;

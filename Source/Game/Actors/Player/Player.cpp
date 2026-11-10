@@ -9,9 +9,7 @@
 #include "Graphics/Core/Graphics.h"
 #include "Physics/Physics.h"
 #include "Core/ActorManager.h"
-
 #include "Components/Render/PointLightComponent.h"
-
 #include "PlayerStateDerived.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneBase.h"
@@ -23,11 +21,11 @@
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Physics/CollisionFunction.h"
 
-
-
 void Player::Initialize(const Transform& transform)
 {
-
+	mass = 50.0f;
+	maxHp = 50;
+	hp = maxHp;
 	delayedHp = static_cast<float>(hp);
 	delayedHpDelayTimer = 0.0f;
 
@@ -79,7 +77,6 @@ void Player::Initialize(const Transform& transform)
 		capsuleComponent->Initialize();
 	}
 
-
 	// ポイントライトコンポーネントを追加
 	auto pointLightComponent = this->AddComponent<PointLightComponent>("pointLightComponent", parentName);
 	pointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f, 1.0f });
@@ -91,8 +88,6 @@ void Player::Initialize(const Transform& transform)
 	backPointLightComponent->SetRelativeLocationDirect({ 0.0f, 1.5f,-1.0f });
 	// ライトの名前からライトマネージャーの共有ライトを取得して設定
 	backPointLightComponent->SetSharedLightName("PlayerBackPointLight");
-
-
 
 	{
 		PROFILE_SCOPE("Create PlayerComponent");
@@ -161,8 +156,6 @@ void Player::Initialize(const Transform& transform)
 		ghost.renderConstantsComponent->overrideDeferredPipelineName = "PlayerSwordGhostPS";
 	}
 	ResetPlayerPoseGhost();
-
-
 	// カメラの注視点の位置のコンポーネントを追加
 	cameraTargetComponent = AddComponent<SceneComponent>("cameraTargetComponent", parentName);
 	cameraTargetComponent->SetRelativeLocationDirect({ 0.0f,1.0f,0.0f });
@@ -173,7 +166,6 @@ void Player::Initialize(const Transform& transform)
 
 	// UIを生成する
 	CreateUI();
-
 }
 
 void Player::InitializeSkeletalMeshAndAnimations(const std::string& parentName)

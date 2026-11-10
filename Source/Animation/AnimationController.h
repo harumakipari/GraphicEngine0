@@ -83,10 +83,7 @@ public:
     void AddAnimation(const std::string& animationName, const size_t animationClip)
     {
         animationNameToIndex_[animationName] = animationClip;
-        animationImGUiOrder.push_back(animationName);
-
-        auto& asset =
-            animationNotifyAssets[animationClip];
+        auto& asset =animationNotifyAssets[animationClip];
 
         asset.animationName = animationName;
         asset.animationClip = animationClip;
@@ -122,19 +119,12 @@ public:
         requestStopLoop = true;
     }
 
-    float GetCurrentTimeNormalized() const
-    {
-        float duration = target_->model->animations[animationClip].duration;
-        return animationTime / duration;
-    }
-
     float GetCurrentAnimationTime() const
     {
         return animationTime;
     }
 
     bool EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower,bool& outHasShowTrail, bool& outHasShowEmissive) const;
-    bool EvaluateShowEmissiveState(float& outPower, float& outProgress) const;
     void ResetRootMotion(const std::string& animationName, const bool loop = false, const bool isBlend = true, const float blendTime = 0.3f);
     bool PlayAnimationImmediate(const std::string& animationName, bool loop = true, bool ignoreRootMotion = false);
 
@@ -150,11 +140,7 @@ public:
         return editorPreviewActive ? editorPreviewTime : animationTime;
     }
 
-    size_t GetAnimationClip()const { return animationClip; }
-
     const std::string& GetCurrentAnimationName()const { return currentAnimationName; }
-
-    float GetCurrentAnimationLength() const { return target_->model->animations[animationClip].duration; }
 
     float GetAnimationLength(const std::string& animationName)
     {
@@ -174,49 +160,10 @@ public:
     bool HoldAnimationPose(const std::string& animationName, float time);
     bool BlendToHeldAnimationPose(const std::string& animationName, float time, float blendTime);
     void ReleaseRuntimeHeldAnimationPose(bool preserveBlendSource = false);
-    bool IsRuntimeHeldAnimationPose() const
-    {
-        return runtimeHeldPoseActive || runtimeHeldPoseTransitionActive;
-    }
-
     void ReleaseHeldAnimationPose(bool preserveBlendSource = false);
     bool LatchCurrentVisualPose();
     void ReleaseLatchedVisualPose();
     bool IsVisualPoseLatched() const { return visualPoseLatchActive; }
-
-    void AddNotifyState(const std::string& animationName, const float start, const float end,
-        const AnimationNotifyState::Type type, const std::string& parameter = "", float animationSpeed = 1.0f)
-    {
-        const size_t clip = animationNameToIndex_[animationName];
-        animationNotifyAssets[clip].notifyTrack.states.push_back({ start,end,type,parameter,animationSpeed });
-    }
-
-    void AddNotifyEvent(const std::string& animationName, const float time,
-        const AnimationNotifyEvent::Type type, const std::string& parameter = "", float value = 1.0f)
-    {
-        const size_t clip = animationNameToIndex_[animationName];
-        animationNotifyAssets[clip].notifyTrack.events.push_back({ time,type,parameter,value });
-
-        std::sort(
-            animationNotifyAssets[clip].notifyTrack.events.begin(),
-            animationNotifyAssets[clip].notifyTrack.events.end(),
-            [](const auto& a, const auto& b)
-            {
-                return a.time < b.time;
-            });
-    }
-
-    void AddCombo(const std::string& animationName, const std::string& nextComboName)
-    {
-        const size_t clip = animationNameToIndex_[animationName];
-        animationNotifyAssets[clip].nextCombo = nextComboName;
-    }
-
-    void AddAnimationCurve(const std::string& animationName, const AnimationCurve& curve)
-    {
-        const size_t clip = animationNameToIndex_[animationName];
-        animationNotifyAssets[clip].speedCurve = curve;
-    }
 
     void OnNotifyBegin(const AnimationNotifyState& state);
 
@@ -275,10 +222,6 @@ public:
         size_t clip, size_t stateIndex, const AnimationNotifyState& state,
         std::string& outFilePath);
 
-    const std::vector<size_t>& GetAnimationAssetOrderForRuntimeTuning() const
-    {
-        return animationAssetOrder;
-    }
     AnimationNotifyAsset* GetNotifyAssetForRuntimeTuning(size_t clip)
     {
         const auto it = animationNotifyAssets.find(clip);
@@ -288,23 +231,6 @@ public:
     {
         const auto it = animationNotifyAssets.find(clip);
         return it != animationNotifyAssets.end() ? &it->second : nullptr;
-    }
-
-    // ブレンドスペースでブレンドするアニメーションを追加する
-    // x +右-左　y +前-後
-    void AddForwardBlendAnimation(const std::string& name, float angle)
-    {
-        const size_t clip = animationNameToIndex_[name];
-        forwardBlendSpace.AddAnimation(clip, angle);
-
-    }
-
-    // ブレンドスペースでブレンドするアニメーションを追加する
-    // x +右-左　y +前-後
-    void AddBackwardBlendAnimation(const std::string& name, float angle)
-    {
-        const size_t clip = animationNameToIndex_[name];
-        backwardBlendSpace.AddAnimation(clip, angle);
     }
 
     // 単一の360度Locomotion BlendSpaceへアニメーションを追加する
@@ -317,21 +243,6 @@ public:
         const float normalizedOffset =
             name == "Jog_Fwd" ? 0.0f : BlendSpace::WrapPhase(phaseOffset);
         locomotionBlendSpace.AddAnimation(clip, angle, normalizedOffset);
-
-        if (name == "Jog_Right") locomotionRightPhaseOffset = normalizedOffset;
-        if (name == "Jog_Bwd") locomotionBackwardPhaseOffset = normalizedOffset;
-        if (name == "Jog_Left") locomotionLeftPhaseOffset = normalizedOffset;
-    }
-
-    void SetLocomotionPhaseOffset(const std::string& name, float phaseOffset)
-    {
-        const auto it = animationNameToIndex_.find(name);
-        if (it == animationNameToIndex_.end())
-            return;
-
-        const float normalizedOffset =
-            name == "Jog_Fwd" ? 0.0f : BlendSpace::WrapPhase(phaseOffset);
-        locomotionBlendSpace.SetPhaseOffset(it->second, normalizedOffset);
     }
 
     void SetBlendInput(const float x, const float y, const float speed)
@@ -478,25 +389,11 @@ public:
         }
     }
 
-    bool IsUsingBlendSpace() const { return useBlendSpace; }
-
-    void AddTarget(SkeletalMeshComponent* target)
-    {
-        extraTargets_.push_back(target);
-    }
-
     // 方向とスピードからアニメーションを取得する 
     size_t GetBlendSpaceAnimationClip(MoveDirection direction, MoveSpeed speed);
 
     // BlendSpaceから抽出したRoot Motionを取得して消費する
     bool ConsumeBlendSpaceRootMotion(DirectX::XMFLOAT3& outDelta);
-
-    // 方向とスピードからアニメーションの名前を取得する 
-    const std::string GetBlendSpaceAnimationName(MoveDirection direction, MoveSpeed speed);
-
-    // blendInputから方向を決める関数
-    MoveDirection CalculateMoveDirection(const DirectX::XMFLOAT2& input, MoveDirection currentMoveDirection);
-
 
 private:
 
@@ -536,9 +433,6 @@ private:
 
     // ステートを追加する
     void AddState(AnimationNotifyTrack& track, AnimationNotifyState::Type type, float startTime);
-
-    // ルートモーションをリセットする
-    void ResetRootMotion(int animationClip);
 
     // アニメーション設定のImGui描画
     void DrawAnimationSettings(AnimationNotifyAsset& asset, float duration);
@@ -618,10 +512,6 @@ private:
 
     // BlendSpaceの完成結果
     std::vector<InterleavedGltfModel::Node> blendSpaceNodes;
-
-    std::vector<InterleavedGltfModel::Node> blendSpaceClipA;
-    std::vector<InterleavedGltfModel::Node> blendSpaceClipB;
-
     std::array<std::vector<InterleavedGltfModel::Node>, 4> blendSpacePoses;
 
     enum class AnimationTransitionState :uint8_t
@@ -654,7 +544,6 @@ private:
         std::vector<InterleavedGltfModel::Node> finalNodes;
         DirectX::XMFLOAT3 previousPosition{};
         DirectX::XMFLOAT3 zeroTranslation{};
-        bool resetRootMotionDelta = false;
         bool suppressNormalRootMotionUntilTransitionCompleted = false;
         bool suppressNormalRootMotionObservedTransition = false;
     };
@@ -702,11 +591,6 @@ private:
     // 今再生しているアニメーションの名前
     std::string currentAnimationName;
 
-    // ImGuiで表示するための
-    std::vector<std::string> animationImGUiOrder;
-
-
-
     int rootNodeIndex = 0;
     DirectX::XMFLOAT3 previousPosition = {}; // world 空間
     DirectX::XMFLOAT3 zeroTranslation = {}; // 親ノード空間
@@ -751,25 +635,11 @@ private:
 
     // ブレンドスペース
     BlendSpace locomotionBlendSpace;
-
     BlendGroup currentGroup = BlendGroup::Forward;
-    // グループ変更待機
-    BlendGroup pendingGroup = BlendGroup::Forward;
-    bool hasPendingGroupChange = false;
-    // グループ切り替え後、再び切り替え可能になるまでの時間
-    float minimumGroupHoldTime = 0.8f;
-    // 最後にグループを切り替えてからの経過時間
-    float groupHoldElapsed = minimumGroupHoldTime;
-
 
     // ブレンドスペースで使用する入力値
     DirectX::XMFLOAT2 blendInput;
-    size_t locomotionClip;
-    size_t locomotionNextClip;
 
-    bool locomotionChanging;
-
-    float locomotionBlendElapsed;
     float blendSpeed;
 
     bool useBlendSpace = false;
@@ -809,10 +679,6 @@ private:
     bool pendingLocomotionPhaseTransfer = false;
     float pendingLocomotionPhase = 0.0f;
 
-    float locomotionCommonPhase = 0.0f;
-    float locomotionBackwardPhaseOffset = 0.0f;
-    float locomotionRightPhaseOffset = 0.464f;
-    float locomotionLeftPhaseOffset = 0.5f;
     float locomotionBackwardSideMaxWeight = 0.15f;
     int locomotionDebugBodyBlendMode = 0;
     bool locomotionDebugExcludePelvisTranslation = false;
@@ -824,8 +690,6 @@ private:
     float locomotionDebugRawStickX = 0.0f;
     float locomotionDebugRawStickZ = 0.0f;
     float locomotionDebugEvaluationAngle = 0.0f;
-    bool locomotionDebugHasReference = false;
-    float locomotionDebugReferenceAngle = 0.0f;
     bool locomotionDebugFreezeCommonPhase = false;
     float locomotionDebugFrozenCommonPhase = 0.0f;
     // ブレンドスペースではない
@@ -838,10 +702,6 @@ private:
 
     std::vector<InterleavedGltfModel::Node> groupTransitionStartNodes;
     std::vector<InterleavedGltfModel::Node> groupTransitionNodes;
-
-
-    MoveDirection currentMoveDirection = MoveDirection::Idle;
-    LocomotionGroup locomotionGroup = LocomotionGroup::Forward;
 
     friend class Player;
 };
