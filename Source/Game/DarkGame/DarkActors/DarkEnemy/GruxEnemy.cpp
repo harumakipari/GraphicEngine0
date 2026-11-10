@@ -318,9 +318,14 @@ void GruxEnemy::DrawImGuiDetails()
 			{
 				auto& attack = combatAttackData[i];
 				ImGui::PushID(static_cast<int>(i));
-				ImGui::SeparatorText(attack.animationName.c_str());
-				ImGui::DragFloat(U8("攻撃後の硬直時間"), &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
-				attack.recoveryDuration = (std::max)(0.0f, attack.recoveryDuration);
+				ImGui::SeparatorText(
+					attack.type == BossAttackType::PrimaryAttackLA ? U8("左腕の通常攻撃") :
+					attack.type == BossAttackType::PrimaryAttackRA ? U8("右腕の通常攻撃") :
+					attack.type == BossAttackType::FastCombo ? U8("高速連続攻撃") :
+					attack.type == BossAttackType::JumpAttack ? U8("ジャンプ攻撃") :
+					attack.type == BossAttackType::DashAttack ? U8("ダッシュ攻撃") :
+					attack.type == BossAttackType::ChargeAttack ? U8("突進攻撃") : U8("その他の攻撃"));
+				ImGui::DragFloat(U8("攻撃後の硬直時間（秒）"), &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
 				ImGui::PopID();
 			}
 			ImGui::TreePop();
@@ -328,149 +333,88 @@ void GruxEnemy::DrawImGuiDetails()
 
 		if (ImGui::TreeNode(U8("咆哮攻撃")))
 		{
-			const auto roarController = GetBodyAnimationController();
-			const float clipDuration = roarController ? roarController->GetAnimationLength("Pre_Stampede_0") : 60.0f;
-			const float rangeLimit = std::isfinite(clipDuration) ? (std::max)(0.05f, clipDuration) : 60.0f;
-			ImGui::DragFloat(U8("咆哮 開始時間"), &roarPreStampedeStartTime, 0.05f, 0.0f, rangeLimit - 0.05f, "%.2f sec");
-			ImGui::DragFloat(U8("咆哮 終了時間"), &roarPreStampedeEndTime, 0.05f, roarPreStampedeStartTime + 0.05f, rangeLimit, "%.2f sec");
-			ImGui::DragFloat("Roar Radius Phase1", &roarRadiusPhase1, 0.1f, 0.0f, 30.0f, "%.2f m");
-			ImGui::DragFloat("Roar Radius Phase2", &roarRadiusPhase2, 0.1f, 0.0f, 30.0f, "%.2f m");
-			ImGui::DragInt("Roar Damage", &roarDamage, 1.0f, 0, 1000);
-			ImGui::DragFloat(U8("咆哮 高低差許容"), &roarHeightTolerance, 0.1f, 0.0f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("咆哮クールタイム"), &roarCooldownDuration, 0.1f, 0.0f, 120.0f, "%.2f sec");
+			ImGui::DragFloat(U8("第一形態 咆哮の攻撃半径（距離）"), &roarRadiusPhase1, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("第二形態 咆哮の攻撃半径（距離）"), &roarRadiusPhase2, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragInt(U8("咆哮ダメージ"), &roarDamage, 1.0f, 0, 1000);
+			ImGui::DragFloat(U8("咆哮の再使用待ち時間（秒）"), &roarCooldownDuration, 0.1f, 0.0f, 120.0f, "%.2f sec");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("突進攻撃")))
 		{
-			ImGui::DragFloat(U8("三連突進 壁前切り返し距離"), &chargeBT.tripleChargeWallTurnClearance, 0.05f, 0.0f, 10.0f, "%.2f m");
-			ImGui::DragFloat(U8("三連突進 1・2段目 最大突進距離"), &chargeBT.tripleChargeLegMaxDistance, 0.1f, 0.1f, 50.0f, "%.2f m");
-			ImGui::DragFloat(U8("三連突進 1・2段目 最大突進時間"), &chargeBT.tripleChargeLegMaxDuration, 0.05f, 0.1f, 10.0f, "%.2f sec");
-			ImGui::DragFloat(U8("三連突進 段間切り返し時間"), &chargeBT.tripleChargeTransitionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
-			ImGui::DragFloat(U8("三連突進 最終壁スタン倍率"), &chargeBT.tripleWallStunDurationMultiplier, 0.05f, 1.0f, 5.0f, "%.2fx");
-			ImGui::DragFloat(U8("第一形態 突進速度"), &chargeSpeed, 0.1f, 0.1f, 50.0f, "%.2f m/s");
-			ImGui::DragFloat(U8("第二形態 突進速度"), &chargeSpeedPhase2, 0.1f, 0.1f, 50.0f, "%.2f m/s");
-
-			for (BossAttackData& attackData : combatAttackData)
-			{
-				if (attackData.type != BossAttackType::ChargeAttack)
-					continue;
-
-				ImGui::DragInt(U8("第一形態 突進ダメージ"), &attackData.damagePerHit, 1.0f, 0, 1000);
-				break;
-			}
-
-			ImGui::DragInt(U8("第二形態 突進ダメージ"), &chargeDamagePhase2, 1.0f, 0, 1000);
+			ImGui::DragFloat(U8("第一形態 突進速度（距離/秒）"), &chargeSpeed, 0.1f, 0.1f, 50.0f, "%.2f m/s");
+			ImGui::DragFloat(U8("第二形態 突進速度（距離/秒）"), &chargeSpeedPhase2, 0.1f, 0.1f, 50.0f, "%.2f m/s");
 			ImGui::DragFloat(U8("第一形態 突進の当たり判定倍率"), &chargePlayerCastRadiusScale, 0.01f, 0.1f, 2.0f, "%.2f");
 			ImGui::DragFloat(U8("第二形態 突進の当たり判定倍率"), &chargePlayerCastRadiusScalePhase2, 0.01f, 0.1f, 2.0f, "%.2f");
-			ImGui::DragFloat(U8("突進ダメージ判定 前方オフセット"), &chargePlayerDamageForwardOffset, 0.01f, 0.0f, 5.0f, "%.2f m");
+			ImGui::DragFloat(U8("突進ダメージ判定 前方オフセット（距離）"), &chargePlayerDamageForwardOffset, 0.01f, 0.0f, 5.0f, "%.2f m");
 			ImGui::DragFloat(U8("第一形態 突進ジャスト回避判定倍率"), &chargeJustDodgeCastRadiusScale, 0.01f, 0.1f, 2.0f, "%.2f");
 			ImGui::DragFloat(U8("第二形態 突進ジャスト回避判定倍率"), &chargeJustDodgeCastRadiusScalePhase2, 0.01f, 0.1f, 5.0f, "%.2f");
 			ImGui::DragFloat(U8("突進 壁判定の半径倍率"), &chargeWallCastRadiusScale, 0.01f, 0.1f, 2.0f, "%.2f");
-			ImGui::DragFloat(U8("突進 方向固定時刻"), &chargeDirectionLockTime, 0.01f, 0.0f, GetChargeWindupEndTime(), "%.2f sec");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("ジャンプ攻撃")))
 		{
-			ImGui::DragFloat(U8("ジャンプ間の遷移時間"), &tripleJumpTransitionDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
+			ImGui::DragFloat(U8("ジャンプ間の遷移時間（秒）"), &tripleJumpTransitionDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("近接・高速連続攻撃")))
 		{
-			ImGui::SeparatorText(U8("高速連続攻撃の踏み込み"));
-			ImGui::DragFloat(U8("高速連続攻撃 理想攻撃距離"), &fastComboDesiredAttackDistance, 0.1f, 0.0f, 20.0f, "%.2f m");
-			ImGui::DragFloat(U8("高速連続攻撃 踏み込み倍率"), &fastComboStepInRatio, 0.05f, 0.0f, 2.0f, "%.2f");
-
-			const char* stepNames[] = { "A", "B", "C" };
+			const char* stepNames[] = { U8("1段目"), U8("2段目"), U8("3段目") };
 			for (int i = 0; i < 3; ++i)
 			{
-				ImGui::DragFloat((std::string("FastCombo ") + stepNames[i] + " 最大Step-In").c_str(), &fastComboMaxStepInDistance[i], 0.1f, 0.0f, 6.0f, "%.2f m");
+				ImGui::DragFloat((std::string(U8("高速連続攻撃 ")) + stepNames[i] + U8(" 最大踏み込み距離（距離）")).c_str(), &fastComboMaxStepInDistance[i], 0.1f, 0.0f, 6.0f, "%.2f m");
 			}
-
-			ImGui::DragFloat(U8("高速連続攻撃 踏み込み最大速度"), &fastComboStepInMaxSpeed, 0.5f, 1.0f, 60.0f, "%.2f m/s");
-			ImGui::DragFloat(U8("高速連続攻撃の準備時間"), &fastComboPrepareDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+			ImGui::DragFloat(U8("高速連続攻撃 踏み込み最大速度（距離/秒）"), &fastComboStepInMaxSpeed, 0.5f, 1.0f, 60.0f, "%.2f m/s");
+			ImGui::DragFloat(U8("高速連続攻撃の準備時間（秒）"), &fastComboPrepareDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
 			ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("被弾リアクション・攻撃後硬直")))
 		{
-			ImGui::DragFloat(U8("代替リカバリー時間"), &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-			ImGui::SeparatorText(U8("4段目 被弾リアクション"));
-			ImGui::DragFloat(U8("4段目 被弾リアクション発生確率"), &fourthHitReactionChance, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::DragFloat(U8("4段目 被弾リアクション時間"), &fourthHitReactionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
+			ImGui::DragFloat(U8("代替の攻撃後硬直時間（秒）"), &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+			ImGui::DragFloat(U8("ひるみ 被弾リアクション発生確率"), &fourthHitReactionChance, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("ひるみ 被弾リアクション時間（秒）"), &fourthHitReactionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
 			ImGui::TreePop();
 		}
-
 	}
 
 	if (ImGui::CollapsingHeader(U8("AI調整")))
 	{
-		ImGui::SeparatorText(U8("ボスAI"));
 		if (ImGui::TreeNode(U8("戦闘距離・行動選択")))
 		{
-			ImGui::DragFloat(U8("防御行動 至近距離"), &defensiveTooCloseDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("防御行動 Back最小角度"), &defensiveBackMinAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+			ImGui::DragFloat(U8("防御行動 至近距離（距離）"), &defensiveTooCloseDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("防御行動 後方判定の最小角度（度）"), &defensiveBackMinAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
 			ImGui::DragFloat(U8("近距離正面 高速連続攻撃の選択確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::DragFloat(U8("高速連続攻撃 正面判定の最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
-			ImGui::DragFloat(U8("待機時間"), &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+			ImGui::DragFloat(U8("高速連続攻撃 正面判定の最大角度（度）"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+			ImGui::DragFloat(U8("待機時間（秒）"), &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
 			ImGui::SeparatorText(U8("近距離戦闘設定"));
 			ImGui::DragFloat(U8("近距離戦闘 最小距離"), &closeCombatSettings.minRange, 0.1f, 0.0f, 100.0f, "%.2f");
 			ImGui::DragFloat(U8("近距離戦闘 実行可能な最大距離"), &closeCombatSettings.executeMaxRange, 0.1f, closeCombatSettings.minRange, 100.0f, "%.2f");
 			ImGui::DragFloat(U8("近距離戦闘 計画可能な最大距離"), &closeCombatSettings.planMaxRange, 0.1f, closeCombatSettings.executeMaxRange, 100.0f, "%.2f");
-			ImGui::DragFloat(U8("近距離攻撃 正面角度制限"), &closeCombatSettings.facingLimitDegrees, 1.0f, 0.0f, 180.0f, "%.1f deg");
+			ImGui::DragFloat(U8("近距離攻撃 正面角度制限（度）"), &closeCombatSettings.facingLimitDegrees, 1.0f, 0.0f, 180.0f, "%.1f deg");
 			ImGui::DragFloat(U8("攻撃時の理想距離"), &desiredAttackDistance, 0.05f, 0.0f, 10.0f, "%.2f");
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode(U8("接近・退避・部屋制約")))
-		{
-			ImGui::SeparatorText(U8("Retreat"));
-			ImGui::DragFloat(U8("退避距離 最小"), &retreatDistanceMin, 0.1f, 0.0f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("退避距離 最大"), &retreatDistanceMax, 0.1f, 0.0f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("退避 最低移動距離"), &retreatMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("退避 移動速度"), &retreatMoveSpeed, 0.1f, 0.0f, 30.0f, "%.2f m/s");
-			ImGui::DragFloat(U8("退避 再試行待ち"), &retreatRetryCooldownDuration, 0.1f, 0.0f, 10.0f, "%.2f sec");
-			if (ImGui::TreeNode(U8("位置調整パラメータ")))
-			{
-				for (BossPositioningData& data : combatPositioningData)
-				{
-					if (data.actionType != BossActionType::Approach)
-						continue;
-
-					if (ImGui::TreeNode(U8("接近")))
-					{
-						ImGui::DragFloat(U8("移動速度"), &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
-						ImGui::TreePop();
-					}
-				}
-				ImGui::TreePop();
-			}
-
-			ImGui::SeparatorText(U8("ボス部屋の位置調整"));
-			constexpr float maximumBossRoomMargin = (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f, (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
-			ImGui::DragFloat(U8("壁からの安全余裕"), &bossRoomSafetyMargin, 0.05f, 0.0f, maximumBossRoomMargin, "%.2f m");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("攻撃準備位置")))
 		{
-			ImGui::SeparatorText(U8("突進BT"));
-			ImGui::DragFloat(U8("突進準備距離 最小"), &chargeSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("突進準備距離 最大"), &chargeSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("突進準備 最低移動距離"), &chargeSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("三連突進 位置補正 最大距離"), &tripleChargeRepositionMaxDistance, 0.05f, 0.0f, 2.0f, "%.2f m");
-			ImGui::DragFloat(U8("三連突進 位置補正 安全余裕"), &tripleChargeRepositionSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
-			ImGui::DragFloat(U8("三連突進 位置補正速度"), &tripleChargeRepositionSpeed, 0.05f, 0.1f, 10.0f, "%.2f m/s");
-			ImGui::DragFloat(U8("三連突進 位置補正 横方向の安全余裕"), &tripleChargeRepositionSideSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
-			ImGui::SeparatorText(U8("ダッシュBT"));
-			ImGui::DragFloat(U8("ダッシュ準備距離 最小"), &dashSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("ダッシュ準備距離 最大"), &dashSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("ダッシュ準備 最低移動距離"), &dashSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
-			ImGui::DragFloat(U8("高速連続攻撃 接近最大時間"), &fastComboApproachMaxDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
-			ImGui::DragFloat(U8("高速連続攻撃 接近再試行の待機時間"), &fastComboApproachRetryCooldown, 0.05f, 0.0f, 30.0f, "%.2f sec");
+			ImGui::SeparatorText(U8("突進攻撃の準備位置"));
+			ImGui::DragFloat(U8("突進準備距離 最小（距離）"), &chargeSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("突進準備距離 最大（距離）"), &chargeSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("突進準備 最低移動距離（距離）"), &chargeSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("三連突進 位置補正 最大距離（距離）"), &tripleChargeRepositionMaxDistance, 0.05f, 0.0f, 2.0f, "%.2f m");
+			ImGui::DragFloat(U8("三連突進 位置補正 安全余裕（距離）"), &tripleChargeRepositionSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
+			ImGui::DragFloat(U8("三連突進 位置補正速度（距離/秒）"), &tripleChargeRepositionSpeed, 0.05f, 0.1f, 10.0f, "%.2f m/s");
+			ImGui::DragFloat(U8("三連突進 位置補正 横方向の安全余裕（距離）"), &tripleChargeRepositionSideSafetyMargin, 0.01f, 0.0f, 1.0f, "%.2f m");
+			ImGui::SeparatorText(U8("ダッシュ攻撃の準備位置"));
+			ImGui::DragFloat(U8("ダッシュ準備距離 最小（距離）"), &dashSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("ダッシュ準備距離 最大（距離）"), &dashSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("ダッシュ準備 最低移動距離（距離）"), &dashSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("高速連続攻撃 接近最大時間（秒）"), &fastComboApproachMaxDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
+			ImGui::DragFloat(U8("高速連続攻撃 接近再試行の待機時間（秒）"), &fastComboApproachRetryCooldown, 0.05f, 0.0f, 30.0f, "%.2f sec");
 			ImGui::SeparatorText(U8("ジャンプ攻撃位置調整"));
 			ImGui::DragFloat(U8("位置調整距離 最小"), &jumpSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f");
 			ImGui::DragFloat(U8("位置調整距離 最大"), &jumpSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f");
@@ -481,134 +425,85 @@ void GruxEnemy::DrawImGuiDetails()
 
 		if (ImGui::TreeNode(U8("旋回")))
 		{
-			ImGui::DragFloat(U8("正面向き完了角度"), &closeCombatSettings.faceCompleteAngleDegrees, 0.5f, 0.0f, 90.0f, "%.1f deg");
-			ImGui::DragFloat(U8("攻撃段間の正面向き完了角度"), &interStageFaceCompleteAngle, 0.5f, 0.0f, 90.0f, "%.1f deg");
-			ImGui::DragFloat(U8("攻撃段間の最大旋回角度"), &interStageMaxFacingAngle, 0.5f, 0.0f, 180.0f, "%.1f deg");
-			ImGui::DragFloat(U8("攻撃段間の旋回待機時間"), &interStageFaceDelay, 0.01f, 0.0f, 0.5f, "%.2f sec");
-			ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
-			ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+			ImGui::DragFloat(U8("正面向き完了角度（度）"), &closeCombatSettings.faceCompleteAngleDegrees, 0.5f, 0.0f, 90.0f, "%.1f deg");
+			ImGui::DragFloat(U8("攻撃段間の正面向き完了角度（度）"), &interStageFaceCompleteAngle, 0.5f, 0.0f, 90.0f, "%.1f deg");
+			ImGui::DragFloat(U8("攻撃段間の最大旋回角度（度）"), &interStageMaxFacingAngle, 0.5f, 0.0f, 180.0f, "%.1f deg");
+			ImGui::DragFloat(U8("攻撃段間の旋回待機時間（秒）"), &interStageFaceDelay, 0.01f, 0.0f, 0.5f, "%.2f sec");
+			ImGui::DragFloat(U8("旋回速度（度/秒）"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
+			ImGui::DragFloat(U8("旋回完了角度（度）"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
 			ImGui::TreePop();
 		}
 	}
 
 	if (ImGui::CollapsingHeader(U8("演出調整")))
 	{
-		if (ImGui::CollapsingHeader(U8("突進風エフェクト")))
-		{
-			ImGui::Checkbox(U8("有効化"), &chargeWindTrailEnabled);
-			ImGui::DragInt(U8("風エフェクトの数"), &chargeWindTrailActiveCount, 1.0f, 1, static_cast<int>(chargeWindTrailCount));
-			ImGui::DragFloat(U8("寿命 最小"), &chargeWindTrailLifetimeMin, 0.01f, 0.01f, 5.0f, "%.2f sec");
-			ImGui::DragFloat(U8("寿命 最大"), &chargeWindTrailLifetimeMax, 0.01f, 0.01f, 5.0f, "%.2f sec");
-			ImGui::DragFloat(U8("後方移動速度 最小"), &chargeWindTrailSpeedMin, 0.1f, 0.0f, 100.0f);
-			ImGui::DragFloat(U8("後方移動速度 最大"), &chargeWindTrailSpeedMax, 0.1f, 0.0f, 100.0f);
-			ImGui::DragFloat(U8("幅 最小"), &chargeWindTrailWidthMin, 0.005f, 0.001f, 5.0f);
-			ImGui::DragFloat(U8("幅 最大"), &chargeWindTrailWidthMax, 0.005f, 0.001f, 5.0f);
-			ImGui::DragFloat(U8("先端の幅倍率"), &chargeWindTrailHeadWidthScale, 0.01f, 0.0f, 3.0f);
-			ImGui::DragFloat(U8("末端の幅倍率"), &chargeWindTrailTailWidthScale, 0.01f, 0.0f, 3.0f);
-			ImGui::DragFloat(U8("横方向の生成範囲"), &chargeWindTrailLateralSpawnRange, 0.01f, 0.0f, 10.0f);
-			ImGui::DragFloat(U8("生成高さ 最小"), &chargeWindTrailHeightMin, 0.01f, -5.0f, 10.0f);
-			ImGui::DragFloat(U8("生成高さ 最大"), &chargeWindTrailHeightMax, 0.01f, -5.0f, 10.0f);
-			ImGui::DragFloat(U8("前方生成位置 最小"), &chargeWindTrailForwardMin, 0.01f, -10.0f, 10.0f);
-			ImGui::DragFloat(U8("前方生成位置 最大"), &chargeWindTrailForwardMax, 0.01f, -10.0f, 10.0f);
-			ImGui::DragFloat(U8("横揺れ幅 最小"), &chargeWindTrailLateralWobbleMin, 0.005f, 0.0f, 5.0f);
-			ImGui::DragFloat(U8("横揺れ幅 最大"), &chargeWindTrailLateralWobbleMax, 0.005f, 0.0f, 5.0f);
-			ImGui::DragFloat(U8("縦揺れ幅 最小"), &chargeWindTrailVerticalWobbleMin, 0.005f, 0.0f, 5.0f);
-			ImGui::DragFloat(U8("縦揺れ幅 最大"), &chargeWindTrailVerticalWobbleMax, 0.005f, 0.0f, 5.0f);
-			ImGui::DragFloat(U8("揺れ周波数 最小"), &chargeWindTrailWobbleFrequencyMin, 0.1f, 0.0f, 50.0f);
-			ImGui::DragFloat(U8("揺れ周波数 最大"), &chargeWindTrailWobbleFrequencyMax, 0.1f, 0.0f, 50.0f);
-			ImGui::ColorEdit3(U8("エフェクトの色"), &chargeWindTrailColor.x);
-			ImGui::DragFloat(U8("発光強度"), &chargeWindTrailEmissiveStrength, 0.05f, 0.0f, 30.0f);
-
-			if (!chargeWindTrailEnabled) StopChargeWindTrails();
-		}
-
-		if (ImGui::CollapsingHeader(U8("突進風モデル")))
-		{
-			ImGui::Checkbox(U8("有効化##MainChargeWind"), &mainChargeWindEnabled);
-			ImGui::DragFloat3(U8("ローカル位置##MainChargeWind"), &mainChargeWindLocalPosition.x, 0.05f);
-			ImGui::DragFloat3(U8("ローカル回転##MainChargeWind"), &mainChargeWindLocalRotation.x, 1.0f);
-			ImGui::DragFloat3(U8("ローカルスケール##MainChargeWind"), &mainChargeWindLocalScale.x, 0.05f, 0.01f, 50.0f);
-			ImGui::Combo(U8("マスクの流れ方##MainChargeWind"), &mainChargeWindMaskFlowMode, U8("直線\0放射状\0"));
-			ImGui::DragFloat2(U8("スクロール速度##MainChargeWind"), &mainChargeWindScrollSpeed.x, 0.01f, -10.0f, 10.0f);
-			ImGui::DragFloat(U8("放射状の流動速度##MainChargeWind"), &mainChargeWindRadialSpeed, 0.01f, -10.0f, 10.0f);
-			ImGui::DragFloat(U8("放射状の繰り返し数##MainChargeWind"), &mainChargeWindRadialTiling, 0.01f, 0.01f, 32.0f);
-			ImGui::ColorEdit3(U8("モデルの色##MainChargeWind"), &mainChargeWindColor.x);
-			ImGui::DragFloat(U8("発光強度##MainChargeWind"), &mainChargeWindEmissionPower, 0.05f, 0.0f, 30.0f);
-			ImGui::DragFloat(U8("不透明度##MainChargeWind"), &mainChargeWindOpacity, 0.01f, 0.0f, 1.0f);
-
-			ApplyMainChargeWindSettings();
-			if (mainChargeWindMeshComponent && chargeMovementActive)
-				mainChargeWindMeshComponent->SetIsVisible(mainChargeWindEnabled);
-		}
-
 		if (ImGui::TreeNode(U8("咆哮予兆")))
 		{
-			ImGui::DragFloat("Roar Telegraph Outer Alpha", &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::ColorEdit3("Roar Phase 1 Outer Tint", &roarTelegraphPhase1OuterTint.x);
-			ImGui::ColorEdit3("Roar Phase 1 Fill Tint Min", &roarTelegraphPhase1FillTintMin.x);
-			ImGui::ColorEdit3("Roar Phase 1 Fill Tint Max", &roarTelegraphPhase1FillTintMax.x);
-			ImGui::ColorEdit3("Roar Phase 2 Outer Tint", &roarTelegraphPhase2OuterTint.x);
-			ImGui::ColorEdit3("Roar Phase 2 Fill Tint Min", &roarTelegraphPhase2FillTintMin.x);
-			ImGui::ColorEdit3("Roar Phase 2 Fill Tint Max", &roarTelegraphPhase2FillTintMax.x);
-			ImGui::DragFloat("Roar Fill Glow Min", &roarTelegraphFillGlowMin, 0.05f, 0.0f, 20.0f, "%.2f");
-			ImGui::DragFloat("Roar Fill Glow Max", &roarTelegraphFillGlowMax, 0.05f, 0.0f, 20.0f, "%.2f");
-			ImGui::DragFloat("Roar Fill Alpha Min", &roarTelegraphFillAlphaMin, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::DragFloat("Roar Fill Alpha Max", &roarTelegraphFillAlphaMax, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("外周の不透明度"), &roarTelegraphOuterAlpha, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::ColorEdit3(U8("第一形態 外周色"), &roarTelegraphPhase1OuterTint.x);
+			ImGui::ColorEdit3(U8("第一形態 塗り色 最小"), &roarTelegraphPhase1FillTintMin.x);
+			ImGui::ColorEdit3(U8("第一形態 塗り色 最大"), &roarTelegraphPhase1FillTintMax.x);
+			ImGui::ColorEdit3(U8("第二形態 外周色"), &roarTelegraphPhase2OuterTint.x);
+			ImGui::ColorEdit3(U8("第二形態 塗り色 最小"), &roarTelegraphPhase2FillTintMin.x);
+			ImGui::ColorEdit3(U8("第二形態 塗り色 最大"), &roarTelegraphPhase2FillTintMax.x);
+			ImGui::DragFloat(U8("塗りの発光強度 最小"), &roarTelegraphFillGlowMin, 0.05f, 0.0f, 20.0f, "%.2f");
+			ImGui::DragFloat(U8("塗りの発光強度 最大"), &roarTelegraphFillGlowMax, 0.05f, 0.0f, 20.0f, "%.2f");
+			ImGui::DragFloat(U8("塗りの不透明度 最小"), &roarTelegraphFillAlphaMin, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("塗りの不透明度 最大"), &roarTelegraphFillAlphaMax, 0.01f, 0.0f, 1.0f, "%.2f");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("咆哮の浮遊破片")))
 		{
-			ImGui::Checkbox("Floating Debris Enabled", &roarFloatingDebrisEnabled);
-			ImGui::TextDisabled("Floating debris ring, height and scale apply when debris is generated.");
-			ImGui::DragFloat("Roar Floating Debris Inner Ratio", &roarFloatingDebrisInnerRatio, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::DragFloat("Roar Floating Debris Outer Ratio", &roarFloatingDebrisOuterRatio, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::DragFloat("Roar Floating Debris Min Height", &roarFloatingDebrisMinHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
-			ImGui::DragFloat("Roar Floating Debris Max Height", &roarFloatingDebrisMaxHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
-			ImGui::DragFloat("Roar Floating Debris Scale Min", &roarFloatingDebrisScaleMin, 0.01f, 0.0f, 5.0f, "%.2f");
-			ImGui::DragFloat("Roar Floating Debris Scale Max", &roarFloatingDebrisScaleMax, 0.01f, 0.0f, 5.0f, "%.2f");
+			ImGui::Checkbox(U8("浮遊破片を有効化"), &roarFloatingDebrisEnabled);
+			ImGui::DragFloat(U8("浮遊範囲の内周比率"), &roarFloatingDebrisInnerRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("浮遊範囲の外周比率"), &roarFloatingDebrisOuterRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("浮遊する高さ 最小（距離）"), &roarFloatingDebrisMinHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
+			ImGui::DragFloat(U8("浮遊する高さ 最大（距離）"), &roarFloatingDebrisMaxHeight, 0.01f, 0.0f, 5.0f, "%.2f m");
+			ImGui::DragFloat(U8("浮遊破片のスケール 最小"), &roarFloatingDebrisScaleMin, 0.01f, 0.0f, 5.0f, "%.2f");
+			ImGui::DragFloat(U8("浮遊破片のスケール 最大"), &roarFloatingDebrisScaleMax, 0.01f, 0.0f, 5.0f, "%.2f");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("咆哮の衝撃破片")))
 		{
-			ImGui::Checkbox("Impact Debris Enabled", &roarImpactDebrisEnabled);
-			ImGui::TextDisabled("Impact debris speed, scale and lifetime apply to newly spawned debris.");
-			ImGui::DragFloat("Impact Debris Spawn Height", &roarImpactDebrisSpawnHeight, 0.01f, 0.0f, 1.0f, "%.2f m");
-			ImGui::DragFloat("Impact Debris Gravity", &roarImpactDebrisGravity, 0.1f, 0.0f, 30.0f, "%.2f m/s2");
-			ImGui::DragFloatRange2("Impact Small Horizontal Speed", &roarImpactDebrisSmallHorizontalSpeedMin, &roarImpactDebrisSmallHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
-			ImGui::DragFloatRange2("Impact Small Vertical Speed", &roarImpactDebrisSmallVerticalSpeedMin, &roarImpactDebrisSmallVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
-			ImGui::DragFloatRange2("Impact Small Lifetime", &roarImpactDebrisSmallLifetimeMin, &roarImpactDebrisSmallLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
-			ImGui::DragFloatRange2("Impact Block Horizontal Speed", &roarImpactDebrisBlockHorizontalSpeedMin, &roarImpactDebrisBlockHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
-			ImGui::DragFloatRange2("Impact Block Vertical Speed", &roarImpactDebrisBlockVerticalSpeedMin, &roarImpactDebrisBlockVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
-			ImGui::DragFloatRange2("Impact Block Lifetime", &roarImpactDebrisBlockLifetimeMin, &roarImpactDebrisBlockLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
-			ImGui::DragFloatRange2("Small Debris Scale", &roarImpactDebrisSmallScaleMin, &roarImpactDebrisSmallScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
-			ImGui::DragFloatRange2("Block Debris Scale", &roarImpactDebrisBlockScaleMin, &roarImpactDebrisBlockScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::Checkbox(U8("衝撃破片を有効化"), &roarImpactDebrisEnabled);
+			ImGui::TextDisabled(U8("衝撃破片の初速・スケール・寿命は、新しく生成する破片に反映されます。"));
+			ImGui::DragFloat(U8("衝撃破片の発生高さ（距離）"), &roarImpactDebrisSpawnHeight, 0.01f, 0.0f, 1.0f, "%.2f m");
+			ImGui::DragFloat(U8("衝撃破片の重力（距離/秒/秒）"), &roarImpactDebrisGravity, 0.1f, 0.0f, 30.0f, "%.2f m/s2");
+			ImGui::DragFloatRange2(U8("小破片の水平初速（距離/秒）"), &roarImpactDebrisSmallHorizontalSpeedMin, &roarImpactDebrisSmallHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2(U8("小破片の垂直初速（距離/秒）"), &roarImpactDebrisSmallVerticalSpeedMin, &roarImpactDebrisSmallVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2(U8("小破片の寿命（秒）"), &roarImpactDebrisSmallLifetimeMin, &roarImpactDebrisSmallLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2(U8("大破片の水平初速（距離/秒）"), &roarImpactDebrisBlockHorizontalSpeedMin, &roarImpactDebrisBlockHorizontalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2(U8("大破片の垂直初速（距離/秒）"), &roarImpactDebrisBlockVerticalSpeedMin, &roarImpactDebrisBlockVerticalSpeedMax, 0.05f, 0.0f, 20.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2(U8("大破片の寿命（秒）"), &roarImpactDebrisBlockLifetimeMin, &roarImpactDebrisBlockLifetimeMax, 0.01f, 0.0f, 5.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2(U8("小破片のスケール"), &roarImpactDebrisSmallScaleMin, &roarImpactDebrisSmallScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
+			ImGui::DragFloatRange2(U8("大破片のスケール"), &roarImpactDebrisBlockScaleMin, &roarImpactDebrisBlockScaleMax, 0.01f, 0.0f, 10.0f, "Min: %.2f", "Max: %.2f");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("咆哮の地面噴出")))
 		{
-			ImGui::Checkbox("Roar Ground Burst Enabled", &roarGroundBurstEnabled);
-			ImGui::DragFloat("Roar Ground Burst Inner Ring Ratio", &roarGroundBurstInnerRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::DragFloat("Roar Ground Burst Outer Ring Ratio", &roarGroundBurstOuterRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
-			ImGui::DragFloat("Roar Ground Burst Angle Jitter", &roarGroundBurstAngleJitterDegrees, 0.25f, 0.0f, 45.0f, "%.1f deg");
-			ImGui::DragFloat("Roar Ground Burst Radius Jitter", &roarGroundBurstRadiusJitter, 0.005f, 0.0f, 0.25f, "%.3f");
-			ImGui::DragFloat("Roar Ground Burst Y Offset", &roarGroundBurstYOffset, 0.01f, -1.0f, 1.0f, "%.2f m");
+			ImGui::Checkbox(U8("地面噴出を有効化"), &roarGroundBurstEnabled);
+			ImGui::DragFloat(U8("噴出範囲の内周比率"), &roarGroundBurstInnerRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("噴出範囲の外周比率"), &roarGroundBurstOuterRingRatio, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("噴出角度のばらつき（度）"), &roarGroundBurstAngleJitterDegrees, 0.25f, 0.0f, 45.0f, "%.1f deg");
+			ImGui::DragFloat(U8("噴出半径のばらつき"), &roarGroundBurstRadiusJitter, 0.005f, 0.0f, 0.25f, "%.3f");
+			ImGui::DragFloat(U8("噴出位置の高さオフセット（距離）"), &roarGroundBurstYOffset, 0.01f, -1.0f, 1.0f, "%.2f m");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("突進予兆")))
 		{
 			ImGui::Checkbox(U8("三連突進 予兆の発光を有効化"), &tripleChargeTelegraphEmissiveEnabled);
-			ImGui::ColorEdit3(U8("三連突進 予兆の第一形態発光色"), &tripleChargeTelegraphPhase1EmissiveColor.x);
-			ImGui::ColorEdit3(U8("三連突進 予兆の第二形態発光色"), &tripleChargeTelegraphPhase2EmissiveColor.x);
+			ImGui::ColorEdit3(U8("第一形態 三連突進予兆の発光色"), &tripleChargeTelegraphPhase1EmissiveColor.x);
+			ImGui::ColorEdit3(U8("第二形態 三連突進予兆の発光色"), &tripleChargeTelegraphPhase2EmissiveColor.x);
 			ImGui::DragFloat(U8("三連突進 予兆の発光強度"), &tripleChargeTelegraphEmissiveIntensity, 0.05f, 0.0f, 20.0f, "%.2f");
-			ImGui::DragFloat(U8("三連突進 予兆の拡大時間"), &tripleChargeTelegraphExpandDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
-			ImGui::DragFloat(U8("三連突進 予兆の維持時間"), &tripleChargeTelegraphHoldDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
-			ImGui::DragFloat(U8("三連突進 予兆のワールドY座標"), &tripleChargeTelegraphFixedWorldY, 0.01f, -5.0f, 5.0f, "%.3f");
-			ImGui::DragFloat(U8("三連突進 予兆の前方オフセット"), &tripleChargeTelegraphForwardOffset, 0.01f, -1.0f, 2.0f, "%.2f m");
-			ImGui::DragFloat(U8("三連突進 予兆の最大距離"), &tripleChargeTelegraphMaxDistance, 0.1f, 0.1f, 100.0f, "%.2f m");
+			ImGui::DragFloat(U8("三連突進 予兆の拡大時間（秒）"), &tripleChargeTelegraphExpandDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
+			ImGui::DragFloat(U8("三連突進 予兆の維持時間（秒）"), &tripleChargeTelegraphHoldDuration, 0.01f, 0.0f, 1.0f, "%.2f sec");
+			ImGui::DragFloat(U8("三連突進予兆のワールド高さ"), &tripleChargeTelegraphFixedWorldY, 0.01f, -5.0f, 5.0f, "%.3f");
+			ImGui::DragFloat(U8("三連突進 予兆の前方オフセット（距離）"), &tripleChargeTelegraphForwardOffset, 0.01f, -1.0f, 2.0f, "%.2f m");
+			ImGui::DragFloat(U8("三連突進 予兆の最大距離（距離）"), &tripleChargeTelegraphMaxDistance, 0.1f, 0.1f, 100.0f, "%.2f m");
 			ImGui::TreePop();
 		}
 
@@ -616,15 +511,15 @@ void GruxEnemy::DrawImGuiDetails()
 		{
 			ImGui::DragFloat(U8("ジャンプ予兆のスケール"), &jumpTelegraphScale, 0.01f, 0.01f, 10.0f, "%.2f");
 			ImGui::Checkbox(U8("ジャンプ予兆の発光を有効化"), &jumpTelegraphEmissiveEnabled);
-			ImGui::ColorEdit3(U8("フェーズ1の予兆発光色"), &jumpTelegraphPhase1EmissiveColor.x);
-			ImGui::ColorEdit3(U8("フェーズ2の予兆発光色"), &jumpTelegraphPhase2EmissiveColor.x);
+			ImGui::ColorEdit3(U8("第一形態 予兆の発光色"), &jumpTelegraphPhase1EmissiveColor.x);
+			ImGui::ColorEdit3(U8("第二形態 予兆の発光色"), &jumpTelegraphPhase2EmissiveColor.x);
 			ImGui::DragFloat(U8("予兆の発光強度"), &jumpTelegraphEmissiveIntensity, 0.05f, 0.0f, 20.0f, "%.2f");
 			ImGui::DragFloat(U8("内側予兆の開始スケール"), &jumpTelegraphInnerStartScale, 0.01f, 0.01f, 10.0f, "%.2f");
 			ImGui::Checkbox(U8("予兆の回転を有効化"), &jumpTelegraphEnableRotation);
-			ImGui::DragFloat(U8("外側予兆の回転速度"), &jumpTelegraphOuterRotationSpeed, 1.0f, -360.0f, 360.0f, "%.1f deg/sec");
-			ImGui::DragFloat(U8("内側予兆の回転速度"), &jumpTelegraphInnerRotationSpeed, 1.0f, -360.0f, 360.0f, "%.1f deg/sec");
+			ImGui::DragFloat(U8("外側予兆の回転速度（度/秒）"), &jumpTelegraphOuterRotationSpeed, 1.0f, -360.0f, 360.0f, "%.1f deg/sec");
+			ImGui::DragFloat(U8("内側予兆の回転速度（度/秒）"), &jumpTelegraphInnerRotationSpeed, 1.0f, -360.0f, 360.0f, "%.1f deg/sec");
 			ImGui::Checkbox(U8("着地時のフラッシュを有効化"), &jumpTelegraphEnableImpactFlash);
-			ImGui::DragFloat(U8("着地フラッシュの持続時間"), &jumpTelegraphImpactFlashDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
+			ImGui::DragFloat(U8("着地フラッシュの持続時間（秒）"), &jumpTelegraphImpactFlashDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
 			ImGui::DragFloat(U8("着地フラッシュの強度"), &jumpTelegraphImpactFlashIntensity, 0.05f, 0.0f, 2.0f, "%.2f");
 			ImGui::TreePop();
 		}
@@ -642,75 +537,61 @@ void GruxEnemy::DrawImGuiDetails()
 				skeletalMeshComponent->SetRuntimeMaterialEmissive("M_Grux_Qilin_Weapon", weaponEmissiveEnabled, weaponEmissiveColor, weaponEmissiveIntensity);
 			}
 
-			ImGui::ColorEdit3(U8("武器攻撃予兆のリム色"), &weaponTelegraphRimColor.x);
-			ImGui::DragFloat(U8("武器攻撃予兆のフェードアウト時間"), &weaponTelegraphFadeOutDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
+			ImGui::ColorEdit3(U8("武器攻撃予兆の輪郭色"), &weaponTelegraphRimColor.x);
+			ImGui::DragFloat(U8("武器攻撃予兆のフェードアウト時間（秒）"), &weaponTelegraphFadeOutDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("ダッシュ予兆")))
 		{
 			ImGui::Checkbox(U8("ダッシュ予兆の発光を有効化"), &dashTelegraphEmissiveEnabled);
-			ImGui::ColorEdit3(U8("ダッシュ予兆 第一形態の発光色"), &dashTelegraphPhase1EmissiveColor.x);
-			ImGui::ColorEdit3(U8("ダッシュ予兆 第二形態の発光色"), &dashTelegraphPhase2EmissiveColor.x);
+			ImGui::ColorEdit3(U8("第一形態 ダッシュ予兆の発光色"), &dashTelegraphPhase1EmissiveColor.x);
+			ImGui::ColorEdit3(U8("第二形態 ダッシュ予兆の発光色"), &dashTelegraphPhase2EmissiveColor.x);
 			ImGui::DragFloat(U8("ダッシュ予兆の発光強度"), &dashTelegraphEmissiveIntensity, 0.05f, 0.0f, 20.0f, "%.2f");
 
-			ImGui::DragFloat(U8("ライン予兆の拡大時間"), &dashTelegraphLineExpandDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-			ImGui::DragFloat(U8("ライン予兆のフェードアウト時間"), &dashTelegraphLineFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-			ImGui::DragFloat(U8("扇形予兆のフェードイン時間"), &dashTelegraphFanFadeInDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-			ImGui::DragFloat(U8("扇形予兆のフラッシュ時間"), &dashTelegraphFanFlashDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("ライン予兆の拡大時間（秒）"), &dashTelegraphLineExpandDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("ライン予兆のフェードアウト時間（秒）"), &dashTelegraphLineFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("扇形予兆のフェードイン時間（秒）"), &dashTelegraphFanFadeInDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("扇形予兆のフラッシュ時間（秒）"), &dashTelegraphFanFlashDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
 			ImGui::DragFloat(U8("扇形予兆のフラッシュ強度"), &dashTelegraphFanFlashIntensity, 0.05f, 0.0f, 8.0f, "%.2f");
-			ImGui::DragFloat(U8("扇形予兆のフェードアウト時間"), &dashTelegraphFanFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-			ImGui::DragFloat(U8("ライン予兆の幅"), &dashTelegraphLineWidth, 0.01f, 0.01f, 8.0f, "%.3f m");
-			ImGui::TextDisabled(U8("扇形の半径とYオフセットはダッシュ予兆開始時に反映されます。"));
-			ImGui::DragFloat(U8("扇形予兆の半径"), &dashTelegraphFanRadius, 0.05f, 0.01f, 20.0f, "%.2f m");
-			ImGui::DragFloat(U8("ライン予兆のYオフセット"), &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
-			ImGui::DragFloat(U8("扇形予兆のYオフセット"), &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
+			ImGui::DragFloat(U8("扇形予兆のフェードアウト時間（秒）"), &dashTelegraphFanFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("ライン予兆の幅（距離）"), &dashTelegraphLineWidth, 0.01f, 0.01f, 8.0f, "%.3f m");
+			ImGui::DragFloat(U8("扇形予兆の半径（距離）"), &dashTelegraphFanRadius, 0.05f, 0.01f, 20.0f, "%.2f m");
+			ImGui::DragFloat(U8("ライン予兆の高さオフセット（距離）"), &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
+			ImGui::DragFloat(U8("扇形予兆の高さオフセット（距離）"), &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("移動アニメーション")))
 		{
-			ImGui::DragFloat(U8("咆哮 LevelStart 足元補正"), &roarLevelStartFootOffset, 0.01f, -2.0f, 2.0f, "%.3f m");
-			ImGui::DragFloat(U8("咆哮 足元補正終了時間"), &roarLevelStartFootOffsetEndTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
-			ImGui::SeparatorText(U8("移動アニメーション調整"));
-			ImGui::DragFloat(U8("移動開始速度の閾値"), &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
-			ImGui::DragFloat(U8("移動停止速度の閾値"), &positioningMoveStopSpeedThreshold, 0.01f, 0.0f, positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
-			ImGui::DragFloat(U8("移動停止までの遅延時間"), &positioningMoveStopDelay, 0.01f, 0.0f, 2.0f, "%.2f sec");
+			ImGui::DragFloat(U8("咆哮開始時の足元補正（距離）"), &roarLevelStartFootOffset, 0.01f, -2.0f, 2.0f, "%.3f m");
+			ImGui::DragFloat(U8("咆哮の足元補正終了時間（秒）"), &roarLevelStartFootOffsetEndTime, 0.01f, 0.0f, 5.0f, "%.2f sec");
+			ImGui::DragFloat(U8("移動開始速度の閾値（距離/秒）"), &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
+			ImGui::DragFloat(U8("移動停止速度の閾値（距離/秒）"), &positioningMoveStopSpeedThreshold, 0.01f, 0.0f, positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
+			ImGui::DragFloat(U8("移動停止までの遅延時間（秒）"), &positioningMoveStopDelay, 0.01f, 0.0f, 2.0f, "%.2f sec");
 			ImGui::TreePop();
 		}
 
 		if (ImGui::TreeNode(U8("被弾・ヒットエフェクト")))
 		{
-			ImGui::SeparatorText(U8("Rushヒットエフェクト"));
-			ImGui::DragFloat(U8("表面からのオフセット"), &rushHitEffectSurfaceOffset, 0.005f, 0.0f, 0.20f, "%.3f m");
-			ImGui::DragFloat(U8("ボス被ダメージ時のフラッシュ時間"), &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
+			ImGui::DragFloat(U8("ラッシュのヒット位置からのオフセット（距離）"), &rushHitEffectSurfaceOffset, 0.005f, 0.0f, 0.20f, "%.3f m");
+			ImGui::DragFloat(U8("ボス被ダメージ時のフラッシュ時間（秒）"), &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
 			ImGui::SliderFloat(U8("ボス被ダメージ時のフラッシュ強度"), &damageFlashStartValue, 0.0f, 1.0f, "%.2f");
-			ImGui::DragFloat(U8("敵へのヒットエフェクト Yオフセット"), &hitEnemyEffectOffsetY, 0.1f);
-			ImGui::DragFloat(U8("プレイヤーへのヒットエフェクト Yオフセット"), &hitPlayerEffectOffsetY, 0.1f);
+			ImGui::DragFloat(U8("敵へのヒットエフェクト 高さオフセット"), &hitEnemyEffectOffsetY, 0.1f);
+			ImGui::DragFloat(U8("プレイヤーへのヒットエフェクト 高さオフセット"), &hitPlayerEffectOffsetY, 0.1f);
 			ImGui::TreePop();
 		}
 
-		if (ImGui::TreeNode(U8("SE")))
+		if (ImGui::TreeNode(U8("プレイヤーに攻撃された時のコントローラー振動")))
 		{
-			ImGui::DragFloat(U8("ピッチ基準値"), &pitchBaseValue, 0.05f);
-			ImGui::DragFloat(U8("ボス被弾ボイスのクールダウン"), &hitVoiceCooldown, 0.01f, 0.0f, 2.0f, "%.2f sec");
-			ImGui::TreePop();
-		}
-
-		if (ImGui::TreeNode(U8("コントローラー振動")))
-		{
-			if (ImGui::TreeNode(U8("プレイヤーに攻撃された時のコントローラー振動")))
-			{
-				ImGui::DragFloat(U8("通常攻撃 振動強度"), &normalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-				ImGui::DragFloat(U8("通常攻撃 振動時間"), &normalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-				ImGui::DragFloat(U8("コンボ最終段 振動強度"), &comboFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-				ImGui::DragFloat(U8("コンボ最終段 振動時間"), &comboFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-				ImGui::DragFloat(U8("Rush攻撃 振動強度"), &rushHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-				ImGui::DragFloat(U8("Rush攻撃 振動時間"), &rushHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-				ImGui::DragFloat(U8("Rush最終段 振動強度"), &rushFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-				ImGui::DragFloat(U8("Rush最終段 振動時間"), &rushFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-				ImGui::TreePop();
-			}
+			ImGui::DragFloat(U8("通常攻撃 振動強度"), &normalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+			ImGui::DragFloat(U8("通常攻撃 振動時間（秒）"), &normalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+			ImGui::DragFloat(U8("コンボ最終段 振動強度"), &comboFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+			ImGui::DragFloat(U8("コンボ最終段 振動時間（秒）"), &comboFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+			ImGui::DragFloat(U8("ラッシュ攻撃 振動強度"), &rushHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+			ImGui::DragFloat(U8("ラッシュ攻撃 振動時間（秒）"), &rushHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+			ImGui::DragFloat(U8("ラッシュ最終段 振動強度"), &rushFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+			ImGui::DragFloat(U8("ラッシュ最終段 振動時間（秒）"), &rushFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
 			ImGui::TreePop();
 		}
 
@@ -722,14 +603,13 @@ void GruxEnemy::DrawImGuiDetails()
 
 	if (ImGui::CollapsingHeader(U8("UI調整")))
 	{
-		if (ImGui::TreeNode(U8("ボスHP")))
+		if (ImGui::TreeNode(U8("ボス体力")))
 		{
-			ImGui::SeparatorText(U8("HPのUI"));
-			ImGui::DragFloat(U8("遅延HPの追従開始までの時間"), &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-			ImGui::DragFloat(U8("遅延HPの追従速度"), &delayedHpFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
-			ImGui::DragFloat(U8("Rush時の遅延HP追従速度"), &delayedHpRushFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
-			ImGui::ColorEdit4(U8("現在HPの色"), &bossHpCurrentColor.r);
-			ImGui::ColorEdit4(U8("遅延HPの色"), &bossHpDelayedColor.r);
+			ImGui::DragFloat(U8("遅延体力の追従開始までの時間（秒）"), &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+			ImGui::DragFloat(U8("遅延体力の追従速度（秒）"), &delayedHpFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
+			ImGui::DragFloat(U8("ラッシュ時の遅延体力の追従速度（秒）"), &delayedHpRushFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
+			ImGui::ColorEdit4(U8("現在体力の色"), &bossHpCurrentColor.r);
+			ImGui::ColorEdit4(U8("遅延体力の色"), &bossHpDelayedColor.r);
 			ImGui::TreePop();
 		}
 	}
@@ -742,12 +622,12 @@ void GruxEnemy::DrawImGuiDetails()
 		HideRoarImpactDebris();
 	Character::DrawImGuiDetails();
 
-	ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
+	ImGui::Text(U8("行動ツリーの前回ノード: %s"), behaviorTreePreviousNode.c_str());
 
 #endif
 }
 
-void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,const bool blend, const float blendTime, const bool ignoreRootMotion) const
+void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop, const bool blend, const float blendTime, const bool ignoreRootMotion) const
 {
 	if (phase2CinematicAnimationOwnedExternally)
 		return;
@@ -821,10 +701,11 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
 		if (lastHitVoiceIndex >= 0 && voiceIndex >= lastHitVoiceIndex)
 			++voiceIndex;
 
+
 		if (CoreAudio::PlayOneShot(hitVoicePaths[voiceIndex], 0.3f))
 		{
 			lastHitVoiceIndex = voiceIndex;
-			hitVoiceCooldownTimer = hitVoiceCooldown;
+			hitVoiceCooldownTimer = 0.5f;// 被弾ボイスの再生間隔。
 		}
 	}
 	if (!rushHpDisplayActive && hp < hpBeforeDamage)
@@ -2249,9 +2130,6 @@ float GruxEnemy::GetActiveChargePlayerCastRadiusScale() const
 
 int GruxEnemy::GetActiveChargeDamage() const
 {
-	if (chargeBT.phase2SettingsLatched)
-		return (std::max)(0, chargeDamagePhase2);
-
 	for (const BossAttackData& attackData : combatAttackData)
 	{
 		if (attackData.type == BossAttackType::ChargeAttack)
@@ -2259,7 +2137,6 @@ int GruxEnemy::GetActiveChargeDamage() const
 	}
 	return 1;
 }
-
 
 bool GruxEnemy::EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition,
 	const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const

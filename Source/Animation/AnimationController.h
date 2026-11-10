@@ -588,12 +588,6 @@ private:
     bool blendSpaceTransition = false;
     float blendSpaceTransitionTime = 0.2f;
     float blendSpaceElapsed = 0.0f;
-
-    bool groupTransition = false;
-
-    float groupTransitionElapsed = 0.0f;
-    float groupTransitionDuration = 0.15f;
-
     // ブレンドスペースのルートモーション処理
     float previousLocomotionPhase = 0.0f;
     bool resetLocomotionRootMotion = true;
@@ -629,12 +623,6 @@ private:
     std::vector<InterleavedGltfModel::Node> normalRootMotionStartNodes;
     // ルートモーションの最後を記録する　Pose
     std::vector<InterleavedGltfModel::Node> normalRootMotionEndNodes;
-
-
-
-    std::vector<InterleavedGltfModel::Node> groupTransitionStartNodes;
-    std::vector<InterleavedGltfModel::Node> groupTransitionNodes;
-
     friend class Player;
 };
 

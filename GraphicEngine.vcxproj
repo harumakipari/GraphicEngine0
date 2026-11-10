@@ -325,7 +325,6 @@
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\GruxEnemy.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonBodyPartActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.cpp" />
-    <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBarrelActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageCandelabraActor.cpp" />
     <ClCompile Include="Source\Game\DarkGame\DarkActors\DarkStageChandelierActor.cpp" />
@@ -498,7 +497,6 @@
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonBodyPartActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkEnemy\SkeletonWarriorEnemy.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageAsset.h" />
-    <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageBarrelActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageBrazierActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageCandelabraActor.h" />
     <ClInclude Include="Source\Game\DarkGame\DarkActors\DarkStageChandelierActor.h" />

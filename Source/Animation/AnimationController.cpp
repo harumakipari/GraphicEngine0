@@ -21,11 +21,8 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
     // アニメーションブレンドに使用するノード
     animationNodes[AnimNode::Origin] = target_->model->GetNodes();
     animationNodes[AnimNode::Next] = target_->model->GetNodes();
-
     // BlendSpaceの完成結果に使用するノード
     blendSpaceNodes = target_->model->GetNodes();
-    groupTransitionStartNodes = target_->model->GetNodes();
-    groupTransitionNodes = target_->model->GetNodes();
     // 前回時刻の RootMotion 取得用 Pose
     previousBlendSpaceRootMotionNodes = target_->model->GetNodes();
     // ルートモーションの最初を記録する　Pose
@@ -1089,8 +1086,6 @@ bool AnimationController::PlayAnimationImmediate(
     useBlendSpace = false;
     blendSpaceTransition = false;
     blendSpaceElapsed = 0.0f;
-    groupTransition = false;
-    groupTransitionElapsed = 0.0f;
 
     animationClip = requestedClip;
     animationNextClip = requestedClip;
@@ -2336,7 +2331,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             }
         }
     }
-    // Keep the current pose when the selected BlendSpace has no samples.
     if (weights.empty())
     {
         blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
@@ -2401,11 +2395,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
                 }
             }
         }
-    }
-
-    if (groupTransition )
-    {
-        canExtractRootMotion = false;
     }
 
     blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
@@ -2599,29 +2588,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         if (t >= 1.0f)
         {
             blendSpaceTransition = false;
-        }
-    }
-    else if (groupTransition)
-    {
-        groupTransitionElapsed += deltaTime;
-
-        const float t = std::clamp(
-            groupTransitionElapsed /
-            groupTransitionDuration,
-            0.0f,
-            1.0f);
-
-        target_->model->BlendAnimations(
-            groupTransitionStartNodes,
-            blendSpaceNodes,
-            t,
-            groupTransitionNodes);
-
-        finalNodes = groupTransitionNodes;
-
-        if (t >= 1.0f)
-        {
-            groupTransition = false;
         }
     }
     else
