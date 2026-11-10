@@ -102,14 +102,6 @@ public:
 
     void OnUpdate(const float deltaTime);
 
-    // Values actually used by the last runtime update, before advancing the curve.
-    float GetLastEffectivePlaybackRateDebug() const { return lastEffectivePlaybackRateDebug; }
-    float GetLastUpdateDeltaTimeDebug() const { return lastUpdateDeltaTimeDebug; }
-    float GetBlendFactorDebug() const { return blendFactor; }
-    float GetAnimationRateDebug() const { return animationRate; }
-    float GetPlaybackEndTimeDebug() const { return playbackEndTime; }
-    bool IsHeldAnimationPoseDebug() const { return editorPreviewActive && !editorPreviewPlaying; }
-
     // アニメーションの再生倍率を変更する関数
     void SetAnimationRate(const float animationRate) { this->animationRate = animationRate; }
 
@@ -272,20 +264,7 @@ public:
     }
 
     // Animation単位でRoot TranslationをPoseから除去する。
-    void SetRemoveRootTranslationFromPose(
-        const std::string& animationName, bool remove);
-    bool IsRemovingRootTranslationFromPose() const
-    {
-        return removeRootTranslationFromPoseDebug;
-    }
-    const DirectX::XMFLOAT3& GetRawRootLocalTranslation() const
-    {
-        return rawRootLocalTranslationDebug;
-    }
-    const DirectX::XMFLOAT3& GetAppliedRootLocalTranslation() const
-    {
-        return appliedRootLocalTranslationDebug;
-    }
+    void SetRemoveRootTranslationFromPose(const std::string& animationName, bool remove);
 
     // ルートモーションを無視するかどうか
     void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
@@ -714,11 +693,7 @@ private:
     float prevAnimationTime = 0.0f;
 
     //アニメーション時間
-    float lastEffectivePlaybackRateDebug = 0.0f;
-    float lastUpdateDeltaTimeDebug = 0.0f;
     float animationTime = 0.0f;
-
-    // Negative means that the animation uses its full clip duration.
     float playbackEndTime = -1.0f;
 
     // 今再生しているアニメーションのインデックス
@@ -767,9 +742,6 @@ private:
     std::unordered_set<size_t> removeRootTranslationFromPoseClips;
     bool currentAnimationRemovesRootTranslation = false;
     bool removeRootTranslationDuringTransition = false;
-    bool removeRootTranslationFromPoseDebug = false;
-    DirectX::XMFLOAT3 rawRootLocalTranslationDebug{};
-    DirectX::XMFLOAT3 appliedRootLocalTranslationDebug{};
 
     float blendElapsedTime = 0.0f;  // ブレンド時に経過した時間
 
@@ -861,19 +833,7 @@ private:
     bool pendingLocomotionPhaseTransfer = false;
     float pendingLocomotionPhase = 0.0f;
 
-
-    struct LocomotionBlendDebugSample
-    {
-        std::string clipName;
-        float weight = 0.0f;
-        float duration = 0.0f;
-        float phaseOffset = 0.0f;
-        float samplePhase = 0.0f;
-        float sampleTime = 0.0f;
-    };
-
     float locomotionCommonPhase = 0.0f;
-    std::array<LocomotionBlendDebugSample, 2> locomotionDebugSamples;
     size_t locomotionDebugSampleCount = 0;
     float locomotionBackwardPhaseOffset = 0.0f;
     float locomotionRightPhaseOffset = 0.464f;
@@ -895,7 +855,6 @@ private:
     float locomotionDebugReferenceAngle = 0.0f;
     bool locomotionDebugFreezeCommonPhase = false;
     float locomotionDebugFrozenCommonPhase = 0.0f;
-    std::array<LocomotionBlendDebugSample, 2> locomotionDebugReferenceSamples;
     size_t locomotionDebugReferenceSampleCount = 0;
     // ブレンドスペースではない
     // ルートモーションの最初を記録する　Pose
