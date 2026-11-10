@@ -180,7 +180,6 @@ public:
 	{
 		std::shared_ptr<SkeletalMeshComponent> meshComponent;  // 衝撃時の破片のメッシュ。
 		bool active = false;  // 破片が有効か。
-		bool isBlock = false;  // 破片がブロック状か。
 		DirectX::XMFLOAT3 position{};  // 破片の位置。
 		DirectX::XMFLOAT3 velocity{};  // 破片の速度。
 		DirectX::XMFLOAT3 rotation{};  // 破片の回転。
@@ -240,7 +239,6 @@ public:
 		DirectX::XMFLOAT3 previousPosition{};  // 前回の位置。
 		float elapsed = 0.0f;  // 移動の経過時間。
 		float traveledDistance = 0.0f;  // 移動済み距離。
-		float remainingDistance = 0.0f;  // 目標までの残り距離。
 		float stuckTime = 0.0f;  // 停滞した時間。
 		bool movementActive = false;  // 移動が有効か。
 	};
@@ -1257,10 +1255,6 @@ private:
 	float fourthHitReactionRemaining = 0.0f;  // 4段目の被弾リアクションの残り時間。
 	float fourthHitReactionChance = 0.3f;  // 4段目の被弾リアクションを発生させる確率。
 	float fourthHitReactionDuration = 1.25f;  // 4段目の被弾リアクション時間。
-	float fourthHitReactionLastRoll = -1.0f;  // 4段目の被弾リアクションに使った直近の乱数値。
-	bool fourthHitReactionLastWon = false;  // 直近の4段目の被弾リアクション抽選が成功したか。
-	float fourthHitReactionLastDirectionDot = 0.0f;  // 4段目の被弾方向の判定に使った内積。
-	std::string fourthHitReactionAnimation = "None";  // 4段目の被弾リアクションのアニメーション名。
 
 	// 武器の発光・予兆
 	bool weaponEmissiveEnabled = true;  // 武器の発光を有効にするか。
@@ -1846,10 +1840,7 @@ private:
 	float easingFactorAlpha = 0.0f;  // 表示演出の不透明度の補間係数。
 
 	// DangerArea判定
-	DirectX::XMFLOAT3 justDodgeAreaSize = { 0.0f,2.0f,0.0f };  // ジャスト回避判定領域の大きさ。
-	DirectX::XMFLOAT3 justDodgeAreaOffset = { 0.0f,0.0f,0.0f };  // ジャスト回避判定領域のオフセット。
 	DangerArea dangerArea{};  // 危険範囲の判定情報。
-
 
 	// DangerArea Notify状態
 	const AnimationNotifyState* activeDangerNotifyState = nullptr;  // 現在有効な危険範囲のNotify State。

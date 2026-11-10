@@ -461,7 +461,6 @@ private:
         bool isBlendingAnimation = false;
         bool isAnimationFinished = false;
         bool isAnimationLoop = false;
-        bool requestStopLoop = false;
         std::string currentAnimationName;
         std::vector<InterleavedGltfModel::Node> animationOriginNodes;
         std::vector<InterleavedGltfModel::Node> animationNextNodes;
@@ -509,8 +508,6 @@ private:
     // アニメーションが終了したかどうか
     bool isAnimationFinished = false;
 
-    // ループ終了フラグ 
-    bool requestStopLoop = false; // 切りよくループを終わらせる
 
     // 今再生しているアニメーションの名前
     std::string currentAnimationName;
