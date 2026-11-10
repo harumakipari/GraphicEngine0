@@ -279,7 +279,6 @@
     <ClCompile Include="Source\Core\ActorManager.cpp" />
     <ClCompile Include="Source\Core\CoreColor.cpp" />
     <ClCompile Include="Source\Core\Vector.cpp" />
-    <ClCompile Include="Source\Core\World.cpp" />
     <ClCompile Include="Source\Engine\Audio\Audio.cpp" />
     <ClCompile Include="Source\Engine\Camera\CameraManager.cpp" />
     <ClCompile Include="Source\Engine\Camera\MovieCameraManagerActor.cpp" />
@@ -429,7 +428,6 @@
     <ClInclude Include="Source\Core\ActorManager.h" />
     <ClInclude Include="Source\Core\CoreColor.h" />
     <ClInclude Include="Source\Core\Vector.h" />
-    <ClInclude Include="Source\Core\World.h" />
     <ClInclude Include="Source\Engine\Audio\Audio.h" />
     <ClInclude Include="Source\Engine\Camera\CameraConstants.h" />
     <ClInclude Include="Source\Engine\Camera\CameraManager.h" />

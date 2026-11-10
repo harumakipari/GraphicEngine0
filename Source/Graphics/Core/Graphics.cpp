@@ -135,10 +135,6 @@ void Graphics::CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgi_factory6)
         ID3D11RenderTargetView* null_render_target_view{};
         immediateContext->OMSetRenderTargets(1, &null_render_target_view, NULL);
         renderTargetView.Reset();
-#if 0
-        immediate_context->Flush();
-        immediate_context->ClearState();
-#endif
         DXGI_SWAP_CHAIN_DESC swapChainDesc{};
         swapChain->GetDesc(&swapChainDesc);
         hr = swapChain->ResizeBuffers(swapChainDesc.BufferCount, framebufferDimensions.cx, framebufferDimensions.cy, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags);
@@ -176,9 +172,6 @@ void Graphics::CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgi_factory6)
         swapChainDesc1.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
         swapChainDesc1.Flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
         hr = dxgi_factory6->CreateSwapChainForHwnd(device.Get(), hwnd, &swapChainDesc1, NULL, NULL, swapChain.ReleaseAndGetAddressOf());
-#if 0
-        swap_chain_desc1.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
-#endif
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
         hr = dxgi_factory6->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
@@ -191,7 +184,6 @@ void Graphics::CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgi_factory6)
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 
-#if 1
     Microsoft::WRL::ComPtr<ID3D11Texture2D> depthStencilBuffer{};
     D3D11_TEXTURE2D_DESC texture2dDesc{};
     texture2dDesc.Width = framebufferDimensions.cx;
@@ -214,45 +206,6 @@ void Graphics::CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgi_factory6)
     depthStencilViewDesc.Texture2D.MipSlice = 0;
     hr = device->CreateDepthStencilView(depthStencilBuffer.Get(), &depthStencilViewDesc, depthStencilView.ReleaseAndGetAddressOf());
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-#else
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> render_target_buffer;
-    D3D11_TEXTURE2D_DESC texture2d_desc{};
-    texture2d_desc.Width = framebufferDimensions.cx;
-    texture2d_desc.Height = framebufferDimensions.cy;
-    texture2d_desc.MipLevels = 1;
-    texture2d_desc.ArraySize = 1;
-    texture2d_desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT; // DXGI_FORMAT_R8G8B8A8_UNORM
-    texture2d_desc.SampleDesc.Count = 1;
-    texture2d_desc.SampleDesc.Quality = 0;
-    texture2d_desc.Usage = D3D11_USAGE_DEFAULT;
-    texture2d_desc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-    texture2d_desc.CPUAccessFlags = 0;
-    texture2d_desc.MiscFlags = 0;
-    hr = device->CreateTexture2D(&texture2d_desc, 0, render_target_buffer.GetAddressOf());
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-    D3D11_RENDER_TARGET_VIEW_DESC render_target_view_desc{};
-    render_target_view_desc.Format = texture2d_desc.Format;
-    render_target_view_desc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
-    hr = device->CreateRenderTargetView(render_target_buffer.Get(), &render_target_view_desc, renderTargetView.GetAddressOf());
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-
-    Microsoft::WRL::ComPtr<ID3D11Texture2D> depth_stencil_buffer;
-    texture2d_desc.Format = DXGI_FORMAT_R24G8_TYPELESS;
-    texture2d_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
-    hr = device->CreateTexture2D(&texture2d_desc, 0, depth_stencil_buffer.GetAddressOf());
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-    D3D11_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc{};
-    depth_stencil_view_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    depth_stencil_view_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-    depth_stencil_view_desc.Flags = 0;
-    hr = device->CreateDepthStencilView(depth_stencil_buffer.Get(), &depth_stencil_view_desc, depthStencilView.GetAddressOf());
-    _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-
-#endif
     D3D11_VIEWPORT viewport{};
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
@@ -285,135 +238,7 @@ void Graphics::OnSizeChanged(HWND hwnd, UINT64 width, UINT height)
 
         immediateContext->Flush();
         immediateContext->ClearState();
-
-
         CreateSwapChain(hwnd, dxgi_factory6.Get());
-#if 0
-        Microsoft::WRL::ComPtr<IDXGIFactory2> dxgi_factory2;
-        hr = swapChain->GetParent(IID_PPV_ARGS(dxgi_factory2.GetAddressOf()));
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        DXGI_SWAP_CHAIN_DESC1 swap_chain_desc1{};
-        swap_chain_desc1.Width = static_cast<UINT>(framebufferDimensions.cx);
-        swap_chain_desc1.Height = framebufferDimensions.cy;
-        swap_chain_desc1.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-        swap_chain_desc1.Stereo = FALSE;
-        swap_chain_desc1.SampleDesc.Count = 1;
-        swap_chain_desc1.SampleDesc.Quality = 0;
-        swap_chain_desc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        swap_chain_desc1.BufferCount = 2;
-        swap_chain_desc1.Scaling = DXGI_SCALING_STRETCH;
-        swap_chain_desc1.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
-        swap_chain_desc1.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-        hr = dxgi_factory2->CreateSwapChainForHwnd(device.Get(), hwnd, &swap_chain_desc1, nullptr, nullptr, swapChain.ReleaseAndGetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-#if 1
-        hr = dxgi_factory2->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-#endif
-
-        Microsoft::WRL::ComPtr<IDXGIFactory> dxgi_factory;
-        hr = swapChain->GetParent(IID_PPV_ARGS(dxgi_factory.GetAddressOf()));
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        // DXGI_MWA_NO_WINDOW_CHANGES - Prevent DXGI from monitoring an applications message queue; this makes DXGI unable to respond to mode changes.
-        // DXGI_MWA_NO_ALT_ENTER - Prevent DXGI from responding to an alt - enter sequence.
-        // DXGI_MWA_NO_PRINT_SCREEN - Prevent DXGI from responding to a print - scree
-        hr = dxgi_factory->MakeWindowAssociation(hwnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER);
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        Microsoft::WRL::ComPtr<ID3D11Texture2D> back_buffer;
-        hr = swapChain->GetBuffer(0, IID_PPV_ARGS(back_buffer.GetAddressOf()));
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        hr = device->CreateRenderTargetView(back_buffer.Get(), NULL, renderTargetView.ReleaseAndGetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        Microsoft::WRL::ComPtr<ID3D11Texture2D> depth_stencil_buffer;
-        D3D11_TEXTURE2D_DESC texture2d_desc{};
-        texture2d_desc.Width = static_cast<UINT>(framebufferDimensions.cx);
-        texture2d_desc.Height = framebufferDimensions.cy;
-        texture2d_desc.MipLevels = 1;
-        texture2d_desc.ArraySize = 1;
-        texture2d_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
-        texture2d_desc.SampleDesc.Count = 1;
-        texture2d_desc.SampleDesc.Quality = 0;
-        texture2d_desc.Usage = D3D11_USAGE_DEFAULT;
-        texture2d_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        texture2d_desc.CPUAccessFlags = 0;
-        texture2d_desc.MiscFlags = 0;
-        hr = device->CreateTexture2D(&texture2d_desc, NULL, depth_stencil_buffer.GetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        D3D11_DEPTH_STENCIL_VIEW_DESC depth_stencil_view_desc{};
-        depth_stencil_view_desc.Format = texture2d_desc.Format;
-        depth_stencil_view_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-        depth_stencil_view_desc.Texture2D.MipSlice = 0;
-        hr = device->CreateDepthStencilView(depth_stencil_buffer.Get(), &depth_stencil_view_desc, depthStencilView.ReleaseAndGetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        D3D11_VIEWPORT viewport{};
-        viewport.TopLeftX = 0;
-        viewport.TopLeftY = 0;
-        viewport.Width = static_cast<float>(framebufferDimensions.cx);
-        viewport.Height = static_cast<float>(framebufferDimensions.cy);
-        viewport.MinDepth = 0.0f;
-        viewport.MaxDepth = 1.0f;
-        immediateContext->RSSetViewports(1, &viewport);
-
-#ifdef ENABLE_DIRECT2D
-        Microsoft::WRL::ComPtr<IDXGIDevice2> dxgi_device2;
-        hr = device.As(&dxgi_device2);
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        Microsoft::WRL::ComPtr<ID2D1Factory1> d2d_factory1;
-        D2D1_FACTORY_OPTIONS factory_options{};
-#ifdef _DEBUG
-        factory_options.debugLevel = D2D1_DEBUG_LEVEL_INFORMATION;
-#endif
-        hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, factory_options, d2d_factory1.GetAddressOf());
-
-        Microsoft::WRL::ComPtr<ID2D1Device> d2d_device;
-        hr = d2d_factory1->CreateDevice(dxgi_device2.Get(), d2d_device.GetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        hr = d2d_device->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, d2d1DeviceContext.ReleaseAndGetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        hr = dxgi_device2->SetMaximumFrameLatency(1);
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        Microsoft::WRL::ComPtr<IDXGISurface2> dxgi_surface2;
-        hr = swapChain->GetBuffer(0, IID_PPV_ARGS(dxgi_surface2.GetAddressOf()));
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        Microsoft::WRL::ComPtr<ID2D1Bitmap1> d2d_bitmap1;
-        hr = d2d1DeviceContext->CreateBitmapFromDxgiSurface(dxgi_surface2.Get(),
-            D2D1::BitmapProperties1(D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-                D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE)), d2d_bitmap1.GetAddressOf());
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        d2d1DeviceContext->SetTarget(d2d_bitmap1.Get());
-
-        // UNIT.99:Create COM object for DirectWrite.
-        Microsoft::WRL::ComPtr<IDWriteFactory> dwrite_factory;
-        hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(dwrite_factory.GetAddressOf()));
-        _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        //hr = dwrite_factory->CreateTextFormat(L"Consolas", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 12, L"", dwrite_text_format.ReleaseAndGetAddressOf());
-
-
-        //hr = dwrite_factory->CreateTextFormat(L"Meiryo", nullptr, DWRITE_FONT_WEIGHT_NORMAL, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, 11, L"", dwrite_text_format.ReleaseAndGetAddressOf());
-        //_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        //hr = dwrite_text_format->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
-        //_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-
-        //hr = d2d1_device_context->CreateSolidColorBrush(D2D1::ColorF(D2D1::ColorF::White), d2d_solid_color_brush.ReleaseAndGetAddressOf());
-        //_ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-#endif
-
-
-#endif
-
     }
 
 }
@@ -530,26 +355,7 @@ void Graphics::StylizeWindow(BOOL fullscreen)
     else
     {
         SetWindowLongPtrA(hWnd, GWL_STYLE, WS_OVERLAPPEDWINDOW ^ WS_MAXIMIZEBOX ^ WS_THICKFRAME | WS_VISIBLE);
-#if 0// 画面の大きさがWindowモードになる
-        SetWindowPos(
-            hWnd,
-            HWND_NOTOPMOST,
-            windowedRect.left,
-            windowedRect.top,
-            windowedRect.right - windowedRect.left,
-            windowedRect.bottom - windowedRect.top,
-            SWP_FRAMECHANGED | SWP_NOACTIVATE);
-#else
-        SetWindowPos(
-            hWnd,
-            nullptr,
-            0, 0, 0, 0,
-            SWP_FRAMECHANGED |
-            SWP_NOMOVE |
-            SWP_NOSIZE |
-            SWP_NOZORDER);
-#endif // 0// 画面の大きさがWindowモードになる
-
+        SetWindowPos(hWnd,nullptr,0, 0, 0, 0,SWP_FRAMECHANGED |SWP_NOMOVE |SWP_NOSIZE |SWP_NOZORDER);
         ShowWindow(hWnd, SW_NORMAL);
     }
 }
