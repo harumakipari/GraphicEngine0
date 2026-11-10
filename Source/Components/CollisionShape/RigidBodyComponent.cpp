@@ -13,28 +13,17 @@ void SingleRigidBodyComponent::Initialize(physx::PxPhysics* physics)
 
     DirectX::XMFLOAT3 pos = shapeComponent_->GetOwner()->GetPosition();
     DirectX::XMFLOAT4 rot = shapeComponent_->GetComponentRotation();
-    //pos.y += shapeComponent_->GetCollisionOffsetY();
     PxVec3 pxPosition(pos.x, pos.y, pos.z);
     PxQuat pxRotation(rot.x, rot.y, rot.z, rot.w);
-    // physx の原点を上げるため
-    // PxTransform を作成して使用する
+    // physx の原点を上げるためPxTransform を作成して使用する
     PxTransform transform(pxPosition, pxRotation);
 
     pxActor_ = physics->createRigidDynamic(transform);
     pxActor_->userData = shapeComponent_->GetOwner();    // Actor へのポインタ
-
-    {
-        //material_->setRestitution(0.0f);
-        //material_->setDynamicFriction(1.0f);
-        //material_->setStaticFriction(1.0f);
-    }
-    material_ = Physics::Instance().GetMaterial(
-        shapeComponent_->GetPhysicsMaterialType()
-    );
-
-    pxShape_ = physics->createShape(info.geometry.any(), *material_, true);
+    material_ = Physics::Instance().GetMaterial(shapeComponent_->GetPhysicsMaterialType());
 
     // 第三引数を true にすることで一意的な専用の shape にする
+    pxShape_ = physics->createShape(info.geometry.any(), *material_, true);
     //pxShape_ = physics->createShape(info.geometry.any(), *material_, true);
 
     pxShape_->userData = shapeComponent_;    // ShapeComponent へのポインタ
@@ -272,7 +261,6 @@ void SingleRigidBodyComponent::ResizeBox(float newExtentX, float newExtentY, flo
 
 void MultiRigidBodyComponent::Initialize(physx::PxPhysics* physics)
 {
-#if 1
     using namespace physx;
     auto& model = meshComponent_->model;
 
@@ -282,19 +270,13 @@ void MultiRigidBodyComponent::Initialize(physx::PxPhysics* physics)
 
     //// owner_ の position と rotaion を取得
     //// owner_ のTransform（ワールド空間基準）をPhysX Transformに変換
-#if 1
-    //DirectX::XMFLOAT4X4 world = collisionComponent_->GetComponentWorldTransform().ToWorldTransform();
-    //PxTransform ownerTransform = PhysicsHelper::ToPxTransform(world);
-
     DirectX::XMFLOAT3 pos = meshComponent_->GetOwner()->GetPosition(); // world空間に生成しないと当たり判定がおかしくなる
     DirectX::XMFLOAT4 rot = meshComponent_->GetOwner()->GetQuaternionRotation();
-    //PxVec3 pxPosition(pos.x, pos.y, pos.z);
     PxVec3 pxPosition(pos.x, pos.y, pos.z);
     PxQuat pxRotation(rot.x, rot.y, rot.z, rot.w);
     // PxTransform を作成して使用する
     PxTransform ownerTransform(pxPosition, pxRotation);
 
-#endif // 0
 
     // 各 Node から mesh を持っているノードのみを処理する
     for (size_t nodeIndex = 0; nodeIndex < animatedNodes_.size(); ++nodeIndex)
@@ -310,10 +292,6 @@ void MultiRigidBodyComponent::Initialize(physx::PxPhysics* physics)
         PxTransform nodeTransform = PhysicsHelper::ToPxTransform(node.globalTransform);
         PxTransform worldPx = ownerTransform * nodeTransform;
 
-        // ノードのワールド変換を PhysX 変換に
-        //PxTransform nodePx = PhysicsHelper::ToPxTransform(node.globalTransform);
-        //PxTransform worldPx = ownerTransform * nodePx;
-
         // RigidDynamic を作成
         PxRigidDynamic* currentBody = physics->createRigidDynamic(worldPx);
         currentBody->userData = meshComponent_->GetOwner();
@@ -323,38 +301,26 @@ void MultiRigidBodyComponent::Initialize(physx::PxPhysics* physics)
         bool isMeter = meshComponent_->model->isModelInMeters;
         float unitScale = isMeter ? 1.0f : 0.01f;
 
-        //const DirectX::XMFLOAT3 scale = meshComponent_->GetComponentScale();
         const DirectX::XMFLOAT3 scale = { unitScale,unitScale,unitScale };
         PxConvexMeshGeometry geometry(convexMesh, PxMeshScale(physx::PxVec3(scale.x, scale.y, scale.z)));
         PxMaterial& material = *Physics::Instance().GetMaterial(PhysicsMaterialType::Default);
-        //PxMaterial& mat = *Physics::Instance().GetMaterial();
-        //mat.setStaticFriction(1.0f);
-        //mat.setDynamicFriction(1.0f);
-        //mat.setRestitution(0.0f); // バウンドしないように
         if (!geometry.isValid())
         {
-            OutputDebugStringA("PxConvexMeshGeometry is invalid.\n");
+            Logger::Warning("PxConvexMeshGeometry is invalid.\n");
             continue;
         }
         if (!convexMesh)
         {
-            OutputDebugStringA("ToPxConvexMesh failed: convexMesh is null.\n");
+            Logger::Warning("ToPxConvexMesh failed: convexMesh is null.\n");
             continue;
         }
 
-        //if (primitive.cachedVertices.size() < 4 || primitive.cachedVertices.size() > 256)
-        //if (mesh.primitives[0].cachedVertices.size() < 4 || mesh.primitives[0].cachedVertices.size() > 256)
-        //{
-        //    OutputDebugStringA("ConvexMesh creation skipped due to invalid vertex count.\n");
-        //    continue;
-        //}
         if (!geometry.isValid())
         {
-            OutputDebugStringA("PxConvexMeshGeometry is invalid.\n");
+            Logger::Warning("PxConvexMeshGeometry is invalid.\n");
             continue;
         }
         PxShape* pxShape_ = physics->createShape(geometry, material, true); // 専用 shape を作成する
-        //pxShape_->userData = meshComponent_;   // MeshComponent へのポインタ
         pxShape_->userData = collisionComponent_;   // MeshComponent へのポインタ
 
         physx::PxFilterData filterData;
@@ -370,150 +336,23 @@ void MultiRigidBodyComponent::Initialize(physx::PxPhysics* physics)
         // nodeTransform（ローカル空間）をワールド空間に変換（ownerTransformと合成）
         PxTransform worldTrnasform = ownerTransform * nodeTransform;
 
-        // RigidDynamic を作成
-        //PxRigidDynamic* curretBody/* pxActor_ */ = physics->createRigidDynamic(worldTrnasform);
-        //curretBody->userData = meshComponent_->GetOwner();     // Actor へのポインタ
-
-        // 重力を無効化する
-        //curretBody->setActorFlag(PxActorFlag::eDISABLE_GRAVITY, true);
-
         // 最初キネマティックとして登録する
         currentBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, true);
-        //currentBody->setRigidBodyFlag(PxRigidBodyFlag::eKINEMATIC, false);
-
-        //currentBody->setActorFlag(PxActorFlag::eVISUALIZATION, true);
-        //currentBody->setRigidBodyFlag(PxRigidBodyFlag::eENABLE_CCD, true);
-        //PxReal pxMass = 0.0f;
-        //PxMat33 inertia;
-        //PxVec3 centerOfMass;
-        //convexMesh->getMassInformation(pxMass, inertia, centerOfMass);
-        //float volumeScale = pxMass;       // 体積を取得
-        //float baseMass = 10.0f; // 基準質量
-        //float mass = baseMass * volumeScale;
-        //currentBody->setMass(mass);
         currentBody->setMass(20.0f);
         currentBody->setMassSpaceInertiaTensor(PxVec3(1.0f, 1.0f, 1.0f));  // Y軸の回転を抑える
         currentBody->setLinearDamping(0.9f);
-        //currentBody->setLinearDamping(0.3f);
         currentBody->setAngularDamping(0.8f);
 
         currentBody->attachShape(*pxShape_);
-        // 今回はこの時点で addActor　すると 物理演算の挙動に差し支えるからやめる
-        //Physics::Instance().GetScene()->addActor(*curretBody);
-
         nodeIndexToRigidBody_[nodeIndex] = currentBody;
         rigidBodies_.push_back(currentBody);
         pxShapes_.push_back(pxShape_);
-        //}
     }
-#else
-    using namespace physx;
-    auto& model = owner_->model;
-
-    // owner のワールドTransform（原点と回転）を取得
-    DirectX::XMFLOAT3 pos = owner_->GetOwner()->GetPosition();
-    DirectX::XMFLOAT4 rot = owner_->GetOwner()->GetQuaternionRotation();
-    PxTransform ownerTransform(PxVec3(pos.x, pos.y, pos.z), PxQuat(rot.x, rot.y, rot.z, rot.w));
-
-    // スケール（1つだけ取得、ノード単位に変更したければこの取得位置を工夫）
-    const DirectX::XMFLOAT3 scale = owner_->GetComponentScale();
-    PxVec3 pxScale(scale.x, scale.y, scale.z);
-
-    // 前回の剛体・Transformを保持
-    PxRigidDynamic* previousBody = nullptr;
-    DirectX::XMFLOAT4X4 previousNodeTransform;
-
-    animatedNodes_ = model->nodes;
-
-    for (size_t nodeIndex = 0; nodeIndex < animatedNodes_.size(); ++nodeIndex)
-    {
-        const auto& node = animatedNodes_[nodeIndex];
-
-        if (node.mesh < 0)
-        {
-            continue; // メッシュを持たないノードはスキップ
-        }
-
-        const auto& mesh = model->meshes[node.mesh];
-        PxMaterial& material = *Physics::Instance().GetMaterial();
-
-        // ノードのワールドTransformを取得
-        PxTransform nodeTransform = PhysicsHelper::ToPxTransform(node.globalTransform);
-        PxTransform worldTransform = ownerTransform * nodeTransform;
-
-        // 剛体を作成（primitiveが複数あっても1個にまとめる）
-        PxRigidDynamic* currentBody = physics->createRigidDynamic(worldTransform);
-        currentBody->userData = owner_->GetOwner(); // Actorポインタなど
-
-        for (const auto& primitive : mesh.primitives)
-        {
-            PxConvexMesh* convexMesh = ToPxConvexMesh(physics, primitive.cachedVertices);
-            PxConvexMeshGeometry geometry(convexMesh, PxMeshScale(pxScale));
-
-            PxShape* shape = physics->createShape(geometry, material);
-            shape->userData = owner_;
-
-            PxFilterData filterData;
-            filterData.word0 = layer_;
-            filterData.word1 = mask_;
-            shape->setSimulationFilterData(filterData);
-            shape->setQueryFilterData(filterData);
-
-            shape->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true);
-            shape->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
-
-            currentBody->attachShape(*shape);
-        }
-
-        // シーンに剛体を追加
-        Physics::Instance().GetScene()->addActor(*currentBody);
-
-        // 登録
-        nodeIndexToRigidBody_[nodeIndex] = currentBody;
-        rigidBodies_.push_back(currentBody);
-
-        // 前の剛体がある場合、ジョイントで接続
-        if (previousBody)
-        {
-            // Transform A（前）と B（今）を PxTransform に変換
-            PxTransform a = PhysicsHelper::ToPxTransform(previousNodeTransform);
-            PxTransform b = PhysicsHelper::ToPxTransform(node.globalTransform);
-
-            // A空間でのBの相対Transform
-            PxTransform relativeToA = a.getInverse() * b;
-
-            // FixedJoint 作成
-            PxFixedJoint* joint = PxFixedJointCreate(*physics,
-                previousBody, PxTransform(PxIdentity),
-                currentBody, relativeToA);
-            joint->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, true);
-        }
-
-        // 次のジョイント用に保存
-        previousBody = currentBody;
-        previousNodeTransform = node.globalTransform;
-    }
-#endif
 }
 
 void MultiRigidBodyComponent::Destroy()
 {
     using namespace physx;
-#if 0
-    for (physx::PxRigidActor* actor : rigidBodies_)
-    {
-        if (actor)
-        {
-            if (physx::PxScene* scene = actor->getScene())
-            {// actor が scene に属している時だけ
-                scene->removeActor(*actor);
-            }
-
-            actor->release();
-        }
-    }
-
-#endif // 0
     for (auto actor : rigidBodies_)
     {
         if (auto scene = actor->getScene())
@@ -534,13 +373,6 @@ void MultiRigidBodyComponent::Destroy()
                 auto geom = holder.convexMesh(); // PxConvexMeshGeometry
                 geom.convexMesh->release();
             }
-
-            //if (Actor* ownerA = static_cast<Actor*>(actor->userData))
-            //{
-            //    char b[256];
-            //    sprintf_s(b, "Actor Name :%s is destroy\n", ownerA->GetName());
-            //    OutputDebugStringA(b);
-            //}
             actor->detachShape(*shape);
             shape->release();
         }
@@ -571,24 +403,14 @@ void MultiRigidBodyComponent::Tick(float deltaTime)
     DirectX::XMMATRIX OwnerMatrix = DirectX::XMLoadFloat4x4(&ownerTransform);
 
     using namespace physx;
-#if 1
     for (const auto& [nodeIndex, body] : nodeIndexToRigidBody_)
     {
 
         {
-#if 0
-            DirectX::XMFLOAT3 pos = animatedNodes_[nodeIndex].translation;
-            DirectX::XMFLOAT4 rot = animatedNodes_[nodeIndex].rotation;
-            DirectX::XMFLOAT3 scale = animatedNodes_[nodeIndex].scale;
-#else
             const PxTransform& pxT = body->getGlobalPose();
             DirectX::XMFLOAT3 pos = { pxT.p.x, pxT.p.y, pxT.p.z };
             DirectX::XMFLOAT4 rot = { pxT.q.x, pxT.q.y, pxT.q.z, pxT.q.w };
-            //DirectX::XMFLOAT3 scale = meshComponent_->GetComponentScale();
-            //DirectX::XMFLOAT3 scale = animatedNodes_[nodeIndex].scale;
             DirectX::XMFLOAT3 scale = { 1.0f,1.0f,1.0f };
-#endif
-            //DirectX::XMFLOAT3 pos = { 0.0f,0.0f,0.0f };
             DirectX::XMMATRIX S = DirectX::XMMatrixScaling(scale.x, scale.y, scale.z);
             DirectX::XMMATRIX R = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&rot));
             DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(pos.x, pos.y, pos.z);
@@ -601,28 +423,6 @@ void MultiRigidBodyComponent::Tick(float deltaTime)
             DirectX::XMStoreFloat4x4(&animatedNodes_[nodeIndex].globalTransform, M);
         }
     }
-
-#endif // 0
-
-    //for (const auto& [nodeIndex, body] : nodeIndexToRigidBody_)
-    //{
-    //    // 動的剛体かチェック＆キャスト
-    //    physx::PxRigidDynamic* dynamicBody = body->is<physx::PxRigidDynamic>();
-    //    if (dynamicBody)
-    //    {
-    //        const PxTransform& pxT = dynamicBody->getGlobalPose();
-
-    //        // PxTransform -> DirectX::XMFLOAT4x4 変換
-    //        DirectX::XMMATRIX M =
-    //            DirectX::XMMatrixScaling(animatedNodes_[nodeIndex].scale.x,
-    //                animatedNodes_[nodeIndex].scale.y,
-    //                animatedNodes_[nodeIndex].scale.z) *
-    //            DirectX::XMMatrixRotationQuaternion(DirectX::XMVectorSet(pxT.q.x, pxT.q.y, pxT.q.z, pxT.q.w)) *
-    //            DirectX::XMMatrixTranslation(pxT.p.x, pxT.p.y, pxT.p.z);
-
-    //        DirectX::XMStoreFloat4x4(&animatedNodes_[nodeIndex].globalTransform, M);
-    //    }
-    //}
 }
 
 void TriangleMeshRigidBodyComponent::Initialize(physx::PxPhysics* physics)

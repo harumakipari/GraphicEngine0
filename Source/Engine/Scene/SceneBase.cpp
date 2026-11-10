@@ -750,7 +750,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                      gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::EMISSIVE)],   // emissiveMap
                      gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::VELOCITY)],   // velocityMap
                      cascadedShadowMaps->depthMap().Get(),   //cascadedShadowMaps
-                      gBufferRenderTarget->renderTargetShaderResourceViews[static_cast<int>(SRV_SLOT::PBR_VALUE)], // materialMap (w: Cloth debug ID)
                 };
                 //immediateContext->PSSetShaderResources(8, 1, cascadedShadowMaps->depthMap().GetAddressOf());
 

@@ -7,21 +7,6 @@
 #include <imgui.h>
 #endif // USE_IMGUI
 
-#if defined(_DEBUG)
-namespace
-{
-    void DebugLogEditorMutation(const char* label, const void* data,
-        size_t size, size_t capacity, uint64_t effectId = 0, uint64_t emitterId = 0)
-    {
-        char buffer[512]{};
-        sprintf_s(buffer, sizeof(buffer),
-            "[EffectMutation] %s tid=%lu effectData=%p/%zu/%zu effectRuntimeId=%llu emitterRuntimeId=%llu\n",
-            label, ::GetCurrentThreadId(), data, size, capacity,
-            static_cast<unsigned long long>(effectId), static_cast<unsigned long long>(emitterId));
-        ::OutputDebugStringA(buffer);
-    }
-}
-#endif
 #include "Graphics/Core/Graphics.h"
 #include "Engine/Utility/JsonFileHandler.h"
 #include "Engine/Utility/Dialog.h"
@@ -146,14 +131,8 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
 #endif // 0
                     if (ImGui::MenuItem("Copy"))
                     {
-#if defined(_DEBUG)
-                        DebugLogEditorMutation("EffectEditor Copy BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), effect.runtimeId);
-#endif
                         // エフェクトデータをコピー（複製）
                         EffectManager::CopyEffectData(static_cast<EffectHandle>(emitterIndex));
-#if defined(_DEBUG)
-                        DebugLogEditorMutation("EffectEditor Copy AFTER", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity());
-#endif
                     }
                     ImGui::EndPopup();
                 }
@@ -166,9 +145,6 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
             // 新しいエフェクトデータ追加ボタン
             if (ImGui::Button("Add New Effect Data"))
             {
-#if defined(_DEBUG)
-                DebugLogEditorMutation("EffectEditor CreateEffect BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity());
-#endif
                 currentEffectHandle = EffectManager::CreateEffectData();
                 // 追加したエフェクトデータの名前を設定
                 EffectManager::effectData[currentEffectHandle].name = "Effect " + std::to_string(currentEffectHandle);
@@ -177,9 +153,6 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
             // 全エフェクトデータクリアボタン
             if (ImGui::Button("Clear All Effect Data"))
             {
-#if defined(_DEBUG)
-                DebugLogEditorMutation("EffectEditor ClearEffect BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity());
-#endif
                 EffectManager::ClearEffectData();
                 currentEffectHandle = -1;
             }
@@ -226,7 +199,6 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
                 ImGui::PushID(static_cast<int>(i));
 
                 auto& emitterData = emitterDataList[i];
-                //if (ImGui::TreeNode((void*)(intptr_t)i, "Emitter %zu", i))
                 ImGui::SetNextItemOpen(true, ImGuiCond_Once);
                 if (ImGui::TreeNodeEx(emitterData.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
                 {
@@ -488,16 +460,10 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
                     // エミッタ削除ボタン
                     if (ImGui::Button("Remove"))
                     {
-#if defined(_DEBUG)
-                        DebugLogEditorMutation("EffectEditor Emitter erase BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId, emitterData.runtimeId);
-#endif
                         EffectManager::RemoveActiveEmittersForEmitter(
                             EffectManager::effectData.at(currentEffectHandle).runtimeId,
                             emitterData.runtimeId);
                         emitterDataList.erase(emitterDataList.begin() + i);
-#if defined(_DEBUG)
-                        DebugLogEditorMutation("EffectEditor Emitter erase AFTER", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId);
-#endif
                         ImGui::TreePop();
                         ImGui::PopID();
                         break;
@@ -509,9 +475,6 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
             }
             if (ImGui::Button("+", ImVec2(25, 25)))
             {
-#if defined(_DEBUG)
-                DebugLogEditorMutation("EffectEditor Emitter emplace BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId);
-#endif
                 auto& data = emitterDataList.emplace_back();
                 data.runtimeId = EffectManager::AllocateEmitterRuntimeId();
                 data.name = "Emitter" + std::to_string(emitterDataList.size() - 1);
@@ -519,15 +482,8 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
             ImGui::SameLine();
             if (ImGui::Button("Clear Emitters"))
             {
-#if defined(_DEBUG)
-                DebugLogEditorMutation("EffectEditor Emitter clear BEFORE", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId);
-#endif
-                EffectManager::RemoveActiveEmittersForEffect(
-                    EffectManager::effectData.at(currentEffectHandle).runtimeId);
+                EffectManager::RemoveActiveEmittersForEffect(EffectManager::effectData.at(currentEffectHandle).runtimeId);
                 emitterDataList.clear();
-#if defined(_DEBUG)
-                DebugLogEditorMutation("EffectEditor Emitter clear AFTER", EffectManager::effectData.data(), EffectManager::effectData.size(), EffectManager::effectData.capacity(), EffectManager::effectData.at(currentEffectHandle).runtimeId);
-#endif
             }
         }
 
@@ -565,35 +521,12 @@ bool EffectEditor::DrawRangeUInt(const char* label, Range<unsigned int>& range, 
     ImGui::SameLine();
     ImGui::PushItemWidth(70);
 
-    //uint32_t prevMin = range.min;
-    //uint32_t prevMax = range.max;
-
     changed |= ImGui::DragScalar("##Min", ImGuiDataType_U32, &range.min, static_cast<float>(speed), &min, &range.max, "Min:%u");
     ImGui::SameLine();
     changed |= ImGui::DragScalar("##Max", ImGuiDataType_U32, &range.max, static_cast<float>(speed), &range.min, &max, "Max:%u");
 
     ImGui::PopItemWidth();
     ImGui::PopID();
-
-#if 0
-    // 整合性チェック
-    if (range.min > range.max)
-    {
-        if (range.min != prevMin)
-            range.max = range.min;
-        else
-            range.min = range.max;
-        changed = true;
-    }
-
-    if (min == 0 && max == 0)
-        return changed; // Clamp不要判定
-
-
-    // 範囲制限
-    range.min = std::clamp(range.min, min, max);
-    range.max = std::clamp(range.max, min, max);
-#endif // 0
 
     return changed;
 }
@@ -607,10 +540,8 @@ bool EffectEditor::DrawRangeFloat(const char* label, Range<float>& range, float 
     ImGui::SameLine();
     ImGui::PushItemWidth(70);
 
-#if 1
     float prevMin = range.min;
     float prevMax = range.max;
-#endif // 0
 
     changed |= ImGui::DragFloat("##Min", &range.min, speed, min, range.max, "Min:%.3f");
     ImGui::SameLine();
@@ -619,7 +550,6 @@ bool EffectEditor::DrawRangeFloat(const char* label, Range<float>& range, float 
     ImGui::PopItemWidth();
     ImGui::PopID();
 
-#if 1
     // 整合性チェック
     if (range.min > range.max)
     {
@@ -638,8 +568,6 @@ bool EffectEditor::DrawRangeFloat(const char* label, Range<float>& range, float 
     // 範囲制限
     range.min = std::clamp(range.min, min, max);
     range.max = std::clamp(range.max, min, max);
-#endif // 0
-
 
     return changed;
 }
@@ -648,9 +576,6 @@ bool EffectEditor::DrawRangeVector2(const char* label, Range<Vector2>& range, fl
 {
     bool changed = false;
     ImGui::PushID(label); // 一意のIDをプッシュ
-
-    //Vector2 prevMin = range.min;
-    //Vector2 prevMax = range.max;
 
     if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen))
     {
@@ -669,34 +594,6 @@ bool EffectEditor::DrawRangeVector2(const char* label, Range<Vector2>& range, fl
     }
     ImGui::PopID();
 
-#if 0
-    // 整合性チェック：軸ごと
-    for (int i = 0; i < 2; ++i)
-    {
-        float* minPtr = (&range.min.x) + i;
-        float* maxPtr = (&range.max.x) + i;
-        float* prevMinPtr = (&prevMin.x) + i;
-
-        if (*minPtr > *maxPtr)
-        {
-            if (*minPtr != *prevMinPtr)
-                *maxPtr = *minPtr;
-            else
-                *minPtr = *maxPtr;
-            changed = true;
-        }
-
-        float epsilon = 1e-6f;
-        if (fabsf(min) < epsilon && fabsf(max) < epsilon)
-            continue; // Clamp不要
-
-        // Clamp
-        *minPtr = std::clamp(*minPtr, min, max);
-        *maxPtr = std::clamp(*maxPtr, min, max);
-    }
-#endif // 0
-
-
     return changed;
 }
 
@@ -704,9 +601,6 @@ bool EffectEditor::DrawRangeVector3(const char* label, Range<Vector3>& range, fl
 {
     bool changed = false;
     ImGui::PushID(label); // 一意のIDをプッシュ
-
-    //Vector3 prevMin = range.min;
-    //Vector3 prevMax = range.max;
 
     if (ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_DefaultOpen))
     {
@@ -724,34 +618,6 @@ bool EffectEditor::DrawRangeVector3(const char* label, Range<Vector3>& range, fl
         ImGui::TreePop();
     }
     ImGui::PopID();
-
-#if 0
-    // 整合性チェック：軸ごと
-    for (int i = 0; i < 3; ++i)
-    {
-        float* minPtr = (&range.min.x) + i;
-        float* maxPtr = (&range.max.x) + i;
-        float* prevMinPtr = (&prevMin.x) + i;
-
-        if (*minPtr > *maxPtr)
-        {
-            if (*minPtr != *prevMinPtr)
-                *maxPtr = *minPtr;
-            else
-                *minPtr = *maxPtr;
-            changed = true;
-        }
-
-        float epsilon = 1e-6f;
-        if (fabsf(min) < epsilon && fabsf(max) < epsilon)
-            continue; // Clamp不要
-
-        // Clamp
-        *minPtr = std::clamp(*minPtr, min, max);
-        *maxPtr = std::clamp(*maxPtr, min, max);
-    }
-#endif // 0
-
 
     return changed;
 }

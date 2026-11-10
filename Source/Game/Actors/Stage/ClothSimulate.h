@@ -53,18 +53,22 @@ public:
     };
 
     //モデルがメートル単位か cm単位の時はfalseにする
+private:
     bool isModelInMeters = true;
 
     //モデル固有の座標系 //初期　LH_Y_UP
     CoordinateSystem modelCoordinateSystem = CoordinateSystem::LH_Y_UP;
 
+public:
     ClothSimulate(ID3D11Device* device, const std::string& filename);
     virtual ~ClothSimulate() = default;
 
+private:
     void SetupPinVertices(int curretPinMode);
 
     void RecreateClothBuffers(ID3D11Device* device);
 
+public:
     struct Scene
     {
         std::string name;
@@ -79,9 +83,11 @@ public:
             );
         }
     };
+private:
     std::vector<Scene> scenes;
     int defaultScene = 0;
 
+public:
     struct Node
     {
         std::string name;
@@ -121,8 +127,10 @@ public:
 
     void Update(float deltaTime);
 
+private:
     void Simulate(ID3D11DeviceContext* immediateContext);
 
+public:
     struct ClothSimulateCBuffer
     {
         float gravity = -0.98f;
@@ -137,8 +145,10 @@ public:
         float driveForceFrequency = 1.5f;
         float driveForcePhaseGradient = 1.8f;
     };
+private:
     std::unique_ptr<ConstantBuffer<ClothSimulateCBuffer>> cbuffer;
 
+public:
     struct ClothTimeCBuffer
     {
         float elapsedTime = 0.0f;
@@ -146,24 +156,18 @@ public:
         float gravityScale = 0.25f;
         float clothTimePadding = 0.0f;
     };
-    static_assert(sizeof(ClothTimeCBuffer) == 16, "Cloth b11 layout must match HLSL");
-    static_assert(offsetof(ClothTimeCBuffer, gravityScale) == 8, "Cloth b11 gravity scale offset must match HLSL");
+private:
     std::unique_ptr<ConstantBuffer<ClothTimeCBuffer>> clothTimeCBuffer;
 
-    enum class ClothDebugDrawMode : uint32_t 
-    {
-        Default,
-        UnlitBaseColor, WorldNormal, NoNormalMap, NoShadow, DiffuseOnly, AmbientOnly, NormalDotLight, TwoSidedDiffuse, AbsNormalDotLight, DirectDiffuseTerm, DiffuseAmbientTerm, PointLightDiffuseOnly, PointLightAttenuation, PointLightNoL, SimulationNormal, GeometricNormal, NormalDifference };
-    struct ClothDebugCBuffer { uint32_t mode = 0; float padding[3] = {}; };
+public:
     struct ClothAlphaTestCBuffer { uint32_t enableAlphaTest = 1; float alphaThreshold = 0.5f; float padding[2] = {}; };
-    static_assert(sizeof(ClothDebugCBuffer) == 16, "Cloth debug b12 layout must be 16 bytes");
-    std::unique_ptr<ConstantBuffer<ClothDebugCBuffer>> clothDebugCBuffer;
-    static_assert(sizeof(ClothAlphaTestCBuffer) == 16, "Cloth alpha-test b13 layout must be 16 bytes");
+private:
     std::unique_ptr<ConstantBuffer<ClothAlphaTestCBuffer>> clothAlphaTestCBuffer;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> clothOpacityTextureSRV;
     bool clothOpacityTextureLoaded = false;
     bool enableAlphaTest = true;
     float alphaThreshold = 0.5f;
+public:
     struct ClothPlane
     {
         DirectX::XMFLOAT3 normal = { 0.0f, 1.0f, 0.0f };
@@ -173,8 +177,7 @@ public:
     {
         ClothPlane planes[4];
     };
-    static_assert(sizeof(ClothPlane) == 16, "ClothPlane must match HLSL Plane packing");
-    static_assert(sizeof(ClothPlaneCBuffer) == 64, "ClothPlaneCBuffer must contain four 16-byte planes");
+private:
     std::unique_ptr<ConstantBuffer<ClothPlaneCBuffer>> planeCBuffer;
 
     float windPhaseOffset = 0.0f;
@@ -186,13 +189,14 @@ public:
     float driveForcePhaseGradient = 5.0f;
     float gravityScale = 0.0f;
     float bottomWindExponent = 1.0f;
-    ClothDebugDrawMode debugDrawMode = ClothDebugDrawMode::Default;
 
     bool enableClothRendering = true;
     bool enableClothSimulation = true;
 
+public:
     bool IsClothRenderingEnabled() const { return enableClothRendering; }
 
+private:
     float fixedDeltaTime = 1.0f / 120.0f;
     int maxSubsteps = 8;
     float simulationAccumulator = 0.0f;
@@ -201,6 +205,7 @@ public:
     SimulationStage simulationStage = SimulationStage::UpdateAndConstraint;
     bool disableCulling = false;
 
+public:
     void DrawImGui();
 
 private:
@@ -286,7 +291,6 @@ public:
 
         struct Primitive
         {
-            //std::vector<int> materialIndices; // 複数のマテリアル候補
             int material;// 現在使用しているマテリアルの index
 
             std::vector<unsigned char> cachedIndices;
@@ -373,8 +377,6 @@ public:
                     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
                 }
 
-                // Initial local-Y bottom weight is immutable simulation input:
-                // top = 0, bottom = 1.  It is intentionally separate from ClothVertex.
                 std::vector<float> initialBottomWeights(cachedVertices.size());
                 if (!cachedVertices.empty())
                 {
@@ -467,17 +469,19 @@ public:
             archive(cereal::make_nvp("name", name), cereal::make_nvp("primitives", primitives));
         }
     };
+private:
     std::vector<Mesh> meshes;
 
     // INTERLEAVED_GLTF_MODEL
     std::vector<Microsoft::WRL::ComPtr<ID3D11Buffer>> buffers;
 
+public:
     void Render(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4& world);
 
     struct TextureInfo
     {
-        int index = -1; // required.
-        int texcoord = 0; // The set index of texture's TEXCOORD attribute used for texture coordinate mapping.
+        int index = -1; 
+        int texcoord = 0; 
 
         template<class T>
         void serialize(T& archive)
@@ -492,8 +496,8 @@ public:
     struct NormalTextureInfo
     {
         int index = -1;
-        int texcoord = 0;    // The set index of texture's TEXCOORD attribute used for texture coordinate mapping.
-        float scale = 1;    // scaledNormal = normalize((<sampled normal texture value> * 2.0 - 1.0) * vec3(<normal scale>, <normal scale>, 1.0))
+        int texcoord = 0;  
+        float scale = 1;   
 
         template<class T>
         void serialize(T& archive)
@@ -592,9 +596,11 @@ public:
             );
         }
     };
+private:
     std::vector<Material> materials;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> materialResourceView;
 
+public:
     struct Texture
     {
         std::string name;
@@ -609,24 +615,20 @@ public:
             );
         }
     };
+private:
     std::vector<Texture> textures;
+public:
     struct Image
     {
         std::string name;
         int width = -1;
         int height = -1;
         int component = -1;
-        int bits = -1;			// bit depth per channel. 8(byte), 16 or 32.
-        int pixelType = -1;	// pixel type(TINYGLTF_COMPONENT_TYPE_***). usually UBYTE(bits = 8) or USHORT(bits = 16)
-        std::string mimeType;	// (required if no uri) ["image/jpeg", "image/png", "image/bmp", "image/gif"]
-        std::string uri;		// (required if no mimeType) uri is not decoded(e.g. whitespace may be represented as %20)
+        int bits = -1;			
+        int pixelType = -1;	    
+        std::string mimeType;	
+        std::string uri;		
 
-        // When this flag is true, data is stored to `image` in as-is format(e.g. jpeg
-        // compressed for "image/jpeg" mime) This feature is good if you use custom
-        // image loader function. (e.g. delayed decoding of images for faster glTF
-        // parsing) Default parser for Image does not provide as-is loading feature at
-        // the moment. (You can manipulate this by providing your own LoadImageData
-        // function)
         bool asIs = false;
 
         std::vector<unsigned char> cacheData;
@@ -648,6 +650,7 @@ public:
             );
         }
     };
+private:
     std::vector<Image> images;
     std::vector<Microsoft::WRL::ComPtr<ID3D11ShaderResourceView>> textureResourceViews;
 
@@ -662,7 +665,6 @@ private:
         bool finite = true;
     };
 
-    // Calculated only from the explicit GPU readback requested by the debug button.
     struct ClothStretchDiagnostics
     {
         UINT vertexCount = 0;
@@ -705,34 +707,16 @@ private:
     void FetchNodes(const tinygltf::Model& gltf_model);
     void CumulateTransforms(std::vector<Node>& nodes);
     void FetchMeshes(ID3D11Device* device, const tinygltf::Model& gltf_model);
-public:
     Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
     Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
     Microsoft::WRL::ComPtr<ID3D11InputLayout> inputLayout;
-
-    //Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> clothSRV[2];
-    //Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> clothUAV[2];
-    //Microsoft::WRL::ComPtr<ID3D11Buffer> clothBuffer[2];
-    //// 描画時に使用する
-    //Microsoft::WRL::ComPtr<ID3D11Buffer> clothVB;   // 頂点バッファ
+    // 描画時に使用する
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothUpdateCS;
     Microsoft::WRL::ComPtr<ID3D11ComputeShader> clothConstraintCS;
-
-    //Microsoft::WRL::ComPtr<ID3D11Buffer> clothEdgeBuffer;   // エッジ用のバッファ
-    //Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> clothEdgeSRV;  
-
-    //struct ClothEdge
-    //{
-    //    uint32_t neighbor;  // 隣接頂点のインデックス
-    //    DirectX::XMFLOAT3 delta;    // 初期の相対ベクトル
-    //    float restLength;   // 初期距離
-    //};
     std::vector<Mesh::Vertex> allVertices;
-    std::vector<uint32_t> globalIndices;
-    //std::vector<ClothEdge> finalEdges;
 
 
-    // Compute Shader b0: matches ClothUpdateCS.hlsl and ClothConstraintCS.hlsl.
+public:
     struct ComputePrimitiveConstants
     {
         DirectX::XMFLOAT4X4 world;
@@ -750,7 +734,6 @@ public:
     static_assert(offsetof(ComputePrimitiveConstants, pad) == 76, "Cloth compute b0 padding offset mismatch");
     static_assert(offsetof(ComputePrimitiveConstants, invWorld) == 80, "Cloth compute b0 invWorld offset mismatch");
 
-    // Graphics b0: matches PRIMITIVE_CONSTANT_BUFFER in GltfModel.hlsli.
     struct GraphicsPrimitiveConstants
     {
         DirectX::XMFLOAT4X4 world;
@@ -770,18 +753,20 @@ public:
     static_assert(offsetof(GraphicsPrimitiveConstants, materialType) == 140, "Cloth graphics b0 materialType offset mismatch");
     static_assert(offsetof(GraphicsPrimitiveConstants, inverseTransposeWorld) == 144, "Cloth graphics b0 inverseTransposeWorld offset mismatch");
 
+private:
     Microsoft::WRL::ComPtr<ID3D11Buffer> computePrimitiveCbuffer;
     Microsoft::WRL::ComPtr<ID3D11Buffer> graphicsPrimitiveCbuffer;
     void FetchMaterials(ID3D11Device* device, const tinygltf::Model& gltf_model);
     void FetchTextures(ID3D11Device* device, const tinygltf::Model& gltf_model);
-    //void FetchAnimations(const tinygltf::Model& gltf_model);
 
+public:
     static const size_t PRIMITIVE_MAX_JOINTS = 512;
     struct PrimitiveJointConstants
     {
         DirectX::XMFLOAT4X4 matrices[PRIMITIVE_MAX_JOINTS];
     };
 
+private:
     void CreateAndUploadResources(ID3D11Device* device);
 
     // 指定されたアライメントに合わせて数値を調整する関数
@@ -789,7 +774,5 @@ public:
     {
         return (num + (alignment - 1)) & ~(alignment - 1);
     }
-
-public:
 
 };

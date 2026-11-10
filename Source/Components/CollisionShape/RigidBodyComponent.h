@@ -445,75 +445,6 @@ private:
     // mesh 一つから vertices を作る
     std::vector<DirectX::XMFLOAT3> ReturnPhysxVertices(const InterleavedGltfModel::Mesh& mesh)
     {
-#if 0
-        std::vector<DirectX::XMFLOAT3> physxVertices;
-
-        for (auto& primitive : mesh.primitives)
-        {
-            auto& p = primitive;
-            //OutputDebugStringA(("index buffer size: " + std::to_string(p.cachedIndices.size()) + "\n").c_str());
-            size_t vertexCount = p.cachedVertices.size();
-            //int offset = static_cast<int>(p.cachedVertices.size());
-            if (primitive.indexBufferView.format == DXGI_FORMAT_R32_UINT)
-            {// TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT
-                const uint32_t* indices = reinterpret_cast<const uint32_t*>(p.cachedIndices.data());
-                size_t indexCount = p.cachedIndices.size() / sizeof(uint32_t);
-
-                for (size_t i = 0; i < indexCount; i++)
-                {
-                    uint32_t index = indices[i];
-                    if (index < vertexCount)
-                    {
-                        physxVertices.push_back(p.cachedVertices[index].position);
-                    }
-                }
-                //uint32_t* data = reinterpret_cast<uint32_t*>(p.cachedIndices.data());
-                //for (int i = 0; i < p.cachedIndices.size() / 4; ++i)
-                //{
-                //    //data[i] += offset;
-                //}
-            }
-            else if (primitive.indexBufferView.format == DXGI_FORMAT_R16_UINT)
-            {// TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT
-                const uint16_t* data = reinterpret_cast<const uint16_t*>(p.cachedIndices.data());
-                size_t indexCount = p.cachedIndices.size() / sizeof(uint16_t);
-
-                for (size_t i = 0; i < indexCount; i++)
-                {
-                    uint16_t index = data[i];
-                    if (index < vertexCount)
-                    {
-                        physxVertices.push_back(p.cachedVertices[index].position);
-                    }
-                }
-                //for (int i = 0; i < p.cachedIndices.size() / 2; ++i)
-                //{
-                //    data[i] += offset;
-                //}
-            }
-            else
-            {
-                _ASSERT(L"このフォーマットには対応していないです。");
-            }
-
-
-            //for(size_t index=0;)
-            //physxVertices.emplace_back(p.cachedVertices[data[i]]);s
-
-        }
-        //for (auto& primitive : mesh.primitives)
-        //{
-        //    if (primitive.cachedVertices.size() < 4 || primitive.cachedVertices.size() > 256)
-        //    {
-        //        int i = 0;
-        //    }
-        //}
-        return physxVertices;
-
-#else
-        //bool isMeter = /*meshComponent_->model->isModelInMeters;*/true;
-        //float unitScale = isMeter ? 1.0f : 0.01f;
-
         std::unordered_set<DirectX::XMFLOAT3, XMFLOAT3Hasher, XMFLOAT3Equal> uniquePositions;
 
         for (auto& primitive : mesh.primitives)
@@ -534,52 +465,8 @@ private:
         // vector にコピーして返す
         return std::vector<DirectX::XMFLOAT3>(uniquePositions.begin(), uniquePositions.end());
 
-#endif // 0
     }
 
-#if 0
-    // Vertices の Data から ConvexMesh を作成する
-    physx::PxConvexMesh* ToPxConvexMesh(physx::PxPhysics* physics, const std::vector<InterleavedGltfModel::Mesh::Vertex>& vertices)
-    {
-        using namespace physx;
-
-        // 頂点数チェック（明示的に）
-        if (vertices.size() < 4 || vertices.size() > 256)
-        {
-            OutputDebugStringA("ConvexMesh cooking skipped: 頂点数が 4 未満 or 256 超え\n");
-            return nullptr;
-        }
-
-        //std::set<DirectX::XMFLOAT3> uniqueVerts;
-        //for (const auto& v : vertices) uniqueVerts.insert(v.position);
-        //if (uniqueVerts.size() < 4) {
-        //    OutputDebugStringA("ConvexMesh skipped: 実質ユニーク頂点数 < 4\n");
-        //    return nullptr;
-        //}
-
-        physx::PxTolerancesScale tolerancesScale;
-        physx::PxCookingParams cookingParams(tolerancesScale);
-        cookingParams.convexMeshCookingType = physx::PxConvexMeshCookingType::Enum::eQUICKHULL;
-        cookingParams.gaussMapLimit = 256;
-        physx::PxConvexMeshDesc pxMeshDesc;
-
-        pxMeshDesc.points.count = static_cast<physx::PxU32>(vertices.size());
-        pxMeshDesc.points.stride = sizeof(InterleavedGltfModel::Mesh::Vertex);
-        //pxMeshDesc.points.data = &vertices[0];
-        pxMeshDesc.points.data = vertices.data();
-        //pxMeshDesc.flags = ::PxConvexFlag::eCOMPUTE_CONVEX;
-        pxMeshDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
-        physx::PxConvexMesh* convexMesh = nullptr;
-        physx::PxDefaultMemoryOutputStream writeBuffer;
-        if (!PxCookConvexMesh(cookingParams, pxMeshDesc, writeBuffer))
-        {
-            _ASSERT(L" PxCookConvexMesh が失敗しました！");
-        }
-        physx::PxDefaultMemoryInputData readBuffer(writeBuffer.getData(), writeBuffer.getSize());
-        convexMesh = physics->createConvexMesh(readBuffer);
-        return convexMesh;
-    }
-#else
     // Vertices の Data から ConvexMesh を作成する
     physx::PxConvexMesh* ToPxConvexMesh(physx::PxPhysics* physics, const std::vector<DirectX::XMFLOAT3>& vertices)
     {
@@ -592,13 +479,6 @@ private:
             return nullptr;
         }
 
-        //std::set<DirectX::XMFLOAT3> uniqueVerts;
-        //for (const auto& v : vertices) uniqueVerts.insert(v.position);
-        //if (uniqueVerts.size() < 4) {
-        //    OutputDebugStringA("ConvexMesh skipped: 実質ユニーク頂点数 < 4\n");
-        //    return nullptr;
-        //}
-
         physx::PxTolerancesScale tolerancesScale;
         physx::PxCookingParams cookingParams(tolerancesScale);
         cookingParams.convexMeshCookingType = physx::PxConvexMeshCookingType::Enum::eQUICKHULL;
@@ -606,11 +486,8 @@ private:
         physx::PxConvexMeshDesc pxMeshDesc;
 
         pxMeshDesc.points.count = static_cast<physx::PxU32>(vertices.size());
-        //pxMeshDesc.points.stride = sizeof(InterleavedGltfModel::Mesh::Vertex);
         pxMeshDesc.points.stride = sizeof(DirectX::XMFLOAT3);
-        //pxMeshDesc.points.data = &vertices[0];
         pxMeshDesc.points.data = vertices.data();
-        //pxMeshDesc.flags = ::PxConvexFlag::eCOMPUTE_CONVEX;
         pxMeshDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
         physx::PxConvexMesh* convexMesh = nullptr;
         physx::PxDefaultMemoryOutputStream writeBuffer;
@@ -622,8 +499,6 @@ private:
         convexMesh = physics->createConvexMesh(readBuffer);
         return convexMesh;
     }
-
-#endif // 0
 
     // rigidBodies の接続
     void CreateFixedJoints(MeshComponent* meshComponent)
@@ -689,9 +564,6 @@ private:
 class TriangleMeshRigidBodyComponent :public RigidBodyComponent
 {
 public:
-    //TriangleMeshRigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner, MeshComponent* meshComponent)
-    //    : RigidBodyComponent(name, owner), owner_(meshComponent), material_(Physics::Instance().GetDefaultMaterial()) {
-    //}
     TriangleMeshRigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner, MeshComponent* meshComponent)
         : RigidBodyComponent(name, owner), owner_(meshComponent), material_(Physics::Instance().GetMaterial(PhysicsMaterialType::Wall)) {
     }

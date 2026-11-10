@@ -40,23 +40,6 @@ namespace
 
 bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, const std::unordered_map<std::string, std::string>& props)
 {
-#if 0
-    SceneBase::Initialize(device, width, height, props);
-
-    auto mainCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<LoadingCamera>("mainLoadingCameraActor");
-    auto mainCameraComponent = mainCameraActor->GetComponent<CameraComponent>();
-    mainCameraActor->SetPosition({ -4.1f,1.9f,-4.3f });
-    SetActiveCamera(mainCameraActor);
-    Logger::Log(U8("ロードシーンのカメラ設定される。"));
-
-
-    OutputDebugStringA((std::string("Scene::Initialize this=") + std::to_string(reinterpret_cast<uintptr_t>(this)) + "\n").c_str());
-    OutputDebugStringA((std::string("_current_scene.get()=") + std::to_string(reinterpret_cast<uintptr_t>(this)) + "\n").c_str());
-    OutputDebugStringA((std::string("actorManager_ ptr=") + std::to_string(reinterpret_cast<uintptr_t>(this->GetActorManager())) + "\n").c_str());
-    //HRESULT hr;
-
-    //D3D11_BUFFER_DESC bufferDesc{};
-#else
     lightDirection = { 0.722f, -0.38f, -0.0211f, 0.9f };   // 上の窓からの光
     lightColor = { 1.0f, 0.8f, 1.0f, 2.6f };
     {
@@ -147,13 +130,8 @@ bool LoadingScene::Initialize(ID3D11Device* device, UINT64 width, UINT height, c
         {
         });
 
-
-#endif // 0
-
     preload_scene = props.at("preload");
     _async_preload_scene(device, width, height, preload_scene, props);
-
-    
 
     loadingTime = 4.0f;   // ロードにかかる時間
 

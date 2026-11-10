@@ -25,10 +25,6 @@ float3 LinearToSrgb(float3 linearColor)
 
 float4 main(VS_OUT pin) : SV_TARGET
 {
-    // These three IDs are written only by Cloth debug rendering. Keep their
-    // numerical lighting visualizations out of FinalPS image adjustments.
-    int clothDiagnosticMaterialType = materialTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).w;
-    const bool clothPointLightDiagnostic = clothDiagnosticMaterialType >= 111 && clothDiagnosticMaterialType <= 116;
     // シーンからライティング済みのカラーテクスチャ
     float4 sceneColor = sceneColorTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
     float4 color = sceneColor;
@@ -53,7 +49,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
 
     // DOFの処理
-    if (enableDof && !clothPointLightDiagnostic)
+    if (enableDof)
     {
         // 深度からview space Z
         float viewSpaceZ = positionViewSpace.z;
@@ -79,7 +75,7 @@ float4 main(VS_OUT pin) : SV_TARGET
         finalColor = sceneColor;
     }
 
-    if (enableToneMapping == 1 && !clothPointLightDiagnostic)
+    if (enableToneMapping == 1)
     {
         // トーンマップは共通にする
         finalColor.rgb = JodieReinhardToneMap(finalColor.rgb);
@@ -108,7 +104,7 @@ float4 main(VS_OUT pin) : SV_TARGET
     int gBufferFlag = sampled.w;
 
 
-    if (!clothPointLightDiagnostic && ((objectType == OBJECT_ENEMY && materialType != MATERIAL_EYE) || objectType == OBJECT_STAGE || objectType == OBJECT_FURNITURE))
+    if (((objectType == OBJECT_ENEMY && materialType != MATERIAL_EYE) || objectType == OBJECT_STAGE || objectType == OBJECT_FURNITURE))
     {
         finalColor.rgb = lerp(bossRoomColor, finalColor.rgb, bossRoomLerpFactor);
     }
