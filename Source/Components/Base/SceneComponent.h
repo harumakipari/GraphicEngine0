@@ -39,12 +39,9 @@ public:
     // 消去処理
     virtual void Destroy() override;
 
-    // 初期化時に困るから即時 Transform 更新処理
-    void UpdateTransformImmediate();
 protected:
     // SceneComponent や Transform 持ちクラスに追加
     DirectX::XMFLOAT3 inspectorEuler_ = { 0,0,0 };
-    bool inspectorEulerInitialized_ = false;
 
     // このコンポーネントのワールド空間上でのTransform
     // final Transform_　親子関係を全て考慮した最終的なTransform
@@ -307,7 +304,6 @@ public:
         if (auto parent = attachParent_.lock())
         {
             // 親のワールドトランスフォームの逆行列を使って、相対位置を求める
-#if 1
             DirectX::XMMATRIX parentWorld = parent->GetComponentWorldTransform().ToMatrix();
             DirectX::XMMATRIX parentInv = DirectX::XMMatrixInverse(nullptr, parentWorld);
             DirectX::XMVECTOR worldPos = DirectX::XMLoadFloat3(&newWorldLocation);
@@ -315,9 +311,6 @@ public:
             DirectX::XMFLOAT3 relative;
             DirectX::XMStoreFloat3(&relative, localPos);
             SetRelativeLocationDirect(relative);
-#else
-            parent->SetRelativeLocationDirect(newWorldLocation);
-#endif
         }
         else
         {
@@ -550,29 +543,6 @@ private:
     void UpdateComponentToWorldWithParent(SceneComponent* parent, int socketNode, UpdateTransformFlags updateTransformFlags, TeleportType teleport);
 
 
-    //  指定された component が、このコンポーネントの子孫（子、孫など）であるかを判定する関数。
-    // component が自分自身または子孫であれば true を返して、それ以外は false を返す
-    bool IsAttachBelow(SceneComponent* component)
-    {
-        // 自分自身と一致する場合は true（＝component は自分、よって子孫関係にある）
-        if (component == this)
-        {
-            return true;
-        }
-
-        // 子コンポーネントそれぞれに対して、再帰的に子孫関係をチェック
-        for (const std::shared_ptr<SceneComponent>& child : attachChildren_)
-        {
-            if (child->IsAttachBelow(component))   // 再帰的チェック
-            {
-                return true;
-            }
-        }
-
-        // どの子孫にも該当しなければ false
-        return false;
-    }
-
     // 指定された component が、このコンポーネントの祖先（親、祖父母など）であるかを判定する関数。
     // component が祖先であれば true を返し、それ以外は false を返す。
     bool IsAttachAbove(const SceneComponent* component) const
@@ -619,7 +589,6 @@ public:
 
     void AddWorldOffset(const DirectX::XMFLOAT3& offset);
 
-    bool isDirty = true;
 
     // ワールド空間でのこのコンポーネントの回転をオフセット分だけ加算する
     void AddLocalRotation(const DirectX::XMFLOAT3& offset);

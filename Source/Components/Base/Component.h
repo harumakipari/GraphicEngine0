@@ -111,7 +111,6 @@ protected:
     std::weak_ptr<Actor> owner_;
     std::string name_;
     bool active_;
-    bool initialized_ = false; // •¡”‰ñ‚Ì‰Šú‰»‚·‚é‚Ì‚ğ–h‚®‚Ì‚Ég‚¤BB
 };
 
 

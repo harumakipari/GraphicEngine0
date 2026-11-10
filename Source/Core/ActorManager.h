@@ -1,12 +1,12 @@
 #pragma once
-#include <map>
+#include <algorithm>
 #include <memory>
-#include <cassert>
-#include <tracy/Tracy.hpp>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 #include "Actor.h"
 
-#include "Components/CollisionShape/ShapeComponent.h"
-#include "Components/Render/MeshComponent.h"
 
 
 class Scene;
@@ -18,11 +18,13 @@ protected:
 public:
     void SetOwnerScene(Scene* scene) { ownerScene_ = scene; }
     Scene* GetOwnerScene() const { return ownerScene_; }
+private:
     // アクター名からアクターへのポインタを高速に取得するためのキャッシュ。
     // 名前が見つからない場合はアクターリストを検索し、結果をこのキャッシュに保存する。
     std::unordered_map<std::string, std::weak_ptr<Actor>> actorCacheByName_;
     // 現在存在しているすべてのアクター
     std::vector<std::shared_ptr<Actor>> allActors_;
+public:
 
     // アクターを名前付きで作成・登録する（同名アクターが存在する場合は"_1","_2"とつけてユニークな名前にする） 二つ目の引数は初期化をautoでするかどうかを決定する
     template <class T, class... Args>
