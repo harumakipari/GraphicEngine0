@@ -24,8 +24,6 @@ AnimationController::AnimationController(Character* character, SkeletalMeshCompo
 
     // BlendSpaceの完成結果に使用するノード
     blendSpaceNodes = target_->model->GetNodes();
-    blendSpaceClipA = target_->model->GetNodes();
-    blendSpaceClipB = target_->model->GetNodes();
     groupTransitionStartNodes = target_->model->GetNodes();
     groupTransitionNodes = target_->model->GetNodes();
     // 前回時刻の RootMotion 取得用 Pose
@@ -575,7 +573,6 @@ void AnimationController::CaptureEditorRuntimeSnapshot()
     editorRuntimeSnapshot.finalNodes = finalNodes;
     editorRuntimeSnapshot.previousPosition = previousPosition;
     editorRuntimeSnapshot.zeroTranslation = zeroTranslation;
-    editorRuntimeSnapshot.resetRootMotionDelta = resetRootMotionDelta;
     editorRuntimeSnapshot.suppressNormalRootMotionUntilTransitionCompleted = suppressNormalRootMotionUntilTransitionCompleted;
     editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition = suppressNormalRootMotionObservedTransition;
 }
@@ -2447,7 +2444,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             BlendSpace::WrapPhase(locomotionDebugFrozenCommonPhase);
     }
 
-    locomotionCommonPhase = currentLocomotionPhase;
     bool canExtractRootMotion = enableRootMotion && !ignoreRootMotion;
 
     if (resetLocomotionRootMotion)
@@ -2460,7 +2456,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         canExtractRootMotion = false;
     }
 
-    // BlendSpace uses Jog_Fwd as its single locomotion Notify source.
     const auto notifyClipIt = animationNameToIndex_.find("Jog_Fwd");
     if (notifyClipIt != animationNameToIndex_.end())
     {

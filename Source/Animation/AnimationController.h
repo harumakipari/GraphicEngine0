@@ -83,10 +83,7 @@ public:
     void AddAnimation(const std::string& animationName, const size_t animationClip)
     {
         animationNameToIndex_[animationName] = animationClip;
-        animationImGUiOrder.push_back(animationName);
-
-        auto& asset =
-            animationNotifyAssets[animationClip];
+        auto& asset =animationNotifyAssets[animationClip];
 
         asset.animationName = animationName;
         asset.animationClip = animationClip;
@@ -317,10 +314,6 @@ public:
         const float normalizedOffset =
             name == "Jog_Fwd" ? 0.0f : BlendSpace::WrapPhase(phaseOffset);
         locomotionBlendSpace.AddAnimation(clip, angle, normalizedOffset);
-
-        if (name == "Jog_Right") locomotionRightPhaseOffset = normalizedOffset;
-        if (name == "Jog_Bwd") locomotionBackwardPhaseOffset = normalizedOffset;
-        if (name == "Jog_Left") locomotionLeftPhaseOffset = normalizedOffset;
     }
 
     void SetLocomotionPhaseOffset(const std::string& name, float phaseOffset)
@@ -618,10 +611,6 @@ private:
 
     // BlendSpaceの完成結果
     std::vector<InterleavedGltfModel::Node> blendSpaceNodes;
-
-    std::vector<InterleavedGltfModel::Node> blendSpaceClipA;
-    std::vector<InterleavedGltfModel::Node> blendSpaceClipB;
-
     std::array<std::vector<InterleavedGltfModel::Node>, 4> blendSpacePoses;
 
     enum class AnimationTransitionState :uint8_t
@@ -654,7 +643,6 @@ private:
         std::vector<InterleavedGltfModel::Node> finalNodes;
         DirectX::XMFLOAT3 previousPosition{};
         DirectX::XMFLOAT3 zeroTranslation{};
-        bool resetRootMotionDelta = false;
         bool suppressNormalRootMotionUntilTransitionCompleted = false;
         bool suppressNormalRootMotionObservedTransition = false;
     };
@@ -702,11 +690,6 @@ private:
     // 今再生しているアニメーションの名前
     std::string currentAnimationName;
 
-    // ImGuiで表示するための
-    std::vector<std::string> animationImGUiOrder;
-
-
-
     int rootNodeIndex = 0;
     DirectX::XMFLOAT3 previousPosition = {}; // world 空間
     DirectX::XMFLOAT3 zeroTranslation = {}; // 親ノード空間
@@ -751,25 +734,11 @@ private:
 
     // ブレンドスペース
     BlendSpace locomotionBlendSpace;
-
     BlendGroup currentGroup = BlendGroup::Forward;
-    // グループ変更待機
-    BlendGroup pendingGroup = BlendGroup::Forward;
-    bool hasPendingGroupChange = false;
-    // グループ切り替え後、再び切り替え可能になるまでの時間
-    float minimumGroupHoldTime = 0.8f;
-    // 最後にグループを切り替えてからの経過時間
-    float groupHoldElapsed = minimumGroupHoldTime;
-
 
     // ブレンドスペースで使用する入力値
     DirectX::XMFLOAT2 blendInput;
-    size_t locomotionClip;
-    size_t locomotionNextClip;
 
-    bool locomotionChanging;
-
-    float locomotionBlendElapsed;
     float blendSpeed;
 
     bool useBlendSpace = false;
@@ -809,10 +778,6 @@ private:
     bool pendingLocomotionPhaseTransfer = false;
     float pendingLocomotionPhase = 0.0f;
 
-    float locomotionCommonPhase = 0.0f;
-    float locomotionBackwardPhaseOffset = 0.0f;
-    float locomotionRightPhaseOffset = 0.464f;
-    float locomotionLeftPhaseOffset = 0.5f;
     float locomotionBackwardSideMaxWeight = 0.15f;
     int locomotionDebugBodyBlendMode = 0;
     bool locomotionDebugExcludePelvisTranslation = false;
@@ -824,8 +789,6 @@ private:
     float locomotionDebugRawStickX = 0.0f;
     float locomotionDebugRawStickZ = 0.0f;
     float locomotionDebugEvaluationAngle = 0.0f;
-    bool locomotionDebugHasReference = false;
-    float locomotionDebugReferenceAngle = 0.0f;
     bool locomotionDebugFreezeCommonPhase = false;
     float locomotionDebugFrozenCommonPhase = 0.0f;
     // ブレンドスペースではない
@@ -838,10 +801,6 @@ private:
 
     std::vector<InterleavedGltfModel::Node> groupTransitionStartNodes;
     std::vector<InterleavedGltfModel::Node> groupTransitionNodes;
-
-
-    MoveDirection currentMoveDirection = MoveDirection::Idle;
-    LocomotionGroup locomotionGroup = LocomotionGroup::Forward;
 
     friend class Player;
 };
