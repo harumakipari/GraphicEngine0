@@ -45,7 +45,7 @@ void Framework::RequestExit()
 
 bool Framework::Initialize()
 {
-    ////デバイス・デバイスコンテクスト・スワップチェーンの作成
+    //デバイス・デバイスコンテクスト・スワップチェーンの作成
     ID3D11Device* device = Graphics::GetDevice();
     if (!device)
     {
@@ -58,7 +58,6 @@ bool Framework::Initialize()
     SceneTransitionManager::Instance().Initialize();
 
     Scene::_boot(device, "TitleScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
-    //Scene::_boot(device, "GameScene", SCREEN_WIDTH, SCREEN_HEIGHT, {});
 
     //パーティクルシステム
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTexture;
@@ -76,7 +75,7 @@ bool Framework::Initialize()
     FontManager::Initialize(Graphics::GetDevice(), "./Data/Font/BuildFont.fnt");
 
     //プロファイラ初期化
-    ProfileInitialize(&isPaused, Framework::SetPause/*, ImGuiControl::Profiler::DefaultMaxThreads*/);
+    ProfileInitialize(&isPaused, Framework::SetPause);
     ProfileThreadName(0, "Main Thread");
 
     back = std::make_shared<Sprite>(device, L"./Data/Textures/back.png");
@@ -84,7 +83,7 @@ bool Framework::Initialize()
     return true;
 }
 
-bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
+bool Framework::Update(float deltaTime)
 {
     ZoneScopedN("Update");
 
@@ -109,18 +108,14 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
     SceneTransitionManager::Instance().Update(deltaTime);
 
     bool skipRendering;
-    // SCENE_TRANSITION
     {
         ZoneScopedN("Scene Update");
         ProfileScopedSection_2(0, "SceneUpdate", ImGuiControl::Profiler::Blue);
         skipRendering = Scene::_update(immediateContext, deltaTime);
     }
 
-
 #ifdef USE_IMGUI
     ProfileNewFrame();
-
-
 #endif
 
     if ((GetAsyncKeyState(VK_RETURN) & 1) && (GetAsyncKeyState(VK_MENU) & 0x8000))
@@ -172,7 +167,7 @@ bool Framework::Update(float deltaTime/*Elapsed seconds from last frame*/)
 
 }
 
-void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bool skipRendering)
+void Framework::Render(float deltaTime, bool skipRendering) const
 {
     ZoneScopedN("Render CPU");
 
@@ -189,7 +184,7 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
     immediateContext->VSSetShaderResources(0, _countof(nullShaderResourceViews), nullShaderResourceViews);
     immediateContext->PSSetShaderResources(0, _countof(nullShaderResourceViews), nullShaderResourceViews);
 
-    //// 画面を初期化する（色を指定してレンダーターゲットをクリア）
+    // 画面を初期化する（色を指定してレンダーターゲットをクリア）
     // 画面クリア
     if (skipRendering)
         Graphics::Clear(0.0f, 0.0f, 0.0f, 1.0f);
@@ -199,19 +194,14 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
     // レンダーターゲット設定
     Graphics::SetRenderTargets();
 
-    // A newly started scene has no rendered viewport texture yet.
-    // Present the black clear without drawing the scene or its GUI.
     if (skipRendering)
         return;
 
-    {
         {
             ZoneScopedN("Scene Render");
             ProfileScopedSection_2(0, "Render", ImGuiControl::Profiler::Red);
             Scene::_render(immediateContext, elapsed_time);//
         }
-    }
-    {
 #ifdef USE_IMGUI
         {
             ImGui::PushFont(fontJP);
@@ -222,8 +212,6 @@ void Framework::Render(float elapsed_time/*Elapsed seconds from last frame*/, bo
         }
 #endif
 
-
-    }
 }
 
 bool Framework::Uninitialize()

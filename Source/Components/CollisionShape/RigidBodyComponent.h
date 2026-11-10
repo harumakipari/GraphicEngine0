@@ -475,7 +475,7 @@ private:
         // 頂点数チェック（明示的に）
         if (vertices.size() < 4 || vertices.size() > 256)
         {
-            OutputDebugStringA("ConvexMesh cooking skipped: 頂点数が 4 未満 or 256 超え\n");
+            Logger::Warning("ConvexMesh cooking skipped: 頂点数が 4 未満 or 256 超え\n");
             return nullptr;
         }
 

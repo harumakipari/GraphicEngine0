@@ -97,7 +97,7 @@ public:
 
     void SetActive(bool active) { this->active_ = active; }
 
-    bool GetActive() { return active_; }
+    bool GetActive() const { return active_; }
 
     virtual void UpdateComponentToWorld(UpdateTransformFlags update_transform_flags = UpdateTransformFlags::None, TeleportType teleport = TeleportType::None) {}
 

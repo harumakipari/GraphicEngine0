@@ -53,8 +53,6 @@ public:
         return state_;
     }
 
-    // Scene* scene = Scene::GetCurrrentScene()
-
     // 現在のシーンへのアクセス関数
     static Scene* GetCurrentScene()
     {
@@ -186,10 +184,6 @@ private:
     // GUIの描画
     static void _drawGUI()
     {
-        //if (_current_scene->actorManager_)
-        //{
-        //    _current_scene->actorManager_->DrawImGuiAllActors();
-        //}
         _current_scene->DrawGui();
     }
 
@@ -358,7 +352,6 @@ private:
 
 protected:
     // 注意: 静的初期化順序の問題を回避するための仕組み
-    //CAUSION: Static Initialization Order Fiasco
     template<class T>
     struct Autoenrollment
     {//Scene::_reflections() に 自動的に登録

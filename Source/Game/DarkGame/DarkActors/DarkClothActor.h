@@ -11,8 +11,6 @@ public:
 
     void Update(float deltaTime)override;
 
-    void DrawImGuiDetails() override;
-
     // •z‚ð•`‰æ‚·‚é
     void RenderCloth(ID3D11DeviceContext* immediateContext);
 

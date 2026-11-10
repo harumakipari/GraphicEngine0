@@ -49,7 +49,8 @@ void ActorManager::Update(float deltaTime)
 {
     ZoneScopedN("Actor Update");
 
-    // allActors_ のコピーを作る（弱参照ならshared_ptrもコピーされる）
+    // 更新中に Actor が追加されても走査を継続できるよう、shared_ptr の一覧をコピーする。
+    // コピーが更新対象の寿命を保持し、追加された Actor の更新は次回に回る。
     auto updateActors = allActors_;
 
     for (auto it = updateActors.begin(); it != updateActors.end(); ++it)
@@ -83,35 +84,7 @@ void ActorManager::Update(float deltaTime)
         actor->PostDestroyComponents();
     }
 
-    // isValid == false のアクターだけを削除
+    // 破棄済みの Actor と null の要素を所有一覧から除く。
     std::erase_if(allActors_,
         [](const std::shared_ptr<Actor>& a) { return !a || !a->IsAlive(); });
-}
-
-void ActorManager::DrawImGuiAllActors() const
-{
-#ifdef USE_IMGUI
-    // 画面サイズを取得
-    ImGuiIO& io = ImGui::GetIO();
-    float windowWidth = io.DisplaySize.x * 0.25f;
-    float windowHeight = io.DisplaySize.y;
-
-    // 次のウィンドウの位置とサイズを指定
-    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x - windowWidth, 0));
-    ImGui::SetNextWindowSize(ImVec2(windowWidth, windowHeight));
-
-    // フラグをつけて固定表示に（サイズ変更などを禁止したい場合）
-    ImGui::Begin("Actor Inspector", nullptr,
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoCollapse
-    );
-
-    for (const auto& actor : allActors_)
-    {
-        actor->DrawImGuiInspector();
-    }
-
-    ImGui::End();
-#endif
 }

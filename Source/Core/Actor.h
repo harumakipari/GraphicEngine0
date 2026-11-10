@@ -56,16 +56,16 @@ public:
     /**
     * @brief Actor を完全に破棄する
     *
-    * 全 Component を Destroy し、Scene からも削除される。
-    * 通常は MarkPendingKill() 経由で呼ばれる。
+    * 全 Component を破棄し、Actor を生存していない状態にする。
+    * ActorManager の所有一覧からの除去は、Update() または ClearAll() が行う。
     */
     void DestroyActor();
 
     /**
     * @brief Actor を削除予約状態にする
     *
-    * この関数を呼ぶと、次の Update フレームで
-    * DestroyActor() が実行される。
+    * ActorManager::Update() がこの Actor の削除予約を次に確認した時点で破棄する。
+    * 同じ Update() 内でも、この Actor の処理開始前ならその回で破棄される。
     */
     void MarkPendingKill() { isPendingKill = true; }
 
@@ -77,7 +77,7 @@ public:
     {
         // 自分自身が shared_ptr で管理されている前提で、それを渡す
         std::shared_ptr<Actor> sharedThis = shared_from_this(); // Actorは std::enable_shared_from_this 継承が必要
-        // Debugチェック1: 自分自身の確認
+        // 自分自身の確認
         _ASSERT_EXPR(sharedThis != nullptr, "shared_from_this() returned nullptr!");
 
 

@@ -38,16 +38,6 @@ void DarkClothActor::Update(float deltaTime)
     }
 }
 
-void DarkClothActor::DrawImGuiDetails()
-{
-#ifdef USE_IMGUI
-    if (clothSimulate)
-    {
-        clothSimulate->DrawImGui();
-    }
-#endif
-}
-
 void DarkClothActor::RenderCloth(ID3D11DeviceContext* immediateContext)
 {
     if (clothSimulate && clothSimulate->IsClothRenderingEnabled())

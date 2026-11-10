@@ -64,8 +64,6 @@ public:
     virtual ~ClothSimulate() = default;
 
 private:
-    void SetupPinVertices(int curretPinMode);
-
     void RecreateClothBuffers(ID3D11Device* device);
 
 public:
@@ -204,9 +202,6 @@ private:
     UINT lastExecutedSubsteps = 0;
     SimulationStage simulationStage = SimulationStage::UpdateAndConstraint;
     bool disableCulling = false;
-
-public:
-    void DrawImGui();
 
 private:
     std::vector<Node> nodes;

@@ -21,34 +21,11 @@
 #include "Graphics/Resource/Texture.h"
 #include "Graphics/Core/RenderState.h"
 #include "Graphics/Core/PipelineState.h"
-
+#include "Graphics/Core/GltfDxgiHelper.h"
 #include "Graphics/Core/Graphics.h"
 #include "Math/MathHelper.h"
 
 #define NUMTHREAD_X 16
-
-UINT sizeofComponent(DXGI_FORMAT format)
-{
-    switch (format)
-    {
-    case DXGI_FORMAT_R8_UINT: return 1;
-    case DXGI_FORMAT_R16_UINT: return 2;
-    case DXGI_FORMAT_R32_UINT: return 4;
-    case DXGI_FORMAT_R32G32_FLOAT: return 8;
-    case DXGI_FORMAT_R32G32B32_FLOAT: return 12;
-    case DXGI_FORMAT_R8G8B8A8_UINT: return 3;
-    case DXGI_FORMAT_R16G16B16A16_UINT: return 8;
-    case DXGI_FORMAT_R32G32B32A32_UINT: return 16;
-    case DXGI_FORMAT_R32G32B32A32_FLOAT: return 16;
-    }
-    _ASSERT_EXPR(FALSE, L"Not supported");
-    return 0;
-}
-
-bool nullLoadImageData(tinygltf::Image*, const int, std::string*, std::string*, int, int, const unsigned char*, int, void*)
-{
-    return true;
-}
 
 ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) : filename(filename)
 {
@@ -70,7 +47,7 @@ ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) 
     else
     {
         tinygltf::TinyGLTF tinyGltf;
-        tinyGltf.SetImageLoader(nullLoadImageData, nullptr);
+        tinyGltf.SetImageLoader(NullLoadImage, nullptr);
 
         std::string error, warning;
         bool succeeded = false;
@@ -158,7 +135,7 @@ ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) 
     }
     if (indexView.sizeInBytes > 0)
     {
-        const UINT indexSize = sizeofComponent(indexView.format);
+        const UINT indexSize = GetFormatByteSize(indexView.format);
         if (indexView.sizeInBytes % indexSize != 0 ||
             primitive.cachedIndices.size() != indexView.sizeInBytes)
         {
@@ -256,73 +233,7 @@ void ClothSimulate::CumulateTransforms(std::vector<Node>& nodes)
         traverse(-1, nodeIndex);
     }
 }
-DXGI_FORMAT DxgiFormat(const tinygltf::Accessor& accessor)
-{
-    switch (accessor.type)
-    {
-    case TINYGLTF_TYPE_SCALAR:
-        switch (accessor.componentType)
-        {
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-            return DXGI_FORMAT_R8_UINT;
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-            return DXGI_FORMAT_R16_UINT;
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-            return DXGI_FORMAT_R32_UINT;
-        default:
-            _ASSERT_EXPR(FALSE, L"This accessor component type is not supported.");
-            return DXGI_FORMAT_UNKNOWN;
-        }
-    case TINYGLTF_TYPE_VEC2:
-        switch (accessor.componentType)
-        {
-        case TINYGLTF_COMPONENT_TYPE_FLOAT:
-            return DXGI_FORMAT_R32G32_FLOAT;
-        default:
-            _ASSERT_EXPR(FALSE, L"This accessor component type is not supported.");
-            return DXGI_FORMAT_UNKNOWN;
-        }
-    case TINYGLTF_TYPE_VEC3:
-        switch (accessor.componentType)
-        {
-        case TINYGLTF_COMPONENT_TYPE_FLOAT:
-            return DXGI_FORMAT_R32G32B32_FLOAT;
-        default:
-            _ASSERT_EXPR(FALSE, L"This accessor component type is not supported.");
-            return DXGI_FORMAT_UNKNOWN;
-        }
-    case TINYGLTF_TYPE_VEC4:
-        switch (accessor.componentType)
-        {
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-            return DXGI_FORMAT_R8G8B8A8_UINT;
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-            return DXGI_FORMAT_R16G16B16A16_UINT;
-        case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-            return DXGI_FORMAT_R32G32B32A32_UINT;
-        case TINYGLTF_COMPONENT_TYPE_FLOAT:
-            return DXGI_FORMAT_R32G32B32A32_FLOAT;
-        default:
-            _ASSERT_EXPR(FALSE, L"This accessor component type is not supported.");
-            return DXGI_FORMAT_UNKNOWN;
-        }
-        break;
-    default:
-        _ASSERT_EXPR(FALSE, L"This accessor type is not supported.");
-        return DXGI_FORMAT_UNKNOWN;
-    }
-}
 
-template<class T>
-static void _Copy(unsigned char* dData, const size_t dStride, const unsigned char* sData, const size_t sStride, size_t count)
-{
-    while (count-- > 0)
-    {
-        *reinterpret_cast<T*>(dData) = *reinterpret_cast<const T*>(sData);
-        sData += sStride;
-        dData += dStride;
-    }
-};
 void ClothSimulate::FetchMeshes(ID3D11Device* device, const tinygltf::Model& gltfModel)
 {
     for (const tinygltf::Mesh& gltfMesh : gltfModel.meshes)
@@ -335,21 +246,21 @@ void ClothSimulate::FetchMeshes(ID3D11Device* device, const tinygltf::Model& glt
             Mesh::Primitive& primitive = mesh.primitives.emplace_back();
             primitive.material = gltfPrimitive.material;
 
-            // Create index buffer view
+			// インデックスバッファの作成
             if (gltfPrimitive.indices > -1)
             {
                 const tinygltf::Accessor& gltfAccessor = gltfModel.accessors.at(gltfPrimitive.indices);
                 const tinygltf::BufferView& gltfBufferView = gltfModel.bufferViews.at(gltfAccessor.bufferView);
 
-                primitive.indexBufferView.format = DxgiFormat(gltfAccessor);
-                primitive.indexBufferView.sizeInBytes = static_cast<UINT>(gltfAccessor.count) * sizeofComponent(primitive.indexBufferView.format);
+                primitive.indexBufferView.format = ToDxgiFormat(gltfAccessor);
+                primitive.indexBufferView.sizeInBytes = static_cast<UINT>(gltfAccessor.count) * GetFormatByteSize(primitive.indexBufferView.format);
                 primitive.cachedIndices.resize(primitive.indexBufferView.sizeInBytes);
                 const unsigned char* data = gltfModel.buffers.at(gltfBufferView.buffer).data.data() + gltfBufferView.byteOffset + gltfAccessor.byteOffset;
 
                 memcpy_s(primitive.cachedIndices.data(), primitive.cachedIndices.size(), data, primitive.indexBufferView.sizeInBytes);
             }
 
-            // Create index buffer view
+            // インデックスバッファの作成
             if (gltfPrimitive.attributes.size() > 0 && gltfPrimitive.attributes.find("POSITION") != gltfPrimitive.attributes.end())
             {
                 primitive.cachedVertices.resize(gltfModel.accessors.at(gltfPrimitive.attributes.at("POSITION")).count);
@@ -370,27 +281,9 @@ void ClothSimulate::FetchMeshes(ID3D11Device* device, const tinygltf::Model& glt
                 {
                     const size_t count = gltfAccessor.count;
                     _ASSERT_EXPR(count == primitive.cachedVertices.size(), L"The number of components on all vertices comprising the mesh must be the same.");
-#if 0
-                    const unsigned char* src = sData;
+
                     unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->position);
-
-                    for (size_t i = 0; i < count; ++i)
-                    {
-                        // glTFのPOSITIONを読み取る
-                        const DirectX::XMFLOAT3* srcPos = reinterpret_cast<const DirectX::XMFLOAT3*>(src + sStride * i);
-                        DirectX::XMVECTOR pos = DirectX::XMLoadFloat3(srcPos);
-
-                        // ノードのTransformを適用
-                        pos = DirectX::XMVector3TransformCoord(pos, transform);
-
-                        // 結果をキャッシュに書き込む
-                        DirectX::XMStoreFloat3(&primitive.cachedVertices[i].position, pos);
-                    }
-#else
-                    unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->position);
-
-                    _Copy<DirectX::XMFLOAT3>(dData, dStride, sData, sStride, count);
-#endif
+                    CopyStride<DirectX::XMFLOAT3>(dData, dStride, sData, sStride, count);
                 }
                 else if (gltfAttribute.first == "NORMAL")
                 {
@@ -398,7 +291,7 @@ void ClothSimulate::FetchMeshes(ID3D11Device* device, const tinygltf::Model& glt
                     _ASSERT_EXPR(count == primitive.cachedVertices.size(), L"The number of components on all vertices comprising the mesh must be the same.");
 
                     unsigned char* d_data = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->normal);
-                    _Copy<DirectX::XMFLOAT3>(d_data, dStride, sData, sStride, count);
+                    CopyStride<DirectX::XMFLOAT3>(d_data, dStride, sData, sStride, count);
                 }
                 else if (gltfAttribute.first == "TANGENT")
                 {
@@ -406,7 +299,7 @@ void ClothSimulate::FetchMeshes(ID3D11Device* device, const tinygltf::Model& glt
                     _ASSERT_EXPR(count == primitive.cachedVertices.size(), L"The number of components on all vertices comprising the mesh must be the same.");
 
                     unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->tangent);
-                    _Copy<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
+                    CopyStride<DirectX::XMFLOAT4>(dData, dStride, sData, sStride, count);
                 }
                 else if (gltfAttribute.first == "TEXCOORD_0")
                 {
@@ -414,13 +307,13 @@ void ClothSimulate::FetchMeshes(ID3D11Device* device, const tinygltf::Model& glt
                     _ASSERT_EXPR(count == primitive.cachedVertices.size(), L"The number of components on all vertices comprising the mesh must be the same.");
 
                     unsigned char* dData = reinterpret_cast<unsigned char*>(&primitive.cachedVertices.data()->texcoord);
-                    _Copy<DirectX::XMFLOAT2>(dData, dStride, sData, sStride, count);
+                    CopyStride<DirectX::XMFLOAT2>(dData, dStride, sData, sStride, count);
                 }
                 else
                 {
                     //_ASSERT_EXPR(FALSE, L"This attribute is unsupported.");
                 }
-                primitive.attributes.emplace(gltfAttribute.first, DxgiFormat(gltfAccessor));
+                primitive.attributes.emplace(gltfAttribute.first, ToDxgiFormat(gltfAccessor));
             }
             primitive.vertexBufferView.sizeInBytes = static_cast<UINT>(primitive.cachedVertices.size() * sizeof(Mesh::Vertex));
         }
@@ -549,100 +442,6 @@ void ClothSimulate::Update(float deltaTime)
     simulationAccumulator = (std::min)(simulationAccumulator + clampedFrameTime, maxAccumulatedTime);
 }
 
-void ClothSimulate::DrawImGui()
-{
-    if (!cbuffer)
-        return;
-#ifdef USE_IMGUI
-    std::string windowName =
-        "Cloth Debug##" + std::to_string(reinterpret_cast<uintptr_t>(this));
-
-    ImGui::Begin(windowName.c_str());
-    bool resetClothBuffers = false;
-    int stage = static_cast<int>(simulationStage);
-    const char* stageNames[] = { "Initial Mesh", "Update CS Only", "Update + Constraint" };
-    if (ImGui::Combo("Execution Stage", &stage, stageNames, _countof(stageNames)))
-    {
-        simulationStage = static_cast<SimulationStage>(stage);
-        resetClothBuffers = true;
-    }
-    ImGui::Checkbox("Disable Culling", &disableCulling);
-    ImGui::Checkbox("Enable Cloth Rendering", &enableClothRendering);
-    ImGui::Checkbox("Enable Cloth Simulation", &enableClothSimulation);
-    ImGui::Checkbox("Enable Alpha Test", &enableAlphaTest);
-    ImGui::SliderFloat("Alpha Threshold", &alphaThreshold, 0.0f, 1.0f, "%.2f");
-    if (!clothOpacityTextureLoaded)
-        ImGui::TextDisabled("Opacity texture unavailable: Alpha Test falls back to full cloth rendering.");
-    if (ImGui::DragFloat("Gravity Scale", &gravityScale, 0.01f, 0.0f, 2.0f, "%.2f"))
-        resetClothBuffers = true;
-    ImGui::SliderFloat("Bottom Wind Exponent", &bottomWindExponent, 1.0f, 8.0f, "%.2f");
-    ImGui::Checkbox("Enable Drive Force", &enableDriveForce);
-    ImGui::SliderFloat("Drive Force Amplitude", &driveForceAmplitude, 0.0f, 10.0f, "%.2f");
-    ImGui::SliderFloat("Drive Force Frequency", &driveForceFrequency, 0.0f, 10.0f, "%.2f");
-    ImGui::SliderFloat("Drive Force Phase Gradient", &driveForcePhaseGradient, 0.0f, 10.0f, "%.2f");
-    if (ImGui::DragFloat("Fixed Delta Time", &fixedDeltaTime, 0.0001f, 1.0f / 1000.0f, 1.0f / 15.0f, "%.6f"))
-        fixedDeltaTime = (std::clamp)(fixedDeltaTime, 1.0f / 1000.0f, 1.0f / 15.0f);
-    ImGui::SliderInt("Max Substeps", &maxSubsteps, 1, 32);
-    ImGui::Text("Substeps=%u | Accumulator=%.6f | Simulated Time=%.3f", lastExecutedSubsteps, simulationAccumulator, simulationElapsedTime);
-    if (resetClothBuffers)
-    {
-        RecreateClothBuffers(Graphics::GetDevice());
-        Logger::Log(Logger::LogCategory::System, std::format(
-            "[Cloth] execution stage changed to {}; reset CPU initial vertex buffers",
-            GetSimulationStageName()));
-    }
-
-    ImGui::Separator();
-    ImGui::Text("CS: t0=vertices, t1=edges, u0=vertices, b0=primitive, b6=planes, b10=cloth, b11=cloth time");
-    ImGui::Text("Thread group: 16 x 1 x 1 | vertices=%u | Dispatch=(%u, 1, 1)", lastVertexCount, lastDispatchGroupCountX);
-    ImGui::Text("Update: input=%d output=%d | Constraint: input=%d output=%d", lastUpdateInputBuffer, lastUpdateOutputBuffer, lastConstraintInputBuffer, lastConstraintOutputBuffer);
-    ImGui::Text("CopyResource: clothBuffer[%d] -> clothVB (latest draw source)", lastCopySourceBuffer);
-    ImGui::TextUnformatted("Initial Mesh copies no CS output; the reset clothVB contains cached initial vertices.");
-    if (ImGui::Button("Capture GPU Vertex Samples"))
-        CaptureVertexDiagnostics(Graphics::GetDeviceContext());
-    UpdateVertexDiagnosticsCapture(Graphics::GetDeviceContext());
-    ImGui::TextUnformatted(lastVertexDiagnosticStatus.c_str());
-    for (const VertexDiagnostic& sample : lastVertexDiagnostics)
-    {
-        ImGui::Text("%s v%u  pos=(%.5f, %.5f, %.5f) vel=(%.5f, %.5f, %.5f) disp=%.5f %s", sample.label, sample.index, sample.position.x, sample.position.y, sample.position.z, sample.velocity.x, sample.velocity.y, sample.velocity.z, sample.displacement, sample.finite ? "finite" : "NaN/Inf");
-    }
-    if (lastClothStretchDiagnostics.valid)
-    {
-        const ClothStretchDiagnostics& d = lastClothStretchDiagnostics;
-        ImGui::Separator();
-        ImGui::Text("Springs: directed=%u unique=%u | connections min/max/avg=%u/%u/%.2f", d.directedSpringCount, d.uniqueSpringCount, d.minConnections, d.maxConnections, d.averageConnections);
-        ImGui::Text("Rest length: min/max/avg=%.6f / %.6f / %.6f", d.restLengthMin, d.restLengthMax, d.restLengthAverage);
-        ImGui::Text("Cloth height: initial=%.6f current=%.6f", d.initialHeight, d.currentHeight);
-        ImGui::Text("Spring ratio: max=%.3f (%.1f%%) avg=%.3f (%.1f%%)", d.maxStretchRatio, (d.maxStretchRatio - 1.0f) * 100.0f, d.averageStretchRatio, (d.averageStretchRatio - 1.0f) * 100.0f);
-        ImGui::Text("Max vertex speed=%.6f | all vertices/edges %s", d.maxVertexSpeed, d.finite ? "finite" : "contain NaN/Inf");
-    }
-    if (ImGui::Button("four fix"))
-    {
-        SetupPinVertices(0);
-        RecreateClothBuffers(Graphics::GetDevice());
-    }
-    if (ImGui::Button("up fix"))
-    {
-        SetupPinVertices(1);
-        RecreateClothBuffers(Graphics::GetDevice());
-    }
-    if (ImGui::Button("no fix"))
-    {
-        SetupPinVertices(2);
-        RecreateClothBuffers(Graphics::GetDevice());
-    }
-    if (ImGui::Button("curtain fix"))
-    {
-        SetupPinVertices(3);
-        RecreateClothBuffers(Graphics::GetDevice());
-    }
-    ImGui::DragFloat("windVariation", &windPhaseOffset, 0.5f);
-    ImGui::DragFloat("windBase", &windBase, 0.5f);
-    ImGui::DragFloat3("windEmitPosition", &windEmitPosition.x, 0.5f);
-    ImGui::End();
-#endif
-
-}
 
 void ClothSimulate::RecreateClothBuffers(ID3D11Device* device)
 {
@@ -690,87 +489,6 @@ void ClothSimulate::RecreateClothBuffers(ID3D11Device* device)
     }
 }
 
-void ClothSimulate::SetupPinVertices(int curretPinMode)
-{
-    for (auto& mesh : meshes)
-    {
-        for (auto& primitive : mesh.primitives)
-        {
-            primitive.clothVertexOffset = (uint32_t)allVertices.size(); // オフセット保存
-
-            // 固定点を決める
-             // AABBを計算
-            DirectX::XMFLOAT3 min = { FLT_MAX, FLT_MAX, FLT_MAX };
-            DirectX::XMFLOAT3 max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
-
-            for (auto& v : primitive.cachedVertices)
-            {
-                min.x = std::min<float>(min.x, v.position.x);
-                min.y = std::min<float>(min.y, v.position.y);
-                min.z = std::min<float>(min.z, v.position.z);
-
-                max.x = std::max<float>(max.x, v.position.x);
-                max.y = std::max<float>(max.y, v.position.y);
-                max.z = std::max<float>(max.z, v.position.z);
-            }
-
-            // 四隅の判定
-            if (curretPinMode == 0)
-            {
-                for (auto& v : primitive.cachedVertices)
-                {
-                    bool isCorner =
-                        (fabs(v.position.x - min.x) < 0.001f || fabs(v.position.x - max.x) < 0.001f) &&
-                        (fabs(v.position.z - min.z) < 0.001f || fabs(v.position.z - max.z) < 0.001f) &&
-                        (fabs(v.position.y - max.y) < 0.001f); // 上辺
-
-                    if (isCorner)
-                    {
-                        v.isPinned = 1;
-                    }
-                }
-            }
-            else if (curretPinMode == 1)
-            {
-                const float yThreshold = 0.001f;
-                //const float yThreshold = 0.1f;
-                for (auto& v : primitive.cachedVertices)
-                {
-                    if (fabs(v.position.y - max.y) < yThreshold)
-                    {
-                        v.isPinned = 1;
-                    }
-                    else
-                    {
-                        v.isPinned = 0;
-                    }
-                }
-            }
-            else if (curretPinMode == 2)
-            {
-                for (auto& v : primitive.cachedVertices)
-                {
-                    v.isPinned = 0;
-                }
-            }
-            else if (curretPinMode == 3)
-            {
-                const float yThreshold = 0.1f;
-                for (auto& v : primitive.cachedVertices)
-                {
-                    if (fabs(v.position.y - min.y) < yThreshold)
-                    {
-                        v.isPinned = 1;
-                    }
-                    else
-                    {
-                        v.isPinned = 0;
-                    }
-                }
-            }
-        }
-    }
-}
 void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
 {
     if (!cbuffer)
@@ -780,7 +498,7 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
     D3D11_BUFFER_DESC bufferDesc = {};
     D3D11_SUBRESOURCE_DATA subresourceData = {};
 
-    // Create and upload index buffers on GPU
+	// GPUにインデックスバッファをアップロードする
     {
         for (Mesh& mesh : meshes)
         {
@@ -806,7 +524,7 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
         }
     }
 
-    // Create and upload materials on GPU
+	// マテリアルをGPUにアップロードする
     std::vector<Material::Cbuffer> materialData;
     for (const Material& material : materials)
     {
@@ -1026,7 +744,6 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
         }
     }
 
-    // Retain the per-primitive index count for rendering diagnostics.
     for (auto& mesh : meshes)
     {
         for (auto& primitive : mesh.primitives)
@@ -1035,7 +752,7 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
                 continue;
 
             primitive.startIndexLocation = 0;
-            primitive.indexCount = primitive.indexBufferView.sizeInBytes / sizeofComponent(primitive.indexBufferView.format);
+            primitive.indexCount = primitive.indexBufferView.sizeInBytes / GetFormatByteSize(primitive.indexBufferView.format);
         }
     }
 
@@ -1651,14 +1368,9 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                     static bool loggedFirstDrawIndexed = false;
                     if (!loggedFirstDrawIndexed)
                     {
-                        Logger::Log(Logger::LogCategory::System, std::format(
-                            "[Cloth][DrawIndexed] count={} format={}",
-                            primitive.indexBufferView.sizeInBytes / sizeofComponent(primitive.indexBufferView.format),
-                            primitive.indexBufferView.format == DXGI_FORMAT_R16_UINT ? "R16_UINT" : "R32_UINT"));
                         loggedFirstDrawIndexed = true;
                     }
-                    immediateContext->DrawIndexed(primitive.indexBufferView.sizeInBytes / sizeofComponent(primitive.indexBufferView.format), 0, 0);
-                    //immediateContext->DrawIndexed(primitive.indexCount, primitive.startIndexLocation, 0);
+                    immediateContext->DrawIndexed(primitive.indexBufferView.sizeInBytes / GetFormatByteSize(primitive.indexBufferView.format), 0, 0);
                 }
                 else
                 {

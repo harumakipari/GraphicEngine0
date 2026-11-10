@@ -1,8 +1,5 @@
 #pragma once
 #include <d3d11.h>
-//#define TINYGLTF_NO_EXTERNAL_IMAGE
-//#define TINYGLTF_NO_STB_IMAGE
-//#define TINYGLTF_NO_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
 #include "Engine/Utility/Win32Utils.h"
 
