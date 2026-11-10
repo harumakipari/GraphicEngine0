@@ -503,7 +503,9 @@ private:
 		const DirectX::XMFLOAT3* swordTipPos, bool updateTrail);
 	// 特殊演出中の剣の表示状態をアニメーション時刻から再評価する。
 	void UpdateWeaponVisualPresentation(float deltaTime, bool updateTrail = true);
-	void InitializeAnimations();
+	
+	// モデルとアニメーション生成する
+	void InitializeSkeletalMeshAndAnimations(const std::string& parentName);
 
 	// UIを生成する。
 	void CreateUI();

@@ -363,122 +363,38 @@ void GruxEnemy::DrawImGuiDetails()
 	DrawRoarBTDebug();
 	Character::DrawImGuiDetails();
 
-	ImGui::SeparatorText(U8("武器の発光設定（実行時上書き）"));
-	bool weaponEmissiveChanged = false;
-	weaponEmissiveChanged |= ImGui::Checkbox(U8("武器の発光を有効化"), &weaponEmissiveEnabled);
-	weaponEmissiveChanged |= ImGui::ColorEdit3(U8("武器の発光色"), &weaponEmissiveColor.x);
-	weaponEmissiveChanged |= ImGui::DragFloat(U8("武器の発光強度"), &weaponEmissiveIntensity, 0.05f, 0.0f, 50.0f, "%.2f");
-
-	if (weaponEmissiveChanged && skeletalMeshComponent)
+	if (ImGui::CollapsingHeader(U8("ゲームプレイ調整")))
 	{
-		skeletalMeshComponent->SetRuntimeMaterialEmissive("M_Grux_Qilin_Weapon", weaponEmissiveEnabled, weaponEmissiveColor, weaponEmissiveIntensity);
-	}
-
-	ImGui::ColorEdit3(U8("武器攻撃予兆のリム色"), &weaponTelegraphRimColor.x);
-	ImGui::DragFloat(U8("武器攻撃予兆のフェードアウト時間"), &weaponTelegraphFadeOutDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
-
-	ImGui::SeparatorText(U8("HPのUI"));
-	ImGui::DragFloat(U8("遅延HPの追従開始までの時間"), &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-	ImGui::DragFloat(U8("遅延HPの追従速度"), &delayedHpFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
-	ImGui::DragFloat(U8("Rush時の遅延HP追従速度"), &delayedHpRushFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
-	ImGui::ColorEdit4(U8("現在HPの色"), &bossHpCurrentColor.r);
-	ImGui::ColorEdit4(U8("遅延HPの色"), &bossHpDelayedColor.r);
-
-	ImGui::SeparatorText(U8("ボスAI"));
-
-	ImGui::SeparatorText(U8("Rushヒットエフェクト"));
-	ImGui::DragFloat(U8("表面からのオフセット"), &rushHitEffectSurfaceOffset, 0.005f, 0.0f, 0.20f, "%.3f m");
-	ImGui::DragFloat(U8("代替リカバリー時間"), &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-
-	ImGui::SeparatorText(U8("高速連続攻撃の踏み込み"));
-	ImGui::DragFloat(U8("高速連続攻撃 理想攻撃距離"), &fastComboDesiredAttackDistance, 0.1f, 0.0f, 20.0f, "%.2f m");
-	ImGui::DragFloat(U8("高速連続攻撃 踏み込み倍率"), &fastComboStepInRatio, 0.05f, 0.0f, 2.0f, "%.2f");
-
-	const char* stepNames[] = { "A", "B", "C" };
-	for (int i = 0; i < 3; ++i)
-	{
-		ImGui::DragFloat((std::string("FastCombo ") + stepNames[i] + " 最大Step-In").c_str(), &fastComboMaxStepInDistance[i], 0.1f, 0.0f, 6.0f, "%.2f m");
-	}
-
-	ImGui::DragFloat(U8("高速連続攻撃 踏み込み最大速度"), &fastComboStepInMaxSpeed, 0.5f, 1.0f, 60.0f, "%.2f m/s");
-	ImGui::DragFloat(U8("近距離正面 高速連続攻撃の選択確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
-	ImGui::DragFloat(U8("高速連続攻撃 正面判定の最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
-
-	ImGui::SeparatorText(U8("ダッシュBT"));
-	ImGui::DragFloat(U8("ダッシュ準備距離 最小"), &dashSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
-	ImGui::DragFloat(U8("ダッシュ準備距離 最大"), &dashSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
-	ImGui::DragFloat(U8("ダッシュ準備 最低移動距離"), &dashSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
-
-	ImGui::Checkbox(U8("ダッシュ予兆の発光を有効化"), &dashTelegraphEmissiveEnabled);
-	ImGui::ColorEdit3(U8("ダッシュ予兆 第一形態の発光色"), &dashTelegraphPhase1EmissiveColor.x);
-	ImGui::ColorEdit3(U8("ダッシュ予兆 第二形態の発光色"), &dashTelegraphPhase2EmissiveColor.x);
-	ImGui::DragFloat(U8("ダッシュ予兆の発光強度"), &dashTelegraphEmissiveIntensity, 0.05f, 0.0f, 20.0f, "%.2f");
-
-	ImGui::DragFloat(U8("ライン予兆の拡大時間"), &dashTelegraphLineExpandDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-	ImGui::DragFloat(U8("ライン予兆のフェードアウト時間"), &dashTelegraphLineFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-	ImGui::DragFloat(U8("扇形予兆のフェードイン時間"), &dashTelegraphFanFadeInDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-	ImGui::DragFloat(U8("扇形予兆のフラッシュ時間"), &dashTelegraphFanFlashDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-	ImGui::DragFloat(U8("扇形予兆のフラッシュ強度"), &dashTelegraphFanFlashIntensity, 0.05f, 0.0f, 8.0f, "%.2f");
-	ImGui::DragFloat(U8("扇形予兆のフェードアウト時間"), &dashTelegraphFanFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
-
-	if (dashBTPhase != DashBTPhase::Telegraph && dashBTPhase != DashBTPhase::InterDashTransition)
-		HideDashTelegraphVisual();
-
-	ImGui::DragFloat(U8("ライン予兆の幅"), &dashTelegraphLineWidth, 0.01f, 0.01f, 8.0f, "%.3f m");
-	ImGui::TextDisabled(U8("扇形の半径とYオフセットはダッシュ予兆開始時に反映されます。"));
-	ImGui::DragFloat(U8("扇形予兆の半径"), &dashTelegraphFanRadius, 0.05f, 0.01f, 20.0f, "%.2f m");
-	ImGui::DragFloat(U8("ライン予兆のYオフセット"), &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
-	ImGui::DragFloat(U8("扇形予兆のYオフセット"), &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
-
-	if (ImGui::TreeNode(U8("位置調整パラメータ")))
-	{
-		for (BossPositioningData& data : combatPositioningData)
+		if (ImGui::TreeNode(U8("近接・高速連続攻撃")))
 		{
-			if (data.actionType != BossActionType::Approach)
-				continue;
+			ImGui::SeparatorText(U8("高速連続攻撃の踏み込み"));
+			ImGui::DragFloat(U8("高速連続攻撃 理想攻撃距離"), &fastComboDesiredAttackDistance, 0.1f, 0.0f, 20.0f, "%.2f m");
+			ImGui::DragFloat(U8("高速連続攻撃 踏み込み倍率"), &fastComboStepInRatio, 0.05f, 0.0f, 2.0f, "%.2f");
 
-			if (ImGui::TreeNode(U8("接近")))
+			const char* stepNames[] = { "A", "B", "C" };
+			for (int i = 0; i < 3; ++i)
 			{
-				ImGui::DragFloat(U8("移動速度"), &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
-				ImGui::TreePop();
+				ImGui::DragFloat((std::string("FastCombo ") + stepNames[i] + " 最大Step-In").c_str(), &fastComboMaxStepInDistance[i], 0.1f, 0.0f, 6.0f, "%.2f m");
 			}
+
+			ImGui::DragFloat(U8("高速連続攻撃 踏み込み最大速度"), &fastComboStepInMaxSpeed, 0.5f, 1.0f, 60.0f, "%.2f m/s");
+			ImGui::DragFloat(U8("高速連続攻撃の準備時間"), &fastComboPrepareDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+			ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
+			ImGui::TreePop();
 		}
-		ImGui::TreePop();
+
+		if (ImGui::TreeNode(U8("被弾リアクション・攻撃後硬直")))
+		{
+			ImGui::DragFloat(U8("代替リカバリー時間"), &recoveryDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+			ImGui::SeparatorText(U8("4段目 被弾リアクション"));
+			ImGui::DragFloat(U8("4段目 被弾リアクション発生確率"), &fourthHitReactionChance, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("4段目 被弾リアクション時間"), &fourthHitReactionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
+			ImGui::TreePop();
+		}
+
 	}
 
-	ImGui::SeparatorText(U8("ボス部屋の位置調整"));
-	constexpr float maximumBossRoomMargin = (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f, (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
-	ImGui::DragFloat(U8("壁からの安全余裕"), &bossRoomSafetyMargin, 0.05f, 0.0f, maximumBossRoomMargin, "%.2f m");
-
-	ImGui::SeparatorText(U8("移動アニメーション調整"));
-	ImGui::DragFloat(U8("移動開始速度の閾値"), &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
-	ImGui::DragFloat(U8("移動停止速度の閾値"), &positioningMoveStopSpeedThreshold, 0.01f, 0.0f, positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
-	ImGui::DragFloat(U8("移動停止までの遅延時間"), &positioningMoveStopDelay, 0.01f, 0.0f, 2.0f, "%.2f sec");
-	ImGui::DragFloat(U8("待機時間"), &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-	ImGui::DragFloat(U8("高速連続攻撃の準備時間"), &fastComboPrepareDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
-	ImGui::DragFloat(U8("高速連続攻撃 接近最大時間"), &fastComboApproachMaxDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
-	ImGui::DragFloat(U8("高速連続攻撃 接近再試行の待機時間"), &fastComboApproachRetryCooldown, 0.05f, 0.0f, 30.0f, "%.2f sec");
-
-	ImGui::SeparatorText(U8("近距離戦闘設定"));
-	ImGui::DragFloat(U8("近距離戦闘 最小距離"), &closeCombatSettings.minRange, 0.1f, 0.0f, 100.0f, "%.2f");
-	ImGui::DragFloat(U8("近距離戦闘 実行可能な最大距離"), &closeCombatSettings.executeMaxRange, 0.1f, closeCombatSettings.minRange, 100.0f, "%.2f");
-	ImGui::DragFloat(U8("近距離戦闘 計画可能な最大距離"), &closeCombatSettings.planMaxRange, 0.1f, closeCombatSettings.executeMaxRange, 100.0f, "%.2f");
-	ImGui::DragFloat(U8("近距離攻撃 正面角度制限"), &closeCombatSettings.facingLimitDegrees, 1.0f, 0.0f, 180.0f, "%.1f deg");
-	ImGui::DragFloat(U8("正面向き完了角度"), &closeCombatSettings.faceCompleteAngleDegrees, 0.5f, 0.0f, 90.0f, "%.1f deg");
-	ImGui::DragFloat(U8("攻撃段間の正面向き完了角度"), &interStageFaceCompleteAngle, 0.5f, 0.0f, 90.0f, "%.1f deg");
-	ImGui::DragFloat(U8("攻撃段間の最大旋回角度"), &interStageMaxFacingAngle, 0.5f, 0.0f, 180.0f, "%.1f deg");
-	ImGui::DragFloat(U8("攻撃段間の旋回待機時間"), &interStageFaceDelay, 0.01f, 0.0f, 0.5f, "%.2f sec");
-	ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
-	ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
-	ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
-
-	ImGui::SeparatorText(U8("ジャンプ攻撃位置調整"));
-	ImGui::DragFloat(U8("位置調整距離 最小"), &jumpSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f");
-	ImGui::DragFloat(U8("位置調整距離 最大"), &jumpSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f");
-	ImGui::DragFloat(U8("ジャンプ最低移動距離"), &jumpSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
-	ImGui::DragFloat(U8("最大ジャンプ距離"), &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
-	ImGui::DragFloat(U8("攻撃時の理想距離"), &desiredAttackDistance, 0.05f, 0.0f, 10.0f, "%.2f");
-
+	// Tree の開閉が硬直時間の補正条件のため、カテゴリ外に維持する。
 	if (ImGui::TreeNode(U8("戦闘攻撃候補")))
 	{
 		for (size_t i = 0; i < combatAttackData.size(); ++i)
@@ -493,41 +409,195 @@ void GruxEnemy::DrawImGuiDetails()
 		ImGui::TreePop();
 	}
 
-	ImGui::DragFloat(U8("ピッチ基準値"), &pitchBaseValue, 0.05f);
-
-	if (ImGui::Button(U8("ボスの名前の演出")))
+	if (ImGui::CollapsingHeader(U8("AI調整")))
 	{
-		StartGruxNamePerform(2.0f);
+		ImGui::SeparatorText(U8("ボスAI"));
+		if (ImGui::TreeNode(U8("戦闘距離・行動選択")))
+		{
+			ImGui::DragFloat(U8("近距離正面 高速連続攻撃の選択確率"), &nearFrontFastComboProbability, 0.01f, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("高速連続攻撃 正面判定の最大角度"), &fastComboFrontMaxAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+			ImGui::DragFloat(U8("待機時間"), &behaviorIdleDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+			ImGui::SeparatorText(U8("近距離戦闘設定"));
+			ImGui::DragFloat(U8("近距離戦闘 最小距離"), &closeCombatSettings.minRange, 0.1f, 0.0f, 100.0f, "%.2f");
+			ImGui::DragFloat(U8("近距離戦闘 実行可能な最大距離"), &closeCombatSettings.executeMaxRange, 0.1f, closeCombatSettings.minRange, 100.0f, "%.2f");
+			ImGui::DragFloat(U8("近距離戦闘 計画可能な最大距離"), &closeCombatSettings.planMaxRange, 0.1f, closeCombatSettings.executeMaxRange, 100.0f, "%.2f");
+			ImGui::DragFloat(U8("近距離攻撃 正面角度制限"), &closeCombatSettings.facingLimitDegrees, 1.0f, 0.0f, 180.0f, "%.1f deg");
+			ImGui::DragFloat(U8("攻撃時の理想距離"), &desiredAttackDistance, 0.05f, 0.0f, 10.0f, "%.2f");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("接近・退避・部屋制約")))
+		{
+			if (ImGui::TreeNode(U8("位置調整パラメータ")))
+			{
+				for (BossPositioningData& data : combatPositioningData)
+				{
+					if (data.actionType != BossActionType::Approach)
+						continue;
+
+					if (ImGui::TreeNode(U8("接近")))
+					{
+						ImGui::DragFloat(U8("移動速度"), &data.moveSpeed, 0.1f, 0.0f, 20.0f, "%.2f");
+						ImGui::TreePop();
+					}
+				}
+				ImGui::TreePop();
+			}
+
+			ImGui::SeparatorText(U8("ボス部屋の位置調整"));
+			constexpr float maximumBossRoomMargin = (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f, (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
+			ImGui::DragFloat(U8("壁からの安全余裕"), &bossRoomSafetyMargin, 0.05f, 0.0f, maximumBossRoomMargin, "%.2f m");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("攻撃準備位置")))
+		{
+			ImGui::SeparatorText(U8("ダッシュBT"));
+			ImGui::DragFloat(U8("ダッシュ準備距離 最小"), &dashSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("ダッシュ準備距離 最大"), &dashSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("ダッシュ準備 最低移動距離"), &dashSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f m");
+			ImGui::DragFloat(U8("高速連続攻撃 接近最大時間"), &fastComboApproachMaxDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
+			ImGui::DragFloat(U8("高速連続攻撃 接近再試行の待機時間"), &fastComboApproachRetryCooldown, 0.05f, 0.0f, 30.0f, "%.2f sec");
+			ImGui::SeparatorText(U8("ジャンプ攻撃位置調整"));
+			ImGui::DragFloat(U8("位置調整距離 最小"), &jumpSetupDistanceMin, 0.1f, 0.1f, 30.0f, "%.2f");
+			ImGui::DragFloat(U8("位置調整距離 最大"), &jumpSetupDistanceMax, 0.1f, 0.1f, 30.0f, "%.2f");
+			ImGui::DragFloat(U8("ジャンプ最低移動距離"), &jumpSetupMinimumMoveDistance, 0.1f, 0.0f, 30.0f, "%.2f");
+			ImGui::DragFloat(U8("最大ジャンプ距離"), &maxJumpDistance, 0.05f, 0.0f, 30.0f, "%.2f");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("旋回")))
+		{
+			ImGui::DragFloat(U8("正面向き完了角度"), &closeCombatSettings.faceCompleteAngleDegrees, 0.5f, 0.0f, 90.0f, "%.1f deg");
+			ImGui::DragFloat(U8("攻撃段間の正面向き完了角度"), &interStageFaceCompleteAngle, 0.5f, 0.0f, 90.0f, "%.1f deg");
+			ImGui::DragFloat(U8("攻撃段間の最大旋回角度"), &interStageMaxFacingAngle, 0.5f, 0.0f, 180.0f, "%.1f deg");
+			ImGui::DragFloat(U8("攻撃段間の旋回待機時間"), &interStageFaceDelay, 0.01f, 0.0f, 0.5f, "%.2f sec");
+			ImGui::DragFloat(U8("旋回速度"), &turnSpeed, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
+			ImGui::DragFloat(U8("旋回完了角度"), &turnCompleteAngle, 1.0f, 0.0f, 180.0f, "%.1f deg");
+			ImGui::TreePop();
+		}
 	}
 
-	ImGui::DragFloat(U8("ボス被ダメージ時のフラッシュ時間"), &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
-	ImGui::SliderFloat(U8("ボス被ダメージ時のフラッシュ強度"), &damageFlashStartValue, 0.0f, 1.0f, "%.2f");
-	ImGui::DragFloat(U8("ボス被弾ボイスのクールダウン"), &hitVoiceCooldown, 0.01f, 0.0f, 2.0f, "%.2f sec");
-
-	if (ImGui::TreeNode(U8("プレイヤーに攻撃された時のコントローラー振動")))
+	if (ImGui::CollapsingHeader(U8("演出調整")))
 	{
-		ImGui::DragFloat(U8("通常攻撃 振動強度"), &normalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat(U8("通常攻撃 振動時間"), &normalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-		ImGui::DragFloat(U8("コンボ最終段 振動強度"), &comboFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat(U8("コンボ最終段 振動時間"), &comboFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-		ImGui::DragFloat(U8("Rush攻撃 振動強度"), &rushHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat(U8("Rush攻撃 振動時間"), &rushHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-		ImGui::DragFloat(U8("Rush最終段 振動強度"), &rushFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
-		ImGui::DragFloat(U8("Rush最終段 振動時間"), &rushFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
-		ImGui::TreePop();
+		if (ImGui::TreeNode(U8("武器発光・攻撃予兆")))
+		{
+			ImGui::SeparatorText(U8("武器の発光設定（実行時上書き）"));
+			bool weaponEmissiveChanged = false;
+			weaponEmissiveChanged |= ImGui::Checkbox(U8("武器の発光を有効化"), &weaponEmissiveEnabled);
+			weaponEmissiveChanged |= ImGui::ColorEdit3(U8("武器の発光色"), &weaponEmissiveColor.x);
+			weaponEmissiveChanged |= ImGui::DragFloat(U8("武器の発光強度"), &weaponEmissiveIntensity, 0.05f, 0.0f, 50.0f, "%.2f");
+
+			if (weaponEmissiveChanged && skeletalMeshComponent)
+			{
+				skeletalMeshComponent->SetRuntimeMaterialEmissive("M_Grux_Qilin_Weapon", weaponEmissiveEnabled, weaponEmissiveColor, weaponEmissiveIntensity);
+			}
+
+			ImGui::ColorEdit3(U8("武器攻撃予兆のリム色"), &weaponTelegraphRimColor.x);
+			ImGui::DragFloat(U8("武器攻撃予兆のフェードアウト時間"), &weaponTelegraphFadeOutDuration, 0.01f, 0.01f, 1.0f, "%.2f sec");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("ダッシュ予兆")))
+		{
+			ImGui::Checkbox(U8("ダッシュ予兆の発光を有効化"), &dashTelegraphEmissiveEnabled);
+			ImGui::ColorEdit3(U8("ダッシュ予兆 第一形態の発光色"), &dashTelegraphPhase1EmissiveColor.x);
+			ImGui::ColorEdit3(U8("ダッシュ予兆 第二形態の発光色"), &dashTelegraphPhase2EmissiveColor.x);
+			ImGui::DragFloat(U8("ダッシュ予兆の発光強度"), &dashTelegraphEmissiveIntensity, 0.05f, 0.0f, 20.0f, "%.2f");
+
+			ImGui::DragFloat(U8("ライン予兆の拡大時間"), &dashTelegraphLineExpandDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("ライン予兆のフェードアウト時間"), &dashTelegraphLineFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("扇形予兆のフェードイン時間"), &dashTelegraphFanFadeInDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("扇形予兆のフラッシュ時間"), &dashTelegraphFanFlashDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("扇形予兆のフラッシュ強度"), &dashTelegraphFanFlashIntensity, 0.05f, 0.0f, 8.0f, "%.2f");
+			ImGui::DragFloat(U8("扇形予兆のフェードアウト時間"), &dashTelegraphFanFadeOutDuration, 0.005f, 0.001f, 1.0f, "%.3f sec");
+			ImGui::DragFloat(U8("ライン予兆の幅"), &dashTelegraphLineWidth, 0.01f, 0.01f, 8.0f, "%.3f m");
+			ImGui::TextDisabled(U8("扇形の半径とYオフセットはダッシュ予兆開始時に反映されます。"));
+			ImGui::DragFloat(U8("扇形予兆の半径"), &dashTelegraphFanRadius, 0.05f, 0.01f, 20.0f, "%.2f m");
+			ImGui::DragFloat(U8("ライン予兆のYオフセット"), &dashTelegraphLineYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
+			ImGui::DragFloat(U8("扇形予兆のYオフセット"), &dashTelegraphFanYOffset, 0.001f, -2.0f, 2.0f, "%.3f m");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("移動アニメーション")))
+		{
+			ImGui::SeparatorText(U8("移動アニメーション調整"));
+			ImGui::DragFloat(U8("移動開始速度の閾値"), &positioningMoveStartSpeedThreshold, 0.01f, 0.01f, 10.0f, "%.2f m/s");
+			ImGui::DragFloat(U8("移動停止速度の閾値"), &positioningMoveStopSpeedThreshold, 0.01f, 0.0f, positioningMoveStartSpeedThreshold - 0.01f, "%.2f m/s");
+			ImGui::DragFloat(U8("移動停止までの遅延時間"), &positioningMoveStopDelay, 0.01f, 0.0f, 2.0f, "%.2f sec");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("被弾・ヒットエフェクト")))
+		{
+			ImGui::SeparatorText(U8("Rushヒットエフェクト"));
+			ImGui::DragFloat(U8("表面からのオフセット"), &rushHitEffectSurfaceOffset, 0.005f, 0.0f, 0.20f, "%.3f m");
+			ImGui::DragFloat(U8("ボス被ダメージ時のフラッシュ時間"), &damageFlashDuration, 0.01f, 0.01f, 2.0f, "%.2f sec");
+			ImGui::SliderFloat(U8("ボス被ダメージ時のフラッシュ強度"), &damageFlashStartValue, 0.0f, 1.0f, "%.2f");
+			ImGui::DragFloat(U8("敵へのヒットエフェクト Yオフセット"), &hitEnemyEffectOffsetY, 0.1f);
+			ImGui::DragFloat(U8("プレイヤーへのヒットエフェクト Yオフセット"), &hitPlayerEffectOffsetY, 0.1f);
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("SE")))
+		{
+			ImGui::DragFloat(U8("ピッチ基準値"), &pitchBaseValue, 0.05f);
+			ImGui::DragFloat(U8("ボス被弾ボイスのクールダウン"), &hitVoiceCooldown, 0.01f, 0.0f, 2.0f, "%.2f sec");
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("コントローラー振動")))
+		{
+			if (ImGui::TreeNode(U8("プレイヤーに攻撃された時のコントローラー振動")))
+			{
+				ImGui::DragFloat(U8("通常攻撃 振動強度"), &normalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+				ImGui::DragFloat(U8("通常攻撃 振動時間"), &normalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+				ImGui::DragFloat(U8("コンボ最終段 振動強度"), &comboFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+				ImGui::DragFloat(U8("コンボ最終段 振動時間"), &comboFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+				ImGui::DragFloat(U8("Rush攻撃 振動強度"), &rushHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+				ImGui::DragFloat(U8("Rush攻撃 振動時間"), &rushHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+				ImGui::DragFloat(U8("Rush最終段 振動強度"), &rushFinalHitRumbleStrength, 0.01f, 0.0f, 3.0f);
+				ImGui::DragFloat(U8("Rush最終段 振動時間"), &rushFinalHitRumbleDuration, 0.005f, 0.0f, 3.0f, "%.3f sec");
+				ImGui::TreePop();
+			}
+			ImGui::TreePop();
+		}
+
 	}
 
-	ImGui::SeparatorText(U8("4段目 被弾リアクション"));
-	ImGui::DragFloat(U8("4段目 被弾リアクション発生確率"), &fourthHitReactionChance, 0.01f, 0.0f, 1.0f, "%.2f");
-	ImGui::DragFloat(U8("4段目 被弾リアクション時間"), &fourthHitReactionDuration, 0.01f, 0.0f, 2.0f, "%.2f sec");
-	ImGui::DragFloat(U8("ボスの武器の攻撃範囲"), &hitWeaponRadius, 0.05f, 0.1f, 2.0f);
-	ImGui::DragFloat(U8("敵へのヒットエフェクト Yオフセット"), &hitEnemyEffectOffsetY, 0.1f);
-	ImGui::DragFloat(U8("プレイヤーへのヒットエフェクト Yオフセット"), &hitPlayerEffectOffsetY, 0.1f);
+	// カテゴリの開閉に関係なく、従来のフェーズ条件で非表示化する。
+	if (dashBTPhase != DashBTPhase::Telegraph && dashBTPhase != DashBTPhase::InterDashTransition)
+		HideDashTelegraphVisual();
+
+	if (ImGui::CollapsingHeader(U8("UI調整")))
+	{
+		if (ImGui::TreeNode(U8("ボスHP")))
+		{
+			ImGui::SeparatorText(U8("HPのUI"));
+			ImGui::DragFloat(U8("遅延HPの追従開始までの時間"), &delayedHpDelayDuration, 0.05f, 0.0f, 10.0f, "%.2f sec");
+			ImGui::DragFloat(U8("遅延HPの追従速度"), &delayedHpFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
+			ImGui::DragFloat(U8("Rush時の遅延HP追従速度"), &delayedHpRushFollowSpeed, 0.05f, 0.0f, 25.0f, "%.2f sec");
+			ImGui::ColorEdit4(U8("現在HPの色"), &bossHpCurrentColor.r);
+			ImGui::ColorEdit4(U8("遅延HPの色"), &bossHpDelayedColor.r);
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode(U8("ボス名演出")))
+		{
+			if (ImGui::Button(U8("ボスの名前の演出")))
+			{
+				StartGruxNamePerform(2.0f);
+			}
+			ImGui::TreePop();
+		}
+
+	}
+	ImGui::Text(U8("BT 前回ノード: %s"), behaviorTreePreviousNode.c_str());
+
 #endif
 }
 
-void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,
-	const bool blend, const float blendTime, const bool ignoreRootMotion) const
+void GruxEnemy::PlayBodyAnimation(const std::string& name, const bool loop,const bool blend, const float blendTime, const bool ignoreRootMotion) const
 {
 	if (phase2CinematicAnimationOwnedExternally)
 		return;

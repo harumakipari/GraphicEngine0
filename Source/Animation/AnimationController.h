@@ -133,17 +133,9 @@ public:
         return animationTime;
     }
 
-    // Evaluates weapon visual notify states at the currently sampled local time.
-    // This also works while an animation pose is held by the editor-preview path.
-    bool EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower,
-        bool& outHasShowTrail, bool& outHasShowEmissive) const;
-    // Returns the active ShowEmissive state at the sampled runtime/editor time.
+    bool EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower,bool& outHasShowTrail, bool& outHasShowEmissive) const;
     bool EvaluateShowEmissiveState(float& outPower, float& outProgress) const;
-
     void ResetRootMotion(const std::string& animationName, const bool loop = false, const bool isBlend = true, const float blendTime = 0.3f);
-
-    // Immediately samples a clip at time zero and clears every transition source.
-    // This is intended for hard runtime resets where the previous pose must not blend.
     bool PlayAnimationImmediate(const std::string& animationName, bool loop = true, bool ignoreRootMotion = false);
 
     void DrawImGui();
@@ -170,8 +162,6 @@ public:
         return target_->model->animations[clip].duration;
     }
 
-    // Samples selected bones from an animation and stores their local pose as a
-    // lightweight override. Scale is intentionally left to the base animation.
     bool ConfigureLocalPoseOverride(
         const std::string& sourceAnimationName,
         float sourceTime,
@@ -180,17 +170,8 @@ public:
     void ClearLocalPoseOverride();
 
     // NotifyTrack にイベントを追加する関数
-    // Restrict the current one-shot animation to a runtime time range.
-    // ResetRootMotion clears this range whenever another animation is played.
     bool SetPlaybackRange(float startTime, float endTime);
-
-    // Samples a named clip at an exact time and keeps that skeletal pose without
-    // advancing runtime time or dispatching runtime animation events.
     bool HoldAnimationPose(const std::string& animationName, float time);
-
-    // Blends from the currently displayed runtime pose to an exact clip sample,
-    // then keeps that sample without advancing animation time or dispatching
-    // animation events. This is intended for gameplay presentation poses.
     bool BlendToHeldAnimationPose(const std::string& animationName, float time, float blendTime);
     void ReleaseRuntimeHeldAnimationPose(bool preserveBlendSource = false);
     bool IsRuntimeHeldAnimationPose() const
@@ -198,12 +179,7 @@ public:
         return runtimeHeldPoseActive || runtimeHeldPoseTransitionActive;
     }
 
-    // Leaves a pose held by HoldAnimationPose and restores runtime animation
-    // ownership. Callers can start another animation in the same update.
-    // Optionally keep the displayed pose as the source of an immediate animation blend.
     void ReleaseHeldAnimationPose(bool preserveBlendSource = false);
-
-    // Freezes only the pose sent to mesh components; runtime animation continues.
     bool LatchCurrentVisualPose();
     void ReleaseLatchedVisualPose();
     bool IsVisualPoseLatched() const { return visualPoseLatchActive; }
@@ -834,13 +810,10 @@ private:
     float pendingLocomotionPhase = 0.0f;
 
     float locomotionCommonPhase = 0.0f;
-    size_t locomotionDebugSampleCount = 0;
     float locomotionBackwardPhaseOffset = 0.0f;
     float locomotionRightPhaseOffset = 0.464f;
     float locomotionLeftPhaseOffset = 0.5f;
     float locomotionBackwardSideMaxWeight = 0.15f;
-    int locomotionDebugForcedPair = 0;
-    int locomotionDebugForcedSingle = 0;
     int locomotionDebugBodyBlendMode = 0;
     bool locomotionDebugExcludePelvisTranslation = false;
     bool locomotionDebugExcludePelvisRotation = false;
@@ -855,7 +828,6 @@ private:
     float locomotionDebugReferenceAngle = 0.0f;
     bool locomotionDebugFreezeCommonPhase = false;
     float locomotionDebugFrozenCommonPhase = 0.0f;
-    size_t locomotionDebugReferenceSampleCount = 0;
     // ブレンドスペースではない
     // ルートモーションの最初を記録する　Pose
     std::vector<InterleavedGltfModel::Node> normalRootMotionStartNodes;
