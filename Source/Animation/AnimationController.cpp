@@ -1294,7 +1294,6 @@ void AnimationController::DrawAnimationSettings(AnimationNotifyAsset& asset, flo
 	ImGui::Separator();
 	ImGui::Text("Animation Settings");
 	ImGui::Checkbox("Loop", &isAnimationLoop);
-	//ImGui::Checkbox("Loop", &asset.loop);
 	ImGui::SameLine();
 	ImGui::DragFloat("Play Rate", &asset.playRate, 0.01f, 0.1f, 3.0f);
 	// éüÇÃÉRÉìÉ{Çê›íËÇ∑ÇÈ
@@ -1706,15 +1705,7 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
 
 	}
 
-	ImGui::Text("Selected = %d", selectedCurveKey);
-	if (selectedCurveKey >= 0 && selectedCurveKey < asset.speedCurve.keys.size())
-	{
-		auto& selectedKey = asset.speedCurve.keys[selectedCurveKey];
-		ImGui::Text("Selected Key");
-		ImGui::Text("Time  = %.3f", selectedKey.time);
-		ImGui::Text("Speed = %.3f", selectedKey.value);
-	}
-	else
+	if (!(selectedCurveKey >= 0 && selectedCurveKey < asset.speedCurve.keys.size()))
 	{
 		ImGui::Text("No Key Selected");
 	}
@@ -1795,38 +1786,6 @@ void AnimationController::DrawCurveEditor(AnimationNotifyAsset& asset, float dur
 	}
 
 
-
-	if (asset.animationClip == animationClip)
-	{
-		float currentX =
-			timelinePos.x +
-			((editorPreviewActive ? editorPreviewTime : animationTime) / duration)
-			* width;
-
-		drawList->AddLine(
-			ImVec2(currentX, curvePos.y),
-			ImVec2(currentX, curvePos.y + height),
-			IM_COL32(255, 0, 0, 255),
-			3.0f);
-
-		char currentText[32];
-
-		sprintf_s(
-			currentText,
-			"%.3f",
-			editorPreviewActive ? editorPreviewTime : animationTime);
-
-		drawList->AddText(
-			ImVec2(
-				currentX - 15,
-				curvePos.y - 18),
-			IM_COL32(
-				255,
-				0,
-				0,
-				255),
-			currentText);
-	}
 
 	const float displayedTime = editorPreviewActive ? editorPreviewTime : animationTime;
 	// åªç›éûä‘ï\é¶
