@@ -26,14 +26,10 @@ class Scene;
 class Actor :public std::enable_shared_from_this <Actor>
 {
 public:
-    //==================================================
     // Type Definitions
-    //==================================================
     using HitCallBack = std::function<void(std::pair<CollisionComponent*, CollisionComponent*>)>;
 
-    //==================================================
     // Constructor / Destructor
-    //==================================================
     Actor() = default;
     Actor(const std::string& actorName) :actorName(actorName) {}
     virtual ~Actor() = default;
@@ -43,10 +39,7 @@ public:
     Actor(Actor&&) noexcept = delete;
     Actor& operator=(Actor&&) noexcept = delete;
 
-
-    //==================================================
     // Lifecycle
-    //==================================================
     virtual void Initialize(const Transform& transform) {}
 
     virtual void Update(float deltaTime) {}
@@ -61,17 +54,11 @@ public:
     */
     void DestroyActor();
 
-    /**
-    * @brief Actor を削除予約状態にする
-    *
-    * ActorManager::Update() がこの Actor の削除予約を次に確認した時点で破棄する。
-    * 同じ Update() 内でも、この Actor の処理開始前ならその回で破棄される。
-    */
+    // ActorManager::Update() がこの Actor の削除予約を次に確認した時点で破棄する。
+    // 同じ Update() 内でも、この Actor の処理開始前ならその回で破棄される。
     void MarkPendingKill() { isPendingKill = true; }
 
-    //==================================================
     // Component Management
-    //==================================================
     template <class T>
     std::shared_ptr<T> AddComponent(const std::string& name, const std::string& parentName = "")
     {
@@ -81,9 +68,7 @@ public:
         _ASSERT_EXPR(sharedThis != nullptr, "shared_from_this() returned nullptr!");
 
 
-        //------------------------------------------------------
-        // ① ユニーク名生成
-        //------------------------------------------------------
+        // ユニーク名生成
         std::string finalName = name;
         int suffix = 1;
 
@@ -103,9 +88,8 @@ public:
             finalName = name + "_" + std::to_string(suffix++);
         }
 
-
         std::shared_ptr<T> newComponent = std::make_shared<T>(finalName, sharedThis);
-        _ASSERT_EXPR(newComponent != nullptr, "Failed to create new SceneComponent!");//std::shared_ptr<T> newComponent = std::make_shared<T>(name, this);
+        _ASSERT_EXPR(newComponent != nullptr, "Failed to create new SceneComponent!");
 
         if constexpr ((std::is_base_of<SceneComponent, T>::value))
         {
@@ -422,6 +406,9 @@ public:
 
         for (const auto& comp : ownedComponents_)
         {
+            if (comp == rootComponent_)
+                continue;
+
             comp->UpdateComponentToWorld();
         }
     }

@@ -1,5 +1,4 @@
-#ifndef RIGID_BODY_COMPONENT_H
-#define RIGID_BODY_COMPONENT_H
+#pragma once
 
 // C++ ïWèÄÉâÉCÉuÉâÉä
 #include <memory>
@@ -565,7 +564,7 @@ class TriangleMeshRigidBodyComponent :public RigidBodyComponent
 {
 public:
     TriangleMeshRigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner, MeshComponent* meshComponent)
-        : RigidBodyComponent(name, owner), owner_(meshComponent), material_(Physics::Instance().GetMaterial(PhysicsMaterialType::Wall)) {
+        : RigidBodyComponent(name, owner), owner_(meshComponent), material_(Physics::Instance().GetMaterial(PhysicsMaterialType::Default)) {
     }
 
     void Initialize(physx::PxPhysics* physics) override;
@@ -652,4 +651,3 @@ private:
     physx::PxMaterial* material_ = nullptr;
 };
 
-#endif //RIGID_BODY_COMPONENT_H
