@@ -962,7 +962,7 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
 		return;
 	}
 
-	lockOnEnemyDistance = MathHelper::Distance(playerHeadShared->GetComponentLocation(),enemyHeadShared->GetComponentLocation());
+	lockOnEnemyDistance = MathHelper::Distance(playerHeadShared->GetComponentLocation(), enemyHeadShared->GetComponentLocation());
 
 	if (lockOnDistanceForZoom <= FLT_EPSILON)
 	{
@@ -987,30 +987,30 @@ void DarkCameraActor::UpdateLockOnComposition(float deltaTime)
 		lockOnCollisionRatioForAdaptive = cameraCollisionRatio - lockOnCollisionRatioHysteresis;
 	}
 
-	const float collisionRange = std::max<float>(lockOnCollisionStartRatio - lockOnCollisionFullRatio,FLT_EPSILON);
-	const float collisionInput =(lockOnCollisionStartRatio - lockOnCollisionRatioForAdaptive) / collisionRange;
+	const float collisionRange = std::max<float>(lockOnCollisionStartRatio - lockOnCollisionFullRatio, FLT_EPSILON);
+	const float collisionInput = (lockOnCollisionStartRatio - lockOnCollisionRatioForAdaptive) / collisionRange;
 	const float targetCollisionStrength = MathHelper::SmoothStep01(collisionInput);
 
-	const float enemyRange = std::max<float>(lockOnDistanceFull - lockOnDistanceStart,FLT_EPSILON);
-	const float enemyDistanceInput =(lockOnDistanceForZoom - lockOnDistanceStart) / enemyRange;
+	const float enemyRange = std::max<float>(lockOnDistanceFull - lockOnDistanceStart, FLT_EPSILON);
+	const float enemyDistanceInput = (lockOnDistanceForZoom - lockOnDistanceStart) / enemyRange;
 	const float targetDistanceStrength = MathHelper::SmoothStep01(enemyDistanceInput);
 
-	const float lerpRate = std::clamp(deltaTime * lockOnCompositionLerpSpeed,0.0f,1.0f);
-	lockOnCollisionStrength = std::lerp(lockOnCollisionStrength,targetCollisionStrength,lerpRate);
+	const float lerpRate = std::clamp(deltaTime * lockOnCompositionLerpSpeed, 0.0f, 1.0f);
+	lockOnCollisionStrength = std::lerp(lockOnCollisionStrength, targetCollisionStrength, lerpRate);
 	lockOnDistanceStrength = targetDistanceStrength;
 
 	// 壁際の初期比較はDistance Adaptiveのみ。Weight/OffsetはBase値を維持する。
 	adaptiveLockOnTargetWeight = lockOnTargetWeight;
 	adaptiveLockOnHorizontalOffset = lockOnSettings.horizontalOffset;
 
-	lockOnExistingAdaptiveDistance =activeProfile.distance + activeProfile.maxDistanceAdd * lockOnDistanceStrength;
+	lockOnExistingAdaptiveDistance = activeProfile.distance + activeProfile.maxDistanceAdd * lockOnDistanceStrength;
 	lockOnRequiredFramingDistance = CalculateRequiredLockOnFramingDistance();
 	desiredLockOnCameraDistance = ClampEnemyLockOnDistanceToProfile(
 		(std::max)(lockOnExistingAdaptiveDistance, lockOnRequiredFramingDistance), activeProfile);
-	const float currentLockOnZoomSpeed = desiredLockOnCameraDistance > currentLockOnCameraDistance? lockOnZoomOutSpeed: lockOnZoomInSpeed;
-	const float zoomLerpRate = std::clamp(deltaTime * currentLockOnZoomSpeed,0.0f,1.0f);
-	currentLockOnCameraDistance = std::lerp(currentLockOnCameraDistance,desiredLockOnCameraDistance,zoomLerpRate);
-	adaptiveLockOnCameraDistance = currentLockOnCameraDistance * std::lerp(1.0f,lockOnWallDistanceScale,lockOnCollisionStrength);
+	const float currentLockOnZoomSpeed = desiredLockOnCameraDistance > currentLockOnCameraDistance ? lockOnZoomOutSpeed : lockOnZoomInSpeed;
+	const float zoomLerpRate = std::clamp(deltaTime * currentLockOnZoomSpeed, 0.0f, 1.0f);
+	currentLockOnCameraDistance = std::lerp(currentLockOnCameraDistance, desiredLockOnCameraDistance, zoomLerpRate);
+	adaptiveLockOnCameraDistance = currentLockOnCameraDistance * std::lerp(1.0f, lockOnWallDistanceScale, lockOnCollisionStrength);
 }
 
 float DarkCameraActor::CalculateRequiredLockOnFramingDistance()
@@ -1108,7 +1108,7 @@ float DarkCameraActor::CalculateRequiredLockOnFramingDistance()
 		lockOnRequiredYDistance });
 }
 
-float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(const DirectX::XMFLOAT3& eye,LockOnFovDiagnostics& diagnostics,bool& outValid) const
+float DarkCameraActor::EvaluateRequiredLockOnFovFromEye(const DirectX::XMFLOAT3& eye, LockOnFovDiagnostics& diagnostics, bool& outValid) const
 {
 	return EvaluateRequiredLockOnFovFromEye(eye, currentPose.target, diagnostics, outValid);
 }
@@ -2126,8 +2126,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
 
 	if (cameraMode == CameraMode::Death)
 	{
-		return CalculateDeathPoseWithSideOffset(
-			playerPos, yaw, deathBlendSideOffset);
+		return CalculateDeathPoseWithSideOffset(playerPos, yaw, deathBlendSideOffset);
 	}
 
 	const CameraCompositionSettings* settings = &GetActiveTpsSettings();
@@ -2140,7 +2139,6 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
 		distance = adaptiveLockOnCameraDistance;
 		horizontalOffset = adaptiveLockOnHorizontalOffset;
 	}
-
 	switch (cameraMode)
 	{
 	case CameraMode::TPS:
@@ -2178,11 +2176,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
 	// Eye の処理は共通
 	using namespace DirectX;
 
-	XMVECTOR forward = XMVectorSet(
-		sinf(yaw) * cosf(pitch),
-		sinf(pitch),
-		cosf(yaw) * cosf(pitch),
-		0.0f);
+	XMVECTOR forward = XMVectorSet(sinf(yaw) * cosf(pitch), sinf(pitch), cosf(yaw) * cosf(pitch), 0.0f);
 	XMVECTOR target = XMLoadFloat3(&pose.target);
 	XMVECTOR eye = target - forward * distance;
 	XMVECTOR right = XMVectorSet(cosf(yaw), 0.0f, -sinf(yaw), 0.0f);
@@ -2195,7 +2189,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
 	return pose;
 }
 
-DarkCameraActor::CameraPose DarkCameraActor::CalculateDeathPoseWithSideOffset(const DirectX::XMFLOAT3& playerPos,float yaw,float sideOffset) const
+DarkCameraActor::CameraPose DarkCameraActor::CalculateDeathPoseWithSideOffset(const DirectX::XMFLOAT3& playerPos, float yaw, float sideOffset) const
 {
 	CameraPose pose{};
 	DirectX::XMFLOAT3 toBoss{};
@@ -2271,8 +2265,8 @@ void DarkCameraActor::DrawImGuiDetails()
 	{
 		ImGui::DragFloat(U8("通常TPS FOV"), &standardTpsSettings.fovDegree, 0.1f, 10.0f, 120.0f);
 		ImGui::DragFloat(U8("通常TPS 距離"), &standardTpsSettings.distance, 0.05f, 0.1f, 30.0f);
-		ImGui::DragFloat(U8("通常敵 ロックオン画面内判定半径"), &normalEnemyLockOnScreenRadius,0.01f, 0.0f, 1.5f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
-		ImGui::DragFloat(U8("通常敵 ロックオン最大選択距離"), &lockOnTargetSelectionMaxDistance,0.1f, 3.0f, 20.0f, "%.1f m", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::DragFloat(U8("通常敵 ロックオン画面内判定半径"), &normalEnemyLockOnScreenRadius, 0.01f, 0.0f, 1.5f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+		ImGui::DragFloat(U8("通常敵 ロックオン最大選択距離"), &lockOnTargetSelectionMaxDistance, 0.1f, 3.0f, 20.0f, "%.1f m", ImGuiSliderFlags_AlwaysClamp);
 
 		ImGui::Separator();
 
@@ -2355,13 +2349,13 @@ void DarkCameraActor::DrawImGuiDetails()
 		}
 
 		ImGui::SeparatorText(U8("死亡時カメラ"));
-		ImGui::DragFloat(U8("前景までの距離"), &deathCameraSettings.foregroundDistance,0.05f, 0.1f, 15.0f);
-		ImGui::DragFloat(U8("横方向オフセット"), &deathCameraSettings.sideOffset,0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat(U8("カメラの高さ"), &deathCameraSettings.cameraHeight,0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat(U8("注視点の高さ"), &deathCameraSettings.lookHeight,0.05f, -10.0f, 10.0f);
-		ImGui::DragFloat(U8("ボスへの注視比率"), &deathCameraSettings.bossLookWeight,0.05f, -5.0f, 10.0f);
-		ImGui::SliderFloat(U8("死亡時FOV"), &deathCameraSettings.fovDegree,10.0f, 120.0f, "%.1f deg");
-		ImGui::DragFloat(U8("死亡時カメラの切替時間"), &deathCameraSettings.deathBlendTime,0.01f, 0.01f, 5.0f, "%.2f sec");
+		ImGui::DragFloat(U8("前景までの距離"), &deathCameraSettings.foregroundDistance, 0.05f, 0.1f, 15.0f);
+		ImGui::DragFloat(U8("横方向オフセット"), &deathCameraSettings.sideOffset, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("カメラの高さ"), &deathCameraSettings.cameraHeight, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("注視点の高さ"), &deathCameraSettings.lookHeight, 0.05f, -10.0f, 10.0f);
+		ImGui::DragFloat(U8("ボスへの注視比率"), &deathCameraSettings.bossLookWeight, 0.05f, -5.0f, 10.0f);
+		ImGui::SliderFloat(U8("死亡時FOV"), &deathCameraSettings.fovDegree, 10.0f, 120.0f, "%.1f deg");
+		ImGui::DragFloat(U8("死亡時カメラの切替時間"), &deathCameraSettings.deathBlendTime, 0.01f, 0.01f, 5.0f, "%.2f sec");
 
 		if (ImGui::Button(U8("カメラ設定をリセット"))) ResetCameraTuning();
 	}
@@ -2370,14 +2364,13 @@ void DarkCameraActor::DrawImGuiDetails()
 		ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		ImGui::SeparatorText(U8("アシスト調整"));
-		ImGui::DragFloat(U8("水平方向の安全余白"),&offscreenAssistHorizontalSafeMargin, 0.005f, 0.0f, 0.49f);
-		ImGui::DragFloat(U8("垂直方向の安全余白"),&offscreenAssistVerticalSafeMargin, 0.005f, 0.0f, 0.49f);
-		ImGui::DragFloat(U8("アシスト最大回転速度"),&offscreenAssistMaxAngularSpeedDegree, 1.0f, 0.0f, 720.0f,"%.1f deg/sec");
-		ImGui::DragFloat(U8("画面外攻撃時の目標ピッチ角度"),&offscreenAssistTargetPitchDegree, 0.5f, -89.0f, 89.0f, "%.1f deg");
-		ImGui::DragFloat(U8("ピッチ角度の補間時間"),&offscreenAssistPitchBlendTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
-		ImGui::DragFloat(U8("右スティック操作による解除閾値"),&offscreenAssistRightStickCancelThreshold, 0.005f, 0.0f, 1.0f);
+		ImGui::DragFloat(U8("水平方向の安全余白"), &offscreenAssistHorizontalSafeMargin, 0.005f, 0.0f, 0.49f);
+		ImGui::DragFloat(U8("垂直方向の安全余白"), &offscreenAssistVerticalSafeMargin, 0.005f, 0.0f, 0.49f);
+		ImGui::DragFloat(U8("アシスト最大回転速度"), &offscreenAssistMaxAngularSpeedDegree, 1.0f, 0.0f, 720.0f, "%.1f deg/sec");
+		ImGui::DragFloat(U8("画面外攻撃時の目標ピッチ角度"), &offscreenAssistTargetPitchDegree, 0.5f, -89.0f, 89.0f, "%.1f deg");
+		ImGui::DragFloat(U8("ピッチ角度の補間時間"), &offscreenAssistPitchBlendTime, 0.01f, 0.0f, 3.0f, "%.2f sec");
+		ImGui::DragFloat(U8("右スティック操作による解除閾値"), &offscreenAssistRightStickCancelThreshold, 0.005f, 0.0f, 1.0f);
 	}
-
 	if (ImGui::Button(U8("TPS")))
 	{
 		SetRequestMode(CameraMode::TPS);
@@ -2443,35 +2436,35 @@ void DarkCameraActor::DrawImGuiDetails()
 		ImGui::DragFloat(U8("ズームイン速度"), &lockOnZoomInSpeed, 0.1f, 0.01f, 30.0f);
 		ImGui::DragFloat(U8("距離補正のデッドゾーン"), &lockOnDistanceDeadZone, 0.01f, 0.0f, 5.0f);
 		ImGui::DragFloat(U8("構図の補間速度"), &lockOnCompositionLerpSpeed, 0.1f, 0.1f, 30.0f);
-		ImGui::DragFloat(U8("安全フレーム 水平余白"),&lockOnSafeFrameHorizontalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
-		ImGui::DragFloat(U8("安全フレーム 垂直余白"),&lockOnSafeFrameVerticalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
+		ImGui::DragFloat(U8("安全フレーム 水平余白"), &lockOnSafeFrameHorizontalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
+		ImGui::DragFloat(U8("安全フレーム 垂直余白"), &lockOnSafeFrameVerticalMargin, 0.005f, 0.0f, 0.49f, "%.3f");
 
 		ImGui::SeparatorText(U8("壁際の横方向回避"));
-		ImGui::DragFloat(U8("近距離時の横方向オフセット"), &lockOnWallEscapeNearOffset,0.05f, 0.0f, 5.0f, "%.2f m");
-		ImGui::DragFloat(U8("遠距離時の横方向オフセット"), &lockOnWallEscapeFarOffset,0.05f, 0.0f, 5.0f, "%.2f m");
-		ImGui::DragFloat(U8("構図悪化判定のFOV閾値"),&lockOnWallEscapeSevereFovThreshold,0.5f, lockOnSettings.fovDegree, 120.0f, "%.1f deg");
-		ImGui::DragFloat(U8("必要なFOV改善量"),&lockOnWallEscapeImprovementThreshold,0.25f, 0.0f, 30.0f, "%.1f deg");
-		ImGui::DragFloat(U8("回避方向切替に必要な改善量"),&lockOnWallEscapeSideSwitchImprovementThreshold,0.25f, 0.0f, 30.0f, "%.1f deg");
-		ImGui::DragFloat(U8("距離補正に必要な改善量"),&lockOnWallEscapeDistanceImprovementThreshold,0.25f, 0.0f, 30.0f, "%.1f deg");
-		ImGui::DragFloat(U8("壁回避の移動速度"), &lockOnWallEscapeMoveSpeed,0.25f, 0.0f, 20.0f, "%.2f m/s");
-		ImGui::DragFloat(U8("壁回避の復帰速度"), &lockOnWallEscapeReturnSpeed,0.25f, 0.0f, 20.0f, "%.2f m/s");
+		ImGui::DragFloat(U8("近距離時の横方向オフセット"), &lockOnWallEscapeNearOffset, 0.05f, 0.0f, 5.0f, "%.2f m");
+		ImGui::DragFloat(U8("遠距離時の横方向オフセット"), &lockOnWallEscapeFarOffset, 0.05f, 0.0f, 5.0f, "%.2f m");
+		ImGui::DragFloat(U8("構図悪化判定のFOV閾値"), &lockOnWallEscapeSevereFovThreshold, 0.5f, lockOnSettings.fovDegree, 120.0f, "%.1f deg");
+		ImGui::DragFloat(U8("必要なFOV改善量"), &lockOnWallEscapeImprovementThreshold, 0.25f, 0.0f, 30.0f, "%.1f deg");
+		ImGui::DragFloat(U8("回避方向切替に必要な改善量"), &lockOnWallEscapeSideSwitchImprovementThreshold, 0.25f, 0.0f, 30.0f, "%.1f deg");
+		ImGui::DragFloat(U8("距離補正に必要な改善量"), &lockOnWallEscapeDistanceImprovementThreshold, 0.25f, 0.0f, 30.0f, "%.1f deg");
+		ImGui::DragFloat(U8("壁回避の移動速度"), &lockOnWallEscapeMoveSpeed, 0.25f, 0.0f, 20.0f, "%.2f m/s");
+		ImGui::DragFloat(U8("壁回避の復帰速度"), &lockOnWallEscapeReturnSpeed, 0.25f, 0.0f, 20.0f, "%.2f m/s");
 
 		ImGui::SeparatorText(U8("補正失敗時の距離復帰"));
-		ImGui::DragFloat(U8("最大復帰距離"), &recoveryMaxDistance,0.05f, 0.0f, 5.0f, "%.2f m");
-		ImGui::DragFloat(U8("復帰時の移動速度"), &recoveryMoveSpeed,0.05f, 0.0f, 10.0f, "%.2f m/s");
-		ImGui::DragFloat(U8("復帰後の戻り速度"), &recoveryReturnSpeed,0.05f, 0.0f, 10.0f, "%.2f m/s");
-		ImGui::DragFloat(U8("復帰に必要なFOV改善量"),&recoveryFovImprovementThreshold, 0.25f, 0.0f, 30.0f,"%.1f deg");
-		ImGui::DragFloat(U8("構図補正の最大角度"),&compositionMaxCorrectionDegree, 0.25f, 0.0f, 15.0f,"%.1f deg");
-		ImGui::DragFloat(U8("構図補正の回転速度"),&compositionAngularSpeedDegree, 1.0f, 0.0f, 180.0f,"%.1f deg/sec");
-		ImGui::DragFloat(U8("構図補正のデッドゾーン"),&compositionDeadZoneDegree, 0.1f, 0.0f, 10.0f,"%.1f deg");
+		ImGui::DragFloat(U8("最大復帰距離"), &recoveryMaxDistance, 0.05f, 0.0f, 5.0f, "%.2f m");
+		ImGui::DragFloat(U8("復帰時の移動速度"), &recoveryMoveSpeed, 0.05f, 0.0f, 10.0f, "%.2f m/s");
+		ImGui::DragFloat(U8("復帰後の戻り速度"), &recoveryReturnSpeed, 0.05f, 0.0f, 10.0f, "%.2f m/s");
+		ImGui::DragFloat(U8("復帰に必要なFOV改善量"), &recoveryFovImprovementThreshold, 0.25f, 0.0f, 30.0f, "%.1f deg");
+		ImGui::DragFloat(U8("構図補正の最大角度"), &compositionMaxCorrectionDegree, 0.25f, 0.0f, 15.0f, "%.1f deg");
+		ImGui::DragFloat(U8("構図補正の回転速度"), &compositionAngularSpeedDegree, 1.0f, 0.0f, 180.0f, "%.1f deg/sec");
+		ImGui::DragFloat(U8("構図補正のデッドゾーン"), &compositionDeadZoneDegree, 0.1f, 0.0f, 10.0f, "%.1f deg");
 
 		ImGui::SeparatorText(U8("衝突時のFOV補正"));
-		ImGui::DragFloat(U8("Grux FOV補正の最大値"), &lockOnMaxFallbackFovDegree,0.1f, lockOnSettings.fovDegree, 90.0f, "%.1f deg");
-		ImGui::DragFloat(U8("FOV拡大速度"), &lockOnFovExpandSpeed,0.5f, 0.0f, 180.0f, "%.1f deg/s");
-		ImGui::DragFloat(U8("FOV復帰速度"), &lockOnFovReturnSpeed,0.5f, 0.0f, 180.0f, "%.1f deg/s");
-		ImGui::DragFloat(U8("FOV補正開始時の不足距離"), &lockOnFovFallbackEnterDeficit,0.01f, 0.0f, 10.0f, "%.2f m");
-		ImGui::DragFloat(U8("FOV補正終了時の不足距離"), &lockOnFovFallbackExitDeficit,0.01f, 0.0f, 10.0f, "%.2f m");
-		ImGui::DragFloat(U8("FOV復帰までの遅延時間"), &lockOnFovFallbackReturnDelay,0.01f, 0.0f, 2.0f, "%.2f sec");
+		ImGui::DragFloat(U8("Grux FOV補正の最大値"), &lockOnMaxFallbackFovDegree, 0.1f, lockOnSettings.fovDegree, 90.0f, "%.1f deg");
+		ImGui::DragFloat(U8("FOV拡大速度"), &lockOnFovExpandSpeed, 0.5f, 0.0f, 180.0f, "%.1f deg/s");
+		ImGui::DragFloat(U8("FOV復帰速度"), &lockOnFovReturnSpeed, 0.5f, 0.0f, 180.0f, "%.1f deg/s");
+		ImGui::DragFloat(U8("FOV補正開始時の不足距離"), &lockOnFovFallbackEnterDeficit, 0.01f, 0.0f, 10.0f, "%.2f m");
+		ImGui::DragFloat(U8("FOV補正終了時の不足距離"), &lockOnFovFallbackExitDeficit, 0.01f, 0.0f, 10.0f, "%.2f m");
+		ImGui::DragFloat(U8("FOV復帰までの遅延時間"), &lockOnFovFallbackReturnDelay, 0.01f, 0.0f, 2.0f, "%.2f sec");
 		ImGui::TreePop();
 	}
 

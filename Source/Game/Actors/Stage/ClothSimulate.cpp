@@ -179,7 +179,6 @@ ClothSimulate::ClothSimulate(ID3D11Device* device, const std::string& filename) 
     cbuffer = std::make_unique<ConstantBuffer<ClothSimulateCBuffer>>(device);
     planeCBuffer = std::make_unique<ConstantBuffer<ClothPlaneCBuffer>>(device);
     clothTimeCBuffer = std::make_unique<ConstantBuffer<ClothTimeCBuffer>>(device);
-    clothDebugCBuffer = std::make_unique<ConstantBuffer<ClothDebugCBuffer>>(device);
     clothAlphaTestCBuffer = std::make_unique<ConstantBuffer<ClothAlphaTestCBuffer>>(device);
 
     CreateAndUploadResources(device);
@@ -573,10 +572,6 @@ void ClothSimulate::DrawImGui()
     ImGui::Checkbox("Disable Culling", &disableCulling);
     ImGui::Checkbox("Enable Cloth Rendering", &enableClothRendering);
     ImGui::Checkbox("Enable Cloth Simulation", &enableClothSimulation);
-    int drawMode = static_cast<int>(debugDrawMode);
-    const char* drawModeNames[] = { "Default", "Unlit BaseColor", "World Normal", "No Normal Map", "No Shadow", "Diffuse Only", "Ambient Only", "Normal Dot Light", "Two-Sided Diffuse", "Abs Normal Dot Light", "Direct Diffuse Term", "Diffuse Ambient Term", "Point Light Diffuse Only", "Point Light Attenuation", "Point Light NoL", "Simulation Normal", "Geometric Normal", "Normal Difference" };
-    if (ImGui::Combo("Draw Mode", &drawMode, drawModeNames, _countof(drawModeNames)))
-        debugDrawMode = static_cast<ClothDebugDrawMode>(drawMode);
     ImGui::Checkbox("Enable Alpha Test", &enableAlphaTest);
     ImGui::SliderFloat("Alpha Threshold", &alphaThreshold, 0.0f, 1.0f, "%.2f");
     if (!clothOpacityTextureLoaded)
@@ -1752,14 +1747,10 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
                 graphicsPrimitiveData.material = primitive.material;
                 graphicsPrimitiveData.hasTangent = primitive.has("TANGENT");
                 graphicsPrimitiveData.skin = node.skin;
-                graphicsPrimitiveData.materialType = 99; // Reserved for Cloth-only diagnostics in GltfModelDeferredPS.
+                graphicsPrimitiveData.materialType = 99; // Cloth tag for opacity testing and Furniture classification.
                 DirectX::XMStoreFloat4x4(&graphicsPrimitiveData.inverseTransposeWorld,
                     DirectX::XMMatrixTranspose(DirectX::XMMatrixInverse(nullptr, WorldMatrix)));
                 immediateContext->UpdateSubresource(graphicsPrimitiveCbuffer.Get(), 0, 0, &graphicsPrimitiveData, 0, 0);
-                clothDebugCBuffer->data.mode = static_cast<uint32_t>(debugDrawMode);
-                ID3D11Buffer* clothDebugBuffer = clothDebugCBuffer->GetBuffer();
-                immediateContext->UpdateSubresource(clothDebugBuffer, 0, nullptr, &clothDebugCBuffer->data, 0, 0);
-                immediateContext->PSSetConstantBuffers(12, 1, &clothDebugBuffer);
                 clothAlphaTestCBuffer->data.enableAlphaTest = (enableAlphaTest && clothOpacityTextureLoaded) ? 1u : 0u;
                 clothAlphaTestCBuffer->data.alphaThreshold = alphaThreshold;
                 ID3D11Buffer* clothAlphaTestBuffer = clothAlphaTestCBuffer->GetBuffer();
@@ -1846,8 +1837,6 @@ void ClothSimulate::Render(ID3D11DeviceContext* immediateContext, const DirectX:
         traverse(nodeIndex);
     }
 
-    ID3D11Buffer* nullClothDebugBuffer = nullptr;
-    immediateContext->PSSetConstantBuffers(12, 1, &nullClothDebugBuffer);
     ID3D11Buffer* nullClothAlphaTestBuffer = nullptr;
     immediateContext->PSSetConstantBuffers(13, 1, &nullClothAlphaTestBuffer);
     ID3D11ShaderResourceView* nullClothOpacitySRV = nullptr;

@@ -150,14 +150,7 @@ public:
     static_assert(offsetof(ClothTimeCBuffer, gravityScale) == 8, "Cloth b11 gravity scale offset must match HLSL");
     std::unique_ptr<ConstantBuffer<ClothTimeCBuffer>> clothTimeCBuffer;
 
-    enum class ClothDebugDrawMode : uint32_t 
-    {
-        Default,
-        UnlitBaseColor, WorldNormal, NoNormalMap, NoShadow, DiffuseOnly, AmbientOnly, NormalDotLight, TwoSidedDiffuse, AbsNormalDotLight, DirectDiffuseTerm, DiffuseAmbientTerm, PointLightDiffuseOnly, PointLightAttenuation, PointLightNoL, SimulationNormal, GeometricNormal, NormalDifference };
-    struct ClothDebugCBuffer { uint32_t mode = 0; float padding[3] = {}; };
     struct ClothAlphaTestCBuffer { uint32_t enableAlphaTest = 1; float alphaThreshold = 0.5f; float padding[2] = {}; };
-    static_assert(sizeof(ClothDebugCBuffer) == 16, "Cloth debug b12 layout must be 16 bytes");
-    std::unique_ptr<ConstantBuffer<ClothDebugCBuffer>> clothDebugCBuffer;
     static_assert(sizeof(ClothAlphaTestCBuffer) == 16, "Cloth alpha-test b13 layout must be 16 bytes");
     std::unique_ptr<ConstantBuffer<ClothAlphaTestCBuffer>> clothAlphaTestCBuffer;
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> clothOpacityTextureSRV;
@@ -186,7 +179,6 @@ public:
     float driveForcePhaseGradient = 5.0f;
     float gravityScale = 0.0f;
     float bottomWindExponent = 1.0f;
-    ClothDebugDrawMode debugDrawMode = ClothDebugDrawMode::Default;
 
     bool enableClothRendering = true;
     bool enableClothSimulation = true;

@@ -94,6 +94,19 @@ public:
 		Idle,
 	};
 
+	enum class EyeCloseOverrideOwner :uint8_t
+	{
+		None,
+		PrisonOpening,
+		Death,
+	};
+
+	struct GameplayHudFadeEntry
+	{
+		std::shared_ptr<UIImageComponent> component; // フェード対象のUI画像
+		CoreColor color; // フェード前に復元するUI色
+	};
+
 	struct OperationGuideItemState
 	{
 		std::shared_ptr<UIImageComponent> image; // 操作ガイドに表示する画像
@@ -573,10 +586,6 @@ public:
 	// Rush対象と初回入力の受付状態
 	std::weak_ptr<Enemy> rushTarget; // ターゲットを選択
 
-
-
-
-
 	// 入力受付のコマンド
 	ActionRequest bufferCommand{}; // 入力コマンド
 
@@ -608,10 +617,6 @@ public:
 		bool isVisible = false; // 残像を描画するか
 	};
 	std::array<PlayerPoseGhost, 6> playerPoseGhosts; // 循環利用するPlayer残像
-
-
-
-
 
 private:
 	// 操作UI
@@ -716,12 +721,6 @@ private:
 
 	// 牢獄・死亡演出で共用する目閉じ姿勢
 	float closedEyePoseTime = 4.045f; // 目閉じ姿勢を取得するIdleアニメーション時刻
-	enum class EyeCloseOverrideOwner :uint8_t
-	{
-		None,
-		PrisonOpening,
-		Death,
-	};
 
 	float closeEyeWeight = 0.0f; // 目閉じ姿勢オーバーライドの適用量
 	EyeCloseOverrideOwner eyeCloseOverrideOwner = EyeCloseOverrideOwner::None; // 目閉じ姿勢オーバーライドの所有者
@@ -804,11 +803,6 @@ private:
 	std::shared_ptr<UIGaugeFillComponent> hpDelayedFillUiComponent; // 遅延HPバーを描画するUI
 	std::shared_ptr<UIGaugeFillComponent> hpCurrentFillUiComponent; // 現在HPバーを描画するUI
 	std::vector<std::shared_ptr<UICoreComponent>> hpBarUiComponents; // HPバーを構成するUI一覧
-	struct GameplayHudFadeEntry
-	{
-		std::shared_ptr<UIImageComponent> component; // フェード対象のUI画像
-		CoreColor color; // フェード前に復元するUI色
-	};
 	std::vector<GameplayHudFadeEntry> gameplayHudFadeEntries; // 共通フェードを適用するHUD画像と元の色
 	float delayedHp = 0.0f; // 遅延HPバーが表示するHP値
 	float delayedHpDelayTimer = 0.0f; // 遅延HPバーの追従開始までの経過時間
