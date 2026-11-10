@@ -137,8 +137,6 @@ void AnimationController::ApplyLocalPoseOverride()
 void AnimationController::OnUpdate(const float deltaTime)
 {
     ZoneScopedN("Animation Update");
-    lastEffectivePlaybackRateDebug = 0.0f;
-    lastUpdateDeltaTimeDebug = deltaTime;
 
     const DirectX::XMFLOAT3 actorPositionAtBegin =owner->GetPosition();
 
@@ -236,7 +234,6 @@ void AnimationController::OnUpdate(const float deltaTime)
             asset.playRate *
             curveRate;
 
-        lastEffectivePlaybackRateDebug = normalPlayRate;
         animationTime +=
             deltaTime * normalPlayRate;
 
@@ -406,13 +403,10 @@ void AnimationController::OnUpdate(const float deltaTime)
     bool releaseNormalRootMotionSuppression = false;
 
     InterleavedGltfModel::Node& rootNode = finalNodes.at(rootNodeIndex);
-    rawRootLocalTranslationDebug = rootNode.translation;
     const bool removeRootTranslationFromPose =
         enableRootMotion ||
         currentAnimationRemovesRootTranslation ||
         removeRootTranslationDuringTransition;
-    removeRootTranslationFromPoseDebug =
-        removeRootTranslationFromPose;
 
     if (enableRootMotion)
     {
@@ -536,7 +530,6 @@ void AnimationController::OnUpdate(const float deltaTime)
         rootNode.translation = zeroTranslation;
         target_->model->CumulateTransforms(finalNodes);
     }
-    appliedRootLocalTranslationDebug = rootNode.translation;
 
     ApplyLocalPoseOverride();
 
@@ -1400,49 +1393,12 @@ void AnimationController::DrawImGui()
     {
         locomotionDebugReferenceAngle = locomotionDebugEvaluationAngle;
         locomotionDebugReferenceSampleCount = locomotionDebugSampleCount;
-        locomotionDebugReferenceSamples = locomotionDebugSamples;
         locomotionDebugHasReference = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Clear Blend Reference"))
     {
         locomotionDebugHasReference = false;
-    }
-    for (size_t i = 0; i < locomotionDebugSampleCount; ++i)
-    {
-        const LocomotionBlendDebugSample& sample = locomotionDebugSamples[i];
-        ImGui::Text("[%zu] %s", i, sample.clipName.c_str());
-        ImGui::Text("  Weight %.3f  duration %.3f",
-            sample.weight, sample.duration);
-        ImGui::Text(
-            "  phaseOffset %.4f  samplePhase %.4f  sampleTime %.4f",
-            sample.phaseOffset, sample.samplePhase, sample.sampleTime);
-    }
-
-    if (locomotionDebugHasReference)
-    {
-        constexpr float CompareEpsilon = 0.0001f;
-        bool valuesMatch =
-            std::fabs(locomotionDebugEvaluationAngle -
-                locomotionDebugReferenceAngle) <= CompareEpsilon &&
-            locomotionDebugSampleCount == locomotionDebugReferenceSampleCount;
-
-        for (size_t i = 0;
-            valuesMatch && i < locomotionDebugSampleCount;
-            ++i)
-        {
-            const auto& current = locomotionDebugSamples[i];
-            const auto& reference = locomotionDebugReferenceSamples[i];
-            valuesMatch = current.clipName == reference.clipName &&
-                std::fabs(current.weight - reference.weight) <= CompareEpsilon &&
-                std::fabs(current.phaseOffset - reference.phaseOffset) <= CompareEpsilon &&
-                std::fabs(current.samplePhase - reference.samplePhase) <= CompareEpsilon;
-        }
-
-        ImGui::Text("Reference comparison: %s",
-            valuesMatch ? "MATCH" : "MISMATCH");
-        ImGui::Text("Reference angle %.3f / Current %.3f",
-            locomotionDebugReferenceAngle, locomotionDebugEvaluationAngle);
     }
 
     ImGui::Separator();
@@ -2678,7 +2634,7 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
         }
     }
 
-    if (groupTransition /*|| blendSpaceTransition*/)
+    if (groupTransition )
     {
         canExtractRootMotion = false;
     }
@@ -2720,26 +2676,6 @@ void AnimationController::UpdateBlendSpace(float deltaTime)
             BlendSpace::WrapPhase(currentLocomotionPhase + phaseOffset);
         const float previousTime = previousSamplePhase * clipDuration;
         const float sampleTime = samplePhase * clipDuration;
-
-        if (locomotionDebugSampleCount < locomotionDebugSamples.size())
-        {
-            LocomotionBlendDebugSample& debugSample =
-                locomotionDebugSamples[locomotionDebugSampleCount++];
-            debugSample.clipName = "<unknown>";
-            for (const auto& [name, registeredClip] : animationNameToIndex_)
-            {
-                if (registeredClip == clip)
-                {
-                    debugSample.clipName = name;
-                    break;
-                }
-            }
-            debugSample.weight = weights[i].weight;
-            debugSample.duration = clipDuration;
-            debugSample.phaseOffset = phaseOffset;
-            debugSample.samplePhase = samplePhase;
-            debugSample.sampleTime = sampleTime;
-        }
 
         target_->model->Animate(clip, sampleTime, blendSpacePoses[i]);
 
