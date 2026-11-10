@@ -48,7 +48,7 @@ void Physics::Initialize()
         physx::PxSceneDesc pxSceneDesc(pxPhysics->getTolerancesScale());
         pxSceneDesc.gravity = physx::PxVec3(0.0f, -9.81f, 0.0f);
         pxSceneDesc.cpuDispatcher = pxDispatcher;
-        pxSceneDesc.filterShader = SimulationFilterShader;	// NOTE:⑧衝突検出フィルタリング
+        pxSceneDesc.filterShader = SimulationFilterShader;	// 衝突検出フィルタリング
         pxSceneDesc.simulationEventCallback = this;
         pxSceneDesc.flags |= physx::PxSceneFlag::eENABLE_PCM;
         pxSceneDesc.flags |= physx::PxSceneFlag::eENABLE_STABILIZATION;
@@ -82,20 +82,10 @@ void Physics::Initialize()
             = pxPhysics->createMaterial(0.5f, 0.5f, 0.6f);
         _ASSERT_EXPR(materials[PhysicsMaterialType::Default] != nullptr, "Failed pxPhysics->createMaterial");
 
-        materials[PhysicsMaterialType::Wall]
-            = pxPhysics->createMaterial(0.0f, 0.0f, 1.0f); // 壁：滑る＆跳ねる
-        _ASSERT_EXPR(materials[PhysicsMaterialType::Wall] != nullptr, "Failed pxPhysics->createMaterial");
-
-        materials[PhysicsMaterialType::Food]
-            = pxPhysics->createMaterial(0.1f, 0.1f, 0.4f); // 食材：少し摩擦
-        _ASSERT_EXPR(materials[PhysicsMaterialType::Food] != nullptr, "Failed pxPhysics->createMaterial");
-
         materials[PhysicsMaterialType::NoFriction]
             = pxPhysics->createMaterial(0.0f, 0.0f, 0.0f);
         _ASSERT_EXPR(materials[PhysicsMaterialType::NoFriction] != nullptr, "Failed pxPhysics->createMaterial");
 
-        //pxMaterial = pxPhysics->createMaterial(0.5f, 0.5f, 0.6f);
-        //_ASSERT_EXPR(pxMaterial != nullptr, "Failed pxPhysics->createMaterial");
     }
 }
 
@@ -489,7 +479,6 @@ void Physics::Render(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4&
     // 描画
     RenderState::BindBlendState(immediateContext, BLEND_STATE::NONE);
     RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON);
-    //RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_BACK);
 
     shapeRenderer->Render(immediateContext, view, projection, lightDirection);
     primitiveRenderer->Render(immediateContext, view, projection, D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
@@ -499,23 +488,16 @@ void Physics::Render(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4&
 // レイキャスト
 bool Physics::RayCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, HitResult& result, uint32_t wantToHitLayer/*なにと当たりたいか、ここの数字に入れたら、この数値と同じレイヤーに当たる*/)
 {
-    //--------------------------
-    // NOTE:②フィルタリング設定
-    //--------------------------
+    // フィルタリング設定
     physx::PxQueryFilterData pxQueryFilterData(
         physx::PxQueryFlag::eDYNAMIC |
         physx::PxQueryFlag::eSTATIC |
         physx::PxQueryFlag::ePREFILTER |
         physx::PxQueryFlag::ePOSTFILTER
     );
-    //pxQueryFilterData.data.word0 = 0xFFFFFFFF;	// NOTE:⑤レイヤーマスク
-    //pxQueryFilterData.data.word1 = 0xFFFFFFFF;	// NOTE:⑤レイヤーマスク
-    pxQueryFilterData.data.word0 = wantToHitLayer;	// NOTE:⑤レイヤーマスク
+    pxQueryFilterData.data.word0 = wantToHitLayer;	// レイヤーマスク
 
-
-    //--------------------------
-    // NOTE:①レイキャスト
-    //--------------------------
+    // レイキャスト
     physx::PxVec3 pxOrigin(origin.x, origin.y, origin.z);
     physx::PxVec3 pxDirection(direction.x, direction.y, direction.z);
     pxDirection.normalize();
@@ -524,13 +506,11 @@ bool Physics::RayCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& 
         pxOrigin, pxDirection, distance,
         pxRaycastBuffer,
         physx::PxHitFlag::eDEFAULT,
-        pxQueryFilterData,		// NOTE:②フィルタリング設定
+        pxQueryFilterData,		// フィルタリング設定
         this);
     if (hit && pxRaycastBuffer.hasBlock)
     {
-        //--------------------------
-        // NOTE:④ヒット情報
-        //--------------------------
+        // ヒット情報
         const physx::PxVec3& p = pxRaycastBuffer.block.position;
         const physx::PxVec3& n = pxRaycastBuffer.block.normal;
         result.position = DirectX::XMFLOAT3(p.x, p.y, p.z);
@@ -650,7 +630,7 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
         physx::PxQueryFlag::ePREFILTER |
         physx::PxQueryFlag::ePOSTFILTER;
 
-    pxQueryFilterData.data.word0 = wantToHitLayer;	// NOTE:⑤レイヤーマスク
+    pxQueryFilterData.data.word0 = wantToHitLayer;	// レイヤーマスク
     physx::PxSphereGeometry pxGeometry(radius);
     physx::PxSweepBuffer pxSweepBuffer;
     physx::PxTransform pxTransform(
@@ -889,7 +869,6 @@ bool Physics::CapsuleCast(
     )
 {
     physx::PxQueryFilterData px_query_filter_data(
-        //	physx::PxQueryFlag::eDYNAMIC |
         physx::PxQueryFlag::eSTATIC |
         physx::PxQueryFlag::ePREFILTER |
         physx::PxQueryFlag::ePOSTFILTER

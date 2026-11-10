@@ -36,8 +36,6 @@ struct HitResultWithActor
 };
 
 /// マテリアルタイプ
-// Positioning movement uses this shape to test path clearance without changing
-// the behavior of the engine-wide query callbacks.
 struct PositioningSweepShape
 {
     enum class Type { Sphere, Capsule };
@@ -77,8 +75,6 @@ struct PositioningPathSafetyResult
 enum class PhysicsMaterialType : uint8_t
 {
     Default,
-    Wall,
-    Food,
     NoFriction,
 };
 
@@ -141,25 +137,17 @@ public:
     // スフィアキャスト
     bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
     bool SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, float radius, HitResultWithActor& result, uint32_t wantToHitLayer = 0xFFFFFF, bool useMTD = false);
-
-    // Positioning-specific path sweep. Initial support overlaps accepted by policy
-    // are excluded in a per-call callback, and later walls remain blocking hits.
-    bool SweepPositioningPath(const PositioningSweepShape& shape,
-        const DirectX::XMFLOAT3& direction, float distance, uint32_t wantToHitLayer,
-        const PositioningPathSafetyPolicy& policy, PositioningPathSafetyResult& result);
+    bool SweepPositioningPath(const PositioningSweepShape& shape,const DirectX::XMFLOAT3& direction, float distance, uint32_t wantToHitLayer,const PositioningPathSafetyPolicy& policy, PositioningPathSafetyResult& result);
+  
     // カプセルキャスト
     bool CapsuleCast(const DirectX::XMFLOAT3& point1, const DirectX::XMFLOAT3& point2, float radius, const DirectX::XMFLOAT3& direction, float distance, bool trigger, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
 
 protected:
-    //--------------------------
-    // NOTE:③フィルタリングインターフェース関数
-    //--------------------------
+    // フィルタリングインターフェース関数
     physx::PxQueryHitType::Enum preFilter(const physx::PxFilterData& filterData, const physx::PxShape* shape, const physx::PxRigidActor* actor, physx::PxHitFlags& queryFlags) override;
     physx::PxQueryHitType::Enum postFilter(const physx::PxFilterData& filterData, const physx::PxQueryHit& hit, const physx::PxShape* shape, const physx::PxRigidActor* actor) override;
 
-    //--------------------------
-    // NOTE:⑦衝突イベントインターフェース関数
-    //--------------------------
+    // 衝突イベントインターフェース関数
     void onConstraintBreak(physx::PxConstraintInfo* constraints, physx::PxU32 count) override {};
     void onWake(physx::PxActor** actors, physx::PxU32 count) override {};
     void onSleep(physx::PxActor** actors, physx::PxU32 count) override {};
@@ -168,9 +156,7 @@ protected:
     void onAdvance(const physx::PxRigidBody* const* bodyBuffer, const physx::PxTransform* poseBuffer, const physx::PxU32 count) override {};
 
 private:
-    //--------------------------
-    // NOTE:⑧衝突検出フィルタリング
-    //--------------------------
+    // 衝突検出フィルタリング
     static physx::PxFilterFlags SimulationFilterShader(
         physx::PxFilterObjectAttributes	attributes0, physx::PxFilterData filterData0,
         physx::PxFilterObjectAttributes	attributes1, physx::PxFilterData	filterData1,
@@ -214,5 +200,4 @@ private:
 
     std::vector<DebugLine>		lines;
     std::vector<DebugCapsule>	capsules;
-
 };

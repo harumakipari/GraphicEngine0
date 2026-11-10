@@ -21,12 +21,7 @@ using namespace std;
 static map<wstring, ComPtr<ID3D11ShaderResourceView>> resources;
 static mutex resourcesMutex;
 
-
-HRESULT LoadTextureFromFile(
-	ID3D11Device* device,
-	const wchar_t* filename,
-	ID3D11ShaderResourceView** shaderResourceView,
-	D3D11_TEXTURE2D_DESC* texture2dDesc)
+HRESULT LoadTextureFromFile(ID3D11Device* device,const wchar_t* filename,ID3D11ShaderResourceView** shaderResourceView,D3D11_TEXTURE2D_DESC* texture2dDesc)
 {
 	HRESULT hr = S_OK;
 
@@ -40,8 +35,7 @@ HRESULT LoadTextureFromFile(
 		*shaderResourceView = it->second.Get();
 		(*shaderResourceView)->AddRef();
 
-		(*shaderResourceView)->GetResource(
-			resource.GetAddressOf());
+		(*shaderResourceView)->GetResource(resource.GetAddressOf());
 	}
 	else
 	{
@@ -87,15 +81,6 @@ HRESULT LoadTextureFromFile(
 
 		if (dimension != D3D11_RESOURCE_DIMENSION_TEXTURE2D)
 		{
-			char buffer[128];
-
-			sprintf_s(
-				buffer,
-				"[Texture] Not Texture2D. dimension = %d\n",
-				static_cast<int>(dimension));
-
-			OutputDebugStringA(buffer);
-
 			return E_NOINTERFACE;
 		}
 

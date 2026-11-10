@@ -82,8 +82,7 @@ inline DXGI_FORMAT ToDxgiFormat(const tinygltf::Accessor& accessor)
 }
 
 // tinygltf の画像を無視する時のコールバック
-inline bool NullLoadImage(tinygltf::Image*, const int, std::string*, std::string*,
-    int, int, const unsigned char*, int, void*)
+inline bool NullLoadImage(tinygltf::Image*, const int, std::string*, std::string*,int, int, const unsigned char*, int, void*)
 {
     return true;
 }
