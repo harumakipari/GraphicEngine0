@@ -938,8 +938,6 @@ void InterleavedGltfModel::FetchAndBatchMeshes(ID3D11Device* device, const tinyg
                     else
                     {
                         Logger::Error(gltfAttribute.first + " is an unsupported attribute.");
-                        //OutputDebugStringA((gltfAttribute.first + " is an unsupported attribute.\n").c_str());
-                        //_ASSERT_EXPR(FALSE, L"This attribute is unsupported.");
                     }
                     batchMesh.attributes.emplace(gltfAttribute.first, _DxgiFormat(gltfAccessor));
                 }
@@ -1048,18 +1046,9 @@ void InterleavedGltfModel::FetchTextures(ID3D11Device* device, const tinygltf::M
 
 void InterleavedGltfModel::FetchAnimations(const tinygltf::Model& gltfModel, std::vector<Animation>& outAnimations)
 {
-    char buf[256];
-
-    // skinsÇÃèÛë‘ÇèoóÕ
-    sprintf_s(buf, "Before emplace_back, skins size=%zu, capacity=%zu\n", skins.size(), skins.capacity());
-    OutputDebugStringA(buf);
     for (const tinygltf::Skin& transmissionSkin : gltfModel.skins)
     {
-        sprintf_s(buf, "Processing skin, transmissionSkin.inverseBindMatrices=%d\n", transmissionSkin.inverseBindMatrices);
-        OutputDebugStringA(buf);
         Skin& skin = skins.emplace_back();
-        sprintf_s(buf, "After emplace_back, skins size=%zu\n", skins.size());
-        OutputDebugStringA(buf);
         const tinygltf::Accessor& gltfAccessor = gltfModel.accessors.at(transmissionSkin.inverseBindMatrices);
         const tinygltf::BufferView& gltfBufferView = gltfModel.bufferViews.at(gltfAccessor.bufferView);
         _ASSERT_EXPR(gltfAccessor.type == TINYGLTF_TYPE_MAT4, L"");
@@ -1072,7 +1061,6 @@ void InterleavedGltfModel::FetchAnimations(const tinygltf::Model& gltfModel, std
 
     for (const tinygltf::Animation& gltfAnimation : gltfModel.animations)
     {
-        //Animation& animation = animations.emplace_back();
         Animation& animation = outAnimations.emplace_back();
         animation.name = gltfAnimation.name;
         for (const tinygltf::AnimationSampler& gltfSampler : gltfAnimation.samplers)
@@ -2727,9 +2715,7 @@ void InterleavedGltfModel::ExtractAnimations(const tinygltf::Model& transmission
             }
             else if (transmission_channel.target_path == "weights")
             {
-                //_ASSERT_EXPR(FALSE, L"Weighted animations have not yet been implemented.");
                 OutputDebugStringA("Weighted animations have not yet been implemented.\n");
-
             }
             else
             {

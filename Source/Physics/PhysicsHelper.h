@@ -1,5 +1,4 @@
-#ifndef PHYSICS_HELPER_H
-#define PHYSICS_HELPER_H
+#pragma once
 
 #include <string>
 
@@ -61,37 +60,5 @@ namespace PhysicsHelper
         );
     }
 
-    inline void DebugPrintCollisionInfo(const std::string& name, const physx::PxGeometryHolder& geometry, const physx::PxTransform& transform)
-    {
-        using namespace physx;
-        // 形状タイプ取得
-        const char* shapeType = "Unknown";
-        switch (geometry.getType())
-        {
-        case PxGeometryType::eSPHERE:        shapeType = "Sphere"; break;
-        case PxGeometryType::ePLANE:         shapeType = "Plane"; break;
-        case PxGeometryType::eCAPSULE:       shapeType = "Capsule"; break;
-        case PxGeometryType::eBOX:           shapeType = "Box"; break;
-        case PxGeometryType::eCONVEXMESH:    shapeType = "ConvexMesh"; break;
-        case PxGeometryType::eTRIANGLEMESH:  shapeType = "TriangleMesh"; break;
-        case PxGeometryType::eHEIGHTFIELD:   shapeType = "HeightField"; break;
-        default:                             break;
-        }
-
-        // 位置と回転
-        const PxVec3& p = transform.p;
-        const PxQuat& q = transform.q;
-
-        // 出力
-        char buffer[512];
-        sprintf_s(buffer, sizeof(buffer),
-            "[%s] Type: %s | Pos: (%.2f, %.2f, %.2f) | Rot (quat): (%.2f, %.2f, %.2f, %.2f)\n",
-            name.c_str(), shapeType,
-            p.x, p.y, p.z,
-            q.x, q.y, q.z, q.w
-        );
-        OutputDebugStringA(buffer);
-    }
 
 }
-#endif //PHYSICS_HELPER_H

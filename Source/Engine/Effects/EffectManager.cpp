@@ -13,61 +13,6 @@
 
 namespace
 {
-#if defined(_DEBUG)
-    void DebugLogCurveState(const char* label, const void* effect, const void* emitter,
-        const void* visual, const FloatCurve& curve)
-    {
-        char buffer[512]{};
-        sprintf_s(buffer, sizeof(buffer),
-            "[EffectCurve] %s tid=%lu effect=%p emitter=%p visual=%p curve=%p points=%p data=%p size=%zu capacity=%zu\n",
-            label, ::GetCurrentThreadId(), effect, emitter, visual, &curve, &curve.points,
-            curve.points.data(), curve.points.size(), curve.points.capacity());
-        ::OutputDebugStringA(buffer);
-    }
-
-    void DebugLogOwnerState(const char* label,
-        const void* effectsData, size_t effectsSize, size_t effectsCapacity,
-        const void* effect, const void* emittersData, size_t emittersSize, size_t emittersCapacity,
-        const void* emitter, const void* visual,
-        const FloatCurve& sizeCurve, const FloatCurve& colorCurve,
-        const FloatCurve& alphaCurve, const FloatCurve& emissiveCurve)
-    {
-        char buffer[2048]{};
-        sprintf_s(buffer, sizeof(buffer),
-            "[EffectCurveOwner] %s tid=%lu effectData=%p/%zu/%zu effect=%p emitters=%p/%zu/%zu emitter=%p visual=%p "
-            "size=%p/%zu/%zu color=%p/%zu/%zu alpha=%p/%zu/%zu emissive=%p/%zu/%zu\n",
-            label, ::GetCurrentThreadId(), effectsData, effectsSize, effectsCapacity,
-            effect, emittersData, emittersSize, emittersCapacity, emitter, visual,
-            sizeCurve.points.data(), sizeCurve.points.size(), sizeCurve.points.capacity(),
-            colorCurve.points.data(), colorCurve.points.size(), colorCurve.points.capacity(),
-            alphaCurve.points.data(), alphaCurve.points.size(), alphaCurve.points.capacity(),
-            emissiveCurve.points.data(), emissiveCurve.points.size(), emissiveCurve.points.capacity());
-        ::OutputDebugStringA(buffer);
-    }
-
-    void DebugLogRegisterState(const char* label, const FloatCurve& curve,
-        const std::vector<std::vector<float>>& curveData)
-    {
-        char buffer[768]{};
-        sprintf_s(buffer, sizeof(buffer),
-            "[RegisterCurve] %s tid=%lu curve=%p points=%p/%zu/%zu curveData=%p/%zu/%zu\n",
-            label, ::GetCurrentThreadId(), &curve, curve.points.data(), curve.points.size(),
-            curve.points.capacity(), curveData.data(), curveData.size(), curveData.capacity());
-        ::OutputDebugStringA(buffer);
-    }
-
-    void DebugLogMutation(const char* label, const void* effectsData,
-        size_t effectsSize, size_t effectsCapacity, uint64_t effectId = 0, uint64_t emitterId = 0)
-    {
-        char buffer[512]{};
-        sprintf_s(buffer, sizeof(buffer),
-            "[EffectMutation] %s tid=%lu effectData=%p/%zu/%zu effectRuntimeId=%llu emitterRuntimeId=%llu\n",
-            label, ::GetCurrentThreadId(), effectsData, effectsSize, effectsCapacity,
-            static_cast<unsigned long long>(effectId), static_cast<unsigned long long>(emitterId));
-        ::OutputDebugStringA(buffer);
-    }
-#endif
-
     FloatCurve LoadCurve(const json& emitterJson, const char* key, FloatCurve defaultCurve,
         float valueMin = 0.0f, float valueMax = 1.0f)
     {
@@ -162,26 +107,17 @@ void EffectManager::ClearAll()
 
 EffectHandle EffectManager::CreateEffectData()
 {
-#if defined(_DEBUG)
-    DebugLogMutation("CreateEffectData ENTRY", effectData.data(), effectData.size(), effectData.capacity());
-#endif
     // 新しいエフェクトデータ追加用のハンドル
     EffectHandle handle = static_cast<EffectHandle>(effectData.size());
     // 空のエミッターデータを追加
     effectData.emplace_back();
     effectData.back().runtimeId = AllocateEffectRuntimeId();
-#if defined(_DEBUG)
-    DebugLogMutation("CreateEffectData EXIT", effectData.data(), effectData.size(), effectData.capacity(), effectData.back().runtimeId);
-#endif
     return handle;
 }
 
 EffectHandle EffectManager::LoadEffectData(const std::string& filePath)
 {
     AssertMainThread();
-#if defined(_DEBUG)
-    DebugLogMutation("LoadEffectData ENTRY", effectData.data(), effectData.size(), effectData.capacity());
-#endif
     // すでに同じデータが存在する場合はそれを返す
     for (size_t i = 0; i < effectData.size(); ++i)
     {
@@ -276,7 +212,6 @@ bool EffectManager::BuildEffectDataFromJson(const std::string& filePath, EffectD
                 emitterData.emitData.burstCount = emitterJson.value("burstCount", 10);
             if (emitterJson.contains("emissivePower"))
                 emitterData.emitData.emissivePower = emitterJson.value("emissivePower", 1.0f);
-            //emitterData.emitData.loop = emitterJson.value("loop", false);
         }
         // 形状設定
         {
@@ -359,9 +294,6 @@ EffectHandle EffectManager::RegisterEffectData(EffectDataLoadResult&& loadResult
         emitterData.runtimeId = AllocateEmitterRuntimeId();
     }
 
-#if defined(_DEBUG)
-    DebugLogMutation("RegisterEffectData EXIT", effectData.data(), effectData.size(), effectData.capacity(), registeredEffect.runtimeId);
-#endif
     return handle;
 }
 
@@ -610,7 +542,6 @@ void EffectManager::EmitParticle(EffectHandle handle, const XMFLOAT3& pos, const
     // ハンドルチェック
     if (handle < 0 || handle >= static_cast<EffectHandle>(effectData.size()))
     {
-        //Console::LogError("EffectManager::Play: Invalid effect handle " + std::to_string(handle));
         return;
     }
 
@@ -655,7 +586,6 @@ void EffectManager::EmitParticle(EffectHandle handle, const XMFLOAT3& pos, const
             delayTime += emitterData.emitData.emitInterval.GetRandom() * i; // エミット間隔設定
 
             emitData.parameter.z = delayTime; // 遅延時間設定
-            //emitData.parameter.w = 0.0f; // テクスチャインデックスは未使用
             // 位置設定
             {
                 emitData.position.x = pos.x;
@@ -708,7 +638,6 @@ void EffectManager::EmitParticle(EffectHandle handle, const XMFLOAT3& pos, const
             {
                 Vector2 startSize = emitterData.visualData.startSize.GetRandom();
                 Vector2 endSize = emitterData.visualData.endSize.GetRandom();
-                //emitData.scale = DirectX::XMFLOAT4(startSize.x, startSize.y, endSize.x, endSize.y);
                 emitData.scale = DirectX::XMFLOAT4(startSize.x, startSize.y, endSize.x, endSize.y);
                 CoreColor startColor = emitterData.visualData.startColor.GetRandom();
                 CoreColor endColor = emitterData.visualData.endColor.GetRandom();
@@ -747,13 +676,9 @@ EffectPlaybackId EffectManager::PlayAttached(EffectHandle handle,
 
 EffectHandle EffectManager::CopyEffectData(EffectHandle srcHandle)
 {
-#if defined(_DEBUG)
-    DebugLogMutation("CopyEffectData ENTRY", effectData.data(), effectData.size(), effectData.capacity());
-#endif
     // エフェクトデータコピー
     if (srcHandle < 0 || srcHandle >= static_cast<EffectHandle>(effectData.size()))
     {
-        //Console::LogError("EffectManager::CopyEffectData: Invalid effect handle " + std::to_string(srcHandle));
         return -1; // 無効なハンドルを返す
     }
     // 新しいエフェクトデータ追加用のハンドル
@@ -781,9 +706,6 @@ EffectManager::EffectData& EffectManager::GetEffectData(EffectHandle handle)
 
 void EffectManager::ClearEffectData()
 {
-#if defined(_DEBUG)
-    DebugLogMutation("ClearEffectData ENTRY", effectData.data(), effectData.size(), effectData.capacity());
-#endif
     for (auto& emitter : activeEmitters)
         if (emitter.playback) emitter.playback->stopped.store(true);
     for (auto& attached : attachedEffects)
@@ -798,9 +720,6 @@ void EffectManager::ClearEffectData()
     activeEmitters.clear();
     attachedEffects.clear();
     effectData.clear();
-#if defined(_DEBUG)
-    DebugLogMutation("ClearEffectData EXIT", effectData.data(), effectData.size(), effectData.capacity());
-#endif
 }
 
 void EffectManager::StopAll()
@@ -1181,7 +1100,6 @@ void EffectManager::ApplyShapeEmitterSettings(const EmitterShapeData& s, CoreCom
 float EffectManager::Random(float min, float max)
 {
     // minからmaxまでのランダムな浮動小数点数を生成
-    //return min + static_cast <float> (rand()) / (static_cast <float> (RAND_MAX / (max - min)));
     return MathHelper::RandomRange(min, max);
 }
 
@@ -1285,16 +1203,6 @@ void EffectManager::UpdateCurveTexture()
 
 void EffectManager::RebuildCurveTexture()
 {
-#if defined(_DEBUG)
-    static thread_local int rebuildDepth = 0;
-    ++rebuildDepth;
-    {
-        char buffer[128]{};
-        sprintf_s(buffer, sizeof(buffer), "[RebuildCurveTexture] ENTRY depth=%d tid=%lu\n", rebuildDepth, ::GetCurrentThreadId());
-        ::OutputDebugStringA(buffer);
-    }
-    if (rebuildDepth >= 2) ::DebugBreak();
-#endif
     curveData.clear();
 
     for (auto& effect : effectData)
@@ -1303,72 +1211,25 @@ void EffectManager::RebuildCurveTexture()
         {
             auto& visual = emitter.visualData;
             const float sizeCurveMax = visual.sizeCurveMode == SizeCurveMode::StartMultiplier ? 10.0f : 1.0f;
-#if defined(_DEBUG)
-            DebugLogCurveState("emissive before Sanitize", &effect, &emitter, &visual, visual.emissiveCurve);
-#endif
             visual.sizeCurve.Sanitize(0.0f, sizeCurveMax);
             visual.colorCurve.Sanitize();
             visual.alphaCurve.Sanitize();
             visual.emissiveCurve.Sanitize();
-#if defined(_DEBUG)
-            assert(!visual.sizeCurve.points.empty());
-            assert(!visual.colorCurve.points.empty());
-            assert(!visual.alphaCurve.points.empty());
-            assert(!visual.emissiveCurve.points.empty());
-            DebugLogCurveState("emissive after Sanitize", &effect, &emitter, &visual, visual.emissiveCurve);
-            auto logOwner = [&](const char* label)
-            {
-                DebugLogOwnerState(label, effectData.data(), effectData.size(), effectData.capacity(),
-                    &effect, effect.emitters.data(), effect.emitters.size(), effect.emitters.capacity(),
-                    &emitter, &visual, visual.sizeCurve, visual.colorCurve,
-                    visual.alphaCurve, visual.emissiveCurve);
-            };
-#endif
 
-#if defined(_DEBUG)
-            logOwner("BEFORE size RegisterCurve");
-#endif
             visual.curveIndex = RegisterCurve(visual.sizeCurve);
-#if defined(_DEBUG)
-            logOwner("AFTER size RegisterCurve");
-            logOwner("BEFORE color RegisterCurve");
-#endif
             RegisterCurve(visual.colorCurve);
-#if defined(_DEBUG)
-            logOwner("AFTER color RegisterCurve");
-            logOwner("BEFORE alpha RegisterCurve");
-#endif
             RegisterCurve(visual.alphaCurve);
-#if defined(_DEBUG)
-            logOwner("AFTER alpha RegisterCurve");
-            logOwner("BEFORE emissive RegisterCurve");
-            DebugLogCurveState("emissive before RegisterCurve", &effect, &emitter, &visual, visual.emissiveCurve);
-#endif
             RegisterCurve(visual.emissiveCurve);
-#if defined(_DEBUG)
-            logOwner("AFTER emissive RegisterCurve");
-#endif
             visual.dirty = false;
         }
     }
 
     UpdateCurveTexture();
-#if defined(_DEBUG)
-    {
-        char buffer[128]{};
-        sprintf_s(buffer, sizeof(buffer), "[RebuildCurveTexture] EXIT depth=%d tid=%lu\n", rebuildDepth, ::GetCurrentThreadId());
-        ::OutputDebugStringA(buffer);
-    }
-    --rebuildDepth;
-#endif
 }
 
 // カーブ → 1Dテクスチャ化関数
 int EffectManager::RegisterCurve(const FloatCurve& curve)
 {
-#if defined(_DEBUG)
-    DebugLogRegisterState("ENTRY", curve, curveData);
-#endif
     const int resolution = 256;
 
     std::vector<float> samples(resolution);
@@ -1379,18 +1240,8 @@ int EffectManager::RegisterCurve(const FloatCurve& curve)
         samples[i] = curve.Evaluate(t);
     }
 
-#if defined(_DEBUG)
-    DebugLogRegisterState("AFTER SAMPLING", curve, curveData);
-    DebugLogRegisterState("BEFORE curveData.push_back", curve, curveData);
-#endif
-
     int index = (int)curveData.size();
     curveData.push_back(samples);
-
-#if defined(_DEBUG)
-    DebugLogRegisterState("AFTER curveData.push_back", curve, curveData);
-    DebugLogRegisterState("EXIT", curve, curveData);
-#endif
 
     return index;
 }

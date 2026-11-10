@@ -1029,172 +1029,18 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
         }
     }
 
-    // グローバルインデックスを一つにまとめる 
+    // Retain the per-primitive index count for rendering diagnostics.
     for (auto& mesh : meshes)
     {
-        for (auto& prim : mesh.primitives)
+        for (auto& primitive : mesh.primitives)
         {
-            if (prim.indexBufferView.sizeInBytes == 0)
-            {
+            if (primitive.indexBufferView.sizeInBytes == 0)
                 continue;
-            }
-            const UINT indexCount = prim.indexBufferView.sizeInBytes / sizeofComponent(prim.indexBufferView.format); // このプリミティブが開始する位置を保存しておく 
-            prim.startIndexLocation = static_cast<UINT>(globalIndices.size());
-            if (prim.indexBufferView.format == DXGI_FORMAT_R16_UINT)        // ここでキャストしておく
-            {
-                const uint16_t* src = reinterpret_cast<const uint16_t*>(prim.cachedIndices.data());
-                for (UINT i = 0; i < indexCount; ++i)
-                {
-                    globalIndices.push_back(static_cast<uint32_t>(src[i]) + prim.clothVertexOffset);
-                }
-            }
-            else if (prim.indexBufferView.format == DXGI_FORMAT_R32_UINT)
-            {
-                const uint32_t* src = reinterpret_cast<const uint32_t*>(prim.cachedIndices.data());
-                for (UINT i = 0; i < indexCount; ++i)
-                {
-                    globalIndices.push_back(src[i] + prim.clothVertexOffset);
-                }
-            }
-            prim.indexCount = indexCount;
+
+            primitive.startIndexLocation = 0;
+            primitive.indexCount = primitive.indexBufferView.sizeInBytes / sizeofComponent(primitive.indexBufferView.format);
         }
     }
-
-    auto MakeEdgeKey = [&](uint32_t a, uint32_t b)
-        {
-            if (a < b)
-                return (uint64_t(a) << 32) | uint64_t(b);
-            else
-                return (uint64_t(b) << 32) | uint64_t(a);
-        };
-
-    // 対角線を探すために。。？
-    std::unordered_map<uint64_t, std::vector<uint32_t>> edgeOpp;
-    edgeOpp.reserve(globalIndices.size() / 2);
-
-    //// 頂点ごとのエッジのリスト
-    //std::vector<std::vector<ClothEdge>> vertexEdges(allVertices.size());
-    //const size_t MAX_EDGES = 8;
-
-#if 0
-    for (size_t i = 0; i < globalIndices.size(); i += 3)
-    {
-        // 頂点バッファの値を取り出す
-        uint32_t i0 = globalIndices[i + 0];
-        uint32_t i1 = globalIndices[i + 1];
-        uint32_t i2 = globalIndices[i + 2];
-
-        edgeOpp[MakeEdgeKey(i0, i1)].push_back(i2);
-        edgeOpp[MakeEdgeKey(i1, i2)].push_back(i0);
-        edgeOpp[MakeEdgeKey(i2, i0)].push_back(i1);
-
-        // 頂点インデックスごとにエッジを追加する
-        auto AddEdge = [&](uint32_t a, uint32_t b)
-            {
-                DirectX::XMFLOAT3 pa = allVertices[a].position;
-                DirectX::XMFLOAT3 pb = allVertices[b].position;
-                DirectX::XMFLOAT3 delta = { pb.x - pa.x, pb.y - pa.y, pb.z - pa.z };
-                float restLength = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
-
-                ClothEdge edge;
-                edge.neighbor = b;
-                edge.delta = delta;
-                edge.restLength = restLength;
-
-                vertexEdges[a].push_back(edge);
-            };
-
-        // 相互に頂点を追加する
-        AddEdge(i0, i1);
-        AddEdge(i1, i0);
-        AddEdge(i1, i2);
-        AddEdge(i2, i1);
-        AddEdge(i2, i0);
-        AddEdge(i0, i2);
-    }
-
-    for (auto& kv : edgeOpp)
-    {
-        std::vector<uint32_t>& opps = kv.second;
-        std::sort(opps.begin(), opps.end());
-        opps.erase(
-            std::unique(opps.begin(), opps.end()), opps.end());
-
-        const size_t n = opps.size();
-        if (n < 2)
-        {
-            continue;
-        }
-
-        for (size_t a = 0; a < n; ++a)
-        {
-            for (size_t b = a + 1; b < n; ++b)
-            {
-                uint32_t vA = opps[a];
-                uint32_t vB = opps[b];
-                if (vA == vB)
-                    continue;
-                // compute rest length and delta 
-                const auto& pa = allVertices[vA].position;
-                const auto& pb = allVertices[vB].position;
-                DirectX::XMFLOAT3 delta = { pb.x - pa.x, pb.y - pa.y, pb.z - pa.z };
-                float restLength = sqrtf(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z);
-                ClothEdge eAB;
-                eAB.neighbor = vB;
-                eAB.delta = delta;
-                eAB.restLength = restLength;
-                ClothEdge eBA;
-                eBA.neighbor = vA;
-                eBA.delta = DirectX::XMFLOAT3{ -delta.x, -delta.y, -delta.z };
-                eBA.restLength = restLength;
-                // push into per-vertex adjacency (bidirectional) 
-                vertexEdges[vA].push_back(eAB);
-                vertexEdges[vB].push_back(eBA);
-            }
-        }
-    }
-
-    // 重複しているのを削除する と　距離が短いものを優先して残す
-    finalEdges.clear();
-    finalEdges.reserve(allVertices.size() * MAX_EDGES);
-
-    for (size_t v = 0; v < vertexEdges.size(); ++v)
-    {
-        std::vector<ClothEdge>& edges = vertexEdges[v];
-        // 距離が短いのを残す
-        std::sort(edges.begin(), edges.end(),
-            [&](const ClothEdge& a, const ClothEdge& b)
-            {
-                if (a.neighbor != b.neighbor)
-                    return a.neighbor < b.neighbor;
-                return a.restLength < b.restLength;
-            }
-        );
-
-
-        // 重複削除
-        std::sort(edges.begin(), edges.end(),
-            [](auto& a, auto& b) { return a.neighbor < b.neighbor; });
-        edges.erase(std::unique(edges.begin(), edges.end(),
-            [](auto& a, auto& b) { return a.neighbor == b.neighbor; }),
-            edges.end());
-
-        // 制限数に揃える
-        if (edges.size() > MAX_EDGES)
-            edges.resize(MAX_EDGES);
-
-        while (edges.size() < MAX_EDGES)
-        {
-            edges.push_back({ UINT32_MAX, {0,0,0}, 0 }); // 無効エッジ
-        }
-
-        // 一個の長い配列にする   8個ごとに
-        for (auto& e : edges)
-        {
-            finalEdges.push_back(e);
-        }
-    }
-#else
 
     constexpr float maxDistance = 20.0f;
     for (auto& mesh : meshes)
@@ -1266,7 +1112,6 @@ void ClothSimulate::CreateAndUploadResources(ID3D11Device* device)
         }
     }
 
-#endif // 0
     cbuffer->data.vertexCount = static_cast<int>(allVertices.size());
     cbuffer->data.windPhaseOffset = windPhaseOffset;
     cbuffer->data.windBase = windBase;

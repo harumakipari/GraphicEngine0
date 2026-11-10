@@ -162,8 +162,6 @@ public:
         _current_scene->State(SCENE_STATE::active);
         _current_scene->Start();
 
-        //SceneTransitionManager::Instance().NotifySceneChanged();
-
         return true;
     }
     // ウィンドウサイズ変更時の処理

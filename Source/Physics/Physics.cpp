@@ -561,16 +561,10 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
         physx::PxQueryFlag::ePREFILTER |
         physx::PxQueryFlag::ePOSTFILTER
     );
-    //pxQueryFilterData.data.word0 = 0xFFFFFFFF;	// NOTE:⑤レイヤーマスク
-    pxQueryFilterData.data.word0 = wantToHitLayer;	// NOTE:⑤レイヤーマスク
-    //pxQueryFilterData.data.word1 = 0xFFFFFFFF;	// NOTE:⑤レイヤーマスク
+    pxQueryFilterData.data.word0 = wantToHitLayer;	
 
-    //--------------------------
-    // NOTE:④シェイプキャスト
-    //--------------------------
     physx::PxSphereGeometry pxGeometry(radius);
     physx::PxSweepBuffer pxSweepBuffer;
-    //physx::PxSweepBufferN<1> pxSweepBuffer;
     physx::PxTransform pxTransform(
         physx::PxVec3(origin.x, origin.y, origin.z),
         physx::PxQuat(0, 0, 0, 1));
@@ -580,14 +574,12 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
         physx::PxVec3(direction.x, direction.y, direction.z),
         distance,
         pxSweepBuffer,
-        //physx::PxHitFlag::eDEFAULT,
         hitFlags,
         pxQueryFilterData,
         this);
     if (hit && pxSweepBuffer.hasBlock)
     {
         const physx::PxVec3& p = pxSweepBuffer.block.position;
-        //OutputDebugStringA(("Hit Position: " + std::to_string(p.x) + "," + std::to_string(p.y) + "," + std::to_string(p.z) + "\n").c_str());
         const physx::PxVec3& n = pxSweepBuffer.block.normal;
 
         result.position = DirectX::XMFLOAT3(p.x, p.y, p.z);
@@ -642,7 +634,6 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
         DirectX::XMStoreFloat4x4(&capsule.transform, Offset * Transform);
     }
 
-
     return hit;
 }
 
@@ -683,12 +674,9 @@ bool Physics::SphereCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT
         result.hasPosition = block.flags.isSet(physx::PxHitFlag::ePOSITION);
         result.hasNormal = block.flags.isSet(physx::PxHitFlag::eNORMAL);
         result.initialOverlap = block.hadInitialOverlap();
-        result.penetrationDepth = result.initialOverlap
-            ? (std::max)(0.0f, -block.distance)
-            : 0.0f;
+        result.penetrationDepth = result.initialOverlap? (std::max)(0.0f, -block.distance): 0.0f;
 
         const physx::PxVec3& p = block.position;
-        //OutputDebugStringA(("Hit Position: " + std::to_string(p.x) + "," + std::to_string(p.y) + "," + std::to_string(p.z) + "\n").c_str());
         const physx::PxVec3& n = block.normal;
 
         if (result.hasPosition)
@@ -959,7 +947,7 @@ bool Physics::CapsuleCast(
 
         distance = result.distance;
     }
-#if 1
+#ifdef _DEBUG
     // デバッグ描画
     DebugLine line;
     line.color = hit ? DirectX::XMFLOAT4(1, 0, 0, 1) : DirectX::XMFLOAT4(0, 0, 1, 1);
@@ -1009,21 +997,15 @@ bool Physics::CapsuleCast(
     Transform.r[3] = DirectX::XMVectorSet(line.end.x, line.end.y, line.end.z, 1.0f);
     DirectX::XMStoreFloat4x4(&capsule.transform, Transform);
     capsules.emplace_back(capsule);
-#endif
+#endif // _DEBUG
 
     return hit;
 }
 
 physx::PxQueryHitType::Enum Physics::preFilter(const physx::PxFilterData& filterData, const physx::PxShape* shape, const physx::PxRigidActor* actor, physx::PxHitFlags& queryFlags)
 {
-    //OutputDebugStringA("=== preFilter CALLED ===\n");
-    //return physx::PxQueryHitType::eBLOCK;
-    //--------------------------
-    // NOTE:③フィルタリング処理
-    //--------------------------
     physx::PxFilterData shapeFilterData = shape->getQueryFilterData();
-    //if ((shapeFilterData.word0 & filterData.word0) == 0xFFFFFF)	// NOTE:⑥レイヤーマスク判定
-    if ((shapeFilterData.word0 & filterData.word0) == 0)	// NOTE:⑥レイヤーマスク判定
+    if ((shapeFilterData.word0 & filterData.word0) == 0)	// レイヤーマスク判定
     {
         return physx::PxQueryHitType::eNONE;
     }
@@ -1033,9 +1015,7 @@ physx::PxQueryHitType::Enum Physics::preFilter(const physx::PxFilterData& filter
 
 physx::PxQueryHitType::Enum Physics::postFilter(const physx::PxFilterData& filterData, const physx::PxQueryHit& hit, const physx::PxShape* shape, const physx::PxRigidActor* actor)
 {
-    //--------------------------
-    // NOTE:③フィルタリング処理
-    //--------------------------
+    // フィルタリング処理
     return physx::PxQueryHitType::eBLOCK;
 }
 
@@ -1046,9 +1026,7 @@ physx::PxQueryHitType::Enum Physics::postFilter(const physx::PxFilterData& filte
 void Physics::onContact(const physx::PxContactPairHeader& pairHeader, const physx::PxContactPair* pairs, physx::PxU32 nbPairs)
 {
     using namespace physx;
-    //--------------------------
     // 衝突イベント検出
-    //--------------------------
     for (physx::PxU32 i = 0; i < nbPairs; i++)
     {
         const physx::PxContactPair& pair = pairs[i];
@@ -1068,17 +1046,10 @@ void Physics::onContact(const physx::PxContactPairHeader& pairHeader, const phys
         // userDataを使って、自分のCollisionComponentを取得
         CollisionComponent* compA = static_cast<CollisionComponent*>(shapeA->userData);
         CollisionComponent* compB = static_cast<CollisionComponent*>(shapeB->userData);
-        //if (!compA || !compB)
-        //{
-        //    continue;
-        //}
-
 
         // ここで衝突した２つの Actor を取得
         physx::PxActor* pxActorA = pairHeader.actors[0];
         physx::PxActor* pxActorB = pairHeader.actors[1];
-        //physx::PxActor* pxActorA = pair.shapes[0]->getActor();
-        //physx::PxActor* pxActorB = pair.shapes[1]->getActor();
         if (!pxActorA || !pxActorB)
         {
             continue;
@@ -1107,27 +1078,10 @@ void Physics::onContact(const physx::PxContactPairHeader& pairHeader, const phys
             // 衝突の深さ
             float separate = point.separation;
 
-
-            //if (compA && compB)
-            //{
-            //    compA->OnCollisionEnter(compB/*,*/
-            //       /* DirectX::XMFLOAT3(hitPos.x, hitPos.y, hitPos.z),
-            //        DirectX::XMFLOAT3(normal.x, normal.y, normal.z),
-            //        DirectX::XMFLOAT3(impulse.x, impulse.y, impulse.z)*/);
-            //    compB->OnCollisionEnter(compA/*,
-            //        DirectX::XMFLOAT3(hitPos.x, hitPos.y, hitPos.z),
-            //        DirectX::XMFLOAT3(-normal.x, -normal.y, -normal.z),
-            //        DirectX::XMFLOAT3(impulse.x, impulse.y, impulse.z)*/);
-            //}
             if (ownerA)
             {
                 if (compA && compB)
                 {
-                    //compA->OnCollisionEnter(compB,
-                    //    DirectX::XMFLOAT3(hitPos.x, hitPos.y, hitPos.z),
-                    //    DirectX::XMFLOAT3(normal.x, normal.y, normal.z),
-                    //    DirectX::XMFLOAT3(impulse.x, impulse.y, impulse.z));
-
                     ownerA->NotifyHit(compA, compB, ownerB, DirectX::XMFLOAT3(hitPos.x, hitPos.y, hitPos.z), DirectX::XMFLOAT3(normal.x, normal.y, normal.z), DirectX::XMFLOAT3(impulse.x, impulse.y, impulse.z));
                 }
             }
@@ -1147,112 +1101,17 @@ void Physics::onContact(const physx::PxContactPairHeader& pairHeader, const phys
             {
                 ownerB->NotifyHit(ownerA, DirectX::XMFLOAT3(hitPos.x, hitPos.y, hitPos.z), DirectX::XMFLOAT3(-normal.x, -normal.y, -normal.z), DirectX::XMFLOAT3(impulse.x, impulse.y, impulse.z));
             }
-            //std::string msg = ownerA->GetName() + " hit " + ownerB->GetName() + "\n";
-            //OutputDebugStringA(msg.c_str());
-
-            //char buffer[256];
-            //sprintf_s(buffer, sizeof(buffer), "HitPos: (%.2f, %.2f, %.2f)\n", hitPos.x, hitPos.y, hitPos.z);
-            //OutputDebugStringA(buffer);
-
-            //sprintf_s(buffer, sizeof(buffer), "Impulse: (%.2f, %.2f, %.2f)\n", impulse.x, impulse.y, impulse.z);
-            //OutputDebugStringA(buffer);
         }
-
-        // pxActorA 
-        //if (auto* dynamicA = pxActorA->is<physx::PxRigidDynamic>())
-        //{
-        //    if (dynamicA->getActorFlags() & physx::PxActorFlag::eDISABLE_GRAVITY)
-        //    {
-        //        gravityEnableList_.push_back(dynamicA);
-        //        //dynamicA->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC, false);
-        //        //dynamicA->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, false);
-        //    }
-        //}
-        //// pxActorB 
-        //if (auto* dynamicB = pxActorB->is<physx::PxRigidDynamic>())
-        //{
-        //    if (dynamicB->getActorFlags() & physx::PxActorFlag::eDISABLE_GRAVITY)
-        //    {
-        //        gravityEnableList_.push_back(dynamicB);
-        //        //dynamicB->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, false);
-        //    }
-        //}
 
         physx::PxContactPairPoint pxContactPoints[32];
         physx::PxU32 pxContactCount = pair.extractContacts(pxContactPoints, _countof(pxContactPoints));
-
-        if (pair.events & physx::PxPairFlag::eNOTIFY_TOUCH_FOUND)
-        {
-            // 初めて接触したとき
-            //for (physx::PxU32 j = 0; j < pxContactCount; ++j)
-            //{
-            //	const physx::PxContactPairPoint& pxContactPoint = pxContactPoints[j];
-
-            //	auto a = static_cast<CollisionEvent*>(pxActorA->userData);
-            //	if (a != nullptr)
-            //	{
-            //		// NOTE:⑫衝突イベント通知
-            //		CollisionContact contact;
-            //		contact.pxActor = pxActorB;
-            //		contact.pxNormal = pxContactPoint.normal;
-            //		contact.pxPoint = pxContactPoint.position;
-            //		contact.pxDepth = pxContactPoint.separation;
-            //		a->OnContactTouchFound(contact);
-            //	}
-            //	auto b = static_cast<CollisionEvent*>(pxActorB->userData);
-            //	if (b != nullptr)
-            //	{
-            //		// NOTE:⑫衝突イベント通知
-            //		CollisionContact contact;
-            //		contact.pxActor = pxActorA;
-            //		contact.pxNormal = -pxContactPoint.normal;
-            //		contact.pxPoint = pxContactPoint.position;
-            //		contact.pxDepth = pxContactPoint.separation;
-            //		b->OnContactTouchFound(contact);
-            //	}
-            //}
-        }
-
-        if (pair.events & physx::PxPairFlag::eNOTIFY_TOUCH_PERSISTS)
-        {
-            // 接触している状態
-            //for (physx::PxU32 j = 0; j < pxContactCount; ++j)
-            //{
-            //	const physx::PxContactPairPoint& pxContactPoint = pxContactPoints[j];
-
-            //	auto a = static_cast<CollisionEvent*>(pxActorA->userData);
-            //	if (a != nullptr)
-            //	{
-            //		// NOTE:⑫衝突イベント通知
-            //		CollisionContact contact;
-            //		contact.pxActor = pxActorB;
-            //		contact.pxNormal = pxContactPoint.normal;
-            //		contact.pxPoint = pxContactPoint.position;
-            //		contact.pxDepth = pxContactPoint.separation;
-            //		a->OnContactTouchPersists(contact);
-            //	}
-            //	auto b = static_cast<CollisionEvent*>(pxActorB->userData);
-            //	if (b != nullptr)
-            //	{
-            //		// NOTE:⑫衝突イベント通知
-            //		CollisionContact contact;
-            //		contact.pxActor = pxActorA;
-            //		contact.pxNormal = -pxContactPoint.normal;
-            //		contact.pxPoint = pxContactPoint.position;
-            //		contact.pxDepth = pxContactPoint.separation;
-            //		b->OnContactTouchPersists(contact);
-            //	}
-            //}
-        }
 
     }
 }
 
 void Physics::onTrigger(physx::PxTriggerPair* pairs, physx::PxU32 count)
 {
-    //--------------------------
-    // NOTE:⑨トリガーイベント検出
-    //--------------------------
+    // トリガーイベント検出
     for (physx::PxU32 i = 0; i < count; i++)
     {
         const physx::PxTriggerPair& pair = pairs[i];
@@ -1268,65 +1127,10 @@ void Physics::onTrigger(physx::PxTriggerPair* pairs, physx::PxU32 count)
         if (!triggerComp || !otherComp)
             continue;
 
-        //// Trigger の Enter / Exit を判定
-        //if (pair.status & physx::PxPairFlag::eNOTIFY_TOUCH_FOUND)
-        //{
-        //    triggerComp->OnCollisionEnter(otherComp);
-        //}
-        //else if (pair.status & physx::PxPairFlag::eNOTIFY_TOUCH_LOST)
-        //{
-        //    //triggerComp->OnTriggerExit(otherComp);
-        //}
-#if 0
-
-        if (pair.status & physx::PxPairFlag::eNOTIFY_TOUCH_FOUND)
-        {
-            // 初めて接触したとき						//TODO:02ここでのuserDataはcollisionEventのはずだから
-            auto a = static_cast<CollisionEvent*>(pair.triggerActor->userData);
-            if (a != nullptr)
-            {
-                // NOTE:⑫衝突イベント通知
-                CollisionTrigger trigger;
-                trigger.pxActor = pair.otherActor;
-                a->OnTriggerTouchFound(trigger);//OnTriggerEnter
-            }
-            auto b = static_cast<CollisionEvent*>(pair.otherActor->userData);
-            if (b != nullptr)
-            {
-                // NOTE:⑫衝突イベント通知
-                CollisionTrigger trigger;
-                trigger.pxActor = pair.triggerActor;
-                b->OnTriggerTouchFound(trigger);
-            }
-        }
-        if (pair.status & physx::PxPairFlag::eNOTIFY_TOUCH_LOST)
-        {
-            // 接触している状態から離れたとき
-            auto a = static_cast<CollisionEvent*>(pair.triggerActor->userData);
-            if (a != nullptr)
-            {
-                // NOTE:⑫衝突イベント通知
-                CollisionTrigger trigger;
-                trigger.pxActor = pair.otherActor;
-                a->OnTriggerTouchLost(trigger);
-            }
-            auto b = static_cast<CollisionEvent*>(pair.otherActor->userData);
-            if (b != nullptr)
-            {
-                // NOTE:⑫衝突イベント通知
-                CollisionTrigger trigger;
-                trigger.pxActor = pair.triggerActor;
-                b->OnTriggerTouchLost(trigger);
-            }
-        }
-
-#endif // 0
     }
 }
 
-//--------------------------
-// NOTE:⑧衝突検出フィルタリング
-//--------------------------
+// 衝突検出フィルタリング
 physx::PxFilterFlags Physics::SimulationFilterShader(
     physx::PxFilterObjectAttributes	attributes0, physx::PxFilterData filterData0,
     physx::PxFilterObjectAttributes	attributes1, physx::PxFilterData	filterData1,
@@ -1365,9 +1169,4 @@ physx::PxFilterFlags Physics::SimulationFilterShader(
     pairFlags |= physx::PxPairFlag::eNOTIFY_TOUCH_FOUND | physx::PxPairFlag::eNOTIFY_TOUCH_LOST
         | physx::PxPairFlag::eNOTIFY_TOUCH_PERSISTS | physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
     return physx::PxFilterFlag::eNOTIFY;
-
-    //pairFlags = physx::PxPairFlag::eCONTACT_DEFAULT;
-    //pairFlags |= physx::PxPairFlag::eNOTIFY_TOUCH_FOUND | physx::PxPairFlag::eNOTIFY_TOUCH_LOST | physx::PxPairFlag::eNOTIFY_TOUCH_PERSISTS | physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
-
-    //return physx::PxFilterFlag::eDEFAULT;
 }

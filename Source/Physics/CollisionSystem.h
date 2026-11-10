@@ -1,5 +1,4 @@
-#ifndef COLLISION_SYSTEM_H
-#define COLLISION_SYSTEM_H
+#pragma once
 
 // C++ 標準ライブラリ
 #include <vector>
@@ -140,22 +139,11 @@ public:
                 aActor->OnHit(hitPairA);
                 bActor->OnHit(hitPairB);
 
-
-
                 // Block でなければ押し出さない
-                //if (aToB != CollisionComponent::CollisionResponse::Block && bToA != CollisionComponent::CollisionResponse::Block)
                 if (aToB != CollisionComponent::CollisionResponse::Block || bToA != CollisionComponent::CollisionResponse::Block)
                 {
-                    //char msg[256];
-                    //sprintf_s(msg, "skipPush: aToB=%d bToA=%d\n", (int)aToB, (int)bToA);
-                    //OutputDebugStringA(msg);
                     continue;
                 }
-
-                //if (aComponent->IsStatic() && bComponent->IsStatic())
-                //{
-                //    continue; // 両方静的なら無視
-                //}
 
                 // 質量から押し出し率を計算
                 float massA = aShape->GetMass();
@@ -181,20 +169,15 @@ public:
                 }
 
                 // 押し出しベクトル
-
                 float pushDistance = std::min<float>(depth, 1.0f); // 最大深さ制限
                 dir = dir.getNormalized();
 
-
                 // Actor単位に押し出し量を合算
                 actorPushMap_[aActor].x += dir.x * pushDistance * rateA;
-                //actorPushMap_[aActor].y += dir.y * pushDistance * rateA;
                 actorPushMap_[aActor].z += dir.z * pushDistance * rateA;
 
                 actorPushMap_[bActor].x -= dir.x * pushDistance * rateB;
-                //actorPushMap_[bActor].y -= dir.y * pushDistance * rateB;
                 actorPushMap_[bActor].z -= dir.z * pushDistance * rateB;
-
             }
         }
     }
@@ -216,7 +199,6 @@ public:
 
     static void RegisterCollisionComponent(std::shared_ptr<CollisionComponent> collisionComponent)
     {
-        //allComponents_.emplace_back(collisionComponent->GetOwner(), collisionComponent);
         allComponents_.emplace_back(collisionComponent->GetActor(), collisionComponent);
     }
 
@@ -237,9 +219,7 @@ public:
     }
 
     static inline std::vector<std::pair<std::weak_ptr<Actor>, std::weak_ptr<CollisionComponent>>> allComponents_;
-    //static inline std::vector<std::pair<Actor*, CollisionComponent*>> allComponents_;
 private:
     // Actor 毎の押出量を計算して合成する用の Map 
     static inline std::unordered_map<Actor*, DirectX::XMFLOAT3> actorPushMap_;
 };
-#endif //COLLISION_SYSTEM_H

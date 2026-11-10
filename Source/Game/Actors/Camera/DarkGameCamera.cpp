@@ -1947,54 +1947,43 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
 				return false;
 
 			const float targetYaw = atan2f(direction.x, direction.z);
-			const DirectX::XMFLOAT3 baseDirection = MathHelper::Subtract(
-				currentPose.target, eye);
+			const DirectX::XMFLOAT3 baseDirection = MathHelper::Subtract(currentPose.target, eye);
 			const float baseYaw = atan2f(baseDirection.x, baseDirection.z);
 			float correction = MathHelper::ClampAngle(targetYaw - baseYaw);
-			const float maxCorrection = DirectX::XMConvertToRadians(
-				(std::max)(compositionMaxCorrectionDegree, 0.0f));
+			const float maxCorrection = DirectX::XMConvertToRadians((std::max)(compositionMaxCorrectionDegree, 0.0f));
 			correction = std::clamp(correction, -maxCorrection, maxCorrection);
 			const float c = std::cos(correction);
 			const float s = std::sin(correction);
-			const DirectX::XMFLOAT3 lookVector = MathHelper::Subtract(
-				currentPose.target, eye);
-			const DirectX::XMFLOAT3 rotatedLookVector{
+			const DirectX::XMFLOAT3 lookVector = MathHelper::Subtract(currentPose.target, eye);
+			const DirectX::XMFLOAT3 rotatedLookVector =
+			{
 				c * lookVector.x + s * lookVector.z,
 				lookVector.y,
 				-s * lookVector.x + c * lookVector.z
 			};
 			outTarget = MathHelper::Add(eye, rotatedLookVector);
 			bool valid = false;
-			outRequiredFov = EvaluateRequiredLockOnFovFromEye(
-				eye, outTarget, outDiagnostics, valid);
-			return valid && outDiagnostics.player.inFront &&
-				outDiagnostics.boss.inFront;
+			outRequiredFov = EvaluateRequiredLockOnFovFromEye(eye, outTarget, outDiagnostics, valid);
+			return valid && outDiagnostics.player.inFront && outDiagnostics.boss.inFront;
 		};
 
 	if (recoveryEligible)
 	{
 		const DirectX::XMFLOAT3 baseEye = currentPose.eye;
-		const DirectX::XMFLOAT3 toDesired = MathHelper::Subtract(
-			collisionPreEyePosition, baseEye);
+		const DirectX::XMFLOAT3 toDesired = MathHelper::Subtract(collisionPreEyePosition, baseEye);
 		const float distanceToDesired = MathHelper::Length(toDesired);
 		const float maxRecovery = (std::max)(recoveryMaxDistance, 0.0f);
 		const float candidateDistance = (std::min)(distanceToDesired, maxRecovery);
 		if (candidateDistance > FLT_EPSILON && distanceToDesired > FLT_EPSILON)
 		{
-			const DirectX::XMFLOAT3 candidateEye = MathHelper::Add(baseEye,
-				MathHelper::Multiply(toDesired, candidateDistance / distanceToDesired));
+			const DirectX::XMFLOAT3 candidateEye = MathHelper::Add(baseEye,MathHelper::Multiply(toDesired, candidateDistance / distanceToDesired));
 			DirectX::XMFLOAT3 resolvedCandidateEye{};
 			bool candidateHit = false;
-			const bool collisionValid = ResolveWallLateralCandidateCollision(
-				currentPose.target, candidateEye, resolvedCandidateEye, candidateHit);
+			const bool collisionValid = ResolveWallLateralCandidateCollision(currentPose.target, candidateEye, resolvedCandidateEye, candidateHit);
 			DirectX::XMFLOAT3 candidateLookTarget{};
 			LockOnFovDiagnostics candidateDiagnostics{};
 			float candidateFov = compositionRequiredFovAfter;
-			recoveryCandidateValid = collisionValid &&
-				calculateCompositionTarget(resolvedCandidateEye,
-					candidateLookTarget, candidateDiagnostics, candidateFov) &&
-				recoveryBaseRequiredFov - candidateFov >=
-				recoveryFovImprovementThreshold;
+			recoveryCandidateValid = collisionValid &&calculateCompositionTarget(resolvedCandidateEye,candidateLookTarget, candidateDiagnostics, candidateFov) &&recoveryBaseRequiredFov - candidateFov >=recoveryFovImprovementThreshold;
 			if (recoveryCandidateValid)
 				targetRecoveryDistance = candidateDistance;
 			else
@@ -2010,37 +1999,28 @@ void DarkCameraActor::UpdateLockOnCompositionLookCorrection(
 		targetRecoveryDistance = 0.0f;
 	}
 
-	const float recoverySpeed = targetRecoveryDistance > currentRecoveryDistance
-		? recoveryMoveSpeed : recoveryReturnSpeed;
-	const float recoveryStep = (std::max)(recoverySpeed, 0.0f) *
-		(std::max)(deltaTime, 0.0f);
-	currentRecoveryDistance += std::clamp(
-		targetRecoveryDistance - currentRecoveryDistance,
-		-recoveryStep, recoveryStep);
+	const float recoverySpeed = targetRecoveryDistance > currentRecoveryDistance ? recoveryMoveSpeed : recoveryReturnSpeed;
+	const float recoveryStep = (std::max)(recoverySpeed, 0.0f) * (std::max)(deltaTime, 0.0f);
+	currentRecoveryDistance += std::clamp(targetRecoveryDistance - currentRecoveryDistance, -recoveryStep, recoveryStep);
 
 	if (currentRecoveryDistance > FLT_EPSILON)
 	{
 		const DirectX::XMFLOAT3 baseEye = currentPose.eye;
-		const DirectX::XMFLOAT3 toDesired = MathHelper::Subtract(
-			collisionPreEyePosition, baseEye);
+		const DirectX::XMFLOAT3 toDesired = MathHelper::Subtract(collisionPreEyePosition, baseEye);
 		const float distanceToDesired = MathHelper::Length(toDesired);
 		if (distanceToDesired > FLT_EPSILON)
 		{
-			const float distance = (std::min)(currentRecoveryDistance,
-				distanceToDesired);
-			const DirectX::XMFLOAT3 recoveryEye = MathHelper::Add(baseEye,
-				MathHelper::Multiply(toDesired, distance / distanceToDesired));
+			const float distance = (std::min)(currentRecoveryDistance, distanceToDesired);
+			const DirectX::XMFLOAT3 recoveryEye = MathHelper::Add(baseEye, MathHelper::Multiply(toDesired, distance / distanceToDesired));
 			DirectX::XMFLOAT3 resolvedEye{};
 			bool collisionHit = false;
-			if (ResolveWallLateralCandidateCollision(currentPose.target,
-				recoveryEye, resolvedEye, collisionHit))
+			if (ResolveWallLateralCandidateCollision(currentPose.target, recoveryEye, resolvedEye, collisionHit))
 			{
 				currentPose.eye = resolvedEye;
 				collisionPostEyePosition = resolvedEye;
 				DirectX::XMFLOAT3 finalLookTarget{};
 				LockOnFovDiagnostics finalDiagnostics{};
-				if (calculateCompositionTarget(resolvedEye, finalLookTarget,
-					finalDiagnostics, recoveryFinalRequiredFov))
+				if (calculateCompositionTarget(resolvedEye, finalLookTarget, finalDiagnostics, recoveryFinalRequiredFov))
 				{
 					compositionLookTarget = finalLookTarget;
 					compositionRequiredFovAfter = recoveryFinalRequiredFov;
@@ -2084,8 +2064,7 @@ void DarkCameraActor::ResetLockOnAdaptiveState()
 	compositionLookTarget = currentPose.target;
 }
 
-float DarkCameraActor::ClampEnemyLockOnDistanceToProfile(
-	float distance, const LockOnProfile& profile) const
+float DarkCameraActor::ClampEnemyLockOnDistanceToProfile(float distance, const LockOnProfile& profile) const
 {
 	if (IsGruxLockOnTarget())
 		return distance;
@@ -2164,10 +2143,7 @@ DarkCameraActor::CameraPose DarkCameraActor::CalculatePose(CameraMode cameraMode
 			playerLookPosition.y += lockOnPlayerLookHeight;
 			enemyLookPosition.y += lockOnEnemyLookHeight;
 
-			pose.target = MathHelper::Lerp(
-				playerLookPosition,
-				enemyLookPosition,
-				adaptiveLockOnTargetWeight);
+			pose.target = MathHelper::Lerp(playerLookPosition,enemyLookPosition,adaptiveLockOnTargetWeight);
 		}
 		break;
 	}
