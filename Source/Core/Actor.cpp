@@ -13,8 +13,8 @@ void Actor::DestroyActor()
     std::unordered_set<const Component*> covered;
     std::vector<std::shared_ptr<SceneComponent>> work;
 
-    // Select every direct target before Destroy() changes attachment relationships.
-    for (const auto& comp : ownedComponents_)
+	// まずは ownedComponents_ の中から、まだ covered に入っていないコンポーネントを探す
+    for (const auto& comp : ownedComponents)
     {
         if (!comp || !covered.insert(comp.get()).second)
         {
@@ -47,9 +47,9 @@ void Actor::DestroyActor()
 
     Finalize();
 
-    ownedComponents_.clear();
-    componentsByName_.clear();
-    rootComponent_ = nullptr;
+    ownedComponents.clear();
+    componentsByName.clear();
+    rootComponent = nullptr;
 
     isAlive = false;
 }
@@ -59,19 +59,19 @@ std::shared_ptr<Component> Actor::FindComponentByName(const std::string& name)
 {
     if (name.empty())
     {
-        return rootComponent_;
+        return rootComponent;
     }
 
-    decltype(componentsByName_)::const_iterator nameToComponent = componentsByName_.find(name);
-    if (nameToComponent != componentsByName_.end())
+    decltype(componentsByName)::const_iterator nameToComponent = componentsByName.find(name);
+    if (nameToComponent != componentsByName.end())
     {
         return nameToComponent->second;
     }
 
-    decltype(ownedComponents_)::const_iterator component = std::find(ownedComponents_.begin(), ownedComponents_.end(), name);
-    if (component != ownedComponents_.end())
+    decltype(ownedComponents)::const_iterator component = std::find(ownedComponents.begin(), ownedComponents.end(), name);
+    if (component != ownedComponents.end())
     {
-        componentsByName_.emplace(name, *component);
+        componentsByName.emplace(name, *component);
         return *component;
     }
 
@@ -88,7 +88,7 @@ void Actor::DestroyComponentByName(const std::string& name)
         return;
     }
 
-    if (rootComponent_ && rootComponent_->GetName() == name)
+    if (rootComponent && rootComponent->GetName() == name)
     {
         // rootComponentの削除は禁止
         Logger::Warning(Logger::LogCategory::System, u8"rootComponentは削除できません。");
@@ -97,13 +97,13 @@ void Actor::DestroyComponentByName(const std::string& name)
     }
 
     // キャッシュからも探す
-    auto itNameSceneComp = componentsByName_.find(name);
-    if (itNameSceneComp != componentsByName_.end())
+    auto itNameSceneComp = componentsByName.find(name);
+    if (itNameSceneComp != componentsByName.end())
     {
-        componentsByName_.erase(itNameSceneComp);
+        componentsByName.erase(itNameSceneComp);
     }
 
-    auto it = std::remove_if(ownedComponents_.begin(), ownedComponents_.end(),
+    auto it = std::remove_if(ownedComponents.begin(), ownedComponents.end(),
         [&](const std::shared_ptr<Component>& comp)
         {
             if (comp->GetName() == name) {
@@ -113,7 +113,38 @@ void Actor::DestroyComponentByName(const std::string& name)
             return false;
         });
 
-    ownedComponents_.erase(it, ownedComponents_.end());
-    componentsByName_.erase(name);
+    ownedComponents.erase(it, ownedComponents.end());
+    componentsByName.erase(name);
 }
 
+void Actor::DrawImGuiInspector()
+{
+#ifdef USE_IMGUI
+
+    if (ImGui::TreeNodeEx(actorName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        // isValid チェックボックスを追加
+        ImGui::Checkbox("isActive", &isActive);
+
+        if (rootComponent)
+        {
+            ImGui::Text("RootComponent: %s", typeid(*rootComponent).name());
+            rootComponent->DrawImGuiInspector();
+        }
+
+        for (auto& comp : ownedComponents)
+        {
+            if (comp != rootComponent) {
+                ImGui::Text("%s", typeid(*comp).name());
+                comp->DrawImGuiInspector();
+            }
+        }
+
+        ImGui::DragFloat(U8("ActorのTimeScale"), &timeScale, 0.05f);
+
+        DrawImGuiDetails();
+
+        ImGui::TreePop();
+    }
+#endif
+}
