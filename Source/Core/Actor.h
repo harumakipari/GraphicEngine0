@@ -1,6 +1,6 @@
 #pragma once
 
-// C++ •W€ƒ‰ƒCƒuƒ‰ƒŠ
+// C++ æ¨™æº–ãƒ©ã‚¤ãƒ–ãƒ©ãƒª
 #include <string>
 #include <DirectXMath.h>
 #include <memory>
@@ -15,475 +15,373 @@
 
 class Scene;
 
-
-/**
- * @class Actor
- * @brief Scene ã‚É‘¶İ‚·‚éƒQ[ƒ€ƒIƒuƒWƒFƒNƒg
- *
- * Actor ‚Í Component ‚ğŠ—L‚µA
- * TransformEƒ‰ƒCƒtƒTƒCƒNƒ‹EƒCƒxƒ“ƒg‚ğŠÇ—‚·‚éB
- */
 class Actor :public std::enable_shared_from_this <Actor>
 {
 public:
-    // Type Definitions
-    using HitCallBack = std::function<void(std::pair<CollisionComponent*, CollisionComponent*>)>;
-
-    // Constructor / Destructor
-    Actor() = default;
-    Actor(const std::string& actorName) :actorName(actorName) {}
-    virtual ~Actor() = default;
-
-    Actor(const Actor&) = delete;
-    Actor& operator=(const Actor&) = delete;
-    Actor(Actor&&) noexcept = delete;
-    Actor& operator=(Actor&&) noexcept = delete;
-
-    // Lifecycle
-    virtual void Initialize(const Transform& transform) {}
-
-    virtual void Update(float deltaTime) {}
-
-    virtual void Finalize() {}
-
-    /**
-    * @brief Actor ‚ğŠ®‘S‚É”jŠü‚·‚é
-    *
-    * ‘S Component ‚ğ”jŠü‚µAActor ‚ğ¶‘¶‚µ‚Ä‚¢‚È‚¢ó‘Ô‚É‚·‚éB
-    * ActorManager ‚ÌŠ—Lˆê——‚©‚ç‚Ìœ‹‚ÍAUpdate() ‚Ü‚½‚Í ClearAll() ‚ªs‚¤B
-    */
-    void DestroyActor();
-
-    // ActorManager::Update() ‚ª‚±‚Ì Actor ‚Ìíœ—\–ñ‚ğŸ‚ÉŠm”F‚µ‚½“_‚Å”jŠü‚·‚éB
-    // “¯‚¶ Update() “à‚Å‚àA‚±‚Ì Actor ‚Ìˆ—ŠJn‘O‚È‚ç‚»‚Ì‰ñ‚Å”jŠü‚³‚ê‚éB
-    void MarkPendingKill() { isPendingKill = true; }
-
-    // Component Management
-    template <class T>
-    std::shared_ptr<T> AddComponent(const std::string& name, const std::string& parentName = "")
-    {
-        // ©•ª©g‚ª shared_ptr ‚ÅŠÇ—‚³‚ê‚Ä‚¢‚é‘O’ñ‚ÅA‚»‚ê‚ğ“n‚·
-        std::shared_ptr<Actor> sharedThis = shared_from_this(); // Actor‚Í std::enable_shared_from_this Œp³‚ª•K—v
-        // ©•ª©g‚ÌŠm”F
-        _ASSERT_EXPR(sharedThis != nullptr, "shared_from_this() returned nullptr!");
-
-
-        // ƒ†ƒj[ƒN–¼¶¬
-        std::string finalName = name;
-        int suffix = 1;
-
-        auto nameExists = [&](const std::string& checkName)
-            {
-                return std::any_of(
-                    ownedComponents_.begin(),
-                    ownedComponents_.end(),
-                    [&](const std::shared_ptr<Component>& comp)
-                    {
-                        return comp->GetName() == checkName;
-                    });
-            };
-
-        while (nameExists(finalName))
-        {
-            finalName = name + "_" + std::to_string(suffix++);
-        }
-
-        std::shared_ptr<T> newComponent = std::make_shared<T>(finalName, sharedThis);
-        _ASSERT_EXPR(newComponent != nullptr, "Failed to create new SceneComponent!");
-
-        if constexpr ((std::is_base_of<SceneComponent, T>::value))
-        {
-            std::shared_ptr<SceneComponent> sceneComponent = std::dynamic_pointer_cast<SceneComponent>(newComponent);
-            _ASSERT_EXPR(sceneComponent != nullptr, "Dynamic cast to SceneComponent failed!");
-            if (parentName.empty())
-            {
-                if (rootComponent_)
-                {
-                    sceneComponent->AttachTo(rootComponent_);
-                }
-                else
-                {
-                    SetRootComponent(sceneComponent);
-                }
-            }
-            else
-            {
-                std::shared_ptr<SceneComponent> parent = std::dynamic_pointer_cast<SceneComponent>(FindComponentByName(parentName));
-                sceneComponent->AttachTo(parent);
-            }
-        }
-
-
-        ownedComponents_.push_back(std::static_pointer_cast<Component>(newComponent));
-
-
-        // ‰Šú‰»‚·‚é
-        newComponent->OnRegister();
-
-        return newComponent;
-    }
-
-
-    /**
-    * @brief –¼‘O‚©‚ç Component ‚ğæ“¾‚·‚é
-    * @return Œ©‚Â‚©‚ç‚È‚¢ê‡ nullptr
-    */
-    std::shared_ptr<Component> FindComponentByName(const std::string& name);
-
-    // –¼‘O‚©‚çcomponent‚ğíœ‚·‚é
-    void DestroyComponentByName(const std::string& name);
-
-    template<typename T>
-    T* GetComponent()
-    {
-        // SceneComponent ‚©‚ç’T‚·
-        for (const std::shared_ptr<Component>& compent : ownedComponents_)
-        {
-            T* casted = dynamic_cast<T*>(compent.get());
-            if (casted != nullptr)
-            {
-                return casted;
-            }
-        }
-
-        _ASSERT(L"Actor ‚Ì GetComponent ‚ª nullptr ‚ğ•Ô‚µ‚Ä‚¢‚Ü‚·B");
-        return nullptr;
-    }
-
-
-    template<class T>       //ˆø”‚Évector‚ğ“ü‚ê‚é‚ÆAƒRƒ“ƒ|[ƒlƒ“ƒg‚ğ
-    void GetComponents(std::vector<T*>& components)
-    {
-        components.clear();
-        for (auto component : ownedComponents_)
-        {
-            if (T* downCastComponent = dynamic_cast<T*>(component.get()))
-            {
-                components.push_back(downCastComponent);
-            }
-        }
-
-    }
-
-    /**
-    * @brief Actor ‚ªŠ—L‚·‚é‘S Component ‚ğæ“¾‚·‚éi“Ç‚İæ‚èê—pj
-    */
-    const std::vector<std::shared_ptr<Component>>& GetComponents() const
-    {
-        return ownedComponents_;
-    }
-
-    /**
-    * @brief Component ‚ğíœ—\–ñ‚·‚é
-    *
-    * PhysX simulate ’†‚Å‚àˆÀ‘S‚Éíœ‚Å‚«‚éB
-    */
-    void RequestDestroyComponent(const std::string& name)
-    {
-        pendingDestroyComponentNames_.push_back(name);
-    }
-
-    // physx ‚ÌŒã‚Å‚â‚è‚½‚¢ˆ—
-    void PostDestroyComponents()
-    {
-        for (const auto& name : pendingDestroyComponentNames_)
-        {
-            DestroyComponentByName(name);
-        }
-        pendingDestroyComponentNames_.clear();
-    }
-
-    //==================================================
-    // Transform
-    //==================================================
-    void SetRootComponent(const std::shared_ptr<SceneComponent>& root)
-    {
-        rootComponent_ = root;
-    }
-
-    std::shared_ptr<SceneComponent> GetRootComponent()
-    {
-        return rootComponent_;
-    }
-
-
-    DirectX::XMFLOAT4X4 GetWorldTransform() const
-    {
-        DirectX::XMFLOAT4X4 worldTransform;
-        DirectX::XMMATRIX M = rootComponent_ ? rootComponent_->GetFinalWorldTransform().ToMatrix() : DirectX::XMMatrixIdentity();
-        DirectX::XMStoreFloat4x4(&worldTransform, M);
-        return worldTransform;
-    }
-
-    DirectX::XMFLOAT3 GetPosition() const
-    {
-        if (rootComponent_)
-        {
-            return rootComponent_->GetRelativeLocation();
-        }
-        return { 0.0f,0.0f,0.0f };
-    }
-
-    void SetPosition(const DirectX::XMFLOAT3& position) const
-    {
-        this->rootComponent_->SetRelativeLocationDirect(position);
-        UpdateAllComponentTransforms();
-    }
-
-    const DirectX::XMFLOAT4& GetQuaternionRotation() const { return rootComponent_->GetRelativeRotation(); }
-
-    void SetQuaternionRotation(const DirectX::XMFLOAT4& rotation) const
-    {
-        // –¾¦“I‚ÉŒŸ¸‚ğ’Ç‰Á
-        _ASSERT_EXPR(MathHelper::IsValidQuaternion(rotation), L"SetQuaternionRotation: Invalid quaternion");
-        this->rootComponent_->SetRelativeRotationDirect(rotation);
-    }
-
-    // degrees ‚Å•Ô‚·
-    DirectX::XMFLOAT3 GetEulerRotation() const
-    {
-        return rootComponent_->GetRelativeEulerRotation();
-    }
-
-    void SetEulerRotation(const DirectX::XMFLOAT3& eulerRotation) const
-    {
-        this->rootComponent_->SetRelativeEulerRotationDirect(eulerRotation);
-    }
-
-    DirectX::XMFLOAT3 GetScale() const { return rootComponent_->GetRelativeScale(); }
-
-    void SetScale(const DirectX::XMFLOAT3& scale) const
-    {
-        this->rootComponent_->SetRelativeScaleDirect(scale);
-    }
-
-    //is•ûŒü‚Ì’PˆÊƒxƒNƒgƒ‹‚ğæ“¾‚·‚é
-    DirectX::XMFLOAT3 GetForward() const
-    {
-        DirectX::XMFLOAT3  front;
-        // Z²•ûŒü‚Ì’PˆÊ•ûŒüƒxƒNƒgƒ‹@ƒfƒtƒHƒ‹ƒg
-        DirectX::XMVECTOR DefaultForward = DirectX::XMVectorSet(0, 0, 1, 0);
-        //player‚Ì‰ñ“]’l‚É‚æ‚Á‚Äì‚ç‚ê‚é‰ñ“]s—ñ
-        DirectX::XMMATRIX RotationMatrix = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&GetQuaternionRotation()));
-        //DirectX::XMMATRIX RotationMatrix = DirectX::XMMatrixRotationRollPitchYaw(GetQuaternionRotation().x, GetQuaternionRotation().y, GetQuaternionRotation().z);
-        // ƒfƒtƒHƒ‹ƒg‚ÌƒxƒNƒgƒ‹‚É‰ñ“]s—ñ‚ğ“K‰‚·‚é
-        DirectX::XMVECTOR TransformedForward = DirectX::XMVector3TransformNormal(DefaultForward, RotationMatrix);
-        //³‹K‰»
-        TransformedForward = DirectX::XMVector3Normalize(TransformedForward);
-
-        DirectX::XMStoreFloat3(&front, TransformedForward);
-        return front;
-    }
-
-
-    //==================================================
-    // State
-    //==================================================
-    void SetActive(bool isActive)
-    {
-        this->isActive = isActive;
-    }
-
-    bool IsActive() const
-    {
-        return isActive;
-    }
-
-    bool IsAlive() const
-    {
-        return this->isAlive;
-    }
-
-    bool IsPendingKill() const
-    {
-        return this->isPendingKill;
-    }
-
-    //==================================================
-    // Collision / Event
-    //==================================================
-
-    //@collisionComponent@‚ª Dynamic ‚Ì•¨‚Æ“–‚½‚Á‚½‚É’Ê‚é
-    virtual void NotifyHit(/*std::shared_ptr<Component> selfComp, std::shared_ptr<Component> otherComp,*//* std::shared_ptr<Actor> otherActor*/Actor* otherActor, const DirectX::XMFLOAT3& hitPos, const DirectX::XMFLOAT3& normal, const DirectX::XMFLOAT3& impulse) {}
-    //@collisionComponent@‚ª Dynamic ‚Ì•¨‚Æ“–‚½‚Á‚½‚É’Ê‚é
-    virtual void NotifyHit(CollisionComponent* selfComp, CollisionComponent* otherComp, Actor* otherActor, const DirectX::XMFLOAT3& hitPos, const DirectX::XMFLOAT3& normal, const DirectX::XMFLOAT3& impulse) {}
-
-
-    /**
-    * @brief Õ“ËƒCƒxƒ“ƒg‚ğ‘SƒR[ƒ‹ƒoƒbƒN‚Ö’Ê’m‚·‚é
-    *
-    * @param hitPair first ‚ª©gAsecond ‚ª‘Šè‚Ì CollisionComponent
-    */
-    void DispatchHitEvent(std::pair<CollisionComponent*, CollisionComponent*> hitPair) const
-    {
-        for (auto& callback : hitCallbacks_)
-        {
-            callback(hitPair);
-        }
-    }
-
-    /**
-    * @brief ƒLƒlƒ}ƒeƒBƒbƒN“¯m‚ÌÕ“Ë‚ÉŒÄ‚Î‚ê‚é‰¼‘zŠÖ”
-    *
-    * ”h¶ƒNƒ‰ƒX‚ÅƒI[ƒo[ƒ‰ƒCƒh‚µ‚Äg—p‚·‚éB
-    */
-    virtual void OnHit(std::pair<CollisionComponent*, CollisionComponent*> hitPair) {}
-
-    void AddHitCallback(const HitCallBack& callback)
-    {
-        hitCallbacks_.push_back(callback);
-    }
-
-    void RemoveAllHitCallBacks()
-    {
-        hitCallbacks_.clear();
-    }
-
-    //==================================================
-    // Debug
-    //==================================================
-    void DrawImGuiInspector()
-    {
-#ifdef USE_IMGUI
-
-        if (ImGui::TreeNodeEx(actorName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            // isValid ƒ`ƒFƒbƒNƒ{ƒbƒNƒX‚ğ’Ç‰Á
-            ImGui::Checkbox("isValid", &isActive);
-
-            if (rootComponent_)
-            {
-                ImGui::Text("RootComponent: %s", typeid(*rootComponent_).name());
-                rootComponent_->DrawImGuiInspector();
-            }
-
-            for (auto& comp : ownedComponents_)
-            {
-                if (comp != rootComponent_) {
-                    ImGui::Text("%s", typeid(*comp).name());
-                    comp->DrawImGuiInspector();
-                }
-            }
-
-            ImGui::DragFloat(U8("Actor‚ÌTimeScale"), &timeScale, 0.05f);
-
-            DrawImGuiDetails();
-
-            ImGui::TreePop();
-        }
-#endif
-    }
-
-    // Œp³‰Ÿ‚µ‚½ƒTƒuƒNƒ‰ƒX‚Ìê—pGUI
-    virtual void DrawImGuiDetails() {};
-
-    //==================================================
-    // Scene
-    //==================================================
-    void SetOwnerScene(Scene* scene) { ownerScene_ = scene; }
-    Scene* GetOwnerScene() const { return ownerScene_; }
-    const Scene* GetOwnerConstScene() const { return ownerScene_; }
-
-
-    // 
-
-    void MakeRootComponent()
-    {
-        rootComponent_ = AddComponent<SceneComponent>(rootComponentName);
-    }
-
-
-    std::string& GetName() { return actorName; }
-
-
-    // Initialize ‚ÌŒã‚ÉŒÄ‚Î‚ê‚é‚×‚«ˆ— Transform‚ğXV‚·‚é@ƒLƒƒƒbƒVƒ…‚µ‚Ä‚¢‚é‚½‚ßˆêƒtƒŒ[ƒ€Œã‚ÌTransform‚ğ‚ªŒÄ‚Î‚ê‚é‰Â”\«‚ğ–h‚®‚½‚ß
-    void UpdateAllComponentTransforms() const
-    {
-        if (rootComponent_)
-        {
-            rootComponent_->UpdateComponentToWorld();
-        }
-
-        for (const auto& comp : ownedComponents_)
-        {
-            if (comp == rootComponent_)
-                continue;
-
-            comp->UpdateComponentToWorld();
-        }
-    }
-
-    // ƒ^ƒO‚ğ’Ç‰Á‚·‚é
-    void AddTag(const std::string& tag)
-    {
-        tags_.push_back(tag);
-    }
-    // ƒ^ƒO‚ğ‚Á‚Ä‚¢‚é‚©
-    bool HasTag(const std::string& tag) const
-    {
-        return std::find(tags_.begin(), tags_.end(), tag) != tags_.end();
-    }
-
-    // ƒ^ƒCƒ€ƒXƒP[ƒ‹‚ğæ“¾‚·‚é
-    float GetTimeScale() const { return timeScale; }
-
-    // ƒ^ƒCƒ€ƒXƒP[ƒ‹‚ğƒŠƒZƒbƒg‚·‚é
-    void ResetTimeScale() { timeScale = 1.0f; }
-
-    // ƒ^ƒCƒ€ƒXƒP[ƒ‹‚ğİ’è‚·‚é
-    void SetTimeScale(const float timeScale) { this->timeScale = timeScale; }
-
-    // ƒ‹[ƒgƒRƒ“ƒ|[ƒlƒ“ƒg‚Ì–¼‘O‚ğæ“¾‚·‚é
-    const std::string& GetRootComponentName()const { return rootComponentName; }
+	using HitCallback = std::function<void(std::pair<CollisionComponent*, CollisionComponent*>)>;
+
+public:
+	Actor() = default;
+	Actor(const std::string& actorName) :actorName(actorName) {}
+	virtual ~Actor() = default;
+
+	Actor(const Actor&) = delete;
+	Actor& operator=(const Actor&) = delete;
+	Actor(Actor&&) noexcept = delete;
+	Actor& operator=(Actor&&) noexcept = delete;
+
+	// Lifecycle
+	virtual void Initialize(const Transform& transform) {}
+
+	virtual void Update(float deltaTime) {}
+
+	virtual void Finalize() {}
+
+	// å…¨Componentã‚’ç ´æ£„ã—ã¦Actorã‚’çµ‚äº†çŠ¶æ…‹ã«ã™ã‚‹ã€‚Managerä¸€è¦§ã‹ã‚‰ã®é™¤å»ã¯Managerå´ãŒè¡Œã†ã€‚
+	void DestroyActor();
+
+	// ActorManager::Update() ãŒã“ã® Actor ã®å‰Šé™¤äºˆç´„ã‚’æ¬¡ã«ç¢ºèªã—ãŸæ™‚ç‚¹ã§ç ´æ£„ã™ã‚‹ã€‚
+	// åŒã˜ Update() å†…ã§ã‚‚ã€ã“ã® Actor ã®å‡¦ç†é–‹å§‹å‰ãªã‚‰ãã®å›ã§ç ´æ£„ã•ã‚Œã‚‹ã€‚
+	void MarkPendingKill() { isPendingKill = true; }
+
+	// Component Management
+	template <class T>
+	std::shared_ptr<T> AddComponent(const std::string& name, const std::string& parentName = "")
+	{
+		// è‡ªåˆ†è‡ªèº«ãŒ shared_ptr ã§ç®¡ç†ã•ã‚Œã¦ã„ã‚‹å‰æã§ã€ãã‚Œã‚’æ¸¡ã™
+		std::shared_ptr<Actor> sharedThis = shared_from_this(); // Actorã¯ std::enable_shared_from_this ç¶™æ‰¿ãŒå¿…è¦
+		// è‡ªåˆ†è‡ªèº«ã®ç¢ºèª
+		_ASSERT_EXPR(sharedThis != nullptr, "shared_from_this() returned nullptr!");
+
+		std::string finalName = name;
+		int suffix = 1;
+
+		auto nameExists = [&](const std::string& checkName)
+			{
+				return std::any_of(
+					ownedComponents.begin(),
+					ownedComponents.end(),
+					[&](const std::shared_ptr<Component>& comp)
+					{
+						return comp->GetName() == checkName;
+					});
+			};
+
+		while (nameExists(finalName))
+		{
+			finalName = name + "_" + std::to_string(suffix++);
+		}
+
+		std::shared_ptr<T> newComponent = std::make_shared<T>(finalName, sharedThis);
+		_ASSERT_EXPR(newComponent != nullptr, "Failed to create new SceneComponent!");
+
+		if constexpr ((std::is_base_of<SceneComponent, T>::value))
+		{
+			std::shared_ptr<SceneComponent> sceneComponent = std::dynamic_pointer_cast<SceneComponent>(newComponent);
+			_ASSERT_EXPR(sceneComponent != nullptr, "Dynamic cast to SceneComponent failed!");
+			if (parentName.empty())
+			{
+				if (rootComponent)
+				{
+					sceneComponent->AttachTo(rootComponent);
+				}
+				else
+				{
+					SetRootComponent(sceneComponent);
+				}
+			}
+			else
+			{
+				std::shared_ptr<SceneComponent> parent = std::dynamic_pointer_cast<SceneComponent>(FindComponentByName(parentName));
+				sceneComponent->AttachTo(parent);
+			}
+		}
+		ownedComponents.push_back(std::static_pointer_cast<Component>(newComponent));
+		// åˆæœŸåŒ–ã™ã‚‹
+		newComponent->OnRegister();
+		return newComponent;
+	}
+
+
+	// åå‰ãŒç©ºãªã‚‰RootComponentã‚’è¿”ã™ã€‚è¦‹ã¤ã‹ã‚‰ãªã„å ´åˆã¯nullptrã€‚
+	std::shared_ptr<Component> FindComponentByName(const std::string& name);
+
+	void DestroyComponentByName(const std::string& name);
+
+	template<typename T>
+	T* GetComponent()
+	{
+		// SceneComponent ã‹ã‚‰æ¢ã™
+		for (const std::shared_ptr<Component>& compent : ownedComponents)
+		{
+			T* casted = dynamic_cast<T*>(compent.get());
+			if (casted != nullptr)
+			{
+				return casted;
+			}
+		}
+
+		_ASSERT(L"Actor ã® GetComponent ãŒ nullptr ã‚’è¿”ã—ã¦ã„ã¾ã™ã€‚");
+		return nullptr;
+	}
+
+
+	template<class T>
+	void GetComponents(std::vector<T*>& components)
+	{
+		components.clear();
+		for (auto component : ownedComponents)
+		{
+			if (T* downCastComponent = dynamic_cast<T*>(component.get()))
+			{
+				components.push_back(downCastComponent);
+			}
+		}
+
+	}
+
+	// Actor ãŒæ‰€æœ‰ã™ã‚‹å…¨ Component ã‚’å–å¾—ã™ã‚‹ï¼ˆèª­ã¿å–ã‚Šå°‚ç”¨ï¼‰
+	const std::vector<std::shared_ptr<Component>>& GetComponents() const
+	{
+		return ownedComponents;
+	}
+
+	// PhysXã®simulateä¸­ã«Shapeã‚’ç ´æ£„ã—ãªã„ã‚ˆã†ã€å‰Šé™¤ã‚’å¾Œæ®µã¸äºˆç´„ã™ã‚‹ã€‚ 
+	void RequestDestroyComponent(const std::string& name)
+	{
+		pendingDestroyComponentNames.push_back(name);
+	}
+
+	// Updateå¾Œã«ã€äºˆç´„ã•ã‚ŒãŸComponentã®å‰Šé™¤ã‚’å®Ÿè¡Œã™ã‚‹ã€‚ 
+	void PostDestroyComponents()
+	{
+		for (const auto& name : pendingDestroyComponentNames)
+		{
+			DestroyComponentByName(name);
+		}
+		pendingDestroyComponentNames.clear();
+	}
+
+	void SetRootComponent(const std::shared_ptr<SceneComponent>& root)
+	{
+		rootComponent = root;
+	}
+
+	std::shared_ptr<SceneComponent> GetRootComponent()
+	{
+		return rootComponent;
+	}
+
+
+	DirectX::XMFLOAT4X4 GetWorldTransform() const
+	{
+		DirectX::XMFLOAT4X4 worldTransform;
+		DirectX::XMMATRIX M = rootComponent ? rootComponent->GetFinalWorldTransform().ToMatrix() : DirectX::XMMatrixIdentity();
+		DirectX::XMStoreFloat4x4(&worldTransform, M);
+		return worldTransform;
+	}
+
+	DirectX::XMFLOAT3 GetPosition() const
+	{
+		if (rootComponent)
+		{
+			return rootComponent->GetRelativeLocation();
+		}
+		return { 0.0f,0.0f,0.0f };
+	}
+
+	void SetPosition(const DirectX::XMFLOAT3& position) const
+	{
+		this->rootComponent->SetRelativeLocationDirect(position);
+		UpdateAllComponentTransforms();
+	}
+
+	const DirectX::XMFLOAT4& GetQuaternionRotation() const { return rootComponent->GetRelativeRotation(); }
+
+	void SetQuaternionRotation(const DirectX::XMFLOAT4& rotation) const
+	{
+		// æ˜ç¤ºçš„ã«æ¤œæŸ»ã‚’è¿½åŠ 
+		_ASSERT_EXPR(MathHelper::IsValidQuaternion(rotation), L"SetQuaternionRotation: Invalid quaternion");
+		this->rootComponent->SetRelativeRotationDirect(rotation);
+	}
+
+	// degrees ã§è¿”ã™
+	DirectX::XMFLOAT3 GetEulerRotation() const
+	{
+		return rootComponent->GetRelativeEulerRotation();
+	}
+
+	void SetEulerRotation(const DirectX::XMFLOAT3& eulerRotation) const
+	{
+		this->rootComponent->SetRelativeEulerRotationDirect(eulerRotation);
+	}
+
+	DirectX::XMFLOAT3 GetScale() const { return rootComponent->GetRelativeScale(); }
+
+	void SetScale(const DirectX::XMFLOAT3& scale) const
+	{
+		this->rootComponent->SetRelativeScaleDirect(scale);
+	}
+
+	//é€²è¡Œæ–¹å‘ã®å˜ä½ãƒ™ã‚¯ãƒˆãƒ«ã‚’å–å¾—ã™ã‚‹
+	DirectX::XMFLOAT3 GetForward() const
+	{
+		DirectX::XMFLOAT3  front;
+		// Zè»¸æ–¹å‘ã®å˜ä½æ–¹å‘ãƒ™ã‚¯ãƒˆãƒ«ã€€ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆ
+		DirectX::XMVECTOR DefaultForward = DirectX::XMVectorSet(0, 0, 1, 0);
+		//playerã®å›è»¢å€¤ã«ã‚ˆã£ã¦ä½œã‚‰ã‚Œã‚‹å›è»¢è¡Œåˆ—
+		DirectX::XMMATRIX RotationMatrix = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&GetQuaternionRotation()));
+		// ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆã®ãƒ™ã‚¯ãƒˆãƒ«ã«å›è»¢è¡Œåˆ—ã‚’é©å¿œã™ã‚‹
+		DirectX::XMVECTOR TransformedForward = DirectX::XMVector3TransformNormal(DefaultForward, RotationMatrix);
+		TransformedForward = DirectX::XMVector3Normalize(TransformedForward);
+		DirectX::XMStoreFloat3(&front, TransformedForward);
+		return front;
+	}
+
+
+	// State
+	void SetActive(bool isActive)
+	{
+		this->isActive = isActive;
+	}
+
+	bool IsActive() const
+	{
+		return isActive;
+	}
+
+	bool IsAlive() const
+	{
+		return this->isAlive;
+	}
+
+	bool IsPendingKill() const
+	{
+		return this->isPendingKill;
+	}
+
+	// Collision / Event
+	//ã€€collisionComponentã€€ãŒ Dynamic ã®ç‰©ã¨å½“ãŸã£ãŸæ™‚ã«é€šã‚‹
+	virtual void NotifyHit(Actor* otherActor, const DirectX::XMFLOAT3& hitPos, const DirectX::XMFLOAT3& normal, const DirectX::XMFLOAT3& impulse) {}
+	//ã€€collisionComponentã€€ãŒ Dynamic ã®ç‰©ã¨å½“ãŸã£ãŸæ™‚ã«é€šã‚‹
+	virtual void NotifyHit(CollisionComponent* selfComp, CollisionComponent* otherComp, Actor* otherActor, const DirectX::XMFLOAT3& hitPos, const DirectX::XMFLOAT3& normal, const DirectX::XMFLOAT3& impulse) {}
+
+
+	// firstã¯è‡ªèº«ã®CollisionComponentã€secondã¯ç›¸æ‰‹å´ã€‚
+	void DispatchHitEvent(std::pair<CollisionComponent*, CollisionComponent*> hitPair) const
+	{
+		for (auto& callback : hitCallbacks)
+		{
+			callback(hitPair);
+		}
+	}
+
+	//ã‚­ãƒãƒãƒ†ã‚£ãƒƒã‚¯åŒå£«ã®è¡çªæ™‚ã«å‘¼ã°ã‚Œã‚‹ä»®æƒ³é–¢æ•°
+	//æ´¾ç”Ÿã‚¯ãƒ©ã‚¹ã§ã‚ªãƒ¼ãƒãƒ¼ãƒ©ã‚¤ãƒ‰ã—ã¦ä½¿ç”¨ã™ã‚‹ã€‚
+	virtual void OnHit(std::pair<CollisionComponent*, CollisionComponent*> hitPair) {}
+
+	void AddHitCallback(const HitCallback& callback)
+	{
+		hitCallbacks.push_back(callback);
+	}
+
+	void RemoveAllHitCallBacks()
+	{
+		hitCallbacks.clear();
+	}
+
+	// Debug
+	void DrawImGuiInspector();
+
+	// ç¶™æ‰¿æŠ¼ã—ãŸã‚µãƒ–ã‚¯ãƒ©ã‚¹ã®å°‚ç”¨GUI
+	virtual void DrawImGuiDetails() {};
+
+	// Scene
+	void SetOwnerScene(Scene* scene) { ownerScene = scene; }
+	Scene* GetOwnerScene() const { return ownerScene; }
+	const Scene* GetOwnerConstScene() const { return ownerScene; }
+
+
+	void MakeRootComponent()
+	{
+		rootComponent = AddComponent<SceneComponent>(rootComponentName);
+	}
+
+	std::string& GetName() { return actorName; }
+
+	// åˆæœŸåŒ–å¾Œã«å‘¼ã³ã€æ‰€æœ‰Componentã®World Transformã‚’æ›´æ–°ã™ã‚‹ã€‚
+	void UpdateAllComponentTransforms() const
+	{
+		if (rootComponent)
+		{
+			rootComponent->UpdateComponentToWorld();
+		}
+
+		for (const auto& comp : ownedComponents)
+		{
+			if (comp == rootComponent)
+				continue;
+
+			comp->UpdateComponentToWorld();
+		}
+	}
+
+	// ã‚¿ã‚°ã‚’è¿½åŠ ã™ã‚‹
+	void AddTag(const std::string& tag)
+	{
+		tags.push_back(tag);
+	}
+	// ã‚¿ã‚°ã‚’æŒã£ã¦ã„ã‚‹ã‹
+	bool HasTag(const std::string& tag) const
+	{
+		return std::find(tags.begin(), tags.end(), tag) != tags.end();
+	}
+
+	// ã‚¿ã‚¤ãƒ ã‚¹ã‚±ãƒ¼ãƒ«ã‚’å–å¾—ã™ã‚‹
+	float GetTimeScale() const { return timeScale; }
+
+	// ã‚¿ã‚¤ãƒ ã‚¹ã‚±ãƒ¼ãƒ«ã‚’ãƒªã‚»ãƒƒãƒˆã™ã‚‹
+	void ResetTimeScale() { timeScale = 1.0f; }
+
+	// ã‚¿ã‚¤ãƒ ã‚¹ã‚±ãƒ¼ãƒ«ã‚’è¨­å®šã™ã‚‹
+	void SetTimeScale(const float timeScale) { this->timeScale = timeScale; }
+
+	// ãƒ«ãƒ¼ãƒˆã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã®åå‰ã‚’å–å¾—ã™ã‚‹
+	const std::string& GetRootComponentName()const { return rootComponentName; }
 protected:
-    Scene* ownerScene_ = nullptr;   // ©•ª‚ª‘®‚µ‚Ä‚¢‚éScene
-    std::vector<std::string> tags_;
+	Scene* ownerScene = nullptr;   // è‡ªåˆ†ãŒå±ã—ã¦ã„ã‚‹Scene
+	std::vector<std::string> tags;
 
 private:
-    //==================================================
-    // Internal Data
-    //==================================================
-    std::string actorName;
-
-    std::string rootComponentName = "RootComponent";
-
-    bool isActive = true;
-
-    // ƒAƒNƒ^[‚ª‘¶İ‚µ‚Ä‚¢‚é‚©‚Ç‚¤‚©
-    bool isAlive = true;
-
-    // ƒAƒNƒ^[‚Ìíœ—\–ñ
-    bool isPendingKill = false;
-
-    std::vector<HitCallBack> hitCallbacks_;
-
-    // rootComponent (Transform) Œn
-    std::shared_ptr<SceneComponent> rootComponent_;
-    // Component
-    std::vector<std::shared_ptr<Component>> ownedComponents_;
-
-    // –¼‘O‚ÆƒRƒ“ƒ|[ƒlƒ“ƒg‚ğƒLƒƒƒbƒVƒ…‚µ‚Ä‚¨‚­
-    std::unordered_map<std::string, std::shared_ptr<Component>> componentsByName_;
-
-    // íœ—\–ñ—pƒŠƒXƒg@
-    // physx ‚Ì simulate “r’†‚É pxShape ‚ª•t‚¢‚½ shapeComponent ‚ğíœ‚·‚é‚Ì‚ğ–h‚®‚½‚ß
-    std::vector<std::string> pendingDestroyComponentNames_;
-
-    // ƒAƒNƒ^[‚²‚Æ‚Ìƒ^ƒCƒ€ƒXƒP[ƒ‹
-    float timeScale = 1.0f;
+	// Internal Data
+	std::string actorName;
+	std::string rootComponentName = "RootComponent";
+	bool isActive = true;	// ã‚¢ã‚¯ã‚¿ãƒ¼ãŒã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã‹ã©ã†ã‹
+	bool isAlive = true;	// ã‚¢ã‚¯ã‚¿ãƒ¼ãŒå­˜åœ¨ã—ã¦ã„ã‚‹ã‹ã©ã†ã‹
+	bool isPendingKill = false;		// ã‚¢ã‚¯ã‚¿ãƒ¼ã®å‰Šé™¤äºˆç´„
+	std::vector<HitCallback> hitCallbacks;
+	// rootComponent (Transform) ç³»
+	std::shared_ptr<SceneComponent> rootComponent;
+	// Component
+	std::vector<std::shared_ptr<Component>> ownedComponents;
+	// åå‰ã¨ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã‚’ã‚­ãƒ£ãƒƒã‚·ãƒ¥ã—ã¦ãŠã
+	std::unordered_map<std::string, std::shared_ptr<Component>> componentsByName;
+	// å‰Šé™¤äºˆç´„ç”¨ãƒªã‚¹ãƒˆã€€
+	std::vector<std::string> pendingDestroyComponentNames;
+	float timeScale = 1.0f;		// ã‚¢ã‚¯ã‚¿ãƒ¼ã”ã¨ã®ã‚¿ã‚¤ãƒ ã‚¹ã‚±ãƒ¼ãƒ«
 };
 
 static inline bool operator==(const std::shared_ptr<Actor>& actor, const std::string& name)
 {
-    return actor->GetName() == name;
+	return actor->GetName() == name;
 }
 
 static inline bool operator==(const std::shared_ptr<SceneComponent>& component, const std::string& name)
 {
-    return component->GetName() == name;
+	return component->GetName() == name;
 }
 
 static inline bool operator==(const std::shared_ptr<Component>& component, const std::string& name)
 {
-    return component->GetName() == name;
+	return component->GetName() == name;
 }

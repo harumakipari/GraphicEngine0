@@ -1,5 +1,4 @@
-#ifndef SCENE_COMPONENT_H
-#define SCENE_COMPONENT_H
+#pragma once
 
 // C++ 標準ライブラリ
 #include <memory>
@@ -8,18 +7,11 @@
 // 他ライブラリ
 #include <DirectXMath.h>
 
-#ifdef USE_IMGUI
-#define IMGUI_ENABLE_DOCKING
-#include "../External/imgui/imgui.h"
-#endif
-
 // プロジェクトの他のヘッダ
 #include "Component.h"
 #include "Components/Transform/Transform.h"
 
-
 class Actor;
-
 
 class SceneComponent :public Component, public std::enable_shared_from_this<SceneComponent>
 {
@@ -142,9 +134,6 @@ private:
     DirectX::XMFLOAT3 relativeScale_ = { 1.0f,1.0f,1.0f };
 
 private:
-
-
-
     // 0はfalse 1はtrue 符号なし8ビット整数
 
     // 相対的な位置、回転、スケールに基づいて worldTransform　を更新したことがあれば true
@@ -158,9 +147,9 @@ private:
     uint8_t skipUpdateOverlaps_ : 1 = 0; //→ 当たり判定の更新処理をスキップして高速化するためのフラグ
     // 子コンポーネントに影響がない場合、無駄な処理を避ける
 
-//　通常、シーンコンポーネントの位置などは親からの相対座標だけど、
-// これらフラグがtrueだとワールドに対して直接指定される
-// relativeLocation_ を親ではなくワールド座標系に対する位置とみなす場合に true
+    //　通常、シーンコンポーネントの位置などは親からの相対座標だけど、
+    // これらフラグがtrueだとワールドに対して直接指定される
+    // relativeLocation_ を親ではなくワールド座標系に対する位置とみなす場合に true
     uint8_t absoluteLocation_ : 1 = 0;
     // relativeRotation_ を親ではなくワールド座標系に対する位置とみなす場合に true
     uint8_t absoluteRotation_ : 1 = 0;
@@ -193,7 +182,6 @@ public:
     {
         absoluteScale_ = absoluteScale ? 1 : 0;
     }
-
 
 public:
     // 前フレームの Transform を保存する
@@ -298,9 +286,6 @@ public:
     // （親がある場合は、親のワールド行列を使って相対位置に変換してセットする）
     virtual void SetWorldLocationDirect(const DirectX::XMFLOAT3& newWorldLocation)
     {
-#if 0
-        GetComponentWorldTransform().SetTranslation(newWorldLocation);
-#else
         if (auto parent = attachParent_.lock())
         {
             // 親のワールドトランスフォームの逆行列を使って、相対位置を求める
@@ -316,21 +301,10 @@ public:
         {
             SetRelativeLocationDirect(newWorldLocation);
         }
-#endif
     }
     // ワールド空間でのこのコンポーネントのクォータニオンを設定
     void SetWorldRotationDirect(const DirectX::XMFLOAT4& newWorldRotation)
     {
-#if 0
-        if (auto parent = attachParent_.lock())
-        {
-            parent->SetRelativeRotationDirect(newWorldRotation);
-        }
-        else
-        {
-            SetRelativeRotationDirect(newWorldRotation);
-        }
-#else
         using namespace DirectX;
 
         if (auto parent = attachParent_.lock())
@@ -354,7 +328,6 @@ public:
         {
             SetRelativeRotationDirect(newWorldRotation);
         }
-#endif // 0
     }
     // ワールド空間でのこのコンポーネントの角度を設定
     void SetWorldEulerRotationDirect(const DirectX::XMFLOAT3& newWorldEuler)
@@ -404,7 +377,6 @@ public:
 
         SetWorldLocationDirect(pos);
         SetWorldRotationDirect(rot);
-        //SetWorldScaleDirect(scl);
     }
 
 
@@ -429,9 +401,7 @@ public:
         XMStoreFloat3(&scl, scale);
         XMStoreFloat4(&rot, rotation);
 
-        //SetRelativeLocationDirect(pos);
-        SetRelativeRotationDirect(rot);
-        //SetRelativeScaleDirect(scl);
+        SetRelativeRotationDirect(rot); 
     }
 
 
@@ -594,5 +564,3 @@ public:
     void AddLocalRotation(const DirectX::XMFLOAT3& offset);
 };
 
-
-#endif  //SCENE_COMPONENT_H

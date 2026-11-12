@@ -1,15 +1,8 @@
-#ifndef COMPONENT_H
-#define COMPONENT_H
-// 1. 自分自身のヘッダが一番上に来る
-
-// 2. C 標準ライブラリ（あれば）
+#pragma once
 
 // C++ 標準ライブラリ
 #include <memory>
 #include <string>
-
-// 他ライブラリ
-
 
 #ifdef USE_IMGUI
 #define IMGUI_ENABLE_DOCKING
@@ -114,6 +107,3 @@ protected:
 };
 
 
-
-
-#endif //COMPONENT_H
