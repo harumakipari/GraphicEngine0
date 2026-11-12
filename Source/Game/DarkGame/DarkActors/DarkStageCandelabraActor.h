@@ -1,6 +1,6 @@
 #pragma once
 #include "DarkStageAsset.h"
-#include "Components/Easing/CoreEasingComponent.h"
+#include "Components/Easing/EasingComponent.h"
 #include "Core/Actor.h"
 #include "Components/Render/PointLightComponent.h"
 

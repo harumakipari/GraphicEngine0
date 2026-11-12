@@ -98,7 +98,7 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
         }
         else
         {
-            DirectX::XMFLOAT3 pos = owner_.lock()->GetPosition();
+            DirectX::XMFLOAT3 pos = owner.lock()->GetPosition();
             DirectX::XMFLOAT3 targetPos = targetShared->GetPosition();
 
             DirectX::XMFLOAT3 dir =
@@ -137,12 +137,12 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
         velocity_.y += gravity_ * deltaTime;
     }
 
-    if (owner_.expired())
+    if (owner.expired())
     {
         Logger::Warning("owner is not existed so movement is nullptr!");
         _ASSERT("owner is not existed so movement is nullptr!");
     }
-    auto owner = owner_.lock();
+    auto owner = this->owner.lock();
 
     // ˆÊ’u‚ð—\‘ª
     DirectX::XMFLOAT3 pos = owner->GetPosition();
@@ -319,8 +319,8 @@ void RotationComponent::SetDirection(const DirectX::XMFLOAT3& dir)
 
     // •âŠÔ‚Ì‰Šú‰»
     lerpTime_ = 0.0f;
-    startAngle_ = owner_.lock()->GetEulerRotation();
-    startRotation_ = owner_.lock()->GetQuaternionRotation();
+    startAngle_ = owner.lock()->GetEulerRotation();
+    startRotation_ = owner.lock()->GetQuaternionRotation();
     float targetYaw = std::atan2f(dir.x, dir.z);
     startAngle_.x = DirectX::XMConvertToRadians(startAngle_.x);
     startAngle_.z = DirectX::XMConvertToRadians(startAngle_.z);
@@ -330,12 +330,11 @@ void RotationComponent::SetDirection(const DirectX::XMFLOAT3& dir)
 
 void RotationComponent::SetDirectionImmediate(const DirectX::XMFLOAT3& dir)
 {
-    // Keep the current rotation for a zero-length XZ direction.
     if (fabs(dir.x) < 0.001f && fabs(dir.z) < 0.001f)
         return;
 
     SetDirection(dir);
-    if (auto owner = owner_.lock())
+    if (auto owner = this->owner.lock())
         owner->SetQuaternionRotation(targetRotation_);
     lerpTime_ = rotateTime_;
 }
@@ -344,7 +343,7 @@ void RotationComponent::ForceDirectionImmediate(const DirectX::XMFLOAT3& dir)
     if (fabs(dir.x) < 0.001f && fabs(dir.z) < 0.001f)
         return;
 
-    if (auto owner = owner_.lock())
+    if (auto owner = this->owner.lock())
     {
         direction_ = dir;
         previousDirection_ = dir;
@@ -364,7 +363,7 @@ void RotationComponent::ForceDirectionImmediate(const DirectX::XMFLOAT3& dir)
 
 void RotationComponent::SyncCurrentRotation()
 {
-    if (const auto owner = owner_.lock())
+    if (const auto owner = this->owner.lock())
     {
         const DirectX::XMFLOAT4 currentRotation = owner->GetQuaternionRotation();
         startRotation_ = currentRotation;
@@ -378,7 +377,7 @@ bool RotationComponent::RotateTowardsDirection(
     const float maxDegreesPerSecond,
     const float deltaTime)
 {
-    if (auto owner = owner_.lock())
+    if (auto owner = this->owner.lock())
     {
         const float directionLengthSq =
             direction.x * direction.x + direction.z * direction.z;
@@ -404,7 +403,7 @@ bool RotationComponent::RotateTowardsDirection(
         DirectX::XMStoreFloat4(&rotation,
             DirectX::XMQuaternionRotationRollPitchYaw(0.0f, newYaw, 0.0f));
         owner->SetQuaternionRotation(rotation);
-        // Do not let a pending SetDirection interpolation overwrite this rotation.
+        
         lerpTime_ = rotateTime_;
         return std::abs(yawDelta) <= maxStep;
     }
@@ -421,7 +420,7 @@ void RotationComponent::Tick(float deltaTime)
     t = std::min<float>(t, 1.0f);
 
     auto q = SlerpQuaternion(startRotation_, targetRotation_, t);
-    owner_.lock()->SetQuaternionRotation(q);
+    owner.lock()->SetQuaternionRotation(q);
 }
 
 void InputComponent::Tick(float)

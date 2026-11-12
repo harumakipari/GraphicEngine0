@@ -16,13 +16,13 @@ void SceneComponent::CapturePreviousTransform()
     }
 }
 
-void SceneComponent::UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags, TeleportType teleport)
+void SceneComponent::UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags)
 {
-    UpdateComponentToWorldWithParent(GetAttachParent().get(), GetAttachSocketNode(), updateTransformFlags, teleport);
+    UpdateComponentToWorldWithParent(GetAttachParent().get(), GetAttachSocketNode(), updateTransformFlags);
 }
 
 // 親の Transform をもとに、自分の Transform（= ComponentToWorld）を更新し、必要に応じてその変更を子へ伝播する
-void SceneComponent::UpdateComponentToWorldWithParent(SceneComponent* parent, int socketNode, UpdateTransformFlags updateTransformFlags, TeleportType teleport)
+void SceneComponent::UpdateComponentToWorldWithParent(SceneComponent* parent, int socketNode, UpdateTransformFlags updateTransformFlags)
 {
     // 親がまだ更新されていない場合は、親の階層を上って更新する必要がある
     if (parent && !parent->componentToWorldTransformUpdate_)
@@ -46,13 +46,13 @@ void SceneComponent::UpdateComponentToWorldWithParent(SceneComponent* parent, in
 
     // Transform に変更がある、または Teleport 指定がされているならば、
     // 他のコンポーネントが Teleport を検知する必要がある可能性もある
-    if (hasChanged || teleport != TeleportType::None)
+    if (hasChanged)
     {
         // Transform を更新
         componentToWorld_ = newTransform;
 
         // 変更を子に伝播させる
-        PropagateTransformUpdate(true, updateTransformFlags, teleport);
+        PropagateTransformUpdate(true, updateTransformFlags);
     }
     else
     {
@@ -62,7 +62,7 @@ void SceneComponent::UpdateComponentToWorldWithParent(SceneComponent* parent, in
 }
 
 // このコンポーネントにアタッチされている全ての子コンポーネントの Transform を更新する
-void SceneComponent::UpdateChildTransforms(UpdateTransformFlags updateTransformFlags, TeleportType teleport)
+void SceneComponent::UpdateChildTransforms(UpdateTransformFlags updateTransformFlags)
 {
     if (attachChildren_.size() > 0)
     {// 子コンポーネントが存在していたら、
@@ -83,7 +83,7 @@ void SceneComponent::UpdateChildTransforms(UpdateTransformFlags updateTransformF
             {
                 if (!childComponent->componentToWorldTransformUpdate_)
                 {// まだ一度も更新されていない子ならそのまま更新
-                    childComponent->UpdateComponentToWorld(updateTransformFlagsFromParent, teleport);
+                    childComponent->UpdateComponentToWorld(updateTransformFlagsFromParent);
                 }
                 else
                 {// すでに更新された子コンポーネントなら条件に応じてスキップ or 更新：
@@ -97,7 +97,7 @@ void SceneComponent::UpdateChildTransforms(UpdateTransformFlags updateTransformF
                         continue;
                     }
 
-                    childComponent->UpdateComponentToWorld(updateTransformFlagsFromParent, teleport);
+                    childComponent->UpdateComponentToWorld(updateTransformFlagsFromParent);
                 }
             }
         }
@@ -105,7 +105,7 @@ void SceneComponent::UpdateChildTransforms(UpdateTransformFlags updateTransformF
 }
 
 // 自身の Transform の変更を反映し、必要に応じて子コンポーネントにもそれを伝播させる関数
-void SceneComponent::PropagateTransformUpdate(bool transformChanged, UpdateTransformFlags updateTransformFlags, TeleportType teleport)
+void SceneComponent::PropagateTransformUpdate(bool transformChanged, UpdateTransformFlags updateTransformFlags)
 {
     // アタッチされている子コンポーネントの一覧を取得
     const std::vector<std::shared_ptr<SceneComponent>>& attachedChildren = GetAttachChildren();
@@ -117,7 +117,7 @@ void SceneComponent::PropagateTransformUpdate(bool transformChanged, UpdateTrans
             // 子供には skipPhysicsUpdate フラグを渡さない（物理エンジンが制御している場合を除く）
             UpdateTransformFlags childrenFlagNoPhysics = ~UpdateTransformFlags::SkipPhysicsUpdate & updateTransformFlags;
             // 子供たちの Transform を更新（再帰的）
-            UpdateChildTransforms(childrenFlagNoPhysics, teleport);
+            UpdateChildTransforms(childrenFlagNoPhysics);
         }
     }
     else
@@ -140,7 +140,7 @@ void SceneComponent::AttachToComponent(const std::shared_ptr<SceneComponent>& pa
     // エラー: 自分自身にアタッチしようとしている場合
     _ASSERT_EXPR(parent.get() != this, L"自分自身にはアタッチ出来ません");
     // エラー: 同じ Actor 内で、ルートコンポーネントが他のコンポーネントにアタッチされようとしている
-    _ASSERT_EXPR(!(owner_.lock() == parent->owner_.lock() && owner_.lock() && owner_.lock()->GetRootComponent().get() == this),
+    _ASSERT_EXPR(!(owner.lock() == parent->owner.lock() && owner.lock() && owner.lock()->GetRootComponent().get() == this),
         L"同じアクター内のルートコンポーネントは他にアタッチできません");
     // エラー: サイクル（循環）を作ろうとしている場合（親が既にこのコンポーネントにぶら下がっている）
     _ASSERT_EXPR(!parent->IsAttachAbove(this), L"循環参照が発生します");

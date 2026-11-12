@@ -60,14 +60,13 @@ struct XMFLOAT3Equal
 class RigidBodyComponent : public Component
 {
 public:
-    //RigidBodyComponent() = default;
-
     RigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner) : Component(name, owner) {}
 
     virtual ~RigidBodyComponent() = default;
 
     virtual void Initialize() {};
-    virtual void UpdateComponentToWorld(UpdateTransformFlags update_transform_flags = UpdateTransformFlags::None, TeleportType teleport = TeleportType::None) {}
+
+    virtual void UpdateComponentToWorld(UpdateTransformFlags update_transform_flags = UpdateTransformFlags::None) {}
 
 
     virtual void Initialize(physx::PxPhysics* physics) = 0;
@@ -98,9 +97,6 @@ public:
     SingleRigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner, ShapeComponent* shape)
         : RigidBodyComponent(name, owner), shapeComponent_(shape), material_(Physics::Instance().GetMaterial(PhysicsMaterialType::Default)) {
     }
-    //SingleRigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner, ShapeComponent* shape)
-    //    : RigidBodyComponent(name, owner), shapeComponent_(shape), material_(Physics::Instance().GetDefaultMaterial()) {
-    //}
 
     virtual void Initialize(physx::PxPhysics* physics) override;
 
@@ -255,15 +251,6 @@ public:
                 pxActor_->addForce(impulsePx, PxForceMode::eIMPULSE);
             }
         }
-        //else
-        //{// キネマティックの時
-        //    if (pxActor_)
-        //    {
-        //        PxTransform current = pxActor_->getGlobalPose();
-
-        //    }
-
-        //}
     }
 
     void SetMaterial(PhysicsMaterialType type)
@@ -364,19 +351,6 @@ public:
         auto* dyn = rigidBodies_[index]->is<physx::PxRigidDynamic>();
         return dyn ? dyn->getRigidBodyFlags() & physx::PxRigidBodyFlag::eKINEMATIC : false;
     }
-
-    //virtual void Destroy() override
-    //{
-    //    for (auto pxActor : rigidBodies_)
-    //    {
-    //        if (pxActor && isAddedToScene_)
-    //        {
-    //            Physics::Instance().GetScene()->removeActor(*pxActor);
-    //            isAddedToScene_ = false;
-    //        }
-    //        isDestroyed_ = true;
-    //    }
-    //}
 
     // 当たり判定を無効にする関数
     void DisableCollision()
@@ -564,7 +538,7 @@ class TriangleMeshRigidBodyComponent :public RigidBodyComponent
 {
 public:
     TriangleMeshRigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner, MeshComponent* meshComponent)
-        : RigidBodyComponent(name, owner), owner_(meshComponent), material_(Physics::Instance().GetMaterial(PhysicsMaterialType::Default)) {
+        : RigidBodyComponent(name, owner), meshComponent(meshComponent), material_(Physics::Instance().GetMaterial(PhysicsMaterialType::Default)) {
     }
 
     void Initialize(physx::PxPhysics* physics) override;
@@ -645,7 +619,7 @@ public:
         pxShape_ = nullptr; // PxShape はアクターが所有しているので release 不要
     }
 private:
-    MeshComponent* owner_ = nullptr;
+    MeshComponent* meshComponent = nullptr;
     physx::PxRigidStatic* pxActor_ = nullptr;
     physx::PxShape* pxShape_ = nullptr;
     physx::PxMaterial* material_ = nullptr;

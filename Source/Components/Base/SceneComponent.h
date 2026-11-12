@@ -72,7 +72,7 @@ public:
 #ifdef USE_IMGUI
         inspectorEuler_ = GetRelativeEulerRotation(); // ここをコメントアウトするかで、ImGuiがバグるか変わる。
 
-        if (ImGui::TreeNodeEx((name_ + "  Transform").c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+        if (ImGui::TreeNodeEx((name + "  Transform").c_str(), ImGuiTreeNodeFlags_DefaultOpen))
         {
             ImGui::DragFloat3("Relative Location", &relativeLocation_.x, 0.1f);
 
@@ -115,7 +115,7 @@ public:
         }
 
 
-        if (ImGui::TreeNode((name_ + "   Debug Info").c_str()))
+        if (ImGui::TreeNode((name + "   Debug Info").c_str()))
         {
             ImGui::Text("Children: %zu", attachChildren_.size());
             ImGui::Text("Parent: %s", attachParent_.lock() ? attachParent_.lock()->GetName().c_str() : "None");
@@ -406,7 +406,7 @@ public:
 
 
     // このコンポーネントが動いた時にコールバック(呼び出)される関数
-    virtual void OnUpdateTransform(UpdateTransformFlags updateTransformFlags, TeleportType teleport = TeleportType::None)
+    virtual void OnUpdateTransform(UpdateTransformFlags updateTransformFlags)
     {
     }
 
@@ -420,7 +420,7 @@ public:
     }
 
     // このコンポーネントにアタッチされている全ての子コンポーネントたちの Transform を更新する
-    void UpdateChildTransforms(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None, TeleportType teleport = TeleportType::None);
+    void UpdateChildTransforms(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None);
 
         // このコンポーネントの親からの相対的な Transform を返す
     Transform GetRelativeTransform() const
@@ -507,10 +507,10 @@ protected:
 private:
     //「Transformが変わった時や物理的に移動した時に、自分とその子たちを正しく更新するための中心的な処理」
     // 自身の Transform の変更を反映し、必要に応じて子コンポーネントにもそれを伝播させる関数
-    void PropagateTransformUpdate(bool transformChanged, UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None, TeleportType teleport = TeleportType::None);
+    void PropagateTransformUpdate(bool transformChanged, UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None);
 
     // 親の Transform をもとに、自分の Transform（= ComponentToWorld）を更新し、必要に応じてその変更を子へ伝播する
-    void UpdateComponentToWorldWithParent(SceneComponent* parent, int socketNode, UpdateTransformFlags updateTransformFlags, TeleportType teleport);
+    void UpdateComponentToWorldWithParent(SceneComponent* parent, int socketNode, UpdateTransformFlags updateTransformFlags);
 
 
     // 指定された component が、このコンポーネントの祖先（親、祖父母など）であるかを判定する関数。
@@ -532,7 +532,7 @@ private:
 
     friend class Actor;
 public:
-    virtual void UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None, TeleportType teleport = TeleportType::None) override final;
+    virtual void UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None) override final;
 
     void Tick(float deltaTime) override {}
 

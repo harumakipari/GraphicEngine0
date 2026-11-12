@@ -1,10 +1,10 @@
 #include "pch.h"
-#include "CoreEasingComponent.h"
+#include "EasingComponent.h"
 
 #include "Core/Actor.h"
 #include "Engine/Utility/Time.h"
 
-void CoreEasingComponent::Tick(float deltaTime)
+void EasingComponent::Tick(float deltaTime)
 {
     for (auto& [accessor, handler] : handlers)
     {
@@ -27,17 +27,10 @@ void CoreEasingComponent::Tick(float deltaTime)
     }
 }
 
-void CoreEasingComponent::DrawImGuiInspector()
+void EasingComponent::DrawImGuiInspector()
 {
 #ifdef USE_IMGUI
-#if 0
-    if (ImGui::Button("Dump"))
-    {
-        DumpObject(this);// ないから
-    }
-#endif // 0
-
-    auto owner = owner_.lock();
+    auto owner = this->owner.lock();
     if (!owner)
     {
         Logger::Warning(u8"イージングコンポーネントのownerがnullです！");
@@ -60,7 +53,7 @@ void CoreEasingComponent::DrawImGuiInspector()
         if (ImGui::TreeNodeEx(("ease" + std::to_string(i)).c_str(), ImGuiTreeNodeFlags_DefaultOpen))
         {
             ImGui::Combo("function", &easeItems[i].first, typeNames, IM_ARRAYSIZE(typeNames));
-            TestEasingHandler::ToEasingFunction(static_cast<TestEaseType>(easeItems[i].first), easeItems[i].second.function, easeItems[i].second.backFunction);
+            EasingHandler::ToEasingFunction(static_cast<TestEaseType>(easeItems[i].first), easeItems[i].second.function, easeItems[i].second.backFunction);
 
             if (easeItems[i].first != IM_ARRAYSIZE(typeNames) - 1)
             {
@@ -91,7 +84,7 @@ void CoreEasingComponent::DrawImGuiInspector()
 
     if (ImGui::Button("Start") && easeItems.size() > 0)
     {
-        TestEasingHandler handler;
+        EasingHandler handler;
         for (auto& easeItem : easeItems)
         {
             handler.AddEasing(easeItem.second);

@@ -264,14 +264,13 @@
     <ClCompile Include="Source\Animation\AnimationState.cpp" />
     <ClCompile Include="Source\Animation\BlendSpaceAnimation.cpp" />
     <ClCompile Include="Source\Components\Audio\AudioSourceComponent.cpp" />
-    <ClCompile Include="Source\Components\Base\Component.cpp" />
     <ClCompile Include="Source\Components\Base\SceneComponent.cpp" />
     <ClCompile Include="Source\Components\Camera\CameraComponent.cpp" />
     <ClCompile Include="Source\Components\CollisionShape\CollisionComponent.cpp" />
     <ClCompile Include="Source\Components\CollisionShape\RigidBodyComponent.cpp" />
     <ClCompile Include="Source\Components\CollisionShape\ShapeComponent.cpp" />
     <ClCompile Include="Source\Components\Controller\ControllerComponent.cpp" />
-    <ClCompile Include="Source\Components\Easing\CoreEasingComponent.cpp" />
+    <ClCompile Include="Source\Components\Easing\EasingComponent.cpp" />
     <ClCompile Include="Source\Components\Effect\ParticleComponent.cpp" />
     <ClCompile Include="Source\Components\Render\MeshComponent.cpp" />
     <ClCompile Include="Source\Components\Render\PointLightComponent.cpp" />
@@ -286,7 +285,7 @@
     <ClCompile Include="Source\Engine\Debug\EditorGizmo.cpp" />
     <ClCompile Include="Source\Engine\Debug\Logger.cpp" />
     <ClCompile Include="Source\Engine\Debug\SceneEditor.cpp" />
-    <ClCompile Include="Source\Engine\Easing\TestEasingHandler.cpp" />
+    <ClCompile Include="Source\Engine\Easing\EasingHandler.cpp" />
     <ClCompile Include="Source\Engine\Effects\CoreComputeParticleSystem.cpp" />
     <ClCompile Include="Source\Engine\Effects\CurveEditorWidget.cpp" />
     <ClCompile Include="Source\Engine\Effects\EffectEditor.cpp" />
@@ -295,7 +294,6 @@
     <ClCompile Include="Source\Engine\Framework\Framework.cpp" />
     <ClCompile Include="Source\Engine\Input\GamePad.cpp" />
     <ClCompile Include="Source\Engine\Input\InputSystem.cpp" />
-    <ClCompile Include="Source\Engine\Resources\ResourceManager.cpp" />
     <ClCompile Include="Source\Engine\Scene\Scene.cpp" />
     <ClCompile Include="Source\Engine\Scene\SceneBase.cpp" />
     <ClCompile Include="Source\Engine\Utility\Dialog.cpp" />
@@ -418,7 +416,7 @@
     <ClInclude Include="Source\Components\CollisionShape\RigidBodyComponent.h" />
     <ClInclude Include="Source\Components\CollisionShape\ShapeComponent.h" />
     <ClInclude Include="Source\Components\Controller\ControllerComponent.h" />
-    <ClInclude Include="Source\Components\Easing\CoreEasingComponent.h" />
+    <ClInclude Include="Source\Components\Easing\EasingComponent.h" />
     <ClInclude Include="Source\Components\Effect\ParticleComponent.h" />
     <ClInclude Include="Source\Components\Render\MeshComponent.h" />
     <ClInclude Include="Source\Components\Render\PointLightComponent.h" />
@@ -438,7 +436,7 @@
     <ClInclude Include="Source\Engine\Debug\SceneEditor.h" />
     <ClInclude Include="Source\Engine\Debug\ScopedTimer.h" />
     <ClInclude Include="Source\Engine\Easing\Easing.h" />
-    <ClInclude Include="Source\Engine\Easing\TestEasingHandler.h" />
+    <ClInclude Include="Source\Engine\Easing\EasingHandler.h" />
     <ClInclude Include="Source\Engine\Effects\CoreComputeParticleSystem.h" />
     <ClInclude Include="Source\Engine\Effects\EffectEditor.h" />
     <ClInclude Include="Source\Engine\Effects\CurveEditorWidget.h" />
@@ -448,7 +446,6 @@
     <ClInclude Include="Source\Engine\Input\GamePad.h" />
     <ClInclude Include="Source\Engine\Input\InputSystem.h" />
     <ClInclude Include="Source\Engine\Resources\Resource.h" />
-    <ClInclude Include="Source\Engine\Resources\ResourceManager.h" />
     <ClInclude Include="Source\Engine\Scene\Scene.h" />
     <ClInclude Include="Source\Engine\Scene\SceneBase.h" />
     <ClInclude Include="Source\Engine\Scene\SceneJson.h" />
