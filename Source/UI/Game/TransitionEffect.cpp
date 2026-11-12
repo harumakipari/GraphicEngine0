@@ -54,7 +54,7 @@ void ScaleTransitionEffect::Start(TransitionDirection dir)
 {
     isFinishTransitionPerform = false;
 
-    TestEasingHandler handler;
+    EasingHandler handler;
     float startScale = 160.0f;
 
     if (dir == TransitionDirection::Close)
@@ -118,7 +118,7 @@ void FadeTransitionEffect::Start(TransitionDirection dir)
 {
     isFinishTransitionPerform = false;
 
-    TestEasingHandler handler;
+    EasingHandler handler;
 
     if (dir == TransitionDirection::Close)
     {

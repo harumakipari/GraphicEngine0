@@ -1,7 +1,7 @@
 #include "pch.h"
-#include "TestEasingHandler.h"
+#include "EasingHandler.h"
 
-void TestEasingHandler::AddEasing(TestEaseType type, float start, float end, float duration, float back)
+void EasingHandler::AddEasing(TestEaseType type, float start, float end, float duration, float back)
 {
 	//処理内容を設定
 	EaseItem item{};
@@ -21,7 +21,7 @@ void TestEasingHandler::AddEasing(TestEaseType type, float start, float end, flo
 	isCompleted = false;
 }
 
-void TestEasingHandler::AddEasing(const EaseItem& item)
+void EasingHandler::AddEasing(const EaseItem& item)
 {
 	//シーケンスに追加
 	sequence.emplace_back(item);
@@ -29,7 +29,7 @@ void TestEasingHandler::AddEasing(const EaseItem& item)
 	isCompleted = false;
 }
 
-void TestEasingHandler::AddWait(float waitTime)
+void EasingHandler::AddWait(float waitTime)
 {
 	//処理内容を設定
 	EaseItem item{};
@@ -43,7 +43,7 @@ void TestEasingHandler::AddWait(float waitTime)
 	isCompleted = false;
 }
 
-void TestEasingHandler::Update(float& value, float deltaTime)
+void EasingHandler::Update(float& value, float deltaTime)
 {
 	if (sequence.empty()) return;
 
@@ -79,14 +79,14 @@ void TestEasingHandler::Update(float& value, float deltaTime)
 	}
 }
 
-void TestEasingHandler::Clear()
+void EasingHandler::Clear()
 {
 	sequence.clear();
 	isCompleted = false;
 	completeFunction = nullptr;
 }
 
-void TestEasingHandler::ToEasingFunction(TestEaseType type, std::function<float(float, float, float, float)>& function, std::function<float(float, float, float, float, float)>& backFunction)
+void EasingHandler::ToEasingFunction(TestEaseType type, std::function<float(float, float, float, float)>& function, std::function<float(float, float, float, float, float)>& backFunction)
 {
 	function = nullptr;
 	backFunction = nullptr;

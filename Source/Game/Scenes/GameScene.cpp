@@ -2289,7 +2289,7 @@ void GameScene::StartBossRoomLerp(float startFactor, float endFactor, float dura
     startBossRoomLerp = true;
     // ボスの部屋の色のラープを開始する
     {
-        TestEasingHandler handler;
+        EasingHandler handler;
 
         handler.AddEasing(
             TestEaseType::InSine,

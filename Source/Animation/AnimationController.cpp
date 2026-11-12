@@ -153,11 +153,11 @@ void AnimationController::OnUpdate(const float deltaTime)
 		target_->model->BlendAnimations(
 			animationNodes[Origin], runtimeHeldPoseNodes, blendFactor, finalNodes);
 		target_->SetModelNodes(finalNodes);
-		target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		target_->UpdateChildTransforms(UpdateTransformFlags::None);
 		for (auto* extraTarget : extraTargets_)
 		{
 			extraTarget->SetModelNodes(finalNodes);
-			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None);
 		}
 
 		if (blendFactor >= 1.0f)
@@ -173,11 +173,11 @@ void AnimationController::OnUpdate(const float deltaTime)
 	{
 		finalNodes = runtimeHeldPoseNodes;
 		target_->SetModelNodes(finalNodes);
-		target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		target_->UpdateChildTransforms(UpdateTransformFlags::None);
 		for (auto* extraTarget : extraTargets_)
 		{
 			extraTarget->SetModelNodes(finalNodes);
-			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None);
 		}
 		return;
 	}
@@ -575,11 +575,11 @@ void AnimationController::EndEditorPreview()
 	suppressNormalRootMotionObservedTransition = editorRuntimeSnapshot.suppressNormalRootMotionObservedTransition;
 
 	target_->SetModelNodes(finalNodes);
-	target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+	target_->UpdateChildTransforms(UpdateTransformFlags::None);
 	for (auto* extraTarget : extraTargets_)
 	{
 		extraTarget->SetModelNodes(finalNodes);
-		extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		extraTarget->UpdateChildTransforms(UpdateTransformFlags::None);
 	}
 
 	if (rootNodeIndex >= 0 && rootNodeIndex < static_cast<int>(finalNodes.size()))
@@ -705,11 +705,11 @@ void AnimationController::ReleaseRuntimeHeldAnimationPose(const bool preserveBle
 	{
 		finalNodes = runtimeHeldPoseNodes;
 		target_->SetModelNodes(finalNodes);
-		target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		target_->UpdateChildTransforms(UpdateTransformFlags::None);
 		for (auto* extraTarget : extraTargets_)
 		{
 			extraTarget->SetModelNodes(finalNodes);
-			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None);
 		}
 	}
 
@@ -725,11 +725,11 @@ void AnimationController::ReleaseHeldAnimationPose(bool preserveBlendSource)
 		EndEditorPreview();
 		finalNodes = heldNodes;
 		target_->SetModelNodes(finalNodes);
-		target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		target_->UpdateChildTransforms(UpdateTransformFlags::None);
 		for (auto* extraTarget : extraTargets_)
 		{
 			extraTarget->SetModelNodes(finalNodes);
-			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+			extraTarget->UpdateChildTransforms(UpdateTransformFlags::None);
 		}
 		return;
 	}
@@ -791,8 +791,8 @@ void AnimationController::ApplyRuntimeVisualPose()
 	if (!target_) return;
 	const auto& visualPoseNodes = GetRuntimeVisualPoseNodes();
 	target_->SetModelNodes(visualPoseNodes);
-	target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
-	for (auto* extraTarget : extraTargets_) { extraTarget->SetModelNodes(visualPoseNodes); extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None); }
+	target_->UpdateChildTransforms(UpdateTransformFlags::None);
+	for (auto* extraTarget : extraTargets_) { extraTarget->SetModelNodes(visualPoseNodes); extraTarget->UpdateChildTransforms(UpdateTransformFlags::None); }
 }
 void AnimationController::UpdateEditorPreview(const float deltaTime)
 {
@@ -994,11 +994,11 @@ void AnimationController::ApplyEditorPreviewPose()
 	ApplyLocalPoseOverride();
 
 	target_->SetModelNodes(finalNodes);
-	target_->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+	target_->UpdateChildTransforms(UpdateTransformFlags::None);
 	for (auto* extraTarget : extraTargets_)
 	{
 		extraTarget->SetModelNodes(finalNodes);
-		extraTarget->UpdateChildTransforms(UpdateTransformFlags::None, TeleportType::None);
+		extraTarget->UpdateChildTransforms(UpdateTransformFlags::None);
 	}
 	DrawEditorPreviewStates();
 }

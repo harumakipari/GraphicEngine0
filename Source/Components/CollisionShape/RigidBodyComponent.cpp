@@ -343,7 +343,7 @@ void TriangleMeshRigidBodyComponent::Initialize(physx::PxPhysics* physics)
 {
 	using namespace physx;
 
-	auto& model = owner_->model; //batchMeshes
+	auto& model = meshComponent->model; //batchMeshes
 
 	//モデルがメートル単位か cm単位の時はfalseにする
 	bool isMeter = model->isModelInMeters;
@@ -433,7 +433,7 @@ void TriangleMeshRigidBodyComponent::Initialize(physx::PxPhysics* physics)
 
 	PxTriangleMeshGeometry geometry(triangleMesh);
 	pxShape_ = physics->createShape(geometry, *material_, true);
-	pxShape_->userData = owner_;   // MeshComponent へのポインタ
+	pxShape_->userData = meshComponent;   // MeshComponent へのポインタ
 
 	// 衝突フィルタ
 	physx::PxFilterData queryData = pxShape_->getQueryFilterData();
@@ -441,14 +441,14 @@ void TriangleMeshRigidBodyComponent::Initialize(physx::PxPhysics* physics)
 	pxShape_->setQueryFilterData(queryData);
 	pxShape_->setFlag(PxShapeFlag::eSCENE_QUERY_SHAPE, true);
 	pxShape_->setFlag(PxShapeFlag::eSIMULATION_SHAPE, true); // 念のため
-	DirectX::XMFLOAT3 pos = owner_->GetOwner()->GetPosition();
-	DirectX::XMFLOAT4 rot = owner_->GetComponentRotation();
+	DirectX::XMFLOAT3 pos = meshComponent->GetOwner()->GetPosition();
+	DirectX::XMFLOAT4 rot = meshComponent->GetComponentRotation();
 	PxVec3 pxPosition(pos.x, pos.y, pos.z);
 	PxQuat pxRotation(rot.x, rot.y, rot.z, rot.w);
 	PxTransform transform(pxPosition, pxRotation);
 
 	pxActor_ = physics->createRigidStatic(transform);
-	pxActor_->userData = owner_->GetOwner();     // Actor へのポインタ
+	pxActor_->userData = meshComponent->GetOwner();     // Actor へのポインタ
 	pxActor_->attachShape(*pxShape_);
 
 	physx::PxTransform pose(

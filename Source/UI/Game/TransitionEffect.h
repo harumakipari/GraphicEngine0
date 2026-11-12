@@ -1,5 +1,5 @@
 #pragma once
-#include "Components/Easing/CoreEasingComponent.h"
+#include "Components/Easing/EasingComponent.h"
 #include "UI/Widgets/Widget.h"
 
 enum class TransitionDirection :uint8_t

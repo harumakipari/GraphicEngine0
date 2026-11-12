@@ -3051,7 +3051,7 @@ void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
 {
 	// 名前テクスチャのalphaが徐々に濃くなる処理
 	{
-		TestEasingHandler handler;
+		EasingHandler handler;
 
 		handler.AddEasing(
 			TestEaseType::InSine,

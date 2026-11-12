@@ -12,7 +12,7 @@ void MeshComponent::DrawImGuiInspector()
 {
 #ifdef USE_IMGUI
     SceneComponent::DrawImGuiInspector();
-    if (ImGui::TreeNode((name_ + "  model").c_str()))
+    if (ImGui::TreeNode((name + "  model").c_str()))
     {
         ImGui::Checkbox("isVisible", &isVisible_);
         ImGui::SliderFloat(U8("F‘Š’²®"), &plusAlphaCBuffer->data.hueShift, -1.0f, +1.0);

@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // C++ 標準ライブラリ
 #include <string>
@@ -120,7 +120,6 @@ public:
 				return casted;
 			}
 		}
-
 		_ASSERT(L"Actor の GetComponent が nullptr を返しています。");
 		return nullptr;
 	}

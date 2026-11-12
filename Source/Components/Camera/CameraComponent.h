@@ -1,5 +1,4 @@
-#ifndef CAMERA_COMPONENT_H
-#define CAMERA_COMPONENT_H
+#pragma once
 
 // C++ 標準ライブラリ
 #include <string>
@@ -16,7 +15,7 @@
 
 // プロジェクトの他のヘッダ
 #include "Components/Base/SceneComponent.h"
-#include "Components/Easing/CoreEasingComponent.h"
+#include "Components/Easing/EasingComponent.h"
 #include "Core/Actor.h"
 #include "Engine/Camera/CameraConstants.h"
 #include "Engine/Input/InputSystem.h"
@@ -178,7 +177,7 @@ public:
     {
 #ifdef USE_IMGUI
         SceneComponent::DrawImGuiInspector();
-        if (ImGui::TreeNode((name_ + "  camera").c_str()))
+        if (ImGui::TreeNode((name + "  camera").c_str()))
         {
             ImGui::DragFloat3(U8("注視点のオフセット"), &targetOffset.x, 0.1f);
             ImGui::DragFloat3(U8("カメラの位置のオフセット"), &cameraOffset.x, 0.1f);
@@ -215,7 +214,7 @@ public:
         distanceFrom = from;
         distanceTo = to;
 
-        TestEasingHandler handler;
+        EasingHandler handler;
         handler.AddEasing(TestEaseType::OutExp, 0.0f, 1.0f, time);
 
         PropertyAccessor<float> accessor;
@@ -382,7 +381,7 @@ private:
 #ifdef USE_IMGUI
 
         SceneComponent::DrawImGuiInspector();
-        if (ImGui::TreeNode((name_ + "  camera").c_str()))
+        if (ImGui::TreeNode((name + "  camera").c_str()))
         {
             ImGui::Checkbox("useDebug", &useDebug);
             ImGui::DragFloat("moveSpeed", &moveSpeed, 0.1f);
@@ -567,7 +566,7 @@ private:
 #ifdef USE_IMGUI
 
         SceneComponent::DrawImGuiInspector();
-        if (ImGui::TreeNode((name_ + "  camera").c_str()))
+        if (ImGui::TreeNode((name + "  camera").c_str()))
         {
             ImGui::Checkbox("useCinematic", &useCinematic);
             ImGui::Checkbox("Cinematic Camera Debug Input", &cinematicCameraDebugInputEnabled);
@@ -1196,4 +1195,4 @@ private:
     std::function<void()> onMovieStart;
 };
 
-#endif //CAMERA_COMPONENT_H
+

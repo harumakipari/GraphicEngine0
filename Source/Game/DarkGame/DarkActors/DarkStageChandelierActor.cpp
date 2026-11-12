@@ -79,7 +79,7 @@ void DarkStageChandelierActor::ResetFireLightScale(float duration)
 {
     // 炎の光のスケールを大きくする処理を開始する
     {
-        TestEasingHandler handler;
+        EasingHandler handler;
 
         handler.AddEasing(
             TestEaseType::InSine,

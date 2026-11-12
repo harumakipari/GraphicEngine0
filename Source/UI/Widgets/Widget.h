@@ -5,7 +5,7 @@
 #include <vector>
 #include <functional>
 
-#include "Components/Easing/CoreEasingComponent.h"
+#include "Components/Easing/EasingComponent.h"
 #include "Core/CoreColor.h"
 #include "Core/Vector.h"
 #include "Engine/Input/InputSystem.h"

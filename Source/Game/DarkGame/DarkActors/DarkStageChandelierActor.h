@@ -1,6 +1,6 @@
 #pragma once
-#include "Components/Easing/CoreEasingComponent.h"
 #include "Core/Actor.h"
+#include "Components/Easing/EasingComponent.h"
 #include "Components/Render/PointLightComponent.h"
 
 class DarkStageChandelierActor :public Actor

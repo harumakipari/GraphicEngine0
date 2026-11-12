@@ -1,6 +1,6 @@
 #pragma once
 #include "Components/Base/SceneComponent.h"
-#include "Engine/Easing/TestEasingHandler.h"
+#include "Engine/Easing/EasingHandler.h"
 
 /**
  * @file
@@ -18,19 +18,19 @@ struct PropertyAccessor
 	std::function<void(T)> setter;  // 値を書き込む
 };
 
-class CoreEasingComponent :public SceneComponent
+class EasingComponent :public SceneComponent
 {
 public:
-	CoreEasingComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :SceneComponent(name, owner) {}
+	EasingComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :SceneComponent(name, owner) {}
 
-	virtual ~CoreEasingComponent() = default;
+	virtual ~EasingComponent() = default;
 
 	/**
 	 * @brief イージングハンドラを開始します。
 	 * @param handler 実行する `EasingHandler`。
 	 * @param accessor 対象プロパティのゲッター/セッター。
 	 */
-	void StartHandler(const TestEasingHandler& handler, PropertyAccessor<float> accessor)
+	void StartHandler(const EasingHandler& handler, PropertyAccessor<float> accessor)
     {
 		handlers.push_back(std::make_pair(accessor, handler));
 	}
@@ -57,10 +57,10 @@ public:
 
 protected:
 	/** @brief デバッグ/GUI 用のイージング要素（内部管理）。*/
-	std::vector<std::pair<int, TestEasingHandler::EaseItem>> easeItems;
+	std::vector<std::pair<int, EasingHandler::EaseItem>> easeItems;
 
 	/** @brief 実行中ハンドラの集合（プロパティアクセサとペア）。*/
-	std::vector<std::pair<PropertyAccessor<float>, TestEasingHandler>> handlers;
+	std::vector<std::pair<PropertyAccessor<float>, EasingHandler>> handlers;
 
 	/** @brief 非スケール時間を使用するか。*/
 	bool useUnscaledTime = true;
@@ -77,7 +77,7 @@ public:
 class EasingRunner
 {
 public:
-	void StartHandler(const TestEasingHandler& handler, PropertyAccessor<float> accessor)
+	void StartHandler(const EasingHandler& handler, PropertyAccessor<float> accessor)
 	{
 		handlers.emplace_back(accessor, handler);
 	}
@@ -109,5 +109,5 @@ public:
 	bool IsFinished() const { return handlers.empty(); }
 
 private:
-	std::vector<std::pair<PropertyAccessor<float>, TestEasingHandler>> handlers;
+	std::vector<std::pair<PropertyAccessor<float>, EasingHandler>> handlers;
 };

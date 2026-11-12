@@ -133,7 +133,7 @@ public:
     {
 #ifdef USE_IMGUI
         SceneComponent::DrawImGuiInspector();
-        if (ImGui::TreeNode((name_ + "  debugRender").c_str()))
+        if (ImGui::TreeNode((name + "  debugRender").c_str()))
         {
             ImGui::Checkbox("isVisibleDebugBox", &isVisibleDebugBox_);
             ImGui::Checkbox("isVisibleDebugShape", &isVisibleDebugShape_);
@@ -332,7 +332,7 @@ public:
     {
 #ifdef USE_IMGUI
         ShapeComponent::DrawImGuiInspector();
-        if (ImGui::TreeNode((name_ + "  box").c_str()))
+        if (ImGui::TreeNode((name + "  box").c_str()))
         {
             ImGui::DragFloat3("boxExtent", &boxExtent_.x, 0.1f);
             ResizeBox(boxExtent_.x, boxExtent_.y, boxExtent_.z);
@@ -386,7 +386,7 @@ public:
 #ifdef USE_IMGUI
 
         ShapeComponent::DrawImGuiInspector();
-        if (ImGui::TreeNode((name_ + "  sphere").c_str()))
+        if (ImGui::TreeNode((name + "  sphere").c_str()))
         {
             ImGui::DragFloat("radius", &radius_, 0.1f);
             ImGui::TreePop();
@@ -453,7 +453,7 @@ public:
 #ifdef USE_IMGUI
         ShapeComponent::DrawImGuiInspector();
 
-        if (ImGui::TreeNode((name_ + "  capsule").c_str()))
+        if (ImGui::TreeNode((name + "  capsule").c_str()))
         {
             ImGui::DragFloat("radius", &radius_, 0.1f);
             ImGui::DragFloat("height", &height, 0.1f);

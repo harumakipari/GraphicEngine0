@@ -62,7 +62,7 @@ void TitleCamera::Play(float interval)
 {
     // position ‚Ì easing
     {
-        TestEasingHandler handler;
+        EasingHandler handler;
 
         handler.AddWait(0.0f);
 
@@ -91,7 +91,7 @@ void TitleCamera::Play(float interval)
 
     // position ‚Ì easing
     {
-        TestEasingHandler handler;
+        EasingHandler handler;
 
         handler.AddWait(0.0f);
 
@@ -119,7 +119,7 @@ void TitleCamera::Play(float interval)
 
     // fov ‚Ì easing
     {
-        TestEasingHandler handler;
+        EasingHandler handler;
 
         handler.AddWait(0.0f);
 
@@ -150,7 +150,7 @@ void TitleCamera::PlayReverse(float interval)
 {
     // position ‚Ì easing
     {
-        TestEasingHandler handler;
+        EasingHandler handler;
 
         handler.AddWait(0.0f);
 
@@ -179,7 +179,7 @@ void TitleCamera::PlayReverse(float interval)
 
     // position ‚Ì easing
     {
-        TestEasingHandler handler;
+        EasingHandler handler;
 
         handler.AddWait(0.0f);
 
