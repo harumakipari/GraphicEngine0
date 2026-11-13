@@ -18,6 +18,7 @@
 #include "Engine/Debug/Logger.h"
 #include "Engine/Effects/EffectEditor.h"
 #include "Engine/Effects/EffectManager.h"
+#include "UI/FontManager.h"
 #include "UI/Game/SceneTransitionManager.h"
 
 

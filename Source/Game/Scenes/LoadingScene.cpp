@@ -162,19 +162,17 @@ void LoadingScene::Start()
     imageUiComponent->SetPivot({ 0.5f, 0.5f });
     imageUiComponent->SetScale(logoScale);
     imageUiComponent->SetSize({ 1000, 200 });
-    imageUiComponent->SetColor(DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, 0.0f });
+    imageUiComponent->SetColor({ 1.0f, 1.0f, 1.0f, 0.0f });
     uiManager->Add(imageUiComponent);
 }
 
 void LoadingScene::SetUpActors()
 {
     Transform mainCameraTr(DirectX::XMFLOAT3{ -0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    //auto mainCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<FixedCamera>("fixedCameraActor", mainCameraTr);
     auto mainCameraActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<TitleCamera>("fixedCameraActor", mainCameraTr);
     auto mainCameraComponent = mainCameraActor->GetComponent<TPSCameraComponent>();
 
     Transform cameraTargetTr(DirectX::XMFLOAT3{ -0.297f,3.197f,2.936f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
-    //Transform cameraTargetTr(DirectX::XMFLOAT3{ 2.2f,1.984f,2.753f }, DirectX::XMFLOAT3{ 0.0f,0.0f,0.0f }, DirectX::XMFLOAT3{ 1.0f,1.0f,1.0f });
     auto cameraTargetActor = this->GetActorManager()->CreateAndRegisterActorWithTransform<Actor>("cameraTargetActor", cameraTargetTr);
 
     mainCameraActor->SetTarget(cameraTargetActor->GetRootComponent());
@@ -250,7 +248,7 @@ void LoadingScene::Update(float deltaTime)
         / (LogoFadeEnd - LogoFadeStart), 0.0f, 1.0f);
     const float logoFadeInAlpha = logoFade * logoFade * (3.0f - 2.0f * logoFade);
     const float logoAlpha = logoFadeInAlpha * fadeOutAlpha;
-    imageUiComponent->SetColor(DirectX::XMFLOAT4{ 1.0f, 1.0f, 1.0f, logoAlpha });
+    imageUiComponent->SetColor({ 1.0f, 1.0f, 1.0f, logoAlpha });
     imageUiComponent->SetWorldPosition(logoPosition);
     imageUiComponent->SetScale(logoScale);
 }

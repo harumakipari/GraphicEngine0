@@ -10,6 +10,7 @@
 #include "Graphics/Renderer/TrailRenderer.h"
 #include <array>
 
+#include "Components/Easing/EasingComponent.h"
 #include "Engine/Audio/Audio.h"
 #include "Game/DarkGame/BehaviorTree/BehaviorData.h"
 

@@ -19,7 +19,7 @@ void Pause::Initialize(const Transform& transform)
 
 	pauseBackImage = std::make_shared<UIImageComponent>("./Data/Textures/UI/Pause/back.png", "back");
 	pauseBackImage->SetWorldPosition({ 960, 540 }); pauseBackImage->SetPivot({ .5f,.5f });
-	pauseBackImage->SetSize({ 1920, 1080 }); pauseBackImage->SetColor(DirectX::XMFLOAT4{ 0,0,0,.5f });
+	pauseBackImage->SetSize({ 1920, 1080 }); pauseBackImage->SetColor({ 0,0,0,.5f });
 	pauseBackImage->SetVisible(false); pauseBackImage->zOrder = 95; uiManager->Add(pauseBackImage);
 
 	pausePanel = std::make_shared<UIImageComponent>("./Data/Textures/UI/Pause/pause_panel.png", "pause_panel");

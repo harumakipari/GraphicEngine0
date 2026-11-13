@@ -3132,7 +3132,7 @@ void Player::UpdateRushPromptUI()
 	rushGuideImageComponent->SetWorldPosition(rushGuidePosition);
 	rushGuideImageComponent->SetSize(rushGuideSize);
 	rushGuideImageComponent->SetScale(rushGuideScale);
-	rushGuideImageComponent->SetColor(color);
+	rushGuideImageComponent->SetColor({ color.x,color.y,color.z,color.w });
 	rushGuideImageComponent->SetVisible(true);
 
 	rushButtonImageComponent->SetWorldPosition(rushButtonPosition);
@@ -3140,7 +3140,7 @@ void Player::UpdateRushPromptUI()
 	rushButtonImageComponent->SetScale({
 		rushButtonBaseScale.x * buttonAnimationScale,
 		rushButtonBaseScale.y * buttonAnimationScale });
-	rushButtonImageComponent->SetColor(color);
+	rushButtonImageComponent->SetColor({ color.x,color.y,color.z,color.w });
 	rushButtonImageComponent->SetVisible(true);
 
 	rushWordImageComponent->SetWorldPosition(rushWordPosition);
@@ -3148,7 +3148,7 @@ void Player::UpdateRushPromptUI()
 	rushWordImageComponent->SetScale({
 		rushWordScale.x * wordAnimationScale,
 		rushWordScale.y * wordAnimationScale });
-	rushWordImageComponent->SetColor(color);
+	rushWordImageComponent->SetColor({ color.x,color.y,color.z,color.w });
 	rushWordImageComponent->SetVisible(true);
 }
 

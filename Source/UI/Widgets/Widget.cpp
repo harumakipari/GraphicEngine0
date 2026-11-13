@@ -6,7 +6,7 @@
 #include "Engine/Scene/Scene.h"
 #include "Physics/CollisionFunction.h"
 
-inline XMFLOAT2 Rotate2D(const XMFLOAT2& v, float rad)
+inline XMFLOAT2 Rotate2D(const XMFLOAT2& v, const float rad)
 {
     float c = cosf(rad);
     float s = sinf(rad);
@@ -15,7 +15,6 @@ inline XMFLOAT2 Rotate2D(const XMFLOAT2& v, float rad)
         v.x * s + v.y * c
     };
 }
-
 
 void UICoreComponent::DrawImGui()
 {
@@ -32,30 +31,6 @@ void UICoreComponent::DrawImGui()
 
 #endif
 }
-
-void UICoreComponent::SetParent(UICoreComponent* newParent)
-{
-    if (parent == newParent) return;
-
-    // 既存の親から外す
-    if (parent)
-    {
-        auto& siblings = parent->children;
-        siblings.erase(
-            std::remove(siblings.begin(), siblings.end(), this),
-            siblings.end()
-        );
-    }
-
-    parent = newParent;
-
-    if (parent)
-    {
-        parent->children.push_back(this);
-    }
-}
-
-
 
 void UICoreComponent::UpdateTransform()
 {
@@ -81,7 +56,34 @@ void UICoreComponent::UpdateTransform()
     }
 }
 
-void UIButtonComponent::Update(float dt)
+void UICoreComponent::SetParent(UICoreComponent* newParent)
+{
+    if (parent == newParent) return;
+
+    // 既存の親から外す
+    if (parent)
+    {
+        auto& siblings = parent->children;
+        siblings.erase(
+            std::remove(siblings.begin(), siblings.end(), this),
+            siblings.end()
+        );
+    }
+
+    parent = newParent;
+
+    if (parent)
+    {
+        parent->children.push_back(this);
+    }
+}
+
+void UIImageComponent::Draw(ID3D11DeviceContext* immediateContext)
+{
+    SpriteRenderer::Draw(texture.get(), worldPosition, size, color, uv, worldAngle, pivot, scale);
+}
+
+void UIButtonComponent::Update(const float dt)
 {
     if (InputSystem::IsGamepadConnected())
     {// ゲームパッドをつないでいたら
@@ -138,7 +140,44 @@ void UIButtonComponent::Update(float dt)
     }
 }
 
-void UIButtonComponent::UpdateScale(float deltaTime)
+
+
+bool UIButtonComponent::IsInside(const DirectX::XMFLOAT2& p) const
+{
+    float left = worldPosition.x - size.x * pivot.x;
+    float top = worldPosition.y - size.y * pivot.y;
+
+    float right = left + size.x;
+    float bottom = top + size.y;
+
+    return p.x >= left && p.x <= right &&
+        p.y >= top && p.y <= bottom;
+}
+
+void UIButtonComponent::UpdateVisual()
+{
+    switch (state)
+    {
+    case UIButtonState::Normal:
+        color = normalColor;
+        targetScale = normalScale;
+        break;
+    case UIButtonState::Hovered:
+        color = hoveredColor;
+        targetScale = hoverScale;
+        break;
+    case UIButtonState::Pressed:
+        targetScale = pressScale;
+        color = CoreColor(0.8f, 0.8f, 0.8f, 1);
+        break;
+    case UIButtonState::Selected:
+        color = hoveredColor;
+        targetScale = hoverScale;
+        break;
+    }
+}
+
+void UIButtonComponent::UpdateScale(const float deltaTime)
 {
     currentScale = std::lerp(currentScale, targetScale, deltaTime * scaleSpeed);
 
@@ -147,3 +186,43 @@ void UIButtonComponent::UpdateScale(float deltaTime)
 }
 
 
+void UIGaugeFillComponent::Draw(ID3D11DeviceContext* immediateContext)
+{
+    if (value <= 0.0f)
+        return;
+
+    XMFLOAT2 drawSize = size;
+    SpriteUV drawUv = uv;
+
+    if (horizontal)
+    {
+        drawSize.x *= value;
+        drawUv.w *= value;
+    }
+    else
+    {
+        drawSize.y *= value;
+        drawUv.h *= value;
+    }
+
+    SpriteRenderer::Draw(texture.get(), worldPosition, drawSize, color, drawUv, worldAngle, pivot, scale);
+}
+
+void UIGaugeComponent::Draw(ID3D11DeviceContext* immediateContext)
+{
+    XMFLOAT2 drawSize = gaugeFillSize;
+
+    if (horizontal)
+        drawSize.x *= value;
+    else
+        drawSize.y *= value;
+
+    SpriteRenderer::Draw(texture.get(), { worldPosition.x + gaugeOffset.x,worldPosition.y + gaugeOffset.y }, drawSize, gaugeFillColor, uv, worldAngle, pivot, scale);
+
+    SpriteRenderer::Draw(frameTexture.get(), worldPosition, size, gaugeFrameColor, { uv.x,uv.y,size.x,size.y }, worldAngle, pivot, scale);
+}
+
+void UISceneChangeComponent::DrawSceneChangeSprite(ID3D11DeviceContext* immediateContext)
+{
+    SpriteRenderer::Draw(texture.get(), worldPosition, size, color, uv, worldAngle, pivot, scale);
+}

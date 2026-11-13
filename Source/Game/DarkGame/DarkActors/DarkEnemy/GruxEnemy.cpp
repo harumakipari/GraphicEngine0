@@ -246,7 +246,7 @@ void GruxEnemy::Update(float deltaTime)
     {
         easingRunner->Tick(deltaTime);
         float bossNameImageAlpha = std::lerp(0.0f, 1.0f, easingFactorAlpha);
-        gruxNameImageComponent->SetColor(DirectX::XMFLOAT4{ 1.0f,1.0f,1.0f,bossNameImageAlpha });
+        gruxNameImageComponent->SetColor({ 1.0f,1.0f,1.0f,bossNameImageAlpha });
     }
 
     // ”í’eŽž‚Ìƒtƒ‰ƒbƒVƒ…
@@ -3657,7 +3657,7 @@ void GruxEnemy::CreateUI()
     gruxNameImageComponent->SetScale({ 0.8f,0.8f });
     gruxNameImageComponent->SetSize({ 600, 200 });
     gruxNameImageComponent->SetPivot({ 0.5f,0.5f });
-    gruxNameImageComponent->SetColor(DirectX::XMFLOAT4{ 1.0f,1.0f,1.0f,0.0f });
+    gruxNameImageComponent->SetColor({ 1.0f,1.0f,1.0f,0.0f });
     gruxNameImageComponent->SetVisible(true);
     uiManager->Add(gruxNameImageComponent);
     easingRunner = std::make_unique<EasingRunner>();
