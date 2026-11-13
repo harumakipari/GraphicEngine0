@@ -1,9 +1,6 @@
 #include "pch.h"
 #include "Font.h"
-
-
 #include <WICTextureLoader.h>
-//#include "Logger.h"
 #include "Engine/Utility/Win32Utils.h"
 #include "Graphics/Core/Graphics.h"
 #include "Graphics/Core/RenderState.h"
@@ -12,7 +9,6 @@ Font::Font(ID3D11Device* device, const char* filename, int maxSpriteCount)
 {
     // 頂点シェーダー
     {
-        // ファイルを開く
         FILE* fp = nullptr;
         fopen_s(&fp, "./Data/Shaders/FontVS.cso", "rb");
         _ASSERT_EXPR_A(fp, "CSO File not found");
@@ -176,7 +172,6 @@ Font::Font(ID3D11Device* device, const char* filename, int maxSpriteCount)
         }
 
         bufferDesc.ByteWidth = static_cast<UINT>(sizeof(UINT) * maxSpriteCount * 6);
-        //bufferDesc.Usage = D3D11_USAGE_DEFAULT;
         bufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
         bufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
         bufferDesc.CPUAccessFlags = 0;
@@ -203,8 +198,7 @@ Font::Font(ID3D11Device* device, const char* filename, int maxSpriteCount)
         fread(fntData.get(), fntSize, 1, fp);
         fclose(fp);
 
-        // (***.fnt)ヘッダ解析
-        char* context = nullptr;	// 内部的に使用するので深く考えない
+        char* context = nullptr;	
         const char* delimiter = " ,=\"\r\n";
         const char* delimiter2 = ",=\"\r\n";
         char* pToken = ::strtok_s(fntData.get(), delimiter, &context);
@@ -403,22 +397,11 @@ Font::Font(ID3D11Device* device, const char* filename, int maxSpriteCount)
 
 void Font::Begin(ID3D11DeviceContext* context)
 {
-#if 0
-    // スクリーンサイズ取得
-    D3D11_VIEWPORT viewport;
-    UINT num_viewports = 1;
-    context->RSGetViewports(&num_viewports, &viewport);
-    screenWidth = viewport.Width;
-    screenHeight = viewport.Height;
-#else
     float viewX, viewY;
     Graphics::GetViewport(viewX, viewY, screenWidth, screenHeight);
-#endif // 0
-
     // 頂点編集開始
     D3D11_MAPPED_SUBRESOURCE mapped_subresource;
     context->Map(vertexBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped_subresource);
-
     currentVertex = reinterpret_cast<Vertex*>(mapped_subresource.pData);
     currentIndexCount = 0;
     currentPage = -1;

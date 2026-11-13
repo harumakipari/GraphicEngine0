@@ -5,15 +5,11 @@
 #include <vector>
 #include <functional>
 
-#include "Components/Easing/EasingComponent.h"
 #include "Core/CoreColor.h"
-#include "Core/Vector.h"
 #include "Engine/Input/InputSystem.h"
 #include "Graphics/Core/Graphics.h"
 #include "Graphics/Renderer/SpriteRenderer.h"
 #include "Graphics/Sprite/Sprite.h"
-#include "UI/Font.h"
-#include "UI/FontManager.h"
 
 class UICoreComponent
 {
@@ -47,7 +43,7 @@ public:
 
     void SetScale(const XMFLOAT2 scale) { this->scale = scale; }
 
-    void SetWorldAngleDegree(float angle) { this->worldAngle = angle; }
+    void SetWorldAngleDegree(const float angle) { this->worldAngle = angle; }
 
     bool IsVisible() const { return visible; }
 
@@ -71,12 +67,12 @@ public:
     void ClearDirty() { dirty = false; }
 
 public:
-    int zOrder = 0; 
+    int zOrder = 0;
 
     bool dirty = true;
 
 protected:
-    SpriteUV uv{ 0,0,100,100 };
+    SpriteUV uv = { 0,0,100,100 };
     XMFLOAT2 scale = { 1.0f,1.0f };
     XMFLOAT2 worldPosition = { 0.0f,0.0f };
     XMFLOAT2 size = { 1.0f,1.0f };
@@ -84,16 +80,12 @@ protected:
     bool visible = true;
     bool enabled = true;
     float worldAngle = 0.0f;
-
     XMFLOAT2 localPosition = { 0.0f,0.0f };
     float localAngle = 0.0f;
-
     std::string name = "UICoreComponent";
     UICoreComponent* parent = nullptr;
     std::vector<UICoreComponent*> children;
-
     bool isPendingKill = false;
-
 };
 
 
@@ -127,8 +119,6 @@ public:
         this->color.a = color.w;
     }
 
-
-
     void SetTexture(const std::shared_ptr<Sprite>& sprite)
     {
         texture = sprite;
@@ -150,15 +140,12 @@ public:
         );
     }
 
-    void SetUV(const SpriteUV& inUV) { uv = inUV; }
+    void SetUV(const SpriteUV& inUv) { uv = inUv; }
 
 protected:
     std::shared_ptr<Sprite>  texture;
 
 };
-
-
-
 
 enum class UIButtonState :uint8_t
 {
@@ -190,7 +177,7 @@ public:
         if (onClick) onClick();
     }
 
-    void SetUseHoverScale(bool useHoverScale) { this->useHoverScale = useHoverScale; }
+    void SetUseHoverScale(const bool useHoverScale) { this->useHoverScale = useHoverScale; }
 
     void SetVisualColors(const CoreColor& normal, const CoreColor& hovered, const CoreColor& pressed, const CoreColor& selected) { normalColor = normal; hoveredColor = hovered; pressedColor = pressed; selectedColor = selected; }
 
@@ -383,17 +370,17 @@ public:
         this->gaugeOffset = offset;
     }
 
-    void SetGaugeFillSize(DirectX::XMFLOAT2 gaugeFillSize) { this->gaugeFillSize = gaugeFillSize; }
+    void SetGaugeFillSize(const DirectX::XMFLOAT2 gaugeFillSize) { this->gaugeFillSize = gaugeFillSize; }
 
     bool horizontal = true;
 
 private:
     float value = 1.0f;  // 0.0f ~ 1.0f
-    std::shared_ptr<Sprite>  frameTexture;  
+    std::shared_ptr<Sprite>  frameTexture;
     XMFLOAT2 gaugeOffset = { 0.0f,0.0f };
     CoreColor gaugeFrameColor = CoreColor::White;
     CoreColor gaugeFillColor = CoreColor::White;
-    XMFLOAT2 gaugeFillSize ={0.0f,0.0f};    
+    XMFLOAT2 gaugeFillSize = { 0.0f,0.0f };
 };
 
 class UISceneChangeComponent : public UICoreComponent

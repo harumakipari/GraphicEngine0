@@ -6,6 +6,16 @@
 #include "Engine/Scene/Scene.h"
 #include "Physics/CollisionFunction.h"
 
+inline XMFLOAT2 Rotate2D(const XMFLOAT2& v, float rad)
+{
+    float c = cosf(rad);
+    float s = sinf(rad);
+    return {
+        v.x * c - v.y * s,
+        v.x * s + v.y * c
+    };
+}
+
 
 void UICoreComponent::DrawImGui()
 {
@@ -42,23 +52,9 @@ void UICoreComponent::SetParent(UICoreComponent* newParent)
     if (parent)
     {
         parent->children.push_back(this);
-
-        //localPosition.x = worldPosition.x - parent->worldPosition.x;
-        //localPosition.y = worldPosition.y - parent->worldPosition.y;
-
-        //localAngle = worldAngle - parent->worldAngle;
     }
 }
 
-inline XMFLOAT2 Rotate2D(const XMFLOAT2& v, float rad)
-{
-    float c = cosf(rad);
-    float s = sinf(rad);
-    return {
-        v.x * c - v.y * s,
-        v.x * s + v.y * c
-    };
-}
 
 
 void UICoreComponent::UpdateTransform()
