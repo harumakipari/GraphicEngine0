@@ -293,7 +293,7 @@ public:
 
     DirectX::XMFLOAT3 GetJointWorldPosition(const std::string& name)
     {
-        if (auto parent = attachParent_.lock())
+        if (auto parent = attachParent.lock())
         {
             DirectX::XMFLOAT4X4 parentWorld = parent->GetComponentWorldTransform().ToWorldTransform();
             return model->GetJointWorldPosition(name, modelNodes, parentWorld);

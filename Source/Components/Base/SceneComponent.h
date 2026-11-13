@@ -12,494 +12,192 @@ class Actor;
 class SceneComponent :public Component, public std::enable_shared_from_this<SceneComponent>
 {
 public:
-    SceneComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :Component(name, owner){}
+    SceneComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :Component(name, owner) {}
 
-    ~SceneComponent() override {}
+    ~SceneComponent() override = default;
 
-    // Tick で最終Transformを取得するときはこれを使う
-    Transform GetFinalWorldTransform() const
-    {
-        return componentToWorld_;
-    }
+    void Initialize()override {}
+
+    void Tick(float deltaTime) override {}
+
+    void UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None) final;
 
     void Destroy() override;
 
-protected:
-    // SceneComponent や Transform 持ちクラスに追加
-    DirectX::XMFLOAT3 inspectorEuler_ = { 0,0,0 };
+    void OnRegister()override {}
 
-    // このコンポーネントのワールド空間上でのTransform
-    // final Transform_　親子関係を全て考慮した最終的なTransform
-    Transform componentToWorld_;     // キャッシュ
+    void OnUnregister()override {}
 
-    Transform previousComponentToWorld_; // 前フレームの Transform キャッシュ。　velocity計算などに使用する
+    void DrawImGuiInspector() override;
 
-protected:
-    // 現在接続している親。　valid　なら　relativeLocation_ などはこのオブジェクトに対する相対値になる
-    std::weak_ptr<SceneComponent> attachParent_; // 弱参照
+    // 新規Component用の簡易接続。既存の親から付け替える場合はAttachToComponentを使用する
+    void AttachTo(const std::shared_ptr<SceneComponent>& parent)
+    {
+        attachParent = parent;
+        parent->attachChildren.push_back(shared_from_this());
+    }
 
-    // 親のソケットノード (特定の接続ポイント) に接続する場合に使用されるオプションのインデックス
-    int attachSocketNode_ = -1;
+    // 既存の親を解除して接続する。socketNodeが-1の場合はソケットを指定しない
+    void AttachToComponent(const std::shared_ptr<SceneComponent>& parent, int socketNode);
 
-    // このコンポーネントに接続されている子供のシーンコンポーネントのリスト
-    std::vector<std::shared_ptr<SceneComponent>> attachChildren_; // 子を保持（共有）
+    void AddWorldOffset(const DirectX::XMFLOAT3& offset) const;
 
-public:
+    // ローカル回転にオフセットを加える
+    void AddLocalRotation(const DirectX::XMFLOAT3& offset);
+
+    Transform GetFinalWorldTransform() const
+    {
+        return componentToWorld;
+    }
+
     std::shared_ptr<SceneComponent> GetAttachParent() const
     {
-        return attachParent_.lock();
+        return attachParent.lock();
     }
 
     int GetAttachSocketNode() const
     {
-        return attachSocketNode_;
+        return attachSocketNode;
     }
 
     const std::vector<std::shared_ptr<SceneComponent>>& GetAttachChildren() const
     {
-        return attachChildren_;
+        return attachChildren;
     }
 
-    void DrawImGuiInspector() override;
+    bool IsUsingAbsoluteLocation() const { return absoluteLocation; }
 
-private:
-    // 親からの相対的な位置
-    DirectX::XMFLOAT3 relativeLocation_ = { 0.0f,0.0f,0.0f };
+    void SetUsingAbsoluteLocation(const bool absoluteLocation) { this->absoluteLocation = absoluteLocation ? 1 : 0; }
 
-    // 親からの相対的なクォータニオン
-    DirectX::XMFLOAT4 relativeRotation_ = { 0.0f,0.0f,0.0f,1.0f };
+    bool IsUsingAbsoluteRotation() const { return absoluteRotation; }
 
-    // 親からの相対的なスケール
-    DirectX::XMFLOAT3 relativeScale_ = { 1.0f,1.0f,1.0f };
+    void SetUsingAbsoluteRotation(const bool absoluteRotation) { this->absoluteRotation = absoluteRotation ? 1 : 0; }
 
-private:
-    // 0はfalse 1はtrue 符号なし8ビット整数
+    bool IsUsingAbsoluteScale() const { return absoluteScale; }
 
-    // 相対的な位置、回転、スケールに基づいて worldTransform　を更新したことがあれば true
-    // 開始時に　worldTrnasform が初期化されているかどうかを確認するために使う
-    uint8_t componentToWorldTransformUpdate_ : 1 = 0; // <-１ビットだけ使う 
+    void SetUsingAbsoluteScale(const bool absoluteScale) { this->absoluteScale = absoluteScale ? 1 : 0; }
 
-    // trueの時に、このコンポーネントやその子に対して、updateOverlapsを呼び出す必要がない
-    // これは、ツリーを辿っても当たり判定の更新が不要な場合に、パフォーマンス最適化として使われる
-    // 通常このフラグは　UpdateOverlaps 実行後に true　にセットされる
-    // 状態（アタッチ変更、当たり判定設定など）が変わったときは、clearSkipUpdateOverlaps() を呼んでフラグを無効化する。
-    uint8_t skipUpdateOverlaps_ : 1 = 0; //→ 当たり判定の更新処理をスキップして高速化するためのフラグ
-    // 子コンポーネントに影響がない場合、無駄な処理を避ける
-
-    //　通常、シーンコンポーネントの位置などは親からの相対座標だけど、
-    // これらフラグがtrueだとワールドに対して直接指定される
-    // relativeLocation_ を親ではなくワールド座標系に対する位置とみなす場合に true
-    uint8_t absoluteLocation_ : 1 = 0;
-    // relativeRotation_ を親ではなくワールド座標系に対する位置とみなす場合に true
-    uint8_t absoluteRotation_ : 1 = 0;
-    // relativeScale_ を親ではなくワールド座標系に対する位置とみなす場合に true
-    uint8_t absoluteScale_ : 1 = 0;
-
-
-public:
-    bool IsUsingAbsoluteLocation() const
-    {
-        return absoluteLocation_;
-    }
-    void SetUsingAbsoluteLocation(bool absoluteLocation)
-    {
-        absoluteLocation_ = absoluteLocation ? 1 : 0;
-    }
-    bool IsUsingAbsoluteRotation() const
-    {
-        return absoluteRotation_;
-    }
-    void SetUsingAbsoluteRotation(bool absoluteRotation)
-    {
-        absoluteRotation_ = absoluteRotation ? 1 : 0;
-    }
-    bool IsUsingAbsoluteScale() const
-    {
-        return absoluteScale_;
-    }
-    void SetUsingAbsoluteScale(bool absoluteScale)
-    {
-        absoluteScale_ = absoluteScale ? 1 : 0;
-    }
-
-public:
-    // 前フレームの Transform を保存する
+    // 自身と子コンポーネントのワールドTransformを前フレーム用に保存する
     void CapturePreviousTransform();
 
-    // 相対的な座標を取得
-    DirectX::XMFLOAT3 GetRelativeLocation() const
-    {
-        return relativeLocation_;
-    }
-    // 直接　相対的な座標を設定
-    void SetRelativeLocationDirect(const DirectX::XMFLOAT3& newRelativeLocation)
-    {
-        relativeLocation_ = newRelativeLocation;
-    }
-    // 相対的なスケールを取得
-    DirectX::XMFLOAT3 GetRelativeScale()const
-    {
-        return relativeScale_;
-    }
-    // 直接　相対的なスケールを設定
-    void SetRelativeScaleDirect(const DirectX::XMFLOAT3& newRelativeScale)
-    {
-        relativeScale_ = newRelativeScale;
-    }
-    // 相対的な角度を取得   degree で返す
+    DirectX::XMFLOAT3 GetRelativeLocation() const { return relativeLocation; }
+    void SetRelativeLocationDirect(const DirectX::XMFLOAT3& newRelativeLocation) { relativeLocation = newRelativeLocation; }
+    DirectX::XMFLOAT3 GetRelativeScale()const { return relativeScale; }
+    void SetRelativeScaleDirect(const DirectX::XMFLOAT3& newRelativeScale) { relativeScale = newRelativeScale; }
+    // 相対回転を度数法のEuler角で返す
     DirectX::XMFLOAT3 GetRelativeEulerRotation()const
     {
-        DirectX::XMFLOAT3 angle = MathHelper::QuaternionToEuler(relativeRotation_);
-
+        DirectX::XMFLOAT3 angle = MathHelper::QuaternionToEuler(relativeRotation);
         return { DirectX::XMConvertToDegrees(angle.x),DirectX::XMConvertToDegrees(angle.y) ,DirectX::XMConvertToDegrees(angle.z) };
     }
-    DirectX::XMFLOAT4 QuaternionFromEulerYXZ(const DirectX::XMFLOAT3& eulerRadians)
-    {
-        using namespace DirectX;
-        XMVECTOR qx = XMQuaternionRotationAxis({ 1,0,0 }, eulerRadians.x);
-        XMVECTOR qy = XMQuaternionRotationAxis({ 0,1,0 }, eulerRadians.y);
-        XMVECTOR qz = XMQuaternionRotationAxis({ 0,0,1 }, eulerRadians.z);
 
-        // 順序 Y → X → Z（YXZ intrinsic）
-        XMVECTOR q = XMQuaternionMultiply(qz, XMQuaternionMultiply(qx, qy));
-        XMFLOAT4 result;
-        XMStoreFloat4(&result, q);
-        return result;
-    }
-    // 直接　相対的な角度を設定
-    void SetRelativeEulerRotationDirect(const DirectX::XMFLOAT3& newEulerRotaion)
+    DirectX::XMFLOAT4 QuaternionFromEulerYXZ(const DirectX::XMFLOAT3& eulerRadians);
+
+    // 度数法のEuler角を相対回転に設定する
+    void SetRelativeEulerRotationDirect(const DirectX::XMFLOAT3& newEulerRotation)
     {
-        DirectX::XMStoreFloat4(&relativeRotation_, DirectX::XMQuaternionRotationRollPitchYaw(DirectX::XMConvertToRadians(newEulerRotaion.x), DirectX::XMConvertToRadians(newEulerRotaion.y), DirectX::XMConvertToRadians(newEulerRotaion.z)));
+        DirectX::XMStoreFloat4(&relativeRotation, DirectX::XMQuaternionRotationRollPitchYaw(DirectX::XMConvertToRadians(newEulerRotation.x), DirectX::XMConvertToRadians(newEulerRotation.y), DirectX::XMConvertToRadians(newEulerRotation.z)));
     }
-    // 相対的なクォータニオンを取得
-    const DirectX::XMFLOAT4& GetRelativeRotation() const
-    {
-        return relativeRotation_;
-    }
-    // 直接　相対的なクォータニオンを設定
-    void SetRelativeRotationDirect(const DirectX::XMFLOAT4& newRelativeRotation)
-    {
-        relativeRotation_ = newRelativeRotation;
-    }
-    //  このコンポーネントのワールド空間上でのTransformを取得
-    _NODISCARD const Transform& GetComponentWorldTransform() const
-    {
-        return componentToWorld_;
-    }
-    //  このコンポーネントのワールド空間上でのTransformを取得(書き換え用)
-    _NODISCARD Transform& GetComponentWorldTransform()
-    {
-        return componentToWorld_;
-    }
-    //  このコンポーネントの1フレーム前のワールド空間上でのTransformを取得
-    _NODISCARD const Transform& GetPreviousComponentWorldTransform() const
-    {
-        return previousComponentToWorld_;
-    }
-    //  このコンポーネントの1フレーム前のワールド空間上でのTransformを取得(書き換え用)
-    _NODISCARD Transform& GetPreviousComponentWorldTransform()
-    {
-        return previousComponentToWorld_;
-    }
-    // ワールド空間でのこのコンポーネントの位置を取得
+    const DirectX::XMFLOAT4& GetRelativeRotation() const { return relativeRotation; }
+    void SetRelativeRotationDirect(const DirectX::XMFLOAT4& newRelativeRotation) { relativeRotation = newRelativeRotation; }
+    _NODISCARD const Transform& GetComponentWorldTransform() const { return componentToWorld; }
+    _NODISCARD Transform& GetComponentWorldTransform() { return componentToWorld; }
+    _NODISCARD const Transform& GetPreviousComponentWorldTransform() const { return previousComponentToWorld; }
+    _NODISCARD Transform& GetPreviousComponentWorldTransform() { return previousComponentToWorld; }
     DirectX::XMFLOAT3 GetComponentLocation() const
     {
         return GetComponentWorldTransform().GetLocation();
     }
-    // ワールド空間でのこのコンポーネントのクォータニオンを取得
     DirectX::XMFLOAT4 GetComponentRotation() const
     {
         return GetComponentWorldTransform().GetRotation();
     }
-    // ワールド空間でのこのコンポーネントのスケールを取得
     DirectX::XMFLOAT3 GetComponentScale() const
     {
         return GetComponentWorldTransform().GetScale();
     }
-    // ワールド空間でのこのコンポーネントの角度を取得
     DirectX::XMFLOAT3 GetComponentEulerRotation() const
     {
         return GetComponentWorldTransform().GetEulerRotation();
     }
-    // ワールド空間でのこのコンポーネントの座標を設定
-    // （親がある場合は、親のワールド行列を使って相対位置に変換してセットする）
-    virtual void SetWorldLocationDirect(const DirectX::XMFLOAT3& newWorldLocation)
-    {
-        if (auto parent = attachParent_.lock())
-        {
-            // 親のワールドトランスフォームの逆行列を使って、相対位置を求める
-            DirectX::XMMATRIX parentWorld = parent->GetComponentWorldTransform().ToMatrix();
-            DirectX::XMMATRIX parentInv = DirectX::XMMatrixInverse(nullptr, parentWorld);
-            DirectX::XMVECTOR worldPos = DirectX::XMLoadFloat3(&newWorldLocation);
-            DirectX::XMVECTOR localPos = DirectX::XMVector3TransformCoord(worldPos, parentInv);
-            DirectX::XMFLOAT3 relative;
-            DirectX::XMStoreFloat3(&relative, localPos);
-            SetRelativeLocationDirect(relative);
-        }
-        else
-        {
-            SetRelativeLocationDirect(newWorldLocation);
-        }
-    }
-    // ワールド空間でのこのコンポーネントのクォータニオンを設定
-    void SetWorldRotationDirect(const DirectX::XMFLOAT4& newWorldRotation)
-    {
-        using namespace DirectX;
+    // 親がある場合は、ワールド座標を親からの相対座標に変換して設定する
+    virtual void SetWorldLocationDirect(const DirectX::XMFLOAT3& newWorldLocation);
 
-        if (auto parent = attachParent_.lock())
-        {
-            XMVECTOR worldRot = XMLoadFloat4(&newWorldRotation);
-            XMFLOAT4 rot = parent->GetComponentWorldTransform().GetRotation();
+    void SetWorldRotationDirect(const DirectX::XMFLOAT4& newWorldRotation);
 
-            XMVECTOR parentWorldRot =
-                XMLoadFloat4(&rot);
+    void SetWorldEulerRotationDirect(const DirectX::XMFLOAT3& newWorldEuler);
+    void SetWorldScaleDirect(const DirectX::XMFLOAT3& newWorldScale);
 
-            XMVECTOR parentInv = XMQuaternionInverse(parentWorldRot);
+    void SetWorldMatrixDirect(const DirectX::XMFLOAT4X4& worldMatrix);
 
-            XMVECTOR localRot = XMQuaternionMultiply(parentInv, worldRot);
+    void SetRelativeMatrixDirect(const DirectX::XMFLOAT4X4& matrix);
 
-            XMFLOAT4 relative;
-            XMStoreFloat4(&relative, localRot);
+    // ワールドTransformが未更新の場合に更新する
+    void ConditionalUpdateComponentWorldTransform();
 
-            SetRelativeRotationDirect(relative);
-        }
-        else
-        {
-            SetRelativeRotationDirect(newWorldRotation);
-        }
-    }
-    // ワールド空間でのこのコンポーネントの角度を設定
-    void SetWorldEulerRotationDirect(const DirectX::XMFLOAT3& newWorldEuler)
-    {
-        if (auto parent = attachParent_.lock())
-        {
-            parent->SetRelativeEulerRotationDirect(newWorldEuler);
-        }
-        else
-        {
-            SetRelativeEulerRotationDirect(newWorldEuler);
-        }
-    }
-    // ワールド空間でのこのコンポーネントのスケールを設定
-    void SetWorldScaleDirect(const DirectX::XMFLOAT3& newWorldScale)
-    {
-        if (auto parent = attachParent_.lock())
-        {
-            parent->SetRelativeScaleDirect(newWorldScale);
-        }
-        else
-        {
-            SetRelativeScaleDirect(newWorldScale);
-        }
-    }
-
-    // ワールド空間でのこのコンポーネントの Transform を直接設定
-    void SetWorldMatrixDirect(const DirectX::XMFLOAT4X4& worldMatrix)
-    {
-        using namespace DirectX;
-
-        XMMATRIX m = XMLoadFloat4x4(&worldMatrix);
-
-        XMVECTOR scale;
-        XMVECTOR rotation;
-        XMVECTOR translation;
-
-        XMMatrixDecompose(&scale, &rotation, &translation, m);
-
-        XMFLOAT3 pos;
-        XMFLOAT3 scl;
-        XMFLOAT4 rot;
-
-        XMStoreFloat3(&pos, translation);
-        XMStoreFloat3(&scl, scale);
-        XMStoreFloat4(&rot, rotation);
-
-        SetWorldLocationDirect(pos);
-        SetWorldRotationDirect(rot);
-    }
-
-
-    // 親からの相対的なこのコンポーネントの Transform を直接設定
-    void SetRelativeMatrixDirect(const DirectX::XMFLOAT4X4& matrix)
-    {
-        using namespace DirectX;
-
-        XMMATRIX m = XMLoadFloat4x4(&matrix);
-
-        XMVECTOR scale;
-        XMVECTOR rotation;
-        XMVECTOR translation;
-
-        XMMatrixDecompose(&scale, &rotation, &translation, m);
-
-        XMFLOAT3 pos;
-        XMFLOAT3 scl;
-        XMFLOAT4 rot;
-
-        XMStoreFloat3(&pos, translation);
-        XMStoreFloat3(&scl, scale);
-        XMStoreFloat4(&rot, rotation);
-
-        SetRelativeRotationDirect(rot); 
-    }
-
-
-    // このコンポーネントが動いた時にコールバック(呼び出)される関数
-    virtual void OnUpdateTransform(UpdateTransformFlags updateTransformFlags)
-    {
-    }
-
-    // コンポーネントの worldTransform の　update が　false だったら　worldTrasnformUpdate を呼ぶ
-    void ConditionalUpdateComponentWorldTransform()
-    {
-        if (!componentToWorldTransformUpdate_)
-        {
-            UpdateComponentToWorld();
-        }
-    }
-
-    // このコンポーネントにアタッチされている全ての子コンポーネントたちの Transform を更新する
     void UpdateChildTransforms(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None) const;
 
-        // このコンポーネントの親からの相対的な Transform を返す
+    // このコンポーネントの親からの相対的な Transform を返す
     Transform GetRelativeTransform() const
     {
-        return Transform(relativeLocation_, relativeRotation_, relativeScale_);
+        return Transform(relativeLocation, relativeRotation, relativeScale);
     }
 
 
 protected:
-
-    // 指定されたソケットノードのワールド空間のTransformを返す
-    // ソケットが見つからなかった場合は、自身の WorldTransform を返す
+    // 派生クラスでソケットのTransformを取得する。基底クラスでは自身のワールドTransformを返す
     virtual Transform GetSocketTransform(int socketNode) const
     {
-        // TODO: // 自身のワールド空間のトランスフォーム
-
-        return componentToWorld_;
+        return componentToWorld;
     }
 
-    // このコンポーネントの新しい　componentToWorld_Transformを計算する
-    // parent は省略可能で、任意の sceneComponent を使って計算できる
-    // 指定されない場合は、コンポーネント自身の　attachParent を使う
-    Transform CalculateNewComponentToWorldTransform(const Transform& newRelativeTransform, const SceneComponent* parent = nullptr, int socketNode = -1)const
-    {
-        // socketNode と parent を指定されていなければ、アタッチされた情報から取得
-        socketNode = parent ? socketNode : attachSocketNode_;
-        parent = parent ? parent : attachParent_.lock().get();
-        if (parent)
-        {
-            // 「絶対位置・絶対回転・絶対スケール」のいずれかを使っているか
-            const bool general = IsUsingAbsoluteLocation() || IsUsingAbsoluteRotation() || IsUsingAbsoluteScale();
-            if (!general)
-            {// 絶対座標指定がされていないなら（＝通常の親からの相対的な座標なら）
-                return newRelativeTransform * parent->GetSocketTransform(socketNode);
-            }
-            // 絶対指定が含まれているから、特殊な合成処理を行う
-            return CalculateNewComponentToWorldGeneralCase(newRelativeTransform, parent, socketNode);
-        }
-        else
-        {// 親が存在しない時は、自分の相対 Transform がそのまま WorldTransform になる
-            return newRelativeTransform;
-        }
-    }
+    // 親を指定しない場合は、現在の接続先を使ってワールドTransformを計算する
+    Transform CalculateNewComponentToWorldTransform(const Transform& newRelativeTransform, const SceneComponent* parent = nullptr, int socketNode = -1)const;
 
-    // 親の Transform を使用して、絶対指定の要素を考慮した　componentToWorldTransform を計算する
-    Transform CalculateNewComponentToWorldGeneralCase(const Transform& newRelativeTransform, const SceneComponent* parent, int socketNode)const
-    {
-        if (parent != nullptr)
-        {
-            const Transform parentToWorld = parent->GetSocketTransform(socketNode);
-            Transform newComponentToWorldTransform = newRelativeTransform * parentToWorld;
-
-            // 絶対位置が有効なら、位置だけは親の影響を無視
-            if (absoluteLocation_)
-            {
-                newComponentToWorldTransform.translation_ = newRelativeTransform.translation_;
-            }
-            // 絶対回転が有効なら、回転だけは親の影響を無視
-            if (absoluteRotation_)
-            {
-                newComponentToWorldTransform.rotation_ = newRelativeTransform.rotation_;
-            }
-            // 絶対スケールが有効なら、スケールだけは親の影響を無視
-            if (absoluteScale_)
-            {
-                //newComponentToWorldTransform.scale_ = newRelativeTransform.scale_;
-                // ただの代入ではなく、符号の補正を加えたスケール合成
-                newComponentToWorldTransform.scale_ = DirectX::XMVectorMultiply(newRelativeTransform.scale_, MathHelper::VectorSign(newComponentToWorldTransform.scale_));
-            }
-
-            return newComponentToWorldTransform;
-        }
-        else
-        {
-            return newRelativeTransform;
-        }
-    }
-
+    // 位置・回転・スケールの絶対指定を考慮してワールドTransformを計算する
+    Transform CalculateNewComponentToWorldGeneralCase(const Transform& newRelativeTransform, const SceneComponent* parent, const int socketNode)const;
 
     // このコンポーネントを現在の親のコンポーネントから切り離す
     void DetachFromParent();
-
-
 private:
-    //「Transformが変わった時や物理的に移動した時に、自分とその子たちを正しく更新するための中心的な処理」
-    // 自身の Transform の変更を反映し、必要に応じて子コンポーネントにもそれを伝播させる関数
+    // Transformの変更状態と更新フラグに応じて、子コンポーネントへ更新を伝播する
     void PropagateTransformUpdate(bool transformChanged, UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None) const;
 
-    // 親の Transform をもとに、自分の Transform（= ComponentToWorld）を更新し、必要に応じてその変更を子へ伝播する
+    // 指定された親とソケットを使ってワールドTransformを更新し、必要に応じて子へ伝播する
     void UpdateComponentToWorldWithParent(SceneComponent* parent, int socketNode, UpdateTransformFlags updateTransformFlags);
 
+    // 指定されたコンポーネントが自身の祖先にあたるか判定する
+    bool IsAttachAbove(const SceneComponent* component) const;
 
-    // 指定された component が、このコンポーネントの祖先（親、祖父母など）であるかを判定する関数。
-    // component が祖先であれば true を返し、それ以外は false を返す。
-    bool IsAttachAbove(const SceneComponent* component) const
-    {
-        // 親から辿っていって、指定された component に一致するかをチェック
-        for (SceneComponent* parent = attachParent_.lock().get(); parent; parent = parent->attachParent_.lock().get())
-        {
-            if (parent == component)
-            {
-                return true;
-            }
-        }
+protected:
+    DirectX::XMFLOAT3 inspectorEuler = { 0,0,0 };
 
-        // どの親にも一致しなければ false
-        return false;
-    }
+    Transform componentToWorld;     // 親子関係を反映したワールドTransformのキャッシュ
+
+    Transform previousComponentToWorld; // 前フレームのワールドTransform。モーションベクトル等で使用する
+
+    // 親コンポーネントを弱参照で保持する
+    std::weak_ptr<SceneComponent> attachParent; 
+
+    // 接続先のソケット番号。-1はソケット指定なし
+    int attachSocketNode = -1;
+
+    // 子コンポーネントを共有参照で保持する
+    std::vector<std::shared_ptr<SceneComponent>> attachChildren; 
+
+private:
+    DirectX::XMFLOAT3 relativeLocation = { 0.0f,0.0f,0.0f };
+    DirectX::XMFLOAT4 relativeRotation = { 0.0f,0.0f,0.0f,1.0f };
+    DirectX::XMFLOAT3 relativeScale = { 1.0f,1.0f,1.0f };
+
+    // ワールドTransformが初期化・更新済みかを示す
+    uint8_t componentToWorldTransformUpdate : 1 = 0; 
+
+    // trueの場合は親のTransformではなく、ワールド座標系を基準に扱う
+    uint8_t absoluteLocation : 1 = 0;
+    uint8_t absoluteRotation : 1 = 0;
+    uint8_t absoluteScale : 1 = 0;
 
     friend class Actor;
-public:
-    void UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None) final;
-
-    void Tick(float deltaTime) override {}
-
-    void Initialize()override {};
-
-    void OnRegister()override {} // 派生クラスで override して登録処理を書く
-
-    void OnUnregister()override {} // 派生クラスで override して解除処理を書く
-
-
-    // 親子関係セット
-    void AttachTo(const std::shared_ptr<SceneComponent>& parent)
-    {
-        attachParent_ = parent;
-        parent->attachChildren_.push_back(shared_from_this());
-        // もう一度確認
-
-    }
-
-    // このコンポーネントを、指定された親コンポーネントにアタッチ（接続）する
-    // parent はアタッチ先の親コンポーネント　
-    // socketNode 接続先のソケットノード番号( -1 ならデフォルト)
-    void AttachToComponent(const std::shared_ptr<SceneComponent>& parent, int socketNode);
-
-    void AddWorldOffset(const DirectX::XMFLOAT3& offset);
-
-
-    // ワールド空間でのこのコンポーネントの回転をオフセット分だけ加算する
-    void AddLocalRotation(const DirectX::XMFLOAT3& offset);
 };
 
