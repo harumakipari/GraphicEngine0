@@ -4,12 +4,13 @@
 class UIManager
 {
 public:
-    // 更新処理
     void Update(float deltaTime);
 
     void Draw(ID3D11DeviceContext* immediateContext) const;
 
-    void DrawFont(ID3D11DeviceContext* immedaiateContext) const;
+    void DrawImGui();
+
+    void DrawFont(ID3D11DeviceContext* immediateContext) const;
 
     void DrawSceneChangeSprite(ID3D11DeviceContext* immediateContext) const;
 
@@ -26,46 +27,24 @@ public:
         buttons.push_back(ui);
     }
 
-
-
-    void Cleanup()
-    {
-        rootComponents.erase(
-            std::remove_if(
-                rootComponents.begin(),
-                rootComponents.end(),
-                [](const std::shared_ptr<UICoreComponent>& ui)
-                {
-                    return ui->IsPendingKill();
-                }
-            ),
-            rootComponents.end()
-        );
-    }
+    void Cleanup();
 
     void Clear()
     {
         rootComponents.clear();
     }
 
-    void DrawImGUi();
-
     void SetAllUIActive(bool visible, bool enabled);
-
     bool IsMouseCaptured() const { return mouseCaptured; }
-    void SetMouseCaptured(const bool v) { mouseCaptured = v; }
-
-    void SetNavigationEnabled(bool value) { navigationEnabled = value; }
+    void SetMouseCaptured(const bool isCaptured) { mouseCaptured = isCaptured; }
+    void SetNavigationEnabled(const bool isEnabled) { navigationEnabled = isEnabled; }
     void SetSelected(UIButtonComponent* button);
     UIButtonComponent* GetSelectedButton() const { return selectedButton; }
-
 private:
     // ゲームパッドでUIを操作
     void HandleGamepadUI(float deltaTime);
-
     // 選択切り替え処理
-    void MoveSelection(int dir);
-
+    void MoveSelection(const int direction);
 private:
     std::vector<std::shared_ptr<UICoreComponent>> rootComponents;
     std::vector<std::shared_ptr<UICoreComponent>> pendingAdd; // 追加待ち

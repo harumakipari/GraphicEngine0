@@ -92,13 +92,8 @@ public:
         }
     }
 
-    virtual void Tick(const float deltaTime) override
-    {
-        if (rigidBody_)
-        {
-            rigidBody_->Tick(deltaTime);
-        }
-    }
+    void Tick(const float deltaTime) override;
+
     // ゲーム内でカプセルがどの軸に長いか取得
     const ShapeComponent::CapsuleAxis& GetCapusleAxis() const { return capsuleAxis; }
     // ゲーム内でカプセルがどの軸に長いか設定
@@ -214,7 +209,7 @@ public:
     // 当たり判定を無効にする
     void DisableCollision() override
     {
-        isCollide_ = false;
+        isCollide = false;
         if (rigidBody_)
         {
             rigidBody_->DisableCollision();
@@ -224,7 +219,7 @@ public:
     // 当たり判定を有効にする
     void EnableCollision() override
     {
-        isCollide_ = true;
+        isCollide = true;
         if (rigidBody_)
         {
             rigidBody_->EnableCollision();

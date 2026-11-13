@@ -16,8 +16,8 @@ void CollisionComponent::OnRegister()
 // Õ“ËƒCƒxƒ“ƒg
 void CollisionComponent::OnHit(CollisionComponent* self, CollisionComponent* other)
 {
-    if (onHitCallback_)
+    if (onHitCallback)
     {
-        onHitCallback_(self, other);
+        onHitCallback(self, other);
     }
 }

@@ -1,22 +1,15 @@
-#ifndef COLLISION_COMPONENT_H
-#define COLLISION_COMPONENT_H
+#pragma once
 
-// C++ 標準ライブラリ
-#include <cstdint>
 #include <string>
 #include <unordered_map>
 
-// 他ライブラリ
-
-// プロジェクトの他のヘッダ
 #include "Components/Base/SceneComponent.h"
 #include "Physics/CollisionHelper.h"
-#include "Physics/Collider.h"
 
 class CollisionComponent :public SceneComponent
 {
 public:
-    enum class CollisionResponse
+    enum class CollisionResponse:uint8_t
     {
         None,    // 完全に無視
         Trigger, // 衝突通知だけ（押し出ししない）
@@ -26,33 +19,33 @@ public:
     CollisionComponent(const std::string& name, const std::shared_ptr<Actor>& owner) : SceneComponent(name, owner) {}
 
     // 現在の設定を取得
-    uint32_t GetCollisionLayer() const { return collisionLayer_; }
+    uint32_t GetCollisionLayer() const { return collisionLayer; }
 
-    uint32_t GetCollisionMask() const { return collisionMask_; }
+    uint32_t GetCollisionMask() const { return collisionMask; }
 
     void OnRegister()override;
 
 
     // 所属レイヤーを設定（例：Player、Enemy、Convexなど）
-    void SetLayer(CollisionLayer layer)
+    void SetLayer(const CollisionLayer layer)
     {
-        collisionLayer_ = CollisionHelper::ToBit(layer);
+        collisionLayer = CollisionHelper::ToBit(layer);
     }
 
     // 相手に対する反応を登録 (引数：相手、反応)
-    void SetResponseToLayer(CollisionLayer otherLayer, CollisionResponse response)
+    void SetResponseToLayer(const CollisionLayer otherLayer, const CollisionResponse response)
     {
         uint32_t bit = CollisionHelper::ToBit(otherLayer);
         // 相手と反応を登録
-        responseTable_[bit] = response;
+        responseTable[bit] = response;
 
         if (response != CollisionResponse::None)
         {
-            collisionMask_ |= bit;  // 衝突対象として登録
+            collisionMask |= bit;  // 衝突対象として登録
         }
         else
         {
-            collisionMask_ &= ~bit; // 対象から除外
+            collisionMask &= ~bit; // 対象から除外
         }
     }
 
@@ -61,8 +54,8 @@ public:
     {
         uint32_t layer = other->GetCollisionLayer();
 
-        auto it = responseTable_.find(layer);
-        if (it != responseTable_.end())
+        auto it = responseTable.find(layer);
+        if (it != responseTable.end())
         {
             return it->second;
         }
@@ -92,9 +85,9 @@ public:
     virtual void AddImpulse(const DirectX::XMFLOAT3& impulse) {}
 
     // コールバック関数を設定するための関数
-    void SetOnHitCallback(std::function<void(CollisionComponent*, CollisionComponent*)> callback)
+    void SetOnHitCallback(const std::function<void(CollisionComponent*, CollisionComponent*)>& callback)
     {
-        onHitCallback_ = callback;
+        onHitCallback = callback;
     }
 
     //------- physics で遅延処理するための仮想関数-------//
@@ -106,19 +99,16 @@ public:
     // 当たり判定を有効にする
     virtual void EnableCollision() {};
     // 当たり判定が有効かどうかを取得する
-    bool IsCollide() { return this->isCollide_; }
+    bool IsCollide() const { return this->isCollide; }
     // OnTrigger か OnContact どっちに入るか設定する
     virtual void SetTrigger(bool isTrigger) {};
-    //virtual void Destroy()override {};
 protected:
-    uint32_t collisionLayer_ = 0;
-    uint32_t collisionMask_ = 0;
-    std::unordered_map<uint32_t, CollisionResponse> responseTable_;// 相手、反応
+    uint32_t collisionLayer = 0;
+    uint32_t collisionMask = 0;
+    std::unordered_map<uint32_t, CollisionResponse> responseTable;// 相手、反応
 
-    bool isCollide_ = true;
+    bool isCollide = true;
 
-    std::function<void(CollisionComponent*, CollisionComponent*)> onHitCallback_;
+    std::function<void(CollisionComponent*, CollisionComponent*)> onHitCallback;
 };
 
-
-#endif

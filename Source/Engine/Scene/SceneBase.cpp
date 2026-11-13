@@ -872,7 +872,7 @@ void SceneBase::DrawGui()
     DrawInspector();
     SceneEditor::Draw();
     ProfileDrawUI();
-    uiManager->DrawImGUi();
+    uiManager->DrawImGui();
     EffectEditor::DrawGUI();
     DrawShortcutInfo();
     skyMap->DrawImGui();

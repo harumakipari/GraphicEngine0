@@ -27,7 +27,7 @@ class Actor;
 class MeshComponent :public SceneComponent
 {
 public:
-    PipeLineStateDesc pipeLineState_;   
+    PipeLineStateDesc pipeLineState;   
     std::optional<std::string> overrideDeferredPipelineName;
     std::optional<std::string> overrideForwardPipelineName;
     std::optional<std::string> overrideCascadeShadowPipelineName;
@@ -76,9 +76,9 @@ public:
 
     virtual void DrawImGuiInspector() override;
 
-    void SetPipeLineState(const PipeLineStateDesc& pipelinesState) { this->pipeLineState_ = pipelinesState; }
+    void SetPipeLineState(const PipeLineStateDesc& pipelinesState) { this->pipeLineState = pipelinesState; }
 
-    PipeLineStateDesc GetPipeLineState()const { return pipeLineState_; }
+    PipeLineStateDesc GetPipeLineState()const { return pipeLineState; }
 
     void SetIsCastShadow(bool isCastShadow) { this->isCastShadow_ = isCastShadow; }
 

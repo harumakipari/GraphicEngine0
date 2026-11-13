@@ -1,12 +1,12 @@
 #include "pch.h"
 #include "UIManager.h"
-#include <imgui.h>
 
+#include <imgui.h>
 #include "FontManager.h"
 #include "Engine/Utility/Time.h"
 
 
-void UIManager::Update(float deltaTime)
+void UIManager::Update(const float deltaTime)
 {
     if (!enabled) return;
 
@@ -44,12 +44,10 @@ void UIManager::Draw(ID3D11DeviceContext* immediateContext)const
     // 描画順にソート zOrderが大きいほど後に描画される
     std::vector<std::shared_ptr<UICoreComponent>> sortedComponents = rootComponents;
     std::sort(sortedComponents.begin(), sortedComponents.end(),
-        [](const std::shared_ptr<UICoreComponent>& a, const std::shared_ptr<UICoreComponent>& b)
-        {
-            return a->zOrder < b->zOrder;
-        });
-
-    //FontManager::GetUIFont()->Begin(immediateContext);
+              [](const std::shared_ptr<UICoreComponent>& a, const std::shared_ptr<UICoreComponent>& b)
+              {
+                  return a->zOrder < b->zOrder;
+              });
 
     for (auto& ui : sortedComponents)
     {
@@ -58,73 +56,9 @@ void UIManager::Draw(ID3D11DeviceContext* immediateContext)const
             ui->Draw(immediateContext);
         }
     }
-
-    //RenderState::BindBlendState(immediateContext, BLEND_STATE::ALPHA);
-    //RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-    //RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_OFF_ZW_OFF);
-
-    //FontManager::GetUIFont()->End(immediateContext);
 }
 
-void UIManager::DrawFont(ID3D11DeviceContext* immediateContext)const
-{
-    if (!visible) return;
-
-    // 描画順にソート zOrderが大きいほど後に描画される
-    std::vector<std::shared_ptr<UICoreComponent>> sortedComponents = rootComponents;
-    std::sort(sortedComponents.begin(), sortedComponents.end(),
-        [](const std::shared_ptr<UICoreComponent>& a, const std::shared_ptr<UICoreComponent>& b)
-        {
-            return a->zOrder < b->zOrder;
-        });
-
-
-    FontManager::GetUIFont()->Begin(immediateContext);
-    for (auto& ui : sortedComponents)
-    {
-        if (ui->IsVisible())
-        {
-            if (ui->IsVisible())
-            {
-                ui->DrawTexts(immediateContext);
-                //ui->ClearDirty();
-            }
-        }
-    }
-    FontManager::GetUIFont()->End(immediateContext);
-
-}
-
-void UIManager::DrawSceneChangeSprite(ID3D11DeviceContext* immediateContext)const
-{
-    if (!visible) return;
-
-    // 描画順にソート zOrderが大きいほど後に描画される
-    std::vector<std::shared_ptr<UICoreComponent>> sortedComponents = rootComponents;
-    std::sort(sortedComponents.begin(), sortedComponents.end(),
-        [](const std::shared_ptr<UICoreComponent>& a, const std::shared_ptr<UICoreComponent>& b)
-        {
-            return a->zOrder < b->zOrder;
-        });
-
-
-    FontManager::GetUIFont()->Begin(immediateContext);
-    for (auto& ui : sortedComponents)
-    {
-        if (ui->IsVisible())
-        {
-            if (ui->IsVisible())
-            {
-                ui->DrawSceneChangeSprite(immediateContext);
-                //ui->ClearDirty();
-            }
-        }
-    }
-    FontManager::GetUIFont()->End(immediateContext);
-
-}
-
-void UIManager::DrawImGUi()
+void UIManager::DrawImGui()
 {
 
     if (ImGui::Begin("UI Manager"))
@@ -149,7 +83,72 @@ void UIManager::DrawImGUi()
     ImGui::End();
 }
 
-void UIManager::SetAllUIActive(bool visible, bool enabled)
+void UIManager::DrawFont(ID3D11DeviceContext* immediateContext)const
+{
+    if (!visible) return;
+
+    // 描画順にソート zOrderが大きいほど後に描画される
+    std::vector<std::shared_ptr<UICoreComponent>> sortedComponents = rootComponents;
+    std::sort(sortedComponents.begin(), sortedComponents.end(),
+              [](const std::shared_ptr<UICoreComponent>& a, const std::shared_ptr<UICoreComponent>& b)
+              {
+                  return a->zOrder < b->zOrder;
+              });
+
+
+    FontManager::GetUIFont()->Begin(immediateContext);
+    for (auto& ui : sortedComponents)
+    {
+        if (ui->IsVisible())
+        {
+            ui->DrawTexts(immediateContext);
+        }
+    }
+    FontManager::GetUIFont()->End(immediateContext);
+
+}
+
+void UIManager::DrawSceneChangeSprite(ID3D11DeviceContext* immediateContext)const
+{
+    if (!visible) return;
+
+    // 描画順にソート zOrderが大きいほど後に描画される
+    std::vector<std::shared_ptr<UICoreComponent>> sortedComponents = rootComponents;
+    std::sort(sortedComponents.begin(), sortedComponents.end(),
+              [](const std::shared_ptr<UICoreComponent>& a, const std::shared_ptr<UICoreComponent>& b)
+              {
+                  return a->zOrder < b->zOrder;
+              });
+
+
+    FontManager::GetUIFont()->Begin(immediateContext);
+    for (auto& ui : sortedComponents)
+    {
+        if (ui->IsVisible())
+        {
+            ui->DrawSceneChangeSprite(immediateContext);
+        }
+    }
+    FontManager::GetUIFont()->End(immediateContext);
+
+}
+
+void UIManager::Cleanup()
+{
+    rootComponents.erase(
+        std::remove_if(
+            rootComponents.begin(),
+            rootComponents.end(),
+            [](const std::shared_ptr<UICoreComponent>& ui)
+            {
+                return ui->IsPendingKill();
+            }
+        ),
+        rootComponents.end()
+    );
+}
+
+void UIManager::SetAllUIActive(const bool visible, const bool enabled)
 {
     this->visible = visible;
     this->enabled = enabled;
@@ -167,27 +166,25 @@ void UIManager::SetAllUIActive(bool visible, bool enabled)
     }
 }
 
-void UIManager::SetSelected(UIButtonComponent* btn)
+void UIManager::SetSelected(UIButtonComponent* button)
 {
     if (selectedButton)
         selectedButton->state = UIButtonState::Normal;
 
-    selectedButton = btn;
+    selectedButton = button;
 
     if (selectedButton)
         selectedButton->state = UIButtonState::Selected;
 }
 
-void UIManager::HandleGamepadUI(float deltaTime)
+void UIManager::HandleGamepadUI(const float deltaTime)
 {
     static float stickDelay = 0.0f;
     stickDelay -= deltaTime;
 
     bool moved = false;
 
-    // =========================
     // D-Pad入力（優先・1回だけ）
-    // =========================
     if (InputSystem::GetInputState("UIUp", InputStateMask::Trigger) ||
         InputSystem::GetInputState("UILeft", InputStateMask::Trigger))
     {
@@ -196,16 +193,14 @@ void UIManager::HandleGamepadUI(float deltaTime)
         moved = true;
     }
     else if (InputSystem::GetInputState("UIDown", InputStateMask::Trigger) ||
-             InputSystem::GetInputState("UIRight", InputStateMask::Trigger))
+        InputSystem::GetInputState("UIRight", InputStateMask::Trigger))
     {
         MoveSelection(1);
         stickDelay = 0.2f;
         moved = true;
     }
 
-    // =========================
     // スティック入力（D-Pad優先）
-    // =========================
     if (!moved && stickDelay <= 0.0f)
     {
         const auto stick = InputSystem::GetLeftStick();
@@ -222,9 +217,7 @@ void UIManager::HandleGamepadUI(float deltaTime)
         }
     }
 
-    // =========================
     // 決定ボタン
-    // =========================
     if (InputSystem::GetInputState("UISubmit", InputStateMask::Trigger))
     {
         if (selectedButton)
@@ -235,7 +228,7 @@ void UIManager::HandleGamepadUI(float deltaTime)
 }
 
 // 選択切り替え処理
-void UIManager::MoveSelection(int dir)
+void UIManager::MoveSelection(const int direction)
 {
     std::vector<UIButtonComponent*> activeButtons;
     activeButtons.reserve(buttons.size());
@@ -258,6 +251,6 @@ void UIManager::MoveSelection(int dir)
         }
     }
 
-    index = std::clamp(index + dir, 0, static_cast<int>(activeButtons.size()) - 1);
+    index = std::clamp(index + direction, 0, static_cast<int>(activeButtons.size()) - 1);
     SetSelected(activeButtons[index]);
 }
