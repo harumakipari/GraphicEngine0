@@ -430,21 +430,6 @@ void AudioSourceComponent::DrawImGuiInspector()
             }
         }
 
-#if 0
-        ImGui::Separator();
-        // ループ設定
-        static float loopBegin = 0.0f;
-        static float loopLength = 0.0f;
-        if (ImGui::InputFloat("Loop Begin", &loopBegin)) {
-            loopBegin = max(0.0f, loopBegin);
-            SetLoopOption(loopBegin, loopLength);
-        }
-        if (ImGui::InputFloat("Loop Length", &loopLength)) {
-            loopLength = max(0.0f, loopLength);
-            SetLoopOption(loopBegin, loopLength);
-        }
-#endif // 0
-
         // ループ有無
         ImGui::Checkbox("Loop", &isLooping);
 

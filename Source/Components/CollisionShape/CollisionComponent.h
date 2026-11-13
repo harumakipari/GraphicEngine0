@@ -90,15 +90,12 @@ public:
         onHitCallback = callback;
     }
 
-    //------- physics で遅延処理するための仮想関数-------//
     // シーンに物理処理を追加する
     virtual void AddToScene() {};
     virtual void SetKinematic(bool isKinematic) {};
-    // 当たり判定を無効にする
+
     virtual void DisableCollision() {};
-    // 当たり判定を有効にする
     virtual void EnableCollision() {};
-    // 当たり判定が有効かどうかを取得する
     bool IsCollide() const { return this->isCollide; }
     // OnTrigger か OnContact どっちに入るか設定する
     virtual void SetTrigger(bool isTrigger) {};

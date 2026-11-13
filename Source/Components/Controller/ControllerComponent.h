@@ -1,15 +1,11 @@
-#ifndef CONTROLLER_COMPONENT_H
-#define CONTROLLER_COMPONENT_H
+#pragma once
 
-// C++ 標準ライブラリ
 #include <memory>
 #include <unordered_map>
 #include <string>
 
-// 他ライブラリ
 #include <DirectXMath.h>
 
-// プロジェクトの他のヘッダ
 #include "Components/Base/Component.h"
 #include "Components/Base/SceneComponent.h"
 #include "Engine/Input/GamePad.h"
@@ -138,8 +134,6 @@ public:
         return true;
     }
 
-    // DarkStage owns this state so the movement probe and BossRoom wall colliders
-    // always become active together.
     void SetBossRoomWallProbeEnabled(const bool enabled) { bossRoomWallProbeEnabled_ = enabled; }
     bool IsBossRoomWallProbeEnabled() const { return bossRoomWallProbeEnabled_; }
     void SetBossRoomWallProbeRadius(const float radius) { bossRoomWallProbeRadius_ = (std::max)(radius, 0.01f); }
@@ -306,7 +300,6 @@ private:
     float moveSpeedScale_ = 1.0f;
     float finalMoveSpeed_ = 0.0f;
     float actualHorizontalSpeed_ = 0.0f;
-    // Observation only: records the result of the existing horizontal wall ray.
     bool lastWallRayCastHitForDebug_ = false;
     DirectX::XMFLOAT3 lastWallCollisionPositionForDebug_{};
     // 固定のスピードを使用するかどうか
@@ -324,8 +317,6 @@ public:
     void SetDirection(const DirectX::XMFLOAT3& dir);
     void SetDirectionImmediate(const DirectX::XMFLOAT3& dir);
     void ForceDirectionImmediate(const DirectX::XMFLOAT3& dir);
-    // Align interpolation state with the owner's existing rotation without
-    // changing the owner's transform.
     void SyncCurrentRotation();
     bool RotateTowardsDirection(const DirectX::XMFLOAT3& direction,
         float maxDegreesPerSecond, float deltaTime);
@@ -373,6 +364,3 @@ private:
     float lerpTime_ = 0.0f;
     float rotateTime_ = 0.3f;    // 3秒で rotation する
 };
-
-
-#endif //CONTROLLER_COMPONENT_H
