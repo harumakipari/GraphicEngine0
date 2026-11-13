@@ -376,7 +376,6 @@
     <ClCompile Include="Source\Graphics\Shadow\CascadeShadowMap.cpp" />
     <ClCompile Include="Source\Graphics\Shadow\ShadowMap.cpp" />
     <ClCompile Include="Source\Graphics\Sprite\Sprite.cpp" />
-    <ClCompile Include="Source\Graphics\Sprite\SpriteBatch.cpp" />
     <ClCompile Include="Source\main.cpp" />
     <ClCompile Include="Source\pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -557,7 +556,6 @@
     <ClInclude Include="Source\Graphics\Shadow\CascadeShadowMap.h" />
     <ClInclude Include="Source\Graphics\Shadow\ShadowMap.h" />
     <ClInclude Include="Source\Graphics\Sprite\Sprite.h" />
-    <ClInclude Include="Source\Graphics\Sprite\SpriteBatch.h" />
     <ClInclude Include="Source\Math\MathHelper.h" />
     <ClInclude Include="Source\pch.h" />
     <ClInclude Include="Source\Physics\Collider.h" />

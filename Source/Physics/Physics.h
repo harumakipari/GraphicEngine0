@@ -2,7 +2,6 @@
 
 #include <vector>
 #include <map>
-#include <memory>
 
 #include <DirectXMath.h>
 
@@ -12,7 +11,6 @@ class Actor;
 class ShapeComponent;
 class CollisionComponent;
 
-/// ヒット結果
 struct HitResult
 {
     DirectX::XMFLOAT3 position = {};
@@ -21,7 +19,7 @@ struct HitResult
     bool initialOverlap = false;
     uint32_t layerMask = 0;
 };
-/// Actor除法付きヒット結果
+
 struct HitResultWithActor
 {
     Actor* actor = nullptr;     // 衝突した相手
@@ -35,7 +33,6 @@ struct HitResultWithActor
     float penetrationDepth = 0.0f;
 };
 
-/// マテリアルタイプ
 struct PositioningSweepShape
 {
     enum class Type { Sphere, Capsule };
@@ -72,6 +69,7 @@ struct PositioningPathSafetyResult
     PositioningPathSafetyHit ignoredSupportContact{};
     PositioningPathSafetyHit blockingHit{};
 };
+
 enum class PhysicsMaterialType : uint8_t
 {
     Default,
@@ -93,28 +91,20 @@ public:
         return instance;
     }
 
-    // 初期化
     void Initialize();
 
-    // 終了化
     void Finalize();
 
-    // 更新処理
     void Update(float elapsedTime);
 
-    // デバック描画処理
     void Render(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4& projection, const DirectX::XMFLOAT3& lightDirection);
 
-    // フィジクス取得
     physx::PxPhysics* GetPhysics() const { return pxPhysics; }
 
-    // シーン取得
     physx::PxScene* GetScene() const { return pxScene; }
 
-    // コントローラーマネージャー取得
     physx::PxControllerManager* GetControllerManager() const { return pxControllerManager; }
 
-    // マテリアル取得
     physx::PxMaterial* GetMaterial(const PhysicsMaterialType type)
     {
         auto it = materials.find(type);
@@ -125,13 +115,11 @@ public:
         return materials[PhysicsMaterialType::Default];
     }
 
-    // デフォルトのマテリアル取得
     physx::PxMaterial* GetDefaultMaterial() const
     {
         return materials.at(PhysicsMaterialType::Default);
     }
 
-    // レイキャスト
     bool RayCast(const DirectX::XMFLOAT3& origin, const DirectX::XMFLOAT3& direction, float distance, HitResult& result, uint32_t wantToHitLayer = 0xFFFFFF);
 
     // スフィアキャスト
@@ -184,7 +172,6 @@ private:
         float				height;
         DirectX::XMFLOAT4	color;
     };
-
 private:
     physx::PxDefaultAllocator			pxAllocator;
     physx::PxDefaultErrorCallback		pxErrorCallback;

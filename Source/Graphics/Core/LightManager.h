@@ -8,7 +8,6 @@
 
 class Scene;
 
-
 class LightManager
 {
     const static inline int PointLightMaxCount = 160;
@@ -54,11 +53,11 @@ public:
         PointLight pointsLight[PointLightMaxCount];
     };
 
-    SharedLightParam FindSharedLight(const std::string& name);
 public:
     void Initialize(ID3D11Device* device);
     void Update(float deltaTime);
     void Apply(ID3D11DeviceContext* context, int slot) const;
+    void DrawGui();
 
     void AddPointLight(const PointLight& light)
     {
@@ -66,11 +65,12 @@ public:
     }
 
     void CollectPointLightsFromScene(const Scene& scene);
+    SharedLightParam FindSharedLight(const std::string& name);
 
-    void SetDirectionalLight(Scene* scene, const DirectX::XMFLOAT4& dir, const DirectX::XMFLOAT4& color);
+
     void InitializeDefaultLights(std::unordered_map<std::string, SharedLightParam>& sharedLights);
+    void SetDirectionalLight(Scene* scene, const DirectX::XMFLOAT4& dir, const DirectX::XMFLOAT4& color);
 
-    void DrawGui();
 
     void LightGui();
 
@@ -78,6 +78,7 @@ public:
     size_t GetCollectedPointLightCount() const { return scenePointLights.size(); }
     int GetGpuPointLightCount() const { return constants.pointLightCount; }
 
+public:
     bool showLightRange = false; // ポイントライトの範囲をデバッグ表示するか
 
 private:

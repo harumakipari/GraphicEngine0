@@ -1,12 +1,8 @@
 #pragma once
 
-#include <string>
-
-// 他ライブラリ
 #include <DirectXMath.h>
 #include <PxPhysicsAPI.h>
 
-// プロジェクトの他のヘッダ
 #include "Components/Transform/Transform.h"
 
 namespace PhysicsHelper
@@ -59,6 +55,4 @@ namespace PhysicsHelper
             physx::PxQuat(rot.x, rot.y, rot.z, rot.w)
         );
     }
-
-
 }

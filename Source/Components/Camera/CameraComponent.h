@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <fstream>
 #include <DirectXMath.h>
 
 #ifdef USE_IMGUI
@@ -24,34 +23,12 @@ class CameraComponent :public SceneComponent
 public:
     CameraComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :SceneComponent(name, owner) {}
 
-    // パースペクティブ設定
     void SetPerspective(const float fovY, const float aspect, const float nearZ, const float farZ)
     {
         this->fovY = fovY;
         this->aspect = aspect;
         this->nearZ = nearZ;
         this->farZ = farZ;
-    }
-
-    void SaveBookmark()
-    {
-        bookmark.position = GetComponentLocation();
-        bookmark.rotation = GetComponentRotation();
-        bookmark.yaw = yaw;
-        bookmark.pitch = pitch;
-        bookmark.fov = fovY;
-        hasBookmark = true;
-    }
-
-    void LoadBookmark()
-    {
-        if (!hasBookmark) return;
-        GetOwner()->SetPosition(bookmark.position);
-        GetOwner()->SetQuaternionRotation(bookmark.rotation);
-        yaw = bookmark.yaw;
-        pitch = bookmark.pitch;
-        fovY = bookmark.fov;
-        UpdateRotationFromYawPitch();
     }
 
     const DirectX::XMFLOAT4X4& GetView();
@@ -69,7 +46,6 @@ public:
 
     ViewConstants GetViewConstants();
 
-    // CameraActorのrotationを更新する
     void UpdateRotationFromYawPitch();
 
     void AddYaw(const float v);
@@ -101,9 +77,29 @@ public:
     {
         this->pitch = pitch;
     }
+protected:
+    void SaveBookmark()
+    {
+        bookmark.position = GetComponentLocation();
+        bookmark.rotation = GetComponentRotation();
+        bookmark.yaw = yaw;
+        bookmark.pitch = pitch;
+        bookmark.fov = fovY;
+        hasBookmark = true;
+    }
+
+    void LoadBookmark()
+    {
+        if (!hasBookmark) return;
+        GetOwner()->SetPosition(bookmark.position);
+        GetOwner()->SetQuaternionRotation(bookmark.rotation);
+        yaw = bookmark.yaw;
+        pitch = bookmark.pitch;
+        fovY = bookmark.fov;
+        UpdateRotationFromYawPitch();
+    }
+
 public:
-    CameraBookmark bookmark;
-    bool hasBookmark = false;
     bool useLookTarget = false;
     DirectX::XMFLOAT3 lookTarget{};
 protected:
@@ -122,8 +118,11 @@ protected:
     float maxPitchDegree = 22.5f;  // pitchの最大角度
 
     bool firstFrame = true;
-};
+private:
+    CameraBookmark bookmark;
+    bool hasBookmark = false;
 
+};
 
 // 三人称視点のカメラ
 class TPSCameraComponent : public CameraComponent
@@ -142,9 +141,9 @@ public:
 
 public:
     float distance = 4.5f;
+private:
     DirectX::XMFLOAT3 targetOffset = { 0.0f, 1.5f, 0.0f }; // 注視点のオフセット。キャラクターの頭あたりを注視するために Y を 1.5f くらいにしている
     DirectX::XMFLOAT3 cameraOffset = { 0.0f, 0.0f, 0.0f }; // カメラの位置を微調整するためのオフセット
-private:
     float distanceEasingValue = 0.0f;
     float distanceFrom = 0.0f;
     float distanceTo = 0.0f;
@@ -161,10 +160,11 @@ public:
     void Tick(const float deltaTime)override;
 
     void SetIsUseDebug(const bool useDebug) { this->useDebug = useDebug; }
+
 private:
+    void DrawImGuiInspector() override;
     void HandleKeyboardInput(float deltaTime);
     void HandleMouseInput(float deltaTime);
-    void DrawImGuiInspector() override;
 
 private:
     bool useDebug = false;
@@ -189,50 +189,43 @@ public:
 
     void Tick(const float deltaTime)override;
 
+    void DrawImGuiInspector() override;
+
     void SetIsUseCinematic(const bool useCinematic) { this->useCinematic = useCinematic; }
     void SetDebugInputEnabled(const bool enabled) { cinematicCameraDebugInputEnabled = enabled; }
-
     void CutToPose(const CameraPose& pose);
     void BlendToPose(const CameraPose& pose, float duration);
     bool IsBlending() const { return poseBlending; }
 
-public:
-    std::vector<CameraBookmark> bookmarks;
-
 private:
-    // 保存関数
-    void SaveBookmarksToFile();
-
-    // 読み込み関数
-    void LoadBookmarksFromFile();
-
+    void HandleMouseInput(float deltaTime);
     void HandleKeyboardInput(float deltaTime);
+
+    void SaveBookmarksToFile();
+    void LoadBookmarksFromFile();
+    void SaveBookmark(const int i);
+    void LoadBookmark(const int i);
+
     void ApplyPose(const CameraPose& pose);
     void UpdatePoseBlend(float deltaTime);
     void SyncYawPitchFromRotation(const DirectX::XMFLOAT4& rotation);
-    void HandleMouseInput(float deltaTime);
-    void DrawImGuiInspector() override;
-
-    void SaveBookmark(const int i);
-
-    void LoadBookmark(const int i);
-
     void StartCameraPath();
-
     void UpdateCameraPath(const float deltaTime);
+
+public:
+    std::vector<CameraBookmark> bookmarks;
+
 
 private:
     float moveSpeed = 2.0f;
     float rotateSpeed = 0.001f;
     bool useCinematic = false;
     bool cinematicCameraDebugInputEnabled = false;
-    static const int MAX_BOOKMARKS = 10;
-
+    static constexpr int MAX_BOOKMARKS = 10;
     bool playingPath = false;
     float pathTime = 0.f;
     int currentTarget = 0;
     float pathDuration = 2.0f; // 秒単位
-
     bool poseBlending = false;
     CameraPose poseBlendStart{};
     CameraPose poseBlendTarget{};
@@ -269,12 +262,13 @@ public:
 
     void Tick(const float deltaTime) override;
 
-    void SetIsUseMovie(const bool useMovie){this->useMovieCamera = useMovie;}
+    void DrawImGuiInspector()override;
 
+    void SetIsUseMovie(const bool useMovie){this->useMovieCamera = useMovie;}
     void CutToWorldPose(const DirectX::XMFLOAT3& position,const DirectX::XMFLOAT4& rotation, float fov);
     void ApplyWorldPose(const DirectX::XMFLOAT3& position,const DirectX::XMFLOAT4& rotation, float fov);
     float GetFirstKeyframeFov() const{return keys.empty() ? GetFov() : keys.front().fov;}
-    // ムービー再生中かどうかを取得する
+
     bool IsMovieFinish() const { return finished; }
     bool IsPlaying() const { return playing; }
 
@@ -293,6 +287,19 @@ public:
         time = 0.0f;
     }
 
+    void LoadFromJson(const std::string& path);
+    void RefreshMovieFiles();
+
+
+    void Start(bool reverse = false);
+    bool ApplyFirstFrameToOwner();
+
+    void SetOnMovieStart(const std::function<void()>& func) { onMovieStart = func; }
+
+    // 現在のカメラ姿勢から仮想targetを計算する
+    DirectX::XMFLOAT3 GetVirtualTarget(float distance = 5.0f);
+
+private:
     void ResetToFirstKey()
     {
         Stop();
@@ -305,30 +312,15 @@ public:
     void JumpToKey(const size_t keyIndex);
 
     void SaveToJson(const std::string& path);
-
-    void LoadFromJson(const std::string& path);
-    void RefreshMovieFiles();
-
-    void DrawImGuiInspector()override;
-
-    void Start(bool reverse = false);
-    bool ApplyFirstFrameToOwner();
-
-    void SetOnMovieStart(const std::function<void()>& func) { onMovieStart = func; }
-
-    // 現在のカメラ姿勢から仮想targetを計算する
-    DirectX::XMFLOAT3 GetVirtualTarget(float distance = 5.0f);
-
     float ApplyEase(const float t, const EaseType type);
 
     std::string EaseToString(const EaseType e);
 
     EaseType StringToEase(const std::string& s);
 
-private:
-    void SyncYawPitchFromRotation(const DirectX::XMFLOAT4& rotation);
     void HandleKeyboardInput(float deltaTime);
     void HandleMouseInput(float deltaTime);
+    void SyncYawPitchFromRotation(const DirectX::XMFLOAT4& rotation);
     void UpdatePath(float dt);
 private:
     std::vector<CameraKeyframe> keys;

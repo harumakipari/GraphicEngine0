@@ -32,56 +32,24 @@ bool CollideSphereVsSphere(Sphere a, Sphere b)
 
 bool ColliderAABBVsAABB(AABB a, AABB b)
 {
-# if 0
-    int r;
-    r = a.r[0] + b.r[0];
-    if ((unsigned int)(a.c.x - b.c.x + r) > r + r)
-    {
-        return false;
-    }
-    r = a.r[1] + b.r[1];
-    if ((unsigned int)(a.c.y - b.c.y + r) > r + r)
-    {
-        return false;
-    }
-    r = a.r[2] + b.r[2];
-    if ((unsigned int)(a.c.z - b.c.z + r) > r + r)
-    {
-        return false;
-    }
-    return true;
-#else
     return (a.min.x <= b.max.x && a.max.x >= b.min.x) &&
         (a.min.y <= b.max.y && a.max.y >= b.min.y) &&
         (a.min.z <= b.max.z && a.max.z >= b.min.z);
-
-#endif
-}
-
-// Return true if sphere s intersects AABB b, false otherwise
-bool CollideSphereVsAABB(Sphere a, AABB aabb)
-{
-    // Compute squard distance between sphere center and AABB
-    return 1;
 }
 
 
 bool CollideSphereVsCapsule(Sphere s, Capsule capsule)
 {
-    // Compute (squared) distance between sphere center and capsule line segment
     float dist2 = SqDistPointVsSegment(capsule.a, capsule.b, s.c);
-    // if (squared) distance smaller than (squared) sum of radii, they collide
     float radius = s.r + capsule.r;
     return dist2 <= radius + radius;
 }
 
 bool CollideCapsuleVsCapsule(Capsule capsule1, Capsule capsule2)
 {
-    // Compute (squared) distance between the inner structures of the capsules
     float s, t;
     Point c1, c2;
     float dist2 = ClosestPtSegmentVsSegment(capsule1.a, capsule1.b, capsule2.a, capsule2.b, s, t, c1, c2);
-    // If (squared) distance smaller than (squared) sum of radii, they collide
     float radius = capsule1.r + capsule2.r;
     return dist2 <= radius * radius;
 }
@@ -103,25 +71,20 @@ bool CollideCapsuleVsSegment(Capsule capsule, Point a, Point b)
     return dist2 <= radius2;
 }
 
-// Returns the squared distance between point c and segment ab
 float SqDistPointVsSegment(Point a, Point b, Point c)
 {
     Vector ab = b - a, ac = c - a, bc = c - b;
     float e = Dot(ac, ab);
-    // Handle cases where c projects outside ab
     // 内積の結果で二つの矢印の向きがわかるからそれを利用して　マイナスなら c は a の後ろ側にあるから最近点は a になる
     if (e <= 0.0f) return Dot(ac, ac);
 
     float f = Dot(ab, ab);
     if (e >= f) return Dot(bc, bc);
-    // Handle cases where c projects onto ab
     return Dot(ac, ac) - e * e / f;
 }
 
 //2本の線分（セグメント）間の最も近い2点 を計算し、その2点間の距離の2乗を返す
 //また、その最も近い2点が線分上のどこにあるかを示すパラメータ s と t も計算
-// Computes closest points C1 and C2 of S1(s)=P1*s*(Q1-P1) and S2(t)=P2+t*(Q2-P2),returning s and t. 
-// Finction result is squared distance between S1(s) and S2(t)
 float ClosestPtSegmentVsSegment(Point p1, Point q1, Point p2, Point q2, float& s, float& t, Point& c1, Point& c2)
 {
     Vector d1 = q1 - p1;// Direction vector of segmeny S1
@@ -130,7 +93,6 @@ float ClosestPtSegmentVsSegment(Point p1, Point q1, Point p2, Point q2, float& s
     float a = Dot(d1, d1);// Squared length of segment S1, always nonnegative
     float e = Dot(d2, d2);// Squared length of segment S2, always nonnegative
     float f = Dot(d2, r);
-    //Check if either or both segments degenerate into points
     if (a <= FLT_EPSILON && e <= FLT_EPSILON)
     {// Both segments degenerate into points    両方点
         s = t = 0.0f;

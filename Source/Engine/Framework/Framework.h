@@ -4,7 +4,6 @@
 #include <tchar.h>
 #include <sstream>
 
-#include "Engine/Utility/Win32Utils.h"
 #include "Engine/Utility/Time.h"
 
 
@@ -32,8 +31,6 @@ extern ImWchar glyphRangesJapanese[];
 #pragma comment(lib,"dwrite.lib")
 #endif
 
-
-
 #include <memory>
 #include <tracy/Tracy.hpp>
 
@@ -41,8 +38,6 @@ extern ImWchar glyphRangesJapanese[];
 #include "Graphics/Core/RenderState.h"
 
 #include "Graphics/Sprite/Sprite.h"
-#include "Graphics/Sprite/SpriteBatch.h"
-#include "Graphics/Resource/GeometricPrimitive.h"
 #include "Engine/Effects/CoreComputeParticleSystem.h"
 
 #ifndef _DEBUG
@@ -73,7 +68,6 @@ public:
     Framework(Framework&&) noexcept = delete;
     Framework& operator=(Framework&&) noexcept = delete;
 
-    // Starts the normal Win32 shutdown route; cleanup remains in run().
     static void RequestExit();
 
     int run()
@@ -145,9 +139,6 @@ public:
                     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
                 }
 #endif
-                //UINT sync_interval{ vsync ? 1U : 0U };
-                //UINT flags = (tearing_supported && !fullscreenMode && !vsync) ? DXGI_PRESENT_ALLOW_TEARING : 0;
-                //Graphics::GetSwapChain()->Present(sync_interval, flags);
                     }
                 UINT sync_interval{ 0 };
                 Graphics::Present(sync_interval);
@@ -163,14 +154,6 @@ public:
         ImGui::DestroyContext();
 #endif
 
-#if 0
-        BOOL fullscreen = 0;
-        Graphics::GetSwapChain()->GetFullscreenState(&fullscreen, 0);
-        if (fullscreen)
-        {
-            Graphics::GetSwapChain()->SetFullscreenState(FALSE, 0);
-        }
-#endif
 
         return Uninitialize() ? static_cast<int>(msg.wParam) : 0;
     }
@@ -210,11 +193,9 @@ public:
             break;
         case WM_SIZE:
         {
-#if 1
             RECT client_rect{};
             GetClientRect(hwnd, &client_rect);
             Graphics::OnSizeChanged(hwnd, static_cast<UINT64>(client_rect.right - client_rect.left), client_rect.bottom - client_rect.top);
-#endif
             break;
         }
         default:

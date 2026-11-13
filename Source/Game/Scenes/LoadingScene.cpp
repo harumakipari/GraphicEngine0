@@ -31,7 +31,6 @@ namespace
     {
         float x, y, width, height;
         Graphics::GetViewport(x, y, width, height);
-        // Sprite::Render scales coordinates from its 1920 x 1080 UI design space.
         const float uiScale = std::min<float>(width / 1920.0f, height / 1080.0f);
         if (uiScale <= 0.0f) return { 960.0f, 540.0f };
         return { width * 0.5f / uiScale, height * 0.5f / uiScale };
@@ -194,8 +193,7 @@ void LoadingScene::Update(float deltaTime)
     switch (fadeOutState)
     {
     case FadeOutState::Waiting:
-        // Keep the existing minimum display time and wait for async preload completion.
-        if (_has_finished_preloading() /*&& loadingTime <= 0.0f*/)
+        if (_has_finished_preloading())
         {
             fadeOutState = FadeOutState::Holding;
             fadeOutStateElapsed = 0.0f;
@@ -224,7 +222,6 @@ void LoadingScene::Update(float deltaTime)
         break;
     }
     case FadeOutState::BlackFrame:
-        // Render has submitted an opaque black LoadingPS frame before transition.
         if (blackFrameRendered)
         {
             fadeOutState = FadeOutState::Transition;

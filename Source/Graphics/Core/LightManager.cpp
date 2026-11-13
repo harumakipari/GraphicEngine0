@@ -1,10 +1,10 @@
 #include "pch.h"
 #include "LightManager.h"
-#include "Engine/Scene/Scene.h"
-#include "Components/Render/PointLightComponent.h"
 #include <string>
 
+#include "Engine/Scene/Scene.h"
 #include "Engine/Debug/DebugRender.h"
+#include "Components/Render/PointLightComponent.h"
 
 #ifdef USE_IMGUI
 #define IMGUI_ENABLE_DOCKING
@@ -357,13 +357,10 @@ void LightManager::Update(float deltaTime)
     constants.pointLightSpecularIntensity = light.pointLightSpecularIntensity;
 
     // デフォルト初期化
-#if 1
     for (int i = 0; i < constants.pointLightCount; i++)
     {
-        constants.pointsLight[i] =
-            (i < renderPointLights.size()) ? renderPointLights[i] : PointLight{};
+        constants.pointsLight[i] =(i < renderPointLights.size()) ? renderPointLights[i] : PointLight{};
     }
-#endif // 1
 
 #ifdef _DEBUG
     if (showLightRange)
@@ -435,19 +432,8 @@ void LightManager::DrawGui()
     ImGui::SliderFloat(U8("ライト強度"), &light.lightColor.w, 0.0f, 20.0f);
     CheckboxInt(U8("ポイントライト 有効"), &light.pointLightEnable);
     ImGui::SliderInt(U8("ポイントライト数"), &light.pointLightCount, 0, PointLightMaxCount);
-    ImGui::Text("Collected PointLight Count: %zu", scenePointLights.size());
-    ImGui::Text("GPU pointLightCount: %d", constants.pointLightCount);
 
-    // Read-only snapshot of the exact LightConstants most recently uploaded
-    // to the Deferred Lighting pixel shader at b11.
     const LightConstants& bound = lightCBuffer->data;
-    ImGui::SeparatorText("Deferred Lighting PS b11 (last bound, read-only)");
-    ImGui::Text("directionalLightEnable = %d", bound.directionalLightEnable);
-    ImGui::Text("colorLight = (%.6f, %.6f, %.6f), intensity = %.6f",
-        bound.lightColor.x, bound.lightColor.y, bound.lightColor.z, bound.lightColor.w);
-    ImGui::Text("diffuseIntensity = %.6f | iblIntensity = %.6f",
-        bound.diffuseIntensity, bound.iblIntensity);
-    ImGui::TextUnformatted("Bound by SceneBase::UpdateConstantBuffer via LightManager::Apply at PS slot b11.");
     ImGui::Checkbox(U8("ライト範囲表示"), &showLightRange);
 
     ImGui::SliderFloat("Kc", &light.kc, 0.0f, 2.0f);
@@ -461,37 +447,6 @@ void LightManager::DrawGui()
     {
         auto& lightData = Scene::GetCurrentScene()->GetSceneSettings().sceneLightSaveData;
         auto& sharedLights = lightData.sharedLights;
-#if 0
-        for (auto& [name, light] : sharedLights)
-        {
-            const char* displayName = name.c_str();
-
-            if (lightDisplayNames.contains(name))
-            {
-                displayName = lightDisplayNames[name];
-            }
-            if (ImGui::TreeNodeEx(displayName, ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                ImGui::ColorEdit3(U8("色"), &light.color.x);
-                ImGui::SliderFloat(U8("強度"), &light.color.w, 0.0f, 50.0f);
-                ImGui::Combo(U8("ポイントライト距離"), &light.attenuationType,
-                    "7\0"
-                    "13\0"
-                    "20\0"
-                    "32\0"
-                    "50\0"
-                    "65\0"
-                    "100\0"
-                    "160\0"
-                    "200\0"
-                    "325\0"
-                    "600\0"
-                    "3250\0");
-                ImGui::TreePop();
-            }
-        }
-        ImGui::TreePop();
-#else
         // 指定した順番で表示
         for (const std::string& name : lightDisplayOrder)
         {
@@ -549,13 +504,8 @@ void LightManager::DrawGui()
 
             ImGui::PopID();
         }
-
         ImGui::TreePop();
-#endif // 0
-
     }
-
-
 #endif
 }
 

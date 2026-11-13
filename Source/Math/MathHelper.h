@@ -1,12 +1,8 @@
-#ifndef MATH_HELPER_H
-#define MATH_HELPER_H
+#pragma once
 
-// C++ 標準ライブラリ
 #include <cmath>
 #include <cfloat>
 #include <random>
-
-// 他ライブラリ
 #include <DirectXMath.h>
 
 namespace MathHelper
@@ -116,8 +112,6 @@ namespace MathHelper
         int i = 0;
         int j = 0;
         int k = 0;
-        // The first action in the function is to reverse the sequence if the rotation is intrinsic. As we only do intrinsic rotations, we have to make sure i,j and k are reversed
-        // So if e.g. the sequence is ZXY, i should be 1, j should be 0 and k should be 2 as the sequence to use is yxz. 
         switch (rotationSequenceToUse)
         {
         case RotationSequence::zyx:
@@ -164,8 +158,6 @@ namespace MathHelper
 
         float n2 = a * a + b * b + c * c + d * d;
 
-        // always not proper as we only support Tait-Bryan angles/rotations
-
         angles[1] = std::acos((2.0f * (a * a + b * b) / n2) - 1.0f);
         bool safe1 = abs(angles[1]) >= FLT_EPSILON;
         bool safe2 = abs(angles[1] - DirectX::XM_PI) >= FLT_EPSILON;
@@ -179,7 +171,6 @@ namespace MathHelper
         }
         else
         {
-            // always intrinsic as we rotate a camera
             angles[0] = 0.0f;
 
             if (!safe1)
@@ -569,5 +560,3 @@ namespace MathHelper
     }
 
 }
-
-#endif //MATH_HELPER_H

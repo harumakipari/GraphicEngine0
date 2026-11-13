@@ -1,11 +1,9 @@
 #pragma once
 
-// C++ 標準ライブラリ
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-// プロジェクトの他のヘッダ
 #include "Components/Render/MeshComponent.h"
 #include "Graphics/Resource/InterleavedGltfModel.h"
 #include "AnimationState.h"
@@ -13,7 +11,6 @@
 
 class Character;
 
-// アニメーションのコントローラー  
 class AnimationController
 {
 public:
@@ -215,10 +212,6 @@ public:
         enableRootMotion = false;
         ignoreRootMotion = true;
 
-        // ルートモーションを使う
-        //enableRootMotion = true;
-        //ignoreRootMotion = false;
-
         // BlendSpace -> 通常アニメーション
         if (wasUsingBlendSpace && !useBlendSpace)
         {
@@ -257,7 +250,6 @@ public:
         {
             Logger::Log("Enable BlendSpace");
 
-            float normalizedPhase = 0.0f;
             bool phaseTransferSucceeded = false;
 
             const size_t phaseSourceClip =
@@ -286,6 +278,7 @@ public:
                 if (normalDuration >
                     FLT_EPSILON)
                 {
+                    float normalizedPhase = 0.0f;
                     normalizedPhase =
                         animationTime /
                         normalDuration;

@@ -331,9 +331,6 @@
     <ClCompile Include="Source\Graphics\Sprite\Sprite.cpp">
       <Filter>Source\Graphics\Sprite</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Graphics\Sprite\SpriteBatch.cpp">
-      <Filter>Source\Graphics\Sprite</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Graphics\PostProcess\DepthOfFieldEffect.cpp">
       <Filter>Source\Graphics\PostProcess</Filter>
     </ClCompile>
@@ -820,9 +817,6 @@
       <Filter>Source\Graphics\Shadow</Filter>
     </ClInclude>
     <ClInclude Include="Source\Graphics\Sprite\Sprite.h">
-      <Filter>Source\Graphics\Sprite</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Graphics\Sprite\SpriteBatch.h">
       <Filter>Source\Graphics\Sprite</Filter>
     </ClInclude>
     <ClInclude Include="Source\Graphics\PostProcess\BloomEffect.h">
@@ -1508,9 +1502,6 @@
     </Filter>
     <Filter Include="Source\Graphics\Environment">
       <UniqueIdentifier>{3088a86c-04b4-427b-9b47-85c3b3161e62}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Source\Graphics\Cloud">
-      <UniqueIdentifier>{a601d8a5-f8ae-4532-aab8-1f51fbc02e84}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source\UI">
       <UniqueIdentifier>{33d2a407-ef53-4b0e-9603-7951dbb9c029}</UniqueIdentifier>

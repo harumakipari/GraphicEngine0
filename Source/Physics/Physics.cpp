@@ -1,16 +1,17 @@
 #include "pch.h"
-#include <algorithm>
-#include "Engine/Utility/Win32Utils.h"
 #include "Physics.h"
-#include "Graphics/Core/Graphics.h"
+#include <algorithm>
 #include <tracy/Tracy.hpp>
+#include "Engine/Utility/Win32Utils.h"
+
+#include "Graphics/Core/Graphics.h"
+#include "Graphics/Renderer/PrimitiveRenderer.h"
+#include "Graphics/Renderer/PrimitiveShapeRenderer.h"
 
 #include "Core/Actor.h"
 
 #include "Components/CollisionShape/CollisionComponent.h"
 #include "Components/CollisionShape/ShapeComponent.h"
-#include "Graphics/Renderer/PrimitiveRenderer.h"
-#include "Graphics/Renderer/PrimitiveShapeRenderer.h"
 
 
 // 初期化
@@ -1105,7 +1106,6 @@ void Physics::onTrigger(physx::PxTriggerPair* pairs, physx::PxU32 count)
 
         if (!triggerComp || !otherComp)
             continue;
-
     }
 }
 
@@ -1138,14 +1138,4 @@ physx::PxFilterFlags Physics::SimulationFilterShader(
     pairFlags |= physx::PxPairFlag::eNOTIFY_TOUCH_FOUND | physx::PxPairFlag::eNOTIFY_TOUCH_LOST | physx::PxPairFlag::eNOTIFY_TOUCH_PERSISTS | physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
 
     return physx::PxFilterFlag::eDEFAULT;
-    // レイヤーマスクを使用して衝突フィルタリングする
-    if ((filterData0.word1 & filterData1.word0) == 0 || (filterData1.word1 & filterData0.word0) == 0)
-    {
-        return physx::PxFilterFlag::eSUPPRESS;
-    }
-
-    pairFlags = physx::PxPairFlag::eCONTACT_DEFAULT;
-    pairFlags |= physx::PxPairFlag::eNOTIFY_TOUCH_FOUND | physx::PxPairFlag::eNOTIFY_TOUCH_LOST
-        | physx::PxPairFlag::eNOTIFY_TOUCH_PERSISTS | physx::PxPairFlag::eNOTIFY_CONTACT_POINTS;
-    return physx::PxFilterFlag::eNOTIFY;
 }

@@ -5,6 +5,7 @@
 #include "Physics/CollisionFunction.h"
 #include "Game/Actors/Camera/Camera.h"
 #include <json.hpp>
+#include <fstream>
 
 
 const DirectX::XMFLOAT4X4& CameraComponent::GetView()
@@ -159,7 +160,6 @@ void TPSCameraComponent::DrawImGuiInspector()
     {
         ImGui::DragFloat3(U8("注視点のオフセット"), &targetOffset.x, 0.1f);
         ImGui::DragFloat3(U8("カメラの位置のオフセット"), &cameraOffset.x, 0.1f);
-        // ===== yaw / pitch / fov を degree 表示 =====
         float yawDeg = DirectX::XMConvertToDegrees(yaw);
         float pitchDeg = DirectX::XMConvertToDegrees(pitch);
         float fovDeg = DirectX::XMConvertToDegrees(fovY);

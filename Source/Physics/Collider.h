@@ -1,8 +1,6 @@
 #pragma once
 #include <DirectXMath.h>
 
-//#include "Math/MathHelper.h"
-
 struct Vector
 {
     float x;
@@ -108,15 +106,6 @@ struct AABB
         outCorners[7] = { max.x, max.y, max.z };
     }
 
-    //bool operator==(const AABB& other) const
-    //{
-    //    return MathHelper::AlmostEqualRelative(min.x, other.min.x)
-    //        && MathHelper::AlmostEqualRelative(min.y, other.min.y)
-    //        && MathHelper::AlmostEqualRelative(min.z, other.min.z)
-    //        && MathHelper::AlmostEqualRelative(max.x, other.max.x)
-    //        && MathHelper::AlmostEqualRelative(max.y, other.max.y)
-    //        && MathHelper::AlmostEqualRelative(max.z, other.max.z);
-    //}
     bool operator==(const AABB& o) const noexcept 
     {
         return min.x == o.min.x && min.y == o.min.y && min.z == o.min.z
@@ -127,8 +116,6 @@ struct AABB
 bool ColliderAABBVsAABB(AABB a, AABB b);
 
 bool CollideSphereVsSphere(Sphere a, Sphere b);
-
-bool CollideSphereVsAABB(Sphere a, AABB aabb);
 
 bool CollideSphereVsCapsule(Sphere s, Capsule capsule);
 
@@ -143,5 +130,4 @@ float SqDistPointVsSegment(Point a, Point b, Point c);
 
 //2本の線分（セグメント）間の最も近い2点 を計算し、その2点間の距離の2乗を返す
 //また、その最も近い2点が線分上のどこにあるかを示すパラメータ s と t も計算
-// Finction result is squared distance between S1(s) and S2(t)
 float ClosestPtSegmentVsSegment(Point p1, Point q1, Point p2, Point q2, float& s, float& t, Point& c1, Point& c2);

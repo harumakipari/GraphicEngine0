@@ -141,9 +141,6 @@ namespace CollisionFunction
             return { 0.0f,0.0f };
         }
         auto camera = scene->GetCameraManager()->GetRenderCamera(scene);
-
-        //auto camera = CameraManager::GetRenderCamera(dynamic_cast<SceneBase*>(Scene::GetCurrentScene()));
-
         ViewConstants data;
         if (camera)
             data = camera->GetViewConstants();

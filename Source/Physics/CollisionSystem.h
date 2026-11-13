@@ -1,12 +1,8 @@
 #pragma once
 
-// C++ 標準ライブラリ
 #include <vector>
-
-// 他ライブラリ
 #include <PxPhysicsAPI.h>
 
-// プロジェクトの他のヘッダ
 #include "Core/Actor.h"
 #include "Components/CollisionShape/CollisionComponent.h"
 #include "Components/CollisionShape/ShapeComponent.h"
@@ -18,8 +14,8 @@ class CollisionSystem
 public:
     static DirectX::XMFLOAT3 GetPushVectorForActor(Actor* actor)
     {
-        auto it = actorPushMap_.find(actor);
-        if (it != actorPushMap_.end())
+        auto it = actorPushMap.find(actor);
+        if (it != actorPushMap.end())
         {
             return it->second;
         }
@@ -30,29 +26,29 @@ public:
     {
         using namespace physx;
 
-        actorPushMap_.clear(); // 初期化
+        actorPushMap.clear(); // 初期化
 
         // expired な　weak_ptr　
-        allComponents_.erase(
+        allComponents.erase(
             std::remove_if(
-                allComponents_.begin(), allComponents_.end(),
+                allComponents.begin(), allComponents.end(),
                 [](const std::pair<std::weak_ptr<Actor>, std::weak_ptr<CollisionComponent>>& p)->bool
                 {
                     return p.first.expired() || p.second.expired();
                 }),
-            allComponents_.end());
+            allComponents.end());
 
 
         // 衝突判定＆押し出し
-        for (size_t i = 0; i < allComponents_.size(); ++i)
+        for (size_t i = 0; i < allComponents.size(); ++i)
         {
-            for (size_t j = i + 1; j < allComponents_.size(); ++j)
+            for (size_t j = i + 1; j < allComponents.size(); ++j)
             {
-                auto aActorWeak = allComponents_[i].first;
-                auto bActorWeak = allComponents_[j].first;
+                auto aActorWeak = allComponents[i].first;
+                auto bActorWeak = allComponents[j].first;
 
-                auto aComponentWeak = allComponents_[i].second;
-                auto bComponentWeak = allComponents_[j].second;
+                auto aComponentWeak = allComponents[i].second;
+                auto bComponentWeak = allComponents[j].second;
 
                 auto aActorShared = aActorWeak.lock();
                 auto bActorShared = bActorWeak.lock();
@@ -62,7 +58,6 @@ public:
 
                 if (!aActorShared || !bActorShared || !aComponentShared || !bComponentShared)
                 {
-                    // どれか有効じゃない場合はスキップ（もしくは後でallComponents_から削除する）
                     continue;
                 }
 
@@ -76,7 +71,6 @@ public:
                     continue;
                 }
 
-                // どちらかの当たり判定のフラグが無効ならスキップ
                 if (!aComponent->IsCollide() || !bComponent->IsCollide())
                 {
                     continue;
@@ -123,8 +117,8 @@ public:
                 if (!hit || depth <= 0.0001f) // 微小な衝突は無視
                     continue;
 
-                std::pair<CollisionComponent*, CollisionComponent*> hitPairA = { aComponent, bComponent };
-                std::pair<CollisionComponent*, CollisionComponent*> hitPairB = { bComponent, aComponent };
+                std::pair hitPairA = { aComponent, bComponent };
+                std::pair hitPairB = { bComponent, aComponent };
 
                 // 衝突通知 (Trigger or Block ) どっちにも
                 aComponent->OnHit(aComponent, bComponent);
@@ -173,11 +167,11 @@ public:
                 dir = dir.getNormalized();
 
                 // Actor単位に押し出し量を合算
-                actorPushMap_[aActor].x += dir.x * pushDistance * rateA;
-                actorPushMap_[aActor].z += dir.z * pushDistance * rateA;
+                actorPushMap[aActor].x += dir.x * pushDistance * rateA;
+                actorPushMap[aActor].z += dir.z * pushDistance * rateA;
 
-                actorPushMap_[bActor].x -= dir.x * pushDistance * rateB;
-                actorPushMap_[bActor].z -= dir.z * pushDistance * rateB;
+                actorPushMap[bActor].x -= dir.x * pushDistance * rateB;
+                actorPushMap[bActor].z -= dir.z * pushDistance * rateB;
             }
         }
     }
@@ -185,7 +179,7 @@ public:
     // 押出
     static void ApplyPushAll()
     {
-        for (auto& [actor, pushVec] : actorPushMap_)
+        for (auto& [actor, pushVec] : actorPushMap)
         {
             if (!actor) continue;
 
@@ -199,27 +193,27 @@ public:
 
     static void RegisterCollisionComponent(std::shared_ptr<CollisionComponent> collisionComponent)
     {
-        allComponents_.emplace_back(collisionComponent->GetActor(), collisionComponent);
+        allComponents.emplace_back(collisionComponent->GetActor(), collisionComponent);
     }
 
     static void UnRegisterCollisionComponent(CollisionComponent* collisionComponent)
     {
-        allComponents_.erase(
+        allComponents.erase(
             std::remove_if(
-                allComponents_.begin(), allComponents_.end(),
+                allComponents.begin(), allComponents.end(),
                 [collisionComponent](const std::pair<std::weak_ptr<Actor>, std::weak_ptr<CollisionComponent>>& p) {
                     return p.second.lock().get() == collisionComponent;
                 }),
-            allComponents_.end());
+            allComponents.end());
     }
 
     static void ClearAll()
     {
-        allComponents_.clear();
+        allComponents.clear();
     }
 
-    static inline std::vector<std::pair<std::weak_ptr<Actor>, std::weak_ptr<CollisionComponent>>> allComponents_;
+public:
+    static inline std::vector<std::pair<std::weak_ptr<Actor>, std::weak_ptr<CollisionComponent>>> allComponents;
 private:
-    // Actor 毎の押出量を計算して合成する用の Map 
-    static inline std::unordered_map<Actor*, DirectX::XMFLOAT3> actorPushMap_;
+    static inline std::unordered_map<Actor*, DirectX::XMFLOAT3> actorPushMap;
 };

@@ -9,7 +9,6 @@ enum class CollisionLayer :uint32_t
     WorldStatic ,
     Player ,
     Enemy ,
-    Boss,
     Convex ,
     WorldProps , // stage の object(カメラのレイキャストに関係するもの）
     WorldPropsNoRaycast, // stage の object(カメラのレイキャストに関係しないもの）
@@ -18,10 +17,11 @@ enum class CollisionLayer :uint32_t
     PlayerWeapon,// プレイヤーの武器
     EnemyWeapon,
     Floor,
-    Wall, //
-    BodyPart, // Death-effect debris; simulation-only, never a gameplay hit target.
+    Wall, 
+    BodyPart, 
     Max,
 };
+
 constexpr uint32_t COLLISION_EVERYTHING = 0xFFFFFFFF;
 
 
