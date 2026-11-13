@@ -2,20 +2,16 @@
 
 #include <memory>
 #include <unordered_map>
-#include <unordered_set>
 #include <string>
-
 #include <DirectXMath.h>
 #include <PxPhysicsAPI.h>
 #include <PxShape.h>
-#include <geometry/PxConvexMesh.h>
 
 #ifdef USE_IMGUI
 #define IMGUI_ENABLE_DOCKING
 #endif
 
 #include "Physics/Physics.h"
-#include "Physics/PhysicsHelper.h"
 #include "Components/Transform/Transform.h"
 #include "Graphics/Resource/InterleavedGltfModel.h"
 #include "Components/Render/MeshComponent.h"
@@ -93,163 +89,45 @@ public:
 
     void Tick(float deltaTime) override;
 
-    void AddToScene(physx::PxScene* scene) override
-    {
-        if (pxActor)
-        {
-            scene->addActor(*pxActor);
-            isInScene = true;
-        }
-    }
+    void AddToScene(physx::PxScene* scene) override;
 
-    void SetTransform(const Transform& worldTransform) override
-    {
-        if (pxActor)
-        {
-            pxActor->setGlobalPose(PhysicsHelper::ToPxTransform(worldTransform));
-        }
-    }
+    void SetTransform(const Transform& worldTransform) override;
 
-    void SetCollisionFilter(uint32_t layer, uint32_t mask) override
-    {
-        layer = layer;
-        mask = mask;
-        if (pxShape)
-        {
-            physx::PxFilterData filterData(layer, mask, 0, 0);
-            pxShape->setSimulationFilterData(filterData);
-            pxShape->setQueryFilterData(filterData);
-        }
-    }
+    void SetCollisionFilter(const uint32_t layer, const uint32_t mask) override;
 
-    void SetGravity(bool isUseGravity)override
-    {
-        if (pxActor)
-        {
-            pxActor->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, !isUseGravity);
-        }
-    }
+    void SetGravity(const bool isUseGravity)override;
 
-    void SetIntialVelocity(const DirectX::XMFLOAT3& velocity) const
-    {
-        if (pxActor)
-        {
-            pxActor->setLinearVelocity(physx::PxVec3(velocity.x, velocity.y, velocity.z));
-        }
-    }
+    void SetInitialVelocity(const DirectX::XMFLOAT3& velocity) const;
 
-    void SetInitialAngularVelocity(const DirectX::XMFLOAT3& angularVelocity) const
-    {
-        if (pxActor)
-            pxActor->setAngularVelocity(physx::PxVec3(angularVelocity.x, angularVelocity.y, angularVelocity.z));
-    }
+    void SetInitialAngularVelocity(const DirectX::XMFLOAT3& angularVelocity) const;
 
-    void SetLinearDamping(float damping) const
-    {
-        if (pxActor)
-            pxActor->setLinearDamping((std::max)(0.0f, damping));
-    }
+    void SetLinearDamping(const float damping) const;
 
-    void SetAngularDamping(float damping) const
-    {
-        if (pxActor)
-            pxActor->setAngularDamping((std::max)(0.0f, damping));
-    }
+    void SetAngularDamping(const float damping) const;
 
-    void SetSleepThreshold(float threshold) const
-    {
-        if (pxActor)
-            pxActor->setSleepThreshold((std::max)(0.0f, threshold));
-    }
+    void SetSleepThreshold(const float threshold) const;
 
-    void SetMass(float newMass)
-    {
-        if (pxActor)
-            physx::PxRigidBodyExt::updateMassAndInertia(*pxActor, newMass);
-        mass = newMass;
-    }
+    void SetMass(const float newMass);
 
-    // 当たり判定を無効にする関数
-    void DisableCollision() const
-    {
-        if (!pxShape)
-        {
-            return;
-        }
-        pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
-        pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
-    }
+    void DisableCollision() const;
 
-    // 当たり判定を有効にする関数
-    void EnableCollision() const
-    {
-        if (!pxShape)
-        {
-            return;
-        }
-        pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, true);
-        pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, true);
-    }
+    void EnableCollision() const;
 
-    // 動的に球の当たり判定の半径を大きくする関数
     void ResizeSphere(float newRadius);
 
-    // 動的にカプセルの判定を大きくする関数
-    void ResizeCapsule(float newRadius, float newHeight);
+    void ResizeCapsule(float newRadius, float newHeight) const;
 
-    // 動的にボックスの判定を大きくする関数
-    void ResizeBox(float newExtentX, float newExtentY, float newExtentZ);
+    void ResizeBox(float newExtentX, float newExtentY, float newExtentZ) const;
 
-    void SetKinematic(bool isKinematic)override
-    {
-        if (pxActor)
-        {
-            pxActor->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC, isKinematic);
-        }
-        isKinematic = isKinematic;
-    }
+    void SetKinematic(const bool isKinematic)override;
 
-    void SetTrigger(bool isTrigger)
-    {
-        isTrigger = isTrigger;
-    }
+    void SetTrigger(const bool isTrigger) { this->isTrigger = isTrigger; }
 
-    void Destroy() override
-    {
-        if (pxActor && isInScene)
-        {
-            Physics::Instance().GetScene()->removeActor(*pxActor);
-            isInScene = false;
-        }
+    void Destroy() override;
 
-        isDestroyed = true;
-    }
+    void AddImpulse(const DirectX::XMFLOAT3& impulse) const;
 
-    void AddImpulse(const DirectX::XMFLOAT3& impulse) const
-    {
-        using namespace physx;
-        if (!isKinematic)
-        {// ダイナミックの時
-            if (pxActor)
-            {
-                PxVec3 impulsePx(impulse.x, impulse.y, impulse.z);
-
-                // 瞬間的な速度変化を与える
-                pxActor->addForce(impulsePx, PxForceMode::eIMPULSE);
-            }
-        }
-    }
-
-    void SetMaterial(PhysicsMaterialType type) const
-    {
-        if (!pxShape) return;
-
-        physx::PxMaterial* mat =
-            Physics::Instance().GetMaterial(type);
-
-        pxShape->setMaterials(&mat, 1);
-    }
-
+    void SetMaterial(const PhysicsMaterialType type) const;
 
 private:
     physx::PxRigidDynamic* pxActor = nullptr;
@@ -263,7 +141,6 @@ private:
     bool isKinematic = true;
     bool isTrigger = false;
 
-    // 動的に半径を変更した時に position を足すため
     float currentRadius = 0.0f;
 };
 
@@ -279,224 +156,41 @@ public:
 
     void Tick(float deltaTime)override;
 
-    void AddToScene(physx::PxScene* scene) override
-    {
-        if (isAddedToScene)
-        {
-            return;
-        }
-        for (auto* pxBody : rigidBodies)
-        {
-            scene->addActor(*pxBody);
-        }
-        isAddedToScene = true;
-    }
+    void AddToScene(physx::PxScene* scene) override;
 
     void SetTransform(const Transform& worldTransform) override {}
 
-    void SetCollisionFilter(uint32_t layer, uint32_t mask) override
+    void SetCollisionFilter(const uint32_t layer, const uint32_t mask) override
     {
         this->layer = layer;
         this->mask = mask;
     }
 
-    const std::vector<InterleavedGltfModel::Node>& GetAnimatedNodes() const
-    {
-        return animatedNodes;
-    }
+    const std::vector<InterleavedGltfModel::Node>& GetAnimatedNodes() const{return animatedNodes;}
 
-    void SetKinematic(bool isKinematic) override
-    {
-        for (physx::PxRigidActor* actor : rigidBodies)
-        {
-            // RigidDynamic のみが Kinematic を設定可能
-            if (physx::PxRigidDynamic* dynActor = actor->is<physx::PxRigidDynamic>())
-            {
-                dynActor->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC, isKinematic);
-                if (isKinematic)
-                {
-                    dynActor->setLinearVelocity({ 0, 0, 0 });
-                    dynActor->setAngularVelocity({ 0, 0, 0 });
-                }
-                else
-                {
-                    dynActor->wakeUp();
-                }
-            }
-        }
-    }
+    void SetKinematic(const bool isKinematic) override;
 
-    bool IsKinematic(size_t index) const
-    {
-        if (index >= rigidBodies.size())
-        {
-            return false;
-        }
-        auto* dyn = rigidBodies[index]->is<physx::PxRigidDynamic>();
-        return dyn ? dyn->getRigidBodyFlags() & physx::PxRigidBodyFlag::eKINEMATIC : false;
-    }
-
-    // 当たり判定を無効にする関数
-    void DisableCollision() const
-    {
-        for (physx::PxShape* pxShape : pxShapes)
-        {
-            if (pxShape)
-            {
-                pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
-                pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
-            }
-        }
-    }
-
+    void DisableCollision() const;
 
     void Destroy() override;
 
 private:
-    void ComputeGlobalTransformRecursive(std::vector<InterleavedGltfModel::Node>& nodes, int nodeIndex, const DirectX::XMFLOAT4X4& parentGlobal)
-    {
-        InterleavedGltfModel::Node& node = nodes[nodeIndex];
+    bool IsAddedToScene() const { return isAddedToScene; }
 
-        // ローカル行列 SRT
-        DirectX::XMMATRIX S = DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f);
-        DirectX::XMMATRIX R = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&node.rotation));
-        DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(node.translation.x, node.translation.y, node.translation.z);
-        DirectX::XMMATRIX localMat = S * R * T;
+    bool IsKinematic(const size_t index) const;
 
-        // 親行列 * ローカル行列 で自分のグローバル行列
-        DirectX::XMMATRIX parentMat = DirectX::XMLoadFloat4x4(&parentGlobal);
-        DirectX::XMMATRIX globalMat = parentMat * localMat;
-        DirectX::XMStoreFloat4x4(&node.globalTransform, globalMat);
+    void ComputeGlobalTransformRecursive(std::vector<InterleavedGltfModel::Node>& nodes, const int nodeIndex, const DirectX::XMFLOAT4X4& parentGlobal);
 
-        // 子ノードも同様に処理
-        for (int childIdx : node.children)
-        {
-            ComputeGlobalTransformRecursive(nodes, childIdx, node.globalTransform);
-        }
-    }
-
-    void ComputeGlobalTransforms(std::vector<InterleavedGltfModel::Node>& nodes)
-    {
-        // ルートを探す
-        std::vector<bool> hasParent(nodes.size(), false);
-        for (size_t i = 0; i < nodes.size(); ++i)
-        {
-            for (int c : nodes[i].children)
-            {
-                hasParent[c] = true;
-            }
-        }
-        // Identity 行列を親として、各ルートから再帰
-        DirectX::XMFLOAT4X4 identity;
-        DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
-        for (size_t i = 0; i < nodes.size(); ++i)
-        {
-            if (!hasParent[i])
-            {
-                ComputeGlobalTransformRecursive(nodes, int(i), identity);
-            }
-        }
-    }
+    void ComputeGlobalTransforms(std::vector<InterleavedGltfModel::Node>& nodes);
 
     // mesh 一つから vertices を作る
-    std::vector<DirectX::XMFLOAT3> ReturnPhysxVertices(const InterleavedGltfModel::Mesh& mesh)
-    {
-        std::unordered_set<DirectX::XMFLOAT3, XMFLOAT3Hasher, XMFLOAT3Equal> uniquePositions;
-
-        for (auto& primitive : mesh.primitives)
-        {
-            for (auto& vertex : primitive.cachedVertices)
-            {
-                DirectX::XMFLOAT3 scaledPos =
-                {
-                    vertex.position.x,
-                    vertex.position.y,
-                    vertex.position.z,
-                };
-
-                uniquePositions.insert(scaledPos);
-            }
-        }
-
-        // vector にコピーして返す
-        return std::vector<DirectX::XMFLOAT3>(uniquePositions.begin(), uniquePositions.end());
-
-    }
+    std::vector<DirectX::XMFLOAT3> ReturnPhysxVertices(const InterleavedGltfModel::Mesh& mesh);
 
     // Vertices の Data から ConvexMesh を作成する
-    physx::PxConvexMesh* ToPxConvexMesh(physx::PxPhysics* physics, const std::vector<DirectX::XMFLOAT3>& vertices)
-    {
-        using namespace physx;
-
-        // 頂点数チェック（明示的に）
-        if (vertices.size() < 4 || vertices.size() > 256)
-        {
-            Logger::Warning("ConvexMesh cooking skipped: 頂点数が 4 未満 or 256 超え\n");
-            return nullptr;
-        }
-
-        physx::PxTolerancesScale tolerancesScale;
-        physx::PxCookingParams cookingParams(tolerancesScale);
-        cookingParams.convexMeshCookingType = physx::PxConvexMeshCookingType::Enum::eQUICKHULL;
-        cookingParams.gaussMapLimit = 256;
-        physx::PxConvexMeshDesc pxMeshDesc;
-
-        pxMeshDesc.points.count = static_cast<physx::PxU32>(vertices.size());
-        pxMeshDesc.points.stride = sizeof(DirectX::XMFLOAT3);
-        pxMeshDesc.points.data = vertices.data();
-        pxMeshDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
-        physx::PxConvexMesh* convexMesh = nullptr;
-        physx::PxDefaultMemoryOutputStream writeBuffer;
-        if (!PxCookConvexMesh(cookingParams, pxMeshDesc, writeBuffer))
-        {
-            _ASSERT(L" PxCookConvexMesh が失敗しました！");
-        }
-        physx::PxDefaultMemoryInputData readBuffer(writeBuffer.getData(), writeBuffer.getSize());
-        convexMesh = physics->createConvexMesh(readBuffer);
-        return convexMesh;
-    }
+    physx::PxConvexMesh* ToPxConvexMesh(physx::PxPhysics* physics, const std::vector<DirectX::XMFLOAT3>& vertices);
 
     // rigidBodies の接続
-    void CreateFixedJoints(const MeshComponent* meshComponent) const
-    {
-        using namespace physx;
-        PxPhysics* pxPhysics = Physics::Instance().GetPhysics();
-        auto& model = meshComponent->model;
-
-        for (size_t parentIndex = 0; parentIndex < rigidBodies.size(); ++parentIndex)
-        {
-            PxRigidActor* parentBody = rigidBodies[parentIndex];
-            if (!parentBody)
-            {// 空ならスキップ
-                continue;
-            }
-
-            auto nodes = model->GetNodes();
-            auto node = nodes[parentIndex];
-            for (int childIndex : node.children)
-            {
-                if (childIndex < 0 || static_cast<size_t>(childIndex) >= rigidBodies.size())
-                {
-                    continue;
-                }
-
-                PxRigidActor* childBody = rigidBodies[childIndex];
-                if (!childBody)
-                {
-                    continue;
-                }
-
-                PxFixedJoint* joint = PxFixedJointCreate(*pxPhysics, parentBody, PxTransform(PxIdentity), childBody, PxTransform(PxIdentity));
-                joint->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, true);
-            }
-        }
-    }
-
-    bool IsAddedToScene() const
-    {
-        return isAddedToScene;
-    }
-
+    void CreateFixedJoints(const MeshComponent* meshComponent) const;
 
 private:
     std::vector<physx::PxShape*> pxShapes;
@@ -522,79 +216,18 @@ public:
 
     void Tick(float deltaTime) override {}
 
-    void AddToScene(physx::PxScene* scene)override
-    {
-        if (pxActor)
-        {
-            scene->addActor(*pxActor);
-        }
-    }
+    void Destroy()override;
 
-    void SetTransform(const Transform& worldTransform) override
-    {
-        if (pxActor)
-        {
-            pxActor->setGlobalPose(PhysicsHelper::ToPxTransform(worldTransform));
-        }
-    }
+    void AddToScene(physx::PxScene* scene)override;
 
-    void SetCollisionFilter(uint32_t layer, uint32_t mask) override
-    {
-        this->layer = layer;
-        this->mask = mask;
-        if (pxShape)
-        {
-            physx::PxFilterData filterData(layer, mask, 0, 0);
-            pxShape->setSimulationFilterData(filterData);
-            pxShape->setQueryFilterData(filterData);
-        }
-    }
+    void SetTransform(const Transform& worldTransform) override;
 
-    void DisableCollision() const
-    {
-        if (!pxActor) return;
+    void SetCollisionFilter(const uint32_t layer, const uint32_t mask) override;
 
-        pxActor->setActorFlag(
-            physx::PxActorFlag::eDISABLE_SIMULATION,
-            false
-        );
-        if (!pxShape)
-        {
-            return;
-        }
-        pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
-        pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
-    }
+private:
+    void DisableCollision() const;
 
-    // 当たり判定を有効にする関数
-    void EnableCollision() const
-    {
-        if (!pxActor) return;
-
-        pxActor->setActorFlag(
-            physx::PxActorFlag::eDISABLE_SIMULATION,
-            true
-        );
-
-        if (!pxShape)
-        {
-            return;
-        }
-        pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, true);
-        pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, true);
-    }
-
-
-    void Destroy()override
-    {
-        if (pxActor)
-        {
-            pxActor->release();
-            pxActor = nullptr;
-        }
-
-        pxShape = nullptr; // PxShape はアクターが所有しているので release 不要
-    }
+    void EnableCollision() const;
 private:
     MeshComponent* meshComponent = nullptr;
     physx::PxRigidStatic* pxActor = nullptr;

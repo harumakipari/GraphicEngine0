@@ -12,11 +12,6 @@
 #include "Physics/CollisionFunction.h"
 #include <tracy/Tracy.hpp>
 
-
-namespace
-{
-}
-
 class SkeletonHpBarUI
 {
 public:
@@ -149,8 +144,6 @@ void SkeletonHpBarUI::Update(const SkeletonWarriorActor& owner, const DarkCamera
                 hide();
                 return;
             }
-            // Keep the HP bar above the Skeleton in world space so its position
-            // remains correct as the camera angle and Skeleton distance change.
             const DirectX::XMFLOAT3 skeletonWorldPosition = target->GetComponentLocation();
             const DirectX::XMFLOAT3 hpBarWorldPosition = {
                 skeletonWorldPosition.x + tutorialSkeletonHpBarWorldOffset.x,
@@ -175,13 +168,11 @@ void SkeletonHpBarUI::Update(const SkeletonWarriorActor& owner, const DarkCamera
             }
             else if (currentHp < hpBar.observedHp)
             {
-                // Keep the delayed fill monotonically decreasing during Rush hits.
                 hpBar.delayedHp = (std::min)(hpBar.delayedHp, static_cast<float>(hpBar.observedHp));
                 hpBar.delayedHpDelayTimer = 0.25f;
             }
             else if (currentHp > hpBar.observedHp)
             {
-                // Match Grux: HP recovery synchronizes the delayed display immediately.
                 hpBar.delayedHp = currentHp;
                 hpBar.delayedHpDelayTimer = 0.0f;
             }

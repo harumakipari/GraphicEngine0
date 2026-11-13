@@ -1,4 +1,3 @@
-#include "Constants.hlsli"
 #include "ViewConstants.hlsli"
 #include "GltfModel.hlsli"
 
@@ -30,7 +29,7 @@ float4 QuatMul(float4 q1, float4 q2)
 float3 RotateByQuaternion(float3 v, float4 q)
 {
     float4 vq = float4(v, 0.0f);
-    float4 qi = float4(-q.x, -q.y, -q.z, q.w); // conjugate (inverse if q is normalized)
+    float4 qi = float4(-q.x, -q.y, -q.z, q.w); 
 
     float4 r = QuatMul(QuatMul(q, vq), qi);
     return r.xyz;
@@ -45,37 +44,22 @@ VS_OUT main(VS_ClOTH_IN vin)
     vin.position.w = 1;
     vout.position = mul(vin.position, mul(world, viewProjection));
     
-    //vout.position /= vout.position.w; // to ndc
     vout.wPosition = mul(vin.position, world);
 
     vout.currentClipPosition = vout.position;
     vout.previousClipPosition = mul(vin.position, mul(previousWorld, previousViewProjection));
 
-
     // ‚±‚±‚Å world ‚Ì‰ñ“]‚Ì‘O‚É
     float3 normal = vin.normal.xyz;
     float3 tangent = vin.tangent.xyz;
     
-#if 1
     normal = RotateByQuaternion(normal, vin.rotation);
     tangent = RotateByQuaternion(tangent, vin.rotation);
-#endif
-    vin.normal.w = 0;
-    //vout.wNormal = normalize(mul(vin.gbuffer1Normal, world));
     vout.wNormal = normalize(mul(float4(normal, 0.0), world));
-    
-    vin.tangent.w = 0;
-    //vout.wTangent = normalize(mul(vin.tangent, world));
     vout.wTangent = normalize(mul(float4(tangent, 0.0), world));
     vout.wTangent.w = sigma;
     
     vout.texcoord = vin.texcoord;
-    
-    if (vout.wPosition.y < 0.0)
-    {
-        //vout.wPosition.y = 0.0;
-    }
-
     
     return vout;
 }

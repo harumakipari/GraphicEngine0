@@ -19,11 +19,9 @@ struct ClothEdge
 
 float Rand(float n)
 {
-    // Return value is greater than or equal to 0 and less than 1.
     return frac(sin(n) * 43758.5453123);
 }
 
-// Returns a random value in the specified range [min, max] 
 float RandRange(float seed, float min, float max)
 {
     return lerp(min, max, Rand(seed));
@@ -63,77 +61,7 @@ void main(uint3 id : SV_DispatchThreadID)
 {
     ClothVertex readVertex = clothVerticesSRV[id.x];
     ClothVertex writeVertex = clothVerticesUAV[id.x];
-#if 0
-    //v.position.x += RandRange(id.x * 3.14, 0.2f, 0.5f) * deltaTime;
-    //v.position.z += RandRange(id.x * 3.14, 0.2f, 0.5f) * deltaTime;
-    //v.position.y += RandRange(id.x * 3.14, 0.2f, 0.5f) * deltaTime;
-    //v.newPosition.x += RandRange(id.x * 3.14, 0.2f, 0.5f) * deltaTime;
-    //v.newPosition.z += RandRange(id.x * 3.14, 0.2f, 0.5f) * deltaTime;
-    //v.newPosition.y += RandRange(id.x * 3.14, 0.2f, 0.5f) * deltaTime;
-    writeVertex.position.x += 0.2 * deltaTime;
-    writeVertex.position.z += 0.2 * deltaTime;
-    writeVertex.position.y -= 0.2 * deltaTime;
-   
-    if (writeVertex.position.y < 0.0f)
-    {
-        writeVertex.position.y = 0.0;
-    }
-#else
-#if 0
-    float3 curretPosition = readVertex.position;
-    float3 currentVelocity = readVertex.velocity;
-    float3 force = float3(0.0, 0.0, 0.0);
-    float3 avgVelocity = float3(0.0, 0.0, 0.0);
-    int edgeCount = 0;
-    for (int i = 0; i < CLOTH_EDGES_PER_VERTEX; i++)
-    {
-        ClothEdge edge = clothEdges[id.x * CLOTH_EDGES_PER_VERTEX + i];
-        if (edge.id == 0xffffffff)
-        {
-            continue;
-        }
-        float3 delta = readVertex.position.xyz - curretPosition;
-        float distance = length(delta);
-        if (distance > 0.0f)
-        {
-            force += delta * (SPRING_FORCE * (distance - edge.restLength) / distance);
-        }
-    
-        //avgVelocity += clothVertices[edge.id].oldVelocity;
-        
-        edgeCount++;
-    }
-    
-    if (edgeCount > 0)
-    {
-        force += float3(0.0f, -GRAVITY * MASS, 0.0);
-        
 
-        // 外力入れたかったらここに後で        
-        //avgVelocity /= edgeCount;
-        
-        float3 newVelocity = (currentVelocity + force * deltaTime / MASS) * exp(-DAMPING * deltaTime);
-        
-        float3 newPosition = curretPosition + newVelocity * deltaTime;
-        
-        //　仮の当たり判定
-        if (newPosition.y < 0.0f)
-        {
-            newPosition.y = 0.0;
-            newVelocity.y = 0.0;
-        }
-        writeVertex.velocity = float4(newVelocity.xyz, 0.0);
-        writeVertex.newPosition = float4(newPosition.xyz, 1.0);
-        writeVertex.position = float4(newPosition.xyz, 1.0);
-        //v.position = float4(0.0f,2.0f,0.0f, 1.0);
-    }
-    else
-    {
-        writeVertex.newPosition = float4(curretPosition.xyz, 1.0);
-        writeVertex.position = float4(curretPosition.xyz, 1.0);
-        //v.position = float4(0.0f,2.0f,0.0f, 1.0);
-    }
-#endif
      // --- 固定点はスキップ ---
     if (readVertex.oldVelocity.x == 1.0)
     {
@@ -192,7 +120,5 @@ void main(uint3 id : SV_DispatchThreadID)
     writeVertex.newPosition = float4(newPosition, 1.0f);
     writeVertex.position = float4(newPosition, 1.0f);
     
-#endif
-    //currentclothVertices[id.x] = v;
     clothVerticesUAV[id.x] = writeVertex;
 }

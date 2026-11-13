@@ -1255,9 +1255,6 @@
     <None Include="Shader\Bloom.hlsli">
       <Filter>Shader</Filter>
     </None>
-    <None Include="Shader\Cloth.hlsli">
-      <Filter>Shader</Filter>
-    </None>
     <None Include="Shader\Common.hlsli">
       <Filter>Shader</Filter>
     </None>

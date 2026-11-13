@@ -72,8 +72,6 @@ float3 IblRadianceGgx(float3 N, float3 V, float roughness, float3 f0)
     float3 R = normalize(reflect(-V, N));
     float3 specular_light = sampleSpecularPmrem(R, roughness).rgb;
 
-	// see https://bruop.github.io/ibl/#single_scattering_results at Single Scattering Results
-	// Roughness dependent fresnel, from Fdez-Aguera
     float3 fr = max(1.0 - roughness, f0) - f0;
     float3 k_s = f0 + fr * pow(1.0 - NoV, 5.0);
     float3 fss_ess = k_s * f_ab.x + f_ab.y;

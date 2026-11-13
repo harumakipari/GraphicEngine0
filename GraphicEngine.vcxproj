@@ -1078,7 +1078,6 @@
   <ItemGroup>
     <None Include="Shader\BidirectionalReflectanceDistributionFunction.hlsli" />
     <None Include="Shader\Bloom.hlsli" />
-    <None Include="Shader\Cloth.hlsli" />
     <None Include="Shader\Common.hlsli" />
     <None Include="Shader\ComputeParticle.hlsli" />
     <None Include="Shader\ComputeParticleBitonicSort.hlsli" />

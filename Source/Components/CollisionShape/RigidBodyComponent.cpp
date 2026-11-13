@@ -100,8 +100,152 @@ void SingleRigidBodyComponent::Tick(float deltaTime)
     }
 }
 
+void SingleRigidBodyComponent::AddToScene(physx::PxScene* scene)
+{
+    if (pxActor)
+    {
+        scene->addActor(*pxActor);
+        isInScene = true;
+    }
+}
+
+void SingleRigidBodyComponent::SetTransform(const Transform& worldTransform)
+{
+    if (pxActor)
+    {
+        pxActor->setGlobalPose(PhysicsHelper::ToPxTransform(worldTransform));
+    }
+}
+
+void SingleRigidBodyComponent::SetCollisionFilter(const uint32_t layer, const uint32_t mask)
+{
+    this->layer = layer;
+    this->mask = mask;
+    if (pxShape)
+    {
+        physx::PxFilterData filterData(layer, mask, 0, 0);
+        pxShape->setSimulationFilterData(filterData);
+        pxShape->setQueryFilterData(filterData);
+    }
+}
+
+void SingleRigidBodyComponent::SetGravity(const bool isUseGravity)
+{
+    if (pxActor)
+    {
+        pxActor->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, !isUseGravity);
+    }
+}
+
+void SingleRigidBodyComponent::SetInitialVelocity(const DirectX::XMFLOAT3& velocity) const
+{
+    if (pxActor)
+    {
+        pxActor->setLinearVelocity(physx::PxVec3(velocity.x, velocity.y, velocity.z));
+    }
+}
+
+void SingleRigidBodyComponent::SetInitialAngularVelocity(const DirectX::XMFLOAT3& angularVelocity) const
+{
+    if (pxActor)
+        pxActor->setAngularVelocity(physx::PxVec3(angularVelocity.x, angularVelocity.y, angularVelocity.z));
+}
+
+void SingleRigidBodyComponent::SetLinearDamping(const float damping) const
+{
+    if (pxActor)
+        pxActor->setLinearDamping((std::max)(0.0f, damping));
+}
+
+void SingleRigidBodyComponent::SetAngularDamping(const float damping) const
+{
+    if (pxActor)
+        pxActor->setAngularDamping((std::max)(0.0f, damping));
+}
+
+void SingleRigidBodyComponent::SetSleepThreshold(const float threshold) const
+{
+    if (pxActor)
+        pxActor->setSleepThreshold((std::max)(0.0f, threshold));
+}
+
+void SingleRigidBodyComponent::SetMass(const float newMass)
+{
+    if (pxActor)
+        physx::PxRigidBodyExt::updateMassAndInertia(*pxActor, newMass);
+    mass = newMass;
+}
+
+// 当たり判定を無効にする関数
+void SingleRigidBodyComponent::DisableCollision() const
+{
+    if (!pxShape)
+    {
+        return;
+    }
+    pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
+    pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+}
+
+// 当たり判定を有効にする関数
+void SingleRigidBodyComponent::EnableCollision() const
+{
+    if (!pxShape)
+    {
+        return;
+    }
+    pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, true);
+    pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+}
+
+void SingleRigidBodyComponent::SetKinematic(const bool isKinematic)
+{
+    if (pxActor)
+    {
+        pxActor->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC, isKinematic);
+    }
+    this->isKinematic = isKinematic;
+}
+
+void SingleRigidBodyComponent::Destroy()
+{
+    if (pxActor && isInScene)
+    {
+        Physics::Instance().GetScene()->removeActor(*pxActor);
+        isInScene = false;
+    }
+
+    isDestroyed = true;
+}
+
+void SingleRigidBodyComponent::AddImpulse(const DirectX::XMFLOAT3& impulse) const
+{
+    using namespace physx;
+    if (!isKinematic)
+    {// ダイナミックの時
+        if (pxActor)
+        {
+            PxVec3 impulsePx(impulse.x, impulse.y, impulse.z);
+
+            // 瞬間的な速度変化を与える
+            pxActor->addForce(impulsePx, PxForceMode::eIMPULSE);
+        }
+    }
+}
+
+void SingleRigidBodyComponent::SetMaterial(const PhysicsMaterialType type) const
+{
+    if (!pxShape) return;
+
+    physx::PxMaterial* mat =
+        Physics::Instance().GetMaterial(type);
+
+    pxShape->setMaterials(&mat, 1);
+}
+
+
 // 動的に球の当たり判定の半径を大きくする関数
-void SingleRigidBodyComponent::ResizeSphere(float newRadius)
+void SingleRigidBodyComponent::ResizeSphere(const float newRadius)
 {
     if (!pxShape)
     {
@@ -128,7 +272,7 @@ void SingleRigidBodyComponent::ResizeSphere(float newRadius)
 }
 
 // 動的にカプセルの判定を大きくする関数
-void SingleRigidBodyComponent::ResizeCapsule(float newRadius, float newHeight)
+void SingleRigidBodyComponent::ResizeCapsule(const float newRadius, const float newHeight) const
 {
     if (!pxShape)
     {
@@ -153,7 +297,7 @@ void SingleRigidBodyComponent::ResizeCapsule(float newRadius, float newHeight)
 }
 
 // 動的にボックスの判定を大きくする関数
-void SingleRigidBodyComponent::ResizeBox(float newExtentX, float newExtentY, float newExtentZ)
+void SingleRigidBodyComponent::ResizeBox(const float newExtentX, const float newExtentY, const float newExtentZ) const
 {
     if (!pxShape)
     {
@@ -262,6 +406,54 @@ void MultiRigidBodyComponent::Initialize(physx::PxPhysics* physics)
     }
 }
 
+
+void MultiRigidBodyComponent::AddToScene(physx::PxScene* scene)
+{
+    if (isAddedToScene)
+    {
+        return;
+    }
+    for (auto* pxBody : rigidBodies)
+    {
+        scene->addActor(*pxBody);
+    }
+    isAddedToScene = true;
+}
+
+void MultiRigidBodyComponent::SetKinematic(const bool isKinematic)
+{
+    for (physx::PxRigidActor* actor : rigidBodies)
+    {
+        // RigidDynamic のみが Kinematic を設定可能
+        if (physx::PxRigidDynamic* dynActor = actor->is<physx::PxRigidDynamic>())
+        {
+            dynActor->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC, isKinematic);
+            if (isKinematic)
+            {
+                dynActor->setLinearVelocity({ 0, 0, 0 });
+                dynActor->setAngularVelocity({ 0, 0, 0 });
+            }
+            else
+            {
+                dynActor->wakeUp();
+            }
+        }
+    }
+}
+
+// 当たり判定を無効にする関数
+void MultiRigidBodyComponent::DisableCollision() const
+{
+    for (physx::PxShape* pxShape : pxShapes)
+    {
+        if (pxShape)
+        {
+            pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
+            pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+        }
+    }
+}
+
 void MultiRigidBodyComponent::Destroy()
 {
     using namespace physx;
@@ -324,6 +516,154 @@ void MultiRigidBodyComponent::Tick(float deltaTime)
         DirectX::XMStoreFloat4x4(&animatedNodes[nodeIndex].globalTransform, M);
     }
 }
+
+bool MultiRigidBodyComponent::IsKinematic(const size_t index) const
+{
+    if (index >= rigidBodies.size())
+    {
+        return false;
+    }
+    auto* dyn = rigidBodies[index]->is<physx::PxRigidDynamic>();
+    return dyn ? dyn->getRigidBodyFlags() & physx::PxRigidBodyFlag::eKINEMATIC : false;
+}
+
+void MultiRigidBodyComponent::ComputeGlobalTransformRecursive(std::vector<InterleavedGltfModel::Node>& nodes, const int nodeIndex, const DirectX::XMFLOAT4X4& parentGlobal)
+{
+    InterleavedGltfModel::Node& node = nodes[nodeIndex];
+
+    // ローカル行列 SRT
+    DirectX::XMMATRIX S = DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f);
+    DirectX::XMMATRIX R = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&node.rotation));
+    DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(node.translation.x, node.translation.y, node.translation.z);
+    DirectX::XMMATRIX localMat = S * R * T;
+
+    // 親行列 * ローカル行列 で自分のグローバル行列
+    DirectX::XMMATRIX parentMat = DirectX::XMLoadFloat4x4(&parentGlobal);
+    DirectX::XMMATRIX globalMat = parentMat * localMat;
+    DirectX::XMStoreFloat4x4(&node.globalTransform, globalMat);
+
+    // 子ノードも同様に処理
+    for (int childIdx : node.children)
+    {
+        ComputeGlobalTransformRecursive(nodes, childIdx, node.globalTransform);
+    }
+}
+
+void MultiRigidBodyComponent::ComputeGlobalTransforms(std::vector<InterleavedGltfModel::Node>& nodes)
+{
+    // ルートを探す
+    std::vector<bool> hasParent(nodes.size(), false);
+    for (size_t i = 0; i < nodes.size(); ++i)
+    {
+        for (int c : nodes[i].children)
+        {
+            hasParent[c] = true;
+        }
+    }
+    // Identity 行列を親として、各ルートから再帰
+    DirectX::XMFLOAT4X4 identity;
+    DirectX::XMStoreFloat4x4(&identity, DirectX::XMMatrixIdentity());
+    for (size_t i = 0; i < nodes.size(); ++i)
+    {
+        if (!hasParent[i])
+        {
+            ComputeGlobalTransformRecursive(nodes, int(i), identity);
+        }
+    }
+}
+
+// mesh 一つから vertices を作る
+std::vector<DirectX::XMFLOAT3> MultiRigidBodyComponent::ReturnPhysxVertices(const InterleavedGltfModel::Mesh& mesh)
+{
+    std::unordered_set<DirectX::XMFLOAT3, XMFLOAT3Hasher, XMFLOAT3Equal> uniquePositions;
+
+    for (auto& primitive : mesh.primitives)
+    {
+        for (auto& vertex : primitive.cachedVertices)
+        {
+            DirectX::XMFLOAT3 scaledPos =
+            {
+                vertex.position.x,
+                vertex.position.y,
+                vertex.position.z,
+            };
+
+            uniquePositions.insert(scaledPos);
+        }
+    }
+    // vector にコピーして返す
+    return std::vector<DirectX::XMFLOAT3>(uniquePositions.begin(), uniquePositions.end());
+}
+
+// Vertices の Data から ConvexMesh を作成する
+physx::PxConvexMesh* MultiRigidBodyComponent::ToPxConvexMesh(physx::PxPhysics* physics, const std::vector<DirectX::XMFLOAT3>& vertices)
+{
+    using namespace physx;
+
+    // 頂点数チェック（明示的に）
+    if (vertices.size() < 4 || vertices.size() > 256)
+    {
+        Logger::Warning("ConvexMesh cooking skipped: 頂点数が 4 未満 or 256 超え\n");
+        return nullptr;
+    }
+
+    physx::PxTolerancesScale tolerancesScale;
+    physx::PxCookingParams cookingParams(tolerancesScale);
+    cookingParams.convexMeshCookingType = physx::PxConvexMeshCookingType::Enum::eQUICKHULL;
+    cookingParams.gaussMapLimit = 256;
+    physx::PxConvexMeshDesc pxMeshDesc;
+
+    pxMeshDesc.points.count = static_cast<physx::PxU32>(vertices.size());
+    pxMeshDesc.points.stride = sizeof(DirectX::XMFLOAT3);
+    pxMeshDesc.points.data = vertices.data();
+    pxMeshDesc.flags = PxConvexFlag::eCOMPUTE_CONVEX;
+    physx::PxConvexMesh* convexMesh = nullptr;
+    physx::PxDefaultMemoryOutputStream writeBuffer;
+    if (!PxCookConvexMesh(cookingParams, pxMeshDesc, writeBuffer))
+    {
+        _ASSERT(L" PxCookConvexMesh が失敗しました！");
+    }
+    physx::PxDefaultMemoryInputData readBuffer(writeBuffer.getData(), writeBuffer.getSize());
+    convexMesh = physics->createConvexMesh(readBuffer);
+    return convexMesh;
+}
+
+// rigidBodies の接続
+void MultiRigidBodyComponent::CreateFixedJoints(const MeshComponent* meshComponent) const
+{
+    using namespace physx;
+    PxPhysics* pxPhysics = Physics::Instance().GetPhysics();
+    auto& model = meshComponent->model;
+
+    for (size_t parentIndex = 0; parentIndex < rigidBodies.size(); ++parentIndex)
+    {
+        PxRigidActor* parentBody = rigidBodies[parentIndex];
+        if (!parentBody)
+        {// 空ならスキップ
+            continue;
+        }
+
+        auto nodes = model->GetNodes();
+        auto node = nodes[parentIndex];
+        for (int childIndex : node.children)
+        {
+            if (childIndex < 0 || static_cast<size_t>(childIndex) >= rigidBodies.size())
+            {
+                continue;
+            }
+
+            PxRigidActor* childBody = rigidBodies[childIndex];
+            if (!childBody)
+            {
+                continue;
+            }
+
+            PxFixedJoint* joint = PxFixedJointCreate(*pxPhysics, parentBody, PxTransform(PxIdentity), childBody, PxTransform(PxIdentity));
+            joint->setConstraintFlag(PxConstraintFlag::eCOLLISION_ENABLED, true);
+        }
+    }
+}
+
 
 void TriangleMeshRigidBodyComponent::Initialize(physx::PxPhysics* physics)
 {
@@ -444,4 +784,78 @@ void TriangleMeshRigidBodyComponent::Initialize(physx::PxPhysics* physics)
 
     pxActor->setGlobalPose(pose);
 
+}
+
+void TriangleMeshRigidBodyComponent::Destroy()
+{
+    if (pxActor)
+    {
+        pxActor->release();
+        pxActor = nullptr;
+    }
+
+    pxShape = nullptr; // PxShape はアクターが所有しているので release 不要
+}
+
+void TriangleMeshRigidBodyComponent::AddToScene(physx::PxScene* scene)
+{
+    if (pxActor)
+    {
+        scene->addActor(*pxActor);
+    }
+}
+
+void TriangleMeshRigidBodyComponent::SetTransform(const Transform& worldTransform) 
+{
+    if (pxActor)
+    {
+        pxActor->setGlobalPose(PhysicsHelper::ToPxTransform(worldTransform));
+    }
+}
+
+void TriangleMeshRigidBodyComponent::SetCollisionFilter(const uint32_t layer, const uint32_t mask) 
+{
+    this->layer = layer;
+    this->mask = mask;
+    if (pxShape)
+    {
+        physx::PxFilterData filterData(layer, mask, 0, 0);
+        pxShape->setSimulationFilterData(filterData);
+        pxShape->setQueryFilterData(filterData);
+    }
+}
+
+
+void TriangleMeshRigidBodyComponent::DisableCollision() const
+{
+    if (!pxActor) return;
+
+    pxActor->setActorFlag(
+        physx::PxActorFlag::eDISABLE_SIMULATION,
+        false
+    );
+    if (!pxShape)
+    {
+        return;
+    }
+    pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
+    pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+}
+
+// 当たり判定を有効にする関数
+void TriangleMeshRigidBodyComponent::EnableCollision() const
+{
+    if (!pxActor) return;
+
+    pxActor->setActorFlag(
+        physx::PxActorFlag::eDISABLE_SIMULATION,
+        true
+    );
+
+    if (!pxShape)
+    {
+        return;
+    }
+    pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, true);
+    pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, true);
 }

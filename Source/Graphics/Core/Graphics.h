@@ -67,7 +67,7 @@ public:
     static float GetScreenHeight() { return screenHeight; }
 
     // スワップチェーンを作成する
-    static void CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgi_factory6);
+    static void CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgiFactory6);
 
     // ウィンドウの外観をフルスクリーンに設定する
     static void StylizeWindow(BOOL fullscreen);

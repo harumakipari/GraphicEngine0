@@ -126,7 +126,7 @@ void Graphics::DestroyTracyD3D11Context()
 }
 
 
-void Graphics::CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgi_factory6)
+void Graphics::CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgiFactory6)
 {
     HRESULT hr{ S_OK };
 
@@ -154,7 +154,7 @@ void Graphics::CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgi_factory6)
         BOOL allowTearing = FALSE;
         if (SUCCEEDED(hr))
         {
-            hr = dxgi_factory6->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
+            hr = dxgiFactory6->CheckFeatureSupport(DXGI_FEATURE_PRESENT_ALLOW_TEARING, &allowTearing, sizeof(allowTearing));
         }
         tearingSupported = SUCCEEDED(hr) && allowTearing;
 
@@ -171,10 +171,10 @@ void Graphics::CreateSwapChain(HWND hwnd, IDXGIFactory6* dxgi_factory6)
         swapChainDesc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
         swapChainDesc1.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
         swapChainDesc1.Flags = tearingSupported ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
-        hr = dxgi_factory6->CreateSwapChainForHwnd(device.Get(), hwnd, &swapChainDesc1, NULL, NULL, swapChain.ReleaseAndGetAddressOf());
+        hr = dxgiFactory6->CreateSwapChainForHwnd(device.Get(), hwnd, &swapChainDesc1, NULL, NULL, swapChain.ReleaseAndGetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-        hr = dxgi_factory6->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
+        hr = dxgiFactory6->MakeWindowAssociation(hwnd, DXGI_MWA_NO_ALT_ENTER);
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
         Microsoft::WRL::ComPtr<ID3D11Texture2D> render_target_buffer;
