@@ -330,7 +330,6 @@ void SkeletonWarriorActor::Initialize(const Transform& transform)
         capsuleComponent->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Block);
         capsuleComponent->SetResponseToLayer(CollisionLayer::Convex, CollisionComponent::CollisionResponse::Block);
         capsuleComponent->SetCollisionOffsetY(height * 0.5f);
-        capsuleComponent->SetIsVisibleDebugBox(false);
         capsuleComponent->Initialize();
     }
 

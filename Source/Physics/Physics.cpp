@@ -369,7 +369,6 @@ void Physics::Render(const DirectX::XMFLOAT4X4& view, const DirectX::XMFLOAT4X4&
             }
             }
         };
-    physx::PxShape* pxShpaes[128] = { nullptr };
     auto drawActor = [&](physx::PxRigidActor* pxActor, float contactOffset)
         {
             const physx::PxU32 pxNumShapes = pxActor->getNbShapes();

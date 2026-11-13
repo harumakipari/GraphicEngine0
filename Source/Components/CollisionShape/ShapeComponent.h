@@ -1,11 +1,8 @@
 #pragma once
 
-// C++ 標準ライブラリ
 #include <memory>
-#include <optional>
 #include <string>
 
-// 他ライブラリ
 #include <DirectXMath.h>
 #include <PxPhysicsAPI.h>
 
@@ -14,14 +11,11 @@
 #include "imgui.h"
 #endif
 
-// プロジェクトの他のヘッダ
 #include "Physics/Collider.h"
 #include "Physics/Physics.h"
 #include "Physics/CollisionHelper.h"
 #include "Components/Base/SceneComponent.h"
 #include "RigidBodyComponent.h"
-
-// ConvexMeshComponentClass で使用している
 #include "Graphics/Resource/InterleavedGltfModel.h"
 #include "Components/Render/MeshComponent.h"
 #include "CollisionComponent.h"
@@ -46,8 +40,7 @@ protected:
 
     CapsuleAxis capsuleAxis = CapsuleAxis::y;   // デフォルトは Y 軸方向
 
-    //std::shared_ptr<RigidBodyComponent> rigidBody_;// 物理ボディを内包
-    std::shared_ptr<SingleRigidBodyComponent> rigidBody_;// 物理ボディを内包
+    std::unique_ptr<SingleRigidBodyComponent> rigidBody;// 物理ボディを内包
 
     // 物理形状情報を返すもの
     struct PhysicsShapeInfo
@@ -56,9 +49,9 @@ protected:
         physx::PxTransform transform;       //ワールド変換
     };
 public:
-    ShapeComponent(const std::string& name, std::shared_ptr<Actor> owner) :CollisionComponent(name, owner) {}
+    ShapeComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :CollisionComponent(name, owner) {}
 
-    virtual void Initialize()override;
+    void Initialize()override;
 
     bool IsKinematic()const
     {
@@ -69,80 +62,75 @@ public:
     void SetKinematic(const bool isKinematic)override
     {
         physicsMode = isKinematic ? PhysicsControlMode::Kinematic : PhysicsControlMode::Dynamic;
-        if (rigidBody_)
+        if (rigidBody)
         {
-            rigidBody_->SetKinematic(isKinematic);
+            rigidBody->SetKinematic(isKinematic);
         }
     }
     // OnTrigger か OnContact どっちに入るか設定する
     //　これは Initialize の前に設定する　デフォルトは false
     void SetTrigger(const bool isTrigger)override
     {
-        if (rigidBody_)
+        if (rigidBody)
         {
-            rigidBody_->SetTrigger(isTrigger);
+            rigidBody->SetTrigger(isTrigger);
         }
     }
 
-    void SetGravity(const bool isUseGravity)
+    void SetGravity(const bool isUseGravity) const
     {
-        if (rigidBody_)
+        if (rigidBody)
         {
-            rigidBody_->SetGravity(isUseGravity);
+            rigidBody->SetGravity(isUseGravity);
         }
     }
 
     void Tick(const float deltaTime) override;
 
     // ゲーム内でカプセルがどの軸に長いか取得
-    const ShapeComponent::CapsuleAxis& GetCapusleAxis() const { return capsuleAxis; }
+    const CapsuleAxis& GetCapsuleAxis() const { return capsuleAxis; }
     // ゲーム内でカプセルがどの軸に長いか設定
-    void SetCapsuleAxis(const ShapeComponent::CapsuleAxis& axis) { this->capsuleAxis = axis; }
+    void SetCapsuleAxis(const CapsuleAxis& axis) { this->capsuleAxis = axis; }
 
     // 初速を設定する
-    void SetIntialVelocity(const DirectX::XMFLOAT3& velocity)
+    void SetInitialVelocity(const DirectX::XMFLOAT3& velocity) const
     {
-        rigidBody_->SetIntialVelocity(velocity);
+        rigidBody->SetIntialVelocity(velocity);
     }
 
-    void SetInitialAngularVelocity(const DirectX::XMFLOAT3& angularVelocity)
+    void SetInitialAngularVelocity(const DirectX::XMFLOAT3& angularVelocity) const
     {
-        rigidBody_->SetInitialAngularVelocity(angularVelocity);
+        rigidBody->SetInitialAngularVelocity(angularVelocity);
     }
 
-    // Immediately teleport an existing PhysX actor before enabling simulation.
-    void SetPhysicsWorldTransform(const Transform& worldTransform)
+    void SetPhysicsWorldTransform(const Transform& worldTransform) const
     {
-        if (rigidBody_)
-            rigidBody_->SetTransform(worldTransform);
+        if (rigidBody)
+            rigidBody->SetTransform(worldTransform);
     }
 
     // 当たり判定レイヤーを途中で追加する
-    void AddCollisionFilter(const CollisionLayer otherLayer, const CollisionComponent::CollisionResponse response)
+    void AddCollisionFilter(const CollisionLayer otherLayer, const CollisionResponse response)
     {
         SetResponseToLayer(otherLayer, response);
-        rigidBody_->SetCollisionFilter(GetCollisionLayer(), GetCollisionMask());
+        rigidBody->SetCollisionFilter(GetCollisionLayer(), GetCollisionMask());
     }
 
-    virtual void DrawImGuiInspector() override
+    void DrawImGuiInspector() override
     {
 #ifdef USE_IMGUI
         SceneComponent::DrawImGuiInspector();
         if (ImGui::TreeNode((name + "  debugRender").c_str()))
         {
-            ImGui::Checkbox("isVisibleDebugBox", &isVisibleDebugBox_);
-            ImGui::Checkbox("isVisibleDebugShape", &isVisibleDebugShape_);
+            ImGui::Checkbox("isVisibleDebugShape", &isVisibleDebugShape);
             ImGui::TreePop();
         }
 #endif
     }
-    void SetIsCollisionEnabled(const bool enabled) { this->isCollisionEnabled_ = enabled; }
-
-    bool GetIsCollisionEnabled() { return isCollisionEnabled_; }
 
     virtual AABB GetAABB() const = 0;
 
-    const float& GetRadius() const { return radius_; }
+    const float& GetRadius() const { return radius; }
 
     void SetCollisionOffsetX(const float offsetX) { collisionOffsetX = offsetX; }
     void SetCollisionOffsetY(const float offsetY) { collisionOffsetY = offsetY; }
@@ -162,57 +150,57 @@ public:
         };
     }
 
-    void SetLinearDamping(float damping)
+    void SetLinearDamping(float damping) const
     {
-        if (rigidBody_) rigidBody_->SetLinearDamping(damping);
+        if (rigidBody) rigidBody->SetLinearDamping(damping);
     }
 
-    void SetAngularDamping(float damping)
+    void SetAngularDamping(float damping) const
     {
-        if (rigidBody_) rigidBody_->SetAngularDamping(damping);
+        if (rigidBody) rigidBody->SetAngularDamping(damping);
     }
 
-    void SetSleepThreshold(float threshold)
+    void SetSleepThreshold(float threshold) const
     {
-        if (rigidBody_) rigidBody_->SetSleepThreshold(threshold);
+        if (rigidBody) rigidBody->SetSleepThreshold(threshold);
     }
 
     // 当たった時に衝撃を与える
     void AddImpulse(const DirectX::XMFLOAT3& impulse)override
     {
-        if (rigidBody_)
+        if (rigidBody)
         {
-            rigidBody_->AddImpulse(impulse);
+            rigidBody->AddImpulse(impulse);
         }
     }
 
     virtual PhysicsShapeInfo GetPhysicsShapeInfo()const = 0;
 
-    virtual void SetMass(const float m) { this->mass_ = m; }
+    virtual void SetMass(const float m) { this->mass = m; }
 
-    virtual float GetMass() { return this->mass_; }
+    virtual float GetMass() { return this->mass; }
 
     void SetStatic(const bool isStatic)
     {
-        isStatic_ = isStatic;
+        this->isStatic = isStatic;
         if (isStatic)
         {
             physicsMode = PhysicsControlMode::Kinematic;
-            mass_ = 0.0f;
-            if (rigidBody_)
-                rigidBody_->SetKinematic(true);
+            mass = 0.0f;
+            if (rigidBody)
+                rigidBody->SetKinematic(true);
         }
     }
 
-    bool IsStatic() const { return isStatic_; }
+    bool IsStatic() const { return isStatic; }
 
     // 当たり判定を無効にする
     void DisableCollision() override
     {
         isCollide = false;
-        if (rigidBody_)
+        if (rigidBody)
         {
-            rigidBody_->DisableCollision();
+            rigidBody->DisableCollision();
         }
     };
 
@@ -220,76 +208,66 @@ public:
     void EnableCollision() override
     {
         isCollide = true;
-        if (rigidBody_)
+        if (rigidBody)
         {
-            rigidBody_->EnableCollision();
+            rigidBody->EnableCollision();
         }
     };
 
-    virtual void OnUnregister()override
+    void OnUnregister()override
     {
-        if (rigidBody_)
+        if (rigidBody)
         {
-            rigidBody_->Destroy();
-            rigidBody_ = nullptr;
+            rigidBody->Destroy();
+            rigidBody = nullptr;
         }
     }
 
-    // デバック箱を描画するか
-    bool IsVisibleDebugBox() const { return isVisibleDebugBox_; }
-
-    void SetIsVisibleDebugBox(const bool isVisibleDebugBox) { this->isVisibleDebugBox_ = isVisibleDebugBox; }
-
     // デバックの形状を描画するか
-    bool IsVisibleDebugShape() const { return isVisibleDebugShape_; }
+    bool IsVisibleDebugShape() const { return isVisibleDebugShape; }
 
-    void SetIsVisibleDebugShape(const bool isVisibleDebugShape) { this->isVisibleDebugShape_ = isVisibleDebugShape; }
+    void SetIsVisibleDebugShape(const bool isVisibleDebugShape) { this->isVisibleDebugShape = isVisibleDebugShape; }
 
-    const std::string& GetCollisionType()const { return collisionTypeName_; }
+    const std::string& GetCollisionType()const { return collisionTypeName; }
 
     void SetPhysicsMaterial(PhysicsMaterialType type)
     {
-        materialType_ = type;
-        if (rigidBody_)
+        materialType = type;
+        if (rigidBody)
         {
-            rigidBody_->SetMaterial(type);
+            rigidBody->SetMaterial(type);
         }
     }
 
     PhysicsMaterialType GetPhysicsMaterialType() const
     {
-        return materialType_;
+        return materialType;
     }
 
     // 初速度を与える
-    void InitialVelocity(DirectX::XMFLOAT3 initialVelocity)
+    void InitialVelocity(DirectX::XMFLOAT3 initialVelocity) const
     {
-        if (rigidBody_)
+        if (rigidBody)
         {
-            rigidBody_->SetIntialVelocity(initialVelocity);
+            rigidBody->SetIntialVelocity(initialVelocity);
         }
     }
 
 
 protected:
-    bool isStatic_ = false;
+    bool isStatic = false;
 
-    bool isVisibleDebugBox_ = false;
-    bool isVisibleDebugShape_ = true;
+    bool isVisibleDebugShape = true;
 
-    bool isCollisionEnabled_ = true;
-
-    float radius_ = 0.0f;
+    float radius = 0.0f;
     float collisionOffsetY = 0.0f; // physxの当たり判定の原点が埋まらないようにするために使用
     float collisionOffsetX = 0.0f; // physxの当たり判定の原点が埋まらないようにするために使用
     float collisionOffsetZ = 0.0f; // physxの当たり判定の原点が埋まらないようにするために使用
 
-    // のちに責任を分離
-    float mass_ = 1.0f; // defaultで 1.0kg にしておく
+    float mass = 1.0f; // defaultで 1.0kg にしておく
 
-    std::string collisionTypeName_ = "";
-
-    PhysicsMaterialType materialType_ = PhysicsMaterialType::Default;
+    std::string collisionTypeName = "";
+    PhysicsMaterialType materialType = PhysicsMaterialType::Default;
 };
 
 
@@ -300,7 +278,7 @@ class BoxComponent :public ShapeComponent
 public:
     BoxComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :ShapeComponent(name, owner)
     {
-        collisionTypeName_ = "Box";
+        collisionTypeName = "Box";
     }
 
     void SetHalfBoxExtent(const DirectX::XMFLOAT3& extent)//boxの半径
@@ -316,14 +294,13 @@ public:
     AABB GetAABB()const override
     {
         AABB aabb{};
-        //DirectX::XMFLOAT3 center = attachParent_.lock()->GetWorldPosition();
         DirectX::XMFLOAT3 center = GetComponentLocation();
         aabb.min = { center.x - boxExtent_.x,center.y - boxExtent_.y,center.z - boxExtent_.z };
         aabb.max = { center.x + boxExtent_.x,center.y + boxExtent_.y,center.z + boxExtent_.z };
         return aabb;
     }
 
-    virtual void DrawImGuiInspector() override
+    void DrawImGuiInspector() override
     {
 #ifdef USE_IMGUI
         ShapeComponent::DrawImGuiInspector();
@@ -339,7 +316,7 @@ public:
     // 動的にボックスの判定を大きくする関数
     void ResizeBox(const float newExtentX, const float newExtentY, const float newExtentZ)
     {
-        rigidBody_->ResizeBox(newExtentX, newExtentY, newExtentZ);
+        rigidBody->ResizeBox(newExtentX, newExtentY, newExtentZ);
         boxExtent_.x = newExtentX;
         boxExtent_.y = newExtentY;
         boxExtent_.z = newExtentZ;
@@ -349,7 +326,6 @@ public:
     {
         PhysicsShapeInfo info;
         info.geometry = physx::PxBoxGeometry(boxExtent_.x, boxExtent_.y, boxExtent_.z);
-        //DirectX::XMFLOAT3 pos = attachParent_.lock()->GetWorldPosition();
         const Transform& worldT = GetComponentWorldTransform();
         DirectX::XMFLOAT3 pos = worldT.GetLocation();
         DirectX::XMFLOAT4 rot = worldT.GetRotation();
@@ -365,7 +341,6 @@ public:
 
         return info;
     }
-private:
 };
 
 class SphereComponent :public ShapeComponent
@@ -373,17 +348,17 @@ class SphereComponent :public ShapeComponent
 public:
     SphereComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :ShapeComponent(name, owner)
     {
-        collisionTypeName_ = "Sphere";
+        collisionTypeName = "Sphere";
     }
 
-    virtual void DrawImGuiInspector() override
+    void DrawImGuiInspector() override
     {
 #ifdef USE_IMGUI
 
         ShapeComponent::DrawImGuiInspector();
         if (ImGui::TreeNode((name + "  sphere").c_str()))
         {
-            ImGui::DragFloat("radius", &radius_, 0.1f);
+            ImGui::DragFloat("radius", &radius, 0.1f);
             ImGui::TreePop();
         }
 #endif
@@ -392,45 +367,42 @@ public:
     Sphere ToSphere()const
     {
         Sphere s{};
-        //s.c = Point(attachParent_.lock()->GetWorldPosition());
         s.c = Point(GetComponentWorldTransform().GetLocation());
-        s.r = radius_;
+        s.r = radius;
         return s;
     }
 
     PhysicsShapeInfo GetPhysicsShapeInfo()const override
     {
         PhysicsShapeInfo info;
-        info.geometry = physx::PxSphereGeometry(radius_);
+        info.geometry = physx::PxSphereGeometry(radius);
         DirectX::XMFLOAT3 pos = GetComponentWorldTransform().GetLocation();
-        //DirectX::XMFLOAT3 pos = attachParent_.lock()->GetWorldPosition();
         info.transform = physx::PxTransform{ {pos.x,pos.y,pos.z} };
         return info;
     }
 
     void SetRadius(const float radius)
     {
-        this->radius_ = radius;
+        this->radius = radius;
     }
 
     _NODISCARD AABB GetAABB()const override
     {
-        //DirectX::XMFLOAT3 pos = attachParent_.lock()->GetWorldPosition();
         DirectX::XMFLOAT3 pos = GetComponentWorldTransform().GetLocation();
         AABB aabb;
-        aabb.min = { pos.x - radius_,pos.y - radius_,pos.z - radius_ };
-        aabb.max = { pos.x + radius_,pos.y + radius_,pos.z + radius_ };
+        aabb.min = { pos.x - radius,pos.y - radius,pos.z - radius };
+        aabb.max = { pos.x + radius,pos.y + radius,pos.z + radius };
         return aabb;
     }
 
     // 動的に球の当たり判定の半径を変更する関数
     void ResizeSphere(const float radius)
     {
-        radius_ = radius;
-        rigidBody_->ResizeSphere(radius);
+        this->radius = radius;
+        rigidBody->ResizeSphere(radius);
     }
 
-    float GetRadius() const { return radius_; }
+    float GetRadius() const { return radius; }
 private:
 };
 
@@ -438,21 +410,21 @@ class CapsuleComponent :public ShapeComponent
 {
     float height = 0.0f;
 public:
-    CapsuleComponent(const std::string& name, std::shared_ptr<Actor> owner) :ShapeComponent(name, owner)
+    CapsuleComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :ShapeComponent(name, owner)
     {
-        collisionTypeName_ = "Capsule";
+        collisionTypeName = "Capsule";
     }
 
-    virtual void DrawImGuiInspector() override
+    void DrawImGuiInspector() override
     {
 #ifdef USE_IMGUI
         ShapeComponent::DrawImGuiInspector();
 
         if (ImGui::TreeNode((name + "  capsule").c_str()))
         {
-            ImGui::DragFloat("radius", &radius_, 0.1f);
+            ImGui::DragFloat("radius", &radius, 0.1f);
             ImGui::DragFloat("height", &height, 0.1f);
-            ResizeCapsule(radius_,height);
+            ResizeCapsule(radius,height);
             ImGui::TreePop();
         }
 #endif
@@ -462,30 +434,26 @@ public:
     Capsule ToCapsule()const
     {
         Capsule c{};
-        //c.a = Point(attachParent_.lock()->GetWorldPosition().x, attachParent_.lock()->GetWorldPosition().y + height - radius, attachParent_.lock()->GetWorldPosition().z);
-        //c.b = DirectX::XMFLOAT3(attachParent_.lock()->GetWorldPosition().x, attachParent_.lock()->GetWorldPosition().y + radius, attachParent_.lock()->GetWorldPosition().z);
-        c.a = Point(GetComponentWorldTransform().GetLocation().x, GetComponentWorldTransform().GetLocation().y + height - radius_, GetComponentWorldTransform().GetLocation().z);
-        c.b = DirectX::XMFLOAT3(GetComponentWorldTransform().GetLocation().x, GetComponentWorldTransform().GetLocation().y + radius_, GetComponentWorldTransform().GetLocation().z);
-        c.r = radius_;
+        c.a = Point(GetComponentWorldTransform().GetLocation().x, GetComponentWorldTransform().GetLocation().y + height - radius, GetComponentWorldTransform().GetLocation().z);
+        c.b = DirectX::XMFLOAT3(GetComponentWorldTransform().GetLocation().x, GetComponentWorldTransform().GetLocation().y + radius, GetComponentWorldTransform().GetLocation().z);
+        c.r = radius;
         return c;
     }
 
     AABB GetAABB() const override
     {
         auto pos = GetComponentWorldTransform().GetLocation();
-        //auto pos = attachParent_.lock()->GetWorldPosition();
-        float halfHeight = height * 0.5f;
         DirectX::XMFLOAT3 a = { pos.x, pos.y + height , pos.z };
-        DirectX::XMFLOAT3 b = { pos.x, pos.y + radius_, pos.z };
+        DirectX::XMFLOAT3 b = { pos.x, pos.y + radius, pos.z };
 
         AABB box;
-        box.min.x = std::min<float>(a.x, b.x) - radius_;
-        box.min.y = std::min<float>(a.y, b.y) - radius_;
-        box.min.z = std::min<float>(a.z, b.z) - radius_;
+        box.min.x = std::min<float>(a.x, b.x) - radius;
+        box.min.y = std::min<float>(a.y, b.y) - radius;
+        box.min.z = std::min<float>(a.z, b.z) - radius;
 
-        box.max.x = std::max<float>(a.x, b.x) + radius_;
-        box.max.y = std::max<float>(a.y, b.y) + radius_;
-        box.max.z = std::max<float>(a.z, b.z) + radius_;
+        box.max.x = std::max<float>(a.x, b.x) + radius;
+        box.max.y = std::max<float>(a.y, b.y) + radius;
+        box.max.z = std::max<float>(a.z, b.z) + radius;
 
         return box;
     }
@@ -497,14 +465,10 @@ public:
         float totalHeight = height;
 
         // PhysX 用 halfHeight（球を除いた円柱部分）
-        float halfHeight = (totalHeight * 0.5f) - radius_;
+        float halfHeight = (totalHeight * 0.5f) - radius;
         halfHeight = std::max<float>(halfHeight, 0.0f);
 
-        info.geometry = physx::PxCapsuleGeometry(radius_, halfHeight);
-        //DirectX::XMFLOAT3 pos = GetComponentWorldTransform().GetLocation();
-        //DirectX::XMFLOAT3 pos = attachParent_.lock()->GetWorldPosition();
-        //pos = attachParent_.lock()->GetLocalPosition();
-
+        info.geometry = physx::PxCapsuleGeometry(radius, halfHeight);
         const Transform& worldT = GetComponentWorldTransform();
         DirectX::XMFLOAT3 pos = worldT.GetLocation();
         DirectX::XMFLOAT4 rot = worldT.GetRotation();
@@ -534,38 +498,23 @@ public:
             physx::PxVec3(pos.x, pos.y, pos.z),
             worldQ * capsuleAxisQ
         );
-        //info.transform = physx::PxTransform{ {pos.x,pos.y,pos.z} };
-
-        //if (capsuleAxis == ShapeComponent::CapsuleAxis::y)
-        //{
-        //    info.transform.q = physx::PxQuat(physx::PxPiDivTwo, physx::PxVec3(0.0f, 0.0f, 1.0f));	//90度回転させて
-        //}
-        //else if (capsuleAxis == ShapeComponent::CapsuleAxis::x)
-        //{
-        //    info.transform.q = physx::PxQuat(physx::PxPiDivTwo, physx::PxVec3(0.0f, 1.0f, 0.0f));	//90度回転させて
-        //}
-        //else
-        //{
-        //    info.transform.q = physx::PxQuat(physx::PxPiDivTwo, physx::PxVec3(0.0f, 0.0f, 0.0f));	//回転不要
-        //}
         return info;
     }
 
-    void SetRadiusAndHeight(const float radius, const float height) { this->radius_ = radius; this->height = height; }
+    void SetRadiusAndHeight(const float radius, const float height) { this->radius = radius; this->height = height; }
 
-    float GetRadius() const { return radius_; }
+    float GetRadius() const { return radius; }
     float GetHeight() const { return height; }
 
 
     // 動的にカプセルの判定を大きくする関数
     void ResizeCapsule(const float newRadius, const float newHeight)
     {
-        rigidBody_->ResizeCapsule(newRadius, newHeight);
-        radius_ = newRadius;
+        rigidBody->ResizeCapsule(newRadius, newHeight);
+        radius = newRadius;
         height = newHeight;
     }
 
-private:
 };
 
 class ConvexCollisionComponent :public CollisionComponent
@@ -573,9 +522,8 @@ class ConvexCollisionComponent :public CollisionComponent
 public:
     ConvexCollisionComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :CollisionComponent(name, owner) {}
 
-    virtual void Initialize()override
+    void Initialize()override
     {
-        //InitializePhysics();
     }
 
     void Tick(const float deltaTime)override
@@ -609,7 +557,7 @@ public:
         rigidBody_->DisableCollision();
     }
 
-    virtual void OnUnregister()override
+    void OnUnregister()override
     {
         if (rigidBody_)
         {
@@ -624,32 +572,30 @@ private:
     MeshComponent* meshComponent_ = nullptr;
 };
 
-// staticBatchinModel にのみ使用可能
+// staticBatchingModel にのみ使用可能
 class TriangleMeshCollisionComponent :public CollisionComponent
 {
 public:
-    TriangleMeshCollisionComponent(const std::string& name, std::shared_ptr<Actor> owner) :CollisionComponent(name, owner) {}
+    TriangleMeshCollisionComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :CollisionComponent(name, owner) {}
 
-    virtual void Initialize()override {}
+    void Initialize()override {}
 
     void Tick(const float deltaTime)override
     {
-        if (rigidBody_)
+        if (rigidBody)
         {
-            rigidBody_->Tick(deltaTime);
+            rigidBody->Tick(deltaTime);
         }
     }
     void AddToScene()override
     {
-        rigidBody_->AddToScene(Physics::Instance().GetScene());
+        rigidBody->AddToScene(Physics::Instance().GetScene());
     }
-
-
 
     // モデルから TriangleMesh を作成する
     void CreateConvexMeshFromModel(MeshComponent* meshComponent);
 
 private:
-    std::shared_ptr<TriangleMeshRigidBodyComponent> rigidBody_;
-    MeshComponent* meshComponent_ = nullptr;
+    std::shared_ptr<TriangleMeshRigidBodyComponent> rigidBody;
+    MeshComponent* meshComponent = nullptr;
 };

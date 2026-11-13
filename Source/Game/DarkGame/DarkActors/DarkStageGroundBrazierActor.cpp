@@ -26,7 +26,6 @@ void DarkStageGroundBrazierActor::SetModel(const std::shared_ptr<StageAsset>& st
     boxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
     boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
     boxComponent->SetCollisionOffsetY(size.y * 0.5f);
-    boxComponent->SetIsVisibleDebugBox(false);
     boxComponent->Initialize();
 
 

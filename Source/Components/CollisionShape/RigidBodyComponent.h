@@ -1,26 +1,19 @@
 #pragma once
 
-// C++ 標準ライブラリ
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
 
-// 他ライブラリ
 #include <DirectXMath.h>
 #include <PxPhysicsAPI.h>
 #include <PxShape.h>
-#include <geometry/PxConvexMeshGeometry.h>
-#include <geometry/PxGeometry.h>
 #include <geometry/PxConvexMesh.h>
 
 #ifdef USE_IMGUI
 #define IMGUI_ENABLE_DOCKING
-#include "../External/imgui/imgui.h"
 #endif
 
-// プロジェクトの他のヘッダ
-#include "Physics/Collider.h"
 #include "Physics/Physics.h"
 #include "Physics/PhysicsHelper.h"
 #include "Components/Transform/Transform.h"
@@ -60,18 +53,17 @@ struct XMFLOAT3Equal
 class RigidBodyComponent : public Component
 {
 public:
-    RigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner) : Component(name, owner) {}
+    RigidBodyComponent(const std::string& name, const std::shared_ptr<Actor>& owner) : Component(name, owner) {}
 
-    virtual ~RigidBodyComponent() = default;
+    ~RigidBodyComponent() override = default;
 
-    virtual void Initialize() {};
+    void Initialize() override {};
 
-    virtual void UpdateComponentToWorld(UpdateTransformFlags update_transform_flags = UpdateTransformFlags::None) {}
-
+    void UpdateComponentToWorld(UpdateTransformFlags update_transform_flags = UpdateTransformFlags::None) override {}
 
     virtual void Initialize(physx::PxPhysics* physics) = 0;
 
-    virtual void Tick(float deltaTime) = 0;
+    void Tick(float deltaTime) override = 0;
 
     virtual void AddToScene(physx::PxScene* scene) = 0;
 
@@ -83,122 +75,120 @@ public:
 
     virtual void SetKinematic(bool isKinematic) {}
 
-    virtual void Destroy() override = 0;
+    void Destroy() override = 0;
 
 protected:
-    uint32_t layer_ = 0xFFFFFFFF;
-    uint32_t mask_ = 0xFFFFFFFF;
+    uint32_t layer = 0xFFFFFFFF;
+    uint32_t mask = 0xFFFFFFFF;
 };
 
 
 class SingleRigidBodyComponent :public RigidBodyComponent
 {
 public:
-    SingleRigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner, ShapeComponent* shape)
-        : RigidBodyComponent(name, owner), shapeComponent_(shape), material_(Physics::Instance().GetMaterial(PhysicsMaterialType::Default)) {
-    }
+    SingleRigidBodyComponent(const std::string& name, const std::shared_ptr<Actor>& owner, ShapeComponent* shape)
+        : RigidBodyComponent(name, owner), shapeComponent(shape), material(Physics::Instance().GetMaterial(PhysicsMaterialType::Default)) {}
 
-    virtual void Initialize(physx::PxPhysics* physics) override;
+    void Initialize(physx::PxPhysics* physics) override;
 
-    virtual void Tick(float deltaTime) override;
+    void Tick(float deltaTime) override;
 
-    virtual void AddToScene(physx::PxScene* scene) override
+    void AddToScene(physx::PxScene* scene) override
     {
-        if (pxActor_)
+        if (pxActor)
         {
-            scene->addActor(*pxActor_);
-            isInScene_ = true;
+            scene->addActor(*pxActor);
+            isInScene = true;
         }
     }
 
-    virtual void SetTransform(const Transform& worldTransform) override
+    void SetTransform(const Transform& worldTransform) override
     {
-        if (pxActor_)
+        if (pxActor)
         {
-            pxActor_->setGlobalPose(PhysicsHelper::ToPxTransform(worldTransform));
+            pxActor->setGlobalPose(PhysicsHelper::ToPxTransform(worldTransform));
         }
     }
 
-    virtual void SetCollisionFilter(uint32_t layer, uint32_t mask) override
+    void SetCollisionFilter(uint32_t layer, uint32_t mask) override
     {
-        layer_ = layer;
-        mask_ = mask;
-        if (pxShape_)
+        layer = layer;
+        mask = mask;
+        if (pxShape)
         {
             physx::PxFilterData filterData(layer, mask, 0, 0);
-            pxShape_->setSimulationFilterData(filterData);
-            pxShape_->setQueryFilterData(filterData);
+            pxShape->setSimulationFilterData(filterData);
+            pxShape->setQueryFilterData(filterData);
         }
     }
 
     void SetGravity(bool isUseGravity)override
     {
-        if (pxActor_)
+        if (pxActor)
         {
-            pxActor_->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, !isUseGravity);
+            pxActor->setActorFlag(physx::PxActorFlag::eDISABLE_GRAVITY, !isUseGravity);
         }
     }
 
-    void SetIntialVelocity(const DirectX::XMFLOAT3& velocity)
+    void SetIntialVelocity(const DirectX::XMFLOAT3& velocity) const
     {
-        if (pxActor_)
+        if (pxActor)
         {
-            pxActor_->setLinearVelocity(physx::PxVec3(velocity.x, velocity.y, velocity.z));
+            pxActor->setLinearVelocity(physx::PxVec3(velocity.x, velocity.y, velocity.z));
         }
     }
 
-    void SetInitialAngularVelocity(const DirectX::XMFLOAT3& angularVelocity)
+    void SetInitialAngularVelocity(const DirectX::XMFLOAT3& angularVelocity) const
     {
-        if (pxActor_)
-            pxActor_->setAngularVelocity(physx::PxVec3(angularVelocity.x, angularVelocity.y, angularVelocity.z));
+        if (pxActor)
+            pxActor->setAngularVelocity(physx::PxVec3(angularVelocity.x, angularVelocity.y, angularVelocity.z));
     }
 
-    void SetLinearDamping(float damping)
+    void SetLinearDamping(float damping) const
     {
-        if (pxActor_)
-            pxActor_->setLinearDamping((std::max)(0.0f, damping));
+        if (pxActor)
+            pxActor->setLinearDamping((std::max)(0.0f, damping));
     }
 
-    void SetAngularDamping(float damping)
+    void SetAngularDamping(float damping) const
     {
-        if (pxActor_)
-            pxActor_->setAngularDamping((std::max)(0.0f, damping));
+        if (pxActor)
+            pxActor->setAngularDamping((std::max)(0.0f, damping));
     }
 
-    void SetSleepThreshold(float threshold)
+    void SetSleepThreshold(float threshold) const
     {
-        if (pxActor_)
-            pxActor_->setSleepThreshold((std::max)(0.0f, threshold));
+        if (pxActor)
+            pxActor->setSleepThreshold((std::max)(0.0f, threshold));
     }
 
-    // Update the mass and inertia after the dynamic shape has been created.
     void SetMass(float newMass)
     {
-        if (pxActor_)
-            physx::PxRigidBodyExt::updateMassAndInertia(*pxActor_, newMass);
-        mass_ = newMass;
+        if (pxActor)
+            physx::PxRigidBodyExt::updateMassAndInertia(*pxActor, newMass);
+        mass = newMass;
     }
 
     // 当たり判定を無効にする関数
-    void DisableCollision()
+    void DisableCollision() const
     {
-        if (!pxShape_)
+        if (!pxShape)
         {
             return;
         }
-        pxShape_->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
-        pxShape_->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+        pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
+        pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
     }
 
     // 当たり判定を有効にする関数
-    void EnableCollision()
+    void EnableCollision() const
     {
-        if (!pxShape_)
+        if (!pxShape)
         {
             return;
         }
-        pxShape_->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, true);
-        pxShape_->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+        pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, true);
+        pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, true);
     }
 
     // 動的に球の当たり判定の半径を大きくする関数
@@ -212,73 +202,69 @@ public:
 
     void SetKinematic(bool isKinematic)override
     {
-        if (pxActor_)
+        if (pxActor)
         {
-            pxActor_->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC, isKinematic);
-            //shapeComponent_->SetKinematic(isKinematic); // ShapeComonent側も更新する
+            pxActor->setRigidBodyFlag(physx::PxRigidBodyFlag::eKINEMATIC, isKinematic);
         }
-        isKinematic_ = isKinematic;
+        isKinematic = isKinematic;
     }
 
     void SetTrigger(bool isTrigger)
     {
-        isTrigger_ = isTrigger;
+        isTrigger = isTrigger;
     }
 
-    virtual void Destroy() override
+    void Destroy() override
     {
-        if (pxActor_ && isInScene_)
+        if (pxActor && isInScene)
         {
-            // deferred に変更
-            //Physics::EnqueueDefferfOperations({ DefferdPhysicsOperation::Type::RemoveRigidActor, pxActor_ });
-            Physics::Instance().GetScene()->removeActor(*pxActor_);
-            isInScene_ = false;
+            Physics::Instance().GetScene()->removeActor(*pxActor);
+            isInScene = false;
         }
 
-        isDestroyed_ = true;
+        isDestroyed = true;
     }
 
-    void AddImpulse(const DirectX::XMFLOAT3& impulse)
+    void AddImpulse(const DirectX::XMFLOAT3& impulse) const
     {
         using namespace physx;
-        if (!isKinematic_)
+        if (!isKinematic)
         {// ダイナミックの時
-            if (pxActor_)
+            if (pxActor)
             {
                 PxVec3 impulsePx(impulse.x, impulse.y, impulse.z);
 
                 // 瞬間的な速度変化を与える
-                pxActor_->addForce(impulsePx, PxForceMode::eIMPULSE);
+                pxActor->addForce(impulsePx, PxForceMode::eIMPULSE);
             }
         }
     }
 
-    void SetMaterial(PhysicsMaterialType type)
+    void SetMaterial(PhysicsMaterialType type) const
     {
-        if (!pxShape_) return;
+        if (!pxShape) return;
 
         physx::PxMaterial* mat =
             Physics::Instance().GetMaterial(type);
 
-        pxShape_->setMaterials(&mat, 1);
+        pxShape->setMaterials(&mat, 1);
     }
 
 
 private:
-    physx::PxRigidDynamic* pxActor_ = nullptr;
-    physx::PxShape* pxShape_ = nullptr;
-    ShapeComponent* shapeComponent_ = nullptr;
-    physx::PxMaterial* material_ = nullptr;
+    physx::PxRigidDynamic* pxActor = nullptr;
+    physx::PxShape* pxShape = nullptr;
+    ShapeComponent* shapeComponent = nullptr;
+    physx::PxMaterial* material = nullptr;
 
-    float mass_ = 1.0f;
-    bool isDestroyed_ = false;
-    bool isInScene_ = false;
-    bool isKinematic_ = true;
-    bool isTrigger_ = false;
+    float mass = 1.0f;
+    bool isDestroyed = false;
+    bool isInScene = false;
+    bool isKinematic = true;
+    bool isTrigger = false;
 
     // 動的に半径を変更した時に position を足すため
-    float currentRadius_ = 0.0f;
-
+    float currentRadius = 0.0f;
 };
 
 
@@ -286,9 +272,8 @@ private:
 class MultiRigidBodyComponent :public RigidBodyComponent
 {
 public:
-    MultiRigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner, MeshComponent* meshComponent, CollisionComponent* collisionComponent)
-        : RigidBodyComponent(name, owner), meshComponent_(meshComponent), collisionComponent_(collisionComponent) {
-    }
+    MultiRigidBodyComponent(const std::string& name, const std::shared_ptr<Actor>& owner, MeshComponent* meshComponent, CollisionComponent* collisionComponent)
+        : RigidBodyComponent(name, owner), meshComponent(meshComponent), collisionComponent(collisionComponent) {}
 
     void Initialize(physx::PxPhysics* physics)override;
 
@@ -296,34 +281,33 @@ public:
 
     void AddToScene(physx::PxScene* scene) override
     {
-        if (isAddedToScene_)
+        if (isAddedToScene)
         {
             return;
         }
-        for (auto* pxBody : rigidBodies_)
+        for (auto* pxBody : rigidBodies)
         {
             scene->addActor(*pxBody);
         }
-        isAddedToScene_ = true;
+        isAddedToScene = true;
     }
 
-    void SetTransform(const Transform& worldTransform) {}
+    void SetTransform(const Transform& worldTransform) override {}
 
-    void SetCollisionFilter(uint32_t layer, uint32_t mask)
+    void SetCollisionFilter(uint32_t layer, uint32_t mask) override
     {
-        layer_ = layer;
-        mask_ = mask;
-        // pxShape の配列にセットしてもいいかも
+        this->layer = layer;
+        this->mask = mask;
     }
 
     const std::vector<InterleavedGltfModel::Node>& GetAnimatedNodes() const
     {
-        return animatedNodes_;
+        return animatedNodes;
     }
 
-    void SetKinematic(bool isKinematic)
+    void SetKinematic(bool isKinematic) override
     {
-        for (physx::PxRigidActor* actor : rigidBodies_)
+        for (physx::PxRigidActor* actor : rigidBodies)
         {
             // RigidDynamic のみが Kinematic を設定可能
             if (physx::PxRigidDynamic* dynActor = actor->is<physx::PxRigidDynamic>())
@@ -344,18 +328,18 @@ public:
 
     bool IsKinematic(size_t index) const
     {
-        if (index >= rigidBodies_.size())
+        if (index >= rigidBodies.size())
         {
             return false;
         }
-        auto* dyn = rigidBodies_[index]->is<physx::PxRigidDynamic>();
+        auto* dyn = rigidBodies[index]->is<physx::PxRigidDynamic>();
         return dyn ? dyn->getRigidBodyFlags() & physx::PxRigidBodyFlag::eKINEMATIC : false;
     }
 
     // 当たり判定を無効にする関数
-    void DisableCollision()
+    void DisableCollision() const
     {
-        for (physx::PxShape* pxShape : pxShapes_)
+        for (physx::PxShape* pxShape : pxShapes)
         {
             if (pxShape)
             {
@@ -366,7 +350,7 @@ public:
     }
 
 
-    virtual void Destroy() override;
+    void Destroy() override;
 
 private:
     void ComputeGlobalTransformRecursive(std::vector<InterleavedGltfModel::Node>& nodes, int nodeIndex, const DirectX::XMFLOAT4X4& parentGlobal)
@@ -374,7 +358,6 @@ private:
         InterleavedGltfModel::Node& node = nodes[nodeIndex];
 
         // ローカル行列 SRT
-        //DirectX::XMMATRIX S = DirectX::XMMatrixScaling(node.scale.x, node.scale.y, node.scale.z);
         DirectX::XMMATRIX S = DirectX::XMMatrixScaling(1.0f, 1.0f, 1.0f);
         DirectX::XMMATRIX R = DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&node.rotation));
         DirectX::XMMATRIX T = DirectX::XMMatrixTranslation(node.translation.x, node.translation.y, node.translation.z);
@@ -426,9 +409,9 @@ private:
             {
                 DirectX::XMFLOAT3 scaledPos =
                 {
-                    vertex.position.x /** unitScale*/,
-                    vertex.position.y /** unitScale*/,
-                    vertex.position.z /** unitScale*/,
+                    vertex.position.x,
+                    vertex.position.y,
+                    vertex.position.z,
                 };
 
                 uniquePositions.insert(scaledPos);
@@ -474,15 +457,15 @@ private:
     }
 
     // rigidBodies の接続
-    void CreateFixedJoints(MeshComponent* meshComponent)
+    void CreateFixedJoints(const MeshComponent* meshComponent) const
     {
         using namespace physx;
         PxPhysics* pxPhysics = Physics::Instance().GetPhysics();
         auto& model = meshComponent->model;
 
-        for (size_t parentIndex = 0; parentIndex < rigidBodies_.size(); ++parentIndex)
+        for (size_t parentIndex = 0; parentIndex < rigidBodies.size(); ++parentIndex)
         {
-            PxRigidActor* parentBody = rigidBodies_[parentIndex];
+            PxRigidActor* parentBody = rigidBodies[parentIndex];
             if (!parentBody)
             {// 空ならスキップ
                 continue;
@@ -492,12 +475,12 @@ private:
             auto node = nodes[parentIndex];
             for (int childIndex : node.children)
             {
-                if (childIndex < 0 || static_cast<size_t>(childIndex) >= rigidBodies_.size())
+                if (childIndex < 0 || static_cast<size_t>(childIndex) >= rigidBodies.size())
                 {
                     continue;
                 }
 
-                PxRigidActor* childBody = rigidBodies_[childIndex];
+                PxRigidActor* childBody = rigidBodies[childIndex];
                 if (!childBody)
                 {
                     continue;
@@ -511,35 +494,29 @@ private:
 
     bool IsAddedToScene() const
     {
-        return isAddedToScene_;
+        return isAddedToScene;
     }
 
 
 private:
-    std::vector<physx::PxShape*> pxShapes_;
-    std::vector<physx::PxRigidActor*> rigidBodies_;
+    std::vector<physx::PxShape*> pxShapes;
+    std::vector<physx::PxRigidActor*> rigidBodies;
     // 更新時に nodeIndex と rigidBody を紐づけておくため
-    std::unordered_map<size_t, physx::PxRigidActor*> nodeIndexToRigidBody_;
+    std::unordered_map<size_t, physx::PxRigidActor*> nodeIndexToRigidBody;
     // 描画時に必要な nodes
-    std::vector<InterleavedGltfModel::Node> animatedNodes_;
-    MeshComponent* meshComponent_ = nullptr;
+    std::vector<InterleavedGltfModel::Node> animatedNodes;
+    MeshComponent* meshComponent = nullptr;
     // shape の userData に登録する
-    CollisionComponent* collisionComponent_ = nullptr;
-    // 前のボーンとのジョイントを作成するのに使用する
-    physx::PxRigidDynamic* previousBody_ = nullptr;
-    DirectX::XMFLOAT4X4 previousNodeTransform;
-
-    bool isAddedToScene_ = false;
-    bool isDestroyed_ = false;
+    CollisionComponent* collisionComponent = nullptr;
+    bool isAddedToScene = false;
 };
 
 // 静的なステージ用 RigidBody
 class TriangleMeshRigidBodyComponent :public RigidBodyComponent
 {
 public:
-    TriangleMeshRigidBodyComponent(const std::string& name, std::shared_ptr<Actor> owner, MeshComponent* meshComponent)
-        : RigidBodyComponent(name, owner), meshComponent(meshComponent), material_(Physics::Instance().GetMaterial(PhysicsMaterialType::Default)) {
-    }
+    TriangleMeshRigidBodyComponent(const std::string& name, const std::shared_ptr<Actor>& owner, MeshComponent* meshComponent)
+        : RigidBodyComponent(name, owner), meshComponent(meshComponent), material(Physics::Instance().GetMaterial(PhysicsMaterialType::Default)) {}
 
     void Initialize(physx::PxPhysics* physics) override;
 
@@ -547,81 +524,81 @@ public:
 
     void AddToScene(physx::PxScene* scene)override
     {
-        if (pxActor_)
+        if (pxActor)
         {
-            scene->addActor(*pxActor_);
+            scene->addActor(*pxActor);
         }
     }
 
     void SetTransform(const Transform& worldTransform) override
     {
-        if (pxActor_)
+        if (pxActor)
         {
-            pxActor_->setGlobalPose(PhysicsHelper::ToPxTransform(worldTransform));
+            pxActor->setGlobalPose(PhysicsHelper::ToPxTransform(worldTransform));
         }
     }
 
-    void SetCollisionFilter(uint32_t layer, uint32_t mask)
+    void SetCollisionFilter(uint32_t layer, uint32_t mask) override
     {
-        layer_ = layer;
-        mask_ = mask;
-        if (pxShape_)
+        this->layer = layer;
+        this->mask = mask;
+        if (pxShape)
         {
             physx::PxFilterData filterData(layer, mask, 0, 0);
-            pxShape_->setSimulationFilterData(filterData);
-            pxShape_->setQueryFilterData(filterData);
+            pxShape->setSimulationFilterData(filterData);
+            pxShape->setQueryFilterData(filterData);
         }
     }
 
-    void DisableCollision()
+    void DisableCollision() const
     {
-        if (!pxActor_) return;
+        if (!pxActor) return;
 
-        pxActor_->setActorFlag(
+        pxActor->setActorFlag(
             physx::PxActorFlag::eDISABLE_SIMULATION,
             false
         );
-        if (!pxShape_)
+        if (!pxShape)
         {
             return;
         }
-        pxShape_->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
-        pxShape_->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
+        pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, false);
+        pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, false);
     }
 
     // 当たり判定を有効にする関数
-    void EnableCollision()
+    void EnableCollision() const
     {
-        if (!pxActor_) return;
+        if (!pxActor) return;
 
-        pxActor_->setActorFlag(
+        pxActor->setActorFlag(
             physx::PxActorFlag::eDISABLE_SIMULATION,
             true
         );
 
-        if (!pxShape_)
+        if (!pxShape)
         {
             return;
         }
-        pxShape_->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, true);
-        pxShape_->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, true);
+        pxShape->setFlag(physx::PxShapeFlag::eSIMULATION_SHAPE, true);
+        pxShape->setFlag(physx::PxShapeFlag::eSCENE_QUERY_SHAPE, true);
     }
 
 
-    virtual void Destroy()override
+    void Destroy()override
     {
-        if (pxActor_)
+        if (pxActor)
         {
-            pxActor_->release();
-            pxActor_ = nullptr;
+            pxActor->release();
+            pxActor = nullptr;
         }
 
-        pxShape_ = nullptr; // PxShape はアクターが所有しているので release 不要
+        pxShape = nullptr; // PxShape はアクターが所有しているので release 不要
     }
 private:
     MeshComponent* meshComponent = nullptr;
-    physx::PxRigidStatic* pxActor_ = nullptr;
-    physx::PxShape* pxShape_ = nullptr;
-    physx::PxMaterial* material_ = nullptr;
+    physx::PxRigidStatic* pxActor = nullptr;
+    physx::PxShape* pxShape = nullptr;
+    physx::PxMaterial* material = nullptr;
 };
 

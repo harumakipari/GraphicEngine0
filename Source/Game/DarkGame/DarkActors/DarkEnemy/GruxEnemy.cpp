@@ -3194,7 +3194,6 @@ void GruxEnemy::CreateCoreComponents(const std::string& parentName)
     capsuleComponent->SetResponseToLayer(CollisionLayer::WorldProps, CollisionComponent::CollisionResponse::Block);
     capsuleComponent->SetResponseToLayer(CollisionLayer::Convex, CollisionComponent::CollisionResponse::Block);
     capsuleComponent->SetCollisionOffsetY(height * 0.5f);
-    capsuleComponent->SetIsVisibleDebugBox(false);
     capsuleComponent->Initialize();
 
     rotationComponent = this->AddComponent<class RotationComponent>("rotationComponent", parentName);

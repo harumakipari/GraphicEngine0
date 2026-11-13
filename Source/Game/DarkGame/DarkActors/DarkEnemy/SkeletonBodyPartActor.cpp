@@ -106,7 +106,7 @@ void SkeletonBodyPartActor::ActivateFromDeathPose(const Transform& transform,
     meshComponent->SetIsVisible(true);
     collisionComponent->EnableCollision();
     collisionComponent->SetKinematic(false);
-    collisionComponent->SetIntialVelocity(initialVelocity);
+    collisionComponent->SetInitialVelocity(initialVelocity);
     constexpr float degreesToRadians = DirectX::XM_PI / 180.0f;
     collisionComponent->SetInitialAngularVelocity({
         angularVelocityDegrees.x * degreesToRadians,

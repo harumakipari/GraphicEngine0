@@ -618,9 +618,6 @@
     <ClInclude Include="Source\Engine\Serialization\DirectXSerializers.h">
       <Filter>Source\Engine\Serialization</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Utility\GameUtility.h">
-      <Filter>Source\Utility</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Utility\SceneJsonUtils.h">
       <Filter>Source\Utility</Filter>
     </ClInclude>

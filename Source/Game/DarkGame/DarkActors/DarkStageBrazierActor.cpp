@@ -25,7 +25,6 @@ void DarkStageBrazierActor::SetModel(const std::shared_ptr<StageAsset>& stageAss
     boxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
     boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
     boxComponent->SetCollisionOffsetY(size.y * 0.5f);
-    boxComponent->SetIsVisibleDebugBox(false);
     boxComponent->Initialize();
 
 
@@ -124,7 +123,6 @@ void DarkStageStandingBrazierActor::SetModel(const std::shared_ptr<StageAsset>& 
     boxComponent->SetLayer(CollisionLayer::WorldPropsNoRaycast);
     boxComponent->SetResponseToLayer(CollisionLayer::Player, CollisionComponent::CollisionResponse::Trigger);
     boxComponent->SetCollisionOffsetY(size.y * 0.5f);
-    boxComponent->SetIsVisibleDebugBox(false);
     boxComponent->Initialize();
 
 
