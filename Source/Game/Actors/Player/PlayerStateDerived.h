@@ -131,10 +131,6 @@ public:
     void Execute(float deltaTime) override;
     void Exit() override;
     const char* GetName() const override { return "KnockBack"; }
-<<<<<<< HEAD
-=======
-
->>>>>>> nakashima
 private:
     Phase phase = Phase::KnockBack;
 };

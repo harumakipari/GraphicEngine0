@@ -1398,9 +1398,6 @@
     <Filter Include="Source\Components\Camera">
       <UniqueIdentifier>{aca8c1f9-b3e5-4f9a-a59a-ff3439705e82}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source\Components\Game">
-      <UniqueIdentifier>{f4af14ee-7fc7-4324-a38a-0512a0c5d7e1}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Source\Components\Audio">
       <UniqueIdentifier>{0e678c17-08b2-443c-beb1-40f23e1fed90}</UniqueIdentifier>
     </Filter>

@@ -2,14 +2,12 @@
 #include "ActorManager.h"
 #include <tracy/Tracy.hpp>
 
-
-
 // 名前からアクターを取得（キャッシュ付き検索）
 std::shared_ptr<Actor> ActorManager::GetActorByName(const std::string& actorName)
 {
     // キャッシュにあればそれを返す
-    auto cached = actorCacheByName_.find(actorName);
-    if (cached != actorCacheByName_.end())
+    auto cached = actorCacheByName.find(actorName);
+    if (cached != actorCacheByName.end())
     {
         if (!cached->second.expired())
         {
@@ -18,14 +16,14 @@ std::shared_ptr<Actor> ActorManager::GetActorByName(const std::string& actorName
     }
 
     // なければ全アクターから探す
-    auto found = std::find_if(allActors_.begin(), allActors_.end(),
+    auto found = std::find_if(allActors.begin(), allActors.end(),
         [&actorName](const std::shared_ptr<Actor>& actor) {
             return actor->GetName() == actorName;
         });
 
     // 見つかった場合はキャッシュして返す
-    if (found != allActors_.end()) {
-        actorCacheByName_[actorName] = *found;
+    if (found != allActors.end()) {
+        actorCacheByName[actorName] = *found;
         return *found;
     }
 
@@ -36,12 +34,12 @@ std::shared_ptr<Actor> ActorManager::GetActorByName(const std::string& actorName
 // 登録済みアクターとキャッシュをすべてクリアする
 void ActorManager::ClearAll()
 {
-    for (const std::shared_ptr<Actor>& actor : allActors_)
+    for (const std::shared_ptr<Actor>& actor : allActors)
     {
         actor->DestroyActor();
     }
-    allActors_.clear();
-    actorCacheByName_.clear();
+    allActors.clear();
+    actorCacheByName.clear();
 }
 
 // 全アクターのUpdate処理を呼び出す（RootComponentとOwnedComponent）
@@ -51,7 +49,7 @@ void ActorManager::Update(float deltaTime)
 
     // 更新中に Actor が追加されても走査を継続できるよう、shared_ptr の一覧をコピーする。
     // コピーが更新対象の寿命を保持し、追加された Actor の更新は次回に回る。
-    auto updateActors = allActors_;
+    auto updateActors = allActors;
 
     for (auto it = updateActors.begin(); it != updateActors.end(); ++it)
     {
@@ -85,6 +83,6 @@ void ActorManager::Update(float deltaTime)
     }
 
     // 破棄済みの Actor と null の要素を所有一覧から除く。
-    std::erase_if(allActors_,
+    std::erase_if(allActors,
         [](const std::shared_ptr<Actor>& a) { return !a || !a->IsAlive(); });
 }

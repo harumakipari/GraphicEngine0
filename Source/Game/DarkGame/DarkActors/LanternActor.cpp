@@ -28,15 +28,6 @@ void LanternActor::Initialize(const Transform& transform)
 
 void LanternActor::Update(float deltaTime)
 {
-    if (titleRoomLightComponent0)
-    {
-        DebugRender::DrawSphere(titleRoomLightComponent0->GetComponentLocation(), 0.1f, { 1,0,1,1 }, 0);
-    }
-    if (titleRoomLightComponent1)
-    {
-        DebugRender::DrawSphere(titleRoomLightComponent1->GetComponentLocation(), 0.1f, { 1,0,1,1 }, 0);
-    }
-
     swingTime += deltaTime;
     float angle = sinf(swingTime * swingSpeed) * swingAngle;
     DirectX::XMFLOAT3 rot = { 0.0f, 0.0f ,angle }; // ZŽ²‰ñ“]‚Å—h‚ç‚·

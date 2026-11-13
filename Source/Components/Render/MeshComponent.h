@@ -1,12 +1,8 @@
 #pragma once
 
-// C++ 標準ライブラリ
 #include <memory>
 #include <functional>
 #include <string>
-#include <cstdint>
-
-// 他ライブラリ
 #include <DirectXMath.h>
 #include <d3d11.h>
 #include <wrl.h>
@@ -16,13 +12,10 @@
 #include "../External/imgui/imgui.h"
 #endif
 
-// プロジェクトの他のヘッダ
 #include "Graphics/Core/Graphics.h"
 #include "Graphics/Core/Shader.h"
 #include "Graphics/Core/PipelineState.h"
 #include "Components/Base/SceneComponent.h"
-#include "Core/Vector.h"
-#include "Engine/Debug/DebugRender.h"
 #include "Graphics/Resource/InterleavedGltfModel.h"
 #include "Engine/Utility/Win32Utils.h"
 #include "Graphics/Resource/AssetManager.h"

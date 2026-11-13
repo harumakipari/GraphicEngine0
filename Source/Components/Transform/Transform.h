@@ -1,11 +1,6 @@
-#ifndef TRANSFORM_H
-#define TRANSFORM_H
+#pragma once
 
-// 他ライブラリ
 #include <DirectXMath.h>
-#include <PxPhysicsAPI.h>
-
-// プロジェクトの他のヘッダ
 #include "Math/MathHelper.h"
 
 struct alignas(16) Transform
@@ -17,19 +12,19 @@ struct alignas(16) Transform
     Transform() : translation_(DirectX::XMVectorZero()), rotation_(DirectX::XMQuaternionIdentity()), scale_(DirectX::XMVectorSet(1, 1, 1, 0))
     {
     }
-    Transform(DirectX::XMFLOAT3 translation, DirectX::XMFLOAT3 euler_rotation, DirectX::XMFLOAT3 scale) :
+    Transform(const DirectX::XMFLOAT3 translation, const DirectX::XMFLOAT3 euler_rotation, const DirectX::XMFLOAT3 scale) :
         translation_(DirectX::XMLoadFloat3(&translation)),
         rotation_(DirectX::XMQuaternionRotationRollPitchYaw(DirectX::XMConvertToRadians(euler_rotation.x), DirectX::XMConvertToRadians( euler_rotation.y), DirectX::XMConvertToRadians(euler_rotation.z))),
         scale_(DirectX::XMLoadFloat3(&scale))
     {
     }
-    Transform(DirectX::XMFLOAT3 translation, DirectX::XMFLOAT4 rotation/*quaternion*/, DirectX::XMFLOAT3 scale) :
+    Transform(const DirectX::XMFLOAT3 translation, const DirectX::XMFLOAT4 rotation/*quaternion*/, const DirectX::XMFLOAT3 scale) :
         translation_(DirectX::XMLoadFloat3(&translation)),
         rotation_(DirectX::XMLoadFloat4(&rotation)),
         scale_(DirectX::XMLoadFloat3(&scale))
     {
     }
-    Transform(DirectX::XMVECTOR translation, DirectX::XMVECTOR rotation/*quaternion*/, DirectX::XMVECTOR scale) :
+    Transform(const DirectX::XMVECTOR translation, const DirectX::XMVECTOR rotation/*quaternion*/, const DirectX::XMVECTOR scale) :
         translation_(translation),
         rotation_(rotation),
         scale_(scale)
@@ -50,7 +45,7 @@ struct alignas(16) Transform
     {
         return GetTranslation();
     }
-    void SetTranslation(DirectX::XMFLOAT3 translation)
+    void SetTranslation(const DirectX::XMFLOAT3 translation)
     {
         translation_ = DirectX::XMLoadFloat3(&translation);
     }
@@ -60,7 +55,7 @@ struct alignas(16) Transform
         DirectX::XMStoreFloat3(&scale, scale_);
         return scale;
     }
-    void SetScale(DirectX::XMFLOAT3 scale)
+    void SetScale(const DirectX::XMFLOAT3 scale)
     {
         scale_ = DirectX::XMLoadFloat3(&scale);
     }
@@ -71,7 +66,7 @@ struct alignas(16) Transform
         DirectX::XMStoreFloat4(&rotation, rotation_);
         return rotation;
     }
-    void SetRotation(DirectX::XMFLOAT4 rotation) 
+    void SetRotation(const DirectX::XMFLOAT4 rotation) 
     {
         rotation_ = DirectX::XMLoadFloat4(&rotation);
     }
@@ -118,14 +113,8 @@ struct alignas(16) Transform
         return composed;
     }
 
-    // 引数の姿勢から自身の相対的な座標を取得する
-    //Transform GetRelativeTransform(const Transform& other) const
-    //{
-    //    
-    //}
-
     // 他のTransformと比較
-    bool Equals(const Transform& other, float tolerance) const
+    bool Equals(const Transform& other, const float tolerance) const
     {
         DirectX::XMVECTOR epsilon = DirectX::XMVectorReplicate(tolerance);
         return DirectX::XMVector3NearEqual(translation_, other.translation_, epsilon)
@@ -135,4 +124,3 @@ struct alignas(16) Transform
 
 };
 
-#endif //TRANSFORM_H

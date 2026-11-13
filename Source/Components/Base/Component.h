@@ -74,9 +74,9 @@ public:
         return name;
     }
 
-    Actor* GetOwner() { return owner.lock().get(); }
+    Actor* GetOwner() const { return owner.lock().get(); }
 
-    std::shared_ptr<Actor> GetActor() { return owner.lock(); }
+    std::shared_ptr<Actor> GetActor() const { return owner.lock(); }
 
     void SetActive(bool active) { this->active = active; }
     bool IsActive() const { return active; }

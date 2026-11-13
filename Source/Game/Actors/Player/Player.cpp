@@ -11,6 +11,7 @@
 #include "Core/ActorManager.h"
 #include "Components/Render/PointLightComponent.h"
 #include "PlayerStateDerived.h"
+#include "Engine/Debug/DebugRender.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneBase.h"
 #include "Engine/Utility/Time.h"

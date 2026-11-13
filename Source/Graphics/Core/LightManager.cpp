@@ -4,6 +4,8 @@
 #include "Components/Render/PointLightComponent.h"
 #include <string>
 
+#include "Engine/Debug/DebugRender.h"
+
 #ifdef USE_IMGUI
 #define IMGUI_ENABLE_DOCKING
 #include "imgui.h"
@@ -364,7 +366,6 @@ void LightManager::Update(float deltaTime)
 #endif // 1
 
 #ifdef _DEBUG
-#if 1
     if (showLightRange)
     {
         for (int i = 0; i < constants.pointLightCount; i++)
@@ -372,10 +373,6 @@ void LightManager::Update(float deltaTime)
             auto& light = constants.pointsLight[i];
 
             float range = sqrt(1.0f / constants.kq);
-            //DebugRender::DrawLightIcon(
-            //    { light.position.x, light.position.y, light.position.z },
-            //    light.color
-            //);
             DebugRender::DrawSphere(
                 { light.position.x,light.position.y, light.position.z },
                 range,
@@ -384,7 +381,6 @@ void LightManager::Update(float deltaTime)
             );
         }
     }
-#endif
 #endif // _DEBUG
 }
 

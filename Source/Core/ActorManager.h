@@ -5,38 +5,26 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
 #include "Actor.h"
-
-
 
 class Scene;
 
 class ActorManager
 {
-protected:
-    Scene* ownerScene_ = nullptr;
 public:
-    void SetOwnerScene(Scene* scene) { ownerScene_ = scene; }
-    Scene* GetOwnerScene() const { return ownerScene_; }
-private:
-    // アクター名からアクターへのポインタを高速に取得するためのキャッシュ。
-    // 名前が見つからない場合はアクターリストを検索し、結果をこのキャッシュに保存する。
-    std::unordered_map<std::string, std::weak_ptr<Actor>> actorCacheByName_;
-    // 現在存在しているすべてのアクター
-    std::vector<std::shared_ptr<Actor>> allActors_;
-public:
+    void SetOwnerScene(Scene* scene) { ownerScene = scene; }
+    Scene* GetOwnerScene() const { return ownerScene; }
 
-    // アクターを名前付きで作成・登録する（同名アクターが存在する場合は"_1","_2"とつけてユニークな名前にする） 二つ目の引数は初期化をautoでするかどうかを決定する
+    // 同名時は "_1", "_2", ... を付与して一意な名前で生成・登録する。
     template <class T, class... Args>
     std::shared_ptr<T> CreateAndRegisterActorWithTransform(const std::string& actorName, const Transform& transform = { DirectX::XMFLOAT3 {0,0,0},DirectX::XMFLOAT4{1,1,1,0},DirectX::XMFLOAT3{1,1,1} }, Args&&... args)
     {
-        // 同名の時にユニークな名前をつける
-        // 同名があれば "_1", "_2", ... をつけてユニークな名前にする
         std::string finalName = actorName;
         int suffix = 1;
         auto nameExists = [&](const std::string& name)
             {
-                return std::any_of(allActors_.begin(), allActors_.end(), [&](const std::shared_ptr<Actor>& actor)
+                return std::any_of(allActors.begin(), allActors.end(), [&](const std::shared_ptr<Actor>& actor)
                     {
                         return actor->GetName() == name;
                     });
@@ -47,11 +35,9 @@ public:
             finalName = actorName + "_" + std::to_string(suffix++);
         }
 
-        //std::shared_ptr<T> newActor = std::make_shared<T>(finalName);
         std::shared_ptr<T> newActor = std::make_shared<T>(finalName, std::forward<Args>(args)...);
-        // Sceneを渡す
-        newActor->SetOwnerScene(ownerScene_);
-        allActors_.push_back(newActor);
+        newActor->SetOwnerScene(ownerScene);
+        allActors.push_back(newActor);
 
         newActor->MakeRootComponent();
         newActor->SetPosition(transform.GetLocation());
@@ -64,7 +50,7 @@ public:
 
     const std::vector<std::shared_ptr<Actor>>& GetAllActors() const
     {
-        return allActors_;
+        return allActors;
     }
 
     // 名前からアクターを取得（キャッシュ付き検索）
@@ -74,7 +60,7 @@ public:
     template<class T>
     std::shared_ptr<T> GetActorOfType()
     {
-        for (auto& actor : allActors_)
+        for (auto& actor : allActors)
         {
             if (auto casted = std::dynamic_pointer_cast<T>(actor))
             {
@@ -90,7 +76,7 @@ public:
     {
         std::vector<std::shared_ptr<T>> result;
 
-        for (auto& actor : allActors_)
+        for (auto& actor : allActors)
         {
             if (auto casted = std::dynamic_pointer_cast<T>(actor))
             {
@@ -106,7 +92,7 @@ public:
     {
         std::vector<std::shared_ptr<T>> result;
 
-        for (auto& actor : allActors_)
+        for (auto& actor : allActors)
         {
             if (actor->HasTag(tag))
             {
@@ -120,16 +106,18 @@ public:
         return result;
     }
 
-    // 登録済みアクターとキャッシュをすべてクリアする
-    void ClearAll();
-
-    // 全アクターのUpdate処理を呼び出す（RootComponentとOwnedComponent）
+    // Actorを更新し、破棄済みのActorを管理一覧から除去する。
     void Update(float deltaTime);
 
+    // 全Actorを破棄した後、管理一覧と名前キャッシュを空にする。
+    void ClearAll();
 
+protected:
+    Scene* ownerScene = nullptr;
+
+private:
+    // 名前検索済みの Actor を保持する弱参照キャッシュ。
+    std::unordered_map<std::string, std::weak_ptr<Actor>> actorCacheByName;
+
+    std::vector<std::shared_ptr<Actor>> allActors;
 };
-
-
-
-
-

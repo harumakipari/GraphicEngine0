@@ -1,6 +1,5 @@
 ﻿#pragma once
 
-// C++ 標準ライブラリ
 #include <string>
 #include <DirectXMath.h>
 #include <memory>
@@ -10,7 +9,6 @@
 #include "Components/Base/SceneComponent.h"
 #include "Components/CollisionShape/ShapeComponent.h"
 #include "Components/Transform/Transform.h"
-#include "Engine/Utility/Win32Utils.h"
 #include "Math/MathHelper.h"
 
 class Scene;
@@ -30,7 +28,6 @@ public:
 	Actor(Actor&&) noexcept = delete;
 	Actor& operator=(Actor&&) noexcept = delete;
 
-	// Lifecycle
 	virtual void Initialize(const Transform& transform) {}
 
 	virtual void Update(float deltaTime) {}
@@ -44,13 +41,11 @@ public:
 	// 同じ Update() 内でも、この Actor の処理開始前ならその回で破棄される。
 	void MarkPendingKill() { isPendingKill = true; }
 
-	// Component Management
 	template <class T>
 	std::shared_ptr<T> AddComponent(const std::string& name, const std::string& parentName = "")
 	{
 		// 自分自身が shared_ptr で管理されている前提で、それを渡す
 		std::shared_ptr<Actor> sharedThis = shared_from_this(); // Actorは std::enable_shared_from_this 継承が必要
-		// 自分自身の確認
 		_ASSERT_EXPR(sharedThis != nullptr, "shared_from_this() returned nullptr!");
 
 		std::string finalName = name;
@@ -102,8 +97,6 @@ public:
 		return newComponent;
 	}
 
-
-	// 名前が空ならRootComponentを返す。見つからない場合はnullptr。
 	std::shared_ptr<Component> FindComponentByName(const std::string& name);
 
 	void DestroyComponentByName(const std::string& name);

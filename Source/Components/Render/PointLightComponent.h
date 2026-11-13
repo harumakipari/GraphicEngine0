@@ -1,6 +1,5 @@
 #pragma once
 #include "Components/Base/SceneComponent.h"
-#include "Engine/Debug/DebugRender.h"
 #include "Graphics/Core/LightManager.h"
 
 class PointLightComponent :public SceneComponent
@@ -12,23 +11,17 @@ public:
 
     void Initialize() override;
 
-    void Tick(float deltaTime)override;
-
     void SetSharedLightName(const std::string& name)
     {
         sharedLightName = name;
     }
 
-    void DrawImGuiInspector() override;
-
     LightManager::PointLight ToRenderLight() const;
 
-
     bool  IsUsePointLight()const { return enable; }
-    void SetUsePointLight(bool enabled) { enable = enabled; }
+    void SetUsePointLight(const bool enabled) { enable = enabled; }
 
 private:
     bool enable = true;
-
-    std::string sharedLightName = "PlayerPointLight"; // 一旦デフォルトで、playerのポイントライトを入れておく
+    std::string sharedLightName = "PlayerPointLight"; // デフォルトで、playerのポイントライトを入れておく
 };

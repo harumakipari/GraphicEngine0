@@ -1,13 +1,9 @@
 #pragma once
 
-// C++ 標準ライブラリ
 #include <memory>
 #include <string>
-
-// 他ライブラリ
 #include <DirectXMath.h>
 
-// プロジェクトの他のヘッダ
 #include "Component.h"
 #include "Components/Transform/Transform.h"
 
@@ -16,11 +12,9 @@ class Actor;
 class SceneComponent :public Component, public std::enable_shared_from_this<SceneComponent>
 {
 public:
-    SceneComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :Component(name, owner)
-    {
-    }
+    SceneComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :Component(name, owner){}
 
-    virtual ~SceneComponent() {}
+    ~SceneComponent() override {}
 
     // Tick で最終Transformを取得するときはこれを使う
     Transform GetFinalWorldTransform() const
@@ -28,8 +22,7 @@ public:
         return componentToWorld_;
     }
 
-    // 消去処理
-    virtual void Destroy() override;
+    void Destroy() override;
 
 protected:
     // SceneComponent や Transform 持ちクラスに追加
@@ -67,62 +60,8 @@ public:
         return attachChildren_;
     }
 
-    void DrawImGuiInspector() override
-    {
-#ifdef USE_IMGUI
-        inspectorEuler_ = GetRelativeEulerRotation(); // ここをコメントアウトするかで、ImGuiがバグるか変わる。
+    void DrawImGuiInspector() override;
 
-        if (ImGui::TreeNodeEx((name + "  Transform").c_str(), ImGuiTreeNodeFlags_DefaultOpen))
-        {
-            ImGui::DragFloat3("Relative Location", &relativeLocation_.x, 0.1f);
-
-            static bool editingRotation = false;
-
-            DirectX::XMFLOAT3 prevEuler = inspectorEuler_;
-
-            if (ImGui::DragFloat3("RelativeAngle", &inspectorEuler_.x, 1.0f))
-            {
-                editingRotation = true;
-
-                DirectX::XMFLOAT3 delta =
-                {
-                    inspectorEuler_.x - prevEuler.x,
-                    inspectorEuler_.y - prevEuler.y,
-                    inspectorEuler_.z - prevEuler.z
-                };
-
-                DirectX::XMVECTOR q = DirectX::XMLoadFloat4(&GetRelativeRotation());
-
-                DirectX::XMVECTOR dq = DirectX::XMQuaternionRotationRollPitchYaw(
-                    DirectX::XMConvertToRadians(delta.x),
-                    DirectX::XMConvertToRadians(delta.y),
-                    DirectX::XMConvertToRadians(delta.z)
-                );
-
-                q = DirectX::XMQuaternionMultiply(q, dq);
-
-                DirectX::XMFLOAT4 newRot;
-                DirectX::XMStoreFloat4(&newRot, q);
-
-                SetRelativeRotationDirect(newRot);
-            }
-            else
-            {
-                editingRotation = false;
-            }
-            ImGui::DragFloat3("Relative Scale", &relativeScale_.x, 0.01f, 0.01f, 100.0f);
-            ImGui::TreePop();
-        }
-
-
-        if (ImGui::TreeNode((name + "   Debug Info").c_str()))
-        {
-            ImGui::Text("Children: %zu", attachChildren_.size());
-            ImGui::Text("Parent: %s", attachParent_.lock() ? attachParent_.lock()->GetName().c_str() : "None");
-            ImGui::TreePop();
-        }
-#endif
-    }
 private:
     // 親からの相対的な位置
     DirectX::XMFLOAT3 relativeLocation_ = { 0.0f,0.0f,0.0f };
@@ -420,7 +359,7 @@ public:
     }
 
     // このコンポーネントにアタッチされている全ての子コンポーネントたちの Transform を更新する
-    void UpdateChildTransforms(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None);
+    void UpdateChildTransforms(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None) const;
 
         // このコンポーネントの親からの相対的な Transform を返す
     Transform GetRelativeTransform() const
@@ -507,7 +446,7 @@ protected:
 private:
     //「Transformが変わった時や物理的に移動した時に、自分とその子たちを正しく更新するための中心的な処理」
     // 自身の Transform の変更を反映し、必要に応じて子コンポーネントにもそれを伝播させる関数
-    void PropagateTransformUpdate(bool transformChanged, UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None);
+    void PropagateTransformUpdate(bool transformChanged, UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None) const;
 
     // 親の Transform をもとに、自分の Transform（= ComponentToWorld）を更新し、必要に応じてその変更を子へ伝播する
     void UpdateComponentToWorldWithParent(SceneComponent* parent, int socketNode, UpdateTransformFlags updateTransformFlags);
@@ -532,15 +471,15 @@ private:
 
     friend class Actor;
 public:
-    virtual void UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None) override final;
+    void UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags = UpdateTransformFlags::None) final;
 
     void Tick(float deltaTime) override {}
 
-    virtual void Initialize()override {};
+    void Initialize()override {};
 
-    virtual void OnRegister()override {} // 派生クラスで override して登録処理を書く
+    void OnRegister()override {} // 派生クラスで override して登録処理を書く
 
-    virtual void OnUnregister()override {} // 派生クラスで override して解除処理を書く
+    void OnUnregister()override {} // 派生クラスで override して解除処理を書く
 
 
     // 親子関係セット

@@ -16,13 +16,13 @@ void SceneComponent::CapturePreviousTransform()
     }
 }
 
-void SceneComponent::UpdateComponentToWorld(UpdateTransformFlags updateTransformFlags)
+void SceneComponent::UpdateComponentToWorld(const UpdateTransformFlags updateTransformFlags)
 {
     UpdateComponentToWorldWithParent(GetAttachParent().get(), GetAttachSocketNode(), updateTransformFlags);
 }
 
 // 親の Transform をもとに、自分の Transform（= ComponentToWorld）を更新し、必要に応じてその変更を子へ伝播する
-void SceneComponent::UpdateComponentToWorldWithParent(SceneComponent* parent, int socketNode, UpdateTransformFlags updateTransformFlags)
+void SceneComponent::UpdateComponentToWorldWithParent(SceneComponent* parent, const int socketNode, const UpdateTransformFlags updateTransformFlags)
 {
     // 親がまだ更新されていない場合は、親の階層を上って更新する必要がある
     if (parent && !parent->componentToWorldTransformUpdate_)
@@ -62,7 +62,7 @@ void SceneComponent::UpdateComponentToWorldWithParent(SceneComponent* parent, in
 }
 
 // このコンポーネントにアタッチされている全ての子コンポーネントの Transform を更新する
-void SceneComponent::UpdateChildTransforms(UpdateTransformFlags updateTransformFlags)
+void SceneComponent::UpdateChildTransforms(const UpdateTransformFlags updateTransformFlags) const
 {
     if (attachChildren_.size() > 0)
     {// 子コンポーネントが存在していたら、
@@ -105,7 +105,7 @@ void SceneComponent::UpdateChildTransforms(UpdateTransformFlags updateTransformF
 }
 
 // 自身の Transform の変更を反映し、必要に応じて子コンポーネントにもそれを伝播させる関数
-void SceneComponent::PropagateTransformUpdate(bool transformChanged, UpdateTransformFlags updateTransformFlags)
+void SceneComponent::PropagateTransformUpdate(const bool transformChanged, const UpdateTransformFlags updateTransformFlags) const
 {
     // アタッチされている子コンポーネントの一覧を取得
     const std::vector<std::shared_ptr<SceneComponent>>& attachedChildren = GetAttachChildren();
@@ -133,7 +133,7 @@ void SceneComponent::PropagateTransformUpdate(bool transformChanged, UpdateTrans
 // このコンポーネントを、指定された親コンポーネントにアタッチ（接続）する
 // parent はアタッチ先の親コンポーネント　
 // socketNode 接続先のソケットノード番号( -1 ならデフォルト)
-void SceneComponent::AttachToComponent(const std::shared_ptr<SceneComponent>& parent, int socketNode)
+void SceneComponent::AttachToComponent(const std::shared_ptr<SceneComponent>& parent, const int socketNode)
 {
     // エラー: parent が nullptr の場合はアサート（無効なポインタ）
     _ASSERT_EXPR(parent != nullptr, L"親コンポーネントのポインタが null です");
@@ -241,4 +241,61 @@ void SceneComponent::AddLocalRotation(const DirectX::XMFLOAT3& offset)
 
     // Transform更新フラグ
     componentToWorldTransformUpdate_ = false;
+}
+
+void SceneComponent::DrawImGuiInspector()
+{
+#ifdef USE_IMGUI
+    inspectorEuler_ = GetRelativeEulerRotation(); // ここをコメントアウトするかで、ImGuiがバグるか変わる。
+
+    if (ImGui::TreeNodeEx((name + "  Transform").c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+    {
+        ImGui::DragFloat3("Relative Location", &relativeLocation_.x, 0.1f);
+
+        static bool editingRotation = false;
+
+        DirectX::XMFLOAT3 prevEuler = inspectorEuler_;
+
+        if (ImGui::DragFloat3("RelativeAngle", &inspectorEuler_.x, 1.0f))
+        {
+            editingRotation = true;
+
+            DirectX::XMFLOAT3 delta =
+            {
+                inspectorEuler_.x - prevEuler.x,
+                inspectorEuler_.y - prevEuler.y,
+                inspectorEuler_.z - prevEuler.z
+            };
+
+            DirectX::XMVECTOR q = DirectX::XMLoadFloat4(&GetRelativeRotation());
+
+            DirectX::XMVECTOR dq = DirectX::XMQuaternionRotationRollPitchYaw(
+                DirectX::XMConvertToRadians(delta.x),
+                DirectX::XMConvertToRadians(delta.y),
+                DirectX::XMConvertToRadians(delta.z)
+            );
+
+            q = DirectX::XMQuaternionMultiply(q, dq);
+
+            DirectX::XMFLOAT4 newRot;
+            DirectX::XMStoreFloat4(&newRot, q);
+
+            SetRelativeRotationDirect(newRot);
+        }
+        else
+        {
+            editingRotation = false;
+        }
+        ImGui::DragFloat3("Relative Scale", &relativeScale_.x, 0.01f, 0.01f, 100.0f);
+        ImGui::TreePop();
+    }
+
+
+    if (ImGui::TreeNode((name + "   Debug Info").c_str()))
+    {
+        ImGui::Text("Children: %zu", attachChildren_.size());
+        ImGui::Text("Parent: %s", attachParent_.lock() ? attachParent_.lock()->GetName().c_str() : "None");
+        ImGui::TreePop();
+    }
+#endif
 }
