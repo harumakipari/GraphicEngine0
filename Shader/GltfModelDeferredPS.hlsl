@@ -1,7 +1,5 @@
 #include "GltfModel.hlsli"
 #include "Sampler.hlsli"
-#include "Common.hlsli"
-#include "ShaderFunctions.hlsli"
 
 #define BASE_COLOR_TEXTURE 0 
 #define METALLIC_ROUGHNESS_TEXTURE 1 
@@ -37,8 +35,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         sampled.rgb = pow(sampled.rgb, GAMMA);
         baseColorFactor *= sampled;
     }
-    // The opacity mask is bound only by ClothSimulate at t16.  Keep this
-    // branch material-type guarded so ordinary glTF draws never read t16.
     if (materialType == MATERIAL_SIMULATED_CLOTH && clothAlphaTestEnabled != 0u)
     {
         const float clothOpacity = clothOpacityTexture.Sample(samplerStates[LINEAR], pin.texcoord).r;
@@ -74,7 +70,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     if (metallicRoughnessTexture > -1)
     {
         float4 sampled = materialTextures[METALLIC_ROUGHNESS_TEXTURE].Sample(samplerStates[LINEAR], pin.texcoord);
-        //roughnessFactor = 1.0;
         roughnessFactor *= sampled.g;
         metallicFactor *= sampled.b;
     }
@@ -95,17 +90,11 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         float4 sampled = materialTextures[OCCLUSION_TEXTURE].Sample(samplerStates[LINEAR], pin.texcoord);
         occlusionFactor *= sampled.r;
     }
-    const float occlusionStrength = m.occlusionTexture.strength;
-
     float3 N = normalize(pin.wNormal.xyz);
     float3 T = hasTangent ? normalize(pin.wTangent.xyz) : float3(1, 0, 0.0001);
     float sigma = hasTangent ? pin.wTangent.w : 1.0;
     T = normalize(T - N * dot(N, T));
     float3 B = normalize(cross(N, T) * sigma);
-
-    // TODO:アンチエイリアス対策にラフネスを下げる処理を追加
-    //roughnessFactor = SpecularAntiAliasing(roughnessFactor, N, 0.05f);
-
 
     //背面については、接線方向の基底ベクトルは符号が反転する。
     if (isFrontFace == false)
@@ -125,14 +114,10 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         N = normalize((normalFactor.x * T) + (normalFactor.y * B) + (normalFactor.z * N));
     }
 
-    // Per-material rim values use the component-owned runtime material override.
-    // Materials without an override keep their default zero power and are unchanged.
     const float3 viewDirection = normalize(cameraPosition.xyz - pin.wPosition.xyz);
     const float rimFactor = pow(saturate(1.0f - dot(N, viewDirection)), 3.0f);
     emissiveFactor += m.rimColor * (m.rimPower * rimFactor);
 
-    // Cloth uses its dedicated material type and does not bind the generic
-    // object-type constant buffer. Carry its Furniture classification through the GBuffer.
     const int gBufferObjectType = materialType == MATERIAL_SIMULATED_CLOTH
         ? OBJECT_FURNITURE
         : objectType;

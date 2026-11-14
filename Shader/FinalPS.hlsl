@@ -2,7 +2,6 @@
 #include "Constants.hlsli"
 #include "Sampler.hlsli"
 #include "FilterFunctions.hlsli"
-#include "Lights.hlsli"
 #include "ViewConstants.hlsli"
 
 Texture2D sceneColorTexture : register(t0);
@@ -42,11 +41,6 @@ float4 main(VS_OUT pin) : SV_TARGET
     // ndc -> view 
     float4 positionViewSpace = mul(positionNdc, inverseProjection); // ndc ¨ clip 
     positionViewSpace = positionViewSpace / positionViewSpace.w; // clip -> view 
-    //return float4((positionViewSpace.z) / 100.0, 0, 0, 1);
-    // ndc -> world 
-    float4 positionWorldSpace = mul(positionNdc, inverseViewProjection);
-    positionWorldSpace /= positionWorldSpace.w;
-
 
     // DOF‚Ìˆ—
     if (enableDof)
@@ -109,19 +103,12 @@ float4 main(VS_OUT pin) : SV_TARGET
         finalColor.rgb = lerp(bossRoomColor, finalColor.rgb, bossRoomLerpFactor);
     }
 
-    if (gBufferFlag == GBUFFER_FLAG_EMISSIVE /*&& materialType == MATERIAL_EYE*/)
+    if (gBufferFlag == GBUFFER_FLAG_EMISSIVE )
     {
         finalColor.rgb += emissive;
     }
 
 
-    if (objectType==OBJECT_PLAYER)
-    {
-        //finalColor.a = 0.1f;
-    }
-
-    // Debug views bypass all later FinalPS composition, then share the single display encode below.
-    // Modes >= 2 are raw linear HDR and may clip on an SDR display.
     if (finalColorDebugMode == 1)
     {
         finalColor = gBufferAlbedoTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
@@ -135,7 +122,6 @@ float4 main(VS_OUT pin) : SV_TARGET
         finalColor = toneMappedColor;
     }
 
-    // The swap-chain RTV is UNORM, not UNORM_SRGB. Encode exactly once at display output.
     if (useFinalSrgbEncode != 0)
     {
         finalColor.rgb = LinearToSrgb(finalColor.rgb);

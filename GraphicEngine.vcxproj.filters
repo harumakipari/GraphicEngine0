@@ -1046,9 +1046,6 @@
     <FxCompile Include="Shader\GaussianDofBlurVerticalPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\GBufferDecalPrimitivePS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\GltfModelPlayerWeaponForwardPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
@@ -1128,12 +1125,6 @@
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\GltfModelDeferredPS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\GltfModelDissolvePS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\GltfModelFightStagePS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\GltfModelHairOrFurDeferredPS.hlsl">
@@ -1277,12 +1268,6 @@
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\GBuffer.hlsli">
-      <Filter>Shader</Filter>
-    </None>
-    <None Include="Shader\GBufferDecalConstantBuffer.hlsli">
-      <Filter>Shader</Filter>
-    </None>
-    <None Include="Shader\GBufferDecalPrimitive.hlsli">
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\geometricPrimitive.hlsli">

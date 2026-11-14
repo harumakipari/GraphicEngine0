@@ -54,7 +54,6 @@ cbuffer SHADER_CONSTANT_BUFFER : register(b9)
 
     int useFinalSrgbEncode;
     int finalColorDebugMode;
-    // Reuses the existing 8-byte padding; bit 1=directional, 2=point, 4=IBL Hair specular disable.
     int hairSpecularDebugDisableMask;
     float hairSpecularDebugPadding;
 
@@ -97,7 +96,7 @@ cbuffer FOG_CONSTANTS_BUFFER : register(b8)
 cbuffer VOLUMETRIC_CLOUDSCAPES_CONSTANT_BUFFER : register(b5)
 {
     float2 windDirection;
-    float2 cloudAltitudesMinMax; // highest and lowest altitudes at which clouds are distributed
+    float2 cloudAltitudesMinMax; 
     
     float windSpeed; // [0.0, 20.0]
     
@@ -118,6 +117,5 @@ cbuffer VOLUMETRIC_CLOUDSCAPES_CONSTANT_BUFFER : register(b5)
 }
 #include "ViewConstants.hlsli"
 #include "ModelType.hlsli"
-
 
 #endif

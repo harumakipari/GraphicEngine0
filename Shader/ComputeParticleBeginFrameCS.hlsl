@@ -4,8 +4,6 @@ RWByteAddressBuffer indirectDataBuffer : register(u2);
 [numthreads(1, 1, 1)]
 void main( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
-    uint index = dispatchThreadId.x;
-    
     //1フレーム前の総パーティクル数＋現在のフレームの生成パーティクル数＝”仮の”現在のフレームの総パーティクル数
     uint previousNumParticle = indirectDataBuffer.Load(IndirectArgumentsNumCurrentParticle);
     //ピクセルエミットパーティクルの総数を加算

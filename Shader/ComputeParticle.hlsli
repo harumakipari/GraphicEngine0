@@ -1,4 +1,3 @@
-
 //パーティクルスレッド数
 static const int NumParticleThread = 1024;
 
@@ -68,7 +67,6 @@ static const uint IndirectArgumentsNumEmitParticleIndex = 36;
 static const uint IndirectArgumentsNumEmitPixelParticleIndex = 40;
 static const uint IndirectArgumentsDrawIndirect = 44;
 
-//=========================================================================================
 //  汎用情報
 cbuffer COMPUTE_PARTICLE_COMMON_CONSTANT_BUFFER : register(b10)
 {
@@ -90,7 +88,6 @@ cbuffer COMPUTE_PARTICLE_BITONIC_SORT_CONSTANT_BUFFER : register(b11)
 static const uint BitonicSortB2Thread = 256;
 static const uint BitonicSortC2Thread = 512;
 
-//=========================================================================================
 //  頂点シェーダーからジオメトリシェーダーに転送する情報
 struct GS_IN
 {

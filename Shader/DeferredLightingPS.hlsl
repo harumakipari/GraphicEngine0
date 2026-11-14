@@ -129,7 +129,6 @@ float4 main(VS_OUT pin) : SV_TARGET
         float maxPointSpecular = 3.0f;
         pointSpecular = max(0, min(maxPointSpecular, pointSpecular));
     }
-#if 1
     // 平行光源の処理
     float3 diffuse = 0;
     float3 specular = 0;
@@ -139,12 +138,10 @@ float4 main(VS_OUT pin) : SV_TARGET
     float3 Li = float3(colorLight.x, colorLight.y, colorLight.z) * colorLight.w; // 光の輝き 
 
     const float NoL = max(0, dot(N, L));
-    //float NoL = saturate(dot(N, L) * 0.1 + 0.1);
     const float NoV = max(0.0, dot(N, V));
 
     if (directionalLightEnable != 0)
     {
-        lightCount++;
         if (NoL > 0.0 || NoV > 0.0)
         {
             const float3 R = reflect(-L, N);
@@ -158,10 +155,7 @@ float4 main(VS_OUT pin) : SV_TARGET
         }
     }
 
-
-#endif
-    
-#if 1   // 画像ベースの照明
+   // 画像ベースの照明
 
     float3 iblDiffuse = IblRadianceLambertian(N, V, roughnessFactor, cDiff, f0) * iblIntensity;
     float3 iblSpecular = IblRadianceGgx(N, V, roughnessFactor, f0) * iblIntensity;
@@ -176,10 +170,7 @@ float4 main(VS_OUT pin) : SV_TARGET
     {
         iblSpecular *= 0.3;
     }
-#endif
 
-    // Keep each HDR contribution separate for the Deferred Lighting debug views.
-    // These are the exact terms used by the normal composite below.
     const float3 directionalDiffuse = diffuse * occlusionFactor * diffuseIntensity;
 
 
@@ -191,23 +182,11 @@ float4 main(VS_OUT pin) : SV_TARGET
     const float3 iblDiffuseContribution = iblDiffuse * occlusionFactor * diffuseIntensity;
     float3 iblSpecularContribution = iblSpecular * occlusionFactor * specularIntensity;
 
-    // These debug switches are deliberately restricted to enemy hair. They
-    // zero only the selected specular contribution; diffuse and all other
-    // materials remain untouched.
     const bool isHairEnemy = (objectType == OBJECT_ENEMY && materialType == MATERIAL_HAIR);
-    //if (isHairEnemy)
-    //{
-    //    if ((hairSpecularDebugDisableMask & 1) != 0) directionalSpecular = 0.0f;
-    //    if ((hairSpecularDebugDisableMask & 2) != 0) pointLightSpecular = 0.0f;
-    //    if ((hairSpecularDebugDisableMask & 4) != 0) iblSpecularContribution = 0.0f;
-    //}
-
     float3 totalDiffuse = directionalDiffuse + pointLightDiffuse + iblDiffuseContribution;
     float3 totalSpecular = directionalSpecular + pointLightSpecular + iblSpecularContribution;
 
 
-
-#if 1
     float3 rim = 0;
 
     if (objectType == OBJECT_ENEMY && !isHairEnemy)
@@ -223,15 +202,10 @@ float4 main(VS_OUT pin) : SV_TARGET
         }
     }
 
-
-#endif
     const float3 directLight = directionalDiffuse + directionalSpecular;
     const float3 pointLight = pointLightDiffuse + pointLightSpecular;
     const float3 fullDeferredLighting = totalDiffuse + totalSpecular + emissive + rim /*+ ambient*/;
 
-    // Deferred Lighting component debug views. FinalPS bypasses all post effects
-    // for modes >= 2, so these values remain linear HDR (and intentionally may
-    // clip on an SDR display when a channel exceeds 1.0).
     if (finalColorDebugMode == 4) return float4(totalDiffuse, 1.0f);                 // Diffuse Only
     if (finalColorDebugMode == 5) return float4(directLight, 1.0f);                  // Direct Light Only
     if (finalColorDebugMode == 6) return float4(pointLight, 1.0f);                   // Point Light Only

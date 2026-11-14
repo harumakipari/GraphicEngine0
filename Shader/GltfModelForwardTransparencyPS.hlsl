@@ -84,9 +84,7 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
         normalFactor = normalize(normalFactor * float3(m.normalTexture.scale, m.normalTexture.scale, 1.0));
         N = normalize((normalFactor.x * T) + (normalFactor.y * B) + (normalFactor.z * N));
     }
-
   
-#if 1
     // 点光源の処理
     float3 pointDiffuse = 0;
     float3 pointSpecular = 0;
@@ -150,13 +148,11 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
             specular += Li * NoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, NoL, NoV, NoH);
         }
     }
-#endif
     
 
-#if 1   // 画像ベースの照明
+  // 画像ベースの照明
     float3 iblDiffuse = IblRadianceLambertian(N, V, roughnessFactor, cDiff, f0) * iblIntensity;
     float3 iblSpecular = IblRadianceGgx(N, V, roughnessFactor, f0) * iblIntensity;
-#endif
     float3 totalDiffuse = diffuse + pointDiffuse + iblDiffuse;
     float3 totalSpecular = specular + pointSpecular + iblSpecular;
 
@@ -164,10 +160,8 @@ float4 main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace) : SV_TARGET0
     totalSpecular = lerp(totalSpecular, totalSpecular * occlusionFactor, occlusionStrength);
 
     float3 emissive = emissiveFactor;
-#if 1
     float rimPower = lightDirection.w;
     float3 rim = CalcRimLight(N, V, rimColor.rgb, rimPower) * rimIntensity;
-#endif
     float3 Lo = totalDiffuse + totalSpecular + emissive + rim;
 	
     return float4(Lo, baseColorFactor.a);

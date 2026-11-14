@@ -1,5 +1,4 @@
 #include "ComputeParticle.hlsli"
-
 #include "ComputeParticleBitonicSort.hlsli"
 
 [numthreads(BitonicSortB2Thread, 1, 1)]

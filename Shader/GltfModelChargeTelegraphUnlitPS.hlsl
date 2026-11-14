@@ -19,12 +19,8 @@ float4 main(VS_OUT pin) : SV_TARGET0
             .Sample(samplerStates[ANISOTROPIC], pin.texcoord).r);
     }
 
-    // Per-component visual controls come from b5. Jump, Dash, and Charge
-    // telegraphs share this pipeline and provide their own tint/intensity.
     const float alphaFade = saturate(1.0f + modelBrightness);
     const float alpha = saturate(mask * m.pbrMetallicRoughness.baseColorFactor.a * alphaFade);
-    // The mask's brightest band is the thin core; retain the existing mask
-    // for alpha so black/zero-alpha texels remain transparent.
     const float core = smoothstep(0.72f, 0.95f, mask);
     const float glowMultiplier = lerp(0.75f, 1.35f, core);
     const float glowStrength = max(0.0f, emissionPower);

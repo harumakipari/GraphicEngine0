@@ -1,6 +1,5 @@
 #include "GltfModel.hlsli"
 #include "Sampler.hlsli"
-#include "Common.hlsli"
 #include "FilterFunctions.hlsli"
 
 #define BASE_COLOR_TEXTURE 0 
@@ -74,7 +73,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     if (metallicRoughnessTexture > -1)
     {
         float4 sampled = materialTextures[METALLIC_ROUGHNESS_TEXTURE].Sample(samplerStates[LINEAR], pin.texcoord);
-        //roughnessFactor = 1.0;
         roughnessFactor *= sampled.g;
         metallicFactor *= sampled.b;
     }
@@ -109,10 +107,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         float3 normalFactor = sampled.xyz;
         normalFactor = (normalFactor * 2.0) - 1.0;
         normalFactor = normalize(normalFactor * float3(m.normalTexture.scale, m.normalTexture.scale, 1.0));
-        if (materialType == MATERIAL_HAIR)
-        {
-            //N = normalize((normalFactor.x * T) + (normalFactor.y * B) + (normalFactor.z * N));
-        }
     }
 
     pout.gBuffer3Normal = float4(N.xyz, objectType); // world space

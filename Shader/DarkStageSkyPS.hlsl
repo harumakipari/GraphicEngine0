@@ -69,6 +69,7 @@ float StarLayer(float2 uv, float scale, float threshold)
 }
 float4 main(VS_OUT pin) : SV_TARGET
 {
+    return 0;
     float2 uv = pin.texcoord;
 
  // ---- 空のグラデーション（上半分のみ） ----

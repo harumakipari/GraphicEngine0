@@ -16,16 +16,12 @@ Texture2D emissiveMap : register(t4);
 float4 main(VS_OUT pin) : SV_TARGET
 {
     float3 normal = normalMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).xyz; // world space 
-
     float4 baseColor = colorMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
-
     float3 position = positionMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord).xyz; // world space
-
     float4 sampled = materialMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
     float metallicFactor = sampled.x;
     float roughnessFactor = sampled.y;
     float occlusionFactor = sampled.z;
-    int materialType = sampled.w;
     
     sampled = emissiveMap.Sample(samplerStates[LINEAR_BORDER_BLACK], pin.texcoord);
     float3 emissive = sampled.xyz;
@@ -61,13 +57,7 @@ float4 main(VS_OUT pin) : SV_TARGET
         {
             float3 LP = pointLights[i].position.xyz - position.xyz;
             float len = length(LP);
-            //if (len >= pointLights[i].range)
-            //{
-            //    continue;
-            //}
 
-            float attenuateLength = saturate(1.0 - len / pointLights[i].range);
-#if 1
             /*	
             		Distance	Kc		Kl		Kq
             		7			1		0.7		1.8
@@ -89,23 +79,12 @@ float4 main(VS_OUT pin) : SV_TARGET
             float kq = attenuationPresets[pointLights[i].attenuationType].kq;
 
             float attenuation = saturate(1.0 / (kc + kl * len + kq * (len * len)));
-#else
-            //float attenuation = attenuateLength * attenuateLength;
-
-            float distanceAtt = 1.0 / (1.0 + len * len);
-            float rangeAtt = saturate(1.0 - len / pointLights[i].range);
-            rangeAtt *= rangeAtt;
-
-            float attenuation = distanceAtt * rangeAtt;
-
-#endif
             LP /= len;
             const float pNoV = max(0.0, dot(N, V));
             const float pNoL = max(0.0, dot(N, LP));
 
             if (pNoV > 0.0 || pNoL > 0.0) // 点光源には方向がないため
             {
-                const float3 R = reflect(-LP, N);
                 const float3 H = normalize(V + LP);
 
                 float3 pLi = float3(pointLights[i].color.xyz) * pointLights[i].color.w; // 光の輝き
@@ -119,7 +98,6 @@ float4 main(VS_OUT pin) : SV_TARGET
             }
         }
     }
-#if 1
     // 平行光源の処理
     float3 diffuse = 0;
     float3 specular = 0;
@@ -128,8 +106,6 @@ float4 main(VS_OUT pin) : SV_TARGET
     float3 L = normalize(-lightDirection.xyz);
     float3 Li = float3(colorLight.x, colorLight.y, colorLight.z) * colorLight.w; // 光の輝き 
 
-
-    //const float NoL = max(0, dot(N, L));
     float NoL = saturate(dot(N, L) * 0.5 + 0.5);
     const float NoV = max(0.0, dot(N, V));
 
@@ -137,7 +113,6 @@ float4 main(VS_OUT pin) : SV_TARGET
     {
         if (NoL > 0.0 || NoV > 0.0)
         {
-            const float3 R = reflect(-L, N);
             const float3 H = normalize(V + L);
         
             const float NoH = max(0.0, dot(N, H));
@@ -147,12 +122,11 @@ float4 main(VS_OUT pin) : SV_TARGET
             specular += Li * NoL * BrdfSpecularGgx(f0, f90, alphaRoughness, HoV, NoL, NoV, NoH);
         }
     }
-#endif
     
-#if 1   // 画像ベースの照明
+    // 画像ベースの照明
     float3 iblDiffuse = IblRadianceLambertian(N, V, roughnessFactor, cDiff, f0) * iblIntensity;
     float3 iblSpecular = IblRadianceGgx(N, V, roughnessFactor, f0) * iblIntensity;
-#endif
+
 
     float3 totalDiffuse = diffuse + (pointDiffuse * pointLightDiffuseIntensity) + iblDiffuse;
     float3 totalSpecular = specular + (pointSpecular * pointLightSpecularIntensity) + iblSpecular;
@@ -161,14 +135,9 @@ float4 main(VS_OUT pin) : SV_TARGET
     totalDiffuse = totalDiffuse * occlusionFactor * diffuseIntensity;
     totalSpecular = totalSpecular * occlusionFactor * specularIntensity;
 
-#if 0
-    float3 rim = CalcRimLight(N, V, rimColor.rgb, 3.0) * rimIntensity;
-    if (baseColor.a < 1.0)
-        rim = 0;
-#endif
     float3 ambient = baseColor.rgb * 0.05;
 
-    float3 lo = totalDiffuse + totalSpecular + emissive /*+ rim*/ + ambient;
+    float3 lo = totalDiffuse + totalSpecular + emissive + ambient;
 
     return float4(lo, 1.0f);
 }

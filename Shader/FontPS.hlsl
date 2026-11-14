@@ -1,4 +1,3 @@
-
 #include "Font.hlsli"
 
 Texture2D diffuseMap : register(t0);

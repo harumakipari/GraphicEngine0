@@ -38,15 +38,12 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         phase2Sampled.rgb = pow(phase2Sampled.rgb, GAMMA);
         if (materialType == MATERIAL_HAIR)
         {
-            // Preserve the Hair texture detail while moving Phase2 toward warm charcoal.
             phase2Sampled.rgb *= phase2HairTint;
         }
         const float normalizedHeight = saturate(
             (pin.wPosition.y - phase2WorldMinY) /
             max(phase2WorldMaxY - phase2WorldMinY, 0.0001f));
         const float softness = max(phase2MaskSoftness, 0.00001f);
-        // Move a soft boundary upward. Extending it past both ends guarantees
-        // Progress 0 = Phase1 and Progress 1 = Phase2 across the whole torso.
         const float boundary = lerp(-softness, 1.0f + softness,
             saturate(phase2TransformProgress));
         const float phase2Weight = 1.0f - smoothstep(
@@ -83,7 +80,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     if (metallicRoughnessTexture > -1)
     {
         float4 sampled = materialTextures[METALLIC_ROUGHNESS_TEXTURE].Sample(samplerStates[LINEAR], pin.texcoord);
-        //roughnessFactor = 1.0;
         roughnessFactor *= sampled.g;
         metallicFactor *= sampled.b;
     }
@@ -126,8 +122,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
         N = normalize((normalFactor.x * T) + (normalFactor.y * B) + (normalFactor.z * N));
     }
 
-    // This is a per-material value from the component-owned material override;
-    // it is independent of the scene-wide rim-light settings.
     const float3 viewDirection = normalize(cameraPosition.xyz - pin.wPosition.xyz);
     const float rimFactor = pow(saturate(1.0f - dot(N, viewDirection)), 3.0f);
     emissiveFactor += m.rimColor * (m.rimPower * rimFactor);

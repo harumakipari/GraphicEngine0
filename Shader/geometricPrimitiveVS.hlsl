@@ -1,4 +1,3 @@
-#include "Constants.hlsli"
 #include "geometricPrimitive.hlsli"
 #include "Lights.hlsli"
 #include "ViewConstants.hlsli"

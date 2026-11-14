@@ -10,6 +10,40 @@
 #include "Engine/Utility/Win32Utils.h"
 #include "Physics/CollisionSystem.h"
 
+void InputComponent::Tick(float)
+{
+    intent.leftMove = { 0,0,0 };
+    intent.rightMove = { 0.0f,0.0f };
+
+    if (!InputSystem::IsInputEnabled())
+        return;
+
+    auto scene = Scene::GetCurrentScene();
+    if (!scene)
+    {
+        Logger::Warning(Logger::LogCategory::System, U8("InputComponent で　scene が null です！"));
+        return;
+    }
+
+    if (!scene->GetCameraManager()->IsUseDebug() &&
+        !scene->GetCameraManager()->IsUseCinematic() && !scene->GetCameraManager()->IsUseMovie())
+    {
+        // 左スティック
+        float lx = InputSystem::GetLeftStick().x;
+        float ly = InputSystem::GetLeftStick().y;
+
+        intent.leftMove.x = lx;
+        intent.leftMove.z = ly;
+
+        // 右スティック
+        float rx = InputSystem::GetRightStick().x;
+        float ry = InputSystem::GetRightStick().y;
+
+        intent.rightMove.x = rx;
+        intent.rightMove.y = ry;
+    }
+}
+
 void CharacterMovementComponent::Tick(float deltaTime)
 {
     if (deferredMovementTick)
@@ -26,8 +60,65 @@ void CharacterMovementComponent::TickDeferredMovement(float deltaTime)
     TickMovement(deltaTime);
 }
 
+
+
+void CharacterMovementComponent::DrawImGuiInspector()
+{
+#ifdef USE_IMGUI
+    SceneComponent::DrawImGuiInspector();
+    ImGui::DragFloat(U8("歩く速度"), &walkSpeed, 0.05f, 0.0f, 5.0f);
+    ImGui::DragFloat(U8("走り速度"), &runSpeed, 0.05f, 0.0f, 10.0f);
+
+#endif
+}
+
+bool CharacterMovementComponent::ConsumeBossRoomProbeChargeWallHitEvent(BossRoomProbeMoveBlockEvent& outEvent)
+{
+    if (!bossRoomProbeChargeWallHitEvent.pending) return false;
+    outEvent = bossRoomProbeChargeWallHitEvent;
+    bossRoomProbeChargeWallHitEvent = {};
+    return true;
+}
+// 入力によって変わる現在の速さを取得
+float CharacterMovementComponent::GetCurrentInputNormalizeSpeed()const
+{
+    // 0除算を防ぐため
+    float speed = targetSpeed / std::max<float>(0.00001f, runSpeed);
+    return speed;
+}
+
+// 一定時間だけ強制移動する速度を設定するための関数  ルートモーションではないアニメーションなどに使用する
+void CharacterMovementComponent::AddForcedMove(const DirectX::XMFLOAT3& direction, const float speed, const float duration)
+{
+    forcedVelocity =
+    {
+        direction.x * speed,
+        direction.y * speed,
+        direction.z * speed
+    };
+
+    forcedMoveTime = duration;
+}
+
+// targetまで進む時に使用する
+void  CharacterMovementComponent::MoveToActor(const std::shared_ptr<Actor>& target, const float moveTime, float stopDistance)
+{
+    this->target = target;
+    moveToTargetTimer = moveTime;
+    this->stopDistance = stopDistance;
+    moveToTarget = true;
+}
+
 void CharacterMovementComponent::TickMovement(float deltaTime)
 {
+    auto owner = this->owner.lock();
+    if (!owner)
+    {
+        Logger::Warning("owner is not existed so movement is nullptr!");
+        _ASSERT("owner is not existed so movement is nullptr!");
+        return;
+    }
+
     if (useGravity)
     {
         gravity = -9.8f;
@@ -57,9 +148,7 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
         targetSpeed = std::lerp(walkSpeed, runSpeed, inputMagnitude);
     }
 
-    finalMoveSpeed = len > 0.001f
-        ? targetSpeed * moveSpeedScale
-        : 0.0f;
+    finalMoveSpeed = len > 0.001f ? targetSpeed * moveSpeedScale : 0.0f;
     velocity.x = wishDir.x * finalMoveSpeed;
     velocity.z = wishDir.z * finalMoveSpeed;
 
@@ -98,7 +187,7 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
         }
         else
         {
-            DirectX::XMFLOAT3 pos = owner.lock()->GetPosition();
+            DirectX::XMFLOAT3 pos = owner->GetPosition();
             DirectX::XMFLOAT3 targetPos = targetShared->GetPosition();
 
             DirectX::XMFLOAT3 dir =
@@ -108,9 +197,7 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
                 targetPos.z - pos.z
             };
 
-            float dist =
-                sqrtf(dir.x * dir.x +
-                    dir.z * dir.z);
+            float dist = sqrtf(dir.x * dir.x + dir.z * dir.z);
 
             if (dist <= stopDistance)
             {
@@ -137,13 +224,6 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
         velocity.y += gravity * deltaTime;
     }
 
-    if (owner.expired())
-    {
-        Logger::Warning("owner is not existed so movement is nullptr!");
-        _ASSERT("owner is not existed so movement is nullptr!");
-    }
-    auto owner = this->owner.lock();
-
     // 位置を予測
     DirectX::XMFLOAT3 pos = owner->GetPosition();
     DirectX::XMFLOAT3 nextPos = pos;
@@ -165,12 +245,7 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
     float rayLength = groundOffset + std::max<float>(fallDistance, 0.0f) + 0.1f;
 
     HitResult hit;
-    if (Physics::Instance().RayCast(
-        { pos.x, rayStartY, pos.z },
-        { 0,-1,0 },
-        rayLength,
-        hit,
-        CollisionHelper::ToBit(CollisionLayer::WorldStatic)))
+    if (Physics::Instance().RayCast({ pos.x, rayStartY, pos.z }, { 0,-1,0 }, rayLength, hit, CollisionHelper::ToBit(CollisionLayer::WorldStatic)))
     {
         float groundY = hit.position.y;
 
@@ -180,23 +255,12 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
             velocity.y = 0;
             isGrounded = true;
         }
-        Graphics::GetShapeRenderer()->DrawSphere(
-            hit.position, 0.1f, { 1,0,0,1 });
+        Graphics::GetShapeRenderer()->DrawSphere(hit.position, 0.1f, { 1,0,0,1 });
     }
 
     // 壁とのレイキャスト
     DirectX::XMFLOAT3 horizontalMove = { nextPos.x - pos.x, 0.0f, nextPos.z - pos.z };
-    lastRequestedHorizontalMoveForDebug = horizontalMove;
     lastResolvedHorizontalMoveForDebug = {};
-    lastWallRayCastHitForDebug = false;
-    lastStageWallRayCastHitForDebug = false;
-    lastBossRoomWallSphereCastHitForDebug = false;
-    lastWallProbeUsedSphereCastForDebug = false;
-    lastWallProbeInitialOverlapForDebug = false;
-    lastWallProbeHitLayerForDebug = 0;
-    lastWallProbeOriginForDebug = {};
-    lastWallProbeDirectionForDebug = {};
-    lastWallProbeDistanceForDebug = 0.0f;
     HitResult bossRoomProbeHitForCharge{};
     bool bossRoomProbeInwardContactForCharge = false;
     if (bossRoomProbeChargeWallHitArmed)
@@ -211,9 +275,6 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
         HitResult stageHit;
         if (Physics::Instance().RayCast({ pos.x, pos.y + 1.0f, pos.z }, moveDirection, dist + radius, stageHit, legacyMask))
         {
-            lastWallRayCastHitForDebug = true;
-            lastStageWallRayCastHitForDebug = true;
-            lastWallCollisionPositionForDebug = stageHit.position;
             nextPos.x = pos.x;
             nextPos.z = pos.z;
         }
@@ -222,17 +283,8 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
             const float probeRadius = GetActiveHorizontalWallProbeRadius();
             const DirectX::XMFLOAT3 probeOrigin = { pos.x, pos.y + (std::max)(1.0f, probeRadius + 0.05f), pos.z };
             HitResult wallHit;
-            lastWallProbeUsedSphereCastForDebug = true;
-            lastWallProbeOriginForDebug = probeOrigin;
-            lastWallProbeDirectionForDebug = moveDirection;
-            lastWallProbeDistanceForDebug = dist;
             if (Physics::Instance().SphereCast(probeOrigin, moveDirection, dist, probeRadius, wallHit, bossMask))
             {
-                lastWallRayCastHitForDebug = true;
-                lastBossRoomWallSphereCastHitForDebug = true;
-                lastWallProbeInitialOverlapForDebug = wallHit.initialOverlap;
-                lastWallProbeHitLayerForDebug = wallHit.layerMask;
-                lastWallCollisionPositionForDebug = wallHit.position;
                 if (!wallHit.initialOverlap)
                 {
                     const float intoWall = horizontalMove.x * wallHit.normal.x + horizontalMove.z * wallHit.normal.z;
@@ -268,9 +320,7 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
         !bossRoomProbeHitForCharge.initialOverlap && dist > 0.001f)
     {
         const DirectX::XMFLOAT3 moveDirection = { horizontalMove.x / dist, 0.0f, horizontalMove.z / dist };
-        const float resolvedForward =
-            lastResolvedHorizontalMoveForDebug.x * moveDirection.x +
-            lastResolvedHorizontalMoveForDebug.z * moveDirection.z;
+        const float resolvedForward = lastResolvedHorizontalMoveForDebug.x * moveDirection.x + lastResolvedHorizontalMoveForDebug.z * moveDirection.z;
         const float forwardMoveLost = (std::max)(0.0f, dist - resolvedForward);
         if (forwardMoveLost > 0.01f)
         {
@@ -284,24 +334,36 @@ void CharacterMovementComponent::TickMovement(float deltaTime)
             bossRoomProbeChargeWallHitEvent.forwardMoveLost = forwardMoveLost;
         }
     }
-    if (deltaTime > FLT_EPSILON)
-    {
-        const float actualDeltaX = nextPos.x - pos.x;
-        const float actualDeltaZ = nextPos.z - pos.z;
-        actualHorizontalSpeed =
-            sqrtf(actualDeltaX * actualDeltaX + actualDeltaZ * actualDeltaZ) /
-            deltaTime;
-    }
-    else
-    {
-        actualHorizontalSpeed = 0.0f;
-    }
 
     // 位置を更新
     owner->SetPosition(nextPos);
 }
+void RotationComponent::Tick(float deltaTime)
+{
+    if (lerpTime >= rotateTime)
+        return; // 補間完了
+
+    auto owner = this->owner.lock();
+    if (!owner)
+        return;
+
+    lerpTime += deltaTime;
+    float t = lerpTime / rotateTime;
+    t = std::min<float>(t, 1.0f);
+
+    auto q = SlerpQuaternion(startRotation, targetRotation, t);
+    owner->SetQuaternionRotation(q);
+}
 
 
+void RotationComponent::DrawImGuiInspector()
+{
+#ifdef USE_IMGUI
+    SceneComponent::DrawImGuiInspector();
+    ImGui::DragFloat(U8("回転時間"), &rotateTime, 0.05f, 0.0f, 10.0f);
+
+#endif
+}
 
 void RotationComponent::SetDirection(const DirectX::XMFLOAT3& dir)
 {
@@ -313,13 +375,16 @@ void RotationComponent::SetDirection(const DirectX::XMFLOAT3& dir)
     if (IsSameDirection(dir, previousDirection))
         return;
 
+    auto owner = this->owner.lock();
+    if (!owner)
+        return;
+
     previousDirection = dir;
-    direction = dir;
 
     // 補間の初期化
     lerpTime = 0.0f;
-    startAngle = owner.lock()->GetEulerRotation();
-    startRotation = owner.lock()->GetQuaternionRotation();
+    startAngle = owner->GetEulerRotation();
+    startRotation = owner->GetQuaternionRotation();
     float targetYaw = std::atan2f(dir.x, dir.z);
     startAngle.x = DirectX::XMConvertToRadians(startAngle.x);
     startAngle.z = DirectX::XMConvertToRadians(startAngle.z);
@@ -337,6 +402,7 @@ void RotationComponent::SetDirectionImmediate(const DirectX::XMFLOAT3& dir)
         owner->SetQuaternionRotation(targetRotation);
     lerpTime = rotateTime;
 }
+
 void RotationComponent::ForceDirectionImmediate(const DirectX::XMFLOAT3& dir)
 {
     if (fabs(dir.x) < 0.001f && fabs(dir.z) < 0.001f)
@@ -344,7 +410,6 @@ void RotationComponent::ForceDirectionImmediate(const DirectX::XMFLOAT3& dir)
 
     if (auto owner = this->owner.lock())
     {
-        direction = dir;
         previousDirection = dir;
         const DirectX::XMFLOAT3 rotation = owner->GetEulerRotation();
         const float pitch = DirectX::XMConvertToRadians(rotation.x);
@@ -360,6 +425,7 @@ void RotationComponent::ForceDirectionImmediate(const DirectX::XMFLOAT3& dir)
     }
 }
 
+
 void RotationComponent::SyncCurrentRotation()
 {
     if (const auto owner = this->owner.lock())
@@ -371,86 +437,55 @@ void RotationComponent::SyncCurrentRotation()
     }
 }
 
-bool RotationComponent::RotateTowardsDirection(
-    const DirectX::XMFLOAT3& direction,
-    const float maxDegreesPerSecond,
-    const float deltaTime)
+bool RotationComponent::RotateTowardsDirection(const DirectX::XMFLOAT3& direction, const float maxDegreesPerSecond, const float deltaTime)
 {
     if (auto owner = this->owner.lock())
     {
-        const float directionLengthSq =
-            direction.x * direction.x + direction.z * direction.z;
+        const float directionLengthSq = direction.x * direction.x + direction.z * direction.z;
         if (directionLengthSq <= FLT_EPSILON)
             return true;
 
         const float targetYaw = std::atan2f(direction.x, direction.z);
-        DirectX::XMVECTOR currentForward = DirectX::XMVector3Rotate(
-            DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f),
-            DirectX::XMLoadFloat4(&owner->GetQuaternionRotation()));
+        DirectX::XMVECTOR currentForward = DirectX::XMVector3Rotate(DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f), DirectX::XMLoadFloat4(&owner->GetQuaternionRotation()));
         DirectX::XMFLOAT3 forward{};
         DirectX::XMStoreFloat3(&forward, currentForward);
         const float currentYaw = std::atan2f(forward.x, forward.z);
-        const float yawDelta = std::atan2f(
-            std::sinf(targetYaw - currentYaw),
-            std::cosf(targetYaw - currentYaw));
-        const float maxStep = DirectX::XMConvertToRadians(
-            (std::max)(0.0f, maxDegreesPerSecond)) * (std::max)(0.0f, deltaTime);
+        const float yawDelta = std::atan2f(std::sinf(targetYaw - currentYaw), std::cosf(targetYaw - currentYaw));
+        const float maxStep = DirectX::XMConvertToRadians((std::max)(0.0f, maxDegreesPerSecond)) * (std::max)(0.0f, deltaTime);
         const float appliedDelta = std::clamp(yawDelta, -maxStep, maxStep);
         const float newYaw = currentYaw + appliedDelta;
 
         DirectX::XMFLOAT4 rotation{};
         DirectX::XMStoreFloat4(&rotation,
-            DirectX::XMQuaternionRotationRollPitchYaw(0.0f, newYaw, 0.0f));
+                               DirectX::XMQuaternionRotationRollPitchYaw(0.0f, newYaw, 0.0f));
         owner->SetQuaternionRotation(rotation);
-        
+
         lerpTime = rotateTime;
         return std::abs(yawDelta) <= maxStep;
     }
     return false;
 }
 
-void RotationComponent::Tick(float deltaTime)
+
+
+
+DirectX::XMFLOAT4 RotationComponent::SlerpQuaternion(const DirectX::XMFLOAT4& current, const DirectX::XMFLOAT4& target, const float t)
 {
-    if (lerpTime >= rotateTime)
-        return; // 補間完了
+    using namespace DirectX;
 
-    lerpTime += deltaTime;
-    float t = lerpTime / rotateTime;
-    t = std::min<float>(t, 1.0f);
+    XMVECTOR q1 = XMLoadFloat4(&current);
+    XMVECTOR q2 = XMLoadFloat4(&target);
+    XMVECTOR result = XMQuaternionSlerp(q1, q2, t);
 
-    auto q = SlerpQuaternion(startRotation, targetRotation, t);
-    owner.lock()->SetQuaternionRotation(q);
+    XMFLOAT4 out;
+    XMStoreFloat4(&out, result);
+    return out;
 }
 
-void InputComponent::Tick(float)
+bool RotationComponent::IsSameDirection(const DirectX::XMFLOAT3& a, const DirectX::XMFLOAT3& b)
 {
-    intent_.leftMove = { 0,0,0 };
-    intent_.rightMove = { 0.0f,0.0f };
-
-    if (!InputSystem::IsInputEnabled())
-        return;
-
-    auto scene = Scene::GetCurrentScene();
-    if (!scene)
-    {
-        Logger::Warning(Logger::LogCategory::System, U8("InputComponent で　scene が null です！"));
-    }
-
-    if (!scene->GetCameraManager()->IsUseDebug() &&
-        !scene->GetCameraManager()->IsUseCinematic() && !scene->GetCameraManager()->IsUseMovie())
-    {
-        // 左スティック
-        float lx = InputSystem::GetLeftStick().x;
-        float ly = InputSystem::GetLeftStick().y;
-
-        intent_.leftMove.x = lx;
-        intent_.leftMove.z = ly;
-
-        // 右スティック
-        float rx = InputSystem::GetRightStick().x;
-        float ry = InputSystem::GetRightStick().y;
-
-        intent_.rightMove.x = rx;
-        intent_.rightMove.y = ry;
-    }
+    constexpr float epsilon = 0.001f;
+    return std::abs(a.x - b.x) < epsilon &&
+        std::abs(a.y - b.y) < epsilon &&
+        std::abs(a.z - b.z) < epsilon;
 }

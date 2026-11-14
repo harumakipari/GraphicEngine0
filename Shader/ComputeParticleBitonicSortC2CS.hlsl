@@ -7,26 +7,23 @@ groupshared ParticleHeader sharedData[BitonicSortC2Thread * 2];
 [numthreads(BitonicSortC2Thread, 1, 1)]
 void main( uint3 dispatchThreadId : SV_DispatchThreadID )
 {
-    int t = dispatchThreadId.x; // thread index
-    int wgBits = 2 * BitonicSortC2Thread - 1; // bit mask to get index in local memory AUX (size is 2*WG)
+    int t = dispatchThreadId.x;
+    int wgBits = 2 * BitonicSortC2Thread - 1; 
     
     for (int inc = increment; inc > 0; inc >>= 1)
     {
-        int low = t & (inc - 1); // low order bits (below INC)
-        int i = (t << 1) - low; // insert 0 at position INC
-        bool reverse = ((direction & i) == 0); // asc/desc order
+        int low = t & (inc - 1); 
+        int i = (t << 1) - low; 
+        bool reverse = ((direction & i) == 0); 
         ParticleHeader x0, x1;
         
-        // Load
         if (inc == (int) increment)
         {
-            // First iteration: load from global memory
             x0 = particleHeaderBuffer[i];
             x1 = particleHeaderBuffer[i + inc];
         }
         else
         {
-            // Other iterations: load from local memory
             GroupMemoryBarrierWithGroupSync();
             x0 = sharedData[i & wgBits];
             x1 = sharedData[(i + inc) & wgBits];
@@ -46,13 +43,11 @@ void main( uint3 dispatchThreadId : SV_DispatchThreadID )
         // Store
         if (inc == 1)
         {
-            // Last iteration: store to global memory
             particleHeaderBuffer[i] = x0;
             particleHeaderBuffer[i + inc] = x1;
         }
         else
         {
-            // Other iterations: store to local memory
             GroupMemoryBarrierWithGroupSync();
             sharedData[i & wgBits] = x0;
             sharedData[(i + inc) & wgBits] = x1;

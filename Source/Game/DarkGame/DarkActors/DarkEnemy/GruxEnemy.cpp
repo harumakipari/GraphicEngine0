@@ -321,11 +321,11 @@ void GruxEnemy::DrawImGuiDetails()
                 ImGui::PushID(static_cast<int>(i));
                 ImGui::SeparatorText(
                     attack.type == BossAttackType::PrimaryAttackLA ? U8("左腕の通常攻撃") :
-                        attack.type == BossAttackType::PrimaryAttackRA ? U8("右腕の通常攻撃") :
-                        attack.type == BossAttackType::FastCombo ? U8("高速連続攻撃") :
-                        attack.type == BossAttackType::JumpAttack ? U8("ジャンプ攻撃") :
-                        attack.type == BossAttackType::DashAttack ? U8("ダッシュ攻撃") :
-                        attack.type == BossAttackType::ChargeAttack ? U8("突進攻撃") : U8("その他の攻撃"));
+                    attack.type == BossAttackType::PrimaryAttackRA ? U8("右腕の通常攻撃") :
+                    attack.type == BossAttackType::FastCombo ? U8("高速連続攻撃") :
+                    attack.type == BossAttackType::JumpAttack ? U8("ジャンプ攻撃") :
+                    attack.type == BossAttackType::DashAttack ? U8("ダッシュ攻撃") :
+                    attack.type == BossAttackType::ChargeAttack ? U8("突進攻撃") : U8("その他の攻撃"));
                 ImGui::DragFloat(U8("攻撃後の硬直時間（秒）"), &attack.recoveryDuration, 0.05f, 0.0f, 30.0f, "%.2f sec");
                 ImGui::PopID();
             }
@@ -697,8 +697,8 @@ void GruxEnemy::TakeDamageFromPlayerAttack(const int damage, const bool isNormal
         };
 
         int voiceIndex = lastHitVoiceIndex < 0
-                             ? MathHelper::RandomRange(0, static_cast<int>(hitVoicePaths.size()) - 1)
-                             : MathHelper::RandomRange(0, static_cast<int>(hitVoicePaths.size()) - 2);
+            ? MathHelper::RandomRange(0, static_cast<int>(hitVoicePaths.size()) - 1)
+            : MathHelper::RandomRange(0, static_cast<int>(hitVoicePaths.size()) - 2);
         if (lastHitVoiceIndex >= 0 && voiceIndex >= lastHitVoiceIndex)
             ++voiceIndex;
 
@@ -1128,13 +1128,13 @@ void GruxEnemy::SpawnHitEffect(const DirectX::XMFLOAT3 hitPos, DirectX::XMFLOAT3
 
 }
 void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos,
-                                 DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos,
-                                 bool hasHitPosition, bool hasHitNormal) const
+    DirectX::XMFLOAT3 hitNormal, DirectX::XMFLOAT3 playerPos,
+    bool hasHitPosition, bool hasHitNormal) const
 {
     const auto isFiniteVector = [](const DirectX::XMFLOAT3& value)
-    {
-        return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
-    };
+        {
+            return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
+        };
     const float normalLengthSq = hitNormal.x * hitNormal.x +
         hitNormal.y * hitNormal.y + hitNormal.z * hitNormal.z;
     const bool useSurfaceSpawn = hasHitPosition && hasHitNormal &&
@@ -1146,8 +1146,8 @@ void GruxEnemy::SpawnRushHitRing(const DirectX::XMFLOAT3 hitPos,
         const float inverseNormalLength = 1.0f / std::sqrt(normalLengthSq);
         hitNormal = MathHelper::Multiply(hitNormal, inverseNormalLength);
         rushEffectPosition = MathHelper::Add(hitPos,
-                                             MathHelper::Multiply(hitNormal,
-                                                                  std::clamp(rushHitEffectSurfaceOffset, 0.0f, 0.20f)));
+            MathHelper::Multiply(hitNormal,
+                std::clamp(rushHitEffectSurfaceOffset, 0.0f, 0.20f)));
     }
     else
     {
@@ -1243,46 +1243,46 @@ void GruxEnemy::OnAnimationNotifyBegin(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::ShowEmissive:
         break;
     case AnimationNotifyState::Type::MotionWarp:
+    {
+        if (IsFastComboMotionWarpNotify(state))
         {
-            if (IsFastComboMotionWarpNotify(state))
-            {
-                BeginFastComboStepIn(fastComboRuntimeStage, state.startTime, state.endTime);
-                break;
-            }
-            // アニメーション側で指定したローカル方向
-            DirectX::XMFLOAT3 localDirection = state.moveDirection;
-            // プレイヤーの向いている方向を考慮してワールド方向へ変換
-            float radianAngle = DirectX::XMConvertToRadians(GetEulerRotation().y);
-            DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationY(radianAngle);
-            DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&localDirection);
-            dir = DirectX::XMVector3TransformNormal(dir, rotation);
-            dir = DirectX::XMVector3Normalize(dir);
-            DirectX::XMFLOAT3 direction;
-            DirectX::XMStoreFloat3(&direction, dir);
-            // 区間の時間を取る
-            float duration = state.endTime - state.startTime;
-            float actualWarpDistance = state.moveDistance;
-            if (jumpMotionWarpOverrideActive)
-            {
-                direction = jumpMotionWarpDirection;
-                actualWarpDistance = calculatedJumpDistance;
-            }
-
-            float speed = 0.0f;
-            if (duration > 0.0f)
-            {
-                speed = actualWarpDistance / duration;
-            }
-            AnimationMotionWarp warp{};
-            warp.direction = direction;
-            warp.speed = speed;
-            warp.state = &state;
-            warp.notifyMoveDistance = state.moveDistance;
-            warp.actualWarpDistance = actualWarpDistance;
-            warp.startPosition = GetPosition();
-            animationMotionWarps.push_back(warp);
+            BeginFastComboStepIn(fastComboRuntimeStage, state.startTime, state.endTime);
+            break;
         }
-        break;
+        // アニメーション側で指定したローカル方向
+        DirectX::XMFLOAT3 localDirection = state.moveDirection;
+        // プレイヤーの向いている方向を考慮してワールド方向へ変換
+        float radianAngle = DirectX::XMConvertToRadians(GetEulerRotation().y);
+        DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationY(radianAngle);
+        DirectX::XMVECTOR dir = DirectX::XMLoadFloat3(&localDirection);
+        dir = DirectX::XMVector3TransformNormal(dir, rotation);
+        dir = DirectX::XMVector3Normalize(dir);
+        DirectX::XMFLOAT3 direction;
+        DirectX::XMStoreFloat3(&direction, dir);
+        // 区間の時間を取る
+        float duration = state.endTime - state.startTime;
+        float actualWarpDistance = state.moveDistance;
+        if (jumpMotionWarpOverrideActive)
+        {
+            direction = jumpMotionWarpDirection;
+            actualWarpDistance = calculatedJumpDistance;
+        }
+
+        float speed = 0.0f;
+        if (duration > 0.0f)
+        {
+            speed = actualWarpDistance / duration;
+        }
+        AnimationMotionWarp warp{};
+        warp.direction = direction;
+        warp.speed = speed;
+        warp.state = &state;
+        warp.notifyMoveDistance = state.moveDistance;
+        warp.actualWarpDistance = actualWarpDistance;
+        warp.startPosition = GetPosition();
+        animationMotionWarps.push_back(warp);
+    }
+    break;
     }
 }
 
@@ -1335,23 +1335,23 @@ void GruxEnemy::OnAnimationNotifyEnd(const AnimationNotifyState& state)
     case AnimationNotifyState::Type::ShowEmissive:
         break;
     case AnimationNotifyState::Type::MotionWarp:
+    {
+        if (IsFastComboMotionWarpNotify(state))
         {
-            if (IsFastComboMotionWarpNotify(state))
-            {
-                ClearFastComboStepIn();
-                break;
-            }
-            animationMotionWarps.erase(
-                std::remove_if(
-                    animationMotionWarps.begin(),
-                    animationMotionWarps.end(),
-                    [&](const AnimationMotionWarp& warp)
-                    {
-                        return warp.state == &state;
-                    }),
-                animationMotionWarps.end());
+            ClearFastComboStepIn();
+            break;
         }
-        break;
+        animationMotionWarps.erase(
+            std::remove_if(
+                animationMotionWarps.begin(),
+                animationMotionWarps.end(),
+                [&](const AnimationMotionWarp& warp)
+                {
+                    return warp.state == &state;
+                }),
+            animationMotionWarps.end());
+    }
+    break;
     }
 }
 void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
@@ -1418,37 +1418,37 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
     switch (event.type)
     {
     case AnimationNotifyEvent::Type::PlaySE:
-        {
-            const bool isBossDeathCinematicClip = controller &&
+    {
+        const bool isBossDeathCinematicClip = controller &&
             (controller->GetCurrentAnimationName() == "Ultimate_Roar_0" ||
                 controller->GetCurrentAnimationName() == "Result_Down_Start" ||
                 controller->GetCurrentAnimationName() == "Death_B_0");
-            const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
-            if (isBossDeathCinematicClip && gameScene &&
-                gameScene->IsBossDeathFinishPromptActive())
+        const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
+        if (isBossDeathCinematicClip && gameScene &&
+            gameScene->IsBossDeathFinishPromptActive())
+        {
+            return;
+        }
+        const bool isBossDeathCinematicOneShot = isBossDeathCinematicClip &&
+            gameScene && gameScene->IsBossDeathCinematicAudioActive();
+        if (event.parameter != "")
+        {
+            std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
+            auto audio = CoreAudio::PlayOneShot(audioPath, event.value);
+            float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
+            audio->SetPitch(pitch);
+            if (isBossDeathCinematicOneShot && audio)
             {
-                return;
-            }
-            const bool isBossDeathCinematicOneShot = isBossDeathCinematicClip &&
-                gameScene && gameScene->IsBossDeathCinematicAudioActive();
-            if (event.parameter != "")
-            {
-                std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
-                auto audio = CoreAudio::PlayOneShot(audioPath, event.value);
-                float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
-                audio->SetPitch(pitch);
-                if (isBossDeathCinematicOneShot && audio)
-                {
-                    std::erase_if(bossDeathCinematicOneShots,
-                                  [](const std::shared_ptr<CoreStandaloneAudioSource>& source)
-                                  {
-                                      return !source || !source->IsPlaying();
-                                  });
-                    bossDeathCinematicOneShots.push_back(audio);
-                }
+                std::erase_if(bossDeathCinematicOneShots,
+                    [](const std::shared_ptr<CoreStandaloneAudioSource>& source)
+                    {
+                        return !source || !source->IsPlaying();
+                    });
+                bossDeathCinematicOneShots.push_back(audio);
             }
         }
-        break;
+    }
+    break;
     case AnimationNotifyEvent::Type::SpawnEffect:
         if (event.parameter == "GroundImpact")
             SpawnGroundImpactEffect();
@@ -1467,11 +1467,11 @@ void GruxEnemy::OnAnimationNotifyEvent(const AnimationNotifyEvent& event)
 
         break;
     case AnimationNotifyEvent::Type::CameraShake:
-        {
-            if (auto* cameraManager = GetOwnerScene()->GetCameraManager())
-                cameraManager->PlayCameraShakePreset(event.parameter);
-            break;
-        }
+    {
+        if (auto* cameraManager = GetOwnerScene()->GetCameraManager())
+            cameraManager->PlayCameraShakePreset(event.parameter);
+        break;
+    }
     }
 }
 
@@ -1480,28 +1480,28 @@ void GruxEnemy::OnAnimationEditorPreviewEvent(const AnimationNotifyEvent& event)
     switch (event.type)
     {
     case AnimationNotifyEvent::Type::PlaySE:
-        {
-            if (event.parameter.empty())
-                return;
+    {
+        if (event.parameter.empty())
+            return;
 
-            const std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
-            auto audio = CoreAudio::PlayOneShot(audioPath, event.value);
-            if (audio)
-            {
-                const float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
-                audio->SetPitch(pitch);
-            }
-            break;
+        const std::string audioPath = "./Data/Sound/SE/" + event.parameter + ".wav";
+        auto audio = CoreAudio::PlayOneShot(audioPath, event.value);
+        if (audio)
+        {
+            const float pitch = pitchBaseValue + GetTimeScale() * (1.0f - pitchBaseValue);
+            audio->SetPitch(pitch);
         }
+        break;
+    }
     case AnimationNotifyEvent::Type::CameraShake:
-        {
-            if (event.parameter.empty())
-                return;
+    {
+        if (event.parameter.empty())
+            return;
 
-            if (auto* cameraManager = GetOwnerScene()->GetCameraManager())
-                cameraManager->PlayCameraShakePreset(event.parameter);
-            break;
-        }
+        if (auto* cameraManager = GetOwnerScene()->GetCameraManager())
+            cameraManager->PlayCameraShakePreset(event.parameter);
+        break;
+    }
     case AnimationNotifyEvent::Type::SpawnEffect:
         if (event.parameter == "GroundImpact" && groundDustEffectComponent)
         {
@@ -1562,7 +1562,7 @@ void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& stat
             GetPosition(), GetRight(), GetUp(), GetForward(),
             state.justDodgeAreaOffset, state.justDodgeAreaSize);
         DebugRender::DrawBox(previewArea.WorldTransform(), previewArea.size,
-                             dangerPreviewColor, 0.0f, true);
+            dangerPreviewColor, 0.0f, true);
         return;
     }
     if (state.type != AnimationNotifyState::Type::HitBox)
@@ -1573,51 +1573,51 @@ void GruxEnemy::DrawAnimationEditorPreviewState(const AnimationNotifyState& stat
         controller->IsEditorPreviewHitBoxSweepVisible();
     const float currentTime = controller ? controller->GetCurrentSampledAnimationTime() : 0.0f;
     const auto drawPoints = [](const WeaponHitBoxPoints& points, float radius,
-                               const DirectX::XMFLOAT4& color)
-    {
-        DebugRender::DrawSphere(points.root, radius, color, 0.0f, true);
-        DebugRender::DrawSphere(points.middle, radius, color, 0.0f, true);
-        DebugRender::DrawSphere(points.tip, radius, color, 0.0f, true);
-        DebugRender::DrawLine(points.root, points.middle, color, 0.0f, true);
-        DebugRender::DrawLine(points.middle, points.tip, color, 0.0f, true);
-    };
+        const DirectX::XMFLOAT4& color)
+        {
+            DebugRender::DrawSphere(points.root, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(points.middle, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(points.tip, radius, color, 0.0f, true);
+            DebugRender::DrawLine(points.root, points.middle, color, 0.0f, true);
+            DebugRender::DrawLine(points.middle, points.tip, color, 0.0f, true);
+        };
     const auto drawSweepPoints = [](const WeaponHitBoxPoints& previous,
-                                    const WeaponHitBoxPoints& current, float radius, const DirectX::XMFLOAT4& color)
-    {
-        DebugRender::DrawLine(previous.root, current.root, color, 0.0f, true);
-        DebugRender::DrawLine(previous.middle, current.middle, color, 0.0f, true);
-        DebugRender::DrawLine(previous.tip, current.tip, color, 0.0f, true);
-        DebugRender::DrawSphere(previous.root, radius, color, 0.0f, true);
-        DebugRender::DrawSphere(previous.middle, radius, color, 0.0f, true);
-        DebugRender::DrawSphere(previous.tip, radius, color, 0.0f, true);
-    };
+        const WeaponHitBoxPoints& current, float radius, const DirectX::XMFLOAT4& color)
+        {
+            DebugRender::DrawLine(previous.root, current.root, color, 0.0f, true);
+            DebugRender::DrawLine(previous.middle, current.middle, color, 0.0f, true);
+            DebugRender::DrawLine(previous.tip, current.tip, color, 0.0f, true);
+            DebugRender::DrawSphere(previous.root, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(previous.middle, radius, color, 0.0f, true);
+            DebugRender::DrawSphere(previous.tip, radius, color, 0.0f, true);
+        };
     const auto drawWeapon = [&](const std::shared_ptr<SceneComponent>& root,
-                                const std::shared_ptr<SceneComponent>& middle, const std::shared_ptr<SceneComponent>& tip,
-                                const DirectX::XMFLOAT4& color, WeaponHitBoxPoints& previous,
-                                const AnimationNotifyState*& previousState, float& previousTime)
-    {
-        if (!root || !middle || !tip)
-            return;
-        const WeaponHitBoxPoints current = BuildWeaponHitBoxPoints(root, middle, tip,
-                                                                   state.hitBoxOffset);
-        const bool contiguous = previousState == &state && currentTime >= previousTime &&
-            currentTime - previousTime <= 0.1f;
-        if (drawSweep && contiguous)
-            drawSweepPoints(previous, current, state.hitBoxRadius, color);
-        drawPoints(current, state.hitBoxRadius, color);
-        previous = current;
-        previousState = &state;
-        previousTime = currentTime;
-    };
+        const std::shared_ptr<SceneComponent>& middle, const std::shared_ptr<SceneComponent>& tip,
+        const DirectX::XMFLOAT4& color, WeaponHitBoxPoints& previous,
+        const AnimationNotifyState*& previousState, float& previousTime)
+        {
+            if (!root || !middle || !tip)
+                return;
+            const WeaponHitBoxPoints current = BuildWeaponHitBoxPoints(root, middle, tip,
+                state.hitBoxOffset);
+            const bool contiguous = previousState == &state && currentTime >= previousTime &&
+                currentTime - previousTime <= 0.1f;
+            if (drawSweep && contiguous)
+                drawSweepPoints(previous, current, state.hitBoxRadius, color);
+            drawPoints(current, state.hitBoxRadius, color);
+            previous = current;
+            previousState = &state;
+            previousTime = currentTime;
+        };
 
     if (state.parameter == leftWeapon || state.parameter == bothWeapon)
         drawWeapon(weaponLeftRootComponent, weaponLeftMiddleComponent, weaponLeftTipComponent,
-                   leftHitBoxPreviewColor, editorPreviewLeftHitBoxPoints,
-                   editorPreviewLeftHitBoxState, editorPreviewLeftHitBoxTime);
+            leftHitBoxPreviewColor, editorPreviewLeftHitBoxPoints,
+            editorPreviewLeftHitBoxState, editorPreviewLeftHitBoxTime);
     if (state.parameter == rightWeapon || state.parameter == bothWeapon)
         drawWeapon(weaponRightRootComponent, weaponRightMiddleComponent, weaponRightTipComponent,
-                   rightHitBoxPreviewColor, editorPreviewRightHitBoxPoints,
-                   editorPreviewRightHitBoxState, editorPreviewRightHitBoxTime);
+            rightHitBoxPreviewColor, editorPreviewRightHitBoxPoints,
+            editorPreviewRightHitBoxState, editorPreviewRightHitBoxTime);
 }
 void GruxEnemy::OnAnimationChanged()
 {
@@ -1692,8 +1692,8 @@ void GruxEnemy::OnSelectedActionStartedSuccessfully()
         if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
         {
             const DirectX::XMFLOAT3 bossCameraPosition = cameraTargetComponent
-                                                             ? cameraTargetComponent->GetComponentLocation()
-                                                             : GetPosition();
+                ? cameraTargetComponent->GetComponentLocation()
+                : GetPosition();
             darkCamera->RequestOffscreenAttackAssist(
                 bossCameraPosition, cameraAssistStrength, cameraAssistDuration);
         }
@@ -1707,8 +1707,8 @@ void GruxEnemy::RequestJumpAttackCameraAssist() const
     if (auto* darkCamera = dynamic_cast<DarkCameraActor*>(activeCamera))
     {
         const DirectX::XMFLOAT3 bossCameraPosition = cameraTargetComponent
-                                                         ? cameraTargetComponent->GetComponentLocation()
-                                                         : GetPosition();
+            ? cameraTargetComponent->GetComponentLocation()
+            : GetPosition();
         darkCamera->RequestOffscreenAttackAssist(
             bossCameraPosition, 0.70f, 0.80f);
     }
@@ -1735,18 +1735,18 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
     case BossAttackType::PrimaryAttackLA: animationName = "PrimaryAttack_LA"; break;
     case BossAttackType::PrimaryAttackRA: animationName = "PrimaryAttack_RA"; break;
     case BossAttackType::FastCombo:
+    {
+        static constexpr const char* comboAnimations[] =
         {
-            static constexpr const char* comboAnimations[] =
-            {
-                "Attack_A_Fast_0",
-                "Attack_B_Fast_0",
-                "Attack_C_Fast_0",
-            };
-            if (stage < 0 || stage >= static_cast<int>(std::size(comboAnimations)))
-                return false;
-            animationName = comboAnimations[stage];
-            break;
-        }
+            "Attack_A_Fast_0",
+            "Attack_B_Fast_0",
+            "Attack_C_Fast_0",
+        };
+        if (stage < 0 || stage >= static_cast<int>(std::size(comboAnimations)))
+            return false;
+        animationName = comboAnimations[stage];
+        break;
+    }
     case BossAttackType::JumpAttack:
         if (stage == 0)
         {
@@ -1764,22 +1764,22 @@ bool GruxEnemy::PlayAttackStage(BossAttackType type, int stage)
         break;
     case BossAttackType::Dash: animationName = "Stampede_0"; break;
     case BossAttackType::DashAttack:
+    {
+        static constexpr const char* dashAnimations[] =
         {
-            static constexpr const char* dashAnimations[] =
-            {
-                "Pre_Stampede_0",
-                "Stampede_0",
-                "Stampede_Knockup_0",
-            };
-            if (stage < 0 || stage >= static_cast<int>(std::size(dashAnimations)))
-                return false;
-            if (stage == 0)
-                StopDashAttackMovement();
-            if (stage == 1 && !BeginDashAttackMovement())
-                return false;
-            animationName = dashAnimations[stage];
-            break;
-        }
+            "Pre_Stampede_0",
+            "Stampede_0",
+            "Stampede_Knockup_0",
+        };
+        if (stage < 0 || stage >= static_cast<int>(std::size(dashAnimations)))
+            return false;
+        if (stage == 0)
+            StopDashAttackMovement();
+        if (stage == 1 && !BeginDashAttackMovement())
+            return false;
+        animationName = dashAnimations[stage];
+        break;
+    }
     case BossAttackType::ChargeAttack: return false;
     case BossAttackType::LongRangeAttack: return false;
     }
@@ -1841,8 +1841,8 @@ float GruxEnemy::ConsumeNextRecoveryDuration()
 {
     const bool hasOverride = nextRecoveryDuration.has_value();
     const float duration = hasOverride
-                               ? *nextRecoveryDuration
-                               : GetRecoveryDurationForCurrentAttack();
+        ? *nextRecoveryDuration
+        : GetRecoveryDurationForCurrentAttack();
 
     nextRecoveryDuration.reset();
     return duration;
@@ -1890,7 +1890,7 @@ BossTargetContext GruxEnemy::BuildTargetContext() const
     {
         const float inverseDistance = 1.0f / context.xzDistance;
         context.directionToPlayer =
-            { dx * inverseDistance, 0.0f, dz * inverseDistance };
+        { dx * inverseDistance, 0.0f, dz * inverseDistance };
     }
     else
     {
@@ -1979,8 +1979,8 @@ bool GruxEnemy::PrepareJumpAttackSetupTarget()
 {
     DirectX::XMFLOAT3 target{};
     if (!FindAttackSetupTarget(jumpSetupDistanceMin, jumpSetupDistanceMax,
-                               attackSetupCandidateAngleStep, attackSetupClampTolerance, jumpSetupMinimumMoveDistance,
-                               target))
+        attackSetupCandidateAngleStep, attackSetupClampTolerance, jumpSetupMinimumMoveDistance,
+        target))
     {
         ClearAttackSetupTarget();
         return false;
@@ -2042,7 +2042,7 @@ void GruxEnemy::StartWeaponTelegraph(const std::string& animationName)
     const auto* asset = controller ? controller->GetAnimationAsset(animationName) : nullptr;
     if (!asset) return;
     const auto state = std::find_if(asset->notifyTrack.states.begin(), asset->notifyTrack.states.end(),
-                                    [](const AnimationNotifyState& value) { return value.type == AnimationNotifyState::Type::ShowEmissive; });
+        [](const AnimationNotifyState& value) { return value.type == AnimationNotifyState::Type::ShowEmissive; });
     if (state == asset->notifyTrack.states.end()) return;
 
     weaponTelegraphActive = true;
@@ -2087,16 +2087,16 @@ void GruxEnemy::StartGruxNamePerform(float duration, float start, float end)
 
 
         handler.SetCompletedFunction([this]()
-        {
-            easingFactorAlpha = 1.0f;
-        });
+            {
+                easingFactorAlpha = 1.0f;
+            });
         PropertyAccessor<float> accessor;
 
         accessor.getter = [this]() { return easingFactorAlpha; };
         accessor.setter = [this](float t)
-        {
-            easingFactorAlpha = t;
-        };
+            {
+                easingFactorAlpha = t;
+            };
 
         easingRunner->StartHandler(handler, accessor);
     }
@@ -2406,8 +2406,8 @@ bool GruxEnemy::UpdateDashAttackMovement(float deltaTime, bool keepLockedDirecti
 
     const float inverseDistance = 1.0f / remainingDistance;
     const DirectX::XMFLOAT3 directionToTarget = keepLockedDirection
-                                                    ? dashAttackDirection
-                                                    : DirectX::XMFLOAT3{ dx * inverseDistance, 0.0f, dz * inverseDistance };
+        ? dashAttackDirection
+        : DirectX::XMFLOAT3{ dx * inverseDistance, 0.0f, dz * inverseDistance };
     if (characterMovementComponent)
         characterMovementComponent->SetMoveDirection(directionToTarget);
     rotationComponent->SetDirectionImmediate(directionToTarget);
@@ -2431,7 +2431,7 @@ float GruxEnemy::GetActiveChargeSpeed() const
 float GruxEnemy::GetActiveChargePlayerCastRadiusScale() const
 {
     return chargeBT.phase2SettingsLatched
-               ? chargePlayerCastRadiusScalePhase2 : chargePlayerCastRadiusScale;
+        ? chargePlayerCastRadiusScalePhase2 : chargePlayerCastRadiusScale;
 }
 
 
@@ -2446,7 +2446,7 @@ int GruxEnemy::GetActiveChargeDamage() const
 }
 
 bool GruxEnemy::EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosition,
-                                             const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const
+    const DirectX::XMFLOAT3& direction, float& outClearance, bool& outHit) const
 {
     outClearance = 0.0f;
     outHit = false;
@@ -2467,8 +2467,8 @@ bool GruxEnemy::EvaluateChargeStartClearance(const DirectX::XMFLOAT3& startPosit
 }
 
 bool GruxEnemy::EvaluateChargeSideClearance(const DirectX::XMFLOAT3& startPosition,
-                                            const DirectX::XMFLOAT3& direction, float& outClearance,
-                                            DirectX::XMFLOAT3& outNormal, bool& outHit) const
+    const DirectX::XMFLOAT3& direction, float& outClearance,
+    DirectX::XMFLOAT3& outNormal, bool& outHit) const
 {
     outClearance = 0.0f;
     outNormal = {};
@@ -2508,7 +2508,7 @@ bool GruxEnemy::BeginChargeAttackMovement()
     {
         chargeEndReason = ChargeAttackEndReason::SafetyTimeout;
         Logger::Warning(Logger::LogCategory::Gameplay,
-                        "[BossCharge][StartFailed] reason=InvalidTarget");
+            "[BossCharge][StartFailed] reason=InvalidTarget");
         return false;
     }
 
@@ -2599,9 +2599,9 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
             bossRoomProbeBlockEvent.requestedMove.x * bossRoomProbeBlockEvent.requestedMove.x +
             bossRoomProbeBlockEvent.requestedMove.z * bossRoomProbeBlockEvent.requestedMove.z);
         const float requestedAlongCharge = requestedLength > 0.001f
-                                               ? (bossRoomProbeBlockEvent.requestedMove.x * chargeDirection.x +
-                                                   bossRoomProbeBlockEvent.requestedMove.z * chargeDirection.z) / requestedLength
-                                               : 0.0f;
+            ? (bossRoomProbeBlockEvent.requestedMove.x * chargeDirection.x +
+                bossRoomProbeBlockEvent.requestedMove.z * chargeDirection.z) / requestedLength
+            : 0.0f;
         const uint32_t bossRoomWallLayer = CollisionHelper::ToBit(CollisionLayer::WorldPropsNoRaycast);
         if (!bossRoomProbeBlockEvent.initialOverlap &&
             (bossRoomProbeBlockEvent.hitLayer & bossRoomWallLayer) != 0 &&
@@ -2630,7 +2630,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     const float castDistance = frameMoveDistance + chargeWallCastSafetyMargin;
     const float playerCastRadius = (std::max)(0.05f, radius * GetActiveChargePlayerCastRadiusScale());
     const float justDodgeCastScale = chargeBT.phase2SettingsLatched
-                                         ? chargeJustDodgeCastRadiusScalePhase2 : chargeJustDodgeCastRadiusScale;
+        ? chargeJustDodgeCastRadiusScalePhase2 : chargeJustDodgeCastRadiusScale;
     const float justDodgeCastRadius = (std::max)(0.05f, radius * justDodgeCastScale);
     const float wallCastRadius = (std::max)(0.05f, radius * chargeWallCastRadiusScale);
     DirectX::XMFLOAT3 castOrigin = GetPosition();
@@ -2654,7 +2654,7 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         CollisionLayer::WorldStatic,
         CollisionLayer::WorldProps,
         CollisionLayer::WorldPropsNoRaycast,
-    });
+        });
     const bool wallCastHit = Physics::Instance().SphereCast(
         castOrigin, chargeDirection, castDistance, wallCastRadius, wallHit, wallMask);
     bool wallCandidate = false;
@@ -2672,15 +2672,15 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
     }
 
     Player* hitPlayer = playerCastHit
-                            ? dynamic_cast<Player*>(playerHit.actor)
-                            : nullptr;
+        ? dynamic_cast<Player*>(playerHit.actor)
+        : nullptr;
     const bool playerCandidate =
         hitPlayer && !hitActors.contains(hitPlayer);
     const bool playerIsFirst = playerCandidate &&
         (!wallCandidate || playerHit.distance <= wallHit.distance);
     Player* justDodgePlayer = justDodgeCastHit
-                                  ? dynamic_cast<Player*>(justDodgeHit.actor)
-                                  : nullptr;
+        ? dynamic_cast<Player*>(justDodgeHit.actor)
+        : nullptr;
     const bool justDodgeCandidate = justDodgePlayer && !hitActors.contains(justDodgePlayer);
     const bool justDodgePlayerIsFirst = justDodgeCandidate &&
         (!wallCandidate || justDodgeHit.distance <= wallHit.distance);
@@ -2721,15 +2721,15 @@ ChargeAttackEndReason GruxEnemy::UpdateChargeAttackMovement(float deltaTime, boo
         chargeEndReason = ChargeAttackEndReason::WallHit;
         const float wallHitDistance = (std::max)(0.0f, wallHit.distance);
         const DirectX::XMFLOAT3 impactPosition = wallHit.hasPosition
-                                                     ? wallHit.hitPoint
-                                                     : DirectX::XMFLOAT3{
-                                                         castOrigin.x + chargeDirection.x * wallHitDistance,
-                                                         castOrigin.y + chargeDirection.y * wallHitDistance,
-                                                         castOrigin.z + chargeDirection.z * wallHitDistance };
+            ? wallHit.hitPoint
+            : DirectX::XMFLOAT3{
+                castOrigin.x + chargeDirection.x * wallHitDistance,
+                castOrigin.y + chargeDirection.y * wallHitDistance,
+                castOrigin.z + chargeDirection.z * wallHitDistance };
         const DirectX::XMFLOAT3 impactNormal = wallHit.hasNormal
-                                                   ? wallHit.normal
-                                                   : DirectX::XMFLOAT3{
-                                                       -chargeDirection.x, -chargeDirection.y, -chargeDirection.z };
+            ? wallHit.normal
+            : DirectX::XMFLOAT3{
+                -chargeDirection.x, -chargeDirection.y, -chargeDirection.z };
         SpawnWallImpactEffect(impactPosition, impactNormal);
         Time::SetSlow(0.0f, 0.05f);
         StopChargeAttackMovement();
@@ -2982,7 +2982,7 @@ void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float not
         return;
     const float distanceError = context.xzDistance - fastComboDesiredAttackDistance;
     const float stepDistance = std::clamp(distanceError * fastComboStepInRatio,
-                                          0.0f, fastComboMaxStepInDistance[stage]);
+        0.0f, fastComboMaxStepInDistance[stage]);
     const float notifyDuration = notifyEndTime - notifyStartTime;
     const float calculatedSpeed = notifyDuration > 0.001f ? stepDistance / notifyDuration : 0.0f;
     const float appliedSpeed = (std::min)(calculatedSpeed, fastComboStepInMaxSpeed);
@@ -2990,7 +2990,7 @@ void GruxEnemy::BeginFastComboStepIn(int stage, float notifyStartTime, float not
         return;
     fastComboStepInActive = true;
     characterMovementComponent->AddForcedMove(context.directionToPlayer, appliedSpeed,
-                                              notifyDuration);
+        notifyDuration);
 }
 bool GruxEnemy::IsFastComboMotionWarpNotify(const AnimationNotifyState& state) const
 {
@@ -3021,8 +3021,8 @@ bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, floa
     const float baseZ = bossPosition.z - playerPosition.z;
     const float baseLength = std::sqrt(baseX * baseX + baseZ * baseZ);
     const DirectX::XMFLOAT3 baseDirection = baseLength > FLT_EPSILON
-                                                ? DirectX::XMFLOAT3{ baseX / baseLength, 0.0f, baseZ / baseLength }
-                                                : GetForward();
+        ? DirectX::XMFLOAT3{ baseX / baseLength, 0.0f, baseZ / baseLength }
+    : GetForward();
     static thread_local std::mt19937 randomEngine{ std::random_device{}() };
     std::uniform_real_distribution<float> distanceDistribution(
         (std::min)(minDistance, maxDistance), (std::max)(minDistance, maxDistance));
@@ -3056,9 +3056,7 @@ bool GruxEnemy::FindAttackSetupTarget(float minDistance, float maxDistance, floa
     return false;
 }
 
-bool GruxEnemy::ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPosition,
-                                               const DirectX::XMFLOAT3& desiredTarget, DirectX::XMFLOAT3& outResolvedTarget,
-                                               bool& outPathBlocked) const
+bool GruxEnemy::ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPosition, const DirectX::XMFLOAT3& desiredTarget, DirectX::XMFLOAT3& outResolvedTarget, bool& outPathBlocked) const
 {
     outResolvedTarget = desiredTarget;
     outPathBlocked = false;
@@ -3071,7 +3069,7 @@ bool GruxEnemy::ResolveBossRoomPositioningMove(const DirectX::XMFLOAT3& startPos
     const float probeOriginY = startPosition.y + (std::max)(1.0f, probeRadius + 0.05f);
     DarkStage::BossRoomHorizontalMoveResult result;
     if (!stage->ResolveBossRoomHorizontalMove(startPosition, desiredTarget,
-                                              probeOriginY, probeRadius, result) || !result.valid)
+        probeOriginY, probeRadius, result) || !result.valid)
         return false;
     outResolvedTarget = result.resolvedTarget;
     outPathBlocked = result.pathBlocked;
@@ -3084,10 +3082,10 @@ void GruxEnemy::InitializeSkeletalMeshAndAnimations(const std::string& parentNam
     skeletalMeshComponent->SetModel("./Data/Models/Characters/GruxQilin/boss.gltf", false, true);
     const std::weak_ptr<GruxEnemy> roarPoseOwner = std::static_pointer_cast<GruxEnemy>(shared_from_this());
     skeletalMeshComponent->SetRenderLocalYOffsetProvider("pelvis", [roarPoseOwner]()
-    {
-        const auto owner = roarPoseOwner.lock();
-        return owner ? owner->GetRoarRenderFootOffset() : 0.0f;
-    });
+        {
+            const auto owner = roarPoseOwner.lock();
+            return owner ? owner->GetRoarRenderFootOffset() : 0.0f;
+        });
     skeletalMeshComponent->plusAlphaCBuffer->data.objectType = ObjectType::Enemy;   // オブジェクトの種類を Enemy に設定
     skeletalMeshComponent->plusAlphaCBuffer->data.emissionPower = 6.6f;   // 目玉の自己発光の強さを設定
     skeletalMeshComponent->plusAlphaCBuffer->data.cpuColor = { 0.9f,0.08f,0.08f,1.0f };   // 目玉の色を赤にしてみる
@@ -3121,17 +3119,17 @@ void GruxEnemy::InitializeSkeletalMeshAndAnimations(const std::string& parentNam
 
     // 第二形態のテクスチャをロードする
     const auto loadPhase2BaseColor = [this](const char* materialName, const std::wstring& filename)
-    {
-        skeletalMeshComponent->LoadPhase2BaseColorTexture(materialName, filename);
-    };
+        {
+            skeletalMeshComponent->LoadPhase2BaseColorTexture(materialName, filename);
+        };
     loadPhase2BaseColor("M_Grux_Qilin_Torso",
-                        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Torso_BaseColor_Phase2.DDS");
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Torso_BaseColor_Phase2.DDS");
     loadPhase2BaseColor("M_Grux_Qilin_Gear",
-                        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Gear_BaseColor_Phase2.png");
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Gear_BaseColor_Phase2.png");
     loadPhase2BaseColor("M_Grux_Qilin_Head",
-                        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Head_BaseColor_Phase2.DDS");
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_Head_BaseColor_Phase2.DDS");
     loadPhase2BaseColor("M_Grux_Qilin_LegsHands",
-                        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_LegsHands_BaseColor_Phase2.DDS");
+        L"./Data/Models/Characters/GruxQilin/M_Grux_Qilin_LegsHands_BaseColor_Phase2.DDS");
 
     // アニメーションコントローラーを作成
 
@@ -3325,8 +3323,8 @@ void GruxEnemy::UpdateHpBar(const float uiDeltaTime)
         else
         {
             const float followSpeed = useRushDelayedHpFollowSpeed
-                                          ? delayedHpRushFollowSpeed
-                                          : delayedHpFollowSpeed;
+                ? delayedHpRushFollowSpeed
+                : delayedHpFollowSpeed;
             delayedHp = (std::max)(currentHp, delayedHp - followSpeed * uiDeltaTime);
             if (delayedHp <= currentHp)
                 useRushDelayedHpFollowSpeed = false;
@@ -3666,23 +3664,23 @@ void GruxEnemy::CreateUI()
 void GruxEnemy::CreateTelegraphMesh(const std::string& parentName)
 {
     const auto configureMesh = [](const std::shared_ptr<StaticMeshComponent>& mesh,
-                                  const char* modelPath, const DirectX::XMFLOAT4& color,
-                                  const bool useAbsoluteTransform = true)
-    {
-        if (!mesh->model)
-            mesh->SetModel(modelPath);
-        if (mesh->model)
-            mesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
-        mesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
-        mesh->SetIsCastShadow(false);
-        mesh->SetIsVisible(false);
-        mesh->SetUsingAbsoluteLocation(useAbsoluteTransform);
-        mesh->SetUsingAbsoluteRotation(useAbsoluteTransform);
-        mesh->SetUsingAbsoluteScale(useAbsoluteTransform);
-        mesh->plusAlphaCBuffer->data.cpuColor = color;
-        mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
-        mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
-    };
+        const char* modelPath, const DirectX::XMFLOAT4& color,
+        const bool useAbsoluteTransform = true)
+        {
+            if (!mesh->model)
+                mesh->SetModel(modelPath);
+            if (mesh->model)
+                mesh->overrideDeferredPipelineName = "chargeTelegraphUnlitForward";
+            mesh->overrideForwardPipelineName = "chargeTelegraphUnlitForward";
+            mesh->SetIsCastShadow(false);
+            mesh->SetIsVisible(false);
+            mesh->SetUsingAbsoluteLocation(useAbsoluteTransform);
+            mesh->SetUsingAbsoluteRotation(useAbsoluteTransform);
+            mesh->SetUsingAbsoluteScale(useAbsoluteTransform);
+            mesh->plusAlphaCBuffer->data.cpuColor = color;
+            mesh->plusAlphaCBuffer->data.emissionPower = 0.0f;
+            mesh->plusAlphaCBuffer->data.objectType = ObjectType::NoLighting;
+        };
 
 
     // Chargeの予兆メッシュ。
@@ -3843,7 +3841,7 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
     outEvaluation.clampedTarget = desiredTarget;
     DirectX::XMFLOAT3 bossRoomTarget{};
     if (ResolveBossRoomPositioningMove(startPosition, desiredTarget, bossRoomTarget,
-                                       outEvaluation.bossRoomPathBlocked))
+        outEvaluation.bossRoomPathBlocked))
     {
         outEvaluation.clampedTarget = bossRoomTarget;
     }
@@ -3851,7 +3849,7 @@ void GruxEnemy::EvaluateClampedPositioningTarget(
     {
         constexpr float maximumMargin =
             (std::min)((bossRoomMaxX - bossRoomMinX) * 0.5f,
-                       (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
+                (bossRoomMaxZ - bossRoomMinZ) * 0.5f) - 0.01f;
         const float requestedMargin = boundaryMarginOverride >= 0.0f ? boundaryMarginOverride : bossRoomSafetyMargin;
         const float margin = std::clamp(requestedMargin, 0.0f, maximumMargin);
         outEvaluation.clampedTarget.x = std::clamp(
@@ -3922,20 +3920,20 @@ GruxEnemy::WeaponHitBoxPoints GruxEnemy::BuildWeaponHitBoxPoints(
     const DirectX::XMFLOAT3& localOffset) const
 {
     const auto offsetPoint = [&localOffset](const std::shared_ptr<SceneComponent>& component)
-    {
-        if (!component)
-            return DirectX::XMFLOAT3{};
-        DirectX::XMVECTOR offset = DirectX::XMLoadFloat3(&localOffset);
-        const DirectX::XMFLOAT4 componentRotation =
-            component->GetComponentWorldTransform().GetRotation();
-        offset = DirectX::XMVector3Rotate(offset,
-                                          DirectX::XMLoadFloat4(&componentRotation));
-        DirectX::XMFLOAT3 worldOffset{};
-        DirectX::XMStoreFloat3(&worldOffset, offset);
-        const DirectX::XMFLOAT3 base = component->GetComponentLocation();
-        return DirectX::XMFLOAT3{ base.x + worldOffset.x, base.y + worldOffset.y,
-            base.z + worldOffset.z };
-    };
+        {
+            if (!component)
+                return DirectX::XMFLOAT3{};
+            DirectX::XMVECTOR offset = DirectX::XMLoadFloat3(&localOffset);
+            const DirectX::XMFLOAT4 componentRotation =
+                component->GetComponentWorldTransform().GetRotation();
+            offset = DirectX::XMVector3Rotate(offset,
+                DirectX::XMLoadFloat4(&componentRotation));
+            DirectX::XMFLOAT3 worldOffset{};
+            DirectX::XMStoreFloat3(&worldOffset, offset);
+            const DirectX::XMFLOAT3 base = component->GetComponentLocation();
+            return DirectX::XMFLOAT3{ base.x + worldOffset.x, base.y + worldOffset.y,
+                base.z + worldOffset.z };
+        };
     return { offsetPoint(root), offsetPoint(middle), offsetPoint(tip) };
 }
 void GruxEnemy::RefreshActiveDangerAreaFromNotify()
@@ -4038,7 +4036,7 @@ GruxEnemy::PositioningMoveResult GruxEnemy::UpdatePositioningTargetMovement(Posi
     runtime.traveledDistance += frameMovement;
     runtime.previousPosition = position;
     runtime.stuckTime = frameMovement < target.stuckMovementThreshold
-                            ? runtime.stuckTime + safeDt : 0.0f;
+        ? runtime.stuckTime + safeDt : 0.0f;
     if (runtime.traveledDistance >= target.maxMoveDistance)
         return PositioningMoveResult::MaxDistanceReached;
     if (runtime.stuckTime >= target.stuckTimeThreshold)
@@ -4388,7 +4386,7 @@ void GruxEnemy::ResetPhase2HpBarPresentation()
     phase2HpBarPresentationFillProgress = 0.0f;
     const auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene());
     ApplyHpBarVisualProfile(gameScene && gameScene->IsBossInFinalPhase()
-                                ? HpBarVisualProfile::Phase2 : HpBarVisualProfile::Phase1);
+        ? HpBarVisualProfile::Phase2 : HpBarVisualProfile::Phase1);
     const float maximumHp = static_cast<float>((std::max)(maxHp, 1));
     if (hpCurrentFillUiComponent) hpCurrentFillUiComponent->SetValue(static_cast<float>((std::max)(hp, 0)), maximumHp);
     if (hpDelayedFillUiComponent) hpDelayedFillUiComponent->SetValue(delayedHp, maximumHp);

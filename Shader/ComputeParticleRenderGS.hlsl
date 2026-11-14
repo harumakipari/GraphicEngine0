@@ -147,25 +147,25 @@ void main(point GS_IN gin[1], inout TriangleStream<PS_IN> output)
             rotationMatrix = mul(localRollMatrix, billbordMatrix);
             break;
         }
-        
         case 1: // StretchedBillboard
         {
-                float3 velocity = particleDataBuffer[particleIndex].velocity;
-                float speed = length(velocity);
-                float3 dir = speed > 1e-5f ? normalize(velocity) : float3(0, 0, 1);
+            float3 velocity = particleDataBuffer[particleIndex].velocity;
+            float speed = length(velocity);
+            float3 dir = speed > 1e-5f ? normalize(velocity) : float3(0, 0, 1);
 
-                float3 camRight = normalize(invView._m00_m01_m02);
-                float3 camUp = normalize(cross(dir, camRight));
-                camRight = normalize(cross(camUp, dir));
+            float3 camRight = normalize(invView._m00_m01_m02);
+            float3 camUp = normalize(cross(dir, camRight));
+            camRight = normalize(cross(camUp, dir));
 
-                rotationMatrix = float4x4(
+            rotationMatrix = float4x4
+            (
             float4(camRight, 0),
             float4(camUp, 0),
             float4(dir, 0),
             float4(0, 0, 0, 1)
             );
                 break;
-            }
+        }
         case 2: // FixedRotation
             rotationMatrix = MatrixRotationRollPitchYaw(particleDataBuffer[particleIndex].rotation.xyz);
             break;
