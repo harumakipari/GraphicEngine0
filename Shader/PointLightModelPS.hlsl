@@ -9,7 +9,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
     float3 N = normalize(pin.wNormal.xyz);
     pout.gBuffer3Normal = float4(N.xyz, objectType); // world 空間
     pout.albedo = float4(1, 1, 1, 1); // 仮。点光源はemissiveで色をつけるからここでは白にしておく
-#if 1
     float n =
     sin(pin.wPosition.y * 15 + elapsedTime * 4) *
     sin(pin.wPosition.x * 10 + elapsedTime * 3);
@@ -59,7 +58,6 @@ GBUFFER_PS_OUT main(VS_OUT pin, bool isFrontFace : SV_IsFrontFace)
 // 外側暗く
     emissive *= lerp(0.4, 1.0, core);
 
-#endif 
     // 元々wは１だったがスカイマップなどの時に使用するため、２は点光源であることを示すフラグ
     pout.emissive = float4(emissive, GBUFFER_FLAG_EMISSIVE);
     pout.material = float4(0.0, 0.0, 0.0, materialType);

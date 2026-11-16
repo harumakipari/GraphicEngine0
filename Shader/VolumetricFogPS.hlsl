@@ -14,12 +14,7 @@ float SunlightRadiance(float3 worldPositon)
     float4 posView = mul(float4(worldPositon, 1.0), view);
     float depthViewSpace = posView.z;
 
-    //// ndc -> world space
-    //float4 positionWorldSpace = mul(positionNdc, inverseViewProjection);
-    //positionWorldSpace = positionWorldSpace / positionWorldSpace.w;
-    
     // View 空間での深度を使って、どのカスケードに属するかを判定
-    //float depthViewSpace = positionViewSpace.z;
     int cascadeIndex = -1;
     for (uint layer = 0; layer < 4; ++layer)
     {
@@ -71,8 +66,6 @@ void ApplyHeightFog(float3 position /*world space*/, inout float density)
     // 地面付近 → 濃い
     // 高空→ 薄い
     density *= exp(-(position.y - groundLevel) * fogHeightFalloff);
-    //float height = saturate((fogTopHeight - position.y) / fogTopHeight);
-    //density *= height;
 }
 
 // 太陽方向に伸びる霧（前方散乱）
@@ -113,13 +106,11 @@ float DitheredRayMarch(float2 screenPos, float3 rayStart, float3 rayDir, float r
         float radiance = SunlightRadiance(currentPosition);
         // 霧密度
         float density = fogDensity;
-#if 1
         // ノイズ（霧の揺らぎ）
         const float3 noiseVelocity = normalize(float3(1, 0, 0));
         float3 noiseSamplePosition = frac(currentPosition * noiseScale + noiseVelocity * elapsedTime * timeScale);
         float noise = 0.5 * noise3D.Sample(samplerStates[LINEAR], noiseSamplePosition) + 0.5;
         density *= noise;
-#endif
         // 高さフォグ
         ApplyHeightFog(currentPosition, density);
 
@@ -146,7 +137,6 @@ float DitheredRayMarch(float2 screenPos, float3 rayStart, float3 rayDir, float r
     
     const float cosAngle = dot(normalize(lightDirection.xyz), -rayDir);
     // Mie散乱補正
-    //accumulatedRadiance *= MieScattering(cosAngle, mieScatteringCoef);
     return accumulatedRadiance;
 }
 
@@ -174,11 +164,9 @@ float main(VS_OUT pin) : SV_TARGET
     float rayLength = length(rayDir);
     rayDir /= rayLength;
     
-#if 1
     // 距離制限
     const float maxRayLength = fogCutoffDistance;
     rayLength = min(rayLength, maxRayLength);
-#endif
     // レイマーチ実行
     return DitheredRayMarch(pin.position.xy, rayStart, rayDir, rayLength, pin);
 }

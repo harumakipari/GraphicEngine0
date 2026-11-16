@@ -13,13 +13,6 @@ float4 main(VS_OUT pin) : SV_TARGET
 {
     float2 vel = Velocity.Sample(samplerStates[LINEAR], pin.texcoord).xy;
     float2 historyUv = pin.texcoord - vel;
-#if 0
-    float3 current = CurrentColor.Sample(samplerStates[LINEAR], pin.texcoord);
-    
-
-    float3 history = HistoryColor.Sample(samplerStates[LINEAR], historyUv).rgb;
-    return float4(lerp(current, history, 0.5), 1);
-#else
     uint mipLevel = 0, width, height, numberOfLevel, levels;
     CurrentColor.GetDimensions(mipLevel, width, height, numberOfLevel);
 
@@ -48,9 +41,7 @@ float4 main(VS_OUT pin) : SV_TARGET
 
     float3 historyClamped = clamp(history, minColor, maxColor);
 
-    // ------------------------------
     //Emission ÇéÁÇÈèàóùÇí«â¡
-    // ------------------------------
     float lumCurrent = max(current.r, max(current.g, current.b));
     float lumHistory = max(history.r, max(history.g, history.b));
 
@@ -64,6 +55,5 @@ float4 main(VS_OUT pin) : SV_TARGET
     float3 output = current * 0.1 + historyClamped * 0.9;
 
     return float4(output, 1);
-#endif
 
 }

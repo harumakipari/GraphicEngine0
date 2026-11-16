@@ -47,10 +47,14 @@ float2 SpawnPointFromId(int particleId, float2 screenHalfExtent)
     const float along = lerp(-0.92f, 0.92f, Hash11(id * 4.13f));
     const float outside = particleSpawnOutsideDistance * lerp(0.72f, 1.30f, Hash11(id * 7.91f));
 
-    if (entrance < 0.22f) return float2(-screenHalfExtent.x - outside, along * screenHalfExtent.y);
-    if (entrance < 0.43f) return float2(+screenHalfExtent.x + outside, along * screenHalfExtent.y);
-    if (entrance < 0.63f) return float2(along * screenHalfExtent.x, +screenHalfExtent.y + outside);
-    if (entrance < 0.82f) return float2(along * screenHalfExtent.x, -screenHalfExtent.y - outside);
+    if (entrance < 0.22f)
+        return float2(-screenHalfExtent.x - outside, along * screenHalfExtent.y);
+    if (entrance < 0.43f)
+        return float2(+screenHalfExtent.x + outside, along * screenHalfExtent.y);
+    if (entrance < 0.63f)
+        return float2(along * screenHalfExtent.x, +screenHalfExtent.y + outside);
+    if (entrance < 0.82f)
+        return float2(along * screenHalfExtent.x, -screenHalfExtent.y - outside);
 
     const float cornerX = Hash11(id * 12.57f) < 0.5f ? -1.0f : 1.0f;
     const float cornerY = Hash11(id * 17.29f) < 0.5f ? -1.0f : 1.0f;
@@ -117,7 +121,6 @@ float4 main(VS_OUT pin) : SV_Target
     const float centerFade = smoothstep(centerFadeStart, max(centerFadeEnd, centerFadeStart + 0.001f), elapsedTime);
     const float centerGlow = CENTER_GLOW * centerFade * exp(-dot(p, p) / (0.23f * 0.23f));
     const float light = 1.0f - exp(-(f + centerGlow));
-    const float3 loadingColor = float3(0.001f, 0.003f, 0.008f) +
-        COLOR * light * 0.8f * particleBrightness;
+    const float3 loadingColor = float3(0.001f, 0.003f, 0.008f) + COLOR * light * 0.8f * particleBrightness;
     return float4(loadingColor * saturate(particleFadeOutAlpha), 1.0f);
 }

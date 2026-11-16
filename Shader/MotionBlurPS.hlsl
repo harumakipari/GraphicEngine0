@@ -1,20 +1,20 @@
 #include "MotionBlur.hlsli"
 #include "Sampler.hlsli"
 
-Texture2D<float4> gbuffer_base_color : register(t0); //< ここがシーンバッファに書き換わるので注意
-Texture2D<float4> gbuffer_emissive_color : register(t1);
-Texture2D<float4> gbuffer_normal : register(t2);
-Texture2D<float4> gbuffer_parameter : register(t3);
-Texture2D<float> gbuffer_depth : register(t4);
-Texture2D<float4> gbuffer_velocity : register(t5);
-Texture2D<float4> neighbor_max_velocity : register(t6); //< 近傍最大速度バッファ
+Texture2D<float4> gbufferBaseColor : register(t0); //< ここがシーンバッファに書き換わるので注意
+Texture2D<float4> gbufferEmissiveColor : register(t1);
+Texture2D<float4> gbufferNormal : register(t2);
+Texture2D<float4> gbufferParameter : register(t3);
+Texture2D<float> gbufferDepth : register(t4);
+Texture2D<float4> gbufferVelocity : register(t5);
+Texture2D<float4> neighborMaxVelocity : register(t6); //< 近傍最大速度バッファ
 
 cbuffer MOTION_BLUR_CONSTANT_BUFFER : register(b2)
 {
-    int motion_blur_iteration;
-    float motion_blur_jitter;
-    float motion_blur_exposure_time;
-    float motion_blur_fps_rate;
+    int motionBlurIteration;
+    float motionBlurJitter;
+    float motionBlurExposureTime;
+    float motionBlurFpsRate;
 };
 
 float rand(float t)
@@ -28,25 +28,25 @@ float2 rand2(float2 s)
     return frac(sin(s) * float2(43758.5453123f, 43758.5453123f));
 }
 
-float4 adjust_velocity(float4 velocity)
+float4 AdjustVelocity(float4 velocity)
 {
-    velocity.xy *= motion_blur_exposure_time * motion_blur_fps_rate;
+    velocity.xy *= motionBlurExposureTime * motionBlurFpsRate;
     return velocity;
 }
 
-float calc_soft_depth_compare(float za, float zb)
+float CalcSoftDepthCompare(float za, float zb)
 {
     static const float SoftDepthExtend = 0.1f;
     return saturate(1.0f - (za - zb) / SoftDepthExtend);
 }
 
-float calc_cone(float L, float2 V)
+float CalcCone(float L, float2 V)
 {
     float ret = 1.0f - (L / length(V));
     return saturate(ret);
 }
 
-float calc_cylinder(float L, float2 V)
+float CalcCylinder(float L, float2 V)
 {
     float lv = length(V);
     return 1.0f - smoothstep(0.95f * lv, 1.05f * lv, L);
@@ -56,44 +56,41 @@ float4 main(VS_OUT pin) : SV_TARGET
 {
 #define FLT_EPS 1.19209e-07f
 
-    float2 gbuffer_texcoord = pin.texCoord.xy;
+    float2 gbufferTexcoord = pin.texCoord.xy;
 
     //  GBufferテクスチャから情報をデコード
-    float3 baseColor = gbuffer_base_color.SampleLevel(samplerStates[POINT], gbuffer_texcoord, 0);
-    float linear_depth = gbuffer_depth.SampleLevel(samplerStates[POINT], gbuffer_texcoord, 0);
+    float3 baseColor = gbufferBaseColor.SampleLevel(samplerStates[POINT], gbufferTexcoord, 0);
+    float linearDepth = gbufferDepth.SampleLevel(samplerStates[POINT], gbufferTexcoord, 0);
 
     uint width, height;
-    gbuffer_base_color.GetDimensions(width, height);
-    const float2 tex_size = float2((float) width, (float) height);
-    const float2 HalfPixel = float2(0.5f, 0.5f);
-    const float HalfPixelLength = length(HalfPixel);
+    gbufferBaseColor.GetDimensions(width, height);
+    const float2 texSize = float2((float) width, (float) height);
+    const float2 halfPixel = float2(0.5f, 0.5f);
+    const float halfPixelLength = length(halfPixel);
 
     float4 color = float4(baseColor, 1);
-
-    //float4 tVn = adjust_velocity(neighbor_max_velocity.SampleLevel(motion_blur_sampler_state, pin.texCoord.xy, 0));
     float2 Vn = float2(0, 0);
-    //float2 Vn = ReconstVelocity(tVn.xy);
 
     //  速度が小さい場合は無視
-    if (length(Vn) >= HalfPixelLength + FLT_EPS)
+    if (length(Vn) >= halfPixelLength + FLT_EPS)
     {
-        float2 X = pin.texCoord.xy * tex_size;
+        float2 X = pin.texCoord.xy * texSize;
         int3 nX = int3((int) X.x, (int) X.y, 0);
         
-        float4 tVx = adjust_velocity(gbuffer_velocity.Load(nX));
+        float4 tVx = AdjustVelocity(gbufferVelocity.Load(nX));
         float2 Vx = ReconstVelocity(tVx.xy);
-        float Zx = linear_depth;
+        float Zx = linearDepth;
 
-        float weight = 1.0f / max(length(Vx), HalfPixelLength);
+        float weight = 1.0f / max(length(Vx), halfPixelLength);
         color *= weight;
 
         float2 random_value = rand2(pin.texCoord.xy);
-        float jitter = ((random_value.x + random_value.y) * 2.0f - 1.0f) * motion_blur_jitter;
+        float jitter = ((random_value.x + random_value.y) * 2.0f - 1.0f) * motionBlurJitter;
 
         //  速度ベクトル方向にブラーをかける
-        int ignore = (motion_blur_iteration - 1) / 2;
+        int ignore = (motionBlurIteration - 1) / 2;
 	    [loop]
-        for (int i = 0; i < motion_blur_iteration; ++i)
+        for (int i = 0; i < motionBlurIteration; ++i)
         {
             if (i == ignore)
                 continue;
@@ -105,21 +102,21 @@ float4 main(VS_OUT pin) : SV_TARGET
                 Va = Vx;
             }
 
-            float t = lerp(-1.0f, 1.0f, ((float) i + jitter) / motion_blur_iteration);
-            float2 Y = X + Va * t + HalfPixel;
+            float t = lerp(-1.0f, 1.0f, ((float) i + jitter) / motionBlurIteration);
+            float2 Y = X + Va * t + halfPixel;
             int3 nY = int3((int) Y.x, (int) Y.y, 0);
 
-            float Zy = gbuffer_depth.Load(nY);
+            float Zy = gbufferDepth.Load(nY);
             float2 L = length(X - Y);
 
-            float2 Vy = ReconstVelocity(adjust_velocity(gbuffer_velocity.Load(nY)).xy);
-            float ay = calc_soft_depth_compare(Zx, Zy) * calc_cone(L, Vy)
-						+ calc_soft_depth_compare(Zy, Zx) * calc_cone(L, Vx)
-						+ calc_cylinder(L, Vy)
-                        * calc_cylinder(L, Vx) * 2.0f;
+            float2 Vy = ReconstVelocity(AdjustVelocity(gbufferVelocity.Load(nY)).xy);
+            float ay = CalcSoftDepthCompare(Zx, Zy) * CalcCone(L, Vy)
+						+ CalcSoftDepthCompare(Zy, Zx) * CalcCone(L, Vx)
+						+ CalcCylinder(L, Vy)
+                        * CalcCylinder(L, Vx) * 2.0f;
 
             weight += ay;
-            color += gbuffer_base_color.Load(nY) * ay;
+            color += gbufferBaseColor.Load(nY) * ay;
         }
 
         color /= weight;
