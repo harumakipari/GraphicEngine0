@@ -64,7 +64,7 @@ bool Framework::Initialize()
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleTexture;
     HRESULT hr = LoadTextureFromFile(device, L"./Data/Effect/Textures/particle.png", particleTexture.GetAddressOf(), NULL);
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-    particleSystem = std::make_unique<CoreComputeParticleSystem>(device, 30000, particleTexture);
+    particleSystem = std::make_unique<ComputeParticleSystem>(device, 30000, particleTexture);
 
     // エフェクトマネージャー初期化
     EffectManager::Initialize();

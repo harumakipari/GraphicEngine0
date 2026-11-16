@@ -1,6 +1,5 @@
 #pragma once
 #include "Engine/Effects/EffectManager.h"
-#include "Engine/Effects/CoreComputeParticleSystem.h"
 
 #include "Core/Vector.h"
 #include "Core/CoreColor.h"

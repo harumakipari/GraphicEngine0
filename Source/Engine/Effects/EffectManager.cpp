@@ -568,7 +568,7 @@ void EffectManager::EmitParticle(EffectHandle handle, const XMFLOAT3& pos, const
             //テクスチャSRV取得
             Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> srv = texture.GetSRV();
             //パーティクルシステム生成
-            particleSystems[effectFilePath][texturePath] = std::make_unique<CoreComputeParticleSystem>(Graphics::GetDevice(), maxParticles, srv, emitterData.visualData.textureSplitCount);
+            particleSystems[effectFilePath][texturePath] = std::make_unique<ComputeParticleSystem>(Graphics::GetDevice(), maxParticles, srv, emitterData.visualData.textureSplitCount);
         }
         // ブレンドステート設定
         particleSystems[effectFilePath][texturePath]->blendState = emitterData.visualData.blendState;
@@ -577,7 +577,7 @@ void EffectManager::EmitParticle(EffectHandle handle, const XMFLOAT3& pos, const
         int emitCount = emitterData.emitData.emitCount.GetRandom();
         for (int i = 0; i < emitCount; ++i)
         {
-            CoreComputeParticleSystem::EmitParticleData emitData;
+            ComputeParticleSystem::EmitParticleData emitData;
             emitData.parameter.x = static_cast<float>(emitterData.visualData.renderingMode); // 描画モード設定
             emitData.parameter.y = emitterData.motionData.lifeTime.GetRandom(); // 生存時間設定
 
@@ -929,7 +929,7 @@ void EffectManager::ReInitializeParticleSystem()
     StopAll();
 }
 
-void EffectManager::ApplyShapeEmitterSettings(const EmitterShapeData& s, CoreComputeParticleSystem::EmitParticleData& emitData, int index, int emitCount)
+void EffectManager::ApplyShapeEmitterSettings(const EmitterShapeData& s, ComputeParticleSystem::EmitParticleData& emitData, int index, int emitCount)
 {
     // シェイプエミッタ設定をemitDataに適用
     Vector3 position{};

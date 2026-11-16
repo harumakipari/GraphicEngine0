@@ -1,13 +1,15 @@
 #include "pch.h"
-#include "CoreComputeParticleSystem.h"
+#include "ComputeParticleSystem.h"
 
 
 #ifdef USE_IMGUI
 #include <imgui.h>
 #endif // USE_IMGUI
 
+#include "Graphics/Core/Shader.h"
 
-CoreComputeParticleSystem::CoreComputeParticleSystem(ID3D11Device* device, UINT particlesCount,
+
+ComputeParticleSystem::ComputeParticleSystem(ID3D11Device* device, UINT particlesCount,
     Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shaderResourceView, DirectX::XMUINT2 splitCount)
 {
     HRESULT hr;
@@ -184,7 +186,7 @@ CoreComputeParticleSystem::CoreComputeParticleSystem(ID3D11Device* device, UINT 
     _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 }
 
-CoreComputeParticleSystem::~CoreComputeParticleSystem()
+ComputeParticleSystem::~ComputeParticleSystem()
 {
     initShader.Reset();
     updateShader.Reset();
@@ -195,7 +197,7 @@ CoreComputeParticleSystem::~CoreComputeParticleSystem()
     shaderResourceView.Reset();
 }
 
-void CoreComputeParticleSystem::Emit(const EmitParticleData& data)
+void ComputeParticleSystem::Emit(const EmitParticleData& data)
 {
     if (emitParticles.size() + pendingParticles.size() >= numEmitParticles)
         return;
@@ -210,7 +212,7 @@ void CoreComputeParticleSystem::Emit(const EmitParticleData& data)
     }
 }
 
-void CoreComputeParticleSystem::PixelEmitBegin(ID3D11DeviceContext* immediateContext, float deltaTime)
+void ComputeParticleSystem::PixelEmitBegin(ID3D11DeviceContext* immediateContext, float deltaTime)
 {
     //定数バッファ設定
     {
@@ -245,13 +247,13 @@ void CoreComputeParticleSystem::PixelEmitBegin(ID3D11DeviceContext* immediateCon
         0, ARRAYSIZE(uavs), uavs, nullptr);
 }
 
-void CoreComputeParticleSystem::PixelEmitEnd(ID3D11DeviceContext* immediateContext)
+void ComputeParticleSystem::PixelEmitEnd(ID3D11DeviceContext* immediateContext)
 {
     immediateContext->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr,
         0, 0, nullptr, nullptr);
 }
 
-void CoreComputeParticleSystem::Update(ID3D11DeviceContext* immediateContext, float deltaTime)
+void ComputeParticleSystem::Update(ID3D11DeviceContext* immediateContext, float deltaTime)
 {
     //保留リストのパーティクルの処理
     {
@@ -401,7 +403,7 @@ void CoreComputeParticleSystem::Update(ID3D11DeviceContext* immediateContext, fl
     }
 }
 
-void CoreComputeParticleSystem::Render(ID3D11DeviceContext* immediateContext)
+void ComputeParticleSystem::Render(ID3D11DeviceContext* immediateContext)
 {
     //点描画設定
     immediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
@@ -442,7 +444,7 @@ void CoreComputeParticleSystem::Render(ID3D11DeviceContext* immediateContext)
     immediateContext->CSSetShaderResources(0, 2, clearShaderResourceViews);
 }
 
-void CoreComputeParticleSystem::DrawGUI() const
+void ComputeParticleSystem::DrawGUI() const
 {
 #ifdef USE_IMGUI
     ImGui::Text("EmitParticles:%d", numEmitParticles);

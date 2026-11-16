@@ -7,7 +7,7 @@
 #include <string>
 #include <thread>
 
-#include "Engine/Effects/CoreComputeParticleSystem.h"
+#include "Engine/Effects/ComputeParticleSystem.h"
 #include "Core/Vector.h"
 #include "Core/CoreColor.h"
 
@@ -323,7 +323,7 @@ private:
     static void ReInitializeParticleSystem(); // パーティクルシステム再初期化
 
     // 形状エミッタ設定適用
-    static void ApplyShapeEmitterSettings(const EmitterShapeData& settings, CoreComputeParticleSystem::EmitParticleData& emitData, int index, int emitCount);
+    static void ApplyShapeEmitterSettings(const EmitterShapeData& settings, ComputeParticleSystem::EmitParticleData& emitData, int index, int emitCount);
 
 
     // ランダム値取得
@@ -538,11 +538,10 @@ private:
     //エディタが開いているか
     static inline bool isOpen = false;
 
-    // Debug-only override. Restricted to the two Rush effect files in Render().
     static inline bool debugRushParticleDepthTestDisabled = false;
 
     //パーティクルシステム管理用マップ定義
-    using ParticleSystems = std::unordered_map<std::string/*texturePath*/, std::unique_ptr<CoreComputeParticleSystem>>;
+    using ParticleSystems = std::unordered_map<std::string/*texturePath*/, std::unique_ptr<ComputeParticleSystem>>;
 
     //パーティクルシステムリスト
     static inline std::unordered_map<std::string/*effectFilePath*/, ParticleSystems> particleSystems;

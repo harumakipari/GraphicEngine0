@@ -285,7 +285,7 @@
     <ClCompile Include="Source\Engine\Debug\Logger.cpp" />
     <ClCompile Include="Source\Engine\Debug\SceneEditor.cpp" />
     <ClCompile Include="Source\Engine\Easing\EasingHandler.cpp" />
-    <ClCompile Include="Source\Engine\Effects\CoreComputeParticleSystem.cpp" />
+    <ClCompile Include="Source\Engine\Effects\ComputeParticleSystem.cpp" />
     <ClCompile Include="Source\Engine\Effects\CurveEditorWidget.cpp" />
     <ClCompile Include="Source\Engine\Effects\EffectEditor.cpp" />
     <ClCompile Include="Source\Engine\Effects\EffectManager.cpp" />
@@ -433,7 +433,7 @@
     <ClInclude Include="Source\Engine\Debug\ScopedTimer.h" />
     <ClInclude Include="Source\Engine\Easing\Easing.h" />
     <ClInclude Include="Source\Engine\Easing\EasingHandler.h" />
-    <ClInclude Include="Source\Engine\Effects\CoreComputeParticleSystem.h" />
+    <ClInclude Include="Source\Engine\Effects\ComputeParticleSystem.h" />
     <ClInclude Include="Source\Engine\Effects\EffectEditor.h" />
     <ClInclude Include="Source\Engine\Effects\CurveEditorWidget.h" />
     <ClInclude Include="Source\Engine\Effects\EffectManager.h" />
@@ -1056,7 +1056,6 @@
     <None Include="Shader\PrimitiveRenderer.hlsli" />
     <None Include="Shader\Sampler.hlsli" />
     <None Include="Shader\ShaderFunctions.hlsli" />
-    <None Include="Shader\ShaderToy.hlsli" />
     <None Include="Shader\SkyMap.hlsli" />
     <None Include="Shader\SolidShapeRenderer.hlsli" />
     <None Include="Shader\sprite.hlsli" />

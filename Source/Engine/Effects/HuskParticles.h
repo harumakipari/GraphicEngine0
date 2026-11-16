@@ -3,12 +3,9 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include <directxmath.h>
-
-#include <vector>
 #include <cstddef>
 
 #include "Graphics/Core/ConstantBuffer.h"
-#include "Graphics/Resource/InterleavedGltfModel.h"
 
 struct husk_particles
 {

@@ -89,6 +89,7 @@ private:
     void UpdatePrisonOpeningBlendToTPS(float deltaTime);
     void FinishPrisonOpeningMovie();
     void FinishBossEntryToBattle();
+    DirectX::XMFLOAT4 CreateLookRotation(const DirectX::XMFLOAT3& eye, const DirectX::XMFLOAT3& target);
 
     DoorMovieState doorMovieState = DoorMovieState::None;
     bool bossEntryExternalBlendActive = false;

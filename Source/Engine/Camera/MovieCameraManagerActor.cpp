@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "MovieCameraManagerActor.h"
+#include <fstream>
+#include <json.hpp>
 
 #include "Engine/Scene/Scene.h"
 #include "Engine/Camera/CameraManager.h"
@@ -9,35 +11,6 @@
 #include "Game/DarkGame/DarkActors/DoorActor.h"
 #include "Game/DarkGame/DarkActors/DarkEnemy/GruxEnemy.h"
 #include "Game/Scenes/GameScene.h"
-#include <fstream>
-#include <json.hpp>
-
-namespace
-{
-    DirectX::XMFLOAT4 CreateDeathWideLookRotation(const DirectX::XMFLOAT3& eye, const DirectX::XMFLOAT3& target)
-    {
-        using namespace DirectX;
-        XMFLOAT3 direction = MathHelper::Subtract(target, eye);
-        if (MathHelper::Length(direction) <= FLT_EPSILON)
-            direction = { 0.0f, 0.0f, 1.0f };
-        else
-            direction = MathHelper::Normalize(direction);
-
-        const float yaw = atan2f(direction.x, direction.z);
-        const float pitch = -asinf(std::clamp(direction.y, -1.0f, 1.0f));
-        const XMVECTOR qYaw = XMQuaternionRotationAxis(
-            XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), yaw);
-        const XMVECTOR right = XMVector3Rotate(
-            XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), qYaw);
-        const XMVECTOR qPitch = XMQuaternionRotationAxis(right, pitch);
-
-        XMFLOAT4 result{};
-        XMStoreFloat4(&result,
-            XMQuaternionNormalize(XMQuaternionMultiply(qPitch, qYaw)));
-        return result;
-    }
-
-}
 
 void MovieCameraManagerActor::Initialize(const Transform& transform)
 {
@@ -199,16 +172,30 @@ void MovieCameraManagerActor::Update(float deltaTime)
         }
         if (gameScene)
         {
-            gameScene->StartBossRoomLerp(0.0f, 1.0f, duration, [&, gruxEnemy]()
+            const std::weak_ptr<MovieCameraManagerActor> managerWeak =
+                std::dynamic_pointer_cast<MovieCameraManagerActor>(shared_from_this());
+            const std::weak_ptr<MovieCameraComponent> movieCameraWeak =
+                movieCameraWeakPtr;
+            gameScene->StartBossRoomLerp(
+                0.0f, 1.0f, duration,
+                [managerWeak, movieCameraWeak, gruxEnemy]()
                 {
-                    if (auto camera = movieCameraWeakPtr.lock())
+                    const auto manager = managerWeak.lock();
+                    if (!manager)
+                        return;
+
+                    if (const auto camera = movieCameraWeak.lock())
                     {
-                        camera->GetOwner()->SetPosition(bossRoomZoomTargetPosition);
-                        camera->GetOwner()->SetQuaternionRotation(bossRoomZoomTargetRotation);
-                        camera->SetFov(DirectX::XMConvertToRadians(bossRoomZoomTargetFovDegree));
+                        camera->GetOwner()->SetPosition(manager->bossRoomZoomTargetPosition);
+                        camera->GetOwner()->SetQuaternionRotation(manager->bossRoomZoomTargetRotation);
+                        camera->SetFov(DirectX::XMConvertToRadians(manager->bossRoomZoomTargetFovDegree));
                     }
-                    gruxEnemy->GetBodyAnimationController()->ResetAnimationRate();
-                    doorMovieState = DoorMovieState::UpPlayerCombat;
+                    if (gruxEnemy)
+                    {
+                        if (const auto controller = gruxEnemy->GetBodyAnimationController())
+                            controller->ResetAnimationRate();
+                    }
+                    manager->doorMovieState = DoorMovieState::UpPlayerCombat;
                 });
         }
         for (auto chandelier : chandelierActors)
@@ -423,6 +410,40 @@ void MovieCameraManagerActor::DrawImGuiDetails()
 #endif
 }
 
+void MovieCameraManagerActor::PlayDoorMovie()
+{
+    bossEntryBattleStarted = false;
+    bossEntryExternalBlendActive = false;
+    if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
+    {
+        gameScene->PrepareTutorialForBossEntry();
+        gameScene->EnterBossRoomLockOnScope();
+    }
+
+    if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
+    {
+        player->StartEvent();
+
+
+        DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
+        player->SetPosition(fixedPosition);
+        player->rotationComponent->SetDirection({ 1.0f,0.0f,0.0f });
+    }
+
+    if (auto cameraManager = GetOwnerScene()->GetCameraManager())
+    {
+        if (!cameraManager->IsUseMovie())
+        {
+            cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+        }
+    }
+    std::string fileName = "door_pre_open.json";
+    auto movieCamera = this->movieCameraWeakPtr.lock();
+    movieCamera->LoadFromJson("./Data/Saves/MovieCameras/" + fileName);
+    movieCamera->Start();
+    doorMovieState = DoorMovieState::DoorPreMovie;
+}
+
 bool MovieCameraManagerActor::PreparePrisonOpeningMovieFirstFrame()
 {
     auto scene = GetOwnerScene();
@@ -440,8 +461,6 @@ bool MovieCameraManagerActor::PreparePrisonOpeningMovieFirstFrame()
     if (!movieCamera->ApplyFirstFrameToOwner())
         return false;
 
-    // Toggle copies the previous render-camera pose into MovieCamera. Reapply
-    // the authored first key so the Opening fade reveals the movie frame.
     if (!cameraManager->IsUseMovie())
         cameraManager->ToggleMovieCamera(GetOwnerConstScene());
     movieCamera->ApplyFirstFrameToOwner();
@@ -528,6 +547,98 @@ bool MovieCameraManagerActor::PlayPrisonOpeningMovie()
     return true;
 }
 
+void MovieCameraManagerActor::SkipPrisonOpeningToGameplay()
+{
+    if (!prisonOpeningMoviePlaying)
+        return;
+
+    const auto scene = GetOwnerScene();
+    if (scene)
+    {
+        if (const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>())
+            jailDoor->SetOpenCompletedSilently();
+
+        if (const auto darkCamera = scene->GetActorManager()->GetActorOfType<DarkCameraActor>())
+        {
+            DarkCameraActor::PrisonOpeningTpsPose target{};
+            if (darkCamera->GetPrisonOpeningTpsPose(target))
+                darkCamera->PreparePrisonOpeningTpsReturn(target);
+        }
+    }
+
+    FinishPrisonOpeningMovie();
+}
+
+void MovieCameraManagerActor::SkipBossEntryToBattle()
+{
+    if (!IsBossEntryMovieActive() || bossEntryBattleStarted)
+        return;
+
+    const auto scene = GetOwnerScene();
+    if (!scene)
+        return;
+
+    const auto actorManager = scene->GetActorManager();
+    const auto gameScene = dynamic_cast<GameScene*>(scene);
+    const auto player = actorManager->GetActorOfType<Player>();
+    const auto gruxEnemy = actorManager->GetActorOfType<GruxEnemy>();
+    const auto darkCamera = actorManager->GetActorOfType<DarkCameraActor>();
+
+    if (const auto doorActor = actorManager->GetActorOfType<DoorLargeActor>())
+    {
+        doorActor->Closed();
+        doorActor->CompleteInteraction();
+    }
+
+    if (gameScene)
+    {
+        gameScene->CancelBossRoomLerp();
+        gameScene->SetBossRoomLerpFactor(1.0f);
+    }
+
+    if (const auto movieCamera = movieCameraWeakPtr.lock())
+    {
+        movieCamera->SetOnMovieStart(nullptr);
+        movieCamera->Stop();
+    }
+    if (const auto cameraManager = scene->GetCameraManager(); cameraManager && cameraManager->IsUseMovie())
+        cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+
+    if (player)
+    {
+        player->SetPosition({ -1.3f, -0.1f, 11.24f });
+        player->SetEulerRotation({ 0.0f, 90.0f, 0.0f });
+        player->PlayBodyAnimation("Idle", true);
+    }
+    if (gruxEnemy)
+    {
+        gruxEnemy->SetEulerRotation({ 0.0f, -90.0f, 0.0f });
+        gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false);
+        if (const auto controller = gruxEnemy->GetBodyAnimationController())
+            controller->ResetAnimationRate();
+        gruxEnemy->StartGruxNamePerform(1.0f, 1.0f, 0.0f);
+    }
+
+    if (darkCamera)
+        darkCamera->SnapToExternalPose(darkCamera->CreateFocusPose());
+
+    FinishBossEntryToBattle();
+}
+
+void MovieCameraManagerActor::PlayMovie(const std::string& file)
+{
+    if (auto cameraManager = GetOwnerScene()->GetCameraManager())
+    {
+        if (!cameraManager->IsUseMovie())
+        {
+            cameraManager->ToggleMovieCamera(GetOwnerConstScene());
+        }
+    }
+    auto movieCamera = this->movieCameraWeakPtr.lock();
+    movieCamera->LoadFromJson("./Data/Saves/MovieCameras/" + file);
+    movieCamera->Start();
+}
+
 void MovieCameraManagerActor::HandlePrisonOpeningCameraPathCompleted()
 {
     if (!prisonOpeningMoviePlaying ||
@@ -604,6 +715,176 @@ void MovieCameraManagerActor::UpdatePrisonOpeningPresentation(float deltaTime)
     default:
         break;
     }
+}
+
+void MovieCameraManagerActor::UpdatePrisonOpeningEyeOpening()
+{
+    const auto movieCamera = movieCameraWeakPtr.lock();
+    const auto scene = GetOwnerScene();
+    const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
+    float prisonOpeningCurrentEyeWeight = 0.0f;
+
+    if (!movieCamera || !player || !prisonOpeningEyeOverrideActive ||
+        !player->IsPrisonOpeningEyeOverrideActive())
+    {
+        prisonOpeningEyeOverrideActive = false;
+        prisonOpeningCurrentEyeWeight = 0.0f;
+        return;
+    }
+
+    float prisonOpeningCurrentMovieTime = movieCamera->GetPlaybackElapsedTime();
+    if (!prisonOpeningEyeOpeningEnabled)
+    {
+        player->SetPrisonOpeningEyeClosedWeight(0.0f);
+        EndPrisonOpeningEyeOverride();
+        return;
+    }
+
+    if (!prisonOpeningFaceCloseUpKeyTimeValid)
+    {
+        prisonOpeningCurrentEyeWeight = 1.0f;
+        player->SetPrisonOpeningEyeClosedWeight(prisonOpeningCurrentEyeWeight);
+        return;
+    }
+
+    const float evaluationTime = prisonOpeningEyeOpeningPreview ? prisonOpeningEyeOpeningPreviewTime : prisonOpeningCurrentMovieTime;
+    const float duration = (std::max)(prisonOpeningEyeOpenDuration, FLT_EPSILON);
+    const float normalizedTime = std::clamp((evaluationTime - (prisonOpeningFaceCloseUpKeyTime + prisonOpeningEyeOpenDelay)) / duration, 0.0f, 1.0f);
+    const float smoothStep = normalizedTime * normalizedTime * (3.0f - 2.0f * normalizedTime);
+    prisonOpeningCurrentEyeWeight = 1.0f - smoothStep;
+    player->SetPrisonOpeningEyeClosedWeight(prisonOpeningCurrentEyeWeight);
+
+    if (!prisonOpeningEyeOpeningPreview && normalizedTime >= 1.0f)
+        EndPrisonOpeningEyeOverride();
+}
+
+void MovieCameraManagerActor::UpdatePrisonOpeningFaceCloseUpKeyTime()
+{
+    prisonOpeningFaceCloseUpKeyTime = 0.0f;
+    prisonOpeningFaceCloseUpKeyTimeValid = false;
+    const auto movieCamera = movieCameraWeakPtr.lock();
+    if (!movieCamera)
+        return;
+
+    prisonOpeningFaceCloseUpKeyTimeValid =
+        movieCamera->TryGetKeyframeStartTime(
+            PrisonOpeningFaceCloseUpKeyName, prisonOpeningFaceCloseUpKeyTime);
+    if (!prisonOpeningFaceCloseUpKeyTimeValid)
+    {
+        prisonOpeningFaceCloseUpKeyTimeValid =
+            movieCamera->TryGetKeyframeStartTime(
+                PrisonOpeningFaceCloseUpKeyIndex, prisonOpeningFaceCloseUpKeyTime);
+    }
+}
+
+bool MovieCameraManagerActor::ReplayPrisonOpeningMovie()
+{
+    if (!CanReplayPrisonOpeningMovie())
+        return false;
+
+    const auto scene = GetOwnerScene();
+    const auto movieCamera = movieCameraWeakPtr.lock();
+    const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>();
+    if (!movieCamera || !jailDoor)
+        return false;
+
+    movieCamera->LoadFromJson(PrisonOpeningMoviePath);
+    UpdatePrisonOpeningFaceCloseUpKeyTime();
+    if (movieCamera->GetKeyframeCount() < 2)
+        return false;
+
+    EndPrisonOpeningEyeOverride();
+    jailDoor->ResetToClosedForPrisonOpening();
+    doorMovieState = DoorMovieState::None;
+    prisonOpeningState = PrisonOpeningState::None;
+    prisonOpeningJailDoorInteractionRequested = false;
+    prisonOpeningMoviePrepared = false;
+    return PlayPrisonOpeningMovie();
+}
+
+bool MovieCameraManagerActor::CanReplayPrisonOpeningMovie() const
+{
+    const auto scene = GetOwnerScene();
+    const auto gameScene = dynamic_cast<GameScene*>(scene);
+    const auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
+    if (!scene || !gameScene || !cameraManager || scene->IsPaused() ||
+        prisonOpeningMoviePlaying || prisonOpeningMoviePrepared ||
+        cameraManager->IsUseMovie() || cameraManager->IsUseCinematic())
+    {
+        return false;
+    }
+
+    const auto player = scene->GetActorManager()->GetActorOfType<Player>();
+    const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>();
+    return player && jailDoor && !player->IsBossBattle() && player->GetHp() > 0;
+}
+
+void MovieCameraManagerActor::LoadPrisonOpeningEyeSettings()
+{
+    std::ifstream file(PrisonOpeningEyeSettingsPath);
+    if (!file.is_open())
+        return;
+
+    try
+    {
+        nlohmann::json settings;
+        file >> settings;
+        prisonOpeningEyeOpeningEnabled = settings.value("eyeOpeningEnabled", prisonOpeningEyeOpeningEnabled);
+        prisonOpeningEyeOpenDelay = (std::max)(0.0f,
+            settings.value("eyeOpenDelay", prisonOpeningEyeOpenDelay));
+        prisonOpeningEyeOpenDuration = (std::max)(0.01f,
+            settings.value("eyeOpenDuration", prisonOpeningEyeOpenDuration));
+        const int sittingMode = settings.value("sittingMotionMode",
+            static_cast<int>(prisonOpeningSittingMotionMode));
+        prisonOpeningSittingMotionMode = sittingMode == static_cast<int>(PrisonOpeningSittingMotionMode::OriginalSitting)
+            ? PrisonOpeningSittingMotionMode::OriginalSitting : PrisonOpeningSittingMotionMode::StandingPingPong;
+        prisonOpeningSittingPingPongStartTime = (std::max)(0.0f, settings.value("pingPongStartTime", prisonOpeningSittingPingPongStartTime));
+        prisonOpeningSittingPingPongEndTime = (std::max)(prisonOpeningSittingPingPongStartTime + 0.001f, settings.value("pingPongEndTime", prisonOpeningSittingPingPongEndTime));
+        prisonOpeningSittingPingPongSpeed = std::clamp(settings.value("pingPongSpeed", prisonOpeningSittingPingPongSpeed), 0.1f, 2.0f);
+        prisonOpeningSittingToStandingBlendTime = std::clamp(settings.value("sittingToStandingBlendTime", prisonOpeningSittingToStandingBlendTime), 0.0f, 0.5f);
+        prisonOpeningBlendDuration = std::clamp(settings.value("tpsBlendTime", prisonOpeningBlendDuration), 0.1f, 3.0f);
+    }
+    catch (const std::exception& exception)
+    {
+        Logger::Warning(std::string("[PrisonOpeningMovie] Failed to load eye settings: ") + exception.what());
+    }
+}
+
+void MovieCameraManagerActor::SavePrisonOpeningEyeSettings() const
+{
+    std::ofstream file(PrisonOpeningEyeSettingsPath);
+    if (!file.is_open())
+    {
+        Logger::Warning("[PrisonOpeningMovie] Failed to save eye settings.");
+        return;
+    }
+
+    nlohmann::json settings;
+    settings["eyeOpeningEnabled"] = prisonOpeningEyeOpeningEnabled;
+    settings["sittingMotionMode"] = static_cast<int>(prisonOpeningSittingMotionMode);
+    settings["pingPongStartTime"] = prisonOpeningSittingPingPongStartTime;
+    settings["pingPongEndTime"] = prisonOpeningSittingPingPongEndTime;
+    settings["pingPongSpeed"] = prisonOpeningSittingPingPongSpeed;
+    settings["sittingToStandingBlendTime"] = prisonOpeningSittingToStandingBlendTime;
+    settings["tpsBlendTime"] = prisonOpeningBlendDuration;
+    settings["eyeOpenDelay"] = prisonOpeningEyeOpenDelay;
+    settings["eyeOpenDuration"] = prisonOpeningEyeOpenDuration;
+    file << settings.dump(4);
+}
+
+void MovieCameraManagerActor::EndPrisonOpeningEyeOverride()
+{
+    if (!prisonOpeningEyeOverrideActive)
+        return;
+
+    const auto scene = GetOwnerScene();
+    if (const auto player = scene
+        ? scene->GetActorManager()->GetActorOfType<Player>()
+        : nullptr)
+    {
+        player->EndPrisonOpeningEyeOverride();
+    }
+    prisonOpeningEyeOverrideActive = false;
 }
 
 void MovieCameraManagerActor::BeginPrisonOpeningPlayerStanding()
@@ -702,11 +983,10 @@ void MovieCameraManagerActor::UpdatePrisonOpeningBlendToTPS(float deltaTime)
     prisonOpeningBlendElapsed = (std::min)(
         prisonOpeningBlendElapsed + (std::max)(deltaTime, 0.0f), duration);
     const float linearT = prisonOpeningBlendElapsed / duration;
-    // SmoothStep: t * t * (3 - 2t).
     const float t = linearT * linearT * (3.0f - 2.0f * linearT);
 
     using namespace DirectX;
-    const XMFLOAT4 targetRotation = CreateDeathWideLookRotation(target.eye, target.target);
+    const XMFLOAT4 targetRotation = CreateLookRotation(target.eye, target.target);
     const XMVECTOR rotation = XMQuaternionSlerp(
         XMLoadFloat4(&prisonOpeningBlendStartRotation),
         XMLoadFloat4(&targetRotation),
@@ -724,177 +1004,6 @@ void MovieCameraManagerActor::UpdatePrisonOpeningBlendToTPS(float deltaTime)
         FinishPrisonOpeningMovie();
     }
 }
-
-void MovieCameraManagerActor::UpdatePrisonOpeningFaceCloseUpKeyTime()
-{
-    prisonOpeningFaceCloseUpKeyTime = 0.0f;
-    prisonOpeningFaceCloseUpKeyTimeValid = false;
-    const auto movieCamera = movieCameraWeakPtr.lock();
-    if (!movieCamera)
-        return;
-
-    prisonOpeningFaceCloseUpKeyTimeValid =
-        movieCamera->TryGetKeyframeStartTime(
-            PrisonOpeningFaceCloseUpKeyName, prisonOpeningFaceCloseUpKeyTime);
-    if (!prisonOpeningFaceCloseUpKeyTimeValid)
-    {
-        prisonOpeningFaceCloseUpKeyTimeValid =
-            movieCamera->TryGetKeyframeStartTime(
-                PrisonOpeningFaceCloseUpKeyIndex, prisonOpeningFaceCloseUpKeyTime);
-    }
-}
-
-bool MovieCameraManagerActor::CanReplayPrisonOpeningMovie() const
-{
-    const auto scene = GetOwnerScene();
-    const auto gameScene = dynamic_cast<GameScene*>(scene);
-    const auto cameraManager = scene ? scene->GetCameraManager() : nullptr;
-    if (!scene || !gameScene || !cameraManager || scene->IsPaused() ||
-        prisonOpeningMoviePlaying || prisonOpeningMoviePrepared ||
-        cameraManager->IsUseMovie() || cameraManager->IsUseCinematic())
-    {
-        return false;
-    }
-
-    const auto player = scene->GetActorManager()->GetActorOfType<Player>();
-    const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>();
-    return player && jailDoor && !player->IsBossBattle() && player->GetHp() > 0;
-}
-
-bool MovieCameraManagerActor::ReplayPrisonOpeningMovie()
-{
-    if (!CanReplayPrisonOpeningMovie())
-        return false;
-
-    const auto scene = GetOwnerScene();
-    const auto movieCamera = movieCameraWeakPtr.lock();
-    const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>();
-    if (!movieCamera || !jailDoor)
-        return false;
-
-    movieCamera->LoadFromJson(PrisonOpeningMoviePath);
-    UpdatePrisonOpeningFaceCloseUpKeyTime();
-    if (movieCamera->GetKeyframeCount() < 2)
-        return false;
-
-    EndPrisonOpeningEyeOverride();
-    jailDoor->ResetToClosedForPrisonOpening();
-    doorMovieState = DoorMovieState::None;
-    prisonOpeningState = PrisonOpeningState::None;
-    prisonOpeningJailDoorInteractionRequested = false;
-    prisonOpeningMoviePrepared = false;
-    return PlayPrisonOpeningMovie();
-}
-
-void MovieCameraManagerActor::LoadPrisonOpeningEyeSettings()
-{
-    std::ifstream file(PrisonOpeningEyeSettingsPath);
-    if (!file.is_open())
-        return;
-
-    try
-    {
-        nlohmann::json settings;
-        file >> settings;
-        prisonOpeningEyeOpeningEnabled = settings.value("eyeOpeningEnabled", prisonOpeningEyeOpeningEnabled);
-        prisonOpeningEyeOpenDelay = (std::max)(0.0f,
-            settings.value("eyeOpenDelay", prisonOpeningEyeOpenDelay));
-        prisonOpeningEyeOpenDuration = (std::max)(0.01f,
-            settings.value("eyeOpenDuration", prisonOpeningEyeOpenDuration));
-        const int sittingMode = settings.value("sittingMotionMode",
-            static_cast<int>(prisonOpeningSittingMotionMode));
-        prisonOpeningSittingMotionMode = sittingMode == static_cast<int>(PrisonOpeningSittingMotionMode::OriginalSitting)
-            ? PrisonOpeningSittingMotionMode::OriginalSitting : PrisonOpeningSittingMotionMode::StandingPingPong;
-        prisonOpeningSittingPingPongStartTime = (std::max)(0.0f, settings.value("pingPongStartTime", prisonOpeningSittingPingPongStartTime));
-        prisonOpeningSittingPingPongEndTime = (std::max)(prisonOpeningSittingPingPongStartTime + 0.001f, settings.value("pingPongEndTime", prisonOpeningSittingPingPongEndTime));
-        prisonOpeningSittingPingPongSpeed = std::clamp(settings.value("pingPongSpeed", prisonOpeningSittingPingPongSpeed), 0.1f, 2.0f);
-        prisonOpeningSittingToStandingBlendTime = std::clamp(settings.value("sittingToStandingBlendTime", prisonOpeningSittingToStandingBlendTime), 0.0f, 0.5f);
-        prisonOpeningBlendDuration = std::clamp(settings.value("tpsBlendTime", prisonOpeningBlendDuration), 0.1f, 3.0f);
-    }
-    catch (const std::exception& exception)
-    {
-        Logger::Warning(std::string("[PrisonOpeningMovie] Failed to load eye settings: ") + exception.what());
-    }
-}
-
-void MovieCameraManagerActor::SavePrisonOpeningEyeSettings() const
-{
-    std::ofstream file(PrisonOpeningEyeSettingsPath);
-    if (!file.is_open())
-    {
-        Logger::Warning("[PrisonOpeningMovie] Failed to save eye settings.");
-        return;
-    }
-
-    nlohmann::json settings;
-    settings["eyeOpeningEnabled"] = prisonOpeningEyeOpeningEnabled;
-    settings["sittingMotionMode"] = static_cast<int>(prisonOpeningSittingMotionMode);
-    settings["pingPongStartTime"] = prisonOpeningSittingPingPongStartTime;
-    settings["pingPongEndTime"] = prisonOpeningSittingPingPongEndTime;
-    settings["pingPongSpeed"] = prisonOpeningSittingPingPongSpeed;
-    settings["sittingToStandingBlendTime"] = prisonOpeningSittingToStandingBlendTime;
-    settings["tpsBlendTime"] = prisonOpeningBlendDuration;
-    settings["eyeOpenDelay"] = prisonOpeningEyeOpenDelay;
-    settings["eyeOpenDuration"] = prisonOpeningEyeOpenDuration;
-    file << settings.dump(4);
-}
-
-void MovieCameraManagerActor::UpdatePrisonOpeningEyeOpening()
-{
-    const auto movieCamera = movieCameraWeakPtr.lock();
-    const auto scene = GetOwnerScene();
-    const auto player = scene ? scene->GetActorManager()->GetActorOfType<Player>() : nullptr;
-    float prisonOpeningCurrentEyeWeight = 0.0f;
-
-    if (!movieCamera || !player || !prisonOpeningEyeOverrideActive ||
-        !player->IsPrisonOpeningEyeOverrideActive())
-    {
-        prisonOpeningEyeOverrideActive = false;
-        prisonOpeningCurrentEyeWeight = 0.0f;
-        return;
-    }
-
-    float prisonOpeningCurrentMovieTime = movieCamera->GetPlaybackElapsedTime();
-    if (!prisonOpeningEyeOpeningEnabled)
-    {
-        player->SetPrisonOpeningEyeClosedWeight(0.0f);
-        EndPrisonOpeningEyeOverride();
-        return;
-    }
-
-    if (!prisonOpeningFaceCloseUpKeyTimeValid)
-    {
-        prisonOpeningCurrentEyeWeight = 1.0f;
-        player->SetPrisonOpeningEyeClosedWeight(prisonOpeningCurrentEyeWeight);
-        return;
-    }
-
-    const float evaluationTime = prisonOpeningEyeOpeningPreview ? prisonOpeningEyeOpeningPreviewTime : prisonOpeningCurrentMovieTime;
-    const float duration = (std::max)(prisonOpeningEyeOpenDuration, FLT_EPSILON);
-    const float normalizedTime = std::clamp((evaluationTime - (prisonOpeningFaceCloseUpKeyTime + prisonOpeningEyeOpenDelay)) / duration, 0.0f, 1.0f);
-    const float smoothStep = normalizedTime * normalizedTime * (3.0f - 2.0f * normalizedTime);
-    prisonOpeningCurrentEyeWeight = 1.0f - smoothStep;
-    player->SetPrisonOpeningEyeClosedWeight(prisonOpeningCurrentEyeWeight);
-
-    if (!prisonOpeningEyeOpeningPreview && normalizedTime >= 1.0f)
-        EndPrisonOpeningEyeOverride();
-}
-
-void MovieCameraManagerActor::EndPrisonOpeningEyeOverride()
-{
-    if (!prisonOpeningEyeOverrideActive)
-        return;
-
-    const auto scene = GetOwnerScene();
-    if (const auto player = scene
-        ? scene->GetActorManager()->GetActorOfType<Player>()
-        : nullptr)
-    {
-        player->EndPrisonOpeningEyeOverride();
-    }
-    prisonOpeningEyeOverrideActive = false;
-}
-
 void MovieCameraManagerActor::FinishPrisonOpeningMovie()
 {
     if (!prisonOpeningMoviePlaying)
@@ -947,128 +1056,25 @@ void MovieCameraManagerActor::FinishBossEntryToBattle()
         gameScene->StartBossBattle();
 }
 
-void MovieCameraManagerActor::SkipBossEntryToBattle()
+DirectX::XMFLOAT4  MovieCameraManagerActor::CreateLookRotation(const DirectX::XMFLOAT3& eye, const DirectX::XMFLOAT3& target)
 {
-    if (!IsBossEntryMovieActive() || bossEntryBattleStarted)
-        return;
+    using namespace DirectX;
+    XMFLOAT3 direction = MathHelper::Subtract(target, eye);
+    if (MathHelper::Length(direction) <= FLT_EPSILON)
+        direction = { 0.0f, 0.0f, 1.0f };
+    else
+        direction = MathHelper::Normalize(direction);
 
-    const auto scene = GetOwnerScene();
-    if (!scene)
-        return;
+    const float yaw = atan2f(direction.x, direction.z);
+    const float pitch = -asinf(std::clamp(direction.y, -1.0f, 1.0f));
+    const XMVECTOR qYaw = XMQuaternionRotationAxis(
+        XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f), yaw);
+    const XMVECTOR right = XMVector3Rotate(
+        XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f), qYaw);
+    const XMVECTOR qPitch = XMQuaternionRotationAxis(right, pitch);
 
-    const auto actorManager = scene->GetActorManager();
-    const auto gameScene = dynamic_cast<GameScene*>(scene);
-    const auto player = actorManager->GetActorOfType<Player>();
-    const auto gruxEnemy = actorManager->GetActorOfType<GruxEnemy>();
-    const auto darkCamera = actorManager->GetActorOfType<DarkCameraActor>();
-
-    if (const auto doorActor = actorManager->GetActorOfType<DoorLargeActor>())
-    {
-        doorActor->Closed();
-        doorActor->CompleteInteraction();
-    }
-
-    if (gameScene)
-    {
-        gameScene->CancelBossRoomLerp();
-        gameScene->SetBossRoomLerpFactor(1.0f);
-    }
-
-    if (const auto movieCamera = movieCameraWeakPtr.lock())
-    {
-        movieCamera->SetOnMovieStart(nullptr);
-        movieCamera->Stop();
-    }
-    if (const auto cameraManager = scene->GetCameraManager(); cameraManager && cameraManager->IsUseMovie())
-        cameraManager->ToggleMovieCamera(GetOwnerConstScene());
-
-    if (player)
-    {
-        player->SetPosition({ -1.3f, -0.1f, 11.24f });
-        player->SetEulerRotation({ 0.0f, 90.0f, 0.0f });
-        player->PlayBodyAnimation("Idle", true);
-    }
-    if (gruxEnemy)
-    {
-        gruxEnemy->SetEulerRotation({ 0.0f, -90.0f, 0.0f });
-        gruxEnemy->PlayBodyAnimation("TravelMode_Idle_0", true, true, 0.3f, false);
-        if (const auto controller = gruxEnemy->GetBodyAnimationController())
-            controller->ResetAnimationRate();
-        gruxEnemy->StartGruxNamePerform(1.0f, 1.0f, 0.0f);
-    }
-
-    if (darkCamera)
-        darkCamera->SnapToExternalPose(darkCamera->CreateFocusPose());
-
-    FinishBossEntryToBattle();
-}
-void MovieCameraManagerActor::SkipPrisonOpeningToGameplay()
-{
-    if (!prisonOpeningMoviePlaying)
-        return;
-
-    const auto scene = GetOwnerScene();
-    if (scene)
-    {
-        if (const auto jailDoor = scene->GetActorManager()->GetActorOfType<DoorJailActor>())
-            jailDoor->SetOpenCompletedSilently();
-
-        if (const auto darkCamera = scene->GetActorManager()->GetActorOfType<DarkCameraActor>())
-        {
-            DarkCameraActor::PrisonOpeningTpsPose target{};
-            if (darkCamera->GetPrisonOpeningTpsPose(target))
-                darkCamera->PreparePrisonOpeningTpsReturn(target);
-        }
-    }
-
-    FinishPrisonOpeningMovie();
-}
-
-void MovieCameraManagerActor::PlayMovie(const std::string& file)
-{
-    if (auto cameraManager = GetOwnerScene()->GetCameraManager())
-    {
-        if (!cameraManager->IsUseMovie())
-        {
-            cameraManager->ToggleMovieCamera(GetOwnerConstScene());
-        }
-    }
-    auto movieCamera = this->movieCameraWeakPtr.lock();
-    movieCamera->LoadFromJson("./Data/Saves/MovieCameras/" + file);
-    movieCamera->Start();
-}
-
-
-void MovieCameraManagerActor::PlayDoorMovie()
-{
-    bossEntryBattleStarted = false;
-    bossEntryExternalBlendActive = false;
-    if (auto gameScene = dynamic_cast<GameScene*>(GetOwnerScene()))
-    {
-        gameScene->PrepareTutorialForBossEntry();
-        gameScene->EnterBossRoomLockOnScope();
-    }
-
-    if (auto player = GetOwnerScene()->GetActorManager()->GetActorOfType < Player>())
-    {
-        player->StartEvent();
-
-
-        DirectX::XMFLOAT3 fixedPosition = { -7.6f,-0.073f,10.16f };
-        player->SetPosition(fixedPosition);
-        player->rotationComponent->SetDirection({ 1.0f,0.0f,0.0f });
-    }
-
-    if (auto cameraManager = GetOwnerScene()->GetCameraManager())
-    {
-        if (!cameraManager->IsUseMovie())
-        {
-            cameraManager->ToggleMovieCamera(GetOwnerConstScene());
-        }
-    }
-    std::string fileName = "door_pre_open.json";
-    auto movieCamera = this->movieCameraWeakPtr.lock();
-    movieCamera->LoadFromJson("./Data/Saves/MovieCameras/" + fileName);
-    movieCamera->Start();
-    doorMovieState = DoorMovieState::DoorPreMovie;
+    XMFLOAT4 result{};
+    XMStoreFloat4(&result,
+        XMQuaternionNormalize(XMQuaternionMultiply(qPitch, qYaw)));
+    return result;
 }

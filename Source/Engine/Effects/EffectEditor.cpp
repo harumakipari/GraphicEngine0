@@ -1,7 +1,6 @@
 #include "pch.h"
 #define NOMINMAX
 #include "EffectEditor.h"
-#include "Engine/Effects/CurveEditorWidget.h"
 #include <filesystem>
 #ifdef USE_IMGUI
 #include <imgui.h>
@@ -10,6 +9,8 @@
 #include "Graphics/Core/Graphics.h"
 #include "Engine/Utility/JsonFileHandler.h"
 #include "Engine/Utility/Dialog.h"
+#include "Engine/Effects/CurveEditorWidget.h"
+#include "Graphics/Core/RenderState.h"
 
 void EffectEditor::Show()
 {
@@ -105,7 +106,6 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
                 {
                     currentEffectHandle = static_cast<EffectHandle>(emitterIndex);
                 }
-#if 1
                 // 右クリックで削除メニュー表示
                 if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
                 {
@@ -113,22 +113,6 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
                 }
                 if (ImGui::BeginPopup("EffectDataContextMenu"))
                 {
-#if 0
-                    if (ImGui::MenuItem("Delete"))
-                    {
-                        const auto runtimeId = effect.runtimeId;
-                        EffectManager::RemoveActiveEmittersForEffect(runtimeId);
-                        EffectManager::effectData.erase(EffectManager::effectData.begin() + emitterIndex);
-                        // 現在のエフェクトハンドルが削除された場合、無効にする
-                        if (currentEffectHandle == static_cast<EffectHandle>(emitterIndex))
-                        {
-                            currentEffectHandle = -1;
-                        }
-                        ImGui::EndPopup();
-                        ImGui::PopID();
-                        break; // ループを抜けて再描画
-                    }
-#endif // 0
                     if (ImGui::MenuItem("Copy"))
                     {
                         // エフェクトデータをコピー（複製）
@@ -136,7 +120,6 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
                     }
                     ImGui::EndPopup();
                 }
-#endif // 0
                 ImGui::PopID();
             }
 
@@ -247,7 +230,6 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
                             emitterData.visualData.renderingMode = static_cast<EffectManager::RenderingMode>(renderingModeIndex);
                         }
 
-                        // Keep this order aligned one-to-one with BLEND_STATE.
                         const char* blendStateItems[] =
                         {
                             "Opaque",

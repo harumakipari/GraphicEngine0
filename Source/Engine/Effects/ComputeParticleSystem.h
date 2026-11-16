@@ -4,14 +4,10 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include <DirectXMath.h>
-#include <functional>
-
-#include "Engine/Utility/Win32Utils.h"
-#include "Graphics/Core/Shader.h"
 #include "Graphics/Core/RenderState.h"
 
 
-class CoreComputeParticleSystem
+class ComputeParticleSystem
 {
 public:
     BLEND_STATE blendState = BLEND_STATE::ADD;
@@ -89,9 +85,9 @@ public:
 	static constexpr UINT BitonicSortC2Thread = 512;
 
 public:
-	CoreComputeParticleSystem(ID3D11Device* device, UINT particlesCount, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shaderResourceView,
+	ComputeParticleSystem(ID3D11Device* device, UINT particlesCount, Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> shaderResourceView,
 		DirectX::XMUINT2 splitCount = DirectX::XMUINT2(1, 1));
-	~CoreComputeParticleSystem();
+	~ComputeParticleSystem();
 
 	void Emit(const EmitParticleData& data);
 	void PixelEmitBegin(ID3D11DeviceContext* immediateContext, float deltaTime);

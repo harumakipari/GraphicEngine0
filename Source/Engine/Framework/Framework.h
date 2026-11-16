@@ -36,7 +36,7 @@ extern ImWchar glyphRangesJapanese[];
 #include "Graphics/Core/RenderState.h"
 
 #include "Graphics/Sprite/Sprite.h"
-#include "Engine/Effects/CoreComputeParticleSystem.h"
+#include "Engine/Effects/ComputeParticleSystem.h"
 
 #ifndef _DEBUG
 CONST LONG SCREEN_WIDTH{ 1920 };
@@ -243,6 +243,6 @@ private:
 
     RECT windowedRect;
     DWORD windowedStyle;
-    std::unique_ptr<CoreComputeParticleSystem> particleSystem;
+    std::unique_ptr<ComputeParticleSystem> particleSystem;
     std::shared_ptr<Sprite> back;
 };
