@@ -1,5 +1,4 @@
-#ifndef INPUT_SYSTEM_H
-#define INPUT_SYSTEM_H
+#pragma once
 
 #include <Windows.h>
 
@@ -13,31 +12,34 @@
 #include <vector>
 
 
-enum class InputDeviceType { Keyboard, Mouse, Gamepad };
+enum class InputDeviceType:uint8_t
+{
+    Keyboard, Mouse, Gamepad
+};
 
 class InputKey
 {
 protected:
-    int vkey_;
-    float pressTime_ = 0.0f;
-    float oldPressTime_ = 0.0f;
-    InputDeviceType deviceType_;
+    int vkey;
+    float pressTime = 0.0f;
+    float oldPressTime = 0.0f;
+    InputDeviceType deviceType;
 
 public:
-    InputKey(int vKey, InputDeviceType deviceType) : vkey_(vKey), pressTime_(0), oldPressTime_(0), deviceType_(deviceType) {}
+    InputKey(const int vKey, const InputDeviceType deviceType) : vkey(vKey), pressTime(0), oldPressTime(0), deviceType(deviceType) {}
     virtual ~InputKey() = default;
     virtual void Update(float deltaTime);
-    virtual bool IsPressed() const { return pressTime_ > 0; }
-    virtual bool IsTrigger() const { return (oldPressTime_ == 0 && pressTime_ > 0); }
-    virtual bool IsRelease() const { return (pressTime_ == 0 && oldPressTime_ > 0); }
+    virtual bool IsPressed() const { return pressTime > 0; }
+    virtual bool IsTrigger() const { return (oldPressTime == 0 && pressTime > 0); }
+    virtual bool IsRelease() const { return (pressTime == 0 && oldPressTime > 0); }
 
-    virtual InputDeviceType GetDeviceType() const { return deviceType_; }
+    virtual InputDeviceType GetDeviceType() const { return deviceType; }
 };
 
 class Keyboard :public InputKey
 {
 public:
-    Keyboard(int vkey) :InputKey(vkey, InputDeviceType::Keyboard) {}
+    Keyboard(const int vkey) :InputKey(vkey, InputDeviceType::Keyboard) {}
     virtual ~Keyboard() override = default;
     Keyboard(Keyboard&) = delete;
     Keyboard& operator=(Keyboard&) = delete;
@@ -46,32 +48,13 @@ public:
 class Mouse :public InputKey
 {
 public:
-    Mouse(int vkey) :InputKey(vkey, InputDeviceType::Mouse) {}
+    Mouse(const int vkey) :InputKey(vkey, InputDeviceType::Mouse) {}
     virtual ~Mouse() override = default;
     Mouse(Mouse&) = delete;
     Mouse& operator=(Mouse&) = delete;
 };
 
 
-///------------  Gamepad ----------///
-enum class GamepadKey
-{
-    A = XINPUT_GAMEPAD_A,
-    B = XINPUT_GAMEPAD_B,
-    X = XINPUT_GAMEPAD_X,
-    Y = XINPUT_GAMEPAD_Y,
-
-    LB = XINPUT_GAMEPAD_LEFT_SHOULDER,
-    RB = XINPUT_GAMEPAD_RIGHT_SHOULDER,
-
-    Start = XINPUT_GAMEPAD_START,
-    Back = XINPUT_GAMEPAD_BACK,
-
-    DPadUp = XINPUT_GAMEPAD_DPAD_UP,
-    DPadDown = XINPUT_GAMEPAD_DPAD_DOWN,
-    DPadLeft = XINPUT_GAMEPAD_DPAD_LEFT,
-    DPadRight = XINPUT_GAMEPAD_DPAD_RIGHT
-};
 enum class GamePadKeyType :uint8_t
 {
     Button,
@@ -80,15 +63,22 @@ enum class GamePadKeyType :uint8_t
     LeftStick,
     RightStick
 };
-enum class Side { Left, Right };
-enum class Axis { X, Y };
+enum class Side:uint8_t
+{
+    Left, Right
+};
+
+enum class Axis:uint8_t
+{
+    X, Y
+};
 
 class Gamepad :public InputKey
 {
 private:
     GamePadKeyType keyType;
 public:
-    Gamepad(int vkey, GamePadKeyType type = GamePadKeyType::Button) :InputKey(vkey, InputDeviceType::Gamepad), keyType(type) {}
+    Gamepad(const int vkey, const GamePadKeyType type = GamePadKeyType::Button) :InputKey(vkey, InputDeviceType::Gamepad), keyType(type) {}
     virtual ~Gamepad() override = default;
     Gamepad(Gamepad&) = delete;
     Gamepad& operator=(Gamepad&) = delete;
@@ -96,12 +86,22 @@ public:
     void Update(float deltaTime) override;
 };
 
-
-
-enum class DeadZoneMode { IndependentAxes, Circular, None };
-enum class DeviceFlags { All, KeyboardOnly, MouseOnly, GamePadOnly, KeyboardAndMouse, KeyboardAndGamePad, MouseAndGamePad };
-enum class InputStateMask { Press, Trigger, Release };
-enum class Direction { Up, Left, Down, Right, None };
+enum class DeadZoneMode :uint8_t
+{
+    IndependentAxes, Circular, None
+};
+enum class DeviceFlags :uint8_t
+{
+    All, KeyboardOnly, MouseOnly, GamePadOnly, KeyboardAndMouse, KeyboardAndGamePad, MouseAndGamePad
+};
+enum class InputStateMask :uint8_t
+{
+    Press, Trigger, Release
+};
+enum class Direction :uint8_t
+{
+    Up, Left, Down, Right, None
+};
 
 
 class InputSystem
@@ -129,18 +129,7 @@ public:
 
     // 方向スティック状態の取得
     static float GetAxis(Side side, Axis axis) { return mAxis[static_cast<size_t>(side)][static_cast<size_t>(axis)]; }
-    static int GetAxisRaw(Side side, Axis axis) { return static_cast<int>(round(GetAxis(side, axis))); }
-    static Direction GetAxisDirection()
-    {
-        int ax = GetAxisRaw(Side::Left, Axis::X);
-        int ay = GetAxisRaw(Side::Left, Axis::Y);
-        if (ax == 1) { return Direction::Right; }
-        if (ax == -1) { return Direction::Left; }
-        if (ay == 1) { return Direction::Up; }
-        if (ay == -1) { return Direction::Down; }
-
-        return Direction::None;
-    }
+    static int GetAxisRaw(const Side side, const Axis axis) { return static_cast<int>(round(GetAxis(side, axis))); }
 
     static DirectX::XMFLOAT2 GetLeftStick()
     {
@@ -158,53 +147,8 @@ public:
         };
     }
 
-    static bool IsLeftStick(Direction dir)
-    {
-        auto stick = GetLeftStick();
-
-        switch (dir)
-        {
-        case Direction::Up:    return stick.y > 0.5f;
-        case Direction::Down:  return stick.y < -0.5f;
-        case Direction::Left:  return stick.x < -0.5f;
-        case Direction::Right: return stick.x > 0.5f;
-        }
-
-        return false;
-    }
-
-
-    static bool IsRightStick(Direction dir)
-    {
-        auto stick = GetRightStick();
-
-        switch (dir)
-        {
-        case Direction::Up:    return stick.y > 0.5f;
-        case Direction::Down:  return stick.y < -0.5f;
-        case Direction::Left:  return stick.x < -0.5f;
-        case Direction::Right: return stick.x > 0.5f;
-        }
-
-        return false;
-    }
-
-    static DirectX::XMFLOAT2 GetAxisDirectionVector()
-    {
-        int ax = GetAxisRaw(Side::Left, Axis::X);
-        int ay = GetAxisRaw(Side::Left, Axis::Y);
-
-        return { static_cast<float>(ax),static_cast<float>(ay) };
-    }
-
     // マウスカーソルの移動量取得
     static void GetMouseDelta(int& x, int& y) { (x = mousePositionX[0] - mousePositionX[1], y = mousePositionY[0] - mousePositionY[1]); }
-
-    // マウスカーソルのX座標を取得
-    static int GetMousePositionX() { return mousePositionX[0]; }
-
-    // マウスカーソルのY座標を取得
-    static int GetMousePositionY() { return mousePositionY[0]; }
 
     // マウスカーソルの位置を取得
     static DirectX::XMFLOAT2 GetMousePositionScreen()
@@ -215,7 +159,7 @@ public:
         return mousePosition;
     }
 
-    static void SetViewportRect(float x, float y, float w, float h)
+    static void SetViewportRect(const float x, const float y, const float w, const float h)
     {
         viewportX = x;
         viewportY = y;
@@ -231,41 +175,19 @@ public:
         h = viewportH;
     }
 
-
     // ビューポート内のマウスカーソル位置を取得（ビューポート外ならfalseを返す）
     static bool GetMousePositionInViewport(DirectX::XMFLOAT2& out)
     {
         float mx = static_cast<float>(mousePositionX[0]);
         float my = static_cast<float>(mousePositionY[0]);
-
-        if (mx < viewportX || my < viewportY ||
-            mx > viewportX + viewportW ||
-            my > viewportY + viewportH)
+        if (mx < viewportX || my < viewportY || mx > viewportX + viewportW || my > viewportY + viewportH)
         {
             return false;
         }
-
         out.x = mx - viewportX;
         out.y = my - viewportY;
         return true;
     }
-
-    // ビューポート内のマウスカーソル位置を取得（ビューポート外なら0,0を返す）
-    static DirectX::XMFLOAT2 GetMousePositionInViewportOrZero()
-    {
-        DirectX::XMFLOAT2 pos = { 0.0f,0.0f };
-        GetMousePositionInViewport(pos);
-        return pos;
-    }
-
-    // 前回のマウスカーソルX座標取得
-    static int GetOldMousePositionX() { return mousePositionX[1]; }
-
-    // 前回のマウスカーソルY座標取得
-    static int GetOldMousePositionY() { return mousePositionY[1]; }
-
-    // カーソルが表示されているか
-    static bool IsCursolVisible() { return cursolVisible; }
 
     static bool GetMousePositionUI(DirectX::XMFLOAT2& out)
     {
@@ -283,7 +205,6 @@ public:
         float scaleY = vh / DESIGN_H;
         float scale = std::min<float>(scaleX, scaleY);
 
-        // 黒帯補正（今後フルスクリーン対応するなら必須）
         float offsetX = (vw - DESIGN_W * scale) * 0.5f;
         float offsetY = (vh - DESIGN_H * scale) * 0.5f;
 
@@ -297,8 +218,6 @@ public:
     static void RequestRumble(float leftMotorStrength, float rightMotorStrength, float duration);
     static void StopRumble();
 
-    // Movie-only raw gamepad triggers. These are sampled by InputSystem::Update
-    // and intentionally ignore SetInputEnabled, without enabling gameplay input.
     static bool IsAnyGamepadButtonTriggeredRaw()
     {
         return rawGamepadButtonsTriggered != 0 ||
@@ -317,7 +236,7 @@ public:
     }
 
     // 入力を有効化・無効化する
-    static void SetInputEnabled(bool enabled)
+    static void SetInputEnabled(const bool enabled)
     {
         inputEnabled = enabled;
         if (inputEnabled)
@@ -337,33 +256,21 @@ public:
     }
 
     // カーソルの表示非表示を変更
-    static void SetCursorVisible(bool visible)
+    static void SetCursorVisible(const bool visible)
     {
-        cursolVisible = visible;
         int count = 0;
-
         do
         {
             count = ShowCursor(visible);
         } while ((visible && count < 0) || (!visible && count >= 0));
     }
 
-
 public:
     // ゲームパッドが接続されているか
     static bool IsGamepadConnected() { return isGamePadConnected; }
 
-    // アクティブなデバイスを取得
-    static InputDeviceType GetActiveDevice() { return activeDevice; }
-
-    static inline bool isUIUsingMouse = false; // UIがマウスを使用しているかどうか
-
-private:
-    static inline InputDeviceType activeDevice = InputDeviceType::Keyboard;
-
-    friend class Gamepad;
     static XINPUT_STATE GetXInputState() { return state; }
-
+private:
     static inline float mAxis[2][2];
     static inline XINPUT_STATE state;
     static inline WORD rawGamepadButtonsTriggered = 0;
@@ -380,9 +287,6 @@ private:
 
     static inline bool isGamePadConnected = false;
 
-    static inline bool cursolLock = false;
-    static inline bool cursolVisible = true;
-
     static inline float viewportX = 0;
     static inline float viewportY = 0;
     static inline float viewportW = 0;
@@ -395,4 +299,3 @@ private:
     static inline bool inputEnabled = true; // 入力することができるかどうか
 };
 
-#endif // INPUT_SYSTEM_H

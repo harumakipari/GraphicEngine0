@@ -10,7 +10,6 @@
 #include "Graphics/PostProcess/MultipleRenderTargets.h"
 #include "Graphics/Shadow/CascadeShadowMap.h"
 #include "UI/Widgets/Widget.h"
-#include "UI/Font.h"
 
 #include <d3d11.h>
 #include <wrl.h>

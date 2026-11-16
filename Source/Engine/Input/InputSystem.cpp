@@ -86,13 +86,13 @@ static DirectX::XMFLOAT2 GetStick(const XINPUT_GAMEPAD& pad, GamePadKeyType type
 
 void InputKey::Update(float deltaTime)
 {
-    oldPressTime_ = pressTime_;
-    pressTime_ = (static_cast<USHORT>(GetAsyncKeyState(vkey_)) & 0x8000) ? pressTime_ + deltaTime : 0.0f;
+    oldPressTime = pressTime;
+    pressTime = (static_cast<USHORT>(GetAsyncKeyState(vkey)) & 0x8000) ? pressTime + deltaTime : 0.0f;
 }
 
 void Gamepad::Update(float deltaTime)
 {
-    oldPressTime_ = pressTime_;
+    oldPressTime = pressTime;
 
     const XINPUT_STATE& state = InputSystem::GetXInputState();
     const XINPUT_GAMEPAD& pad = state.Gamepad;
@@ -103,7 +103,7 @@ void Gamepad::Update(float deltaTime)
     {
     case GamePadKeyType::Button:
     {
-        pressed = (pad.wButtons & vkey_) != 0;
+        pressed = (pad.wButtons & vkey) != 0;
         break;
     }
 
@@ -125,7 +125,7 @@ void Gamepad::Update(float deltaTime)
         auto stick = GetStick(pad, keyType);
 
         // vkey_ は方向を表す
-        switch (vkey_)
+        switch (vkey)
         {
         case GAMEPAD_L_UP:
         case GAMEPAD_R_UP:
@@ -152,7 +152,7 @@ void Gamepad::Update(float deltaTime)
     }
     }
 
-    pressTime_ = pressed ? pressTime_ + deltaTime : 0.0f;
+    pressTime = pressed ? pressTime + deltaTime : 0.0f;
 }
 
 //  初期化
@@ -199,9 +199,7 @@ void InputSystem::Initialize()
     inputKeys["8"].emplace_back(std::make_unique<Keyboard>('8'));
     inputKeys["9"].emplace_back(std::make_unique<Keyboard>('9'));
 
-
     inputKeys["Space"].emplace_back(std::make_unique<Keyboard>(VK_SPACE));
-    //inputKeys["Space"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_X));
 
     inputKeys["Up"].emplace_back(std::make_unique<Keyboard>(VK_UP));
     inputKeys["W"].emplace_back(std::make_unique<Keyboard>('W'));
@@ -236,10 +234,8 @@ void InputSystem::Initialize()
     inputKeys["Enter"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
     inputKeys["1"].emplace_back(std::make_unique<Keyboard>('1'));
 
-
     inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_LEFT_SHOULDER));    // 左
     inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::LeftTrigger));    // 左
-    //inputKeys["LockOn"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_THUMB));    // 右スティック押し込み
 
     inputKeys["Attack"].emplace_back(std::make_unique<Keyboard>('Z'));
     inputKeys["Attack"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_Y));     // Yボタン
@@ -248,21 +244,11 @@ void InputSystem::Initialize()
     inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::RightTrigger));   // RT
     inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_SHIFT)); // Shiftキー
 
-    //inputKeys["Dodge"].emplace_back(std::make_unique<Keyboard>(VK_RETURN)); // Enterキー
-    //inputKeys["Dodge"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_B));     // Bボタン
-
     inputKeys["Interact"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_A));
     inputKeys["Interact"].emplace_back(std::make_unique<Keyboard>(VK_RETURN));
 
     inputKeys["Jump"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_X));     // Bボタン
     inputKeys["Jump"].emplace_back(std::make_unique<Keyboard>('X'));     // 右
-
-
-    //inputKeys["Z"].emplace_back(std::make_unique<Keyboard>('Z'));
-    //inputKeys["RB"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_SHOULDER));     // 右
-    //inputKeys["RT"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::RightTrigger));
-    //inputKeys["LB"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_LEFT_SHOULDER));     // 左
-    //inputKeys["LT"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::LeftTrigger));
 
     inputKeys["BookRight"].emplace_back(std::make_unique<Gamepad>(XINPUT_GAMEPAD_RIGHT_SHOULDER));     // 右
     inputKeys["BookRight"].emplace_back(std::make_unique<Gamepad>(0, GamePadKeyType::RightTrigger));
@@ -325,10 +311,6 @@ void InputSystem::StopRumble()
 
 void InputSystem::Update(float deltaTime)
 {
-    // UIがマウスを使用しているかどうかのフラグをリセット
-    InputSystem::isUIUsingMouse = false;
-
-
     DWORD xinputResult = XInputGetState(static_cast<DWORD>(slot), &state);
     isGamePadConnected = (xinputResult == ERROR_SUCCESS);
 
@@ -337,10 +319,8 @@ void InputSystem::Update(float deltaTime)
     rawGamepadButtonsPrevious = rawButtons;
     rawGamepadLeftTriggerPressedPrevious = rawGamepadLeftTriggerPressed;
     rawGamepadRightTriggerPressedPrevious = rawGamepadRightTriggerPressed;
-    rawGamepadLeftTriggerPressed = isGamePadConnected &&
-        state.Gamepad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
-    rawGamepadRightTriggerPressed = isGamePadConnected &&
-        state.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+    rawGamepadLeftTriggerPressed = isGamePadConnected && state.Gamepad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
+    rawGamepadRightTriggerPressed = isGamePadConnected && state.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD;
 
     //入力情報の更新
     {
@@ -412,7 +392,7 @@ void InputSystem::Update(float deltaTime)
     }
     // カーソル位置の取得
     POINT cursor;
-    ::GetCursorPos(&cursor);
+    GetCursorPos(&cursor);
     ScreenToClient(Graphics::GetWindowHandle(), &cursor);
 
     // マウス座標更新
@@ -420,70 +400,6 @@ void InputSystem::Update(float deltaTime)
     mousePositionY[1] = mousePositionY[0];
     mousePositionX[0] = (LONG)cursor.x;
     mousePositionY[0] = (LONG)cursor.y;
-
-    //アクティブデバイス判定
-
-#if 0
-    //コントローラー
-    {
-        auto buttons = state.Gamepad.wButtons;
-        auto lx = state.Gamepad.sThumbLX;
-        auto ly = state.Gamepad.sThumbLY;
-        // ボタンが押された or スティックが動いたらアクティブデバイスを切り替え
-        if (buttons != 0 || abs(lx) > XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE || abs(ly) > XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE) {
-            activeDevice = InputDeviceType::Gamepad;
-        }
-    }
-    //キーボード
-    {
-        for (int vk = 0x08; vk <= 0xFE; ++vk) {
-            if (GetAsyncKeyState(vk) & 0x8000) {
-                activeDevice = InputDeviceType::Keyboard;
-            }
-        }
-    }
-    //マウス
-    {
-        if (GetAsyncKeyState(VK_LBUTTON) & 0x8000 ||
-            GetAsyncKeyState(VK_RBUTTON) & 0x8000 ||
-            mousePositionX[0] != mousePositionX[1] ||
-            mousePositionY[0] != mousePositionY[1]) {
-            activeDevice = InputDeviceType::Mouse;
-        }
-    }
-#else
-    // 1. Gamepad
-    {
-        auto buttons = state.Gamepad.wButtons;
-        auto lx = state.Gamepad.sThumbLX;
-        auto ly = state.Gamepad.sThumbLY;
-
-        if (buttons != 0 ||
-            abs(lx) > XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE ||
-            abs(ly) > XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE)
-        {
-            activeDevice = InputDeviceType::Gamepad;
-        }
-    }
-
-    // 2. Keyboard（Updateの中で検知済みなのでスキャンしない）
-
-    // ※キー更新中にこれを入れれば良い：
-    // if(key->GetDeviceType()==Keyboard && key->IsPressedRaw()) activeDevice = Keyboard;
-
-    // 3. Mouse
-    {
-        if (GetAsyncKeyState(VK_LBUTTON) & 0x8000 ||
-            GetAsyncKeyState(VK_RBUTTON) & 0x8000 ||
-            mousePositionX[0] != mousePositionX[1] ||
-            mousePositionY[0] != mousePositionY[1])
-        {
-            activeDevice = InputDeviceType::Mouse;
-        }
-    }
-
-
-#endif // 0
 }
 
 bool InputSystem::GetInputState(const std::string& action, InputStateMask state, DeviceFlags flag)

@@ -187,11 +187,9 @@ float3 main(VS_OUT pin) : SV_TARGET
 	// roughness減衰（単純エネルギー近似）
     visibility = lerp(visibility, 0, roughness * roughness);
 
-
     // フレネル＋色取得
     float fresnel = saturate(FSchlick(0.04, max(0, dot(reflection, normalView.xyz))));
     float3 reflectionColor = colorTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], uv.xy).rgb;
     reflectionColor = fresnel * reflectionColor * visibility * reflectionIntensity;
-
     return reflectionColor;
 }

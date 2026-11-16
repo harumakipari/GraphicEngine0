@@ -109,9 +109,6 @@ void UIButtonComponent::Update(const float dt)
     {
         Scene::GetCurrentScene()->GetUIManager()->SetMouseCaptured(true);
 
-        InputSystem::isUIUsingMouse = true;
-
-
         // マウスカーソルを取得
         if (InputSystem::GetInputState("MouseLeft"))
         {// 左ボタンを押している間
