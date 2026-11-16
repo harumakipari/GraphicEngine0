@@ -2,10 +2,6 @@
 #include "ComputeParticleSystem.h"
 
 
-#ifdef USE_IMGUI
-#include <imgui.h>
-#endif // USE_IMGUI
-
 #include "Graphics/Core/Shader.h"
 
 
@@ -58,7 +54,7 @@ ComputeParticleSystem::ComputeParticleSystem(ID3D11Device* device, UINT particle
 
         hr = device->CreateShaderResourceView(particleDataBuffer.Get(), nullptr, particleDataShaderResourceView.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        hr = device->CreateUnorderedAccessView(particleDataBuffer.Get(), nullptr, particleDataUnordredAccessView.GetAddressOf());
+        hr = device->CreateUnorderedAccessView(particleDataBuffer.Get(), nullptr, particleDataUnorderedAccessView.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 
@@ -75,7 +71,7 @@ ComputeParticleSystem::ComputeParticleSystem(ID3D11Device* device, UINT particle
 
         hr = device->CreateShaderResourceView(particleHeaderBuffer.Get(), nullptr, particleHeaderShaderResourceView.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-        hr = device->CreateUnorderedAccessView(particleHeaderBuffer.Get(), nullptr, particleHeaderUnordredAccessView.GetAddressOf());
+        hr = device->CreateUnorderedAccessView(particleHeaderBuffer.Get(), nullptr, particleHeaderUnorderedAccessView.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 
@@ -97,7 +93,7 @@ ComputeParticleSystem::ComputeParticleSystem(ID3D11Device* device, UINT particle
         uavDesc.Buffer.FirstElement = 0;
         uavDesc.Buffer.NumElements = numParticles;
         uavDesc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_APPEND;
-        hr = device->CreateUnorderedAccessView(particleAppendConsumeBuffer.Get(), &uavDesc, particleAppendConsumeUnordredAccessView.GetAddressOf());
+        hr = device->CreateUnorderedAccessView(particleAppendConsumeBuffer.Get(), &uavDesc, particleAppendConsumeUnorderedAccessView.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 
@@ -115,7 +111,7 @@ ComputeParticleSystem::ComputeParticleSystem(ID3D11Device* device, UINT particle
         hr = device->CreateShaderResourceView(particleEmitBuffer.Get(), nullptr, particleEmitShaderResourceView.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
 
-        hr = device->CreateUnorderedAccessView(particleEmitBuffer.Get(), nullptr, particleEmitUnordredAccessView.GetAddressOf());
+        hr = device->CreateUnorderedAccessView(particleEmitBuffer.Get(), nullptr, particleEmitUnorderedAccessView.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 
@@ -155,7 +151,7 @@ ComputeParticleSystem::ComputeParticleSystem(ID3D11Device* device, UINT particle
         uavDesc.Buffer.FirstElement = 0;
         uavDesc.Buffer.NumElements = desc.ByteWidth / sizeof(UINT);
         uavDesc.Buffer.Flags = D3D11_BUFFER_UAV_FLAG_RAW;
-        hr = device->CreateUnorderedAccessView(indirectDataBuffer.Get(), &uavDesc, indirectDataUnordredAccessView.GetAddressOf());
+        hr = device->CreateUnorderedAccessView(indirectDataBuffer.Get(), &uavDesc, indirectDataUnorderedAccessView.GetAddressOf());
         _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
     }
 
@@ -240,8 +236,8 @@ void ComputeParticleSystem::PixelEmitBegin(ID3D11DeviceContext* immediateContext
     //ピクセルエミッターの処理
     ID3D11UnorderedAccessView* uavs[] =
     {
-        particleEmitUnordredAccessView.Get(),
-        indirectDataUnordredAccessView.Get(),
+        particleEmitUnorderedAccessView.Get(),
+        indirectDataUnorderedAccessView.Get(),
     };
     immediateContext->OMSetRenderTargetsAndUnorderedAccessViews(0, nullptr, nullptr,
         0, ARRAYSIZE(uavs), uavs, nullptr);
@@ -300,15 +296,15 @@ void ComputeParticleSystem::Update(ID3D11DeviceContext* immediateContext, float 
         if (!oneShotInitialize)
         {
             UINT clearParameter = 0;
-            immediateContext->CSSetUnorderedAccessViews(0, 1, particleAppendConsumeUnordredAccessView.GetAddressOf(), &clearParameter);
+            immediateContext->CSSetUnorderedAccessViews(0, 1, particleAppendConsumeUnorderedAccessView.GetAddressOf(), &clearParameter);
         }
 
         ID3D11UnorderedAccessView* uavs[] =
         {
-            particleDataUnordredAccessView.Get(),
-            particleAppendConsumeUnordredAccessView.Get(),
-            indirectDataUnordredAccessView.Get(),
-            particleHeaderUnordredAccessView.Get(),
+            particleDataUnorderedAccessView.Get(),
+            particleAppendConsumeUnorderedAccessView.Get(),
+            indirectDataUnorderedAccessView.Get(),
+            particleHeaderUnorderedAccessView.Get(),
         };
         immediateContext->CSSetUnorderedAccessViews(0, ARRAYSIZE(uavs), uavs, nullptr);
     }
@@ -442,12 +438,4 @@ void ComputeParticleSystem::Render(ID3D11DeviceContext* immediateContext)
     immediateContext->PSSetShaderResources(0, 2, clearShaderResourceViews);
     immediateContext->GSSetShaderResources(0, 2, clearShaderResourceViews);
     immediateContext->CSSetShaderResources(0, 2, clearShaderResourceViews);
-}
-
-void ComputeParticleSystem::DrawGUI() const
-{
-#ifdef USE_IMGUI
-    ImGui::Text("EmitParticles:%d", numEmitParticles);
-    ImGui::Text("NumParticles:%d", numParticles);
-#endif // USE_IMGUI
 }

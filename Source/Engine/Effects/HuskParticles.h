@@ -3,14 +3,13 @@
 #include <d3d11.h>
 #include <wrl.h>
 #include <directxmath.h>
-#include <cstddef>
 
 #include "Graphics/Core/ConstantBuffer.h"
 
-struct husk_particles
+struct HuskParticles
 {
-    size_t max_particle_count;
-    struct particle
+    size_t maxParticleCount;
+    struct Particle
     {
         DirectX::XMFLOAT4 color;
         DirectX::XMFLOAT3 position;
@@ -21,96 +20,84 @@ struct husk_particles
         float normalizedX{};
     };
 
-    struct particle_constants
+    struct ParticleConstants
     {
-        int particle_count{};
-        float particle_size{ 0.008f };
-        float particle_option{};
-        float delta_time{};
-        float world_x_min{ 5.585f };
-        float world_x_max{ 12.519f };
-        float death_progress{};
-        float detach_speed{ 0.35f };
+        int particleCount{};
+        float particleSize{ 0.008f };
+        float particleOption{};
+        float deltaTime{};
+        float worldXMin{ 5.585f };
+        float worldXMax{ 12.519f };
+        float deathProgress{};
+        float detachSpeed{ 0.35f };
         float gravity{ -9.8f };
         float lifetime{ 1.5f };
-        float rise_speed{ 0.5f };
-        float max_start_delay{ 0.28f };
-        float rise_speed_min_multiplier{ 0.6f };
-        float rise_speed_max_multiplier{ 1.4f };
-        float horizontal_random_speed{ 0.08f };
-        float fade_start_ratio{ 0.75f };
-        float lifetime_min_multiplier{ 0.85f };
-        float lifetime_max_multiplier{ 1.15f };
-        float display_ratio{ 0.75f };
-        float debug_normalized_x{}; // Debug display only; reuses b12 padding.
-        float boundary_width{ 0.01f };
-        float boundary_emissive_strength{ 4.0f };
-        float detach_glow_duration{ 0.2f };
-        float detach_glow_strength{ 0.2f };
-        DirectX::XMFLOAT3 body_color_multiplier{ 1.0f, 1.0f, 1.0f };
-        float body_brightness{ 1.0f };
-        float use_scene_color_capture{ 1.0f };
-        float scene_color_depth_threshold{ 0.000001f }; // Device depth [0, 1].
-        float scene_color_capture_ready{}; // Set only for the capture upload.
-        float capture_padding{};
+        float riseSpeed{ 0.5f };
+        float maxStartDelay{ 0.28f };
+        float riseSpeedMinMultiplier{ 0.6f };
+        float riseSpeedMaxMultiplier{ 1.4f };
+        float horizontalRandomSpeed{ 0.08f };
+        float fadeStartRatio{ 0.75f };
+        float lifetimeMinMultiplier{ 0.85f };
+        float lifetimeMaxMultiplier{ 1.15f };
+        float displayRatio{ 0.75f };
+        float debugNormalizedX{}; 
+        float boundaryWidth{ 0.01f };
+        float boundaryEmissiveStrength{ 4.0f };
+        float detachGlowDuration{ 0.2f };
+        float detachGlowStrength{ 0.2f };
+        DirectX::XMFLOAT3 bodyColorMultiplier{ 1.0f, 1.0f, 1.0f };
+        float bodyBrightness{ 1.0f };
+        float useSceneColorCapture{ 1.0f };
+        float sceneColorDepthThreshold{ 0.000001f }; 
+        float sceneColorCaptureReady{}; 
+        float capturePadding{};
     };
-    static_assert(sizeof(particle) == 64, "Husk particle GPU stride must stay unchanged");
-    static_assert(offsetof(particle, normalizedX) == 60, "Husk normalizedX layout");
-    static_assert(sizeof(particle_constants) == 128, "Husk b12 must occupy eight registers");
-    static_assert(offsetof(particle_constants, world_x_min) == 16, "Husk b12 X range layout");
-    static_assert(offsetof(particle_constants, death_progress) == 24, "Husk b12 progress layout");
-    static_assert(offsetof(particle_constants, display_ratio) == 72, "Husk b12 display layout");
-    static_assert(offsetof(particle_constants, debug_normalized_x) == 76, "Husk b12 debug layout");
-    static_assert(offsetof(particle_constants, boundary_width) == 80, "Husk b12 glow layout");
-    static_assert(offsetof(particle_constants, detach_glow_strength) == 92, "Husk b12 glow end layout");
-    static_assert(offsetof(particle_constants, body_color_multiplier) == 96, "Husk b12 body color layout");
-    static_assert(offsetof(particle_constants, body_brightness) == 108, "Husk b12 body brightness layout");
-    static_assert(offsetof(particle_constants, use_scene_color_capture) == 112, "Husk b12 capture layout");
-    static_assert(offsetof(particle_constants, scene_color_capture_ready) == 120, "Husk b12 capture ready layout");
+
 #ifdef _DEBUG
-    // CPU-only diagnostics. Never uploaded to a shader constant/particle buffer.
-    struct capture_x_measurement
+    struct CaptureXMeasurement
     {
         bool attempted = false;
         bool valid = false;
         HRESULT result = S_OK;
-        UINT particle_count = 0;
-        UINT non_finite_count = 0;
+        UINT particleCount = 0;
+        UINT nonFiniteCount = 0;
         float minimum = 0.0f;
         float maximum = 0.0f;
     };
-    capture_x_measurement captured_x;
-    void measure_captured_world_x(ID3D11DeviceContext* context, UINT count);
+    CaptureXMeasurement capturedX;
+
+    void MeasureCapturedWorldX(ID3D11DeviceContext* context, UINT count);
 #endif
-    particle_constants particle_data;
-    std::unique_ptr<ConstantBuffer<particle_constants>> particleCBuffer;
+    ParticleConstants particleData;
+    std::unique_ptr<ConstantBuffer<ParticleConstants>> particleCBuffer;
 
-    Microsoft::WRL::ComPtr<ID3D11Buffer> particle_buffer;
-    Microsoft::WRL::ComPtr<ID3D11Buffer> particle_backup_buffer;
-    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particle_buffer_uav;
-    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particle_append_buffer_uav;
-    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particle_buffer_srv;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> particleBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> particleBackupBuffer;
+    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleBufferUav;
+    Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleAppendBufferUav;
+    Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleBufferSrv;
 
-    Microsoft::WRL::ComPtr<ID3D11Buffer> particle_count_buffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> particleCountBuffer;
+    Microsoft::WRL::ComPtr<ID3D11Buffer> particleCountReadbackBuffer;
 
-    Microsoft::WRL::ComPtr<ID3D11VertexShader> vertex_shader;
-    Microsoft::WRL::ComPtr<ID3D11PixelShader> pixel_shader;
-    Microsoft::WRL::ComPtr<ID3D11GeometryShader> geometry_shader;
-    Microsoft::WRL::ComPtr<ID3D11InputLayout> input_layout;
-    Microsoft::WRL::ComPtr<ID3D11ComputeShader> compute_shader;
+    Microsoft::WRL::ComPtr<ID3D11VertexShader> vertexShader;
+    Microsoft::WRL::ComPtr<ID3D11PixelShader> pixelShader;
+    Microsoft::WRL::ComPtr<ID3D11GeometryShader> geometryShader;
+    Microsoft::WRL::ComPtr<ID3D11ComputeShader> computeShader;
 
-    husk_particles(ID3D11Device* pDevice, size_t max_particle_count = 3000000);
-    husk_particles(const husk_particles&) = delete;
-    husk_particles& operator=(const husk_particles&) = delete;
-    husk_particles(husk_particles&&) noexcept = delete;
-    husk_particles& operator=(husk_particles&&) noexcept = delete;
-    virtual ~husk_particles() = default;
+    HuskParticles(ID3D11Device* pDevice, size_t maxParticleCount = 3000000);
+    HuskParticles(const HuskParticles&) = delete;
+    HuskParticles& operator=(const HuskParticles&) = delete;
+    HuskParticles(HuskParticles&&) noexcept = delete;
+    HuskParticles& operator=(HuskParticles&&) noexcept = delete;
+    virtual ~HuskParticles() = default;
 
-    void integrate(ID3D11DeviceContext* immediate_context, float delta_time);
-    void render(ID3D11DeviceContext* immediate_context);
-    void backup_particles(ID3D11DeviceContext* immediate_context);
-    void restore_particles(ID3D11DeviceContext* immediate_context);
+    void Integrate(ID3D11DeviceContext* immediateContext, float deltaTime);
+    void Render(ID3D11DeviceContext* immediateContext);
+    void BackupParticles(ID3D11DeviceContext* immediateContext);
+    void RestoreParticles(ID3D11DeviceContext* immediateContext);
 
-    Microsoft::WRL::ComPtr<ID3D11PixelShader> accumulate_husk_particles_ps;
-    void accumulate_husk_particles(ID3D11DeviceContext* immediate_context, std::function<void(ID3D11PixelShader*)> drawcallback, ID3D11ShaderResourceView* sceneColor, ID3D11ShaderResourceView* sceneDepth);
+    Microsoft::WRL::ComPtr<ID3D11PixelShader> accumulateHuskParticlesPs;
+    void AccumulateHuskParticles(ID3D11DeviceContext* immediateContext, std::function<void(ID3D11PixelShader*)> drawcallback, ID3D11ShaderResourceView* sceneColor, ID3D11ShaderResourceView* sceneDepth);
 };

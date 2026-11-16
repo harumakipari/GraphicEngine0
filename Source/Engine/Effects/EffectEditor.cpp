@@ -1,16 +1,12 @@
 #include "pch.h"
 #define NOMINMAX
 #include "EffectEditor.h"
-#include <filesystem>
 #ifdef USE_IMGUI
 #include <imgui.h>
 #endif // USE_IMGUI
 
-#include "Graphics/Core/Graphics.h"
-#include "Engine/Utility/JsonFileHandler.h"
 #include "Engine/Utility/Dialog.h"
 #include "Engine/Effects/CurveEditorWidget.h"
-#include "Graphics/Core/RenderState.h"
 
 void EffectEditor::Show()
 {
@@ -49,6 +45,10 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
             ImGui::Begin("Effect Editor", &isOpen);
         }
 
+        bool hasSelectedEffect =
+            currentEffectHandle >= 0 &&
+            currentEffectHandle < static_cast<EffectHandle>(EffectManager::effectData.size());
+
         // ロード・セーブ・適用・クリアボタン
         {
             // ロード・セーブボタン
@@ -58,13 +58,23 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
                 if (handle > -1)
                 {
                     currentEffectHandle = handle;
+                    hasSelectedEffect =
+                        currentEffectHandle >= 0 &&
+                        currentEffectHandle < static_cast<EffectHandle>(EffectManager::effectData.size());
                 }
             }
             ImGui::SameLine();
+            ImGui::BeginDisabled(!hasSelectedEffect);
             if (ImGui::Button("Save")) { EffectManager::SaveEffectDataWithDialog(currentEffectHandle); }
+            ImGui::EndDisabled();
             ImGui::SameLine(0, 30.0f);
             // クリアボタン
-            if (ImGui::Button("Clear")) { EffectManager::ClearAll(); }
+            if (ImGui::Button("Clear"))
+            {
+                EffectManager::ClearAll();
+                currentEffectHandle = -1;
+                hasSelectedEffect = false;
+            }
 
         }
 
@@ -129,6 +139,7 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
             if (ImGui::Button("Add New Effect Data"))
             {
                 currentEffectHandle = EffectManager::CreateEffectData();
+                hasSelectedEffect = true;
                 // 追加したエフェクトデータの名前を設定
                 EffectManager::effectData[currentEffectHandle].name = "Effect " + std::to_string(currentEffectHandle);
             }
@@ -138,6 +149,7 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
             {
                 EffectManager::ClearEffectData();
                 currentEffectHandle = -1;
+                hasSelectedEffect = false;
             }
         }
 
@@ -149,7 +161,7 @@ void EffectEditor::DrawGUI(bool effectEditorOnlyMode)
         // エミッタエディタ
         {
             // 現在のエフェクトハンドルが有効かチェック
-            if (currentEffectHandle < 0 || currentEffectHandle >= EffectManager::effectData.size())
+            if (!hasSelectedEffect)
             {
                 ImGui::Text("No Emitter Data Selected.");
                 ImGui::End();
@@ -494,25 +506,6 @@ bool EffectEditor::DrawRangeInt(const char* label, Range<int>& range, int speed,
     return changed;
 }
 
-bool EffectEditor::DrawRangeUInt(const char* label, Range<unsigned int>& range, unsigned int speed, unsigned int min, unsigned int max)
-{
-    ImGui::PushID(label);
-    bool changed = false;
-
-    ImGui::Text("%s", label);
-    ImGui::SameLine();
-    ImGui::PushItemWidth(70);
-
-    changed |= ImGui::DragScalar("##Min", ImGuiDataType_U32, &range.min, static_cast<float>(speed), &min, &range.max, "Min:%u");
-    ImGui::SameLine();
-    changed |= ImGui::DragScalar("##Max", ImGuiDataType_U32, &range.max, static_cast<float>(speed), &range.min, &max, "Max:%u");
-
-    ImGui::PopItemWidth();
-    ImGui::PopID();
-
-    return changed;
-}
-
 bool EffectEditor::DrawRangeFloat(const char* label, Range<float>& range, float speed, float min, float max)
 {
     ImGui::PushID(label);
@@ -655,68 +648,6 @@ bool EffectEditor::DrawVector3(const char* label, Vector3& value, float speed, f
     return changed;
 }
 
-void EffectEditor::DrawCurve(const char* label, FloatCurve& curve, bool& dirty)
-{
-    if (ImGui::TreeNode(label))
-    {
-        bool changed = false;
-        curve.Sanitize();
-
-        for (int i = 0; i < curve.points.size(); ++i)
-        {
-            ImGui::PushID(i);
-
-            if (i == 0 || i == curve.points.size() - 1)
-            {
-                ImGui::BeginDisabled();
-                ImGui::DragFloat("Time", &curve.points[i].time, 0.01f, 0.0f, 1.0f);
-                ImGui::EndDisabled();
-            }
-            else
-            {
-                changed |= ImGui::DragFloat("Time", &curve.points[i].time, 0.01f, 0.0f, 1.0f);
-            }
-            changed |= ImGui::DragFloat("Value", &curve.points[i].value, 0.01f, 0.0f, 1.0f);
-
-            if (i > 0 && i < curve.points.size() - 1 && ImGui::Button("Delete"))
-            {
-                curve.points.erase(curve.points.begin() + i);
-                changed = true;
-                ImGui::PopID();
-                break;
-            }
-
-            ImGui::Separator();
-            ImGui::PopID();
-        }
-
-        if (curve.points.size() < FloatCurve::MaxPoints && ImGui::Button("Add Point"))
-        {
-            curve.points.push_back({ 0.5f, 1.0f });
-            changed = true;
-        }
-
-        if (changed)
-        {
-            curve.Sanitize();
-            dirty = true;
-        }
-
-        // カーブのプレビュー表示
-        const int resolution = 64;
-        static float values[resolution];
-
-        for (int i = 0; i < resolution; ++i)
-        {
-            float t = (float)i / (resolution - 1);
-            values[i] = curve.Evaluate(t);
-        }
-
-        ImGui::PlotLines("##CurvePreview", values, resolution, 0, nullptr, 0.0f, 2.0f, ImVec2(200, 80));
-
-        ImGui::TreePop();
-    }
-}
 
 
 #endif // USE_IMGUI

@@ -25,9 +25,7 @@
 //コンストラクタ：ウィンドウハンドルを受け取って初期化
 Framework::Framework(HWND hwnd, BOOL fullscreen) : hwnd(hwnd), fullscreenMode(fullscreen), windowedStyle(static_cast<DWORD>(GetWindowLongPtrW(hwnd, GWL_STYLE)))
 {
-    //#ifndef _DEBUG
     fullscreenMode = true;
-    //#endif
     Graphics::Initialize(hwnd, fullscreenMode);
     InputSystem::Initialize();
     RenderState::Initialize();
@@ -46,14 +44,12 @@ void Framework::RequestExit()
 
 bool Framework::Initialize()
 {
-    //デバイス・デバイスコンテクスト・スワップチェーンの作成
     ID3D11Device* device = Graphics::GetDevice();
     if (!device)
     {
         assert("ModelComponent Error: device is null\n");
     }
 
-    // ShapeRendererを初期化
     ShapeRenderer::Initialize(device);
 
     SceneTransitionManager::Instance().Initialize();
@@ -185,7 +181,6 @@ void Framework::Render(float deltaTime, bool skipRendering) const
     immediateContext->PSSetShaderResources(0, _countof(nullShaderResourceViews), nullShaderResourceViews);
 
     // 画面を初期化する（色を指定してレンダーターゲットをクリア）
-    // 画面クリア
     if (skipRendering)
         Graphics::Clear(0.0f, 0.0f, 0.0f, 1.0f);
     else

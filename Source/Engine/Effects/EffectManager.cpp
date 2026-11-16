@@ -898,37 +898,6 @@ void EffectManager::Render(ID3D11DeviceContext* immediateContext)
 }
 
 
-void EffectManager::SaveAllEffectData()
-{
-    // ファイルダイアログ表示
-    {
-        const char* filter = "JSON Files (*.json)\0*.json\0All Files (*.*)\0*.*\0";
-
-        char filePath[256] = { 0 };
-        DialogResult result = Dialog::SaveFileName(filePath, sizeof(filePath), filter);
-        if (result == DialogResult::OK) {
-            std::filesystem::path path(filePath);
-            // 拡張子が.jsonでない場合、.jsonを追加
-            path.replace_extension(".json");
-
-            // エフェクトデータ保存
-            for (EffectHandle handle = 0; handle < effectData.size(); ++handle)
-            {
-                SaveEffectData(handle, path.string());
-            }
-        }
-        else {
-            return; // キャンセルされた場合は保存を中止
-        }
-    }
-}
-
-void EffectManager::ReInitializeParticleSystem()
-{
-    // パーティクルシステム再初期化
-    StopAll();
-}
-
 void EffectManager::ApplyShapeEmitterSettings(const EmitterShapeData& s, ComputeParticleSystem::EmitParticleData& emitData, int index, int emitCount)
 {
     // シェイプエミッタ設定をemitDataに適用
@@ -1103,14 +1072,6 @@ float EffectManager::Random(float min, float max)
     return MathHelper::RandomRange(min, max);
 }
 
-Vector3 EffectManager::RandomBoxPosition(const Vector3& size)
-{
-    float x = Random(-size.x / 2.0f, size.x / 2.0f);
-    float y = Random(-size.y / 2.0f, size.y / 2.0f);
-    float z = Random(-size.z / 2.0f, size.z / 2.0f);
-    return Vector3(x, y, z);
-}
-
 Vector3 EffectManager::RandomDirection()
 {
     // ランダムな単位ベクトルを生成
@@ -1125,49 +1086,6 @@ Vector3 EffectManager::RandomDirection()
     float y = r * std::sinf(theta);
 
     return Vector3(x, y, z);
-}
-
-Vector3 EffectManager::RandomHemisphereDirection(const Vector3& normal)
-{
-    Vector3 dir = RandomDirection();
-    if (dir.Dot(normal) < 0.0f)
-    {
-        dir = dir * -1.0f;
-    }
-    return dir.Normalize();
-}
-
-Vector3 EffectManager::RandomConeDirection(const Vector3& dir, float coneAngle)
-{
-    // 基準方向を上ベクトルにして回転行列を作成
-    float cosTheta = Random(std::cosf(XMConvertToRadians(coneAngle)), 1.0f);
-    float sinTheta = std::sqrtf(1.0f - cosTheta * cosTheta);
-    float phi = Random(0.0f, DirectX::XM_2PI);
-
-    Vector3 localDir{
-        sinTheta * std::cosf(phi),
-        cosTheta,
-        sinTheta * std::sinf(phi),
-    };
-
-    // dir方向への回転行列を計算
-    Vector3 axis = Vector3(Vector3::up).Cross(dir).Normalize();
-    float angle = std::acosf(Vector3(Vector3::up).Dot(dir.Normalize()));
-
-    // dirが上ベクトルとほぼ平行な場合、回転は不要
-    if (axis.LengthSq() < 1e-6f)
-    {
-        return dir.Normalize();
-    }
-
-    // ロドリゲスの回転公式を使用して回転
-    float cosA = std::cosf(angle);
-    float sinA = std::sinf(angle);
-    Vector3 rotatedDir =
-        localDir * cosA +
-        axis.Cross(localDir) * sinA +
-        axis * (axis.Dot(localDir)) * (1 - cosA);
-    return rotatedDir.Normalize();
 }
 
 void EffectManager::UpdateCurveTexture()

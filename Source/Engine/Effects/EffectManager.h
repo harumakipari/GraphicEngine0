@@ -66,9 +66,9 @@ struct FloatCurve
             point.value = std::clamp(point.value, valueMin, valueMax);
         }
         std::stable_sort(points.begin(), points.end(), [](const CurvePoint& lhs, const CurvePoint& rhs)
-        {
-            return lhs.time < rhs.time;
-        });
+            {
+                return lhs.time < rhs.time;
+            });
 
         std::vector<CurvePoint> uniquePoints;
         uniquePoints.reserve(points.size());
@@ -152,7 +152,6 @@ struct FloatCurve
                 return p0.value + (p1.value - p0.value) * lerpT;
             }
         }
-
         return points.back().value;
     }
 };
@@ -165,7 +164,6 @@ using EffectRuntimeId = std::uint64_t;
 using EmitterRuntimeId = std::uint64_t;
 inline constexpr EffectRuntimeId InvalidEffectRuntimeId = 0;
 inline constexpr EmitterRuntimeId InvalidEmitterRuntimeId = 0;
-
 
 using EffectPlaybackId = std::uint64_t;
 inline constexpr EffectPlaybackId InvalidEffectPlaybackId = 0;
@@ -194,16 +192,13 @@ public:
 
     EffectHandle GetEffectHandle() const
     {
-        return GetState() == EffectLoadState::Ready
-            ? effectHandle.load(std::memory_order_acquire)
-            : -1;
+        return GetState() == EffectLoadState::Ready ? effectHandle.load(std::memory_order_acquire) : -1;
     }
 
     void Cancel()
     {
         EffectLoadState expected = EffectLoadState::Pending;
-        state.compare_exchange_strong(expected, EffectLoadState::Cancelled,
-            std::memory_order_acq_rel, std::memory_order_acquire);
+        state.compare_exchange_strong(expected, EffectLoadState::Cancelled, std::memory_order_acq_rel, std::memory_order_acquire);
     }
 
 private:
@@ -213,17 +208,14 @@ private:
     {
         effectHandle.store(handle, std::memory_order_relaxed);
         EffectLoadState expected = EffectLoadState::Pending;
-        state.compare_exchange_strong(expected, EffectLoadState::Ready,
-            std::memory_order_release, std::memory_order_relaxed);
+        state.compare_exchange_strong(expected, EffectLoadState::Ready, std::memory_order_release, std::memory_order_relaxed);
     }
 
     void MarkFailed()
     {
         EffectLoadState expected = EffectLoadState::Pending;
-        state.compare_exchange_strong(expected, EffectLoadState::Failed,
-            std::memory_order_acq_rel, std::memory_order_acquire);
+        state.compare_exchange_strong(expected, EffectLoadState::Failed, std::memory_order_acq_rel, std::memory_order_acquire);
     }
-
     std::atomic<EffectLoadState> state{ EffectLoadState::Pending };
     std::atomic<EffectHandle> effectHandle{ -1 };
 };
@@ -283,7 +275,6 @@ public:
     // 全エフェクト停止
     static void StopAll();
 
-    // Stops this playback only, including queued and attached emitters.
     static void Stop(EffectPlaybackId id);
     static bool IsPlaying(EffectPlaybackId id);
 
@@ -295,21 +286,13 @@ public:
     static EffectData& GetEffectData(EffectHandle handle);
 
 public:
-
     //初期化
     static void Initialize();
-
     //更新
     static void Update(float deltaTime);
-
     //描画
     static void Render(ID3D11DeviceContext* immediateContext);
 
-
-    //エディタGUI描画
-    //static void DrawGUI();
-
-        //
     static void EmitParticle(EffectHandle handle, const XMFLOAT3& pos, const XMFLOAT3& rot);
 
 private:
@@ -318,31 +301,16 @@ private:
 
     static void ClearEffectData(); // エフェクトデータクリア
 
-    static void SaveAllEffectData(); // 全エフェクトデータ保存
-
-    static void ReInitializeParticleSystem(); // パーティクルシステム再初期化
-
     // 形状エミッタ設定適用
     static void ApplyShapeEmitterSettings(const EmitterShapeData& settings, ComputeParticleSystem::EmitParticleData& emitData, int index, int emitCount);
-
 
     // ランダム値取得
     static float Random(float min, float max);
 
-    // ランダムなボックス内位置取得
-    static Vector3 RandomBoxPosition(const Vector3& size);
-
     // ランダム方向ベクトル取得
     static Vector3 RandomDirection();
 
-    // ランダム上半球方向ベクトル取得
-    static Vector3 RandomHemisphereDirection(const Vector3& normal);
-
-    // 指定角度内のランダム方向ベクトル取得
-    static Vector3 RandomConeDirection(const Vector3& dir, float coneAngle);
-
     static void UpdateCurveTexture();
-
 public:
     // 描画モード
     enum class RenderingMode : uint8_t
@@ -472,7 +440,6 @@ public:
 
     static inline std::vector<EffectAttachInfo> attachedEffects; // エフェクトデータリスト
 
-    // Only Update's thread may access these live emitter containers.
     static inline std::vector<ActiveEmitter> activeEmitters;
 private:
     // JSON から構築済みだが、共有データへは未登録のエフェクト。
@@ -509,20 +476,16 @@ private:
 
     static EffectPlaybackId QueuePlayback(PendingPlayback request);
     static void ConsumePendingPlaybacks();
-    static void StartEmitters(EffectHandle handle, const XMFLOAT3& position,
-        const XMFLOAT3& rotation, const std::shared_ptr<EffectPlaybackState>& playback);
+    static void StartEmitters(EffectHandle handle, const XMFLOAT3& position, const XMFLOAT3& rotation, const std::shared_ptr<EffectPlaybackState>& playback);
 
     static EffectRuntimeId AllocateEffectRuntimeId();
     static EmitterRuntimeId AllocateEmitterRuntimeId();
     static EffectData* FindEffectDataByRuntimeId(EffectRuntimeId runtimeId);
-    static const ParticleEmitterData* FindEmitterDataByRuntimeId(
-        EffectRuntimeId effectRuntimeId, EmitterRuntimeId emitterRuntimeId);
+    static const ParticleEmitterData* FindEmitterDataByRuntimeId(EffectRuntimeId effectRuntimeId, EmitterRuntimeId emitterRuntimeId);
     static EffectHandle FindEffectHandleByRuntimeId(EffectRuntimeId runtimeId);
     static void RemoveActiveEmittersForEffect(EffectRuntimeId runtimeId);
-    static void RemoveActiveEmittersForEmitter(
-        EffectRuntimeId effectRuntimeId, EmitterRuntimeId emitterRuntimeId);
+    static void RemoveActiveEmittersForEmitter(EffectRuntimeId effectRuntimeId, EmitterRuntimeId emitterRuntimeId);
 
-    // The mutex protects only requests and ID lookup, never GPU work.
     static inline std::mutex effectLoadMutex;
     static inline std::vector<PendingEffectLoad> pendingEffectLoads;
     static inline std::thread::id mainThreadId;
@@ -535,8 +498,6 @@ private:
     static inline EmitterRuntimeId nextEmitterRuntimeId = 1;
 private:
     friend class EffectEditor;
-    //エディタが開いているか
-    static inline bool isOpen = false;
 
     static inline bool debugRushParticleDepthTestDisabled = false;
 

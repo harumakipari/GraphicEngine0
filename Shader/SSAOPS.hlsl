@@ -25,12 +25,10 @@ float4 main(float4 svPosition : SV_POSITION, float2 texcoord : TEXCOORD) : SV_TA
     normal = mul(float4(normal, 0), view).xyz; //@world‹óŠÔ -> view‹óŠÔ
 
     float depth = depthTexture.SampleLevel(samplerStates[LINEAR_BORDER_BLACK], texcoord, 0);
-#if 1
     if (depth > 0.9999999)
     {
         discard;
     }
-#endif	
     float4 ndc;
     ndc.xy = UvToNdc(texcoord);
     ndc.z = depth;

@@ -148,9 +148,6 @@ float3 main(VS_OUT pin) : SV_TARGET
             search0 = search1;
         }
     }
-#if 0
-    hit1 = hit0;
-#else
     search1 = search0 + ((search1 - search0) / 2.0);
     steps *= hit0;
     
@@ -179,7 +176,6 @@ float3 main(VS_OUT pin) : SV_TARGET
             search0 = temp;
         }
     }
-#endif
 
     float visibility = hit1;
     visibility *= (1 - max(dot(-normalize(positionFrom.xyz), reflection), 0));
@@ -188,10 +184,8 @@ float3 main(VS_OUT pin) : SV_TARGET
     visibility *= (uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1) ? 0 : 1;
     visibility = clamp(visibility, 0, 1);
 
-#if 1
 	// roughness減衰（単純エネルギー近似）
     visibility = lerp(visibility, 0, roughness * roughness);
-#endif
 
 
     // フレネル＋色取得

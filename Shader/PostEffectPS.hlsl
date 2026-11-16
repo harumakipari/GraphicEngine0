@@ -36,15 +36,8 @@ float4 CalculatedPositionNDC(VS_OUT pin)
 
 float3 ApplyShadowMaps(inout float3 color, in float4 positionWorldSpace)
 {
-#if 1
     float shadowFactor = 0.0;
-#if 1
     const float shadow_depth_bias = 0.001;
-#else
-	// Here we have a maximum bias of 0.01 and a minimum of 0.001 based on the surface's normal and light direction. 
-    const float shadow_depth_bias = max(0.01 * (1.0 - dot(N, L)), 0.001);
-#endif
-
     float4 light_view_position = mul(positionWorldSpace, lightViewProjection); // World to Clip space
     light_view_position = light_view_position / light_view_position.w; // Clip to NDC
     float2 light_view_texcoord = 0;
@@ -54,8 +47,6 @@ float3 ApplyShadowMaps(inout float3 color, in float4 positionWorldSpace)
     float depth = saturate(light_view_position.z - shadow_depth_bias);
 
     float3 shadow_factor = 1.0f;
-    //shadow_factor = shadowMap.SampleCmpLevelZero(comparisionSamplerState, light_view_texcoord, depth).xxx;
-#endif
     return shadow_factor;
 }
 
@@ -88,7 +79,6 @@ float3 ApplyShadow(inout float3 color, in float4 positionWorldSpace, in float de
     positionLightSpace.x = positionLightSpace.x * +0.5 + 0.5;
     positionLightSpace.y = positionLightSpace.y * -0.5 + 0.5;
 
-#if 1
     float NdotL = saturate(dot(normalize(normal), -normalize(lightDir)));
     float slope = 1.0 - NdotL;
 
@@ -98,24 +88,7 @@ float3 ApplyShadow(inout float3 color, in float4 positionWorldSpace, in float de
     float bias = baseBias + slope * slopeBias;
 	// 硬い影
     shadowFactor = cascadedShadowMaps.SampleCmpLevelZero(comparisionSamplerState, float3(positionLightSpace.xy, cascadeIndex), positionLightSpace.z - bias).x;
-#else
-	// ソフトシャドウ
-    const float2 sampleScale = (0.5 * shadow_filter_radius) / shadowMapDimensions;
-    float accum = 0.0;
-    for (uint sample_index = 0; sample_index < shadow_sample_count; ++sample_index)
-    {
-        float2 sampleOffset;
-        float4 seed = float4(randSeed, sample_index);
-        uint random = (uint) (64.0 * frac(sin(dot(seed, float4(12.9898, 78.233, 45.164, 94.673))) * 43758.5453)) % 64;
-        sampleOffset = poisson_samples[random] * sampleScale;
-
-        float2 sample_position = positionLightSpace.xy + sampleOffset;
-        accum += cascadedShadowMaps.SampleCmpLevelZero(comparisionSamplerState, float3(sample_position, cascadeIndex), positionLightSpace.z - shadowDepthBias).x;
-    }
-    shadowFactor = accum / shadow_sample_count;
-#endif
 	
-#if 1
     if (colorizeCascadedLayer)
     {
         const float3 colors[4] =
@@ -127,7 +100,6 @@ float3 ApplyShadow(inout float3 color, in float4 positionWorldSpace, in float de
         };
         return color * lerp(shadowColor, 1.0, shadowFactor) * colors[cascadeIndex];
     }
-#endif
 	
     return color * lerp(shadowColor, 1.0, shadowFactor);
 }
@@ -157,23 +129,10 @@ float3 CalculatedFogColor(float2 uv, float depth, float3 sceneColor)
                 float distance = x * x + y * y;
                 const float sigma = 2.0 * radius * radius;
                 float domainGaussian = exp(-distance / sigma); // ガウシアン関数で距離に基づく重みを計算
-
-#if 1
                 float sampledDepth = depthTexture.Sample(samplerStates[POINT], texcoord).x;
                 distance = (depth - sampledDepth) * (depth - sampledDepth);
                 const float sigma2 = 0.0001;
                 float rangeGaussian = exp(-distance / sigma2); // ガウシアン関数で深度差に基づく重みを計算
-#else
-                float sampledDepthNdc = depthTexture.Sample(samplerStates[POINT], texcoord).x;
-                // NDC → View に変換
-                float4 ndc = float4(texcoord.x * 2 - 1, texcoord.y * -2 + 1, sampledDepthNdc, 1);
-                float4 view = mul(ndc, inverseProjection);
-                view /= view.w;
-                const float sigma2 = 0.0001;
-                float sampledLinearDepth = view.z;
-                float diff = depth - sampledLinearDepth;
-                float rangeGaussian = exp(-(diff * diff) / sigma2);
-#endif
                 accumulatedRadiance += sampledRadiance * domainGaussian * rangeGaussian;
                 accumulatedWeight += domainGaussian * rangeGaussian;
             }
@@ -185,7 +144,6 @@ float3 CalculatedFogColor(float2 uv, float depth, float3 sceneColor)
         fogFacter = fogTexture.Sample(samplerStates[LINEAR_BORDER_BLACK], uv).x;
     }
 
-#if 1
     float fogStrength = fogFacter * fogColor.a;
 
     float transmittance = exp(-fogStrength);
@@ -195,10 +153,6 @@ float3 CalculatedFogColor(float2 uv, float depth, float3 sceneColor)
     fogColor.rgb * (1 - transmittance);
 
     return finalColor;
-#else
-    float3 finalFogColor = fogColor.rgb * fogColor.a * max(0, fogFacter);
-    return finalFogColor;
-#endif
 }
 
 float4 main(VS_OUT pin) : SV_TARGET
@@ -237,7 +191,6 @@ float4 main(VS_OUT pin) : SV_TARGET
     // ndc -> view 
     float4 positionViewSpace = mul(positionNdc, inverseProjection); // ndc → clip 
     positionViewSpace = positionViewSpace / positionViewSpace.w; // clip -> view 
-    //return float4((positionViewSpace.z) / 100.0, 0, 0, 1);
     // ndc -> world 
     float4 positionWorldSpace = mul(positionNdc, inverseViewProjection);
     positionWorldSpace /= positionWorldSpace.w;
@@ -251,10 +204,8 @@ float4 main(VS_OUT pin) : SV_TARGET
         float shadow = lerp(1.0, shadowFactor, shadowMapFactor);
         // 影色へ補間
         color.rgb = lerp(shadowMapColor, color.rgb, shadow);
-        //color *= lerp(1.0, shadowFactor, shadowMapFactor);
     }
 
-    //color.rgb = ApplyShadowMaps(color.rgb, positionWorldSpace);
 
     if (enableFog && objectType != OBJECT_NO_LIGHTING)
     {
@@ -262,24 +213,6 @@ float4 main(VS_OUT pin) : SV_TARGET
 
         // Volumetric Fog
         color.rgb = CalculatedFogColor(pin.texcoord, depthNdc, color.rgb);
-
-#if 0
-        float fogTopHeight = 0.5f;
-        float heightFactor = saturate((fogTopHeight - positionWorldSpace.y) / fogTopHeight);
-        float3 noisePos = positionWorldSpace.xyz * 0.05f;
-        noisePos.x += elapsedTime * 0.03;
-        noisePos.z += elapsedTime * 0.01;
-
-        float noise = noise3D.Sample(samplerStates[LINEAR], frac(noisePos).r);
-        heightFactor *= lerp(0.5, 1.5, noise);
-        float dist = length(positionWorldSpace.xyz - cameraPosition.xyz);
-        float distanceFactor = saturate((dist - 5) / 40);
-        float fogFactor = heightFactor * distanceFactor;
-        float density = 3.7f;
-
-        float transmittance = exp(-fogFactor * density);
-        color.rgb = color.rgb * transmittance + fogColor.rgb * (1 - transmittance);
-#endif
     }
 
     // ブルーム処理
@@ -292,9 +225,6 @@ float4 main(VS_OUT pin) : SV_TARGET
     // SSRの処理
     if (enableSSR && objectType != OBJECT_NO_LIGHTING)
     {
-        //float3 reflectColor = reflectionTexture.Sample(samplerStates[LINEAR_CLAMP], pin.texcoord).rgb;
-        //return float4(reflectColor.rgb, 1);
-
         color.rgb += ssrTexture.Sample(samplerStates[LINEAR_CLAMP], pin.texcoord).rgb;
     }
 

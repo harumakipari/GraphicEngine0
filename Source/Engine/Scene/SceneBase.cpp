@@ -54,7 +54,7 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
     }
 
     depthOfFieldEffect = std::make_unique<DepthOfFieldEffect>();
-    depthOfFieldEffect->Initialize(device, static_cast<uint32_t>(width), static_cast<uint32_t>(height ));
+    depthOfFieldEffect->Initialize(device, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
 #endif // 0
 
@@ -132,11 +132,11 @@ bool SceneBase::Initialize(ID3D11Device* device, const UINT64 width, UINT height
         imageSize.y
     );
 
-    temporalAa.Initialize(device, static_cast<UINT>(screenWidth ), static_cast<UINT>(screenHeight ));
+    temporalAa.Initialize(device, static_cast<UINT>(screenWidth), static_cast<UINT>(screenHeight));
 
     shadowMap = std::make_unique<shadow_map>(device, shadowmapWidth, shadowmapHeight);
 
-    huskParticles = std::make_unique<husk_particles>(device);
+    huskParticles = std::make_unique<HuskParticles>(device);
     particleMeshModel = std::make_unique<InterleavedGltfModel>(device, "./Data/Models/Weapons/PlayerSword/Sword.gltf", ModelTypes::ModelMode::SkeletalMesh, false, true);
     swordGhostMeshModel = std::make_unique<InterleavedGltfModel>(device, "./Data/Models/Weapons/PlayerSwordGhost/Sword.gltf", ModelTypes::ModelMode::SkeletalMesh, false, true);
 
@@ -163,12 +163,12 @@ void SceneBase::UpdateHuskCompletionTracking(float deltaTime)
 {
     if (!huskCompletionTracking || !huskParticles) return;
     huskPlaybackElapsed += (std::max)(0.0f, deltaTime);
-    const auto& settings = huskParticles->particle_data;
+    const auto& settings = huskParticles->particleData;
     constexpr double safetyMargin = 0.05;
     const double dissolve = (std::max)(0.001f, huskDissolveDuration);
-    const double startDelay = (std::max)(0.0f, settings.max_start_delay);
+    const double startDelay = (std::max)(0.0f, settings.maxStartDelay);
     const double maxLifetime = (std::max)(0.0f, settings.lifetime) *
-        (std::max)(0.0f, (std::max)(settings.lifetime_min_multiplier, settings.lifetime_max_multiplier));
+        (std::max)(0.0f, (std::max)(settings.lifetimeMinMultiplier, settings.lifetimeMaxMultiplier));
     huskCompletionDuration = (std::max)(huskCompletionDuration,
         (std::max)(dissolve, startDelay) + maxLifetime + safetyMargin);
     if (gruxHuskDeathProgress >= 1.0f && huskPlaybackElapsed >= startDelay)
@@ -253,7 +253,7 @@ void SceneBase::Update(float deltaTime)
         gruxHuskDeathProgress = 0.0f;
         if (huskParticles)
         {
-            huskParticles->particle_data.particle_count = 0;
+            huskParticles->particleData.particleCount = 0;
         }
     }
     else
@@ -277,9 +277,9 @@ void SceneBase::Update(float deltaTime)
                 gruxHuskDeathProgress = std::clamp(
                     gruxHuskDeathProgress + huskDeltaTime / (std::max)(huskDissolveDuration, 0.001f),
                     0.0f, 1.0f);
-            huskParticles->particle_data.death_progress =
+            huskParticles->particleData.deathProgress =
                 std::clamp(gruxHuskDeathProgress, 0.0f, 1.0f);
-            huskParticles->integrate(Graphics::GetDeviceContext(), huskDeltaTime);
+            huskParticles->Integrate(Graphics::GetDeviceContext(), huskDeltaTime);
             UpdateHuskCompletionTracking(huskDeltaTime);
         }
     }
@@ -554,9 +554,9 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
             const auto gruxMesh = grux->GetSkeletalMeshComponent();
             if (gruxMesh && gruxMesh->model)
             {
-                huskParticles->particle_data.death_progress = 0.0f;
+                huskParticles->particleData.deathProgress = 0.0f;
                 auto world = gruxMesh->GetComponentWorldTransform().ToWorldTransform();
-                huskParticles->accumulate_husk_particles(immediateContext, [&](ID3D11PixelShader* accumulate_husk_particles_ps)
+                huskParticles->AccumulateHuskParticles(immediateContext, [&](ID3D11PixelShader* accumulate_husk_particles_ps)
                     {
                         PipeLineStateDesc pipeline;
                         pipeline.blendState = BLEND_STATE::MULTIPLY_RENDER_TARGET_ALPHA;
@@ -571,10 +571,10 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                 gruxHuskDeathProgress = 0.0f;
                 BeginHuskCompletionTracking();
                 gruxMesh->SetIsVisible(false);
-                huskParticles->backup_particles(immediateContext);
+                huskParticles->BackupParticles(immediateContext);
 #ifdef _DEBUG
-                huskCapturedWorldXMin = huskParticles->particle_data.world_x_min;
-                huskCapturedWorldXMax = huskParticles->particle_data.world_x_max;
+                huskCapturedWorldXMin = huskParticles->particleData.worldXMin;
+                huskCapturedWorldXMax = huskParticles->particleData.worldXMax;
 #endif
                 gruxHuskBackupValid = true;
             }
@@ -628,12 +628,7 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                     RenderState::BindDepthStencilState(
                         immediateContext, DEPTH_STATE::ZT_ON_ZW_OFF);
                     playerGhost.renderConstantsComponent->UpdatePlusAlphaConstants(immediateContext);
-                    player->skeletalMeshComponent->model->Render(
-                        immediateContext,
-                        playerGhost.world,
-                        playerGhost.nodes,
-                        InterleavedGltfModel::RenderPass::All,
-                        pipeline);
+                    player->skeletalMeshComponent->model->Render(immediateContext, playerGhost.world, playerGhost.nodes, InterleavedGltfModel::RenderPass::All, pipeline);
                 }
             }
         }
@@ -647,14 +642,11 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
             //ラスタライザ設定
             RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
 
-            //定数バッファ更新
-
             // HuskParticle
             RenderState::BindDepthStencilState(immediateContext, DEPTH_STATE::ZT_ON_ZW_ON, 0);
             RenderState::BindBlendState(immediateContext, BLEND_STATE::ALPHA);
             RenderState::BindRasterizerState(immediateContext, RASTERIZE_STATE::SOLID_CULL_NONE);
-
-            huskParticles->render(immediateContext);
+            huskParticles->Render(immediateContext);
             // パーティクル描画
             EffectManager::Render(immediateContext);
 
@@ -734,7 +726,6 @@ void SceneBase::DeferredRender(ID3D11DeviceContext* immediateContext, ViewConsta
                 };
                 // メインフレームバッファとブルームエフェクトを組み合わせて描画
                 fullscreenQuad->Blit(immediateContext, shader_resource_views, 0, _countof(shader_resource_views), postEffectPs.Get());
-
             }
             finalBuffer->Deactivate(immediateContext);
         }
@@ -786,13 +777,10 @@ void SceneBase::Draw(ID3D11DeviceContext* immediateContext)
 
         // 画像を表示
         uiManager->Draw(immediateContext);
-
         // フォントを表示
         uiManager->DrawFont(immediateContext);
-
         // シーン遷移用のUIを表示
         uiManager->DrawSceneChangeSprite(immediateContext);
-
         ExecuteHooks(RenderPass::UI, immediateContext);
     }
 }
@@ -803,7 +791,6 @@ bool SceneBase::Uninitialize(ID3D11Device* device)
     uiManager->Clear();
     // エフェクトを全停止
     EffectManager::StopAll();
-
     return true;
 }
 
@@ -1022,8 +1009,8 @@ void SceneBase::DrawSceneSettingsTab()
             gruxHuskPlaybackActive = false;
             ResetHuskCompletionTracking();
             gruxHuskDeathProgress = 0.0f;
-            huskParticles->particle_data.death_progress = 0.0f;
-            huskParticles->particle_data.particle_count = 0;
+            huskParticles->particleData.deathProgress = 0.0f;
+            huskParticles->particleData.particleCount = 0;
             if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
             {
                 if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)
@@ -1034,9 +1021,9 @@ void SceneBase::DrawSceneSettingsTab()
         ImGui::SameLine();
         if (ImGui::Button("Replay") && gruxHuskBackupValid)
         {
-            huskParticles->restore_particles(Graphics::GetDeviceContext());
+            huskParticles->RestoreParticles(Graphics::GetDeviceContext());
             gruxHuskDeathProgress = 0.0f;
-            huskParticles->particle_data.death_progress = 0.0f;
+            huskParticles->particleData.deathProgress = 0.0f;
             gruxHuskPlaybackActive = true;
             BeginHuskCompletionTracking();
             if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
@@ -1051,11 +1038,11 @@ void SceneBase::DrawSceneSettingsTab()
             gruxHuskPlaybackActive = false;
             ResetHuskCompletionTracking();
             gruxHuskDeathProgress = 0.0f;
-            huskParticles->particle_data.death_progress = 0.0f;
+            huskParticles->particleData.deathProgress = 0.0f;
             if (gruxHuskBackupValid)
-                huskParticles->restore_particles(Graphics::GetDeviceContext());
+                huskParticles->RestoreParticles(Graphics::GetDeviceContext());
             else
-                huskParticles->particle_data.particle_count = 0;
+                huskParticles->particleData.particleCount = 0;
             if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
             {
                 if (auto mesh = grux->GetSkeletalMeshComponent(); mesh)
@@ -1064,36 +1051,36 @@ void SceneBase::DrawSceneSettingsTab()
         }
         ImGui::Text("Preview Capture Requested: %s", gruxHuskPreviewCaptureRequested ? "Yes" : "No");
         ImGui::Text("Particle Backup: %s", gruxHuskBackupValid ? "Valid" : "None");
-        ImGui::Text("accumulated husk particle count %d", huskParticles->particle_data.particle_count);
-        ImGui::DragFloat("Husk World X Min", &huskParticles->particle_data.world_x_min, 0.01f);
-        ImGui::DragFloat("Husk World X Max", &huskParticles->particle_data.world_x_max, 0.01f);
-        huskParticles->particle_data.world_x_max = (std::max)(
-            huskParticles->particle_data.world_x_max, huskParticles->particle_data.world_x_min + 0.0001f);
+        ImGui::Text("accumulated husk particle count %d", huskParticles->particleData.particleCount);
+        ImGui::DragFloat("Husk World X Min", &huskParticles->particleData.worldXMin, 0.01f);
+        ImGui::DragFloat("Husk World X Max", &huskParticles->particleData.worldXMax, 0.01f);
+        huskParticles->particleData.worldXMax = (std::max)(
+            huskParticles->particleData.worldXMax, huskParticles->particleData.worldXMin + 0.0001f);
         ImGui::DragFloat("Husk Dissolve Duration", &huskDissolveDuration, 0.01f, 0.001f, 60.0f, "%.3f sec");
         huskDissolveDuration = (std::max)(huskDissolveDuration, 0.001f);
         ImGui::TextUnformatted("World X changes require Capture & Play; Replay keeps the captured range.");
-        bool useSceneColorCapture = huskParticles->particle_data.use_scene_color_capture > 0.5f;
+        bool useSceneColorCapture = huskParticles->particleData.useSceneColorCapture > 0.5f;
         if (ImGui::Checkbox("Husk Use Scene Color Capture", &useSceneColorCapture))
-            huskParticles->particle_data.use_scene_color_capture = useSceneColorCapture ? 1.0f : 0.0f;
+            huskParticles->particleData.useSceneColorCapture = useSceneColorCapture ? 1.0f : 0.0f;
         ImGui::DragFloat("Husk Scene Color Depth Threshold",
-            &huskParticles->particle_data.scene_color_depth_threshold, 0.0000001f, 0.0f, 0.001f, "%.7f");
-        huskParticles->particle_data.scene_color_depth_threshold =
-            (std::max)(huskParticles->particle_data.scene_color_depth_threshold, 0.0f);
+            &huskParticles->particleData.sceneColorDepthThreshold, 0.0000001f, 0.0f, 0.001f, "%.7f");
+        huskParticles->particleData.sceneColorDepthThreshold =
+            (std::max)(huskParticles->particleData.sceneColorDepthThreshold, 0.0f);
         ImGui::TextUnformatted("Scene color / depth threshold changes require Capture & Play (not Replay).");
-        ImGui::DragFloat("Husk Body Color R", &huskParticles->particle_data.body_color_multiplier.x, 0.01f, 0.0f, 4.0f, "%.3f");
-        ImGui::DragFloat("Husk Body Color G", &huskParticles->particle_data.body_color_multiplier.y, 0.01f, 0.0f, 4.0f, "%.3f");
-        ImGui::DragFloat("Husk Body Color B", &huskParticles->particle_data.body_color_multiplier.z, 0.01f, 0.0f, 4.0f, "%.3f");
-        ImGui::DragFloat("Husk Body Brightness", &huskParticles->particle_data.body_brightness, 0.01f, 0.0f, 4.0f, "%.3f");
+        ImGui::DragFloat("Husk Body Color R", &huskParticles->particleData.bodyColorMultiplier.x, 0.01f, 0.0f, 4.0f, "%.3f");
+        ImGui::DragFloat("Husk Body Color G", &huskParticles->particleData.bodyColorMultiplier.y, 0.01f, 0.0f, 4.0f, "%.3f");
+        ImGui::DragFloat("Husk Body Color B", &huskParticles->particleData.bodyColorMultiplier.z, 0.01f, 0.0f, 4.0f, "%.3f");
+        ImGui::DragFloat("Husk Body Brightness", &huskParticles->particleData.bodyBrightness, 0.01f, 0.0f, 4.0f, "%.3f");
         ImGui::TextUnformatted("Body: state 0 only; 1.0 = unchanged. Glow and alpha are independent.");
-        ImGui::DragFloat("Husk Boundary Width", &huskParticles->particle_data.boundary_width, 0.001f, 0.0f, 1.0f, "%.3f");
-        ImGui::DragFloat("Husk Boundary Emissive Strength", &huskParticles->particle_data.boundary_emissive_strength, 0.1f, 0.0f, 20.0f);
-        ImGui::DragFloat("Husk Detach Glow Duration", &huskParticles->particle_data.detach_glow_duration, 0.01f, 0.0f, 2.0f, "%.3f sec");
-        ImGui::DragFloat("Husk Detach Glow Strength", &huskParticles->particle_data.detach_glow_strength, 0.1f, 0.0f, 20.0f);
+        ImGui::DragFloat("Husk Boundary Width", &huskParticles->particleData.boundaryWidth, 0.001f, 0.0f, 1.0f, "%.3f");
+        ImGui::DragFloat("Husk Boundary Emissive Strength", &huskParticles->particleData.boundaryEmissiveStrength, 0.1f, 0.0f, 20.0f);
+        ImGui::DragFloat("Husk Detach Glow Duration", &huskParticles->particleData.detachGlowDuration, 0.01f, 0.0f, 2.0f, "%.3f sec");
+        ImGui::DragFloat("Husk Detach Glow Strength", &huskParticles->particleData.detachGlowStrength, 0.1f, 0.0f, 20.0f);
         ImGui::TextUnformatted("Glow: live rendering only; Normalized X debug colors override glow.");
 #ifdef _DEBUG
-        bool debugNormalizedX = huskParticles->particle_data.debug_normalized_x > 0.5f;
+        bool debugNormalizedX = huskParticles->particleData.debugNormalizedX > 0.5f;
         if (ImGui::Checkbox("Husk Debug Normalized X", &debugNormalizedX))
-            huskParticles->particle_data.debug_normalized_x = debugNormalizedX ? 1.0f : 0.0f;
+            huskParticles->particleData.debugNormalizedX = debugNormalizedX ? 1.0f : 0.0f;
         ImGui::TextColored(ImVec4(1, 0, 0, 1), "0.0 = Red");
         ImGui::SameLine();
         ImGui::TextColored(ImVec4(0, 1, 0, 1), "0.5 = Green");
@@ -1111,9 +1098,9 @@ void SceneBase::DrawSceneSettingsTab()
         }
         if (restartDebugPreview && gruxHuskBackupValid)
         {
-            huskParticles->restore_particles(Graphics::GetDeviceContext());
+            huskParticles->RestoreParticles(Graphics::GetDeviceContext());
             gruxHuskDeathProgress = huskDebugProgressOverride ? huskDebugProgress : 0.0f;
-            huskParticles->particle_data.death_progress = gruxHuskDeathProgress;
+            huskParticles->particleData.deathProgress = gruxHuskDeathProgress;
             gruxHuskPlaybackActive = true;
             BeginHuskCompletionTracking();
             if (auto grux = GetActorManager()->GetActorOfType<GruxEnemy>(); grux)
@@ -1123,17 +1110,17 @@ void SceneBase::DrawSceneSettingsTab()
             }
         }
 #endif
-        ImGui::SliderFloat("particle_data.size", &huskParticles->particle_data.particle_size, +0.0f, +0.05f, "%.4f");
-        ImGui::SliderFloat("particle_data.rise_speed", &huskParticles->particle_data.rise_speed, 0.0f, 2.0f, "%.3f m/s");
-        ImGui::SliderFloat("particle_data.max_start_delay", &huskParticles->particle_data.max_start_delay, 0.0f, 1.0f, "%.3f sec");
-        ImGui::SliderFloat("particle_data.rise_speed_min_multiplier", &huskParticles->particle_data.rise_speed_min_multiplier, 0.1f, 2.0f, "%.2fx");
-        ImGui::SliderFloat("particle_data.rise_speed_max_multiplier", &huskParticles->particle_data.rise_speed_max_multiplier, 0.1f, 2.0f, "%.2fx");
-        ImGui::SliderFloat("particle_data.horizontal_random_speed", &huskParticles->particle_data.horizontal_random_speed, 0.0f, 0.5f, "%.3f m/s");
-        ImGui::SliderFloat("particle_data.lifetime", &huskParticles->particle_data.lifetime, 0.1f, 10.0f, "%.3f sec");
-        ImGui::SliderFloat("particle_data.fade_start_ratio", &huskParticles->particle_data.fade_start_ratio, 0.0f, 1.0f, "%.3f");
-        ImGui::SliderFloat("particle_data.lifetime_min_multiplier", &huskParticles->particle_data.lifetime_min_multiplier, 0.1f, 2.0f, "%.2fx");
-        ImGui::SliderFloat("particle_data.lifetime_max_multiplier", &huskParticles->particle_data.lifetime_max_multiplier, 0.1f, 2.0f, "%.2fx");
-        ImGui::SliderFloat("particle_data.display_ratio", &huskParticles->particle_data.display_ratio, 0.0f, 1.0f, "%.2f");
+        ImGui::SliderFloat("particle_data.size", &huskParticles->particleData.particleSize, +0.0f, +0.05f, "%.4f");
+        ImGui::SliderFloat("particle_data.rise_speed", &huskParticles->particleData.riseSpeed, 0.0f, 2.0f, "%.3f m/s");
+        ImGui::SliderFloat("particle_data.max_start_delay", &huskParticles->particleData.maxStartDelay, 0.0f, 1.0f, "%.3f sec");
+        ImGui::SliderFloat("particle_data.rise_speed_min_multiplier", &huskParticles->particleData.riseSpeedMinMultiplier, 0.1f, 2.0f, "%.2fx");
+        ImGui::SliderFloat("particle_data.rise_speed_max_multiplier", &huskParticles->particleData.riseSpeedMaxMultiplier, 0.1f, 2.0f, "%.2fx");
+        ImGui::SliderFloat("particle_data.horizontal_random_speed", &huskParticles->particleData.horizontalRandomSpeed, 0.0f, 0.5f, "%.3f m/s");
+        ImGui::SliderFloat("particle_data.lifetime", &huskParticles->particleData.lifetime, 0.1f, 10.0f, "%.3f sec");
+        ImGui::SliderFloat("particle_data.fade_start_ratio", &huskParticles->particleData.fadeStartRatio, 0.0f, 1.0f, "%.3f");
+        ImGui::SliderFloat("particle_data.lifetime_min_multiplier", &huskParticles->particleData.lifetimeMinMultiplier, 0.1f, 2.0f, "%.2fx");
+        ImGui::SliderFloat("particle_data.lifetime_max_multiplier", &huskParticles->particleData.lifetimeMaxMultiplier, 0.1f, 2.0f, "%.2fx");
+        ImGui::SliderFloat("particle_data.display_ratio", &huskParticles->particleData.displayRatio, 0.0f, 1.0f, "%.2f");
     }
     ImGui::End();
 }

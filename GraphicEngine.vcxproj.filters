@@ -1130,19 +1130,10 @@
     <FxCompile Include="Shader\GltfModelVS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
-    <FxCompile Include="Shader\HighFreqWorleyCS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
     <FxCompile Include="Shader\LineSegmentPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\LineSegmentVS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\LowFreqPerlinWorleyCS.hlsl">
-      <Filter>Shader</Filter>
-    </FxCompile>
-    <FxCompile Include="Shader\LuminanceExtranctionPS.hlsl">
       <Filter>Shader</Filter>
     </FxCompile>
     <FxCompile Include="Shader\GltfModelForwardTransparencyPS.hlsl">
@@ -1265,9 +1256,6 @@
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\MotionBlur.hlsli">
-      <Filter>Shader</Filter>
-    </None>
-    <None Include="Shader\PerlinWorleyNoise.hlsli">
       <Filter>Shader</Filter>
     </None>
     <None Include="Shader\PrimitiveRenderer.hlsli">

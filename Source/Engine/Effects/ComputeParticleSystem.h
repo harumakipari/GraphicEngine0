@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 
 #include <d3d11.h>
 #include <wrl.h>
@@ -51,7 +50,6 @@ public:
 		DirectX::XMFLOAT4 startColor{ 1,1,1,1 };	// 開始色
 		DirectX::XMFLOAT4 endColor{ 1,1,1,1 };		// 終了色
 
-
 		DirectX::XMFLOAT4 customData;				//カスタムデータ
 	};
 
@@ -96,7 +94,6 @@ public:
 	void Update(ID3D11DeviceContext* immediateContext, float deltaTime);
 	void Render(ID3D11DeviceContext* immediateContext);
 
-	void DrawGUI() const;
 
 private:
 	UINT numParticles;//パーティクル総数
@@ -113,28 +110,25 @@ private:
 	//パーティクルバッファ
 	Microsoft::WRL::ComPtr<ID3D11Buffer> particleDataBuffer;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleDataShaderResourceView;
-	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleDataUnordredAccessView;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleDataUnorderedAccessView;
 
 	//未使用パーティクル番号を格納したAppend/Cosumeバッファ
 	Microsoft::WRL::ComPtr<ID3D11Buffer> particleAppendConsumeBuffer;
-	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleAppendConsumeUnordredAccessView;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleAppendConsumeUnorderedAccessView;
 
 	//パーティクル生成情報を格納したバッファ
 	Microsoft::WRL::ComPtr<ID3D11Buffer> particleEmitBuffer;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleEmitShaderResourceView;
-	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleEmitUnordredAccessView;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleEmitUnorderedAccessView;
 
 	//DispatchIndirect用構造体
 	using DispatchIndirect = DirectX::XMUINT3; //UINT3で十分
 
-	//	00バイト目：現在のパーティクル総数
-	//	04バイト目：1フレーム前のパーティクル総数
-	//	08バイト目：パーティクル破棄数
-	//	12バイト目：パーティクル生成用DispatchIndirect情報
 	static constexpr UINT NumCurrentParticleOffset = 0;
 	static constexpr UINT NumPreviousParticleOffset = NumCurrentParticleOffset + sizeof(UINT);
 	static constexpr UINT NumDeadParticleOffset = NumPreviousParticleOffset + sizeof(UINT);
 	static constexpr UINT EmitDispatchIndirectOffset = NumDeadParticleOffset + sizeof(UINT);
+
 	//DrawInstanced用DrawIndirect用構造体
 	struct DrawIndirect
 	{
@@ -143,12 +137,8 @@ private:
 		UINT startVertexLocation;
 		UINT startInstanceLocation;
 	};
-	//	24バイト目：パーティクル更新用DispatchIndirect情報
-	//	36バイト目：パーティクル生成時に使用するインデックス(Append/Consumeの代わり)
-	//	40バイト目：DrawIndirect情報
-	//	40バイト目：ピクセルパーティクル生成数カウンター
-	//	44バイト目：DrawIndirect情報
-	static constexpr UINT UpdateDispatchIndirectOffset = EmitDispatchIndirectOffset + sizeof(DispatchIndirect);
+
+    static constexpr UINT UpdateDispatchIndirectOffset = EmitDispatchIndirectOffset + sizeof(DispatchIndirect);
 	static constexpr UINT NumEmitParticleIndexOffset = UpdateDispatchIndirectOffset + sizeof(DispatchIndirect);
 	static constexpr UINT NumEmitPixelParticleIndirectOffset = NumEmitParticleIndexOffset + sizeof(UINT);
 	static constexpr UINT DrawIndirectOffset = NumEmitPixelParticleIndirectOffset + sizeof(UINT);
@@ -157,12 +147,12 @@ private:
 
 	//DrawIndirectを用いるため、RWStructuredBufferを用いるものに変更
 	Microsoft::WRL::ComPtr<ID3D11Buffer> indirectDataBuffer;
-	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> indirectDataUnordredAccessView;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> indirectDataUnorderedAccessView;
 
 	//パーティクルヘッダーバッファ
 	Microsoft::WRL::ComPtr<ID3D11Buffer> particleHeaderBuffer;
 	Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> particleHeaderShaderResourceView;
-	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleHeaderUnordredAccessView;
+	Microsoft::WRL::ComPtr<ID3D11UnorderedAccessView> particleHeaderUnorderedAccessView;
 
 	//各種シェーダー
 	Microsoft::WRL::ComPtr<ID3D11ComputeShader> initShader;

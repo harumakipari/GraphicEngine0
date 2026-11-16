@@ -2079,8 +2079,8 @@ void GameScene::RestartBossBattle()
     gruxHuskDeathProgress = 0.0f;
     if (huskParticles)
     {
-        huskParticles->particle_data.death_progress = 0.0f;
-        huskParticles->particle_data.particle_count = 0;
+        huskParticles->particleData.deathProgress = 0.0f;
+        huskParticles->particleData.particleCount = 0;
     }
 
     StartBossBattle();

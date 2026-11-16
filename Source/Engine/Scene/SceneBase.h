@@ -152,7 +152,7 @@ protected:
     bool useDrawDebug = false;
 
     // HuskParticle—p
-    std::unique_ptr<husk_particles> huskParticles;
+    std::unique_ptr<HuskParticles> huskParticles;
     std::unique_ptr<InterleavedGltfModel> particleMeshModel;
     std::unique_ptr<InterleavedGltfModel> swordGhostMeshModel;
     bool gruxHuskCaptured = false;

@@ -19,8 +19,6 @@ extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam
 extern ImWchar glyphRangesJapanese[];
 #endif
 
-
-
 #define ENABLE_DIRECT2D
 #ifdef ENABLE_DIRECT2D
 #include <d2d1_1.h>
@@ -84,7 +82,6 @@ public:
         // 日本語用（メイリオ or MSゴシック）
          fontJP = ImGui::GetIO().Fonts->AddFontFromFileTTF(
             "C:\\Windows\\Fonts\\meiryo.ttc",
-            //"C:\\Windows\\Fonts\\msgothic.ttc",
             16.0f,
             nullptr,
             ImGui::GetIO().Fonts->GetGlyphRangesJapanese()
