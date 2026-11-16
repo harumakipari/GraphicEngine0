@@ -413,8 +413,8 @@ bool GameBossDeathController::SkipToFinishPrompt(const Context& context)
     if (!cameraManager->IsUseCinematic())
         cameraManager->ToggleCinematicCamera(context.scene);
     CutToShot(Shot::Finish,
-                cinemaCameraActor ? dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()) : nullptr,
-                *context.shader);
+        cinemaCameraActor ? dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()) : nullptr,
+        *context.shader);
     gruxEnemyActor->StopBossDeathCinematicOneShots();
 
     bossDeathPhase = BossDeathPhase::RecallPingPong;
@@ -471,8 +471,8 @@ bool GameBossDeathController::SetupBossDeathCinematic(const Context& context)
     // ToggleCinematicCamera copies the gameplay pose first. Overwrite every pose
     // field and DOF in this same update so that copied pose is never rendered.
     CutToShot(Shot::Scream,
-                cinemaCameraActor ? dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()) : nullptr,
-                *context.shader);
+        cinemaCameraActor ? dynamic_cast<CinematicCameraComponent*>(cinemaCameraActor->GetCameraComponent()) : nullptr,
+        *context.shader);
     const auto controller = gruxEnemyActor->GetBodyAnimationController();
     if (controller)
         controller->SetAnimationRate(bossDeathRoarPlaybackRate);
@@ -698,12 +698,8 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
 
     case BossDeathPhase::DeathFall:
     {
-        const auto controller = gruxEnemyActor
-            ? gruxEnemyActor->GetBodyAnimationController()
-            : nullptr;
-        if (controller &&
-            controller->GetCurrentAnimationName() == "Result_Down_Start" &&
-            !controller->IsPlayAnimation())
+        const auto controller = gruxEnemyActor ? gruxEnemyActor->GetBodyAnimationController() : nullptr;
+        if (controller && controller->GetCurrentAnimationName() == "Result_Down_Start" && !controller->IsPlayAnimation())
         {
             controller->ResetAnimationRate();
             BlendToLanding(
@@ -720,13 +716,11 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
             gruxEnemyActor->UpdateAllComponentTransforms();
 
             controller->SetAnimationRate(bossDeathFwdPlaybackRate);
-            gruxEnemyActor->PlayBodyAnimation(
-                "Death_B_0", false, true, bossDeathStunToDeathBlend, true);
+            gruxEnemyActor->PlayBodyAnimation("Death_B_0", false, true, bossDeathStunToDeathBlend, true);
             if (!controller->SetPlaybackRange(
                 bossDeathFwdStartTime, bossDeathFwdEndTime))
             {
-                Logger::Error(Logger::LogCategory::System,
-                    "Failed to set Death_Fwd playback range for boss death preview");
+                Logger::Error(Logger::LogCategory::System, "Failed to set Death_Fwd playback range for boss death preview");
             }
             bossDeathPhase = BossDeathPhase::DeathLanding;
             bossDeathPhaseElapsed = 0.0f;
@@ -744,7 +738,6 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
             controller->GetCurrentAnimationTime() >= bossDeathFwdEndTime)
         {
             controller->ResetAnimationRate();
-            // Own the endpoint pose first; walking never restarts the boss clip.
             bossDeathFwdPromptTime = controller->GetCurrentAnimationTime();
             bossDeathFwdPromptDirection =
                 bossDeathFwdPromptTime >= bossDeathFwdPromptMaxTime ? -1.0f : 1.0f;
@@ -780,19 +773,13 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
         const float approachDistance = DirectX::XMVectorGetX(DirectX::XMVector3Length(
             DirectX::XMVectorSubtract(DirectX::XMLoadFloat3(&adjustedFinishPosition),
                 DirectX::XMLoadFloat3(&bossDeathApproachStartPosition))));
-        const float stopStartT = approachDistance > FLT_EPSILON
-            ? 1.0f - (std::min)(bossDeathWalkStopStartDistance / approachDistance, 1.0f)
-            : 0.0f;
-        // Clamp at the threshold even when a long frame crosses it.
+        const float stopStartT = approachDistance > FLT_EPSILON ? 1.0f - (std::min)(bossDeathWalkStopStartDistance / approachDistance, 1.0f) : 0.0f;
         const bool startStop = smoothT >= stopStartT;
         smoothT = (std::min)(smoothT, stopStartT);
         DirectX::XMFLOAT3 position{};
-        position.x = std::lerp(
-            bossDeathApproachStartPosition.x, adjustedFinishPosition.x, smoothT);
-        position.y = std::lerp(
-            bossDeathApproachStartPosition.y, adjustedFinishPosition.y, smoothT);
-        position.z = std::lerp(
-            bossDeathApproachStartPosition.z, adjustedFinishPosition.z, smoothT);
+        position.x = std::lerp(bossDeathApproachStartPosition.x, adjustedFinishPosition.x, smoothT);
+        position.y = std::lerp(bossDeathApproachStartPosition.y, adjustedFinishPosition.y, smoothT);
+        position.z = std::lerp(bossDeathApproachStartPosition.z, adjustedFinishPosition.z, smoothT);
         DirectX::XMFLOAT4 rotation{};
         DirectX::XMStoreFloat4(&rotation, DirectX::XMQuaternionNormalize(
             DirectX::XMQuaternionSlerp(
@@ -811,7 +798,6 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
             bossDeathWalkStopFinishRotation = finishPose.rotation;
             if (const auto controller = player->GetBodyAnimationController())
                 controller->ResetAnimationRate();
-            // Player root motion is disabled; only this scene moves the actor.
             player->PlayBodyAnimation("Walk_Fwd_Stop_Fast", false, true, 0.1f, true);
             bossDeathPhase = BossDeathPhase::PlayerWalkStop;
             bossDeathPhaseElapsed = 0.0f;
@@ -873,9 +859,6 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
             controller->GetCurrentAnimationName() == "Result_Recall" &&
             !controller->IsPlayAnimation())
         {
-            // Recall's runtime ShowTrail state starts at 0.24 sec but its end at
-            // 1.4 sec is intentionally never reached. Clear only transient
-            // battle presentation before pose-only sampling begins.
             player->ClearTransientBattleActions();
             bossDeathRecallPromptTime = bossDeathRecallPromptMinTime;
             bossDeathRecallPromptDirection = 1.0f;
@@ -895,20 +878,14 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
     {
         UpdateBossDeathPromptLoop(gruxEnemyActor, deltaTime);
         bossDeathUIActor->UpdatePresentation();
-        bossDeathRecallPromptTime +=
-            bossDeathRecallPromptDirection *
-            bossDeathRecallPromptPlaybackRate * deltaTime;
+        bossDeathRecallPromptTime += bossDeathRecallPromptDirection * bossDeathRecallPromptPlaybackRate * deltaTime;
 
-        // Reflect overshoot at both endpoints. The loop also handles a large
-        // debug-frame delta crossing the very short range more than once.
         while (bossDeathRecallPromptTime > bossDeathRecallPromptMaxTime ||
             bossDeathRecallPromptTime < bossDeathRecallPromptMinTime)
         {
             if (bossDeathRecallPromptTime > bossDeathRecallPromptMaxTime)
             {
-                bossDeathRecallPromptTime =
-                    bossDeathRecallPromptMaxTime -
-                    (bossDeathRecallPromptTime - bossDeathRecallPromptMaxTime);
+                bossDeathRecallPromptTime = bossDeathRecallPromptMaxTime - (bossDeathRecallPromptTime - bossDeathRecallPromptMaxTime);
                 bossDeathRecallPromptDirection = -1.0f;
             }
             else
@@ -964,7 +941,6 @@ bool GameBossDeathController::Update(const Context& context, const float deltaTi
             controller->GetCurrentAnimationTime() >= bossDeathRecallFinishHitTime)
         {
             StopBossDeathGroanLoop();
-            // Keep pose ownership and enter the narrower interval continuously.
             bossDeathScreamHoldTime = bossDeathFwdPromptTime;
             bossDeathScreamHoldDirection = bossDeathFwdPromptDirection;
             // ƒ{ƒXŽ€–S’f–––‚

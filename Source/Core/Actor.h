@@ -252,12 +252,10 @@ public:
 		return this->isPendingKill;
 	}
 
-	// Collision / Event
 	//　collisionComponent　が Dynamic の物と当たった時に通る
 	virtual void NotifyHit(Actor* otherActor, const DirectX::XMFLOAT3& hitPos, const DirectX::XMFLOAT3& normal, const DirectX::XMFLOAT3& impulse) {}
 	//　collisionComponent　が Dynamic の物と当たった時に通る
 	virtual void NotifyHit(CollisionComponent* selfComp, CollisionComponent* otherComp, Actor* otherActor, const DirectX::XMFLOAT3& hitPos, const DirectX::XMFLOAT3& normal, const DirectX::XMFLOAT3& impulse) {}
-
 
 	// firstは自身のCollisionComponent、secondは相手側。
 	void DispatchHitEvent(std::pair<CollisionComponent*, CollisionComponent*> hitPair) const
@@ -329,23 +327,15 @@ public:
 		return std::find(tags.begin(), tags.end(), tag) != tags.end();
 	}
 
-	// タイムスケールを取得する
 	float GetTimeScale() const { return timeScale; }
-
-	// タイムスケールをリセットする
 	void ResetTimeScale() { timeScale = 1.0f; }
-
-	// タイムスケールを設定する
 	void SetTimeScale(const float timeScale) { this->timeScale = timeScale; }
-
-	// ルートコンポーネントの名前を取得する
 	const std::string& GetRootComponentName()const { return rootComponentName; }
 protected:
 	Scene* ownerScene = nullptr;   // 自分が属しているScene
 	std::vector<std::string> tags;
 
 private:
-	// Internal Data
 	std::string actorName;
 	std::string rootComponentName = "RootComponent";
 	bool isActive = true;	// アクターがアクティブかどうか
@@ -354,7 +344,6 @@ private:
 	std::vector<HitCallback> hitCallbacks;
 	// rootComponent (Transform) 系
 	std::shared_ptr<SceneComponent> rootComponent;
-	// Component
 	std::vector<std::shared_ptr<Component>> ownedComponents;
 	// 名前とコンポーネントをキャッシュしておく
 	std::unordered_map<std::string, std::shared_ptr<Component>> componentsByName;

@@ -33,7 +33,7 @@ public:
         float phaseOffset;
     };
 public:
-    void AddAnimation(const size_t clip, float angle, float phaseOffset = 0.0f)
+    void AddAnimation(const size_t clip, const float angle, const float phaseOffset = 0.0f)
     {
         samples.push_back({ clip, angle, WrapPhase(phaseOffset) });
 
@@ -47,23 +47,7 @@ public:
         );
     }
 
-    const std::vector<Sample>& GetSamples() const
-    {
-        return samples;
-    }
-
-    void SetPhaseOffset(size_t clip, float phaseOffset)
-    {
-        for (Sample& sample : samples)
-        {
-            if (sample.clip == clip)
-            {
-                sample.phaseOffset = WrapPhase(phaseOffset);
-            }
-        }
-    }
-
-    static float WrapPhase(float phase)
+    static float WrapPhase(const float phase)
     {
         if (!std::isfinite(phase))
             return 0.0f;
@@ -76,7 +60,4 @@ public:
 
 private:
     std::vector<Sample> samples;
-
-    float prevAngle = 0.0f;
-    bool hasPrevAngle = false;
 };

@@ -79,13 +79,6 @@ bool CharacterMovementComponent::ConsumeBossRoomProbeChargeWallHitEvent(BossRoom
     bossRoomProbeChargeWallHitEvent = {};
     return true;
 }
-// 入力によって変わる現在の速さを取得
-float CharacterMovementComponent::GetCurrentInputNormalizeSpeed()const
-{
-    // 0除算を防ぐため
-    float speed = targetSpeed / std::max<float>(0.00001f, runSpeed);
-    return speed;
-}
 
 // 一定時間だけ強制移動する速度を設定するための関数  ルートモーションではないアニメーションなどに使用する
 void CharacterMovementComponent::AddForcedMove(const DirectX::XMFLOAT3& direction, const float speed, const float duration)
@@ -361,7 +354,6 @@ void RotationComponent::DrawImGuiInspector()
 #ifdef USE_IMGUI
     SceneComponent::DrawImGuiInspector();
     ImGui::DragFloat(U8("回転時間"), &rotateTime, 0.05f, 0.0f, 10.0f);
-
 #endif
 }
 

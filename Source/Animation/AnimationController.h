@@ -14,89 +14,111 @@ class Character;
 class AnimationController
 {
 public:
-    enum class MoveDirection :uint8_t
+    enum class RuntimeDangerObbSaveResult :uint8_t
     {
-        Idle,
-        Forward,
-        ForwardRight,
-        ForwardLeft,
-        BackRight,
-        Backward,
-        BackLeft,
+        Saved,
+        FileNotFound,
+        DangerWindowNotFound,
+        JsonParseFailed,
+        JsonWriteFailed,
     };
+
+private:
+    // アニメーションブレンドに使用するノード
+    enum AnimNode :uint8_t
+    {
+        Origin, // 元のアニメーション
+        Next    // 次のアニメーション
+    };
+
+    enum class AnimationTransitionState :uint8_t
+    {
+        NotStarted,
+        Inprogress,
+        Completed,
+    };
+
+    struct LocalPoseOverrideBone
+    {
+        size_t nodeIndex = 0;
+        DirectX::XMFLOAT3 translation = {};
+        DirectX::XMFLOAT4 rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+    };
+
+    struct VisualPoseLatchTarget
+    {
+        SkeletalMeshComponent* target = nullptr;
+        const InterleavedGltfModel* model = nullptr;
+        size_t nodeCount = 0;
+    };
+
+    struct EditorRuntimeSnapshot
+    {
+        bool valid = false;
+        float animationTime = 0.0f;
+        float playbackEndTime = -1.0f;
+        float prevAnimationTime = 0.0f;
+        size_t animationClip = 0;
+        size_t animationNextClip = 0;
+        size_t notifyAnimationClip = 0;
+        AnimationTransitionState transitionState = AnimationTransitionState::NotStarted;
+        float blendFactor = 0.0f;
+        float blendElapsedTime = 0.0f;
+        float transitionTime = 0.0f;
+        bool isAnimationFinished = false;
+        bool isAnimationLoop = false;
+        std::string currentAnimationName;
+        std::vector<InterleavedGltfModel::Node> animationOriginNodes;
+        std::vector<InterleavedGltfModel::Node> animationNextNodes;
+        std::vector<InterleavedGltfModel::Node> finalNodes;
+        DirectX::XMFLOAT3 previousPosition{};
+        DirectX::XMFLOAT3 zeroTranslation{};
+        bool suppressNormalRootMotionUntilTransitionCompleted = false;
+        bool suppressNormalRootMotionObservedTransition = false;
+    };
+
 public:
     AnimationController(Character* character, SkeletalMeshComponent* target, const int rootNodeIndex);
 
-    void AddAnimation(const std::string& animationName, const size_t animationClip)
-    {
-        animationNameToIndex_[animationName] = animationClip;
-        auto& asset =animationNotifyAssets[animationClip];
-
-        asset.animationName = animationName;
-        asset.animationClip = animationClip;
-
-        animationAssetOrder.push_back(animationClip);
-    }
-
-    // アニメーション再生しているかどうか
-    bool IsPlayAnimation() const
-    {
-        return !(this->isAnimationFinished);
-    }
-
     void OnUpdate(const float deltaTime);
 
-    // アニメーションの再生倍率を変更する関数
+    void AddAnimation(const std::string& animationName, const size_t animationClip);
+
+    bool IsPlayAnimation() const { return !(this->isAnimationFinished); }
+
     void SetAnimationRate(const float animationRate) { this->animationRate = animationRate; }
 
-    // アニメーションの再生倍率をリセットする関数
     void ResetAnimationRate() { this->animationRate = 1.0f; }
 
+    float GetCurrentAnimationTime() const { return animationTime; }
 
-    // アニメーションを止める処理
-    void Stop()
-    {
-        isAnimationFinished = true;
-        transitionState = AnimationTransitionState::NotStarted;
-    }
+    bool EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower, bool& outHasShowTrail, bool& outHasShowEmissive) const;
 
-    float GetCurrentAnimationTime() const
-    {
-        return animationTime;
-    }
-
-    bool EvaluateWeaponVisualState(bool& outShowTrail, float& outEmissivePower,bool& outHasShowTrail, bool& outHasShowEmissive) const;
     void ResetRootMotion(const std::string& animationName, const bool loop = false, const bool isBlend = true, const float blendTime = 0.3f);
+
     bool PlayAnimationImmediate(const std::string& animationName, bool loop = true, bool ignoreRootMotion = false);
 
     void DrawImGui();
 
-    void DrawTimeline();
-
     bool IsEditorPreviewActive() const { return editorPreviewActive; }
     bool IsEditorPreviewPlaying() const { return editorPreviewPlaying; }
     bool IsEditorPreviewHitBoxSweepVisible() const { return editorPreviewShowHitBoxSweep; }
-    float GetCurrentSampledAnimationTime() const
-    {
-        return editorPreviewActive ? editorPreviewTime : animationTime;
-    }
 
+    float GetCurrentSampledAnimationTime() const { return editorPreviewActive ? editorPreviewTime : animationTime; }
     const std::string& GetCurrentAnimationName()const { return currentAnimationName; }
 
     float GetAnimationLength(const std::string& animationName)
     {
-        const size_t clip = animationNameToIndex_[animationName];
-        return target_->model->animations[clip].duration;
+        const size_t clip = animationNameToIndex[animationName];
+        return target->model->animations[clip].duration;
     }
 
-    bool ConfigureLocalPoseOverride(
-        const std::string& sourceAnimationName,
-        float sourceTime,
-        const std::vector<std::string>& boneNames);
+    bool ConfigureLocalPoseOverride(const std::string& sourceAnimationName, float sourceTime, const std::vector<std::string>& boneNames);
+
     void SetLocalPoseOverrideWeight(float weight);
+
     void ClearLocalPoseOverride();
 
-    // NotifyTrack にイベントを追加する関数
     bool SetPlaybackRange(float startTime, float endTime);
     bool HoldAnimationPose(const std::string& animationName, float time);
     bool BlendToHeldAnimationPose(const std::string& animationName, float time, float blendTime);
@@ -106,244 +128,48 @@ public:
     void ReleaseLatchedVisualPose();
     bool IsVisualPoseLatched() const { return visualPoseLatchActive; }
 
+    const AnimationNotifyAsset* GetAnimationAsset(const std::string& animationName) const;
+
+    // Animation単位でRoot TranslationをPoseから除去する。
+    void SetRemoveRootTranslationFromPose(const std::string& animationName, bool remove);
+
+    void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
+
+    void SetEnableRootMotion(const bool enableRootMotion);
+
+    void SetOwnerName(const std::string& name) { ownerName = name; }
+
+    void LoadAllNotifyAssets(const std::string& ownerName);
+
+    RuntimeDangerObbSaveResult SaveDangerObbForRuntimeTuning(size_t clip, size_t stateIndex, const AnimationNotifyState& state,std::string& outFilePath);
+
+    AnimationNotifyAsset* GetNotifyAssetForRuntimeTuning(const size_t clip);
+    const AnimationNotifyAsset* GetNotifyAssetForRuntimeTuning(const size_t clip) const;
+
+    // 単一の360度Locomotion BlendSpaceへアニメーションを追加する
+    void AddLocomotionBlendAnimation(const std::string& name, const float angle, const float phaseOffset = 0.0f);
+
+    void SetBlendInput(const float x, const float y) { blendInput = { x, y }; }
+
+    void SetUseBlendSpace(const bool use);
+
+private:
+    // ブレンドスペースを更新する
+    void UpdateBlendSpace(float deltaTime);
+
+    // それぞれのアニメーション再生時間を取る
+    float GetLocomotionDuration();
+
     void OnNotifyBegin(const AnimationNotifyState& state);
 
     void OnNotifyEnd(const AnimationNotifyState& state);
 
     void OnNotifyEvent(const AnimationNotifyEvent& event);
 
-    const AnimationNotifyAsset* GetAnimationAsset(const std::string& animationName) const
-    {
-        auto it = animationNameToIndex_.find(animationName);
-
-        if (it == animationNameToIndex_.end())
-            return nullptr;
-
-        auto assetIt = animationNotifyAssets.find(it->second);
-
-        if (assetIt == animationNotifyAssets.end())
-            return nullptr;
-
-        return &assetIt->second;
-    }
-
-    // Animation単位でRoot TranslationをPoseから除去する。
-    void SetRemoveRootTranslationFromPose(const std::string& animationName, bool remove);
-
-    // ルートモーションを無視するかどうか
-    void SetIgnoreRootMotion(const bool ignoreRootMotion) { this->ignoreRootMotion = ignoreRootMotion; }
-
-    void SetEnableRootMotion(const bool enableRootMotion)
-    {
-        this->enableRootMotion = enableRootMotion;
-
-        if (!enableRootMotion)
-        {
-            blendSpaceRootMotionDelta = { 0.0f, 0.0f, 0.0f };
-            blendSpaceRootMotionValid = false;
-            resetLocomotionRootMotion = true;
-        }
-    }
-
-    // オーナーの名前を設定する
-    void SetOwnerName(const std::string& name) { ownerName = name; }
-
-    // 全てのNotifyAssetsをロードする
-    void LoadAllNotifyAssets(const std::string& ownerName);
-
-    enum class RuntimeDangerObbSaveResult
-    {
-        Saved,
-        FileNotFound,
-        DangerWindowNotFound,
-        JsonParseFailed,
-        JsonWriteFailed,
-    };
-    RuntimeDangerObbSaveResult SaveDangerObbForRuntimeTuning(
-        size_t clip, size_t stateIndex, const AnimationNotifyState& state,
-        std::string& outFilePath);
-
-    AnimationNotifyAsset* GetNotifyAssetForRuntimeTuning(size_t clip)
-    {
-        const auto it = animationNotifyAssets.find(clip);
-        return it != animationNotifyAssets.end() ? &it->second : nullptr;
-    }
-    const AnimationNotifyAsset* GetNotifyAssetForRuntimeTuning(size_t clip) const
-    {
-        const auto it = animationNotifyAssets.find(clip);
-        return it != animationNotifyAssets.end() ? &it->second : nullptr;
-    }
-
-    // 単一の360度Locomotion BlendSpaceへアニメーションを追加する
-    void AddLocomotionBlendAnimation(
-        const std::string& name,
-        float angle,
-        float phaseOffset = 0.0f)
-    {
-        const size_t clip = animationNameToIndex_[name];
-        const float normalizedOffset =
-            name == "Jog_Fwd" ? 0.0f : BlendSpace::WrapPhase(phaseOffset);
-        locomotionBlendSpace.AddAnimation(clip, angle, normalizedOffset);
-    }
-
-    void SetBlendInput(const float x, const float y, const float speed)
-    {
-        blendInput = { x, y };
-        blendSpeed = speed;
-    }
-
-    void SetBlendDebugRawInput(const float x, const float z)
-    {
-        locomotionDebugRawStickX = x;
-        locomotionDebugRawStickZ = z;
-    }
-
-    void SetUseBlendSpace(const bool use)
-    {
-        // 変更がないなら何もしない
-        if (this->useBlendSpace == use)
-            return;
-
-        // 変更前の状態を保存
-        const bool wasUsingBlendSpace = this->useBlendSpace;
-        this->useBlendSpace = use;
-
-        // ルートモーションを使わない
-        enableRootMotion = false;
-        ignoreRootMotion = true;
-
-        // BlendSpace -> 通常アニメーション
-        if (wasUsingBlendSpace && !useBlendSpace)
-        {
-            Logger::Log("Disable BlendSpace");
-
-            // 位相転送はRootMotion抑制とは別に管理する
-            const float blendDuration = GetLocomotionDuration();
-
-            pendingLocomotionPhase = 0.0f;
-
-            if (blendDuration > FLT_EPSILON)
-            {
-                pendingLocomotionPhase = locomotionTime / blendDuration;
-                // 0~1へ収める
-                pendingLocomotionPhase -= std::floor(pendingLocomotionPhase);
-            }
-
-            // 次に通常アニメーションが開始される時、
-            // この位相をanimationTime へ反映する
-            pendingLocomotionPhaseTransfer = true;
-
-            // BlendSpaceから通常アニメーションへの遷移中は、
-            // ブレンド済みRoot位置の差分をActorへ適用しない
-            suppressNormalRootMotionUntilTransitionCompleted = true;
-            suppressNormalRootMotionObservedTransition = false;
-
-            blendSpaceRootMotionDelta = {};
-            blendSpaceRootMotionValid = false;
-            // 通常Root Motionの基準位置を再同期する
-            resetRootMotionDelta = true;
-
-            return;
-        }
-        // 通常アニメーション → BlendSpace
-        if (!wasUsingBlendSpace && use)
-        {
-            Logger::Log("Enable BlendSpace");
-
-            bool phaseTransferSucceeded = false;
-
-            const size_t phaseSourceClip =
-                transitionState ==
-                AnimationTransitionState::Completed
-                ? animationClip
-                : animationNextClip;
-
-            const float blendSpaceDuration =GetLocomotionDuration();
-
-            if (target_ &&
-                target_->model &&
-                phaseSourceClip <
-                target_->model
-                ->animations
-                .size() &&
-                blendSpaceDuration >
-                FLT_EPSILON)
-            {
-                const float normalDuration =
-                    target_->model
-                    ->animations
-                    .at(phaseSourceClip)
-                    .duration;
-
-                if (normalDuration >
-                    FLT_EPSILON)
-                {
-                    float normalizedPhase = 0.0f;
-                    normalizedPhase =
-                        animationTime /
-                        normalDuration;
-
-                    normalizedPhase -=
-                        std::floor(
-                            normalizedPhase);
-
-                    locomotionTime =
-                        normalizedPhase *
-                        blendSpaceDuration;
-
-                    previousLocomotionPhase =
-                        normalizedPhase;
-
-                    resetLocomotionRootMotion =
-                        false;
-
-                    phaseTransferSucceeded =
-                        true;
-                }
-            }
-
-            if (!phaseTransferSucceeded)
-            {
-                locomotionTime = 0.0f;
-                previousLocomotionPhase = 0.0f;
-
-                resetLocomotionRootMotion =
-                    true;
-            }
-
-            // 前回のBlendSpace RMを破棄する
-            blendSpaceRootMotionDelta = {};
-            blendSpaceRootMotionValid = false;
-
-            // 通常PoseからBlendSpace Poseへ補間
-            blendSpaceElapsed = 0.0f;
-            blendSpaceTransition = true;
-            animationNodes[Origin] = finalNodes;
-
-            return;
-        }
-    }
-
     // BlendSpaceから抽出したRoot Motionを取得して消費する
     bool ConsumeBlendSpaceRootMotion(DirectX::XMFLOAT3& outDelta);
 
-private:
-
-    struct LocalPoseOverrideBone
-    {
-        size_t nodeIndex = 0;
-        DirectX::XMFLOAT3 translation = {};
-        DirectX::XMFLOAT4 rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
-    };
-
     void ApplyLocalPoseOverride();
-
-
-    // それぞれのアニメーション再生時間を取る
-    float GetLocomotionDuration();
-
-    // ブレンドスペースを更新する
-    void UpdateBlendSpace(float deltaTime);
 
     // NotifyAssetを保存する
     void SaveNotifyAsset(const std::string& filename, const AnimationNotifyAsset& asset);
@@ -356,6 +182,8 @@ private:
 
     // ステートを追加する
     void AddState(AnimationNotifyTrack& track, AnimationNotifyState::Type type, float startTime);
+
+    void DrawTimeline();
 
     // アニメーション設定のImGui描画
     void DrawAnimationSettings(AnimationNotifyAsset& asset, float duration);
@@ -391,20 +219,13 @@ private:
     void ApplyRuntimeVisualPose();
 
 private:
-    std::vector<SkeletalMeshComponent*> extraTargets_;
-    SkeletalMeshComponent* target_ = nullptr;
+    std::vector<SkeletalMeshComponent*> extraTargets;
+    SkeletalMeshComponent* target = nullptr;
     Character* owner = nullptr;
 
-    std::unordered_map<std::string, size_t> animationNameToIndex_;
+    std::unordered_map<std::string, size_t> animationNameToIndex;
 
-    // アニメーションブレンドに使用するノード
-    enum AnimNode
-    {
-        Origin, // 元のアニメーション
-        Next    // 次のアニメーション
-    };
     std::vector<InterleavedGltfModel::Node> animationNodes[2];
-
 
     // 描画に使用するノード
     std::vector<InterleavedGltfModel::Node> finalNodes;
@@ -413,12 +234,6 @@ private:
     bool runtimeHeldPoseActive = false;
     bool runtimeHeldPoseTransitionActive = false;
 
-    struct VisualPoseLatchTarget
-    {
-        SkeletalMeshComponent* target = nullptr;
-        const InterleavedGltfModel* model = nullptr;
-        size_t nodeCount = 0;
-    };
     std::vector<InterleavedGltfModel::Node> visualPoseLatchNodes;
     std::vector<VisualPoseLatchTarget> visualPoseLatchTargets;
     bool visualPoseLatchActive = false;
@@ -431,44 +246,11 @@ private:
     std::vector<InterleavedGltfModel::Node> blendSpaceNodes;
     std::array<std::vector<InterleavedGltfModel::Node>, 4> blendSpacePoses;
 
-    enum class AnimationTransitionState :uint8_t
-    {
-        NotStarted,
-        Inprogress,
-        Completed,
-    };
-
-    struct EditorRuntimeSnapshot
-    {
-        bool valid = false;
-        float animationTime = 0.0f;
-        float playbackEndTime = -1.0f;
-        float prevAnimationTime = 0.0f;
-        size_t animationClip = 0;
-        size_t animationNextClip = 0;
-        size_t notifyAnimationClip = 0;
-        AnimationTransitionState transitionState = AnimationTransitionState::NotStarted;
-        float blendFactor = 0.0f;
-        float blendElapsedTime = 0.0f;
-        float transitionTime = 0.0f;
-        bool isBlendingAnimation = false;
-        bool isAnimationFinished = false;
-        bool isAnimationLoop = false;
-        std::string currentAnimationName;
-        std::vector<InterleavedGltfModel::Node> animationOriginNodes;
-        std::vector<InterleavedGltfModel::Node> animationNextNodes;
-        std::vector<InterleavedGltfModel::Node> finalNodes;
-        DirectX::XMFLOAT3 previousPosition{};
-        DirectX::XMFLOAT3 zeroTranslation{};
-        bool suppressNormalRootMotionUntilTransitionCompleted = false;
-        bool suppressNormalRootMotionObservedTransition = false;
-    };
-
     //遷移ステート
     AnimationTransitionState transitionState = AnimationTransitionState::NotStarted;
 
     //アニメーションの再生倍率
-    float animationRate = 1.0f;     //デフォルト 1,0f
+    float animationRate = 1.0f;     
 
     // 前フレームのアニメーション時間
     float prevAnimationTime = 0.0f;
@@ -492,15 +274,11 @@ private:
     // 現在のブレンドの比率
     float blendFactor = 0.0f;
 
-    // ブレンド中かどうか
-    bool isBlendingAnimation = false;
-
     // ブレンドしている時間
     float transitionTime = 0.0f;
 
     // アニメーションが終了したかどうか
     bool isAnimationFinished = false;
-
 
     // 今再生しているアニメーションの名前
     std::string currentAnimationName;
@@ -553,8 +331,6 @@ private:
     // ブレンドスペースで使用する入力値
     DirectX::XMFLOAT2 blendInput;
 
-    float blendSpeed;
-
     bool useBlendSpace = false;
     float locomotionTime = 0.0f;
     float locomotionPlayRate = 1.0f;
@@ -578,8 +354,7 @@ private:
     // BlendSpace終了後、通常アニメーション遷移中の
     // ブレンド済みrootからRoot Motionを抽出しないためのフラグ
     bool suppressNormalRootMotionUntilTransitionCompleted = false;
-    // SetUseBlendSpace(false)以前からCompletedだった状態と、
-    // 新しく開始した通常遷移の完了を区別する
+    // SetUseBlendSpace(false)以前からCompletedだった状態と、 新しく開始した通常遷移の完了を区別する
     bool suppressNormalRootMotionObservedTransition = false;
 
     // BlendSpace解除時の位相を次のLocomotion clipへ一度だけ渡す
@@ -588,15 +363,10 @@ private:
 
     float locomotionBackwardSideMaxWeight = 0.15f;
     float locomotionDebugBwdWeight = 0.5f;
-    float locomotionDebugRawStickX = 0.0f;
-    float locomotionDebugRawStickZ = 0.0f;
     float locomotionDebugEvaluationAngle = 0.0f;
-    float locomotionDebugFrozenCommonPhase = 0.0f;
-    // ブレンドスペースではない
     // ルートモーションの最初を記録する　Pose
     std::vector<InterleavedGltfModel::Node> normalRootMotionStartNodes;
     // ルートモーションの最後を記録する　Pose
     std::vector<InterleavedGltfModel::Node> normalRootMotionEndNodes;
-    friend class Player;
 };
 

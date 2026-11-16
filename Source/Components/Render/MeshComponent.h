@@ -5,19 +5,12 @@
 #include <string>
 #include <DirectXMath.h>
 #include <d3d11.h>
-#include <wrl.h>
-
-#ifdef USE_IMGUI
-#define IMGUI_ENABLE_DOCKING
-#include "../External/imgui/imgui.h"
-#endif
 
 #include "Graphics/Core/Graphics.h"
 #include "Graphics/Core/Shader.h"
 #include "Graphics/Core/PipelineState.h"
 #include "Components/Base/SceneComponent.h"
 #include "Graphics/Resource/InterleavedGltfModel.h"
-#include "Engine/Utility/Win32Utils.h"
 #include "Graphics/Resource/AssetManager.h"
 #include "Graphics/Resource/Texture.h"
 
@@ -27,76 +20,6 @@ class Actor;
 class MeshComponent :public SceneComponent
 {
 public:
-    PipeLineStateDesc pipeLineState;   
-    std::optional<std::string> overrideDeferredPipelineName;
-    std::optional<std::string> overrideForwardPipelineName;
-    std::optional<std::string> overrideCascadeShadowPipelineName;
-
-    // このメッシュのレンダーパス
-    enum class MeshRenderPass :uint8_t
-    {
-        Deferred,
-        Forward
-    };
-    MeshRenderPass renderPass = MeshRenderPass::Deferred;
-public:
-    MeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :SceneComponent(name, owner)
-    {
-        plusAlphaCBuffer = std::make_unique<ConstantBuffer<PlusAlphaConstants>>(Graphics::GetDevice());
-    };
-    std::shared_ptr<InterleavedGltfModel> model;
-
-    void Tick(float deltaTime)override {}
-
-    DirectX::XMFLOAT3 GetModelSize() const;
-
-    virtual void SetModel(const std::string& fileName, bool isSaveVerticesData = false, bool convertToLHS = false) = 0;
-
-    virtual void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const = 0;
-
-    virtual void SetIsVisible(bool isVisible) { this->isVisible_ = isVisible; }
-
-    // 影用のモデルにする
-    virtual void SetIsOnlyShadow(bool isOnlyShadow) { this->isOnlyShadow = isOnlyShadow; }
-
-    virtual bool IsVisible() const { return isVisible_; }
-
-    // 他のメッシュコンポーネントに必要な外部からの定数バッファ更新するためのフック関数
-    virtual void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const {}
-
-    void UpdatePlusAlphaConstants(ID3D11DeviceContext* immediateContext) const
-    {
-        plusAlphaCBuffer->Activate(immediateContext, 5);
-    }
-
-    const std::vector<InterleavedGltfModel::Node>& GetNodes() const { return modelNodes; }
-    virtual const std::vector<InterleavedGltfModel::Node>& GetRenderPoseNodes() const { return modelNodes; }
-
-    void SetModelNodes(const std::vector<InterleavedGltfModel::Node>& nodes) { modelNodes = nodes; }
-
-    virtual void DrawImGuiInspector() override;
-
-    void SetPipeLineState(const PipeLineStateDesc& pipelinesState) { this->pipeLineState = pipelinesState; }
-
-    PipeLineStateDesc GetPipeLineState()const { return pipeLineState; }
-
-    void SetIsCastShadow(bool isCastShadow) { this->isCastShadow_ = isCastShadow; }
-
-    void SetIsShadowMap(bool isShadowMap) { this->isShadowMap = isShadowMap; }
-
-    bool IsShadowMap() const { return isShadowMap; }
-
-    virtual bool IsCastShadow() const { return isCastShadow_; }
-
-    // 影用のモデルかどうか
-    virtual bool IsOnlyShadow() const { return isOnlyShadow; }
-
-    virtual void OnRegister() override {}
-
-    // 数値が大きいほうが後に描画される
-    void SetPriority(int priority) { this->priority = priority; }
-    int GetPriority() const { return priority; }
-
     // エフェクト用の構造体 
     struct EffectParameters
     {
@@ -111,7 +34,6 @@ public:
         float noiseScale;
         float noiseSpeed;
     };
-
 
     // モデルごとに更新したいPlusAlpha 用定数バッファ
     struct PlusAlphaConstants
@@ -136,36 +58,86 @@ public:
         float deathVisualFade = 0.0f;
         DirectX::XMFLOAT3 deathDeadEmissiveColor = { 0.35f, 0.35f, 0.35f };   // 敵の角などを光らせるのに使用する処理
     };
+public:
+    MeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :SceneComponent(name, owner)
+    {
+        plusAlphaCBuffer = std::make_unique<ConstantBuffer<PlusAlphaConstants>>(Graphics::GetDevice());
+    };
+
+    DirectX::XMFLOAT3 GetModelSize() const;
+
+    virtual void SetModel(const std::string& fileName, bool isSaveVerticesData = false, bool convertToLHS = false) = 0;
+
+    virtual void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const = 0;
+
+    virtual void SetIsVisible(const bool isVisible) { this->isVisible = isVisible; }
+
+    // 影用のモデルにする
+    virtual void SetIsOnlyShadow(const bool isOnlyShadow) { this->isOnlyShadow = isOnlyShadow; }
+
+    virtual bool IsVisible() const { return isVisible; }
+
+    // 他のメッシュコンポーネントに必要な外部からの定数バッファ更新するためのフック関数
+    virtual void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const {}
+
+    void UpdatePlusAlphaConstants(ID3D11DeviceContext* immediateContext) const
+    {
+        plusAlphaCBuffer->Activate(immediateContext, 5);
+    }
+
+    const std::vector<InterleavedGltfModel::Node>& GetNodes() const { return modelNodes; }
+    virtual const std::vector<InterleavedGltfModel::Node>& GetRenderPoseNodes() const { return modelNodes; }
+
+    void SetModelNodes(const std::vector<InterleavedGltfModel::Node>& nodes) { modelNodes = nodes; }
+
+    void DrawImGuiInspector() override;
+
+    void SetPipeLineState(const PipeLineStateDesc& pipelinesState) { this->pipeLineState = pipelinesState; }
+
+    PipeLineStateDesc GetPipeLineState()const { return pipeLineState; }
+
+    void SetIsCastShadow(const bool isCastShadow) { this->isCastShadow = isCastShadow; }
+
+    void SetIsShadowMap(const bool isShadowMap) { this->isShadowMap = isShadowMap; }
+
+    bool IsShadowMap() const { return isShadowMap; }
+
+    virtual bool IsCastShadow() const { return isCastShadow; }
+
+    // 影用のモデルかどうか
+    virtual bool IsOnlyShadow() const { return isOnlyShadow; }
+
+    // 数値が大きいほうが後に描画される
+    void SetPriority(const int priority) { this->priority = priority; }
+    int GetPriority() const { return priority; }
+
+public:
+    std::shared_ptr<InterleavedGltfModel> model;
+    std::optional<std::string> overrideDeferredPipelineName;
+    std::optional<std::string> overrideForwardPipelineName;
+    std::optional<std::string> overrideCascadeShadowPipelineName;
     std::unique_ptr<ConstantBuffer<PlusAlphaConstants>> plusAlphaCBuffer;
 protected:
     //描画するかどうか
-    bool isVisible_ = true;
+    bool isVisible = true;
     // 影をつけるかどうか
-    bool isCastShadow_ = true;
+    bool isCastShadow = true;
     // シャドウマップで影をつけるかどうか
     bool isShadowMap = false;
     // 影用のモデルかどうか
     bool isOnlyShadow = false;
-
     // 描画優先度
     int priority = 0;
     // モデルのノード情報
     std::vector<InterleavedGltfModel::Node> modelNodes = {};
+
+private:
+    PipeLineStateDesc pipeLineState;
 };
 
 class SkeletalMeshComponent :public MeshComponent
 {
 public:
-    void SetRuntimeMaterialEmissive(const std::string& materialName, bool enabled,const DirectX::XMFLOAT3& color, float intensity);
-    void ClearRuntimeMaterialEmissive(const std::string& materialName);
-    void SetRuntimeMaterialRimLight(const std::string& materialName,const DirectX::XMFLOAT3& color, float power);
-    void ClearRuntimeMaterialRimLight(const std::string& materialName);
-    ID3D11ShaderResourceView* GetRuntimeMaterialResourceView() const
-    {
-        return runtimeMaterialResourceView.Get();
-    }
-    void UpdateRuntimeMaterialOverrides(ID3D11DeviceContext* immediateContext) const;
-
     struct Phase2TextureBlendConstants
     {
         float progress = 0.0f;
@@ -175,136 +147,40 @@ public:
         int padding = 0;
         DirectX::XMFLOAT3 hairTint = { 1.0f, 1.0f, 1.0f };
     };
-    static_assert(sizeof(Phase2TextureBlendConstants) == 32,
-        "Phase2TextureBlendConstants must remain 32 bytes for the HLSL cbuffer layout");
 
+public:
     SkeletalMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :MeshComponent(name, owner)
     {
         phase2TextureBlendCBuffer = std::make_unique<ConstantBuffer<Phase2TextureBlendConstants>>(Graphics::GetDevice());
     }
 
-    bool LoadPhase2BaseColorTexture(const std::wstring& filename)
-    {
-        return phase2BaseColorTexture.Load(Graphics::GetDevice(), filename);
-    }
-    bool LoadPhase2BaseColorTexture(const std::string& materialName, const std::wstring& filename)
-    {
-        if (materialName == "M_Grux_Qilin_Torso")
-            return phase2BaseColorTexture.Load(Graphics::GetDevice(), filename);
-        if (materialName == "M_Grux_Qilin_Gear")
-            return phase2GearBaseColorTexture.Load(Graphics::GetDevice(), filename);
-        if (materialName == "M_Grux_Qilin_Head")
-            return phase2HeadBaseColorTexture.Load(Graphics::GetDevice(), filename);
-        if (materialName == "M_Grux_Qilin_LegsHands")
-            return phase2LegsHandsBaseColorTexture.Load(Graphics::GetDevice(), filename);
-        return false;
-    }
-    void SetPhase2TextureBlendProgress(const float progress)
-    {
-        phase2TextureBlendCBuffer->data.progress = std::clamp(progress, 0.0f, 1.0f);
-    }
-    void SetPhase2HairTint(const DirectX::XMFLOAT3& tint)
-    {
-        phase2TextureBlendCBuffer->data.hairTint = tint;
-    }
-    const DirectX::XMFLOAT3& GetPhase2HairTint() const
-    {
-        return phase2TextureBlendCBuffer->data.hairTint;
-    }
-    void SetPhase2TextureBlendWorldYRange(const float worldMinY, const float worldMaxY,
-        const float maskSoftness)
-    {
-        phase2TextureBlendCBuffer->data.worldMinY = worldMinY;
-        phase2TextureBlendCBuffer->data.worldMaxY = (std::max)(worldMaxY, worldMinY + 0.0001f);
-        phase2TextureBlendCBuffer->data.maskSoftness = std::clamp(maskSoftness, 0.0f, 0.3f);
-    }
-    float GetPhase2TextureBlendWorldMinY() const { return phase2TextureBlendCBuffer->data.worldMinY; }
-    float GetPhase2TextureBlendWorldMaxY() const { return phase2TextureBlendCBuffer->data.worldMaxY; }
-    ID3D11ShaderResourceView* GetPhase2BaseColorTextureSRV() const
-    {
-        return phase2BaseColorTexture.GetSRV();
-    }
-    ID3D11ShaderResourceView* GetPhase2BaseColorTextureSRV(const std::string& materialName) const
-    {
-        if (materialName == "M_Grux_Qilin_Torso") return phase2BaseColorTexture.GetSRV();
-        if (materialName == "M_Grux_Qilin_Gear") return phase2GearBaseColorTexture.GetSRV();
-        if (materialName == "M_Grux_Qilin_Head") return phase2HeadBaseColorTexture.GetSRV();
-        if (materialName == "M_Grux_Qilin_LegsHands") return phase2LegsHandsBaseColorTexture.GetSRV();
-        return nullptr;
-    }
-    bool IsPhase2BaseColorTextureLoaded(const std::string& materialName) const
-    {
-        return GetPhase2BaseColorTextureSRV(materialName) != nullptr;
-    }
-    void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const override
-    {
-        phase2TextureBlendCBuffer->Activate(immediateContext, 6);
-    }
+    void SetRuntimeMaterialEmissive(const std::string& materialName, bool enabled, const DirectX::XMFLOAT3& color, float intensity);
+    void SetRuntimeMaterialRimLight(const std::string& materialName, const DirectX::XMFLOAT3& color, float power);
+    void ClearRuntimeMaterialRimLight(const std::string& materialName);
+    ID3D11ShaderResourceView* GetRuntimeMaterialResourceView() const { return runtimeMaterialResourceView.Get(); }
+    void UpdateRuntimeMaterialOverrides(ID3D11DeviceContext* immediateContext) const;
 
-    void SetModel(const std::string& filename, bool isSaveVerticesData = false, bool convertToLHS = false)override
-    {
-        ID3D11Device* device = Graphics::GetDevice();
+    bool LoadPhase2BaseColorTexture(const std::string& materialName, const std::wstring& filename);
+    void SetPhase2TextureBlendProgress(const float progress);
+    void SetPhase2TextureBlendWorldYRange(const float worldMinY, const float worldMaxY, const float maskSoftness);
+    ID3D11ShaderResourceView* GetPhase2BaseColorTextureSRV(const std::string& materialName) const;
 
-        model = AssetManager::Get().LoadModel(device, filename, ModelTypes::ModelMode::SkeletalMesh, isSaveVerticesData, convertToLHS);
-        modelNodes = model->GetNodes();
-        runtimeMaterialData.clear();
-        sourceMaterialData.clear();
-        runtimeMaterialBuffer.Reset();
-        runtimeMaterialResourceView.Reset();
-        runtimeMaterialOverridesDirty = false;
-    }
+    void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const override;
 
+    void SetModel(const std::string& filename, const bool isSaveVerticesData = false, const bool convertToLHS = false)override;
 
     Transform GetSocketTransform(int socketNode) const override;
 
-    void SetRenderLocalYOffsetProvider(const std::string& nodeName, std::function<float()> provider)
-    {
-        renderOffsetNodeName = nodeName;
-        renderLocalYOffsetProvider = std::move(provider);
-    }
+    void SetRenderLocalYOffsetProvider(const std::string& nodeName, std::function<float()> provider);
 
-    void AppendAnimations(const std::vector<std::string>& filenames) const
-    {
-        model->AppendAnimations(filenames);
-    }
+    int FindIndexByName(const std::string& name) const;
 
-    int FindIndexByName(const std::string& name) const
-    {
-        return model->FindNodeIndexByName(name);
-    }
-
-    void SetMaterialPS(const std::string& psFilename, const std::string& materialName) const
-    {
-        ID3D11Device* device = Graphics::GetDevice();
-        for (InterleavedGltfModel::Material& material : model->materials)
-        {
-            if (material.name == materialName)
-            {
-                HRESULT hr = CreatePsFromCSO(device, psFilename.c_str(), material.replacedPixelShader.GetAddressOf());
-                _ASSERT_EXPR(SUCCEEDED(hr), hr_trace(hr));
-            }
-        }
-    }
-
-    void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const override
-    {
-        model->CastShadow(immediateContext, world, GetRenderPoseNodes());
-    }
-
-    DirectX::XMFLOAT3 GetJointWorldPosition(const std::string& name)
-    {
-        if (auto parent = attachParent.lock())
-        {
-            DirectX::XMFLOAT4X4 parentWorld = parent->GetComponentWorldTransform().ToWorldTransform();
-            return model->GetJointWorldPosition(name, modelNodes, parentWorld);
-        }
-        DirectX::XMFLOAT4X4 world = GetComponentWorldTransform().ToWorldTransform();
-        return model->GetJointWorldPosition(name, modelNodes, world);
-    }
-
+    void CastShadow(ID3D11DeviceContext* immediateContext, const DirectX::XMFLOAT4X4 world) const override;
+    
 private:
     void CreateRuntimeMaterialOverrideBuffer(ID3D11Device* device);
 
+private:
     std::vector<InterleavedGltfModel::Material::Cbuffer> runtimeMaterialData;
     std::vector<InterleavedGltfModel::Material::Cbuffer> sourceMaterialData;
     Microsoft::WRL::ComPtr<ID3D11Buffer> runtimeMaterialBuffer;
@@ -326,11 +202,9 @@ private:
 class StaticMeshComponent :public MeshComponent
 {
 public:
-    StaticMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :MeshComponent(name, owner)
-    {
-    }
+    StaticMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :MeshComponent(name, owner) {}
 
-    void SetModel(const std::string& filename, bool isSaveVerticesData = false, bool convertToLHS = false)override
+    void SetModel(const std::string& filename, const bool isSaveVerticesData = false, const bool convertToLHS = false)override
     {
         ID3D11Device* device = Graphics::GetDevice();
         model = AssetManager::Get().LoadModel(device, filename, ModelTypes::ModelMode::StaticMesh, isSaveVerticesData, convertToLHS);
@@ -346,11 +220,9 @@ public:
 class InstanceMeshComponent : public MeshComponent
 {
 public:
-    InstanceMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :MeshComponent(name, owner)
-    {
-    }
+    InstanceMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) :MeshComponent(name, owner) {}
 
-    void SetModel(const std::string& filename, bool isSaveVerticesData = false, bool convertToLHS = false)override
+    void SetModel(const std::string& filename, const bool isSaveVerticesData = false, const bool convertToLHS = false)override
     {
         ID3D11Device* device = Graphics::GetDevice();
         model = AssetManager::Get().LoadModel(device, filename, ModelTypes::ModelMode::InstancedStaticMesh, isSaveVerticesData, convertToLHS);
@@ -376,26 +248,15 @@ public:
         DirectX::XMFLOAT2 padding{};
     };
 
-    MainChargeWindMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner)
-        : StaticMeshComponent(name, owner), constants_(Graphics::GetDevice())
-    {
-    }
+    MainChargeWindMeshComponent(const std::string& name, const std::shared_ptr<Actor>& owner) : StaticMeshComponent(name, owner), constants(Graphics::GetDevice()) {}
 
-    void SetWindConstants(const DirectX::XMFLOAT2& scrollSpeed, const float opacity,
-        const float radialSpeed, const float radialTiling, const int maskFlowMode) const
-    {
-        constants_.data.maskScrollSpeed = scrollSpeed;
-        constants_.data.opacity = opacity;
-        constants_.data.radialSpeed = radialSpeed;
-        constants_.data.radialTiling = radialTiling;
-        constants_.data.maskFlowMode = maskFlowMode;
-    }
+    void SetWindConstants(const DirectX::XMFLOAT2& scrollSpeed, const float opacity, const float radialSpeed, const float radialTiling, const int maskFlowMode) const;
 
     void UpdateConstantBuffer(ID3D11DeviceContext* immediateContext) const override
     {
-        constants_.Activate(immediateContext, 6);
+        constants.Activate(immediateContext, 6);
     }
 
 private:
-    mutable ConstantBuffer<Constants> constants_;
+    mutable ConstantBuffer<Constants> constants;
 };

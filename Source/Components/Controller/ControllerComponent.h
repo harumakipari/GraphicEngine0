@@ -83,9 +83,6 @@ public:
 
     float GetActiveHorizontalWallProbeRadius() const { return bossRoomWallProbeEnabled ? bossRoomWallProbeRadius : radius; }
 
-    // “ü—Í‚É‚æ‚Á‚Ä•Ï‚í‚éŒ»İ‚Ì‘¬‚³‚ğæ“¾
-    float GetCurrentInputNormalizeSpeed()const;
-
     // ‘¬‚³‚ğİ’è‚·‚é
     void SetFixedSpeed(const float speed)
     {

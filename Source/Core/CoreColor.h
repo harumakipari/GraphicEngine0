@@ -1,7 +1,7 @@
 #pragma once
 #include <DirectXMath.h>
 using namespace DirectX;
-//カラー（XMFLOAT4と互換性あり）
+
 struct CoreColor
 {
 	float r;
@@ -22,7 +22,6 @@ struct CoreColor
 
 	operator XMFLOAT4() const { return XMFLOAT4(r, g, b, a); }
 
-	//Color operator=(const XMFLOAT4& color) { return { color.x,color.y,color.z,color.w }; }
 	CoreColor& operator+=(const CoreColor& c) { r += c.r, g += c.g, b += c.b, a += c.a; return *this; }
 	CoreColor& operator-=(const CoreColor& c) { r -= c.r, g -= c.g, b -= c.b, a -= c.a; return *this; }
 	CoreColor& operator*=(const CoreColor& c) { r *= c.r, g *= c.g, b *= c.b, a *= c.a; return *this; }
@@ -51,18 +50,9 @@ struct CoreColor
 	static const CoreColor Black;
 
 	static void ConvertToPastelColors(CoreColor& color);
-	/**
-	 * @brief 16進数カラーコード（0xRRGGBB）をRGB（0～1）に変換する
-	 * @param hexColor 0xRRGGBB形式のカラーコード
-	 * @param color 変換後のColor構造体（r, g, b, a）
-	 * @param alpha アルファ値（省略時は1.0）
-	 */
+	 // 16進数カラーコード（0xRRGGBB）をRGB（0～1）に変換する
 	static void HexToRGB(uint32_t hexColor, CoreColor& color, float alpha = 1.f);
-	/**
-	* @brief 色を少し暗くする
-	* @param color 対象の色（0～1の範囲）
-	* @param factor 暗くする割合（0.0～1.0、デフォルトは0.8で20%暗くする）
-	*/
+	// 色を少し暗くする
 	static void DarkenColor(CoreColor& color, float factor = 0.8f);
 };
 
@@ -77,7 +67,7 @@ namespace ColorHelper
 		v = std::clamp(v, 0.0f, 1.0f);
 		a = std::clamp(a, 0.0f, 1.0f);
 
-		float c = v * s;                     // chroma
+		float c = v * s;                   
 		float x = c * (1.0f - fabsf(fmodf(h / 60.0f, 2.0f) - 1.0f));
 		float m = v - c;
 
